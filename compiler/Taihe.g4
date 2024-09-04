@@ -1,186 +1,136 @@
 grammar Taihe;
 
 specification
-    : imports* specificationField* EOF
+    : imports* field_attr = specificationField_opt* EOF
     ;
+
+specificationField_opt
+	: namespace
+	;
 
 imports
-    : KW_IMPORT moduleName SEMICOLON
-    ;
-
-moduleName
-    : ID (DOT ID)*
-    ;
-
-specificationField
-    : namespace
+    : KW_IMPORT file_attr = STRING_LITERAL SEMICOLON
     ;
 
 namespace
-    : KW_NAMESPACE namespaceName LEFT_BRACE namespaceField* RIGHT_BRACE
+    : KW_NAMESPACE (name_attr += ID DOT)* name_attr += ID LEFT_BRACE field_attr = namespaceField_opt* RIGHT_BRACE
     ;
 
-namespaceName
-    : ID (DOUBLE_COLON ID)*
-    ;
-
-namespaceField
-    : namespace
+namespaceField_opt
+	: namespace
     | struct
     | enumClass
     | interface
     | class
-    | const
+    | constant
     | function
     ;
 
 struct
-    : KW_STRUCT structName LEFT_BRACE structField* RIGHT_BRACE
+    : KW_STRUCT name_attr = ID LEFT_BRACE structField_opt* RIGHT_BRACE
     ;
 
-structName
-    : ID
-    ;
+structField_opt
+	: structProperty
+	;
 
-structField
-    : structFieldName COLON type SEMICOLON
-    ;
-
-structFieldName
-    : ID
+structProperty
+    : name_attr = ID COLON type_opt SEMICOLON
     ;
 
 enumClass
-    : KW_ENUM enumClassName LEFT_BRACE enumField+ RIGHT_BRACE
+    : KW_ENUM name_attr = ID LEFT_BRACE field_attr = enumField_opt RIGHT_BRACE
     ;
 
-enumClassName
-    : ID
+enumField_opt
+	: enumValue
+    | enumProperty
+    | enumStruct
     ;
 
-enumField
-    : enumFieldName SEMICOLON
-    | enumFieldName COLON type SEMICOLON
-    | structName LEFT_BRACE structField* RIGHT_BRACE
+enumValue
+    : name_attr = ID SEMICOLON
     ;
 
-enumFieldName
-    : ID
+enumProperty
+    : name_attr = ID COLON type_attr = type_opt SEMICOLON
+    ;
+
+enumStruct
+    : name_attr = ID LEFT_BRACE field_attr = structField_opt* RIGHT_BRACE
     ;
 
 interface
-    : KW_INTERFACE interfaceName (KW_IMPLEMENTS interfaceName (COMMA interfaceName)*)? LEFT_BRACE interfaceField* RIGHT_BRACE
+    : KW_INTERFACE name_attr = ID (KW_EXTENDS extends_attr += ID (COMMA extends_attr += ID)*)? LEFT_BRACE field_attr = interfaceField_opt* RIGHT_BRACE
     ;
 
-interfaceName
-    : ID
-    ;
-
-interfaceField
-    : static
-    | nonstatic
-    ;
+interfaceField_opt
+	: memberFunction
+	| memberConst
+	;
 
 class
-    : KW_CLASS className (KW_INHERITS className)? (KW_IMPLEMENTS interfaceName (COMMA interfaceName)*)? LEFT_BRACE classField* RIGHT_BRACE
+    : KW_CLASS name_attr = ID (KW_INHERITS inherits_attr += ID)? (KW_IMPLEMENTS implements_attr += ID (COMMA implements_attr += ID)*)? LEFT_BRACE field_attr = classField_opt* RIGHT_BRACE
     ;
 
-className
-    : ID
-    ;
-
-classField
-    : static
-    | nonstatic
-    | constructor
-    ;
-
-static
-    : KW_STATIC function
-    | KW_STATIC const
-    ;
-
-nonstatic
-    : function
-    ;
+classField_opt
+	: constructor
+	| memberFunction
+	| memberConst
+	;
 
 constructor
-    : KW_CONSTRUCTOR LEFT_BRACKET (functionParameterPair (COMMA functionParameterPair)*)? RIGHT_BRACKET SEMICOLON
+    : KW_CONSTRUCTOR LEFT_BRACKET (parameters_attr += parameter (COMMA parameters_attr += parameter)*)? RIGHT_BRACKET SEMICOLON
+    ;
+
+memberFunction
+    : (static_attr = KW_STATIC)? KW_FUNCTION name_attr = ID LEFT_BRACKET (parameters_attr += parameter (COMMA parameters_attr += parameter)*)? RIGHT_BRACKET COLON
+        (LEFT_BRACKET (returnValueTypes_attr += type_opt (COMMA returnValueTypes_attr += type_opt)*)? RIGHT_BRACKET | returnValueTypes_attr += type_opt) SEMICOLON
+    ;
+
+memberConst
+    : (static_attr = KW_STATIC)? KW_CONST name_attr = ID COLON type_attr = type_opt SEMICOLON
     ;
 
 function
-    : KW_FUNCTION functionName LEFT_BRACKET (functionParameterPair (COMMA functionParameterPair)*)? RIGHT_BRACKET COLON
-          (LEFT_BRACKET (type (COMMA type)*)? RIGHT_BRACKET | type) SEMICOLON
+    : KW_FUNCTION name_attr = ID LEFT_BRACKET (parameters_attr += parameter (COMMA parameters_attr += parameter)*)? RIGHT_BRACKET COLON
+        (LEFT_BRACKET (returnValueTypes_attr += type_opt (COMMA returnValueTypes_attr += type_opt)*)? RIGHT_BRACKET | returnValueTypes_attr += type_opt) SEMICOLON
     ;
 
-functionName
-    : ID
+constant
+    : KW_CONST name_attr = ID COLON type_attr = type_opt SEMICOLON
     ;
 
-functionParameterPair
-    : functionParameterName COLON functionParameterType
+parameter
+    : name_attr = ID COLON type_attr = typeWithSpecifier
     ;
 
-functionParameterName
-    : ID
+type_opt
+	: basicType
+	| userType
+	| parameterizedType
+	| functionType
+	;
+
+typeWithSpecifier
+	: ((const_attr = KW_CONST)? ref_attr = KW_REF)? type_attr = type_opt
+	;
+
+basicType
+    : name_attr = (KW_I8 | KW_I16 | KW_I32 | KW_I64 | KW_U8 | KW_U16 | KW_U32 | KW_U64 | KW_F32 | KW_F64 | KW_BOOL)
     ;
 
-functionParameterType
-    : ((KW_CONST)? KW_REF)? valType
-    | refType
-    ;
-
-const
-    : KW_CONST constName COLON type SEMICOLON
-    ;
-
-constName
-    : ID
-    ;
-
-type
-    : valType
-    | refType
-    ;
-
-refType
-    : className
-    | interfaceName
-    | functionType
-    | parameterizedType
+userType
+    : (global = KW_GLOBAL)? (name_attr += ID DOT)* name_attr += ID
     ;
 
 functionType
-    : <assoc = right> LEFT_BRACKET (functionParameterType (COMMA functionParameterType)*)? RIGHT_BRACKET ARROW
-          (LEFT_BRACKET (type (COMMA type)*)? RIGHT_BRACKET | type) SEMICOLON
+    : <assoc_attr = right> LEFT_BRACKET ((parameterTypes_attr += typeWithSpecifier) (COMMA parameterTypes_attr += typeWithSpecifier)*)? RIGHT_BRACKET ARROW
+        (LEFT_BRACKET (returnValueTypes_attr += type_opt (COMMA returnValueTypes_attr += type_opt)*)? RIGHT_BRACKET | returnValueTypes_attr += type_opt) SEMICOLON
     ;
 
 parameterizedType
-    : templateName LEFT_ANG_BRACKET (type (COMMA type)*)? RIGHT_ANG_BRACKET
-    ;
-
-valType
-    : basicType
-    | structName
-    | enumClassName
-    ;
-
-basicType
-    : KW_I8
-    | KW_I16
-    | KW_I32
-    | KW_I64
-    | KW_U8
-    | KW_U16
-    | KW_U32
-    | KW_U64
-    | KW_F32
-    | KW_F64
-    | KW_BOOL
-    ;
-
-templateName
-    : ID
+    : name_attr = ID LEFT_ANG_BRACKET (parameters_attr += type_opt (COMMA parameters_attr += type_opt)*)? RIGHT_ANG_BRACKET
     ;
 
 SEMICOLON
@@ -275,20 +225,6 @@ DOT
     : '.'
     ;
 
-DOUBLE_COLON
-    : '::'
-    ;
-
-fragment LETTER
-    : '_'
-    | 'A' .. 'Z'
-    | 'a' .. 'z'
-    ;
-
-fragment DIGIT
-    : '0' .. '9'
-    ;
-
 KW_IMPORT
     : 'import'
     ;
@@ -345,6 +281,10 @@ KW_FUNCTION
     : 'function'
     ;
 
+KW_GLOBAL
+    : 'global'
+    ;
+
 KW_I8
     : 'i8'
     ;
@@ -389,8 +329,42 @@ KW_BOOL
     : 'bool'
     ;
 
+STRING_LITERAL
+    : '"' (ESCAPE_SEQUENCE | ~ ('\\' | '"'))* '"'
+    ;
+
+fragment ESCAPE_SEQUENCE
+    : '\\' ('b' | 't' | 'n' | 'f' | 'r' | '"' | '\'' | '\\')
+    | UNICODE_ESCAPE
+    | OCTAL_ESCAPE
+    ;
+
+fragment OCTAL_ESCAPE
+    : '\\' 'x' HEX_DIGIT HEX_DIGIT
+    ;
+
+fragment UNICODE_ESCAPE
+    : '\\' 'u' HEX_DIGIT HEX_DIGIT HEX_DIGIT HEX_DIGIT
+    ;
+
+fragment HEX_DIGIT
+    : '0' .. '9'
+    | 'a' .. 'f'
+    | 'A' .. 'F'
+    ;
+
 ID
     : LETTER (LETTER | DIGIT)*
+    ;
+
+fragment LETTER
+    : '_'
+    | 'A' .. 'Z'
+    | 'a' .. 'z'
+    ;
+
+fragment DIGIT
+    : '0' .. '9'
     ;
 
 WS
