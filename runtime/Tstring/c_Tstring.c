@@ -4,24 +4,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Atomic reference count functions
-void atomic_ref_count_init(atomic_ref_count* ref_count, uint32_t count) {
-  atomic_store(&(ref_count->count), count);
-}
-
-uint32_t atomic_ref_count_increment(atomic_ref_count* ref_count) {
-  return (uint32_t)(atomic_fetch_add(&(ref_count->count), 1) + 1);
-}
-
-uint32_t atomic_ref_count_decrement(atomic_ref_count* ref_count) {
-  return (uint32_t)(atomic_fetch_sub(&(ref_count->count), 1) - 1);
-}
+#include "common.h"
 
 // Release the Tstring
 void release_Tstring(Tstring_header* handle) {
   if ((handle->flags & SHARED_STR) == 0) {
-    if (atomic_ref_count_decrement(
-            &(((shared_Tstring_header*)handle)->count)) == 0) {
+    if (tref_dec(&(((shared_Tstring_header*)handle)->count))) {
       free(handle);
     }
   }
@@ -41,7 +29,7 @@ shared_Tstring_header* precreate_Tstring_on_heap(uint32_t length) {
   header->header.flags = 0;
   header->header.length = length;
   header->header.ptr = header->buffer;
-  atomic_ref_count_init(&(header->count), 1);
+  tref_inc(&(header->count));
   header->buffer[length] = '\0';
   return header;
 }
@@ -76,7 +64,7 @@ Tstring_header* duplicate_Tstring(Tstring_header* handle) {
   if (!handle) {
     return NULL;
   } else if ((handle->flags & SHARED_STR) == 0) {
-    atomic_ref_count_increment(&(((shared_Tstring_header*)handle)->count));
+    tref_inc(&(((shared_Tstring_header*)handle)->count));
     return handle;
   } else {
     return create_Tstring_on_heap(handle->ptr, handle->length);

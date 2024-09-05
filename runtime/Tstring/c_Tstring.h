@@ -1,20 +1,14 @@
-#ifndef TSTRING_H
-#define TSTRING_H
-
-#include <stdatomic.h>
+#pragma once
 #include <stddef.h>
 #include <stdint.h>
+
+#include "common.h"
 // #include <wchar.h>
 
 typedef enum {
   // CONST_STR  = 0,
   SHARED_STR = 1,
 } TStringType;
-
-// Atomic reference count structure
-typedef struct {
-  atomic_uint count;
-} atomic_ref_count;
 
 // HSTRING header structure
 typedef struct {
@@ -26,14 +20,9 @@ typedef struct {
 // Shared HSTRING header with reference counting
 typedef struct {
   Tstring_header header;
-  atomic_ref_count count;
+  TRefCount count;
   char buffer[1];  // Flexible array member for the string data
 } shared_Tstring_header;
-
-// Function declarations
-void atomic_ref_count_init(atomic_ref_count* ref_count, uint32_t count);
-uint32_t atomic_ref_count_increment(atomic_ref_count* ref_count);
-uint32_t atomic_ref_count_decrement(atomic_ref_count* ref_count);
 
 void release_Tstring(Tstring_header* handle);
 shared_Tstring_header* precreate_Tstring_on_heap(uint32_t length);
@@ -71,5 +60,3 @@ void Tstring_attach_abi(Tstring* str, void* value);
 void* Tstring_detach_abi(Tstring* str);
 void Tstring_copy_from_abi(Tstring* str, void* value);
 void Tstring_copy_to_abi(const Tstring* str, void** value);
-
-#endif  // HSTRING_H
