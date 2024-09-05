@@ -1,0 +1,23 @@
+#+TITLE: 接口合约描述语言
+
+* 命名空间
+** 定义命名空间
+1. 源文件和命名空间一一对应
+   - 不支持拆分一个命名空间为多个源文件
+   - 也不支持在同一个源文件内描述多个命名空间
+2. 命名空间由源文件名唯一确定
+   - 例： =ohos.hardware.sensors.taihe= 源文件内，描述了 =ohos.hardware.sensors= 命名空间下的各个成员
+3. 命名空间的成员和命名空间不能重名
+   - 例：若在 =ohos.hardware.sensors= 下定义了 =class SensorManager= ，则不允许定义 =ohos.hardware.sensors.SensorManager.taihe=
+** 名称解析
+1. 允许直接使用全名
+   #+BEGIN_SRC rust
+     fn foobar(manager: ::ohos::hardware::sensors::SensorManager)
+   #+END_SRC
+2. 允许使用 =use= 语句生成别名
+   #+BEGIN_SRC rust
+   use ohos::hardware::sensors::SensorManager;
+   // 或是
+   use ohos::hardware::sensors::*;
+   fn foobar(manager: SensorManager);
+   #+END_SRC
