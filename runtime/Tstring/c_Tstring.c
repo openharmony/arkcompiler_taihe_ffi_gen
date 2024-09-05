@@ -43,18 +43,6 @@ struct TString* create_Tstring_on_heap(const char* value, uint32_t length) {
   return (struct TString*)header;
 }
 
-// stack
-void create_Tstring_on_stack(struct TString* header, const char* value,
-                             uint32_t length) {
-  assert(value);
-  assert(length != 0);
-  assert(value[length] == '\0');
-
-  header->flags = 1;
-  header->length = length;
-  header->ptr = value;
-}
-
 // duplicate Tstring
 struct TString* duplicate_Tstring(struct TString* s) {
   if (!s) return NULL;

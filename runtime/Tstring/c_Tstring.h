@@ -1,4 +1,5 @@
 #pragma once
+#include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -35,8 +36,35 @@ struct TString* duplicate_Tstring(struct TString* handle);
 // Public C API //
 //////////////////
 
-/// Returns the buffer of the string.
+/// Returns the buffer of the TString.
 inline const char* tstr_buf(const struct TString* s) { return s->ptr; }
 
-/// Returns the length of the string.
+/// Returns the length of the TString.
 inline size_t tstr_len(const struct TString* s) { return s->length; }
+
+// Creates a TString from an existing string.
+//
+// # Arguments
+// - `buf`: a null-terminated string. Null pointer is invalid.
+// - `len`: the length of the string.
+// - `tstr`: pointer to an uninitialized TString. Do not pass an
+//    already-initialized TString here.
+//
+// # Returns
+// - `tstr`, if the string is created successfully. The caller must ensure the
+//    string buffer and the returned TString remain unchanged during the whole
+//    lifetime of the TString.
+// - `NULL`, if the string is not null-terminated, or the length is too large.
+//    In this case, the original `tstr` is still uninitialized and should not be
+//    used.
+inline struct TString* tstr_new_ref(const char* buf TH_NONNULL, size_t len,
+                                    struct TString* tstr) {
+  if (len > UINT32_MAX) return NULL;
+  if (buf[len] != '\0') return NULL;
+
+  tstr->flags = TSTRING_SHARED;
+  tstr->length = len;
+  tstr->ptr = buf;
+  return tstr;
+}
+

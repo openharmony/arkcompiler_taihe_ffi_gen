@@ -1,6 +1,8 @@
 #pragma once
 #include <stdint.h>
 
+#define TH_NONNULL __attribute__((nonnull))
+
 ////////////////////////
 // REFERENCE COUNTING //
 ////////////////////////
