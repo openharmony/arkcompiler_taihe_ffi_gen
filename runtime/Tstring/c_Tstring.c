@@ -11,7 +11,7 @@ inline struct TStringHeap* to_heap(struct TString* s) {
   return (struct TStringHeap*)s;
 }
 
-void release_Tstring(struct TString* s) {
+void tstr_free(struct TString* s) {
   struct TStringHeap* sh = to_heap(s);
   if (sh && tref_dec(&sh->count)) free(sh);
 }
@@ -30,17 +30,13 @@ static struct TStringHeap* allocate_header(uint32_t length) {
   return sh;
 }
 
-// create struct TString on heap
-struct TString* create_Tstring_on_heap(const char* value, uint32_t length) {
-  if (length == 0) {
-    return NULL;
-  }
+const struct TString* tstr_new(const char* buf TH_NONNULL, size_t len) {
+  if (len > UINT32_MAX) return NULL;
+  if (buf[len] != '\0') return NULL;
 
-  struct TStringHeap* header = allocate_header(length);
-  if (header) {
-    memcpy(header->buffer, value, sizeof(char) * length);
-  }
-  return (struct TString*)header;
+  struct TStringHeap* sh = allocate_header(len);
+  if (sh) memcpy(sh->buffer, buf, sizeof(char) * len);
+  return (struct TString*)sh;
 }
 
 // duplicate Tstring

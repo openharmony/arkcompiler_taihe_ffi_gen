@@ -68,3 +68,18 @@ inline struct TString* tstr_new_ref(const char* buf TH_NONNULL, size_t len,
   return tstr;
 }
 
+/// Creates a heap-allocated TString by copying the original string.
+//
+// # Arguments
+// - `buf`: a null-terminated string. Null pointer is invalid.
+// - `len`: the length of the string.
+//
+// # Returns
+// - `tstr`, if the string is created successfully.
+// - `NULL`, if the string is not null-terminated, or the length is too large,
+//    or the system is out of memory. In this case, the original `tstr` is still
+//    uninitialized and should not be used.
+const struct TString* tstr_new(const char* buf TH_NONNULL, size_t len);
+
+// Frees the string. The string should not be accessed thereafter.
+void tstr_drop(struct TString* s);
