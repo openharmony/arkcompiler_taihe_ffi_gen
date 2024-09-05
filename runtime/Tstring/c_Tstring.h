@@ -16,14 +16,13 @@ enum TStringFlags {
 struct TString {
   uint32_t flags;
   uint32_t length;
-  char const* ptr;
+  char const* ptr; // Always valid and non-null.
 };
 
-// Shared HSTRING header with reference counting
 struct TStringHeap {
   struct TString header;
   TRefCount count;
-  char buffer[1];  // Flexible array member for the string data
+  char buffer[1];
 };
 
 //////////////////
@@ -73,6 +72,9 @@ inline struct TString* tstr_new_ref(const char* buf TH_NONNULL, size_t len,
 // - `NULL`, if the string is not null-terminated, or the length is too large,
 //    or the system is out of memory. In this case, the original `tstr` is still
 //    uninitialized and should not be used.
+//
+// # Notes
+// Free the TString with `tstr_drop` after use.
 const struct TString* tstr_new(const char* buf TH_NONNULL, size_t len);
 
 // Frees the string. The string should not be accessed thereafter.
@@ -89,4 +91,5 @@ void tstr_drop(struct TString* s);
 //   buffer is incremented.
 // - If string was created by `tstr_new_ref`, the source string is copied
 //   to a new heap-allocated buffer and is managed by reference counting.
+// - Similar to `tstr_new`, remeber to call `tstr_drop` after use.
 const struct TString* tstr_dup(struct TString* s);
