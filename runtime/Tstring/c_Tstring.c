@@ -8,7 +8,7 @@
 
 // Release the Tstring
 void release_Tstring(Tstring_header* handle) {
-  if ((handle->flags & SHARED_STR) == 0) {
+  if ((handle->flags & TSTRING_SHARED) == 0) {
     if (tref_dec(&(((shared_Tstring_header*)handle)->count))) {
       free(handle);
     }
@@ -63,7 +63,7 @@ void create_Tstring_on_stack(Tstring_header* header, const char* value,
 Tstring_header* duplicate_Tstring(Tstring_header* handle) {
   if (!handle) {
     return NULL;
-  } else if ((handle->flags & SHARED_STR) == 0) {
+  } else if ((handle->flags & TSTRING_SHARED) == 0) {
     tref_inc(&(((shared_Tstring_header*)handle)->count));
     return handle;
   } else {

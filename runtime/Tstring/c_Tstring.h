@@ -5,10 +5,9 @@
 #include "common.h"
 // #include <wchar.h>
 
-typedef enum {
-  // CONST_STR  = 0,
-  SHARED_STR = 1,
-} TStringType;
+enum TStringFlags {
+  TSTRING_SHARED = 1,
+};
 
 // HSTRING header structure
 typedef struct {
