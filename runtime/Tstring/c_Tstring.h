@@ -26,12 +26,6 @@ struct TStringHeap {
   char buffer[1];  // Flexible array member for the string data
 };
 
-void release_Tstring(struct TString* handle);
-struct TString* create_Tstring_on_heap(const char* value, uint32_t length);
-void create_Tstring_on_stack(struct TString* header, const char* value,
-                             uint32_t length);
-struct TString* duplicate_Tstring(struct TString* handle);
-
 //////////////////
 // Public C API //
 //////////////////
@@ -83,3 +77,16 @@ const struct TString* tstr_new(const char* buf TH_NONNULL, size_t len);
 
 // Frees the string. The string should not be accessed thereafter.
 void tstr_drop(struct TString* s);
+
+// Copies a TString.
+//
+// # Returns
+// - `tstr`, if the string is created successfully.
+// - `NULL`, on insufficient memory.
+//
+// # Notes
+// - If string was created by `tstr_new`, the reference count of the backing
+//   buffer is incremented.
+// - If string was created by `tstr_new_ref`, the source string is copied
+//   to a new heap-allocated buffer and is managed by reference counting.
+const struct TString* tstr_dup(struct TString* s);

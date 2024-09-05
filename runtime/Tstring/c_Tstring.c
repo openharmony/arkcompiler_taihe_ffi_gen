@@ -39,8 +39,7 @@ const struct TString* tstr_new(const char* buf TH_NONNULL, size_t len) {
   return (struct TString*)sh;
 }
 
-// duplicate Tstring
-struct TString* duplicate_Tstring(struct TString* s) {
+const struct TString* tstr_dup(struct TString* s) {
   if (!s) return NULL;
 
   struct TStringHeap* sh = to_heap(s);
@@ -49,7 +48,7 @@ struct TString* duplicate_Tstring(struct TString* s) {
     return s;
   }
 
-  return create_Tstring_on_heap(s->ptr, s->length);
+  return tstr_new(s->ptr, s->length);
 }
 
 typedef struct {
