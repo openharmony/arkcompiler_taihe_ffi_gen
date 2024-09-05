@@ -1,23 +1,36 @@
 #+TITLE: 接口合约描述语言
 
-* 命名空间
-** 定义命名空间
-1. 源文件和命名空间一一对应
-   - 不支持拆分一个命名空间为多个源文件
-   - 也不支持在同一个源文件内描述多个命名空间
-2. 命名空间由源文件名唯一确定
-   - 例： =ohos.hardware.sensors.taihe= 源文件内，描述了 =ohos.hardware.sensors= 命名空间下的各个成员
-3. 命名空间的成员和命名空间不能重名
+* 包
+** 定义包
+1. 源文件和包一一对应
+   - 不支持拆分一个包为多个源文件
+   - 也不支持在同一个源文件内描述多个包
+2. 包名由源文件名唯一确定
+   - 例： =ohos.hardware.sensors.taihe= 源文件内，描述了 =ohos.hardware.sensors= 包下的各个成员
+3. 包的成员名称不应和包自身的名称相同
    - 例：若在 =ohos.hardware.sensors= 下定义了 =class SensorManager= ，则不允许定义 =ohos.hardware.sensors.SensorManager.taihe=
-** 名称解析
-1. 允许直接使用全名
+   - 理由：JS、Python 等动态类型语言不支持重名
+** 使用包管理命名空间
+1. 默认可使用当前包下的名称
    #+BEGIN_SRC rust
-     fn foobar(manager: ::ohos::hardware::sensors::SensorManager)
+     // example1.taihe
+     struct Foo {}
+     fn func1(bar: example1::Foo); // OK
+     fn func2(foo: Foo);           // OK
    #+END_SRC
 2. 允许使用 =use= 语句生成别名
    #+BEGIN_SRC rust
-   use ohos::hardware::sensors::SensorManager;
-   // 或是
-   use ohos::hardware::sensors::*;
-   fn foobar(manager: SensorManager);
+     // example2.taihe
+     use example1::Foo;
+     fn func3(foo: Foo);               // OK
+   #+END_SRC
+3. 包与包之间互相隔离，无从属关系
+   #+BEGIN_SRC rust
+     // example.foo.taihe
+     struct Foo {}
+     // example.taihe
+     fn func4(foo: foo::Foo);          // Error: undefined symbol
+     fn func5(foo: example::foo::Foo); // OK
+     use foo::Foo;                     // Error: undefined symbol
+     use example::foo::Foo;            // OK
    #+END_SRC
