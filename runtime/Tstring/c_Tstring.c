@@ -6,13 +6,14 @@
 
 #include "common.h"
 
-// Release the Tstring
-void release_Tstring(struct TString* handle) {
-  if ((handle->flags & TSTRING_SHARED) == 0) {
-    if (tref_dec(&(((struct TStringHeap*)handle)->count))) {
-      free(handle);
-    }
-  }
+inline struct TStringHeap* to_heap(struct TString* s) {
+  if (s->flags & TSTRING_SHARED) return NULL;
+  return (struct TStringHeap*)s;
+}
+
+void release_Tstring(struct TString* s) {
+  struct TStringHeap* sh = to_heap(s);
+  if (sh && tref_dec(&sh->count)) free(sh);
 }
 
 // allocation function
@@ -59,15 +60,16 @@ void create_Tstring_on_stack(struct TString* header, const char* value,
 }
 
 // duplicate Tstring
-struct TString* duplicate_Tstring(struct TString* handle) {
-  if (!handle) {
-    return NULL;
-  } else if ((handle->flags & TSTRING_SHARED) == 0) {
-    tref_inc(&(((struct TStringHeap*)handle)->count));
-    return handle;
-  } else {
-    return create_Tstring_on_heap(handle->ptr, handle->length);
+struct TString* duplicate_Tstring(struct TString* s) {
+  if (!s) return NULL;
+
+  struct TStringHeap* sh = to_heap(s);
+  if (sh) {
+    tref_inc(&sh->count);
+    return s;
   }
+
+  return create_Tstring_on_heap(s->ptr, s->length);
 }
 
 typedef struct {
