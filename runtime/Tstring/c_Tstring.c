@@ -7,20 +7,19 @@
 #include "common.h"
 
 // Release the Tstring
-void release_Tstring(Tstring_header* handle) {
+void release_Tstring(struct TString* handle) {
   if ((handle->flags & TSTRING_SHARED) == 0) {
-    if (tref_dec(&(((shared_Tstring_header*)handle)->count))) {
+    if (tref_dec(&(((struct TStringHeap*)handle)->count))) {
       free(handle);
     }
   }
 }
 
 // allocation function
-shared_Tstring_header* precreate_Tstring_on_heap(uint32_t length) {
-  size_t bytes_required = sizeof(shared_Tstring_header) + sizeof(char) * length;
+struct TStringHeap* precreate_Tstring_on_heap(uint32_t length) {
+  size_t bytes_required = sizeof(struct TStringHeap) + sizeof(char) * length;
 
-  shared_Tstring_header* header =
-      (shared_Tstring_header*)malloc(bytes_required);
+  struct TStringHeap* header = (struct TStringHeap*)malloc(bytes_required);
   if (!header) {
     // Memory allocation failure
     return NULL;
@@ -34,21 +33,21 @@ shared_Tstring_header* precreate_Tstring_on_heap(uint32_t length) {
   return header;
 }
 
-// create Tstring_header on heap
-Tstring_header* create_Tstring_on_heap(const char* value, uint32_t length) {
+// create struct TString on heap
+struct TString* create_Tstring_on_heap(const char* value, uint32_t length) {
   if (length == 0) {
     return NULL;
   }
 
-  shared_Tstring_header* header = precreate_Tstring_on_heap(length);
+  struct TStringHeap* header = precreate_Tstring_on_heap(length);
   if (header) {
     memcpy(header->buffer, value, sizeof(char) * length);
   }
-  return (Tstring_header*)header;
+  return (struct TString*)header;
 }
 
 // stack
-void create_Tstring_on_stack(Tstring_header* header, const char* value,
+void create_Tstring_on_stack(struct TString* header, const char* value,
                              uint32_t length) {
   assert(value);
   assert(length != 0);
@@ -60,23 +59,27 @@ void create_Tstring_on_stack(Tstring_header* header, const char* value,
 }
 
 // duplicate Tstring
-Tstring_header* duplicate_Tstring(Tstring_header* handle) {
+struct TString* duplicate_Tstring(struct TString* handle) {
   if (!handle) {
     return NULL;
   } else if ((handle->flags & TSTRING_SHARED) == 0) {
-    tref_inc(&(((shared_Tstring_header*)handle)->count));
+    tref_inc(&(((struct TStringHeap*)handle)->count));
     return handle;
   } else {
     return create_Tstring_on_heap(handle->ptr, handle->length);
   }
 }
 
+typedef struct {
+  struct TString* handle;
+} Tstring;
+
 // Tstring functions
 // Init
 void Tstring_init(Tstring* str) { str->handle = NULL; }
 
 void Tstring_init_from_handle(Tstring* str, void* ptr) {
-  str->handle = (Tstring_header*)ptr;
+  str->handle = (struct TString*)ptr;
 }
 
 void Tstring_init_from_char(Tstring* str, const char* value, uint32_t size) {
@@ -111,13 +114,13 @@ void Tstring_move(Tstring* dest, Tstring* src) {
   src->handle = NULL;
 }
 
+void Tstring_assign_from_char(Tstring* str, const char* value) {
+  Tstring_init_from_char(str, value, (uint32_t)strlen(value));
+}
+
 void Tstring_assign_from_string_view(Tstring* str, const char* value,
                                      size_t size) {
   Tstring_assign_from_char(str, value);
-}
-
-void Tstring_assign_from_char(Tstring* str, const char* value) {
-  Tstring_init_from_char(str, value, (uint32_t)strlen(value));
 }
 
 void Tstring_assign_from_initializer(Tstring* str, const char* value,
@@ -148,12 +151,12 @@ void* Tstring_get_abi(const Tstring* str) { return (void*)(str->handle); }
 
 void Tstring_put_abi(Tstring* str, void* value) {
   Tstring_clear(str);
-  str->handle = (Tstring_header*)value;
+  str->handle = (struct TString*)value;
 }
 
 void Tstring_attach_abi(Tstring* str, void* value) {
   Tstring_clear(str);
-  str->handle = (Tstring_header*)value;
+  str->handle = (struct TString*)value;
 }
 
 void* Tstring_detach_abi(Tstring* str) {
@@ -162,7 +165,7 @@ void* Tstring_detach_abi(Tstring* str) {
 }
 
 void Tstring_copy_from_abi(Tstring* str, void* value) {
-  Tstring_attach_abi(str, duplicate_Tstring((Tstring_header*)value));
+  Tstring_attach_abi(str, duplicate_Tstring((struct TString*)value));
 }
 
 void Tstring_copy_to_abi(const Tstring* str, void** value) {
