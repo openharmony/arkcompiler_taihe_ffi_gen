@@ -26,7 +26,6 @@ struct TStringHeap {
 };
 
 void release_Tstring(struct TString* handle);
-struct TStringHeap* precreate_Tstring_on_heap(uint32_t length);
 struct TString* create_Tstring_on_heap(const char* value, uint32_t length);
 void create_Tstring_on_stack(struct TString* header, const char* value,
                              uint32_t length);

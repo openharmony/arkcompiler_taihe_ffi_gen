@@ -16,22 +16,18 @@ void release_Tstring(struct TString* s) {
   if (sh && tref_dec(&sh->count)) free(sh);
 }
 
-// allocation function
-struct TStringHeap* precreate_Tstring_on_heap(uint32_t length) {
+static struct TStringHeap* allocate_header(uint32_t length) {
+  // The last member of `TStringHeap` already accounts for the '\0' terminator.
   size_t bytes_required = sizeof(struct TStringHeap) + sizeof(char) * length;
+  struct TStringHeap* sh = malloc(bytes_required);
+  if (!sh) return NULL;
 
-  struct TStringHeap* header = (struct TStringHeap*)malloc(bytes_required);
-  if (!header) {
-    // Memory allocation failure
-    return NULL;
-  }
-
-  header->header.flags = 0;
-  header->header.length = length;
-  header->header.ptr = header->buffer;
-  tref_inc(&(header->count));
-  header->buffer[length] = '\0';
-  return header;
+  sh->header.flags = 0;
+  sh->header.length = length;
+  sh->header.ptr = sh->buffer;
+  tref_inc(&sh->count);
+  sh->buffer[length] = '\0';
+  return sh;
 }
 
 // create struct TString on heap
@@ -40,7 +36,7 @@ struct TString* create_Tstring_on_heap(const char* value, uint32_t length) {
     return NULL;
   }
 
-  struct TStringHeap* header = precreate_Tstring_on_heap(length);
+  struct TStringHeap* header = allocate_header(length);
   if (header) {
     memcpy(header->buffer, value, sizeof(char) * length);
   }
