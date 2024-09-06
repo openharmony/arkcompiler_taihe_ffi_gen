@@ -4,12 +4,12 @@
 #include <taihe/common.h>
 #include <taihe/string.abi.h>
 
-inline struct TStringHeap* to_heap(struct TString* s) {
+static inline struct TStringHeap* to_heap(struct TString* s) {
   if (s->flags & TSTRING_SHARED) return NULL;
   return (struct TStringHeap*)s;
 }
 
-void tstr_free(struct TString* s) {
+void tstr_drop(struct TString* s) {
   struct TStringHeap* sh = to_heap(s);
   if (sh && tref_dec(&sh->count)) free(sh);
 }

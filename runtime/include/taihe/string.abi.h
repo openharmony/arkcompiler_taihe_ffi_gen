@@ -49,7 +49,7 @@ inline size_t tstr_len(const struct TString* s) { return s->length; }
 // - `NULL`, if the string is not null-terminated, or the length is too large.
 //    In this case, the original `tstr` is still uninitialized and should not be
 //    used.
-inline struct TString* tstr_new_ref(const char* buf TH_NONNULL, size_t len,
+static inline struct TString* tstr_new_ref(const char* buf TH_NONNULL, size_t len,
                                     struct TString* tstr) {
   if (len > UINT32_MAX) return NULL;
   if (buf[len] != '\0') return NULL;
@@ -74,10 +74,10 @@ inline struct TString* tstr_new_ref(const char* buf TH_NONNULL, size_t len,
 //
 // # Notes
 // Free the TString with `tstr_drop` after use.
-const struct TString* tstr_new(const char* buf TH_NONNULL, size_t len);
+TH_EXPORT const struct TString* tstr_new(const char* buf TH_NONNULL, size_t len);
 
 // Frees the string. The string should not be accessed thereafter.
-void tstr_drop(struct TString* s);
+TH_EXPORT void tstr_drop(struct TString* s);
 
 // Copies a TString.
 //
@@ -91,4 +91,4 @@ void tstr_drop(struct TString* s);
 // - If string was created by `tstr_new_ref`, the source string is copied
 //   to a new heap-allocated buffer and is managed by reference counting.
 // - Similar to `tstr_new`, remeber to call `tstr_drop` after use.
-const struct TString* tstr_dup(struct TString* s);
+TH_EXPORT const struct TString* tstr_dup(struct TString* s);
