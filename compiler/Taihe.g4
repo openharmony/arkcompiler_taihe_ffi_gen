@@ -5,7 +5,7 @@ specification
     ;
 
 use
-    : KW_USE (Bool_glob = AT)? (Str_ns += ID DOT)* (LEFT_BRACE (Str_names += ID (COMMA Str_names += ID)*)? RIGHT_BRACE | Str_names += ID | Bool_all = STAR) SEMICOLON
+    : KW_USE (token_glob = AT)? (token_ns += ID DOT)* (LEFT_BRACE (token_names += ID (COMMA token_names += ID)*)? RIGHT_BRACE | token_names += ID | token_all = STAR) SEMICOLON
     ;
 
 specificationFieldOpt
@@ -18,7 +18,7 @@ specificationFieldOpt
     ;
 
 struct
-    : KW_STRUCT Str_name = ID LEFT_BRACE (StructFieldOpt_fields += structFieldOpt)* RIGHT_BRACE
+    : KW_STRUCT token_name = ID LEFT_BRACE (StructFieldOpt_fields += structFieldOpt)* RIGHT_BRACE
     ;
 
 structFieldOpt
@@ -26,11 +26,11 @@ structFieldOpt
 	;
 
 structProperty
-    : Str_name = ID COLON typeOpt SEMICOLON
+    : token_name = ID COLON typeOpt SEMICOLON
     ;
 
 enumClass
-    : KW_ENUM Str_name = ID LEFT_BRACE (EnumFieldOpt_fields += enumFieldOpt)+ RIGHT_BRACE
+    : KW_ENUM token_name = ID LEFT_BRACE (EnumFieldOpt_fields += enumFieldOpt)+ RIGHT_BRACE
     ;
 
 enumFieldOpt
@@ -38,11 +38,11 @@ enumFieldOpt
     ;
 
 enumProperty
-    : Str_name = ID (COLON TypeOpt_type = typeOpt)? SEMICOLON
+    : token_name = ID (COLON TypeOpt_type = typeOpt)? SEMICOLON
     ;
 
 interface
-    : KW_INTERFACE Str_name = ID (KW_EXTENDS Str_extends += ID (COMMA Str_extends += ID)*)? LEFT_BRACE (InterfaceFieldOpt_fields += interfaceFieldOpt)* RIGHT_BRACE
+    : KW_INTERFACE token_name = ID (KW_EXTENDS token_extends += ID (COMMA token_extends += ID)*)? LEFT_BRACE (InterfaceFieldOpt_fields += interfaceFieldOpt)* RIGHT_BRACE
     ;
 
 interfaceFieldOpt
@@ -51,7 +51,7 @@ interfaceFieldOpt
 	;
 
 class
-    : KW_CLASS Str_name = ID (KW_INHERITS Str_inherits += ID)? (KW_IMPLEMENTS Str_implements += ID (COMMA Str_implements += ID)*)? LEFT_BRACE (ClassFieldOpt_fields += classFieldOpt)* RIGHT_BRACE
+    : KW_CLASS token_name = ID (KW_INHERITS token_inherits += ID)? (KW_IMPLEMENTS token_implements += ID (COMMA token_implements += ID)*)? LEFT_BRACE (ClassFieldOpt_fields += classFieldOpt)* RIGHT_BRACE
     ;
 
 classFieldOpt
@@ -65,25 +65,25 @@ constructor
     ;
 
 memberFunction
-    : (Bool_static = KW_STATIC)? KW_FUNCTION Str_name = ID LEFT_BRACKET (Parameter_parameters += parameter (COMMA Parameter_parameters += parameter)*)? RIGHT_BRACKET COLON
+    : (token_static = KW_STATIC)? KW_FUNCTION token_name = ID LEFT_BRACKET (Parameter_parameters += parameter (COMMA Parameter_parameters += parameter)*)? RIGHT_BRACKET COLON
         (LEFT_BRACKET (TypeOpt_returnValueTypes += typeOpt (COMMA TypeOpt_returnValueTypes += typeOpt)*)? RIGHT_BRACKET | TypeOpt_returnValueTypes += typeOpt) SEMICOLON
     ;
 
 memberConst
-    : (Bool_static = KW_STATIC)? KW_CONST Str_name = ID COLON TypeOpt_type = typeOpt SEMICOLON
+    : (token_static = KW_STATIC)? KW_CONST token_name = ID COLON TypeOpt_type = typeOpt SEMICOLON
     ;
 
 function
-    : KW_FUNCTION Str_name = ID LEFT_BRACKET (Parameter_parameters += parameter (COMMA Parameter_parameters += parameter)*)? RIGHT_BRACKET COLON
+    : KW_FUNCTION token_name = ID LEFT_BRACKET (Parameter_parameters += parameter (COMMA Parameter_parameters += parameter)*)? RIGHT_BRACKET COLON
         (LEFT_BRACKET (TypeOpt_returnValueTypes += typeOpt (COMMA TypeOpt_returnValueTypes += typeOpt)*)? RIGHT_BRACKET | TypeOpt_returnValueTypes += typeOpt) SEMICOLON
     ;
 
 const
-    : KW_CONST Str_name = ID COLON TypeOpt_type = typeOpt SEMICOLON
+    : KW_CONST token_name = ID COLON TypeOpt_type = typeOpt SEMICOLON
     ;
 
 parameter
-    : Str_name = ID COLON ParameterType_parameterType = parameterType
+    : token_name = ID COLON ParameterType_parameterType = parameterType
     ;
 
 typeOpt
@@ -94,15 +94,15 @@ typeOpt
 	;
 
 parameterType
-	: ((Bool_const = KW_CONST)? Bool_ref = KW_REF)? TypeOpt_type = typeOpt
+	: ((token_const = KW_CONST)? token_ref = KW_REF)? TypeOpt_type = typeOpt
 	;
 
 basicType
-    : Str_name = (KW_I8 | KW_I16 | KW_I32 | KW_I64 | KW_U8 | KW_U16 | KW_U32 | KW_U64 | KW_F32 | KW_F64 | KW_BOOL)
+    : token_name = (KW_I8 | KW_I16 | KW_I32 | KW_I64 | KW_U8 | KW_U16 | KW_U32 | KW_U64 | KW_F32 | KW_F64 | KW_BOOL)
     ;
 
 userType
-    : (Bool_glob = AT)? (Str_ns += ID DOT)* Str_name += ID
+    : (token_glob = AT)? (token_ns += ID DOT)* token_name += ID
     ;
 
 functionType
@@ -111,7 +111,7 @@ functionType
     ;
 
 parameterizedType
-    : Str_name = ID LEFT_ANG_BRACKET (TypeOpt_parameters += typeOpt (COMMA TypeOpt_parameters += typeOpt)*)? RIGHT_ANG_BRACKET
+    : token_name = ID LEFT_ANG_BRACKET (TypeOpt_parameters += typeOpt (COMMA TypeOpt_parameters += typeOpt)*)? RIGHT_ANG_BRACKET
     ;
 
 SEMICOLON

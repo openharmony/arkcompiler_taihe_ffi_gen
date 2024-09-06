@@ -1,7 +1,17 @@
 # Binaries
 *.exe
 
-.antlr/
+# compiler
+compiler/.antlr/
+compiler/__pycache__/
+compiler/Taihe.interp
+compiler/Taihe.tokens
+compiler/TaiheLexer.interp
+compiler/TaiheLexer.py
+compiler/TaiheLexer.tokens
+compiler/TaiheParser.py
+compiler/TaiheAST.py
+compiler/examples/
 
 # files
 *.log
@@ -13,5 +23,5 @@
 *.vcxproj.filters
 *.sln
 
-#Visual Studio Code files and folder
+# Visual Studio Code files and folder
 .vscode/
