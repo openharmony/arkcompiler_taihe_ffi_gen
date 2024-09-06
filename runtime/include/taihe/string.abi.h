@@ -1,5 +1,4 @@
 #pragma once
-#include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -16,7 +15,7 @@ enum TStringFlags {
 struct TString {
   uint32_t flags;
   uint32_t length;
-  char const* ptr; // Always valid and non-null.
+  char const* ptr;  // Always valid and non-null.
 };
 
 struct TStringHeap {
