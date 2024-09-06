@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.9) # For GTest
+cmake_minimum_required(VERSION 3.9)
 
 project(TaiheRuntime C CXX)
 
@@ -7,10 +7,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-# Handy for development.
+set(CMAKE_C_VISIBILITY_PRESET "hidden")
+set(CMAKE_CXX_VISIBILITY_PRESET "hidden")
+
+# Handy for development use.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_library(taihe-rt
+add_library(taihe-rt SHARED
   src/string.c
 )
 
