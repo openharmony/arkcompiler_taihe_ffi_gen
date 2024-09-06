@@ -1,10 +1,8 @@
-#include "c_Tstring.h"
-
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "common.h"
+#include <taihe/common.h>
+#include <taihe/string.abi.h>
 
 inline struct TStringHeap* to_heap(struct TString* s) {
   if (s->flags & TSTRING_SHARED) return NULL;
