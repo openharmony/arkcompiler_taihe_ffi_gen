@@ -1,100 +1,113 @@
 grammar Taihe;
 
 specification
-    : (Use_uses += use)* (SpecificationFieldOpt_fields += specificationFieldOpt)* EOF
+    : (UseUniLst_uses += useUni)* (SpecificationFieldUniLst_fields += specificationFieldUni)* EOF
     ;
 
-use
-    : KW_USE (token_glob = AT)? (token_ns += ID DOT)* (LEFT_BRACE (token_names += ID (COMMA token_names += ID)*)? RIGHT_BRACE | token_names += ID | token_all = STAR) SEMICOLON
+useUni
+    : UseAs_ = useAs
+    | UseFrom_ = useFrom
     ;
 
-specificationFieldOpt
-	: Struct = struct
-    | EnumClass = enumClass
-    | Interface = interface
-    | Class = class
-    | Const = const
-    | Function = function
+useAs
+    : KW_USE tokenLst_package_name += ID (DOT tokenLst_package_name += ID)* KW_AS token_new_name = ID SEMICOLON
+    ;
+
+useFrom
+    : KW_FROM tokenLst_package_name += ID (DOT tokenLst_package_name += ID)* KW_USE ((AliasLst_alias += alias COMMA)* AliasLst_alias += alias | tokenOpt_all = STAR) SEMICOLON
+    ;
+
+alias
+    : token_old_name = ID (KW_AS tokenOpt_new_name = ID)?
+    ;
+
+specificationFieldUni
+	: Struct_ = struct
+    | EnumClass_ = enumClass
+    | Interface_ = interface
+    | Class_ = class
+    | Const_ = const
+    | Function_ = function
     ;
 
 struct
-    : KW_STRUCT token_name = ID LEFT_BRACE (StructFieldOpt_fields += structFieldOpt)* RIGHT_BRACE
+    : KW_STRUCT token_name = ID LEFT_BRACE (StructFieldUniLst_fields += structFieldUni)* RIGHT_BRACE
     ;
 
-structFieldOpt
-	: StructProperty = structProperty
+structFieldUni
+	: StructProperty_ = structProperty
 	;
 
 structProperty
-    : token_name = ID COLON typeOpt SEMICOLON
+    : token_name = ID COLON typeUni SEMICOLON
     ;
 
 enumClass
-    : KW_ENUM token_name = ID LEFT_BRACE (EnumFieldOpt_fields += enumFieldOpt)+ RIGHT_BRACE
+    : KW_ENUM token_name = ID LEFT_BRACE (EnumFieldUniLst_fields += enumFieldUni)+ RIGHT_BRACE
     ;
 
-enumFieldOpt
-	: EnumProperty = enumProperty
+enumFieldUni
+	: EnumProperty_ = enumProperty
     ;
 
 enumProperty
-    : token_name = ID (COLON TypeOpt_type = typeOpt)? SEMICOLON
+    : token_name = ID (COLON TypeUniOpt_type = typeUni)? SEMICOLON
     ;
 
 interface
-    : KW_INTERFACE token_name = ID (KW_EXTENDS token_extends += ID (COMMA token_extends += ID)*)? LEFT_BRACE (InterfaceFieldOpt_fields += interfaceFieldOpt)* RIGHT_BRACE
+    : KW_INTERFACE token_name = ID (KW_EXTENDS tokenLst_extends += ID (COMMA tokenLst_extends += ID)*)? LEFT_BRACE (InterfaceFieldUniLst_fields += interfaceFieldUni)* RIGHT_BRACE
     ;
 
-interfaceFieldOpt
-	: MemberFunction = memberFunction
-	| MemberConst = memberConst
+interfaceFieldUni
+	: MemberFunction_ = memberFunction
+	| MemberConst_ = memberConst
 	;
 
 class
-    : KW_CLASS token_name = ID (KW_INHERITS token_inherits += ID)? (KW_IMPLEMENTS token_implements += ID (COMMA token_implements += ID)*)? LEFT_BRACE (ClassFieldOpt_fields += classFieldOpt)* RIGHT_BRACE
+    : KW_CLASS token_name = ID (KW_INHERITS tokenLst_inherits += ID)? (KW_IMPLEMENTS tokenLst_implements += ID (COMMA tokenLst_implements += ID)*)? LEFT_BRACE (ClassFieldUniLst_fields += classFieldUni)* RIGHT_BRACE
     ;
 
-classFieldOpt
-	: Constructor = constructor
-	| MemberFunction = memberFunction
-	| MemberConst = memberConst
+classFieldUni
+	: Constructor_ = constructor
+	| MemberFunction_ = memberFunction
+	| MemberConst_ = memberConst
 	;
 
 constructor
-    : KW_CONSTRUCTOR LEFT_BRACKET (Parameter_parameters += parameter (COMMA Parameter_parameters += parameter)*)? RIGHT_BRACKET SEMICOLON
+    : KW_CONSTRUCTOR LEFT_BRACKET (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_BRACKET SEMICOLON
     ;
 
 memberFunction
-    : (token_static = KW_STATIC)? KW_FUNCTION token_name = ID LEFT_BRACKET (Parameter_parameters += parameter (COMMA Parameter_parameters += parameter)*)? RIGHT_BRACKET COLON
-        (LEFT_BRACKET (TypeOpt_returnValueTypes += typeOpt (COMMA TypeOpt_returnValueTypes += typeOpt)*)? RIGHT_BRACKET | TypeOpt_returnValueTypes += typeOpt) SEMICOLON
+    : (tokenOpt_static = KW_STATIC)? KW_FUNCTION token_name = ID LEFT_BRACKET (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_BRACKET COLON
+        (LEFT_BRACKET (TypeUniLst_return_value_types += typeUni (COMMA TypeUniLst_return_value_types += typeUni)*)? RIGHT_BRACKET | TypeUniLst_return_value_types += typeUni) SEMICOLON
     ;
 
 memberConst
-    : (token_static = KW_STATIC)? KW_CONST token_name = ID COLON TypeOpt_type = typeOpt SEMICOLON
+    : (tokenOpt_static = KW_STATIC)? KW_CONST token_name = ID COLON TypeUni_type = typeUni SEMICOLON
     ;
 
 function
-    : KW_FUNCTION token_name = ID LEFT_BRACKET (Parameter_parameters += parameter (COMMA Parameter_parameters += parameter)*)? RIGHT_BRACKET COLON
-        (LEFT_BRACKET (TypeOpt_returnValueTypes += typeOpt (COMMA TypeOpt_returnValueTypes += typeOpt)*)? RIGHT_BRACKET | TypeOpt_returnValueTypes += typeOpt) SEMICOLON
+    : KW_FUNCTION token_name = ID LEFT_BRACKET (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_BRACKET COLON
+        (LEFT_BRACKET (TypeUniLst_return_value_types += typeUni (COMMA TypeUniLst_return_value_types += typeUni)*)? RIGHT_BRACKET | TypeUniLst_return_value_types += typeUni) SEMICOLON
     ;
 
 const
-    : KW_CONST token_name = ID COLON TypeOpt_type = typeOpt SEMICOLON
+    : KW_CONST token_name = ID COLON TypeUni_type = typeUni SEMICOLON
     ;
 
 parameter
-    : token_name = ID COLON ParameterType_parameterType = parameterType
+    : token_name = ID COLON ParameterType_parameter_type = parameterType
     ;
 
-typeOpt
-	: BasicType = basicType
-	| UserType = userType
-	| ParameterizedType = parameterizedType
-	| FunctionType = functionType
+typeUni
+	: BasicType_ = basicType
+	| UserType_ = userType
+	| ParameterizedType_ = parameterizedType
+	| FunctionType_ = functionType
 	;
 
 parameterType
-	: ((token_const = KW_CONST)? token_ref = KW_REF)? TypeOpt_type = typeOpt
+	: ((tokenOpt_const = KW_CONST)? tokenOpt_ref = KW_REF)? TypeUni_type = typeUni
 	;
 
 basicType
@@ -102,16 +115,16 @@ basicType
     ;
 
 userType
-    : (token_glob = AT)? (token_ns += ID DOT)* token_name += ID
+    : (tokenLst_package_name += ID)* token_name = ID
     ;
 
 functionType
-    : <assoc = right> LEFT_BRACKET ((ParameterType_parameterTypes += parameterType) (COMMA ParameterType_parameterTypes += parameterType)*)? RIGHT_BRACKET ARROW
-        (LEFT_BRACKET (TypeOpt_returnValueTypes += typeOpt (COMMA TypeOpt_returnValueTypes += typeOpt)*)? RIGHT_BRACKET | TypeOpt_returnValueTypes += typeOpt) SEMICOLON
+    : <assoc = right> LEFT_BRACKET ((ParameterTypeLst_parameter_types += parameterType) (COMMA ParameterTypeLst_parameter_types += parameterType)*)? RIGHT_BRACKET ARROW
+        (LEFT_BRACKET (TypeUniLst_return_value_types += typeUni (COMMA TypeUniLst_return_value_types += typeUni)*)? RIGHT_BRACKET | TypeUniLst_return_value_types += typeUni) SEMICOLON
     ;
 
 parameterizedType
-    : token_name = ID LEFT_ANG_BRACKET (TypeOpt_parameters += typeOpt (COMMA TypeOpt_parameters += typeOpt)*)? RIGHT_ANG_BRACKET
+    : token_name = ID LEFT_ANG_BRACKET (TypeUniLst_parameters += typeUni (COMMA TypeUniLst_parameters += typeUni)*)? RIGHT_ANG_BRACKET
     ;
 
 SEMICOLON
@@ -214,6 +227,14 @@ KW_USE
     : 'use'
     ;
 
+KW_AS
+    : 'as'
+    ;
+
+KW_FROM
+    : 'from'
+    ;
+
 KW_IMPLEMENTS
     : 'implements'
     ;
@@ -244,10 +265,6 @@ KW_ENUM
 
 KW_STRUCT
     : 'struct'
-    ;
-
-KW_NAMESPACE
-    : 'namespace'
     ;
 
 KW_CLASS
