@@ -8,9 +8,10 @@ compiler/__pycache__/
 compiler/Taihe.interp
 compiler/Taihe.tokens
 compiler/TaiheLexer.interp
-compiler/TaiheLexer.py
 compiler/TaiheLexer.tokens
+compiler/TaiheLexer.py
 compiler/TaiheParser.py
+compiler/TaiheVisitor.py
 compiler/TaiheAST.py
 compiler/examples/
 

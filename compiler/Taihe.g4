@@ -14,7 +14,7 @@ useAs
     ;
 
 useFrom
-    : KW_FROM tokenLst_package_name += ID (DOT tokenLst_package_name += ID)* KW_USE ((AliasLst_alias += alias COMMA)* AliasLst_alias += alias | tokenOpt_all = STAR) SEMICOLON
+    : KW_FROM tokenLst_package_name += ID (DOT tokenLst_package_name += ID)* KW_USE (AliasLst_alias += alias COMMA)* AliasLst_alias += alias SEMICOLON
     ;
 
 alias
@@ -79,7 +79,7 @@ constructor
 
 memberFunction
     : (tokenOpt_static = KW_STATIC)? KW_FUNCTION token_name = ID LEFT_BRACKET (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_BRACKET COLON
-        (LEFT_BRACKET (TypeUniLst_return_value_types += typeUni (COMMA TypeUniLst_return_value_types += typeUni)*)? RIGHT_BRACKET | TypeUniLst_return_value_types += typeUni) SEMICOLON
+        (LEFT_BRACKET (TypeUniLst_return_types += typeUni (COMMA TypeUniLst_return_types += typeUni)*)? RIGHT_BRACKET | TypeUniLst_return_types += typeUni) SEMICOLON
     ;
 
 memberConst
@@ -88,7 +88,7 @@ memberConst
 
 function
     : KW_FUNCTION token_name = ID LEFT_BRACKET (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_BRACKET COLON
-        (LEFT_BRACKET (TypeUniLst_return_value_types += typeUni (COMMA TypeUniLst_return_value_types += typeUni)*)? RIGHT_BRACKET | TypeUniLst_return_value_types += typeUni) SEMICOLON
+        (LEFT_BRACKET (TypeUniLst_return_types += typeUni (COMMA TypeUniLst_return_types += typeUni)*)? RIGHT_BRACKET | TypeUniLst_return_types += typeUni) SEMICOLON
     ;
 
 const
@@ -96,7 +96,7 @@ const
     ;
 
 parameter
-    : token_name = ID COLON ParameterType_parameter_type = parameterType
+    : token_name = ID COLON TypeWithSpecifier_type_with_specifier = typeWithSpecifier
     ;
 
 typeUni
@@ -106,7 +106,7 @@ typeUni
 	| FunctionType_ = functionType
 	;
 
-parameterType
+typeWithSpecifier
 	: ((tokenOpt_const = KW_CONST)? tokenOpt_ref = KW_REF)? TypeUni_type = typeUni
 	;
 
@@ -119,8 +119,8 @@ userType
     ;
 
 functionType
-    : <assoc = right> LEFT_BRACKET ((ParameterTypeLst_parameter_types += parameterType) (COMMA ParameterTypeLst_parameter_types += parameterType)*)? RIGHT_BRACKET ARROW
-        (LEFT_BRACKET (TypeUniLst_return_value_types += typeUni (COMMA TypeUniLst_return_value_types += typeUni)*)? RIGHT_BRACKET | TypeUniLst_return_value_types += typeUni) SEMICOLON
+    : <assoc = right> LEFT_BRACKET ((TypeWithSpecifierLst_parameter_types += typeWithSpecifier) (COMMA TypeWithSpecifierLst_parameter_types += typeWithSpecifier)*)? RIGHT_BRACKET ARROW
+        (LEFT_BRACKET (TypeUniLst_return_types += typeUni (COMMA TypeUniLst_return_types += typeUni)*)? RIGHT_BRACKET | TypeUniLst_return_types += typeUni) SEMICOLON
     ;
 
 parameterizedType
