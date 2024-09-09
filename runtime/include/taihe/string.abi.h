@@ -74,7 +74,7 @@ static inline struct TString* tstr_new_ref(const char* buf TH_NONNULL, size_t le
 //
 // # Notes
 // Free the TString with `tstr_drop` after use.
-TH_EXPORT const struct TString* tstr_new(const char* buf TH_NONNULL, size_t len);
+TH_EXPORT struct TString* tstr_new(const char* buf TH_NONNULL, size_t len);
 
 // Frees the string. The string should not be accessed thereafter.
 TH_EXPORT void tstr_drop(struct TString* s);
@@ -91,4 +91,4 @@ TH_EXPORT void tstr_drop(struct TString* s);
 // - If string was created by `tstr_new_ref`, the source string is copied
 //   to a new heap-allocated buffer and is managed by reference counting.
 // - Similar to `tstr_new`, remeber to call `tstr_drop` after use.
-TH_EXPORT const struct TString* tstr_dup(struct TString* s);
+TH_EXPORT struct TString* tstr_dup(struct TString* s);

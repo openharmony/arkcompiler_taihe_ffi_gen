@@ -28,7 +28,7 @@ static struct TStringHeap* allocate_header(uint32_t length) {
   return sh;
 }
 
-const struct TString* tstr_new(const char* buf TH_NONNULL, size_t len) {
+struct TString* tstr_new(const char* buf TH_NONNULL, size_t len) {
   if (len > UINT32_MAX) return NULL;
   if (buf[len] != '\0') return NULL;
 
@@ -37,7 +37,7 @@ const struct TString* tstr_new(const char* buf TH_NONNULL, size_t len) {
   return (struct TString*)sh;
 }
 
-const struct TString* tstr_dup(struct TString* s) {
+struct TString* tstr_dup(struct TString* s) {
   if (!s) return NULL;
 
   struct TStringHeap* sh = to_heap(s);
