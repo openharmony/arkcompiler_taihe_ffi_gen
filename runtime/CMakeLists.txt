@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.9)
+cmake_minimum_required(VERSION 3.14)
 
 project(TaiheRuntime C CXX)
 
@@ -18,3 +18,7 @@ add_library(taihe-rt SHARED
 )
 
 target_include_directories(taihe-rt PUBLIC include)
+
+# Add test directory
+enable_testing()
+add_subdirectory(test)
