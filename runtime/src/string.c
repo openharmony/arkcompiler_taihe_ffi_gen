@@ -23,7 +23,7 @@ static struct TStringHeap* allocate_header(uint32_t length) {
   sh->header.flags = 0;
   sh->header.length = length;
   sh->header.ptr = sh->buffer;
-  tref_inc(&sh->count);
+  tref_init(&sh->count, 1);
   sh->buffer[length] = '\0';
   return sh;
 }

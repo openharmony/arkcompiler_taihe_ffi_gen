@@ -10,6 +10,11 @@
 
 typedef uint32_t TRefCount;
 
+// Sets the refcount to a new value and returns the previous value.
+static inline void tref_init(TRefCount *c, int i) {
+  __atomic_store_n(c, i, __ATOMIC_SEQ_CST);
+}
+
 // Increments the refcount and returns the *original* value before add.
 static inline TRefCount tref_inc(TRefCount *c) {
   return __atomic_fetch_add(c, 1, __ATOMIC_SEQ_CST);
