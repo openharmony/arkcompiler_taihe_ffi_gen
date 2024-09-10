@@ -59,7 +59,7 @@ class CodeGenerator(TaiheVisitor):
 
         h_code = ""
         h_code += f"#pragma once\n"
-        h_code += f'#include "runtime/common.h"\n'
+        h_code += f'#include "taihe/common.h"\n'
         h_code += f'#define TH_EXTERN_C extern "C" TH_EXPORT\n'
         for h_first, h_second, cpp_field, impl_h_field, impl_cpp_field in fields:
             h_code += h_first

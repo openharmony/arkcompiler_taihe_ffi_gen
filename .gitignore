@@ -13,7 +13,9 @@ compiler/TaiheLexer.py
 compiler/TaiheParser.py
 compiler/TaiheVisitor.py
 compiler/TaiheAST.py
-compiler/examples/
+
+# temporary directories
+temp
 
 # files
 *.log
