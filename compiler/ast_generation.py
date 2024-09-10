@@ -23,7 +23,7 @@ def visit(ctx):
     return getattr(TaiheAST, ast_class_name)(**kwargs)
 
 
-def ast_generation(input_stream) -> TaiheAST.Specification:
+def generate_ast(input_stream) -> TaiheAST.Specification:
     lexer = TaiheLexer(input_stream)
     token_stream = CommonTokenStream(lexer)
     parser = TaiheParser(token_stream)
@@ -32,4 +32,4 @@ def ast_generation(input_stream) -> TaiheAST.Specification:
 
 
 if __name__ == "__main__":
-    print(ast_generation(StdinStream()))
+    print(generate_ast(StdinStream()))

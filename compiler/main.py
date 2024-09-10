@@ -3,8 +3,8 @@ import os
 
 from antlr4 import FileStream
 
-from ast_generation import ast_generation
-from code_generation import CodeGenerator
+from compiler.ast_generation import generate_ast
+from compiler.code_generation import CodeGenerator
 from semantic_analysis import PackageInput, PackageOutput, semantic_analysis
 
 
@@ -23,14 +23,17 @@ def main():
             if os.path.splitext(src_path)[1].lower() == ".taihe":
                 src_path = os.path.abspath(os.path.join(src_dir, src_path))
                 src_paths.append(src_path)
+    # Parse into ASTs
     package_inputs = []
     for src_path in src_paths:
         package_name = tuple(os.path.splitext(os.path.basename(src_path))[0].split("."))
-        spec = ast_generation(FileStream(src_path))
+        spec = generate_ast(FileStream(src_path))
         package_inputs.append(PackageInput(src_path, package_name, spec))
+    # Semantic analysis
     package_outputs = semantic_analysis(package_inputs)
+    # Code generation
     if not os.path.exists(dst_dir):
-        os.mkdir(dst_dir)
+        os.makedirs(dst_dir, exist_ok=True)
     for package_output in package_outputs:
         code_generator = CodeGenerator(package_output.name, dll_name)
         for name, code in code_generator.visit(package_output.spec):

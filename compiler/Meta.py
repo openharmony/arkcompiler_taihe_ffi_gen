@@ -17,7 +17,7 @@ def get_attr_pairs(ctx):
             yield attr_type, attr_name
 
 
-def gen_ast_code():
+def generate_TaiheAST():
     ast = []
     ast.append(f"from dataclasses import dataclass\n")
     ast.append(f"from typing import List, Optional, Type, Union\n\n")
@@ -47,7 +47,7 @@ def gen_ast_code():
         file.writelines(ast)
 
 
-def gen_visitor_code():
+def generate_TaiheVisitor():
     visitor = []
     visitor.append(f"from TaiheAST import TaiheAST\n")
     visitor.append(f"\n")
@@ -56,7 +56,7 @@ def gen_visitor_code():
     visitor.append(f"    def visit(self, node):\n")
     visitor.append(f"        return getattr(self, 'visit_' + node.__class__.__name__)(node)\n")
     visitor.append(f"\n")
-    visitor.append(f"    def visit_token(self, node):\n")
+    visitor.append(f"    def visit_token(self, node: TaiheAST.token):\n")
     visitor.append(f"        raise NotImplementedError\n")
     visitor.append(f"\n")
     for rule_name in TaiheParser.ruleNames:
@@ -72,5 +72,5 @@ def gen_visitor_code():
 
 
 if __name__ == "__main__":
-    gen_ast_code()
-    gen_visitor_code()
+    generate_TaiheAST()
+    generate_TaiheVisitor()
