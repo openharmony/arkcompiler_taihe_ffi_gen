@@ -10,12 +10,10 @@ from semantic_analysis import Package, semantic_analysis
 
 def main():
     parser = argparse.ArgumentParser()
-    # use -D{DLL_NAME}_DLLEXPORT / -D{DLL_NAME}_DLLIMPORT to export/import .dll when compiling
-    parser.add_argument("dll_name", required=True, help="use -D{DLL_NAME}_DLLEXPORT / -D{DLL_NAME}_DLLIMPORT to export/import .dll when compiling")
     parser.add_argument("-I", dest="src_dirs", nargs="*", required=True, help="directories of .taihe source files")
     parser.add_argument("-O", dest="dst_dir", required=True, help="directory for generated .h and .cpp files")
     args = parser.parse_args()
-    src_dirs, dst_dir, dll_name = args.src_dirs, args.dst_dir, args.dll_name
+    src_dirs, dst_dir = args.src_dirs, args.dst_dir
     # Find all .taihe files in the containing directories
     src_paths = []
     for src_dir in src_dirs:
@@ -35,7 +33,7 @@ def main():
     if not os.path.exists(dst_dir):
         os.makedirs(dst_dir, exist_ok=True)
     for package in packages:
-        code_generator = CodeGenerator(package.name, dll_name)
+        code_generator = CodeGenerator(package.name)
         for name, code in code_generator.visit(package.spec):
             with open(os.path.join(dst_dir, name), "w") as file:
                 file.write(code)
