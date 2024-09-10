@@ -3,17 +3,12 @@ import os
 
 from antlr4 import FileStream
 
-from ast_generation import generate_ast
-from code_generation import CodeGenerator
+from compiler.ast_generation import generate_ast
+from compiler.code_generation import CodeGenerator
 from semantic_analysis import Package, semantic_analysis
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-I", dest="src_dirs", nargs="*", required=True, help="directories of .taihe source files")
-    parser.add_argument("-O", dest="dst_dir", required=True, help="directory for generated .h and .cpp files")
-    args = parser.parse_args()
-    src_dirs, dst_dir = args.src_dirs, args.dst_dir
+def compile(src_dirs, dst_dir, producer_call):
     # Find all .taihe files in the containing directories
     src_paths = []
     for src_dir in src_dirs:
@@ -34,9 +29,19 @@ def main():
         os.makedirs(dst_dir, exist_ok=True)
     for package in packages:
         code_generator = CodeGenerator(package.name)
-        for name, code in code_generator.visit(package.spec):
+        for producer_only, name, code in code_generator.visit(package.spec):
+            if not producer_call and producer_only:
+                continue
             with open(os.path.join(dst_dir, name), "w") as file:
                 file.write(code)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-I", dest="src_dirs", nargs="*", required=True, help="directories of .taihe source files")
+    parser.add_argument("-O", dest="dst_dir", required=True, help="directory for generated .h and .cpp files")
+    args = parser.parse_args()
+    compile(args.src_dirs, args.dst_dir)
 
 
 if __name__ == "__main__":

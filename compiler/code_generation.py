@@ -48,12 +48,12 @@ class CodeGenerator(TaiheVisitor):
         for field in node.fields:
             fields.append(self.visit(field))
 
-        base_name = ".".join(self.package_name)
-        impl_base_name = base_name + "_impl"
-        h_name = base_name + ".h"
-        cpp_name = base_name + ".cpp"
-        impl_h_name = impl_base_name + ".h"
-        impl_cpp_name = impl_base_name + ".cpp"
+        basename = ".".join(self.package_name)
+        impl_basename = basename + "_impl"
+        h_name = basename + ".h"
+        cpp_name = basename + ".cpp"
+        impl_h_name = impl_basename + ".h"
+        impl_cpp_name = impl_basename + ".cpp"
         namespace = "::".join(self.package_name)
         impl_namespace = "_impl::" + namespace
 
@@ -91,10 +91,10 @@ class CodeGenerator(TaiheVisitor):
         impl_cpp_code += f"}}\n"
 
         return [
-            (h_name, h_code),
-            (cpp_name, cpp_code),
-            (impl_h_name, impl_h_code),
-            (impl_cpp_name, impl_cpp_code),
+            (True, h_name, h_code),
+            (False, cpp_name, cpp_code),
+            (False, impl_h_name, impl_h_code),
+            (False, impl_cpp_name, impl_cpp_code),
         ]
 
     def visit_Function(self, node: TaiheAST.Function):
