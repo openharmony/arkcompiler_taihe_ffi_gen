@@ -10,8 +10,8 @@
 
 typedef uint32_t TRefCount;
 
-// Sets the refcount to a new value and returns the previous value.
-static inline void tref_init(TRefCount *c, int i) {
+// Sets the counter to a fixed value.
+static inline void tref_set(TRefCount *c, TRefCount i) {
   __atomic_store_n(c, i, __ATOMIC_SEQ_CST);
 }
 
