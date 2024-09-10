@@ -1,0 +1,28 @@
+#+TITLE: 搭建开发环境
+
+- 操作系统：推荐 Linux (或 WSL)，Windows 不保证完整支持
+- 软件最低版本
+  - 运行时
+    - Clang 15, GCC 不保证完整支持
+    - CMake 3.14
+  - 编译器
+    - Python 3.10
+    - ANTLR 4
+    - antlr4-python3-runtime
+    - antlr4-tools
+
+* 编译器
+执行下列命令，生成项目代码：
+
+#+BEGIN_SRC bash
+  cd compiler/
+  # 生成 Lexer 和 Parser
+  antlr4 -Dlanguage=Python3 -no-listener Taihe.g4
+  # 生成 Visitor 和 AST
+  python3 meta.py
+#+END_SRC
+
+运行编译器主程序：
+#+BEGIN_SRC bash
+python main.py --help
+#+END_SRC

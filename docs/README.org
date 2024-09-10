@@ -4,7 +4,7 @@
 TODO
 
 * 开发指南
-- TODO: 搭建开发环境
+- [[./DevSetup.org]]：搭建开发环境
 - [[./Architecture.org]]：整体设计
 - [[./Milestones.org]]：阶段性目标
 * 内部实现
