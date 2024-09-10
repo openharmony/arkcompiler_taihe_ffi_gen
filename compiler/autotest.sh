@@ -1,6 +1,7 @@
 #!/usr/bin/sh
 BASEDIR=$(dirname $0) &&
     python3 "$BASEDIR"/compilation.py -I "$1"/idl -O "$1"/output &&
+    mkdir -p "$1"/temp &&
     cp -rf "$1"/output/* "$1"/temp &&
     cp -rf "$1"/impl/* "$1"/temp &&
     mkdir -p "$1"/build &&
