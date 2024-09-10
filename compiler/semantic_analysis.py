@@ -6,25 +6,19 @@ from TaiheVisitor import TaiheVisitor
 
 
 @dataclass
-class PackageInput:
+class Package:
     path: str
     name: tuple[str]
     spec: TaiheAST.Specification
 
 
-@dataclass
-class PackageOutput:
-    name: tuple[str]
-    spec: TaiheAST.Specification
-
-
-def semantic_analysis(packages: list[PackageInput]) -> list[PackageOutput]:
+def semantic_analysis(packages: list[Package]):
     # Generate packages dict, Check for package name conflicts
     packages_dict = {}
     for package in packages:
-        other_path, other_spec = packages_dict.setdefault(package.name, (package.path, package.spec))
-        if other_path != package.path:
-            raise PackageNameConflictError(package.path, other_path)
+        other = packages_dict.setdefault(package.name, package)
+        if other.path != package.path:
+            raise PackageNameConflictError(package.path, other.path)
     # Generate namespace tree
     namespaces = {}
     namespace_tree = {}
@@ -46,4 +40,3 @@ def semantic_analysis(packages: list[PackageInput]) -> list[PackageOutput]:
                 raise SymbolCollisionError(package.path, field, first)
     # Check for package alias and using symbols
     # ...
-    return packages

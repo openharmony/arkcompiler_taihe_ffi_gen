@@ -5,7 +5,7 @@ from antlr4 import FileStream
 
 from compiler.ast_generation import generate_ast
 from compiler.code_generation import CodeGenerator
-from semantic_analysis import PackageInput, PackageOutput, semantic_analysis
+from semantic_analysis import Package, semantic_analysis
 
 
 def main():
@@ -24,19 +24,19 @@ def main():
                 src_path = os.path.abspath(os.path.join(src_dir, src_path))
                 src_paths.append(src_path)
     # Parse into ASTs
-    package_inputs = []
+    packages = []
     for src_path in src_paths:
         package_name = tuple(os.path.splitext(os.path.basename(src_path))[0].split("."))
         spec = generate_ast(FileStream(src_path))
-        package_inputs.append(PackageInput(src_path, package_name, spec))
+        packages.append(Package(src_path, package_name, spec))
     # Semantic analysis
-    package_outputs = semantic_analysis(package_inputs)
+    semantic_analysis(packages)
     # Code generation
     if not os.path.exists(dst_dir):
         os.makedirs(dst_dir, exist_ok=True)
-    for package_output in package_outputs:
-        code_generator = CodeGenerator(package_output.name, dll_name)
-        for name, code in code_generator.visit(package_output.spec):
+    for package in packages:
+        code_generator = CodeGenerator(package.name, dll_name)
+        for name, code in code_generator.visit(package.spec):
             with open(os.path.join(dst_dir, name), "w") as file:
                 file.write(code)
 
