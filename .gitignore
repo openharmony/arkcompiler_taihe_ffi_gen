@@ -15,7 +15,8 @@ compiler/TaiheVisitor.py
 compiler/TaiheAST.py
 
 # temporary directories
-temp
+test/*/temp
+test/*/output
 
 # files
 *.log

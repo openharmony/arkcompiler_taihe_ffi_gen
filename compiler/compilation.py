@@ -3,12 +3,12 @@ import os
 
 from antlr4 import FileStream
 
-from compiler.ast_generation import generate_ast
-from compiler.code_generation import CodeGenerator
+from ast_generation import generate_ast
+from code_generation import CodeGenerator
 from semantic_analysis import Package, semantic_analysis
 
 
-def compile(src_dirs, dst_dir, producer_call):
+def compile(src_dirs, dst_dir, producer_call=True):
     # Find all .taihe files in the containing directories
     src_paths = []
     for src_dir in src_dirs:
