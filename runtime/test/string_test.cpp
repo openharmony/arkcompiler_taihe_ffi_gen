@@ -52,7 +52,7 @@ TEST(TStringTest, DropString) {
 // Test case for reference counting (tref_inc and tref_dec)
 TEST(TRefCountTest, ReferenceCounting) {
     TRefCount ref_count;
-    tref_init(&ref_count, 1);  // Set initial count to 1
+    tref_set(&ref_count, 1);  // Set initial count to 1
 
     EXPECT_EQ(tref_inc(&ref_count), 1);  // Increment and check previous value (should be 1)
     EXPECT_EQ(tref_dec(&ref_count), 0);  // Decrement and check if it should be freed (should return 0 for no free)
