@@ -1,19 +1,21 @@
+import argparse
+import os
+
 from antlr4 import FileStream
 
 from ast_generation import ast_generation
-from semantic_analysis import semantic_analysis, PackageInput, PackageOutput
 from code_generation import CodeGenerator
-
-import argparse
-import os
+from semantic_analysis import PackageInput, PackageOutput, semantic_analysis
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-I", dest="src_dirs", nargs="*")
-    parser.add_argument("-O", dest="dst_dir")
+    # use -D{DLL_NAME}_DLLEXPORT / -D{DLL_NAME}_DLLIMPORT to export/import .dll when compiling
+    parser.add_argument("dll_name", required=True, help="use -D{DLL_NAME}_DLLEXPORT / -D{DLL_NAME}_DLLIMPORT to export/import .dll when compiling")
+    parser.add_argument("-I", dest="src_dirs", nargs="*", required=True, help="directories of .taihe source files")
+    parser.add_argument("-O", dest="dst_dir", required=True, help="directory for generated .h and .cpp files")
     args = parser.parse_args()
-    src_dirs, dst_dir = args.src_dirs, args.dst_dir
+    src_dirs, dst_dir, dll_name = args.src_dirs, args.dst_dir, args.dll_name
     # Find all .taihe files in the containing directories
     src_paths = []
     for src_dir in src_dirs:
@@ -25,12 +27,12 @@ def main():
     for src_path in src_paths:
         package_name = tuple(os.path.splitext(os.path.basename(src_path))[0].split("."))
         spec = ast_generation(FileStream(src_path))
-        package_inputs.append(PackageInput(path=src_path, name=package_name, spec=spec))
+        package_inputs.append(PackageInput(src_path, package_name, spec))
     package_outputs = semantic_analysis(package_inputs)
     if not os.path.exists(dst_dir):
         os.mkdir(dst_dir)
     for package_output in package_outputs:
-        code_generator = CodeGenerator(package_output.name)
+        code_generator = CodeGenerator(package_output.name, dll_name)
         for name, code in code_generator.visit(package_output.spec):
             with open(os.path.join(dst_dir, name), "w") as file:
                 file.write(code)

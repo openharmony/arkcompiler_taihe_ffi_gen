@@ -3,9 +3,9 @@ from TaiheVisitor import TaiheVisitor
 
 
 class CodeGenerator(TaiheVisitor):
-
-    def __init__(self, package_name: tuple[str]):
+    def __init__(self, package_name: tuple[str], dll_name: str):
         self.package_name = package_name
+        self.dll_name = dll_name
 
     def visit_BasicType(self, node: TaiheAST.BasicType):
         if node.name.text == "i8":
@@ -49,7 +49,7 @@ class CodeGenerator(TaiheVisitor):
         for field in node.fields:
             fields.append(self.visit(field))
 
-        filename_upper = "_".join(part.upper() for part in self.package_name)
+        dll_name = self.dll_name.upper()
         base_name = ".".join(self.package_name)
         impl_base_name = base_name + "_impl"
         h_name = base_name + ".h"
@@ -62,12 +62,12 @@ class CodeGenerator(TaiheVisitor):
         h_code = ""
         h_code += f"#pragma once\n"
         h_code += f"#include <cstdint>\n"
-        h_code += f"#if defined(DLLEXPORT_{filename_upper})\n"
-        h_code += f'#define EXTERN_ABI extern "C" __declspec(dllexport)\n'
-        h_code += f"#elif defined(DLLIMPORT_{filename_upper})\n"
-        h_code += f'#define EXTERN_ABI extern "C" __declspec(dllimport)\n'
+        h_code += f"#if defined({dll_name}_DLLEXPORT)\n"
+        h_code += f'#define TAIHE_EXTERN_ABI extern "C" __declspec(dllexport)\n'
+        h_code += f"#elif defined({dll_name}_DLLIMPORT)\n"
+        h_code += f'#define TAIHE_EXTERN_ABI extern "C" __declspec(dllimport)\n'
         h_code += f"#else\n"
-        h_code += f'#define EXTERN_ABI extern "C"\n'
+        h_code += f'#define TAIHE_EXTERN_ABI extern "C"\n'
         h_code += f"#endif\n"
         for h_first, h_second, cpp_field, impl_h_field, impl_cpp_field in fields:
             h_code += h_first
@@ -75,7 +75,7 @@ class CodeGenerator(TaiheVisitor):
         for h_first, h_second, cpp_field, impl_h_field, impl_cpp_field in fields:
             h_code += h_second
         h_code += f"}}\n"
-        h_code += f"#undef EXTERN_ABI\n"
+        h_code += f"#undef TAIHE_EXTERN_ABI\n"
 
         cpp_code = ""
         cpp_code += f'#include "{h_name}"\n'
@@ -117,7 +117,7 @@ class CodeGenerator(TaiheVisitor):
             raise NotImplementedError
         return_type = self.visit(node.return_types[0]) if node.return_types else "void"
 
-        h_first = f"EXTERN_ABI {return_type} {abi_name}({parameters});\n"
+        h_first = f"TAIHE_EXTERN_ABI {return_type} {abi_name}({parameters});\n"
         h_second = ""
         h_second += f"inline {return_type} {func_name}({parameters}) {{\n"
         h_second += f"    return {abi_name}({arguments});\n"

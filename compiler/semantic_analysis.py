@@ -1,6 +1,7 @@
-from TaiheAST import TaiheAST
-from exceptions import *
 from dataclasses import dataclass
+
+from exceptions import *
+from TaiheAST import TaiheAST
 
 
 @dataclass
@@ -20,13 +21,10 @@ def semantic_analysis(packages: list[PackageInput]) -> list[PackageOutput]:
     # Generate packages dict, Check for package name conflicts
     packages_dict = {}
     for package in packages:
-        other_path, other_spec = packages_dict.setdefault(
-            package.name, (package.path, package.spec)
-        )
+        other_path, other_spec = packages_dict.setdefault(package.name, (package.path, package.spec))
         if other_path != package.path:
             raise PackageNameConflictError(package.path, other_path)
     # Generate namespace tree
-    namespaces = {}
     namespace_tree = {}
     for package in packages:
         namespace = namespace_tree
@@ -39,9 +37,7 @@ def semantic_analysis(packages: list[PackageInput]) -> list[PackageOutput]:
         for field in package.spec.fields:
             symbol = field.name.text
             if symbol in namespace:
-                raise SymbolCollisionWithNamespaceError(
-                    package.path, package.name, field
-                )
+                raise SymbolCollisionWithNamespaceError(package.path, package.name, field)
             first = local_symbol_table.setdefault(symbol, field)
             if first is not field:
                 raise SymbolCollisionError(package.path, field, first)

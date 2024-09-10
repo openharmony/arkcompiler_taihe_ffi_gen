@@ -20,10 +20,14 @@ def get_attr_pairs(ctx):
 def gen_ast_code():
     ast = []
     ast.append(f"from dataclasses import dataclass\n")
-    ast.append(f"from typing import Type, List, Optional, Union\n")
+    ast.append(f"from typing import List, Optional, Type, Union\n\n")
+    ast.append(f"\n")
     ast.append(f"from antlr4 import Token\n")
+    ast.append(f"\n")
+    ast.append(f"\n")
     ast.append(f"class TaiheAST:\n")
     ast.append(f"    token = Token\n")
+    ast.append(f"\n")
     for rule_name in TaiheParser.ruleNames:
         ast_class_name = rule_name[0].upper() + rule_name[1:]
         ctx = getattr(TaiheParser, ast_class_name + "Context")(None)
@@ -37,6 +41,8 @@ def gen_ast_code():
             ast.append(f"    class {ast_class_name}:\n")
             for attr_type, attr_name in get_attr_pairs(ctx):
                 ast.append(f"        {attr_name}: {attr_type}\n")
+        ast.append(f"\n")
+    ast.pop()
     with open(f"TaiheAST.py", "w") as file:
         file.writelines(ast)
 
@@ -44,21 +50,23 @@ def gen_ast_code():
 def gen_visitor_code():
     visitor = []
     visitor.append(f"from TaiheAST import TaiheAST\n")
+    visitor.append(f"\n")
+    visitor.append(f"\n")
     visitor.append(f"class TaiheVisitor:\n")
     visitor.append(f"    def visit(self, node):\n")
-    visitor.append(
-        f"        return getattr(self, 'visit_' + node.__class__.__name__)(node)\n"
-    )
+    visitor.append(f"        return getattr(self, 'visit_' + node.__class__.__name__)(node)\n")
+    visitor.append(f"\n")
     visitor.append(f"    def visit_token(self, node):\n")
     visitor.append(f"        raise NotImplementedError\n")
+    visitor.append(f"\n")
     for rule_name in TaiheParser.ruleNames:
         ast_class_name = rule_name[0].upper() + rule_name[1:]
         if rule_name.endswith("Uni"):
             continue
-        visitor.append(
-            f"    def visit_{ast_class_name}(self, node: TaiheAST.{ast_class_name}):\n"
-        )
+        visitor.append(f"    def visit_{ast_class_name}(self, node: TaiheAST.{ast_class_name}):\n")
         visitor.append(f"        raise NotImplementedError\n")
+        visitor.append(f"\n")
+    visitor.pop()
     with open(f"TaiheVisitor.py", "w") as file:
         file.writelines(visitor)
 
