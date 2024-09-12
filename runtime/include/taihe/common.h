@@ -2,7 +2,12 @@
 #include <stdint.h>
 
 #define TH_NONNULL __attribute__((nonnull))
+
+#ifdef __cplusplus
+#define TH_EXPORT extern "C" __attribute__((visibility("default")))
+#else
 #define TH_EXPORT __attribute__((visibility("default")))
+#endif
 
 ////////////////////////
 // REFERENCE COUNTING //

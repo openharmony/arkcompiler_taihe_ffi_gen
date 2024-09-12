@@ -74,11 +74,6 @@ class CodeGenerator(Visitor):
         h_code = ""
         h_code += f"#pragma once\n"
         h_code += f'#include "taihe/common.h"\n'
-        h_code += f'#ifdef __cplusplus\n'
-        h_code += f'#define TH_EXTERN_C extern "C" TH_EXPORT\n'
-        h_code += f'#else\n'
-        h_code += f'#define TH_EXTERN_C TH_EXPORT\n'
-        h_code += f'#endif\n'
         for h_field, hpp_field, cpp_field, impl_hpp_field, impl_cpp_field in fields:
             h_code += h_field
 
@@ -116,7 +111,7 @@ class CodeGenerator(Visitor):
             raise NotImplementedError
         return_type = self.visit(node.return_types[0]) if node.return_types else "void"
 
-        h_field = f"TH_EXTERN_C {return_type} {abi_name}({parameters});\n"
+        h_field = f"TH_EXPORT {return_type} {abi_name}({parameters});\n"
 
         hpp_field = ""
         hpp_field += f"inline {return_type} {func_name}({parameters}) {{\n"
