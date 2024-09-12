@@ -6,14 +6,7 @@ build
 __pycache__
 
 compiler/.antlr/
-compiler/taihe/Taihe.interp
-compiler/taihe/Taihe.tokens
-compiler/taihe/TaiheLexer.interp
-compiler/taihe/TaiheLexer.tokens
-compiler/taihe/TaiheLexer.py
-compiler/taihe/TaiheParser.py
-compiler/taihe/TaiheVisitor.py
-compiler/taihe/TaiheAST.py
+compiler/taihe/parse/antlr
 
 # Temporary directories
 test/*/temp

@@ -1,12 +1,11 @@
-from taihe.TaiheAST import TaiheAST
-from taihe.TaiheVisitor import TaiheVisitor
+from taihe.parse import ast, Visitor
 
 
-class CodeGenerator(TaiheVisitor):
+class CodeGenerator(Visitor):
     def __init__(self, package_name: tuple[str]):
         self.package_name = package_name
 
-    def visit_BasicType(self, node: TaiheAST.BasicType):
+    def visit_BasicType(self, node: ast.BasicType):
         if node.name.text == "i8":
             return "int8_t"
         if node.name.text == "i16":
@@ -31,7 +30,7 @@ class CodeGenerator(TaiheVisitor):
             return "bool"
         raise NotImplementedError
 
-    def visit_TypeWithSpecifier(self, node: TaiheAST.TypeWithSpecifier):
+    def visit_TypeWithSpecifier(self, node: ast.TypeWithSpecifier):
         text = self.visit(node.type)
         if node.const:
             text += " const"
@@ -40,10 +39,10 @@ class CodeGenerator(TaiheVisitor):
             text += "&"
         return text
 
-    def visit_Parameter(self, node: TaiheAST.Parameter):
+    def visit_Parameter(self, node: ast.Parameter):
         return self.visit(node.type_with_specifier) + node.name.text
 
-    def visit_Specification(self, node: TaiheAST.Specification):
+    def visit_Specification(self, node: ast.Specification):
         fields = []
         for field in node.fields:
             fields.append(self.visit(field))
@@ -97,7 +96,7 @@ class CodeGenerator(TaiheVisitor):
             (False, impl_cpp_name, impl_cpp_code),
         ]
 
-    def visit_Function(self, node: TaiheAST.Function):
+    def visit_Function(self, node: ast.Function):
         namespace = "::".join(self.package_name)
         impl_namespace = "_impl::" + namespace
         func_name = node.name.text

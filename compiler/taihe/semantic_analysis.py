@@ -1,15 +1,14 @@
 from dataclasses import dataclass
 
 from taihe.exceptions import *
-from taihe.TaiheAST import TaiheAST
-from taihe.TaiheVisitor import TaiheVisitor
+from taihe.parse import ast
 
 
 @dataclass
 class Package:
     path: str
     name: tuple[str]
-    spec: TaiheAST.Specification
+    spec: ast.Specification
 
 
 def semantic_analysis(packages: list[Package]):

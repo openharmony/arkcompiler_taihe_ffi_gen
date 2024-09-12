@@ -1,8 +1,8 @@
-from antlr4 import *
+from antlr4 import CommonTokenStream, StdinStream, Token
 
-from taihe.TaiheAST import TaiheAST
-from taihe.TaiheLexer import TaiheLexer
-from taihe.TaiheParser import TaiheParser
+from .antlr.TaiheAST import TaiheAST
+from .antlr.TaiheLexer import TaiheLexer
+from .antlr.TaiheParser import TaiheParser
 
 
 def visit(ctx):

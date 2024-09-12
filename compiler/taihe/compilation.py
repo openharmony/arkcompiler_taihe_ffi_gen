@@ -2,7 +2,7 @@ import os
 
 from antlr4 import FileStream
 
-from taihe.ast_generation import generate_ast
+from taihe.parse.ast_generation import generate_ast
 from taihe.code_generation import CodeGenerator
 from taihe.semantic_analysis import Package, semantic_analysis
 
