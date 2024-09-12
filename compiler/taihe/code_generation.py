@@ -60,14 +60,14 @@ class CodeGenerator(Visitor):
         impl_hpp_code += f"#pragma once\n"
         impl_hpp_code += f"#include <cstdint>\n"
         impl_hpp_code += f"namespace {impl_namespace} {{\n"
-        for h_field, hpp_field, cpp_field, impl_h_field, impl_cpp_field in fields:
-            impl_hpp_code += impl_h_field
+        for h_field, hpp_field, cpp_field, impl_hpp_field, impl_cpp_field in fields:
+            impl_hpp_code += impl_hpp_field
         impl_hpp_code += f"}}\n"
 
         impl_cpp_code = ""
         impl_cpp_code += f'#include "{impl_hpp_name}"\n'
         impl_cpp_code += f"namespace {impl_namespace} {{\n"
-        for h_field, hpp_field, cpp_field, impl_h_field, impl_cpp_field in fields:
+        for h_field, hpp_field, cpp_field, impl_hpp_field, impl_cpp_field in fields:
             impl_cpp_code += impl_cpp_field
         impl_cpp_code += f"}}\n"
 
@@ -79,21 +79,21 @@ class CodeGenerator(Visitor):
         h_code += f'#else\n'
         h_code += f'#define TH_EXTERN_C TH_EXPORT\n'
         h_code += f'#endif\n'
-        for h_field, hpp_field, cpp_field, impl_h_field, impl_cpp_field in fields:
+        for h_field, hpp_field, cpp_field, impl_hpp_field, impl_cpp_field in fields:
             h_code += h_field
 
         hpp_code = ""
         hpp_code += f"#pragma once\n"
         hpp_code += f'#include "{h_name}"\n'
         hpp_code += f"namespace {namespace} {{\n"
-        for h_field, hpp_field, cpp_field, impl_h_field, impl_cpp_field in fields:
+        for h_field, hpp_field, cpp_field, impl_hpp_field, impl_cpp_field in fields:
             hpp_code += hpp_field
         hpp_code += f"}}\n"
 
         cpp_code = ""
         cpp_code += f'#include "{h_name}"\n'
         cpp_code += f'#include "{impl_hpp_name}"\n'
-        for h_field, hpp_field, cpp_field, impl_h_field, impl_cpp_field in fields:
+        for h_field, hpp_field, cpp_field, impl_hpp_field, impl_cpp_field in fields:
             cpp_code += cpp_field
 
         return [
@@ -128,11 +128,11 @@ class CodeGenerator(Visitor):
         cpp_field += f"    return {impl_name}({arguments});\n"
         cpp_field += f"}}\n"
 
-        impl_h_field = f"{return_type} {func_name}({parameters});\n"
+        impl_hpp_field = f"{return_type} {func_name}({parameters});\n"
 
         impl_cpp_field = ""
         impl_cpp_field += f"{return_type} {func_name}({parameters}) {{\n"
         impl_cpp_field += f"    // todo\n"
         impl_cpp_field += f"}}\n"
 
-        return h_field, hpp_field, cpp_field, impl_h_field, impl_cpp_field
+        return h_field, hpp_field, cpp_field, impl_hpp_field, impl_cpp_field
