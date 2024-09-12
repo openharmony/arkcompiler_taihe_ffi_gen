@@ -48,51 +48,59 @@ class CodeGenerator(Visitor):
             fields.append(self.visit(field))
 
         basename = ".".join(self.package_name)
-        impl_basename = basename + "_impl"
+        impl_hpp_name = basename + "_impl.hpp"
+        impl_cpp_name = basename + "_impl.cpp"
         h_name = basename + ".h"
+        hpp_name = basename + ".hpp"
         cpp_name = basename + ".cpp"
-        impl_h_name = impl_basename + ".h"
-        impl_cpp_name = impl_basename + ".cpp"
         namespace = "::".join(self.package_name)
         impl_namespace = "_impl::" + namespace
+
+        impl_hpp_code = ""
+        impl_hpp_code += f"#pragma once\n"
+        impl_hpp_code += f"#include <cstdint>\n"
+        impl_hpp_code += f"namespace {impl_namespace} {{\n"
+        for h_field, hpp_field, cpp_field, impl_h_field, impl_cpp_field in fields:
+            impl_hpp_code += impl_h_field
+        impl_hpp_code += f"}}\n"
+
+        impl_cpp_code = ""
+        impl_cpp_code += f'#include "{impl_hpp_name}"\n'
+        impl_cpp_code += f"namespace {impl_namespace} {{\n"
+        for h_field, hpp_field, cpp_field, impl_h_field, impl_cpp_field in fields:
+            impl_cpp_code += impl_cpp_field
+        impl_cpp_code += f"}}\n"
 
         h_code = ""
         h_code += f"#pragma once\n"
         h_code += f'#include "taihe/common.h"\n'
+        h_code += f'#ifdef __cplusplus\n'
         h_code += f'#define TH_EXTERN_C extern "C" TH_EXPORT\n'
-        for h_first, h_second, cpp_field, impl_h_field, impl_cpp_field in fields:
-            h_code += h_first
-        h_code += f"namespace {namespace} {{\n"
-        for h_first, h_second, cpp_field, impl_h_field, impl_cpp_field in fields:
-            h_code += h_second
-        h_code += f"}}\n"
-        h_code += f"#undef TH_EXTERN_C\n"
+        h_code += f'#else\n'
+        h_code += f'#define TH_EXTERN_C TH_EXPORT\n'
+        h_code += f'#endif\n'
+        for h_field, hpp_field, cpp_field, impl_h_field, impl_cpp_field in fields:
+            h_code += h_field
+
+        hpp_code = ""
+        hpp_code += f"#pragma once\n"
+        hpp_code += f'#include "{h_name}"\n'
+        hpp_code += f"namespace {namespace} {{\n"
+        for h_field, hpp_field, cpp_field, impl_h_field, impl_cpp_field in fields:
+            hpp_code += hpp_field
+        hpp_code += f"}}\n"
 
         cpp_code = ""
         cpp_code += f'#include "{h_name}"\n'
-        cpp_code += f'#include "{impl_h_name}"\n'
-        for h_first, h_second, cpp_field, impl_h_field, impl_cpp_field in fields:
+        cpp_code += f'#include "{impl_hpp_name}"\n'
+        for h_field, hpp_field, cpp_field, impl_h_field, impl_cpp_field in fields:
             cpp_code += cpp_field
-
-        impl_h_code = ""
-        impl_h_code += f"#pragma once\n"
-        impl_h_code += f"#include <cstdint>\n"
-        impl_h_code += f"namespace {impl_namespace} {{\n"
-        for h_first, h_second, cpp_field, impl_h_field, impl_cpp_field in fields:
-            impl_h_code += impl_h_field
-        impl_h_code += f"}}\n"
-
-        impl_cpp_code = ""
-        impl_cpp_code += f'#include "{impl_h_name}"\n'
-        impl_cpp_code += f"namespace {impl_namespace} {{\n"
-        for h_first, h_second, cpp_field, impl_h_field, impl_cpp_field in fields:
-            impl_cpp_code += impl_cpp_field
-        impl_cpp_code += f"}}\n"
 
         return [
             (True, h_name, h_code),
+            (True, hpp_name, hpp_code),
             (False, cpp_name, cpp_code),
-            (False, impl_h_name, impl_h_code),
+            (False, impl_hpp_name, impl_hpp_code),
             (False, impl_cpp_name, impl_cpp_code),
         ]
 
@@ -108,11 +116,12 @@ class CodeGenerator(Visitor):
             raise NotImplementedError
         return_type = self.visit(node.return_types[0]) if node.return_types else "void"
 
-        h_first = f"TH_EXTERN_C {return_type} {abi_name}({parameters});\n"
-        h_second = ""
-        h_second += f"inline {return_type} {func_name}({parameters}) {{\n"
-        h_second += f"    return {abi_name}({arguments});\n"
-        h_second += f"}}\n"
+        h_field = f"TH_EXTERN_C {return_type} {abi_name}({parameters});\n"
+
+        hpp_field = ""
+        hpp_field += f"inline {return_type} {func_name}({parameters}) {{\n"
+        hpp_field += f"    return {abi_name}({arguments});\n"
+        hpp_field += f"}}\n"
 
         cpp_field = ""
         cpp_field += f"{return_type} {abi_name}({parameters}) {{\n"
@@ -126,4 +135,4 @@ class CodeGenerator(Visitor):
         impl_cpp_field += f"    // todo\n"
         impl_cpp_field += f"}}\n"
 
-        return h_first, h_second, cpp_field, impl_h_field, impl_cpp_field
+        return h_field, hpp_field, cpp_field, impl_h_field, impl_cpp_field

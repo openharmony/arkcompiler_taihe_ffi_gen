@@ -18,7 +18,7 @@ cp -rf "$1"/impl/* "$1"/temp
 mkdir -p "$1"/build
 "$CXX" "$1"/temp/*.cpp -I "$BASEDIR"/../runtime/include -shared -fPIC -o "$1"/build/libtest.so
 echo "Dynamic link library is generated successfully."
-rm "$1"/temp/*.cpp "$1"/temp/*_impl.h
+rm "$1"/temp/*.cpp "$1"/temp/*_impl.hpp
 
 cp -rf "$1"/src/* "$1"/temp
 "$CXX" "$1"/temp/*.cpp "$1"/build/libtest.so -I "$BASEDIR"/../runtime/include -o "$1"/build/test

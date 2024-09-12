@@ -1,7 +1,10 @@
-#include "integer.arithmetic.h"
-#include "integer.io.h"
 #include <iostream>
+
+#include "integer.arithmetic.hpp"
+#include "integer.io.hpp"
+
 using namespace integer;
+
 int main() {
     std::cout << "Please enter two 32-bit signed integers:" << std::endl;
     auto a = io::input_i32();

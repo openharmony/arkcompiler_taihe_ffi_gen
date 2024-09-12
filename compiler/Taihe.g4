@@ -25,7 +25,7 @@ specificationFieldUni
 	: Struct_ = struct
     | EnumClass_ = enumClass
     | Interface_ = interface
-    | Class_ = class
+    | Runtimeclass_ = runtimeclass
     | Const_ = const
     | Function_ = function
     ;
@@ -63,11 +63,11 @@ interfaceFieldUni
 	| MemberConst_ = memberConst
 	;
 
-class
-    : KW_CLASS token_name = ID (KW_INHERITS tokenLst_inherits += ID)? (KW_IMPLEMENTS tokenLst_implements += ID (COMMA tokenLst_implements += ID)*)? LEFT_BRACE (ClassFieldUniLst_fields += classFieldUni)* RIGHT_BRACE
+runtimeclass
+    : KW_RUNTIMECLASS token_name = ID (KW_INHERITS tokenLst_inherits += ID)? (KW_IMPLEMENTS tokenLst_implements += ID (COMMA tokenLst_implements += ID)*)? LEFT_BRACE (RuntimeclassFieldUniLst_fields += runtimeclassFieldUni)* RIGHT_BRACE
     ;
 
-classFieldUni
+runtimeclassFieldUni
 	: Constructor_ = constructor
 	| MemberFunction_ = memberFunction
 	| MemberConst_ = memberConst
@@ -267,8 +267,8 @@ KW_STRUCT
     : 'struct'
     ;
 
-KW_CLASS
-    : 'class'
+KW_RUNTIMECLASS
+    : 'runtimeclass'
     ;
 
 KW_INTERFACE
