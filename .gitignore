@@ -2,19 +2,20 @@
 build
 *.exe
 
-# compiler
-compiler/.antlr/
-compiler/__pycache__/
-compiler/Taihe.interp
-compiler/Taihe.tokens
-compiler/TaiheLexer.interp
-compiler/TaiheLexer.tokens
-compiler/TaiheLexer.py
-compiler/TaiheParser.py
-compiler/TaiheVisitor.py
-compiler/TaiheAST.py
+# Compiler
+__pycache__
 
-# temporary directories
+compiler/.antlr/
+compiler/taihe/Taihe.interp
+compiler/taihe/Taihe.tokens
+compiler/taihe/TaiheLexer.interp
+compiler/taihe/TaiheLexer.tokens
+compiler/taihe/TaiheLexer.py
+compiler/taihe/TaiheParser.py
+compiler/taihe/TaiheVisitor.py
+compiler/taihe/TaiheAST.py
+
+# Temporary directories
 test/*/temp
 test/*/output
 

@@ -1,4 +1,13 @@
-from TaiheParser import TaiheParser
+#!/usr/bin/env python
+from subprocess import check_call
+from functools import cache
+
+
+@cache
+def get_parser():
+    from taihe.TaiheParser import TaiheParser
+
+    return TaiheParser
 
 
 def get_attr_type(attr_type_name):
@@ -28,9 +37,11 @@ def generate_TaiheAST():
     ast.append(f"class TaiheAST:\n")
     ast.append(f"    token = Token\n")
     ast.append(f"\n")
-    for rule_name in TaiheParser.ruleNames:
+
+    parser = get_parser()
+    for rule_name in parser.ruleNames:
         ast_class_name = rule_name[0].upper() + rule_name[1:]
-        ctx = getattr(TaiheParser, ast_class_name + "Context")(None)
+        ctx = getattr(parser, ast_class_name + "Context")(None)
         if rule_name.endswith("Uni"):
             ast.append(f"    {ast_class_name} = Union[\n")
             for attr_type, attr_name in get_attr_pairs(ctx):
@@ -43,13 +54,13 @@ def generate_TaiheAST():
                 ast.append(f"        {attr_name}: {attr_type}\n")
         ast.append(f"\n")
     ast.pop()
-    with open(f"TaiheAST.py", "w") as file:
+    with open(f"taihe/TaiheAST.py", "w") as file:
         file.writelines(ast)
 
 
 def generate_TaiheVisitor():
     visitor = []
-    visitor.append(f"from TaiheAST import TaiheAST\n")
+    visitor.append(f"from taihe.TaiheAST import TaiheAST\n")
     visitor.append(f"\n")
     visitor.append(f"\n")
     visitor.append(f"class TaiheVisitor:\n")
@@ -61,7 +72,7 @@ def generate_TaiheVisitor():
     visitor.append(f"    def visit_token(self, node: TaiheAST.token):\n")
     visitor.append(f"        raise NotImplementedError\n")
     visitor.append(f"\n")
-    for rule_name in TaiheParser.ruleNames:
+    for rule_name in get_parser().ruleNames:
         ast_class_name = rule_name[0].upper() + rule_name[1:]
         if rule_name.endswith("Uni"):
             continue
@@ -71,10 +82,27 @@ def generate_TaiheVisitor():
         visitor.append(f"        raise NotImplementedError\n")
         visitor.append(f"\n")
     visitor.pop()
-    with open(f"TaiheVisitor.py", "w") as file:
+    with open(f"taihe/TaiheVisitor.py", "w") as file:
         file.writelines(visitor)
 
 
-if __name__ == "__main__":
+def run_antlr():
+    args = [
+        "antlr4",
+        "-Dlanguage=Python3",
+        "-no-listener",
+        "Taihe.g4",
+        "-o",
+        "taihe",
+    ]
+    check_call(args)
+
+
+def main():
+    run_antlr()
     generate_TaiheAST()
     generate_TaiheVisitor()
+
+
+if __name__ == "__main__":
+    main()

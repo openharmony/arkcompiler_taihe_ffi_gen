@@ -1,11 +1,10 @@
-import argparse
 import os
 
 from antlr4 import FileStream
 
-from ast_generation import generate_ast
-from code_generation import CodeGenerator
-from semantic_analysis import Package, semantic_analysis
+from taihe.ast_generation import generate_ast
+from taihe.code_generation import CodeGenerator
+from taihe.semantic_analysis import Package, semantic_analysis
 
 
 def compile(src_dirs, dst_dir, producer_call=True):
@@ -34,26 +33,3 @@ def compile(src_dirs, dst_dir, producer_call=True):
                 continue
             with open(os.path.join(dst_dir, name), "w") as file:
                 file.write(code)
-
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-I",
-        dest="src_dirs",
-        nargs="*",
-        required=True,
-        help="directories of .taihe source files",
-    )
-    parser.add_argument(
-        "-O",
-        dest="dst_dir",
-        required=True,
-        help="directory for generated .h and .cpp files",
-    )
-    args = parser.parse_args()
-    compile(args.src_dirs, args.dst_dir)
-
-
-if __name__ == "__main__":
-    main()

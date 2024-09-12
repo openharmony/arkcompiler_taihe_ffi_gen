@@ -1,8 +1,8 @@
 from antlr4 import *
 
-from TaiheAST import TaiheAST
-from TaiheLexer import TaiheLexer
-from TaiheParser import TaiheParser
+from taihe.TaiheAST import TaiheAST
+from taihe.TaiheLexer import TaiheLexer
+from taihe.TaiheParser import TaiheParser
 
 
 def visit(ctx):

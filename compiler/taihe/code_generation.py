@@ -1,5 +1,5 @@
-from TaiheAST import TaiheAST
-from TaiheVisitor import TaiheVisitor
+from taihe.TaiheAST import TaiheAST
+from taihe.TaiheVisitor import TaiheVisitor
 
 
 class CodeGenerator(TaiheVisitor):

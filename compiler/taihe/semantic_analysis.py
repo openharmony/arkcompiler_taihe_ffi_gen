@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
-from exceptions import *
-from TaiheAST import TaiheAST
-from TaiheVisitor import TaiheVisitor
+from taihe.exceptions import *
+from taihe.TaiheAST import TaiheAST
+from taihe.TaiheVisitor import TaiheVisitor
 
 
 @dataclass
