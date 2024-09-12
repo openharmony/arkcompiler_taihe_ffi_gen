@@ -54,7 +54,9 @@ def generate_TaiheVisitor():
     visitor.append(f"\n")
     visitor.append(f"class TaiheVisitor:\n")
     visitor.append(f"    def visit(self, node):\n")
-    visitor.append(f"        return getattr(self, 'visit_' + node.__class__.__name__)(node)\n")
+    visitor.append(
+        f"        return getattr(self, 'visit_' + node.__class__.__name__)(node)\n"
+    )
     visitor.append(f"\n")
     visitor.append(f"    def visit_token(self, node: TaiheAST.token):\n")
     visitor.append(f"        raise NotImplementedError\n")
@@ -63,7 +65,9 @@ def generate_TaiheVisitor():
         ast_class_name = rule_name[0].upper() + rule_name[1:]
         if rule_name.endswith("Uni"):
             continue
-        visitor.append(f"    def visit_{ast_class_name}(self, node: TaiheAST.{ast_class_name}):\n")
+        visitor.append(
+            f"    def visit_{ast_class_name}(self, node: TaiheAST.{ast_class_name}):\n"
+        )
         visitor.append(f"        raise NotImplementedError\n")
         visitor.append(f"\n")
     visitor.pop()

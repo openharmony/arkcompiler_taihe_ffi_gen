@@ -34,7 +34,9 @@ def semantic_analysis(packages: list[Package]):
         for field in package.spec.fields:
             symbol = field.name.text
             if symbol in namespaces[package.name]:
-                raise SymbolCollisionWithNamespaceError(package.path, package.name, field)
+                raise SymbolCollisionWithNamespaceError(
+                    package.path, package.name, field
+                )
             first = local_symbol_table.setdefault(symbol, field)
             if first is not field:
                 raise SymbolCollisionError(package.path, field, first)

@@ -8,7 +8,9 @@ class PackageNameConflictError(SemanticError):
         self.fst_path = fst_path
 
     def __str__(self):
-        return f"file {self.src_path!r} and {self.fst_path!r} have the same package name"
+        return (
+            f"file {self.src_path!r} and {self.fst_path!r} have the same package name"
+        )
 
 
 class SymbolCollisionError(SemanticError):
