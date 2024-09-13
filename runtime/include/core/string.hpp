@@ -35,7 +35,10 @@ namespace core {
         
         string(std::string_view value)
             : string(value.data(), value.size()) {}
-        
+
+        string(std::initializer_list<char> value)
+            : string(value.begin(), static_cast<uint32_t>(value.size())) {}
+                    
         string(string& other)
             : m_handle(tstr_dup(other.m_handle)) {}
 
