@@ -303,5 +303,81 @@ namespace core {
     bool operator>(std::nullptr_t left, string const& right) = delete;
     bool operator<=(std::nullptr_t left, string const& right) = delete;
     bool operator>=(std::nullptr_t left, string const& right) = delete;
+
+    // Convert function
+    template <typename T>
+    inline string string_convert(T value) {
+        static_assert(std::is_arithmetic_v<T>);
+        char buffer[32];
+        std::to_chars_result result;
+        if constexpr (std::is_integral_v<T>) {
+            result = std::to_chars(std::begin(temp), std::end(temp), value);
+        } else {
+            // Floating point
+            result = std::to_chars(std::begin(temp), std::end(temp), value, std::chars_format::general);
+        }
+        if (result.ec != std::errc{}) {
+            throw std::runtime_error("Conversion to char failed");
+        }
+        return tstring{ std::string_view{temp, result.ptr - temp} };
+    }
+
+    inline string to_string(uint8_t value) {
+        return string_convert(value);
+    }
+
+    inline string to_string(int8_t value) {
+        return string_convert(value);
+    }
+
+    inline string to_string(uint16_t value) {
+        return string_convert(value);
+    }
+
+    inline string to_string(int16_t value) {
+        return string_convert(value);
+    }
+
+    inline string to_string(uint32_t value) {
+        return string_convert(value);
+    }
+
+    inline string to_string(int32_t value) {
+        return string_convert(value);
+    }
+
+    inline string to_string(uint64_t value) {
+        return string_convert(value);
+    }
+
+    inline string to_string(int64_t value) {
+        return string_convert(value);
+    }
+
+    inline string to_string(float value) {
+        return string_convert(value);
+    }
+
+    inline string to_string(double value) {
+        return string_convert(value);
+    }
+
+    inline string to_string(char8_t value) {
+        char buffer[2] = { value, '\0' };
+        return string{ std::string_view{ buffer, 1 } };
+    }
+
+    inline string to_string(string const& value) noexcept {
+        return value;
+    }
+
+    template <typename T, std::enable_if_t<std::is_same_v<T, bool>, int> = 0>
+    string to_string(T const value) {
+        if (value) {
+            return string{ "true" };
+        } else {
+            return string{ "false" };
+        }
+    }
 }
 }
