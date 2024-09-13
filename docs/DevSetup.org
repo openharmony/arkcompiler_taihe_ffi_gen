@@ -12,17 +12,14 @@
     - antlr4-tools
 
 * 编译器
-执行下列命令，生成项目代码：
 
+执行下列命令，生成项目代码：
 #+BEGIN_SRC bash
   cd compiler/
-  # 生成 Lexer 和 Parser
-  antlr4 -Dlanguage=Python3 -no-listener Taihe.g4
-  # 生成 Visitor 和 AST
-  python3 meta.py
+  ./generate-grammar
 #+END_SRC
 
 运行编译器主程序：
 #+BEGIN_SRC bash
-python main.py --help
+  python -m taihe --help
 #+END_SRC
