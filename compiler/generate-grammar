@@ -21,24 +21,21 @@ def get_parser():
 
 def get_attr_type(attr_type_name):
     if attr_type_name.endswith("Lst"):
-        return f"List['TaiheAST.{attr_type_name[:-3]}']"
+        return f"list['TaiheAST.{attr_type_name[:-3]}']"
     if attr_type_name.endswith("Opt"):
-        return f"Optional['TaiheAST.{attr_type_name[:-3]}']"
-    return f"Type['TaiheAST.{attr_type_name}']"
+        return f"type['TaiheAST.{attr_type_name[:-3]}'] | None"
+    return f"type['TaiheAST.{attr_type_name}']"
 
 
 def get_attr_pairs(ctx):
     for attr_full_name, attr_ctx in ctx.__dict__.items():
         if attr_full_name[0].isupper() or attr_full_name.startswith("token"):
-            attr_type_name, attr_name = attr_full_name.split("_", 1)
-            attr_type = get_attr_type(attr_type_name)
-            yield attr_type, attr_name
+            yield attr_full_name.split("_", 1)
 
 
 def generate_TaiheAST():
     ast = []
     ast.append(f"from dataclasses import dataclass\n")
-    ast.append(f"from typing import List, Optional, Type, Union\n\n")
     ast.append(f"\n")
     ast.append(f"from antlr4 import Token\n")
     ast.append(f"\n")
@@ -47,19 +44,21 @@ def generate_TaiheAST():
     ast.append(f"    @dataclass\n")
     ast.append(f"    class token:\n")
     ast.append(f"        text: str\n")
-    ast.append(f"        line: Optional[int]\n")
-    ast.append(f"        column: Optional[int]\n")
+    ast.append(f"        line: int | None\n")
+    ast.append(f"        column: int | None\n")
     ast.append(f"\n")
     parser = get_parser()
     for rule_name in parser.ruleNames:
-        ast_class_name = rule_name[0].upper() + rule_name[1:]
-        ctx = getattr(parser, ast_class_name + "Context")(None)
+        ast_type = rule_name[0].upper() + rule_name[1:]
+        ctx = getattr(parser, ast_type + "Context")(None)
         if rule_name.endswith("Uni"):
-            ast.append(f"    {ast_class_name} = {' | '.join(attr_type for attr_type, attr_name in get_attr_pairs(ctx))}\n")
+            union_type = " | ".join(get_attr_type(attr_type_name) for attr_type_name, attr_name in get_attr_pairs(ctx))
+            ast.append(f"    {ast_type} = {union_type}\n")
         else:
             ast.append(f"    @dataclass\n")
-            ast.append(f"    class {ast_class_name}:\n")
-            for attr_type, attr_name in get_attr_pairs(ctx):
+            ast.append(f"    class {ast_type}:\n")
+            for attr_type_name, attr_name in get_attr_pairs(ctx):
+                attr_type = get_attr_type(attr_type_name)
                 ast.append(f"        {attr_name}: {attr_type}\n")
         ast.append(f"\n")
     ast.pop()
@@ -79,11 +78,15 @@ def generate_TaiheVisitor():
     visitor.append(f"    def visit_token(self, node: TaiheAST.token):\n")
     visitor.append(f"        raise NotImplementedError\n")
     visitor.append(f"\n")
-    for rule_name in get_parser().ruleNames:
-        ast_class_name = rule_name[0].upper() + rule_name[1:]
+    parser = get_parser()
+    for rule_name in parser.ruleNames:
+        ast_type = rule_name[0].upper() + rule_name[1:]
+        visitor.append(f"    def visit_{ast_type}(self, node: TaiheAST.{ast_type}):\n")
         if rule_name.endswith("Uni"):
-            continue
-        visitor.append(f"    def visit_{ast_class_name}(self, node: TaiheAST.{ast_class_name}):\n")
+            ctx = getattr(parser, ast_type + "Context")(None)
+            for attr_type, attr_name in get_attr_pairs(ctx):
+                visitor.append(f"        if isinstance(node, TaiheAST.{attr_type}):\n")
+                visitor.append(f"            return self.visit_{attr_type}(node)\n")
         visitor.append(f"        raise NotImplementedError\n")
         visitor.append(f"\n")
     visitor.pop()
