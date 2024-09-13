@@ -7,7 +7,7 @@ from taihe.code_generation import CodeGenerator
 from taihe.semantic_analysis import Package, semantic_analysis
 
 
-def compile(src_dirs, dst_dir, producer_call=True):
+def compile(src_dirs, dst_dir, gen_author=True, gen_user=True):
     # Find all .taihe files in the containing directories
     src_paths = []
     for src_dir in src_dirs:
@@ -28,8 +28,7 @@ def compile(src_dirs, dst_dir, producer_call=True):
         os.makedirs(dst_dir, exist_ok=True)
     for package in packages:
         code_generator = CodeGenerator(package.name)
-        for producer_only, name, code in code_generator.visit(package.spec):
-            if not producer_call and producer_only:
-                continue
-            with open(os.path.join(dst_dir, name), "w") as file:
-                file.write(code)
+        for for_author, for_user, name, code in code_generator.visit(package.spec):
+            if gen_author and for_author or gen_user and for_user:
+                with open(os.path.join(dst_dir, name), "w") as file:
+                    file.write(code)

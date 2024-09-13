@@ -9,19 +9,16 @@ taihec() {
 }
 
 
-taihec -I "$1"/idl -O "$1"/output
-
-mkdir -p "$1"/temp
-cp -rf "$1"/output/* "$1"/temp
-cp -rf "$1"/impl/* "$1"/temp
-
 mkdir -p "$1"/build
-"$CXX" "$1"/temp/*.cpp -I "$BASEDIR"/../runtime/include -shared -fPIC -o "$1"/build/libtest.so
-echo "Dynamic link library is generated successfully."
-rm "$1"/temp/*.cpp "$1"/temp/*_impl.hpp
 
-cp -rf "$1"/src/* "$1"/temp
-"$CXX" "$1"/temp/*.cpp "$1"/build/libtest.so -I "$BASEDIR"/../runtime/include -o "$1"/build/test
+taihec -I "$1"/idl -O "$1"/author --author
+cp -rf "$1"/impl/* "$1"/author
+"$CXX" "$1"/author/*.cpp -I "$BASEDIR"/../runtime/include -shared -fPIC -o "$1"/build/libtest.so
+echo "Dynamic link library is generated successfully."
+
+taihec -I "$1"/idl -O "$1"/user --user
+cp -rf "$1"/src/* "$1"/user
+"$CXX" "$1"/user/*.cpp "$1"/build/libtest.so -I "$BASEDIR"/../runtime/include -o "$1"/build/test
 echo "Excutable file is generated successfully, running..."
 
 "$1"/build/test

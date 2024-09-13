@@ -92,11 +92,11 @@ class CodeGenerator(Visitor):
             cpp_code += cpp_field
 
         return [
-            (True, h_name, h_code),
-            (True, hpp_name, hpp_code),
-            (False, cpp_name, cpp_code),
-            (False, impl_hpp_name, impl_hpp_code),
-            (False, impl_cpp_name, impl_cpp_code),
+            (True, True, h_name, h_code),
+            (False, True, hpp_name, hpp_code),
+            (True, False, cpp_name, cpp_code),
+            (True, False, impl_hpp_name, impl_hpp_code),
+            (True, False, impl_cpp_name, impl_cpp_code),
         ]
 
     def visit_Function(self, node: ast.Function):

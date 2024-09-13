@@ -356,9 +356,12 @@ ID
     ;
 
 fragment LETTER
-    : '_'
-    | 'A' .. 'Z'
+    : 'A' .. 'Z'
     | 'a' .. 'z'
+    ;
+
+fragment UNDERLINE
+    : '_'
     ;
 
 fragment DIGIT

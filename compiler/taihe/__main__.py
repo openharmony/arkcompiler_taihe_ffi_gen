@@ -17,8 +17,20 @@ def main():
         required=True,
         help="directory for generated .h and .cpp files",
     )
+    parser.add_argument(
+        "--author",
+        "-a",
+        action="store_true",
+        help="generate files for interface author",
+    )
+    parser.add_argument(
+        "--user",
+        "-u",
+        action="store_true",
+        help="generate files for interface user",
+    )
     args = parser.parse_args()
-    compile(args.src_dirs, args.dst_dir)
+    compile(args.src_dirs, args.dst_dir, args.author, args.user)
 
 
 if __name__ == "__main__":
