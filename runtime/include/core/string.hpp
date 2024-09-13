@@ -91,7 +91,7 @@ namespace core {
         string& operator=(std::initializer_list<char> value) {
             return *this = string{ value };
         }
-        
+
         operator std::string_view() const noexcept {
             if (m_handle)
             {
@@ -176,8 +176,44 @@ namespace core {
         const_reverse_iterator crend() const noexcept {
             return rend();
         }
+        
+    private:
+        friend class taihe::core::param::string;
+
+        TString* m_handle;
+    };
+
+namespace param {
+    struct string {
+    public:
+        string() noexcept : m_handle(nullptr) {}
+
+        string(string const& values) = delete;
+        string& operator=(string const& values) = delete;
+        string(std::nullptr_t) = delete;
+
+        // Use other type to be taihe::core::param::string
+        string(taihe::core::string const& value) noexcept 
+            : m_handle(value.m_handle) {}
+
+        string(std::string_view const& value) noexcept {
+            tstr_new_ref(value.data(), value.size(), m_handle);
+        }
+
+        string(std::string const& value) noexcept {
+            tstr_new_ref(value.data(), value.size(), m_handle);
+        }
+
+        string(char const* const value) noexcept {
+            tstr_new_ref(value, strlen(value), m_handle);
+        }
+
+        operator taihe::core::string const&() const noexcept {
+            return *reinterpret_cast<taihe::core::string const*>(this);
+        }
     private:
         TString* m_handle;
     };
+}
 }
 }
