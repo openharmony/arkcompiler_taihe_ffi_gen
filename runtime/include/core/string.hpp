@@ -217,3 +217,91 @@ namespace param {
 }
 }
 }
+
+namespace taihe {
+namespace core {
+    // ‌Comparative function
+    inline bool operator==(string const& left, string const& right) noexcept {
+        return std::string_view(left) == std::string_view(right);
+    }
+
+    inline bool operator==(string const& left, std::string const& right) noexcept {
+        return std::string_view(left) == right;
+    }
+
+    inline bool operator==(std::string const& left, string const& right) noexcept {
+        return left == std::string_view(right);
+    }
+
+    inline bool operator==(string const& left, char const* right) noexcept {
+        return std::string_view(left) == right;
+    }
+
+    inline bool operator==(char const* left, string const& right) noexcept {
+        return left == std::string_view(right);
+    }
+
+    bool operator==(string const& left, std::nullptr_t) = delete;
+
+    bool operator==(std::nullptr_t, string const& right) = delete;
+
+    inline bool operator<(string const& left, string const& right) noexcept {
+        return std::string_view(left) < std::string_view(right);
+    }
+
+    inline bool operator<(std::string const& left, string const& right) noexcept {
+        return left < std::string_view(right);
+    }
+
+    inline bool operator<(string const& left, std::string const& right) noexcept {
+        return std::string_view(left) < right;
+    }
+
+    inline bool operator<(string const& left, char const* right) noexcept {
+        return std::string_view(left) < right;
+    }
+
+    inline bool operator<(char const* left, string const& right) noexcept {
+        return left < std::string_view(right);
+    }
+
+    bool operator<(string const& left, nullptr_t) = delete;
+
+    bool operator<(nullptr_t, string const& right) = delete;
+
+    inline bool operator!=(string const& left, string const& right) noexcept { return !(left == right); }
+    inline bool operator>(string const& left, string const& right) noexcept { return right < left; }
+    inline bool operator<=(string const& left, string const& right) noexcept { return !(right < left); }
+    inline bool operator>=(string const& left, string const& right) noexcept { return !(left < right); }
+
+    inline bool operator!=(string const& left, std::string const& right) noexcept { return !(left == right); }
+    inline bool operator>(string const& left, std::string const& right) noexcept { return right < left; }
+    inline bool operator<=(string const& left, std::string const& right) noexcept { return !(right < left); }
+    inline bool operator>=(string const& left, std::string const& right) noexcept { return !(left < right); }
+
+    inline bool operator!=(std::string const& left, string const& right) noexcept { return !(left == right); }
+    inline bool operator>(std::string const& left, string const& right) noexcept { return right < left; }
+    inline bool operator<=(std::string const& left, string const& right) noexcept { return !(right < left); }
+    inline bool operator>=(std::string const& left, string const& right) noexcept { return !(left < right); }
+
+    inline bool operator!=(string const& left, char const* right) noexcept { return !(left == right); }
+    inline bool operator>(string const& left, char const* right) noexcept { return right < left; }
+    inline bool operator<=(string const& left, char const* right) noexcept { return !(right < left); }
+    inline bool operator>=(string const& left, char const* right) noexcept { return !(left < right); }
+
+    inline bool operator!=(char const* left, string const& right) noexcept { return !(left == right); }
+    inline bool operator>(char const* left, string const& right) noexcept { return right < left; }
+    inline bool operator<=(char const* left, string const& right) noexcept { return !(right < left); }
+    inline bool operator>=(char const* left, string const& right) noexcept { return !(left < right); }
+
+    bool operator!=(string const& left, std::nullptr_t right) = delete;
+    bool operator>(string const& left, std::nullptr_t right) = delete;
+    bool operator<=(string const& left, std::nullptr_t right) = delete;
+    bool operator>=(string const& left, std::nullptr_t right) = delete;
+
+    bool operator!=(std::nullptr_t left, string const& right) = delete;
+    bool operator>(std::nullptr_t left, string const& right) = delete;
+    bool operator<=(std::nullptr_t left, string const& right) = delete;
+    bool operator>=(std::nullptr_t left, string const& right) = delete;
+}
+}
