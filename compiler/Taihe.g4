@@ -352,7 +352,7 @@ fragment HEX_DIGIT
     ;
 
 ID
-    : LETTER (LETTER | DIGIT)*
+    : (LETTER | UNDERLINE) (LETTER | UNDERLINE | DIGIT)*
     ;
 
 fragment LETTER

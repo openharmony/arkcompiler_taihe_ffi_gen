@@ -44,18 +44,18 @@ def generate_TaiheAST():
     ast.append(f"\n")
     ast.append(f"\n")
     ast.append(f"class TaiheAST:\n")
-    ast.append(f"    token = Token\n")
+    ast.append(f"    @dataclass\n")
+    ast.append(f"    class token:\n")
+    ast.append(f"        text: str\n")
+    ast.append(f"        line: Optional[int]\n")
+    ast.append(f"        column: Optional[int]\n")
     ast.append(f"\n")
-
     parser = get_parser()
     for rule_name in parser.ruleNames:
         ast_class_name = rule_name[0].upper() + rule_name[1:]
         ctx = getattr(parser, ast_class_name + "Context")(None)
         if rule_name.endswith("Uni"):
-            ast.append(f"    {ast_class_name} = Union[\n")
-            for attr_type, attr_name in get_attr_pairs(ctx):
-                ast.append(f"        {attr_type},\n")
-            ast.append(f"    ]\n")
+            ast.append(f"    {ast_class_name} = {' | '.join(attr_type for attr_type, attr_name in get_attr_pairs(ctx))}\n")
         else:
             ast.append(f"    @dataclass\n")
             ast.append(f"    class {ast_class_name}:\n")
@@ -74,9 +74,7 @@ def generate_TaiheVisitor():
     visitor.append(f"\n")
     visitor.append(f"class TaiheVisitor:\n")
     visitor.append(f"    def visit(self, node):\n")
-    visitor.append(
-        f"        return getattr(self, 'visit_' + node.__class__.__name__)(node)\n"
-    )
+    visitor.append(f"        return getattr(self, 'visit_' + node.__class__.__name__)(node)\n")
     visitor.append(f"\n")
     visitor.append(f"    def visit_token(self, node: TaiheAST.token):\n")
     visitor.append(f"        raise NotImplementedError\n")
@@ -85,9 +83,7 @@ def generate_TaiheVisitor():
         ast_class_name = rule_name[0].upper() + rule_name[1:]
         if rule_name.endswith("Uni"):
             continue
-        visitor.append(
-            f"    def visit_{ast_class_name}(self, node: TaiheAST.{ast_class_name}):\n"
-        )
+        visitor.append(f"    def visit_{ast_class_name}(self, node: TaiheAST.{ast_class_name}):\n")
         visitor.append(f"        raise NotImplementedError\n")
         visitor.append(f"\n")
     visitor.pop()

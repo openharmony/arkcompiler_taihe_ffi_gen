@@ -11,7 +11,7 @@ def visit(ctx):
     if ctx is None:
         return None
     if isinstance(ctx, Token):
-        return ctx
+        return TaiheAST.token(text=ctx.text, line=ctx.line, column=ctx.column)
     ast_class_name = ctx.__class__.__name__[:-7]
     if ast_class_name.endswith("Uni"):
         return visit(ctx.getChild(0))
