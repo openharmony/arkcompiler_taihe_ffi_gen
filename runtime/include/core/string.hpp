@@ -38,7 +38,7 @@ namespace core {
 
         string(std::initializer_list<char> value)
             : string(value.begin(), static_cast<uint32_t>(value.size())) {}
-                    
+
         string(string& other)
             : m_handle(tstr_dup(other.m_handle)) {}
 
@@ -46,6 +46,7 @@ namespace core {
             : m_handle(other.m_handle) {
             other.m_handle = nullptr;
         }
+
         // Destructor
         ~string() {
             if (m_handle) {
@@ -53,6 +54,7 @@ namespace core {
             }
             m_handle = nullptr;
         }
+
         // Operator
         string& operator=(string const& other) {
             if (this != &other)
@@ -78,6 +80,18 @@ namespace core {
             return *this;
         }
 
+        string& operator=(std::string_view const& value) {
+            return *this = string{ value };
+        }
+
+        string& operator=(char const* const value) {
+            return *this = string{ value };
+        }
+
+        string& operator=(std::initializer_list<char> value) {
+            return *this = string{ value };
+        }
+        
         operator std::string_view() const noexcept {
             if (m_handle)
             {
