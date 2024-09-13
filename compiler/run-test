@@ -11,11 +11,13 @@ taihec() {
 
 mkdir -p "$1"/build
 
+rm -rf "$1"/author
 taihec -I "$1"/idl -O "$1"/author --author
 cp -rf "$1"/impl/* "$1"/author
 "$CXX" "$1"/author/*.cpp -I "$BASEDIR"/../runtime/include -shared -fPIC -o "$1"/build/libtest.so
 echo "Dynamic link library is generated successfully."
 
+rm -rf "$1"/user
 taihec -I "$1"/idl -O "$1"/user --user
 cp -rf "$1"/src/* "$1"/user
 "$CXX" "$1"/user/*.cpp "$1"/build/libtest.so -I "$BASEDIR"/../runtime/include -o "$1"/build/test
