@@ -48,11 +48,11 @@ class CodeGenerator(Visitor):
             fields.append(self.visit(field))
 
         basename = ".".join(self.package_name)
-        impl_hpp_name = basename + "_impl.hpp"
-        impl_cpp_name = basename + "_impl.cpp"
-        h_name = basename + ".h"
-        hpp_name = basename + ".hpp"
-        cpp_name = basename + ".cpp"
+        impl_hpp_name = basename + ".impl.hpp"
+        impl_cpp_name = basename + ".impl.cpp"
+        abi_h_name = basename + ".abi.h"
+        abi_hpp_name = basename + ".abi.hpp"
+        abi_cpp_name = basename + ".abi.cpp"
         namespace = "::".join(self.package_name)
         impl_namespace = "_impl::" + namespace
 
@@ -71,30 +71,30 @@ class CodeGenerator(Visitor):
             impl_cpp_code += impl_cpp_field
         impl_cpp_code += f"}}\n"
 
-        h_code = ""
-        h_code += f"#pragma once\n"
-        h_code += f'#include "taihe/common.h"\n'
+        abi_h_code = ""
+        abi_h_code += f"#pragma once\n"
+        abi_h_code += f'#include "taihe/common.h"\n'
         for h_field, hpp_field, cpp_field, impl_hpp_field, impl_cpp_field in fields:
-            h_code += h_field
+            abi_h_code += h_field
 
-        hpp_code = ""
-        hpp_code += f"#pragma once\n"
-        hpp_code += f'#include "{h_name}"\n'
-        hpp_code += f"namespace {namespace} {{\n"
+        abi_hpp_code = ""
+        abi_hpp_code += f"#pragma once\n"
+        abi_hpp_code += f'#include "{abi_h_name}"\n'
+        abi_hpp_code += f"namespace {namespace} {{\n"
         for h_field, hpp_field, cpp_field, impl_hpp_field, impl_cpp_field in fields:
-            hpp_code += hpp_field
-        hpp_code += f"}}\n"
+            abi_hpp_code += hpp_field
+        abi_hpp_code += f"}}\n"
 
-        cpp_code = ""
-        cpp_code += f'#include "{h_name}"\n'
-        cpp_code += f'#include "{impl_hpp_name}"\n'
+        abi_cpp_code = ""
+        abi_cpp_code += f'#include "{abi_h_name}"\n'
+        abi_cpp_code += f'#include "{impl_hpp_name}"\n'
         for h_field, hpp_field, cpp_field, impl_hpp_field, impl_cpp_field in fields:
-            cpp_code += cpp_field
+            abi_cpp_code += cpp_field
 
         return [
-            (True, True, h_name, h_code),
-            (False, True, hpp_name, hpp_code),
-            (True, False, cpp_name, cpp_code),
+            (True, True, abi_h_name, abi_h_code),
+            (False, True, abi_hpp_name, abi_hpp_code),
+            (True, False, abi_cpp_name, abi_cpp_code),
             (True, False, impl_hpp_name, impl_hpp_code),
             (True, False, impl_cpp_name, impl_cpp_code),
         ]
@@ -105,29 +105,29 @@ class CodeGenerator(Visitor):
         func_name = node.name.text
         abi_name = "__".join(self.package_name) + "__" + func_name
         impl_name = impl_namespace + "::" + func_name
-        parameters = ", ".join(self.visit(parameter) for parameter in node.parameters)
-        arguments = ", ".join(parameter.name.text for parameter in node.parameters)
+        params = ", ".join(self.visit(parameter) for parameter in node.parameters)
+        args = ", ".join(parameter.name.text for parameter in node.parameters)
         if len(node.return_types) > 1:
             raise NotImplementedError
         return_type = self.visit(node.return_types[0]) if node.return_types else "void"
 
-        h_field = f"TH_EXPORT {return_type} {abi_name}({parameters});\n"
+        abi_h_field = f"TH_EXPORT {return_type} {abi_name}({params});\n"
 
-        hpp_field = ""
-        hpp_field += f"inline {return_type} {func_name}({parameters}) {{\n"
-        hpp_field += f"    return {abi_name}({arguments});\n"
-        hpp_field += f"}}\n"
+        abi_hpp_field = ""
+        abi_hpp_field += f"inline {return_type} {func_name}({params}) {{\n"
+        abi_hpp_field += f"    return {abi_name}({args});\n"
+        abi_hpp_field += f"}}\n"
 
-        cpp_field = ""
-        cpp_field += f"{return_type} {abi_name}({parameters}) {{\n"
-        cpp_field += f"    return {impl_name}({arguments});\n"
-        cpp_field += f"}}\n"
+        abi_cpp_field = ""
+        abi_cpp_field += f"{return_type} {abi_name}({params}) {{\n"
+        abi_cpp_field += f"    return {impl_name}({args});\n"
+        abi_cpp_field += f"}}\n"
 
-        impl_hpp_field = f"{return_type} {func_name}({parameters});\n"
+        impl_hpp_field = f"{return_type} {func_name}({params});\n"
 
         impl_cpp_field = ""
-        impl_cpp_field += f"{return_type} {func_name}({parameters}) {{\n"
+        impl_cpp_field += f"{return_type} {func_name}({params}) {{\n"
         impl_cpp_field += f"    // todo\n"
         impl_cpp_field += f"}}\n"
 
-        return h_field, hpp_field, cpp_field, impl_hpp_field, impl_cpp_field
+        return abi_h_field, abi_hpp_field, abi_cpp_field, impl_hpp_field, impl_cpp_field
