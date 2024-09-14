@@ -16,18 +16,18 @@ def compile(src_dirs, dst_dir, gen_author=True, gen_user=True):
                 src_path = os.path.abspath(os.path.join(src_dir, src_path))
                 src_paths.append(src_path)
     # Parse into ASTs
-    packages = []
+    packages: list[Package] = []
     for src_path in src_paths:
-        package_name = tuple(os.path.splitext(os.path.basename(src_path))[0].split("."))
+        pktupl = tuple(os.path.splitext(os.path.basename(src_path))[0].split("."))
         spec = generate_ast(FileStream(src_path))
-        packages.append(Package(package_name, src_path, spec))
+        packages.append(Package(pktupl, src_path, spec))
     # Semantic analysis
     semantic_analysis(packages)
     # Code generation
     if not os.path.exists(dst_dir):
         os.makedirs(dst_dir, exist_ok=True)
     for package in packages:
-        code_generator = CodeGenerator(package.name)
+        code_generator = CodeGenerator(package.tupl)
         for for_author, for_user, name, code in code_generator.visit(package.spec):
             if gen_author and for_author or gen_user and for_user:
                 with open(os.path.join(dst_dir, name), "w") as file:

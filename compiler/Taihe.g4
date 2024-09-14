@@ -10,14 +10,14 @@ useUni
     ;
 
 usePackage
-    : KW_USE PackageName_package_old = packageName (KW_AS PackageAliasOpt_package_new = packageAlias)? SEMICOLON
+    : KW_USE PackageName_old_pkname = packageName (KW_AS PackageAliasOpt_new_pkname = packageAlias)? SEMICOLON
     ;
 
 useSymbol
-    : KW_FROM PackageName_package_old = packageName KW_USE (AliasPairLst_alias_pairs += aliasPair COMMA)* AliasPairLst_alias_pairs += aliasPair SEMICOLON
+    : KW_FROM PackageName_pkname = packageName KW_USE (AliasPairLst_alias_pairs += aliasPair COMMA)* AliasPairLst_alias_pairs += aliasPair SEMICOLON
     ;
 
-packageUni
+packageNameUni
     : PackageName_ = packageName
     | PackageAlias_ = packageAlias
     ;
@@ -31,7 +31,7 @@ packageAlias
     ;
 
 aliasPair
-    : token_old = ID (KW_AS tokenOpt_new = ID)?
+    : token_old_name = ID (KW_AS tokenOpt_new_name = ID)?
     ;
 
 specificationFieldUni
@@ -128,7 +128,7 @@ basicType
     ;
 
 userType
-    : (PackageUniOpt_package = packageUni DOT)? token_name = ID
+    : (PackageNameUniOpt_pkname = packageNameUni DOT)? token_name = ID
     ;
 
 functionType

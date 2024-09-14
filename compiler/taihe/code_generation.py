@@ -2,7 +2,7 @@ from taihe.parse import ast, Visitor
 
 
 class CodeGenerator(Visitor):
-    def __init__(self, package_name: tuple[str]):
+    def __init__(self, package_name: tuple[str, ...]):
         self.package_name = package_name
 
     def visit_BasicType(self, node: ast.BasicType):
