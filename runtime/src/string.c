@@ -59,3 +59,14 @@ struct TString* tstr_concat(struct TString* left, struct TString* right) {
   }
   return (struct TString*)sh;
 }
+
+struct TString* tstr_substr(struct TString* s, size_t pos, size_t len) {
+  if (pos > s->length || s->length - pos < len || len <= 0) {
+    return NULL;
+  }
+  struct TStringHeap* sh = allocate_header(len);
+  if (sh) {
+    memcpy(sh->buffer, s->ptr + sizeof(char) * pos, sizeof(char) * len);
+  }
+  return (struct TString*)sh;
+}

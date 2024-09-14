@@ -104,3 +104,19 @@ TH_EXPORT struct TString* tstr_dup(struct TString* s);
 // - The reference counts of both `left` and `right` are incremented. 
 //   Remember to call `tstr_drop` after use to manage memory correctly.
 TH_EXPORT struct TString* tstr_concat(struct TString* left, struct TString* right);
+
+// Extracts a substring from a TString object.
+//
+// # Parameters
+// - `s`: The source TString object to extract the substring from.
+// - `pos`: The starting position of the substring within the source TString object. 
+// - `len`: The length of the substring to extract.
+//
+// # Returns
+// - `tstr`, if the substring extraction is successful.
+// - `NULL`, on insufficient memory, if `pos` is out of bounds, or if `len` extends beyond the end of the source TString object.
+//
+// # Notes
+// - The resulting TString object is a substring of `s` starting from `pos` with a length of `len`.
+// - Remember to call `tstr_drop` after use to manage memory correctly.
+TH_EXPORT struct TString* tstr_substr(struct TString* s, size_t pos, size_t len);
