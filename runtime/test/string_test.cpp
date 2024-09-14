@@ -49,6 +49,22 @@ TEST(TStringTest, DropString) {
     tstr_drop(tstr);  // Should properly free the memory
 }
 
+// Test cae for tstr_concat (concat two string)
+TEST(TStringTest, TestTstrConcat) {
+    const char* test_left_tstr = "Hello";
+    struct TString* left_tstr = (struct TString*)tstr_new(test_left_tstr, strlen(test_left_tstr));
+    const char* test_right_str = "World";
+    struct TString* right_tstr = (struct TString*)tstr_new(test_right_str, strlen(test_right_str));
+
+    struct TString* tstr = tstr_concat(left_tstr, right_tstr);
+    ASSERT_NE(tstr, nullptr);
+    ASSERT_EQ(tstr_len(tstr), 10);
+    ASSERT_STREQ(tstr_buf(tstr), "HelloWorld");
+    tstr_drop(left_tstr);
+    tstr_drop(right_tstr);
+    tstr_drop(tstr);
+}
+
 // Test case for reference counting (tref_inc and tref_dec)
 TEST(TRefCountTest, ReferenceCounting) {
     TRefCount ref_count;
