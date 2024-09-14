@@ -49,7 +49,7 @@ class SemanticAnalyzer(Visitor):
             field = symbol_table.get(old_text)
             if field is None:
                 raise SymbolNotExistError(self.package_path, alias_pair.old)
-            if not isinstance(field, ast.TypeDeclUni):
+            if isinstance(field, ast.Const | ast.Function):
                 raise NotATypeError(self.package_path, alias_pair.old)
             new_meta = alias_pair.new or alias_pair.old
             new_text = new_meta.text

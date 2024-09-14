@@ -35,16 +35,12 @@ aliasPair
     ;
 
 specificationFieldUni
-	: TypeDeclUni_ = typeDeclUni
-    | Const_ = const
-    | Function_ = function
-    ;
-
-typeDeclUni
     : Struct_ = struct
     | EnumClass_ = enumClass
     | Interface_ = interface
     | Runtimeclass_ = runtimeclass
+    | Const_ = const
+    | Function_ = function
     ;
 
 struct
@@ -52,8 +48,8 @@ struct
     ;
 
 structFieldUni
-	: StructProperty_ = structProperty
-	;
+    : StructProperty_ = structProperty
+    ;
 
 structProperty
     : token_name = ID COLON typeUni SEMICOLON
@@ -64,7 +60,7 @@ enumClass
     ;
 
 enumFieldUni
-	: EnumProperty_ = enumProperty
+    : EnumProperty_ = enumProperty
     ;
 
 enumProperty
@@ -76,19 +72,19 @@ interface
     ;
 
 interfaceFieldUni
-	: MemberFunction_ = memberFunction
-	| MemberConst_ = memberConst
-	;
+    : MemberFunction_ = memberFunction
+    | MemberConst_ = memberConst
+    ;
 
 runtimeclass
     : KW_RUNTIMECLASS token_name = ID (KW_INHERITS tokenLst_inherits += ID)? (KW_IMPLEMENTS tokenLst_implements += ID (COMMA tokenLst_implements += ID)*)? LEFT_BRACE (RuntimeclassFieldUniLst_fields += runtimeclassFieldUni)* RIGHT_BRACE
     ;
 
 runtimeclassFieldUni
-	: Constructor_ = constructor
-	| MemberFunction_ = memberFunction
-	| MemberConst_ = memberConst
-	;
+    : Constructor_ = constructor
+    | MemberFunction_ = memberFunction
+    | MemberConst_ = memberConst
+    ;
 
 constructor
     : KW_CONSTRUCTOR LEFT_BRACKET (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_BRACKET SEMICOLON
@@ -117,15 +113,15 @@ parameter
     ;
 
 typeUni
-	: BasicType_ = basicType
-	| UserType_ = userType
-	| ParameterizedType_ = parameterizedType
-	| FunctionType_ = functionType
-	;
+    : BasicType_ = basicType
+    | UserType_ = userType
+    | ParameterizedType_ = parameterizedType
+    | FunctionType_ = functionType
+    ;
 
 typeWithSpecifier
-	: ((tokenOpt_const = KW_CONST)? tokenOpt_ref = KW_REF)? TypeUni_type = typeUni
-	;
+    : ((tokenOpt_const = KW_CONST)? tokenOpt_ref = KW_REF)? TypeUni_type = typeUni
+    ;
 
 basicType
     : token_name = (KW_I8 | KW_I16 | KW_I32 | KW_I64 | KW_U8 | KW_U16 | KW_U32 | KW_U64 | KW_F32 | KW_F64 | KW_BOOL)
