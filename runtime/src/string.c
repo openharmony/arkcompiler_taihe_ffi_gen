@@ -48,3 +48,14 @@ struct TString* tstr_dup(struct TString* s) {
 
   return tstr_new(s->ptr, s->length);
 }
+
+struct TString* tstr_concat(struct TString* left, struct TString* right) {
+  size_t len = left->length + right->length;
+  if (len > UINT32_MAX) return NULL;
+  struct TStringHeap* sh = allocate_header(len);
+  if (sh) {
+    memcpy(sh->buffer, left->ptr, left->length);
+    memcpy(sh->buffer + sizeof(char) * left->length, right->ptr, right->length);
+  }
+  return (struct TString*)sh;
+}

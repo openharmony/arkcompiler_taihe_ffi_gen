@@ -92,3 +92,15 @@ TH_EXPORT void tstr_drop(struct TString* s);
 //   to a new heap-allocated buffer and is managed by reference counting.
 // - Similar to `tstr_new`, remeber to call `tstr_drop` after use.
 TH_EXPORT struct TString* tstr_dup(struct TString* s);
+
+// Concatenates two TString objects.
+//
+// # Returns
+// - `tstr`, if the concatenation is successful.
+// - `NULL`, on insufficient memory.
+//
+// # Notes
+// - The resulting TString object contains the concatenation of `left` and `right`.
+// - The reference counts of both `left` and `right` are incremented. 
+//   Remember to call `tstr_drop` after use to manage memory correctly.
+TH_EXPORT struct TString* tstr_concat(struct TString* left, struct TString* right);
