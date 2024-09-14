@@ -5,29 +5,46 @@ specification
     ;
 
 useUni
-    : UseAs_ = useAs
-    | UseFrom_ = useFrom
+    : UsePackage_ = usePackage
+    | UseSymbol_ = useSymbol
     ;
 
-useAs
-    : KW_USE tokenLst_package_name += ID (DOT tokenLst_package_name += ID)* KW_AS token_new_name = ID SEMICOLON
+usePackage
+    : KW_USE PackageName_package_old = packageName (KW_AS PackageAliasOpt_package_new = packageAlias)? SEMICOLON
     ;
 
-useFrom
-    : KW_FROM tokenLst_package_name += ID (DOT tokenLst_package_name += ID)* KW_USE (AliasLst_alias += alias COMMA)* AliasLst_alias += alias SEMICOLON
+useSymbol
+    : KW_FROM PackageName_package_old = packageName KW_USE (AliasPairLst_alias_pairs += aliasPair COMMA)* AliasPairLst_alias_pairs += aliasPair SEMICOLON
     ;
 
-alias
-    : token_old_name = ID (KW_AS tokenOpt_new_name = ID)?
+packageUni
+    : PackageName_ = packageName
+    | PackageAlias_ = packageAlias
+    ;
+
+packageName
+    : tokenLst_parts += ID (DOT tokenLst_parts += ID)*
+    ;
+
+packageAlias
+    : tokenLst_parts += ID
+    ;
+
+aliasPair
+    : token_old = ID (KW_AS tokenOpt_new = ID)?
     ;
 
 specificationFieldUni
-	: Struct_ = struct
+	: TypeDeclUni_ = typeDeclUni
+    | Const_ = const
+    | Function_ = function
+    ;
+
+typeDeclUni
+    : Struct_ = struct
     | EnumClass_ = enumClass
     | Interface_ = interface
     | Runtimeclass_ = runtimeclass
-    | Const_ = const
-    | Function_ = function
     ;
 
 struct
@@ -115,7 +132,7 @@ basicType
     ;
 
 userType
-    : (tokenLst_package_name += ID)* token_name = ID
+    : (PackageUniOpt_package = packageUni DOT)? token_name = ID
     ;
 
 functionType

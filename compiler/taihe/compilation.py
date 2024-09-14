@@ -20,7 +20,7 @@ def compile(src_dirs, dst_dir, gen_author=True, gen_user=True):
     for src_path in src_paths:
         package_name = tuple(os.path.splitext(os.path.basename(src_path))[0].split("."))
         spec = generate_ast(FileStream(src_path))
-        packages.append(Package(src_path, package_name, spec))
+        packages.append(Package(package_name, src_path, spec))
     # Semantic analysis
     semantic_analysis(packages)
     # Code generation
