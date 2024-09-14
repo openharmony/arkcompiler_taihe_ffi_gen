@@ -65,6 +65,18 @@ TEST(TStringTest, TestTstrConcat) {
     tstr_drop(tstr);
 }
 
+// Test case for tstr_substr (substr a string)
+TEST(TStringTest, TestTstrSubstr) {
+    const char* test_tstr = "Lalaland";
+    struct TString* tstr = (struct TString*)tstr_new(test_tstr, strlen(test_tstr));
+    struct TString* sub_tstr = tstr_substr(tstr, 2, 2);
+    ASSERT_NE(tstr, nullptr);
+    ASSERT_EQ(tstr_len(sub_tstr), 2);
+    ASSERT_STREQ(tstr_buf(sub_tstr), "la");
+    tstr_drop(tstr);
+    tstr_drop(sub_tstr);
+}
+
 // Test case for reference counting (tref_inc and tref_dec)
 TEST(TRefCountTest, ReferenceCounting) {
     TRefCount ref_count;
