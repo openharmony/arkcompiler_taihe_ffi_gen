@@ -7,10 +7,13 @@
 #include <stdexcept>
 #include <utility>
 #include <string_view>
+#include <charconv>
 
 extern "C" {
 #include <taihe/string.abi.h>
 }
+
+namespace taihe::core::param { struct string; }
 
 namespace taihe {
 namespace core {
@@ -38,7 +41,7 @@ namespace core {
 
         string(std::initializer_list<char> value)
             : string(value.begin(), static_cast<uint32_t>(value.size())) {}
-
+        
         string(string& other)
             : m_handle(tstr_dup(other.m_handle)) {}
 
@@ -140,7 +143,6 @@ namespace core {
             return m_handle ? tstr_buf(m_handle) : "";
         }
 
-        // need ?
         const_pointer data() const noexcept {
             return c_str();
         }
@@ -176,9 +178,9 @@ namespace core {
         const_reverse_iterator crend() const noexcept {
             return rend();
         }
-        
+
     private:
-        friend class taihe::core::param::string;
+        friend class param::string;
 
         TString* m_handle;
     };
@@ -209,12 +211,13 @@ namespace param {
         }
 
         operator taihe::core::string const&() const noexcept {
-            return *reinterpret_cast<taihe::core::string const*>(this);
+            return *reinterpret_cast<string const*>(this);
         }
     private:
         TString* m_handle;
     };
 }
+
 }
 }
 
@@ -226,19 +229,19 @@ namespace core {
     }
 
     inline bool operator==(string const& left, std::string const& right) noexcept {
-        return std::string_view(left) == right;
+        return std::string_view(left) == std::string_view(right);
     }
 
     inline bool operator==(std::string const& left, string const& right) noexcept {
-        return left == std::string_view(right);
+        return std::string_view(left) == std::string_view(right);
     }
 
     inline bool operator==(string const& left, char const* right) noexcept {
-        return std::string_view(left) == right;
+        return std::string_view(left) == std::string_view(right);
     }
 
     inline bool operator==(char const* left, string const& right) noexcept {
-        return left == std::string_view(right);
+        return std::string_view(left) == std::string_view(right);
     }
 
     bool operator==(string const& left, std::nullptr_t) = delete;
@@ -250,24 +253,24 @@ namespace core {
     }
 
     inline bool operator<(std::string const& left, string const& right) noexcept {
-        return left < std::string_view(right);
+        return std::string_view(left) < std::string_view(right);
     }
 
     inline bool operator<(string const& left, std::string const& right) noexcept {
-        return std::string_view(left) < right;
+        return std::string_view(left) < std::string_view(right);
     }
 
     inline bool operator<(string const& left, char const* right) noexcept {
-        return std::string_view(left) < right;
+        return std::string_view(left) < std::string_view(right);
     }
 
     inline bool operator<(char const* left, string const& right) noexcept {
-        return left < std::string_view(right);
+        return std::string_view(left) < std::string_view(right);
     }
 
-    bool operator<(string const& left, nullptr_t) = delete;
+    bool operator<(string const& left, std::nullptr_t) = delete;
 
-    bool operator<(nullptr_t, string const& right) = delete;
+    bool operator<(std::nullptr_t, string const& right) = delete;
 
     inline bool operator!=(string const& left, string const& right) noexcept { return !(left == right); }
     inline bool operator>(string const& left, string const& right) noexcept { return right < left; }
@@ -311,15 +314,15 @@ namespace core {
         char buffer[32];
         std::to_chars_result result;
         if constexpr (std::is_integral_v<T>) {
-            result = std::to_chars(std::begin(temp), std::end(temp), value);
+            result = std::to_chars(std::begin(buffer), std::end(buffer), value);
         } else {
             // Floating point
-            result = std::to_chars(std::begin(temp), std::end(temp), value, std::chars_format::general);
+            result = std::to_chars(std::begin(buffer), std::end(buffer), value, std::chars_format::general);
         }
         if (result.ec != std::errc{}) {
             throw std::runtime_error("Conversion to char failed");
         }
-        return tstring{ std::string_view{temp, result.ptr - temp} };
+        return string{ std::string_view{buffer, static_cast<std::size_t>(result.ptr - buffer)} };
     }
 
     inline string to_string(uint8_t value) {
@@ -362,10 +365,11 @@ namespace core {
         return string_convert(value);
     }
 
-    inline string to_string(char8_t value) {
-        char buffer[2] = { value, '\0' };
-        return string{ std::string_view{ buffer, 1 } };
-    }
+    // C++20 char8_t
+    // inline string to_string(char8_t value) {
+    //     char buffer[2] = { value, '\0' };
+    //     return string{ std::string_view{ buffer, 1 } };
+    // }
 
     inline string to_string(string const& value) noexcept {
         return value;
