@@ -1,9 +1,17 @@
+from os import path
+from typing import Any
+
 from taihe.parse import Visitor, ast
 
 
 class CodeGenerator(Visitor):
-    def __init__(self, package_name: tuple[str, ...]):
+    def __init__(
+        self, package_name: tuple[str, ...], dst_dir: str, author: bool, user: bool
+    ):
         self.package_name = package_name
+        self.dst_dir = dst_dir
+        self.author = author
+        self.user = user
 
     def generic_visit(self, node):
         raise NotImplementedError
@@ -46,43 +54,42 @@ class CodeGenerator(Visitor):
         return self.visit(node.type_with_specifier) + node.name.text
 
     def visit_Specification(self, node: ast.Specification):
-        fields = []
-        for field in node.fields:
-            fields.append(self.visit(field))
-
         basename = ".".join(self.package_name)
         abi_h_name = basename + ".abi.h"
         abi_hpp_name = basename + ".abi.hpp"
         impl_h_name = basename + ".impl.h"
+
         namespace = "::".join(self.package_name)
 
-        abi_h_code = ""
-        abi_h_code += "#pragma once\n"
-        abi_h_code += '#include "taihe/common.h"\n'
-        for h_field, _hpp_field, _cpp_field in fields:
-            abi_h_code += h_field
+        if self.author or self.user:
+            with open(path.join(self.dst_dir, abi_h_name), "w") as abi_h:
+                abi_h.write("#pragma once\n")
+                abi_h.write('#include "taihe/common.h"\n')
 
-        abi_hpp_code = ""
-        abi_hpp_code += "#pragma once\n"
-        abi_hpp_code += f'#include "{abi_h_name}"\n'
-        abi_hpp_code += f"namespace {namespace} {{\n"
-        for _h_field, hpp_field, _cpp_field in fields:
-            abi_hpp_code += hpp_field
-        abi_hpp_code += f"}}\n"
+        if self.user:
+            with open(path.join(self.dst_dir, abi_hpp_name), "w") as abi_hpp:
+                abi_hpp.write("#pragma once\n")
+                abi_hpp.write(f'#include "{abi_h_name}"\n')
+                abi_hpp.write(f"namespace {namespace} {{\n")
 
-        impl_h_code = ""
-        impl_h_code += f'#include "{abi_h_name}"\n'
-        for _h_field, _hpp_field, cpp_field in fields:
-            impl_h_code += cpp_field
+        if self.author:
+            with open(path.join(self.dst_dir, impl_h_name), "w") as impl_h:
+                impl_h.write(f'#include "{abi_h_name}"\n')
 
-        return [
-            (True, True, abi_h_name, abi_h_code),
-            (False, True, abi_hpp_name, abi_hpp_code),
-            (True, False, impl_h_name, impl_h_code),
-        ]
+        for field in node.fields:
+            if isinstance(field, ast.Function):
+                self.visit(field)
+
+        if self.user:
+            with open(path.join(self.dst_dir, abi_hpp_name), "a") as abi_hpp:
+                abi_hpp.write(f"}}\n")
 
     def visit_Function(self, node: ast.Function):
-        # namespace = "::".join(self.package_name)
+        basename = ".".join(self.package_name)
+        abi_h_name = basename + ".abi.h"
+        abi_hpp_name = basename + ".abi.hpp"
+        impl_h_name = basename + ".impl.h"
+
         func_name = node.name.text
         abi_name = "__".join(self.package_name) + "__" + func_name
         cpp_params = ", ".join(self.visit(parameter) for parameter in node.parameters)
@@ -93,17 +100,19 @@ class CodeGenerator(Visitor):
             raise NotImplementedError
         return_type = self.visit(node.return_types[0]) if node.return_types else "void"
 
-        abi_h_field = f"TH_EXPORT {return_type} {abi_name}({abi_params});\n"
+        if self.author or self.user:
+            with open(path.join(self.dst_dir, abi_h_name), "a") as abi_h:
+                abi_h.write(f"TH_EXPORT {return_type} {abi_name}({abi_params});\n")
 
-        abi_hpp_field = ""
-        abi_hpp_field += f"inline {return_type} {func_name}({cpp_params}) {{\n"
-        abi_hpp_field += f"    return {abi_name}({abi_args});\n"
-        abi_hpp_field += f"}}\n"
+        if self.user:
+            with open(path.join(self.dst_dir, abi_hpp_name), "a") as abi_hpp:
+                abi_hpp.write(f"inline {return_type} {func_name}({cpp_params}) {{\n")
+                abi_hpp.write(f"    return {abi_name}({abi_args});\n")
+                abi_hpp.write("}\n")
 
-        impl_h_field = ""
-        impl_h_field += f"#define TH_EXPORT_API_{func_name}(real_name) \\\n"
-        impl_h_field += f"    {return_type} {abi_name}({abi_params}) {{ \\\n"
-        impl_h_field += f"        return real_name({cpp_args}); \\\n"
-        impl_h_field += f"    }}\n"
-
-        return abi_h_field, abi_hpp_field, impl_h_field
+        if self.author:
+            with open(path.join(self.dst_dir, impl_h_name), "a") as impl_h:
+                impl_h.write(f"#define TH_EXPORT_API_{func_name}(real_name) \\\n")
+                impl_h.write(f"    {return_type} {abi_name}({abi_params}) {{\\\n")
+                impl_h.write(f"        return real_name({cpp_args}); \\\n")
+                impl_h.write("    }\n")
