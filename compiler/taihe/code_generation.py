@@ -1,4 +1,4 @@
-from taihe.parse import ast, Visitor
+from taihe.parse import Visitor, ast
 
 
 class CodeGenerator(Visitor):
@@ -57,22 +57,22 @@ class CodeGenerator(Visitor):
         namespace = "::".join(self.package_name)
 
         abi_h_code = ""
-        abi_h_code += f"#pragma once\n"
-        abi_h_code += f'#include "taihe/common.h"\n'
-        for h_field, hpp_field, cpp_field in fields:
+        abi_h_code += "#pragma once\n"
+        abi_h_code += '#include "taihe/common.h"\n'
+        for h_field, _hpp_field, _cpp_field in fields:
             abi_h_code += h_field
 
         abi_hpp_code = ""
-        abi_hpp_code += f"#pragma once\n"
+        abi_hpp_code += "#pragma once\n"
         abi_hpp_code += f'#include "{abi_h_name}"\n'
         abi_hpp_code += f"namespace {namespace} {{\n"
-        for h_field, hpp_field, cpp_field in fields:
+        for _h_field, hpp_field, _cpp_field in fields:
             abi_hpp_code += hpp_field
         abi_hpp_code += f"}}\n"
 
         impl_h_code = ""
         impl_h_code += f'#include "{abi_h_name}"\n'
-        for h_field, hpp_field, cpp_field in fields:
+        for _h_field, _hpp_field, cpp_field in fields:
             impl_h_code += cpp_field
 
         return [
@@ -82,7 +82,7 @@ class CodeGenerator(Visitor):
         ]
 
     def visit_Function(self, node: ast.Function):
-        namespace = "::".join(self.package_name)
+        # namespace = "::".join(self.package_name)
         func_name = node.name.text
         abi_name = "__".join(self.package_name) + "__" + func_name
         cpp_params = ", ".join(self.visit(parameter) for parameter in node.parameters)
