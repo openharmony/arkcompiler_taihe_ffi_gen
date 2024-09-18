@@ -17,7 +17,12 @@ class PackageNameConflictError(SemanticError):
 
 
 class PackageAliasConflictError(SemanticError):
-    def __init__(self, src_path: str, rec_pkname: ast.PackageNameUni, new_pkname: ast.PackageNameUni):
+    def __init__(
+        self,
+        src_path: str,
+        rec_pkname: ast.PackageNameUni,
+        new_pkname: ast.PackageNameUni,
+    ):
         self.src_path = src_path
         self.rec_pkname = rec_pkname
         self.new_pkname = new_pkname
@@ -29,11 +34,11 @@ class PackageAliasConflictError(SemanticError):
 class SymbolConflictError(SemanticError):
     def __init__(self, src_path: str, rec_name: ast.token, new_name: ast.token):
         self.src_path = src_path
-        self.token = rec_name
-        self.other = new_name
+        self.rec_name = rec_name
+        self.new_name = new_name
 
     def __str__(self):
-        return f"symbol {self.token.text!r} is declared multiple times in {self.src_path!r}: line {self.other.line}, col {self.other.column} and line {self.token.line}, col {self.token.column}"
+        return f"symbol {self.rec_name.text!r} is declared multiple times in {self.src_path!r}: line {self.new_name.line}, col {self.new_name.column} and line {self.rec_name.line}, col {self.rec_name.column}"
 
 
 class SymbolConflictWithNamespaceError(SemanticError):
@@ -43,7 +48,7 @@ class SymbolConflictWithNamespaceError(SemanticError):
         self.name = name
 
     def __str__(self):
-        return f"{'.'.join((*self.package_name, self.name.text))!r} in {self.src_path!r}: line {self.name.line}, col {self.name.column} has been used as a namespace"
+        return f"{'.'.join((*self.package_name, self.name.text))!r} in {self.src_path!r}: line {self.name.line}, col {self.name.column} has been used as a namespace already"
 
 
 class PackageNotExistError(SemanticError):
