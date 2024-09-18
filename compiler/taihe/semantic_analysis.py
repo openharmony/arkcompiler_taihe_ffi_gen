@@ -86,6 +86,7 @@ class SymbolReplacement(Visitor):
             if package is None:
                 raise PackageNotExistError(self.src_path, node.pkname)
             _, pktupl = package
+            text = node.name.text
             target = self.symbol_tables[pktupl].get(node.name.text)
             if target is None:
                 raise SymbolNotExistError(self.src_path, node.name)
@@ -104,8 +105,8 @@ class SemanticAnalyzer(Visitor):
         self.symbol_tables = symbol_tables
         self.src_path = src_path
 
-    def generic_visit(self, node):
-        raise NotImplementedError
+    # def generic_visit(self, node):
+    #     raise NotImplementedError
 
     def visit_Specification(self, node: ast.Specification):
         for field in node.fields:

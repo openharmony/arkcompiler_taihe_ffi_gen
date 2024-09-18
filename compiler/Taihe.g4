@@ -52,7 +52,7 @@ structFieldUni
     ;
 
 structProperty
-    : token_name = ID COLON typeUni SEMICOLON
+    : token_name = ID COLON TypeUni_type = typeUni SEMICOLON
     ;
 
 enumClass
