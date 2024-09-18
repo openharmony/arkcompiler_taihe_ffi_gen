@@ -79,6 +79,18 @@ class SymbolReplacement(Visitor):
             raise NotATypeError(self.package_path, node.name)
         node.pkname = ast.PackageName([ast.token(text) for text in pktupl])
         node.name.text = text
+    
+    def visit_BasicType(self, node: ast.BasicType):
+        pass
+    
+    def visit_TypeWithSpecifier(self, node: ast.TypeWithSpecifier):
+        self.visit(node.type)
+
+    def visit_Function(self, node: ast.Function):
+        for parameter in node.parameters:
+            self.visit(parameter.type_with_specifier)
+        for return_type in node.return_types:
+            self.visit(return_type)
 
     def visit_Specification(self, node: ast.Specification):
         while node.uses:

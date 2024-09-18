@@ -92,7 +92,7 @@ constructor
 
 memberFunction
     : (tokenOpt_static = KW_STATIC)? KW_FUNCTION token_name = ID LEFT_BRACKET (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_BRACKET COLON
-        (LEFT_BRACKET (TypeUniLst_return_types += typeUni (COMMA TypeUniLst_return_types += typeUni)*)? RIGHT_BRACKET | TypeUniLst_return_types += typeUni) SEMICOLON
+        (LEFT_BRACKET (TypeWithSpecifierLst_return_types += typeWithSpecifier (COMMA TypeWithSpecifierLst_return_types += typeWithSpecifier)*)? RIGHT_BRACKET | TypeWithSpecifierLst_return_types += typeWithSpecifier) SEMICOLON
     ;
 
 memberConst
@@ -101,7 +101,7 @@ memberConst
 
 function
     : KW_FUNCTION token_name = ID LEFT_BRACKET (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_BRACKET COLON
-        (LEFT_BRACKET (TypeUniLst_return_types += typeUni (COMMA TypeUniLst_return_types += typeUni)*)? RIGHT_BRACKET | TypeUniLst_return_types += typeUni) SEMICOLON
+        (LEFT_BRACKET (TypeWithSpecifierLst_return_types += typeWithSpecifier (COMMA TypeWithSpecifierLst_return_types += typeWithSpecifier)*)? RIGHT_BRACKET | TypeWithSpecifierLst_return_types += typeWithSpecifier) SEMICOLON
     ;
 
 const
@@ -133,7 +133,7 @@ userType
 
 functionType
     : <assoc = right> LEFT_BRACKET ((TypeWithSpecifierLst_parameter_types += typeWithSpecifier) (COMMA TypeWithSpecifierLst_parameter_types += typeWithSpecifier)*)? RIGHT_BRACKET ARROW
-        (LEFT_BRACKET (TypeUniLst_return_types += typeUni (COMMA TypeUniLst_return_types += typeUni)*)? RIGHT_BRACKET | TypeUniLst_return_types += typeUni) SEMICOLON
+        (LEFT_BRACKET (TypeWithSpecifierLst_return_types += typeWithSpecifier (COMMA TypeWithSpecifierLst_return_types += typeWithSpecifier)*)? RIGHT_BRACKET | TypeWithSpecifierLst_return_types += typeWithSpecifier) SEMICOLON
     ;
 
 parameterizedType
