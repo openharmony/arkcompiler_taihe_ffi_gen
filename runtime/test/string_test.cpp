@@ -1,89 +1,127 @@
 #include <gtest/gtest.h>
-#include <string.h>
-extern "C" {
-#include <taihe/string.abi.h>
+#include "core/string.hpp"
+
+using namespace taihe::core;
+
+// Test default constructor
+TEST(TaiheStringTest, DefaultConstructor) {
+    string str;
+    EXPECT_TRUE(str.empty());
+    EXPECT_EQ(str.size(), 0);
+    EXPECT_STREQ(str.c_str(), "");
 }
 
-// Test case for tstr_new
-TEST(TStringTest, CreateNewString) {
-    const char* test_str = "Hello";
-    struct TString* tstr = (struct TString*)tstr_new(test_str, strlen(test_str));
-
-    ASSERT_NE(tstr, nullptr);  // Ensure the string is created
-    EXPECT_EQ(tstr_len(tstr), strlen(test_str));  // Check length
-    EXPECT_STREQ(tstr_buf(tstr), test_str);  // Check content
-
-    tstr_drop(tstr);  // Clean up
+// Test c style constructor
+TEST(TaiheStringTest, CStrConstructor) {
+    const char* testStr = "Hello";
+    string str(testStr);
+    EXPECT_FALSE(str.empty());
+    EXPECT_EQ(str.size(), 5);
+    EXPECT_STREQ(str.c_str(), "Hello");
 }
 
-// Test case for tstr_new with invalid input (non-null terminated string)
-TEST(TStringTest, CreateNewStringInvalidInput) {
-    const char invalid_str[] = {'H', 'e', 'l', 'l', 'o', 'X'};
-    struct TString* tstr = (struct TString*)tstr_new(invalid_str, 5);  // Invalid, since the input is not null-terminated
-
-    EXPECT_EQ(tstr, nullptr);  // Should return nullptr
+// Test std::string_view constructor
+TEST(TaiheStringTest, StringViewConstructor) {
+    std::string_view sv = "World";
+    string str(sv);
+    EXPECT_FALSE(str.empty());
+    EXPECT_EQ(str.size(), 5);
+    EXPECT_STREQ(str.c_str(), "World");
 }
 
-// Test case for tstr_dup (copying a string)
-TEST(TStringTest, DuplicateString) {
-    const char* test_str = "Hello";
-    struct TString* tstr = (struct TString*)tstr_new(test_str, strlen(test_str));
-
-    ASSERT_NE(tstr, nullptr);  // Ensure the original string is created
-    const struct TString* dup_str = tstr_dup(tstr);
-
-    ASSERT_NE(dup_str, nullptr);  // Ensure the duplicated string is created
-    EXPECT_EQ(tstr_len(dup_str), strlen(test_str));  // Check length of duplicated string
-    EXPECT_STREQ(tstr_buf(dup_str), test_str);  // Check content of duplicated string
-
-    tstr_drop(tstr);  // Clean up
-    tstr_drop((struct TString*)dup_str);  // Clean up duplicated string
+// Test copy constructor
+TEST(TaiheStringTest, CopyConstructor) {
+    string str1("Copy");
+    string str2(str1);
+    EXPECT_EQ(str1.size(), str2.size());
+    EXPECT_STREQ(str1.c_str(), str2.c_str());
 }
 
-// Test case for tstr_drop (reference counting and destruction)
-TEST(TStringTest, DropString) {
-    const char* test_str = "Hello";
-    struct TString* tstr = (struct TString*)tstr_new(test_str, strlen(test_str));
-
-    ASSERT_NE(tstr, nullptr);  // Ensure the string is created
-    tstr_drop(tstr);  // Should properly free the memory
+// Test move constructor
+TEST(TaiheStringTest, MoveConstructor) {
+    string str1("Move");
+    string str2(std::move(str1));
+    EXPECT_STREQ(str2.c_str(), "Move");
+    EXPECT_TRUE(str1.empty());
 }
 
-// Test cae for tstr_concat (concat two string)
-TEST(TStringTest, TestTstrConcat) {
-    const char* test_left_tstr = "Hello";
-    struct TString* left_tstr = (struct TString*)tstr_new(test_left_tstr, strlen(test_left_tstr));
-    const char* test_right_str = "World";
-    struct TString* right_tstr = (struct TString*)tstr_new(test_right_str, strlen(test_right_str));
-
-    struct TString* tstr = tstr_concat(left_tstr, right_tstr);
-    ASSERT_NE(tstr, nullptr);
-    ASSERT_EQ(tstr_len(tstr), 10);
-    ASSERT_STREQ(tstr_buf(tstr), "HelloWorld");
-    tstr_drop(left_tstr);
-    tstr_drop(right_tstr);
-    tstr_drop(tstr);
+// Test operator=
+TEST(TaiheStringTest, CopyAssignment) {
+    string str1("Assignment");
+    string str2;
+    str2 = str1;
+    EXPECT_EQ(str1.size(), str2.size());
+    EXPECT_STREQ(str1.c_str(), str2.c_str());
 }
 
-// Test case for tstr_substr (substr a string)
-TEST(TStringTest, TestTstrSubstr) {
-    const char* test_tstr = "Lalaland";
-    struct TString* tstr = (struct TString*)tstr_new(test_tstr, strlen(test_tstr));
-    struct TString* sub_tstr = tstr_substr(tstr, 2, 2);
-    ASSERT_NE(tstr, nullptr);
-    ASSERT_EQ(tstr_len(sub_tstr), 2);
-    ASSERT_STREQ(tstr_buf(sub_tstr), "la");
-    tstr_drop(tstr);
-    tstr_drop(sub_tstr);
+// Test move operator=
+TEST(TaiheStringTest, MoveAssignment) {
+    string str1("Move Assignment");
+    string str2;
+    str2 = std::move(str1);
+    EXPECT_STREQ(str2.c_str(), "Move Assignment");
+    EXPECT_TRUE(str1.empty());
 }
 
-// Test case for reference counting (tref_inc and tref_dec)
-TEST(TRefCountTest, ReferenceCounting) {
-    TRefCount ref_count;
-    tref_set(&ref_count, 1);  // Set initial count to 1
+// Test `empty()` and `size()`
+TEST(TaiheStringTest, EmptyAndSize) {
+    string str1;
+    EXPECT_TRUE(str1.empty());
+    EXPECT_EQ(str1.size(), 0);
 
-    EXPECT_EQ(tref_inc(&ref_count), 1);  // Increment and check previous value (should be 1)
-    EXPECT_EQ(tref_dec(&ref_count), 0);  // Decrement and check if it should be freed (should return 0 for no free)
+    string str2("NotEmpty");
+    EXPECT_FALSE(str2.empty());
+    EXPECT_EQ(str2.size(), 8);
+}
+
+// Test `front()` and `back()`
+TEST(TaiheStringTest, FrontAndBack) {
+    string str("Test");
+    EXPECT_EQ(str.front(), 'T');
+    EXPECT_EQ(str.back(), 't');
+}
+
+// Test out of range
+TEST(TaiheStringTest, OutOfRange) {
+    string str("Test");
+    EXPECT_THROW(str[10], std::out_of_range);
+}
+
+// Test operator[]
+TEST(TaiheStringTest, IndexOperator) {
+    taihe::core::string s("index");
+    EXPECT_EQ(s[0], 'i');
+    EXPECT_EQ(s[4], 'x');
+    EXPECT_THROW(s[5], std::out_of_range);
+}
+
+// Test substr function
+TEST(TaiheStringTest, Substring) {
+    taihe::core::string s("substring");
+    taihe::core::string sub = s.substr(3, 6);
+    EXPECT_EQ(sub.size(), 6);
+    EXPECT_EQ(sub, "string");
+}
+
+// Test concat function
+TEST(TaiheStringTest, ConcatTest) {
+    taihe::core::string s1("con");
+    taihe::core::string s2("cat");
+    taihe::core::string s3 = concat(s1, s2);
+    EXPECT_EQ(s3.size(), 6);
+    EXPECT_EQ(s3, "concat");
+}
+
+// Test comparison operators
+TEST(TaiheStringTest, ComparisonTest) {
+    taihe::core::string s1("abc");
+    taihe::core::string s2("abc");
+    taihe::core::string s3("def");
+
+    EXPECT_TRUE(s1 == s2);
+    EXPECT_FALSE(s1 == s3);
+    EXPECT_TRUE(s1 < s3);
+    EXPECT_TRUE(s3 > s1);
 }
 
 int main(int argc, char **argv) {
