@@ -11,7 +11,7 @@ class Package:
     spec: ast.Specification
 
 
-class SemanticAnalyzer(Visitor):
+class SymbolReplacement(Visitor):
     def __init__(
         self,
         symbol_tables: dict[tuple[str, ...], dict[str, ast.SpecificationFieldUni]],
@@ -51,8 +51,6 @@ class SemanticAnalyzer(Visitor):
             field = symbol_table.get(old_text)
             if field is None:
                 raise SymbolNotExistError(self.package_path, alias_pair.old_name)
-            if isinstance(field, ast.Const | ast.Function):
-                raise NotATypeError(self.package_path, alias_pair.old_name)
             new_name = alias_pair.new_name or alias_pair.old_name
             new_text = new_name.text
             rec_name, _, _ = self.using_symbols.setdefault(
@@ -61,9 +59,32 @@ class SemanticAnalyzer(Visitor):
             if rec_name != new_name:
                 raise SymbolConflictError(self.package_path, rec_name, new_name)
 
+    def visit_UserType(self, node: ast.UserType):
+        if node.pkname is None:
+            symbol = self.using_symbols.get(node.name.text)
+            if symbol is None:
+                raise SymbolNotExistError(self.package_path, node.name)
+            _, pktupl, text = symbol
+            target = self.symbol_tables[pktupl][text]
+        else:
+            pktupl = tuple(token.text for token in node.pkname.parts)
+            package = self.using_packages.get(pktupl)
+            if package is None:
+                raise PackageNotExistError(self.package_path, node.pkname)
+            _, pktupl = package
+            target = self.symbol_tables[pktupl].get(node.name.text)
+            if target is None:
+                raise SymbolNotExistError(self.package_path, node.name)
+        if isinstance(target, ast.Const | ast.Function):
+            raise NotATypeError(self.package_path, node.name)
+        node.pkname = ast.PackageName([ast.token(text) for text in pktupl])
+        node.name.text = text
+
     def visit_Specification(self, node: ast.Specification):
         while node.uses:
             self.visit(node.uses.pop())
+        for field in node.fields:
+            self.visit(field)
 
 
 def semantic_analysis(packages: list[Package]):
@@ -96,5 +117,5 @@ def semantic_analysis(packages: list[Package]):
                 raise SymbolConflictError(package.path, field.name, first.name)
     # Check for package alias and using symbols
     for package in packages:
-        analyzer = SemanticAnalyzer(symbol_tables, package.tupl, package.path)
+        analyzer = SymbolReplacement(symbol_tables, package.tupl, package.path)
         analyzer.visit(package.spec)

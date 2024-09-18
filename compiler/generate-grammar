@@ -45,8 +45,8 @@ def generate_TaiheAST():
     ast.append(f"    @dataclass\n")
     ast.append(f"    class token:\n")
     ast.append(f"        text: str\n")
-    ast.append(f"        line: Optional[int]\n")
-    ast.append(f"        column: Optional[int]\n")
+    ast.append(f"        line: Optional[int] = None\n")
+    ast.append(f"        column: Optional[int] = None\n")
     ast.append(f"\n")
     parser = get_parser()
     for rule_name in parser.ruleNames:
