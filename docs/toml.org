@@ -1,0 +1,25 @@
+#+TITLE: 项目配置文件
+
+* 检查代码格式
+
+使用ruff进行检查
+#+BEGIN_SRC bash
+poetry run ruff check [dirs]
+#+END_SRC
+
+使用black进行检查
+#+BEGIN_SRC bash
+poetry run black --check [dirs]
+#+END_SRC
+
+* 虚拟环境管理
+
+创建并激活虚拟环境
+#+BEGIN_SRC bash
+poetry shell
+#+END_SRC
+
+安装依赖包
+#+BEGIN_SRC bash
+poetry install
+#+END_SRC
