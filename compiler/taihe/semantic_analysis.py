@@ -1,4 +1,7 @@
 from dataclasses import dataclass
+from typing import Any
+
+from numpy import isin
 
 from taihe.exceptions import *
 from taihe.parse import ast, Visitor
@@ -6,8 +9,8 @@ from taihe.parse import ast, Visitor
 
 @dataclass
 class Package:
-    tupl: tuple[str, ...]
     path: str
+    tupl: tuple[str, ...]
     spec: ast.Specification
 
 
@@ -15,10 +18,11 @@ class SymbolReplacement(Visitor):
     def __init__(
         self,
         symbol_tables: dict[tuple[str, ...], dict[str, ast.SpecificationFieldUni]],
-        pktupl: tuple[str, ...],
         src_path: str,
+        pktupl: tuple[str, ...],
     ) -> None:
         self.symbol_tables = symbol_tables
+        self.src_path = src_path
         self.using_packages: dict[
             tuple[str, ...], tuple[ast.PackageNameUni, tuple[str, ...]]
         ] = {}
@@ -26,7 +30,12 @@ class SymbolReplacement(Visitor):
             symbol: (field.name, pktupl, symbol)
             for symbol, field in symbol_tables[pktupl].items()
         }
-        self.src_path = src_path
+
+    def visit_Specification(self, node: ast.Specification):
+        while node.uses:
+            self.visit(node.uses.pop())
+        for field in node.fields:
+            self.visit(field)
 
     def visit_UsePackage(self, node: ast.UsePackage):
         old_pktupl = tuple(token.text for token in node.old_pkname.parts)
@@ -80,24 +89,6 @@ class SymbolReplacement(Visitor):
         node.pkname = ast.PackageName([ast.token(text) for text in pktupl])
         node.name.text = text
 
-    def visit_BasicType(self, node: ast.BasicType):
-        pass
-
-    def visit_TypeWithSpecifier(self, node: ast.TypeWithSpecifier):
-        self.visit(node.type)
-
-    def visit_Function(self, node: ast.Function):
-        for parameter in node.parameters:
-            self.visit(parameter.type_with_specifier)
-        for return_type in node.return_types:
-            self.visit(return_type)
-
-    def visit_Specification(self, node: ast.Specification):
-        while node.uses:
-            self.visit(node.uses.pop())
-        for field in node.fields:
-            self.visit(field)
-
 
 class SemanticAnalyzer(Visitor):
     def __init__(
@@ -107,6 +98,9 @@ class SemanticAnalyzer(Visitor):
     ) -> None:
         self.symbol_tables = symbol_tables
         self.src_path = src_path
+
+    def generic_visit(self, node):
+        raise NotImplementedError
 
     def visit_Specification(self, node: ast.Specification):
         for field in node.fields:
@@ -123,7 +117,7 @@ class SemanticAnalyzer(Visitor):
 
 def semantic_analysis(packages: list[Package]):
     # Generate packages dict, Check for package name conflicts
-    packages_dict = {}
+    packages_dict: dict[tuple[str, ...], Package] = {}
     for package in packages:
         other = packages_dict.setdefault(package.tupl, package)
         if other.path is not package.path:
@@ -152,7 +146,7 @@ def semantic_analysis(packages: list[Package]):
     # Check for package alias and using symbols
     for package in packages:
         symbol_replacement = SymbolReplacement(
-            symbol_tables, package.tupl, package.path
+            symbol_tables, package.path, package.tupl
         )
         symbol_replacement.visit(package.spec)
     # Semantic analysis

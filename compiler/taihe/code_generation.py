@@ -5,6 +5,9 @@ class CodeGenerator(Visitor):
     def __init__(self, package_name: tuple[str, ...]):
         self.package_name = package_name
 
+    def generic_visit(self, node):
+        raise NotImplementedError
+
     def visit_BasicType(self, node: ast.BasicType):
         if node.name.text == "i8":
             return "int8_t"
