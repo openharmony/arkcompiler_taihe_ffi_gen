@@ -50,6 +50,10 @@ namespace core {
             other.m_handle = nullptr;
         }
 
+        string(TString* other_handle)
+            : m_handle(tstr_dup(other_handle)) {}
+
+
         // Destructor
         ~string() {
             if (m_handle) {
@@ -98,12 +102,15 @@ namespace core {
         }
 
         operator std::string_view() const noexcept {
-            if (m_handle)
-            {
+            if (m_handle) {
                 return { tstr_buf(m_handle), tstr_len(m_handle) };
             }
             return { "", 0 };
         }
+
+        operator TString*() const noexcept {
+            return m_handle;
+        }        
 
         const_reference operator[](size_type pos) const {
             if (pos >= size())
@@ -213,8 +220,15 @@ namespace param {
             tstr_new_ref(value, strlen(value), m_handle);
         }
 
+        string(struct TString* other_handle) noexcept
+            : m_handle(other_handle) {}
+
         operator taihe::core::string const&() const noexcept {
             return *reinterpret_cast<string const*>(this);
+        }
+
+        operator TString*() const noexcept {
+            return m_handle;
         }
     private:
         TString* m_handle;
