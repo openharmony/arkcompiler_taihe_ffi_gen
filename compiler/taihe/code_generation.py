@@ -4,7 +4,7 @@ from taihe.parse import Visitor, ast
 
 
 class File:
-    def __init__(self, is_header: bool = False):
+    def __init__(self, is_header: bool = True):
         self.is_header = is_header
         self.headers: set[str] = set()
         self.code = StringIO()
@@ -12,7 +12,7 @@ class File:
     def output_to(self, dst_path: str):
         with open(dst_path, "w") as dst:
             if self.is_header:
-                dst.write("#pragma once")
+                dst.write("#pragma once\n")
             for header in self.headers:
                 dst.write(f'#include "{header}"\n')
             dst.write(self.code.getvalue())
@@ -20,8 +20,8 @@ class File:
     def update(self, code: str):
         self.code.write(code)
 
-    def include(self, header: str):
-        self.headers.add(header)
+    def include(self, *header: str):
+        self.headers.update(header)
 
 
 class CodeGenerator(Visitor):
@@ -74,7 +74,7 @@ class CodeGenerator(Visitor):
         if node.const:
             text += " const"
         if node.ref:
-            text += "&"
+            text += "&" if cpp else "*"
         return text
 
     def visit_Parameter(self, node: ast.Parameter, cpp: bool):
@@ -119,7 +119,14 @@ class CodeGenerator(Visitor):
         namespace = "::".join(self.pktupl)
 
         func_abi_name = "__".join(self.pktupl) + "__" + func_name
-        cpp_args = ", ".join(param.name.text for param in node.parameters)
+        cpp_args_from_abi = ", ".join(
+            ("*" if param.type_with_specifier.ref else "") + param.name.text
+            for param in node.parameters
+        )
+        abi_args_from_cpp = ", ".join(
+            ("&" if param.type_with_specifier.ref else "") + param.name.text
+            for param in node.parameters
+        )
         abi_args = ", ".join(param.name.text for param in node.parameters)
         cpp_params = ", ".join(
             [self.visit(param, cpp=True) for param in node.parameters]
@@ -137,6 +144,12 @@ class CodeGenerator(Visitor):
             abi_return_type = self.visit(node.return_types[0], cpp=False, param=False)
         else:
             raise NotImplementedError
+        if return_count == 1 and node.return_types[0].ref:
+            cpp_rv_from_abi = "*"
+            abi_rv_from_cpp = "&"
+        else:
+            cpp_rv_from_abi = ""
+            abi_rv_from_cpp = ""
 
         types = [
             param.type_with_specifier.type
@@ -170,16 +183,18 @@ class CodeGenerator(Visitor):
                 abi_hpp.include(user_type_abi_hpp_name)
             abi_hpp.update(f"namespace {namespace} {{\n")
             abi_hpp.update(f"inline {cpp_return_type} {func_name}({cpp_params}) {{\n")
-            abi_hpp.update(f"  return {func_abi_name}({abi_args});\n")
+            abi_hpp.update(
+                f"    return {cpp_rv_from_abi}{func_abi_name}({abi_args_from_cpp});\n"
+            )
             abi_hpp.update("}\n")
             abi_hpp.update("}\n")
 
         if self.author:
             impl_h = self.files[impl_h_name]
-            impl_h.update(f"#define TH_EXPORT_C_API_{func_name}(_func) \\\n")
-            impl_h.update(f"  {abi_return_type} {func_abi_name}({abi_params}) {{\\\n")
-            impl_h.update(f"    return _func({abi_args}); \\\n")
-            impl_h.update("  }\n")
+            impl_h.update(f"#define TH_EXPORT_C_API_{func_name}(_f) \\\n")
+            impl_h.update(f"    {abi_return_type} {func_abi_name}({abi_params}) {{\\\n")
+            impl_h.update(f"        return _f({abi_args}); \\\n")
+            impl_h.update("    }\n")
 
             impl_hpp = self.files[impl_hpp_name]
             for type in types:
@@ -188,10 +203,14 @@ class CodeGenerator(Visitor):
                 text = type.name.text
                 user_type_abi_hpp_name = ".".join(pktupl) + "." + text + ".abi.hpp"
                 impl_hpp.include(user_type_abi_hpp_name)
-            impl_hpp.update(f"#define TH_EXPORT_CPP_API_{func_name}(_func) \\\n")
-            impl_hpp.update(f"  {abi_return_type} {func_abi_name}({abi_params}) {{\\\n")
-            impl_hpp.update(f"    return _func({cpp_args}); \\\n")
-            impl_hpp.update("  }\n")
+            impl_hpp.update(f"#define TH_EXPORT_CPP_API_{func_name}(_f) \\\n")
+            impl_hpp.update(
+                f"    {abi_return_type} {func_abi_name}({abi_params}) {{\\\n"
+            )
+            impl_hpp.update(
+                f"        return {abi_rv_from_cpp}_f({cpp_args_from_abi}); \\\n"
+            )
+            impl_hpp.update("    }\n")
 
     def visit_Struct(self, node: ast.Struct):
         struct_name = node.name.text
@@ -219,22 +238,22 @@ class CodeGenerator(Visitor):
                 text = type.name.text
                 user_type_abi_h_name = ".".join(pktupl) + "." + text + ".abi.h"
                 struct_abi_h.include(user_type_abi_h_name)
-            struct_abi_h.update(f"struct {struct_abi_name} {{\n")
+            struct_abi_h.update(f"typedef struct {struct_abi_name} {{\n")
             for field in node.fields:
                 type = self.visit(field.type, cpp=False, param=False)
                 name = field.name.text
-                struct_abi_h.update(f"  {type} {name};\n")
-            struct_abi_h.update("};\n")
+                struct_abi_h.update(f"    {type} {name};\n")
+            struct_abi_h.update(f"}} {struct_abi_name};\n")
 
             abi_h = self.files[abi_h_name]
             abi_h.include(struct_abi_h_name)
 
-        if self.author or self.user:
             struct_abi_hpp = self.files.setdefault(struct_abi_hpp_name, File())
             struct_abi_hpp.include(struct_abi_h_name)
             struct_abi_hpp.update(f"namespace {namespace} {{\n")
             struct_abi_hpp.update(f"using {struct_name} = {struct_abi_name};\n")
             struct_abi_hpp.update("}\n")
 
+        if self.user:
             abi_hpp = self.files[abi_hpp_name]
             abi_hpp.include(struct_abi_hpp_name)

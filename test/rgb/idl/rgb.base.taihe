@@ -1,0 +1,6 @@
+struct RGB {
+    r: u8;
+    g: u8;
+    b: u8;
+}
+function make(r: u8, g: u8, b: u8): RGB;
