@@ -41,6 +41,7 @@ for file in "$1"/user/*.cpp; do
     "$CXX" -c -o "$1"/build/"$name".o "$file" -I "$BASEDIR"/../runtime/include
 done
 "$CXX" "$1"/build/*.o "$1"/build/libtest.so -o "$1"/build/test
+rm -rf "$1"/build/*.o
 echo "Excutable file is generated successfully, running..."
 
 "$1"/build/test
