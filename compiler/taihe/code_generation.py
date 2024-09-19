@@ -1,5 +1,4 @@
 from os import path
-from typing import Any
 
 from taihe.parse import Visitor, ast
 
@@ -91,7 +90,7 @@ class CodeGenerator(Visitor):
 
         if self.user:
             with open(path.join(self.dst_dir, abi_hpp_name), "a") as abi_hpp:
-                abi_hpp.write(f"}}\n")
+                abi_hpp.write(f"}}\n")      # noqa: F541
 
     def visit_Function(self, node: ast.Function):
         basename = ".".join(self.pktupl)
