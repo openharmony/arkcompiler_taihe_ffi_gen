@@ -5,6 +5,7 @@ build
 # Compiler
 __pycache__
 
+compiler/dist/
 compiler/.antlr/
 compiler/taihe/parse/antlr
 
