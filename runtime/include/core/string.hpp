@@ -30,10 +30,10 @@ namespace core {
         // Constructor
         string() noexcept : m_handle(nullptr) {}
 
-        string(const char* value)
+        string(const char* value TH_NONNULL)
             : m_handle(tstr_new(value, std::strlen(value))) {}
 
-        string(const char* value, size_type size)
+        string(const char* value TH_NONNULL, size_type size)
             : m_handle(tstr_new(value, size)) {}
         
         string(std::string_view value)
@@ -84,14 +84,16 @@ namespace core {
         }
 
         string& operator=(std::string_view const& value) {
+            TH_ASSERT(value.data() != nullptr || value.empty(), "std::string_view's data should not be empty!");
             return *this = string{ value };
         }
 
-        string& operator=(char const* const value) {
+        string& operator=(char const* const value TH_NONNULL) {
             return *this = string{ value };
         }
 
         string& operator=(std::initializer_list<char> value) {
+            TH_ASSERT(value.size() > 0, "initializer_list's data should not be empty!");
             return *this = string{ value };
         }
 
@@ -110,6 +112,7 @@ namespace core {
             }
             return tstr_buf(m_handle)[pos];
         }
+        
         // others
         bool empty() const noexcept {
             return m_handle == nullptr || tstr_len(m_handle) == 0;
