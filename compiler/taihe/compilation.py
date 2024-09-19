@@ -27,7 +27,7 @@ def compile(src_dirs, dst_dir, gen_author=True, gen_user=True):
     if not os.path.exists(dst_dir):
         os.makedirs(dst_dir, exist_ok=True)
     for package in packages:
-        code_generator = CodeGenerator(
-            package.tupl, dst_dir, author=gen_author, user=gen_user
-        )
+        code_generator = CodeGenerator(package.tupl, author=gen_author, user=gen_user)
         code_generator.visit(package.spec)
+        for dst_path, file in code_generator.files.items():
+            file.output_to(os.path.join(dst_dir, dst_path))

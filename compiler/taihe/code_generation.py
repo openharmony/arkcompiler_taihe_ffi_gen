@@ -1,14 +1,35 @@
-from os import path
+from io import StringIO
 
 from taihe.parse import Visitor, ast
 
 
+class File:
+    def __init__(self, is_header: bool = False):
+        self.is_header = is_header
+        self.headers: set[str] = set()
+        self.code = StringIO()
+
+    def output_to(self, dst_path: str):
+        with open(dst_path, "w") as dst:
+            if self.is_header:
+                dst.write("#pragma once")
+            for header in self.headers:
+                dst.write(f'#include "{header}"\n')
+            dst.write(self.code.getvalue())
+
+    def update(self, code: str):
+        self.code.write(code)
+
+    def include(self, header: str):
+        self.headers.add(header)
+
+
 class CodeGenerator(Visitor):
-    def __init__(self, pktupl: tuple[str, ...], dst_dir: str, author: bool, user: bool):
+    def __init__(self, pktupl: tuple[str, ...], author: bool, user: bool):
         self.pktupl = pktupl
-        self.dst_dir = dst_dir
         self.author = author
         self.user = user
+        self.files: dict[str, File] = {}
 
     def generic_visit(self, node):
         raise NotImplementedError
@@ -66,36 +87,40 @@ class CodeGenerator(Visitor):
         abi_h_name = basename + ".abi.h"
         abi_hpp_name = basename + ".abi.hpp"
         impl_h_name = basename + ".impl.h"
+        impl_hpp_name = basename + ".impl.hpp"
 
         if self.author or self.user:
-            with open(path.join(self.dst_dir, abi_h_name), "w") as abi_h:
-                abi_h.write("#pragma once\n")
-                abi_h.write('#include "taihe/common.h"\n')
+            abi_h = self.files.setdefault(abi_h_name, File())
+            abi_h.update('#include "taihe/common.h"\n')
 
         if self.user:
-            with open(path.join(self.dst_dir, abi_hpp_name), "w") as abi_hpp:
-                abi_hpp.write("#pragma once\n")
-                abi_hpp.write(f'#include "{abi_h_name}"\n')
+            abi_hpp = self.files.setdefault(abi_hpp_name, File())
+            abi_hpp.include(abi_h_name)
 
         if self.author:
-            with open(path.join(self.dst_dir, impl_h_name), "w") as impl_h:
-                impl_h.write(f'#include "{abi_h_name}"\n')
+            impl_h = self.files.setdefault(impl_h_name, File())
+            impl_h.include(abi_h_name)
+
+            impl_hpp = self.files.setdefault(impl_hpp_name, File())
+            impl_hpp.include(abi_h_name)
 
         for field in node.fields:
             self.visit(field)
 
     def visit_Function(self, node: ast.Function):
         func_name = node.name.text
-        
+
         basename = ".".join(self.pktupl)
         abi_h_name = basename + ".abi.h"
         abi_hpp_name = basename + ".abi.hpp"
         impl_h_name = basename + ".impl.h"
+        impl_hpp_name = basename + ".impl.hpp"
 
         namespace = "::".join(self.pktupl)
 
         func_abi_name = "__".join(self.pktupl) + "__" + func_name
-        args = ", ".join(param.name.text for param in node.parameters)
+        cpp_args = ", ".join(param.name.text for param in node.parameters)
+        abi_args = ", ".join(param.name.text for param in node.parameters)
         cpp_params = ", ".join(
             [self.visit(param, cpp=True) for param in node.parameters]
         )
@@ -114,59 +139,59 @@ class CodeGenerator(Visitor):
             raise NotImplementedError
 
         types = [
-            type
+            param.type_with_specifier.type
             for param in node.parameters
-            if isinstance(type := param.type_with_specifier.type, ast.UserType)
+            if isinstance(param.type_with_specifier.type, ast.UserType)
         ] + [
-            type
+            return_type.type
             for return_type in node.return_types
-            if isinstance(type := return_type.type, ast.UserType)
+            if isinstance(return_type.type, ast.UserType)
         ]
 
         if self.author or self.user:
-            with open(path.join(self.dst_dir, abi_h_name), "a") as abi_h:
-                for type in types:
-                    assert isinstance(type.pkname, ast.PackageName)
-                    pktupl = tuple(token.text for token in type.pkname.parts)
-                    text = type.name.text
-                    user_type_abi_h_name = ".".join(pktupl) + "." + text + ".abi.h"
-                    abi_h.write(f'#include "{user_type_abi_h_name}"\n')
-                abi_h.write(
-                    f"TH_EXPORT {abi_return_type} {func_abi_name}({abi_params});\n"
-                )
+            abi_h = self.files[abi_h_name]
+            for type in types:
+                assert isinstance(type.pkname, ast.PackageName)
+                pktupl = tuple(token.text for token in type.pkname.parts)
+                text = type.name.text
+                user_type_abi_h_name = ".".join(pktupl) + "." + text + ".abi.h"
+                abi_h.include(user_type_abi_h_name)
+            abi_h.update(
+                f"TH_EXPORT {abi_return_type} {func_abi_name}({abi_params});\n"
+            )
 
         if self.user:
-            with open(path.join(self.dst_dir, abi_hpp_name), "a") as abi_hpp:
-                for type in types:
-                    assert isinstance(type.pkname, ast.PackageName)
-                    pktupl = tuple(token.text for token in type.pkname.parts)
-                    text = type.name.text
-                    user_type_abi_hpp_name = ".".join(pktupl) + "." + text + ".abi.hpp"
-                    abi_hpp.write(f'#include "{user_type_abi_hpp_name}"\n')
-                abi_hpp.write(f"namespace {namespace} {{\n")
-                abi_hpp.write(
-                    f"inline {cpp_return_type} {func_name}({cpp_params}) {{\n"
-                )
-                abi_hpp.write(f"    return {func_abi_name}({args});\n")
-                abi_hpp.write("}\n")
-                abi_hpp.write("}\n")
+            abi_hpp = self.files[abi_hpp_name]
+            for type in types:
+                assert isinstance(type.pkname, ast.PackageName)
+                pktupl = tuple(token.text for token in type.pkname.parts)
+                text = type.name.text
+                user_type_abi_hpp_name = ".".join(pktupl) + "." + text + ".abi.hpp"
+                abi_hpp.include(user_type_abi_hpp_name)
+            abi_hpp.update(f"namespace {namespace} {{\n")
+            abi_hpp.update(f"inline {cpp_return_type} {func_name}({cpp_params}) {{\n")
+            abi_hpp.update(f"  return {func_abi_name}({abi_args});\n")
+            abi_hpp.update("}\n")
+            abi_hpp.update("}\n")
 
         if self.author:
-            with open(path.join(self.dst_dir, impl_h_name), "a") as impl_h:
-                impl_h.write("#ifdef __cplusplus\n")
-                for type in types:
-                    assert isinstance(type.pkname, ast.PackageName)
-                    pktupl = tuple(token.text for token in type.pkname.parts)
-                    text = type.name.text
-                    user_type_abi_hpp_name = ".".join(pktupl) + "." + text + ".abi.hpp"
-                    impl_h.write(f'#include "{user_type_abi_hpp_name}"\n')
-                impl_h.write("#endif\n")
-                impl_h.write(f"#define TH_EXPORT_API_{func_name}(_func) \\\n")
-                impl_h.write(
-                    f"    {abi_return_type} {func_abi_name}({abi_params}) {{\\\n"
-                )
-                impl_h.write(f"        return _func({args}); \\\n")
-                impl_h.write("    }\n")
+            impl_h = self.files[impl_h_name]
+            impl_h.update(f"#define TH_EXPORT_C_API_{func_name}(_func) \\\n")
+            impl_h.update(f"  {abi_return_type} {func_abi_name}({abi_params}) {{\\\n")
+            impl_h.update(f"    return _func({abi_args}); \\\n")
+            impl_h.update("  }\n")
+
+            impl_hpp = self.files[impl_hpp_name]
+            for type in types:
+                assert isinstance(type.pkname, ast.PackageName)
+                pktupl = tuple(token.text for token in type.pkname.parts)
+                text = type.name.text
+                user_type_abi_hpp_name = ".".join(pktupl) + "." + text + ".abi.hpp"
+                impl_hpp.include(user_type_abi_hpp_name)
+            impl_hpp.update(f"#define TH_EXPORT_CPP_API_{func_name}(_func) \\\n")
+            impl_hpp.update(f"  {abi_return_type} {func_abi_name}({abi_params}) {{\\\n")
+            impl_hpp.update(f"    return _func({cpp_args}); \\\n")
+            impl_hpp.update("  }\n")
 
     def visit_Struct(self, node: ast.Struct):
         struct_name = node.name.text
@@ -182,39 +207,34 @@ class CodeGenerator(Visitor):
         struct_abi_name = "__".join(self.pktupl) + "__" + struct_name
 
         types = [
-            type
-            for field in node.fields
-            if isinstance(type := field.type, ast.UserType)
+            field.type for field in node.fields if isinstance(field.type, ast.UserType)
         ]
 
         if self.author or self.user:
-            with open(path.join(self.dst_dir, struct_abi_h_name), "w") as struct_abi_h:
-                struct_abi_h.write("#pragma once\n")
-                struct_abi_h.write('#include "taihe/common.h"\n')
-                for type in types:
-                    assert isinstance(type.pkname, ast.PackageName)
-                    pktupl = tuple(token.text for token in type.pkname.parts)
-                    text = type.name.text
-                    user_type_abi_h_name = ".".join(pktupl) + "." + text + ".abi.h"
-                    struct_abi_h.write(f'#include "{user_type_abi_h_name}"\n')
-                struct_abi_h.write(f"struct {struct_abi_name} {{\n")
-                for field in node.fields:
-                    type = self.visit(field.type, cpp=False, param=False)
-                    name = field.name.text
-                    struct_abi_h.write(f"    {type} {name};\n")
-                struct_abi_h.write("};\n")
+            struct_abi_h = self.files.setdefault(struct_abi_h_name, File())
+            struct_abi_h.include("taihe/common.h")
+            for type in types:
+                assert isinstance(type.pkname, ast.PackageName)
+                pktupl = tuple(token.text for token in type.pkname.parts)
+                text = type.name.text
+                user_type_abi_h_name = ".".join(pktupl) + "." + text + ".abi.h"
+                struct_abi_h.include(user_type_abi_h_name)
+            struct_abi_h.update(f"struct {struct_abi_name} {{\n")
+            for field in node.fields:
+                type = self.visit(field.type, cpp=False, param=False)
+                name = field.name.text
+                struct_abi_h.update(f"  {type} {name};\n")
+            struct_abi_h.update("};\n")
 
-            with open(path.join(self.dst_dir, abi_h_name), "a") as abi_h:
-                abi_h.write(f'#include "{struct_abi_h_name}"\n')
+            abi_h = self.files[abi_h_name]
+            abi_h.include(struct_abi_h_name)
 
         if self.author or self.user:
-            with open(
-                path.join(self.dst_dir, struct_abi_hpp_name), "w"
-            ) as struct_abi_hpp:
-                struct_abi_hpp.write(f'#include "{struct_abi_h_name}"\n')
-                struct_abi_hpp.write(f"namespace {namespace} {{\n")
-                struct_abi_hpp.write(f"using {struct_name} = {struct_abi_name};\n")
-                struct_abi_hpp.write("}\n")
+            struct_abi_hpp = self.files.setdefault(struct_abi_hpp_name, File())
+            struct_abi_hpp.include(struct_abi_h_name)
+            struct_abi_hpp.update(f"namespace {namespace} {{\n")
+            struct_abi_hpp.update(f"using {struct_name} = {struct_abi_name};\n")
+            struct_abi_hpp.update("}\n")
 
-            with open(path.join(self.dst_dir, abi_hpp_name), "a") as abi_hpp:
-                abi_hpp.write(f'#include "{struct_abi_hpp_name}"\n')
+            abi_hpp = self.files[abi_hpp_name]
+            abi_hpp.include(struct_abi_hpp_name)
