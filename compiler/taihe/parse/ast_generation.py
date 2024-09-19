@@ -1,7 +1,9 @@
 from antlr4 import CommonTokenStream, StdinStream, Token
+
 from taihe.parse.antlr.TaiheAST import TaiheAST
 from taihe.parse.antlr.TaiheLexer import TaiheLexer
 from taihe.parse.antlr.TaiheParser import TaiheParser
+
 
 def visit(ctx):
     if isinstance(ctx, list):
