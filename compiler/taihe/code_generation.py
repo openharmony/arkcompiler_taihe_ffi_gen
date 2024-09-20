@@ -63,7 +63,7 @@ class CodeGenerator(Visitor):
             if cpp:
                 return "taihe::core::param::string" if param else "taihe::core::string", "core/string.hpp"
             else:
-                return "struct TString *", "taihe/string.abi.h"
+                return "struct TString*", "taihe/string.abi.h"
         raise NotImplementedError
 
     def visit_UserType(self, node: ast.UserType, cpp: bool, param: bool):
