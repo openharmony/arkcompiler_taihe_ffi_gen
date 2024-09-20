@@ -232,6 +232,7 @@ namespace param {
         }
     private:
         TString* m_handle;
+        TString m_header;
     };
 }
 
