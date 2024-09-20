@@ -13,6 +13,8 @@ extern "C" {
 #include <taihe/string.abi.h>
 }
 
+#include <core/common.hpp>
+
 namespace taihe::core::param { struct string; }
 
 namespace taihe {
@@ -49,10 +51,6 @@ namespace core {
             : m_handle(other.m_handle) {
             other.m_handle = nullptr;
         }
-
-        string(TString* other_handle)
-            : m_handle(tstr_dup(other_handle)) {}
-
 
         // Destructor
         ~string() {
@@ -101,6 +99,10 @@ namespace core {
             return *this = string{ value };
         }
 
+        string& operator=(TString* other_handle) {
+            return *this = string(other_handle);
+        }
+
         operator std::string_view() const noexcept {
             if (m_handle) {
                 return { tstr_buf(m_handle), tstr_len(m_handle) };
@@ -110,7 +112,7 @@ namespace core {
 
         operator TString*() const noexcept {
             return m_handle;
-        }        
+        }
 
         const_reference operator[](size_type pos) const {
             if (pos >= size())
@@ -119,7 +121,6 @@ namespace core {
             }
             return tstr_buf(m_handle)[pos];
         }
-        
         // others
         bool empty() const noexcept {
             return m_handle == nullptr || tstr_len(m_handle) == 0;
@@ -131,6 +132,18 @@ namespace core {
 
         friend void swap(string& lhs, string& rhs) noexcept {
             std::swap(lhs.m_handle, rhs.m_handle);
+        }
+
+        string substr(size_t pos, size_t len) const noexcept {
+            struct TString* result_handle = tstr_substr(m_handle, pos, len);
+
+            if (!result_handle) {
+                return string();
+            }
+
+            string result;
+            result.m_handle = result_handle;
+            return result;
         }
 
         const_reference front() const {
@@ -191,6 +204,15 @@ namespace core {
 
     private:
         friend class param::string;
+        friend inline string concat(string const& left, string const& right);
+
+        template<typename cpp_t>
+        friend as_abi_t<cpp_t> taihe::core::into_abi(cpp_t val);
+        template<typename cpp_t>
+        friend cpp_t taihe::core::from_abi(as_abi_t<cpp_t> val);
+
+        string(TString* other_handle)
+            : m_handle(other_handle) {}
 
         TString* m_handle;
     };
@@ -207,7 +229,7 @@ namespace param {
         // Use other type to be taihe::core::param::string
         string(taihe::core::string const& value) noexcept 
             : m_handle(value.m_handle) {}
-
+        
         string(std::string_view const& value) noexcept {
             m_handle = tstr_new_ref(value.data(), value.size(), &m_header);
         }
@@ -220,19 +242,22 @@ namespace param {
             m_handle = tstr_new_ref(value, strlen(value), &m_header);
         }
 
-        string(struct TString* other_handle) noexcept
-            : m_handle(other_handle) {}
 
         operator taihe::core::string const&() const noexcept {
             return *reinterpret_cast<string const*>(this);
         }
 
-        operator TString*() const noexcept {
-            return m_handle;
-        }
     private:
+        template<typename cpp_t>
+        friend as_abi_t<cpp_t> taihe::core::into_abi(cpp_t val);
+        template<typename cpp_t>
+        friend cpp_t taihe::core::from_abi(as_abi_t<cpp_t> val);
+
+        string(struct TString* other_handle) noexcept
+            : m_handle(other_handle) {}
+
         TString* m_handle;
-        TString m_header;
+        TString  m_header;
     };
 }
 
@@ -389,7 +414,7 @@ namespace core {
     //     return string{ std::string_view{ buffer, 1 } };
     // }
 
-    inline string to_string(string const& value) noexcept {
+    inline string to_string(string& value) noexcept {
         return value;
     }
 
@@ -401,5 +426,41 @@ namespace core {
             return string{ "false" };
         }
     }
+
+    inline string concat(string const& left, string const& right) {
+        struct TString* result_handle = tstr_concat(left.m_handle, right.m_handle);
+        
+        if (!result_handle) {
+            return string();
+        }
+
+        string result;
+        result.m_handle = result_handle;
+        return result;
+    }
+
+    template<> struct as_abi<taihe::core::string> { using type = TString* ; };
+
+    template<> inline taihe::core::string from_abi(TString* _val) {
+        return taihe::core::string(_val);
+    }
+
+    template<> inline TString* into_abi(taihe::core::string _val) {
+        TString* abi_val = _val.m_handle;
+        _val.m_handle = nullptr;
+        return abi_val;
+    }
+
+    template<> struct as_abi<taihe::core::param::string> { using type = TString* ; };
+
+    template<> inline taihe::core::param::string from_abi(TString* _val) {
+        return taihe::core::param::string(_val);
+    }
+
+    template<> inline TString* into_abi(taihe::core::param::string _val) {
+        TString* abi_val = _val.m_handle;
+        return abi_val;
+    }
+
 }
 }
