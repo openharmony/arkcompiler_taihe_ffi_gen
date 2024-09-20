@@ -77,21 +77,21 @@ def generate_TaiheVisitor():
     code.append("\n")
     code.append("\n")
     code.append("class TaiheVisitor:\n")
-    code.append("    def visit(self, node):\n")
+    code.append("    def visit(self, node, *args, **kwargs):\n")
     code.append("        node_type = node.__class__.__name__\n")
     code.append('        method_name = f"visit_{node_type}"\n')
     code.append("        method = getattr(self, method_name, self.generic_visit)\n")
-    code.append("        return method(node)\n")
+    code.append("        return method(node, *args, **kwargs)\n")
     code.append("\n")
-    code.append("    def generic_visit(self, node):\n")
+    code.append("    def generic_visit(self, node, *args, **kwargs):\n")
     code.append("        for value in node.__dict__.values():\n")
     code.append("            if value is None:\n")
     code.append("                continue\n")
     code.append("            if isinstance(value, list):\n")
     code.append("                for item in value:\n")
-    code.append("                    self.visit(item)\n")
+    code.append("                    self.visit(item, *args, **kwargs)\n")
     code.append("                continue\n")
-    code.append("            self.visit(value)\n")
+    code.append("            self.visit(value, *args, **kwargs)\n")
     code.append("\n")
     code.append("    def visit_token(self, node: TaiheAST.token):\n")
     code.append("        pass\n")
@@ -101,15 +101,17 @@ def generate_TaiheVisitor():
     stub.append(f"from {ANTLR_PKG}.TaiheAST import TaiheAST\n")
     stub.append("\n")
     stub.append("class TaiheVisitor:\n")
-    stub.append("    def visit(self, node) -> Any: ...\n")
-    stub.append("    def generic_visit(self, node) -> Any: ...\n")
-    stub.append("    def visit_token(self, node: TaiheAST.token) -> Any: ...\n")
+    stub.append("    def visit(self, node, *args, **kwargs) -> Any: ...\n")
+    stub.append("    def generic_visit(self, node, *args, **kwargs) -> Any: ...\n")
+    stub.append(
+        "    def visit_token(self, node: TaiheAST.token, *args, **kwargs) -> Any: ...\n"
+    )
     parser = get_parser()
     for rule_name in parser.ruleNames:
         node_type = rule_name[0].upper() + rule_name[1:]
         if not node_type.endswith("Uni"):
             stub.append(
-                f"    def visit_{node_type}(self, node: TaiheAST.{node_type}) -> Any: ...\n"
+                f"    def visit_{node_type}(self, node: TaiheAST.{node_type}, *args, **kwargs) -> Any: ...\n"
             )
     with open(path.join(ANTLR_PATH, "TaiheVisitor.py"), "w") as file:
         file.writelines(code)
