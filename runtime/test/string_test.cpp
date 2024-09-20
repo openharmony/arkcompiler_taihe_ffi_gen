@@ -124,6 +124,17 @@ TEST(TaiheStringTest, ComparisonTest) {
     EXPECT_TRUE(s3 > s1);
 }
 
+// Test C++ to C and C to C++
+TEST(TaiheStringTest, CrossLanguageTest) {
+    taihe::core::string s1("abc");
+    taihe::core::param::string s2(s1);
+    ASSERT_STREQ(tstr_buf(static_cast<TString*>(s2)), "abc");
+    ASSERT_EQ(tstr_len(static_cast<TString*>(s2)), 3);
+    taihe::core::param::string s3(static_cast<TString*>(s2));
+    ASSERT_STREQ(tstr_buf(static_cast<TString*>(s3)), "abc");
+    ASSERT_EQ(tstr_len(static_cast<TString*>(s3)), 3);
+}
+
 int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
