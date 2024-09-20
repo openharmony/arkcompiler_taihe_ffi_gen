@@ -208,17 +208,17 @@ namespace param {
         string(taihe::core::string const& value) noexcept 
             : m_handle(value.m_handle) {}
 
-        string(std::string_view const& value) noexcept {
-            tstr_new_ref(value.data(), value.size(), m_handle);
-        }
+        // string(std::string_view const& value) noexcept {
+        //     tstr_new_ref(value.data(), value.size(), m_handle);
+        // }
 
-        string(std::string const& value) noexcept {
-            tstr_new_ref(value.data(), value.size(), m_handle);
-        }
+        // string(std::string const& value) noexcept {
+        //     tstr_new_ref(value.data(), value.size(), m_handle);
+        // }
 
-        string(char const* const value) noexcept {
-            tstr_new_ref(value, strlen(value), m_handle);
-        }
+        // string(char const* const value) noexcept {
+        //     tstr_new_ref(value, strlen(value), m_handle);
+        // }
 
         string(struct TString* other_handle) noexcept
             : m_handle(other_handle) {}
