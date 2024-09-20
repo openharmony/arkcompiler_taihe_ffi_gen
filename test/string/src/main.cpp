@@ -4,6 +4,7 @@
 #include "string.op.abi.hpp"
 
 int main() {
+    std::cout << "Please input two strings:" << std::endl;
     auto a = string::io::input();
     auto b = string::io::input();
     auto c = string::op::concat(a, b);
