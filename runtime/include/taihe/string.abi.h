@@ -9,7 +9,7 @@
 /////////////////////////////////////////
 
 enum TStringFlags {
-  TSTRING_SHARED = 1,
+  TSTRING_REF = 1,
 };
 
 struct TString {
@@ -54,7 +54,7 @@ static inline struct TString* tstr_new_ref(const char* buf TH_NONNULL, size_t le
   if (len > UINT32_MAX) return NULL;
   if (buf[len] != '\0') return NULL;
 
-  tstr->flags = TSTRING_SHARED;
+  tstr->flags = TSTRING_REF;
   tstr->length = len;
   tstr->ptr = buf;
   return tstr;
