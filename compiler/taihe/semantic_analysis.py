@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Any
 
 from taihe.exceptions import (
     NotATypeError,
@@ -112,13 +113,60 @@ class SemanticAnalyzer(Visitor):
         for field in node.fields:
             self.visit(field)
 
+    def visit_TypeWithSpecifier(self, node: ast.TypeWithSpecifier):
+        if self.visit(node.type) is True and (node.ref or node.const):
+            raise SyntaxError
+
     def visit_Function(self, node: ast.Function):
         parameters = {}
         for parameter in node.parameters:
+            self.visit(parameter.type_with_specifier)
             new_name = parameter.name
             rec_name = parameters.setdefault(new_name.text, new_name)
             if rec_name is not new_name:
                 raise SymbolConflictError(self.src_path, rec_name, new_name)
+        for return_type in node.return_types:
+            self.visit(return_type)
+    
+    def visit_Struct(self, node: ast.Struct):
+        fields = {}
+        for field in node.fields:
+            if self.visit(field.type) is True:
+                raise SyntaxError
+            new_name = field.name
+            rec_name = fields.setdefault(new_name.text, new_name)
+            if rec_name is not new_name:
+                raise SymbolConflictError(self.src_path, rec_name, new_name)
+
+    def visit_BasicType(self, node: ast.BasicType):
+        if node.name.text == "bool":
+            return False
+        if node.name.text == "f32":
+            return False
+        if node.name.text == "f64":
+            return False
+        if node.name.text == "i8":
+            return False
+        if node.name.text == "i16":
+            return False
+        if node.name.text == "i32":
+            return False
+        if node.name.text == "i64":
+            return False
+        if node.name.text == "u8":
+            return False
+        if node.name.text == "u16":
+            return False
+        if node.name.text == "u32":
+            return False
+        if node.name.text == "u64":
+            return False
+        if node.name.text == "String":
+            return True
+        raise NotImplementedError
+
+    def visit_UserType(self, node: ast.UserType):
+        return False
 
 
 def semantic_analysis(packages: list[Package]):
