@@ -24,11 +24,11 @@ taihec -I "$1"/idl -O "$1"/user --user
 
 echo "Compiling to dynamic link library..."
 cp -rf "$1"/impl/* "$1"/author
-for file in "$1"/author/*.c; do
+for file in "$1"/author/*.c "$BASEDIR"/../runtime/src/*.c; do
     name=$(basename "$file")
     "$C" -c -o "$1"/build/"$name".o "$file" -I "$BASEDIR"/../runtime/include
 done
-for file in "$1"/author/*.cpp; do
+for file in "$1"/author/*.cpp "$BASEDIR"/../runtime/src/*.cpp; do
     name=$(basename "$file")
     "$CXX" -c -o "$1"/build/"$name".o "$file" -I "$BASEDIR"/../runtime/include
 done
@@ -37,11 +37,11 @@ rm -rf "$1"/build/*.o
 
 echo "Compiling to executable file..."
 cp -rf "$1"/src/* "$1"/user
-for file in "$1"/user/*.c; do
+for file in "$1"/user/*.c "$BASEDIR"/../runtime/src/*.c; do
     name=$(basename "$file")
     "$C" -c -o "$1"/build/"$name".o "$file" -I "$BASEDIR"/../runtime/include
 done
-for file in "$1"/user/*.cpp; do
+for file in "$1"/user/*.cpp "$BASEDIR"/../runtime/src/*.cpp; do
     name=$(basename "$file")
     "$CXX" -c -o "$1"/build/"$name".o "$file" -I "$BASEDIR"/../runtime/include
 done

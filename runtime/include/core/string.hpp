@@ -44,7 +44,7 @@ namespace core {
         string(std::initializer_list<char> value)
             : string(value.begin(), static_cast<uint32_t>(value.size())) {}
         
-        string(string& other)
+        string(string const& other)
             : m_handle(tstr_dup(other.m_handle)) {}
 
         string(string&& other) noexcept
@@ -222,9 +222,9 @@ namespace param {
     public:
         string() noexcept : m_handle(nullptr) {}
 
-        string(string const& values) = delete;
-        string& operator=(string const& values) = delete;
-        string(std::nullptr_t) = delete;
+        // string(string const& values) = delete;
+        // string& operator=(string const& values) = delete;
+        // string(std::nullptr_t) = delete;
 
         // Use other type to be taihe::core::param::string
         string(taihe::core::string const& value) noexcept 
@@ -244,7 +244,7 @@ namespace param {
 
 
         operator taihe::core::string const&() const noexcept {
-            return *reinterpret_cast<string const*>(this);
+            return *reinterpret_cast<taihe::core::string const*>(this);
         }
 
     private:
