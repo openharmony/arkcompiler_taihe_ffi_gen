@@ -5,7 +5,7 @@
 #include <taihe/string.abi.h>
 
 static inline struct TStringHeap* to_heap(struct TString* s) {
-  if (s->flags & TSTRING_SHARED) return NULL;
+  if (s->flags & TSTRING_REF) return NULL;
   return (struct TStringHeap*)s;
 }
 
