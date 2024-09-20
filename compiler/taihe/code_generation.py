@@ -4,7 +4,7 @@ from taihe.parse import Visitor, ast
 
 
 class File:
-    def __init__(self, is_header):
+    def __init__(self, is_header: bool):
         self.is_header = is_header
         self.headers: set[str] = set()
         self.code = StringIO()
@@ -192,7 +192,7 @@ class CodeGenerator(Visitor):
             impl_hpp.include(*cpp_param_headers, cpp_return_header)
             impl_hpp.write(f"#define TH_EXPORT_CPP_API_{func_name}(_func) \\\n")
             impl_hpp.write(f"    {abi_return_type} {func_abi_name}({abi_params_str}) {{\\\n")
-            impl_hpp.write(f"        return {return_from_abi}(_func({args_from_abi_str})); \\\n")
+            impl_hpp.write(f"        return {return_into_abi}(_func({args_from_abi_str})); \\\n")
             impl_hpp.write("    }\n")
 
     def visit_Struct(self, node: ast.Struct):

@@ -1,2 +1,1 @@
 function concat(a: String, b: String): String;
-function substr(a: String, start: i32, end: i32): String;
