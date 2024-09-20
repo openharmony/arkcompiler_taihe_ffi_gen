@@ -59,6 +59,11 @@ class CodeGenerator(Visitor):
             return "uint32_t", None
         if node.name.text == "u64":
             return "uint64_t", None
+        if node.name.text == "String":
+            if cpp:
+                return "taihe::core::param::string" if param else "taihe::core::string", "core/string.hpp"
+            else:
+                return "struct TString *", "taihe/string.abi.h"
         raise NotImplementedError
 
     def visit_UserType(self, node: ast.UserType, cpp: bool, param: bool):
@@ -137,8 +142,8 @@ class CodeGenerator(Visitor):
             param_name = param.name.text
             cpp_param_headers.append(cpp_param_header)
             abi_param_headers.append(abi_param_header)
-            args_from_abi.append(f"from_abi<{cpp_param_type}>({param_name})")
-            args_into_abi.append(f"into_abi<{cpp_param_type}>({param_name})")
+            args_from_abi.append(f"taihe::core::from_abi<{cpp_param_type}>({param_name})")
+            args_into_abi.append(f"taihe::core::into_abi<{cpp_param_type}>({param_name})")
             cpp_params.append(f"{cpp_param_type} {param_name}")
             abi_params.append(f"{abi_param_type} {param_name}")
         args_from_abi_str = ", ".join(args_from_abi)
@@ -158,8 +163,8 @@ class CodeGenerator(Visitor):
             abi_return_type, abi_return_header = self.visit(
                 node.return_types[0], cpp=False, param=False
             )
-            return_from_abi = f"from_abi<{cpp_return_type}>"
-            return_into_abi = f"into_abi<{cpp_return_type}>"
+            return_from_abi = f"taihe::core::from_abi<{cpp_return_type}>"
+            return_into_abi = f"taihe::core::into_abi<{cpp_return_type}>"
         else:
             raise NotImplementedError
 
@@ -230,39 +235,39 @@ class CodeGenerator(Visitor):
             struct_abi_hpp.write(f"using {struct_name} = {struct_abi_name};\n")
             struct_abi_hpp.write("}\n")
             struct_abi_hpp.write("template<>\n")
-            struct_abi_hpp.write(f"struct as_abi<{struct_cpp_name}> {{\n")
+            struct_abi_hpp.write(f"struct taihe::core::as_abi<{struct_cpp_name}> {{\n")
             struct_abi_hpp.write(f"    using type = {struct_abi_name};\n")
             struct_abi_hpp.write("};\n")
             struct_abi_hpp.write("template<>\n")
-            struct_abi_hpp.write(f"inline {struct_abi_name} into_abi({struct_cpp_name} _val) {{\n")
+            struct_abi_hpp.write(f"inline {struct_abi_name} taihe::core::into_abi({struct_cpp_name} _val) {{\n")
             struct_abi_hpp.write("    return _val;\n")
             struct_abi_hpp.write("}\n")
             struct_abi_hpp.write("template<>\n")
-            struct_abi_hpp.write(f"inline {struct_cpp_name} from_abi({struct_abi_name} _val) {{\n")
+            struct_abi_hpp.write(f"inline {struct_cpp_name} taihe::core::from_abi({struct_abi_name} _val) {{\n")
             struct_abi_hpp.write("    return _val;\n")
             struct_abi_hpp.write("}\n")
             struct_abi_hpp.write("template<>\n")
-            struct_abi_hpp.write(f"struct as_abi<{struct_cpp_name}&> {{\n")
+            struct_abi_hpp.write(f"struct taihe::core::as_abi<{struct_cpp_name}&> {{\n")
             struct_abi_hpp.write(f"    using type = {struct_abi_name}*;\n")
             struct_abi_hpp.write("};\n")
             struct_abi_hpp.write("template<>\n")
-            struct_abi_hpp.write(f"inline {struct_abi_name} *into_abi({struct_cpp_name} &_val) {{\n")
+            struct_abi_hpp.write(f"inline {struct_abi_name} *taihe::core::into_abi({struct_cpp_name} &_val) {{\n")
             struct_abi_hpp.write("    return &_val;\n")
             struct_abi_hpp.write("}\n")
             struct_abi_hpp.write("template<>\n")
-            struct_abi_hpp.write(f"inline {struct_cpp_name} &from_abi({struct_abi_name} *_val) {{\n")
+            struct_abi_hpp.write(f"inline {struct_cpp_name} &taihe::core::from_abi({struct_abi_name} *_val) {{\n")
             struct_abi_hpp.write("    return *_val;\n")
             struct_abi_hpp.write("}\n")
             struct_abi_hpp.write("template<>\n")
-            struct_abi_hpp.write(f"struct as_abi<{struct_cpp_name} const&> {{\n")
+            struct_abi_hpp.write(f"struct taihe::core::as_abi<{struct_cpp_name} const&> {{\n")
             struct_abi_hpp.write(f"    using type = {struct_abi_name} const*;\n")
             struct_abi_hpp.write("};\n")
             struct_abi_hpp.write("template<>\n")
-            struct_abi_hpp.write(f"inline {struct_abi_name} const *into_abi({struct_cpp_name} const &_val) {{\n")
+            struct_abi_hpp.write(f"inline {struct_abi_name} const *taihe::core::into_abi({struct_cpp_name} const &_val) {{\n")
             struct_abi_hpp.write("    return &_val;\n")
             struct_abi_hpp.write("}\n")
             struct_abi_hpp.write("template<>\n")
-            struct_abi_hpp.write(f"inline {struct_cpp_name} const &from_abi({struct_abi_name} const *_val) {{\n")
+            struct_abi_hpp.write(f"inline {struct_cpp_name} const &taihe::core::from_abi({struct_abi_name} const *_val) {{\n")
             struct_abi_hpp.write("    return *_val;\n")
             struct_abi_hpp.write("}\n")
 

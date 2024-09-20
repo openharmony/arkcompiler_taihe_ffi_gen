@@ -7,7 +7,7 @@ extern "C" {
 #include <taihe/common.h>
 }
 
-
+namespace taihe::core {
 template<typename cpp_t> struct as_abi {};
 
 template<typename cpp_t>
@@ -117,3 +117,4 @@ template<> inline uint64_t const &from_abi(uint64_t const *_val) { return *_val;
 template<> inline bool     const &from_abi(bool     const *_val) { return *_val; }
 template<> inline float    const &from_abi(float    const *_val) { return *_val; }
 template<> inline double   const &from_abi(double   const *_val) { return *_val; }
+}
