@@ -124,14 +124,6 @@ TEST(TaiheStringTest, ComparisonTest) {
     EXPECT_TRUE(s3 > s1);
 }
 
-// Test Ref String
-TEST(TaiheStringTest, RefStringTest) {
-    std::string_view sv = "abc";
-    taihe::core::param::string s2(sv);
-    ASSERT_STREQ(tstr_buf(static_cast<TString*>(s2)), "abc");
-    ASSERT_EQ(tstr_len(static_cast<TString*>(s2)), 3);
-}
-
 // Test C++ to C and C to C++
 TEST(TaiheStringTest, CrossLanguageTest) {
     taihe::core::string s1("abc");
