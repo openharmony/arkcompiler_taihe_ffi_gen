@@ -206,10 +206,10 @@ namespace core {
         friend class param::string;
         friend inline string concat(string const& left, string const& right);
 
-        template<typename cpp_t>
-        friend as_abi_t<cpp_t> taihe::core::into_abi(cpp_t val);
-        template<typename cpp_t>
-        friend cpp_t taihe::core::from_abi(as_abi_t<cpp_t> val);
+        template<typename cpp_t, typename abi_t>
+        friend abi_t taihe::core::into_abi(cpp_t val);
+        template<typename cpp_t, typename abi_t>
+        friend cpp_t taihe::core::from_abi(abi_t val);
 
         string(TString* other_handle)
             : m_handle(other_handle) {}
@@ -248,10 +248,10 @@ namespace param {
         }
 
     private:
-        template<typename cpp_t>
-        friend as_abi_t<cpp_t> taihe::core::into_abi(cpp_t val);
-        template<typename cpp_t>
-        friend cpp_t taihe::core::from_abi(as_abi_t<cpp_t> val);
+        template<typename cpp_t, typename abi_t>
+        friend abi_t taihe::core::into_abi(cpp_t val);
+        template<typename cpp_t, typename abi_t>
+        friend cpp_t taihe::core::from_abi(abi_t val);
 
         string(struct TString* other_handle) noexcept
             : m_handle(other_handle) {}
@@ -439,8 +439,6 @@ namespace core {
         return result;
     }
 
-    template<> struct as_abi<taihe::core::string> { using type = TString* ; };
-
     template<> inline taihe::core::string from_abi(TString* _val) {
         return taihe::core::string(_val);
     }
@@ -450,8 +448,6 @@ namespace core {
         _val.m_handle = nullptr;
         return abi_val;
     }
-
-    template<> struct as_abi<taihe::core::param::string> { using type = TString* ; };
 
     template<> inline taihe::core::param::string from_abi(TString* _val) {
         return taihe::core::param::string(_val);
