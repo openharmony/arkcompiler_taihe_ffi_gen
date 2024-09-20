@@ -124,15 +124,23 @@ TEST(TaiheStringTest, ComparisonTest) {
     EXPECT_TRUE(s3 > s1);
 }
 
+// Test Ref String
+TEST(TaiheStringTest, RefStringTest) {
+    std::string_view sv = "abc";
+    taihe::core::param::string s2(sv);
+    ASSERT_STREQ(tstr_buf(static_cast<TString*>(s2)), "abc");
+    ASSERT_EQ(tstr_len(static_cast<TString*>(s2)), 3);
+}
+
 // Test C++ to C and C to C++
 TEST(TaiheStringTest, CrossLanguageTest) {
     taihe::core::string s1("abc");
-    taihe::core::param::string s2(s1);
-    ASSERT_STREQ(tstr_buf(static_cast<TString*>(s2)), "abc");
-    ASSERT_EQ(tstr_len(static_cast<TString*>(s2)), 3);
-    taihe::core::param::string s3(static_cast<TString*>(s2));
-    ASSERT_STREQ(tstr_buf(static_cast<TString*>(s3)), "abc");
-    ASSERT_EQ(tstr_len(static_cast<TString*>(s3)), 3);
+    TString* s2 = taihe::core::into_abi<taihe::core::string>(s1);
+    ASSERT_STREQ(tstr_buf(s2), "abc");
+    ASSERT_EQ(tstr_len(s2), 3);
+    taihe::core::string s3 = taihe::core::from_abi<taihe::core::string>(s2);
+    EXPECT_EQ(s3, "abc");
+    EXPECT_EQ(s3.size(), 3);
 }
 
 int main(int argc, char **argv) {
