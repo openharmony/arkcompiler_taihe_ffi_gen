@@ -34,6 +34,7 @@ def get_attr_pairs(ctx):
 
 
 def generate_TaiheAST():
+    # fmt: off
     code = []
     code.append(f"from dataclasses import dataclass\n")
     code.append(f"from typing import Union, List, Optional\n")
@@ -72,6 +73,7 @@ def generate_TaiheAST():
 
 
 def generate_TaiheVisitor():
+    # fmt: off
     code = []
     code.append(f"from {ANTLR_PKG}.TaiheAST import TaiheAST\n")
     code.append(f"\n")

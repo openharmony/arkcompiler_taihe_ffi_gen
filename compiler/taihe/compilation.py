@@ -15,14 +15,17 @@ def compile(src_dirs, dst_dir, gen_author=True, gen_user=True):
             if os.path.splitext(src_path)[1].lower() == ".taihe":
                 src_path = os.path.abspath(os.path.join(src_dir, src_path))
                 src_paths.append(src_path)
+
     # Parse into ASTs
     packages: list[Package] = []
     for src_path in src_paths:
         pktupl = tuple(os.path.splitext(os.path.basename(src_path))[0].split("."))
         spec = generate_ast(FileStream(src_path))
         packages.append(Package(src_path, pktupl, spec))
+
     # Semantic analysis
     semantic_analysis(packages)
+
     # Code generation
     if not os.path.exists(dst_dir):
         os.makedirs(dst_dir, exist_ok=True)

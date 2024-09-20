@@ -10,6 +10,7 @@ class File:
         self.code = StringIO()
 
     def output_to(self, dst_path: str):
+        # fmt: off
         with open(dst_path, "w") as dst:
             if self.is_header:
                 dst.write(f"#pragma once\n")
@@ -27,6 +28,7 @@ class File:
 
 
 class CodeGenerator(Visitor):
+    # fmt: off
     def __init__(self, pktupl: tuple[str, ...], author: bool, user: bool):
         self.pktupl = pktupl
         self.author = author
@@ -131,12 +133,8 @@ class CodeGenerator(Visitor):
         cpp_param_headers = []
         abi_param_headers = []
         for param in node.parameters:
-            cpp_param_type, cpp_param_header = self.visit(
-                param.type_with_specifier, cpp=True, param=True
-            )
-            abi_param_type, abi_param_header = self.visit(
-                param.type_with_specifier, cpp=False, param=True
-            )
+            cpp_param_type, cpp_param_header = self.visit(param.type_with_specifier, cpp=True, param=True)
+            abi_param_type, abi_param_header = self.visit(param.type_with_specifier, cpp=False, param=True)
             param_name = param.name.text
             cpp_param_headers.append(cpp_param_header)
             abi_param_headers.append(abi_param_header)
@@ -154,8 +152,8 @@ class CodeGenerator(Visitor):
         if len(node.return_types) == 0:
             cpp_return_type = "void"
             abi_return_type = "void"
-            return_from_abi = f""
-            return_into_abi = f""
+            return_from_abi = ""
+            return_into_abi = ""
         elif len(node.return_types) == 1:
             cpp_return_type, cpp_return_header = self.visit(node.return_types[0], cpp=True, param=False)
             abi_return_type, abi_return_header = self.visit(node.return_types[0], cpp=False, param=False)
@@ -175,7 +173,7 @@ class CodeGenerator(Visitor):
                 abi_return_iters.append(abi_return_iter)
             cpp_return_iters_str = ", ".join(cpp_return_iters)
             cpp_return_type = f"std::tuple<{cpp_return_iters_str}>"
-            abi_return_type = func_abi_name + "__return_t"
+            abi_return_type = f"{func_abi_name}__return_t"
 
             if self.author or self.user:
                 abi_h = self.files[abi_h_name]
