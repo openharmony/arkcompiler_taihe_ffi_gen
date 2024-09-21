@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 from antlr4 import FileStream
 
@@ -7,7 +8,12 @@ from taihe.parse.ast_generation import generate_ast
 from taihe.semantic_analysis import Package, semantic_analysis
 
 
-def compile(src_dirs, dst_dir, gen_author=True, gen_user=True):
+def compile(
+    src_dirs: list[Path | str],
+    dst_dir: Path | str,
+    gen_author: bool = False,
+    gen_user: bool = False,
+):
     # Find all .taihe files in the containing directories
     src_paths = []
     for src_dir in src_dirs:

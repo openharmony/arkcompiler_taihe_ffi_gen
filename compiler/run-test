@@ -1,52 +1,141 @@
-#!/usr/bin/bash -eu
+#!/usr/bin/env python3
 
-shopt -s nullglob
+import os
+import shutil
+import subprocess
+from pathlib import Path
+import argparse
+from taihe.compilation import compile as taihec
 
-set -o pipefail
-BASEDIR=$(dirname $0)
-CXX="${CXX:-clang++}"
-C="${C:-clang}"
+CXX = os.getenv("CXX", "clang++")
+C = os.getenv("C", "clang")
 
-taihec() {
-    PYTHONPATH="$BASEDIR" python -m taihe "$@"
-}
+BASEDIR = Path(__file__).resolve().parent
 
-rm -rf "$1"/build
-mkdir -p "$1"/build
 
-echo "Generating author codes..."
-rm -rf "$1"/author
-taihec -I "$1"/idl -O "$1"/author --author
+def run_command(command):
+    result = subprocess.run(command, shell=True, check=True, text=True)
+    return result
 
-echo "Generating user codes..."
-rm -rf "$1"/user
-taihec -I "$1"/idl -O "$1"/user --user
 
-echo "Compiling to dynamic link library..."
-cp -rf "$1"/impl/* "$1"/author
-for file in "$1"/author/*.c "$BASEDIR"/../runtime/src/*.c; do
-    name=$(basename "$file")
-    "$C" -c -o "$1"/build/"$name".o "$file" -I "$BASEDIR"/../runtime/include
-done
-for file in "$1"/author/*.cpp "$BASEDIR"/../runtime/src/*.cpp; do
-    name=$(basename "$file")
-    "$CXX" -c -o "$1"/build/"$name".o "$file" -I "$BASEDIR"/../runtime/include
-done
-"$CXX" "$1"/build/*.o -shared -fPIC -o "$1"/build/libtest.so
-rm -rf "$1"/build/*.o
+def clean_directory(directory):
+    if directory.exists():
+        shutil.rmtree(directory)
 
-echo "Compiling to executable file..."
-cp -rf "$1"/src/* "$1"/user
-for file in "$1"/user/*.c "$BASEDIR"/../runtime/src/*.c; do
-    name=$(basename "$file")
-    "$C" -c -o "$1"/build/"$name".o "$file" -I "$BASEDIR"/../runtime/include
-done
-for file in "$1"/user/*.cpp "$BASEDIR"/../runtime/src/*.cpp; do
-    name=$(basename "$file")
-    "$CXX" -c -o "$1"/build/"$name".o "$file" -I "$BASEDIR"/../runtime/include
-done
-"$CXX" "$1"/build/*.o "$1"/build/libtest.so -o "$1"/build/test
-rm -rf "$1"/build/*.o
 
-echo "Running..."
-"$1"/build/test
+def create_directory(directory):
+    directory.mkdir(parents=True, exist_ok=True)
+
+
+def copy_directory(src_directory, dst_directory):
+    if src_directory.exists():
+        shutil.copytree(src_directory, dst_directory, dirs_exist_ok=True)
+
+
+def compile(input_dir, output_dir, include_dirs, optimization_level):
+    for input_file in input_dir.iterdir():
+        name = input_file.name
+        output_file = output_dir / f"{name}.o"
+        compiler = C if name.endswith(".c") else CXX
+        includes = " ".join(f"-I {include_dir}" for include_dir in include_dirs)
+        command = f"{compiler} -c -o {output_file} {input_file} {includes} -O{optimization_level}"
+        run_command(command)
+
+
+def main(target_dir, optimization_level):
+    target_path = Path(target_dir)
+
+    idl_dir = target_path / "idl"
+    author_dir = target_path / "author"
+    user_dir = target_path / "user"
+
+    author_test_dir = target_path / "author_test"
+    author_test_include_dir = author_test_dir / "include"
+    author_test_src_dir = author_test_dir / "src"
+
+    user_test_dir = target_path / "user_test"
+    user_test_include_dir = user_test_dir / "include"
+    user_test_src_dir = user_test_dir / "src"
+
+    runtime_dir = BASEDIR / ".." / "runtime"
+    runtime_include_dir = runtime_dir / "include"
+    runtime_src_dir = runtime_dir / "src"
+
+    build_dir = target_path / "build"
+    build_runtime_dir = build_dir / "runtime"
+    build_author_dir = build_dir / "author"
+    build_user_dir = build_dir / "user"
+
+    print("Generating author codes...")
+    clean_directory(author_test_dir)
+    create_directory(author_test_src_dir)
+    create_directory(author_test_include_dir)
+    taihec(src_dirs=[idl_dir], dst_dir=author_test_include_dir, gen_author=True)
+
+    print("Generating user codes...")
+    clean_directory(user_test_dir)
+    create_directory(user_test_src_dir)
+    create_directory(user_test_include_dir)
+    taihec(src_dirs=[idl_dir], dst_dir=user_test_include_dir, gen_user=True)
+
+    clean_directory(build_dir)
+    create_directory(build_runtime_dir)
+    create_directory(build_author_dir)
+    create_directory(build_user_dir)
+
+    print("Compiling to dynamic link library...")
+    copy_directory(author_dir, author_test_dir)
+    compile(
+        runtime_src_dir,
+        build_runtime_dir,
+        [runtime_include_dir],
+        optimization_level,
+    )
+    compile(
+        author_test_src_dir,
+        build_author_dir,
+        [runtime_include_dir, author_test_include_dir],
+        optimization_level,
+    )
+    so_file = build_dir / "libtest.so"
+    command = f"{CXX} {build_runtime_dir}/*.o {build_author_dir}/*.o -shared -fPIC -o {so_file}"
+    run_command(command)
+
+    print("Compiling to executable file...")
+    copy_directory(user_dir, user_test_dir)
+    compile(
+        user_test_src_dir,
+        build_user_dir,
+        [runtime_include_dir, user_test_include_dir],
+        optimization_level,
+    )
+    test_executable = build_dir / "test"
+    command = f"{CXX} {build_user_dir}/*.o {so_file} -o {test_executable}"
+    run_command(command)
+
+    print("Running...")
+    run_command(str(test_executable))
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Build and run project from a target directory"
+    )
+    parser.add_argument(
+        "target_directory",
+        type=str,
+        help="The target directory containing source files for the project",
+    )
+    parser.add_argument(
+        "-O",
+        "--optimization",
+        type=str,
+        nargs="?",
+        default="0",
+        const="",
+        help="Optimization level for compilation",
+    )
+
+    args = parser.parse_args()
+
+    main(args.target_directory, args.optimization)

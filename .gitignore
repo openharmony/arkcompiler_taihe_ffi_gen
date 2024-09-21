@@ -10,8 +10,8 @@ compiler/.antlr/
 compiler/taihe/parse/antlr
 
 # Temporary directories
-test/*/author
-test/*/user
+test/*/author_test
+test/*/user_test
 
 # files
 *.log
