@@ -10,14 +10,15 @@ int main() {
     auto b = string::io::input();
 
     auto a_b = string::op::concat(a, b);
-    auto b_a = string::op::concat(b, a);
 
     std::cout << "a + b = ";
     string::io::output(a_b);
 
     std::cout << "Please input a number n: ";
+
     auto n_str = string::io::input();
     int32_t n = std::atoi(n_str.c_str());
+
     auto [a_0, a_1] = string::op::split(a, n);
     auto [b_0, b_1] = string::op::split(b, n);
 

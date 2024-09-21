@@ -142,8 +142,8 @@ class CodeGenerator(Visitor):
             args.append(param_name)
             cpp_param_headers.append(cpp_param_header)
             abi_param_headers.append(abi_param_header)
-            args_from_abi.append(f"taihe::core::from_abi<{cpp_param_type}, {abi_param_type}>({param_name})")
-            args_into_abi.append(f"taihe::core::into_abi<{cpp_param_type}, {abi_param_type}>({param_name})")
+            args_from_abi.append(f"taihe::core::from_abi<{cpp_param_type}, {abi_param_type}>(std::move({param_name}))")
+            args_into_abi.append(f"taihe::core::into_abi<{cpp_param_type}, {abi_param_type}>(std::move({param_name}))")
             cpp_params.append(f"{cpp_param_type} {param_name}")
             abi_params.append(f"{abi_param_type} {param_name}")
         args_str = ", ".join(args)
@@ -193,7 +193,7 @@ class CodeGenerator(Visitor):
                 abi_hpp.write(f"inline {cpp_return_type} taihe::core::from_abi({abi_return_type} _val) {{\n")
                 abi_hpp.write(f"    return {{\n")
                 for i, (cpp_return_iter, abi_return_iter) in enumerate(zip(cpp_return_iters, abi_return_iters)):
-                    abi_hpp.write(f"        taihe::core::from_abi<{cpp_return_iter}, {abi_return_iter}>(_val._{i}), \n")
+                    abi_hpp.write(f"        taihe::core::from_abi<{cpp_return_iter}, {abi_return_iter}>(std::move(_val._{i})), \n")
                 abi_hpp.write(f"    }};\n")
                 abi_hpp.write(f"}}\n")
     
@@ -203,7 +203,7 @@ class CodeGenerator(Visitor):
                 impl_hpp.write(f"inline {abi_return_type} taihe::core::into_abi({cpp_return_type} _val) {{\n")
                 impl_hpp.write(f"    return {{\n")
                 for i, (cpp_return_iter, abi_return_iter) in enumerate(zip(cpp_return_iters, abi_return_iters)):
-                    impl_hpp.write(f"        taihe::core::into_abi<{cpp_return_iter}, {abi_return_iter}>(std::get<{i}>(_val)), \n")
+                    impl_hpp.write(f"        taihe::core::into_abi<{cpp_return_iter}, {abi_return_iter}>(std::move(std::get<{i}>(_val))), \n")
                 impl_hpp.write(f"    }};\n")
                 impl_hpp.write(f"}}\n")
     

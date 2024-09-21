@@ -3,9 +3,9 @@
 using namespace taihe::core;
 
 std::tuple<string, string> ohos_split_str(param::string pstr, int32_t n) {
-    string tstr = pstr;
+    string const &tstr = pstr;
     int32_t l = tstr.size();
-    if (n > 0) {
+    if (n > l) {
         n = l;
     } else if (n + l < 0) {
         n = 0;
