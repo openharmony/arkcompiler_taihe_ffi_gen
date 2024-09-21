@@ -1,5 +1,7 @@
 // common.hpp
 #pragma once
+#include <tuple>
+#include <type_traits> // TH_IS_SAME
 
 extern "C" {
 #include <taihe/common.h>

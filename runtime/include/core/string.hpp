@@ -13,7 +13,7 @@ extern "C" {
 #include <taihe/string.abi.h>
 }
 
-#include <core/common.hpp>
+#include "common.hpp"
 
 namespace taihe::core::param { struct string; }
 

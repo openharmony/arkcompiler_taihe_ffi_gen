@@ -1,9 +1,10 @@
 #pragma once
 #include <stdint.h>
+#include <assert.h>
 
 #define TH_NONNULL __attribute__((nonnull))
 
-#define TH_ASSERT(condition, message)                                  \
+#define TH_ASSERT(condition, message)                               \
     do {                                                            \
         if (!(condition)) {                                         \
             fprintf(stderr, "Assertion failed: (%s), function %s, " \
@@ -21,6 +22,23 @@
 #define TH_EXPORT __attribute__((visibility("default")))
 #endif
 
+#ifdef __cplusplus
+#define TH_TYPEOF(value) decltype(value)
+#else
+#define TH_TYPEOF(value) typeof(value)
+#endif
+
+#ifdef __cplusplus
+#define TH_STATIC_ASSERT(condition, message) static_assert(condition, message)
+#else
+#define TH_STATIC_ASSERT(condition, message) static_assert(condition, message)
+#endif
+
+#ifdef __cplusplus
+#define TH_IS_SAME(u, v) std::is_same<u, v>::value
+#else
+#define TH_IS_SAME(u, v) __builtin_types_compatible_p(u, v)
+#endif
 
 ////////////////////////
 // REFERENCE COUNTING //
