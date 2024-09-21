@@ -2,10 +2,12 @@ from dataclasses import dataclass
 from typing import Any
 
 from taihe.exceptions import (
+    CircularReferenceError,
     NotATypeError,
     PackageAliasConflictError,
     PackageNameConflictError,
     PackageNotExistError,
+    ReferenceTypeError,
     SymbolConflictError,
     SymbolConflictWithNamespaceError,
     SymbolNotExistError,
@@ -114,8 +116,13 @@ class SemanticAnalyzer(Visitor):
             self.visit(field)
 
     def visit_TypeWithSpecifier(self, node: ast.TypeWithSpecifier):
-        if self.visit(node.type) is True and (node.ref or node.const):
-            raise SyntaxError
+        specifier = node.ref or node.const
+        if self.visit(node.type) is True and specifier:
+            raise ReferenceTypeError(self.src_path, specifier)
+
+    def visit_Const(self, node: ast.Const):
+        if self.visit(node.type) is True:
+            raise ReferenceTypeError(self.src_path, node.name)
 
     def visit_Function(self, node: ast.Function):
         parameters = {}
@@ -127,12 +134,12 @@ class SemanticAnalyzer(Visitor):
                 raise SymbolConflictError(self.src_path, rec_name, new_name)
         for return_type in node.return_types:
             self.visit(return_type)
-    
+
     def visit_Struct(self, node: ast.Struct):
         fields = {}
         for field in node.fields:
             if self.visit(field.type) is True:
-                raise SyntaxError
+                raise ReferenceTypeError(self.src_path, field.name)
             new_name = field.name
             rec_name = fields.setdefault(new_name.text, new_name)
             if rec_name is not new_name:
@@ -166,7 +173,38 @@ class SemanticAnalyzer(Visitor):
         raise NotImplementedError
 
     def visit_UserType(self, node: ast.UserType):
-        return False
+        assert node.pkname
+        pktupl = tuple(token.text for token in node.pkname.parts)
+        type_name = node.name.text
+        if isinstance(self.symbol_tables[pktupl][type_name], ast.Struct | ast.Enum):
+            return False
+        return True
+
+
+def check_cycle(struct_table):
+    visited = set()
+    visiting_dict = {}
+    visiting_list = []
+
+    def visit(struct) -> tuple | None:
+        if struct in visited:
+            return None
+        idx = len(visiting_list)
+        rec = visiting_dict.setdefault(struct, idx)
+        if rec != idx:
+            return struct, visiting_list[rec:]
+        for name, child in struct_table[struct]:
+            visiting_list.append((name, child))
+            result = visit(child)
+            if result is not None:
+                return result
+            visiting_list.pop()
+        visiting_dict.pop(struct)
+
+    for struct in struct_table:
+        result = visit(struct)
+        if result is not None:
+            raise CircularReferenceError(*result)
 
 
 def semantic_analysis(packages: list[Package]):
@@ -176,6 +214,7 @@ def semantic_analysis(packages: list[Package]):
         other = packages_dict.setdefault(package.tupl, package)
         if other.path is not package.path:
             raise PackageNameConflictError(package.path, other.path)
+
     # Generate namespace tree
     namespaces = {}
     namespace_tree = {}
@@ -184,6 +223,7 @@ def semantic_analysis(packages: list[Package]):
         for part in package.tupl:
             namespace = namespace.setdefault(part, {})
         namespaces[package.tupl] = namespace
+
     # Check for symbol collisions, not considering `use` statements, generate symbol tables
     symbol_tables: dict[tuple[str, ...], dict[str, ast.SpecificationFieldUni]] = {}
     for package in packages:
@@ -197,13 +237,35 @@ def semantic_analysis(packages: list[Package]):
             first = symbol_table.setdefault(name_text, field)
             if first is not field:
                 raise SymbolConflictError(package.path, field.name, first.name)
+
     # Check for package alias and using symbols
     for package in packages:
         symbol_replacement = SymbolReplacement(
             symbol_tables, package.path, package.tupl
         )
         symbol_replacement.visit(package.spec)
-    # Semantic analysis
+
+    # Semantic analysis (type errors, symbol conflicts)
     for package in packages:
         semantic_analyzer = SemanticAnalyzer(symbol_tables, package.path)
         semantic_analyzer.visit(package.spec)
+
+    # Check for circular reference in structs
+    struct_table = {}
+    for package in packages:
+        for decl in package.spec.fields:
+            if not isinstance(decl, ast.Struct):
+                continue
+            struct_name = decl.name.text
+            child = struct_table.setdefault((package.tupl, struct_name), [])
+            for attr in decl.fields:
+                name = attr.name.text
+                type = attr.type
+                if not isinstance(type, ast.UserType):
+                    continue
+                assert type.pkname
+                pktupl = tuple(token.text for token in type.pkname.parts)
+                type_name = type.name.text
+                if isinstance(symbol_tables[pktupl][type_name], ast.Struct):
+                    child.append((name, (pktupl, type_name)))
+    check_cycle(struct_table)

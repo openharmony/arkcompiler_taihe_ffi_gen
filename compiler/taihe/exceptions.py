@@ -31,7 +31,7 @@ class PackageAliasConflictError(SemanticError):
 
     def __str__(self):
         pkname = ".".join(token.text for token in self.rec_pkname.parts)
-        return f"package alias {pkname!r} is used multiple times in {self.src_path!r}: {pos(self.new_pkname.parts[0])} and {pos(self.rec_pkname.parts[0])}"
+        return f"{self.src_path!r}: {pos(self.new_pkname.parts[0])} and {pos(self.rec_pkname.parts[0])}: package alias {pkname!r} is used multiple times"
 
 
 class SymbolConflictError(SemanticError):
@@ -41,7 +41,7 @@ class SymbolConflictError(SemanticError):
         self.new_name = new_name
 
     def __str__(self):
-        return f"symbol {self.rec_name.text!r} is declared multiple times in {self.src_path!r}: {pos(self.new_name)} and {pos(self.rec_name)}"
+        return f"{self.src_path!r}: {pos(self.new_name)} and {pos(self.rec_name)}: symbol {self.rec_name.text!r} is declared multiple times"
 
 
 class SymbolConflictWithNamespaceError(SemanticError):
@@ -52,7 +52,7 @@ class SymbolConflictWithNamespaceError(SemanticError):
 
     def __str__(self):
         namespace = ".".join(self.package_name) + "." + self.name.text
-        return f"{namespace!r} in {self.src_path!r}: {pos(self.name)} has been used as a namespace already"
+        return f"{self.src_path!r}: {pos(self.name)}: {namespace!r} has been used as a namespace already"
 
 
 class PackageNotExistError(SemanticError):
@@ -62,7 +62,7 @@ class PackageNotExistError(SemanticError):
 
     def __str__(self):
         pkname = ".".join(token.text for token in self.name.parts)
-        return f"package {pkname!r} not exist, found in {self.src_path!r}: {pos(self.name.parts[0])}"
+        return f"{self.src_path!r}: {pos(self.name.parts[0])}, package {pkname!r} does not exist"
 
 
 class SymbolNotExistError(SemanticError):
@@ -71,7 +71,7 @@ class SymbolNotExistError(SemanticError):
         self.name = name
 
     def __str__(self):
-        return f"symbol {self.name.text!r} not exist, found in {self.src_path!r}: line {pos(self.name)}"
+        return f"{self.src_path!r}: {pos(self.name)}: symbol {self.name.text!r} does not exist"
 
 
 class NotATypeError(SemanticError):
@@ -80,4 +80,30 @@ class NotATypeError(SemanticError):
         self.name = name
 
     def __str__(self):
-        return f"symbol {self.name.text!r} in {self.src_path!r}: {pos(self.name)} is not a type"
+        return f"{self.src_path!r}: {pos(self.name)}: symbol {self.name.text!r} is not a type"
+
+
+class ReferenceTypeError(SemanticError):
+    def __init__(self, src_path: str, name: ast.token):
+        self.src_path = src_path
+        self.name = name
+
+    def __str__(self):
+        return f"{self.src_path!r}: {pos(self.name)}: only value types can be used in the current context"
+
+
+class CircularReferenceError(SemanticError):
+    def __init__(
+        self,
+        start: tuple[tuple[str, ...], str],
+        cycle: list[tuple[str, tuple[tuple[str, ...], str]]],
+    ):
+        self.start = start
+        self.cycle = cycle
+
+    def __str__(self):
+        pkname, text = self.start
+        cycle_str = ".".join(pkname) + "." + text
+        for name, (pkname, text) in self.cycle:
+            cycle_str += " -> " + name + ": " + ".".join(pkname) + "." + text
+        return f"circular reference has been found: {cycle_str}"

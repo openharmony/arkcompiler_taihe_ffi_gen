@@ -36,7 +36,8 @@ aliasPair
 
 specificationFieldUni
     : Struct_ = struct
-    | EnumClass_ = enumClass
+    | Enum_ = enum
+    | Variant_ = variant
     | Interface_ = interface
     | Runtimeclass_ = runtimeclass
     | Const_ = const
@@ -55,7 +56,7 @@ structProperty
     : token_name = ID COLON TypeUni_type = typeUni SEMICOLON
     ;
 
-enumClass
+enum
     : KW_ENUM token_name = ID LEFT_BRACE (EnumFieldUniLst_fields += enumFieldUni)+ RIGHT_BRACE
     ;
 
@@ -64,6 +65,18 @@ enumFieldUni
     ;
 
 enumProperty
+    : token_name = ID SEMICOLON
+    ;
+
+variant
+    : KW_ENUM token_name = ID LEFT_BRACE (VariantFieldUniLst_fields += variantFieldUni)+ RIGHT_BRACE
+    ;
+
+variantFieldUni
+    : VariantProperty_ = variantProperty
+    ;
+
+variantProperty
     : token_name = ID (COLON TypeUniOpt_type = typeUni)? SEMICOLON
     ;
 
@@ -274,6 +287,10 @@ KW_REF
 
 KW_ENUM
     : 'enum'
+    ;
+
+KW_UNION
+    : 'union'
     ;
 
 KW_STRUCT

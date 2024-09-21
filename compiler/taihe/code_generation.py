@@ -69,9 +69,9 @@ class CodeGenerator(Visitor):
         raise NotImplementedError
 
     def visit_UserType(self, node: ast.UserType, cpp: bool, param: bool):
-        assert isinstance(node.pkname, ast.PackageName)
-        type_name = node.name.text
+        assert node.pkname
         pktupl = tuple(token.text for token in node.pkname.parts)
+        type_name = node.name.text
         type_basename = ".".join(pktupl) + "." + type_name
         if cpp:
             return "::".join(pktupl) + "::" + type_name, type_basename + ".abi.hpp"
