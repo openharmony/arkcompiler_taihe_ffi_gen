@@ -235,7 +235,7 @@ class CodeGenerator(Visitor):
             impl_h.write(f"    }}\n")
 
             impl_hpp = self.files[impl_hpp_name]
-            impl_hpp.include(*cpp_param_headers, *cpp_return_headers, "type_traits")
+            impl_hpp.include(*cpp_param_headers, *cpp_return_headers)
             impl_hpp.write(f"#define TH_EXPORT_CPP_API_{func_name}(_func) \\\n")
             impl_hpp.write(f"    TH_STATIC_ASSERT(TH_IS_SAME(TH_TYPEOF(_func), {cpp_return_type} ({cpp_params_str})), \\\n")
             impl_hpp.write(f'        #_func " is incompatible with {cpp_return_type} {cpp_func_name}({cpp_params_str})"); \\\n')

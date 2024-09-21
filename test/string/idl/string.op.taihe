@@ -1,1 +1,2 @@
 function concat(a: String, b: String): String;
+function split(a: String, n: i32): (String, String);
