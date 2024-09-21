@@ -26,7 +26,10 @@ def compile(
     packages: list[Package] = []
     for src_path in src_paths:
         pktupl = tuple(os.path.splitext(os.path.basename(src_path))[0].split("."))
-        spec = generate_ast(FileStream(src_path))
+        try:
+            spec = generate_ast(FileStream(src_path))
+        except SyntaxError:
+            raise SyntaxError(f"while parsing {src_path}") from None
         packages.append(Package(src_path, pktupl, spec))
 
     # Semantic analysis

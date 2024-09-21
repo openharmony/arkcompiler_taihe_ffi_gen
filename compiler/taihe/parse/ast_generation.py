@@ -1,8 +1,26 @@
 from antlr4 import CommonTokenStream, StdinStream, Token
+from antlr4.error.ErrorListener import ErrorListener
 
 from taihe.parse.antlr.TaiheAST import TaiheAST
 from taihe.parse.antlr.TaiheLexer import TaiheLexer
 from taihe.parse.antlr.TaiheParser import TaiheParser
+
+
+class TaiheErrorListener(ErrorListener):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def syntaxError(self, *args, **kwargs):
+        raise SyntaxError
+
+    def reportAmbiguity(self, *args, **kwargs):
+        raise SyntaxError
+
+    def reportAttemptingFullContext(self, *args, **kwargs):
+        raise SyntaxError
+
+    def reportContextSensitivity(self, *args, **kwargs):
+        raise SyntaxError
 
 
 def visit(ctx):
@@ -25,8 +43,10 @@ def visit(ctx):
 
 def generate_ast(input_stream) -> TaiheAST.Specification:
     lexer = TaiheLexer(input_stream)
+    lexer.addErrorListener(TaiheErrorListener())
     token_stream = CommonTokenStream(lexer)
     parser = TaiheParser(token_stream)
+    parser.addErrorListener(TaiheErrorListener())
     tree = parser.specification()
     return visit(tree)
 
