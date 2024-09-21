@@ -129,8 +129,6 @@ class CodeGenerator(Visitor):
         cpp_func_name = "::".join(self.pktupl) + "::" + func_name
 
         args = []
-        cpp_param_types = []
-        abi_param_types = []
         cpp_param_headers = []
         abi_param_headers = []
         args_from_abi = []
@@ -142,8 +140,6 @@ class CodeGenerator(Visitor):
             abi_param_type, abi_param_header = self.visit(param.type_with_specifier, cpp=False, param=True)
             param_name = param.name.text
             args.append(param_name)
-            cpp_param_types.append(cpp_param_type)
-            abi_param_types.append(abi_param_type)
             cpp_param_headers.append(cpp_param_header)
             abi_param_headers.append(abi_param_header)
             args_from_abi.append(f"taihe::core::from_abi<{cpp_param_type}, {abi_param_type}>({param_name})")
@@ -155,8 +151,6 @@ class CodeGenerator(Visitor):
         args_into_abi_str = ", ".join(args_into_abi)
         cpp_params_str = ", ".join(cpp_params)
         abi_params_str = ", ".join(abi_params)
-        cpp_param_types_str = ", ".join(cpp_param_types)
-        abi_param_types_str = ", ".join(abi_param_types)
 
         cpp_return_headers = []
         abi_return_headers = []
@@ -215,9 +209,6 @@ class CodeGenerator(Visitor):
     
             return_from_abi = f"taihe::core::from_abi<{cpp_return_type}, {abi_return_type}>"
             return_into_abi = f"taihe::core::into_abi<{cpp_return_type}, {abi_return_type}>"
-    
-        cpp_func_type = f"{cpp_return_type} ({cpp_param_types_str})"
-        abi_func_type = f"{abi_return_type} ({abi_param_types_str})"
 
         if self.author or self.user:
             abi_h = self.files[abi_h_name]
@@ -237,8 +228,8 @@ class CodeGenerator(Visitor):
             impl_h = self.files[impl_h_name]
             impl_h.include(*abi_param_headers, *abi_return_headers)
             impl_h.write(f"#define TH_EXPORT_C_API_{func_name}(_func) \\\n")
-            impl_h.write(f'    TH_STATIC_ASSERT(TH_IS_SAME(TH_TYPEOF(_func), {abi_func_type}), \\\n')
-            impl_h.write(f'        "the type of function " #_func " is incompatible with {abi_func_name}, should be {abi_func_type}"); \\\n')
+            impl_h.write(f'    TH_STATIC_ASSERT(TH_IS_SAME(TH_TYPEOF(_func), {abi_return_type} ({abi_params_str})), \\\n')
+            impl_h.write(f'        #_func " is incompatible with {abi_return_type} {abi_func_name}({abi_params_str})"); \\\n')
             impl_h.write(f"    {abi_return_type} {abi_func_name}({abi_params_str}) {{ \\\n")
             impl_h.write(f"        return _func({args_str}); \\\n")
             impl_h.write(f"    }}\n")
@@ -246,8 +237,8 @@ class CodeGenerator(Visitor):
             impl_hpp = self.files[impl_hpp_name]
             impl_hpp.include(*cpp_param_headers, *cpp_return_headers, "type_traits")
             impl_hpp.write(f"#define TH_EXPORT_CPP_API_{func_name}(_func) \\\n")
-            impl_hpp.write(f"    TH_STATIC_ASSERT(TH_IS_SAME(TH_TYPEOF(_func), {cpp_func_type}), \\\n")
-            impl_hpp.write(f'        "the type of function " #_func " is incompatible with {cpp_func_name}, should be {cpp_func_type}"); \\\n')
+            impl_hpp.write(f"    TH_STATIC_ASSERT(TH_IS_SAME(TH_TYPEOF(_func), {cpp_return_type} ({cpp_params_str})), \\\n")
+            impl_hpp.write(f'        #_func " is incompatible with {cpp_return_type} {cpp_func_name}({cpp_params_str})"); \\\n')
             impl_hpp.write(f"    {abi_return_type} {abi_func_name}({abi_params_str}) {{ \\\n")
             impl_hpp.write(f"        return {return_into_abi}(_func({args_from_abi_str})); \\\n")
             impl_hpp.write(f"    }}\n")
