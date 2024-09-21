@@ -116,7 +116,6 @@ class CodeGenerator(Visitor):
 
     def visit_Function(self, node: ast.Function):
         func_name = node.name.text
-        func_abi_name = "__".join(self.pktupl) + "__" + func_name
 
         basename = ".".join(self.pktupl)
         abi_h_name = basename + ".abi.h"
@@ -126,26 +125,38 @@ class CodeGenerator(Visitor):
 
         namespace = "::".join(self.pktupl)
 
+        abi_func_name = "__".join(self.pktupl) + "__" + func_name
+        cpp_func_name = "::".join(self.pktupl) + "::" + func_name
+
+        args = []
+        cpp_param_types = []
+        abi_param_types = []
+        cpp_param_headers = []
+        abi_param_headers = []
         args_from_abi = []
         args_into_abi = []
         cpp_params = []
         abi_params = []
-        cpp_param_headers = []
-        abi_param_headers = []
         for param in node.parameters:
             cpp_param_type, cpp_param_header = self.visit(param.type_with_specifier, cpp=True, param=True)
             abi_param_type, abi_param_header = self.visit(param.type_with_specifier, cpp=False, param=True)
             param_name = param.name.text
+            args.append(param_name)
+            cpp_param_types.append(cpp_param_type)
+            abi_param_types.append(abi_param_type)
             cpp_param_headers.append(cpp_param_header)
             abi_param_headers.append(abi_param_header)
             args_from_abi.append(f"taihe::core::from_abi<{cpp_param_type}, {abi_param_type}>({param_name})")
             args_into_abi.append(f"taihe::core::into_abi<{cpp_param_type}, {abi_param_type}>({param_name})")
             cpp_params.append(f"{cpp_param_type} {param_name}")
             abi_params.append(f"{abi_param_type} {param_name}")
+        args_str = ", ".join(args)
         args_from_abi_str = ", ".join(args_from_abi)
         args_into_abi_str = ", ".join(args_into_abi)
         cpp_params_str = ", ".join(cpp_params)
         abi_params_str = ", ".join(abi_params)
+        cpp_param_types_str = ", ".join(cpp_param_types)
+        abi_param_types_str = ", ".join(abi_param_types)
 
         cpp_return_headers = []
         abi_return_headers = []
@@ -173,7 +184,7 @@ class CodeGenerator(Visitor):
                 abi_return_iters.append(abi_return_iter)
             cpp_return_iters_str = ", ".join(cpp_return_iters)
             cpp_return_type = f"std::tuple<{cpp_return_iters_str}>"
-            abi_return_type = f"{func_abi_name}__return_t"
+            abi_return_type = f"{abi_func_name}__return_t"
 
             if self.author or self.user:
                 abi_h = self.files[abi_h_name]
@@ -184,7 +195,6 @@ class CodeGenerator(Visitor):
 
             if self.user:
                 abi_hpp = self.files[abi_hpp_name]
-                abi_hpp.include("tuple")
                 abi_hpp.write(f"template<>\n")
                 abi_hpp.write(f"inline {cpp_return_type} taihe::core::from_abi({abi_return_type} _val) {{\n")
                 abi_hpp.write(f"    return {{\n")
@@ -195,7 +205,6 @@ class CodeGenerator(Visitor):
     
             if self.author:
                 impl_hpp = self.files[impl_hpp_name]
-                abi_hpp.include("tuple")
                 impl_hpp.write(f"template<>\n")
                 impl_hpp.write(f"inline {abi_return_type} taihe::core::into_abi({cpp_return_type} _val) {{\n")
                 impl_hpp.write(f"    return {{\n")
@@ -206,18 +215,21 @@ class CodeGenerator(Visitor):
     
             return_from_abi = f"taihe::core::from_abi<{cpp_return_type}, {abi_return_type}>"
             return_into_abi = f"taihe::core::into_abi<{cpp_return_type}, {abi_return_type}>"
+    
+        cpp_func_type = f"{cpp_return_type} ({cpp_param_types_str})"
+        abi_func_type = f"{abi_return_type} ({abi_param_types_str})"
 
         if self.author or self.user:
             abi_h = self.files[abi_h_name]
             abi_h.include(*abi_param_headers, *abi_return_headers)
-            abi_h.write(f"TH_EXPORT {abi_return_type} {func_abi_name}({abi_params_str});\n")
+            abi_h.write(f"TH_EXPORT {abi_return_type} {abi_func_name}({abi_params_str});\n")
 
         if self.user:
             abi_hpp = self.files[abi_hpp_name]
             abi_hpp.include(*cpp_param_headers, *cpp_return_headers)
             abi_hpp.write(f"namespace {namespace} {{\n")
             abi_hpp.write(f"inline {cpp_return_type} {func_name}({cpp_params_str}) {{\n")
-            abi_hpp.write(f"    return {return_from_abi}({func_abi_name}({args_into_abi_str}));\n")
+            abi_hpp.write(f"    return {return_from_abi}({abi_func_name}({args_into_abi_str}));\n")
             abi_hpp.write(f"}}\n")
             abi_hpp.write(f"}}\n")
 
@@ -225,12 +237,18 @@ class CodeGenerator(Visitor):
             impl_h = self.files[impl_h_name]
             impl_h.include(*abi_param_headers, *abi_return_headers)
             impl_h.write(f"#define TH_EXPORT_C_API_{func_name}(_func) \\\n")
-            impl_h.write(f"    {abi_return_type} {func_abi_name}({abi_params_str}) __attribute__((alias(#_func)));\n")
+            impl_h.write(f'    TH_STATIC_ASSERT(TH_IS_SAME(TH_TYPEOF(_func), {abi_func_type}), \\\n')
+            impl_h.write(f'        "the type of function " #_func " is incompatible with {abi_func_name}, should be {abi_func_type}"); \\\n')
+            impl_h.write(f"    {abi_return_type} {abi_func_name}({abi_params_str}) {{ \\\n")
+            impl_h.write(f"        return _func({args_str}); \\\n")
+            impl_h.write(f"    }}\n")
 
             impl_hpp = self.files[impl_hpp_name]
-            impl_hpp.include(*cpp_param_headers, *cpp_return_headers)
+            impl_hpp.include(*cpp_param_headers, *cpp_return_headers, "type_traits")
             impl_hpp.write(f"#define TH_EXPORT_CPP_API_{func_name}(_func) \\\n")
-            impl_hpp.write(f"    {abi_return_type} {func_abi_name}({abi_params_str}) {{ \\\n")
+            impl_hpp.write(f"    TH_STATIC_ASSERT(TH_IS_SAME(TH_TYPEOF(_func), {cpp_func_type}), \\\n")
+            impl_hpp.write(f'        "the type of function " #_func " is incompatible with {cpp_func_name}, should be {cpp_func_type}"); \\\n')
+            impl_hpp.write(f"    {abi_return_type} {abi_func_name}({abi_params_str}) {{ \\\n")
             impl_hpp.write(f"        return {return_into_abi}(_func({args_from_abi_str})); \\\n")
             impl_hpp.write(f"    }}\n")
 
@@ -246,19 +264,19 @@ class CodeGenerator(Visitor):
 
         namespace = "::".join(self.pktupl)
 
-        struct_abi_name = "__".join(self.pktupl) + "__" + struct_name
-        struct_cpp_name = "::".join(self.pktupl) + "::" + struct_name
+        abi_struct_name = "__".join(self.pktupl) + "__" + struct_name
+        cpp_struct_name = "::".join(self.pktupl) + "::" + struct_name
 
         if self.author or self.user:
             struct_abi_h = self.files.setdefault(struct_abi_h_name, File(is_header=True))
             struct_abi_h.include("taihe/common.h")
-            struct_abi_h.write(f"typedef struct {struct_abi_name} {{\n")
+            struct_abi_h.write(f"typedef struct {abi_struct_name} {{\n")
             for field in node.fields:
                 type, header = self.visit(field.type, cpp=False, param=False)
                 name = field.name.text
                 struct_abi_h.write(f"    {type} {name};\n")
                 struct_abi_h.include(header)
-            struct_abi_h.write(f"}} {struct_abi_name};\n")
+            struct_abi_h.write(f"}} {abi_struct_name};\n")
 
             abi_h = self.files[abi_h_name]
             abi_h.include(struct_abi_h_name)
@@ -276,28 +294,28 @@ class CodeGenerator(Visitor):
             struct_abi_hpp.write(f"}};\n")
             struct_abi_hpp.write(f"}}\n")
             struct_abi_hpp.write(f"template<>\n")
-            struct_abi_hpp.write(f"inline {struct_abi_name} taihe::core::into_abi({struct_cpp_name} _val) {{\n")
-            struct_abi_hpp.write(f"    return reinterpret_cast<{struct_abi_name} &>(_val);\n")
+            struct_abi_hpp.write(f"inline {abi_struct_name} taihe::core::into_abi({cpp_struct_name} _val) {{\n")
+            struct_abi_hpp.write(f"    return reinterpret_cast<{abi_struct_name} &>(_val);\n")
             struct_abi_hpp.write(f"}}\n")
             struct_abi_hpp.write(f"template<>\n")
-            struct_abi_hpp.write(f"inline {struct_cpp_name} taihe::core::from_abi({struct_abi_name} _val) {{\n")
-            struct_abi_hpp.write(f"    return reinterpret_cast<{struct_cpp_name} &>(_val);\n")
+            struct_abi_hpp.write(f"inline {cpp_struct_name} taihe::core::from_abi({abi_struct_name} _val) {{\n")
+            struct_abi_hpp.write(f"    return reinterpret_cast<{cpp_struct_name} &>(_val);\n")
             struct_abi_hpp.write(f"}}\n")
             struct_abi_hpp.write(f"template<>\n")
-            struct_abi_hpp.write(f"inline {struct_abi_name} *taihe::core::into_abi({struct_cpp_name} &_val) {{\n")
-            struct_abi_hpp.write(f"    return reinterpret_cast<{struct_abi_name} *>(&_val);\n")
+            struct_abi_hpp.write(f"inline {abi_struct_name} *taihe::core::into_abi({cpp_struct_name} &_val) {{\n")
+            struct_abi_hpp.write(f"    return reinterpret_cast<{abi_struct_name} *>(&_val);\n")
             struct_abi_hpp.write(f"}}\n")
             struct_abi_hpp.write(f"template<>\n")
-            struct_abi_hpp.write(f"inline {struct_cpp_name} &taihe::core::from_abi({struct_abi_name} *_val) {{\n")
-            struct_abi_hpp.write(f"    return reinterpret_cast<{struct_cpp_name} &>(*_val);\n")
+            struct_abi_hpp.write(f"inline {cpp_struct_name} &taihe::core::from_abi({abi_struct_name} *_val) {{\n")
+            struct_abi_hpp.write(f"    return reinterpret_cast<{cpp_struct_name} &>(*_val);\n")
             struct_abi_hpp.write(f"}}\n")
             struct_abi_hpp.write(f"template<>\n")
-            struct_abi_hpp.write(f"inline {struct_abi_name} const *taihe::core::into_abi({struct_cpp_name} const &_val) {{\n")
-            struct_abi_hpp.write(f"    return reinterpret_cast<{struct_abi_name} const *>(&_val);\n")
+            struct_abi_hpp.write(f"inline {abi_struct_name} const *taihe::core::into_abi({cpp_struct_name} const &_val) {{\n")
+            struct_abi_hpp.write(f"    return reinterpret_cast<{abi_struct_name} const *>(&_val);\n")
             struct_abi_hpp.write(f"}}\n")
             struct_abi_hpp.write(f"template<>\n")
-            struct_abi_hpp.write(f"inline {struct_cpp_name} const &taihe::core::from_abi({struct_abi_name} const *_val) {{\n")
-            struct_abi_hpp.write(f"    return reinterpret_cast<{struct_cpp_name} const &>(*_val);\n")
+            struct_abi_hpp.write(f"inline {cpp_struct_name} const &taihe::core::from_abi({abi_struct_name} const *_val) {{\n")
+            struct_abi_hpp.write(f"    return reinterpret_cast<{cpp_struct_name} const &>(*_val);\n")
             struct_abi_hpp.write(f"}}\n")
 
         if self.user:
