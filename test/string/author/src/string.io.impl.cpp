@@ -8,7 +8,7 @@ taihe::core::string ohos_read_str() {
     return taihe::core::string(str);
 }
 
-void ohos_write_str(taihe::core::param::string pstr) {
+void ohos_write_str(taihe::core::string &pstr) {
     taihe::core::string const &tstr = pstr;
     std::string_view str = tstr;
     std::cout << str << std::endl;

@@ -2,7 +2,7 @@
 
 using namespace taihe::core;
 
-std::tuple<string, string> ohos_split_str(param::string pstr, int32_t n) {
+std::tuple<string, string> ohos_split_str(string &pstr, int32_t n) {
     string const &tstr = pstr;
     int32_t l = tstr.size();
     if (n > l) {
