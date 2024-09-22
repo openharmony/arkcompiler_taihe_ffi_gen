@@ -2,8 +2,7 @@
 
 using namespace taihe::core;
 
-std::tuple<string, string> ohos_split_str(string const &pstr, int32_t n) {
-    string const &tstr = pstr;
+std::tuple<string, string> ohos_split_str(string const &tstr, int32_t n) {
     int32_t l = tstr.size();
     if (n > l) {
         n = l;
@@ -22,8 +21,8 @@ string ohos_int_to_str(int32_t n) {
     return to_string(n);
 }
 
-int32_t ohos_str_to_int(string const &pstr) {
-    return std::atoi(pstr.c_str());
+int32_t ohos_str_to_int(string const &tstr) {
+    return std::atoi(tstr.c_str());
 }
 
 TH_EXPORT_CPP_API_split(ohos_split_str)

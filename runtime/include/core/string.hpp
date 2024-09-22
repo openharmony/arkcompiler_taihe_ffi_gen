@@ -121,12 +121,12 @@ namespace core {
         // When constructing from TString*, you should manage the reference count yourself.
         // For example:
         // ```cpp
-        // string str(tstr_dup(tstr));
+        // string str(tstr_dup(ptr));
         // ```
         // or
         // ```cpp
-        // string str(tstr);
-        // tstr = NULL;
+        // string str(ptr);
+        // ptr = NULL;
         // ```
         string(TString* other_handle)
             : m_handle(other_handle) {}
@@ -264,14 +264,11 @@ namespace param {
         }
 
 
-        operator taihe::core::string &() noexcept {
-            return *reinterpret_cast<taihe::core::string *>(this);
+        operator taihe::core::string const& () const& noexcept {
+            return *reinterpret_cast<taihe::core::string const*>(this);
         }
 
     private:
-        string(struct TString* other_handle) noexcept
-            : m_handle(other_handle) {}
-
         TString* m_handle;
         TString  m_header;
     };
