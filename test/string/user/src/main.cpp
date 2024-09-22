@@ -1,37 +1,35 @@
-#include <iostream>
-
 #include "string.io.abi.hpp"
 #include "string.op.abi.hpp"
 
 int main() {
-    std::cout << "Please input string a: ";
+    string::io::print("Please input string a: ");
     auto a = string::io::input();
-    std::cout << "Please input string b: ";
+    string::io::print("Please input string b: ");
     auto b = string::io::input();
 
     auto a_b = string::op::concat(a, b);
 
-    std::cout << "a + b = ";
-    string::io::output(a_b);
+    string::io::print("a + b = ");
+    string::io::println(a_b);
 
-    std::cout << "Please input a number n: ";
-
+    string::io::print("Please input a number n: ");
     auto n_str = string::io::input();
+
     int32_t n = string::op::to_i32(n_str);
     n_str = string::op::from_i32(n);
 
-    std::cout << "n = ";
-    string::io::output(n_str);
+    string::io::print("n = ");
+    string::io::println(n_str);
 
     auto [a_0, a_1] = string::op::split(a, n);
     auto [b_0, b_1] = string::op::split(b, n);
 
-    std::cout << "a[:n] = ";
-    string::io::output(a_0);
-    std::cout << "a[n:] = ";
-    string::io::output(a_1);
-    std::cout << "b[:n] = ";
-    string::io::output(b_0);
-    std::cout << "b[n:] = ";
-    string::io::output(b_1);
+    string::io::print("a[:n] = ");
+    string::io::println(a_0);
+    string::io::print("a[n:] = ");
+    string::io::println(a_1);
+    string::io::print("b[:n] = ");
+    string::io::println(b_0);
+    string::io::print("b[n:] = ");
+    string::io::println(b_1);
 }

@@ -66,6 +66,9 @@ def main(target_dir, optimization_level):
     build_author_dir = build_dir / "author"
     build_user_dir = build_dir / "user"
 
+    if not idl_dir.is_dir():
+        raise FileNotFoundError(f"'{idl_dir}' is not an valid directory.")
+
     print("Generating author codes...")
     clean_directory(author_test_dir)
     create_directory(author_test_src_dir)

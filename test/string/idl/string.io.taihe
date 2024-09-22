@@ -1,2 +1,3 @@
 function input(): String;
-function output(a: String): ();
+function print(a: String): ();
+function println(a: String): ();

@@ -66,7 +66,7 @@ class CodeGenerator(Visitor):
                 return (
                     "taihe::core::param::string"
                     if glue else
-                    "taihe::core::string&"
+                    "taihe::core::string const&"
                     if param else
                     "taihe::core::string"
                 ), "core/string.hpp"

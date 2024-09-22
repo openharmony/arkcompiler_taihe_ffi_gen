@@ -467,13 +467,13 @@ namespace core {
     }
 
     // passing argument from abi
-    template<> inline taihe::core::string& from_abi(std::add_rvalue_reference_t<TString*> _val) {
+    template<> inline taihe::core::string const& from_abi(std::add_rvalue_reference_t<TString*> _val) {
         return *reinterpret_cast<taihe::core::string *>(&_val);
     }
 
     // passing argument into abi
-    template<> inline TString* into_abi(std::add_rvalue_reference_t<taihe::core::string&> _val) {
-        return *reinterpret_cast<TString **>(&_val);
+    template<> inline TString* into_abi(std::add_rvalue_reference_t<taihe::core::string const&> _val) {
+        return *reinterpret_cast<TString* const*>(&_val);
     }
 }
 }
