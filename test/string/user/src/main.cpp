@@ -17,7 +17,11 @@ int main() {
     std::cout << "Please input a number n: ";
 
     auto n_str = string::io::input();
-    int32_t n = std::atoi(n_str.c_str());
+    int32_t n = string::op::to_i32(n_str);
+    n_str = string::op::from_i32(n);
+
+    std::cout << "n = ";
+    string::io::output(n_str);
 
     auto [a_0, a_1] = string::op::split(a, n);
     auto [b_0, b_1] = string::op::split(b, n);

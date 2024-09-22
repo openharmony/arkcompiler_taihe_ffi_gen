@@ -381,6 +381,7 @@ namespace core {
         if (result.ec != std::errc{}) {
             throw std::runtime_error("Conversion to char failed");
         }
+        *result.ptr = '\0'; // std::to_chars does not write '\0' at the end of the buffer automatcally
         return string{ std::string_view{buffer, static_cast<std::size_t>(result.ptr - buffer)} };
     }
 
