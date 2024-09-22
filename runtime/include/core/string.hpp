@@ -25,10 +25,12 @@ namespace core {
         using value_type = char;
         using size_type = std::size_t;
         using const_reference = value_type const&;
+    
         // using pointer = value_type*;
         using const_pointer = value_type const*;
         using const_iterator = const_pointer;
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+    
         // Constructor
         string() noexcept : m_handle(nullptr) {}
 
@@ -61,47 +63,53 @@ namespace core {
         }
 
         // Operator
-        string& operator=(string const& other) {
-            if (this != &other)
-            {
-                if (m_handle) {
-                    tstr_drop(m_handle);
-                }
-                m_handle = tstr_dup(other.m_handle);
-            }
+        string& operator=(string other) {
+            // copy-and-swap idiom
+            swap(*this, other);
             return *this;
         }
+    
+        // string& operator=(string other) {
+        //     if (this != &other)
+        //     {
+        //         if (m_handle) {
+        //             tstr_drop(m_handle);
+        //         }
+        //         m_handle = tstr_dup(other.m_handle);
+        //     }
+        //     return *this;
+        // }
 
-        string& operator=(string&& other) noexcept {
-            if (this != &other)
-            {
-                if (m_handle) {
-                    tstr_drop(m_handle);
-                }
-                m_handle = tstr_dup(other.m_handle);
-                tstr_drop(other.m_handle);
-                other.m_handle = nullptr;
-            }
-            return *this;
-        }
+        // string& operator=(string&& other) noexcept {
+        //     if (this != &other)
+        //     {
+        //         if (m_handle) {
+        //             tstr_drop(m_handle);
+        //         }
+        //         m_handle = tstr_dup(other.m_handle);
+        //         tstr_drop(other.m_handle);
+        //         other.m_handle = nullptr;
+        //     }
+        //     return *this;
+        // }
 
-        string& operator=(std::string_view const& value) {
-            TH_ASSERT(value.data() != nullptr || value.empty(), "std::string_view's data should not be empty!");
-            return *this = string{ value };
-        }
+        // string& operator=(std::string_view const& value) {
+        //     TH_ASSERT(value.data() != nullptr || value.empty(), "std::string_view's data should not be empty!");
+        //     return *this = string{ value };
+        // }
 
-        string& operator=(char const* const value TH_NONNULL) {
-            return *this = string{ value };
-        }
+        // string& operator=(char const* const value TH_NONNULL) {
+        //     return *this = string{ value };
+        // }
 
-        string& operator=(std::initializer_list<char> value) {
-            TH_ASSERT(value.size() > 0, "initializer_list's data should not be empty!");
-            return *this = string{ value };
-        }
+        // string& operator=(std::initializer_list<char> value) {
+        //     TH_ASSERT(value.size() > 0, "initializer_list's data should not be empty!");
+        //     return *this = string{ value };
+        // }
 
-        string& operator=(TString* other_handle) {
-            return *this = string(other_handle);
-        }
+        // string& operator=(TString* other_handle) {
+        //     return *this = string(other_handle);
+        // }
 
         operator std::string_view() const noexcept {
             if (m_handle) {
@@ -110,8 +118,29 @@ namespace core {
             return { "", 0 };
         }
 
-        operator TString*() const noexcept {
-            return m_handle;
+        // When constructing from TString*, you should manage the reference count yourself.
+        // For example:
+        // ```cpp
+        // string str(tstr_dup(tstr));
+        // ```
+        // or
+        // ```cpp
+        // string str(tstr);
+        // tstr = NULL;
+        // ```
+        string(TString* other_handle)
+            : m_handle(other_handle) {}
+
+        // You don't need to manually increase the reference count of the returned TString*.
+        operator TString*() const & noexcept {
+            return tstr_dup(m_handle);
+        }
+
+        // You don't need to manually increase the reference count of the returned TString*.
+        operator TString*() && noexcept {
+            TString *ret_handle = m_handle;
+            m_handle = nullptr;
+            return ret_handle;
         }
 
         const_reference operator[](size_type pos) const {
@@ -206,14 +235,6 @@ namespace core {
         friend class param::string;
         friend inline string concat(string const& left, string const& right);
 
-        template<typename cpp_t, typename abi_t>
-        friend abi_t taihe::core::into_abi(cpp_t val);
-        template<typename cpp_t, typename abi_t>
-        friend cpp_t taihe::core::from_abi(abi_t val);
-
-        string(TString* other_handle)
-            : m_handle(other_handle) {}
-
         TString* m_handle;
     };
 
@@ -222,9 +243,9 @@ namespace param {
     public:
         string() noexcept : m_handle(nullptr) {}
 
-        // string(string const& values) = delete;
-        // string& operator=(string const& values) = delete;
-        // string(std::nullptr_t) = delete;
+        string(string const& values) = delete;
+        string& operator=(string const& values) = delete;
+        string(std::nullptr_t) = delete;
 
         // Use other type to be taihe::core::param::string
         string(taihe::core::string const& value) noexcept 
@@ -243,16 +264,11 @@ namespace param {
         }
 
 
-        operator taihe::core::string const&() const noexcept {
-            return *reinterpret_cast<taihe::core::string const*>(this);
+        operator taihe::core::string &() noexcept {
+            return *reinterpret_cast<taihe::core::string *>(this);
         }
 
     private:
-        template<typename cpp_t, typename abi_t>
-        friend abi_t taihe::core::into_abi(cpp_t val);
-        template<typename cpp_t, typename abi_t>
-        friend cpp_t taihe::core::from_abi(abi_t val);
-
         string(struct TString* other_handle) noexcept
             : m_handle(other_handle) {}
 
@@ -439,24 +455,24 @@ namespace core {
         return result;
     }
 
-    template<> inline taihe::core::string from_abi(TString* _val) {
+    // returning from abi
+    template<> inline taihe::core::string from_abi(std::add_rvalue_reference_t<TString*> _val) {
         return taihe::core::string(_val);
     }
 
-    template<> inline TString* into_abi(taihe::core::string _val) {
-        TString* abi_val = _val.m_handle;
-        _val.m_handle = nullptr;
-        return abi_val;
+    // returning into abi
+    template<> inline TString* into_abi(std::add_rvalue_reference_t<taihe::core::string> _val) {
+        return (TString *)std::move(_val);
     }
 
-    template<> inline taihe::core::param::string from_abi(TString* _val) {
-        return taihe::core::param::string(_val);
+    // passing argument from abi
+    template<> inline taihe::core::string& from_abi(std::add_rvalue_reference_t<TString*> _val) {
+        return *reinterpret_cast<taihe::core::string *>(&_val);
     }
 
-    template<> inline TString* into_abi(taihe::core::param::string _val) {
-        TString* abi_val = _val.m_handle;
-        return abi_val;
+    // passing argument into abi
+    template<> inline TString* into_abi(std::add_rvalue_reference_t<taihe::core::string&> _val) {
+        return *reinterpret_cast<TString **>(&_val);
     }
-
 }
 }
