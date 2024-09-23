@@ -38,12 +38,12 @@ def compile(input_dir, output_dir, include_dirs, optimization_level):
         output_file = output_dir / f"{name}.o"
         if name.endswith(".c"):
             compiler = C
-            std = "gnu11"
+            compiler_args = "-std=gnu11 -fvisibility=hidden"
         else:
             compiler = CXX
-            std = "gnu++17"
+            compiler_args = "-std=gnu++17 -fPIC -fvisibility=hidden"
         includes = " ".join(f"-I {include_dir}" for include_dir in include_dirs)
-        command = f"{compiler} -c -o {output_file} {input_file} {includes} -O{optimization_level} -fvisibility=hidden -std={std}"
+        command = f"{compiler} -c {compiler_args} -o {output_file} {input_file} {includes} -O{optimization_level}"
         run_command(command)
 
 
