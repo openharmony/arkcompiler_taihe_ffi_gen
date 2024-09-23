@@ -1,4 +1,3 @@
-// string.hpp
 #pragma once
 
 #include <cstddef>

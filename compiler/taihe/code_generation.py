@@ -1,5 +1,4 @@
 from io import StringIO
-import struct
 
 from taihe.parse import Visitor, ast
 
