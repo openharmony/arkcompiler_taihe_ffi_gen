@@ -57,6 +57,10 @@ public:
         m_handle = nullptr;
     }
 
+    friend void swap(string& lhs, string& rhs) noexcept {
+        std::swap(lhs.m_handle, rhs.m_handle);
+    }
+
     // Operator
     string& operator=(string other) {
         // copy-and-swap idiom
@@ -152,10 +156,6 @@ public:
 
     size_type size() const noexcept {
         return m_handle ? tstr_len(m_handle) : 0;
-    }
-
-    friend void swap(string& lhs, string& rhs) noexcept {
-        std::swap(lhs.m_handle, rhs.m_handle);
     }
 
     string substr(size_t pos, size_t len) const noexcept {
