@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 
-from taihe.parse import Visitor, ast
 from taihe.exceptions import (
     CircularReferenceError,
     NotATypeError,
@@ -12,6 +11,7 @@ from taihe.exceptions import (
     SymbolConflictWithNamespaceError,
     SymbolNotExistError,
 )
+from taihe.parse import Visitor, ast
 
 
 @dataclass
