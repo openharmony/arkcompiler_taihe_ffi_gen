@@ -65,7 +65,18 @@ enumFieldUni
     ;
 
 enumProperty
-    : token_name = ID SEMICOLON
+    : token_name = ID (EQUAL ExprUni_expr = exprUni)? SEMICOLON
+    ;
+
+exprUni
+    : Integer_ = integer
+    ;
+
+integer
+    : DEC_LITERAL
+    | OCT_LITERAL
+    | HEX_LITERAL
+    | BIN_LITERAL
     ;
 
 variant
@@ -161,6 +172,14 @@ COLON
     : ':'
     ;
 
+DOT
+    : '.'
+    ;
+
+AT
+    : '@'
+    ;
+
 ARROW
     : '=>'
     ;
@@ -193,14 +212,6 @@ RIGHT_SQUARE_BRACKET
     : ']'
     ;
 
-TILDE
-    : '~'
-    ;
-
-SLASH
-    : '/'
-    ;
-
 LEFT_ANG_BRACKET
     : '<'
     ;
@@ -209,8 +220,8 @@ RIGHT_ANG_BRACKET
     : '>'
     ;
 
-STAR
-    : '*'
+EQUAL
+    : '='
     ;
 
 PLUS
@@ -219,6 +230,18 @@ PLUS
 
 MINUS
     : '-'
+    ;
+
+STAR
+    : '*'
+    ;
+
+SLASH
+    : '/'
+    ;
+
+PERCENT
+    : '%'
     ;
 
 CARET
@@ -233,20 +256,28 @@ PIPE
     : '|'
     ;
 
-EQUAL
-    : '='
+TILDE
+    : '~'
     ;
 
-PERCENT
-    : '%'
+AND
+    : '&&'
     ;
 
-DOT
-    : '.'
+OR
+    : '||'
     ;
 
-AT
-    : '@'
+EXCLAMATION
+    : '!'
+    ;
+
+LEFT_SHIFT
+    : '<<'
+    ;
+
+RIGHT_SHIFT
+    : '>>'
     ;
 
 KW_USE
@@ -389,8 +420,33 @@ fragment HEX_DIGIT
     | 'A' .. 'F'
     ;
 
+fragment OCT_DIGIT
+    : '0' .. '7'
+    ;
+
+fragment BIN_DIGIT
+    : '0'
+    | '1'
+    ;
+
+DEC_LITERAL
+    : DIGIT+
+    ;
+
+HEX_LITERAL
+    : '0x' HEX_DIGIT+
+    ;
+
+OCT_LITERAL
+    : '0o' OCT_DIGIT+
+    ;
+
+BIN_LITERAL
+    : '0b' HEX_DIGIT+
+    ;
+
 ID
-    : (LETTER | UNDERLINE) (LETTER | UNDERLINE | DIGIT)*
+    : LETTER (LETTER | DIGIT)* (UNDERLINE (LETTER | DIGIT)+)*
     ;
 
 fragment LETTER
