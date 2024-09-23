@@ -1,0 +1,5 @@
+#!/usr/bin/bash
+cd `dirname $0`
+cd ../compiler
+poetry run black --diff taihe || exit 1
+poetry run ruff check taihe || exit 1

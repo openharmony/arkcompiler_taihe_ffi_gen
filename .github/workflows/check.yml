@@ -1,0 +1,29 @@
+name: check
+
+on: 
+    [push, pull_request]
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/workflows/actions/install_independencies/
+
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses:  ./.github/workflows/actions/install_independencies/
+      - name: Install Dependencies
+        working-directory: compiler
+        run: poetry install --no-root
+      - name: Check Format
+        run: scripts/check
+
+  all_checks_passed:
+    needs:
+      - check
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "All checks passed"
