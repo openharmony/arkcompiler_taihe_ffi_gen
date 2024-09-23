@@ -61,7 +61,7 @@ class CodeGenerator(Visitor):
             return "uint64_t", None
         if node.name.text == "String":
             if cpp:
-                return "taihe::core::param::string" if glue else "taihe::core::string const&" if param else "taihe::core::string", "core/string.hpp"
+                return "taihe::core::param::string" if glue or param else "taihe::core::string", "core/string.hpp"
             else:
                 return "struct TString*", "taihe/string.abi.h"
         raise NotImplementedError

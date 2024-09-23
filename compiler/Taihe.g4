@@ -73,10 +73,10 @@ exprUni
     ;
 
 integer
-    : DEC_LITERAL
-    | OCT_LITERAL
-    | HEX_LITERAL
-    | BIN_LITERAL
+    : token_val = DEC_LITERAL
+    | token_val = OCT_LITERAL
+    | token_val = HEX_LITERAL
+    | token_val = BIN_LITERAL
     ;
 
 variant

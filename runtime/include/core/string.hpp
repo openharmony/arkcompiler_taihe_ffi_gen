@@ -5,6 +5,7 @@
 #include <cstring>
 #include <stdexcept>
 #include <utility>
+#include <string>
 #include <string_view>
 #include <charconv>
 
@@ -34,13 +35,13 @@ public:
 
     string(const char* value TH_NONNULL, size_type size)
         : m_handle(tstr_new(value, size)) {}
-    
+
     string(std::string_view value)
         : string(value.data(), value.size()) {}
 
     string(std::initializer_list<char> value)
         : string(value.begin(), static_cast<uint32_t>(value.size())) {}
-    
+
     string(string const& other)
         : m_handle(tstr_dup(other.m_handle)) {}
 
@@ -127,7 +128,7 @@ public:
     // string str(ptr);
     // ptr = NULL;
     // ```
-    string(TString* other_handle)
+    string(TString* other_handle) noexcept
         : m_handle(other_handle) {}
 
     // You don't need to manually increase the reference count of the returned TString*.
@@ -244,9 +245,9 @@ public:
     string(std::nullptr_t) = delete;
 
     // Use other type to be taihe::core::param::string
-    string(taihe::core::string const& value) noexcept 
+    string(taihe::core::string const& value) noexcept
         : m_handle(value.m_handle) {}
-    
+
     string(std::string_view const& value) noexcept {
         m_handle = tstr_new_ref(value.data(), value.size(), &m_header);
     }
@@ -259,7 +260,13 @@ public:
         m_handle = tstr_new_ref(value, strlen(value), &m_header);
     }
 
+    // For abi
+    string(TString *value) noexcept
+        : m_handle(value) {}
 
+    operator TString *() noexcept {
+        return m_handle;
+    }
     operator taihe::core::string const& () const& noexcept {
         return *reinterpret_cast<taihe::core::string const*>(this);
     }
@@ -456,12 +463,12 @@ template<> inline TString* into_abi(std::add_rvalue_reference_t<taihe::core::str
 }
 
 // passing argument from abi
-template<> inline taihe::core::string const& from_abi(std::add_rvalue_reference_t<TString*> _val) {
-    return *reinterpret_cast<taihe::core::string *>(&_val);
+template<> inline taihe::core::param::string from_abi(std::add_rvalue_reference_t<TString*> _val) {
+    return taihe::core::param::string(_val);
 }
 
 // passing argument into abi
-template<> inline TString* into_abi(std::add_rvalue_reference_t<taihe::core::string const&> _val) {
-    return *reinterpret_cast<TString* const*>(&_val);
+template<> inline TString* into_abi(std::add_rvalue_reference_t<taihe::core::param::string> _val) {
+    return (TString *)std::move(_val);
 }
 }

@@ -9,7 +9,8 @@ taihe::core::string ohos_input_str() {
 }
 
 template <bool endl>
-void ohos_print_str(taihe::core::string const &tstr) {
+void ohos_print_str(taihe::core::param::string pstr) {
+    taihe::core::string const &tstr = pstr;
     if (endl) {
         std::cout << tstr.c_str() << std::endl;
     } else {
