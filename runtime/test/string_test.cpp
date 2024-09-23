@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "core/string.hpp"
+#include <core/string.hpp>
 
 using namespace taihe::core;
 

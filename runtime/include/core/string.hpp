@@ -8,8 +8,8 @@
 #include <string_view>
 #include <charconv>
 
+#include <taihe/common.hpp>
 #include <taihe/string.abi.h>
-#include <core/common.hpp>
 
 namespace taihe::core::param { struct string; }
 

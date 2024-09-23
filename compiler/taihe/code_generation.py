@@ -107,7 +107,7 @@ class CodeGenerator(Visitor):
 
         if self.user:
             abi_hpp = self.files.setdefault(abi_hpp_name, File(is_header=True))
-            abi_hpp.include("core/common.hpp")
+            abi_hpp.include("taihe/common.hpp")
             abi_hpp.include(abi_h_name)
 
         if self.author:
@@ -116,7 +116,7 @@ class CodeGenerator(Visitor):
             impl_h.include(abi_h_name)
 
             impl_hpp = self.files.setdefault(impl_hpp_name, File(is_header=True))
-            impl_hpp.include("core/common.hpp")
+            impl_hpp.include("taihe/common.hpp")
             impl_hpp.include(abi_h_name)
 
         for field in node.fields:
@@ -289,7 +289,7 @@ class CodeGenerator(Visitor):
             abi_h.include(struct_abi_h_name)
 
             struct_abi_hpp = self.files.setdefault(struct_abi_hpp_name, File(is_header=True))
-            struct_abi_hpp.include("core/common.hpp")
+            struct_abi_hpp.include("taihe/common.hpp")
             struct_abi_hpp.include(struct_abi_h_name)
             struct_abi_hpp.write(f"namespace {namespace} {{\n")
             struct_abi_hpp.write(f"struct {struct_name} {{\n")
