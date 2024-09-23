@@ -1,7 +1,7 @@
 #include "rgb.base.impl.h"
 
-rgb__base__RGB ohos_make_rgb(uint8_t r, uint8_t g, uint8_t b) {
-    rgb__base__RGB result = {r, g, b};
+struct rgb__base__RGB ohos_make_rgb(uint8_t r, uint8_t g, uint8_t b) {
+    struct rgb__base__RGB result = {r, g, b};
     return result;
 }
 
