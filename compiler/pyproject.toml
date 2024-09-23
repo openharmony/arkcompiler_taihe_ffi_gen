@@ -61,11 +61,13 @@ lint.select = [
 
 lint.ignore = [
     "E501", # "Line too long"
-    # -> line length already regulated by black
+    # -> "line length already regulated by black"
     "PT011", # "pytest.raises() should specify expected exception"
-    # -> would imply to update tests every time you update exception message
+    # -> "would imply to update tests every time you update exception message"
     "SIM102", # "Use a single `if` statement instead of nested `if` statements"
-    # -> too restrictive,
+    # -> "too restrictive"
+    "F541", # "f-string without any placeholders"
+    # -> "some of them are for aesthetic reasons"
     "D100",
     "D101",
     "D102",
