@@ -19,12 +19,7 @@ class PackageNameConflictError(SemanticError):
 
 
 class PackageAliasConflictError(SemanticError):
-    def __init__(
-        self,
-        src_path: str,
-        rec_pkname: ast.PackageNameUni,
-        new_pkname: ast.PackageNameUni,
-    ):
+    def __init__(self, src_path: str, rec_pkname: ast.PackageNameUni, new_pkname: ast.PackageNameUni):
         self.src_path = src_path
         self.rec_pkname = rec_pkname
         self.new_pkname = new_pkname
@@ -93,11 +88,7 @@ class ReferenceTypeError(SemanticError):
 
 
 class CircularReferenceError(SemanticError):
-    def __init__(
-        self,
-        start: tuple[tuple[str, ...], str],
-        cycle: list[tuple[str, tuple[tuple[str, ...], str]]],
-    ):
+    def __init__(self, start: tuple[tuple[str, ...], str], cycle: list[tuple[str, tuple[tuple[str, ...], str]]]):
         self.start = start
         self.cycle = cycle
 

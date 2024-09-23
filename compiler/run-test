@@ -32,22 +32,35 @@ def copy_directory(src_directory, dst_directory):
         shutil.copytree(src_directory, dst_directory, dirs_exist_ok=True)
 
 
-def compile(input_dir, output_dir, include_dirs, optimization_level):
+def compile(output_dir, input_dir, *include_dirs, opt_level):
+    output_files = []
     for input_file in input_dir.iterdir():
         name = input_file.name
         output_file = output_dir / f"{name}.o"
         if name.endswith(".c"):
             compiler = C
-            compiler_args = "-std=gnu11 -fvisibility=hidden"
+            std = "gnu11"
         else:
             compiler = CXX
-            compiler_args = "-std=gnu++17 -fPIC -fvisibility=hidden"
-        includes = " ".join(f"-I {include_dir}" for include_dir in include_dirs)
-        command = f"{compiler} -c {compiler_args} -o {output_file} {input_file} {includes} -O{optimization_level}"
+            std = "gnu++17"
+        command = f"{compiler} -c -fvisibility=hidden -fPIC -O{opt_level} -std={std} -o {output_file} {input_file}"
+        for include_dir in include_dirs:
+            command += f" -I {include_dir}"
         run_command(command)
+        output_files.append(output_file)
+    return output_files
 
 
-def main(target_dir, optimization_level):
+def link(output_file, *input_files, shared):
+    command = f"{CXX} -fPIC -o {output_file}"
+    for input_file in input_files:
+        command += f" {input_file}"
+    if shared:
+        command += " -shared"
+    run_command(command)
+
+
+def main(target_dir, opt_level):
     target_path = Path(target_dir)
 
     idl_dir = target_path / "idl"
@@ -78,13 +91,21 @@ def main(target_dir, optimization_level):
     clean_directory(author_test_dir)
     create_directory(author_test_src_dir)
     create_directory(author_test_include_dir)
-    taihec(src_dirs=[idl_dir], dst_dir=author_test_include_dir, gen_author=True)
+    taihec(
+        src_dirs=[idl_dir],
+        dst_dir=author_test_include_dir,
+        gen_author=True,
+    )
 
     print("Generating user codes...")
     clean_directory(user_test_dir)
     create_directory(user_test_src_dir)
     create_directory(user_test_include_dir)
-    taihec(src_dirs=[idl_dir], dst_dir=user_test_include_dir, gen_user=True)
+    taihec(
+        src_dirs=[idl_dir],
+        dst_dir=user_test_include_dir,
+        gen_user=True,
+    )
 
     clean_directory(build_dir)
     create_directory(build_runtime_dir)
@@ -93,41 +114,48 @@ def main(target_dir, optimization_level):
 
     print("Compiling to dynamic link library...")
     copy_directory(author_dir, author_test_dir)
-    compile(
-        runtime_src_dir,
-        build_runtime_dir,
-        [runtime_include_dir],
-        optimization_level,
-    )
-    compile(
-        author_test_src_dir,
-        build_author_dir,
-        [runtime_include_dir, author_test_include_dir],
-        optimization_level,
-    )
     so_file = build_dir / "libtest.so"
-    command = f"{CXX} {build_runtime_dir}/*.o {build_author_dir}/*.o -shared -fPIC -o {so_file}"
-    run_command(command)
+    link(
+        so_file,
+        *compile(
+            build_runtime_dir,
+            runtime_src_dir,
+            runtime_include_dir,
+            opt_level=opt_level,
+        ),
+        *compile(
+            build_author_dir,
+            author_test_src_dir,
+            runtime_include_dir,
+            author_test_include_dir,
+            opt_level=opt_level,
+        ),
+        shared=True,
+    )
 
     print("Compiling to executable file...")
     copy_directory(user_dir, user_test_dir)
-    compile(
-        user_test_src_dir,
-        build_user_dir,
-        [runtime_include_dir, user_test_include_dir],
-        optimization_level,
+    elf_file = build_dir / "test"
+    link(
+        elf_file,
+        so_file,
+        *compile(
+            build_user_dir,
+            user_test_src_dir,
+            runtime_include_dir,
+            user_test_include_dir,
+            opt_level=opt_level,
+        ),
+        shared=False,
     )
-    test_executable = build_dir / "test"
-    command = f"{CXX} {build_user_dir}/*.o {so_file} -o {test_executable}"
-    run_command(command)
 
     print("Running...")
-    run_command(str(test_executable))
+    run_command(f"{elf_file}")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Build and run project from a target directory"
+        description="Build and run project from a target directory",
     )
     parser.add_argument(
         "target_directory",

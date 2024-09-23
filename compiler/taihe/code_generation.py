@@ -10,12 +10,11 @@ class File:
         self.code = StringIO()
 
     def output_to(self, dst_path: str):
-        # fmt: off
         with open(dst_path, "w") as dst:
             if self.is_header:
                 dst.write(f"#pragma once\n")
             for header in self.headers:
-                dst.write(f'#include <{header}>\n')
+                dst.write(f"#include <{header}>\n")
             dst.write(self.code.getvalue())
 
     def write(self, code: str):
@@ -28,7 +27,6 @@ class File:
 
 
 class CodeGenerator(Visitor):
-    # fmt: off
     def __init__(self, pktupl: tuple[str, ...], author: bool, user: bool):
         self.pktupl = pktupl
         self.author = author
@@ -38,7 +36,7 @@ class CodeGenerator(Visitor):
     def generic_visit(self, node):
         raise NotImplementedError
 
-    def visit_BasicType(self, node: ast.BasicType, cpp: bool, param: bool=False, glue: bool=False):
+    def visit_BasicType(self, node: ast.BasicType, cpp: bool, param: bool = False, glue: bool = False):
         if node.name.text == "bool":
             return "bool", None
         if node.name.text == "f32":
@@ -63,20 +61,12 @@ class CodeGenerator(Visitor):
             return "uint64_t", None
         if node.name.text == "String":
             if cpp:
-                return (
-                    "taihe::core::param::string"
-                    if glue else
-                    "taihe::core::string const&"
-                    if param else
-                    "taihe::core::string"
-                ), "core/string.hpp"
+                return "taihe::core::param::string" if glue else "taihe::core::string const&" if param else "taihe::core::string", "core/string.hpp"
             else:
-                return (
-                    "struct TString*"
-                ), "taihe/string.abi.h"
+                return "struct TString*", "taihe/string.abi.h"
         raise NotImplementedError
 
-    def visit_UserType(self, node: ast.UserType, cpp: bool, param: bool=False, glue: bool=False):
+    def visit_UserType(self, node: ast.UserType, cpp: bool, param: bool = False, glue: bool = False):
         assert node.pkname
         pktupl = tuple(token.text for token in node.pkname.parts)
         type_name = node.name.text
@@ -86,7 +76,7 @@ class CodeGenerator(Visitor):
         else:
             return "struct " + "__".join(pktupl) + "__" + type_name, type_basename + ".abi.h"
 
-    def visit_TypeWithSpecifier(self, node: ast.TypeWithSpecifier, cpp: bool, param: bool=False, glue: bool=False):
+    def visit_TypeWithSpecifier(self, node: ast.TypeWithSpecifier, cpp: bool, param: bool = False, glue: bool = False):
         type, header = self.visit(node.type, cpp, param, glue)
         if node.const:
             type += " const"
@@ -207,21 +197,21 @@ class CodeGenerator(Visitor):
                 abi_hpp.write(f"template<>\n")
                 abi_hpp.write(f"inline {cpp_return_type} taihe::core::from_abi(std::add_rvalue_reference_t<{abi_return_type}> _val) {{\n")
                 abi_hpp.write(f"    return {{\n")
-                for i, (cpp_return_iter, abi_return_iter) in enumerate(zip(cpp_return_iters, abi_return_iters)):
+                for i, (cpp_return_iter, abi_return_iter) in enumerate(zip(cpp_return_iters, abi_return_iters, strict=True)):
                     abi_hpp.write(f"        taihe::core::from_abi<{cpp_return_iter}, {abi_return_iter}>(std::move(_val._{i})), \n")
                 abi_hpp.write(f"    }};\n")
                 abi_hpp.write(f"}}\n")
-    
+
             if self.author:
                 impl_hpp = self.files[impl_hpp_name]
                 impl_hpp.write(f"template<>\n")
                 impl_hpp.write(f"inline {abi_return_type} taihe::core::into_abi(std::add_rvalue_reference_t<{cpp_return_type}> _val) {{\n")
                 impl_hpp.write(f"    return {{\n")
-                for i, (cpp_return_iter, abi_return_iter) in enumerate(zip(cpp_return_iters, abi_return_iters)):
+                for i, (cpp_return_iter, abi_return_iter) in enumerate(zip(cpp_return_iters, abi_return_iters, strict=True)):
                     impl_hpp.write(f"        taihe::core::into_abi<{cpp_return_iter}, {abi_return_iter}>(std::move(std::get<{i}>(_val))), \n")
                 impl_hpp.write(f"    }};\n")
                 impl_hpp.write(f"}}\n")
-    
+
             return_from_abi = f"taihe::core::from_abi<{cpp_return_type}, {abi_return_type}>"
             return_into_abi = f"taihe::core::into_abi<{cpp_return_type}, {abi_return_type}>"
 
@@ -243,8 +233,8 @@ class CodeGenerator(Visitor):
             impl_h = self.files[impl_h_name]
             impl_h.include(*abi_param_headers, *abi_return_headers)
             impl_h.write(f"#define TH_EXPORT_C_API_{func_name}(_func) \\\n")
-            impl_h.write(f'    TH_STATIC_ASSERT(TH_IS_SAME(TH_TYPEOF(_func), {abi_return_type} ({abi_params_str})), \\\n')
-            impl_h.write(f'        "\'" #_func "\' is incompatible with \'{abi_return_type} {abi_func_name}({abi_params_str})\'"); \\\n')
+            impl_h.write(f"    TH_STATIC_ASSERT(TH_IS_SAME(TH_TYPEOF(_func), {abi_return_type} ({abi_params_str})), \\\n")
+            impl_h.write(f"        \"'\" #_func \"' is incompatible with '{abi_return_type} {abi_func_name}({abi_params_str})'\"); \\\n")
             impl_h.write(f"    {abi_return_type} {abi_func_name}({abi_params_str}) {{ \\\n")
             impl_h.write(f"        return _func({args_str}); \\\n")
             impl_h.write(f"    }}\n")
@@ -253,7 +243,7 @@ class CodeGenerator(Visitor):
             impl_hpp.include(*cpp_param_headers, *cpp_return_headers)
             impl_hpp.write(f"#define TH_EXPORT_CPP_API_{func_name}(_func) \\\n")
             impl_hpp.write(f"    TH_STATIC_ASSERT(TH_IS_SAME(TH_TYPEOF(_func), {cpp_return_type} ({cpp_params_str})), \\\n")
-            impl_hpp.write(f'        "\'" #_func "\' is incompatible with \'{cpp_return_type} {cpp_func_name}({cpp_params_str})\'"); \\\n')
+            impl_hpp.write(f"        \"'\" #_func \"' is incompatible with '{cpp_return_type} {cpp_func_name}({cpp_params_str})'\"); \\\n")
             impl_hpp.write(f"    {abi_return_type} {abi_func_name}({abi_params_str}) {{ \\\n")
             impl_hpp.write(f"        return {return_into_abi}(_func({args_from_abi_str})); \\\n")
             impl_hpp.write(f"    }}\n")
