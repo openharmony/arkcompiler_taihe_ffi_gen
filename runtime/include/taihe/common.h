@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <assert.h>
 
 #define TH_NONNULL __attribute__((nonnull))
 
@@ -33,10 +32,12 @@
 #ifdef __cplusplus
 #define TH_STATIC_ASSERT static_assert
 #else
+#include <assert.h>
 #define TH_STATIC_ASSERT static_assert
 #endif
 
 #ifdef __cplusplus
+#include <type_traits>
 #define TH_IS_SAME(...) std::is_same<__VA_ARGS__>::value
 #else
 #define TH_IS_SAME __builtin_types_compatible_p

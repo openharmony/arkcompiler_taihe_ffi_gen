@@ -1,11 +1,9 @@
 // common.hpp
 #pragma once
 #include <tuple>
-#include <type_traits> // TH_IS_SAME
+#include <type_traits>
 
-extern "C" {
 #include <taihe/common.h>
-}
 
 namespace taihe::core {
 template<typename cpp_t, typename abi_t> abi_t into_abi(cpp_t &&val);
