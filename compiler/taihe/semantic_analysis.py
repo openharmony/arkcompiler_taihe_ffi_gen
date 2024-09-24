@@ -24,13 +24,13 @@ class Package:
 class SymbolReplacement(Visitor):
     def __init__(
         self,
-        symbol_tables: dict[tuple[str, ...], dict[str, ast.SpecificationFieldUni]],
+        symbol_tables: dict[tuple[str, ...], dict[str, ast.SpecificationField]],
         src_path: str,
         pktupl: tuple[str, ...],
     ) -> None:
         self.symbol_tables = symbol_tables
         self.src_path = src_path
-        self.using_packages: dict[tuple[str, ...], tuple[ast.PackageNameUni, tuple[str, ...]]] = {}
+        self.using_packages: dict[tuple[str, ...], tuple[ast.PackageName, tuple[str, ...]]] = {}
         self.using_symbols = {symbol: (field.name, pktupl, symbol) for symbol, field in symbol_tables[pktupl].items()}
 
     def visit_Specification(self, node: ast.Specification):
@@ -44,7 +44,11 @@ class SymbolReplacement(Visitor):
         symbol_table = self.symbol_tables.get(old_pktupl)
         if symbol_table is None:
             raise PackageNotExistError(self.src_path, node.old_pkname)
-        new_pkname = node.new_pkname or node.old_pkname
+        # new_pkname = node.new_pkname or node.old_pkname
+        if node.new_pkname:
+            new_pkname = ast.PackageName(node.new_pkname.parts)
+        else:
+            new_pkname = ast.PackageName(node.old_pkname.parts)
         new_pktupl = tuple(token.text for token in new_pkname.parts)
         rec_pkname, _ = self.using_packages.setdefault(new_pktupl, (new_pkname, old_pktupl))
         if rec_pkname is not new_pkname:
@@ -92,7 +96,7 @@ class SymbolReplacement(Visitor):
 class SemanticAnalyzer(Visitor):
     def __init__(
         self,
-        symbol_tables: dict[tuple[str, ...], dict[str, ast.SpecificationFieldUni]],
+        symbol_tables: dict[tuple[str, ...], dict[str, ast.SpecificationField]],
         src_path: str,
     ) -> None:
         self.symbol_tables = symbol_tables
@@ -213,7 +217,7 @@ def semantic_analysis(packages: list[Package]):
         namespaces[package.tupl] = namespace
 
     # Check for symbol collisions, not considering `use` statements, generate symbol tables
-    symbol_tables: dict[tuple[str, ...], dict[str, ast.SpecificationFieldUni]] = {}
+    symbol_tables: dict[tuple[str, ...], dict[str, ast.SpecificationField]] = {}
     for package in packages:
         symbol_table = symbol_tables.setdefault(package.tupl, {})
         for field in package.spec.fields:
