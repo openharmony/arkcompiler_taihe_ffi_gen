@@ -36,7 +36,7 @@ class CodeGenerator(Visitor):
     def generic_visit(self, node):
         raise NotImplementedError
 
-    def visit_BasicType(self, node: ast.BasicType, cpp: bool, param: bool = False, glue: bool = False):
+    def visit_BasicType(self, node: ast.BasicType, cpp: bool, param: bool = False):
         if node.name.text == "bool":
             return "bool", None
         if node.name.text == "f32":
@@ -61,12 +61,12 @@ class CodeGenerator(Visitor):
             return "uint64_t", None
         if node.name.text == "String":
             if cpp:
-                return "taihe::core::param::string" if glue or param else "taihe::core::string", "core/string.hpp"
+                return "taihe::core::string_view" if param else "taihe::core::string", "core/string.hpp"
             else:
                 return "struct TString*", "taihe/string.abi.h"
         raise NotImplementedError
 
-    def visit_UserType(self, node: ast.UserType, cpp: bool, param: bool = False, glue: bool = False):
+    def visit_UserType(self, node: ast.UserType, cpp: bool, param: bool = False):
         assert node.pkname
         pktupl = tuple(token.text for token in node.pkname.parts)
         type_name = node.name.text
@@ -76,8 +76,8 @@ class CodeGenerator(Visitor):
         else:
             return "struct " + "__".join(pktupl) + "__" + type_name, type_basename + ".abi.h"
 
-    def visit_TypeWithSpecifier(self, node: ast.TypeWithSpecifier, cpp: bool, param: bool = False, glue: bool = False):
-        type, header = self.visit(node.type, cpp, param, glue)
+    def visit_TypeWithSpecifier(self, node: ast.TypeWithSpecifier, cpp: bool, param: bool = False):
+        type, header = self.visit(node.type, cpp, param)
         if node.const:
             type += " const"
         if node.ref:
@@ -127,32 +127,26 @@ class CodeGenerator(Visitor):
         cpp_func_name = "::".join(self.pktupl) + "::" + func_name
 
         args = []
-        glu_param_headers = []
         cpp_param_headers = []
         abi_param_headers = []
         args_from_abi = []
         args_into_abi = []
-        glu_params = []
         cpp_params = []
         abi_params = []
         for param in node.parameters:
-            glu_param_type, glu_param_header = self.visit(param.type_with_specifier, cpp=True, glue=True)
             cpp_param_type, cpp_param_header = self.visit(param.type_with_specifier, cpp=True, param=True)
             abi_param_type, abi_param_header = self.visit(param.type_with_specifier, cpp=False)
             param_name = param.name.text
             args.append(param_name)
-            glu_param_headers.append(glu_param_header)
             cpp_param_headers.append(cpp_param_header)
             abi_param_headers.append(abi_param_header)
             args_from_abi.append(f"taihe::core::from_abi<{cpp_param_type}, {abi_param_type}>(std::move({param_name}))")
             args_into_abi.append(f"taihe::core::into_abi<{cpp_param_type}, {abi_param_type}>(std::move({param_name}))")
-            glu_params.append(f"{glu_param_type} {param_name}")
             cpp_params.append(f"{cpp_param_type} {param_name}")
             abi_params.append(f"{abi_param_type} {param_name}")
         args_str = ", ".join(args)
         args_from_abi_str = ", ".join(args_from_abi)
         args_into_abi_str = ", ".join(args_into_abi)
-        glu_params_str = ", ".join(glu_params)
         cpp_params_str = ", ".join(cpp_params)
         abi_params_str = ", ".join(abi_params)
 
@@ -224,7 +218,7 @@ class CodeGenerator(Visitor):
             abi_hpp = self.files[abi_hpp_name]
             abi_hpp.include(*cpp_param_headers, *cpp_return_headers)
             abi_hpp.write(f"namespace {namespace} {{\n")
-            abi_hpp.write(f"inline {cpp_return_type} {func_name}({glu_params_str}) {{\n")
+            abi_hpp.write(f"inline {cpp_return_type} {func_name}({cpp_params_str}) {{\n")
             abi_hpp.write(f"    return {return_from_abi}({abi_func_name}({args_into_abi_str}));\n")
             abi_hpp.write(f"}}\n")
             abi_hpp.write(f"}}\n")
