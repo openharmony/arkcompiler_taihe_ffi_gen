@@ -353,7 +353,7 @@ class CodeGenerator(Visitor):
             enum_abi_hpp.include("taihe/common.hpp")
             enum_abi_hpp.include(enum_abi_h_name)
             enum_abi_hpp.write(f"namespace {namespace} {{\n")
-            enum_abi_hpp.write(f"enum {enum_name} {{\n")
+            enum_abi_hpp.write(f"enum class {enum_name} {{\n")
             for field in node.fields:
                 assert isinstance(field.expr, ast.IntLiteralExpr)
                 val = int(field.expr.val.text)
