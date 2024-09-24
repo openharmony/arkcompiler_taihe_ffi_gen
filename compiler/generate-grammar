@@ -1,9 +1,11 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 import sys
 from functools import cache
 from os import path
 from subprocess import check_call
+
+from dataclasses import dataclass
 
 ANTLR_PKG = "taihe.parse.antlr"
 ANTLR_PATH = path.join(*ANTLR_PKG.split("."))
@@ -30,12 +32,21 @@ def get_hint(attr_type):
 
 def get_attr_pairs(ctx):
     for attr_full_name, attr_ctx in ctx.__dict__.items():
-        if attr_full_name[0].isupper() or attr_full_name.startswith("token"):
+        if (attr_full_name[0].isupper() or attr_full_name.startswith("token")):
             yield attr_full_name.split("_", 1)
 
 
+@dataclass
+class Checker:
+    def __init__(self):
+        self.parentCtx = None
+        self.invokingState = None
+        self.children = None
+        self.start = None
+        self.stop = None
+
+
 def generate_TaiheAST():
-    # fmt: off
     code = []
     code.append(f"from dataclasses import dataclass\n")
     code.append(f"from typing import Union, List, Optional\n")
@@ -51,22 +62,36 @@ def generate_TaiheAST():
     code.append(f"        column: Optional[int] = None\n")
     code.append(f"\n")
     parser = get_parser()
-    for rule_name in parser.ruleNames:
-        node_type = rule_name[0].upper() + rule_name[1:]
-        ctx_type = node_type + "Context"
-        ctx = getattr(parser, ctx_type)(None)
-        if rule_name.endswith("Uni"):
+    for ctx_name, ctx_cls in parser.__dict__.items():
+        if not ctx_name.endswith('Context'):
+            continue
+        node_type = ctx_name[:-7]
+        if node_type.endswith("Base"):
             code.append(f"    {node_type} = Union[\n")
-            for attr_type, attr_name in get_attr_pairs(ctx):
+            for tmp_name, tmp_cls in parser.__dict__.items():
+                if not tmp_name.endswith('Context'):
+                    continue
+                if not issubclass(tmp_cls, ctx_cls) or tmp_cls is ctx_cls:
+                    continue
+                attr_type = tmp_name[:-7]
                 attr_hint = get_hint(attr_type)
                 code.append(f"        {attr_hint},\n")
             code.append(f"    ]\n")
-        else:
+        if node_type.endswith("Uni"):
+            code.append(f"    {node_type} = Union[\n")
+            ctx_obj = ctx_cls(None, Checker())
+            for attr_type, attr_name in get_attr_pairs(ctx_obj):
+                attr_hint = get_hint(attr_type)
+                code.append(f"        {attr_hint},\n")
+            code.append(f"    ]\n")
+        if not (node_type.endswith("Uni") or node_type.endswith("Base")):
             code.append(f"    @dataclass\n")
             code.append(f"    class {node_type}:\n")
-            for attr_type, attr_name in get_attr_pairs(ctx):
+            ctx_obj = ctx_cls(None, Checker())
+            for attr_type, attr_name in get_attr_pairs(ctx_obj):
                 attr_hint = get_hint(attr_type)
                 code.append(f"        {attr_name}: {attr_hint}\n")
+            code.append(f"        pass\n")
         code.append(f"\n")
     code.pop()
     with open(path.join(ANTLR_PATH, "TaiheAST.py"), "w") as file:
@@ -74,7 +99,6 @@ def generate_TaiheAST():
 
 
 def generate_TaiheVisitor():
-    # fmt: off
     code = []
     code.append(f"from {ANTLR_PKG}.TaiheAST import TaiheAST\n")
     code.append(f"\n")
@@ -108,9 +132,11 @@ def generate_TaiheVisitor():
     stub.append(f"    def generic_visit(self, node, *args, **kwargs) -> Any: ...\n")
     stub.append(f"    def visit_token(self, node: TaiheAST.token, *args, **kwargs) -> Any: ...\n")
     parser = get_parser()
-    for rule_name in parser.ruleNames:
-        node_type = rule_name[0].upper() + rule_name[1:]
-        if not node_type.endswith("Uni"):
+    for ctx_name, ctx_cls in parser.__dict__.items():
+        if not ctx_name.endswith('Context'):
+            continue
+        node_type = ctx_name[:-7]
+        if not (node_type.endswith("Uni") or node_type.endswith("Base")):
             stub.append(f"    def visit_{node_type}(self, node: TaiheAST.{node_type}, *args, **kwargs) -> Any: ...\n")
     with open(path.join(ANTLR_PATH, "TaiheVisitor.py"), "w") as file:
         file.writelines(code)
