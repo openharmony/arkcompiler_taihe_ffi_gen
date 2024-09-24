@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Any
 
 from taihe.exceptions import (
     CircularReferenceError,
@@ -169,7 +168,7 @@ class Calculator(Visitor):
 
     def visit_BoolConditionalExpr(self, node: ast.BoolConditionalExpr):
         return self.visit(node.then_expr) if self.visit(node.cond) else self.visit(node.else_expr)
-    
+
     def visit_EnumProperty(self, node: ast.EnumProperty):
         if node.expr:
             val = self.visit(node.expr)
