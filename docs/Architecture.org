@@ -47,5 +47,18 @@ Taihe 通过一套二进制接口标准 (ABI)，连接了 API 的作者和消费
 4. =consumer/sensors.h=: 消费侧 API 调用转换至 ABI
    - 自动生成的 C++ 头文件，提供舒适的 C++ API 供业务逻辑使用 Taihe ABI
    - 例: =inline uint32_t Sensor::getAltitude() { return _taihe_sensor_getAltitude(this); }=
-* TODO 编译器结构
-* TODO 运行时结构
+* 编译器
+** 整体流程
+1. =taihe.__main__=: CLI 层，负责读入命令行参数
+2. =taihe.compilation=: 编译器驱动 (Driver)，负责编排整体编译流程
+3. =taihe.parse=: 解析器，IDL -> AST
+4. =taihe.semantic_analysis=: 语义分析，在 AST 上运行，负责检查 IDL 的有效性
+5. =taihe.code_generation=: 代码生成，AST -> 目标代码
+
+** 文件解析
+- =compiler/Taihe.g4=: 根据 ANTLR 描述了 IDL 的文法规则
+- =compiler/generate-grammer=: 在编译器运行前执行，自动生成代码
+  - 生成 TaiheLexer 以及 TaiheParser，负责词法和语法分析
+  - 生成 TaiheAST，负责存储 AST 节点
+  - 生成 TaiheVisitor。该文件以 Visitor 设计模式，简化 AST 的访问
+* TODO 运行时
