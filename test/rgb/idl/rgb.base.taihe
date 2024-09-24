@@ -3,4 +3,11 @@ struct RGB {
     g: u8;
     b: u8;
 }
-function make(r: u8, g: u8, b: u8): RGB;
+
+enum Color {
+    RED   = 0xff << 0o20;
+    GREEN = 0xff << 0o10;
+    BLUE  = 0xff << 0o00;
+}
+
+function convert(color: Color): RGB;

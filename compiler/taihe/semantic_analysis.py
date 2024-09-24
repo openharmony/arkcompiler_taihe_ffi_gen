@@ -1,7 +1,9 @@
 from dataclasses import dataclass
+from typing import Any
 
 from taihe.exceptions import (
     CircularReferenceError,
+    EnumError,
     NotATypeError,
     PackageAliasConflictError,
     PackageNameConflictError,
@@ -93,6 +95,87 @@ class SymbolReplacement(Visitor):
         node.name.text = text
 
 
+class Calculator(Visitor):
+    def visit_IntLiteralExpr(self, node: ast.IntLiteralExpr):
+        text = node.val.text
+        if text.startswith("0b"):
+            return int(text, 2)
+        if text.startswith("0o"):
+            return int(text, 8)
+        if text.startswith("0x"):
+            return int(text, 16)
+        return int(text)
+
+    def visit_IntParenthesisExpr(self, node: ast.IntParenthesisExpr):
+        return self.visit(node.expr)
+
+    def visit_IntConditionalExpr(self, node: ast.IntConditionalExpr):
+        return self.visit(node.then_expr) if self.visit(node.cond) else self.visit(node.else_expr)
+
+    def visit_IntUnaryExpr(self, node: ast.IntUnaryExpr):
+        return {
+            "-": int.__neg__,
+            "+": int.__pos__,
+            "~": int.__invert__,
+        }[node.op.text](
+            self.visit(node.expr),
+        )
+
+    def visit_IntBinaryExpr(self, node: ast.IntBinaryExpr):
+        return {
+            "+": int.__add__,
+            "-": int.__sub__,
+            "*": int.__mul__,
+            "/": int.__floordiv__,
+            "%": int.__mod__,
+            "<<": int.__lshift__,
+            ">>": int.__rshift__,
+            "&": int.__and__,
+            "|": int.__or__,
+            "^": int.__xor__,
+        }[node.op.text](
+            self.visit(node.left),
+            self.visit(node.right),
+        )
+
+    def visit_IntComparisonExpr(self, node: ast.IntComparisonExpr):
+        return {
+            ">": int.__gt__,
+            "<": int.__lt__,
+            ">=": int.__ge__,
+            "<=": int.__le__,
+            "==": int.__eq__,
+            "!=": int.__ne__,
+        }[node.op.text](
+            self.visit(node.left),
+            self.visit(node.right),
+        )
+
+    def visit_BoolUnaryExpr(self, node: ast.BoolUnaryExpr):
+        assert node.op.text == "!"
+        return not self.visit(node.expr)
+
+    def visit_BoolBinaryExpr(self, node: ast.BoolBinaryExpr):
+        return {
+            "&&": bool.__and__,
+            "||": bool.__or__,
+        }[node.op.text](
+            self.visit(node.left),
+            self.visit(node.right),
+        )
+
+    def visit_BoolParenthesisExpr(self, node: ast.BoolParenthesisExpr):
+        return self.visit(node.expr)
+
+    def visit_BoolConditionalExpr(self, node: ast.BoolConditionalExpr):
+        return self.visit(node.then_expr) if self.visit(node.cond) else self.visit(node.else_expr)
+    
+    def visit_EnumProperty(self, node: ast.EnumProperty):
+        if node.expr:
+            val = self.visit(node.expr)
+            node.expr = ast.IntLiteralExpr(ast.token(str(val)))
+
+
 class SemanticAnalyzer(Visitor):
     def __init__(
         self,
@@ -102,8 +185,8 @@ class SemanticAnalyzer(Visitor):
         self.symbol_tables = symbol_tables
         self.src_path = src_path
 
-    # def generic_visit(self, node):
-    #     raise NotImplementedError
+    def generic_visit(self, node):
+        raise NotImplementedError
 
     def visit_Specification(self, node: ast.Specification):
         for field in node.fields:
@@ -138,6 +221,25 @@ class SemanticAnalyzer(Visitor):
             rec_name = fields.setdefault(new_name.text, new_name)
             if rec_name is not new_name:
                 raise SymbolConflictError(self.src_path, rec_name, new_name)
+
+    def visit_Enum(self, node: ast.Enum):
+        fields = {}
+        vals = {}
+        val = 0
+        for field in node.fields:
+            new_name = field.name
+            rec_name = fields.setdefault(new_name.text, new_name)
+            if rec_name is not new_name:
+                raise SymbolConflictError(self.src_path, rec_name, new_name)
+            if field.expr is not None:
+                assert isinstance(field.expr, ast.IntLiteralExpr)
+                val = int(field.expr.val.text)
+            else:
+                field.expr = ast.IntLiteralExpr(ast.token(str(val)))
+            rec_name = vals.setdefault(val, field.name)
+            if rec_name is not new_name:
+                raise EnumError(self.src_path, node.name, rec_name, new_name, val)
+            val += 1
 
     def visit_BasicType(self, node: ast.BasicType):
         if node.name.text == "bool":
@@ -232,6 +334,11 @@ def semantic_analysis(packages: list[Package]):
     for package in packages:
         symbol_replacement = SymbolReplacement(symbol_tables, package.path, package.tupl)
         symbol_replacement.visit(package.spec)
+
+    # Check for numbers
+    for package in packages:
+        calculator = Calculator()
+        calculator.visit(package.spec)
 
     # Semantic analysis (type errors, symbol conflicts)
     for package in packages:

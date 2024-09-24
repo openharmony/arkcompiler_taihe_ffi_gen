@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-from dataclasses import dataclass
 import sys
 from functools import cache
 from os import path
@@ -29,13 +28,12 @@ def get_hint(attr_type):
     return f'"TaiheAST.{attr_type}"'
 
 
-def get_attr_pairs(ctx_obj):
-    for attr_full_name, attr_ctx in ctx_obj.__dict__.items():
+def get_attr_pairs(ctx):
+    for attr_full_name, attr_ctx in ctx.__dict__.items():
         if not attr_full_name.startswith("_") and attr_full_name != "parser":
             yield attr_full_name.split("_", 1)
 
 
-@dataclass
 class Inspector:
     def __init__(self):
         self.parentCtx = None
@@ -79,10 +77,10 @@ def generate_TaiheAST():
                 code.append(f"        {attr_hint},\n")
             code.append(f"    ]\n")
         else:
-            ctx_obj = ctx_cls(None, Inspector())
+            ctx = ctx_cls(None, Inspector())
             code.append(f"    @dataclass\n")
             code.append(f"    class {node_type}:\n")
-            for attr_type, attr_name in get_attr_pairs(ctx_obj):
+            for attr_type, attr_name in get_attr_pairs(ctx):
                 attr_hint = get_hint(attr_type)
                 code.append(f"        {attr_name}: {attr_hint}\n")
         code.append(f"\n")

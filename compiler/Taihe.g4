@@ -28,7 +28,6 @@ aliasPair
 specificationField
     : KW_STRUCT token_name = ID LEFT_BRACE (StructFieldLst_fields += structField)* RIGHT_BRACE # struct
     | KW_ENUM token_name = ID LEFT_BRACE (EnumFieldLst_fields += enumField)+ RIGHT_BRACE # enum
-    | KW_ENUM token_name = ID LEFT_BRACE (VariantFieldLst_fields += variantField)+ RIGHT_BRACE # variant
     | KW_INTERFACE token_name = ID (KW_EXTENDS tokenLst_extends += ID (COMMA tokenLst_extends += ID)*)? LEFT_BRACE (InterfaceFieldLst_fields += interfaceField)* RIGHT_BRACE # interface
     | KW_RUNTIMECLASS token_name = ID (KW_INHERITS tokenLst_inherits += ID)? (KW_IMPLEMENTS tokenLst_implements += ID (COMMA tokenLst_implements += ID)*)? LEFT_BRACE (RuntimeclassFieldLst_fields += runtimeclassField)* RIGHT_BRACE # runtimeclass
     | KW_FUNCTION token_name = ID LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS COLON
@@ -42,10 +41,6 @@ structField
 
 enumField
     : token_name = ID (ASSIGN_TO IntExprOpt_expr = intExpr)? SEMICOLON # enumProperty
-    ;
-
-variantField
-    : token_name = ID (COLON TypeOpt_type = type)? SEMICOLON # variantProperty
     ;
 
 interfaceField
@@ -78,7 +73,7 @@ type
     | (PackageNameOpt_pkname = packageName DOT)? token_name = ID # userType
     | token_name = ID LEFT_PARENTHESIS (TypeLst_parameters += type (COMMA TypeLst_parameters += type)*)? RIGHT_PARENTHESIS # parameterizedType
     | <assoc = right> LEFT_PARENTHESIS ((TypeWithSpecifierLst_parameter_types += typeWithSpecifier) (COMMA TypeWithSpecifierLst_parameter_types += typeWithSpecifier)*)? RIGHT_PARENTHESIS ARROW
-        (LEFT_PARENTHESIS (TypeWithSpecifierLst_return_types += typeWithSpecifier (COMMA TypeWithSpecifierLst_return_types += typeWithSpecifier)*)? RIGHT_PARENTHESIS | TypeWithSpecifierLst_return_types += typeWithSpecifier) # functionType
+        (LEFT_BRACKET (TypeWithSpecifierLst_return_types += typeWithSpecifier (COMMA TypeWithSpecifierLst_return_types += typeWithSpecifier)*)? RIGHT_BRACKET | TypeWithSpecifierLst_return_types += typeWithSpecifier) # functionType
     ;
 
 ////////////////
@@ -362,7 +357,7 @@ KW_STRING
     : 'String'
     ;
 
-KW_Array
+KW_ARRAY
     : 'Array'
     ;
 

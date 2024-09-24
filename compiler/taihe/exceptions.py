@@ -98,3 +98,15 @@ class CircularReferenceError(SemanticError):
         for name, (pkname, text) in self.cycle:
             cycle_str += " -> " + name + ": " + ".".join(pkname) + "." + text
         return f"circular reference has been found: {cycle_str}"
+
+
+class EnumError(SemanticError):
+    def __init__(self, src_path: str, enum_name: ast.token, rec_name: ast.token, new_name: ast.token, val: int):
+        self.src_path = src_path
+        self.enum_name = enum_name
+        self.rec_name = rec_name
+        self.new_name = new_name
+        self.val = val
+
+    def __str__(self):
+        return f"{self.src_path!r}: {pos(self.enum_name)}: {self.rec_name.text!r} and {self.new_name.text!r} in enum class {self.enum_name.text!r} have the same value {self.val}"
