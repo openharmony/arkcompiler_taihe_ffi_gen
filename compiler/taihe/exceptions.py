@@ -19,7 +19,7 @@ class PackageNameConflictError(SemanticError):
 
 
 class PackageAliasConflictError(SemanticError):
-    def __init__(self, src_path: str, rec_pkname: ast.PackageNameUni, new_pkname: ast.PackageNameUni):
+    def __init__(self, src_path: str, rec_pkname: ast.PackageName, new_pkname: ast.PackageName):
         self.src_path = src_path
         self.rec_pkname = rec_pkname
         self.new_pkname = new_pkname
@@ -51,7 +51,7 @@ class SymbolConflictWithNamespaceError(SemanticError):
 
 
 class PackageNotExistError(SemanticError):
-    def __init__(self, src_path: str, pkname: ast.PackageNameUni):
+    def __init__(self, src_path: str, pkname: ast.PackageName):
         self.src_path = src_path
         self.name = pkname
 

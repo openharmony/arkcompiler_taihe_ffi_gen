@@ -5,25 +5,12 @@ grammar Taihe;
 /////////////
 
 specification
-    : (UseUniLst_uses += useUni)* (SpecificationFieldUniLst_fields += specificationFieldUni)* EOF
+    : (UseLst_uses += use)* (SpecificationFieldLst_fields += specificationField)* EOF
     ;
 
-useUni
-    : UsePackage_ = usePackage
-    | UseSymbol_ = useSymbol
-    ;
-
-usePackage
-    : KW_USE PackageName_old_pkname = packageName (KW_AS PackageAliasOpt_new_pkname = packageAlias)? SEMICOLON
-    ;
-
-useSymbol
-    : KW_FROM PackageName_pkname = packageName KW_USE (AliasPairLst_alias_pairs += aliasPair COMMA)* AliasPairLst_alias_pairs += aliasPair SEMICOLON
-    ;
-
-packageNameUni
-    : PackageName_ = packageName
-    | PackageAlias_ = packageAlias
+use
+    : KW_USE PackageName_old_pkname = packageName (KW_AS PackageAliasOpt_new_pkname = packageAlias)? SEMICOLON # usePackage
+    | KW_FROM PackageName_pkname = packageName KW_USE (AliasPairLst_alias_pairs += aliasPair COMMA)* AliasPairLst_alias_pairs += aliasPair SEMICOLON # useSymbol
     ;
 
 packageName
@@ -38,91 +25,40 @@ aliasPair
     : token_old_name = ID (KW_AS tokenOpt_new_name = ID)?
     ;
 
-specificationFieldUni
-    : Struct_ = struct
-    | Enum_ = enum
-    | Variant_ = variant
-    | Interface_ = interface
-    | Runtimeclass_ = runtimeclass
-    | Const_ = const
-    | Function_ = function
+specificationField
+    : KW_STRUCT token_name = ID LEFT_BRACE (StructFieldLst_fields += structField)* RIGHT_BRACE # struct
+    | KW_ENUM token_name = ID LEFT_BRACE (EnumFieldLst_fields += enumField)+ RIGHT_BRACE # enum
+    | KW_ENUM token_name = ID LEFT_BRACE (VariantFieldLst_fields += variantField)+ RIGHT_BRACE # variant
+    | KW_INTERFACE token_name = ID (KW_EXTENDS tokenLst_extends += ID (COMMA tokenLst_extends += ID)*)? LEFT_BRACE (InterfaceFieldLst_fields += interfaceField)* RIGHT_BRACE # interface
+    | KW_RUNTIMECLASS token_name = ID (KW_INHERITS tokenLst_inherits += ID)? (KW_IMPLEMENTS tokenLst_implements += ID (COMMA tokenLst_implements += ID)*)? LEFT_BRACE (RuntimeclassFieldLst_fields += runtimeclassField)* RIGHT_BRACE # runtimeclass
+    | KW_FUNCTION token_name = ID LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS COLON
+        (LEFT_PARENTHESIS (TypeWithSpecifierLst_return_types += typeWithSpecifier (COMMA TypeWithSpecifierLst_return_types += typeWithSpecifier)*)? RIGHT_PARENTHESIS | TypeWithSpecifierLst_return_types += typeWithSpecifier) SEMICOLON # function
+    | KW_CONST token_name = ID COLON Type_type = type SEMICOLON # const
     ;
 
-struct
-    : KW_STRUCT token_name = ID LEFT_BRACE (StructFieldUniLst_fields += structFieldUni)* RIGHT_BRACE
+structField
+    : token_name = ID COLON Type_type = type SEMICOLON # structProperty
     ;
 
-structFieldUni
-    : StructProperty_ = structProperty
+enumField
+    : token_name = ID (ASSIGN_TO IntExprOpt_expr = intExpr)? SEMICOLON # enumProperty
     ;
 
-structProperty
-    : token_name = ID COLON TypeBase_type = typeBase SEMICOLON
+variantField
+    : token_name = ID (COLON TypeOpt_type = type)? SEMICOLON # variantProperty
     ;
 
-enum
-    : KW_ENUM token_name = ID LEFT_BRACE (EnumFieldUniLst_fields += enumFieldUni)+ RIGHT_BRACE
-    ;
-
-enumFieldUni
-    : EnumProperty_ = enumProperty
-    ;
-
-enumProperty
-    : token_name = ID (ASSIGN_TO IntExprBaseOpt_expr = intExprBase)? SEMICOLON
-    ;
-
-variant
-    : KW_ENUM token_name = ID LEFT_BRACE (VariantFieldUniLst_fields += variantFieldUni)+ RIGHT_BRACE
-    ;
-
-variantFieldUni
-    : VariantProperty_ = variantProperty
-    ;
-
-variantProperty
-    : token_name = ID (COLON TypeBaseOpt_type = typeBase)? SEMICOLON
-    ;
-
-interface
-    : KW_INTERFACE token_name = ID (KW_EXTENDS tokenLst_extends += ID (COMMA tokenLst_extends += ID)*)? LEFT_BRACE (InterfaceFieldUniLst_fields += interfaceFieldUni)* RIGHT_BRACE
-    ;
-
-interfaceFieldUni
-    : MemberFunction_ = memberFunction
-    | MemberConst_ = memberConst
-    ;
-
-runtimeclass
-    : KW_RUNTIMECLASS token_name = ID (KW_INHERITS tokenLst_inherits += ID)? (KW_IMPLEMENTS tokenLst_implements += ID (COMMA tokenLst_implements += ID)*)? LEFT_BRACE (RuntimeclassFieldUniLst_fields += runtimeclassFieldUni)* RIGHT_BRACE
-    ;
-
-runtimeclassFieldUni
-    : Constructor_ = constructor
-    | MemberFunction_ = memberFunction
-    | MemberConst_ = memberConst
-    ;
-
-constructor
-    : KW_CONSTRUCTOR LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS SEMICOLON
-    ;
-
-memberFunction
+interfaceField
     : (tokenOpt_static = KW_STATIC)? KW_FUNCTION token_name = ID LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS COLON
-        (LEFT_PARENTHESIS (TypeWithSpecifierLst_return_types += typeWithSpecifier (COMMA TypeWithSpecifierLst_return_types += typeWithSpecifier)*)? RIGHT_PARENTHESIS | TypeWithSpecifierLst_return_types += typeWithSpecifier) SEMICOLON
+        (LEFT_PARENTHESIS (TypeWithSpecifierLst_return_types += typeWithSpecifier (COMMA TypeWithSpecifierLst_return_types += typeWithSpecifier)*)? RIGHT_PARENTHESIS | TypeWithSpecifierLst_return_types += typeWithSpecifier) SEMICOLON # interfaceFunction
+    | (tokenOpt_static = KW_STATIC)? KW_CONST token_name = ID COLON Type_type = type SEMICOLON  # interfaceConst
     ;
 
-memberConst
-    : (tokenOpt_static = KW_STATIC)? KW_CONST token_name = ID COLON TypeBase_type = typeBase SEMICOLON
-    ;
-
-function
-    : KW_FUNCTION token_name = ID LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS COLON
-        (LEFT_PARENTHESIS (TypeWithSpecifierLst_return_types += typeWithSpecifier (COMMA TypeWithSpecifierLst_return_types += typeWithSpecifier)*)? RIGHT_PARENTHESIS | TypeWithSpecifierLst_return_types += typeWithSpecifier) SEMICOLON
-    ;
-
-const
-    : KW_CONST token_name = ID COLON TypeBase_type = typeBase SEMICOLON
+runtimeclassField
+    : KW_CONSTRUCTOR LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS SEMICOLON # constructor
+    | (tokenOpt_static = KW_STATIC)? KW_FUNCTION token_name = ID LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS COLON
+        (LEFT_PARENTHESIS (TypeWithSpecifierLst_return_types += typeWithSpecifier (COMMA TypeWithSpecifierLst_return_types += typeWithSpecifier)*)? RIGHT_PARENTHESIS | TypeWithSpecifierLst_return_types += typeWithSpecifier) SEMICOLON # runtimeclassFunction
+    | (tokenOpt_static = KW_STATIC)? KW_CONST token_name = ID COLON Type_type = type SEMICOLON  # runtimeclassConst
     ;
 
 parameter
@@ -134,40 +70,40 @@ parameter
 //////////
 
 typeWithSpecifier
-    : ((tokenOpt_const = KW_CONST)? tokenOpt_ref = KW_REF)? TypeBase_type = typeBase
+    : ((tokenOpt_const = KW_CONST)? tokenOpt_ref = KW_REF)? Type_type = type
     ;
 
-typeBase
+type
     : token_name = (KW_I8 | KW_I16 | KW_I32 | KW_I64 | KW_U8 | KW_U16 | KW_U32 | KW_U64 | KW_F32 | KW_F64 | KW_BOOL | KW_STRING) # basicType
-    | (PackageNameUniOpt_pkname = packageNameUni DOT)? token_name = ID # userType
-    | token_name = ID LEFT_PARENTHESIS (TypeBaseLst_parameters += typeBase (COMMA TypeBaseLst_parameters += typeBase)*)? RIGHT_PARENTHESIS # parameterizedType
+    | (PackageNameOpt_pkname = packageName DOT)? token_name = ID # userType
+    | token_name = ID LEFT_PARENTHESIS (TypeLst_parameters += type (COMMA TypeLst_parameters += type)*)? RIGHT_PARENTHESIS # parameterizedType
     | <assoc = right> LEFT_PARENTHESIS ((TypeWithSpecifierLst_parameter_types += typeWithSpecifier) (COMMA TypeWithSpecifierLst_parameter_types += typeWithSpecifier)*)? RIGHT_PARENTHESIS ARROW
-        (LEFT_PARENTHESIS (TypeWithSpecifierLst_return_types += typeWithSpecifier (COMMA TypeWithSpecifierLst_return_types += typeWithSpecifier)*)? RIGHT_PARENTHESIS | TypeWithSpecifierLst_return_types += typeWithSpecifier) SEMICOLON # functionType
+        (LEFT_PARENTHESIS (TypeWithSpecifierLst_return_types += typeWithSpecifier (COMMA TypeWithSpecifierLst_return_types += typeWithSpecifier)*)? RIGHT_PARENTHESIS | TypeWithSpecifierLst_return_types += typeWithSpecifier) # functionType
     ;
 
 ////////////////
 // Expression //
 ////////////////
 
-intExprBase
+intExpr
     : token_val = (DEC_LITERAL | OCT_LITERAL | HEX_LITERAL | BIN_LITERAL) # intLiteralExpr
-    | LEFT_PARENTHESIS IntExprBase_expr = intExprBase RIGHT_PARENTHESIS # intParenthesisExpr
-    | token_op = (PLUS | MINUS | TILDE) IntExprBase_expr = intExprBase # intUnaryExpr
-    | IntExprBase_left = intExprBase token_op = (STAR | SLASH | PERCENT) IntExprBase_right = intExprBase # intBinaryExpr
-    | IntExprBase_left = intExprBase token_op = (PLUS | MINUS) IntExprBase_right = intExprBase # intBinaryExpr
-    | IntExprBase_left = intExprBase token_op = (LEFT_SHIFT | RIGHT_SHIFT) IntExprBase_right = intExprBase # intBinaryExpr
-    | IntExprBase_left = intExprBase token_op = AMPERSAND IntExprBase_right = intExprBase # intBinaryExpr
-    | IntExprBase_left = intExprBase token_op = CARET IntExprBase_right = intExprBase # intBinaryExpr
-    | IntExprBase_left = intExprBase token_op = PIPE IntExprBase_right = intExprBase # intBinaryExpr
-    | KW_IF BoolExprBase_cond = boolExprBase KW_THEN IntExprBase_then_expr = intExprBase KW_ELSE IntExprBase_else_expr = intExprBase # intConditionalExpr
+    | LEFT_PARENTHESIS IntExpr_expr = intExpr RIGHT_PARENTHESIS # intParenthesisExpr
+    | token_op = (PLUS | MINUS | TILDE) IntExpr_expr = intExpr # intUnaryExpr
+    | IntExpr_left = intExpr token_op = (STAR | SLASH | PERCENT) IntExpr_right = intExpr # intBinaryExpr
+    | IntExpr_left = intExpr token_op = (PLUS | MINUS) IntExpr_right = intExpr # intBinaryExpr
+    | IntExpr_left = intExpr token_op = (LEFT_SHIFT | RIGHT_SHIFT) IntExpr_right = intExpr # intBinaryExpr
+    | IntExpr_left = intExpr token_op = AMPERSAND IntExpr_right = intExpr # intBinaryExpr
+    | IntExpr_left = intExpr token_op = CARET IntExpr_right = intExpr # intBinaryExpr
+    | IntExpr_left = intExpr token_op = PIPE IntExpr_right = intExpr # intBinaryExpr
+    | KW_IF BoolExpr_cond = boolExpr KW_THEN IntExpr_then_expr = intExpr KW_ELSE IntExpr_else_expr = intExpr # intConditionalExpr
     ;
 
-boolExprBase
-    : LEFT_PARENTHESIS BoolExprBase_expr = boolExprBase RIGHT_PARENTHESIS # boolParenthesisExpr
-    | token_op = EXCLAMATION BoolExprBase_expr = boolExprBase # boolUnaryExpr
-    | IntExprBase_left = intExprBase token_op = (EQUAL_TO | NOT_EQUAL_TO | LESS_EQUAL_TO | GREATER_EQUAL_TO | LESS_THAN | GREATER_THAN) IntExprBase_right = intExprBase # intComparisonExpr
-    | BoolExprBase_left = boolExprBase token_op = (AND | OR) BoolExprBase_right = boolExprBase # boolBinaryExpr
-    | KW_IF BoolExprBase_cond = boolExprBase KW_THEN BoolExprBase_then_expr = boolExprBase KW_ELSE BoolExprBase_else_expr = boolExprBase # boolConditionalExpr
+boolExpr
+    : LEFT_PARENTHESIS BoolExpr_expr = boolExpr RIGHT_PARENTHESIS # boolParenthesisExpr
+    | token_op = EXCLAMATION BoolExpr_expr = boolExpr # boolUnaryExpr
+    | IntExpr_left = intExpr token_op = (EQUAL_TO | NOT_EQUAL_TO | LESS_EQUAL_TO | GREATER_EQUAL_TO | LESS_THAN | GREATER_THAN) IntExpr_right = intExpr # intComparisonExpr
+    | BoolExpr_left = boolExpr token_op = (AND | OR) BoolExpr_right = boolExpr # boolBinaryExpr
+    | KW_IF BoolExpr_cond = boolExpr KW_THEN BoolExpr_then_expr = boolExpr KW_ELSE BoolExpr_else_expr = boolExpr # boolConditionalExpr
     ;
 
 ///////////
