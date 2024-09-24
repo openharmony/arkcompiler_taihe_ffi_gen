@@ -1,33 +1,57 @@
-#+TITLE: 项目配置文件
+#+ TITLE: 项目配置文件
 
-* 检查代码格式
+*  环境配置
 
-使用ruff进行检查
+**  配置虚拟环境
+
+初次克隆项目时请按照以下步骤完成配置。
+
+- 1. 本机环境应安装 poetry ，可参考[[https://python-poetry.org/docs/#installation][官方文档]]。
+
+- 2. 修改配置，设置项目环境存储于 =compiler/.venv= 。
+
+    #+BEGIN_SRC bash
+        poetry config virtualenvs.in-project true
+    #+END_SRC
+
+- 3. 在 =compiler= 目录中创建并激活虚拟环境。
+
+    #+BEGIN_SRC bash
+        cd compiler
+        poetry shell
+    #+END_SRC
+
+- 4. 从当前项目中读取 =pyproject.toml= 文件，解析依赖项并安装。
+
+    #+BEGIN_SRC bash
+        poetry install
+    #+END_SRC
+
+再次进入项目时，在 =compiler= 目录中激活已有环境。
+
+    #+BEGIN_SRC bash
+        cd compiler
+        poetry shell
+    #+END_SRC
+
+** 配置 pre-commit 钩子
+
+初次克隆项目时执行 =scripts= 目录中的脚本 =pre-commit= ，再次进入项目无需任何操作。
+
 #+BEGIN_SRC bash
-poetry run ruff check [dirs]
+    ./scripts/pre-commit
 #+END_SRC
 
-使用black进行检查
+** 可能需要的指令
+
+打包项目
+
 #+BEGIN_SRC bash
-poetry run black --check [dirs]
+    poetry build
 #+END_SRC
 
-* 虚拟环境管理
+赋予脚本执行权限
 
-1. 位于包含poetry的环境中克隆代码，可参考[[https://python-poetry.org/docs/cli#install][官方安装指南]]。
-
-2.修改配置，使虚拟环境存储于compiler/.venv。
 #+BEGIN_SRC bash
-poetry config virtualenvs.in-project true
-#+END_SRC
-
-3.在compiler目录中创建并激活虚拟环境。
-#+BEGIN_SRC bash
-cd compiler
-poetry shell
-#+END_SRC
-
-4.从当前项目中读取pyproject.toml文件，解析依赖项并安装。
-#+BEGIN_SRC bash
-poetry install
+    git update-index --chmod=+x PATH/TO/YOUR/script.sh
 #+END_SRC
