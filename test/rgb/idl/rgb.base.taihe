@@ -10,4 +10,5 @@ enum Color {
     BLUE  = 0xff << 0o00;
 }
 
-function convert(color: Color): RGB;
+function get_rgb(color: Color): RGB;
+function invert_rgb(color: mut RGB): ();

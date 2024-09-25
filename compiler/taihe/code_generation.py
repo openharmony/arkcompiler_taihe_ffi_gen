@@ -140,8 +140,8 @@ class CodeGenerator(Visitor):
             args.append(param_name)
             cpp_param_headers.append(cpp_param_header)
             abi_param_headers.append(abi_param_header)
-            args_from_abi.append(f"taihe::core::from_abi<{cpp_param_type}, {abi_param_type}>(std::move({param_name}))")
-            args_into_abi.append(f"taihe::core::into_abi<{cpp_param_type}, {abi_param_type}>(std::move({param_name}))")
+            args_from_abi.append(f"taihe::core::from_abi<{cpp_param_type}, {abi_param_type}>(static_cast<std::add_rvalue_reference_t<{abi_param_type}>>({param_name}))")
+            args_into_abi.append(f"taihe::core::into_abi<{cpp_param_type}, {abi_param_type}>(static_cast<std::add_rvalue_reference_t<{cpp_param_type}>>({param_name}))")
             cpp_params.append(f"{cpp_param_type} {param_name}")
             abi_params.append(f"{abi_param_type} {param_name}")
         args_str = ", ".join(args)
@@ -194,7 +194,7 @@ class CodeGenerator(Visitor):
                 abi_hpp.write(f"inline {cpp_return_type} taihe::core::from_abi(std::add_rvalue_reference_t<{abi_return_type}> _val) {{\n")
                 abi_hpp.write(f"    return {{\n")
                 for i, (cpp_return_iter, abi_return_iter) in enumerate(zip(cpp_return_iters, abi_return_iters, strict=True)):
-                    abi_hpp.write(f"        taihe::core::from_abi<{cpp_return_iter}, {abi_return_iter}>(std::move(_val._{i})), \n")
+                    abi_hpp.write(f"        taihe::core::from_abi<{cpp_return_iter}, {abi_return_iter}>(static_cast<std::add_rvalue_reference_t<{abi_return_iter}>>(_val._{i})), \n")
                 abi_hpp.write(f"    }};\n")
                 abi_hpp.write(f"}}\n")
 
@@ -204,7 +204,7 @@ class CodeGenerator(Visitor):
                 impl_hpp.write(f"inline {abi_return_type} taihe::core::into_abi(std::add_rvalue_reference_t<{cpp_return_type}> _val) {{\n")
                 impl_hpp.write(f"    return {{\n")
                 for i, (cpp_return_iter, abi_return_iter) in enumerate(zip(cpp_return_iters, abi_return_iters, strict=True)):
-                    impl_hpp.write(f"        taihe::core::into_abi<{cpp_return_iter}, {abi_return_iter}>(std::move(std::get<{i}>(_val))), \n")
+                    impl_hpp.write(f"        taihe::core::into_abi<{cpp_return_iter}, {abi_return_iter}>(static_cast<std::add_rvalue_reference_t<{cpp_return_iter}>>(std::get<{i}>(_val))), \n")
                 impl_hpp.write(f"    }};\n")
                 impl_hpp.write(f"}}\n")
 
@@ -278,7 +278,7 @@ class CodeGenerator(Visitor):
             struct_h.include("taihe/common.h")
             struct_h.include(*abi_attr_headers)
             struct_h.write(f"typedef struct {abi_struct_name} {{\n")
-            for abi_attr_type, attr_name in zip(abi_attr_types, attr_names):
+            for abi_attr_type, attr_name in zip(abi_attr_types, attr_names, strict=True):
                 struct_h.write(f"    {abi_attr_type} {attr_name};\n")
             struct_h.write(f"}} {abi_struct_name};\n")
 
@@ -293,7 +293,7 @@ class CodeGenerator(Visitor):
             struct_hpp.include(struct_h_name)
             struct_hpp.write(f"namespace {namespace} {{\n")
             struct_hpp.write(f"struct {struct_name} {{\n")
-            for cpp_attr_type, attr_name in zip(cpp_attr_types, attr_names):
+            for cpp_attr_type, attr_name in zip(cpp_attr_types, attr_names, strict=True):
                 struct_hpp.write(f"    {cpp_attr_type} {attr_name};\n")
             struct_hpp.write(f"}};\n")
             struct_hpp.write(f"}}\n")
@@ -302,15 +302,15 @@ class CodeGenerator(Visitor):
             struct_hpp.write(f"template<>\n")
             struct_hpp.write(f"inline {abi_struct_type} taihe::core::into_abi(std::add_rvalue_reference_t<{cpp_struct_type}> _val) {{\n")
             struct_hpp.write(f"    return {{\n")
-            for abi_attr_type, cpp_attr_type, attr_name in zip(abi_attr_types, cpp_attr_types, attr_names):
-                struct_hpp.write(f"        taihe::core::into_abi<{cpp_attr_type}, {abi_attr_type}>(std::move(_val.{attr_name})),\n")
+            for abi_attr_type, cpp_attr_type, attr_name in zip(abi_attr_types, cpp_attr_types, attr_names, strict=True):
+                struct_hpp.write(f"        taihe::core::into_abi<{cpp_attr_type}, {abi_attr_type}>(static_cast<std::add_rvalue_reference_t<{cpp_attr_type}>>(_val.{attr_name})),\n")
             struct_hpp.write(f"    }};\n")
             struct_hpp.write(f"}}\n")
             struct_hpp.write(f"template<>\n")
             struct_hpp.write(f"inline {cpp_struct_type} taihe::core::from_abi(std::add_rvalue_reference_t<{abi_struct_type}> _val) {{\n")
             struct_hpp.write(f"    return {{\n")
-            for abi_attr_type, cpp_attr_type, attr_name in zip(abi_attr_types, cpp_attr_types, attr_names):
-                struct_hpp.write(f"        taihe::core::from_abi<{cpp_attr_type}, {abi_attr_type}>(std::move(_val.{attr_name})),\n")
+            for abi_attr_type, cpp_attr_type, attr_name in zip(abi_attr_types, cpp_attr_types, attr_names, strict=True):
+                struct_hpp.write(f"        taihe::core::from_abi<{cpp_attr_type}, {abi_attr_type}>(static_cast<std::add_rvalue_reference_t<{abi_attr_type}>>(_val.{attr_name})),\n")
             struct_hpp.write(f"    }};\n")
             struct_hpp.write(f"}}\n")
             struct_hpp.write(f"template<>\n")
@@ -362,12 +362,11 @@ class CodeGenerator(Visitor):
             field_names.append(field_name)
             vals.append(val)
 
-
         if self.author or self.user:
             enum_h = self.files.setdefault(enum_h_name, File(is_header=True))
             enum_h.include("taihe/common.h")
             enum_h.write(f"typedef enum {abi_enum_name} {{\n")
-            for abi_field_name, val in zip(abi_f_names, vals):
+            for abi_field_name, val in zip(abi_f_names, vals, strict=True):
                 enum_h.write(f"    {abi_field_name} = {val},\n")
             enum_h.write(f"}} {abi_enum_name};\n")
 
@@ -381,7 +380,7 @@ class CodeGenerator(Visitor):
             enum_hpp.include(enum_h_name)
             enum_hpp.write(f"namespace {namespace} {{\n")
             enum_hpp.write(f"enum class {enum_name} {{\n")
-            for field_name, val in zip(field_names, vals):
+            for field_name, val in zip(field_names, vals, strict=True):
                 enum_hpp.write(f"    {field_name} = {val},\n")
             enum_hpp.write(f"}};\n")
             enum_hpp.write(f"}}\n")

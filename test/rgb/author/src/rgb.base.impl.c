@@ -9,4 +9,11 @@ struct rgb__base__RGB ohos_color_convert(rgb__base__Color color) {
     return result;
 }
 
-TH_EXPORT_C_API_convert(ohos_color_convert)
+void ohos_color_invert(rgb__base__RGB *ptr) {
+    ptr->r = 0xff - ptr->r;
+    ptr->g = 0xff - ptr->g;
+    ptr->b = 0xff - ptr->b;
+}
+
+TH_EXPORT_C_API_get_rgb(ohos_color_convert)
+TH_EXPORT_C_API_invert_rgb(ohos_color_invert)
