@@ -29,7 +29,7 @@ def compile(
         try:
             spec = generate_ast(FileStream(src_path))
         except SyntaxError:
-            raise SyntaxError(f"while parsing {src_path}") from None
+            raise SyntaxError(src_path) from None
         packages.append(Package(src_path, pktupl, spec))
 
     # Semantic analysis

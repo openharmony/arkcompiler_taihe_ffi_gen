@@ -78,13 +78,13 @@ class NotATypeError(SemanticError):
         return f"{self.src_path!r}: {pos(self.name)}: symbol {self.name.text!r} is not a type"
 
 
-class ReferenceTypeError(SemanticError):
+class QualifierError(SemanticError):
     def __init__(self, src_path: str, name: ast.token):
         self.src_path = src_path
         self.name = name
 
     def __str__(self):
-        return f"{self.src_path!r}: {pos(self.name)}: only value types can be used in the current context"
+        return f"{self.src_path!r}: {pos(self.name)}: {self.name!r} cannot be mutable due to its type"
 
 
 class CircularReferenceError(SemanticError):

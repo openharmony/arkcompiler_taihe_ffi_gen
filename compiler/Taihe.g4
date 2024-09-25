@@ -4,8 +4,8 @@ grammar Taihe;
 // Grammar //
 /////////////
 
-specification
-    : (UseLst_uses += use)* (SpecificationFieldLst_fields += specificationField)* EOF
+spec
+    : (UseLst_uses += use)* (SpecFieldLst_fields += specField)* EOF
     ;
 
 use
@@ -25,14 +25,13 @@ aliasPair
     : token_old_name = ID (KW_AS tokenOpt_new_name = ID)?
     ;
 
-specificationField
+specField
     : KW_STRUCT token_name = ID LEFT_BRACE (StructFieldLst_fields += structField)* RIGHT_BRACE # struct
     | KW_ENUM token_name = ID LEFT_BRACE (EnumFieldLst_fields += enumField)+ RIGHT_BRACE # enum
     | KW_INTERFACE token_name = ID (KW_EXTENDS tokenLst_extends += ID (COMMA tokenLst_extends += ID)*)? LEFT_BRACE (InterfaceFieldLst_fields += interfaceField)* RIGHT_BRACE # interface
     | KW_RUNTIMECLASS token_name = ID (KW_INHERITS tokenLst_inherits += ID)? (KW_IMPLEMENTS tokenLst_implements += ID (COMMA tokenLst_implements += ID)*)? LEFT_BRACE (RuntimeclassFieldLst_fields += runtimeclassField)* RIGHT_BRACE # runtimeclass
     | KW_FUNCTION token_name = ID LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS COLON
-        (LEFT_PARENTHESIS (TypeWithSpecifierLst_return_types += typeWithSpecifier (COMMA TypeWithSpecifierLst_return_types += typeWithSpecifier)*)? RIGHT_PARENTHESIS | TypeWithSpecifierLst_return_types += typeWithSpecifier) SEMICOLON # function
-    | KW_CONST token_name = ID COLON Type_type = type SEMICOLON # const
+        (LEFT_PARENTHESIS (TypeLst_return_types += type (COMMA TypeLst_return_types += type)*)? RIGHT_PARENTHESIS | TypeLst_return_types += type) SEMICOLON # function
     ;
 
 structField
@@ -45,35 +44,33 @@ enumField
 
 interfaceField
     : (tokenOpt_static = KW_STATIC)? KW_FUNCTION token_name = ID LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS COLON
-        (LEFT_PARENTHESIS (TypeWithSpecifierLst_return_types += typeWithSpecifier (COMMA TypeWithSpecifierLst_return_types += typeWithSpecifier)*)? RIGHT_PARENTHESIS | TypeWithSpecifierLst_return_types += typeWithSpecifier) SEMICOLON # interfaceFunction
-    | (tokenOpt_static = KW_STATIC)? KW_CONST token_name = ID COLON Type_type = type SEMICOLON  # interfaceConst
+        (LEFT_PARENTHESIS (TypeLst_return_types += type (COMMA TypeLst_return_types += type)*)? RIGHT_PARENTHESIS | TypeLst_return_types += type) SEMICOLON # interfaceFunction
     ;
 
 runtimeclassField
-    : KW_CONSTRUCTOR LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS SEMICOLON # constructor
-    | (tokenOpt_static = KW_STATIC)? KW_FUNCTION token_name = ID LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS COLON
-        (LEFT_PARENTHESIS (TypeWithSpecifierLst_return_types += typeWithSpecifier (COMMA TypeWithSpecifierLst_return_types += typeWithSpecifier)*)? RIGHT_PARENTHESIS | TypeWithSpecifierLst_return_types += typeWithSpecifier) SEMICOLON # runtimeclassFunction
-    | (tokenOpt_static = KW_STATIC)? KW_CONST token_name = ID COLON Type_type = type SEMICOLON  # runtimeclassConst
+    : (tokenOpt_static = KW_STATIC)? KW_FUNCTION token_name = ID LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS COLON
+        (LEFT_PARENTHESIS (TypeLst_return_types += type (COMMA TypeLst_return_types += type)*)? RIGHT_PARENTHESIS | TypeLst_return_types += type) SEMICOLON # runtimeclassFunction
+    | KW_CONSTRUCTOR LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS SEMICOLON # constructor
     ;
 
 parameter
-    : token_name = ID COLON TypeWithSpecifier_type_with_specifier = typeWithSpecifier
+    : token_name = ID COLON QualifiedType_param_type = qualifiedType
     ;
 
 //////////
 // Type //
 //////////
 
-typeWithSpecifier
-    : ((tokenOpt_const = KW_CONST)? tokenOpt_ref = KW_REF)? Type_type = type
+qualifiedType
+    : (tokenOpt_mut = KW_MUT)? Type_type = type
     ;
 
 type
     : token_name = (KW_I8 | KW_I16 | KW_I32 | KW_I64 | KW_U8 | KW_U16 | KW_U32 | KW_U64 | KW_F32 | KW_F64 | KW_BOOL | KW_STRING) # basicType
     | (PackageNameOpt_pkname = packageName DOT)? token_name = ID # userType
     | token_name = ID LEFT_PARENTHESIS (TypeLst_parameters += type (COMMA TypeLst_parameters += type)*)? RIGHT_PARENTHESIS # parameterizedType
-    | <assoc = right> LEFT_PARENTHESIS ((TypeWithSpecifierLst_parameter_types += typeWithSpecifier) (COMMA TypeWithSpecifierLst_parameter_types += typeWithSpecifier)*)? RIGHT_PARENTHESIS ARROW
-        (LEFT_BRACKET (TypeWithSpecifierLst_return_types += typeWithSpecifier (COMMA TypeWithSpecifierLst_return_types += typeWithSpecifier)*)? RIGHT_BRACKET | TypeWithSpecifierLst_return_types += typeWithSpecifier) # functionType
+    | <assoc = right> LEFT_PARENTHESIS ((QualifiedTypeLst_param_types += qualifiedType) (COMMA QualifiedTypeLst_param_types += qualifiedType)*)? RIGHT_PARENTHESIS ARROW
+        (LEFT_BRACKET (TypeLst_return_types += type (COMMA TypeLst_return_types += type)*)? RIGHT_BRACKET | TypeLst_return_types += type) # functionType
     ;
 
 ////////////////
@@ -277,8 +274,8 @@ KW_CONST
     : 'const'
     ;
 
-KW_REF
-    : 'ref'
+KW_MUT
+    : 'mut'
     ;
 
 KW_ENUM

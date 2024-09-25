@@ -76,15 +76,15 @@ class CodeGenerator(Visitor):
         else:
             return "__".join(pktupl) + "__" + type_name, type_basename + ".abi.h"
 
-    def visit_TypeWithSpecifier(self, node: ast.TypeWithSpecifier, cpp: bool, param: bool = False):
+    def visit_QualifiedType(self, node: ast.QualifiedType, cpp: bool, param: bool = False):
         type, header = self.visit(node.type, cpp, param)
-        if node.const:
-            type += " const"
-        if node.ref:
+        if node.mut is not None:
+            if node.mut.text != "mut":
+                type += " const"
             type += "&" if cpp else "*"
         return type, header
 
-    def visit_Specification(self, node: ast.Specification):
+    def visit_Spec(self, node: ast.Spec):
         basename = ".".join(self.pktupl)
         abi_h_name = basename + ".abi.h"
         abi_hpp_name = basename + ".abi.hpp"
@@ -134,8 +134,8 @@ class CodeGenerator(Visitor):
         cpp_params = []
         abi_params = []
         for param in node.parameters:
-            cpp_param_type, cpp_param_header = self.visit(param.type_with_specifier, cpp=True, param=True)
-            abi_param_type, abi_param_header = self.visit(param.type_with_specifier, cpp=False)
+            cpp_param_type, cpp_param_header = self.visit(param.param_type, cpp=True, param=True)
+            abi_param_type, abi_param_header = self.visit(param.param_type, cpp=False)
             param_name = param.name.text
             args.append(param_name)
             cpp_param_headers.append(cpp_param_header)
@@ -178,6 +178,8 @@ class CodeGenerator(Visitor):
             abi_return_struct_name = f"{abi_func_name}__return_t"
             abi_return_type = f"struct {abi_func_name}__return_t"
             cpp_return_type = f"std::tuple<{cpp_return_iters_str}>"
+            return_from_abi = f"taihe::core::from_abi<{cpp_return_type}, {abi_return_type}>"
+            return_into_abi = f"taihe::core::into_abi<{cpp_return_type}, {abi_return_type}>"
 
             if self.author or self.user:
                 abi_h = self.files[abi_h_name]
@@ -205,9 +207,6 @@ class CodeGenerator(Visitor):
                     impl_hpp.write(f"        taihe::core::into_abi<{cpp_return_iter}, {abi_return_iter}>(std::move(std::get<{i}>(_val))), \n")
                 impl_hpp.write(f"    }};\n")
                 impl_hpp.write(f"}}\n")
-
-            return_from_abi = f"taihe::core::from_abi<{cpp_return_type}, {abi_return_type}>"
-            return_into_abi = f"taihe::core::into_abi<{cpp_return_type}, {abi_return_type}>"
 
         if self.author or self.user:
             abi_h = self.files[abi_h_name]
@@ -250,8 +249,8 @@ class CodeGenerator(Visitor):
         abi_h_name = basename + ".abi.h"
         abi_hpp_name = basename + ".abi.hpp"
         struct_basename = basename + "." + struct_name
-        struct_abi_h_name = struct_basename + ".abi.h"
-        struct_abi_hpp_name = struct_basename + ".abi.hpp"
+        struct_h_name = struct_basename + ".abi.h"
+        struct_hpp_name = struct_basename + ".abi.hpp"
 
         namespace = "::".join(self.pktupl)
 
@@ -259,62 +258,81 @@ class CodeGenerator(Visitor):
         cpp_struct_type = "::".join(self.pktupl) + "::" + struct_name
         abi_struct_type = "__".join(self.pktupl) + "__" + struct_name
 
+        attr_names = []
+        cpp_attr_types = []
+        abi_attr_types = []
+        cpp_attr_headers = []
+        abi_attr_headers = []
+        for field in node.fields:
+            abi_attr_type, abi_attr_header = self.visit(field.type, cpp=False)
+            cpp_attr_type, cpp_attr_header = self.visit(field.type, cpp=True)
+            attr_name = field.name.text
+            attr_names.append(attr_name)
+            cpp_attr_headers.append(cpp_attr_header)
+            abi_attr_headers.append(abi_attr_header)
+            cpp_attr_types.append(cpp_attr_type)
+            abi_attr_types.append(abi_attr_type)
+
         if self.author or self.user:
-            struct_abi_h = self.files.setdefault(struct_abi_h_name, File(is_header=True))
-            struct_abi_h.include("taihe/common.h")
-            struct_abi_h.write(f"typedef struct {abi_struct_name} {{\n")
-            for field in node.fields:
-                type, header = self.visit(field.type, cpp=False)
-                name = field.name.text
-                struct_abi_h.write(f"    {type} {name};\n")
-                struct_abi_h.include(header)
-            struct_abi_h.write(f"}} {abi_struct_name};\n")
+            struct_h = self.files.setdefault(struct_h_name, File(is_header=True))
+            struct_h.include("taihe/common.h")
+            struct_h.include(*abi_attr_headers)
+            struct_h.write(f"typedef struct {abi_struct_name} {{\n")
+            for abi_attr_type, attr_name in zip(abi_attr_types, attr_names):
+                struct_h.write(f"    {abi_attr_type} {attr_name};\n")
+            struct_h.write(f"}} {abi_struct_name};\n")
 
         if self.author or self.user:
             abi_h = self.files[abi_h_name]
-            abi_h.include(struct_abi_h_name)
+            abi_h.include(struct_h_name)
 
         if self.author or self.user:
-            struct_abi_hpp = self.files.setdefault(struct_abi_hpp_name, File(is_header=True))
-            struct_abi_hpp.include("taihe/common.hpp")
-            struct_abi_hpp.include(struct_abi_h_name)
-            struct_abi_hpp.write(f"namespace {namespace} {{\n")
-            struct_abi_hpp.write(f"struct {struct_name} {{\n")
-            for field in node.fields:
-                type, header = self.visit(field.type, cpp=True)
-                name = field.name.text
-                struct_abi_hpp.write(f"    {type} {name};\n")
-                struct_abi_hpp.include(header)
-            struct_abi_hpp.write(f"}};\n")
-            struct_abi_hpp.write(f"}}\n")
-            struct_abi_hpp.write(f"template<>\n")
-            struct_abi_hpp.write(f"inline {abi_struct_type} taihe::core::into_abi(std::add_rvalue_reference_t<{cpp_struct_type}> _val) {{\n")
-            struct_abi_hpp.write(f"    return reinterpret_cast<{abi_struct_type} &>(_val);\n")
-            struct_abi_hpp.write(f"}}\n")
-            struct_abi_hpp.write(f"template<>\n")
-            struct_abi_hpp.write(f"inline {cpp_struct_type} taihe::core::from_abi(std::add_rvalue_reference_t<{abi_struct_type}> _val) {{\n")
-            struct_abi_hpp.write(f"    return reinterpret_cast<{cpp_struct_type} &>(_val);\n")
-            struct_abi_hpp.write(f"}}\n")
-            struct_abi_hpp.write(f"template<>\n")
-            struct_abi_hpp.write(f"inline {abi_struct_type} *taihe::core::into_abi(std::add_rvalue_reference_t<{cpp_struct_type} &> _val) {{\n")
-            struct_abi_hpp.write(f"    return reinterpret_cast<{abi_struct_type} *>(&_val);\n")
-            struct_abi_hpp.write(f"}}\n")
-            struct_abi_hpp.write(f"template<>\n")
-            struct_abi_hpp.write(f"inline {cpp_struct_type} &taihe::core::from_abi(std::add_rvalue_reference_t<{abi_struct_type} *> _val) {{\n")
-            struct_abi_hpp.write(f"    return reinterpret_cast<{cpp_struct_type} &>(*_val);\n")
-            struct_abi_hpp.write(f"}}\n")
-            struct_abi_hpp.write(f"template<>\n")
-            struct_abi_hpp.write(f"inline {abi_struct_type} const *taihe::core::into_abi(std::add_rvalue_reference_t<{cpp_struct_type} const &> _val) {{\n")
-            struct_abi_hpp.write(f"    return reinterpret_cast<{abi_struct_type} const *>(&_val);\n")
-            struct_abi_hpp.write(f"}}\n")
-            struct_abi_hpp.write(f"template<>\n")
-            struct_abi_hpp.write(f"inline {cpp_struct_type} const &taihe::core::from_abi(std::add_rvalue_reference_t<{abi_struct_type} const *> _val) {{\n")
-            struct_abi_hpp.write(f"    return reinterpret_cast<{cpp_struct_type} const &>(*_val);\n")
-            struct_abi_hpp.write(f"}}\n")
+            struct_hpp = self.files.setdefault(struct_hpp_name, File(is_header=True))
+            struct_hpp.include("taihe/common.hpp")
+            struct_hpp.include(*cpp_attr_headers)
+            struct_hpp.include(struct_h_name)
+            struct_hpp.write(f"namespace {namespace} {{\n")
+            struct_hpp.write(f"struct {struct_name} {{\n")
+            for cpp_attr_type, attr_name in zip(cpp_attr_types, attr_names):
+                struct_hpp.write(f"    {cpp_attr_type} {attr_name};\n")
+            struct_hpp.write(f"}};\n")
+            struct_hpp.write(f"}}\n")
+
+        if self.author or self.user:
+            struct_hpp.write(f"template<>\n")
+            struct_hpp.write(f"inline {abi_struct_type} taihe::core::into_abi(std::add_rvalue_reference_t<{cpp_struct_type}> _val) {{\n")
+            struct_hpp.write(f"    return {{\n")
+            for abi_attr_type, cpp_attr_type, attr_name in zip(abi_attr_types, cpp_attr_types, attr_names):
+                struct_hpp.write(f"        taihe::core::into_abi<{cpp_attr_type}, {abi_attr_type}>(std::move(_val.{attr_name})),\n")
+            struct_hpp.write(f"    }};\n")
+            struct_hpp.write(f"}}\n")
+            struct_hpp.write(f"template<>\n")
+            struct_hpp.write(f"inline {cpp_struct_type} taihe::core::from_abi(std::add_rvalue_reference_t<{abi_struct_type}> _val) {{\n")
+            struct_hpp.write(f"    return {{\n")
+            for abi_attr_type, cpp_attr_type, attr_name in zip(abi_attr_types, cpp_attr_types, attr_names):
+                struct_hpp.write(f"        taihe::core::from_abi<{cpp_attr_type}, {abi_attr_type}>(std::move(_val.{attr_name})),\n")
+            struct_hpp.write(f"    }};\n")
+            struct_hpp.write(f"}}\n")
+            struct_hpp.write(f"template<>\n")
+            struct_hpp.write(f"inline {abi_struct_type} *taihe::core::into_abi(std::add_rvalue_reference_t<{cpp_struct_type} &> _val) {{\n")
+            struct_hpp.write(f"    return reinterpret_cast<{abi_struct_type} *>(&_val);\n")
+            struct_hpp.write(f"}}\n")
+            struct_hpp.write(f"template<>\n")
+            struct_hpp.write(f"inline {cpp_struct_type} &taihe::core::from_abi(std::add_rvalue_reference_t<{abi_struct_type} *> _val) {{\n")
+            struct_hpp.write(f"    return reinterpret_cast<{cpp_struct_type} &>(*_val);\n")
+            struct_hpp.write(f"}}\n")
+            struct_hpp.write(f"template<>\n")
+            struct_hpp.write(f"inline {abi_struct_type} const *taihe::core::into_abi(std::add_rvalue_reference_t<{cpp_struct_type} const &> _val) {{\n")
+            struct_hpp.write(f"    return reinterpret_cast<{abi_struct_type} const *>(&_val);\n")
+            struct_hpp.write(f"}}\n")
+            struct_hpp.write(f"template<>\n")
+            struct_hpp.write(f"inline {cpp_struct_type} const &taihe::core::from_abi(std::add_rvalue_reference_t<{abi_struct_type} const *> _val) {{\n")
+            struct_hpp.write(f"    return reinterpret_cast<{cpp_struct_type} const &>(*_val);\n")
+            struct_hpp.write(f"}}\n")
 
         if self.user:
             abi_hpp = self.files[abi_hpp_name]
-            abi_hpp.include(struct_abi_hpp_name)
+            abi_hpp.include(struct_hpp_name)
 
     def visit_Enum(self, node: ast.Enum):
         enum_name = node.name.text
@@ -323,8 +341,8 @@ class CodeGenerator(Visitor):
         abi_h_name = basename + ".abi.h"
         abi_hpp_name = basename + ".abi.hpp"
         enum_basename = basename + "." + enum_name
-        enum_abi_h_name = enum_basename + ".abi.h"
-        enum_abi_hpp_name = enum_basename + ".abi.hpp"
+        enum_h_name = enum_basename + ".abi.h"
+        enum_hpp_name = enum_basename + ".abi.hpp"
 
         namespace = "::".join(self.pktupl)
 
@@ -332,60 +350,50 @@ class CodeGenerator(Visitor):
         cpp_enum_type = "::".join(self.pktupl) + "::" + enum_name
         abi_enum_type = "__".join(self.pktupl) + "__" + enum_name
 
+        abi_f_names = []
+        field_names = []
+        vals = []
+        for field in node.fields:
+            assert isinstance(field.expr, ast.IntLiteralExpr)
+            field_name = field.name.text
+            abi_field_name = "__".join(self.pktupl) + "__" + enum_name + "__" + field_name
+            val = int(field.expr.val.text)
+            abi_f_names.append(abi_field_name)
+            field_names.append(field_name)
+            vals.append(val)
+
+
         if self.author or self.user:
-            enum_abi_h = self.files.setdefault(enum_abi_h_name, File(is_header=True))
-            enum_abi_h.include("taihe/common.h")
-            enum_abi_h.write(f"typedef enum {abi_enum_name} {{\n")
-            for field in node.fields:
-                assert isinstance(field.expr, ast.IntLiteralExpr)
-                val = int(field.expr.val.text)
-                name = field.name.text
-                abi_name = "__".join(self.pktupl) + "__" + enum_name + "__" + name
-                enum_abi_h.write(f"    {abi_name} = {val},\n")
-            enum_abi_h.write(f"}} {abi_enum_name};\n")
+            enum_h = self.files.setdefault(enum_h_name, File(is_header=True))
+            enum_h.include("taihe/common.h")
+            enum_h.write(f"typedef enum {abi_enum_name} {{\n")
+            for abi_field_name, val in zip(abi_f_names, vals):
+                enum_h.write(f"    {abi_field_name} = {val},\n")
+            enum_h.write(f"}} {abi_enum_name};\n")
 
         if self.author or self.user:
             abi_h = self.files[abi_h_name]
-            abi_h.include(enum_abi_h_name)
+            abi_h.include(enum_h_name)
 
         if self.author or self.user:
-            enum_abi_hpp = self.files.setdefault(enum_abi_hpp_name, File(is_header=True))
-            enum_abi_hpp.include("taihe/common.hpp")
-            enum_abi_hpp.include(enum_abi_h_name)
-            enum_abi_hpp.write(f"namespace {namespace} {{\n")
-            enum_abi_hpp.write(f"enum class {enum_name} {{\n")
-            for field in node.fields:
-                assert isinstance(field.expr, ast.IntLiteralExpr)
-                val = int(field.expr.val.text)
-                name = field.name.text
-                enum_abi_hpp.write(f"    {name} = {val},\n")
-            enum_abi_hpp.write(f"}};\n")
-            enum_abi_hpp.write(f"}}\n")
-            enum_abi_hpp.write(f"template<>\n")
-            enum_abi_hpp.write(f"inline {abi_enum_type} taihe::core::into_abi(std::add_rvalue_reference_t<{cpp_enum_type}> _val) {{\n")
-            enum_abi_hpp.write(f"    return reinterpret_cast<{abi_enum_type} &>(_val);\n")
-            enum_abi_hpp.write(f"}}\n")
-            enum_abi_hpp.write(f"template<>\n")
-            enum_abi_hpp.write(f"inline {cpp_enum_type} taihe::core::from_abi(std::add_rvalue_reference_t<{abi_enum_type}> _val) {{\n")
-            enum_abi_hpp.write(f"    return reinterpret_cast<{cpp_enum_type} &>(_val);\n")
-            enum_abi_hpp.write(f"}}\n")
-            enum_abi_hpp.write(f"template<>\n")
-            enum_abi_hpp.write(f"inline {abi_enum_type} *taihe::core::into_abi(std::add_rvalue_reference_t<{cpp_enum_type} &> _val) {{\n")
-            enum_abi_hpp.write(f"    return reinterpret_cast<{abi_enum_type} *>(&_val);\n")
-            enum_abi_hpp.write(f"}}\n")
-            enum_abi_hpp.write(f"template<>\n")
-            enum_abi_hpp.write(f"inline {cpp_enum_type} &taihe::core::from_abi(std::add_rvalue_reference_t<{abi_enum_type} *> _val) {{\n")
-            enum_abi_hpp.write(f"    return reinterpret_cast<{cpp_enum_type} &>(*_val);\n")
-            enum_abi_hpp.write(f"}}\n")
-            enum_abi_hpp.write(f"template<>\n")
-            enum_abi_hpp.write(f"inline {abi_enum_type} const *taihe::core::into_abi(std::add_rvalue_reference_t<{cpp_enum_type} const &> _val) {{\n")
-            enum_abi_hpp.write(f"    return reinterpret_cast<{abi_enum_type} const *>(&_val);\n")
-            enum_abi_hpp.write(f"}}\n")
-            enum_abi_hpp.write(f"template<>\n")
-            enum_abi_hpp.write(f"inline {cpp_enum_type} const &taihe::core::from_abi(std::add_rvalue_reference_t<{abi_enum_type} const *> _val) {{\n")
-            enum_abi_hpp.write(f"    return reinterpret_cast<{cpp_enum_type} const &>(*_val);\n")
-            enum_abi_hpp.write(f"}}\n")
+            enum_hpp = self.files.setdefault(enum_hpp_name, File(is_header=True))
+            enum_hpp.include("taihe/common.hpp")
+            enum_hpp.include(enum_h_name)
+            enum_hpp.write(f"namespace {namespace} {{\n")
+            enum_hpp.write(f"enum class {enum_name} {{\n")
+            for field_name, val in zip(field_names, vals):
+                enum_hpp.write(f"    {field_name} = {val},\n")
+            enum_hpp.write(f"}};\n")
+            enum_hpp.write(f"}}\n")
+            enum_hpp.write(f"template<>\n")
+            enum_hpp.write(f"inline {abi_enum_type} taihe::core::into_abi(std::add_rvalue_reference_t<{cpp_enum_type}> _val) {{\n")
+            enum_hpp.write(f"    return static_cast<{abi_enum_type}>(_val);\n")
+            enum_hpp.write(f"}}\n")
+            enum_hpp.write(f"template<>\n")
+            enum_hpp.write(f"inline {cpp_enum_type} taihe::core::from_abi(std::add_rvalue_reference_t<{abi_enum_type}> _val) {{\n")
+            enum_hpp.write(f"    return static_cast<{cpp_enum_type}>(_val);\n")
+            enum_hpp.write(f"}}\n")
 
         if self.user:
             abi_hpp = self.files[abi_hpp_name]
-            abi_hpp.include(enum_abi_hpp_name)
+            abi_hpp.include(enum_hpp_name)

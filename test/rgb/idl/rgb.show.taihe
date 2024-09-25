@@ -1,2 +1,2 @@
 from rgb.base use RGB;
-function show(color: const ref RGB): ();
+function show(color: RGB): ();

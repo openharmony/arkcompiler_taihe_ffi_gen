@@ -7,7 +7,7 @@ from taihe.exceptions import (
     PackageAliasConflictError,
     PackageNameConflictError,
     PackageNotExistError,
-    ReferenceTypeError,
+    QualifierError,
     SymbolConflictError,
     SymbolConflictWithNamespaceError,
     SymbolNotExistError,
@@ -19,13 +19,13 @@ from taihe.parse import Visitor, ast
 class Package:
     path: str
     tupl: tuple[str, ...]
-    spec: ast.Specification
+    spec: ast.Spec
 
 
-class SymbolReplacement(Visitor):
+class SymbolReplacer(Visitor):
     def __init__(
         self,
-        symbol_tables: dict[tuple[str, ...], dict[str, ast.SpecificationField]],
+        symbol_tables: dict[tuple[str, ...], dict[str, ast.SpecField]],
         src_path: str,
         pktupl: tuple[str, ...],
     ) -> None:
@@ -34,7 +34,7 @@ class SymbolReplacement(Visitor):
         self.using_packages: dict[tuple[str, ...], tuple[ast.PackageName, tuple[str, ...]]] = {}
         self.using_symbols = {symbol: (field.name, pktupl, symbol) for symbol, field in symbol_tables[pktupl].items()}
 
-    def visit_Specification(self, node: ast.Specification):
+    def visit_Spec(self, node: ast.Spec):
         while node.uses:
             self.visit(node.uses.pop())
         for field in node.fields:
@@ -88,13 +88,64 @@ class SymbolReplacement(Visitor):
             target = self.symbol_tables[pktupl].get(node.name.text)
             if target is None:
                 raise SymbolNotExistError(self.src_path, node.name)
-        if isinstance(target, ast.Const | ast.Function):
+        if isinstance(target, ast.Function):
             raise NotATypeError(self.src_path, node.name)
         node.pkname = ast.PackageName([ast.token(text) for text in pktupl])
         node.name.text = text
 
 
-class Calculator(Visitor):
+class SemanticAnalyzer(Visitor):
+    def __init__(
+        self,
+        symbol_tables: dict[tuple[str, ...], dict[str, ast.SpecField]],
+        src_path: str,
+    ) -> None:
+        self.symbol_tables = symbol_tables
+        self.src_path = src_path
+
+    def generic_visit(self, node):
+        raise NotImplementedError
+
+    # Type
+    def visit_BasicType(self, node: ast.BasicType):
+        if node.name.text == "bool":
+            return False
+        if node.name.text == "f32":
+            return False
+        if node.name.text == "f64":
+            return False
+        if node.name.text == "i8":
+            return False
+        if node.name.text == "i16":
+            return False
+        if node.name.text == "i32":
+            return False
+        if node.name.text == "i64":
+            return False
+        if node.name.text == "u8":
+            return False
+        if node.name.text == "u16":
+            return False
+        if node.name.text == "u32":
+            return False
+        if node.name.text == "u64":
+            return False
+        if node.name.text == "String":
+            return False
+        raise NotImplementedError
+
+    def visit_UserType(self, node: ast.UserType):
+        assert node.pkname
+        pktupl = tuple(token.text for token in node.pkname.parts)
+        type_name = node.name.text
+        spec = self.symbol_tables[pktupl][type_name]
+        if isinstance(spec, ast.Enum):
+            return False
+        if isinstance(spec, ast.Struct | ast.Runtimeclass | ast.Interface):
+            return True
+        raise NotImplementedError
+
+    # IntExpr
     def visit_IntLiteralExpr(self, node: ast.IntLiteralExpr):
         text = node.val.text
         if text.startswith("0b"):
@@ -137,6 +188,7 @@ class Calculator(Visitor):
             self.visit(node.right),
         )
 
+    # BoolExpr
     def visit_IntComparisonExpr(self, node: ast.IntComparisonExpr):
         return {
             ">": int.__gt__,
@@ -169,53 +221,29 @@ class Calculator(Visitor):
     def visit_BoolConditionalExpr(self, node: ast.BoolConditionalExpr):
         return self.visit(node.then_expr) if self.visit(node.cond) else self.visit(node.else_expr)
 
-    def visit_EnumProperty(self, node: ast.EnumProperty):
-        if node.expr:
-            val = self.visit(node.expr)
-            node.expr = ast.IntLiteralExpr(ast.token(str(val)))
-
-
-class SemanticAnalyzer(Visitor):
-    def __init__(
-        self,
-        symbol_tables: dict[tuple[str, ...], dict[str, ast.SpecificationField]],
-        src_path: str,
-    ) -> None:
-        self.symbol_tables = symbol_tables
-        self.src_path = src_path
-
-    def generic_visit(self, node):
-        raise NotImplementedError
-
-    def visit_Specification(self, node: ast.Specification):
+    # Spec
+    def visit_Spec(self, node: ast.Spec):
         for field in node.fields:
             self.visit(field)
 
-    def visit_TypeWithSpecifier(self, node: ast.TypeWithSpecifier):
-        specifier = node.ref or node.const
-        if self.visit(node.type) is True and specifier:
-            raise ReferenceTypeError(self.src_path, specifier)
-
-    def visit_Const(self, node: ast.Const):
-        if self.visit(node.type) is True:
-            raise ReferenceTypeError(self.src_path, node.name)
-
+    # SpecField
     def visit_Function(self, node: ast.Function):
         parameters = {}
         for parameter in node.parameters:
-            self.visit(parameter.type_with_specifier)
             new_name = parameter.name
             rec_name = parameters.setdefault(new_name.text, new_name)
             if rec_name is not new_name:
                 raise SymbolConflictError(self.src_path, rec_name, new_name)
-        for return_type in node.return_types:
-            self.visit(return_type)
+            mut = parameter.param_type.mut
+            type = parameter.param_type.type
+            if self.visit(type):
+                parameter.param_type.mut = ast.token("mut" if mut else "ref")
+            elif mut:
+                raise QualifierError(self.src_path, new_name)
 
     def visit_Struct(self, node: ast.Struct):
         fields = {}
         for field in node.fields:
-            if self.visit(field.type) is True:
-                raise ReferenceTypeError(self.src_path, field.name)
             new_name = field.name
             rec_name = fields.setdefault(new_name.text, new_name)
             if rec_name is not new_name:
@@ -231,47 +259,12 @@ class SemanticAnalyzer(Visitor):
             if rec_name is not new_name:
                 raise SymbolConflictError(self.src_path, rec_name, new_name)
             if field.expr is not None:
-                assert isinstance(field.expr, ast.IntLiteralExpr)
-                val = int(field.expr.val.text)
-            else:
-                field.expr = ast.IntLiteralExpr(ast.token(str(val)))
+                val = self.visit(field.expr)
+            field.expr = ast.IntLiteralExpr(ast.token(str(val)))
             rec_name = vals.setdefault(val, field.name)
             if rec_name is not new_name:
                 raise EnumError(self.src_path, node.name, rec_name, new_name, val)
             val += 1
-
-    def visit_BasicType(self, node: ast.BasicType):
-        if node.name.text == "bool":
-            return False
-        if node.name.text == "f32":
-            return False
-        if node.name.text == "f64":
-            return False
-        if node.name.text == "i8":
-            return False
-        if node.name.text == "i16":
-            return False
-        if node.name.text == "i32":
-            return False
-        if node.name.text == "i64":
-            return False
-        if node.name.text == "u8":
-            return False
-        if node.name.text == "u16":
-            return False
-        if node.name.text == "u32":
-            return False
-        if node.name.text == "u64":
-            return False
-        if node.name.text == "String":
-            return True
-        raise NotImplementedError
-
-    def visit_UserType(self, node: ast.UserType):
-        assert node.pkname
-        pktupl = tuple(token.text for token in node.pkname.parts)
-        type_name = node.name.text
-        return not isinstance(self.symbol_tables[pktupl][type_name], ast.Struct | ast.Enum)
 
 
 def check_cycle(struct_table):
@@ -318,7 +311,7 @@ def semantic_analysis(packages: list[Package]):
         namespaces[package.tupl] = namespace
 
     # Check for symbol collisions, not considering `use` statements, generate symbol tables
-    symbol_tables: dict[tuple[str, ...], dict[str, ast.SpecificationField]] = {}
+    symbol_tables: dict[tuple[str, ...], dict[str, ast.SpecField]] = {}
     for package in packages:
         symbol_table = symbol_tables.setdefault(package.tupl, {})
         for field in package.spec.fields:
@@ -331,13 +324,8 @@ def semantic_analysis(packages: list[Package]):
 
     # Check for package alias and using symbols
     for package in packages:
-        symbol_replacement = SymbolReplacement(symbol_tables, package.path, package.tupl)
-        symbol_replacement.visit(package.spec)
-
-    # Check for numbers
-    for package in packages:
-        calculator = Calculator()
-        calculator.visit(package.spec)
+        symbol_replacer = SymbolReplacer(symbol_tables, package.path, package.tupl)
+        symbol_replacer.visit(package.spec)
 
     # Semantic analysis (type errors, symbol conflicts)
     for package in packages:

@@ -41,13 +41,13 @@ def visit(ctx):
     return getattr(TaiheAST, ast_class_name)(**kwargs)
 
 
-def generate_ast(input_stream) -> TaiheAST.Specification:
+def generate_ast(input_stream) -> TaiheAST.Spec:
     lexer = TaiheLexer(input_stream)
     lexer.addErrorListener(TaiheErrorListener())
     token_stream = CommonTokenStream(lexer)
     parser = TaiheParser(token_stream)
     parser.addErrorListener(TaiheErrorListener())
-    tree = parser.specification()
+    tree = parser.spec()
     return visit(tree)
 
 
