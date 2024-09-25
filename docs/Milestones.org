@@ -11,6 +11,7 @@
 - Initialize the repository
 - Compiler: Infra, DSL design, lex & parse
 - Compiler: C ABI generation
+
 * Core standard library
 - Goal
   - =assert(concat(["hello", " ", "world]}) == "hello world")=
@@ -20,12 +21,14 @@
   - Standard library: Strings and arrays
   - C++ projection: memory management
   - Parameters: in/out/fill/byval/byref
+
 * Composite types
 - Goal: logger
   - Enum for log level
   - Struct for log details
   - Constant literal for log paths
 - Features: struct, enum, and constants
+
 * OOP
 - Goal: shapes
   - Inheritance
@@ -38,12 +41,14 @@
   - Methods
   - Properties
   - Inheritance
+
 * Callbacks
 - Goal: timer
 - Features
   - Callback and related library support
   - Type alias
   - Object lifetime management
+
 * TODO
 - Error handling
 - Thread safety

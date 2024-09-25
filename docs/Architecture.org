@@ -16,6 +16,7 @@ Taihe 的目标包括：
 - 不考虑现有 API 接口的兼容替代。现有的 C API、NodeJS API 等接口未能完全和实现解耦，接口内包含大量逻辑，导致兼容这些接口需要大量的工作。
 - 不支持各类编程语言互相调用，只支持上层应用的各种编程语言调用底座的 C/C++ 实现。这样的约束让我们只考虑将 C++ 实现向外暴露的场景，用有限的资源支持最重要的工作。
 - 不支持直接转换现有的 C++ 实现。现有的 C++ 代码未能良好分离接口和实现，全自动转换会暴露不必要的内部实现，增加后期维护的成本。
+
 * 系统上下文
 Taihe 通过一套二进制接口标准 (ABI)，连接了 API 的作者和消费者。
 
@@ -47,6 +48,7 @@ Taihe 通过一套二进制接口标准 (ABI)，连接了 API 的作者和消费
 4. =consumer/sensors.h=: 消费侧 API 调用转换至 ABI
    - 自动生成的 C++ 头文件，提供舒适的 C++ API 供业务逻辑使用 Taihe ABI
    - 例: =inline uint32_t Sensor::getAltitude() { return _taihe_sensor_getAltitude(this); }=
+
 * 编译器
 ** 整体流程
 1. =taihe.__main__=: CLI 层，负责读入命令行参数
@@ -61,4 +63,5 @@ Taihe 通过一套二进制接口标准 (ABI)，连接了 API 的作者和消费
   - 生成 TaiheLexer 以及 TaiheParser，负责词法和语法分析
   - 生成 TaiheAST，负责存储 AST 节点
   - 生成 TaiheVisitor。该文件以 Visitor 设计模式，简化 AST 的访问
+
 * TODO 运行时
