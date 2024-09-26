@@ -56,7 +56,7 @@ def get_name_and_header(node: ast.Type | ast.QualifiedType, cpp: bool, param: bo
             else:
                 return "struct TString*", "taihe/string.abi.h"
         raise NotImplementedError
-    
+
     if isinstance(node, ast.UserType):
         assert node.pkname
         pktupl = tuple(token.text for token in node.pkname.parts)
@@ -75,7 +75,27 @@ def get_name_and_header(node: ast.Type | ast.QualifiedType, cpp: bool, param: bo
             if node.mut.text in ("mut", "ref"):
                 type += "&" if cpp else "*"
         return type, header
-    
+
+    raise NotImplementedError
+
+
+def get_basic_method(node: ast.Type) -> tuple[str, str]:
+    if isinstance(node, ast.BasicType):
+        if node.name.text in ("bool", "f32", "f64", "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64"):
+            return "", ""
+        if node.name.text == "String":
+            return "tstr_dup", "tstr_drop"
+        raise NotImplementedError
+
+    if isinstance(node, ast.UserType):
+        assert node.pkname
+        pktupl = tuple(token.text for token in node.pkname.parts)
+        type_name = node.name.text
+        return (
+            "__" + "__".join(pktupl) + "__" + type_name + "__dup",
+            "__" + "__".join(pktupl) + "__" + type_name + "__drop",
+        )
+
     raise NotImplementedError
 
 
@@ -262,8 +282,12 @@ class CodeGenerator(Visitor):
         abi_struct_name = "__" + "__".join(self.pktupl) + "__" + struct_name
         cpp_struct_type = "::" + "::".join(self.pktupl) + "::" + struct_name
         abi_struct_type = "__" + "__".join(self.pktupl) + "__" + struct_name
+        abi_struct_dupl_method = f"{abi_struct_name}__dup"
+        abi_struct_drop_method = f"{abi_struct_name}__drop"
 
         attr_names = []
+        attr_dupl_methods = []
+        attr_drop_methods = []
         cpp_attr_types = []
         abi_attr_types = []
         cpp_attr_headers = []
@@ -271,6 +295,9 @@ class CodeGenerator(Visitor):
         for field in node.fields:
             abi_attr_type, abi_attr_header = get_name_and_header(field.type, cpp=False)
             cpp_attr_type, cpp_attr_header = get_name_and_header(field.type, cpp=True)
+            attr_dupl_method, attr_drop_method = get_basic_method(field.type)
+            attr_dupl_methods.append(attr_dupl_method)
+            attr_drop_methods.append(attr_drop_method)
             attr_name = field.name.text
             attr_names.append(attr_name)
             cpp_attr_headers.append(cpp_attr_header)
@@ -286,6 +313,18 @@ class CodeGenerator(Visitor):
             for abi_attr_type, attr_name in zip(abi_attr_types, attr_names, strict=True):
                 struct_h.write(f"    {abi_attr_type} {attr_name};\n")
             struct_h.write(f"}} {abi_struct_name};\n")
+            struct_h.write(f"inline {abi_struct_type} {abi_struct_dupl_method}({abi_struct_type} _val) {{\n")
+            struct_h.write(f"    {abi_struct_type} _dup = {{\n")
+            for attr_dupl_method, attr_name in zip(attr_dupl_methods, attr_names, strict=True):
+                struct_h.write(f"        {attr_dupl_method}(_val.{attr_name}),\n")
+            struct_h.write(f"    }};\n")
+            struct_h.write(f"    return _dup;\n")
+            struct_h.write(f"}}\n")
+            struct_h.write(f"inline void {abi_struct_drop_method}({abi_struct_type} _val) {{\n")
+            for attr_drop_method, attr_name in zip(attr_drop_methods, attr_names, strict=True):
+                if len(attr_drop_method):  # -Wunused-value
+                    struct_h.write(f"    {attr_drop_method}(_val.{attr_name});\n")
+            struct_h.write(f"}}\n")
 
         if self.author or self.user:
             abi_h = self.files[abi_h_name]
@@ -354,6 +393,8 @@ class CodeGenerator(Visitor):
         abi_enum_name = "__" + "__".join(self.pktupl) + "__" + enum_name
         cpp_enum_type = "::" + "::".join(self.pktupl) + "::" + enum_name
         abi_enum_type = "__" + "__".join(self.pktupl) + "__" + enum_name
+        abi_enum_dupl_method = f"{abi_enum_name}__dup"
+        abi_enum_drop_method = f"{abi_enum_name}__drop"
 
         abi_f_names = []
         field_names = []
@@ -374,6 +415,11 @@ class CodeGenerator(Visitor):
             for abi_field_name, val in zip(abi_f_names, vals, strict=True):
                 enum_h.write(f"    {abi_field_name} = {val},\n")
             enum_h.write(f"}} {abi_enum_name};\n")
+            enum_h.write(f"inline {abi_enum_type} {abi_enum_dupl_method}({abi_enum_type} _val) {{\n")
+            enum_h.write(f"    return _val;\n")
+            enum_h.write(f"}}\n")
+            enum_h.write(f"inline void {abi_enum_drop_method}({abi_enum_type} _val) {{\n")
+            enum_h.write(f"}}\n")
 
         if self.author or self.user:
             abi_h = self.files[abi_h_name]

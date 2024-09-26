@@ -177,7 +177,7 @@ def convert_qualifier(self: SemanticAnalyzer, node: ast.Type, mut: ast.token | N
         if isinstance(spec, ast.Runtimeclass | ast.Interface):
             return None if mut is not None else ast.token("const")
         raise NotImplementedError
-    
+
     raise NotImplementedError
 
 
@@ -223,7 +223,7 @@ def get_int_val(node: ast.IntExpr) -> int:
             get_int_val(node.left),
             get_int_val(node.right),
         )
-    
+
     raise NotImplementedError
 
 
@@ -259,7 +259,7 @@ def get_bool_val(node: ast.BoolExpr) -> bool:
 
     if isinstance(node, ast.BoolConditionalExpr):
         return get_bool_val(node.then_expr) if get_bool_val(node.cond) else get_bool_val(node.else_expr)
-    
+
     raise NotImplementedError
 
 
