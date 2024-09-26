@@ -127,7 +127,7 @@ enum Bar {
 #+END_SRC
 
 * 其他
-函数和类型的声明没有先后顺序，但需要注意结构体之间不可循环引用。例如：
+函数和类型的声明没有先后顺序，但需要注意结构体之间不可递归包含。例如：
 #+BEGIN_SRC rust
 struct Foo {
   bar: Bar;
@@ -141,6 +141,6 @@ struct Foo {
 }
 struct Bar {
   foo: Foo;
-}  // Error: circular reference detected: Foo -> bar: Bar -> foo: Foo
+}  // Error: recursive inclusion detected: Foo -> bar: Bar -> foo: Foo
 #+END_SRC
 

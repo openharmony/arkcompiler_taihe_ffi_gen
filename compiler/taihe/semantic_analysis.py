@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from taihe.exceptions import (
-    CircularReferenceError,
+    RecursiveInclusionError,
     EnumValueCollisionError,
     NotATypeError,
     PackageAliasConflictError,
@@ -318,7 +318,7 @@ def check_cycle(struct_table) -> None:
     for struct in struct_table:
         result = visit(struct)
         if result is not None:
-            raise CircularReferenceError(*result)
+            raise RecursiveInclusionError(*result)
 
 
 def semantic_check(

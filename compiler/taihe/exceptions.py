@@ -88,7 +88,7 @@ class QualifierError(SemanticError):
         return f"{self.src_path!r}: {pos(self.qualifier)}: {self.qualifier.text!r} cannot be used to {self.type.text!r}"
 
 
-class CircularReferenceError(SemanticError):
+class RecursiveInclusionError(SemanticError):
     def __init__(self, start: tuple[tuple[str, ...], str], cycle: list[tuple[str, tuple[tuple[str, ...], str]]]):
         self.start = start
         self.cycle = cycle
