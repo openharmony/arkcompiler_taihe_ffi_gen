@@ -5,8 +5,8 @@ from taihe.exceptions import (
     EnumValueCollisionError,
     NotATypeError,
     PackageAliasConflictError,
+    PackageAliasNotExistError,
     PackageNameConflictError,
-    PackageNotExistError,
     QualifierError,
     SymbolConflictError,
     SymbolConflictWithNamespaceError,
@@ -31,35 +31,31 @@ class SymbolReplacer(Visitor):
     ) -> None:
         self.symbol_tables = symbol_tables
         self.src_path = src_path
-        self.using_packages: dict[tuple[str, ...], tuple[ast.PackageName, tuple[str, ...]]] = {}
+        self.using_packages: dict[tuple[str, ...], tuple[list[ast.token], tuple[str, ...]]] = {}
         self.using_symbols = {symbol: (field.name, pktupl, symbol) for symbol, field in symbol_tables[pktupl].items()}
 
-    def visit_Spec(self, node: ast.Spec):
+    def visit_Spec(self, node: ast.Spec) -> None:
         while node.uses:
             self.visit(node.uses.pop())
         for field in node.fields:
             self.visit(field)
 
-    def visit_UsePackage(self, node: ast.UsePackage):
-        old_pktupl = tuple(token.text for token in node.old_pkname.parts)
+    def visit_UsePackage(self, node: ast.UsePackage) -> None:
+        old_pktupl = tuple(token.text for token in node.old_pkname)
         symbol_table = self.symbol_tables.get(old_pktupl)
         if symbol_table is None:
-            raise PackageNotExistError(self.src_path, node.old_pkname)
-        # new_pkname = node.new_pkname or node.old_pkname
-        if node.new_pkname:
-            new_pkname = ast.PackageName(node.new_pkname.parts)
-        else:
-            new_pkname = ast.PackageName(node.old_pkname.parts)
-        new_pktupl = tuple(token.text for token in new_pkname.parts)
+            raise PackageAliasNotExistError(self.src_path, node.old_pkname)
+        new_pkname = node.new_pkname or node.old_pkname
+        new_pktupl = tuple(token.text for token in new_pkname)
         rec_pkname, _ = self.using_packages.setdefault(new_pktupl, (new_pkname, old_pktupl))
         if rec_pkname is not new_pkname:
             raise PackageAliasConflictError(self.src_path, rec_pkname, new_pkname)
 
-    def visit_UseSymbol(self, node: ast.UseSymbol):
-        pktupl = tuple(token.text for token in node.pkname.parts)
+    def visit_UseSymbol(self, node: ast.UseSymbol) -> None:
+        pktupl = tuple(token.text for token in node.pkname)
         symbol_table = self.symbol_tables.get(pktupl)
         if symbol_table is None:
-            raise PackageNotExistError(self.src_path, node.pkname)
+            raise PackageAliasNotExistError(self.src_path, node.pkname)
         for alias_pair in node.alias_pairs:
             old_text = alias_pair.old_name.text
             field = symbol_table.get(old_text)
@@ -71,27 +67,70 @@ class SymbolReplacer(Visitor):
             if rec_name is not new_name:
                 raise SymbolConflictError(self.src_path, rec_name, new_name)
 
-    def visit_UserType(self, node: ast.UserType):
-        if node.pkname is None:
-            symbol = self.using_symbols.get(node.name.text)
+    # substitution
+    def visit_UserType(self, node: ast.UserType) -> None:
+        if not node.pkname:
+            text = node.name.text
+            symbol = self.using_symbols.get(text)
             if symbol is None:
                 raise SymbolNotExistError(self.src_path, node.name)
             _, pktupl, text = symbol
-            target = self.symbol_tables[pktupl][text]
+            symbol_table = self.symbol_tables[pktupl]
+            target = symbol_table[text]
         else:
-            pktupl = tuple(token.text for token in node.pkname.parts)
+            pktupl = tuple(token.text for token in node.pkname)
             package = self.using_packages.get(pktupl)
             if package is None:
-                raise PackageNotExistError(self.src_path, node.pkname)
+                raise PackageAliasNotExistError(self.src_path, node.pkname)
             _, pktupl = package
             text = node.name.text
-            target = self.symbol_tables[pktupl].get(node.name.text)
+            symbol_table = self.symbol_tables[pktupl]
+            target = symbol_table.get(text)
             if target is None:
                 raise SymbolNotExistError(self.src_path, node.name)
         if isinstance(target, ast.Function):
             raise NotATypeError(self.src_path, node.name)
-        node.pkname = ast.PackageName([ast.token(text) for text in pktupl])
+        node.pkname = [ast.token(text) for text in pktupl]
         node.name.text = text
+
+
+def symbol_substitute(
+    packages: list[Package],
+) -> dict[tuple[str, ...], dict[str, ast.SpecField]]:
+    # Generate packages dict, Check for package name conflicts
+    packages_dict: dict[tuple[str, ...], Package] = {}
+    for package in packages:
+        other = packages_dict.setdefault(package.tupl, package)
+        if other.path is not package.path:
+            raise PackageNameConflictError(package.path, other.path)
+
+    # Generate namespace tree
+    namespaces = {}
+    namespace_tree = {}
+    for package in packages:
+        namespace = namespace_tree
+        for part in package.tupl:
+            namespace = namespace.setdefault(part, {})
+        namespaces[package.tupl] = namespace
+
+    # Check for symbol collisions, not considering `use` statements, generate symbol tables
+    symbol_tables: dict[tuple[str, ...], dict[str, ast.SpecField]] = {}
+    for package in packages:
+        symbol_table = symbol_tables.setdefault(package.tupl, {})
+        for field in package.spec.fields:
+            name_text = field.name.text
+            if name_text in namespaces[package.tupl]:
+                raise SymbolConflictWithNamespaceError(package.path, package.tupl, field.name)
+            first = symbol_table.setdefault(name_text, field)
+            if first is not field:
+                raise SymbolConflictError(package.path, field.name, first.name)
+
+    # Check for package alias and using symbols and perform symbol substitution
+    for package in packages:
+        SymbolReplacer(symbol_tables, package.path, package.tupl).visit(package.spec)
+
+    # return the symbol tables
+    return symbol_tables
 
 
 class SemanticAnalyzer(Visitor):
@@ -103,29 +142,28 @@ class SemanticAnalyzer(Visitor):
         self.symbol_tables = symbol_tables
         self.src_path = src_path
 
-    def generic_visit(self, node):
+    def generic_visit(self, node) -> None:
         raise NotImplementedError
 
     # Spec
-    def visit_Spec(self, node: ast.Spec):
+    def visit_Spec(self, node: ast.Spec) -> None:
         for field in node.fields:
             self.visit(field)
 
     # SpecField
-    def visit_Function(self, node: ast.Function):
+    def visit_Function(self, node: ast.Function) -> None:
         parameters = {}
         for parameter in node.parameters:
             new_name = parameter.name
             rec_name = parameters.setdefault(new_name.text, new_name)
             if rec_name is not new_name:
                 raise SymbolConflictError(self.src_path, rec_name, new_name)
-            parameter.param_type.mut = convert_qualifier(
-                self,
-                parameter.param_type.type,
-                parameter.param_type.mut,
-            )
+            mut = parameter.param_type.mut
+            type = parameter.param_type.type
+            if mut is not None and not can_be_mutable(self.symbol_tables, type):
+                raise QualifierError(self.src_path, node.name, mut)
 
-    def visit_Struct(self, node: ast.Struct):
+    def visit_Struct(self, node: ast.Struct) -> None:
         fields = {}
         for field in node.fields:
             new_name = field.name
@@ -133,7 +171,7 @@ class SemanticAnalyzer(Visitor):
             if rec_name is not new_name:
                 raise SymbolConflictError(self.src_path, rec_name, new_name)
 
-    def visit_Enum(self, node: ast.Enum):
+    def visit_Enum(self, node: ast.Enum) -> None:
         fields = {}
         vals = {}
         val = 0
@@ -151,31 +189,25 @@ class SemanticAnalyzer(Visitor):
             val += 1
 
 
-def convert_qualifier(self: SemanticAnalyzer, node: ast.Type, mut: ast.token | None) -> ast.token | None:
+def can_be_mutable(
+    symbol_tables: dict[tuple[str, ...], dict[str, ast.SpecField]],
+    node: ast.Type,
+) -> bool:
     if isinstance(node, ast.BasicType):
-        if node.name.text in ("bool", "f32", "f64", "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64"):
-            if mut is not None:
-                raise QualifierError(self.src_path, node.name, mut)
-            return None
-        if node.name.text == "String":
-            if mut is not None:
-                raise QualifierError(self.src_path, node.name, mut)
-            return None
+        if node.name.text in ("bool", "f32", "f64", "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64", "String"):
+            return False
         raise NotImplementedError
 
     if isinstance(node, ast.UserType):
-        assert node.pkname
-        pktupl = tuple(token.text for token in node.pkname.parts)
-        type_name = node.name.text
-        spec = self.symbol_tables[pktupl][type_name]
-        if isinstance(spec, ast.Enum):
-            if mut is not None:
-                raise QualifierError(self.src_path, node.name, mut)
-            return None
-        if isinstance(spec, ast.Struct):
-            return ast.token("mut") if mut is not None else ast.token("ref")
-        if isinstance(spec, ast.Runtimeclass | ast.Interface):
-            return None if mut is not None else ast.token("const")
+        pktupl = tuple(token.text for token in node.pkname)
+        text = node.name.text
+        target = symbol_tables[pktupl][text]
+        if isinstance(target, ast.Enum):
+            return False
+        if isinstance(target, ast.Struct):
+            return True
+        if isinstance(target, ast.Runtimeclass | ast.Interface):
+            return True
         raise NotImplementedError
 
     raise NotImplementedError
@@ -263,7 +295,7 @@ def get_bool_val(node: ast.BoolExpr) -> bool:
     raise NotImplementedError
 
 
-def check_cycle(struct_table):
+def check_cycle(struct_table) -> None:
     visited = set()
     visiting_dict = {}
     visiting_list = []
@@ -289,61 +321,30 @@ def check_cycle(struct_table):
             raise CircularReferenceError(*result)
 
 
-def semantic_analysis(packages: list[Package]):
-    # Generate packages dict, Check for package name conflicts
-    packages_dict: dict[tuple[str, ...], Package] = {}
+def semantic_check(
+    packages: list[Package],
+    symbol_tables: dict[tuple[str, ...], dict[str, ast.SpecField]],
+) -> None:
+    # Semantic checking within each file
     for package in packages:
-        other = packages_dict.setdefault(package.tupl, package)
-        if other.path is not package.path:
-            raise PackageNameConflictError(package.path, other.path)
-
-    # Generate namespace tree
-    namespaces = {}
-    namespace_tree = {}
-    for package in packages:
-        namespace = namespace_tree
-        for part in package.tupl:
-            namespace = namespace.setdefault(part, {})
-        namespaces[package.tupl] = namespace
-
-    # Check for symbol collisions, not considering `use` statements, generate symbol tables
-    symbol_tables: dict[tuple[str, ...], dict[str, ast.SpecField]] = {}
-    for package in packages:
-        symbol_table = symbol_tables.setdefault(package.tupl, {})
-        for field in package.spec.fields:
-            name_text = field.name.text
-            if name_text in namespaces[package.tupl]:
-                raise SymbolConflictWithNamespaceError(package.path, package.tupl, field.name)
-            first = symbol_table.setdefault(name_text, field)
-            if first is not field:
-                raise SymbolConflictError(package.path, field.name, first.name)
-
-    # Check for package alias and using symbols
-    for package in packages:
-        symbol_replacer = SymbolReplacer(symbol_tables, package.path, package.tupl)
-        symbol_replacer.visit(package.spec)
-
-    # Semantic analysis (type errors, symbol conflicts)
-    for package in packages:
-        semantic_analyzer = SemanticAnalyzer(symbol_tables, package.path)
-        semantic_analyzer.visit(package.spec)
+        SemanticAnalyzer(symbol_tables, package.path).visit(package.spec)
 
     # Check for circular reference in structs
     struct_table = {}
     for package in packages:
-        for decl in package.spec.fields:
-            if not isinstance(decl, ast.Struct):
+        for node in package.spec.fields:
+            if not isinstance(node, ast.Struct):
                 continue
-            struct_name = decl.name.text
-            child = struct_table.setdefault((package.tupl, struct_name), [])
-            for attr in decl.fields:
-                name = attr.name.text
-                type = attr.type
-                if not isinstance(type, ast.UserType):
+            struct_name = node.name.text
+            children = struct_table.setdefault((package.tupl, struct_name), [])
+            for child in node.fields:
+                child_name = child.name.text
+                child_type = child.type
+                if not isinstance(child_type, ast.UserType):
                     continue
-                assert type.pkname
-                pktupl = tuple(token.text for token in type.pkname.parts)
-                type_name = type.name.text
-                if isinstance(symbol_tables[pktupl][type_name], ast.Struct):
-                    child.append((name, (pktupl, type_name)))
+                child_pktupl = tuple(token.text for token in child_type.pkname)
+                child_text = child_type.name.text
+                child_target = symbol_tables[child_pktupl][child_text]
+                if isinstance(child_target, ast.Struct):
+                    children.append((child_name, (child_pktupl, child_text)))
     check_cycle(struct_table)

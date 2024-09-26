@@ -5,7 +5,7 @@ from antlr4 import FileStream
 
 from taihe.code_generation import CodeGenerator
 from taihe.parse.ast_generation import generate_ast
-from taihe.semantic_analysis import Package, semantic_analysis
+from taihe.semantic_analysis import Package, semantic_check, symbol_substitute
 
 
 def compile(
@@ -13,7 +13,7 @@ def compile(
     dst_dir: Path | str,
     gen_author: bool = False,
     gen_user: bool = False,
-):
+) -> None:
     # Find all .taihe files in the containing directories
     src_paths = []
     for src_dir in src_dirs:
@@ -33,13 +33,14 @@ def compile(
         packages.append(Package(src_path, pktupl, spec))
 
     # Semantic analysis
-    semantic_analysis(packages)
+    symbol_tables = symbol_substitute(packages)
+    semantic_check(packages, symbol_tables)
 
     # Code generation
     if not os.path.exists(dst_dir):
         os.makedirs(dst_dir, exist_ok=True)
     for package in packages:
-        code_generator = CodeGenerator(package.tupl, author=gen_author, user=gen_user)
+        code_generator = CodeGenerator(symbol_tables, package.tupl, author=gen_author, user=gen_user)
         code_generator.visit(package.spec)
         for dst_path, file in code_generator.files.items():
             file.output_to(os.path.join(dst_dir, dst_path))
