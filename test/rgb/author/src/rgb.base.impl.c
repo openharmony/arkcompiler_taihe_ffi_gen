@@ -1,7 +1,7 @@
 #include "rgb.base.impl.h"
 
-struct rgb__base__RGB ohos_color_convert(rgb__base__Color color) {
-    struct rgb__base__RGB result = {
+struct __rgb__base__RGB ohos_color_convert(__rgb__base__Color color) {
+    struct __rgb__base__RGB result = {
         color >> 16 & 0xff,
         color >>  8 & 0xff,
         color >>  0 & 0xff,
@@ -9,7 +9,7 @@ struct rgb__base__RGB ohos_color_convert(rgb__base__Color color) {
     return result;
 }
 
-void ohos_color_invert(rgb__base__RGB *ptr) {
+void ohos_color_invert(__rgb__base__RGB *ptr) {
     ptr->r = ~ptr->r;
     ptr->g = ~ptr->g;
     ptr->b = ~ptr->b;

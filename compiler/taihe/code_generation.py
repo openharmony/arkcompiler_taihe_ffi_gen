@@ -72,9 +72,9 @@ class CodeGenerator(Visitor):
         type_name = node.name.text
         type_basename = ".".join(pktupl) + "." + type_name
         if cpp:
-            return "::".join(pktupl) + "::" + type_name, type_basename + ".abi.hpp"
+            return "::" + "::".join(pktupl) + "::" + type_name, type_basename + ".abi.hpp"
         else:
-            return "__".join(pktupl) + "__" + type_name, type_basename + ".abi.h"
+            return "__" + "__".join(pktupl) + "__" + type_name, type_basename + ".abi.h"
 
     def visit_QualifiedType(self, node: ast.QualifiedType, cpp: bool, param: bool = False):
         type, header = self.visit(node.type, cpp, param)
@@ -123,8 +123,8 @@ class CodeGenerator(Visitor):
 
         namespace = "::".join(self.pktupl)
 
-        abi_func_name = "__".join(self.pktupl) + "__" + func_name
-        cpp_func_name = "::".join(self.pktupl) + "::" + func_name
+        abi_func_name = "__" + "__".join(self.pktupl) + "__" + func_name
+        cpp_func_name = "::" + "::".join(self.pktupl) + "::" + func_name
 
         args = []
         cpp_param_headers = []
@@ -165,27 +165,27 @@ class CodeGenerator(Visitor):
             cpp_return_headers.append(cpp_return_header)
             abi_return_headers.append(abi_return_header)
         else:
-            cpp_return_iters = []
-            abi_return_iters = []
+            cpp_return_parts = []
+            abi_return_parts = []
             for return_type in node.return_types:
-                cpp_return_iter, cpp_return_header = self.visit(return_type, cpp=True)
-                abi_return_iter, abi_return_header = self.visit(return_type, cpp=False)
+                cpp_return_part, cpp_return_header = self.visit(return_type, cpp=True)
+                abi_return_part, abi_return_header = self.visit(return_type, cpp=False)
                 cpp_return_headers.append(cpp_return_header)
                 abi_return_headers.append(abi_return_header)
-                cpp_return_iters.append(cpp_return_iter)
-                abi_return_iters.append(abi_return_iter)
-            cpp_return_iters_str = ", ".join(cpp_return_iters)
+                cpp_return_parts.append(cpp_return_part)
+                abi_return_parts.append(abi_return_part)
+            cpp_return_parts_str = ", ".join(cpp_return_parts)
             abi_return_struct_name = f"{abi_func_name}__return_t"
             abi_return_type = f"struct {abi_func_name}__return_t"
-            cpp_return_type = f"std::tuple<{cpp_return_iters_str}>"
+            cpp_return_type = f"std::tuple<{cpp_return_parts_str}>"
             return_from_abi = f"taihe::core::from_abi<{cpp_return_type}, {abi_return_type}>"
             return_into_abi = f"taihe::core::into_abi<{cpp_return_type}, {abi_return_type}>"
 
             if self.author or self.user:
                 abi_h = self.files[abi_h_name]
                 abi_h.write(f"struct {abi_return_struct_name} {{\n")
-                for i, abi_return_iter in enumerate(abi_return_iters):
-                    abi_h.write(f"    {abi_return_iter} _{i};\n")
+                for i, abi_return_part in enumerate(abi_return_parts):
+                    abi_h.write(f"    {abi_return_part} _{i};\n")
                 abi_h.write(f"}};\n")
 
             if self.user:
@@ -193,8 +193,8 @@ class CodeGenerator(Visitor):
                 abi_hpp.write(f"template<>\n")
                 abi_hpp.write(f"inline {cpp_return_type} taihe::core::from_abi(std::add_rvalue_reference_t<{abi_return_type}> _val) {{\n")
                 abi_hpp.write(f"    return {{\n")
-                for i, (cpp_return_iter, abi_return_iter) in enumerate(zip(cpp_return_iters, abi_return_iters, strict=True)):
-                    abi_hpp.write(f"        taihe::core::from_abi<{cpp_return_iter}, {abi_return_iter}>(static_cast<std::add_rvalue_reference_t<{abi_return_iter}>>(_val._{i})), \n")
+                for i, (cpp_return_part, abi_return_part) in enumerate(zip(cpp_return_parts, abi_return_parts, strict=True)):
+                    abi_hpp.write(f"        taihe::core::from_abi<{cpp_return_part}, {abi_return_part}>(static_cast<std::add_rvalue_reference_t<{abi_return_part}>>(_val._{i})), \n")
                 abi_hpp.write(f"    }};\n")
                 abi_hpp.write(f"}}\n")
 
@@ -203,8 +203,8 @@ class CodeGenerator(Visitor):
                 impl_hpp.write(f"template<>\n")
                 impl_hpp.write(f"inline {abi_return_type} taihe::core::into_abi(std::add_rvalue_reference_t<{cpp_return_type}> _val) {{\n")
                 impl_hpp.write(f"    return {{\n")
-                for i, (cpp_return_iter, abi_return_iter) in enumerate(zip(cpp_return_iters, abi_return_iters, strict=True)):
-                    impl_hpp.write(f"        taihe::core::into_abi<{cpp_return_iter}, {abi_return_iter}>(static_cast<std::add_rvalue_reference_t<{cpp_return_iter}>>(std::get<{i}>(_val))), \n")
+                for i, (cpp_return_part, abi_return_part) in enumerate(zip(cpp_return_parts, abi_return_parts, strict=True)):
+                    impl_hpp.write(f"        taihe::core::into_abi<{cpp_return_part}, {abi_return_part}>(static_cast<std::add_rvalue_reference_t<{cpp_return_part}>>(std::get<{i}>(_val))), \n")
                 impl_hpp.write(f"    }};\n")
                 impl_hpp.write(f"}}\n")
 
@@ -254,9 +254,9 @@ class CodeGenerator(Visitor):
 
         namespace = "::".join(self.pktupl)
 
-        abi_struct_name = "__".join(self.pktupl) + "__" + struct_name
-        cpp_struct_type = "::".join(self.pktupl) + "::" + struct_name
-        abi_struct_type = "__".join(self.pktupl) + "__" + struct_name
+        abi_struct_name = "__" + "__".join(self.pktupl) + "__" + struct_name
+        cpp_struct_type = "::" + "::".join(self.pktupl) + "::" + struct_name
+        abi_struct_type = "__" + "__".join(self.pktupl) + "__" + struct_name
 
         attr_names = []
         cpp_attr_types = []
@@ -346,9 +346,9 @@ class CodeGenerator(Visitor):
 
         namespace = "::".join(self.pktupl)
 
-        abi_enum_name = "__".join(self.pktupl) + "__" + enum_name
-        cpp_enum_type = "::".join(self.pktupl) + "::" + enum_name
-        abi_enum_type = "__".join(self.pktupl) + "__" + enum_name
+        abi_enum_name = "__" + "__".join(self.pktupl) + "__" + enum_name
+        cpp_enum_type = "::" + "::".join(self.pktupl) + "::" + enum_name
+        abi_enum_type = "__" + "__".join(self.pktupl) + "__" + enum_name
 
         abi_f_names = []
         field_names = []
@@ -356,7 +356,7 @@ class CodeGenerator(Visitor):
         for field in node.fields:
             assert isinstance(field.expr, ast.IntLiteralExpr)
             field_name = field.name.text
-            abi_field_name = "__".join(self.pktupl) + "__" + enum_name + "__" + field_name
+            abi_field_name = "__" + "__".join(self.pktupl) + "__" + enum_name + "__" + field_name
             val = int(field.expr.val.text)
             abi_f_names.append(abi_field_name)
             field_names.append(field_name)
