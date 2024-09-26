@@ -79,12 +79,13 @@ class NotATypeError(SemanticError):
 
 
 class QualifierError(SemanticError):
-    def __init__(self, src_path: str, name: ast.token):
+    def __init__(self, src_path: str, type: ast.token, qualifier: ast.token):
         self.src_path = src_path
-        self.name = name
+        self.type = type
+        self.qualifier = qualifier
 
     def __str__(self):
-        return f"{self.src_path!r}: {pos(self.name)}: {self.name!r} cannot be mutable due to its type"
+        return f"{self.src_path!r}: {pos(self.qualifier)}: {self.qualifier.text!r} cannot be used to {self.type.text!r}"
 
 
 class CircularReferenceError(SemanticError):
@@ -100,7 +101,7 @@ class CircularReferenceError(SemanticError):
         return f"circular reference has been found: {cycle_str}"
 
 
-class EnumError(SemanticError):
+class EnumValueCollisionError(SemanticError):
     def __init__(self, src_path: str, enum_name: ast.token, rec_name: ast.token, new_name: ast.token, val: int):
         self.src_path = src_path
         self.enum_name = enum_name

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from taihe.exceptions import (
     CircularReferenceError,
-    EnumError,
+    EnumValueCollisionError,
     NotATypeError,
     PackageAliasConflictError,
     PackageNameConflictError,
@@ -106,121 +106,6 @@ class SemanticAnalyzer(Visitor):
     def generic_visit(self, node):
         raise NotImplementedError
 
-    # Type
-    def visit_BasicType(self, node: ast.BasicType):
-        if node.name.text == "bool":
-            return False
-        if node.name.text == "f32":
-            return False
-        if node.name.text == "f64":
-            return False
-        if node.name.text == "i8":
-            return False
-        if node.name.text == "i16":
-            return False
-        if node.name.text == "i32":
-            return False
-        if node.name.text == "i64":
-            return False
-        if node.name.text == "u8":
-            return False
-        if node.name.text == "u16":
-            return False
-        if node.name.text == "u32":
-            return False
-        if node.name.text == "u64":
-            return False
-        if node.name.text == "String":
-            return False
-        raise NotImplementedError
-
-    def visit_UserType(self, node: ast.UserType):
-        assert node.pkname
-        pktupl = tuple(token.text for token in node.pkname.parts)
-        type_name = node.name.text
-        spec = self.symbol_tables[pktupl][type_name]
-        if isinstance(spec, ast.Enum):
-            return False
-        if isinstance(spec, ast.Struct | ast.Runtimeclass | ast.Interface):
-            return True
-        raise NotImplementedError
-
-    # IntExpr
-    def visit_IntLiteralExpr(self, node: ast.IntLiteralExpr):
-        text = node.val.text
-        if text.startswith("0b"):
-            return int(text, 2)
-        if text.startswith("0o"):
-            return int(text, 8)
-        if text.startswith("0x"):
-            return int(text, 16)
-        return int(text)
-
-    def visit_IntParenthesisExpr(self, node: ast.IntParenthesisExpr):
-        return self.visit(node.expr)
-
-    def visit_IntConditionalExpr(self, node: ast.IntConditionalExpr):
-        return self.visit(node.then_expr) if self.visit(node.cond) else self.visit(node.else_expr)
-
-    def visit_IntUnaryExpr(self, node: ast.IntUnaryExpr):
-        return {
-            "-": int.__neg__,
-            "+": int.__pos__,
-            "~": int.__invert__,
-        }[node.op.text](
-            self.visit(node.expr),
-        )
-
-    def visit_IntBinaryExpr(self, node: ast.IntBinaryExpr):
-        return {
-            "+": int.__add__,
-            "-": int.__sub__,
-            "*": int.__mul__,
-            "/": int.__floordiv__,
-            "%": int.__mod__,
-            "<<": int.__lshift__,
-            ">>": int.__rshift__,
-            "&": int.__and__,
-            "|": int.__or__,
-            "^": int.__xor__,
-        }[node.op.text](
-            self.visit(node.left),
-            self.visit(node.right),
-        )
-
-    # BoolExpr
-    def visit_IntComparisonExpr(self, node: ast.IntComparisonExpr):
-        return {
-            ">": int.__gt__,
-            "<": int.__lt__,
-            ">=": int.__ge__,
-            "<=": int.__le__,
-            "==": int.__eq__,
-            "!=": int.__ne__,
-        }[node.op.text](
-            self.visit(node.left),
-            self.visit(node.right),
-        )
-
-    def visit_BoolUnaryExpr(self, node: ast.BoolUnaryExpr):
-        assert node.op.text == "!"
-        return not self.visit(node.expr)
-
-    def visit_BoolBinaryExpr(self, node: ast.BoolBinaryExpr):
-        return {
-            "&&": bool.__and__,
-            "||": bool.__or__,
-        }[node.op.text](
-            self.visit(node.left),
-            self.visit(node.right),
-        )
-
-    def visit_BoolParenthesisExpr(self, node: ast.BoolParenthesisExpr):
-        return self.visit(node.expr)
-
-    def visit_BoolConditionalExpr(self, node: ast.BoolConditionalExpr):
-        return self.visit(node.then_expr) if self.visit(node.cond) else self.visit(node.else_expr)
-
     # Spec
     def visit_Spec(self, node: ast.Spec):
         for field in node.fields:
@@ -234,12 +119,11 @@ class SemanticAnalyzer(Visitor):
             rec_name = parameters.setdefault(new_name.text, new_name)
             if rec_name is not new_name:
                 raise SymbolConflictError(self.src_path, rec_name, new_name)
-            mut = parameter.param_type.mut
-            type = parameter.param_type.type
-            if self.visit(type):
-                parameter.param_type.mut = ast.token("mut" if mut else "ref")
-            elif mut:
-                raise QualifierError(self.src_path, new_name)
+            parameter.param_type.mut = convert_qualifier(
+                self,
+                parameter.param_type.type,
+                parameter.param_type.mut,
+            )
 
     def visit_Struct(self, node: ast.Struct):
         fields = {}
@@ -259,12 +143,124 @@ class SemanticAnalyzer(Visitor):
             if rec_name is not new_name:
                 raise SymbolConflictError(self.src_path, rec_name, new_name)
             if field.expr is not None:
-                val = self.visit(field.expr)
+                val = get_int_val(field.expr)
             field.expr = ast.IntLiteralExpr(ast.token(str(val)))
             rec_name = vals.setdefault(val, field.name)
             if rec_name is not new_name:
-                raise EnumError(self.src_path, node.name, rec_name, new_name, val)
+                raise EnumValueCollisionError(self.src_path, node.name, rec_name, new_name, val)
             val += 1
+
+
+def convert_qualifier(self: SemanticAnalyzer, node: ast.Type, mut: ast.token | None) -> ast.token | None:
+    if isinstance(node, ast.BasicType):
+        if node.name.text in ("bool", "f32", "f64", "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64"):
+            if mut is not None:
+                raise QualifierError(self.src_path, node.name, mut)
+            return None
+        if node.name.text == "String":
+            if mut is not None:
+                raise QualifierError(self.src_path, node.name, mut)
+            return None
+        raise NotImplementedError
+
+    if isinstance(node, ast.UserType):
+        assert node.pkname
+        pktupl = tuple(token.text for token in node.pkname.parts)
+        type_name = node.name.text
+        spec = self.symbol_tables[pktupl][type_name]
+        if isinstance(spec, ast.Enum):
+            if mut is not None:
+                raise QualifierError(self.src_path, node.name, mut)
+            return None
+        if isinstance(spec, ast.Struct):
+            return ast.token("mut") if mut is not None else ast.token("ref")
+        if isinstance(spec, ast.Runtimeclass | ast.Interface):
+            return None if mut is not None else ast.token("const")
+        raise NotImplementedError
+    
+    raise NotImplementedError
+
+
+def get_int_val(node: ast.IntExpr) -> int:
+    if isinstance(node, ast.IntLiteralExpr):
+        text = node.val.text
+        if text.startswith("0b"):
+            return int(text, 2)
+        if text.startswith("0o"):
+            return int(text, 8)
+        if text.startswith("0x"):
+            return int(text, 16)
+        return int(text)
+
+    if isinstance(node, ast.IntParenthesisExpr):
+        return get_int_val(node.expr)
+
+    if isinstance(node, ast.IntConditionalExpr):
+        return get_int_val(node.then_expr) if get_bool_val(node.cond) else get_int_val(node.else_expr)
+
+    if isinstance(node, ast.IntUnaryExpr):
+        return {
+            "-": int.__neg__,
+            "+": int.__pos__,
+            "~": int.__invert__,
+        }[node.op.text](
+            get_int_val(node.expr),
+        )
+
+    if isinstance(node, ast.IntBinaryExpr):
+        return {
+            "+": int.__add__,
+            "-": int.__sub__,
+            "*": int.__mul__,
+            "/": int.__floordiv__,
+            "%": int.__mod__,
+            "<<": int.__lshift__,
+            ">>": int.__rshift__,
+            "&": int.__and__,
+            "|": int.__or__,
+            "^": int.__xor__,
+        }[node.op.text](
+            get_int_val(node.left),
+            get_int_val(node.right),
+        )
+    
+    raise NotImplementedError
+
+
+def get_bool_val(node: ast.BoolExpr) -> bool:
+    if isinstance(node, ast.IntComparisonExpr):
+        return {
+            ">": int.__gt__,
+            "<": int.__lt__,
+            ">=": int.__ge__,
+            "<=": int.__le__,
+            "==": int.__eq__,
+            "!=": int.__ne__,
+        }[node.op.text](
+            get_int_val(node.left),
+            get_int_val(node.right),
+        )
+
+    if isinstance(node, ast.BoolUnaryExpr):
+        assert node.op.text == "!"
+        return not get_bool_val(node.expr)
+
+    if isinstance(node, ast.BoolBinaryExpr):
+        return {
+            "&&": bool.__and__,
+            "||": bool.__or__,
+        }[node.op.text](
+            get_bool_val(node.left),
+            get_bool_val(node.right),
+        )
+
+    if isinstance(node, ast.BoolParenthesisExpr):
+        return get_bool_val(node.expr)
+
+    if isinstance(node, ast.BoolConditionalExpr):
+        return get_bool_val(node.then_expr) if get_bool_val(node.cond) else get_bool_val(node.else_expr)
+    
+    raise NotImplementedError
 
 
 def check_cycle(struct_table):

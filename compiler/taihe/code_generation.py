@@ -26,17 +26,8 @@ class File:
                 self.headers.add(header)
 
 
-class CodeGenerator(Visitor):
-    def __init__(self, pktupl: tuple[str, ...], author: bool, user: bool):
-        self.pktupl = pktupl
-        self.author = author
-        self.user = user
-        self.files: dict[str, File] = {}
-
-    def generic_visit(self, node):
-        raise NotImplementedError
-
-    def visit_BasicType(self, node: ast.BasicType, cpp: bool, param: bool = False):
+def get_name_and_header(node: ast.Type | ast.QualifiedType, cpp: bool, param: bool = False) -> tuple[str, str | None]:
+    if isinstance(node, ast.BasicType):
         if node.name.text == "bool":
             return "bool", None
         if node.name.text == "f32":
@@ -65,8 +56,8 @@ class CodeGenerator(Visitor):
             else:
                 return "struct TString*", "taihe/string.abi.h"
         raise NotImplementedError
-
-    def visit_UserType(self, node: ast.UserType, cpp: bool, param: bool = False):
+    
+    if isinstance(node, ast.UserType):
         assert node.pkname
         pktupl = tuple(token.text for token in node.pkname.parts)
         type_name = node.name.text
@@ -76,13 +67,27 @@ class CodeGenerator(Visitor):
         else:
             return "__" + "__".join(pktupl) + "__" + type_name, type_basename + ".abi.h"
 
-    def visit_QualifiedType(self, node: ast.QualifiedType, cpp: bool, param: bool = False):
-        type, header = self.visit(node.type, cpp, param)
+    if isinstance(node, ast.QualifiedType):
+        type, header = get_name_and_header(node.type, cpp, param)
         if node.mut is not None:
-            if node.mut.text != "mut":
+            if node.mut.text in ("ref", "const"):
                 type += " const"
-            type += "&" if cpp else "*"
+            if node.mut.text in ("mut", "ref"):
+                type += "&" if cpp else "*"
         return type, header
+    
+    raise NotImplementedError
+
+
+class CodeGenerator(Visitor):
+    def __init__(self, pktupl: tuple[str, ...], author: bool, user: bool):
+        self.pktupl = pktupl
+        self.author = author
+        self.user = user
+        self.files: dict[str, File] = {}
+
+    def generic_visit(self, node):
+        raise NotImplementedError
 
     def visit_Spec(self, node: ast.Spec):
         basename = ".".join(self.pktupl)
@@ -134,8 +139,8 @@ class CodeGenerator(Visitor):
         cpp_params = []
         abi_params = []
         for param in node.parameters:
-            cpp_param_type, cpp_param_header = self.visit(param.param_type, cpp=True, param=True)
-            abi_param_type, abi_param_header = self.visit(param.param_type, cpp=False)
+            cpp_param_type, cpp_param_header = get_name_and_header(param.param_type, cpp=True, param=True)
+            abi_param_type, abi_param_header = get_name_and_header(param.param_type, cpp=False, param=True)
             param_name = param.name.text
             args.append(param_name)
             cpp_param_headers.append(cpp_param_header)
@@ -158,8 +163,8 @@ class CodeGenerator(Visitor):
             return_from_abi = ""
             return_into_abi = ""
         elif len(node.return_types) == 1:
-            cpp_return_type, cpp_return_header = self.visit(node.return_types[0], cpp=True)
-            abi_return_type, abi_return_header = self.visit(node.return_types[0], cpp=False)
+            cpp_return_type, cpp_return_header = get_name_and_header(node.return_types[0], cpp=True)
+            abi_return_type, abi_return_header = get_name_and_header(node.return_types[0], cpp=False)
             return_from_abi = f"taihe::core::from_abi<{cpp_return_type}, {abi_return_type}>"
             return_into_abi = f"taihe::core::into_abi<{cpp_return_type}, {abi_return_type}>"
             cpp_return_headers.append(cpp_return_header)
@@ -168,8 +173,8 @@ class CodeGenerator(Visitor):
             cpp_return_parts = []
             abi_return_parts = []
             for return_type in node.return_types:
-                cpp_return_part, cpp_return_header = self.visit(return_type, cpp=True)
-                abi_return_part, abi_return_header = self.visit(return_type, cpp=False)
+                cpp_return_part, cpp_return_header = get_name_and_header(return_type, cpp=True)
+                abi_return_part, abi_return_header = get_name_and_header(return_type, cpp=False)
                 cpp_return_headers.append(cpp_return_header)
                 abi_return_headers.append(abi_return_header)
                 cpp_return_parts.append(cpp_return_part)
@@ -264,8 +269,8 @@ class CodeGenerator(Visitor):
         cpp_attr_headers = []
         abi_attr_headers = []
         for field in node.fields:
-            abi_attr_type, abi_attr_header = self.visit(field.type, cpp=False)
-            cpp_attr_type, cpp_attr_header = self.visit(field.type, cpp=True)
+            abi_attr_type, abi_attr_header = get_name_and_header(field.type, cpp=False)
+            cpp_attr_type, cpp_attr_header = get_name_and_header(field.type, cpp=True)
             attr_name = field.name.text
             attr_names.append(attr_name)
             cpp_attr_headers.append(cpp_attr_header)
