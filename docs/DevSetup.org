@@ -18,6 +18,7 @@
 #+BEGIN_SRC bash
 ./scripts/install-git-hooks
 #+END_SRC
+
 * 编译器
 首先配置 Python 及依赖环境。后续操作均假设位于 =compiler/= 目录下。
 
@@ -38,4 +39,14 @@ poetry install
 使用下列命令运行编译器主程序：
 #+BEGIN_SRC bash
 python -m taihe --help
+#+END_SRC
+
+使用下列命令打包并测试编译器：
+#+BEGIN_SRC bash
+# 打包
+# 执行命令前注释 =.gitgnore= 文件中的 =compiler/taihe/parse/antlr=
+# 默认输出文件夹为 =dist/=
+poetry build
+# 测试
+./run-test ../test/integer/
 #+END_SRC
