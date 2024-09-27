@@ -50,5 +50,24 @@
   - Object lifetime management
 
 * TODO
+** Design
 - Error handling
 - Thread safety
+- RPC (?)
+** Refactor
+- Individual component
+  - Parsing: g4 generation
+  - Semantics: replace AST-based analysis
+  - Code generation: use IR
+- Overall
+  - Error Manager
+  - Context
+** Engineering
+- Integrate with OHOS
+  - Migrate from C(++)
+  - Migrate: Cangjie / ArkUI
+  - Integrate with the build system
+- Standard library
+- Code generation
+  - Dart
+  - ArkTS (NAPI)
