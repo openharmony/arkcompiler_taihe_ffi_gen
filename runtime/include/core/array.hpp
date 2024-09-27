@@ -7,6 +7,9 @@
 #include <taihe/common.h>
 
 namespace taihe::core {
+
+struct take_ownership_from_abi_t {};
+
 template <typename T>
 struct array_view {
     using value_type = T;
@@ -186,4 +189,143 @@ private:
  * template <typename C, size_t N> array_view(std::array<C, N>& value) -> array_view<C>;
  * template <typename C, size_t N> array_view(std::array<C, N> const& value) -> array_view<C const>;
  */
+
+template <typename T>
+struct th_array : array_view<T>
+{
+    using typename array_view<T>::value_type;
+    using typename array_view<T>::size_type;
+    using typename array_view<T>::reference;
+    using typename array_view<T>::const_reference;
+    using typename array_view<T>::pointer;
+    using typename array_view<T>::const_pointer;
+    using typename array_view<T>::iterator;
+    using typename array_view<T>::const_iterator;
+    using typename array_view<T>::reverse_iterator;
+    using typename array_view<T>::const_reverse_iterator;
+
+    th_array(th_array const&) = delete;
+    th_array& operator=(th_array const&) = delete;
+
+    th_array() noexcept = default;
+
+    explicit th_array(size_type const count)
+        : th_array(count, value_type()) {}
+
+    th_array(void* ptr, uint32_t const count, take_ownership_from_abi_t) noexcept
+        : array_view<T>(static_cast<value_type*>(ptr), static_cast<value_type*>(ptr) + count) {
+    }
+
+    th_array(size_type const count, value_type const& value) {
+        alloc(count);
+        std::uninitialized_fill_n(this->m_data, count, value);
+    }
+
+    template <typename InIt, typename = std::void_t<typename std::iterator_traits<InIt>::difference_type>>
+    th_array(InIt first, InIt last) {
+        alloc(static_cast<size_type>(std::distance(first, last)));
+        std::uninitialized_copy(first, last, this->begin());
+    }
+
+    template <typename U>
+    explicit th_array(std::vector<U> const& value) 
+        : th_array(value.begin(), value.end()) {}
+
+    template <typename U, size_t N>
+    explicit th_array(std::array<U, N> const& value)
+        : th_array(value.begin(), value.end()) {}
+
+    template <typename U, size_t N>
+    explicit th_array(U const(&value)[N])
+        : th_array(value, value + N) {}
+
+    th_array(std::initializer_list<value_type> value)
+        : th_array(value.begin(), value.end()) {}
+
+    template <typename U, typename = std::enable_if_t<std::is_convertible_v<U, T>>>
+    th_array(std::initializer_list<U> value)
+        : th_array(value.begin(), value.end()) {}
+
+    th_array(th_array&& other) noexcept
+        : array_view<T>(other.m_data, other.m_size) {
+        other.m_data = nullptr;
+        other.m_size = 0;
+    }
+
+    th_array& operator=(th_array&& other) noexcept {
+        clear();
+        this->m_data = other.m_data;
+        this->m_size = other.m_size;
+        other.m_data = nullptr;
+        other.m_size = 0;
+        return*this;
+    }
+
+    ~th_array() noexcept {
+        clear();
+    }
+
+    void clear() noexcept {
+        if (this->m_data == nullptr) { return; }
+
+        std::destroy(this->begin(), this->end());
+
+        free(this->m_data);
+        this->m_data = nullptr;
+        this->m_size = 0;
+    }
+
+    friend void swap(th_array& left, th_array& right) noexcept {
+        std::swap(left.m_data, right.m_data);
+        std::swap(left.m_size, right.m_size);
+    }
+
+private:
+    void alloc(size_type const size) {
+        TH_ASSERT(this->empty(), "this array should be empty");
+
+        if (0 != size) {
+            size_t bytes_required = sizeof(value_type) * size;
+            this->m_data = static_cast<value_type*>(malloc(bytes_required));
+
+            if (this->m_data == nullptr) {
+                throw std::bad_alloc();
+            }
+
+            this->m_size = size;
+        }
+    }
+};
+
+namespace impl {
+    template <typename T, typename U>
+    inline constexpr bool array_comparable = std::is_same_v<std::remove_cv_t<T>, std::remove_cv_t<U>>;
+}
+
+template <typename T, typename U, 
+    std::enable_if_t<impl::array_comparable<T, U>, int> = 0>
+bool operator==(array_view<T> const& left, array_view<U> const& right) noexcept {
+    return std::equal(left.begin(), left.end(), right.begin(), right.end());
+}
+
+template <typename T, typename U,
+    std::enable_if_t<impl::array_comparable<T, U>, int> = 0>
+bool operator<(array_view<T> const& left, array_view<U> const& right) noexcept {
+    return std::lexicographical_compare(left.begin(), left.end(), right.begin(), right.end());
+}
+
+template <typename T, typename U, std::enable_if_t<impl::array_comparable<T, U>, int> = 0>
+bool operator!=(array_view<T> const& left, array_view<U> const& right) noexcept { return !(left == right); }
+template <typename T, typename U,std::enable_if_t<impl::array_comparable<T, U>, int> = 0>
+bool operator>(array_view<T> const& left, array_view<U> const& right) noexcept { return right < left; }
+template <typename T, typename U,std::enable_if_t<impl::array_comparable<T, U>, int> = 0>
+bool operator<=(array_view<T> const& left, array_view<U> const& right) noexcept { return !(right < left); }
+template <typename T, typename U, std::enable_if_t<impl::array_comparable<T, U>, int> = 0>
+bool operator>=(array_view<T> const& left, array_view<U> const& right) noexcept { return !(left < right); }
+
+/////////////////////////////
+//////////abi func///////////
+/////////////////////////////
+///////to be continued///////
+/////////////////////////////
 }
