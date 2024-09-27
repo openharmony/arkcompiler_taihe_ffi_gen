@@ -34,7 +34,7 @@ def get_type_infos(
     tuple[str, str | None],  # abi typename and header
     tuple[str, str | None],  # cpp typename and header
 ]:
-    if isinstance(node, ast.BasicType):
+    if isinstance(node, ast.PrimitiveType):
         text = node.name.text
         type = {
             "bool": "bool",
@@ -96,7 +96,7 @@ def get_dup_and_drop(
     symbol_tables: dict[tuple[str, ...], dict[str, ast.SpecField]],
     node: ast.Type,
 ) -> tuple[str, str]:
-    if isinstance(node, ast.BasicType):
+    if isinstance(node, ast.PrimitiveType):
         if node.name.text in ("bool", "f32", "f64", "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64"):
             return "", ""
         if node.name.text == "String":

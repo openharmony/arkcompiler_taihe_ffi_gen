@@ -1,13 +1,13 @@
 from dataclasses import dataclass
 
 from taihe.exceptions import (
-    RecursiveInclusionError,
     EnumValueCollisionError,
     NotATypeError,
     PackageAliasConflictError,
     PackageAliasNotExistError,
     PackageNameConflictError,
     QualifierError,
+    RecursiveInclusionError,
     SymbolConflictError,
     SymbolConflictWithNamespaceError,
     SymbolNotExistError,
@@ -193,7 +193,7 @@ def can_be_mutable(
     symbol_tables: dict[tuple[str, ...], dict[str, ast.SpecField]],
     node: ast.Type,
 ) -> bool:
-    if isinstance(node, ast.BasicType):
+    if isinstance(node, ast.PrimitiveType):
         if node.name.text in ("bool", "f32", "f64", "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64", "String"):
             return False
         raise NotImplementedError

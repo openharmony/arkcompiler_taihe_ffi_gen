@@ -58,7 +58,7 @@ qualifiedType
     ;
 
 type
-    : token_name = (KW_I8 | KW_I16 | KW_I32 | KW_I64 | KW_U8 | KW_U16 | KW_U32 | KW_U64 | KW_F32 | KW_F64 | KW_BOOL | KW_STRING) # basicType
+    : token_name = (KW_I8 | KW_I16 | KW_I32 | KW_I64 | KW_U8 | KW_U16 | KW_U32 | KW_U64 | KW_F32 | KW_F64 | KW_BOOL | KW_STRING) # primitiveType
     | (tokenLst_pkname += ID DOT)* token_name = ID # userType
     | token_name = ID LEFT_PARENTHESIS (TypeLst_parameters += type (COMMA TypeLst_parameters += type)*)? RIGHT_PARENTHESIS # genericType
     | <assoc = right> LEFT_PARENTHESIS ((QualifiedTypeLst_param_types += qualifiedType) (COMMA QualifiedTypeLst_param_types += qualifiedType)*)? RIGHT_PARENTHESIS ARROW

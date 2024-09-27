@@ -182,6 +182,7 @@ private:
         return value.data();
     }
 };
+
 /* C++ 20 
  * template <typename C, size_t N> array_view(C(&value)[N]) -> array_view<C>;
  * template <typename C> array_view(std::vector<C>& value) -> array_view<C>;
@@ -191,8 +192,7 @@ private:
  */
 
 template <typename T>
-struct th_array : array_view<T>
-{
+struct array : array_view<T> {
     using typename array_view<T>::value_type;
     using typename array_view<T>::size_type;
     using typename array_view<T>::reference;
@@ -204,55 +204,54 @@ struct th_array : array_view<T>
     using typename array_view<T>::reverse_iterator;
     using typename array_view<T>::const_reverse_iterator;
 
-    th_array(th_array const&) = delete;
-    th_array& operator=(th_array const&) = delete;
+    array(array const&) = delete;
+    array& operator=(array const&) = delete;
 
-    th_array() noexcept = default;
+    array() noexcept = default;
 
-    explicit th_array(size_type const count)
-        : th_array(count, value_type()) {}
+    explicit array(size_type const count)
+        : array(count, value_type()) {}
 
-    th_array(void* ptr, uint32_t const count, take_ownership_from_abi_t) noexcept
-        : array_view<T>(static_cast<value_type*>(ptr), static_cast<value_type*>(ptr) + count) {
-    }
+    array(void* ptr, uint32_t const count, take_ownership_from_abi_t) noexcept
+        : array_view<T>(static_cast<value_type*>(ptr), static_cast<value_type*>(ptr) + count) {}
 
-    th_array(size_type const count, value_type const& value) {
+    array(size_type const count, value_type const& value) {
         alloc(count);
         std::uninitialized_fill_n(this->m_data, count, value);
     }
 
     template <typename InIt, typename = std::void_t<typename std::iterator_traits<InIt>::difference_type>>
-    th_array(InIt first, InIt last) {
+    array(InIt first, InIt last) {
         alloc(static_cast<size_type>(std::distance(first, last)));
         std::uninitialized_copy(first, last, this->begin());
     }
 
     template <typename U>
-    explicit th_array(std::vector<U> const& value) 
-        : th_array(value.begin(), value.end()) {}
+    explicit array(std::vector<U> const& value) 
+        : array(value.begin(), value.end()) {}
 
     template <typename U, size_t N>
-    explicit th_array(std::array<U, N> const& value)
-        : th_array(value.begin(), value.end()) {}
+    explicit array(std::array<U, N> const& value)
+        : array(value.begin(), value.end()) {}
 
     template <typename U, size_t N>
-    explicit th_array(U const(&value)[N])
-        : th_array(value, value + N) {}
+    explicit array(U const(&value)[N])
+        : array(value, value + N) {}
 
-    th_array(std::initializer_list<value_type> value)
-        : th_array(value.begin(), value.end()) {}
+    array(std::initializer_list<value_type> value)
+        : array(value.begin(), value.end()) {}
 
     template <typename U, typename = std::enable_if_t<std::is_convertible_v<U, T>>>
-    th_array(std::initializer_list<U> value)
-        : th_array(value.begin(), value.end()) {}
+    array(std::initializer_list<U> value)
+        : array(value.begin(), value.end()) {}
 
-    th_array(th_array&& other) noexcept
+    array(array&& other) noexcept
         : array_view<T>(other.m_data, other.m_size) {
         other.m_data = nullptr;
         other.m_size = 0;
     }
 
-    th_array& operator=(th_array&& other) noexcept {
+    array& operator=(array&& other) noexcept {
         clear();
         this->m_data = other.m_data;
         this->m_size = other.m_size;
@@ -261,21 +260,19 @@ struct th_array : array_view<T>
         return*this;
     }
 
-    ~th_array() noexcept {
+    ~array() noexcept {
         clear();
     }
 
     void clear() noexcept {
         if (this->m_data == nullptr) { return; }
-
         std::destroy(this->begin(), this->end());
-
         free(this->m_data);
         this->m_data = nullptr;
         this->m_size = 0;
     }
 
-    friend void swap(th_array& left, th_array& right) noexcept {
+    friend void swap(array& left, array& right) noexcept {
         std::swap(left.m_data, right.m_data);
         std::swap(left.m_size, right.m_size);
     }
@@ -324,8 +321,8 @@ template <typename T, typename U, std::enable_if_t<impl::array_comparable<T, U>,
 bool operator>=(array_view<T> const& left, array_view<U> const& right) noexcept { return !(left < right); }
 
 /////////////////////////////
-//////////abi func///////////
+///////// abi func //////////
 /////////////////////////////
-///////to be continued///////
+////// to be continued //////
 /////////////////////////////
 }
