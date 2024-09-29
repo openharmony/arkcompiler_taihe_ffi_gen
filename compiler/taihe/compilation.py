@@ -33,8 +33,11 @@ def compile(
         packages.append(Package(src_path, pktupl, spec))
 
     # Semantic analysis
-    symbol_tables = symbol_substitute(packages)
-    semantic_check(packages, symbol_tables)
+    errors = []
+    symbol_tables = symbol_substitute(errors, packages)
+    semantic_check(errors, packages, symbol_tables)
+    if errors:
+        raise ExceptionGroup("Semantic Error", errors)
 
     # Code generation
     if not os.path.exists(dst_dir):

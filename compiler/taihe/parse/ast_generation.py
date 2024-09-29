@@ -1,3 +1,5 @@
+from typing import Any
+
 from antlr4 import CommonTokenStream, StdinStream, Token
 from antlr4.error.ErrorListener import ErrorListener
 
@@ -23,21 +25,26 @@ class TaiheErrorListener(ErrorListener):
         raise SyntaxError
 
 
-def visit(ctx):
+def get_meta(ctx) -> tuple[int, int]:
+    if isinstance(ctx, Token):
+        return ctx.line, ctx.column
+    return 0, 0
+
+
+def visit(ctx) -> Any:
     if isinstance(ctx, list):
         return [visit(node) for node in ctx]
     if ctx is None:
         return None
+    line, column = get_meta(ctx)
     if isinstance(ctx, Token):
-        return TaiheAST.token(text=ctx.text, line=ctx.line, column=ctx.column)
-    ast_class_name = ctx.__class__.__name__[:-7]
-    if ast_class_name.endswith("Uni"):
-        return visit(ctx.getChild(0))
-    kwargs = {}
+        return TaiheAST.token(text=ctx.text, line=line, column=column)
+    kwargs = {"line": line, "column": column}
     for attr_full_name, attr_ctx in ctx.__dict__.items():
         if attr_full_name[0].isupper() or attr_full_name.startswith("token"):
             attr_type_name, attr_name = attr_full_name.split("_", 1)
             kwargs[attr_name] = visit(attr_ctx)
+    ast_class_name = ctx.__class__.__name__[:-7]
     return getattr(TaiheAST, ast_class_name)(**kwargs)
 
 

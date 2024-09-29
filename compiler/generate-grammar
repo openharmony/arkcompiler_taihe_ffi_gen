@@ -83,6 +83,8 @@ def generate_TaiheAST():
             for attr_type, attr_name in get_attr_pairs(ctx):
                 attr_hint = get_hint(attr_type)
                 code.append(f"        {attr_name}: {attr_hint}\n")
+            code.append(f"        line: Optional[int] = None\n")
+            code.append(f"        column: Optional[int] = None\n")
         code.append(f"\n")
     code.pop()
     with open(path.join(ANTLR_PATH, "TaiheAST.py"), "w") as file:
@@ -103,7 +105,7 @@ def generate_TaiheVisitor():
     code.append(f"\n")
     code.append(f"    def generic_visit(self, node):\n")
     code.append(f"        for value in node.__dict__.values():\n")
-    code.append(f"            if value is None:\n")
+    code.append(f"            if value is None or isinstance(value, int):\n")
     code.append(f"                continue\n")
     code.append(f"            if isinstance(value, list):\n")
     code.append(f"                for item in value:\n")

@@ -27,7 +27,7 @@ class File:
 
 
 def get_type_infos(
-    symbol_tables: dict[tuple[str, ...], dict[str, ast.SpecField]],
+    symbol_tables: dict[tuple[str, ...], dict[str, list[ast.SpecField]]],
     node: ast.Type,
     mutable: bool | None = None,  # None: not param, False: immutable param, True: mutable param
 ) -> tuple[
@@ -66,7 +66,7 @@ def get_type_infos(
         cpp_header = basename + ".abi.hpp"
         abi_type = "__" + "__".join(pkname) + "__" + text
         abi_header = basename + ".abi.h"
-        target = symbol_tables[pkname][text]
+        target = symbol_tables[pkname][text][0]
         if isinstance(target, ast.Struct):
             if mutable is True:
                 cpp_type += " &"
@@ -83,7 +83,7 @@ def get_type_infos(
 
 
 def get_qualified_type_infos(
-    symbol_tables: dict[tuple[str, ...], dict[str, ast.SpecField]],
+    symbol_tables: dict[tuple[str, ...], dict[str, list[ast.SpecField]]],
     node: ast.QualifiedType,
 ) -> tuple[
     tuple[str, str | None],
@@ -93,7 +93,7 @@ def get_qualified_type_infos(
 
 
 def get_dup_and_drop(
-    symbol_tables: dict[tuple[str, ...], dict[str, ast.SpecField]],
+    symbol_tables: dict[tuple[str, ...], dict[str, list[ast.SpecField]]],
     node: ast.Type,
 ) -> tuple[str, str]:
     if isinstance(node, ast.PrimitiveType):
@@ -106,7 +106,7 @@ def get_dup_and_drop(
     if isinstance(node, ast.UserType):
         pkname = tuple(token.text for token in node.pkname)
         name = node.name.text
-        target = symbol_tables[pkname][name]
+        target = symbol_tables[pkname][name][0]
         if isinstance(target, ast.Struct | ast.Interface | ast.Runtimeclass):
             return (
                 "__" + "__".join(pkname) + "__" + name + "__dup",
@@ -122,7 +122,7 @@ def get_dup_and_drop(
 class CodeGenerator(Visitor):
     def __init__(
         self,
-        symbol_tables: dict[tuple[str, ...], dict[str, ast.SpecField]],
+        symbol_tables: dict[tuple[str, ...], dict[str, list[ast.SpecField]]],
         pkname: tuple[str, ...],
         author: bool,
         user: bool,

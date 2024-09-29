@@ -1,19 +1,19 @@
-// use foo;  // Error: PackageNotExist
+use foo;  // Error: PackageNotExist
 use example.foo as foobar;  // OK
-// use example.bar as foobar;  // Error: PackageNameConflict
+use example.bar as foobar;  // Error: PackageNameConflict
 use example.bar;  // OK
 
-// from example.foobar use Foo;  // Error: PackageNotExist
-// from example.bar use Foo as Foobar;  // Error: SymbolNotExist
+from example.foobar use Foo;  // Error: PackageNotExist
+from example.bar use Foo as Foobar;  // Error: SymbolNotExist
 from example.bar use Bar as Foobar;  // OK
-// from example.foo use Foo as Foobar; // Error: SymbolConflict
-from example.foo use Foo;  // OK
+from example.foo use Foo as Foobar; // Error: SymbolConflict
+from example.bar use Bar;  // OK
 
-// enum BadEnum1 {
-//     A;
-//     B: -1;
-//     C;
-// }  // Error: EnumValueConflict
+enum BadEnum1 {
+    A;
+    B = -1;
+    C;
+}  // Error: EnumValueConflict
 
 enum GoodEnum1 {
     A;
@@ -22,15 +22,17 @@ enum GoodEnum1 {
     D;
 }  // OK
 
-// struct BadStructA {
-//     b: BadStructB;
-// }
-// struct BadStructB {
-//     c: BadStructC;
-// }
-// struct BadStructC {
-//     a: BadStructA;
-// }  // Error: RecursiveInclusion
+function f(a: mut BadEnum1, a: i32): ();
+
+struct BadStructA {
+    b: BadStructB;
+}
+struct BadStructB {
+    c: BadStructC;
+}
+struct BadStructC {
+    a: BadStructA;
+}  // Error: RecursiveInclusion
 
 struct GoodStructA {
     b: GoodStructB;
