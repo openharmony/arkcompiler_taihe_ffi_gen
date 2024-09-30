@@ -1,4 +1,8 @@
 import os
+import sys
+
+if sys.version_info < (3, 11):
+    from exceptiongroup import ExceptionGroup
 from pathlib import Path
 
 from antlr4 import FileStream
@@ -37,7 +41,7 @@ def compile(
     symbol_tables = symbol_substitute(errors, packages)
     semantic_check(errors, packages, symbol_tables)
     if errors:
-        raise ExceptionGroup("Semantic Error", errors)
+        raise ExceptionGroup("Semantic Errors", errors)
 
     # Code generation
     if not os.path.exists(dst_dir):

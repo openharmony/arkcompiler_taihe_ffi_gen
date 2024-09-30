@@ -1,19 +1,66 @@
-use foo;  // Error: PackageNotExist
+// Use Packages
+
+use foo;  // PackageNotExistError
+
 use example.foo as foobar;  // OK
-use example.bar as foobar;  // Error: PackageNameConflict
+
+use example.bar as foobar;  // PackageNameConflictError
+
 use example.bar;  // OK
 
-from example.foobar use Foo;  // Error: PackageNotExist
-from example.bar use Foo as Foobar;  // Error: SymbolNotExist
-from example.bar use Bar as Foobar;  // OK
-from example.foo use Foo as Foobar; // Error: SymbolConflict
+// Use Symbols
+
+from example.foobar use Foo;  // PackageNotExistError
+
+from example.bar use Foo;  // SymbolNotExistError
+
+from example.bar use Bar as Foobar;
+from example.foo use Foo as Foobar; // SymbolConflictError
+
 from example.bar use Bar;  // OK
+
+// Structs
+
+struct BadStruct1 {
+    x: UnimportedType;  // SymbolNotImportedError
+    y: unimported.package.Type;  // PackageNotImportedError
+    z: example.bar.Foo;  // SymbolNotExistError
+}
+
+struct BadStruct2 {
+    x: i32;
+    x: i32;
+}  // SymbolConflictError
+
+struct BadStruct3A {
+    b: BadStruct3B;
+}
+struct BadStruct3B {
+    c: BadStruct3C;
+}
+struct BadStruct3C {
+    a: BadStruct3A;
+}  // RecursiveInclusion
+
+struct GoodStruct1A {
+    b: GoodStructB;
+}  // OK
+struct GoodStruct1B {
+    n: i32;
+}  // OK
+
+// Enums
 
 enum BadEnum1 {
     A;
     B = -1;
     C;
-}  // Error: EnumValueConflict
+}  // EnumValueCollisionError
+
+enum BadEnum2 {
+    A;
+    A;
+}  // SymbolConflictError
 
 enum GoodEnum1 {
     A;
@@ -22,22 +69,11 @@ enum GoodEnum1 {
     D;
 }  // OK
 
-function f(a: mut BadEnum1, a: i32): ();
+// Functions
 
-struct BadStructA {
-    b: BadStructB;
-}
-struct BadStructB {
-    c: BadStructC;
-}
-struct BadStructC {
-    a: BadStructA;
-}  // Error: RecursiveInclusion
+function bad_func_1(a: mut GoodEnum1): ();  // QualifierError
 
-struct GoodStructA {
-    b: GoodStructB;
-}  // OK
-struct GoodStructB {
-    n: i32;
-}  // OK
+function bad_func_2(a: i32, a: i32): ();  // SymbolConflictError
+
+function good_func_1(a: i32, b: mut Bar): (String, String);  // OK
 

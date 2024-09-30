@@ -120,7 +120,7 @@ def symbol_substitute(
         if len(pks) > 1:
             errors.append(PackageNameConflictError(pktupl, pks))
 
-    # Generate namespace tree
+    # Generate namespace tree and check for relative errors
     namespaces = {}
     namespace_tree = {}
     for package in packages:
@@ -133,7 +133,7 @@ def symbol_substitute(
             if decl.name.text in namespaces[package.tupl]:
                 errors.append(SymbolConflictWithNamespaceError(package.path, package.tupl, decl.name))
 
-    # Check for symbol collisions, not considering `use` statements, generate symbol tables
+    # Generate type tables
     type_tables: dict[tuple[str, ...], dict[str, list[ast.SpecField]]] = {}
     for package in packages:
         type_table = type_tables.setdefault(package.tupl, {})
@@ -238,8 +238,8 @@ def can_be_mutable(
 
     if isinstance(node, ast.UserType):
         pktupl = tuple(id.text for id in node.pkname)
-        text = node.name.text
-        targets = type_tables.get(pktupl, {}).get(text)
+        name = node.name.text
+        targets = type_tables.get(pktupl, {}).get(name)
         if targets is None or len(targets) > 1:
             return True
         target = targets[0]
@@ -336,30 +336,27 @@ def get_bool_val(node: ast.BoolExpr) -> bool:
     raise NotImplementedError
 
 
-def check_cycle(errors: list, struct_table) -> None:
+def check_cycle(errors: list, table) -> None:
     visited = set()
     visiting_dict = {}
     visiting_list = []
 
-    def visit(struct) -> tuple | None:
-        if struct in visited:
-            return None
+    def visit(parent):
+        if parent in visited:
+            return
         idx = len(visiting_list)
-        rec = visiting_dict.setdefault(struct, idx)
-        if rec != idx:
-            return struct, visiting_list[rec:]
-        for name, child in struct_table[struct]:
+        rec = visiting_dict.setdefault(parent, idx)
+        if idx != rec:
+            errors.append(RecursiveInclusionError(parent, visiting_list[rec:]))
+            return
+        for name, child in table[parent]:
             visiting_list.append((name, child))
-            result = visit(child)
-            if result is not None:
-                return result
+            visit(child)
             visiting_list.pop()
-        visiting_dict.pop(struct)
+        visited.add(parent)
 
-    for struct in struct_table:
-        result = visit(struct)
-        if result is not None:
-            errors.append(RecursiveInclusionError(*result))
+    for parent in table:
+        visit(parent)
 
 
 def semantic_check(
@@ -369,7 +366,8 @@ def semantic_check(
 ) -> None:
     # Semantic checking within each file
     for package in packages:
-        SemanticAnalyzer(errors, type_tables, package.path).visit(package.spec)
+        analyzer = SemanticAnalyzer(errors, type_tables, package.path)
+        analyzer.visit(package.spec)
 
     # Check for circular reference in structs
     struct_table = {}
@@ -386,15 +384,15 @@ def semantic_check(
                 child_type = child.type
                 if not isinstance(child_type, ast.UserType):
                     continue
-                child_pktupl = tuple(id.text for id in child_type.pkname)
-                child_text = child_type.name.text
-                if not child_pktupl:
+                child_type_pktupl = tuple(id.text for id in child_type.pkname)
+                child_type_name = child_type.name.text
+                if not child_type_pktupl:
                     continue
-                child_targets = type_tables.get(child_pktupl, {}).get(child_text)
-                if child_targets is None or len(child_targets) > 1:
+                child_type_decls = type_tables.get(child_type_pktupl, {}).get(child_type_name)
+                if child_type_decls is None or len(child_type_decls) > 1:
                     continue
-                child_target = child_targets[0]
-                if not isinstance(child_target, ast.Struct):
+                child_type_decl = child_type_decls[0]
+                if not isinstance(child_type_decl, ast.Struct):
                     continue
-                children.append((child_name, (child_pktupl, child_text)))
+                children.append((child_name, (child_type_pktupl, child_type_name)))
     check_cycle(errors, struct_table)

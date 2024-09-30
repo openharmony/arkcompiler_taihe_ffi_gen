@@ -47,7 +47,10 @@ class PackageNotExistError(SemanticError):
     pkname: list[ast.token]
 
 
-PackageNotImportedError = PackageNotExistError
+@dataclass
+class PackageNotImportedError(SemanticError):
+    src_path: str
+    pkname: list[ast.token]
 
 
 @dataclass
@@ -56,7 +59,10 @@ class SymbolNotExistError(SemanticError):
     name: ast.token
 
 
-SymbolNotImportedError = SymbolNotExistError
+@dataclass
+class SymbolNotImportedError(SemanticError):
+    src_path: str
+    name: ast.token
 
 
 @dataclass
