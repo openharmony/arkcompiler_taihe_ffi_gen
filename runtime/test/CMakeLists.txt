@@ -22,3 +22,14 @@ target_link_libraries(string_test
 )
 
 add_test(NAME string_test COMMAND string_test)
+
+# array test
+add_executable(array_test array_test.cpp)
+
+target_link_libraries(array_test
+    ${GTEST_LIBRARIES}
+    pthread  # if used Linux
+    taihe-rt
+)
+
+add_test(NAME array_test COMMAND array_test)
