@@ -1,3 +1,4 @@
 #!/usr/bin/bash -eux
 cd "$(dirname $0)/.."
 cp ".githooks/pre-commit" ".git/hooks/pre-commit"
+chmod ug+x ".git/hooks/pre-commit"
