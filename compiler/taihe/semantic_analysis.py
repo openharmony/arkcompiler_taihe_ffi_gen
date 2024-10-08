@@ -10,8 +10,9 @@ from taihe.exceptions import (
     RecursiveInclusionError,
     SymbolConflictError,
     SymbolConflictWithNamespaceError,
-    SymbolNotExistError,
-    SymbolNotImportedError,
+    TypeAliasConflictError,
+    TypeNotExistError,
+    TypeNotImportedError,
 )
 from taihe.parse import Visitor, ast
 
@@ -34,30 +35,31 @@ class SymbolReplacer(Visitor):
         self.errors = errors
         self.type_tables = type_tables
         self.src_path = src_path
-        self.all_packages: dict[tuple[str, ...], list[list[ast.token]]] = {}
-        self.all_symbols: dict[str, list[ast.token]] = {}
-        self.using_package_table: dict[tuple[str, ...], list[tuple[str, ...]]] = {}
-        self.using_type_table: dict[str, list[tuple[tuple[str, ...], str]]] = {}
-        type_table = type_tables[pktupl]
-        for name in type_table:
-            self.using_type_table.setdefault(name, []).append((pktupl, name))
+        self.using_package_metas: dict[tuple[str, ...], list[list[ast.token]]] = {}
+        self.using_package_table: dict[tuple[str, ...], set[tuple[str, ...]]] = {}
+        self.using_type_metas: dict[str, list[ast.token]] = {}
+        self.using_type_table: dict[str, set[tuple[tuple[str, ...], str]]] = {}
+        self.pktupl = pktupl
 
     def visit_Spec(self, node: ast.Spec) -> None:
         while node.uses:
             self.visit(node.uses.pop(0))
-        for field in node.fields:
-            meta = field.name
-            name = meta.text
-            self.all_symbols.setdefault(name, []).append(meta)
-            self.visit(field)
+        for decl in node.fields:
+            if isinstance(decl, ast.Struct | ast.Enum | ast.Runtimeclass | ast.Interface):
+                meta = decl.name
+                name = meta.text
+                self.using_type_table.setdefault(name, set()).add((self.pktupl, name))
+                self.using_type_metas.setdefault(name, []).append(meta)
+        for decl in node.fields:
+            self.visit(decl)
 
     def visit_UsePackage(self, node: ast.UsePackage) -> None:
         old_pkmeta = node.old_pkname
         new_pkmeta = node.new_pkname or node.old_pkname
         old_pktupl = tuple(id.text for id in old_pkmeta)
         new_pktupl = tuple(id.text for id in new_pkmeta)
-        self.all_packages.setdefault(new_pktupl, []).append(new_pkmeta)
-        self.using_package_table.setdefault(new_pktupl, []).append(old_pktupl)
+        self.using_package_metas.setdefault(new_pktupl, []).append(new_pkmeta)
+        self.using_package_table.setdefault(new_pktupl, set()).add(old_pktupl)
         if old_pktupl not in self.type_tables:
             self.errors.append(PackageNotExistError(self.src_path, old_pkmeta))
 
@@ -72,10 +74,10 @@ class SymbolReplacer(Visitor):
             new_meta = alias_pair.new_name or alias_pair.old_name
             old_name = old_meta.text
             new_name = new_meta.text
-            self.all_symbols.setdefault(new_name, []).append(new_meta)
-            self.using_type_table.setdefault(new_name, []).append((pktupl, old_name))
+            self.using_type_metas.setdefault(new_name, []).append(new_meta)
+            self.using_type_table.setdefault(new_name, set()).add((pktupl, old_name))
             if type_table is not None and old_name not in type_table:
-                self.errors.append(SymbolNotExistError(self.src_path, old_meta))
+                self.errors.append(TypeNotExistError(self.src_path, old_meta))
 
     # substitution
     def visit_UserType(self, node: ast.UserType) -> None:
@@ -91,19 +93,19 @@ class SymbolReplacer(Visitor):
             if packages is None:
                 self.errors.append(PackageNotImportedError(self.src_path, pkmeta))
             elif len(packages) == 1:
-                real_pktupl = packages[0]
+                real_pktupl = next(iter(packages))
                 real_name = name
                 type_table = self.type_tables.get(real_pktupl)
                 if type_table is not None and real_name not in type_table:
-                    self.errors.append(SymbolNotExistError(self.src_path, meta))
+                    self.errors.append(TypeNotExistError(self.src_path, meta))
         else:
             # use symbol
             name = meta.text
             symbols = self.using_type_table.get(name)
             if symbols is None:
-                self.errors.append(SymbolNotImportedError(self.src_path, meta))
+                self.errors.append(TypeNotImportedError(self.src_path, meta))
             elif len(symbols) == 1:
-                real_pktupl, real_name = symbols[0]
+                real_pktupl, real_name = next(iter(symbols))
         node.pkname = [ast.token(id) for id in real_pktupl]
         node.name = ast.token(real_name)
 
@@ -133,6 +135,17 @@ def symbol_substitute(
             if decl.name.text in namespaces[package.tupl]:
                 errors.append(SymbolConflictWithNamespaceError(package.path, package.tupl, decl.name))
 
+    # Check for declaration conflicts
+    for package in packages:
+        decls: dict[str, list[ast.token]] = {}
+        for decl in package.spec.fields:
+            meta = decl.name
+            name = meta.text
+            decls.setdefault(name, []).append(meta)
+        for name, metas in decls.items():
+            if len(metas) > 1:
+                errors.append(SymbolConflictError(package.path, name, metas))
+
     # Generate type tables
     type_tables: dict[tuple[str, ...], dict[str, list[ast.SpecField]]] = {}
     for package in packages:
@@ -141,16 +154,16 @@ def symbol_substitute(
             if isinstance(decl, ast.Struct | ast.Enum | ast.Runtimeclass | ast.Interface):
                 type_table.setdefault(decl.name.text, []).append(decl)
 
-    # Check for package alias and using symbols and perform symbol substitution
+    # Check for using packages and symbols and perform symbol substitution
     for package in packages:
         replacer = SymbolReplacer(errors, type_tables, package.path, package.tupl)
         replacer.visit(package.spec)
-        for symbol, metas in replacer.all_symbols.items():
-            if len(metas) > 1:
-                errors.append(SymbolConflictError(package.path, symbol, metas))
-        for symbol, pkmetas in replacer.all_packages.items():
-            if len(pkmetas) > 1:
-                errors.append(PackageAliasConflictError(package.path, symbol, pkmetas))
+        for key, vals in replacer.using_type_table.items():
+            if len(vals) > 1:
+                errors.append(TypeAliasConflictError(package.path, key, replacer.using_type_metas[key]))
+        for key, vals in replacer.using_package_table.items():
+            if len(vals) > 1:
+                errors.append(PackageAliasConflictError(package.path, key, replacer.using_package_metas[key]))
 
     # return the symbol tables
     return type_tables
@@ -386,8 +399,6 @@ def semantic_check(
                     continue
                 child_type_pktupl = tuple(id.text for id in child_type.pkname)
                 child_type_name = child_type.name.text
-                if not child_type_pktupl:
-                    continue
                 child_type_decls = type_tables.get(child_type_pktupl, {}).get(child_type_name)
                 if child_type_decls is None or len(child_type_decls) > 1:
                     continue

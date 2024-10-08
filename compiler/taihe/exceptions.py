@@ -21,13 +21,6 @@ class SymbolConflictWithNamespaceError(SemanticError):
 
 
 @dataclass
-class PackageAliasConflictError(SemanticError):
-    src_path: str
-    symbol: tuple[str, ...]
-    pkmetas: list[list[ast.token]]
-
-
-@dataclass
 class SymbolConflictError(SemanticError):
     src_path: str
     name: str
@@ -42,33 +35,41 @@ class EnumValueCollisionError(SemanticError):
 
 
 @dataclass
+class PackageAliasConflictError(SemanticError):
+    src_path: str
+    symbol: tuple[str, ...]
+    pkmetas: list[list[ast.token]]
+
+
+@dataclass
 class PackageNotExistError(SemanticError):
     src_path: str
-    pkname: list[ast.token]
+    pkmeta: list[ast.token]
 
 
 @dataclass
 class PackageNotImportedError(SemanticError):
     src_path: str
-    pkname: list[ast.token]
+    pkmeta: list[ast.token]
 
 
 @dataclass
-class SymbolNotExistError(SemanticError):
+class TypeAliasConflictError(SemanticError):
     src_path: str
-    name: ast.token
+    name: str
+    metas: list[ast.token]
 
 
 @dataclass
-class SymbolNotImportedError(SemanticError):
+class TypeNotExistError(SemanticError):
     src_path: str
-    name: ast.token
+    meta: ast.token
 
 
 @dataclass
-class NotATypeError(SemanticError):
+class TypeNotImportedError(SemanticError):
     src_path: str
-    name: ast.token
+    meta: ast.token
 
 
 @dataclass

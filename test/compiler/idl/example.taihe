@@ -4,20 +4,25 @@ use foo;  // PackageNotExistError
 
 use example.foo as foobar;  // OK
 
-use example.bar as foobar;  // PackageNameConflictError
+use example.bar as foobar;  // UsingPackageConflictError
 
 use example.bar;  // OK
 
 // Use Symbols
 
-from example.foobar use Foo;  // PackageNotExistError
+from example.foobar use XXX;  // PackageNotExistError
 
 from example.bar use Foo;  // SymbolNotExistError
 
 from example.bar use Bar as Foobar;
-from example.foo use Foo as Foobar; // SymbolConflictError
+from example.foo use Foo as Foobar; // UsingTypeConflictError
 
 from example.bar use Bar;  // OK
+
+// Others
+
+function test(): ();
+struct test {}  // SymbolConflictError
 
 // Structs
 
@@ -29,45 +34,48 @@ struct BadStruct1 {
 
 struct BadStruct2 {
     x: i32;
-    x: i32;
-}  // SymbolConflictError
+    x: i32;  // SymbolConflictError
+}
 
 struct BadStruct3A {
     b: BadStruct3B;
 }
+
 struct BadStruct3B {
     c: BadStruct3C;
 }
+
 struct BadStruct3C {
-    a: BadStruct3A;
-}  // RecursiveInclusion
+    a: BadStruct3A;  // RecursiveInclusion
+}
 
 struct GoodStruct1A {
-    b: GoodStructB;
-}  // OK
+    b: GoodStruct1B;  // OK
+}
+
 struct GoodStruct1B {
     n: i32;
-}  // OK
+}
 
 // Enums
 
 enum BadEnum1 {
     A;
     B = -1;
-    C;
-}  // EnumValueCollisionError
+    C;  // EnumValueCollisionError
+}
 
 enum BadEnum2 {
     A;
-    A;
-}  // SymbolConflictError
+    A;  // SymbolConflictError
+}
 
 enum GoodEnum1 {
     A;
     B;
-    C = if (7 << 1 + 1) + (3 * 3 - 2 & 11) == 31 && 1 + 1 == 2 then 42 else 10;
+    C = if (7 << 1 + 1) + (3 * 3 - 2 & 11) == 31 && 1 + 1 == 2 then 42 else 10;  // OK (42)
     D;
-}  // OK
+}
 
 // Functions
 
@@ -76,4 +84,6 @@ function bad_func_1(a: mut GoodEnum1): ();  // QualifierError
 function bad_func_2(a: i32, a: i32): ();  // SymbolConflictError
 
 function good_func_1(a: i32, b: mut Bar): (String, String);  // OK
+
+function foo(): ();  // SymbolConflictWithNamespaceError
 
