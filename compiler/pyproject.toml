@@ -12,6 +12,7 @@ antlr4-tools = "^0.2.1"
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.6.5"
 black = "^24.8.0"
+exceptiongroup = "^1.2.2"
 
 [[tool.poetry.source]]
 name = "tsinghua"
