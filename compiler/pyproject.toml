@@ -13,6 +13,8 @@ antlr4-tools = "^0.2.1"
 ruff = "^0.6.5"
 black = "^24.8.0"
 exceptiongroup = "^1.2.2"
+coverage = "^7.6.1"
+pytest = "^8.3.3"
 
 [[tool.poetry.source]]
 name = "tsinghua"

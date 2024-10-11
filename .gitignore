@@ -8,6 +8,8 @@ __pycache__
 compiler/dist/
 compiler/.antlr/
 compiler/taihe/parse/antlr
+.coverage
+.coverage.*
 
 # Temporary directories
 test/*/author_test

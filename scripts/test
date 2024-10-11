@@ -1,0 +1,10 @@
+#!/usr/bin/bash
+cd `dirname $0`
+cd ../compiler
+poetry run ./generate-grammar 
+poetry run coverage run -m -p pytest || exit 1
+poetry run coverage run -p ./run-test ../test/integer -c || exit 1
+poetry run coverage run -p ./run-test ../test/string -c || exit 1
+poetry run coverage run -p ./run-test ../test/rgb -c || exit 1
+poetry run coverage combine
+poetry run coverage report

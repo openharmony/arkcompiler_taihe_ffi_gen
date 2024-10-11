@@ -153,6 +153,10 @@ def main(target_dir: str, generate_only: bool, opt_level: str):
         shared=False,
     )
 
+    if compile:
+        print("Compile.")
+        return
+
     print("Done. Running...")
     run_command(f"{elf_file}")
 
@@ -171,6 +175,12 @@ if __name__ == "__main__":
         "--generate-only",
         action="store_true",
         help="To generate source and header files and not to compile them",
+    )
+    parser.add_argument(
+        "-c",
+        "--compile",
+        action="store_true",
+        help="Generate source and header files and Compile them",
     )
     parser.add_argument(
         "-O",
