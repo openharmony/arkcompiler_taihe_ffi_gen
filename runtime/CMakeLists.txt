@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.14)
 
 project(TaiheRuntime C CXX)
 
+option(ENABLE_RT_TEST "Enable my feature" OFF)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 99)
@@ -20,5 +22,7 @@ add_library(taihe-rt SHARED
 target_include_directories(taihe-rt PUBLIC include)
 
 # Add test directory
-enable_testing()
-add_subdirectory(test)
+if (ENABLE_RT_TEST)
+  enable_testing()
+  add_subdirectory(test)
+endif()
