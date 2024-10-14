@@ -1,0 +1,6 @@
+#!/usr/bin/bash
+# Fix code formatting issues.
+cd `dirname $0`
+cd ../compiler
+poetry run black taihe tests
+poetry run ruff check taihe tests --fix

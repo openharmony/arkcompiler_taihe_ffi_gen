@@ -1,7 +1,7 @@
 #!/usr/bin/bash
+# Test and report code coverage.
 cd `dirname $0`
 cd ../compiler
-poetry run ./generate-grammar 
 poetry run coverage run -m -p pytest || exit 1
 poetry run coverage run -p ./run-test ../test/integer -c || exit 1
 poetry run coverage run -p ./run-test ../test/string -c || exit 1

@@ -23,6 +23,9 @@ jobs:
         with:
           version: 15
           platform: x64
+      - name: Automatically Generate Code based on Grammar
+        working-directory: compiler
+        run: poetry run ./generate-grammar
       - name: Test and Report Coverage
         run: scripts/test
 

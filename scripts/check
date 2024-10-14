@@ -1,5 +1,8 @@
 #!/usr/bin/bash
+# Check code format.
 cd `dirname $0`
 cd ../compiler
-poetry run black --diff taihe tests || exit 1
+poetry run black --diff --check taihe tests
+exit_code_black="$?"
 poetry run ruff check taihe tests || exit 1
+exit $exit_code_black
