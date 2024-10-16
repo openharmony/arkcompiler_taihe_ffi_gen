@@ -1,6 +1,6 @@
 name: test
 
-on: 
+on:
     [push, pull_request]
 
 jobs:
@@ -17,10 +17,10 @@ jobs:
         with:
           version: 15
           platform: x64
-      - name: Check Format
-        run: scripts/check
-      - name: Automatically Generate Code based on Grammar
+      - name: Generate Code
         working-directory: compiler
         run: poetry run ./generate-grammar
+      - name: Check Format
+        run: scripts/check
       - name: Test and Report Coverage
         run: scripts/test

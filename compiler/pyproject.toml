@@ -8,6 +8,7 @@ authors = ["Your Name <you@example.com>"]
 python = "^3.10"
 antlr4-python3-runtime = "^4.13.2"
 antlr4-tools = "^0.2.1"
+typing-extensions = "^4.12.2"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.6.5"
@@ -15,6 +16,7 @@ black = "^24.8.0"
 exceptiongroup = "^1.2.2"
 coverage = "^7.6.1"
 pytest = "^8.3.3"
+pyre-check = "^0.9.22"
 
 [[tool.poetry.source]]
 name = "tsinghua"
