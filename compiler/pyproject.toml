@@ -36,7 +36,6 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.black]
-line-length = 1024
 exclude = "taihe/parse/antlr"
 target-version = ['py310']
 
@@ -80,8 +79,8 @@ lint.ignore = [
     "D104",
     "D105",
     "D106",
-    "D107"
-    # -> "Missing docstring in public function too restrictive"
+    "D107", # -> "Missing docstring in public function too restrictive"
+    "UP007", # Allow `Optional[T]`
 ]
 
 [tool.ruff.lint.pydocstyle]
