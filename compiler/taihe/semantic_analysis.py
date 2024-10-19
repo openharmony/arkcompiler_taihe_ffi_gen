@@ -45,7 +45,9 @@ class SymbolReplacer(Visitor):
         while node.uses:
             self.visit(node.uses.pop(0))
         for decl in node.fields:
-            if isinstance(decl, ast.Struct | ast.Enum | ast.Runtimeclass | ast.Interface):
+            if isinstance(
+                decl, ast.Struct | ast.Enum | ast.Runtimeclass | ast.Interface
+            ):
                 meta = decl.name
                 name = meta.text
                 self.using_type_table.setdefault(name, set()).add((self.pktupl, name))
@@ -133,7 +135,11 @@ def symbol_substitute(
     for package in packages:
         for decl in package.spec.fields:
             if decl.name.text in namespaces[package.tupl]:
-                errors.append(SymbolConflictWithNamespaceError(package.path, package.tupl, decl.name))
+                errors.append(
+                    SymbolConflictWithNamespaceError(
+                        package.path, package.tupl, decl.name
+                    )
+                )
 
     # Check for declaration conflicts
     for package in packages:
@@ -151,7 +157,9 @@ def symbol_substitute(
     for package in packages:
         type_table = type_tables.setdefault(package.tupl, {})
         for decl in package.spec.fields:
-            if isinstance(decl, ast.Struct | ast.Enum | ast.Runtimeclass | ast.Interface):
+            if isinstance(
+                decl, ast.Struct | ast.Enum | ast.Runtimeclass | ast.Interface
+            ):
                 type_table.setdefault(decl.name.text, []).append(decl)
 
     # Check for using packages and symbols and perform symbol substitution
@@ -160,10 +168,18 @@ def symbol_substitute(
         replacer.visit(package.spec)
         for key, vals in replacer.using_type_table.items():
             if len(vals) > 1:
-                errors.append(TypeAliasConflictError(package.path, key, replacer.using_type_metas[key]))
+                errors.append(
+                    TypeAliasConflictError(
+                        package.path, key, replacer.using_type_metas[key]
+                    )
+                )
         for key, vals in replacer.using_package_table.items():
             if len(vals) > 1:
-                errors.append(PackageAliasConflictError(package.path, key, replacer.using_package_metas[key]))
+                errors.append(
+                    PackageAliasConflictError(
+                        package.path, key, replacer.using_package_metas[key]
+                    )
+                )
 
     # return the symbol tables
     return type_tables
@@ -245,7 +261,20 @@ def can_be_mutable(
     node: ast.Type,
 ) -> bool:
     if isinstance(node, ast.PrimitiveType):
-        if node.name.text in ("bool", "f32", "f64", "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64", "String"):
+        if node.name.text in (
+            "bool",
+            "f32",
+            "f64",
+            "i8",
+            "i16",
+            "i32",
+            "i64",
+            "u8",
+            "u16",
+            "u32",
+            "u64",
+            "String",
+        ):
             return False
         raise NotImplementedError
 
@@ -282,7 +311,11 @@ def get_int_val(node: ast.IntExpr) -> int:
         return get_int_val(node.expr)
 
     if isinstance(node, ast.IntConditionalExpr):
-        return get_int_val(node.then_expr) if get_bool_val(node.cond) else get_int_val(node.else_expr)
+        return (
+            get_int_val(node.then_expr)
+            if get_bool_val(node.cond)
+            else get_int_val(node.else_expr)
+        )
 
     if isinstance(node, ast.IntUnaryExpr):
         return {
@@ -344,7 +377,11 @@ def get_bool_val(node: ast.BoolExpr) -> bool:
         return get_bool_val(node.expr)
 
     if isinstance(node, ast.BoolConditionalExpr):
-        return get_bool_val(node.then_expr) if get_bool_val(node.cond) else get_bool_val(node.else_expr)
+        return (
+            get_bool_val(node.then_expr)
+            if get_bool_val(node.cond)
+            else get_bool_val(node.else_expr)
+        )
 
     raise NotImplementedError
 
@@ -399,7 +436,9 @@ def semantic_check(
                     continue
                 child_type_pktupl = tuple(id.text for id in child_type.pkname)
                 child_type_name = child_type.name.text
-                child_type_decls = type_tables.get(child_type_pktupl, {}).get(child_type_name)
+                child_type_decls = type_tables.get(child_type_pktupl, {}).get(
+                    child_type_name
+                )
                 if child_type_decls is None or len(child_type_decls) > 1:
                     continue
                 child_type_decl = child_type_decls[0]

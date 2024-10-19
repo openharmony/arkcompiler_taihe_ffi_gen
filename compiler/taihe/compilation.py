@@ -47,7 +47,9 @@ def compile(
     if not os.path.exists(dst_dir):
         os.makedirs(dst_dir, exist_ok=True)
     for package in packages:
-        code_generator = CodeGenerator(symbol_tables, package.tupl, author=gen_author, user=gen_user)
+        code_generator = CodeGenerator(
+            symbol_tables, package.tupl, author=gen_author, user=gen_user
+        )
         code_generator.visit(package.spec)
         for dst_path, file in code_generator.files.items():
             file.output_to(os.path.join(dst_dir, dst_path))

@@ -29,7 +29,9 @@ class File:
 def get_type_infos(
     symbol_tables: dict[tuple[str, ...], dict[str, list[ast.SpecField]]],
     node: ast.Type,
-    mutable: bool | None = None,  # None: not param, False: immutable param, True: mutable param
+    mutable: (
+        bool | None
+    ) = None,  # None: not param, False: immutable param, True: mutable param
 ) -> tuple[
     tuple[str, str | None],  # abi typename and header
     tuple[str, str | None],  # cpp typename and header
@@ -54,7 +56,14 @@ def get_type_infos(
         if node.name.text == "String":
             return (
                 ("struct TString*", "taihe/string.abi.h"),
-                ("taihe::core::string_view" if mutable is not None else "taihe::core::string", "core/string.hpp"),
+                (
+                    (
+                        "taihe::core::string_view"
+                        if mutable is not None
+                        else "taihe::core::string"
+                    ),
+                    "core/string.hpp",
+                ),
             )
         raise NotImplementedError
 
@@ -91,7 +100,19 @@ def get_dup_and_drop(
     node: ast.Type,
 ) -> tuple[str, str]:
     if isinstance(node, ast.PrimitiveType):
-        if node.name.text in ("bool", "f32", "f64", "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64"):
+        if node.name.text in (
+            "bool",
+            "f32",
+            "f64",
+            "i8",
+            "i16",
+            "i32",
+            "i64",
+            "u8",
+            "u16",
+            "u32",
+            "u64",
+        ):
             return "", ""
         if node.name.text == "String":
             return "tstr_dup", "tstr_drop"
@@ -203,7 +224,9 @@ class CodeGenerator(Visitor):
         write_enum_in_files(self, enum_name, abi_f_names, field_names, vals)
 
 
-def get_file_names(pkname: tuple[str, ...], type_name: str | None) -> tuple[str, str, str, str]:
+def get_file_names(
+    pkname: tuple[str, ...], type_name: str | None
+) -> tuple[str, str, str, str]:
     basename = ".".join(pkname)
     abi_h_name = basename + ".abi.h"
     abi_hpp_name = basename + ".abi.hpp"
@@ -344,14 +367,24 @@ def write_inline_function_struct_detail(
     attr_names: list[str],
 ) -> None:
     file.write(f"template<>\n")
-    file.write(f"inline {return_type} taihe::core::{function_name}(std::add_rvalue_reference_t<{parm_type}> _val) {{\n")
+    file.write(
+        f"inline {return_type} taihe::core::{function_name}(std::add_rvalue_reference_t<{parm_type}> _val) {{\n"
+    )
     file.write(f"    return {{\n")
     if function_name == "from_abi":
-        for abi_attr_type, cpp_attr_type, attr_name in zip(abi_attr_types, cpp_attr_types, attr_names, strict=True):
-            file.write(f"        taihe::core::{function_name}<{cpp_attr_type}, {abi_attr_type}>(static_cast<std::add_rvalue_reference_t<{abi_attr_type}>>(_val.{attr_name})),\n")
+        for abi_attr_type, cpp_attr_type, attr_name in zip(
+            abi_attr_types, cpp_attr_types, attr_names, strict=True
+        ):
+            file.write(
+                f"        taihe::core::{function_name}<{cpp_attr_type}, {abi_attr_type}>(static_cast<std::add_rvalue_reference_t<{abi_attr_type}>>(_val.{attr_name})),\n"
+            )
     else:
-        for abi_attr_type, cpp_attr_type, attr_name in zip(abi_attr_types, cpp_attr_types, attr_names, strict=True):
-            file.write(f"        taihe::core::{function_name}<{cpp_attr_type}, {abi_attr_type}>(static_cast<std::add_rvalue_reference_t<{cpp_attr_type}>>(_val.{attr_name})),\n")
+        for abi_attr_type, cpp_attr_type, attr_name in zip(
+            abi_attr_types, cpp_attr_types, attr_names, strict=True
+        ):
+            file.write(
+                f"        taihe::core::{function_name}<{cpp_attr_type}, {abi_attr_type}>(static_cast<std::add_rvalue_reference_t<{cpp_attr_type}>>(_val.{attr_name})),\n"
+            )
     file.write(f"    }};\n")
     file.write(f"}}\n")
 
@@ -365,19 +398,31 @@ def write_inline_function_func(
     abi_return_parts: list[str],
 ) -> None:
     file.write(f"template<>\n")
-    file.write(f"inline {return_type} taihe::core::{function_name}(std::add_rvalue_reference_t<{parm_type}> _val) {{\n")
+    file.write(
+        f"inline {return_type} taihe::core::{function_name}(std::add_rvalue_reference_t<{parm_type}> _val) {{\n"
+    )
     file.write(f"    return {{\n")
     if function_name == "from_abi":
-        for i, (cpp_return_part, abi_return_part) in enumerate(zip(cpp_return_parts, abi_return_parts, strict=True)):
-            file.write(f"        taihe::core::{function_name}<{cpp_return_part}, {abi_return_part}>(static_cast<std::add_rvalue_reference_t<{abi_return_part}>>(_val._{i})), \n")
+        for i, (cpp_return_part, abi_return_part) in enumerate(
+            zip(cpp_return_parts, abi_return_parts, strict=True)
+        ):
+            file.write(
+                f"        taihe::core::{function_name}<{cpp_return_part}, {abi_return_part}>(static_cast<std::add_rvalue_reference_t<{abi_return_part}>>(_val._{i})), \n"
+            )
     else:
-        for i, (cpp_return_part, abi_return_part) in enumerate(zip(cpp_return_parts, abi_return_parts, strict=True)):
-            file.write(f"        taihe::core::{function_name}<{cpp_return_part}, {abi_return_part}>(static_cast<std::add_rvalue_reference_t<{cpp_return_part}>>(std::get<{i}>(_val))), \n")
+        for i, (cpp_return_part, abi_return_part) in enumerate(
+            zip(cpp_return_parts, abi_return_parts, strict=True)
+        ):
+            file.write(
+                f"        taihe::core::{function_name}<{cpp_return_part}, {abi_return_part}>(static_cast<std::add_rvalue_reference_t<{cpp_return_part}>>(std::get<{i}>(_val))), \n"
+            )
     file.write(f"    }};\n")
     file.write(f"}}\n")
 
 
-def write_inline_function_enum(file: File, parm_type: str, return_type: str, function_name: str) -> None:
+def write_inline_function_enum(
+    file: File, parm_type: str, return_type: str, function_name: str
+) -> None:
     content = f"""template<>
 inline {return_type} taihe::core::{function_name}(std::add_rvalue_reference_t<{parm_type}> _val) {{
     return static_cast<{return_type}>(_val);
@@ -409,7 +454,9 @@ def write_enum_in_files(
     field_names: list[str],
     vals: list[int],
 ):
-    abi_h_name, abi_hpp_name, enum_h_name, enum_hpp_name = get_file_names(self.pkname, enum_name)
+    abi_h_name, abi_hpp_name, enum_h_name, enum_hpp_name = get_file_names(
+        self.pkname, enum_name
+    )
     namespace = get_cpp_name(self.pkname, None)
     abi_enum_name = get_abi_name(self.pkname, enum_name)
     cpp_enum_type = get_cpp_name(self.pkname, enum_name)
@@ -423,7 +470,9 @@ def write_enum_in_files(
         abi_h.include(enum_h_name)
 
         enum_hpp = self.files.setdefault(enum_hpp_name, File(is_header=True))
-        write_class_define(enum_hpp, enum_h_name, namespace, "enum", enum_name, field_names, vals)
+        write_class_define(
+            enum_hpp, enum_h_name, namespace, "enum", enum_name, field_names, vals
+        )
         write_inline_function_enum(enum_hpp, cpp_enum_type, abi_enum_type, "into_abi")
         write_inline_function_enum(enum_hpp, abi_enum_type, cpp_enum_type, "from_abi")
 
@@ -432,7 +481,9 @@ def write_enum_in_files(
         abi_hpp.include(enum_hpp_name)
 
 
-def get_struct_field(self, node: ast.Struct) -> tuple[list[str], list[str], list[str], list[str], list[str], list[str], list[str]]:
+def get_struct_field(
+    self, node: ast.Struct
+) -> tuple[list[str], list[str], list[str], list[str], list[str], list[str], list[str]]:
     attr_names = []
     attr_dupl_methods = []
     attr_drop_methods = []
@@ -446,7 +497,9 @@ def get_struct_field(self, node: ast.Struct) -> tuple[list[str], list[str], list
             (abi_attr_type, abi_attr_header),
             (cpp_attr_type, cpp_attr_header),
         ) = get_type_infos(self.symbol_tables, field.type)
-        attr_dupl_method, attr_drop_method = get_dup_and_drop(self.symbol_tables, field.type)
+        attr_dupl_method, attr_drop_method = get_dup_and_drop(
+            self.symbol_tables, field.type
+        )
         attr_dupl_methods.append(attr_dupl_method)
         attr_drop_methods.append(attr_drop_method)
         attr_names.append(attr_name)
@@ -476,7 +529,9 @@ def write_struct_in_files(
     cpp_attr_types: list[str],
     attr_names: list[str],
 ):
-    abi_h_name, abi_hpp_name, struct_h_name, struct_hpp_name = get_file_names(self.pkname, struct_name)
+    abi_h_name, abi_hpp_name, struct_h_name, struct_hpp_name = get_file_names(
+        self.pkname, struct_name
+    )
     namespace = get_cpp_name(self.pkname, None)
     abi_struct_name = get_abi_name(self.pkname, struct_name)
     cpp_struct_type = get_cpp_name(self.pkname, struct_name)
@@ -487,17 +542,27 @@ def write_struct_in_files(
     if self.author or self.user:
         struct_h = self.files.setdefault(struct_h_name, File(is_header=True))
         struct_h.include(*abi_headers)
-        write_class_declaration(struct_h, "struct", abi_struct_name, abi_attr_types, attr_names)
+        write_class_declaration(
+            struct_h, "struct", abi_struct_name, abi_attr_types, attr_names
+        )
 
-        struct_h.write(f"inline {abi_struct_type} {abi_struct_dupl_method}({abi_struct_type} _val) {{\n")
+        struct_h.write(
+            f"inline {abi_struct_type} {abi_struct_dupl_method}({abi_struct_type} _val) {{\n"
+        )
         struct_h.write(f"    {abi_struct_type} _dup = {{\n")
-        for attr_dupl_method, attr_name in zip(attr_dupl_methods, attr_names, strict=True):
+        for attr_dupl_method, attr_name in zip(
+            attr_dupl_methods, attr_names, strict=True
+        ):
             struct_h.write(f"        {attr_dupl_method}(_val.{attr_name}),\n")
         struct_h.write(f"    }};\n")
         struct_h.write(f"    return _dup;\n")
         struct_h.write(f"}}\n")
-        struct_h.write(f"inline void {abi_struct_drop_method}({abi_struct_type} _val) {{\n")
-        for attr_drop_method, attr_name in zip(attr_drop_methods, attr_names, strict=True):
+        struct_h.write(
+            f"inline void {abi_struct_drop_method}({abi_struct_type} _val) {{\n"
+        )
+        for attr_drop_method, attr_name in zip(
+            attr_drop_methods, attr_names, strict=True
+        ):
             if len(attr_drop_method):  # -Wunused-value
                 struct_h.write(f"    {attr_drop_method}(_val.{attr_name});\n")
         struct_h.write(f"}}\n")
@@ -507,20 +572,54 @@ def write_struct_in_files(
 
         struct_hpp = self.files.setdefault(struct_hpp_name, File(is_header=True))
         struct_hpp.include(*cpp_headers)
-        write_class_define(struct_hpp, struct_h_name, namespace, "struct", struct_name, cpp_attr_types, attr_names)
-        write_inline_function_struct_detail(struct_hpp, cpp_struct_type, abi_struct_type, "into_abi", abi_attr_types, cpp_attr_types, attr_names)
-        write_inline_function_struct_detail(struct_hpp, abi_struct_type, cpp_struct_type, "from_abi", abi_attr_types, cpp_attr_types, attr_names)
-        write_inline_function_struct(struct_hpp, "*", cpp_struct_type, abi_struct_type, "into_abi")
-        write_inline_function_struct(struct_hpp, "&", abi_struct_type, cpp_struct_type, "from_abi")
-        write_inline_function_struct(struct_hpp, "const *", cpp_struct_type, abi_struct_type, "into_abi")
-        write_inline_function_struct(struct_hpp, "const &", abi_struct_type, cpp_struct_type, "from_abi")
+        write_class_define(
+            struct_hpp,
+            struct_h_name,
+            namespace,
+            "struct",
+            struct_name,
+            cpp_attr_types,
+            attr_names,
+        )
+        write_inline_function_struct_detail(
+            struct_hpp,
+            cpp_struct_type,
+            abi_struct_type,
+            "into_abi",
+            abi_attr_types,
+            cpp_attr_types,
+            attr_names,
+        )
+        write_inline_function_struct_detail(
+            struct_hpp,
+            abi_struct_type,
+            cpp_struct_type,
+            "from_abi",
+            abi_attr_types,
+            cpp_attr_types,
+            attr_names,
+        )
+        write_inline_function_struct(
+            struct_hpp, "*", cpp_struct_type, abi_struct_type, "into_abi"
+        )
+        write_inline_function_struct(
+            struct_hpp, "&", abi_struct_type, cpp_struct_type, "from_abi"
+        )
+        write_inline_function_struct(
+            struct_hpp, "const *", cpp_struct_type, abi_struct_type, "into_abi"
+        )
+        write_inline_function_struct(
+            struct_hpp, "const &", abi_struct_type, cpp_struct_type, "from_abi"
+        )
 
     if self.user:
         abi_hpp = self.files[abi_hpp_name]
         abi_hpp.include(struct_hpp_name)
 
 
-def get_function_params(self, node: ast.Function) -> tuple[str, str, str, str, str, list[str], list[str]]:
+def get_function_params(
+    self, node: ast.Function
+) -> tuple[str, str, str, str, str, list[str], list[str]]:
     args = []
     cpp_param_headers = []
     abi_param_headers = []
@@ -537,8 +636,12 @@ def get_function_params(self, node: ast.Function) -> tuple[str, str, str, str, s
         args.append(param_name)
         cpp_param_headers.append(cpp_param_header)
         abi_param_headers.append(abi_param_header)
-        args_from_abi.append(f"taihe::core::from_abi<{cpp_param_type}, {abi_param_type}>(static_cast<std::add_rvalue_reference_t<{abi_param_type}>>({param_name}))")
-        args_into_abi.append(f"taihe::core::into_abi<{cpp_param_type}, {abi_param_type}>(static_cast<std::add_rvalue_reference_t<{cpp_param_type}>>({param_name}))")
+        args_from_abi.append(
+            f"taihe::core::from_abi<{cpp_param_type}, {abi_param_type}>(static_cast<std::add_rvalue_reference_t<{abi_param_type}>>({param_name}))"
+        )
+        args_into_abi.append(
+            f"taihe::core::into_abi<{cpp_param_type}, {abi_param_type}>(static_cast<std::add_rvalue_reference_t<{cpp_param_type}>>({param_name}))"
+        )
         cpp_params.append(f"{cpp_param_type} {param_name}")
         abi_params.append(f"{abi_param_type} {param_name}")
     args_str = ", ".join(args)
@@ -557,7 +660,9 @@ def get_function_params(self, node: ast.Function) -> tuple[str, str, str, str, s
     )
 
 
-def get_function_returns(self, node: ast.Function) -> tuple[str, str, str, str, list[str], list[str]]:
+def get_function_returns(
+    self, node: ast.Function
+) -> tuple[str, str, str, str, list[str], list[str]]:
     func_name = node.name.text
     cpp_return_headers = []
     abi_return_headers = []
@@ -588,12 +693,21 @@ def get_function_returns(self, node: ast.Function) -> tuple[str, str, str, str, 
             cpp_return_parts.append(cpp_return_part)
             abi_return_parts.append(abi_return_part)
         cpp_return_parts_str = ", ".join(cpp_return_parts)
-        abi_return_struct_name = get_abi_name(self.pkname, func_name, suffix="__return_t")
+        abi_return_struct_name = get_abi_name(
+            self.pkname, func_name, suffix="__return_t"
+        )
         abi_return_type = f"struct {abi_return_struct_name}"
         cpp_return_type = f"std::tuple<{cpp_return_parts_str}>"
         return_from_abi = f"taihe::core::from_abi<{cpp_return_type}, {abi_return_type}>"
         return_into_abi = f"taihe::core::into_abi<{cpp_return_type}, {abi_return_type}>"
-        write_function_returns_in_files(self, func_name, abi_return_parts, cpp_return_parts, abi_return_type, cpp_return_type)
+        write_function_returns_in_files(
+            self,
+            func_name,
+            abi_return_parts,
+            cpp_return_parts,
+            abi_return_type,
+            cpp_return_type,
+        )
 
     return (
         abi_return_type,
@@ -624,11 +738,25 @@ def write_function_returns_in_files(
 
     if self.user:
         abi_hpp = self.files[abi_hpp_name]
-        write_inline_function_func(abi_hpp, abi_return_type, cpp_return_type, "from_abi", cpp_return_parts, abi_return_parts)
+        write_inline_function_func(
+            abi_hpp,
+            abi_return_type,
+            cpp_return_type,
+            "from_abi",
+            cpp_return_parts,
+            abi_return_parts,
+        )
 
     if self.author:
         impl_hpp = self.files[impl_hpp_name]
-        write_inline_function_func(impl_hpp, cpp_return_type, abi_return_type, "into_abi", cpp_return_parts, abi_return_parts)
+        write_inline_function_func(
+            impl_hpp,
+            cpp_return_type,
+            abi_return_type,
+            "into_abi",
+            cpp_return_parts,
+            abi_return_parts,
+        )
 
 
 def write_function_in_files(
@@ -647,7 +775,9 @@ def write_function_in_files(
     args_str: str,
 ):
     namespace = get_cpp_name(self.pkname, None)
-    abi_h_name, abi_hpp_name, impl_h_name, impl_hpp_name = get_file_names(self.pkname, None)
+    abi_h_name, abi_hpp_name, impl_h_name, impl_hpp_name = get_file_names(
+        self.pkname, None
+    )
     abi_func_name = get_abi_name(self.pkname, func_name)
     cpp_func_name = get_cpp_name(self.pkname, func_name)
 
@@ -702,7 +832,9 @@ return {return_from_abi}({abi_func_name}({args_into_abi_str}));
 
 
 def write_basic_info_in_files(self):
-    abi_h_name, abi_hpp_name, impl_h_name, impl_hpp_name = get_file_names(self.pkname, None)
+    abi_h_name, abi_hpp_name, impl_h_name, impl_hpp_name = get_file_names(
+        self.pkname, None
+    )
 
     if self.author or self.user:
         abi_h = self.files.setdefault(abi_h_name, File(is_header=True))
