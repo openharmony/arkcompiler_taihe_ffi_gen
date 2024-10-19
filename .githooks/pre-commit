@@ -1,2 +1,3 @@
-#!/usr/bin/bash
-./scripts/check || exit 1
+#!/usr/bin/bash -e
+cd scripts
+./check

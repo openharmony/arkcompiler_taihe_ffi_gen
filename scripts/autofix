@@ -1,6 +1,9 @@
 #!/usr/bin/bash
+
 # Fix code formatting issues.
-cd `dirname $0`
-cd ../compiler
-poetry run black taihe tests
-poetry run ruff check taihe tests --fix
+
+source "$(dirname "$0")/common_lib.sh"
+init_py_env
+
+black taihe tests
+ruff check taihe tests --fix

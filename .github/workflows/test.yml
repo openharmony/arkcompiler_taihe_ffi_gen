@@ -4,17 +4,11 @@ on:
     [push, pull_request]
 
 jobs:
-  setup:
+  check_and_test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/workflows/actions/install_independencies/
-
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses:  ./.github/workflows/actions/install_independencies/
       - name: Install Dependencies
         working-directory: compiler
         run: poetry lock --no-update && poetry install --no-root
@@ -23,15 +17,10 @@ jobs:
         with:
           version: 15
           platform: x64
+      - name: Check Format
+        run: scripts/check
       - name: Automatically Generate Code based on Grammar
         working-directory: compiler
         run: poetry run ./generate-grammar
       - name: Test and Report Coverage
         run: scripts/test
-
-  all_tests_passed:
-    needs:
-      - test
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "All tests passed"

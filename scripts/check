@@ -1,8 +1,14 @@
 #!/usr/bin/bash
-# Check code format.
-cd `dirname $0`
-cd ../compiler
-poetry run black --diff --check taihe tests
-exit_code_black="$?"
-poetry run ruff check taihe tests || exit 1
-exit $exit_code_black
+
+# Checks code format
+
+source "$(dirname "$0")/common_lib.sh"
+init_py_env
+
+ret=0
+
+set -x
+black --diff --check taihe tests || ret=1
+ruff check taihe tests || ret=1
+
+exit "$ret"
