@@ -75,6 +75,7 @@ class TypeNotImportedError(SemanticError):
 @dataclass
 class QualifierError(SemanticError):
     src_path: str
+    # pyre-fixme[11]: Annotation `Type` is not defined as a type.
     type: ast.Type
     qualifier: ast.token
 

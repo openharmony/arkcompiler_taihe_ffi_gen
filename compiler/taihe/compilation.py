@@ -5,6 +5,7 @@ if sys.version_info < (3, 11):
     from exceptiongroup import ExceptionGroup
 from pathlib import Path
 
+# pyre-fixme[21]: Could not find module `antlr4`.
 from antlr4 import FileStream
 
 from taihe.code_generation import CodeGenerator

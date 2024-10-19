@@ -27,7 +27,9 @@ class File:
 
 
 def get_type_infos(
+    # pyre-fixme[11]: Annotation `SpecField` is not defined as a type.
     symbol_tables: dict[tuple[str, ...], dict[str, list[ast.SpecField]]],
+    # pyre-fixme[11]: Annotation `Type` is not defined as a type.
     node: ast.Type,
     mutable: (
         bool | None

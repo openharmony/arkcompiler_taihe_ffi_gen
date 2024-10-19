@@ -28,6 +28,7 @@ class SymbolReplacer(Visitor):
     def __init__(
         self,
         errors: list,
+        # pyre-fixme[11]: Annotation `SpecField` is not defined as a type.
         type_tables: dict[tuple[str, ...], dict[str, list[ast.SpecField]]],
         src_path: str,
         pktupl: tuple[str, ...],
@@ -220,6 +221,7 @@ class SemanticAnalyzer(Visitor):
             mut = parameter.param_type.mut
             type = parameter.param_type.type
             if mut is not None and not can_be_mutable(self.type_tables, type):
+                # pyre-fixme[19]: Expected 2 positional arguments.
                 self.errors.append(QualifierError(self.src_path, type, mut))
 
     def visit_Struct(self, node: ast.Struct) -> None:
@@ -258,6 +260,7 @@ class SemanticAnalyzer(Visitor):
 
 def can_be_mutable(
     type_tables: dict[tuple[str, ...], dict[str, list[ast.SpecField]]],
+    # pyre-fixme[11]: Annotation `Type` is not defined as a type.
     node: ast.Type,
 ) -> bool:
     if isinstance(node, ast.PrimitiveType):
@@ -296,6 +299,7 @@ def can_be_mutable(
     raise NotImplementedError
 
 
+# pyre-fixme[11]: Annotation `IntExpr` is not defined as a type.
 def get_int_val(node: ast.IntExpr) -> int:
     if isinstance(node, ast.IntLiteralExpr):
         text = node.val.text
@@ -346,6 +350,7 @@ def get_int_val(node: ast.IntExpr) -> int:
     raise NotImplementedError
 
 
+# pyre-fixme[11]: Annotation `BoolExpr` is not defined as a type.
 def get_bool_val(node: ast.BoolExpr) -> bool:
     if isinstance(node, ast.IntComparisonExpr):
         return {
