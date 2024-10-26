@@ -17,6 +17,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_library(taihe-rt SHARED
   src/string.c
+  src/object.c
 )
 
 target_include_directories(taihe-rt PUBLIC include)
