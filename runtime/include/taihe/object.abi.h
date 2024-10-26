@@ -53,7 +53,7 @@ struct THObject {
 //
 // # Returns
 // - Returns the corresponding vtable pointer if found; otherwise, returns NULL.
-inline void* GetVtptr(struct TypeInfo* typeInfo_ptr, const void* id);
+TH_EXPORT inline void* GetVtptr(struct TypeInfo* typeInfo_ptr, const void* id);
 
 // Converts the source object to the target object based on the provided id, looking up the corresponding vtable pointer.
 // # Arguments
@@ -63,4 +63,4 @@ inline void* GetVtptr(struct TypeInfo* typeInfo_ptr, const void* id);
 //
 // # Returns
 // - Returns 1 if conversion is successful; otherwise, returns 0.
-int Convert(struct THObject src, struct THObject *dst, const void* id);
+TH_EXPORT int Convert(struct THObject src, struct THObject *dst, const void* id);
