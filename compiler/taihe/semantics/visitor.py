@@ -56,9 +56,19 @@ class TypeVisitor:
     DeclVisitor: visit_enum_decl() -> traverse() -> visit_enum_item_decl()
     """
 
+    visiting: Any
+    """The current node being visited. Only for debug use."""
+
+    def __init__(self) -> None:
+        self.visiting = None
+
     def handle_type(self, t: TypeAlike) -> Any:
         """The entrance for visiting."""
-        return t._accept(self)
+        try:
+            return t._accept(self)
+        except:
+            print(f"Internal error while handling {self.visiting}")
+            raise
 
     def visit_type(self, t: Type) -> Any:
         """The fallback method which handles the most general type.
@@ -103,9 +113,19 @@ class TypeVisitor:
 
 
 class DeclVisitor:
+    visiting: Any
+    """The current node being visited. Only for debug use."""
+
+    def __init__(self) -> None:
+        self.visiting = None
+
     def handle_decl(self, d: "DeclAlike") -> Any:
         """The entrance for visiting anything "acceptable"."""
-        return d._accept(self)
+        try:
+            return d._accept(self)
+        except:
+            print(f"Internal error while handling {self.visiting}")
+            raise
 
     def handle_type(self, t: TypeAlike) -> Any:
         """Override this function to handle types during the visit of declarations."""

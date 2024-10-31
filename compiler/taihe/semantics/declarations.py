@@ -77,6 +77,7 @@ class TypeRefDecl(Decl, TypeRef):
         self.ref_ty = ref_ty
 
     def _accept(self, v: "DeclVisitor | TypeVisitor") -> Any:
+        v.visiting = self
         return v.visit_type_ref_decl(self)
 
     def _traverse(self, v: "DeclVisitor") -> Any:
@@ -125,6 +126,7 @@ class PackageImportDecl(ImportDecl):
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
+        v.visiting = self
         return v.visit_package_import_decl(self)
 
     @override
@@ -147,6 +149,7 @@ class DeclarationImportDecl(ImportDecl):
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
+        v.visiting = self
         return v.visit_decl_import_decl(self)
 
     @override
@@ -167,6 +170,7 @@ class ParamDecl(Decl):
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
+        v.visiting = self
         return v.visit_param_decl(self)
 
     def _traverse(self, v: "DeclVisitor"):
@@ -188,10 +192,12 @@ class FuncDecl(Decl):
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
+        v.visiting = self
         return v.visit_func_decl(self)
 
     def _traverse(self, v: "DeclVisitor"):
         for p in self.params:
+            v.visiting = p
             p._accept(v)
         v.handle_type(self.return_ty)
 
@@ -220,6 +226,7 @@ class EnumItemDecl(Decl):
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
+        v.visiting = self
         return v.visit_enum_item_decl(self)
 
 
@@ -234,10 +241,12 @@ class EnumDecl(TypeDecl):
 
     @override
     def _accept(self, v: "DeclVisitor | TypeVisitor") -> Any:
+        v.visiting = self
         return v.visit_enum_decl(self)
 
     def _traverse(self, v: "DeclVisitor"):
         for f in self.items:
+            v.visiting = f
             f._accept(v)
 
     def add_item(self, name: str, value: int, **kwargs):
@@ -257,6 +266,7 @@ class StructFieldDecl(Decl):
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
+        v.visiting = self
         return v.visit_struct_field_decl(self)
 
     def _traverse(self, v: "DeclVisitor"):
@@ -273,10 +283,12 @@ class StructDecl(TypeDecl):
 
     @override
     def _accept(self, v: "TypeVisitor | DeclVisitor") -> Any:
+        v.visiting = self
         return v.visit_struct_decl(self)
 
     def _traverse(self, v: "DeclVisitor"):
         for f in self.fields:
+            v.visiting = f
             f._accept(v)
 
     def add_field(self, name: str, ty: TypeRef, **kwargs):
@@ -318,12 +330,15 @@ class Package:
         return f"{self.__class__.__qualname__}<{self.name!r}>"
 
     def _accept(self, v: "DeclVisitor") -> Any:
+        v.visiting = self
         return v.visit_package(self)
 
     def _traverse(self, v: "DeclVisitor"):
         for i in self.imports.values():
+            v.visiting = i
             i._accept(v)
         for d in self.decls.values():
+            v.visiting = d
             d._accept(v)
 
     def _register_to_decl(self, d: Decl):
@@ -372,10 +387,12 @@ class PackageGroup:
         self._pkgs = {}
 
     def _accept(self, v: "DeclVisitor"):
+        v.visiting = self
         return v.visit_package_group(self)
 
     def _traverse(self, v: "DeclVisitor"):
         for p in self.packages:
+            v.visiting = p
             p._accept(v)
 
     def lookup(self, name: str) -> Optional["Package"]:

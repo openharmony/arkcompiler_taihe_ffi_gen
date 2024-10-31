@@ -47,6 +47,7 @@ class TypeRef(TypeAlike):
     ref_ty: Optional[Type] = None
 
     def _accept(self, v: "TypeVisitor") -> Any:
+        v.visiting = self
         return v.visit_type_ref(self)
 
     def __repr__(self) -> str:
@@ -67,6 +68,7 @@ class QualifiedType(TypeAlike):
     qual: TypeQualifier = TypeQualifier.NONE
 
     def _accept(self, v: "TypeVisitor") -> Any:
+        v.visiting = self
         return v.visit_qualified_type(self)
 
     def __repr__(self) -> str:
@@ -100,6 +102,7 @@ class BuiltinType(Type):
     kind: BuiltinTypeKind
 
     def _accept(self, v: "TypeVisitor") -> Any:
+        v.visiting = self
         return v.visit_builtin_type(self)
 
     @staticmethod
@@ -117,12 +120,14 @@ class ScalarType(BuiltinType):
     is_float: bool = False
 
     def _accept(self, v: "TypeVisitor") -> Any:
+        v.visiting = self
         return v.visit_scalar_type(self)
 
 
 @dataclass(frozen=True, repr=False)
 class SpecialType(BuiltinType):
     def _accept(self, v: "TypeVisitor") -> Any:
+        v.visiting = self
         return v.visit_special_type(self)
 
 
