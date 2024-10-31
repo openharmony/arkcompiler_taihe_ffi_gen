@@ -48,20 +48,11 @@
   - Callback and related library support
   - Type alias
   - Object lifetime management
-
 * TODO
-** Design
+** High-Level Designs
 - Error handling
 - Thread safety
 - RPC (?)
-** Refactor
-- Individual component
-  - Parsing: g4 generation
-  - Semantics: replace AST-based analysis
-  - Code generation: use IR
-- Overall
-  - Error Manager
-  - Context
 ** Engineering
 - Integrate with OHOS
   - Migrate from C(++)
@@ -71,3 +62,21 @@
 - Code generation
   - Dart
   - ArkTS (NAPI)
+** Refactor
++ Driver
+  - Introduce the concept of "Backend"
+  - Introduce the concept of "Action", such as partial compilation, batch compilation, and code check
+  - Design flexible option parsing for specific backend
++ Parser
+  - Add support for =#[attributes]=
+  - Report parsing errors to =DiagnosticsManager=
+  - Report warning on unexpected code styles (e.g. =class FOOBAR=)
++ Semantics
+  - Types: support tuple
+  - Pass: analysis for type dependency graph
+  - Decl (or parse/convert): fix the parent field of =TypeRefDecl=
++ Projection, C and Cpp
+  - Reorganize the source sturture and support partial type imports
+  - Remove =std::add_rvalue_reference_t= with type analysis
+  - Use proper name mangling
+  - Reorganize the filesystem hierarchy of header files
