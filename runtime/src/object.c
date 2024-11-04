@@ -23,3 +23,17 @@ int tobj_dynamic_cast(struct TObject src, struct TObject *dst, const void* id) {
   }
   return 0;
 }
+
+void tobj_addref(struct TObject tobj) {
+  if (tobj.data_ptr && tobj.data_ptr->m_count != 0) {
+    ++tobj.data_ptr->m_count;
+  }
+}
+
+void tobj_release(struct TObject tobj) {
+  if (tobj.data_ptr && --(tobj.data_ptr->m_count) == 0) {
+    free(tobj.data_ptr);
+    tobj.data_ptr = NULL;
+    tobj.vtbl_ptr = NULL;  
+  }
+}

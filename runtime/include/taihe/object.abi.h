@@ -23,14 +23,16 @@ struct IdMapItem {
 // # Members
 // - `version`: A 64-bit unsigned integer representing the version of the type information.
 // - `len`: Size of the type information in bytes.
-// - `dup`: Function pointer to a duplication function for `TObject`.
-// - `drop`: Function pointer to a deallocation function for `TObject`.
+// - `inside_func_len`: Size of inside functions.
+// - `addref`: Function pointer to a addref function for `TObject`.
+// - `release`: Function pointer to a release function for `TObject`.
 // - `idmap`: A flexible array of `IdMapItem` structures for ID-to-vtable mapping.
 struct TypeInfo {
   uint64_t version;
-  size_t len;
-  struct TObject (*dup)(struct TObject);
-  void (*drop)(struct TObject);
+  uint32_t len;
+  uint32_t inside_func_len;
+  void (*addref)(struct TObject);
+  void (*release)(struct TObject);
   struct IdMapItem idmap[0];
 };
 
@@ -64,3 +66,19 @@ TH_EXPORT void* tobj_get_pvtbl(struct TypeInfo* rtti_ptr, const void* id);
 // # Returns
 // - Returns 1 if conversion is successful; otherwise, returns 0.
 TH_EXPORT int tobj_dynamic_cast(struct TObject src, struct TObject *dst, const void* id);
+
+// Increments the reference count of the given TObject.
+// # Arguments
+// - `tobj`: The TObject whose reference count is to be incremented.
+//
+// # Returns
+// - This function does not return a value. It modifies the reference count of the TObject.
+TH_EXPORT void tobj_addref(struct TObject tobj);
+
+// Decrements the reference count of the given TObject. If the reference count reaches zero, the object is destroyed.
+// # Arguments
+// - `tobj`: The TObject whose reference count is to be decremented.
+//
+// # Returns
+// - This function does not return a value. It may result in the destruction of the TObject if the reference count reaches zero.
+TH_EXPORT void tobj_release(struct TObject tobj);
