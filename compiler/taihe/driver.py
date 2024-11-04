@@ -68,7 +68,7 @@ class CompilerInstance:
             self.package_group.add(pkg)
 
     def validate(self):
-        resolve_types(self.package_group)
+        resolve_types(self.package_group, self.diagnostics_manager)
 
     def generate(self):
         s = pretty_print(self.package_group)

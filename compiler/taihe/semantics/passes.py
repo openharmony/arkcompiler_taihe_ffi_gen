@@ -1,7 +1,6 @@
 from typing_extensions import override
 
 from taihe.semantics.declarations import (
-    Decl,
     DeclAlike,
     DeclarationImportDecl,
     EnumDecl,
@@ -24,6 +23,16 @@ from taihe.semantics.types import (
     TypeAlike,
 )
 from taihe.semantics.visitor import DeclVisitor, RecursiveTypeVisitor, TypeVisitor
+from taihe.utils.diagnostics import DiagnosticsManager
+from taihe.utils.exceptions import (
+    DeclNotExistError,
+    DeclRedefDiagError,
+    NotATypeError,
+    PackageNotExistError,
+    QualifierError,
+    RecursiveInclusionError,
+    SymbolConflictWithNamespaceError,
+)
 
 
 class _TypeNamePrinter(TypeVisitor):
@@ -129,13 +138,15 @@ class _PrettyPrinter(DeclVisitor):
 
 class _ResolveImportsPass(RecursiveTypeVisitor):
     _imported_pkgs: dict[str, Package]
-    _imported_decls: dict[str, Decl]
+    _imported_decls: dict[str, TypeDecl]
+    diag: DiagnosticsManager
 
-    def __init__(self, pm: PackageGroup):
+    def __init__(self, pm: PackageGroup, diag: DiagnosticsManager):
         self._pkg_group = pm
         self._current_package = None  # Always points to the current package.
         self._imported_pkgs = {}
         self._imported_decls = {}
+        self.diag = diag
 
     @property
     def _pkg(self) -> Package:
@@ -145,27 +156,29 @@ class _ResolveImportsPass(RecursiveTypeVisitor):
     @override
     def visit_package(self, p: Package):
         self._current_package = p
-        # TODO: check for conflicts between the imported and the local decl
         return super().visit_package(p)
 
     @override
     def visit_package_import_decl(self, d: PackageImportDecl):
-        if pkg := self._pkg_group.lookup(d.pkg):
-            # TODO Conflict
-            self._imported_pkgs[d.name] = pkg
-        else:
-            raise ValueError("unknown pkg")
+        with self.diag.capture_error():
+            if pkg := self._pkg_group.lookup(d.pkg):
+                self._imported_pkgs[d.name] = pkg
+            else:
+                raise PackageNotExistError(d.name, d.loc)
 
     @override
     def visit_decl_import_decl(self, d: DeclarationImportDecl):
-        if pkg := self._pkg_group.lookup(d.pkg):
-            if decl := pkg.decls.get(d.decl):
-                # TODO Conflict
-                self._imported_decls[d.name] = decl
+        with self.diag.capture_error():
+            if pkg := self._pkg_group.lookup(d.pkg):
+                if decl := pkg.decls.get(d.decl):
+                    if isinstance(decl, (StructDecl | EnumDecl)):
+                        self._imported_decls[d.name] = decl
+                    else:
+                        raise NotATypeError(d)
+                else:
+                    raise DeclNotExistError(d.name, d)
             else:
-                raise ValueError("unknown decl")
-        else:
-            raise ValueError("unknown pkg")
+                raise PackageNotExistError(d.pkg, d.pkg_loc)
 
     def visit_type_ref_decl(self, d: TypeRefDecl):
         if d.ref_ty:
@@ -174,27 +187,29 @@ class _ResolveImportsPass(RecursiveTypeVisitor):
         xs = d.name.rsplit(".", maxsplit=1)
         if len(xs) == 1:
             # fn foo(x: Bar)
-            pkg = ""
-            decl = xs[0]
+            pkg_name = ""
+            decl_name = xs[0]
         elif len(xs) == 2:
             # fn foo(x: com.example.Bar)
-            pkg, decl = xs
+            pkg_name, decl_name = xs
         else:
             raise ValueError("unexpected format for type reference")
 
-        if pkg:
-            # Imports from aother package.
-            # TODO handle missing packages
-            pkg = self._imported_pkgs[pkg]
-            decl = pkg.decls[decl]
-        else:
-            # TODO handle conflicts
-            decl1 = self._imported_decls.get(decl, None)
-            decl2 = self._pkg.decls.get(decl, None)
-            decl = decl1 or decl2
-
-        assert isinstance(decl, Type)
-        d.ref_ty = decl
+        with self.diag.capture_error():
+            if pkg_name:
+                if pkg := self._imported_pkgs.get(pkg_name):
+                    if (decl := pkg.decls.get(decl_name)) is None:
+                        raise DeclNotExistError(d.name, d)
+                else:
+                    raise DeclNotExistError(d.name, d)
+            else:
+                decl1 = self._imported_decls.get(decl_name, None)
+                decl2 = self._pkg.decls.get(decl_name, None)
+                if (decl := decl1 or decl2) is None:
+                    raise DeclNotExistError(d.name, d)
+            if not isinstance(decl, Type):
+                raise NotATypeError(d)
+            d.ref_ty = decl
 
 
 def pretty_print(x: DeclAlike) -> str:
@@ -204,7 +219,112 @@ def pretty_print(x: DeclAlike) -> str:
     return r
 
 
-def resolve_types(pg: PackageGroup):
+def resolve_types(pg: PackageGroup, diag: DiagnosticsManager):
     """Replaces UnresolvedType with the corresponding type."""
-    p = _ResolveImportsPass(pg)
+    p = _ResolveImportsPass(pg, diag)
     p.handle_decl(pg)
+    check_decl_redefine(pg, diag)
+    check_cycle_error(pg, diag)
+    check_sym_confilct_namespace(pg, diag)
+    check_qualifier(pg, diag)
+
+
+class CheckQualifier(DeclVisitor):
+    pg: PackageGroup
+    diag: DiagnosticsManager
+
+    def __init__(self, pg: PackageGroup, diag: DiagnosticsManager):
+        self.pg = pg
+        self.diag = diag
+
+    @override
+    def visit_param_decl(self, d: ParamDecl):
+        if d.qual_ty.qual:
+            if not isinstance(d.qual_ty.inner_ty.ref_ty, StructDecl):
+                self.diag.emit(QualifierError(d, d.qual_ty.inner_ty.name))
+
+
+def check_qualifier(pg: PackageGroup, diag: DiagnosticsManager):
+    c = CheckQualifier(pg, diag)
+    c.handle_decl(pg)
+
+
+def check_sym_confilct_namespace(pg: PackageGroup, diag: DiagnosticsManager):
+    pkg_name = set(pg._pkgs)
+
+    for p in pg.packages:
+        for i in p.decls:
+            decl_name = p.name + "." + i
+            if decl_name in pkg_name:
+                diag.emit(SymbolConflictWithNamespaceError(p.decls[i], p.name))
+
+
+def check_decl_redefine(pg: PackageGroup, diag: DiagnosticsManager):
+    for p in pg.packages:
+        if redef_decls := p.imports.keys() & p.decls.keys():
+            for redef_decl in redef_decls:
+                diag.emit(
+                    DeclRedefDiagError(p.imports[redef_decl], p.decls[redef_decl])
+                )
+
+
+def check_cycle_error(pg: PackageGroup, diag: DiagnosticsManager):
+    struct_table = {}
+    struct_relations = {}
+    for pkg in pg.packages:
+        for s in pkg.structs:
+            struct_table.setdefault(s, [])
+            for f in s.fields:
+                if isinstance(f.ty.ref_ty, StructDecl):
+                    struct_table[s].append(f.ty.ref_ty)
+                    struct_relations[(s, f.ty.ref_ty)] = f
+
+    cycles = check_cycle(struct_table)
+    for cycle in cycles:
+        """
+        Design,
+        error_pair represents the formation of a recursive inclusion loop.
+        note represents the location of fields and the struct involved in the recursive inclusion.
+        """
+        extend_cycle = cycle[-1:] + cycle
+        error_pair = (extend_cycle[-2], extend_cycle[-1])
+        note = []
+        for i in range(len(extend_cycle) - 2, 0, -1):
+            note.append(
+                (
+                    struct_relations[(extend_cycle[i - 1], extend_cycle[i])].loc,
+                    extend_cycle[i - 1],
+                )
+            )
+        diag.emit(
+            RecursiveInclusionError(
+                struct_relations[error_pair].loc, error_pair[0], note
+            )
+        )
+
+
+def check_cycle(graph):
+    cycles = []
+
+    visited = set()
+    visiting_dict = {}
+    visiting_list = []
+
+    def visit(parent):
+        if parent in visited:
+            return
+        idx = len(visiting_list)
+        rec = visiting_dict.setdefault(parent, idx)
+        if idx != rec:
+            cycles.append(visiting_list[rec:])
+            return
+        for child in graph[parent]:
+            visiting_list.append(child)
+            visit(child)
+            visiting_list.pop()
+        visited.add(parent)
+
+    for parent in graph:
+        visit(parent)
+
+    return cycles
