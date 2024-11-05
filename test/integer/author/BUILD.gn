@@ -1,0 +1,33 @@
+import("//build/compiler/taihe_compiler.gni")
+
+
+taihe_compiler("integer_test_author_compiler") {
+  sources = [
+    "../idl/integer.arithmetic.taihe",
+    "../idl/integer.io.taihe"
+  ]
+  mode = "author"
+}
+
+config("integer_test_author_config") {
+  include_dirs = [
+    "$taihe_out_include_path",
+  ]
+}
+
+shared_library("author") {
+  sources = [ 
+    "./src/integer.arithmetic.impl.c",
+    "./src/integer.arithmetic.impl.cpp",
+    "./src/integer.io.impl.cpp",
+  ]
+  deps = [
+    ":integer_test_author_compiler",
+  ]
+  public_configs = [
+    ":integer_test_author_config",
+  ]
+  lib_dirs = [ taihe_out_librt_path ]
+  libs = ["taihe-rt"]
+  ldflags = ["-Wl,-rpath=$taihe_out_librt_path"]
+}

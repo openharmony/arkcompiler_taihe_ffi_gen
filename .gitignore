@@ -1,6 +1,7 @@
 # Binaries
-build
 *.exe
+out
+/dist
 
 # Compiler
 __pycache__

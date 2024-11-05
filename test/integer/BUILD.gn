@@ -1,0 +1,6 @@
+group("integer_test") {
+  deps = [
+    "./author:author",
+    "./user:user"
+  ]
+}
