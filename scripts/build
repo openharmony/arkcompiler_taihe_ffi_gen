@@ -27,7 +27,7 @@ build-compiler() {
 
     ./generate-grammar && poetry build
     cd dist
-    wheel unpack taihe-*.whl
+    tar xf taihe-*.gz
     echo "Copying the compiler"
     mkdir -p "$compiler_dir/taihe" && cp -r taihe-*/taihe "$compiler_dir"
     popd 2>/dev/null
