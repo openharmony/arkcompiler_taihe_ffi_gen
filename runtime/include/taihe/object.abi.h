@@ -31,8 +31,7 @@ struct TypeInfo {
   uint64_t version;
   uint32_t len;
   uint32_t inside_func_len;
-  void (*addref)(struct TObject);
-  void (*release)(struct TObject);
+  void (*free_data)(struct TObject);
   struct IdMapItem idmap[0];
 };
 

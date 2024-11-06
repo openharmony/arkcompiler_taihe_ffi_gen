@@ -32,7 +32,7 @@ void tobj_addref(struct TObject tobj) {
 
 void tobj_release(struct TObject tobj) {
   if (tobj.data_ptr && --(tobj.data_ptr->m_count) == 0) {
-    free(tobj.data_ptr);
+    tobj.data_ptr->rtti_ptr->free_data(tobj);
     tobj.data_ptr = NULL;
     tobj.vtbl_ptr = NULL;  
   }
