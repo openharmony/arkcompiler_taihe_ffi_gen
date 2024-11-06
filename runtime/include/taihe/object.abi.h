@@ -17,6 +17,20 @@ struct IdMapItem {
   void* vtbl_ptr;  
 };
 
+struct TypeInfo;
+
+// DataBlockHead
+struct DataBlockHead {
+  struct TypeInfo* rtti_ptr;
+  TRefCount m_count;
+};
+
+// TObject
+struct TObject {
+  void* vtbl_ptr;
+  struct DataBlockHead* data_ptr;
+};
+
 // TypeInfo
 // Represents metadata information for a type, including version, length, and function pointers.
 //
@@ -33,18 +47,6 @@ struct TypeInfo {
   uint32_t inside_func_len;
   void (*free_data)(struct TObject);
   struct IdMapItem idmap[0];
-};
-
-// DataBlockHead
-struct DataBlockHead {
-  struct TypeInfo* rtti_ptr;
-  TRefCount m_count;
-};
-
-// TObject
-struct TObject {
-  void* vtbl_ptr;
-  struct DataBlockHead* data_ptr;
 };
 
 // Retrieves the corresponding vtable pointer based on the given id from TypeInfo.
