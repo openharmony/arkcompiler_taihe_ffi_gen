@@ -270,14 +270,12 @@ def check_decl_redefine(pg: PackageGroup, diag: DiagnosticsManager):
 
 def check_cycle_error(pg: PackageGroup, diag: DiagnosticsManager):
     struct_table = {}
-    struct_relations = {}
     for pkg in pg.packages:
-        for s in pkg.structs:
-            struct_table.setdefault(s, [])
-            for f in s.fields:
-                if isinstance(f.ty.ref_ty, StructDecl):
-                    struct_table[s].append(f.ty.ref_ty)
-                    struct_relations[(s, f.ty.ref_ty)] = f
+        for struct in pkg.structs:
+            struct_table.setdefault(struct, [])
+            for field in struct.fields:
+                if isinstance(field.ty.ref_ty, StructDecl):
+                    struct_table[struct].append((field, field.ty.ref_ty))
 
     cycles = check_cycle(struct_table)
     for cycle in cycles:
@@ -286,24 +284,21 @@ def check_cycle_error(pg: PackageGroup, diag: DiagnosticsManager):
         error_pair represents the formation of a recursive inclusion loop.
         note represents the location of fields and the struct involved in the recursive inclusion.
         """
-        extend_cycle = cycle[-1:] + cycle
-        error_pair = (extend_cycle[-2], extend_cycle[-1])
-        note = []
-        for i in range(len(extend_cycle) - 2, 0, -1):
-            note.append(
-                (
-                    struct_relations[(extend_cycle[i - 1], extend_cycle[i])].loc,
-                    extend_cycle[i - 1],
-                )
-            )
         diag.emit(
             RecursiveInclusionError(
-                struct_relations[error_pair].loc, error_pair[0], note
+                cycle[0].loc, cycle[0].parent, [(edge.loc, edge.parent) for edge in cycle[1:]]
             )
         )
 
 
 def check_cycle(graph):
+    """
+    Input a graph, return all the cycles in it.
+
+    This function can be reused.
+    - graph: {parent: [(edge, child), ...], ...}
+    - return value: [[edge, ...], ...]
+    """
     cycles = []
 
     visited = set()
@@ -318,8 +313,8 @@ def check_cycle(graph):
         if idx != rec:
             cycles.append(visiting_list[rec:])
             return
-        for child in graph[parent]:
-            visiting_list.append(child)
+        for edge, child in graph[parent]:
+            visiting_list.append(edge)
             visit(child)
             visiting_list.pop()
         visited.add(parent)
