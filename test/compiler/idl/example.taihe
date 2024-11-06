@@ -85,5 +85,4 @@ function bad_func_2(a: i32, a: i32): ();  // SymbolConflictError
 
 function good_func_1(a: i32, b: mut Bar): (String, String);  // OK
 
-function foo(): ();  // SymbolConflictWithNamespaceError
-
+function a(): ();  // SymbolConflictWithNamespaceError
