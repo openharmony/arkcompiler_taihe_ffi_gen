@@ -4,7 +4,7 @@
 #include <vector>
 #include <cstddef>
 
-#include <taihe/common.h>
+#include <taihe/common.hpp>
 
 namespace taihe::core {
 
