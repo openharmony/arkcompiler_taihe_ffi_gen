@@ -279,21 +279,16 @@ def check_cycle_error(pg: PackageGroup, diag: DiagnosticsManager):
 
     cycles = check_cycle(struct_table)
     for cycle in cycles:
-        """
-        Design,
-        error_pair represents the formation of a recursive inclusion loop.
-        note represents the location of fields and the struct involved in the recursive inclusion.
-        """
+        last, *other = cycle[::-1]
         diag.emit(
             RecursiveInclusionError(
-                cycle[0].loc, cycle[0].parent, [(edge.loc, edge.parent) for edge in cycle[1:]]
+                last.loc, last.parent, [(edge.loc, edge.parent) for edge in other]
             )
         )
 
 
 def check_cycle(graph):
-    """
-    Input a graph, return all the cycles in it.
+    """Input a graph, return all the cycles in it.
 
     This function can be reused.
     - graph: {parent: [(edge, child), ...], ...}
