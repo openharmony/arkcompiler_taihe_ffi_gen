@@ -102,4 +102,4 @@ TH_EXPORT void* alloc_ftable(size_t func_len);
 // # Returns
 // - A pointer to the newly created function table that contains pointers from `ftable_ptr` where available,
 //   or from `default_ftable_ptr` otherwise. The function returns `NULL` if memory allocation fails.
-void* create_new_ftable(void* ftable_ptr, void* default_ftable_ptr);
+TH_EXPORT void* create_new_ftable(void* ftable_ptr, void* default_ftable_ptr);
