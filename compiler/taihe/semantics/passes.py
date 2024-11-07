@@ -161,7 +161,7 @@ class _ResolveImportsPass(RecursiveTypeVisitor):
     @override
     def visit_package_import_decl(self, d: PackageImportDecl):
         if (pkg := self._pkg_group.lookup(d.pkg)) is None:
-            self.diag.emit(PackageNotExistError(d.name, d.loc))
+            self.diag.emit(PackageNotExistError(d.pkg, d.pkg_loc))
         else:
             self._imported_pkgs[d.name] = pkg
 
@@ -170,9 +170,9 @@ class _ResolveImportsPass(RecursiveTypeVisitor):
         if (pkg := self._pkg_group.lookup(d.pkg)) is None:
             self.diag.emit(PackageNotExistError(d.pkg, d.pkg_loc))
         elif (decl := pkg.decls.get(d.decl)) is None:
-            self.diag.emit(DeclNotExistError(d.name, d))
+            self.diag.emit(DeclNotExistError(d.decl, d.decl_loc))
         elif (isinstance(decl, StructDecl | EnumDecl)) is None:
-            self.diag.emit(NotATypeError(d))
+            self.diag.emit(NotATypeError(d.decl, d.decl_loc))
         else:
             self._imported_decls[d.name] = decl
 
@@ -187,20 +187,22 @@ class _ResolveImportsPass(RecursiveTypeVisitor):
             imported_decl = self._imported_decls.get(decl_name, None)
             local_decl = self._pkg.decls.get(decl_name, None)
             if (decl := imported_decl or local_decl) is None:
-                self.diag.emit(DeclNotExistError(d.name, d))
+                self.diag.emit(DeclNotExistError(d.name, d.loc))
             elif not isinstance(decl, Type):
-                self.diag.emit(NotATypeError(d))
+                self.diag.emit(NotATypeError(d.name, d.loc))
             else:
                 d.ref_ty = decl
         elif len(xs) == 2:
             # fn foo(x: com.example.Bar)
             pkg_name, decl_name = xs
             if (pkg := self._imported_pkgs.get(pkg_name)) is None:
-                self.diag.emit(DeclNotExistError(d.name, d))  # Package Not Exist
+                self.diag.emit(DeclNotExistError(d.name, d.loc))  # Package Not Exist
             elif (decl := pkg.decls.get(decl_name)) is None:
-                self.diag.emit(DeclNotExistError(d.name, d))  # Decalaration Not Exist
+                self.diag.emit(
+                    DeclNotExistError(d.name, d.loc)
+                )  # Decalaration Not Exist
             elif not isinstance(decl, Type):
-                self.diag.emit(NotATypeError(d))
+                self.diag.emit(NotATypeError(d.name, d.loc))
             else:
                 d.ref_ty = decl
         else:

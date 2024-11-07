@@ -100,10 +100,10 @@ class DeclNotExistError(DiagError):
     def __init__(
         self,
         decl: str,
-        current: "Decl",
+        loc: Optional["SourceLocation"],
     ):
         self.decl = decl
-        self.loc = current.loc
+        self.loc = loc
 
 
 @dataclass
@@ -141,11 +141,15 @@ class RecursiveInclusionError(DiagError):
 class NotATypeError(DiagError):
     MSG = "{name!r} is not a type"
 
-    name: str
+    decl: str
 
-    def __init__(self, current: "Decl"):
-        self.loc = current.loc
-        self.name = current.name
+    def __init__(
+        self,
+        decl: str,
+        loc: Optional["SourceLocation"],
+    ):
+        self.decl = decl
+        self.loc = loc
 
 
 @dataclass

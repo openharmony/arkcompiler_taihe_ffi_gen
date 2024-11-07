@@ -103,12 +103,8 @@ class ImportDecl(Decl):
 
     KIND = "<import-decl-kind>"
 
-    pkg: str
-    """The target package to import into the current package."""
-
-    def __init__(self, name: str, pkg: str, **kwargs):
+    def __init__(self, name: str, **kwargs):
         super().__init__(name=name, **kwargs)
-        self.pkg = pkg
 
     def is_alias(self) -> bool:
         """Returns True if the import has been renamed."""
@@ -121,8 +117,18 @@ class PackageImportDecl(ImportDecl):
     name: str
     """Optionally use another name for the imported package."""
 
-    def __init__(self, pkg: str, *, alias: str = "", **kwargs):
-        super().__init__(name=alias or pkg, pkg=pkg, **kwargs)
+    pkg: str
+    """The target package to import into the current package."""
+
+    pkg_loc: SourceLocation
+    """The location of the package."""
+
+    def __init__(
+        self, pkg: str, pkg_loc: SourceLocation, *, alias: str = "", loc=None, **kwargs
+    ):
+        super().__init__(name=alias or pkg, loc=loc or pkg_loc, **kwargs)
+        self.pkg = pkg
+        self.pkg_loc = pkg_loc
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
@@ -137,21 +143,37 @@ class PackageImportDecl(ImportDecl):
 class DeclarationImportDecl(ImportDecl):
     KIND = "use of declaration"
 
-    decl: str
-    """The original name for the declaration inside the target package."""
-
     name: str
     """Optionally use another name for the imported declaration."""
+
+    pkg: str
+    """The target package to import into the current package."""
 
     pkg_loc: SourceLocation
     """The location of the package."""
 
+    decl: str
+    """The original name for the declaration inside the target package."""
+
+    decl_loc: SourceLocation
+    """The location of the declaration name."""
+
     def __init__(
-        self, pkg: str, sym: str, *, pkg_loc: SourceLocation, alias: str = "", **kwargs
+        self,
+        pkg: str,
+        pkg_loc: SourceLocation,
+        decl: str,
+        decl_loc: SourceLocation,
+        *,
+        alias: str = "",
+        loc=None,
+        **kwargs,
     ):
-        super().__init__(name=alias or sym, pkg=pkg, **kwargs)
-        self.decl = sym
+        super().__init__(name=alias or decl, loc=loc or decl_loc, **kwargs)
+        self.pkg = pkg
         self.pkg_loc = pkg_loc
+        self.decl = decl
+        self.decl_loc = decl_loc
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:

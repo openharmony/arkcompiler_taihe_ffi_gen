@@ -246,25 +246,38 @@ class AstConverter(Visitor):
 
     @override
     def visit_UsePackage(self, node: ast.UsePackage) -> Iterable[PackageImportDecl]:
-        yield PackageImportDecl(
-            pkg2str(node.old_pkname),
-            alias=pkg2str(node.new_pkname),
-            loc=self.loc(node.new_pkname or node.old_pkname),
-        )
+        if node.new_pkname:
+            yield PackageImportDecl(
+                pkg=pkg2str(node.old_pkname),
+                pkg_loc=self.loc(node.old_pkname),
+                alias=pkg2str(node.new_pkname),
+                loc=self.loc(node.new_pkname),
+            )
+        else:
+            yield PackageImportDecl(
+                pkg=pkg2str(node.old_pkname),
+                pkg_loc=self.loc(node.old_pkname),
+            )
 
     @override
     def visit_UseSymbol(self, node: ast.UseSymbol) -> Iterable[DeclarationImportDecl]:
-        pkg = pkg2str(node.pkname)
-
         for p in node.alias_pairs:
-            alias = p.new_name.text if p.new_name else ""
-            yield DeclarationImportDecl(
-                pkg,
-                p.old_name.text,
-                alias=alias,
-                loc=self.loc(p.new_name or p.old_name),
-                pkg_loc=self.loc(node.pkname),
-            )
+            if p.new_name:
+                yield DeclarationImportDecl(
+                    pkg=pkg2str(node.pkname),
+                    pkg_loc=self.loc(node.pkname),
+                    decl=str(p.old_name),
+                    decl_loc=self.loc(p.old_name),
+                    alias=str(p.new_name),
+                    loc=self.loc(p.new_name),
+                )
+            else:
+                yield DeclarationImportDecl(
+                    pkg=pkg2str(node.pkname),
+                    pkg_loc=self.loc(node.pkname),
+                    decl=str(p.old_name),
+                    decl_loc=self.loc(p.old_name),
+                )
 
     @override
     def visit_Spec(self, node: ast.Spec) -> Package:

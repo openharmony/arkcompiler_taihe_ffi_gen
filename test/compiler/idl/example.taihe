@@ -8,11 +8,13 @@ use example.bar as foobar;  // UsingPackageConflictError
 
 use example.bar;  // OK
 
+use example.baz as baz;  // PackageNotExistError
+
 // Use Symbols
 
-from example.foobar use XXX;  // PackageNotExistError
+from example.foobar use XXX, YYY;  // PackageNotExistError
 
-from example.bar use Foo;  // SymbolNotExistError
+from example.bar use Foo as ABC;  // SymbolNotExistError
 
 from example.bar use Bar as Foobar;
 from example.foo use Foo as Foobar; // UsingTypeConflictError
