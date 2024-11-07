@@ -7,12 +7,22 @@ source "$(dirname "$0")/common_lib.sh"
 build-runtime-libs() {
     echo "Building the runtime"
     local build_dir="runtime/out" arch="$(uname -m)"
+
+    libtaihe=""
+    if [ "$(uname)" == "Darwin" ]; then
+        libtaihe="libtaihe-rt.dylib"
+    elif [ "$(uname)" == "Linux" ]; then
+        libtaihe="libtaihe-rt.so"
+    else
+        echo "Unsupported platform"
+    fi
+
     cmake -S runtime -B "$build_dir" -G Ninja
     cmake --build "$build_dir"
 
     local runtime_lib_dir="$SHARE_DIR/runtime/$arch"
     mkdir -p "$runtime_lib_dir"
-    cp "$build_dir/libtaihe-rt.so" "$runtime_lib_dir"
+    cp "$build_dir/$libtaihe" "$runtime_lib_dir"
 }
 
 copy-headers() {
