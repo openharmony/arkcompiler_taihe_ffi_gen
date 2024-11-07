@@ -29,5 +29,5 @@ shared_library("author") {
   ]
   lib_dirs = [ taihe_out_librt_path ]
   libs = ["taihe-rt"]
-  ldflags = ["-Wl,-rpath=$taihe_out_librt_path"]
+  ldflags = ["-Wl,-rpath,$taihe_out_librt_path"]
 }

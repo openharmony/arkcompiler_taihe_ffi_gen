@@ -17,5 +17,5 @@ executable("user") {
     "//author:author"
   ]
   ldpath = rebase_path("$root_out_dir")
-  ldflags = ["-Wl,-rpath=$ldpath"]
+  ldflags = ["-Wl,-rpath,$ldpath"]
 }

@@ -13,6 +13,8 @@ template("clang_toolchain") {
       }
       if (defined(invoker.solink_extension)) {
           solink_extension = invoker.solink_extension
+      } else if ("$host_os" == "mac") {
+          solink_extension = ".dylib"
       } else {
           solink_extension = ".so"
       }
