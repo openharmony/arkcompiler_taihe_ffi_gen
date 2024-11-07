@@ -160,25 +160,21 @@ class _ResolveImportsPass(RecursiveTypeVisitor):
 
     @override
     def visit_package_import_decl(self, d: PackageImportDecl):
-        with self.diag.capture_error():
-            if pkg := self._pkg_group.lookup(d.pkg):
-                self._imported_pkgs[d.name] = pkg
-            else:
-                raise PackageNotExistError(d.name, d.loc)
+        if (pkg := self._pkg_group.lookup(d.pkg)) is None:
+            self.diag.emit(PackageNotExistError(d.name, d.loc))
+        else:
+            self._imported_pkgs[d.name] = pkg
 
     @override
     def visit_decl_import_decl(self, d: DeclarationImportDecl):
-        with self.diag.capture_error():
-            if pkg := self._pkg_group.lookup(d.pkg):
-                if decl := pkg.decls.get(d.decl):
-                    if isinstance(decl, (StructDecl | EnumDecl)):
-                        self._imported_decls[d.name] = decl
-                    else:
-                        raise NotATypeError(d)
-                else:
-                    raise DeclNotExistError(d.name, d)
-            else:
-                raise PackageNotExistError(d.pkg, d.pkg_loc)
+        if (pkg := self._pkg_group.lookup(d.pkg)) is None:
+            self.diag.emit(PackageNotExistError(d.pkg, d.pkg_loc))
+        elif (decl := pkg.decls.get(d.decl)) is None:
+            self.diag.emit(DeclNotExistError(d.name, d))
+        elif (isinstance(decl, StructDecl | EnumDecl)) is None:
+            self.diag.emit(NotATypeError(d))
+        else:
+            self._imported_decls[d.name] = decl
 
     def visit_type_ref_decl(self, d: TypeRefDecl):
         if d.ref_ty:
@@ -187,29 +183,28 @@ class _ResolveImportsPass(RecursiveTypeVisitor):
         xs = d.name.rsplit(".", maxsplit=1)
         if len(xs) == 1:
             # fn foo(x: Bar)
-            pkg_name = ""
             decl_name = xs[0]
+            imported_decl = self._imported_decls.get(decl_name, None)
+            local_decl = self._pkg.decls.get(decl_name, None)
+            if (decl := imported_decl or local_decl) is None:
+                self.diag.emit(DeclNotExistError(d.name, d))
+            elif not isinstance(decl, Type):
+                self.diag.emit(NotATypeError(d))
+            else:
+                d.ref_ty = decl
         elif len(xs) == 2:
             # fn foo(x: com.example.Bar)
             pkg_name, decl_name = xs
+            if (pkg := self._imported_pkgs.get(pkg_name)) is None:
+                self.diag.emit(DeclNotExistError(d.name, d))  # Package Not Exist
+            elif (decl := pkg.decls.get(decl_name)) is None:
+                self.diag.emit(DeclNotExistError(d.name, d))  # Decalaration Not Exist
+            elif not isinstance(decl, Type):
+                self.diag.emit(NotATypeError(d))
+            else:
+                d.ref_ty = decl
         else:
             raise ValueError("unexpected format for type reference")
-
-        with self.diag.capture_error():
-            if pkg_name:
-                if pkg := self._imported_pkgs.get(pkg_name):
-                    if (decl := pkg.decls.get(decl_name)) is None:
-                        raise DeclNotExistError(d.name, d)
-                else:
-                    raise DeclNotExistError(d.name, d)
-            else:
-                decl1 = self._imported_decls.get(decl_name, None)
-                decl2 = self._pkg.decls.get(decl_name, None)
-                if (decl := decl1 or decl2) is None:
-                    raise DeclNotExistError(d.name, d)
-            if not isinstance(decl, Type):
-                raise NotATypeError(d)
-            d.ref_ty = decl
 
 
 def pretty_print(x: DeclAlike) -> str:
