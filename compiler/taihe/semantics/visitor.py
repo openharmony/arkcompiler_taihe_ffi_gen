@@ -11,11 +11,13 @@ Design:
 - The `VisitorBase.visit_{type,decl}` is the "root" of the type hierarchy.
 """
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from taihe.semantics.declarations import (
     Decl,
+    DeclAlike,
     DeclarationImportDecl,
+    DeclarationRefDecl,
     EnumDecl,
     EnumItemDecl,
     FuncDecl,
@@ -23,6 +25,7 @@ from taihe.semantics.declarations import (
     Package,
     PackageGroup,
     PackageImportDecl,
+    PackageRefDecl,
     ParamDecl,
     StructDecl,
     StructFieldDecl,
@@ -38,9 +41,6 @@ from taihe.semantics.types import (
     TypeAlike,
     TypeRef,
 )
-
-if TYPE_CHECKING:
-    from taihe.semantics.declarations import DeclAlike
 
 
 class TypeVisitor:
@@ -119,7 +119,7 @@ class DeclVisitor:
     def __init__(self) -> None:
         self.visiting = None
 
-    def handle_decl(self, d: "DeclAlike") -> Any:
+    def handle_decl(self, d: DeclAlike) -> Any:
         """The entrance for visiting anything "acceptable"."""
         try:
             return d._accept(self)
@@ -136,6 +136,12 @@ class DeclVisitor:
         del d
 
     ### Imports ###
+
+    def visit_package_ref_decl(self, d: PackageRefDecl) -> Any:
+        return self.visit_decl(d)
+
+    def visit_decl_ref_decl(self, d: DeclarationRefDecl) -> Any:
+        return self.visit_decl(d)
 
     def visit_import_decl(self, d: ImportDecl) -> Any:
         return self.visit_decl(d)

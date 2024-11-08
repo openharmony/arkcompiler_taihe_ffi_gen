@@ -75,6 +75,7 @@ class TypeRefDecl(Decl, TypeRef):
     def __init__(self, name: str, ref_ty: Optional[Type] = None, **kwargs):
         super().__init__(name, **kwargs)
         self.ref_ty = ref_ty
+        self.resolved = ref_ty is not None
 
     def _accept(self, v: "DeclVisitor | TypeVisitor") -> Any:
         v.visiting = self
@@ -111,24 +112,47 @@ class ImportDecl(Decl):
         raise NotImplementedError()
 
 
+class PackageRefDecl(Decl):
+    KIND = "package reference"
+
+    ref_pkg: Optional["Package"] = None
+    resolved: bool = False
+
+    def __init__(self, name: str = "", loc=None, parent=None):
+        super().__init__(name, loc, parent)
+
+    @override
+    def _accept(self, v: "DeclVisitor") -> Any:
+        v.visiting = self
+        return v.visit_package_ref_decl(self)
+
+
+class DeclarationRefDecl(Decl):
+    KIND = "package reference"
+
+    ref_decl: Optional["TypeDecl"] = None
+    resolved: bool = False
+
+    def __init__(self, name: str = "", loc=None, parent=None):
+        super().__init__(name, loc, parent)
+
+    @override
+    def _accept(self, v: "DeclVisitor") -> Any:
+        v.visiting = self
+        return v.visit_decl_ref_decl(self)
+
+
 class PackageImportDecl(ImportDecl):
     KIND = "use of package"
 
     name: str
     """Optionally use another name for the imported package."""
 
-    pkg: str
-    """The target package to import into the current package."""
+    pkg: PackageRefDecl
 
-    pkg_loc: SourceLocation
-    """The location of the package."""
-
-    def __init__(
-        self, pkg: str, pkg_loc: SourceLocation, *, alias: str = "", loc=None, **kwargs
-    ):
-        super().__init__(name=alias or pkg, loc=loc or pkg_loc, **kwargs)
+    def __init__(self, pkg: PackageRefDecl, *, name: str = "", loc=None, **kwargs):
+        super().__init__(name=name or pkg.name, loc=loc or pkg.loc, **kwargs)
         self.pkg = pkg
-        self.pkg_loc = pkg_loc
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
@@ -137,7 +161,7 @@ class PackageImportDecl(ImportDecl):
 
     @override
     def is_alias(self) -> bool:
-        return self.name != self.pkg
+        return self.name != self.pkg.name
 
 
 class DeclarationImportDecl(ImportDecl):
@@ -146,34 +170,22 @@ class DeclarationImportDecl(ImportDecl):
     name: str
     """Optionally use another name for the imported declaration."""
 
-    pkg: str
-    """The target package to import into the current package."""
+    pkg: PackageRefDecl
 
-    pkg_loc: SourceLocation
-    """The location of the package."""
-
-    decl: str
-    """The original name for the declaration inside the target package."""
-
-    decl_loc: SourceLocation
-    """The location of the declaration name."""
+    decl: DeclarationRefDecl
 
     def __init__(
         self,
-        pkg: str,
-        pkg_loc: SourceLocation,
-        decl: str,
-        decl_loc: SourceLocation,
+        pkg: PackageRefDecl,
+        decl: DeclarationRefDecl,
         *,
-        alias: str = "",
+        name: str = "",
         loc=None,
         **kwargs,
     ):
-        super().__init__(name=alias or decl, loc=loc or decl_loc, **kwargs)
+        super().__init__(name=name or decl.name, loc=loc or decl.loc, **kwargs)
         self.pkg = pkg
-        self.pkg_loc = pkg_loc
         self.decl = decl
-        self.decl_loc = decl_loc
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
@@ -182,7 +194,7 @@ class DeclarationImportDecl(ImportDecl):
 
     @override
     def is_alias(self) -> bool:
-        return self.name != self.decl
+        return self.name != self.decl.name
 
 
 class ParamDecl(Decl):

@@ -45,6 +45,7 @@ class TypeRef(TypeAlike):
 
     name: str
     ref_ty: Optional[Type] = None
+    resolved: bool = False
 
     def _accept(self, v: "TypeVisitor") -> Any:
         v.visiting = self

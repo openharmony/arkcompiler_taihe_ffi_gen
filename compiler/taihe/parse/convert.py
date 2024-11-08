@@ -7,12 +7,14 @@ from taihe.parse import Visitor, ast
 from taihe.semantics.declarations import (
     Decl,
     DeclarationImportDecl,
+    DeclarationRefDecl,
     EnumDecl,
     EnumItemDecl,
     FuncDecl,
     ImportDecl,
     Package,
     PackageImportDecl,
+    PackageRefDecl,
     ParamDecl,
     StructDecl,
     StructFieldDecl,
@@ -246,37 +248,34 @@ class AstConverter(Visitor):
 
     @override
     def visit_UsePackage(self, node: ast.UsePackage) -> Iterable[PackageImportDecl]:
+        pkg = PackageRefDecl(pkg2str(node.old_pkname), self.loc(node.old_pkname))
         if node.new_pkname:
             yield PackageImportDecl(
-                pkg=pkg2str(node.old_pkname),
-                pkg_loc=self.loc(node.old_pkname),
-                alias=pkg2str(node.new_pkname),
+                pkg=pkg,
+                name=pkg2str(node.new_pkname),
                 loc=self.loc(node.new_pkname),
             )
         else:
             yield PackageImportDecl(
-                pkg=pkg2str(node.old_pkname),
-                pkg_loc=self.loc(node.old_pkname),
+                pkg=pkg,
             )
 
     @override
     def visit_UseSymbol(self, node: ast.UseSymbol) -> Iterable[DeclarationImportDecl]:
+        pkg = PackageRefDecl(pkg2str(node.pkname), self.loc(node.pkname))
         for p in node.alias_pairs:
+            decl = DeclarationRefDecl(str(p.old_name), self.loc(p.old_name))
             if p.new_name:
                 yield DeclarationImportDecl(
-                    pkg=pkg2str(node.pkname),
-                    pkg_loc=self.loc(node.pkname),
-                    decl=str(p.old_name),
-                    decl_loc=self.loc(p.old_name),
-                    alias=str(p.new_name),
+                    pkg=pkg,
+                    decl=decl,
+                    name=str(p.new_name),
                     loc=self.loc(p.new_name),
                 )
             else:
                 yield DeclarationImportDecl(
-                    pkg=pkg2str(node.pkname),
-                    pkg_loc=self.loc(node.pkname),
-                    decl=str(p.old_name),
-                    decl_loc=self.loc(p.old_name),
+                    pkg=pkg,
+                    decl=decl,
                 )
 
     @override

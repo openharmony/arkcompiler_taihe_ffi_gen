@@ -78,7 +78,7 @@ class EnumValueCollisionError(DiagError):
 
 @dataclass
 class PackageNotExistError(DiagFatalError):
-    MSG = "package {pkg!r} not found"
+    MSG = "package {pkg!r} not exist"
 
     pkg: str
 
@@ -93,7 +93,37 @@ class PackageNotExistError(DiagFatalError):
 
 @dataclass
 class DeclNotExistError(DiagError):
-    MSG = "declaration {decl!r} not found"
+    MSG = "declaration {decl!r} not exist"
+
+    decl: str
+
+    def __init__(
+        self,
+        decl: str,
+        loc: Optional["SourceLocation"],
+    ):
+        self.decl = decl
+        self.loc = loc
+
+
+@dataclass
+class DeclarationNotInScopeError(DiagError):
+    MSG = "declaration {decl!r} is not declared or imported in this scope"
+
+    decl: str
+
+    def __init__(
+        self,
+        decl: str,
+        loc: Optional["SourceLocation"],
+    ):
+        self.decl = decl
+        self.loc = loc
+
+
+@dataclass
+class PackageNotInScopeError(DiagError):
+    MSG = "package {decl!r} is not imported in this scope"
 
     decl: str
 
@@ -140,6 +170,36 @@ class RecursiveInclusionError(DiagError):
 @dataclass
 class NotATypeError(DiagError):
     MSG = "{name!r} is not a type"
+
+    decl: str
+
+    def __init__(
+        self,
+        decl: str,
+        loc: Optional["SourceLocation"],
+    ):
+        self.decl = decl
+        self.loc = loc
+
+
+@dataclass
+class NotAPackageError(DiagError):
+    MSG = "{name!r} is not a package"
+
+    decl: str
+
+    def __init__(
+        self,
+        decl: str,
+        loc: Optional["SourceLocation"],
+    ):
+        self.decl = decl
+        self.loc = loc
+
+
+@dataclass
+class NotADeclarationError(DiagError):
+    MSG = "{name!r} is not a declaration"
 
     decl: str
 
