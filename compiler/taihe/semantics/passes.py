@@ -26,14 +26,14 @@ from taihe.semantics.types import (
 from taihe.semantics.visitor import DeclVisitor, RecursiveTypeVisitor, TypeVisitor
 from taihe.utils.diagnostics import DiagnosticsManager
 from taihe.utils.exceptions import (
-    DeclNotExistError,
     DeclarationNotInScopeError,
-    PackageNotInScopeError,
+    DeclNotExistError,
     DeclRedefDiagError,
     NotADeclarationError,
     NotAPackageError,
     NotATypeError,
     PackageNotExistError,
+    PackageNotInScopeError,
     QualifierError,
     RecursiveInclusionError,
     SymbolConflictWithNamespaceError,

@@ -169,7 +169,7 @@ class RecursiveInclusionError(DiagError):
 
 @dataclass
 class NotATypeError(DiagError):
-    MSG = "{name!r} is not a type"
+    MSG = "declaration {name!r} is not a type"
 
     decl: str
 
