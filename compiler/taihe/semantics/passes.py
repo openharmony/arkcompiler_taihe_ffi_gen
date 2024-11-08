@@ -171,7 +171,7 @@ class _ResolveImportsPass(RecursiveTypeVisitor):
             self.diag.emit(PackageNotExistError(d.pkg, d.pkg_loc))
         elif (decl := pkg.decls.get(d.decl)) is None:
             self.diag.emit(DeclNotExistError(d.decl, d.decl_loc))
-        elif (isinstance(decl, StructDecl | EnumDecl)) is None:
+        elif not isinstance(decl, TypeDecl):
             self.diag.emit(NotATypeError(d.decl, d.decl_loc))
         else:
             self._imported_decls[d.name] = decl
@@ -188,7 +188,7 @@ class _ResolveImportsPass(RecursiveTypeVisitor):
             local_decl = self._pkg.decls.get(decl_name, None)
             if (decl := imported_decl or local_decl) is None:
                 self.diag.emit(DeclNotExistError(d.name, d.loc))
-            elif not isinstance(decl, Type):
+            elif not isinstance(decl, TypeDecl):
                 self.diag.emit(NotATypeError(d.name, d.loc))
             else:
                 d.ref_ty = decl
@@ -201,7 +201,7 @@ class _ResolveImportsPass(RecursiveTypeVisitor):
                 self.diag.emit(
                     DeclNotExistError(d.name, d.loc)
                 )  # Decalaration Not Exist
-            elif not isinstance(decl, Type):
+            elif not isinstance(decl, TypeDecl):
                 self.diag.emit(NotATypeError(d.name, d.loc))
             else:
                 d.ref_ty = decl
