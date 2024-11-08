@@ -109,6 +109,7 @@ class TypeVisitor:
         return self.visit_type_decl(d)
 
     def visit_type_ref_decl(self, d: TypeRefDecl) -> Any:
+        # pyre-fixme[6]: For 1st argument expected `TypeRef` but got `TypeRefDecl`.
         return self.visit_type_ref(d)
 
 

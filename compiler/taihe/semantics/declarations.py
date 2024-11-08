@@ -6,7 +6,14 @@ from typing import TYPE_CHECKING, Any, ClassVar, Optional, Protocol
 
 from typing_extensions import override
 
-from taihe.semantics.types import VOID, QualifiedType, Type, TypeRef
+from taihe.semantics.types import (
+    VOID,
+    QualifiedType,
+    Type,
+    TypeAlike,
+    TypeQualifier,
+    TypeRef,
+)
 from taihe.utils.exceptions import DeclRedefDiagError
 from taihe.utils.sources import SourceLocation
 
@@ -65,17 +72,39 @@ class Decl(ABC, DeclAlike):
         return f"{self.__class__.__qualname__}<{self.name!r} in {self.parent}>"
 
 
-class TypeRefDecl(Decl, TypeRef):
-    """Represents a reference to type. TypeRefDecl is NOT a TypeDecl!"""
+class TypeRefDecl(Decl, TypeAlike):
+    """Repersents a reference to a `Type`.
+
+    Each user of a `Type` must be encapsulated in a `TypeRefDecl`.
+    Also, `TypeRefDecl` is NOT a `TypeDecl`.
+    In other words, `TypeRefDecl` is a pointer, instead of a declaration.
+
+    For example:
+    ```
+    struct Foo { ... }.     // `Foo` is a `TypeDecl`.
+
+    fn func(foo: mut Foo);  // `Foo` is `TypeRefDecl(ref_ty=TypeDecl('Foo'), qual=MUT)`.
+    fn func(foo: BadType);  // `BadType` is `TypeRefDecl(ref_ty=None)`.
+    ```
+    """
 
     KIND = "type reference"
 
     parent: Optional["Decl"] = None
+    ref_ty: Optional[Type] = None
+    qual: TypeQualifier
 
-    def __init__(self, name: str, ref_ty: Optional[Type] = None, **kwargs):
+    def __init__(
+        self,
+        name: str,
+        ref_ty: Optional[Type] = None,
+        qual: TypeQualifier = TypeQualifier.NONE,
+        **kwargs,
+    ):
         super().__init__(name, **kwargs)
         self.ref_ty = ref_ty
         self.resolved = ref_ty is not None
+        self.qual = qual
 
     def _accept(self, v: "DeclVisitor | TypeVisitor") -> Any:
         v.visiting = self
@@ -86,7 +115,8 @@ class TypeRefDecl(Decl, TypeRef):
             return v.handle_type(self.ref_ty)
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__qualname__}<{self.name!r} to {self.ref_ty}>"
+        ref_str = repr(self.ref_ty) if self.ref_ty else f"??? {self.name!r}"
+        return f"<type-ref to {self.qual.describe(ref_str)}>"
 
 
 class ImportDecl(Decl):
