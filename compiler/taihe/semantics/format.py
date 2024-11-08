@@ -20,7 +20,6 @@ from taihe.semantics.declarations import (
 from taihe.semantics.types import (
     VOID,
     BuiltinType,
-    QualifiedType,
     TypeAlike,
 )
 from taihe.semantics.visitor import DeclVisitor, TypeVisitor
@@ -47,20 +46,8 @@ class _TypeNamePrinter(TypeVisitor):
 
     @override
     def visit_type_ref_decl(self, d: TypeRefDecl) -> str:
-        if d.ref_ty:
-            return self.handle_type(d.ref_ty)
-        return f"<unresolved {d.name!r}>"
-
-    @override
-    def visit_qualified_type(self, t: QualifiedType) -> str:
-        tname = self.handle_type(t.inner_ty)
-        assert isinstance(tname, str)
-        if not t.qual:
-            return tname
-
-        # field.name is always str instead of None. Skip type checking below.
-        qualname = " ".join(f.name.lower() for f in t.qual)  # type: ignore
-        return f"{qualname} {tname}"
+        ref_str = self.handle_type(d.ref_ty) if d.ref_ty else f"<unresolved {d.name!r}>"
+        return d.qual.describe(ref_str)
 
 
 class _PrettyPrinter(DeclVisitor):
@@ -88,7 +75,7 @@ class _PrettyPrinter(DeclVisitor):
 
     @override
     def visit_param_decl(self, d: ParamDecl):
-        return f"{d.name}: {self.handle_type(d.qual_ty)}"
+        return f"{d.name}: {self.handle_type(d.ty)}"
 
     @override
     def visit_func_decl(self, d: FuncDecl):

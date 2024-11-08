@@ -8,7 +8,6 @@ from typing_extensions import override
 
 from taihe.semantics.types import (
     VOID,
-    QualifiedType,
     Type,
     TypeAlike,
     TypeQualifier,
@@ -230,13 +229,13 @@ class DeclarationImportDecl(ImportDecl):
 class ParamDecl(Decl):
     KIND = "function parameter"
 
-    qual_ty: QualifiedType
+    ty: TypeRefDecl
     # type: ignore (already set with Decl.__init__)
     parent: Optional["FuncDecl"]
 
-    def __init__(self, name: str, ty: QualifiedType | TypeRef, **kwargs):
+    def __init__(self, name: str, ty: TypeRefDecl, **kwargs):
         super().__init__(name, **kwargs)
-        self.qual_ty = ty if isinstance(ty, QualifiedType) else QualifiedType(ty)
+        self.ty = ty
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
@@ -244,7 +243,7 @@ class ParamDecl(Decl):
         return v.visit_param_decl(self)
 
     def _traverse(self, v: "DeclVisitor"):
-        v.handle_type(self.qual_ty)
+        v.handle_type(self.ty)
 
 
 class FuncDecl(Decl):
@@ -271,7 +270,7 @@ class FuncDecl(Decl):
             p._accept(v)
         v.handle_type(self.return_ty)
 
-    def add_param(self, name: str, ty: QualifiedType | TypeRef, **kwargs):
+    def add_param(self, name: str, ty: TypeRefDecl, **kwargs):
         param = ParamDecl(name, ty, parent=self, **kwargs)
         self.params.append(param)
 

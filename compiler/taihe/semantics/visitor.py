@@ -34,7 +34,6 @@ from taihe.semantics.declarations import (
 )
 from taihe.semantics.types import (
     BuiltinType,
-    QualifiedType,
     ScalarType,
     SpecialType,
     Type,
@@ -82,9 +81,6 @@ class TypeVisitor:
     def visit_type_ref(self, t: TypeRef) -> Any:
         if t.ref_ty:
             return self.handle_type(t.ref_ty)
-
-    def visit_qualified_type(self, t: QualifiedType) -> Any:
-        return self.handle_type(t.inner_ty)
 
     ### Built-in types ###
 

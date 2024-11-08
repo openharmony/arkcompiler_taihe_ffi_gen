@@ -19,8 +19,10 @@ class TypeAlike(Protocol):
     This protocol defines a single method, `_accept`, which is used by `TypeVisitor` instances
     to traverse and process instances of classes conforming to this protocol.
 
-    Notable implementors to this protocol are type containers, i.e. `QualifiedType` and `TypeRef`.
+    Notable implementors to this protocol is `TypeRefDecl`.
     """
+
+    name: str
 
     def _accept(self, v: "TypeVisitor") -> Any: ...
 
@@ -49,6 +51,13 @@ class TypeQualifier(IntFlag):
         return " ".join(segments)
 
 
+# type: ignore
+#
+# Message:
+#   Uninitialized attribute [13]: Attribute `name` inherited from protocol
+#   `TypeAlike` in class `Type` to have type `str` but is never initialized.
+#
+# Reason: always implemented by subclasses.
 class Type(TypeAlike):
     """Represents a concrete type."""
 
@@ -81,19 +90,6 @@ class TypeRef(TypeAlike):
             return f"<type-ref to {self.ref_ty!r}>"
         else:
             return f"<type-ref ??? {self.name!r}>"
-
-
-@dataclass
-class QualifiedType(TypeAlike):
-    inner_ty: TypeRef
-    qual: TypeQualifier = TypeQualifier.NONE
-
-    def _accept(self, v: "TypeVisitor") -> Any:
-        v.visiting = self
-        return v.visit_qualified_type(self)
-
-    def __repr__(self) -> str:
-        return f"<type-qual {self.qual.name!r} {self.inner_ty!r}>"
 
 
 ##################
