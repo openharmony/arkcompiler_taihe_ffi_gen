@@ -209,19 +209,19 @@ class _ResolveImportsPass(RecursiveTypeVisitor):
             # fn foo(x: com.example.Bar)
             pkg_name, decl_name = xs
             if (import_pkg := self._pkg.imports.get(pkg_name)) is None:
-                self.diag.emit(PackageNotInScopeError(d.name, d.loc))
+                self.diag.emit(PackageNotInScopeError(pkg_name, d.loc))
                 d.ref_ty = None
             elif not isinstance(import_pkg, PackageImportDecl):
-                self.diag.emit(NotAPackageError(d.name, d.loc))
+                self.diag.emit(NotAPackageError(pkg_name, d.loc))
                 d.ref_ty = None
             elif (pkg := import_pkg.pkg.ref_pkg) is None:
                 # no need to raise error
                 d.ref_ty = None
             elif (decl := pkg.decls.get(decl_name)) is None:
-                self.diag.emit(DeclNotExistError(d.name, d.loc))
+                self.diag.emit(DeclNotExistError(decl_name, d.loc))
                 d.ref_ty = None
             elif not isinstance(decl, TypeDecl):
-                self.diag.emit(NotATypeError(d.name, d.loc))
+                self.diag.emit(NotATypeError(decl_name, d.loc))
                 d.ref_ty = None
             else:
                 d.ref_ty = decl
@@ -231,13 +231,13 @@ class _ResolveImportsPass(RecursiveTypeVisitor):
             if isinstance(decl := self._pkg.decls.get(decl_name), TypeDecl):
                 d.ref_ty = decl
             elif decl:
-                self.diag.emit(NotATypeError(d.name, d.loc))
+                self.diag.emit(NotATypeError(decl_name, d.loc))
                 d.ref_ty = None
             elif (import_decl := self._pkg.imports.get(decl_name)) is None:
-                self.diag.emit(DeclarationNotInScopeError(d.name, d.loc))
+                self.diag.emit(DeclarationNotInScopeError(decl_name, d.loc))
                 d.ref_ty = None
             elif not isinstance(import_decl, DeclarationImportDecl):
-                self.diag.emit(NotADeclarationError(d.name, d.loc))
+                self.diag.emit(NotADeclarationError(decl_name, d.loc))
                 d.ref_ty = None
             elif (decl := import_decl.decl.ref_decl) is None:
                 # no need to raise error
