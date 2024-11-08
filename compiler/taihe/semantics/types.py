@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from enum import Enum, IntFlag, auto
+from itertools import chain
 from typing import TYPE_CHECKING, Any, Optional, Protocol
 
 if TYPE_CHECKING:
@@ -22,6 +23,30 @@ class TypeAlike(Protocol):
     """
 
     def _accept(self, v: "TypeVisitor") -> Any: ...
+
+
+class TypeQualifier(IntFlag):
+    NONE = 0
+    MUT = auto()
+
+    def describe(self, type_name: str = "") -> str:
+        """Describes a qualifier, optionally with a type name.
+
+        Example:
+        ```
+        # Describe the qualifier itself.
+        NONE.describe() == ''
+        MUT.describe() == 'mut'
+
+        # Describe the qualifier itself.
+        MUT.describe('int') == 'mut int'
+        ```
+        """
+        # field.name is always str instead of None. Skip type checking below.
+        segments = (f.name.lower() for f in self)  # type: ignore
+        if type_name:
+            segments = chain(segments, (type_name,))
+        return " ".join(segments)
 
 
 class Type(TypeAlike):
@@ -56,11 +81,6 @@ class TypeRef(TypeAlike):
             return f"<type-ref to {self.ref_ty!r}>"
         else:
             return f"<type-ref ??? {self.name!r}>"
-
-
-class TypeQualifier(IntFlag):
-    NONE = 0
-    MUT = auto()
 
 
 @dataclass
