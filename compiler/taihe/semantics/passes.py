@@ -1,6 +1,10 @@
+from collections.abc import Sequence
+from typing import Any
+
 from typing_extensions import override
 
 from taihe.semantics.declarations import (
+    Decl,
     DeclAlike,
     DeclarationImportDecl,
     DeclarationRefDecl,
@@ -29,6 +33,7 @@ from taihe.utils.exceptions import (
     DeclarationNotInScopeError,
     DeclNotExistError,
     DeclRedefDiagError,
+    EnumValueCollisionError,
     NotADeclarationError,
     NotAPackageError,
     NotATypeError,
@@ -152,8 +157,8 @@ class _PrettyPrinter(DeclVisitor):
 class _ResolveImportsPass(RecursiveTypeVisitor):
     diag: DiagnosticsManager
 
-    def __init__(self, pm: PackageGroup, diag: DiagnosticsManager):
-        self._pkg_group = pm
+    def __init__(self, diag: DiagnosticsManager):
+        self._current_package_group = None
         self._current_package = None  # Always points to the current package.
         self.diag = diag
 
@@ -162,10 +167,22 @@ class _ResolveImportsPass(RecursiveTypeVisitor):
         assert self._current_package
         return self._current_package
 
+    @property
+    def _pkg_group(self) -> PackageGroup:
+        assert self._current_package_group
+        return self._current_package_group
+
     @override
     def visit_package(self, p: Package):
         self._current_package = p
-        return super().visit_package(p)
+        super().visit_package(p)
+        self._current_package = None
+
+    @override
+    def visit_package_group(self, g: PackageGroup):
+        self._current_package_group = g
+        super().visit_package_group(g)
+        self._current_package_group = None
 
     @override
     def visit_package_import_decl(self, d: PackageImportDecl):
@@ -259,15 +276,15 @@ def pretty_print(x: DeclAlike) -> str:
 
 def resolve_types(pg: PackageGroup, diag: DiagnosticsManager):
     """Replaces UnresolvedType with the corresponding type."""
-    p = _ResolveImportsPass(pg, diag)
-    p.handle_decl(pg)
+    _ResolveImportsPass(diag).handle_decl(pg)
     check_decl_redefine(pg, diag)
     check_recursive_inclusion(pg, diag)
     check_sym_confilct_namespace(pg, diag)
-    QualifierChecker(diag).handle_decl(pg)
+    _CheckFieldCollisionErrorPass(diag).handle_decl(pg)
+    _CheckQualifierErrorPass(diag).handle_decl(pg)
 
 
-class QualifierChecker(DeclVisitor):
+class _CheckQualifierErrorPass(DeclVisitor):
     diag: DiagnosticsManager
 
     def __init__(self, diag: DiagnosticsManager):
@@ -278,6 +295,50 @@ class QualifierChecker(DeclVisitor):
         if d.qual_ty.qual:
             if not isinstance(d.qual_ty.inner_ty.ref_ty, StructDecl):
                 self.diag.emit(QualifierError(d, d.qual_ty.inner_ty.name))
+
+
+class _CheckFieldCollisionErrorPass(DeclVisitor):
+    diag: DiagnosticsManager
+
+    def __init__(self, diag: DiagnosticsManager):
+        self.diag = diag
+
+    @override
+    def visit_enum_decl(self, d: EnumDecl) -> Any:
+        check_field_name_collision(self.diag, d.items)
+        check_field_value_collision(self.diag, d.items)
+
+    @override
+    def visit_func_decl(self, d: FuncDecl) -> Any:
+        check_field_name_collision(self.diag, d.params)
+
+    @override
+    def visit_struct_decl(self, d: StructDecl) -> Any:
+        check_field_name_collision(self.diag, d.fields)
+
+
+def check_field_name_collision(
+    diag: DiagnosticsManager,
+    items: Sequence[Decl],
+):
+    symbol = {}
+    for f in items:
+        if prev := symbol.get(f.name):
+            diag.emit(DeclRedefDiagError(prev, f))
+        else:
+            symbol[f.name] = f
+
+
+def check_field_value_collision(
+    diag: DiagnosticsManager,
+    items: Sequence[EnumItemDecl],
+):
+    symbol = {}
+    for f in items:
+        if prev := symbol.get(f.value):
+            diag.emit(EnumValueCollisionError(prev, f, f.value))
+        else:
+            symbol[f.value] = f
 
 
 def check_sym_confilct_namespace(pg: PackageGroup, diag: DiagnosticsManager):

@@ -1,5 +1,5 @@
 from collections.abc import Iterable
-from typing import Optional, Union
+from typing import Optional
 
 from typing_extensions import override
 
@@ -9,15 +9,12 @@ from taihe.semantics.declarations import (
     DeclarationImportDecl,
     DeclarationRefDecl,
     EnumDecl,
-    EnumItemDecl,
     FuncDecl,
     ImportDecl,
     Package,
     PackageImportDecl,
     PackageRefDecl,
-    ParamDecl,
     StructDecl,
-    StructFieldDecl,
     TypeRefDecl,
 )
 from taihe.semantics.types import (
@@ -26,11 +23,7 @@ from taihe.semantics.types import (
     TypeQualifier,
 )
 from taihe.utils.diagnostics import DiagnosticsManager
-from taihe.utils.exceptions import (
-    DeclRedefDiagError,
-    EnumValueCollisionError,
-    TypeNotExistError,
-)
+from taihe.utils.exceptions import TypeNotExistError
 from taihe.utils.sources import SourceBase, SourceBuffer, SourceFile, SourceLocation
 
 
@@ -127,27 +120,6 @@ def eval_int_expr(node: ast.IntExpr) -> int:
         )
 
 
-def check_DeclRefDiagError(
-    diag: DiagnosticsManager,
-    items: Union[list[ParamDecl], list[EnumItemDecl], list[StructFieldDecl]],
-):
-    symbol = {}
-    for f in items:
-        if prev := symbol.get(f.name, None):
-            diag.emit(DeclRedefDiagError(prev, f))
-        else:
-            symbol[f.name] = f
-
-
-def check_EnumValueCollisionError(diag: DiagnosticsManager, items: list[EnumItemDecl]):
-    symbol = {}
-    for f in items:
-        if prev := symbol.get(f.value, None):
-            diag.emit(EnumValueCollisionError(prev, f, f.value))
-        else:
-            symbol[f.value] = f
-
-
 class AstConverter(Visitor):
     """Converts a node on AST to the intermetiade representation.
 
@@ -197,31 +169,30 @@ class AstConverter(Visitor):
     @override
     def visit_Struct(self, node: ast.Struct) -> Optional[StructDecl]:
         d = StructDecl(str(node.name), loc=self.loc(node.name))
-        no_error = self.diag.for_each(
-            node.fields,
-            lambda f: d.add_field(
-                str(f.name), self.visit(f.type), loc=self.loc(f.name)
-            ),
-        )
-        check_DeclRefDiagError(self.diag, d.fields)
-        if no_error:
-            return d
+
+        def add_field(f):
+            d.add_field(str(f.name), self.visit(f.type), loc=self.loc(f.name))
+
+        self.diag.for_each(node.fields, add_field)
+        return d
 
     @override
     def visit_Enum(self, node: ast.Enum) -> Optional[EnumDecl]:
-        decl = EnumDecl(str(node.name), loc=self.loc(node.name))
+        d = EnumDecl(str(node.name), loc=self.loc(node.name))
         next_value = 0
-        for node_item in node.fields:
-            if node_item.expr:
-                v = eval_int_expr(node_item.expr)
+
+        def add_item(f):
+            nonlocal next_value
+            if f.expr:
+                v = eval_int_expr(f.expr)
                 next_value = v + 1
             else:
                 v = next_value
                 next_value += 1
-            decl.add_item(str(node_item.name), v, loc=self.loc(node_item.name))
-        check_DeclRefDiagError(self.diag, decl.items)
-        check_EnumValueCollisionError(self.diag, decl.items)
-        return decl
+            d.add_item(str(f.name), v, loc=self.loc(f.name))
+
+        self.diag.for_each(node.fields, add_item)
+        return d
 
     @override
     def visit_QualifiedType(self, node: ast.QualifiedType) -> QualifiedType:
@@ -236,15 +207,12 @@ class AstConverter(Visitor):
     @override
     def visit_Function(self, node: ast.Function) -> Optional[FuncDecl]:
         f = FuncDecl(str(node.name), loc=self.loc(node.name))
-        no_error = self.diag.for_each(
-            node.parameters,
-            lambda p: f.add_param(
-                str(p.name), self.visit(p.param_type), loc=self.loc(p.name)
-            ),
-        )
-        check_DeclRefDiagError(self.diag, f.params)
-        if no_error:
-            return f
+
+        def add_param(p):
+            f.add_param(str(p.name), self.visit(p.param_type), loc=self.loc(p.name))
+
+        self.diag.for_each(node.parameters, add_param)
+        return f
 
     @override
     def visit_UsePackage(self, node: ast.UsePackage) -> Iterable[PackageImportDecl]:
