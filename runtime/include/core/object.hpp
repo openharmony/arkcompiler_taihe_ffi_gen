@@ -5,6 +5,7 @@
 #include <taihe/common.hpp>
 #include <taihe/object.abi.h>
 
+namespace taihe::core {
 struct InterfaceMapItem {
     void const *iid;
     void const *pvtbl;
@@ -238,3 +239,4 @@ struct Ref : FatPtr {
 
     Ref<FatPtr> &operator=(Ref<FatPtr> other) = delete;
 };
+}
