@@ -20,8 +20,7 @@ aliasPair
 specField
     : KW_STRUCT token_name = ID LEFT_BRACE (StructFieldLst_fields += structField)* RIGHT_BRACE # struct
     | KW_ENUM token_name = ID LEFT_BRACE (EnumFieldLst_fields += enumField)+ RIGHT_BRACE # enum
-    | KW_INTERFACE token_name = ID (KW_EXTENDS tokenLst_extends += ID (COMMA tokenLst_extends += ID)*)? LEFT_BRACE (InterfaceFieldLst_fields += interfaceField)* RIGHT_BRACE # interface
-    | KW_RUNTIMECLASS token_name = ID (KW_INHERITS tokenLst_inherits += ID)? (KW_IMPLEMENTS tokenLst_implements += ID (COMMA tokenLst_implements += ID)*)? LEFT_BRACE (RuntimeclassFieldLst_fields += runtimeclassField)* RIGHT_BRACE # runtimeclass
+    | KW_INTERFACE token_name = ID (COLON tokenLst_extends += ID (COMMA tokenLst_extends += ID)*)? LEFT_BRACE (InterfaceFieldLst_fields += interfaceField)* RIGHT_BRACE # interface
     | KW_FUNCTION token_name = ID LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS COLON
         (LEFT_PARENTHESIS (TypeLst_return_types += type (COMMA TypeLst_return_types += type)*)? RIGHT_PARENTHESIS | TypeLst_return_types += type) SEMICOLON # function
     ;
@@ -36,13 +35,7 @@ enumField
 
 interfaceField
     : (tokenOpt_static = KW_STATIC)? KW_FUNCTION token_name = ID LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS COLON
-        (LEFT_PARENTHESIS (TypeLst_return_types += type (COMMA TypeLst_return_types += type)*)? RIGHT_PARENTHESIS | TypeLst_return_types += type) SEMICOLON # interfaceFunction
-    ;
-
-runtimeclassField
-    : (tokenOpt_static = KW_STATIC)? KW_FUNCTION token_name = ID LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS COLON
-        (LEFT_PARENTHESIS (TypeLst_return_types += type (COMMA TypeLst_return_types += type)*)? RIGHT_PARENTHESIS | TypeLst_return_types += type) SEMICOLON # runtimeclassFunction
-    | KW_CONSTRUCTOR LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS SEMICOLON # constructor
+        (LEFT_PARENTHESIS (QualifiedTypeLst_return_types += qualifiedType (COMMA QualifiedTypeLst_return_types += qualifiedType)*)? RIGHT_PARENTHESIS | QualifiedTypeLst_return_types += qualifiedType) SEMICOLON # interfaceFunction
     ;
 
 parameter
@@ -62,7 +55,7 @@ type
     | (tokenLst_pkname += ID DOT)* token_name = ID # userType
     | token_name = ID LEFT_PARENTHESIS (TypeLst_parameters += type (COMMA TypeLst_parameters += type)*)? RIGHT_PARENTHESIS # genericType
     | <assoc = right> LEFT_PARENTHESIS ((QualifiedTypeLst_param_types += qualifiedType) (COMMA QualifiedTypeLst_param_types += qualifiedType)*)? RIGHT_PARENTHESIS ARROW
-        (LEFT_BRACKET (TypeLst_return_types += type (COMMA TypeLst_return_types += type)*)? RIGHT_BRACKET | TypeLst_return_types += type) # functionType
+        (LEFT_BRACKET (QualifiedTypeLst_return_types += qualifiedType (COMMA QualifiedTypeLst_return_types += qualifiedType)*)? RIGHT_BRACKET | QualifiedTypeLst_return_types += qualifiedType) # functionType
     ;
 
 ////////////////
@@ -246,18 +239,6 @@ KW_FROM
     : 'from'
     ;
 
-KW_IMPLEMENTS
-    : 'implements'
-    ;
-
-KW_EXTENDS
-    : 'extends'
-    ;
-
-KW_INHERITS
-    : 'inherits'
-    ;
-
 KW_STATIC
     : 'static'
     ;
@@ -274,16 +255,8 @@ KW_ENUM
     : 'enum'
     ;
 
-KW_UNION
-    : 'union'
-    ;
-
 KW_STRUCT
     : 'struct'
-    ;
-
-KW_RUNTIMECLASS
-    : 'runtimeclass'
     ;
 
 KW_INTERFACE
@@ -344,10 +317,6 @@ KW_BOOL
 
 KW_STRING
     : 'String'
-    ;
-
-KW_ARRAY
-    : 'Array'
     ;
 
 STRING_LITERAL
