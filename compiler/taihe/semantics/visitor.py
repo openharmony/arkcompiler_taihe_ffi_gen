@@ -1,13 +1,14 @@
 """Implements the classic visitor pattern for core types.
 
-In most cases, you need to call `Visitor.handle`.
+In most cases, you need to call `Visitor.handle_{type,decl}`.
 
 Design:
-- Each visitable type implements the "_accept_{ty,decl}" method, which delegates to
-    the corresponding `VisitorBase.visit_xxx` method.
+- Each visitable type implements the "_accept" method, which delegates to the
+    corresponding `VisitorBase.visit_xxx` method.
 - `VisitorBase.visit_xxx` implements the default logic for each type.
-    1. Calls `node._traverse` to visit the "children" nodes.
-    2. Calls `self.visit_super_type` to bubble up towards the base type inside the type hierarchy.
+    1. Calls `node._traverse` to visit the "children" nodes for declarations.
+    2. Calls `self.visit_super_type` to bubble up towards the base type inside
+    the type hierarchy.
 - The `VisitorBase.visit_{type,decl}` is the "root" of the type hierarchy.
 """
 
@@ -42,16 +43,17 @@ from taihe.semantics.types import (
 
 
 class TypeVisitor:
-    """Visits types and its base classes along the type hierarchy.
+    """Visits types along the type hierarchy.
 
-    Error prone cases:
-    visit_type_ref_decl() -> visit_type_ref() -> handle_type(type_ref.ref_ty)
-    visit_qualified_type() -> handle_type(qualty.inner_ty)
+    `TypeVisitor` traverses the type hierarchy in a linear fashion, visiting
+    each type and its base types. It does NOT recursively visit the
+    declarations within a type (e.g., enum items, record fields).
 
-    Note that a TypeVisitor does not visit the declaration.
-    In other words:
-    TypeVisitor: visit_enum_decl() -> visit_type_decl() -> visit_type()
-    DeclVisitor: visit_enum_decl() -> traverse() -> visit_enum_item_decl()
+    Contrast with `DeclVisitor`:
+    - **`TypeVisitor`**: Focuses on the type hierarchy.
+        - Example: `visit_enum_decl()` -> `visit_type_decl()` -> `visit_type()`
+    - **`DeclVisitor`**: Traverses the declaration tree.
+        - Example: `visit_enum_decl()` -> `EnumDecl._traverse()` -> `visit_enum_item_decl()`
     """
 
     visiting: Any
@@ -105,6 +107,14 @@ class TypeVisitor:
 
 
 class DeclVisitor:
+    """Traverses a declaration and its child declarations, also traversing the type hierarchy.
+
+    `DeclVisitor` explores the declaration tree, visiting each declaration and
+    its children, while also ascending the type hierarchy.
+
+    See the documentation of `TypeVisitor` for comparison.
+    """
+
     visiting: Any
     """The current node being visited. Only for debug use."""
 
@@ -192,15 +202,21 @@ class DeclVisitor:
 
 
 class RecursiveTypeVisitor(DeclVisitor, TypeVisitor):
-    """Visits declarations first, optionally descent into types.
+    """Visits declarations and the types referenced by the declarations.
 
-    Special case:
-       DeclVisitor.visit_param_decl(param)
+    `RecursiveTypeVisitor` combines the behavior of both `DeclVisitor` and
+    `TypeVisitor`. It traverses the declaration tree, visiting each
+    declaration, and then, for each type referenced within a declaration, it
+    descends into the type hierarchy. However, it does not recursively visit
+    the child types of type declarations (e.g., the fields of a struct).
+
+    **Example:**
+
+    DeclVisitor.visit_param_decl(param)
     -> RecursiveTypeVisitor.handle_type(param.ty)
-    -> TypeVisitor.visit_qualified_type(param.ty)
-    -> RecursiveTypeVisitor.handle_type(param.ty.inner_ty)
-    -> TypeVisitor.visit_type_ref_decl(param.ty.inner_ty)
-    -> RecursiveTypeVisitor.handle_type(param.ty.inner_ty.ref_ty)
+    -> DeclVisitor.visit_type_ref_decl(param.ty)
+    -> RecursiveTypeVisitor.handle_type(param.ty.ref_ty)
+    -> return (assuming that param.ty.ref_ty is a StructDecl)
     """
 
     def handle_type(self, t: TypeAlike) -> Any:
