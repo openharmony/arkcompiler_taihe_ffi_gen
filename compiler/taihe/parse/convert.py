@@ -19,7 +19,6 @@ from taihe.semantics.declarations import (
 )
 from taihe.semantics.types import (
     BuiltinType,
-    QualifiedType,
     TypeQualifier,
 )
 from taihe.utils.diagnostics import DiagnosticsManager
@@ -195,14 +194,13 @@ class AstConverter(Visitor):
         return d
 
     @override
-    def visit_QualifiedType(self, node: ast.QualifiedType) -> QualifiedType:
-        qual = TypeQualifier.NONE
-        if node.mut:
-            qual |= TypeQualifier.MUT
-
+    def visit_QualifiedType(self, node: ast.QualifiedType) -> TypeRefDecl:
         ty = self.visit(node.type)
         assert isinstance(ty, TypeRefDecl)
-        return QualifiedType(ty, qual)
+
+        if node.mut:
+            ty.qual |= TypeQualifier.MUT
+        return ty
 
     @override
     def visit_Function(self, node: ast.Function) -> Optional[FuncDecl]:

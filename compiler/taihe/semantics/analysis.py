@@ -166,9 +166,9 @@ class _CheckQualifierErrorPass(DeclVisitor):
 
     @override
     def visit_param_decl(self, d: ParamDecl):
-        if d.qual_ty.qual:
-            if not isinstance(d.qual_ty.inner_ty.ref_ty, StructDecl):
-                self.diag.emit(QualifierError(d, d.qual_ty.inner_ty.name))
+        if d.ty.qual:
+            if not isinstance(d.ty.ref_ty, StructDecl):
+                self.diag.emit(QualifierError(d, d.ty.name))
 
 
 class _CheckFieldCollisionErrorPass(DeclVisitor):

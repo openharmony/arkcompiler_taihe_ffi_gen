@@ -6,7 +6,12 @@ from typing import TYPE_CHECKING, Any, ClassVar, Optional, Protocol
 
 from typing_extensions import override
 
-from taihe.semantics.types import VOID, QualifiedType, Type, TypeRef
+from taihe.semantics.types import (
+    VOID,
+    Type,
+    TypeAlike,
+    TypeQualifier,
+)
 from taihe.utils.exceptions import DeclRedefDiagError
 from taihe.utils.sources import SourceLocation
 
@@ -65,17 +70,39 @@ class Decl(ABC, DeclAlike):
         return f"{self.__class__.__qualname__}<{self.name!r} in {self.parent}>"
 
 
-class TypeRefDecl(Decl, TypeRef):
-    """Represents a reference to type. TypeRefDecl is NOT a TypeDecl!"""
+class TypeRefDecl(Decl, TypeAlike):
+    """Repersents a reference to a `Type`.
+
+    Each user of a `Type` must be encapsulated in a `TypeRefDecl`.
+    Also, `TypeRefDecl` is NOT a `TypeDecl`.
+    In other words, `TypeRefDecl` is a pointer, instead of a declaration.
+
+    For example:
+    ```
+    struct Foo { ... }.     // `Foo` is a `TypeDecl`.
+
+    fn func(foo: mut Foo);  // `Foo` is `TypeRefDecl(ref_ty=TypeDecl('Foo'), qual=MUT)`.
+    fn func(foo: BadType);  // `BadType` is `TypeRefDecl(ref_ty=None)`.
+    ```
+    """
 
     KIND = "type reference"
 
     parent: Optional["Decl"] = None
+    ref_ty: Optional[Type] = None
+    qual: TypeQualifier
 
-    def __init__(self, name: str, ref_ty: Optional[Type] = None, **kwargs):
+    def __init__(
+        self,
+        name: str,
+        ref_ty: Optional[Type] = None,
+        qual: TypeQualifier = TypeQualifier.NONE,
+        **kwargs,
+    ):
         super().__init__(name, **kwargs)
         self.ref_ty = ref_ty
         self.resolved = ref_ty is not None
+        self.qual = qual
 
     def _accept(self, v: "DeclVisitor | TypeVisitor") -> Any:
         v.visiting = self
@@ -86,7 +113,8 @@ class TypeRefDecl(Decl, TypeRef):
             return v.handle_type(self.ref_ty)
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__qualname__}<{self.name!r} to {self.ref_ty}>"
+        ref_str = repr(self.ref_ty) if self.ref_ty else f"??? {self.name!r}"
+        return f"<type-ref to {self.qual.describe(ref_str)}>"
 
 
 class ImportDecl(Decl):
@@ -200,13 +228,13 @@ class DeclarationImportDecl(ImportDecl):
 class ParamDecl(Decl):
     KIND = "function parameter"
 
-    qual_ty: QualifiedType
+    ty: TypeRefDecl
     # type: ignore (already set with Decl.__init__)
     parent: Optional["FuncDecl"]
 
-    def __init__(self, name: str, ty: QualifiedType | TypeRef, **kwargs):
+    def __init__(self, name: str, ty: TypeRefDecl, **kwargs):
         super().__init__(name, **kwargs)
-        self.qual_ty = ty if isinstance(ty, QualifiedType) else QualifiedType(ty)
+        self.ty = ty
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
@@ -214,21 +242,21 @@ class ParamDecl(Decl):
         return v.visit_param_decl(self)
 
     def _traverse(self, v: "DeclVisitor"):
-        v.handle_type(self.qual_ty)
+        v.handle_type(self.ty)
 
 
 class FuncDecl(Decl):
     KIND = "function"
 
     params: list[ParamDecl]
-    return_ty: TypeRef
+    return_ty: TypeRefDecl
     # type: ignore (already set with Decl.__init__)
     parent: Optional["Package"]
 
     def __init__(self, name: str, **kwargs):
         super().__init__(name, **kwargs)
         self.params = []
-        self.return_ty = TypeRef("void", VOID)
+        self.return_ty = TypeRefDecl(VOID.name, VOID)
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
@@ -241,7 +269,7 @@ class FuncDecl(Decl):
             p._accept(v)
         v.handle_type(self.return_ty)
 
-    def add_param(self, name: str, ty: QualifiedType | TypeRef, **kwargs):
+    def add_param(self, name: str, ty: TypeRefDecl, **kwargs):
         param = ParamDecl(name, ty, parent=self, **kwargs)
         self.params.append(param)
 
@@ -297,10 +325,10 @@ class EnumDecl(TypeDecl):
 class StructFieldDecl(Decl):
     KIND = "struct field"
 
-    ty: TypeRef
+    ty: TypeRefDecl
     parent: Optional["StructDecl"] = None
 
-    def __init__(self, name: str, ty: TypeRef, **kwargs):
+    def __init__(self, name: str, ty: TypeRefDecl, **kwargs):
         super().__init__(name, **kwargs)
         self.ty = ty
 
@@ -331,7 +359,7 @@ class StructDecl(TypeDecl):
             v.visiting = f
             f._accept(v)
 
-    def add_field(self, name: str, ty: TypeRef, **kwargs):
+    def add_field(self, name: str, ty: TypeRefDecl, **kwargs):
         f = StructFieldDecl(name, ty, parent=self, **kwargs)
         self.fields.append(f)
 

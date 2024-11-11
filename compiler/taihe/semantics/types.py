@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from enum import Enum, IntFlag, auto
+from itertools import chain
 from typing import TYPE_CHECKING, Any, Optional, Protocol
 
 if TYPE_CHECKING:
@@ -18,62 +19,47 @@ class TypeAlike(Protocol):
     This protocol defines a single method, `_accept`, which is used by `TypeVisitor` instances
     to traverse and process instances of classes conforming to this protocol.
 
-    Notable implementors to this protocol are type containers, i.e. `QualifiedType` and `TypeRef`.
-    """
-
-    def _accept(self, v: "TypeVisitor") -> Any: ...
-
-
-class Type(TypeAlike):
-    """Represents a concrete type."""
-
-
-@dataclass
-class TypeRef(TypeAlike):
-    """Repersents a user of a `Type`.
-
-    Each user of a `Type` must be encapsulated in a `TypeRef`.
-
-    For example:
-    ```
-    struct Foo { ... }.     // `Foo` is a `TypeDecl`.
-
-    fn func(foo: Foo);      // `Foo` is a `TypeRef`, which points to `Foo`.
-    fn func(foo: BadType);  // `BadType` is a `TypeRef`, which points to `None`.
-    ```
+    Notable implementors to this protocol is `TypeRefDecl`.
     """
 
     name: str
-    ref_ty: Optional[Type] = None
-    resolved: bool = False
 
-    def _accept(self, v: "TypeVisitor") -> Any:
-        v.visiting = self
-        return v.visit_type_ref(self)
-
-    def __repr__(self) -> str:
-        if self.ref_ty:
-            return f"<type-ref to {self.ref_ty!r}>"
-        else:
-            return f"<type-ref ??? {self.name!r}>"
+    def _accept(self, v: "TypeVisitor") -> Any: ...
 
 
 class TypeQualifier(IntFlag):
     NONE = 0
     MUT = auto()
 
+    def describe(self, type_name: str = "") -> str:
+        """Describes a qualifier, optionally with a type name.
 
-@dataclass
-class QualifiedType(TypeAlike):
-    inner_ty: TypeRef
-    qual: TypeQualifier = TypeQualifier.NONE
+        Example:
+        ```
+        # Describe the qualifier itself.
+        NONE.describe() == ''
+        MUT.describe() == 'mut'
 
-    def _accept(self, v: "TypeVisitor") -> Any:
-        v.visiting = self
-        return v.visit_qualified_type(self)
+        # Describe the qualifier itself.
+        MUT.describe('int') == 'mut int'
+        ```
+        """
+        # field.name is always str instead of None. Skip type checking below.
+        segments = (f.name.lower() for f in self)  # type: ignore
+        if type_name:
+            segments = chain(segments, (type_name,))
+        return " ".join(segments)
 
-    def __repr__(self) -> str:
-        return f"<type-qual {self.qual.name!r} {self.inner_ty!r}>"
+
+# type: ignore
+#
+# Message:
+#   Uninitialized attribute [13]: Attribute `name` inherited from protocol
+#   `TypeAlike` in class `Type` to have type `str` but is never initialized.
+#
+# Reason: always implemented by subclasses.
+class Type(TypeAlike):
+    """Represents a concrete type."""
 
 
 ##################
