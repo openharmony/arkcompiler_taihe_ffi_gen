@@ -38,7 +38,6 @@ from taihe.semantics.types import (
     SpecialType,
     Type,
     TypeAlike,
-    TypeRef,
 )
 
 
@@ -78,9 +77,9 @@ class TypeVisitor:
 
     ### Non-`Type`s ###
 
-    def visit_type_ref(self, t: TypeRef) -> Any:
-        if t.ref_ty:
-            return self.handle_type(t.ref_ty)
+    def visit_type_ref_decl(self, d: TypeRefDecl) -> Any:
+        if d.ref_ty:
+            return self.handle_type(d.ref_ty)
 
     ### Built-in types ###
 
@@ -103,10 +102,6 @@ class TypeVisitor:
 
     def visit_enum_decl(self, d: EnumDecl) -> Any:
         return self.visit_type_decl(d)
-
-    def visit_type_ref_decl(self, d: TypeRefDecl) -> Any:
-        # pyre-fixme[6]: For 1st argument expected `TypeRef` but got `TypeRefDecl`.
-        return self.visit_type_ref(d)
 
 
 class DeclVisitor:

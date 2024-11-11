@@ -62,36 +62,6 @@ class Type(TypeAlike):
     """Represents a concrete type."""
 
 
-@dataclass
-class TypeRef(TypeAlike):
-    """Repersents a user of a `Type`.
-
-    Each user of a `Type` must be encapsulated in a `TypeRef`.
-
-    For example:
-    ```
-    struct Foo { ... }.     // `Foo` is a `TypeDecl`.
-
-    fn func(foo: Foo);      // `Foo` is a `TypeRef`, which points to `Foo`.
-    fn func(foo: BadType);  // `BadType` is a `TypeRef`, which points to `None`.
-    ```
-    """
-
-    name: str
-    ref_ty: Optional[Type] = None
-    resolved: bool = False
-
-    def _accept(self, v: "TypeVisitor") -> Any:
-        v.visiting = self
-        return v.visit_type_ref(self)
-
-    def __repr__(self) -> str:
-        if self.ref_ty:
-            return f"<type-ref to {self.ref_ty!r}>"
-        else:
-            return f"<type-ref ??? {self.name!r}>"
-
-
 ##################
 # Built-in Types #
 ##################

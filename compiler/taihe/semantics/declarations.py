@@ -11,7 +11,6 @@ from taihe.semantics.types import (
     Type,
     TypeAlike,
     TypeQualifier,
-    TypeRef,
 )
 from taihe.utils.exceptions import DeclRedefDiagError
 from taihe.utils.sources import SourceLocation
@@ -250,14 +249,14 @@ class FuncDecl(Decl):
     KIND = "function"
 
     params: list[ParamDecl]
-    return_ty: TypeRef
+    return_ty: TypeRefDecl
     # type: ignore (already set with Decl.__init__)
     parent: Optional["Package"]
 
     def __init__(self, name: str, **kwargs):
         super().__init__(name, **kwargs)
         self.params = []
-        self.return_ty = TypeRef("void", VOID)
+        self.return_ty = TypeRefDecl(VOID.name, VOID)
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
@@ -326,10 +325,10 @@ class EnumDecl(TypeDecl):
 class StructFieldDecl(Decl):
     KIND = "struct field"
 
-    ty: TypeRef
+    ty: TypeRefDecl
     parent: Optional["StructDecl"] = None
 
-    def __init__(self, name: str, ty: TypeRef, **kwargs):
+    def __init__(self, name: str, ty: TypeRefDecl, **kwargs):
         super().__init__(name, **kwargs)
         self.ty = ty
 
@@ -360,7 +359,7 @@ class StructDecl(TypeDecl):
             v.visiting = f
             f._accept(v)
 
-    def add_field(self, name: str, ty: TypeRef, **kwargs):
+    def add_field(self, name: str, ty: TypeRefDecl, **kwargs):
         f = StructFieldDecl(name, ty, parent=self, **kwargs)
         self.fields.append(f)
 
