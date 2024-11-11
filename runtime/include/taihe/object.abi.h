@@ -37,14 +37,14 @@ struct TObject {
 // # Members
 // - `version`: A 64-bit unsigned integer representing the version of the type information.
 // - `len`: Size of the type information in bytes.
-// - `inside_func_len`: Size of inside functions.
+// - `pre_idmap_func_count`: Size of inside functions.
 // - `addref`: Function pointer to a addref function for `TObject`.
 // - `release`: Function pointer to a release function for `TObject`.
 // - `idmap`: A flexible array of `IdMapItem` structures for ID-to-vtable mapping.
 struct TypeInfo {
   uint64_t version;
   uint32_t len;
-  uint32_t inside_func_len;
+  uint32_t pre_idmap_func_count;
   void (*free_data)(struct TObject);
   struct IdMapItem idmap[0];
 };
