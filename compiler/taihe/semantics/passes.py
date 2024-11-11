@@ -170,34 +170,34 @@ class _ResolveImportsPass(RecursiveTypeVisitor):
     @override
     def visit_package_import_decl(self, d: PackageImportDecl):
         if not d.pkg.resolved:
-            if (pkg := self._pkg_group.lookup(d.pkg.name)) is None:
+            if pkg := self._pkg_group.lookup(d.pkg.name):
+                d.pkg.ref_pkg = pkg
+            else:
                 self.diag.emit(PackageNotExistError(d.pkg.name, d.pkg.loc))
                 d.pkg.ref_pkg = None
-            else:
-                d.pkg.ref_pkg = pkg
             d.pkg.resolved = True
 
     @override
     def visit_decl_import_decl(self, d: DeclarationImportDecl):
         if not d.decl.resolved:
             if not d.pkg.resolved:
-                if (pkg := self._pkg_group.lookup(d.pkg.name)) is None:
+                if pkg := self._pkg_group.lookup(d.pkg.name):
+                    d.pkg.ref_pkg = pkg
+                else:
                     self.diag.emit(PackageNotExistError(d.pkg.name, d.pkg.loc))
                     d.pkg.ref_pkg = None
-                else:
-                    d.pkg.ref_pkg = pkg
                 d.pkg.resolved = True
             if (pkg := d.pkg.ref_pkg) is None:
                 # no need to raise error
                 d.decl.ref_decl = None
-            elif (decl := pkg.decls.get(d.decl.name)) is None:
-                self.diag.emit(DeclNotExistError(d.decl.name, d.decl.loc))
-                d.decl.ref_decl = None
-            elif not isinstance(decl, TypeDecl):
+            elif isinstance(decl := pkg.decls.get(d.decl.name), TypeDecl):
+                d.decl.ref_decl = decl
+            elif decl:
                 self.diag.emit(NotATypeError(d.decl.name, d.decl.loc))
                 d.decl.ref_decl = None
             else:
-                d.decl.ref_decl = decl
+                self.diag.emit(DeclNotExistError(d.decl.name, d.decl.loc))
+                d.decl.ref_decl = None
         d.pkg.resolved = True
 
     def visit_type_ref_decl(self, d: TypeRefDecl):
@@ -217,14 +217,14 @@ class _ResolveImportsPass(RecursiveTypeVisitor):
             elif (pkg := import_pkg.pkg.ref_pkg) is None:
                 # no need to raise error
                 d.ref_ty = None
-            elif (decl := pkg.decls.get(decl_name)) is None:
-                self.diag.emit(DeclNotExistError(decl_name, d.loc))
-                d.ref_ty = None
-            elif not isinstance(decl, TypeDecl):
+            elif isinstance(decl := pkg.decls.get(decl_name), TypeDecl):
+                d.ref_ty = decl
+            elif decl:
                 self.diag.emit(NotATypeError(decl_name, d.loc))
                 d.ref_ty = None
             else:
-                d.ref_ty = decl
+                self.diag.emit(DeclNotExistError(decl_name, d.loc))
+                d.ref_ty = None
         elif len(xs) == 1:
             # fn foo(x: Bar)
             decl_name = xs[0]
