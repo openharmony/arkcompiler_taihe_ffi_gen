@@ -5,8 +5,9 @@ from pathlib import Path
 from typing import Optional
 
 from taihe.parse.convert import AstConverter
+from taihe.semantics.analysis import analyze_semantics
 from taihe.semantics.declarations import PackageGroup
-from taihe.semantics.passes import pretty_print, resolve_types
+from taihe.semantics.format import pretty_print
 from taihe.utils.diagnostics import DiagnosticsManager
 from taihe.utils.sources import SourceManager
 
@@ -68,7 +69,7 @@ class CompilerInstance:
             self.package_group.add(pkg)
 
     def validate(self):
-        resolve_types(self.package_group, self.diagnostics_manager)
+        analyze_semantics(self.package_group, self.diagnostics_manager)
 
     def generate(self):
         s = pretty_print(self.package_group)
