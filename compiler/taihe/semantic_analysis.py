@@ -46,9 +46,7 @@ class SymbolReplacer(Visitor):
         while node.uses:
             self.visit(node.uses.pop(0))
         for decl in node.fields:
-            if isinstance(
-                decl, ast.Struct | ast.Enum | ast.Runtimeclass | ast.Interface
-            ):
+            if isinstance(decl, ast.Struct | ast.Enum | ast.Interface):
                 meta = decl.name
                 name = meta.text
                 self.using_type_table.setdefault(name, set()).add((self.pktupl, name))
@@ -158,9 +156,7 @@ def symbol_substitute(
     for package in packages:
         type_table = type_tables.setdefault(package.tupl, {})
         for decl in package.spec.fields:
-            if isinstance(
-                decl, ast.Struct | ast.Enum | ast.Runtimeclass | ast.Interface
-            ):
+            if isinstance(decl, ast.Struct | ast.Enum | ast.Interface):
                 type_table.setdefault(decl.name.text, []).append(decl)
 
     # Check for using packages and symbols and perform symbol substitution
@@ -292,7 +288,7 @@ def can_be_mutable(
             return False
         if isinstance(target, ast.Struct):
             return True
-        if isinstance(target, ast.Runtimeclass | ast.Interface):
+        if isinstance(target, ast.Interface):
             return True
         raise NotImplementedError
 

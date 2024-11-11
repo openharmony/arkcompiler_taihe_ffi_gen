@@ -124,7 +124,7 @@ def get_dup_and_drop(
         pkname = tuple(token.text for token in node.pkname)
         name = node.name.text
         target = symbol_tables[pkname][name][0]
-        if isinstance(target, ast.Struct | ast.Interface | ast.Runtimeclass):
+        if isinstance(target, ast.Struct | ast.Interface):
             return (
                 get_abi_name(pkname, name, suffix="__dup"),
                 get_abi_name(pkname, name, suffix="__drop"),
