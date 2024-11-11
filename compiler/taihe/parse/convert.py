@@ -210,6 +210,11 @@ class AstConverter(Visitor):
             f.add_param(str(p.name), self.visit(p.param_type), loc=self.loc(p.name))
 
         self.diag.for_each(node.parameters, add_param)
+
+        def add_return_ty(r):
+            f.add_return_ty(self.visit(r))
+
+        self.diag.for_each(node.return_types, add_return_ty)
         return f
 
     @override

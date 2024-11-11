@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, Optional, Protocol
 from typing_extensions import override
 
 from taihe.semantics.types import (
-    VOID,
     Type,
     TypeAlike,
     TypeQualifier,
@@ -249,14 +248,14 @@ class FuncDecl(Decl):
     KIND = "function"
 
     params: list[ParamDecl]
-    return_ty: TypeRefDecl
+    return_ty: list[TypeRefDecl]
     # type: ignore (already set with Decl.__init__)
     parent: Optional["Package"]
 
     def __init__(self, name: str, **kwargs):
         super().__init__(name, **kwargs)
         self.params = []
-        self.return_ty = TypeRefDecl(VOID.name, VOID)
+        self.return_ty = []
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
@@ -265,13 +264,16 @@ class FuncDecl(Decl):
 
     def _traverse(self, v: "DeclVisitor"):
         for p in self.params:
-            v.visiting = p
-            p._accept(v)
-        v.handle_type(self.return_ty)
+            v.handle_decl(p)
+        for r in self.return_ty:
+            v.handle_type(r)
 
     def add_param(self, name: str, ty: TypeRefDecl, **kwargs):
         param = ParamDecl(name, ty, parent=self, **kwargs)
         self.params.append(param)
+
+    def add_return_ty(self, ty: TypeRefDecl, **kwargs):
+        self.return_ty.append(ty)
 
 
 class TypeDecl(Decl, Type):
@@ -314,8 +316,7 @@ class EnumDecl(TypeDecl):
 
     def _traverse(self, v: "DeclVisitor"):
         for f in self.items:
-            v.visiting = f
-            f._accept(v)
+            v.handle_decl(f)
 
     def add_item(self, name: str, value: int, **kwargs):
         f = EnumItemDecl(name, value, parent=self, **kwargs)
@@ -356,8 +357,7 @@ class StructDecl(TypeDecl):
 
     def _traverse(self, v: "DeclVisitor"):
         for f in self.fields:
-            v.visiting = f
-            f._accept(v)
+            v.handle_decl(f)
 
     def add_field(self, name: str, ty: TypeRefDecl, **kwargs):
         f = StructFieldDecl(name, ty, parent=self, **kwargs)
@@ -403,11 +403,9 @@ class Package:
 
     def _traverse(self, v: "DeclVisitor"):
         for i in self.imports.values():
-            v.visiting = i
-            i._accept(v)
+            v.handle_decl(i)
         for d in self.decls.values():
-            v.visiting = d
-            d._accept(v)
+            v.handle_decl(d)
 
     def _register_to_decl(self, d: Decl):
         if prev := self.decls.get(d.name, None):
@@ -460,8 +458,7 @@ class PackageGroup:
 
     def _traverse(self, v: "DeclVisitor"):
         for p in self.packages:
-            v.visiting = p
-            p._accept(v)
+            v.handle_decl(p)
 
     def lookup(self, name: str) -> Optional["Package"]:
         return self._pkgs.get(name, None)

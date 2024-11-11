@@ -220,11 +220,7 @@ class RecursiveTypeVisitor(DeclVisitor, TypeVisitor):
     """
 
     def handle_type(self, t: TypeAlike) -> Any:
-        if isinstance(t, TypeRefDecl):
-            # From "Type" back to "Decl"
-            return self.visit_type_ref_decl(t)
-        if isinstance(t, Decl):
-            return
+        if isinstance(t, TypeDecl):
+            return DeclVisitor.handle_type(self, t)
         else:
-            # Avoid infinite recursion.
-            return t._accept(self)
+            return TypeVisitor.handle_type(self, t)

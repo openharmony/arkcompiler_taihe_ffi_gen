@@ -18,7 +18,6 @@ from taihe.semantics.declarations import (
     TypeRefDecl,
 )
 from taihe.semantics.types import (
-    VOID,
     BuiltinType,
     TypeAlike,
 )
@@ -79,9 +78,9 @@ class _PrettyPrinter(DeclVisitor):
 
     @override
     def visit_func_decl(self, d: FuncDecl):
-        fmt_args = ", ".join(self.visit_param_decl(x) for x in d.params)
-        fmt_ret = "" if d.return_ty is VOID else f" -> {self.handle_type(d.return_ty)}"
-        return f"fn {d.name}({fmt_args}){fmt_ret};"
+        fmt_args = ", ".join(self.handle_decl(x) for x in d.params)
+        fmt_ret = ", ".join(self.handle_type(r) for r in d.return_ty)
+        return f"fn {d.name}({fmt_args}) -> ({fmt_ret});"
 
     @override
     def visit_struct_field_decl(self, d: StructFieldDecl):
@@ -95,7 +94,7 @@ class _PrettyPrinter(DeclVisitor):
     def visit_enum_decl(self, d: EnumDecl):
         r = f"enum {d.name} {{\n"
         for i in d.items:
-            r += f"{self.visit_enum_item_decl(i)}\n"
+            r += f"{self.handle_decl(i)}\n"
         r += "}"
         return r
 
@@ -105,7 +104,7 @@ class _PrettyPrinter(DeclVisitor):
         if d.fields:
             ret = header + "{\n"
             for f in d.fields:
-                ret += self.visit_struct_field_decl(f) + ";\n"
+                ret += self.handle_decl(f) + ";\n"
             return ret + "}"
         else:
             return f"{header} {{}}"
