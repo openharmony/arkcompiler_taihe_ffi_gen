@@ -22,7 +22,7 @@ specField
     | KW_ENUM token_name = ID LEFT_BRACE (EnumFieldLst_fields += enumField)+ RIGHT_BRACE # enum
     | KW_INTERFACE token_name = ID (COLON tokenLst_extends += ID (COMMA tokenLst_extends += ID)*)? LEFT_BRACE (InterfaceFieldLst_fields += interfaceField)* RIGHT_BRACE # interface
     | KW_FUNCTION token_name = ID LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS COLON
-        (LEFT_PARENTHESIS (TypeLst_return_types += type (COMMA TypeLst_return_types += type)*)? RIGHT_PARENTHESIS | TypeLst_return_types += type) SEMICOLON # function
+        (LEFT_PARENTHESIS (QualifiedTypeLst_return_types += qualifiedType (COMMA QualifiedTypeLst_return_types += qualifiedType)*)? RIGHT_PARENTHESIS | QualifiedTypeLst_return_types += qualifiedType) SEMICOLON # function
     ;
 
 structField
