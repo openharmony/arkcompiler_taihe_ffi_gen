@@ -677,7 +677,7 @@ def get_function_returns(
         (
             (abi_return_type, abi_return_header),
             (cpp_return_type, cpp_return_header),
-        ) = get_type_infos(self.symbol_tables, node.return_types[0])
+        ) = get_type_infos(self.symbol_tables, node.return_types[0].type)
         return_from_abi = f"taihe::core::from_abi<{cpp_return_type}, {abi_return_type}>"
         return_into_abi = f"taihe::core::into_abi<{cpp_return_type}, {abi_return_type}>"
         cpp_return_headers.append(cpp_return_header)
@@ -689,7 +689,7 @@ def get_function_returns(
             (
                 (abi_return_part, abi_return_header),
                 (cpp_return_part, cpp_return_header),
-            ) = get_type_infos(self.symbol_tables, return_type)
+            ) = get_type_infos(self.symbol_tables, return_type.type)
             cpp_return_headers.append(cpp_return_header)
             abi_return_headers.append(abi_return_header)
             cpp_return_parts.append(cpp_return_part)
