@@ -21,6 +21,7 @@ from taihe.semantics.declarations import (
     DeclarationRefDecl,
     EnumDecl,
     EnumItemDecl,
+    FuncBaseDecl,
     FuncDecl,
     IfaceDecl,
     IfaceMethodDecl,
@@ -28,7 +29,6 @@ from taihe.semantics.declarations import (
     Package,
     PackageGroup,
     PackageImportDecl,
-    PackageLevelDecl,
     PackageRefDecl,
     ParamDecl,
     StructDecl,
@@ -139,7 +139,7 @@ class DeclVisitor:
         """The fallback method which handles the most general cases."""
         del d
 
-    def visit_package_level_decl(self, d: PackageLevelDecl) -> Any:
+    def visit_func_base_decl(self, d: FuncBaseDecl) -> Any:
         return self.visit_decl(d)
 
     ### Imports ###
@@ -170,12 +170,12 @@ class DeclVisitor:
 
     def visit_func_decl(self, d: FuncDecl) -> Any:
         d._traverse(self)
-        return self.visit_package_level_decl(d)
+        return self.visit_func_base_decl(d)
 
     ### Type (Generic) ###
 
     def visit_type_decl(self, d: TypeDecl) -> Any:
-        return self.visit_package_level_decl(d)
+        return self.visit_decl(d)
 
     def visit_type_ref_decl(self, d: TypeRefDecl) -> Any:
         return self.visit_decl(d)
@@ -202,7 +202,7 @@ class DeclVisitor:
     ### Interface ###
 
     def visit_iface_method_decl(self, d: IfaceMethodDecl) -> Any:
-        return self.visit_decl(d)
+        return self.visit_func_base_decl(d)
 
     def visit_iface_decl(self, d: IfaceDecl) -> Any:
         d._traverse(self)

@@ -6,9 +6,8 @@ from taihe.semantics.declarations import (
     DeclarationRefDecl,
     EnumDecl,
     EnumItemDecl,
-    FuncDecl,
+    FuncBaseDecl,
     IfaceDecl,
-    IfaceMethodDecl,
     Package,
     PackageGroup,
     PackageImportDecl,
@@ -27,8 +26,7 @@ from taihe.semantics.visitor import DeclVisitor, TypeVisitor
 
 
 def pretty_print(x: DeclAlike) -> str:
-    p = _PrettyPrinter()
-    r = x._accept(p)
+    r = _PrettyPrinter().handle_decl(x)
     assert isinstance(r, str)
     return r
 
@@ -81,31 +79,25 @@ class _PrettyPrinter(DeclVisitor):
         return f"{d.name}: {self.handle_decl(d.ty)}"
 
     @override
-    def visit_func_decl(self, d: FuncDecl):
+    def visit_func_base_decl(self, d: FuncBaseDecl):
         fmt_args = ", ".join(self.handle_decl(x) for x in d.params)
         fmt_ret = ", ".join(self.handle_decl(r) for r in d.return_types)
         return f"fn {d.name}({fmt_args}) -> ({fmt_ret});"
 
     @override
-    def visit_iface_method_decl(self, d: IfaceMethodDecl):
-        fmt_args = ", ".join(self.handle_decl(x) for x in d.params)
-        fmt_ret = ", ".join(self.handle_decl(r) for r in d.return_types)
-        return f"  fn {d.name}({fmt_args}) -> ({fmt_ret});"
-
-    @override
     def visit_struct_field_decl(self, d: StructFieldDecl):
-        return f"  {d.name}: {self.handle_decl(d.ty)};"
+        return f"{d.name}: {self.handle_decl(d.ty)};"
 
     @override
     def visit_enum_item_decl(self, d: EnumItemDecl):
-        return f"  {d.name} = {d.value}; // {hex(d.value)}"
+        return f"{d.name} = {d.value}; // {hex(d.value)}"
 
     @override
     def visit_enum_decl(self, d: EnumDecl):
         r = f"enum {d.name} {{"
         r += "\n"
         for i in d.items:
-            r += f"{self.handle_decl(i)}\n"
+            r += "  " + self.handle_decl(i) + "\n"
         r += "}"
         return r
 
@@ -115,7 +107,7 @@ class _PrettyPrinter(DeclVisitor):
         if d.fields:
             ret += "\n"
             for f in d.fields:
-                ret += self.handle_decl(f) + "\n"
+                ret += "  " + self.handle_decl(f) + "\n"
         ret += "}"
         return ret
 
@@ -125,14 +117,16 @@ class _PrettyPrinter(DeclVisitor):
         if d.methods:
             ret += "\n"
             for f in d.methods:
-                ret += self.handle_decl(f) + "\n"
+                ret += "  " + self.handle_decl(f) + "\n"
         ret += "}"
         return ret
 
     @override
     def visit_package(self, p: Package):
         r = f"// Package {p.name}\n"
-        for d in p.imports.values():
+        for d in p.pkg_imports:
+            r += self.handle_decl(d) + "\n"
+        for d in p.decl_imports:
             r += self.handle_decl(d) + "\n"
         for d in p.structs:
             r += self.handle_decl(d) + "\n"

@@ -9,9 +9,8 @@ from taihe.semantics.declarations import (
     DeclarationRefDecl,
     EnumDecl,
     EnumItemDecl,
-    FuncDecl,
+    FuncBaseDecl,
     IfaceDecl,
-    IfaceMethodDecl,
     Package,
     PackageGroup,
     PackageImportDecl,
@@ -189,19 +188,14 @@ class _CheckFieldCollisionErrorPass(DeclVisitor):
         check_field_value_collision(self.diag, d.items)
 
     @override
-    def visit_func_decl(self, d: FuncDecl) -> Any:
-        super().visit_func_decl(d)
+    def visit_func_base_decl(self, d: FuncBaseDecl) -> Any:
+        super().visit_func_base_decl(d)
         check_field_name_collision(self.diag, d.params)
 
     @override
     def visit_struct_decl(self, d: StructDecl) -> Any:
         super().visit_struct_decl(d)
         check_field_name_collision(self.diag, d.fields)
-
-    @override
-    def visit_iface_method_decl(self, d: IfaceMethodDecl) -> Any:
-        super().visit_iface_method_decl(d)
-        check_field_name_collision(self.diag, d.params)
 
     @override
     def visit_iface_decl(self, d: IfaceDecl) -> Any:

@@ -227,7 +227,7 @@ class ParamDecl(Decl):
     KIND = "function parameter"
 
     ty: TypeRefDecl
-    parent: Optional["FuncDecl | IfaceMethodDecl"]
+    parent: Optional["FuncBaseDecl"]
 
     def __init__(self, name: str, ty: TypeRefDecl, **kwargs):
         super().__init__(name, **kwargs)
@@ -242,8 +242,8 @@ class ParamDecl(Decl):
         v.handle_decl(self.ty)
 
 
-class FuncDecl(PackageLevelDecl):
-    KIND = "function"
+class FuncBaseDecl(Decl):
+    KIND = "<base-function-decl-kind>"
 
     params: list[ParamDecl]
     return_types: list[TypeRefDecl]
@@ -252,11 +252,6 @@ class FuncDecl(PackageLevelDecl):
         super().__init__(name, **kwargs)
         self.params = []
         self.return_types = []
-
-    @override
-    def _accept(self, v: "DeclVisitor") -> Any:
-        v.visiting = self
-        return v.visit_func_decl(self)
 
     def _traverse(self, v: "DeclVisitor"):
         for p in self.params:
@@ -270,6 +265,15 @@ class FuncDecl(PackageLevelDecl):
 
     def add_return_ty(self, ty: TypeRefDecl):
         self.return_types.append(ty)
+
+
+class FuncDecl(PackageLevelDecl, FuncBaseDecl):
+    KIND = "function"
+
+    @override
+    def _accept(self, v: "DeclVisitor") -> Any:
+        v.visiting = self
+        return v.visit_func_decl(self)
 
 
 class TypeDecl(PackageLevelDecl, Type):
@@ -359,34 +363,15 @@ class StructDecl(TypeDecl):
         self.fields.append(f)
 
 
-class IfaceMethodDecl(Decl):
+class IfaceMethodDecl(FuncBaseDecl):
     KIND = "interface method"
 
-    params: list[ParamDecl]
-    return_types: list[TypeRefDecl]
-
-    def __init__(self, name: str, **kwargs):
-        super().__init__(name, **kwargs)
-        self.params = []
-        self.return_types = []
+    parent: Optional["IfaceDecl"]
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
         v.visiting = self
         return v.visit_iface_method_decl(self)
-
-    def _traverse(self, v: "DeclVisitor"):
-        for p in self.params:
-            v.handle_decl(p)
-        for r in self.return_types:
-            v.handle_decl(r)
-
-    def add_param(self, name: str, ty: TypeRefDecl, **kwargs):
-        param = ParamDecl(name, ty, parent=self, **kwargs)
-        self.params.append(param)
-
-    def add_return_ty(self, ty: TypeRefDecl):
-        self.return_types.append(ty)
 
 
 class IfaceDecl(TypeDecl):
@@ -424,9 +409,14 @@ class Package:
 
     # Metadata about the package itself.
     name: str
+
     # Symbols
     imports: dict[str, ImportDecl]
     decls: dict[str, PackageLevelDecl]
+
+    # Imports
+    pkg_imports: list[PackageImportDecl]
+    decl_imports: list[DeclarationImportDecl]
 
     # Things that the package contains.
     functions: list[FuncDecl]
@@ -438,6 +428,9 @@ class Package:
         self.name = name
         self.imports = {}
         self.decls = {}
+
+        self.pkg_imports = []
+        self.decl_imports = []
 
         self.functions = []
         self.structs = []
@@ -452,7 +445,9 @@ class Package:
         return v.visit_package(self)
 
     def _traverse(self, v: "DeclVisitor"):
-        for i in self.imports.values():
+        for i in self.pkg_imports:
+            v.handle_decl(i)
+        for i in self.decl_imports:
             v.handle_decl(i)
         for d in self.functions:
             v.handle_decl(d)
@@ -464,32 +459,34 @@ class Package:
             v.handle_decl(d)
 
     def _register_to_decl(self, d: PackageLevelDecl):
-        d.parent = self
         if prev := self.decls.get(d.name, None):
             raise DeclRedefDiagError(prev, d)
         else:
             self.decls[d.name] = d
 
-    def add_import(self, i: ImportDecl):
-        i.parent = self
+    def _register_to_import(self, i: ImportDecl):
         if prev := self.imports.get(i.name, None):
             raise DeclRedefDiagError(prev, i)
         else:
             self.imports[i.name] = i
 
     def add_function(self, f: FuncDecl):
+        f.parent = self
         self.functions.append(f)
         self._register_to_decl(f)
 
     def add_struct(self, s: StructDecl):
+        s.parent = self
         self.structs.append(s)
         self._register_to_decl(s)
 
     def add_enum(self, e: EnumDecl):
+        e.parent = self
         self.enums.append(e)
         self._register_to_decl(e)
 
     def add_interface(self, i: IfaceDecl):
+        i.parent = self
         self.interfaces.append(i)
         self._register_to_decl(i)
 
@@ -504,6 +501,24 @@ class Package:
             self.add_interface(d)
         else:
             raise NotImplementedError(f"unexpected declaration {type(d)}")
+
+    def add_decl_import(self, i: DeclarationImportDecl):
+        i.parent = self
+        self.decl_imports.append(i)
+        self._register_to_import(i)
+
+    def add_pkg_import(self, i: PackageImportDecl):
+        i.parent = self
+        self.pkg_imports.append(i)
+        self._register_to_import(i)
+
+    def add_import(self, i: ImportDecl):
+        if isinstance(i, DeclarationImportDecl):
+            self.add_decl_import(i)
+        elif isinstance(i, PackageImportDecl):
+            self.add_pkg_import(i)
+        else:
+            raise NotImplementedError(f"unexpected import {type(i)}")
 
 
 class PackageGroup:
