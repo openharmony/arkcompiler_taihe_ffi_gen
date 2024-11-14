@@ -88,3 +88,12 @@ function bad_func_2(a: i32, a: i32): ();  // SymbolConflictError
 function good_func_1(a: i32, b: mut Bar): (String, String);  // OK
 
 function a(): ();  // SymbolConflictWithNamespaceError
+
+interface Iface1 {
+    function a(): ();
+}
+
+interface Iface2 {
+    function b(): ();
+    function b(a: i32, a: i32): ();  // SymbolConflictError x 2
+}

@@ -7,6 +7,8 @@ from taihe.semantics.declarations import (
     EnumDecl,
     EnumItemDecl,
     FuncDecl,
+    IfaceDecl,
+    IfaceMethodDecl,
     Package,
     PackageGroup,
     PackageImportDecl,
@@ -70,9 +72,7 @@ class _PrettyPrinter(DeclVisitor):
         if d.is_alias():
             return f"from {self.handle_decl(d.decl.pkg)} use {self.handle_decl(d.decl)} as {d.name};"
         else:
-            return (
-                f"from {self.handle_decl(d.decl.pkg)} use {self.handle_decl(d.decl)};"
-            )
+            return f"from {self.handle_decl(d.decl.pkg)} use {self.handle_decl(d.decl)};"
 
     @override
     def visit_param_decl(self, d: ParamDecl):
@@ -85,8 +85,14 @@ class _PrettyPrinter(DeclVisitor):
         return f"fn {d.name}({fmt_args}) -> ({fmt_ret});"
 
     @override
+    def visit_iface_method_decl(self, d: IfaceMethodDecl):
+        fmt_args = ", ".join(self.handle_decl(x) for x in d.params)
+        fmt_ret = ", ".join(self.handle_decl(r) for r in d.return_types)
+        return f"  fn {d.name}({fmt_args}) -> ({fmt_ret});"
+
+    @override
     def visit_struct_field_decl(self, d: StructFieldDecl):
-        return f"  {d.name}: {self.handle_decl(d.ty)}"
+        return f"  {d.name}: {self.handle_decl(d.ty)};"
 
     @override
     def visit_enum_item_decl(self, d: EnumItemDecl):
@@ -94,7 +100,8 @@ class _PrettyPrinter(DeclVisitor):
 
     @override
     def visit_enum_decl(self, d: EnumDecl):
-        r = f"enum {d.name} {{\n"
+        r = f"enum {d.name} {{"
+        r += "\n"
         for i in d.items:
             r += f"{self.handle_decl(i)}\n"
         r += "}"
@@ -102,24 +109,37 @@ class _PrettyPrinter(DeclVisitor):
 
     @override
     def visit_struct_decl(self, d: StructDecl):
-        header = f"struct {d.name} "
+        ret = f"struct {d.name} {{"
         if d.fields:
-            ret = header + "{\n"
+            ret += "\n"
             for f in d.fields:
-                ret += self.handle_decl(f) + ";\n"
-            return ret + "}"
-        else:
-            return f"{header} {{}}"
+                ret += self.handle_decl(f) + "\n"
+        ret += "}"
+        return ret
+
+    @override
+    def visit_iface_decl(self, d: IfaceDecl):
+        ret = f"interface {d.name} {{"
+        if d.methods:
+            ret += "\n"
+            for f in d.methods:
+                ret += self.handle_decl(f) + "\n"
+        ret += "}"
+        return ret
 
     @override
     def visit_package(self, p: Package):
         r = f"// Package {p.name}\n"
-        if p.imports:
-            r += "\n".join(self.handle_decl(d) for d in p.imports.values())
-            r += "\n"
-        if p.decls:
-            r += "\n".join(self.handle_decl(d) for d in p.decls.values())
-            r += "\n"
+        for d in p.imports.values():
+            r += self.handle_decl(d) + "\n"
+        for d in p.structs:
+            r += self.handle_decl(d) + "\n"
+        for d in p.enums:
+            r += self.handle_decl(d) + "\n"
+        for d in p.interfaces:
+            r += self.handle_decl(d) + "\n"
+        for d in p.functions:
+            r += self.handle_decl(d) + "\n"
         return r
 
     @override

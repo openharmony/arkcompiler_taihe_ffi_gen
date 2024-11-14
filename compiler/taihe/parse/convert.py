@@ -10,6 +10,8 @@ from taihe.semantics.declarations import (
     DeclarationRefDecl,
     EnumDecl,
     FuncDecl,
+    IfaceDecl,
+    IfaceMethodDecl,
     ImportDecl,
     Package,
     PackageImportDecl,
@@ -166,55 +168,61 @@ class AstConverter(Visitor):
         return TypeRefDecl(name, loc)
 
     @override
-    def visit_Struct(self, node: ast.Struct) -> Optional[StructDecl]:
-        d = StructDecl(str(node.name), loc=self.loc(node.name))
-
-        def add_field(f):
-            d.add_field(str(f.name), self.visit(f.type), loc=self.loc(f.name))
-
-        self.diag.for_each(node.fields, add_field)
-        return d
-
-    @override
-    def visit_Enum(self, node: ast.Enum) -> Optional[EnumDecl]:
-        d = EnumDecl(str(node.name), loc=self.loc(node.name))
-        next_value = 0
-
-        def add_item(f):
-            nonlocal next_value
-            if f.expr:
-                v = eval_int_expr(f.expr)
-                next_value = v + 1
-            else:
-                v = next_value
-                next_value += 1
-            d.add_item(str(f.name), v, loc=self.loc(f.name))
-
-        self.diag.for_each(node.fields, add_item)
-        return d
-
-    @override
     def visit_QualifiedType(self, node: ast.QualifiedType) -> TypeRefDecl:
         ty = self.visit(node.type)
         assert isinstance(ty, TypeRefDecl)
-
         if node.mut:
             ty.qual |= TypeQualifier.MUT
         return ty
 
     @override
+    def visit_Struct(self, node: ast.Struct) -> StructDecl:
+        d = StructDecl(str(node.name), loc=self.loc(node.name))
+        for f in node.fields:
+            with self.diag.capture_error():
+                d.add_field(str(f.name), self.visit(f.type), loc=self.loc(f.name))
+        return d
+
+    @override
+    def visit_Enum(self, node: ast.Enum) -> EnumDecl:
+        d = EnumDecl(str(node.name), loc=self.loc(node.name))
+        next_value = 0
+        for f in node.fields:
+            with self.diag.capture_error():
+                v = eval_int_expr(f.expr) if f.expr else next_value
+                d.add_item(str(f.name), v, loc=self.loc(f.name))
+                next_value = v + 1
+        return d
+
+    @override
+    def visit_InterfaceFunction(self, node: ast.InterfaceFunction) -> IfaceMethodDecl:
+        f = IfaceMethodDecl(str(node.name), loc=self.loc(node.name))
+        for p in node.parameters:
+            with self.diag.capture_error():
+                f.add_param(str(p.name), self.visit(p.param_type), loc=self.loc(p.name))
+        for r in node.return_types:
+            with self.diag.capture_error():
+                f.add_return_ty(self.visit(r))
+        return f
+
+    @override
+    def visit_Interface(self, node: ast.Interface) -> IfaceDecl:
+        d = IfaceDecl(str(node.name), loc=self.loc(node.name))
+        for f in node.fields:
+            m = self.visit(f)
+            with self.diag.capture_error():
+                d.add_function(m)
+        return d
+
+    @override
     def visit_Function(self, node: ast.Function) -> Optional[FuncDecl]:
         f = FuncDecl(str(node.name), loc=self.loc(node.name))
-
-        def add_param(p):
-            f.add_param(str(p.name), self.visit(p.param_type), loc=self.loc(p.name))
-
-        self.diag.for_each(node.parameters, add_param)
-
-        def add_return_ty(r):
-            f.add_return_ty(self.visit(r))
-
-        self.diag.for_each(node.return_types, add_return_ty)
+        for p in node.parameters:
+            with self.diag.capture_error():
+                f.add_param(str(p.name), self.visit(p.param_type), loc=self.loc(p.name))
+        for r in node.return_types:
+            with self.diag.capture_error():
+                f.add_return_ty(self.visit(r))
         return f
 
     @override

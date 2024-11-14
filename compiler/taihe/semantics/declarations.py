@@ -86,6 +86,7 @@ class TypeRefDecl(Decl, TypeAlike):
     """
 
     KIND = "type reference"
+
     qual: TypeQualifier
     ref_ty: Optional[Type] = None
     resolved: bool = False
@@ -130,6 +131,7 @@ class ImportDecl(Decl):
     """
 
     KIND = "<import-decl-kind>"
+
     parent: Optional["Package"]
 
 
@@ -153,7 +155,6 @@ class DeclarationRefDecl(Decl):
 
     ref_decl: Optional["TypeDecl"] = None
     resolved: bool = False
-
     pkg: PackageRefDecl
 
     def __init__(self, p: PackageRefDecl, name: str, loc):
@@ -171,9 +172,6 @@ class DeclarationRefDecl(Decl):
 
 class PackageImportDecl(ImportDecl):
     KIND = "use of package"
-
-    name: str
-    """Optionally use another name for the imported package."""
 
     pkg: PackageRefDecl
 
@@ -195,9 +193,6 @@ class PackageImportDecl(ImportDecl):
 
 class DeclarationImportDecl(ImportDecl):
     KIND = "use of declaration"
-
-    name: str
-    """Optionally use another name for the imported declaration."""
 
     decl: DeclarationRefDecl
 
@@ -224,6 +219,7 @@ class DeclarationImportDecl(ImportDecl):
 
 class PackageLevelDecl(Decl):
     KIND = "<package-level-decl-kind>"
+
     parent: Optional["Package"]
 
 
@@ -231,8 +227,7 @@ class ParamDecl(Decl):
     KIND = "function parameter"
 
     ty: TypeRefDecl
-    # type: ignore (already set with Decl.__init__)
-    parent: Optional["FuncDecl"]
+    parent: Optional["FuncDecl | IfaceMethodDecl"]
 
     def __init__(self, name: str, ty: TypeRefDecl, **kwargs):
         super().__init__(name, **kwargs)
@@ -278,14 +273,15 @@ class FuncDecl(PackageLevelDecl):
 
 
 class TypeDecl(PackageLevelDecl, Type):
-    parent: Optional["Package"]
     KIND = "<type-decl-kind>"
+
+    parent: Optional["Package"]
 
 
 class EnumItemDecl(Decl):
     KIND = "enum item"
+
     parent: Optional["EnumDecl"]
-    # type:ignore (already set with Decl.__init__)
     value: int
 
     def __init__(self, name: str, value: int, **kwargs):
@@ -300,6 +296,7 @@ class EnumItemDecl(Decl):
 
 class EnumDecl(TypeDecl):
     KIND = "enum"
+
     items: list[EnumItemDecl]
 
     def __init__(self, name: str, **kwargs):
@@ -341,6 +338,7 @@ class StructFieldDecl(Decl):
 
 class StructDecl(TypeDecl):
     KIND = "struct"
+
     fields: list[StructFieldDecl]
 
     def __init__(self, name: str, **kwargs):
@@ -359,6 +357,59 @@ class StructDecl(TypeDecl):
     def add_field(self, name: str, ty: TypeRefDecl, **kwargs):
         f = StructFieldDecl(name, ty, parent=self, **kwargs)
         self.fields.append(f)
+
+
+class IfaceMethodDecl(Decl):
+    KIND = "interface method"
+
+    params: list[ParamDecl]
+    return_types: list[TypeRefDecl]
+
+    def __init__(self, name: str, **kwargs):
+        super().__init__(name, **kwargs)
+        self.params = []
+        self.return_types = []
+
+    @override
+    def _accept(self, v: "DeclVisitor") -> Any:
+        v.visiting = self
+        return v.visit_iface_method_decl(self)
+
+    def _traverse(self, v: "DeclVisitor"):
+        for p in self.params:
+            v.handle_decl(p)
+        for r in self.return_types:
+            v.handle_decl(r)
+
+    def add_param(self, name: str, ty: TypeRefDecl, **kwargs):
+        param = ParamDecl(name, ty, parent=self, **kwargs)
+        self.params.append(param)
+
+    def add_return_ty(self, ty: TypeRefDecl):
+        self.return_types.append(ty)
+
+
+class IfaceDecl(TypeDecl):
+    KIND = "struct"
+
+    methods: list[IfaceMethodDecl]
+
+    def __init__(self, name: str, **kwargs):
+        super().__init__(name, **kwargs)
+        self.methods = []
+
+    @override
+    def _accept(self, v: "TypeVisitor | DeclVisitor") -> Any:
+        v.visiting = self
+        return v.visit_iface_decl(self)
+
+    def _traverse(self, v: "DeclVisitor"):
+        for f in self.methods:
+            v.handle_decl(f)
+
+    def add_function(self, f: IfaceMethodDecl):
+        f.parent = self
+        self.methods.append(f)
 
 
 ######################
@@ -381,6 +432,7 @@ class Package:
     functions: list[FuncDecl]
     structs: list[StructDecl]
     enums: list[EnumDecl]
+    interfaces: list[IfaceDecl]
 
     def __init__(self, name: str):
         self.name = name
@@ -390,6 +442,7 @@ class Package:
         self.functions = []
         self.structs = []
         self.enums = []
+        self.interfaces = []
 
     def __repr__(self) -> str:
         return f"{self.__class__.__qualname__}<{self.name!r}>"
@@ -401,34 +454,44 @@ class Package:
     def _traverse(self, v: "DeclVisitor"):
         for i in self.imports.values():
             v.handle_decl(i)
-        for d in self.decls.values():
+        for d in self.functions:
+            v.handle_decl(d)
+        for d in self.structs:
+            v.handle_decl(d)
+        for d in self.enums:
+            v.handle_decl(d)
+        for d in self.interfaces:
             v.handle_decl(d)
 
     def _register_to_decl(self, d: PackageLevelDecl):
+        d.parent = self
         if prev := self.decls.get(d.name, None):
             raise DeclRedefDiagError(prev, d)
         else:
             self.decls[d.name] = d
-        d.parent = self
 
     def add_import(self, i: ImportDecl):
+        i.parent = self
         if prev := self.imports.get(i.name, None):
             raise DeclRedefDiagError(prev, i)
         else:
             self.imports[i.name] = i
-        i.parent = self
 
     def add_function(self, f: FuncDecl):
-        self._register_to_decl(f)
         self.functions.append(f)
+        self._register_to_decl(f)
 
     def add_struct(self, s: StructDecl):
-        self._register_to_decl(s)
         self.structs.append(s)
+        self._register_to_decl(s)
 
     def add_enum(self, e: EnumDecl):
-        self._register_to_decl(e)
         self.enums.append(e)
+        self._register_to_decl(e)
+
+    def add_interface(self, i: IfaceDecl):
+        self.interfaces.append(i)
+        self._register_to_decl(i)
 
     def add_declaration(self, d: Decl):
         if isinstance(d, FuncDecl):
@@ -437,6 +500,8 @@ class Package:
             self.add_struct(d)
         elif isinstance(d, EnumDecl):
             self.add_enum(d)
+        elif isinstance(d, IfaceDecl):
+            self.add_interface(d)
         else:
             raise NotImplementedError(f"unexpected declaration {type(d)}")
 

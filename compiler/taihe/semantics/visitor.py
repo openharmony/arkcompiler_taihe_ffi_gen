@@ -22,6 +22,8 @@ from taihe.semantics.declarations import (
     EnumDecl,
     EnumItemDecl,
     FuncDecl,
+    IfaceDecl,
+    IfaceMethodDecl,
     ImportDecl,
     Package,
     PackageGroup,
@@ -104,6 +106,9 @@ class TypeVisitor:
         return self.visit_type_decl(d)
 
     def visit_enum_decl(self, d: EnumDecl) -> Any:
+        return self.visit_type_decl(d)
+
+    def visit_iface_decl(self, d: IfaceDecl) -> Any:
         return self.visit_type_decl(d)
 
 
@@ -191,6 +196,15 @@ class DeclVisitor:
         return self.visit_decl(d)
 
     def visit_enum_decl(self, d: EnumDecl) -> Any:
+        d._traverse(self)
+        return self.visit_type_decl(d)
+
+    ### Interface ###
+
+    def visit_iface_method_decl(self, d: IfaceMethodDecl) -> Any:
+        return self.visit_decl(d)
+
+    def visit_iface_decl(self, d: IfaceDecl) -> Any:
         d._traverse(self)
         return self.visit_type_decl(d)
 
