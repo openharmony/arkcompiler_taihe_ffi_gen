@@ -89,11 +89,13 @@ function good_func_1(a: i32, b: mut Bar): (String, String);  // OK
 
 function a(): ();  // SymbolConflictWithNamespaceError
 
-interface Iface1 {
+interface Iface: i32 {  // ExtensionTypeError
     function a(): ();
+    function a(x: i32, x: i32): ();  // SymbolConflictError x 2
 }
 
-interface Iface2 {
-    function b(): ();
-    function b(a: i32, a: i32): ();  // SymbolConflictError x 2
-}
+interface IfaceA: IfaceB {}
+
+interface IfaceB: IfaceC {}
+
+interface IfaceC: IfaceA {}  // RecursiveExtension

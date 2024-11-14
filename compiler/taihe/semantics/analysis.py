@@ -15,7 +15,6 @@ from taihe.semantics.declarations import (
     PackageGroup,
     PackageImportDecl,
     PackageRefDecl,
-    ParamDecl,
     StructDecl,
     TypeDecl,
     TypeRefDecl,
@@ -27,12 +26,14 @@ from taihe.utils.exceptions import (
     DeclNotExistError,
     DeclRedefDiagError,
     EnumValueCollisionError,
+    ExtendsTypeError,
     NotADeclarationError,
     NotAPackageError,
     NotATypeError,
     PackageNotExistError,
     PackageNotInScopeError,
     QualifierError,
+    RecursiveExtensionError,
     RecursiveInclusionError,
     SymbolConflictWithNamespaceError,
 )
@@ -42,7 +43,8 @@ def analyze_semantics(pg: PackageGroup, diag: DiagnosticsManager):
     """Replaces UnresolvedType with the corresponding type."""
     _ResolveImportsPass(diag).handle_decl(pg)
     check_decl_redefine(pg, diag)
-    check_recursive_inclusion(pg, diag)
+    check_struct_recursive_inclusion(pg, diag)
+    check_iface_extends(pg, diag)
     check_sym_confilct_namespace(pg, diag)
     _CheckFieldCollisionErrorPass(diag).handle_decl(pg)
     _CheckQualifierErrorPass(diag).handle_decl(pg)
@@ -169,10 +171,9 @@ class _CheckQualifierErrorPass(DeclVisitor):
         self.diag = diag
 
     @override
-    def visit_param_decl(self, d: ParamDecl):
-        if d.ty.qual:
-            if not isinstance(d.ty.ref_ty, StructDecl):
-                self.diag.emit(QualifierError(d, d.ty.name))
+    def visit_type_ref_decl(self, d: TypeRefDecl):
+        if d.qual and not isinstance(d.ref_ty, StructDecl):
+            self.diag.emit(QualifierError(d))
 
 
 class _CheckFieldCollisionErrorPass(DeclVisitor):
@@ -252,23 +253,36 @@ def check_decl_redefine(pg: PackageGroup, diag: DiagnosticsManager):
             diag.emit(DeclRedefDiagError(p.imports[redef_decl], p.decls[redef_decl]))
 
 
-def check_recursive_inclusion(pg: PackageGroup, diag: DiagnosticsManager):
+def check_iface_extends(pg: PackageGroup, diag: DiagnosticsManager):
+    iface_table = {}
+    for pkg in pg.packages:
+        for iface in pkg.interfaces:
+            base_list = iface_table.setdefault(iface, [])
+            for base in iface.extends:
+                if isinstance(base.ref_ty, IfaceDecl):
+                    base_list.append(((iface, base), base.ref_ty))
+                else:
+                    diag.emit(ExtendsTypeError(base))
+
+    cycles = detect_cycles(iface_table)
+    for cycle in cycles:
+        last, *other = cycle[::-1]
+        diag.emit(RecursiveExtensionError(last, other))
+
+
+def check_struct_recursive_inclusion(pg: PackageGroup, diag: DiagnosticsManager):
     struct_table = {}
     for pkg in pg.packages:
         for struct in pkg.structs:
-            struct_table.setdefault(struct, [])
+            struct_list = struct_table.setdefault(struct, [])
             for field in struct.fields:
                 if isinstance(field.ty.ref_ty, StructDecl):
-                    struct_table[struct].append((field, field.ty.ref_ty))
+                    struct_list.append((field, field.ty.ref_ty))
 
     cycles = detect_cycles(struct_table)
     for cycle in cycles:
         last, *other = cycle[::-1]
-        diag.emit(
-            RecursiveInclusionError(
-                last.loc, last.parent, [(edge.loc, edge.parent) for edge in other]
-            )
-        )
+        diag.emit(RecursiveInclusionError(last, other))
 
 
 def detect_cycles(graph):

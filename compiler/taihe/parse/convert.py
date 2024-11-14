@@ -1,5 +1,4 @@
 from collections.abc import Iterable
-from typing import Optional
 
 from typing_extensions import override
 
@@ -24,7 +23,6 @@ from taihe.semantics.types import (
     TypeQualifier,
 )
 from taihe.utils.diagnostics import DiagnosticsManager
-from taihe.utils.exceptions import TypeNotExistError
 from taihe.utils.sources import SourceBase, SourceBuffer, SourceFile, SourceLocation
 
 
@@ -156,8 +154,7 @@ class AstConverter(Visitor):
         name = str(node.name)
         loc = self.loc(node.name)
         ty = BuiltinType.lookup(name)
-        if ty is None:
-            self.diag.emit(TypeNotExistError(name, loc=loc))
+        assert ty
         return TypeRefDecl(name, loc, ty)
 
     @override
@@ -212,10 +209,13 @@ class AstConverter(Visitor):
             m = self.visit(f)
             with self.diag.capture_error():
                 d.add_function(m)
+        for i in node.extends:
+            with self.diag.capture_error():
+                d.add_base(self.visit(i))
         return d
 
     @override
-    def visit_Function(self, node: ast.Function) -> Optional[FuncDecl]:
+    def visit_Function(self, node: ast.Function) -> FuncDecl:
         f = FuncDecl(str(node.name), loc=self.loc(node.name))
         for p in node.parameters:
             with self.diag.capture_error():

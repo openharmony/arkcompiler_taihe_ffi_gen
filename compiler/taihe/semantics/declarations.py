@@ -87,6 +87,7 @@ class TypeRefDecl(Decl, TypeAlike):
 
     KIND = "type reference"
 
+    parent = None
     qual: TypeQualifier
     ref_ty: Optional[Type] = None
     resolved: bool = False
@@ -138,6 +139,7 @@ class ImportDecl(Decl):
 class PackageRefDecl(Decl):
     KIND = "package reference"
 
+    parent = None
     ref_pkg: Optional["Package"] = None
     resolved: bool = False
 
@@ -153,6 +155,7 @@ class PackageRefDecl(Decl):
 class DeclarationRefDecl(Decl):
     KIND = "package reference"
 
+    parent = None
     ref_decl: Optional["TypeDecl"] = None
     resolved: bool = False
     pkg: PackageRefDecl
@@ -378,10 +381,12 @@ class IfaceDecl(TypeDecl):
     KIND = "struct"
 
     methods: list[IfaceMethodDecl]
+    extends: list[TypeRefDecl]
 
     def __init__(self, name: str, **kwargs):
         super().__init__(name, **kwargs)
         self.methods = []
+        self.extends = []
 
     @override
     def _accept(self, v: "TypeVisitor | DeclVisitor") -> Any:
@@ -391,10 +396,15 @@ class IfaceDecl(TypeDecl):
     def _traverse(self, v: "DeclVisitor"):
         for f in self.methods:
             v.handle_decl(f)
+        for e in self.extends:
+            v.handle_decl(e)
 
     def add_function(self, f: IfaceMethodDecl):
         f.parent = self
         self.methods.append(f)
+
+    def add_base(self, d: TypeRefDecl):
+        self.extends.append(d)
 
 
 ######################

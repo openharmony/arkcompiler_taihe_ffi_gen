@@ -5,7 +5,13 @@ from taihe.utils.diagnostics import DiagError, DiagFatalError, DiagNote
 from taihe.utils.sources import SourceLocation
 
 if TYPE_CHECKING:
-    from taihe.semantics.declarations import Decl
+    from taihe.semantics.declarations import (
+        Decl,
+        IfaceDecl,
+        PackageLevelDecl,
+        StructFieldDecl,
+        TypeRefDecl,
+    )
 
 
 @dataclass
@@ -19,12 +25,27 @@ class EnumValueCollisionDiagNote(DiagNote):
 
 
 @dataclass
+class RecursiveExtensionNote(DiagNote):
+    MSG = "the interface is extended by {iface.name}"
+
+    def __init__(
+        self,
+        last: tuple["IfaceDecl", "TypeRefDecl"],
+    ):
+        self.loc = last[1].loc
+        self.iface = last[0]
+
+
+@dataclass
 class RecursiveInclusionNote(DiagNote):
     MSG = "the struct is included in {struct.name}"
 
-    def __init__(self, loc: Optional["SourceLocation"], struct: "Decl"):
-        self.loc = loc
-        self.struct = struct
+    def __init__(
+        self,
+        last: "StructFieldDecl",
+    ):
+        self.loc = last.loc
+        self.struct = last.parent
 
 
 @dataclass
@@ -45,11 +66,7 @@ class DeclRedefDiagError(DiagError):
     prev: "Decl"
     current: "Decl"
 
-    def __init__(
-        self,
-        prev: "Decl",
-        current: "Decl",
-    ):
+    def __init__(self, prev: "Decl", current: "Decl"):
         self.prev = prev
         self.current = current
         self.loc = current.loc
@@ -140,12 +157,41 @@ class PackageNotInScopeError(DiagError):
 class SymbolConflictWithNamespaceError(DiagError):
     MSG = "declaration of {current.description} in package {pkg_name!r} shadows a file-level declaration"
 
-    current: "Decl"
+    current: "PackageLevelDecl"
 
-    def __init__(self, current: "Decl", pkg_name: str):
+    def __init__(self, current: "PackageLevelDecl", pkg_name: str):
         self.current = current
         self.loc = current.loc
         self.pkg_name = pkg_name
+
+
+@dataclass
+class ExtendsTypeError(DiagError):
+    MSG = "expected an interface, got {name}"
+
+    ty: "TypeRefDecl"
+
+    def __init__(self, ty: "TypeRefDecl"):
+        self.loc = ty.loc
+        self.name = ty.name
+
+
+@dataclass
+class RecursiveExtensionError(DiagError):
+    MSG = "recursive extension is found in {iface.name}"
+
+    def __init__(
+        self,
+        last: tuple["IfaceDecl", "TypeRefDecl"],
+        other: list[tuple["IfaceDecl", "TypeRefDecl"]],
+    ):
+        self.loc = last[1].loc
+        self.iface = last[0]
+        self.other = other
+
+    def notes(self):
+        for n in self.other:
+            yield RecursiveExtensionNote(n)
 
 
 @dataclass
@@ -154,17 +200,16 @@ class RecursiveInclusionError(DiagError):
 
     def __init__(
         self,
-        loc: Optional["SourceLocation"],
-        struct: "Decl",
-        note: list[tuple[Optional["SourceLocation"], "Decl"]],
+        last: "StructFieldDecl",
+        other: list["StructFieldDecl"],
     ):
-        self.loc = loc
-        self.struct = struct
-        self.note = note
+        self.loc = last.loc
+        self.struct = last.parent
+        self.other = other
 
     def notes(self):
-        for n in self.note:
-            yield RecursiveInclusionNote(loc=n[0], struct=n[1])
+        for n in self.other:
+            yield RecursiveInclusionNote(n)
 
 
 @dataclass
@@ -214,23 +259,9 @@ class NotADeclarationError(DiagError):
 
 @dataclass
 class QualifierError(DiagError):
-    MSG = "'mut' cannot be applied to {ty!r}"
+    MSG = "qualifier {qual} cannot be applied to {name}"
 
-    ty: str
-    current: "Decl"
-
-    def __init__(
-        self,
-        current: "Decl",
-        ty: str,
-    ):
-        self.current = current
-        self.loc = current.loc
-        self.ty = ty
-
-
-@dataclass
-class TypeNotExistError(DiagError):
-    MSG = "use of undeclared type {ty!r}"
-
-    ty: str
+    def __init__(self, ty: "TypeRefDecl"):
+        self.loc = ty.loc
+        self.name = ty.name
+        self.qual = ty.qual.describe()
