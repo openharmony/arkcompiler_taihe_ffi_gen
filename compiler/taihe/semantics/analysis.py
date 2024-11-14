@@ -6,18 +6,20 @@ from typing_extensions import override
 from taihe.semantics.declarations import (
     Decl,
     DeclarationImportDecl,
+    DeclarationRefDecl,
     EnumDecl,
     EnumItemDecl,
     FuncDecl,
     Package,
     PackageGroup,
     PackageImportDecl,
+    PackageRefDecl,
     ParamDecl,
     StructDecl,
     TypeDecl,
     TypeRefDecl,
 )
-from taihe.semantics.visitor import DeclVisitor, RecursiveTypeVisitor
+from taihe.semantics.visitor import DeclVisitor
 from taihe.utils.diagnostics import DiagnosticsManager
 from taihe.utils.exceptions import (
     DeclarationNotInScopeError,
@@ -45,7 +47,7 @@ def analyze_semantics(pg: PackageGroup, diag: DiagnosticsManager):
     _CheckQualifierErrorPass(diag).handle_decl(pg)
 
 
-class _ResolveImportsPass(RecursiveTypeVisitor):
+class _ResolveImportsPass(DeclVisitor):
     diag: DiagnosticsManager
 
     def __init__(self, diag: DiagnosticsManager):
@@ -76,36 +78,37 @@ class _ResolveImportsPass(RecursiveTypeVisitor):
         self._current_package_group = None
 
     @override
-    def visit_package_import_decl(self, d: PackageImportDecl):
-        if not d.pkg.resolved:
-            if pkg := self._pkg_group.lookup(d.pkg.name):
-                d.pkg.ref_pkg = pkg
-            else:
-                self.diag.emit(PackageNotExistError(d.pkg.name, d.pkg.loc))
-                d.pkg.ref_pkg = None
-            d.pkg.resolved = True
+    def visit_package_ref_decl(self, d: PackageRefDecl):
+        if d.resolved:
+            return
+
+        if pkg := self._pkg_group.lookup(d.name):
+            d.ref_pkg = pkg
+        else:
+            self.diag.emit(PackageNotExistError(d.name, d.loc))
+            d.ref_pkg = None
+
+        d.resolved = True
 
     @override
-    def visit_decl_import_decl(self, d: DeclarationImportDecl):
-        if not d.decl.resolved:
-            if not d.pkg.resolved:
-                if pkg := self._pkg_group.lookup(d.pkg.name):
-                    d.pkg.ref_pkg = pkg
-                else:
-                    self.diag.emit(PackageNotExistError(d.pkg.name, d.pkg.loc))
-                    d.pkg.ref_pkg = None
-                d.pkg.resolved = True
-            if (pkg := d.pkg.ref_pkg) is None:
-                # no need to raise error
-                d.decl.ref_decl = None
-            elif isinstance(decl := pkg.decls.get(d.decl.name), TypeDecl):
-                d.decl.ref_decl = decl
-            elif decl:
-                self.diag.emit(NotATypeError(d.decl.name, d.decl.loc))
-                d.decl.ref_decl = None
-            else:
-                self.diag.emit(DeclNotExistError(d.decl.name, d.decl.loc))
-                d.decl.ref_decl = None
+    def visit_decl_ref_decl(self, d: DeclarationRefDecl):
+        if d.resolved:
+            return
+
+        self.handle_decl(d.pkg)
+
+        if (pkg := d.pkg.ref_pkg) is None:
+            # no need to raise error
+            d.ref_decl = None
+        elif isinstance(decl := pkg.decls.get(d.name), TypeDecl):
+            d.ref_decl = decl
+        elif decl:
+            self.diag.emit(NotATypeError(d.name, d.loc))
+            d.ref_decl = None
+        else:
+            self.diag.emit(DeclNotExistError(d.name, d.loc))
+            d.ref_decl = None
+
         d.pkg.resolved = True
 
     def visit_type_ref_decl(self, d: TypeRefDecl):

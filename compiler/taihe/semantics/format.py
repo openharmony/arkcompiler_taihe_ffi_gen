@@ -43,16 +43,16 @@ class _TypeNamePrinter(TypeVisitor):
     def visit_builtin_type(self, t: BuiltinType) -> str:
         return t.name
 
-    @override
-    def visit_type_ref_decl(self, d: TypeRefDecl) -> str:
-        ref_str = self.handle_type(d.ref_ty) if d.ref_ty else f"<unresolved {d.name!r}>"
-        return d.qual.describe(ref_str)
-
 
 class _PrettyPrinter(DeclVisitor):
     @override
     def visit_package_ref_decl(self, d: PackageRefDecl):
         return d.name
+
+    @override
+    def visit_type_ref_decl(self, d: TypeRefDecl) -> str:
+        ref_str = self.handle_type(d.ref_ty) if d.ref_ty else f"<unresolved {d.name!r}>"
+        return d.qual.describe(ref_str)
 
     @override
     def visit_decl_ref_decl(self, d: DeclarationRefDecl):
@@ -68,23 +68,25 @@ class _PrettyPrinter(DeclVisitor):
     @override
     def visit_decl_import_decl(self, d: DeclarationImportDecl):
         if d.is_alias():
-            return f"from {self.handle_decl(d.pkg)} use {self.handle_decl(d.decl)} as {d.name};"
+            return f"from {self.handle_decl(d.decl.pkg)} use {self.handle_decl(d.decl)} as {d.name};"
         else:
-            return f"from {self.handle_decl(d.pkg)} use {self.handle_decl(d.decl)};"
+            return (
+                f"from {self.handle_decl(d.decl.pkg)} use {self.handle_decl(d.decl)};"
+            )
 
     @override
     def visit_param_decl(self, d: ParamDecl):
-        return f"{d.name}: {self.handle_type(d.ty)}"
+        return f"{d.name}: {self.handle_decl(d.ty)}"
 
     @override
     def visit_func_decl(self, d: FuncDecl):
         fmt_args = ", ".join(self.handle_decl(x) for x in d.params)
-        fmt_ret = ", ".join(self.handle_type(r) for r in d.return_ty)
+        fmt_ret = ", ".join(self.handle_decl(r) for r in d.return_types)
         return f"fn {d.name}({fmt_args}) -> ({fmt_ret});"
 
     @override
     def visit_struct_field_decl(self, d: StructFieldDecl):
-        return f"  {d.name}: {self.handle_type(d.ty)}"
+        return f"  {d.name}: {self.handle_decl(d.ty)}"
 
     @override
     def visit_enum_item_decl(self, d: EnumItemDecl):

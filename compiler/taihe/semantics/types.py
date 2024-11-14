@@ -22,8 +22,6 @@ class TypeAlike(Protocol):
     Notable implementors to this protocol is `TypeRefDecl`.
     """
 
-    name: str
-
     def _accept(self, v: "TypeVisitor") -> Any: ...
 
 

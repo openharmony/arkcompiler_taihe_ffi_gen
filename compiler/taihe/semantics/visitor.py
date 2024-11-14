@@ -26,6 +26,7 @@ from taihe.semantics.declarations import (
     Package,
     PackageGroup,
     PackageImportDecl,
+    PackageLevelDecl,
     PackageRefDecl,
     ParamDecl,
     StructDecl,
@@ -129,13 +130,12 @@ class DeclVisitor:
             print(f"Internal error while handling {self.visiting}")
             raise
 
-    def handle_type(self, t: TypeAlike) -> Any:
-        """Override this function to handle types during the visit of declarations."""
-        del t
-
     def visit_decl(self, d: Decl) -> Any:
         """The fallback method which handles the most general cases."""
         del d
+
+    def visit_package_level_decl(self, d: PackageLevelDecl) -> Any:
+        return self.visit_decl(d)
 
     ### Imports ###
 
@@ -143,15 +143,18 @@ class DeclVisitor:
         return self.visit_decl(d)
 
     def visit_decl_ref_decl(self, d: DeclarationRefDecl) -> Any:
+        d._traverse(self)
         return self.visit_decl(d)
 
     def visit_import_decl(self, d: ImportDecl) -> Any:
         return self.visit_decl(d)
 
     def visit_package_import_decl(self, d: PackageImportDecl) -> Any:
+        d._traverse(self)
         return self.visit_import_decl(d)
 
     def visit_decl_import_decl(self, d: DeclarationImportDecl) -> Any:
+        d._traverse(self)
         return self.visit_import_decl(d)
 
     ### Functions ###
@@ -162,15 +165,14 @@ class DeclVisitor:
 
     def visit_func_decl(self, d: FuncDecl) -> Any:
         d._traverse(self)
-        return self.visit_decl(d)
+        return self.visit_package_level_decl(d)
 
     ### Type (Generic) ###
 
     def visit_type_decl(self, d: TypeDecl) -> Any:
-        return self.visit_decl(d)
+        return self.visit_package_level_decl(d)
 
     def visit_type_ref_decl(self, d: TypeRefDecl) -> Any:
-        d._traverse(self)
         return self.visit_decl(d)
 
     ### Struct ###
@@ -201,26 +203,26 @@ class DeclVisitor:
         g._traverse(self)
 
 
-class RecursiveTypeVisitor(DeclVisitor, TypeVisitor):
-    """Visits declarations and the types referenced by the declarations.
+# class RecursiveTypeVisitor(DeclVisitor, TypeVisitor):
+#     """Visits declarations and the types referenced by the declarations.
 
-    `RecursiveTypeVisitor` combines the behavior of both `DeclVisitor` and
-    `TypeVisitor`. It traverses the declaration tree, visiting each
-    declaration, and then, for each type referenced within a declaration, it
-    descends into the type hierarchy. However, it does not recursively visit
-    the child types of type declarations (e.g., the fields of a struct).
+#     `RecursiveTypeVisitor` combines the behavior of both `DeclVisitor` and
+#     `TypeVisitor`. It traverses the declaration tree, visiting each
+#     declaration, and then, for each type referenced within a declaration, it
+#     descends into the type hierarchy. However, it does not recursively visit
+#     the child types of type declarations (e.g., the fields of a struct).
 
-    **Example:**
+#     **Example:**
 
-    DeclVisitor.visit_param_decl(param)
-    -> RecursiveTypeVisitor.handle_type(param.ty)
-    -> DeclVisitor.visit_type_ref_decl(param.ty)
-    -> RecursiveTypeVisitor.handle_type(param.ty.ref_ty)
-    -> return (assuming that param.ty.ref_ty is a StructDecl)
-    """
+#     DeclVisitor.visit_param_decl(param)
+#     -> RecursiveTypeVisitor.handle_type(param.ty)
+#     -> DeclVisitor.visit_type_ref_decl(param.ty)
+#     -> RecursiveTypeVisitor.handle_type(param.ty.ref_ty)
+#     -> return (assuming that param.ty.ref_ty is a StructDecl)
+#     """
 
-    def handle_type(self, t: TypeAlike) -> Any:
-        if isinstance(t, TypeDecl):
-            return DeclVisitor.handle_type(self, t)
-        else:
-            return TypeVisitor.handle_type(self, t)
+#     def handle_type(self, t: TypeAlike) -> Any:
+#         if isinstance(t, TypeDecl):
+#             return DeclVisitor.handle_type(self, t)
+#         else:
+#             return TypeVisitor.handle_type(self, t)

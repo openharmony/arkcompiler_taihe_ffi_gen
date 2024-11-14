@@ -156,14 +156,14 @@ class AstConverter(Visitor):
         ty = BuiltinType.lookup(name)
         if ty is None:
             self.diag.emit(TypeNotExistError(name, loc=loc))
-        return TypeRefDecl(name, ty, loc=loc)
+        return TypeRefDecl(name, loc, ty)
 
     @override
     def visit_UserType(self, node: ast.UserType) -> TypeRefDecl:
         full_name = [*node.pkname, node.name]
         name = pkg2str(full_name)
         loc = self.loc(full_name)
-        return TypeRefDecl(name, loc=loc)
+        return TypeRefDecl(name, loc)
 
     @override
     def visit_Struct(self, node: ast.Struct) -> Optional[StructDecl]:
@@ -222,31 +222,29 @@ class AstConverter(Visitor):
         pkg = PackageRefDecl(pkg2str(node.old_pkname), self.loc(node.old_pkname))
         if node.new_pkname:
             yield PackageImportDecl(
-                pkg=pkg,
+                pkg,
                 name=pkg2str(node.new_pkname),
                 loc=self.loc(node.new_pkname),
             )
         else:
             yield PackageImportDecl(
-                pkg=pkg,
+                pkg,
             )
 
     @override
     def visit_UseSymbol(self, node: ast.UseSymbol) -> Iterable[DeclarationImportDecl]:
         pkg = PackageRefDecl(pkg2str(node.pkname), self.loc(node.pkname))
         for p in node.alias_pairs:
-            decl = DeclarationRefDecl(str(p.old_name), self.loc(p.old_name))
+            decl = DeclarationRefDecl(pkg, str(p.old_name), self.loc(p.old_name))
             if p.new_name:
                 yield DeclarationImportDecl(
-                    pkg=pkg,
-                    decl=decl,
+                    decl,
                     name=str(p.new_name),
                     loc=self.loc(p.new_name),
                 )
             else:
                 yield DeclarationImportDecl(
-                    pkg=pkg,
-                    decl=decl,
+                    decl,
                 )
 
     @override
