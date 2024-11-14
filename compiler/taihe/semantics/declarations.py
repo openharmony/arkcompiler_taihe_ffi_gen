@@ -38,7 +38,7 @@ class Decl(ABC, DeclAlike):
     KIND: ClassVar[str]
 
     name: str
-    parent: Any
+    parent: Any = None
     loc: Optional[SourceLocation]
 
     def __init__(self, name: str, loc=None, parent=None):
@@ -133,7 +133,7 @@ class ImportDecl(Decl):
 
     KIND = "<import-decl-kind>"
 
-    parent: Optional["Package"]
+    parent: Optional["Package"] = None
 
 
 class PackageRefDecl(Decl):
@@ -223,14 +223,14 @@ class DeclarationImportDecl(ImportDecl):
 class PackageLevelDecl(Decl):
     KIND = "<package-level-decl-kind>"
 
-    parent: Optional["Package"]
+    parent: Optional["Package"] = None
 
 
 class ParamDecl(Decl):
     KIND = "function parameter"
 
     ty: TypeRefDecl
-    parent: Optional["FuncBaseDecl"]
+    parent: Optional["FuncBaseDecl"] = None
 
     def __init__(self, name: str, ty: TypeRefDecl, **kwargs):
         super().__init__(name, **kwargs)
@@ -282,13 +282,11 @@ class FuncDecl(PackageLevelDecl, FuncBaseDecl):
 class TypeDecl(PackageLevelDecl, Type):
     KIND = "<type-decl-kind>"
 
-    parent: Optional["Package"]
-
 
 class EnumItemDecl(Decl):
     KIND = "enum item"
 
-    parent: Optional["EnumDecl"]
+    parent: Optional["EnumDecl"] = None
     value: int
 
     def __init__(self, name: str, value: int, **kwargs):
@@ -328,7 +326,7 @@ class StructFieldDecl(Decl):
     KIND = "struct field"
 
     ty: TypeRefDecl
-    parent: Optional["StructDecl"]
+    parent: Optional["StructDecl"] = None
 
     def __init__(self, name: str, ty: TypeRefDecl, **kwargs):
         super().__init__(name, **kwargs)
@@ -369,7 +367,7 @@ class StructDecl(TypeDecl):
 class IfaceMethodDecl(FuncBaseDecl):
     KIND = "interface method"
 
-    parent: Optional["IfaceDecl"]
+    parent: Optional["IfaceDecl"] = None
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:

@@ -169,8 +169,6 @@ class SymbolConflictWithNamespaceError(DiagError):
 class ExtendsTypeError(DiagError):
     MSG = "expected an interface, got {name}"
 
-    ty: "TypeRefDecl"
-
     def __init__(self, ty: "TypeRefDecl"):
         self.loc = ty.loc
         self.name = ty.name
