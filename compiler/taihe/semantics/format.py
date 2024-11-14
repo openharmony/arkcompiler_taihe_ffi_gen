@@ -62,17 +62,19 @@ class _PrettyPrinter(DeclVisitor):
 
     @override
     def visit_package_import_decl(self, d: PackageImportDecl):
+        ret = f"use {self.handle_decl(d.pkg)}"
         if d.is_alias():
-            return f"use {self.handle_decl(d.pkg)} as {d.name};"
-        else:
-            return f"use {self.handle_decl(d.pkg)};"
+            ret += f" as {d.name}"
+        ret += ";"
+        return ret
 
     @override
     def visit_decl_import_decl(self, d: DeclarationImportDecl):
+        ret = f"from {self.handle_decl(d.decl.pkg)} use {self.handle_decl(d.decl)}"
         if d.is_alias():
-            return f"from {self.handle_decl(d.decl.pkg)} use {self.handle_decl(d.decl)} as {d.name};"
-        else:
-            return f"from {self.handle_decl(d.decl.pkg)} use {self.handle_decl(d.decl)};"
+            ret += f" as {d.name}"
+        ret += ";"
+        return ret
 
     @override
     def visit_param_decl(self, d: ParamDecl):
