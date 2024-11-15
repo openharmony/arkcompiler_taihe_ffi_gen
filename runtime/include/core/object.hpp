@@ -11,8 +11,12 @@ struct InterfaceMapItem {
     void const *pvtbl;
 };
 
+struct CommonHandle;
+
 struct RTTI {
     std::size_t length;
+    void(*drop)(CommonHandle *pself);
+    CommonHandle*(*dup)(CommonHandle *pself);
     InterfaceMapItem imap[];
 };
 
@@ -28,6 +32,16 @@ struct CommonHandle {
         return nullptr;
     }
 };
+
+template<typename Self>
+constexpr void Iobj_drop(CommonHandle *pself) {
+    static_cast<Self *>(pself)->drop();
+}
+
+template<typename Self>
+constexpr CommonHandle *Iobj_dup(CommonHandle *pself) {
+    return static_cast<Self *>(static_cast<Self *>(pself)->dup());
+}
 
 template<typename T, std::size_t S>
 constexpr void concatArraysInPlace(std::array<T, S> &r, std::size_t j) {}
@@ -51,6 +65,8 @@ template<typename Self, template<typename> typename... TypeInfos>
 struct Handle : CommonHandle {
     static constexpr struct {
         std::size_t length = (TypeInfos<Self>::imap.size() + ...);
+        void (*drop)(CommonHandle *pself) = &Iobj_drop<Self>;
+        CommonHandle*(*dup)(CommonHandle *pself) = &Iobj_dup<Self>;
         std::array<InterfaceMapItem, (TypeInfos<Self>::imap.size() + ...)> imap = concatArrays(TypeInfos<Self>::imap...);
     } rtti = {};
 
