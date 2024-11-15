@@ -1,39 +1,44 @@
 // Use Packages
 
+use example.bar as bar; // OK
+
 use example.nonexist as nonexist;  // PackageNotExistError
 
 use example.foo as foobar;
-use example.bar as foobar;  // UsingPackageConflictError
-
-use example.bar as bar; // OK
+use example.bar as foobar;  // DeclConflictError
 
 // Use Symbols
 
 from example.nonexist use XXX, YYY;  // PackageNotExistError
 
-from example.bar use Nonexist as MyNonexist;  // DeclNotExistError
+from example.bar use Bar;  // OK
 
 from example.foo use func as my_func; // NotATypeError
 
-from example.bar use Bar as Foobar;
-from example.foo use Foo as Foobar; // UsingTypeConflictError
+from example.foo use Nonexist as MyNonexist;  // DeclNotExistError
 
-from example.bar use Bar;  // OK
+from example.bar use Bar as Foobar;
+from example.foo use Foo as Foobar; // DeclConflictError
 
 // Structs
 
-struct UserTypes {
-    s: nonexist.Baz;  // Should no error
-    t: MyNonexist;  // Should no error
+struct ResolveTypesTester {
+    a: unimported.Type;  // PackageNotInScopeError
+    b: Bar.Type;  // NotAPackageError
+    c: nonexist.Baz;  // Should no error
+    d: bar.Bar;  // OK
+    e: bar.func;  // NotATypeError
+    f: bar.Foo;  // DeclNotExistError
 
-    u: example.unimported.Type;  // PackageNotInScopeError
-    v: UnimportedType;  // DeclNotInScopeError
-    w: bar.Foo;  // DeclNotExistError
-
-    x: Bar.Type;  // NotAPackageError
-    y: bar;  // NotADeclarationError
-    z: bar.func;  // NotATypeError
+    u: GoodStruct;  // OK
+    v: good_func;  // NotATypeError
+    w: Unimported;  // DeclNotInScopeError
+    x: bar;  // NotADeclarationError
+    y: MyNonexist;  // Should no error
+    z: Bar;  // OK
 }
+
+struct Foobar {}  // DeclConflictError
 
 struct BadStruct {}
 
@@ -54,11 +59,7 @@ struct RecursiveStructC {
     a: RecursiveStructA;  // RecursiveInclusion
 }
 
-struct GoodStructA {
-    b: GoodStructB;  // OK
-}
-
-struct GoodStructB {
+struct GoodStruct {
     n: i32;
 }
 
@@ -73,19 +74,21 @@ enum BadEnum {
 enum GoodEnum {
     A;
     B;
-    C = if (7 << 1 + 1) + (3 * 3 - 2 & 11) == 31 && 1 + 1 == 2 then 42 else 10;  // OK (42)
+    C = if (7 << 1 + 1) + (3 * 3 - 2 & 11) == 31 && 1 + 1 == 2 then 42 else 10;  // OK (should equal to 42)
     D;
 }
 
 // Functions
 
-function bad_func_1(a: mut GoodEnum): ();  // QualifierError
-
-function bad_func_2(a: i32, a: i32): ();  // SymbolConflictError
+function foobar(): ();  // DeclConflictError
 
 function inner(): ();  // SymbolConflictWithNamespaceError
 
-function good_func_1(a: i32, b: mut Bar): (String, String);  // OK
+function bad_func_a(a: mut GoodEnum): ();  // QualifierError
+
+function bad_func_b(a: i32, a: i32): ();  // DeclConflictError
+
+function good_func(a: i32, b: mut Bar): (String, String);  // OK
 
 // Interfaces
 
@@ -97,5 +100,5 @@ interface RecursiveIfaceC: RecursiveIfaceA {}  // RecursiveExtension
 
 interface BadIface: i32 {  // ExtensTypeError
     function a(x: String): ();
-    function a(x: i32): ();  // SymbolConflictError
+    function a(x: i32): ();  // DeclConflictError
 }

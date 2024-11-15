@@ -41,12 +41,12 @@ from taihe.utils.exceptions import (
 
 def analyze_semantics(pg: PackageGroup, diag: DiagnosticsManager):
     """Replaces UnresolvedType with the corresponding type."""
+    check_decls_and_imports_conflict(pg, diag)
+    check_sym_confilct_namespace(pg, diag)
     _ResolveImportsPass(diag).handle_decl(pg)
-    check_decl_redefine(pg, diag)
+    _CheckFieldCollisionErrorPass(diag).handle_decl(pg)
     check_struct_recursive_inclusion(pg, diag)
     check_iface_extends(pg, diag)
-    check_sym_confilct_namespace(pg, diag)
-    _CheckFieldCollisionErrorPass(diag).handle_decl(pg)
     _CheckQualifierErrorPass(diag).handle_decl(pg)
 
 
@@ -247,7 +247,7 @@ def check_sym_confilct_namespace(pg: PackageGroup, diag: DiagnosticsManager):
                 diag.emit(SymbolConflictWithNamespaceError(p.decls[i], p.name))
 
 
-def check_decl_redefine(pg: PackageGroup, diag: DiagnosticsManager):
+def check_decls_and_imports_conflict(pg: PackageGroup, diag: DiagnosticsManager):
     for p in pg.packages:
         for redef_decl in p.imports.keys() & p.decls.keys():
             diag.emit(DeclRedefDiagError(p.imports[redef_decl], p.decls[redef_decl]))
