@@ -34,12 +34,12 @@ struct CommonHandle {
 };
 
 template<typename Self>
-constexpr void Iobj_drop(CommonHandle *pself) {
+void Iobj_drop(CommonHandle *pself) {
     static_cast<Self *>(pself)->drop();
 }
 
 template<typename Self>
-constexpr CommonHandle *Iobj_dup(CommonHandle *pself) {
+CommonHandle *Iobj_dup(CommonHandle *pself) {
     return static_cast<Self *>(static_cast<Self *>(pself)->dup());
 }
 
@@ -54,21 +54,45 @@ constexpr void concatArraysInPlace(std::array<T, S> &r, std::size_t j, std::arra
     concatArraysInPlace(r, j, as...);
 }
 
-template<typename T, std::size_t... Ns>
-constexpr auto concatArrays(std::array<T, Ns> const &...as) {
-    std::array<T, (Ns + ...)> r = {};
-    concatArraysInPlace(r, 0, as...);
+constexpr bool operator==(const InterfaceMapItem& lhs, const InterfaceMapItem& rhs) {
+    return lhs.iid == rhs.iid;
+}
+
+template <std::size_t N>
+constexpr std::size_t uniqueArrayInPlace(std::array<InterfaceMapItem, N>& arr) {
+    std::size_t uniqueCount = 1;
+    for (std::size_t i = 1; i < N; ++i) {
+        bool isDuplicate = false;
+        for (std::size_t j = 0; j < uniqueCount; ++j) {
+            if (arr[i] == arr[j]) {
+                isDuplicate = true;
+                break;
+            }
+        }
+        if (!isDuplicate) {
+            arr[uniqueCount] = arr[i];
+            ++uniqueCount;
+        }
+    }
+    return uniqueCount;
+}
+
+template<typename Self, typename T, std::size_t... Ns>
+constexpr auto buildRtti(std::array<T, Ns> const &...as) {
+    struct {
+        std::size_t length;
+        void (*drop)(CommonHandle *pself);
+        CommonHandle*(*dup)(CommonHandle *pself);
+        std::array<InterfaceMapItem, (Ns + ...)> imap;
+    } r = {(Ns + ...), &Iobj_drop<Self>, &Iobj_dup<Self>, {}};
+    concatArraysInPlace(r.imap, 0, as...);
+    r.length = uniqueArrayInPlace(r.imap);
     return r;
 }
 
 template<typename Self, template<typename> typename... TypeInfos>
 struct Handle : CommonHandle {
-    static constexpr struct {
-        std::size_t length = (TypeInfos<Self>::imap.size() + ...);
-        void (*drop)(CommonHandle *pself) = &Iobj_drop<Self>;
-        CommonHandle*(*dup)(CommonHandle *pself) = &Iobj_dup<Self>;
-        std::array<InterfaceMapItem, (TypeInfos<Self>::imap.size() + ...)> imap = concatArrays(TypeInfos<Self>::imap...);
-    } rtti = {};
+    static constexpr auto rtti = buildRtti<Self>(TypeInfos<Self>::imap...);
 
     Handle()
         : CommonHandle{(RTTI *)&rtti} {}
