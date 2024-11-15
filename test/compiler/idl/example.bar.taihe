@@ -2,3 +2,5 @@ struct Bar {
     a: i32;
     b: i32;
 }
+
+function func(a: i32): i32;

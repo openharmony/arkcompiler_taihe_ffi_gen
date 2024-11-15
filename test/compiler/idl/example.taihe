@@ -1,78 +1,76 @@
 // Use Packages
 
-use foo;  // PackageNotExistError
+use example.nonexist as nonexist;  // PackageNotExistError
 
-use example.foo as foobar;  // OK
-
+use example.foo as foobar;
 use example.bar as foobar;  // UsingPackageConflictError
 
-use example.bar;  // OK
-
-use example.baz as baz;  // PackageNotExistError
+use example.bar as bar; // OK
 
 // Use Symbols
 
-from example.foobar use XXX, YYY;  // PackageNotExistError
+from example.nonexist use XXX, YYY;  // PackageNotExistError
 
-from example.bar use Foo as ABC;  // SymbolNotExistError
+from example.bar use Nonexist as MyNonexist;  // DeclNotExistError
+
+from example.foo use func as my_func; // NotATypeError
 
 from example.bar use Bar as Foobar;
 from example.foo use Foo as Foobar; // UsingTypeConflictError
 
 from example.bar use Bar;  // OK
 
-// Others
-
-function test(): ();
-struct test {}  // SymbolConflictError
-
 // Structs
 
-struct BadStruct1 {
-    x: UnimportedType;  // SymbolNotImportedError
-    y: unimported.package.Type;  // PackageNotImportedError
-    z: example.bar.Foo;  // SymbolNotExistError
+struct UserTypes {
+    s: nonexist.Baz;  // Should no error
+    t: MyNonexist;  // Should no error
+
+    u: example.unimported.Type;  // PackageNotInScopeError
+    v: UnimportedType;  // DeclNotInScopeError
+    w: bar.Foo;  // DeclNotExistError
+
+    x: Bar.Type;  // NotAPackageError
+    y: bar;  // NotADeclarationError
+    z: bar.func;  // NotATypeError
 }
 
-struct BadStruct2 {
-    x: i32;
-    x: i32;  // SymbolConflictError
+struct BadStruct {}
+
+struct BadStruct {  // DeclConflictError
+    a: i32;
+    a: i32;  // DeclConflictError
 }
 
-struct BadStruct3A {
-    b: BadStruct3B;
+struct RecursiveStructA {
+    b: RecursiveStructB;
 }
 
-struct BadStruct3B {
-    c: BadStruct3C;
+struct RecursiveStructB {
+    c: RecursiveStructC;
 }
 
-struct BadStruct3C {
-    a: BadStruct3A;  // RecursiveInclusion
+struct RecursiveStructC {
+    a: RecursiveStructA;  // RecursiveInclusion
 }
 
-struct GoodStruct1A {
-    b: GoodStruct1B;  // OK
+struct GoodStructA {
+    b: GoodStructB;  // OK
 }
 
-struct GoodStruct1B {
+struct GoodStructB {
     n: i32;
 }
 
 // Enums
 
-enum BadEnum1 {
+enum BadEnum {
     A;
-    B = -1;
-    C;  // EnumValueCollisionError
+    A = -1;  // DeclConflictError
+    B;  // EnumValueCollisionError
 }
 
-enum BadEnum2 {
-    A;
-    A;  // SymbolConflictError
-}
-
-enum GoodEnum1 {
+enum GoodEnum {
     A;
     B;
     C = if (7 << 1 + 1) + (3 * 3 - 2 & 11) == 31 && 1 + 1 == 2 then 42 else 10;  // OK (42)
@@ -81,21 +79,23 @@ enum GoodEnum1 {
 
 // Functions
 
-function bad_func_1(a: mut GoodEnum1): ();  // QualifierError
+function bad_func_1(a: mut GoodEnum): ();  // QualifierError
 
 function bad_func_2(a: i32, a: i32): ();  // SymbolConflictError
 
+function inner(): ();  // SymbolConflictWithNamespaceError
+
 function good_func_1(a: i32, b: mut Bar): (String, String);  // OK
 
-function a(): ();  // SymbolConflictWithNamespaceError
+// Interfaces
 
-interface Iface: i32 {  // ExtensionTypeError
-    function a(): ();
-    function a(x: i32, x: i32): ();  // SymbolConflictError x 2
+interface RecursiveIfaceA: RecursiveIfaceB {}
+
+interface RecursiveIfaceB: RecursiveIfaceC {}
+
+interface RecursiveIfaceC: RecursiveIfaceA {}  // RecursiveExtension
+
+interface BadIface: i32 {  // ExtensTypeError
+    function a(x: String): ();
+    function a(x: i32): ();  // SymbolConflictError
 }
-
-interface IfaceA: IfaceB {}
-
-interface IfaceB: IfaceC {}
-
-interface IfaceC: IfaceA {}  // RecursiveExtension

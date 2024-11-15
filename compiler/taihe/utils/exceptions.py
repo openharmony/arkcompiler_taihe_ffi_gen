@@ -95,61 +95,106 @@ class EnumValueCollisionError(DiagError):
 
 @dataclass
 class PackageNotExistError(DiagFatalError):
-    MSG = "package {pkg!r} not exist"
+    MSG = "package {name!r} not exist"
 
-    pkg: str
+    name: str
 
     def __init__(
         self,
-        pkg: str,
+        name: str,
         loc: Optional["SourceLocation"],
     ):
-        self.pkg = pkg
+        self.name = name
         self.loc = loc
 
 
 @dataclass
 class DeclNotExistError(DiagError):
-    MSG = "declaration {decl!r} not exist"
+    MSG = "declaration {name!r} not exist"
 
-    decl: str
+    name: str
 
     def __init__(
         self,
-        decl: str,
+        name: str,
         loc: Optional["SourceLocation"],
     ):
-        self.decl = decl
+        self.name = name
         self.loc = loc
 
 
 @dataclass
 class DeclarationNotInScopeError(DiagError):
-    MSG = "declaration {decl!r} is not declared or imported in this scope"
+    MSG = "declaration {name!r} is not declared or imported in this scope"
 
-    decl: str
+    name: str
 
     def __init__(
         self,
-        decl: str,
+        name: str,
         loc: Optional["SourceLocation"],
     ):
-        self.decl = decl
+        self.name = name
         self.loc = loc
 
 
 @dataclass
 class PackageNotInScopeError(DiagError):
-    MSG = "package {decl!r} is not imported in this scope"
+    MSG = "package {name!r} is not imported in this scope"
 
-    decl: str
+    name: str
 
     def __init__(
         self,
-        decl: str,
+        name: str,
         loc: Optional["SourceLocation"],
     ):
-        self.decl = decl
+        self.name = name
+        self.loc = loc
+
+
+@dataclass
+class NotATypeError(DiagError):
+    MSG = "declaration {name!r} is not a type"
+
+    name: str
+
+    def __init__(
+        self,
+        name: str,
+        loc: Optional["SourceLocation"],
+    ):
+        self.name = name
+        self.loc = loc
+
+
+@dataclass
+class NotAPackageError(DiagError):
+    MSG = "{name!r} is not a package"
+
+    name: str
+
+    def __init__(
+        self,
+        name: str,
+        loc: Optional["SourceLocation"],
+    ):
+        self.name = name
+        self.loc = loc
+
+
+@dataclass
+class NotADeclarationError(DiagError):
+    MSG = "{name!r} is not a declaration"
+
+    name: str
+
+    def __init__(
+        self,
+        name: str,
+        loc: Optional["SourceLocation"],
+    ):
+        self.name = name
         self.loc = loc
 
 
@@ -208,51 +253,6 @@ class RecursiveInclusionError(DiagError):
     def notes(self):
         for n in self.other:
             yield RecursiveInclusionNote(n)
-
-
-@dataclass
-class NotATypeError(DiagError):
-    MSG = "declaration {name!r} is not a type"
-
-    decl: str
-
-    def __init__(
-        self,
-        decl: str,
-        loc: Optional["SourceLocation"],
-    ):
-        self.decl = decl
-        self.loc = loc
-
-
-@dataclass
-class NotAPackageError(DiagError):
-    MSG = "{name!r} is not a package"
-
-    decl: str
-
-    def __init__(
-        self,
-        decl: str,
-        loc: Optional["SourceLocation"],
-    ):
-        self.decl = decl
-        self.loc = loc
-
-
-@dataclass
-class NotADeclarationError(DiagError):
-    MSG = "{name!r} is not a declaration"
-
-    decl: str
-
-    def __init__(
-        self,
-        decl: str,
-        loc: Optional["SourceLocation"],
-    ):
-        self.decl = decl
-        self.loc = loc
 
 
 @dataclass
