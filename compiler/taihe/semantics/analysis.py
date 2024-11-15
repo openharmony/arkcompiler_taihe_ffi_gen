@@ -308,19 +308,21 @@ def detect_cycles(graph):
     visited = [False for _ in glist]
     edges = []
 
-    def visit(i, m):
+    def visit(i):
+        if i < k:
+            return
         if visited[i]:
-            if i == k == m:
+            if i == k:
                 cycles.append(edges.copy())
             return
         visited[i] = True
         for edge, j in glist[i]:
             edges.append(edge)
-            visit(j, min(m, j))
+            visit(j)
             edges.pop()
         visited[i] = False
 
     for k in range(len(glist)):
-        visit(k, k)
+        visit(k)
 
     return cycles
