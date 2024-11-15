@@ -1,4 +1,4 @@
-from collections.abc import Sequence
+from collections.abc import Iterable
 from typing import Any
 
 from typing_extensions import override
@@ -206,7 +206,7 @@ class _CheckFieldCollisionErrorPass(DeclVisitor):
 
 def check_field_name_collision(
     diag: DiagnosticsManager,
-    items: Sequence[Decl],
+    items: Iterable[Decl],
 ):
     symbol = {}
     for f in items:
@@ -218,7 +218,7 @@ def check_field_name_collision(
 
 def check_field_value_collision(
     diag: DiagnosticsManager,
-    items: Sequence[EnumItemDecl],
+    items: Iterable[EnumItemDecl],
 ):
     symbol = {}
     for f in items:
@@ -300,25 +300,27 @@ def detect_cycles(graph):
     """
     cycles = []
 
-    visited = set()
-    visiting_dict = {}
-    visiting_list = []
+    order = {point: i for i, point in enumerate(graph)}
+    glist = [
+        [(edge, order[child]) for edge, child in children]
+        for children in graph.values()
+    ]
+    visited = [False for _ in glist]
+    edges = []
 
-    def visit(parent):
-        if parent in visited:
+    def visit(i, m):
+        if visited[i]:
+            if i == k == m:
+                cycles.append(edges.copy())
             return
-        idx = len(visiting_list)
-        rec = visiting_dict.setdefault(parent, idx)
-        if idx != rec:
-            cycles.append(visiting_list[rec:])
-            return
-        for edge, child in graph[parent]:
-            visiting_list.append(edge)
-            visit(child)
-            visiting_list.pop()
-        visited.add(parent)
+        visited[i] = True
+        for edge, j in glist[i]:
+            edges.append(edge)
+            visit(j, min(m, j))
+            edges.pop()
+        visited[i] = False
 
-    for parent in graph:
-        visit(parent)
+    for k in range(len(glist)):
+        visit(k, k)
 
     return cycles
