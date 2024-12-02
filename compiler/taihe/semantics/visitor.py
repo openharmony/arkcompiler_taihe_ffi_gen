@@ -12,7 +12,7 @@ Design:
 - The `VisitorBase.visit_{type,decl}` is the "root" of the type hierarchy.
 """
 
-from typing import Any
+from typing import Any, Generic, Optional, TypeVar
 
 from taihe.semantics.declarations import (
     Decl,
@@ -44,8 +44,10 @@ from taihe.semantics.types import (
     TypeAlike,
 )
 
+T = TypeVar("T")
 
-class TypeVisitor:
+
+class TypeVisitor(Generic[T]):
     """Visits types along the type hierarchy.
 
     `TypeVisitor` traverses the type hierarchy in a linear fashion, visiting
@@ -59,56 +61,57 @@ class TypeVisitor:
         - Example: `visit_enum_decl()` -> `EnumDecl._traverse()` -> `visit_enum_item_decl()`
     """
 
-    visiting: Any
+    visiting: Optional[TypeAlike]
     """The current node being visited. Only for debug use."""
 
     def __init__(self) -> None:
         self.visiting = None
 
-    def handle_type(self, t: TypeAlike) -> Any:
+    def handle_type(self, t: TypeAlike) -> T:
         """The entrance for visiting."""
         try:
+            self.visiting = t
             return t._accept(self)
         except:
             print(f"Internal error while handling {self.visiting}")
             raise
 
-    def visit_type(self, t: Type) -> Any:
+    def visit_type(self, t: Type) -> T:
         """The fallback method which handles the most general type.
 
         Note that `TypeRef` and `QualifiedType` is NOT a `Type`.
         """
-        del t
+        raise NotImplementedError
 
     ### Non-`Type`s ###
 
-    def visit_type_ref_decl(self, d: TypeRefDecl) -> Any:
-        if d.ref_ty:
-            return self.handle_type(d.ref_ty)
+    def visit_type_ref_decl(self, d: TypeRefDecl) -> T:
+        assert d.ref_ty
+        return self.handle_type(d.ref_ty)
 
     ### Built-in types ###
 
-    def visit_builtin_type(self, t: BuiltinType) -> Any:
+    def visit_builtin_type(self, t: BuiltinType) -> T:
         return self.visit_type(t)
 
-    def visit_scalar_type(self, t: ScalarType) -> Any:
+    def visit_scalar_type(self, t: ScalarType) -> T:
         return self.visit_builtin_type(t)
 
-    def visit_special_type(self, t: SpecialType) -> Any:
+    def visit_special_type(self, t: SpecialType) -> T:
         return self.visit_builtin_type(t)
 
     ### Declarations ###
 
-    def visit_type_decl(self, d: TypeDecl) -> Any:
+    def visit_type_decl(self, d: TypeDecl) -> T:
         return self.visit_type(d)
 
-    def visit_struct_decl(self, d: StructDecl) -> Any:
+    def visit_struct_decl(self, d: StructDecl) -> T:
         return self.visit_type_decl(d)
 
-    def visit_enum_decl(self, d: EnumDecl) -> Any:
+    def visit_enum_decl(self, d: EnumDecl) -> T:
         return self.visit_type_decl(d)
 
-    def visit_iface_decl(self, d: IfaceDecl) -> Any:
+    def visit_iface_decl(self, d: IfaceDecl) -> T:
         return self.visit_type_decl(d)
 
 
@@ -130,6 +133,7 @@ class DeclVisitor:
     def handle_decl(self, d: DeclAlike) -> Any:
         """The entrance for visiting anything "acceptable"."""
         try:
+            self.visiting = d
             return d._accept(self)
         except:
             print(f"Internal error while handling {self.visiting}")
@@ -140,6 +144,7 @@ class DeclVisitor:
         del d
 
     def visit_func_base_decl(self, d: FuncBaseDecl) -> Any:
+        d._traverse(self)
         return self.visit_decl(d)
 
     ### Imports ###
@@ -169,7 +174,6 @@ class DeclVisitor:
         return self.visit_decl(d)
 
     def visit_func_decl(self, d: FuncDecl) -> Any:
-        d._traverse(self)
         return self.visit_func_base_decl(d)
 
     ### Type (Generic) ###
@@ -215,28 +219,3 @@ class DeclVisitor:
 
     def visit_package_group(self, g: PackageGroup) -> Any:
         g._traverse(self)
-
-
-# class RecursiveTypeVisitor(DeclVisitor, TypeVisitor):
-#     """Visits declarations and the types referenced by the declarations.
-
-#     `RecursiveTypeVisitor` combines the behavior of both `DeclVisitor` and
-#     `TypeVisitor`. It traverses the declaration tree, visiting each
-#     declaration, and then, for each type referenced within a declaration, it
-#     descends into the type hierarchy. However, it does not recursively visit
-#     the child types of type declarations (e.g., the fields of a struct).
-
-#     **Example:**
-
-#     DeclVisitor.visit_param_decl(param)
-#     -> RecursiveTypeVisitor.handle_type(param.ty)
-#     -> DeclVisitor.visit_type_ref_decl(param.ty)
-#     -> RecursiveTypeVisitor.handle_type(param.ty.ref_ty)
-#     -> return (assuming that param.ty.ref_ty is a StructDecl)
-#     """
-
-#     def handle_type(self, t: TypeAlike) -> Any:
-#         if isinstance(t, TypeDecl):
-#             return DeclVisitor.handle_type(self, t)
-#         else:
-#             return TypeVisitor.handle_type(self, t)

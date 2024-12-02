@@ -151,7 +151,7 @@ class CodeGenerator(Visitor):
         self.files: dict[str, File] = {}
 
     def generic_visit(self, node) -> None:
-        raise NotImplementedError
+        pass
 
     def visit_Spec(self, node: ast.Spec) -> None:
         write_basic_info_in_files(self)

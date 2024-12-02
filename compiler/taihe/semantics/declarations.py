@@ -1,6 +1,6 @@
 """Defines the types for declarations."""
 
-from abc import ABC, abstractmethod
+from abc import ABC
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Protocol
 
@@ -47,10 +47,6 @@ class Decl(ABC, DeclAlike):
         self.parent = parent
         self.loc = loc
 
-    @abstractmethod
-    def _accept(self, v: "DeclVisitor") -> Any:
-        pass
-
     @property
     def description(self) -> str:
         """Describes the object in a human-friendly way."""
@@ -80,7 +76,7 @@ class TypeRefDecl(Decl, TypeAlike):
     ```
     struct Foo { ... }.     // `Foo` is a `TypeDecl`.
 
-    fn func(foo: mut Foo);  // `Foo` is `TypeRefDecl(ref_ty=TypeDecl('Foo'), qual=MUT)`.
+    fn func(foo: mut Foo);  // `mut Foo` is `TypeRefDecl(ref_ty=TypeDecl('Foo'), qual=MUT)`.
     fn func(foo: BadType);  // `BadType` is `TypeRefDecl(ref_ty=None)`.
     ```
     """
@@ -105,12 +101,7 @@ class TypeRefDecl(Decl, TypeAlike):
         self.qual = qual
 
     def _accept(self, v: "DeclVisitor | TypeVisitor") -> Any:
-        v.visiting = self
         return v.visit_type_ref_decl(self)
-
-    def __repr__(self) -> str:
-        ref_str = repr(self.ref_ty) if self.ref_ty else f"??? {self.name!r}"
-        return f"<type-ref to {self.qual.describe(ref_str)}>"
 
 
 #######################
@@ -125,10 +116,30 @@ class ImportDecl(Decl):
 
     For example:
 
-    use foo;                 -->     PackageImportDecl(pkg='foo', name='foo')
-    use foo as bar;          -->     PackageImportDecl(pkg='foo', name='bar')
-    from foo use Bar;        --> DeclarationImportDecl(pkg='foo', symbol='Bar', name='Bar')
-    from foo use Bar as Baz; --> DeclarationImportDecl(pkg='foo', symbol='Bar', name='Baz')
+    ```
+    use foo;                 --> PackageImportDecl(
+                                     name='foo',
+                                     pkg=PackageRefDecl(name='foo'),
+                                 )
+    use foo as bar;          --> PackageImportDecl(
+                                     name='bar',
+                                     pkg=PackageRefDecl(name='foo'),
+                                 )
+    from foo use Bar;        --> DeclarationImportDecl(
+                                     name='Bar',
+                                     decl=DeclarationRefDecl(
+                                         name='Bar',
+                                         pkg=PackageRefDecl(name='foo'),
+                                     ),
+                                 )
+    from foo use Bar as Baz; --> DeclarationImportDecl(
+                                     name='Baz',
+                                     decl=DeclarationRefDecl(
+                                         name='Bar',
+                                         pkg=PackageRefDecl(name='foo'),
+                                     ),
+                                 )
+    ```
     """
 
     KIND = "<import-decl-kind>"
@@ -148,7 +159,6 @@ class PackageRefDecl(Decl):
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
-        v.visiting = self
         return v.visit_package_ref_decl(self)
 
 
@@ -166,7 +176,6 @@ class DeclarationRefDecl(Decl):
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
-        v.visiting = self
         return v.visit_decl_ref_decl(self)
 
     def _traverse(self, v: "DeclVisitor"):
@@ -184,7 +193,6 @@ class PackageImportDecl(ImportDecl):
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
-        v.visiting = self
         return v.visit_package_import_decl(self)
 
     def is_alias(self) -> bool:
@@ -205,7 +213,6 @@ class DeclarationImportDecl(ImportDecl):
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
-        v.visiting = self
         return v.visit_decl_import_decl(self)
 
     def is_alias(self) -> bool:
@@ -238,7 +245,6 @@ class ParamDecl(Decl):
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
-        v.visiting = self
         return v.visit_param_decl(self)
 
     def _traverse(self, v: "DeclVisitor"):
@@ -246,7 +252,7 @@ class ParamDecl(Decl):
 
 
 class FuncBaseDecl(Decl):
-    KIND = "<base-function-decl-kind>"
+    KIND = "<func-decl-kind>"
 
     params: list[ParamDecl]
     return_types: list[TypeRefDecl]
@@ -270,12 +276,11 @@ class FuncBaseDecl(Decl):
         self.return_types.append(ty)
 
 
-class FuncDecl(PackageLevelDecl, FuncBaseDecl):
+class FuncDecl(FuncBaseDecl, PackageLevelDecl):
     KIND = "function"
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
-        v.visiting = self
         return v.visit_func_decl(self)
 
 
@@ -295,7 +300,6 @@ class EnumItemDecl(Decl):
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
-        v.visiting = self
         return v.visit_enum_item_decl(self)
 
 
@@ -310,7 +314,6 @@ class EnumDecl(TypeDecl):
 
     @override
     def _accept(self, v: "DeclVisitor | TypeVisitor") -> Any:
-        v.visiting = self
         return v.visit_enum_decl(self)
 
     def _traverse(self, v: "DeclVisitor"):
@@ -334,7 +337,6 @@ class StructFieldDecl(Decl):
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
-        v.visiting = self
         return v.visit_struct_field_decl(self)
 
     def _traverse(self, v: "DeclVisitor"):
@@ -352,7 +354,6 @@ class StructDecl(TypeDecl):
 
     @override
     def _accept(self, v: "TypeVisitor | DeclVisitor") -> Any:
-        v.visiting = self
         return v.visit_struct_decl(self)
 
     def _traverse(self, v: "DeclVisitor"):
@@ -371,7 +372,6 @@ class IfaceMethodDecl(FuncBaseDecl):
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
-        v.visiting = self
         return v.visit_iface_method_decl(self)
 
 
@@ -379,30 +379,29 @@ class IfaceDecl(TypeDecl):
     KIND = "struct"
 
     methods: list[IfaceMethodDecl]
-    extends: list[TypeRefDecl]
+    parents: list[TypeRefDecl]
 
     def __init__(self, name: str, **kwargs):
         super().__init__(name, **kwargs)
         self.methods = []
-        self.extends = []
+        self.parents = []
 
     @override
     def _accept(self, v: "TypeVisitor | DeclVisitor") -> Any:
-        v.visiting = self
         return v.visit_iface_decl(self)
 
     def _traverse(self, v: "DeclVisitor"):
         for f in self.methods:
             v.handle_decl(f)
-        for e in self.extends:
+        for e in self.parents:
             v.handle_decl(e)
 
     def add_function(self, f: IfaceMethodDecl):
         f.parent = self
         self.methods.append(f)
 
-    def add_base(self, d: TypeRefDecl):
-        self.extends.append(d)
+    def add_parent(self, d: TypeRefDecl):
+        self.parents.append(d)
 
 
 ######################
@@ -410,13 +409,12 @@ class IfaceDecl(TypeDecl):
 ######################
 
 
-class Package:
+class Package(Decl):
     """A collection of named identities sharing the same scope."""
 
-    parent: ClassVar = None
+    KIND = "package"
 
-    # Metadata about the package itself.
-    name: str
+    parent: ClassVar = None
 
     # Symbols
     imports: dict[str, ImportDecl]
@@ -432,8 +430,10 @@ class Package:
     enums: list[EnumDecl]
     interfaces: list[IfaceDecl]
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, loc: Optional[SourceLocation]):
+        self.loc = loc
         self.name = name
+
         self.imports = {}
         self.decls = {}
 
@@ -449,7 +449,6 @@ class Package:
         return f"{self.__class__.__qualname__}<{self.name!r}>"
 
     def _accept(self, v: "DeclVisitor") -> Any:
-        v.visiting = self
         return v.visit_package(self)
 
     def _traverse(self, v: "DeclVisitor"):
@@ -529,7 +528,7 @@ class Package:
             raise NotImplementedError(f"unexpected import {type(i)}")
 
 
-class PackageGroup:
+class PackageGroup(DeclAlike):
     """Stores all known packages for a compilation instance."""
 
     _pkgs: dict[str, Package]
@@ -538,7 +537,6 @@ class PackageGroup:
         self._pkgs = {}
 
     def _accept(self, v: "DeclVisitor"):
-        v.visiting = self
         return v.visit_package_group(self)
 
     def _traverse(self, v: "DeclVisitor"):

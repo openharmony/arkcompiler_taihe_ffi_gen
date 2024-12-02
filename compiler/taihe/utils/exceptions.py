@@ -1,22 +1,35 @@
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional
 
-from taihe.utils.diagnostics import DiagError, DiagFatalError, DiagNote
+from taihe.utils.diagnostics import DiagError, DiagFatalError, DiagNote, DiagWarn
 from taihe.utils.sources import SourceLocation
 
 if TYPE_CHECKING:
     from taihe.semantics.declarations import (
         Decl,
         IfaceDecl,
+        Package,
         PackageLevelDecl,
+        StructDecl,
         StructFieldDecl,
         TypeRefDecl,
     )
 
 
 @dataclass
+class IDLSyntaxError(DiagFatalError):
+    MSG = "unexpected {token!r}"
+
+    token: str
+
+    def __init__(self, loc: SourceLocation, token: str):
+        self.loc = loc
+        self.token = token
+
+
+@dataclass
 class DefinitionConflictDiagNote(DiagNote):
-    MSG = "previously defined here"
+    MSG = "previously occurred here"
 
 
 @dataclass
@@ -26,7 +39,9 @@ class EnumValueCollisionDiagNote(DiagNote):
 
 @dataclass
 class RecursiveExtensionNote(DiagNote):
-    MSG = "the interface is extended by {iface.name}"
+    MSG = "the interface is extended by {iface.description}"
+
+    iface: "IfaceDecl"
 
     def __init__(
         self,
@@ -38,19 +53,21 @@ class RecursiveExtensionNote(DiagNote):
 
 @dataclass
 class RecursiveInclusionNote(DiagNote):
-    MSG = "the struct is included in {struct.name}"
+    MSG = "the struct is included in {struct.description}"
+
+    struct: "StructDecl"
 
     def __init__(
         self,
-        last: "StructFieldDecl",
+        last: tuple["StructDecl", "StructFieldDecl"],
     ):
-        self.loc = last.loc
-        self.struct = last.parent
+        self.loc = last[1].loc
+        self.struct = last[0]
 
 
 @dataclass
 class PackageRedefDiagError(DiagError):
-    MSG = "redefinition of package {pkg_name!r}"
+    MSG = "package name {pkg!r} is duplicated"
 
     pkg_name: str
     prev: SourceLocation
@@ -77,7 +94,7 @@ class DeclRedefDiagError(DiagError):
 
 @dataclass
 class EnumValueCollisionError(DiagError):
-    MSG = "discriminant value '{value}' already exists"
+    MSG = "discriminant value {value} already exists"
 
     prev: "Decl"
     current: "Decl"
@@ -94,7 +111,7 @@ class EnumValueCollisionError(DiagError):
 
 
 @dataclass
-class PackageNotExistError(DiagFatalError):
+class PackageNotExistError(DiagError):
     MSG = "package {name!r} not exist"
 
     name: str
@@ -102,7 +119,7 @@ class PackageNotExistError(DiagFatalError):
     def __init__(
         self,
         name: str,
-        loc: Optional["SourceLocation"],
+        loc: Optional[SourceLocation],
     ):
         self.name = name
         self.loc = loc
@@ -117,7 +134,7 @@ class DeclNotExistError(DiagError):
     def __init__(
         self,
         name: str,
-        loc: Optional["SourceLocation"],
+        loc: Optional[SourceLocation],
     ):
         self.name = name
         self.loc = loc
@@ -125,14 +142,14 @@ class DeclNotExistError(DiagError):
 
 @dataclass
 class DeclarationNotInScopeError(DiagError):
-    MSG = "declaration {name!r} is not declared or imported in this scope"
+    MSG = "declaration name {name!r} is not declared or imported in this scope"
 
     name: str
 
     def __init__(
         self,
         name: str,
-        loc: Optional["SourceLocation"],
+        loc: Optional[SourceLocation],
     ):
         self.name = name
         self.loc = loc
@@ -140,14 +157,14 @@ class DeclarationNotInScopeError(DiagError):
 
 @dataclass
 class PackageNotInScopeError(DiagError):
-    MSG = "package {name!r} is not imported in this scope"
+    MSG = "package name {name!r} is not imported in this scope"
 
     name: str
 
     def __init__(
         self,
         name: str,
-        loc: Optional["SourceLocation"],
+        loc: Optional[SourceLocation],
     ):
         self.name = name
         self.loc = loc
@@ -155,14 +172,14 @@ class PackageNotInScopeError(DiagError):
 
 @dataclass
 class NotATypeError(DiagError):
-    MSG = "declaration {name!r} is not a type"
+    MSG = "{name!r} is not a type name"
 
     name: str
 
     def __init__(
         self,
         name: str,
-        loc: Optional["SourceLocation"],
+        loc: Optional[SourceLocation],
     ):
         self.name = name
         self.loc = loc
@@ -170,14 +187,14 @@ class NotATypeError(DiagError):
 
 @dataclass
 class NotAPackageError(DiagError):
-    MSG = "{name!r} is not a package"
+    MSG = "{name!r} is not a package name"
 
     name: str
 
     def __init__(
         self,
         name: str,
-        loc: Optional["SourceLocation"],
+        loc: Optional[SourceLocation],
     ):
         self.name = name
         self.loc = loc
@@ -185,14 +202,14 @@ class NotAPackageError(DiagError):
 
 @dataclass
 class NotADeclarationError(DiagError):
-    MSG = "{name!r} is not a declaration"
+    MSG = "{name!r} is not a declaration name"
 
     name: str
 
     def __init__(
         self,
         name: str,
-        loc: Optional["SourceLocation"],
+        loc: Optional[SourceLocation],
     ):
         self.name = name
         self.loc = loc
@@ -200,19 +217,22 @@ class NotADeclarationError(DiagError):
 
 @dataclass
 class SymbolConflictWithNamespaceError(DiagError):
-    MSG = "declaration of {current.description} in package {pkg_name!r} shadows a file-level declaration"
+    MSG = "declaration of {decl.description} in {pkg.description} shadows a file-level declaration"
 
-    current: "PackageLevelDecl"
+    decl: "PackageLevelDecl"
+    pkg: "Package"
 
-    def __init__(self, current: "PackageLevelDecl", pkg_name: str):
-        self.current = current
-        self.loc = current.loc
-        self.pkg_name = pkg_name
+    def __init__(self, decl: "PackageLevelDecl", pkg: "Package"):
+        self.decl = decl
+        self.loc = decl.loc
+        self.pkg = pkg
 
 
 @dataclass
-class ExtendsTypeError(DiagError):
-    MSG = "expected an interface, got {name}"
+class StructFieldTypeError(DiagError):
+    MSG = "expected built-in/struct/enum type, got {name!r}"
+
+    name: str
 
     def __init__(self, ty: "TypeRefDecl"):
         self.loc = ty.loc
@@ -220,8 +240,40 @@ class ExtendsTypeError(DiagError):
 
 
 @dataclass
+class ExtendsTypeError(DiagError):
+    MSG = "expected an interface, got {name!r}"
+
+    name: str
+
+    def __init__(self, ty: "TypeRefDecl"):
+        self.loc = ty.loc
+        self.name = ty.name
+
+
+@dataclass
+class DuplicateExtendsWarn(DiagWarn):
+    MSG = "{iface.description} is extended multiple times"
+
+    iface: "IfaceDecl"
+    prev: "TypeRefDecl"
+    curr: "TypeRefDecl"
+
+    def __init__(self, iface: "IfaceDecl", prev: "TypeRefDecl", curr: "TypeRefDecl"):
+        self.loc = curr.loc
+        self.iface = iface
+        self.curr = curr
+        self.prev = prev
+
+    def notes(self):
+        yield DefinitionConflictDiagNote(loc=self.prev.loc)
+
+
+@dataclass
 class RecursiveExtensionError(DiagError):
-    MSG = "recursive extension is found in {iface.name}"
+    MSG = "recursive extension is found in {iface.description}"
+
+    iface: "IfaceDecl"
+    other: list[tuple["IfaceDecl", "TypeRefDecl"]]
 
     def __init__(
         self,
@@ -239,15 +291,18 @@ class RecursiveExtensionError(DiagError):
 
 @dataclass
 class RecursiveInclusionError(DiagError):
-    MSG = "recursive inclusion is found in {struct.name}"
+    MSG = "recursive inclusion is found in {struct.description}"
+
+    struct: "StructDecl"
+    other: list[tuple["StructDecl", "StructFieldDecl"]]
 
     def __init__(
         self,
-        last: "StructFieldDecl",
-        other: list["StructFieldDecl"],
+        last: tuple["StructDecl", "StructFieldDecl"],
+        other: list[tuple["StructDecl", "StructFieldDecl"]],
     ):
-        self.loc = last.loc
-        self.struct = last.parent
+        self.loc = last[1].loc
+        self.struct = last[0]
         self.other = other
 
     def notes(self):
@@ -257,7 +312,10 @@ class RecursiveInclusionError(DiagError):
 
 @dataclass
 class QualifierError(DiagError):
-    MSG = "qualifier {qual} cannot be applied to {name}"
+    MSG = "qualifier {qual!r} cannot be applied to {name!r}"
+
+    name: str
+    qual: str
 
     def __init__(self, ty: "TypeRefDecl"):
         self.loc = ty.loc

@@ -5,6 +5,7 @@
 
 #include "common.h"
 
+struct DataBlockHead;
 
 // IdMapItem
 // Represents an ID mapping item containing an ID and a vtable pointer.
@@ -15,20 +16,6 @@
 struct IdMapItem {
   const void* id;
   void* vtbl_ptr;  
-};
-
-struct TypeInfo;
-
-// DataBlockHead
-struct DataBlockHead {
-  struct TypeInfo* rtti_ptr;
-  TRefCount m_count;
-};
-
-// TObject
-struct TObject {
-  void* vtbl_ptr;
-  struct DataBlockHead* data_ptr;
 };
 
 // TypeInfo
@@ -43,10 +30,21 @@ struct TObject {
 // - `idmap`: A flexible array of `IdMapItem` structures for ID-to-vtable mapping.
 struct TypeInfo {
   uint64_t version;
-  uint32_t len;
-  uint32_t inside_func_len;
-  void (*free_data)(struct TObject);
-  struct IdMapItem idmap[0];
+  uint64_t len;
+  void (*free_data)(struct DataBlockHead*);
+  struct IdMapItem idmap[];
+};
+
+// DataBlockHead
+struct DataBlockHead {
+  struct TypeInfo* rtti_ptr;
+  TRefCount m_count;
+};
+
+// TObject
+struct TObject {
+  void* vtbl_ptr;
+  struct DataBlockHead* data_ptr;
 };
 
 // Retrieves the corresponding vtable pointer based on the given id from TypeInfo.

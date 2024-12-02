@@ -49,13 +49,6 @@ class TypeQualifier(IntFlag):
         return " ".join(segments)
 
 
-# type: ignore
-#
-# Message:
-#   Uninitialized attribute [13]: Attribute `name` inherited from protocol
-#   `TypeAlike` in class `Type` to have type `str` but is never initialized.
-#
-# Reason: always implemented by subclasses.
 class Type(TypeAlike):
     """Represents a concrete type."""
 
@@ -87,7 +80,6 @@ class BuiltinType(Type):
     kind: BuiltinTypeKind
 
     def _accept(self, v: "TypeVisitor") -> Any:
-        v.visiting = self
         return v.visit_builtin_type(self)
 
     @staticmethod
@@ -105,14 +97,12 @@ class ScalarType(BuiltinType):
     is_float: bool = False
 
     def _accept(self, v: "TypeVisitor") -> Any:
-        v.visiting = self
         return v.visit_scalar_type(self)
 
 
 @dataclass(frozen=True, repr=False)
 class SpecialType(BuiltinType):
     def _accept(self, v: "TypeVisitor") -> Any:
-        v.visiting = self
         return v.visit_special_type(self)
 
 

@@ -1,6 +1,6 @@
 // Use Packages
 
-use example.bar as bar; // OK
+use example.bar as bar;  // OK
 
 use example.nonexist as nonexist;  // PackageNotExistError
 
@@ -13,19 +13,19 @@ from example.nonexist use XXX, YYY;  // PackageNotExistError
 
 from example.bar use Bar;  // OK
 
-from example.foo use func as my_func; // NotATypeError
+from example.foo use func as my_func;  // NotATypeError
 
 from example.foo use Nonexist as MyNonexist;  // DeclNotExistError
 
 from example.bar use Bar as Foobar;
-from example.foo use Foo as Foobar; // DeclConflictError
+from example.foo use Foo as Foobar;  // DeclConflictError
 
 // Structs
 
 struct ResolveTypesTester {
     a: unimported.Type;  // PackageNotInScopeError
     b: Bar.Type;  // NotAPackageError
-    c: nonexist.Baz;  // Should no error
+    c: nonexist.Baz;  // Nothing should be reported here
     d: bar.Bar;  // OK
     e: bar.func;  // NotATypeError
     f: bar.Foo;  // DeclNotExistError
@@ -34,7 +34,7 @@ struct ResolveTypesTester {
     v: good_func;  // NotATypeError
     w: Unimported;  // DeclNotInScopeError
     x: bar;  // NotADeclarationError
-    y: MyNonexist;  // Should no error
+    y: MyNonexist;  // Nothing should be reported here
     z: Bar;  // OK
 }
 
@@ -45,6 +45,8 @@ struct BadStruct {}
 struct BadStruct {  // DeclConflictError
     a: i32;
     a: i32;  // DeclConflictError
+    b: TestIface;  // StructFieldTypeError
+    c: MyNonexist;  // Nothing should be reported here
 }
 
 struct RecursiveStructA {
@@ -98,7 +100,15 @@ interface RecursiveIfaceB: RecursiveIfaceC {}
 
 interface RecursiveIfaceC: RecursiveIfaceA {}  // RecursiveExtension
 
-interface BadIface: i32 {  // ExtensTypeError
+interface TestIface {}
+
+interface BadIface
+    : i32  // ExtensTypeError
+    , TestIface
+    , TestIface  // DuplicateExtendsWarn
+    , MyNonexist  // Nothing should be reported here
+{
     function a(x: String): ();
     function a(x: i32): ();  // DeclConflictError
+    function b(x: i32, x: i32): ();  // DeclConflictError
 }

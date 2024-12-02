@@ -4,11 +4,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
+from taihe.codegen.generator import ABICodeGenerator
 from taihe.parse.convert import AstConverter
 from taihe.semantics.analysis import analyze_semantics
 from taihe.semantics.declarations import PackageGroup
 from taihe.semantics.format import pretty_print
-from taihe.utils.diagnostics import DiagnosticsManager
+from taihe.utils.analyses import AnalysisManager
+from taihe.utils.diagnostics import DiagnosticsManager, Level
+from taihe.utils.outputs import OutputManager
 from taihe.utils.sources import SourceManager
 
 
@@ -48,11 +51,17 @@ class CompilerInstance:
     source_manager: SourceManager
     package_group: PackageGroup
 
+    analysis_manager: AnalysisManager
+
+    target_manager: OutputManager
+
     def __init__(self, invocation: CompilerInvocation):
         self.invocation = invocation
         self.source_manager = SourceManager()
         self.diagnostics_manager = DiagnosticsManager()
         self.package_group = PackageGroup()
+        self.analysis_manager = AnalysisManager()
+        self.target_manager = OutputManager()
 
     ##########################
     # The compilation phases #
@@ -71,12 +80,23 @@ class CompilerInstance:
     def validate(self):
         analyze_semantics(self.package_group, self.diagnostics_manager)
 
-    def generate(self):
+    def show(self):
         s = pretty_print(self.package_group)
         print(s)
+
+    def generate(self):
+        generator = ABICodeGenerator(self.target_manager, self.analysis_manager)
+        generator.handle_decl(self.package_group)
+        if self.invocation.out_dir is None:
+            self.target_manager.show()
+        else:
+            self.target_manager.output_to(self.invocation.out_dir)
 
     def run(self):
         self.scan()
         self.parse()
         self.validate()
+        if self.diagnostics_manager.current_max_level >= Level.ERROR:
+            return
+        self.show()
         self.generate()

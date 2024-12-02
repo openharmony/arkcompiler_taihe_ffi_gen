@@ -6,7 +6,6 @@ from taihe.exceptions import (
     PackageNameConflictError,
     PackageNotExistError,
     PackageNotImportedError,
-    QualifierError,
     RecursiveInclusionError,
     SymbolConflictError,
     SymbolConflictWithNamespaceError,
@@ -194,7 +193,7 @@ class SemanticAnalyzer(Visitor):
         self.src_path = src_path
 
     def generic_visit(self, node) -> None:
-        raise NotImplementedError
+        pass
 
     # Spec
     def visit_Spec(self, node: ast.Spec) -> None:
@@ -211,14 +210,6 @@ class SemanticAnalyzer(Visitor):
         for name, metas in parameters.items():
             if len(metas) > 1:
                 self.errors.append(SymbolConflictError(self.src_path, name, metas))
-        for parameter in node.parameters:
-            meta = parameter.name
-            name = meta.text
-            mut = parameter.param_type.mut
-            type = parameter.param_type.type
-            if mut is not None and not can_be_mutable(self.type_tables, type):
-                # pyre-fixme[19]: Expected 2 positional arguments.
-                self.errors.append(QualifierError(self.src_path, type, mut))
 
     def visit_Struct(self, node: ast.Struct) -> None:
         fields = {}

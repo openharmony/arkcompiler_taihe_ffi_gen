@@ -1,5 +1,6 @@
 """Manages source files."""
 
+from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from os import PathLike
@@ -9,7 +10,7 @@ from taihe.utils.diagnostics import DiagnosticsManager
 
 
 @dataclass(frozen=True)
-class SourceBase:
+class SourceBase(ABC):
     """Base class reprensenting all kinds of source code."""
 
     source_identifier: str
@@ -18,8 +19,8 @@ class SourceBase:
     def __str__(self) -> str:
         return f"Package {self.pkg_name} (in {self.source_identifier})"
 
-    def read(self) -> list[str]:
-        return ["<remember to implement SourceBase.read()!>"]
+    @abstractmethod
+    def read(self) -> list[str]: ...
 
 
 @dataclass(frozen=True)

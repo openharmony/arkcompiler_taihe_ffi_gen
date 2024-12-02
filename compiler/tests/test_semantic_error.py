@@ -9,7 +9,6 @@ from taihe.exceptions import (
     PackageAliasConflictError,
     PackageNotExistError,
     PackageNotImportedError,
-    QualifierError,
     RecursiveInclusionError,
     SymbolConflictError,
     SymbolConflictWithNamespaceError,
@@ -135,32 +134,6 @@ def test_sym_conflict_namespace() -> None:
         """
     write_file(test_case)
     with pytest.raises(SymbolConflictWithNamespaceError):
-        run_test()
-
-
-def test_qualifier_1() -> None:
-    test_case = """package.taihe
-        ---
-        function bad_func(a: mut i32): ();
-        """
-    write_file(test_case)
-    with pytest.raises(QualifierError):
-        run_test()
-
-
-def test_qualifier_2() -> None:
-    test_case = """package.taihe
-        ---
-        enum Enum {
-            A;
-        }
-        struct Struct {
-            a: Enum;
-        }
-        function bad_func(a: mut Struct, b: mut Enum): ();
-        """
-    write_file(test_case)
-    with pytest.raises(QualifierError):
         run_test()
 
 

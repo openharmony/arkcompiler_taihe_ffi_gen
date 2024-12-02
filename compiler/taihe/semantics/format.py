@@ -20,7 +20,6 @@ from taihe.semantics.declarations import (
 )
 from taihe.semantics.types import (
     BuiltinType,
-    TypeAlike,
 )
 from taihe.semantics.visitor import DeclVisitor, TypeVisitor
 
@@ -32,6 +31,15 @@ def pretty_print(x: DeclAlike) -> str:
 
 
 class _TypeNamePrinter(TypeVisitor):
+    @override
+    def visit_type_ref_decl(self, d: TypeRefDecl) -> str:
+        ref_str = (
+            f"<unresolved {d.name!r}>"
+            if not d.resolved
+            else f"<error {d.name!r}>" if not d.ref_ty else self.handle_type(d.ref_ty)
+        )
+        return d.qual.describe(ref_str)
+
     @override
     def visit_type_decl(self, d: TypeDecl) -> str:
         if pkg := d.parent_package:
@@ -51,8 +59,7 @@ class _PrettyPrinter(DeclVisitor):
 
     @override
     def visit_type_ref_decl(self, d: TypeRefDecl) -> str:
-        ref_str = self.handle_type(d.ref_ty) if d.ref_ty else f"<unresolved {d.name!r}>"
-        return d.qual.describe(ref_str)
+        return _TypeNamePrinter().handle_type(d)
 
     @override
     def visit_decl_ref_decl(self, d: DeclarationRefDecl):
@@ -113,8 +120,8 @@ class _PrettyPrinter(DeclVisitor):
 
     @override
     def visit_iface_decl(self, d: IfaceDecl):
-        if d.extends:
-            fmt_extends = ", ".join(self.handle_decl(e) for e in d.extends)
+        if d.parents:
+            fmt_extends = ", ".join(self.handle_decl(e) for e in d.parents)
             ret = f"interface {d.name}: {fmt_extends} {{"
         else:
             ret = f"interface {d.name} {{"
@@ -145,6 +152,3 @@ class _PrettyPrinter(DeclVisitor):
     @override
     def visit_package_group(self, g: PackageGroup):
         return "\n".join(self.handle_decl(p) for p in g.packages)
-
-    def handle_type(self, t: TypeAlike):
-        return _TypeNamePrinter().handle_type(t)

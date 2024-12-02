@@ -5,12 +5,11 @@ if sys.version_info < (3, 11):
     from exceptiongroup import ExceptionGroup
 from pathlib import Path
 
-# pyre-fixme[21]: Could not find module `antlr4`.
-from antlr4 import FileStream
-
 from taihe.code_generation import CodeGenerator
 from taihe.parse.ast_generation import generate_ast
 from taihe.semantic_analysis import Package, semantic_check, symbol_substitute
+from taihe.utils.diagnostics import DiagnosticsManager
+from taihe.utils.sources import SourceFile
 
 
 def compile(
@@ -32,7 +31,9 @@ def compile(
     for src_path in src_paths:
         pktupl = tuple(os.path.splitext(os.path.basename(src_path))[0].split("."))
         try:
-            spec = generate_ast(FileStream(src_path))
+            spec = generate_ast(
+                SourceFile(src_path, ".".join(pktupl)), DiagnosticsManager()
+            )
         except SyntaxError:
             raise SyntaxError(src_path) from None
         packages.append(Package(src_path, pktupl, spec))

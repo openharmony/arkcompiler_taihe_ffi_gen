@@ -1,2 +1,19 @@
 from rgb.base use RGB;
+
 function show(color: RGB): ();
+
+interface Base {
+    function base_func(child: Child): ();
+}
+
+interface Father: Base {
+    function father_func(): ();
+}
+
+interface Mother: Base {
+    function mother_func(): ();
+}
+
+interface Child: Father, Mother {
+    function child_func(): ();
+}

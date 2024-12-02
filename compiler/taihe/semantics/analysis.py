@@ -19,12 +19,14 @@ from taihe.semantics.declarations import (
     TypeDecl,
     TypeRefDecl,
 )
+from taihe.semantics.types import BuiltinType
 from taihe.semantics.visitor import DeclVisitor
 from taihe.utils.diagnostics import DiagnosticsManager
 from taihe.utils.exceptions import (
     DeclarationNotInScopeError,
     DeclNotExistError,
     DeclRedefDiagError,
+    DuplicateExtendsWarn,
     EnumValueCollisionError,
     ExtendsTypeError,
     NotADeclarationError,
@@ -35,6 +37,7 @@ from taihe.utils.exceptions import (
     QualifierError,
     RecursiveExtensionError,
     RecursiveInclusionError,
+    StructFieldTypeError,
     SymbolConflictWithNamespaceError,
 )
 
@@ -45,8 +48,8 @@ def analyze_semantics(pg: PackageGroup, diag: DiagnosticsManager):
     check_sym_confilct_namespace(pg, diag)
     _ResolveImportsPass(diag).handle_decl(pg)
     _CheckFieldCollisionErrorPass(diag).handle_decl(pg)
-    check_struct_recursive_inclusion(pg, diag)
-    check_iface_extends(pg, diag)
+    check_struct_fields(pg, diag)
+    check_iface_parents(pg, diag)
     _CheckQualifierErrorPass(diag).handle_decl(pg)
 
 
@@ -210,10 +213,8 @@ def check_field_name_collision(
 ):
     symbol = {}
     for f in items:
-        if prev := symbol.get(f.name):
+        if (prev := symbol.setdefault(f.name, f)) != f:
             diag.emit(DeclRedefDiagError(prev, f))
-        else:
-            symbol[f.name] = f
 
 
 def check_field_value_collision(
@@ -222,10 +223,8 @@ def check_field_value_collision(
 ):
     symbol = {}
     for f in items:
-        if prev := symbol.get(f.value):
+        if (prev := symbol.setdefault(f.value, f)) != f:
             diag.emit(EnumValueCollisionError(prev, f, f.value))
-        else:
-            symbol[f.value] = f
 
 
 def check_sym_confilct_namespace(pg: PackageGroup, diag: DiagnosticsManager):
@@ -241,10 +240,10 @@ def check_sym_confilct_namespace(pg: PackageGroup, diag: DiagnosticsManager):
                 break
 
     for p in pg.packages:
-        for i in p.decls:
-            decl_name = p.name + "." + i
-            if decl_name in namespaces:
-                diag.emit(SymbolConflictWithNamespaceError(p.decls[i], p.name))
+        for d in p.decls.values():
+            name = p.name + "." + d.name
+            if name in namespaces:
+                diag.emit(SymbolConflictWithNamespaceError(d, p))
 
 
 def check_decls_and_imports_conflict(pg: PackageGroup, diag: DiagnosticsManager):
@@ -253,16 +252,21 @@ def check_decls_and_imports_conflict(pg: PackageGroup, diag: DiagnosticsManager)
             diag.emit(DeclRedefDiagError(p.imports[redef_decl], p.decls[redef_decl]))
 
 
-def check_iface_extends(pg: PackageGroup, diag: DiagnosticsManager):
+def check_iface_parents(pg: PackageGroup, diag: DiagnosticsManager):
     iface_table = {}
     for pkg in pg.packages:
         for iface in pkg.interfaces:
             base_list = iface_table.setdefault(iface, [])
-            for base in iface.extends:
-                if isinstance(base.ref_ty, IfaceDecl):
-                    base_list.append(((iface, base), base.ref_ty))
+            base_dict = {}
+            for parent in iface.parents:
+                if (base := parent.ref_ty) is None:
+                    pass
+                elif not isinstance(base, IfaceDecl):
+                    diag.emit(ExtendsTypeError(parent))
+                elif (prev := base_dict.setdefault(base, parent)) != parent:
+                    diag.emit(DuplicateExtendsWarn(base, prev, parent))
                 else:
-                    diag.emit(ExtendsTypeError(base))
+                    base_list.append(((iface, parent), base))
 
     cycles = detect_cycles(iface_table)
     for cycle in cycles:
@@ -270,14 +274,18 @@ def check_iface_extends(pg: PackageGroup, diag: DiagnosticsManager):
         diag.emit(RecursiveExtensionError(last, other))
 
 
-def check_struct_recursive_inclusion(pg: PackageGroup, diag: DiagnosticsManager):
+def check_struct_fields(pg: PackageGroup, diag: DiagnosticsManager):
     struct_table = {}
     for pkg in pg.packages:
         for struct in pkg.structs:
             struct_list = struct_table.setdefault(struct, [])
             for field in struct.fields:
-                if isinstance(field.ty.ref_ty, StructDecl):
-                    struct_list.append((field, field.ty.ref_ty))
+                if (inner := field.ty.ref_ty) is None:
+                    pass
+                elif not isinstance(inner, BuiltinType | EnumDecl | StructDecl):
+                    diag.emit(StructFieldTypeError(field.ty))
+                elif isinstance(inner, StructDecl):
+                    struct_list.append(((struct, field), inner))
 
     cycles = detect_cycles(struct_table)
     for cycle in cycles:
