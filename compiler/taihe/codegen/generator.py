@@ -34,7 +34,7 @@ from taihe.semantics.types import (
     SpecialType,
     TypeAlike,
 )
-from taihe.semantics.visitor import DeclVisitor, TypeVisitor
+from taihe.semantics.visitor import TypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
 from taihe.utils.outputs import OutputBase, OutputManager
 
@@ -232,84 +232,47 @@ class ABIParamTypeRefDeclInfo(ABINormalTypeRefDeclInfo):
         self.name = f"struct {abi_struct_info.name} const*"
 
 
-class ABICodeGenerator(DeclVisitor):
+class ABICodeGenerator:
     def __init__(self, tm: OutputManager, am: AnalysisManager):
-        self._current_package_group = None
-        self._current_package = None
-        self._current_abi_target = None
         self.tm = tm
         self.am = am
 
-    @property
-    def _pkg(self) -> Package:
-        assert self._current_package
-        return self._current_package
+    def generate_code(self, pg: PackageGroup):
+        for pkg in pg.packages:
+            self.generate_package(pkg)
 
-    @property
-    def _pkg_group(self) -> PackageGroup:
-        assert self._current_package_group
-        return self._current_package_group
+    def generate_package(self, pkg: Package):
+        abi_pkg_info = ABIPackageInfo.get(self.am, pkg)
+        abi_pkg_target = COutputBuffer(f"include/{abi_pkg_info.header}")
+        self.tm.add(abi_pkg_target)
 
-    @override
-    def visit_package_group(self, g: PackageGroup):
-        self._current_package_group = g
-        super().visit_package_group(g)
-        self._current_package_group = None
+        abi_pkg_target.include("taihe/common.h")
 
-    @property
-    def _abi_target(self) -> COutputBuffer:
-        assert self._current_abi_target
-        return self._current_abi_target
+        for func in pkg.functions:
+            self.generate_func(func, abi_pkg_target)
+        for struct in pkg.structs:
+            self.generate_struct(struct, abi_pkg_target)
+        for enum in pkg.enums:
+            self.generate_enum(enum, abi_pkg_target)
+        for iface in pkg.interfaces:
+            self.generate_iface(iface, abi_pkg_target)
 
-    @override
-    def visit_package(self, p: Package):
-        abi_pkg_info = ABIPackageInfo.get(self.am, p)
-        self._current_abi_target = COutputBuffer(f"include/{abi_pkg_info.header}")
-        self.tm.add(self._current_abi_target)
-
-        self._current_abi_target.include("taihe/common.h")
-
-        self._current_package = p
-        super().visit_package(p)
-        self._current_package = None
-
-        self._current_abi_target = None
-
-    @override
-    def visit_func_decl(self, d: FuncDecl) -> Any:
-        abi_func_info = ABIFuncDeclInfo.get(self.am, d)
-        abi_return_t_info = ABIFuncReturnTypeInfo.get(self.am, d)
+    def generate_func(self, func: FuncDecl, abi_pkg_target: COutputBuffer):
+        abi_func_info = ABIFuncDeclInfo.get(self.am, func)
+        abi_return_t_info = ABIFuncReturnTypeInfo.get(self.am, func)
 
         params = []
-        for param in d.params:
+        for param in func.params:
             abi_param_type_info = ABIParamTypeRefDeclInfo.get(self.am, param.ty)
-            self._abi_target.include(abi_param_type_info.header)
+            abi_pkg_target.include(abi_param_type_info.header)
             params.append(f"{abi_param_type_info.name} {param.name}")
         params_str = ", ".join(params)
-        self._abi_target.write(
+        abi_pkg_target.write(
             f"TH_EXPORT {abi_return_t_info.name} {abi_func_info.name}({params_str});\n"
         )
 
-    @override
-    def visit_enum_decl(self, d: EnumDecl) -> Any:
-        abi_enum_info = ABIEnumDeclInfo.get(self.am, d)
-
-        abi_enum_target = COutputBuffer(f"include/{abi_enum_info.header}")
-        self.tm.add(abi_enum_target)
-
-        abi_enum_target.include("taihe/common.h")
-
-        abi_enum_target.write(f"enum {abi_enum_info.name} {{\n")
-        for item in d.items:
-            abi_enum_item_info = ABIEnumItemDeclInfo.get(self.am, item)
-            abi_enum_target.write(f"  {abi_enum_item_info.name} = {item.value},\n")
-        abi_enum_target.write("};\n")
-
-        self._abi_target.include(abi_enum_info.header)
-
-    @override
-    def visit_struct_decl(self, d: StructDecl) -> Any:
-        abi_struct_info = ABIStructDeclInfo.get(self.am, d)
+    def generate_struct(self, struct: StructDecl, abi_pkg_target: COutputBuffer):
+        abi_struct_info = ABIStructDeclInfo.get(self.am, struct)
 
         abi_struct_target = COutputBuffer(f"include/{abi_struct_info.header}")
         self.tm.add(abi_struct_target)
@@ -317,7 +280,7 @@ class ABICodeGenerator(DeclVisitor):
         abi_struct_target.include("taihe/common.h")
 
         abi_struct_target.write(f"struct {abi_struct_info.name} {{\n")
-        for field in d.fields:
+        for field in struct.fields:
             ty_info = ABINormalTypeRefDeclInfo.get(self.am, field.ty)
             abi_struct_target.include(ty_info.header)
             abi_struct_target.write(f"  {ty_info.name} {field.name};\n")
@@ -327,7 +290,7 @@ class ABICodeGenerator(DeclVisitor):
             f"inline struct {abi_struct_info.name} {abi_struct_info.copy_name}(struct {abi_struct_info.name} data) {{\n"
             f"  struct {abi_struct_info.name} result = {{\n"
         )
-        for field in d.fields:
+        for field in struct.fields:
             ty_info = ABINormalTypeRefDeclInfo.get(self.am, field.ty)
             abi_struct_target.include(ty_info.header)
             copied = ty_info.copy_func(f"data.{field.name}")
@@ -337,7 +300,7 @@ class ABICodeGenerator(DeclVisitor):
         abi_struct_target.write(
             f"inline void {abi_struct_info.drop_name}(struct {abi_struct_info.name} data) {{\n"
         )
-        for field in d.fields:
+        for field in struct.fields:
             ty_info = ABINormalTypeRefDeclInfo.get(self.am, field.ty)
             abi_struct_target.include(ty_info.header)
             dropping = ty_info.drop_func(f"data.{field.name}")
@@ -345,11 +308,26 @@ class ABICodeGenerator(DeclVisitor):
                 abi_struct_target.write(f"  {dropping};\n")
         abi_struct_target.write("}\n")
 
-        self._abi_target.include(abi_struct_info.header)
+        abi_pkg_target.include(abi_struct_info.header)
 
-    @override
-    def visit_iface_decl(self, d: IfaceDecl) -> Any:
-        abi_iface_info = ABIIfaceDeclInfo.get(self.am, d)
+    def generate_enum(self, enum: EnumDecl, abi_pkg_target: COutputBuffer):
+        abi_enum_info = ABIEnumDeclInfo.get(self.am, enum)
+
+        abi_enum_target = COutputBuffer(f"include/{abi_enum_info.header}")
+        self.tm.add(abi_enum_target)
+
+        abi_enum_target.include("taihe/common.h")
+
+        abi_enum_target.write(f"enum {abi_enum_info.name} {{\n")
+        for item in enum.items:
+            abi_enum_item_info = ABIEnumItemDeclInfo.get(self.am, item)
+            abi_enum_target.write(f"  {abi_enum_item_info.name} = {item.value},\n")
+        abi_enum_target.write("};\n")
+
+        abi_pkg_target.include(abi_enum_info.header)
+
+    def generate_iface(self, iface: IfaceDecl, abi_pkg_target: COutputBuffer):
+        abi_iface_info = ABIIfaceDeclInfo.get(self.am, iface)
 
         abi_iface_target_0 = COutputBuffer(f"include/{abi_iface_info.header_0}")
         self.tm.add(abi_iface_target_0)
@@ -373,7 +351,7 @@ class ABICodeGenerator(DeclVisitor):
         abi_iface_target_1.write(f"TH_EXPORT void const* const {abi_iface_info.iid};\n")
 
         abi_iface_target_1.write(f"struct {abi_iface_info.f_table} {{\n")
-        for method in d.methods:
+        for method in iface.methods:
             abi_return_t_info = ABIFuncReturnTypeInfo.get(self.am, method)
 
             params = ["struct DataBlockHead* data_ptr"]
@@ -395,7 +373,7 @@ class ABICodeGenerator(DeclVisitor):
             )
         abi_iface_target_1.write("};\n")
 
-        for method in d.methods:
+        for method in iface.methods:
             abi_method_info = ABIIfaceMethodDeclInfo.get(self.am, method)
             abi_return_t_info = ABIFuncReturnTypeInfo.get(self.am, method)
 
@@ -473,4 +451,4 @@ class ABICodeGenerator(DeclVisitor):
             f"void const* const {abi_iface_info.iid} = &{abi_iface_info.iid};\n"
         )
 
-        self._abi_target.include(abi_iface_info.header_1)
+        abi_pkg_target.include(abi_iface_info.header_1)

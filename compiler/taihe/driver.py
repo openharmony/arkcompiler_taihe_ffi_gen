@@ -86,7 +86,7 @@ class CompilerInstance:
 
     def generate(self):
         generator = ABICodeGenerator(self.target_manager, self.analysis_manager)
-        generator.handle_decl(self.package_group)
+        generator.generate_code(self.package_group)
         if self.invocation.out_dir is None:
             self.target_manager.show()
         else:
