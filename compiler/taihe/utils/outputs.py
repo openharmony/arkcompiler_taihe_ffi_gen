@@ -15,9 +15,6 @@ class OutputBase(ABC):
     @abstractmethod
     def output_to(self, dst_dir: PathLike): ...
 
-    @abstractmethod
-    def show(self): ...
-
 
 class OutputManager:
     """Manage all target files."""
@@ -28,10 +25,6 @@ class OutputManager:
     def output_to(self, dst_dir: PathLike):
         for target in self.targets:
             target.output_to(dst_dir)
-
-    def show(self):
-        for target in self.targets:
-            target.show()
 
     def add(self, target: OutputBase):
         self.targets.append(target)

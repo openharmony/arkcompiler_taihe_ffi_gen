@@ -1,5 +1,6 @@
 """Orchestrates the compilation process."""
 
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
@@ -81,15 +82,12 @@ class CompilerInstance:
         analyze_semantics(self.package_group, self.diagnostics_manager)
 
     def show(self):
-        s = pretty_print(self.package_group)
-        print(s)
+        pretty_print(self.package_group, sys.stdout)
 
     def generate(self):
-        generator = ABICodeGenerator(self.target_manager, self.analysis_manager)
-        generator.generate_code(self.package_group)
-        if self.invocation.out_dir is None:
-            self.target_manager.show()
-        else:
+        if self.invocation.out_dir:
+            generator = ABICodeGenerator(self.target_manager, self.analysis_manager)
+            generator.generate_code(self.package_group)
             self.target_manager.output_to(self.invocation.out_dir)
 
     def run(self):

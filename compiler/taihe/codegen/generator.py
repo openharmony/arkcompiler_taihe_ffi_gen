@@ -59,15 +59,6 @@ class COutputBuffer(OutputBase):
                 dst.write(f'#include "{header}"\n')
             dst.write(self.code.getvalue())
 
-    @override
-    def show(self):
-        print(f"// {self.filename}")
-        if self.filename.endswith((".h", ".hpp")):
-            print(f"#pragma once")
-        for header in self.headers:
-            print(f"#include <{header}>")
-        print(self.code.getvalue())
-
     def write(self, code: str):
         self.code.write(code)
 

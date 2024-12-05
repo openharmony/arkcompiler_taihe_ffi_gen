@@ -12,7 +12,7 @@ Design:
 - The `VisitorBase.visit_{type,decl}` is the "root" of the type hierarchy.
 """
 
-from typing import Any, Generic, Optional, TypeVar
+from typing import Generic, Optional, TypeVar
 
 from taihe.semantics.declarations import (
     Decl,
@@ -124,13 +124,13 @@ class DeclVisitor:
     See the documentation of `TypeVisitor` for comparison.
     """
 
-    visiting: Any
+    visiting: Optional[DeclAlike]
     """The current node being visited. Only for debug use."""
 
     def __init__(self) -> None:
         self.visiting = None
 
-    def handle_decl(self, d: DeclAlike) -> Any:
+    def handle_decl(self, d: DeclAlike) -> None:
         """The entrance for visiting anything "acceptable"."""
         try:
             self.visiting = d
@@ -139,83 +139,83 @@ class DeclVisitor:
             print(f"Internal error while handling {self.visiting}")
             raise
 
-    def visit_decl(self, d: Decl) -> Any:
+    def visit_decl(self, d: Decl) -> None:
         """The fallback method which handles the most general cases."""
         del d
 
-    def visit_func_base_decl(self, d: FuncBaseDecl) -> Any:
+    def visit_func_base_decl(self, d: FuncBaseDecl) -> None:
         d._traverse(self)
         return self.visit_decl(d)
 
     ### Imports ###
 
-    def visit_package_ref_decl(self, d: PackageRefDecl) -> Any:
+    def visit_package_ref_decl(self, d: PackageRefDecl) -> None:
         return self.visit_decl(d)
 
-    def visit_decl_ref_decl(self, d: DeclarationRefDecl) -> Any:
+    def visit_decl_ref_decl(self, d: DeclarationRefDecl) -> None:
         d._traverse(self)
         return self.visit_decl(d)
 
-    def visit_import_decl(self, d: ImportDecl) -> Any:
+    def visit_import_decl(self, d: ImportDecl) -> None:
         return self.visit_decl(d)
 
-    def visit_package_import_decl(self, d: PackageImportDecl) -> Any:
+    def visit_package_import_decl(self, d: PackageImportDecl) -> None:
         d._traverse(self)
         return self.visit_import_decl(d)
 
-    def visit_decl_import_decl(self, d: DeclarationImportDecl) -> Any:
+    def visit_decl_import_decl(self, d: DeclarationImportDecl) -> None:
         d._traverse(self)
         return self.visit_import_decl(d)
 
     ### Functions ###
 
-    def visit_param_decl(self, d: ParamDecl) -> Any:
+    def visit_param_decl(self, d: ParamDecl) -> None:
         d._traverse(self)
         return self.visit_decl(d)
 
-    def visit_func_decl(self, d: FuncDecl) -> Any:
+    def visit_func_decl(self, d: FuncDecl) -> None:
         return self.visit_func_base_decl(d)
 
     ### Type (Generic) ###
 
-    def visit_type_decl(self, d: TypeDecl) -> Any:
+    def visit_type_decl(self, d: TypeDecl) -> None:
         return self.visit_decl(d)
 
-    def visit_type_ref_decl(self, d: TypeRefDecl) -> Any:
+    def visit_type_ref_decl(self, d: TypeRefDecl) -> None:
         return self.visit_decl(d)
 
     ### Struct ###
 
-    def visit_struct_field_decl(self, d: StructFieldDecl) -> Any:
+    def visit_struct_field_decl(self, d: StructFieldDecl) -> None:
         d._traverse(self)
         return self.visit_decl(d)
 
-    def visit_struct_decl(self, d: StructDecl) -> Any:
+    def visit_struct_decl(self, d: StructDecl) -> None:
         d._traverse(self)
         return self.visit_type_decl(d)
 
     ### Enum ###
 
-    def visit_enum_item_decl(self, d: EnumItemDecl) -> Any:
+    def visit_enum_item_decl(self, d: EnumItemDecl) -> None:
         return self.visit_decl(d)
 
-    def visit_enum_decl(self, d: EnumDecl) -> Any:
+    def visit_enum_decl(self, d: EnumDecl) -> None:
         d._traverse(self)
         return self.visit_type_decl(d)
 
     ### Interface ###
 
-    def visit_iface_method_decl(self, d: IfaceMethodDecl) -> Any:
+    def visit_iface_method_decl(self, d: IfaceMethodDecl) -> None:
         return self.visit_func_base_decl(d)
 
-    def visit_iface_decl(self, d: IfaceDecl) -> Any:
+    def visit_iface_decl(self, d: IfaceDecl) -> None:
         d._traverse(self)
         return self.visit_type_decl(d)
 
     ### Package ###
 
-    def visit_package(self, p: Package) -> Any:
+    def visit_package(self, p: Package) -> None:
         p._traverse(self)
 
-    def visit_package_group(self, g: PackageGroup) -> Any:
+    def visit_package_group(self, g: PackageGroup) -> None:
         g._traverse(self)
