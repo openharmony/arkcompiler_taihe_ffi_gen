@@ -1,30 +1,57 @@
 """Manage output files."""
 
 from abc import ABC, abstractmethod
-from os import PathLike
+from pathlib import Path
+from typing import Generic, ParamSpec, TypeVar
+
+P = ParamSpec("P")
+T = TypeVar("T", bound="OutputBase")
 
 
-class OutputBase(ABC):
+class OutputBase(ABC, Generic[P]):
     """Base class reprensenting all kinds of generated code."""
 
-    filename: str
+    def __init__(
+        self,
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ): ...
 
-    def __init__(self, filename):
-        self.filename = filename
+    @classmethod
+    def create(
+        cls: type[T],
+        tm: "OutputManager",
+        filename: str,
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> T:
+        return tm.get_or_create(cls, filename, *args, **kwargs)
 
     @abstractmethod
-    def output_to(self, dst_dir: PathLike): ...
+    def save_as(self, file_path: Path): ...
 
 
 class OutputManager:
     """Manage all target files."""
 
     def __init__(self):
-        self.targets: list[OutputBase] = []
+        self.targets: dict[str, OutputBase] = {}
 
-    def output_to(self, dst_dir: PathLike):
-        for target in self.targets:
-            target.output_to(dst_dir)
+    def output_to(self, dst_dir: Path):
+        for filename, target in self.targets.items():
+            target.save_as(dst_dir / filename)
 
-    def add(self, target: OutputBase):
-        self.targets.append(target)
+    def get_or_create(
+        self,
+        cls: type[T],
+        filename: str,
+        *args,
+        **kwargs,
+    ) -> T:
+        if target := self.targets.get(filename):
+            assert isinstance(target, cls)
+            return target
+
+        target = cls(*args, **kwargs)
+        self.targets[filename] = target
+        return target

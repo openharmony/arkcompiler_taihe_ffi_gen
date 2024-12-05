@@ -10,31 +10,42 @@ The framework ensures that analyses are uniquely identified by their type and ar
 avoiding redundant computation or memory usage.
 """
 
-from abc import ABC, abstractmethod
+from abc import ABC
 from collections.abc import Hashable
 from dataclasses import dataclass
-from typing import Final, Generic, TypeVar
+from typing import Final, Generic, ParamSpec, TypeVar
 
+P = ParamSpec("P")
 A = TypeVar("A", bound="AbstractAnalysis")
 
 
 @dataclass(frozen=True)
 class CacheKey(Generic[A]):
     analysis_type: type[A]
-    iderntifier: Hashable
+    args: Hashable
+    kwargs: Hashable
 
 
-class AbstractAnalysis(ABC):
+class AbstractAnalysis(ABC, Generic[P]):
     """Base class for all analyses with enforced hashable arguments."""
 
-    @abstractmethod
-    def __init__(self, am: "AnalysisManager", *args) -> None:
+    def __init__(
+        self,
+        am: "AnalysisManager",
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> None:
         """Initialize analysis with hashable arguments."""
 
     @classmethod
-    def get(cls: type[A], am: "AnalysisManager", *args) -> A:
+    def get(
+        cls: type[A],
+        am: "AnalysisManager",
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> A:
         """Get or create a cached analysis instance."""
-        return am.get_or_create(cls, *args)
+        return am.get_or_create(cls, *args, **kwargs)
 
 
 class AnalysisManager:
@@ -43,15 +54,20 @@ class AnalysisManager:
     def __init__(self) -> None:
         self._cache: Final[dict[CacheKey, AbstractAnalysis]] = {}
 
-    def get_or_create(self, analysis_type: type[A], *args) -> A:
+    def get_or_create(
+        self,
+        analysis_type: type[A],
+        *args,
+        **kwargs,
+    ) -> A:
         """Get existing analysis or create new one if not cached."""
-        key = CacheKey(analysis_type, args)
+        key = CacheKey(analysis_type, tuple(args), frozenset(kwargs))
 
         if cached := self._cache.get(key):
             assert isinstance(cached, analysis_type)
             return cached
 
-        new_instance = analysis_type(self, *args)
+        new_instance = analysis_type(self, *args, **kwargs)
         self._cache[key] = new_instance
         return new_instance
 
