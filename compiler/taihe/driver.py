@@ -87,7 +87,7 @@ class CompilerInstance:
     def generate(self):
         if self.invocation.out_dir:
             generator = ABICodeGenerator(self.target_manager, self.analysis_manager)
-            generator.generate_code(self.package_group)
+            generator.generate(self.package_group)
             self.target_manager.output_to(self.invocation.out_dir)
 
     def run(self):

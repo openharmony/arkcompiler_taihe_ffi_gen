@@ -228,11 +228,11 @@ class ABICodeGenerator:
         self.tm = tm
         self.am = am
 
-    def generate_code(self, pg: PackageGroup):
+    def generate(self, pg: PackageGroup):
         for pkg in pg.packages:
-            self.generate_package(pkg)
+            self.generate_package_file(pkg)
 
-    def generate_package(self, pkg: Package):
+    def generate_package_file(self, pkg: Package):
         abi_pkg_info = ABIPackageInfo.get(self.am, pkg)
         abi_pkg_target = COutputBuffer(f"include/{abi_pkg_info.header}")
         self.tm.add(abi_pkg_target)
@@ -242,13 +242,17 @@ class ABICodeGenerator:
         for func in pkg.functions:
             self.generate_func(func, abi_pkg_target)
         for struct in pkg.structs:
-            self.generate_struct(struct, abi_pkg_target)
+            self.generate_struct_file(struct, abi_pkg_target)
         for enum in pkg.enums:
-            self.generate_enum(enum, abi_pkg_target)
+            self.generate_enum_file(enum, abi_pkg_target)
         for iface in pkg.interfaces:
-            self.generate_iface(iface, abi_pkg_target)
+            self.generate_iface_files(iface, abi_pkg_target)
 
-    def generate_func(self, func: FuncDecl, abi_pkg_target: COutputBuffer):
+    def generate_func(
+        self,
+        func: FuncDecl,
+        abi_pkg_target: COutputBuffer,
+    ):
         abi_func_info = ABIFuncDeclInfo.get(self.am, func)
         abi_return_t_info = ABIFuncReturnTypeInfo.get(self.am, func)
 
@@ -262,7 +266,11 @@ class ABICodeGenerator:
             f"TH_EXPORT {abi_return_t_info.name} {abi_func_info.name}({params_str});\n"
         )
 
-    def generate_struct(self, struct: StructDecl, abi_pkg_target: COutputBuffer):
+    def generate_struct_file(
+        self,
+        struct: StructDecl,
+        abi_pkg_target: COutputBuffer,
+    ):
         abi_struct_info = ABIStructDeclInfo.get(self.am, struct)
 
         abi_struct_target = COutputBuffer(f"include/{abi_struct_info.header}")
@@ -270,6 +278,18 @@ class ABICodeGenerator:
 
         abi_struct_target.include("taihe/common.h")
 
+        self.generate_struct_decl(struct, abi_struct_target, abi_struct_info)
+        self.generate_struct_copy_func(struct, abi_struct_target, abi_struct_info)
+        self.generate_struct_drop_func(struct, abi_struct_target, abi_struct_info)
+
+        abi_pkg_target.include(abi_struct_info.header)
+
+    def generate_struct_decl(
+        self,
+        struct: StructDecl,
+        abi_struct_target: COutputBuffer,
+        abi_struct_info: ABIStructDeclInfo,
+    ):
         abi_struct_target.write(f"struct {abi_struct_info.name} {{\n")
         for field in struct.fields:
             ty_info = ABINormalTypeRefDeclInfo.get(self.am, field.ty)
@@ -277,6 +297,12 @@ class ABICodeGenerator:
             abi_struct_target.write(f"  {ty_info.name} {field.name};\n")
         abi_struct_target.write("};\n")
 
+    def generate_struct_copy_func(
+        self,
+        struct: StructDecl,
+        abi_struct_target: COutputBuffer,
+        abi_struct_info: ABIStructDeclInfo,
+    ):
         abi_struct_target.write(
             f"inline struct {abi_struct_info.name} {abi_struct_info.copy_name}(struct {abi_struct_info.name} data) {{\n"
             f"  struct {abi_struct_info.name} result = {{\n"
@@ -288,6 +314,12 @@ class ABICodeGenerator:
             abi_struct_target.write(f"    {copied},\n")
         abi_struct_target.write("  };\n" "  return result;\n" "}\n")
 
+    def generate_struct_drop_func(
+        self,
+        struct: StructDecl,
+        abi_struct_target: COutputBuffer,
+        abi_struct_info: ABIStructDeclInfo,
+    ):
         abi_struct_target.write(
             f"inline void {abi_struct_info.drop_name}(struct {abi_struct_info.name} data) {{\n"
         )
@@ -299,9 +331,11 @@ class ABICodeGenerator:
                 abi_struct_target.write(f"  {dropping};\n")
         abi_struct_target.write("}\n")
 
-        abi_pkg_target.include(abi_struct_info.header)
-
-    def generate_enum(self, enum: EnumDecl, abi_pkg_target: COutputBuffer):
+    def generate_enum_file(
+        self,
+        enum: EnumDecl,
+        abi_pkg_target: COutputBuffer,
+    ):
         abi_enum_info = ABIEnumDeclInfo.get(self.am, enum)
 
         abi_enum_target = COutputBuffer(f"include/{abi_enum_info.header}")
@@ -309,17 +343,38 @@ class ABICodeGenerator:
 
         abi_enum_target.include("taihe/common.h")
 
+        self.generate_enum_decl(enum, abi_enum_target, abi_enum_info)
+
+        abi_pkg_target.include(abi_enum_info.header)
+
+    def generate_enum_decl(
+        self,
+        enum: EnumDecl,
+        abi_enum_target: COutputBuffer,
+        abi_enum_info: ABIEnumDeclInfo,
+    ):
         abi_enum_target.write(f"enum {abi_enum_info.name} {{\n")
         for item in enum.items:
             abi_enum_item_info = ABIEnumItemDeclInfo.get(self.am, item)
             abi_enum_target.write(f"  {abi_enum_item_info.name} = {item.value},\n")
         abi_enum_target.write("};\n")
 
-        abi_pkg_target.include(abi_enum_info.header)
-
-    def generate_iface(self, iface: IfaceDecl, abi_pkg_target: COutputBuffer):
+    def generate_iface_files(
+        self,
+        iface: IfaceDecl,
+        abi_pkg_target: COutputBuffer,
+    ):
         abi_iface_info = ABIIfaceDeclInfo.get(self.am, iface)
+        self.generate_iface_0_file(abi_iface_info)
+        self.generate_iface_1_file(iface, abi_iface_info)
+        self.generate_iface_src_file(abi_iface_info)
 
+        abi_pkg_target.include(abi_iface_info.header_1)
+
+    def generate_iface_0_file(
+        self,
+        abi_iface_info: ABIIfaceDeclInfo,
+    ):
         abi_iface_target_0 = COutputBuffer(f"include/{abi_iface_info.header_0}")
         self.tm.add(abi_iface_target_0)
 
@@ -334,6 +389,11 @@ class ABICodeGenerator:
             f"}};\n"
         )
 
+    def generate_iface_1_file(
+        self,
+        iface: IfaceDecl,
+        abi_iface_info: ABIIfaceDeclInfo,
+    ):
         abi_iface_target_1 = COutputBuffer(f"include/{abi_iface_info.header_1}")
         self.tm.add(abi_iface_target_1)
 
@@ -341,6 +401,20 @@ class ABICodeGenerator:
 
         abi_iface_target_1.write(f"TH_EXPORT void const* const {abi_iface_info.iid};\n")
 
+        self.generate_iface_ftable(iface, abi_iface_target_1, abi_iface_info)
+        self.generate_iface_vtable(abi_iface_target_1, abi_iface_info)
+        self.generate_iface_methods(iface, abi_iface_target_1, abi_iface_info)
+        self.generate_iface_convert(abi_iface_target_1, abi_iface_info)
+        self.generate_iface_dynamic_cast(abi_iface_target_1, abi_iface_info)
+        self.generate_iface_copy(abi_iface_target_1, abi_iface_info)
+        self.generate_iface_drop(abi_iface_target_1, abi_iface_info)
+
+    def generate_iface_ftable(
+        self,
+        iface: IfaceDecl,
+        abi_iface_target_1: COutputBuffer,
+        abi_iface_info: ABIIfaceDeclInfo,
+    ):
         abi_iface_target_1.write(f"struct {abi_iface_info.f_table} {{\n")
         for method in iface.methods:
             abi_return_t_info = ABIFuncReturnTypeInfo.get(self.am, method)
@@ -356,6 +430,11 @@ class ABICodeGenerator:
             )
         abi_iface_target_1.write("};\n")
 
+    def generate_iface_vtable(
+        self,
+        abi_iface_target_1: COutputBuffer,
+        abi_iface_info: ABIIfaceDeclInfo,
+    ):
         abi_iface_target_1.write(f"struct {abi_iface_info.v_table} {{\n")
         for i, ancestor in enumerate(abi_iface_info.ancestors):
             abi_ancestor_info = ABIIfaceDeclInfo.get(self.am, ancestor)
@@ -364,6 +443,12 @@ class ABICodeGenerator:
             )
         abi_iface_target_1.write("};\n")
 
+    def generate_iface_methods(
+        self,
+        iface: IfaceDecl,
+        abi_iface_target_1: COutputBuffer,
+        abi_iface_info: ABIIfaceDeclInfo,
+    ):
         for method in iface.methods:
             abi_method_info = ABIIfaceMethodDeclInfo.get(self.am, method)
             abi_return_t_info = ABIFuncReturnTypeInfo.get(self.am, method)
@@ -382,6 +467,11 @@ class ABICodeGenerator:
                 f"}}\n"
             )
 
+    def generate_iface_convert(
+        self,
+        abi_iface_target_1: COutputBuffer,
+        abi_iface_info: ABIIfaceDeclInfo,
+    ):
         for ancestor, i in abi_iface_info.offsets.items():
             if i == 0:
                 continue
@@ -397,6 +487,11 @@ class ABICodeGenerator:
                 f"}}\n"
             )
 
+    def generate_iface_dynamic_cast(
+        self,
+        abi_iface_target_1: COutputBuffer,
+        abi_iface_info: ABIIfaceDeclInfo,
+    ):
         abi_iface_target_1.write(
             f"inline struct {abi_iface_info.name} dynamic_cast_to_{abi_iface_info.name}(struct DataBlockHead* data_ptr) {{\n"
             f"  struct TypeInfo *rtti_ptr = data_ptr->rtti_ptr;\n"
@@ -414,6 +509,11 @@ class ABICodeGenerator:
             f"}}\n"
         )
 
+    def generate_iface_copy(
+        self,
+        abi_iface_target_1: COutputBuffer,
+        abi_iface_info: ABIIfaceDeclInfo,
+    ):
         abi_iface_target_1.write(
             f"inline struct {abi_iface_info.name} {abi_iface_info.copy_name}(struct {abi_iface_info.name} tobj) {{\n"
             f"  struct DataBlockHead* data_ptr = tobj.data_ptr;\n"
@@ -424,6 +524,11 @@ class ABICodeGenerator:
             f"}}\n"
         )
 
+    def generate_iface_drop(
+        self,
+        abi_iface_target_1: COutputBuffer,
+        abi_iface_info: ABIIfaceDeclInfo,
+    ):
         abi_iface_target_1.write(
             f"inline void {abi_iface_info.drop_name}(struct {abi_iface_info.name} tobj) {{\n"
             f"  struct DataBlockHead* data_ptr = tobj.data_ptr;\n"
@@ -433,6 +538,10 @@ class ABICodeGenerator:
             f"}}\n"
         )
 
+    def generate_iface_src_file(
+        self,
+        abi_iface_info: ABIIfaceDeclInfo,
+    ):
         abi_iface_src = COutputBuffer(f"src/{abi_iface_info.src}")
         self.tm.add(abi_iface_src)
 
@@ -441,5 +550,3 @@ class ABICodeGenerator:
         abi_iface_src.write(
             f"void const* const {abi_iface_info.iid} = &{abi_iface_info.iid};\n"
         )
-
-        abi_pkg_target.include(abi_iface_info.header_1)
