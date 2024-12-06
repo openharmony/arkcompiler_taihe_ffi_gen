@@ -13,43 +13,32 @@ avoiding redundant computation or memory usage.
 from abc import ABC
 from collections.abc import Hashable
 from dataclasses import dataclass
-from typing import Generic, ParamSpec, TypeVar
+from typing import Generic, Never, TypeVar
 
-P = ParamSpec("P")
+P = TypeVar("P", bound=Hashable)
 A = TypeVar("A", bound="AbstractAnalysis")
 
 
 @dataclass(frozen=True)
-class CacheKey(Generic[A]):
-    analysis_type: type[A]
-    args: Hashable
-    kwargs: Hashable
+class CacheKey:
+    analysis_type: type["AbstractAnalysis"]
+    arg: Hashable
 
 
 class AbstractAnalysis(ABC, Generic[P]):
     """Base class for all analyses with enforced hashable arguments."""
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args, **kwargs) -> Never:
         """Avoid accidentally instantiating without using the `get` method."""
         raise TypeError(f"Cannot instantiate {cls.__name__}. Use `get` instead.")
 
-    def __init__(
-        self,
-        am: "AnalysisManager",
-        *args: P.args,
-        **kwargs: P.kwargs,
-    ) -> None:
+    def __init__(self, am: "AnalysisManager", arg: P) -> None:
         """Initialize analysis with hashable arguments."""
 
     @classmethod
-    def get(
-        cls: type[A],  # pyre-ignore
-        am: "AnalysisManager",
-        *args: P.args,
-        **kwargs: P.kwargs,
-    ) -> A:
+    def get(cls: type[A], am: "AnalysisManager", arg: P) -> A:
         """Get or create a cached analysis instance."""
-        return am.get_or_create(cls, *args, **kwargs)
+        return am.get_or_create(cls, arg)
 
 
 class AnalysisManager:
@@ -58,21 +47,16 @@ class AnalysisManager:
     def __init__(self) -> None:
         self._cache: dict[CacheKey, AbstractAnalysis] = {}
 
-    def get_or_create(
-        self,
-        analysis_type: type[A],
-        *args,
-        **kwargs,
-    ) -> A:
+    def get_or_create(self, analysis_type: type[A], arg: Hashable) -> A:
         """Get existing analysis or create new one if not cached."""
-        key = CacheKey(analysis_type, tuple(args), frozenset(kwargs))
+        key = CacheKey(analysis_type, arg)
 
         if cached := self._cache.get(key):
             assert isinstance(cached, analysis_type)
             return cached
 
         new_instance = object.__new__(analysis_type)
-        new_instance.__init__(self, *args, **kwargs)
+        new_instance.__init__(self, arg)
         self._cache[key] = new_instance
         return new_instance
 
