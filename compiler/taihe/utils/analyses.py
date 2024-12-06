@@ -13,7 +13,7 @@ avoiding redundant computation or memory usage.
 from abc import ABC
 from collections.abc import Hashable
 from dataclasses import dataclass
-from typing import Final, Generic, ParamSpec, TypeVar
+from typing import Generic, ParamSpec, TypeVar
 
 P = ParamSpec("P")
 A = TypeVar("A", bound="AbstractAnalysis")
@@ -29,6 +29,10 @@ class CacheKey(Generic[A]):
 class AbstractAnalysis(ABC, Generic[P]):
     """Base class for all analyses with enforced hashable arguments."""
 
+    def __new__(cls, *args, **kwargs):
+        """Avoid accidentally instantiating without using the `get` method."""
+        raise TypeError(f"Cannot instantiate {cls.__name__}. Use `get` instead.")
+
     def __init__(
         self,
         am: "AnalysisManager",
@@ -39,7 +43,7 @@ class AbstractAnalysis(ABC, Generic[P]):
 
     @classmethod
     def get(
-        cls: type[A],
+        cls: type[A],  # pyre-ignore
         am: "AnalysisManager",
         *args: P.args,
         **kwargs: P.kwargs,
@@ -52,7 +56,7 @@ class AnalysisManager:
     """Manages caching and retrieval of analysis instances."""
 
     def __init__(self) -> None:
-        self._cache: Final[dict[CacheKey, AbstractAnalysis]] = {}
+        self._cache: dict[CacheKey, AbstractAnalysis] = {}
 
     def get_or_create(
         self,
@@ -67,7 +71,8 @@ class AnalysisManager:
             assert isinstance(cached, analysis_type)
             return cached
 
-        new_instance = analysis_type(self, *args, **kwargs)
+        new_instance = object.__new__(analysis_type)
+        new_instance.__init__(self, *args, **kwargs)
         self._cache[key] = new_instance
         return new_instance
 

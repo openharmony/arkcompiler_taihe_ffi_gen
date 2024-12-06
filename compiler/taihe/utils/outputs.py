@@ -19,7 +19,7 @@ class OutputBase(ABC, Generic[P]):
 
     @classmethod
     def create(
-        cls: type[T],
+        cls: type[T],  # pyre-ignore
         tm: "OutputManager",
         filename: str,
         *args: P.args,
