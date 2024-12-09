@@ -61,11 +61,8 @@ class TypeVisitor(Generic[T]):
         - Example: `visit_enum_decl()` -> `EnumDecl._traverse()` -> `visit_enum_item_decl()`
     """
 
-    visiting: Optional[TypeAlike]
+    visiting: Optional[TypeAlike] = None
     """The current node being visited. Only for debug use."""
-
-    def __init__(self) -> None:
-        self.visiting = None
 
     def handle_type(self, t: TypeAlike) -> T:
         """The entrance for visiting."""
@@ -79,7 +76,7 @@ class TypeVisitor(Generic[T]):
     def visit_type(self, t: Type) -> T:
         """The fallback method which handles the most general type.
 
-        Note that `TypeRef` and `QualifiedType` is NOT a `Type`.
+        Note that `TypeRef` is NOT a `Type`.
         """
         raise NotImplementedError
 
@@ -124,11 +121,8 @@ class DeclVisitor:
     See the documentation of `TypeVisitor` for comparison.
     """
 
-    visiting: Optional[DeclAlike]
+    visiting: Optional[DeclAlike] = None
     """The current node being visited. Only for debug use."""
-
-    def __init__(self) -> None:
-        self.visiting = None
 
     def handle_decl(self, d: DeclAlike) -> None:
         """The entrance for visiting anything "acceptable"."""

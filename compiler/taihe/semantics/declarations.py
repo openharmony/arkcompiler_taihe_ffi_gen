@@ -38,10 +38,10 @@ class Decl(ABC, DeclAlike):
     KIND: ClassVar[str]
 
     name: str
-    parent: Any = None
+    parent: Optional["Decl"] = None
     loc: Optional[SourceLocation]
 
-    def __init__(self, name: str, loc=None, parent=None):
+    def __init__(self, name: str, loc: Optional[SourceLocation], parent: Any = None):
         assert name
         self.name = name
         self.parent = parent
@@ -464,7 +464,7 @@ class Package(Decl):
 
     KIND = "package"
 
-    parent: ClassVar = None
+    parent = None
 
     # Symbols
     imports: dict[str, ImportDecl]
@@ -481,7 +481,7 @@ class Package(Decl):
     interfaces: list[IfaceDecl]
 
     def __init__(self, name: str, loc: Optional[SourceLocation]):
-        super().__init__(name, loc)
+        super().__init__(name, loc, parent=None)
 
         self.imports = {}
         self.decls = {}

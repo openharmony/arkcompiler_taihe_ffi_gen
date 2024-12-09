@@ -59,7 +59,6 @@ class _ResolveImportsPass(DeclVisitor):
     diag: DiagnosticsManager
 
     def __init__(self, diag: DiagnosticsManager):
-        super().__init__()
         self._current_package_group = None
         self._current_package = None  # Always points to the current package.
         self.diag = diag
@@ -172,7 +171,6 @@ class _CheckQualifierErrorPass(DeclVisitor):
     diag: DiagnosticsManager
 
     def __init__(self, diag: DiagnosticsManager):
-        super().__init__()
         self.diag = diag
 
     @override
@@ -187,7 +185,6 @@ class _CheckFieldCollisionErrorPass(DeclVisitor):
     diag: DiagnosticsManager
 
     def __init__(self, diag: DiagnosticsManager):
-        super().__init__()
         self.diag = diag
 
     @override

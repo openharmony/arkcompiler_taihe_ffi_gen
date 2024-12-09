@@ -130,7 +130,6 @@ class AstConverter(Visitor):
     diag: DiagnosticsManager
 
     def __init__(self, source: SourceBase, diag: DiagnosticsManager):
-        super().__init__()
         self.source = source
         self.diag = diag
 

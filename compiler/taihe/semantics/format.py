@@ -1,3 +1,5 @@
+"""Format the IDL files."""
+
 from typing import TextIO
 
 from typing_extensions import override
