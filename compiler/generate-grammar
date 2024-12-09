@@ -20,12 +20,12 @@ def get_parser():
     return TaiheParser
 
 
-def get_hint(attr_type):
-    if attr_type.endswith("Lst"):
-        return f'List["TaiheAST.{attr_type[:-3]}"]'
-    if attr_type.endswith("Opt"):
-        return f'Optional["TaiheAST.{attr_type[:-3]}"]'
-    return f'"TaiheAST.{attr_type}"'
+def get_hint(attr_kind):
+    if attr_kind.endswith("Lst"):
+        return f'List["TaiheAST.{attr_kind[:-3]}"]'
+    if attr_kind.endswith("Opt"):
+        return f'Optional["TaiheAST.{attr_kind[:-3]}"]'
+    return f'"TaiheAST.{attr_kind}"'
 
 
 def get_attr_pairs(ctx):
@@ -63,27 +63,27 @@ def generate_TaiheAST():
     parser = get_parser()
     type_list = []
     for rule_name in parser.ruleNames:
-        node_type = rule_name[0].upper() + rule_name[1:]
-        ctx_type = node_type + "Context"
-        ctx_cls = getattr(parser, ctx_type)
-        type_list.append((node_type, ctx_cls))
-    for node_type, ctx_cls in type_list:
-        subclasses = ctx_cls.__subclasses__()
+        node_kind = rule_name[0].upper() + rule_name[1:]
+        ctx_kind = node_kind + "Context"
+        ctx_type = getattr(parser, ctx_kind)
+        type_list.append((node_kind, ctx_type))
+    for node_kind, ctx_type in type_list:
+        subclasses = ctx_type.__subclasses__()
         if subclasses:
-            code.append(f"    {node_type} = Union[\n")
-            for sub_cls in subclasses:
-                sub_type = sub_cls.__name__
-                attr_type = sub_type[:-7]
-                attr_hint = get_hint(attr_type)
-                type_list.append((attr_type, sub_cls))
+            code.append(f"    {node_kind} = Union[\n")
+            for sub_type in subclasses:
+                sub_kind = sub_type.__name__
+                attr_kind = sub_kind[:-7]
+                attr_hint = get_hint(attr_kind)
+                type_list.append((attr_kind, sub_type))
                 code.append(f"        {attr_hint},\n")
             code.append(f"    ]\n")
         else:
-            ctx = ctx_cls(None, Inspector())
+            ctx = ctx_type(None, Inspector())
             code.append(f"    @dataclass\n")
-            code.append(f"    class {node_type}:\n")
-            for attr_type, attr_name in get_attr_pairs(ctx):
-                attr_hint = get_hint(attr_type)
+            code.append(f"    class {node_kind}:\n")
+            for attr_kind, attr_name in get_attr_pairs(ctx):
+                attr_hint = get_hint(attr_kind)
                 code.append(f"        {attr_name}: {attr_hint}\n")
             code.append(f"        line: Optional[int] = None\n")
             code.append(f"        column: Optional[int] = None\n")
@@ -100,8 +100,8 @@ def generate_TaiheVisitor():
     code.append(f"\n")
     code.append(f"class TaiheVisitor:\n")
     code.append(f"    def visit(self, node):\n")
-    code.append(f"        node_type = node.__class__.__name__\n")
-    code.append(f'        method_name = f"visit_{{node_type}}"\n')
+    code.append(f"        node_kind = node.__class__.__name__\n")
+    code.append(f'        method_name = f"visit_{{node_kind}}"\n')
     code.append(f"        method = getattr(self, method_name, self.generic_visit)\n")
     code.append(f"        return method(node)\n")
     code.append(f"\n")
@@ -128,19 +128,19 @@ def generate_TaiheVisitor():
     parser = get_parser()
     type_list = []
     for rule_name in parser.ruleNames:
-        node_type = rule_name[0].upper() + rule_name[1:]
-        ctx_type = node_type + "Context"
-        ctx_cls = getattr(parser, ctx_type)
-        type_list.append((node_type, ctx_cls))
-    for node_type, ctx_cls in type_list:
-        subclasses = ctx_cls.__subclasses__()
+        node_kind = rule_name[0].upper() + rule_name[1:]
+        ctx_kind = node_kind + "Context"
+        ctx_type = getattr(parser, ctx_kind)
+        type_list.append((node_kind, ctx_type))
+    for node_kind, ctx_type in type_list:
+        subclasses = ctx_type.__subclasses__()
         if subclasses:
-            for sub_cls in subclasses:
-                sub_type = sub_cls.__name__
-                attr_type = sub_type[:-7]
-                type_list.append((attr_type, sub_cls))
+            for sub_type in subclasses:
+                sub_kind = sub_type.__name__
+                attr_kind = sub_kind[:-7]
+                type_list.append((attr_kind, sub_type))
         else:
-            stub.append(f"    def visit_{node_type}(self, node: TaiheAST.{node_type}) -> Any: ...\n")
+            stub.append(f"    def visit_{node_kind}(self, node: TaiheAST.{node_kind}) -> Any: ...\n")
     with open(path.join(ANTLR_PATH, "TaiheVisitor.py"), "w") as file:
         file.writelines(code)
     with open(path.join(ANTLR_PATH, "TaiheVisitor.pyi"), "w") as file:

@@ -94,7 +94,7 @@ class CompilerInstance:
         self.scan()
         self.parse()
         self.validate()
+        self.show()
         if self.diagnostics_manager.current_max_level >= Level.ERROR:
             return
-        self.show()
         self.generate()
