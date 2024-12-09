@@ -126,6 +126,22 @@ enum Bar {
    // Bar::A defaults to 0, and Bar::C is implicitly set to 0
 #+END_SRC
 
+* 接口
+接口的基本定义方式如下：
+#+BEGIN_SRC rust
+interface BaseA {
+  fn baseAFunc(): u32;
+}
+
+interface BaseB {
+  fn baseBFunc(): u32;
+}
+
+interface Derived: BaseA, BaseB {
+  fn derivedFunc(): String;
+}
+#+END_SRC
+
 * 其他
 函数和类型的声明没有先后顺序，但需要注意结构体之间不可递归包含。例如：
 #+BEGIN_SRC rust
