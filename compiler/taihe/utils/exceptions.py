@@ -1,7 +1,7 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Optional
 
-from taihe.utils.diagnostics import DiagError, DiagFatalError, DiagNote, DiagWarn
+from taihe.utils.diagnostics import DiagError, DiagNote, DiagWarn
 from taihe.utils.sources import SourceLocation
 
 if TYPE_CHECKING:
@@ -14,17 +14,6 @@ if TYPE_CHECKING:
         StructFieldDecl,
         TypeRefDecl,
     )
-
-
-@dataclass
-class IDLSyntaxError(DiagFatalError):
-    MSG = "unexpected {token!r}"
-
-    token: str
-
-    def __init__(self, loc: SourceLocation, token: str):
-        self.loc = loc
-        self.token = token
 
 
 @dataclass
@@ -70,10 +59,11 @@ class PackageRedefDiagError(DiagError):
     MSG = "package name {pkg!r} is duplicated"
 
     pkg_name: str
-    prev: SourceLocation
+    prev_loc: Optional[SourceLocation] = field(kw_only=True)
 
     def notes(self):
-        yield DefinitionConflictDiagNote(loc=self.prev)
+        if self.prev_loc:
+            yield DefinitionConflictDiagNote(loc=self.prev_loc)
 
 
 @dataclass
@@ -89,7 +79,8 @@ class DeclRedefDiagError(DiagError):
         self.loc = current.loc
 
     def notes(self):
-        yield DefinitionConflictDiagNote(loc=self.prev.loc)
+        if self.prev.loc:
+            yield DefinitionConflictDiagNote(loc=self.prev.loc)
 
 
 @dataclass
@@ -107,7 +98,15 @@ class EnumValueCollisionError(DiagError):
         self.value = value
 
     def notes(self):
-        yield EnumValueCollisionDiagNote(loc=self.prev.loc)
+        if self.prev.loc:
+            yield EnumValueCollisionDiagNote(loc=self.prev.loc)
+
+
+@dataclass
+class IDLSyntaxError(DiagError):
+    MSG = "unexpected {token!r}"
+
+    token: str
 
 
 @dataclass
@@ -116,28 +115,12 @@ class PackageNotExistError(DiagError):
 
     name: str
 
-    def __init__(
-        self,
-        name: str,
-        loc: Optional[SourceLocation],
-    ):
-        self.name = name
-        self.loc = loc
-
 
 @dataclass
 class DeclNotExistError(DiagError):
     MSG = "declaration {name!r} not exist"
 
     name: str
-
-    def __init__(
-        self,
-        name: str,
-        loc: Optional[SourceLocation],
-    ):
-        self.name = name
-        self.loc = loc
 
 
 @dataclass
@@ -146,28 +129,12 @@ class DeclarationNotInScopeError(DiagError):
 
     name: str
 
-    def __init__(
-        self,
-        name: str,
-        loc: Optional[SourceLocation],
-    ):
-        self.name = name
-        self.loc = loc
-
 
 @dataclass
 class PackageNotInScopeError(DiagError):
     MSG = "package name {name!r} is not imported in this scope"
 
     name: str
-
-    def __init__(
-        self,
-        name: str,
-        loc: Optional[SourceLocation],
-    ):
-        self.name = name
-        self.loc = loc
 
 
 @dataclass
@@ -176,14 +143,6 @@ class NotATypeError(DiagError):
 
     name: str
 
-    def __init__(
-        self,
-        name: str,
-        loc: Optional[SourceLocation],
-    ):
-        self.name = name
-        self.loc = loc
-
 
 @dataclass
 class NotAPackageError(DiagError):
@@ -191,28 +150,12 @@ class NotAPackageError(DiagError):
 
     name: str
 
-    def __init__(
-        self,
-        name: str,
-        loc: Optional[SourceLocation],
-    ):
-        self.name = name
-        self.loc = loc
-
 
 @dataclass
 class NotADeclarationError(DiagError):
     MSG = "{name!r} is not a declaration name"
 
     name: str
-
-    def __init__(
-        self,
-        name: str,
-        loc: Optional[SourceLocation],
-    ):
-        self.name = name
-        self.loc = loc
 
 
 @dataclass
@@ -265,7 +208,8 @@ class DuplicateExtendsWarn(DiagWarn):
         self.prev = prev
 
     def notes(self):
-        yield DefinitionConflictDiagNote(loc=self.prev.loc)
+        if self.prev.loc:
+            yield DefinitionConflictDiagNote(loc=self.prev.loc)
 
 
 @dataclass

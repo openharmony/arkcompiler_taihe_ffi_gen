@@ -43,7 +43,7 @@ from taihe.utils.exceptions import (
 
 
 def analyze_semantics(pg: PackageGroup, diag: DiagnosticsManager):
-    """Replaces UnresolvedType with the corresponding type."""
+    """Runs semantic analysis passes on the given package group."""
     check_decls_and_imports_conflict(pg, diag)
     check_sym_confilct_namespace(pg, diag)
     _ResolveImportsPass(diag).handle_decl(pg)
@@ -54,9 +54,12 @@ def analyze_semantics(pg: PackageGroup, diag: DiagnosticsManager):
 
 
 class _ResolveImportsPass(DeclVisitor):
+    """Resolves imports and type references within a package group."""
+
     diag: DiagnosticsManager
 
     def __init__(self, diag: DiagnosticsManager):
+        super().__init__()
         self._current_package_group = None
         self._current_package = None  # Always points to the current package.
         self.diag = diag
@@ -91,7 +94,7 @@ class _ResolveImportsPass(DeclVisitor):
         if pkg := self._pkg_group.lookup(d.name):
             d.ref_pkg = pkg
         else:
-            self.diag.emit(PackageNotExistError(d.name, d.loc))
+            self.diag.emit(PackageNotExistError(d.name, loc=d.loc))
             d.ref_pkg = None
 
         d.resolved = True
@@ -109,10 +112,10 @@ class _ResolveImportsPass(DeclVisitor):
         elif isinstance(decl := pkg.decls.get(d.name), TypeDecl):
             d.ref_decl = decl
         elif decl:
-            self.diag.emit(NotATypeError(d.name, d.loc))
+            self.diag.emit(NotATypeError(d.name, loc=d.loc))
             d.ref_decl = None
         else:
-            self.diag.emit(DeclNotExistError(d.name, d.loc))
+            self.diag.emit(DeclNotExistError(d.name, loc=d.loc))
             d.ref_decl = None
 
         d.pkg.resolved = True
@@ -122,14 +125,13 @@ class _ResolveImportsPass(DeclVisitor):
             return
 
         xs = d.name.rsplit(".", maxsplit=1)
-        if len(xs) == 2:
-            # fn foo(x: com.example.Bar)
+        if len(xs) == 2:  # fn foo(x: com.example.Bar)
             pkg_name, decl_name = xs
             if (import_pkg := self._pkg.imports.get(pkg_name)) is None:
-                self.diag.emit(PackageNotInScopeError(pkg_name, d.loc))
+                self.diag.emit(PackageNotInScopeError(pkg_name, loc=d.loc))
                 d.ref_ty = None
             elif not isinstance(import_pkg, PackageImportDecl):
-                self.diag.emit(NotAPackageError(pkg_name, d.loc))
+                self.diag.emit(NotAPackageError(pkg_name, loc=d.loc))
                 d.ref_ty = None
             elif (pkg := import_pkg.pkg.ref_pkg) is None:
                 # no need to raise error
@@ -137,24 +139,23 @@ class _ResolveImportsPass(DeclVisitor):
             elif isinstance(decl := pkg.decls.get(decl_name), TypeDecl):
                 d.ref_ty = decl
             elif decl:
-                self.diag.emit(NotATypeError(decl_name, d.loc))
+                self.diag.emit(NotATypeError(decl_name, loc=d.loc))
                 d.ref_ty = None
             else:
-                self.diag.emit(DeclNotExistError(decl_name, d.loc))
+                self.diag.emit(DeclNotExistError(decl_name, loc=d.loc))
                 d.ref_ty = None
-        elif len(xs) == 1:
-            # fn foo(x: Bar)
+        elif len(xs) == 1:  # fn foo(x: Bar)
             decl_name = xs[0]
             if isinstance(decl := self._pkg.decls.get(decl_name), TypeDecl):
                 d.ref_ty = decl
             elif decl:
-                self.diag.emit(NotATypeError(decl_name, d.loc))
+                self.diag.emit(NotATypeError(decl_name, loc=d.loc))
                 d.ref_ty = None
             elif (import_decl := self._pkg.imports.get(decl_name)) is None:
-                self.diag.emit(DeclarationNotInScopeError(decl_name, d.loc))
+                self.diag.emit(DeclarationNotInScopeError(decl_name, loc=d.loc))
                 d.ref_ty = None
             elif not isinstance(import_decl, DeclarationImportDecl):
-                self.diag.emit(NotADeclarationError(decl_name, d.loc))
+                self.diag.emit(NotADeclarationError(decl_name, loc=d.loc))
                 d.ref_ty = None
             elif (decl := import_decl.decl.ref_decl) is None:
                 # no need to raise error
@@ -171,6 +172,7 @@ class _CheckQualifierErrorPass(DeclVisitor):
     diag: DiagnosticsManager
 
     def __init__(self, diag: DiagnosticsManager):
+        super().__init__()
         self.diag = diag
 
     @override
@@ -180,9 +182,12 @@ class _CheckQualifierErrorPass(DeclVisitor):
 
 
 class _CheckFieldCollisionErrorPass(DeclVisitor):
+    """Checks for name and value collisions in declarations."""
+
     diag: DiagnosticsManager
 
     def __init__(self, diag: DiagnosticsManager):
+        super().__init__()
         self.diag = diag
 
     @override
@@ -211,6 +216,7 @@ def check_field_name_collision(
     diag: DiagnosticsManager,
     items: Iterable[Decl],
 ):
+    """Checks for duplicate field names in declarations."""
     symbol = {}
     for f in items:
         if (prev := symbol.setdefault(f.name, f)) != f:
@@ -221,6 +227,7 @@ def check_field_value_collision(
     diag: DiagnosticsManager,
     items: Iterable[EnumItemDecl],
 ):
+    """Checks for duplicate enum values."""
     symbol = {}
     for f in items:
         if (prev := symbol.setdefault(f.value, f)) != f:
@@ -228,6 +235,7 @@ def check_field_value_collision(
 
 
 def check_sym_confilct_namespace(pg: PackageGroup, diag: DiagnosticsManager):
+    """Checks for declarations conflicts with namespaces."""
     namespaces = set()
     for pkg_name in pg._pkgs:
         # package "a.b.c" -> namespaces ["a.b.c", "a.b", "a"]
@@ -247,12 +255,14 @@ def check_sym_confilct_namespace(pg: PackageGroup, diag: DiagnosticsManager):
 
 
 def check_decls_and_imports_conflict(pg: PackageGroup, diag: DiagnosticsManager):
+    """Checks for conflicts between declarations and imports."""
     for p in pg.packages:
         for redef_decl in p.imports.keys() & p.decls.keys():
             diag.emit(DeclRedefDiagError(p.imports[redef_decl], p.decls[redef_decl]))
 
 
 def check_iface_parents(pg: PackageGroup, diag: DiagnosticsManager):
+    """Validates interface inheritance for correctness and cycles."""
     iface_table = {}
     for pkg in pg.packages:
         for iface in pkg.interfaces:
@@ -275,6 +285,7 @@ def check_iface_parents(pg: PackageGroup, diag: DiagnosticsManager):
 
 
 def check_struct_fields(pg: PackageGroup, diag: DiagnosticsManager):
+    """Validates struct fields for type correctness and cycles."""
     struct_table = {}
     for pkg in pg.packages:
         for struct in pkg.structs:

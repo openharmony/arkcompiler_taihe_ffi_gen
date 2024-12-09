@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from os import PathLike
 from pathlib import Path
 
@@ -56,7 +56,7 @@ class SourceManager:
 
         if prev := self._pkg_to_source.get(sb.pkg_name, None):
             raise PackageRedefDiagError(
-                sb.pkg_name, prev=SourceLocation(prev), loc=SourceLocation(sb)
+                sb.pkg_name, loc=SourceLocation(sb), prev_loc=SourceLocation(prev)
             )
         else:
             self._pkg_to_source[sb.pkg_name] = sb
@@ -97,7 +97,7 @@ class SourceLocation:
     column: int = 0
     """Optional: The column number (1-based). Use 0 if unavailable."""
 
-    span: int = field(kw_only=True, default=0)
+    span: int = 0
     """Optional: The number of characters in the region.
     Use 0 if the location does not represent a region.
 

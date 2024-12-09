@@ -154,7 +154,7 @@ class PackageRefDecl(Decl):
     ref_pkg: Optional["Package"] = None
     resolved: bool = False
 
-    def __init__(self, name: str, loc):
+    def __init__(self, name: str, loc: Optional[SourceLocation]):
         super().__init__(name, loc, parent=None)
 
     @override
@@ -170,7 +170,7 @@ class DeclarationRefDecl(Decl):
     resolved: bool = False
     pkg: PackageRefDecl
 
-    def __init__(self, p: PackageRefDecl, name: str, loc):
+    def __init__(self, name: str, loc: Optional[SourceLocation], p: PackageRefDecl):
         super().__init__(name, loc, parent=None)
         self.pkg = p
 
@@ -187,7 +187,14 @@ class PackageImportDecl(ImportDecl):
 
     pkg: PackageRefDecl
 
-    def __init__(self, p: PackageRefDecl, *, name: str = "", loc=None, **kwargs):
+    def __init__(
+        self,
+        p: PackageRefDecl,
+        *,
+        name: str = "",
+        loc: Optional[SourceLocation] = None,
+        **kwargs,
+    ):
         super().__init__(name=name or p.name, loc=loc or p.loc, **kwargs)
         self.pkg = p
 
@@ -207,7 +214,14 @@ class DeclarationImportDecl(ImportDecl):
 
     decl: DeclarationRefDecl
 
-    def __init__(self, d: DeclarationRefDecl, *, name: str = "", loc=None, **kwargs):
+    def __init__(
+        self,
+        d: DeclarationRefDecl,
+        *,
+        name: str = "",
+        loc: Optional[SourceLocation] = None,
+        **kwargs,
+    ):
         super().__init__(name=name or d.name, loc=loc or d.loc, **kwargs)
         self.decl = d
 
@@ -239,8 +253,14 @@ class ParamDecl(Decl):
     ty: TypeRefDecl
     parent: Optional["FuncBaseDecl"] = None
 
-    def __init__(self, name: str, ty: TypeRefDecl, **kwargs):
-        super().__init__(name, **kwargs)
+    def __init__(
+        self,
+        name: str,
+        loc: Optional[SourceLocation],
+        ty: TypeRefDecl,
+        **kwargs,
+    ):
+        super().__init__(name, loc, **kwargs)
         self.ty = ty
 
     @override
@@ -257,8 +277,8 @@ class FuncBaseDecl(Decl):
     params: list[ParamDecl]
     return_types: list[TypeRefDecl]
 
-    def __init__(self, name: str, **kwargs):
-        super().__init__(name, **kwargs)
+    def __init__(self, name: str, loc: Optional[SourceLocation], **kwargs):
+        super().__init__(name, loc, **kwargs)
         self.params = []
         self.return_types = []
 
@@ -268,8 +288,14 @@ class FuncBaseDecl(Decl):
         for r in self.return_types:
             v.handle_decl(r)
 
-    def add_param(self, name: str, ty: TypeRefDecl, **kwargs):
-        param = ParamDecl(name, ty, parent=self, **kwargs)
+    def add_param(
+        self,
+        name: str,
+        loc: Optional[SourceLocation],
+        ty: TypeRefDecl,
+        **kwargs,
+    ):
+        param = ParamDecl(name, loc, ty, parent=self, **kwargs)
         self.params.append(param)
 
     def add_return_ty(self, ty: TypeRefDecl):
@@ -294,8 +320,14 @@ class EnumItemDecl(Decl):
     parent: Optional["EnumDecl"] = None
     value: int
 
-    def __init__(self, name: str, value: int, **kwargs):
-        super().__init__(name, **kwargs)
+    def __init__(
+        self,
+        name: str,
+        loc: Optional[SourceLocation],
+        value: int,
+        **kwargs,
+    ):
+        super().__init__(name, loc, **kwargs)
         self.value = value
 
     @override
@@ -308,8 +340,8 @@ class EnumDecl(TypeDecl):
 
     items: list[EnumItemDecl]
 
-    def __init__(self, name: str, **kwargs):
-        super().__init__(name, **kwargs)
+    def __init__(self, name: str, loc: Optional[SourceLocation], **kwargs):
+        super().__init__(name, loc, **kwargs)
         self.items = []
 
     @override
@@ -320,8 +352,14 @@ class EnumDecl(TypeDecl):
         for f in self.items:
             v.handle_decl(f)
 
-    def add_item(self, name: str, value: int, **kwargs):
-        f = EnumItemDecl(name, value, parent=self, **kwargs)
+    def add_item(
+        self,
+        name: str,
+        loc: Optional[SourceLocation],
+        value: int,
+        **kwargs,
+    ):
+        f = EnumItemDecl(name, loc, value, parent=self, **kwargs)
         self.items.append(f)
 
 
@@ -331,8 +369,14 @@ class StructFieldDecl(Decl):
     ty: TypeRefDecl
     parent: Optional["StructDecl"] = None
 
-    def __init__(self, name: str, ty: TypeRefDecl, **kwargs):
-        super().__init__(name, **kwargs)
+    def __init__(
+        self,
+        name: str,
+        loc: Optional[SourceLocation],
+        ty: TypeRefDecl,
+        **kwargs,
+    ):
+        super().__init__(name, loc, **kwargs)
         self.ty = ty
 
     @override
@@ -348,8 +392,8 @@ class StructDecl(TypeDecl):
 
     fields: list[StructFieldDecl]
 
-    def __init__(self, name: str, **kwargs):
-        super().__init__(name, **kwargs)
+    def __init__(self, name: str, loc: Optional[SourceLocation], **kwargs):
+        super().__init__(name, loc, **kwargs)
         self.fields = []
 
     @override
@@ -360,8 +404,14 @@ class StructDecl(TypeDecl):
         for f in self.fields:
             v.handle_decl(f)
 
-    def add_field(self, name: str, ty: TypeRefDecl, **kwargs):
-        f = StructFieldDecl(name, ty, parent=self, **kwargs)
+    def add_field(
+        self,
+        name: str,
+        loc: Optional[SourceLocation],
+        ty: TypeRefDecl,
+        **kwargs,
+    ):
+        f = StructFieldDecl(name, loc, ty, parent=self, **kwargs)
         self.fields.append(f)
 
 
@@ -381,8 +431,8 @@ class IfaceDecl(TypeDecl):
     methods: list[IfaceMethodDecl]
     parents: list[TypeRefDecl]
 
-    def __init__(self, name: str, **kwargs):
-        super().__init__(name, **kwargs)
+    def __init__(self, name: str, loc: Optional[SourceLocation], **kwargs):
+        super().__init__(name, loc, **kwargs)
         self.methods = []
         self.parents = []
 
@@ -431,8 +481,7 @@ class Package(Decl):
     interfaces: list[IfaceDecl]
 
     def __init__(self, name: str, loc: Optional[SourceLocation]):
-        self.loc = loc
-        self.name = name
+        super().__init__(name, loc)
 
         self.imports = {}
         self.decls = {}

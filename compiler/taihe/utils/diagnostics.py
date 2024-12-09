@@ -66,7 +66,7 @@ class DiagBase:
     MSG: ClassVar[str] = "<todo-diagbase-msg>"
     """The template for generating diagnostic message."""
 
-    loc: Optional["SourceLocation"] = field(default=None, kw_only=True)
+    loc: Optional["SourceLocation"] = field(kw_only=True)
     """The source location where the diagnostic refers to."""
 
     def format_msg(self) -> str:
@@ -203,15 +203,15 @@ class DiagnosticsManager:
         ```
         # Emit the error and prevent its propogation
         with diag_mgr.capture_error():
-          foo();
-          raise DiagError(...)
-          bar();
+            foo();
+            raise DiagError(...)
+            bar();
 
         # Equivalent to:
         try:
-          foo();
-          raise DiagError(...)
-          bar();
+            foo();
+            raise DiagError(...)
+            bar();
         except DiagError as e:
             diag_mgr.emit(e)
         ```

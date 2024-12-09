@@ -21,10 +21,10 @@ class TaiheErrorListener(ErrorListener):
     def syntaxError(self, recognizer, offendingSymbol, line, column, msg, e):
         self.diag.emit(
             IDLSyntaxError(
-                SourceLocation(
-                    self.source, line, column + 1, span=len(offendingSymbol.text)
-                ),
                 offendingSymbol.text,
+                loc=SourceLocation(
+                    self.source, line, column + 1, len(offendingSymbol.text)
+                ),
             )
         )
         self.has_error = True

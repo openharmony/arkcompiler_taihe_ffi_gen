@@ -136,19 +136,18 @@ class AstConverter(Visitor):
 
     def visit(self, node):
         r = super().visit(node)
-        # print(f"{r=} {node=}")
         return r
 
     def loc(self, t: ast.token | list[ast.token]):
         # Remember, token.column is 0-based.
         if isinstance(t, ast.token):
             col = 0 if t.column is None else t.column + 1
-            return SourceLocation(self.source, t.line or 0, col, span=len(t.text))
+            return SourceLocation(self.source, t.line or 0, col, len(t.text))
 
         first_begin = 0 if t[0].column is None else t[0].column + 1
         last_begin = 0 if t[-1].column is None else t[-1].column + 1
         span = max(last_begin + len(t[-1].text) - first_begin, 0)
-        return SourceLocation(self.source, t[0].line or 0, first_begin, span=span)
+        return SourceLocation(self.source, t[0].line or 0, first_begin, span)
 
     @override
     def visit_PrimitiveType(self, node: ast.PrimitiveType) -> TypeRefDecl:
@@ -178,7 +177,7 @@ class AstConverter(Visitor):
         d = StructDecl(str(node.name), loc=self.loc(node.name))
         for f in node.fields:
             with self.diag.capture_error():
-                d.add_field(str(f.name), self.visit(f.type), loc=self.loc(f.name))
+                d.add_field(str(f.name), self.loc(f.name), self.visit(f.type))
         return d
 
     @override
@@ -187,9 +186,9 @@ class AstConverter(Visitor):
         next_value = 0
         for f in node.fields:
             with self.diag.capture_error():
-                v = eval_int_expr(f.expr) if f.expr else next_value
-                d.add_item(str(f.name), v, loc=self.loc(f.name))
-                next_value = v + 1
+                value = eval_int_expr(f.expr) if f.expr else next_value
+                d.add_item(str(f.name), self.loc(f.name), value)
+                next_value = value + 1
         return d
 
     @override
@@ -197,7 +196,7 @@ class AstConverter(Visitor):
         f = IfaceMethodDecl(str(node.name), loc=self.loc(node.name))
         for p in node.parameters:
             with self.diag.capture_error():
-                f.add_param(str(p.name), self.visit(p.param_type), loc=self.loc(p.name))
+                f.add_param(str(p.name), self.loc(p.name), self.visit(p.param_type))
         for r in node.return_types:
             with self.diag.capture_error():
                 f.add_return_ty(self.visit(r))
@@ -220,7 +219,7 @@ class AstConverter(Visitor):
         f = FuncDecl(str(node.name), loc=self.loc(node.name))
         for p in node.parameters:
             with self.diag.capture_error():
-                f.add_param(str(p.name), self.visit(p.param_type), loc=self.loc(p.name))
+                f.add_param(str(p.name), self.loc(p.name), self.visit(p.param_type))
         for r in node.return_types:
             with self.diag.capture_error():
                 f.add_return_ty(self.visit(r))
@@ -244,7 +243,7 @@ class AstConverter(Visitor):
     def visit_UseSymbol(self, node: ast.UseSymbol) -> Iterable[DeclarationImportDecl]:
         pkg = PackageRefDecl(pkg2str(node.pkname), self.loc(node.pkname))
         for p in node.alias_pairs:
-            decl = DeclarationRefDecl(pkg, str(p.old_name), self.loc(p.old_name))
+            decl = DeclarationRefDecl(str(p.old_name), self.loc(p.old_name), pkg)
             if p.new_name:
                 yield DeclarationImportDecl(
                     decl,
