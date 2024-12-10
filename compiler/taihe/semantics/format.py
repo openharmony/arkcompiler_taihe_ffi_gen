@@ -106,7 +106,7 @@ class _PrettyPrinter(DeclVisitor):
     @override
     def visit_struct_field_decl(self, d: StructFieldDecl):
         self.buffer.write(self.indent * 2 * " ")
-        self.buffer.write(f"{d.name}: {self.handle_decl(d.ty)};\n")
+        self.buffer.write(f"{d.name}: {self.get_type_ref_decl(d.ty)};\n")
 
     @override
     def visit_enum_item_decl(self, d: EnumItemDecl):
