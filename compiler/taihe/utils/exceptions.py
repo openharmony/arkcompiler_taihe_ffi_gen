@@ -124,6 +124,13 @@ class DeclNotExistError(DiagError):
 
 
 @dataclass
+class NotATypeError(DiagError):
+    MSG = "{name!r} is not a type name"
+
+    name: str
+
+
+@dataclass
 class DeclarationNotInScopeError(DiagError):
     MSG = "declaration name {name!r} is not declared or imported in this scope"
 
@@ -133,27 +140,6 @@ class DeclarationNotInScopeError(DiagError):
 @dataclass
 class PackageNotInScopeError(DiagError):
     MSG = "package name {name!r} is not imported in this scope"
-
-    name: str
-
-
-@dataclass
-class NotATypeError(DiagError):
-    MSG = "{name!r} is not a type name"
-
-    name: str
-
-
-@dataclass
-class NotAPackageError(DiagError):
-    MSG = "{name!r} is not a package name"
-
-    name: str
-
-
-@dataclass
-class NotADeclarationError(DiagError):
-    MSG = "{name!r} is not a declaration name"
 
     name: str
 

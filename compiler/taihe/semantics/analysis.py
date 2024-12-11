@@ -29,8 +29,6 @@ from taihe.utils.exceptions import (
     DuplicateExtendsWarn,
     EnumValueCollisionError,
     ExtendsTypeError,
-    NotADeclarationError,
-    NotAPackageError,
     NotATypeError,
     PackageNotExistError,
     PackageNotInScopeError,
@@ -106,7 +104,7 @@ class _ResolveImportsPass(DeclVisitor):
         self.handle_decl(d.pkg)
 
         if (pkg := d.pkg.ref_pkg) is None:
-            # no need to raise error
+            # No need to repeatedly throw exceptions for package import errors
             d.ref_decl = None
         elif isinstance(decl := pkg.decls.get(d.name), TypeDecl):
             d.ref_decl = decl
@@ -124,17 +122,22 @@ class _ResolveImportsPass(DeclVisitor):
             return
 
         xs = d.name.rsplit(".", maxsplit=1)
-        if len(xs) == 2:  # fn foo(x: com.example.Bar)
+
+        # fn foo(x: com.example.Bar)
+        if len(xs) == 2:  
             pkg_name, decl_name = xs
-            if (import_pkg := self._pkg.imports.get(pkg_name)) is None:
+
+            # Find the corresponding imported package according to the package name
+            if not isinstance(
+                import_pkg := self._pkg.imports.get(pkg_name), PackageImportDecl
+            ):
                 self.diag.emit(PackageNotInScopeError(pkg_name, loc=d.loc))
                 d.ref_ty = None
-            elif not isinstance(import_pkg, PackageImportDecl):
-                self.diag.emit(NotAPackageError(pkg_name, loc=d.loc))
-                d.ref_ty = None
             elif (pkg := import_pkg.pkg.ref_pkg) is None:
-                # no need to raise error
+                # No need to repeatedly throw exceptions for package import errors
                 d.ref_ty = None
+
+            # Then find the corresponding type declaration from the package
             elif isinstance(decl := pkg.decls.get(decl_name), TypeDecl):
                 d.ref_ty = decl
             elif decl:
@@ -143,24 +146,31 @@ class _ResolveImportsPass(DeclVisitor):
             else:
                 self.diag.emit(DeclNotExistError(decl_name, loc=d.loc))
                 d.ref_ty = None
-        elif len(xs) == 1:  # fn foo(x: Bar)
+
+        # fn foo(x: Bar)
+        elif len(xs) == 1:
             decl_name = xs[0]
+
+            # Find types declared in the current package
             if isinstance(decl := self._pkg.decls.get(decl_name), TypeDecl):
                 d.ref_ty = decl
             elif decl:
                 self.diag.emit(NotATypeError(decl_name, loc=d.loc))
                 d.ref_ty = None
-            elif (import_decl := self._pkg.imports.get(decl_name)) is None:
+
+            # If that fails, continue looking for imported type declarations
+            elif not isinstance(
+                import_decl := self._pkg.imports.get(decl_name), DeclarationImportDecl
+            ):
                 self.diag.emit(DeclarationNotInScopeError(decl_name, loc=d.loc))
                 d.ref_ty = None
-            elif not isinstance(import_decl, DeclarationImportDecl):
-                self.diag.emit(NotADeclarationError(decl_name, loc=d.loc))
-                d.ref_ty = None
             elif (decl := import_decl.decl.ref_decl) is None:
-                # no need to raise error
+                # No need to repeatedly throw exceptions for declaration import errors
                 d.ref_ty = None
             else:
                 d.ref_ty = decl
+
+        # Should not be reached
         else:
             raise ValueError("unexpected format for type reference")
 
