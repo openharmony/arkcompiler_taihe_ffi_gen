@@ -241,13 +241,3 @@ class DiagnosticsManager(AbstractDiagnosticsManager):
         for n in diag.notes():
             self._render(n)
         stderr.flush()
-
-
-class SemanticTestDiagnosticsManager(AbstractDiagnosticsManager):
-    error_msg: list[DiagBase]
-
-    def __init__(self):
-        self.error_msg = []
-
-    def emit(self, diag: DiagBase) -> None:
-        self.error_msg.append(diag)
