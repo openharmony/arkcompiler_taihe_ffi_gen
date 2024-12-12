@@ -30,8 +30,8 @@ struct IdMapItem {
 // - `idmap`: A flexible array of `IdMapItem` structures for ID-to-vtable mapping.
 struct TypeInfo {
   uint64_t version;
-  uint64_t len;
   void (*free_data)(struct DataBlockHead*);
+  uint64_t len;
   struct IdMapItem idmap[];
 };
 

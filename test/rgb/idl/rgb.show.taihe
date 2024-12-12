@@ -1,19 +1,18 @@
-from rgb.base use RGB;
+from rgb.base use RGB, Color;
 
 function show(color: RGB): ();
 
-interface Base {
-    function base_func(child: Child): ();
+interface IBase {}
+
+interface IColorable: IBase {
+    function getColor(): Color;
+    function setColor(c: Color): ();
 }
 
-interface Father: Base {
-    function father_func(): ();
+interface IShape: IBase {
+    function calculateArea(): f32;
 }
 
-interface Mother: Base {
-    function mother_func(): ();
-}
-
-interface Child: Father, Mother {
-    function child_func(): ();
+interface IShowable: IColorable, IShape {
+    function show(): ();
 }
