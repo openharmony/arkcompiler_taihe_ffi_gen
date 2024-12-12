@@ -11,7 +11,11 @@ from taihe.semantics.analysis import analyze_semantics
 from taihe.semantics.declarations import PackageGroup
 from taihe.semantics.format import pretty_print
 from taihe.utils.analyses import AnalysisManager
-from taihe.utils.diagnostics import DiagnosticsManager, Level
+from taihe.utils.diagnostics import (
+    DiagnosticsManager,
+    Level,
+    SemanticTestDiagnosticsManager,
+)
 from taihe.utils.outputs import OutputManager
 from taihe.utils.sources import SourceManager
 
@@ -98,3 +102,34 @@ class CompilerInstance:
         if self.diagnostics_manager.current_max_level >= Level.ERROR:
             return
         self.generate()
+
+
+class SemanticTestCompilerInstance:
+    diagnostics_manager: SemanticTestDiagnosticsManager
+
+    source_manager: SourceManager
+    package_group: PackageGroup
+
+    test_files: list[tuple[str, str]]
+
+    def __init__(self, test_files):
+        self.source_manager = SourceManager()
+        self.diagnostics_manager = SemanticTestDiagnosticsManager()
+        self.package_group = PackageGroup()
+        self.test_files = test_files
+
+    def parse(self):
+        for src in self.source_manager.sources:
+            conv = AstConverter(src, self.diagnostics_manager)
+            pkg = conv.convert()
+            self.package_group.add(pkg)
+
+    def validate(self):
+        analyze_semantics(self.package_group, self.diagnostics_manager)
+
+    def test(self):
+        self.diagnostics_manager.for_each(
+            self.test_files, lambda f: self.source_manager.add_buffer(f[0], f[1])
+        )
+        self.parse()
+        self.validate()

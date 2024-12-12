@@ -21,7 +21,7 @@ from taihe.semantics.declarations import (
 )
 from taihe.semantics.types import BuiltinType
 from taihe.semantics.visitor import DeclVisitor
-from taihe.utils.diagnostics import DiagnosticsManager
+from taihe.utils.diagnostics import AbstractDiagnosticsManager
 from taihe.utils.exceptions import (
     DeclarationNotInScopeError,
     DeclNotExistError,
@@ -39,7 +39,7 @@ from taihe.utils.exceptions import (
 )
 
 
-def analyze_semantics(pg: PackageGroup, diag: DiagnosticsManager):
+def analyze_semantics(pg: PackageGroup, diag: AbstractDiagnosticsManager):
     """Runs semantic analysis passes on the given package group."""
     check_decls_and_imports_conflict(pg, diag)
     check_sym_confilct_namespace(pg, diag)
@@ -52,9 +52,9 @@ def analyze_semantics(pg: PackageGroup, diag: DiagnosticsManager):
 class _ResolveImportsPass(DeclVisitor):
     """Resolves imports and type references within a package group."""
 
-    diag: DiagnosticsManager
+    diag: AbstractDiagnosticsManager
 
-    def __init__(self, diag: DiagnosticsManager):
+    def __init__(self, diag: AbstractDiagnosticsManager):
         self._current_package_group = None
         self._current_package = None  # Always points to the current package.
         self.diag = diag
@@ -178,9 +178,9 @@ class _ResolveImportsPass(DeclVisitor):
 class _CheckFieldCollisionErrorPass(DeclVisitor):
     """Checks for name and value collisions in declarations."""
 
-    diag: DiagnosticsManager
+    diag: AbstractDiagnosticsManager
 
-    def __init__(self, diag: DiagnosticsManager):
+    def __init__(self, diag: AbstractDiagnosticsManager):
         self.diag = diag
 
     @override
@@ -206,7 +206,7 @@ class _CheckFieldCollisionErrorPass(DeclVisitor):
 
 
 def check_field_name_collision(
-    diag: DiagnosticsManager,
+    diag: AbstractDiagnosticsManager,
     items: Iterable[Decl],
 ):
     """Checks for duplicate field names in declarations."""
@@ -217,7 +217,7 @@ def check_field_name_collision(
 
 
 def check_field_value_collision(
-    diag: DiagnosticsManager,
+    diag: AbstractDiagnosticsManager,
     items: Iterable[EnumItemDecl],
 ):
     """Checks for duplicate enum values."""
@@ -227,7 +227,10 @@ def check_field_value_collision(
             diag.emit(EnumValueCollisionError(prev, f, f.value))
 
 
-def check_sym_confilct_namespace(pg: PackageGroup, diag: DiagnosticsManager):
+def check_sym_confilct_namespace(
+    pg: PackageGroup,
+    diag: AbstractDiagnosticsManager,
+):
     """Checks for declarations conflicts with namespaces."""
     namespaces = set()
     for pkg_name in pg._pkgs:
@@ -247,14 +250,20 @@ def check_sym_confilct_namespace(pg: PackageGroup, diag: DiagnosticsManager):
                 diag.emit(SymbolConflictWithNamespaceError(d, p))
 
 
-def check_decls_and_imports_conflict(pg: PackageGroup, diag: DiagnosticsManager):
+def check_decls_and_imports_conflict(
+    pg: PackageGroup,
+    diag: AbstractDiagnosticsManager,
+):
     """Checks for conflicts between declarations and imports."""
     for p in pg.packages:
         for redef_decl in p.imports.keys() & p.decls.keys():
             diag.emit(DeclRedefDiagError(p.imports[redef_decl], p.decls[redef_decl]))
 
 
-def check_iface_parents(pg: PackageGroup, diag: DiagnosticsManager):
+def check_iface_parents(
+    pg: PackageGroup,
+    diag: AbstractDiagnosticsManager,
+):
     """Validates interface inheritance for correctness and cycles."""
     iface_table = {}
     for pkg in pg.packages:
@@ -277,7 +286,10 @@ def check_iface_parents(pg: PackageGroup, diag: DiagnosticsManager):
         diag.emit(RecursiveExtensionError(last, other))
 
 
-def check_struct_fields(pg: PackageGroup, diag: DiagnosticsManager):
+def check_struct_fields(
+    pg: PackageGroup,
+    diag: AbstractDiagnosticsManager,
+):
     """Validates struct fields for type correctness and cycles."""
     struct_table = {}
     for pkg in pg.packages:

@@ -1,5 +1,6 @@
 """Manages diagnostics messages such as semantic errors."""
 
+from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -133,7 +134,53 @@ class AdhocDiagNote(DiagNote):
         return self.msg
 
 
-class DiagnosticsManager:
+class AbstractDiagnosticsManager(ABC):
+    @abstractmethod
+    def emit(self, diag: DiagBase) -> None: ...
+
+    @contextmanager
+    def capture_error(self):
+        """Captures "error" and "fatal" diagnostics using context manager.
+
+        Example:
+        ```
+        # Emit the error and prevent its propogation
+        with diag_mgr.capture_error():
+            foo();
+            raise DiagError(...)
+            bar();
+
+        # Equivalent to:
+        try:
+            foo();
+            raise DiagError(...)
+            bar();
+        except DiagError as e:
+            diag_mgr.emit(e)
+        ```
+        """
+        try:
+            yield None
+        except DiagError as e:
+            self.emit(e)
+
+    def for_each(self, xs: Iterable[T], cb: Callable[[T], bool | None]) -> bool:
+        """Calls `cb` for each element. Records and recovers from `DiagError`s.
+
+        Returns `True` if no errors are encountered.
+        """
+        no_error = True
+        for x in xs:
+            try:
+                if cb(x):
+                    return True
+            except DiagError as e:
+                self.emit(e)
+                no_error = False
+        return no_error
+
+
+class DiagnosticsManager(AbstractDiagnosticsManager):
     """Manages diagnostic messages."""
 
     current_max_level: Level
@@ -187,7 +234,7 @@ class DiagnosticsManager:
         if d.loc:
             self._render_source_location(d.loc)
 
-    def emit(self, diag: DiagBase):
+    def emit(self, diag: DiagBase) -> None:
         """Emits a new diagnostic message."""
         self.current_max_level = max(self.current_max_level, diag.LEVEL)
         self._render(diag)
@@ -195,43 +242,12 @@ class DiagnosticsManager:
             self._render(n)
         stderr.flush()
 
-    @contextmanager
-    def capture_error(self):
-        """Captures "error" and "fatal" diagnostics using context manager.
 
-        Example:
-        ```
-        # Emit the error and prevent its propogation
-        with diag_mgr.capture_error():
-            foo();
-            raise DiagError(...)
-            bar();
+class SemanticTestDiagnosticsManager(AbstractDiagnosticsManager):
+    error_msg: list[DiagBase]
 
-        # Equivalent to:
-        try:
-            foo();
-            raise DiagError(...)
-            bar();
-        except DiagError as e:
-            diag_mgr.emit(e)
-        ```
-        """
-        try:
-            yield None
-        except DiagError as e:
-            self.emit(e)
+    def __init__(self):
+        self.error_msg = []
 
-    def for_each(self, xs: Iterable[T], cb: Callable[[T], bool | None]) -> bool:
-        """Calls `cb` for each element. Records and recovers from `DiagError`s.
-
-        Returns `True` if no errors are encountered.
-        """
-        no_error = True
-        for x in xs:
-            try:
-                if cb(x):
-                    return True
-            except DiagError as e:
-                self.emit(e)
-                no_error = False
-        return no_error
+    def emit(self, diag: DiagBase) -> None:
+        self.error_msg.append(diag)

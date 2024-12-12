@@ -7,7 +7,7 @@ avoiding redundant computation or memory usage.
 from abc import ABC
 from collections.abc import Hashable
 from dataclasses import dataclass
-from typing import Generic, Never, TypeVar
+from typing import Generic, NoReturn, TypeVar
 
 P = TypeVar("P", bound=Hashable)
 A = TypeVar("A", bound="AbstractAnalysis")
@@ -27,7 +27,7 @@ class AbstractAnalysis(ABC, Generic[P]):
     Enforcing the use of hashable argument for unique identification and caching.
     """
 
-    def __new__(cls, *args, **kwargs) -> Never:
+    def __new__(cls, *args, **kwargs) -> NoReturn:
         """Avoid accidentally instantiating without using the `get` method."""
         raise TypeError(
             f"Cannot instantiate {cls.__name__}. Use `{cls.__name__}.get` instead."

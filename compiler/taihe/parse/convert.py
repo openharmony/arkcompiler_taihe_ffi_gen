@@ -22,7 +22,7 @@ from taihe.semantics.declarations import (
 from taihe.semantics.types import (
     BuiltinType,
 )
-from taihe.utils.diagnostics import DiagnosticsManager
+from taihe.utils.diagnostics import AbstractDiagnosticsManager
 from taihe.utils.sources import SourceBase, SourceLocation
 
 
@@ -126,9 +126,9 @@ class AstConverter(Visitor):
     """
 
     source: SourceBase
-    diag: DiagnosticsManager
+    diag: AbstractDiagnosticsManager
 
-    def __init__(self, source: SourceBase, diag: DiagnosticsManager):
+    def __init__(self, source: SourceBase, diag: AbstractDiagnosticsManager):
         self.source = source
         self.diag = diag
 

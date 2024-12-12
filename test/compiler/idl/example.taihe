@@ -24,7 +24,7 @@ from example.foo use Foo as Foobar;  // DeclConflictError
 
 struct ResolveTypesTester {
     a: unimported.Type;  // PackageNotInScopeError
-    b: Bar.Type;  // NotAPackageError
+    b: Bar.Type;  // PackageNotInScopeError
     c: nonexist.Baz;  // Nothing should be reported here
     d: bar.Bar;  // OK
     e: bar.func;  // NotATypeError
@@ -33,7 +33,7 @@ struct ResolveTypesTester {
     u: GoodStruct;  // OK
     v: good_func;  // NotATypeError
     w: Unimported;  // DeclNotInScopeError
-    x: bar;  // NotADeclarationError
+    x: bar;  // DeclNotInScopeError
     y: MyNonexist;  // Nothing should be reported here
     z: Bar;  // OK
 }
