@@ -36,12 +36,11 @@ def pretty_print(x: DeclAlike, buffer: TextIO):
 class _TypeNamePrinter(TypeVisitor[str]):
     @override
     def visit_type_ref_decl(self, d: TypeRefDecl):
-        ref_str = (
+        return (
             f"<unresolved {d.name!r}>"
             if not d.resolved
             else f"<error {d.name!r}>" if not d.ref_ty else self.handle_type(d.ref_ty)
         )
-        return d.qual.describe(ref_str)
 
     @override
     def visit_type_decl(self, d: TypeDecl):

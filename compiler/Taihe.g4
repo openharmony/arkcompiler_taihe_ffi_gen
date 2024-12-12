@@ -22,7 +22,7 @@ specField
     | KW_ENUM token_name = ID LEFT_BRACE (EnumFieldLst_fields += enumField)+ RIGHT_BRACE # enum
     | KW_INTERFACE token_name = ID (COLON TypeLst_extends += type (COMMA TypeLst_extends += type)*)? LEFT_BRACE (InterfaceFieldLst_fields += interfaceField)* RIGHT_BRACE # interface
     | KW_FUNCTION token_name = ID LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS COLON
-        (LEFT_PARENTHESIS (QualifiedTypeLst_return_types += qualifiedType (COMMA QualifiedTypeLst_return_types += qualifiedType)*)? RIGHT_PARENTHESIS | QualifiedTypeLst_return_types += qualifiedType) SEMICOLON # function
+        (LEFT_PARENTHESIS (ReturnLst_returns += return (COMMA ReturnLst_returns += return)*)? RIGHT_PARENTHESIS | ReturnLst_returns += return) SEMICOLON # function
     ;
 
 structField
@@ -35,27 +35,27 @@ enumField
 
 interfaceField
     : (tokenOpt_static = KW_STATIC)? KW_FUNCTION token_name = ID LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS COLON
-        (LEFT_PARENTHESIS (QualifiedTypeLst_return_types += qualifiedType (COMMA QualifiedTypeLst_return_types += qualifiedType)*)? RIGHT_PARENTHESIS | QualifiedTypeLst_return_types += qualifiedType) SEMICOLON # interfaceFunction
+        (LEFT_PARENTHESIS (ReturnLst_returns += return (COMMA ReturnLst_returns += return)*)? RIGHT_PARENTHESIS | ReturnLst_returns += return) SEMICOLON # interfaceFunction
     ;
 
 parameter
-    : token_name = ID COLON QualifiedType_param_type = qualifiedType
+    : token_name = ID COLON Type_param_type = type
+    ;
+
+return
+    : Type_return_type = type
     ;
 
 //////////
 // Type //
 //////////
 
-qualifiedType
-    : (tokenOpt_mut = KW_MUT)? Type_type = type
-    ;
-
 type
     : token_name = (KW_I8 | KW_I16 | KW_I32 | KW_I64 | KW_U8 | KW_U16 | KW_U32 | KW_U64 | KW_F32 | KW_F64 | KW_BOOL | KW_STRING) # primitiveType
     | (tokenLst_pkname += ID DOT)* token_name = ID # userType
     | token_name = ID LEFT_PARENTHESIS (TypeLst_parameters += type (COMMA TypeLst_parameters += type)*)? RIGHT_PARENTHESIS # genericType
     | <assoc = right> LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS ARROW
-        (LEFT_BRACKET (QualifiedTypeLst_return_types += qualifiedType (COMMA QualifiedTypeLst_return_types += qualifiedType)*)? RIGHT_BRACKET | QualifiedTypeLst_return_types += qualifiedType) # functionType
+        (LEFT_BRACKET (ReturnLst_returns += return (COMMA ReturnLst_returns += return)*)? RIGHT_BRACKET | ReturnLst_returns += return) # functionType
     ;
 
 ////////////////

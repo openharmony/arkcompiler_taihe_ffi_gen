@@ -11,4 +11,4 @@ enum Color {
 }
 
 function get_rgb(color: Color): RGB;
-function invert_rgb(color: mut RGB): ();
+function invert_rgb(color: RGB): ();

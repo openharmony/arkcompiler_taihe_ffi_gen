@@ -238,16 +238,3 @@ class RecursiveInclusionError(DiagError):
     def notes(self):
         for n in self.other:
             yield RecursiveInclusionNote(n)
-
-
-@dataclass
-class QualifierError(DiagError):
-    MSG = "qualifier {qual!r} cannot be applied to {name!r}"
-
-    name: str
-    qual: str
-
-    def __init__(self, ty: "TypeRefDecl"):
-        self.loc = ty.loc
-        self.name = ty.name
-        self.qual = ty.qual.describe()

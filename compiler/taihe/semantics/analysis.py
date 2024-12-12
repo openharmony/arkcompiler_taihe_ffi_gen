@@ -32,7 +32,6 @@ from taihe.utils.exceptions import (
     NotATypeError,
     PackageNotExistError,
     PackageNotInScopeError,
-    QualifierError,
     RecursiveExtensionError,
     RecursiveInclusionError,
     StructFieldTypeError,
@@ -48,7 +47,6 @@ def analyze_semantics(pg: PackageGroup, diag: DiagnosticsManager):
     _CheckFieldCollisionErrorPass(diag).handle_decl(pg)
     check_struct_fields(pg, diag)
     check_iface_parents(pg, diag)
-    _CheckQualifierErrorPass(diag).handle_decl(pg)
 
 
 class _ResolveImportsPass(DeclVisitor):
@@ -124,7 +122,7 @@ class _ResolveImportsPass(DeclVisitor):
         xs = d.name.rsplit(".", maxsplit=1)
 
         # fn foo(x: com.example.Bar)
-        if len(xs) == 2:  
+        if len(xs) == 2:
             pkg_name, decl_name = xs
 
             # Find the corresponding imported package according to the package name
@@ -175,18 +173,6 @@ class _ResolveImportsPass(DeclVisitor):
             raise ValueError("unexpected format for type reference")
 
         d.resolved = True
-
-
-class _CheckQualifierErrorPass(DeclVisitor):
-    diag: DiagnosticsManager
-
-    def __init__(self, diag: DiagnosticsManager):
-        self.diag = diag
-
-    @override
-    def visit_type_ref_decl(self, d: TypeRefDecl):
-        if d.qual and not isinstance(d.ref_ty, StructDecl):
-            self.diag.emit(QualifierError(d))
 
 
 class _CheckFieldCollisionErrorPass(DeclVisitor):

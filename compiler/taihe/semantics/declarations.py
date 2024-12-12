@@ -9,7 +9,6 @@ from typing_extensions import override
 from taihe.semantics.types import (
     Type,
     TypeAlike,
-    TypeQualifier,
 )
 from taihe.utils.exceptions import DeclRedefDiagError
 from taihe.utils.sources import SourceLocation
@@ -84,7 +83,6 @@ class TypeRefDecl(Decl, TypeAlike):
     KIND = "type reference"
 
     parent = None
-    qual: TypeQualifier
     ref_ty: Optional[Type] = None
     resolved: bool = False
 
@@ -93,12 +91,10 @@ class TypeRefDecl(Decl, TypeAlike):
         name: str,
         loc: Optional[SourceLocation],
         ref_ty: Optional[Type] = None,
-        qual: TypeQualifier = TypeQualifier.NONE,
     ):
         super().__init__(name, loc, parent=None)
         self.ref_ty = ref_ty
         self.resolved = ref_ty is not None
-        self.qual = qual
 
     def _accept(self, v: "DeclVisitor | TypeVisitor") -> Any:
         return v.visit_type_ref_decl(self)

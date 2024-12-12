@@ -21,7 +21,6 @@ from taihe.semantics.declarations import (
 )
 from taihe.semantics.types import (
     BuiltinType,
-    TypeQualifier,
 )
 from taihe.utils.diagnostics import DiagnosticsManager
 from taihe.utils.sources import SourceBase, SourceLocation
@@ -133,10 +132,6 @@ class AstConverter(Visitor):
         self.source = source
         self.diag = diag
 
-    def visit(self, node):
-        r = super().visit(node)
-        return r
-
     def loc(self, t: ast.token | list[ast.token]):
         # Remember, token.column is 0-based.
         if isinstance(t, ast.token):
@@ -164,14 +159,6 @@ class AstConverter(Visitor):
         return TypeRefDecl(name, loc)
 
     @override
-    def visit_QualifiedType(self, node: ast.QualifiedType) -> TypeRefDecl:
-        ty = self.visit(node.type)
-        assert isinstance(ty, TypeRefDecl)
-        if node.mut:
-            ty.qual |= TypeQualifier.MUT
-        return ty
-
-    @override
     def visit_Struct(self, node: ast.Struct) -> StructDecl:
         d = StructDecl(str(node.name), loc=self.loc(node.name))
         for f in node.fields:
@@ -196,9 +183,9 @@ class AstConverter(Visitor):
         for p in node.parameters:
             with self.diag.capture_error():
                 f.add_param(str(p.name), self.loc(p.name), self.visit(p.param_type))
-        for r in node.return_types:
+        for r in node.returns:
             with self.diag.capture_error():
-                f.add_return_ty(self.visit(r))
+                f.add_return_ty(self.visit(r.return_type))
         return f
 
     @override
@@ -219,9 +206,9 @@ class AstConverter(Visitor):
         for p in node.parameters:
             with self.diag.capture_error():
                 f.add_param(str(p.name), self.loc(p.name), self.visit(p.param_type))
-        for r in node.return_types:
+        for r in node.returns:
             with self.diag.capture_error():
-                f.add_return_ty(self.visit(r))
+                f.add_return_ty(self.visit(r.return_type))
         return f
 
     @override
