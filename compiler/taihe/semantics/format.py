@@ -12,11 +12,13 @@ from taihe.semantics.declarations import (
     EnumItemDecl,
     FuncBaseDecl,
     IfaceDecl,
+    IfaceParentDecl,
     Package,
     PackageGroup,
     PackageImportDecl,
     PackageRefDecl,
     ParamDecl,
+    ReturnDecl,
     StructDecl,
     StructFieldDecl,
     TypeDecl,
@@ -44,8 +46,8 @@ class _TypeNamePrinter(TypeVisitor[str]):
 
     @override
     def visit_type_decl(self, d: TypeDecl):
-        if pkg := d.parent_package:
-            return f"{pkg}.{d.name}"
+        if pkg := d.parent:
+            return f"{pkg.name}.{d.name}"
         else:
             return f"<unknown>.{d.name}"
 
@@ -67,6 +69,12 @@ class _PrettyPrinter(DeclVisitor):
 
     def get_decl_ref_decl(self, d: DeclarationRefDecl) -> str:
         return d.name
+
+    def get_parent_decl(self, d: IfaceParentDecl) -> str:
+        return self.get_type_ref_decl(d.ty)
+
+    def get_return_decl(self, d: ReturnDecl) -> str:
+        return self.get_type_ref_decl(d.ty)
 
     def get_param_decl(self, d: ParamDecl) -> str:
         return f"{d.name}: {self.get_type_ref_decl(d.ty)}"
@@ -93,13 +101,13 @@ class _PrettyPrinter(DeclVisitor):
     def visit_func_base_decl(self, d: FuncBaseDecl):
         self.buffer.write(self.indent * 2 * " ")
         fmt_args = ", ".join(self.get_param_decl(x) for x in d.params)
-        if len(d.return_types) == 0:
+        if len(d.returns) == 0:
             self.buffer.write(f"fn {d.name}({fmt_args});\n")
-        elif len(d.return_types) == 1:
-            fmt_ret = self.get_type_ref_decl(d.return_types[0])
+        elif len(d.returns) == 1:
+            fmt_ret = self.get_return_decl(d.returns[0])
             self.buffer.write(f"fn {d.name}({fmt_args}) -> {fmt_ret};\n")
         else:
-            fmt_ret = ", ".join(self.get_type_ref_decl(r) for r in d.return_types)
+            fmt_ret = ", ".join(self.get_return_decl(r) for r in d.returns)
             self.buffer.write(f"fn {d.name}({fmt_args}) -> ({fmt_ret});\n")
 
     @override
@@ -142,7 +150,7 @@ class _PrettyPrinter(DeclVisitor):
     def visit_iface_decl(self, d: IfaceDecl):
         self.buffer.write(self.indent * 2 * " ")
         if d.parents:
-            fmt_extends = ", ".join(self.get_type_ref_decl(e) for e in d.parents)
+            fmt_extends = ", ".join(self.get_parent_decl(e) for e in d.parents)
             self.buffer.write(f"interface {d.name}: {fmt_extends} {{")
         else:
             self.buffer.write(f"interface {d.name} {{")

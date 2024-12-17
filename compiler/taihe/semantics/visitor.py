@@ -25,12 +25,14 @@ from taihe.semantics.declarations import (
     FuncDecl,
     IfaceDecl,
     IfaceMethodDecl,
+    IfaceParentDecl,
     ImportDecl,
     Package,
     PackageGroup,
     PackageImportDecl,
     PackageRefDecl,
     ParamDecl,
+    ReturnDecl,
     StructDecl,
     StructFieldDecl,
     TypeDecl,
@@ -137,6 +139,14 @@ class DeclVisitor:
         """The fallback method which handles the most general cases."""
         del d
 
+    def visit_param_decl(self, d: ParamDecl) -> None:
+        d._traverse(self)
+        return self.visit_decl(d)
+
+    def visit_return_decl(self, d: ReturnDecl) -> None:
+        d._traverse(self)
+        return self.visit_decl(d)
+
     def visit_func_base_decl(self, d: FuncBaseDecl) -> None:
         d._traverse(self)
         return self.visit_decl(d)
@@ -162,10 +172,6 @@ class DeclVisitor:
         return self.visit_import_decl(d)
 
     ### Functions ###
-
-    def visit_param_decl(self, d: ParamDecl) -> None:
-        d._traverse(self)
-        return self.visit_decl(d)
 
     def visit_func_decl(self, d: FuncDecl) -> None:
         return self.visit_func_base_decl(d)
@@ -198,6 +204,10 @@ class DeclVisitor:
         return self.visit_type_decl(d)
 
     ### Interface ###
+
+    def visit_iface_parent_decl(self, d: IfaceParentDecl) -> None:
+        d._traverse(self)
+        return self.visit_decl(d)
 
     def visit_iface_method_decl(self, d: IfaceMethodDecl) -> None:
         return self.visit_func_base_decl(d)

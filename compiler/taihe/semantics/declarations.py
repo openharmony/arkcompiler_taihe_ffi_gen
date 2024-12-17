@@ -52,13 +52,17 @@ class Decl(ABC, DeclAlike):
         return f"{self.KIND} {self.name!r}"
 
     @property
-    def parent_package(self) -> str | None:
+    def segments(self) -> list[str]:
         t = self
-        while t is not None:
+        segments: list[str] = []
+        while True:
             if isinstance(t, Package):
-                return t.name
+                segments = [*t.name.split("."), *segments]
+                return segments
             # All objects inherenting "Decl" must has "parent" as its field.
+            segments = [t.name, *segments]
             t = t.parent
+            assert t
 
     def __repr__(self) -> str:
         return f"{self.__class__.__qualname__}<{self.name!r} in {self.parent}>"
@@ -267,21 +271,45 @@ class ParamDecl(Decl):
         v.handle_decl(self.ty)
 
 
+class ReturnDecl(Decl):
+    KIND = "function return type"
+
+    ty: TypeRefDecl
+    parent: Optional["FuncBaseDecl"] = None
+
+    def __init__(
+        self,
+        name: str,
+        loc: Optional[SourceLocation],
+        ty: TypeRefDecl,
+        **kwargs,
+    ):
+        super().__init__(name, loc, **kwargs)
+        self.ty = ty
+
+    @override
+    def _accept(self, v: "DeclVisitor") -> Any:
+        return v.visit_return_decl(self)
+
+    def _traverse(self, v: "DeclVisitor"):
+        v.handle_decl(self.ty)
+
+
 class FuncBaseDecl(Decl):
     KIND = "<func-decl-kind>"
 
     params: list[ParamDecl]
-    return_types: list[TypeRefDecl]
+    returns: list[ReturnDecl]
 
     def __init__(self, name: str, loc: Optional[SourceLocation], **kwargs):
         super().__init__(name, loc, **kwargs)
         self.params = []
-        self.return_types = []
+        self.returns = []
 
     def _traverse(self, v: "DeclVisitor"):
         for p in self.params:
             v.handle_decl(p)
-        for r in self.return_types:
+        for r in self.returns:
             v.handle_decl(r)
 
     def add_param(
@@ -294,8 +322,14 @@ class FuncBaseDecl(Decl):
         param = ParamDecl(name, loc, ty, parent=self, **kwargs)
         self.params.append(param)
 
-    def add_return_ty(self, ty: TypeRefDecl):
-        self.return_types.append(ty)
+    def add_return_ty(
+        self,
+        ty: TypeRefDecl,
+        **kwargs,
+    ):
+        name = str(len(self.params))
+        retval = ReturnDecl(name, ty.loc, ty, parent=self, **kwargs)
+        self.returns.append(retval)
 
 
 class FuncDecl(FuncBaseDecl, PackageLevelDecl):
@@ -411,6 +445,30 @@ class StructDecl(TypeDecl):
         self.fields.append(f)
 
 
+class IfaceParentDecl(Decl):
+    KIND = "function return type"
+
+    ty: TypeRefDecl
+    parent: Optional["IfaceDecl"] = None
+
+    def __init__(
+        self,
+        name: str,
+        loc: Optional[SourceLocation],
+        ty: TypeRefDecl,
+        **kwargs,
+    ):
+        super().__init__(name, loc, **kwargs)
+        self.ty = ty
+
+    @override
+    def _accept(self, v: "DeclVisitor") -> Any:
+        return v.visit_iface_parent_decl(self)
+
+    def _traverse(self, v: "DeclVisitor"):
+        v.handle_decl(self.ty)
+
+
 class IfaceMethodDecl(FuncBaseDecl):
     KIND = "interface method"
 
@@ -425,7 +483,7 @@ class IfaceDecl(TypeDecl):
     KIND = "struct"
 
     methods: list[IfaceMethodDecl]
-    parents: list[TypeRefDecl]
+    parents: list[IfaceParentDecl]
 
     def __init__(self, name: str, loc: Optional[SourceLocation], **kwargs):
         super().__init__(name, loc, **kwargs)
@@ -442,12 +500,18 @@ class IfaceDecl(TypeDecl):
         for e in self.parents:
             v.handle_decl(e)
 
-    def add_function(self, f: IfaceMethodDecl):
+    def add_method(self, f: IfaceMethodDecl):
         f.parent = self
         self.methods.append(f)
 
-    def add_parent(self, d: TypeRefDecl):
-        self.parents.append(d)
+    def add_parent(
+        self,
+        ty: TypeRefDecl,
+        **kwargs,
+    ):
+        name = str(len(self.parents))
+        parent = IfaceParentDecl(name, ty.loc, ty, parent=self, **kwargs)
+        self.parents.append(parent)
 
 
 ######################

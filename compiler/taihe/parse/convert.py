@@ -194,10 +194,10 @@ class AstConverter(Visitor):
         for f in node.fields:
             m = self.visit(f)
             with self.diag.capture_error():
-                d.add_function(m)
+                d.add_method(m)
         for i in node.extends:
             with self.diag.capture_error():
-                d.add_parent(self.visit(i))
+                d.add_parent(self.visit(i.parent_type))
         return d
 
     @override

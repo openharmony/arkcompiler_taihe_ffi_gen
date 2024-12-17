@@ -271,14 +271,14 @@ def check_iface_parents(
             base_list = iface_table.setdefault(iface, [])
             base_dict = {}
             for parent in iface.parents:
-                if (base := parent.ref_ty) is None:
+                if (base := parent.ty.ref_ty) is None:
                     pass
                 elif not isinstance(base, IfaceDecl):
                     diag.emit(ExtendsTypeError(parent))
                 elif (prev := base_dict.setdefault(base, parent)) != parent:
                     diag.emit(DuplicateExtendsWarn(base, prev, parent))
                 else:
-                    base_list.append(((iface, parent), base))
+                    base_list.append((parent, base))
 
     cycles = detect_cycles(iface_table)
     for cycle in cycles:
@@ -299,9 +299,9 @@ def check_struct_fields(
                 if (inner := field.ty.ref_ty) is None:
                     pass
                 elif not isinstance(inner, BuiltinType | EnumDecl | StructDecl):
-                    diag.emit(StructFieldTypeError(field.ty))
+                    diag.emit(StructFieldTypeError(field))
                 elif isinstance(inner, StructDecl):
-                    struct_list.append(((struct, field), inner))
+                    struct_list.append((field, inner))
 
     cycles = detect_cycles(struct_table)
     for cycle in cycles:

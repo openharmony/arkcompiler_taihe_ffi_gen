@@ -8,11 +8,11 @@ if TYPE_CHECKING:
     from taihe.semantics.declarations import (
         Decl,
         IfaceDecl,
+        IfaceParentDecl,
         Package,
         PackageLevelDecl,
         StructDecl,
         StructFieldDecl,
-        TypeRefDecl,
     )
 
 
@@ -30,28 +30,28 @@ class EnumValueCollisionDiagNote(DiagNote):
 class RecursiveExtensionNote(DiagNote):
     MSG = "the interface is extended by {iface.description}"
 
-    iface: "IfaceDecl"
+    iface: Optional["IfaceDecl"]
 
     def __init__(
         self,
-        last: tuple["IfaceDecl", "TypeRefDecl"],
+        last: "IfaceParentDecl",
     ):
-        self.loc = last[1].loc
-        self.iface = last[0]
+        self.loc = last.loc
+        self.iface = last.parent
 
 
 @dataclass
 class RecursiveInclusionNote(DiagNote):
     MSG = "the struct is included in {struct.description}"
 
-    struct: "StructDecl"
+    struct: Optional["StructDecl"]
 
     def __init__(
         self,
-        last: tuple["StructDecl", "StructFieldDecl"],
+        last: "StructFieldDecl",
     ):
-        self.loc = last[1].loc
-        self.struct = last[0]
+        self.loc = last.loc
+        self.struct = last.parent
 
 
 @dataclass
@@ -163,9 +163,9 @@ class StructFieldTypeError(DiagError):
 
     name: str
 
-    def __init__(self, ty: "TypeRefDecl"):
-        self.loc = ty.loc
-        self.name = ty.name
+    def __init__(self, decl: "StructFieldDecl"):
+        self.loc = decl.ty.loc
+        self.name = decl.ty.name
 
 
 @dataclass
@@ -174,9 +174,9 @@ class ExtendsTypeError(DiagError):
 
     name: str
 
-    def __init__(self, ty: "TypeRefDecl"):
-        self.loc = ty.loc
-        self.name = ty.name
+    def __init__(self, decl: "IfaceParentDecl"):
+        self.loc = decl.ty.loc
+        self.name = decl.ty.name
 
 
 @dataclass
@@ -184,10 +184,12 @@ class DuplicateExtendsWarn(DiagWarn):
     MSG = "{iface.description} is extended multiple times"
 
     iface: "IfaceDecl"
-    prev: "TypeRefDecl"
-    curr: "TypeRefDecl"
+    prev: "IfaceParentDecl"
+    curr: "IfaceParentDecl"
 
-    def __init__(self, iface: "IfaceDecl", prev: "TypeRefDecl", curr: "TypeRefDecl"):
+    def __init__(
+        self, iface: "IfaceDecl", prev: "IfaceParentDecl", curr: "IfaceParentDecl"
+    ):
         self.loc = curr.loc
         self.iface = iface
         self.curr = curr
@@ -202,16 +204,16 @@ class DuplicateExtendsWarn(DiagWarn):
 class RecursiveExtensionError(DiagError):
     MSG = "recursive extension is found in {iface.description}"
 
-    iface: "IfaceDecl"
-    other: list[tuple["IfaceDecl", "TypeRefDecl"]]
+    iface: Optional["IfaceDecl"]
+    other: list["IfaceParentDecl"]
 
     def __init__(
         self,
-        last: tuple["IfaceDecl", "TypeRefDecl"],
-        other: list[tuple["IfaceDecl", "TypeRefDecl"]],
+        last: "IfaceParentDecl",
+        other: list["IfaceParentDecl"],
     ):
-        self.loc = last[1].loc
-        self.iface = last[0]
+        self.loc = last.loc
+        self.iface = last.parent
         self.other = other
 
     def notes(self):
@@ -223,16 +225,16 @@ class RecursiveExtensionError(DiagError):
 class RecursiveInclusionError(DiagError):
     MSG = "recursive inclusion is found in {struct.description}"
 
-    struct: "StructDecl"
-    other: list[tuple["StructDecl", "StructFieldDecl"]]
+    struct: Optional["StructDecl"]
+    other: list["StructFieldDecl"]
 
     def __init__(
         self,
-        last: tuple["StructDecl", "StructFieldDecl"],
-        other: list[tuple["StructDecl", "StructFieldDecl"]],
+        last: "StructFieldDecl",
+        other: list["StructFieldDecl"],
     ):
-        self.loc = last[1].loc
-        self.struct = last[0]
+        self.loc = last.loc
+        self.struct = last.parent
         self.other = other
 
     def notes(self):

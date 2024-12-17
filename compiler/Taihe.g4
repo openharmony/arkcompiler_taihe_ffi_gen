@@ -20,7 +20,7 @@ aliasPair
 specField
     : KW_STRUCT token_name = ID LEFT_BRACE (StructFieldLst_fields += structField)* RIGHT_BRACE # struct
     | KW_ENUM token_name = ID LEFT_BRACE (EnumFieldLst_fields += enumField)+ RIGHT_BRACE # enum
-    | KW_INTERFACE token_name = ID (COLON TypeLst_extends += type (COMMA TypeLst_extends += type)*)? LEFT_BRACE (InterfaceFieldLst_fields += interfaceField)* RIGHT_BRACE # interface
+    | KW_INTERFACE token_name = ID (COLON InterfaceParentLst_extends += interfaceParent (COMMA InterfaceParentLst_extends += interfaceParent)*)? LEFT_BRACE (InterfaceFieldLst_fields += interfaceField)* RIGHT_BRACE # interface
     | KW_FUNCTION token_name = ID LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS COLON
         (LEFT_PARENTHESIS (ReturnLst_returns += return (COMMA ReturnLst_returns += return)*)? RIGHT_PARENTHESIS | ReturnLst_returns += return) SEMICOLON # function
     ;
@@ -31,6 +31,10 @@ structField
 
 enumField
     : token_name = ID (ASSIGN_TO IntExprOpt_expr = intExpr)? SEMICOLON # enumProperty
+    ;
+
+interfaceParent
+    : Type_parent_type = type
     ;
 
 interfaceField
