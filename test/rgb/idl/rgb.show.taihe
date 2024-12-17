@@ -13,6 +13,7 @@ interface IColorable: IBase {
 
 interface IShape: IBase {
     function calculateArea(): f32;
+    function separate(): (IShape, IShape);
 }
 
 interface IShowable: IColorable, IShape {

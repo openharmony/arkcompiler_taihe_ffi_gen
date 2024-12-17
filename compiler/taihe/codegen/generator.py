@@ -9,7 +9,6 @@ from taihe.codegen.mangle import DeclKind, encode
 from taihe.semantics.declarations import (
     EnumDecl,
     EnumItemDecl,
-    FuncBaseDecl,
     FuncDecl,
     IfaceDecl,
     IfaceMethodDecl,
@@ -78,27 +77,42 @@ class ABIFuncDeclInfo(AbstractAnalysis[FuncDecl]):
         assert p
         segments = [*p.name.split("."), f.name]
         self.name = encode(segments, DeclKind.FUNCTION)
+        if len(f.return_types) == 0:
+            self.return_ty_header = None
+            self.return_ty_name = "void"
+            self.return_ty_struct_name = None
+        elif len(f.return_types) == 1:
+            info = ABINormalTypeRefDeclInfo.get(am, f.return_types[0])
+            self.return_ty_header = info.header
+            self.return_ty_name = info.name
+            self.return_ty_struct_name = None
+        else:
+            self.return_ty_header = None
+            self.return_ty_struct_name = encode(segments, DeclKind.RETURN_T)
+            self.return_ty_name = f"struct {self.return_ty_struct_name}"
 
 
 class ABIIfaceMethodDeclInfo(AbstractAnalysis[IfaceMethodDecl]):
-    def __init__(self, am: AnalysisManager, m: IfaceMethodDecl) -> None:
-        i = m.parent
+    def __init__(self, am: AnalysisManager, f: IfaceMethodDecl) -> None:
+        i = f.parent
         assert i
         p = i.parent
         assert p
-        segments = [*p.name.split("."), i.name, m.name]
+        segments = [*p.name.split("."), i.name, f.name]
         self.name = encode(segments, DeclKind.FUNCTION)
-
-
-class ABIFuncReturnTypeInfo(AbstractAnalysis[FuncBaseDecl]):
-    def __init__(self, am: AnalysisManager, f: FuncBaseDecl) -> None:
         if len(f.return_types) == 0:
-            self.header = None
-            self.name = "void"
+            self.return_ty_header = None
+            self.return_ty_name = "void"
+            self.return_ty_struct_name = None
         elif len(f.return_types) == 1:
             info = ABINormalTypeRefDeclInfo.get(am, f.return_types[0])
-            self.header = info.header
-            self.name = info.name
+            self.return_ty_header = info.header
+            self.return_ty_name = info.name
+            self.return_ty_struct_name = None
+        else:
+            self.return_ty_header = None
+            self.return_ty_struct_name = encode(segments, DeclKind.RETURN_T)
+            self.return_ty_name = f"struct {self.return_ty_struct_name}"
 
 
 class ABIEnumItemDeclInfo(AbstractAnalysis[EnumItemDecl]):
@@ -240,13 +254,15 @@ class ABICodeGenerator:
         abi_pkg_target.include("taihe/common.h")
 
         for func in pkg.functions:
-            self.gen_func(func, abi_pkg_target)
+            self.gen_func_return_ty(func, abi_pkg_target)
         for struct in pkg.structs:
             self.gen_struct_file(struct, abi_pkg_target)
         for enum in pkg.enums:
             self.gen_enum_file(enum, abi_pkg_target)
         for iface in pkg.interfaces:
             self.gen_iface_files(iface, abi_pkg_target)
+        for func in pkg.functions:
+            self.gen_func(func, abi_pkg_target)
 
     def gen_func(
         self,
@@ -254,7 +270,8 @@ class ABICodeGenerator:
         abi_pkg_target: COutputBuffer,
     ):
         abi_func_info = ABIFuncDeclInfo.get(self.am, func)
-        abi_return_t_info = ABIFuncReturnTypeInfo.get(self.am, func)
+
+        abi_pkg_target.include(abi_func_info.return_ty_header)
 
         params = []
         for param in func.params:
@@ -263,8 +280,25 @@ class ABICodeGenerator:
             params.append(f"{abi_param_type_info.name} {param.name}")
         params_str = ", ".join(params)
         abi_pkg_target.write(
-            f"TH_EXPORT {abi_return_t_info.name} {abi_func_info.name}({params_str});\n"
+            f"TH_EXPORT {abi_func_info.return_ty_name} {abi_func_info.name}({params_str});\n"
         )
+
+    def gen_func_return_ty(
+        self,
+        func: FuncDecl,
+        abi_pkg_target: COutputBuffer,
+    ):
+        abi_func_info = ABIFuncDeclInfo.get(self.am, func)
+
+        if abi_func_info.return_ty_struct_name is None:
+            return
+
+        abi_pkg_target.write(f"struct {abi_func_info.return_ty_struct_name} {{\n")
+        for i, return_ty in enumerate(func.return_types):
+            ty_info = ABINormalTypeRefDeclInfo.get(self.am, return_ty)
+            abi_pkg_target.include(ty_info.header)
+            abi_pkg_target.write(f"  {ty_info.name} _{i};\n")
+        abi_pkg_target.write("};\n")
 
     def gen_struct_file(
         self,
@@ -405,6 +439,7 @@ class ABICodeGenerator:
 
         abi_iface_target_1.write(f"TH_EXPORT void const* const {abi_iface_info.iid};\n")
 
+        self.gen_iface_methods_return_types(iface, abi_iface_target_1)
         self.gen_iface_ftable(iface, abi_iface_target_1, abi_iface_info)
         self.gen_iface_vtable(abi_iface_target_1, abi_iface_info)
         self.gen_iface_methods(iface, abi_iface_target_1, abi_iface_info)
@@ -412,6 +447,31 @@ class ABICodeGenerator:
         self.gen_iface_dynamic_cast_func(abi_iface_target_1, abi_iface_info)
         self.gen_iface_copy_func(abi_iface_target_1, abi_iface_info)
         self.gen_iface_drop_func(abi_iface_target_1, abi_iface_info)
+
+    def gen_iface_methods_return_types(
+        self,
+        iface: IfaceDecl,
+        abi_iface_target_1: COutputBuffer,
+    ):
+        for func in iface.methods:
+            self.gen_iface_method_return_ty(func, abi_iface_target_1)
+
+    def gen_iface_method_return_ty(
+        self,
+        func: IfaceMethodDecl,
+        abi_iface_target_1: COutputBuffer,
+    ):
+        abi_func_info = ABIIfaceMethodDeclInfo.get(self.am, func)
+
+        if abi_func_info.return_ty_struct_name is None:
+            return
+
+        abi_iface_target_1.write(f"struct {abi_func_info.return_ty_struct_name} {{\n")
+        for i, return_ty in enumerate(func.return_types):
+            ty_info = ABINormalTypeRefDeclInfo.get(self.am, return_ty)
+            abi_iface_target_1.include(ty_info.header)
+            abi_iface_target_1.write(f"  {ty_info.name} _{i};\n")
+        abi_iface_target_1.write("};\n")
 
     def gen_iface_ftable(
         self,
@@ -421,7 +481,9 @@ class ABICodeGenerator:
     ):
         abi_iface_target_1.write(f"struct {abi_iface_info.f_table} {{\n")
         for method in iface.methods:
-            abi_return_t_info = ABIFuncReturnTypeInfo.get(self.am, method)
+            abi_method_info = ABIIfaceMethodDeclInfo.get(self.am, method)
+
+            abi_iface_target_1.include(abi_method_info.return_ty_header)
 
             params = ["struct DataBlockHead* data_ptr"]
             for param in method.params:
@@ -430,7 +492,7 @@ class ABICodeGenerator:
                 params.append(f"{abi_param_type_info.name} {param.name}")
             params_str = ", ".join(params)
             abi_iface_target_1.write(
-                f"  {abi_return_t_info.name} (*{method.name})({params_str});\n"
+                f"  {abi_method_info.return_ty_name} (*{method.name})({params_str});\n"
             )
         abi_iface_target_1.write("};\n")
 
@@ -455,7 +517,6 @@ class ABICodeGenerator:
     ):
         for method in iface.methods:
             abi_method_info = ABIIfaceMethodDeclInfo.get(self.am, method)
-            abi_return_t_info = ABIFuncReturnTypeInfo.get(self.am, method)
 
             params = [f"struct {abi_iface_info.name} tobj"]
             args = ["tobj.data_ptr"]
@@ -466,7 +527,7 @@ class ABICodeGenerator:
             params_str = ", ".join(params)
             args_str = ", ".join(args)
             abi_iface_target_1.write(
-                f"inline {abi_return_t_info.name} {abi_method_info.name}({params_str}) {{\n"
+                f"inline {abi_method_info.return_ty_name} {abi_method_info.name}({params_str}) {{\n"
                 f"  return tobj.vtbl_ptr->ftbl_ptr_0->{method.name}({args_str});\n"
                 f"}}\n"
             )

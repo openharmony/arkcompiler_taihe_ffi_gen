@@ -52,6 +52,7 @@ from enum import Enum
 
 class DeclKind(Enum):
     FUNCTION = "f"
+    RETURN_T = "r"
     STRUCT = "s"
     ENUM = "e"
     ENUM_ITEM = "v"

@@ -85,7 +85,7 @@ class DeclRedefDiagError(DiagError):
 
 @dataclass
 class EnumValueCollisionError(DiagError):
-    MSG = "{current.description} has the value {value}, whicsh already exists"
+    MSG = "{current.description} has the value {value}, which already exists"
 
     prev: "Decl"
     current: "Decl"
