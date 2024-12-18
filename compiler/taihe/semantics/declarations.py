@@ -178,8 +178,9 @@ class DeclarationRefDecl(Decl):
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_decl_ref_decl(self)
 
-    def _traverse(self, v: "DeclVisitor"):
-        v.handle_decl(self.pkg)
+    @property
+    def children(self) -> Iterable[DeclAlike]:
+        yield self.pkg
 
 
 class PackageImportDecl(ImportDecl):
@@ -205,8 +206,9 @@ class PackageImportDecl(ImportDecl):
     def is_alias(self) -> bool:
         return self.name != self.pkg.name
 
-    def _traverse(self, v: "DeclVisitor"):
-        v.handle_decl(self.pkg)
+    @property
+    def children(self) -> Iterable[DeclAlike]:
+        yield self.pkg
 
 
 class DeclarationImportDecl(ImportDecl):
@@ -232,8 +234,9 @@ class DeclarationImportDecl(ImportDecl):
     def is_alias(self) -> bool:
         return self.name != self.decl.name
 
-    def _traverse(self, v: "DeclVisitor"):
-        v.handle_decl(self.decl)
+    @property
+    def children(self) -> Iterable[DeclAlike]:
+        yield self.decl
 
 
 ######################
@@ -267,8 +270,9 @@ class ParamDecl(Decl):
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_param_decl(self)
 
-    def _traverse(self, v: "DeclVisitor"):
-        v.handle_decl(self.ty)
+    @property
+    def children(self) -> Iterable[DeclAlike]:
+        yield self.ty
 
 
 class ReturnDecl(Decl):
@@ -291,8 +295,9 @@ class ReturnDecl(Decl):
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_return_decl(self)
 
-    def _traverse(self, v: "DeclVisitor"):
-        v.handle_decl(self.ty)
+    @property
+    def children(self) -> Iterable[DeclAlike]:
+        yield self.ty
 
 
 class FuncBaseDecl(Decl):
@@ -306,11 +311,10 @@ class FuncBaseDecl(Decl):
         self.params = []
         self.returns = []
 
-    def _traverse(self, v: "DeclVisitor"):
-        for p in self.params:
-            v.handle_decl(p)
-        for r in self.returns:
-            v.handle_decl(r)
+    @property
+    def children(self) -> Iterable[Decl]:
+        yield from self.params
+        yield from self.returns
 
     def add_param(
         self,
@@ -322,12 +326,12 @@ class FuncBaseDecl(Decl):
         param = ParamDecl(name, loc, ty, parent=self, **kwargs)
         self.params.append(param)
 
-    def add_return_ty(
+    def add_return(
         self,
         ty: TypeRefDecl,
         **kwargs,
     ):
-        name = str(len(self.params))
+        name = str(len(self.returns))
         retval = ReturnDecl(name, ty.loc, ty, parent=self, **kwargs)
         self.returns.append(retval)
 
@@ -378,9 +382,9 @@ class EnumDecl(TypeDecl):
     def _accept(self, v: "DeclVisitor | TypeVisitor") -> Any:
         return v.visit_enum_decl(self)
 
-    def _traverse(self, v: "DeclVisitor"):
-        for f in self.items:
-            v.handle_decl(f)
+    @property
+    def children(self) -> Iterable[Decl]:
+        yield from self.items
 
     def add_item(
         self,
@@ -413,8 +417,9 @@ class StructFieldDecl(Decl):
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_struct_field_decl(self)
 
-    def _traverse(self, v: "DeclVisitor"):
-        v.handle_decl(self.ty)
+    @property
+    def children(self) -> Iterable[DeclAlike]:
+        yield self.ty
 
 
 class StructDecl(TypeDecl):
@@ -430,9 +435,9 @@ class StructDecl(TypeDecl):
     def _accept(self, v: "TypeVisitor | DeclVisitor") -> Any:
         return v.visit_struct_decl(self)
 
-    def _traverse(self, v: "DeclVisitor"):
-        for f in self.fields:
-            v.handle_decl(f)
+    @property
+    def children(self) -> Iterable[Decl]:
+        yield from self.fields
 
     def add_field(
         self,
@@ -465,8 +470,9 @@ class IfaceParentDecl(Decl):
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_iface_parent_decl(self)
 
-    def _traverse(self, v: "DeclVisitor"):
-        v.handle_decl(self.ty)
+    @property
+    def children(self) -> Iterable[DeclAlike]:
+        yield self.ty
 
 
 class IfaceMethodDecl(FuncBaseDecl):
@@ -494,11 +500,10 @@ class IfaceDecl(TypeDecl):
     def _accept(self, v: "TypeVisitor | DeclVisitor") -> Any:
         return v.visit_iface_decl(self)
 
-    def _traverse(self, v: "DeclVisitor"):
-        for f in self.methods:
-            v.handle_decl(f)
-        for e in self.parents:
-            v.handle_decl(e)
+    @property
+    def children(self) -> Iterable[Decl]:
+        yield from self.methods
+        yield from self.parents
 
     def add_method(self, f: IfaceMethodDecl):
         f.parent = self
@@ -560,19 +565,15 @@ class Package(Decl):
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_package(self)
 
-    def _traverse(self, v: "DeclVisitor"):
-        for i in self.pkg_imports:
-            v.handle_decl(i)
-        for i in self.decl_imports:
-            v.handle_decl(i)
-        for d in self.functions:
-            v.handle_decl(d)
-        for d in self.structs:
-            v.handle_decl(d)
-        for d in self.enums:
-            v.handle_decl(d)
-        for d in self.interfaces:
-            v.handle_decl(d)
+    @property
+    def children(self) -> Iterable[Decl]:
+        yield from self.pkg_imports
+        yield from self.decl_imports
+
+        yield from self.functions
+        yield from self.structs
+        yield from self.enums
+        yield from self.interfaces
 
     def _register_to_decl(self, d: PackageLevelDecl):
         if prev := self.decls.get(d.name, None):
@@ -648,9 +649,9 @@ class PackageGroup(DeclAlike):
     def _accept(self, v: "DeclVisitor"):
         return v.visit_package_group(self)
 
-    def _traverse(self, v: "DeclVisitor"):
-        for p in self.packages:
-            v.handle_decl(p)
+    @property
+    def children(self) -> Iterable[Decl]:
+        yield from self._pkgs.values()
 
     def lookup(self, name: str) -> Optional["Package"]:
         return self._pkgs.get(name, None)

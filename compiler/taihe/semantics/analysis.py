@@ -8,7 +8,6 @@ from taihe.semantics.declarations import (
     DeclarationImportDecl,
     DeclarationRefDecl,
     EnumDecl,
-    EnumItemDecl,
     FuncBaseDecl,
     IfaceDecl,
     Package,
@@ -27,7 +26,6 @@ from taihe.utils.exceptions import (
     DeclNotExistError,
     DeclRedefDiagError,
     DuplicateExtendsWarn,
-    EnumValueCollisionError,
     ExtendsTypeError,
     NotATypeError,
     PackageNotExistError,
@@ -41,7 +39,6 @@ from taihe.utils.exceptions import (
 
 def analyze_semantics(pg: PackageGroup, diag: AbstractDiagnosticsManager):
     """Runs semantic analysis passes on the given package group."""
-    check_decls_and_imports_conflict(pg, diag)
     check_sym_confilct_namespace(pg, diag)
     _ResolveImportsPass(diag).handle_decl(pg)
     _CheckFieldCollisionErrorPass(diag).handle_decl(pg)
@@ -184,25 +181,29 @@ class _CheckFieldCollisionErrorPass(DeclVisitor):
         self.diag = diag
 
     @override
+    def visit_package(self, p: Package) -> None:
+        check_field_name_collision(self.diag, p.children)
+        super().visit_package(p)
+
+    @override
     def visit_enum_decl(self, d: EnumDecl) -> Any:
+        check_field_name_collision(self.diag, d.children)
         super().visit_enum_decl(d)
-        check_field_name_collision(self.diag, d.items)
-        check_field_value_collision(self.diag, d.items)
 
     @override
     def visit_func_base_decl(self, d: FuncBaseDecl) -> Any:
+        check_field_name_collision(self.diag, d.children)
         super().visit_func_base_decl(d)
-        check_field_name_collision(self.diag, d.params)
 
     @override
     def visit_struct_decl(self, d: StructDecl) -> Any:
+        check_field_name_collision(self.diag, d.children)
         super().visit_struct_decl(d)
-        check_field_name_collision(self.diag, d.fields)
 
     @override
     def visit_iface_decl(self, d: IfaceDecl) -> Any:
+        check_field_name_collision(self.diag, d.children)
         super().visit_iface_decl(d)
-        check_field_name_collision(self.diag, d.methods)
 
 
 def check_field_name_collision(
@@ -214,17 +215,6 @@ def check_field_name_collision(
     for f in items:
         if (prev := symbol.setdefault(f.name, f)) != f:
             diag.emit(DeclRedefDiagError(prev, f))
-
-
-def check_field_value_collision(
-    diag: AbstractDiagnosticsManager,
-    items: Iterable[EnumItemDecl],
-):
-    """Checks for duplicate enum values."""
-    symbol = {}
-    for f in items:
-        if (prev := symbol.setdefault(f.value, f)) != f:
-            diag.emit(EnumValueCollisionError(prev, f, f.value))
 
 
 def check_sym_confilct_namespace(
@@ -248,16 +238,6 @@ def check_sym_confilct_namespace(
             name = p.name + "." + d.name
             if name in namespaces:
                 diag.emit(SymbolConflictWithNamespaceError(d, p))
-
-
-def check_decls_and_imports_conflict(
-    pg: PackageGroup,
-    diag: AbstractDiagnosticsManager,
-):
-    """Checks for conflicts between declarations and imports."""
-    for p in pg.packages:
-        for redef_decl in p.imports.keys() & p.decls.keys():
-            diag.emit(DeclRedefDiagError(p.imports[redef_decl], p.decls[redef_decl]))
 
 
 def check_iface_parents(

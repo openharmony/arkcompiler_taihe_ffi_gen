@@ -140,15 +140,18 @@ class DeclVisitor:
         del d
 
     def visit_param_decl(self, d: ParamDecl) -> None:
-        d._traverse(self)
+        for i in d.children:
+            self.handle_decl(i)
         return self.visit_decl(d)
 
     def visit_return_decl(self, d: ReturnDecl) -> None:
-        d._traverse(self)
+        for i in d.children:
+            self.handle_decl(i)
         return self.visit_decl(d)
 
     def visit_func_base_decl(self, d: FuncBaseDecl) -> None:
-        d._traverse(self)
+        for i in d.children:
+            self.handle_decl(i)
         return self.visit_decl(d)
 
     ### Imports ###
@@ -157,18 +160,21 @@ class DeclVisitor:
         return self.visit_decl(d)
 
     def visit_decl_ref_decl(self, d: DeclarationRefDecl) -> None:
-        d._traverse(self)
+        for i in d.children:
+            self.handle_decl(i)
         return self.visit_decl(d)
 
     def visit_import_decl(self, d: ImportDecl) -> None:
         return self.visit_decl(d)
 
     def visit_package_import_decl(self, d: PackageImportDecl) -> None:
-        d._traverse(self)
+        for i in d.children:
+            self.handle_decl(i)
         return self.visit_import_decl(d)
 
     def visit_decl_import_decl(self, d: DeclarationImportDecl) -> None:
-        d._traverse(self)
+        for i in d.children:
+            self.handle_decl(i)
         return self.visit_import_decl(d)
 
     ### Functions ###
@@ -187,11 +193,13 @@ class DeclVisitor:
     ### Struct ###
 
     def visit_struct_field_decl(self, d: StructFieldDecl) -> None:
-        d._traverse(self)
+        for i in d.children:
+            self.handle_decl(i)
         return self.visit_decl(d)
 
     def visit_struct_decl(self, d: StructDecl) -> None:
-        d._traverse(self)
+        for i in d.children:
+            self.handle_decl(i)
         return self.visit_type_decl(d)
 
     ### Enum ###
@@ -200,26 +208,31 @@ class DeclVisitor:
         return self.visit_decl(d)
 
     def visit_enum_decl(self, d: EnumDecl) -> None:
-        d._traverse(self)
+        for i in d.children:
+            self.handle_decl(i)
         return self.visit_type_decl(d)
 
     ### Interface ###
 
     def visit_iface_parent_decl(self, d: IfaceParentDecl) -> None:
-        d._traverse(self)
+        for i in d.children:
+            self.handle_decl(i)
         return self.visit_decl(d)
 
     def visit_iface_method_decl(self, d: IfaceMethodDecl) -> None:
         return self.visit_func_base_decl(d)
 
     def visit_iface_decl(self, d: IfaceDecl) -> None:
-        d._traverse(self)
+        for i in d.children:
+            self.handle_decl(i)
         return self.visit_type_decl(d)
 
     ### Package ###
 
     def visit_package(self, p: Package) -> None:
-        p._traverse(self)
+        for i in p.children:
+            self.handle_decl(i)
 
     def visit_package_group(self, g: PackageGroup) -> None:
-        g._traverse(self)
+        for i in g.children:
+            self.handle_decl(i)

@@ -153,7 +153,7 @@ class AstConverter(Visitor):
 
     @override
     def visit_UserType(self, node: ast.UserType) -> TypeRefDecl:
-        full_name = [*node.pkname, node.name]
+        full_name = [*node.pkg_name, node.decl_name]
         name = pkg2str(full_name)
         loc = self.loc(full_name)
         return TypeRefDecl(name, loc)
@@ -185,7 +185,7 @@ class AstConverter(Visitor):
                 f.add_param(str(p.name), self.loc(p.name), self.visit(p.param_type))
         for r in node.returns:
             with self.diag.capture_error():
-                f.add_return_ty(self.visit(r.return_type))
+                f.add_return(self.visit(r.return_type))
         return f
 
     @override
@@ -208,17 +208,17 @@ class AstConverter(Visitor):
                 f.add_param(str(p.name), self.loc(p.name), self.visit(p.param_type))
         for r in node.returns:
             with self.diag.capture_error():
-                f.add_return_ty(self.visit(r.return_type))
+                f.add_return(self.visit(r.return_type))
         return f
 
     @override
     def visit_UsePackage(self, node: ast.UsePackage) -> Iterable[PackageImportDecl]:
-        pkg = PackageRefDecl(pkg2str(node.old_pkname), self.loc(node.old_pkname))
-        if node.new_pkname:
+        pkg = PackageRefDecl(pkg2str(node.pkg_name), self.loc(node.pkg_name))
+        if node.pkg_alias:
             yield PackageImportDecl(
                 pkg,
-                name=pkg2str(node.new_pkname),
-                loc=self.loc(node.new_pkname),
+                name=str(node.pkg_alias),
+                loc=self.loc(node.pkg_alias),
             )
         else:
             yield PackageImportDecl(
@@ -227,14 +227,14 @@ class AstConverter(Visitor):
 
     @override
     def visit_UseSymbol(self, node: ast.UseSymbol) -> Iterable[DeclarationImportDecl]:
-        pkg = PackageRefDecl(pkg2str(node.pkname), self.loc(node.pkname))
-        for p in node.alias_pairs:
-            decl = DeclarationRefDecl(str(p.old_name), self.loc(p.old_name), pkg)
-            if p.new_name:
+        pkg = PackageRefDecl(pkg2str(node.pkg_name), self.loc(node.pkg_name))
+        for p in node.decl_alias_pairs:
+            decl = DeclarationRefDecl(str(p.decl_name), self.loc(p.decl_name), pkg)
+            if p.decl_alias:
                 yield DeclarationImportDecl(
                     decl,
-                    name=str(p.new_name),
-                    loc=self.loc(p.new_name),
+                    name=str(p.decl_alias),
+                    loc=self.loc(p.decl_alias),
                 )
             else:
                 yield DeclarationImportDecl(

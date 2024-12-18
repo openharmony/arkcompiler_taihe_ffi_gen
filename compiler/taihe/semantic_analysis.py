@@ -54,8 +54,8 @@ class SymbolReplacer(Visitor):
             self.visit(decl)
 
     def visit_UsePackage(self, node: ast.UsePackage) -> None:
-        old_pkmeta = node.old_pkname
-        new_pkmeta = node.new_pkname or node.old_pkname
+        old_pkmeta = node.pkg_name
+        new_pkmeta = [node.pkg_alias] if node.pkg_alias else node.pkg_name
         old_pktupl = tuple(id.text for id in old_pkmeta)
         new_pktupl = tuple(id.text for id in new_pkmeta)
         self.using_package_metas.setdefault(new_pktupl, []).append(new_pkmeta)
@@ -64,14 +64,14 @@ class SymbolReplacer(Visitor):
             self.errors.append(PackageNotExistError(self.src_path, old_pkmeta))
 
     def visit_UseSymbol(self, node: ast.UseSymbol) -> None:
-        pkmeta = node.pkname
+        pkmeta = node.pkg_name
         pktupl = tuple(id.text for id in pkmeta)
         type_table = self.type_tables.get(pktupl)
         if type_table is None:
             self.errors.append(PackageNotExistError(self.src_path, pkmeta))
-        for alias_pair in node.alias_pairs:
-            old_meta = alias_pair.old_name
-            new_meta = alias_pair.new_name or alias_pair.old_name
+        for alias_pair in node.decl_alias_pairs:
+            old_meta = alias_pair.decl_name
+            new_meta = alias_pair.decl_alias or alias_pair.decl_name
             old_name = old_meta.text
             new_name = new_meta.text
             self.using_type_metas.setdefault(new_name, []).append(new_meta)
@@ -83,8 +83,8 @@ class SymbolReplacer(Visitor):
     def visit_UserType(self, node: ast.UserType) -> None:
         real_pktupl: tuple[str, ...] = ()
         real_name: str = ""
-        pkmeta = node.pkname
-        meta = node.name
+        pkmeta = node.pkg_name
+        meta = node.decl_name
         if pkmeta:
             # use package
             pktupl = tuple(id.text for id in pkmeta)
@@ -106,8 +106,8 @@ class SymbolReplacer(Visitor):
                 self.errors.append(TypeNotImportedError(self.src_path, meta))
             elif len(symbols) == 1:
                 real_pktupl, real_name = next(iter(symbols))
-        node.pkname = [ast.token(id) for id in real_pktupl]
-        node.name = ast.token(real_name)
+        node.pkg_name = [ast.token(id) for id in real_pktupl]
+        node.decl_name = ast.token(real_name)
 
 
 def symbol_substitute(
@@ -269,8 +269,8 @@ def can_be_mutable(
         raise NotImplementedError
 
     if isinstance(node, ast.UserType):
-        pktupl = tuple(id.text for id in node.pkname)
-        name = node.name.text
+        pktupl = tuple(id.text for id in node.pkg_name)
+        name = node.decl_name.text
         targets = type_tables.get(pktupl, {}).get(name)
         if targets is None or len(targets) > 1:
             return True
@@ -426,8 +426,8 @@ def semantic_check(
                 child_type = child.type
                 if not isinstance(child_type, ast.UserType):
                     continue
-                child_type_pktupl = tuple(id.text for id in child_type.pkname)
-                child_type_name = child_type.name.text
+                child_type_pktupl = tuple(id.text for id in child_type.pkg_name)
+                child_type_name = child_type.decl_name.text
                 child_type_decls = type_tables.get(child_type_pktupl, {}).get(
                     child_type_name
                 )

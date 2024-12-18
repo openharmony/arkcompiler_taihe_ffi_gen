@@ -70,12 +70,12 @@ def get_type_infos(
         raise NotImplementedError
 
     if isinstance(node, ast.UserType):
-        pkname = tuple(token.text for token in node.pkname)
-        text = node.name.text
-        cpp_type = get_cpp_name(pkname, text)
-        abi_type = get_abi_name(pkname, text)
-        _, _, abi_header, cpp_header = get_file_names(pkname, text)
-        target = symbol_tables[pkname][text][0]
+        pkg_name = tuple(token.text for token in node.pkg_name)
+        text = node.decl_name.text
+        cpp_type = get_cpp_name(pkg_name, text)
+        abi_type = get_abi_name(pkg_name, text)
+        _, _, abi_header, cpp_header = get_file_names(pkg_name, text)
+        target = symbol_tables[pkg_name][text][0]
         if isinstance(target, ast.Struct):
             abi_type = get_mutable_name(abi_type, mutable, "abi")
             cpp_type = get_mutable_name(cpp_type, mutable, "cpp")
@@ -111,13 +111,13 @@ def get_dup_and_drop(
         raise NotImplementedError
 
     if isinstance(node, ast.UserType):
-        pkname = tuple(token.text for token in node.pkname)
-        name = node.name.text
-        target = symbol_tables[pkname][name][0]
+        pkg_name = tuple(token.text for token in node.pkg_name)
+        name = node.decl_name.text
+        target = symbol_tables[pkg_name][name][0]
         if isinstance(target, ast.Struct | ast.Interface):
             return (
-                get_abi_name(pkname, name, suffix="__dup"),
-                get_abi_name(pkname, name, suffix="__drop"),
+                get_abi_name(pkg_name, name, suffix="__dup"),
+                get_abi_name(pkg_name, name, suffix="__drop"),
             )
         if isinstance(target, ast.Enum):
             return "", ""
@@ -130,12 +130,12 @@ class CodeGenerator(Visitor):
     def __init__(
         self,
         symbol_tables: dict[tuple[str, ...], dict[str, list[ast.SpecField]]],
-        pkname: tuple[str, ...],
+        pkg_name: tuple[str, ...],
         author: bool,
         user: bool,
     ) -> None:
         self.symbol_tables = symbol_tables
-        self.pkname = pkname
+        self.pkg_name = pkg_name
         self.author = author
         self.user = user
         self.files: dict[str, File] = {}
@@ -217,9 +217,9 @@ class CodeGenerator(Visitor):
 
 
 def get_file_names(
-    pkname: tuple[str, ...], type_name: str | None
+    pkg_name: tuple[str, ...], type_name: str | None
 ) -> tuple[str, str, str, str]:
-    basename = ".".join(pkname)
+    basename = ".".join(pkg_name)
     abi_h_name = basename + ".abi.h"
     abi_hpp_name = basename + ".abi.hpp"
     if type_name is not None:
@@ -234,25 +234,25 @@ def get_file_names(
 
 
 def get_cpp_name(
-    pkname: tuple[str, ...],
+    pkg_name: tuple[str, ...],
     type_name: str | None,
     prefix: str = "::",
     suffix: str = "",
 ) -> str:
     if type_name is not None:
-        cpp_name = prefix + "::".join(pkname) + "::" + type_name + suffix
+        cpp_name = prefix + "::".join(pkg_name) + "::" + type_name + suffix
     else:
-        cpp_name = "::".join(pkname)
+        cpp_name = "::".join(pkg_name)
     return cpp_name
 
 
 def get_abi_name(
-    pkname: tuple[str, ...],
+    pkg_name: tuple[str, ...],
     type_name: str,
     prefix: str = "__",
     suffix: str = "",
 ) -> str:
-    abi_name = prefix + "__".join(pkname) + "__" + type_name + suffix
+    abi_name = prefix + "__".join(pkg_name) + "__" + type_name + suffix
     return abi_name
 
 
@@ -431,7 +431,9 @@ def get_enum_field(self, node: ast.Enum) -> tuple[list[str], list[str], list[int
     for field in node.fields:
         assert isinstance(field.expr, ast.IntLiteralExpr)
         field_name = field.name.text
-        abi_field_name = get_abi_name(self.pkname, enum_name, suffix="__" + field_name)
+        abi_field_name = get_abi_name(
+            self.pkg_name, enum_name, suffix="__" + field_name
+        )
         val = int(field.expr.val.text)
         abi_f_names.append(abi_field_name)
         field_names.append(field_name)
@@ -447,12 +449,12 @@ def write_enum_in_files(
     vals: list[int],
 ):
     abi_h_name, abi_hpp_name, enum_h_name, enum_hpp_name = get_file_names(
-        self.pkname, enum_name
+        self.pkg_name, enum_name
     )
-    namespace = get_cpp_name(self.pkname, None)
-    abi_enum_name = get_abi_name(self.pkname, enum_name)
-    cpp_enum_type = get_cpp_name(self.pkname, enum_name)
-    abi_enum_type = get_abi_name(self.pkname, enum_name)
+    namespace = get_cpp_name(self.pkg_name, None)
+    abi_enum_name = get_abi_name(self.pkg_name, enum_name)
+    cpp_enum_type = get_cpp_name(self.pkg_name, enum_name)
+    abi_enum_type = get_abi_name(self.pkg_name, enum_name)
 
     if self.author or self.user:
         enum_h = self.files.setdefault(enum_h_name, File(is_header=True))
@@ -522,14 +524,14 @@ def write_struct_in_files(
     attr_names: list[str],
 ):
     abi_h_name, abi_hpp_name, struct_h_name, struct_hpp_name = get_file_names(
-        self.pkname, struct_name
+        self.pkg_name, struct_name
     )
-    namespace = get_cpp_name(self.pkname, None)
-    abi_struct_name = get_abi_name(self.pkname, struct_name)
-    cpp_struct_type = get_cpp_name(self.pkname, struct_name)
-    abi_struct_type = get_abi_name(self.pkname, struct_name)
-    abi_struct_dupl_method = get_abi_name(self.pkname, struct_name, suffix="__dup")
-    abi_struct_drop_method = get_abi_name(self.pkname, struct_name, suffix="__drop")
+    namespace = get_cpp_name(self.pkg_name, None)
+    abi_struct_name = get_abi_name(self.pkg_name, struct_name)
+    cpp_struct_type = get_cpp_name(self.pkg_name, struct_name)
+    abi_struct_type = get_abi_name(self.pkg_name, struct_name)
+    abi_struct_dupl_method = get_abi_name(self.pkg_name, struct_name, suffix="__dup")
+    abi_struct_drop_method = get_abi_name(self.pkg_name, struct_name, suffix="__drop")
 
     if self.author or self.user:
         struct_h = self.files.setdefault(struct_h_name, File(is_header=True))
@@ -686,7 +688,7 @@ def get_function_returns(
             abi_return_parts.append(abi_return_part)
         cpp_return_parts_str = ", ".join(cpp_return_parts)
         abi_return_struct_name = get_abi_name(
-            self.pkname, func_name, suffix="__return_t"
+            self.pkg_name, func_name, suffix="__return_t"
         )
         abi_return_type = f"struct {abi_return_struct_name}"
         cpp_return_type = f"std::tuple<{cpp_return_parts_str}>"
@@ -719,8 +721,8 @@ def write_function_returns_in_files(
     abi_return_type: str,
     cpp_return_type: str,
 ):
-    abi_h_name, abi_hpp_name, _, impl_hpp_name = get_file_names(self.pkname, None)
-    abi_return_struct_name = get_abi_name(self.pkname, func_name, suffix="__return_t")
+    abi_h_name, abi_hpp_name, _, impl_hpp_name = get_file_names(self.pkg_name, None)
+    abi_return_struct_name = get_abi_name(self.pkg_name, func_name, suffix="__return_t")
     if self.author or self.user:
         abi_h = self.files[abi_h_name]
         abi_h.write(f"struct {abi_return_struct_name} {{\n")
@@ -766,12 +768,12 @@ def write_function_in_files(
     args_from_abi_str: str,
     args_str: str,
 ):
-    namespace = get_cpp_name(self.pkname, None)
+    namespace = get_cpp_name(self.pkg_name, None)
     abi_h_name, abi_hpp_name, impl_h_name, impl_hpp_name = get_file_names(
-        self.pkname, None
+        self.pkg_name, None
     )
-    abi_func_name = get_abi_name(self.pkname, func_name)
-    cpp_func_name = get_cpp_name(self.pkname, func_name)
+    abi_func_name = get_abi_name(self.pkg_name, func_name)
+    cpp_func_name = get_cpp_name(self.pkg_name, func_name)
 
     if self.author or self.user:
         abi_h = self.files[abi_h_name]
@@ -825,7 +827,7 @@ return {return_from_abi}({abi_func_name}({args_into_abi_str}));
 
 def write_basic_info_in_files(self):
     abi_h_name, abi_hpp_name, impl_h_name, impl_hpp_name = get_file_names(
-        self.pkname, None
+        self.pkg_name, None
     )
 
     if self.author or self.user:

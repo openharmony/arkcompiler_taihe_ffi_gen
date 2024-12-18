@@ -9,12 +9,12 @@ spec
     ;
 
 use
-    : KW_USE tokenLst_old_pkname += ID (DOT tokenLst_old_pkname += ID)* (KW_AS tokenLst_new_pkname += ID)? SEMICOLON # usePackage
-    | KW_FROM tokenLst_pkname += ID (DOT tokenLst_pkname += ID)* KW_USE (AliasPairLst_alias_pairs += aliasPair COMMA)* AliasPairLst_alias_pairs += aliasPair SEMICOLON # useSymbol
+    : KW_USE (tokenLst_pkg_name += ID DOT)* tokenLst_pkg_name += ID (KW_AS tokenOpt_pkg_alias = ID)? SEMICOLON # usePackage
+    | KW_FROM (tokenLst_pkg_name += ID DOT)* tokenLst_pkg_name += ID* KW_USE (DeclAliasPairLst_decl_alias_pairs += declAliasPair COMMA)* DeclAliasPairLst_decl_alias_pairs += declAliasPair SEMICOLON # useSymbol
     ;
 
-aliasPair
-    : token_old_name = ID (KW_AS tokenOpt_new_name = ID)?
+declAliasPair
+    : token_decl_name = ID (KW_AS tokenOpt_decl_alias = ID)?
     ;
 
 specField
@@ -56,7 +56,7 @@ return
 
 type
     : token_name = (KW_I8 | KW_I16 | KW_I32 | KW_I64 | KW_U8 | KW_U16 | KW_U32 | KW_U64 | KW_F32 | KW_F64 | KW_BOOL | KW_STRING) # primitiveType
-    | (tokenLst_pkname += ID DOT)* token_name = ID # userType
+    | (tokenLst_pkg_name += ID DOT)* token_decl_name = ID # userType
     | token_name = ID LEFT_PARENTHESIS (TypeLst_parameters += type (COMMA TypeLst_parameters += type)*)? RIGHT_PARENTHESIS # genericType
     | <assoc = right> LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS ARROW
         (LEFT_BRACKET (ReturnLst_returns += return (COMMA ReturnLst_returns += return)*)? RIGHT_BRACKET | ReturnLst_returns += return) # functionType

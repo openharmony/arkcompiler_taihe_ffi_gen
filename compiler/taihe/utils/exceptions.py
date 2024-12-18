@@ -22,11 +22,6 @@ class DefinitionConflictDiagNote(DiagNote):
 
 
 @dataclass
-class EnumValueCollisionDiagNote(DiagNote):
-    MSG = "first use"
-
-
-@dataclass
 class RecursiveExtensionNote(DiagNote):
     MSG = "the interface is extended by {iface.description}"
 
@@ -81,25 +76,6 @@ class DeclRedefDiagError(DiagError):
     def notes(self):
         if self.prev.loc:
             yield DefinitionConflictDiagNote(loc=self.prev.loc)
-
-
-@dataclass
-class EnumValueCollisionError(DiagError):
-    MSG = "{current.description} has the value {value}, which already exists"
-
-    prev: "Decl"
-    current: "Decl"
-    value: int
-
-    def __init__(self, prev: "Decl", current: "Decl", value: int):
-        self.prev = prev
-        self.current = current
-        self.loc = current.loc
-        self.value = value
-
-    def notes(self):
-        if self.prev.loc:
-            yield EnumValueCollisionDiagNote(loc=self.prev.loc)
 
 
 @dataclass
