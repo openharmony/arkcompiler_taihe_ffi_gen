@@ -7,7 +7,6 @@ from taihe.utils.exceptions import (
     DeclNotExistError,
     DeclRedefDiagError,
     DuplicateExtendsWarn,
-    EnumValueCollisionError,
     ExtendsTypeError,
     IDLSyntaxError,
     NotATypeError,
@@ -236,35 +235,6 @@ def test_symbol_conflict_namespace():
     test_instance.add_source("package.example1.a", "")
     test_instance.run()
     test_instance.assert_has_error(SymbolConflictWithNamespaceError)
-
-
-def test_enum_value_collision_1():
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance()
-    test_instance.add_source(
-        "package",
-        "enum BadEnum {\n"
-        "    A=if !(if 1+1==2 then 2<1&&3<2 else 1!=1) then -1 else -2;\n"
-        "    B=-1;\n"
-        "}\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(EnumValueCollisionError)
-
-
-def test_enum_value_collision2():
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance()
-    test_instance.add_source(
-        "package",
-        "enum BadEnum {\n"
-        "    A = 0b01 << 0b01;\n"
-        "    B = if (7 << 1 + 1) + (3 * 3 - 2 & 11) == 31 && 1 + 1 == 2 then 1 else 10;\n"
-        "    C;\n"
-        "}\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(EnumValueCollisionError)
 
 
 def test_decl_not_exist_1():

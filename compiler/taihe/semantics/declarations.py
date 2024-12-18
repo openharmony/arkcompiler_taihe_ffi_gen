@@ -486,7 +486,7 @@ class IfaceMethodDecl(FuncBaseDecl):
 
 
 class IfaceDecl(TypeDecl):
-    KIND = "struct"
+    KIND = "interface"
 
     methods: list[IfaceMethodDecl]
     parents: list[IfaceParentDecl]

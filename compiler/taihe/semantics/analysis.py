@@ -39,7 +39,7 @@ from taihe.utils.exceptions import (
 
 def analyze_semantics(pg: PackageGroup, diag: AbstractDiagnosticsManager):
     """Runs semantic analysis passes on the given package group."""
-    check_sym_confilct_namespace(pg, diag)
+    check_decl_confilct_with_namespace(pg, diag)
     _ResolveImportsPass(diag).handle_decl(pg)
     _CheckFieldCollisionErrorPass(diag).handle_decl(pg)
     check_struct_fields(pg, diag)
@@ -182,42 +182,38 @@ class _CheckFieldCollisionErrorPass(DeclVisitor):
 
     @override
     def visit_package(self, p: Package) -> None:
-        check_field_name_collision(self.diag, p.children)
-        super().visit_package(p)
+        self.check_field_name_collision(p.children)
+        return super().visit_package(p)
 
     @override
     def visit_enum_decl(self, d: EnumDecl) -> Any:
-        check_field_name_collision(self.diag, d.children)
-        super().visit_enum_decl(d)
+        self.check_field_name_collision(d.children)
+        return super().visit_enum_decl(d)
 
     @override
     def visit_func_base_decl(self, d: FuncBaseDecl) -> Any:
-        check_field_name_collision(self.diag, d.children)
-        super().visit_func_base_decl(d)
+        self.check_field_name_collision(d.children)
+        return super().visit_func_base_decl(d)
 
     @override
     def visit_struct_decl(self, d: StructDecl) -> Any:
-        check_field_name_collision(self.diag, d.children)
-        super().visit_struct_decl(d)
+        self.check_field_name_collision(d.children)
+        return super().visit_struct_decl(d)
 
     @override
     def visit_iface_decl(self, d: IfaceDecl) -> Any:
-        check_field_name_collision(self.diag, d.children)
-        super().visit_iface_decl(d)
+        self.check_field_name_collision(d.children)
+        return super().visit_iface_decl(d)
+
+    def check_field_name_collision(self, items: Iterable[Decl]):
+        """Checks for duplicate field names in declarations."""
+        symbol = {}
+        for f in items:
+            if (prev := symbol.setdefault(f.name, f)) != f:
+                self.diag.emit(DeclRedefDiagError(prev, f))
 
 
-def check_field_name_collision(
-    diag: AbstractDiagnosticsManager,
-    items: Iterable[Decl],
-):
-    """Checks for duplicate field names in declarations."""
-    symbol = {}
-    for f in items:
-        if (prev := symbol.setdefault(f.name, f)) != f:
-            diag.emit(DeclRedefDiagError(prev, f))
-
-
-def check_sym_confilct_namespace(
+def check_decl_confilct_with_namespace(
     pg: PackageGroup,
     diag: AbstractDiagnosticsManager,
 ):
@@ -245,22 +241,26 @@ def check_iface_parents(
     diag: AbstractDiagnosticsManager,
 ):
     """Validates interface inheritance for correctness and cycles."""
-    iface_table = {}
+    parent_iface_table = {}
     for pkg in pg.packages:
         for iface in pkg.interfaces:
-            base_list = iface_table.setdefault(iface, [])
-            base_dict = {}
+            parent_iface_list = parent_iface_table.setdefault(iface, [])
+            parent_iface_dict = {}
             for parent in iface.parents:
-                if (base := parent.ty.ref_ty) is None:
+                if (parent_iface := parent.ty.ref_ty) is None:
                     pass
-                elif not isinstance(base, IfaceDecl):
+                elif not isinstance(parent_iface, IfaceDecl):
                     diag.emit(ExtendsTypeError(parent))
-                elif (prev := base_dict.setdefault(base, parent)) != parent:
-                    diag.emit(DuplicateExtendsWarn(base, prev, parent))
                 else:
-                    base_list.append((parent, base))
+                    parent_iface_list.append((parent, parent_iface))
+                    if (
+                        prev := parent_iface_dict.setdefault(parent_iface, parent)
+                    ) != parent:
+                        diag.emit(
+                            DuplicateExtendsWarn(iface, parent_iface, prev, parent)
+                        )
 
-    cycles = detect_cycles(iface_table)
+    cycles = detect_cycles(parent_iface_table)
     for cycle in cycles:
         last, *other = cycle[::-1]
         diag.emit(RecursiveExtensionError(last, other))
@@ -271,19 +271,19 @@ def check_struct_fields(
     diag: AbstractDiagnosticsManager,
 ):
     """Validates struct fields for type correctness and cycles."""
-    struct_table = {}
+    field_struct_table = {}
     for pkg in pg.packages:
         for struct in pkg.structs:
-            struct_list = struct_table.setdefault(struct, [])
+            field_struct_list = field_struct_table.setdefault(struct, [])
             for field in struct.fields:
-                if (inner := field.ty.ref_ty) is None:
+                if (field_struct := field.ty.ref_ty) is None:
                     pass
-                elif not isinstance(inner, BuiltinType | EnumDecl | StructDecl):
+                elif not isinstance(field_struct, BuiltinType | EnumDecl | StructDecl):
                     diag.emit(StructFieldTypeError(field))
-                elif isinstance(inner, StructDecl):
-                    struct_list.append((field, inner))
+                elif isinstance(field_struct, StructDecl):
+                    field_struct_list.append((field, field_struct))
 
-    cycles = detect_cycles(struct_table)
+    cycles = detect_cycles(field_struct_table)
     for cycle in cycles:
         last, *other = cycle[::-1]
         diag.emit(RecursiveInclusionError(last, other))

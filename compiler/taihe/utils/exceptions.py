@@ -157,17 +157,23 @@ class ExtendsTypeError(DiagError):
 
 @dataclass
 class DuplicateExtendsWarn(DiagWarn):
-    MSG = "{iface.description} is extended multiple times"
+    MSG = "{parent_iface.description} is extended multiple times by {iface.description}"
 
     iface: "IfaceDecl"
+    parent_iface: "IfaceDecl"
     prev: "IfaceParentDecl"
     curr: "IfaceParentDecl"
 
     def __init__(
-        self, iface: "IfaceDecl", prev: "IfaceParentDecl", curr: "IfaceParentDecl"
+        self,
+        iface: "IfaceDecl",
+        parent_iface: "IfaceDecl",
+        prev: "IfaceParentDecl",
+        curr: "IfaceParentDecl",
     ):
         self.loc = curr.loc
         self.iface = iface
+        self.parent_iface = parent_iface
         self.curr = curr
         self.prev = prev
 
