@@ -45,21 +45,25 @@ class Inspector:
 
 def generate_TaiheAST():
     code = []
-    code.append(f"from dataclasses import dataclass\n")
-    code.append(f"from typing import Union, List, Optional\n")
-    code.append(f"\n")
-    code.append(f"from antlr4 import Token\n")
-    code.append(f"\n")
-    code.append(f"\n")
-    code.append(f"class TaiheAST:\n")
-    code.append(f"    @dataclass\n")
-    code.append(f"    class token:\n")
-    code.append(f"        text: str\n")
-    code.append(f"        line: Optional[int] = None\n")
-    code.append(f"        column: Optional[int] = None\n")
-    code.append(f"        def __str__(self):\n")
-    code.append(f"            return self.text\n")
-    code.append(f"\n")
+    code.append(
+        f"from dataclasses import dataclass\n"
+        f"from typing import Any, Union, List, Optional\n"
+        f"\n"
+        f"\n"
+        f"class TaiheAST:\n"
+        f"    @dataclass\n"
+        f"    class token:\n"
+        f"        text: str\n"
+        f"        line: Optional[int] = None\n"
+        f"        column: Optional[int] = None\n"
+        f"\n"
+        f"        def __str__(self):\n"
+        f"            return self.text\n"
+        f"\n"
+        f"        def _accept(self, visitor) -> Any:\n"
+        f"            return visitor.visit_token(self)\n"
+        f"\n"
+    )
     parser = get_parser()
     type_list = []
     for rule_name in parser.ruleNames:
@@ -77,17 +81,19 @@ def generate_TaiheAST():
                 attr_hint = get_hint(attr_kind)
                 type_list.append((attr_kind, sub_type))
                 code.append(f"        {attr_hint},\n")
-            code.append(f"    ]\n")
+            code.append(f"    ]\n" f"\n")
         else:
             ctx = ctx_type(None, Inspector())
-            code.append(f"    @dataclass\n")
-            code.append(f"    class {node_kind}:\n")
+            code.append(f"    @dataclass\n" f"    class {node_kind}:\n")
             for attr_kind, attr_name in get_attr_pairs(ctx):
                 attr_hint = get_hint(attr_kind)
                 code.append(f"        {attr_name}: {attr_hint}\n")
-            code.append(f"        line: Optional[int] = None\n")
-            code.append(f"        column: Optional[int] = None\n")
-        code.append(f"\n")
+            code.append(
+                f"\n"
+                f"        def _accept(self, visitor) -> Any:\n"
+                f"            return visitor.visit_{node_kind}(self)\n"
+                f"\n"
+            )
     code.pop()
     with open(path.join(ANTLR_PATH, "TaiheAST.py"), "w") as file:
         file.writelines(code)
@@ -95,36 +101,20 @@ def generate_TaiheAST():
 
 def generate_TaiheVisitor():
     code = []
-    code.append(f"from {ANTLR_PKG}.TaiheAST import TaiheAST\n")
-    code.append(f"\n")
-    code.append(f"\n")
-    code.append(f"class TaiheVisitor:\n")
-    code.append(f"    def visit(self, node):\n")
-    code.append(f"        node_kind = node.__class__.__name__\n")
-    code.append(f'        method_name = f"visit_{{node_kind}}"\n')
-    code.append(f"        method = getattr(self, method_name, self.generic_visit)\n")
-    code.append(f"        return method(node)\n")
-    code.append(f"\n")
-    code.append(f"    def generic_visit(self, node):\n")
-    code.append(f"        for value in node.__dict__.values():\n")
-    code.append(f"            if value is None or isinstance(value, int):\n")
-    code.append(f"                continue\n")
-    code.append(f"            if isinstance(value, list):\n")
-    code.append(f"                for item in value:\n")
-    code.append(f"                    self.visit(item)\n")
-    code.append(f"                continue\n")
-    code.append(f"            self.visit(value)\n")
-    code.append(f"\n")
-    code.append(f"    def visit_token(self, node: TaiheAST.token):\n")
-    code.append(f"        pass\n")
-    stub = []
-    stub.append(f"from typing import Any\n\n")
-    stub.append(f"from {ANTLR_PKG}.TaiheAST import TaiheAST\n")
-    stub.append(f"\n")
-    stub.append(f"class TaiheVisitor:\n")
-    stub.append(f"    def visit(self, node) -> Any: ...\n")
-    stub.append(f"    def generic_visit(self, node) -> Any: ...\n")
-    stub.append(f"    def visit_token(self, node: TaiheAST.token) -> Any: ...\n")
+    code.append(
+        f"from {ANTLR_PKG}.TaiheAST import TaiheAST\n"
+        f"\n"
+        f"from typing import Any\n"
+        f"\n"
+        f"\n"
+        f"class TaiheVisitor:\n"
+        f"    def visit(self, node) -> Any:\n"
+        f"        return node._accept(self)\n"
+        f"\n"
+        f"    def visit_token(self, node: TaiheAST.token) -> Any:\n"
+        f"        raise NotImplementedError()\n"
+        f"\n"
+    )
     parser = get_parser()
     type_list = []
     for rule_name in parser.ruleNames:
@@ -140,11 +130,13 @@ def generate_TaiheVisitor():
                 attr_kind = sub_kind[:-7]
                 type_list.append((attr_kind, sub_type))
         else:
-            stub.append(f"    def visit_{node_kind}(self, node: TaiheAST.{node_kind}) -> Any: ...\n")
+            code.append(
+                f"    def visit_{node_kind}(self, node: TaiheAST.{node_kind}) -> Any:\n"
+                f"        raise NotImplementedError()\n"
+                f"\n"
+            )
     with open(path.join(ANTLR_PATH, "TaiheVisitor.py"), "w") as file:
         file.writelines(code)
-    with open(path.join(ANTLR_PATH, "TaiheVisitor.pyi"), "w") as file:
-        file.writelines(stub)
 
 
 def run_antlr():

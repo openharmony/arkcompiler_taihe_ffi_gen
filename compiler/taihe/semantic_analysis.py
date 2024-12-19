@@ -423,7 +423,7 @@ def semantic_check(
             children = struct_table.setdefault((pktupl, name), [])
             for child in decl.fields:
                 child_name = child.name.text
-                child_type = child.type
+                child_type = child.ty
                 if not isinstance(child_type, ast.UserType):
                     continue
                 child_type_pktupl = tuple(id.text for id in child_type.pkg_name)

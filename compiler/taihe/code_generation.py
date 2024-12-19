@@ -490,9 +490,9 @@ def get_struct_field(
         (
             (abi_attr_type, abi_attr_header),
             (cpp_attr_type, cpp_attr_header),
-        ) = get_type_infos(self.symbol_tables, field.type)
+        ) = get_type_infos(self.symbol_tables, field.ty)
         attr_dupl_method, attr_drop_method = get_dup_and_drop(
-            self.symbol_tables, field.type
+            self.symbol_tables, field.ty
         )
         attr_dupl_methods.append(attr_dupl_method)
         attr_drop_methods.append(attr_drop_method)
@@ -626,7 +626,7 @@ def get_function_params(
         (
             (abi_param_type, abi_param_header),
             (cpp_param_type, cpp_param_header),
-        ) = get_type_infos(self.symbol_tables, param.param_type)
+        ) = get_type_infos(self.symbol_tables, param.ty)
         args.append(param_name)
         cpp_param_headers.append(cpp_param_header)
         abi_param_headers.append(abi_param_header)
@@ -660,16 +660,16 @@ def get_function_returns(
     func_name = node.name.text
     cpp_return_headers = []
     abi_return_headers = []
-    if len(node.returns) == 0:
+    if len(node.retvals) == 0:
         cpp_return_type = "void"
         abi_return_type = "void"
         return_from_abi = ""
         return_into_abi = ""
-    elif len(node.returns) == 1:
+    elif len(node.retvals) == 1:
         (
             (abi_return_type, abi_return_header),
             (cpp_return_type, cpp_return_header),
-        ) = get_type_infos(self.symbol_tables, node.returns[0].return_type)
+        ) = get_type_infos(self.symbol_tables, node.retvals[0].ty)
         return_from_abi = f"taihe::core::from_abi<{cpp_return_type}, {abi_return_type}>"
         return_into_abi = f"taihe::core::into_abi<{cpp_return_type}, {abi_return_type}>"
         cpp_return_headers.append(cpp_return_header)
@@ -677,11 +677,11 @@ def get_function_returns(
     else:
         cpp_return_parts = []
         abi_return_parts = []
-        for ret in node.returns:
+        for retval in node.retvals:
             (
                 (abi_return_part, abi_return_header),
                 (cpp_return_part, cpp_return_header),
-            ) = get_type_infos(self.symbol_tables, ret.return_type)
+            ) = get_type_infos(self.symbol_tables, retval.ty)
             cpp_return_headers.append(cpp_return_header)
             abi_return_headers.append(abi_return_header)
             cpp_return_parts.append(cpp_return_part)
