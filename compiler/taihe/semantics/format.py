@@ -18,7 +18,7 @@ from taihe.semantics.declarations import (
     PackageImportDecl,
     PackageRefDecl,
     ParamDecl,
-    ReturnDecl,
+    RetvalDecl,
     StructDecl,
     StructFieldDecl,
     TypeDecl,
@@ -73,7 +73,7 @@ class _PrettyPrinter(DeclVisitor):
     def get_parent_decl(self, d: IfaceParentDecl) -> str:
         return self.get_type_ref_decl(d.ty)
 
-    def get_return_decl(self, d: ReturnDecl) -> str:
+    def get_return_decl(self, d: RetvalDecl) -> str:
         return self.get_type_ref_decl(d.ty)
 
     def get_param_decl(self, d: ParamDecl) -> str:
@@ -101,13 +101,13 @@ class _PrettyPrinter(DeclVisitor):
     def visit_func_base_decl(self, d: FuncBaseDecl):
         self.buffer.write(self.indent * 2 * " ")
         fmt_args = ", ".join(self.get_param_decl(x) for x in d.params)
-        if len(d.returns) == 0:
+        if len(d.retvals) == 0:
             self.buffer.write(f"fn {d.name}({fmt_args});\n")
-        elif len(d.returns) == 1:
-            fmt_ret = self.get_return_decl(d.returns[0])
+        elif len(d.retvals) == 1:
+            fmt_ret = self.get_return_decl(d.retvals[0])
             self.buffer.write(f"fn {d.name}({fmt_args}) -> {fmt_ret};\n")
         else:
-            fmt_ret = ", ".join(self.get_return_decl(r) for r in d.returns)
+            fmt_ret = ", ".join(self.get_return_decl(r) for r in d.retvals)
             self.buffer.write(f"fn {d.name}({fmt_args}) -> ({fmt_ret});\n")
 
     @override

@@ -280,7 +280,7 @@ class ParamDecl(Decl):
         yield self.ty
 
 
-class ReturnDecl(Decl):
+class RetvalDecl(Decl):
     KIND = "function return type"
 
     ty: TypeRefDecl
@@ -298,7 +298,7 @@ class ReturnDecl(Decl):
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
-        return v.visit_return_decl(self)
+        return v.visit_retval_decl(self)
 
     @property
     def children(self) -> Iterable[DeclAlike]:
@@ -309,17 +309,17 @@ class FuncBaseDecl(Decl):
     KIND = "<func-decl-kind>"
 
     params: list[ParamDecl]
-    returns: list[ReturnDecl]
+    retvals: list[RetvalDecl]
 
     def __init__(self, name: str, loc: Optional[SourceLocation], **kwargs):
         super().__init__(name, loc, **kwargs)
         self.params = []
-        self.returns = []
+        self.retvals = []
 
     @property
     def children(self) -> Iterable[Decl]:
         yield from self.params
-        yield from self.returns
+        yield from self.retvals
 
     def add_param(
         self,
@@ -328,17 +328,17 @@ class FuncBaseDecl(Decl):
         ty: TypeRefDecl,
         **kwargs,
     ):
-        param = ParamDecl(name, loc, ty, parent=self, **kwargs)
-        self.params.append(param)
+        p = ParamDecl(name, loc, ty, parent=self, **kwargs)
+        self.params.append(p)
 
-    def add_return(
+    def add_retval(
         self,
         ty: TypeRefDecl,
         **kwargs,
     ):
-        name = str(len(self.returns))
-        retval = ReturnDecl(name, ty.loc, ty, parent=self, **kwargs)
-        self.returns.append(retval)
+        name = str(len(self.retvals))
+        r = RetvalDecl(name, ty.loc, ty, parent=self, **kwargs)
+        self.retvals.append(r)
 
 
 class FuncDecl(FuncBaseDecl, PackageLevelDecl):
@@ -520,8 +520,8 @@ class IfaceDecl(TypeDecl):
         **kwargs,
     ):
         name = str(len(self.parents))
-        parent = IfaceParentDecl(name, ty.loc, ty, parent=self, **kwargs)
-        self.parents.append(parent)
+        p = IfaceParentDecl(name, ty.loc, ty, parent=self, **kwargs)
+        self.parents.append(p)
 
 
 ######################

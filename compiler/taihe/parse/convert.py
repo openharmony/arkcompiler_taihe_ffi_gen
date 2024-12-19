@@ -163,7 +163,7 @@ class AstConverter(Visitor):
         d = StructDecl(str(node.name), loc=self.loc(node.name))
         for f in node.fields:
             with self.diag.capture_error():
-                d.add_field(str(f.name), self.loc(f.name), self.visit(f.type))
+                d.add_field(str(f.name), self.loc(f.name), self.visit(f.ty))
         return d
 
     @override
@@ -182,10 +182,10 @@ class AstConverter(Visitor):
         f = IfaceMethodDecl(str(node.name), loc=self.loc(node.name))
         for p in node.parameters:
             with self.diag.capture_error():
-                f.add_param(str(p.name), self.loc(p.name), self.visit(p.param_type))
-        for r in node.returns:
+                f.add_param(str(p.name), self.loc(p.name), self.visit(p.ty))
+        for r in node.retvals:
             with self.diag.capture_error():
-                f.add_return(self.visit(r.return_type))
+                f.add_retval(self.visit(r.ty))
         return f
 
     @override
@@ -197,7 +197,7 @@ class AstConverter(Visitor):
                 d.add_method(m)
         for i in node.extends:
             with self.diag.capture_error():
-                d.add_parent(self.visit(i.parent_type))
+                d.add_parent(self.visit(i.ty))
         return d
 
     @override
@@ -205,10 +205,10 @@ class AstConverter(Visitor):
         f = FuncDecl(str(node.name), loc=self.loc(node.name))
         for p in node.parameters:
             with self.diag.capture_error():
-                f.add_param(str(p.name), self.loc(p.name), self.visit(p.param_type))
-        for r in node.returns:
+                f.add_param(str(p.name), self.loc(p.name), self.visit(p.ty))
+        for r in node.retvals:
             with self.diag.capture_error():
-                f.add_return(self.visit(r.return_type))
+                f.add_retval(self.visit(r.ty))
         return f
 
     @override

@@ -75,12 +75,12 @@ class ABIFuncBaseDeclInfo(AbstractAnalysis[FuncBaseDecl]):
     def __init__(self, am: AnalysisManager, f: FuncBaseDecl) -> None:
         segments = f.segments
         self.name = encode(segments, DeclKind.FUNCTION)
-        if len(f.returns) == 0:
+        if len(f.retvals) == 0:
             self.return_ty_header = None
             self.return_ty_name = "void"
             self.return_ty_struct_name = None
-        elif len(f.returns) == 1:
-            info = ABINormalTypeRefDeclInfo.get(am, f.returns[0].ty)
+        elif len(f.retvals) == 1:
+            info = ABINormalTypeRefDeclInfo.get(am, f.retvals[0].ty)
             self.return_ty_header = info.header
             self.return_ty_name = info.name
             self.return_ty_struct_name = None
@@ -265,7 +265,7 @@ class ABICodeGenerator:
             return
 
         abi_pkg_target.write(f"struct {abi_func_info.return_ty_struct_name} {{\n")
-        for i, retval in enumerate(func.returns):
+        for i, retval in enumerate(func.retvals):
             ty_info = ABINormalTypeRefDeclInfo.get(self.am, retval.ty)
             abi_pkg_target.include(ty_info.header)
             abi_pkg_target.write(f"  {ty_info.name} _{i};\n")

@@ -22,11 +22,11 @@ specField
     | KW_ENUM token_name = ID LEFT_BRACE (EnumFieldLst_fields += enumField)+ RIGHT_BRACE # enum
     | KW_INTERFACE token_name = ID (COLON InterfaceParentLst_extends += interfaceParent (COMMA InterfaceParentLst_extends += interfaceParent)*)? LEFT_BRACE (InterfaceFieldLst_fields += interfaceField)* RIGHT_BRACE # interface
     | KW_FUNCTION token_name = ID LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS COLON
-        (LEFT_PARENTHESIS (ReturnLst_returns += return (COMMA ReturnLst_returns += return)*)? RIGHT_PARENTHESIS | ReturnLst_returns += return) SEMICOLON # function
+        (LEFT_PARENTHESIS (RetvalLst_retvals += retval (COMMA RetvalLst_retvals += retval)*)? RIGHT_PARENTHESIS | RetvalLst_retvals += retval) SEMICOLON # function
     ;
 
 structField
-    : token_name = ID COLON Type_type = type SEMICOLON # structProperty
+    : token_name = ID COLON Type_ty = type SEMICOLON # structProperty
     ;
 
 enumField
@@ -34,20 +34,20 @@ enumField
     ;
 
 interfaceParent
-    : Type_parent_type = type
+    : Type_ty = type
     ;
 
 interfaceField
     : (tokenOpt_static = KW_STATIC)? KW_FUNCTION token_name = ID LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS COLON
-        (LEFT_PARENTHESIS (ReturnLst_returns += return (COMMA ReturnLst_returns += return)*)? RIGHT_PARENTHESIS | ReturnLst_returns += return) SEMICOLON # interfaceFunction
+        (LEFT_PARENTHESIS (RetvalLst_retvals += retval (COMMA RetvalLst_retvals += retval)*)? RIGHT_PARENTHESIS | RetvalLst_retvals += retval) SEMICOLON # interfaceFunction
     ;
 
 parameter
-    : token_name = ID COLON Type_param_type = type
+    : token_name = ID COLON Type_ty = type
     ;
 
-return
-    : Type_return_type = type
+retval
+    : Type_ty = type
     ;
 
 //////////
@@ -59,7 +59,7 @@ type
     | (tokenLst_pkg_name += ID DOT)* token_decl_name = ID # userType
     | token_name = ID LEFT_PARENTHESIS (TypeLst_parameters += type (COMMA TypeLst_parameters += type)*)? RIGHT_PARENTHESIS # genericType
     | <assoc = right> LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS ARROW
-        (LEFT_BRACKET (ReturnLst_returns += return (COMMA ReturnLst_returns += return)*)? RIGHT_BRACKET | ReturnLst_returns += return) # functionType
+        (LEFT_BRACKET (RetvalLst_retvals += retval (COMMA RetvalLst_retvals += retval)*)? RIGHT_BRACKET | RetvalLst_retvals += retval) # functionType
     ;
 
 ////////////////

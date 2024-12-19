@@ -32,7 +32,7 @@ from taihe.semantics.declarations import (
     PackageImportDecl,
     PackageRefDecl,
     ParamDecl,
-    ReturnDecl,
+    RetvalDecl,
     StructDecl,
     StructFieldDecl,
     TypeDecl,
@@ -144,7 +144,7 @@ class DeclVisitor:
             self.handle_decl(i)
         return self.visit_decl(d)
 
-    def visit_return_decl(self, d: ReturnDecl) -> None:
+    def visit_retval_decl(self, d: RetvalDecl) -> None:
         for i in d.children:
             self.handle_decl(i)
         return self.visit_decl(d)
