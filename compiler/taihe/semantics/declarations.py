@@ -40,7 +40,12 @@ class Decl(ABC, DeclAlike):
     parent: Optional["Decl"] = None
     loc: Optional[SourceLocation]
 
-    def __init__(self, name: str, loc: Optional[SourceLocation], parent: Any = None):
+    def __init__(
+        self,
+        name: str,
+        loc: Optional[SourceLocation],
+        parent: Optional["Decl"] = None,
+    ):
         assert name
         self.name = name
         self.parent = parent
@@ -617,7 +622,7 @@ class Package(Decl):
         elif isinstance(d, IfaceDecl):
             self.add_interface(d)
         else:
-            raise NotImplementedError(f"unexpected declaration {type(d)}")
+            raise NotImplementedError(f"unexpected declaration {d.description}")
 
     def add_decl_import(self, i: DeclarationImportDecl):
         i.parent = self
@@ -635,36 +640,34 @@ class Package(Decl):
         elif isinstance(i, PackageImportDecl):
             self.add_pkg_import(i)
         else:
-            raise NotImplementedError(f"unexpected import {type(i)}")
+            raise NotImplementedError(f"unexpected import {i.description}")
 
 
 class PackageGroup(DeclAlike):
     """Stores all known packages for a compilation instance."""
 
-    _pkgs: dict[str, Package]
+    package_dict: dict[str, Package]
 
     def __init__(self):
-        self._pkgs = {}
+        self.package_dict = {}
 
     def _accept(self, v: "DeclVisitor"):
         return v.visit_package_group(self)
 
     @property
     def children(self) -> Iterable[Decl]:
-        yield from self._pkgs.values()
+        yield from self.packages
 
     def lookup(self, name: str) -> Optional["Package"]:
-        return self._pkgs.get(name, None)
+        return self.package_dict.get(name, None)
 
     def add(self, pkg: Package):
-        assert pkg.name not in self._pkgs
-        self._pkgs[pkg.name] = pkg
+        assert pkg.name not in self.package_dict
+        self.package_dict[pkg.name] = pkg
 
     @property
     def packages(self) -> Iterable[Package]:
-        return self._pkgs.values()
+        return self.package_dict.values()
 
     def __repr__(self) -> str:
-        return (
-            f"{self.__class__.__qualname__}({', '.join(repr(x) for x in self._pkgs)})"
-        )
+        return f"{self.__class__.__qualname__}({', '.join(repr(x) for x in self.package_dict)})"

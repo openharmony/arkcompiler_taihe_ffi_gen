@@ -1,5 +1,5 @@
 from collections.abc import Iterable
-from typing import Any
+from typing import TYPE_CHECKING, TypeVar
 
 from typing_extensions import override
 
@@ -36,14 +36,17 @@ from taihe.utils.exceptions import (
     SymbolConflictWithNamespaceError,
 )
 
+if TYPE_CHECKING:
+    from taihe.semantics.declarations import IfaceParentDecl, StructFieldDecl
+
 
 def analyze_semantics(pg: PackageGroup, diag: AbstractDiagnosticsManager):
     """Runs semantic analysis passes on the given package group."""
-    check_decl_confilct_with_namespace(pg, diag)
+    _check_decl_confilct_with_namespace(pg, diag)
     _ResolveImportsPass(diag).handle_decl(pg)
     _CheckFieldCollisionErrorPass(diag).handle_decl(pg)
-    check_struct_fields(pg, diag)
-    check_iface_parents(pg, diag)
+    _check_struct_fields(pg, diag)
+    _check_iface_parents(pg, diag)
 
 
 class _ResolveImportsPass(DeclVisitor):
@@ -186,26 +189,26 @@ class _CheckFieldCollisionErrorPass(DeclVisitor):
         return super().visit_package(p)
 
     @override
-    def visit_enum_decl(self, d: EnumDecl) -> Any:
+    def visit_enum_decl(self, d: EnumDecl) -> None:
         self.check_field_name_collision(d.children)
         return super().visit_enum_decl(d)
 
     @override
-    def visit_func_base_decl(self, d: FuncBaseDecl) -> Any:
+    def visit_func_base_decl(self, d: FuncBaseDecl) -> None:
         self.check_field_name_collision(d.children)
         return super().visit_func_base_decl(d)
 
     @override
-    def visit_struct_decl(self, d: StructDecl) -> Any:
+    def visit_struct_decl(self, d: StructDecl) -> None:
         self.check_field_name_collision(d.children)
         return super().visit_struct_decl(d)
 
     @override
-    def visit_iface_decl(self, d: IfaceDecl) -> Any:
+    def visit_iface_decl(self, d: IfaceDecl) -> None:
         self.check_field_name_collision(d.children)
         return super().visit_iface_decl(d)
 
-    def check_field_name_collision(self, items: Iterable[Decl]):
+    def check_field_name_collision(self, items: Iterable[Decl]) -> None:
         """Checks for duplicate field names in declarations."""
         symbol = {}
         for f in items:
@@ -213,13 +216,13 @@ class _CheckFieldCollisionErrorPass(DeclVisitor):
                 self.diag.emit(DeclRedefDiagError(prev, f))
 
 
-def check_decl_confilct_with_namespace(
+def _check_decl_confilct_with_namespace(
     pg: PackageGroup,
     diag: AbstractDiagnosticsManager,
 ):
     """Checks for declarations conflicts with namespaces."""
     namespaces = set()
-    for pkg_name in pg._pkgs:
+    for pkg_name in pg.package_dict:
         # package "a.b.c" -> namespaces ["a.b.c", "a.b", "a"]
         while True:
             namespaces.add(pkg_name)
@@ -236,12 +239,12 @@ def check_decl_confilct_with_namespace(
                 diag.emit(SymbolConflictWithNamespaceError(d, p))
 
 
-def check_iface_parents(
+def _check_iface_parents(
     pg: PackageGroup,
     diag: AbstractDiagnosticsManager,
 ):
     """Validates interface inheritance for correctness and cycles."""
-    parent_iface_table = {}
+    parent_iface_table: dict[IfaceDecl, list[tuple[IfaceParentDecl, IfaceDecl]]] = {}
     for pkg in pg.packages:
         for iface in pkg.interfaces:
             parent_iface_list = parent_iface_table.setdefault(iface, [])
@@ -266,12 +269,12 @@ def check_iface_parents(
         diag.emit(RecursiveExtensionError(last, other))
 
 
-def check_struct_fields(
+def _check_struct_fields(
     pg: PackageGroup,
     diag: AbstractDiagnosticsManager,
 ):
     """Validates struct fields for type correctness and cycles."""
-    field_struct_table = {}
+    field_struct_table: dict[StructDecl, list[tuple[StructFieldDecl, StructDecl]]] = {}
     for pkg in pg.packages:
         for struct in pkg.structs:
             field_struct_list = field_struct_table.setdefault(struct, [])
@@ -289,7 +292,11 @@ def check_struct_fields(
         diag.emit(RecursiveInclusionError(last, other))
 
 
-def detect_cycles(graph):
+V = TypeVar("V")
+E = TypeVar("E")
+
+
+def detect_cycles(graph: dict[V, list[tuple[E, V]]]) -> list[list[E]]:
     """Detects and returns all cycles in a directed graph.
 
     Example:
@@ -299,10 +306,10 @@ def detect_cycles(graph):
             "B": [("B.c_0", "C")],
             "C": [("C.a_0", "A"), ("C.a_1", "A")],
         }
-    >>> find_cycles(graph)
+    >>> detect_cycles(graph)
     [["A.b_0", "B.c_0", "C.a_0"], ["A.b_0", "B.c_0", "C.a_1"]]
     """
-    cycles = []
+    cycles: list[list[E]] = []
 
     order = {point: i for i, point in enumerate(graph)}
     glist = [
@@ -310,9 +317,9 @@ def detect_cycles(graph):
         for children in graph.values()
     ]
     visited = [False for _ in glist]
-    edges = []
+    edges: list[E] = []
 
-    def visit(i):
+    def visit(i: int):
         if i < k:
             return
         if visited[i]:
