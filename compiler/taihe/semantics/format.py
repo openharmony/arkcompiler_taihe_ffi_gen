@@ -38,18 +38,15 @@ def pretty_print(x: DeclAlike, buffer: TextIO):
 class _TypeNamePrinter(TypeVisitor[str]):
     @override
     def visit_type_ref_decl(self, d: TypeRefDecl):
-        return (
-            f"<unresolved {d.name!r}>"
-            if not d.resolved
-            else f"<error {d.name!r}>" if not d.ref_ty else self.handle_type(d.ref_ty)
-        )
+        if d.resolved:
+            real = "<error>" if not d.ref_ty else self.handle_type(d.ref_ty)
+            return f"{d.name} /* {real} */"
+        else:
+            return d.name
 
     @override
     def visit_type_decl(self, d: TypeDecl):
-        if pkg := d.parent:
-            return f"{pkg.name}.{d.name}"
-        else:
-            return f"<unknown>.{d.name}"
+        return f"{pkg.name}.{d.name}" if (pkg := d.parent) else d.name
 
     @override
     def visit_builtin_type(self, t: BuiltinType):

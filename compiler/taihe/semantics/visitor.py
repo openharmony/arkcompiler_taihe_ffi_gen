@@ -68,12 +68,17 @@ class TypeVisitor(Generic[T]):
 
     def handle_type(self, t: TypeAlike) -> T:
         """The entrance for visiting."""
+        r = self.visiting
+        self.visiting = t
         try:
-            self.visiting = t
             return t._accept(self)
         except:
-            print(f"Internal error while handling {self.visiting}")
+            print(
+                f"Internal error from {self.__class__.__name__} while handling {self.visiting}"
+            )
             raise
+        finally:
+            self.visiting = r
 
     def visit_type(self, t: Type) -> T:
         """The fallback method which handles the most general type.
@@ -128,12 +133,17 @@ class DeclVisitor:
 
     def handle_decl(self, d: DeclAlike) -> None:
         """The entrance for visiting anything "acceptable"."""
+        r = self.visiting
+        self.visiting = d
         try:
-            self.visiting = d
             return d._accept(self)
         except:
-            print(f"Internal error while handling {self.visiting}")
+            print(
+                f"Internal error from {self.__class__.__name__} while handling {self.visiting}"
+            )
             raise
+        finally:
+            self.visiting = r
 
     def visit_decl(self, d: Decl) -> None:
         """The fallback method which handles the most general cases."""

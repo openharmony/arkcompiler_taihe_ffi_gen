@@ -38,7 +38,7 @@ interfaceParent
     ;
 
 interfaceField
-    : (tokenOpt_static = KW_STATIC)? KW_FUNCTION token_name = ID LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS COLON
+    : KW_FUNCTION token_name = ID LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS COLON
         (LEFT_PARENTHESIS (RetvalLst_retvals += retval (COMMA RetvalLst_retvals += retval)*)? RIGHT_PARENTHESIS | RetvalLst_retvals += retval) SEMICOLON # interfaceFunction
     ;
 
@@ -57,7 +57,7 @@ retval
 type
     : token_name = (KW_I8 | KW_I16 | KW_I32 | KW_I64 | KW_U8 | KW_U16 | KW_U32 | KW_U64 | KW_F32 | KW_F64 | KW_BOOL | KW_STRING) # primitiveType
     | (tokenLst_pkg_name += ID DOT)* token_decl_name = ID # userType
-    | token_name = ID LEFT_PARENTHESIS (TypeLst_parameters += type (COMMA TypeLst_parameters += type)*)? RIGHT_PARENTHESIS # genericType
+    | token_name = ID LEFT_PARENTHESIS (TypeLst_args += type (COMMA TypeLst_args += type)*)? RIGHT_PARENTHESIS # genericType
     | <assoc = right> LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS ARROW
         (LEFT_BRACKET (RetvalLst_retvals += retval (COMMA RetvalLst_retvals += retval)*)? RIGHT_BRACKET | RetvalLst_retvals += retval) # functionType
     ;
@@ -251,8 +251,8 @@ KW_CONST
     : 'const'
     ;
 
-KW_MUT
-    : 'mut'
+KW_TYPE
+    : 'type'
     ;
 
 KW_ENUM

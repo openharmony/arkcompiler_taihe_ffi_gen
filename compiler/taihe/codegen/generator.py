@@ -112,8 +112,17 @@ class ABIStructDeclInfo(AbstractAnalysis[StructDecl]):
         segments = d.segments
         self.header = f"{p.name}.{d.name}.abi.h"
         self.name = encode(segments, DeclKind.STRUCT)
-        self.copy_name = encode(segments, DeclKind.COPY)
-        self.drop_name = encode(segments, DeclKind.DROP)
+        ty_ref_infos = [ABINormalTypeRefDeclInfo.get(am, f.ty) for f in d.fields]
+        self.copy_func = (
+            encode(segments, DeclKind.COPY)
+            if any(info.copy_func is not None for info in ty_ref_infos)
+            else None
+        )
+        self.drop_func = (
+            encode(segments, DeclKind.DROP)
+            if any(info.drop_func is not None for info in ty_ref_infos)
+            else None
+        )
 
 
 class ABIIfaceDeclInfo(AbstractAnalysis[IfaceDecl]):
@@ -125,8 +134,8 @@ class ABIIfaceDeclInfo(AbstractAnalysis[IfaceDecl]):
         self.header_1 = f"{p.name}.{d.name}.abi.1.h"
         self.src = f"{p.name}.{d.name}.c"
         self.name = encode(segments, DeclKind.INTERFACE)
-        self.copy_name = encode(segments, DeclKind.COPY)
-        self.drop_name = encode(segments, DeclKind.DROP)
+        self.copy_func = encode(segments, DeclKind.COPY)
+        self.drop_func = encode(segments, DeclKind.DROP)
         self.f_table = encode(segments, DeclKind.FTABLE)
         self.v_table = encode(segments, DeclKind.VTABLE)
         self.iid = encode(segments, DeclKind.IID)
@@ -146,8 +155,8 @@ class ABINormalTypeRefDeclInfo(AbstractAnalysis[TypeAlike], TypeVisitor):
         self.am = am
         self.header = None
         self.name = None
-        self.copy_func = lambda a: a
-        self.drop_func = lambda _: None
+        self.copy_func = None
+        self.drop_func = None
         self.handle_type(t)
 
     @override
@@ -161,16 +170,16 @@ class ABINormalTypeRefDeclInfo(AbstractAnalysis[TypeAlike], TypeVisitor):
         abi_struct_info = ABIStructDeclInfo.get(self.am, d)
         self.header = abi_struct_info.header
         self.name = f"struct {abi_struct_info.name}"
-        self.copy_func = lambda a: f"{abi_struct_info.copy_name}({a})"
-        self.drop_func = lambda a: f"{abi_struct_info.drop_name}({a})"
+        self.copy_func = abi_struct_info.copy_func
+        self.drop_func = abi_struct_info.drop_func
 
     @override
     def visit_iface_decl(self, d: IfaceDecl) -> Any:
         abi_iface_info = ABIIfaceDeclInfo.get(self.am, d)
         self.header = abi_iface_info.header_0
         self.name = f"struct {abi_iface_info.name}"
-        self.copy_func = lambda a: f"{abi_iface_info.copy_name}({a})"
-        self.drop_func = lambda a: f"{abi_iface_info.drop_name}({a})"
+        self.copy_func = abi_iface_info.copy_func
+        self.drop_func = abi_iface_info.drop_func
 
     def visit_scalar_type(self, t: ScalarType):
         self.name = {
@@ -193,8 +202,8 @@ class ABINormalTypeRefDeclInfo(AbstractAnalysis[TypeAlike], TypeVisitor):
         if t == STRING:
             self.header = "taihe/string.abi.h"
             self.name = "struct TString*"
-            self.copy_func = lambda a: f"tstr_dup({a})"
-            self.copy_func = lambda a: f"tstr_drop({a})"
+            self.copy_func = "tstr_dup"
+            self.drop_func = "tstr_drop"
         else:
             raise ValueError
 
@@ -309,16 +318,21 @@ class ABICodeGenerator:
         abi_struct_target: COutputBuffer,
         abi_struct_info: ABIStructDeclInfo,
     ):
-        abi_struct_target.write(
-            f"inline struct {abi_struct_info.name} {abi_struct_info.copy_name}(struct {abi_struct_info.name} data) {{\n"
-            f"  struct {abi_struct_info.name} result = {{\n"
-        )
-        for field in struct.fields:
-            ty_info = ABINormalTypeRefDeclInfo.get(self.am, field.ty)
-            abi_struct_target.include(ty_info.header)
-            copied = ty_info.copy_func(f"data.{field.name}")
-            abi_struct_target.write(f"    {copied},\n")
-        abi_struct_target.write("  };\n" "  return result;\n" "}\n")
+        if abi_struct_info.copy_func is not None:
+            abi_struct_target.write(
+                f"inline struct {abi_struct_info.name} {abi_struct_info.copy_func}(struct {abi_struct_info.name} data) {{\n"
+                f"  struct {abi_struct_info.name} result = {{\n"
+            )
+            for field in struct.fields:
+                ty_info = ABINormalTypeRefDeclInfo.get(self.am, field.ty)
+                abi_struct_target.include(ty_info.header)
+                if ty_info.copy_func is not None:
+                    abi_struct_target.write(
+                        f"    {ty_info.copy_func}(data.{field.name}),\n"
+                    )
+                else:
+                    abi_struct_target.write(f"    data.{field.name},\n")
+            abi_struct_target.write("  };\n" "  return result;\n" "}\n")
 
     def gen_struct_drop_func(
         self,
@@ -326,16 +340,18 @@ class ABICodeGenerator:
         abi_struct_target: COutputBuffer,
         abi_struct_info: ABIStructDeclInfo,
     ):
-        abi_struct_target.write(
-            f"inline void {abi_struct_info.drop_name}(struct {abi_struct_info.name} data) {{\n"
-        )
-        for field in struct.fields:
-            ty_info = ABINormalTypeRefDeclInfo.get(self.am, field.ty)
-            abi_struct_target.include(ty_info.header)
-            dropping = ty_info.drop_func(f"data.{field.name}")
-            if dropping:
-                abi_struct_target.write(f"  {dropping};\n")
-        abi_struct_target.write("}\n")
+        if abi_struct_info.drop_func is not None:
+            abi_struct_target.write(
+                f"inline void {abi_struct_info.drop_func}(struct {abi_struct_info.name} data) {{\n"
+            )
+            for field in struct.fields:
+                ty_info = ABINormalTypeRefDeclInfo.get(self.am, field.ty)
+                abi_struct_target.include(ty_info.header)
+                if ty_info.drop_func is not None:
+                    abi_struct_target.write(
+                        f"  {ty_info.drop_func}(data.{field.name});\n"
+                    )
+            abi_struct_target.write("}\n")
 
     def gen_enum_file(
         self,
@@ -534,7 +550,7 @@ class ABICodeGenerator:
         abi_iface_info: ABIIfaceDeclInfo,
     ):
         abi_iface_target_1.write(
-            f"inline struct {abi_iface_info.name} {abi_iface_info.copy_name}(struct {abi_iface_info.name} tobj) {{\n"
+            f"inline struct {abi_iface_info.name} {abi_iface_info.copy_func}(struct {abi_iface_info.name} tobj) {{\n"
             f"  struct DataBlockHead* data_ptr = tobj.data_ptr;\n"
             f"  if (data_ptr) {{\n"
             f"    tref_inc(&data_ptr->m_count);\n"
@@ -549,7 +565,7 @@ class ABICodeGenerator:
         abi_iface_info: ABIIfaceDeclInfo,
     ):
         abi_iface_target_1.write(
-            f"inline void {abi_iface_info.drop_name}(struct {abi_iface_info.name} tobj) {{\n"
+            f"inline void {abi_iface_info.drop_func}(struct {abi_iface_info.name} tobj) {{\n"
             f"  struct DataBlockHead* data_ptr = tobj.data_ptr;\n"
             f"  if (data_ptr && tref_dec(&data_ptr->m_count)) {{\n"
             f"    data_ptr->rtti_ptr->free_data(data_ptr);\n"

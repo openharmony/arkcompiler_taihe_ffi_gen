@@ -4,6 +4,11 @@ struct RGB {
     b: u8;
 }
 
+struct RGBWithName {
+    rgb: RGB;
+    name: String;
+}
+
 enum Color {
     RED   = 0xff << 0o20;
     GREEN = 0xff << 0o10;
