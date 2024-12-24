@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 from taihe.codegen.generator import ABICodeGenerator
+from taihe.codegen.proj_cpp_generator import CppProjGenerator
 from taihe.parse.convert import AstConverter
 from taihe.semantics.analysis import analyze_semantics
 from taihe.semantics.declarations import PackageGroup
@@ -91,6 +92,10 @@ class CompilerInstance:
             return
         generator = ABICodeGenerator(self.target_manager, self.analysis_manager)
         generator.generate(self.package_group)
+        self.target_manager.output_to(self.invocation.out_dir)
+
+        cpp_generator = CppProjGenerator(self.target_manager, self.analysis_manager)
+        cpp_generator.generate(self.package_group)
         self.target_manager.output_to(self.invocation.out_dir)
 
     def run(self):
