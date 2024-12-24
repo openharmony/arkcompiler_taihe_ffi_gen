@@ -51,11 +51,15 @@ def generate_TaiheAST():
         f"\n"
         f"\n"
         f"class TaiheAST:\n"
-        f"    @dataclass\n"
-        f"    class token:\n"
-        f"        text: str\n"
+        f"    @dataclass(kw_only=True)\n"
+        f"    class any:\n"
         f"        line: Optional[int] = None\n"
         f"        column: Optional[int] = None\n"
+        f"\n"
+        f"\n"
+        f"    @dataclass\n"
+        f"    class token(any):\n"
+        f"        text: str\n"
         f"\n"
         f"        def __str__(self):\n"
         f"            return self.text\n"
@@ -84,7 +88,7 @@ def generate_TaiheAST():
             code.append(f"    ]\n" f"\n")
         else:
             ctx = ctx_type(None, Inspector())
-            code.append(f"    @dataclass\n" f"    class {node_kind}:\n")
+            code.append(f"    @dataclass\n" f"    class {node_kind}(any):\n")
             for attr_kind, attr_name in get_attr_pairs(ctx):
                 attr_hint = get_hint(attr_kind)
                 code.append(f"        {attr_name}: {attr_hint}\n")

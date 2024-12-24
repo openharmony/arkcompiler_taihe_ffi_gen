@@ -27,9 +27,9 @@ from taihe.utils.diagnostics import AbstractDiagnosticsManager
 from taihe.utils.sources import SourceBase, SourceLocation
 
 
-def pkg2str(pkg_name: list[ast.token] | None) -> str:
+def pkg2str(pkg_name: ast.PkgName) -> str:
     if pkg_name:
-        return ".".join(t.text for t in pkg_name)
+        return ".".join(t.text for t in pkg_name.parts)
     else:
         return ""
 
@@ -154,9 +154,12 @@ class AstConverter(Visitor):
 
     @override
     def visit_UserType(self, node: ast.UserType) -> TypeRefDecl:
-        full_name = [*node.pkg_name, node.decl_name]
-        name = pkg2str(full_name)
-        loc = self.loc(full_name)
+        if node.pkg_name:
+            loc = self.loc([*node.pkg_name.parts, node.decl_name])
+            name = pkg2str(node.pkg_name) + "." + str(node.decl_name)
+        else:
+            loc = self.loc(node.decl_name)
+            name = str(node.decl_name)
         return TypeRefDecl(name, loc)
 
     @override
@@ -218,7 +221,7 @@ class AstConverter(Visitor):
 
     @override
     def visit_UsePackage(self, node: ast.UsePackage) -> Iterable[PackageImportDecl]:
-        pkg = PackageRefDecl(pkg2str(node.pkg_name), self.loc(node.pkg_name))
+        pkg = PackageRefDecl(pkg2str(node.pkg_name), self.loc(node.pkg_name.parts))
         if node.pkg_alias:
             yield PackageImportDecl(
                 pkg,
@@ -232,7 +235,7 @@ class AstConverter(Visitor):
 
     @override
     def visit_UseSymbol(self, node: ast.UseSymbol) -> Iterable[DeclarationImportDecl]:
-        pkg = PackageRefDecl(pkg2str(node.pkg_name), self.loc(node.pkg_name))
+        pkg = PackageRefDecl(pkg2str(node.pkg_name), self.loc(node.pkg_name.parts))
         for p in node.decl_alias_pairs:
             decl = DeclarationRefDecl(str(p.decl_name), self.loc(p.decl_name), pkg)
             if p.decl_alias:

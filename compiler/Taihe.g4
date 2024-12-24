@@ -9,8 +9,12 @@ spec
     ;
 
 use
-    : KW_USE (tokenLst_pkg_name += ID DOT)* tokenLst_pkg_name += ID (KW_AS tokenOpt_pkg_alias = ID)? SEMICOLON # usePackage
-    | KW_FROM (tokenLst_pkg_name += ID DOT)* tokenLst_pkg_name += ID* KW_USE (DeclAliasPairLst_decl_alias_pairs += declAliasPair COMMA)* DeclAliasPairLst_decl_alias_pairs += declAliasPair SEMICOLON # useSymbol
+    : KW_USE PkgName_pkg_name = pkgName (KW_AS tokenOpt_pkg_alias = ID)? SEMICOLON # usePackage
+    | KW_FROM PkgName_pkg_name = pkgName KW_USE (DeclAliasPairLst_decl_alias_pairs += declAliasPair COMMA)* DeclAliasPairLst_decl_alias_pairs += declAliasPair SEMICOLON # useSymbol
+    ;
+
+pkgName
+    : (tokenLst_parts += ID DOT)* tokenLst_parts += ID
     ;
 
 declAliasPair
@@ -57,7 +61,7 @@ retval
 
 type
     : token_name = (KW_I8 | KW_I16 | KW_I32 | KW_I64 | KW_U8 | KW_U16 | KW_U32 | KW_U64 | KW_F32 | KW_F64 | KW_BOOL | KW_STRING) # primitiveType
-    | (tokenLst_pkg_name += ID DOT)* token_decl_name = ID # userType
+    | (PkgNameOpt_pkg_name = pkgName DOT)? token_decl_name = ID # userType
     | token_name = ID LEFT_PARENTHESIS (TypeLst_args += type (COMMA TypeLst_args += type)*)? RIGHT_PARENTHESIS # genericType
     | <assoc = right> LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS ARROW
         (LEFT_BRACKET (RetvalLst_retvals += retval (COMMA RetvalLst_retvals += retval)*)? RIGHT_BRACKET | RetvalLst_retvals += retval) # functionType
