@@ -94,9 +94,9 @@ class CompilerInstance:
         generator.generate(self.package_group)
         self.target_manager.output_to(self.invocation.out_dir)
 
-        cpp_generator = CppProjGenerator(self.target_manager, self.analysis_manager)
-        cpp_generator.generate(self.package_group)
-        self.target_manager.output_to(self.invocation.out_dir)
+        # cpp_generator = CppProjGenerator(self.target_manager, self.analysis_manager)
+        # cpp_generator.generate(self.package_group)
+        # self.target_manager.output_to(self.invocation.out_dir)
 
     def run(self):
         self.scan()
