@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 from taihe.codegen.generator import ABICodeGenerator
+from taihe.codegen.kn_bridge_generator import KNBridgeGenerator
 
 # from taihe.codegen.proj_cpp_generator import CppProjGenerator
 from taihe.parse.convert import AstConverter
@@ -98,6 +99,12 @@ class CompilerInstance:
         # cpp_generator = CppProjGenerator(self.target_manager, self.analysis_manager)
         # cpp_generator.generate(self.package_group)
         # self.target_manager.output_to(self.invocation.out_dir)
+
+        kn_bridge_generator = KNBridgeGenerator(
+            self.target_manager, self.analysis_manager
+        )
+        kn_bridge_generator.generate(self.package_group)
+        self.target_manager.output_to(self.invocation.out_dir)
 
     def run(self):
         self.scan()
