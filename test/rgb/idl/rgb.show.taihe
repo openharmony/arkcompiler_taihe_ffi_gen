@@ -2,7 +2,7 @@ from rgb.base use RGB, Color;
 
 function show(color: RGB): ();
 
-function test(a: String, b: IBase): ();
+function test(a: String, b: IBase): (String, String);
 
 interface IBase {}
 

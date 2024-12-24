@@ -53,11 +53,11 @@ from enum import Enum
 class DeclKind(Enum):
     FUNCTION = "f"
     RETURN_T = "r"
+    OWNER_T = "owner"
+    PARAM_T = "param"
     STRUCT = "s"
     ENUM = "e"
     ENUM_ITEM = "v"
-    TYPEDEF_N = "n"
-    TYPEDEF_P = "p"
     INTERFACE = "i"
     IID = "iid"
     FTABLE = "FTable"

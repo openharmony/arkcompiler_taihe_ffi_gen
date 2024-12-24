@@ -1,13 +1,13 @@
-from typing import Any
+from typing import Any, Optional
 
 from typing_extensions import override
 
-from taihe.codegen.generator import (
+from taihe.codegen.abi_generator import (
     ABIEnumDeclInfo,
     ABIFuncBaseDeclInfo,
-    ABINormalTypeRefDeclInfo,
     ABIPackageInfo,
     ABIStructDeclInfo,
+    ABITypeInfo,
     COutputBuffer,
 )
 from taihe.semantics.declarations import (
@@ -33,7 +33,7 @@ from taihe.semantics.types import (
     U64,
     ScalarType,
     SpecialType,
-    TypeAlike,
+    Type,
 )
 from taihe.semantics.visitor import TypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
@@ -42,8 +42,10 @@ from taihe.utils.outputs import OutputManager
 
 class CppProjPackageInfo(AbstractAnalysis[Package]):
     def __init__(self, am: AnalysisManager, p: Package) -> None:
+        segments = p.segments
         self.header = f"{p.name}.proj.hpp"
-        self.full_name = p.name.replace(".", "::")
+        self.namespace = "::".join(segments)
+        self.param_namespace = "::".join(["param", *segments])
 
 
 class CppProjFuncBaseDeclInfo(AbstractAnalysis[FuncBaseDecl]):
@@ -52,35 +54,38 @@ class CppProjFuncBaseDeclInfo(AbstractAnalysis[FuncBaseDecl]):
         self.name = f.name
         self.full_name = "::" + "::".join(segments)
         if len(f.retvals) == 0:
-            self.return_ty_header = None
+            self.return_ty_headers = []
             self.return_ty_name = "void"
-            self.return_ty_struct_name = None
-            self.return_from_abi = ""
-            self.return_into_abi = ""
+            self.return_from_abi = lambda val: val
+            self.return_into_abi = lambda val: val
         elif len(f.retvals) == 1:
-            cpp_retval_info = CppProjNormalTypeRefDeclInfo.get(am, f.retvals[0].ty)
+            (retval,) = f.retvals
+            cpp_return_ty_info = CppProjTypeInfo.get(am, retval.ty_ref.resolved_ty)
             abi_func_info = ABIFuncBaseDeclInfo.get(am, f)
-            self.return_ty_header = cpp_retval_info.header
-            self.return_ty_name = cpp_retval_info.name
-            self.return_ty_struct_name = None
-            self.return_from_abi = f"taihe::core::from_abi<{self.return_ty_name}, {abi_func_info.return_ty_name}>"
-            self.return_into_abi = f"taihe::core::into_abi<{self.return_ty_name}, {abi_func_info.return_ty_name}>"
+            self.return_ty_headers = [cpp_return_ty_info.header]
+            self.return_ty_name = cpp_return_ty_info.as_owner
+            self.return_from_abi = cpp_return_ty_info.return_from_abi
+            self.return_into_abi = cpp_return_ty_info.return_into_abi
         else:
             abi_func_info = ABIFuncBaseDeclInfo.get(am, f)
-            self.return_ty_header = None
-            self.return_ty_struct_name = f.name + "__return_t"
-            self.cpp_retval_parts = []
-            self.abi_retval_parts = []
-            self.cpp_retval_headers = []
+            self.return_ty_headers = []
+            cpp_return_ty_names = []
+            abi_return_ty_parts = []
             for return_type in f.retvals:
-                cpp_retval_info = CppProjNormalTypeRefDeclInfo.get(am, return_type.ty)
-                self.cpp_retval_parts.append(cpp_retval_info.name)
-                abi_retval_info = ABINormalTypeRefDeclInfo.get(am, return_type.ty)
-                self.abi_retval_parts.append(abi_retval_info.name)
-                self.cpp_retval_headers.append(cpp_retval_info.header)
-            self.return_ty_name = f"std::tuple<{', '.join(self.cpp_retval_parts)}>"
-            self.return_from_abi = f"taihe::core::from_abi<{self.return_ty_name}, {abi_func_info.return_ty_struct_name}>"
-            self.return_into_abi = f"taihe::core::into_abi<{self.return_ty_name}, {abi_func_info.return_ty_struct_name}>"
+                abi_return_ty_info = ABITypeInfo.get(am, return_type.ty_ref.resolved_ty)
+                cpp_return_ty_info = CppProjTypeInfo.get(
+                    am, return_type.ty_ref.resolved_ty
+                )
+                abi_return_ty_parts.append(abi_return_ty_info.as_owner)
+                cpp_return_ty_names.append(cpp_return_ty_info.as_owner)
+                self.return_ty_headers.append(cpp_return_ty_info.header)
+            self.return_ty_name = f"std::tuple<{', '.join(cpp_return_ty_names)}>"
+            self.return_from_abi = (
+                lambda val: f"taihe::core::from_abi<{self.return_ty_name}, {abi_func_info.return_ty_struct_name}>(std::move({val}))"
+            )
+            self.return_into_abi = (
+                lambda val: f"taihe::core::into_abi<{self.return_ty_name}, {abi_func_info.return_ty_struct_name}>(std::move({val}))"
+            )
 
 
 class CppProjStructDeclInfo(AbstractAnalysis[StructDecl]):
@@ -88,9 +93,10 @@ class CppProjStructDeclInfo(AbstractAnalysis[StructDecl]):
         p = d.parent
         assert p
         segments = d.segments
-        self.header = f"{p.name}.{d.name}.abi.hpp"
+        self.header = f"{p.name}.{d.name}.proj.hpp"
         self.name = d.name
-        self.full_name = "::" + "::".join(segments)
+        self.owner_full_name = "::" + "::".join(segments)
+        self.param_full_name = "::param::" + "::".join(segments)
 
 
 class CppProjEnumDeclInfo(AbstractAnalysis[EnumDecl]):
@@ -98,34 +104,66 @@ class CppProjEnumDeclInfo(AbstractAnalysis[EnumDecl]):
         p = d.parent
         assert p
         segments = d.segments
-        self.header = f"{p.name}.{d.name}.abi.hpp"
+        self.header = f"{p.name}.{d.name}.proj.hpp"
         self.name = d.name
-        self.full_name = "::" + "::".join(segments)
+        self.owner_full_name = "::" + "::".join(segments)
+        self.param_full_name = "::param::" + "::".join(segments)
 
 
-class CppProjNormalTypeRefDeclInfo(AbstractAnalysis[TypeAlike], TypeVisitor):
-    def __init__(self, am: AnalysisManager, t: TypeAlike) -> None:
+class CppProjTypeInfo(AbstractAnalysis[Optional[Type]], TypeVisitor):
+    def __init__(self, am: AnalysisManager, t: Optional[Type]) -> None:
         self.am = am
         self.header = None
-        self.name = None
-        self.copy_func = lambda a: a
-        self.drop_func = lambda _: None
+        self.as_owner = None
+        self.as_param = None
+        self.pass_from_abi = lambda val: val
+        self.pass_into_abi = lambda val: val
+        self.return_from_abi = lambda val: val
+        self.return_into_abi = lambda val: val
         self.handle_type(t)
 
     @override
     def visit_enum_decl(self, d: EnumDecl) -> Any:
         cpp_proj_enum_info = CppProjEnumDeclInfo.get(self.am, d)
+        abi_enum_info = ABIEnumDeclInfo.get(self.am, d)
+
         self.header = cpp_proj_enum_info.header
-        self.name = cpp_proj_enum_info.full_name
+        self.as_owner = cpp_proj_enum_info.owner_full_name
+        self.as_param = cpp_proj_enum_info.param_full_name
+        self.pass_from_abi = (
+            lambda val: f"static_cast<{cpp_proj_enum_info.param_full_name}>({val})"
+        )
+        self.pass_into_abi = lambda val: f"static_cast<{abi_enum_info.as_param}>({val})"
+        self.return_from_abi = (
+            lambda val: f"static_cast<{cpp_proj_enum_info.owner_full_name}>({val})"
+        )
+        self.return_into_abi = (
+            lambda val: f"static_cast<{abi_enum_info.as_owner}>({val})"
+        )
 
     @override
     def visit_struct_decl(self, d: StructDecl) -> Any:
         cpp_proj_struct_info = CppProjStructDeclInfo.get(self.am, d)
+        abi_struct_info = ABIStructDeclInfo.get(self.am, d)
+
         self.header = cpp_proj_struct_info.header
-        self.name = cpp_proj_struct_info.full_name
+        self.as_owner = cpp_proj_struct_info.owner_full_name
+        self.as_param = cpp_proj_struct_info.param_full_name
+        self.pass_from_abi = (
+            lambda val: f"taihe::core::from_abi<{cpp_proj_struct_info.param_full_name}, {abi_struct_info.as_param}>(std::move({val}))"
+        )
+        self.pass_into_abi = (
+            lambda val: f"taihe::core::into_abi<{cpp_proj_struct_info.param_full_name}, {abi_struct_info.as_param}>(std::move({val}))"
+        )
+        self.return_from_abi = (
+            lambda val: f"taihe::core::from_abi<{cpp_proj_struct_info.owner_full_name}, {abi_struct_info.as_owner}>(std::move({val}))"
+        )
+        self.return_into_abi = (
+            lambda val: f"taihe::core::into_abi<{cpp_proj_struct_info.owner_full_name}, {abi_struct_info.as_owner}>(std::move({val}))"
+        )
 
     def visit_scalar_type(self, t: ScalarType):
-        self.name = {
+        res = self.as_param = self.as_owner = {
             BOOL: "bool",
             F32: "float",
             F64: "double",
@@ -138,34 +176,33 @@ class CppProjNormalTypeRefDeclInfo(AbstractAnalysis[TypeAlike], TypeVisitor):
             U32: "uint32_t",
             U64: "uint64_t",
         }.get(t)
-        if self.name is None:
+        self.as_param = res
+        self.as_owner = res
+        if res is None:
             raise ValueError
 
     def visit_special_type(self, t: SpecialType) -> Any:
         if t == STRING:
             self.header = "core/string.hpp"
-            self.name = "taihe::core::string"
+            self.as_owner = "taihe::core::string"
+            self.as_param = "taihe::core::string_view"
+            self.pass_from_abi = (
+                lambda val: f"taihe::core::from_abi<{self.as_param}, TString*>(std::move({val}))"
+            )
+            self.pass_into_abi = (
+                lambda val: f"taihe::core::into_abi<{self.as_param}, TString*>(std::move({val}))"
+            )
+            self.return_from_abi = (
+                lambda val: f"taihe::core::from_abi<{self.as_owner}, TString*>(std::move({val}))"
+            )
+            self.return_into_abi = (
+                lambda val: f"taihe::core::into_abi<{self.as_owner}, TString*>(std::move({val}))"
+            )
         else:
             raise ValueError
 
 
-class CppProjParamTypeRefDeclInfo(CppProjNormalTypeRefDeclInfo):
-    @override
-    def visit_struct_decl(self, d: StructDecl) -> Any:
-        cpp_proj_struct_info = CppProjStructDeclInfo.get(self.am, d)
-        self.header = cpp_proj_struct_info.header
-        self.name = f"const {cpp_proj_struct_info.full_name}&"
-
-    @override
-    def visit_special_type(self, t: SpecialType) -> Any:
-        if t == STRING:
-            self.header = "core/string.hpp"
-            self.name = "taihe::core::string_view"
-        else:
-            raise ValueError
-
-
-class CppProjGenerator:
+class CppProjCodeGenerator:
     def __init__(self, tm: OutputManager, am: AnalysisManager):
         self.tm = tm
         self.am = am
@@ -202,27 +239,25 @@ class CppProjGenerator:
         cpp_proj_func_info = CppProjFuncBaseDeclInfo.get(self.am, func)
         abi_func_info = ABIFuncBaseDeclInfo.get(self.am, func)
 
-        cpp_proj_pkg_target.include(cpp_proj_func_info.return_ty_header)
+        cpp_proj_pkg_target.include(*cpp_proj_func_info.return_ty_headers)
 
         cpp_params = []
         args_into_abi = []
         for param in func.params:
-            cpp_proj_param_type_info = CppProjParamTypeRefDeclInfo.get(
-                self.am, param.ty
-            )
-            abi_param_type_info = ABINormalTypeRefDeclInfo.get(self.am, param.ty)
-            cpp_proj_pkg_target.include(cpp_proj_param_type_info.header)
-            cpp_params.append(f"{cpp_proj_param_type_info.name} {param.name}")
-            args_into_abi.append(
-                f"taihe::core::into_abi<{cpp_proj_param_type_info.name}, {abi_param_type_info.name}>(static_cast<std::add_rvalue_reference_t<{cpp_proj_param_type_info.name}>>({param.name}))"
-            )
+            cpp_proj_type_info = CppProjTypeInfo.get(self.am, param.ty_ref.resolved_ty)
+            cpp_proj_pkg_target.include(cpp_proj_type_info.header)
+            cpp_params.append(f"{cpp_proj_type_info.as_param} {param.name}")
+            args_into_abi.append(cpp_proj_type_info.pass_into_abi(param.name))
         cpp_params_str = ", ".join(cpp_params)
         args_into_abi_str = ",".join(args_into_abi)
 
+        result = cpp_proj_func_info.return_from_abi(
+            f"{abi_func_info.name}({args_into_abi_str})"
+        )
         cpp_proj_pkg_target.write(
-            f"namespace {cpp_proj_pkg_info.full_name} {{\n"
+            f"namespace {cpp_proj_pkg_info.namespace} {{\n"
             f"inline {cpp_proj_func_info.return_ty_name} {cpp_proj_func_info.name}({cpp_params_str}) {{\n"
-            f"    return {cpp_proj_func_info.return_from_abi}({abi_func_info.name}({args_into_abi_str}));\n"
+            f"    return {result};\n"
             f"}}\n"
             f"}}\n"
         )
@@ -232,31 +267,22 @@ class CppProjGenerator:
         func: FuncBaseDecl,
         cpp_proj_pkg_target: COutputBuffer,
     ):
-        cpp_proj_func_info = CppProjFuncBaseDeclInfo.get(self.am, func)
         abi_func_info = ABIFuncBaseDeclInfo.get(self.am, func)
+        cpp_proj_func_info = CppProjFuncBaseDeclInfo.get(self.am, func)
 
         if abi_func_info.return_ty_struct_name is None:
             return
 
         cpp_proj_pkg_target.write(
             f"template<>\n"
-            f"inline {cpp_proj_func_info.return_ty_name} taihe::core::from_abi(std::add_rvalue_reference_t<{abi_func_info.return_ty_name}> _val) {{\n"
+            f"inline {cpp_proj_func_info.return_ty_name} taihe::core::from_abi({abi_func_info.return_ty_name}&& _val) {{\n"
             f"    return {{\n"
         )
-        for i, (cpp_return_part, abi_return_part, cpp_header) in enumerate(
-            zip(
-                cpp_proj_func_info.cpp_retval_parts,
-                cpp_proj_func_info.abi_retval_parts,
-                cpp_proj_func_info.cpp_retval_headers,
-                strict=True,
-            )
-        ):
-            cpp_proj_pkg_target.include(cpp_header)
-            cpp_proj_pkg_target.write(
-                f"        taihe::core::from_abi<{cpp_return_part}, {abi_return_part}>(static_cast<std::add_rvalue_reference_t<{abi_return_part}>>(_val._{i})),\n"
-            )
-        cpp_proj_pkg_target.write(f"    }};\n")
-        cpp_proj_pkg_target.write(f"}};\n")
+        for retval in func.retvals:
+            cpp_proj_type_info = CppProjTypeInfo.get(self.am, retval.ty_ref.resolved_ty)
+            result = cpp_proj_type_info.return_from_abi(f"_val.{retval.name}")
+            cpp_proj_pkg_target.write(f"        {result},\n")
+        cpp_proj_pkg_target.write(f"    }};\n" f"}};\n")
 
     def gen_struct_file(
         self,
@@ -264,14 +290,14 @@ class CppProjGenerator:
         cpp_proj_pkg_target: COutputBuffer,
         cpp_proj_pkg_info: CppProjPackageInfo,
     ):
-        cpp_proj_struct_info = CppProjStructDeclInfo.get(self.am, struct)
         abi_struct_info = ABIStructDeclInfo.get(self.am, struct)
+        cpp_proj_struct_info = CppProjStructDeclInfo.get(self.am, struct)
 
         cpp_proj_struct_target = COutputBuffer.create(
             self.tm, f"include/{cpp_proj_struct_info.header}", True
         )
 
-        cpp_proj_struct_target.include("taihe/common.h")
+        cpp_proj_struct_target.include("taihe/common.hpp")
         cpp_proj_struct_target.include(abi_struct_info.header)
 
         self.gen_struct_decl(
@@ -291,14 +317,20 @@ class CppProjGenerator:
         cpp_proj_pkg_info: CppProjPackageInfo,
     ):
         cpp_proj_struct_target.write(
-            f"namespace {cpp_proj_pkg_info.full_name} {{\n"
+            f"namespace {cpp_proj_pkg_info.namespace} {{\n"
             f"struct {cpp_proj_struct_info.name} {{\n"
         )
         for field in struct.fields:
-            ty_info = ABINormalTypeRefDeclInfo.get(self.am, field.ty)
+            ty_info = CppProjTypeInfo.get(self.am, field.ty_ref.resolved_ty)
             cpp_proj_struct_target.include(ty_info.header)
-            cpp_proj_struct_target.write(f"  {ty_info.name} {field.name};\n")
+            cpp_proj_struct_target.write(f"    {ty_info.as_owner} {field.name};\n")
         cpp_proj_struct_target.write(f"}};\n" f"}}\n")
+
+        cpp_proj_struct_target.write(
+            f"namespace {cpp_proj_pkg_info.param_namespace} {{\n"
+            f"using {cpp_proj_struct_info.name} = {cpp_proj_struct_info.owner_full_name} const&;\n"
+            f"}};\n"
+        )
 
     def gen_struct_trans_func(
         self,
@@ -309,47 +341,37 @@ class CppProjGenerator:
     ):
         cpp_proj_struct_target.write(
             f"template<>\n"
-            f"inline {abi_struct_info.name} taihe::core::into_abi(std::add_rvalue_reference_t<{cpp_proj_struct_info.full_name}> _val){{\n"
+            f"inline {abi_struct_info.as_owner} taihe::core::into_abi({cpp_proj_struct_info.owner_full_name}&& _val){{\n"
             f"    return {{\n"
         )
         for field in struct.fields:
-            abi_ty_info = ABINormalTypeRefDeclInfo.get(self.am, field.ty)
-            cpp_proj_ty_info = CppProjNormalTypeRefDeclInfo.get(self.am, field.ty)
-            cpp_proj_struct_target.write(
-                f"    taihe::core::into_abi<{cpp_proj_ty_info.name}, {abi_ty_info.name}>(static_cast<std::add_rvalue_reference_t<{cpp_proj_ty_info.name}>>(_val.{field.name})),\n"
-            )
-
+            cpp_proj_ty_info = CppProjTypeInfo.get(self.am, field.ty_ref.resolved_ty)
+            result = cpp_proj_ty_info.return_into_abi(f"_val.{field.name}")
+            cpp_proj_struct_target.write(f"        {result},\n")
         cpp_proj_struct_target.write(f"    }};\n" f"}};\n")
 
         cpp_proj_struct_target.write(
             f"template<>\n"
-            f"inline {cpp_proj_struct_info.name} taihe::core::from_abi(std::add_rvalue_reference_t<{abi_struct_info.name}> _val){{\n"
+            f"inline {cpp_proj_struct_info.owner_full_name} taihe::core::from_abi({abi_struct_info.as_owner}&& _val){{\n"
             f"    return {{\n"
         )
         for field in struct.fields:
-            abi_ty_info = ABINormalTypeRefDeclInfo.get(self.am, field.ty)
-            cpp_proj_ty_info = CppProjNormalTypeRefDeclInfo.get(self.am, field.ty)
-            cpp_proj_struct_target.write(
-                f"    taihe::core::from_abi<{cpp_proj_ty_info.name}, {abi_ty_info.name}>(static_cast<std::add_rvalue_reference_t<{abi_ty_info.name}>>(_val.{field.name})),\n"
-            )
-
+            cpp_proj_ty_info = CppProjTypeInfo.get(self.am, field.ty_ref.resolved_ty)
+            result = cpp_proj_ty_info.return_from_abi(f"_val.{field.name}")
+            cpp_proj_struct_target.write(f"        {result},\n")
         cpp_proj_struct_target.write(f"    }};\n" f"}};\n")
+
         cpp_proj_struct_target.write(
             f"template<>\n"
-            f"inline {abi_struct_info.name} *taihe::core::into_abi(std::add_rvalue_reference_t<{cpp_proj_struct_info.name} &> _val){{\n"
-            f"    return reinterpret_cast<{abi_struct_info.name} *>(&_val);\n"
+            f"inline {abi_struct_info.as_param} taihe::core::into_abi({cpp_proj_struct_info.param_full_name}&& _val){{\n"
+            f"    return reinterpret_cast<{abi_struct_info.as_param}>(&_val);\n"
             f"}}\n"
+        )
+
+        cpp_proj_struct_target.write(
             f"template<>\n"
-            f"inline {cpp_proj_struct_info.name} &taihe::core::from_abi(std::add_rvalue_reference_t<{abi_struct_info.name} *> _val){{\n"
-            f"    return reinterpret_cast<{cpp_proj_struct_info.name} *>(*_val);\n"
-            f"}}\n"
-            f"template<>\n"
-            f"inline {abi_struct_info.name} const *taihe::core::into_abi(std::add_rvalue_reference_t<{cpp_proj_struct_info.name} const &> _val){{\n"
-            f"    return reinterpret_cast<{abi_struct_info.name} const *>(&_val);\n"
-            f"}}\n"
-            f"template<>\n"
-            f"inline {cpp_proj_struct_info.name} *taihe::core::from_abi(std::add_rvalue_reference_t<{abi_struct_info.name} const *> _val){{\n"
-            f"    return reinterpret_cast<{cpp_proj_struct_info.name} const &>(*_val);\n"
+            f"inline {cpp_proj_struct_info.param_full_name} taihe::core::from_abi({abi_struct_info.as_param}&& _val){{\n"
+            f"    return reinterpret_cast<{cpp_proj_struct_info.param_full_name}>(*_val);\n"
             f"}}\n"
         )
 
@@ -372,9 +394,6 @@ class CppProjGenerator:
         self.gen_enum_decl(
             enum, cpp_proj_enum_target, cpp_proj_enum_info, cpp_proj_pkg_info
         )
-        self.gen_enum_trans_func(
-            cpp_proj_enum_target, cpp_proj_enum_info, abi_enum_info
-        )
 
         cpp_proj_pkg_target.include(cpp_proj_enum_info.header)
 
@@ -386,26 +405,9 @@ class CppProjGenerator:
         cpp_proj_pkg_info: CppProjPackageInfo,
     ):
         cpp_proj_enum_target.write(
-            f"namespace {cpp_proj_pkg_info.full_name} {{\n"
+            f"namespace {cpp_proj_pkg_info.namespace} {{\n"
             f"enum class {cpp_proj_enum_info.name} {{\n"
         )
         for item in enum.items:
             cpp_proj_enum_target.write(f"  {item.name} = {item.value},\n")
         cpp_proj_enum_target.write(f"}};\n" f"}}\n")
-
-    def gen_enum_trans_func(
-        self,
-        cpp_proj_enum_target: COutputBuffer,
-        cpp_proj_enum_info: CppProjEnumDeclInfo,
-        abi_enum_info: ABIEnumDeclInfo,
-    ):
-        cpp_proj_enum_target.write(
-            f"template<>\n"
-            f"inline {abi_enum_info.name} taihe::core::into_abi(std::add_rvalue_reference_t<{cpp_proj_enum_info.full_name}> _val){{\n"
-            f"    return static_cast<{abi_enum_info.name}>(_val);\n"
-            f"}}\n"
-            f"template<>\n"
-            f"inline {cpp_proj_enum_info.full_name} taihe::core::from_abi(std::add_rvalue_reference_t<{abi_enum_info.name}> _val){{\n"
-            f"    return static_cast<{cpp_proj_enum_info.full_name}>(_val);\n"
-            f"}}\n"
-        )

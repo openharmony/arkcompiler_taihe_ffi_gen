@@ -271,7 +271,7 @@ def _resolve_typedef(
         d.is_solved = True
 
     for pkg in pg.packages:
-        for typedef in pkg.typedefs:
+        for typedef in pkg.type_aliases:
             visit(typedef)
 
 

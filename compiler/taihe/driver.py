@@ -5,8 +5,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-from taihe.codegen.generator import ABICodeGenerator
-from taihe.codegen.proj_cpp_generator import CppProjGenerator
+from taihe.codegen.abi_generator import ABICodeGenerator
+from taihe.codegen.cpp_proj_generator import CppProjCodeGenerator
 from taihe.parse.convert import AstConverter
 from taihe.semantics.analysis import analyze_semantics
 from taihe.semantics.declarations import PackageGroup
@@ -94,9 +94,9 @@ class CompilerInstance:
         generator.generate(self.package_group)
         self.target_manager.output_to(self.invocation.out_dir)
 
-        cpp_generator = CppProjGenerator(self.target_manager, self.analysis_manager)
-        cpp_generator.generate(self.package_group)
-        self.target_manager.output_to(self.invocation.out_dir)
+        # cpp_generator = CppProjCodeGenerator(self.target_manager, self.analysis_manager)
+        # cpp_generator.generate(self.package_group)
+        # self.target_manager.output_to(self.invocation.out_dir)
 
     def run(self):
         self.scan()

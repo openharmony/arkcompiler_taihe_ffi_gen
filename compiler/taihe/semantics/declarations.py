@@ -313,7 +313,7 @@ class FuncBaseDecl(NamedDecl):
         ty: TypeRefDecl,
         **kwargs,
     ):
-        name = str(len(self.retvals))
+        name = f"_{len(self.retvals)}"
         r = RetvalDecl(name, ty.loc, ty, parent=self, **kwargs)
         self.retvals.append(r)
 
@@ -337,7 +337,7 @@ class TypeDecl(PackageLevelDecl, Type):
 
 
 class TypeAliasDecl(TypeDecl):
-    KIND = "typedef"
+    KIND = "type alias"
 
     ty_ref: TypeRefDecl
     final_ty: Optional[Type] = None
@@ -528,7 +528,7 @@ class IfaceDecl(TypeDecl):
         ty: TypeRefDecl,
         **kwargs,
     ):
-        name = str(len(self.parents))
+        name = f"_{len(self.parents)}"
         p = IfaceParentDecl(name, ty.loc, ty, parent=self, **kwargs)
         self.parents.append(p)
 
@@ -558,7 +558,7 @@ class Package(NamedDecl):
     structs: list[StructDecl]
     enums: list[EnumDecl]
     interfaces: list[IfaceDecl]
-    typedefs: list[TypeAliasDecl]
+    type_aliases: list[TypeAliasDecl]
 
     def __init__(self, name: str, loc: Optional[SourceLocation]):
         super().__init__(name, loc, parent=None)
@@ -573,7 +573,7 @@ class Package(NamedDecl):
         self.structs = []
         self.enums = []
         self.interfaces = []
-        self.typedefs = []
+        self.type_aliases = []
 
     def __repr__(self) -> str:
         return f"{self.__class__.__qualname__}<{self.name!r}>"
@@ -590,7 +590,7 @@ class Package(NamedDecl):
         yield from self.structs
         yield from self.enums
         yield from self.interfaces
-        yield from self.typedefs
+        yield from self.type_aliases
 
     def _register_to_decl(self, d: PackageLevelDecl):
         if prev := self.decls.get(d.name, None):
@@ -624,9 +624,9 @@ class Package(NamedDecl):
         self.interfaces.append(i)
         self._register_to_decl(i)
 
-    def add_typedef(self, d: TypeAliasDecl):
+    def add_type_alias(self, d: TypeAliasDecl):
         d.parent = self
-        self.typedefs.append(d)
+        self.type_aliases.append(d)
         self._register_to_decl(d)
 
     def add_declaration(self, d: NamedDecl):
@@ -639,7 +639,7 @@ class Package(NamedDecl):
         elif isinstance(d, IfaceDecl):
             self.add_interface(d)
         elif isinstance(d, TypeAliasDecl):
-            self.add_typedef(d)
+            self.add_type_alias(d)
         else:
             raise NotImplementedError(f"unexpected declaration {d.description}")
 

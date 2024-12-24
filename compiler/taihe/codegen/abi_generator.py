@@ -1,7 +1,7 @@
 from io import StringIO
 from os import makedirs, path
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 from typing_extensions import override
 
@@ -15,6 +15,7 @@ from taihe.semantics.declarations import (
     Package,
     PackageGroup,
     StructDecl,
+    TypeAliasDecl,
 )
 from taihe.semantics.types import (
     BOOL,
@@ -76,18 +77,18 @@ class ABIFuncBaseDeclInfo(AbstractAnalysis[FuncBaseDecl]):
         segments = f.segments
         self.name = encode(segments, DeclKind.FUNCTION)
         if len(f.retvals) == 0:
+            self.return_ty_struct_name = None
             self.return_ty_header = None
             self.return_ty_name = "void"
-            self.return_ty_struct_name = None
         elif len(f.retvals) == 1:
             (retval,) = f.retvals
-            info = ABINormalTypeRefDeclInfo.get(am, retval.ty_ref.resolved_ty)
-            self.return_ty_header = info.header
-            self.return_ty_name = info.name
+            info = ABITypeInfo.get(am, retval.ty_ref.resolved_ty)
             self.return_ty_struct_name = None
+            self.return_ty_header = info.header
+            self.return_ty_name = info.as_owner
         else:
-            self.return_ty_header = None
             self.return_ty_struct_name = encode(segments, DeclKind.RETURN_T)
+            self.return_ty_header = None
             self.return_ty_name = f"struct {self.return_ty_struct_name}"
 
 
@@ -104,6 +105,8 @@ class ABIEnumDeclInfo(AbstractAnalysis[EnumDecl]):
         segments = d.segments
         self.header = f"{p.name}.{d.name}.abi.h"
         self.name = encode(segments, DeclKind.ENUM)
+        self.as_owner = encode(segments, DeclKind.OWNER_T)
+        self.as_param = encode(segments, DeclKind.PARAM_T)
 
 
 class ABIStructDeclInfo(AbstractAnalysis[StructDecl]):
@@ -113,9 +116,9 @@ class ABIStructDeclInfo(AbstractAnalysis[StructDecl]):
         segments = d.segments
         self.header = f"{p.name}.{d.name}.abi.h"
         self.name = encode(segments, DeclKind.STRUCT)
-        ty_ref_infos = [
-            ABINormalTypeRefDeclInfo.get(am, f.ty_ref.resolved_ty) for f in d.fields
-        ]
+        self.as_owner = encode(segments, DeclKind.OWNER_T)
+        self.as_param = encode(segments, DeclKind.PARAM_T)
+        ty_ref_infos = [ABITypeInfo.get(am, f.ty_ref.resolved_ty) for f in d.fields]
         self.copy_func = (
             encode(segments, DeclKind.COPY)
             if any(info.copy_func is not None for info in ty_ref_infos)
@@ -128,6 +131,16 @@ class ABIStructDeclInfo(AbstractAnalysis[StructDecl]):
         )
 
 
+class ABITypeAliasDeclInfo(AbstractAnalysis[TypeAliasDecl]):
+    def __init__(self, am: AnalysisManager, d: TypeAliasDecl) -> None:
+        p = d.parent
+        assert p
+        segments = d.segments
+        self.header = f"{p.name}.{d.name}.abi.h"
+        self.as_owner = encode(segments, DeclKind.OWNER_T)
+        self.as_param = encode(segments, DeclKind.PARAM_T)
+
+
 class ABIIfaceDeclInfo(AbstractAnalysis[IfaceDecl]):
     def __init__(self, am: AnalysisManager, d: IfaceDecl) -> None:
         p = d.parent
@@ -137,6 +150,8 @@ class ABIIfaceDeclInfo(AbstractAnalysis[IfaceDecl]):
         self.header_1 = f"{p.name}.{d.name}.abi.1.h"
         self.src = f"{p.name}.{d.name}.c"
         self.name = encode(segments, DeclKind.INTERFACE)
+        self.as_owner = encode(segments, DeclKind.OWNER_T)
+        self.as_param = encode(segments, DeclKind.PARAM_T)
         self.copy_func = encode(segments, DeclKind.COPY)
         self.drop_func = encode(segments, DeclKind.DROP)
         self.f_table = encode(segments, DeclKind.FTABLE)
@@ -153,39 +168,50 @@ class ABIIfaceDeclInfo(AbstractAnalysis[IfaceDecl]):
             self.offsets.setdefault(ancestor, i)
 
 
-class ABINormalTypeRefDeclInfo(AbstractAnalysis[Optional[Type]], TypeVisitor):
+class ABITypeInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
     def __init__(self, am: AnalysisManager, t: Optional[Type]) -> None:
         self.am = am
         self.header = None
-        self.name = None
+        self.as_owner = None
+        self.as_param = None
         self.copy_func = None
         self.drop_func = None
         self.handle_type(t)
 
     @override
-    def visit_enum_decl(self, d: EnumDecl) -> Any:
-        abi_enum_info = ABIEnumDeclInfo.get(self.am, d)
-        self.header = abi_enum_info.header
-        self.name = f"enum {abi_enum_info.name}"
+    def visit_type_alias_decl(self, d: TypeAliasDecl) -> None:
+        abi_type_alias_info = ABITypeAliasDeclInfo.get(self.am, d)
+        self.header = abi_type_alias_info.header
+        self.as_owner = abi_type_alias_info.as_owner
+        self.as_param = abi_type_alias_info.as_param
 
     @override
-    def visit_struct_decl(self, d: StructDecl) -> Any:
+    def visit_enum_decl(self, d: EnumDecl) -> None:
+        abi_enum_info = ABIEnumDeclInfo.get(self.am, d)
+        self.header = abi_enum_info.header
+        self.as_owner = abi_enum_info.as_owner
+        self.as_param = abi_enum_info.as_param
+
+    @override
+    def visit_struct_decl(self, d: StructDecl) -> None:
         abi_struct_info = ABIStructDeclInfo.get(self.am, d)
         self.header = abi_struct_info.header
-        self.name = f"struct {abi_struct_info.name}"
+        self.as_owner = abi_struct_info.as_owner
+        self.as_param = abi_struct_info.as_param
         self.copy_func = abi_struct_info.copy_func
         self.drop_func = abi_struct_info.drop_func
 
     @override
-    def visit_iface_decl(self, d: IfaceDecl) -> Any:
+    def visit_iface_decl(self, d: IfaceDecl) -> None:
         abi_iface_info = ABIIfaceDeclInfo.get(self.am, d)
         self.header = abi_iface_info.header_0
-        self.name = f"struct {abi_iface_info.name}"
+        self.as_owner = abi_iface_info.as_owner
+        self.as_param = abi_iface_info.as_param
         self.copy_func = abi_iface_info.copy_func
         self.drop_func = abi_iface_info.drop_func
 
     def visit_scalar_type(self, t: ScalarType):
-        self.name = {
+        res = {
             BOOL: "bool",
             F32: "float",
             F64: "double",
@@ -198,25 +224,20 @@ class ABINormalTypeRefDeclInfo(AbstractAnalysis[Optional[Type]], TypeVisitor):
             U32: "uint32_t",
             U64: "uint64_t",
         }.get(t)
-        if self.name is None:
+        self.as_param = res
+        self.as_owner = res
+        if res is None:
             raise ValueError
 
-    def visit_special_type(self, t: SpecialType) -> Any:
+    def visit_special_type(self, t: SpecialType) -> None:
         if t == STRING:
             self.header = "taihe/string.abi.h"
-            self.name = "struct TString*"
+            self.as_owner = "struct TString*"
+            self.as_param = "struct TString*"
             self.copy_func = "tstr_dup"
             self.drop_func = "tstr_drop"
         else:
             raise ValueError
-
-
-class ABIParamTypeRefDeclInfo(ABINormalTypeRefDeclInfo):
-    @override
-    def visit_struct_decl(self, d: StructDecl) -> Any:
-        abi_struct_info = ABIStructDeclInfo.get(self.am, d)
-        self.header = abi_struct_info.header
-        self.name = f"struct {abi_struct_info.name} const*"
 
 
 class ABICodeGenerator:
@@ -244,6 +265,8 @@ class ABICodeGenerator:
             self.gen_enum_file(enum, abi_pkg_target)
         for iface in pkg.interfaces:
             self.gen_iface_files(iface, abi_pkg_target)
+        for type_alias in pkg.type_aliases:
+            self.gen_type_alias_file(type_alias, abi_pkg_target)
         for func in pkg.functions:
             self.gen_func(func, abi_pkg_target)
 
@@ -258,11 +281,9 @@ class ABICodeGenerator:
 
         params = []
         for param in func.params:
-            abi_param_type_info = ABIParamTypeRefDeclInfo.get(
-                self.am, param.ty_ref.resolved_ty
-            )
-            abi_pkg_target.include(abi_param_type_info.header)
-            params.append(f"{abi_param_type_info.name} {param.name}")
+            abi_type_info = ABITypeInfo.get(self.am, param.ty_ref.resolved_ty)
+            abi_pkg_target.include(abi_type_info.header)
+            params.append(f"{abi_type_info.as_param} {param.name}")
         params_str = ", ".join(params)
         abi_pkg_target.write(
             f"TH_EXPORT {abi_func_info.return_ty_name} {abi_func_info.name}({params_str});\n"
@@ -279,11 +300,32 @@ class ABICodeGenerator:
             return
 
         abi_pkg_target.write(f"struct {abi_func_info.return_ty_struct_name} {{\n")
-        for i, retval in enumerate(func.retvals):
-            ty_info = ABINormalTypeRefDeclInfo.get(self.am, retval.ty_ref.resolved_ty)
+        for retval in func.retvals:
+            ty_info = ABITypeInfo.get(self.am, retval.ty_ref.resolved_ty)
             abi_pkg_target.include(ty_info.header)
-            abi_pkg_target.write(f"  {ty_info.name} _{i};\n")
+            abi_pkg_target.write(f"  {ty_info.as_owner} {retval.name};\n")
         abi_pkg_target.write("};\n")
+
+    def gen_type_alias_file(
+        self,
+        decl: TypeAliasDecl,
+        abi_pkg_target: COutputBuffer,
+    ):
+        abi_type_alias_info = ABITypeAliasDeclInfo.get(self.am, decl)
+        abi_inner_type_info = ABITypeInfo.get(self.am, decl.ty_ref.resolved_ty)
+
+        abi_type_alias_target = COutputBuffer.create(
+            self.tm, f"include/{abi_type_alias_info.header}", True
+        )
+
+        abi_type_alias_target.include(abi_inner_type_info.header)
+
+        abi_type_alias_target.write(
+            f"typedef {abi_inner_type_info.as_owner} {abi_type_alias_info.as_owner};\n"
+            f"typedef {abi_inner_type_info.as_param} {abi_type_alias_info.as_param};\n"
+        )
+
+        abi_pkg_target.include(abi_type_alias_info.header)
 
     def gen_struct_file(
         self,
@@ -312,10 +354,14 @@ class ABICodeGenerator:
     ):
         abi_struct_target.write(f"struct {abi_struct_info.name} {{\n")
         for field in struct.fields:
-            ty_info = ABINormalTypeRefDeclInfo.get(self.am, field.ty_ref.resolved_ty)
+            ty_info = ABITypeInfo.get(self.am, field.ty_ref.resolved_ty)
             abi_struct_target.include(ty_info.header)
-            abi_struct_target.write(f"  {ty_info.name} {field.name};\n")
-        abi_struct_target.write("};\n")
+            abi_struct_target.write(f"  {ty_info.as_owner} {field.name};\n")
+        abi_struct_target.write(
+            f"}};\n"
+            f"typedef struct {abi_struct_info.name} {abi_struct_info.as_owner};\n"
+            f"typedef struct {abi_struct_info.name} const* {abi_struct_info.as_param};\n"
+        )
 
     def gen_struct_copy_func(
         self,
@@ -329,9 +375,7 @@ class ABICodeGenerator:
                 f"  struct {abi_struct_info.name} result = {{\n"
             )
             for field in struct.fields:
-                ty_info = ABINormalTypeRefDeclInfo.get(
-                    self.am, field.ty_ref.resolved_ty
-                )
+                ty_info = ABITypeInfo.get(self.am, field.ty_ref.resolved_ty)
                 abi_struct_target.include(ty_info.header)
                 if ty_info.copy_func is not None:
                     abi_struct_target.write(
@@ -352,9 +396,7 @@ class ABICodeGenerator:
                 f"inline void {abi_struct_info.drop_func}(struct {abi_struct_info.name} data) {{\n"
             )
             for field in struct.fields:
-                ty_info = ABINormalTypeRefDeclInfo.get(
-                    self.am, field.ty_ref.resolved_ty
-                )
+                ty_info = ABITypeInfo.get(self.am, field.ty_ref.resolved_ty)
                 abi_struct_target.include(ty_info.header)
                 if ty_info.drop_func is not None:
                     abi_struct_target.write(
@@ -389,7 +431,11 @@ class ABICodeGenerator:
         for item in enum.items:
             abi_enum_item_info = ABIEnumItemDeclInfo.get(self.am, item)
             abi_enum_target.write(f"  {abi_enum_item_info.name} = {item.value},\n")
-        abi_enum_target.write("};\n")
+        abi_enum_target.write(
+            f"}};\n"
+            f"typedef enum {abi_enum_info.name} {abi_enum_info.as_owner};\n"
+            f"typedef enum {abi_enum_info.name} {abi_enum_info.as_param};\n"
+        )
 
     def gen_iface_files(
         self,
@@ -420,6 +466,8 @@ class ABICodeGenerator:
             f"  struct {abi_iface_info.v_table}* vtbl_ptr;\n"
             f"  struct DataBlockHead* data_ptr;\n"
             f"}};\n"
+            f"typedef struct {abi_iface_info.name} {abi_iface_info.as_param};\n"
+            f"typedef struct {abi_iface_info.name} {abi_iface_info.as_owner};\n"
         )
 
     def gen_iface_1_file(
@@ -464,13 +512,11 @@ class ABICodeGenerator:
 
             abi_iface_target_1.include(abi_method_info.return_ty_header)
 
-            params = ["struct DataBlockHead* data_ptr"]
+            params = [f"{abi_iface_info.as_param} tobj"]
             for param in method.params:
-                abi_param_type_info = ABIParamTypeRefDeclInfo.get(
-                    self.am, param.ty_ref.resolved_ty
-                )
-                abi_iface_target_1.include(abi_param_type_info.header)
-                params.append(f"{abi_param_type_info.name} {param.name}")
+                abi_type_info = ABITypeInfo.get(self.am, param.ty_ref.resolved_ty)
+                abi_iface_target_1.include(abi_type_info.header)
+                params.append(f"{abi_type_info.as_param} {param.name}")
             params_str = ", ".join(params)
             abi_iface_target_1.write(
                 f"  {abi_method_info.return_ty_name} (*{method.name})({params_str});\n"
@@ -499,13 +545,11 @@ class ABICodeGenerator:
         for method in iface.methods:
             abi_method_info = ABIFuncBaseDeclInfo.get(self.am, method)
 
-            params = [f"struct {abi_iface_info.name} tobj"]
-            args = ["tobj.data_ptr"]
+            params = [f"{abi_iface_info.as_param} tobj"]
+            args = ["tobj"]
             for param in method.params:
-                abi_param_type_info = ABIParamTypeRefDeclInfo.get(
-                    self.am, param.ty_ref.resolved_ty
-                )
-                params.append(f"{abi_param_type_info.name} {param.name}")
+                abi_type_info = ABITypeInfo.get(self.am, param.ty_ref.resolved_ty)
+                params.append(f"{abi_type_info.as_param} {param.name}")
                 args.append(param.name)
             params_str = ", ".join(params)
             args_str = ", ".join(args)

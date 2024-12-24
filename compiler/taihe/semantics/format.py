@@ -179,7 +179,7 @@ class _PrettyPrinter(DeclVisitor):
             self.handle_decl(d)
         for d in p.decl_imports:
             self.handle_decl(d)
-        for d in p.typedefs:
+        for d in p.type_aliases:
             self.handle_decl(d)
         for d in p.structs:
             self.handle_decl(d)

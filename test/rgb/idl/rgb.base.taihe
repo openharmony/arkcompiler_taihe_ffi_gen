@@ -4,9 +4,11 @@ struct RGB {
     b: u8;
 }
 
+type NameType = String;
+
 struct RGBWithName {
     rgb: RGB;
-    name: String;
+    name: NameType;
 }
 
 enum Color {
