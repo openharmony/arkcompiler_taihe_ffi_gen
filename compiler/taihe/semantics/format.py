@@ -1,11 +1,11 @@
 """Format the IDL files."""
 
-from typing import TextIO
+from typing import Optional, TextIO
 
 from typing_extensions import override
 
 from taihe.semantics.declarations import (
-    DeclAlike,
+    Decl,
     DeclarationImportDecl,
     DeclarationRefDecl,
     EnumDecl,
@@ -21,29 +21,23 @@ from taihe.semantics.declarations import (
     RetvalDecl,
     StructDecl,
     StructFieldDecl,
+    TypeAliasDecl,
     TypeDecl,
     TypeRefDecl,
 )
 from taihe.semantics.types import (
     BuiltinType,
+    Type,
 )
 from taihe.semantics.visitor import DeclVisitor, TypeVisitor
 
 
-def pretty_print(x: DeclAlike, buffer: TextIO):
+def pretty_print(x: Decl, buffer: TextIO):
     printer = _PrettyPrinter(buffer)
     printer.handle_decl(x)
 
 
 class _TypeNamePrinter(TypeVisitor[str]):
-    @override
-    def visit_type_ref_decl(self, d: TypeRefDecl):
-        if d.resolved:
-            real = "<error>" if not d.ref_ty else self.handle_type(d.ref_ty)
-            return f"{d.name} /* {real} */"
-        else:
-            return d.name
-
     @override
     def visit_type_decl(self, d: TypeDecl):
         return f"{pkg.name}.{d.name}" if (pkg := d.parent) else d.name
@@ -57,9 +51,19 @@ class _PrettyPrinter(DeclVisitor):
     def __init__(self, buffer: TextIO):
         self.buffer = buffer
         self.indent = 0
+        self.type_name_printer = _TypeNamePrinter()
 
     def get_type_ref_decl(self, d: TypeRefDecl) -> str:
-        return _TypeNamePrinter().handle_type(d)
+        if d.is_resolved:
+            return f"{d.name} /* {self.get_real_type(d.resolved_ty)} */"
+        else:
+            return d.name
+
+    def get_type(self, t: Type) -> str:
+        return self.type_name_printer.handle_type(t)
+
+    def get_real_type(self, t: Optional[Type]) -> str:
+        return "<error type>" if not t else self.get_type(t)
 
     def get_package_ref_decl(self, d: PackageRefDecl) -> str:
         return d.name
@@ -68,18 +72,18 @@ class _PrettyPrinter(DeclVisitor):
         return d.name
 
     def get_parent_decl(self, d: IfaceParentDecl) -> str:
-        return self.get_type_ref_decl(d.ty)
+        return self.get_type_ref_decl(d.ty_ref)
 
     def get_return_decl(self, d: RetvalDecl) -> str:
-        return self.get_type_ref_decl(d.ty)
+        return self.get_type_ref_decl(d.ty_ref)
 
     def get_param_decl(self, d: ParamDecl) -> str:
-        return f"{d.name}: {self.get_type_ref_decl(d.ty)}"
+        return f"{d.name}: {self.get_type_ref_decl(d.ty_ref)}"
 
     @override
     def visit_package_import_decl(self, d: PackageImportDecl):
         self.buffer.write(self.indent * 2 * " ")
-        self.buffer.write(f"use {self.get_package_ref_decl(d.pkg)}")
+        self.buffer.write(f"use {self.get_package_ref_decl(d.pkg_ref)}")
         if d.is_alias():
             self.buffer.write(f" as {d.name}")
         self.buffer.write(";\n")
@@ -88,7 +92,7 @@ class _PrettyPrinter(DeclVisitor):
     def visit_decl_import_decl(self, d: DeclarationImportDecl):
         self.buffer.write(self.indent * 2 * " ")
         self.buffer.write(
-            f"from {self.get_package_ref_decl(d.decl.pkg)} use {self.get_decl_ref_decl(d.decl)}"
+            f"from {self.get_package_ref_decl(d.decl_ref.pkg)} use {self.get_decl_ref_decl(d.decl_ref)}"
         )
         if d.is_alias():
             self.buffer.write(f" as {d.name}")
@@ -110,7 +114,7 @@ class _PrettyPrinter(DeclVisitor):
     @override
     def visit_struct_field_decl(self, d: StructFieldDecl):
         self.buffer.write(self.indent * 2 * " ")
-        self.buffer.write(f"{d.name}: {self.get_type_ref_decl(d.ty)};\n")
+        self.buffer.write(f"{d.name}: {self.get_type_ref_decl(d.ty_ref)};\n")
 
     @override
     def visit_enum_item_decl(self, d: EnumItemDecl):
@@ -161,12 +165,21 @@ class _PrettyPrinter(DeclVisitor):
         self.buffer.write("}\n")
 
     @override
+    def visit_type_alias_decl(self, d: TypeAliasDecl):
+        self.buffer.write(self.indent * 2 * " ")
+        self.buffer.write(
+            f"type {d.name} = {self.get_type_ref_decl(d.ty_ref)}; // {self.get_real_type(d.final_ty)}\n"
+        )
+
+    @override
     def visit_package(self, p: Package):
         self.buffer.write(self.indent * 2 * " ")
         self.buffer.write(f"// Package {p.name}\n")
         for d in p.pkg_imports:
             self.handle_decl(d)
         for d in p.decl_imports:
+            self.handle_decl(d)
+        for d in p.typedefs:
             self.handle_decl(d)
         for d in p.structs:
             self.handle_decl(d)
@@ -179,5 +192,5 @@ class _PrettyPrinter(DeclVisitor):
 
     @override
     def visit_package_group(self, g: PackageGroup):
-        for p in g.packages:
+        for p in g.children:
             self.handle_decl(p)

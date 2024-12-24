@@ -1,7 +1,7 @@
 from io import StringIO
 from os import makedirs, path
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from typing_extensions import override
 
@@ -31,7 +31,7 @@ from taihe.semantics.types import (
     U64,
     ScalarType,
     SpecialType,
-    TypeAlike,
+    Type,
 )
 from taihe.semantics.visitor import TypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
@@ -80,7 +80,8 @@ class ABIFuncBaseDeclInfo(AbstractAnalysis[FuncBaseDecl]):
             self.return_ty_name = "void"
             self.return_ty_struct_name = None
         elif len(f.retvals) == 1:
-            info = ABINormalTypeRefDeclInfo.get(am, f.retvals[0].ty)
+            (retval,) = f.retvals
+            info = ABINormalTypeRefDeclInfo.get(am, retval.ty_ref.resolved_ty)
             self.return_ty_header = info.header
             self.return_ty_name = info.name
             self.return_ty_struct_name = None
@@ -112,7 +113,9 @@ class ABIStructDeclInfo(AbstractAnalysis[StructDecl]):
         segments = d.segments
         self.header = f"{p.name}.{d.name}.abi.h"
         self.name = encode(segments, DeclKind.STRUCT)
-        ty_ref_infos = [ABINormalTypeRefDeclInfo.get(am, f.ty) for f in d.fields]
+        ty_ref_infos = [
+            ABINormalTypeRefDeclInfo.get(am, f.ty_ref.resolved_ty) for f in d.fields
+        ]
         self.copy_func = (
             encode(segments, DeclKind.COPY)
             if any(info.copy_func is not None for info in ty_ref_infos)
@@ -141,7 +144,7 @@ class ABIIfaceDeclInfo(AbstractAnalysis[IfaceDecl]):
         self.iid = encode(segments, DeclKind.IID)
         self.ancestors = [d]
         for extend in d.parents:
-            iface = extend.ty.ref_ty
+            iface = extend.ty_ref.resolved_ty
             assert isinstance(iface, IfaceDecl)
             abi_extend_info = ABIIfaceDeclInfo.get(am, iface)
             self.ancestors.extend(abi_extend_info.ancestors)
@@ -150,8 +153,8 @@ class ABIIfaceDeclInfo(AbstractAnalysis[IfaceDecl]):
             self.offsets.setdefault(ancestor, i)
 
 
-class ABINormalTypeRefDeclInfo(AbstractAnalysis[TypeAlike], TypeVisitor):
-    def __init__(self, am: AnalysisManager, t: TypeAlike) -> None:
+class ABINormalTypeRefDeclInfo(AbstractAnalysis[Optional[Type]], TypeVisitor):
+    def __init__(self, am: AnalysisManager, t: Optional[Type]) -> None:
         self.am = am
         self.header = None
         self.name = None
@@ -255,7 +258,9 @@ class ABICodeGenerator:
 
         params = []
         for param in func.params:
-            abi_param_type_info = ABIParamTypeRefDeclInfo.get(self.am, param.ty)
+            abi_param_type_info = ABIParamTypeRefDeclInfo.get(
+                self.am, param.ty_ref.resolved_ty
+            )
             abi_pkg_target.include(abi_param_type_info.header)
             params.append(f"{abi_param_type_info.name} {param.name}")
         params_str = ", ".join(params)
@@ -275,7 +280,7 @@ class ABICodeGenerator:
 
         abi_pkg_target.write(f"struct {abi_func_info.return_ty_struct_name} {{\n")
         for i, retval in enumerate(func.retvals):
-            ty_info = ABINormalTypeRefDeclInfo.get(self.am, retval.ty)
+            ty_info = ABINormalTypeRefDeclInfo.get(self.am, retval.ty_ref.resolved_ty)
             abi_pkg_target.include(ty_info.header)
             abi_pkg_target.write(f"  {ty_info.name} _{i};\n")
         abi_pkg_target.write("};\n")
@@ -307,7 +312,7 @@ class ABICodeGenerator:
     ):
         abi_struct_target.write(f"struct {abi_struct_info.name} {{\n")
         for field in struct.fields:
-            ty_info = ABINormalTypeRefDeclInfo.get(self.am, field.ty)
+            ty_info = ABINormalTypeRefDeclInfo.get(self.am, field.ty_ref.resolved_ty)
             abi_struct_target.include(ty_info.header)
             abi_struct_target.write(f"  {ty_info.name} {field.name};\n")
         abi_struct_target.write("};\n")
@@ -324,7 +329,9 @@ class ABICodeGenerator:
                 f"  struct {abi_struct_info.name} result = {{\n"
             )
             for field in struct.fields:
-                ty_info = ABINormalTypeRefDeclInfo.get(self.am, field.ty)
+                ty_info = ABINormalTypeRefDeclInfo.get(
+                    self.am, field.ty_ref.resolved_ty
+                )
                 abi_struct_target.include(ty_info.header)
                 if ty_info.copy_func is not None:
                     abi_struct_target.write(
@@ -345,7 +352,9 @@ class ABICodeGenerator:
                 f"inline void {abi_struct_info.drop_func}(struct {abi_struct_info.name} data) {{\n"
             )
             for field in struct.fields:
-                ty_info = ABINormalTypeRefDeclInfo.get(self.am, field.ty)
+                ty_info = ABINormalTypeRefDeclInfo.get(
+                    self.am, field.ty_ref.resolved_ty
+                )
                 abi_struct_target.include(ty_info.header)
                 if ty_info.drop_func is not None:
                     abi_struct_target.write(
@@ -457,7 +466,9 @@ class ABICodeGenerator:
 
             params = ["struct DataBlockHead* data_ptr"]
             for param in method.params:
-                abi_param_type_info = ABIParamTypeRefDeclInfo.get(self.am, param.ty)
+                abi_param_type_info = ABIParamTypeRefDeclInfo.get(
+                    self.am, param.ty_ref.resolved_ty
+                )
                 abi_iface_target_1.include(abi_param_type_info.header)
                 params.append(f"{abi_param_type_info.name} {param.name}")
             params_str = ", ".join(params)
@@ -491,7 +502,9 @@ class ABICodeGenerator:
             params = [f"struct {abi_iface_info.name} tobj"]
             args = ["tobj.data_ptr"]
             for param in method.params:
-                abi_param_type_info = ABIParamTypeRefDeclInfo.get(self.am, param.ty)
+                abi_param_type_info = ABIParamTypeRefDeclInfo.get(
+                    self.am, param.ty_ref.resolved_ty
+                )
                 params.append(f"{abi_param_type_info.name} {param.name}")
                 args.append(param.name)
             params_str = ", ".join(params)

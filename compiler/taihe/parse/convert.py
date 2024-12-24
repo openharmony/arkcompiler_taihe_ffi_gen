@@ -5,7 +5,6 @@ from typing_extensions import override
 from taihe.parse import Visitor, ast
 from taihe.parse.ast_generation import generate_ast
 from taihe.semantics.declarations import (
-    Decl,
     DeclarationImportDecl,
     DeclarationRefDecl,
     EnumDecl,
@@ -13,10 +12,12 @@ from taihe.semantics.declarations import (
     IfaceDecl,
     IfaceMethodDecl,
     ImportDecl,
+    NamedDecl,
     Package,
     PackageImportDecl,
     PackageRefDecl,
     StructDecl,
+    TypeAliasDecl,
     TypeRefDecl,
 )
 from taihe.semantics.types import (
@@ -201,6 +202,10 @@ class AstConverter(Visitor):
         return d
 
     @override
+    def visit_TypeAlias(self, node: ast.TypeAlias) -> TypeAliasDecl:
+        return TypeAliasDecl(str(node.name), self.loc(node.name), self.visit(node.ty))
+
+    @override
     def visit_Function(self, node: ast.Function) -> FuncDecl:
         f = FuncDecl(str(node.name), loc=self.loc(node.name))
         for p in node.parameters:
@@ -257,7 +262,7 @@ class AstConverter(Visitor):
                 print(f"visit_Spec: Ignoring {n.__class__.__qualname__}")
                 continue
 
-            assert isinstance(d, Decl)
+            assert isinstance(d, NamedDecl)
             with self.diag.capture_error():
                 pkg.add_declaration(d)
 

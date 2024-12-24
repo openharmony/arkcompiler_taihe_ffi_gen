@@ -4,17 +4,18 @@ from typing import TYPE_CHECKING, TypeVar
 from typing_extensions import override
 
 from taihe.semantics.declarations import (
-    Decl,
     DeclarationImportDecl,
     DeclarationRefDecl,
     EnumDecl,
     FuncBaseDecl,
     IfaceDecl,
+    NamedDecl,
     Package,
     PackageGroup,
     PackageImportDecl,
     PackageRefDecl,
     StructDecl,
+    TypeAliasDecl,
     TypeDecl,
     TypeRefDecl,
 )
@@ -32,6 +33,7 @@ from taihe.utils.exceptions import (
     PackageNotInScopeError,
     RecursiveExtensionError,
     RecursiveInclusionError,
+    RecursiveTypeAliasError,
     StructFieldTypeError,
     SymbolConflictWithNamespaceError,
 )
@@ -44,6 +46,7 @@ def analyze_semantics(pg: PackageGroup, diag: AbstractDiagnosticsManager):
     """Runs semantic analysis passes on the given package group."""
     _check_decl_confilct_with_namespace(pg, diag)
     _ResolveImportsPass(diag).handle_decl(pg)
+    _resolve_typedef(pg, diag)
     _CheckFieldCollisionErrorPass(diag).handle_decl(pg)
     _check_struct_fields(pg, diag)
     _check_iface_parents(pg, diag)
@@ -55,68 +58,68 @@ class _ResolveImportsPass(DeclVisitor):
     diag: AbstractDiagnosticsManager
 
     def __init__(self, diag: AbstractDiagnosticsManager):
-        self._current_package_group = None
-        self._current_package = None  # Always points to the current package.
+        self._current_pkg_group = None
+        self._current_pkg = None  # Always points to the current package.
         self.diag = diag
 
     @property
-    def _pkg(self) -> Package:
-        assert self._current_package
-        return self._current_package
+    def pkg(self) -> Package:
+        assert self._current_pkg
+        return self._current_pkg
 
     @property
-    def _pkg_group(self) -> PackageGroup:
-        assert self._current_package_group
-        return self._current_package_group
+    def pkg_group(self) -> PackageGroup:
+        assert self._current_pkg_group
+        return self._current_pkg_group
 
     @override
     def visit_package(self, p: Package):
-        self._current_package = p
+        self._current_pkg = p
         super().visit_package(p)
-        self._current_package = None
+        self._current_pkg = None
 
     @override
     def visit_package_group(self, g: PackageGroup):
-        self._current_package_group = g
+        self._current_pkg_group = g
         super().visit_package_group(g)
-        self._current_package_group = None
+        self._current_pkg_group = None
 
     @override
     def visit_package_ref_decl(self, d: PackageRefDecl):
-        if d.resolved:
+        if d.is_resolved:
             return
 
-        if pkg := self._pkg_group.lookup(d.name):
-            d.ref_pkg = pkg
+        if pkg := self.pkg_group.lookup(d.name):
+            d.resolved_pkg = pkg
         else:
             self.diag.emit(PackageNotExistError(d.name, loc=d.loc))
-            d.ref_pkg = None
+            d.resolved_pkg = None
 
-        d.resolved = True
+        d.is_resolved = True
 
     @override
     def visit_decl_ref_decl(self, d: DeclarationRefDecl):
-        if d.resolved:
+        if d.is_resolved:
             return
 
         self.handle_decl(d.pkg)
 
-        if (pkg := d.pkg.ref_pkg) is None:
+        if (pkg := d.pkg.resolved_pkg) is None:
             # No need to repeatedly throw exceptions for package import errors
-            d.ref_decl = None
+            d.resolved_decl = None
         elif isinstance(decl := pkg.decls.get(d.name), TypeDecl):
-            d.ref_decl = decl
+            d.resolved_decl = decl
         elif decl:
             self.diag.emit(NotATypeError(d.name, loc=d.loc))
-            d.ref_decl = None
+            d.resolved_decl = None
         else:
             self.diag.emit(DeclNotExistError(d.name, loc=d.loc))
-            d.ref_decl = None
+            d.resolved_decl = None
 
-        d.pkg.resolved = True
+        d.pkg.is_resolved = True
 
     def visit_type_ref_decl(self, d: TypeRefDecl):
-        if d.resolved:
+        if d.is_resolved:
             return
 
         xs = d.name.rsplit(".", maxsplit=1)
@@ -127,52 +130,52 @@ class _ResolveImportsPass(DeclVisitor):
 
             # Find the corresponding imported package according to the package name
             if not isinstance(
-                import_pkg := self._pkg.imports.get(pkg_name), PackageImportDecl
+                import_pkg := self.pkg.imports.get(pkg_name), PackageImportDecl
             ):
                 self.diag.emit(PackageNotInScopeError(pkg_name, loc=d.loc))
-                d.ref_ty = None
-            elif (pkg := import_pkg.pkg.ref_pkg) is None:
+                d.resolved_ty = None
+            elif (pkg := import_pkg.pkg_ref.resolved_pkg) is None:
                 # No need to repeatedly throw exceptions for package import errors
-                d.ref_ty = None
+                d.resolved_ty = None
 
             # Then find the corresponding type declaration from the package
             elif isinstance(decl := pkg.decls.get(decl_name), TypeDecl):
-                d.ref_ty = decl
+                d.resolved_ty = decl
             elif decl:
                 self.diag.emit(NotATypeError(decl_name, loc=d.loc))
-                d.ref_ty = None
+                d.resolved_ty = None
             else:
                 self.diag.emit(DeclNotExistError(decl_name, loc=d.loc))
-                d.ref_ty = None
+                d.resolved_ty = None
 
         # fn foo(x: Bar)
         elif len(xs) == 1:
             decl_name = xs[0]
 
             # Find types declared in the current package
-            if isinstance(decl := self._pkg.decls.get(decl_name), TypeDecl):
-                d.ref_ty = decl
+            if isinstance(decl := self.pkg.decls.get(decl_name), TypeDecl):
+                d.resolved_ty = decl
             elif decl:
                 self.diag.emit(NotATypeError(decl_name, loc=d.loc))
-                d.ref_ty = None
+                d.resolved_ty = None
 
             # If that fails, continue looking for imported type declarations
             elif not isinstance(
-                import_decl := self._pkg.imports.get(decl_name), DeclarationImportDecl
+                import_decl := self.pkg.imports.get(decl_name), DeclarationImportDecl
             ):
                 self.diag.emit(DeclarationNotInScopeError(decl_name, loc=d.loc))
-                d.ref_ty = None
-            elif (decl := import_decl.decl.ref_decl) is None:
+                d.resolved_ty = None
+            elif (decl := import_decl.decl_ref.resolved_decl) is None:
                 # No need to repeatedly throw exceptions for declaration import errors
-                d.ref_ty = None
+                d.resolved_ty = None
             else:
-                d.ref_ty = decl
+                d.resolved_ty = decl
 
         # Should not be reached
         else:
             raise ValueError("unexpected format for type reference")
 
-        d.resolved = True
+        d.is_resolved = True
 
 
 class _CheckFieldCollisionErrorPass(DeclVisitor):
@@ -208,7 +211,7 @@ class _CheckFieldCollisionErrorPass(DeclVisitor):
         self.check_field_name_collision(d.children)
         return super().visit_iface_decl(d)
 
-    def check_field_name_collision(self, items: Iterable[Decl]) -> None:
+    def check_field_name_collision(self, items: Iterable[NamedDecl]) -> None:
         """Checks for duplicate field names in declarations."""
         symbol = {}
         for f in items:
@@ -239,6 +242,39 @@ def _check_decl_confilct_with_namespace(
                 diag.emit(SymbolConflictWithNamespaceError(d, p))
 
 
+def _resolve_typedef(
+    pg: PackageGroup,
+    diag: AbstractDiagnosticsManager,
+):
+    resolving_dict: dict[TypeAliasDecl, int] = {}
+    resolving_list: list[TypeAliasDecl] = []
+
+    def visit(d: TypeAliasDecl):
+        if d.is_solved:
+            return
+        n = len(resolving_list)
+        m = resolving_dict.setdefault(d, n)
+        if m == n:
+            resolving_list.append(d)
+            i = d.ty_ref.resolved_ty
+            if isinstance(i, TypeAliasDecl):
+                visit(i)
+                i = i.final_ty
+            d.final_ty = i
+            resolving_list.pop()
+            resolving_dict.pop(d)
+        else:
+            diag.emit(
+                RecursiveTypeAliasError(resolving_list[m], resolving_list[m + 1 :])
+            )
+
+        d.is_solved = True
+
+    for pkg in pg.packages:
+        for typedef in pkg.typedefs:
+            visit(typedef)
+
+
 def _check_iface_parents(
     pg: PackageGroup,
     diag: AbstractDiagnosticsManager,
@@ -250,17 +286,22 @@ def _check_iface_parents(
             parent_iface_list = parent_iface_table.setdefault(iface, [])
             parent_iface_dict = {}
             for parent in iface.parents:
-                if (parent_iface := parent.ty.ref_ty) is None:
+                parent_ty = parent.ty_ref.resolved_ty
+                parent_final_ty = (
+                    parent_ty.final_ty
+                    if isinstance(parent_ty, TypeAliasDecl)
+                    else parent_ty
+                )
+                if parent_final_ty is None:
                     pass
-                elif not isinstance(parent_iface, IfaceDecl):
+                elif not isinstance(parent_final_ty, IfaceDecl):
                     diag.emit(ExtendsTypeError(parent))
                 else:
-                    parent_iface_list.append((parent, parent_iface))
-                    if (
-                        prev := parent_iface_dict.setdefault(parent_iface, parent)
-                    ) != parent:
+                    parent_iface_list.append((parent, parent_final_ty))
+                    prev = parent_iface_dict.setdefault(parent_final_ty, parent)
+                    if prev != parent:
                         diag.emit(
-                            DuplicateExtendsWarn(iface, parent_iface, prev, parent)
+                            DuplicateExtendsWarn(iface, parent_final_ty, prev, parent)
                         )
 
     cycles = detect_cycles(parent_iface_table)
@@ -279,7 +320,13 @@ def _check_struct_fields(
         for struct in pkg.structs:
             field_struct_list = field_struct_table.setdefault(struct, [])
             for field in struct.fields:
-                if (field_struct := field.ty.ref_ty) is None:
+                field_ty = field.ty_ref.resolved_ty
+                field_struct = (
+                    field_ty.final_ty
+                    if isinstance(field_ty, TypeAliasDecl)
+                    else field_ty
+                )
+                if field_struct is None:
                     pass
                 elif not isinstance(field_struct, BuiltinType | EnumDecl | StructDecl):
                     diag.emit(StructFieldTypeError(field))

@@ -91,12 +91,6 @@ function good_func(a: i32, b: Bar): (String, String);  // OK
 
 // Interfaces
 
-interface RecursiveIfaceA: RecursiveIfaceB {}
-
-interface RecursiveIfaceB: RecursiveIfaceC {}
-
-interface RecursiveIfaceC: RecursiveIfaceA {}  // RecursiveExtension
-
 interface TestIface {}
 
 interface BadIface
@@ -109,3 +103,15 @@ interface BadIface
     function a(x: i32): ();  // DeclConflictError
     function b(x: i32, x: i32): ();  // DeclConflictError
 }
+
+interface RecursiveIfaceA: RecursiveIfaceB {}
+
+interface RecursiveIfaceB: RecursiveIfaceAlias {}  // RecursiveExtension
+
+type RecursiveIfaceAlias = RecursiveIfaceA;
+
+type RecursiveAliasA = RecursiveAliasB;
+type RecursiveAliasB = RecursiveAliasA;
+
+type AliasTestA = AliasTestB;
+type AliasTestB = String;

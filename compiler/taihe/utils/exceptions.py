@@ -6,13 +6,14 @@ from taihe.utils.sources import SourceLocation
 
 if TYPE_CHECKING:
     from taihe.semantics.declarations import (
-        Decl,
         IfaceDecl,
         IfaceParentDecl,
+        NamedDecl,
         Package,
         PackageLevelDecl,
         StructDecl,
         StructFieldDecl,
+        TypeAliasDecl,
     )
 
 
@@ -50,6 +51,17 @@ class RecursiveInclusionNote(DiagNote):
 
 
 @dataclass
+class RecursiveTypeAliasNote(DiagNote):
+    MSG = "from here"
+
+    def __init__(
+        self,
+        last: "TypeAliasDecl",
+    ):
+        self.loc = last.ty_ref.loc
+
+
+@dataclass
 class PackageRedefDiagError(DiagError):
     MSG = "package name {pkg!r} is duplicated"
 
@@ -65,10 +77,10 @@ class PackageRedefDiagError(DiagError):
 class DeclRedefDiagError(DiagError):
     MSG = "redefinition of {current.description}"
 
-    prev: "Decl"
-    current: "Decl"
+    prev: "NamedDecl"
+    current: "NamedDecl"
 
-    def __init__(self, prev: "Decl", current: "Decl"):
+    def __init__(self, prev: "NamedDecl", current: "NamedDecl"):
         self.prev = prev
         self.current = current
         self.loc = current.loc
@@ -140,8 +152,8 @@ class StructFieldTypeError(DiagError):
     name: str
 
     def __init__(self, decl: "StructFieldDecl"):
-        self.loc = decl.ty.loc
-        self.name = decl.ty.name
+        self.loc = decl.ty_ref.loc
+        self.name = decl.ty_ref.name
 
 
 @dataclass
@@ -151,8 +163,8 @@ class ExtendsTypeError(DiagError):
     name: str
 
     def __init__(self, decl: "IfaceParentDecl"):
-        self.loc = decl.ty.loc
-        self.name = decl.ty.name
+        self.loc = decl.ty_ref.loc
+        self.name = decl.ty_ref.name
 
 
 @dataclass
@@ -222,3 +234,22 @@ class RecursiveInclusionError(DiagError):
     def notes(self):
         for n in self.other:
             yield RecursiveInclusionNote(n)
+
+
+@dataclass
+class RecursiveTypeAliasError(DiagError):
+    MSG = "recursive typedef"
+
+    other: list["TypeAliasDecl"]
+
+    def __init__(
+        self,
+        last: "TypeAliasDecl",
+        other: list["TypeAliasDecl"],
+    ):
+        self.loc = last.ty_ref.loc
+        self.other = other
+
+    def notes(self):
+        for n in self.other:
+            yield RecursiveTypeAliasNote(n)

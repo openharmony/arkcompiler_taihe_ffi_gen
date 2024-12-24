@@ -6,10 +6,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Optional, Protocol
 
 from typing_extensions import override
 
-from taihe.semantics.types import (
-    Type,
-    TypeAlike,
-)
+from taihe.semantics.types import Type
 from taihe.utils.exceptions import DeclRedefDiagError
 from taihe.utils.sources import SourceLocation
 
@@ -21,30 +18,24 @@ if TYPE_CHECKING:
 ################
 
 
-class DeclAlike(Protocol):
-    """Represents classes that are similar to, but not necessarily identical to, declarations.
-
-    This protocol defines a single method, `_accept`, which is used by `DeclVisitor` instances
-    to traverse and process instances of classes conforming to this protocol.
-
-    Notable implementors to this protocol are `Package` and `PackageGroup`.
-    """
+class Decl(Protocol):
+    """Represents any declaration."""
 
     def _accept(self, v: "DeclVisitor") -> Any: ...
 
 
-class Decl(ABC, DeclAlike):
+class NamedDecl(ABC, Decl):
     KIND: ClassVar[str]
 
     name: str
-    parent: Optional["Decl"] = None
+    parent: Optional["NamedDecl"] = None
     loc: Optional[SourceLocation]
 
     def __init__(
         self,
         name: str,
         loc: Optional[SourceLocation],
-        parent: Optional["Decl"] = None,
+        parent: Optional["NamedDecl"] = None,
     ):
         assert name
         self.name = name
@@ -73,7 +64,7 @@ class Decl(ABC, DeclAlike):
         return f"{self.__class__.__qualname__}<{self.name!r} in {self.parent}>"
 
 
-class TypeRefDecl(Decl, TypeAlike):
+class TypeRefDecl(NamedDecl):
     """Repersents a reference to a `Type`.
 
     Each user of a `Type` must be encapsulated in a `TypeRefDecl`.
@@ -92,8 +83,8 @@ class TypeRefDecl(Decl, TypeAlike):
     KIND = "type reference"
 
     parent = None
-    ref_ty: Optional[Type] = None
-    resolved: bool = False
+    resolved_ty: Optional[Type] = None
+    is_resolved: bool = False
 
     def __init__(
         self,
@@ -102,10 +93,10 @@ class TypeRefDecl(Decl, TypeAlike):
         ref_ty: Optional[Type] = None,
     ):
         super().__init__(name, loc, parent=None)
-        self.ref_ty = ref_ty
-        self.resolved = ref_ty is not None
+        self.resolved_ty = ref_ty
+        self.is_resolved = ref_ty is not None
 
-    def _accept(self, v: "DeclVisitor | TypeVisitor") -> Any:
+    def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_type_ref_decl(self)
 
 
@@ -114,7 +105,7 @@ class TypeRefDecl(Decl, TypeAlike):
 #######################
 
 
-class ImportDecl(Decl):
+class ImportDecl(NamedDecl):
     """Represents a package or declaration import.
 
     Invariant: the `name` field in base class `Decl` always represents actual name of imports.
@@ -122,28 +113,20 @@ class ImportDecl(Decl):
     For example:
 
     ```
-    use foo;                 --> PackageImportDecl(
-                                     name='foo',
-                                     pkg=PackageRefDecl(name='foo'),
-                                 )
-    use foo as bar;          --> PackageImportDecl(
-                                     name='bar',
-                                     pkg=PackageRefDecl(name='foo'),
-                                 )
-    from foo use Bar;        --> DeclarationImportDecl(
-                                     name='Bar',
-                                     decl=DeclarationRefDecl(
-                                         name='Bar',
-                                         pkg=PackageRefDecl(name='foo'),
-                                     ),
-                                 )
-    from foo use Bar as Baz; --> DeclarationImportDecl(
-                                     name='Baz',
-                                     decl=DeclarationRefDecl(
-                                         name='Bar',
-                                         pkg=PackageRefDecl(name='foo'),
-                                     ),
-                                 )
+    >>> use foo;
+    PackageImportDecl(name='foo', pkg_ref=PackageRefDecl(name='foo'))
+    >>> use foo as bar;
+    PackageImportDecl(name='bar', pkg_ref=PackageRefDecl(name='foo'))
+    >>> from foo use Bar;
+    DeclarationImportDecl(
+        name='Bar',
+        decl_ref=DeclarationRefDecl(name='Bar', pkg_ref=PackageRefDecl(name='foo')),
+    )
+    >>> from foo use Bar as Baz;
+    DeclarationImportDecl(
+        name='Baz',
+        decl_ref=DeclarationRefDecl(name='Bar', pkg_ref=PackageRefDecl(name='foo')),
+    )
     ```
     """
 
@@ -152,12 +135,12 @@ class ImportDecl(Decl):
     parent: Optional["Package"] = None
 
 
-class PackageRefDecl(Decl):
+class PackageRefDecl(NamedDecl):
     KIND = "package reference"
 
     parent = None
-    ref_pkg: Optional["Package"] = None
-    resolved: bool = False
+    resolved_pkg: Optional["Package"] = None
+    is_resolved: bool = False
 
     def __init__(self, name: str, loc: Optional[SourceLocation]):
         super().__init__(name, loc, parent=None)
@@ -167,12 +150,12 @@ class PackageRefDecl(Decl):
         return v.visit_package_ref_decl(self)
 
 
-class DeclarationRefDecl(Decl):
+class DeclarationRefDecl(NamedDecl):
     KIND = "package reference"
 
     parent = None
-    ref_decl: Optional["TypeDecl"] = None
-    resolved: bool = False
+    resolved_decl: Optional["TypeDecl"] = None
+    is_resolved: bool = False
     pkg: PackageRefDecl
 
     def __init__(self, name: str, loc: Optional[SourceLocation], p: PackageRefDecl):
@@ -184,14 +167,14 @@ class DeclarationRefDecl(Decl):
         return v.visit_decl_ref_decl(self)
 
     @property
-    def children(self) -> Iterable[DeclAlike]:
+    def children(self) -> Iterable[Decl]:
         yield self.pkg
 
 
 class PackageImportDecl(ImportDecl):
     KIND = "use of package"
 
-    pkg: PackageRefDecl
+    pkg_ref: PackageRefDecl
 
     def __init__(
         self,
@@ -202,24 +185,24 @@ class PackageImportDecl(ImportDecl):
         **kwargs,
     ):
         super().__init__(name=name or p.name, loc=loc or p.loc, **kwargs)
-        self.pkg = p
+        self.pkg_ref = p
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_package_import_decl(self)
 
     def is_alias(self) -> bool:
-        return self.name != self.pkg.name
+        return self.name != self.pkg_ref.name
 
     @property
-    def children(self) -> Iterable[DeclAlike]:
-        yield self.pkg
+    def children(self) -> Iterable[Decl]:
+        yield self.pkg_ref
 
 
 class DeclarationImportDecl(ImportDecl):
     KIND = "use of declaration"
 
-    decl: DeclarationRefDecl
+    decl_ref: DeclarationRefDecl
 
     def __init__(
         self,
@@ -230,18 +213,18 @@ class DeclarationImportDecl(ImportDecl):
         **kwargs,
     ):
         super().__init__(name=name or d.name, loc=loc or d.loc, **kwargs)
-        self.decl = d
+        self.decl_ref = d
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_decl_import_decl(self)
 
     def is_alias(self) -> bool:
-        return self.name != self.decl.name
+        return self.name != self.decl_ref.name
 
     @property
-    def children(self) -> Iterable[DeclAlike]:
-        yield self.decl
+    def children(self) -> Iterable[Decl]:
+        yield self.decl_ref
 
 
 ######################
@@ -249,16 +232,10 @@ class DeclarationImportDecl(ImportDecl):
 ######################
 
 
-class PackageLevelDecl(Decl):
-    KIND = "<package-level-decl-kind>"
-
-    parent: Optional["Package"] = None
-
-
-class ParamDecl(Decl):
+class ParamDecl(NamedDecl):
     KIND = "function parameter"
 
-    ty: TypeRefDecl
+    ty_ref: TypeRefDecl
     parent: Optional["FuncBaseDecl"] = None
 
     def __init__(
@@ -269,21 +246,21 @@ class ParamDecl(Decl):
         **kwargs,
     ):
         super().__init__(name, loc, **kwargs)
-        self.ty = ty
+        self.ty_ref = ty
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_param_decl(self)
 
     @property
-    def children(self) -> Iterable[DeclAlike]:
-        yield self.ty
+    def children(self) -> Iterable[Decl]:
+        yield self.ty_ref
 
 
-class RetvalDecl(Decl):
+class RetvalDecl(NamedDecl):
     KIND = "function return type"
 
-    ty: TypeRefDecl
+    ty_ref: TypeRefDecl
     parent: Optional["FuncBaseDecl"] = None
 
     def __init__(
@@ -294,18 +271,18 @@ class RetvalDecl(Decl):
         **kwargs,
     ):
         super().__init__(name, loc, **kwargs)
-        self.ty = ty
+        self.ty_ref = ty
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_retval_decl(self)
 
     @property
-    def children(self) -> Iterable[DeclAlike]:
-        yield self.ty
+    def children(self) -> Iterable[Decl]:
+        yield self.ty_ref
 
 
-class FuncBaseDecl(Decl):
+class FuncBaseDecl(NamedDecl):
     KIND = "<func-decl-kind>"
 
     params: list[ParamDecl]
@@ -317,7 +294,7 @@ class FuncBaseDecl(Decl):
         self.retvals = []
 
     @property
-    def children(self) -> Iterable[Decl]:
+    def children(self) -> Iterable[NamedDecl]:
         yield from self.params
         yield from self.retvals
 
@@ -341,6 +318,12 @@ class FuncBaseDecl(Decl):
         self.retvals.append(r)
 
 
+class PackageLevelDecl(NamedDecl):
+    KIND = "<package-level-decl-kind>"
+
+    parent: Optional["Package"] = None
+
+
 class FuncDecl(FuncBaseDecl, PackageLevelDecl):
     KIND = "function"
 
@@ -353,7 +336,33 @@ class TypeDecl(PackageLevelDecl, Type):
     KIND = "<type-decl-kind>"
 
 
-class EnumItemDecl(Decl):
+class TypeAliasDecl(TypeDecl):
+    KIND = "typedef"
+
+    ty_ref: TypeRefDecl
+    final_ty: Optional[Type] = None
+    is_solved: bool = False
+
+    def __init__(
+        self,
+        name: str,
+        loc: Optional[SourceLocation],
+        ty: TypeRefDecl,
+        **kwargs,
+    ):
+        super().__init__(name, loc, **kwargs)
+        self.ty_ref = ty
+
+    @override
+    def _accept(self, v: "DeclVisitor") -> Any:
+        return v.visit_type_alias_decl(self)
+
+    @property
+    def children(self) -> Iterable[Decl]:
+        yield self.ty_ref
+
+
+class EnumItemDecl(NamedDecl):
     KIND = "enum item"
 
     parent: Optional["EnumDecl"] = None
@@ -388,7 +397,7 @@ class EnumDecl(TypeDecl):
         return v.visit_enum_decl(self)
 
     @property
-    def children(self) -> Iterable[Decl]:
+    def children(self) -> Iterable[NamedDecl]:
         yield from self.items
 
     def add_item(
@@ -402,10 +411,10 @@ class EnumDecl(TypeDecl):
         self.items.append(f)
 
 
-class StructFieldDecl(Decl):
+class StructFieldDecl(NamedDecl):
     KIND = "struct field"
 
-    ty: TypeRefDecl
+    ty_ref: TypeRefDecl
     parent: Optional["StructDecl"] = None
 
     def __init__(
@@ -416,15 +425,15 @@ class StructFieldDecl(Decl):
         **kwargs,
     ):
         super().__init__(name, loc, **kwargs)
-        self.ty = ty
+        self.ty_ref = ty
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_struct_field_decl(self)
 
     @property
-    def children(self) -> Iterable[DeclAlike]:
-        yield self.ty
+    def children(self) -> Iterable[Decl]:
+        yield self.ty_ref
 
 
 class StructDecl(TypeDecl):
@@ -441,7 +450,7 @@ class StructDecl(TypeDecl):
         return v.visit_struct_decl(self)
 
     @property
-    def children(self) -> Iterable[Decl]:
+    def children(self) -> Iterable[NamedDecl]:
         yield from self.fields
 
     def add_field(
@@ -455,10 +464,10 @@ class StructDecl(TypeDecl):
         self.fields.append(f)
 
 
-class IfaceParentDecl(Decl):
+class IfaceParentDecl(NamedDecl):
     KIND = "function return type"
 
-    ty: TypeRefDecl
+    ty_ref: TypeRefDecl
     parent: Optional["IfaceDecl"] = None
 
     def __init__(
@@ -469,15 +478,15 @@ class IfaceParentDecl(Decl):
         **kwargs,
     ):
         super().__init__(name, loc, **kwargs)
-        self.ty = ty
+        self.ty_ref = ty
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_iface_parent_decl(self)
 
     @property
-    def children(self) -> Iterable[DeclAlike]:
-        yield self.ty
+    def children(self) -> Iterable[Decl]:
+        yield self.ty_ref
 
 
 class IfaceMethodDecl(FuncBaseDecl):
@@ -506,7 +515,7 @@ class IfaceDecl(TypeDecl):
         return v.visit_iface_decl(self)
 
     @property
-    def children(self) -> Iterable[Decl]:
+    def children(self) -> Iterable[NamedDecl]:
         yield from self.methods
         yield from self.parents
 
@@ -529,7 +538,7 @@ class IfaceDecl(TypeDecl):
 ######################
 
 
-class Package(Decl):
+class Package(NamedDecl):
     """A collection of named identities sharing the same scope."""
 
     KIND = "package"
@@ -549,6 +558,7 @@ class Package(Decl):
     structs: list[StructDecl]
     enums: list[EnumDecl]
     interfaces: list[IfaceDecl]
+    typedefs: list[TypeAliasDecl]
 
     def __init__(self, name: str, loc: Optional[SourceLocation]):
         super().__init__(name, loc, parent=None)
@@ -563,6 +573,7 @@ class Package(Decl):
         self.structs = []
         self.enums = []
         self.interfaces = []
+        self.typedefs = []
 
     def __repr__(self) -> str:
         return f"{self.__class__.__qualname__}<{self.name!r}>"
@@ -571,7 +582,7 @@ class Package(Decl):
         return v.visit_package(self)
 
     @property
-    def children(self) -> Iterable[Decl]:
+    def children(self) -> Iterable[NamedDecl]:
         yield from self.pkg_imports
         yield from self.decl_imports
 
@@ -579,6 +590,7 @@ class Package(Decl):
         yield from self.structs
         yield from self.enums
         yield from self.interfaces
+        yield from self.typedefs
 
     def _register_to_decl(self, d: PackageLevelDecl):
         if prev := self.decls.get(d.name, None):
@@ -612,7 +624,12 @@ class Package(Decl):
         self.interfaces.append(i)
         self._register_to_decl(i)
 
-    def add_declaration(self, d: Decl):
+    def add_typedef(self, d: TypeAliasDecl):
+        d.parent = self
+        self.typedefs.append(d)
+        self._register_to_decl(d)
+
+    def add_declaration(self, d: NamedDecl):
         if isinstance(d, FuncDecl):
             self.add_function(d)
         elif isinstance(d, StructDecl):
@@ -621,6 +638,8 @@ class Package(Decl):
             self.add_enum(d)
         elif isinstance(d, IfaceDecl):
             self.add_interface(d)
+        elif isinstance(d, TypeAliasDecl):
+            self.add_typedef(d)
         else:
             raise NotImplementedError(f"unexpected declaration {d.description}")
 
@@ -643,7 +662,7 @@ class Package(Decl):
             raise NotImplementedError(f"unexpected import {i.description}")
 
 
-class PackageGroup(DeclAlike):
+class PackageGroup(Decl):
     """Stores all known packages for a compilation instance."""
 
     package_dict: dict[str, Package]
@@ -655,7 +674,7 @@ class PackageGroup(DeclAlike):
         return v.visit_package_group(self)
 
     @property
-    def children(self) -> Iterable[Decl]:
+    def children(self) -> Iterable[NamedDecl]:
         yield from self.packages
 
     def lookup(self, name: str) -> Optional["Package"]:

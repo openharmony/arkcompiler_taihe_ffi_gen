@@ -1,8 +1,7 @@
 """Defines the type system."""
 
 from dataclasses import dataclass
-from enum import Enum, IntFlag, auto
-from itertools import chain
+from enum import Enum
 from typing import TYPE_CHECKING, Any, Optional, Protocol
 
 if TYPE_CHECKING:
@@ -13,44 +12,10 @@ if TYPE_CHECKING:
 ############################
 
 
-class TypeAlike(Protocol):
-    """Represents classes that are similar to, but not necessarily identical to, types.
-
-    This protocol defines a single method, `_accept`, which is used by `TypeVisitor` instances
-    to traverse and process instances of classes conforming to this protocol.
-
-    Notable implementors to this protocol is `TypeRefDecl`.
-    """
+class Type(Protocol):
+    """Represents a concrete type."""
 
     def _accept(self, v: "TypeVisitor") -> Any: ...
-
-
-class TypeQualifier(IntFlag):
-    NONE = 0
-    MUT = auto()
-
-    def describe(self, type_name: str = "") -> str:
-        """Describes a qualifier, optionally with a type name.
-
-        Example:
-        ```
-        # Describe the qualifier itself.
-        NONE.describe() == ''
-        MUT.describe() == 'mut'
-
-        # Describe the qualifier itself.
-        MUT.describe('int') == 'mut int'
-        ```
-        """
-        # field.name is always str instead of None. Skip type checking below.
-        segments = (f.name.lower() for f in self)  # type: ignore
-        if type_name:
-            segments = chain(segments, (type_name,))
-        return " ".join(segments)
-
-
-class Type(TypeAlike):
-    """Represents a concrete type."""
 
 
 ##################

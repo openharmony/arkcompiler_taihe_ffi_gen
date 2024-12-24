@@ -16,7 +16,6 @@ from typing import Generic, Optional, TypeVar
 
 from taihe.semantics.declarations import (
     Decl,
-    DeclAlike,
     DeclarationImportDecl,
     DeclarationRefDecl,
     EnumDecl,
@@ -27,6 +26,7 @@ from taihe.semantics.declarations import (
     IfaceMethodDecl,
     IfaceParentDecl,
     ImportDecl,
+    NamedDecl,
     Package,
     PackageGroup,
     PackageImportDecl,
@@ -35,6 +35,7 @@ from taihe.semantics.declarations import (
     RetvalDecl,
     StructDecl,
     StructFieldDecl,
+    TypeAliasDecl,
     TypeDecl,
     TypeRefDecl,
 )
@@ -43,7 +44,6 @@ from taihe.semantics.types import (
     ScalarType,
     SpecialType,
     Type,
-    TypeAlike,
 )
 
 T = TypeVar("T")
@@ -63,15 +63,15 @@ class TypeVisitor(Generic[T]):
         - Example: `visit_enum_decl()` -> `EnumDecl._traverse()` -> `visit_enum_item_decl()`
     """
 
-    visiting: Optional[TypeAlike] = None
+    visiting: Optional[Type] = None
     """The current node being visited. Only for debug use."""
 
-    def handle_type(self, t: TypeAlike) -> T:
+    def handle_type(self, t: Optional[Type]) -> T:
         """The entrance for visiting."""
         r = self.visiting
         self.visiting = t
         try:
-            return t._accept(self)
+            return t._accept(self) if t else self.visit_error_type()
         except:
             print(
                 f"Internal error from {self.__class__.__name__} while handling {self.visiting}"
@@ -80,18 +80,15 @@ class TypeVisitor(Generic[T]):
         finally:
             self.visiting = r
 
+    def visit_error_type(self) -> T:
+        raise TypeError
+
     def visit_type(self, t: Type) -> T:
         """The fallback method which handles the most general type.
 
         Note that `TypeRef` is NOT a `Type`.
         """
         raise NotImplementedError
-
-    ### Non-`Type`s ###
-
-    def visit_type_ref_decl(self, d: TypeRefDecl) -> T:
-        assert d.ref_ty
-        return self.handle_type(d.ref_ty)
 
     ### Built-in types ###
 
@@ -118,6 +115,9 @@ class TypeVisitor(Generic[T]):
     def visit_iface_decl(self, d: IfaceDecl) -> T:
         return self.visit_type_decl(d)
 
+    def visit_type_alias_decl(self, d: TypeAliasDecl) -> T:
+        return self.visit_type_decl(d)
+
 
 class DeclVisitor:
     """Traverses a declaration and its child declarations, also traversing the type hierarchy.
@@ -128,10 +128,10 @@ class DeclVisitor:
     See the documentation of `TypeVisitor` for comparison.
     """
 
-    visiting: Optional[DeclAlike] = None
+    visiting: Optional[Decl] = None
     """The current node being visited. Only for debug use."""
 
-    def handle_decl(self, d: DeclAlike) -> None:
+    def handle_decl(self, d: Decl) -> None:
         """The entrance for visiting anything "acceptable"."""
         r = self.visiting
         self.visiting = d
@@ -149,33 +149,36 @@ class DeclVisitor:
         """The fallback method which handles the most general cases."""
         del d
 
+    def visit_named_decl(self, d: NamedDecl) -> None:
+        return self.visit_decl(d)
+
     def visit_param_decl(self, d: ParamDecl) -> None:
         for i in d.children:
             self.handle_decl(i)
-        return self.visit_decl(d)
+        return self.visit_named_decl(d)
 
     def visit_retval_decl(self, d: RetvalDecl) -> None:
         for i in d.children:
             self.handle_decl(i)
-        return self.visit_decl(d)
+        return self.visit_named_decl(d)
 
     def visit_func_base_decl(self, d: FuncBaseDecl) -> None:
         for i in d.children:
             self.handle_decl(i)
-        return self.visit_decl(d)
+        return self.visit_named_decl(d)
 
     ### Imports ###
 
     def visit_package_ref_decl(self, d: PackageRefDecl) -> None:
-        return self.visit_decl(d)
+        return self.visit_named_decl(d)
 
     def visit_decl_ref_decl(self, d: DeclarationRefDecl) -> None:
         for i in d.children:
             self.handle_decl(i)
-        return self.visit_decl(d)
+        return self.visit_named_decl(d)
 
     def visit_import_decl(self, d: ImportDecl) -> None:
-        return self.visit_decl(d)
+        return self.visit_named_decl(d)
 
     def visit_package_import_decl(self, d: PackageImportDecl) -> None:
         for i in d.children:
@@ -195,17 +198,24 @@ class DeclVisitor:
     ### Type (Generic) ###
 
     def visit_type_decl(self, d: TypeDecl) -> None:
-        return self.visit_decl(d)
+        return self.visit_named_decl(d)
 
     def visit_type_ref_decl(self, d: TypeRefDecl) -> None:
-        return self.visit_decl(d)
+        return self.visit_named_decl(d)
+
+    ### Typedef ###
+
+    def visit_type_alias_decl(self, d: TypeAliasDecl) -> None:
+        for i in d.children:
+            self.handle_decl(i)
+        return self.visit_named_decl(d)
 
     ### Struct ###
 
     def visit_struct_field_decl(self, d: StructFieldDecl) -> None:
         for i in d.children:
             self.handle_decl(i)
-        return self.visit_decl(d)
+        return self.visit_named_decl(d)
 
     def visit_struct_decl(self, d: StructDecl) -> None:
         for i in d.children:
@@ -215,7 +225,7 @@ class DeclVisitor:
     ### Enum ###
 
     def visit_enum_item_decl(self, d: EnumItemDecl) -> None:
-        return self.visit_decl(d)
+        return self.visit_named_decl(d)
 
     def visit_enum_decl(self, d: EnumDecl) -> None:
         for i in d.children:
@@ -227,7 +237,7 @@ class DeclVisitor:
     def visit_iface_parent_decl(self, d: IfaceParentDecl) -> None:
         for i in d.children:
             self.handle_decl(i)
-        return self.visit_decl(d)
+        return self.visit_named_decl(d)
 
     def visit_iface_method_decl(self, d: IfaceMethodDecl) -> None:
         return self.visit_func_base_decl(d)
@@ -242,7 +252,9 @@ class DeclVisitor:
     def visit_package(self, p: Package) -> None:
         for i in p.children:
             self.handle_decl(i)
+        return self.visit_named_decl(p)
 
     def visit_package_group(self, g: PackageGroup) -> None:
         for i in g.children:
             self.handle_decl(i)
+        return self.visit_decl(g)
