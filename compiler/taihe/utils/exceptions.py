@@ -153,7 +153,7 @@ class StructFieldTypeError(DiagError):
 
     def __init__(self, decl: "StructFieldDecl"):
         self.loc = decl.ty_ref.loc
-        self.name = decl.ty_ref.name
+        self.name = decl.ty_ref.symbol
 
 
 @dataclass
@@ -164,7 +164,7 @@ class ExtendsTypeError(DiagError):
 
     def __init__(self, decl: "IfaceParentDecl"):
         self.loc = decl.ty_ref.loc
-        self.name = decl.ty_ref.name
+        self.name = decl.ty_ref.symbol
 
 
 @dataclass

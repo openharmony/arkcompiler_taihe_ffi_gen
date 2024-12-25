@@ -55,9 +55,9 @@ class _PrettyPrinter(DeclVisitor):
 
     def get_type_ref_decl(self, d: TypeRefDecl) -> str:
         if d.is_resolved:
-            return f"{d.name} /* {self.get_real_type(d.resolved_ty)} */"
+            return f"{d.symbol} /* {self.get_real_type(d.resolved_ty)} */"
         else:
-            return d.name
+            return d.symbol
 
     def get_type(self, t: Type) -> str:
         return self.type_name_printer.handle_type(t)
@@ -66,10 +66,10 @@ class _PrettyPrinter(DeclVisitor):
         return "<error type>" if not t else self.get_type(t)
 
     def get_package_ref_decl(self, d: PackageRefDecl) -> str:
-        return d.name
+        return d.symbol
 
     def get_decl_ref_decl(self, d: DeclarationRefDecl) -> str:
-        return d.name
+        return d.symbol
 
     def get_parent_decl(self, d: IfaceParentDecl) -> str:
         return self.get_type_ref_decl(d.ty_ref)
@@ -92,7 +92,7 @@ class _PrettyPrinter(DeclVisitor):
     def visit_decl_import_decl(self, d: DeclarationImportDecl):
         self.buffer.write(self.indent * 2 * " ")
         self.buffer.write(
-            f"from {self.get_package_ref_decl(d.decl_ref.pkg)} use {self.get_decl_ref_decl(d.decl_ref)}"
+            f"from {self.get_package_ref_decl(d.decl_ref.pkg_ref)} use {self.get_decl_ref_decl(d.decl_ref)}"
         )
         if d.is_alias():
             self.buffer.write(f" as {d.name}")

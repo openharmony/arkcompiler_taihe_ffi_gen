@@ -89,10 +89,10 @@ class _ResolveImportsPass(DeclVisitor):
         if d.is_resolved:
             return
 
-        if pkg := self.pkg_group.lookup(d.name):
+        if pkg := self.pkg_group.lookup(d.symbol):
             d.resolved_pkg = pkg
         else:
-            self.diag.emit(PackageNotExistError(d.name, loc=d.loc))
+            self.diag.emit(PackageNotExistError(d.symbol, loc=d.loc))
             d.resolved_pkg = None
 
         d.is_resolved = True
@@ -102,27 +102,27 @@ class _ResolveImportsPass(DeclVisitor):
         if d.is_resolved:
             return
 
-        self.handle_decl(d.pkg)
+        self.handle_decl(d.pkg_ref)
 
-        if (pkg := d.pkg.resolved_pkg) is None:
+        if (pkg := d.pkg_ref.resolved_pkg) is None:
             # No need to repeatedly throw exceptions for package import errors
             d.resolved_decl = None
-        elif isinstance(decl := pkg.decls.get(d.name), TypeDecl):
+        elif isinstance(decl := pkg.decls.get(d.symbol), TypeDecl):
             d.resolved_decl = decl
         elif decl:
-            self.diag.emit(NotATypeError(d.name, loc=d.loc))
+            self.diag.emit(NotATypeError(d.symbol, loc=d.loc))
             d.resolved_decl = None
         else:
-            self.diag.emit(DeclNotExistError(d.name, loc=d.loc))
+            self.diag.emit(DeclNotExistError(d.symbol, loc=d.loc))
             d.resolved_decl = None
 
-        d.pkg.is_resolved = True
+        d.pkg_ref.is_resolved = True
 
     def visit_type_ref_decl(self, d: TypeRefDecl):
         if d.is_resolved:
             return
 
-        xs = d.name.rsplit(".", maxsplit=1)
+        xs = d.symbol.rsplit(".", maxsplit=1)
 
         # fn foo(x: com.example.Bar)
         if len(xs) == 2:

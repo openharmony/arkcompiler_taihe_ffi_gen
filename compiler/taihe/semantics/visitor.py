@@ -170,12 +170,12 @@ class DeclVisitor:
     ### Imports ###
 
     def visit_package_ref_decl(self, d: PackageRefDecl) -> None:
-        return self.visit_named_decl(d)
+        return self.visit_decl(d)
 
     def visit_decl_ref_decl(self, d: DeclarationRefDecl) -> None:
         for i in d.children:
             self.handle_decl(i)
-        return self.visit_named_decl(d)
+        return self.visit_decl(d)
 
     def visit_import_decl(self, d: ImportDecl) -> None:
         return self.visit_named_decl(d)
@@ -201,7 +201,7 @@ class DeclVisitor:
         return self.visit_named_decl(d)
 
     def visit_type_ref_decl(self, d: TypeRefDecl) -> None:
-        return self.visit_named_decl(d)
+        return self.visit_decl(d)
 
     ### Typedef ###
 
