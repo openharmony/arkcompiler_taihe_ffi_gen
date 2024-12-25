@@ -1,7 +1,7 @@
 from contextlib import suppress
 from typing import Any
 
-from antlr4 import CommonTokenStream, FileStream, InputStream, TerminalNode
+from antlr4 import CommonTokenStream, FileStream, InputStream, TerminalNode, Token
 from antlr4.error.ErrorListener import ErrorListener
 
 from taihe.parse.antlr.TaiheAST import TaiheAST
@@ -12,6 +12,31 @@ from taihe.utils.exceptions import IDLSyntaxError
 from taihe.utils.sources import SourceBase, SourceBuffer, SourceFile, SourceLocation
 
 
+def add_pos(ctx):
+    if isinstance(ctx, Token):
+        text = ctx.text.splitlines()
+        row = ctx.line
+        col = ctx.column
+        row_offset = len(text) - 1
+        col_offset = len(text[-1])
+        ctx._beg = (
+            row,
+            col + 1,
+        )
+        ctx._end = (
+            row + row_offset,
+            col + col_offset if row_offset == 0 else col_offset,
+        )
+    elif isinstance(ctx, TerminalNode):
+        add_pos(ctx.symbol)
+        ctx._beg = ctx.symbol._beg
+        ctx._end = ctx.symbol._end
+    else:
+        for child in ctx.children:
+            add_pos(child)
+        ctx._beg, ctx._end = ctx.children[0]._beg, ctx.children[-1]._end
+
+
 class TaiheErrorListener(ErrorListener):
     def __init__(self, source: SourceBase, diag: AbstractDiagnosticsManager) -> None:
         super().__init__()
@@ -20,36 +45,18 @@ class TaiheErrorListener(ErrorListener):
         self.has_error = False
 
     def syntaxError(self, recognizer, offendingSymbol, line, column, msg, e):
+        add_pos(offendingSymbol)
         self.diag.emit(
             IDLSyntaxError(
-                offendingSymbol.text,
+                offendingSymbol,
                 loc=SourceLocation(
-                    self.source, line, column + 1, len(offendingSymbol.text)
+                    self.source,
+                    *offendingSymbol._beg,
+                    *offendingSymbol._end,
                 ),
             )
         )
         self.has_error = True
-
-
-def add_pos(ctx):
-    if isinstance(ctx, TerminalNode):
-        text = ctx.symbol.text.splitlines()
-        row = ctx.symbol.line
-        col = ctx.symbol.column
-        row_offset = len(text) - 1
-        col_offset = len(text[-1])
-        ctx._beg = ctx.symbol._beg = (
-            row,
-            col + 1,
-        )
-        ctx._end = ctx.symbol._end = (
-            row + row_offset,
-            col + col_offset if row_offset == 0 else col_offset,
-        )
-    else:
-        for child in ctx.children:
-            add_pos(child)
-        ctx._beg, ctx._end = ctx.children[0]._beg, ctx.children[-1]._end
 
 
 def issubkind(real_kind, node_kind):
