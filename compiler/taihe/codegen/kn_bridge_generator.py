@@ -127,6 +127,22 @@ class KNBridgeGenerator:
 
         kn_bridge_pkg_name = "prefix"  # need to read from pkg_prefix
 
+        kn_base_type_list = [
+            "Byte",
+            "Short",
+            "Int",
+            "Long",
+            "Float",
+            "Double",
+            "Char",
+            "Boolean",
+            "Unit",
+            "UByte",
+            "UShort",
+            "Uint",
+            "ULong",
+        ]
+
         kn_bridge_pkg_target.write(
             f"#ifndef KONAN_{kn_bridge_pkg_name.upper()}_H\n"
             f"#define KONAN_{kn_bridge_pkg_name.upper()}_H\n"
@@ -152,79 +168,35 @@ class KNBridgeGenerator:
             f"struct {kn_bridge_pkg_name}_KType;\n"
             f"typedef struct {kn_bridge_pkg_name}_KType {kn_bridge_pkg_name}_KType;\n"
             f"\n"
-            f"typedef struct {{\n"
-            f"{kn_bridge_pkg_name}_KNativePtr pinned;\n"
-            f"}} {kn_bridge_pkg_name}_kref_kotlin_Byte;\n"
-            f"typedef struct {{\n"
-            f"{kn_bridge_pkg_name}_KNativePtr pinned;\n"
-            f"}} {kn_bridge_pkg_name}_kref_kotlin_Short;\n"
-            f"typedef struct {{\n"
-            f"{kn_bridge_pkg_name}_KNativePtr pinned;\n"
-            f"}} {kn_bridge_pkg_name}_kref_kotlin_Int;\n"
-            f"typedef struct {{\n"
-            f"{kn_bridge_pkg_name}_KNativePtr pinned;\n"
-            f"}} {kn_bridge_pkg_name}_kref_kotlin_Long;\n"
-            f"typedef struct {{\n"
-            f"{kn_bridge_pkg_name}_KNativePtr pinned;\n"
-            f"}} {kn_bridge_pkg_name}_kref_kotlin_Float;\n"
-            f"typedef struct {{\n"
-            f"{kn_bridge_pkg_name}_KNativePtr pinned;\n"
-            f"}} {kn_bridge_pkg_name}_kref_kotlin_Double;\n"
-            f"typedef struct {{\n"
-            f"{kn_bridge_pkg_name}_KNativePtr pinned;\n"
-            f"}} {kn_bridge_pkg_name}_kref_kotlin_Char;\n"
-            f"typedef struct {{\n"
-            f"{kn_bridge_pkg_name}_KNativePtr pinned;\n"
-            f"}} {kn_bridge_pkg_name}_kref_kotlin_Boolean;\n"
-            f"typedef struct {{\n"
-            f"{kn_bridge_pkg_name}_KNativePtr pinned;\n"
-            f"}} {kn_bridge_pkg_name}_kref_kotlin_Unit;\n"
-            f"typedef struct {{\n"
-            f"{kn_bridge_pkg_name}_KNativePtr pinned;\n"
-            f"}} {kn_bridge_pkg_name}_kref_kotlin_UByte;\n"
-            f"typedef struct {{\n"
-            f"{kn_bridge_pkg_name}_KNativePtr pinned;\n"
-            f"}} {kn_bridge_pkg_name}_kref_kotlin_UShort;\n"
-            f"typedef struct {{\n"
-            f"{kn_bridge_pkg_name}_KNativePtr pinned;\n"
-            f"}} {kn_bridge_pkg_name}_kref_kotlin_UInt;\n"
-            f"typedef struct {{\n"
-            f"{kn_bridge_pkg_name}_KNativePtr pinned;\n"
-            f"}} {kn_bridge_pkg_name}_kref_kotlin_ULong;\n"
+        )
+        for baseType in kn_base_type_list:
+            kn_bridge_pkg_target.write(
+                f"typedef struct {{\n"
+                f"{kn_bridge_pkg_name}_KNativePtr pinned;\n"
+                f"}} {kn_bridge_pkg_name}_kref_kotlin_{baseType};\n"
+            )
+
+        kn_bridge_pkg_target.write(
             f"typedef struct {{\n"
             f"  /* Service functions. */\n"
             f"  void (*DisposeStablePointer)({kn_bridge_pkg_name}_KNativePtr ptr);\n"
             f"  void (*DisposeString)(const char* string);\n"
             f"  {kn_bridge_pkg_name}_KBoolean (*IsInstance)({kn_bridge_pkg_name}_KNativePtr ref, const {kn_bridge_pkg_name}_KType* type);\n"
-            f"  {kn_bridge_pkg_name}_kref_kotlin_Byte (*createNullableByte)({kn_bridge_pkg_name}_KByte);\n"
-            f"  {kn_bridge_pkg_name}_KByte (*getNonNullValueOfByte)({kn_bridge_pkg_name}_kref_kotlin_Byte);\n"
-            f"  {kn_bridge_pkg_name}_kref_kotlin_Short (*createNullableShort)({kn_bridge_pkg_name}_KShort);\n"
-            f"  {kn_bridge_pkg_name}_KShort (*getNonNullValueOfShort)({kn_bridge_pkg_name}_kref_kotlin_Short);\n"
-            f"  {kn_bridge_pkg_name}_kref_kotlin_Int (*createNullableInt)({kn_bridge_pkg_name}_KInt);\n"
-            f"  {kn_bridge_pkg_name}_KInt (*getNonNullValueOfInt)({kn_bridge_pkg_name}_kref_kotlin_Int);\n"
-            f"  {kn_bridge_pkg_name}_kref_kotlin_Long (*createNullableLong)({kn_bridge_pkg_name}_KLong);\n"
-            f"  {kn_bridge_pkg_name}_KLong (*getNonNullValueOfLong)({kn_bridge_pkg_name}_kref_kotlin_Long);\n"
-            f"  {kn_bridge_pkg_name}_kref_kotlin_Float (*createNullableFloat)({kn_bridge_pkg_name}_KFloat);\n"
-            f"  {kn_bridge_pkg_name}_KFloat (*getNonNullValueOfFloat)({kn_bridge_pkg_name}_kref_kotlin_Float);\n"
-            f"  {kn_bridge_pkg_name}_kref_kotlin_Double (*createNullableDouble)({kn_bridge_pkg_name}_KDouble);\n"
-            f"  {kn_bridge_pkg_name}_KDouble (*getNonNullValueOfDouble)({kn_bridge_pkg_name}_kref_kotlin_Double);\n"
-            f"  {kn_bridge_pkg_name}_kref_kotlin_Char (*createNullableChar)({kn_bridge_pkg_name}_KChar);\n"
-            f"  {kn_bridge_pkg_name}_KChar (*getNonNullValueOfChar)({kn_bridge_pkg_name}_kref_kotlin_Char);\n"
-            f"  {kn_bridge_pkg_name}_kref_kotlin_Boolean (*createNullableBoolean)({kn_bridge_pkg_name}_KBoolean);\n"
-            f"  {kn_bridge_pkg_name}_KBoolean (*getNonNullValueOfBoolean)({kn_bridge_pkg_name}_kref_kotlin_Boolean);\n"
-            f"  {kn_bridge_pkg_name}_kref_kotlin_Unit (*createNullableUnit)(void);\n"
-            f"  {kn_bridge_pkg_name}_kref_kotlin_UByte (*createNullableUByte)({kn_bridge_pkg_name}_KUByte);\n"
-            f"  {kn_bridge_pkg_name}_KUByte (*getNonNullValueOfUByte)({kn_bridge_pkg_name}_kref_kotlin_UByte);\n"
-            f"  {kn_bridge_pkg_name}_kref_kotlin_UShort (*createNullableUShort)({kn_bridge_pkg_name}_KUShort);\n"
-            f"  {kn_bridge_pkg_name}_KUShort (*getNonNullValueOfUShort)({kn_bridge_pkg_name}_kref_kotlin_UShort);\n"
-            f"  {kn_bridge_pkg_name}_kref_kotlin_UInt (*createNullableUInt)({kn_bridge_pkg_name}_KUInt);\n"
-            f"  {kn_bridge_pkg_name}_KUInt (*getNonNullValueOfUInt)({kn_bridge_pkg_name}_kref_kotlin_UInt);\n"
-            f"  {kn_bridge_pkg_name}_kref_kotlin_ULong (*createNullableULong)({kn_bridge_pkg_name}_KULong);\n"
-            f"  {kn_bridge_pkg_name}_KULong (*getNonNullValueOfULong)({kn_bridge_pkg_name}_kref_kotlin_ULong);\n"
-            f"\n"
-            f"  /* User functions. */\n"
-            f"  struct {{\n"
-            f"    struct {{\n"
+        )
+
+        for baseType in kn_base_type_list:
+            if baseType != "Unit":
+                kn_bridge_pkg_target.write(
+                    f"  {kn_bridge_pkg_name}_kref_kotlin_{baseType} (*createNullable{baseType})({kn_bridge_pkg_name}_K{baseType});\n"
+                    f"  {kn_bridge_pkg_name}_K{baseType} (*getNonNullValueOf{baseType})({kn_bridge_pkg_name}_kref_kotlin_{baseType});\n"
+                )
+            else:
+                kn_bridge_pkg_target.write(
+                    f"  {kn_bridge_pkg_name}_kref_kotlin_Unit (*createNullableUnit)(void);\n"
+                )
+
+        kn_bridge_pkg_target.write(
+            f"\n" f"  /* User functions. */\n" f"  struct {{\n" f"    struct {{\n"
         )
         for func in pkg.functions:
             kn_bridge_func_info = KNBridgeFuncBaseDeclInfo.get(self.am, func)
