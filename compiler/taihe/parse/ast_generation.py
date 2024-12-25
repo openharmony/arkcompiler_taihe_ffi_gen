@@ -1,7 +1,7 @@
 from contextlib import suppress
 from typing import Any
 
-from antlr4 import CommonTokenStream, FileStream, InputStream
+from antlr4 import CommonTokenStream, FileStream, InputStream, TerminalNode
 from antlr4.error.ErrorListener import ErrorListener
 
 from taihe.parse.antlr.TaiheAST import TaiheAST
@@ -31,6 +31,27 @@ class TaiheErrorListener(ErrorListener):
         self.has_error = True
 
 
+def add_pos(ctx):
+    if isinstance(ctx, TerminalNode):
+        text = ctx.symbol.text.splitlines()
+        row = ctx.symbol.line
+        col = ctx.symbol.column
+        row_offset = len(text) - 1
+        col_offset = len(text[-1])
+        ctx._beg = ctx.symbol._beg = (
+            row,
+            col + 1,
+        )
+        ctx._end = ctx.symbol._end = (
+            row + row_offset,
+            col + col_offset if row_offset == 0 else col_offset,
+        )
+    else:
+        for child in ctx.children:
+            add_pos(child)
+        ctx._beg, ctx._end = ctx.children[0]._beg, ctx.children[-1]._end
+
+
 def issubkind(real_kind, node_kind):
     ctx_kind = node_kind + "Context"
     ctx_type = getattr(TaiheParser, ctx_kind)
@@ -57,8 +78,15 @@ def visit(node_kind: str, ctx) -> Any:
                 node = visit(node_kind[:-3], ctx)
         return node
     if node_kind == "token":
-        return TaiheAST.token(text=ctx.text, line=ctx.line, column=ctx.column)
-    kwargs = {}
+        return TaiheAST.token(
+            _beg=ctx._beg,
+            _end=ctx._end,
+            text=ctx.text,
+        )
+    kwargs = {
+        "_beg": ctx._beg,
+        "_end": ctx._end,
+    }
     for attr_full_name, attr_ctx in ctx.__dict__.items():
         if attr_full_name[0].isupper() or attr_full_name.startswith("token"):
             attr_kind_name, attr_name = attr_full_name.split("_", 1)
@@ -85,5 +113,7 @@ def generate_ast(source: SourceBase, diag: AbstractDiagnosticsManager) -> TaiheA
     parser.removeErrorListeners()
     parser.addErrorListener(error_listener)
     tree = parser.spec()
+
+    add_pos(tree)
 
     return visit("Spec", tree)

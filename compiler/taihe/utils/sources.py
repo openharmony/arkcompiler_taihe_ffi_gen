@@ -84,32 +84,42 @@ class SourceManager:
         return self._pkg_to_source.values()
 
 
-@dataclass(slots=True)
+@dataclass
 class SourceLocation:
     """Represents a location (either a position or a region) within a file."""
 
     file: SourceBase
     """Required: The source file associated with the location."""
 
-    line: int = 0
-    """Optional: The line number (1-based). Use 0 if unavailable."""
+    has_pos: bool
 
-    column: int = 0
-    """Optional: The column number (1-based). Use 0 if unavailable."""
+    start_row: int
+    """Optional: The start line number (1-based)."""
 
-    span: int = 0
-    """Optional: The number of characters in the region.
-    Use 0 if the location does not represent a region.
+    start_col: int
+    """Optional: The start column number (1-based)."""
 
-    This region is defined as `[column, column + span)` within the current line.
-    Note that the region must NOT span multiple lines.
-    """
+    stop_row: int
+    """Optional: The stop line number (1-based)."""
+
+    stop_col: int
+    """Optional: The stop column number (1-based)."""
+
+    def __init__(self, file: SourceBase, *pos: int):
+        self.file = file
+
+        if len(pos) == 4:
+            self.start_row, self.start_col, self.stop_row, self.stop_col = pos
+            self.has_pos = True
+        elif len(pos) == 0:
+            self.start_row, self.start_col, self.stop_row, self.stop_col = 0, 0, 0, 0
+            self.has_pos = False
+        else:
+            raise ValueError()
 
     def __str__(self) -> str:
         r = self.file.source_identifier
-        if self.line != 0:
-            r = f"{r}:{self.line}"
-            if self.column != 0:
-                r = f"{r}:{self.column}"
+        if self.has_pos:
+            r = f"{r}:{self.start_row}:{self.start_col}"
 
         return r

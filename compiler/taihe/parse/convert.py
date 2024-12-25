@@ -133,16 +133,9 @@ class AstConverter(Visitor):
         self.source = source
         self.diag = diag
 
-    def loc(self, t: ast.token | list[ast.token]):
+    def loc(self, t: ast.any):
         # Remember, token.column is 0-based.
-        if isinstance(t, ast.token):
-            col = 0 if t.column is None else t.column + 1
-            return SourceLocation(self.source, t.line or 0, col, len(t.text))
-
-        first_begin = 0 if t[0].column is None else t[0].column + 1
-        last_begin = 0 if t[-1].column is None else t[-1].column + 1
-        span = max(last_begin + len(t[-1].text) - first_begin, 0)
-        return SourceLocation(self.source, t[0].line or 0, first_begin, span)
+        return SourceLocation(self.source, *t._beg, *t._end)
 
     @override
     def visit_PrimitiveType(self, node: ast.PrimitiveType) -> TypeRefDecl:
@@ -155,7 +148,7 @@ class AstConverter(Visitor):
     @override
     def visit_UserType(self, node: ast.UserType) -> TypeRefDecl:
         if node.pkg_name:
-            loc = self.loc([*node.pkg_name.parts, node.decl_name])
+            loc = self.loc(node)
             name = pkg2str(node.pkg_name) + "." + str(node.decl_name)
         else:
             loc = self.loc(node.decl_name)
@@ -221,7 +214,7 @@ class AstConverter(Visitor):
 
     @override
     def visit_UsePackage(self, node: ast.UsePackage) -> Iterable[PackageImportDecl]:
-        pkg = PackageRefDecl(pkg2str(node.pkg_name), self.loc(node.pkg_name.parts))
+        pkg = PackageRefDecl(pkg2str(node.pkg_name), self.loc(node.pkg_name))
         if node.pkg_alias:
             yield PackageImportDecl(
                 pkg,
@@ -235,7 +228,7 @@ class AstConverter(Visitor):
 
     @override
     def visit_UseSymbol(self, node: ast.UseSymbol) -> Iterable[DeclarationImportDecl]:
-        pkg = PackageRefDecl(pkg2str(node.pkg_name), self.loc(node.pkg_name.parts))
+        pkg = PackageRefDecl(pkg2str(node.pkg_name), self.loc(node.pkg_name))
         for p in node.decl_alias_pairs:
             decl = DeclarationRefDecl(str(p.decl_name), self.loc(p.decl_name), pkg)
             if p.decl_alias:

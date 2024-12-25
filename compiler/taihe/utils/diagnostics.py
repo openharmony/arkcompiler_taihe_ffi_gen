@@ -202,32 +202,38 @@ class DiagnosticsManager(AbstractDiagnosticsManager):
     # TODO: could be slow.
     def _render_source_location(self, loc: "SourceLocation"):
         MAX_LINE_NO_SPACE = 5
-        if loc.line == 0:
+        if not loc.has_pos:
             return
 
         line_contents = loc.file.read()
-        if loc.line - 1 >= len(line_contents):
-            line = len(line_contents)
-            line_content = line_contents[line - 1].rstrip("\n")
-            col_begin = len(line_content)
-            col_end = len(line_content) + 1
-        else:
-            line = loc.line
-            line_content = line_contents[line - 1].rstrip("\n")
-            col_begin = min(loc.column - 1, len(line_content))
-            col_end = min(loc.column - 1 + max(loc.span, 1), len(line_content) + 1)
 
-        # The first line: content.
-        self._write(f"{line:{MAX_LINE_NO_SPACE}} | {line_content}\n")
+        if loc.start_row < 1 or loc.stop_row > len(line_contents):
+            return
 
-        # The second line: marker.
-        markers = "^" * (col_end - col_begin)
-        c = self._color_filter_fn
-        self._write(
-            f"{'':{MAX_LINE_NO_SPACE}} | "
-            f"{c(AnsiStyle.GREEN + AnsiStyle.BRIGHT)}"
-            f"{'':{col_begin}}{markers}{c(AnsiStyle.RESET_ALL)}\n"
-        )
+        for line, line_content in enumerate(line_contents, 1):
+            if line < loc.start_row or line > loc.stop_row:
+                continue
+
+            line_content = line_content.rstrip("\n")
+
+            # The first line: content.
+            self._write(f"{line:{MAX_LINE_NO_SPACE}} | " f"{line_content}\n")
+
+            # The second line: marker.
+            markers = "".join(
+                (
+                    " "
+                    if (line == loc.start_row and col < loc.start_col)
+                    or (line == loc.stop_row and col > loc.stop_col)
+                    else "^"
+                )
+                for col in range(1, len(line_content) + 1)
+            )
+
+            self._write(
+                f"{'':{MAX_LINE_NO_SPACE}} | "
+                f"{self._color_filter_fn(AnsiStyle.GREEN + AnsiStyle.BRIGHT)}{markers}{self._color_filter_fn(AnsiStyle.RESET_ALL)}\n"
+            )
 
     def _render(self, d: DiagBase):
         self._write(f"{d._format(self._color_filter_fn)}\n")
