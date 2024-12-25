@@ -12,7 +12,6 @@ from taihe.semantics.declarations import (
     IfaceDecl,
     IfaceMethodDecl,
     ImportDecl,
-    NamedDecl,
     Package,
     PackageImportDecl,
     PackageRefDecl,
@@ -258,7 +257,6 @@ class AstConverter(Visitor):
                 print(f"visit_Spec: Ignoring {n.__class__.__qualname__}")
                 continue
 
-            assert isinstance(d, NamedDecl)
             with self.diag.capture_error():
                 pkg.add_declaration(d)
 
