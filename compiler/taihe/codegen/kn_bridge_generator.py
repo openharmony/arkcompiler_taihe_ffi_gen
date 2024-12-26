@@ -297,12 +297,12 @@ class KNBridgeGenerator:
             f"\n"
             f"class ScopedRunnableState {{\n"
             f"public:\n"
-            f"   ScopedRunnableState() noexcept {{ Kotlin_mm_switchThreadStateRunnable(); }}\n"
-            f"   ~ScopedRunnableState() {{ Kotlin_mm_switchThreadStateNative(); }}\n"
-            f"   ScopedRunnableState(const ScopedRunnableState&) = delete;\n"
-            f"   ScopedRunnableState(ScopedRunnableState&&) = delete;\n"
-            f"   ScopedRunnableState& operator=(const ScopedRunnableState&) = delete;\n"
-            f"   ScopedRunnableState& operator=(ScopedRunnableState&&) = delete;\n"
+            f"  ScopedRunnableState() noexcept {{ Kotlin_mm_switchThreadStateRunnable(); }}\n"
+            f"  ~ScopedRunnableState() {{ Kotlin_mm_switchThreadStateNative(); }}\n"
+            f"  ScopedRunnableState(const ScopedRunnableState&) = delete;\n"
+            f"  ScopedRunnableState(ScopedRunnableState&&) = delete;\n"
+            f"  ScopedRunnableState& operator=(const ScopedRunnableState&) = delete;\n"
+            f"  ScopedRunnableState& operator=(ScopedRunnableState&&) = delete;\n"
             f"}};\n"
             f"\n"
             f"static void DisposeStablePointerImpl({kn_bridge_pkg_name}_KNativePtr ptr) {{\n"
@@ -333,21 +333,21 @@ class KNBridgeGenerator:
                     f"}}\n"
                     f'extern "C" {kn_bridge_pkg_name}_K{predefinedType} Kotlin_unbox{predefinedType}(KObjHeader*);\n'
                     f"static {kn_bridge_pkg_name}_K{predefinedType} getNonNullValueOf{predefinedType}Impl({kn_bridge_pkg_name}_kref_kotlin_{predefinedType} value) {{\n"
-                    f"Kotlin_initRuntimeIfNeeded();\n"
-                    f"ScopedRunnableState stateGuard;\n"
-                    f"KObjHolder value_holder;\n"
-                    f"return Kotlin_unbox{predefinedType}(DerefStablePointer(value.pinned, value_holder.slot()));\n"
+                    f"  Kotlin_initRuntimeIfNeeded();\n"
+                    f"  ScopedRunnableState stateGuard;\n"
+                    f"  KObjHolder value_holder;\n"
+                    f"  return Kotlin_unbox{predefinedType}(DerefStablePointer(value.pinned, value_holder.slot()));\n"
                     f"}}\n"
                 )
             else:
                 kn_bridge_pkg_target.write(
                     f'extern "C" KObjHeader* Kotlin_box{predefinedType}( KObjHeader**);\n'
                     f"static {kn_bridge_pkg_name}_kref_kotlin_{predefinedType} createNullable{predefinedType}Impl() {{\n"
-                    f"Kotlin_initRuntimeIfNeeded();\n"
-                    f"ScopedRunnableState stateGuard;\n"
-                    f"KObjHolder result_holder;\n"
-                    f"KObjHeader* result = Kotlin_box{predefinedType}( result_holder.slot());\n"
-                    f"return {kn_bridge_pkg_name}_kref_kotlin_{predefinedType} {{ .pinned = CreateStablePointer(result) }};\n"
+                    f"  Kotlin_initRuntimeIfNeeded();\n"
+                    f"  ScopedRunnableState stateGuard;\n"
+                    f" KObjHolder result_holder;\n"
+                    f"  KObjHeader* result = Kotlin_box{predefinedType}( result_holder.slot());\n"
+                    f"  return {kn_bridge_pkg_name}_kref_kotlin_{predefinedType} {{ .pinned = CreateStablePointer(result) }};\n"
                     f"}}\n"
                 )
         for func in pkg.functions:
@@ -363,8 +363,8 @@ class KNBridgeGenerator:
                 kn_bridge_pkg_target.write(f"  KObjHolder {param.name}_holder;\n")
             kn_bridge_pkg_target.write(
                 f"  try {{\n"
-                f"  auto result = {kn_bridge_func_info.konan_proj_name}({kn_bridge_func_info.convert_params_str});\n"
-                f"  return {kn_bridge_func_info.return_ty_str};\n"
+                f"    auto result = {kn_bridge_func_info.konan_proj_name}({kn_bridge_func_info.convert_params_str});\n"
+                f"    return {kn_bridge_func_info.return_ty_str};\n"
                 f"  }} catch (...) {{\n"
                 f"    SetCurrentFrame(reinterpret_cast<KObjHeader**>(frame));\n"
                 f"    HandleCurrentExceptionWhenLeavingKotlinCode();\n"
