@@ -26,7 +26,7 @@ specField
     | KW_ENUM token_name = ID LEFT_BRACE (EnumFieldLst_fields += enumField)+ RIGHT_BRACE # enum
     | KW_INTERFACE token_name = ID (COLON InterfaceParentLst_extends += interfaceParent (COMMA InterfaceParentLst_extends += interfaceParent)*)? LEFT_BRACE (InterfaceFieldLst_fields += interfaceField)* RIGHT_BRACE # interface
     | KW_FUNCTION token_name = ID LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS COLON
-        (LEFT_PARENTHESIS (RetvalLst_retvals += retval (COMMA RetvalLst_retvals += retval)*)? RIGHT_PARENTHESIS | RetvalLst_retvals += retval) SEMICOLON # function
+        (LEFT_PARENTHESIS (RetvalLst_retvals += retval (COMMA RetvalLst_retvals += retval)*)? RIGHT_PARENTHESIS | RetvalLst_retvals += retval) SEMICOLON # globalFunction
     | KW_TYPE token_name = ID ASSIGN_TO Type_ty = type SEMICOLON # typeAlias
     ;
 
@@ -55,6 +55,24 @@ retval
     : Type_ty = type
     ;
 
+///////////////
+// Attribute //
+///////////////
+
+attribute
+    : AT LEFT_BRACKET (AttributeItemLst_items += attributeItem (COMMA AttributeItemLst_items += attributeItem)*)? RIGHT_BRACKET
+    ;
+
+attributeItem
+    : token_name = ID (ASSIGN_TO AttributeValueOpt_val = attributeValue)?
+    ;
+
+attributeValue
+    : StringExpr_expr = stringExpr # stringAttributeValue
+    | IntExpr_expr = intExpr # intAttributeValue
+    | BoolExpr_expr = boolExpr # boolAttributeValue
+    ;
+
 //////////
 // Type //
 //////////
@@ -64,7 +82,7 @@ type
     | (PkgNameOpt_pkg_name = pkgName DOT)? token_decl_name = ID # userType
     | token_name = ID LEFT_PARENTHESIS (TypeLst_args += type (COMMA TypeLst_args += type)*)? RIGHT_PARENTHESIS # genericType
     | <assoc = right> LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS ARROW
-        (LEFT_BRACKET (RetvalLst_retvals += retval (COMMA RetvalLst_retvals += retval)*)? RIGHT_BRACKET | RetvalLst_retvals += retval) # functionType
+        (LEFT_PARENTHESIS (RetvalLst_retvals += retval (COMMA RetvalLst_retvals += retval)*)? RIGHT_PARENTHESIS | RetvalLst_retvals += retval) # functionType
     ;
 
 ////////////////
@@ -167,6 +185,14 @@ SLASH
 
 PERCENT
     : '%'
+    ;
+
+AT
+    : '@'
+    ;
+
+DOLLAR
+    : '$'
     ;
 
 LEFT_SHIFT

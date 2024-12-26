@@ -1,4 +1,3 @@
-from collections.abc import Iterable
 from typing import TYPE_CHECKING, TypeVar
 
 from typing_extensions import override
@@ -7,7 +6,6 @@ from taihe.semantics.declarations import (
     DeclarationImportDecl,
     DeclarationRefDecl,
     EnumDecl,
-    FuncBaseDecl,
     IfaceDecl,
     NamedDecl,
     Package,
@@ -47,7 +45,7 @@ def analyze_semantics(pg: PackageGroup, diag: AbstractDiagnosticsManager):
     _check_decl_confilct_with_namespace(pg, diag)
     _ResolveImportsPass(diag).handle_decl(pg)
     _resolve_typedef(pg, diag)
-    _CheckFieldCollisionErrorPass(diag).handle_decl(pg)
+    _CheckFieldNameCollisionErrorPass(diag).handle_decl(pg)
     _check_struct_fields(pg, diag)
     _check_iface_parents(pg, diag)
 
@@ -178,7 +176,7 @@ class _ResolveImportsPass(DeclVisitor):
         d.is_resolved = True
 
 
-class _CheckFieldCollisionErrorPass(DeclVisitor):
+class _CheckFieldNameCollisionErrorPass(DeclVisitor):
     """Checks for name and value collisions in declarations."""
 
     diag: AbstractDiagnosticsManager
@@ -187,36 +185,14 @@ class _CheckFieldCollisionErrorPass(DeclVisitor):
         self.diag = diag
 
     @override
-    def visit_package(self, p: Package) -> None:
-        self.check_field_name_collision(p.children)
-        return super().visit_package(p)
-
-    @override
-    def visit_enum_decl(self, d: EnumDecl) -> None:
-        self.check_field_name_collision(d.children)
-        return super().visit_enum_decl(d)
-
-    @override
-    def visit_func_base_decl(self, d: FuncBaseDecl) -> None:
-        self.check_field_name_collision(d.children)
-        return super().visit_func_base_decl(d)
-
-    @override
-    def visit_struct_decl(self, d: StructDecl) -> None:
-        self.check_field_name_collision(d.children)
-        return super().visit_struct_decl(d)
-
-    @override
-    def visit_iface_decl(self, d: IfaceDecl) -> None:
-        self.check_field_name_collision(d.children)
-        return super().visit_iface_decl(d)
-
-    def check_field_name_collision(self, items: Iterable[NamedDecl]) -> None:
+    def visit_named_decl(self, d: NamedDecl) -> None:
         """Checks for duplicate field names in declarations."""
         symbol = {}
-        for f in items:
+        for f in d.children:
             if (prev := symbol.setdefault(f.name, f)) != f:
                 self.diag.emit(DeclRedefDiagError(prev, f))
+
+        return super().visit_named_decl(d)
 
 
 def _check_decl_confilct_with_namespace(

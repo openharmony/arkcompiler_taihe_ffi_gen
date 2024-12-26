@@ -1,13 +1,13 @@
 """Defines the types for declarations."""
 
-from abc import ABCMeta
+from abc import ABCMeta, abstractmethod
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, Protocol
 
 from typing_extensions import override
 
 from taihe.semantics.types import Type
-from taihe.utils.exceptions import DeclRedefDiagError
+from taihe.utils.exceptions import AttrRedefDiagError, DeclRedefDiagError
 from taihe.utils.sources import SourceLocation
 
 if TYPE_CHECKING:
@@ -25,6 +25,33 @@ class Decl(Protocol):
 
 
 class NamedDecl(Decl, metaclass=ABCMeta):
+    """Represents a declaration with a unique semantic identity within a PackageGroup symbol tree.
+
+    A `NamedDecl` is defined as any declaration that:
+    1. Exists as a meaningful entity in the symbol tree of a `PackageGroup`.
+    2. Has a fully qualified name that allows it to be uniquely identified by traversing the symbol
+       tree.
+
+    Examples:
+    - Given the file `example.package.x` containing the declaration:
+      ```
+      @[info = "xxx"]
+      struct A {
+          name: example.package.y.B;
+      }
+      ```
+      - `StructDecl("A")` is a `NamedDecl` because it corresponds to `example.package.x.A`.
+      - `StructFieldDecl("name")` is a `NamedDecl` because it corresponds to
+        `example.package.x.A.name`.
+      - `AttributeItemDecl("info")` is **not** a `NamedDecl` because it does not correspond to
+        `example.package.x.A.info`.
+      - `TypeRefDecl("example.package.y.B")` is **not** a `NamedDecl` because it does not correspond
+        to `example.package.x.A.example.package.y.B`.
+
+    By adhering to the rules, `NamedDecl` ensures that all identified declarations are semantically
+    meaningful and uniquely resolvable within the hierarchical structure of the symbol tree.
+    """
+
     KIND: ClassVar[str]
 
     name: str
@@ -52,16 +79,89 @@ class NamedDecl(Decl, metaclass=ABCMeta):
         t = self
         segments: list[str] = []
         while True:
+            if t is None:
+                segments = ["???", *segments]
+                return segments
             if isinstance(t, Package):
                 segments = [*t.name.split("."), *segments]
                 return segments
             # All objects inherenting "Decl" must has "parent" as its field.
             segments = [t.name, *segments]
             t = t.parent
-            assert t
+
+    @property
+    @abstractmethod
+    def children(self) -> Iterable["NamedDecl"]: ...
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__qualname__}<{self.name!r} in {self.parent}>"
+        return f"{self.__class__.__qualname__}<{self.segments} at {self.loc}>"
+
+
+#############
+# Attribute #
+#############
+
+
+class AttributeItemDecl(Decl):
+    name: str
+    loc: Optional[SourceLocation]
+    parent: "AttributeDecl"
+
+    value: bool | int | str | None
+
+    def __init__(
+        self,
+        name: str,
+        loc: Optional[SourceLocation],
+        parent: "AttributeDecl",
+        value: bool | int | str | None,
+    ):
+        self.name = name
+        self.loc = loc
+        self.parent = parent
+        self.value = value
+
+    @property
+    def description(self) -> str:
+        """Describes the object in a human-friendly way."""
+        return f"attribute {self.name!r}"
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__qualname__}<{self.name} at {self.loc}>"
+
+    @override
+    def _accept(self, v: "DeclVisitor") -> Any:
+        return v.visit_decl(self)
+
+
+class AttributeDecl(Decl):
+    parent: Decl
+
+    items: dict[str, AttributeItemDecl]
+
+    def __init__(self, parent: Decl):
+        self.parent = parent
+        self.items = {}
+
+    def add_item(
+        self,
+        name: str,
+        loc: Optional[SourceLocation],
+        value: bool | int | str | None = None,
+    ):
+        i = AttributeItemDecl(name, loc, self, value)
+        if prev := self.items.get(i.name, None):
+            raise AttrRedefDiagError(prev, i)
+        else:
+            self.items[i.name] = i
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__qualname__}<{self.parent}"
+
+
+##############
+# References #
+##############
 
 
 class TypeRefDecl(Decl):
@@ -100,6 +200,66 @@ class TypeRefDecl(Decl):
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_type_ref_decl(self)
 
+    def __repr__(self) -> str:
+        return f"{self.__class__.__qualname__}<{self.symbol} at {self.loc}>"
+
+
+class PackageRefDecl(Decl):
+    symbol: str
+    loc: Optional[SourceLocation]
+
+    is_resolved: bool
+    resolved_pkg: Optional["Package"]
+
+    def __init__(
+        self,
+        symbol: str,
+        loc: Optional[SourceLocation],
+    ):
+        self.symbol = symbol
+        self.loc = loc
+        self.is_resolved = False
+        self.resolved_pkg = None
+
+    @override
+    def _accept(self, v: "DeclVisitor") -> Any:
+        return v.visit_package_ref_decl(self)
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__qualname__}<{self.symbol} at {self.loc}>"
+
+
+class DeclarationRefDecl(Decl):
+    symbol: str
+    loc: Optional[SourceLocation]
+
+    pkg_ref: PackageRefDecl
+
+    is_resolved: bool
+    resolved_decl: Optional["TypeDecl"]
+
+    def __init__(
+        self,
+        symbol: str,
+        loc: Optional[SourceLocation],
+        pkg_ref: PackageRefDecl,
+    ):
+        self.symbol = symbol
+        self.loc = loc
+        self.pkg_ref = pkg_ref
+        self.is_resolved = False
+        self.resolved_decl = None
+
+    @override
+    def _accept(self, v: "DeclVisitor") -> Any:
+        return v.visit_decl_ref_decl(self)
+
+    def _traverse(self, v) -> None:
+        v.handle_decl(self.pkg_ref)
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__qualname__}<{self.symbol} at {self.loc}>"
+
 
 #######################
 # Import Declarations #
@@ -134,58 +294,6 @@ class ImportDecl(NamedDecl, metaclass=ABCMeta):
     parent: Optional["Package"] = None
 
 
-class PackageRefDecl(Decl):
-    symbol: str
-    loc: Optional[SourceLocation]
-
-    is_resolved: bool
-    resolved_pkg: Optional["Package"]
-
-    def __init__(
-        self,
-        symbol: str,
-        loc: Optional[SourceLocation],
-    ):
-        self.symbol = symbol
-        self.loc = loc
-        self.is_resolved = False
-        self.resolved_pkg = None
-
-    @override
-    def _accept(self, v: "DeclVisitor") -> Any:
-        return v.visit_package_ref_decl(self)
-
-
-class DeclarationRefDecl(Decl):
-    symbol: str
-    loc: Optional[SourceLocation]
-
-    pkg_ref: PackageRefDecl
-
-    is_resolved: bool
-    resolved_decl: Optional["TypeDecl"]
-
-    def __init__(
-        self,
-        symbol: str,
-        loc: Optional[SourceLocation],
-        pkg_ref: PackageRefDecl,
-    ):
-        self.symbol = symbol
-        self.loc = loc
-        self.pkg_ref = pkg_ref
-        self.is_resolved = False
-        self.resolved_decl = None
-
-    @override
-    def _accept(self, v: "DeclVisitor") -> Any:
-        return v.visit_decl_ref_decl(self)
-
-    @property
-    def children(self) -> Iterable[Decl]:
-        yield self.pkg_ref
-
-
 class PackageImportDecl(ImportDecl):
     KIND = "package import"
 
@@ -210,12 +318,16 @@ class PackageImportDecl(ImportDecl):
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_package_import_decl(self)
 
-    def is_alias(self) -> bool:
-        return self.name != self.pkg_ref.symbol
+    def _traverse(self, v) -> None:
+        v.handle_decl(self.pkg_ref)
 
     @property
-    def children(self) -> Iterable[Decl]:
-        yield self.pkg_ref
+    @override
+    def children(self) -> Iterable["NamedDecl"]:
+        return []
+
+    def is_alias(self) -> bool:
+        return self.name != self.pkg_ref.symbol
 
 
 class DeclarationImportDecl(ImportDecl):
@@ -242,12 +354,16 @@ class DeclarationImportDecl(ImportDecl):
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_decl_import_decl(self)
 
-    def is_alias(self) -> bool:
-        return self.name != self.decl_ref.symbol
+    def _traverse(self, v) -> None:
+        v.handle_decl(self.decl_ref)
 
     @property
-    def children(self) -> Iterable[Decl]:
-        yield self.decl_ref
+    @override
+    def children(self) -> Iterable["NamedDecl"]:
+        return []
+
+    def is_alias(self) -> bool:
+        return self.name != self.decl_ref.symbol
 
 
 ######################
@@ -275,9 +391,13 @@ class ParamDecl(NamedDecl):
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_param_decl(self)
 
+    def _traverse(self, v) -> None:
+        v.handle_decl(self.ty_ref)
+
     @property
-    def children(self) -> Iterable[Decl]:
-        yield self.ty_ref
+    @override
+    def children(self) -> Iterable["NamedDecl"]:
+        return []
 
 
 class RetvalDecl(NamedDecl):
@@ -300,9 +420,13 @@ class RetvalDecl(NamedDecl):
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_retval_decl(self)
 
+    def _traverse(self, v) -> None:
+        v.handle_decl(self.ty_ref)
+
     @property
-    def children(self) -> Iterable[Decl]:
-        yield self.ty_ref
+    @override
+    def children(self) -> Iterable["NamedDecl"]:
+        return []
 
 
 class FuncBaseDecl(NamedDecl, metaclass=ABCMeta):
@@ -314,8 +438,15 @@ class FuncBaseDecl(NamedDecl, metaclass=ABCMeta):
         self.params = []
         self.retvals = []
 
+    def _traverse(self, v) -> None:
+        for i in self.params:
+            v.handle_decl(i)
+        for i in self.retvals:
+            v.handle_decl(i)
+
     @property
-    def children(self) -> Iterable[NamedDecl]:
+    @override
+    def children(self) -> Iterable["NamedDecl"]:
         yield from self.params
         yield from self.retvals
 
@@ -376,9 +507,13 @@ class TypeAliasDecl(TypeDecl):
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_type_alias_decl(self)
 
+    def _traverse(self, v) -> None:
+        v.handle_decl(self.ty_ref)
+
     @property
-    def children(self) -> Iterable[Decl]:
-        yield self.ty_ref
+    @override
+    def children(self) -> Iterable["NamedDecl"]:
+        return []
 
 
 class EnumItemDecl(NamedDecl):
@@ -401,6 +536,11 @@ class EnumItemDecl(NamedDecl):
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_enum_item_decl(self)
 
+    @property
+    @override
+    def children(self) -> Iterable["NamedDecl"]:
+        return []
+
 
 class EnumDecl(TypeDecl):
     KIND = "enum"
@@ -415,8 +555,13 @@ class EnumDecl(TypeDecl):
     def _accept(self, v: "DeclVisitor | TypeVisitor") -> Any:
         return v.visit_enum_decl(self)
 
+    def _traverse(self, v) -> None:
+        for i in self.items:
+            v.handle_decl(i)
+
     @property
-    def children(self) -> Iterable[NamedDecl]:
+    @override
+    def children(self) -> Iterable["NamedDecl"]:
         yield from self.items
 
     def add_item(
@@ -450,9 +595,13 @@ class StructFieldDecl(NamedDecl):
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_struct_field_decl(self)
 
+    def _traverse(self, v) -> None:
+        v.handle_decl(self.ty_ref)
+
     @property
-    def children(self) -> Iterable[Decl]:
-        yield self.ty_ref
+    @override
+    def children(self) -> Iterable["NamedDecl"]:
+        return []
 
 
 class StructDecl(TypeDecl):
@@ -468,8 +617,13 @@ class StructDecl(TypeDecl):
     def _accept(self, v: "TypeVisitor | DeclVisitor") -> Any:
         return v.visit_struct_decl(self)
 
+    def _traverse(self, v) -> None:
+        for i in self.fields:
+            v.handle_decl(i)
+
     @property
-    def children(self) -> Iterable[NamedDecl]:
+    @override
+    def children(self) -> Iterable["NamedDecl"]:
         yield from self.fields
 
     def add_field(
@@ -503,9 +657,13 @@ class IfaceParentDecl(NamedDecl):
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_iface_parent_decl(self)
 
+    def _traverse(self, v) -> None:
+        v.handle_decl(self.ty_ref)
+
     @property
-    def children(self) -> Iterable[Decl]:
-        yield self.ty_ref
+    @override
+    def children(self) -> Iterable["NamedDecl"]:
+        return []
 
 
 class IfaceMethodDecl(FuncBaseDecl):
@@ -533,8 +691,15 @@ class IfaceDecl(TypeDecl):
     def _accept(self, v: "TypeVisitor | DeclVisitor") -> Any:
         return v.visit_iface_decl(self)
 
+    def _traverse(self, v) -> None:
+        for i in self.methods:
+            v.handle_decl(i)
+        for i in self.parents:
+            v.handle_decl(i)
+
     @property
-    def children(self) -> Iterable[NamedDecl]:
+    @override
+    def children(self) -> Iterable["NamedDecl"]:
         yield from self.methods
         yield from self.parents
 
@@ -600,8 +765,26 @@ class Package(NamedDecl):
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_package(self)
 
+    def _traverse(self, v) -> None:
+        for i in self.pkg_imports:
+            v.handle_decl(i)
+        for i in self.decl_imports:
+            v.handle_decl(i)
+
+        for i in self.functions:
+            v.handle_decl(i)
+        for i in self.structs:
+            v.handle_decl(i)
+        for i in self.enums:
+            v.handle_decl(i)
+        for i in self.interfaces:
+            v.handle_decl(i)
+        for i in self.type_aliases:
+            v.handle_decl(i)
+
     @property
-    def children(self) -> Iterable[NamedDecl]:
+    @override
+    def children(self) -> Iterable["NamedDecl"]:
         yield from self.pkg_imports
         yield from self.decl_imports
 
@@ -692,9 +875,9 @@ class PackageGroup(Decl):
     def _accept(self, v: "DeclVisitor"):
         return v.visit_package_group(self)
 
-    @property
-    def children(self) -> Iterable[NamedDecl]:
-        yield from self.packages
+    def _traverse(self, v) -> None:
+        for i in self.packages:
+            v.handle_decl(i)
 
     def lookup(self, name: str) -> Optional["Package"]:
         return self.package_dict.get(name, None)

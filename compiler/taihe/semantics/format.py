@@ -192,5 +192,5 @@ class _PrettyPrinter(DeclVisitor):
 
     @override
     def visit_package_group(self, g: PackageGroup):
-        for p in g.children:
+        for p in g.packages:
             self.handle_decl(p)

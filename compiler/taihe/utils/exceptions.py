@@ -6,6 +6,7 @@ from taihe.utils.sources import SourceLocation
 
 if TYPE_CHECKING:
     from taihe.semantics.declarations import (
+        AttributeItemDecl,
         IfaceDecl,
         IfaceParentDecl,
         NamedDecl,
@@ -81,6 +82,23 @@ class DeclRedefDiagError(DiagError):
     current: "NamedDecl"
 
     def __init__(self, prev: "NamedDecl", current: "NamedDecl"):
+        self.prev = prev
+        self.current = current
+        self.loc = current.loc
+
+    def notes(self):
+        if self.prev.loc:
+            yield DefinitionConflictDiagNote(loc=self.prev.loc)
+
+
+@dataclass
+class AttrRedefDiagError(DiagError):
+    MSG = "duplicate {current.description}"
+
+    prev: "AttributeItemDecl"
+    current: "AttributeItemDecl"
+
+    def __init__(self, prev: "AttributeItemDecl", current: "AttributeItemDecl"):
         self.prev = prev
         self.current = current
         self.loc = current.loc

@@ -157,6 +157,12 @@ class AstConverter(ExprEvaluator):
         return SourceLocation(self.source, *t._beg, *t._end)
 
     @override
+    def visit_Attribute(
+        self, node: ast.Attribute
+    ) -> dict[str, str | int | bool | object]:
+        return {item.name.text: self.visit(item.val) for item in node.items}
+
+    @override
     def visit_PrimitiveType(self, node: ast.PrimitiveType) -> TypeRefDecl:
         name = str(node.name)
         loc = self.loc(node.name)
@@ -221,7 +227,7 @@ class AstConverter(ExprEvaluator):
         return TypeAliasDecl(str(node.name), self.loc(node.name), self.visit(node.ty))
 
     @override
-    def visit_Function(self, node: ast.Function) -> FuncDecl:
+    def visit_GlobalFunction(self, node: ast.GlobalFunction) -> FuncDecl:
         f = FuncDecl(str(node.name), loc=self.loc(node.name))
         for p in node.parameters:
             with self.diag.capture_error():
