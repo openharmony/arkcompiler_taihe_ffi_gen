@@ -373,9 +373,22 @@ class KNBridgeGenerator:
             )
         kn_bridge_pkg_target.write(
             f"static {kn_bridge_pkg_name}_ExportedSymbols __konan_symbols = {{\n"
-            f"  .kotlin = {{\n"
-            f"    .root = {{\n"
+            f"  .DisposeStablePointer = DisposeStablePointerImpl,\n"
+            f"  .DisposeString = DisposeStringImpl,\n"
+            f"  .IsInstance = IsInstanceImpl,\n"
         )
+        for predefinedType in kn_predefined_type_list:
+            if predefinedType != "Unit":
+                kn_bridge_pkg_target.write(
+                    f"  {kn_bridge_pkg_name}_kref_kotlin_{predefinedType} (*createNullable{predefinedType})({kn_bridge_pkg_name}_KByte);\n"
+                    f"  {kn_bridge_pkg_name}_K{predefinedType} (*getNonNullValueOfByte)({kn_bridge_pkg_name}_kref_kotlin_Byte);\n"
+                )
+            else:
+                kn_bridge_pkg_target.write(
+                    f"    {kn_bridge_pkg_name}_kref_kotlin_Unit (*createNullableUnit)(void);\n"
+                )
+
+        kn_bridge_pkg_target.write(f"  .kotlin = {{\n" f"    .root = {{\n")
         for func in pkg.functions:
             kn_bridge_func_info = KNBridgeFuncBaseDeclInfo.get(self.am, func)
             kn_bridge_pkg_target.write(
