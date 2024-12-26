@@ -144,7 +144,7 @@ class KNBridgeGenerator:
 
         kn_bridge_pkg_name = "prefix"  # need to read from pkg_prefix
 
-        kn_base_type_list = [
+        kn_predefined_type_list = [
             "Byte",
             "Short",
             "Int",
@@ -186,11 +186,11 @@ class KNBridgeGenerator:
             f"typedef struct {kn_bridge_pkg_name}_KType {kn_bridge_pkg_name}_KType;\n"
             f"\n"
         )
-        for baseType in kn_base_type_list:
+        for predefinedType in kn_predefined_type_list:
             kn_bridge_pkg_target.write(
                 f"typedef struct {{\n"
                 f"{kn_bridge_pkg_name}_KNativePtr pinned;\n"
-                f"}} {kn_bridge_pkg_name}_kref_kotlin_{baseType};\n"
+                f"}} {kn_bridge_pkg_name}_kref_kotlin_{predefinedType};\n"
             )
 
         kn_bridge_pkg_target.write(
@@ -201,11 +201,11 @@ class KNBridgeGenerator:
             f"  {kn_bridge_pkg_name}_KBoolean (*IsInstance)({kn_bridge_pkg_name}_KNativePtr ref, const {kn_bridge_pkg_name}_KType* type);\n"
         )
 
-        for baseType in kn_base_type_list:
-            if baseType != "Unit":
+        for predefinedType in kn_predefined_type_list:
+            if predefinedType != "Unit":
                 kn_bridge_pkg_target.write(
-                    f"  {kn_bridge_pkg_name}_kref_kotlin_{baseType} (*createNullable{baseType})({kn_bridge_pkg_name}_K{baseType});\n"
-                    f"  {kn_bridge_pkg_name}_K{baseType} (*getNonNullValueOf{baseType})({kn_bridge_pkg_name}_kref_kotlin_{baseType});\n"
+                    f"  {kn_bridge_pkg_name}_kref_kotlin_{predefinedType} (*createNullable{predefinedType})({kn_bridge_pkg_name}_K{predefinedType});\n"
+                    f"  {kn_bridge_pkg_name}_K{predefinedType} (*getNonNullValueOf{predefinedType})({kn_bridge_pkg_name}_kref_kotlin_{predefinedType});\n"
                 )
             else:
                 kn_bridge_pkg_target.write(
@@ -320,6 +320,36 @@ class KNBridgeGenerator:
             f"  return IsInstanceInternal(DerefStablePointer(ref, holder.slot()), (const KTypeInfo*)type);\n"
             f"}}\n"
         )
+        for predefinedType in kn_predefined_type_list:
+            if predefinedType != "Unit":
+                kn_bridge_pkg_target.write(
+                    f'extern "C" KObjHeader* Kotlin_box{predefinedType}({kn_bridge_pkg_name}_K{predefinedType} value, KObjHeader**);\n'
+                    f"static {kn_bridge_pkg_name}_kref_kotlin_{predefinedType} createNullable{predefinedType}Impl({kn_bridge_pkg_name}_K{predefinedType} value) {{\n"
+                    f"  Kotlin_initRuntimeIfNeeded();\n"
+                    f"  ScopedRunnableState stateGuard;\n"
+                    f"  KObjHolder result_holder;\n"
+                    f"  KObjHeader* result = Kotlin_box{predefinedType}(value,  result_holder.slot());\n"
+                    f"  return {kn_bridge_pkg_name}_kref_kotlin_{predefinedType} {{ .pinned = CreateStablePointer(result) }};\n"
+                    f"}}\n"
+                    f'extern "C" {kn_bridge_pkg_name}_K{predefinedType} Kotlin_unbox{predefinedType}(KObjHeader*);\n'
+                    f"static {kn_bridge_pkg_name}_K{predefinedType} getNonNullValueOf{predefinedType}Impl({kn_bridge_pkg_name}_kref_kotlin_{predefinedType} value) {{\n"
+                    f"Kotlin_initRuntimeIfNeeded();\n"
+                    f"ScopedRunnableState stateGuard;\n"
+                    f"KObjHolder value_holder;\n"
+                    f"return Kotlin_unbox{predefinedType}(DerefStablePointer(value.pinned, value_holder.slot()));\n"
+                    f"}}\n"
+                )
+            else:
+                kn_bridge_pkg_target.write(
+                    f'extern "C" KObjHeader* Kotlin_box{predefinedType}( KObjHeader**);\n'
+                    f"static {kn_bridge_pkg_name}_kref_kotlin_{predefinedType} createNullable{predefinedType}Impl() {{\n"
+                    f"Kotlin_initRuntimeIfNeeded();\n"
+                    f"ScopedRunnableState stateGuard;\n"
+                    f"KObjHolder result_holder;\n"
+                    f"KObjHeader* result = Kotlin_box{predefinedType}( result_holder.slot());\n"
+                    f"return {kn_bridge_pkg_name}_kref_kotlin_{predefinedType} {{ .pinned = CreateStablePointer(result) }};\n"
+                    f"}}\n"
+                )
         for func in pkg.functions:
             kn_bridge_func_info = KNBridgeFuncBaseDeclInfo.get(self.am, func)
             kn_bridge_pkg_target.write(
