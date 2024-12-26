@@ -6,7 +6,6 @@ from taihe.codegen.generator import COutputBuffer
 from taihe.codegen.mangle import DeclKind, encode
 from taihe.semantics.declarations import (
     FuncBaseDecl,
-    # FuncDecl,
     Package,
     PackageGroup,
 )
@@ -48,15 +47,16 @@ class KNBridgeFuncBaseDeclInfo(AbstractAnalysis[FuncBaseDecl]):
         self.konan_retval_name = (
             "KObjHeader*"  # Assuming that information is obtained from IR here
         )
-        info = KNBridgeReturnTypeRefDeclInfo.get(am, f.retvals[0].ty)
-        self.return_ty = info.name
-        if info.convert_func:
-            self.return_ty_str = f"{info.convert_func}(result)"
+        if len(f.retvals) == 0:
+            self.return_ty = "void"
+            self.return_ty_str = ""
         else:
-            if info.name:
-                self.return_ty_str = "result"
+            info = KNBridgeReturnTypeRefDeclInfo.get(am, f.retvals[0].ty)
+            self.return_ty = info.name
+            if info.convert_func:
+                self.return_ty_str = f"{info.convert_func}(result)"
             else:
-                self.return_ty_str = ""
+                self.return_ty_str = "result"
         params = []
         convert_params = []
         for param in f.params:
