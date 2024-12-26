@@ -72,24 +72,29 @@ type
 ////////////////
 
 intExpr
-    : token_val = (DEC_LITERAL | OCT_LITERAL | HEX_LITERAL | BIN_LITERAL) # intLiteralExpr
-    | LEFT_PARENTHESIS IntExpr_expr = intExpr RIGHT_PARENTHESIS # intParenthesisExpr
-    | token_op = (PLUS | MINUS | TILDE) IntExpr_expr = intExpr # intUnaryExpr
-    | IntExpr_left = intExpr token_op = (STAR | SLASH | PERCENT) IntExpr_right = intExpr # intBinaryExpr
-    | IntExpr_left = intExpr token_op = (PLUS | MINUS) IntExpr_right = intExpr # intBinaryExpr
-    | IntExpr_left = intExpr token_op = (LEFT_SHIFT | RIGHT_SHIFT) IntExpr_right = intExpr # intBinaryExpr
-    | IntExpr_left = intExpr token_op = AMPERSAND IntExpr_right = intExpr # intBinaryExpr
-    | IntExpr_left = intExpr token_op = CARET IntExpr_right = intExpr # intBinaryExpr
-    | IntExpr_left = intExpr token_op = PIPE IntExpr_right = intExpr # intBinaryExpr
-    | KW_IF BoolExpr_cond = boolExpr KW_THEN IntExpr_then_expr = intExpr KW_ELSE IntExpr_else_expr = intExpr # intConditionalExpr
+    : token_val = (DEC_LITERAL | OCT_LITERAL | HEX_LITERAL | BIN_LITERAL) # literalIntExpr
+    | LEFT_PARENTHESIS IntExpr_expr = intExpr RIGHT_PARENTHESIS # parenthesisIntExpr
+    | token_op = (PLUS | MINUS | TILDE) IntExpr_expr = intExpr # unaryIntExpr
+    | IntExpr_left = intExpr token_op = (STAR | SLASH | PERCENT) IntExpr_right = intExpr # binaryIntExpr
+    | IntExpr_left = intExpr token_op = (PLUS | MINUS) IntExpr_right = intExpr # binaryIntExpr
+    | IntExpr_left = intExpr token_op = (LEFT_SHIFT | RIGHT_SHIFT) IntExpr_right = intExpr # binaryIntExpr
+    | IntExpr_left = intExpr token_op = AMPERSAND IntExpr_right = intExpr # binaryIntExpr
+    | IntExpr_left = intExpr token_op = CARET IntExpr_right = intExpr # binaryIntExpr
+    | IntExpr_left = intExpr token_op = PIPE IntExpr_right = intExpr # binaryIntExpr
+    | KW_IF BoolExpr_cond = boolExpr KW_THEN IntExpr_then_expr = intExpr KW_ELSE IntExpr_else_expr = intExpr # conditionalIntExpr
     ;
 
 boolExpr
-    : LEFT_PARENTHESIS BoolExpr_expr = boolExpr RIGHT_PARENTHESIS # boolParenthesisExpr
-    | token_op = EXCLAMATION BoolExpr_expr = boolExpr # boolUnaryExpr
-    | IntExpr_left = intExpr token_op = (EQUAL_TO | NOT_EQUAL_TO | LESS_EQUAL_TO | GREATER_EQUAL_TO | LESS_THAN | GREATER_THAN) IntExpr_right = intExpr # intComparisonExpr
-    | BoolExpr_left = boolExpr token_op = (AND | OR) BoolExpr_right = boolExpr # boolBinaryExpr
-    | KW_IF BoolExpr_cond = boolExpr KW_THEN BoolExpr_then_expr = boolExpr KW_ELSE BoolExpr_else_expr = boolExpr # boolConditionalExpr
+    : token_val = (KW_TRUE | KW_FALSE) # literalBoolExpr
+    | LEFT_PARENTHESIS BoolExpr_expr = boolExpr RIGHT_PARENTHESIS # parenthesisBoolExpr
+    | token_op = EXCLAMATION BoolExpr_expr = boolExpr # unaryBoolExpr
+    | IntExpr_left = intExpr token_op = (EQUAL_TO | NOT_EQUAL_TO | LESS_EQUAL_TO | GREATER_EQUAL_TO | LESS_THAN | GREATER_THAN) IntExpr_right = intExpr # comparisonBoolExpr
+    | BoolExpr_left = boolExpr token_op = (AND | OR) BoolExpr_right = boolExpr # binaryBoolExpr
+    | KW_IF BoolExpr_cond = boolExpr KW_THEN BoolExpr_then_expr = boolExpr KW_ELSE BoolExpr_else_expr = boolExpr # conditionalBoolExpr
+    ;
+
+stringExpr
+    : tokenLst_vals = STRING_LITERAL+ # literalStringExpr
     ;
 
 ///////////
@@ -326,6 +331,18 @@ KW_BOOL
 
 KW_STRING
     : 'String'
+    ;
+
+KW_VOID
+    : 'void'
+    ;
+
+KW_TRUE
+    : 'TRUE'
+    ;
+
+KW_FALSE
+    : 'FALSE'
     ;
 
 STRING_LITERAL

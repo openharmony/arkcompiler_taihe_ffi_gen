@@ -1,3 +1,4 @@
+from codecs import decode
 from collections.abc import Iterable
 
 from typing_extensions import override
@@ -33,8 +34,16 @@ def pkg2str(pkg_name: ast.PkgName) -> str:
         return ""
 
 
-def eval_bool_expr(node: ast.BoolExpr) -> bool:
-    if isinstance(node, ast.IntComparisonExpr):
+class ExprEvaluator(Visitor):
+    @override
+    def visit_LiteralBoolExpr(self, node: ast.LiteralBoolExpr) -> bool:
+        return {
+            "TRUE": True,
+            "False": False,
+        }[node.val.text]
+
+    @override
+    def visit_ComparisonBoolExpr(self, node: ast.ComparisonBoolExpr) -> bool:
         return {
             ">": int.__gt__,
             "<": int.__lt__,
@@ -43,36 +52,39 @@ def eval_bool_expr(node: ast.BoolExpr) -> bool:
             "==": int.__eq__,
             "!=": int.__ne__,
         }[node.op.text](
-            eval_int_expr(node.left),
-            eval_int_expr(node.right),
+            self.visit(node.left),
+            self.visit(node.right),
         )
 
-    if isinstance(node, ast.BoolUnaryExpr):
+    @override
+    def visit_UnaryBoolExpr(self, node: ast.UnaryBoolExpr) -> bool:
         assert node.op.text == "!"
-        return not eval_bool_expr(node.expr)
+        return not self.visit(node.expr)
 
-    if isinstance(node, ast.BoolBinaryExpr):
+    @override
+    def visit_BinaryBoolExpr(self, node: ast.BinaryBoolExpr) -> bool:
         return {
             "&&": bool.__and__,
             "||": bool.__or__,
         }[node.op.text](
-            eval_bool_expr(node.left),
-            eval_bool_expr(node.right),
+            self.visit(node.left),
+            self.visit(node.right),
         )
 
-    if isinstance(node, ast.BoolParenthesisExpr):
-        return eval_bool_expr(node.expr)
+    @override
+    def visit_ParenthesisBoolExpr(self, node: ast.ParenthesisBoolExpr) -> bool:
+        return self.visit(node.expr)
 
-    if isinstance(node, ast.BoolConditionalExpr):
+    @override
+    def visit_ConditionalBoolExpr(self, node: ast.ConditionalBoolExpr) -> bool:
         return (
-            eval_bool_expr(node.then_expr)
-            if eval_bool_expr(node.cond)
-            else eval_bool_expr(node.else_expr)
+            self.visit(node.then_expr)
+            if self.visit(node.cond)
+            else self.visit(node.else_expr)
         )
 
-
-def eval_int_expr(node: ast.IntExpr) -> int:
-    if isinstance(node, ast.IntLiteralExpr):
+    @override
+    def visit_LiteralIntExpr(self, node: ast.LiteralIntExpr) -> int:
         text = node.val.text
         if text.startswith("0b"):
             return int(text, 2)
@@ -82,26 +94,30 @@ def eval_int_expr(node: ast.IntExpr) -> int:
             return int(text, 16)
         return int(text)
 
-    if isinstance(node, ast.IntParenthesisExpr):
-        return eval_int_expr(node.expr)
+    @override
+    def visit_ParenthesisIntExpr(self, node: ast.ParenthesisIntExpr) -> int:
+        return self.visit(node.expr)
 
-    if isinstance(node, ast.IntConditionalExpr):
+    @override
+    def visit_ConditionalIntExpr(self, node: ast.ConditionalIntExpr) -> int:
         return (
-            eval_int_expr(node.then_expr)
-            if eval_bool_expr(node.cond)
-            else eval_int_expr(node.else_expr)
+            self.visit(node.then_expr)
+            if self.visit(node.cond)
+            else self.visit(node.else_expr)
         )
 
-    if isinstance(node, ast.IntUnaryExpr):
+    @override
+    def visit_UnaryIntExpr(self, node: ast.UnaryIntExpr) -> int:
         return {
             "-": int.__neg__,
             "+": int.__pos__,
             "~": int.__invert__,
         }[node.op.text](
-            eval_int_expr(node.expr),
+            self.visit(node.expr),
         )
 
-    if isinstance(node, ast.IntBinaryExpr):
+    @override
+    def visit_BinaryIntExpr(self, node: ast.BinaryIntExpr) -> int:
         return {
             "+": int.__add__,
             "-": int.__sub__,
@@ -114,12 +130,16 @@ def eval_int_expr(node: ast.IntExpr) -> int:
             "|": int.__or__,
             "^": int.__xor__,
         }[node.op.text](
-            eval_int_expr(node.left),
-            eval_int_expr(node.right),
+            self.visit(node.left),
+            self.visit(node.right),
         )
 
+    @override
+    def visit_LiteralStringExpr(self, node: ast.LiteralStringExpr) -> str:
+        return "".join(decode(val.text[1:-1], "unicode-escape") for val in node.vals)
 
-class AstConverter(Visitor):
+
+class AstConverter(ExprEvaluator):
     """Converts a node on AST to the intermetiade representation.
 
     Note that declerations with errors are discarded.
@@ -168,7 +188,7 @@ class AstConverter(Visitor):
         next_value = 0
         for f in node.fields:
             with self.diag.capture_error():
-                value = eval_int_expr(f.expr) if f.expr else next_value
+                value = self.visit(f.expr) if f.expr else next_value
                 d.add_item(str(f.name), self.loc(f.name), value)
                 next_value = value + 1
         return d
