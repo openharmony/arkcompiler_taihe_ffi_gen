@@ -380,12 +380,12 @@ class KNBridgeGenerator:
         for predefinedType in kn_predefined_type_list:
             if predefinedType != "Unit":
                 kn_bridge_pkg_target.write(
-                    f"  {kn_bridge_pkg_name}_kref_kotlin_{predefinedType} (*createNullable{predefinedType})({kn_bridge_pkg_name}_KByte);\n"
-                    f"  {kn_bridge_pkg_name}_K{predefinedType} (*getNonNullValueOfByte)({kn_bridge_pkg_name}_kref_kotlin_Byte);\n"
+                    f"  .createNullable{predefinedType} = createNullable{predefinedType}Impl,\n"
+                    f"  .getNonNullValueOf{predefinedType} = getNonNullValueOf{predefinedType}Impl,\n"
                 )
             else:
                 kn_bridge_pkg_target.write(
-                    f"    {kn_bridge_pkg_name}_kref_kotlin_Unit (*createNullableUnit)(void);\n"
+                    f"  .createNullableUnit = createNullableUnitImpl,\n"
                 )
 
         kn_bridge_pkg_target.write(f"  .kotlin = {{\n" f"    .root = {{\n")
