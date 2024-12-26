@@ -156,7 +156,7 @@ class KNBridgeGenerator:
             "Unit",
             "UByte",
             "UShort",
-            "Uint",
+            "UInt",
             "ULong",
         ]
 
