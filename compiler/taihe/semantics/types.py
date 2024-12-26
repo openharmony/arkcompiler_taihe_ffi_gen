@@ -1,5 +1,6 @@
 """Defines the type system."""
 
+from abc import ABCMeta
 from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Optional, Protocol
@@ -12,10 +13,12 @@ if TYPE_CHECKING:
 ############################
 
 
-class Type(Protocol):
-    """Represents a concrete type."""
-
+class TypeProtocol(Protocol):
     def _accept(self, v: "TypeVisitor") -> Any: ...
+
+
+class Type(TypeProtocol, metaclass=ABCMeta):
+    """Represents a concrete type."""
 
 
 ##################
@@ -25,6 +28,7 @@ class Type(Protocol):
 
 class BuiltinTypeKind(Enum):
     VOID = 0
+
     BOOL = 1
     INTEGER = 2
     FLOAT = 3
@@ -33,7 +37,7 @@ class BuiltinTypeKind(Enum):
 
 
 @dataclass(frozen=True)
-class BuiltinType(Type):
+class BuiltinType(Type, metaclass=ABCMeta):
     """Represents built-in types, including scalars and strings.
 
     Invariant: all primitive types must be directy obtained with `lookup` or

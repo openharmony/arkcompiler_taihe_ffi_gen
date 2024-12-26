@@ -10,7 +10,7 @@ from taihe.semantics.declarations import (
     EnumDecl,
     EnumItemDecl,
     FuncBaseDecl,
-    FuncDecl,
+    GlobFuncDecl,
     IfaceDecl,
     Package,
     PackageGroup,
@@ -272,7 +272,7 @@ class ABICodeGenerator:
 
     def gen_func(
         self,
-        func: FuncDecl,
+        func: GlobFuncDecl,
         abi_pkg_target: COutputBuffer,
     ):
         abi_func_info = ABIFuncBaseDeclInfo.get(self.am, func)

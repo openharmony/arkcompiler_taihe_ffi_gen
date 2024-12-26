@@ -44,8 +44,9 @@ def analyze_semantics(pg: PackageGroup, diag: AbstractDiagnosticsManager):
     """Runs semantic analysis passes on the given package group."""
     _check_decl_confilct_with_namespace(pg, diag)
     _ResolveImportsPass(diag).handle_decl(pg)
-    _resolve_typedef(pg, diag)
+    _resolve_type_alias(pg, diag)
     _CheckFieldNameCollisionErrorPass(diag).handle_decl(pg)
+    _CalculateEnumItemValuePass(diag).handle_decl(pg)
     _check_struct_fields(pg, diag)
     _check_iface_parents(pg, diag)
 
@@ -176,8 +177,26 @@ class _ResolveImportsPass(DeclVisitor):
         d.is_resolved = True
 
 
+class _CalculateEnumItemValuePass(DeclVisitor):
+    """Calculate Enum Values."""
+
+    diag: AbstractDiagnosticsManager
+
+    def __init__(self, diag: AbstractDiagnosticsManager):
+        self.diag = diag
+
+    def visit_enum_decl(self, d: EnumDecl) -> None:
+        value = 0
+        for i in d.items:
+            if i.value is None:
+                i.value = value
+            else:
+                value = i.value
+            value += 1
+
+
 class _CheckFieldNameCollisionErrorPass(DeclVisitor):
-    """Checks for name and value collisions in declarations."""
+    """Check for duplicate field names in declarations and name anonymous declarations."""
 
     diag: AbstractDiagnosticsManager
 
@@ -186,11 +205,13 @@ class _CheckFieldNameCollisionErrorPass(DeclVisitor):
 
     @override
     def visit_named_decl(self, d: NamedDecl) -> None:
-        """Checks for duplicate field names in declarations."""
         symbol = {}
-        for f in d.children:
-            if (prev := symbol.setdefault(f.name, f)) != f:
-                self.diag.emit(DeclRedefDiagError(prev, f))
+        for field_name, children in d.all_children.items():
+            for i, f in enumerate(children):
+                if not f.name:
+                    f.name = f"_{field_name}_{i}"
+                if (prev := symbol.setdefault(f.name, f)) != f:
+                    self.diag.emit(DeclRedefDiagError(prev, f))
 
         return super().visit_named_decl(d)
 
@@ -218,7 +239,7 @@ def _check_decl_confilct_with_namespace(
                 diag.emit(SymbolConflictWithNamespaceError(d, p))
 
 
-def _resolve_typedef(
+def _resolve_type_alias(
     pg: PackageGroup,
     diag: AbstractDiagnosticsManager,
 ):
@@ -277,7 +298,12 @@ def _check_iface_parents(
                     prev = parent_iface_dict.setdefault(parent_final_ty, parent)
                     if prev != parent:
                         diag.emit(
-                            DuplicateExtendsWarn(iface, parent_final_ty, prev, parent)
+                            DuplicateExtendsWarn(
+                                iface,
+                                parent_final_ty,
+                                loc=parent.ty_ref.loc,
+                                prev_loc=prev.ty_ref.loc,
+                            )
                         )
 
     cycles = detect_cycles(parent_iface_table)

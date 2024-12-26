@@ -6,6 +6,7 @@ struct RGB {
 
 type NameType = String;
 
+@[tuple]
 struct RGBWithName {
     rgb: RGB;
     name: NameType;
@@ -17,5 +18,10 @@ enum Color {
     BLUE  = 0xff << 0o00;
 }
 
+@[cname = "ohos_get_rgb", index = 0, deprecated]
 function get_rgb(color: Color): RGB;
+
+@[cname = "ohos_invert_rgb", index = 1]
 function invert_rgb(color: RGB): ();
+
+@[file_info = "\u6d4b\u8bd5"] // file attribute write at the end

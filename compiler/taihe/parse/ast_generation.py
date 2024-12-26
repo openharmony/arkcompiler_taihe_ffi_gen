@@ -12,47 +12,54 @@ from taihe.utils.exceptions import IDLSyntaxError
 from taihe.utils.sources import SourceBase, SourceBuffer, SourceFile, SourceLocation
 
 
-def add_pos(ctx):
+def add_pos(ctx, pos_dict: dict):
     if isinstance(ctx, Token):
         text = ctx.text.splitlines()
         row = ctx.line
         col = ctx.column
         row_offset = len(text) - 1
         col_offset = len(text[-1])
-        ctx._beg = (
+        beg = (
             row,
             col + 1,
         )
-        ctx._end = (
+        end = (
             row + row_offset,
             col + col_offset if row_offset == 0 else col_offset,
         )
+        pos_dict[ctx] = beg, end
     elif isinstance(ctx, TerminalNode):
-        add_pos(ctx.symbol)
-        ctx._beg = ctx.symbol._beg
-        ctx._end = ctx.symbol._end
+        add_pos(ctx.symbol, pos_dict)
+        pos_dict[ctx] = pos_dict[ctx.symbol]
     else:
         for child in ctx.children:
-            add_pos(child)
-        ctx._beg, ctx._end = ctx.children[0]._beg, ctx.children[-1]._end
+            add_pos(child, pos_dict)
+        beg, _ = pos_dict[ctx.children[0]]
+        _, end = pos_dict[ctx.children[-1]]
+        pos_dict[ctx] = beg, end
 
 
 class TaiheErrorListener(ErrorListener):
-    def __init__(self, source: SourceBase, diag: AbstractDiagnosticsManager) -> None:
+    def __init__(
+        self,
+        source: SourceBase,
+        diag: AbstractDiagnosticsManager,
+        pos_dict: dict,
+    ) -> None:
         super().__init__()
         self.diag = diag
         self.source = source
         self.has_error = False
+        self.pos_dict = pos_dict
 
     def syntaxError(self, recognizer, offendingSymbol, line, column, msg, e):
-        add_pos(offendingSymbol)
+        add_pos(offendingSymbol, self.pos_dict)
+        (start_row, start_col), (stop_row, stop_col) = self.pos_dict[offendingSymbol]
         self.diag.emit(
             IDLSyntaxError(
-                offendingSymbol,
+                offendingSymbol.text,
                 loc=SourceLocation(
-                    self.source,
-                    *offendingSymbol._beg,
-                    *offendingSymbol._end,
+                    self.source, start_row, start_col, stop_row, stop_col
                 ),
             )
         )
@@ -71,33 +78,27 @@ def issubkind(real_kind, node_kind):
         return real_kind == node_kind
 
 
-def visit(node_kind: str, ctx) -> Any:
+def visit(node_kind: str, ctx, pos_dict: dict) -> Any:
     if node_kind.endswith("Lst"):
         node = []
         for sub in ctx:
             with suppress(Exception):
-                node.append(visit(node_kind[:-3], sub))
+                node.append(visit(node_kind[:-3], sub, pos_dict))
         return node
     if node_kind.endswith("Opt"):
         node = None
         if ctx is not None:
             with suppress(Exception):
-                node = visit(node_kind[:-3], ctx)
+                node = visit(node_kind[:-3], ctx, pos_dict)
         return node
+    beg, end = pos_dict[ctx]
     if node_kind == "token":
-        return TaiheAST.token(
-            _beg=ctx._beg,
-            _end=ctx._end,
-            text=ctx.text,
-        )
-    kwargs = {
-        "_beg": ctx._beg,
-        "_end": ctx._end,
-    }
+        return TaiheAST.token(_beg=beg, _end=end, text=ctx.text)
+    kwargs = {"_beg": beg, "_end": end}
     for attr_full_name, attr_ctx in ctx.__dict__.items():
         if attr_full_name[0].isupper() or attr_full_name.startswith("token"):
             attr_kind_name, attr_name = attr_full_name.split("_", 1)
-            kwargs[attr_name] = visit(attr_kind_name, attr_ctx)
+            kwargs[attr_name] = visit(attr_kind_name, attr_ctx, pos_dict)
     real_kind = ctx.__class__.__name__[:-7]
     assert issubkind(real_kind, node_kind)
     return getattr(TaiheAST, real_kind)(**kwargs)
@@ -114,13 +115,15 @@ def generate_ast(source: SourceBase, diag: AbstractDiagnosticsManager) -> TaiheA
     lexer = TaiheLexer(input_stream)
     token_stream = CommonTokenStream(lexer)
 
-    error_listener = TaiheErrorListener(source, diag)
+    pos_dict = {}
+
+    error_listener = TaiheErrorListener(source, diag, pos_dict)
 
     parser = TaiheParser(token_stream)
     parser.removeErrorListeners()
     parser.addErrorListener(error_listener)
     tree = parser.spec()
 
-    add_pos(tree)
+    add_pos(tree, pos_dict)
 
-    return visit("Spec", tree)
+    return visit("Spec", tree, pos_dict)

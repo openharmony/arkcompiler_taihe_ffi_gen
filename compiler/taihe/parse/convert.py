@@ -6,17 +6,22 @@ from typing_extensions import override
 from taihe.parse import Visitor, ast
 from taihe.parse.ast_generation import generate_ast
 from taihe.semantics.declarations import (
+    AttrItemDecl,
     DeclarationImportDecl,
     DeclarationRefDecl,
     EnumDecl,
-    FuncDecl,
+    EnumItemDecl,
+    GlobFuncDecl,
     IfaceDecl,
     IfaceMethodDecl,
-    ImportDecl,
+    IfaceParentDecl,
     Package,
     PackageImportDecl,
     PackageRefDecl,
+    ParamDecl,
+    RetvalDecl,
     StructDecl,
+    StructFieldDecl,
     TypeAliasDecl,
     TypeRefDecl,
 )
@@ -157,18 +162,20 @@ class AstConverter(ExprEvaluator):
         return SourceLocation(self.source, *t._beg, *t._end)
 
     @override
-    def visit_Attribute(
-        self, node: ast.Attribute
-    ) -> dict[str, str | int | bool | object]:
-        return {item.name.text: self.visit(item.val) for item in node.items}
+    def visit_AttrItem(self, node: ast.AttrItem) -> AttrItemDecl:
+        if val := node.val:
+            d = AttrItemDecl(str(node.name), self.loc(node.name), self.visit(val.expr))
+        else:
+            d = AttrItemDecl(str(node.name), self.loc(node.name))
+        return d
 
     @override
     def visit_PrimitiveType(self, node: ast.PrimitiveType) -> TypeRefDecl:
-        name = str(node.name)
-        loc = self.loc(node.name)
-        ty = BuiltinType.lookup(name)
-        assert ty
-        return TypeRefDecl(name, loc, ty)
+        if ty := BuiltinType.lookup(str(node.name)):
+            t_ref = TypeRefDecl(str(node.name), self.loc(node.name), ty)
+        else:
+            t_ref = TypeRefDecl(str(node.name), self.loc(node.name))
+        return t_ref
 
     @override
     def visit_UserType(self, node: ast.UserType) -> TypeRefDecl:
@@ -178,114 +185,124 @@ class AstConverter(ExprEvaluator):
         else:
             loc = self.loc(node.decl_name)
             name = str(node.decl_name)
-        return TypeRefDecl(name, loc)
-
-    @override
-    def visit_Struct(self, node: ast.Struct) -> StructDecl:
-        d = StructDecl(str(node.name), loc=self.loc(node.name))
-        for f in node.fields:
-            with self.diag.capture_error():
-                d.add_field(str(f.name), self.loc(f.name), self.visit(f.ty))
-        return d
-
-    @override
-    def visit_Enum(self, node: ast.Enum) -> EnumDecl:
-        d = EnumDecl(str(node.name), loc=self.loc(node.name))
-        next_value = 0
-        for f in node.fields:
-            with self.diag.capture_error():
-                value = self.visit(f.expr) if f.expr else next_value
-                d.add_item(str(f.name), self.loc(f.name), value)
-                next_value = value + 1
-        return d
-
-    @override
-    def visit_InterfaceFunction(self, node: ast.InterfaceFunction) -> IfaceMethodDecl:
-        f = IfaceMethodDecl(str(node.name), loc=self.loc(node.name))
-        for p in node.parameters:
-            with self.diag.capture_error():
-                f.add_param(str(p.name), self.loc(p.name), self.visit(p.ty))
-        for r in node.retvals:
-            with self.diag.capture_error():
-                f.add_retval(self.visit(r.ty))
-        return f
-
-    @override
-    def visit_Interface(self, node: ast.Interface) -> IfaceDecl:
-        d = IfaceDecl(str(node.name), loc=self.loc(node.name))
-        for f in node.fields:
-            m = self.visit(f)
-            with self.diag.capture_error():
-                d.add_method(m)
-        for i in node.extends:
-            with self.diag.capture_error():
-                d.add_parent(self.visit(i.ty))
-        return d
-
-    @override
-    def visit_TypeAlias(self, node: ast.TypeAlias) -> TypeAliasDecl:
-        return TypeAliasDecl(str(node.name), self.loc(node.name), self.visit(node.ty))
-
-    @override
-    def visit_GlobalFunction(self, node: ast.GlobalFunction) -> FuncDecl:
-        f = FuncDecl(str(node.name), loc=self.loc(node.name))
-        for p in node.parameters:
-            with self.diag.capture_error():
-                f.add_param(str(p.name), self.loc(p.name), self.visit(p.ty))
-        for r in node.retvals:
-            with self.diag.capture_error():
-                f.add_retval(self.visit(r.ty))
-        return f
+        t_ref = TypeRefDecl(name, loc)
+        return t_ref
 
     @override
     def visit_UsePackage(self, node: ast.UsePackage) -> Iterable[PackageImportDecl]:
-        pkg = PackageRefDecl(pkg2str(node.pkg_name), self.loc(node.pkg_name))
+        p_ref = PackageRefDecl(pkg2str(node.pkg_name), self.loc(node.pkg_name))
         if node.pkg_alias:
-            yield PackageImportDecl(
-                pkg,
+            d = PackageImportDecl(
+                p_ref,
                 name=str(node.pkg_alias),
                 loc=self.loc(node.pkg_alias),
             )
         else:
-            yield PackageImportDecl(
-                pkg,
+            d = PackageImportDecl(
+                p_ref,
             )
+        yield d
 
     @override
     def visit_UseSymbol(self, node: ast.UseSymbol) -> Iterable[DeclarationImportDecl]:
-        pkg = PackageRefDecl(pkg2str(node.pkg_name), self.loc(node.pkg_name))
+        p_ref = PackageRefDecl(pkg2str(node.pkg_name), self.loc(node.pkg_name))
         for p in node.decl_alias_pairs:
-            decl = DeclarationRefDecl(str(p.decl_name), self.loc(p.decl_name), pkg)
+            d_ref = DeclarationRefDecl(str(p.decl_name), self.loc(p.decl_name), p_ref)
             if p.decl_alias:
-                yield DeclarationImportDecl(
-                    decl,
+                d = DeclarationImportDecl(
+                    d_ref,
                     name=str(p.decl_alias),
                     loc=self.loc(p.decl_alias),
                 )
             else:
-                yield DeclarationImportDecl(
-                    decl,
+                d = DeclarationImportDecl(
+                    d_ref,
                 )
+            yield d
+
+    @override
+    def visit_StructProperty(self, node: ast.StructProperty) -> StructFieldDecl:
+        d = StructFieldDecl(str(node.name), self.loc(node.name), self.visit(node.ty))
+        self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
+        return d
+
+    @override
+    def visit_Struct(self, node: ast.Struct) -> StructDecl:
+        d = StructDecl(str(node.name), self.loc(node.name))
+        self.diag.for_each(node.fields, lambda f: d.add_field(self.visit(f)))
+        self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
+        return d
+
+    @override
+    def visit_EnumProperty(self, node: ast.EnumProperty) -> EnumItemDecl:
+        if node.expr:
+            d = EnumItemDecl(str(node.name), self.loc(node.name), self.visit(node.expr))
+        else:
+            d = EnumItemDecl(str(node.name), self.loc(node.name))
+        self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
+        return d
+
+    @override
+    def visit_Enum(self, node: ast.Enum) -> EnumDecl:
+        d = EnumDecl(str(node.name), self.loc(node.name))
+        self.diag.for_each(node.fields, lambda f: d.add_item(self.visit(f)))
+        self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
+        return d
+
+    @override
+    def visit_Parameter(self, node: ast.Parameter) -> ParamDecl:
+        d = ParamDecl(str(node.name), self.loc(node.name), self.visit(node.ty))
+        self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
+        return d
+
+    @override
+    def visit_Retval(self, node: ast.Retval) -> RetvalDecl:
+        d = RetvalDecl("", None, self.visit(node.ty))
+        self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
+        return d
+
+    @override
+    def visit_InterfaceFunction(self, node: ast.InterfaceFunction) -> IfaceMethodDecl:
+        d = IfaceMethodDecl(str(node.name), self.loc(node.name))
+        self.diag.for_each(node.parameters, lambda p: d.add_param(self.visit(p)))
+        self.diag.for_each(node.retvals, lambda r: d.add_retval(self.visit(r)))
+        self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
+        return d
+
+    @override
+    def visit_InterfaceParent(self, node: ast.InterfaceParent) -> IfaceParentDecl:
+        p = IfaceParentDecl("", None, self.visit(node.ty))
+        return p
+
+    @override
+    def visit_Interface(self, node: ast.Interface) -> IfaceDecl:
+        d = IfaceDecl(str(node.name), self.loc(node.name))
+        self.diag.for_each(node.fields, lambda f: d.add_method(self.visit(f)))
+        self.diag.for_each(node.extends, lambda i: d.add_parent(self.visit(i)))
+        self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
+        return d
+
+    @override
+    def visit_TypeAlias(self, node: ast.TypeAlias) -> TypeAliasDecl:
+        d = TypeAliasDecl(str(node.name), self.loc(node.name), self.visit(node.ty))
+        self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
+        return d
+
+    @override
+    def visit_GlobalFunction(self, node: ast.GlobalFunction) -> GlobFuncDecl:
+        d = GlobFuncDecl(str(node.name), self.loc(node.name))
+        self.diag.for_each(node.parameters, lambda p: d.add_param(self.visit(p)))
+        self.diag.for_each(node.retvals, lambda r: d.add_retval(self.visit(r)))
+        self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
+        return d
 
     @override
     def visit_Spec(self, node: ast.Spec) -> Package:
         pkg = Package(self.source.pkg_name, SourceLocation(self.source))
         for u in node.uses:
-            for i in self.visit(u):
-                assert isinstance(i, ImportDecl)
-                with self.diag.capture_error():
-                    pkg.add_import(i)
-
-        for n in node.fields:
-            d = self.visit(n)
-            if d is None:
-                # TODO handle all node types.
-                print(f"visit_Spec: Ignoring {n.__class__.__qualname__}")
-                continue
-
-            with self.diag.capture_error():
-                pkg.add_declaration(d)
-
+            self.diag.for_each(self.visit(u), lambda i: pkg.add_import(i))
+        self.diag.for_each(node.fields, lambda n: pkg.add_declaration(self.visit(n)))
+        self.diag.for_each(node.attrs, lambda a: pkg.add_attr(self.visit(a)))
         return pkg
 
     def convert(self) -> Package:

@@ -13,7 +13,7 @@ from taihe.codegen.abi_generator import (
 from taihe.semantics.declarations import (
     EnumDecl,
     FuncBaseDecl,
-    FuncDecl,
+    GlobFuncDecl,
     Package,
     PackageGroup,
     StructDecl,
@@ -232,7 +232,7 @@ class CppProjCodeGenerator:
 
     def gen_func(
         self,
-        func: FuncDecl,
+        func: GlobFuncDecl,
         cpp_proj_pkg_target: COutputBuffer,
         cpp_proj_pkg_info: CppProjPackageInfo,
     ):

@@ -6,7 +6,7 @@ from taihe.utils.sources import SourceLocation
 
 if TYPE_CHECKING:
     from taihe.semantics.declarations import (
-        AttributeItemDecl,
+        AttrItemDecl,
         IfaceDecl,
         IfaceParentDecl,
         NamedDecl,
@@ -19,47 +19,8 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class DefinitionConflictDiagNote(DiagNote):
+class PackageRedefDiagNote(DiagNote):
     MSG = "previously occurred here"
-
-
-@dataclass
-class RecursiveExtensionNote(DiagNote):
-    MSG = "the interface is extended by {iface.description}"
-
-    iface: Optional["IfaceDecl"]
-
-    def __init__(
-        self,
-        last: "IfaceParentDecl",
-    ):
-        self.loc = last.loc
-        self.iface = last.parent
-
-
-@dataclass
-class RecursiveInclusionNote(DiagNote):
-    MSG = "the struct is included in {struct.description}"
-
-    struct: Optional["StructDecl"]
-
-    def __init__(
-        self,
-        last: "StructFieldDecl",
-    ):
-        self.loc = last.loc
-        self.struct = last.parent
-
-
-@dataclass
-class RecursiveTypeAliasNote(DiagNote):
-    MSG = "from here"
-
-    def __init__(
-        self,
-        last: "TypeAliasDecl",
-    ):
-        self.loc = last.ty_ref.loc
 
 
 @dataclass
@@ -71,7 +32,18 @@ class PackageRedefDiagError(DiagError):
 
     def notes(self):
         if self.prev_loc:
-            yield DefinitionConflictDiagNote(loc=self.prev_loc)
+            yield PackageRedefDiagNote(loc=self.prev_loc)
+
+
+@dataclass
+class DeclRedefDiagNote(DiagError):
+    MSG = "conflict with {prev.description}"
+
+    prev: "NamedDecl"
+
+    def __init__(self, prev: "NamedDecl"):
+        self.prev = prev
+        self.loc = prev.loc
 
 
 @dataclass
@@ -88,24 +60,35 @@ class DeclRedefDiagError(DiagError):
 
     def notes(self):
         if self.prev.loc:
-            yield DefinitionConflictDiagNote(loc=self.prev.loc)
+            yield DeclRedefDiagNote(self.prev)
+
+
+@dataclass
+class AttrRedefDiagNote(DiagNote):
+    MSG = "conflict with {prev.description}"
+
+    prev: "AttrItemDecl"
+
+    def __init__(self, prev: "AttrItemDecl"):
+        self.prev = prev
+        self.loc = prev.loc
 
 
 @dataclass
 class AttrRedefDiagError(DiagError):
     MSG = "duplicate {current.description}"
 
-    prev: "AttributeItemDecl"
-    current: "AttributeItemDecl"
+    prev: "AttrItemDecl"
+    current: "AttrItemDecl"
 
-    def __init__(self, prev: "AttributeItemDecl", current: "AttributeItemDecl"):
+    def __init__(self, prev: "AttrItemDecl", current: "AttrItemDecl"):
         self.prev = prev
         self.current = current
         self.loc = current.loc
 
     def notes(self):
         if self.prev.loc:
-            yield DefinitionConflictDiagNote(loc=self.prev.loc)
+            yield AttrRedefDiagNote(self.prev)
 
 
 @dataclass
@@ -186,30 +169,35 @@ class ExtendsTypeError(DiagError):
 
 
 @dataclass
+class DuplicateExtendsNote(DiagNote):
+    MSG = "previously extended here"
+
+
+@dataclass
 class DuplicateExtendsWarn(DiagWarn):
     MSG = "{parent_iface.description} is extended multiple times by {iface.description}"
 
     iface: "IfaceDecl"
     parent_iface: "IfaceDecl"
-    prev: "IfaceParentDecl"
-    curr: "IfaceParentDecl"
+    prev_loc: Optional["SourceLocation"]
+
+    def notes(self):
+        if self.prev_loc:
+            yield DuplicateExtendsNote(loc=self.prev_loc)
+
+
+@dataclass
+class RecursiveExtensionNote(DiagNote):
+    MSG = "the interface is extended by {iface.description}"
+
+    iface: Optional["IfaceDecl"]
 
     def __init__(
         self,
-        iface: "IfaceDecl",
-        parent_iface: "IfaceDecl",
-        prev: "IfaceParentDecl",
-        curr: "IfaceParentDecl",
+        last: "IfaceParentDecl",
     ):
-        self.loc = curr.loc
-        self.iface = iface
-        self.parent_iface = parent_iface
-        self.curr = curr
-        self.prev = prev
-
-    def notes(self):
-        if self.prev.loc:
-            yield DefinitionConflictDiagNote(loc=self.prev.loc)
+        self.loc = last.ty_ref.loc
+        self.iface = last.parent
 
 
 @dataclass
@@ -224,13 +212,27 @@ class RecursiveExtensionError(DiagError):
         last: "IfaceParentDecl",
         other: list["IfaceParentDecl"],
     ):
-        self.loc = last.loc
+        self.loc = last.ty_ref.loc
         self.iface = last.parent
         self.other = other
 
     def notes(self):
         for n in self.other:
             yield RecursiveExtensionNote(n)
+
+
+@dataclass
+class RecursiveInclusionNote(DiagNote):
+    MSG = "the struct is included in {struct.description}"
+
+    struct: Optional["StructDecl"]
+
+    def __init__(
+        self,
+        last: "StructFieldDecl",
+    ):
+        self.loc = last.ty_ref.loc
+        self.struct = last.parent
 
 
 @dataclass
@@ -245,13 +247,24 @@ class RecursiveInclusionError(DiagError):
         last: "StructFieldDecl",
         other: list["StructFieldDecl"],
     ):
-        self.loc = last.loc
+        self.loc = last.ty_ref.loc
         self.struct = last.parent
         self.other = other
 
     def notes(self):
         for n in self.other:
             yield RecursiveInclusionNote(n)
+
+
+@dataclass
+class RecursiveTypeAliasNote(DiagNote):
+    MSG = "from here"
+
+    def __init__(
+        self,
+        last: "TypeAliasDecl",
+    ):
+        self.loc = last.ty_ref.loc
 
 
 @dataclass

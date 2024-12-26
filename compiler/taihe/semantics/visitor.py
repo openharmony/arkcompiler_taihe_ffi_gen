@@ -15,15 +15,14 @@ Design:
 from typing import Generic, Optional, TypeVar
 
 from taihe.semantics.declarations import (
-    AttributeDecl,
-    AttributeItemDecl,
+    AttrItemDecl,
     Decl,
     DeclarationImportDecl,
     DeclarationRefDecl,
     EnumDecl,
     EnumItemDecl,
     FuncBaseDecl,
-    FuncDecl,
+    GlobFuncDecl,
     IfaceDecl,
     IfaceMethodDecl,
     IfaceParentDecl,
@@ -149,29 +148,34 @@ class DeclVisitor:
 
     def visit_decl(self, d: Decl) -> None:
         """The fallback method which handles the most general cases."""
-        del d
+        for i in d.attrs.values():
+            self.handle_decl(i)
 
     def visit_named_decl(self, d: NamedDecl) -> None:
         return self.visit_decl(d)
 
     def visit_param_decl(self, d: ParamDecl) -> None:
-        d._traverse(self)
+        self.handle_decl(d.ty_ref)
+
         return self.visit_named_decl(d)
 
     def visit_retval_decl(self, d: RetvalDecl) -> None:
-        d._traverse(self)
+        self.handle_decl(d.ty_ref)
+
         return self.visit_named_decl(d)
 
     def visit_func_base_decl(self, d: FuncBaseDecl) -> None:
-        d._traverse(self)
+        for i in d.params:
+            self.handle_decl(i)
+
+        for i in d.retvals:
+            self.handle_decl(i)
+
         return self.visit_named_decl(d)
 
     ### Attribute ###
 
-    def visit_attribute_decl(self, d: AttributeDecl) -> None:
-        return self.visit_decl(d)
-
-    def visit_attribute_item_decl(self, d: AttributeItemDecl) -> None:
+    def visit_attr_item_decl(self, d: AttrItemDecl) -> None:
         return self.visit_decl(d)
 
     ### References ###
@@ -183,7 +187,8 @@ class DeclVisitor:
         return self.visit_decl(d)
 
     def visit_decl_ref_decl(self, d: DeclarationRefDecl) -> None:
-        d._traverse(self)
+        self.handle_decl(d.pkg_ref)
+
         return self.visit_decl(d)
 
     ### Imports ###
@@ -192,16 +197,18 @@ class DeclVisitor:
         return self.visit_named_decl(d)
 
     def visit_package_import_decl(self, d: PackageImportDecl) -> None:
-        d._traverse(self)
+        self.handle_decl(d.pkg_ref)
+
         return self.visit_import_decl(d)
 
     def visit_decl_import_decl(self, d: DeclarationImportDecl) -> None:
-        d._traverse(self)
+        self.handle_decl(d.decl_ref)
+
         return self.visit_import_decl(d)
 
     ### Functions ###
 
-    def visit_func_decl(self, d: FuncDecl) -> None:
+    def visit_glob_func_decl(self, d: GlobFuncDecl) -> None:
         return self.visit_func_base_decl(d)
 
     ### Type (Generic) ###
@@ -212,17 +219,21 @@ class DeclVisitor:
     ### Type Alias ###
 
     def visit_type_alias_decl(self, d: TypeAliasDecl) -> None:
-        d._traverse(self)
+        self.handle_decl(d.ty_ref)
+
         return self.visit_named_decl(d)
 
     ### Struct ###
 
     def visit_struct_field_decl(self, d: StructFieldDecl) -> None:
-        d._traverse(self)
+        self.handle_decl(d.ty_ref)
+
         return self.visit_named_decl(d)
 
     def visit_struct_decl(self, d: StructDecl) -> None:
-        d._traverse(self)
+        for i in d.fields:
+            self.handle_decl(i)
+
         return self.visit_type_decl(d)
 
     ### Enum ###
@@ -231,28 +242,53 @@ class DeclVisitor:
         return self.visit_named_decl(d)
 
     def visit_enum_decl(self, d: EnumDecl) -> None:
-        d._traverse(self)
+        for i in d.items:
+            self.handle_decl(i)
+
         return self.visit_type_decl(d)
 
     ### Interface ###
 
     def visit_iface_parent_decl(self, d: IfaceParentDecl) -> None:
-        d._traverse(self)
+        self.handle_decl(d.ty_ref)
+
         return self.visit_named_decl(d)
 
     def visit_iface_method_decl(self, d: IfaceMethodDecl) -> None:
         return self.visit_func_base_decl(d)
 
     def visit_iface_decl(self, d: IfaceDecl) -> None:
-        d._traverse(self)
+        for i in d.parents:
+            self.handle_decl(i)
+
+        for i in d.methods:
+            self.handle_decl(i)
+
         return self.visit_type_decl(d)
 
     ### Package ###
 
     def visit_package(self, p: Package) -> None:
-        p._traverse(self)
+        for i in p.pkg_imports:
+            self.handle_decl(i)
+        for i in p.decl_imports:
+            self.handle_decl(i)
+
+        for i in p.functions:
+            self.handle_decl(i)
+        for i in p.structs:
+            self.handle_decl(i)
+        for i in p.enums:
+            self.handle_decl(i)
+        for i in p.interfaces:
+            self.handle_decl(i)
+        for i in p.type_aliases:
+            self.handle_decl(i)
+
         return self.visit_named_decl(p)
 
     def visit_package_group(self, g: PackageGroup) -> None:
-        g._traverse(self)
+        for i in g.packages:
+            self.handle_decl(i)
+
         return self.visit_decl(g)
