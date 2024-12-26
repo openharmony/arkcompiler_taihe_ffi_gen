@@ -44,7 +44,7 @@ class ExprEvaluator(Visitor):
     def visit_LiteralBoolExpr(self, node: ast.LiteralBoolExpr) -> bool:
         return {
             "TRUE": True,
-            "False": False,
+            "FALSE": False,
         }[node.val.text]
 
     @override

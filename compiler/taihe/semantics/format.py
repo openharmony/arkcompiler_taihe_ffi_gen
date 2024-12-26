@@ -89,10 +89,10 @@ class _PrettyPrinter(DeclVisitor):
     def get_attr_item(self, d: AttrItemDecl) -> str:
         if d.value is None:
             return d.name
-        elif isinstance(d.value, int):
-            value = str(d.value)
         elif isinstance(d.value, bool):
             value = "TRUE" if d.value else "FALSE"
+        elif isinstance(d.value, int):
+            value = str(d.value)
         elif isinstance(d.value, str):
             value = '"' + encode(d.value, "unicode-escape").decode() + '"'
         else:
@@ -106,7 +106,7 @@ class _PrettyPrinter(DeclVisitor):
     def with_attrs(self, d: Decl, s: str) -> str:
         if d.attrs:
             fmt_attrs = ", ".join(map(self.get_attr_item, d.attrs.values()))
-            return f"{AnsiStyle.MAGENTA}@[{fmt_attrs}]{AnsiStyle.RESET_ALL} {s}"
+            return f"{AnsiStyle.MAGENTA}[{fmt_attrs}]{AnsiStyle.RESET_ALL} {s}"
         else:
             return s
 
@@ -115,7 +115,7 @@ class _PrettyPrinter(DeclVisitor):
             fmt_attrs = ", ".join(map(self.get_attr_item, d.attrs.values()))
             self.buffer.write(self.indent * 2 * " ")
             self.buffer.write(
-                f"{AnsiStyle.MAGENTA}@[{fmt_attrs}]{AnsiStyle.RESET_ALL}\n"
+                f"{AnsiStyle.MAGENTA}[{fmt_attrs}]{AnsiStyle.RESET_ALL}\n"
             )
 
     @override

@@ -12,21 +12,26 @@ from taihe.utils.exceptions import IDLSyntaxError
 from taihe.utils.sources import SourceBase, SourceBuffer, SourceFile, SourceLocation
 
 
+def get_pos(ctx: Token):
+    text = ctx.text.splitlines()
+    row = ctx.line
+    col = ctx.column
+    row_offset = len(text) - 1
+    col_offset = len(text[-1])
+    beg = (
+        row,
+        col + 1,
+    )
+    end = (
+        row + row_offset,
+        col + col_offset if row_offset == 0 else col_offset,
+    )
+    return beg, end
+
+
 def add_pos(ctx, pos_dict: dict):
     if isinstance(ctx, Token):
-        text = ctx.text.splitlines()
-        row = ctx.line
-        col = ctx.column
-        row_offset = len(text) - 1
-        col_offset = len(text[-1])
-        beg = (
-            row,
-            col + 1,
-        )
-        end = (
-            row + row_offset,
-            col + col_offset if row_offset == 0 else col_offset,
-        )
+        beg, end = get_pos(ctx)
         pos_dict[ctx] = beg, end
     elif isinstance(ctx, TerminalNode):
         add_pos(ctx.symbol, pos_dict)
@@ -54,7 +59,7 @@ class TaiheErrorListener(ErrorListener):
 
     def syntaxError(self, recognizer, offendingSymbol, line, column, msg, e):
         add_pos(offendingSymbol, self.pos_dict)
-        (start_row, start_col), (stop_row, stop_col) = self.pos_dict[offendingSymbol]
+        (start_row, start_col), (stop_row, stop_col) = get_pos(offendingSymbol)
         self.diag.emit(
             IDLSyntaxError(
                 offendingSymbol.text,
