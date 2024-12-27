@@ -5,14 +5,14 @@ from taihe.utils.diagnostics import AbstractDiagnosticsManager, DiagBase
 from taihe.utils.exceptions import (
     DeclarationNotInScopeError,
     DeclNotExistError,
-    DeclRedefDiagError,
+    DeclRedefError,
     DuplicateExtendsWarn,
     ExtendsTypeError,
     IDLSyntaxError,
     NotATypeError,
     PackageNotExistError,
     PackageNotInScopeError,
-    PackageRedefDiagError,
+    PackageRedefError,
     RecursiveExtensionError,
     RecursiveInclusionError,
     StructFieldTypeError,
@@ -141,7 +141,7 @@ def test_decl_redef_1():
         "function bad_func(a: i32, a: i32): ();\n"
     )
     test_instance.run()
-    test_instance.assert_has_error(DeclRedefDiagError)
+    test_instance.assert_has_error(DeclRedefError)
 
 
 def test_decl_redef_2():
@@ -155,7 +155,7 @@ def test_decl_redef_2():
         "}\n"
     )
     test_instance.run()
-    test_instance.assert_has_error(DeclRedefDiagError)
+    test_instance.assert_has_error(DeclRedefError)
 
 
 def test_decl_redef_3():
@@ -169,7 +169,7 @@ def test_decl_redef_3():
         "}\n"
     )
     test_instance.run()
-    test_instance.assert_has_error(DeclRedefDiagError)
+    test_instance.assert_has_error(DeclRedefError)
 
 
 def test_decl_redef_4():
@@ -193,7 +193,7 @@ def test_decl_redef_4():
         "}\n"
     )
     test_instance.run()
-    test_instance.assert_has_error(DeclRedefDiagError)
+    test_instance.assert_has_error(DeclRedefError)
 
 
 def test_decl_redef_5():
@@ -207,7 +207,7 @@ def test_decl_redef_5():
     test_instance.add_source("package.example1", "")
     test_instance.add_source("package.example2", "")
     test_instance.run()
-    test_instance.assert_has_error(DeclRedefDiagError)
+    test_instance.assert_has_error(DeclRedefError)
 
 
 def test_package_redef():
@@ -216,7 +216,7 @@ def test_package_redef():
     test_instance.add_source("package", "")
     test_instance.add_source("package", "")
     test_instance.run()
-    test_instance.assert_has_error(PackageRedefDiagError)
+    test_instance.assert_has_error(PackageRedefError)
 
 
 def test_symbol_conflict_namespace():

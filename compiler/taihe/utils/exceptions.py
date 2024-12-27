@@ -7,24 +7,26 @@ from taihe.utils.sources import SourceLocation
 if TYPE_CHECKING:
     from taihe.semantics.declarations import (
         AttrItemDecl,
+        BasicTypeDecl,
+        EnumItemDecl,
         IfaceDecl,
         IfaceParentDecl,
         NamedDecl,
         Package,
         PackageLevelDecl,
-        StructDecl,
         StructFieldDecl,
         TypeAliasDecl,
+        TypeRefDecl,
     )
 
 
 @dataclass
-class PackageRedefDiagNote(DiagNote):
+class PackageRedefNote(DiagNote):
     MSG = "previously occurred here"
 
 
 @dataclass
-class PackageRedefDiagError(DiagError):
+class PackageRedefError(DiagError):
     MSG = "package name {pkg!r} is duplicated"
 
     pkg_name: str
@@ -32,11 +34,11 @@ class PackageRedefDiagError(DiagError):
 
     def notes(self):
         if self.prev_loc:
-            yield PackageRedefDiagNote(loc=self.prev_loc)
+            yield PackageRedefNote(loc=self.prev_loc)
 
 
 @dataclass
-class DeclRedefDiagNote(DiagError):
+class DeclRedefNote(DiagNote):
     MSG = "conflict with {prev.description}"
 
     prev: "NamedDecl"
@@ -47,7 +49,7 @@ class DeclRedefDiagNote(DiagError):
 
 
 @dataclass
-class DeclRedefDiagError(DiagError):
+class DeclRedefError(DiagError):
     MSG = "redefinition of {current.description}"
 
     prev: "NamedDecl"
@@ -60,11 +62,39 @@ class DeclRedefDiagError(DiagError):
 
     def notes(self):
         if self.prev.loc:
-            yield DeclRedefDiagNote(self.prev)
+            yield DeclRedefNote(self.prev)
 
 
 @dataclass
-class AttrRedefDiagNote(DiagNote):
+class EnumValueConflictNote(DiagNote):
+    MSG = "conflict with {prev.description}"
+
+    prev: "EnumItemDecl"
+
+    def __init__(self, prev: "EnumItemDecl"):
+        self.prev = prev
+        self.loc = prev.loc
+
+
+@dataclass
+class EnumValueConflictError(DiagError):
+    MSG = "value {current.value} of {current.description} is repeated"
+
+    prev: "EnumItemDecl"
+    current: "EnumItemDecl"
+
+    def __init__(self, prev: "EnumItemDecl", current: "EnumItemDecl"):
+        self.prev = prev
+        self.current = current
+        self.loc = current.loc
+
+    def notes(self):
+        if self.prev.loc:
+            yield DeclRedefNote(self.prev)
+
+
+@dataclass
+class AttrRedefNote(DiagNote):
     MSG = "conflict with {prev.description}"
 
     prev: "AttrItemDecl"
@@ -75,7 +105,7 @@ class AttrRedefDiagNote(DiagNote):
 
 
 @dataclass
-class AttrRedefDiagError(DiagError):
+class AttrRedefError(DiagError):
     MSG = "duplicate {current.description}"
 
     prev: "AttrItemDecl"
@@ -88,7 +118,7 @@ class AttrRedefDiagError(DiagError):
 
     def notes(self):
         if self.prev.loc:
-            yield AttrRedefDiagNote(self.prev)
+            yield AttrRedefNote(self.prev)
 
 
 @dataclass
@@ -188,32 +218,32 @@ class DuplicateExtendsWarn(DiagWarn):
 
 @dataclass
 class RecursiveExtensionNote(DiagNote):
-    MSG = "the interface is extended by {iface.description}"
+    MSG = "extended by {iface.description}"
 
-    iface: Optional["IfaceDecl"]
+    iface: "IfaceDecl"
 
     def __init__(
         self,
-        last: "IfaceParentDecl",
+        last: tuple["IfaceDecl", "TypeRefDecl"],
     ):
-        self.loc = last.ty_ref.loc
-        self.iface = last.parent
+        self.loc = last[1].loc
+        self.iface = last[0]
 
 
 @dataclass
 class RecursiveExtensionError(DiagError):
     MSG = "recursive extension is found in {iface.description}"
 
-    iface: Optional["IfaceDecl"]
-    other: list["IfaceParentDecl"]
+    iface: "IfaceDecl"
+    other: list[tuple["IfaceDecl", "TypeRefDecl"]]
 
     def __init__(
         self,
-        last: "IfaceParentDecl",
-        other: list["IfaceParentDecl"],
+        last: tuple["IfaceDecl", "TypeRefDecl"],
+        other: list[tuple["IfaceDecl", "TypeRefDecl"]],
     ):
-        self.loc = last.ty_ref.loc
-        self.iface = last.parent
+        self.loc = last[1].loc
+        self.iface = last[0]
         self.other = other
 
     def notes(self):
@@ -223,32 +253,32 @@ class RecursiveExtensionError(DiagError):
 
 @dataclass
 class RecursiveInclusionNote(DiagNote):
-    MSG = "the struct is included in {struct.description}"
+    MSG = "referenced by {decl.description}"
 
-    struct: Optional["StructDecl"]
+    decl: "BasicTypeDecl"
 
     def __init__(
         self,
-        last: "StructFieldDecl",
+        last: tuple["BasicTypeDecl", "TypeRefDecl"],
     ):
-        self.loc = last.ty_ref.loc
-        self.struct = last.parent
+        self.loc = last[1].loc
+        self.decl = last[0]
 
 
 @dataclass
 class RecursiveInclusionError(DiagError):
-    MSG = "recursive inclusion is found in {struct.description}"
+    MSG = "cycle detected in {decl.description}"
 
-    struct: Optional["StructDecl"]
-    other: list["StructFieldDecl"]
+    decl: "BasicTypeDecl"
+    other: list[tuple["BasicTypeDecl", "TypeRefDecl"]]
 
     def __init__(
         self,
-        last: "StructFieldDecl",
-        other: list["StructFieldDecl"],
+        last: tuple["BasicTypeDecl", "TypeRefDecl"],
+        other: list[tuple["BasicTypeDecl", "TypeRefDecl"]],
     ):
-        self.loc = last.ty_ref.loc
-        self.struct = last.parent
+        self.loc = last[1].loc
+        self.decl = last[0]
         self.other = other
 
     def notes(self):

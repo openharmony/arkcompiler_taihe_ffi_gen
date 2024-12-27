@@ -48,7 +48,7 @@ structField
 
 enumField
     : (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
-      token_name = ID (COLON Type_ty = type SEMICOLON)? (ASSIGN_TO IntExprOpt_expr = intExpr)? SEMICOLON # enumProperty
+      token_name = ID (COLON TypeOpt_ty = type)? (ASSIGN_TO IntExprOpt_expr = intExpr)? SEMICOLON # enumProperty
     ;
 
 interfaceParent

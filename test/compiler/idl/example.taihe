@@ -20,6 +20,12 @@ from example.foo use Nonexist as MyNonexist;  // DeclNotExistError
 from example.bar use Bar as Foobar;
 from example.foo use Foo as Foobar;  // DeclConflictError
 
+// TypeAlias
+
+type AliasTestA = AliasTestB;
+
+type AliasTestB = String;
+
 // Structs
 
 struct ResolveTypesTester {
@@ -49,18 +55,6 @@ struct BadStruct {  // DeclConflictError
     c: MyNonexist;  // Nothing should be reported here
 }
 
-struct RecursiveStructA {
-    b: RecursiveStructB;
-}
-
-struct RecursiveStructB {
-    c: RecursiveStructC;
-}
-
-struct RecursiveStructC {
-    a: RecursiveStructA;  // RecursiveInclusion
-}
-
 struct GoodStruct {
     n: i32;
 }
@@ -70,6 +64,7 @@ struct GoodStruct {
 enum BadEnum {
     A;
     A = -1;  // DeclConflictError
+    C = 0; // EnumValueConflictError
 }
 
 enum GoodEnum {
@@ -104,14 +99,18 @@ interface BadIface
     function b(x: i32, x: i32): void;  // DeclConflictError
 }
 
+// Cycle Detection
+
 interface RecursiveIfaceA: RecursiveIfaceB {}
 
-interface RecursiveIfaceB: RecursiveIfaceAlias {}  // RecursiveExtension
+interface RecursiveIfaceB: RecursiveIfaceA {}  // RecursiveExtension
 
-type RecursiveIfaceAlias = RecursiveIfaceA;
+struct RecursiveStruct {
+    e: RecursiveEnum;
+}
 
-type RecursiveAliasA = RecursiveAliasB;
-type RecursiveAliasB = RecursiveAliasA;
+enum RecursiveEnum {
+    a: RecursiveAlias;
+}
 
-type AliasTestA = AliasTestB;
-type AliasTestB = String;
+type RecursiveAlias = RecursiveStruct;

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Optional, Protocol
 from typing_extensions import override
 
 from taihe.semantics.types import Type
-from taihe.utils.exceptions import AttrRedefDiagError, DeclRedefDiagError
+from taihe.utils.exceptions import AttrRedefError, DeclRedefError
 from taihe.utils.sources import SourceLocation
 
 if TYPE_CHECKING:
@@ -33,7 +33,7 @@ class Decl(DeclProtocol, metaclass=ABCMeta):
     def add_attr(self, i: "AttrItemDecl"):
         i.parent = self
         if prev := self.attrs.get(i.name, None):
-            raise AttrRedefDiagError(prev, i)
+            raise AttrRedefError(prev, i)
         else:
             self.attrs[i.name] = i
 
@@ -420,7 +420,11 @@ class TypeDecl(PackageLevelDecl, Type, metaclass=ABCMeta):
     pass
 
 
-class TypeAliasDecl(TypeDecl):
+class BasicTypeDecl(TypeDecl, metaclass=ABCMeta):
+    pass
+
+
+class TypeAliasDecl(BasicTypeDecl):
     KIND = "type alias"
 
     ty_ref: TypeRefDecl
@@ -442,6 +446,7 @@ class TypeAliasDecl(TypeDecl):
 class EnumItemDecl(NamedDecl):
     KIND = "enum item"
 
+    ty_ref: Optional[TypeRefDecl]
     value: Optional[int]
     parent: Optional["EnumDecl"]
 
@@ -449,9 +454,11 @@ class EnumItemDecl(NamedDecl):
         self,
         name: str,
         loc: Optional[SourceLocation],
+        ty_ref: Optional[TypeRefDecl] = None,
         value: Optional[int] = None,
     ):
         super().__init__(name, loc)
+        self.ty_ref = ty_ref
         self.value = value
         self.parent = None
 
@@ -471,7 +478,7 @@ class EnumItemDecl(NamedDecl):
         return [*self.parent.segments, self.name]
 
 
-class EnumDecl(TypeDecl):
+class EnumDecl(BasicTypeDecl):
     KIND = "enum"
 
     items: list[EnumItemDecl]
@@ -526,7 +533,7 @@ class StructFieldDecl(NamedDecl):
         return {}
 
 
-class StructDecl(TypeDecl):
+class StructDecl(BasicTypeDecl):
     KIND = "struct"
 
     fields: list[StructFieldDecl]
@@ -695,7 +702,7 @@ class Package(NamedDecl):
 
     def _register_to_decl(self, d: PackageLevelDecl):
         if prev := self.decls.get(d.name, None):
-            raise DeclRedefDiagError(prev, d)
+            raise DeclRedefError(prev, d)
         else:
             self.decls[d.name] = d
 
@@ -740,7 +747,7 @@ class Package(NamedDecl):
 
     def _register_to_import(self, i: ImportDecl):
         if prev := self.imports.get(i.name, None):
-            raise DeclRedefDiagError(prev, i)
+            raise DeclRedefError(prev, i)
         else:
             self.imports[i.name] = i
 

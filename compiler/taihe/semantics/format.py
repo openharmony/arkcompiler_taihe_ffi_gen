@@ -1,7 +1,7 @@
 """Format the IDL files."""
 
 from codecs import encode
-from typing import Optional, TextIO
+from typing import TextIO
 
 from typing_extensions import override
 
@@ -28,7 +28,6 @@ from taihe.semantics.declarations import (
 )
 from taihe.semantics.types import (
     BuiltinType,
-    Type,
 )
 from taihe.semantics.visitor import DeclVisitor, TypeVisitor
 from taihe.utils.diagnostics import AnsiStyle
@@ -56,16 +55,16 @@ class _PrettyPrinter(DeclVisitor):
         self.type_name_printer = _TypeNamePrinter()
 
     def get_type_ref_decl(self, d: TypeRefDecl) -> str:
-        if d.is_resolved:
-            return f"{d.symbol} {AnsiStyle.GREEN}/* {self.get_real_type(d.resolved_ty)} */{AnsiStyle.RESET}"
-        else:
-            return d.symbol
-
-    def get_type(self, t: Type) -> str:
-        return self.type_name_printer.handle_type(t)
-
-    def get_real_type(self, t: Optional[Type]) -> str:
-        return "<error type>" if not t else self.get_type(t)
+        real_type = (
+            "<error type>"
+            if not d.resolved_ty
+            else self.type_name_printer.handle_type(d.resolved_ty)
+        )
+        return (
+            f"{d.symbol} {AnsiStyle.GREEN}/* {real_type} */{AnsiStyle.RESET}"
+            if d.is_resolved
+            else d.symbol
+        )
 
     def get_package_ref_decl(self, d: PackageRefDecl) -> str:
         return d.symbol
@@ -75,11 +74,11 @@ class _PrettyPrinter(DeclVisitor):
 
     def get_parent_decl(self, d: IfaceParentDecl) -> str:
         res = self.get_type_ref_decl(d.ty_ref)
-        return self.with_attrs(d, res)
+        return self.with_attr(d, res)
 
     def get_param_decl(self, d: ParamDecl) -> str:
         res = f"{d.name}: {self.get_type_ref_decl(d.ty_ref)}"
-        return self.with_attrs(d, res)
+        return self.with_attr(d, res)
 
     def get_attr_item(self, d: AttrItemDecl) -> str:
         if d.value is None:
@@ -98,80 +97,90 @@ class _PrettyPrinter(DeclVisitor):
     def as_keyword(self, s) -> str:
         return f"{AnsiStyle.CYAN}{s}{AnsiStyle.RESET}"
 
-    def with_attrs(self, d: Decl, s: str) -> str:
+    def with_attr(self, d: Decl, s: str) -> str:
         if d.attrs:
             fmt_attrs = ", ".join(map(self.get_attr_item, d.attrs.values()))
-            return f"{AnsiStyle.MAGENTA}[{fmt_attrs}]{AnsiStyle.RESET_ALL} {s}"
+            attr = f"{AnsiStyle.MAGENTA}[{fmt_attrs}]{AnsiStyle.RESET_ALL}"
+            return f"{attr} {s}"
         else:
             return s
 
-    def write_attrs(self, d: Decl):
+    def write_attr(self, d: Decl):
         if d.attrs:
             fmt_attrs = ", ".join(map(self.get_attr_item, d.attrs.values()))
+            attr = f"{AnsiStyle.MAGENTA}[{fmt_attrs}]{AnsiStyle.RESET_ALL}"
             self.buffer.write(self.indent * 2 * " ")
-            self.buffer.write(
-                f"{AnsiStyle.MAGENTA}[{fmt_attrs}]{AnsiStyle.RESET_ALL}\n"
-            )
+            self.buffer.write(f"{attr}\n")
 
     @override
     def visit_package_import_decl(self, d: PackageImportDecl):
+        self.write_attr(d)
+
+        use_kw = self.as_keyword("use")
+        as_kw = self.as_keyword("as")
+
+        as_ = f" {as_kw} {d.name}" if d.is_alias() else ""
+
         self.buffer.write(self.indent * 2 * " ")
-        self.buffer.write(f"use {self.get_package_ref_decl(d.pkg_ref)}")
-        if d.is_alias():
-            self.buffer.write(f" as {d.name}")
-        self.buffer.write(";\n")
+        self.buffer.write(f"{use_kw} {self.get_package_ref_decl(d.pkg_ref)}{as_};\n")
 
     @override
     def visit_decl_import_decl(self, d: DeclarationImportDecl):
+        self.write_attr(d)
+
+        from_kw = self.as_keyword("from")
+        use_kw = self.as_keyword("use")
+        as_kw = self.as_keyword("as")
+
+        as_ = f" {as_kw} {d.name}" if d.is_alias() else ""
+
         self.buffer.write(self.indent * 2 * " ")
         self.buffer.write(
-            f"{self.as_keyword('from')} {self.get_package_ref_decl(d.decl_ref.pkg_ref)} {self.as_keyword('use')} {self.get_decl_ref_decl(d.decl_ref)}"
+            f"{from_kw} {self.get_package_ref_decl(d.decl_ref.pkg_ref)} {use_kw} {self.get_decl_ref_decl(d.decl_ref)}{as_};\n"
         )
-        if d.is_alias():
-            self.buffer.write(f" {self.as_keyword('as')} {d.name}")
-        self.buffer.write(";\n")
 
     @override
     def visit_func_base_decl(self, d: FuncBaseDecl):
-        self.write_attrs(d)
+        self.write_attr(d)
+
+        func_kw = self.as_keyword("fn")
+
+        fmt_args = ", ".join(self.get_param_decl(x) for x in d.params)
+        ret = f"-> {self.get_type_ref_decl(d.return_ty_ref)}" if d.return_ty_ref else ""
 
         self.buffer.write(self.indent * 2 * " ")
-        fmt_args = ", ".join(self.get_param_decl(x) for x in d.params)
-        if d.return_ty_ref is None:
-            self.buffer.write(f"{self.as_keyword('fn')} {d.name}({fmt_args});\n")
-        else:
-            fmt_ret = self.get_type_ref_decl(d.return_ty_ref)
-            self.buffer.write(
-                f"{self.as_keyword('fn')} {d.name}({fmt_args}) -> {fmt_ret};\n"
-            )
+        self.buffer.write(f"{func_kw} {d.name}({fmt_args}){ret};\n")
 
     @override
     def visit_struct_field_decl(self, d: StructFieldDecl):
-        self.write_attrs(d)
+        self.write_attr(d)
 
         self.buffer.write(self.indent * 2 * " ")
         self.buffer.write(f"{d.name}: {self.get_type_ref_decl(d.ty_ref)};\n")
 
     @override
     def visit_enum_item_decl(self, d: EnumItemDecl):
-        self.write_attrs(d)
+        self.write_attr(d)
+
+        ty_name = f": {self.get_type_ref_decl(d.ty_ref)}" if d.ty_ref else ""
+        value = "unknown" if d.value is None else str(d.value)
+        comment = (
+            ""
+            if d.value is None
+            else f" {AnsiStyle.GREEN}// {hex(d.value)}{AnsiStyle.RESET}"
+        )
 
         self.buffer.write(self.indent * 2 * " ")
-        if d.value is None:
-            self.buffer.write(
-                f"{d.name}; {AnsiStyle.GREEN}// unknown{AnsiStyle.RESET}\n"
-            )
-        else:
-            self.buffer.write(
-                f"{d.name} = {d.value}; {AnsiStyle.GREEN}// {hex(d.value)}{AnsiStyle.RESET}\n"
-            )
+        self.buffer.write(f"{d.name}{ty_name} = {value};{comment}\n")
 
     @override
     def visit_enum_decl(self, d: EnumDecl):
-        self.write_attrs(d)
+        self.write_attr(d)
+
+        enum_kw = self.as_keyword("enum")
 
         self.buffer.write(self.indent * 2 * " ")
-        self.buffer.write(f"{self.as_keyword('enum')} {d.name} {{")
+        self.buffer.write(f"{enum_kw} {d.name} {{")
         if d.items:
             self.buffer.write("\n")
             self.indent += 1
@@ -183,10 +192,12 @@ class _PrettyPrinter(DeclVisitor):
 
     @override
     def visit_struct_decl(self, d: StructDecl):
-        self.write_attrs(d)
+        self.write_attr(d)
+
+        struct_kw = self.as_keyword("struct")
 
         self.buffer.write(self.indent * 2 * " ")
-        self.buffer.write(f"{self.as_keyword('struct')} {d.name} {{")
+        self.buffer.write(f"{struct_kw} {d.name} {{")
         if d.fields:
             self.buffer.write("\n")
             self.indent += 1
@@ -198,16 +209,18 @@ class _PrettyPrinter(DeclVisitor):
 
     @override
     def visit_iface_decl(self, d: IfaceDecl):
-        self.write_attrs(d)
+        self.write_attr(d)
+
+        iface_kw = self.as_keyword("interface")
+
+        extends = (
+            ": " + ", ".join(self.get_parent_decl(e) for e in d.parents)
+            if d.parents
+            else ""
+        )
 
         self.buffer.write(self.indent * 2 * " ")
-        if d.parents:
-            fmt_extends = ", ".join(self.get_parent_decl(e) for e in d.parents)
-            self.buffer.write(
-                f"{self.as_keyword('interface')} {d.name}: {fmt_extends} {{"
-            )
-        else:
-            self.buffer.write(f"{self.as_keyword('interface')} {d.name} {{")
+        self.buffer.write(f"{iface_kw} {d.name}{extends} {{")
         if d.methods:
             self.buffer.write("\n")
             self.indent += 1
@@ -219,17 +232,17 @@ class _PrettyPrinter(DeclVisitor):
 
     @override
     def visit_type_alias_decl(self, d: TypeAliasDecl):
-        self.write_attrs(d)
+        self.write_attr(d)
+
+        type_kw = self.as_keyword("type")
 
         self.buffer.write(self.indent * 2 * " ")
-        self.buffer.write(
-            f"{self.as_keyword('type')} {d.name} = {self.get_type_ref_decl(d.ty_ref)};\n"
-        )
+        self.buffer.write(f"{type_kw} {d.name} = {self.get_type_ref_decl(d.ty_ref)};\n")
 
     @override
     def visit_package(self, p: Package):
         self.buffer.write(self.indent * 2 * " ")
-        self.buffer.write(f"// {self.with_attrs(p, p.name)}\n")
+        self.buffer.write(f"// {self.with_attr(p, p.name)}\n")
         for d in p.pkg_imports:
             self.handle_decl(d)
         for d in p.decl_imports:

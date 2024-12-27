@@ -171,10 +171,10 @@ class AstConverter(ExprEvaluator):
     @override
     def visit_PrimitiveType(self, node: ast.PrimitiveType) -> TypeRefDecl:
         if ty := BuiltinType.lookup(str(node.name)):
-            t_ref = TypeRefDecl(str(node.name), self.loc(node.name), ty)
+            ty_ref = TypeRefDecl(str(node.name), self.loc(node.name), ty)
         else:
-            t_ref = TypeRefDecl(str(node.name), self.loc(node.name))
-        return t_ref
+            ty_ref = TypeRefDecl(str(node.name), self.loc(node.name))
+        return ty_ref
 
     @override
     def visit_UserType(self, node: ast.UserType) -> TypeRefDecl:
@@ -184,8 +184,8 @@ class AstConverter(ExprEvaluator):
         else:
             loc = self.loc(node.decl_name)
             name = str(node.decl_name)
-        t_ref = TypeRefDecl(name, loc)
-        return t_ref
+        ty_ref = TypeRefDecl(name, loc)
+        return ty_ref
 
     @override
     def visit_UsePackage(self, node: ast.UsePackage) -> Iterable[PackageImportDecl]:
@@ -234,10 +234,12 @@ class AstConverter(ExprEvaluator):
 
     @override
     def visit_EnumProperty(self, node: ast.EnumProperty) -> EnumItemDecl:
-        if node.expr:
-            d = EnumItemDecl(str(node.name), self.loc(node.name), self.visit(node.expr))
-        else:
-            d = EnumItemDecl(str(node.name), self.loc(node.name))
+        d = EnumItemDecl(
+            str(node.name),
+            self.loc(node.name),
+            ty_ref=self.visit(node.ty) if node.ty else None,
+            value=self.visit(node.expr) if node.expr else None,
+        )
         self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
         return d
 

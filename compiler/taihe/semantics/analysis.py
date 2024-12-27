@@ -1,8 +1,9 @@
-from typing import TYPE_CHECKING, TypeVar
+from typing import TypeVar
 
 from typing_extensions import override
 
 from taihe.semantics.declarations import (
+    BasicTypeDecl,
     DeclarationImportDecl,
     DeclarationRefDecl,
     EnumDecl,
@@ -12,7 +13,6 @@ from taihe.semantics.declarations import (
     PackageGroup,
     PackageImportDecl,
     PackageRefDecl,
-    StructDecl,
     TypeDecl,
     TypeRefDecl,
 )
@@ -21,8 +21,9 @@ from taihe.utils.diagnostics import AbstractDiagnosticsManager
 from taihe.utils.exceptions import (
     DeclarationNotInScopeError,
     DeclNotExistError,
-    DeclRedefDiagError,
+    DeclRedefError,
     DuplicateExtendsWarn,
+    EnumValueConflictError,
     ExtendsTypeError,
     NotATypeError,
     PackageNotExistError,
@@ -32,9 +33,6 @@ from taihe.utils.exceptions import (
     SymbolConflictWithNamespaceError,
 )
 
-if TYPE_CHECKING:
-    from taihe.semantics.declarations import IfaceParentDecl, StructFieldDecl
-
 
 def analyze_semantics(pg: PackageGroup, diag: AbstractDiagnosticsManager):
     """Runs semantic analysis passes on the given package group."""
@@ -42,7 +40,7 @@ def analyze_semantics(pg: PackageGroup, diag: AbstractDiagnosticsManager):
     _ResolveImportsPass(diag).handle_decl(pg)
     _CheckFieldNameCollisionErrorPass(diag).handle_decl(pg)
     _CalculateEnumItemValuePass(diag).handle_decl(pg)
-    _check_struct_fields(pg, diag)
+    _check_recursive_types(pg, diag)
     _check_iface_parents(pg, diag)
 
 
@@ -181,12 +179,15 @@ class _CalculateEnumItemValuePass(DeclVisitor):
         self.diag = diag
 
     def visit_enum_decl(self, d: EnumDecl) -> None:
+        values = {}
         value = 0
         for i in d.items:
             if i.value is None:
                 i.value = value
             else:
                 value = i.value
+            if (prev := values.setdefault(value, i)) != i:
+                self.diag.emit(EnumValueConflictError(prev, i))
             value += 1
 
 
@@ -200,13 +201,13 @@ class _CheckFieldNameCollisionErrorPass(DeclVisitor):
 
     @override
     def visit_named_decl(self, d: NamedDecl) -> None:
-        symbol = {}
+        names = {}
         for field_name, children in d.all_children.items():
             for i, f in enumerate(children):
                 if not f.name:
                     f.name = f"_{field_name}_{i}"
-                if (prev := symbol.setdefault(f.name, f)) != f:
-                    self.diag.emit(DeclRedefDiagError(prev, f))
+                if (prev := names.setdefault(f.name, f)) != f:
+                    self.diag.emit(DeclRedefError(prev, f))
 
         return super().visit_named_decl(d)
 
@@ -239,7 +240,9 @@ def _check_iface_parents(
     diag: AbstractDiagnosticsManager,
 ):
     """Validates interface inheritance for correctness and cycles."""
-    parent_iface_table: dict[IfaceDecl, list[tuple[IfaceParentDecl, IfaceDecl]]] = {}
+    parent_iface_table: dict[
+        IfaceDecl, list[tuple[tuple[IfaceDecl, TypeRefDecl], IfaceDecl]]
+    ] = {}
     for pkg in pg.packages:
         for iface in pkg.interfaces:
             parent_iface_list = parent_iface_table.setdefault(iface, [])
@@ -250,7 +253,7 @@ def _check_iface_parents(
                 elif not isinstance(parent_iface, IfaceDecl):
                     diag.emit(ExtendsTypeError(parent))
                 else:
-                    parent_iface_list.append((parent, parent_iface))
+                    parent_iface_list.append(((iface, parent.ty_ref), parent_iface))
                     prev = parent_iface_dict.setdefault(parent_iface, parent)
                     if prev != parent:
                         diag.emit(
@@ -268,20 +271,35 @@ def _check_iface_parents(
         diag.emit(RecursiveExtensionError(last, other))
 
 
-def _check_struct_fields(
+def _check_recursive_types(
     pg: PackageGroup,
     diag: AbstractDiagnosticsManager,
 ):
     """Validates struct fields for type correctness and cycles."""
-    field_struct_table: dict[StructDecl, list[tuple[StructFieldDecl, StructDecl]]] = {}
+    type_table: dict[
+        BasicTypeDecl,
+        list[tuple[tuple[BasicTypeDecl, TypeRefDecl], BasicTypeDecl]],
+    ] = {}
     for pkg in pg.packages:
         for struct in pkg.structs:
-            field_struct_list = field_struct_table.setdefault(struct, [])
+            type_list = type_table.setdefault(struct, [])
             for field in struct.fields:
-                if isinstance((field_struct := field.ty_ref.resolved_ty), StructDecl):
-                    field_struct_list.append((field, field_struct))
+                if isinstance((ty := field.ty_ref.resolved_ty), BasicTypeDecl):
+                    type_list.append(((struct, field.ty_ref), ty))
+        for enum in pkg.enums:
+            type_list = type_table.setdefault(enum, [])
+            for item in enum.items:
+                if item.ty_ref and isinstance(
+                    (ty := item.ty_ref.resolved_ty), BasicTypeDecl
+                ):
+                    type_list.append(((enum, item.ty_ref), ty))
+        for alias in pkg.type_aliases:
+            if isinstance((ty := alias.ty_ref.resolved_ty), BasicTypeDecl):
+                type_table[alias] = [((alias, alias.ty_ref), ty)]
+            else:
+                type_table[alias] = []
 
-    cycles = detect_cycles(field_struct_table)
+    cycles = detect_cycles(type_table)
     for cycle in cycles:
         last, *other = cycle[::-1]
         diag.emit(RecursiveInclusionError(last, other))

@@ -233,6 +233,9 @@ class DeclVisitor:
     ### Enum ###
 
     def visit_enum_item_decl(self, d: EnumItemDecl) -> None:
+        if d.ty_ref:
+            self.handle_decl(d.ty_ref)
+
         return self.visit_named_decl(d)
 
     def visit_enum_decl(self, d: EnumDecl) -> None:

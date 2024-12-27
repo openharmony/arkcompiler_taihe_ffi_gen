@@ -17,6 +17,11 @@ enum Color {
     BLUE  = 0xff << 0o00;
 }
 
+enum ColorOrRGB {
+    color: Color = 0x1;
+    rgb: RGB = 0x2;
+}
+
 [cname = "ohos_get_rgb", index = 0, has_return_val = TRUE, deprecated]
 function get_rgb(color: Color): RGB;
 

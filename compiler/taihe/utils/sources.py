@@ -52,10 +52,10 @@ class SourceManager:
 
     def _add(self, sb: SourceBase):
         # Avoid circular import
-        from taihe.utils.exceptions import PackageRedefDiagError
+        from taihe.utils.exceptions import PackageRedefError
 
         if prev := self._pkg_to_source.get(sb.pkg_name, None):
-            raise PackageRedefDiagError(
+            raise PackageRedefError(
                 sb.pkg_name, loc=SourceLocation(sb), prev_loc=SourceLocation(prev)
             )
         else:
