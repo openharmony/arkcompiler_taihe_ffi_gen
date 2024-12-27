@@ -1,1 +1,4 @@
-function foo(s1: String, s2: String) : String;
+[konan_name = "konan_function_0"]
+function foo1(s1: String, s2: String) : String;
+
+[pkg_name = "try_lib"]

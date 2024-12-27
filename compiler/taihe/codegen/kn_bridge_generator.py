@@ -38,13 +38,9 @@ class KNBridgeFuncBaseDeclInfo(AbstractAnalysis[BaseFuncDecl]):
     def __init__(self, am: AnalysisManager, f: BaseFuncDecl) -> None:
         segments = f.segments
         self.name = encode(segments, DeclKind.FUNCTION)
-        self.konan_proj_name = (
-            "_konan_function_0"  # Assuming that information is obtained from IR here
-        )
+        self.konan_proj_name = f.attrs["konan_name"].value
+        assert isinstance(self.konan_proj_name, str)
         self.konan_param_name = "KObjHeader*, KObjHeader*, KObjHeader**"  # Assuming that information is obtained from IR here
-        self.konan_retval_name = (
-            "KObjHeader*"  # Assuming that information is obtained from IR here
-        )
 
         params = []
         convert_params = []
@@ -57,6 +53,7 @@ class KNBridgeFuncBaseDeclInfo(AbstractAnalysis[BaseFuncDecl]):
                 )
             else:
                 convert_params.append(f"{param.name}")
+
         convert_params.append("result_holder.slot()")
         self.params_str = ", ".join(params)
         self.convert_params_str = ", ".join(convert_params)
@@ -88,17 +85,28 @@ class KNBridgeTypeInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
 
     def visit_scalar_type(self, t: ScalarType):
         res = {
+            # BOOL: "bool",
+            # F32: "float",
+            # F64: "double",
+            # I8: "int8_t",
+            # I16: "int16_t",
+            # I32: "int32_t",
+            # I64: "int64_t",
+            # U8: "uint8_t",
+            # U16: "uint16_t",
+            # U32: "uint32_t",
+            # U64: "uint64_t",
             BOOL: "bool",
             F32: "float",
             F64: "double",
-            I8: "int8_t",
-            I16: "int16_t",
-            I32: "int32_t",
-            I64: "int64_t",
-            U8: "uint8_t",
-            U16: "uint16_t",
-            U32: "uint32_t",
-            U64: "uint64_t",
+            I8: "int",
+            I16: "int",
+            I32: "int",
+            I64: "int",
+            U8: "unsigned_int",
+            U16: "unsigned_int",
+            U32: "unsigned_int",
+            U64: "unsigned_int",
         }.get(t)
         self.as_param = res
         self.as_owner = res
@@ -132,7 +140,28 @@ class KNBridgeCodeGenerator:
             self.tm, f"include/{kn_bridge_pkg_info.header}", True
         )
 
-        kn_bridge_pkg_name = "prefix"  # need to read from pkg_prefix
+        kn_bridge_pkg_name = pkg.attrs["pkg_name"].value
+        assert isinstance(kn_bridge_pkg_name, str)
+
+        kn_type_dict = {
+            # "bool"        :  kn_bridge_pkg_name + "_KBoolean",
+            # "float"       : kn_bridge_pkg_name + "_KFloat",
+            # "double"      : kn_bridge_pkg_name + "_KDouble",
+            # "int8_t"      : kn_bridge_pkg_name + "_KInt",
+            # "int16_t"     : kn_bridge_pkg_name + "_KInt",
+            # "int32_t"     : kn_bridge_pkg_name + "_KInt",
+            # "int64_t"     : kn_bridge_pkg_name + "_KInt",
+            # "uint8_t"     : kn_bridge_pkg_name + "_KUInt",
+            # "uint16_t"    : kn_bridge_pkg_name + "_KUInt",
+            # "uint32_t"    : kn_bridge_pkg_name + "_KUInt",
+            # "uint64_t"    : kn_bridge_pkg_name + "_KUInt",
+            "bool": kn_bridge_pkg_name + "_KBoolean",
+            "float": kn_bridge_pkg_name + "_KFloat",
+            "double": kn_bridge_pkg_name + "_KDouble",
+            "int": kn_bridge_pkg_name + "_KInt",
+            "unsigned_int": kn_bridge_pkg_name + "_KUInt",
+            "const char*": "KObjHeader*",
+        }
 
         kn_predefined_type_list = [
             "Byte",
@@ -343,7 +372,7 @@ class KNBridgeCodeGenerator:
         for func in pkg.functions:
             kn_bridge_func_info = KNBridgeFuncBaseDeclInfo.get(self.am, func)
             kn_bridge_pkg_target.write(
-                f'extern "C" {kn_bridge_func_info.konan_retval_name} {kn_bridge_func_info.konan_proj_name}({kn_bridge_func_info.konan_param_name});\n'
+                f'extern "C" {kn_type_dict.get(kn_bridge_func_info.return_ty_name)} {kn_bridge_func_info.konan_proj_name}({kn_bridge_func_info.konan_param_name});\n'
                 f"static {kn_bridge_func_info.return_ty_name} {kn_bridge_func_info.konan_proj_name}_impl({kn_bridge_func_info.params_str}) {{\n"
                 f"  Kotlin_initRuntimeIfNeeded();\n"
                 f"  ScopedRunnableState stateGuard;\n"
