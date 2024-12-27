@@ -51,7 +51,6 @@ struct BadStruct {}
 struct BadStruct {  // DeclConflictError
     a: i32;
     a: i32;  // DeclConflictError
-    b: TestIface;  // StructFieldTypeError
     c: MyNonexist;  // Nothing should be reported here
 }
 
