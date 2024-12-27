@@ -1,11 +1,9 @@
-from typing import Any
-
-from typing_extensions import override
+from typing import Any, Optional
 
 from taihe.codegen.abi_generator import COutputBuffer
 from taihe.codegen.mangle import DeclKind, encode
 from taihe.semantics.declarations import (
-    FuncBaseDecl,
+    BaseFuncDecl,
     Package,
     PackageGroup,
 )
@@ -24,7 +22,7 @@ from taihe.semantics.types import (
     U64,
     ScalarType,
     SpecialType,
-    TypeAlike,
+    Type,
 )
 from taihe.semantics.visitor import TypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
@@ -36,8 +34,8 @@ class KNBridgePackageInfo(AbstractAnalysis[Package]):
         self.header = f"{p.name}.api.hpp"
 
 
-class KNBridgeFuncBaseDeclInfo(AbstractAnalysis[FuncBaseDecl]):
-    def __init__(self, am: AnalysisManager, f: FuncBaseDecl) -> None:
+class KNBridgeFuncBaseDeclInfo(AbstractAnalysis[BaseFuncDecl]):
+    def __init__(self, am: AnalysisManager, f: BaseFuncDecl) -> None:
         segments = f.segments
         self.name = encode(segments, DeclKind.FUNCTION)
         self.konan_proj_name = (
@@ -47,24 +45,15 @@ class KNBridgeFuncBaseDeclInfo(AbstractAnalysis[FuncBaseDecl]):
         self.konan_retval_name = (
             "KObjHeader*"  # Assuming that information is obtained from IR here
         )
-        if len(f.retvals) == 0:
-            self.return_ty = "void"
-            self.return_ty_str = ""
-        else:
-            info = KNBridgeReturnTypeRefDeclInfo.get(am, f.retvals[0].ty)
-            self.return_ty = info.name
-            if info.convert_func:
-                self.return_ty_str = f"{info.convert_func}(result)"
-            else:
-                self.return_ty_str = "result"
+
         params = []
         convert_params = []
         for param in f.params:
-            abi_param_type_info = KNBridgeParamTypeRefDeclInfo.get(am, param.ty)
-            params.append(f"{abi_param_type_info.name} {param.name}")
-            if abi_param_type_info.convert_func:
+            param_type_info = KNBridgeTypeInfo.get(am, param.ty_ref.resolved_ty)
+            params.append(f"{param_type_info.as_param} {param.name}")
+            if param_type_info.param_covert_func:
                 convert_params.append(
-                    f"{abi_param_type_info.convert_func}({param.name}, {param.name}_holder.slot())"
+                    f"{param_type_info.param_covert_func}({param.name}, {param.name}_holder.slot())"
                 )
             else:
                 convert_params.append(f"{param.name}")
@@ -72,19 +61,33 @@ class KNBridgeFuncBaseDeclInfo(AbstractAnalysis[FuncBaseDecl]):
         self.params_str = ", ".join(params)
         self.convert_params_str = ", ".join(convert_params)
 
+        if f.return_ty_ref is None:
+            self.return_ty_header = None
+            self.return_ty_name = "void"
+            self.return_ty_str = ""
+        else:
+            ty_info = KNBridgeTypeInfo.get(am, f.return_ty_ref.resolved_ty)
+            self.return_ty_header = ty_info.header
+            self.return_ty_name = ty_info.as_retval
+            if ty_info.retval_covert_func:
+                self.return_ty_str = f"{ty_info.retval_covert_func}(result)"
+            else:
+                self.return_ty_str = "result"
 
-class KNBridgeNormalTypeRefDeclInfo(AbstractAnalysis[TypeAlike], TypeVisitor):
-    def __init__(self, am: AnalysisManager, t: TypeAlike) -> None:
+
+class KNBridgeTypeInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
+    def __init__(self, am: AnalysisManager, t: Optional[Type]) -> None:
         self.am = am
         self.header = None
-        self.name = None
-        self.copy_func = None
-        self.drop_func = None
-        self.convert_func = None
+        self.as_owner = None
+        self.as_param = None
+        self.as_retval = None
+        self.param_covert_func = None
+        self.retval_covert_func = None
         self.handle_type(t)
 
     def visit_scalar_type(self, t: ScalarType):
-        self.name = {
+        res = {
             BOOL: "bool",
             F32: "float",
             F64: "double",
@@ -97,37 +100,24 @@ class KNBridgeNormalTypeRefDeclInfo(AbstractAnalysis[TypeAlike], TypeVisitor):
             U32: "uint32_t",
             U64: "uint64_t",
         }.get(t)
-        if self.name is None:
+        self.as_param = res
+        self.as_owner = res
+        self.as_retval = res
+        if res is None:
             raise ValueError
 
     def visit_special_type(self, t: SpecialType) -> Any:
         if t == STRING:
-            self.name = "char*"
+            self.as_owner = "char*"
+            self.as_param = "const char*"
+            self.as_retval = "const char*"
+            self.param_covert_func = "CreateStringFromCString"
+            self.retval_covert_func = "CreateCStringFromString"
         else:
             raise ValueError
 
 
-class KNBridgeParamTypeRefDeclInfo(KNBridgeNormalTypeRefDeclInfo):
-    @override
-    def visit_special_type(self, t: SpecialType) -> Any:
-        if t == STRING:
-            self.name = "const char*"
-            self.convert_func = "CreateStringFromCString"
-        else:
-            raise ValueError
-
-
-class KNBridgeReturnTypeRefDeclInfo(KNBridgeNormalTypeRefDeclInfo):
-    @override
-    def visit_special_type(self, t: SpecialType) -> Any:
-        if t == STRING:
-            self.name = "const char*"
-            self.convert_func = "CreateCStringFromString"
-        else:
-            raise ValueError
-
-
-class KNBridgeGenerator:
+class KNBridgeCodeGenerator:
     def __init__(self, tm: OutputManager, am: AnalysisManager):
         self.tm = tm
         self.am = am
@@ -218,7 +208,7 @@ class KNBridgeGenerator:
         for func in pkg.functions:
             kn_bridge_func_info = KNBridgeFuncBaseDeclInfo.get(self.am, func)
             kn_bridge_pkg_target.write(
-                f"      {kn_bridge_func_info.return_ty} (*{kn_bridge_func_info.name})({kn_bridge_func_info.params_str});\n"
+                f"      {kn_bridge_func_info.return_ty_name} (*{kn_bridge_func_info.name})({kn_bridge_func_info.params_str});\n"
             )
         kn_bridge_pkg_target.write(
             f"    }} root;\n"
@@ -354,17 +344,25 @@ class KNBridgeGenerator:
             kn_bridge_func_info = KNBridgeFuncBaseDeclInfo.get(self.am, func)
             kn_bridge_pkg_target.write(
                 f'extern "C" {kn_bridge_func_info.konan_retval_name} {kn_bridge_func_info.konan_proj_name}({kn_bridge_func_info.konan_param_name});\n'
-                f"static {kn_bridge_func_info.return_ty} {kn_bridge_func_info.konan_proj_name}_impl({kn_bridge_func_info.params_str}) {{\n"
+                f"static {kn_bridge_func_info.return_ty_name} {kn_bridge_func_info.konan_proj_name}_impl({kn_bridge_func_info.params_str}) {{\n"
                 f"  Kotlin_initRuntimeIfNeeded();\n"
                 f"  ScopedRunnableState stateGuard;\n"
                 f"  FrameOverlay* frame = getCurrentFrame();\n"
             )
             for param in func.params:
                 kn_bridge_pkg_target.write(f"  KObjHolder {param.name}_holder;\n")
+            kn_bridge_pkg_target.write(f"  try {{\n")
+            if func.return_ty_ref is None:
+                kn_bridge_pkg_target.write(
+                    f"{kn_bridge_func_info.konan_proj_name}({kn_bridge_func_info.convert_params_str});\n"
+                )
+            else:
+                kn_bridge_pkg_target.write(
+                    f"    KObjHolder result_holder;\n"
+                    f"    auto result = {kn_bridge_func_info.konan_proj_name}({kn_bridge_func_info.convert_params_str});\n"
+                    f"    return {kn_bridge_func_info.return_ty_str};\n"
+                )
             kn_bridge_pkg_target.write(
-                f"  try {{\n"
-                f"    auto result = {kn_bridge_func_info.konan_proj_name}({kn_bridge_func_info.convert_params_str});\n"
-                f"    return {kn_bridge_func_info.return_ty_str};\n"
                 f"  }} catch (...) {{\n"
                 f"    SetCurrentFrame(reinterpret_cast<KObjHeader**>(frame));\n"
                 f"    HandleCurrentExceptionWhenLeavingKotlinCode();\n"

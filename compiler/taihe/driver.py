@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-from taihe.codegen.kn_bridge_generator import KNBridgeGenerator
+from taihe.codegen.kn_bridge_generator import KNBridgeCodeGenerator
 from taihe.parse.convert import AstConverter
 from taihe.semantics.analysis import analyze_semantics
 from taihe.semantics.declarations import PackageGroup
@@ -90,7 +90,7 @@ class CompilerInstance:
         if not self.invocation.out_dir:
             return
 
-        kn_bridge_generator = KNBridgeGenerator(
+        kn_bridge_generator = KNBridgeCodeGenerator(
             self.target_manager, self.analysis_manager
         )
         kn_bridge_generator.generate(self.package_group)
