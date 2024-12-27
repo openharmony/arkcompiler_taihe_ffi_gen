@@ -7,9 +7,9 @@ from typing_extensions import override
 
 from taihe.codegen.mangle import DeclKind, encode
 from taihe.semantics.declarations import (
+    BaseFuncDecl,
     EnumDecl,
     EnumItemDecl,
-    FuncBaseDecl,
     GlobFuncDecl,
     IfaceDecl,
     Package,
@@ -72,17 +72,17 @@ class ABIPackageInfo(AbstractAnalysis[Package]):
         self.header = f"{p.name}.abi.h"
 
 
-class ABIFuncBaseDeclInfo(AbstractAnalysis[FuncBaseDecl]):
-    def __init__(self, am: AnalysisManager, f: FuncBaseDecl) -> None:
+class ABIFuncBaseDeclInfo(AbstractAnalysis[BaseFuncDecl]):
+    def __init__(self, am: AnalysisManager, f: BaseFuncDecl) -> None:
         segments = f.segments
         self.name = encode(segments, DeclKind.FUNCTION)
         if f.return_ty_ref is None:
             self.return_ty_header = None
             self.return_ty_name = "void"
         else:
-            info = ABITypeInfo.get(am, f.return_ty_ref.resolved_ty)
-            self.return_ty_header = info.header
-            self.return_ty_name = info.as_owner
+            ty_info = ABITypeInfo.get(am, f.return_ty_ref.resolved_ty)
+            self.return_ty_header = ty_info.header
+            self.return_ty_name = ty_info.as_owner
 
 
 class ABIEnumItemDeclInfo(AbstractAnalysis[EnumItemDecl]):
@@ -97,9 +97,30 @@ class ABIEnumDeclInfo(AbstractAnalysis[EnumDecl]):
         assert p
         segments = d.segments
         self.header = f"{p.name}.{d.name}.abi.h"
-        self.name = encode(segments, DeclKind.ENUM)
+        self.tag_name = encode(segments, DeclKind.ENUM_TAG)
+        self.union_name = encode(segments, DeclKind.ENUM_UNION)
+        self.name = encode(segments, DeclKind.ENUM_STRUCT)
         self.as_owner = encode(segments, DeclKind.OWNER_T)
         self.as_param = encode(segments, DeclKind.PARAM_T)
+        self.has_data = any(item.ty_ref for item in d.items)
+        self.copy_func = (
+            None
+            if all(
+                f.ty_ref is None
+                or ABITypeInfo.get(am, f.ty_ref.resolved_ty).copy_func is None
+                for f in d.items
+            )
+            else encode(segments, DeclKind.COPY)
+        )
+        self.drop_func = (
+            None
+            if all(
+                f.ty_ref is None
+                or ABITypeInfo.get(am, f.ty_ref.resolved_ty).drop_func is None
+                for f in d.items
+            )
+            else encode(segments, DeclKind.DROP)
+        )
 
 
 class ABIStructDeclInfo(AbstractAnalysis[StructDecl]):
@@ -111,16 +132,21 @@ class ABIStructDeclInfo(AbstractAnalysis[StructDecl]):
         self.name = encode(segments, DeclKind.STRUCT)
         self.as_owner = encode(segments, DeclKind.OWNER_T)
         self.as_param = encode(segments, DeclKind.PARAM_T)
-        ty_ref_infos = [ABITypeInfo.get(am, f.ty_ref.resolved_ty) for f in d.fields]
         self.copy_func = (
-            encode(segments, DeclKind.COPY)
-            if any(info.copy_func is not None for info in ty_ref_infos)
-            else None
+            None
+            if all(
+                ABITypeInfo.get(am, f.ty_ref.resolved_ty).copy_func is None
+                for f in d.fields
+            )
+            else encode(segments, DeclKind.COPY)
         )
         self.drop_func = (
-            encode(segments, DeclKind.DROP)
-            if any(info.drop_func is not None for info in ty_ref_infos)
-            else None
+            None
+            if all(
+                ABITypeInfo.get(am, f.ty_ref.resolved_ty).drop_func is None
+                for f in d.fields
+            )
+            else encode(segments, DeclKind.DROP)
         )
 
 
@@ -343,21 +369,24 @@ class ABICodeGenerator:
         abi_struct_target: COutputBuffer,
         abi_struct_info: ABIStructDeclInfo,
     ):
-        if abi_struct_info.copy_func is not None:
-            abi_struct_target.write(
-                f"inline struct {abi_struct_info.name} {abi_struct_info.copy_func}(struct {abi_struct_info.name} data) {{\n"
-                f"  struct {abi_struct_info.name} result = {{\n"
-            )
-            for field in struct.fields:
-                ty_info = ABITypeInfo.get(self.am, field.ty_ref.resolved_ty)
-                abi_struct_target.include(ty_info.header)
-                if ty_info.copy_func is not None:
-                    abi_struct_target.write(
-                        f"    {ty_info.copy_func}(data.{field.name}),\n"
-                    )
-                else:
-                    abi_struct_target.write(f"    data.{field.name},\n")
-            abi_struct_target.write("  };\n" "  return result;\n" "}\n")
+        if abi_struct_info.copy_func is None:
+            return
+
+        abi_struct_target.write(
+            f"inline struct {abi_struct_info.name} {abi_struct_info.copy_func}(struct {abi_struct_info.name} const* data_ptr) {{\n"
+            f"  struct {abi_struct_info.name} result;\n"
+        )
+        for field in struct.fields:
+            ty_info = ABITypeInfo.get(self.am, field.ty_ref.resolved_ty)
+            if ty_info.copy_func is not None:
+                abi_struct_target.write(
+                    f"  result.{field.name} = {ty_info.copy_func}(data_ptr->{field.name});\n"
+                )
+            else:
+                abi_struct_target.write(
+                    f"  result.{field.name} = data_ptr->{field.name};\n"
+                )
+        abi_struct_target.write("  };\n" "  return result;\n" "}\n")
 
     def gen_struct_drop_func(
         self,
@@ -365,18 +394,19 @@ class ABICodeGenerator:
         abi_struct_target: COutputBuffer,
         abi_struct_info: ABIStructDeclInfo,
     ):
-        if abi_struct_info.drop_func is not None:
-            abi_struct_target.write(
-                f"inline void {abi_struct_info.drop_func}(struct {abi_struct_info.name} data) {{\n"
-            )
-            for field in struct.fields:
-                ty_info = ABITypeInfo.get(self.am, field.ty_ref.resolved_ty)
-                abi_struct_target.include(ty_info.header)
-                if ty_info.drop_func is not None:
-                    abi_struct_target.write(
-                        f"  {ty_info.drop_func}(data.{field.name});\n"
-                    )
-            abi_struct_target.write("}\n")
+        if abi_struct_info.drop_func is None:
+            return
+
+        abi_struct_target.write(
+            f"inline void {abi_struct_info.drop_func}(struct {abi_struct_info.name} const *data_ptr) {{\n"
+        )
+        for field in struct.fields:
+            ty_info = ABITypeInfo.get(self.am, field.ty_ref.resolved_ty)
+            if ty_info.drop_func is not None:
+                abi_struct_target.write(
+                    f"  {ty_info.drop_func}(data_ptr->{field.name});\n"
+                )
+        abi_struct_target.write("}\n")
 
     def gen_enum_file(
         self,
@@ -391,25 +421,122 @@ class ABICodeGenerator:
 
         abi_enum_target.include("taihe/common.h")
 
-        self.gen_enum_decl(enum, abi_enum_target, abi_enum_info)
+        self.gen_enum_tag_decl(enum, abi_enum_target, abi_enum_info)
+        self.gen_enum_union_decl(enum, abi_enum_target, abi_enum_info)
+        self.gen_enum_struct_decl(enum, abi_enum_target, abi_enum_info)
+        self.gen_enum_copy_func(enum, abi_enum_target, abi_enum_info)
+        self.gen_enum_drop_func(enum, abi_enum_target, abi_enum_info)
 
         abi_pkg_target.include(abi_enum_info.header)
 
-    def gen_enum_decl(
+    def gen_enum_tag_decl(
         self,
         enum: EnumDecl,
         abi_enum_target: COutputBuffer,
         abi_enum_info: ABIEnumDeclInfo,
     ):
-        abi_enum_target.write(f"enum {abi_enum_info.name} {{\n")
+        abi_enum_target.write(f"enum {abi_enum_info.tag_name} {{\n")
         for item in enum.items:
             abi_enum_item_info = ABIEnumItemDeclInfo.get(self.am, item)
             abi_enum_target.write(f"  {abi_enum_item_info.name} = {item.value},\n")
+        abi_enum_target.write("};\n")
+
+    def gen_enum_union_decl(
+        self,
+        enum: EnumDecl,
+        abi_enum_target: COutputBuffer,
+        abi_enum_info: ABIEnumDeclInfo,
+    ):
+        if not abi_enum_info.has_data:
+            return
+
+        abi_enum_target.write(f"union {abi_enum_info.union_name} {{\n")
+        for item in enum.items:
+            if item.ty_ref is None:
+                continue
+            ty_info = ABITypeInfo.get(self.am, item.ty_ref.resolved_ty)
+            abi_enum_target.include(ty_info.header)
+            abi_enum_target.write(f"  {ty_info.as_owner} {item.name};\n")
+        abi_enum_target.write("};\n")
+
+    def gen_enum_struct_decl(
+        self,
+        enum: EnumDecl,
+        abi_enum_target: COutputBuffer,
+        abi_enum_info: ABIEnumDeclInfo,
+    ):
+        abi_enum_target.write(
+            f"struct {abi_enum_info.name} {{\n"
+            f"  enum {abi_enum_info.tag_name} tag;\n"
+        )
+        if abi_enum_info.has_data:
+            abi_enum_target.write(f"  union {abi_enum_info.union_name} data;\n")
         abi_enum_target.write(
             f"}};\n"
-            f"typedef enum {abi_enum_info.name} {abi_enum_info.as_owner};\n"
-            f"typedef enum {abi_enum_info.name} {abi_enum_info.as_param};\n"
+            f"typedef struct {abi_enum_info.name} {abi_enum_info.as_owner};\n"
+            f"typedef struct {abi_enum_info.name} const* {abi_enum_info.as_param};\n"
         )
+
+    def gen_enum_copy_func(
+        self,
+        enum: EnumDecl,
+        abi_enum_target: COutputBuffer,
+        abi_enum_info: ABIEnumDeclInfo,
+    ):
+        if abi_enum_info.copy_func is None:
+            return
+
+        abi_enum_target.write(
+            f"inline struct {abi_enum_info.name} {abi_enum_info.copy_func}(struct {abi_enum_info.name} const* data_ptr) {{\n"
+            f"  struct {abi_enum_info.name} result;\n"
+            f"  switch (result.tag = data_ptr->tag) {{\n"
+        )
+        for item in enum.items:
+            if item.ty_ref is None:
+                continue
+            ty_info = ABITypeInfo.get(self.am, item.ty_ref.resolved_ty)
+            abi_enum_item_info = ABIEnumItemDeclInfo.get(self.am, item)
+            if ty_info.copy_func is not None:
+                abi_enum_target.write(
+                    f"  case {abi_enum_item_info.name}:\n"
+                    f"    result.data.{item.name} = {ty_info.copy_func}(data_ptr->data.{item.name});\n"
+                    f"    break;\n"
+                )
+            else:
+                abi_enum_target.write(
+                    f"  case {abi_enum_item_info.name}:\n"
+                    f"    result.data.{item.name} = data_ptr->data.{item.name};\n"
+                    f"    break;\n"
+                )
+        abi_enum_target.write(
+            "  default:\n" "    break;\n" "  }\n" "  return result;\n" "}\n"
+        )
+
+    def gen_enum_drop_func(
+        self,
+        enum: EnumDecl,
+        abi_enum_target: COutputBuffer,
+        abi_enum_info: ABIEnumDeclInfo,
+    ):
+        if abi_enum_info.drop_func is None:
+            return
+
+        abi_enum_target.write(
+            f"inline void {abi_enum_info.drop_func}(struct {abi_enum_info.name} const* data_ptr) {{\n"
+            f"  switch (data_ptr->tag) {{\n"
+        )
+        for item in enum.items:
+            if item.ty_ref is None:
+                continue
+            ty_info = ABITypeInfo.get(self.am, item.ty_ref.resolved_ty)
+            abi_enum_item_info = ABIEnumItemDeclInfo.get(self.am, item)
+            if ty_info.copy_func is not None:
+                abi_enum_target.write(
+                    f"  case {abi_enum_item_info.name}:\n"
+                    f"    {ty_info.drop_func}(data_ptr->data.{item.name});\n"
+                    f"    break;\n"
+                )
+        abi_enum_target.write("  default:\n" "    break;\n" "  }\n" "}\n")
 
     def gen_iface_files(
         self,
@@ -417,14 +544,16 @@ class ABICodeGenerator:
         abi_pkg_target: COutputBuffer,
     ):
         abi_iface_info = ABIIfaceDeclInfo.get(self.am, iface)
-        self.gen_iface_0_file(abi_iface_info)
+
+        self.gen_iface_0_file(iface, abi_iface_info)
         self.gen_iface_1_file(iface, abi_iface_info)
-        self.gen_iface_src_file(abi_iface_info)
+        self.gen_iface_src_file(iface, abi_iface_info)
 
         abi_pkg_target.include(abi_iface_info.header_1)
 
     def gen_iface_0_file(
         self,
+        iface: IfaceDecl,
         abi_iface_info: ABIIfaceDeclInfo,
     ):
         abi_iface_target_0 = COutputBuffer.create(
@@ -444,8 +573,8 @@ class ABICodeGenerator:
             f"typedef struct {abi_iface_info.name} {abi_iface_info.as_owner};\n"
         )
 
-        self.gen_iface_copy_func(abi_iface_target_0, abi_iface_info)
-        self.gen_iface_drop_func(abi_iface_target_0, abi_iface_info)
+        self.gen_iface_copy_func(iface, abi_iface_target_0, abi_iface_info)
+        self.gen_iface_drop_func(iface, abi_iface_target_0, abi_iface_info)
 
     def gen_iface_1_file(
         self,
@@ -461,10 +590,10 @@ class ABICodeGenerator:
         abi_iface_target_1.write(f"TH_EXPORT void const* const {abi_iface_info.iid};\n")
 
         self.gen_iface_ftable(iface, abi_iface_target_1, abi_iface_info)
-        self.gen_iface_vtable(abi_iface_target_1, abi_iface_info)
+        self.gen_iface_vtable(iface, abi_iface_target_1, abi_iface_info)
         self.gen_iface_methods(iface, abi_iface_target_1, abi_iface_info)
-        self.gen_iface_static_cast_funcs(abi_iface_target_1, abi_iface_info)
-        self.gen_iface_dynamic_cast_func(abi_iface_target_1, abi_iface_info)
+        self.gen_iface_static_cast_funcs(iface, abi_iface_target_1, abi_iface_info)
+        self.gen_iface_dynamic_cast_func(iface, abi_iface_target_1, abi_iface_info)
 
     def gen_iface_ftable(
         self,
@@ -491,6 +620,7 @@ class ABICodeGenerator:
 
     def gen_iface_vtable(
         self,
+        iface: IfaceDecl,
         abi_iface_target_1: COutputBuffer,
         abi_iface_info: ABIIfaceDeclInfo,
     ):
@@ -527,6 +657,7 @@ class ABICodeGenerator:
 
     def gen_iface_static_cast_funcs(
         self,
+        iface: IfaceDecl,
         abi_iface_target_1: COutputBuffer,
         abi_iface_info: ABIIfaceDeclInfo,
     ):
@@ -547,6 +678,7 @@ class ABICodeGenerator:
 
     def gen_iface_dynamic_cast_func(
         self,
+        iface: IfaceDecl,
         abi_iface_target_1: COutputBuffer,
         abi_iface_info: ABIIfaceDeclInfo,
     ):
@@ -569,6 +701,7 @@ class ABICodeGenerator:
 
     def gen_iface_copy_func(
         self,
+        iface: IfaceDecl,
         abi_iface_target_1: COutputBuffer,
         abi_iface_info: ABIIfaceDeclInfo,
     ):
@@ -584,6 +717,7 @@ class ABICodeGenerator:
 
     def gen_iface_drop_func(
         self,
+        iface: IfaceDecl,
         abi_iface_target_1: COutputBuffer,
         abi_iface_info: ABIIfaceDeclInfo,
     ):
@@ -598,6 +732,7 @@ class ABICodeGenerator:
 
     def gen_iface_src_file(
         self,
+        iface: IfaceDecl,
         abi_iface_info: ABIIfaceDeclInfo,
     ):
         abi_iface_src = COutputBuffer.create(

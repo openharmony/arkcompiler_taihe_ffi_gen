@@ -3,7 +3,7 @@ from typing import TypeVar
 from typing_extensions import override
 
 from taihe.semantics.declarations import (
-    BasicTypeDecl,
+    DataTypeDecl,
     DeclarationImportDecl,
     DeclarationRefDecl,
     EnumDecl,
@@ -13,6 +13,8 @@ from taihe.semantics.declarations import (
     PackageGroup,
     PackageImportDecl,
     PackageRefDecl,
+    StructDecl,
+    TypeAliasDecl,
     TypeDecl,
     TypeRefDecl,
 )
@@ -40,8 +42,31 @@ def analyze_semantics(pg: PackageGroup, diag: AbstractDiagnosticsManager):
     _ResolveImportsPass(diag).handle_decl(pg)
     _CheckFieldNameCollisionErrorPass(diag).handle_decl(pg)
     _CalculateEnumItemValuePass(diag).handle_decl(pg)
-    _check_recursive_types(pg, diag)
-    _check_iface_parents(pg, diag)
+    _CheckIfaceParentsPass(diag).handle_decl(pg)
+    _CheckRecursiveInclusionPass(diag).handle_decl(pg)
+
+
+def _check_decl_confilct_with_namespace(
+    pg: PackageGroup,
+    diag: AbstractDiagnosticsManager,
+):
+    """Checks for declarations conflicts with namespaces."""
+    namespaces = set()
+    for pkg_name in pg.package_dict:
+        # package "a.b.c" -> namespaces ["a.b.c", "a.b", "a"]
+        while True:
+            namespaces.add(pkg_name)
+            splited = pkg_name.rsplit(".", maxsplit=1)
+            if len(splited) == 2:
+                pkg_name = splited[0]
+            else:
+                break
+
+    for p in pg.packages:
+        for d in p.decls.values():
+            name = p.name + "." + d.name
+            if name in namespaces:
+                diag.emit(SymbolConflictWithNamespaceError(d, p))
 
 
 class _ResolveImportsPass(DeclVisitor):
@@ -202,107 +227,96 @@ class _CheckFieldNameCollisionErrorPass(DeclVisitor):
     @override
     def visit_named_decl(self, d: NamedDecl) -> None:
         names = {}
-        for field_name, children in d.all_children.items():
+        for field_name, children in d.symbol_tables.items():
             for i, f in enumerate(children):
                 if not f.name:
-                    f.name = f"_{field_name}_{i}"
+                    f.name = f"{field_name}_{i}"
                 if (prev := names.setdefault(f.name, f)) != f:
                     self.diag.emit(DeclRedefError(prev, f))
 
         return super().visit_named_decl(d)
 
 
-def _check_decl_confilct_with_namespace(
-    pg: PackageGroup,
-    diag: AbstractDiagnosticsManager,
-):
-    """Checks for declarations conflicts with namespaces."""
-    namespaces = set()
-    for pkg_name in pg.package_dict:
-        # package "a.b.c" -> namespaces ["a.b.c", "a.b", "a"]
-        while True:
-            namespaces.add(pkg_name)
-            splited = pkg_name.rsplit(".", maxsplit=1)
-            if len(splited) == 2:
-                pkg_name = splited[0]
-            else:
-                break
-
-    for p in pg.packages:
-        for d in p.decls.values():
-            name = p.name + "." + d.name
-            if name in namespaces:
-                diag.emit(SymbolConflictWithNamespaceError(d, p))
-
-
-def _check_iface_parents(
-    pg: PackageGroup,
-    diag: AbstractDiagnosticsManager,
-):
+class _CheckIfaceParentsPass(DeclVisitor):
     """Validates interface inheritance for correctness and cycles."""
-    parent_iface_table: dict[
-        IfaceDecl, list[tuple[tuple[IfaceDecl, TypeRefDecl], IfaceDecl]]
-    ] = {}
-    for pkg in pg.packages:
-        for iface in pkg.interfaces:
-            parent_iface_list = parent_iface_table.setdefault(iface, [])
-            parent_iface_dict = {}
-            for parent in iface.parents:
-                if (parent_iface := parent.ty_ref.resolved_ty) is None:
-                    pass
-                elif not isinstance(parent_iface, IfaceDecl):
-                    diag.emit(ExtendsTypeError(parent))
-                else:
-                    parent_iface_list.append(((iface, parent.ty_ref), parent_iface))
-                    prev = parent_iface_dict.setdefault(parent_iface, parent)
-                    if prev != parent:
-                        diag.emit(
-                            DuplicateExtendsWarn(
-                                iface,
-                                parent_iface,
-                                loc=parent.ty_ref.loc,
-                                prev_loc=prev.ty_ref.loc,
-                            )
-                        )
 
-    cycles = detect_cycles(parent_iface_table)
-    for cycle in cycles:
-        last, *other = cycle[::-1]
-        diag.emit(RecursiveExtensionError(last, other))
+    diag: AbstractDiagnosticsManager
 
+    def __init__(self, diag: AbstractDiagnosticsManager):
+        self.diag = diag
+        self.parent_table: dict[
+            IfaceDecl, list[tuple[tuple[IfaceDecl, TypeRefDecl], IfaceDecl]]
+        ] = {}
 
-def _check_recursive_types(
-    pg: PackageGroup,
-    diag: AbstractDiagnosticsManager,
-):
-    """Validates struct fields for type correctness and cycles."""
-    type_table: dict[
-        BasicTypeDecl,
-        list[tuple[tuple[BasicTypeDecl, TypeRefDecl], BasicTypeDecl]],
-    ] = {}
-    for pkg in pg.packages:
-        for struct in pkg.structs:
-            type_list = type_table.setdefault(struct, [])
-            for field in struct.fields:
-                if isinstance((ty := field.ty_ref.resolved_ty), BasicTypeDecl):
-                    type_list.append(((struct, field.ty_ref), ty))
-        for enum in pkg.enums:
-            type_list = type_table.setdefault(enum, [])
-            for item in enum.items:
-                if item.ty_ref and isinstance(
-                    (ty := item.ty_ref.resolved_ty), BasicTypeDecl
-                ):
-                    type_list.append(((enum, item.ty_ref), ty))
-        for alias in pkg.type_aliases:
-            if isinstance((ty := alias.ty_ref.resolved_ty), BasicTypeDecl):
-                type_table[alias] = [((alias, alias.ty_ref), ty)]
+    def visit_package_group(self, g: PackageGroup) -> None:
+        self.parent_table = {}
+        super().visit_package_group(g)
+        cycles = detect_cycles(self.parent_table)
+        for cycle in cycles:
+            last, *other = cycle[::-1]
+            self.diag.emit(RecursiveExtensionError(last, other))
+
+    def visit_iface_decl(self, d: IfaceDecl) -> None:
+        parent_iface_list = self.parent_table.setdefault(d, [])
+        parent_iface_dict = {}
+        for parent in d.parents:
+            if (parent_iface := parent.ty_ref.resolved_ty) is None:
+                pass
+            elif not isinstance(parent_iface, IfaceDecl):
+                self.diag.emit(ExtendsTypeError(parent))
             else:
-                type_table[alias] = []
+                parent_iface_list.append(((d, parent.ty_ref), parent_iface))
+                prev = parent_iface_dict.setdefault(parent_iface, parent)
+                if prev != parent:
+                    self.diag.emit(
+                        DuplicateExtendsWarn(
+                            d,
+                            parent_iface,
+                            loc=parent.ty_ref.loc,
+                            prev_loc=prev.ty_ref.loc,
+                        )
+                    )
 
-    cycles = detect_cycles(type_table)
-    for cycle in cycles:
-        last, *other = cycle[::-1]
-        diag.emit(RecursiveInclusionError(last, other))
+
+class _CheckRecursiveInclusionPass(DeclVisitor):
+    """Validates struct fields for type correctness and cycles."""
+
+    diag: AbstractDiagnosticsManager
+
+    def __init__(self, diag: AbstractDiagnosticsManager):
+        self.diag = diag
+        self.type_table: dict[
+            DataTypeDecl,
+            list[tuple[tuple[DataTypeDecl, TypeRefDecl], DataTypeDecl]],
+        ] = {}
+
+    def visit_package_group(self, g: PackageGroup) -> None:
+        self.type_table = {}
+        super().visit_package_group(g)
+        cycles = detect_cycles(self.type_table)
+        for cycle in cycles:
+            last, *other = cycle[::-1]
+            self.diag.emit(RecursiveInclusionError(last, other))
+
+    def visit_data_type_decl(self, d: DataTypeDecl) -> None:
+        raise NotImplementedError()
+
+    def visit_struct_decl(self, d: StructDecl) -> None:
+        type_list = self.type_table.setdefault(d, [])
+        for f in d.fields:
+            if isinstance((ty := f.ty_ref.resolved_ty), DataTypeDecl):
+                type_list.append(((d, f.ty_ref), ty))
+
+    def visit_enum_decl(self, d: EnumDecl) -> None:
+        type_list = self.type_table.setdefault(d, [])
+        for i in d.items:
+            if i.ty_ref and isinstance((ty := i.ty_ref.resolved_ty), DataTypeDecl):
+                type_list.append(((d, i.ty_ref), ty))
+
+    def visit_type_alias_decl(self, d: TypeAliasDecl) -> None:
+        type_list = self.type_table.setdefault(d, [])
+        if isinstance((ty := d.ty_ref.resolved_ty), DataTypeDecl):
+            type_list.append(((d, d.ty_ref), ty))
 
 
 V = TypeVar("V")

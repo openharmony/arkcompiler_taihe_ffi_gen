@@ -7,12 +7,12 @@ from typing_extensions import override
 
 from taihe.semantics.declarations import (
     AttrItemDecl,
+    BaseFuncDecl,
     Decl,
     DeclarationImportDecl,
     DeclarationRefDecl,
     EnumDecl,
     EnumItemDecl,
-    FuncBaseDecl,
     IfaceDecl,
     IfaceParentDecl,
     Package,
@@ -140,7 +140,7 @@ class _PrettyPrinter(DeclVisitor):
         )
 
     @override
-    def visit_func_base_decl(self, d: FuncBaseDecl):
+    def visit_base_func_decl(self, d: BaseFuncDecl):
         self.write_attr(d)
 
         func_kw = self.as_keyword("fn")

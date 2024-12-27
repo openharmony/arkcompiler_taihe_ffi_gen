@@ -7,7 +7,7 @@ from taihe.utils.sources import SourceLocation
 if TYPE_CHECKING:
     from taihe.semantics.declarations import (
         AttrItemDecl,
-        BasicTypeDecl,
+        DataTypeDecl,
         EnumItemDecl,
         IfaceDecl,
         IfaceParentDecl,
@@ -255,11 +255,11 @@ class RecursiveExtensionError(DiagError):
 class RecursiveInclusionNote(DiagNote):
     MSG = "referenced by {decl.description}"
 
-    decl: "BasicTypeDecl"
+    decl: "DataTypeDecl"
 
     def __init__(
         self,
-        last: tuple["BasicTypeDecl", "TypeRefDecl"],
+        last: tuple["DataTypeDecl", "TypeRefDecl"],
     ):
         self.loc = last[1].loc
         self.decl = last[0]
@@ -269,13 +269,13 @@ class RecursiveInclusionNote(DiagNote):
 class RecursiveInclusionError(DiagError):
     MSG = "cycle detected in {decl.description}"
 
-    decl: "BasicTypeDecl"
-    other: list[tuple["BasicTypeDecl", "TypeRefDecl"]]
+    decl: "DataTypeDecl"
+    other: list[tuple["DataTypeDecl", "TypeRefDecl"]]
 
     def __init__(
         self,
-        last: tuple["BasicTypeDecl", "TypeRefDecl"],
-        other: list[tuple["BasicTypeDecl", "TypeRefDecl"]],
+        last: tuple["DataTypeDecl", "TypeRefDecl"],
+        other: list[tuple["DataTypeDecl", "TypeRefDecl"]],
     ):
         self.loc = last[1].loc
         self.decl = last[0]

@@ -91,7 +91,7 @@ class NamedDecl(Decl, metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def all_children(self) -> dict[str, Iterable["NamedDecl"]]: ...
+    def symbol_tables(self) -> dict[str, Iterable["NamedDecl"]]: ...
 
     def __repr__(self) -> str:
         return f"<{self.description} at {self.loc}>"
@@ -299,7 +299,7 @@ class PackageImportDecl(ImportDecl):
 
     @property
     @override
-    def all_children(self) -> dict[str, Iterable["NamedDecl"]]:
+    def symbol_tables(self) -> dict[str, Iterable["NamedDecl"]]:
         return {}
 
     def is_alias(self) -> bool:
@@ -330,7 +330,7 @@ class DeclarationImportDecl(ImportDecl):
 
     @property
     @override
-    def all_children(self) -> dict[str, Iterable["NamedDecl"]]:
+    def symbol_tables(self) -> dict[str, Iterable["NamedDecl"]]:
         return {}
 
     def is_alias(self) -> bool:
@@ -356,7 +356,7 @@ class ParamDecl(NamedDecl):
     KIND = "function parameter"
 
     ty_ref: TypeRefDecl
-    parent: Optional["FuncBaseDecl"]
+    parent: Optional["BaseFuncDecl"]
 
     def __init__(
         self,
@@ -380,11 +380,11 @@ class ParamDecl(NamedDecl):
 
     @property
     @override
-    def all_children(self) -> dict[str, Iterable["NamedDecl"]]:
+    def symbol_tables(self) -> dict[str, Iterable["NamedDecl"]]:
         return {}
 
 
-class FuncBaseDecl(NamedDecl, metaclass=ABCMeta):
+class BaseFuncDecl(NamedDecl, metaclass=ABCMeta):
     params: list[ParamDecl]
     return_ty_ref: Optional[TypeRefDecl]
 
@@ -400,7 +400,7 @@ class FuncBaseDecl(NamedDecl, metaclass=ABCMeta):
 
     @property
     @override
-    def all_children(self) -> dict[str, Iterable["NamedDecl"]]:
+    def symbol_tables(self) -> dict[str, Iterable["NamedDecl"]]:
         return {"param": self.params}
 
     def add_param(self, p: ParamDecl):
@@ -408,7 +408,7 @@ class FuncBaseDecl(NamedDecl, metaclass=ABCMeta):
         self.params.append(p)
 
 
-class GlobFuncDecl(FuncBaseDecl, PackageLevelDecl):
+class GlobFuncDecl(BaseFuncDecl, PackageLevelDecl):
     KIND = "non-member function"
 
     @override
@@ -420,11 +420,11 @@ class TypeDecl(PackageLevelDecl, Type, metaclass=ABCMeta):
     pass
 
 
-class BasicTypeDecl(TypeDecl, metaclass=ABCMeta):
+class DataTypeDecl(TypeDecl, metaclass=ABCMeta):
     pass
 
 
-class TypeAliasDecl(BasicTypeDecl):
+class TypeAliasDecl(DataTypeDecl):
     KIND = "type alias"
 
     ty_ref: TypeRefDecl
@@ -439,7 +439,7 @@ class TypeAliasDecl(BasicTypeDecl):
 
     @property
     @override
-    def all_children(self) -> dict[str, Iterable["NamedDecl"]]:
+    def symbol_tables(self) -> dict[str, Iterable["NamedDecl"]]:
         return {}
 
 
@@ -468,7 +468,7 @@ class EnumItemDecl(NamedDecl):
 
     @property
     @override
-    def all_children(self) -> dict[str, Iterable["NamedDecl"]]:
+    def symbol_tables(self) -> dict[str, Iterable["NamedDecl"]]:
         return {}
 
     @property
@@ -478,7 +478,7 @@ class EnumItemDecl(NamedDecl):
         return [*self.parent.segments, self.name]
 
 
-class EnumDecl(BasicTypeDecl):
+class EnumDecl(DataTypeDecl):
     KIND = "enum"
 
     items: list[EnumItemDecl]
@@ -493,7 +493,7 @@ class EnumDecl(BasicTypeDecl):
 
     @property
     @override
-    def all_children(self) -> dict[str, Iterable["NamedDecl"]]:
+    def symbol_tables(self) -> dict[str, Iterable["NamedDecl"]]:
         return {"item": self.items}
 
     def add_item(self, f: EnumItemDecl):
@@ -529,11 +529,11 @@ class StructFieldDecl(NamedDecl):
 
     @property
     @override
-    def all_children(self) -> dict[str, Iterable["NamedDecl"]]:
+    def symbol_tables(self) -> dict[str, Iterable["NamedDecl"]]:
         return {}
 
 
-class StructDecl(BasicTypeDecl):
+class StructDecl(DataTypeDecl):
     KIND = "struct"
 
     fields: list[StructFieldDecl]
@@ -548,7 +548,7 @@ class StructDecl(BasicTypeDecl):
 
     @property
     @override
-    def all_children(self) -> dict[str, Iterable["NamedDecl"]]:
+    def symbol_tables(self) -> dict[str, Iterable["NamedDecl"]]:
         return {"field": self.fields}
 
     def add_field(self, f: StructFieldDecl):
@@ -584,11 +584,11 @@ class IfaceParentDecl(NamedDecl):
 
     @property
     @override
-    def all_children(self) -> dict[str, Iterable["NamedDecl"]]:
+    def symbol_tables(self) -> dict[str, Iterable["NamedDecl"]]:
         return {}
 
 
-class IfaceMethodDecl(FuncBaseDecl):
+class IfaceMethodDecl(BaseFuncDecl):
     KIND = "interface method"
 
     parent: Optional["IfaceDecl"] = None
@@ -621,7 +621,7 @@ class IfaceDecl(TypeDecl):
 
     @property
     @override
-    def all_children(self) -> dict[str, Iterable["NamedDecl"]]:
+    def symbol_tables(self) -> dict[str, Iterable["NamedDecl"]]:
         return {
             "method": self.methods,
             "parent": self.parents,
@@ -689,7 +689,7 @@ class Package(NamedDecl):
 
     @property
     @override
-    def all_children(self) -> dict[str, Iterable["NamedDecl"]]:
+    def symbol_tables(self) -> dict[str, Iterable["NamedDecl"]]:
         return {
             "pkg_imports": self.pkg_imports,
             "decl_imports": self.decl_imports,

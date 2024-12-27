@@ -16,12 +16,13 @@ from typing import Generic, Optional, TypeVar
 
 from taihe.semantics.declarations import (
     AttrItemDecl,
+    BaseFuncDecl,
+    DataTypeDecl,
     Decl,
     DeclarationImportDecl,
     DeclarationRefDecl,
     EnumDecl,
     EnumItemDecl,
-    FuncBaseDecl,
     GlobFuncDecl,
     IfaceDecl,
     IfaceMethodDecl,
@@ -106,16 +107,19 @@ class TypeVisitor(Generic[T]):
     def visit_type_decl(self, d: TypeDecl) -> T:
         return self.visit_type(d)
 
-    def visit_struct_decl(self, d: StructDecl) -> T:
+    def visit_data_type_decl(self, d: DataTypeDecl) -> T:
         return self.visit_type_decl(d)
+
+    def visit_struct_decl(self, d: StructDecl) -> T:
+        return self.visit_data_type_decl(d)
 
     def visit_enum_decl(self, d: EnumDecl) -> T:
-        return self.visit_type_decl(d)
-
-    def visit_iface_decl(self, d: IfaceDecl) -> T:
-        return self.visit_type_decl(d)
+        return self.visit_data_type_decl(d)
 
     def visit_type_alias_decl(self, d: TypeAliasDecl) -> T:
+        return self.visit_data_type_decl(d)
+
+    def visit_iface_decl(self, d: IfaceDecl) -> T:
         return self.visit_type_decl(d)
 
 
@@ -158,7 +162,7 @@ class DeclVisitor:
 
         return self.visit_named_decl(d)
 
-    def visit_func_base_decl(self, d: FuncBaseDecl) -> None:
+    def visit_base_func_decl(self, d: BaseFuncDecl) -> None:
         for i in d.params:
             self.handle_decl(i)
 
@@ -203,19 +207,22 @@ class DeclVisitor:
     ### Functions ###
 
     def visit_glob_func_decl(self, d: GlobFuncDecl) -> None:
-        return self.visit_func_base_decl(d)
+        return self.visit_base_func_decl(d)
 
     ### Type (Generic) ###
 
     def visit_type_decl(self, d: TypeDecl) -> None:
         return self.visit_named_decl(d)
 
+    def visit_data_type_decl(self, d: DataTypeDecl) -> None:
+        return self.visit_type_decl(d)
+
     ### Type Alias ###
 
     def visit_type_alias_decl(self, d: TypeAliasDecl) -> None:
         self.handle_decl(d.ty_ref)
 
-        return self.visit_named_decl(d)
+        return self.visit_data_type_decl(d)
 
     ### Struct ###
 
@@ -228,7 +235,7 @@ class DeclVisitor:
         for i in d.fields:
             self.handle_decl(i)
 
-        return self.visit_type_decl(d)
+        return self.visit_data_type_decl(d)
 
     ### Enum ###
 
@@ -242,7 +249,7 @@ class DeclVisitor:
         for i in d.items:
             self.handle_decl(i)
 
-        return self.visit_type_decl(d)
+        return self.visit_data_type_decl(d)
 
     ### Interface ###
 
@@ -252,7 +259,7 @@ class DeclVisitor:
         return self.visit_named_decl(d)
 
     def visit_iface_func_decl(self, d: IfaceMethodDecl) -> None:
-        return self.visit_func_base_decl(d)
+        return self.visit_base_func_decl(d)
 
     def visit_iface_decl(self, d: IfaceDecl) -> None:
         for i in d.parents:

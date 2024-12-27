@@ -17,9 +17,10 @@ enum Color {
     BLUE  = 0xff << 0o00;
 }
 
-enum ColorOrRGB {
+enum ColorOrRGBOrName {
     color: Color = 0x1;
     rgb: RGB = 0x2;
+    name: String = 0x0;
 }
 
 [cname = "ohos_get_rgb", index = 0, has_return_val = TRUE, deprecated]

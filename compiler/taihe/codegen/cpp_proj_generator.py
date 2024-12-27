@@ -10,8 +10,8 @@ from taihe.codegen.abi_generator import (
     COutputBuffer,
 )
 from taihe.semantics.declarations import (
+    BaseFuncDecl,
     EnumDecl,
-    FuncBaseDecl,
     GlobFuncDecl,
     Package,
     PackageGroup,
@@ -47,8 +47,8 @@ class CppProjPackageInfo(AbstractAnalysis[Package]):
         self.param_namespace = "::".join(["param", *segments])
 
 
-class CppProjFuncBaseDeclInfo(AbstractAnalysis[FuncBaseDecl]):
-    def __init__(self, am: AnalysisManager, f: FuncBaseDecl) -> None:
+class CppProjFuncBaseDeclInfo(AbstractAnalysis[BaseFuncDecl]):
+    def __init__(self, am: AnalysisManager, f: BaseFuncDecl) -> None:
         segments = f.segments
         self.name = f.name
         self.full_name = "::" + "::".join(segments)
