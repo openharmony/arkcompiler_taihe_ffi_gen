@@ -15,7 +15,6 @@ from taihe.utils.exceptions import (
     PackageRedefError,
     RecursiveExtensionError,
     RecursiveInclusionError,
-    StructFieldTypeError,
     SymbolConflictWithNamespaceError,
 )
 from taihe.utils.sources import SourceManager
@@ -138,7 +137,7 @@ def test_decl_redef_1():
     test_instance = SemanticTestCompilerInstance()
     test_instance.add_source(
         "package",
-        "function bad_func(a: i32, a: i32): ();\n"
+        "function bad_func(a: i32, a: i32);\n"
     )
     test_instance.run()
     test_instance.assert_has_error(DeclRedefError)
@@ -316,20 +315,6 @@ def test_recursive_inclusion():
     test_instance.assert_has_error(RecursiveInclusionError)
 
 
-def test_struct_field_type():
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance()
-    test_instance.add_source(
-        "package",
-        "interface TestIface {}\n"
-        "struct A {\n"
-        "    a: TestIface;\n"
-        "}\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(StructFieldTypeError)
-
-
 def test_extends_type():
     # fmt: off
     test_instance = SemanticTestCompilerInstance()
@@ -384,7 +369,7 @@ def test_not_a_type():
     test_instance = SemanticTestCompilerInstance()
     test_instance.add_source(
         "package",
-        "function good_func(a: i32): ();\n"
+        "function good_func(a: i32): void;\n"
         "struct A {\n"
         "    a: good_func;\n"
         "}\n"

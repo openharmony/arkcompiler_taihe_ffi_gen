@@ -5,7 +5,7 @@ def test_name_mangler():
     """Comprehensive test suite for NameMangler."""
     test_cases = [
         (["a", "b_c", "d", "e_f_g"], DeclKind.FUNCTION),
-        (["pkg", "sub_pkg", "name"], DeclKind.ENUM),
+        (["pkg", "sub_pkg", "name"], DeclKind.ENUM_TAG),
         (["x", "y", "z"], DeclKind.STRUCT),
         (["a_b_c"], DeclKind.FUNCTION),
         (["a"], DeclKind.FUNCTION),

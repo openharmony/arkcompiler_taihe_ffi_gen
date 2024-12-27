@@ -14,7 +14,6 @@ if TYPE_CHECKING:
         NamedDecl,
         Package,
         PackageLevelDecl,
-        StructFieldDecl,
         TypeAliasDecl,
         TypeRefDecl,
     )
@@ -174,17 +173,6 @@ class SymbolConflictWithNamespaceError(DiagError):
         self.decl = decl
         self.loc = decl.loc
         self.pkg = pkg
-
-
-@dataclass
-class StructFieldTypeError(DiagError):
-    MSG = "expected built-in/struct/enum type, got {name!r}"
-
-    name: str
-
-    def __init__(self, decl: "StructFieldDecl"):
-        self.loc = decl.ty_ref.loc
-        self.name = decl.ty_ref.symbol
 
 
 @dataclass
