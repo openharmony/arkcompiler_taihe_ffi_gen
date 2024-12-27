@@ -5,8 +5,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-from taihe.codegen.abi_generator import ABICodeGenerator
-from taihe.codegen.cpp_proj_generator import CppProjCodeGenerator
+from taihe.codegen.kn_bridge_generator import KNBridgeGenerator
 from taihe.parse.convert import AstConverter
 from taihe.semantics.analysis import analyze_semantics
 from taihe.semantics.declarations import PackageGroup
@@ -90,16 +89,12 @@ class CompilerInstance:
             return
         if not self.invocation.out_dir:
             return
-        generator = ABICodeGenerator(self.target_manager, self.analysis_manager)
-        generator.generate(self.package_group)
-        self.target_manager.output_to(self.invocation.out_dir)
 
-        if self.invocation.gen_user:
-            cpp_generator = CppProjCodeGenerator(
-                self.target_manager, self.analysis_manager
-            )
-            cpp_generator.generate(self.package_group)
-            self.target_manager.output_to(self.invocation.out_dir)
+        kn_bridge_generator = KNBridgeGenerator(
+            self.target_manager, self.analysis_manager
+        )
+        kn_bridge_generator.generate(self.package_group)
+        self.target_manager.output_to(self.invocation.out_dir)
 
     def run(self):
         self.scan()
