@@ -7,7 +7,6 @@ from taihe.codegen.abi_generator import (
     ABIFuncBaseDeclInfo,
     ABIPackageInfo,
     ABIStructDeclInfo,
-    ABITypeInfo,
     COutputBuffer,
 )
 from taihe.semantics.declarations import (
@@ -53,39 +52,17 @@ class CppProjFuncBaseDeclInfo(AbstractAnalysis[FuncBaseDecl]):
         segments = f.segments
         self.name = f.name
         self.full_name = "::" + "::".join(segments)
-        if len(f.retvals) == 0:
+        if f.return_ty_ref is None:
             self.return_ty_headers = []
             self.return_ty_name = "void"
             self.return_from_abi = lambda val: val
             self.return_into_abi = lambda val: val
-        elif len(f.retvals) == 1:
-            (retval,) = f.retvals
-            cpp_return_ty_info = CppProjTypeInfo.get(am, retval.ty_ref.resolved_ty)
-            abi_func_info = ABIFuncBaseDeclInfo.get(am, f)
+        else:
+            cpp_return_ty_info = CppProjTypeInfo.get(am, f.return_ty_ref.resolved_ty)
             self.return_ty_headers = [cpp_return_ty_info.header]
             self.return_ty_name = cpp_return_ty_info.as_owner
             self.return_from_abi = cpp_return_ty_info.return_from_abi
             self.return_into_abi = cpp_return_ty_info.return_into_abi
-        else:
-            abi_func_info = ABIFuncBaseDeclInfo.get(am, f)
-            self.return_ty_headers = []
-            cpp_return_ty_names = []
-            abi_return_ty_parts = []
-            for return_type in f.retvals:
-                abi_return_ty_info = ABITypeInfo.get(am, return_type.ty_ref.resolved_ty)
-                cpp_return_ty_info = CppProjTypeInfo.get(
-                    am, return_type.ty_ref.resolved_ty
-                )
-                abi_return_ty_parts.append(abi_return_ty_info.as_owner)
-                cpp_return_ty_names.append(cpp_return_ty_info.as_owner)
-                self.return_ty_headers.append(cpp_return_ty_info.header)
-            self.return_ty_name = f"std::tuple<{', '.join(cpp_return_ty_names)}>"
-            self.return_from_abi = (
-                lambda val: f"taihe::core::from_abi<{self.return_ty_name}, {abi_func_info.return_ty_struct_name}>(std::move({val}))"
-            )
-            self.return_into_abi = (
-                lambda val: f"taihe::core::into_abi<{self.return_ty_name}, {abi_func_info.return_ty_struct_name}>(std::move({val}))"
-            )
 
 
 class CppProjStructDeclInfo(AbstractAnalysis[StructDecl]):
@@ -226,8 +203,6 @@ class CppProjCodeGenerator:
         for enum in pkg.enums:
             self.gen_enum_file(enum, cpp_proj_pkg_target, cpp_proj_pkg_info)
         for func in pkg.functions:
-            self.gen_return_ty(func, cpp_proj_pkg_target)
-        for func in pkg.functions:
             self.gen_func(func, cpp_proj_pkg_target, cpp_proj_pkg_info)
 
     def gen_func(
@@ -261,28 +236,6 @@ class CppProjCodeGenerator:
             f"}}\n"
             f"}}\n"
         )
-
-    def gen_return_ty(
-        self,
-        func: FuncBaseDecl,
-        cpp_proj_pkg_target: COutputBuffer,
-    ):
-        abi_func_info = ABIFuncBaseDeclInfo.get(self.am, func)
-        cpp_proj_func_info = CppProjFuncBaseDeclInfo.get(self.am, func)
-
-        if abi_func_info.return_ty_struct_name is None:
-            return
-
-        cpp_proj_pkg_target.write(
-            f"template<>\n"
-            f"inline {cpp_proj_func_info.return_ty_name} taihe::core::from_abi({abi_func_info.return_ty_name}&& _val) {{\n"
-            f"    return {{\n"
-        )
-        for retval in func.retvals:
-            cpp_proj_type_info = CppProjTypeInfo.get(self.am, retval.ty_ref.resolved_ty)
-            result = cpp_proj_type_info.return_from_abi(f"_val.{retval.name}")
-            cpp_proj_pkg_target.write(f"        {result},\n")
-        cpp_proj_pkg_target.write(f"    }};\n" f"}};\n")
 
     def gen_struct_file(
         self,

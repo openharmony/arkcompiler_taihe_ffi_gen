@@ -1,21 +1,33 @@
 from rgb.base use RGB, Color;
 
-function show(color: RGB): ();
+function show(color: RGB): void;
 
-function test(a: String, b: IBase): (String, String);
+[tuple]
+struct StringPair {
+    _0: String;
+    _1: String;
+}
+
+function separate(a: String): StringPair;
 
 interface IBase {}
 
 interface IColorable: IBase {
     function getColor(): Color;
-    function setColor(c: Color): ();
+    function setColor(c: Color): void;
+}
+
+[tuple]
+struct IShapePair {
+    _0: IShape;
+    _1: IShape;
 }
 
 interface IShape: IBase {
     function calculateArea(): f32;
-    function separate(): (IShape, IShape);
+    function separate(): IShapePair;
 }
 
 interface IShowable: IColorable, IShape {
-    function show(): ();
+    function show(): void;
 }

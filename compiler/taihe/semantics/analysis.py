@@ -13,11 +13,9 @@ from taihe.semantics.declarations import (
     PackageImportDecl,
     PackageRefDecl,
     StructDecl,
-    TypeAliasDecl,
     TypeDecl,
     TypeRefDecl,
 )
-from taihe.semantics.types import BuiltinType
 from taihe.semantics.visitor import DeclVisitor
 from taihe.utils.diagnostics import AbstractDiagnosticsManager
 from taihe.utils.exceptions import (
@@ -31,8 +29,6 @@ from taihe.utils.exceptions import (
     PackageNotInScopeError,
     RecursiveExtensionError,
     RecursiveInclusionError,
-    RecursiveTypeAliasError,
-    StructFieldTypeError,
     SymbolConflictWithNamespaceError,
 )
 
@@ -44,7 +40,6 @@ def analyze_semantics(pg: PackageGroup, diag: AbstractDiagnosticsManager):
     """Runs semantic analysis passes on the given package group."""
     _check_decl_confilct_with_namespace(pg, diag)
     _ResolveImportsPass(diag).handle_decl(pg)
-    _resolve_type_alias(pg, diag)
     _CheckFieldNameCollisionErrorPass(diag).handle_decl(pg)
     _CalculateEnumItemValuePass(diag).handle_decl(pg)
     _check_struct_fields(pg, diag)
@@ -239,39 +234,6 @@ def _check_decl_confilct_with_namespace(
                 diag.emit(SymbolConflictWithNamespaceError(d, p))
 
 
-def _resolve_type_alias(
-    pg: PackageGroup,
-    diag: AbstractDiagnosticsManager,
-):
-    resolving_dict: dict[TypeAliasDecl, int] = {}
-    resolving_list: list[TypeAliasDecl] = []
-
-    def visit(d: TypeAliasDecl):
-        if d.is_solved:
-            return
-        n = len(resolving_list)
-        m = resolving_dict.setdefault(d, n)
-        if m == n:
-            resolving_list.append(d)
-            i = d.ty_ref.resolved_ty
-            if isinstance(i, TypeAliasDecl):
-                visit(i)
-                i = i.final_ty
-            d.final_ty = i
-            resolving_list.pop()
-            resolving_dict.pop(d)
-        else:
-            diag.emit(
-                RecursiveTypeAliasError(resolving_list[m], resolving_list[m + 1 :])
-            )
-
-        d.is_solved = True
-
-    for pkg in pg.packages:
-        for typedef in pkg.type_aliases:
-            visit(typedef)
-
-
 def _check_iface_parents(
     pg: PackageGroup,
     diag: AbstractDiagnosticsManager,
@@ -283,24 +245,18 @@ def _check_iface_parents(
             parent_iface_list = parent_iface_table.setdefault(iface, [])
             parent_iface_dict = {}
             for parent in iface.parents:
-                parent_ty = parent.ty_ref.resolved_ty
-                parent_final_ty = (
-                    parent_ty.final_ty
-                    if isinstance(parent_ty, TypeAliasDecl)
-                    else parent_ty
-                )
-                if parent_final_ty is None:
+                if (parent_iface := parent.ty_ref.resolved_ty) is None:
                     pass
-                elif not isinstance(parent_final_ty, IfaceDecl):
+                elif not isinstance(parent_iface, IfaceDecl):
                     diag.emit(ExtendsTypeError(parent))
                 else:
-                    parent_iface_list.append((parent, parent_final_ty))
-                    prev = parent_iface_dict.setdefault(parent_final_ty, parent)
+                    parent_iface_list.append((parent, parent_iface))
+                    prev = parent_iface_dict.setdefault(parent_iface, parent)
                     if prev != parent:
                         diag.emit(
                             DuplicateExtendsWarn(
                                 iface,
-                                parent_final_ty,
+                                parent_iface,
                                 loc=parent.ty_ref.loc,
                                 prev_loc=prev.ty_ref.loc,
                             )
@@ -322,17 +278,7 @@ def _check_struct_fields(
         for struct in pkg.structs:
             field_struct_list = field_struct_table.setdefault(struct, [])
             for field in struct.fields:
-                field_ty = field.ty_ref.resolved_ty
-                field_struct = (
-                    field_ty.final_ty
-                    if isinstance(field_ty, TypeAliasDecl)
-                    else field_ty
-                )
-                if field_struct is None:
-                    pass
-                elif not isinstance(field_struct, BuiltinType | EnumDecl | StructDecl):
-                    diag.emit(StructFieldTypeError(field))
-                elif isinstance(field_struct, StructDecl):
+                if isinstance((field_struct := field.ty_ref.resolved_ty), StructDecl):
                     field_struct_list.append((field, field_struct))
 
     cycles = detect_cycles(field_struct_table)

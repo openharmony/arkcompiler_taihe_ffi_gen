@@ -33,7 +33,6 @@ from taihe.semantics.declarations import (
     PackageImportDecl,
     PackageRefDecl,
     ParamDecl,
-    RetvalDecl,
     StructDecl,
     StructFieldDecl,
     TypeAliasDecl,
@@ -159,17 +158,12 @@ class DeclVisitor:
 
         return self.visit_named_decl(d)
 
-    def visit_retval_decl(self, d: RetvalDecl) -> None:
-        self.handle_decl(d.ty_ref)
-
-        return self.visit_named_decl(d)
-
     def visit_func_base_decl(self, d: FuncBaseDecl) -> None:
         for i in d.params:
             self.handle_decl(i)
 
-        for i in d.retvals:
-            self.handle_decl(i)
+        if d.return_ty_ref:
+            self.handle_decl(d.return_ty_ref)
 
         return self.visit_named_decl(d)
 
@@ -254,7 +248,7 @@ class DeclVisitor:
 
         return self.visit_named_decl(d)
 
-    def visit_iface_method_decl(self, d: IfaceMethodDecl) -> None:
+    def visit_iface_func_decl(self, d: IfaceMethodDecl) -> None:
         return self.visit_func_base_decl(d)
 
     def visit_iface_decl(self, d: IfaceDecl) -> None:

@@ -384,62 +384,28 @@ class ParamDecl(NamedDecl):
         return {}
 
 
-class RetvalDecl(NamedDecl):
-    KIND = "function return type"
-
-    ty_ref: TypeRefDecl
-    parent: Optional["FuncBaseDecl"]
+class FuncBaseDecl(NamedDecl, metaclass=ABCMeta):
+    params: list[ParamDecl]
+    return_ty_ref: Optional[TypeRefDecl]
 
     def __init__(
         self,
         name: str,
         loc: Optional[SourceLocation],
-        ty_ref: TypeRefDecl,
+        return_ty_ref: Optional[TypeRefDecl] = None,
     ):
         super().__init__(name, loc)
-        self.ty_ref = ty_ref
-        self.parent = None
-
-    @override
-    def _accept(self, v: "DeclVisitor") -> Any:
-        return v.visit_retval_decl(self)
-
-    @property
-    @override
-    def segments(self) -> list[str]:
-        assert self.parent
-        return [*self.parent.segments, self.name]
-
-    @property
-    @override
-    def all_children(self) -> dict[str, Iterable["NamedDecl"]]:
-        return {}
-
-
-class FuncBaseDecl(NamedDecl, metaclass=ABCMeta):
-    params: list[ParamDecl]
-    retvals: list[RetvalDecl]
-
-    def __init__(self, name: str, loc: Optional[SourceLocation]):
-        super().__init__(name, loc)
         self.params = []
-        self.retvals = []
+        self.return_ty_ref = return_ty_ref
 
     @property
     @override
     def all_children(self) -> dict[str, Iterable["NamedDecl"]]:
-        return {
-            "param": self.params,
-            "retval": self.retvals,
-        }
+        return {"param": self.params}
 
     def add_param(self, p: ParamDecl):
         p.parent = self
         self.params.append(p)
-
-    def add_retval(self, r: RetvalDecl):
-        r.parent = self
-        self.retvals.append(r)
 
 
 class GlobFuncDecl(FuncBaseDecl, PackageLevelDecl):
@@ -458,8 +424,6 @@ class TypeAliasDecl(TypeDecl):
     KIND = "type alias"
 
     ty_ref: TypeRefDecl
-    final_ty: Optional[Type] = None
-    is_solved: bool = False
 
     def __init__(self, name: str, loc: Optional[SourceLocation], ty_ref: TypeRefDecl):
         super().__init__(name, loc)
@@ -624,7 +588,7 @@ class IfaceMethodDecl(FuncBaseDecl):
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
-        return v.visit_iface_method_decl(self)
+        return v.visit_iface_func_decl(self)
 
     @property
     @override

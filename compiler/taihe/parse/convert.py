@@ -19,7 +19,6 @@ from taihe.semantics.declarations import (
     PackageImportDecl,
     PackageRefDecl,
     ParamDecl,
-    RetvalDecl,
     StructDecl,
     StructFieldDecl,
     TypeAliasDecl,
@@ -256,16 +255,12 @@ class AstConverter(ExprEvaluator):
         return d
 
     @override
-    def visit_Retval(self, node: ast.Retval) -> RetvalDecl:
-        d = RetvalDecl("", None, self.visit(node.ty))
-        self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
-        return d
-
-    @override
     def visit_InterfaceFunction(self, node: ast.InterfaceFunction) -> IfaceMethodDecl:
-        d = IfaceMethodDecl(str(node.name), self.loc(node.name))
+        if ty := node.return_ty:
+            d = IfaceMethodDecl(str(node.name), self.loc(node.name), self.visit(ty))
+        else:
+            d = IfaceMethodDecl(str(node.name), self.loc(node.name))
         self.diag.for_each(node.parameters, lambda p: d.add_param(self.visit(p)))
-        self.diag.for_each(node.retvals, lambda r: d.add_retval(self.visit(r)))
         self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
         return d
 
@@ -290,9 +285,11 @@ class AstConverter(ExprEvaluator):
 
     @override
     def visit_GlobalFunction(self, node: ast.GlobalFunction) -> GlobFuncDecl:
-        d = GlobFuncDecl(str(node.name), self.loc(node.name))
+        if ty := node.return_ty:
+            d = GlobFuncDecl(str(node.name), self.loc(node.name), self.visit(ty))
+        else:
+            d = GlobFuncDecl(str(node.name), self.loc(node.name))
         self.diag.for_each(node.parameters, lambda p: d.add_param(self.visit(p)))
-        self.diag.for_each(node.retvals, lambda r: d.add_retval(self.visit(r)))
         self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
         return d
 
@@ -300,7 +297,7 @@ class AstConverter(ExprEvaluator):
     def visit_Spec(self, node: ast.Spec) -> Package:
         pkg = Package(self.source.pkg_name, SourceLocation(self.source))
         for u in node.uses:
-            self.diag.for_each(self.visit(u), lambda i: pkg.add_import(i))
+            self.diag.for_each(self.visit(u), pkg.add_import)
         self.diag.for_each(node.fields, lambda n: pkg.add_declaration(self.visit(n)))
         self.diag.for_each(node.attrs, lambda a: pkg.add_attr(self.visit(a)))
         return pkg

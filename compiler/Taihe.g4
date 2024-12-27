@@ -36,8 +36,7 @@ specField
       LEFT_BRACE (InterfaceFieldLst_fields += interfaceField)* RIGHT_BRACE # interface
     | (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
       KW_FUNCTION token_name = ID
-      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS COLON
-      (LEFT_PARENTHESIS (RetvalLst_retvals += retval (COMMA RetvalLst_retvals += retval)*)? RIGHT_PARENTHESIS | RetvalLst_retvals += retval) SEMICOLON # globalFunction
+      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS COLON (TypeOpt_return_ty = type | KW_VOID)? SEMICOLON # globalFunction
     | (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
       KW_TYPE token_name = ID ASSIGN_TO Type_ty = type SEMICOLON # typeAlias
     ;
@@ -49,7 +48,7 @@ structField
 
 enumField
     : (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
-      token_name = ID (ASSIGN_TO IntExprOpt_expr = intExpr)? SEMICOLON # enumProperty
+      token_name = ID (COLON Type_ty = type SEMICOLON)? (ASSIGN_TO IntExprOpt_expr = intExpr)? SEMICOLON # enumProperty
     ;
 
 interfaceParent
@@ -60,18 +59,12 @@ interfaceParent
 interfaceField
     : (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
       KW_FUNCTION token_name = ID
-      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS COLON
-      (LEFT_PARENTHESIS (RetvalLst_retvals += retval (COMMA RetvalLst_retvals += retval)*)? RIGHT_PARENTHESIS | RetvalLst_retvals += retval) SEMICOLON # interfaceFunction
+      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS COLON (TypeOpt_return_ty = type | KW_VOID)? SEMICOLON # interfaceFunction
     ;
 
 parameter
     : (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
       token_name = ID COLON Type_ty = type
-    ;
-
-retval
-    : (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
-      Type_ty = type
     ;
 
 ///////////////
@@ -97,8 +90,7 @@ type
     | (PkgNameOpt_pkg_name = pkgName DOT)? token_decl_name = ID # userType
     | token_name = ID LEFT_PARENTHESIS (TypeLst_args += type (COMMA TypeLst_args += type)*)? RIGHT_PARENTHESIS # genericType
     | <assoc = right>
-      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS ARROW
-      (LEFT_PARENTHESIS (RetvalLst_retvals += retval (COMMA RetvalLst_retvals += retval)*)? RIGHT_PARENTHESIS | RetvalLst_retvals += retval) # functionType
+      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS ARROW (TypeOpt_return_ty = type | KW_VOID)? # functionType
     ;
 
 ////////////////

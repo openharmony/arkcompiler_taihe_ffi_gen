@@ -20,7 +20,6 @@ from taihe.semantics.declarations import (
     PackageImportDecl,
     PackageRefDecl,
     ParamDecl,
-    RetvalDecl,
     StructDecl,
     StructFieldDecl,
     TypeAliasDecl,
@@ -75,10 +74,6 @@ class _PrettyPrinter(DeclVisitor):
         return d.symbol
 
     def get_parent_decl(self, d: IfaceParentDecl) -> str:
-        res = self.get_type_ref_decl(d.ty_ref)
-        return self.with_attrs(d, res)
-
-    def get_return_decl(self, d: RetvalDecl) -> str:
         res = self.get_type_ref_decl(d.ty_ref)
         return self.with_attrs(d, res)
 
@@ -142,17 +137,12 @@ class _PrettyPrinter(DeclVisitor):
 
         self.buffer.write(self.indent * 2 * " ")
         fmt_args = ", ".join(self.get_param_decl(x) for x in d.params)
-        if len(d.retvals) == 0:
+        if d.return_ty_ref is None:
             self.buffer.write(f"{self.as_keyword('fn')} {d.name}({fmt_args});\n")
-        elif len(d.retvals) == 1:
-            fmt_ret = self.get_return_decl(d.retvals[0])
+        else:
+            fmt_ret = self.get_type_ref_decl(d.return_ty_ref)
             self.buffer.write(
                 f"{self.as_keyword('fn')} {d.name}({fmt_args}) -> {fmt_ret};\n"
-            )
-        else:
-            fmt_ret = ", ".join(self.get_return_decl(r) for r in d.retvals)
-            self.buffer.write(
-                f"{self.as_keyword('fn')} {d.name}({fmt_args}) -> ({fmt_ret});\n"
             )
 
     @override
@@ -233,7 +223,7 @@ class _PrettyPrinter(DeclVisitor):
 
         self.buffer.write(self.indent * 2 * " ")
         self.buffer.write(
-            f"{self.as_keyword('type')} {d.name} = {self.get_type_ref_decl(d.ty_ref)}; {AnsiStyle.GREEN}// {self.get_real_type(d.final_ty)}{AnsiStyle.RESET}\n"
+            f"{self.as_keyword('type')} {d.name} = {self.get_type_ref_decl(d.ty_ref)};\n"
         )
 
     @override
