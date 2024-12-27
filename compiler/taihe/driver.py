@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import Optional
 
 from taihe.codegen.abi_generator import ABICodeGenerator
+from taihe.codegen.c_impl_generator import CImplCodeGenerator
+from taihe.codegen.cpp_impl_generator import CppImplCodeGenerator
 from taihe.codegen.cpp_proj_generator import CppProjCodeGenerator
 from taihe.parse.convert import AstConverter
 from taihe.semantics.analysis import analyze_semantics
@@ -90,15 +92,28 @@ class CompilerInstance:
             return
         if not self.invocation.out_dir:
             return
-        generator = ABICodeGenerator(self.target_manager, self.analysis_manager)
-        generator.generate(self.package_group)
+        abi_generator = ABICodeGenerator(self.target_manager, self.analysis_manager)
+        abi_generator.generate(self.package_group)
         self.target_manager.output_to(self.invocation.out_dir)
 
         if self.invocation.gen_user:
-            cpp_generator = CppProjCodeGenerator(
+            cpp_proj_generator = CppProjCodeGenerator(
                 self.target_manager, self.analysis_manager
             )
-            cpp_generator.generate(self.package_group)
+            cpp_proj_generator.generate(self.package_group)
+            self.target_manager.output_to(self.invocation.out_dir)
+
+        if self.invocation.gen_author:
+            c_impl_generator = CImplCodeGenerator(
+                self.target_manager, self.analysis_manager
+            )
+            c_impl_generator.generate(self.package_group)
+            self.target_manager.output_to(self.invocation.out_dir)
+
+            cpp_impl_generator = CppImplCodeGenerator(
+                self.target_manager, self.analysis_manager
+            )
+            cpp_impl_generator.generate(self.package_group)
             self.target_manager.output_to(self.invocation.out_dir)
 
     def run(self):

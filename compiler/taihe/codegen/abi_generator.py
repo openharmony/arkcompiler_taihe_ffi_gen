@@ -158,6 +158,16 @@ class ABITypeAliasDeclInfo(AbstractAnalysis[TypeAliasDecl]):
         self.header = f"{p.name}.{d.name}.abi.h"
         self.as_owner = encode(segments, DeclKind.OWNER_T)
         self.as_param = encode(segments, DeclKind.PARAM_T)
+        self.copy_func = (
+            None
+            if ABITypeInfo.get(am, d.ty_ref.resolved_ty).copy_func is None
+            else encode(segments, DeclKind.COPY)
+        )
+        self.drop_func = (
+            None
+            if ABITypeInfo.get(am, d.ty_ref.resolved_ty).drop_func is None
+            else encode(segments, DeclKind.DROP)
+        )
 
 
 class ABIIfaceDeclInfo(AbstractAnalysis[IfaceDecl]):
@@ -203,6 +213,8 @@ class ABITypeInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
         self.header = abi_type_alias_info.header
         self.as_owner = abi_type_alias_info.as_owner
         self.as_param = abi_type_alias_info.as_param
+        self.copy_func = abi_type_alias_info.copy_func
+        self.drop_func = abi_type_alias_info.drop_func
 
     @override
     def visit_enum_decl(self, d: EnumDecl) -> None:
@@ -210,6 +222,8 @@ class ABITypeInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
         self.header = abi_enum_info.header
         self.as_owner = abi_enum_info.as_owner
         self.as_param = abi_enum_info.as_param
+        self.copy_func = abi_enum_info.copy_func
+        self.drop_func = abi_enum_info.drop_func
 
     @override
     def visit_struct_decl(self, d: StructDecl) -> None:
@@ -318,6 +332,25 @@ class ABICodeGenerator:
             self.tm, f"include/{abi_type_alias_info.header}", True
         )
 
+        self.gen_type_alias_decl(
+            decl, abi_type_alias_target, abi_type_alias_info, abi_inner_type_info
+        )
+        self.gen_type_alias_copy(
+            decl, abi_type_alias_target, abi_type_alias_info, abi_inner_type_info
+        )
+        self.gen_type_alias_drop(
+            decl, abi_type_alias_target, abi_type_alias_info, abi_inner_type_info
+        )
+
+        abi_pkg_target.include(abi_type_alias_info.header)
+
+    def gen_type_alias_decl(
+        self,
+        decl: TypeAliasDecl,
+        abi_type_alias_target: COutputBuffer,
+        abi_type_alias_info: ABITypeAliasDeclInfo,
+        abi_inner_type_info: ABITypeInfo,
+    ):
         abi_type_alias_target.include(abi_inner_type_info.header)
 
         abi_type_alias_target.write(
@@ -325,7 +358,37 @@ class ABICodeGenerator:
             f"typedef {abi_inner_type_info.as_param} {abi_type_alias_info.as_param};\n"
         )
 
-        abi_pkg_target.include(abi_type_alias_info.header)
+    def gen_type_alias_copy(
+        self,
+        decl: TypeAliasDecl,
+        abi_type_alias_target: COutputBuffer,
+        abi_type_alias_info: ABITypeAliasDeclInfo,
+        abi_inner_type_info: ABITypeInfo,
+    ):
+        if abi_inner_type_info.copy_func is None:
+            return
+
+        abi_type_alias_target.write(
+            f"{abi_type_alias_info.as_owner} {abi_type_alias_info.copy_func}({abi_type_alias_info.as_param} data) {{\n"
+            f"    return {abi_inner_type_info.copy_func}(data);\n"
+            f"}}\n"
+        )
+
+    def gen_type_alias_drop(
+        self,
+        decl: TypeAliasDecl,
+        abi_type_alias_target: COutputBuffer,
+        abi_type_alias_info: ABITypeAliasDeclInfo,
+        abi_inner_type_info: ABITypeInfo,
+    ):
+        if abi_inner_type_info.drop_func is None:
+            return
+
+        abi_type_alias_target.write(
+            f"void {abi_type_alias_info.drop_func}({abi_type_alias_info.as_param} data) {{\n"
+            f"    {abi_inner_type_info.drop_func}(data);\n"
+            f"}}\n"
+        )
 
     def gen_struct_file(
         self,
@@ -386,7 +449,7 @@ class ABICodeGenerator:
                 abi_struct_target.write(
                     f"  result.{field.name} = data_ptr->{field.name};\n"
                 )
-        abi_struct_target.write("  };\n" "  return result;\n" "}\n")
+        abi_struct_target.write("  return result;\n" "}\n")
 
     def gen_struct_drop_func(
         self,
@@ -668,10 +731,9 @@ class ABICodeGenerator:
             abi_iface_target_1.include(abi_ancestor_info.header_0)
             abi_iface_target_1.write(
                 f"inline struct {abi_ancestor_info.name} convert_{abi_iface_info.name}_to_{abi_ancestor_info.name}(struct {abi_iface_info.name} tobj) {{\n"
-                f"  struct {abi_ancestor_info.name} result = {{\n"
-                f"     (struct {abi_ancestor_info.v_table}*)(&tobj.vtbl_ptr->ftbl_ptr_0 + {i}),\n"
-                f"     tobj.data_ptr,\n"
-                f"  }};\n"
+                f"  struct {abi_ancestor_info.name} result; {{\n"
+                f"  result.vtbl_ptr = (struct {abi_ancestor_info.v_table}*)(&tobj.vtbl_ptr->ftbl_ptr_0 + {i});\n"
+                f"  result.data_ptr = tobj.data_ptr;\n"
                 f"  return result;\n"
                 f"}}\n"
             )

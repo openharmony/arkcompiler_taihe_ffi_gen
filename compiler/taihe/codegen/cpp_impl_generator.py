@@ -4,7 +4,10 @@ from taihe.codegen.abi_generator import (
     ABITypeInfo,
     COutputBuffer,
 )
-from taihe.codegen.cpp_proj_generator import CppProjFuncBaseDeclInfo, CppProjTypeInfo
+from taihe.codegen.cpp_proj_generator import (
+    CppProjFuncBaseDeclInfo,
+    CppProjTypeInfo,
+)
 from taihe.semantics.declarations import (
     GlobFuncDecl,
     Package,
