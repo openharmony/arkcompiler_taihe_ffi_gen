@@ -40,13 +40,14 @@ class KNBridgeFuncBaseDeclInfo(AbstractAnalysis[BaseFuncDecl]):
         self.name = encode(segments, DeclKind.FUNCTION)
         self.konan_proj_name = f.attrs["konan_name"].value
         assert isinstance(self.konan_proj_name, str)
-        self.konan_param_name = "KObjHeader*, KObjHeader*, KObjHeader**"  # Assuming that information is obtained from IR here
 
         params = []
+        konan_params_only_ty = []
         convert_params = []
         for param in f.params:
             param_type_info = KNBridgeTypeInfo.get(am, param.ty_ref.resolved_ty)
             params.append(f"{param_type_info.as_param} {param.name}")
+            konan_params_only_ty.append(f"{param_type_info.as_konan_param}")
             if param_type_info.param_covert_func:
                 convert_params.append(
                     f"{param_type_info.param_covert_func}({param.name}, {param.name}_holder.slot())"
@@ -55,9 +56,11 @@ class KNBridgeFuncBaseDeclInfo(AbstractAnalysis[BaseFuncDecl]):
                 convert_params.append(f"{param.name}")
 
         convert_params.append("result_holder.slot()")
-        self.params_str = ", ".join(params)
-        self.convert_params_str = ", ".join(convert_params)
+        konan_params_only_ty.append(f"KObjHeader**")
 
+        self.params_str = ", ".join(params)
+        self.konan_params_only_ty = ", ".join(konan_params_only_ty)
+        self.convert_params_str = ", ".join(convert_params)
         if f.return_ty_ref is None:
             self.return_ty_header = None
             self.return_ty_name = "void"
@@ -71,6 +74,15 @@ class KNBridgeFuncBaseDeclInfo(AbstractAnalysis[BaseFuncDecl]):
             else:
                 self.return_ty_str = "result"
 
+        if f.return_ty_ref is None:
+            self.return_ty_konan_header = None
+            self.return_ty_konan_name = "void"
+            self.return_ty_konan_str = ""
+        else:
+            ty_info = KNBridgeTypeInfo.get(am, f.return_ty_ref.resolved_ty)
+            self.return_ty_konan_header = ty_info.header
+            self.return_ty_konan_name = ty_info.as_konan_retval
+
 
 class KNBridgeTypeInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
     def __init__(self, am: AnalysisManager, t: Optional[Type]) -> None:
@@ -79,46 +91,41 @@ class KNBridgeTypeInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
         self.as_owner = None
         self.as_param = None
         self.as_retval = None
+        self.as_konan_param = None
+        self.as_konan_retval = None
         self.param_covert_func = None
         self.retval_covert_func = None
         self.handle_type(t)
 
     def visit_scalar_type(self, t: ScalarType):
         res = {
-            # BOOL: "bool",
-            # F32: "float",
-            # F64: "double",
-            # I8: "int8_t",
-            # I16: "int16_t",
-            # I32: "int32_t",
-            # I64: "int64_t",
-            # U8: "uint8_t",
-            # U16: "uint16_t",
-            # U32: "uint32_t",
-            # U64: "uint64_t",
-            BOOL: "bool",
-            F32: "float",
-            F64: "double",
-            I8: "int",
-            I16: "int",
-            I32: "int",
-            I64: "int",
-            U8: "unsigned_int",
-            U16: "unsigned_int",
-            U32: "unsigned_int",
-            U64: "unsigned_int",
+            BOOL: "TH_BOOL",
+            F32: "TH_FLOAT",
+            F64: "TH_DOUBLE",
+            I8: "TH_INT8",
+            I16: "TH_INT16",
+            I32: "TH_INT32",
+            I64: "TH_INT64",
+            U8: "TH_UINT8",
+            U16: "TH_UINT16",
+            U32: "TH_UINT32",
+            U64: "TH_UINT64",
         }.get(t)
         self.as_param = res
         self.as_owner = res
         self.as_retval = res
+        self.as_konan_param = res
+        self.as_konan_retval = res
         if res is None:
             raise ValueError
 
     def visit_special_type(self, t: SpecialType) -> Any:
         if t == STRING:
-            self.as_owner = "char*"
+            self.as_owner = "const char*"
             self.as_param = "const char*"
             self.as_retval = "const char*"
+            self.as_konan_param = "TH_STRING"
+            self.as_konan_retval = "TH_STRING"
             self.param_covert_func = "CreateStringFromCString"
             self.retval_covert_func = "CreateCStringFromString"
         else:
@@ -143,26 +150,6 @@ class KNBridgeCodeGenerator:
         kn_bridge_pkg_name = pkg.attrs["pkg_name"].value
         assert isinstance(kn_bridge_pkg_name, str)
 
-        kn_type_dict = {
-            # "bool"        :  kn_bridge_pkg_name + "_KBoolean",
-            # "float"       : kn_bridge_pkg_name + "_KFloat",
-            # "double"      : kn_bridge_pkg_name + "_KDouble",
-            # "int8_t"      : kn_bridge_pkg_name + "_KInt",
-            # "int16_t"     : kn_bridge_pkg_name + "_KInt",
-            # "int32_t"     : kn_bridge_pkg_name + "_KInt",
-            # "int64_t"     : kn_bridge_pkg_name + "_KInt",
-            # "uint8_t"     : kn_bridge_pkg_name + "_KUInt",
-            # "uint16_t"    : kn_bridge_pkg_name + "_KUInt",
-            # "uint32_t"    : kn_bridge_pkg_name + "_KUInt",
-            # "uint64_t"    : kn_bridge_pkg_name + "_KUInt",
-            "bool": kn_bridge_pkg_name + "_KBoolean",
-            "float": kn_bridge_pkg_name + "_KFloat",
-            "double": kn_bridge_pkg_name + "_KDouble",
-            "int": kn_bridge_pkg_name + "_KInt",
-            "unsigned_int": kn_bridge_pkg_name + "_KUInt",
-            "const char*": "KObjHeader*",
-        }
-
         kn_predefined_type_list = [
             "Byte",
             "Short",
@@ -180,6 +167,19 @@ class KNBridgeCodeGenerator:
         ]
 
         kn_bridge_pkg_target.write(
+            f"#define TH_BOOL {kn_bridge_pkg_name}_KBoolean\n"
+            f"#define TH_FLOAT {kn_bridge_pkg_name}_KFloat\n"
+            f"#define TH_DOUBLE {kn_bridge_pkg_name}_KDouble\n"
+            f"#define TH_INT8 {kn_bridge_pkg_name}_KByte\n"
+            f"#define TH_INT16 {kn_bridge_pkg_name}_KShort\n"
+            f"#define TH_INT32 {kn_bridge_pkg_name}_KInt\n"
+            f"#define TH_INT64 {kn_bridge_pkg_name}_KInt\n"
+            f"#define TH_UINT8 {kn_bridge_pkg_name}_KUByte\n"
+            f"#define TH_UINT16 {kn_bridge_pkg_name}_KUShort\n"
+            f"#define TH_UINT32 {kn_bridge_pkg_name}_KUInt\n"
+            f"#define TH_UINT64 {kn_bridge_pkg_name}_KUInt\n"
+            f"#define TH_STRING KObjHeader*\n"
+            f"\n"
             f"#ifndef KONAN_{kn_bridge_pkg_name.upper()}_H\n"
             f"#define KONAN_{kn_bridge_pkg_name.upper()}_H\n"
             f"#ifdef __cplusplus\n"
@@ -372,7 +372,7 @@ class KNBridgeCodeGenerator:
         for func in pkg.functions:
             kn_bridge_func_info = KNBridgeFuncBaseDeclInfo.get(self.am, func)
             kn_bridge_pkg_target.write(
-                f'extern "C" {kn_type_dict.get(kn_bridge_func_info.return_ty_name)} {kn_bridge_func_info.konan_proj_name}({kn_bridge_func_info.konan_param_name});\n'
+                f'extern "C" {kn_bridge_func_info.return_ty_konan_name} {kn_bridge_func_info.konan_proj_name}({kn_bridge_func_info.konan_params_only_ty});\n'
                 f"static {kn_bridge_func_info.return_ty_name} {kn_bridge_func_info.konan_proj_name}_impl({kn_bridge_func_info.params_str}) {{\n"
                 f"  Kotlin_initRuntimeIfNeeded();\n"
                 f"  ScopedRunnableState stateGuard;\n"
@@ -422,3 +422,42 @@ class KNBridgeCodeGenerator:
                 f"      /* {kn_bridge_func_info.name} = */ {kn_bridge_func_info.konan_proj_name}_impl,\n"
             )
         kn_bridge_pkg_target.write(f"    }},\n" f"  }},\n" f"}};\n")
+        kn_bridge_pkg_target.write(
+            f"#ifdef TH_BOOL\n"
+            f"#undef TH_BOOL\n"
+            f"#endif\n"
+            f"#ifdef TH_FLOAT\n"
+            f"#undef TH_FLOAT\n"
+            f"#endif\n"
+            f"#ifdef TH_DOUBLE\n"
+            f"#undef TH_DOUBLE\n"
+            f"#endif\n"
+            f"#ifdef TH_INT8\n"
+            f"#undef TH_INT8\n"
+            f"#endif\n"
+            f"#ifdef TH_INT16\n"
+            f"#undef TH_INT16\n"
+            f"#endif\n"
+            f"#ifdef TH_INT32\n"
+            f"#undef TH_INT32\n"
+            f"#endif\n"
+            f"#ifdef TH_INT64\n"
+            f"#undef TH_INT64\n"
+            f"#endif\n"
+            f"#ifdef TH_UINT8\n"
+            f"#undef TH_UINT8\n"
+            f"#endif\n"
+            f"#ifdef TH_UINT16\n"
+            f"#undef TH_UINT16\n"
+            f"#endif\n"
+            f"#ifdef TH_UINT32\n"
+            f"#undef TH_UINT32\n"
+            f"#endif\n"
+            f"#ifdef TH_UINT64\n"
+            f"#undef TH_UINT64\n"
+            f"#endif\n"
+            f"#ifdef TH_STRING\n"
+            f"#undef TH_STRING\n"
+            f"#endif\n"
+            f"\n"
+        )
