@@ -731,7 +731,7 @@ class ABICodeGenerator:
             abi_iface_target_1.include(abi_ancestor_info.header_0)
             abi_iface_target_1.write(
                 f"inline struct {abi_ancestor_info.name} convert_{abi_iface_info.name}_to_{abi_ancestor_info.name}(struct {abi_iface_info.name} tobj) {{\n"
-                f"  struct {abi_ancestor_info.name} result; {{\n"
+                f"  struct {abi_ancestor_info.name} result;\n"
                 f"  result.vtbl_ptr = (struct {abi_ancestor_info.v_table}*)(&tobj.vtbl_ptr->ftbl_ptr_0 + {i});\n"
                 f"  result.data_ptr = tobj.data_ptr;\n"
                 f"  return result;\n"
