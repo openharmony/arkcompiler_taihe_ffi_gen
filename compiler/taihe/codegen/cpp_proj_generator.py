@@ -53,13 +53,15 @@ class CppProjFuncBaseDeclInfo(AbstractAnalysis[BaseFuncDecl]):
         self.name = f.name
         self.full_name = "::" + "::".join(segments)
         if f.return_ty_ref is None:
-            self.return_ty_headers = []
+            self.return_ty_header_decl = None
+            self.return_ty_header_defn = None
             self.return_ty_name = "void"
             self.return_from_abi = lambda val: val
             self.return_into_abi = lambda val: val
         else:
             cpp_return_ty_info = CppProjTypeInfo.get(am, f.return_ty_ref.resolved_ty)
-            self.return_ty_headers = [cpp_return_ty_info.header]
+            self.return_ty_header_decl = cpp_return_ty_info.header_decl
+            self.return_ty_header_defn = cpp_return_ty_info.header_defn
             self.return_ty_name = cpp_return_ty_info.as_owner
             self.return_from_abi = cpp_return_ty_info.return_from_abi
             self.return_into_abi = cpp_return_ty_info.return_into_abi
@@ -90,7 +92,8 @@ class CppProjEnumDeclInfo(AbstractAnalysis[EnumDecl]):
 class CppProjTypeInfo(AbstractAnalysis[Optional[Type]], TypeVisitor):
     def __init__(self, am: AnalysisManager, t: Optional[Type]) -> None:
         self.am = am
-        self.header = None
+        self.header_decl = None
+        self.header_defn = None
         self.as_owner = None
         self.as_param = None
         self.pass_from_abi = lambda val: val
@@ -104,7 +107,8 @@ class CppProjTypeInfo(AbstractAnalysis[Optional[Type]], TypeVisitor):
         cpp_proj_enum_info = CppProjEnumDeclInfo.get(self.am, d)
         abi_enum_info = ABIEnumDeclInfo.get(self.am, d)
 
-        self.header = cpp_proj_enum_info.header
+        self.header_decl = cpp_proj_enum_info.header
+        self.header_defn = cpp_proj_enum_info.header
         self.as_owner = cpp_proj_enum_info.owner_full_name
         self.as_param = cpp_proj_enum_info.param_full_name
         self.pass_from_abi = (
@@ -123,7 +127,8 @@ class CppProjTypeInfo(AbstractAnalysis[Optional[Type]], TypeVisitor):
         cpp_proj_struct_info = CppProjStructDeclInfo.get(self.am, d)
         abi_struct_info = ABIStructDeclInfo.get(self.am, d)
 
-        self.header = cpp_proj_struct_info.header
+        self.header_decl = cpp_proj_struct_info.header
+        self.header_defn = cpp_proj_struct_info.header
         self.as_owner = cpp_proj_struct_info.owner_full_name
         self.as_param = cpp_proj_struct_info.param_full_name
         self.pass_from_abi = (
@@ -160,7 +165,8 @@ class CppProjTypeInfo(AbstractAnalysis[Optional[Type]], TypeVisitor):
 
     def visit_special_type(self, t: SpecialType) -> Any:
         if t == STRING:
-            self.header = "core/string.hpp"
+            self.header_decl = "core/string.hpp"
+            self.header_defn = "core/string.hpp"
             self.as_owner = "taihe::core::string"
             self.as_param = "taihe::core::string_view"
             self.pass_from_abi = (
@@ -214,13 +220,13 @@ class CppProjCodeGenerator:
         cpp_proj_func_info = CppProjFuncBaseDeclInfo.get(self.am, func)
         abi_func_info = ABIFuncBaseDeclInfo.get(self.am, func)
 
-        cpp_proj_pkg_target.include(*cpp_proj_func_info.return_ty_headers)
+        cpp_proj_pkg_target.include(cpp_proj_func_info.return_ty_header_defn)
 
         cpp_params = []
         args_into_abi = []
         for param in func.params:
             cpp_proj_type_info = CppProjTypeInfo.get(self.am, param.ty_ref.resolved_ty)
-            cpp_proj_pkg_target.include(cpp_proj_type_info.header)
+            cpp_proj_pkg_target.include(cpp_proj_type_info.header_defn)
             cpp_params.append(f"{cpp_proj_type_info.as_param} {param.name}")
             args_into_abi.append(cpp_proj_type_info.pass_into_abi(param.name))
         cpp_params_str = ", ".join(cpp_params)
@@ -275,7 +281,7 @@ class CppProjCodeGenerator:
         )
         for field in struct.fields:
             ty_info = CppProjTypeInfo.get(self.am, field.ty_ref.resolved_ty)
-            cpp_proj_struct_target.include(ty_info.header)
+            cpp_proj_struct_target.include(ty_info.header_defn)
             cpp_proj_struct_target.write(f"    {ty_info.as_owner} {field.name};\n")
         cpp_proj_struct_target.write(f"}};\n" f"}}\n")
 

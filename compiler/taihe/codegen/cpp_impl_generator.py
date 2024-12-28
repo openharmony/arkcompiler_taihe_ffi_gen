@@ -52,7 +52,7 @@ class CppImplCodeGenerator:
         cpp_proj_func_info = CppProjFuncBaseDeclInfo.get(self.am, func)
         abi_func_info = ABIFuncBaseDeclInfo.get(self.am, func)
 
-        cpp_impl_pkg_target.include(*cpp_proj_func_info.return_ty_headers)
+        cpp_impl_pkg_target.include(cpp_proj_func_info.return_ty_header_defn)
 
         cpp_params = []
         args_from_abi = []
@@ -60,19 +60,20 @@ class CppImplCodeGenerator:
         for param in func.params:
             cpp_proj_type_info = CppProjTypeInfo.get(self.am, param.ty_ref.resolved_ty)
             abi_type_info = ABITypeInfo.get(self.am, param.ty_ref.resolved_ty)
-            cpp_impl_pkg_target.include(cpp_proj_type_info.header)
+            cpp_impl_pkg_target.include(cpp_proj_type_info.header_defn)
             cpp_params.append(f"{cpp_proj_type_info.as_param} {param.name}")
             args_from_abi.append(cpp_proj_type_info.pass_from_abi(param.name))
             abi_params.append(f"{abi_type_info.as_param} {param.name}")
         abi_params_str = ", ".join(abi_params)
         cpp_params_str = ", ".join(cpp_params)
-        args_from_abi_str = ",".join(args_from_abi)
+        args_from_abi_str = ", ".join(args_from_abi)
 
+        result = cpp_proj_func_info.return_into_abi(f"_func({args_from_abi_str})")
         cpp_impl_pkg_target.write(
             f"#define TH_EXPORT_CPP_API_{func.name}(_func) \\\n"
             f"    TH_STATIC_ASSERT(TH_IS_SAME(TH_TYPEOF(_func), {cpp_proj_func_info.return_ty_name} ({cpp_params_str})), \\\n"
             f"        \"'\" #_func \"' is incompatible with '{cpp_proj_func_info.return_ty_name} {cpp_proj_func_info.full_name}({cpp_params_str})'\"); \\\n"
             f"    {abi_func_info.return_ty_name} {abi_func_info.name}({abi_params_str}) {{ \\\n"
-            f"        return {cpp_proj_func_info.return_into_abi(f'_func({args_from_abi_str})')}; \\\n"
+            f"        return {result}; \\\n"
             f"    }}\n"
         )

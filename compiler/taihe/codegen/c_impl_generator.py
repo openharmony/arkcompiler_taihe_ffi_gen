@@ -56,12 +56,12 @@ class CImplCodeGenerator:
             params.append(f"{abi_type_info.as_param} {param.name}")
             args.append(param.name)
         params_str = ", ".join(params)
-        args_str = ",".join(args)
+        args_str = ", ".join(args)
         c_impl_pkg_target.write(
             f"#define TH_EXPORT_C_API_{func.name}(_func) \\\n"
-            f"    TH_STATIC_ASSERT(TH_IS_SAME(TH_TYPEOF(_func), {abi_func_info.return_ty_name} ({params_str})), \\\n"
-            f"        \"'\" #_func \"' is incompatible with '{abi_func_info.return_ty_name} {abi_func_info.name}({params_str})'\"); \\\n"
-            f"    {abi_func_info.return_ty_name} {abi_func_info.name}({params_str}) {{ \\\n"
-            f"        return _func({args_str}); \\\n"
-            f"    }}\n"
+            f"  TH_STATIC_ASSERT(TH_IS_SAME(TH_TYPEOF(_func), {abi_func_info.return_ty_name} ({params_str})), \\\n"
+            f"    \"'\" #_func \"' is incompatible with '{abi_func_info.return_ty_name} {abi_func_info.name}({params_str})'\"); \\\n"
+            f"  {abi_func_info.return_ty_name} {abi_func_info.name}({params_str}) {{ \\\n"
+            f"    return _func({args_str}); \\\n"
+            f"  }}\n"
         )
