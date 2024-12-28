@@ -92,29 +92,26 @@ class CompilerInstance:
             return
         if not self.invocation.out_dir:
             return
-        abi_generator = ABICodeGenerator(self.target_manager, self.analysis_manager)
-        abi_generator.generate(self.package_group)
-        self.target_manager.output_to(self.invocation.out_dir)
+
+        ABICodeGenerator(self.target_manager, self.analysis_manager).generate(
+            self.package_group
+        )
 
         if self.invocation.gen_author or self.invocation.gen_user:
-            cpp_proj_generator = CppProjCodeGenerator(
-                self.target_manager, self.analysis_manager
+            CppProjCodeGenerator(self.target_manager, self.analysis_manager).generate(
+                self.package_group
             )
-            cpp_proj_generator.generate(self.package_group)
-            self.target_manager.output_to(self.invocation.out_dir)
 
         if self.invocation.gen_author:
-            c_impl_generator = CImplCodeGenerator(
-                self.target_manager, self.analysis_manager
+            CImplCodeGenerator(self.target_manager, self.analysis_manager).generate(
+                self.package_group
             )
-            c_impl_generator.generate(self.package_group)
-            self.target_manager.output_to(self.invocation.out_dir)
 
-            cpp_impl_generator = CppImplCodeGenerator(
-                self.target_manager, self.analysis_manager
+            CppImplCodeGenerator(self.target_manager, self.analysis_manager).generate(
+                self.package_group
             )
-            cpp_impl_generator.generate(self.package_group)
-            self.target_manager.output_to(self.invocation.out_dir)
+
+        self.target_manager.output_to(self.invocation.out_dir)
 
     def run(self):
         self.scan()
