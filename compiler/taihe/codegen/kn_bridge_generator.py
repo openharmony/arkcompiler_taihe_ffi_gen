@@ -211,6 +211,18 @@ class KNBridgeCodeGenerator:
                 f"{kn_bridge_pkg_name}_KNativePtr pinned;\n"
                 f"}} {kn_bridge_pkg_name}_kref_kotlin_{predefinedType};\n"
             )
+        kn_bridge_pkg_target.write(
+            f"typedef struct {{\n"
+            f"  {kn_bridge_pkg_name}_KNativePtr pinned;\n"
+            f"}} {kn_bridge_pkg_name}_kref_kotlin_Any;\n"
+        )
+
+        for iface in pkg.interfaces:
+            kn_bridge_pkg_target.write(
+                f"typedef struct {{\n"
+                f"{kn_bridge_pkg_name}_KNativePtr pinned;\n"
+                f"}} {kn_bridge_pkg_name}_kref_{iface.name};\n"
+            )
 
         kn_bridge_pkg_target.write(
             f"typedef struct {{\n"
@@ -242,7 +254,7 @@ class KNBridgeCodeGenerator:
                     self.am, method
                 )
                 kn_bridge_pkg_target.write(
-                    f"        {kn_bridge_iface_method_info.return_ty_konan_name} (*{kn_bridge_iface_method_info.name})({kn_bridge_pkg_name}_kref_{iface.name} thiz, {kn_bridge_iface_method_info.params_str});\n"
+                    f"        {kn_bridge_iface_method_info.return_ty_name} (*{kn_bridge_iface_method_info.name})({kn_bridge_pkg_name}_kref_{iface.name} thiz, {kn_bridge_iface_method_info.params_str});\n"
                 )
             kn_bridge_pkg_target.write(f"      }} {iface.name};\n")
 
@@ -381,6 +393,38 @@ class KNBridgeCodeGenerator:
                     f"  return {kn_bridge_pkg_name}_kref_kotlin_{predefinedType} {{ .pinned = CreateStablePointer(result) }};\n"
                     f"}}\n"
                 )
+        for iface in pkg.interfaces:
+            for func in iface.methods:
+                kn_bridge_func_info = KNBridgeFuncBaseDeclInfo.get(self.am, func)
+                kn_bridge_pkg_target.write(
+                    f'extern "C" {kn_bridge_func_info.return_ty_konan_name} {kn_bridge_func_info.konan_proj_name}(KObjHeader*, {kn_bridge_func_info.konan_params_only_ty});\n'
+                    f"static {kn_bridge_func_info.return_ty_name} {kn_bridge_func_info.konan_proj_name}_impl({kn_bridge_pkg_name}_kref_{iface.name} thiz, {kn_bridge_func_info.params_str}) {{\n"
+                    f"  Kotlin_initRuntimeIfNeeded();\n"
+                    f"  ScopedRunnableState stateGuard;\n"
+                    f"  FrameOverlay* frame = getCurrentFrame();\n"
+                )
+                for param in func.params:
+                    kn_bridge_pkg_target.write(f"  KObjHolder {param.name}_holder;\n")
+                kn_bridge_pkg_target.write(f"  KObjHolder thiz_holder;\n")
+                kn_bridge_pkg_target.write(f"  try {{\n")
+                if func.return_ty_ref is None:
+                    kn_bridge_pkg_target.write(
+                        f"{kn_bridge_func_info.konan_proj_name}(DerefStablePointer(thiz.pinned, thiz_holder.slot()), {kn_bridge_func_info.convert_params_str});\n"
+                    )
+                else:
+                    kn_bridge_pkg_target.write(
+                        f"    KObjHolder result_holder;\n"
+                        f"    auto result = {kn_bridge_func_info.konan_proj_name}(DerefStablePointer(thiz.pinned, thiz_holder.slot()), {kn_bridge_func_info.convert_params_str});\n"
+                        f"    return {kn_bridge_func_info.return_ty_str};\n"
+                    )
+                kn_bridge_pkg_target.write(
+                    f"  }} catch (...) {{\n"
+                    f"    SetCurrentFrame(reinterpret_cast<KObjHeader**>(frame));\n"
+                    f"    HandleCurrentExceptionWhenLeavingKotlinCode();\n"
+                    f"  }} \n"
+                    f"}}\n"
+                )
+
         for func in pkg.functions:
             kn_bridge_func_info = KNBridgeFuncBaseDeclInfo.get(self.am, func)
             kn_bridge_pkg_target.write(
