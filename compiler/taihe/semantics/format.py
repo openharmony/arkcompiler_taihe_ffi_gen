@@ -22,7 +22,6 @@ from taihe.semantics.declarations import (
     ParamDecl,
     StructDecl,
     StructFieldDecl,
-    TypeAliasDecl,
     TypeDecl,
     TypeRefDecl,
 )
@@ -231,23 +230,12 @@ class _PrettyPrinter(DeclVisitor):
         self.buffer.write("}\n")
 
     @override
-    def visit_type_alias_decl(self, d: TypeAliasDecl):
-        self.write_attr(d)
-
-        type_kw = self.as_keyword("type")
-
-        self.buffer.write(self.indent * 2 * " ")
-        self.buffer.write(f"{type_kw} {d.name} = {self.get_type_ref_decl(d.ty_ref)};\n")
-
-    @override
     def visit_package(self, p: Package):
         self.buffer.write(self.indent * 2 * " ")
         self.buffer.write(f"// {self.with_attr(p, p.name)}\n")
         for d in p.pkg_imports:
             self.handle_decl(d)
         for d in p.decl_imports:
-            self.handle_decl(d)
-        for d in p.type_aliases:
             self.handle_decl(d)
         for d in p.structs:
             self.handle_decl(d)

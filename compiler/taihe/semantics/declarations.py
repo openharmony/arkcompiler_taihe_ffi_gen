@@ -424,25 +424,6 @@ class DataTypeDecl(TypeDecl, metaclass=ABCMeta):
     pass
 
 
-class TypeAliasDecl(DataTypeDecl):
-    KIND = "type alias"
-
-    ty_ref: TypeRefDecl
-
-    def __init__(self, name: str, loc: Optional[SourceLocation], ty_ref: TypeRefDecl):
-        super().__init__(name, loc)
-        self.ty_ref = ty_ref
-
-    @override
-    def _accept(self, v: "DeclVisitor") -> Any:
-        return v.visit_type_alias_decl(self)
-
-    @property
-    @override
-    def symbol_tables(self) -> dict[str, Iterable["NamedDecl"]]:
-        return {}
-
-
 class EnumItemDecl(NamedDecl):
     KIND = "enum item"
 
@@ -659,7 +640,6 @@ class Package(NamedDecl):
     structs: list[StructDecl]
     enums: list[EnumDecl]
     interfaces: list[IfaceDecl]
-    type_aliases: list[TypeAliasDecl]
 
     def __init__(self, name: str, loc: Optional[SourceLocation]):
         super().__init__(name, loc)
@@ -674,7 +654,6 @@ class Package(NamedDecl):
         self.structs = []
         self.enums = []
         self.interfaces = []
-        self.type_aliases = []
 
     def __repr__(self) -> str:
         return f"{self.__class__.__qualname__}<{self.name!r}>"
@@ -697,7 +676,6 @@ class Package(NamedDecl):
             "structs": self.structs,
             "enums": self.enums,
             "interfaces": self.interfaces,
-            "type_aliases": self.type_aliases,
         }
 
     def _register_to_decl(self, d: PackageLevelDecl):
@@ -726,11 +704,6 @@ class Package(NamedDecl):
         self.interfaces.append(i)
         self._register_to_decl(i)
 
-    def add_type_alias(self, d: TypeAliasDecl):
-        d.parent = self
-        self.type_aliases.append(d)
-        self._register_to_decl(d)
-
     def add_declaration(self, d: PackageLevelDecl):
         if isinstance(d, GlobFuncDecl):
             self.add_function(d)
@@ -740,8 +713,6 @@ class Package(NamedDecl):
             self.add_enum(d)
         elif isinstance(d, IfaceDecl):
             self.add_interface(d)
-        elif isinstance(d, TypeAliasDecl):
-            self.add_type_alias(d)
         else:
             raise NotImplementedError(f"unexpected declaration {d.description}")
 

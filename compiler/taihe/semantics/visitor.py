@@ -36,7 +36,6 @@ from taihe.semantics.declarations import (
     ParamDecl,
     StructDecl,
     StructFieldDecl,
-    TypeAliasDecl,
     TypeDecl,
     TypeRefDecl,
 )
@@ -114,9 +113,6 @@ class TypeVisitor(Generic[T]):
         return self.visit_data_type_decl(d)
 
     def visit_enum_decl(self, d: EnumDecl) -> T:
-        return self.visit_data_type_decl(d)
-
-    def visit_type_alias_decl(self, d: TypeAliasDecl) -> T:
         return self.visit_data_type_decl(d)
 
     def visit_iface_decl(self, d: IfaceDecl) -> T:
@@ -217,13 +213,6 @@ class DeclVisitor:
     def visit_data_type_decl(self, d: DataTypeDecl) -> None:
         return self.visit_type_decl(d)
 
-    ### Type Alias ###
-
-    def visit_type_alias_decl(self, d: TypeAliasDecl) -> None:
-        self.handle_decl(d.ty_ref)
-
-        return self.visit_data_type_decl(d)
-
     ### Struct ###
 
     def visit_struct_field_decl(self, d: StructFieldDecl) -> None:
@@ -285,8 +274,6 @@ class DeclVisitor:
         for i in p.enums:
             self.handle_decl(i)
         for i in p.interfaces:
-            self.handle_decl(i)
-        for i in p.type_aliases:
             self.handle_decl(i)
 
         return self.visit_named_decl(p)

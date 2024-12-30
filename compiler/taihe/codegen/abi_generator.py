@@ -15,7 +15,6 @@ from taihe.semantics.declarations import (
     Package,
     PackageGroup,
     StructDecl,
-    TypeAliasDecl,
 )
 from taihe.semantics.types import (
     BOOL,
@@ -150,26 +149,6 @@ class ABIStructDeclInfo(AbstractAnalysis[StructDecl]):
         )
 
 
-class ABITypeAliasDeclInfo(AbstractAnalysis[TypeAliasDecl]):
-    def __init__(self, am: AnalysisManager, d: TypeAliasDecl) -> None:
-        p = d.parent
-        assert p
-        segments = d.segments
-        self.header = f"{p.name}.{d.name}.abi.h"
-        self.as_owner = encode(segments, DeclKind.OWNER_T)
-        self.as_param = encode(segments, DeclKind.PARAM_T)
-        self.copy_func = (
-            None
-            if ABITypeInfo.get(am, d.ty_ref.resolved_ty).copy_func is None
-            else encode(segments, DeclKind.COPY)
-        )
-        self.drop_func = (
-            None
-            if ABITypeInfo.get(am, d.ty_ref.resolved_ty).drop_func is None
-            else encode(segments, DeclKind.DROP)
-        )
-
-
 class ABIIfaceDeclInfo(AbstractAnalysis[IfaceDecl]):
     def __init__(self, am: AnalysisManager, d: IfaceDecl) -> None:
         p = d.parent
@@ -206,15 +185,6 @@ class ABITypeInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
         self.copy_func = None
         self.drop_func = None
         self.handle_type(t)
-
-    @override
-    def visit_type_alias_decl(self, d: TypeAliasDecl) -> None:
-        abi_type_alias_info = ABITypeAliasDeclInfo.get(self.am, d)
-        self.header = abi_type_alias_info.header
-        self.as_owner = abi_type_alias_info.as_owner
-        self.as_param = abi_type_alias_info.as_param
-        self.copy_func = abi_type_alias_info.copy_func
-        self.drop_func = abi_type_alias_info.drop_func
 
     @override
     def visit_enum_decl(self, d: EnumDecl) -> None:
@@ -296,8 +266,6 @@ class ABICodeGenerator:
             self.gen_enum_file(enum, abi_pkg_target)
         for iface in pkg.interfaces:
             self.gen_iface_files(iface, abi_pkg_target)
-        for type_alias in pkg.type_aliases:
-            self.gen_type_alias_file(type_alias, abi_pkg_target)
         for func in pkg.functions:
             self.gen_func(func, abi_pkg_target)
 
@@ -318,76 +286,6 @@ class ABICodeGenerator:
         params_str = ", ".join(params)
         abi_pkg_target.write(
             f"TH_EXPORT {abi_func_info.return_ty_name} {abi_func_info.name}({params_str});\n"
-        )
-
-    def gen_type_alias_file(
-        self,
-        decl: TypeAliasDecl,
-        abi_pkg_target: COutputBuffer,
-    ):
-        abi_type_alias_info = ABITypeAliasDeclInfo.get(self.am, decl)
-        abi_inner_type_info = ABITypeInfo.get(self.am, decl.ty_ref.resolved_ty)
-
-        abi_type_alias_target = COutputBuffer.create(
-            self.tm, f"include/{abi_type_alias_info.header}", True
-        )
-
-        self.gen_type_alias_decl(
-            decl, abi_type_alias_target, abi_type_alias_info, abi_inner_type_info
-        )
-        self.gen_type_alias_copy(
-            decl, abi_type_alias_target, abi_type_alias_info, abi_inner_type_info
-        )
-        self.gen_type_alias_drop(
-            decl, abi_type_alias_target, abi_type_alias_info, abi_inner_type_info
-        )
-
-        abi_pkg_target.include(abi_type_alias_info.header)
-
-    def gen_type_alias_decl(
-        self,
-        decl: TypeAliasDecl,
-        abi_type_alias_target: COutputBuffer,
-        abi_type_alias_info: ABITypeAliasDeclInfo,
-        abi_inner_type_info: ABITypeInfo,
-    ):
-        abi_type_alias_target.include(abi_inner_type_info.header)
-
-        abi_type_alias_target.write(
-            f"typedef {abi_inner_type_info.as_owner} {abi_type_alias_info.as_owner};\n"
-            f"typedef {abi_inner_type_info.as_param} {abi_type_alias_info.as_param};\n"
-        )
-
-    def gen_type_alias_copy(
-        self,
-        decl: TypeAliasDecl,
-        abi_type_alias_target: COutputBuffer,
-        abi_type_alias_info: ABITypeAliasDeclInfo,
-        abi_inner_type_info: ABITypeInfo,
-    ):
-        if abi_inner_type_info.copy_func is None:
-            return
-
-        abi_type_alias_target.write(
-            f"{abi_type_alias_info.as_owner} {abi_type_alias_info.copy_func}({abi_type_alias_info.as_param} data) {{\n"
-            f"    return {abi_inner_type_info.copy_func}(data);\n"
-            f"}}\n"
-        )
-
-    def gen_type_alias_drop(
-        self,
-        decl: TypeAliasDecl,
-        abi_type_alias_target: COutputBuffer,
-        abi_type_alias_info: ABITypeAliasDeclInfo,
-        abi_inner_type_info: ABITypeInfo,
-    ):
-        if abi_inner_type_info.drop_func is None:
-            return
-
-        abi_type_alias_target.write(
-            f"void {abi_type_alias_info.drop_func}({abi_type_alias_info.as_param} data) {{\n"
-            f"    {abi_inner_type_info.drop_func}(data);\n"
-            f"}}\n"
         )
 
     def gen_struct_file(
