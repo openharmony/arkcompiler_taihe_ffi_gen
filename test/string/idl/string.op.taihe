@@ -4,6 +4,16 @@ struct StringPair {
     _0: String;
     _1: String;
 }
+enum StrOrInt {
+    u;
+    s: String;
+    i: i32;
+}
+enum Tags {
+    A;
+    B;
+    C;
+}
 function split(a: String, n: i32): StringPair;
 function to_i32(a: String): i32;
 function from_i32(a: i32): String;

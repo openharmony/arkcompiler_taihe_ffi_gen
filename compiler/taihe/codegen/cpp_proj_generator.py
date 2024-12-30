@@ -4,6 +4,7 @@ from typing_extensions import override
 
 from taihe.codegen.abi_generator import (
     ABIEnumDeclInfo,
+    ABIEnumItemDeclInfo,
     ABIFuncBaseDeclInfo,
     ABIPackageInfo,
     ABIStructDeclInfo,
@@ -260,10 +261,16 @@ class CppProjCodeGenerator:
         cpp_proj_struct_target.include(abi_struct_info.header)
 
         self.gen_struct_decl(
-            struct, cpp_proj_struct_target, cpp_proj_struct_info, cpp_proj_pkg_info
+            struct,
+            cpp_proj_struct_target,
+            cpp_proj_struct_info,
+            cpp_proj_pkg_info,
         )
         self.gen_struct_trans_func(
-            struct, cpp_proj_struct_target, cpp_proj_struct_info, abi_struct_info
+            struct,
+            cpp_proj_struct_target,
+            cpp_proj_struct_info,
+            abi_struct_info,
         )
 
         cpp_proj_pkg_target.include(cpp_proj_struct_info.header)
@@ -288,7 +295,7 @@ class CppProjCodeGenerator:
         cpp_proj_struct_target.write(
             f"namespace {cpp_proj_pkg_info.param_namespace} {{\n"
             f"using {cpp_proj_struct_info.name} = {cpp_proj_struct_info.owner_full_name} const&;\n"
-            f"}};\n"
+            f"}}\n"
         )
 
     def gen_struct_trans_func(
@@ -300,37 +307,37 @@ class CppProjCodeGenerator:
     ):
         cpp_proj_struct_target.write(
             f"template<>\n"
-            f"inline {abi_struct_info.as_owner} taihe::core::into_abi({cpp_proj_struct_info.owner_full_name}&& _val){{\n"
+            f"inline {abi_struct_info.as_owner} taihe::core::into_abi({cpp_proj_struct_info.owner_full_name}&& val){{\n"
             f"    return {{\n"
         )
         for field in struct.fields:
             cpp_proj_ty_info = CppProjTypeInfo.get(self.am, field.ty_ref.resolved_ty)
-            result = cpp_proj_ty_info.return_into_abi(f"_val.{field.name}")
+            result = cpp_proj_ty_info.return_into_abi(f"val.{field.name}")
             cpp_proj_struct_target.write(f"        {result},\n")
-        cpp_proj_struct_target.write(f"    }};\n" f"}};\n")
+        cpp_proj_struct_target.write(f"    }};\n" f"}}\n")
 
         cpp_proj_struct_target.write(
             f"template<>\n"
-            f"inline {cpp_proj_struct_info.owner_full_name} taihe::core::from_abi({abi_struct_info.as_owner}&& _val){{\n"
+            f"inline {cpp_proj_struct_info.owner_full_name} taihe::core::from_abi({abi_struct_info.as_owner}&& val){{\n"
             f"    return {{\n"
         )
         for field in struct.fields:
             cpp_proj_ty_info = CppProjTypeInfo.get(self.am, field.ty_ref.resolved_ty)
-            result = cpp_proj_ty_info.return_from_abi(f"_val.{field.name}")
+            result = cpp_proj_ty_info.return_from_abi(f"val.{field.name}")
             cpp_proj_struct_target.write(f"        {result},\n")
-        cpp_proj_struct_target.write(f"    }};\n" f"}};\n")
+        cpp_proj_struct_target.write(f"    }};\n" f"}}\n")
 
         cpp_proj_struct_target.write(
             f"template<>\n"
-            f"inline {abi_struct_info.as_param} taihe::core::into_abi({cpp_proj_struct_info.param_full_name}&& _val){{\n"
-            f"    return reinterpret_cast<{abi_struct_info.as_param}>(&_val);\n"
+            f"inline {abi_struct_info.as_param} taihe::core::into_abi({cpp_proj_struct_info.param_full_name}&& val){{\n"
+            f"    return reinterpret_cast<{abi_struct_info.as_param}>(&val);\n"
             f"}}\n"
         )
 
         cpp_proj_struct_target.write(
             f"template<>\n"
-            f"inline {cpp_proj_struct_info.param_full_name} taihe::core::from_abi({abi_struct_info.as_param}&& _val){{\n"
-            f"    return reinterpret_cast<{cpp_proj_struct_info.param_full_name}>(*_val);\n"
+            f"inline {cpp_proj_struct_info.param_full_name} taihe::core::from_abi({abi_struct_info.as_param}&& val){{\n"
+            f"    return reinterpret_cast<{cpp_proj_struct_info.param_full_name}>(*val);\n"
             f"}}\n"
         )
 
@@ -351,7 +358,17 @@ class CppProjCodeGenerator:
         cpp_proj_enum_target.include(abi_enum_info.header)
 
         self.gen_enum_decl(
-            enum, cpp_proj_enum_target, cpp_proj_enum_info, cpp_proj_pkg_info
+            enum,
+            cpp_proj_enum_target,
+            cpp_proj_enum_info,
+            abi_enum_info,
+            cpp_proj_pkg_info,
+        )
+        self.gen_enum_trans_func(
+            enum,
+            cpp_proj_enum_target,
+            cpp_proj_enum_info,
+            abi_enum_info,
         )
 
         cpp_proj_pkg_target.include(cpp_proj_enum_info.header)
@@ -361,12 +378,203 @@ class CppProjCodeGenerator:
         enum: EnumDecl,
         cpp_proj_enum_target: COutputBuffer,
         cpp_proj_enum_info: CppProjEnumDeclInfo,
+        abi_enum_info: ABIEnumDeclInfo,
         cpp_proj_pkg_info: CppProjPackageInfo,
     ):
         cpp_proj_enum_target.write(
             f"namespace {cpp_proj_pkg_info.namespace} {{\n"
-            f"enum class {cpp_proj_enum_info.name} {{\n"
+            f"struct {cpp_proj_enum_info.name} {{\n"
+        )
+
+        cpp_proj_enum_target.write("    enum class Tag {\n")
+        for item in enum.items:
+            cpp_proj_enum_target.write(f"        {item.name} = {item.value},\n")
+        cpp_proj_enum_target.write("    } tag;\n")
+
+        cpp_proj_enum_target.write("    struct ConstexprTagType {\n")
+        for item in enum.items:
+            cpp_proj_enum_target.write(
+                f"        struct {item.name} {{\n"
+                f"            static constexpr Tag tag = Tag::{item.name};\n"
+                f"        }};\n"
+            )
+        cpp_proj_enum_target.write("    };\n")
+
+        cpp_proj_enum_target.write("    struct ConstexprTag {\n")
+        for item in enum.items:
+            cpp_proj_enum_target.write(
+                f"        static constexpr ConstexprTagType::{item.name} {item.name};\n"
+            )
+        cpp_proj_enum_target.write("    };\n")
+
+        cpp_proj_enum_target.write(
+            "    union Data {\n" "        Data() {}\n" "        ~Data() {}\n"
         )
         for item in enum.items:
-            cpp_proj_enum_target.write(f"  {item.name} = {item.value},\n")
+            if item.ty_ref is None:
+                owner_type = "std::monostate"
+            else:
+                ty_info = CppProjTypeInfo.get(self.am, item.ty_ref.resolved_ty)
+                cpp_proj_enum_target.include(ty_info.header_defn)
+                owner_type = ty_info.as_owner
+            cpp_proj_enum_target.write(
+                f"        {owner_type} {item.name};\n"
+                f"        template<typename... Args>\n"
+                f"        void ctor(ConstexprTagType::{item.name}, Args&&... args) {{\n"
+                f"            new (this) decltype({item.name})(std::forward<Args>(args)...);\n"
+                f"        }}\n"
+                f"        auto get(ConstexprTagType::{item.name}) {{\n"
+                f"            return &{item.name};\n"
+                f"        }}\n"
+                f"        void dtor(ConstexprTagType::{item.name}) {{\n"
+                f"            {item.name}.~decltype({item.name})();\n"
+                f"        }}\n"
+            )
+        cpp_proj_enum_target.write("    } data;\n")
+
+        cpp_proj_enum_target.write(
+            f"    {cpp_proj_enum_info.name}({cpp_proj_enum_info.name} const& other) : tag(other.tag) {{\n"
+            f"        switch(tag) {{\n"
+        )
+        for item in enum.items:
+            cpp_proj_enum_target.write(
+                f"        case Tag::{item.name}:\n"
+                f"            data.ctor(ConstexprTag::{item.name}, other.data);\n"
+                f"            break;\n"
+            )
+        cpp_proj_enum_target.write(
+            "        default:\n" "            break;\n" "        }\n" "    }\n"
+        )
+
+        cpp_proj_enum_target.write(
+            f"    {cpp_proj_enum_info.name}({cpp_proj_enum_info.name}&& other) : tag(other.tag) {{\n"
+            f"        switch(tag) {{\n"
+        )
+        for item in enum.items:
+            cpp_proj_enum_target.write(
+                f"        case Tag::{item.name}:\n"
+                f"            data.ctor(ConstexprTag::{item.name}, std::move(other.data));\n"
+                f"            break;\n"
+            )
+        cpp_proj_enum_target.write(
+            "        default:\n" "            break;\n" "        }\n" "    }\n"
+        )
+
+        cpp_proj_enum_target.write(
+            f"    ~{cpp_proj_enum_info.name}() {{\n" f"        switch(tag) {{\n"
+        )
+        for item in enum.items:
+            cpp_proj_enum_target.write(
+                f"        case Tag::{item.name}:\n"
+                f"            data.dtor(ConstexprTag::{item.name});\n"
+                f"            break;\n"
+            )
+        cpp_proj_enum_target.write(
+            "        default:\n" "            break;\n" "        }\n" "    }\n"
+        )
+
+        cpp_proj_enum_target.write(
+            f"    template<typename T, typename... Args>\n"
+            f"    {cpp_proj_enum_info.name}(T t, Args&&... args) : tag(T::tag) {{\n"
+            f"        this->data.ctor(t, std::forward<Args>(args)...);\n"
+            f"    }}\n"
+            f"    template<typename T, typename... Args>\n"
+            f"    void emplace(T t, Args&&... args) {{\n"
+            f"        this->~{cpp_proj_enum_info.name}();\n"
+            f"        this->tag = T::tag;\n"
+            f"        this->data.ctor(t, std::forward<Args>(args)...);\n"
+            f"    }}\n"
+            f"    template<typename T>\n"
+            f"    auto get_ptr(T t) {{\n"
+            f"        return tag == T::tag ? data.get(t) : nullptr;\n"
+            f"    }}\n"
+            f"    {cpp_proj_enum_info.name} const& operator=({cpp_proj_enum_info.name} const& other) {{\n"
+            f"        if (this != &other) {{\n"
+            f"            this->~{cpp_proj_enum_info.name}();\n"
+            f"            new (this) {cpp_proj_enum_info.name}(other);\n"
+            f"        }}\n"
+            f"        return *this;\n"
+            f"    }}\n"
+            f"    {cpp_proj_enum_info.name} const& operator=({cpp_proj_enum_info.name}&& other) {{\n"
+            f"        if (this != &other) {{\n"
+            f"            this->~{cpp_proj_enum_info.name}();\n"
+            f"            new (this) {cpp_proj_enum_info.name}(std::move(other));\n"
+            f"        }}\n"
+            f"        return *this;\n"
+            f"    }}\n"
+        )
+
         cpp_proj_enum_target.write(f"}};\n" f"}}\n")
+
+        cpp_proj_enum_target.write(
+            f"namespace {cpp_proj_pkg_info.param_namespace} {{\n"
+            f"using {cpp_proj_enum_info.name} = {cpp_proj_enum_info.owner_full_name} const&;\n"
+            f"}}\n"
+        )
+
+    def gen_enum_trans_func(
+        self,
+        enum: EnumDecl,
+        cpp_proj_enum_target: COutputBuffer,
+        cpp_proj_enum_info: CppProjEnumDeclInfo,
+        abi_enum_info: ABIEnumDeclInfo,
+    ):
+        cpp_proj_enum_target.write(
+            f"template<>\n"
+            f"inline {abi_enum_info.as_owner} taihe::core::into_abi({cpp_proj_enum_info.owner_full_name}&& val){{\n"
+            f"    {abi_enum_info.as_owner} result;\n"
+            f"    switch (val.tag) {{\n"
+        )
+        for item in enum.items:
+            abi_enum_item_info = ABIEnumItemDeclInfo.get(self.am, item)
+            if item.ty_ref is None:
+                cpp_proj_enum_target.write(
+                    f"    case {cpp_proj_enum_info.owner_full_name}::Tag::{item.name}:\n"
+                    f"        result.tag = {abi_enum_item_info.name};\n"
+                    f"        break;\n"
+                )
+            else:
+                cpp_proj_ty_info = CppProjTypeInfo.get(self.am, item.ty_ref.resolved_ty)
+                result = cpp_proj_ty_info.return_into_abi(f"val.data.{item.name}")
+                cpp_proj_enum_target.write(
+                    f"    case {cpp_proj_enum_info.owner_full_name}::Tag::{item.name}:\n"
+                    f"        result.tag = {abi_enum_item_info.name};\n"
+                    f"        result.data.{item.name} = {result};\n"
+                    f"        break;\n"
+                )
+        cpp_proj_enum_target.write(f"    }}\n" f"    return result;\n" f"}}\n")
+
+        cpp_proj_enum_target.write(
+            f"template<>\n"
+            f"inline {cpp_proj_enum_info.owner_full_name} taihe::core::from_abi({abi_enum_info.as_owner}&& val){{\n"
+            f"    switch (val.tag) {{\n"
+        )
+        for item in enum.items:
+            abi_enum_item_info = ABIEnumItemDeclInfo.get(self.am, item)
+            if item.ty_ref is None:
+                cpp_proj_enum_target.write(
+                    f"    case {abi_enum_item_info.name}:\n"
+                    f"        return {cpp_proj_enum_info.owner_full_name}({cpp_proj_enum_info.owner_full_name}::ConstexprTag::{item.name});\n"
+                )
+            else:
+                cpp_proj_ty_info = CppProjTypeInfo.get(self.am, item.ty_ref.resolved_ty)
+                result = cpp_proj_ty_info.return_from_abi(f"val.data.{item.name}")
+                cpp_proj_enum_target.write(
+                    f"    case {abi_enum_item_info.name}:\n"
+                    f"        return {cpp_proj_enum_info.owner_full_name}({cpp_proj_enum_info.owner_full_name}::ConstexprTag::{item.name}, {result});\n"
+                )
+        cpp_proj_enum_target.write(f"    }}\n" f"}}\n")
+
+        cpp_proj_enum_target.write(
+            f"template<>\n"
+            f"inline {abi_enum_info.as_param} taihe::core::into_abi({cpp_proj_enum_info.param_full_name}&& val){{\n"
+            f"    return reinterpret_cast<{abi_enum_info.as_param}>(&val);\n"
+            f"}}\n"
+        )
+
+        cpp_proj_enum_target.write(
+            f"template<>\n"
+            f"inline {cpp_proj_enum_info.param_full_name} taihe::core::from_abi({abi_enum_info.as_param}&& val){{\n"
+            f"    return reinterpret_cast<{cpp_proj_enum_info.param_full_name}>(*val);\n"
+            f"}}\n"
+        )
