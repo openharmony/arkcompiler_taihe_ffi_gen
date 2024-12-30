@@ -659,6 +659,7 @@ class CppProjCodeGenerator:
             iface,
             abi_iface_info,
             cpp_proj_iface_info,
+            cpp_proj_pkg_info,
         )
 
         cpp_proj_pkg_target.include(cpp_proj_iface_info.header_impl)
@@ -820,6 +821,7 @@ class CppProjCodeGenerator:
         iface: IfaceDecl,
         abi_iface_info: ABIIfaceDeclInfo,
         cpp_proj_iface_info: CppProjIfaceDeclInfo,
+        cpp_proj_pkg_info: CppProjPackageInfo,
     ):
         cpp_proj_iface_impl_target = COutputBuffer.create(
             self.tm, f"include/{cpp_proj_iface_info.header_impl}", True
@@ -833,12 +835,14 @@ class CppProjCodeGenerator:
             abi_iface_info,
             cpp_proj_iface_info,
             cpp_proj_iface_impl_target,
+            cpp_proj_pkg_info,
         )
         self.gen_iface_impl_param_decl(
             iface,
             abi_iface_info,
             cpp_proj_iface_info,
             cpp_proj_iface_impl_target,
+            cpp_proj_pkg_info,
         )
         self.gen_iface_trans_funcs(
             iface,
@@ -853,20 +857,25 @@ class CppProjCodeGenerator:
         abi_iface_info: ABIIfaceDeclInfo,
         cpp_proj_iface_info: CppProjIfaceDeclInfo,
         cpp_proj_iface_impl_target: COutputBuffer,
+        cpp_proj_pkg_info: CppProjPackageInfo,
     ):
         cpp_proj_iface_impl_target.write(
-            f"inline {cpp_proj_iface_info.owner_full_name}::{cpp_proj_iface_info.name}({abi_iface_info.as_owner} other_handle)\n"
+            f"namespace {cpp_proj_pkg_info.namespace} {{\n"
+        )
+
+        cpp_proj_iface_impl_target.write(
+            f"inline {cpp_proj_iface_info.name}::{cpp_proj_iface_info.name}({abi_iface_info.as_owner} other_handle)\n"
             f"    : m_handle(other_handle) {{}}\n"
-            f"inline {cpp_proj_iface_info.owner_full_name}::~{cpp_proj_iface_info.name}() {{\n"
+            f"inline {cpp_proj_iface_info.name}::~{cpp_proj_iface_info.name}() {{\n"
             f"    {abi_iface_info.drop_func}(this->m_handle);\n"
             f"}}\n"
-            f"inline {cpp_proj_iface_info.owner_full_name}::{cpp_proj_iface_info.name}({cpp_proj_iface_info.owner_full_name} && other)\n"
+            f"inline {cpp_proj_iface_info.name}::{cpp_proj_iface_info.name}({cpp_proj_iface_info.owner_full_name} && other)\n"
             f"    : m_handle(other.m_handle) {{\n"
             f"    other.m_handle.data_ptr = nullptr;\n"
             f"}}\n"
-            f"inline {cpp_proj_iface_info.owner_full_name}::{cpp_proj_iface_info.name}({cpp_proj_iface_info.owner_full_name} const& other)\n"
+            f"inline {cpp_proj_iface_info.name}::{cpp_proj_iface_info.name}({cpp_proj_iface_info.owner_full_name} const& other)\n"
             f"    : m_handle({abi_iface_info.copy_func}(other.m_handle)) {{}}\n"
-            f"inline {cpp_proj_iface_info.owner_full_name}::{cpp_proj_iface_info.name}({cpp_proj_iface_info.param_full_name} const& other)\n"
+            f"inline {cpp_proj_iface_info.name}::{cpp_proj_iface_info.name}({cpp_proj_iface_info.param_full_name} const& other)\n"
             f"    : m_handle({abi_iface_info.copy_func}(other.m_handle)) {{}}\n"
         )
 
@@ -876,16 +885,16 @@ class CppProjCodeGenerator:
             cpp_proj_ancestor_info = CppProjIfaceDeclInfo.get(self.am, ancestor)
             cpp_proj_iface_impl_target.include(cpp_proj_ancestor_info.header_defn)
             cpp_proj_iface_impl_target.write(
-                f"inline {cpp_proj_iface_info.owner_full_name}::operator {cpp_proj_ancestor_info.owner_full_name}() && {{\n"
+                f"inline {cpp_proj_iface_info.name}::operator {cpp_proj_ancestor_info.owner_full_name}() && {{\n"
                 f"    {abi_iface_info.as_owner} ret_handle = this->m_handle;\n"
                 f"    this->m_handle.data_ptr = nullptr;\n"
                 f"    return {cpp_proj_ancestor_info.owner_full_name}({info.static_cast}(ret_handle));\n"
                 f"}}\n"
-                f"inline {cpp_proj_iface_info.owner_full_name}::operator {cpp_proj_ancestor_info.owner_full_name}() const& {{\n"
+                f"inline {cpp_proj_iface_info.name}::operator {cpp_proj_ancestor_info.owner_full_name}() const& {{\n"
                 f"    {abi_iface_info.as_owner} ret_handle = {abi_iface_info.copy_func}(this->m_handle);\n"
                 f"    return {cpp_proj_ancestor_info.owner_full_name}({info.static_cast}(ret_handle));\n"
                 f"}}\n"
-                f"inline {cpp_proj_iface_info.owner_full_name}::operator {cpp_proj_ancestor_info.param_full_name}() const& {{\n"
+                f"inline {cpp_proj_iface_info.name}::operator {cpp_proj_ancestor_info.param_full_name}() const& {{\n"
                 f"    {abi_iface_info.as_owner} ret_handle = this->m_handle;\n"
                 f"    return {cpp_proj_ancestor_info.param_full_name}({info.static_cast}(ret_handle));\n"
                 f"}}\n"
@@ -911,15 +920,17 @@ class CppProjCodeGenerator:
                 cpp_proj_method_info.return_ty_header_defn
             )
 
-            result = cpp_proj_method_info.return_into_abi(
+            result = cpp_proj_method_info.return_from_abi(
                 f"{abi_method_info.name}({args_into_abi_str})"
             )
 
             cpp_proj_iface_impl_target.write(
-                f"inline {cpp_proj_method_info.return_ty_name} {cpp_proj_iface_info.owner_full_name}::{method.name}({params_str}) {{\n"
+                f"inline {cpp_proj_method_info.return_ty_name} {cpp_proj_iface_info.name}::{method.name}({params_str}) {{\n"
                 f"    return {result};\n"
                 f"}}\n"
             )
+
+        cpp_proj_iface_impl_target.write("}\n")
 
     def gen_iface_impl_param_decl(
         self,
@@ -927,14 +938,19 @@ class CppProjCodeGenerator:
         abi_iface_info: ABIIfaceDeclInfo,
         cpp_proj_iface_info: CppProjIfaceDeclInfo,
         cpp_proj_iface_impl_target: COutputBuffer,
+        cpp_proj_pkg_info: CppProjPackageInfo,
     ):
         cpp_proj_iface_impl_target.write(
-            f"inline {cpp_proj_iface_info.param_full_name}::{cpp_proj_iface_info.name}({abi_iface_info.as_param} other_handle)\n"
+            f"namespace {cpp_proj_pkg_info.param_namespace} {{\n"
+        )
+
+        cpp_proj_iface_impl_target.write(
+            f"inline {cpp_proj_iface_info.name}::{cpp_proj_iface_info.name}({abi_iface_info.as_param} other_handle)\n"
             f"    : m_handle(other_handle) {{}}\n"
-            f"inline {cpp_proj_iface_info.param_full_name}::~{cpp_proj_iface_info.name}() {{}}\n"
-            f"inline {cpp_proj_iface_info.param_full_name}::{cpp_proj_iface_info.name}({cpp_proj_iface_info.owner_full_name} const& other)\n"
+            f"inline {cpp_proj_iface_info.name}::~{cpp_proj_iface_info.name}() {{}}\n"
+            f"inline {cpp_proj_iface_info.name}::{cpp_proj_iface_info.name}({cpp_proj_iface_info.owner_full_name} const& other)\n"
             f"    : m_handle(other.m_handle) {{}}\n"
-            f"inline {cpp_proj_iface_info.param_full_name}::{cpp_proj_iface_info.name}({cpp_proj_iface_info.owner_full_name} const& other)\n"
+            f"inline {cpp_proj_iface_info.name}::{cpp_proj_iface_info.name}({cpp_proj_iface_info.owner_full_name} const& other)\n"
             f"    : m_handle(other.m_handle) {{}}\n"
         )
 
@@ -944,11 +960,11 @@ class CppProjCodeGenerator:
             cpp_proj_ancestor_info = CppProjIfaceDeclInfo.get(self.am, ancestor)
             cpp_proj_iface_impl_target.include(cpp_proj_ancestor_info.header_defn)
             cpp_proj_iface_impl_target.write(
-                f"inline {cpp_proj_iface_info.param_full_name}::operator {cpp_proj_ancestor_info.owner_full_name}() const& {{\n"
+                f"inline {cpp_proj_iface_info.name}::operator {cpp_proj_ancestor_info.owner_full_name}() const& {{\n"
                 f"    {abi_iface_info.as_owner} ret_handle = {abi_iface_info.copy_func}(this->m_handle);\n"
                 f"    return {cpp_proj_ancestor_info.owner_full_name}({info.static_cast}(ret_handle));\n"
                 f"}}\n"
-                f"inline {cpp_proj_iface_info.param_full_name}::operator {cpp_proj_ancestor_info.param_full_name}() const& {{\n"
+                f"inline {cpp_proj_iface_info.name}::operator {cpp_proj_ancestor_info.param_full_name}() const& {{\n"
                 f"    {abi_iface_info.as_owner} ret_handle = this->m_handle;\n"
                 f"    return {cpp_proj_ancestor_info.param_full_name}({info.static_cast}(ret_handle));\n"
                 f"}}\n"
@@ -974,15 +990,17 @@ class CppProjCodeGenerator:
                 cpp_proj_method_info.return_ty_header_defn
             )
 
-            result = cpp_proj_method_info.return_into_abi(
+            result = cpp_proj_method_info.return_from_abi(
                 f"{abi_method_info.name}({args_into_abi_str})"
             )
 
             cpp_proj_iface_impl_target.write(
-                f"inline {cpp_proj_method_info.return_ty_name} {cpp_proj_iface_info.param_full_name}::{method.name}({params_str}) {{\n"
+                f"inline {cpp_proj_method_info.return_ty_name} {cpp_proj_iface_info.name}::{method.name}({params_str}) {{\n"
                 f"    return {result};\n"
                 f"}}\n"
             )
+
+        cpp_proj_iface_impl_target.write("}\n")
 
     def gen_iface_trans_funcs(
         self,
