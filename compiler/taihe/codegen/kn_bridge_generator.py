@@ -234,6 +234,18 @@ class KNBridgeCodeGenerator:
         kn_bridge_pkg_target.write(
             f"\n" f"  /* User functions. */\n" f"  struct {{\n" f"    struct {{\n"
         )
+
+        for iface in pkg.interfaces:
+            kn_bridge_pkg_target.write(f"      struct {{\n")
+            for method in iface.methods:
+                kn_bridge_iface_method_info = KNBridgeFuncBaseDeclInfo.get(
+                    self.am, method
+                )
+                kn_bridge_pkg_target.write(
+                    f"        {kn_bridge_iface_method_info.return_ty_konan_name} (*{kn_bridge_iface_method_info.name})({kn_bridge_pkg_name}_kref_{iface.name} thiz, {kn_bridge_iface_method_info.params_str});\n"
+                )
+            kn_bridge_pkg_target.write(f"      }} {iface.name};\n")
+
         for func in pkg.functions:
             kn_bridge_func_info = KNBridgeFuncBaseDeclInfo.get(self.am, func)
             kn_bridge_pkg_target.write(
@@ -416,6 +428,13 @@ class KNBridgeCodeGenerator:
                 )
 
         kn_bridge_pkg_target.write(f"  .kotlin = {{\n" f"    .root = {{\n")
+        for iface in pkg.interfaces:
+            kn_bridge_pkg_target.write(f"      .{iface.name} {{\n")
+            for method in iface.methods:
+                kn_bridge_pkg_target.write(
+                    f"        /* {method.name} = */ {method.attrs['konan_name'].value}_impl, \n"
+                )
+            kn_bridge_pkg_target.write(f"      }}, \n")
         for func in pkg.functions:
             kn_bridge_func_info = KNBridgeFuncBaseDeclInfo.get(self.am, func)
             kn_bridge_pkg_target.write(
