@@ -37,8 +37,6 @@ specField
     | (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
       KW_FUNCTION token_name = ID
       LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS COLON (TypeOpt_return_ty = type | KW_VOID)? SEMICOLON # globalFunction
-    | (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
-      KW_TYPE token_name = ID ASSIGN_TO Type_ty = type SEMICOLON # typeAlias
     ;
 
 structField

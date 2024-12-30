@@ -20,12 +20,6 @@ from example.foo use Nonexist as MyNonexist;  // DeclNotExistError
 from example.bar use Bar as Foobar;
 from example.foo use Foo as Foobar;  // DeclConflictError
 
-// TypeAlias
-
-type AliasTestA = AliasTestB;
-
-type AliasTestB = String;
-
 // Structs
 
 struct ResolveTypesTester {
@@ -109,7 +103,5 @@ struct RecursiveStruct {
 }
 
 enum RecursiveEnum {
-    a: RecursiveAlias;
+    s: RecursiveStruct;
 }
-
-type RecursiveAlias = RecursiveStruct;

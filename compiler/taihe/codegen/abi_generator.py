@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from io import StringIO
 from os import makedirs, path
 from pathlib import Path
@@ -71,7 +72,7 @@ class ABIPackageInfo(AbstractAnalysis[Package]):
         self.header = f"{p.name}.abi.h"
 
 
-class ABIFuncBaseDeclInfo(AbstractAnalysis[BaseFuncDecl]):
+class ABIBaseFuncDeclInfo(AbstractAnalysis[BaseFuncDecl]):
     def __init__(self, am: AnalysisManager, f: BaseFuncDecl) -> None:
         segments = f.segments
         self.name = encode(segments, DeclKind.FUNCTION)
@@ -149,6 +150,12 @@ class ABIStructDeclInfo(AbstractAnalysis[StructDecl]):
         )
 
 
+@dataclass
+class AncestorInfo:
+    offset: int
+    static_cast: str
+
+
 class ABIIfaceDeclInfo(AbstractAnalysis[IfaceDecl]):
     def __init__(self, am: AnalysisManager, d: IfaceDecl) -> None:
         p = d.parent
@@ -165,15 +172,22 @@ class ABIIfaceDeclInfo(AbstractAnalysis[IfaceDecl]):
         self.f_table = encode(segments, DeclKind.FTABLE)
         self.v_table = encode(segments, DeclKind.VTABLE)
         self.iid = encode(segments, DeclKind.IID)
-        self.ancestors = [d]
+        self.dynamic_cast = f"cast_to_{self.name}"
+        self.ancestor_list = [d]
         for extend in d.parents:
             iface = extend.ty_ref.resolved_ty
             assert isinstance(iface, IfaceDecl)
             abi_extend_info = ABIIfaceDeclInfo.get(am, iface)
-            self.ancestors.extend(abi_extend_info.ancestors)
-        self.offsets: dict[IfaceDecl, int] = {}
-        for i, ancestor in enumerate(self.ancestors):
-            self.offsets.setdefault(ancestor, i)
+            self.ancestor_list.extend(abi_extend_info.ancestor_list)
+        self.ancestor_dict: dict[IfaceDecl, AncestorInfo] = {}
+        for i, ancestor in enumerate(self.ancestor_list):
+            self.ancestor_dict.setdefault(
+                ancestor,
+                AncestorInfo(
+                    offset=i,
+                    static_cast=f"cast_{self.name}_to_{ancestor.name}",
+                ),
+            )
 
 
 class ABITypeInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
@@ -274,9 +288,7 @@ class ABICodeGenerator:
         func: GlobFuncDecl,
         abi_pkg_target: COutputBuffer,
     ):
-        abi_func_info = ABIFuncBaseDeclInfo.get(self.am, func)
-
-        abi_pkg_target.include(abi_func_info.return_ty_header)
+        abi_func_info = ABIBaseFuncDeclInfo.get(self.am, func)
 
         params = []
         for param in func.params:
@@ -284,6 +296,9 @@ class ABICodeGenerator:
             abi_pkg_target.include(abi_type_info.header)
             params.append(f"{abi_type_info.as_param} {param.name}")
         params_str = ", ".join(params)
+
+        abi_pkg_target.include(abi_func_info.return_ty_header)
+
         abi_pkg_target.write(
             f"TH_EXPORT {abi_func_info.return_ty_name} {abi_func_info.name}({params_str});\n"
         )
@@ -564,9 +579,7 @@ class ABICodeGenerator:
     ):
         abi_iface_target_1.write(f"struct {abi_iface_info.f_table} {{\n")
         for method in iface.methods:
-            abi_method_info = ABIFuncBaseDeclInfo.get(self.am, method)
-
-            abi_iface_target_1.include(abi_method_info.return_ty_header)
+            abi_method_info = ABIBaseFuncDeclInfo.get(self.am, method)
 
             params = [f"{abi_iface_info.as_param} tobj"]
             for param in method.params:
@@ -574,6 +587,9 @@ class ABICodeGenerator:
                 abi_iface_target_1.include(abi_type_info.header)
                 params.append(f"{abi_type_info.as_param} {param.name}")
             params_str = ", ".join(params)
+
+            abi_iface_target_1.include(abi_method_info.return_ty_header)
+
             abi_iface_target_1.write(
                 f"  {abi_method_info.return_ty_name} (*{method.name})({params_str});\n"
             )
@@ -586,8 +602,9 @@ class ABICodeGenerator:
         abi_iface_info: ABIIfaceDeclInfo,
     ):
         abi_iface_target_1.write(f"struct {abi_iface_info.v_table} {{\n")
-        for i, ancestor in enumerate(abi_iface_info.ancestors):
+        for i, ancestor in enumerate(abi_iface_info.ancestor_list):
             abi_ancestor_info = ABIIfaceDeclInfo.get(self.am, ancestor)
+
             abi_iface_target_1.write(
                 f"  struct {abi_ancestor_info.f_table}* ftbl_ptr_{i};\n"
             )
@@ -600,7 +617,7 @@ class ABICodeGenerator:
         abi_iface_info: ABIIfaceDeclInfo,
     ):
         for method in iface.methods:
-            abi_method_info = ABIFuncBaseDeclInfo.get(self.am, method)
+            abi_method_info = ABIBaseFuncDeclInfo.get(self.am, method)
 
             params = [f"{abi_iface_info.as_param} tobj"]
             args = ["tobj"]
@@ -610,6 +627,7 @@ class ABICodeGenerator:
                 args.append(param.name)
             params_str = ", ".join(params)
             args_str = ", ".join(args)
+
             abi_iface_target_1.write(
                 f"inline {abi_method_info.return_ty_name} {abi_method_info.name}({params_str}) {{\n"
                 f"  return tobj.vtbl_ptr->ftbl_ptr_0->{method.name}({args_str});\n"
@@ -622,15 +640,18 @@ class ABICodeGenerator:
         abi_iface_target_1: COutputBuffer,
         abi_iface_info: ABIIfaceDeclInfo,
     ):
-        for ancestor, i in abi_iface_info.offsets.items():
-            if i == 0:
+        for ancestor, info in abi_iface_info.ancestor_dict.items():
+            if info.offset == 0:
                 continue
+
             abi_ancestor_info = ABIIfaceDeclInfo.get(self.am, ancestor)
+
             abi_iface_target_1.include(abi_ancestor_info.header_0)
+
             abi_iface_target_1.write(
-                f"inline struct {abi_ancestor_info.name} convert_{abi_iface_info.name}_to_{abi_ancestor_info.name}(struct {abi_iface_info.name} tobj) {{\n"
+                f"inline struct {abi_ancestor_info.name} {info.static_cast}(struct {abi_iface_info.name} tobj) {{\n"
                 f"  struct {abi_ancestor_info.name} result;\n"
-                f"  result.vtbl_ptr = (struct {abi_ancestor_info.v_table}*)(&tobj.vtbl_ptr->ftbl_ptr_0 + {i});\n"
+                f"  result.vtbl_ptr = (struct {abi_ancestor_info.v_table}*)(&tobj.vtbl_ptr->ftbl_ptr_0 + {info.offset});\n"
                 f"  result.data_ptr = tobj.data_ptr;\n"
                 f"  return result;\n"
                 f"}}\n"
@@ -643,7 +664,7 @@ class ABICodeGenerator:
         abi_iface_info: ABIIfaceDeclInfo,
     ):
         abi_iface_target_1.write(
-            f"inline struct {abi_iface_info.name} dynamic_cast_to_{abi_iface_info.name}(struct DataBlockHead* data_ptr) {{\n"
+            f"inline struct {abi_iface_info.name} {abi_iface_info.dynamic_cast}(struct DataBlockHead* data_ptr) {{\n"
             f"  struct TypeInfo *rtti_ptr = data_ptr->rtti_ptr;\n"
             f"  struct {abi_iface_info.name} result;\n"
             f"  for (size_t i = 0; i < rtti_ptr->len; i++) {{\n"

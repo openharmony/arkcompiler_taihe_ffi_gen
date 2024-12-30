@@ -1,11 +1,11 @@
 from taihe.codegen.abi_generator import (
-    ABIFuncBaseDeclInfo,
+    ABIBaseFuncDeclInfo,
     ABIPackageInfo,
     ABITypeInfo,
     COutputBuffer,
 )
 from taihe.codegen.cpp_proj_generator import (
-    CppProjFuncBaseDeclInfo,
+    CppProjBaseFuncDeclInfo,
     CppProjTypeInfo,
 )
 from taihe.semantics.declarations import (
@@ -49,10 +49,8 @@ class CppImplCodeGenerator:
         func: GlobFuncDecl,
         cpp_impl_pkg_target: COutputBuffer,
     ):
-        cpp_proj_func_info = CppProjFuncBaseDeclInfo.get(self.am, func)
-        abi_func_info = ABIFuncBaseDeclInfo.get(self.am, func)
-
-        cpp_impl_pkg_target.include(cpp_proj_func_info.return_ty_header_defn)
+        cpp_proj_func_info = CppProjBaseFuncDeclInfo.get(self.am, func)
+        abi_func_info = ABIBaseFuncDeclInfo.get(self.am, func)
 
         cpp_params = []
         args_from_abi = []
@@ -68,7 +66,9 @@ class CppImplCodeGenerator:
         cpp_params_str = ", ".join(cpp_params)
         args_from_abi_str = ", ".join(args_from_abi)
 
+        cpp_impl_pkg_target.include(cpp_proj_func_info.return_ty_header_defn)
         result = cpp_proj_func_info.return_into_abi(f"_func({args_from_abi_str})")
+
         cpp_impl_pkg_target.write(
             f"#define TH_EXPORT_CPP_API_{func.name}(_func) \\\n"
             f"    TH_STATIC_ASSERT(TH_IS_SAME(TH_TYPEOF(_func), {cpp_proj_func_info.return_ty_name} ({cpp_params_str})), \\\n"

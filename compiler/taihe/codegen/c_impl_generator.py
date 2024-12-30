@@ -1,5 +1,5 @@
 from taihe.codegen.abi_generator import (
-    ABIFuncBaseDeclInfo,
+    ABIBaseFuncDeclInfo,
     ABIPackageInfo,
     ABITypeInfo,
     COutputBuffer,
@@ -45,18 +45,20 @@ class CImplCodeGenerator:
         func: GlobFuncDecl,
         c_impl_pkg_target: COutputBuffer,
     ):
-        abi_func_info = ABIFuncBaseDeclInfo.get(self.am, func)
-
-        c_impl_pkg_target.include(abi_func_info.return_ty_header)
+        abi_func_info = ABIBaseFuncDeclInfo.get(self.am, func)
 
         params = []
         args = []
         for param in func.params:
             abi_type_info = ABITypeInfo.get(self.am, param.ty_ref.resolved_ty)
+            c_impl_pkg_target.include(abi_type_info.header)
             params.append(f"{abi_type_info.as_param} {param.name}")
             args.append(param.name)
         params_str = ", ".join(params)
         args_str = ", ".join(args)
+
+        c_impl_pkg_target.include(abi_func_info.return_ty_header)
+
         c_impl_pkg_target.write(
             f"#define TH_EXPORT_C_API_{func.name}(_func) \\\n"
             f"  TH_STATIC_ASSERT(TH_IS_SAME(TH_TYPEOF(_func), {abi_func_info.return_ty_name} ({params_str})), \\\n"
