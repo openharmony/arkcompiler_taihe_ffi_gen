@@ -56,31 +56,21 @@ struct TObject {
 // - Returns the corresponding vtable pointer if found; otherwise, returns NULL.
 TH_EXPORT void* tobj_get_pvtbl(struct TypeInfo* rtti_ptr, const void* id);
 
-// Converts the source object to the target object based on the provided id, looking up the corresponding vtable pointer.
-// # Arguments
-// - `src`: Source TObject.
-// - `dst`: Pointer to an uninitialized target TObject.
-// - `id`: Identifier used for lookup.
-//
-// # Returns
-// - Returns 1 if conversion is successful; otherwise, returns 0.
-TH_EXPORT int tobj_dynamic_cast(struct TObject src, struct TObject *dst, const void* id);
-
 // Increments the reference count of the given TObject.
 // # Arguments
-// - `tobj`: The TObject whose reference count is to be incremented.
+// - `data_ptr`: The data pointer.
 //
 // # Returns
-// - This function does not return a value. It modifies the reference count of the TObject.
-TH_EXPORT void tobj_addref(struct TObject tobj);
+// - The new data pointer.
+TH_EXPORT struct DataBlockHead* tobj_dup(struct DataBlockHead* data_ptr);
 
 // Decrements the reference count of the given TObject. If the reference count reaches zero, the object is destroyed.
 // # Arguments
-// - `tobj`: The TObject whose reference count is to be decremented.
+// - `tobj`: The data pointer.
 //
 // # Returns
 // - This function does not return a value. It may result in the destruction of the TObject if the reference count reaches zero.
-TH_EXPORT void tobj_release(struct TObject tobj);
+TH_EXPORT void tobj_drop(struct DataBlockHead* data_ptr);
 
 // Allocates memory for a function table of a specified length.
 //

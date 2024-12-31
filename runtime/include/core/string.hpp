@@ -12,6 +12,7 @@
 #include <taihe/string.abi.h>
 
 namespace taihe::core {
+struct string;
 struct string_view;
 
 struct string {

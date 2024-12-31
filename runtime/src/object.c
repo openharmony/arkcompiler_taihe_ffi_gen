@@ -13,28 +13,16 @@ void* tobj_get_pvtbl(struct TypeInfo* rtti_ptr, const void* id) {
   return NULL;
 }
 
-// dynamic_cast
-int tobj_dynamic_cast(struct TObject src, struct TObject *dst, const void* id) {
-  void* vtptr = tobj_get_pvtbl(src.data_ptr->rtti_ptr, id);
-  if (vtptr) {
-    dst->vtbl_ptr = vtptr;
-    dst->data_ptr = src.data_ptr;
-    return 1;
+struct DataBlockHead* tobj_dup(struct DataBlockHead* data_ptr) {
+  if (data_ptr && data_ptr->m_count != 0) {
+    ++data_ptr->m_count;
   }
-  return 0;
+  return data_ptr;
 }
 
-void tobj_addref(struct TObject tobj) {
-  if (tobj.data_ptr && tobj.data_ptr->m_count != 0) {
-    ++tobj.data_ptr->m_count;
-  }
-}
-
-void tobj_release(struct TObject tobj) {
-  if (tobj.data_ptr && --(tobj.data_ptr->m_count) == 0) {
-    tobj.data_ptr->rtti_ptr->free_data(tobj.data_ptr);
-    tobj.data_ptr = NULL;
-    tobj.vtbl_ptr = NULL;
+void tobj_drop(struct DataBlockHead* data_ptr) {
+  if (data_ptr && --(data_ptr->m_count) == 0) {
+    data_ptr->rtti_ptr->free_data(data_ptr);
   }
 }
 

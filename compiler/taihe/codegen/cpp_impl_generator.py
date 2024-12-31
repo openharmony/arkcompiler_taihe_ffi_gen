@@ -72,7 +72,7 @@ class CppImplCodeGenerator:
         cpp_impl_pkg_target.write(
             f"#define TH_EXPORT_CPP_API_{func.name}(_func) \\\n"
             f"    TH_STATIC_ASSERT(TH_IS_SAME(TH_TYPEOF(_func), {cpp_proj_func_info.return_ty_name} ({cpp_params_str})), \\\n"
-            f"        \"'\" #_func \"' is incompatible with '{cpp_proj_func_info.return_ty_name} {cpp_proj_func_info.full_name}({cpp_params_str})'\"); \\\n"
+            f"        \"'\" #_func \"' is incompatible with '{cpp_proj_func_info.return_ty_name} {cpp_proj_func_info.name}({cpp_params_str})'\"); \\\n"
             f"    {abi_func_info.return_ty_name} {abi_func_info.name}({abi_params_str}) {{ \\\n"
             f"        return {result}; \\\n"
             f"    }}\n"

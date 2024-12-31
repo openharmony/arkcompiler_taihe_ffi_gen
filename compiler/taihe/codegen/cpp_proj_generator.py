@@ -52,9 +52,8 @@ class CppProjPackageInfo(AbstractAnalysis[Package]):
 
 class CppProjBaseFuncDeclInfo(AbstractAnalysis[BaseFuncDecl]):
     def __init__(self, am: AnalysisManager, f: BaseFuncDecl) -> None:
-        segments = f.segments
         self.name = f.name
-        self.full_name = "::" + "::".join(segments)
+
         if f.return_ty_ref is None:
             self.return_ty_header_decl = None
             self.return_ty_header_defn = None
@@ -82,16 +81,16 @@ class CppProjStructDeclInfo(AbstractAnalysis[StructDecl]):
         self.owner_full_name = "::" + "::".join(segments)
         self.param_full_name = "::param::" + "::".join(segments)
         self.pass_from_abi = (
-            lambda val: f"taihe::core::from_abi<{self.param_full_name}, {abi_info.as_param}>(std::move({val}))"
+            lambda val: f"::taihe::core::from_abi<{self.param_full_name}, {abi_info.as_param}>(std::move({val}))"
         )
         self.pass_into_abi = (
-            lambda val: f"taihe::core::into_abi<{self.param_full_name}, {abi_info.as_param}>(std::move({val}))"
+            lambda val: f"::taihe::core::into_abi<{self.param_full_name}, {abi_info.as_param}>(std::move({val}))"
         )
         self.return_from_abi = (
-            lambda val: f"taihe::core::from_abi<{self.owner_full_name}, {abi_info.as_owner}>(std::move({val}))"
+            lambda val: f"::taihe::core::from_abi<{self.owner_full_name}, {abi_info.as_owner}>(std::move({val}))"
         )
         self.return_into_abi = (
-            lambda val: f"taihe::core::into_abi<{self.owner_full_name}, {abi_info.as_owner}>(std::move({val}))"
+            lambda val: f"::taihe::core::into_abi<{self.owner_full_name}, {abi_info.as_owner}>(std::move({val}))"
         )
 
 
@@ -107,16 +106,16 @@ class CppProjEnumDeclInfo(AbstractAnalysis[EnumDecl]):
         self.owner_full_name = "::" + "::".join(segments)
         self.param_full_name = "::param::" + "::".join(segments)
         self.pass_from_abi = (
-            lambda val: f"taihe::core::from_abi<{self.param_full_name}, {abi_info.as_param}>(std::move({val}))"
+            lambda val: f"::taihe::core::from_abi<{self.param_full_name}, {abi_info.as_param}>(std::move({val}))"
         )
         self.pass_into_abi = (
-            lambda val: f"taihe::core::into_abi<{self.param_full_name}, {abi_info.as_param}>(std::move({val}))"
+            lambda val: f"::taihe::core::into_abi<{self.param_full_name}, {abi_info.as_param}>(std::move({val}))"
         )
         self.return_from_abi = (
-            lambda val: f"taihe::core::from_abi<{self.owner_full_name}, {abi_info.as_owner}>(std::move({val}))"
+            lambda val: f"::taihe::core::from_abi<{self.owner_full_name}, {abi_info.as_owner}>(std::move({val}))"
         )
         self.return_into_abi = (
-            lambda val: f"taihe::core::into_abi<{self.owner_full_name}, {abi_info.as_owner}>(std::move({val}))"
+            lambda val: f"::taihe::core::into_abi<{self.owner_full_name}, {abi_info.as_owner}>(std::move({val}))"
         )
 
 
@@ -134,16 +133,16 @@ class CppProjIfaceDeclInfo(AbstractAnalysis[IfaceDecl]):
         self.owner_full_name = "::" + "::".join(segments)
         self.param_full_name = "::param::" + "::".join(segments)
         self.pass_from_abi = (
-            lambda val: f"taihe::core::from_abi<{self.param_full_name}, {abi_info.as_param}>(std::move({val}))"
+            lambda val: f"::taihe::core::from_abi<{self.param_full_name}, {abi_info.as_param}>(std::move({val}))"
         )
         self.pass_into_abi = (
-            lambda val: f"taihe::core::into_abi<{self.param_full_name}, {abi_info.as_param}>(std::move({val}))"
+            lambda val: f"::taihe::core::into_abi<{self.param_full_name}, {abi_info.as_param}>(std::move({val}))"
         )
         self.return_from_abi = (
-            lambda val: f"taihe::core::from_abi<{self.owner_full_name}, {abi_info.as_owner}>(std::move({val}))"
+            lambda val: f"::taihe::core::from_abi<{self.owner_full_name}, {abi_info.as_owner}>(std::move({val}))"
         )
         self.return_into_abi = (
-            lambda val: f"taihe::core::into_abi<{self.owner_full_name}, {abi_info.as_owner}>(std::move({val}))"
+            lambda val: f"::taihe::core::into_abi<{self.owner_full_name}, {abi_info.as_owner}>(std::move({val}))"
         )
 
 
@@ -222,19 +221,19 @@ class CppProjTypeInfo(AbstractAnalysis[Optional[Type]], TypeVisitor):
         if t == STRING:
             self.header_decl = "core/string.hpp"
             self.header_defn = "core/string.hpp"
-            self.as_owner = "taihe::core::string"
-            self.as_param = "taihe::core::string_view"
+            self.as_owner = "::taihe::core::string"
+            self.as_param = "::taihe::core::string_view"
             self.pass_from_abi = (
-                lambda val: f"taihe::core::from_abi<{self.as_param}, TString*>(std::move({val}))"
+                lambda val: f"::taihe::core::from_abi<{self.as_param}, TString*>(std::move({val}))"
             )
             self.pass_into_abi = (
-                lambda val: f"taihe::core::into_abi<{self.as_param}, TString*>(std::move({val}))"
+                lambda val: f"::taihe::core::into_abi<{self.as_param}, TString*>(std::move({val}))"
             )
             self.return_from_abi = (
-                lambda val: f"taihe::core::from_abi<{self.as_owner}, TString*>(std::move({val}))"
+                lambda val: f"::taihe::core::from_abi<{self.as_owner}, TString*>(std::move({val}))"
             )
             self.return_into_abi = (
-                lambda val: f"taihe::core::into_abi<{self.as_owner}, TString*>(std::move({val}))"
+                lambda val: f"::taihe::core::into_abi<{self.as_owner}, TString*>(std::move({val}))"
             )
         else:
             raise ValueError
@@ -695,7 +694,7 @@ class CppProjCodeGenerator:
             self.tm, f"include/{cpp_proj_iface_info.header_defn}", True
         )
 
-        cpp_proj_iface_defn_target.include("taihe/common.hpp")
+        cpp_proj_iface_defn_target.include("core/object.hpp")
         cpp_proj_iface_defn_target.include(abi_iface_info.header_0)
         cpp_proj_iface_defn_target.include(cpp_proj_iface_info.header_decl)
 
@@ -731,6 +730,12 @@ class CppProjCodeGenerator:
             f"    {cpp_proj_iface_info.name}({cpp_proj_iface_info.owner_full_name} const& other);\n"
             f"    {cpp_proj_iface_info.name}({cpp_proj_iface_info.owner_full_name} && other);\n"
             f"    {cpp_proj_iface_info.name}({cpp_proj_iface_info.param_full_name} const& other);\n"
+            f"    operator ::taihe::core::DataOwner() const&;\n"
+            f"    operator ::taihe::core::DataOwner() &&;\n"
+            f"    operator ::taihe::core::DataRef() const&;\n"
+            f"    {cpp_proj_iface_info.name}(::taihe::core::DataOwner other);\n"
+            f"    {cpp_proj_iface_info.name} &operator=({cpp_proj_iface_info.owner_full_name} other);\n"
+            f"    operator bool();\n"
         )
 
         for ancestor, info in abi_iface_info.ancestor_dict.items():
@@ -782,6 +787,11 @@ class CppProjCodeGenerator:
             f"    ~{cpp_proj_iface_info.name}();\n"
             f"    {cpp_proj_iface_info.name}({cpp_proj_iface_info.owner_full_name} const& other);\n"
             f"    {cpp_proj_iface_info.name}({cpp_proj_iface_info.param_full_name} const& other);\n"
+            f"    operator ::taihe::core::DataOwner() const&;\n"
+            f"    operator ::taihe::core::DataRef() const&;\n"
+            f"    {cpp_proj_iface_info.name}(::taihe::core::DataRef other);\n"
+            f"    {cpp_proj_iface_info.name}& operator=({cpp_proj_iface_info.param_full_name} other);\n"
+            f"    operator bool();\n"
         )
 
         for ancestor, info in abi_iface_info.ancestor_dict.items():
@@ -877,6 +887,29 @@ class CppProjCodeGenerator:
             f"    : m_handle({abi_iface_info.copy_func}(other.m_handle)) {{}}\n"
             f"inline {cpp_proj_iface_info.name}::{cpp_proj_iface_info.name}({cpp_proj_iface_info.param_full_name} const& other)\n"
             f"    : m_handle({abi_iface_info.copy_func}(other.m_handle)) {{}}\n"
+            f"inline {cpp_proj_iface_info.name}::operator ::taihe::core::DataOwner() && {{\n"
+            f"    {abi_iface_info.as_owner} ret_handle = this->m_handle;\n"
+            f"    this->m_handle.data_ptr = nullptr;\n"
+            f"    return ::taihe::core::DataOwner(ret_handle.data_ptr);\n"
+            f"}}\n"
+            f"inline {cpp_proj_iface_info.name}::operator ::taihe::core::DataOwner() const& {{\n"
+            f"    {abi_iface_info.as_owner} ret_handle = {abi_iface_info.copy_func}(this->m_handle);\n"
+            f"    return ::taihe::core::DataOwner(ret_handle.data_ptr);\n"
+            f"}}\n"
+            f"inline {cpp_proj_iface_info.name}::operator ::taihe::core::DataRef() const& {{\n"
+            f"    {abi_iface_info.as_owner} ret_handle = this->m_handle;\n"
+            f"    return ::taihe::core::DataRef(ret_handle.data_ptr);\n"
+            f"}}\n"
+            f"inline {cpp_proj_iface_info.name}::{cpp_proj_iface_info.name}(::taihe::core::DataOwner other)\n"
+            f"    : m_handle({abi_iface_info.dynamic_cast}(other.m_handle)) {{\n"
+            f"    other.m_handle = nullptr;\n"
+            f"}}\n"
+            f"inline {cpp_proj_iface_info.name}& {cpp_proj_iface_info.name}::operator=({cpp_proj_iface_info.owner_full_name} other) {{\n"
+            f"    std::swap(this->m_handle, other.m_handle);\n"
+            f"}}\n"
+            f"inline {cpp_proj_iface_info.name}::operator bool() {{\n"
+            f"    return this->m_handle.vtbl_ptr;\n"
+            f"}}\n"
         )
 
         for ancestor, info in abi_iface_info.ancestor_dict.items():
@@ -952,6 +985,24 @@ class CppProjCodeGenerator:
             f"    : m_handle(other.m_handle) {{}}\n"
             f"inline {cpp_proj_iface_info.name}::{cpp_proj_iface_info.name}({cpp_proj_iface_info.owner_full_name} const& other)\n"
             f"    : m_handle(other.m_handle) {{}}\n"
+            f"inline {cpp_proj_iface_info.name}::operator ::taihe::core::DataOwner() const& {{\n"
+            f"    {abi_iface_info.as_owner} ret_handle = {abi_iface_info.copy_func}(this->m_handle);\n"
+            f"    return ::taihe::core::DataOwner(ret_handle.data_ptr);\n"
+            f"}}\n"
+            f"inline {cpp_proj_iface_info.name}::operator ::taihe::core::DataRef() const& {{\n"
+            f"    {abi_iface_info.as_owner} ret_handle = this->m_handle;\n"
+            f"    return ::taihe::core::DataRef(ret_handle.data_ptr);\n"
+            f"}}\n"
+            f"inline {cpp_proj_iface_info.name}::{cpp_proj_iface_info.name}(::taihe::core::DataRef other)\n"
+            f"    : m_handle({abi_iface_info.dynamic_cast}(other.m_handle)) {{\n"
+            f"    other.m_handle = nullptr;\n"
+            f"}}\n"
+            f"inline {cpp_proj_iface_info.name}& {cpp_proj_iface_info.name}::operator=({cpp_proj_iface_info.param_full_name} other) {{\n"
+            f"    std::swap(this->m_handle, other.m_handle);\n"
+            f"}}\n"
+            f"inline {cpp_proj_iface_info.name}::operator bool() {{\n"
+            f"    return this->m_handle.vtbl_ptr;\n"
+            f"}}\n"
         )
 
         for ancestor, info in abi_iface_info.ancestor_dict.items():
