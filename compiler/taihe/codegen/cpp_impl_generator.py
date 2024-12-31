@@ -1,12 +1,12 @@
 from taihe.codegen.abi_generator import (
-    ABIBaseFuncDeclInfo,
-    ABIPackageInfo,
-    ABITypeInfo,
+    BaseFuncDeclABIInfo,
     COutputBuffer,
+    PackageABIInfo,
+    TypeABIInfo,
 )
 from taihe.codegen.cpp_proj_generator import (
-    CppProjBaseFuncDeclInfo,
-    CppProjTypeInfo,
+    BaseFuncDeclCppProjInfo,
+    TypeCppProjInfo,
 )
 from taihe.semantics.declarations import (
     GlobFuncDecl,
@@ -17,7 +17,7 @@ from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
 from taihe.utils.outputs import OutputManager
 
 
-class CppImplPackageInfo(AbstractAnalysis[Package]):
+class PackageCppImplInfo(AbstractAnalysis[Package]):
     def __init__(self, am: AnalysisManager, p: Package) -> None:
         self.header = f"{p.name}.impl.hpp"
 
@@ -32,43 +32,43 @@ class CppImplCodeGenerator:
             self.gen_package_file(pkg)
 
     def gen_package_file(self, pkg: Package):
-        cpp_impl_pkg_info = CppImplPackageInfo.get(self.am, pkg)
-        cpp_impl_pkg_target = COutputBuffer.create(
-            self.tm, f"include/{cpp_impl_pkg_info.header}", True
+        pkg_cpp_impl_info = PackageCppImplInfo.get(self.am, pkg)
+        pkg_cpp_impl_target = COutputBuffer.create(
+            self.tm, f"include/{pkg_cpp_impl_info.header}", True
         )
-        abi_pkg_info = ABIPackageInfo.get(self.am, pkg)
-        cpp_impl_pkg_target.include("taihe/common.hpp")
-        cpp_impl_pkg_target.include(f"{abi_pkg_info.header}")
+        pkg_abi_info = PackageABIInfo.get(self.am, pkg)
+        pkg_cpp_impl_target.include("taihe/common.hpp")
+        pkg_cpp_impl_target.include(f"{pkg_abi_info.header}")
         for func in pkg.functions:
-            self.gen_func(func, cpp_impl_pkg_target)
+            self.gen_func(func, pkg_cpp_impl_target)
 
     def gen_func(
         self,
         func: GlobFuncDecl,
-        cpp_impl_pkg_target: COutputBuffer,
+        pkg_cpp_impl_target: COutputBuffer,
     ):
-        cpp_proj_func_info = CppProjBaseFuncDeclInfo.get(self.am, func)
-        abi_func_info = ABIBaseFuncDeclInfo.get(self.am, func)
+        func_cpp_proj_info = BaseFuncDeclCppProjInfo.get(self.am, func)
+        func_abi_info = BaseFuncDeclABIInfo.get(self.am, func)
         cpp_params = []
         args_from_abi = []
         abi_params = []
         for param in func.params:
-            cpp_proj_type_info = CppProjTypeInfo.get(self.am, param.ty_ref.resolved_ty)
-            abi_type_info = ABITypeInfo.get(self.am, param.ty_ref.resolved_ty)
-            cpp_impl_pkg_target.include(cpp_proj_type_info.header_defn)
-            cpp_params.append(f"{cpp_proj_type_info.as_param} {param.name}")
-            args_from_abi.append(cpp_proj_type_info.pass_from_abi(param.name))
-            abi_params.append(f"{abi_type_info.as_param} {param.name}")
+            type_cpp_proj_info = TypeCppProjInfo.get(self.am, param.ty_ref.resolved_ty)
+            type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.resolved_ty)
+            pkg_cpp_impl_target.include(type_cpp_proj_info.header_defn)
+            cpp_params.append(f"{type_cpp_proj_info.as_param} {param.name}")
+            args_from_abi.append(type_cpp_proj_info.pass_from_abi(param.name))
+            abi_params.append(f"{type_abi_info.as_param} {param.name}")
         abi_params_str = ", ".join(abi_params)
         cpp_params_str = ", ".join(cpp_params)
         args_from_abi_str = ", ".join(args_from_abi)
-        cpp_impl_pkg_target.include(cpp_proj_func_info.return_ty_header_defn)
-        result = cpp_proj_func_info.return_into_abi(f"_func({args_from_abi_str})")
-        cpp_impl_pkg_target.write(
+        pkg_cpp_impl_target.include(func_cpp_proj_info.return_ty_header_defn)
+        result = func_cpp_proj_info.return_into_abi(f"_func({args_from_abi_str})")
+        pkg_cpp_impl_target.write(
             f"#define TH_EXPORT_CPP_API_{func.name}(_func) \\\n"
-            f"    TH_STATIC_ASSERT(TH_IS_SAME(TH_TYPEOF(_func), {cpp_proj_func_info.return_ty_name} ({cpp_params_str})), \\\n"
-            f"        \"'\" #_func \"' is incompatible with '{cpp_proj_func_info.return_ty_name} {cpp_proj_func_info.name}({cpp_params_str})'\"); \\\n"
-            f"    {abi_func_info.return_ty_name} {abi_func_info.name}({abi_params_str}) {{ \\\n"
+            f"    TH_STATIC_ASSERT(TH_IS_SAME(TH_TYPEOF(_func), {func_cpp_proj_info.return_ty_name} ({cpp_params_str})), \\\n"
+            f"        \"'\" #_func \"' is incompatible with '{func_cpp_proj_info.return_ty_name} {func_cpp_proj_info.name}({cpp_params_str})'\"); \\\n"
+            f"    {func_abi_info.return_ty_name} {func_abi_info.name}({abi_params_str}) {{ \\\n"
             f"        return {result}; \\\n"
             f"    }}\n"
         )

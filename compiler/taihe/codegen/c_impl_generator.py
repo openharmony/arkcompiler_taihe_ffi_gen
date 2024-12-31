@@ -1,8 +1,8 @@
 from taihe.codegen.abi_generator import (
-    ABIBaseFuncDeclInfo,
-    ABIPackageInfo,
-    ABITypeInfo,
+    BaseFuncDeclABIInfo,
     COutputBuffer,
+    PackageABIInfo,
+    TypeABIInfo,
 )
 from taihe.semantics.declarations import (
     GlobFuncDecl,
@@ -13,7 +13,7 @@ from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
 from taihe.utils.outputs import OutputManager
 
 
-class CImplPackageInfo(AbstractAnalysis[Package]):
+class PackageCImplInfo(AbstractAnalysis[Package]):
     def __init__(self, am: AnalysisManager, p: Package) -> None:
         self.header = f"{p.name}.impl.h"
 
@@ -28,37 +28,37 @@ class CImplCodeGenerator:
             self.gen_package_file(pkg)
 
     def gen_package_file(self, pkg: Package):
-        c_impl_pkg_info = CImplPackageInfo.get(self.am, pkg)
-        c_impl_pkg_target = COutputBuffer.create(
-            self.tm, f"include/{c_impl_pkg_info.header}", True
+        pkg_c_impl_info = PackageCImplInfo.get(self.am, pkg)
+        pkg_c_impl_target = COutputBuffer.create(
+            self.tm, f"include/{pkg_c_impl_info.header}", True
         )
-        abi_pkg_info = ABIPackageInfo.get(self.am, pkg)
-        c_impl_pkg_target.include("taihe/common.h")
-        c_impl_pkg_target.include(f"{abi_pkg_info.header}")
+        pkg_abi_info = PackageABIInfo.get(self.am, pkg)
+        pkg_c_impl_target.include("taihe/common.h")
+        pkg_c_impl_target.include(f"{pkg_abi_info.header}")
         for func in pkg.functions:
-            self.gen_func(func, c_impl_pkg_target)
+            self.gen_func(func, pkg_c_impl_target)
 
     def gen_func(
         self,
         func: GlobFuncDecl,
-        c_impl_pkg_target: COutputBuffer,
+        pkg_c_impl_target: COutputBuffer,
     ):
-        abi_func_info = ABIBaseFuncDeclInfo.get(self.am, func)
+        func_abi_info = BaseFuncDeclABIInfo.get(self.am, func)
         params = []
         args = []
         for param in func.params:
-            abi_type_info = ABITypeInfo.get(self.am, param.ty_ref.resolved_ty)
-            c_impl_pkg_target.include(abi_type_info.header)
-            params.append(f"{abi_type_info.as_param} {param.name}")
+            type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.resolved_ty)
+            pkg_c_impl_target.include(type_abi_info.header)
+            params.append(f"{type_abi_info.as_param} {param.name}")
             args.append(param.name)
         params_str = ", ".join(params)
         args_str = ", ".join(args)
-        c_impl_pkg_target.include(abi_func_info.return_ty_header)
-        c_impl_pkg_target.write(
+        pkg_c_impl_target.include(func_abi_info.return_ty_header)
+        pkg_c_impl_target.write(
             f"#define TH_EXPORT_C_API_{func.name}(_func) \\\n"
-            f"  TH_STATIC_ASSERT(TH_IS_SAME(TH_TYPEOF(_func), {abi_func_info.return_ty_name} ({params_str})), \\\n"
-            f"    \"'\" #_func \"' is incompatible with '{abi_func_info.return_ty_name} {abi_func_info.name}({params_str})'\"); \\\n"
-            f"  {abi_func_info.return_ty_name} {abi_func_info.name}({params_str}) {{ \\\n"
+            f"  TH_STATIC_ASSERT(TH_IS_SAME(TH_TYPEOF(_func), {func_abi_info.return_ty_name} ({params_str})), \\\n"
+            f"    \"'\" #_func \"' is incompatible with '{func_abi_info.return_ty_name} {func_abi_info.name}({params_str})'\"); \\\n"
+            f"  {func_abi_info.return_ty_name} {func_abi_info.name}({params_str}) {{ \\\n"
             f"    return _func({args_str}); \\\n"
             f"  }}\n"
         )
