@@ -41,23 +41,25 @@ specField
 
 structField
     : (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
-      token_name = ID COLON Type_ty = type SEMICOLON # structProperty
+      token_name = ID
+      COLON Type_ty = type SEMICOLON # structProperty
     ;
 
 enumField
     : (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
-      token_name = ID (COLON TypeOpt_ty = type)? (ASSIGN_TO IntExprOpt_expr = intExpr)? SEMICOLON # enumProperty
+      token_name = ID
+      (COLON TypeOpt_ty = type)? (ASSIGN_TO IntExprOpt_expr = intExpr)? SEMICOLON # enumProperty
+    ;
+
+interfaceField
+    : (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
+      token_name = ID
+      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS COLON (TypeOpt_return_ty = type | KW_VOID)? SEMICOLON # interfaceFunction
     ;
 
 interfaceParent
     : (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
       Type_ty = type
-    ;
-
-interfaceField
-    : (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
-      KW_FUNCTION token_name = ID
-      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS COLON (TypeOpt_return_ty = type | KW_VOID)? SEMICOLON # interfaceFunction
     ;
 
 parameter

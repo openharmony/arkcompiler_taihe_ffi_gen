@@ -1,22 +1,22 @@
 from rgb.base use RGB, Color, ColorOrRGBOrName;
 
 interface IBase {
-    function getId(): String;
+    getId(): String;
 }
 
 interface IShape: IBase {
-    function calculateArea(): f32;
+    calculateArea(): f32;
 }
 
 interface IColorable: IBase {
-    function getColor(): ColorOrRGBOrName;
-    function setColor(c: ColorOrRGBOrName): void;
+    getColor(): ColorOrRGBOrName;
+    setColor(c: ColorOrRGBOrName): void;
 }
 
 function copyColor(dst: IColorable, src: IColorable): void;
 
 interface IShowable: IColorable, IShape {
-    function show(): void;
+    show(): void;
 }
 
 function makeRectangle(id: String, h: f32, w: f32): IShape;

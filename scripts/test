@@ -6,8 +6,9 @@ source "$(dirname "$0")/common_lib.sh"
 init_py_env
 
 coverage run -m -p pytest
-coverage run -m -p taihe -I ../test/compiler/idl/ -O ../test/compiler/out/
-coverage run -m -p taihe -I ../test/rgb/idl/ -O ../test/rgb/out/
-coverage run -m -p taihe -I ../test/string/idl/ -O ../test/string/out/ -u -a
+coverage run -m -p taihe -I ../test/compiler/idl -O ../test/compiler/out -a -u
+coverage run -m -p taihe -I ../test/integer/idl -O ../test/integer/out -a -u
+coverage run -m -p taihe -I ../test/rgb/idl -O ../test/rgb/out -a -u
+coverage run -m -p taihe -I ../test/string/idl -O ../test/string/out -a -u
 coverage combine
 coverage report
