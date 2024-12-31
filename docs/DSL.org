@@ -49,45 +49,41 @@
 
 * 基础类型
 内部提供了以下几种基础类型：
-- 无符号整型：=i8=, =i16=, =i32=, =i64=
-- 有符号整型：=u8=, =u16=, =u32=, =u64=
-- 浮点型：=f32=, =f64=
-- 布尔型：=bool=
-- 字符串类型：=String=
+- 无符号整型： =i8=, =i16=, =i32=, =i64=
+- 有符号整型： =u8=, =u16=, =u32=, =u64=
+- 浮点型： =f32=, =f64=
+- 布尔型： =bool=
+- 字符串类型： =String=
 
 * 函数
-支持在 class/interface 以外定义函数
+支持在 =class/interface= 以外定义函数
 
 ** 函数参数
 1. 函数可以有任意数量的参数，每个参数由参数名、参数类型和类型修饰符共同组成。
 
-2. =mut= 关键字是唯一的类型修饰符，其用于表示该参数是可变的。该关键字不可用于枚举类型和基础类型。
-
 ** 返回值
-1. 函数可以有零个、一个或多个返回值。每个返回值由返回值的类型表示。
+1. 函数可以有零个或一个返回值。每个返回值由返回值的类型表示。当函数返回值为多个时，可以用结构体表示。
 
 以下是一些合法或非法的函数接口声明示例：
 #+BEGIN_SRC rust
-struct Foo {
-  a: i32;
-  b: i32;
+function func(m: i32, n: i32): (String, String);  // Error: return value can only be one at most
+struct StringPair {
+  a: String;
+  b: String;
 }
-enum Bar {
-  X = 1;
-  Y = 2;
-}
-fn func(m: i32, n: i32): (String, i32);  // OK
-fn func(foo: mut Foo);                   // Error: return value type cannot be omitted
-fn func(foo: mut Foo): ();               // OK
-fn func(bar: mut Bar): String;           // Error: `mut` qualifier cannot be used on enum type
+function func(m: i32, n: i32): StringPair;        // OK
+function func(foo: String);                       // Error: return value type cannot be omitted
+function func(foo: i32): void;                    // OK
 #+END_SRC
 
 * 结构体
-结构体是若干数据成员的组合，其内部可包含的数据成员类型包括基础类型、枚举类型和其他结构体类型，其接口声明方法如下：
+结构体是若干数据成员的组合，其内部可包含的数据成员类型包括基础类型、枚举类型、接口类型和其他结构体类型，其接口声明方法如下：
 #+BEGIN_SRC rust
+interface Base {}
 struct Foo {
   a: i32;
   s: String;
+  i: Base;
 }
 #+END_SRC
 
@@ -126,6 +122,30 @@ enum Bar {
    // Bar::A defaults to 0, and Bar::C is implicitly set to 0
 #+END_SRC
 
+3. 枚举元素可以定义的类型包括基础类型、枚举类型、接口类型和结构体类型。在使用时枚举类型等同于 =Union= 类型，枚举对象的实际数据类型为其标签值对应的枚举元素类型。
+#+BEGIN_SRC rust
+enum Color {
+  RED   = 0xff << 0o20;
+  GREEN = 0xff << 0o10;
+  BLUE  = 0xff << 0o00;
+}
+struct RGB {
+  r: u8;
+  g: u8;
+  b: u8;
+}
+enum ColorName {
+  undefined;            // 0
+  color: Color = 0x1;   // 1
+  rgb: RGB = 0x2;       // 2
+  name: String = 0x3;   // 3
+}   // OK
+    // if ColorName.tag == 0 : it is same as "?" in "Option" type
+    // if ColorName.tag == 1 : ColorName data type is Color
+    // if ColorName.tag == 2 : ColorName data type is RGB
+    // if ColorName.tag == 3 : ColorName data type is String
+#+END_SRC
+
 * 接口
 接口的基本定义方式如下：
 #+BEGIN_SRC rust
@@ -142,8 +162,42 @@ interface Derived: BaseA, BaseB {
 }
 #+END_SRC
 
+* 属性
+属性的名字和值都是自定义的，基本定义方式如下：
+#+BEGIN_SRC rust
+[pkgname = "package_func_1", index = 1, has_return_val = FALSE]
+function func_1(color: RGB): void;
+#+END_SRC
+
+1. 属性可以只有名字，默认值为 =None= 。
+#+BEGIN_SRC rust
+[tuple]
+struct IntPair {
+    n: i32;
+    m: i32;
+}
+#+END_SRC
+
+2. 文件可以有且仅有一个属性，定义位置为文件末尾。
+#+BEGIN_SRC rust
+[file_info = "\u6d4b\u8bd5"]
+#+END_SRC
+
+3. 函数、结构体、结构体元素、枚举、枚举元素、接口都可以有且仅有一个属性，定义位置为元素上方相邻的一行。
+#+BEGIN_SRC rust
+[tuple]                                 // OK
+struct IntPair {
+    [pkgname = "package", baseinfo]     // OK
+    n: i32;
+    m: i32;
+}
+[cname = "package_func_1", index = 1, has_return_val = FALSE]
+[cname = "package_func_2", index = 2, has_return_val = FALSE]       // Error
+function func(): void;
+#+END_SRC
+
 * 其他
-函数和类型的声明没有先后顺序，但需要注意结构体之间不可递归包含。例如：
+1. 函数和类型的声明没有先后顺序，但需要注意结构体之间不可递归包含。例如：
 #+BEGIN_SRC rust
 struct Foo {
   bar: Bar;
@@ -160,3 +214,18 @@ struct Bar {
 }  // Error: recursive inclusion detected: Foo -> bar: Bar -> foo: Foo
 #+END_SRC
 
+2. 接口之间不可递归扩展。例如：
+#+BEGIN_SRC rust
+interface RecursiveIfaceA: RecursiveIfaceB {}
+interface RecursiveIfaceB: RecursiveIfaceA {}  // Error
+#+END_SRC
+
+3. 枚举与结构体的定义之间不可递归包含。例如：
+#+BEGIN_SRC rust
+struct RecursiveStruct {
+    e: RecursiveEnum;
+}
+enum RecursiveEnum {
+    s: RecursiveStruct;   // Error
+}
+#+END_SRC
