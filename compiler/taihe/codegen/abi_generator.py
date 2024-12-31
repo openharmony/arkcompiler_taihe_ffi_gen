@@ -422,8 +422,6 @@ class ABICodeGenerator:
         enum_abi_target: COutputBuffer,
         enum_abi_info: EnumDeclABIInfo,
     ):
-        if not enum_abi_info.has_data:
-            return
         enum_abi_target.write(f"union {enum_abi_info.union_name} {{\n")
         for item in enum.items:
             if item.ty_ref is None:
@@ -442,10 +440,7 @@ class ABICodeGenerator:
         enum_abi_target.write(
             f"struct {enum_abi_info.name} {{\n"
             f"  enum {enum_abi_info.tag_name} tag;\n"
-        )
-        if enum_abi_info.has_data:
-            enum_abi_target.write(f"  union {enum_abi_info.union_name} data;\n")
-        enum_abi_target.write(
+            f"  union {enum_abi_info.union_name} data;\n"
             f"}};\n"
             f"typedef struct {enum_abi_info.name} {enum_abi_info.as_owner};\n"
             f"typedef struct {enum_abi_info.name} const* {enum_abi_info.as_param};\n"
