@@ -526,11 +526,11 @@ class ABICodeGenerator:
         iface: IfaceDecl,
         iface_abi_info: IfaceDeclABIInfo,
     ):
-        iface_abi_0_target = COutputBuffer.create(
+        iface_abi_target_0 = COutputBuffer.create(
             self.tm, f"include/{iface_abi_info.header_0}", True
         )
-        iface_abi_0_target.include("taihe/object.abi.h")
-        iface_abi_0_target.write(
+        iface_abi_target_0.include("taihe/object.abi.h")
+        iface_abi_target_0.write(
             f"struct {iface_abi_info.f_table};\n"
             f"struct {iface_abi_info.v_table};\n"
             f"struct {iface_abi_info.name} {{\n"
@@ -540,8 +540,8 @@ class ABICodeGenerator:
             f"typedef struct {iface_abi_info.name} {iface_abi_info.as_param};\n"
             f"typedef struct {iface_abi_info.name} {iface_abi_info.as_owner};\n"
         )
-        self.gen_iface_copy_func(iface, iface_abi_0_target, iface_abi_info)
-        self.gen_iface_drop_func(iface, iface_abi_0_target, iface_abi_info)
+        self.gen_iface_copy_func(iface, iface_abi_target_0, iface_abi_info)
+        self.gen_iface_drop_func(iface, iface_abi_target_0, iface_abi_info)
 
     def gen_iface_1_file(
         self,

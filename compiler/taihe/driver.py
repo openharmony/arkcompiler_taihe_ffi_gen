@@ -36,8 +36,11 @@ class CompilerInvocation:
 
     # TODO: implement "CompilerBackend" and store the backend-specific options there?
     out_dir: Optional[Path] = None
+
     gen_author: bool = False
     gen_user: bool = False
+
+    quiet: bool = False
 
 
 class CompilerInstance:
@@ -85,7 +88,8 @@ class CompilerInstance:
         analyze_semantics(self.package_group, self.diagnostics_manager)
 
     def show(self):
-        pretty_print(self.package_group, sys.stdout)
+        if not self.invocation.quiet:
+            pretty_print(self.package_group, sys.stdout)
 
     def generate(self):
         if self.diagnostics_manager.current_max_level >= Level.ERROR:

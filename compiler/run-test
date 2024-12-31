@@ -1,0 +1,199 @@
+#!/usr/bin/env python3
+
+import os
+import shutil
+import subprocess
+from pathlib import Path
+import argparse
+from taihe.driver import CompilerInstance, CompilerInvocation
+
+CXX = os.getenv("CXX", "clang++")
+C = os.getenv("C", "clang")
+
+BASEDIR = Path(__file__).resolve().parent
+
+
+def run_command(command):
+    result = subprocess.run(command, shell=True, check=True, text=True)
+    return result
+
+
+def clean_directory(directory):
+    if directory.exists():
+        shutil.rmtree(directory)
+
+
+def create_directory(directory):
+    directory.mkdir(parents=True, exist_ok=True)
+
+
+def copy_directory(src_directory, dst_directory):
+    if src_directory.exists():
+        shutil.copytree(src_directory, dst_directory, dirs_exist_ok=True)
+
+
+def compile(output_dir, input_dir, *include_dirs, opt_level):
+    output_files = []
+    for input_file in input_dir.iterdir():
+        name = input_file.name
+        output_file = output_dir / f"{name}.o"
+        if name.endswith(".c"):
+            compiler = C
+            std = "gnu11"
+        else:
+            compiler = CXX
+            std = "gnu++17"
+        command = f"{compiler} -c -fvisibility=hidden -fPIC -O{opt_level} -std={std} -o {output_file} {input_file}"
+        for include_dir in include_dirs:
+            command += f" -I {include_dir}"
+        run_command(command)
+        output_files.append(output_file)
+    return output_files
+
+
+def link(output_file, *input_files, shared):
+    command = f"{CXX} -fPIC -o {output_file}"
+    for input_file in input_files:
+        command += f" {input_file}"
+    if shared:
+        command += " -shared"
+    run_command(command)
+
+
+def main(target_dir: str, generate_only: bool, generate_and_compile: bool, opt_level: str):
+    target_path = Path(target_dir)
+
+    idl_dir = target_path / "idl"
+    author_dir = target_path / "author"
+    user_dir = target_path / "user"
+
+    author_test_dir = target_path / "author_test"
+    author_test_include_dir = author_test_dir / "include"
+    author_test_src_dir = author_test_dir / "src"
+
+    user_test_dir = target_path / "user_test"
+    user_test_include_dir = user_test_dir / "include"
+    user_test_src_dir = user_test_dir / "src"
+
+    runtime_dir = BASEDIR / ".." / "runtime"
+    runtime_include_dir = runtime_dir / "include"
+    runtime_src_dir = runtime_dir / "src"
+
+    build_dir = target_path / "build"
+    build_runtime_dir = build_dir / "runtime"
+    build_author_dir = build_dir / "author"
+    build_user_dir = build_dir / "user"
+
+    if not idl_dir.is_dir():
+        raise FileNotFoundError(f"'{idl_dir}' is not an valid directory.")
+
+    print("Generating author codes...")
+    clean_directory(author_test_dir)
+    create_directory(author_test_src_dir)
+    create_directory(author_test_include_dir)
+    CompilerInstance(CompilerInvocation(
+        src_dirs=[idl_dir],
+        out_dir=author_test_dir,
+        gen_author=True,
+        quiet=True,
+    )).run()
+
+    print("Generating user codes...")
+    clean_directory(user_test_dir)
+    create_directory(user_test_src_dir)
+    create_directory(user_test_include_dir)
+    CompilerInstance(CompilerInvocation(
+        src_dirs=[idl_dir],
+        out_dir=user_test_dir,
+        gen_user=True,
+        quiet=True,
+    )).run()
+
+    if generate_only:
+        print("Done.")
+        return
+
+    clean_directory(build_dir)
+    create_directory(build_runtime_dir)
+    create_directory(build_author_dir)
+    create_directory(build_user_dir)
+
+    print("Compiling to dynamic link library...")
+    copy_directory(author_dir, author_test_dir)
+    so_file = build_dir / "libtest.so"
+    link(
+        so_file,
+        *compile(
+            build_runtime_dir,
+            runtime_src_dir,
+            runtime_include_dir,
+            opt_level=opt_level,
+        ),
+        *compile(
+            build_author_dir,
+            author_test_src_dir,
+            runtime_include_dir,
+            author_test_include_dir,
+            opt_level=opt_level,
+        ),
+        shared=True,
+    )
+
+    print("Compiling to executable file...")
+    copy_directory(user_dir, user_test_dir)
+    elf_file = build_dir / "test"
+    link(
+        elf_file,
+        so_file,
+        *compile(
+            build_user_dir,
+            user_test_src_dir,
+            runtime_include_dir,
+            user_test_include_dir,
+            opt_level=opt_level,
+        ),
+        shared=False,
+    )
+
+    if generate_and_compile:
+        print("Compile.")
+        return
+
+    print("Done. Running...")
+    run_command(f"{elf_file}")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Build and run project from a target directory",
+    )
+    parser.add_argument(
+        "target_directory",
+        type=str,
+        help="The target directory containing source files for the project",
+    )
+    parser.add_argument(
+        "-g",
+        "--generate-only",
+        action="store_true",
+        help="To generate source and header files and not to compile them",
+    )
+    parser.add_argument(
+        "-c",
+        "--generate-and-compile",
+        action="store_true",
+        help="Generate source and header files and Compile them",
+    )
+    parser.add_argument(
+        "-O",
+        "--optimization",
+        type=str,
+        nargs="?",
+        default="0",
+        const="",
+        help="Optimization level for compilation",
+    )
+
+    args = parser.parse_args()
+
+    main(args.target_directory, args.generate_only, args.generate_and_compile, args.optimization)

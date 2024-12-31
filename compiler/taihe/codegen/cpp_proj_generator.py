@@ -454,6 +454,9 @@ class CppProjCodeGenerator:
                 f"        auto get(ConstexprTagType::{item.name}) {{\n"
                 f"            return &{item.name};\n"
                 f"        }}\n"
+                f"        auto get(ConstexprTagType::{item.name}) const {{\n"
+                f"            return &{item.name};\n"
+                f"        }}\n"
                 f"        void dtor(ConstexprTagType::{item.name}) {{\n"
                 f"            {item.name}.~decltype({item.name})();\n"
                 f"        }}\n"
@@ -466,7 +469,7 @@ class CppProjCodeGenerator:
         for item in enum.items:
             enum_cpp_proj_target.write(
                 f"        case Tag::{item.name}:\n"
-                f"            data.ctor(ConstexprTag::{item.name}, other.data);\n"
+                f"            data.ctor(ConstexprTag::{item.name}, other.data.{item.name});\n"
                 f"            break;\n"
             )
         enum_cpp_proj_target.write(
@@ -479,7 +482,7 @@ class CppProjCodeGenerator:
         for item in enum.items:
             enum_cpp_proj_target.write(
                 f"        case Tag::{item.name}:\n"
-                f"            data.ctor(ConstexprTag::{item.name}, std::move(other.data));\n"
+                f"            data.ctor(ConstexprTag::{item.name}, std::move(other.data.{item.name}));\n"
                 f"            break;\n"
             )
         enum_cpp_proj_target.write(
@@ -510,6 +513,10 @@ class CppProjCodeGenerator:
             f"    }}\n"
             f"    template<typename T>\n"
             f"    auto get_ptr(T t) {{\n"
+            f"        return tag == T::tag ? data.get(t) : nullptr;\n"
+            f"    }}\n"
+            f"    template<typename T>\n"
+            f"    auto get_ptr(T t) const {{\n"
             f"        return tag == T::tag ? data.get(t) : nullptr;\n"
             f"    }}\n"
             f"    {enum_cpp_proj_info.name} const& operator=({enum_cpp_proj_info.name} const& other) {{\n"
