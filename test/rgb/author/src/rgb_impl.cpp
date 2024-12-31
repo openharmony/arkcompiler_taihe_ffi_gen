@@ -33,7 +33,7 @@ public:
 };
 
 rgb::show::IShape makeRectangleImpl(taihe::core::string_view id, float h, float w) {
-    return rgb::show::IShape(taihe::core::type_tag<Rectangle>, id, h, w);
+    return taihe::core::makeInterface<rgb::show::IShape, Rectangle>(id, h, w);
 }
 
 class ColoredRectangle : public Rectangle {
@@ -52,11 +52,11 @@ public:
 
     void show() {
         std::string content = std::format("{}: {}x{}", name, h, w);
-        if (auto ptr = myColor.get_ptr(rgb::base::ColorOrRGBOrName::ConstexprTag::color)) {
+        if (auto ptr = myColor.get_ptr<rgb::base::ColorOrRGBOrName::TagType::color>()) {
             std::cout << std::format("\033[{}m{}\033[39m", 30 + (int)ptr->tag, content) << std::endl;
-        } else if (auto ptr = myColor.get_ptr(rgb::base::ColorOrRGBOrName::ConstexprTag::rgb)) {
+        } else if (auto ptr = myColor.get_ptr<rgb::base::ColorOrRGBOrName::TagType::rgb>()) {
             std::cout << std::format("\033[38;2;{};{};{}m{}\033[39m", ptr->r, ptr->g, ptr->b, content) << std::endl;
-        } else if (auto ptr = myColor.get_ptr(rgb::base::ColorOrRGBOrName::ConstexprTag::name)) {
+        } else if (auto ptr = myColor.get_ptr<rgb::base::ColorOrRGBOrName::TagType::name>()) {
             std::cout << std::format("({}) {}", ptr->c_str(), content) << std::endl;
         } else {
             std::cout << content << std::endl;
@@ -65,7 +65,7 @@ public:
 };
 
 rgb::show::IShowable makeColoredRectangleImpl(taihe::core::string_view id, rgb::base::ColorOrRGBOrName const& color, float h, float w) {
-    return rgb::show::IShowable(taihe::core::type_tag<ColoredRectangle>, id, h, w, color);
+    return taihe::core::makeInterface<rgb::show::IShowable, ColoredRectangle>(id, h, w, color);
 }
 
 void copyColorImpl(param::rgb::show::IColorable dst, param::rgb::show::IColorable src) {
@@ -73,11 +73,11 @@ void copyColorImpl(param::rgb::show::IColorable dst, param::rgb::show::IColorabl
 }
 
 taihe::core::string colorToStringImpl(rgb::base::ColorOrRGBOrName const& color) {
-    if (auto ptr = color.get_ptr(rgb::base::ColorOrRGBOrName::ConstexprTag::color)) {
+    if (auto ptr = color.get_ptr<rgb::base::ColorOrRGBOrName::TagType::color>()) {
         return std::format("Color({})", (int)ptr->tag);
-    } else if (auto ptr = color.get_ptr(rgb::base::ColorOrRGBOrName::ConstexprTag::rgb)) {
+    } else if (auto ptr = color.get_ptr<rgb::base::ColorOrRGBOrName::TagType::rgb>()) {
         return std::format("#{:02x}{:02x}{:02x}", ptr->r, ptr->g, ptr->b);
-    } else if (auto ptr = color.get_ptr(rgb::base::ColorOrRGBOrName::ConstexprTag::name)) {
+    } else if (auto ptr = color.get_ptr<rgb::base::ColorOrRGBOrName::TagType::name>()) {
         return ptr->c_str();
     } else {
         return "Error";

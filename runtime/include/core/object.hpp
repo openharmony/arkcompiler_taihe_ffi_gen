@@ -85,9 +85,17 @@ struct VTableImpl {};
 template<typename RTTI, typename Impl>
 struct RTTIImpl {};
 
-template<typename Impl>
-struct TypeTag {};
+template<typename InterfaceOwner>
+struct OwnerInspector {};
 
-template<typename Impl>
-TypeTag<Impl> type_tag;
+template<typename InterfaceOwner, typename Impl, typename OwnerInspector<InterfaceOwner>::Type = nullptr, typename... Args>
+InterfaceOwner makeInterface(Args&&... args) {
+    return InterfaceOwner{{
+        .vtbl_ptr = &VTableImpl<typename OwnerInspector<InterfaceOwner>::VTable, Impl>::vtbl,
+        .data_ptr = new WithDataBlockHead<Impl>(
+            reinterpret_cast<TypeInfo const*>(&RTTIImpl<typename OwnerInspector<InterfaceOwner>::RTTI, Impl>::rtti), 1,
+            std::forward<Args>(args)...
+        ),
+    }};
+}
 }

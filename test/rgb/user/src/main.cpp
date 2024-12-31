@@ -42,11 +42,11 @@ public:
 
     void show() {
         std::string content = std::format("{}: {}", name, r);
-        if (auto ptr = myColor.get_ptr(rgb::base::ColorOrRGBOrName::ConstexprTag::color)) {
+        if (auto ptr = myColor.get_ptr<rgb::base::ColorOrRGBOrName::TagType::color>()) {
             std::cout << std::format("\033[{}m{}\033[39m", 30 + (int)ptr->tag, content) << std::endl;
-        } else if (auto ptr = myColor.get_ptr(rgb::base::ColorOrRGBOrName::ConstexprTag::rgb)) {
+        } else if (auto ptr = myColor.get_ptr<rgb::base::ColorOrRGBOrName::TagType::rgb>()) {
             std::cout << std::format("\033[38;2;{};{};{}m{}\033[39m", ptr->r, ptr->g, ptr->b, content) << std::endl;
-        } else if (auto ptr = myColor.get_ptr(rgb::base::ColorOrRGBOrName::ConstexprTag::name)) {
+        } else if (auto ptr = myColor.get_ptr<rgb::base::ColorOrRGBOrName::TagType::name>()) {
             std::cout << std::format("({}) {}", ptr->c_str(), content) << std::endl;
         } else {
             std::cout << content << std::endl;
@@ -55,17 +55,17 @@ public:
 };
 
 int main() {
-    base::ColorOrRGBOrName color_114514(base::ColorOrRGBOrName::ConstexprTag::rgb, 0x11, 0x45, 0x14);
-    base::ColorOrRGBOrName color_yellow(base::ColorOrRGBOrName::ConstexprTag::color, base::Color::ConstexprTag::yellow);
-    base::ColorOrRGBOrName color_xxx(base::ColorOrRGBOrName::ConstexprTag::name, "XXX");
-    base::ColorOrRGBOrName color_unknown(base::ColorOrRGBOrName::ConstexprTag::undefined);
+    base::ColorOrRGBOrName color_114514(taihe::core::ConstexprTag<base::ColorOrRGBOrName::TagType::rgb>, 0x11, 0x45, 0x14);
+    base::ColorOrRGBOrName color_yellow(taihe::core::ConstexprTag<base::ColorOrRGBOrName::TagType::color>, taihe::core::ConstexprTag<base::Color::TagType::yellow>);
+    base::ColorOrRGBOrName color_xxx(taihe::core::ConstexprTag<base::ColorOrRGBOrName::TagType::name>, "XXX");
+    base::ColorOrRGBOrName color_unknown(taihe::core::ConstexprTag<base::ColorOrRGBOrName::TagType::undefined>);
 
     std::cout << base::toString(color_114514).c_str() << std::endl;
     std::cout << base::toString(color_yellow).c_str() << std::endl;
     std::cout << base::toString(color_xxx).c_str() << std::endl;
     std::cout << base::toString(color_unknown).c_str() << std::endl;
 
-    auto circle = show::IShowable(taihe::core::type_tag<ColoredCircle>, "circle", 10, color_114514);
+    auto circle = taihe::core::makeInterface<rgb::show::IShowable, ColoredCircle>("circle", 10, color_114514);
     auto rect = show::makeColoredRectangle("rect a", color_yellow, 5, 5);
 
     circle.show();

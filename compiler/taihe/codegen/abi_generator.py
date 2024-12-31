@@ -473,17 +473,15 @@ class ABICodeGenerator:
                 enum_abi_target.write(
                     f"  case {enum_item_abi_info.name}:\n"
                     f"    result.data.{item.name} = {ty_info.copy_func}(data_ptr->data.{item.name});\n"
-                    f"    break;\n"
+                    f"    return result;\n"
                 )
             else:
                 enum_abi_target.write(
                     f"  case {enum_item_abi_info.name}:\n"
                     f"    result.data.{item.name} = data_ptr->data.{item.name};\n"
-                    f"    break;\n"
+                    f"    return result;\n"
                 )
-        enum_abi_target.write(
-            "  default:\n" "    break;\n" "  }\n" "  return result;\n" "}\n"
-        )
+        enum_abi_target.write("  default:\n" "    return result;\n" "  }\n" "}\n")
 
     def gen_enum_drop_func(
         self,
