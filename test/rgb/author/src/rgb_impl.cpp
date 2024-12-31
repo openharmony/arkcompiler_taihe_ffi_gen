@@ -6,22 +6,6 @@
 #include <iostream>
 #include <format>
 
-void copyColorImpl(param::rgb::show::IColorable dst, param::rgb::show::IColorable src) {
-    dst.setColor(src.getColor());
-}
-
-taihe::core::string colorToStringImpl(rgb::base::ColorOrRGBOrName const& color) {
-    if (auto ptr = color.get_ptr(rgb::base::ColorOrRGBOrName::ConstexprTag::color)) {
-        return std::format("Color({})", (int)ptr->tag);
-    } else if (auto ptr = color.get_ptr(rgb::base::ColorOrRGBOrName::ConstexprTag::rgb)) {
-        return std::format("#{:02x}{:02x}{:02x}", ptr->r, ptr->g, ptr->b);
-    } else if (auto ptr = color.get_ptr(rgb::base::ColorOrRGBOrName::ConstexprTag::name)) {
-        return ptr->c_str();
-    } else {
-        return "Error";
-    }
-}
-
 class Rectangle {
 protected:
     float h;
@@ -32,20 +16,18 @@ protected:
 public:
     Rectangle(taihe::core::string_view id, float h, float w)
         : name(id), h(h), w(w) {
-        std::cout << std::format("Rectangle::Rectangle(name = {}, h = {}, w = {})", name, h, w) << std::endl;
+        std::cout << std::format("new 0x{:016x}", (size_t)((void*)this)) << std::endl;
     }
 
     ~Rectangle() {
-        std::cout << std::format("Rectangle::~Rectangle()") << std::endl;
+        std::cout << std::format("del 0x{:016x}", (size_t)((void*)this)) << std::endl;
     }
 
     taihe::core::string getId() {
-        std::cout << std::format("string Rectangle::getId()") << std::endl;
         return name;
     }
 
     float calculateArea() {
-        std::cout << std::format("float Rectangle::getArea()") << std::endl;
         return h * w;
     }
 };
@@ -86,7 +68,23 @@ rgb::show::IShowable makeColoredRectangleImpl(taihe::core::string_view id, rgb::
     return rgb::show::IShowable(taihe::core::type_tag<ColoredRectangle>, id, h, w, color);
 }
 
-TH_EXPORT_CPP_API_copyColor(copyColorImpl)
-TH_EXPORT_CPP_API_toString(colorToStringImpl)
+void copyColorImpl(param::rgb::show::IColorable dst, param::rgb::show::IColorable src) {
+    dst.setColor(src.getColor());
+}
+
+taihe::core::string colorToStringImpl(rgb::base::ColorOrRGBOrName const& color) {
+    if (auto ptr = color.get_ptr(rgb::base::ColorOrRGBOrName::ConstexprTag::color)) {
+        return std::format("Color({})", (int)ptr->tag);
+    } else if (auto ptr = color.get_ptr(rgb::base::ColorOrRGBOrName::ConstexprTag::rgb)) {
+        return std::format("#{:02x}{:02x}{:02x}", ptr->r, ptr->g, ptr->b);
+    } else if (auto ptr = color.get_ptr(rgb::base::ColorOrRGBOrName::ConstexprTag::name)) {
+        return ptr->c_str();
+    } else {
+        return "Error";
+    }
+}
+
 TH_EXPORT_CPP_API_makeRectangle(makeRectangleImpl)
 TH_EXPORT_CPP_API_makeColoredRectangle(makeColoredRectangleImpl)
+TH_EXPORT_CPP_API_copyColor(copyColorImpl)
+TH_EXPORT_CPP_API_toString(colorToStringImpl)

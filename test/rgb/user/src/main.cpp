@@ -2,36 +2,57 @@
 #include "rgb.show.proj.hpp"
 
 #include <iostream>
+#include <format>
+#include <cmath>
 
 using namespace rgb;
 
-// class ColoredCircle : public Rectangle {
-//     rgb::base::ColorOrRGBOrName myColor;
-// public:
-//     ColoredRectangle(taihe::core::string_view id, float h, float w, rgb::base::ColorOrRGBOrName const& color)
-//         : Rectangle(id, h, w), myColor(color) {}
+class ColoredCircle {
+    float r;
 
-//     rgb::base::ColorOrRGBOrName getColor() {
-//         return myColor;
-//     }
+    std::string name;
 
-//     void setColor(rgb::base::ColorOrRGBOrName const& color) {
-//         myColor = color;
-//     }
+    rgb::base::ColorOrRGBOrName myColor;
 
-//     void show() {
-//         std::string content = std::format("{}: {}x{}", name, h, w);
-//         if (auto ptr = myColor.get_ptr(rgb::base::ColorOrRGBOrName::ConstexprTag::color)) {
-//             std::cout << std::format("\033[{}m{}\033[39m", (int)ptr->tag, content) << std::endl;
-//         } else if (auto ptr = myColor.get_ptr(rgb::base::ColorOrRGBOrName::ConstexprTag::rgb)) {
-//             std::cout << std::format("\033[38;2;{};{};{}m{}\033[39m", ptr->r, ptr->g, ptr->b, content) << std::endl;
-//         } else if (auto ptr = myColor.get_ptr(rgb::base::ColorOrRGBOrName::ConstexprTag::name)) {
-//             std::cout << std::format("({}) {}", ptr->c_str(), content) << std::endl;
-//         } else {
-//             std::cout << content << std::endl;
-//         }
-//     }
-// };
+public:
+    ColoredCircle(taihe::core::string_view id, float r, rgb::base::ColorOrRGBOrName const& color)
+        : name(id), r(r), myColor(color) {
+        std::cout << std::format("new 0x{:016x}", (size_t)((void*)this)) << std::endl;
+    }
+
+    ~ColoredCircle() {
+        std::cout << std::format("del 0x{:016x}", (size_t)((void*)this)) << std::endl;
+    }
+
+    taihe::core::string getId() {
+        return name;
+    }
+
+    float calculateArea() {
+        return M_PI * r * r;
+    }
+
+    rgb::base::ColorOrRGBOrName getColor() {
+        return myColor;
+    }
+
+    void setColor(rgb::base::ColorOrRGBOrName const& color) {
+        myColor = color;
+    }
+
+    void show() {
+        std::string content = std::format("{}: {}", name, r);
+        if (auto ptr = myColor.get_ptr(rgb::base::ColorOrRGBOrName::ConstexprTag::color)) {
+            std::cout << std::format("\033[{}m{}\033[39m", 30 + (int)ptr->tag, content) << std::endl;
+        } else if (auto ptr = myColor.get_ptr(rgb::base::ColorOrRGBOrName::ConstexprTag::rgb)) {
+            std::cout << std::format("\033[38;2;{};{};{}m{}\033[39m", ptr->r, ptr->g, ptr->b, content) << std::endl;
+        } else if (auto ptr = myColor.get_ptr(rgb::base::ColorOrRGBOrName::ConstexprTag::name)) {
+            std::cout << std::format("({}) {}", ptr->c_str(), content) << std::endl;
+        } else {
+            std::cout << content << std::endl;
+        }
+    }
+};
 
 int main() {
     base::ColorOrRGBOrName color_114514(base::ColorOrRGBOrName::ConstexprTag::rgb, 0x11, 0x45, 0x14);
@@ -44,11 +65,11 @@ int main() {
     std::cout << base::toString(color_xxx).c_str() << std::endl;
     std::cout << base::toString(color_unknown).c_str() << std::endl;
 
-    auto rect_a = show::makeColoredRectangle("rect a", color_114514, 10, 10);
-    auto rect_b = show::makeColoredRectangle("rect b", color_yellow, 5, 5);
+    auto circle = show::IShowable(taihe::core::type_tag<ColoredCircle>, "circle", 10, color_114514);
+    auto rect = show::makeColoredRectangle("rect a", color_yellow, 5, 5);
 
-    rect_a.show();
-    rect_b.show();
-    show::copyColor(rect_b, rect_a);
-    rect_b.show();
+    circle.show();
+    rect.show();
+    show::copyColor(rect, circle);
+    rect.show();
 }
