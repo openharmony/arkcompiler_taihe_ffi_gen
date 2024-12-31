@@ -40,6 +40,9 @@ public:
     string(std::string_view value)
         : string(value.data(), value.size()) {}
 
+    string(std::string const &value)
+        : string(value.data(), value.size()) {}
+
     operator std::string_view() const noexcept {
         if (m_handle) {
             return { tstr_buf(m_handle), tstr_len(m_handle) };
@@ -205,6 +208,9 @@ struct string_view {
         : string_view(value.begin(), static_cast<uint32_t>(value.size())) {}
 
     string_view(std::string_view value)
+        : string_view(value.data(), value.size()) {}
+
+    string_view(std::string const &value)
         : string_view(value.data(), value.size()) {}
 
     operator std::string_view() const noexcept {

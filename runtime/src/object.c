@@ -1,18 +1,6 @@
 #include <taihe/common.h>
 #include <taihe/object.abi.h>
 
-// success: return ptr
-// failed: return NULL
-void* tobj_get_pvtbl(struct TypeInfo* rtti_ptr, const void* id) {
-  size_t len = rtti_ptr->len;
-  for (size_t i = 0; i < len; ++i) {
-    if ((rtti_ptr->idmap[i].id) == id) {
-      return rtti_ptr->idmap[i].vtbl_ptr;
-    }
-  }
-  return NULL;
-}
-
 struct DataBlockHead* tobj_dup(struct DataBlockHead* data_ptr) {
   if (data_ptr && data_ptr->m_count != 0) {
     ++data_ptr->m_count;
@@ -22,7 +10,7 @@ struct DataBlockHead* tobj_dup(struct DataBlockHead* data_ptr) {
 
 void tobj_drop(struct DataBlockHead* data_ptr) {
   if (data_ptr && --(data_ptr->m_count) == 0) {
-    data_ptr->rtti_ptr->free_data(data_ptr);
+    data_ptr->rtti_ptr->free_ptr(data_ptr);
   }
 }
 

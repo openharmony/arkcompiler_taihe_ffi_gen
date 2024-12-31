@@ -1,33 +1,23 @@
-from rgb.base use RGB, Color;
+from rgb.base use RGB, Color, ColorOrRGBOrName;
 
-function show(color: RGB): void;
-
-[tuple]
-struct StringPair {
-    _0: String;
-    _1: String;
-}
-
-function separate(a: String): StringPair;
-
-interface IBase {}
-
-interface IColorable: IBase {
-    function getColor(): Color;
-    function setColor(c: Color): void;
-}
-
-[tuple]
-struct IShapePair {
-    _0: IShape;
-    _1: IShape;
+interface IBase {
+    function getId(): String;
 }
 
 interface IShape: IBase {
     function calculateArea(): f32;
-    function separate(): IShapePair;
 }
+
+interface IColorable: IBase {
+    function getColor(): ColorOrRGBOrName;
+    function setColor(c: ColorOrRGBOrName): void;
+}
+
+function copyColor(dst: IColorable, src: IColorable): void;
 
 interface IShowable: IColorable, IShape {
     function show(): void;
 }
+
+function makeRectangle(id: String, h: f32, w: f32): IShape;
+function makeColoredRectangle(id: String, c: ColorOrRGBOrName, h: f32, w: f32): IShowable;

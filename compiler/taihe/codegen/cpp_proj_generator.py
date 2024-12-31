@@ -703,7 +703,7 @@ class CppProjCodeGenerator:
             f"    operator ::taihe::core::DataOwner() &&;\n"
             f"    operator ::taihe::core::DataRef() const&;\n"
             f"    {iface_cpp_proj_info.name}(::taihe::core::DataOwner other);\n"
-            f"    {iface_cpp_proj_info.name} &operator=({iface_cpp_proj_info.owner_full_name} other);\n"
+            f"    {iface_cpp_proj_info.name}& operator=({iface_cpp_proj_info.owner_full_name} other);\n"
             f"    operator bool();\n"
         )
         for ancestor, info in iface_abi_info.ancestor_dict.items():
@@ -859,8 +859,8 @@ class CppProjCodeGenerator:
                 args_from_abi.append(type_cpp_proj_info.pass_from_abi(param.name))
             params_abi_str = ", ".join(params_abi)
             args_from_abi_str = ", ".join(args_from_abi)
-            result = iface_cpp_proj_info.return_into_abi(
-                f"static_cast<Impl*>(static_cast<WithDataBlockHead<Impl>*>(tobj.data_ptr))->{method_cpp_proj_info.name}({args_from_abi_str})"
+            result = method_cpp_proj_info.return_into_abi(
+                f"static_cast<Impl*>(static_cast<::taihe::core::WithDataBlockHead<Impl>*>(tobj.data_ptr))->{method_cpp_proj_info.name}({args_from_abi_str})"
             )
             iface_cpp_proj_impl_target.write(
                 f"    static {method_abi_info.return_ty_name} {method.name}({params_abi_str}) {{\n"
@@ -886,13 +886,13 @@ class CppProjCodeGenerator:
     ):
         iface_cpp_proj_impl_target.write(
             f"template<typename Impl>\n"
-            f"struct taihe::core::FTableImpl<{iface_abi_info.v_table}, Impl> {{\n"
+            f"struct taihe::core::VTableImpl<{iface_abi_info.v_table}, Impl> {{\n"
             f"    static constexpr {iface_abi_info.v_table} vtbl = {{\n"
         )
         for ancestor_info in iface_abi_info.ancestor_list:
             ancestor_abi_info = IfaceDeclABIInfo.get(self.am, ancestor_info.iface)
             iface_cpp_proj_impl_target.write(
-                f"      .{ancestor_info.ptbl_ptr} = &::taihe::core::FTableImpl<{ancestor_abi_info.v_table}, Impl>::ftbl,\n"
+                f"      .{ancestor_info.ptbl_ptr} = &::taihe::core::FTableImpl<{ancestor_abi_info.f_table}, Impl>::ftbl,\n"
             )
         iface_cpp_proj_impl_target.write("    };\n" "};\n")
 
@@ -907,7 +907,7 @@ class CppProjCodeGenerator:
             f"template<typename Impl>\n"
             f"struct taihe::core::RTTIImpl<{iface_abi_info.rtti}, Impl> {{\n"
             f"    static void free(struct DataBlockHead* data_ptr) {{\n"
-            f"        delete static_cast<Impl*>(static_cast<WithDataBlockHead<Impl>*>(tobj.data_ptr));\n"
+            f"        delete static_cast<Impl*>(static_cast<::taihe::core::WithDataBlockHead<Impl>*>(data_ptr));\n"
             f"    }}\n"
             f"    static constexpr {iface_abi_info.rtti} rtti = {{\n"
             f"        .version = 0,\n"
@@ -917,8 +917,9 @@ class CppProjCodeGenerator:
         )
         for iface in iface_abi_info.ancestor_dict:
             ancestor_abi_info = IfaceDeclABIInfo.get(self.am, iface)
+            iface_cpp_proj_impl_target.include(ancestor_abi_info.header_1)
             iface_cpp_proj_impl_target.write(
-                f"            {{{ancestor_abi_info.iid}, &::taihe::core::VTableImpl<{ancestor_abi_info.v_table}, Impl>::vtbl}},\n"
+                f"            {{&{ancestor_abi_info.iid}, &::taihe::core::VTableImpl<{ancestor_abi_info.v_table}, Impl>::vtbl}},\n"
             )
         iface_cpp_proj_impl_target.write("        },\n" "    };\n" "};\n")
 
@@ -937,10 +938,10 @@ class CppProjCodeGenerator:
             f"template<typename Impl, typename... Args>\n"
             f"inline {iface_cpp_proj_info.name}::{iface_cpp_proj_info.name}(::taihe::core::TypeTag<Impl>, Args&&... args)\n"
             f"    : m_handle{{\n"
-            f"        .vtbl_ptr = &::taihe::core::VTable<{iface_abi_info.v_table}, Impl>::vtbl,\n"
-            f"        .data_ptr = new WithDataBlockHead<Impl>{{\n"
+            f"        .vtbl_ptr = &::taihe::core::VTableImpl<{iface_abi_info.v_table}, Impl>::vtbl,\n"
+            f"        .data_ptr = new ::taihe::core::WithDataBlockHead<Impl>{{\n"
             f"            {{\n"
-            f"                .rtti_ptr = reinterpret_cast<TypeInfo*>(&::taihe::core::RTTI<{iface_abi_info.rtti}, Impl>::rtti),\n"
+            f"                .rtti_ptr = reinterpret_cast<TypeInfo const*>(&::taihe::core::RTTIImpl<{iface_abi_info.rtti}, Impl>::rtti),\n"
             f"                .m_count = 0,\n"
             f"            }},\n"
             f"            {{std::forward<Args>(args)...}},\n"
@@ -978,6 +979,7 @@ class CppProjCodeGenerator:
             f"}}\n"
             f"inline {iface_cpp_proj_info.name}& {iface_cpp_proj_info.name}::operator=({iface_cpp_proj_info.owner_full_name} other) {{\n"
             f"    std::swap(this->m_handle, other.m_handle);\n"
+            f"    return *this;\n"
             f"}}\n"
             f"inline {iface_cpp_proj_info.name}::operator bool() {{\n"
             f"    return this->m_handle.vtbl_ptr;\n"
@@ -1047,7 +1049,7 @@ class CppProjCodeGenerator:
             f"inline {iface_cpp_proj_info.name}::~{iface_cpp_proj_info.name}() {{}}\n"
             f"inline {iface_cpp_proj_info.name}::{iface_cpp_proj_info.name}({iface_cpp_proj_info.owner_full_name} const& other)\n"
             f"    : m_handle(other.m_handle) {{}}\n"
-            f"inline {iface_cpp_proj_info.name}::{iface_cpp_proj_info.name}({iface_cpp_proj_info.owner_full_name} const& other)\n"
+            f"inline {iface_cpp_proj_info.name}::{iface_cpp_proj_info.name}({iface_cpp_proj_info.param_full_name} const& other)\n"
             f"    : m_handle(other.m_handle) {{}}\n"
             f"inline {iface_cpp_proj_info.name}::operator ::taihe::core::DataOwner() const& {{\n"
             f"    {iface_abi_info.as_owner} ret_handle = {iface_abi_info.copy_func}(this->m_handle);\n"
@@ -1063,6 +1065,7 @@ class CppProjCodeGenerator:
             f"}}\n"
             f"inline {iface_cpp_proj_info.name}& {iface_cpp_proj_info.name}::operator=({iface_cpp_proj_info.param_full_name} other) {{\n"
             f"    std::swap(this->m_handle, other.m_handle);\n"
+            f"    return *this;\n"
             f"}}\n"
             f"inline {iface_cpp_proj_info.name}::operator bool() {{\n"
             f"    return this->m_handle.vtbl_ptr;\n"

@@ -534,7 +534,7 @@ class ABICodeGenerator:
             f"struct {iface_abi_info.f_table};\n"
             f"struct {iface_abi_info.v_table};\n"
             f"struct {iface_abi_info.name} {{\n"
-            f"  struct {iface_abi_info.v_table}* vtbl_ptr;\n"
+            f"  struct {iface_abi_info.v_table} const* vtbl_ptr;\n"
             f"  struct DataBlockHead* data_ptr;\n"
             f"}};\n"
             f"typedef struct {iface_abi_info.name} {iface_abi_info.as_param};\n"
@@ -591,7 +591,7 @@ class ABICodeGenerator:
         for ancestor_item_info in iface_abi_info.ancestor_list:
             ancestor_abi_info = IfaceDeclABIInfo.get(self.am, ancestor_item_info.iface)
             iface_abi_1_target.write(
-                f"  struct {ancestor_abi_info.f_table}* {ancestor_item_info.ptbl_ptr};\n"
+                f"  struct {ancestor_abi_info.f_table} const* {ancestor_item_info.ptbl_ptr};\n"
             )
         iface_abi_1_target.write("};\n")
 
@@ -604,7 +604,7 @@ class ABICodeGenerator:
         iface_abi_1_target.write(
             f"struct {iface_abi_info.rtti} {{\n"
             f"  uint64_t version;\n"
-            f"  void (*free_data)(struct DataBlockHead*);\n"
+            f"  void (*free_ptr)(struct DataBlockHead*);\n"
             f"  uint64_t len;\n"
             f"  struct IdMapItem idmap[{len(iface_abi_info.ancestor_dict)}];\n"
             f"}};\n"
@@ -660,7 +660,7 @@ class ABICodeGenerator:
     ):
         iface_abi_1_target.write(
             f"inline struct {iface_abi_info.name} {iface_abi_info.dynamic_cast}(struct DataBlockHead* data_ptr) {{\n"
-            f"  struct TypeInfo *rtti_ptr = data_ptr->rtti_ptr;\n"
+            f"  struct TypeInfo const* rtti_ptr = data_ptr->rtti_ptr;\n"
             f"  struct {iface_abi_info.name} result;\n"
             f"  result.data_ptr = data_ptr;"
             f"  for (size_t i = 0; i < rtti_ptr->len; i++) {{\n"
@@ -700,7 +700,7 @@ class ABICodeGenerator:
             f"inline void {iface_abi_info.drop_func}(struct {iface_abi_info.name} tobj) {{\n"
             f"  struct DataBlockHead* data_ptr = tobj.data_ptr;\n"
             f"  if (data_ptr && tref_dec(&data_ptr->m_count)) {{\n"
-            f"    data_ptr->rtti_ptr->free_data(data_ptr);\n"
+            f"    data_ptr->rtti_ptr->free_ptr(data_ptr);\n"
             f"  }}\n"
             f"}}\n"
         )

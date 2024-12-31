@@ -42,7 +42,7 @@ def compile(output_dir, input_dir, *include_dirs, opt_level):
             std = "gnu11"
         else:
             compiler = CXX
-            std = "gnu++17"
+            std = "gnu++20"
         command = f"{compiler} -c -fvisibility=hidden -fPIC -O{opt_level} -std={std} -o {output_file} {input_file}"
         for include_dir in include_dirs:
             command += f" -I {include_dir}"

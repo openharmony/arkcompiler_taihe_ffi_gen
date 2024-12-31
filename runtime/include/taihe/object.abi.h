@@ -14,8 +14,8 @@ struct DataBlockHead;
 // - `id`: A constant pointer representing the interface ID.
 // - `vtbl_ptr`: A pointer to the virtual table associated with the ID.
 struct IdMapItem {
-  const void* id;
-  void* vtbl_ptr;  
+  void const* id;
+  void const* vtbl_ptr;
 };
 
 // TypeInfo
@@ -30,31 +30,16 @@ struct IdMapItem {
 // - `idmap`: A flexible array of `IdMapItem` structures for ID-to-vtable mapping.
 struct TypeInfo {
   uint64_t version;
-  void (*free_data)(struct DataBlockHead*);
+  void (*free_ptr)(struct DataBlockHead*);
   uint64_t len;
   struct IdMapItem idmap[];
 };
 
 // DataBlockHead
 struct DataBlockHead {
-  struct TypeInfo* rtti_ptr;
+  struct TypeInfo const* rtti_ptr;
   TRefCount m_count;
 };
-
-// TObject
-struct TObject {
-  void* vtbl_ptr;
-  struct DataBlockHead* data_ptr;
-};
-
-// Retrieves the corresponding vtable pointer based on the given id from TypeInfo.
-// # Arguments
-// - `rtti_ptr`: Pointer to the TypeInfo structure.
-// - `id`: The identifier to look up.
-//
-// # Returns
-// - Returns the corresponding vtable pointer if found; otherwise, returns NULL.
-TH_EXPORT void* tobj_get_pvtbl(struct TypeInfo* rtti_ptr, const void* id);
 
 // Increments the reference count of the given TObject.
 // # Arguments

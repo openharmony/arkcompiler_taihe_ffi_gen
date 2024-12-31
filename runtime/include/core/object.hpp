@@ -50,6 +50,7 @@ DataOwner::DataOwner(DataRef const& other)
 
 DataOwner& DataOwner::operator=(DataOwner other) {
     std::swap(this->m_handle, other.m_handle);
+    return *this;
 }
 
 DataRef::DataRef(DataBlockHead* other_handle)
@@ -65,6 +66,7 @@ DataRef::DataRef(DataRef const& other)
 
 DataRef& DataRef::operator=(DataRef other) {
     std::swap(this->m_handle, other.m_handle);
+    return *this;
 }
 
 template<typename Impl>
