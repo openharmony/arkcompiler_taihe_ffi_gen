@@ -62,8 +62,9 @@ class DeclKind(Enum):
     ENUM_ITEM = "v"
     INTERFACE = "i"
     IID = "iid"
-    FTABLE = "FTable"
-    VTABLE = "VTable"
+    FTABLE = "ftable"
+    VTABLE = "vtable"
+    RTTI = "rtti"
     COPY = "copy"
     DROP = "drop"
 

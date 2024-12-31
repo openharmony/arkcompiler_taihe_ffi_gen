@@ -33,10 +33,8 @@ class CImplCodeGenerator:
             self.tm, f"include/{c_impl_pkg_info.header}", True
         )
         abi_pkg_info = ABIPackageInfo.get(self.am, pkg)
-
         c_impl_pkg_target.include("taihe/common.h")
         c_impl_pkg_target.include(f"{abi_pkg_info.header}")
-
         for func in pkg.functions:
             self.gen_func(func, c_impl_pkg_target)
 
@@ -46,7 +44,6 @@ class CImplCodeGenerator:
         c_impl_pkg_target: COutputBuffer,
     ):
         abi_func_info = ABIBaseFuncDeclInfo.get(self.am, func)
-
         params = []
         args = []
         for param in func.params:
@@ -56,9 +53,7 @@ class CImplCodeGenerator:
             args.append(param.name)
         params_str = ", ".join(params)
         args_str = ", ".join(args)
-
         c_impl_pkg_target.include(abi_func_info.return_ty_header)
-
         c_impl_pkg_target.write(
             f"#define TH_EXPORT_C_API_{func.name}(_func) \\\n"
             f"  TH_STATIC_ASSERT(TH_IS_SAME(TH_TYPEOF(_func), {abi_func_info.return_ty_name} ({params_str})), \\\n"

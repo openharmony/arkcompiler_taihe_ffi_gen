@@ -66,124 +66,22 @@ DataRef::DataRef(DataRef const& other)
 DataRef& DataRef::operator=(DataRef other) {
     std::swap(this->m_handle, other.m_handle);
 }
+
+template<typename Impl>
+struct WithDataBlockHead : DataBlockHead, Impl {};
+
+template<typename FTable, typename Impl>
+struct FTableImpl {};
+
+template<typename VTable, typename Impl>
+struct VTableImpl {};
+
+template<typename RTTI, typename Impl>
+struct RTTIImpl {};
+
+template<typename Impl>
+struct TypeTag {};
+
+template<typename Impl>
+TypeTag<Impl> type_tag;
 }
-
-struct InterfaceMapItem {
-    void const *iid;
-    void const *pvtbl;
-};
-
-struct RTTI {
-    std::size_t length;
-    InterfaceMapItem imap[];
-};
-
-struct CommonHandle {
-    RTTI const *prtti;
-
-    void const *dynamicQueryInterface(void const *iid) {
-        for (std::size_t i = 0; i < prtti->length; i++) {
-            if (iid == prtti->imap[i].iid) {
-                return prtti->imap[i].pvtbl;
-            }
-        }
-        return nullptr;
-    }
-};
-
-template<typename T, std::size_t S>
-constexpr void concatArraysInPlace(std::array<T, S> &r, std::size_t j) {}
-
-template<typename T, std::size_t S, std::size_t N, std::size_t... Ns>
-constexpr void concatArraysInPlace(std::array<T, S> &r, std::size_t j, std::array<T, N> const &a, std::array<T, Ns> const &...as) {
-    for (std::size_t i = 0; i < N; i++, j++) {
-        r[j] = a[i];
-    }
-    concatArraysInPlace(r, j, as...);
-}
-
-template<typename T, std::size_t... Ns>
-constexpr auto concatArrays(std::array<T, Ns> const &...as) {
-    std::array<T, (Ns + ...)> r = {};
-    concatArraysInPlace(r, 0, as...);
-    return r;
-}
-
-template<typename Self, template<typename> typename... TypeInfos>
-struct Handle : CommonHandle {
-    static constexpr struct {
-        std::size_t length = (TypeInfos<Self>::imap.size() + ...);
-        std::array<InterfaceMapItem, (TypeInfos<Self>::imap.size() + ...)> imap = concatArrays(TypeInfos<Self>::imap...);
-    } rtti = {};
-
-    Handle()
-        : CommonHandle{(RTTI *)&rtti} {}
-
-    static constexpr void const *staticQueryInterface(void const *iid) {
-        for (std::size_t i = 0; i < rtti.length; i++) {
-            if (iid == rtti.imap[i].iid) {
-                return rtti.imap[i].pvtbl;
-            }
-        }
-        throw std::logic_error("Static cast failed!");
-    }
-
-    template<void const *iid>
-    static constexpr void const *staticQueryInterfaceResult = staticQueryInterface(iid);
-};
-
-template<typename Self>
-struct OwnerPtr {
-    Self *pself;
-
-    OwnerPtr<Self>(Self *pself)
-        : pself(pself) {}
-
-    operator Self *() && {
-        return std::exchange(this->pself, nullptr);
-    }
-
-    OwnerPtr<Self>(OwnerPtr<Self> &&other)
-        : pself(std::exchange(other.pself, nullptr)) {}
-
-    Self *operator->() {
-        return this->pself;
-    }
-
-    ~OwnerPtr<Self>() {
-        if (this->pself) {
-            this->pself->drop();
-        }
-    }
-
-    OwnerPtr<Self> &operator=(OwnerPtr<Self> other) {
-        std::swap(this->pself, other.pself);
-        return *this;
-    }
-};
-
-template<typename Self>
-struct RefPtr {
-    Self *pself;
-
-    RefPtr<Self>(Self *pself)
-        : pself(pself) {}
-
-    operator Self *() {
-        return this->pself;
-    }
-
-    RefPtr<Self>(OwnerPtr<Self> const &other)
-        : pself(other.pself) {}
-
-    RefPtr<Self>(RefPtr<Self> const &other)
-        : pself(other.pself) {}
-
-    Self *operator->() {
-        return this->pself;
-    }
-
-    ~RefPtr<Self>() {}
-
-    RefPtr<Self> &operator=(RefPtr<Self> other) = delete;
-};

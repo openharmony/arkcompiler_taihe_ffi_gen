@@ -37,10 +37,8 @@ class CppImplCodeGenerator:
             self.tm, f"include/{cpp_impl_pkg_info.header}", True
         )
         abi_pkg_info = ABIPackageInfo.get(self.am, pkg)
-
         cpp_impl_pkg_target.include("taihe/common.hpp")
         cpp_impl_pkg_target.include(f"{abi_pkg_info.header}")
-
         for func in pkg.functions:
             self.gen_func(func, cpp_impl_pkg_target)
 
@@ -51,7 +49,6 @@ class CppImplCodeGenerator:
     ):
         cpp_proj_func_info = CppProjBaseFuncDeclInfo.get(self.am, func)
         abi_func_info = ABIBaseFuncDeclInfo.get(self.am, func)
-
         cpp_params = []
         args_from_abi = []
         abi_params = []
@@ -65,10 +62,8 @@ class CppImplCodeGenerator:
         abi_params_str = ", ".join(abi_params)
         cpp_params_str = ", ".join(cpp_params)
         args_from_abi_str = ", ".join(args_from_abi)
-
         cpp_impl_pkg_target.include(cpp_proj_func_info.return_ty_header_defn)
         result = cpp_proj_func_info.return_into_abi(f"_func({args_from_abi_str})")
-
         cpp_impl_pkg_target.write(
             f"#define TH_EXPORT_CPP_API_{func.name}(_func) \\\n"
             f"    TH_STATIC_ASSERT(TH_IS_SAME(TH_TYPEOF(_func), {cpp_proj_func_info.return_ty_name} ({cpp_params_str})), \\\n"
