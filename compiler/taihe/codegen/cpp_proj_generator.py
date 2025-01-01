@@ -345,8 +345,9 @@ class CppProjCodeGenerator:
         struct_abi_info: StructDeclABIInfo,
     ):
         struct_cpp_proj_target.write(
+            f"namespace taihe::core {{\n"
             f"template<>\n"
-            f"inline {struct_abi_info.as_owner} taihe::core::into_abi({struct_cpp_proj_info.owner_full_name}&& val){{\n"
+            f"inline {struct_abi_info.as_owner} into_abi({struct_cpp_proj_info.owner_full_name}&& val){{\n"
             f"    return {{\n"
         )
         for field in struct.fields:
@@ -356,7 +357,7 @@ class CppProjCodeGenerator:
         struct_cpp_proj_target.write(f"    }};\n" f"}}\n")
         struct_cpp_proj_target.write(
             f"template<>\n"
-            f"inline {struct_cpp_proj_info.owner_full_name} taihe::core::from_abi({struct_abi_info.as_owner}&& val){{\n"
+            f"inline {struct_cpp_proj_info.owner_full_name} from_abi({struct_abi_info.as_owner}&& val){{\n"
             f"    return {{\n"
         )
         for field in struct.fields:
@@ -367,12 +368,13 @@ class CppProjCodeGenerator:
             f"    }};\n"
             f"}}\n"
             f"template<>\n"
-            f"inline {struct_abi_info.as_param} taihe::core::into_abi({struct_cpp_proj_info.param_full_name}&& val){{\n"
+            f"inline {struct_abi_info.as_param} into_abi({struct_cpp_proj_info.param_full_name}&& val){{\n"
             f"    return reinterpret_cast<{struct_abi_info.as_param}>(&val);\n"
             f"}}\n"
             f"template<>\n"
-            f"inline {struct_cpp_proj_info.param_full_name} taihe::core::from_abi({struct_abi_info.as_param}&& val){{\n"
+            f"inline {struct_cpp_proj_info.param_full_name} from_abi({struct_abi_info.as_param}&& val){{\n"
             f"    return reinterpret_cast<{struct_cpp_proj_info.param_full_name}>(*val);\n"
+            f"}}\n"
             f"}}\n"
         )
 
@@ -564,8 +566,9 @@ class CppProjCodeGenerator:
         enum_abi_info: EnumDeclABIInfo,
     ):
         enum_cpp_proj_target.write(
+            f"namespace taihe::core {{\n"
             f"template<>\n"
-            f"inline {enum_abi_info.as_owner} taihe::core::into_abi({enum_cpp_proj_info.owner_full_name}&& val){{\n"
+            f"inline {enum_abi_info.as_owner} into_abi({enum_cpp_proj_info.owner_full_name}&& val){{\n"
             f"    {enum_abi_info.as_owner} result;\n"
             f"    switch (val.tag) {{\n"
         )
@@ -591,7 +594,7 @@ class CppProjCodeGenerator:
             f"    return result;\n"
             f"}}\n"
             f"template<>\n"
-            f"inline {enum_cpp_proj_info.owner_full_name} taihe::core::from_abi({enum_abi_info.as_owner}&& val){{\n"
+            f"inline {enum_cpp_proj_info.owner_full_name} from_abi({enum_abi_info.as_owner}&& val){{\n"
             f"    switch (val.tag) {{\n"
         )
         for item in enum.items:
@@ -612,12 +615,13 @@ class CppProjCodeGenerator:
             f"    }}\n"
             f"}}\n"
             f"template<>\n"
-            f"inline {enum_abi_info.as_param} taihe::core::into_abi({enum_cpp_proj_info.param_full_name}&& val){{\n"
+            f"inline {enum_abi_info.as_param} into_abi({enum_cpp_proj_info.param_full_name}&& val){{\n"
             f"    return reinterpret_cast<{enum_abi_info.as_param}>(&val);\n"
             f"}}\n"
             f"template<>\n"
-            f"inline {enum_cpp_proj_info.param_full_name} taihe::core::from_abi({enum_abi_info.as_param}&& val){{\n"
+            f"inline {enum_cpp_proj_info.param_full_name} from_abi({enum_abi_info.as_param}&& val){{\n"
             f"    return reinterpret_cast<{enum_cpp_proj_info.param_full_name}>(*val);\n"
+            f"}}\n"
             f"}}\n"
         )
 
@@ -811,27 +815,29 @@ class CppProjCodeGenerator:
         iface_cpp_proj_impl_target: COutputBuffer,
     ):
         iface_cpp_proj_impl_target.write(
+            f"namespace taihe::core {{\n"
             f"template<>\n"
-            f"inline {iface_abi_info.as_owner} taihe::core::into_abi({iface_cpp_proj_info.owner_full_name}&& other){{\n"
+            f"inline {iface_abi_info.as_owner} into_abi({iface_cpp_proj_info.owner_full_name}&& other){{\n"
             f"    {iface_abi_info.as_owner} ret_handle = other.m_handle;\n"
             f"    other.m_handle.data_ptr = nullptr;\n"
             f"    return ret_handle;\n"
             f"}}\n"
             f"template<>\n"
-            f"inline {iface_cpp_proj_info.owner_full_name} taihe::core::from_abi({iface_abi_info.as_owner}&& other_handle){{\n"
+            f"inline {iface_cpp_proj_info.owner_full_name} from_abi({iface_abi_info.as_owner}&& other_handle){{\n"
             f"    {iface_abi_info.as_owner} ret_handle = other_handle;\n"
             f"    other_handle.data_ptr = nullptr;\n"
             f"    return {iface_cpp_proj_info.owner_full_name}(ret_handle);\n"
             f"}}\n"
             f"template<>\n"
-            f"inline {iface_abi_info.as_param} taihe::core::into_abi({iface_cpp_proj_info.param_full_name}&& other){{\n"
+            f"inline {iface_abi_info.as_param} into_abi({iface_cpp_proj_info.param_full_name}&& other){{\n"
             f"    {iface_abi_info.as_param} ret_handle = other.m_handle;\n"
             f"    return ret_handle;\n"
             f"}}\n"
             f"template<>\n"
-            f"inline {iface_cpp_proj_info.param_full_name} taihe::core::from_abi({iface_abi_info.as_param}&& other_handle){{\n"
+            f"inline {iface_cpp_proj_info.param_full_name} from_abi({iface_abi_info.as_param}&& other_handle){{\n"
             f"    {iface_abi_info.as_owner} ret_handle = other_handle;\n"
             f"    return {iface_cpp_proj_info.param_full_name}(ret_handle);\n"
+            f"}}\n"
             f"}}\n"
         )
 
@@ -894,8 +900,9 @@ class CppProjCodeGenerator:
         iface_cpp_proj_impl_target: COutputBuffer,
     ):
         iface_cpp_proj_impl_target.write(
+            f"namespace taihe::core {{\n"
             f"template<typename Impl>\n"
-            f"struct taihe::core::FTableImpl<{iface_abi_info.f_table}, Impl> {{\n"
+            f"struct FTableImpl<{iface_abi_info.f_table}, Impl> {{\n"
             f"    struct Inner {{\n"
         )
         for method in iface.methods:
@@ -928,7 +935,7 @@ class CppProjCodeGenerator:
             iface_cpp_proj_impl_target.write(
                 f"        .{method.name} = &Inner::{method_cpp_proj_info.name},\n"
             )
-        iface_cpp_proj_impl_target.write("    };\n" "};\n")
+        iface_cpp_proj_impl_target.write("    };\n" "};\n" "}\n")
 
     def gen_iface_vtable(
         self,
@@ -938,8 +945,9 @@ class CppProjCodeGenerator:
         iface_cpp_proj_impl_target: COutputBuffer,
     ):
         iface_cpp_proj_impl_target.write(
+            f"namespace taihe::core {{\n"
             f"template<typename Impl>\n"
-            f"struct taihe::core::VTableImpl<{iface_abi_info.v_table}, Impl> {{\n"
+            f"struct VTableImpl<{iface_abi_info.v_table}, Impl> {{\n"
             f"    static constexpr {iface_abi_info.v_table} vtbl = {{\n"
         )
         for ancestor_info in iface_abi_info.ancestor_list:
@@ -947,7 +955,7 @@ class CppProjCodeGenerator:
             iface_cpp_proj_impl_target.write(
                 f"        .{ancestor_info.ptbl_ptr} = &::taihe::core::FTableImpl<{ancestor_abi_info.f_table}, Impl>::ftbl,\n"
             )
-        iface_cpp_proj_impl_target.write("    };\n" "};\n")
+        iface_cpp_proj_impl_target.write("    };\n" "};\n" "}\n")
 
     def gen_iface_rtti(
         self,
@@ -957,8 +965,9 @@ class CppProjCodeGenerator:
         iface_cpp_proj_impl_target: COutputBuffer,
     ):
         iface_cpp_proj_impl_target.write(
+            f"namespace taihe::core {{\n"
             f"template<typename Impl>\n"
-            f"struct taihe::core::RTTIImpl<{iface_abi_info.rtti}, Impl> {{\n"
+            f"struct RTTIImpl<{iface_abi_info.rtti}, Impl> {{\n"
             f"    static void free(DataBlockHead* data_ptr) {{\n"
             f"        delete static_cast<::taihe::core::WithDataBlockHead<Impl>*>(data_ptr);\n"
             f"    }}\n"
@@ -974,7 +983,7 @@ class CppProjCodeGenerator:
             iface_cpp_proj_impl_target.write(
                 f"            {{&{ancestor_abi_info.iid}, &::taihe::core::VTableImpl<{ancestor_abi_info.v_table}, Impl>::vtbl}},\n"
             )
-        iface_cpp_proj_impl_target.write("        },\n" "    };\n" "};\n")
+        iface_cpp_proj_impl_target.write("        },\n" "    };\n" "};\n" "}\n")
 
     def gen_iface_inspector(
         self,
@@ -984,12 +993,14 @@ class CppProjCodeGenerator:
         iface_cpp_proj_impl_target: COutputBuffer,
     ):
         iface_cpp_proj_impl_target.write(
+            f"namespace taihe::core {{\n"
             f"template<>\n"
-            f"struct ::taihe::core::OwnerInspector<{iface_cpp_proj_info.owner_full_name}> {{\n"
+            f"struct OwnerInspector<{iface_cpp_proj_info.owner_full_name}> {{\n"
             f"    using Type = void*;\n"
             f"    using RTTI = {iface_abi_info.rtti};\n"
             f"    using VTable = {iface_abi_info.v_table};\n"
             f"}};\n"
+            f"}}\n"
         )
 
     def gen_iface_impl_owner_decl(
