@@ -582,7 +582,9 @@ class CppProjCodeGenerator:
                 )
                 continue
             ty_cpp_proj_info = TypeCppProjInfo.get(self.am, item.ty_ref.resolved_ty)
-            result = ty_cpp_proj_info.return_into_abi(f"std::move(val.data.{item.name})")
+            result = ty_cpp_proj_info.return_into_abi(
+                f"std::move(val.data.{item.name})"
+            )
             enum_cpp_proj_target.write(
                 f"    case {enum_cpp_proj_info.owner_full_name}::TagType::{item.name}:\n"
                 f"        result.tag = {enum_item_abi_info.name};\n"
