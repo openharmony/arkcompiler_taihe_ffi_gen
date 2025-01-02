@@ -957,7 +957,7 @@ class CppProjCodeGenerator:
         for method in iface.methods:
             method_cpp_proj_info = BaseFuncDeclCppProjInfo.get(self.am, method)
             iface_cpp_proj_impl_target.write(
-                f"        .{method.name} = &Inner::{method_cpp_proj_info.name},\n"
+                f"        .{method.name} = &Inner::{method.name},\n"
             )
         iface_cpp_proj_impl_target.write("    };\n" "};\n" "}\n")
 
