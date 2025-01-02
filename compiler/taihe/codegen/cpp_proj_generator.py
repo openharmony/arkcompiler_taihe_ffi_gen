@@ -330,8 +330,9 @@ class CppProjCodeGenerator:
             ty_info = TypeCppProjInfo.get(self.am, field.ty_ref.resolved_ty)
             struct_cpp_proj_target.include(ty_info.header_defn)
             struct_cpp_proj_target.write(f"    {ty_info.as_owner} {field.name};\n")
-        struct_cpp_proj_target.write(f"}};\n" f"}}\n")
         struct_cpp_proj_target.write(
+            f"}};\n"
+            f"}}\n"
             f"namespace {pkg_cpp_proj_info.param_namespace} {{\n"
             f"using {struct_cpp_proj_info.name} = {struct_cpp_proj_info.owner_full_name} const&;\n"
             f"}}\n"
@@ -354,8 +355,9 @@ class CppProjCodeGenerator:
             ty_cpp_proj_info = TypeCppProjInfo.get(self.am, field.ty_ref.resolved_ty)
             result = ty_cpp_proj_info.return_into_abi(f"std::move(val.{field.name})")
             struct_cpp_proj_target.write(f"        {result},\n")
-        struct_cpp_proj_target.write(f"    }};\n" f"}}\n")
         struct_cpp_proj_target.write(
+            f"    }};\n"
+            f"}}\n"
             f"template<>\n"
             f"inline {struct_cpp_proj_info.owner_full_name} from_abi({struct_abi_info.as_owner} val){{\n"
             f"    return {{\n"
@@ -542,7 +544,7 @@ class CppProjCodeGenerator:
             if item.ty_ref is None:
                 enum_cpp_proj_target.write(
                     f"        if constexpr (tag == TagType::{item.name}) {{\n"
-                    f"            return (void*)&this->data;\n"
+                    f"            return (void const*)&this->data;\n"
                     f"        }}\n"
                 )
                 continue
