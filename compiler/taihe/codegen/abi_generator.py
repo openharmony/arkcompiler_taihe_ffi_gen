@@ -353,18 +353,18 @@ class ABICodeGenerator:
         if struct_abi_info.copy_func is None:
             return
         struct_abi_target.write(
-            f"inline struct {struct_abi_info.mangled_name} {struct_abi_info.copy_func}(struct {struct_abi_info.mangled_name} const* data_ptr) {{\n"
+            f"inline struct {struct_abi_info.mangled_name} {struct_abi_info.copy_func}(struct {struct_abi_info.mangled_name} data) {{\n"
             f"  struct {struct_abi_info.mangled_name} result;\n"
         )
         for field in struct.fields:
             ty_info = TypeABIInfo.get(self.am, field.ty_ref.resolved_ty)
             if ty_info.copy_func is not None:
                 struct_abi_target.write(
-                    f"  result.{field.name} = {ty_info.copy_func}(data_ptr->{field.name});\n"
+                    f"  result.{field.name} = {ty_info.copy_func}(data.{field.name});\n"
                 )
             else:
                 struct_abi_target.write(
-                    f"  result.{field.name} = data_ptr->{field.name};\n"
+                    f"  result.{field.name} = data.{field.name};\n"
                 )
         struct_abi_target.write("  return result;\n" "}\n")
 
@@ -377,13 +377,13 @@ class ABICodeGenerator:
         if struct_abi_info.drop_func is None:
             return
         struct_abi_target.write(
-            f"inline void {struct_abi_info.drop_func}(struct {struct_abi_info.mangled_name} const *data_ptr) {{\n"
+            f"inline void {struct_abi_info.drop_func}(struct {struct_abi_info.mangled_name} data) {{\n"
         )
         for field in struct.fields:
             ty_info = TypeABIInfo.get(self.am, field.ty_ref.resolved_ty)
             if ty_info.drop_func is not None:
                 struct_abi_target.write(
-                    f"  {ty_info.drop_func}(data_ptr->{field.name});\n"
+                    f"  {ty_info.drop_func}(data.{field.name});\n"
                 )
         struct_abi_target.write("}\n")
 
@@ -457,9 +457,9 @@ class ABICodeGenerator:
         if enum_abi_info.copy_func is None:
             return
         enum_abi_target.write(
-            f"inline struct {enum_abi_info.mangled_name} {enum_abi_info.copy_func}(struct {enum_abi_info.mangled_name} const* data_ptr) {{\n"
+            f"inline struct {enum_abi_info.mangled_name} {enum_abi_info.copy_func}(struct {enum_abi_info.mangled_name} data) {{\n"
             f"  struct {enum_abi_info.mangled_name} result;\n"
-            f"  switch (result.tag = data_ptr->tag) {{\n"
+            f"  switch (result.tag = data.tag) {{\n"
         )
         for item in enum.items:
             if item.ty_ref is None:
@@ -469,13 +469,13 @@ class ABICodeGenerator:
             if ty_info.copy_func is not None:
                 enum_abi_target.write(
                     f"  case {enum_item_abi_info.mangled_name}:\n"
-                    f"    result.data.{item.name} = {ty_info.copy_func}(data_ptr->data.{item.name});\n"
+                    f"    result.data.{item.name} = {ty_info.copy_func}(data.data.{item.name});\n"
                     f"    return result;\n"
                 )
             else:
                 enum_abi_target.write(
                     f"  case {enum_item_abi_info.mangled_name}:\n"
-                    f"    result.data.{item.name} = data_ptr->data.{item.name};\n"
+                    f"    result.data.{item.name} = data.data.{item.name};\n"
                     f"    return result;\n"
                 )
         enum_abi_target.write("  default:\n" "    return result;\n" "  }\n" "}\n")
@@ -489,8 +489,8 @@ class ABICodeGenerator:
         if enum_abi_info.drop_func is None:
             return
         enum_abi_target.write(
-            f"inline void {enum_abi_info.drop_func}(struct {enum_abi_info.mangled_name} const* data_ptr) {{\n"
-            f"  switch (data_ptr->tag) {{\n"
+            f"inline void {enum_abi_info.drop_func}(struct {enum_abi_info.mangled_name} data) {{\n"
+            f"  switch (data.tag) {{\n"
         )
         for item in enum.items:
             if item.ty_ref is None:
@@ -500,7 +500,7 @@ class ABICodeGenerator:
             if ty_info.copy_func is not None:
                 enum_abi_target.write(
                     f"  case {enum_item_abi_info.mangled_name}:\n"
-                    f"    {ty_info.drop_func}(data_ptr->data.{item.name});\n"
+                    f"    {ty_info.drop_func}(data.data.{item.name});\n"
                     f"    break;\n"
                 )
         enum_abi_target.write("  default:\n" "    break;\n" "  }\n" "}\n")

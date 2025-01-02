@@ -18,7 +18,7 @@ interface XmlSerializer {
     setDeclaration(): void;
     startElement(name: String): void;
     endElement(): void;
-    setNamespace(prefix: String, namespace: String): void;
+    setNamespace(prefix: String, namespace_: String): void;
     setComment(text: String): void;
     setCDATA(text: String): void;
     setText(text: String): void;

@@ -4,14 +4,20 @@
 
 struct XmlSerializer {};
 
-ohos::xml::XmlSerializer makeXmlSerializerImpl(ohos::xml::BufferType const& buffer, ohos::xml::OptString const& encoding) {
-    // ...
+ohos::xml::XmlSerializer makeXmlSerializerImpl(
+    ohos::xml::BufferType const& buffer,
+    ohos::xml::OptString const& encoding)
+{
+    return taihe::core::makeInterface<ohos::xml::XmlSerializer, XmlSerializer>(buffer, encoding);
 }
 
 struct XmlPullParser {};
 
-ohos::xml::XmlPullParser makeXmlPullParserImpl(ohos::xml::BufferType const& buffer, ohos::xml::OptString const& encoding) {
-    // ...
+ohos::xml::XmlPullParser makeXmlPullParserImpl(
+    ohos::xml::BufferType const& buffer,
+    ohos::xml::OptString const& encoding)
+{
+    return taihe::core::makeInterface<ohos::xml::XmlPullParser, XmlSerializer>(buffer, encoding);
 }
 
 TH_EXPORT_CPP_API_makeXmlPullParser(makeXmlPullParserImpl)
