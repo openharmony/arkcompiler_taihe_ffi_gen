@@ -276,7 +276,7 @@ class CppProjCodeGenerator:
             params_cpp.append(f"{type_cpp_proj_info.as_param} {param.name}")
             args_into_abi.append(type_cpp_proj_info.pass_into_abi(param.name))
         params_cpp_str = ", ".join(params_cpp)
-        args_into_abi_str = ",".join(args_into_abi)
+        args_into_abi_str = ", ".join(args_into_abi)
         pkg_cpp_proj_target.include(func_cpp_proj_info.return_ty_header_defn)
         result = func_cpp_proj_info.return_from_abi(
             f"{func_abi_info.mangled_name}({args_into_abi_str})"
@@ -1108,7 +1108,7 @@ class CppProjCodeGenerator:
                 params_cpp.append(f"{type_cpp_proj_info.as_param} {param.name}")
                 args_into_abi.append(type_cpp_proj_info.pass_into_abi(param.name))
             params_cpp_str = ", ".join(params_cpp)
-            args_into_abi_str = ",".join(args_into_abi)
+            args_into_abi_str = ", ".join(args_into_abi)
             iface_cpp_proj_impl_target.include(
                 method_cpp_proj_info.return_ty_header_defn
             )
@@ -1187,7 +1187,7 @@ class CppProjCodeGenerator:
                 params_cpp.append(f"{type_cpp_proj_info.as_param} {param.name}")
                 args_into_abi.append(type_cpp_proj_info.pass_into_abi(param.name))
             params_cpp_str = ", ".join(params_cpp)
-            args_into_abi_str = ",".join(args_into_abi)
+            args_into_abi_str = ", ".join(args_into_abi)
             iface_cpp_proj_impl_target.include(
                 method_cpp_proj_info.return_ty_header_defn
             )
