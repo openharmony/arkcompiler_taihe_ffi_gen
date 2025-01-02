@@ -57,14 +57,15 @@ public:
 int main() {
     base::ColorOrRGBOrName color_114514(ConstexprTag<base::ColorOrRGBOrName::TagType::rgb>, base::RGB{0x11, 0x45, 0x14});
     base::ColorOrRGBOrName color_yellow(ConstexprTag<base::ColorOrRGBOrName::TagType::color>, ConstexprTag<base::Color::TagType::yellow>);
-    base::ColorOrRGBOrName color_xxx(ConstexprTag<base::ColorOrRGBOrName::TagType::name>, "XXX");
+    base::ColorOrRGBOrName color_my_color(ConstexprTag<base::ColorOrRGBOrName::TagType::name>, "My Color");
     base::ColorOrRGBOrName color_unknown(ConstexprTag<base::ColorOrRGBOrName::TagType::undefined>);
 
     std::cout << base::toString(color_114514).c_str() << std::endl;
     std::cout << base::toString(color_yellow).c_str() << std::endl;
-    std::cout << base::toString(color_xxx).c_str() << std::endl;
+    std::cout << base::toString(color_my_color).c_str() << std::endl;
     std::cout << base::toString(color_unknown).c_str() << std::endl;
 
+    // User implements the interface
     auto circle = taihe::core::makeInterface<rgb::show::IShowable, ColoredCircle>("A", 10, color_114514);
     auto rect = show::makeColoredRectangle("B", color_yellow, 5, 5);
 

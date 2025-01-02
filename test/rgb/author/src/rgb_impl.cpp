@@ -74,7 +74,16 @@ void copyColorImpl(param::rgb::show::IColorable dst, param::rgb::show::IColorabl
 
 taihe::core::string colorToStringImpl(rgb::base::ColorOrRGBOrName const& color) {
     if (auto ptr = color.get_ptr<rgb::base::ColorOrRGBOrName::TagType::color>()) {
-        return "Color(" + std::to_string((int)ptr->get_tag()) + ")";
+        switch (ptr->get_tag()) {
+            case rgb::base::Color::TagType::black: return "Black";
+            case rgb::base::Color::TagType::red: return "Red";
+            case rgb::base::Color::TagType::green: return "Green";
+            case rgb::base::Color::TagType::yellow: return "Yellow";
+            case rgb::base::Color::TagType::blue: return "Blue";
+            case rgb::base::Color::TagType::magenta: return "Magenta";
+            case rgb::base::Color::TagType::cyan: return "Cyan";
+            case rgb::base::Color::TagType::white: return "White";
+        }
     } else if (auto ptr = color.get_ptr<rgb::base::ColorOrRGBOrName::TagType::rgb>()) {
         std::ostringstream oss;
         oss << "#"
@@ -83,9 +92,11 @@ taihe::core::string colorToStringImpl(rgb::base::ColorOrRGBOrName const& color) 
         << std::setw(2) << static_cast<int>(ptr->b);
         return oss.str();
     } else if (auto ptr = color.get_ptr<rgb::base::ColorOrRGBOrName::TagType::name>()) {
-        return ptr->c_str();
+        std::ostringstream oss;
+        oss << "Name: " << ptr->c_str();
+        return oss.str();
     } else {
-        return "Error";
+        return "Undefined";
     }
 }
 
