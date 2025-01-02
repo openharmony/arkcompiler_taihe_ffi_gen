@@ -51,10 +51,9 @@ public:
     }
 
     void show() {
-        std::string content = name + ": " + std::to_string(h) + "x" + std::to_string(w);
+        std::string content = "rectangle " + name + ": h = " + std::to_string(h) + ", w = " + std::to_string(w);
         if (auto ptr = myColor.get_ptr<rgb::base::ColorOrRGBOrName::TagType::color>()) {
-            std::string colorCode = "\033[" + std::to_string(30 + (int)ptr->get_tag()) + "m";
-            std::cout << colorCode << content << "\033[39m" << std::endl;
+            std::cout << "\033[" << 30 + (int)ptr->get_tag() << "m" << content << "\033[39m" << std::endl;
         } else if (auto ptr = myColor.get_ptr<rgb::base::ColorOrRGBOrName::TagType::rgb>()) {
             std::cout << "\033[38;2;" << (int)ptr->r << ";" << (int)ptr->g << ";" << (int)ptr->b << "m" << content << "\033[39m" << std::endl;
         } else if (auto ptr = myColor.get_ptr<rgb::base::ColorOrRGBOrName::TagType::name>()) {

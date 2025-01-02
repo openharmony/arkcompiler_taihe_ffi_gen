@@ -41,10 +41,9 @@ public:
     }
 
     void show() {
-        std::string content = name + ": " + std::to_string(r);
+        std::string content = "circle " + name + ": r = " + std::to_string(r);
         if (auto ptr = myColor.get_ptr<rgb::base::ColorOrRGBOrName::TagType::color>()) {
-            std::string colorCode = "\033[" + std::to_string(30 + (int)ptr->get_tag()) + "m";
-            std::cout << colorCode << content << "\033[39m" << std::endl;
+            std::cout << "\033[" << 30 + (int)ptr->get_tag() << "m" << content << "\033[39m" << std::endl;
         } else if (auto ptr = myColor.get_ptr<rgb::base::ColorOrRGBOrName::TagType::rgb>()) {
             std::cout << "\033[38;2;" << (int)ptr->r << ";" << (int)ptr->g << ";" << (int)ptr->b << "m" << content << "\033[39m" << std::endl;
         } else if (auto ptr = myColor.get_ptr<rgb::base::ColorOrRGBOrName::TagType::name>()) {
@@ -66,8 +65,8 @@ int main() {
     std::cout << base::toString(color_xxx).c_str() << std::endl;
     std::cout << base::toString(color_unknown).c_str() << std::endl;
 
-    auto circle = taihe::core::makeInterface<rgb::show::IShowable, ColoredCircle>("circle", 10, color_114514);
-    auto rect = show::makeColoredRectangle("rect a", color_yellow, 5, 5);
+    auto circle = taihe::core::makeInterface<rgb::show::IShowable, ColoredCircle>("A", 10, color_114514);
+    auto rect = show::makeColoredRectangle("B", color_yellow, 5, 5);
 
     circle.show();
     rect.show();

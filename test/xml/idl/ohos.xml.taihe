@@ -27,7 +27,6 @@ interface XmlSerializer {
 
 function makeXmlSerializer(buffer: BufferType, encoding: OptString): XmlSerializer;
 
-
 enum EventType {
     START_DOCUMENT;
     END_DOCUMENT;
