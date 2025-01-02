@@ -6,10 +6,10 @@
 #include <cmath>
 
 using namespace rgb;
+using taihe::core::ConstexprTag;
 
 class ColoredCircle {
     float r;
-
     std::string name;
 
     rgb::base::ColorOrRGBOrName myColor;
@@ -43,7 +43,7 @@ public:
     void show() {
         std::string content = std::format("{}: {}", name, r);
         if (auto ptr = myColor.get_ptr<rgb::base::ColorOrRGBOrName::TagType::color>()) {
-            std::cout << std::format("\033[{}m{}\033[39m", 30 + (int)ptr->tag, content) << std::endl;
+            std::cout << std::format("\033[{}m{}\033[39m", 30 + (int)ptr->get_tag(), content) << std::endl;
         } else if (auto ptr = myColor.get_ptr<rgb::base::ColorOrRGBOrName::TagType::rgb>()) {
             std::cout << std::format("\033[38;2;{};{};{}m{}\033[39m", ptr->r, ptr->g, ptr->b, content) << std::endl;
         } else if (auto ptr = myColor.get_ptr<rgb::base::ColorOrRGBOrName::TagType::name>()) {
@@ -55,10 +55,10 @@ public:
 };
 
 int main() {
-    base::ColorOrRGBOrName color_114514(taihe::core::ConstexprTag<base::ColorOrRGBOrName::TagType::rgb>, 0x11, 0x45, 0x14);
-    base::ColorOrRGBOrName color_yellow(taihe::core::ConstexprTag<base::ColorOrRGBOrName::TagType::color>, taihe::core::ConstexprTag<base::Color::TagType::yellow>);
-    base::ColorOrRGBOrName color_xxx(taihe::core::ConstexprTag<base::ColorOrRGBOrName::TagType::name>, "XXX");
-    base::ColorOrRGBOrName color_unknown(taihe::core::ConstexprTag<base::ColorOrRGBOrName::TagType::undefined>);
+    base::ColorOrRGBOrName color_114514(ConstexprTag<base::ColorOrRGBOrName::TagType::rgb>, 0x11, 0x45, 0x14);
+    base::ColorOrRGBOrName color_yellow(ConstexprTag<base::ColorOrRGBOrName::TagType::color>, ConstexprTag<base::Color::TagType::yellow>);
+    base::ColorOrRGBOrName color_xxx(ConstexprTag<base::ColorOrRGBOrName::TagType::name>, "XXX");
+    base::ColorOrRGBOrName color_unknown(ConstexprTag<base::ColorOrRGBOrName::TagType::undefined>);
 
     std::cout << base::toString(color_114514).c_str() << std::endl;
     std::cout << base::toString(color_yellow).c_str() << std::endl;

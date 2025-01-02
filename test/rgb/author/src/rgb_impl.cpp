@@ -10,7 +10,6 @@ class Rectangle {
 protected:
     float h;
     float w;
-
     std::string name;
 
 public:
@@ -38,6 +37,7 @@ rgb::show::IShape makeRectangleImpl(taihe::core::string_view id, float h, float 
 
 class ColoredRectangle : public Rectangle {
     rgb::base::ColorOrRGBOrName myColor;
+
 public:
     ColoredRectangle(taihe::core::string_view id, float h, float w, rgb::base::ColorOrRGBOrName const& color)
         : Rectangle(id, h, w), myColor(color) {}
@@ -53,7 +53,7 @@ public:
     void show() {
         std::string content = std::format("{}: {}x{}", name, h, w);
         if (auto ptr = myColor.get_ptr<rgb::base::ColorOrRGBOrName::TagType::color>()) {
-            std::cout << std::format("\033[{}m{}\033[39m", 30 + (int)ptr->tag, content) << std::endl;
+            std::cout << std::format("\033[{}m{}\033[39m", 30 + (int)ptr->get_tag(), content) << std::endl;
         } else if (auto ptr = myColor.get_ptr<rgb::base::ColorOrRGBOrName::TagType::rgb>()) {
             std::cout << std::format("\033[38;2;{};{};{}m{}\033[39m", ptr->r, ptr->g, ptr->b, content) << std::endl;
         } else if (auto ptr = myColor.get_ptr<rgb::base::ColorOrRGBOrName::TagType::name>()) {
@@ -74,7 +74,7 @@ void copyColorImpl(param::rgb::show::IColorable dst, param::rgb::show::IColorabl
 
 taihe::core::string colorToStringImpl(rgb::base::ColorOrRGBOrName const& color) {
     if (auto ptr = color.get_ptr<rgb::base::ColorOrRGBOrName::TagType::color>()) {
-        return std::format("Color({})", (int)ptr->tag);
+        return std::format("Color({})", (int)ptr->get_tag());
     } else if (auto ptr = color.get_ptr<rgb::base::ColorOrRGBOrName::TagType::rgb>()) {
         return std::format("#{:02x}{:02x}{:02x}", ptr->r, ptr->g, ptr->b);
     } else if (auto ptr = color.get_ptr<rgb::base::ColorOrRGBOrName::TagType::name>()) {
