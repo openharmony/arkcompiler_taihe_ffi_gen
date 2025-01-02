@@ -206,99 +206,9 @@ class KNBridgeCodeGenerator:
 
         self.gen_box_and_unbox_predefined_type(pkg, kn_bridge_pkg_target)
 
-        for iface in pkg.interfaces:
-            for func in iface.methods:
-                kn_bridge_func_info = KNBridgeFuncBaseDeclInfo.get(self.am, func)
-                kn_bridge_pkg_target.write(
-                    f'extern "C" {kn_bridge_func_info.return_ty_konan_name} {kn_bridge_func_info.konan_proj_name}(KObjHeader*, {kn_bridge_func_info.konan_params_only_ty});\n'
-                    f"static {kn_bridge_func_info.return_ty_name} {kn_bridge_func_info.konan_proj_name}_impl({kn_bridge_pkg_name}_kref_{iface.name} thiz, {kn_bridge_func_info.params_str}) {{\n"
-                    f"  Kotlin_initRuntimeIfNeeded();\n"
-                    f"  ScopedRunnableState stateGuard;\n"
-                    f"  FrameOverlay* frame = getCurrentFrame();\n"
-                )
-                for param in func.params:
-                    kn_bridge_pkg_target.write(f"  KObjHolder {param.name}_holder;\n")
-                kn_bridge_pkg_target.write(f"  KObjHolder thiz_holder;\n")
-                kn_bridge_pkg_target.write(f"  try {{\n")
-                if func.return_ty_ref is None:
-                    kn_bridge_pkg_target.write(
-                        f"{kn_bridge_func_info.konan_proj_name}(DerefStablePointer(thiz.pinned, thiz_holder.slot()), {kn_bridge_func_info.convert_params_str});\n"
-                    )
-                else:
-                    kn_bridge_pkg_target.write(
-                        f"    KObjHolder result_holder;\n"
-                        f"    auto result = {kn_bridge_func_info.konan_proj_name}(DerefStablePointer(thiz.pinned, thiz_holder.slot()), {kn_bridge_func_info.convert_params_str});\n"
-                        f"    return {kn_bridge_func_info.return_ty_str};\n"
-                    )
-                kn_bridge_pkg_target.write(
-                    f"  }} catch (...) {{\n"
-                    f"    SetCurrentFrame(reinterpret_cast<KObjHeader**>(frame));\n"
-                    f"    HandleCurrentExceptionWhenLeavingKotlinCode();\n"
-                    f"  }} \n"
-                    f"}}\n"
-                )
+        self.gen_func_impl(pkg, kn_bridge_pkg_target)
 
-        for func in pkg.functions:
-            kn_bridge_func_info = KNBridgeFuncBaseDeclInfo.get(self.am, func)
-            kn_bridge_pkg_target.write(
-                f'extern "C" {kn_bridge_func_info.return_ty_konan_name} {kn_bridge_func_info.konan_proj_name}({kn_bridge_func_info.konan_params_only_ty});\n'
-                f"static {kn_bridge_func_info.return_ty_name} {kn_bridge_func_info.konan_proj_name}_impl({kn_bridge_func_info.params_str}) {{\n"
-                f"  Kotlin_initRuntimeIfNeeded();\n"
-                f"  ScopedRunnableState stateGuard;\n"
-                f"  FrameOverlay* frame = getCurrentFrame();\n"
-            )
-            for param in func.params:
-                kn_bridge_pkg_target.write(f"  KObjHolder {param.name}_holder;\n")
-            kn_bridge_pkg_target.write(f"  try {{\n")
-            if func.return_ty_ref is None:
-                kn_bridge_pkg_target.write(
-                    f"{kn_bridge_func_info.konan_proj_name}({kn_bridge_func_info.convert_params_str});\n"
-                )
-            else:
-                kn_bridge_pkg_target.write(
-                    f"    KObjHolder result_holder;\n"
-                    f"    auto result = {kn_bridge_func_info.konan_proj_name}({kn_bridge_func_info.convert_params_str});\n"
-                    f"    return {kn_bridge_func_info.return_ty_str};\n"
-                )
-            kn_bridge_pkg_target.write(
-                f"  }} catch (...) {{\n"
-                f"    SetCurrentFrame(reinterpret_cast<KObjHeader**>(frame));\n"
-                f"    HandleCurrentExceptionWhenLeavingKotlinCode();\n"
-                f"  }} \n"
-                f"}}\n"
-            )
-
-        kn_bridge_pkg_target.write(
-            f"static {kn_bridge_pkg_name}_ExportedSymbols __konan_symbols = {{\n"
-            f"  .DisposeStablePointer = DisposeStablePointerImpl,\n"
-            f"  .DisposeString = DisposeStringImpl,\n"
-            f"  .IsInstance = IsInstanceImpl,\n"
-        )
-        for predefinedType in self.kn_predefined_type_list:
-            if predefinedType != "Unit":
-                kn_bridge_pkg_target.write(
-                    f"  .createNullable{predefinedType} = createNullable{predefinedType}Impl,\n"
-                    f"  .getNonNullValueOf{predefinedType} = getNonNullValueOf{predefinedType}Impl,\n"
-                )
-            else:
-                kn_bridge_pkg_target.write(
-                    f"  .createNullableUnit = createNullableUnitImpl,\n"
-                )
-
-        kn_bridge_pkg_target.write(f"  .kotlin = {{\n" f"    .root = {{\n")
-        for iface in pkg.interfaces:
-            kn_bridge_pkg_target.write(f"      .{iface.name} {{\n")
-            for method in iface.methods:
-                kn_bridge_pkg_target.write(
-                    f"        /* {method.name} = */ {method.attrs['konan_name'].value}_impl, \n"
-                )
-            kn_bridge_pkg_target.write(f"      }}, \n")
-        for func in pkg.functions:
-            kn_bridge_func_info = KNBridgeFuncBaseDeclInfo.get(self.am, func)
-            kn_bridge_pkg_target.write(
-                f"      /* {kn_bridge_func_info.name} = */ {kn_bridge_func_info.konan_proj_name}_impl,\n"
-            )
-        kn_bridge_pkg_target.write(f"    }},\n" f"  }},\n" f"}};\n")
+        self.gen_singleton_struct(pkg, kn_bridge_pkg_target)
 
         self.gen_package_th_tyundef(pkg, kn_bridge_pkg_target)
 
@@ -617,4 +527,106 @@ class KNBridgeCodeGenerator:
             kn_bridge_func_info = KNBridgeFuncBaseDeclInfo.get(self.am, func)
             kn_bridge_pkg_target.write(
                 f"      {kn_bridge_func_info.return_ty_name} (*{kn_bridge_func_info.name})({kn_bridge_func_info.params_str});\n"
+            )
+
+    def gen_singleton_struct(self, pkg: Package, kn_bridge_pkg_target: COutputBuffer):
+        kn_bridge_pkg_name = pkg.attrs["pkg_name"].value
+        assert isinstance(kn_bridge_pkg_name, str)
+
+        kn_bridge_pkg_target.write(
+            f"static {kn_bridge_pkg_name}_ExportedSymbols __konan_symbols = {{\n"
+            f"  .DisposeStablePointer = DisposeStablePointerImpl,\n"
+            f"  .DisposeString = DisposeStringImpl,\n"
+            f"  .IsInstance = IsInstanceImpl,\n"
+        )
+        for predefinedType in self.kn_predefined_type_list:
+            if predefinedType != "Unit":
+                kn_bridge_pkg_target.write(
+                    f"  .createNullable{predefinedType} = createNullable{predefinedType}Impl,\n"
+                    f"  .getNonNullValueOf{predefinedType} = getNonNullValueOf{predefinedType}Impl,\n"
+                )
+            else:
+                kn_bridge_pkg_target.write(
+                    f"  .createNullableUnit = createNullableUnitImpl,\n"
+                )
+
+        kn_bridge_pkg_target.write(f"  .kotlin = {{\n" f"    .root = {{\n")
+        for iface in pkg.interfaces:
+            kn_bridge_pkg_target.write(f"      .{iface.name} {{\n")
+            for method in iface.methods:
+                kn_bridge_pkg_target.write(
+                    f"        /* {method.name} = */ {method.attrs['konan_name'].value}_impl, \n"
+                )
+            kn_bridge_pkg_target.write(f"      }}, \n")
+        for func in pkg.functions:
+            kn_bridge_func_info = KNBridgeFuncBaseDeclInfo.get(self.am, func)
+            kn_bridge_pkg_target.write(
+                f"      /* {kn_bridge_func_info.name} = */ {kn_bridge_func_info.konan_proj_name}_impl,\n"
+            )
+        kn_bridge_pkg_target.write(f"    }},\n" f"  }},\n" f"}};\n")
+
+    def gen_func_impl(self, pkg: Package, kn_bridge_pkg_target: COutputBuffer):
+        kn_bridge_pkg_name = pkg.attrs["pkg_name"].value
+        assert isinstance(kn_bridge_pkg_name, str)
+
+        for iface in pkg.interfaces:
+            for func in iface.methods:
+                kn_bridge_func_info = KNBridgeFuncBaseDeclInfo.get(self.am, func)
+                kn_bridge_pkg_target.write(
+                    f'extern "C" {kn_bridge_func_info.return_ty_konan_name} {kn_bridge_func_info.konan_proj_name}(KObjHeader*, {kn_bridge_func_info.konan_params_only_ty});\n'
+                    f"static {kn_bridge_func_info.return_ty_name} {kn_bridge_func_info.konan_proj_name}_impl({kn_bridge_pkg_name}_kref_{iface.name} thiz, {kn_bridge_func_info.params_str}) {{\n"
+                    f"  Kotlin_initRuntimeIfNeeded();\n"
+                    f"  ScopedRunnableState stateGuard;\n"
+                    f"  FrameOverlay* frame = getCurrentFrame();\n"
+                )
+                for param in func.params:
+                    kn_bridge_pkg_target.write(f"  KObjHolder {param.name}_holder;\n")
+                kn_bridge_pkg_target.write(f"  KObjHolder thiz_holder;\n")
+                kn_bridge_pkg_target.write(f"  try {{\n")
+                if func.return_ty_ref is None:
+                    kn_bridge_pkg_target.write(
+                        f"{kn_bridge_func_info.konan_proj_name}(DerefStablePointer(thiz.pinned, thiz_holder.slot()), {kn_bridge_func_info.convert_params_str});\n"
+                    )
+                else:
+                    kn_bridge_pkg_target.write(
+                        f"    KObjHolder result_holder;\n"
+                        f"    auto result = {kn_bridge_func_info.konan_proj_name}(DerefStablePointer(thiz.pinned, thiz_holder.slot()), {kn_bridge_func_info.convert_params_str});\n"
+                        f"    return {kn_bridge_func_info.return_ty_str};\n"
+                    )
+                kn_bridge_pkg_target.write(
+                    f"  }} catch (...) {{\n"
+                    f"    SetCurrentFrame(reinterpret_cast<KObjHeader**>(frame));\n"
+                    f"    HandleCurrentExceptionWhenLeavingKotlinCode();\n"
+                    f"  }} \n"
+                    f"}}\n"
+                )
+
+        for func in pkg.functions:
+            kn_bridge_func_info = KNBridgeFuncBaseDeclInfo.get(self.am, func)
+            kn_bridge_pkg_target.write(
+                f'extern "C" {kn_bridge_func_info.return_ty_konan_name} {kn_bridge_func_info.konan_proj_name}({kn_bridge_func_info.konan_params_only_ty});\n'
+                f"static {kn_bridge_func_info.return_ty_name} {kn_bridge_func_info.konan_proj_name}_impl({kn_bridge_func_info.params_str}) {{\n"
+                f"  Kotlin_initRuntimeIfNeeded();\n"
+                f"  ScopedRunnableState stateGuard;\n"
+                f"  FrameOverlay* frame = getCurrentFrame();\n"
+            )
+            for param in func.params:
+                kn_bridge_pkg_target.write(f"  KObjHolder {param.name}_holder;\n")
+            kn_bridge_pkg_target.write(f"  try {{\n")
+            if func.return_ty_ref is None:
+                kn_bridge_pkg_target.write(
+                    f"{kn_bridge_func_info.konan_proj_name}({kn_bridge_func_info.convert_params_str});\n"
+                )
+            else:
+                kn_bridge_pkg_target.write(
+                    f"    KObjHolder result_holder;\n"
+                    f"    auto result = {kn_bridge_func_info.konan_proj_name}({kn_bridge_func_info.convert_params_str});\n"
+                    f"    return {kn_bridge_func_info.return_ty_str};\n"
+                )
+            kn_bridge_pkg_target.write(
+                f"  }} catch (...) {{\n"
+                f"    SetCurrentFrame(reinterpret_cast<KObjHeader**>(frame));\n"
+                f"    HandleCurrentExceptionWhenLeavingKotlinCode();\n"
+                f"  }} \n"
+                f"}}\n"
             )
