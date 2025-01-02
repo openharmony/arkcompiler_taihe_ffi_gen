@@ -1,0 +1,94 @@
+// enum BufferType {
+//     arr: ArrayBuffer;
+//     data: DataView;
+// }
+
+struct BufferType {
+    content: String;
+}
+
+enum OptString {
+    UNDEFINED;
+    value: String;
+}
+
+interface XmlSerializer {
+    setAttributes(name: String, value: String): void;
+    addEmptyElement(name: String): void;
+    setDeclaration(): void;
+    startElement(name: String): void;
+    endElement(): void;
+    setNamespace(prefix: String, namespace: String): void;
+    setComment(text: String): void;
+    setCDATA(text: String): void;
+    setText(text: String): void;
+    setDocType(text: String): void;
+}
+
+function makeXmlSerializer(buffer: BufferType, encoding: OptString): XmlSerializer;
+
+
+enum EventType {
+    START_DOCUMENT;
+    END_DOCUMENT;
+    START_TAG;
+    END_TAG;
+    TEXT;
+    CDSECT;
+    COMMENT;
+    DOCDECL;
+    INSTRUCTION;
+    ENTITY_REFERENCE;
+    WHITESPACE;
+}
+
+interface ParseInfo {
+    getColumnNumber(): u64;
+    getDepth(): u64;
+    getLineNumber(): u64;
+    getName(): String;
+    getNamespace(): String;
+    getPrefix(): String;
+    getText(): String;
+    isEmptyElementTag(): bool;
+    isWhitespace(): bool;
+    getAttributeCount(): u64;
+}
+
+enum OptBool {
+    UNDEFINED;
+    value: bool;
+}
+
+interface CallbackStringStringBool {
+    call(name: String, value: String): bool;
+}
+
+enum OptCallbackStringStringBool {
+    UNDEFINED;
+    value: CallbackStringStringBool;
+}
+
+interface CallbackEventTypeParseInfoBool {
+    call(eventType: EventType, value: ParseInfo): bool;
+}
+
+enum OptCallbackEventTypeParseInfoBool {
+    UNDEFINED;
+    value: CallbackEventTypeParseInfoBool;
+}
+
+struct ParseOptions {
+    supportDoctype: OptBool;
+    ignoreNameSpace: OptBool;
+    tagValueCallbackFunction: OptCallbackStringStringBool;
+    attributeValueCallbackFunction: OptCallbackStringStringBool;
+    tokenValueCallbackFunction: OptCallbackEventTypeParseInfoBool;
+}
+
+interface XmlPullParser {
+    parse(option: ParseOptions): void;
+    parseXml(option: ParseOptions): void;
+}
+
+function makeXmlPullParser(buffer: BufferType, encoding: OptString): XmlPullParser;
