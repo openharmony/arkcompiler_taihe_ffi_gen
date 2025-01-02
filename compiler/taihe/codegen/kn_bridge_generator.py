@@ -557,6 +557,12 @@ class KNBridgeCodeGenerator:
     def gen_func_impl(
         self, pkg: Package, kn_bridge_pkg_target: COutputBuffer, kn_bridge_pkg_name: str
     ):
+        self.gen_iface_func_impl(pkg, kn_bridge_pkg_target, kn_bridge_pkg_name)
+        self.gen_toplevel_func_impl(pkg, kn_bridge_pkg_target, kn_bridge_pkg_name)
+
+    def gen_iface_func_impl(
+        self, pkg: Package, kn_bridge_pkg_target: COutputBuffer, kn_bridge_pkg_name: str
+    ):
         for iface in pkg.interfaces:
             for func in iface.methods:
                 kn_bridge_func_info = KNBridgeFuncBaseDeclInfo.get(self.am, func)
@@ -589,6 +595,9 @@ class KNBridgeCodeGenerator:
                     f"}}\n"
                 )
 
+    def gen_toplevel_func_impl(
+        self, pkg: Package, kn_bridge_pkg_target: COutputBuffer, kn_bridge_pkg_name: str
+    ):
         for func in pkg.functions:
             kn_bridge_func_info = KNBridgeFuncBaseDeclInfo.get(self.am, func)
             kn_bridge_pkg_target.write(
