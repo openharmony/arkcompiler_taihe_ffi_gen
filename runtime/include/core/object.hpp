@@ -73,7 +73,7 @@ template<typename Impl>
 struct WithDataBlockHead : DataBlockHead, Impl {
     template<typename... Args>
     WithDataBlockHead(TypeInfo const* rtti_ptr, TRefCount m_count, Args&&... args)
-        : DataBlockHead(rtti_ptr, m_count), Impl(std::forward<Args>(args)...) {}
+        : DataBlockHead{rtti_ptr, m_count}, Impl(std::forward<Args>(args)...) {}
 };
 
 template<typename FTable, typename Impl>
