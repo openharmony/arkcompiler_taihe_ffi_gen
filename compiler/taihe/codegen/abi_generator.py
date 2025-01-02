@@ -75,7 +75,7 @@ class PackageABIInfo(AbstractAnalysis[Package]):
 class BaseFuncDeclABIInfo(AbstractAnalysis[BaseFuncDecl]):
     def __init__(self, am: AnalysisManager, f: BaseFuncDecl) -> None:
         segments = f.segments
-        self.name = encode(segments, DeclKind.FUNCTION)
+        self.mangled_name = encode(segments, DeclKind.FUNCTION)
         if f.return_ty_ref is None:
             self.return_ty_header = None
             self.return_ty_name = "void"
@@ -88,18 +88,18 @@ class BaseFuncDeclABIInfo(AbstractAnalysis[BaseFuncDecl]):
 class EnumItemDeclABIInfo(AbstractAnalysis[EnumItemDecl]):
     def __init__(self, am: AnalysisManager, d: EnumItemDecl) -> None:
         segments = d.segments
-        self.name = encode(segments, DeclKind.ENUM_ITEM)
+        self.mangled_name = encode(segments, DeclKind.ENUM_ITEM)
 
 
 class EnumDeclABIInfo(AbstractAnalysis[EnumDecl]):
     def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
-        p = d.parent
+        p = d.node_parent
         assert p
         segments = d.segments
         self.header = f"{p.name}.{d.name}.abi.h"
         self.tag_name = encode(segments, DeclKind.ENUM_TAG)
         self.union_name = encode(segments, DeclKind.ENUM_UNION)
-        self.name = encode(segments, DeclKind.ENUM_STRUCT)
+        self.mangled_name = encode(segments, DeclKind.ENUM_STRUCT)
         self.as_owner = encode(segments, DeclKind.OWNER_T)
         self.as_param = encode(segments, DeclKind.PARAM_T)
         self.has_data = any(item.ty_ref for item in d.items)
@@ -125,11 +125,11 @@ class EnumDeclABIInfo(AbstractAnalysis[EnumDecl]):
 
 class StructDeclABIInfo(AbstractAnalysis[StructDecl]):
     def __init__(self, am: AnalysisManager, d: StructDecl) -> None:
-        p = d.parent
+        p = d.node_parent
         assert p
         segments = d.segments
         self.header = f"{p.name}.{d.name}.abi.h"
-        self.name = encode(segments, DeclKind.STRUCT)
+        self.mangled_name = encode(segments, DeclKind.STRUCT)
         self.as_owner = encode(segments, DeclKind.OWNER_T)
         self.as_param = encode(segments, DeclKind.PARAM_T)
         self.copy_func = (
@@ -164,13 +164,13 @@ class UniqueAncestorInfo:
 
 class IfaceDeclABIInfo(AbstractAnalysis[IfaceDecl]):
     def __init__(self, am: AnalysisManager, d: IfaceDecl) -> None:
-        p = d.parent
+        p = d.node_parent
         assert p
         segments = d.segments
         self.header_0 = f"{p.name}.{d.name}.abi.0.h"
         self.header_1 = f"{p.name}.{d.name}.abi.1.h"
         self.src = f"{p.name}.{d.name}.c"
-        self.name = encode(segments, DeclKind.INTERFACE)
+        self.mangled_name = encode(segments, DeclKind.INTERFACE)
         self.as_owner = encode(segments, DeclKind.OWNER_T)
         self.as_param = encode(segments, DeclKind.PARAM_T)
         self.copy_func = encode(segments, DeclKind.COPY)
@@ -179,7 +179,7 @@ class IfaceDeclABIInfo(AbstractAnalysis[IfaceDecl]):
         self.v_table = encode(segments, DeclKind.VTABLE)
         self.rtti = encode(segments, DeclKind.RTTI)
         self.iid = encode(segments, DeclKind.IID)
-        self.dynamic_cast = f"cast_to_{self.name}"
+        self.dynamic_cast = f"cast_to_{self.mangled_name}"
         self.ancestor_list: list[AncestorItemInfo] = []
         self.ancestor_dict: dict[IfaceDecl, UniqueAncestorInfo] = {}
         self.ancestors = [d]
@@ -199,7 +199,7 @@ class IfaceDeclABIInfo(AbstractAnalysis[IfaceDecl]):
                 ancestor,
                 UniqueAncestorInfo(
                     offset=i,
-                    static_cast=f"cast_{self.name}_to_{ancestor.name}",
+                    static_cast=f"cast_{self.mangled_name}_to_{ancestor.name}",
                 ),
             )
 
@@ -309,7 +309,7 @@ class ABICodeGenerator:
         params_str = ", ".join(params)
         pkg_abi_target.include(func_abi_info.return_ty_header)
         pkg_abi_target.write(
-            f"TH_EXPORT {func_abi_info.return_ty_name} {func_abi_info.name}({params_str});\n"
+            f"TH_EXPORT {func_abi_info.return_ty_name} {func_abi_info.mangled_name}({params_str});\n"
         )
 
     def gen_struct_file(
@@ -333,15 +333,15 @@ class ABICodeGenerator:
         struct_abi_target: COutputBuffer,
         struct_abi_info: StructDeclABIInfo,
     ):
-        struct_abi_target.write(f"struct {struct_abi_info.name} {{\n")
+        struct_abi_target.write(f"struct {struct_abi_info.mangled_name} {{\n")
         for field in struct.fields:
             ty_info = TypeABIInfo.get(self.am, field.ty_ref.resolved_ty)
             struct_abi_target.include(ty_info.header)
             struct_abi_target.write(f"  {ty_info.as_owner} {field.name};\n")
         struct_abi_target.write(
             f"}};\n"
-            f"typedef struct {struct_abi_info.name} {struct_abi_info.as_owner};\n"
-            f"typedef struct {struct_abi_info.name} const* {struct_abi_info.as_param};\n"
+            f"typedef struct {struct_abi_info.mangled_name} {struct_abi_info.as_owner};\n"
+            f"typedef struct {struct_abi_info.mangled_name} const* {struct_abi_info.as_param};\n"
         )
 
     def gen_struct_copy_func(
@@ -353,8 +353,8 @@ class ABICodeGenerator:
         if struct_abi_info.copy_func is None:
             return
         struct_abi_target.write(
-            f"inline struct {struct_abi_info.name} {struct_abi_info.copy_func}(struct {struct_abi_info.name} const* data_ptr) {{\n"
-            f"  struct {struct_abi_info.name} result;\n"
+            f"inline struct {struct_abi_info.mangled_name} {struct_abi_info.copy_func}(struct {struct_abi_info.mangled_name} const* data_ptr) {{\n"
+            f"  struct {struct_abi_info.mangled_name} result;\n"
         )
         for field in struct.fields:
             ty_info = TypeABIInfo.get(self.am, field.ty_ref.resolved_ty)
@@ -377,7 +377,7 @@ class ABICodeGenerator:
         if struct_abi_info.drop_func is None:
             return
         struct_abi_target.write(
-            f"inline void {struct_abi_info.drop_func}(struct {struct_abi_info.name} const *data_ptr) {{\n"
+            f"inline void {struct_abi_info.drop_func}(struct {struct_abi_info.mangled_name} const *data_ptr) {{\n"
         )
         for field in struct.fields:
             ty_info = TypeABIInfo.get(self.am, field.ty_ref.resolved_ty)
@@ -413,7 +413,9 @@ class ABICodeGenerator:
         enum_abi_target.write(f"enum {enum_abi_info.tag_name} {{\n")
         for item in enum.items:
             enum_item_abi_info = EnumItemDeclABIInfo.get(self.am, item)
-            enum_abi_target.write(f"  {enum_item_abi_info.name} = {item.value},\n")
+            enum_abi_target.write(
+                f"  {enum_item_abi_info.mangled_name} = {item.value},\n"
+            )
         enum_abi_target.write("};\n")
 
     def gen_enum_union_decl(
@@ -438,12 +440,12 @@ class ABICodeGenerator:
         enum_abi_info: EnumDeclABIInfo,
     ):
         enum_abi_target.write(
-            f"struct {enum_abi_info.name} {{\n"
+            f"struct {enum_abi_info.mangled_name} {{\n"
             f"  enum {enum_abi_info.tag_name} tag;\n"
             f"  union {enum_abi_info.union_name} data;\n"
             f"}};\n"
-            f"typedef struct {enum_abi_info.name} {enum_abi_info.as_owner};\n"
-            f"typedef struct {enum_abi_info.name} const* {enum_abi_info.as_param};\n"
+            f"typedef struct {enum_abi_info.mangled_name} {enum_abi_info.as_owner};\n"
+            f"typedef struct {enum_abi_info.mangled_name} const* {enum_abi_info.as_param};\n"
         )
 
     def gen_enum_copy_func(
@@ -455,8 +457,8 @@ class ABICodeGenerator:
         if enum_abi_info.copy_func is None:
             return
         enum_abi_target.write(
-            f"inline struct {enum_abi_info.name} {enum_abi_info.copy_func}(struct {enum_abi_info.name} const* data_ptr) {{\n"
-            f"  struct {enum_abi_info.name} result;\n"
+            f"inline struct {enum_abi_info.mangled_name} {enum_abi_info.copy_func}(struct {enum_abi_info.mangled_name} const* data_ptr) {{\n"
+            f"  struct {enum_abi_info.mangled_name} result;\n"
             f"  switch (result.tag = data_ptr->tag) {{\n"
         )
         for item in enum.items:
@@ -466,13 +468,13 @@ class ABICodeGenerator:
             enum_item_abi_info = EnumItemDeclABIInfo.get(self.am, item)
             if ty_info.copy_func is not None:
                 enum_abi_target.write(
-                    f"  case {enum_item_abi_info.name}:\n"
+                    f"  case {enum_item_abi_info.mangled_name}:\n"
                     f"    result.data.{item.name} = {ty_info.copy_func}(data_ptr->data.{item.name});\n"
                     f"    return result;\n"
                 )
             else:
                 enum_abi_target.write(
-                    f"  case {enum_item_abi_info.name}:\n"
+                    f"  case {enum_item_abi_info.mangled_name}:\n"
                     f"    result.data.{item.name} = data_ptr->data.{item.name};\n"
                     f"    return result;\n"
                 )
@@ -487,7 +489,7 @@ class ABICodeGenerator:
         if enum_abi_info.drop_func is None:
             return
         enum_abi_target.write(
-            f"inline void {enum_abi_info.drop_func}(struct {enum_abi_info.name} const* data_ptr) {{\n"
+            f"inline void {enum_abi_info.drop_func}(struct {enum_abi_info.mangled_name} const* data_ptr) {{\n"
             f"  switch (data_ptr->tag) {{\n"
         )
         for item in enum.items:
@@ -497,7 +499,7 @@ class ABICodeGenerator:
             enum_item_abi_info = EnumItemDeclABIInfo.get(self.am, item)
             if ty_info.copy_func is not None:
                 enum_abi_target.write(
-                    f"  case {enum_item_abi_info.name}:\n"
+                    f"  case {enum_item_abi_info.mangled_name}:\n"
                     f"    {ty_info.drop_func}(data_ptr->data.{item.name});\n"
                     f"    break;\n"
                 )
@@ -526,12 +528,12 @@ class ABICodeGenerator:
         iface_abi_target_0.write(
             f"struct {iface_abi_info.f_table};\n"
             f"struct {iface_abi_info.v_table};\n"
-            f"struct {iface_abi_info.name} {{\n"
+            f"struct {iface_abi_info.mangled_name} {{\n"
             f"  struct {iface_abi_info.v_table} const* vtbl_ptr;\n"
             f"  struct DataBlockHead* data_ptr;\n"
             f"}};\n"
-            f"typedef struct {iface_abi_info.name} {iface_abi_info.as_param};\n"
-            f"typedef struct {iface_abi_info.name} {iface_abi_info.as_owner};\n"
+            f"typedef struct {iface_abi_info.mangled_name} {iface_abi_info.as_param};\n"
+            f"typedef struct {iface_abi_info.mangled_name} {iface_abi_info.as_owner};\n"
         )
         self.gen_iface_copy_func(iface, iface_abi_target_0, iface_abi_info)
         self.gen_iface_drop_func(iface, iface_abi_target_0, iface_abi_info)
@@ -620,7 +622,7 @@ class ABICodeGenerator:
             params_str = ", ".join(params)
             args_str = ", ".join(args)
             iface_abi_1_target.write(
-                f"inline {method_abi_info.return_ty_name} {method_abi_info.name}({params_str}) {{\n"
+                f"inline {method_abi_info.return_ty_name} {method_abi_info.mangled_name}({params_str}) {{\n"
                 f"  return tobj.vtbl_ptr->ftbl_ptr_0->{method.name}({args_str});\n"
                 f"}}\n"
             )
@@ -637,8 +639,8 @@ class ABICodeGenerator:
             ancestor_abi_info = IfaceDeclABIInfo.get(self.am, ancestor)
             iface_abi_1_target.include(ancestor_abi_info.header_0)
             iface_abi_1_target.write(
-                f"inline struct {ancestor_abi_info.name} {info.static_cast}(struct {iface_abi_info.name} tobj) {{\n"
-                f"  struct {ancestor_abi_info.name} result;\n"
+                f"inline struct {ancestor_abi_info.mangled_name} {info.static_cast}(struct {iface_abi_info.mangled_name} tobj) {{\n"
+                f"  struct {ancestor_abi_info.mangled_name} result;\n"
                 f"  result.vtbl_ptr = (struct {ancestor_abi_info.v_table}*)(&tobj.vtbl_ptr->ftbl_ptr_0 + {info.offset});\n"
                 f"  result.data_ptr = tobj.data_ptr;\n"
                 f"  return result;\n"
@@ -652,9 +654,9 @@ class ABICodeGenerator:
         iface_abi_info: IfaceDeclABIInfo,
     ):
         iface_abi_1_target.write(
-            f"inline struct {iface_abi_info.name} {iface_abi_info.dynamic_cast}(struct DataBlockHead* data_ptr) {{\n"
+            f"inline struct {iface_abi_info.mangled_name} {iface_abi_info.dynamic_cast}(struct DataBlockHead* data_ptr) {{\n"
             f"  struct TypeInfo const* rtti_ptr = data_ptr->rtti_ptr;\n"
-            f"  struct {iface_abi_info.name} result;\n"
+            f"  struct {iface_abi_info.mangled_name} result;\n"
             f"  result.data_ptr = data_ptr;"
             f"  for (size_t i = 0; i < rtti_ptr->len; i++) {{\n"
             f"    if (rtti_ptr->idmap[i].id == {iface_abi_info.iid}) {{\n"
@@ -674,7 +676,7 @@ class ABICodeGenerator:
         iface_abi_info: IfaceDeclABIInfo,
     ):
         iface_abi_1_target.write(
-            f"inline struct {iface_abi_info.name} {iface_abi_info.copy_func}(struct {iface_abi_info.name} tobj) {{\n"
+            f"inline struct {iface_abi_info.mangled_name} {iface_abi_info.copy_func}(struct {iface_abi_info.mangled_name} tobj) {{\n"
             f"  struct DataBlockHead* data_ptr = tobj.data_ptr;\n"
             f"  if (data_ptr) {{\n"
             f"    tref_inc(&data_ptr->m_count);\n"
@@ -690,7 +692,7 @@ class ABICodeGenerator:
         iface_abi_info: IfaceDeclABIInfo,
     ):
         iface_abi_1_target.write(
-            f"inline void {iface_abi_info.drop_func}(struct {iface_abi_info.name} tobj) {{\n"
+            f"inline void {iface_abi_info.drop_func}(struct {iface_abi_info.mangled_name} tobj) {{\n"
             f"  struct DataBlockHead* data_ptr = tobj.data_ptr;\n"
             f"  if (data_ptr && tref_dec(&data_ptr->m_count)) {{\n"
             f"    data_ptr->rtti_ptr->free_ptr(data_ptr);\n"

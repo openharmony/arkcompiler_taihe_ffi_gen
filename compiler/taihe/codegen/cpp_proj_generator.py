@@ -53,7 +53,8 @@ class PackageCppProjInfo(AbstractAnalysis[Package]):
 
 class BaseFuncDeclCppProjInfo(AbstractAnalysis[BaseFuncDecl]):
     def __init__(self, am: AnalysisManager, f: BaseFuncDecl) -> None:
-        self.name = f.name
+        # TODO: Supports projection to any C++ function name based on attributes
+        self.name = "operator()" if f.attrs.get("functor") else f.name
         if f.return_ty_ref is None:
             self.return_ty_header_decl = None
             self.return_ty_header_defn = None
@@ -72,7 +73,7 @@ class BaseFuncDeclCppProjInfo(AbstractAnalysis[BaseFuncDecl]):
 class StructDeclCppProjInfo(AbstractAnalysis[StructDecl]):
     def __init__(self, am: AnalysisManager, d: StructDecl) -> None:
         abi_info = StructDeclABIInfo.get(am, d)
-        p = d.parent
+        p = d.node_parent
         assert p
         segments = d.segments
         self.header = f"{p.name}.{d.name}.proj.hpp"
@@ -96,7 +97,7 @@ class StructDeclCppProjInfo(AbstractAnalysis[StructDecl]):
 class EnumDeclCppProjInfo(AbstractAnalysis[EnumDecl]):
     def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
         abi_info = EnumDeclABIInfo.get(am, d)
-        p = d.parent
+        p = d.node_parent
         assert p
         segments = d.segments
         self.header = f"{p.name}.{d.name}.proj.hpp"
@@ -120,7 +121,7 @@ class EnumDeclCppProjInfo(AbstractAnalysis[EnumDecl]):
 class IfaceDeclCppProjInfo(AbstractAnalysis[IfaceDecl]):
     def __init__(self, am: AnalysisManager, d: IfaceDecl) -> None:
         abi_info = IfaceDeclABIInfo.get(am, d)
-        p = d.parent
+        p = d.node_parent
         assert p
         segments = d.segments
         self.header_decl = f"{p.name}.{d.name}.proj.0.hpp"
@@ -267,22 +268,22 @@ class CppProjCodeGenerator:
     ):
         func_cpp_proj_info = BaseFuncDeclCppProjInfo.get(self.am, func)
         func_abi_info = BaseFuncDeclABIInfo.get(self.am, func)
-        cpp_params = []
+        params_cpp = []
         args_into_abi = []
         for param in func.params:
             type_cpp_proj_info = TypeCppProjInfo.get(self.am, param.ty_ref.resolved_ty)
             pkg_cpp_proj_target.include(type_cpp_proj_info.header_defn)
-            cpp_params.append(f"{type_cpp_proj_info.as_param} {param.name}")
+            params_cpp.append(f"{type_cpp_proj_info.as_param} {param.name}")
             args_into_abi.append(type_cpp_proj_info.pass_into_abi(param.name))
-        cpp_params_str = ", ".join(cpp_params)
+        params_cpp_str = ", ".join(params_cpp)
         args_into_abi_str = ",".join(args_into_abi)
         pkg_cpp_proj_target.include(func_cpp_proj_info.return_ty_header_defn)
         result = func_cpp_proj_info.return_from_abi(
-            f"{func_abi_info.name}({args_into_abi_str})"
+            f"{func_abi_info.mangled_name}({args_into_abi_str})"
         )
         pkg_cpp_proj_target.write(
             f"namespace {pkg_cpp_proj_info.namespace} {{\n"
-            f"inline {func_cpp_proj_info.return_ty_name} {func_cpp_proj_info.name}({cpp_params_str}) {{\n"
+            f"inline {func_cpp_proj_info.return_ty_name} {func_cpp_proj_info.name}({params_cpp_str}) {{\n"
             f"    return {result};\n"
             f"}}\n"
             f"}}\n"
@@ -599,7 +600,7 @@ class CppProjCodeGenerator:
             if item.ty_ref is None:
                 enum_cpp_proj_target.write(
                     f"    case {enum_cpp_proj_info.owner_full_name}::TagType::{item.name}:\n"
-                    f"        result.tag = {enum_item_abi_info.name};\n"
+                    f"        result.tag = {enum_item_abi_info.mangled_name};\n"
                     f"        break;\n"
                 )
                 continue
@@ -609,7 +610,7 @@ class CppProjCodeGenerator:
             )
             enum_cpp_proj_target.write(
                 f"    case {enum_cpp_proj_info.owner_full_name}::TagType::{item.name}:\n"
-                f"        result.tag = {enum_item_abi_info.name};\n"
+                f"        result.tag = {enum_item_abi_info.mangled_name};\n"
                 f"        result.data.{item.name} = {result};\n"
                 f"        break;\n"
             )
@@ -625,14 +626,14 @@ class CppProjCodeGenerator:
             enum_item_abi_info = EnumItemDeclABIInfo.get(self.am, item)
             if item.ty_ref is None:
                 enum_cpp_proj_target.write(
-                    f"    case {enum_item_abi_info.name}:\n"
+                    f"    case {enum_item_abi_info.mangled_name}:\n"
                     f"        return {enum_cpp_proj_info.owner_full_name}(::taihe::core::ConstexprTag<{enum_cpp_proj_info.owner_full_name}::TagType::{item.name}>);\n"
                 )
                 continue
             ty_cpp_proj_info = TypeCppProjInfo.get(self.am, item.ty_ref.resolved_ty)
             result = ty_cpp_proj_info.return_from_abi(f"val.data.{item.name}")
             enum_cpp_proj_target.write(
-                f"    case {enum_item_abi_info.name}:\n"
+                f"    case {enum_item_abi_info.mangled_name}:\n"
                 f"        return {enum_cpp_proj_info.owner_full_name}(::taihe::core::ConstexprTag<{enum_cpp_proj_info.owner_full_name}::TagType::{item.name}>, {result});\n"
             )
         enum_cpp_proj_target.write(
@@ -766,19 +767,19 @@ class CppProjCodeGenerator:
             )
         for method in iface.methods:
             method_cpp_proj_info = BaseFuncDeclCppProjInfo.get(self.am, method)
-            params = []
+            params_cpp = []
             for param in method.params:
                 type_cpp_proj_info = TypeCppProjInfo.get(
                     self.am, param.ty_ref.resolved_ty
                 )
                 iface_cpp_proj_defn_target.include(type_cpp_proj_info.header_decl)
-                params.append(f"{type_cpp_proj_info.as_param} {param.name}")
-            params_str = ", ".join(params)
+                params_cpp.append(f"{type_cpp_proj_info.as_param} {param.name}")
+            params_cpp_str = ", ".join(params_cpp)
             iface_cpp_proj_defn_target.include(
                 method_cpp_proj_info.return_ty_header_decl
             )
             iface_cpp_proj_defn_target.write(
-                f"    {method_cpp_proj_info.return_ty_name} {method.name}({params_str});\n"
+                f"    {method_cpp_proj_info.return_ty_name} {method_cpp_proj_info.name}({params_cpp_str});\n"
             )
         iface_cpp_proj_defn_target.write("};\n" "}\n")
 
@@ -815,19 +816,19 @@ class CppProjCodeGenerator:
             )
         for method in iface.methods:
             method_cpp_proj_info = BaseFuncDeclCppProjInfo.get(self.am, method)
-            params = []
+            params_cpp = []
             for param in method.params:
                 type_cpp_proj_info = TypeCppProjInfo.get(
                     self.am, param.ty_ref.resolved_ty
                 )
                 iface_cpp_proj_defn_target.include(type_cpp_proj_info.header_decl)
-                params.append(f"{type_cpp_proj_info.as_param} {param.name}")
-            params_str = ", ".join(params)
+                params_cpp.append(f"{type_cpp_proj_info.as_param} {param.name}")
+            params_cpp_str = ", ".join(params_cpp)
             iface_cpp_proj_defn_target.include(
                 method_cpp_proj_info.return_ty_header_decl
             )
             iface_cpp_proj_defn_target.write(
-                f"    {method_cpp_proj_info.return_ty_name} {method.name}({params_str});\n"
+                f"    {method_cpp_proj_info.return_ty_name} {method_cpp_proj_info.name}({params_cpp_str});\n"
             )
         iface_cpp_proj_defn_target.write("};\n" "}\n")
 
@@ -1097,25 +1098,25 @@ class CppProjCodeGenerator:
         for method in iface.methods:
             method_abi_info = BaseFuncDeclABIInfo.get(self.am, method)
             method_cpp_proj_info = BaseFuncDeclCppProjInfo.get(self.am, method)
-            params = []
+            params_cpp = []
             args_into_abi = ["this->m_handle"]
             for param in method.params:
                 type_cpp_proj_info = TypeCppProjInfo.get(
                     self.am, param.ty_ref.resolved_ty
                 )
                 iface_cpp_proj_impl_target.include(type_cpp_proj_info.header_defn)
-                params.append(f"{type_cpp_proj_info.as_param} {param.name}")
+                params_cpp.append(f"{type_cpp_proj_info.as_param} {param.name}")
                 args_into_abi.append(type_cpp_proj_info.pass_into_abi(param.name))
-            params_str = ", ".join(params)
+            params_cpp_str = ", ".join(params_cpp)
             args_into_abi_str = ",".join(args_into_abi)
             iface_cpp_proj_impl_target.include(
                 method_cpp_proj_info.return_ty_header_defn
             )
             result = method_cpp_proj_info.return_from_abi(
-                f"{method_abi_info.name}({args_into_abi_str})"
+                f"{method_abi_info.mangled_name}({args_into_abi_str})"
             )
             iface_cpp_proj_impl_target.write(
-                f"inline {method_cpp_proj_info.return_ty_name} {iface_cpp_proj_info.name}::{method.name}({params_str}) {{\n"
+                f"inline {method_cpp_proj_info.return_ty_name} {iface_cpp_proj_info.name}::{method_cpp_proj_info.name}({params_cpp_str}) {{\n"
                 f"    return {result};\n"
                 f"}}\n"
             )
@@ -1176,25 +1177,25 @@ class CppProjCodeGenerator:
         for method in iface.methods:
             method_abi_info = BaseFuncDeclABIInfo.get(self.am, method)
             method_cpp_proj_info = BaseFuncDeclCppProjInfo.get(self.am, method)
-            params = []
+            params_cpp = []
             args_into_abi = ["this->m_handle"]
             for param in method.params:
                 type_cpp_proj_info = TypeCppProjInfo.get(
                     self.am, param.ty_ref.resolved_ty
                 )
                 iface_cpp_proj_impl_target.include(type_cpp_proj_info.header_defn)
-                params.append(f"{type_cpp_proj_info.as_param} {param.name}")
+                params_cpp.append(f"{type_cpp_proj_info.as_param} {param.name}")
                 args_into_abi.append(type_cpp_proj_info.pass_into_abi(param.name))
-            params_str = ", ".join(params)
+            params_cpp_str = ", ".join(params_cpp)
             args_into_abi_str = ",".join(args_into_abi)
             iface_cpp_proj_impl_target.include(
                 method_cpp_proj_info.return_ty_header_defn
             )
             result = method_cpp_proj_info.return_from_abi(
-                f"{method_abi_info.name}({args_into_abi_str})"
+                f"{method_abi_info.mangled_name}({args_into_abi_str})"
             )
             iface_cpp_proj_impl_target.write(
-                f"inline {method_cpp_proj_info.return_ty_name} {iface_cpp_proj_info.name}::{method.name}({params_str}) {{\n"
+                f"inline {method_cpp_proj_info.return_ty_name} {iface_cpp_proj_info.name}::{method_cpp_proj_info.name}({params_cpp_str}) {{\n"
                 f"    return {result};\n"
                 f"}}\n"
             )

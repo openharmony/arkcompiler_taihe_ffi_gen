@@ -31,7 +31,7 @@ class Decl(DeclProtocol, metaclass=ABCMeta):
         self.attrs = {}
 
     def add_attr(self, i: "AttrItemDecl"):
-        i.parent = self
+        i.node_parent = self
         if prev := self.attrs.get(i.name, None):
             raise AttrRedefError(prev, i)
         else:
@@ -107,7 +107,7 @@ class AttrItemDecl(Decl):
     loc: Optional[SourceLocation]
 
     value: bool | int | str | None
-    parent: Optional[Decl]
+    node_parent: Optional[Decl]
 
     def __init__(
         self,
@@ -119,7 +119,7 @@ class AttrItemDecl(Decl):
         self.name = name
         self.loc = loc
         self.value = value
-        self.parent = None
+        self.node_parent = None
 
     @property
     def description(self) -> str:
@@ -127,7 +127,7 @@ class AttrItemDecl(Decl):
         return f"attribute {self.name!r}"
 
     def __repr__(self) -> str:
-        return f"<{self.description} of {self.parent} at {self.loc}>"
+        return f"<{self.description} of {self.node_parent} at {self.loc}>"
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
@@ -266,13 +266,13 @@ class ImportDecl(NamedDecl, metaclass=ABCMeta):
     ```
     """
 
-    parent: Optional["Package"] = None
+    node_parent: Optional["Package"] = None
 
     @property
     @override
     def segments(self) -> list[str]:
-        assert self.parent
-        return [*self.parent.segments, self.name]
+        assert self.node_parent
+        return [*self.node_parent.segments, self.name]
 
 
 class PackageImportDecl(ImportDecl):
@@ -343,20 +343,20 @@ class DeclarationImportDecl(ImportDecl):
 
 
 class PackageLevelDecl(NamedDecl, metaclass=ABCMeta):
-    parent: Optional["Package"] = None
+    node_parent: Optional["Package"] = None
 
     @property
     @override
     def segments(self) -> list[str]:
-        assert self.parent
-        return [*self.parent.segments, self.name]
+        assert self.node_parent
+        return [*self.node_parent.segments, self.name]
 
 
 class ParamDecl(NamedDecl):
     KIND = "function parameter"
 
     ty_ref: TypeRefDecl
-    parent: Optional["BaseFuncDecl"]
+    node_parent: Optional["BaseFuncDecl"]
 
     def __init__(
         self,
@@ -366,7 +366,7 @@ class ParamDecl(NamedDecl):
     ):
         super().__init__(name, loc)
         self.ty_ref = ty_ref
-        self.parent = None
+        self.node_parent = None
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
@@ -375,8 +375,8 @@ class ParamDecl(NamedDecl):
     @property
     @override
     def segments(self) -> list[str]:
-        assert self.parent
-        return [*self.parent.segments, self.name]
+        assert self.node_parent
+        return [*self.node_parent.segments, self.name]
 
     @property
     @override
@@ -404,7 +404,7 @@ class BaseFuncDecl(NamedDecl, metaclass=ABCMeta):
         return {"param": self.params}
 
     def add_param(self, p: ParamDecl):
-        p.parent = self
+        p.node_parent = self
         self.params.append(p)
 
 
@@ -429,7 +429,7 @@ class EnumItemDecl(NamedDecl):
 
     ty_ref: Optional[TypeRefDecl]
     value: Optional[int]
-    parent: Optional["EnumDecl"]
+    node_parent: Optional["EnumDecl"]
 
     def __init__(
         self,
@@ -441,7 +441,7 @@ class EnumItemDecl(NamedDecl):
         super().__init__(name, loc)
         self.ty_ref = ty_ref
         self.value = value
-        self.parent = None
+        self.node_parent = None
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
@@ -455,8 +455,8 @@ class EnumItemDecl(NamedDecl):
     @property
     @override
     def segments(self) -> list[str]:
-        assert self.parent
-        return [*self.parent.segments, self.name]
+        assert self.node_parent
+        return [*self.node_parent.segments, self.name]
 
 
 class EnumDecl(DataTypeDecl):
@@ -478,7 +478,7 @@ class EnumDecl(DataTypeDecl):
         return {"item": self.items}
 
     def add_item(self, f: EnumItemDecl):
-        f.parent = self
+        f.node_parent = self
         self.items.append(f)
 
 
@@ -486,7 +486,7 @@ class StructFieldDecl(NamedDecl):
     KIND = "struct field"
 
     ty_ref: TypeRefDecl
-    parent: Optional["StructDecl"]
+    node_parent: Optional["StructDecl"]
 
     def __init__(
         self,
@@ -496,7 +496,7 @@ class StructFieldDecl(NamedDecl):
     ):
         super().__init__(name, loc)
         self.ty_ref = ty_ref
-        self.parent = None
+        self.node_parent = None
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
@@ -505,8 +505,8 @@ class StructFieldDecl(NamedDecl):
     @property
     @override
     def segments(self) -> list[str]:
-        assert self.parent
-        return [*self.parent.segments, self.name]
+        assert self.node_parent
+        return [*self.node_parent.segments, self.name]
 
     @property
     @override
@@ -533,7 +533,7 @@ class StructDecl(DataTypeDecl):
         return {"field": self.fields}
 
     def add_field(self, f: StructFieldDecl):
-        f.parent = self
+        f.node_parent = self
         self.fields.append(f)
 
 
@@ -541,7 +541,7 @@ class IfaceParentDecl(NamedDecl):
     KIND = "function return type"
 
     ty_ref: TypeRefDecl
-    parent: Optional["IfaceDecl"]
+    node_parent: Optional["IfaceDecl"]
 
     def __init__(
         self,
@@ -551,7 +551,7 @@ class IfaceParentDecl(NamedDecl):
     ):
         super().__init__(name, loc)
         self.ty_ref = ty_ref
-        self.parent = None
+        self.node_parent = None
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
@@ -560,8 +560,8 @@ class IfaceParentDecl(NamedDecl):
     @property
     @override
     def segments(self) -> list[str]:
-        assert self.parent
-        return [*self.parent.segments, self.name]
+        assert self.node_parent
+        return [*self.node_parent.segments, self.name]
 
     @property
     @override
@@ -572,7 +572,7 @@ class IfaceParentDecl(NamedDecl):
 class IfaceMethodDecl(BaseFuncDecl):
     KIND = "interface method"
 
-    parent: Optional["IfaceDecl"] = None
+    node_parent: Optional["IfaceDecl"] = None
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
@@ -581,8 +581,8 @@ class IfaceMethodDecl(BaseFuncDecl):
     @property
     @override
     def segments(self) -> list[str]:
-        assert self.parent
-        return [*self.parent.segments, self.name]
+        assert self.node_parent
+        return [*self.node_parent.segments, self.name]
 
 
 class IfaceDecl(TypeDecl):
@@ -609,11 +609,11 @@ class IfaceDecl(TypeDecl):
         }
 
     def add_method(self, f: IfaceMethodDecl):
-        f.parent = self
+        f.node_parent = self
         self.methods.append(f)
 
     def add_parent(self, p: IfaceParentDecl):
-        p.parent = self
+        p.node_parent = self
         self.parents.append(p)
 
 
@@ -685,22 +685,22 @@ class Package(NamedDecl):
             self.decls[d.name] = d
 
     def add_function(self, f: GlobFuncDecl):
-        f.parent = self
+        f.node_parent = self
         self.functions.append(f)
         self._register_to_decl(f)
 
     def add_struct(self, s: StructDecl):
-        s.parent = self
+        s.node_parent = self
         self.structs.append(s)
         self._register_to_decl(s)
 
     def add_enum(self, e: EnumDecl):
-        e.parent = self
+        e.node_parent = self
         self.enums.append(e)
         self._register_to_decl(e)
 
     def add_interface(self, i: IfaceDecl):
-        i.parent = self
+        i.node_parent = self
         self.interfaces.append(i)
         self._register_to_decl(i)
 
@@ -723,12 +723,12 @@ class Package(NamedDecl):
             self.imports[i.name] = i
 
     def add_decl_import(self, i: DeclarationImportDecl):
-        i.parent = self
+        i.node_parent = self
         self.decl_imports.append(i)
         self._register_to_import(i)
 
     def add_pkg_import(self, i: PackageImportDecl):
-        i.parent = self
+        i.node_parent = self
         self.pkg_imports.append(i)
         self._register_to_import(i)
 

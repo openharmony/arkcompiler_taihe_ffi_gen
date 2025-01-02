@@ -61,7 +61,7 @@ enum OptBool {
 }
 
 interface CallbackStringStringBool {
-    call(name: String, value: String): bool;
+    [functor] call(name: String, value: String): bool;
 }
 
 enum OptCallbackStringStringBool {
@@ -70,7 +70,7 @@ enum OptCallbackStringStringBool {
 }
 
 interface CallbackEventTypeParseInfoBool {
-    call(eventType: EventType, value: ParseInfo): bool;
+    [functor] call(eventType: EventType, value: ParseInfo): bool;
 }
 
 enum OptCallbackEventTypeParseInfoBool {

@@ -57,8 +57,8 @@ class CImplCodeGenerator:
         pkg_c_impl_target.write(
             f"#define TH_EXPORT_C_API_{func.name}(_func) \\\n"
             f"  TH_STATIC_ASSERT(TH_IS_SAME(TH_TYPEOF(_func), {func_abi_info.return_ty_name} ({params_str})), \\\n"
-            f"    \"'\" #_func \"' is incompatible with '{func_abi_info.return_ty_name} {func_abi_info.name}({params_str})'\"); \\\n"
-            f"  {func_abi_info.return_ty_name} {func_abi_info.name}({params_str}) {{ \\\n"
+            f"    \"'\" #_func \"' is incompatible with '{func_abi_info.return_ty_name} {func_abi_info.mangled_name}({params_str})'\"); \\\n"
+            f"  {func_abi_info.return_ty_name} {func_abi_info.mangled_name}({params_str}) {{ \\\n"
             f"    return _func({args_str}); \\\n"
             f"  }}\n"
         )

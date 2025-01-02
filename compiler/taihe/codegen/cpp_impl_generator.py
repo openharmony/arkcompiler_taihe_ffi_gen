@@ -68,7 +68,7 @@ class CppImplCodeGenerator:
             f"#define TH_EXPORT_CPP_API_{func.name}(_func) \\\n"
             f"    TH_STATIC_ASSERT(TH_IS_SAME(TH_TYPEOF(_func), {func_cpp_proj_info.return_ty_name} ({cpp_params_str})), \\\n"
             f"        \"'\" #_func \"' is incompatible with '{func_cpp_proj_info.return_ty_name} {func_cpp_proj_info.name}({cpp_params_str})'\"); \\\n"
-            f"    {func_abi_info.return_ty_name} {func_abi_info.name}({abi_params_str}) {{ \\\n"
+            f"    {func_abi_info.return_ty_name} {func_abi_info.mangled_name}({abi_params_str}) {{ \\\n"
             f"        return {result}; \\\n"
             f"    }}\n"
         )

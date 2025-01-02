@@ -40,7 +40,7 @@ def pretty_print(x: Decl, buffer: TextIO):
 class _TypeNamePrinter(TypeVisitor[str]):
     @override
     def visit_type_decl(self, d: TypeDecl):
-        return f"{pkg.name}.{d.name}" if (pkg := d.parent) else d.name
+        return f"{pkg.name}.{d.name}" if (pkg := d.node_parent) else d.name
 
     @override
     def visit_builtin_type(self, t: BuiltinType):
