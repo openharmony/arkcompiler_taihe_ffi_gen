@@ -363,9 +363,7 @@ class ABICodeGenerator:
                     f"  result.{field.name} = {ty_info.copy_func}(data.{field.name});\n"
                 )
             else:
-                struct_abi_target.write(
-                    f"  result.{field.name} = data.{field.name};\n"
-                )
+                struct_abi_target.write(f"  result.{field.name} = data.{field.name};\n")
         struct_abi_target.write("  return result;\n" "}\n")
 
     def gen_struct_drop_func(
@@ -382,9 +380,7 @@ class ABICodeGenerator:
         for field in struct.fields:
             ty_info = TypeABIInfo.get(self.am, field.ty_ref.resolved_ty)
             if ty_info.drop_func is not None:
-                struct_abi_target.write(
-                    f"  {ty_info.drop_func}(data.{field.name});\n"
-                )
+                struct_abi_target.write(f"  {ty_info.drop_func}(data.{field.name});\n")
         struct_abi_target.write("}\n")
 
     def gen_enum_file(
