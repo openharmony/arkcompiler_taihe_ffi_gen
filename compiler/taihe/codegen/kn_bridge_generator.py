@@ -31,7 +31,8 @@ from taihe.utils.outputs import OutputManager
 
 class KNBridgePackageInfo(AbstractAnalysis[Package]):
     def __init__(self, am: AnalysisManager, p: Package) -> None:
-        self.header = f"{p.name}.api.hpp"
+        self.header = f"{p.name}.api.h"
+        self.source = f"{p.name}.api.cpp"
 
 
 class KNBridgeFuncBaseDeclInfo(AbstractAnalysis[BaseFuncDecl]):
@@ -136,21 +137,7 @@ class KNBridgeCodeGenerator:
     def __init__(self, tm: OutputManager, am: AnalysisManager):
         self.tm = tm
         self.am = am
-
-    def generate(self, pg: PackageGroup):
-        for pkg in pg.packages:
-            self.gen_package_file(pkg)
-
-    def gen_package_file(self, pkg: Package):
-        kn_bridge_pkg_info = KNBridgePackageInfo.get(self.am, pkg)
-        kn_bridge_pkg_target = COutputBuffer.create(
-            self.tm, f"include/{kn_bridge_pkg_info.header}", True
-        )
-
-        kn_bridge_pkg_name = pkg.attrs["pkg_name"].value
-        assert isinstance(kn_bridge_pkg_name, str)
-
-        kn_predefined_type_list = [
+        self.kn_predefined_type_list = [
             "Byte",
             "Short",
             "Int",
@@ -166,100 +153,59 @@ class KNBridgeCodeGenerator:
             "ULong",
         ]
 
+    def generate(self, pg: PackageGroup):
+        for pkg in pg.packages:
+            self.gen_package_header_file(pkg)
+            self.gen_package_source_file(pkg)
+
+    def gen_package_header_file(self, pkg: Package):
+        kn_bridge_pkg_info = KNBridgePackageInfo.get(self.am, pkg)
+        kn_bridge_pkg_target = COutputBuffer.create(
+            self.tm, f"include/{kn_bridge_pkg_info.header}", True
+        )
+
+        kn_bridge_pkg_name = pkg.attrs["pkg_name"].value
+        assert isinstance(kn_bridge_pkg_name, str)
+
         self.gen_package_th_tydef(pkg, kn_bridge_pkg_target)
+
         self.gen_package_kn_typedef(pkg, kn_bridge_pkg_target)
 
-        for predefinedType in kn_predefined_type_list:
-            kn_bridge_pkg_target.write(
-                f"typedef struct {{\n"
-                f"{kn_bridge_pkg_name}_KNativePtr pinned;\n"
-                f"}} {kn_bridge_pkg_name}_kref_kotlin_{predefinedType};\n"
-            )
-        kn_bridge_pkg_target.write(
-            f"typedef struct {{\n"
-            f"  {kn_bridge_pkg_name}_KNativePtr pinned;\n"
-            f"}} {kn_bridge_pkg_name}_kref_kotlin_Any;\n"
+        self.gen_typedef_struct(pkg, kn_bridge_pkg_target)
+
+        self.gen_struct_above(pkg, kn_bridge_pkg_target)
+
+        self.gen_struct_func(pkg, kn_bridge_pkg_target)
+
+        self.gen_struct_below(pkg, kn_bridge_pkg_target)
+
+        self.gen_package_th_tyundef(pkg, kn_bridge_pkg_target)
+
+    def gen_package_source_file(self, pkg: Package):
+        kn_bridge_pkg_info = KNBridgePackageInfo.get(self.am, pkg)
+        kn_bridge_pkg_target = COutputBuffer.create(
+            self.tm, f"include/{kn_bridge_pkg_info.source}", True
         )
 
-        for iface in pkg.interfaces:
-            kn_bridge_pkg_target.write(
-                f"typedef struct {{\n"
-                f"{kn_bridge_pkg_name}_KNativePtr pinned;\n"
-                f"}} {kn_bridge_pkg_name}_kref_{iface.name};\n"
-            )
+        kn_bridge_pkg_name = pkg.attrs["pkg_name"].value
+        assert isinstance(kn_bridge_pkg_name, str)
 
-        kn_bridge_pkg_target.write(
-            f"typedef struct {{\n"
-            f"  /* Service functions. */\n"
-            f"  void (*DisposeStablePointer)({kn_bridge_pkg_name}_KNativePtr ptr);\n"
-            f"  void (*DisposeString)(const char* string);\n"
-            f"  {kn_bridge_pkg_name}_KBoolean (*IsInstance)({kn_bridge_pkg_name}_KNativePtr ref, const {kn_bridge_pkg_name}_KType* type);\n"
-        )
+        self.gen_package_th_tydef(pkg, kn_bridge_pkg_target)
 
-        for predefinedType in kn_predefined_type_list:
-            if predefinedType != "Unit":
-                kn_bridge_pkg_target.write(
-                    f"  {kn_bridge_pkg_name}_kref_kotlin_{predefinedType} (*createNullable{predefinedType})({kn_bridge_pkg_name}_K{predefinedType});\n"
-                    f"  {kn_bridge_pkg_name}_K{predefinedType} (*getNonNullValueOf{predefinedType})({kn_bridge_pkg_name}_kref_kotlin_{predefinedType});\n"
-                )
-            else:
-                kn_bridge_pkg_target.write(
-                    f"  {kn_bridge_pkg_name}_kref_kotlin_Unit (*createNullableUnit)(void);\n"
-                )
+        self.gen_package_kn_typedef(pkg, kn_bridge_pkg_target)
 
-        kn_bridge_pkg_target.write(
-            f"\n" f"  /* User functions. */\n" f"  struct {{\n" f"    struct {{\n"
-        )
+        self.gen_typedef_struct(pkg, kn_bridge_pkg_target)
 
-        for iface in pkg.interfaces:
-            kn_bridge_pkg_target.write(f"      struct {{\n")
-            for method in iface.methods:
-                kn_bridge_iface_method_info = KNBridgeFuncBaseDeclInfo.get(
-                    self.am, method
-                )
-                kn_bridge_pkg_target.write(
-                    f"        {kn_bridge_iface_method_info.return_ty_name} (*{kn_bridge_iface_method_info.name})({kn_bridge_pkg_name}_kref_{iface.name} thiz, {kn_bridge_iface_method_info.params_str});\n"
-                )
-            kn_bridge_pkg_target.write(f"      }} {iface.name};\n")
+        self.gen_struct_above(pkg, kn_bridge_pkg_target)
 
-        for func in pkg.functions:
-            kn_bridge_func_info = KNBridgeFuncBaseDeclInfo.get(self.am, func)
-            kn_bridge_pkg_target.write(
-                f"      {kn_bridge_func_info.return_ty_name} (*{kn_bridge_func_info.name})({kn_bridge_func_info.params_str});\n"
-            )
+        self.gen_struct_func(pkg, kn_bridge_pkg_target)
+
+        self.gen_struct_below(pkg, kn_bridge_pkg_target)
 
         self.gen_package_internal_type(pkg, kn_bridge_pkg_target)
 
-        for predefinedType in kn_predefined_type_list:
-            if predefinedType != "Unit":
-                kn_bridge_pkg_target.write(
-                    f'extern "C" KObjHeader* Kotlin_box{predefinedType}({kn_bridge_pkg_name}_K{predefinedType} value, KObjHeader**);\n'
-                    f"static {kn_bridge_pkg_name}_kref_kotlin_{predefinedType} createNullable{predefinedType}Impl({kn_bridge_pkg_name}_K{predefinedType} value) {{\n"
-                    f"  Kotlin_initRuntimeIfNeeded();\n"
-                    f"  ScopedRunnableState stateGuard;\n"
-                    f"  KObjHolder result_holder;\n"
-                    f"  KObjHeader* result = Kotlin_box{predefinedType}(value,  result_holder.slot());\n"
-                    f"  return {kn_bridge_pkg_name}_kref_kotlin_{predefinedType} {{ .pinned = CreateStablePointer(result) }};\n"
-                    f"}}\n"
-                    f'extern "C" {kn_bridge_pkg_name}_K{predefinedType} Kotlin_unbox{predefinedType}(KObjHeader*);\n'
-                    f"static {kn_bridge_pkg_name}_K{predefinedType} getNonNullValueOf{predefinedType}Impl({kn_bridge_pkg_name}_kref_kotlin_{predefinedType} value) {{\n"
-                    f"  Kotlin_initRuntimeIfNeeded();\n"
-                    f"  ScopedRunnableState stateGuard;\n"
-                    f"  KObjHolder value_holder;\n"
-                    f"  return Kotlin_unbox{predefinedType}(DerefStablePointer(value.pinned, value_holder.slot()));\n"
-                    f"}}\n"
-                )
-            else:
-                kn_bridge_pkg_target.write(
-                    f'extern "C" KObjHeader* Kotlin_box{predefinedType}( KObjHeader**);\n'
-                    f"static {kn_bridge_pkg_name}_kref_kotlin_{predefinedType} createNullable{predefinedType}Impl() {{\n"
-                    f"  Kotlin_initRuntimeIfNeeded();\n"
-                    f"  ScopedRunnableState stateGuard;\n"
-                    f" KObjHolder result_holder;\n"
-                    f"  KObjHeader* result = Kotlin_box{predefinedType}( result_holder.slot());\n"
-                    f"  return {kn_bridge_pkg_name}_kref_kotlin_{predefinedType} {{ .pinned = CreateStablePointer(result) }};\n"
-                    f"}}\n"
-                )
+        self.gen_box_and_unbox_predefined_type(pkg, kn_bridge_pkg_target)
+
         for iface in pkg.interfaces:
             for func in iface.methods:
                 kn_bridge_func_info = KNBridgeFuncBaseDeclInfo.get(self.am, func)
@@ -321,13 +267,14 @@ class KNBridgeCodeGenerator:
                 f"  }} \n"
                 f"}}\n"
             )
+
         kn_bridge_pkg_target.write(
             f"static {kn_bridge_pkg_name}_ExportedSymbols __konan_symbols = {{\n"
             f"  .DisposeStablePointer = DisposeStablePointerImpl,\n"
             f"  .DisposeString = DisposeStringImpl,\n"
             f"  .IsInstance = IsInstanceImpl,\n"
         )
-        for predefinedType in kn_predefined_type_list:
+        for predefinedType in self.kn_predefined_type_list:
             if predefinedType != "Unit":
                 kn_bridge_pkg_target.write(
                     f"  .createNullable{predefinedType} = createNullable{predefinedType}Impl,\n"
@@ -358,6 +305,7 @@ class KNBridgeCodeGenerator:
     def gen_package_th_tydef(self, pkg: Package, kn_bridge_pkg_target: COutputBuffer):
         kn_bridge_pkg_name = pkg.attrs["pkg_name"].value
         assert isinstance(kn_bridge_pkg_name, str)
+
         kn_bridge_pkg_target.write(
             f"#define TH_BOOL {kn_bridge_pkg_name}_KBoolean\n"
             f"#define TH_FLOAT {kn_bridge_pkg_name}_KFloat\n"
@@ -411,14 +359,6 @@ class KNBridgeCodeGenerator:
         assert isinstance(kn_bridge_pkg_name, str)
 
         kn_bridge_pkg_target.write(
-            f"    }} root;\n"
-            f"  }} kotlin;\n"
-            f"}} {kn_bridge_pkg_name}_ExportedSymbols;\n"
-            f"extern {kn_bridge_pkg_name}_ExportedSymbols* {kn_bridge_pkg_name}_symbols(void);\n"
-            f"#ifdef __cplusplus\n"
-            f'}}  /* extern "C" */\n'
-            f"#endif\n"
-            f"#endif  /* KONAN_{kn_bridge_pkg_name.upper()}_H */\n"
             f"struct KObjHeader;\n"
             f"typedef struct KObjHeader KObjHeader;\n"
             f"struct KTypeInfo;\n"
@@ -514,6 +454,7 @@ class KNBridgeCodeGenerator:
     def gen_package_th_tyundef(self, pkg: Package, kn_bridge_pkg_target: COutputBuffer):
         kn_bridge_pkg_name = pkg.attrs["pkg_name"].value
         assert isinstance(kn_bridge_pkg_name, str)
+
         kn_bridge_pkg_target.write(
             f"#ifdef TH_BOOL\n"
             f"#undef TH_BOOL\n"
@@ -553,3 +494,127 @@ class KNBridgeCodeGenerator:
             f"#endif\n"
             f"\n"
         )
+
+    def gen_struct_above(self, pkg: Package, kn_bridge_pkg_target: COutputBuffer):
+        kn_bridge_pkg_name = pkg.attrs["pkg_name"].value
+        assert isinstance(kn_bridge_pkg_name, str)
+
+        kn_bridge_pkg_target.write(
+            f"typedef struct {{\n"
+            f"  /* Service functions. */\n"
+            f"  void (*DisposeStablePointer)({kn_bridge_pkg_name}_KNativePtr ptr);\n"
+            f"  void (*DisposeString)(const char* string);\n"
+            f"  {kn_bridge_pkg_name}_KBoolean (*IsInstance)({kn_bridge_pkg_name}_KNativePtr ref, const {kn_bridge_pkg_name}_KType* type);\n"
+        )
+
+    def gen_struct_below(self, pkg: Package, kn_bridge_pkg_target: COutputBuffer):
+        kn_bridge_pkg_name = pkg.attrs["pkg_name"].value
+        assert isinstance(kn_bridge_pkg_name, str)
+
+        kn_bridge_pkg_target.write(
+            f"    }} root;\n"
+            f"  }} kotlin;\n"
+            f"}} {kn_bridge_pkg_name}_ExportedSymbols;\n"
+            f"extern {kn_bridge_pkg_name}_ExportedSymbols* {kn_bridge_pkg_name}_symbols(void);\n"
+            f"#ifdef __cplusplus\n"
+            f'}}  /* extern "C" */\n'
+            f"#endif\n"
+            f"#endif  /* KONAN_{kn_bridge_pkg_name.upper()}_H */\n"
+        )
+
+    def gen_box_and_unbox_predefined_type(
+        self, pkg: Package, kn_bridge_pkg_target: COutputBuffer
+    ):
+        kn_bridge_pkg_name = pkg.attrs["pkg_name"].value
+        assert isinstance(kn_bridge_pkg_name, str)
+
+        for predefinedType in self.kn_predefined_type_list:
+            if predefinedType != "Unit":
+                kn_bridge_pkg_target.write(
+                    f'extern "C" KObjHeader* Kotlin_box{predefinedType}({kn_bridge_pkg_name}_K{predefinedType} value, KObjHeader**);\n'
+                    f"static {kn_bridge_pkg_name}_kref_kotlin_{predefinedType} createNullable{predefinedType}Impl({kn_bridge_pkg_name}_K{predefinedType} value) {{\n"
+                    f"  Kotlin_initRuntimeIfNeeded();\n"
+                    f"  ScopedRunnableState stateGuard;\n"
+                    f"  KObjHolder result_holder;\n"
+                    f"  KObjHeader* result = Kotlin_box{predefinedType}(value,  result_holder.slot());\n"
+                    f"  return {kn_bridge_pkg_name}_kref_kotlin_{predefinedType} {{ .pinned = CreateStablePointer(result) }};\n"
+                    f"}}\n"
+                    f'extern "C" {kn_bridge_pkg_name}_K{predefinedType} Kotlin_unbox{predefinedType}(KObjHeader*);\n'
+                    f"static {kn_bridge_pkg_name}_K{predefinedType} getNonNullValueOf{predefinedType}Impl({kn_bridge_pkg_name}_kref_kotlin_{predefinedType} value) {{\n"
+                    f"  Kotlin_initRuntimeIfNeeded();\n"
+                    f"  ScopedRunnableState stateGuard;\n"
+                    f"  KObjHolder value_holder;\n"
+                    f"  return Kotlin_unbox{predefinedType}(DerefStablePointer(value.pinned, value_holder.slot()));\n"
+                    f"}}\n"
+                )
+            else:
+                kn_bridge_pkg_target.write(
+                    f'extern "C" KObjHeader* Kotlin_box{predefinedType}( KObjHeader**);\n'
+                    f"static {kn_bridge_pkg_name}_kref_kotlin_{predefinedType} createNullable{predefinedType}Impl() {{\n"
+                    f"  Kotlin_initRuntimeIfNeeded();\n"
+                    f"  ScopedRunnableState stateGuard;\n"
+                    f" KObjHolder result_holder;\n"
+                    f"  KObjHeader* result = Kotlin_box{predefinedType}( result_holder.slot());\n"
+                    f"  return {kn_bridge_pkg_name}_kref_kotlin_{predefinedType} {{ .pinned = CreateStablePointer(result) }};\n"
+                    f"}}\n"
+                )
+
+    def gen_typedef_struct(self, pkg: Package, kn_bridge_pkg_target: COutputBuffer):
+        kn_bridge_pkg_name = pkg.attrs["pkg_name"].value
+        assert isinstance(kn_bridge_pkg_name, str)
+
+        for predefinedType in self.kn_predefined_type_list:
+            kn_bridge_pkg_target.write(
+                f"typedef struct {{\n"
+                f"{kn_bridge_pkg_name}_KNativePtr pinned;\n"
+                f"}} {kn_bridge_pkg_name}_kref_kotlin_{predefinedType};\n"
+            )
+
+        kn_bridge_pkg_target.write(
+            f"typedef struct {{\n"
+            f"  {kn_bridge_pkg_name}_KNativePtr pinned;\n"
+            f"}} {kn_bridge_pkg_name}_kref_kotlin_Any;\n"
+        )
+
+        for iface in pkg.interfaces:
+            kn_bridge_pkg_target.write(
+                f"typedef struct {{\n"
+                f"{kn_bridge_pkg_name}_KNativePtr pinned;\n"
+                f"}} {kn_bridge_pkg_name}_kref_{iface.name};\n"
+            )
+
+    def gen_struct_func(self, pkg: Package, kn_bridge_pkg_target: COutputBuffer):
+        kn_bridge_pkg_name = pkg.attrs["pkg_name"].value
+        assert isinstance(kn_bridge_pkg_name, str)
+
+        for predefinedType in self.kn_predefined_type_list:
+            if predefinedType != "Unit":
+                kn_bridge_pkg_target.write(
+                    f"  {kn_bridge_pkg_name}_kref_kotlin_{predefinedType} (*createNullable{predefinedType})({kn_bridge_pkg_name}_K{predefinedType});\n"
+                    f"  {kn_bridge_pkg_name}_K{predefinedType} (*getNonNullValueOf{predefinedType})({kn_bridge_pkg_name}_kref_kotlin_{predefinedType});\n"
+                )
+            else:
+                kn_bridge_pkg_target.write(
+                    f"  {kn_bridge_pkg_name}_kref_kotlin_Unit (*createNullableUnit)(void);\n"
+                )
+
+        kn_bridge_pkg_target.write(
+            f"\n" f"  /* User functions. */\n" f"  struct {{\n" f"    struct {{\n"
+        )
+
+        for iface in pkg.interfaces:
+            kn_bridge_pkg_target.write(f"      struct {{\n")
+            for method in iface.methods:
+                kn_bridge_iface_method_info = KNBridgeFuncBaseDeclInfo.get(
+                    self.am, method
+                )
+                kn_bridge_pkg_target.write(
+                    f"        {kn_bridge_iface_method_info.return_ty_name} (*{kn_bridge_iface_method_info.name})({kn_bridge_pkg_name}_kref_{iface.name} thiz, {kn_bridge_iface_method_info.params_str});\n"
+                )
+            kn_bridge_pkg_target.write(f"      }} {iface.name};\n")
+
+        for func in pkg.functions:
+            kn_bridge_func_info = KNBridgeFuncBaseDeclInfo.get(self.am, func)
+            kn_bridge_pkg_target.write(
+                f"      {kn_bridge_func_info.return_ty_name} (*{kn_bridge_func_info.name})({kn_bridge_func_info.params_str});\n"
+            )
