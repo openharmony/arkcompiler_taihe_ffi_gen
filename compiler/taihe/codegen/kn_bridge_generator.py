@@ -167,19 +167,19 @@ class KNBridgeCodeGenerator:
         kn_bridge_pkg_name = pkg.attrs["pkg_name"].value
         assert isinstance(kn_bridge_pkg_name, str)
 
-        self.gen_package_th_tydef(pkg, kn_bridge_pkg_target, kn_bridge_pkg_name)
+        self.gen_package_th_tydef(kn_bridge_pkg_target, kn_bridge_pkg_name)
 
-        self.gen_package_kn_typedef(pkg, kn_bridge_pkg_target, kn_bridge_pkg_name)
+        self.gen_package_kn_typedef(kn_bridge_pkg_target, kn_bridge_pkg_name)
 
         self.gen_typedef_struct(pkg, kn_bridge_pkg_target, kn_bridge_pkg_name)
 
-        self.gen_struct_above(pkg, kn_bridge_pkg_target, kn_bridge_pkg_name)
+        self.gen_struct_above(kn_bridge_pkg_target, kn_bridge_pkg_name)
 
         self.gen_struct_func(pkg, kn_bridge_pkg_target, kn_bridge_pkg_name)
 
-        self.gen_struct_below(pkg, kn_bridge_pkg_target, kn_bridge_pkg_name)
+        self.gen_struct_below(kn_bridge_pkg_target, kn_bridge_pkg_name)
 
-        self.gen_package_th_tyundef(pkg, kn_bridge_pkg_target, kn_bridge_pkg_name)
+        self.gen_package_th_tyundef(kn_bridge_pkg_target)
 
     def gen_package_source_file(self, pkg: Package):
         kn_bridge_pkg_info = KNBridgePackageInfo.get(self.am, pkg)
@@ -190,32 +190,30 @@ class KNBridgeCodeGenerator:
         kn_bridge_pkg_name = pkg.attrs["pkg_name"].value
         assert isinstance(kn_bridge_pkg_name, str)
 
-        self.gen_package_th_tydef(pkg, kn_bridge_pkg_target, kn_bridge_pkg_name)
+        self.gen_package_th_tydef(kn_bridge_pkg_target, kn_bridge_pkg_name)
 
-        self.gen_package_kn_typedef(pkg, kn_bridge_pkg_target, kn_bridge_pkg_name)
+        self.gen_package_kn_typedef(kn_bridge_pkg_target, kn_bridge_pkg_name)
 
         self.gen_typedef_struct(pkg, kn_bridge_pkg_target, kn_bridge_pkg_name)
 
-        self.gen_struct_above(pkg, kn_bridge_pkg_target, kn_bridge_pkg_name)
+        self.gen_struct_above(kn_bridge_pkg_target, kn_bridge_pkg_name)
 
         self.gen_struct_func(pkg, kn_bridge_pkg_target, kn_bridge_pkg_name)
 
-        self.gen_struct_below(pkg, kn_bridge_pkg_target, kn_bridge_pkg_name)
+        self.gen_struct_below(kn_bridge_pkg_target, kn_bridge_pkg_name)
 
-        self.gen_package_internal_type(pkg, kn_bridge_pkg_target, kn_bridge_pkg_name)
+        self.gen_package_internal_type(kn_bridge_pkg_target, kn_bridge_pkg_name)
 
-        self.gen_box_and_unbox_predefined_type(
-            pkg, kn_bridge_pkg_target, kn_bridge_pkg_name
-        )
+        self.gen_box_and_unbox_predefined_type(kn_bridge_pkg_target, kn_bridge_pkg_name)
 
         self.gen_func_impl(pkg, kn_bridge_pkg_target, kn_bridge_pkg_name)
 
         self.gen_singleton_struct(pkg, kn_bridge_pkg_target, kn_bridge_pkg_name)
 
-        self.gen_package_th_tyundef(pkg, kn_bridge_pkg_target, kn_bridge_pkg_name)
+        self.gen_package_th_tyundef(kn_bridge_pkg_target)
 
     def gen_package_th_tydef(
-        self, pkg: Package, kn_bridge_pkg_target: COutputBuffer, kn_bridge_pkg_name: str
+        self, kn_bridge_pkg_target: COutputBuffer, kn_bridge_pkg_name: str
     ):
         kn_bridge_pkg_target.write(
             f"#define TH_BOOL {kn_bridge_pkg_name}_KBoolean\n"
@@ -234,7 +232,7 @@ class KNBridgeCodeGenerator:
         )
 
     def gen_package_kn_typedef(
-        self, pkg: Package, kn_bridge_pkg_target: COutputBuffer, kn_bridge_pkg_name: str
+        self, kn_bridge_pkg_target: COutputBuffer, kn_bridge_pkg_name: str
     ):
         kn_bridge_pkg_target.write(
             f"#ifndef KONAN_{kn_bridge_pkg_name.upper()}_H\n"
@@ -264,7 +262,7 @@ class KNBridgeCodeGenerator:
         )
 
     def gen_package_internal_type(
-        self, pkg: Package, kn_bridge_pkg_target: COutputBuffer, kn_bridge_pkg_name: str
+        self, kn_bridge_pkg_target: COutputBuffer, kn_bridge_pkg_name: str
     ):
         kn_bridge_pkg_target.write(
             f"struct KObjHeader;\n"
@@ -359,9 +357,7 @@ class KNBridgeCodeGenerator:
             f"}}\n"
         )
 
-    def gen_package_th_tyundef(
-        self, pkg: Package, kn_bridge_pkg_target: COutputBuffer, kn_bridge_pkg_name: str
-    ):
+    def gen_package_th_tyundef(self, kn_bridge_pkg_target: COutputBuffer):
         kn_bridge_pkg_target.write(
             f"#ifdef TH_BOOL\n"
             f"#undef TH_BOOL\n"
@@ -403,7 +399,7 @@ class KNBridgeCodeGenerator:
         )
 
     def gen_struct_above(
-        self, pkg: Package, kn_bridge_pkg_target: COutputBuffer, kn_bridge_pkg_name: str
+        self, kn_bridge_pkg_target: COutputBuffer, kn_bridge_pkg_name: str
     ):
         kn_bridge_pkg_target.write(
             f"typedef struct {{\n"
@@ -414,7 +410,7 @@ class KNBridgeCodeGenerator:
         )
 
     def gen_struct_below(
-        self, pkg: Package, kn_bridge_pkg_target: COutputBuffer, kn_bridge_pkg_name: str
+        self, kn_bridge_pkg_target: COutputBuffer, kn_bridge_pkg_name: str
     ):
         kn_bridge_pkg_target.write(
             f"    }} root;\n"
@@ -428,7 +424,7 @@ class KNBridgeCodeGenerator:
         )
 
     def gen_box_and_unbox_predefined_type(
-        self, pkg: Package, kn_bridge_pkg_target: COutputBuffer, kn_bridge_pkg_name: str
+        self, kn_bridge_pkg_target: COutputBuffer, kn_bridge_pkg_name: str
     ):
         for predefinedType in self.kn_predefined_type_list:
             if predefinedType != "Unit":
