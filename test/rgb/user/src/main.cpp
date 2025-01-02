@@ -2,8 +2,8 @@
 #include "rgb.show.proj.hpp"
 
 #include <iostream>
-#include <format>
 #include <cmath>
+#include <iomanip>
 
 using namespace rgb;
 using taihe::core::ConstexprTag;
@@ -17,11 +17,11 @@ class ColoredCircle {
 public:
     ColoredCircle(taihe::core::string_view id, float r, rgb::base::ColorOrRGBOrName const& color)
         : name(id), r(r), myColor(color) {
-        std::cout << std::format("new 0x{:016x}", (size_t)((void*)this)) << std::endl;
+        std::cout << "new " << this << std::endl;
     }
 
     ~ColoredCircle() {
-        std::cout << std::format("del 0x{:016x}", (size_t)((void*)this)) << std::endl;
+        std::cout << "del " << this << std::endl;
     }
 
     taihe::core::string getId() {
@@ -41,13 +41,14 @@ public:
     }
 
     void show() {
-        std::string content = std::format("{}: {}", name, r);
+        std::string content = name + ": " + std::to_string(r);
         if (auto ptr = myColor.get_ptr<rgb::base::ColorOrRGBOrName::TagType::color>()) {
-            std::cout << std::format("\033[{}m{}\033[39m", 30 + (int)ptr->get_tag(), content) << std::endl;
+            std::string colorCode = "\033[" + std::to_string(30 + (int)ptr->get_tag()) + "m";
+            std::cout << colorCode << content << "\033[39m" << std::endl;
         } else if (auto ptr = myColor.get_ptr<rgb::base::ColorOrRGBOrName::TagType::rgb>()) {
-            std::cout << std::format("\033[38;2;{};{};{}m{}\033[39m", ptr->r, ptr->g, ptr->b, content) << std::endl;
+            std::cout << "\033[38;2;" << (int)ptr->r << ";" << (int)ptr->g << ";" << (int)ptr->b << "m" << content << "\033[39m" << std::endl;
         } else if (auto ptr = myColor.get_ptr<rgb::base::ColorOrRGBOrName::TagType::name>()) {
-            std::cout << std::format("({}) {}", ptr->c_str(), content) << std::endl;
+            std::cout << "(" << ptr->c_str() << ") " << content << std::endl;
         } else {
             std::cout << content << std::endl;
         }
@@ -55,7 +56,7 @@ public:
 };
 
 int main() {
-    base::ColorOrRGBOrName color_114514(ConstexprTag<base::ColorOrRGBOrName::TagType::rgb>, 0x11, 0x45, 0x14);
+    base::ColorOrRGBOrName color_114514(ConstexprTag<base::ColorOrRGBOrName::TagType::rgb>, base::RGB{0x11, 0x45, 0x14});
     base::ColorOrRGBOrName color_yellow(ConstexprTag<base::ColorOrRGBOrName::TagType::color>, ConstexprTag<base::Color::TagType::yellow>);
     base::ColorOrRGBOrName color_xxx(ConstexprTag<base::ColorOrRGBOrName::TagType::name>, "XXX");
     base::ColorOrRGBOrName color_unknown(ConstexprTag<base::ColorOrRGBOrName::TagType::undefined>);

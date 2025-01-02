@@ -4,7 +4,7 @@
 #include "rgb.base.impl.hpp"
 
 #include <iostream>
-#include <format>
+#include <iomanip>
 
 class Rectangle {
 protected:
@@ -15,11 +15,11 @@ protected:
 public:
     Rectangle(taihe::core::string_view id, float h, float w)
         : name(id), h(h), w(w) {
-        std::cout << std::format("new 0x{:016x}", (size_t)((void*)this)) << std::endl;
+        std::cout << "new " << this << std::endl;
     }
 
     ~Rectangle() {
-        std::cout << std::format("del 0x{:016x}", (size_t)((void*)this)) << std::endl;
+        std::cout << "del " << this << std::endl;
     }
 
     taihe::core::string getId() {
@@ -51,13 +51,14 @@ public:
     }
 
     void show() {
-        std::string content = std::format("{}: {}x{}", name, h, w);
+        std::string content = name + ": " + std::to_string(h) + "x" + std::to_string(w);
         if (auto ptr = myColor.get_ptr<rgb::base::ColorOrRGBOrName::TagType::color>()) {
-            std::cout << std::format("\033[{}m{}\033[39m", 30 + (int)ptr->get_tag(), content) << std::endl;
+            std::string colorCode = "\033[" + std::to_string(30 + (int)ptr->get_tag()) + "m";
+            std::cout << colorCode << content << "\033[39m" << std::endl;
         } else if (auto ptr = myColor.get_ptr<rgb::base::ColorOrRGBOrName::TagType::rgb>()) {
-            std::cout << std::format("\033[38;2;{};{};{}m{}\033[39m", ptr->r, ptr->g, ptr->b, content) << std::endl;
+            std::cout << "\033[38;2;" << (int)ptr->r << ";" << (int)ptr->g << ";" << (int)ptr->b << "m" << content << "\033[39m" << std::endl;
         } else if (auto ptr = myColor.get_ptr<rgb::base::ColorOrRGBOrName::TagType::name>()) {
-            std::cout << std::format("({}) {}", ptr->c_str(), content) << std::endl;
+            std::cout << "(" << ptr->c_str() << ") " << content << std::endl;
         } else {
             std::cout << content << std::endl;
         }
@@ -74,9 +75,14 @@ void copyColorImpl(param::rgb::show::IColorable dst, param::rgb::show::IColorabl
 
 taihe::core::string colorToStringImpl(rgb::base::ColorOrRGBOrName const& color) {
     if (auto ptr = color.get_ptr<rgb::base::ColorOrRGBOrName::TagType::color>()) {
-        return std::format("Color({})", (int)ptr->get_tag());
+        return "Color(" + std::to_string((int)ptr->get_tag()) + ")";
     } else if (auto ptr = color.get_ptr<rgb::base::ColorOrRGBOrName::TagType::rgb>()) {
-        return std::format("#{:02x}{:02x}{:02x}", ptr->r, ptr->g, ptr->b);
+        std::ostringstream oss;
+        oss << "#"
+        << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(ptr->r)
+        << std::setw(2) << static_cast<int>(ptr->g)
+        << std::setw(2) << static_cast<int>(ptr->b);
+        return oss.str();
     } else if (auto ptr = color.get_ptr<rgb::base::ColorOrRGBOrName::TagType::name>()) {
         return ptr->c_str();
     } else {
