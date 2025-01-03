@@ -589,11 +589,11 @@ class CppProjCodeGenerator:
         )
         for item in enum.items:
             enum_cpp_proj_target.write(
-                f"    template<typename... Args>"
+                f"    template<typename... Args>\n"
                 f"    static {enum_cpp_proj_info.name} make_{item.name}(Args&&... args) {{\n"
                 f"        return make<tag_t::{item.name}>(std::forward<Args>(args)...);\n"
                 f"    }}\n"
-                f"    template<typename... Args>"
+                f"    template<typename... Args>\n"
                 f"    {enum_cpp_proj_info.name} const& emplace_{item.name}(Args&&... args) {{\n"
                 f"        return this->emplace<tag_t::{item.name}>(std::forward<Args>(args)...);\n"
                 f"    }}\n"
