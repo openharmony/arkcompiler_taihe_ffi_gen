@@ -59,9 +59,9 @@ class CppImplCodeGenerator:
             cpp_params.append(f"{type_cpp_proj_info.as_param} {param.name}")
             args_from_abi.append(type_cpp_proj_info.pass_from_abi(param.name))
             abi_params.append(f"{type_abi_info.as_param} {param.name}")
-        abi_params_str = ", ".join(abi_params)
         cpp_params_str = ", ".join(cpp_params)
         args_from_abi_str = ", ".join(args_from_abi)
+        abi_params_str = ", ".join(abi_params)
         pkg_cpp_impl_target.include(func_cpp_proj_info.return_ty_header_defn)
         result = func_cpp_proj_info.return_into_abi(f"_func({args_from_abi_str})")
         pkg_cpp_impl_target.write(

@@ -354,7 +354,7 @@ class CppProjCodeGenerator:
         )
         for field in struct.fields:
             ty_cpp_proj_info = TypeCppProjInfo.get(self.am, field.ty_ref.resolved_ty)
-            result = ty_cpp_proj_info.return_into_abi(f"std::move(val.{field.name})")
+            result = ty_cpp_proj_info.return_into_abi(f"::std::move(val.{field.name})")
             struct_cpp_proj_target.write(f"        {result},\n")
         struct_cpp_proj_target.write(
             f"    }};\n"
@@ -446,7 +446,7 @@ class CppProjCodeGenerator:
                 continue
             enum_cpp_proj_target.write(
                 f"        case TagType::{item.name}:\n"
-                f"            this->data.{item.name}.~decltype(this->data.{item.name})();\n"
+                f"            ::std::destroy_at(&this->data.{item.name});\n"
                 f"            break;\n"
             )
         enum_cpp_proj_target.write(
@@ -478,7 +478,7 @@ class CppProjCodeGenerator:
                 continue
             enum_cpp_proj_target.write(
                 f"        case TagType::{item.name}:\n"
-                f"            new (&this->data.{item.name}) decltype(this->data.{item.name})(std::move(other.data.{item.name}));\n"
+                f"            new (&this->data.{item.name}) decltype(this->data.{item.name})(::std::move(other.data.{item.name}));\n"
                 f"            break;\n"
             )
         enum_cpp_proj_target.write(
@@ -494,7 +494,7 @@ class CppProjCodeGenerator:
                 continue
             enum_cpp_proj_target.write(
                 f"        if constexpr (tag == TagType::{item.name}) {{\n"
-                f"            new (&this->data.{item.name}) decltype(this->data.{item.name})(std::forward<Args>(args)...);\n"
+                f"            new (&this->data.{item.name}) decltype(this->data.{item.name})(::std::forward<Args>(args)...);\n"
                 f"        }}\n"
             )
         enum_cpp_proj_target.write(
@@ -509,7 +509,7 @@ class CppProjCodeGenerator:
             f"    {enum_cpp_proj_info.name} const& operator=({enum_cpp_proj_info.name}&& other) {{\n"
             f"        if (this != &other) {{\n"
             f"            this->~{enum_cpp_proj_info.name}();\n"
-            f"            new (this) {enum_cpp_proj_info.name}(std::move(other));\n"
+            f"            new (this) {enum_cpp_proj_info.name}(::std::move(other));\n"
             f"        }}\n"
             f"        return *this;\n"
             f"    }}\n"
@@ -517,7 +517,7 @@ class CppProjCodeGenerator:
             f"    {enum_cpp_proj_info.name} const& emplace(Args&&... args) {{\n"
             f"        this->~{enum_cpp_proj_info.name}();\n"
             f"        this->tag = tag;\n"
-            f"        new (this) {enum_cpp_proj_info.name}(::taihe::core::ConstexprTag<tag>, std::forward<Args>(args)...);\n"
+            f"        new (this) {enum_cpp_proj_info.name}(::taihe::core::ConstexprTag<tag>, ::std::forward<Args>(args)...);\n"
             f"        return *this;\n"
             f"    }}\n"
             f"    template<TagType tag>\n"
@@ -606,7 +606,7 @@ class CppProjCodeGenerator:
                 continue
             ty_cpp_proj_info = TypeCppProjInfo.get(self.am, item.ty_ref.resolved_ty)
             result = ty_cpp_proj_info.return_into_abi(
-                f"std::move(val.data.{item.name})"
+                f"::std::move(val.data.{item.name})"
             )
             enum_cpp_proj_target.write(
                 f"    case {enum_cpp_proj_info.owner_full_name}::TagType::{item.name}:\n"
@@ -1068,7 +1068,7 @@ class CppProjCodeGenerator:
             f"    other.m_handle = nullptr;\n"
             f"}}\n"
             f"inline {iface_cpp_proj_info.name}& {iface_cpp_proj_info.name}::operator=({iface_cpp_proj_info.owner_full_name} other) {{\n"
-            f"    std::swap(this->m_handle, other.m_handle);\n"
+            f"    ::std::swap(this->m_handle, other.m_handle);\n"
             f"    return *this;\n"
             f"}}\n"
             f"inline {iface_cpp_proj_info.name}::operator bool() {{\n"
@@ -1152,7 +1152,7 @@ class CppProjCodeGenerator:
             f"    other.m_handle = nullptr;\n"
             f"}}\n"
             f"inline {iface_cpp_proj_info.name}& {iface_cpp_proj_info.name}::operator=({iface_cpp_proj_info.param_full_name} other) {{\n"
-            f"    std::swap(this->m_handle, other.m_handle);\n"
+            f"    ::std::swap(this->m_handle, other.m_handle);\n"
             f"    return *this;\n"
             f"}}\n"
             f"inline {iface_cpp_proj_info.name}::operator bool() {{\n"

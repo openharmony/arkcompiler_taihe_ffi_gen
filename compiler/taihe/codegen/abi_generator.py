@@ -353,7 +353,7 @@ class ABICodeGenerator:
         if struct_abi_info.copy_func is None:
             return
         struct_abi_target.write(
-            f"inline struct {struct_abi_info.mangled_name} {struct_abi_info.copy_func}(struct {struct_abi_info.mangled_name} data) {{\n"
+            f"TH_INLINE struct {struct_abi_info.mangled_name} {struct_abi_info.copy_func}(struct {struct_abi_info.mangled_name} data) {{\n"
             f"  struct {struct_abi_info.mangled_name} result;\n"
         )
         for field in struct.fields:
@@ -375,7 +375,7 @@ class ABICodeGenerator:
         if struct_abi_info.drop_func is None:
             return
         struct_abi_target.write(
-            f"inline void {struct_abi_info.drop_func}(struct {struct_abi_info.mangled_name} data) {{\n"
+            f"TH_INLINE void {struct_abi_info.drop_func}(struct {struct_abi_info.mangled_name} data) {{\n"
         )
         for field in struct.fields:
             ty_info = TypeABIInfo.get(self.am, field.ty_ref.resolved_ty)
@@ -453,7 +453,7 @@ class ABICodeGenerator:
         if enum_abi_info.copy_func is None:
             return
         enum_abi_target.write(
-            f"inline struct {enum_abi_info.mangled_name} {enum_abi_info.copy_func}(struct {enum_abi_info.mangled_name} data) {{\n"
+            f"TH_INLINE struct {enum_abi_info.mangled_name} {enum_abi_info.copy_func}(struct {enum_abi_info.mangled_name} data) {{\n"
             f"  struct {enum_abi_info.mangled_name} result;\n"
             f"  switch (result.tag = data.tag) {{\n"
         )
@@ -485,7 +485,7 @@ class ABICodeGenerator:
         if enum_abi_info.drop_func is None:
             return
         enum_abi_target.write(
-            f"inline void {enum_abi_info.drop_func}(struct {enum_abi_info.mangled_name} data) {{\n"
+            f"TH_INLINE void {enum_abi_info.drop_func}(struct {enum_abi_info.mangled_name} data) {{\n"
             f"  switch (data.tag) {{\n"
         )
         for item in enum.items:
@@ -618,7 +618,7 @@ class ABICodeGenerator:
             params_str = ", ".join(params)
             args_str = ", ".join(args)
             iface_abi_1_target.write(
-                f"inline {method_abi_info.return_ty_name} {method_abi_info.mangled_name}({params_str}) {{\n"
+                f"TH_INLINE {method_abi_info.return_ty_name} {method_abi_info.mangled_name}({params_str}) {{\n"
                 f"  return tobj.vtbl_ptr->ftbl_ptr_0->{method.name}({args_str});\n"
                 f"}}\n"
             )
@@ -635,7 +635,7 @@ class ABICodeGenerator:
             ancestor_abi_info = IfaceDeclABIInfo.get(self.am, ancestor)
             iface_abi_1_target.include(ancestor_abi_info.header_0)
             iface_abi_1_target.write(
-                f"inline struct {ancestor_abi_info.mangled_name} {info.static_cast}(struct {iface_abi_info.mangled_name} tobj) {{\n"
+                f"TH_INLINE struct {ancestor_abi_info.mangled_name} {info.static_cast}(struct {iface_abi_info.mangled_name} tobj) {{\n"
                 f"  struct {ancestor_abi_info.mangled_name} result;\n"
                 f"  result.vtbl_ptr = (struct {ancestor_abi_info.v_table}*)(&tobj.vtbl_ptr->ftbl_ptr_0 + {info.offset});\n"
                 f"  result.data_ptr = tobj.data_ptr;\n"
@@ -650,7 +650,7 @@ class ABICodeGenerator:
         iface_abi_info: IfaceDeclABIInfo,
     ):
         iface_abi_1_target.write(
-            f"inline struct {iface_abi_info.mangled_name} {iface_abi_info.dynamic_cast}(struct DataBlockHead* data_ptr) {{\n"
+            f"TH_INLINE struct {iface_abi_info.mangled_name} {iface_abi_info.dynamic_cast}(struct DataBlockHead* data_ptr) {{\n"
             f"  struct TypeInfo const* rtti_ptr = data_ptr->rtti_ptr;\n"
             f"  struct {iface_abi_info.mangled_name} result;\n"
             f"  result.data_ptr = data_ptr;"
@@ -672,7 +672,7 @@ class ABICodeGenerator:
         iface_abi_info: IfaceDeclABIInfo,
     ):
         iface_abi_1_target.write(
-            f"inline struct {iface_abi_info.mangled_name} {iface_abi_info.copy_func}(struct {iface_abi_info.mangled_name} tobj) {{\n"
+            f"TH_INLINE struct {iface_abi_info.mangled_name} {iface_abi_info.copy_func}(struct {iface_abi_info.mangled_name} tobj) {{\n"
             f"  struct DataBlockHead* data_ptr = tobj.data_ptr;\n"
             f"  if (data_ptr) {{\n"
             f"    tref_inc(&data_ptr->m_count);\n"
@@ -688,7 +688,7 @@ class ABICodeGenerator:
         iface_abi_info: IfaceDeclABIInfo,
     ):
         iface_abi_1_target.write(
-            f"inline void {iface_abi_info.drop_func}(struct {iface_abi_info.mangled_name} tobj) {{\n"
+            f"TH_INLINE void {iface_abi_info.drop_func}(struct {iface_abi_info.mangled_name} tobj) {{\n"
             f"  struct DataBlockHead* data_ptr = tobj.data_ptr;\n"
             f"  if (data_ptr && tref_dec(&data_ptr->m_count)) {{\n"
             f"    data_ptr->rtti_ptr->free_ptr(data_ptr);\n"

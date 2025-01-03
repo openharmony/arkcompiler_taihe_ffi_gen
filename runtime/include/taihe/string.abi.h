@@ -29,12 +29,12 @@ struct TStringHeap {
 //////////////////
 
 /// Returns the buffer of the TString.
-static inline const char* tstr_buf(const struct TString* s) {
+TH_INLINE const char* tstr_buf(const struct TString* s) {
   return s->ptr;
 }
 
 /// Returns the length of the TString.
-static inline size_t tstr_len(const struct TString* s) {
+TH_INLINE size_t tstr_len(const struct TString* s) {
   return s->length;
 }
 
@@ -53,7 +53,7 @@ static inline size_t tstr_len(const struct TString* s) {
 // - `NULL`, if the string is not null-terminated, or the length is too large.
 //    In this case, the original `tstr` is still uninitialized and should not be
 //    used.
-static inline struct TString* tstr_new_ref(const char* buf TH_NONNULL, size_t len,
+TH_INLINE struct TString* tstr_new_ref(const char* buf TH_NONNULL, size_t len,
                                     struct TString* tstr) {
   if (len > UINT32_MAX) return NULL;
   if (buf[len] != '\0') return NULL;
