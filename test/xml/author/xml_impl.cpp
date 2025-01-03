@@ -1,23 +1,19 @@
 #include "ohos.xml.proj.hpp"
 #include "ohos.xml.impl.hpp"
-#include "expat.h"
-
-struct XmlSerializer {};
+#include "parser_impl.h"
 
 ohos::xml::XmlSerializer makeXmlSerializerImpl(
     ohos::xml::BufferType const& buffer,
     ohos::xml::OptString const& encoding)
 {
-    return taihe::core::makeInterface<ohos::xml::XmlSerializer, XmlSerializer>(buffer, encoding);
+    throw;
 }
-
-struct XmlPullParser {};
 
 ohos::xml::XmlPullParser makeXmlPullParserImpl(
     ohos::xml::BufferType const& buffer,
     ohos::xml::OptString const& encoding)
 {
-    return taihe::core::makeInterface<ohos::xml::XmlPullParser, XmlSerializer>(buffer, encoding);
+    return taihe::core::makeInterface<ohos::xml::XmlPullParser, ExpatParser>(buffer, encoding);
 }
 
 TH_EXPORT_CPP_API_makeXmlPullParser(makeXmlPullParserImpl)
