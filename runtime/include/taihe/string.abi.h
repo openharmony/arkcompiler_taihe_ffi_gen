@@ -29,10 +29,14 @@ struct TStringHeap {
 //////////////////
 
 /// Returns the buffer of the TString.
-inline const char* tstr_buf(const struct TString* s) { return s->ptr; }
+static inline const char* tstr_buf(const struct TString* s) {
+  return s->ptr;
+}
 
 /// Returns the length of the TString.
-inline size_t tstr_len(const struct TString* s) { return s->length; }
+static inline size_t tstr_len(const struct TString* s) {
+  return s->length;
+}
 
 // Creates a TString from an existing string.
 //

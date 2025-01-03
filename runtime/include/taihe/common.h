@@ -20,9 +20,9 @@
     } while (0)
 
 #ifdef __cplusplus
-#define TH_EXPORT extern "C" __attribute__((visibility("default")))
+#define TH_EXPORT __attribute__((visibility("default"))) extern "C"
 #else
-#define TH_EXPORT __attribute__((visibility("default")))
+#define TH_EXPORT __attribute__((visibility("default"))) extern
 #endif
 
 #ifdef __cplusplus
