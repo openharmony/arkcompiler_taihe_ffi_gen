@@ -56,7 +56,7 @@ TH_INLINE size_t tstr_len(const struct TString* s) {
 TH_INLINE struct TString* tstr_new_ref(const char* buf TH_NONNULL, size_t len,
                                     struct TString* tstr) {
   if (len > UINT32_MAX) return NULL;
-  if (buf[len] != '\0') return NULL;
+  // if (buf[len] != '\0') return NULL;
 
   tstr->flags = TSTRING_REF;
   tstr->length = len;

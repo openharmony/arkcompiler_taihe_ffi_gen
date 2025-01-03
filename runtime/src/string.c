@@ -25,7 +25,7 @@ static inline struct TStringHeap* allocate_header(uint32_t length) {
 
 struct TString* tstr_new(const char* buf TH_NONNULL, size_t len) {
   if (len > UINT32_MAX) return NULL;
-  if (buf[len] != '\0') return NULL;
+  // if (buf[len] != '\0') return NULL;
 
   struct TStringHeap* sh = allocate_header(len);
   if (sh) {

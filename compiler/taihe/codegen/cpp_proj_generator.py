@@ -826,7 +826,7 @@ class CppProjCodeGenerator:
                 method_cpp_proj_info.return_ty_header_decl
             )
             iface_cpp_proj_defn_target.write(
-                f"    {method_cpp_proj_info.return_ty_name} {method_cpp_proj_info.name}({params_cpp_str});\n"
+                f"    {method_cpp_proj_info.return_ty_name} {method_cpp_proj_info.name}({params_cpp_str}) const;\n"
             )
         iface_cpp_proj_defn_target.write("};\n" "}\n")
 
@@ -875,7 +875,7 @@ class CppProjCodeGenerator:
                 method_cpp_proj_info.return_ty_header_decl
             )
             iface_cpp_proj_defn_target.write(
-                f"    {method_cpp_proj_info.return_ty_name} {method_cpp_proj_info.name}({params_cpp_str});\n"
+                f"    {method_cpp_proj_info.return_ty_name} {method_cpp_proj_info.name}({params_cpp_str}) const;\n"
             )
         iface_cpp_proj_defn_target.write("};\n" "}\n")
 
@@ -1163,7 +1163,7 @@ class CppProjCodeGenerator:
                 f"{method_abi_info.mangled_name}({args_into_abi_str})"
             )
             iface_cpp_proj_impl_target.write(
-                f"inline {method_cpp_proj_info.return_ty_name} {iface_cpp_proj_info.name}::{method_cpp_proj_info.name}({params_cpp_str}) {{\n"
+                f"inline {method_cpp_proj_info.return_ty_name} {iface_cpp_proj_info.name}::{method_cpp_proj_info.name}({params_cpp_str}) const {{\n"
                 f"    return {result};\n"
                 f"}}\n"
             )
@@ -1242,7 +1242,7 @@ class CppProjCodeGenerator:
                 f"{method_abi_info.mangled_name}({args_into_abi_str})"
             )
             iface_cpp_proj_impl_target.write(
-                f"inline {method_cpp_proj_info.return_ty_name} {iface_cpp_proj_info.name}::{method_cpp_proj_info.name}({params_cpp_str}) {{\n"
+                f"inline {method_cpp_proj_info.return_ty_name} {iface_cpp_proj_info.name}::{method_cpp_proj_info.name}({params_cpp_str}) const {{\n"
                 f"    return {result};\n"
                 f"}}\n"
             )
