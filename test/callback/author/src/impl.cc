@@ -7,7 +7,7 @@ auto makeEnglishGreeterImpl() {
     auto en_greeter_impl = [](taihe::core::string_view target) {
         std::cout << "Hello, " << target.c_str() << "!" << std::endl;
     };
-    return taihe::core::makeInterface<greet::Greeter, decltype(en_greeter_impl)>(en_greeter_impl);
+    return taihe::core::new_instance<greet::Greeter, decltype(en_greeter_impl)>(en_greeter_impl);
 }
 
 class NamedEnglishGreeter {
@@ -22,7 +22,7 @@ public:
 };
 
 auto makeNamedEnglishGreeterImpl(taihe::core::string_view name) {
-    return taihe::core::makeInterface<greet::Greeter, NamedEnglishGreeter>(name);
+    return taihe::core::new_instance<greet::Greeter, NamedEnglishGreeter>(name);
 }
 
 TH_EXPORT_CPP_API_makeEnglishGreeter(makeEnglishGreeterImpl)

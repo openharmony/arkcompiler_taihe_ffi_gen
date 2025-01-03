@@ -175,8 +175,8 @@ class IfaceDeclABIInfo(AbstractAnalysis[IfaceDecl]):
         self.as_param = encode(segments, DeclKind.PARAM_T)
         self.copy_func = encode(segments, DeclKind.COPY)
         self.drop_func = encode(segments, DeclKind.DROP)
-        self.f_table = encode(segments, DeclKind.FTABLE)
-        self.v_table = encode(segments, DeclKind.VTABLE)
+        self.ftable = encode(segments, DeclKind.FTABLE)
+        self.vtable = encode(segments, DeclKind.VTABLE)
         self.rtti = encode(segments, DeclKind.RTTI)
         self.iid = encode(segments, DeclKind.IID)
         self.dynamic_cast = f"cast_to_{self.mangled_name}"
@@ -522,10 +522,10 @@ class ABICodeGenerator:
         )
         iface_abi_target_0.include("taihe/object.abi.h")
         iface_abi_target_0.write(
-            f"struct {iface_abi_info.f_table};\n"
-            f"struct {iface_abi_info.v_table};\n"
+            f"struct {iface_abi_info.ftable};\n"
+            f"struct {iface_abi_info.vtable};\n"
             f"struct {iface_abi_info.mangled_name} {{\n"
-            f"  struct {iface_abi_info.v_table} const* vtbl_ptr;\n"
+            f"  struct {iface_abi_info.vtable} const* vtbl_ptr;\n"
             f"  struct DataBlockHead* data_ptr;\n"
             f"}};\n"
             f"typedef struct {iface_abi_info.mangled_name} {iface_abi_info.as_param};\n"
@@ -557,7 +557,7 @@ class ABICodeGenerator:
         iface_abi_1_target: COutputBuffer,
         iface_abi_info: IfaceDeclABIInfo,
     ):
-        iface_abi_1_target.write(f"struct {iface_abi_info.f_table} {{\n")
+        iface_abi_1_target.write(f"struct {iface_abi_info.ftable} {{\n")
         for method in iface.methods:
             method_abi_info = BaseFuncDeclABIInfo.get(self.am, method)
             params = [f"{iface_abi_info.as_param} tobj"]
@@ -578,11 +578,11 @@ class ABICodeGenerator:
         iface_abi_1_target: COutputBuffer,
         iface_abi_info: IfaceDeclABIInfo,
     ):
-        iface_abi_1_target.write(f"struct {iface_abi_info.v_table} {{\n")
+        iface_abi_1_target.write(f"struct {iface_abi_info.vtable} {{\n")
         for ancestor_item_info in iface_abi_info.ancestor_list:
             ancestor_abi_info = IfaceDeclABIInfo.get(self.am, ancestor_item_info.iface)
             iface_abi_1_target.write(
-                f"  struct {ancestor_abi_info.f_table} const* {ancestor_item_info.ptbl_ptr};\n"
+                f"  struct {ancestor_abi_info.ftable} const* {ancestor_item_info.ptbl_ptr};\n"
             )
         iface_abi_1_target.write("};\n")
 
@@ -637,7 +637,7 @@ class ABICodeGenerator:
             iface_abi_1_target.write(
                 f"TH_INLINE struct {ancestor_abi_info.mangled_name} {info.static_cast}(struct {iface_abi_info.mangled_name} tobj) {{\n"
                 f"  struct {ancestor_abi_info.mangled_name} result;\n"
-                f"  result.vtbl_ptr = (struct {ancestor_abi_info.v_table}*)(&tobj.vtbl_ptr->ftbl_ptr_0 + {info.offset});\n"
+                f"  result.vtbl_ptr = (struct {ancestor_abi_info.vtable}*)(&tobj.vtbl_ptr->ftbl_ptr_0 + {info.offset});\n"
                 f"  result.data_ptr = tobj.data_ptr;\n"
                 f"  return result;\n"
                 f"}}\n"
@@ -656,7 +656,7 @@ class ABICodeGenerator:
             f"  result.data_ptr = data_ptr;"
             f"  for (size_t i = 0; i < rtti_ptr->len; i++) {{\n"
             f"    if (rtti_ptr->idmap[i].id == {iface_abi_info.iid}) {{\n"
-            f"      result.vtbl_ptr = (struct {iface_abi_info.v_table}*)rtti_ptr->idmap[i].vtbl_ptr;\n"
+            f"      result.vtbl_ptr = (struct {iface_abi_info.vtable}*)rtti_ptr->idmap[i].vtbl_ptr;\n"
             f"      return result;\n"
             f"    }}\n"
             f"  }}\n"

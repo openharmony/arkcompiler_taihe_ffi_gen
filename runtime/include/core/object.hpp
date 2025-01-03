@@ -6,94 +6,94 @@
 #include <taihe/object.abi.h>
 
 namespace taihe::core {
-struct DataOwner;
-struct DataRef;
+struct data_holder;
+struct data_view;
 
-struct DataOwner {
+struct data_holder {
     DataBlockHead* m_handle;
 
-    DataOwner(DataBlockHead* other_handle);
-    ~DataOwner();
-    DataOwner(DataOwner && other);
-    DataOwner(DataOwner const& other);
-    DataOwner(DataRef const& other);
-    DataOwner& operator=(DataOwner other);
+    data_holder(DataBlockHead* other_handle);
+    ~data_holder();
+    data_holder(data_holder && other);
+    data_holder(data_holder const& other);
+    data_holder(data_view const& other);
+    data_holder& operator=(data_holder other);
 };
 
-struct DataRef {
+struct data_view {
     DataBlockHead* m_handle;
 
-    DataRef(DataBlockHead* other_handle);
-    ~DataRef();
-    DataRef(DataOwner const& other);
-    DataRef(DataRef const& other);
-    DataRef& operator=(DataRef other);
+    data_view(DataBlockHead* other_handle);
+    ~data_view();
+    data_view(data_holder const& other);
+    data_view(data_view const& other);
+    data_view& operator=(data_view other);
 };
 
-DataOwner::DataOwner(DataBlockHead* other_handle)
+data_holder::data_holder(DataBlockHead* other_handle)
     : m_handle(other_handle) {}
 
-DataOwner::~DataOwner() {
+data_holder::~data_holder() {
     tobj_drop(this->m_handle);
 }
 
-DataOwner::DataOwner(DataOwner && other)
+data_holder::data_holder(data_holder && other)
     : m_handle(other.m_handle) {
     other.m_handle = nullptr;
 }
 
-DataOwner::DataOwner(DataOwner const& other)
+data_holder::data_holder(data_holder const& other)
     : m_handle(tobj_dup(other.m_handle)) {}
 
-DataOwner::DataOwner(DataRef const& other)
+data_holder::data_holder(data_view const& other)
     : m_handle(tobj_dup(other.m_handle)) {}
 
-DataOwner& DataOwner::operator=(DataOwner other) {
+data_holder& data_holder::operator=(data_holder other) {
     std::swap(this->m_handle, other.m_handle);
     return *this;
 }
 
-DataRef::DataRef(DataBlockHead* other_handle)
+data_view::data_view(DataBlockHead* other_handle)
     : m_handle(other_handle) {}
 
-DataRef::~DataRef() {}
+data_view::~data_view() {}
 
-DataRef::DataRef(DataOwner const& other)
+data_view::data_view(data_holder const& other)
     : m_handle(other.m_handle) {}
 
-DataRef::DataRef(DataRef const& other)
+data_view::data_view(data_view const& other)
     : m_handle(other.m_handle) {}
 
-DataRef& DataRef::operator=(DataRef other) {
+data_view& data_view::operator=(data_view other) {
     std::swap(this->m_handle, other.m_handle);
     return *this;
 }
 
 template<typename Impl>
-struct WithDataBlockHead : DataBlockHead, Impl {
+struct data_block_impl : DataBlockHead, Impl {
     template<typename... Args>
-    WithDataBlockHead(TypeInfo const* rtti_ptr, TRefCount m_count, Args&&... args)
+    data_block_impl(TypeInfo const* rtti_ptr, TRefCount m_count, Args&&... args)
         : DataBlockHead{rtti_ptr, m_count}, Impl(std::forward<Args>(args)...) {}
 };
 
 template<typename FTable, typename Impl>
-struct FTableImpl {};
+struct ftable_impl {};
 
 template<typename VTable, typename Impl>
-struct VTableImpl {};
+struct vtable_impl {};
 
 template<typename RTTI, typename Impl>
-struct RTTIImpl {};
+struct typeinfo_impl {};
 
 template<typename InterfaceOwner>
-struct OwnerInspector {};
+struct interface_owner_traits {};
 
-template<typename InterfaceOwner, typename Impl, typename OwnerInspector<InterfaceOwner>::Type = nullptr, typename... Args>
-InterfaceOwner makeInterface(Args&&... args) {
+template<typename InterfaceOwner, typename Impl, typename interface_owner_traits<InterfaceOwner>::type = nullptr, typename... Args>
+InterfaceOwner new_instance(Args&&... args) {
     return InterfaceOwner{{
-        .vtbl_ptr = &VTableImpl<typename OwnerInspector<InterfaceOwner>::VTable, Impl>::vtbl,
-        .data_ptr = new WithDataBlockHead<Impl>(
-            reinterpret_cast<TypeInfo const*>(&RTTIImpl<typename OwnerInspector<InterfaceOwner>::RTTI, Impl>::rtti), 1,
+        .vtbl_ptr = &vtable_impl<typename interface_owner_traits<InterfaceOwner>::vtable, Impl>::vtbl,
+        .data_ptr = new data_block_impl<Impl>(
+            reinterpret_cast<TypeInfo const*>(&typeinfo_impl<typename interface_owner_traits<InterfaceOwner>::typeinfo, Impl>::rtti), 1,
             std::forward<Args>(args)...
         ),
     }};
