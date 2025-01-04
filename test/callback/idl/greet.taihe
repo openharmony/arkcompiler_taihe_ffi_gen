@@ -1,6 +1,0 @@
-interface Greeter {
-    [functor] greet(target: String): void;
-}
-
-function makeEnglishGreeter(): Greeter;
-function makeNamedEnglishGreeter(name: String): Greeter;
