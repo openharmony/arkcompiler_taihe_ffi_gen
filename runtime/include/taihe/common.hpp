@@ -15,5 +15,5 @@ template<auto tag>
 struct static_tag_t {};
 
 template<auto tag>
-constexpr static_tag_t<tag> static_tag_v = {};
+constexpr static_tag_t<tag> static_tag = {};
 }

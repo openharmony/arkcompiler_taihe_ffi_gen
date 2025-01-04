@@ -27,7 +27,7 @@ char const *content =
     "</bookstore>\n";
 
 int main() {
-    auto parser = makeXmlPullParser({content}, static_tag_v<OptString::tag_t::UNDEFINED>);
+    auto parser = makeXmlPullParser({content}, static_tag<OptString::tag_t::UNDEFINED>);
 
     auto tag_cb = [](taihe::core::string_view name, taihe::core::string_view value) {
         std::cout << "(tag) " << std::string_view(name) << ": " << std::string_view(value) << std::endl;
@@ -39,18 +39,18 @@ int main() {
     };
 
     parser.parseXml({
-        .supportDoctype = static_tag_v<OptBool::tag_t::UNDEFINED>,
-        .ignoreNameSpace = static_tag_v<OptBool::tag_t::UNDEFINED>,
+        .supportDoctype = static_tag<OptBool::tag_t::UNDEFINED>,
+        .ignoreNameSpace = static_tag<OptBool::tag_t::UNDEFINED>,
         .tagValueCallbackFunction = {
-            static_tag_v<OptCallbackStringStringBool::tag_t::value>,
+            static_tag<OptCallbackStringStringBool::tag_t::value>,
             new_instance<CallbackStringStringBool, decltype(tag_cb)>(tag_cb),
         },
         .attributeValueCallbackFunction = {
-            static_tag_v<OptCallbackStringStringBool::tag_t::value>,
+            static_tag<OptCallbackStringStringBool::tag_t::value>,
             new_instance<CallbackStringStringBool, decltype(attr_cb)>(attr_cb),
         },
         . tokenValueCallbackFunction = {
-            static_tag_v<OptCallbackEventTypeParseInfoBool::tag_t::UNDEFINED>,
+            static_tag<OptCallbackEventTypeParseInfoBool::tag_t::UNDEFINED>,
         },
     });
 }

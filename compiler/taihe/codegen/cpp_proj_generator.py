@@ -507,24 +507,23 @@ class CppProjCodeGenerator:
             f"    }}\n"
         )
         # in place constructor
-        enum_cpp_proj_target.write(
-            f"    template<tag_t tag, typename... Args>\n"
-            f"    {enum_cpp_proj_info.name}(::taihe::core::static_tag_t<tag>, Args&&... args) : tag(tag) {{\n"
-        )
         for item in enum.items:
             if item.ty_ref is None:
-                continue
-            enum_cpp_proj_target.write(
-                f"        if constexpr (tag == tag_t::{item.name}) {{\n"
-                f"            new (&this->data.{item.name}) decltype(this->data.{item.name})(::std::forward<Args>(args)...);\n"
-                f"        }}\n"
-            )
-        enum_cpp_proj_target.write("    }\n")
+                enum_cpp_proj_target.write(
+                    f"    {enum_cpp_proj_info.name}(::taihe::core::static_tag_t<tag_t::{item.name}>) : tag(tag_t::{item.name}) {{}}\n"
+                )
+            else:
+                enum_cpp_proj_target.write(
+                    f"    template<typename... Args>\n"
+                    f"    {enum_cpp_proj_info.name}(::taihe::core::static_tag_t<tag_t::{item.name}>, Args&&... args) : tag(tag_t::{item.name}) {{\n"
+                    f"        new (&this->data.{item.name}) decltype(this->data.{item.name})(::std::forward<Args>(args)...);\n"
+                    f"    }}\n"
+                )
         # creator
         enum_cpp_proj_target.write(
             f"    template<tag_t tag, typename... Args>\n"
             f"    static {enum_cpp_proj_info.name} make(Args&&... args) {{\n"
-            f"        return {enum_cpp_proj_info.name}(::taihe::core::static_tag_v<tag>, ::std::forward<Args>(args)...);\n"
+            f"        return {enum_cpp_proj_info.name}(::taihe::core::static_tag<tag>, ::std::forward<Args>(args)...);\n"
             f"    }}\n"
         )
         # emplacement
@@ -533,13 +532,13 @@ class CppProjCodeGenerator:
             f"    {enum_cpp_proj_info.name} const& emplace(Args&&... args) {{\n"
             f"        ::std::destroy_at(this);\n"
             f"        this->tag = tag;\n"
-            f"        new (this) {enum_cpp_proj_info.name}(::taihe::core::static_tag_v<tag>, ::std::forward<Args>(args)...);\n"
+            f"        new (this) {enum_cpp_proj_info.name}(::taihe::core::static_tag<tag>, ::std::forward<Args>(args)...);\n"
             f"        return *this;\n"
             f"    }}\n"
         )
         # non-const getter
         enum_cpp_proj_target.write(
-            "    template<tag_t tag>\n" "    auto* get_raw_ptr() {\n"
+            "    template<tag_t tag>\n" "    auto* unsafe_get_ptr() {\n"
         )
         for item in enum.items:
             result = (
@@ -556,12 +555,12 @@ class CppProjCodeGenerator:
         enum_cpp_proj_target.write(
             "    template<tag_t tag>\n"
             "    auto* get_ptr() {\n"
-            "        return this->tag == tag ? get_raw_ptr<tag>() : nullptr;\n"
+            "        return this->tag == tag ? unsafe_get_ptr<tag>() : nullptr;\n"
             "    }\n"
         )
         # const getter
         enum_cpp_proj_target.write(
-            "    template<tag_t tag>\n" "    auto const* get_raw_ptr() const {\n"
+            "    template<tag_t tag>\n" "    auto const* unsafe_get_ptr() const {\n"
         )
         for item in enum.items:
             result = (
@@ -578,15 +577,20 @@ class CppProjCodeGenerator:
         enum_cpp_proj_target.write(
             "    template<tag_t tag>\n"
             "    auto const* get_ptr() const {\n"
-            "        return this->tag == tag ? get_raw_ptr<tag>() : nullptr;\n"
+            "        return this->tag == tag ? unsafe_get_ptr<tag>() : nullptr;\n"
             "    }\n"
         )
         # checker
         enum_cpp_proj_target.write(
             "    template<tag_t tag>\n"
-            "    bool holds() const { return this->tag == tag; }\n"
-            "    tag_t get_tag() const { return this->tag; }\n"
+            "    bool holds() const {\n"
+            "        return this->tag == tag;\n"
+            "    }\n"
+            "    tag_t get_tag() const {\n"
+            "        return this->tag;\n"
+            "    }\n"
         )
+        # named
         for item in enum.items:
             enum_cpp_proj_target.write(
                 f"    template<typename... Args>\n"
@@ -603,16 +607,70 @@ class CppProjCodeGenerator:
                 f"    auto const* get_{item.name}_ptr() const {{\n"
                 f"        return this->get_ptr<tag_t::{item.name}>();\n"
                 f"    }}\n"
-                f"    auto* get_{item.name}_raw_ptr() {{\n"
-                f"        return this->get_raw_ptr<tag_t::{item.name}>();\n"
+                f"    auto* unsafe_get_{item.name}_ptr() {{\n"
+                f"        return this->unsafe_get_ptr<tag_t::{item.name}>();\n"
                 f"    }}\n"
-                f"    auto const* get_{item.name}_raw_ptr() const {{\n"
-                f"        return this->get_raw_ptr<tag_t::{item.name}>();\n"
+                f"    auto const* unsafe_get_{item.name}_ptr() const {{\n"
+                f"        return this->unsafe_get_ptr<tag_t::{item.name}>();\n"
                 f"    }}\n"
                 f"    bool holds_{item.name}() const {{\n"
                 f"        return this->holds<tag_t::{item.name}>();\n"
                 f"    }}\n"
             )
+        # non_const visitor
+        enum_cpp_proj_target.write(
+            "    template<typename Visitor>\n"
+            "    auto accept_template(Visitor&& visitor) {\n"
+            "        switch (this->tag) {\n"
+        )
+        for item in enum.items:
+            result = f"::taihe::core::static_tag<tag_t::{item.name}>"
+            if item.ty_ref:
+                result += f", this->data.{item.name}"
+            enum_cpp_proj_target.write(
+                f"        case tag_t::{item.name}:\n"
+                f"            return visitor({result});\n"
+            )
+        enum_cpp_proj_target.write("        }\n" "    }\n")
+        enum_cpp_proj_target.write(
+            "    template<typename Visitor>\n"
+            "    auto accept(Visitor&& visitor) {\n"
+            "        switch (this->tag) {\n"
+        )
+        for item in enum.items:
+            result = "" if item.ty_ref is None else f"this->data.{item.name}"
+            enum_cpp_proj_target.write(
+                f"        case tag_t::{item.name}:\n"
+                f"            return visitor.{item.name}({result});\n"
+            )
+        enum_cpp_proj_target.write("        }\n" "    }\n")
+        # const visitor
+        enum_cpp_proj_target.write(
+            "    template<typename Visitor>\n"
+            "    auto accept_template(Visitor&& visitor) const {\n"
+            "        switch (this->tag) {\n"
+        )
+        for item in enum.items:
+            result = f"::taihe::core::static_tag<tag_t::{item.name}>"
+            if item.ty_ref:
+                result += f", this->data.{item.name}"
+            enum_cpp_proj_target.write(
+                f"        case tag_t::{item.name}:\n"
+                f"            return visitor({result});\n"
+            )
+        enum_cpp_proj_target.write("        }\n" "    }\n")
+        enum_cpp_proj_target.write(
+            "    template<typename Visitor>\n"
+            "    auto accept(Visitor&& visitor) const {\n"
+            "        switch (this->tag) {\n"
+        )
+        for item in enum.items:
+            result = "" if item.ty_ref is None else f"this->data.{item.name}"
+            enum_cpp_proj_target.write(
+                f"        case tag_t::{item.name}:\n"
+                f"            return visitor.{item.name}({result});\n"
+            )
+        enum_cpp_proj_target.write("        }\n" "    }\n")
         enum_cpp_proj_target.write(
             f"private:\n"
             f"    tag_t tag;\n"
@@ -674,14 +732,14 @@ class CppProjCodeGenerator:
             if item.ty_ref is None:
                 enum_cpp_proj_target.write(
                     f"    case {enum_item_abi_info.mangled_name}:\n"
-                    f"        return {enum_cpp_proj_info.owner_full_name}(::taihe::core::static_tag_v<{enum_cpp_proj_info.owner_full_name}::tag_t::{item.name}>);\n"
+                    f"        return {enum_cpp_proj_info.owner_full_name}(::taihe::core::static_tag<{enum_cpp_proj_info.owner_full_name}::tag_t::{item.name}>);\n"
                 )
                 continue
             ty_cpp_proj_info = TypeCppProjInfo.get(self.am, item.ty_ref.resolved_ty)
             result = ty_cpp_proj_info.return_from_abi(f"val.data.{item.name}")
             enum_cpp_proj_target.write(
                 f"    case {enum_item_abi_info.mangled_name}:\n"
-                f"        return {enum_cpp_proj_info.owner_full_name}(::taihe::core::static_tag_v<{enum_cpp_proj_info.owner_full_name}::tag_t::{item.name}>, {result});\n"
+                f"        return {enum_cpp_proj_info.owner_full_name}(::taihe::core::static_tag<{enum_cpp_proj_info.owner_full_name}::tag_t::{item.name}>, {result});\n"
             )
         enum_cpp_proj_target.write(
             f"    }}\n"

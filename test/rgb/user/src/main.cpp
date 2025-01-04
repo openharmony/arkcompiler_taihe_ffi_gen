@@ -6,7 +6,7 @@
 #include <iomanip>
 
 using namespace rgb;
-using taihe::core::static_tag_v;
+using taihe::core::static_tag;
 
 class ColoredCircle {
     float r;
