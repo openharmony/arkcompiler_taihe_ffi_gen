@@ -78,19 +78,20 @@ class StructDeclCppProjInfo(AbstractAnalysis[StructDecl]):
         segments = d.segments
         self.header = f"{p.name}.{d.name}.proj.hpp"
         self.name = d.name
-        self.owner_full_name = "::" + "::".join(segments)
-        self.param_full_name = "::param::" + "::".join(segments)
+        self.full_name = "::" + "::".join(segments)
+        self.as_owner = self.full_name
+        self.as_param = self.full_name + " const&"
         self.pass_from_abi = (
-            lambda val: f"::taihe::core::from_abi<{self.param_full_name}, {abi_info.as_param}>({val})"
+            lambda val: f"::taihe::core::from_abi<{self.as_param}, {abi_info.as_param}>({val})"
         )
         self.pass_into_abi = (
-            lambda val: f"::taihe::core::into_abi<{self.param_full_name}, {abi_info.as_param}>({val})"
+            lambda val: f"::taihe::core::into_abi<{self.as_param}, {abi_info.as_param}>({val})"
         )
         self.return_from_abi = (
-            lambda val: f"::taihe::core::from_abi<{self.owner_full_name}, {abi_info.as_owner}>({val})"
+            lambda val: f"::taihe::core::from_abi<{self.as_owner}, {abi_info.as_owner}>({val})"
         )
         self.return_into_abi = (
-            lambda val: f"::taihe::core::into_abi<{self.owner_full_name}, {abi_info.as_owner}>({val})"
+            lambda val: f"::taihe::core::into_abi<{self.as_owner}, {abi_info.as_owner}>({val})"
         )
 
 
@@ -102,19 +103,20 @@ class EnumDeclCppProjInfo(AbstractAnalysis[EnumDecl]):
         segments = d.segments
         self.header = f"{p.name}.{d.name}.proj.hpp"
         self.name = d.name
-        self.owner_full_name = "::" + "::".join(segments)
-        self.param_full_name = "::param::" + "::".join(segments)
+        self.full_name = "::" + "::".join(segments)
+        self.as_owner = self.full_name
+        self.as_param = self.full_name + " const&"
         self.pass_from_abi = (
-            lambda val: f"::taihe::core::from_abi<{self.param_full_name}, {abi_info.as_param}>({val})"
+            lambda val: f"::taihe::core::from_abi<{self.as_param}, {abi_info.as_param}>({val})"
         )
         self.pass_into_abi = (
-            lambda val: f"::taihe::core::into_abi<{self.param_full_name}, {abi_info.as_param}>({val})"
+            lambda val: f"::taihe::core::into_abi<{self.as_param}, {abi_info.as_param}>({val})"
         )
         self.return_from_abi = (
-            lambda val: f"::taihe::core::from_abi<{self.owner_full_name}, {abi_info.as_owner}>({val})"
+            lambda val: f"::taihe::core::from_abi<{self.as_owner}, {abi_info.as_owner}>({val})"
         )
         self.return_into_abi = (
-            lambda val: f"::taihe::core::into_abi<{self.owner_full_name}, {abi_info.as_owner}>({val})"
+            lambda val: f"::taihe::core::into_abi<{self.as_owner}, {abi_info.as_owner}>({val})"
         )
 
 
@@ -130,17 +132,19 @@ class IfaceDeclCppProjInfo(AbstractAnalysis[IfaceDecl]):
         self.name = d.name
         self.owner_full_name = "::" + "::".join(segments)
         self.param_full_name = "::param::" + "::".join(segments)
+        self.as_owner = self.owner_full_name
+        self.as_param = self.param_full_name
         self.pass_from_abi = (
-            lambda val: f"::taihe::core::from_abi<{self.param_full_name}, {abi_info.as_param}>({val})"
+            lambda val: f"::taihe::core::from_abi<{self.as_param}, {abi_info.as_param}>({val})"
         )
         self.pass_into_abi = (
-            lambda val: f"::taihe::core::into_abi<{self.param_full_name}, {abi_info.as_param}>({val})"
+            lambda val: f"::taihe::core::into_abi<{self.as_param}, {abi_info.as_param}>({val})"
         )
         self.return_from_abi = (
-            lambda val: f"::taihe::core::from_abi<{self.owner_full_name}, {abi_info.as_owner}>({val})"
+            lambda val: f"::taihe::core::from_abi<{self.as_owner}, {abi_info.as_owner}>({val})"
         )
         self.return_into_abi = (
-            lambda val: f"::taihe::core::into_abi<{self.owner_full_name}, {abi_info.as_owner}>({val})"
+            lambda val: f"::taihe::core::into_abi<{self.as_owner}, {abi_info.as_owner}>({val})"
         )
 
 
@@ -162,8 +166,8 @@ class TypeCppProjInfo(AbstractAnalysis[Optional[Type]], TypeVisitor):
         enum_cpp_proj_info = EnumDeclCppProjInfo.get(self.am, d)
         self.header_decl = enum_cpp_proj_info.header
         self.header_defn = enum_cpp_proj_info.header
-        self.as_owner = enum_cpp_proj_info.owner_full_name
-        self.as_param = enum_cpp_proj_info.param_full_name
+        self.as_owner = enum_cpp_proj_info.as_owner
+        self.as_param = enum_cpp_proj_info.as_param
         self.pass_from_abi = enum_cpp_proj_info.pass_from_abi
         self.pass_into_abi = enum_cpp_proj_info.pass_into_abi
         self.return_from_abi = enum_cpp_proj_info.return_from_abi
@@ -174,8 +178,8 @@ class TypeCppProjInfo(AbstractAnalysis[Optional[Type]], TypeVisitor):
         struct_cpp_proj_info = StructDeclCppProjInfo.get(self.am, d)
         self.header_decl = struct_cpp_proj_info.header
         self.header_defn = struct_cpp_proj_info.header
-        self.as_owner = struct_cpp_proj_info.owner_full_name
-        self.as_param = struct_cpp_proj_info.param_full_name
+        self.as_owner = struct_cpp_proj_info.as_owner
+        self.as_param = struct_cpp_proj_info.as_param
         self.pass_from_abi = struct_cpp_proj_info.pass_from_abi
         self.pass_into_abi = struct_cpp_proj_info.pass_into_abi
         self.return_from_abi = struct_cpp_proj_info.return_from_abi
@@ -186,8 +190,8 @@ class TypeCppProjInfo(AbstractAnalysis[Optional[Type]], TypeVisitor):
         iface_cpp_proj_info = IfaceDeclCppProjInfo.get(self.am, d)
         self.header_decl = iface_cpp_proj_info.header_decl
         self.header_defn = iface_cpp_proj_info.header_defn
-        self.as_owner = iface_cpp_proj_info.owner_full_name
-        self.as_param = iface_cpp_proj_info.param_full_name
+        self.as_owner = iface_cpp_proj_info.as_owner
+        self.as_param = iface_cpp_proj_info.as_param
         self.pass_from_abi = iface_cpp_proj_info.pass_from_abi
         self.pass_into_abi = iface_cpp_proj_info.pass_into_abi
         self.return_from_abi = iface_cpp_proj_info.return_from_abi
@@ -331,13 +335,7 @@ class CppProjCodeGenerator:
             ty_info = TypeCppProjInfo.get(self.am, field.ty_ref.resolved_ty)
             struct_cpp_proj_target.include(ty_info.header_defn)
             struct_cpp_proj_target.write(f"    {ty_info.as_owner} {field.name};\n")
-        struct_cpp_proj_target.write(
-            f"}};\n"
-            f"}}\n"
-            f"namespace {pkg_cpp_proj_info.param_namespace} {{\n"
-            f"using {struct_cpp_proj_info.name} = {struct_cpp_proj_info.owner_full_name} const&;\n"
-            f"}}\n"
-        )
+        struct_cpp_proj_target.write("};\n" "}\n")
 
     def gen_struct_trans_func(
         self,
@@ -349,7 +347,7 @@ class CppProjCodeGenerator:
         struct_cpp_proj_target.write(
             f"namespace taihe::core {{\n"
             f"template<>\n"
-            f"inline {struct_abi_info.as_owner} into_abi({struct_cpp_proj_info.owner_full_name} val){{\n"
+            f"inline {struct_abi_info.as_owner} into_abi({struct_cpp_proj_info.as_owner} val){{\n"
             f"    return {{\n"
         )
         for field in struct.fields:
@@ -360,7 +358,7 @@ class CppProjCodeGenerator:
             f"    }};\n"
             f"}}\n"
             f"template<>\n"
-            f"inline {struct_cpp_proj_info.owner_full_name} from_abi({struct_abi_info.as_owner} val){{\n"
+            f"inline {struct_cpp_proj_info.as_owner} from_abi({struct_abi_info.as_owner} val){{\n"
             f"    return {{\n"
         )
         for field in struct.fields:
@@ -371,12 +369,12 @@ class CppProjCodeGenerator:
             f"    }};\n"
             f"}}\n"
             f"template<>\n"
-            f"inline {struct_abi_info.as_param} into_abi({struct_cpp_proj_info.param_full_name} val){{\n"
+            f"inline {struct_abi_info.as_param} into_abi({struct_cpp_proj_info.as_param} val){{\n"
             f"    return reinterpret_cast<{struct_abi_info.as_param}>(&val);\n"
             f"}}\n"
             f"template<>\n"
-            f"inline {struct_cpp_proj_info.param_full_name} from_abi({struct_abi_info.as_param} val){{\n"
-            f"    return reinterpret_cast<{struct_cpp_proj_info.param_full_name}>(*val);\n"
+            f"inline {struct_cpp_proj_info.as_param} from_abi({struct_abi_info.as_param} val){{\n"
+            f"    return reinterpret_cast<{struct_cpp_proj_info.as_param}>(*val);\n"
             f"}}\n"
             f"}}\n"
         )
@@ -672,18 +670,15 @@ class CppProjCodeGenerator:
             )
         enum_cpp_proj_target.write("        }\n" "    }\n")
         enum_cpp_proj_target.write(
-            f"private:\n"
-            f"    tag_t tag;\n"
-            f"    storage_t data;\n"
-            f"    template<typename cpp_t, typename abi_t>\n"
-            f"    friend abi_t taihe::core::into_abi(cpp_t val);\n"
-            f"    template<typename cpp_t, typename abi_t>\n"
-            f"    friend cpp_t taihe::core::from_abi(abi_t val);\n"
-            f"}};\n"
-            f"}}\n"
-            f"namespace {pkg_cpp_proj_info.param_namespace} {{\n"
-            f"using {enum_cpp_proj_info.name} = {enum_cpp_proj_info.owner_full_name} const&;\n"
-            f"}}\n"
+            "private:\n"
+            "    tag_t tag;\n"
+            "    storage_t data;\n"
+            "    template<typename cpp_t, typename abi_t>\n"
+            "    friend abi_t taihe::core::into_abi(cpp_t val);\n"
+            "    template<typename cpp_t, typename abi_t>\n"
+            "    friend cpp_t taihe::core::from_abi(abi_t val);\n"
+            "};\n"
+            "}\n"
         )
 
     def gen_enum_trans_func(
@@ -696,7 +691,7 @@ class CppProjCodeGenerator:
         enum_cpp_proj_target.write(
             f"namespace taihe::core {{\n"
             f"template<>\n"
-            f"inline {enum_abi_info.as_owner} into_abi({enum_cpp_proj_info.owner_full_name} val){{\n"
+            f"inline {enum_abi_info.as_owner} into_abi({enum_cpp_proj_info.as_owner} val){{\n"
             f"    {enum_abi_info.as_owner} result;\n"
             f"    switch (val.tag) {{\n"
         )
@@ -704,7 +699,7 @@ class CppProjCodeGenerator:
             enum_item_abi_info = EnumItemDeclABIInfo.get(self.am, item)
             if item.ty_ref is None:
                 enum_cpp_proj_target.write(
-                    f"    case {enum_cpp_proj_info.owner_full_name}::tag_t::{item.name}:\n"
+                    f"    case {enum_cpp_proj_info.full_name}::tag_t::{item.name}:\n"
                     f"        result.tag = {enum_item_abi_info.mangled_name};\n"
                     f"        break;\n"
                 )
@@ -714,7 +709,7 @@ class CppProjCodeGenerator:
                 f"::std::move(val.data.{item.name})"
             )
             enum_cpp_proj_target.write(
-                f"    case {enum_cpp_proj_info.owner_full_name}::tag_t::{item.name}:\n"
+                f"    case {enum_cpp_proj_info.full_name}::tag_t::{item.name}:\n"
                 f"        result.tag = {enum_item_abi_info.mangled_name};\n"
                 f"        result.data.{item.name} = {result};\n"
                 f"        break;\n"
@@ -724,7 +719,7 @@ class CppProjCodeGenerator:
             f"    return result;\n"
             f"}}\n"
             f"template<>\n"
-            f"inline {enum_cpp_proj_info.owner_full_name} from_abi({enum_abi_info.as_owner} val){{\n"
+            f"inline {enum_cpp_proj_info.as_owner} from_abi({enum_abi_info.as_owner} val){{\n"
             f"    switch (val.tag) {{\n"
         )
         for item in enum.items:
@@ -732,25 +727,25 @@ class CppProjCodeGenerator:
             if item.ty_ref is None:
                 enum_cpp_proj_target.write(
                     f"    case {enum_item_abi_info.mangled_name}:\n"
-                    f"        return {enum_cpp_proj_info.owner_full_name}(::taihe::core::static_tag<{enum_cpp_proj_info.owner_full_name}::tag_t::{item.name}>);\n"
+                    f"        return {enum_cpp_proj_info.as_owner}(::taihe::core::static_tag<{enum_cpp_proj_info.full_name}::tag_t::{item.name}>);\n"
                 )
                 continue
             ty_cpp_proj_info = TypeCppProjInfo.get(self.am, item.ty_ref.resolved_ty)
             result = ty_cpp_proj_info.return_from_abi(f"val.data.{item.name}")
             enum_cpp_proj_target.write(
                 f"    case {enum_item_abi_info.mangled_name}:\n"
-                f"        return {enum_cpp_proj_info.owner_full_name}(::taihe::core::static_tag<{enum_cpp_proj_info.owner_full_name}::tag_t::{item.name}>, {result});\n"
+                f"        return {enum_cpp_proj_info.as_owner}(::taihe::core::static_tag<{enum_cpp_proj_info.full_name}::tag_t::{item.name}>, {result});\n"
             )
         enum_cpp_proj_target.write(
             f"    }}\n"
             f"}}\n"
             f"template<>\n"
-            f"inline {enum_abi_info.as_param} into_abi({enum_cpp_proj_info.param_full_name} val){{\n"
+            f"inline {enum_abi_info.as_param} into_abi({enum_cpp_proj_info.as_param} val){{\n"
             f"    return reinterpret_cast<{enum_abi_info.as_param}>(&val);\n"
             f"}}\n"
             f"template<>\n"
-            f"inline {enum_cpp_proj_info.param_full_name} from_abi({enum_abi_info.as_param} val){{\n"
-            f"    return reinterpret_cast<{enum_cpp_proj_info.param_full_name}>(*val);\n"
+            f"inline {enum_cpp_proj_info.as_param} from_abi({enum_abi_info.as_param} val){{\n"
+            f"    return reinterpret_cast<{enum_cpp_proj_info.as_param}>(*val);\n"
             f"}}\n"
             f"}}\n"
         )
@@ -947,25 +942,25 @@ class CppProjCodeGenerator:
         iface_cpp_proj_impl_target.write(
             f"namespace taihe::core {{\n"
             f"template<>\n"
-            f"inline {iface_abi_info.as_owner} into_abi({iface_cpp_proj_info.owner_full_name} other){{\n"
+            f"inline {iface_abi_info.as_owner} into_abi({iface_cpp_proj_info.as_owner} other){{\n"
             f"    {iface_abi_info.as_owner} ret_handle = other.m_handle;\n"
             f"    other.m_handle.data_ptr = nullptr;\n"
             f"    return ret_handle;\n"
             f"}}\n"
             f"template<>\n"
-            f"inline {iface_cpp_proj_info.owner_full_name} from_abi({iface_abi_info.as_owner} other_handle){{\n"
+            f"inline {iface_cpp_proj_info.as_owner} from_abi({iface_abi_info.as_owner} other_handle){{\n"
             f"    {iface_abi_info.as_owner} ret_handle = other_handle;\n"
-            f"    return {iface_cpp_proj_info.owner_full_name}(ret_handle);\n"
+            f"    return {iface_cpp_proj_info.as_owner}(ret_handle);\n"
             f"}}\n"
             f"template<>\n"
-            f"inline {iface_abi_info.as_param} into_abi({iface_cpp_proj_info.param_full_name} other){{\n"
+            f"inline {iface_abi_info.as_param} into_abi({iface_cpp_proj_info.as_param} other){{\n"
             f"    {iface_abi_info.as_param} ret_handle = other.m_handle;\n"
             f"    return ret_handle;\n"
             f"}}\n"
             f"template<>\n"
-            f"inline {iface_cpp_proj_info.param_full_name} from_abi({iface_abi_info.as_param} other_handle){{\n"
+            f"inline {iface_cpp_proj_info.as_param} from_abi({iface_abi_info.as_param} other_handle){{\n"
             f"    {iface_abi_info.as_owner} ret_handle = other_handle;\n"
-            f"    return {iface_cpp_proj_info.param_full_name}(ret_handle);\n"
+            f"    return {iface_cpp_proj_info.as_param}(ret_handle);\n"
             f"}}\n"
             f"}}\n"
         )

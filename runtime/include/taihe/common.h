@@ -28,7 +28,7 @@
 #ifdef __cplusplus
 #define TH_INLINE inline
 #else
-#define TH_INLINE inline __attribute__((weak))
+#define TH_INLINE static inline
 #endif
 
 #ifdef __cplusplus

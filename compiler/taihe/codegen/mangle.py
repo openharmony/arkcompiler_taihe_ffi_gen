@@ -53,8 +53,6 @@ from enum import Enum
 class DeclKind(Enum):
     FUNCTION = "f"
     RETURN_T = "r"
-    OWNER_T = "owner"
-    PARAM_T = "param"
     STRUCT = "s"
     ENUM_TAG = "t"
     ENUM_UNION = "u"

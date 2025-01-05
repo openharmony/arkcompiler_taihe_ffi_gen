@@ -100,8 +100,8 @@ class EnumDeclABIInfo(AbstractAnalysis[EnumDecl]):
         self.tag_name = encode(segments, DeclKind.ENUM_TAG)
         self.union_name = encode(segments, DeclKind.ENUM_UNION)
         self.mangled_name = encode(segments, DeclKind.ENUM_STRUCT)
-        self.as_owner = encode(segments, DeclKind.OWNER_T)
-        self.as_param = encode(segments, DeclKind.PARAM_T)
+        self.as_owner = f"struct {self.mangled_name}"
+        self.as_param = f"struct {self.mangled_name} const*"
         self.has_data = any(item.ty_ref for item in d.items)
         self.copy_func = (
             None
@@ -130,8 +130,8 @@ class StructDeclABIInfo(AbstractAnalysis[StructDecl]):
         segments = d.segments
         self.header = f"{p.name}.{d.name}.abi.h"
         self.mangled_name = encode(segments, DeclKind.STRUCT)
-        self.as_owner = encode(segments, DeclKind.OWNER_T)
-        self.as_param = encode(segments, DeclKind.PARAM_T)
+        self.as_owner = f"struct {self.mangled_name}"
+        self.as_param = f"struct {self.mangled_name} const*"
         self.copy_func = (
             None
             if all(
@@ -171,8 +171,8 @@ class IfaceDeclABIInfo(AbstractAnalysis[IfaceDecl]):
         self.header_1 = f"{p.name}.{d.name}.abi.1.h"
         self.src = f"{p.name}.{d.name}.c"
         self.mangled_name = encode(segments, DeclKind.INTERFACE)
-        self.as_owner = encode(segments, DeclKind.OWNER_T)
-        self.as_param = encode(segments, DeclKind.PARAM_T)
+        self.as_owner = f"struct {self.mangled_name}"
+        self.as_param = f"struct {self.mangled_name}"
         self.copy_func = encode(segments, DeclKind.COPY)
         self.drop_func = encode(segments, DeclKind.DROP)
         self.ftable = encode(segments, DeclKind.FTABLE)
@@ -338,11 +338,7 @@ class ABICodeGenerator:
             ty_info = TypeABIInfo.get(self.am, field.ty_ref.resolved_ty)
             struct_abi_target.include(ty_info.header)
             struct_abi_target.write(f"  {ty_info.as_owner} {field.name};\n")
-        struct_abi_target.write(
-            f"}};\n"
-            f"typedef struct {struct_abi_info.mangled_name} {struct_abi_info.as_owner};\n"
-            f"typedef struct {struct_abi_info.mangled_name} const* {struct_abi_info.as_param};\n"
-        )
+        struct_abi_target.write("};\n")
 
     def gen_struct_copy_func(
         self,
@@ -440,8 +436,6 @@ class ABICodeGenerator:
             f"  enum {enum_abi_info.tag_name} tag;\n"
             f"  union {enum_abi_info.union_name} data;\n"
             f"}};\n"
-            f"typedef struct {enum_abi_info.mangled_name} {enum_abi_info.as_owner};\n"
-            f"typedef struct {enum_abi_info.mangled_name} const* {enum_abi_info.as_param};\n"
         )
 
     def gen_enum_copy_func(
@@ -528,8 +522,6 @@ class ABICodeGenerator:
             f"  struct {iface_abi_info.vtable} const* vtbl_ptr;\n"
             f"  struct DataBlockHead* data_ptr;\n"
             f"}};\n"
-            f"typedef struct {iface_abi_info.mangled_name} {iface_abi_info.as_param};\n"
-            f"typedef struct {iface_abi_info.mangled_name} {iface_abi_info.as_owner};\n"
         )
         self.gen_iface_copy_func(iface, iface_abi_target_0, iface_abi_info)
         self.gen_iface_drop_func(iface, iface_abi_target_0, iface_abi_info)
