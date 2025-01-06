@@ -208,8 +208,10 @@ class TypeABIInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
     def __init__(self, am: AnalysisManager, t: Optional[Type]) -> None:
         self.am = am
         self.header = None
-        self.as_field = None # type as struct field / union field / return value
-        self.as_param = None # type as parameter
+        # type as struct field / union field / return value
+        self.as_field = None
+        # type as parameter
+        self.as_param = None
         self.copy_func = None
         self.drop_func = None
         self.handle_type(t)

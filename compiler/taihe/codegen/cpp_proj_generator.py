@@ -153,8 +153,10 @@ class TypeCppProjInfo(AbstractAnalysis[Optional[Type]], TypeVisitor):
         self.am = am
         self.header_decl = None
         self.header_defn = None
-        self.as_owner = None # type as holder struct field / holder union field / return value
-        self.as_param = None # type as parameter
+        # type as holder struct field / holder union field / return value
+        self.as_owner = None
+        # type as parameter
+        self.as_param = None
         self.pass_from_abi = lambda val: val
         self.pass_into_abi = lambda val: val
         self.return_from_abi = lambda val: val
