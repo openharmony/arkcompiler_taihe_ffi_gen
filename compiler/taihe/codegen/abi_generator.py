@@ -82,7 +82,7 @@ class BaseFuncDeclABIInfo(AbstractAnalysis[BaseFuncDecl]):
         else:
             ty_info = TypeABIInfo.get(am, f.return_ty_ref.resolved_ty)
             self.return_ty_header = ty_info.header
-            self.return_ty_name = ty_info.as_owner
+            self.return_ty_name = ty_info.as_field
 
 
 class EnumItemDeclABIInfo(AbstractAnalysis[EnumItemDecl]):
@@ -100,7 +100,7 @@ class EnumDeclABIInfo(AbstractAnalysis[EnumDecl]):
         self.tag_name = encode(segments, DeclKind.ENUM_TAG)
         self.union_name = encode(segments, DeclKind.ENUM_UNION)
         self.mangled_name = encode(segments, DeclKind.ENUM_STRUCT)
-        self.as_owner = f"struct {self.mangled_name}"
+        self.as_field = f"struct {self.mangled_name}"
         self.as_param = f"struct {self.mangled_name} const*"
         self.has_data = any(item.ty_ref for item in d.items)
         self.copy_func = (
@@ -130,7 +130,7 @@ class StructDeclABIInfo(AbstractAnalysis[StructDecl]):
         segments = d.segments
         self.header = f"{p.name}.{d.name}.abi.h"
         self.mangled_name = encode(segments, DeclKind.STRUCT)
-        self.as_owner = f"struct {self.mangled_name}"
+        self.as_field = f"struct {self.mangled_name}"
         self.as_param = f"struct {self.mangled_name} const*"
         self.copy_func = (
             None
@@ -171,7 +171,7 @@ class IfaceDeclABIInfo(AbstractAnalysis[IfaceDecl]):
         self.header_1 = f"{p.name}.{d.name}.abi.1.h"
         self.src = f"{p.name}.{d.name}.c"
         self.mangled_name = encode(segments, DeclKind.INTERFACE)
-        self.as_owner = f"struct {self.mangled_name}"
+        self.as_field = f"struct {self.mangled_name}"
         self.as_param = f"struct {self.mangled_name}"
         self.copy_func = encode(segments, DeclKind.COPY)
         self.drop_func = encode(segments, DeclKind.DROP)
@@ -208,8 +208,8 @@ class TypeABIInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
     def __init__(self, am: AnalysisManager, t: Optional[Type]) -> None:
         self.am = am
         self.header = None
-        self.as_owner = None
-        self.as_param = None
+        self.as_field = None # type as struct field / union field / return value
+        self.as_param = None # type as parameter
         self.copy_func = None
         self.drop_func = None
         self.handle_type(t)
@@ -218,7 +218,7 @@ class TypeABIInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
     def visit_enum_decl(self, d: EnumDecl) -> None:
         enum_abi_info = EnumDeclABIInfo.get(self.am, d)
         self.header = enum_abi_info.header
-        self.as_owner = enum_abi_info.as_owner
+        self.as_field = enum_abi_info.as_field
         self.as_param = enum_abi_info.as_param
         self.copy_func = enum_abi_info.copy_func
         self.drop_func = enum_abi_info.drop_func
@@ -227,7 +227,7 @@ class TypeABIInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
     def visit_struct_decl(self, d: StructDecl) -> None:
         struct_abi_info = StructDeclABIInfo.get(self.am, d)
         self.header = struct_abi_info.header
-        self.as_owner = struct_abi_info.as_owner
+        self.as_field = struct_abi_info.as_field
         self.as_param = struct_abi_info.as_param
         self.copy_func = struct_abi_info.copy_func
         self.drop_func = struct_abi_info.drop_func
@@ -236,7 +236,7 @@ class TypeABIInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
     def visit_iface_decl(self, d: IfaceDecl) -> None:
         iface_abi_info = IfaceDeclABIInfo.get(self.am, d)
         self.header = iface_abi_info.header_0
-        self.as_owner = iface_abi_info.as_owner
+        self.as_field = iface_abi_info.as_field
         self.as_param = iface_abi_info.as_param
         self.copy_func = iface_abi_info.copy_func
         self.drop_func = iface_abi_info.drop_func
@@ -256,14 +256,14 @@ class TypeABIInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
             U64: "uint64_t",
         }.get(t)
         self.as_param = res
-        self.as_owner = res
+        self.as_field = res
         if res is None:
             raise ValueError
 
     def visit_special_type(self, t: SpecialType) -> None:
         if t == STRING:
             self.header = "taihe/string.abi.h"
-            self.as_owner = "struct TString*"
+            self.as_field = "struct TString*"
             self.as_param = "struct TString*"
             self.copy_func = "tstr_dup"
             self.drop_func = "tstr_drop"
@@ -337,7 +337,7 @@ class ABICodeGenerator:
         for field in struct.fields:
             ty_info = TypeABIInfo.get(self.am, field.ty_ref.resolved_ty)
             struct_abi_target.include(ty_info.header)
-            struct_abi_target.write(f"  {ty_info.as_owner} {field.name};\n")
+            struct_abi_target.write(f"  {ty_info.as_field} {field.name};\n")
         struct_abi_target.write("};\n")
 
     def gen_struct_copy_func(
@@ -422,7 +422,7 @@ class ABICodeGenerator:
                 continue
             ty_info = TypeABIInfo.get(self.am, item.ty_ref.resolved_ty)
             enum_abi_target.include(ty_info.header)
-            enum_abi_target.write(f"  {ty_info.as_owner} {item.name};\n")
+            enum_abi_target.write(f"  {ty_info.as_field} {item.name};\n")
         enum_abi_target.write("};\n")
 
     def gen_enum_struct_decl(
