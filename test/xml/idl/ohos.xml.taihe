@@ -59,30 +59,30 @@ enum OptBool {
     value: bool;
 }
 
-interface CallbackStringStringBool {
-    [functor] call(name: String, value: String): bool;
-}
-
-enum OptCallbackStringStringBool {
-    UNDEFINED;
-    value: CallbackStringStringBool;
-}
-
-interface CallbackEventTypeParseInfoBool {
+interface CallbackEvent {
     [functor] call(eventType: EventType, value: ParseInfo): bool;
 }
 
-enum OptCallbackEventTypeParseInfoBool {
+enum OptCallbackEvent {
     UNDEFINED;
-    value: CallbackEventTypeParseInfoBool;
+    value: CallbackEvent;
+}
+
+interface CallbackKV {
+    [functor] call(name: String, value: String): bool;
+}
+
+enum OptCallbackKV {
+    UNDEFINED;
+    value: CallbackKV;
 }
 
 struct ParseOptions {
     supportDoctype: OptBool;
     ignoreNameSpace: OptBool;
-    tagValueCallbackFunction: OptCallbackStringStringBool;
-    attributeValueCallbackFunction: OptCallbackStringStringBool;
-    tokenValueCallbackFunction: OptCallbackEventTypeParseInfoBool;
+    tagValueCallbackFunction: OptCallbackKV;
+    attributeValueCallbackFunction: OptCallbackKV;
+    tokenValueCallbackFunction: OptCallbackEvent;
 }
 
 interface XmlPullParser {

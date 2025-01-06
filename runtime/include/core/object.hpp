@@ -98,4 +98,15 @@ InterfaceOwner new_instance(Args&&... args) {
         ),
     }};
 }
+
+template<typename InterfaceOwner, typename interface_owner_traits<InterfaceOwner>::type = nullptr, typename Impl>
+InterfaceOwner new_instance(Impl&& arg) {
+    return InterfaceOwner{{
+        .vtbl_ptr = &vtable_impl<typename interface_owner_traits<InterfaceOwner>::vtable, Impl>::vtbl,
+        .data_ptr = new data_block_impl<Impl>(
+            reinterpret_cast<TypeInfo const*>(&typeinfo_impl<typename interface_owner_traits<InterfaceOwner>::typeinfo, Impl>::rtti), 1,
+            std::forward<Impl>(arg)
+        ),
+    }};
+}
 }

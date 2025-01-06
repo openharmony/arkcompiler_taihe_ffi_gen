@@ -16,7 +16,7 @@ struct ExpatParserState {
     void onStartElement(const char* name, const char* attrs[]) {
         m_stack.emplace_back(name);
         for (const char** iter = attrs; *iter; iter += 2) {
-            if (auto callback = m_option.attributeValueCallbackFunction.get_ptr<ohos::xml::OptCallbackStringStringBool::tag_t::value>()) {
+            if (auto callback = m_option.attributeValueCallbackFunction.get_value_ptr()) {
                 (*callback)(iter[0], iter[1]);
             }
         }
@@ -30,13 +30,17 @@ struct ExpatParserState {
         if (m_stack.empty()) {
             return;
         }
-        if (auto callback = m_option.tagValueCallbackFunction.get_ptr<ohos::xml::OptCallbackStringStringBool::tag_t::value>()) {
+        if (auto callback = m_option.tagValueCallbackFunction.get_value_ptr()) {
             (*callback)(m_stack.back(), taihe::core::string_view(data, len));
         }
     }
 };
 
 class ExpatParser {
+private:
+    XML_Parser m_parser;
+    ohos::xml::BufferType m_buffer;
+
 public:
     ExpatParser(ohos::xml::BufferType const& buffer, ohos::xml::OptString const& encoding)
         : m_buffer(buffer) {
@@ -55,15 +59,8 @@ public:
         std::cerr << "Parser destroy" << std::endl;
     }
 
-    ExpatParser(const ExpatParser&) = delete;
-    ExpatParser& operator=(const ExpatParser&) = delete;
-    ExpatParser(const ExpatParser&&) = delete;
-    ExpatParser& operator=(const ExpatParser&&) = delete;
-
     void parse(ohos::xml::ParseOptions const& option) {
-        ExpatParserState state = {option};
-        XML_SetUserData(m_parser, &state);
-        XML_Parse(m_parser, m_buffer.content.data(), m_buffer.content.size(), true);
+        parseXml(option);
     }
 
     void parseXml(ohos::xml::ParseOptions const& option) {
@@ -82,8 +79,4 @@ private:
     static XMLCALL void CharacterDataHandler(void *userData, const XML_Char *s, int len) {
         ((ExpatParserState*)userData)->onCharacterData(s, len);
     }
-
-private:
-    XML_Parser m_parser;
-    ohos::xml::BufferType m_buffer;
 };

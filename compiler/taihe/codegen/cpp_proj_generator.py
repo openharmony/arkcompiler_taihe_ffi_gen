@@ -853,7 +853,7 @@ class CppProjCodeGenerator:
             f"    operator ::taihe::core::data_view() const&;\n"
             f"    explicit {iface_cpp_proj_info.name}(::taihe::core::data_holder other);\n"
             f"    {iface_cpp_proj_info.name}& operator=({iface_cpp_proj_info.full_name} other);\n"
-            f"    operator bool();\n"
+            f"    operator bool() const&;\n"
         )
         for ancestor, info in iface_abi_info.ancestor_dict.items():
             if info.offset == 0:
@@ -903,7 +903,7 @@ class CppProjCodeGenerator:
             f"    operator ::taihe::core::data_view() const&;\n"
             f"    explicit {iface_cpp_proj_info.name}(::taihe::core::data_view other);\n"
             f"    {iface_cpp_proj_info.name}& operator=({iface_cpp_proj_info.weak_name} other);\n"
-            f"    operator bool();\n"
+            f"    operator bool() const&;\n"
         )
         for ancestor, info in iface_abi_info.ancestor_dict.items():
             if info.offset == 0:
@@ -1172,7 +1172,7 @@ class CppProjCodeGenerator:
             f"    ::std::swap(this->m_handle, other.m_handle);\n"
             f"    return *this;\n"
             f"}}\n"
-            f"inline {iface_cpp_proj_info.name}::operator bool() {{\n"
+            f"inline {iface_cpp_proj_info.name}::operator bool() const& {{\n"
             f"    return this->m_handle.vtbl_ptr;\n"
             f"}}\n"
         )
@@ -1257,7 +1257,7 @@ class CppProjCodeGenerator:
             f"    ::std::swap(this->m_handle, other.m_handle);\n"
             f"    return *this;\n"
             f"}}\n"
-            f"inline {iface_cpp_proj_info.name}::operator bool() {{\n"
+            f"inline {iface_cpp_proj_info.name}::operator bool() const& {{\n"
             f"    return this->m_handle.vtbl_ptr;\n"
             f"}}\n"
         )
