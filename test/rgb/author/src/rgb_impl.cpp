@@ -69,7 +69,7 @@ rgb::show::IShowable makeColoredRectangleImpl(taihe::core::string_view id, rgb::
     return taihe::core::new_instance<rgb::show::IShowable, ColoredRectangle>(id, h, w, color);
 }
 
-void copyColorImpl(param::rgb::show::IColorable dst, param::rgb::show::IColorable src) {
+void copyColorImpl(weak::rgb::show::IColorable dst, weak::rgb::show::IColorable src) {
     dst.setColor(src.getColor());
 }
 
