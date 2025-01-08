@@ -87,10 +87,6 @@ class NamedDecl(Decl, metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def segments(self) -> list[str]: ...
-
-    @property
-    @abstractmethod
     def symbol_tables(self) -> dict[str, Iterable["NamedDecl"]]: ...
 
     def __repr__(self) -> str:
@@ -268,12 +264,6 @@ class ImportDecl(NamedDecl, metaclass=ABCMeta):
 
     node_parent: Optional["Package"] = None
 
-    @property
-    @override
-    def segments(self) -> list[str]:
-        assert self.node_parent
-        return [*self.node_parent.segments, self.name]
-
 
 class PackageImportDecl(ImportDecl):
     KIND = "package import"
@@ -345,12 +335,6 @@ class DeclarationImportDecl(ImportDecl):
 class PackageLevelDecl(NamedDecl, metaclass=ABCMeta):
     node_parent: Optional["Package"] = None
 
-    @property
-    @override
-    def segments(self) -> list[str]:
-        assert self.node_parent
-        return [*self.node_parent.segments, self.name]
-
 
 class ParamDecl(NamedDecl):
     KIND = "function parameter"
@@ -371,12 +355,6 @@ class ParamDecl(NamedDecl):
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_param_decl(self)
-
-    @property
-    @override
-    def segments(self) -> list[str]:
-        assert self.node_parent
-        return [*self.node_parent.segments, self.name]
 
     @property
     @override
@@ -452,12 +430,6 @@ class EnumItemDecl(NamedDecl):
     def symbol_tables(self) -> dict[str, Iterable["NamedDecl"]]:
         return {}
 
-    @property
-    @override
-    def segments(self) -> list[str]:
-        assert self.node_parent
-        return [*self.node_parent.segments, self.name]
-
 
 class EnumDecl(DataTypeDecl):
     KIND = "enum"
@@ -501,12 +473,6 @@ class StructFieldDecl(NamedDecl):
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_struct_field_decl(self)
-
-    @property
-    @override
-    def segments(self) -> list[str]:
-        assert self.node_parent
-        return [*self.node_parent.segments, self.name]
 
     @property
     @override
@@ -559,12 +525,6 @@ class IfaceParentDecl(NamedDecl):
 
     @property
     @override
-    def segments(self) -> list[str]:
-        assert self.node_parent
-        return [*self.node_parent.segments, self.name]
-
-    @property
-    @override
     def symbol_tables(self) -> dict[str, Iterable["NamedDecl"]]:
         return {}
 
@@ -577,12 +537,6 @@ class IfaceMethodDecl(BaseFuncDecl):
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_iface_func_decl(self)
-
-    @property
-    @override
-    def segments(self) -> list[str]:
-        assert self.node_parent
-        return [*self.node_parent.segments, self.name]
 
 
 class IfaceDecl(TypeDecl):
@@ -659,7 +613,6 @@ class Package(NamedDecl):
         return f"{self.__class__.__qualname__}<{self.name!r}>"
 
     @property
-    @override
     def segments(self) -> list[str]:
         return self.name.split(".")
 

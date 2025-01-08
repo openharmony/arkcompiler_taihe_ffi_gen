@@ -208,6 +208,10 @@ struct impl_holder {
     Impl* operator->() const {
         return this->m_handle;
     }
+
+    Impl& operator*() const {
+        return *this->m_handle;
+    }
 };
 
 template<typename Impl, typename... InfoContainers>
@@ -252,6 +256,10 @@ struct impl_view {
 
     Impl* operator->() const {
         return this->m_handle;
+    }
+
+    Impl& operator*() const {
+        return *this->m_handle;
     }
 };
 

@@ -5,29 +5,31 @@
 #include "sys.time.proj.hpp"
 #include "sys.time.impl.hpp"
 
-void setTimeoutImpl(weak::sys::time::ICallbackVoid cb, uint64_t ms) {
-    std::thread([cb = sys::time::ICallbackVoid(cb), ms]() {
+using namespace sys::time;
+
+void setTimeoutImpl(weak::ICallbackVoid cb, uint64_t ms) {
+    std::thread([cb = ICallbackVoid(cb), ms]() {
         std::this_thread::sleep_for(std::chrono::milliseconds(ms));
         cb();
     }).detach();
 }
 
 struct CallerImpl {
-    std::vector<sys::time::ICallbackString> vec;
+    std::vector<ICallbackString> vec;
 
     void setValue(taihe::core::string_view state) {
-        for (weak::sys::time::ICallbackString cb : vec) {
+        for (weak::ICallbackString cb : vec) {
             cb(state);
         }
     }
 
-    void waitForValue(weak::sys::time::ICallbackString cb) {
+    void waitForValue(weak::ICallbackString cb) {
         vec.emplace_back(cb);
     }
 };
 
 auto makeCallerImpl() {
-    return taihe::core::make_holder<CallerImpl, sys::time::ICaller>();
+    return taihe::core::make_holder<CallerImpl, ICaller>();
 }
 
 TH_EXPORT_CPP_API_makeCaller(makeCallerImpl)

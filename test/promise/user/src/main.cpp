@@ -9,8 +9,8 @@ using namespace sys::time;
 using namespace taihe::core;
 
 auto make_future_string(string_view sv, uint64_t ms) {
-    return make_promise<taihe::core::string_view, ICallbackString>(
-        [sv, ms](weak::sys::time::ICallbackString promise) {
+    return make_promise<string_view, ICallbackString>(
+        [sv, ms](weak::ICallbackString promise) {
             setTimeout(into_holder<ICallbackVoid>([promise = ICallbackString(promise), s = string(sv), ms]() { promise(s); }), ms);
         }
     );
@@ -19,18 +19,18 @@ auto make_future_string(string_view sv, uint64_t ms) {
 int main() {
     std::cout << "Before promise" << std::endl;
     auto a = make_future_string("Promise 1", 1000)
-        ->template then<taihe::core::string_view, ICallbackString>(
-            [](taihe::core::string_view str) {
+        ->template then<string_view, ICallbackString>(
+            [](string_view str) {
                 std::cout << str.c_str() << std::endl;
                 return make_future_string("Promise 2", 1000);
             })
-        ->template then<taihe::core::string_view, ICallbackString>(
-            [](taihe::core::string_view str) {
+        ->template then<string_view, ICallbackString>(
+            [](string_view str) {
                 std::cout << str.c_str() << std::endl;
                 return make_future_string("Promise 3", 1000);
             })
         ->template then<uint64_t>(
-            [](taihe::core::string_view str) {
+            [](string_view str) {
                 std::cout << str.c_str() << std::endl;
                 return make_resolved<uint64_t>(0);
             });

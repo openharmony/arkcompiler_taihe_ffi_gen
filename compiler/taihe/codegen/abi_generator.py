@@ -8,11 +8,11 @@ from typing_extensions import override
 
 from taihe.codegen.mangle import DeclKind, encode
 from taihe.semantics.declarations import (
-    BaseFuncDecl,
     EnumDecl,
     EnumItemDecl,
     GlobFuncDecl,
     IfaceDecl,
+    IfaceMethodDecl,
     Package,
     PackageGroup,
     StructDecl,
@@ -72,22 +72,31 @@ class PackageABIInfo(AbstractAnalysis[Package]):
         self.header = f"{p.name}.abi.h"
 
 
-class BaseFuncDeclABIInfo(AbstractAnalysis[BaseFuncDecl]):
-    def __init__(self, am: AnalysisManager, f: BaseFuncDecl) -> None:
-        segments = f.segments
+class GlobFuncDeclABIInfo(AbstractAnalysis[GlobFuncDecl]):
+    def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
+        p = f.node_parent
+        assert p
+        segments = [*p.segments, f.name]
         self.mangled_name = encode(segments, DeclKind.FUNCTION)
-        if f.return_ty_ref is None:
-            self.return_ty_header = None
-            self.return_ty_name = "void"
-        else:
-            ty_info = TypeABIInfo.get(am, f.return_ty_ref.resolved_ty)
-            self.return_ty_header = ty_info.header
-            self.return_ty_name = ty_info.as_field
+
+
+class IfaceMethodDeclABIInfo(AbstractAnalysis[IfaceMethodDecl]):
+    def __init__(self, am: AnalysisManager, f: IfaceMethodDecl) -> None:
+        d = f.node_parent
+        assert d
+        p = d.node_parent
+        assert p
+        segments = [*p.segments, d.name, f.name]
+        self.mangled_name = encode(segments, DeclKind.FUNCTION)
 
 
 class EnumItemDeclABIInfo(AbstractAnalysis[EnumItemDecl]):
     def __init__(self, am: AnalysisManager, d: EnumItemDecl) -> None:
-        segments = d.segments
+        e = d.node_parent
+        assert e
+        p = e.node_parent
+        assert p
+        segments = [*p.segments, e.name, d.name]
         self.mangled_name = encode(segments, DeclKind.ENUM_ITEM)
 
 
@@ -95,7 +104,7 @@ class EnumDeclABIInfo(AbstractAnalysis[EnumDecl]):
     def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
         p = d.node_parent
         assert p
-        segments = d.segments
+        segments = [*p.segments, d.name]
         self.header = f"{p.name}.{d.name}.abi.h"
         self.tag_name = encode(segments, DeclKind.ENUM_TAG)
         self.union_name = encode(segments, DeclKind.ENUM_UNION)
@@ -127,7 +136,7 @@ class StructDeclABIInfo(AbstractAnalysis[StructDecl]):
     def __init__(self, am: AnalysisManager, d: StructDecl) -> None:
         p = d.node_parent
         assert p
-        segments = d.segments
+        segments = [*p.segments, d.name]
         self.header = f"{p.name}.{d.name}.abi.h"
         self.mangled_name = encode(segments, DeclKind.STRUCT)
         self.as_field = f"struct {self.mangled_name}"
@@ -167,7 +176,7 @@ class IfaceDeclABIInfo(AbstractAnalysis[IfaceDecl]):
     def __init__(self, am: AnalysisManager, d: IfaceDecl) -> None:
         p = d.node_parent
         assert p
-        segments = d.segments
+        segments = [*p.segments, d.name]
         self.header_0 = f"{p.name}.{d.name}.abi.0.h"
         self.header_1 = f"{p.name}.{d.name}.abi.1.h"
         self.src = f"{p.name}.{d.name}.c"
@@ -305,16 +314,21 @@ class ABICodeGenerator:
         func: GlobFuncDecl,
         pkg_abi_target: COutputBuffer,
     ):
-        func_abi_info = BaseFuncDeclABIInfo.get(self.am, func)
+        func_abi_info = GlobFuncDeclABIInfo.get(self.am, func)
         params = []
         for param in func.params:
             type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.resolved_ty)
             pkg_abi_target.include(type_abi_info.header)
             params.append(f"{type_abi_info.as_param} {param.name}")
         params_str = ", ".join(params)
-        pkg_abi_target.include(func_abi_info.return_ty_header)
+        if return_ty_ref := func.return_ty_ref:
+            type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
+            pkg_abi_target.include(type_abi_info.header)
+            return_ty_name = type_abi_info.as_field
+        else:
+            return_ty_name = "void"
         pkg_abi_target.write(
-            f"TH_EXPORT {func_abi_info.return_ty_name} {func_abi_info.mangled_name}({params_str});\n"
+            f"TH_EXPORT {return_ty_name} {func_abi_info.mangled_name}({params_str});\n"
         )
 
     def gen_struct_file(
@@ -555,16 +569,18 @@ class ABICodeGenerator:
     ):
         iface_abi_1_target.write(f"struct {iface_abi_info.ftable} {{\n")
         for method in iface.methods:
-            method_abi_info = BaseFuncDeclABIInfo.get(self.am, method)
             params = [f"{iface_abi_info.as_param} tobj"]
             for param in method.params:
                 type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.resolved_ty)
-                iface_abi_1_target.include(type_abi_info.header)
                 params.append(f"{type_abi_info.as_param} {param.name}")
             params_str = ", ".join(params)
-            iface_abi_1_target.include(method_abi_info.return_ty_header)
+            if return_ty_ref := method.return_ty_ref:
+                type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
+                return_ty_name = type_abi_info.as_field
+            else:
+                return_ty_name = "void"
             iface_abi_1_target.write(
-                f"  {method_abi_info.return_ty_name} (*{method.name})({params_str});\n"
+                f"  {return_ty_name} (*{method.name})({params_str});\n"
             )
         iface_abi_1_target.write("};\n")
 
@@ -589,17 +605,24 @@ class ABICodeGenerator:
         iface_abi_info: IfaceDeclABIInfo,
     ):
         for method in iface.methods:
-            method_abi_info = BaseFuncDeclABIInfo.get(self.am, method)
+            method_abi_info = IfaceMethodDeclABIInfo.get(self.am, method)
             params = [f"{iface_abi_info.as_param} tobj"]
             args = ["tobj"]
             for param in method.params:
                 type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.resolved_ty)
+                iface_abi_1_target.include(type_abi_info.header)
                 params.append(f"{type_abi_info.as_param} {param.name}")
                 args.append(param.name)
             params_str = ", ".join(params)
             args_str = ", ".join(args)
+            if return_ty_ref := method.return_ty_ref:
+                type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
+                iface_abi_1_target.include(type_abi_info.header)
+                return_ty_name = type_abi_info.as_field
+            else:
+                return_ty_name = "void"
             iface_abi_1_target.write(
-                f"TH_INLINE {method_abi_info.return_ty_name} {method_abi_info.mangled_name}({params_str}) {{\n"
+                f"TH_INLINE {return_ty_name} {method_abi_info.mangled_name}({params_str}) {{\n"
                 f"  return tobj.vtbl_ptr->{iface_abi_info.ancestor_dict[iface].ftbl_ptr}->{method.name}({args_str});\n"
                 f"}}\n"
             )

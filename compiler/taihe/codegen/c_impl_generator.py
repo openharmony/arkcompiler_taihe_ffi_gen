@@ -1,6 +1,6 @@
 from taihe.codegen.abi_generator import (
-    BaseFuncDeclABIInfo,
     COutputBuffer,
+    GlobFuncDeclABIInfo,
     PackageABIInfo,
     TypeABIInfo,
 )
@@ -43,7 +43,7 @@ class CImplCodeGenerator:
         func: GlobFuncDecl,
         pkg_c_impl_target: COutputBuffer,
     ):
-        func_abi_info = BaseFuncDeclABIInfo.get(self.am, func)
+        func_abi_info = GlobFuncDeclABIInfo.get(self.am, func)
         params = []
         args = []
         for param in func.params:
@@ -53,12 +53,17 @@ class CImplCodeGenerator:
             args.append(param.name)
         params_str = ", ".join(params)
         args_str = ", ".join(args)
-        pkg_c_impl_target.include(func_abi_info.return_ty_header)
+        if return_ty_ref := func.return_ty_ref:
+            type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
+            pkg_c_impl_target.include(type_abi_info.header)
+            return_ty_name = type_abi_info.as_field
+        else:
+            return_ty_name = "void"
         pkg_c_impl_target.write(
-            f"#define TH_EXPORT_C_API_{func.name}(_func) \\\n"
-            f"  /* TH_STATIC_ASSERT(TH_IS_SAME(TH_TYPEOF(_func), {func_abi_info.return_ty_name} ({params_str})), \\\n"
-            f"     \"'\" #_func \"' is incompatible with '{func_abi_info.return_ty_name} {func_abi_info.mangled_name}({params_str})'\"); */ \\\n"
-            f"  {func_abi_info.return_ty_name} {func_abi_info.mangled_name}({params_str}) {{ \\\n"
-            f"    return _func({args_str}); \\\n"
+            f"#define TH_EXPORT_C_API_{func.name}(FUNC_IMPL) \\\n"
+            f"  /* TH_STATIC_ASSERT(TH_IS_SAME(TH_TYPEOF(FUNC_IMPL), {return_ty_name} ({params_str})), \\\n"
+            f"     \"'\" #FUNC_IMPL \"' is incompatible with '{return_ty_name} {func_abi_info.mangled_name}({params_str})'\"); */ \\\n"
+            f"  {return_ty_name} {func_abi_info.mangled_name}({params_str}) {{ \\\n"
+            f"    return FUNC_IMPL({args_str}); \\\n"
             f"  }}\n"
         )
