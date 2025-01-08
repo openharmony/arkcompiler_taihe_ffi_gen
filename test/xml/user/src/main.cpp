@@ -1,4 +1,4 @@
-#include "include/ohos.xml.proj.hpp"
+#include "ohos.xml.proj.hpp"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
         .supportDoctype = OptBool::make_UNDEFINED(),
         .ignoreNameSpace = OptBool::make_UNDEFINED(),
         .tagValueCallbackFunction = OptCallbackKV::make_value(
-            new_instance<CallbackKV>(
+            into_holder<CallbackKV>(
                 [](taihe::core::string_view name, taihe::core::string_view value) {
                     std::cout << "(tag) "
                               << std::string_view(name)
@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
             )
         ),
         .attributeValueCallbackFunction = OptCallbackKV::make_value(
-            new_instance<CallbackKV>(
+            into_holder<CallbackKV>(
                 [](taihe::core::string_view name, taihe::core::string_view value) {
                     std::cout << "(attribute) "
                               << std::string_view(name)
@@ -50,6 +50,6 @@ int main(int argc, char** argv) {
                 }
             )
         ),
-        . tokenValueCallbackFunction = OptCallbackEvent::make_UNDEFINED(),
+        .tokenValueCallbackFunction = OptCallbackEvent::make_UNDEFINED(),
     });
 }

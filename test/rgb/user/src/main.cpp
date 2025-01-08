@@ -66,10 +66,10 @@ int main() {
     std::cout << base::toString(color_unknown).c_str() << std::endl;
 
     // User implements the interface
-    auto circle = taihe::core::new_instance<rgb::show::IShowable, ColoredCircle>("A", 10, color_114514);
+    auto circle = taihe::core::make_holder<ColoredCircle, rgb::show::IShowable>("A", 10, color_114514);
     auto rect = show::makeColoredRectangle("B", color_yellow, 5, 5);
 
-    circle.show();
+    circle->show();
     rect.show();
     show::copyColor(rect, circle);
     rect.show();

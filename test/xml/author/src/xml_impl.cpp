@@ -6,7 +6,7 @@ ohos::xml::XmlPullParser makeXmlPullParserImpl(
     ohos::xml::BufferType const& buffer,
     ohos::xml::OptString const& encoding)
 {
-    return taihe::core::new_instance<ohos::xml::XmlPullParser, ExpatParser>(buffer, encoding);
+    return taihe::core::make_holder<ExpatParser, ohos::xml::XmlPullParser>(buffer, encoding);
 }
 
 TH_EXPORT_CPP_API_makeXmlPullParser(makeXmlPullParserImpl)

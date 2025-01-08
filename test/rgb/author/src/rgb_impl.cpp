@@ -33,7 +33,7 @@ public:
 };
 
 rgb::show::IShape makeRectangleImpl(taihe::core::string_view id, float h, float w) {
-    return taihe::core::new_instance<rgb::show::IShape, Rectangle>(id, h, w);
+    return taihe::core::make_holder<Rectangle, rgb::show::IShape>(id, h, w);
 }
 
 class ColoredRectangle : public Rectangle {
@@ -66,7 +66,7 @@ public:
 };
 
 rgb::show::IShowable makeColoredRectangleImpl(taihe::core::string_view id, rgb::base::ColorOrRGBOrName const& color, float h, float w) {
-    return taihe::core::new_instance<rgb::show::IShowable, ColoredRectangle>(id, h, w, color);
+    return taihe::core::make_holder<ColoredRectangle, rgb::show::IShowable>(id, h, w, color);
 }
 
 void copyColorImpl(weak::rgb::show::IColorable dst, weak::rgb::show::IColorable src) {

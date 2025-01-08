@@ -153,13 +153,14 @@ class StructDeclABIInfo(AbstractAnalysis[StructDecl]):
 @dataclass
 class AncestorItemInfo:
     iface: IfaceDecl
-    ptbl_ptr: str
+    ftbl_ptr: str
 
 
 @dataclass
 class UniqueAncestorInfo:
     offset: int
     static_cast: str
+    ftbl_ptr: str
 
 
 class IfaceDeclABIInfo(AbstractAnalysis[IfaceDecl]):
@@ -177,7 +178,6 @@ class IfaceDeclABIInfo(AbstractAnalysis[IfaceDecl]):
         self.drop_func = encode(segments, DeclKind.DROP)
         self.ftable = encode(segments, DeclKind.FTABLE)
         self.vtable = encode(segments, DeclKind.VTABLE)
-        self.rtti = encode(segments, DeclKind.RTTI)
         self.iid = encode(segments, DeclKind.IID)
         self.dynamic_cast = f"cast_to_{self.mangled_name}"
         self.ancestor_list: list[AncestorItemInfo] = []
@@ -189,17 +189,20 @@ class IfaceDeclABIInfo(AbstractAnalysis[IfaceDecl]):
             extend_abi_info = IfaceDeclABIInfo.get(am, iface)
             self.ancestors.extend(extend_abi_info.ancestors)
         for i, ancestor in enumerate(self.ancestors):
+            ftbl_ptr = f"ftbl_ptr_{i}"
             self.ancestor_list.append(
                 AncestorItemInfo(
                     iface=ancestor,
-                    ptbl_ptr=f"ftbl_ptr_{i}",
+                    ftbl_ptr=ftbl_ptr,
                 )
             )
+            ancestor_abi_info = IfaceDeclABIInfo.get(am, ancestor) if i != 0 else self
             self.ancestor_dict.setdefault(
                 ancestor,
                 UniqueAncestorInfo(
                     offset=i,
-                    static_cast=f"cast_{self.mangled_name}_to_{ancestor.name}",
+                    static_cast=f"cast_{self.mangled_name}_to_{ancestor_abi_info.mangled_name}",
+                    ftbl_ptr=ftbl_ptr,
                 ),
             )
 
@@ -540,7 +543,6 @@ class ABICodeGenerator:
         iface_abi_1_target.write(f"TH_EXPORT void const* const {iface_abi_info.iid};\n")
         self.gen_iface_ftable(iface, iface_abi_1_target, iface_abi_info)
         self.gen_iface_vtable(iface, iface_abi_1_target, iface_abi_info)
-        self.gen_iface_rtti(iface, iface_abi_1_target, iface_abi_info)
         self.gen_iface_methods(iface, iface_abi_1_target, iface_abi_info)
         self.gen_iface_static_cast_funcs(iface, iface_abi_1_target, iface_abi_info)
         self.gen_iface_dynamic_cast_func(iface, iface_abi_1_target, iface_abi_info)
@@ -576,24 +578,9 @@ class ABICodeGenerator:
         for ancestor_item_info in iface_abi_info.ancestor_list:
             ancestor_abi_info = IfaceDeclABIInfo.get(self.am, ancestor_item_info.iface)
             iface_abi_1_target.write(
-                f"  struct {ancestor_abi_info.ftable} const* {ancestor_item_info.ptbl_ptr};\n"
+                f"  struct {ancestor_abi_info.ftable} const* {ancestor_item_info.ftbl_ptr};\n"
             )
         iface_abi_1_target.write("};\n")
-
-    def gen_iface_rtti(
-        self,
-        iface: IfaceDecl,
-        iface_abi_1_target: COutputBuffer,
-        iface_abi_info: IfaceDeclABIInfo,
-    ):
-        iface_abi_1_target.write(
-            f"struct {iface_abi_info.rtti} {{\n"
-            f"  uint64_t version;\n"
-            f"  void (*free_ptr)(struct DataBlockHead*);\n"
-            f"  uint64_t len;\n"
-            f"  struct IdMapItem idmap[{len(iface_abi_info.ancestor_dict)}];\n"
-            f"}};\n"
-        )
 
     def gen_iface_methods(
         self,
@@ -613,7 +600,7 @@ class ABICodeGenerator:
             args_str = ", ".join(args)
             iface_abi_1_target.write(
                 f"TH_INLINE {method_abi_info.return_ty_name} {method_abi_info.mangled_name}({params_str}) {{\n"
-                f"  return tobj.vtbl_ptr->ftbl_ptr_0->{method.name}({args_str});\n"
+                f"  return tobj.vtbl_ptr->{iface_abi_info.ancestor_dict[iface].ftbl_ptr}->{method.name}({args_str});\n"
                 f"}}\n"
             )
 
@@ -624,14 +611,14 @@ class ABICodeGenerator:
         iface_abi_info: IfaceDeclABIInfo,
     ):
         for ancestor, info in iface_abi_info.ancestor_dict.items():
-            if info.offset == 0:
+            if ancestor is iface:
                 continue
             ancestor_abi_info = IfaceDeclABIInfo.get(self.am, ancestor)
             iface_abi_1_target.include(ancestor_abi_info.header_0)
             iface_abi_1_target.write(
                 f"TH_INLINE struct {ancestor_abi_info.mangled_name} {info.static_cast}(struct {iface_abi_info.mangled_name} tobj) {{\n"
                 f"  struct {ancestor_abi_info.mangled_name} result;\n"
-                f"  result.vtbl_ptr = (struct {ancestor_abi_info.vtable}*)(&tobj.vtbl_ptr->ftbl_ptr_0 + {info.offset});\n"
+                f"  result.vtbl_ptr = (struct {ancestor_abi_info.vtable} const*)((void* const*)tobj.vtbl_ptr + {info.offset});\n"
                 f"  result.data_ptr = tobj.data_ptr;\n"
                 f"  return result;\n"
                 f"}}\n"
