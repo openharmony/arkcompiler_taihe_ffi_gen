@@ -9,26 +9,28 @@
 #include <core/object.hpp>
 
 namespace taihe::core {
-template <typename T>
-struct Promise;
+template<typename T>
+struct promise;
 
-template <typename U, typename... InterfaceHolders>
-struct PromiseInner {
-    decltype(make_holder<Promise<U>, InterfaceHolders...>()) promise;
+template<typename U>
+struct promise_helper {
+    impl_holder<promise<U>> nextPromise;
 
     auto operator()(U const& result) {
-        promise->operator()(result);
-        return make_holder<Promise<U>, InterfaceHolders...>();
+        nextPromise->operator()(result);
+        return make_holder<promise<U>>();
     }
 };
 
-template <typename T>
-struct Promise {
+template<typename T>
+struct promise {
+    using result_type = T;
+
     std::queue<std::function<auto (T const& value) -> void>> thenCallbacks;
     std::optional<T> optValue;
 
-    Promise() {}
-    ~Promise() {}
+    promise() {}
+    ~promise() {}
 
     template<typename... Args>
     void operator()(Args&&... args) {
@@ -44,13 +46,14 @@ struct Promise {
         }
     }
 
-    template <typename U, typename... InterfaceHolders>
-    auto then(auto&& onResolved) -> decltype(make_holder<Promise<U>, InterfaceHolders...>()) {
-        auto nextPromise = make_holder<Promise<U>, InterfaceHolders...>();
+    auto then(auto&& onResolved) -> impl_holder<promise<typename decltype(onResolved(std::declval<T>()))::impl_type::result_type>> {
+        using U = decltype(onResolved(std::declval<T>()))::impl_type::result_type;
+
+        auto nextPromise = make_holder<promise<U>>();
 
         auto thenCallback = [nextPromise, onResolved](T const& value) mutable {
             onResolved(value)
-                ->template then<U, InterfaceHolders...>(PromiseInner<U, InterfaceHolders...>(std::move(nextPromise)));
+                ->then(promise_helper<U>(std::move(nextPromise)));
         };
 
         if (optValue.has_value()) {
@@ -63,17 +66,17 @@ struct Promise {
     }
 };
 
-template <typename T>
+template<typename T>
 auto make_resolved(auto&&... args) {
-    auto promise = make_holder<Promise<T>>();
-    promise->operator()(std::forward<decltype(args)>(args)...);
-    return promise;
+    auto result = make_holder<promise<T>>();
+    result->operator()(std::forward<decltype(args)>(args)...);
+    return result;
 }
 
-template <typename T, typename... InterfaceHolders>
+template<typename T, typename... InterfaceHolders>
 auto make_promise(auto&& asyncFunc) {
-    auto promise = make_holder<Promise<T>, InterfaceHolders...>();
-    asyncFunc(promise);
-    return promise;
+    auto result = make_holder<promise<T>, InterfaceHolders...>();
+    asyncFunc(result);
+    return result;
 }
 }

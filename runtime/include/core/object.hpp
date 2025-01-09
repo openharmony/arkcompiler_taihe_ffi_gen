@@ -149,6 +149,8 @@ struct typeinfo_impl {
 
 template<typename Impl, typename... InfoContainers>
 struct impl_holder {
+    using impl_type = Impl;
+ 
     data_block_impl<Impl>* m_handle;
 
     explicit impl_holder(data_block_impl<Impl>* other_handle)
@@ -216,6 +218,8 @@ struct impl_holder {
 
 template<typename Impl, typename... InfoContainers>
 struct impl_view {
+    using impl_type = Impl;
+ 
     data_block_impl<Impl>* m_handle;
 
     explicit impl_view(data_block_impl<Impl>* other_handle)

@@ -18,22 +18,25 @@ auto make_future_string(string_view sv, uint64_t ms) {
 
 int main() {
     std::cout << "Before promise" << std::endl;
-    auto a = make_future_string("Promise 1", 1000)
-        ->template then<string_view, ICallbackString>(
+    auto a = make_future_string("promise 1", 1000)
+        ->then(
             [](string_view str) {
                 std::cout << str.c_str() << std::endl;
-                return make_future_string("Promise 2", 1000);
-            })
-        ->template then<string_view, ICallbackString>(
+                return make_future_string("promise 2", 1000);
+            }
+        )
+        ->then(
             [](string_view str) {
                 std::cout << str.c_str() << std::endl;
-                return make_future_string("Promise 3", 1000);
-            })
-        ->template then<uint64_t>(
+                return make_future_string("promise 3", 1000);
+            }
+        )
+        ->then(
             [](string_view str) {
                 std::cout << str.c_str() << std::endl;
                 return make_resolved<uint64_t>(0);
-            });
+            }
+        );
     std::cout << "After promise" << std::endl;
     std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 }
