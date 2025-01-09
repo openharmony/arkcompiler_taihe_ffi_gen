@@ -47,13 +47,13 @@ struct promise {
     }
 
     auto then(auto&& onResolved) -> impl_holder<promise<typename decltype(onResolved(std::declval<T>()))::impl_type::result_type>> {
-        using U = decltype(onResolved(std::declval<T>()))::impl_type::result_type;
+        using U = typename decltype(onResolved(std::declval<T>()))::impl_type::result_type;
 
         auto nextPromise = make_holder<promise<U>>();
 
         auto thenCallback = [nextPromise, onResolved](T const& value) mutable {
             onResolved(value)
-                ->then(promise_helper<U>(std::move(nextPromise)));
+                ->then(promise_helper<U>{std::move(nextPromise)});
         };
 
         if (optValue.has_value()) {

@@ -171,33 +171,33 @@ struct impl_holder {
     impl_holder(impl_view<Impl, InfoContainers...> const& other)
         : m_handle(static_cast<data_block_impl<Impl>*>(tobj_dup(other.m_handle))) {}
 
-    template<typename InterfaceHolder, interface_holder_traits<InterfaceHolder>::type = nullptr>
+    template<typename InterfaceHolder, typename interface_holder_traits<InterfaceHolder>::type = nullptr>
     operator InterfaceHolder() && {
-        using InfoContainer = interface_holder_traits<InterfaceHolder>::info_container;
+        using InfoContainer = typename interface_holder_traits<InterfaceHolder>::info_container;
         DataBlockHead* ret_handle = this->m_handle;
         this->m_handle = nullptr;
         return InterfaceHolder{{
-            static_cast<InfoContainer::vtable_t const*>(typeinfo_impl<Impl, InfoContainers...>::template vtbl_ptr<InfoContainer>),
+            static_cast<typename InfoContainer::vtable_t const*>(typeinfo_impl<Impl, InfoContainers...>::template vtbl_ptr<InfoContainer>),
             ret_handle,
         }};
     }
 
-    template<typename InterfaceHolder, interface_holder_traits<InterfaceHolder>::type = nullptr>
+    template<typename InterfaceHolder, typename interface_holder_traits<InterfaceHolder>::type = nullptr>
     operator InterfaceHolder() const& {
-        using InfoContainer = interface_holder_traits<InterfaceHolder>::info_container;
+        using InfoContainer = typename interface_holder_traits<InterfaceHolder>::info_container;
         DataBlockHead* ret_handle = tobj_dup(this->m_handle);
         return InterfaceHolder{{
-            static_cast<InfoContainer::vtable_t const*>(typeinfo_impl<Impl, InfoContainers...>::template vtbl_ptr<InfoContainer>),
+            static_cast<typename InfoContainer::vtable_t const*>(typeinfo_impl<Impl, InfoContainers...>::template vtbl_ptr<InfoContainer>),
             ret_handle,
         }};
     }
 
-    template<typename InterfaceView, interface_view_traits<InterfaceView>::type = nullptr>
+    template<typename InterfaceView, typename interface_view_traits<InterfaceView>::type = nullptr>
     operator InterfaceView() const& {
-        using InfoContainer = interface_view_traits<InterfaceView>::info_container;
+        using InfoContainer = typename interface_view_traits<InterfaceView>::info_container;
         DataBlockHead* ret_handle = this->m_handle;
         return InterfaceView{{
-            static_cast<InfoContainer::vtable_t const*>(typeinfo_impl<Impl, InfoContainers...>::template vtbl_ptr<typename interface_view_traits<InterfaceView>::info_container>),
+            static_cast<typename InfoContainer::vtable_t const*>(typeinfo_impl<Impl, InfoContainers...>::template vtbl_ptr<typename interface_view_traits<InterfaceView>::info_container>),
             ret_handle,
         }};
     }
@@ -233,22 +233,22 @@ struct impl_view {
     impl_view(impl_view<Impl, InfoContainers...> const& other)
         : m_handle(other.m_handle) {}
 
-    template<typename InterfaceHolder, interface_holder_traits<InterfaceHolder>::type = nullptr>
+    template<typename InterfaceHolder, typename interface_holder_traits<InterfaceHolder>::type = nullptr>
     operator InterfaceHolder() const& {
-        using InfoContainer = interface_holder_traits<InterfaceHolder>::info_container;
+        using InfoContainer = typename interface_holder_traits<InterfaceHolder>::info_container;
         DataBlockHead* ret_handle = tobj_dup(this->m_handle);
         return InterfaceHolder{{
-            static_cast<InfoContainer::vtable_t const*>(typeinfo_impl<Impl, InfoContainers...>::template vtbl_ptr<InfoContainer>),
+            static_cast<typename InfoContainer::vtable_t const*>(typeinfo_impl<Impl, InfoContainers...>::template vtbl_ptr<InfoContainer>),
             ret_handle,
         }};
     }
 
-    template<typename InterfaceView, interface_view_traits<InterfaceView>::type = nullptr>
+    template<typename InterfaceView, typename interface_view_traits<InterfaceView>::type = nullptr>
     operator InterfaceView() const& {
-        using InfoContainer = interface_view_traits<InterfaceView>::info_container;
+        using InfoContainer = typename interface_view_traits<InterfaceView>::info_container;
         DataBlockHead* ret_handle = this->m_handle;
         return InterfaceView{{
-            static_cast<InfoContainer::vtable_t const*>(typeinfo_impl<Impl, InfoContainers...>::template vtbl_ptr<InfoContainer>),
+            static_cast<typename InfoContainer::vtable_t const*>(typeinfo_impl<Impl, InfoContainers...>::template vtbl_ptr<InfoContainer>),
             ret_handle,
         }};
     }
