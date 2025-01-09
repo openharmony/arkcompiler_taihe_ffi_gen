@@ -1,7 +1,7 @@
 #include <iostream>
 
-#include "integer.arithmetic.abi.hpp"
-#include "integer.io.abi.hpp"
+#include "integer.arithmetic.proj.hpp"
+#include "integer.io.proj.hpp"
 
 using namespace integer;
 

@@ -1,5 +1,4 @@
 function concat(a: String, b: String): String;
-[tuple]
 struct StringPair {
     _0: String;
     _1: String;

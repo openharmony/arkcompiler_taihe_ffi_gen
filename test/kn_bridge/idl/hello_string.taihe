@@ -1,7 +1,7 @@
 [actual_type = "class"]
 interface Base {
     [konan_name = "_konan_function_1"]
-    function foo(s1: String) : String;
+    foo(s1: String) : String;
 }
 
 [konan_name = "_konan_function_0"]

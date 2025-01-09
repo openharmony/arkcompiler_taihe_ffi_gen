@@ -22,7 +22,6 @@ from taihe.semantics.declarations import (
     ParamDecl,
     StructDecl,
     StructFieldDecl,
-    TypeAliasDecl,
     TypeDecl,
     TypeRefDecl,
 )
@@ -41,7 +40,7 @@ def pretty_print(x: Decl, buffer: TextIO):
 class _TypeNamePrinter(TypeVisitor[str]):
     @override
     def visit_type_decl(self, d: TypeDecl):
-        return f"{pkg.name}.{d.name}" if (pkg := d.parent) else d.name
+        return f"{pkg.name}.{d.name}" if (pkg := d.node_parent) else d.name
 
     @override
     def visit_builtin_type(self, t: BuiltinType):
@@ -231,23 +230,12 @@ class _PrettyPrinter(DeclVisitor):
         self.buffer.write("}\n")
 
     @override
-    def visit_type_alias_decl(self, d: TypeAliasDecl):
-        self.write_attr(d)
-
-        type_kw = self.as_keyword("type")
-
-        self.buffer.write(self.indent * 2 * " ")
-        self.buffer.write(f"{type_kw} {d.name} = {self.get_type_ref_decl(d.ty_ref)};\n")
-
-    @override
     def visit_package(self, p: Package):
         self.buffer.write(self.indent * 2 * " ")
         self.buffer.write(f"// {self.with_attr(p, p.name)}\n")
         for d in p.pkg_imports:
             self.handle_decl(d)
         for d in p.decl_imports:
-            self.handle_decl(d)
-        for d in p.type_aliases:
             self.handle_decl(d)
         for d in p.structs:
             self.handle_decl(d)

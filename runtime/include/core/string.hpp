@@ -12,6 +12,7 @@
 #include <taihe/string.abi.h>
 
 namespace taihe::core {
+struct string;
 struct string_view;
 
 struct string {
@@ -37,6 +38,9 @@ public:
         : string(value.begin(), static_cast<uint32_t>(value.size())) {}
 
     string(std::string_view value)
+        : string(value.data(), value.size()) {}
+
+    string(std::string const &value)
         : string(value.data(), value.size()) {}
 
     operator std::string_view() const noexcept {
@@ -79,20 +83,10 @@ private:
     explicit string(TString* other_handle)
         : m_handle(other_handle) {}
 
-    explicit operator TString*() const & noexcept {
-        return tstr_dup(m_handle);
-    }
-
-    explicit operator TString*() && noexcept {
-        TString *ret_handle = m_handle;
-        m_handle = nullptr;
-        return ret_handle;
-    }
-
     template<typename cpp_t, typename abi_t>
-    friend abi_t into_abi(cpp_t &&val);
+    friend abi_t into_abi(cpp_t val);
     template<typename cpp_t, typename abi_t>
-    friend cpp_t from_abi(abi_t &&val);
+    friend cpp_t from_abi(abi_t val);
 
 public:
     const_reference operator[](size_type pos) const {
@@ -206,6 +200,9 @@ struct string_view {
     string_view(std::string_view value)
         : string_view(value.data(), value.size()) {}
 
+    string_view(std::string const &value)
+        : string_view(value.data(), value.size()) {}
+
     operator std::string_view() const noexcept {
         if (m_handle) {
             return { tstr_buf(m_handle), tstr_len(m_handle) };
@@ -243,20 +240,10 @@ private:
     explicit string_view(TString* other_handle)
         : m_handle(other_handle) {}
 
-    explicit operator TString*() const & noexcept {
-        return tstr_dup(m_handle);
-    }
-
-    explicit operator TString*() && noexcept {
-        TString *ret_handle = m_handle;
-        m_handle = nullptr;
-        return ret_handle;
-    }
-
     template<typename cpp_t, typename abi_t>
-    friend abi_t into_abi(cpp_t &&val);
+    friend abi_t into_abi(cpp_t val);
     template<typename cpp_t, typename abi_t>
-    friend cpp_t from_abi(abi_t &&val);
+    friend cpp_t from_abi(abi_t val);
 
 public:
     const_reference operator[](size_type pos) const {
@@ -453,22 +440,27 @@ string to_string(T const value) {
 }
 
 // returning from abi
-template<> inline taihe::core::string from_abi(std::add_rvalue_reference_t<TString*> _val) {
-    return taihe::core::string(_val);
+template<> inline taihe::core::string from_abi(TString* _val) {
+    TString* r_handle = _val;
+    return taihe::core::string(r_handle);
 }
 
 // returning into abi
-template<> inline TString* into_abi(std::add_rvalue_reference_t<taihe::core::string> _val) {
-    return (TString *)std::move(_val);
+template<> inline TString* into_abi(taihe::core::string _val) {
+    TString *r_handle = _val.m_handle;
+    _val.m_handle = nullptr;
+    return r_handle;
 }
 
 // passing argument from abi
-template<> inline taihe::core::string_view from_abi(std::add_rvalue_reference_t<TString*> _val) {
+template<> inline taihe::core::string_view from_abi(TString* _val) {
+    TString* r_handle = _val;
     return taihe::core::string_view(_val);
 }
 
 // passing argument into abi
-template<> inline TString* into_abi(std::add_rvalue_reference_t<taihe::core::string_view> _val) {
-    return (TString *)std::move(_val);
+template<> inline TString* into_abi(taihe::core::string_view _val) {
+    TString *r_handle = _val.m_handle;
+    return r_handle;
 }
 }

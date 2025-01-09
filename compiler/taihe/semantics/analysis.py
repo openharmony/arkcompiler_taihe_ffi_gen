@@ -14,7 +14,6 @@ from taihe.semantics.declarations import (
     PackageImportDecl,
     PackageRefDecl,
     StructDecl,
-    TypeAliasDecl,
     TypeDecl,
     TypeRefDecl,
 )
@@ -312,11 +311,6 @@ class _CheckRecursiveInclusionPass(DeclVisitor):
         for i in d.items:
             if i.ty_ref and isinstance((ty := i.ty_ref.resolved_ty), DataTypeDecl):
                 type_list.append(((d, i.ty_ref), ty))
-
-    def visit_type_alias_decl(self, d: TypeAliasDecl) -> None:
-        type_list = self.type_table.setdefault(d, [])
-        if isinstance((ty := d.ty_ref.resolved_ty), DataTypeDecl):
-            type_list.append(((d, d.ty_ref), ty))
 
 
 V = TypeVar("V")

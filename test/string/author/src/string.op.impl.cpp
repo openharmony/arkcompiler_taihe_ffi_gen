@@ -1,6 +1,6 @@
 #include "string.op.impl.hpp"
 
-std::tuple<taihe::core::string, taihe::core::string> ohos_split_str(taihe::core::string_view pstr, int32_t n) {
+string::op::StringPair ohos_split_str(taihe::core::string_view pstr, int32_t n) {
     int32_t l = pstr.size();
     if (n > l) {
         n = l;

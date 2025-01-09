@@ -5,6 +5,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
+from taihe.codegen.abi_generator import ABICodeGenerator
+from taihe.codegen.c_impl_generator import CImplCodeGenerator
+from taihe.codegen.cpp_impl_generator import CppImplCodeGenerator
+from taihe.codegen.cpp_proj_generator import CppProjCodeGenerator
 from taihe.codegen.kn_bridge_generator import KNBridgeCodeGenerator
 from taihe.parse.convert import AstConverter
 from taihe.semantics.analysis import analyze_semantics
@@ -33,8 +37,12 @@ class CompilerInvocation:
 
     # TODO: implement "CompilerBackend" and store the backend-specific options there?
     out_dir: Optional[Path] = None
+
     gen_author: bool = False
     gen_user: bool = False
+    gen_knbridge: bool = False
+
+    quiet: bool = False
 
 
 class CompilerInstance:
@@ -82,7 +90,8 @@ class CompilerInstance:
         analyze_semantics(self.package_group, self.diagnostics_manager)
 
     def show(self):
-        pretty_print(self.package_group, sys.stdout)
+        if not self.invocation.quiet:
+            pretty_print(self.package_group, sys.stdout)
 
     def generate(self):
         if self.diagnostics_manager.current_max_level >= Level.ERROR:
@@ -90,10 +99,28 @@ class CompilerInstance:
         if not self.invocation.out_dir:
             return
 
-        kn_bridge_generator = KNBridgeCodeGenerator(
-            self.target_manager, self.analysis_manager
-        )
-        kn_bridge_generator.generate(self.package_group)
+        if self.invocation.gen_knbridge:
+            KNBridgeCodeGenerator(self.target_manager, self.analysis_manager).generate(
+                self.package_group
+            )
+
+        if self.invocation.gen_author or self.invocation.gen_user:
+            ABICodeGenerator(self.target_manager, self.analysis_manager).generate(
+                self.package_group
+            )
+            CppProjCodeGenerator(self.target_manager, self.analysis_manager).generate(
+                self.package_group
+            )
+
+        if self.invocation.gen_author:
+            CImplCodeGenerator(self.target_manager, self.analysis_manager).generate(
+                self.package_group
+            )
+
+            CppImplCodeGenerator(self.target_manager, self.analysis_manager).generate(
+                self.package_group
+            )
+
         self.target_manager.output_to(self.invocation.out_dir)
 
     def run(self):

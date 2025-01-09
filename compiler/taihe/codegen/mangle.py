@@ -53,8 +53,6 @@ from enum import Enum
 class DeclKind(Enum):
     FUNCTION = "f"
     RETURN_T = "r"
-    OWNER_T = "owner"
-    PARAM_T = "param"
     STRUCT = "s"
     ENUM_TAG = "t"
     ENUM_UNION = "u"
@@ -62,8 +60,8 @@ class DeclKind(Enum):
     ENUM_ITEM = "v"
     INTERFACE = "i"
     IID = "iid"
-    FTABLE = "FTable"
-    VTABLE = "VTable"
+    FTABLE = "ftable"
+    VTABLE = "vtable"
     COPY = "copy"
     DROP = "drop"
 

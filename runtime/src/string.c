@@ -9,12 +9,7 @@ static inline struct TStringHeap* to_heap(struct TString* s) {
   return (struct TStringHeap*)s;
 }
 
-void tstr_drop(struct TString* s) {
-  struct TStringHeap* sh = to_heap(s);
-  if (sh && tref_dec(&sh->count)) free(sh);
-}
-
-static struct TStringHeap* allocate_header(uint32_t length) {
+static inline struct TStringHeap* allocate_header(uint32_t length) {
   // The last member of `TStringHeap` already accounts for the '\0' terminator.
   size_t bytes_required = sizeof(struct TStringHeap) + sizeof(char) * length;
   struct TStringHeap* sh = malloc(bytes_required);
@@ -30,10 +25,12 @@ static struct TStringHeap* allocate_header(uint32_t length) {
 
 struct TString* tstr_new(const char* buf TH_NONNULL, size_t len) {
   if (len > UINT32_MAX) return NULL;
-  if (buf[len] != '\0') return NULL;
+  // if (buf[len] != '\0') return NULL;
 
   struct TStringHeap* sh = allocate_header(len);
-  if (sh) memcpy(sh->buffer, buf, sizeof(char) * len);
+  if (sh) {
+    memcpy(sh->buffer, buf, sizeof(char) * len);
+  }
   return (struct TString*)sh;
 }
 
@@ -49,9 +46,18 @@ struct TString* tstr_dup(struct TString* s) {
   return tstr_new(s->ptr, s->length);
 }
 
+void tstr_drop(struct TString* s) {
+  struct TStringHeap* sh = to_heap(s);
+  if (sh && tref_dec(&sh->count)) {
+    free(sh);
+  }
+}
+
 struct TString* tstr_concat(struct TString* left, struct TString* right) {
   size_t len = left->length + right->length;
-  if (len > UINT32_MAX) return NULL;
+  if (len > UINT32_MAX) {
+    return NULL;
+  }
   struct TStringHeap* sh = allocate_header(len);
   if (sh) {
     memcpy(sh->buffer, left->ptr, left->length);

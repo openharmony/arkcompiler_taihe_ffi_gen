@@ -21,7 +21,6 @@ from taihe.semantics.declarations import (
     ParamDecl,
     StructDecl,
     StructFieldDecl,
-    TypeAliasDecl,
     TypeRefDecl,
 )
 from taihe.semantics.types import (
@@ -276,12 +275,6 @@ class AstConverter(ExprEvaluator):
         d = IfaceDecl(str(node.name), self.loc(node.name))
         self.diag.for_each(node.fields, lambda f: d.add_method(self.visit(f)))
         self.diag.for_each(node.extends, lambda i: d.add_parent(self.visit(i)))
-        self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
-        return d
-
-    @override
-    def visit_TypeAlias(self, node: ast.TypeAlias) -> TypeAliasDecl:
-        d = TypeAliasDecl(str(node.name), self.loc(node.name), self.visit(node.ty))
         self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
         return d
 

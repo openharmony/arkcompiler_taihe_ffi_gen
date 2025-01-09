@@ -14,7 +14,6 @@ if TYPE_CHECKING:
         NamedDecl,
         Package,
         PackageLevelDecl,
-        TypeAliasDecl,
         TypeRefDecl,
     )
 
@@ -272,33 +271,3 @@ class RecursiveInclusionError(DiagError):
     def notes(self):
         for n in self.other:
             yield RecursiveInclusionNote(n)
-
-
-@dataclass
-class RecursiveTypeAliasNote(DiagNote):
-    MSG = "from here"
-
-    def __init__(
-        self,
-        last: "TypeAliasDecl",
-    ):
-        self.loc = last.ty_ref.loc
-
-
-@dataclass
-class RecursiveTypeAliasError(DiagError):
-    MSG = "recursive typedef"
-
-    other: list["TypeAliasDecl"]
-
-    def __init__(
-        self,
-        last: "TypeAliasDecl",
-        other: list["TypeAliasDecl"],
-    ):
-        self.loc = last.ty_ref.loc
-        self.other = other
-
-    def notes(self):
-        for n in self.other:
-            yield RecursiveTypeAliasNote(n)

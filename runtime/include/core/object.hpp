@@ -1,240 +1,292 @@
 #pragma once
 
 #include <array>
+#include <exception>
 
 #include <taihe/common.hpp>
 #include <taihe/object.abi.h>
 
-struct InterfaceMapItem {
-    void const *iid;
-    void const *pvtbl;
+namespace taihe::core {
+template<typename ABIType>
+struct info_container {};
+
+template<typename InterfaceHolder>
+struct interface_holder_traits {};
+
+template<typename InterfaceView>
+struct interface_view_traits {};
+
+//////////////////////
+// Raw Data Handler //
+//////////////////////
+
+struct data_holder;
+struct data_view;
+
+struct data_holder {
+    DataBlockHead* m_handle;
+
+    explicit data_holder(DataBlockHead* other_handle);
+    ~data_holder();
+    data_holder(data_holder&& other);
+    data_holder(data_holder const& other);
+    data_holder(data_view const& other);
+    data_holder& operator=(data_holder other);
 };
 
-struct RTTI {
-    std::size_t length;
-    InterfaceMapItem imap[];
+struct data_view {
+    DataBlockHead* m_handle;
+
+    explicit data_view(DataBlockHead* other_handle);
+    ~data_view();
+    data_view(data_view const& other);
+    data_view(data_holder const& other);
+    data_view& operator=(data_view other);
 };
 
-struct CommonHandle {
-    RTTI const *prtti;
+inline data_holder::data_holder(DataBlockHead* other_handle)
+    : m_handle(other_handle) {}
 
-    void const *dynamicQueryInterface(void const *iid) {
-        for (std::size_t i = 0; i < prtti->length; i++) {
-            if (iid == prtti->imap[i].iid) {
-                return prtti->imap[i].pvtbl;
-            }
-        }
-        return nullptr;
-    }
+inline data_holder::~data_holder() {
+    tobj_drop(this->m_handle);
+}
+
+inline data_holder::data_holder(data_holder&& other)
+    : m_handle(other.m_handle) {
+    other.m_handle = nullptr;
+}
+
+inline data_holder::data_holder(data_holder const& other)
+    : m_handle(tobj_dup(other.m_handle)) {}
+
+inline data_holder::data_holder(data_view const& other)
+    : m_handle(tobj_dup(other.m_handle)) {}
+
+inline data_holder& data_holder::operator=(data_holder other) {
+    std::swap(this->m_handle, other.m_handle);
+    return *this;
+}
+
+inline data_view::data_view(DataBlockHead* other_handle)
+    : m_handle(other_handle) {}
+
+inline data_view::~data_view() {}
+
+inline data_view::data_view(data_view const& other)
+    : m_handle(other.m_handle) {}
+
+inline data_view::data_view(data_holder const& other)
+    : m_handle(other.m_handle) {}
+
+inline data_view& data_view::operator=(data_view other) {
+    std::swap(this->m_handle, other.m_handle);
+    return *this;
+}
+
+///////////////////////////////////////
+// Specific Impl Type Object Handler //
+///////////////////////////////////////
+
+template<typename Impl>
+struct data_block_impl : DataBlockHead, Impl {
+    template<typename... Args>
+    data_block_impl(TypeInfo const* rtti_ptr, TRefCount m_count, Args&&... args)
+        : DataBlockHead{rtti_ptr, m_count}, Impl(std::forward<Args>(args)...) {}
 };
 
-template<typename T, std::size_t S>
-constexpr void concatArraysInPlace(std::array<T, S> &r, std::size_t j) {}
+template<typename Impl>
+inline static void delete_impl(DataBlockHead *data_ptr) {
+    delete static_cast<::taihe::core::data_block_impl<Impl>*>(data_ptr);
+}
 
-template<typename T, std::size_t S, std::size_t N, std::size_t... Ns>
-constexpr void concatArraysInPlace(std::array<T, S> &r, std::size_t j, std::array<T, N> const &a, std::array<T, Ns> const &...as) {
-    for (std::size_t i = 0; i < N; i++, j++) {
+template<typename T, uint64_t S>
+constexpr void static_concat(T (&r)[S], uint64_t j) {}
+
+template<typename T, uint64_t S, uint64_t N, uint64_t... Ns>
+constexpr void static_concat(T (&r)[S], uint64_t j, T const (&a)[N], T const (&...as)[Ns]) {
+    for (uint64_t i = 0; i < N; i++, j++) {
         r[j] = a[i];
     }
-    concatArraysInPlace(r, j, as...);
+    static_concat(r, j, as...);
 }
 
-template<typename T, std::size_t... Ns>
-constexpr auto concatArrays(std::array<T, Ns> const &...as) {
-    std::array<T, (Ns + ...)> r = {};
-    concatArraysInPlace(r, 0, as...);
-    return r;
-}
+template<typename Impl, typename... InfoContainers>
+struct impl_holder;
 
-template<typename Self, template<typename> typename... TypeInfos>
-struct Handle : CommonHandle {
-    static constexpr struct {
-        std::size_t length = (TypeInfos<Self>::imap.size() + ...);
-        std::array<InterfaceMapItem, (TypeInfos<Self>::imap.size() + ...)> imap = concatArrays(TypeInfos<Self>::imap...);
-    } rtti = {};
+template<typename Impl, typename... InfoContainers>
+struct impl_view;
 
-    Handle()
-        : CommonHandle{(RTTI *)&rtti} {}
+template<typename... InfoContainers>
+struct typeinfo_t {
+    uint64_t version;
+    void (*free_ptr)(struct DataBlockHead*);
+    uint64_t len = (InfoContainers::dict_len + ... + 0);
+    struct IdMapItem idmap[(InfoContainers::dict_len + ... + 1)] = {};
+};
 
-    static constexpr void const *staticQueryInterface(void const *iid) {
-        for (std::size_t i = 0; i < rtti.length; i++) {
-            if (iid == rtti.imap[i].iid) {
-                return rtti.imap[i].pvtbl;
+template<typename Impl, typename... InfoContainers>
+struct typeinfo_impl {
+    static constexpr typeinfo_t<InfoContainers...> get_rtti() {
+        struct typeinfo_t<InfoContainers...> rtti = {0, &delete_impl<Impl>};
+        static_concat(rtti.idmap, 0, InfoContainers::template typeinfo_space<Impl>::idmap...);
+        return rtti;
+    }
+
+    static constexpr typeinfo_t<InfoContainers...> rtti = get_rtti();
+
+    static constexpr void const* get_vtbl_ptr(void const *iid) {
+        for (uint64_t i = 0; i < rtti.len; i++) {
+            if (iid == rtti.idmap[i].id) {
+                return rtti.idmap[i].vtbl_ptr;
             }
         }
-        throw std::logic_error("Static cast failed!");
+        throw;
     }
 
-    template<void const *iid>
-    static constexpr void const *staticQueryInterfaceResult = staticQueryInterface(iid);
+    template<typename InfoContainer>
+    static constexpr void const* vtbl_ptr = get_vtbl_ptr(InfoContainer::iid);
 };
 
-template<typename Self>
-struct OwnerPtr {
-    Self *pself;
+template<typename Impl, typename... InfoContainers>
+struct impl_holder {
+    using impl_type = Impl;
+ 
+    data_block_impl<Impl>* m_handle;
 
-    OwnerPtr<Self>(Self *pself)
-        : pself(pself) {}
+    explicit impl_holder(data_block_impl<Impl>* other_handle)
+        : m_handle(other_handle) {}
 
-    operator Self *() && {
-        return std::exchange(this->pself, nullptr);
+    ~impl_holder() {
+        tobj_drop(this->m_handle);
     }
 
-    OwnerPtr<Self>(OwnerPtr<Self> &&other)
-        : pself(std::exchange(other.pself, nullptr)) {}
-
-    Self *operator->() {
-        return this->pself;
+    impl_holder(impl_holder<Impl, InfoContainers...>&& other)
+        : m_handle(other.m_handle) {
+        other.m_handle = nullptr;
     }
 
-    ~OwnerPtr<Self>() {
-        if (this->pself) {
-            this->pself->drop();
-        }
+    impl_holder(impl_holder<Impl, InfoContainers...> const& other)
+        : m_handle(static_cast<data_block_impl<Impl>*>(tobj_dup(other.m_handle))) {}
+
+    impl_holder(impl_view<Impl, InfoContainers...> const& other)
+        : m_handle(static_cast<data_block_impl<Impl>*>(tobj_dup(other.m_handle))) {}
+
+    template<typename InterfaceHolder, typename interface_holder_traits<InterfaceHolder>::type = nullptr>
+    operator InterfaceHolder() && {
+        using InfoContainer = typename interface_holder_traits<InterfaceHolder>::info_container;
+        DataBlockHead* ret_handle = this->m_handle;
+        this->m_handle = nullptr;
+        return InterfaceHolder{{
+            static_cast<typename InfoContainer::vtable_t const*>(typeinfo_impl<Impl, InfoContainers...>::template vtbl_ptr<InfoContainer>),
+            ret_handle,
+        }};
     }
 
-    OwnerPtr<Self> &operator=(OwnerPtr<Self> other) {
-        std::swap(this->pself, other.pself);
+    template<typename InterfaceHolder, typename interface_holder_traits<InterfaceHolder>::type = nullptr>
+    operator InterfaceHolder() const& {
+        using InfoContainer = typename interface_holder_traits<InterfaceHolder>::info_container;
+        DataBlockHead* ret_handle = tobj_dup(this->m_handle);
+        return InterfaceHolder{{
+            static_cast<typename InfoContainer::vtable_t const*>(typeinfo_impl<Impl, InfoContainers...>::template vtbl_ptr<InfoContainer>),
+            ret_handle,
+        }};
+    }
+
+    template<typename InterfaceView, typename interface_view_traits<InterfaceView>::type = nullptr>
+    operator InterfaceView() const& {
+        using InfoContainer = typename interface_view_traits<InterfaceView>::info_container;
+        DataBlockHead* ret_handle = this->m_handle;
+        return InterfaceView{{
+            static_cast<typename InfoContainer::vtable_t const*>(typeinfo_impl<Impl, InfoContainers...>::template vtbl_ptr<typename interface_view_traits<InterfaceView>::info_container>),
+            ret_handle,
+        }};
+    }
+
+    impl_holder& operator=(impl_holder other) {
+        std::swap(this->m_handle, other.m_handle);
         return *this;
     }
+
+    Impl* operator->() const {
+        return this->m_handle;
+    }
+
+    Impl& operator*() const {
+        return *this->m_handle;
+    }
 };
 
-template<typename Self>
-struct RefPtr {
-    Self *pself;
+template<typename Impl, typename... InfoContainers>
+struct impl_view {
+    using impl_type = Impl;
+ 
+    data_block_impl<Impl>* m_handle;
 
-    RefPtr<Self>(Self *pself)
-        : pself(pself) {}
+    explicit impl_view(data_block_impl<Impl>* other_handle)
+        : m_handle(other_handle) {}
 
-    operator Self *() {
-        return this->pself;
+    ~impl_view() {}
+
+    impl_view(impl_holder<Impl, InfoContainers...> const& other)
+        : m_handle(other.m_handle) {}
+
+    impl_view(impl_view<Impl, InfoContainers...> const& other)
+        : m_handle(other.m_handle) {}
+
+    template<typename InterfaceHolder, typename interface_holder_traits<InterfaceHolder>::type = nullptr>
+    operator InterfaceHolder() const& {
+        using InfoContainer = typename interface_holder_traits<InterfaceHolder>::info_container;
+        DataBlockHead* ret_handle = tobj_dup(this->m_handle);
+        return InterfaceHolder{{
+            static_cast<typename InfoContainer::vtable_t const*>(typeinfo_impl<Impl, InfoContainers...>::template vtbl_ptr<InfoContainer>),
+            ret_handle,
+        }};
     }
 
-    RefPtr<Self>(OwnerPtr<Self> const &other)
-        : pself(other.pself) {}
-
-    RefPtr<Self>(RefPtr<Self> const &other)
-        : pself(other.pself) {}
-
-    Self *operator->() {
-        return this->pself;
+    template<typename InterfaceView, typename interface_view_traits<InterfaceView>::type = nullptr>
+    operator InterfaceView() const& {
+        using InfoContainer = typename interface_view_traits<InterfaceView>::info_container;
+        DataBlockHead* ret_handle = this->m_handle;
+        return InterfaceView{{
+            static_cast<typename InfoContainer::vtable_t const*>(typeinfo_impl<Impl, InfoContainers...>::template vtbl_ptr<InfoContainer>),
+            ret_handle,
+        }};
     }
 
-    ~RefPtr<Self>() {}
-
-    RefPtr<Self> &operator=(RefPtr<Self> other) = delete;
-};
-
-template<typename FatPtr>
-struct Owner : FatPtr {
-    Owner<FatPtr>(FatPtr other)
-        : FatPtr(other) {}
-
-    operator FatPtr() && {
-        return {
-            this->pvtbl,
-            std::exchange(this->pself, nullptr),
-        };
-    }
-
-    template<typename Self>
-    Owner<FatPtr>(OwnerPtr<Self> &&other) {
-        this->pvtbl = static_cast<typename FatPtr::VTable const *>(Self::template staticQueryInterfaceResult<FatPtr::iid>);
-        this->pself = std::exchange(other.pself, nullptr);
-    }
-
-    Owner<FatPtr>(Owner<FatPtr> &&other) {
-        this->pvtbl = &static_cast<typename FatPtr::VTable const &>(*other.pvtbl);
-        this->pself = std::exchange(other.pself, nullptr);
-    }
-
-    template<typename IFrom, std::conditional_t<std::is_constructible_v<typename FatPtr::VTable const &, typename IFrom::VTable const &>, int, void> = 0>
-    Owner<FatPtr>(Owner<IFrom> &&other) {
-        this->pvtbl = &static_cast<typename FatPtr::VTable const &>(*other.pvtbl);
-        this->pself = std::exchange(other.pself, nullptr);
-    }
-
-    template<typename IFrom, std::conditional_t<std::is_constructible_v<typename FatPtr::VTable const &, typename IFrom::VTable const &>, void, int> = 0>
-    explicit Owner<FatPtr>(Owner<IFrom> &&other) {
-        this->pself = (this->pvtbl = static_cast<typename FatPtr::VTable const *>(other.pself->dynamicQueryInterface(FatPtr::iid)))
-                          ? std::exchange(other.pself, nullptr)
-                          : nullptr;
-    }
-
-    ~Owner<FatPtr>() {
-        if (this->pself) {
-            this->drop();
-        }
-    }
-
-    Owner<FatPtr> &operator=(Owner<FatPtr> other) {
-        std::swap(this->pvtbl, other.pvtbl);
-        std::swap(this->pself, other.pself);
+    impl_view& operator=(impl_view other) {
+        std::swap(this->m_handle, other.m_handle);
         return *this;
     }
+
+    Impl* operator->() const {
+        return this->m_handle;
+    }
+
+    Impl& operator*() const {
+        return *this->m_handle;
+    }
 };
 
-template<typename FatPtr>
-struct Ref : FatPtr {
-    Ref<FatPtr>(FatPtr other)
-        : FatPtr(other) {}
+template<typename Impl, typename... InterfaceHolders>
+inline auto make_holder(auto&&... args) {
+    return impl_holder<Impl, typename interface_holder_traits<InterfaceHolders>::info_container...>{
+        new data_block_impl<Impl>(
+            reinterpret_cast<TypeInfo const*>(
+                &typeinfo_impl<Impl, typename interface_holder_traits<InterfaceHolders>::info_container...>::rtti
+            ), 1, std::forward<decltype(args)>(args)...
+        ),
+    };
+}
 
-    operator FatPtr() {
-        return {
-            this->pvtbl,
-            this->pself,
-        };
-    }
-
-    template<typename Self>
-    Ref<FatPtr>(RefPtr<Self> const &other) {
-        this->pvtbl = static_cast<typename FatPtr::VTable const *>(Self::template staticQueryInterfaceResult<FatPtr::iid>);
-        this->pself = other.pself;
-    }
-
-    template<typename Self>
-    Ref<FatPtr>(OwnerPtr<Self> const &other) {
-        this->pvtbl = static_cast<typename FatPtr::VTable const *>(Self::template staticQueryInterfaceResult<FatPtr::iid>);
-        this->pself = other.pself;
-    }
-
-    Ref<FatPtr>(Ref<FatPtr> const &other) {
-        this->pvtbl = &static_cast<typename FatPtr::VTable const &>(*other.pvtbl);
-        this->pself = other.pself;
-    }
-
-    Ref<FatPtr>(Owner<FatPtr> const &other) {
-        this->pvtbl = &static_cast<typename FatPtr::VTable const &>(*other.pvtbl);
-        this->pself = other.pself;
-    }
-
-    template<typename IFrom, std::conditional_t<std::is_constructible_v<typename FatPtr::VTable const &, typename IFrom::VTable const &>, int, void> = 0>
-    Ref<FatPtr>(Ref<IFrom> const &other) {
-        this->pvtbl = &static_cast<typename FatPtr::VTable const &>(*other.pvtbl);
-        this->pself = other.pself;
-    }
-
-    template<typename IFrom, std::conditional_t<std::is_constructible_v<typename FatPtr::VTable const &, typename IFrom::VTable const &>, int, void> = 0>
-    Ref<FatPtr>(Owner<IFrom> const &other) {
-        this->pvtbl = &static_cast<typename FatPtr::VTable const &>(*other.pvtbl);
-        this->pself = other.pself;
-    }
-
-    template<typename IFrom, std::conditional_t<std::is_constructible_v<typename FatPtr::VTable const &, typename IFrom::VTable const &>, void, int> = 0>
-    explicit Ref<FatPtr>(Ref<IFrom> const &other) {
-        this->pself = (this->pvtbl = static_cast<typename FatPtr::VTable const *>(other.pself->dynamicQueryInterface(FatPtr::iid)))
-                          ? other.pself
-                          : nullptr;
-    }
-
-    template<typename IFrom, std::conditional_t<std::is_constructible_v<typename FatPtr::VTable const &, typename IFrom::VTable const &>, void, int> = 0>
-    explicit Ref<FatPtr>(Owner<IFrom> const &other) {
-        this->pself = (this->pvtbl = static_cast<typename FatPtr::VTable const *>(other.pself->dynamicQueryInterface(FatPtr::iid)))
-                          ? other.pself
-                          : nullptr;
-    }
-
-    ~Ref<FatPtr>() {}
-
-    Ref<FatPtr> &operator=(Ref<FatPtr> other) = delete;
-};
+template<typename... InterfaceHolders>
+inline auto into_holder(auto&& impl) {
+    using Impl = std::remove_reference_t<decltype(impl)>;
+    return impl_holder<Impl, typename interface_holder_traits<InterfaceHolders>::info_container...>{
+        new data_block_impl<Impl>(
+            reinterpret_cast<TypeInfo const*>(
+                &typeinfo_impl<Impl, typename interface_holder_traits<InterfaceHolders>::info_container...>::rtti
+            ), 1, std::forward<decltype(impl)>(impl)
+        ),
+    };
+}
+}

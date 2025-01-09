@@ -4,29 +4,22 @@ struct RGB {
     b: u8;
 }
 
-type NameType = String;
-
-struct RGBWithName {
-    rgb: RGB;
-    name: NameType;
-}
-
 enum Color {
-    RED   = 0xff << 0o20;
-    GREEN = 0xff << 0o10;
-    BLUE  = 0xff << 0o00;
+    black = 0x0;
+    red = 0x1;
+    green = 0x2;
+    yellow = 0x3;
+    blue = 0x4;
+    magenta = 0x5;
+    cyan = 0x6;
+    white = 0x7;
 }
 
 enum ColorOrRGBOrName {
+    undefined = 0x0;
     color: Color = 0x1;
     rgb: RGB = 0x2;
-    name: String = 0x0;
+    name: String = 0x3;
 }
 
-[cname = "ohos_get_rgb", index = 0, has_return_val = TRUE, deprecated]
-function get_rgb(color: Color): RGB;
-
-[cname = "ohos_invert_rgb", index = 1, has_return_val = FALSE]
-function invert_rgb(color: RGB): void;
-
-[file_info = "\u6d4b\u8bd5"] // file attribute write at the end
+function toString(color: ColorOrRGBOrName): String;

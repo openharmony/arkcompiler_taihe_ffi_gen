@@ -1,7 +1,6 @@
 from typing import Any, Optional
 
 from taihe.codegen.abi_generator import COutputBuffer
-from taihe.codegen.mangle import DeclKind, encode
 from taihe.semantics.declarations import (
     BaseFuncDecl,
     Package,
@@ -37,8 +36,7 @@ class KNBridgePackageInfo(AbstractAnalysis[Package]):
 
 class KNBridgeFuncBaseDeclInfo(AbstractAnalysis[BaseFuncDecl]):
     def __init__(self, am: AnalysisManager, f: BaseFuncDecl) -> None:
-        segments = f.segments
-        self.name = encode(segments, DeclKind.FUNCTION)
+        self.name = f.name
         self.konan_proj_name = f.attrs["konan_name"].value
         assert isinstance(self.konan_proj_name, str)
 

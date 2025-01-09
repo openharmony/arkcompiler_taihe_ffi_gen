@@ -1,0 +1,16 @@
+interface ICallbackString {
+    [functor] call(val: String): void;
+}
+
+interface ICallbackVoid {
+    [functor] call(): void;
+}
+
+function setTimeout(cb: ICallbackVoid, ms: u64): void;
+
+interface ICaller {
+    setValue(str: String): void;
+    waitForValue(cb: ICallbackString): void;
+}
+
+function makeCaller(): ICaller;
