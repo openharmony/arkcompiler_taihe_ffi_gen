@@ -26,7 +26,7 @@ template("taihe_compiler") {
 
     args = [
       "-I", "{{source_dir}}",
-      "-O", rebase_path("$target_out_dir/include"),
+      "-O", rebase_path("$target_out_dir"),
     ]
 
     if (invoker.mode == "author") {
