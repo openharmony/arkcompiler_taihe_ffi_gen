@@ -86,7 +86,7 @@ attrVal
 //////////
 
 type
-    : LEFT_PARENTHESIS Type_inner_ty = type RIGHT_PARENTHESIS
+    : LEFT_PARENTHESIS Type_inner_ty = type RIGHT_PARENTHESIS # parenthesisType
     | token_name = (KW_I8 | KW_I16 | KW_I32 | KW_I64 | KW_U8 | KW_U16 | KW_U32 | KW_U64 | KW_F32 | KW_F64 | KW_BOOL | KW_STRING) # primitiveType
     | (PkgNameOpt_pkg_name = pkgName DOT)? token_decl_name = ID # userType
     | (PkgNameOpt_pkg_name = pkgName DOT)? token_decl_name = ID LESS_THAN (TypeLst_args += type (COMMA TypeLst_args += type)*)? GREATER_THAN # genericType
