@@ -1,331 +1,194 @@
-# obj设计文档
+# OOP ABI 设计文档
 
 ## 继承关系举例
 
 ```
-////////////////////
-/////  IBase  //////
-///   /     \  /////
-// IColor  IShape //
-////  \     /  /////
-//// IRectangle ////
-////////////////////
+interface IBase {
+   fn getState(): bool;
+   fn setState(s: bool): ();
+}
+
+interface IColor: IBase {
+   fn getColor(): String;
+   fn setColor(c: String): ();
+}
+
+interface IShape: IBase {
+   fn getShape(): String;
+   fn setShape(s: String): ();
+}
+
+interface IFancyObj: IColor, IShape {
+   fn sparkle(): ();
+}
 ```
 
 ## 对象构成
 
-* 一个Object由两个指针构成，一个指针为vt_ptr，一个指针为data_ptr
+一个 Object 由两个指针构成，其中第一个指针为 `vt_ptr`，第二个指针为 `data_ptr`
 
 ```
-[IRectangleObject]
-------------
-|   vt_ptr  |
-------------
-|  data_ptr |
-------------
+[IFancyObjObject]
+
++----------------+
+|     vt_ptr     |
+|----------------|
+|    data_ptr    |
++----------------+
 ```
 
-* vt_ptr指向一个表
+其中，`vt_ptr` 指向该对象对应接口（Interface）的虚表（VTable），虚表中的内存如下：
 
 ```
-vt_ptr——————————>------------------
-                | IBase_ft_ptr     |
-                |------------------|
-                | IColor_ft_ptr    |
-                |------------------|
-                | IBase_ft_ptr     |
-                |------------------|
-                | IShape_ft_ptr    |
-                |------------------|
-                | IRectangle_ft_ptr|
-                 ------------------
+vt_ptr --------> +------------------+
+                 | IFancyObj_ft_ptr |
+                 |------------------|
+                 | IColor_ft_ptr    |
+                 |------------------|
+                 | IBase_ft_ptr     |
+                 |------------------|
+                 | IShape_ft_ptr    |
+                 |------------------|
+                 | IBase_ft_ptr     |
+                 +------------------+
 ```
 
-* ft_ptr指向该接口自己的函数表, 函数表内，第一个元素为函数指针数量，剩下的成员为函数指针
+其中，每个 `ft_ptr` 则指向相应接口的函数表（FTable）, 每个函数表内部存有这个接口自己声明的所有方法的指针：
 
 ```
-IColor_ft_ptr————————>---------------
-                     |     len      |
+IColor_ft_ptr -----> +--------------+
+                     |  getColor()  |
                      |--------------|
-                     |  GetColor()  |
+                     |  setColor()  |
+                     +--------------+
+
+IShape_ft_ptr -----> +--------------+
+                     |  getShape()  |
                      |--------------|
-                     |  SetColor()  |
-                      --------------
-
-IShape_ft_ptr————————>---------------
-                     |     len      |
-                     |--------------|
-                     |  GetShape()  |
-                     |--------------|
-                     |  SetShape()  |
-                      --------------
+                     |  setShape()  |
+                     +--------------+
 ```
 
-----------------------------------------------
-
-`data_ptr`指向数据块, 数据块由`DataBlockHead`和`ObjectData`构成
+`data_ptr` 指向数据块, 每个数据块由 `DataBlockHead` 和 `ObjectData` 两部分构成
 
 ```
-data_ptr————————>-------------
-                |DataBlockHead|
-                |-------------|
-                |  ObjectData |
-                 -------------
+data_ptr ---------> +---------------+
+                    | DataBlockHead |
+                    |---------------|
+                    | ObjectData    |
+                    +---------------+
 ```
 
-`DataBlockHead`组成如下: 
-
-```C
-// Maybe unuse dataBlockHead
-                 -------------
-                |    ti_ptr   |
-                |-------------|
-                |    m_count  |
-                 -------------
-```
-
-`m_count`用于引用计数, 而`ti_ptr`是一个指向`TypeInfo`类型的指针, `TypeInfo`用于存储对象类型的相关信息
+其中 `dataBlockHead` 的组成如下: 
 
 ```
-ti_ptr——————————>-----------------------
-                |         version       |
-                |-----------------------|
-                |           len         |
-                |-----------------------|
-                | pre_idmap_func_count  |
-                |-----------------------|
-                |       free_data()     |
-                |-----------------------|
-                | IBaseId      | vt_ptr |
-                |-----------------------|
-                | IColorId     | vt_ptr |
-                |-----------------------|
-                | IShapeId     | vt_ptr |
-                |-----------------------|
-                | IRectangleId | vt_ptr |
-                 -----------------------
++----------------+
+|    ti_ptr      |
+|----------------|
+|    m_count     |
++----------------+
+```
+
+`m_count` 用于引用计数, `ti_ptr` 是一个指向 `typeinfo` 的指针, `typeinfo` 内存储有与对象类型相关的运行时信息
+
+```
+ti_ptr ----> +----------------------+
+             |       version        |
+             |----------------------|
+             |       free()         |
+             |----------------------|
+             |       len            |
+             |----------------------|
+             | IBaseId     | vt_ptr |
+             |----------------------|
+             | IColorId    | vt_ptr |
+             |----------------------|
+             | IShapeId    | vt_ptr |
+             |----------------------|
+             | IFancyObjId | vt_ptr |
+             +----------------------+
 ```
 
 ## 功能部分
 
-### ABI稳定性
+### ABI 稳定性
 
-目前的oop设计支持的版本演进的相关功能有：
+### 静态转换
 
-✔️ 给已有的interface方法后增加新的方法
+接口的函数表由若干函数指针构成，函数指针按照它们在 IDL 接口中的声明顺序排列。
 
-✔️ 修改已有的interface方法的实现
+对于在 IDL 中定义的每个接口，其虚表结构体中的第一项应是指向该接口的函数表结构体的指针，接下来则应按顺序排入该接口*直接*继承的所有父接口的虚表中的完整内存排布，如果多个父接口同时继承了同一祖先，则该祖先的函数表指针也应当在子接口的虚表中出现多次。这保证了一个接口的虚表可以被*静态*转换为其任一祖先的虚表。
 
-✔️ 在已有的成员变量后增加新的成员变量
-
-
-### static_cast and dynamic_cast
-
-类型转换与虚表结构紧密关联, 因为虚表结构的特殊设计, 使得对象拥有了static_cast的能力
+以下是从基于前文所给例子生成的 C ABI 中截取的部分片段：
 
 ```C
-// Rectangle_obj
-vt_ptr——————————>------------------
-                | IBase_ft_ptr     |
-                |------------------|
-                | IColor_ft_ptr    |
-             // |------------------|
-             // | IBase_ft_ptr     |
-             // |------------------|
-             // | IShape_ft_ptr    |
-             // |------------------|
-                | IRectangle_ft_ptr|
-                 ------------------ 
-
-// 上面vt_ptr指向的vt 
-
-
-// IRectangle的vt结构体如下：
-struct IRectangle_vt {
-   // obj_IColor_vt
-   ft_ptr* IBase_ft_ptr;
-   ft_ptr* IColor_ft_ptr;
-   // obj_IRectangle_vt
-   ft_ptr* IBase_ft_ptr;
-   ft_ptr* IShape_ft_ptr;
-
-   ft_ptr* IRectangle_ft_ptr;
+// IBase 的函数表结构体定义
+struct IBaseFT {
+  bool (*getState)();
+  void (*setState)(bool s);
 };
 
-// IShape的vt结构体如下：
-struct IRectangle_vt {
-   ft_ptr* IBase_ft_ptr;
-   ft_ptr* IShape_ft_ptr;
+// ...
+
+// IBase 的虚表结构体定义
+struct IBaseVT {
+  IBaseFT*      IBase_ft_ptr;
 };
 
+// IColor 的虚表结构体定义
+struct IColorVT {
+  IColorFT*     IColor_ft_ptr;
+  IBaseFT*      IBase_ft_ptr;
+};
 
-// example
-obj->vt = obj->vt.obj_IRectangle_vt
+// IShape 的虚表结构体定义
+struct IShapeVT {
+  IShapeFT*     IShape_ft_ptr;
+  IBaseFT*      IBase_ft_ptr;
+};
+
+// IFancyObj 的虚表结构体定义
+struct IFancyObjVT {
+  IFancyObjFT*  IFancyObj_ft_ptr;
+  IColorFT*     IColor_ft_ptr;
+  IBaseFT*      IBase_ft_ptr_0;
+  IShapeFT*     IShape_ft_ptr;
+  IBaseFT*      IBase_ft_ptr_1;
+};
+
+// 可以直接将 IFancyObj_vt_ptr 转换为相应的 IShapeObj_vt_ptr 或 IBase_vt_ptr
+struct IShape_vt* IShape_vt_ptr = (void **)IFancyObj_vt_ptr + offsetof(IFancyObjVT, IShape_ft_ptr);
+struct IBase_vt* IBase_vt_ptr = (void **)IFancyObj_vt_ptr + offsetof(IFancyObjVT, IBase_ft_ptr_0);
+```
+
+### 动态转换
+
+每个对象的数据块头部都有指向其具体类型运行时信息（`typeinfo`）的指针。在 `typeinfo` 中存有版本信息 `version`，`free` 函数指针（用于销毁对象），动态转换表的长度 `len` 和动态转换表。动态转换表是从 Interface ID 到相应虚表的映射，用于在运行时查询对象实现的所有接口，从而实现运行时的向下转换。
+
+以下是一个样例：
+
+```C
+inline struct IFancyObj dynamic_cast_to_IFancyObj(struct DataBlockHead* data_ptr) {
+  struct TypeInfo *rtti_ptr = data_ptr->rtti_ptr;
+  struct IFancyObj result;
+  for (size_t i = 0; i < rtti_ptr->len; i++) {
+    if (rtti_ptr->idmap[i].id == IFancyObj_iid) {
+      result.vtbl_ptr = (struct IFancyObjVT*)rtti_ptr->idmap[i].vtbl_ptr;
+      result.data_ptr = data_ptr;
+      return result;
+    }
+  }
+  result.vtbl_ptr = NULL;
+  result.data_ptr = NULL;
+  return result;
+}
 ```
 
 ### 调用函数
-```C
-// obj function
-obj.vt_ptr->obj_func(obj.data_ptr);
-// interface function
-obj.vt_ptr.obj_IRectangle_vt->getShape(obj.data_ptr);
-```
-
-### create addref release
-
-create函数用于在堆上申请空间并在对应数据处赋值
-
-注：目前的设计typeinfo指针也需要使用者自行赋值
 
 ```C
-// create
-struct ClassDataBlock* class_data_create(arg...) {
-   size_t bytes_requires = sizeof(struct ClassDataBlock);
-   struct ClassDataBlock* data_ptr = malloc(bytes_requires);
-   data_ptr->head.ti_ptr = (struct typeInfo*)&obj_class_typeInfo;
-   data_ptr->head.dup_func = ...;
-   data_ptr->head.drop_func = ...;
-   data_ptr->head.m_count = 1;
-   // data
-   data_ptr->data.arg1 = arg1;
-   data_ptr->data.arg2 = arg2;
-   data_ptr->data.arg3 = arg3;
-   return data_ptr;
-}
+obj.vt_ptr->IFancyObj_ft_ptr->sparkle(obj.data_ptr);
+obj.vt_ptr->IBase_ft_ptr_0->setState(obj.data_ptr, 1);
 ```
-
-增加引用计数
-
-```C
-void tobj_addref(struct TObject tobj) {
-  if (tobj.data_ptr && tobj.data_ptr->m_count != 0) {
-    ++tobj.data_ptr->m_count;
-  }
-}
-```
-
-释放函数
-
-```C
-void tobj_release(struct TObject tobj) {
-  if (tobj.data_ptr && --(tobj.data_ptr->m_count) == 0) {
-    tobj.data_ptr->rtti_ptr->free_data(tobj);
-    tobj.data_ptr = NULL;
-    tobj.vtbl_ptr = NULL;  
-  }
-}
-```
-
-### 支持interface的方法带有默认实现, 并在运行时生成完整虚表
-
-```C
-// Old version
-interface IBase {
-   void func_1() {
-      ...
-   }
-};
-
-void call_funcs(IBase inst) {
-   inst.func_1();
-}
-
-// New version
-interface IBase {
-   void func_1() {
-      ...
-   }
-
-   // new function !
-   void func_2() {
-      ...
-   }
-};
-
-void call_funcs(IBase inst) {
-   inst.func_1();
-   inst.func_2(); // new !
-}
-```
-
-当使用old version的.h与new version的.dll时，会找不到func_2()的符号
-
-于是解决这个问题就需要有两个条件
-
-* 1 虚表里有`func_2()`
-
-* 2 `func_2()`需要有实现
-
-所以运行时要在更新一遍虚表，新增的interface方法**必须**带有默认实现
-
-#### 运行时生成虚表方案
-
-运行时生成虚表需要考虑的问题是**是否支持interface方法默认实现的覆写**
-
-##### 支持覆写
-如果支持interface覆写函数，那就需要在code generate时需要对一个class和它的继承关系拓扑排序，然后在运行时的生成虚表相关代码可能会有如下情况：
-
-```C
-//   IA
-//  /  \
-// IB  IC
-//  \  /
-//   D
-
-if (D.has_func()) {
-    // ...
-} else if (IB.has_func()) {
-    // ...
-} else if (IC.has_func()) {
-    // ...
-} else if (IA.has_func()) {
-    // ...
-}
-```
-继承关系复杂时，对性能会有较大影响
-
-##### 不支持覆写
-如果不支持覆写，则认为IA.func1()和IB.func1()并不是一个函数
-
-此时虚表大小会比支持覆写的情况大一些
-
-```C
-// 允许覆写
-struct IA_ftable {
-    void(*func1)();
-}
-
-struct IB_ftable {
-    void(*func2)();
-}
-
-// 不允许覆写
-struct IA_ftable {
-    void(*func1)();
-}
-
-struct IB_ftable {
-    void(*func1)();
-    void(*func2)();
-}
-```
-
-但是因为每个ftable只会存自身的函数，所以运行时只需要考虑class实现以及interface自身默认实现两种情况
-
-```C
-if (D.has_func()) {
-    // ...
-} else if (IX.has_func()) {
-    // ...
-}
-```
-
-只会有2分支，分支数相比明显降低
-
-目前taihe采用不支持覆写的版本，接口的函数部分应该更像一个contract，不应依赖于函数的实现，同时促进组合而非继承。
-
-
-###
-—————————————————————————————————————————————————
 
 To be continued...

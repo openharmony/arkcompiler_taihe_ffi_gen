@@ -51,17 +51,48 @@ Taihe 通过一套二进制接口标准 (ABI)，连接了 API 的作者和消费
 
 * 编译器
 ** 整体流程
-1. =taihe.__main__=: CLI 层，负责读入命令行参数
-2. =taihe.compilation=: 编译器驱动 (Driver)，负责编排整体编译流程
-3. =taihe.parse=: 解析器，IDL -> AST
-4. =taihe.semantic_analysis=: 语义分析，在 AST 上运行，负责检查 IDL 的有效性
-5. =taihe.code_generation=: 代码生成，AST -> 目标代码
+Taihe 遵从经典的“三阶段”编译器设计，具体地：
 
-** 文件解析
+1. 前端 (Frontend)：源代码（文本） → 中间表示（IR）。
+   例如，字符串 ="fn foo();"= 经过词法分析、语法分析后，从一棵抽象语法树转换成了数据结构“函数声明” (=FuncDecl=)。
+   在 Taihe 代码仓内，该部分由 =taihe.parse= 部分完成。
+2. 语义分析 (Semantics)：IR → IR。部分分析结果被附加于 IR 上，同时进行检查。
+   例如，程序 =fn foo(x: BadType, y: GoodType);= 引入了不存在的类型 =BadType= ，语义分析在此向用户报告错误。
+   对于 =GoodType= ，则需将字符串形式的类型引用指向为数据结构。
+   在 Taihe 代码仓内，该部分由 =taihe.parse= 部分完成。
+3. 代码生成 (Code Generation)：IR → 源代码。此时，IR 已经完成检查，确认是有效的输入。代码生成组件遍历 IR，并将生成的代码写入到文件中。
+   在 Taihe 代码仓内，该部分由 =taihe.codegen= 部分完成。
+
+上述的每个阶段都有明确的输入和输出，相互独立，不访问全局状态。
+例如，我们可以只使用编译器前端，完成代码的格式化，不进行语义分析。
+为了将这些阶段连接在一起，Taihe 提供了编译器驱动 (Driver)。
+例如，在编译 Taihe 源文件”的用法中，驱动根据用户的请求，将这些阶段连接在一起。
+在 Taihe 代码仓内，该部分由 =taihe.driver= 部分完成。
+
+** 文法解析
+Taihe 对源码的解析基于 ANTLR 框架，并对 ANTLR 做了扩展。
+
+文件结构上：
 - =compiler/Taihe.g4=: 根据 ANTLR 描述了 IDL 的文法规则
 - =compiler/generate-grammer=: 在编译器运行前执行，自动生成代码
-  - 生成 TaiheLexer 以及 TaiheParser，负责词法和语法分析
-  - 生成 TaiheAST，负责存储 AST 节点
-  - 生成 TaiheVisitor。该文件以 Visitor 设计模式，简化 AST 的访问
+  - 生成 =TaiheLexer= 以及 =TaiheParser= ，负责词法和语法分析
+  - 生成 =TaiheAST= ，负责存储 AST 节点
+  - 生成 =TaiheVisitor= 。该文件以 Visitor 设计模式，简化 AST 的访问
 
+执行顺序上：
+1. =taihe.parse.ast_generation.generate_ast=: 借助 ANTLR，将文本解析为 AST =taihe.parse.antlr.TaiheAST.Spec=
+2. =taihe.parse.convert.AstConverter=: 便利 AST，构造 IR =taihe.semantics.declarations.Package=
+** 语义分析
+Taihe 的中间表示包括：
+
+- =taihe.semantics.declarations=: 定义了 IR 中“声明”的概念，例如结构体、枚举值
+- =taihe.semantics.types=: 定义了 IR 中“类型”的概念，例如标量、字符串
+
+Taihe 的中间表示是纯数据结构，和文法、驱动部分完全解耦。
+例如，我们为了测试编译器，可以直接跳过编译器前端，直接在内存中构造 IR。
+或者，为了生成不同目标语言的源文件，我们可以对相同的 IR 多次调用代码生成模块。
+
+Taihe 的中间表示可选地蕴含了源码相关的信息（例如 =Decl.loc= ），用于辅助调试、生成报错。
+但需要注意的是，源码相关的信息只是辅助。
+Taihe 的中间表示不会忠实地记录全部的源码信息，也允许源码信息在程序变换的过程中丢失。
 * TODO 运行时

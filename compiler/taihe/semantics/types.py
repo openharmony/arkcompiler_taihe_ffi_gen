@@ -1,0 +1,109 @@
+"""Defines the type system."""
+
+from abc import ABCMeta, abstractmethod
+from dataclasses import dataclass
+from enum import Enum
+from typing import TYPE_CHECKING, Any, Optional, Protocol
+
+from typing_extensions import override
+
+if TYPE_CHECKING:
+    from taihe.semantics.visitor import TypeVisitor
+
+############################
+# Infrastructure for Types #
+############################
+
+
+class TypeProtocol(Protocol):
+    def _accept(self, v: "TypeVisitor") -> Any: ...
+
+
+class Type(TypeProtocol, metaclass=ABCMeta):
+    """Represents a concrete type."""
+
+    @property
+    @abstractmethod
+    def description(self) -> str: ...
+
+
+##################
+# Built-in Types #
+##################
+
+
+class BuiltinTypeKind(Enum):
+    VOID = 0
+
+    BOOL = 1
+    INTEGER = 2
+    FLOAT = 3
+
+    STRING = 0x10
+
+
+@dataclass(frozen=True)
+class BuiltinType(Type, metaclass=ABCMeta):
+    """Represents built-in types, including scalars and strings.
+
+    Invariant: all primitive types must be directy obtained with `lookup` or
+    using the exported values such as `VOID`. Do not copy or construct it on
+    your own. This design allows tests such as `my_type is VOID`.
+    """
+
+    name: str
+    kind: BuiltinTypeKind
+
+    def _accept(self, v: "TypeVisitor") -> Any:
+        return v.visit_builtin_type(self)
+
+    @staticmethod
+    def lookup(name: str) -> Optional["BuiltinType"]:
+        return _TYPE_MAPS.get(name)
+
+    def __repr__(self) -> str:
+        return f"<type-builtin {self.name!r}>"
+
+    @property
+    @override
+    def description(self):
+        return f"builtin type {self.name}"
+
+
+@dataclass(frozen=True, repr=False)
+class ScalarType(BuiltinType):
+    width: int
+    is_signed: bool
+    is_float: bool = False
+
+    def _accept(self, v: "TypeVisitor") -> Any:
+        return v.visit_scalar_type(self)
+
+
+@dataclass(frozen=True, repr=False)
+class SpecialType(BuiltinType):
+    def _accept(self, v: "TypeVisitor") -> Any:
+        return v.visit_special_type(self)
+
+
+BOOL = ScalarType(
+    "bool", BuiltinTypeKind.BOOL, 8, is_signed=False
+)  # Essentially a `u8`
+F32 = ScalarType("f32", BuiltinTypeKind.FLOAT, 32, is_signed=True, is_float=True)
+F64 = ScalarType("f64", BuiltinTypeKind.FLOAT, 64, is_signed=True, is_float=True)
+
+I8 = ScalarType("i8", BuiltinTypeKind.INTEGER, 8, is_signed=True)
+I16 = ScalarType("i16", BuiltinTypeKind.INTEGER, 16, is_signed=True)
+I32 = ScalarType("i32", BuiltinTypeKind.INTEGER, 32, is_signed=True)
+I64 = ScalarType("i64", BuiltinTypeKind.INTEGER, 64, is_signed=True)
+
+U8 = ScalarType("u8", BuiltinTypeKind.INTEGER, 8, is_signed=False)
+U16 = ScalarType("u16", BuiltinTypeKind.INTEGER, 16, is_signed=False)
+U32 = ScalarType("u32", BuiltinTypeKind.INTEGER, 32, is_signed=False)
+U64 = ScalarType("u64", BuiltinTypeKind.INTEGER, 64, is_signed=False)
+
+STRING = SpecialType("String", BuiltinTypeKind.STRING)
+
+_TYPE_MAPS: dict[str, BuiltinType] = {
+    ty.name: ty for ty in [BOOL, I8, I16, I32, I64, U8, U16, U32, U64, F32, F64, STRING]
+}

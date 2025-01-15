@@ -1,2 +1,23 @@
-from rgb.base use RGB;
-function show(color: RGB): ();
+from rgb.base use RGB, Color, ColorOrRGBOrName;
+
+interface IBase {
+    getId(): String;
+}
+
+interface IShape: IBase {
+    calculateArea(): f32;
+}
+
+interface IColorable: IBase {
+    getColor(): ColorOrRGBOrName;
+    setColor(c: ColorOrRGBOrName): void;
+}
+
+function copyColor(dst: IColorable, src: IColorable): void;
+
+interface IShowable: IColorable, IShape {
+    show(): void;
+}
+
+function makeRectangle(id: String, h: f32, w: f32): IShape;
+function makeColoredRectangle(id: String, c: ColorOrRGBOrName, h: f32, w: f32): IShowable;

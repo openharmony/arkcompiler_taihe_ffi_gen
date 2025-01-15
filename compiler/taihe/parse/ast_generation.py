@@ -1,62 +1,134 @@
+from contextlib import suppress
 from typing import Any
 
-from antlr4 import CommonTokenStream, StdinStream, Token
+from antlr4 import CommonTokenStream, FileStream, InputStream, TerminalNode, Token
 from antlr4.error.ErrorListener import ErrorListener
 
 from taihe.parse.antlr.TaiheAST import TaiheAST
 from taihe.parse.antlr.TaiheLexer import TaiheLexer
 from taihe.parse.antlr.TaiheParser import TaiheParser
+from taihe.utils.diagnostics import AbstractDiagnosticsManager
+from taihe.utils.exceptions import IDLSyntaxError
+from taihe.utils.sources import SourceBase, SourceBuffer, SourceFile, SourceLocation
+
+
+def get_pos(ctx: Token):
+    text = ctx.text.splitlines()
+    row = ctx.line
+    col = ctx.column
+    row_offset = len(text) - 1
+    col_offset = len(text[-1])
+    beg = (
+        row,
+        col + 1,
+    )
+    end = (
+        row + row_offset,
+        col + col_offset if row_offset == 0 else col_offset,
+    )
+    return beg, end
+
+
+def add_pos(ctx, pos_dict: dict):
+    if isinstance(ctx, Token):
+        beg, end = get_pos(ctx)
+        pos_dict[ctx] = beg, end
+    elif isinstance(ctx, TerminalNode):
+        add_pos(ctx.symbol, pos_dict)
+        pos_dict[ctx] = pos_dict[ctx.symbol]
+    else:
+        for child in ctx.children:
+            add_pos(child, pos_dict)
+        beg, _ = pos_dict[ctx.children[0]]
+        _, end = pos_dict[ctx.children[-1]]
+        pos_dict[ctx] = beg, end
 
 
 class TaiheErrorListener(ErrorListener):
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        source: SourceBase,
+        diag: AbstractDiagnosticsManager,
+        pos_dict: dict,
+    ) -> None:
         super().__init__()
+        self.diag = diag
+        self.source = source
+        self.has_error = False
+        self.pos_dict = pos_dict
 
-    def syntaxError(self, *args, **kwargs):
-        raise SyntaxError
-
-    def reportAmbiguity(self, *args, **kwargs):
-        raise SyntaxError
-
-    def reportAttemptingFullContext(self, *args, **kwargs):
-        raise SyntaxError
-
-    def reportContextSensitivity(self, *args, **kwargs):
-        raise SyntaxError
-
-
-def get_meta(ctx) -> tuple[int, int]:
-    if isinstance(ctx, Token):
-        return ctx.line, ctx.column
-    return 0, 0
+    def syntaxError(self, recognizer, offendingSymbol, line, column, msg, e):
+        add_pos(offendingSymbol, self.pos_dict)
+        (start_row, start_col), (stop_row, stop_col) = get_pos(offendingSymbol)
+        self.diag.emit(
+            IDLSyntaxError(
+                offendingSymbol.text,
+                loc=SourceLocation(
+                    self.source, start_row, start_col, stop_row, stop_col
+                ),
+            )
+        )
+        self.has_error = True
 
 
-def visit(ctx) -> Any:
-    if isinstance(ctx, list):
-        return [visit(node) for node in ctx]
-    if ctx is None:
-        return None
-    line, column = get_meta(ctx)
-    if isinstance(ctx, Token):
-        return TaiheAST.token(text=ctx.text, line=line, column=column)
-    kwargs = {"line": line, "column": column}
+def issubkind(real_kind, node_kind):
+    ctx_kind = node_kind + "Context"
+    ctx_type = getattr(TaiheParser, ctx_kind)
+    sub_kind = real_kind + "Context"
+    sub_type = getattr(TaiheParser, sub_kind)
+    subclasses = ctx_type.__subclasses__()
+    if subclasses:
+        return sub_type in subclasses
+    else:
+        return real_kind == node_kind
+
+
+def visit(node_kind: str, ctx, pos_dict: dict) -> Any:
+    if node_kind.endswith("Lst"):
+        node = []
+        for sub in ctx:
+            with suppress(Exception):
+                node.append(visit(node_kind[:-3], sub, pos_dict))
+        return node
+    if node_kind.endswith("Opt"):
+        node = None
+        if ctx is not None:
+            with suppress(Exception):
+                node = visit(node_kind[:-3], ctx, pos_dict)
+        return node
+    beg, end = pos_dict[ctx]
+    if node_kind == "token":
+        return TaiheAST.token(_beg=beg, _end=end, text=ctx.text)
+    kwargs = {"_beg": beg, "_end": end}
     for attr_full_name, attr_ctx in ctx.__dict__.items():
         if attr_full_name[0].isupper() or attr_full_name.startswith("token"):
-            attr_type_name, attr_name = attr_full_name.split("_", 1)
-            kwargs[attr_name] = visit(attr_ctx)
-    ast_class_name = ctx.__class__.__name__[:-7]
-    return getattr(TaiheAST, ast_class_name)(**kwargs)
+            attr_kind_name, attr_name = attr_full_name.split("_", 1)
+            kwargs[attr_name] = visit(attr_kind_name, attr_ctx, pos_dict)
+    real_kind = ctx.__class__.__name__[:-7]
+    assert issubkind(real_kind, node_kind)
+    return getattr(TaiheAST, real_kind)(**kwargs)
 
 
-def generate_ast(input_stream) -> TaiheAST.Spec:
+def generate_ast(source: SourceBase, diag: AbstractDiagnosticsManager) -> TaiheAST.Spec:
+    if isinstance(source, SourceBuffer):
+        input_stream = InputStream(source.buf)
+    elif isinstance(source, SourceFile):
+        input_stream = FileStream(source.source_identifier)
+    else:
+        raise NotImplementedError
+
     lexer = TaiheLexer(input_stream)
-    lexer.addErrorListener(TaiheErrorListener())
     token_stream = CommonTokenStream(lexer)
+
+    pos_dict = {}
+
+    error_listener = TaiheErrorListener(source, diag, pos_dict)
+
     parser = TaiheParser(token_stream)
-    parser.addErrorListener(TaiheErrorListener())
+    parser.removeErrorListeners()
+    parser.addErrorListener(error_listener)
     tree = parser.spec()
-    return visit(tree)
 
+    add_pos(tree, pos_dict)
 
-if __name__ == "__main__":
-    print(generate_ast(StdinStream()))
+    return visit("Spec", tree, pos_dict)

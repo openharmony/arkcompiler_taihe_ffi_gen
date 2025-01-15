@@ -1,6 +1,7 @@
 import argparse
+from pathlib import Path
 
-from taihe.compilation import compile
+from taihe.driver import CompilerInstance, CompilerInvocation
 
 
 def main():
@@ -31,7 +32,14 @@ def main():
         help="generate files for interface user",
     )
     args = parser.parse_args()
-    compile(args.src_dirs, args.dst_dir, args.author, args.user)
+    invocation = CompilerInvocation(
+        src_dirs=[Path(d) for d in args.src_dirs],
+        out_dir=Path(args.dst_dir),
+        gen_author=args.author,
+        gen_user=args.user,
+    )
+    instance = CompilerInstance(invocation)
+    instance.run()
 
 
 if __name__ == "__main__":

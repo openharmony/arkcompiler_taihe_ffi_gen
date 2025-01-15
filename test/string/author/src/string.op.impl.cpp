@@ -1,6 +1,6 @@
 #include "string.op.impl.hpp"
 
-std::tuple<taihe::core::string, taihe::core::string> ohos_split_str(taihe::core::string_view pstr, int32_t n) {
+string::op::StringPair ohos_split_str(taihe::core::string_view pstr, int32_t n) {
     int32_t l = pstr.size();
     if (n > l) {
         n = l;
@@ -10,8 +10,8 @@ std::tuple<taihe::core::string, taihe::core::string> ohos_split_str(taihe::core:
         n = n + l;
     }
     return {
-        pstr.substr(0, n),
-        pstr.substr(n, l - n),
+        taihe::core::substr(pstr, 0, n),
+        taihe::core::substr(pstr, n, l - n),
     };
 }
 

@@ -5,10 +5,21 @@ struct RGB {
 }
 
 enum Color {
-    RED   = 0xff << 0o20;
-    GREEN = 0xff << 0o10;
-    BLUE  = 0xff << 0o00;
+    black = 0x0;
+    red = 0x1;
+    green = 0x2;
+    yellow = 0x3;
+    blue = 0x4;
+    magenta = 0x5;
+    cyan = 0x6;
+    white = 0x7;
 }
 
-function get_rgb(color: Color): RGB;
-function invert_rgb(color: mut RGB): ();
+enum ColorOrRGBOrName {
+    undefined = 0x0;
+    color: Color = 0x1;
+    rgb: RGB = 0x2;
+    name: String = 0x3;
+}
+
+function toString(color: ColorOrRGBOrName): String;

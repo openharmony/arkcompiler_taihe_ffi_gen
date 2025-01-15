@@ -5,7 +5,7 @@ import shutil
 import subprocess
 from pathlib import Path
 import argparse
-from taihe.compilation import compile as taihec
+from taihe.driver import CompilerInstance, CompilerInvocation
 
 CXX = os.getenv("CXX", "clang++")
 C = os.getenv("C", "clang")
@@ -14,6 +14,7 @@ BASEDIR = Path(__file__).resolve().parent
 
 
 def run_command(command):
+    print(f"+ {command}")
     result = subprocess.run(command, shell=True, check=True, text=True)
     return result
 
@@ -51,16 +52,26 @@ def compile(output_dir, input_dir, *include_dirs, opt_level):
     return output_files
 
 
-def link(output_file, *input_files, shared):
+def link(output_file, *input_files, shared, link_options):
     command = f"{CXX} -fPIC -o {output_file}"
     for input_file in input_files:
         command += f" {input_file}"
+    for link_option in link_options:
+        command += f" {link_option}"
     if shared:
         command += " -shared"
     run_command(command)
 
 
-def main(target_dir: str, generate_only: bool, generate_and_compile: bool, opt_level: str):
+def main(
+    target_dir: str,
+    generate_only: bool,
+    generate_and_compile: bool,
+    opt_level: str,
+    author_link_options: list[str],
+    user_link_options: list[str],
+    run_args: list[str],
+):
     target_path = Path(target_dir)
 
     idl_dir = target_path / "idl"
@@ -91,24 +102,31 @@ def main(target_dir: str, generate_only: bool, generate_and_compile: bool, opt_l
     clean_directory(author_test_dir)
     create_directory(author_test_src_dir)
     create_directory(author_test_include_dir)
-    taihec(
-        src_dirs=[idl_dir],
-        dst_dir=author_test_include_dir,
-        gen_author=True,
-    )
+    CompilerInstance(
+        CompilerInvocation(
+            src_dirs=[idl_dir],
+            out_dir=author_test_dir,
+            gen_author=True,
+            quiet=True,
+        )
+    ).run()
+    print("Done.")
 
     print("Generating user codes...")
     clean_directory(user_test_dir)
     create_directory(user_test_src_dir)
     create_directory(user_test_include_dir)
-    taihec(
-        src_dirs=[idl_dir],
-        dst_dir=user_test_include_dir,
-        gen_user=True,
-    )
+    CompilerInstance(
+        CompilerInvocation(
+            src_dirs=[idl_dir],
+            out_dir=user_test_dir,
+            gen_user=True,
+            quiet=True,
+        )
+    ).run()
+    print("Done.")
 
     if generate_only:
-        print("Done.")
         return
 
     clean_directory(build_dir)
@@ -135,7 +153,9 @@ def main(target_dir: str, generate_only: bool, generate_and_compile: bool, opt_l
             opt_level=opt_level,
         ),
         shared=True,
+        link_options=author_link_options,
     )
+    print("Done.")
 
     print("Compiling to executable file...")
     copy_directory(user_dir, user_test_dir)
@@ -151,14 +171,15 @@ def main(target_dir: str, generate_only: bool, generate_and_compile: bool, opt_l
             opt_level=opt_level,
         ),
         shared=False,
+        link_options=user_link_options,
     )
+    print("Done.")
 
     if generate_and_compile:
-        print("Compile.")
         return
 
     print("Done. Running...")
-    run_command(f"{elf_file}")
+    run_command(" ".join([str(elf_file), *run_args]))
 
 
 if __name__ == "__main__":
@@ -183,6 +204,27 @@ if __name__ == "__main__":
         help="Generate source and header files and Compile them",
     )
     parser.add_argument(
+        "-a",
+        "--author-link-options",
+        type=str,
+        nargs="+",
+        default=[],
+    )
+    parser.add_argument(
+        "-u",
+        "--user-link-options",
+        type=str,
+        nargs="+",
+        default=[],
+    )
+    parser.add_argument(
+        "-r",
+        "--run-args",
+        type=str,
+        nargs="+",
+        default=[],
+    )
+    parser.add_argument(
         "-O",
         "--optimization",
         type=str,
@@ -194,4 +236,12 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    main(args.target_directory, args.generate_only, args.generate_and_compile, args.optimization)
+    main(
+        args.target_directory,
+        args.generate_only,
+        args.generate_and_compile,
+        args.optimization,
+        args.author_link_options,
+        args.user_link_options,
+        args.run_args,
+    )
