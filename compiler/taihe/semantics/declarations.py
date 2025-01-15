@@ -120,9 +120,9 @@ class AttrItemDecl(Decl):
         return v.visit_attr_item_decl(self)
 
 
-##############
-# References #
-##############
+###################
+# Type References #
+###################
 
 
 class TypeRefDecl(Decl, metaclass=ABCMeta):
@@ -231,6 +231,38 @@ class GenericTypeRefDecl(TypeRefDecl):
         return f"{self.symbol}<{args_fmt}>"
 
 
+class ArrayTypeRefDecl(TypeRefDecl):
+    symbol: str
+    const: bool
+    arg_ty_ref: TypeRefDecl
+
+    def __init__(
+        self,
+        symbol: str,
+        const: bool,
+        arg_ty_ref: TypeRefDecl,
+        loc: Optional[SourceLocation],
+        resolved_ty: Optional[Type] = None,
+    ):
+        super().__init__(loc, resolved_ty)
+        self.arg_ty_ref = arg_ty_ref
+        self.symbol = symbol
+        self.const = const
+
+    def _accept(self, v: "DeclVisitor") -> Any:
+        return v.visit_array_type_ref_decl(self)
+
+    @property
+    @override
+    def unresolved_name(self):
+        return f"{self.symbol}<{self.arg_ty_ref.unresolved_name}>"
+
+
+#####################
+# Import References #
+#####################
+
+
 class PackageRefDecl(Decl):
     symbol: str
     loc: Optional[SourceLocation]
@@ -264,7 +296,7 @@ class DeclarationRefDecl(Decl):
     pkg_ref: PackageRefDecl
 
     is_resolved: bool
-    resolved_decl: Optional["TypeDecl"]
+    resolved_decl: Optional["PackageLevelDecl"]
 
     def __init__(
         self,

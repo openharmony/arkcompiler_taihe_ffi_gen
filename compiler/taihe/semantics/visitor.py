@@ -15,6 +15,7 @@ Design:
 from typing import Generic, Optional, TypeVar
 
 from taihe.semantics.declarations import (
+    ArrayTypeRefDecl,
     AttrItemDecl,
     BaseFuncDecl,
     BuiltinTypeRefDecl,
@@ -43,6 +44,7 @@ from taihe.semantics.declarations import (
     UserTypeRefDecl,
 )
 from taihe.semantics.types import (
+    ArrayType,
     BuiltinType,
     ScalarType,
     SpecialType,
@@ -121,6 +123,11 @@ class TypeVisitor(Generic[T]):
     def visit_iface_decl(self, d: IfaceDecl) -> T:
         return self.visit_type_decl(d)
 
+    ### Generic Types ###
+
+    def visit_array_type(self, t: ArrayType) -> T:
+        return self.visit_type(t)
+
 
 class DeclVisitor:
     """Traverses a declaration and its child declarations, also traversing the type hierarchy.
@@ -189,6 +196,11 @@ class DeclVisitor:
     def visit_generic_type_ref_decl(self, d: GenericTypeRefDecl) -> None:
         for i in d.args:
             self.handle_decl(i)
+
+        return self.visit_type_ref_decl(d)
+
+    def visit_array_type_ref_decl(self, d: ArrayTypeRefDecl) -> None:
+        self.handle_decl(d.arg_ty_ref)
 
         return self.visit_type_ref_decl(d)
 

@@ -107,3 +107,25 @@ STRING = SpecialType("String", BuiltinTypeKind.STRING)
 _TYPE_MAPS: dict[str, BuiltinType] = {
     ty.name: ty for ty in [BOOL, I8, I16, I32, I64, U8, U16, U32, U64, F32, F64, STRING]
 }
+
+
+class ArrayType(Type, metaclass=ABCMeta):
+    item_ty: Type
+    const: bool
+
+    def __init__(self, item_ty: Type, const: bool):
+        self.item_ty = item_ty
+        self.const = const
+
+    def _accept(self, v: "TypeVisitor") -> Any:
+        return v.visit_array_type(self)
+
+    @property
+    @override
+    def description(self):
+        kind = "const" if self.const else "mut"
+        return f"{kind} array of {self.item_ty.description}"
+
+    def __repr__(self) -> str:
+        kind = "const" if self.const else "mut"
+        return f"<{kind} array of {self.item_ty}>"

@@ -89,7 +89,7 @@ interface BadIface
 {
     a(x: String): void;
     a(x: i32): void;  // DeclConflictError
-    b(x: i32, x: i32): void;  // DeclConflictError
+    b(x: i32, x: CArray<i32>): void;  // DeclConflictError
 }
 
 // Cycle Detection

@@ -26,6 +26,7 @@ from taihe.semantics.declarations import (
     TypeRefDecl,
 )
 from taihe.semantics.types import (
+    ArrayType,
     BuiltinType,
 )
 from taihe.semantics.visitor import DeclVisitor, TypeVisitor
@@ -39,12 +40,17 @@ def pretty_print(x: Decl, buffer: TextIO):
 
 class _TypeNamePrinter(TypeVisitor[str]):
     @override
-    def visit_type_decl(self, d: TypeDecl):
+    def visit_type_decl(self, d: TypeDecl) -> str:
         return f"{pkg.name}.{d.name}" if (pkg := d.node_parent) else d.name
 
     @override
-    def visit_builtin_type(self, t: BuiltinType):
+    def visit_builtin_type(self, t: BuiltinType) -> str:
         return t.name
+
+    @override
+    def visit_array_type(self, t: ArrayType) -> str:
+        kind = "const" if t.const else "mut"
+        return f"{kind} {self.handle_type(t.item_ty)}[]"
 
 
 class _PrettyPrinter(DeclVisitor):

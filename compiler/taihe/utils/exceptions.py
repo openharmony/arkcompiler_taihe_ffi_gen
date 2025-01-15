@@ -163,6 +163,13 @@ class PackageNotInScopeError(DiagError):
 
 
 @dataclass
+class BuiltinSymbolNotExistError(DiagError):
+    MSG = "Cannot find built-in type {name!r}"
+
+    name: str
+
+
+@dataclass
 class SymbolConflictWithNamespaceError(DiagError):
     MSG = "declaration of {decl.description} in {pkg.description} shadows a file-level declaration"
 

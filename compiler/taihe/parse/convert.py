@@ -6,6 +6,7 @@ from typing_extensions import override
 from taihe.parse import Visitor, ast
 from taihe.parse.ast_generation import generate_ast
 from taihe.semantics.declarations import (
+    ArrayTypeRefDecl,
     AttrItemDecl,
     BuiltinTypeRefDecl,
     DeclarationImportDecl,
@@ -24,9 +25,6 @@ from taihe.semantics.declarations import (
     StructDecl,
     StructFieldDecl,
     UserTypeRefDecl,
-)
-from taihe.semantics.types import (
-    BuiltinType,
 )
 from taihe.utils.diagnostics import AbstractDiagnosticsManager
 from taihe.utils.sources import SourceBase, SourceLocation
@@ -171,11 +169,7 @@ class AstConverter(ExprEvaluator):
 
     @override
     def visit_PrimitiveType(self, node: ast.PrimitiveType) -> BuiltinTypeRefDecl:
-        if ty := BuiltinType.lookup(str(node.name)):
-            ty_ref = BuiltinTypeRefDecl(str(node.name), self.loc(node.name), ty)
-        else:
-            raise ValueError()
-        return ty_ref
+        return BuiltinTypeRefDecl(str(node.name), self.loc(node.name))
 
     @override
     def visit_UserType(self, node: ast.UserType) -> UserTypeRefDecl:
@@ -199,6 +193,14 @@ class AstConverter(ExprEvaluator):
         args = [self.visit(arg) for arg in node.args]
         ty_ref = GenericTypeRefDecl(name, args, loc)
         return ty_ref
+
+    @override
+    def visit_ArrayType(self, node: ast.ArrayType) -> ArrayTypeRefDecl:
+        name = str(node.name)
+        const = {"CArray": True, "MArray": False}[name]
+        arg_ty_ref = self.visit(node.arg)
+        loc = self.loc(node)
+        return ArrayTypeRefDecl(name, const, arg_ty_ref, loc)
 
     @override
     def visit_UsePackage(self, node: ast.UsePackage) -> Iterable[PackageImportDecl]:

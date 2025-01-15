@@ -4,7 +4,9 @@ from typing import TYPE_CHECKING, TypeVar
 from typing_extensions import override
 
 from taihe.semantics.declarations import (
+    ArrayTypeRefDecl,
     BaseFuncDecl,
+    BuiltinTypeRefDecl,
     DataTypeDecl,
     DeclarationImportDecl,
     DeclarationRefDecl,
@@ -19,9 +21,14 @@ from taihe.semantics.declarations import (
     TypeDecl,
     UserTypeRefDecl,
 )
+from taihe.semantics.types import (
+    ArrayType,
+    BuiltinType,
+)
 from taihe.semantics.visitor import DeclVisitor
 from taihe.utils.diagnostics import AbstractDiagnosticsManager
 from taihe.utils.exceptions import (
+    BuiltinSymbolNotExistError,
     DeclarationNotInScopeError,
     DeclNotExistError,
     DeclRedefError,
@@ -128,16 +135,25 @@ class _ResolveImportsPass(DeclVisitor):
         if (pkg := d.pkg_ref.resolved_pkg) is None:
             # No need to repeatedly throw exceptions for package import errors
             d.resolved_decl = None
-        elif isinstance(decl := pkg.decls.get(d.symbol), TypeDecl):
+        elif decl := pkg.decls.get(d.symbol):
             d.resolved_decl = decl
-        elif decl:
-            self.diag.emit(NotATypeError(d.symbol, loc=d.loc))
-            d.resolved_decl = None
         else:
             self.diag.emit(DeclNotExistError(d.symbol, loc=d.loc))
             d.resolved_decl = None
 
         d.pkg_ref.is_resolved = True
+
+    @override
+    def visit_builtin_type_ref_decl(self, d: BuiltinTypeRefDecl):
+        if d.is_resolved:
+            return
+
+        if ty := BuiltinType.lookup(d.symbol):
+            d.resolved_ty = ty
+        else:
+            self.diag.emit(BuiltinSymbolNotExistError(d.symbol, loc=d.loc))
+
+        d.is_resolved = True
 
     @override
     def visit_user_type_ref_decl(self, d: UserTypeRefDecl):
@@ -190,12 +206,25 @@ class _ResolveImportsPass(DeclVisitor):
             elif (decl := import_decl.decl_ref.resolved_decl) is None:
                 # No need to repeatedly throw exceptions for declaration import errors
                 d.resolved_ty = None
+            elif not isinstance(decl, TypeDecl):
+                self.diag.emit(NotATypeError(decl_name, loc=d.loc))
             else:
                 d.resolved_ty = decl
 
         # Should not be reached
         else:
             raise ValueError("unexpected format for type reference")
+
+        d.is_resolved = True
+
+    @override
+    def visit_array_type_ref_decl(self, d: ArrayTypeRefDecl):
+        if d.is_resolved:
+            return
+
+        self.handle_decl(d.arg_ty_ref)
+        if (item_ty := d.arg_ty_ref.resolved_ty) is not None:
+            d.resolved_ty = ArrayType(item_ty, d.const)
 
         d.is_resolved = True
 
