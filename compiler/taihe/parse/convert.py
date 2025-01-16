@@ -269,7 +269,7 @@ class AstConverter(ExprEvaluator):
 
     @override
     def visit_InterfaceParent(self, node: ast.InterfaceParent) -> IfaceParentDecl:
-        p = IfaceParentDecl("", None, self.visit(node.ty))
+        p = IfaceParentDecl(self.loc(node.ty), self.visit(node.ty))
         return p
 
     @override

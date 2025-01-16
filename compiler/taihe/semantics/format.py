@@ -7,13 +7,14 @@ from typing_extensions import override
 
 from taihe.semantics.declarations import (
     AttrItemDecl,
-    BaseFuncDecl,
     Decl,
     DeclarationImportDecl,
     DeclarationRefDecl,
     EnumDecl,
     EnumItemDecl,
+    GlobFuncDecl,
     IfaceDecl,
+    IfaceMethodDecl,
     IfaceParentDecl,
     Package,
     PackageGroup,
@@ -150,23 +151,16 @@ class _PrettyPrinter(DeclVisitor):
         )
 
     @override
-    def visit_base_func_decl(self, d: BaseFuncDecl):
+    def visit_glob_func_decl(self, d: GlobFuncDecl):
         self.write_attr(d)
 
-        func_kw = self.as_keyword("fn")
+        func_kw = self.as_keyword("function")
 
         fmt_args = ", ".join(self.get_param_decl(x) for x in d.params)
         ret = f"-> {self.get_type_ref_decl(d.return_ty_ref)}" if d.return_ty_ref else ""
 
         self.buffer.write(self.indent * 2 * " ")
         self.buffer.write(f"{func_kw} {d.name}({fmt_args}){ret};\n")
-
-    @override
-    def visit_struct_field_decl(self, d: StructFieldDecl):
-        self.write_attr(d)
-
-        self.buffer.write(self.indent * 2 * " ")
-        self.buffer.write(f"{d.name}: {self.get_type_ref_decl(d.ty_ref)};\n")
 
     @override
     def visit_enum_item_decl(self, d: EnumItemDecl):
@@ -201,6 +195,13 @@ class _PrettyPrinter(DeclVisitor):
         self.buffer.write("}\n")
 
     @override
+    def visit_struct_field_decl(self, d: StructFieldDecl):
+        self.write_attr(d)
+
+        self.buffer.write(self.indent * 2 * " ")
+        self.buffer.write(f"{d.name}: {self.get_type_ref_decl(d.ty_ref)};\n")
+
+    @override
     def visit_struct_decl(self, d: StructDecl):
         self.write_attr(d)
 
@@ -216,6 +217,16 @@ class _PrettyPrinter(DeclVisitor):
             self.indent -= 1
             self.buffer.write(self.indent * 2 * " ")
         self.buffer.write("}\n")
+
+    @override
+    def visit_iface_func_decl(self, d: IfaceMethodDecl):
+        self.write_attr(d)
+
+        fmt_args = ", ".join(self.get_param_decl(x) for x in d.params)
+        ret = f"-> {self.get_type_ref_decl(d.return_ty_ref)}" if d.return_ty_ref else ""
+
+        self.buffer.write(self.indent * 2 * " ")
+        self.buffer.write(f"{d.name}({fmt_args}){ret};\n")
 
     @override
     def visit_iface_decl(self, d: IfaceDecl):

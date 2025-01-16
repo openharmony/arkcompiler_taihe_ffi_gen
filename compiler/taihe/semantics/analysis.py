@@ -4,12 +4,13 @@ from typing import TYPE_CHECKING, TypeVar
 from typing_extensions import override
 
 from taihe.semantics.declarations import (
-    BaseFuncDecl,
     DeclarationImportDecl,
     DeclarationRefDecl,
     EnumDecl,
     GenericTypeRefDecl,
+    GlobFuncDecl,
     IfaceDecl,
+    IfaceMethodDecl,
     NamedDecl,
     Package,
     PackageGroup,
@@ -272,9 +273,14 @@ class _CheckFieldNameCollisionErrorPass(DeclVisitor):
         self.diag = diag
 
     @override
-    def visit_base_func_decl(self, d: BaseFuncDecl) -> None:
+    def visit_glob_func_decl(self, d: GlobFuncDecl) -> None:
         self.check_collision_helper(d.params)
-        return super().visit_base_func_decl(d)
+        return super().visit_glob_func_decl(d)
+
+    @override
+    def visit_iface_func_decl(self, d: IfaceMethodDecl) -> None:
+        self.check_collision_helper(d.params)
+        return super().visit_iface_func_decl(d)
 
     @override
     def visit_struct_decl(self, d: StructDecl) -> None:

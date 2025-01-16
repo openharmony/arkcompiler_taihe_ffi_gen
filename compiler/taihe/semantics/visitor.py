@@ -16,10 +16,10 @@ from typing import Generic, Optional, TypeVar
 
 from taihe.semantics.declarations import (
     AttrItemDecl,
-    BaseFuncDecl,
     Decl,
     DeclarationImportDecl,
     DeclarationRefDecl,
+    DeclProtocol,
     EnumDecl,
     EnumItemDecl,
     GenericTypeRefDecl,
@@ -49,6 +49,7 @@ from taihe.semantics.types import (
     SpecialType,
     StructType,
     Type,
+    TypeProtocol,
     UserType,
 )
 
@@ -69,10 +70,10 @@ class TypeVisitor(Generic[T]):
         - Example: `visit_enum_decl()` -> `EnumDecl._traverse()` -> `visit_enum_item_decl()`
     """
 
-    visiting: Optional[Type] = None
+    visiting: Optional[TypeProtocol] = None
     """The current node being visited. Only for debug use."""
 
-    def handle_type(self, t: Optional[Type]) -> T:
+    def handle_type(self, t: Optional[TypeProtocol]) -> T:
         """The entrance for visiting."""
         r = self.visiting
         self.visiting = t
@@ -136,10 +137,10 @@ class DeclVisitor:
     See the documentation of `TypeVisitor` for comparison.
     """
 
-    visiting: Optional[Decl] = None
+    visiting: Optional[DeclProtocol] = None
     """The current node being visited. Only for debug use."""
 
-    def handle_decl(self, d: Decl) -> None:
+    def handle_decl(self, d: DeclProtocol) -> None:
         """The entrance for visiting anything "acceptable"."""
         r = self.visiting
         self.visiting = d
@@ -163,15 +164,6 @@ class DeclVisitor:
 
     def visit_param_decl(self, d: ParamDecl) -> None:
         self.handle_decl(d.ty_ref)
-
-        return self.visit_named_decl(d)
-
-    def visit_base_func_decl(self, d: BaseFuncDecl) -> None:
-        for i in d.params:
-            self.handle_decl(i)
-
-        if d.return_ty_ref:
-            self.handle_decl(d.return_ty_ref)
 
         return self.visit_named_decl(d)
 
@@ -222,7 +214,13 @@ class DeclVisitor:
     ### Functions ###
 
     def visit_glob_func_decl(self, d: GlobFuncDecl) -> None:
-        return self.visit_base_func_decl(d)
+        for i in d.params:
+            self.handle_decl(i)
+
+        if d.return_ty_ref:
+            self.handle_decl(d.return_ty_ref)
+
+        return self.visit_named_decl(d)
 
     ### Type (Generic) ###
 
@@ -261,10 +259,16 @@ class DeclVisitor:
     def visit_iface_parent_decl(self, d: IfaceParentDecl) -> None:
         self.handle_decl(d.ty_ref)
 
-        return self.visit_named_decl(d)
+        return self.visit_decl(d)
 
     def visit_iface_func_decl(self, d: IfaceMethodDecl) -> None:
-        return self.visit_base_func_decl(d)
+        for i in d.params:
+            self.handle_decl(i)
+
+        if d.return_ty_ref:
+            self.handle_decl(d.return_ty_ref)
+
+        return self.visit_named_decl(d)
 
     def visit_iface_decl(self, d: IfaceDecl) -> None:
         for i in d.parents:
@@ -297,5 +301,3 @@ class DeclVisitor:
     def visit_package_group(self, g: PackageGroup) -> None:
         for i in g.packages:
             self.handle_decl(i)
-
-        return self.visit_decl(g)

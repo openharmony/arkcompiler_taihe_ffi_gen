@@ -33,6 +33,9 @@ class Type(TypeProtocol, metaclass=ABCMeta):
     @abstractmethod
     def description(self) -> str: ...
 
+    def __repr__(self) -> str:
+        return f"<{self.__class__.__qualname__} {self.description}>"
+
 
 ##################
 # Built-in Types #
@@ -60,9 +63,6 @@ class BuiltinType(Type, metaclass=ABCMeta):
 
     name: str
     kind: BuiltinTypeKind
-
-    def __repr__(self) -> str:
-        return f"<type-builtin {self.name!r}>"
 
     @property
     @override
@@ -133,10 +133,6 @@ class ArrayType(Type, metaclass=ABCMeta):
         kind = "const" if self.const else "mut"
         return f"{kind} array of {self.item_ty.description}"
 
-    def __repr__(self) -> str:
-        kind = "const" if self.const else "mut"
-        return f"<{kind} array of {self.item_ty}>"
-
 
 # Builtin Generics Map
 BUILTIN_GENERICS: dict[str, Callable[[*tuple[Type, ...]], Type]] = {
@@ -157,9 +153,6 @@ class UserType(Type, metaclass=ABCMeta):
     @override
     def description(self):
         return self.ty_decl.description
-
-    def __repr__(self) -> str:
-        return f"<user type {self.ty_decl}>"
 
 
 class StructType(UserType):
