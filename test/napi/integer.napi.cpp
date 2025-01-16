@@ -1,11 +1,6 @@
 #include <iostream>
 
-#include "integer.arithmetic.proj.hpp"
-#include "integer.io.proj.hpp"
-
 #include <node/node_api.h>
-
-using namespace integer;
 
 napi_value napi_ohos_int_sub(napi_env env, napi_callback_info info)
 {
@@ -20,7 +15,7 @@ napi_value napi_ohos_int_sub(napi_env env, napi_callback_info info)
     int32_t value1;
     napi_get_value_int32(env, args[1], &value1);
 
-    int32_t value = arithmetic::sub_i32(value0, value1);
+    int32_t value = value0 + value1;
 
     napi_value result;
     napi_create_int32(env, value, &result);
@@ -37,6 +32,5 @@ napi_value module_init(napi_env env, napi_value exports) {
     napi_define_properties(env, exports, sizeof(desc) / sizeof(desc[0]), desc);
     return exports;
 }
-
 
 NAPI_MODULE(my_api, module_init);

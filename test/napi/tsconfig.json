@@ -1,0 +1,18 @@
+{
+    "compilerOptions": {
+        "target": "es6",
+        "module": "commonjs",
+        "declaration": false,
+        "outDir": "./",
+        "strict": true,
+        "esModuleInterop": true,
+        "baseUrl": ".",
+        "paths": {
+            "integer.node": ["./integer.node"]
+        }
+    },
+    "include": [
+        "*.ts", "*.d.ts"
+    ],
+    "exclude": ["node_modules"]
+}
