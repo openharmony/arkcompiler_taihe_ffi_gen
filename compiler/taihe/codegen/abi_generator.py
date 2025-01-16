@@ -115,24 +115,8 @@ class EnumDeclABIInfo(AbstractAnalysis[EnumDecl]):
         self.as_field = f"struct {self.mangled_name}"
         self.as_param = f"struct {self.mangled_name} const*"
         self.has_data = any(item.ty_ref for item in d.items)
-        self.copy_func = (
-            None
-            if all(
-                f.ty_ref is None
-                or TypeABIInfo.get(am, f.ty_ref.resolved_ty).copy_func is None
-                for f in d.items
-            )
-            else encode(segments, DeclKind.COPY)
-        )
-        self.drop_func = (
-            None
-            if all(
-                f.ty_ref is None
-                or TypeABIInfo.get(am, f.ty_ref.resolved_ty).drop_func is None
-                for f in d.items
-            )
-            else encode(segments, DeclKind.DROP)
-        )
+        self.copy_func = encode(segments, DeclKind.COPY)
+        self.drop_func = encode(segments, DeclKind.DROP)
 
 
 class StructDeclABIInfo(AbstractAnalysis[StructDecl]):
@@ -145,22 +129,8 @@ class StructDeclABIInfo(AbstractAnalysis[StructDecl]):
         self.mangled_name = encode(segments, DeclKind.STRUCT)
         self.as_field = f"struct {self.mangled_name}"
         self.as_param = f"struct {self.mangled_name} const*"
-        self.copy_func = (
-            None
-            if all(
-                TypeABIInfo.get(am, f.ty_ref.resolved_ty).copy_func is None
-                for f in d.fields
-            )
-            else encode(segments, DeclKind.COPY)
-        )
-        self.drop_func = (
-            None
-            if all(
-                TypeABIInfo.get(am, f.ty_ref.resolved_ty).drop_func is None
-                for f in d.fields
-            )
-            else encode(segments, DeclKind.DROP)
-        )
+        self.copy_func = encode(segments, DeclKind.COPY)
+        self.drop_func = encode(segments, DeclKind.DROP)
 
 
 @dataclass
@@ -396,8 +366,6 @@ class ABICodeGenerator:
         struct_abi_defn_target: COutputBuffer,
         struct_abi_info: StructDeclABIInfo,
     ):
-        if struct_abi_info.copy_func is None:
-            return
         struct_abi_defn_target.write(
             f"TH_INLINE struct {struct_abi_info.mangled_name} {struct_abi_info.copy_func}(struct {struct_abi_info.mangled_name} data) {{\n"
             f"  struct {struct_abi_info.mangled_name} result;\n"
@@ -420,8 +388,6 @@ class ABICodeGenerator:
         struct_abi_defn_target: COutputBuffer,
         struct_abi_info: StructDeclABIInfo,
     ):
-        if struct_abi_info.drop_func is None:
-            return
         struct_abi_defn_target.write(
             f"TH_INLINE void {struct_abi_info.drop_func}(struct {struct_abi_info.mangled_name} data) {{\n"
         )
@@ -517,8 +483,6 @@ class ABICodeGenerator:
         enum_abi_defn_target: COutputBuffer,
         enum_abi_info: EnumDeclABIInfo,
     ):
-        if enum_abi_info.copy_func is None:
-            return
         enum_abi_defn_target.write(
             f"TH_INLINE struct {enum_abi_info.mangled_name} {enum_abi_info.copy_func}(struct {enum_abi_info.mangled_name} data) {{\n"
             f"  struct {enum_abi_info.mangled_name} result;\n"
@@ -549,8 +513,6 @@ class ABICodeGenerator:
         enum_abi_defn_target: COutputBuffer,
         enum_abi_info: EnumDeclABIInfo,
     ):
-        if enum_abi_info.drop_func is None:
-            return
         enum_abi_defn_target.write(
             f"TH_INLINE void {enum_abi_info.drop_func}(struct {enum_abi_info.mangled_name} data) {{\n"
             f"  switch (data.tag) {{\n"
