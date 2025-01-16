@@ -48,14 +48,14 @@ class CImplCodeGenerator:
         args = []
         for param in func.params:
             type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.resolved_ty)
-            pkg_c_impl_target.include(type_abi_info.header)
+            pkg_c_impl_target.include(*type_abi_info.defn_headers)
             params.append(f"{type_abi_info.as_param} {param.name}")
             args.append(param.name)
         params_str = ", ".join(params)
         args_str = ", ".join(args)
         if return_ty_ref := func.return_ty_ref:
             type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
-            pkg_c_impl_target.include(type_abi_info.header)
+            pkg_c_impl_target.include(*type_abi_info.defn_headers)
             return_ty_name = type_abi_info.as_field
         else:
             return_ty_name = "void"
