@@ -22,12 +22,12 @@ from taihe.semantics.declarations import (
     ParamDecl,
     StructDecl,
     StructFieldDecl,
-    TypeDecl,
     TypeRefDecl,
 )
 from taihe.semantics.types import (
     ArrayType,
     BuiltinType,
+    UserType,
 )
 from taihe.semantics.visitor import DeclVisitor, TypeVisitor
 from taihe.utils.diagnostics import AnsiStyle
@@ -40,11 +40,16 @@ def pretty_print(x: Decl, buffer: TextIO):
 
 class _TypeNamePrinter(TypeVisitor[str]):
     @override
-    def visit_type_decl(self, d: TypeDecl) -> str:
-        return f"{pkg.name}.{d.name}" if (pkg := d.node_parent) else d.name
+    def visit_user_type(self, t: UserType) -> str:
+        ty_decl = t.ty_decl
+        return (
+            f"{pkg.name}.{ty_decl.name}"
+            if (pkg := ty_decl.node_parent)
+            else ty_decl.name
+        )
 
     @override
-    def visit_builtin_type(self, t: BuiltinType) -> str:
+    def visit_builtin_simple_type(self, t: BuiltinType) -> str:
         return t.name
 
     @override

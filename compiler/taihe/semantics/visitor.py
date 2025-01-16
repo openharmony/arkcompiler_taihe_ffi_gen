@@ -15,11 +15,8 @@ Design:
 from typing import Generic, Optional, TypeVar
 
 from taihe.semantics.declarations import (
-    ArrayTypeRefDecl,
     AttrItemDecl,
     BaseFuncDecl,
-    BuiltinTypeRefDecl,
-    DataTypeDecl,
     Decl,
     DeclarationImportDecl,
     DeclarationRefDecl,
@@ -37,18 +34,22 @@ from taihe.semantics.declarations import (
     PackageImportDecl,
     PackageRefDecl,
     ParamDecl,
+    SimpleTypeRefDecl,
     StructDecl,
     StructFieldDecl,
     TypeDecl,
     TypeRefDecl,
-    UserTypeRefDecl,
 )
 from taihe.semantics.types import (
     ArrayType,
     BuiltinType,
+    EnumType,
+    IfaceType,
     ScalarType,
     SpecialType,
+    StructType,
     Type,
+    UserType,
 )
 
 T = TypeVar("T")
@@ -97,31 +98,28 @@ class TypeVisitor(Generic[T]):
 
     ### Built-in types ###
 
-    def visit_builtin_type(self, t: BuiltinType) -> T:
+    def visit_builtin_simple_type(self, t: BuiltinType) -> T:
         return self.visit_type(t)
 
     def visit_scalar_type(self, t: ScalarType) -> T:
-        return self.visit_builtin_type(t)
+        return self.visit_builtin_simple_type(t)
 
     def visit_special_type(self, t: SpecialType) -> T:
-        return self.visit_builtin_type(t)
+        return self.visit_builtin_simple_type(t)
 
-    ### Declarations ###
+    ### UserTypes ###
 
-    def visit_type_decl(self, d: TypeDecl) -> T:
-        return self.visit_type(d)
+    def visit_user_type(self, t: UserType) -> T:
+        return self.visit_type(t)
 
-    def visit_data_type_decl(self, d: DataTypeDecl) -> T:
-        return self.visit_type_decl(d)
+    def visit_struct_type(self, t: StructType) -> T:
+        return self.visit_user_type(t)
 
-    def visit_struct_decl(self, d: StructDecl) -> T:
-        return self.visit_data_type_decl(d)
+    def visit_enum_type(self, t: EnumType) -> T:
+        return self.visit_user_type(t)
 
-    def visit_enum_decl(self, d: EnumDecl) -> T:
-        return self.visit_data_type_decl(d)
-
-    def visit_iface_decl(self, d: IfaceDecl) -> T:
-        return self.visit_type_decl(d)
+    def visit_iface_type(self, t: IfaceType) -> T:
+        return self.visit_user_type(t)
 
     ### Generic Types ###
 
@@ -187,20 +185,12 @@ class DeclVisitor:
     def visit_type_ref_decl(self, d: TypeRefDecl) -> None:
         return self.visit_decl(d)
 
-    def visit_user_type_ref_decl(self, d: UserTypeRefDecl) -> None:
-        return self.visit_type_ref_decl(d)
-
-    def visit_builtin_type_ref_decl(self, d: BuiltinTypeRefDecl) -> None:
+    def visit_simple_type_ref_decl(self, d: SimpleTypeRefDecl) -> None:
         return self.visit_type_ref_decl(d)
 
     def visit_generic_type_ref_decl(self, d: GenericTypeRefDecl) -> None:
-        for i in d.args:
+        for i in d.args_ty_ref:
             self.handle_decl(i)
-
-        return self.visit_type_ref_decl(d)
-
-    def visit_array_type_ref_decl(self, d: ArrayTypeRefDecl) -> None:
-        self.handle_decl(d.arg_ty_ref)
 
         return self.visit_type_ref_decl(d)
 
@@ -239,9 +229,6 @@ class DeclVisitor:
     def visit_type_decl(self, d: TypeDecl) -> None:
         return self.visit_named_decl(d)
 
-    def visit_data_type_decl(self, d: DataTypeDecl) -> None:
-        return self.visit_type_decl(d)
-
     ### Struct ###
 
     def visit_struct_field_decl(self, d: StructFieldDecl) -> None:
@@ -253,7 +240,7 @@ class DeclVisitor:
         for i in d.fields:
             self.handle_decl(i)
 
-        return self.visit_data_type_decl(d)
+        return self.visit_type_decl(d)
 
     ### Enum ###
 
@@ -267,7 +254,7 @@ class DeclVisitor:
         for i in d.items:
             self.handle_decl(i)
 
-        return self.visit_data_type_decl(d)
+        return self.visit_type_decl(d)
 
     ### Interface ###
 

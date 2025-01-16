@@ -87,10 +87,8 @@ attrVal
 
 type
     : LEFT_PARENTHESIS Type_inner_ty = type RIGHT_PARENTHESIS # parenthesisType
-    | token_name = (KW_I8 | KW_I16 | KW_I32 | KW_I64 | KW_U8 | KW_U16 | KW_U32 | KW_U64 | KW_F32 | KW_F64 | KW_BOOL | KW_STRING) # primitiveType
     | (PkgNameOpt_pkg_name = pkgName DOT)? token_decl_name = ID # userType
     | (PkgNameOpt_pkg_name = pkgName DOT)? token_decl_name = ID LESS_THAN (TypeLst_args += type (COMMA TypeLst_args += type)*)? GREATER_THAN # genericType
-    | token_name = (KW_C_ARRAY | KW_M_ARRAY) LESS_THAN Type_arg = type GREATER_THAN # arrayType
     | <assoc = right>
       LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS ARROW (TypeOpt_return_ty = type | KW_VOID) # functionType
     ;
@@ -323,62 +321,6 @@ KW_CONSTRUCTOR
 
 KW_FUNCTION
     : 'function'
-    ;
-
-KW_I8
-    : 'i8'
-    ;
-
-KW_I16
-    : 'i16'
-    ;
-
-KW_I32
-    : 'i32'
-    ;
-
-KW_I64
-    : 'i64'
-    ;
-
-KW_U8
-    : 'u8'
-    ;
-
-KW_U16
-    : 'u16'
-    ;
-
-KW_U32
-    : 'u32'
-    ;
-
-KW_U64
-    : 'u64'
-    ;
-
-KW_F32
-    : 'f32'
-    ;
-
-KW_F64
-    : 'f64'
-    ;
-
-KW_BOOL
-    : 'bool'
-    ;
-
-KW_STRING
-    : 'String'
-    ;
-
-KW_C_ARRAY
-    : 'CArray'
-    ;
-
-KW_M_ARRAY
-    : 'MArray'
     ;
 
 KW_VOID

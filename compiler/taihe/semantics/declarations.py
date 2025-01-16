@@ -6,12 +6,18 @@ from typing import TYPE_CHECKING, Any, ClassVar, Optional, Protocol
 
 from typing_extensions import override
 
-from taihe.semantics.types import Type
+from taihe.semantics.types import (
+    EnumType,
+    IfaceType,
+    StructType,
+    Type,
+    UserType,
+)
 from taihe.utils.exceptions import AttrRedefError, DeclRedefError
 from taihe.utils.sources import SourceLocation
 
 if TYPE_CHECKING:
-    from taihe.semantics.visitor import DeclVisitor, TypeVisitor
+    from taihe.semantics.visitor import DeclVisitor
 
 ################
 # Declarations #
@@ -134,9 +140,9 @@ class TypeRefDecl(Decl, metaclass=ABCMeta):
 
     For example:
     ```
-    struct Foo { ... }.     // `Foo` is a `TypeDecl`.
+    struct Foo { ... }      // `Foo` is a `TypeDecl`.
 
-    fn func(foo: mut Foo);  // `mut Foo` is `TypeRefDecl(ty=TypeDecl('Foo'), qual=MUT)`.
+    fn func(foo: Foo);      // `Foo` is `TypeRefDecl(ty=UserType(ty_decl=TypeDecl('Foo')))`.
     fn func(foo: BadType);  // `BadType` is `TypeRefDecl(ty=None)`.
     ```
     """
@@ -164,7 +170,7 @@ class TypeRefDecl(Decl, metaclass=ABCMeta):
         return f"<type reference {self.unresolved_name} at {self.loc}>"
 
 
-class UserTypeRefDecl(TypeRefDecl):
+class SimpleTypeRefDecl(TypeRefDecl):
     symbol: str
 
     def __init__(
@@ -177,28 +183,7 @@ class UserTypeRefDecl(TypeRefDecl):
         self.symbol = symbol
 
     def _accept(self, v: "DeclVisitor") -> Any:
-        return v.visit_user_type_ref_decl(self)
-
-    @property
-    @override
-    def unresolved_name(self):
-        return self.symbol
-
-
-class BuiltinTypeRefDecl(TypeRefDecl):
-    symbol: str
-
-    def __init__(
-        self,
-        symbol: str,
-        loc: Optional[SourceLocation],
-        resolved_ty: Optional[Type] = None,
-    ):
-        super().__init__(loc, resolved_ty)
-        self.symbol = symbol
-
-    def _accept(self, v: "DeclVisitor") -> Any:
-        return v.visit_builtin_type_ref_decl(self)
+        return v.visit_simple_type_ref_decl(self)
 
     @property
     @override
@@ -208,18 +193,18 @@ class BuiltinTypeRefDecl(TypeRefDecl):
 
 class GenericTypeRefDecl(TypeRefDecl):
     symbol: str
-    args: list[TypeRefDecl]
+    args_ty_ref: list[TypeRefDecl]
 
     def __init__(
         self,
         symbol: str,
-        args: list[TypeRefDecl],
         loc: Optional[SourceLocation],
+        args_ty_ref: list[TypeRefDecl],
         resolved_ty: Optional[Type] = None,
     ):
         super().__init__(loc, resolved_ty)
         self.symbol = symbol
-        self.args = args
+        self.args_ty_ref = args_ty_ref
 
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_generic_type_ref_decl(self)
@@ -227,35 +212,8 @@ class GenericTypeRefDecl(TypeRefDecl):
     @property
     @override
     def unresolved_name(self):
-        args_fmt = ", ".join(arg.unresolved_name for arg in self.args)
+        args_fmt = ", ".join(arg.unresolved_name for arg in self.args_ty_ref)
         return f"{self.symbol}<{args_fmt}>"
-
-
-class ArrayTypeRefDecl(TypeRefDecl):
-    symbol: str
-    const: bool
-    arg_ty_ref: TypeRefDecl
-
-    def __init__(
-        self,
-        symbol: str,
-        const: bool,
-        arg_ty_ref: TypeRefDecl,
-        loc: Optional[SourceLocation],
-        resolved_ty: Optional[Type] = None,
-    ):
-        super().__init__(loc, resolved_ty)
-        self.arg_ty_ref = arg_ty_ref
-        self.symbol = symbol
-        self.const = const
-
-    def _accept(self, v: "DeclVisitor") -> Any:
-        return v.visit_array_type_ref_decl(self)
-
-    @property
-    @override
-    def unresolved_name(self):
-        return f"{self.symbol}<{self.arg_ty_ref.unresolved_name}>"
 
 
 #####################
@@ -461,12 +419,14 @@ class GlobFuncDecl(BaseFuncDecl, PackageLevelDecl):
         return v.visit_glob_func_decl(self)
 
 
-class TypeDecl(PackageLevelDecl, Type, metaclass=ABCMeta):
-    pass
+#####################
+# Type Declarations #
+#####################
 
 
-class DataTypeDecl(TypeDecl, metaclass=ABCMeta):
-    pass
+class TypeDecl(PackageLevelDecl, metaclass=ABCMeta):
+    @abstractmethod
+    def as_type(self) -> UserType: ...
 
 
 class EnumItemDecl(NamedDecl):
@@ -493,7 +453,7 @@ class EnumItemDecl(NamedDecl):
         return v.visit_enum_item_decl(self)
 
 
-class EnumDecl(DataTypeDecl):
+class EnumDecl(TypeDecl):
     KIND = "enum"
 
     items: list[EnumItemDecl]
@@ -503,12 +463,16 @@ class EnumDecl(DataTypeDecl):
         self.items = []
 
     @override
-    def _accept(self, v: "DeclVisitor | TypeVisitor") -> Any:
+    def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_enum_decl(self)
 
     def add_item(self, f: EnumItemDecl):
         f.node_parent = self
         self.items.append(f)
+
+    @override
+    def as_type(self) -> UserType:
+        return EnumType(self)
 
 
 class StructFieldDecl(NamedDecl):
@@ -532,7 +496,7 @@ class StructFieldDecl(NamedDecl):
         return v.visit_struct_field_decl(self)
 
 
-class StructDecl(DataTypeDecl):
+class StructDecl(TypeDecl):
     KIND = "struct"
 
     fields: list[StructFieldDecl]
@@ -542,12 +506,16 @@ class StructDecl(DataTypeDecl):
         self.fields = []
 
     @override
-    def _accept(self, v: "TypeVisitor | DeclVisitor") -> Any:
+    def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_struct_decl(self)
 
     def add_field(self, f: StructFieldDecl):
         f.node_parent = self
         self.fields.append(f)
+
+    @override
+    def as_type(self) -> UserType:
+        return StructType(self)
 
 
 class IfaceParentDecl(NamedDecl):
@@ -593,7 +561,7 @@ class IfaceDecl(TypeDecl):
         self.parents = []
 
     @override
-    def _accept(self, v: "TypeVisitor | DeclVisitor") -> Any:
+    def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_iface_decl(self)
 
     def add_method(self, f: IfaceMethodDecl):
@@ -603,6 +571,10 @@ class IfaceDecl(TypeDecl):
     def add_parent(self, p: IfaceParentDecl):
         p.node_parent = self
         self.parents.append(p)
+
+    @override
+    def as_type(self) -> UserType:
+        return IfaceType(self)
 
 
 ######################

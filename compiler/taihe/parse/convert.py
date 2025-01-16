@@ -6,9 +6,7 @@ from typing_extensions import override
 from taihe.parse import Visitor, ast
 from taihe.parse.ast_generation import generate_ast
 from taihe.semantics.declarations import (
-    ArrayTypeRefDecl,
     AttrItemDecl,
-    BuiltinTypeRefDecl,
     DeclarationImportDecl,
     DeclarationRefDecl,
     EnumDecl,
@@ -22,9 +20,9 @@ from taihe.semantics.declarations import (
     PackageImportDecl,
     PackageRefDecl,
     ParamDecl,
+    SimpleTypeRefDecl,
     StructDecl,
     StructFieldDecl,
-    UserTypeRefDecl,
 )
 from taihe.utils.diagnostics import AbstractDiagnosticsManager
 from taihe.utils.sources import SourceBase, SourceLocation
@@ -168,18 +166,14 @@ class AstConverter(ExprEvaluator):
         return d
 
     @override
-    def visit_PrimitiveType(self, node: ast.PrimitiveType) -> BuiltinTypeRefDecl:
-        return BuiltinTypeRefDecl(str(node.name), self.loc(node.name))
-
-    @override
-    def visit_UserType(self, node: ast.UserType) -> UserTypeRefDecl:
+    def visit_UserType(self, node: ast.UserType) -> SimpleTypeRefDecl:
         if node.pkg_name:
             loc = self.loc(node)
             name = pkg2str(node.pkg_name) + "." + str(node.decl_name)
         else:
             loc = self.loc(node.decl_name)
             name = str(node.decl_name)
-        ty_ref = UserTypeRefDecl(name, loc)
+        ty_ref = SimpleTypeRefDecl(name, loc)
         return ty_ref
 
     @override
@@ -191,16 +185,8 @@ class AstConverter(ExprEvaluator):
             loc = self.loc(node.decl_name)
             name = str(node.decl_name)
         args = [self.visit(arg) for arg in node.args]
-        ty_ref = GenericTypeRefDecl(name, args, loc)
+        ty_ref = GenericTypeRefDecl(name, loc, args)
         return ty_ref
-
-    @override
-    def visit_ArrayType(self, node: ast.ArrayType) -> ArrayTypeRefDecl:
-        name = str(node.name)
-        const = {"CArray": True, "MArray": False}[name]
-        arg_ty_ref = self.visit(node.arg)
-        loc = self.loc(node)
-        return ArrayTypeRefDecl(name, const, arg_ty_ref, loc)
 
     @override
     def visit_UsePackage(self, node: ast.UsePackage) -> Iterable[PackageImportDecl]:

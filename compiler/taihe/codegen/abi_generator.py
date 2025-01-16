@@ -30,8 +30,11 @@ from taihe.semantics.types import (
     U16,
     U32,
     U64,
+    EnumType,
+    IfaceType,
     ScalarType,
     SpecialType,
+    StructType,
     Type,
 )
 from taihe.semantics.visitor import TypeVisitor
@@ -193,9 +196,9 @@ class IfaceDeclABIInfo(AbstractAnalysis[IfaceDecl]):
         self.ancestor_dict: dict[IfaceDecl, UniqueAncestorInfo] = {}
         self.ancestors = [d]
         for extend in d.parents:
-            iface = extend.ty_ref.resolved_ty
-            assert isinstance(iface, IfaceDecl)
-            extend_abi_info = IfaceDeclABIInfo.get(am, iface)
+            ty = extend.ty_ref.resolved_ty
+            assert isinstance(ty, IfaceType)
+            extend_abi_info = IfaceDeclABIInfo.get(am, ty.ty_decl)
             self.ancestors.extend(extend_abi_info.ancestors)
         for i, ancestor in enumerate(self.ancestors):
             ftbl_ptr = f"ftbl_ptr_{i}"
@@ -229,8 +232,8 @@ class TypeABIInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
         self.handle_type(t)
 
     @override
-    def visit_enum_decl(self, d: EnumDecl) -> None:
-        enum_abi_info = EnumDeclABIInfo.get(self.am, d)
+    def visit_enum_type(self, t: EnumType) -> None:
+        enum_abi_info = EnumDeclABIInfo.get(self.am, t.ty_decl)
         self.header = enum_abi_info.header
         self.as_field = enum_abi_info.as_field
         self.as_param = enum_abi_info.as_param
@@ -238,8 +241,8 @@ class TypeABIInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
         self.drop_func = enum_abi_info.drop_func
 
     @override
-    def visit_struct_decl(self, d: StructDecl) -> None:
-        struct_abi_info = StructDeclABIInfo.get(self.am, d)
+    def visit_struct_type(self, t: StructType) -> None:
+        struct_abi_info = StructDeclABIInfo.get(self.am, t.ty_decl)
         self.header = struct_abi_info.header
         self.as_field = struct_abi_info.as_field
         self.as_param = struct_abi_info.as_param
@@ -247,8 +250,8 @@ class TypeABIInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
         self.drop_func = struct_abi_info.drop_func
 
     @override
-    def visit_iface_decl(self, d: IfaceDecl) -> None:
-        iface_abi_info = IfaceDeclABIInfo.get(self.am, d)
+    def visit_iface_type(self, t: IfaceType) -> None:
+        iface_abi_info = IfaceDeclABIInfo.get(self.am, t.ty_decl)
         self.header = iface_abi_info.header_0
         self.as_field = iface_abi_info.as_field
         self.as_param = iface_abi_info.as_param

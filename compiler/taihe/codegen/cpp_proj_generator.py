@@ -35,8 +35,11 @@ from taihe.semantics.types import (
     U16,
     U32,
     U64,
+    EnumType,
+    IfaceType,
     ScalarType,
     SpecialType,
+    StructType,
     Type,
 )
 from taihe.semantics.visitor import TypeVisitor
@@ -153,8 +156,8 @@ class TypeCppProjInfo(AbstractAnalysis[Optional[Type]], TypeVisitor):
         self.handle_type(t)
 
     @override
-    def visit_enum_decl(self, d: EnumDecl) -> Any:
-        enum_cpp_proj_info = EnumDeclCppProjInfo.get(self.am, d)
+    def visit_enum_type(self, t: EnumType) -> Any:
+        enum_cpp_proj_info = EnumDeclCppProjInfo.get(self.am, t.ty_decl)
         self.header_decl = enum_cpp_proj_info.header
         self.header_defn = enum_cpp_proj_info.header
         self.as_owner = enum_cpp_proj_info.as_owner
@@ -165,8 +168,8 @@ class TypeCppProjInfo(AbstractAnalysis[Optional[Type]], TypeVisitor):
         self.return_into_abi = enum_cpp_proj_info.return_into_abi
 
     @override
-    def visit_struct_decl(self, d: StructDecl) -> Any:
-        struct_cpp_proj_info = StructDeclCppProjInfo.get(self.am, d)
+    def visit_struct_type(self, t: StructType) -> Any:
+        struct_cpp_proj_info = StructDeclCppProjInfo.get(self.am, t.ty_decl)
         self.header_decl = struct_cpp_proj_info.header
         self.header_defn = struct_cpp_proj_info.header
         self.as_owner = struct_cpp_proj_info.as_owner
@@ -177,8 +180,8 @@ class TypeCppProjInfo(AbstractAnalysis[Optional[Type]], TypeVisitor):
         self.return_into_abi = struct_cpp_proj_info.return_into_abi
 
     @override
-    def visit_iface_decl(self, d: IfaceDecl) -> Any:
-        iface_cpp_proj_info = IfaceDeclCppProjInfo.get(self.am, d)
+    def visit_iface_type(self, t: IfaceType) -> Any:
+        iface_cpp_proj_info = IfaceDeclCppProjInfo.get(self.am, t.ty_decl)
         self.header_decl = iface_cpp_proj_info.header_decl
         self.header_defn = iface_cpp_proj_info.header_defn
         self.as_owner = iface_cpp_proj_info.as_owner

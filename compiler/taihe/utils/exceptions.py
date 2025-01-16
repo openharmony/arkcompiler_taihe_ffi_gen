@@ -7,7 +7,6 @@ from taihe.utils.sources import SourceLocation
 if TYPE_CHECKING:
     from taihe.semantics.declarations import (
         AttrItemDecl,
-        DataTypeDecl,
         EnumItemDecl,
         IfaceDecl,
         IfaceParentDecl,
@@ -15,6 +14,7 @@ if TYPE_CHECKING:
         Package,
         PackageLevelDecl,
         Type,
+        TypeDecl,
         TypeRefDecl,
     )
 
@@ -163,8 +163,8 @@ class PackageNotInScopeError(DiagError):
 
 
 @dataclass
-class BuiltinSymbolNotExistError(DiagError):
-    MSG = "Cannot find built-in type {name!r}"
+class GenericArgumentsError(DiagError):
+    MSG = "Generic arguments error while handling {name!r}"
 
     name: str
 
@@ -212,65 +212,30 @@ class DuplicateExtendsWarn(DiagWarn):
 
 
 @dataclass
-class RecursiveExtensionNote(DiagNote):
-    MSG = "extended by {iface.description}"
-
-    iface: "IfaceDecl"
-
-    def __init__(
-        self,
-        last: tuple["IfaceDecl", "TypeRefDecl"],
-    ):
-        self.loc = last[1].loc
-        self.iface = last[0]
-
-
-@dataclass
-class RecursiveExtensionError(DiagError):
-    MSG = "recursive extension is found in {iface.description}"
-
-    iface: "IfaceDecl"
-    other: list[tuple["IfaceDecl", "TypeRefDecl"]]
-
-    def __init__(
-        self,
-        last: tuple["IfaceDecl", "TypeRefDecl"],
-        other: list[tuple["IfaceDecl", "TypeRefDecl"]],
-    ):
-        self.loc = last[1].loc
-        self.iface = last[0]
-        self.other = other
-
-    def notes(self):
-        for n in self.other:
-            yield RecursiveExtensionNote(n)
-
-
-@dataclass
-class RecursiveInclusionNote(DiagNote):
+class RecursiveReferenceNote(DiagNote):
     MSG = "referenced by {decl.description}"
 
-    decl: "DataTypeDecl"
+    decl: "TypeDecl"
 
     def __init__(
         self,
-        last: tuple["DataTypeDecl", "TypeRefDecl"],
+        last: tuple["TypeDecl", "TypeRefDecl"],
     ):
         self.loc = last[1].loc
         self.decl = last[0]
 
 
 @dataclass
-class RecursiveInclusionError(DiagError):
+class RecursiveReferenceError(DiagError):
     MSG = "cycle detected in {decl.description}"
 
-    decl: "DataTypeDecl"
-    other: list[tuple["DataTypeDecl", "TypeRefDecl"]]
+    decl: "TypeDecl"
+    other: list[tuple["TypeDecl", "TypeRefDecl"]]
 
     def __init__(
         self,
-        last: tuple["DataTypeDecl", "TypeRefDecl"],
-        other: list[tuple["DataTypeDecl", "TypeRefDecl"]],
+        last: tuple["TypeDecl", "TypeRefDecl"],
+        other: list[tuple["TypeDecl", "TypeRefDecl"]],
     ):
         self.loc = last[1].loc
         self.decl = last[0]
@@ -278,4 +243,4 @@ class RecursiveInclusionError(DiagError):
 
     def notes(self):
         for n in self.other:
-            yield RecursiveInclusionNote(n)
+            yield RecursiveReferenceNote(n)

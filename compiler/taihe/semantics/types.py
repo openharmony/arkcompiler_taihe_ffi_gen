@@ -1,13 +1,20 @@
 """Defines the type system."""
 
 from abc import ABCMeta, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Optional, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 from typing_extensions import override
 
 if TYPE_CHECKING:
+    from taihe.semantics.declarations import (
+        EnumDecl,
+        IfaceDecl,
+        StructDecl,
+        TypeDecl,
+    )
     from taihe.semantics.visitor import TypeVisitor
 
 ############################
@@ -54,13 +61,6 @@ class BuiltinType(Type, metaclass=ABCMeta):
     name: str
     kind: BuiltinTypeKind
 
-    def _accept(self, v: "TypeVisitor") -> Any:
-        return v.visit_builtin_type(self)
-
-    @staticmethod
-    def lookup(name: str) -> Optional["BuiltinType"]:
-        return _TYPE_MAPS.get(name)
-
     def __repr__(self) -> str:
         return f"<type-builtin {self.name!r}>"
 
@@ -86,9 +86,8 @@ class SpecialType(BuiltinType):
         return v.visit_special_type(self)
 
 
-BOOL = ScalarType(
-    "bool", BuiltinTypeKind.BOOL, 8, is_signed=False
-)  # Essentially a `u8`
+BOOL = ScalarType("bool", BuiltinTypeKind.BOOL, 8, is_signed=False)
+
 F32 = ScalarType("f32", BuiltinTypeKind.FLOAT, 32, is_signed=True, is_float=True)
 F64 = ScalarType("f64", BuiltinTypeKind.FLOAT, 64, is_signed=True, is_float=True)
 
@@ -104,17 +103,25 @@ U64 = ScalarType("u64", BuiltinTypeKind.INTEGER, 64, is_signed=False)
 
 STRING = SpecialType("String", BuiltinTypeKind.STRING)
 
-_TYPE_MAPS: dict[str, BuiltinType] = {
+# Builtin Types map
+BUILTIN_TYPES: dict[str, Type] = {
     ty.name: ty for ty in [BOOL, I8, I16, I32, I64, U8, U16, U32, U64, F32, F64, STRING]
 }
+
+
+####################
+# Builtin Generics #
+####################
 
 
 class ArrayType(Type, metaclass=ABCMeta):
     item_ty: Type
     const: bool
 
-    def __init__(self, item_ty: Type, const: bool):
-        self.item_ty = item_ty
+    def __init__(self, *item_ty: Type, const: bool):
+        if len(item_ty) != 1:
+            raise TypeError
+        self.item_ty = item_ty[0]
         self.const = const
 
     def _accept(self, v: "TypeVisitor") -> Any:
@@ -129,3 +136,57 @@ class ArrayType(Type, metaclass=ABCMeta):
     def __repr__(self) -> str:
         kind = "const" if self.const else "mut"
         return f"<{kind} array of {self.item_ty}>"
+
+
+# Builtin Generics Map
+BUILTIN_GENERICS: dict[str, Callable[[*tuple[Type, ...]], Type]] = {
+    "MArray": lambda *t: ArrayType(*t, const=False),
+    "CArray": lambda *t: ArrayType(*t, const=True),
+}
+
+
+##############
+# User Types #
+##############
+
+
+class UserType(Type, metaclass=ABCMeta):
+    ty_decl: "TypeDecl"
+
+    @property
+    @override
+    def description(self):
+        return self.ty_decl.description
+
+    def __repr__(self) -> str:
+        return f"<user type {self.ty_decl}>"
+
+
+class StructType(UserType):
+    ty_decl: "StructDecl"
+
+    def __init__(self, decl: "StructDecl"):
+        self.ty_decl = decl
+
+    def _accept(self, v: "TypeVisitor") -> Any:
+        return v.visit_struct_type(self)
+
+
+class EnumType(UserType):
+    ty_decl: "EnumDecl"
+
+    def __init__(self, decl: "EnumDecl"):
+        self.ty_decl = decl
+
+    def _accept(self, v: "TypeVisitor") -> Any:
+        return v.visit_enum_type(self)
+
+
+class IfaceType(UserType):
+    ty_decl: "IfaceDecl"
+
+    def __init__(self, decl: "IfaceDecl"):
+        self.ty_decl = decl
+
+    def _accept(self, v: "TypeVisitor") -> Any:
+        return v.visit_iface_type(self)

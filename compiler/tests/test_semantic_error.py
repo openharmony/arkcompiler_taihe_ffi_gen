@@ -14,7 +14,7 @@ from taihe.utils.exceptions import (
     PackageNotInScopeError,
     PackageRedefError,
     RecursiveExtensionError,
-    RecursiveInclusionError,
+    RecursiveReferenceError,
     SymbolConflictWithNamespaceError,
 )
 from taihe.utils.sources import SourceManager
@@ -312,7 +312,7 @@ def test_recursive_inclusion():
         "}\n"
     )
     test_instance.run()
-    test_instance.assert_has_error(RecursiveInclusionError)
+    test_instance.assert_has_error(RecursiveReferenceError)
 
 
 def test_extends_type():
