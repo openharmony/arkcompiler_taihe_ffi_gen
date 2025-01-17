@@ -6,6 +6,7 @@ from typing_extensions import override
 from taihe.parse import Visitor, ast
 from taihe.parse.ast_generation import generate_ast
 from taihe.semantics.declarations import (
+    ArrayTypeRefDecl,
     AttrItemDecl,
     DeclarationImportDecl,
     DeclarationRefDecl,
@@ -23,6 +24,7 @@ from taihe.semantics.declarations import (
     SimpleTypeRefDecl,
     StructDecl,
     StructFieldDecl,
+    TypeRefDecl,
 )
 from taihe.utils.diagnostics import AbstractDiagnosticsManager
 from taihe.utils.sources import SourceBase, SourceLocation
@@ -187,6 +189,16 @@ class AstConverter(ExprEvaluator):
         args = [self.visit(arg) for arg in node.args]
         ty_ref = GenericTypeRefDecl(name, loc, args)
         return ty_ref
+
+    @override
+    def visit_ArrayType(self, node: ast.ArrayType) -> ArrayTypeRefDecl:
+        loc = self.loc(node)
+        item = self.visit(node.item)
+        return ArrayTypeRefDecl(loc, item)
+
+    @override
+    def visit_ParenthesisType(self, node: ast.ParenthesisType) -> TypeRefDecl:
+        return self.visit(node.inner_ty)
 
     @override
     def visit_UsePackage(self, node: ast.UsePackage) -> Iterable[PackageImportDecl]:

@@ -55,6 +55,14 @@ public:
     }
 };
 
+void show_array(array_view<IBase> arr, string_view sv) {
+    std::cout << sv << ": ";
+    for (auto item : arr) {
+        std::cout << item.getId() << ", ";
+    }
+    std::cout << std::endl;
+}
+
 int main() {
     Color yellow = Color::make_yellow();
     ColorOrRGBOrName color_114514 = ColorOrRGBOrName::make_rgb(RGB{0x11, 0x45, 0x14});
@@ -110,4 +118,13 @@ int main() {
     rect.show();
     copyColor(rect, circle);
     rect.show();
+
+    auto dst = array<IBase>(10, circle);
+    auto src = array<IBase>(4, rect);
+    show_array(dst, "dst");
+    show_array(src, "src");
+    auto res = exchange(dst, src);
+    show_array(dst, "dst");
+    show_array(src, "src");
+    show_array(res, "res");
 }

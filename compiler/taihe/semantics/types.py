@@ -13,6 +13,7 @@ if TYPE_CHECKING:
         EnumDecl,
         IfaceDecl,
         StructDecl,
+        TemplateDecl,
         TypeDecl,
     )
     from taihe.semantics.visitor import TypeVisitor
@@ -116,13 +117,9 @@ BUILTIN_TYPES: dict[str, Type] = {
 
 class ArrayType(Type, metaclass=ABCMeta):
     item_ty: Type
-    const: bool
 
-    def __init__(self, *item_ty: Type, const: bool):
-        if len(item_ty) != 1:
-            raise TypeError
-        self.item_ty = item_ty[0]
-        self.const = const
+    def __init__(self, item_ty: Type):
+        self.item_ty = item_ty
 
     def _accept(self, v: "TypeVisitor") -> Any:
         return v.visit_array_type(self)
@@ -130,14 +127,61 @@ class ArrayType(Type, metaclass=ABCMeta):
     @property
     @override
     def description(self):
-        kind = "const" if self.const else "mut"
-        return f"{kind} array of {self.item_ty.description}"
+        return f"array of ({self.item_ty.description})"
+
+
+class VectorType(Type, metaclass=ABCMeta):
+    val_ty: Type
+
+    def __init__(self, val_ty: Type):
+        self.val_ty = val_ty
+
+    def _accept(self, v: "TypeVisitor") -> Any:
+        return v.visit_vector_type(self)
+
+    @property
+    @override
+    def description(self):
+        return f"vector of ({self.val_ty.description})"
+
+
+class MapType(Type, metaclass=ABCMeta):
+    key_ty: Type
+    val_ty: Type
+
+    def __init__(self, key_ty: Type, val_ty: Type):
+        self.key_ty = key_ty
+        self.val_ty = val_ty
+
+    def _accept(self, v: "TypeVisitor") -> Any:
+        return v.visit_map_type(self)
+
+    @property
+    @override
+    def description(self):
+        return f"map from ({self.key_ty}) to ({self.val_ty})"
+
+
+class SetType(Type, metaclass=ABCMeta):
+    key_ty: Type
+
+    def __init__(self, key_ty: Type):
+        self.key_ty = key_ty
+
+    def _accept(self, v: "TypeVisitor") -> Any:
+        return v.visit_set_type(self)
+
+    @property
+    @override
+    def description(self):
+        return f"set of ({self.key_ty})"
 
 
 # Builtin Generics Map
-BUILTIN_GENERICS: dict[str, Callable[[*tuple[Type, ...]], Type]] = {
-    "MArray": lambda *t: ArrayType(*t, const=False),
-    "CArray": lambda *t: ArrayType(*t, const=True),
+BUILTIN_GENERICS: dict[str, Callable[[*tuple[Type, ...]], Type]] = {  # pyre-ignore
+    "Vector": lambda *args: VectorType(*args),
+    "Map": lambda *args: MapType(*args),
+    "Set": lambda *args: SetType(*args),
 }
 
 
@@ -183,3 +227,19 @@ class IfaceType(UserType):
 
     def _accept(self, v: "TypeVisitor") -> Any:
         return v.visit_iface_type(self)
+
+
+######################
+# User Generic Types #
+######################
+
+
+class UserGenericType(Type, metaclass=ABCMeta):
+    ty_decl: "TemplateDecl"
+    arg_types: list[Type]
+
+    @property
+    @override
+    def description(self):
+        args_fmt = ", ".format()
+        return f"{self.ty_decl.description} with args ({args_fmt})"

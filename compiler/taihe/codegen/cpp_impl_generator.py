@@ -1,5 +1,4 @@
 from taihe.codegen.abi_generator import (
-    COutputBuffer,
     GlobFuncDeclABIInfo,
     PackageABIInfo,
     TypeABIInfo,
@@ -14,7 +13,7 @@ from taihe.semantics.declarations import (
     PackageGroup,
 )
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
-from taihe.utils.outputs import OutputManager
+from taihe.utils.outputs import COutputBuffer, OutputManager
 
 
 class PackageCppImplInfo(AbstractAnalysis[Package]):

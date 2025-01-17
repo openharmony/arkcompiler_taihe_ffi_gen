@@ -128,7 +128,17 @@ string colorToStringImpl(ColorOrRGBOrName const& color) {
     return color.accept_template(Visitor());
 }
 
+array<IBase> exchangeImpl(array_view<IBase> dst, array_view<IBase> src) {
+    auto n = std::min(dst.size(), src.size());
+    auto res = array<IBase>(dst.data(), n, move_data_t{});
+    for (std::size_t i = 0; i < n; i++) {
+        dst[i] = src[i];
+    }
+    return res;
+}
+
 TH_EXPORT_CPP_API_makeRectangle(makeRectangleImpl)
 TH_EXPORT_CPP_API_makeColoredRectangle(makeColoredRectangleImpl)
 TH_EXPORT_CPP_API_copyColor(copyColorImpl)
 TH_EXPORT_CPP_API_toString(colorToStringImpl)
+TH_EXPORT_CPP_API_exchange(exchangeImpl)

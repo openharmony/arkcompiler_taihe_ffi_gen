@@ -1,7 +1,4 @@
 from dataclasses import dataclass
-from io import StringIO
-from os import makedirs, path
-from pathlib import Path
 from typing import Optional
 
 from typing_extensions import override
@@ -9,7 +6,6 @@ from typing_extensions import override
 from taihe.codegen.mangle import DeclKind, encode
 from taihe.semantics.declarations import (
     EnumDecl,
-    EnumItemDecl,
     GlobFuncDecl,
     IfaceDecl,
     IfaceMethodDecl,
@@ -30,6 +26,7 @@ from taihe.semantics.types import (
     U16,
     U32,
     U64,
+    ArrayType,
     EnumType,
     IfaceType,
     ScalarType,
@@ -39,34 +36,7 @@ from taihe.semantics.types import (
 )
 from taihe.semantics.visitor import TypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
-from taihe.utils.outputs import OutputBase, OutputManager
-
-
-class COutputBuffer(OutputBase[bool]):
-    """Represents a C or C++ target file."""
-
-    def __init__(self, is_header: bool):
-        self.is_header = is_header
-        self.headers: dict[str, None] = {}
-        self.code = StringIO()
-
-    @override
-    def save_as(self, file_path: Path):
-        if not path.exists(file_path.parent):
-            makedirs(file_path.parent, exist_ok=True)
-        with open(file_path, "w", encoding="utf-8") as dst:
-            if self.is_header:
-                dst.write(f"#pragma once\n")
-            for header in self.headers:
-                dst.write(f'#include "{header}"\n')
-            dst.write(self.code.getvalue())
-
-    def write(self, code: str):
-        self.code.write(code)
-
-    def include(self, *headers: str, back=False):
-        for header in headers:
-            self.headers.setdefault(header, None)
+from taihe.utils.outputs import COutputBuffer, OutputManager
 
 
 class PackageABIInfo(AbstractAnalysis[Package]):
@@ -92,16 +62,6 @@ class IfaceMethodDeclABIInfo(AbstractAnalysis[IfaceMethodDecl]):
         self.mangled_name = encode(segments, DeclKind.FUNCTION)
 
 
-class EnumItemDeclABIInfo(AbstractAnalysis[EnumItemDecl]):
-    def __init__(self, am: AnalysisManager, d: EnumItemDecl) -> None:
-        e = d.node_parent
-        assert e
-        p = e.node_parent
-        assert p
-        segments = [*p.segments, e.name, d.name]
-        self.mangled_name = encode(segments, DeclKind.ENUM_ITEM)
-
-
 class EnumDeclABIInfo(AbstractAnalysis[EnumDecl]):
     def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
         p = d.node_parent
@@ -109,7 +69,7 @@ class EnumDeclABIInfo(AbstractAnalysis[EnumDecl]):
         segments = [*p.segments, d.name]
         self.decl_header = f"{p.name}.{d.name}.abi.0.hpp"
         self.defn_header = f"{p.name}.{d.name}.abi.1.hpp"
-        self.tag_name = encode(segments, DeclKind.ENUM_TAG)
+        self.tag_type = "size_t"
         self.union_name = encode(segments, DeclKind.ENUM_UNION)
         self.mangled_name = encode(segments, DeclKind.ENUM_STRUCT)
         self.as_field = f"struct {self.mangled_name}"
@@ -265,6 +225,15 @@ class TypeABIInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
             self.drop_func = "tstr_drop"
         else:
             raise ValueError
+
+    def visit_array_type(self, t: ArrayType) -> None:
+        arg_ty_abi_info = TypeABIInfo.get(self.am, t.item_ty)
+        self.decl_headers = ["core/array.hpp", *arg_ty_abi_info.decl_headers]
+        self.defn_headers = ["core/array.hpp", *arg_ty_abi_info.decl_headers]
+        self.as_field = f"ArrayABI<{arg_ty_abi_info.as_field}>"
+        self.as_param = f"ArrayABI<{arg_ty_abi_info.as_field}>"
+        self.copy_func = "tarr_copy"
+        self.drop_func = "tarr_drop"
 
 
 class ABICodeGenerator:
@@ -429,25 +398,9 @@ class ABICodeGenerator:
         )
         enum_abi_defn_target.include("taihe/common.h")
         enum_abi_defn_target.include(enum_abi_info.decl_header)
-        self.gen_enum_tag_defn(enum, enum_abi_defn_target, enum_abi_info)
         self.gen_enum_union_defn(enum, enum_abi_defn_target, enum_abi_info)
-        self.gen_enum_struct_defn(enum, enum_abi_defn_target, enum_abi_info)
         self.gen_enum_copy_func(enum, enum_abi_defn_target, enum_abi_info)
         self.gen_enum_drop_func(enum, enum_abi_defn_target, enum_abi_info)
-
-    def gen_enum_tag_defn(
-        self,
-        enum: EnumDecl,
-        enum_abi_defn_target: COutputBuffer,
-        enum_abi_info: EnumDeclABIInfo,
-    ):
-        enum_abi_defn_target.write(f"enum {enum_abi_info.tag_name} {{\n")
-        for item in enum.items:
-            enum_item_abi_info = EnumItemDeclABIInfo.get(self.am, item)
-            enum_abi_defn_target.write(
-                f"  {enum_item_abi_info.mangled_name} = {item.value},\n"
-            )
-        enum_abi_defn_target.write("};\n")
 
     def gen_enum_union_defn(
         self,
@@ -458,21 +411,17 @@ class ABICodeGenerator:
         enum_abi_defn_target.write(f"union {enum_abi_info.union_name} {{\n")
         for item in enum.items:
             if item.ty_ref is None:
+                enum_abi_defn_target.write(f"  // {item.value}\n")
                 continue
             ty_info = TypeABIInfo.get(self.am, item.ty_ref.resolved_ty)
             enum_abi_defn_target.include(*ty_info.defn_headers)
-            enum_abi_defn_target.write(f"  {ty_info.as_field} {item.name};\n")
-        enum_abi_defn_target.write("};\n")
-
-    def gen_enum_struct_defn(
-        self,
-        enum: EnumDecl,
-        enum_abi_defn_target: COutputBuffer,
-        enum_abi_info: EnumDeclABIInfo,
-    ):
+            enum_abi_defn_target.write(
+                f"  {ty_info.as_field} {item.name}; // {item.value}\n"
+            )
         enum_abi_defn_target.write(
+            f"}};\n"
             f"struct {enum_abi_info.mangled_name} {{\n"
-            f"  enum {enum_abi_info.tag_name} tag;\n"
+            f"  {enum_abi_info.tag_type} tag;\n"
             f"  union {enum_abi_info.union_name} data;\n"
             f"}};\n"
         )
@@ -492,16 +441,15 @@ class ABICodeGenerator:
             if item.ty_ref is None:
                 continue
             ty_info = TypeABIInfo.get(self.am, item.ty_ref.resolved_ty)
-            enum_item_abi_info = EnumItemDeclABIInfo.get(self.am, item)
             if ty_info.copy_func is not None:
                 enum_abi_defn_target.write(
-                    f"  case {enum_item_abi_info.mangled_name}:\n"
+                    f"  case {item.value}:\n"
                     f"    result.data.{item.name} = {ty_info.copy_func}(data.data.{item.name});\n"
                     f"    return result;\n"
                 )
             else:
                 enum_abi_defn_target.write(
-                    f"  case {enum_item_abi_info.mangled_name}:\n"
+                    f"  case {item.value}:\n"
                     f"    result.data.{item.name} = data.data.{item.name};\n"
                     f"    return result;\n"
                 )
@@ -521,10 +469,9 @@ class ABICodeGenerator:
             if item.ty_ref is None:
                 continue
             ty_info = TypeABIInfo.get(self.am, item.ty_ref.resolved_ty)
-            enum_item_abi_info = EnumItemDeclABIInfo.get(self.am, item)
             if ty_info.copy_func is not None:
                 enum_abi_defn_target.write(
-                    f"  case {enum_item_abi_info.mangled_name}:\n"
+                    f"  case {item.value}:\n"
                     f"    {ty_info.drop_func}(data.data.{item.name});\n"
                     f"    break;\n"
                 )

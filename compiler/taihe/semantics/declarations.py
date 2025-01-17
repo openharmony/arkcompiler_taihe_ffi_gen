@@ -11,6 +11,7 @@ from taihe.semantics.types import (
     IfaceType,
     StructType,
     Type,
+    UserGenericType,
     UserType,
 )
 from taihe.utils.exceptions import AttrRedefError, DeclRedefError
@@ -182,6 +183,27 @@ class GenericTypeRefDecl(TypeRefDecl):
     def unresolved_name(self):
         args_fmt = ", ".join(arg.unresolved_name for arg in self.args_ty_ref)
         return f"{self.symbol}<{args_fmt}>"
+
+
+class ArrayTypeRefDecl(TypeRefDecl):
+    item_ty_ref: TypeRefDecl
+
+    def __init__(
+        self,
+        loc: Optional[SourceLocation],
+        item_ty_ref: TypeRefDecl,
+        resolved_ty: Optional[Type] = None,
+    ):
+        super().__init__(loc, resolved_ty)
+        self.item_ty_ref = item_ty_ref
+
+    def _accept(self, v: "DeclVisitor") -> Any:
+        return v.visit_array_type_ref_decl(self)
+
+    @property
+    @override
+    def unresolved_name(self):
+        return f"{self.item_ty_ref.unresolved_name}[]"
 
 
 #####################
@@ -590,6 +612,16 @@ class IfaceDecl(TypeDecl):
     @override
     def description(self) -> str:
         return f"interface {self.name}"
+
+
+#####################
+# Type Declarations #
+#####################
+
+
+class TemplateDecl(PackageLevelDecl, metaclass=ABCMeta):
+    @abstractmethod
+    def instantiate(self, *args: Type) -> UserGenericType: ...
 
 
 ######################

@@ -14,8 +14,9 @@
 #include <taihe/string.abi.h>
 
 namespace taihe::core {
-struct string;
-struct string_view;
+struct string_view_container;
+
+using string_view = string_view_container const&;
 
 struct string {
 public:
@@ -26,9 +27,6 @@ public:
     using const_pointer = value_type const*;
     using const_iterator = const_pointer;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
-
-    // Constructors
-    string() noexcept : m_handle(nullptr) {}
 
     string(const char* value TH_NONNULL)
         : m_handle(tstr_new(value, std::strlen(value))) {}
@@ -45,11 +43,12 @@ public:
     string(std::string const &value)
         : string(value.data(), value.size()) {}
 
+    operator string_view() const {
+        return reinterpret_cast<string_view>(*m_handle);
+    }
+
     operator std::string_view() const noexcept {
-        if (m_handle) {
-            return { tstr_buf(m_handle), tstr_len(m_handle) };
-        }
-        return { "", 0 };
+        return { tstr_buf(m_handle), tstr_len(m_handle) };
     }
 
     // copy assignment
@@ -64,10 +63,7 @@ public:
 
     // destructor
     ~string() {
-        if (m_handle) {
-            tstr_drop(m_handle);
-        }
-        m_handle = nullptr;
+        tstr_drop(m_handle);
     }
 
     // assignment
@@ -81,11 +77,6 @@ private:
     explicit string(TString* other_handle)
         : m_handle(other_handle) {}
 
-    template<typename cpp_t, typename abi_t>
-    friend abi_t into_abi(cpp_t val);
-    template<typename cpp_t, typename abi_t>
-    friend cpp_t from_abi(abi_t val);
-
 public:
     const_reference operator[](size_type pos) const {
         if (pos >= size()) {
@@ -96,11 +87,11 @@ public:
 
     // others
     bool empty() const noexcept {
-        return m_handle == nullptr || tstr_len(m_handle) == 0;
+        return tstr_len(m_handle) == 0;
     }
 
     size_type size() const noexcept {
-        return m_handle ? tstr_len(m_handle) : 0;
+        return tstr_len(m_handle);
     }
 
     const_reference front() const {
@@ -118,7 +109,7 @@ public:
     }
 
     const_pointer c_str() const noexcept {
-        return m_handle ? tstr_buf(m_handle) : "";
+        return tstr_buf(m_handle);
     }
 
     const_pointer data() const noexcept {
@@ -126,7 +117,7 @@ public:
     }
 
     const_iterator begin() const noexcept {
-        return m_handle ? tstr_buf(m_handle) : "";
+        return tstr_buf(m_handle);
     }
 
     const_iterator cbegin() const noexcept {
@@ -134,7 +125,7 @@ public:
     }
 
     const_iterator end() const noexcept {
-        return m_handle ? tstr_buf(m_handle) + tstr_len(m_handle) : "";
+        return tstr_buf(m_handle) + tstr_len(m_handle);
     }
 
     const_iterator cend() const noexcept {
@@ -158,14 +149,14 @@ public:
     }
 
 private:
-    friend class string_view;
+    friend class string_view_container;
     friend string concat(string_view left, string_view right);
     friend string substr(string_view sv, std::size_t pos, std::size_t len);
 
     TString* m_handle;
 };
 
-struct string_view {
+struct string_view_container {
     // Using
     using value_type = char;
     using size_type = std::size_t;
@@ -174,96 +165,62 @@ struct string_view {
     using const_iterator = const_pointer;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-    // Constructors
-    string_view() noexcept : m_handle(nullptr) {}
+    string_view_container(const char* value TH_NONNULL)
+        : m_header(tstr_new_ref(value, strlen(value))) {}
 
-    string_view(const char* value TH_NONNULL)
-        : m_handle(tstr_new_ref(value, strlen(value), &m_header)) {}
+    string_view_container(const char* value TH_NONNULL, size_type size)
+        : m_header(tstr_new_ref(value, size)) {}
 
-    string_view(const char* value TH_NONNULL, size_type size)
-        : m_handle(tstr_new_ref(value, size, &m_header)) {}
+    string_view_container(std::initializer_list<char> value)
+        : string_view_container(value.begin(), static_cast<uint32_t>(value.size())) {}
 
-    string_view(std::initializer_list<char> value)
-        : string_view(value.begin(), static_cast<uint32_t>(value.size())) {}
+    string_view_container(std::string_view value)
+        : string_view_container(value.data(), value.size()) {}
 
-    string_view(std::string_view value)
-        : string_view(value.data(), value.size()) {}
-
-    string_view(std::string const &value)
-        : string_view(value.data(), value.size()) {}
+    string_view_container(std::string const &value)
+        : string_view_container(value.data(), value.size()) {}
 
     operator std::string_view() const noexcept {
-        if (m_handle) {
-            return { tstr_buf(m_handle), tstr_len(m_handle) };
-        }
-        return { "", 0 };
+        return { tstr_buf(&m_header), tstr_len(&m_header) };
     }
-
-    // copy/move constructor
-    string_view(string_view const& other)
-        : m_handle(other.m_handle) {}
-
-    // convert from/to taihe::core::string
-    string_view(string const& other)
-        : m_handle(other.m_handle) {}
 
     operator string() const noexcept {
-        return string(tstr_dup(m_handle));
+        return string(tstr_dup(const_cast<struct TString*>(&m_header)));
     }
-
-    // destructor
-    ~string_view() {}
-
-    // assignment
-    string_view& operator=(string_view other) {
-        // copy-and-swap idiom
-        std::swap(this->m_handle, other.m_handle);
-        std::swap(this->m_header, other.m_header);
-        return *this;
-    }
-
-private:
-    explicit string_view(TString* other_handle)
-        : m_handle(other_handle) {}
-
-    template<typename cpp_t, typename abi_t>
-    friend abi_t into_abi(cpp_t val);
-    template<typename cpp_t, typename abi_t>
-    friend cpp_t from_abi(abi_t val);
 
 public:
     const_reference operator[](size_type pos) const {
         if (pos >= size()) {
             throw std::out_of_range("Index out of range");
         }
-        return tstr_buf(m_handle)[pos];
+        return tstr_buf(&m_header)[pos];
     }
 
     // others
     bool empty() const noexcept {
-        return m_handle == nullptr || tstr_len(m_handle) == 0;
+        return tstr_len(&m_header) == 0;
     }
 
     size_type size() const noexcept {
-        return m_handle ? tstr_len(m_handle) : 0;
+        return tstr_len(&m_header);
     }
 
     const_reference front() const {
         if (empty()) {
             throw std::out_of_range("Empty string");
         }
-        return tstr_buf(m_handle)[0];
+        return tstr_buf(&m_header)[0];
     }
 
     const_reference back() const {
         if (empty()) {
             throw std::out_of_range("Empty string");
         }
-        return tstr_buf(m_handle)[size() - 1];
+        return tstr_buf(&m_header)[size() - 1];
     }
 
     const_pointer c_str() const noexcept {
-        return m_handle ? tstr_buf(m_handle) : "";
+        return tstr_buf(&m_header);
     }
 
     const_pointer data() const noexcept {
@@ -271,7 +228,7 @@ public:
     }
 
     const_iterator begin() const noexcept {
-        return m_handle ? tstr_buf(m_handle) : "";
+        return tstr_buf(&m_header);
     }
 
     const_iterator cbegin() const noexcept {
@@ -279,7 +236,7 @@ public:
     }
 
     const_iterator end() const noexcept {
-        return m_handle ? tstr_buf(m_handle) + tstr_len(m_handle) : "";
+        return tstr_buf(&m_header) + tstr_len(&m_header);
     }
 
     const_iterator cend() const noexcept {
@@ -306,29 +263,15 @@ private:
     friend string concat(string_view left, string_view right);
     friend string substr(string_view sv, std::size_t pos, std::size_t len);
 
-    TString* m_handle;
-    TString  m_header;
+    struct TString m_header;
 };
 
-
 inline string substr(string_view sv, std::size_t pos, std::size_t len) {
-    struct TString* result_handle = tstr_substr(sv.m_handle, pos, len);
-    if (!result_handle) {
-        return string();
-    }
-    string result;
-    result.m_handle = result_handle;
-    return result;
+    return string(tstr_substr(&sv.m_header, pos, len));
 }
 
 inline string concat(string_view left, string_view right) {
-    struct TString* result_handle = tstr_concat(left.m_handle, right.m_handle);
-    if (!result_handle) {
-        return string();
-    }
-    string result;
-    result.m_handle = result_handle;
-    return result;
+    return string(tstr_concat(&left.m_header, &right.m_header));
 }
 
 inline bool operator==(string_view lhs, string_view rhs) {
@@ -390,30 +333,5 @@ string to_string(T const value) {
     } else {
         return string{ "false" };
     }
-}
-
-// returning from abi
-template<> inline taihe::core::string from_abi(TString* _val) {
-    TString* r_handle = _val;
-    return taihe::core::string(r_handle);
-}
-
-// returning into abi
-template<> inline TString* into_abi(taihe::core::string _val) {
-    TString *r_handle = _val.m_handle;
-    _val.m_handle = nullptr;
-    return r_handle;
-}
-
-// passing argument from abi
-template<> inline taihe::core::string_view from_abi(TString* _val) {
-    TString* r_handle = _val;
-    return taihe::core::string_view(_val);
-}
-
-// passing argument into abi
-template<> inline TString* into_abi(taihe::core::string_view _val) {
-    TString *r_handle = _val.m_handle;
-    return r_handle;
 }
 }

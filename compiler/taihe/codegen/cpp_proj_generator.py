@@ -3,9 +3,7 @@ from typing import Any, Optional
 from typing_extensions import override
 
 from taihe.codegen.abi_generator import (
-    COutputBuffer,
     EnumDeclABIInfo,
-    EnumItemDeclABIInfo,
     GlobFuncDeclABIInfo,
     IfaceDeclABIInfo,
     IfaceMethodDeclABIInfo,
@@ -35,6 +33,7 @@ from taihe.semantics.types import (
     U16,
     U32,
     U64,
+    ArrayType,
     EnumType,
     IfaceType,
     ScalarType,
@@ -44,7 +43,7 @@ from taihe.semantics.types import (
 )
 from taihe.semantics.visitor import TypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
-from taihe.utils.outputs import OutputManager
+from taihe.utils.outputs import COutputBuffer, OutputManager
 
 
 class PackageCppProjInfo(AbstractAnalysis[Package]):
@@ -76,17 +75,17 @@ class StructDeclCppProjInfo(AbstractAnalysis[StructDecl]):
         self.full_name = "::" + "::".join(p.segments) + "::" + self.name
         self.as_owner = self.full_name
         self.as_param = self.full_name + " const&"
-        self.pass_from_abi = (
-            lambda val: f"::taihe::core::from_abi<{self.as_param}, {abi_info.as_param}>({val})"
-        )
-        self.pass_into_abi = (
-            lambda val: f"::taihe::core::into_abi<{self.as_param}, {abi_info.as_param}>({val})"
-        )
         self.return_from_abi = (
-            lambda val: f"::taihe::core::from_abi<{self.as_owner}, {abi_info.as_field}>({val})"
+            lambda val: f"::taihe::core::move_from_abi<{self.as_owner}, {abi_info.as_field}>({val})"
         )
         self.return_into_abi = (
-            lambda val: f"::taihe::core::into_abi<{self.as_owner}, {abi_info.as_field}>({val})"
+            lambda val: f"::taihe::core::move_into_abi<{self.as_owner}, {abi_info.as_field}>({val})"
+        )
+        self.pass_from_abi = (
+            lambda val: f"::taihe::core::cast_from_abi<{self.as_param}, {abi_info.as_param}>({val})"
+        )
+        self.pass_into_abi = (
+            lambda val: f"::taihe::core::cast_into_abi<{self.as_param}, {abi_info.as_param}>({val})"
         )
 
 
@@ -101,17 +100,17 @@ class EnumDeclCppProjInfo(AbstractAnalysis[EnumDecl]):
         self.full_name = "::" + "::".join(p.segments) + "::" + self.name
         self.as_owner = self.full_name
         self.as_param = self.full_name + " const&"
-        self.pass_from_abi = (
-            lambda val: f"::taihe::core::from_abi<{self.as_param}, {abi_info.as_param}>({val})"
-        )
-        self.pass_into_abi = (
-            lambda val: f"::taihe::core::into_abi<{self.as_param}, {abi_info.as_param}>({val})"
-        )
         self.return_from_abi = (
-            lambda val: f"::taihe::core::from_abi<{self.as_owner}, {abi_info.as_field}>({val})"
+            lambda val: f"::taihe::core::move_from_abi<{self.as_owner}, {abi_info.as_field}>({val})"
         )
         self.return_into_abi = (
-            lambda val: f"::taihe::core::into_abi<{self.as_owner}, {abi_info.as_field}>({val})"
+            lambda val: f"::taihe::core::move_into_abi<{self.as_owner}, {abi_info.as_field}>({val})"
+        )
+        self.pass_from_abi = (
+            lambda val: f"::taihe::core::cast_from_abi<{self.as_param}, {abi_info.as_param}>({val})"
+        )
+        self.pass_into_abi = (
+            lambda val: f"::taihe::core::cast_into_abi<{self.as_param}, {abi_info.as_param}>({val})"
         )
 
 
@@ -128,17 +127,17 @@ class IfaceDeclCppProjInfo(AbstractAnalysis[IfaceDecl]):
         self.weak_name = "::" + "::".join(p.segments) + "::weak::" + self.name
         self.as_owner = self.full_name
         self.as_param = self.weak_name
-        self.pass_from_abi = (
-            lambda val: f"::taihe::core::from_abi<{self.as_param}, {abi_info.as_param}>({val})"
-        )
-        self.pass_into_abi = (
-            lambda val: f"::taihe::core::into_abi<{self.as_param}, {abi_info.as_param}>({val})"
-        )
         self.return_from_abi = (
-            lambda val: f"::taihe::core::from_abi<{self.as_owner}, {abi_info.as_field}>({val})"
+            lambda val: f"::taihe::core::move_from_abi<{self.as_owner}, {abi_info.as_field}>({val})"
         )
         self.return_into_abi = (
-            lambda val: f"::taihe::core::into_abi<{self.as_owner}, {abi_info.as_field}>({val})"
+            lambda val: f"::taihe::core::move_into_abi<{self.as_owner}, {abi_info.as_field}>({val})"
+        )
+        self.pass_from_abi = (
+            lambda val: f"::taihe::core::move_from_abi<{self.as_param}, {abi_info.as_param}>({val})"
+        )
+        self.pass_into_abi = (
+            lambda val: f"::taihe::core::move_into_abi<{self.as_param}, {abi_info.as_param}>({val})"
         )
 
 
@@ -207,31 +206,49 @@ class TypeCppProjInfo(AbstractAnalysis[Optional[Type]], TypeVisitor):
             U32: "uint32_t",
             U64: "uint64_t",
         }.get(t)
-        self.as_param = res
-        self.as_owner = res
         if res is None:
             raise ValueError
+        self.as_param = res
+        self.as_owner = res
 
     def visit_special_type(self, t: SpecialType) -> Any:
-        if t == STRING:
-            self.decl_headers = ["core/string.hpp"]
-            self.defn_headers = ["core/string.hpp"]
-            self.as_owner = "::taihe::core::string"
-            self.as_param = "::taihe::core::string_view"
-            self.pass_from_abi = (
-                lambda val: f"::taihe::core::from_abi<{self.as_param}, TString*>({val})"
-            )
-            self.pass_into_abi = (
-                lambda val: f"::taihe::core::into_abi<{self.as_param}, TString*>({val})"
-            )
-            self.return_from_abi = (
-                lambda val: f"::taihe::core::from_abi<{self.as_owner}, TString*>({val})"
-            )
-            self.return_into_abi = (
-                lambda val: f"::taihe::core::into_abi<{self.as_owner}, TString*>({val})"
-            )
-        else:
+        if t != STRING:
             raise ValueError
+        self.decl_headers = ["core/string.hpp"]
+        self.defn_headers = ["core/string.hpp"]
+        self.as_owner = "::taihe::core::string"
+        self.as_param = "::taihe::core::string_view"
+        self.pass_from_abi = lambda val: f"reinterpret_cast<{self.as_param}>(*{val})"
+        self.pass_into_abi = (
+            lambda val: f"const_cast<TString*>(reinterpret_cast<TString const*>(&{val}))"
+        )
+        self.return_from_abi = (
+            lambda val: f"::taihe::core::move_from_abi<{self.as_owner}, TString*>({val})"
+        )
+        self.return_into_abi = (
+            lambda val: f"::taihe::core::move_into_abi<{self.as_owner}, TString*>({val})"
+        )
+
+    def visit_array_type(self, t: ArrayType) -> None:
+        abi_info = TypeABIInfo.get(self.am, t)
+        arg_ty_cpp_proj_info = TypeCppProjInfo.get(self.am, t.item_ty)
+
+        self.decl_headers = ["core/array.hpp", *arg_ty_cpp_proj_info.decl_headers]
+        self.defn_headers = ["core/array.hpp", *arg_ty_cpp_proj_info.decl_headers]
+        self.as_owner = f"::taihe::core::array<{arg_ty_cpp_proj_info.as_owner}>"
+        self.as_param = f"::taihe::core::array_view<{arg_ty_cpp_proj_info.as_owner}>"
+        self.pass_from_abi = (
+            lambda val: f"::taihe::core::move_from_abi<{self.as_param}, {abi_info.as_param}>({val})"
+        )
+        self.pass_into_abi = (
+            lambda val: f"::taihe::core::move_into_abi<{self.as_param}, {abi_info.as_param}>({val})"
+        )
+        self.return_from_abi = (
+            lambda val: f"::taihe::core::move_from_abi<{self.as_owner}, {abi_info.as_field}>({val})"
+        )
+        self.return_into_abi = (
+            lambda val: f"::taihe::core::move_into_abi<{self.as_owner}, {abi_info.as_field}>({val})"
+        )
 
 
 class CppProjCodeGenerator:
@@ -351,12 +368,6 @@ class CppProjCodeGenerator:
             struct_cpp_proj_info,
             pkg_cpp_proj_info,
         )
-        self.gen_struct_trans_func(
-            struct,
-            struct_cpp_proj_defn_target,
-            struct_cpp_proj_info,
-            struct_abi_info,
-        )
 
     def gen_struct_defn(
         self,
@@ -374,48 +385,6 @@ class CppProjCodeGenerator:
             struct_cpp_proj_defn_target.include(*ty_info.defn_headers)
             struct_cpp_proj_defn_target.write(f"    {ty_info.as_owner} {field.name};\n")
         struct_cpp_proj_defn_target.write("};\n" "}\n")
-
-    def gen_struct_trans_func(
-        self,
-        struct: StructDecl,
-        struct_cpp_proj_defn_target: COutputBuffer,
-        struct_cpp_proj_info: StructDeclCppProjInfo,
-        struct_abi_info: StructDeclABIInfo,
-    ):
-        struct_cpp_proj_defn_target.write(
-            f"namespace taihe::core {{\n"
-            f"template<>\n"
-            f"inline {struct_abi_info.as_field} into_abi({struct_cpp_proj_info.as_owner} val){{\n"
-            f"    return {{\n"
-        )
-        for field in struct.fields:
-            ty_cpp_proj_info = TypeCppProjInfo.get(self.am, field.ty_ref.resolved_ty)
-            result = ty_cpp_proj_info.return_into_abi(f"::std::move(val.{field.name})")
-            struct_cpp_proj_defn_target.write(f"        {result},\n")
-        struct_cpp_proj_defn_target.write(
-            f"    }};\n"
-            f"}}\n"
-            f"template<>\n"
-            f"inline {struct_cpp_proj_info.as_owner} from_abi({struct_abi_info.as_field} val){{\n"
-            f"    return {{\n"
-        )
-        for field in struct.fields:
-            ty_cpp_proj_info = TypeCppProjInfo.get(self.am, field.ty_ref.resolved_ty)
-            result = ty_cpp_proj_info.return_from_abi(f"val.{field.name}")
-            struct_cpp_proj_defn_target.write(f"        {result},\n")
-        struct_cpp_proj_defn_target.write(
-            f"    }};\n"
-            f"}}\n"
-            f"template<>\n"
-            f"inline {struct_abi_info.as_param} into_abi({struct_cpp_proj_info.as_param} val){{\n"
-            f"    return reinterpret_cast<{struct_abi_info.as_param}>(&val);\n"
-            f"}}\n"
-            f"template<>\n"
-            f"inline {struct_cpp_proj_info.as_param} from_abi({struct_abi_info.as_param} val){{\n"
-            f"    return reinterpret_cast<{struct_cpp_proj_info.as_param}>(*val);\n"
-            f"}}\n"
-            f"}}\n"
-        )
 
     def gen_enum_files(
         self,
@@ -475,12 +444,6 @@ class CppProjCodeGenerator:
             enum_abi_info,
             pkg_cpp_proj_info,
         )
-        self.gen_enum_trans_func(
-            enum,
-            enum_cpp_proj_defn_target,
-            enum_cpp_proj_info,
-            enum_abi_info,
-        )
 
     def gen_enum_defn(
         self,
@@ -495,7 +458,9 @@ class CppProjCodeGenerator:
             f"struct {enum_cpp_proj_info.name} {{\n"
         )
         # tag type
-        enum_cpp_proj_defn_target.write("    enum class tag_t {\n")
+        enum_cpp_proj_defn_target.write(
+            f"    enum class tag_t : {enum_abi_info.tag_type} {{\n"
+        )
         for item in enum.items:
             enum_cpp_proj_defn_target.write(f"        {item.name} = {item.value},\n")
         enum_cpp_proj_defn_target.write("    };\n")
@@ -751,80 +716,11 @@ class CppProjCodeGenerator:
             "    tag_t tag;\n"
             "    storage_t data;\n"
             "    template<typename cpp_t, typename abi_t>\n"
-            "    friend abi_t taihe::core::into_abi(cpp_t val);\n"
+            "    friend abi_t taihe::core::move_into_abi(cpp_t val);\n"
             "    template<typename cpp_t, typename abi_t>\n"
-            "    friend cpp_t taihe::core::from_abi(abi_t val);\n"
+            "    friend cpp_t taihe::core::move_from_abi(abi_t val);\n"
             "};\n"
             "}\n"
-        )
-
-    def gen_enum_trans_func(
-        self,
-        enum: EnumDecl,
-        enum_cpp_proj_defn_target: COutputBuffer,
-        enum_cpp_proj_info: EnumDeclCppProjInfo,
-        enum_abi_info: EnumDeclABIInfo,
-    ):
-        enum_cpp_proj_defn_target.write(
-            f"namespace taihe::core {{\n"
-            f"template<>\n"
-            f"inline {enum_abi_info.as_field} into_abi({enum_cpp_proj_info.as_owner} val){{\n"
-            f"    {enum_abi_info.as_field} result;\n"
-            f"    switch (val.tag) {{\n"
-        )
-        for item in enum.items:
-            enum_item_abi_info = EnumItemDeclABIInfo.get(self.am, item)
-            if item.ty_ref is None:
-                enum_cpp_proj_defn_target.write(
-                    f"    case {enum_cpp_proj_info.full_name}::tag_t::{item.name}:\n"
-                    f"        result.tag = {enum_item_abi_info.mangled_name};\n"
-                    f"        break;\n"
-                )
-                continue
-            ty_cpp_proj_info = TypeCppProjInfo.get(self.am, item.ty_ref.resolved_ty)
-            result = ty_cpp_proj_info.return_into_abi(
-                f"::std::move(val.data.{item.name})"
-            )
-            enum_cpp_proj_defn_target.write(
-                f"    case {enum_cpp_proj_info.full_name}::tag_t::{item.name}:\n"
-                f"        result.tag = {enum_item_abi_info.mangled_name};\n"
-                f"        result.data.{item.name} = {result};\n"
-                f"        break;\n"
-            )
-        enum_cpp_proj_defn_target.write(
-            f"    }}\n"
-            f"    return result;\n"
-            f"}}\n"
-            f"template<>\n"
-            f"inline {enum_cpp_proj_info.as_owner} from_abi({enum_abi_info.as_field} val){{\n"
-            f"    switch (val.tag) {{\n"
-        )
-        for item in enum.items:
-            enum_item_abi_info = EnumItemDeclABIInfo.get(self.am, item)
-            if item.ty_ref is None:
-                enum_cpp_proj_defn_target.write(
-                    f"    case {enum_item_abi_info.mangled_name}:\n"
-                    f"        return {enum_cpp_proj_info.as_owner}(::taihe::core::static_tag<{enum_cpp_proj_info.full_name}::tag_t::{item.name}>);\n"
-                )
-                continue
-            ty_cpp_proj_info = TypeCppProjInfo.get(self.am, item.ty_ref.resolved_ty)
-            result = ty_cpp_proj_info.return_from_abi(f"val.data.{item.name}")
-            enum_cpp_proj_defn_target.write(
-                f"    case {enum_item_abi_info.mangled_name}:\n"
-                f"        return {enum_cpp_proj_info.as_owner}(::taihe::core::static_tag<{enum_cpp_proj_info.full_name}::tag_t::{item.name}>, {result});\n"
-            )
-        enum_cpp_proj_defn_target.write(
-            f"    }}\n"
-            f"}}\n"
-            f"template<>\n"
-            f"inline {enum_abi_info.as_param} into_abi({enum_cpp_proj_info.as_param} val){{\n"
-            f"    return reinterpret_cast<{enum_abi_info.as_param}>(&val);\n"
-            f"}}\n"
-            f"template<>\n"
-            f"inline {enum_cpp_proj_info.as_param} from_abi({enum_abi_info.as_param} val){{\n"
-            f"    return reinterpret_cast<{enum_cpp_proj_info.as_param}>(*val);\n"
-            f"}}\n"
-            f"}}\n"
         )
 
     def gen_iface_files(
@@ -899,12 +795,6 @@ class CppProjCodeGenerator:
             iface_abi_info,
             iface_cpp_proj_info,
             pkg_cpp_proj_info,
-            iface_cpp_proj_defn_target,
-        )
-        self.gen_iface_trans_funcs(
-            iface,
-            iface_abi_info,
-            iface_cpp_proj_info,
             iface_cpp_proj_defn_target,
         )
 
@@ -1018,39 +908,6 @@ class CppProjCodeGenerator:
                 f"    {cpp_return_ty_name} {method_cpp_proj_info.name}({params_cpp_str}) const;\n"
             )
         iface_cpp_proj_defn_target.write("};\n" "}\n")
-
-    def gen_iface_trans_funcs(
-        self,
-        iface: IfaceDecl,
-        iface_abi_info: IfaceDeclABIInfo,
-        iface_cpp_proj_info: IfaceDeclCppProjInfo,
-        iface_cpp_proj_defn_target: COutputBuffer,
-    ):
-        iface_cpp_proj_defn_target.write(
-            f"namespace taihe::core {{\n"
-            f"template<>\n"
-            f"inline {iface_abi_info.as_field} into_abi({iface_cpp_proj_info.as_owner} other){{\n"
-            f"    {iface_abi_info.as_field} ret_handle = other.m_handle;\n"
-            f"    other.m_handle.data_ptr = nullptr;\n"
-            f"    return ret_handle;\n"
-            f"}}\n"
-            f"template<>\n"
-            f"inline {iface_cpp_proj_info.as_owner} from_abi({iface_abi_info.as_field} other_handle){{\n"
-            f"    {iface_abi_info.as_field} ret_handle = other_handle;\n"
-            f"    return {iface_cpp_proj_info.as_owner}(ret_handle);\n"
-            f"}}\n"
-            f"template<>\n"
-            f"inline {iface_abi_info.as_param} into_abi({iface_cpp_proj_info.as_param} other){{\n"
-            f"    {iface_abi_info.as_param} ret_handle = other.m_handle;\n"
-            f"    return ret_handle;\n"
-            f"}}\n"
-            f"template<>\n"
-            f"inline {iface_cpp_proj_info.as_param} from_abi({iface_abi_info.as_param} other_handle){{\n"
-            f"    {iface_abi_info.as_field} ret_handle = other_handle;\n"
-            f"    return {iface_cpp_proj_info.as_param}(ret_handle);\n"
-            f"}}\n"
-            f"}}\n"
-        )
 
     def gen_iface_impl_file(
         self,

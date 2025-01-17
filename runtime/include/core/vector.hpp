@@ -148,27 +148,5 @@ public:
 
 private:
     TVector<T>* m_handle;
-
-    template<typename cpp_t, typename abi_t>
-    friend abi_t into_abi(cpp_t val);
-    template<typename cpp_t, typename abi_t>
-    friend cpp_t from_abi(abi_t val);
 };
-
-
-
-// returning from abi
-template<typename T>
-inline taihe::core::vector<T> from_abi(TVector<T>* _val) {
-    TVector<T>* r_handle = _val;
-    return taihe::core::vector<T>(r_handle);
-}
-
-// returning into abi
-template<typename T>
-inline TVector<T>* into_abi(taihe::core::vector<T> _val) {
-    TVector<T> *r_handle = _val.m_handle;
-    _val.m_handle = nullptr;
-    return r_handle;
-}
 }

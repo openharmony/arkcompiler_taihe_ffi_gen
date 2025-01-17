@@ -21,3 +21,5 @@ interface IShowable: IColorable, IShape {
 
 function makeRectangle(id: String, h: f32, w: f32): IShape;
 function makeColoredRectangle(id: String, c: ColorOrRGBOrName, h: f32, w: f32): IShowable;
+
+function exchange(dst: IBase[], src: IBase[]): IBase[];

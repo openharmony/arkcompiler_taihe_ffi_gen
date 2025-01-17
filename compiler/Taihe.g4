@@ -89,6 +89,7 @@ type
     : LEFT_PARENTHESIS Type_inner_ty = type RIGHT_PARENTHESIS # parenthesisType
     | (PkgNameOpt_pkg_name = pkgName DOT)? token_decl_name = ID # userType
     | (PkgNameOpt_pkg_name = pkgName DOT)? token_decl_name = ID LESS_THAN (TypeLst_args += type (COMMA TypeLst_args += type)*)? GREATER_THAN # genericType
+    | Type_item = type LEFT_BRACKET RIGHT_BRACKET # arrayType
     | <assoc = right>
       LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS ARROW (TypeOpt_return_ty = type | KW_VOID) # functionType
     ;

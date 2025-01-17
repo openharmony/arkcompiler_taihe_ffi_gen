@@ -55,8 +55,7 @@ class _TypeNamePrinter(TypeVisitor[str]):
 
     @override
     def visit_array_type(self, t: ArrayType) -> str:
-        kind = "const" if t.const else "mut"
-        return f"{kind} {self.handle_type(t.item_ty)}[]"
+        return f"{self.handle_type(t.item_ty)}[]"
 
 
 class _PrettyPrinter(DeclVisitor):
