@@ -114,7 +114,7 @@ class IfaceDeclABIInfo(AbstractAnalysis[IfaceDecl]):
         self.decl_header = f"{p.name}.{d.name}.abi.0.hpp"
         self.defn_header = f"{p.name}.{d.name}.abi.1.hpp"
         self.impl_header = f"{p.name}.{d.name}.abi.2.hpp"
-        self.src = f"{p.name}.{d.name}.c"
+        self.src = f"{p.name}.{d.name}.cpp"
         self.mangled_name = encode(segments, DeclKind.INTERFACE)
         self.as_field = f"struct {self.mangled_name}"
         self.as_param = f"struct {self.mangled_name}"
@@ -219,8 +219,8 @@ class TypeABIInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
         if t == STRING:
             self.decl_headers = ["taihe/string.abi.h"]
             self.defn_headers = ["taihe/string.abi.h"]
-            self.as_field = "struct TString*"
-            self.as_param = "struct TString*"
+            self.as_field = "struct TString const*"
+            self.as_param = "struct TString const*"
             self.copy_func = "tstr_dup"
             self.drop_func = "tstr_drop"
         else:

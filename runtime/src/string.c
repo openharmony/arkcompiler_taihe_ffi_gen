@@ -4,7 +4,7 @@
 #include <taihe/common.h>
 #include <taihe/string.abi.h>
 
-static inline struct TStringHeap* to_heap(struct TString* s) {
+static inline struct TStringHeap* to_heap(struct TString const* s) {
   if (s->flags & TSTRING_REF) return NULL;
   return (struct TStringHeap*)s;
 }
@@ -23,17 +23,17 @@ static inline struct TStringHeap* allocate_header(uint32_t length) {
   return sh;
 }
 
-struct TString* tstr_new(const char* buf TH_NONNULL, size_t len) {
+struct TString const* tstr_new(const char* buf TH_NONNULL, size_t len) {
   if (len > UINT32_MAX) return NULL;
 
   struct TStringHeap* sh = allocate_header(len);
   if (sh) {
     memcpy(sh->buffer, buf, sizeof(char) * len);
   }
-  return (struct TString*)sh;
+  return (struct TString const*)sh;
 }
 
-struct TString* tstr_dup(struct TString* s) {
+struct TString const* tstr_dup(struct TString const* s) {
   if (!s) return NULL;
 
   struct TStringHeap* sh = to_heap(s);
@@ -45,7 +45,7 @@ struct TString* tstr_dup(struct TString* s) {
   return tstr_new(s->ptr, s->length);
 }
 
-void tstr_drop(struct TString* s) {
+void tstr_drop(struct TString const* s) {
   if (!s) return;
 
   struct TStringHeap* sh = to_heap(s);
@@ -54,7 +54,7 @@ void tstr_drop(struct TString* s) {
   }
 }
 
-struct TString* tstr_concat(struct TString const* left, struct TString const* right) {
+struct TString const* tstr_concat(struct TString const* left, struct TString const* right) {
   size_t len = left->length + right->length;
   if (len > UINT32_MAX) {
     return NULL;
@@ -64,10 +64,10 @@ struct TString* tstr_concat(struct TString const* left, struct TString const* ri
     memcpy(sh->buffer, left->ptr, left->length);
     memcpy(sh->buffer + sizeof(char) * left->length, right->ptr, right->length);
   }
-  return (struct TString*)sh;
+  return (struct TString const*)sh;
 }
 
-struct TString* tstr_substr(struct TString const* s, size_t pos, size_t len) {
+struct TString const* tstr_substr(struct TString const* s, size_t pos, size_t len) {
   if (pos > s->length) {
     len = 0;
   } else if (pos + len > s->length) {
@@ -77,5 +77,5 @@ struct TString* tstr_substr(struct TString const* s, size_t pos, size_t len) {
   if (sh) {
     memcpy(sh->buffer, s->ptr + sizeof(char) * pos, sizeof(char) * len);
   }
-  return (struct TString*)sh;
+  return (struct TString const*)sh;
 }

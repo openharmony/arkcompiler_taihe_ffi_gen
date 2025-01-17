@@ -74,7 +74,7 @@ public:
     }
 
 private:
-    explicit string(TString* other_handle)
+    explicit string(TString const* other_handle)
         : m_handle(other_handle) {}
 
 public:
@@ -153,7 +153,7 @@ private:
     friend string concat(string_view left, string_view right);
     friend string substr(string_view sv, std::size_t pos, std::size_t len);
 
-    TString* m_handle;
+    TString const* m_handle;
 };
 
 struct string_view_container {
@@ -185,7 +185,7 @@ struct string_view_container {
     }
 
     operator string() const noexcept {
-        return string(tstr_dup(const_cast<struct TString*>(&m_header)));
+        return string(tstr_dup(&m_header));
     }
 
 public:

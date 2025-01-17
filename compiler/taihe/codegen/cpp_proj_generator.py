@@ -219,14 +219,12 @@ class TypeCppProjInfo(AbstractAnalysis[Optional[Type]], TypeVisitor):
         self.as_owner = "::taihe::core::string"
         self.as_param = "::taihe::core::string_view"
         self.pass_from_abi = lambda val: f"reinterpret_cast<{self.as_param}>(*{val})"
-        self.pass_into_abi = (
-            lambda val: f"const_cast<TString*>(reinterpret_cast<TString const*>(&{val}))"
-        )
+        self.pass_into_abi = lambda val: f"reinterpret_cast<TString const*>(&{val})"
         self.return_from_abi = (
-            lambda val: f"::taihe::core::move_from_abi<{self.as_owner}, TString*>({val})"
+            lambda val: f"::taihe::core::move_from_abi<{self.as_owner}, TString const*>({val})"
         )
         self.return_into_abi = (
-            lambda val: f"::taihe::core::move_into_abi<{self.as_owner}, TString*>({val})"
+            lambda val: f"::taihe::core::move_into_abi<{self.as_owner}, TString const*>({val})"
         )
 
     def visit_array_type(self, t: ArrayType) -> None:
