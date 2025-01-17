@@ -214,17 +214,24 @@ class TypeCppProjInfo(AbstractAnalysis[Optional[Type]], TypeVisitor):
     def visit_special_type(self, t: SpecialType) -> Any:
         if t != STRING:
             raise ValueError
+
+        abi_info = TypeABIInfo.get(self.am, t)
+
         self.decl_headers = ["core/string.hpp"]
         self.defn_headers = ["core/string.hpp"]
         self.as_owner = "::taihe::core::string"
         self.as_param = "::taihe::core::string_view"
-        self.pass_from_abi = lambda val: f"reinterpret_cast<{self.as_param}>(*{val})"
-        self.pass_into_abi = lambda val: f"reinterpret_cast<TString const*>(&{val})"
         self.return_from_abi = (
-            lambda val: f"::taihe::core::move_from_abi<{self.as_owner}, TString const*>({val})"
+            lambda val: f"::taihe::core::move_from_abi<{self.as_owner}, {abi_info.as_field}>({val})"
         )
         self.return_into_abi = (
-            lambda val: f"::taihe::core::move_into_abi<{self.as_owner}, TString const*>({val})"
+            lambda val: f"::taihe::core::move_into_abi<{self.as_owner}, {abi_info.as_field}>({val})"
+        )
+        self.pass_from_abi = (
+            lambda val: f"::taihe::core::cast_from_abi<{self.as_param}, {abi_info.as_param}>({val})"
+        )
+        self.pass_into_abi = (
+            lambda val: f"::taihe::core::cast_into_abi<{self.as_param}, {abi_info.as_param}>({val})"
         )
 
     def visit_array_type(self, t: ArrayType) -> None:
