@@ -1,0 +1,20 @@
+#!/usr/bin/bash -eux
+
+# 安装 require 导入所需环境
+npm install @types/node --save-dev
+
+# 代码生成
+pushd ../../compiler
+python -m taihe -I ../test/napi/idl/ -O ../test/napi/author_test -a
+python -m taihe -I ../test/napi/idl/ -O ../test/napi/user_test -u
+python -m taihe -I ../test/napi/idl/ -O ../test/napi/napi_test -n
+popd
+
+# 编译 napi.cpp
+clang++ -std=gnu++17 -shared -o integer.node -fPIC napi_test/integer.napi.cpp author/src/integer.impl.cpp -I ../../runtime/include -I author_test/include
+
+# 编译 ts
+tsc
+
+# 运行
+node napi.js
