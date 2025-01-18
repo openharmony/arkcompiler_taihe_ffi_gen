@@ -4,26 +4,26 @@
 #include <taihe/common.h>
 #include <taihe/string.abi.h>
 
-static inline struct TStringHeap* to_heap(struct TString tstr) {
+static inline struct TStringHeap *to_heap(struct TString tstr) {
   if (tstr.flags & TSTRING_REF) return NULL;
-  return (struct TStringHeap*)((char*)tstr.ptr - offsetof(struct TStringHeap, buffer));
+  return (struct TStringHeap *)((char *)tstr.ptr - offsetof(struct TStringHeap, buffer));
 }
 
-static inline struct TStringHeap* allocate_heap(struct TString *tstr_ptr, uint32_t length) {
-  size_t bytes_required = sizeof(struct TStringHeap) + sizeof(char) * (length + 1);
-  struct TStringHeap* sh = malloc(bytes_required);
+char *tstr_initialize(struct TString *tstr_ptr, uint32_t capacity) {
+  size_t bytes_required = sizeof(struct TStringHeap) + sizeof(char) * capacity;
+  struct TStringHeap *sh = malloc(bytes_required);
   tref_set(&sh->count, 1);
-  sh->buffer[length] = '\0';
   tstr_ptr->flags = 0;
-  tstr_ptr->length = length;
   tstr_ptr->ptr = sh->buffer;
-  return sh;
+  return sh->buffer;
 }
 
-struct TString tstr_new(const char* buf TH_NONNULL, size_t len) {
+struct TString tstr_new(const char *value TH_NONNULL, size_t len) {
   struct TString tstr;
-  struct TStringHeap* sh = allocate_heap(&tstr, len);
-  memcpy(sh->buffer, buf, sizeof(char) * len);
+  char *buf = tstr_initialize(&tstr, len + 1);
+  memcpy(buf, value, sizeof(char) * len);
+  buf[len] = '\0';
+  tstr.length = len;
   return tstr;
 }
 
@@ -31,7 +31,7 @@ struct TString tstr_dup(struct TString tstr) {
   if (tstr.ptr == NULL) {
     return tstr;
   }
-  struct TStringHeap* sh = to_heap(tstr);
+  struct TStringHeap *sh = to_heap(tstr);
   if (sh) {
     tref_inc(&sh->count);
     return tstr;
@@ -43,7 +43,7 @@ void tstr_drop(struct TString tstr) {
   if (tstr.ptr == NULL) {
     return;
   }
-  struct TStringHeap* sh = to_heap(tstr);
+  struct TStringHeap *sh = to_heap(tstr);
   if (sh && tref_dec(&sh->count)) {
     free(sh);
     return;
@@ -54,13 +54,13 @@ void tstr_drop(struct TString tstr) {
 struct TString tstr_concat(struct TString left, struct TString right) {
   size_t len = left.length + right.length;
   struct TString tstr;
-  struct TStringHeap* sh = allocate_heap(&tstr, len);
-  tref_set(&sh->count, 1);
-  char* buf = sh->buffer;
-  memcpy(buf, left.ptr, left.length);
-  buf += sizeof(char) * left.length;
-  memcpy(buf, right.ptr, right.length);
-  buf += sizeof(char) * right.length;
+  char *buf = tstr_initialize(&tstr, len + 1);
+  memcpy(buf, left.ptr, sizeof(char) * left.length);
+  buf += left.length;
+  memcpy(buf, right.ptr, sizeof(char) * right.length);
+  buf += right.length;
+  *buf = '\0';
+  tstr.length = len;
   return tstr;
 }
 
@@ -71,7 +71,10 @@ struct TString tstr_substr(struct TString tstr, size_t pos, size_t len) {
     len = tstr.length - pos;
   }
   struct TString sstr;
-  struct TStringHeap* sh = allocate_heap(&sstr, len);
-  memcpy(sh->buffer, tstr.ptr + sizeof(char) * pos, sizeof(char) * len);
+  char *buf = tstr_initialize(&sstr, len + 1);
+  memcpy(buf, tstr.ptr + pos, sizeof(char) * len);
+  buf += len;
+  *buf = '\0';
+  tstr.length = len;
   return sstr;
 }

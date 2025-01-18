@@ -60,6 +60,8 @@ TH_INLINE struct TString tstr_new_ref(const char* buf TH_NONNULL, size_t len) {
   return tstr;
 }
 
+char *tstr_initialize(struct TString *tstr_ptr, uint32_t capacity);
+
 /// Creates a heap-allocated TString by copying the original string.
 //
 // # Arguments
