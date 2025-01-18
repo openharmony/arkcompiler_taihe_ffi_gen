@@ -207,9 +207,6 @@ private:
     }
 
     friend struct array<cpp_owner_t>;
-
-    template<typename cpp_t, typename abi_t>
-    friend struct converter;
 };
 
 struct copy_data_t {};
@@ -339,11 +336,7 @@ struct array {
         return m_data[m_size - 1];
     }
 
-    pointer data() noexcept {
-        return m_data;
-    }
-
-    const_pointer data() const noexcept {
+    pointer data() const noexcept {
         return m_data;
     }
 
@@ -392,9 +385,6 @@ private:
     cpp_owner_t* m_data;
 
     friend struct array_view<cpp_owner_t>;
-
-    template<typename cpp_t, typename abi_t>
-    friend struct converter;
 };
 
 template<typename cpp_owner_t>

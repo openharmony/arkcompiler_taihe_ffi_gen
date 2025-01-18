@@ -76,16 +76,16 @@ class StructDeclCppProjInfo(AbstractAnalysis[StructDecl]):
         self.as_owner = self.full_name
         self.as_param = self.full_name + " const&"
         self.return_from_abi = (
-            lambda val: f"::taihe::core::move_from_abi<{self.as_owner}, {abi_info.as_field}>({val})"
+            lambda val: f"::taihe::core::cast_from_abi<{self.as_owner}, {abi_info.as_field}>({val})"
         )
         self.return_into_abi = (
             lambda val: f"::taihe::core::move_into_abi<{self.as_owner}, {abi_info.as_field}>({val})"
         )
         self.pass_from_abi = (
-            lambda val: f"::taihe::core::cast_from_abi<{self.as_param}, {abi_info.as_param}>({val})"
+            lambda val: f"::taihe::core::cast_ref_from_abi<{self.as_param}, {abi_info.as_param}>({val})"
         )
         self.pass_into_abi = (
-            lambda val: f"::taihe::core::cast_into_abi<{self.as_param}, {abi_info.as_param}>({val})"
+            lambda val: f"::taihe::core::cast_ref_into_abi<{self.as_param}, {abi_info.as_param}>({val})"
         )
 
 
@@ -101,16 +101,16 @@ class EnumDeclCppProjInfo(AbstractAnalysis[EnumDecl]):
         self.as_owner = self.full_name
         self.as_param = self.full_name + " const&"
         self.return_from_abi = (
-            lambda val: f"::taihe::core::move_from_abi<{self.as_owner}, {abi_info.as_field}>({val})"
+            lambda val: f"::taihe::core::cast_from_abi<{self.as_owner}, {abi_info.as_field}>({val})"
         )
         self.return_into_abi = (
             lambda val: f"::taihe::core::move_into_abi<{self.as_owner}, {abi_info.as_field}>({val})"
         )
         self.pass_from_abi = (
-            lambda val: f"::taihe::core::cast_from_abi<{self.as_param}, {abi_info.as_param}>({val})"
+            lambda val: f"::taihe::core::cast_ref_from_abi<{self.as_param}, {abi_info.as_param}>({val})"
         )
         self.pass_into_abi = (
-            lambda val: f"::taihe::core::cast_into_abi<{self.as_param}, {abi_info.as_param}>({val})"
+            lambda val: f"::taihe::core::cast_ref_into_abi<{self.as_param}, {abi_info.as_param}>({val})"
         )
 
 
@@ -128,16 +128,16 @@ class IfaceDeclCppProjInfo(AbstractAnalysis[IfaceDecl]):
         self.as_owner = self.full_name
         self.as_param = self.weak_name
         self.return_from_abi = (
-            lambda val: f"::taihe::core::move_from_abi<{self.as_owner}, {abi_info.as_field}>({val})"
+            lambda val: f"::taihe::core::cast_from_abi<{self.as_owner}, {abi_info.as_field}>({val})"
         )
         self.return_into_abi = (
             lambda val: f"::taihe::core::move_into_abi<{self.as_owner}, {abi_info.as_field}>({val})"
         )
         self.pass_from_abi = (
-            lambda val: f"::taihe::core::move_from_abi<{self.as_param}, {abi_info.as_param}>({val})"
+            lambda val: f"::taihe::core::cast_from_abi<{self.as_param}, {abi_info.as_param}>({val})"
         )
         self.pass_into_abi = (
-            lambda val: f"::taihe::core::move_into_abi<{self.as_param}, {abi_info.as_param}>({val})"
+            lambda val: f"::taihe::core::cast_into_abi<{self.as_param}, {abi_info.as_param}>({val})"
         )
 
 
@@ -222,16 +222,16 @@ class TypeCppProjInfo(AbstractAnalysis[Optional[Type]], TypeVisitor):
         self.as_owner = "::taihe::core::string"
         self.as_param = "::taihe::core::string_view"
         self.return_from_abi = (
-            lambda val: f"::taihe::core::move_from_abi<{self.as_owner}, {abi_info.as_field}>({val})"
+            lambda val: f"::taihe::core::cast_from_abi<{self.as_owner}, {abi_info.as_field}>({val})"
         )
         self.return_into_abi = (
             lambda val: f"::taihe::core::move_into_abi<{self.as_owner}, {abi_info.as_field}>({val})"
         )
         self.pass_from_abi = (
-            lambda val: f"::taihe::core::move_from_abi<{self.as_param}, {abi_info.as_param}>({val})"
+            lambda val: f"::taihe::core::cast_from_abi<{self.as_param}, {abi_info.as_param}>({val})"
         )
         self.pass_into_abi = (
-            lambda val: f"::taihe::core::move_into_abi<{self.as_param}, {abi_info.as_param}>({val})"
+            lambda val: f"::taihe::core::cast_into_abi<{self.as_param}, {abi_info.as_param}>({val})"
         )
 
     def visit_array_type(self, t: ArrayType) -> None:
@@ -242,17 +242,17 @@ class TypeCppProjInfo(AbstractAnalysis[Optional[Type]], TypeVisitor):
         self.defn_headers = ["core/array.hpp", *arg_ty_cpp_proj_info.decl_headers]
         self.as_owner = f"::taihe::core::array<{arg_ty_cpp_proj_info.as_owner}>"
         self.as_param = f"::taihe::core::array_view<{arg_ty_cpp_proj_info.as_owner}>"
-        self.pass_from_abi = (
-            lambda val: f"::taihe::core::move_from_abi<{self.as_param}, {abi_info.as_param}>({val})"
-        )
-        self.pass_into_abi = (
-            lambda val: f"::taihe::core::move_into_abi<{self.as_param}, {abi_info.as_param}>({val})"
-        )
         self.return_from_abi = (
-            lambda val: f"::taihe::core::move_from_abi<{self.as_owner}, {abi_info.as_field}>({val})"
+            lambda val: f"::taihe::core::cast_from_abi<{self.as_owner}, {abi_info.as_field}>({val})"
         )
         self.return_into_abi = (
             lambda val: f"::taihe::core::move_into_abi<{self.as_owner}, {abi_info.as_field}>({val})"
+        )
+        self.pass_from_abi = (
+            lambda val: f"::taihe::core::cast_from_abi<{self.as_param}, {abi_info.as_param}>({val})"
+        )
+        self.pass_into_abi = (
+            lambda val: f"::taihe::core::cast_into_abi<{self.as_param}, {abi_info.as_param}>({val})"
         )
 
 
@@ -720,10 +720,6 @@ class CppProjCodeGenerator:
             "private:\n"
             "    tag_t tag;\n"
             "    storage_t data;\n"
-            "    template<typename cpp_t, typename abi_t>\n"
-            "    friend abi_t taihe::core::move_into_abi(cpp_t val);\n"
-            "    template<typename cpp_t, typename abi_t>\n"
-            "    friend cpp_t taihe::core::move_from_abi(abi_t val);\n"
             "};\n"
             "}\n"
         )
