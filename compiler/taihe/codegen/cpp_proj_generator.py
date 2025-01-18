@@ -717,11 +717,7 @@ class CppProjCodeGenerator:
             )
         enum_cpp_proj_defn_target.write("        }\n" "    }\n")
         enum_cpp_proj_defn_target.write(
-            "private:\n"
-            "    tag_t tag;\n"
-            "    storage_t data;\n"
-            "};\n"
-            "}\n"
+            "private:\n" "    tag_t tag;\n" "    storage_t data;\n" "};\n" "}\n"
         )
 
     def gen_iface_files(
