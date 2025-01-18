@@ -228,10 +228,10 @@ class TypeCppProjInfo(AbstractAnalysis[Optional[Type]], TypeVisitor):
             lambda val: f"::taihe::core::move_into_abi<{self.as_owner}, {abi_info.as_field}>({val})"
         )
         self.pass_from_abi = (
-            lambda val: f"::taihe::core::cast_from_abi<{self.as_param}, {abi_info.as_param}>({val})"
+            lambda val: f"::taihe::core::move_from_abi<{self.as_param}, {abi_info.as_param}>({val})"
         )
         self.pass_into_abi = (
-            lambda val: f"::taihe::core::cast_into_abi<{self.as_param}, {abi_info.as_param}>({val})"
+            lambda val: f"::taihe::core::move_into_abi<{self.as_param}, {abi_info.as_param}>({val})"
         )
 
     def visit_array_type(self, t: ArrayType) -> None:

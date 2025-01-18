@@ -32,7 +32,7 @@ struct ExpatParserState {
             return;
         }
         if (auto callback = m_option.tagValueCallbackFunction.get_value_ptr()) {
-            (*callback)(m_stack.back(), taihe::core::string_view_container(data, len));
+            (*callback)(m_stack.back(), taihe::core::string_view(data, len));
         }
     }
 };

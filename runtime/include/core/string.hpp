@@ -14,9 +14,7 @@
 #include <taihe/string.abi.h>
 
 namespace taihe::core {
-struct string_view_container;
-
-using string_view = string_view_container const&;
+struct string_view;
 
 struct string {
 public:
@@ -29,10 +27,10 @@ public:
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
     string(const char* value TH_NONNULL)
-        : m_handle(tstr_new(value, std::strlen(value))) {}
+        : m_data(tstr_new(value, std::strlen(value))) {}
 
     string(const char* value TH_NONNULL, size_type size)
-        : m_handle(tstr_new(value, size)) {}
+        : m_data(tstr_new(value, size)) {}
 
     string(std::initializer_list<char> value)
         : string(value.begin(), static_cast<uint32_t>(value.size())) {}
@@ -43,73 +41,69 @@ public:
     string(std::string const &value)
         : string(value.data(), value.size()) {}
 
-    operator string_view() const {
-        return reinterpret_cast<string_view>(*m_handle);
-    }
-
     operator std::string_view() const noexcept {
-        return { tstr_buf(m_handle), tstr_len(m_handle) };
+        return { tstr_buf(m_data), tstr_len(m_data) };
     }
 
     // copy assignment
     string(string const& other)
-        : m_handle(tstr_dup(other.m_handle)) {}
+        : m_data(tstr_dup(other.m_data)) {}
 
     // move assignment
     string(string&& other) noexcept
-        : m_handle(other.m_handle) {
-        other.m_handle = nullptr;
+        : m_data(other.m_data) {
+        other.m_data.ptr = NULL;
     }
 
     // destructor
     ~string() {
-        tstr_drop(m_handle);
+        tstr_drop(m_data);
     }
 
     // assignment
     string& operator=(string other) {
         // copy-and-swap idiom
-        std::swap(this->m_handle, other.m_handle);
+        std::swap(this->m_data, other.m_data);
         return *this;
     }
 
 private:
-    explicit string(TString const* other_handle)
-        : m_handle(other_handle) {}
+    explicit string(TString other_handle)
+        : m_data(other_handle) {}
 
 public:
     const_reference operator[](size_type pos) const {
         if (pos >= size()) {
             throw std::out_of_range("Index out of range");
         }
-        return tstr_buf(m_handle)[pos];
+        return tstr_buf(m_data)[pos];
     }
 
     // others
     bool empty() const noexcept {
-        return tstr_len(m_handle) == 0;
+        return tstr_len(m_data) == 0;
     }
 
     size_type size() const noexcept {
-        return tstr_len(m_handle);
+        return tstr_len(m_data);
     }
 
     const_reference front() const {
         if (empty()) {
             throw std::out_of_range("Empty string");
         }
-        return tstr_buf(m_handle)[0];
+        return tstr_buf(m_data)[0];
     }
 
     const_reference back() const {
         if (empty()) {
             throw std::out_of_range("Empty string");
         }
-        return tstr_buf(m_handle)[size() - 1];
+        return tstr_buf(m_data)[size() - 1];
     }
 
     const_pointer c_str() const noexcept {
-        return tstr_buf(m_handle);
+        return tstr_buf(m_data);
     }
 
     const_pointer data() const noexcept {
@@ -117,7 +111,7 @@ public:
     }
 
     const_iterator begin() const noexcept {
-        return tstr_buf(m_handle);
+        return tstr_buf(m_data);
     }
 
     const_iterator cbegin() const noexcept {
@@ -125,7 +119,7 @@ public:
     }
 
     const_iterator end() const noexcept {
-        return tstr_buf(m_handle) + tstr_len(m_handle);
+        return tstr_buf(m_data) + tstr_len(m_data);
     }
 
     const_iterator cend() const noexcept {
@@ -149,14 +143,14 @@ public:
     }
 
 private:
-    friend class string_view_container;
+    friend class string_view;
     friend string concat(string_view left, string_view right);
     friend string substr(string_view sv, std::size_t pos, std::size_t len);
 
-    TString const* m_handle;
+    TString m_data;
 };
 
-struct string_view_container {
+struct string_view {
     // Using
     using value_type = char;
     using size_type = std::size_t;
@@ -165,27 +159,30 @@ struct string_view_container {
     using const_iterator = const_pointer;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-    string_view_container(const char* value TH_NONNULL)
-        : m_header(tstr_new_ref(value, strlen(value))) {}
+    string_view(const char* value TH_NONNULL)
+        : m_data(tstr_new_ref(value, strlen(value))) {}
 
-    string_view_container(const char* value TH_NONNULL, size_type size)
-        : m_header(tstr_new_ref(value, size)) {}
+    string_view(const char* value TH_NONNULL, size_type size)
+        : m_data(tstr_new_ref(value, size)) {}
 
-    string_view_container(std::initializer_list<char> value)
-        : string_view_container(value.begin(), static_cast<uint32_t>(value.size())) {}
+    string_view(std::initializer_list<char> value)
+        : string_view(value.begin(), static_cast<uint32_t>(value.size())) {}
 
-    string_view_container(std::string_view value)
-        : string_view_container(value.data(), value.size()) {}
+    string_view(std::string_view value)
+        : string_view(value.data(), value.size()) {}
 
-    string_view_container(std::string const &value)
-        : string_view_container(value.data(), value.size()) {}
+    string_view(std::string const &value)
+        : string_view(value.data(), value.size()) {}
+
+    string_view(string const &value)
+        : string_view(value.data(), value.size()) {}
 
     operator std::string_view() const noexcept {
-        return { tstr_buf(&m_header), tstr_len(&m_header) };
+        return { tstr_buf(m_data), tstr_len(m_data) };
     }
 
     operator string() const noexcept {
-        return string(tstr_dup(&m_header));
+        return string(tstr_dup(m_data));
     }
 
 public:
@@ -193,34 +190,34 @@ public:
         if (pos >= size()) {
             throw std::out_of_range("Index out of range");
         }
-        return tstr_buf(&m_header)[pos];
+        return tstr_buf(m_data)[pos];
     }
 
     // others
     bool empty() const noexcept {
-        return tstr_len(&m_header) == 0;
+        return tstr_len(m_data) == 0;
     }
 
     size_type size() const noexcept {
-        return tstr_len(&m_header);
+        return tstr_len(m_data);
     }
 
     const_reference front() const {
         if (empty()) {
             throw std::out_of_range("Empty string");
         }
-        return tstr_buf(&m_header)[0];
+        return tstr_buf(m_data)[0];
     }
 
     const_reference back() const {
         if (empty()) {
             throw std::out_of_range("Empty string");
         }
-        return tstr_buf(&m_header)[size() - 1];
+        return tstr_buf(m_data)[size() - 1];
     }
 
     const_pointer c_str() const noexcept {
-        return tstr_buf(&m_header);
+        return tstr_buf(m_data);
     }
 
     const_pointer data() const noexcept {
@@ -228,7 +225,7 @@ public:
     }
 
     const_iterator begin() const noexcept {
-        return tstr_buf(&m_header);
+        return tstr_buf(m_data);
     }
 
     const_iterator cbegin() const noexcept {
@@ -236,7 +233,7 @@ public:
     }
 
     const_iterator end() const noexcept {
-        return tstr_buf(&m_header) + tstr_len(&m_header);
+        return tstr_buf(m_data) + tstr_len(m_data);
     }
 
     const_iterator cend() const noexcept {
@@ -263,15 +260,15 @@ private:
     friend string concat(string_view left, string_view right);
     friend string substr(string_view sv, std::size_t pos, std::size_t len);
 
-    struct TString m_header;
+    struct TString m_data;
 };
 
 inline string substr(string_view sv, std::size_t pos, std::size_t len) {
-    return string(tstr_substr(&sv.m_header, pos, len));
+    return string(tstr_substr(sv.m_data, pos, len));
 }
 
 inline string concat(string_view left, string_view right) {
-    return string(tstr_concat(&left.m_header, &right.m_header));
+    return string(tstr_concat(left.m_data, right.m_data));
 }
 
 inline bool operator==(string_view lhs, string_view rhs) {
@@ -310,7 +307,7 @@ inline string to_string(T value) {
     if (result.ec != std::errc{}) {
         throw std::runtime_error("Conversion to char failed");
     }
-    *result.ptr = '\0'; // std::to_chars does not write '\0' at the end of the buffer automatcally
+    // *result.ptr = '\0'; // std::to_chars does not write '\0' at the end of the buffer automatcally
     return string{ buffer, static_cast<std::size_t>(result.ptr - buffer) };
 }
 
@@ -322,7 +319,7 @@ inline string to_string(T value) {
     if (result.ec != std::errc{}) {
         throw std::runtime_error("Conversion to char failed");
     }
-    *result.ptr = '\0'; // std::to_chars does not write '\0' at the end of the buffer automatcally
+    // *result.ptr = '\0'; // std::to_chars does not write '\0' at the end of the buffer automatcally
     return string{ buffer, static_cast<std::size_t>(result.ptr - buffer) };
 }
 

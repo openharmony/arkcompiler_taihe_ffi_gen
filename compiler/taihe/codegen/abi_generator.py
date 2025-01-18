@@ -219,8 +219,8 @@ class TypeABIInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
         if t == STRING:
             self.decl_headers = ["taihe/string.abi.h"]
             self.defn_headers = ["taihe/string.abi.h"]
-            self.as_field = "struct TString const*"
-            self.as_param = "struct TString const*"
+            self.as_field = "struct TString"
+            self.as_param = "struct TString"
             self.copy_func = "tstr_dup"
             self.drop_func = "tstr_drop"
         else:
@@ -230,8 +230,8 @@ class TypeABIInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
         arg_ty_abi_info = TypeABIInfo.get(self.am, t.item_ty)
         self.decl_headers = ["core/array.hpp", *arg_ty_abi_info.decl_headers]
         self.defn_headers = ["core/array.hpp", *arg_ty_abi_info.decl_headers]
-        self.as_field = f"ArrayABI<{arg_ty_abi_info.as_field}>"
-        self.as_param = f"ArrayABI<{arg_ty_abi_info.as_field}>"
+        self.as_field = f"struct TArray<{arg_ty_abi_info.as_field}>"
+        self.as_param = f"struct TArray<{arg_ty_abi_info.as_field}>"
         self.copy_func = "tarr_copy"
         self.drop_func = "tarr_drop"
 
