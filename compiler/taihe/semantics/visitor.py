@@ -29,7 +29,6 @@ from taihe.semantics.declarations import (
     IfaceMethodDecl,
     IfaceParentDecl,
     ImportDecl,
-    NamedDecl,
     Package,
     PackageGroup,
     PackageImportDecl,
@@ -173,13 +172,10 @@ class DeclVisitor:
         for i in d.attrs.values():
             self.handle_decl(i)
 
-    def visit_named_decl(self, d: NamedDecl) -> None:
-        return self.visit_decl(d)
-
     def visit_param_decl(self, d: ParamDecl) -> None:
         self.handle_decl(d.ty_ref)
 
-        return self.visit_named_decl(d)
+        return self.visit_decl(d)
 
     ### Attribute ###
 
@@ -218,7 +214,7 @@ class DeclVisitor:
     ### Imports ###
 
     def visit_import_decl(self, d: ImportDecl) -> None:
-        return self.visit_named_decl(d)
+        return self.visit_decl(d)
 
     def visit_package_import_decl(self, d: PackageImportDecl) -> None:
         self.handle_decl(d.pkg_ref)
@@ -239,19 +235,19 @@ class DeclVisitor:
         if d.return_ty_ref:
             self.handle_decl(d.return_ty_ref)
 
-        return self.visit_named_decl(d)
+        return self.visit_decl(d)
 
     ### Type (Generic) ###
 
     def visit_type_decl(self, d: TypeDecl) -> None:
-        return self.visit_named_decl(d)
+        return self.visit_decl(d)
 
     ### Struct ###
 
     def visit_struct_field_decl(self, d: StructFieldDecl) -> None:
         self.handle_decl(d.ty_ref)
 
-        return self.visit_named_decl(d)
+        return self.visit_decl(d)
 
     def visit_struct_decl(self, d: StructDecl) -> None:
         for i in d.fields:
@@ -265,7 +261,7 @@ class DeclVisitor:
         if d.ty_ref:
             self.handle_decl(d.ty_ref)
 
-        return self.visit_named_decl(d)
+        return self.visit_decl(d)
 
     def visit_enum_decl(self, d: EnumDecl) -> None:
         for i in d.items:
@@ -287,7 +283,7 @@ class DeclVisitor:
         if d.return_ty_ref:
             self.handle_decl(d.return_ty_ref)
 
-        return self.visit_named_decl(d)
+        return self.visit_decl(d)
 
     def visit_iface_decl(self, d: IfaceDecl) -> None:
         for i in d.parents:
@@ -315,7 +311,7 @@ class DeclVisitor:
         for i in p.interfaces:
             self.handle_decl(i)
 
-        return self.visit_named_decl(p)
+        return self.visit_decl(p)
 
     def visit_package_group(self, g: PackageGroup) -> None:
         for i in g.packages:
