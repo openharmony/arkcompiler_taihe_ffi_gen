@@ -27,7 +27,7 @@ class TypeProtocol(Protocol):
     def _accept(self, v: "TypeVisitor") -> Any: ...
 
 
-class Type(TypeProtocol, metaclass=ABCMeta):
+class Type(metaclass=ABCMeta):
     """Represents a concrete type."""
 
     @property
@@ -36,6 +36,9 @@ class Type(TypeProtocol, metaclass=ABCMeta):
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__qualname__} {self.description}>"
+
+    @abstractmethod
+    def _accept(self, v: "TypeVisitor") -> Any: ...
 
 
 ##################

@@ -57,7 +57,9 @@ public:
 
     // destructor
     ~string() {
-        tstr_drop(m_data);
+        if (m_data.ptr != NULL) {
+            tstr_drop(m_data);
+        }
     }
 
     // assignment

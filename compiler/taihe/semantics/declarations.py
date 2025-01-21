@@ -29,7 +29,7 @@ class DeclProtocol(Protocol):
     def _accept(self, v: "DeclVisitor") -> Any: ...
 
 
-class Decl(DeclProtocol, metaclass=ABCMeta):
+class Decl(metaclass=ABCMeta):
     """Represents any declaration."""
 
     loc: Optional[SourceLocation]
@@ -50,6 +50,9 @@ class Decl(DeclProtocol, metaclass=ABCMeta):
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__qualname__} {self.description}>"
+
+    @abstractmethod
+    def _accept(self, v: "DeclVisitor") -> Any: ...
 
 
 class NamedDecl(Decl, metaclass=ABCMeta):

@@ -78,12 +78,12 @@ class TypeVisitor(Generic[T]):
     visiting: Optional[TypeProtocol] = None
     """The current node being visited. Only for debug use."""
 
-    def handle_type(self, t: Optional[TypeProtocol]) -> T:
+    def handle_type(self, t: TypeProtocol) -> T:
         """The entrance for visiting."""
         r = self.visiting
         self.visiting = t
         try:
-            return t._accept(self) if t else self.visit_error_type()
+            return t._accept(self)
         except:
             print(
                 f"Internal error from {self.__class__.__name__} while handling {self.visiting}"
@@ -91,9 +91,6 @@ class TypeVisitor(Generic[T]):
             raise
         finally:
             self.visiting = r
-
-    def visit_error_type(self) -> T:
-        raise TypeError
 
     def visit_type(self, t: Type) -> T:
         """The fallback method which handles the most general type.

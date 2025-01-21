@@ -1,5 +1,5 @@
+from abc import ABCMeta
 from dataclasses import dataclass
-from typing import Optional
 
 from typing_extensions import override
 
@@ -151,22 +151,20 @@ class IfaceDeclABIInfo(AbstractAnalysis[IfaceDecl]):
             )
 
 
-class TypeABIInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
-    def __init__(self, am: AnalysisManager, t: Optional[Type]) -> None:
-        self.am = am
-        self.decl_headers: list[str] = []
-        self.defn_headers: list[str] = []
-        # type as struct field / union field / return value
-        self.as_field = None
-        # type as parameter
-        self.as_param = None
-        self.copy_func = None
-        self.drop_func = None
-        self.handle_type(t)
+class AbstractTypeABIInfo(metaclass=ABCMeta):
+    decl_headers: list[str]
+    defn_headers: list[str]
+    # type as struct field / union field / return value
+    as_field: str
+    # type as parameter
+    as_param: str
+    copy_func: str | None
+    drop_func: str | None
 
-    @override
-    def visit_enum_type(self, t: EnumType) -> None:
-        enum_abi_info = EnumDeclABIInfo.get(self.am, t.ty_decl)
+
+class EnumTypeABIInfo(AbstractAnalysis[EnumType], AbstractTypeABIInfo):
+    def __init__(self, am: AnalysisManager, t: EnumType):
+        enum_abi_info = EnumDeclABIInfo.get(am, t.ty_decl)
         self.decl_headers = [enum_abi_info.decl_header]
         self.defn_headers = [enum_abi_info.defn_header]
         self.as_field = enum_abi_info.as_field
@@ -174,9 +172,10 @@ class TypeABIInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
         self.copy_func = enum_abi_info.copy_func
         self.drop_func = enum_abi_info.drop_func
 
-    @override
-    def visit_struct_type(self, t: StructType) -> None:
-        struct_abi_info = StructDeclABIInfo.get(self.am, t.ty_decl)
+
+class StructTypeABIInfo(AbstractAnalysis[StructType], AbstractTypeABIInfo):
+    def __init__(self, am: AnalysisManager, t: StructType) -> None:
+        struct_abi_info = StructDeclABIInfo.get(am, t.ty_decl)
         self.decl_headers = [struct_abi_info.decl_header]
         self.defn_headers = [struct_abi_info.defn_header]
         self.as_field = struct_abi_info.as_field
@@ -184,9 +183,10 @@ class TypeABIInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
         self.copy_func = struct_abi_info.copy_func
         self.drop_func = struct_abi_info.drop_func
 
-    @override
-    def visit_iface_type(self, t: IfaceType) -> None:
-        iface_abi_info = IfaceDeclABIInfo.get(self.am, t.ty_decl)
+
+class IfaceTypeABIInfo(AbstractAnalysis[IfaceType], AbstractTypeABIInfo):
+    def __init__(self, am: AnalysisManager, t: IfaceType) -> None:
+        iface_abi_info = IfaceDeclABIInfo.get(am, t.ty_decl)
         self.decl_headers = [iface_abi_info.decl_header]
         self.defn_headers = [iface_abi_info.defn_header]
         self.as_field = iface_abi_info.as_field
@@ -194,7 +194,9 @@ class TypeABIInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
         self.copy_func = iface_abi_info.copy_func
         self.drop_func = iface_abi_info.drop_func
 
-    def visit_scalar_type(self, t: ScalarType):
+
+class ScalarTypeABIInfo(AbstractAnalysis[ScalarType], AbstractTypeABIInfo):
+    def __init__(self, am: AnalysisManager, t: ScalarType):
         res = {
             BOOL: "bool",
             F32: "float",
@@ -208,32 +210,71 @@ class TypeABIInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
             U32: "uint32_t",
             U64: "uint64_t",
         }.get(t)
-        self.as_param = res
-        self.as_field = res
-        self.decl_headers = ["taihe/string.abi.h"]
-        self.defn_headers = ["taihe/string.abi.h"]
         if res is None:
             raise ValueError
+        self.decl_headers = ["taihe/string.abi.h"]
+        self.defn_headers = ["taihe/string.abi.h"]
+        self.as_param = res
+        self.as_field = res
+        self.copy_func = None
+        self.drop_func = None
 
-    def visit_special_type(self, t: SpecialType) -> None:
-        if t == STRING:
-            self.decl_headers = ["taihe/string.abi.h"]
-            self.defn_headers = ["taihe/string.abi.h"]
-            self.as_field = "struct TString"
-            self.as_param = "struct TString"
-            self.copy_func = "tstr_dup"
-            self.drop_func = "tstr_drop"
-        else:
+
+class SpecialTypeABIInfo(AbstractAnalysis[SpecialType], AbstractTypeABIInfo):
+    def __init__(self, am: AnalysisManager, t: SpecialType) -> None:
+        if t != STRING:
             raise ValueError
+        self.decl_headers = ["taihe/string.abi.h"]
+        self.defn_headers = ["taihe/string.abi.h"]
+        self.as_field = "struct TString"
+        self.as_param = "struct TString"
+        self.copy_func = "tstr_dup"
+        self.drop_func = "tstr_drop"
 
-    def visit_array_type(self, t: ArrayType) -> None:
-        arg_ty_abi_info = TypeABIInfo.get(self.am, t.item_ty)
+
+class ArrayTypeABIInfo(AbstractAnalysis[ArrayType], AbstractTypeABIInfo):
+    def __init__(self, am: AnalysisManager, t: ArrayType) -> None:
+        arg_ty_abi_info = TypeABIInfo.get(am, t.item_ty)
         self.decl_headers = ["core/array.hpp", *arg_ty_abi_info.decl_headers]
         self.defn_headers = ["core/array.hpp", *arg_ty_abi_info.decl_headers]
         self.as_field = f"struct TArray<{arg_ty_abi_info.as_field}>"
         self.as_param = f"struct TArray<{arg_ty_abi_info.as_field}>"
         self.copy_func = "tarr_copy"
         self.drop_func = "tarr_drop"
+
+
+class TypeABIInfo(TypeVisitor[AbstractTypeABIInfo]):
+    def __init__(self, am: AnalysisManager):
+        self.am = am
+
+    @staticmethod
+    def get(am: AnalysisManager, t: Type | None):
+        assert t is not None
+        return TypeABIInfo(am).handle_type(t)
+
+    @override
+    def visit_enum_type(self, t: EnumType) -> AbstractTypeABIInfo:
+        return EnumTypeABIInfo.get(self.am, t)
+
+    @override
+    def visit_struct_type(self, t: StructType) -> AbstractTypeABIInfo:
+        return StructTypeABIInfo.get(self.am, t)
+
+    @override
+    def visit_iface_type(self, t: IfaceType) -> AbstractTypeABIInfo:
+        return IfaceTypeABIInfo.get(self.am, t)
+
+    @override
+    def visit_scalar_type(self, t: ScalarType) -> AbstractTypeABIInfo:
+        return ScalarTypeABIInfo.get(self.am, t)
+
+    @override
+    def visit_special_type(self, t: SpecialType) -> AbstractTypeABIInfo:
+        return SpecialTypeABIInfo.get(self.am, t)
+
+    @override
+    def visit_array_type(self, t: ArrayType) -> AbstractTypeABIInfo:
+        return ArrayTypeABIInfo.get(self.am, t)
 
 
 class ABICodeGenerator:

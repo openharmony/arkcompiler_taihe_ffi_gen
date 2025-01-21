@@ -28,9 +28,6 @@ struct TString tstr_new(const char *value TH_NONNULL, size_t len) {
 }
 
 struct TString tstr_dup(struct TString tstr) {
-  if (tstr.ptr == NULL) {
-    return tstr;
-  }
   struct TStringHeap *sh = to_heap(tstr);
   if (sh) {
     tref_inc(&sh->count);
@@ -40,9 +37,6 @@ struct TString tstr_dup(struct TString tstr) {
 }
 
 void tstr_drop(struct TString tstr) {
-  if (tstr.ptr == NULL) {
-    return;
-  }
   struct TStringHeap *sh = to_heap(tstr);
   if (sh && tref_dec(&sh->count)) {
     free(sh);

@@ -1,4 +1,5 @@
-from typing import Any, Optional
+from abc import ABCMeta
+from collections.abc import Callable
 
 from typing_extensions import override
 
@@ -141,24 +142,20 @@ class IfaceDeclCppProjInfo(AbstractAnalysis[IfaceDecl]):
         )
 
 
-class TypeCppProjInfo(AbstractAnalysis[Optional[Type]], TypeVisitor):
-    def __init__(self, am: AnalysisManager, t: Optional[Type]) -> None:
-        self.am = am
-        self.decl_headers: list[str] = []
-        self.defn_headers: list[str] = []
-        # type as holder struct field / holder union field / return value
-        self.as_owner = None
-        # type as parameter
-        self.as_param = None
-        self.pass_from_abi = lambda val: val
-        self.pass_into_abi = lambda val: val
-        self.return_from_abi = lambda val: val
-        self.return_into_abi = lambda val: val
-        self.handle_type(t)
+class AbstractTypeCppProjInfo(metaclass=ABCMeta):
+    decl_headers: list[str]
+    defn_headers: list[str]
+    as_owner: str | None
+    as_param: str | None
+    pass_from_abi: Callable[[str], str]
+    pass_into_abi: Callable[[str], str]
+    return_from_abi: Callable[[str], str]
+    return_into_abi: Callable[[str], str]
 
-    @override
-    def visit_enum_type(self, t: EnumType) -> Any:
-        enum_cpp_proj_info = EnumDeclCppProjInfo.get(self.am, t.ty_decl)
+
+class EnumTypeCppProjInfo(AbstractAnalysis[EnumType], AbstractTypeCppProjInfo):
+    def __init__(self, am: AnalysisManager, t: EnumType):
+        enum_cpp_proj_info = EnumDeclCppProjInfo.get(am, t.ty_decl)
         self.decl_headers = [enum_cpp_proj_info.decl_header]
         self.defn_headers = [enum_cpp_proj_info.defn_header]
         self.as_owner = enum_cpp_proj_info.as_owner
@@ -168,9 +165,10 @@ class TypeCppProjInfo(AbstractAnalysis[Optional[Type]], TypeVisitor):
         self.return_from_abi = enum_cpp_proj_info.return_from_abi
         self.return_into_abi = enum_cpp_proj_info.return_into_abi
 
-    @override
-    def visit_struct_type(self, t: StructType) -> Any:
-        struct_cpp_proj_info = StructDeclCppProjInfo.get(self.am, t.ty_decl)
+
+class StructTypeCppProjInfo(AbstractAnalysis[StructType], AbstractTypeCppProjInfo):
+    def __init__(self, am: AnalysisManager, t: StructType):
+        struct_cpp_proj_info = StructDeclCppProjInfo.get(am, t.ty_decl)
         self.decl_headers = [struct_cpp_proj_info.decl_header]
         self.defn_headers = [struct_cpp_proj_info.defn_header]
         self.as_owner = struct_cpp_proj_info.as_owner
@@ -180,9 +178,10 @@ class TypeCppProjInfo(AbstractAnalysis[Optional[Type]], TypeVisitor):
         self.return_from_abi = struct_cpp_proj_info.return_from_abi
         self.return_into_abi = struct_cpp_proj_info.return_into_abi
 
-    @override
-    def visit_iface_type(self, t: IfaceType) -> Any:
-        iface_cpp_proj_info = IfaceDeclCppProjInfo.get(self.am, t.ty_decl)
+
+class IfaceTypeCppProjInfo(AbstractAnalysis[IfaceType], AbstractTypeCppProjInfo):
+    def __init__(self, am: AnalysisManager, t: IfaceType):
+        iface_cpp_proj_info = IfaceDeclCppProjInfo.get(am, t.ty_decl)
         self.decl_headers = [iface_cpp_proj_info.decl_header]
         self.defn_headers = [iface_cpp_proj_info.defn_header]
         self.as_owner = iface_cpp_proj_info.as_owner
@@ -192,8 +191,10 @@ class TypeCppProjInfo(AbstractAnalysis[Optional[Type]], TypeVisitor):
         self.return_from_abi = iface_cpp_proj_info.return_from_abi
         self.return_into_abi = iface_cpp_proj_info.return_into_abi
 
-    def visit_scalar_type(self, t: ScalarType):
-        res = self.as_param = self.as_owner = {
+
+class ScalarTypeCppProjInfo(AbstractAnalysis[ScalarType], AbstractTypeCppProjInfo):
+    def __init__(self, am: AnalysisManager, t: ScalarType):
+        res = {
             BOOL: "bool",
             F32: "float",
             F64: "double",
@@ -208,15 +209,21 @@ class TypeCppProjInfo(AbstractAnalysis[Optional[Type]], TypeVisitor):
         }.get(t)
         if res is None:
             raise ValueError
+        self.decl_headers = []
+        self.defn_headers = []
         self.as_param = res
         self.as_owner = res
+        self.pass_from_abi = lambda x: x
+        self.pass_into_abi = lambda x: x
+        self.return_from_abi = lambda x: x
+        self.return_into_abi = lambda x: x
 
-    def visit_special_type(self, t: SpecialType) -> Any:
+
+class SpecialTypeCppProjInfo(AbstractAnalysis[SpecialType], AbstractTypeCppProjInfo):
+    def __init__(self, am: AnalysisManager, t: SpecialType):
         if t != STRING:
             raise ValueError
-
-        abi_info = TypeABIInfo.get(self.am, t)
-
+        abi_info = TypeABIInfo.get(am, t)
         self.decl_headers = ["core/string.hpp"]
         self.defn_headers = ["core/string.hpp"]
         self.as_owner = "::taihe::core::string"
@@ -234,10 +241,11 @@ class TypeCppProjInfo(AbstractAnalysis[Optional[Type]], TypeVisitor):
             lambda val: f"::taihe::core::cast_into_abi<{self.as_param}, {abi_info.as_param}>({val})"
         )
 
-    def visit_array_type(self, t: ArrayType) -> None:
-        abi_info = TypeABIInfo.get(self.am, t)
-        arg_ty_cpp_proj_info = TypeCppProjInfo.get(self.am, t.item_ty)
 
+class ArrayTypeCppProjInfo(AbstractAnalysis[ArrayType], AbstractTypeCppProjInfo):
+    def __init__(self, am: AnalysisManager, t: ArrayType) -> None:
+        abi_info = TypeABIInfo.get(am, t)
+        arg_ty_cpp_proj_info = TypeCppProjInfo.get(am, t.item_ty)
         self.decl_headers = ["core/array.hpp", *arg_ty_cpp_proj_info.decl_headers]
         self.defn_headers = ["core/array.hpp", *arg_ty_cpp_proj_info.decl_headers]
         self.as_owner = f"::taihe::core::array<{arg_ty_cpp_proj_info.as_owner}>"
@@ -254,6 +262,40 @@ class TypeCppProjInfo(AbstractAnalysis[Optional[Type]], TypeVisitor):
         self.pass_into_abi = (
             lambda val: f"::taihe::core::cast_into_abi<{self.as_param}, {abi_info.as_param}>({val})"
         )
+
+
+class TypeCppProjInfo(TypeVisitor[AbstractTypeCppProjInfo]):
+    def __init__(self, am: AnalysisManager):
+        self.am = am
+
+    @staticmethod
+    def get(am: AnalysisManager, t: Type | None) -> AbstractTypeCppProjInfo:
+        assert t is not None
+        return TypeCppProjInfo(am).handle_type(t)
+
+    @override
+    def visit_enum_type(self, t: EnumType) -> AbstractTypeCppProjInfo:
+        return EnumTypeCppProjInfo.get(self.am, t)
+
+    @override
+    def visit_struct_type(self, t: StructType) -> AbstractTypeCppProjInfo:
+        return StructTypeCppProjInfo.get(self.am, t)
+
+    @override
+    def visit_iface_type(self, t: IfaceType) -> AbstractTypeCppProjInfo:
+        return IfaceTypeCppProjInfo.get(self.am, t)
+
+    @override
+    def visit_scalar_type(self, t: ScalarType) -> AbstractTypeCppProjInfo:
+        return ScalarTypeCppProjInfo.get(self.am, t)
+
+    @override
+    def visit_special_type(self, t: SpecialType) -> AbstractTypeCppProjInfo:
+        return SpecialTypeCppProjInfo.get(self.am, t)
+
+    @override
+    def visit_array_type(self, t: ArrayType) -> AbstractTypeCppProjInfo:
+        return ArrayTypeCppProjInfo.get(self.am, t)
 
 
 class CppProjCodeGenerator:
