@@ -1,8 +1,5 @@
 #!/usr/bin/bash -eux
 
-# 安装 require 导入所需环境
-npm install @types/node --save-dev
-
 # 代码生成
 pushd ../../compiler
 python -m taihe -I ../test/napi/idl/ -O ../test/napi/author_test -a
@@ -14,7 +11,7 @@ popd
 clang++ -std=gnu++17 -shared -o integer.node -fPIC napi_test/integer.napi.cpp author/src/integer.impl.cpp -I ../../runtime/include -I author_test/include
 
 # 编译 ts
-tsc
+tsc napi.ts integer.d.ts
 
 # 运行
 node napi.js
