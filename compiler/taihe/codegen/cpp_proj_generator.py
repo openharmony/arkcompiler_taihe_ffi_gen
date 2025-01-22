@@ -430,7 +430,9 @@ class CppProjCodeGenerator:
         for field in struct.fields:
             ty_info = TypeCppProjInfo.get(self.am, field.ty_ref.resolved_ty)
             struct_cpp_proj_defn_target.include(*ty_info.defn_headers)
-            struct_cpp_proj_defn_target.write(f"    {ty_info.as_holder} {field.name};\n")
+            struct_cpp_proj_defn_target.write(
+                f"    {ty_info.as_holder} {field.name};\n"
+            )
         struct_cpp_proj_defn_target.write("};\n" "}\n")
 
     def gen_enum_files(
