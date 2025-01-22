@@ -74,13 +74,13 @@ class StructDeclCppProjInfo(AbstractAnalysis[StructDecl]):
         self.defn_header = f"{p.name}.{d.name}.proj.1.hpp"
         self.name = d.name
         self.full_name = "::" + "::".join(p.segments) + "::" + self.name
-        self.as_owner = self.full_name
+        self.as_holder = self.full_name
         self.as_param = self.full_name + " const&"
         self.return_from_abi = (
-            lambda val: f"::taihe::core::cast_from_abi<{self.as_owner}, {abi_info.as_field}>({val})"
+            lambda val: f"::taihe::core::cast_from_abi<{self.as_holder}, {abi_info.as_field}>({val})"
         )
         self.return_into_abi = (
-            lambda val: f"::taihe::core::move_into_abi<{self.as_owner}, {abi_info.as_field}>({val})"
+            lambda val: f"::taihe::core::move_into_abi<{self.as_holder}, {abi_info.as_field}>({val})"
         )
         self.pass_from_abi = (
             lambda val: f"::taihe::core::cast_ref_from_abi<{self.as_param}, {abi_info.as_param}>({val})"
@@ -99,13 +99,13 @@ class EnumDeclCppProjInfo(AbstractAnalysis[EnumDecl]):
         self.defn_header = f"{p.name}.{d.name}.proj.1.hpp"
         self.name = d.name
         self.full_name = "::" + "::".join(p.segments) + "::" + self.name
-        self.as_owner = self.full_name
+        self.as_holder = self.full_name
         self.as_param = self.full_name + " const&"
         self.return_from_abi = (
-            lambda val: f"::taihe::core::cast_from_abi<{self.as_owner}, {abi_info.as_field}>({val})"
+            lambda val: f"::taihe::core::cast_from_abi<{self.as_holder}, {abi_info.as_field}>({val})"
         )
         self.return_into_abi = (
-            lambda val: f"::taihe::core::move_into_abi<{self.as_owner}, {abi_info.as_field}>({val})"
+            lambda val: f"::taihe::core::move_into_abi<{self.as_holder}, {abi_info.as_field}>({val})"
         )
         self.pass_from_abi = (
             lambda val: f"::taihe::core::cast_ref_from_abi<{self.as_param}, {abi_info.as_param}>({val})"
@@ -126,13 +126,13 @@ class IfaceDeclCppProjInfo(AbstractAnalysis[IfaceDecl]):
         self.name = d.name
         self.full_name = "::" + "::".join(p.segments) + "::" + self.name
         self.weak_name = "::" + "::".join(p.segments) + "::weak::" + self.name
-        self.as_owner = self.full_name
+        self.as_holder = self.full_name
         self.as_param = self.weak_name
         self.return_from_abi = (
-            lambda val: f"::taihe::core::cast_from_abi<{self.as_owner}, {abi_info.as_field}>({val})"
+            lambda val: f"::taihe::core::cast_from_abi<{self.as_holder}, {abi_info.as_field}>({val})"
         )
         self.return_into_abi = (
-            lambda val: f"::taihe::core::move_into_abi<{self.as_owner}, {abi_info.as_field}>({val})"
+            lambda val: f"::taihe::core::move_into_abi<{self.as_holder}, {abi_info.as_field}>({val})"
         )
         self.pass_from_abi = (
             lambda val: f"::taihe::core::cast_from_abi<{self.as_param}, {abi_info.as_param}>({val})"
@@ -145,7 +145,7 @@ class IfaceDeclCppProjInfo(AbstractAnalysis[IfaceDecl]):
 class AbstractTypeCppProjInfo(metaclass=ABCMeta):
     decl_headers: list[str]
     defn_headers: list[str]
-    as_owner: str | None
+    as_holder: str | None
     as_param: str | None
     pass_from_abi: Callable[[str], str]
     pass_into_abi: Callable[[str], str]
@@ -158,7 +158,7 @@ class EnumTypeCppProjInfo(AbstractAnalysis[EnumType], AbstractTypeCppProjInfo):
         enum_cpp_proj_info = EnumDeclCppProjInfo.get(am, t.ty_decl)
         self.decl_headers = [enum_cpp_proj_info.decl_header]
         self.defn_headers = [enum_cpp_proj_info.defn_header]
-        self.as_owner = enum_cpp_proj_info.as_owner
+        self.as_holder = enum_cpp_proj_info.as_holder
         self.as_param = enum_cpp_proj_info.as_param
         self.pass_from_abi = enum_cpp_proj_info.pass_from_abi
         self.pass_into_abi = enum_cpp_proj_info.pass_into_abi
@@ -171,7 +171,7 @@ class StructTypeCppProjInfo(AbstractAnalysis[StructType], AbstractTypeCppProjInf
         struct_cpp_proj_info = StructDeclCppProjInfo.get(am, t.ty_decl)
         self.decl_headers = [struct_cpp_proj_info.decl_header]
         self.defn_headers = [struct_cpp_proj_info.defn_header]
-        self.as_owner = struct_cpp_proj_info.as_owner
+        self.as_holder = struct_cpp_proj_info.as_holder
         self.as_param = struct_cpp_proj_info.as_param
         self.pass_from_abi = struct_cpp_proj_info.pass_from_abi
         self.pass_into_abi = struct_cpp_proj_info.pass_into_abi
@@ -184,7 +184,7 @@ class IfaceTypeCppProjInfo(AbstractAnalysis[IfaceType], AbstractTypeCppProjInfo)
         iface_cpp_proj_info = IfaceDeclCppProjInfo.get(am, t.ty_decl)
         self.decl_headers = [iface_cpp_proj_info.decl_header]
         self.defn_headers = [iface_cpp_proj_info.defn_header]
-        self.as_owner = iface_cpp_proj_info.as_owner
+        self.as_holder = iface_cpp_proj_info.as_holder
         self.as_param = iface_cpp_proj_info.as_param
         self.pass_from_abi = iface_cpp_proj_info.pass_from_abi
         self.pass_into_abi = iface_cpp_proj_info.pass_into_abi
@@ -212,7 +212,7 @@ class ScalarTypeCppProjInfo(AbstractAnalysis[ScalarType], AbstractTypeCppProjInf
         self.decl_headers = []
         self.defn_headers = []
         self.as_param = res
-        self.as_owner = res
+        self.as_holder = res
         self.pass_from_abi = lambda x: x
         self.pass_into_abi = lambda x: x
         self.return_from_abi = lambda x: x
@@ -226,13 +226,13 @@ class SpecialTypeCppProjInfo(AbstractAnalysis[SpecialType], AbstractTypeCppProjI
         abi_info = TypeABIInfo.get(am, t)
         self.decl_headers = ["core/string.hpp"]
         self.defn_headers = ["core/string.hpp"]
-        self.as_owner = "::taihe::core::string"
+        self.as_holder = "::taihe::core::string"
         self.as_param = "::taihe::core::string_view"
         self.return_from_abi = (
-            lambda val: f"::taihe::core::cast_from_abi<{self.as_owner}, {abi_info.as_field}>({val})"
+            lambda val: f"::taihe::core::cast_from_abi<{self.as_holder}, {abi_info.as_field}>({val})"
         )
         self.return_into_abi = (
-            lambda val: f"::taihe::core::move_into_abi<{self.as_owner}, {abi_info.as_field}>({val})"
+            lambda val: f"::taihe::core::move_into_abi<{self.as_holder}, {abi_info.as_field}>({val})"
         )
         self.pass_from_abi = (
             lambda val: f"::taihe::core::cast_from_abi<{self.as_param}, {abi_info.as_param}>({val})"
@@ -248,13 +248,13 @@ class ArrayTypeCppProjInfo(AbstractAnalysis[ArrayType], AbstractTypeCppProjInfo)
         arg_ty_cpp_proj_info = TypeCppProjInfo.get(am, t.item_ty)
         self.decl_headers = ["core/array.hpp", *arg_ty_cpp_proj_info.decl_headers]
         self.defn_headers = ["core/array.hpp", *arg_ty_cpp_proj_info.decl_headers]
-        self.as_owner = f"::taihe::core::array<{arg_ty_cpp_proj_info.as_owner}>"
-        self.as_param = f"::taihe::core::array_view<{arg_ty_cpp_proj_info.as_owner}>"
+        self.as_holder = f"::taihe::core::array<{arg_ty_cpp_proj_info.as_holder}>"
+        self.as_param = f"::taihe::core::array_view<{arg_ty_cpp_proj_info.as_holder}>"
         self.return_from_abi = (
-            lambda val: f"::taihe::core::cast_from_abi<{self.as_owner}, {abi_info.as_field}>({val})"
+            lambda val: f"::taihe::core::cast_from_abi<{self.as_holder}, {abi_info.as_field}>({val})"
         )
         self.return_into_abi = (
-            lambda val: f"::taihe::core::move_into_abi<{self.as_owner}, {abi_info.as_field}>({val})"
+            lambda val: f"::taihe::core::move_into_abi<{self.as_holder}, {abi_info.as_field}>({val})"
         )
         self.pass_from_abi = (
             lambda val: f"::taihe::core::cast_from_abi<{self.as_param}, {abi_info.as_param}>({val})"
@@ -345,7 +345,7 @@ class CppProjCodeGenerator:
         if return_ty_ref := func.return_ty_ref:
             type_cpp_proj_info = TypeCppProjInfo.get(self.am, return_ty_ref.resolved_ty)
             pkg_cpp_proj_target.include(*type_cpp_proj_info.defn_headers)
-            cpp_return_ty_name = type_cpp_proj_info.as_owner
+            cpp_return_ty_name = type_cpp_proj_info.as_holder
             cpp_result = type_cpp_proj_info.return_from_abi(abi_result)
         else:
             cpp_return_ty_name = "void"
@@ -430,7 +430,7 @@ class CppProjCodeGenerator:
         for field in struct.fields:
             ty_info = TypeCppProjInfo.get(self.am, field.ty_ref.resolved_ty)
             struct_cpp_proj_defn_target.include(*ty_info.defn_headers)
-            struct_cpp_proj_defn_target.write(f"    {ty_info.as_owner} {field.name};\n")
+            struct_cpp_proj_defn_target.write(f"    {ty_info.as_holder} {field.name};\n")
         struct_cpp_proj_defn_target.write("};\n" "}\n")
 
     def gen_enum_files(
@@ -523,7 +523,7 @@ class CppProjCodeGenerator:
             ty_info = TypeCppProjInfo.get(self.am, item.ty_ref.resolved_ty)
             enum_cpp_proj_defn_target.include(*ty_info.defn_headers)
             enum_cpp_proj_defn_target.write(
-                f"        {ty_info.as_owner} {item.name};\n"
+                f"        {ty_info.as_holder} {item.name};\n"
             )
         enum_cpp_proj_defn_target.write("    };\n")
         # destructor
@@ -822,14 +822,14 @@ class CppProjCodeGenerator:
         iface_cpp_proj_defn_target.include("core/object.hpp")
         iface_cpp_proj_defn_target.include(iface_cpp_proj_info.decl_header)
         iface_cpp_proj_defn_target.include(iface_abi_info.defn_header)
-        self.gen_iface_owner_defn(
+        self.gen_iface_holder_defn(
             iface,
             iface_abi_info,
             iface_cpp_proj_info,
             pkg_cpp_proj_info,
             iface_cpp_proj_defn_target,
         )
-        self.gen_iface_param_defn(
+        self.gen_iface_shadow_defn(
             iface,
             iface_abi_info,
             iface_cpp_proj_info,
@@ -837,7 +837,7 @@ class CppProjCodeGenerator:
             iface_cpp_proj_defn_target,
         )
 
-    def gen_iface_owner_defn(
+    def gen_iface_holder_defn(
         self,
         iface: IfaceDecl,
         iface_abi_info: IfaceDeclABIInfo,
@@ -856,7 +856,7 @@ class CppProjCodeGenerator:
             f"    operator {iface_cpp_proj_info.weak_name} () const&;\n"
             f"    operator ::taihe::core::data_holder() const&;\n"
             f"    operator ::taihe::core::data_holder() &&;\n"
-            f"    operator ::taihe::core::data_view() const&;\n"
+            f"    operator ::taihe::core::data_shadow() const&;\n"
             f"    explicit {iface_cpp_proj_info.name}(::taihe::core::data_holder other);\n"
             f"    {iface_cpp_proj_info.name}& operator=({iface_cpp_proj_info.full_name} other);\n"
             f"    operator bool() const&;\n"
@@ -886,7 +886,7 @@ class CppProjCodeGenerator:
                     self.am, return_ty_ref.resolved_ty
                 )
                 iface_cpp_proj_defn_target.include(*type_cpp_proj_info.decl_headers)
-                cpp_return_ty_name = type_cpp_proj_info.as_owner
+                cpp_return_ty_name = type_cpp_proj_info.as_holder
             else:
                 cpp_return_ty_name = "void"
             iface_cpp_proj_defn_target.write(
@@ -894,7 +894,7 @@ class CppProjCodeGenerator:
             )
         iface_cpp_proj_defn_target.write("};\n" "}\n")
 
-    def gen_iface_param_defn(
+    def gen_iface_shadow_defn(
         self,
         iface: IfaceDecl,
         iface_abi_info: IfaceDeclABIInfo,
@@ -911,8 +911,8 @@ class CppProjCodeGenerator:
             f"    {iface_cpp_proj_info.name}({iface_cpp_proj_info.weak_name} const& other);\n"
             f"    operator {iface_cpp_proj_info.full_name} () const&;\n"
             f"    operator ::taihe::core::data_holder() const&;\n"
-            f"    operator ::taihe::core::data_view() const&;\n"
-            f"    explicit {iface_cpp_proj_info.name}(::taihe::core::data_view other);\n"
+            f"    operator ::taihe::core::data_shadow() const&;\n"
+            f"    explicit {iface_cpp_proj_info.name}(::taihe::core::data_shadow other);\n"
             f"    {iface_cpp_proj_info.name}& operator=({iface_cpp_proj_info.weak_name} other);\n"
             f"    operator bool() const&;\n"
         )
@@ -940,7 +940,7 @@ class CppProjCodeGenerator:
                     self.am, return_ty_ref.resolved_ty
                 )
                 iface_cpp_proj_defn_target.include(*type_cpp_proj_info.decl_headers)
-                cpp_return_ty_name = type_cpp_proj_info.as_owner
+                cpp_return_ty_name = type_cpp_proj_info.as_holder
             else:
                 cpp_return_ty_name = "void"
             iface_cpp_proj_defn_target.write(
@@ -960,14 +960,14 @@ class CppProjCodeGenerator:
         )
         iface_cpp_proj_impl_target.include(iface_abi_info.impl_header)
         iface_cpp_proj_impl_target.include(iface_cpp_proj_info.defn_header)
-        self.gen_iface_owner_impl(
+        self.gen_iface_holder_impl(
             iface,
             iface_abi_info,
             iface_cpp_proj_info,
             iface_cpp_proj_impl_target,
             pkg_cpp_proj_info,
         )
-        self.gen_iface_param_impl(
+        self.gen_iface_shadow_impl(
             iface,
             iface_abi_info,
             iface_cpp_proj_info,
@@ -987,7 +987,7 @@ class CppProjCodeGenerator:
             iface_cpp_proj_impl_target,
         )
 
-    def gen_iface_owner_impl(
+    def gen_iface_holder_impl(
         self,
         iface: IfaceDecl,
         iface_abi_info: IfaceDeclABIInfo,
@@ -1021,9 +1021,9 @@ class CppProjCodeGenerator:
             f"    {iface_abi_info.as_field} ret_handle = {iface_abi_info.copy_func}(this->m_handle);\n"
             f"    return ::taihe::core::data_holder(ret_handle.data_ptr);\n"
             f"}}\n"
-            f"inline {iface_cpp_proj_info.name}::operator ::taihe::core::data_view() const& {{\n"
+            f"inline {iface_cpp_proj_info.name}::operator ::taihe::core::data_shadow() const& {{\n"
             f"    {iface_abi_info.as_field} ret_handle = this->m_handle;\n"
-            f"    return ::taihe::core::data_view(ret_handle.data_ptr);\n"
+            f"    return ::taihe::core::data_shadow(ret_handle.data_ptr);\n"
             f"}}\n"
             f"inline {iface_cpp_proj_info.name}::{iface_cpp_proj_info.name}(::taihe::core::data_holder other)\n"
             f"    : m_handle({iface_abi_info.dynamic_cast}(other.m_handle)) {{\n"
@@ -1077,7 +1077,7 @@ class CppProjCodeGenerator:
                     self.am, return_ty_ref.resolved_ty
                 )
                 iface_cpp_proj_impl_target.include(*type_cpp_proj_info.defn_headers)
-                cpp_return_ty_name = type_cpp_proj_info.as_owner
+                cpp_return_ty_name = type_cpp_proj_info.as_holder
                 cpp_result = type_cpp_proj_info.return_from_abi(abi_result)
             else:
                 cpp_return_ty_name = "void"
@@ -1089,7 +1089,7 @@ class CppProjCodeGenerator:
             )
         iface_cpp_proj_impl_target.write("}\n")
 
-    def gen_iface_param_impl(
+    def gen_iface_shadow_impl(
         self,
         iface: IfaceDecl,
         iface_abi_info: IfaceDeclABIInfo,
@@ -1112,11 +1112,11 @@ class CppProjCodeGenerator:
             f"    {iface_abi_info.as_field} ret_handle = {iface_abi_info.copy_func}(this->m_handle);\n"
             f"    return ::taihe::core::data_holder(ret_handle.data_ptr);\n"
             f"}}\n"
-            f"inline {iface_cpp_proj_info.name}::operator ::taihe::core::data_view() const& {{\n"
+            f"inline {iface_cpp_proj_info.name}::operator ::taihe::core::data_shadow() const& {{\n"
             f"    {iface_abi_info.as_field} ret_handle = this->m_handle;\n"
-            f"    return ::taihe::core::data_view(ret_handle.data_ptr);\n"
+            f"    return ::taihe::core::data_shadow(ret_handle.data_ptr);\n"
             f"}}\n"
-            f"inline {iface_cpp_proj_info.name}::{iface_cpp_proj_info.name}(::taihe::core::data_view other)\n"
+            f"inline {iface_cpp_proj_info.name}::{iface_cpp_proj_info.name}(::taihe::core::data_shadow other)\n"
             f"    : m_handle({iface_abi_info.dynamic_cast}(other.m_handle)) {{\n"
             f"    other.m_handle = nullptr;\n"
             f"}}\n"
@@ -1163,7 +1163,7 @@ class CppProjCodeGenerator:
                     self.am, return_ty_ref.resolved_ty
                 )
                 iface_cpp_proj_impl_target.include(*type_cpp_proj_info.defn_headers)
-                cpp_return_ty_name = type_cpp_proj_info.as_owner
+                cpp_return_ty_name = type_cpp_proj_info.as_holder
                 cpp_result = type_cpp_proj_info.return_from_abi(abi_result)
             else:
                 cpp_return_ty_name = "void"
@@ -1266,12 +1266,12 @@ class CppProjCodeGenerator:
             f"namespace taihe::core {{\n"
             f"template<>\n"
             f"struct interface_holder_traits<{iface_cpp_proj_info.full_name}> {{\n"
-            f"    using type = void*;\n"
+            f"    static constexpr bool value = true;\n"
             f"    using info_container = ::taihe::core::info_container<{iface_abi_info.mangled_name}>;\n"
             f"}};\n"
             f"template<>\n"
-            f"struct interface_view_traits<{iface_cpp_proj_info.weak_name}> {{\n"
-            f"    using type = void*;\n"
+            f"struct interface_shadow_traits<{iface_cpp_proj_info.weak_name}> {{\n"
+            f"    static constexpr bool value = true;\n"
             f"    using info_container = ::taihe::core::info_container<{iface_abi_info.mangled_name}>;\n"
             f"}};\n"
             f"}}\n"

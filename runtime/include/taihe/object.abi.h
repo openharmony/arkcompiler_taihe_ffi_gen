@@ -41,6 +41,8 @@ struct DataBlockHead {
   TRefCount m_count;
 };
 
+TH_EXPORT void tobj_init(struct DataBlockHead* data_ptr, struct TypeInfo const* rtti_ptr);
+
 // Increments the reference count of the given TObject.
 // # Arguments
 // - `data_ptr`: The data pointer.
