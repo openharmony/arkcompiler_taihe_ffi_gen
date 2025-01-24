@@ -8,10 +8,18 @@ python -m taihe -I ../test/napi/idl/ -O ../test/napi/napi_test -n
 popd
 
 # 编译 napi.cpp
-clang++ -std=gnu++17 -shared -o integer.node -fPIC napi_test/integer.napi.cpp author/src/integer.impl.cpp -I ../../runtime/include -I author_test/include
+clang++ -c -fvisibility=hidden -fPIC -O0 -std=gnu++20 -o build/integer.impl.cpp.o author/src/integer.impl.cpp -I ../../runtime/include -I author_test/include
+clang++ -c -fvisibility=hidden -fPIC -O0 -std=gnu++20 -o build/integer.napi.cpp.o napi_test/integer.napi.cpp -I ../../runtime/include -I author_test/include
+clang++ -fPIC -o integer.node build/integer.impl.cpp.o build/integer.napi.cpp.o -shared
+
+clang -c -fvisibility=hidden -fPIC -O0 -std=gnu11 -o build/string.c.o ../../runtime/src/string.c -I ../../runtime/include
+clang++ -c -fvisibility=hidden -fPIC -O0 -std=gnu++20 -o build/string.impl.cpp.o author/src/string.impl.cpp -I ../../runtime/include -I author_test/include
+clang++ -c -fvisibility=hidden -fPIC -O0 -std=gnu++20 -o build/string.napi.cpp.o napi_test/string.napi.cpp -I ../../runtime/include -I author_test/include
+clang++ -fPIC -o string.node build/string.c.o build/string.impl.cpp.o build/string.napi.cpp.o -shared
+
 
 # 编译 ts
-tsc napi.ts integer.d.ts
+tsc napi.ts integer.d.ts string.d.ts
 
 # 运行
 node napi.js

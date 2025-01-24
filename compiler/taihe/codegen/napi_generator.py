@@ -13,8 +13,11 @@ from taihe.semantics.types import (
     F64,
     I32,
     I64,
+    STRING,
     U32,
+    Any,
     ScalarType,
+    SpecialType,
     Type,
 )
 from taihe.semantics.visitor import TypeVisitor
@@ -33,6 +36,7 @@ class TypeNapiInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
         self.am = am
         self.as_c = None
         self.as_napi = None
+        self.napi_create_func = None
         self.handle_type(t)
 
     def visit_scalar_type(self, t: ScalarType):
@@ -51,8 +55,17 @@ class TypeNapiInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
         }.get(t)
         self.as_napi = as_napi
         self.as_c = as_c
+        self.napi_create_func = f"napi_create_{self.as_napi}(env, value, &result)"
         if as_napi is None or as_c is None:
             raise ValueError
+
+    def visit_special_type(self, t: SpecialType) -> Any:
+        if t == STRING:
+            self.as_napi = "string_utf8"
+            self.as_c = "taihe::core::string"
+            self.napi_create_func = (
+                f"napi_create_{self.as_napi}(env, value.c_str(), value.size(), &result)"
+            )
 
 
 class NapiCodeGenerator:
@@ -106,6 +119,16 @@ class NapiCodeGenerator:
         )
         args = []
         for i, param in enumerate(func.params):
+            if param.ty_ref.resolved_ty == STRING:
+                pkg_napi_target.write(
+                    f"    size_t length{i} = 0;\n"
+                    f"    napi_get_value_string_utf8(env, args[{i}], nullptr, 0, &length{i});\n"
+                    f"    char value{i}[length{i} + 1];\n"
+                    f"    napi_get_value_string_utf8(env, args[{i}], value{i}, length{i} + 1, &length{i});\n"
+                    f"    taihe::core::string_view th_value{i}(value{i});\n"
+                )
+                args.append(f"th_value{i}")
+                continue
             type_napi_param_info = TypeNapiInfo.get(self.am, param.ty_ref.resolved_ty)
             pkg_napi_target.write(
                 f"    {type_napi_param_info.as_c} value{i};\n"
@@ -121,7 +144,7 @@ class NapiCodeGenerator:
             pkg_napi_target.write(
                 f"    {type_napi_return_info.as_c} value = {full_func_name}({args_str});\n"
                 f"    napi_value result;\n"
-                f"    napi_create_{type_napi_return_info.as_napi}(env, value, &result);\n"
+                f"    {type_napi_return_info.napi_create_func};\n"
                 f"    return result;\n"
                 f"}}\n"
             )

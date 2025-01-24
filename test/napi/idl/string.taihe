@@ -1,0 +1,3 @@
+function concat(a: String, b: String): String;
+function to_i32(a: String): i32;
+function from_i32(a: i32): String;
