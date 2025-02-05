@@ -1,4 +1,4 @@
-import { add, mul } from "./integer"
+import { add, mul, sub } from "./integer"
 import { concat, to_i32, from_i32 } from "./string";
 
 function main() {
@@ -12,6 +12,8 @@ function main() {
   console.log(result4)
   let result5 = from_i32(20);
   console.log(result5)
+  let result6 = sub(3.2, 2.3, true);
+  console.log(result6)
 }
 
 main();

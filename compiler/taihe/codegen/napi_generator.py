@@ -10,6 +10,8 @@ from taihe.semantics.declarations import (
     PackageGroup,
 )
 from taihe.semantics.types import (
+    BOOL,
+    F32,
     F64,
     I32,
     I64,
@@ -35,12 +37,15 @@ class TypeNapiInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
     def __init__(self, am: AnalysisManager, t: Optional[Type]) -> None:
         self.am = am
         self.as_c = None
-        self.as_napi = None
-        self.napi_create_func = None
+        self.from_c_to_js_func = None
+        self.from_js_to_c_func = None
+        self.from_c_to_js_param = None
         self.handle_type(t)
 
     def visit_scalar_type(self, t: ScalarType):
         as_napi = {
+            BOOL: "bool",
+            F32: "double",
             F64: "double",
             I32: "int32",
             I64: "int64",
@@ -48,24 +53,29 @@ class TypeNapiInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
         }.get(t)
 
         as_c = {
+            BOOL: "bool",
+            F32: "double",
             F64: "double",
             I32: "int32_t",
             I64: "int64_t",
             U32: "uint32_t",
         }.get(t)
-        self.as_napi = as_napi
         self.as_c = as_c
-        self.napi_create_func = f"napi_create_{self.as_napi}(env, value, &result)"
+        self.from_js_to_c_func = f"napi_get_value_{as_napi}"
+        if t == BOOL:
+            self.from_c_to_js_func = f"napi_get_boolean"
+        else:
+            self.from_c_to_js_func = f"napi_create_{as_napi}"
+        self.from_c_to_js_param = "env, value, &result"
         if as_napi is None or as_c is None:
             raise ValueError
 
     def visit_special_type(self, t: SpecialType) -> Any:
         if t == STRING:
-            self.as_napi = "string_utf8"
             self.as_c = "taihe::core::string"
-            self.napi_create_func = (
-                f"napi_create_{self.as_napi}(env, value.c_str(), value.size(), &result)"
-            )
+            self.from_js_to_c_func = "napi_get_value_string_utf8"
+            self.from_c_to_js_func = "napi_create_string_utf8"
+            self.from_c_to_js_param = "env, value.c_str(), value.size(), &result"
 
 
 class NapiCodeGenerator:
@@ -132,7 +142,7 @@ class NapiCodeGenerator:
             type_napi_param_info = TypeNapiInfo.get(self.am, param.ty_ref.resolved_ty)
             pkg_napi_target.write(
                 f"    {type_napi_param_info.as_c} value{i};\n"
-                f"    napi_get_value_{type_napi_param_info.as_napi}(env, args[{i}], &value{i});\n"
+                f"    {type_napi_param_info.from_js_to_c_func}(env, args[{i}], &value{i});\n"
             )
             args.append(f"value{i}")
         args_str = ", ".join(args)
@@ -144,12 +154,13 @@ class NapiCodeGenerator:
             pkg_napi_target.write(
                 f"    {type_napi_return_info.as_c} value = {full_func_name}({args_str});\n"
                 f"    napi_value result;\n"
-                f"    {type_napi_return_info.napi_create_func};\n"
+                f"    {type_napi_return_info.from_c_to_js_func}({type_napi_return_info.from_c_to_js_param});\n"
                 f"    return result;\n"
                 f"}}\n"
             )
         else:
             pkg_napi_target.write(
+                f"    {full_func_name}({args_str});\n"
                 f"    napi_value result;\n"
                 f"    napi_get_undefined(env, &result);\n"
                 f"    return result;\n"
