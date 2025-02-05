@@ -18,6 +18,7 @@ compiler/taihe/parse/antlr
 test/*/author_test
 test/*/user_test
 test/*/napi_test
+test/*/kn_test
 
 # files
 *.log

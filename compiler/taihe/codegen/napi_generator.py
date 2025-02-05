@@ -30,6 +30,7 @@ from taihe.utils.outputs import OutputManager
 class PackageNapiInfo(AbstractAnalysis[Package]):
     def __init__(self, am: AnalysisManager, p: Package) -> None:
         self.header = f"{p.name}.napi.cpp"
+        self.kn_header = f"kn_{p.name}.napi.cpp"
         self.full_name = "::".join(p.segments)
 
 
@@ -83,9 +84,28 @@ class NapiCodeGenerator:
         self.tm = tm
         self.am = am
 
-    def generate(self, pg: PackageGroup):
+    def generate(self, pg: PackageGroup, kn: bool = False):
         for pkg in pg.packages:
-            self.gen_package_file(pkg)
+            if kn:
+                self.gen_kn_package_file(pkg)
+            else:
+                self.gen_package_file(pkg)
+
+    def gen_kn_package_file(self, pkg: Package):
+        pkg_napi_info = PackageNapiInfo.get(self.am, pkg)
+        pkg_napi_target = COutputBuffer.create(
+            self.tm, f"{pkg_napi_info.kn_header}", False
+        )
+        pkg_napi_target.include("node/node_api.h")
+
+        desc = []
+        for func in pkg.functions:
+            self.gen_kn_func(func, pkg_napi_info, pkg_napi_target)
+            func_desc = f'        {{"{func.name}", nullptr, {func.name}, nullptr, nullptr, nullptr, napi_default, nullptr}}'
+            desc.append(func_desc)
+
+        desc_str = ", \n".join(desc)
+        self.gen_moudule_init(desc_str, pkg_napi_target)
 
     def gen_package_file(self, pkg: Package):
         pkg_napi_info = PackageNapiInfo.get(self.am, pkg)
@@ -103,6 +123,9 @@ class NapiCodeGenerator:
             desc.append(func_desc)
 
         desc_str = ", \n".join(desc)
+        self.gen_moudule_init(desc_str, pkg_napi_target)
+
+    def gen_moudule_init(self, desc_str: str, pkg_napi_target: COutputBuffer):
         pkg_napi_target.write(
             f"napi_value module_init(napi_env env, napi_value exports) {{\n"
             f"    napi_property_descriptor desc[] = {{\n"
@@ -114,6 +137,26 @@ class NapiCodeGenerator:
             f"NAPI_MODULE(my_api, module_init);"
         )
 
+    def gen_kn_func(
+        self,
+        func: GlobFuncDecl,
+        pkg_napi_info: PackageNapiInfo,
+        pkg_napi_target: COutputBuffer,
+    ):
+        pkg_napi_target.write(
+            f"static napi_value {func.name}(napi_env env, napi_callback_info info)\n"
+            f"{{\n"
+        )
+        self.gen_func_get_cb_info(func, pkg_napi_target)
+        args = [f"args[{i}]" for i in range(len(func.params))]
+        args_str = ", ".join(args)
+        pkg_napi_target.write(
+            f"    dynamic_Exportedsymbols *lib = dynamic_symbols();\n"
+            f"    napi_value res = lib->kotlin.root.{func.name}(env, {args_str});\n"
+            f"    return res;\n"
+        )
+        pkg_napi_target.write(f"}}\n")
+
     def gen_func(
         self,
         func: GlobFuncDecl,
@@ -123,10 +166,21 @@ class NapiCodeGenerator:
         pkg_napi_target.write(
             f"napi_value napi_{func.name}(napi_env env, napi_callback_info info)\n"
             f"{{\n"
+        )
+        self.gen_func_get_cb_info(func, pkg_napi_target)
+        args_str = self.gen_func_get_value(func, pkg_napi_target)
+        full_func_name = pkg_napi_info.full_name + "::" + func.name
+        self.gen_func_return_value(func, pkg_napi_target, args_str, full_func_name)
+        pkg_napi_target.write(f"}}\n")
+
+    def gen_func_get_cb_info(self, func: GlobFuncDecl, pkg_napi_target: COutputBuffer):
+        pkg_napi_target.write(
             f"    size_t argc = {len(func.params)};\n"
             f"    napi_value args[{len(func.params)}] = {{nullptr}};\n"
             f"    napi_get_cb_info(env, info, &argc, args , nullptr, nullptr);\n"
         )
+
+    def gen_func_get_value(self, func: GlobFuncDecl, pkg_napi_target: COutputBuffer):
         args = []
         for i, param in enumerate(func.params):
             if param.ty_ref.resolved_ty == STRING:
@@ -145,8 +199,15 @@ class NapiCodeGenerator:
                 f"    {type_napi_param_info.from_js_to_c_func}(env, args[{i}], &value{i});\n"
             )
             args.append(f"value{i}")
-        args_str = ", ".join(args)
-        full_func_name = pkg_napi_info.full_name + "::" + func.name
+        return ", ".join(args)
+
+    def gen_func_return_value(
+        self,
+        func: GlobFuncDecl,
+        pkg_napi_target: COutputBuffer,
+        args_str: str,
+        full_func_name: str,
+    ):
         if func.return_ty_ref:
             type_napi_return_info = TypeNapiInfo.get(
                 self.am, func.return_ty_ref.resolved_ty
@@ -156,7 +217,6 @@ class NapiCodeGenerator:
                 f"    napi_value result;\n"
                 f"    {type_napi_return_info.from_c_to_js_func}({type_napi_return_info.from_c_to_js_param});\n"
                 f"    return result;\n"
-                f"}}\n"
             )
         else:
             pkg_napi_target.write(
@@ -164,5 +224,4 @@ class NapiCodeGenerator:
                 f"    napi_value result;\n"
                 f"    napi_get_undefined(env, &result);\n"
                 f"    return result;\n"
-                f"}}\n"
             )

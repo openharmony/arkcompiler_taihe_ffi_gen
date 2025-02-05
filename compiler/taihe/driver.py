@@ -110,6 +110,9 @@ class CompilerInstance:
             KNBridgeCodeGenerator(self.target_manager, self.analysis_manager).generate(
                 self.package_group
             )
+            NapiCodeGenerator(self.target_manager, self.analysis_manager).generate(
+                self.package_group, True
+            )
 
         if self.invocation.gen_author or self.invocation.gen_user:
             ABICodeGenerator(self.target_manager, self.analysis_manager).generate(
