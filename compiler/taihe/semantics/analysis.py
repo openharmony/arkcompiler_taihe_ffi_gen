@@ -228,10 +228,7 @@ class _ResolveImportsPass(DeclVisitor):
                 return
             args_ty.append(arg_ty)
 
-        if len(xs := d.symbol.rsplit(".", maxsplit=1)) == 2:
-            raise NotImplementedError()
-
-        decl_name = xs[0]
+        decl_name = d.symbol
 
         if generic := BUILTIN_GENERICS.get(decl_name):
             try:

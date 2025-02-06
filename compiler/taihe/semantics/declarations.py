@@ -11,7 +11,6 @@ from taihe.semantics.types import (
     IfaceType,
     StructType,
     Type,
-    UserGenericType,
     UserType,
 )
 from taihe.utils.exceptions import AttrRedefError, DeclRedefError
@@ -153,6 +152,7 @@ class SimpleTypeRefDecl(TypeRefDecl):
         super().__init__(loc, resolved_ty)
         self.symbol = symbol
 
+    @override
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_simple_type_ref_decl(self)
 
@@ -177,6 +177,7 @@ class GenericTypeRefDecl(TypeRefDecl):
         self.symbol = symbol
         self.args_ty_ref = args_ty_ref
 
+    @override
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_generic_type_ref_decl(self)
 
@@ -199,6 +200,7 @@ class ArrayTypeRefDecl(TypeRefDecl):
         super().__init__(loc, resolved_ty)
         self.item_ty_ref = item_ty_ref
 
+    @override
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_array_type_ref_decl(self)
 
@@ -497,6 +499,10 @@ class IfaceMethodDecl(NamedDecl):
 class PackageLevelDecl(NamedDecl, metaclass=ABCMeta):
     node_parent: Optional["Package"] = None
 
+    @property
+    def full_name(self):
+        return f"{self.node_parent.name}.{self.name}" if self.node_parent else self.name
+
 
 class GlobFuncDecl(PackageLevelDecl):
     params: list[ParamDecl]
@@ -616,16 +622,6 @@ class IfaceDecl(TypeDecl):
         return f"interface {self.name}"
 
 
-#####################
-# Type Declarations #
-#####################
-
-
-class TemplateDecl(PackageLevelDecl, metaclass=ABCMeta):
-    @abstractmethod
-    def instantiate(self, *args: Type) -> UserGenericType: ...
-
-
 ######################
 # The main container #
 ######################
@@ -676,6 +672,7 @@ class Package(NamedDecl):
         yield from self.enums
         yield from self.interfaces
 
+    @override
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_package(self)
 
@@ -745,7 +742,7 @@ class Package(NamedDecl):
         return f"package {self.name}"
 
 
-class PackageGroup(DeclProtocol):
+class PackageGroup:
     """Stores all known packages for a compilation instance."""
 
     package_dict: dict[str, Package]

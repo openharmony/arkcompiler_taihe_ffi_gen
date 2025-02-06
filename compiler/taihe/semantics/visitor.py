@@ -52,7 +52,6 @@ from taihe.semantics.types import (
     StructType,
     Type,
     TypeProtocol,
-    UserGenericType,
     UserType,
     VectorType,
 )
@@ -135,9 +134,6 @@ class TypeVisitor(Generic[T]):
         return self.visit_type(t)
 
     def visit_set_type(self, t: SetType) -> T:
-        return self.visit_type(t)
-
-    def visit_user_generic_type(self, t: UserGenericType) -> T:
         return self.visit_type(t)
 
 

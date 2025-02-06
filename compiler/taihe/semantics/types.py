@@ -13,7 +13,6 @@ if TYPE_CHECKING:
         EnumDecl,
         IfaceDecl,
         StructDecl,
-        TemplateDecl,
         TypeDecl,
     )
     from taihe.semantics.visitor import TypeVisitor
@@ -80,12 +79,14 @@ class ScalarType(BuiltinType):
     is_signed: bool
     is_float: bool = False
 
+    @override
     def _accept(self, v: "TypeVisitor") -> Any:
         return v.visit_scalar_type(self)
 
 
 @dataclass(frozen=True, repr=False)
 class SpecialType(BuiltinType):
+    @override
     def _accept(self, v: "TypeVisitor") -> Any:
         return v.visit_special_type(self)
 
@@ -124,6 +125,7 @@ class ArrayType(Type, metaclass=ABCMeta):
     def __init__(self, item_ty: Type):
         self.item_ty = item_ty
 
+    @override
     def _accept(self, v: "TypeVisitor") -> Any:
         return v.visit_array_type(self)
 
@@ -139,6 +141,7 @@ class VectorType(Type, metaclass=ABCMeta):
     def __init__(self, val_ty: Type):
         self.val_ty = val_ty
 
+    @override
     def _accept(self, v: "TypeVisitor") -> Any:
         return v.visit_vector_type(self)
 
@@ -156,6 +159,7 @@ class MapType(Type, metaclass=ABCMeta):
         self.key_ty = key_ty
         self.val_ty = val_ty
 
+    @override
     def _accept(self, v: "TypeVisitor") -> Any:
         return v.visit_map_type(self)
 
@@ -171,6 +175,7 @@ class SetType(Type, metaclass=ABCMeta):
     def __init__(self, key_ty: Type):
         self.key_ty = key_ty
 
+    @override
     def _accept(self, v: "TypeVisitor") -> Any:
         return v.visit_set_type(self)
 
@@ -196,11 +201,6 @@ BUILTIN_GENERICS: dict[str, Callable[[*tuple[Type, ...]], Type]] = {  # pyre-ign
 class UserType(Type, metaclass=ABCMeta):
     ty_decl: "TypeDecl"
 
-    @property
-    @override
-    def description(self):
-        return self.ty_decl.description
-
 
 class StructType(UserType):
     ty_decl: "StructDecl"
@@ -208,8 +208,14 @@ class StructType(UserType):
     def __init__(self, decl: "StructDecl"):
         self.ty_decl = decl
 
+    @override
     def _accept(self, v: "TypeVisitor") -> Any:
         return v.visit_struct_type(self)
+
+    @property
+    @override
+    def description(self):
+        return f"struct type {self.ty_decl.full_name}"
 
 
 class EnumType(UserType):
@@ -218,8 +224,14 @@ class EnumType(UserType):
     def __init__(self, decl: "EnumDecl"):
         self.ty_decl = decl
 
+    @override
     def _accept(self, v: "TypeVisitor") -> Any:
         return v.visit_enum_type(self)
+
+    @property
+    @override
+    def description(self):
+        return f"enum type {self.ty_decl.full_name}"
 
 
 class IfaceType(UserType):
@@ -228,21 +240,11 @@ class IfaceType(UserType):
     def __init__(self, decl: "IfaceDecl"):
         self.ty_decl = decl
 
+    @override
     def _accept(self, v: "TypeVisitor") -> Any:
         return v.visit_iface_type(self)
-
-
-######################
-# User Generic Types #
-######################
-
-
-class UserGenericType(Type, metaclass=ABCMeta):
-    ty_decl: "TemplateDecl"
-    arg_types: list[Type]
 
     @property
     @override
     def description(self):
-        args_fmt = ", ".format()
-        return f"{self.ty_decl.description} with args ({args_fmt})"
+        return f"interface type {self.ty_decl.full_name}"

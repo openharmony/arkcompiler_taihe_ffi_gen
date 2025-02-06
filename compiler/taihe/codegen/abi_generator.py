@@ -239,7 +239,7 @@ class ArrayTypeABIInfo(AbstractAnalysis[ArrayType], AbstractTypeABIInfo):
         self.defn_headers = ["core/array.hpp", *arg_ty_abi_info.decl_headers]
         self.as_field = f"struct TArray<{arg_ty_abi_info.as_field}>"
         self.as_param = f"struct TArray<{arg_ty_abi_info.as_field}>"
-        self.copy_func = "tarr_copy"
+        self.copy_func = "tarr_dup"
         self.drop_func = "tarr_drop"
 
 

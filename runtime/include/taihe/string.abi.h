@@ -18,7 +18,7 @@ struct TString {
   char const* ptr;  // Always valid and non-null.
 };
 
-struct TStringHeap {
+struct TStringData {
   TRefCount count;
   char buffer[];
 };

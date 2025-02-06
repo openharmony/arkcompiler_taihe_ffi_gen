@@ -7,7 +7,7 @@
 #include <taihe/common.hpp>
 
 template<typename T>
-struct TVector {
+struct TVectorData {
     TRefCount count;
     std::size_t len;
     std::size_t cap;
@@ -15,7 +15,7 @@ struct TVector {
 };
 
 template<typename T>
-TVector<T>* tvec_dup(TVector<T>* handle) {
+TVectorData<T>* tvec_dup(TVectorData<T>* handle) {
     if (handle) {
         tref_inc(&handle->count);
     }
@@ -23,7 +23,7 @@ TVector<T>* tvec_dup(TVector<T>* handle) {
 }
 
 template<typename T>
-void tvec_drop(TVector<T>* handle) {
+void tvec_drop(TVectorData<T>* handle) {
     if (handle && tref_dec(&handle->count)) {
         for (std::size_t i = 0; i < handle->len; i++) {
             std::destroy_at(&handle->data[i]);
@@ -33,9 +33,9 @@ void tvec_drop(TVector<T>* handle) {
 }
 
 template<typename T>
-TVector<T> tvec_new(std::size_t cap) {
-    size_t bytes_required = sizeof(TVector<T>) + sizeof(T) * cap;
-    TVector<T>* handle = reinterpret_cast<TVector<T>*>(malloc(bytes_required));
+TVectorData<T> tvec_new(std::size_t cap) {
+    size_t bytes_required = sizeof(TVectorData<T>) + sizeof(T) * cap;
+    TVectorData<T>* handle = reinterpret_cast<TVectorData<T>*>(malloc(bytes_required));
     tref_set(&handle->count, 1);
     handle->len = 0;
     handle->cap = cap;
@@ -43,9 +43,9 @@ TVector<T> tvec_new(std::size_t cap) {
 }
 
 template<typename T>
-TVector<T>* tvec_resize(TVector<T>* handle, std::size_t cap) {
-    size_t bytes_required = sizeof(TVector<T>) + sizeof(T) * cap;
-    handle = reinterpret_cast<TVector<T>*>(realloc(handle, bytes_required));
+TVectorData<T>* tvec_resize(TVectorData<T>* handle, std::size_t cap) {
+    size_t bytes_required = sizeof(TVectorData<T>) + sizeof(T) * cap;
+    handle = reinterpret_cast<TVectorData<T>*>(realloc(handle, bytes_required));
     handle->cap = cap;
     return handle;
 }
@@ -68,7 +68,7 @@ public:
     explicit vector(size_type cap) 
         : m_handle(tvec_new<T>(cap)) {}
 
-    explicit vector(TVector<T>* handle)
+    explicit vector(TVectorData<T>* handle)
         : m_handle(handle) {}
 
     ~vector() {
@@ -147,6 +147,6 @@ public:
     }
 
 private:
-    TVector<T>* m_handle;
+    TVectorData<T>* m_handle;
 };
 }

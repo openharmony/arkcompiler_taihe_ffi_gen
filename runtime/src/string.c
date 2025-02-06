@@ -4,14 +4,14 @@
 #include <taihe/common.h>
 #include <taihe/string.abi.h>
 
-static inline struct TStringHeap *to_heap(struct TString tstr) {
+static inline struct TStringData *to_heap(struct TString tstr) {
   if (tstr.flags & TSTRING_REF) return NULL;
-  return (struct TStringHeap *)((char *)tstr.ptr - offsetof(struct TStringHeap, buffer));
+  return (struct TStringData *)((char *)tstr.ptr - offsetof(struct TStringData, buffer));
 }
 
 char *tstr_initialize(struct TString *tstr_ptr, uint32_t capacity) {
-  size_t bytes_required = sizeof(struct TStringHeap) + sizeof(char) * capacity;
-  struct TStringHeap *sh = malloc(bytes_required);
+  size_t bytes_required = sizeof(struct TStringData) + sizeof(char) * capacity;
+  struct TStringData *sh = malloc(bytes_required);
   tref_set(&sh->count, 1);
   tstr_ptr->flags = 0;
   tstr_ptr->ptr = sh->buffer;
@@ -28,7 +28,7 @@ struct TString tstr_new(const char *value TH_NONNULL, size_t len) {
 }
 
 struct TString tstr_dup(struct TString tstr) {
-  struct TStringHeap *sh = to_heap(tstr);
+  struct TStringData *sh = to_heap(tstr);
   if (sh) {
     tref_inc(&sh->count);
     return tstr;
@@ -37,7 +37,7 @@ struct TString tstr_dup(struct TString tstr) {
 }
 
 void tstr_drop(struct TString tstr) {
-  struct TStringHeap *sh = to_heap(tstr);
+  struct TStringData *sh = to_heap(tstr);
   if (sh && tref_dec(&sh->count)) {
     free(sh);
     return;

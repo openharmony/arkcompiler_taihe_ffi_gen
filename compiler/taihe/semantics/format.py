@@ -25,12 +25,7 @@ from taihe.semantics.declarations import (
     StructFieldDecl,
     TypeRefDecl,
 )
-from taihe.semantics.types import (
-    ArrayType,
-    BuiltinType,
-    UserType,
-)
-from taihe.semantics.visitor import DeclVisitor, TypeVisitor
+from taihe.semantics.visitor import DeclVisitor
 from taihe.utils.diagnostics import AnsiStyle
 
 
@@ -39,37 +34,13 @@ def pretty_print(x: Decl, buffer: TextIO):
     printer.handle_decl(x)
 
 
-class _TypeNamePrinter(TypeVisitor[str]):
-    @override
-    def visit_user_type(self, t: UserType) -> str:
-        ty_decl = t.ty_decl
-        return (
-            f"{pkg.name}.{ty_decl.name}"
-            if (pkg := ty_decl.node_parent)
-            else ty_decl.name
-        )
-
-    @override
-    def visit_builtin_simple_type(self, t: BuiltinType) -> str:
-        return t.name
-
-    @override
-    def visit_array_type(self, t: ArrayType) -> str:
-        return f"{self.handle_type(t.item_ty)}[]"
-
-
 class _PrettyPrinter(DeclVisitor):
     def __init__(self, buffer: TextIO):
         self.buffer = buffer
         self.indent = 0
-        self.type_name_printer = _TypeNamePrinter()
 
     def get_type_ref_decl(self, d: TypeRefDecl) -> str:
-        real_type = (
-            "<error type>"
-            if not d.resolved_ty
-            else self.type_name_printer.handle_type(d.resolved_ty)
-        )
+        real_type = "<error type>" if not d.resolved_ty else d.resolved_ty.description
         return (
             f"{d.unresolved_name} {AnsiStyle.GREEN}/* {real_type} */{AnsiStyle.RESET}"
             if d.is_resolved
