@@ -1086,7 +1086,7 @@ class CppProjCodeGenerator:
             f"template<>\n"
             f"struct std::hash<{iface_cpp_proj_info.as_holder}> {{\n"
             f"    std::size_t operator()({iface_cpp_proj_info.as_param} x) {{\n"
-            f"        return (std::size_t)((void *)x.m_handle.data_ptr);\n"
+            f"        return (std::size_t)x.m_handle.data_ptr;\n"
             f"    }}\n"
             f"}};\n"
         )
