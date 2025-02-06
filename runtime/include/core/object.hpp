@@ -7,6 +7,9 @@
 #include <taihe/object.abi.h>
 #include <type_traits>
 
+////////////
+// traits //
+////////////
 namespace taihe::core {
 template<typename ABIFromType, typename ABIIntoType>
 struct convert_traits {
@@ -26,11 +29,12 @@ template<typename InterfaceShadow>
 struct interface_shadow_traits {
     static constexpr bool value = false;
 };
+}
 
 //////////////////////
 // Raw Data Handler //
 //////////////////////
-
+namespace taihe::core {
 struct data_holder;
 struct data_shadow;
 
@@ -93,19 +97,20 @@ inline data_shadow& data_shadow::operator=(data_shadow other) {
     std::swap(this->m_handle, other.m_handle);
     return *this;
 }
+}
 
-inline bool operator==(data_shadow a, data_shadow b) {
+inline bool operator==(taihe::core::data_shadow a, taihe::core::data_shadow b) {
     return a.m_handle == b.m_handle;
 }
 
-inline bool operator!=(data_shadow a, data_shadow b) {
+inline bool operator!=(taihe::core::data_shadow a, taihe::core::data_shadow b) {
     return a.m_handle != b.m_handle;
 }
 
-///////////////////////////////////////
-// Specific Impl Type Object Handler //
-///////////////////////////////////////
-
+////////////////////////////////
+// Data blocks and Type infos //
+////////////////////////////////
+namespace taihe::core {
 template<typename Impl>
 struct data_block_impl : DataBlockHead, Impl {
     template<typename... Args>
@@ -128,12 +133,6 @@ constexpr void static_concat(T (&r)[S], uint64_t j, T const (&a)[N], T const (&.
     }
     static_concat(r, j, as...);
 }
-
-template<typename Impl, typename... InfoContainers>
-struct impl_holder;
-
-template<typename Impl, typename... InfoContainers>
-struct impl_shadow;
 
 template<typename... InfoContainers>
 struct typeinfo_t {
@@ -165,6 +164,17 @@ struct typeinfo_impl {
     template<typename InfoContainer>
     static constexpr void const* vtbl_ptr = get_vtbl_ptr(InfoContainer::iid);
 };
+}
+
+///////////////////////////////////////
+// Specific Impl Type Object Handler //
+///////////////////////////////////////
+namespace taihe::core {
+template<typename Impl, typename... InfoContainers>
+struct impl_holder;
+
+template<typename Impl, typename... InfoContainers>
+struct impl_shadow;
 
 template<typename Impl, typename... InfoContainers>
 struct impl_holder {

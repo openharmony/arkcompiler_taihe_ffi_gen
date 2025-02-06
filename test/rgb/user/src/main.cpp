@@ -82,8 +82,8 @@ int main() {
     }
 
     if (color_miku.holds_name()) {
-        string* color_ptr_name_ptr = color_miku.get_name_ptr();
-        std::cout << "color_miku is holding name, name is " << *color_ptr_name_ptr << std::endl;
+        string& color_ptr_name_ref = color_miku.get_name_ref();
+        std::cout << "color_miku is holding name, name is " << color_ptr_name_ref << std::endl;
     } else {
         std::cout << "Error" << std::endl;
     }

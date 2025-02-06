@@ -457,13 +457,11 @@ class CppProjCodeGenerator:
         struct_cpp_proj_defn_target.write(
             f"bool operator==({struct_cpp_proj_info.as_param} a, {struct_cpp_proj_info.as_param} b) {{\n"
         )
+        conds = []
         for field in struct.fields:
-            struct_cpp_proj_defn_target.write(
-                f"    if (a.{field.name} != b.{field.name}) {{\n"
-                f"        return false;\n"
-                f"    }}"
-            )
-        struct_cpp_proj_defn_target.write("    return true;\n" "}\n")
+            conds.append(f"a.{field.name} == b.{field.name}")
+        conds_fmt = " && ".join(conds)
+        struct_cpp_proj_defn_target.write(f"    return {conds_fmt};\n" f"}}\n")
         struct_cpp_proj_defn_target.write(
             f"bool operator!=({struct_cpp_proj_info.as_param} a, {struct_cpp_proj_info.as_param} b) {{\n"
             f"    return !(a == b);\n"
@@ -697,46 +695,38 @@ class CppProjCodeGenerator:
         )
         # non-const getter
         enum_cpp_proj_defn_target.write(
-            "    template<tag_t tag>\n" "    auto* unsafe_get_ptr() {\n"
+            "    template<tag_t tag>\n" "    auto& get_ref() {\n"
         )
         for item in enum.items:
-            result = (
-                "(void*)&this->data"
-                if item.ty_ref is None
-                else f"&this->data.{item.name}"
-            )
-            enum_cpp_proj_defn_target.write(
-                f"        if constexpr (tag == tag_t::{item.name}) {{\n"
-                f"            return {result};\n"
-                f"        }}\n"
-            )
+            if item.ty_ref:
+                enum_cpp_proj_defn_target.write(
+                    f"        if constexpr (tag == tag_t::{item.name}) {{\n"
+                    f"            return this->data.{item.name};\n"
+                    f"        }}\n"
+                )
         enum_cpp_proj_defn_target.write("    }\n")
         enum_cpp_proj_defn_target.write(
             "    template<tag_t tag>\n"
             "    auto* get_ptr() {\n"
-            "        return this->tag == tag ? unsafe_get_ptr<tag>() : nullptr;\n"
+            "        return this->tag == tag ? &get_ref<tag>() : nullptr;\n"
             "    }\n"
         )
         # const getter
         enum_cpp_proj_defn_target.write(
-            "    template<tag_t tag>\n" "    auto const* unsafe_get_ptr() const {\n"
+            "    template<tag_t tag>\n" "    auto const& get_ref() const {\n"
         )
         for item in enum.items:
-            result = (
-                "(void const*)&this->data"
-                if item.ty_ref is None
-                else f"&this->data.{item.name}"
-            )
-            enum_cpp_proj_defn_target.write(
-                f"        if constexpr (tag == tag_t::{item.name}) {{\n"
-                f"            return {result};\n"
-                f"        }}\n"
-            )
+            if item.ty_ref:
+                enum_cpp_proj_defn_target.write(
+                    f"        if constexpr (tag == tag_t::{item.name}) {{\n"
+                    f"            return this->data.{item.name};\n"
+                    f"        }}\n"
+                )
         enum_cpp_proj_defn_target.write("    }\n")
         enum_cpp_proj_defn_target.write(
             "    template<tag_t tag>\n"
             "    auto const* get_ptr() const {\n"
-            "        return this->tag == tag ? unsafe_get_ptr<tag>() : nullptr;\n"
+            "        return this->tag == tag ? &get_ref<tag>() : nullptr;\n"
             "    }\n"
         )
         # checker
@@ -760,22 +750,25 @@ class CppProjCodeGenerator:
                 f"    {enum_cpp_proj_info.name} const& emplace_{item.name}(Args&&... args) {{\n"
                 f"        return this->emplace<tag_t::{item.name}>(std::forward<Args>(args)...);\n"
                 f"    }}\n"
-                f"    auto* get_{item.name}_ptr() {{\n"
-                f"        return this->get_ptr<tag_t::{item.name}>();\n"
-                f"    }}\n"
-                f"    auto const* get_{item.name}_ptr() const {{\n"
-                f"        return this->get_ptr<tag_t::{item.name}>();\n"
-                f"    }}\n"
-                f"    auto* unsafe_get_{item.name}_ptr() {{\n"
-                f"        return this->unsafe_get_ptr<tag_t::{item.name}>();\n"
-                f"    }}\n"
-                f"    auto const* unsafe_get_{item.name}_ptr() const {{\n"
-                f"        return this->unsafe_get_ptr<tag_t::{item.name}>();\n"
-                f"    }}\n"
                 f"    bool holds_{item.name}() const {{\n"
                 f"        return this->holds<tag_t::{item.name}>();\n"
                 f"    }}\n"
             )
+            if item.ty_ref:
+                enum_cpp_proj_defn_target.write(
+                    f"    auto* get_{item.name}_ptr() {{\n"
+                    f"        return this->get_ptr<tag_t::{item.name}>();\n"
+                    f"    }}\n"
+                    f"    auto const* get_{item.name}_ptr() const {{\n"
+                    f"        return this->get_ptr<tag_t::{item.name}>();\n"
+                    f"    }}\n"
+                    f"    auto& get_{item.name}_ref() {{\n"
+                    f"        return this->get_ref<tag_t::{item.name}>();\n"
+                    f"    }}\n"
+                    f"    auto const& get_{item.name}_ref() const {{\n"
+                    f"        return this->get_ref<tag_t::{item.name}>();\n"
+                    f"    }}\n"
+                )
         # non_const visitor
         enum_cpp_proj_defn_target.write(
             "    template<typename Visitor>\n"
@@ -845,17 +838,16 @@ class CppProjCodeGenerator:
         enum_cpp_proj_defn_target.write(
             f"bool operator==({enum_cpp_proj_info.as_param} a, {enum_cpp_proj_info.as_param} b) {{\n"
         )
+        conds = []
         for item in enum.items:
-            if item.ty_ref:
-                eq = f"*a.unsafe_get_{item.name}_ptr() == *b.unsafe_get_{item.name}_ptr()"
-            else:
-                eq = "true"
-            enum_cpp_proj_defn_target.write(
-                f"    if (a.holds_{item.name}() && b.holds_{item.name}() && {eq}) {{\n"
-                f"        return true;\n"
-                f"    }}\n"
+            cond = f"a.holds_{item.name}() && b.holds_{item.name}()"
+            conds.append(
+                f"{cond} && a.get_{item.name}_ref() == b.get_{item.name}_ref()"
+                if item.ty_ref
+                else cond
             )
-        enum_cpp_proj_defn_target.write("    return false;\n" "}\n")
+        conds_fmt = " || ".join(conds)
+        enum_cpp_proj_defn_target.write(f"    return {conds_fmt};\n" f"}}\n")
         enum_cpp_proj_defn_target.write(
             f"bool operator!=({enum_cpp_proj_info.as_param} a, {enum_cpp_proj_info.as_param} b) {{\n"
             f"    return !(a == b);\n"
@@ -878,14 +870,13 @@ class CppProjCodeGenerator:
             f"        switch (x.get_tag()) {{\n"
         )
         for item in enum.items:
+            val = f"({enum_abi_info.tag_type}){enum_cpp_proj_info.full_name}::tag_t::{item.name}"
             if item.ty_ref:
                 ty_info = TypeCppProjInfo.get(self.am, item.ty_ref.resolved_ty)
-                val = f"std::hash<{ty_info.as_holder}>{{}}(*x.unsafe_get_{item.name}_ptr())"
-            else:
-                val = "0"
+                val = f"{val} ^ std::hash<{ty_info.as_holder}>{{}}(x.get_{item.name}_ref())"
             enum_cpp_proj_defn_target.write(
                 f"        case {enum_cpp_proj_info.full_name}::tag_t::{item.name}:\n"
-                f"            return {val} ^ ({enum_abi_info.tag_type}){enum_cpp_proj_info.full_name}::tag_t::{item.name};\n"
+                f"            return {val};\n"
             )
         enum_cpp_proj_defn_target.write("        }\n" "    }\n" "};\n")
 
