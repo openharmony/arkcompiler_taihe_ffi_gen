@@ -105,7 +105,7 @@ class NapiCodeGenerator:
             desc.append(func_desc)
 
         desc_str = ", \n".join(desc)
-        self.gen_moudule_init(desc_str, pkg_napi_target)
+        self.gen_module_init(desc_str, pkg_napi_target)
 
     def gen_package_file(self, pkg: Package):
         pkg_napi_info = PackageNapiInfo.get(self.am, pkg)
@@ -123,18 +123,32 @@ class NapiCodeGenerator:
             desc.append(func_desc)
 
         desc_str = ", \n".join(desc)
-        self.gen_moudule_init(desc_str, pkg_napi_target)
+        self.gen_module_init(desc_str, pkg_napi_target)
 
-    def gen_moudule_init(self, desc_str: str, pkg_napi_target: COutputBuffer):
+    def gen_module_init(self, desc_str: str, pkg_napi_target: COutputBuffer):
         pkg_napi_target.write(
-            f"napi_value module_init(napi_env env, napi_value exports) {{\n"
+            f"EXTERN_C_START\n"
+            f"napi_value Init(napi_env env, napi_value exports) {{\n"
             f"    napi_property_descriptor desc[] = {{\n"
             f"{desc_str}\n"
             f"    }};\n"
             f"    napi_define_properties(env, exports, sizeof(desc) / sizeof(desc[0]), desc);\n"
             f"    return exports;\n"
             f"}}\n"
-            f"NAPI_MODULE(my_api, module_init);"
+            f"EXTERN_C_END\n"
+            f"static napi_module demoModule = {{\n"
+            f"    .nm_version = 1,\n"
+            f"    .nm_flags = 0,\n"
+            f"    .nm_filename = nullptr,\n"
+            f"    .nm_register_func = Init,\n"
+            f'   .nm_modname = "entry",\n'
+            f"    .nm_priv = ((void*)0),\n"
+            f"    .reserved = {{ 0 }},\n"
+            f"}};\n"
+            f'extern "C" __attribute__((constructor)) void RegisterEntryModule(void)\n'
+            f"{{\n"
+            f"    napi_module_register(&demoModule);\n"
+            f"}}\n"
         )
 
     def gen_kn_func(
@@ -164,7 +178,7 @@ class NapiCodeGenerator:
         pkg_napi_target: COutputBuffer,
     ):
         pkg_napi_target.write(
-            f"napi_value napi_{func.name}(napi_env env, napi_callback_info info)\n"
+            f"static napi_value napi_{func.name}(napi_env env, napi_callback_info info)\n"
             f"{{\n"
         )
         self.gen_func_get_cb_info(func, pkg_napi_target)
