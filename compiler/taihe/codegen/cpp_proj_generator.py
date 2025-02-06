@@ -415,6 +415,18 @@ class CppProjCodeGenerator:
             struct_cpp_proj_info,
             pkg_cpp_proj_info,
         )
+        self.gen_struct_comp(
+            struct,
+            struct_cpp_proj_defn_target,
+            struct_cpp_proj_info,
+            pkg_cpp_proj_info,
+        )
+        self.gen_struct_hash(
+            struct,
+            struct_cpp_proj_defn_target,
+            struct_cpp_proj_info,
+            pkg_cpp_proj_info,
+        )
 
     def gen_struct_defn(
         self,
@@ -434,6 +446,50 @@ class CppProjCodeGenerator:
                 f"    {ty_info.as_holder} {field.name};\n"
             )
         struct_cpp_proj_defn_target.write("};\n" "}\n")
+
+    def gen_struct_comp(
+        self,
+        struct: StructDecl,
+        struct_cpp_proj_defn_target: COutputBuffer,
+        struct_cpp_proj_info: StructDeclCppProjInfo,
+        pkg_cpp_proj_info: PackageCppProjInfo,
+    ):
+        struct_cpp_proj_defn_target.write(
+            f"bool operator==({struct_cpp_proj_info.as_param} a, {struct_cpp_proj_info.as_param} b) {{\n"
+        )
+        for field in struct.fields:
+            struct_cpp_proj_defn_target.write(
+                f"    if (a.{field.name} != b.{field.name}) {{\n"
+                f"        return false;\n"
+                f"    }}"
+            )
+        struct_cpp_proj_defn_target.write("    return true;\n" "}\n")
+        struct_cpp_proj_defn_target.write(
+            f"bool operator!=({struct_cpp_proj_info.as_param} a, {struct_cpp_proj_info.as_param} b) {{\n"
+            f"    return !(a == b);\n"
+            f"}}\n"
+        )
+
+    def gen_struct_hash(
+        self,
+        struct: StructDecl,
+        struct_cpp_proj_defn_target: COutputBuffer,
+        struct_cpp_proj_info: StructDeclCppProjInfo,
+        pkg_cpp_proj_info: PackageCppProjInfo,
+    ):
+        struct_cpp_proj_defn_target.include("utility")
+        struct_cpp_proj_defn_target.write(
+            f"template<>"
+            f"struct std::hash<{struct_cpp_proj_info.as_holder}> {{\n"
+            f"    std::size_t operator()({struct_cpp_proj_info.as_param} x) {{\n"
+            f"        std::size_t seed = 0;\n"
+        )
+        for field in struct.fields:
+            ty_info = TypeCppProjInfo.get(self.am, field.ty_ref.resolved_ty)
+            struct_cpp_proj_defn_target.write(
+                f"        seed ^= std::hash<{ty_info.as_holder}>{{}}(x.{field.name}) + 0x9e3779b9 + (seed << 6) + (seed >> 2);\n"
+            )
+        struct_cpp_proj_defn_target.write("    return seed;\n" "    }\n" "};\n")
 
     def gen_enum_files(
         self,
@@ -487,6 +543,20 @@ class CppProjCodeGenerator:
         enum_cpp_proj_defn_target.include(enum_cpp_proj_info.decl_header)
         enum_cpp_proj_defn_target.include(enum_abi_info.defn_header)
         self.gen_enum_defn(
+            enum,
+            enum_cpp_proj_defn_target,
+            enum_cpp_proj_info,
+            enum_abi_info,
+            pkg_cpp_proj_info,
+        )
+        self.gen_enum_comp(
+            enum,
+            enum_cpp_proj_defn_target,
+            enum_cpp_proj_info,
+            enum_abi_info,
+            pkg_cpp_proj_info,
+        )
+        self.gen_enum_hash(
             enum,
             enum_cpp_proj_defn_target,
             enum_cpp_proj_info,
@@ -764,6 +834,61 @@ class CppProjCodeGenerator:
             "private:\n" "    tag_t tag;\n" "    storage_t data;\n" "};\n" "}\n"
         )
 
+    def gen_enum_comp(
+        self,
+        enum: EnumDecl,
+        enum_cpp_proj_defn_target: COutputBuffer,
+        enum_cpp_proj_info: EnumDeclCppProjInfo,
+        enum_abi_info: EnumDeclABIInfo,
+        pkg_cpp_proj_info: PackageCppProjInfo,
+    ):
+        enum_cpp_proj_defn_target.write(
+            f"bool operator==({enum_cpp_proj_info.as_param} a, {enum_cpp_proj_info.as_param} b) {{\n"
+        )
+        for item in enum.items:
+            if item.ty_ref:
+                eq = f"*a.unsafe_get_{item.name}_ptr() == *b.unsafe_get_{item.name}_ptr()"
+            else:
+                eq = "true"
+            enum_cpp_proj_defn_target.write(
+                f"    if (a.holds_{item.name}() && b.holds_{item.name}() && {eq}) {{\n"
+                f"        return true;\n"
+                f"    }}\n"
+            )
+        enum_cpp_proj_defn_target.write("    return false;\n" "}\n")
+        enum_cpp_proj_defn_target.write(
+            f"bool operator!=({enum_cpp_proj_info.as_param} a, {enum_cpp_proj_info.as_param} b) {{\n"
+            f"    return !(a == b);\n"
+            f"}}\n"
+        )
+
+    def gen_enum_hash(
+        self,
+        enum: EnumDecl,
+        enum_cpp_proj_defn_target: COutputBuffer,
+        enum_cpp_proj_info: EnumDeclCppProjInfo,
+        enum_abi_info: EnumDeclABIInfo,
+        pkg_cpp_proj_info: PackageCppProjInfo,
+    ):
+        enum_cpp_proj_defn_target.include("utility")
+        enum_cpp_proj_defn_target.write(
+            f"template<>\n"
+            f"struct std::hash<{enum_cpp_proj_info.as_holder}> {{\n"
+            f"    std::size_t operator()({enum_cpp_proj_info.as_param} x) {{\n"
+            f"        switch (x.get_tag()) {{\n"
+        )
+        for item in enum.items:
+            if item.ty_ref:
+                ty_info = TypeCppProjInfo.get(self.am, item.ty_ref.resolved_ty)
+                val = f"std::hash<{ty_info.as_holder}>{{}}(*x.unsafe_get_{item.name}_ptr())"
+            else:
+                val = "0"
+            enum_cpp_proj_defn_target.write(
+                f"        case {enum_cpp_proj_info.full_name}::tag_t::{item.name}:\n"
+                f"            return {val} ^ ({enum_abi_info.tag_type}){enum_cpp_proj_info.full_name}::tag_t::{item.name};\n"
+            )
+        enum_cpp_proj_defn_target.write("        }\n" "    }\n" "};\n")
+
     def gen_iface_files(
         self,
         iface: IfaceDecl,
@@ -838,6 +963,13 @@ class CppProjCodeGenerator:
             pkg_cpp_proj_info,
             iface_cpp_proj_defn_target,
         )
+        self.gen_iface_hash(
+            iface,
+            iface_abi_info,
+            iface_cpp_proj_info,
+            pkg_cpp_proj_info,
+            iface_cpp_proj_defn_target,
+        )
 
     def gen_iface_holder_defn(
         self,
@@ -861,7 +993,7 @@ class CppProjCodeGenerator:
             f"    operator ::taihe::core::data_shadow() const&;\n"
             f"    explicit {iface_cpp_proj_info.name}(::taihe::core::data_holder other);\n"
             f"    {iface_cpp_proj_info.name}& operator=({iface_cpp_proj_info.full_name} other);\n"
-            f"    operator bool() const&;\n"
+            f"    explicit operator bool() const&;\n"
         )
         for ancestor, info in iface_abi_info.ancestor_dict.items():
             if info.offset == 0:
@@ -916,7 +1048,7 @@ class CppProjCodeGenerator:
             f"    operator ::taihe::core::data_shadow() const&;\n"
             f"    explicit {iface_cpp_proj_info.name}(::taihe::core::data_shadow other);\n"
             f"    {iface_cpp_proj_info.name}& operator=({iface_cpp_proj_info.weak_name} other);\n"
-            f"    operator bool() const&;\n"
+            f"    explicit operator bool() const&;\n"
         )
         for ancestor, info in iface_abi_info.ancestor_dict.items():
             if info.offset == 0:
@@ -949,6 +1081,24 @@ class CppProjCodeGenerator:
                 f"    {cpp_return_ty_name} {method_cpp_proj_info.name}({params_cpp_str}) const;\n"
             )
         iface_cpp_proj_defn_target.write("};\n" "}\n")
+
+    def gen_iface_hash(
+        self,
+        iface: IfaceDecl,
+        iface_abi_info: IfaceDeclABIInfo,
+        iface_cpp_proj_info: IfaceDeclCppProjInfo,
+        pkg_cpp_proj_info: PackageCppProjInfo,
+        iface_cpp_proj_defn_target: COutputBuffer,
+    ):
+        iface_cpp_proj_defn_target.include("utility")
+        iface_cpp_proj_defn_target.write(
+            f"template<>\n"
+            f"struct std::hash<{iface_cpp_proj_info.as_holder}> {{\n"
+            f"    std::size_t operator()({iface_cpp_proj_info.as_param} x) {{\n"
+            f"        return (std::size_t)((void *)x.m_handle.data_ptr);\n"
+            f"    }}\n"
+            f"}};\n"
+        )
 
     def gen_iface_impl_file(
         self,

@@ -94,6 +94,14 @@ inline data_shadow& data_shadow::operator=(data_shadow other) {
     return *this;
 }
 
+inline bool operator==(data_shadow a, data_shadow b) {
+    return a.m_handle == b.m_handle;
+}
+
+inline bool operator!=(data_shadow a, data_shadow b) {
+    return a.m_handle != b.m_handle;
+}
+
 ///////////////////////////////////////
 // Specific Impl Type Object Handler //
 ///////////////////////////////////////

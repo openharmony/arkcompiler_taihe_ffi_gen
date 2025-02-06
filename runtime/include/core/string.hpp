@@ -334,3 +334,10 @@ string to_string(T const value) {
     }
 }
 }
+
+template<>
+struct std::hash<taihe::core::string> {
+    std::size_t operator()(taihe::core::string_view sv) const {
+        return std::hash<std::string_view>{}(sv);
+    }
+};
