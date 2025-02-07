@@ -415,12 +415,6 @@ class CppProjCodeGenerator:
             struct_cpp_proj_info,
             pkg_cpp_proj_info,
         )
-        self.gen_struct_comp(
-            struct,
-            struct_cpp_proj_defn_target,
-            struct_cpp_proj_info,
-            pkg_cpp_proj_info,
-        )
         self.gen_struct_hash(
             struct,
             struct_cpp_proj_defn_target,
@@ -445,28 +439,21 @@ class CppProjCodeGenerator:
             struct_cpp_proj_defn_target.write(
                 f"    {ty_info.as_holder} {field.name};\n"
             )
-        struct_cpp_proj_defn_target.write("};\n" "}\n")
-
-    def gen_struct_comp(
-        self,
-        struct: StructDecl,
-        struct_cpp_proj_defn_target: COutputBuffer,
-        struct_cpp_proj_info: StructDeclCppProjInfo,
-        pkg_cpp_proj_info: PackageCppProjInfo,
-    ):
-        struct_cpp_proj_defn_target.write(
-            f"bool operator==({struct_cpp_proj_info.as_param} a, {struct_cpp_proj_info.as_param} b) {{\n"
-        )
+        # comparison
         conds = []
         for field in struct.fields:
-            conds.append(f"a.{field.name} == b.{field.name}")
+            conds.append(f"lhs.{field.name} == rhs.{field.name}")
         conds_fmt = " && ".join(conds)
-        struct_cpp_proj_defn_target.write(f"    return {conds_fmt};\n" f"}}\n")
         struct_cpp_proj_defn_target.write(
-            f"bool operator!=({struct_cpp_proj_info.as_param} a, {struct_cpp_proj_info.as_param} b) {{\n"
-            f"    return !(a == b);\n"
-            f"}}\n"
+            f"    friend bool operator==({struct_cpp_proj_info.name} const& lhs, {struct_cpp_proj_info.name} const& rhs) {{\n"
+            f"        return {conds_fmt};\n"
+            f"    }}\n"
+            f"    friend bool operator!=({struct_cpp_proj_info.name} const& lhs, {struct_cpp_proj_info.name} const& rhs) {{\n"
+            f"        return !(lhs == rhs);\n"
+            f"    }}\n"
         )
+        # finally
+        struct_cpp_proj_defn_target.write("};\n" "}\n")
 
     def gen_struct_hash(
         self,
@@ -541,13 +528,6 @@ class CppProjCodeGenerator:
         enum_cpp_proj_defn_target.include(enum_cpp_proj_info.decl_header)
         enum_cpp_proj_defn_target.include(enum_abi_info.defn_header)
         self.gen_enum_defn(
-            enum,
-            enum_cpp_proj_defn_target,
-            enum_cpp_proj_info,
-            enum_abi_info,
-            pkg_cpp_proj_info,
-        )
-        self.gen_enum_comp(
             enum,
             enum_cpp_proj_defn_target,
             enum_cpp_proj_info,
@@ -822,36 +802,28 @@ class CppProjCodeGenerator:
                 f"        case tag_t::{item.name}:\n"
                 f"            return visitor.{item.name}({result});\n"
             )
+        # comparison
         enum_cpp_proj_defn_target.write("        }\n" "    }\n")
-        enum_cpp_proj_defn_target.write(
-            "private:\n" "    tag_t tag;\n" "    storage_t data;\n" "};\n" "}\n"
-        )
-
-    def gen_enum_comp(
-        self,
-        enum: EnumDecl,
-        enum_cpp_proj_defn_target: COutputBuffer,
-        enum_cpp_proj_info: EnumDeclCppProjInfo,
-        enum_abi_info: EnumDeclABIInfo,
-        pkg_cpp_proj_info: PackageCppProjInfo,
-    ):
-        enum_cpp_proj_defn_target.write(
-            f"bool operator==({enum_cpp_proj_info.as_param} a, {enum_cpp_proj_info.as_param} b) {{\n"
-        )
         conds = []
         for item in enum.items:
-            cond = f"a.holds_{item.name}() && b.holds_{item.name}()"
+            cond = f"lhs.holds_{item.name}() && rhs.holds_{item.name}()"
             conds.append(
-                f"{cond} && a.get_{item.name}_ref() == b.get_{item.name}_ref()"
+                f"{cond} && lhs.get_{item.name}_ref() == rhs.get_{item.name}_ref()"
                 if item.ty_ref
                 else cond
             )
         conds_fmt = " || ".join(conds)
-        enum_cpp_proj_defn_target.write(f"    return {conds_fmt};\n" f"}}\n")
         enum_cpp_proj_defn_target.write(
-            f"bool operator!=({enum_cpp_proj_info.as_param} a, {enum_cpp_proj_info.as_param} b) {{\n"
-            f"    return !(a == b);\n"
-            f"}}\n"
+            f"    friend bool operator==({enum_cpp_proj_info.name} const& lhs, {enum_cpp_proj_info.name} const& rhs) {{\n"
+            f"        return {conds_fmt};\n"
+            f"    }}\n"
+            f"    friend bool operator!=({enum_cpp_proj_info.name} const& lhs, {enum_cpp_proj_info.name} const& rhs) {{\n"
+            f"        return !(lhs == rhs);\n"
+            f"    }}\n"
+        )
+        # finally
+        enum_cpp_proj_defn_target.write(
+            "private:\n" "    tag_t tag;\n" "    storage_t data;\n" "};\n" "}\n"
         )
 
     def gen_enum_hash(

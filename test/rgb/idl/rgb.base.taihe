@@ -33,3 +33,7 @@ enum Outer {
     a: Inner;
     b: Inner;
 }
+
+struct X {
+    v: Outer[];
+}
