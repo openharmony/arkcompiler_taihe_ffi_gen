@@ -137,9 +137,21 @@ array<IBase> exchangeImpl(array_view<IBase> dst, array_view<IBase> src) {
     return res;
 }
 
-void fillImpl(vector<string>& target) {
+struct TestType {
+    std::string id;
+
+    TestType(std::string const& id) : id(id) { std::cout << id << " made" << std::endl; }
+    ~TestType() { std::cout << id << " deleted" << std::endl; }
+
+    std::string getId() { return id; }
+};
+
+void fillImpl(vector<IBase>& target) {
     for (int i = 0; i < 10; i++) {
-        target.emplace_back("abc");
+        char c[2];
+        c[0] = '0' + i;
+        c[1] = '\0';
+        target.push_back(make_holder<TestType, IBase>(c));
     }
 }
 

@@ -128,17 +128,9 @@ int main() {
     show_array(src, "src");
     show_array(res, "res");
 
-    auto x = Outer::make_a(Inner::make_b("abc"));
-    auto y = Outer::make_b(Inner::make_a("abc"));
-
-    std::cout << std::hash<string>{}(y.get_b_ref().get_a_ref()) << std::endl;
-    std::cout << std::hash<string>{}("abc") << std::endl;
-    std::cout << std::hash<Outer>{}(x) << std::endl;
-    std::cout << std::hash<Outer>{}(y) << std::endl;
-
-    vector<string> vec;
+    vector<IBase> vec;
     fill(vec);
     for (int i = 0; i < vec.size(); i++) {
-        std::cout << vec[i] << std::endl;
+        std::cout << vec[i].getId() << std::endl;
     }
 }

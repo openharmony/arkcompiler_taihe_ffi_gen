@@ -23,17 +23,3 @@ enum ColorOrRGBOrName {
 }
 
 function toString(color: ColorOrRGBOrName): String;
-
-enum Inner {
-    a: String;
-    b: String;
-}
-
-enum Outer {
-    a: Inner;
-    b: Inner;
-}
-
-struct X {
-    v: Outer[];
-}
