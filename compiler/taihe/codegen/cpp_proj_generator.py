@@ -1023,7 +1023,7 @@ class CppProjCodeGenerator:
             f"    }}\n"
             f"    operator {iface_cpp_proj_info.weak_name}() const& {{\n"
             f"        {iface_abi_info.as_field} ret_handle = this->m_handle;\n"
-            f"        return {iface_cpp_proj_info.full_name}(ret_handle);\n"
+            f"        return {iface_cpp_proj_info.weak_name}(ret_handle);\n"
             f"    }}\n"
             f"    {iface_cpp_proj_info.name}({iface_cpp_proj_info.weak_name} const& other)\n"
             f"        : m_handle({iface_abi_info.copy_func}(other.m_handle)) {{}}\n"
