@@ -465,14 +465,14 @@ class CppProjCodeGenerator:
         struct_cpp_proj_defn_target.include("utility")
         struct_cpp_proj_defn_target.write(
             f"template<>"
-            f"struct std::hash<{struct_cpp_proj_info.as_holder}> {{\n"
-            f"    std::size_t operator()({struct_cpp_proj_info.as_param} x) {{\n"
-            f"        std::size_t seed = 0;\n"
+            f"struct ::std::hash<{struct_cpp_proj_info.as_holder}> {{\n"
+            f"    ::std::size_t operator()({struct_cpp_proj_info.as_param} x) {{\n"
+            f"        ::std::size_t seed = 0;\n"
         )
         for field in struct.fields:
             ty_info = TypeCppProjInfo.get(self.am, field.ty_ref.resolved_ty)
             struct_cpp_proj_defn_target.write(
-                f"        seed ^= std::hash<{ty_info.as_holder}>{{}}(x.{field.name}) + 0x9e3779b9 + (seed << 6) + (seed >> 2);\n"
+                f"        seed ^= ::std::hash<{ty_info.as_holder}>{{}}(x.{field.name}) + 0x9e3779b9 + (seed << 6) + (seed >> 2);\n"
             )
         struct_cpp_proj_defn_target.write("    return seed;\n" "    }\n" "};\n")
 
@@ -724,11 +724,11 @@ class CppProjCodeGenerator:
             enum_cpp_proj_defn_target.write(
                 f"    template<typename... Args>\n"
                 f"    static {enum_cpp_proj_info.name} make_{item.name}(Args&&... args) {{\n"
-                f"        return make<tag_t::{item.name}>(std::forward<Args>(args)...);\n"
+                f"        return make<tag_t::{item.name}>(::std::forward<Args>(args)...);\n"
                 f"    }}\n"
                 f"    template<typename... Args>\n"
                 f"    {enum_cpp_proj_info.name} const& emplace_{item.name}(Args&&... args) {{\n"
-                f"        return this->emplace<tag_t::{item.name}>(std::forward<Args>(args)...);\n"
+                f"        return this->emplace<tag_t::{item.name}>(::std::forward<Args>(args)...);\n"
                 f"    }}\n"
                 f"    bool holds_{item.name}() const {{\n"
                 f"        return this->holds<tag_t::{item.name}>();\n"
@@ -837,16 +837,16 @@ class CppProjCodeGenerator:
         enum_cpp_proj_defn_target.include("utility")
         enum_cpp_proj_defn_target.write(
             f"template<>\n"
-            f"struct std::hash<{enum_cpp_proj_info.as_holder}> {{\n"
-            f"    std::size_t operator()({enum_cpp_proj_info.as_param} x) {{\n"
+            f"struct ::std::hash<{enum_cpp_proj_info.as_holder}> {{\n"
+            f"    ::std::size_t operator()({enum_cpp_proj_info.as_param} x) {{\n"
             f"        switch (x.get_tag()) {{\n"
-            f"            std::size_t seed;\n"
+            f"            ::std::size_t seed;\n"
         )
         for item in enum.items:
             val = "0x9e3779b9 + (seed << 6) + (seed >> 2)"
             if item.ty_ref:
                 ty_info = TypeCppProjInfo.get(self.am, item.ty_ref.resolved_ty)
-                val = f"{val} + std::hash<{ty_info.as_holder}>{{}}(x.get_{item.name}_ref())"
+                val = f"{val} + ::std::hash<{ty_info.as_holder}>{{}}(x.get_{item.name}_ref())"
             enum_cpp_proj_defn_target.write(
                 f"        case {enum_cpp_proj_info.full_name}::tag_t::{item.name}:\n"
                 f"            seed = ({enum_abi_info.tag_type}){enum_cpp_proj_info.full_name}::tag_t::{item.name};\n"
@@ -1112,9 +1112,9 @@ class CppProjCodeGenerator:
         iface_cpp_proj_defn_target.include("utility")
         iface_cpp_proj_defn_target.write(
             f"template<>\n"
-            f"struct std::hash<{iface_cpp_proj_info.as_holder}> {{\n"
-            f"    std::size_t operator()({iface_cpp_proj_info.as_param} x) {{\n"
-            f"        return (std::size_t)x.m_handle.data_ptr;\n"
+            f"struct ::std::hash<{iface_cpp_proj_info.as_holder}> {{\n"
+            f"    ::std::size_t operator()({iface_cpp_proj_info.as_param} x) {{\n"
+            f"        return (::std::size_t)x.m_handle.data_ptr;\n"
             f"    }}\n"
             f"}};\n"
         )
