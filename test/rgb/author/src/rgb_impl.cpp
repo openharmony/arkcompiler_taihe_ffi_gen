@@ -137,8 +137,15 @@ array<IBase> exchangeImpl(array_view<IBase> dst, array_view<IBase> src) {
     return res;
 }
 
+void fillImpl(vector<string>& target) {
+    for (int i = 0; i < 10; i++) {
+        target.emplace_back("abc");
+    }
+}
+
 TH_EXPORT_CPP_API_makeRectangle(makeRectangleImpl)
 TH_EXPORT_CPP_API_makeColoredRectangle(makeColoredRectangleImpl)
 TH_EXPORT_CPP_API_copyColor(copyColorImpl)
 TH_EXPORT_CPP_API_toString(colorToStringImpl)
 TH_EXPORT_CPP_API_exchange(exchangeImpl)
+TH_EXPORT_CPP_API_fill(fillImpl)

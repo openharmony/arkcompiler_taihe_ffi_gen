@@ -33,6 +33,7 @@ from taihe.semantics.types import (
     SpecialType,
     StructType,
     Type,
+    VectorType,
 )
 from taihe.semantics.visitor import TypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
@@ -243,6 +244,17 @@ class ArrayTypeABIInfo(AbstractAnalysis[ArrayType], AbstractTypeABIInfo):
         self.drop_func = "tarr_drop"
 
 
+class VectorTypeABIInfo(AbstractAnalysis[VectorType], AbstractTypeABIInfo):
+    def __init__(self, am: AnalysisManager, t: VectorType) -> None:
+        arg_ty_abi_info = TypeABIInfo.get(am, t.val_ty)
+        self.decl_headers = ["core/vector.hpp", *arg_ty_abi_info.decl_headers]
+        self.defn_headers = ["core/vector.hpp", *arg_ty_abi_info.decl_headers]
+        self.as_field = f"struct TVectorData<{arg_ty_abi_info.as_field}>*"
+        self.as_param = f"struct TVectorData<{arg_ty_abi_info.as_field}>**"
+        self.copy_func = "tvec_dup"
+        self.drop_func = "tvec_drop"
+
+
 class TypeABIInfo(TypeVisitor[AbstractTypeABIInfo]):
     def __init__(self, am: AnalysisManager):
         self.am = am
@@ -275,6 +287,10 @@ class TypeABIInfo(TypeVisitor[AbstractTypeABIInfo]):
     @override
     def visit_array_type(self, t: ArrayType) -> AbstractTypeABIInfo:
         return ArrayTypeABIInfo.get(self.am, t)
+
+    @override
+    def visit_vector_type(self, t: VectorType) -> AbstractTypeABIInfo:
+        return VectorTypeABIInfo.get(self.am, t)
 
 
 class ABICodeGenerator:

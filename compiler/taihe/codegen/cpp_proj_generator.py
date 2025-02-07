@@ -41,6 +41,7 @@ from taihe.semantics.types import (
     SpecialType,
     StructType,
     Type,
+    VectorType,
 )
 from taihe.semantics.visitor import TypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
@@ -264,6 +265,28 @@ class ArrayTypeCppProjInfo(AbstractAnalysis[ArrayType], AbstractTypeCppProjInfo)
         )
 
 
+class VectorTypeCppProjInfo(AbstractAnalysis[VectorType], AbstractTypeCppProjInfo):
+    def __init__(self, am: AnalysisManager, t: VectorType) -> None:
+        abi_info = TypeABIInfo.get(am, t)
+        arg_ty_cpp_proj_info = TypeCppProjInfo.get(am, t.val_ty)
+        self.decl_headers = ["core/array.hpp", *arg_ty_cpp_proj_info.decl_headers]
+        self.defn_headers = ["core/array.hpp", *arg_ty_cpp_proj_info.decl_headers]
+        self.as_holder = f"::taihe::core::vector<{arg_ty_cpp_proj_info.as_holder}>"
+        self.as_param = f"::taihe::core::vector<{arg_ty_cpp_proj_info.as_holder}>&"
+        self.return_from_abi = (
+            lambda val: f"::taihe::core::cast_from_abi<{self.as_holder}, {abi_info.as_field}>({val})"
+        )
+        self.return_into_abi = (
+            lambda val: f"::taihe::core::move_into_abi<{self.as_holder}, {abi_info.as_field}>({val})"
+        )
+        self.pass_from_abi = (
+            lambda val: f"::taihe::core::cast_ref_from_abi<{self.as_param}, {abi_info.as_param}>({val})"
+        )
+        self.pass_into_abi = (
+            lambda val: f"::taihe::core::cast_ref_into_abi<{self.as_param}, {abi_info.as_param}>({val})"
+        )
+
+
 class TypeCppProjInfo(TypeVisitor[AbstractTypeCppProjInfo]):
     def __init__(self, am: AnalysisManager):
         self.am = am
@@ -296,6 +319,10 @@ class TypeCppProjInfo(TypeVisitor[AbstractTypeCppProjInfo]):
     @override
     def visit_array_type(self, t: ArrayType) -> AbstractTypeCppProjInfo:
         return ArrayTypeCppProjInfo.get(self.am, t)
+    
+    @override
+    def visit_vector_type(self, t: VectorType) -> AbstractTypeCppProjInfo:
+        return VectorTypeCppProjInfo.get(self.am, t)
 
 
 class CppProjCodeGenerator:

@@ -11,7 +11,7 @@ struct TVectorData {
     TRefCount count;
     std::size_t len;
     std::size_t cap;
-    T data[];
+    T data[0];
 };
 
 template<typename T>
@@ -33,7 +33,7 @@ void tvec_drop(TVectorData<T>* handle) {
 }
 
 template<typename T>
-TVectorData<T> tvec_new(std::size_t cap) {
+TVectorData<T>* tvec_new(std::size_t cap) {
     size_t bytes_required = sizeof(TVectorData<T>) + sizeof(T) * cap;
     TVectorData<T>* handle = reinterpret_cast<TVectorData<T>*>(malloc(bytes_required));
     tref_set(&handle->count, 1);

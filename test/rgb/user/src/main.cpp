@@ -135,4 +135,10 @@ int main() {
     std::cout << std::hash<string>{}("abc") << std::endl;
     std::cout << std::hash<Outer>{}(x) << std::endl;
     std::cout << std::hash<Outer>{}(y) << std::endl;
+
+    vector<string> vec;
+    fill(vec);
+    for (int i = 0; i < vec.size(); i++) {
+        std::cout << vec[i] << std::endl;
+    }
 }
