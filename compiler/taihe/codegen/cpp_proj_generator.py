@@ -914,14 +914,14 @@ class CppProjCodeGenerator:
         iface_cpp_proj_defn_target.include("core/object.hpp")
         iface_cpp_proj_defn_target.include(iface_cpp_proj_info.decl_header)
         iface_cpp_proj_defn_target.include(iface_abi_info.defn_header)
-        self.gen_iface_holder_defn(
+        self.gen_iface_shadow_defn(
             iface,
             iface_abi_info,
             iface_cpp_proj_info,
             pkg_cpp_proj_info,
             iface_cpp_proj_defn_target,
         )
-        self.gen_iface_shadow_defn(
+        self.gen_iface_holder_defn(
             iface,
             iface_abi_info,
             iface_cpp_proj_info,
@@ -936,7 +936,7 @@ class CppProjCodeGenerator:
             iface_cpp_proj_defn_target,
         )
 
-    def gen_iface_holder_defn(
+    def gen_iface_shadow_defn(
         self,
         iface: IfaceDecl,
         iface_abi_info: IfaceDeclABIInfo,
@@ -945,20 +945,27 @@ class CppProjCodeGenerator:
         iface_cpp_proj_defn_target: COutputBuffer,
     ):
         iface_cpp_proj_defn_target.write(
-            f"namespace {pkg_cpp_proj_info.namespace} {{\n"
+            f"namespace {pkg_cpp_proj_info.weakspace} {{\n"
             f"struct {iface_cpp_proj_info.name} {{\n"
-            f"    {iface_abi_info.as_field} m_handle;\n"
-            f"    explicit {iface_cpp_proj_info.name}({iface_abi_info.as_field} other_handle);\n"
-            f"    ~{iface_cpp_proj_info.name}();\n"
-            f"    {iface_cpp_proj_info.name}({iface_cpp_proj_info.full_name} const& other);\n"
-            f"    {iface_cpp_proj_info.name}({iface_cpp_proj_info.full_name} && other);\n"
-            f"    operator {iface_cpp_proj_info.weak_name} () const&;\n"
-            f"    operator ::taihe::core::data_holder() const&;\n"
-            f"    operator ::taihe::core::data_holder() &&;\n"
-            f"    operator ::taihe::core::data_shadow() const&;\n"
-            f"    explicit {iface_cpp_proj_info.name}(::taihe::core::data_holder other);\n"
-            f"    {iface_cpp_proj_info.name}& operator=({iface_cpp_proj_info.full_name} other);\n"
-            f"    explicit operator bool() const&;\n"
+            f"    {iface_abi_info.as_param} m_handle;\n"
+            f"    explicit {iface_cpp_proj_info.name}({iface_abi_info.as_param} other_handle) : m_handle(other_handle) {{}}\n"
+            f"    ~{iface_cpp_proj_info.name}() {{}}\n"
+            f"    {iface_cpp_proj_info.name}({iface_cpp_proj_info.weak_name} const& other) : m_handle(other.m_handle) {{}}\n"
+            f"    operator ::taihe::core::data_holder() const& {{\n"
+            f"        {iface_abi_info.as_field} ret_handle = {iface_abi_info.copy_func}(this->m_handle);\n"
+            f"        return ::taihe::core::data_holder(ret_handle.data_ptr);\n"
+            f"    }}\n"
+            f"    operator ::taihe::core::data_shadow() const& {{\n"
+            f"        {iface_abi_info.as_field} ret_handle = this->m_handle;\n"
+            f"        return ::taihe::core::data_shadow(ret_handle.data_ptr);\n"
+            f"    }}\n"
+            f"    explicit {iface_cpp_proj_info.name}(::taihe::core::data_shadow other)\n"
+            f"        : m_handle({iface_abi_info.dynamic_cast}(other.m_handle)) {{\n"
+            f"        other.m_handle = nullptr;\n"
+            f"    }}\n"
+            f"    explicit operator bool() const& {{\n"
+            f"        return this->m_handle.vtbl_ptr;\n"
+            f"    }}\n"
         )
         for ancestor, info in iface_abi_info.ancestor_dict.items():
             if info.offset == 0:
@@ -966,9 +973,14 @@ class CppProjCodeGenerator:
             ancestor_cpp_proj_info = IfaceDeclCppProjInfo.get(self.am, ancestor)
             iface_cpp_proj_defn_target.include(ancestor_cpp_proj_info.defn_header)
             iface_cpp_proj_defn_target.write(
-                f"    operator {ancestor_cpp_proj_info.full_name}() const&;\n"
-                f"    operator {ancestor_cpp_proj_info.full_name}() &&;\n"
-                f"    operator {ancestor_cpp_proj_info.weak_name}() const&;\n"
+                f"    operator {ancestor_cpp_proj_info.weak_name}() const& {{\n"
+                f"        {iface_abi_info.as_field} ret_handle = this->m_handle;\n"
+                f"        return {ancestor_cpp_proj_info.weak_name}({info.static_cast}(ret_handle));\n"
+                f"    }}\n"
+                f"    operator {ancestor_cpp_proj_info.full_name}() const& {{\n"
+                f"        {iface_abi_info.as_field} ret_handle = {iface_abi_info.copy_func}(this->m_handle);\n"
+                f"        return {ancestor_cpp_proj_info.full_name}({info.static_cast}(ret_handle));\n"
+                f"    }}\n"
             )
         for method in iface.methods:
             method_cpp_proj_info = IfaceMethodDeclCppProjInfo.get(self.am, method)
@@ -993,7 +1005,7 @@ class CppProjCodeGenerator:
             )
         iface_cpp_proj_defn_target.write("};\n" "}\n")
 
-    def gen_iface_shadow_defn(
+    def gen_iface_holder_defn(
         self,
         iface: IfaceDecl,
         iface_abi_info: IfaceDeclABIInfo,
@@ -1002,18 +1014,49 @@ class CppProjCodeGenerator:
         iface_cpp_proj_defn_target: COutputBuffer,
     ):
         iface_cpp_proj_defn_target.write(
-            f"namespace {pkg_cpp_proj_info.weakspace} {{\n"
+            f"namespace {pkg_cpp_proj_info.namespace} {{\n"
             f"struct {iface_cpp_proj_info.name} {{\n"
-            f"    {iface_abi_info.as_param} m_handle;\n"
-            f"    explicit {iface_cpp_proj_info.name}({iface_abi_info.as_param} other_handle);\n"
-            f"    ~{iface_cpp_proj_info.name}();\n"
-            f"    {iface_cpp_proj_info.name}({iface_cpp_proj_info.weak_name} const& other);\n"
-            f"    operator {iface_cpp_proj_info.full_name} () const&;\n"
-            f"    operator ::taihe::core::data_holder() const&;\n"
-            f"    operator ::taihe::core::data_shadow() const&;\n"
-            f"    explicit {iface_cpp_proj_info.name}(::taihe::core::data_shadow other);\n"
-            f"    {iface_cpp_proj_info.name}& operator=({iface_cpp_proj_info.weak_name} other);\n"
-            f"    explicit operator bool() const&;\n"
+            f"    {iface_abi_info.as_field} m_handle;\n"
+            f"    explicit {iface_cpp_proj_info.name}({iface_abi_info.as_field} other_handle) : m_handle(other_handle) {{}}\n"
+            f"    ~{iface_cpp_proj_info.name}() {{\n"
+            f"        {iface_abi_info.drop_func}(this->m_handle);\n"
+            f"    }}\n"
+            f"    operator {iface_cpp_proj_info.weak_name}() const& {{\n"
+            f"        {iface_abi_info.as_field} ret_handle = this->m_handle;\n"
+            f"        return {iface_cpp_proj_info.full_name}(ret_handle);\n"
+            f"    }}\n"
+            f"    {iface_cpp_proj_info.name}({iface_cpp_proj_info.weak_name} const& other)\n"
+            f"        : m_handle({iface_abi_info.copy_func}(other.m_handle)) {{}}\n"
+            f"    {iface_cpp_proj_info.name}({iface_cpp_proj_info.full_name} const& other)\n"
+            f"        : m_handle({iface_abi_info.copy_func}(other.m_handle)) {{}}\n"
+            f"    {iface_cpp_proj_info.name}({iface_cpp_proj_info.full_name} && other)\n"
+            f"        : m_handle(other.m_handle) {{\n"
+            f"        other.m_handle.data_ptr = nullptr;\n"
+            f"    }}\n"
+            f"    operator ::taihe::core::data_shadow() const& {{\n"
+            f"        {iface_abi_info.as_field} ret_handle = this->m_handle;\n"
+            f"        return ::taihe::core::data_shadow(ret_handle.data_ptr);\n"
+            f"    }}\n"
+            f"    operator ::taihe::core::data_holder() const& {{\n"
+            f"        {iface_abi_info.as_field} ret_handle = {iface_abi_info.copy_func}(this->m_handle);\n"
+            f"        return ::taihe::core::data_holder(ret_handle.data_ptr);\n"
+            f"    }}\n"
+            f"    operator ::taihe::core::data_holder() && {{\n"
+            f"        {iface_abi_info.as_field} ret_handle = this->m_handle;\n"
+            f"        this->m_handle.data_ptr = nullptr;\n"
+            f"        return ::taihe::core::data_holder(ret_handle.data_ptr);\n"
+            f"    }}\n"
+            f"    explicit {iface_cpp_proj_info.name}(::taihe::core::data_holder other)\n"
+            f"        : m_handle({iface_abi_info.dynamic_cast}(other.m_handle)) {{\n"
+            f"        other.m_handle = nullptr;\n"
+            f"    }}\n"
+            f"    {iface_cpp_proj_info.name}& operator=({iface_cpp_proj_info.full_name} other) {{\n"
+            f"        ::std::swap(this->m_handle, other.m_handle);\n"
+            f"        return *this;\n"
+            f"    }}\n"
+            f"    explicit operator bool() const& {{\n"
+            f"        return this->m_handle.vtbl_ptr;\n"
+            f"    }}\n"
         )
         for ancestor, info in iface_abi_info.ancestor_dict.items():
             if info.offset == 0:
@@ -1021,8 +1064,19 @@ class CppProjCodeGenerator:
             ancestor_cpp_proj_info = IfaceDeclCppProjInfo.get(self.am, ancestor)
             iface_cpp_proj_defn_target.include(ancestor_cpp_proj_info.defn_header)
             iface_cpp_proj_defn_target.write(
-                f"    operator {ancestor_cpp_proj_info.full_name}() const&;\n"
-                f"    operator {ancestor_cpp_proj_info.weak_name}() const&;\n"
+                f"    operator {ancestor_cpp_proj_info.weak_name}() const& {{\n"
+                f"        {iface_abi_info.as_field} ret_handle = this->m_handle;\n"
+                f"        return {ancestor_cpp_proj_info.weak_name}({info.static_cast}(ret_handle));\n"
+                f"    }}\n"
+                f"    operator {ancestor_cpp_proj_info.full_name}() const& {{\n"
+                f"        {iface_abi_info.as_field} ret_handle = {iface_abi_info.copy_func}(this->m_handle);\n"
+                f"        return {ancestor_cpp_proj_info.full_name}({info.static_cast}(ret_handle));\n"
+                f"    }}\n"
+                f"    operator {ancestor_cpp_proj_info.full_name}() && {{\n"
+                f"        {iface_abi_info.as_field} ret_handle = this->m_handle;\n"
+                f"        this->m_handle.data_ptr = nullptr;\n"
+                f"        return {ancestor_cpp_proj_info.full_name}({info.static_cast}(ret_handle));\n"
+                f"    }}\n"
             )
         for method in iface.methods:
             method_cpp_proj_info = IfaceMethodDeclCppProjInfo.get(self.am, method)
@@ -1075,16 +1129,16 @@ class CppProjCodeGenerator:
         iface_cpp_proj_impl_target = COutputBuffer.create(
             self.tm, f"include/{iface_cpp_proj_info.impl_header}", True
         )
-        iface_cpp_proj_impl_target.include(iface_abi_info.impl_header)
         iface_cpp_proj_impl_target.include(iface_cpp_proj_info.defn_header)
-        self.gen_iface_holder_impl(
+        iface_cpp_proj_impl_target.include(iface_abi_info.impl_header)
+        self.gen_iface_shadow_impl(
             iface,
             iface_abi_info,
             iface_cpp_proj_info,
             iface_cpp_proj_impl_target,
             pkg_cpp_proj_info,
         )
-        self.gen_iface_shadow_impl(
+        self.gen_iface_holder_impl(
             iface,
             iface_abi_info,
             iface_cpp_proj_info,
@@ -1104,7 +1158,7 @@ class CppProjCodeGenerator:
             iface_cpp_proj_impl_target,
         )
 
-    def gen_iface_holder_impl(
+    def gen_iface_shadow_impl(
         self,
         iface: IfaceDecl,
         iface_abi_info: IfaceDeclABIInfo,
@@ -1113,67 +1167,8 @@ class CppProjCodeGenerator:
         pkg_cpp_proj_info: PackageCppProjInfo,
     ):
         iface_cpp_proj_impl_target.write(
-            f"namespace {pkg_cpp_proj_info.namespace} {{\n"
-            f"inline {iface_cpp_proj_info.name}::{iface_cpp_proj_info.name}({iface_abi_info.as_field} other_handle)\n"
-            f"    : m_handle(other_handle) {{}}\n"
-            f"inline {iface_cpp_proj_info.name}::~{iface_cpp_proj_info.name}() {{\n"
-            f"    {iface_abi_info.drop_func}(this->m_handle);\n"
-            f"}}\n"
-            f"inline {iface_cpp_proj_info.name}::{iface_cpp_proj_info.name}({iface_cpp_proj_info.full_name} && other)\n"
-            f"    : m_handle(other.m_handle) {{\n"
-            f"    other.m_handle.data_ptr = nullptr;\n"
-            f"}}\n"
-            f"inline {iface_cpp_proj_info.name}::{iface_cpp_proj_info.name}({iface_cpp_proj_info.full_name} const& other)\n"
-            f"    : m_handle({iface_abi_info.copy_func}(other.m_handle)) {{}}\n"
-            f"inline {iface_cpp_proj_info.name}::operator {iface_cpp_proj_info.weak_name} () const& {{\n"
-            f"    {iface_abi_info.as_field} ret_handle = this->m_handle;\n"
-            f"    return {iface_cpp_proj_info.full_name}(ret_handle);\n"
-            f"}}\n"
-            f"inline {iface_cpp_proj_info.name}::operator ::taihe::core::data_holder() && {{\n"
-            f"    {iface_abi_info.as_field} ret_handle = this->m_handle;\n"
-            f"    this->m_handle.data_ptr = nullptr;\n"
-            f"    return ::taihe::core::data_holder(ret_handle.data_ptr);\n"
-            f"}}\n"
-            f"inline {iface_cpp_proj_info.name}::operator ::taihe::core::data_holder() const& {{\n"
-            f"    {iface_abi_info.as_field} ret_handle = {iface_abi_info.copy_func}(this->m_handle);\n"
-            f"    return ::taihe::core::data_holder(ret_handle.data_ptr);\n"
-            f"}}\n"
-            f"inline {iface_cpp_proj_info.name}::operator ::taihe::core::data_shadow() const& {{\n"
-            f"    {iface_abi_info.as_field} ret_handle = this->m_handle;\n"
-            f"    return ::taihe::core::data_shadow(ret_handle.data_ptr);\n"
-            f"}}\n"
-            f"inline {iface_cpp_proj_info.name}::{iface_cpp_proj_info.name}(::taihe::core::data_holder other)\n"
-            f"    : m_handle({iface_abi_info.dynamic_cast}(other.m_handle)) {{\n"
-            f"    other.m_handle = nullptr;\n"
-            f"}}\n"
-            f"inline {iface_cpp_proj_info.name}& {iface_cpp_proj_info.name}::operator=({iface_cpp_proj_info.full_name} other) {{\n"
-            f"    ::std::swap(this->m_handle, other.m_handle);\n"
-            f"    return *this;\n"
-            f"}}\n"
-            f"inline {iface_cpp_proj_info.name}::operator bool() const& {{\n"
-            f"    return this->m_handle.vtbl_ptr;\n"
-            f"}}\n"
+            f"namespace {pkg_cpp_proj_info.weakspace} {{\n"
         )
-        for ancestor, info in iface_abi_info.ancestor_dict.items():
-            if info.offset == 0:
-                continue
-            ancestor_cpp_proj_info = IfaceDeclCppProjInfo.get(self.am, ancestor)
-            iface_cpp_proj_impl_target.include(ancestor_cpp_proj_info.impl_header)
-            iface_cpp_proj_impl_target.write(
-                f"inline {iface_cpp_proj_info.name}::operator {ancestor_cpp_proj_info.full_name}() && {{\n"
-                f"    {iface_abi_info.as_field} ret_handle = this->m_handle;\n"
-                f"    this->m_handle.data_ptr = nullptr;\n"
-                f"    return {ancestor_cpp_proj_info.full_name}({info.static_cast}(ret_handle));\n"
-                f"}}\n"
-                f"inline {iface_cpp_proj_info.name}::operator {ancestor_cpp_proj_info.full_name}() const& {{\n"
-                f"    {iface_abi_info.as_field} ret_handle = {iface_abi_info.copy_func}(this->m_handle);\n"
-                f"    return {ancestor_cpp_proj_info.full_name}({info.static_cast}(ret_handle));\n"
-                f"}}\n"
-                f"inline {iface_cpp_proj_info.name}::operator {ancestor_cpp_proj_info.weak_name}() const& {{\n"
-                f"    {iface_abi_info.as_field} ret_handle = this->m_handle;\n"
-                f"    return {ancestor_cpp_proj_info.weak_name}({info.static_cast}(ret_handle));\n"
-                f"}}\n"
-            )
         for method in iface.methods:
             method_abi_info = IfaceMethodDeclABIInfo.get(self.am, method)
             method_cpp_proj_info = IfaceMethodDeclCppProjInfo.get(self.am, method)
@@ -1206,7 +1201,7 @@ class CppProjCodeGenerator:
             )
         iface_cpp_proj_impl_target.write("}\n")
 
-    def gen_iface_shadow_impl(
+    def gen_iface_holder_impl(
         self,
         iface: IfaceDecl,
         iface_abi_info: IfaceDeclABIInfo,
@@ -1215,51 +1210,8 @@ class CppProjCodeGenerator:
         pkg_cpp_proj_info: PackageCppProjInfo,
     ):
         iface_cpp_proj_impl_target.write(
-            f"namespace {pkg_cpp_proj_info.weakspace} {{\n"
-            f"inline {iface_cpp_proj_info.name}::{iface_cpp_proj_info.name}({iface_abi_info.as_param} other_handle)\n"
-            f"    : m_handle(other_handle) {{}}\n"
-            f"inline {iface_cpp_proj_info.name}::~{iface_cpp_proj_info.name}() {{}}\n"
-            f"inline {iface_cpp_proj_info.name}::{iface_cpp_proj_info.name}({iface_cpp_proj_info.weak_name} const& other)\n"
-            f"    : m_handle(other.m_handle) {{}}\n"
-            f"inline {iface_cpp_proj_info.name}::operator {iface_cpp_proj_info.full_name} () const& {{\n"
-            f"    {iface_abi_info.as_field} ret_handle = {iface_abi_info.copy_func}(this->m_handle);\n"
-            f"    return {iface_cpp_proj_info.full_name}(ret_handle);\n"
-            f"}}\n"
-            f"inline {iface_cpp_proj_info.name}::operator ::taihe::core::data_holder() const& {{\n"
-            f"    {iface_abi_info.as_field} ret_handle = {iface_abi_info.copy_func}(this->m_handle);\n"
-            f"    return ::taihe::core::data_holder(ret_handle.data_ptr);\n"
-            f"}}\n"
-            f"inline {iface_cpp_proj_info.name}::operator ::taihe::core::data_shadow() const& {{\n"
-            f"    {iface_abi_info.as_field} ret_handle = this->m_handle;\n"
-            f"    return ::taihe::core::data_shadow(ret_handle.data_ptr);\n"
-            f"}}\n"
-            f"inline {iface_cpp_proj_info.name}::{iface_cpp_proj_info.name}(::taihe::core::data_shadow other)\n"
-            f"    : m_handle({iface_abi_info.dynamic_cast}(other.m_handle)) {{\n"
-            f"    other.m_handle = nullptr;\n"
-            f"}}\n"
-            f"inline {iface_cpp_proj_info.name}& {iface_cpp_proj_info.name}::operator=({iface_cpp_proj_info.weak_name} other) {{\n"
-            f"    ::std::swap(this->m_handle, other.m_handle);\n"
-            f"    return *this;\n"
-            f"}}\n"
-            f"inline {iface_cpp_proj_info.name}::operator bool() const& {{\n"
-            f"    return this->m_handle.vtbl_ptr;\n"
-            f"}}\n"
+            f"namespace {pkg_cpp_proj_info.namespace} {{\n"
         )
-        for ancestor, info in iface_abi_info.ancestor_dict.items():
-            if info.offset == 0:
-                continue
-            ancestor_cpp_proj_info = IfaceDeclCppProjInfo.get(self.am, ancestor)
-            iface_cpp_proj_impl_target.include(ancestor_cpp_proj_info.impl_header)
-            iface_cpp_proj_impl_target.write(
-                f"inline {iface_cpp_proj_info.name}::operator {ancestor_cpp_proj_info.weak_name}() const& {{\n"
-                f"    {iface_abi_info.as_field} ret_handle = this->m_handle;\n"
-                f"    return {ancestor_cpp_proj_info.weak_name}({info.static_cast}(ret_handle));\n"
-                f"}}\n"
-                f"inline {iface_cpp_proj_info.name}::operator {ancestor_cpp_proj_info.full_name}() const& {{\n"
-                f"    {iface_abi_info.as_field} ret_handle = {iface_abi_info.copy_func}(this->m_handle);\n"
-                f"    return {ancestor_cpp_proj_info.full_name}({info.static_cast}(ret_handle));\n"
-                f"}}\n"
-            )
         for method in iface.methods:
             method_abi_info = IfaceMethodDeclABIInfo.get(self.am, method)
             method_cpp_proj_info = IfaceMethodDeclCppProjInfo.get(self.am, method)
@@ -1366,6 +1318,9 @@ class CppProjCodeGenerator:
             f"        static constexpr IdMapItem idmap[{len(iface_abi_info.ancestor_dict)}] = {{\n"
         )
         for ancestor, info in iface_abi_info.ancestor_dict.items():
+            if ancestor is not iface:
+                ancestor_cpp_proj_info = IfaceDeclCppProjInfo.get(self.am, ancestor)
+                iface_cpp_proj_impl_target.include(ancestor_cpp_proj_info.impl_header)
             ancestor_abi_info = IfaceDeclABIInfo.get(self.am, ancestor)
             iface_cpp_proj_impl_target.write(
                 f"            {{&{ancestor_abi_info.iid}, &vtbl.{info.ftbl_ptr}}},\n"

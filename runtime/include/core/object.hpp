@@ -35,68 +35,49 @@ struct interface_shadow_traits {
 // Raw Data Handler //
 //////////////////////
 namespace taihe::core {
-struct data_holder;
 struct data_shadow;
-
-struct data_holder {
-    DataBlockHead* m_handle;
-
-    explicit data_holder(DataBlockHead* other_handle);
-    ~data_holder();
-    data_holder(data_holder&& other);
-    data_holder(data_holder const& other);
-    data_holder(data_shadow const& other);
-    data_holder& operator=(data_holder other);
-};
+struct data_holder;
 
 struct data_shadow {
     DataBlockHead* m_handle;
 
-    explicit data_shadow(DataBlockHead* other_handle);
-    ~data_shadow();
-    data_shadow(data_shadow const& other);
-    data_shadow(data_holder const& other);
-    data_shadow& operator=(data_shadow other);
+    explicit data_shadow(DataBlockHead* other_handle) : m_handle(other_handle) {}
+
+    ~data_shadow() {}
+
+    data_shadow(data_shadow const& other)
+        : m_handle(other.m_handle) {}
 };
 
-inline data_holder::data_holder(DataBlockHead* other_handle)
-    : m_handle(other_handle) {}
+struct data_holder {
+    DataBlockHead* m_handle;
 
-inline data_holder::~data_holder() {
-    tobj_drop(this->m_handle);
-}
+    explicit data_holder(DataBlockHead* other_handle) : m_handle(other_handle) {}
 
-inline data_holder::data_holder(data_holder&& other)
-    : m_handle(other.m_handle) {
-    other.m_handle = nullptr;
-}
+    ~data_holder() {
+        tobj_drop(this->m_handle);
+    }
 
-inline data_holder::data_holder(data_holder const& other)
-    : m_handle(tobj_dup(other.m_handle)) {}
+    operator data_shadow() const& {
+        return data_shadow(m_handle);
+    }
 
-inline data_holder::data_holder(data_shadow const& other)
-    : m_handle(tobj_dup(other.m_handle)) {}
+    data_holder(data_shadow const& other)
+        : m_handle(tobj_dup(other.m_handle)) {}
 
-inline data_holder& data_holder::operator=(data_holder other) {
-    std::swap(this->m_handle, other.m_handle);
-    return *this;
-}
+    data_holder(data_holder const& other)
+        : m_handle(tobj_dup(other.m_handle)) {}
 
-inline data_shadow::data_shadow(DataBlockHead* other_handle)
-    : m_handle(other_handle) {}
+    data_holder(data_holder&& other)
+        : m_handle(other.m_handle) {
+        other.m_handle = nullptr;
+    }
 
-inline data_shadow::~data_shadow() {}
-
-inline data_shadow::data_shadow(data_shadow const& other)
-    : m_handle(other.m_handle) {}
-
-inline data_shadow::data_shadow(data_holder const& other)
-    : m_handle(other.m_handle) {}
-
-inline data_shadow& data_shadow::operator=(data_shadow other) {
-    std::swap(this->m_handle, other.m_handle);
-    return *this;
-}
+    data_holder& operator=(data_holder other) {
+        std::swap(this->m_handle, other.m_handle);
+        return *this;
+    }
+};
 }
 
 inline bool operator==(taihe::core::data_shadow a, taihe::core::data_shadow b) {
@@ -171,10 +152,52 @@ struct typeinfo_impl {
 ///////////////////////////////////////
 namespace taihe::core {
 template<typename Impl, typename... InfoContainers>
+struct impl_shadow;
+
+template<typename Impl, typename... InfoContainers>
 struct impl_holder;
 
 template<typename Impl, typename... InfoContainers>
-struct impl_shadow;
+struct impl_shadow {
+    using impl_type = Impl;
+ 
+    data_block_impl<Impl>* m_handle;
+
+    explicit impl_shadow(data_block_impl<Impl>* other_handle) : m_handle(other_handle) {}
+
+    ~impl_shadow() {}
+
+    impl_shadow(impl_shadow<Impl, InfoContainers...> const& other)
+        : m_handle(other.m_handle) {}
+
+    template<typename InterfaceHolder, std::enable_if_t<interface_holder_traits<InterfaceHolder>::value, int> = 0>
+    operator InterfaceHolder() const& {
+        using InfoContainer = typename interface_holder_traits<InterfaceHolder>::info_container;
+        DataBlockHead* ret_handle = tobj_dup(this->m_handle);
+        return InterfaceHolder{{
+            static_cast<typename InfoContainer::vtable_t const*>(typeinfo_impl<Impl, InfoContainers...>::template vtbl_ptr<InfoContainer>),
+            ret_handle,
+        }};
+    }
+
+    template<typename InterfaceShadow, std::enable_if_t<interface_shadow_traits<InterfaceShadow>::value, int> = 0>
+    operator InterfaceShadow() const& {
+        using InfoContainer = typename interface_shadow_traits<InterfaceShadow>::info_container;
+        DataBlockHead* ret_handle = this->m_handle;
+        return InterfaceShadow{{
+            static_cast<typename InfoContainer::vtable_t const*>(typeinfo_impl<Impl, InfoContainers...>::template vtbl_ptr<InfoContainer>),
+            ret_handle,
+        }};
+    }
+
+    Impl* operator->() const {
+        return this->m_handle;
+    }
+
+    Impl& operator*() const {
+        return *this->m_handle;
+    }
+};
 
 template<typename Impl, typename... InfoContainers>
 struct impl_holder {
@@ -182,23 +205,26 @@ struct impl_holder {
  
     data_block_impl<Impl>* m_handle;
 
-    explicit impl_holder(data_block_impl<Impl>* other_handle)
-        : m_handle(other_handle) {}
+    explicit impl_holder(data_block_impl<Impl>* other_handle) : m_handle(other_handle) {}
 
     ~impl_holder() {
         tobj_drop(this->m_handle);
     }
 
-    impl_holder(impl_holder<Impl, InfoContainers...>&& other)
-        : m_handle(other.m_handle) {
-        other.m_handle = nullptr;
+    operator impl_shadow<Impl, InfoContainers...>() const& {
+        return impl_shadow<Impl, InfoContainers...>(m_handle);
     }
+
+    impl_holder(impl_shadow<Impl, InfoContainers...> const& other)
+        : m_handle(static_cast<data_block_impl<Impl>*>(tobj_dup(other.m_handle))) {}
 
     impl_holder(impl_holder<Impl, InfoContainers...> const& other)
         : m_handle(static_cast<data_block_impl<Impl>*>(tobj_dup(other.m_handle))) {}
 
-    impl_holder(impl_shadow<Impl, InfoContainers...> const& other)
-        : m_handle(static_cast<data_block_impl<Impl>*>(tobj_dup(other.m_handle))) {}
+    impl_holder(impl_holder<Impl, InfoContainers...>&& other)
+        : m_handle(other.m_handle) {
+        other.m_handle = nullptr;
+    }
 
     template<typename InterfaceHolder, std::enable_if_t<interface_holder_traits<InterfaceHolder>::value, int> = 0>
     operator InterfaceHolder() && {
@@ -232,57 +258,6 @@ struct impl_holder {
     }
 
     impl_holder& operator=(impl_holder other) {
-        std::swap(this->m_handle, other.m_handle);
-        return *this;
-    }
-
-    Impl* operator->() const {
-        return this->m_handle;
-    }
-
-    Impl& operator*() const {
-        return *this->m_handle;
-    }
-};
-
-template<typename Impl, typename... InfoContainers>
-struct impl_shadow {
-    using impl_type = Impl;
- 
-    data_block_impl<Impl>* m_handle;
-
-    explicit impl_shadow(data_block_impl<Impl>* other_handle)
-        : m_handle(other_handle) {}
-
-    ~impl_shadow() {}
-
-    impl_shadow(impl_holder<Impl, InfoContainers...> const& other)
-        : m_handle(other.m_handle) {}
-
-    impl_shadow(impl_shadow<Impl, InfoContainers...> const& other)
-        : m_handle(other.m_handle) {}
-
-    template<typename InterfaceHolder, std::enable_if_t<interface_holder_traits<InterfaceHolder>::value, int> = 0>
-    operator InterfaceHolder() const& {
-        using InfoContainer = typename interface_holder_traits<InterfaceHolder>::info_container;
-        DataBlockHead* ret_handle = tobj_dup(this->m_handle);
-        return InterfaceHolder{{
-            static_cast<typename InfoContainer::vtable_t const*>(typeinfo_impl<Impl, InfoContainers...>::template vtbl_ptr<InfoContainer>),
-            ret_handle,
-        }};
-    }
-
-    template<typename InterfaceShadow, std::enable_if_t<interface_shadow_traits<InterfaceShadow>::value, int> = 0>
-    operator InterfaceShadow() const& {
-        using InfoContainer = typename interface_shadow_traits<InterfaceShadow>::info_container;
-        DataBlockHead* ret_handle = this->m_handle;
-        return InterfaceShadow{{
-            static_cast<typename InfoContainer::vtable_t const*>(typeinfo_impl<Impl, InfoContainers...>::template vtbl_ptr<InfoContainer>),
-            ret_handle,
-        }};
-    }
-
-    impl_shadow& operator=(impl_shadow other) {
         std::swap(this->m_handle, other.m_handle);
         return *this;
     }
