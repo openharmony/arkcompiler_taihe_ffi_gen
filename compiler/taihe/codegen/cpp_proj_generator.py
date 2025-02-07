@@ -868,15 +868,17 @@ class CppProjCodeGenerator:
             f"struct std::hash<{enum_cpp_proj_info.as_holder}> {{\n"
             f"    std::size_t operator()({enum_cpp_proj_info.as_param} x) {{\n"
             f"        switch (x.get_tag()) {{\n"
+            f"            std::size_t seed;\n"
         )
         for item in enum.items:
-            val = f"({enum_abi_info.tag_type}){enum_cpp_proj_info.full_name}::tag_t::{item.name}"
+            val = "0x9e3779b9 + (seed << 6) + (seed >> 2)"
             if item.ty_ref:
                 ty_info = TypeCppProjInfo.get(self.am, item.ty_ref.resolved_ty)
-                val = f"{val} ^ std::hash<{ty_info.as_holder}>{{}}(x.get_{item.name}_ref())"
+                val = f"{val} + std::hash<{ty_info.as_holder}>{{}}(x.get_{item.name}_ref())"
             enum_cpp_proj_defn_target.write(
                 f"        case {enum_cpp_proj_info.full_name}::tag_t::{item.name}:\n"
-                f"            return {val};\n"
+                f"            seed = ({enum_abi_info.tag_type}){enum_cpp_proj_info.full_name}::tag_t::{item.name};\n"
+                f"            return seed ^ ({val});\n"
             )
         enum_cpp_proj_defn_target.write("        }\n" "    }\n" "};\n")
 
