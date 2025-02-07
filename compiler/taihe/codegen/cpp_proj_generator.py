@@ -319,7 +319,7 @@ class TypeCppProjInfo(TypeVisitor[AbstractTypeCppProjInfo]):
     @override
     def visit_array_type(self, t: ArrayType) -> AbstractTypeCppProjInfo:
         return ArrayTypeCppProjInfo.get(self.am, t)
-    
+
     @override
     def visit_vector_type(self, t: VectorType) -> AbstractTypeCppProjInfo:
         return VectorTypeCppProjInfo.get(self.am, t)
