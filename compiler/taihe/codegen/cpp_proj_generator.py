@@ -446,7 +446,11 @@ class CppProjCodeGenerator:
             struct,
             struct_cpp_proj_defn_target,
             struct_cpp_proj_info,
-            pkg_cpp_proj_info,
+        )
+        self.gen_struct_same(
+            struct,
+            struct_cpp_proj_defn_target,
+            struct_cpp_proj_info,
         )
 
     def gen_struct_defn(
@@ -466,42 +470,43 @@ class CppProjCodeGenerator:
             struct_cpp_proj_defn_target.write(
                 f"    {ty_info.as_holder} {field.name};\n"
             )
-        # comparison
-        conds = []
-        for field in struct.fields:
-            conds.append(f"lhs.{field.name} == rhs.{field.name}")
-        conds_fmt = " && ".join(conds)
-        struct_cpp_proj_defn_target.write(
-            f"    friend bool operator==({struct_cpp_proj_info.name} const& lhs, {struct_cpp_proj_info.name} const& rhs) {{\n"
-            f"        return {conds_fmt};\n"
-            f"    }}\n"
-            f"    friend bool operator!=({struct_cpp_proj_info.name} const& lhs, {struct_cpp_proj_info.name} const& rhs) {{\n"
-            f"        return !(lhs == rhs);\n"
-            f"    }}\n"
-        )
         # finally
         struct_cpp_proj_defn_target.write("};\n" "}\n")
+
+    def gen_struct_same(
+        self,
+        struct: StructDecl,
+        struct_cpp_proj_defn_target: COutputBuffer,
+        struct_cpp_proj_info: StructDeclCppProjInfo,
+    ):
+        conds = []
+        for field in struct.fields:
+            conds.append(f"same(lhs.{field.name}, rhs.{field.name})")
+        conds_fmt = " && ".join(conds)
+        struct_cpp_proj_defn_target.write(
+            f"namespace taihe::core {{\n"
+            f"inline bool same_impl(adl_helper_t, {struct_cpp_proj_info.as_param} lhs, {struct_cpp_proj_info.as_param} rhs) {{\n"
+            f"    return {conds_fmt};\n"
+            f"}}\n"
+            f"}}\n"
+        )
 
     def gen_struct_hash(
         self,
         struct: StructDecl,
         struct_cpp_proj_defn_target: COutputBuffer,
         struct_cpp_proj_info: StructDeclCppProjInfo,
-        pkg_cpp_proj_info: PackageCppProjInfo,
     ):
-        struct_cpp_proj_defn_target.include("utility")
         struct_cpp_proj_defn_target.write(
-            f"template<>"
-            f"struct ::std::hash<{struct_cpp_proj_info.as_holder}> {{\n"
-            f"    ::std::size_t operator()({struct_cpp_proj_info.as_param} x) {{\n"
-            f"        ::std::size_t seed = 0;\n"
+            f"namespace taihe::core {{\n"
+            f"inline auto hash_impl(adl_helper_t, {struct_cpp_proj_info.as_param} val) -> ::std::size_t {{\n"
+            f"    ::std::size_t seed = 0;\n"
         )
         for field in struct.fields:
-            ty_info = TypeCppProjInfo.get(self.am, field.ty_ref.resolved_ty)
             struct_cpp_proj_defn_target.write(
-                f"        seed ^= ::std::hash<{ty_info.as_holder}>{{}}(x.{field.name}) + 0x9e3779b9 + (seed << 6) + (seed >> 2);\n"
+                f"    seed ^= hash(val.{field.name}) + 0x9e3779b9 + (seed << 6) + (seed >> 2);\n"
             )
-        struct_cpp_proj_defn_target.write("    return seed;\n" "    }\n" "};\n")
+        struct_cpp_proj_defn_target.write("    return seed;\n" "}\n" "}\n")
 
     def gen_enum_files(
         self,
@@ -561,12 +566,15 @@ class CppProjCodeGenerator:
             enum_abi_info,
             pkg_cpp_proj_info,
         )
+        self.gen_enum_same(
+            enum,
+            enum_cpp_proj_defn_target,
+            enum_cpp_proj_info,
+        )
         self.gen_enum_hash(
             enum,
             enum_cpp_proj_defn_target,
             enum_cpp_proj_info,
-            enum_abi_info,
-            pkg_cpp_proj_info,
         )
 
     def gen_enum_defn(
@@ -829,28 +837,34 @@ class CppProjCodeGenerator:
                 f"        case tag_t::{item.name}:\n"
                 f"            return visitor.{item.name}({result});\n"
             )
-        # comparison
         enum_cpp_proj_defn_target.write("        }\n" "    }\n")
+        # finally
+        enum_cpp_proj_defn_target.write(
+            "private:\n" "    tag_t tag;\n" "    storage_t data;\n" "};\n" "}\n"
+        )
+
+    def gen_enum_same(
+        self,
+        enum: EnumDecl,
+        enum_cpp_proj_defn_target: COutputBuffer,
+        enum_cpp_proj_info: EnumDeclCppProjInfo,
+    ):
         conds = []
         for item in enum.items:
             cond = f"lhs.holds_{item.name}() && rhs.holds_{item.name}()"
             conds.append(
-                f"{cond} && lhs.get_{item.name}_ref() == rhs.get_{item.name}_ref()"
+                f"{cond} && same(lhs.get_{item.name}_ref(), rhs.get_{item.name}_ref())"
                 if item.ty_ref
                 else cond
             )
         conds_fmt = " || ".join(conds)
         enum_cpp_proj_defn_target.write(
-            f"    friend bool operator==({enum_cpp_proj_info.name} const& lhs, {enum_cpp_proj_info.name} const& rhs) {{\n"
-            f"        return {conds_fmt};\n"
-            f"    }}\n"
-            f"    friend bool operator!=({enum_cpp_proj_info.name} const& lhs, {enum_cpp_proj_info.name} const& rhs) {{\n"
-            f"        return !(lhs == rhs);\n"
-            f"    }}\n"
-        )
-        # finally
-        enum_cpp_proj_defn_target.write(
-            "private:\n" "    tag_t tag;\n" "    storage_t data;\n" "};\n" "}\n"
+            f"namespace taihe::core {{\n"
+            f"using ::taihe::core::same;"
+            f"inline bool same_impl(adl_helper_t, {enum_cpp_proj_info.as_param} lhs, {enum_cpp_proj_info.as_param} rhs) {{\n"
+            f"    return {conds_fmt};\n"
+            f"}}\n"
+            f"}}\n"
         )
 
     def gen_enum_hash(
@@ -858,28 +872,23 @@ class CppProjCodeGenerator:
         enum: EnumDecl,
         enum_cpp_proj_defn_target: COutputBuffer,
         enum_cpp_proj_info: EnumDeclCppProjInfo,
-        enum_abi_info: EnumDeclABIInfo,
-        pkg_cpp_proj_info: PackageCppProjInfo,
     ):
-        enum_cpp_proj_defn_target.include("utility")
         enum_cpp_proj_defn_target.write(
-            f"template<>\n"
-            f"struct ::std::hash<{enum_cpp_proj_info.as_holder}> {{\n"
-            f"    ::std::size_t operator()({enum_cpp_proj_info.as_param} x) {{\n"
-            f"        switch (x.get_tag()) {{\n"
-            f"            ::std::size_t seed;\n"
+            f"namespace taihe::core {{\n"
+            f"inline auto hash_impl(adl_helper_t, {enum_cpp_proj_info.as_param} val) -> ::std::size_t {{\n"
+            f"    switch (val.get_tag()) {{\n"
+            f"        ::std::size_t seed;\n"
         )
         for item in enum.items:
             val = "0x9e3779b9 + (seed << 6) + (seed >> 2)"
             if item.ty_ref:
-                ty_info = TypeCppProjInfo.get(self.am, item.ty_ref.resolved_ty)
-                val = f"{val} + ::std::hash<{ty_info.as_holder}>{{}}(x.get_{item.name}_ref())"
+                val = f"{val} + hash(val.get_{item.name}_ref())"
             enum_cpp_proj_defn_target.write(
-                f"        case {enum_cpp_proj_info.full_name}::tag_t::{item.name}:\n"
-                f"            seed = ({enum_abi_info.tag_type}){enum_cpp_proj_info.full_name}::tag_t::{item.name};\n"
-                f"            return seed ^ ({val});\n"
+                f"    case {enum_cpp_proj_info.full_name}::tag_t::{item.name}:\n"
+                f"        seed = (::std::size_t){enum_cpp_proj_info.full_name}::tag_t::{item.name};\n"
+                f"        return seed ^ ({val});\n"
             )
-        enum_cpp_proj_defn_target.write("        }\n" "    }\n" "};\n")
+        enum_cpp_proj_defn_target.write("    }\n" "}\n" "}\n")
 
     def gen_iface_files(
         self,
@@ -949,13 +958,6 @@ class CppProjCodeGenerator:
             iface_cpp_proj_defn_target,
         )
         self.gen_iface_holder_defn(
-            iface,
-            iface_abi_info,
-            iface_cpp_proj_info,
-            pkg_cpp_proj_info,
-            iface_cpp_proj_defn_target,
-        )
-        self.gen_iface_hash(
             iface,
             iface_abi_info,
             iface_cpp_proj_info,
@@ -1127,24 +1129,6 @@ class CppProjCodeGenerator:
                 f"    {cpp_return_ty_name} {method_cpp_proj_info.name}({params_cpp_str}) const;\n"
             )
         iface_cpp_proj_defn_target.write("};\n" "}\n")
-
-    def gen_iface_hash(
-        self,
-        iface: IfaceDecl,
-        iface_abi_info: IfaceDeclABIInfo,
-        iface_cpp_proj_info: IfaceDeclCppProjInfo,
-        pkg_cpp_proj_info: PackageCppProjInfo,
-        iface_cpp_proj_defn_target: COutputBuffer,
-    ):
-        iface_cpp_proj_defn_target.include("utility")
-        iface_cpp_proj_defn_target.write(
-            f"template<>\n"
-            f"struct ::std::hash<{iface_cpp_proj_info.as_holder}> {{\n"
-            f"    ::std::size_t operator()({iface_cpp_proj_info.as_param} x) {{\n"
-            f"        return (::std::size_t)x.m_handle.data_ptr;\n"
-            f"    }}\n"
-            f"}};\n"
-        )
 
     def gen_iface_impl_file(
         self,

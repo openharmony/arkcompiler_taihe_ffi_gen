@@ -49,9 +49,41 @@ inline cpp_t cast_ref_from_abi(abi_t abi_val) {
     return reinterpret_cast<cpp_t>(*abi_val);
 }
 
+///////////////
+// enum tags //
+///////////////
+
 template<auto tag>
 struct static_tag_t {};
 
 template<auto tag>
 constexpr static_tag_t<tag> static_tag = {};
+
+/////////////////////////
+// hash and comparison //
+/////////////////////////
+
+struct adl_helper_t {};
+
+template<typename T>
+inline std::size_t hash(T&& val) {
+    adl_helper_t adl_helper;
+    return hash_impl(adl_helper, std::forward<T>(val));
+}
+
+template<typename L, typename R>
+inline std::size_t same(L&& lhs, R&& rhs) {
+    adl_helper_t adl_helper;
+    return same_impl(adl_helper, std::forward<L>(lhs), std::forward<R>(rhs));
+}
+
+template<typename T, typename std::enable_if_t<std::is_arithmetic_v<T>, int> = 0>
+inline std::size_t hash_impl(adl_helper_t, T val) {
+    return std::hash<T>{}(val);
+}
+
+template<typename T, typename std::enable_if_t<std::is_arithmetic_v<T>, int> = 0>
+inline bool same_impl(adl_helper_t, T lhs, T rhs) {
+    return lhs == rhs;
+}
 }

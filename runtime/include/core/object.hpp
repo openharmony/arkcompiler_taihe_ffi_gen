@@ -10,6 +10,7 @@
 ////////////
 // traits //
 ////////////
+
 namespace taihe::core {
 template<typename ABIFromType, typename ABIIntoType>
 struct convert_traits {
@@ -34,6 +35,7 @@ struct interface_shadow_traits {
 //////////////////////
 // Raw Data Handler //
 //////////////////////
+
 namespace taihe::core {
 struct data_shadow;
 struct data_holder;
@@ -78,19 +80,20 @@ struct data_holder {
         return *this;
     }
 };
+
+inline bool same_impl(adl_helper_t, data_shadow lhs, data_shadow rhs) {
+    return lhs.m_handle == rhs.m_handle;
 }
 
-inline bool operator==(taihe::core::data_shadow a, taihe::core::data_shadow b) {
-    return a.m_handle == b.m_handle;
+inline std::size_t hash_impl(adl_helper_t, data_shadow val) {
+    return (std::size_t)val.m_handle;
 }
-
-inline bool operator!=(taihe::core::data_shadow a, taihe::core::data_shadow b) {
-    return a.m_handle != b.m_handle;
 }
 
 ////////////////////////////////
 // Data blocks and Type infos //
 ////////////////////////////////
+
 namespace taihe::core {
 template<typename Impl>
 struct data_block_impl : DataBlockHead, Impl {
@@ -150,6 +153,7 @@ struct typeinfo_impl {
 ///////////////////////////////////////
 // Specific Impl Type Object Handler //
 ///////////////////////////////////////
+
 namespace taihe::core {
 template<typename Impl, typename... InfoContainers>
 struct impl_shadow;

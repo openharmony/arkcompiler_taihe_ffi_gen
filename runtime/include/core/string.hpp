@@ -235,11 +235,12 @@ string to_string(T value) {
         return string{ "false", 5 };
     }
 }
+
+inline std::size_t hash_impl(adl_helper_t, string_view val) {
+    return std::hash<std::string_view>{}(val);
 }
 
-template<>
-struct std::hash<taihe::core::string> {
-    std::size_t operator()(taihe::core::string_view sv) const {
-        return std::hash<std::string_view>{}(sv);
-    }
-};
+inline bool same_impl(adl_helper_t, string_view lhs, string_view rhs) {
+    return lhs == rhs;
+}
+}
