@@ -129,8 +129,9 @@ int main() {
     show_array(res, "res");
 
     vector<IBase> vec;
+    vector<IBase> tmp = vec;
     fill(vec);
-    for (int i = 0; i < vec.size(); i++) {
-        std::cout << vec[i].getId() << std::endl;
+    for (int i = 0; i < tmp.size(); i++) {
+        std::cout << tmp[i].getId() << std::endl;
     }
 }

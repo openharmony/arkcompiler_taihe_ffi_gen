@@ -11,7 +11,7 @@ struct TVectorData {
     TRefCount count;
     std::size_t len;
     std::size_t cap;
-    T data[0];
+    T *data;
 };
 
 template<typename T>
@@ -34,20 +34,18 @@ void tvec_drop(TVectorData<T>* handle) {
 
 template<typename T>
 TVectorData<T>* tvec_new(std::size_t cap) {
-    size_t bytes_required = sizeof(TVectorData<T>) + sizeof(T) * cap;
-    TVectorData<T>* handle = reinterpret_cast<TVectorData<T>*>(malloc(bytes_required));
+    TVectorData<T>* handle = reinterpret_cast<TVectorData<T>*>(malloc(sizeof(TVectorData<T>)));
     tref_set(&handle->count, 1);
     handle->len = 0;
     handle->cap = cap;
+    handle->data = reinterpret_cast<T*>(malloc(sizeof(T) * cap));
     return handle;
 }
 
 template<typename T>
-TVectorData<T>* tvec_resize(TVectorData<T>* handle, std::size_t cap) {
-    size_t bytes_required = sizeof(TVectorData<T>) + sizeof(T) * cap;
-    handle = reinterpret_cast<TVectorData<T>*>(realloc(handle, bytes_required));
+void tvec_resize(TVectorData<T>* handle, std::size_t cap) {
     handle->cap = cap;
-    return handle;
+    handle->data = reinterpret_cast<T*>(realloc(handle->data, sizeof(T) * cap));
 }
 
 namespace taihe::core {
@@ -99,7 +97,7 @@ public:
     void reserve(std::size_t requird_cap) {
         if (requird_cap > m_handle->cap) {
             std::size_t new_cap = std::max(requird_cap, m_handle->cap * 2);
-            m_handle = tvec_resize(m_handle, new_cap);
+            tvec_resize(m_handle, new_cap);
         }
     }
 
