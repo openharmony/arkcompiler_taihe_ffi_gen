@@ -15,6 +15,22 @@ struct TVectorData {
 };
 
 template<typename T>
+TVectorData<T>* tvec_new(std::size_t cap) {
+    TVectorData<T>* handle = reinterpret_cast<TVectorData<T>*>(malloc(sizeof(TVectorData<T>)));
+    tref_set(&handle->count, 1);
+    handle->len = 0;
+    handle->cap = cap;
+    handle->data = reinterpret_cast<T*>(malloc(sizeof(T) * cap));
+    return handle;
+}
+
+template<typename T>
+void tvec_resize(TVectorData<T>* handle, std::size_t cap) {
+    handle->cap = cap;
+    handle->data = reinterpret_cast<T*>(realloc(handle->data, sizeof(T) * cap));
+}
+
+template<typename T>
 TVectorData<T>* tvec_dup(TVectorData<T>* handle) {
     if (handle) {
         tref_inc(&handle->count);
@@ -30,22 +46,6 @@ void tvec_drop(TVectorData<T>* handle) {
         }
         free(handle);
     }
-}
-
-template<typename T>
-TVectorData<T>* tvec_new(std::size_t cap) {
-    TVectorData<T>* handle = reinterpret_cast<TVectorData<T>*>(malloc(sizeof(TVectorData<T>)));
-    tref_set(&handle->count, 1);
-    handle->len = 0;
-    handle->cap = cap;
-    handle->data = reinterpret_cast<T*>(malloc(sizeof(T) * cap));
-    return handle;
-}
-
-template<typename T>
-void tvec_resize(TVectorData<T>* handle, std::size_t cap) {
-    handle->cap = cap;
-    handle->data = reinterpret_cast<T*>(realloc(handle->data, sizeof(T) * cap));
 }
 
 namespace taihe::core {
@@ -142,6 +142,14 @@ public:
 
     const T& operator[](std::size_t index) const {
         return m_handle->data[index];
+    }
+
+    friend bool same_impl(vector const& lhs, vector const& rhs) {
+        return lhs.m_handle == rhs.m_handle;
+    }
+
+    friend std::size_t hash_impl(vector const& val) {
+        return val.m_handle;
     }
 
 private:
