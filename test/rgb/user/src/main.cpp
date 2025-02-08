@@ -9,6 +9,14 @@ using namespace rgb::base;
 using namespace rgb::show;
 using namespace taihe::core;
 
+void show_array(array_view<IBase> arr, string_view sv) {
+    std::cout << sv << ": ";
+    for (auto item : arr) {
+        std::cout << item.getId() << ", ";
+    }
+    std::cout << std::endl;
+}
+
 class ColoredCircle {
     float r;
     std::string name;
@@ -55,14 +63,6 @@ public:
     }
 };
 
-void show_array(array_view<IBase> arr, string_view sv) {
-    std::cout << sv << ": ";
-    for (auto item : arr) {
-        std::cout << item.getId() << ", ";
-    }
-    std::cout << std::endl;
-}
-
 int main() {
     Color yellow = Color::make_yellow();
     ColorOrRGBOrName color_114514 = ColorOrRGBOrName::make_rgb(RGB{0x11, 0x45, 0x14});
@@ -75,15 +75,15 @@ int main() {
     std::cout << toString(color_miku) << std::endl;
     std::cout << toString(color_unknown) << std::endl;
 
-    if (string* safe_ptr = color_miku.get_name_ptr(); safe_ptr != nullptr) {
-        std::cout << "color_miku is holding name, name is " << *safe_ptr << std::endl;
+    if (string* name_ptr = color_miku.get_name_ptr()) {
+        std::cout << "color_miku is holding name, name is " << *name_ptr << std::endl;
     } else {
         std::cout << "Error" << std::endl;
     }
 
     if (color_miku.holds_name()) {
-        string& color_ptr_name_ref = color_miku.get_name_ref();
-        std::cout << "color_miku is holding name, name is " << color_ptr_name_ref << std::endl;
+        string& name_ref = color_miku.get_name_ref();
+        std::cout << "color_miku is holding name, name is " << name_ref << std::endl;
     } else {
         std::cout << "Error" << std::endl;
     }
@@ -91,7 +91,6 @@ int main() {
     color_miku.emplace_rgb(RGB{0x39, 0xC5, 0xBB});
     std::cout << toString(color_miku) << std::endl;
 
-    rgb::base::ColorOrRGBOrName::tag_t tag = color_miku.get_tag();
     switch (color_miku.get_tag()) {
     case ColorOrRGBOrName::tag_t::color:
         std::cout << "color_miku is holding color" << std::endl;
@@ -108,17 +107,18 @@ int main() {
     }
 
     // User implements the interface
-    auto circle = make_holder<ColoredCircle, IShowable>("A", 10, color_114514);
-    auto rect = makeColoredRectangle("B", color_yellow, 5, 5);
+    auto circle_original = make_holder<ColoredCircle, IShowable>("A", 10, color_114514);
+    weak::IShowable circle_ref = circle_original;
+    IShowable rect = makeColoredRectangle("B", color_yellow, 5, 5);
     Color color_single = Color::make_yellow();
-    weak::IShowable circle_as_showable = circle;
 
-    circle->show();
-    circle_as_showable.show();
+    circle_original->show();
+    circle_ref.show();
     rect.show();
     copyColor(rect, circle);
     rect.show();
 
+    // array
     auto dst = array<IBase>(10, circle);
     auto src = array<IBase>(4, rect);
     show_array(dst, "dst");
@@ -128,6 +128,7 @@ int main() {
     show_array(src, "src");
     show_array(res, "res");
 
+    // vector
     vector<IBase> vec;
     vector<IBase> tmp = vec;
     fill(vec);
