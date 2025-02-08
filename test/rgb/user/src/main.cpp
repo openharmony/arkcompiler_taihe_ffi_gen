@@ -115,11 +115,11 @@ int main() {
     circle_original->show();
     circle_ref.show();
     rect.show();
-    copyColor(rect, circle);
+    copyColor(rect, circle_ref);
     rect.show();
 
     // array
-    auto dst = array<IBase>(10, circle);
+    auto dst = array<IBase>(10, circle_ref);
     auto src = array<IBase>(4, rect);
     show_array(dst, "dst");
     show_array(src, "src");
