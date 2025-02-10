@@ -34,6 +34,8 @@ from taihe.semantics.types import (
     StructType,
     Type,
     VectorType,
+    MapType,
+    SetType,
 )
 from taihe.semantics.visitor import TypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
@@ -246,13 +248,61 @@ class ArrayTypeABIInfo(AbstractAnalysis[ArrayType], AbstractTypeABIInfo):
 
 class VectorTypeABIInfo(AbstractAnalysis[VectorType], AbstractTypeABIInfo):
     def __init__(self, am: AnalysisManager, t: VectorType) -> None:
-        arg_ty_abi_info = TypeABIInfo.get(am, t.val_ty)
-        self.decl_headers = ["core/vector.hpp", *arg_ty_abi_info.decl_headers]
-        self.defn_headers = ["core/vector.hpp", *arg_ty_abi_info.decl_headers]
-        self.as_field = f"struct TVectorData<{arg_ty_abi_info.as_field}>*"
-        self.as_param = f"struct TVectorData<{arg_ty_abi_info.as_field}>**"
+        val_ty_abi_info = TypeABIInfo.get(am, t.val_ty)
+        self.decl_headers = ["core/vector.hpp", *val_ty_abi_info.decl_headers]
+        self.defn_headers = ["core/vector.hpp", *val_ty_abi_info.decl_headers]
+        self.as_field = f"struct TVectorData<{val_ty_abi_info.as_field}>*"
+        self.as_param = f"struct TVectorData<{val_ty_abi_info.as_field}>* const*"
         self.copy_func = "tvec_dup"
         self.drop_func = "tvec_drop"
+
+
+class MapTypeABIInfo(AbstractAnalysis[MapType], AbstractTypeABIInfo):
+    def __init__(self, am: AnalysisManager, t: MapType) -> None:
+        key_ty_abi_info = TypeABIInfo.get(am, t.key_ty)
+        val_ty_abi_info = TypeABIInfo.get(am, t.val_ty)
+        self.decl_headers = [
+            "core/map.hpp",
+            *key_ty_abi_info.decl_headers,
+            *val_ty_abi_info.decl_headers,
+        ]
+        self.defn_headers = [
+            "core/map.hpp",
+            *key_ty_abi_info.decl_headers,
+            *val_ty_abi_info.decl_headers,
+        ]
+        self.as_field = (
+            f"struct TMapData<{key_ty_abi_info.as_field}, {val_ty_abi_info.as_field}>*"
+        )
+        self.as_param = (
+            f"struct TMapData<{key_ty_abi_info.as_field}, {val_ty_abi_info.as_field}>**"
+        )
+        self.copy_func = "tmap_dup"
+        self.drop_func = "tmap_drop"
+
+
+class SetTypeABIInfo(AbstractAnalysis[SetType], AbstractTypeABIInfo):
+    def __init__(self, am: AnalysisManager, t: SetType) -> None:
+        key_ty_abi_info = TypeABIInfo.get(am, t.key_ty)
+        val_ty_abi_info = TypeABIInfo.get(am, BOOL)
+        self.decl_headers = [
+            "core/map.hpp",
+            *key_ty_abi_info.decl_headers,
+            *val_ty_abi_info.decl_headers,
+        ]
+        self.defn_headers = [
+            "core/map.hpp",
+            *key_ty_abi_info.decl_headers,
+            *val_ty_abi_info.decl_headers,
+        ]
+        self.as_field = (
+            f"struct TMapData<{key_ty_abi_info.as_field}, {val_ty_abi_info.as_field}>*"
+        )
+        self.as_param = (
+            f"struct TMapData<{key_ty_abi_info.as_field}, {val_ty_abi_info.as_field}>**"
+        )
+        self.copy_func = "tmap_dup"
+        self.drop_func = "tmap_drop"
 
 
 class TypeABIInfo(TypeVisitor[AbstractTypeABIInfo]):
@@ -291,6 +341,14 @@ class TypeABIInfo(TypeVisitor[AbstractTypeABIInfo]):
     @override
     def visit_vector_type(self, t: VectorType) -> AbstractTypeABIInfo:
         return VectorTypeABIInfo.get(self.am, t)
+
+    @override
+    def visit_map_type(self, t: MapType) -> AbstractTypeABIInfo:
+        return MapTypeABIInfo.get(self.am, t)
+
+    @override
+    def visit_set_type(self, t: SetType) -> AbstractTypeABIInfo:
+        return SetTypeABIInfo.get(self.am, t)
 
 
 class ABICodeGenerator:

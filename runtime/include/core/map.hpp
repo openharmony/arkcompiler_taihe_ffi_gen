@@ -107,7 +107,7 @@ V* tmap_set(TMapData<K, V>* handle, K key, Args&& ...args) {
 }
 
 template<typename K, typename V>
-V* tmap_find(TMapData<K, V>* handle, K const &key) {
+V* tmap_get(TMapData<K, V>* handle, K const &key) {
     std::size_t index = taihe::core::hash(key) % handle->cap;
     TMapItem<K, V>* current = handle->bucket[index];
     while (current) {
@@ -166,20 +166,20 @@ struct map {
         return m_handle->cap;
     }
 
-    void reserve(std::size_t new_cap) {
+    void reserve(std::size_t new_cap) const {
         tmap_resize(m_handle, new_cap);
     }
 
     template<bool reset, typename... Args>
-    V* set(K key, Args&&... args) {
+    V* set(K key, Args&&... args) const {
         return tmap_set<reset>(m_handle, std::move(key), std::forward<Args>(args)...);
     }
     
-    V* find(K const& key) {
-        return tmap_find(m_handle, key);
+    V* get(K const& key) const {
+        return tmap_get(m_handle, key);
     }
 
-    bool remove(K const& key) {
+    bool remove(K const& key) const {
         return tmap_remove(m_handle, key);
     }
 

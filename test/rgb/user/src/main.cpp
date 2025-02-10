@@ -63,6 +63,20 @@ public:
     }
 };
 
+struct UserType {
+    std::string id;
+
+    UserType(std::string const& id) : id(id) {
+        std::cout << this->getId() << " made" << std::endl;
+    }
+
+    ~UserType() {
+        std::cout << this->getId() << " deleted" << std::endl;
+    }
+
+    std::string getId() { return "UserType(" + this->id + ")"; }
+};
+
 int main() {
     Color yellow = Color::make_yellow();
     ColorOrRGBOrName color_114514 = ColorOrRGBOrName::make_rgb(RGB{0x11, 0x45, 0x14});
@@ -119,20 +133,48 @@ int main() {
     rect.show();
 
     // array
-    auto dst = array<IBase>(10, circle_ref);
-    auto src = array<IBase>(4, rect);
-    show_array(dst, "dst");
-    show_array(src, "src");
-    auto res = exchange(dst, src);
-    show_array(dst, "dst");
-    show_array(src, "src");
-    show_array(res, "res");
+    {
+        std::cout << "-------- Testing Arr --------" << std::endl;
+        auto dst = array<IBase>(10, circle_ref);
+        auto src = array<IBase>(4, rect);
+        show_array(dst, "dst");
+        show_array(src, "src");
+        auto res = exchange(dst, src);
+        show_array(dst, "dst");
+        show_array(src, "src");
+        show_array(res, "res");
+    }
 
     // vector
-    vector<IBase> vec;
-    vector<IBase> tmp = vec;
-    fill(vec);
-    for (int i = 0; i < tmp.size(); i++) {
-        std::cout << tmp[i].getId() << std::endl;
+    {
+        std::cout << "-------- Testing Vec --------" << std::endl;
+        vector<IBase> vec_0;
+        vector<IBase> vec_1 = vec_0;
+        fillVec(vec_0);
+        for (int i = 0; i < vec_1.size(); i++) {
+            std::cout << vec_1[i].getId() << std::endl;
+        }
+    }
+
+    // map
+    {
+        std::cout << "-------- Testing Map --------" << std::endl;
+        map<string, IBase> map_0;
+        map<string, IBase> map_1 = map_0;
+        map_0.set<0>("a", make_holder<UserType, IBase>("a"));
+        map_0.set<0>("b", make_holder<UserType, IBase>("b"));
+        fillMap(map_0);
+        if (auto ptr = map_1.get("a")) {
+            std::cout << "a: " << ptr->getId() << std::endl;
+        }
+        if (auto ptr = map_1.get("b")) {
+            std::cout << "b: " << ptr->getId() << std::endl;
+        }
+        if (auto ptr = map_1.get("c")) {
+            std::cout << "c: " << ptr->getId() << std::endl;
+        }
+        if (auto ptr = map_1.get("d")) {
+            std::cout << "d: " << ptr->getId() << std::endl;
+        }
     }
 }

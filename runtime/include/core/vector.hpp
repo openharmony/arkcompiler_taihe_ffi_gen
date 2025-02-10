@@ -95,32 +95,32 @@ public:
         return m_handle->cap;
     }
 
-    void reserve(std::size_t reserved_cap) {
+    void reserve(std::size_t reserved_cap) const {
         if (reserved_cap > m_handle->len) {
             tvec_resize(m_handle, reserved_cap);
         }
     }
 
-    void require(std::size_t required_cap) {
+    void require(std::size_t required_cap) const {
         if (required_cap > m_handle->cap) {
             tvec_resize(m_handle, std::max(required_cap, m_handle->cap * 2));
         }
     }
 
-    void push_back(T&& value) {
+    void push_back(T&& value) const {
         require(m_handle->len + 1);
         new (&m_handle->data[m_handle->len]) T(std::move(value));
         ++m_handle->len;
     }
 
-    void push_back(T const& value) {
+    void push_back(T const& value) const {
         require(m_handle->len + 1);
         new (&m_handle->data[m_handle->len]) T(value);
         ++m_handle->len;
     }
 
     template <typename... Args>
-    T& emplace_back(Args&&... args) {
+    T& emplace_back(Args&&... args) const {
         require(m_handle->len + 1);
         T* location = &m_handle->data[m_handle->len];
         new (location) T(std::forward<Args>(args)...);
@@ -128,25 +128,21 @@ public:
         return *location;
     }
 
-    void pop_back() {
+    void pop_back() const {
         if (m_handle->len > 0) {
             --m_handle->len;
             std::destroy_at(&m_handle->data[m_handle->len]);
         }
     }
 
-    void clear() noexcept {
+    void clear() const noexcept {
         for (std::size_t i = 0; i < m_handle->len; i++) {
             std::destroy_at(&m_handle->data[i]);
         }
         m_handle->len = 0;
     }
 
-    T& operator[](std::size_t index) {
-        return m_handle->data[index];
-    }
-
-    const T& operator[](std::size_t index) const {
+    T& operator[](std::size_t index) const {
         return m_handle->data[index];
     }
 

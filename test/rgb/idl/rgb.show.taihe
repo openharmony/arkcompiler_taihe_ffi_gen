@@ -24,4 +24,5 @@ function makeColoredRectangle(id: String, c: ColorOrRGBOrName, h: f32, w: f32): 
 
 function exchange(dst: IBase[], src: IBase[]): IBase[];
 
-function fill(dst: Vector<IBase>): void;
+function fillVec(dst: Vector<IBase>): void;
+function fillMap(dst: Map<String, IBase>): void;

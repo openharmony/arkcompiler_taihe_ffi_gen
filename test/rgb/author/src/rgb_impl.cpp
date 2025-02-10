@@ -137,22 +137,30 @@ array<IBase> exchangeImpl(array_view<IBase> dst, array_view<IBase> src) {
     return res;
 }
 
-struct TestType {
+struct AuthorType {
     std::string id;
 
-    TestType(std::string const& id) : id(id) { std::cout << id << " made" << std::endl; }
-    ~TestType() { std::cout << id << " deleted" << std::endl; }
+    AuthorType(std::string const& id) : id(id) {
+        std::cout << this->getId() << " made" << std::endl;
+    }
 
-    std::string getId() { return id; }
+    ~AuthorType() {
+        std::cout << this->getId() << " deleted" << std::endl;
+    }
+
+    std::string getId() { return "AuthorType(" + this->id + ")"; }
 };
 
-void fillImpl(vector<IBase>& target) {
-    for (int i = 0; i < 10; i++) {
-        char c[2];
-        c[0] = '0' + i;
-        c[1] = '\0';
-        target.push_back(make_holder<TestType, IBase>(c));
-    }
+void fillVecImpl(vector<IBase> const& target) {
+    target.push_back(make_holder<AuthorType, IBase>("0"));
+    target.push_back(make_holder<AuthorType, IBase>("1"));
+    target.push_back(make_holder<AuthorType, IBase>("2"));
+}
+
+void fillMapImpl(map<string, IBase> const& target) {
+    target.set<1>("a", make_holder<AuthorType, IBase>("a"));
+    target.set<0>("b", make_holder<AuthorType, IBase>("b"));
+    target.set<0>("c", make_holder<AuthorType, IBase>("c"));
 }
 
 TH_EXPORT_CPP_API_makeRectangle(makeRectangleImpl)
@@ -160,4 +168,5 @@ TH_EXPORT_CPP_API_makeColoredRectangle(makeColoredRectangleImpl)
 TH_EXPORT_CPP_API_copyColor(copyColorImpl)
 TH_EXPORT_CPP_API_toString(colorToStringImpl)
 TH_EXPORT_CPP_API_exchange(exchangeImpl)
-TH_EXPORT_CPP_API_fill(fillImpl)
+TH_EXPORT_CPP_API_fillVec(fillVecImpl)
+TH_EXPORT_CPP_API_fillMap(fillMapImpl)
