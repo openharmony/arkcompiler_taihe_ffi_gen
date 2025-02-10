@@ -72,7 +72,7 @@ inline std::size_t hash(T&& val) {
 }
 
 template<typename L, typename R>
-inline std::size_t same(L&& lhs, R&& rhs) {
+inline bool same(L&& lhs, R&& rhs) {
     adl_helper_t adl_helper;
     return same_impl(adl_helper, std::forward<L>(lhs), std::forward<R>(rhs));
 }
