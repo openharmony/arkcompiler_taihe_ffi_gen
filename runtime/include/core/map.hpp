@@ -91,7 +91,7 @@ TMapItem<K, V>* tmap_set(TMapData<K, V>* handle, K key, Args&& ...args) {
     std::size_t index = taihe::core::hash(key) % handle->cap;
     TMapItem<K, V>* current = handle->bucket[index];
     while (current) {
-        if (same(current->key, key)) {
+        if (taihe::core::same(current->key, key)) {
             if (reset) {
                 current->val = V{std::forward<Args>(args)...};
             }
@@ -110,7 +110,7 @@ TMapItem<K, V>* tmap_find(TMapData<K, V>* handle, K key) {
     std::size_t index = taihe::core::hash(key) % handle->cap;
     TMapItem<K, V>* current = handle->bucket[index];
     while (current) {
-        if (same(current->key, key)) {
+        if (taihe::core::same(current->key, key)) {
             return current;
         }
         current = current->next;
@@ -123,7 +123,7 @@ bool tmap_remove(TMapData<K, V>* handle, K key) {
     std::size_t index = taihe::core::hash(key) % handle->cap;
     TMapItem<K, V>** current_ptr = &handle->bucket[index];
     while (*current_ptr) {
-        if (same((*current_ptr)->key, key)) {
+        if (taihe::core::same((*current_ptr)->key, key)) {
             TMapItem<K, V>* current = *current_ptr;
             *current_ptr = (*current_ptr)->next;
             delete current;
