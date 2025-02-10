@@ -1,8 +1,8 @@
 #pragma once
 
-#include "taihe/common.h"
-#include "taihe/common.hpp"
 #include <utility>
+
+#include "taihe/common.hpp"
 
 template<typename K, typename V>
 struct TMapItem {
@@ -87,7 +87,7 @@ void tmap_drop(TMapData<K, V>* handle) {
 }
 
 template<bool reset, typename K, typename V, typename ...Args>
-TMapItem<K, V>* tmap_set(TMapData<K, V>* handle, K key, Args&& ...args) {
+V* tmap_set(TMapData<K, V>* handle, K key, Args&& ...args) {
     std::size_t index = taihe::core::hash(key) % handle->cap;
     TMapItem<K, V>* current = handle->bucket[index];
     while (current) {
@@ -95,23 +95,24 @@ TMapItem<K, V>* tmap_set(TMapData<K, V>* handle, K key, Args&& ...args) {
             if (reset) {
                 current->val = V{std::forward<Args>(args)...};
             }
-            return current;
+            return &current->val;
         }
         current = current->next;
     }
     TMapItem<K, V>* item = tmap_new_item<K, V>(std::move(key), std::forward<Args>(args)...);
     item->next = handle->bucket[index];
     handle->bucket[index] = item;
-    return item;
+    handle->size++;
+    return &item->val;
 }
 
-template<typename K, typename V, typename ...Args>
-TMapItem<K, V>* tmap_find(TMapData<K, V>* handle, K key) {
+template<typename K, typename V>
+V* tmap_find(TMapData<K, V>* handle, K const &key) {
     std::size_t index = taihe::core::hash(key) % handle->cap;
     TMapItem<K, V>* current = handle->bucket[index];
     while (current) {
         if (taihe::core::same(current->key, key)) {
-            return current;
+            return &current->val;
         }
         current = current->next;
     }
@@ -119,7 +120,7 @@ TMapItem<K, V>* tmap_find(TMapData<K, V>* handle, K key) {
 }
 
 template<typename K, typename V>
-bool tmap_remove(TMapData<K, V>* handle, K key) {
+bool tmap_remove(TMapData<K, V>* handle, K const &key) {
     std::size_t index = taihe::core::hash(key) % handle->cap;
     TMapItem<K, V>** current_ptr = &handle->bucket[index];
     while (*current_ptr) {
@@ -127,6 +128,7 @@ bool tmap_remove(TMapData<K, V>* handle, K key) {
             TMapItem<K, V>* current = *current_ptr;
             *current_ptr = (*current_ptr)->next;
             delete current;
+            handle->size--;
             return true;
         }
         current_ptr = &(*current_ptr)->next;
@@ -134,4 +136,54 @@ bool tmap_remove(TMapData<K, V>* handle, K key) {
     return false;
 }
 
-namespace taihe::core {}
+namespace taihe::core {
+template<typename K, typename V>
+struct map {
+    map() : m_handle(tmap_new<K, V>(16)) {}
+
+    ~map() {
+        tmap_drop(m_handle);
+    }
+
+    map(const map& other)
+        : m_handle(tmap_dup(other.m_handle)) {}
+
+    map(map&& other) noexcept
+        : m_handle(other.m_handle) {
+        other.m_handle = nullptr;
+    }
+
+    map& operator=(map other) {
+        std::swap(this->m_handle, other.m_handle);
+        return *this;
+    }
+
+    std::size_t size() const noexcept {
+        return m_handle->size;
+    }
+
+    std::size_t capacity() const noexcept {
+        return m_handle->cap;
+    }
+
+    void reserve(std::size_t new_cap) {
+        tmap_resize(m_handle, new_cap);
+    }
+
+    template<bool reset, typename... Args>
+    V* set(K key, Args&&... args) {
+        return tmap_set<reset>(m_handle, std::move(key), std::forward<Args>(args)...);
+    }
+    
+    V* find(K const& key) {
+        return tmap_find(m_handle, key);
+    }
+
+    bool remove(K const& key) {
+        return tmap_remove(m_handle, key);
+    }
+
+private:
+    TMapData<K, V>* m_handle;
+};
+}

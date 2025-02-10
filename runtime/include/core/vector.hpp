@@ -64,11 +64,11 @@ public:
 
     vector() : m_handle(tvec_new<T>(0)) {}
 
-    explicit vector(size_type cap) 
-        : m_handle(tvec_new<T>(cap)) {}
+    // explicit vector(size_type cap) 
+    //     : m_handle(tvec_new<T>(cap)) {}
 
-    explicit vector(TVectorData<T>* handle)
-        : m_handle(handle) {}
+    // explicit vector(TVectorData<T>* handle)
+    //     : m_handle(handle) {}
 
     ~vector() {
         tvec_drop(m_handle);
@@ -95,28 +95,33 @@ public:
         return m_handle->cap;
     }
 
-    void reserve(std::size_t requird_cap) {
-        if (requird_cap > m_handle->cap) {
-            std::size_t new_cap = std::max(requird_cap, m_handle->cap * 2);
-            tvec_resize(m_handle, new_cap);
+    void reserve(std::size_t reserved_cap) {
+        if (reserved_cap > m_handle->len) {
+            tvec_resize(m_handle, reserved_cap);
+        }
+    }
+
+    void require(std::size_t required_cap) {
+        if (required_cap > m_handle->cap) {
+            tvec_resize(m_handle, std::max(required_cap, m_handle->cap * 2));
         }
     }
 
     void push_back(T&& value) {
-        reserve(m_handle->len + 1);
+        require(m_handle->len + 1);
         new (&m_handle->data[m_handle->len]) T(std::move(value));
         ++m_handle->len;
     }
 
     void push_back(T const& value) {
-        reserve(m_handle->len + 1);
+        require(m_handle->len + 1);
         new (&m_handle->data[m_handle->len]) T(value);
         ++m_handle->len;
     }
 
     template <typename... Args>
     T& emplace_back(Args&&... args) {
-        reserve(m_handle->len + 1);
+        require(m_handle->len + 1);
         T* location = &m_handle->data[m_handle->len];
         new (location) T(std::forward<Args>(args)...);
         ++m_handle->len;
