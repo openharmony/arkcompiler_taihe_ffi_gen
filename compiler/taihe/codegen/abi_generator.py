@@ -29,13 +29,13 @@ from taihe.semantics.types import (
     ArrayType,
     EnumType,
     IfaceType,
+    MapType,
     ScalarType,
+    SetType,
     SpecialType,
     StructType,
     Type,
     VectorType,
-    MapType,
-    SetType,
 )
 from taihe.semantics.visitor import TypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
@@ -240,8 +240,8 @@ class ArrayTypeABIInfo(AbstractAnalysis[ArrayType], AbstractTypeABIInfo):
         arg_ty_abi_info = TypeABIInfo.get(am, t.item_ty)
         self.decl_headers = ["core/array.hpp", *arg_ty_abi_info.decl_headers]
         self.defn_headers = ["core/array.hpp", *arg_ty_abi_info.decl_headers]
-        self.as_field = f"struct TArray<{arg_ty_abi_info.as_field}>"
-        self.as_param = f"struct TArray<{arg_ty_abi_info.as_field}>"
+        self.as_field = f"TArray<{arg_ty_abi_info.as_field}>"
+        self.as_param = f"TArray<{arg_ty_abi_info.as_field}>"
         self.copy_func = "tarr_dup"
         self.drop_func = "tarr_drop"
 
@@ -251,8 +251,8 @@ class VectorTypeABIInfo(AbstractAnalysis[VectorType], AbstractTypeABIInfo):
         val_ty_abi_info = TypeABIInfo.get(am, t.val_ty)
         self.decl_headers = ["core/vector.hpp", *val_ty_abi_info.decl_headers]
         self.defn_headers = ["core/vector.hpp", *val_ty_abi_info.decl_headers]
-        self.as_field = f"struct TVectorData<{val_ty_abi_info.as_field}>*"
-        self.as_param = f"struct TVectorData<{val_ty_abi_info.as_field}>* const*"
+        self.as_field = f"TVectorData<{val_ty_abi_info.as_field}>*"
+        self.as_param = f"TVectorData<{val_ty_abi_info.as_field}>* const*"
         self.copy_func = "tvec_dup"
         self.drop_func = "tvec_drop"
 
@@ -272,10 +272,10 @@ class MapTypeABIInfo(AbstractAnalysis[MapType], AbstractTypeABIInfo):
             *val_ty_abi_info.decl_headers,
         ]
         self.as_field = (
-            f"struct TMapData<{key_ty_abi_info.as_field}, {val_ty_abi_info.as_field}>*"
+            f"TMapData<{key_ty_abi_info.as_field}, {val_ty_abi_info.as_field}>*"
         )
         self.as_param = (
-            f"struct TMapData<{key_ty_abi_info.as_field}, {val_ty_abi_info.as_field}>**"
+            f"TMapData<{key_ty_abi_info.as_field}, {val_ty_abi_info.as_field}>* const*"
         )
         self.copy_func = "tmap_dup"
         self.drop_func = "tmap_drop"
@@ -296,10 +296,10 @@ class SetTypeABIInfo(AbstractAnalysis[SetType], AbstractTypeABIInfo):
             *val_ty_abi_info.decl_headers,
         ]
         self.as_field = (
-            f"struct TMapData<{key_ty_abi_info.as_field}, {val_ty_abi_info.as_field}>*"
+            f"TMapData<{key_ty_abi_info.as_field}, {val_ty_abi_info.as_field}>*"
         )
         self.as_param = (
-            f"struct TMapData<{key_ty_abi_info.as_field}, {val_ty_abi_info.as_field}>**"
+            f"TMapData<{key_ty_abi_info.as_field}, {val_ty_abi_info.as_field}>* const*"
         )
         self.copy_func = "tmap_dup"
         self.drop_func = "tmap_drop"

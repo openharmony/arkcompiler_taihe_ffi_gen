@@ -2,7 +2,7 @@
 
 #include <utility>
 
-#include "taihe/common.hpp"
+#include <taihe/common.hpp>
 
 template<typename K, typename V>
 struct TMapItem {
@@ -18,6 +18,20 @@ struct TMapData {
     TMapItem<K, V>** bucket;
     std::size_t size;
 };
+
+template<typename K, typename V, typename ...Args>
+TMapItem<K, V>* tmap_new_item(K key, Args&& ...args) {
+    return new TMapItem<K, V>{
+        .key = std::move(key),
+        .val = {std::forward<Args>(args)...},
+        .next = nullptr,
+    };
+}
+
+template<typename K, typename V>
+void tmap_del_item(TMapItem<K, V>* item) {
+    delete item;
+}
 
 template<typename K, typename V>
 TMapData<K, V>* tmap_new(std::size_t cap) {
@@ -57,20 +71,6 @@ TMapData<K, V>* tmap_dup(TMapData<K, V>* handle) {
 }
 
 template<typename K, typename V>
-void tmap_del_item(TMapItem<K, V>* item) {
-    delete item;
-}
-
-template<typename K, typename V, typename ...Args>
-TMapItem<K, V>* tmap_new_item(K key, Args&& ...args) {
-    return new TMapItem<K, V>{
-        .key = std::move(key),
-        .val = {std::forward<Args>(args)...},
-        .next = nullptr,
-    };
-}
-
-template<typename K, typename V>
 void tmap_drop(TMapData<K, V>* handle) {
     if (handle && tref_dec(&handle->count)) {
         for (std::size_t i = 0; i < handle->cap; i++) {
@@ -103,6 +103,10 @@ V* tmap_set(TMapData<K, V>* handle, K key, Args&& ...args) {
     item->next = handle->bucket[index];
     handle->bucket[index] = item;
     handle->size++;
+    std::size_t required_cap = handle->size * 2;
+    if (required_cap > handle->cap) {
+        tmap_resize(handle, required_cap);
+    }
     return &item->val;
 }
 
