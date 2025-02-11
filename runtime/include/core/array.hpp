@@ -2,6 +2,7 @@
 
 #include <array>
 #include <memory>
+#include <type_traits>
 #include <utility>
 #include <vector>
 #include <stdexcept>
@@ -51,43 +52,39 @@ struct array_view {
     using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-    array_view(pointer data, size_type size) noexcept
-        : m_data(data), m_size(size) {}
-
-    array_view(array_view<cpp_owner_t> const& other)
-        : array_view(other.m_data, other.m_size) {}
+    array_view(size_type size, pointer data) noexcept : m_data(data), m_size(size) {} // main constructor
 
     template<typename C>
     array_view(std::initializer_list<C> value) noexcept
-        : array_view(value.begin(), static_cast<size_type>(value.size())) {}
+        : array_view(static_cast<size_type>(value.size()), value.begin()) {}
 
     template<typename C, size_type N>
     array_view(C (&value)[N]) noexcept
-        : array_view(value, N) {}
+        : array_view(N, value) {}
 
     template<typename C>
     array_view(std::vector<C>& value) noexcept
-        : array_view(get_data(value), static_cast<size_type>(value.size())) {}
+        : array_view(static_cast<size_type>(value.size()), value.data()) {}
 
     template<typename C>
     array_view(std::vector<C> const& value) noexcept
-        : array_view(get_data(value), static_cast<size_type>(value.size())) {}
+        : array_view(static_cast<size_type>(value.size()), value.data()) {}
 
     template<typename C, size_t N>
     array_view(std::array<C, N>& value) noexcept
-        : array_view(value.data(), static_cast<size_type>(value.size())) {}
+        : array_view(static_cast<size_type>(value.size()), value.data()) {}
 
     template<typename C, size_t N>
     array_view(std::array<C, N> const& value) noexcept
-        : array_view(value.data(), static_cast<size_type>(value.size())) {}
+        : array_view(static_cast<size_type>(value.size()), value.data()) {}
 
     template<typename C>
     array_view(array_view<C> const& other) noexcept
-        : array_view(other.data(), other.size()) {}
+        : array_view(other.size(), other.data()) {}
 
     template<typename C>
     array_view(array<C> const& other) noexcept
-        : array_view(other.data(), other.size()) {}
+        : array_view(other.size(), other.data()) {}
 
     reference operator[](size_type const pos) const noexcept {
         TH_ASSERT(pos < size(), "Pos should be less than array's size");
@@ -194,18 +191,6 @@ struct array_view {
 protected:
     std::size_t m_size;
     cpp_owner_t* m_data;
-
-    template<typename C>
-    static auto get_data(std::vector<C> const& value) noexcept {
-        static_assert(!std::is_same_v<C, bool>, "Cannot use std::vector<bool> as an array_view. Consider std::array or std::unique_ptr<bool[]>.");
-        return value.data();
-    }
-
-    template<typename C>
-    static auto get_data(std::vector<C>& value) noexcept {
-        static_assert(!std::is_same_v<C, bool>, "Cannot use std::vector<bool> as an array_view. Consider std::array or std::unique_ptr<bool[]>.");
-        return value.data();
-    }
 };
 
 struct copy_data_t {};
@@ -216,18 +201,20 @@ struct array : public array_view<cpp_owner_t> {
     using typename array_view<cpp_owner_t>::pointer;
     using typename array_view<cpp_owner_t>::size_type;
 
+    array(size_type size, pointer data) noexcept : array_view<cpp_owner_t>(size, data) {} // main constructor
+
     array(size_t size, cpp_owner_t const& arg)
-        : array_view<cpp_owner_t>((cpp_owner_t*)malloc(size * sizeof(cpp_owner_t)), size) {
+        : array(size, (cpp_owner_t*)malloc(size * sizeof(cpp_owner_t))) {
         std::uninitialized_fill_n(this->m_data, size, arg);
     }
 
     array(pointer data, size_type size, copy_data_t) noexcept
-        : array_view<cpp_owner_t>((cpp_owner_t*)malloc(size * sizeof(cpp_owner_t)), size) {
+        : array(size, (cpp_owner_t*)malloc(size * sizeof(cpp_owner_t))) {
         std::uninitialized_copy_n(data, size, this->m_data);
     }
 
     array(pointer data, size_type size, move_data_t) noexcept
-        : array_view<cpp_owner_t>((cpp_owner_t*)malloc(size * sizeof(cpp_owner_t)), size) {
+        : array(size, (cpp_owner_t*)malloc(size * sizeof(cpp_owner_t))) {
         std::uninitialized_move_n(data, size, this->m_data);
     }
 
@@ -238,7 +225,7 @@ struct array : public array_view<cpp_owner_t> {
         : array(other.data(), other.size(), copy_data_t{}) {}
 
     array(array<cpp_owner_t>&& other)
-        : array_view<cpp_owner_t>(std::exchange(other.m_data, nullptr), std::exchange(other.m_size, 0)) {}
+        : array(std::exchange(other.m_size, 0), std::exchange(other.m_data, nullptr)) {}
 
     array &operator=(array other) {
         std::swap(this->m_size, other.m_size);

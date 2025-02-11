@@ -25,6 +25,8 @@ struct string_view {
     using const_iterator = const_pointer;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
+    explicit string_view(struct TString m_data) : m_data(m_data) {}
+
     string_view(const char* value TH_NONNULL)
         : string_view(tstr_new_ref(value, strlen(value))) {}
 
@@ -118,19 +120,19 @@ protected:
     friend struct string;
 
     struct TString m_data;
-    string_view(struct TString m_data) : m_data(m_data) {}
 
     friend string concat(string_view left, string_view right);
     friend string substr(string_view sv, std::size_t pos, std::size_t len);
 };
 
 struct string : public string_view {
-public:
+    explicit string(struct TString m_data) : string_view(m_data) {}
+
     string(const char* value TH_NONNULL)
-        : string_view(tstr_new(value, std::strlen(value))) {}
+        : string(tstr_new(value, std::strlen(value))) {}
 
     string(const char* value TH_NONNULL, size_type size)
-        : string_view(tstr_new(value, size)) {}
+        : string(tstr_new(value, size)) {}
 
     string(std::initializer_list<char> value)
         : string(value.begin(), static_cast<uint32_t>(value.size())) {}
@@ -143,13 +145,13 @@ public:
 
     // constructors
     string(string_view const& other)
-        : string_view(tstr_dup(other.m_data)) {}
+        : string(tstr_dup(other.m_data)) {}
 
     string(string const& other)
-        : string_view(tstr_dup(other.m_data)) {}
+        : string(tstr_dup(other.m_data)) {}
 
     string(string&& other) noexcept
-        : string_view(other.m_data) {
+        : string(other.m_data) {
         other.m_data.ptr = NULL;
     }
 

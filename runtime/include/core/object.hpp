@@ -45,39 +45,31 @@ struct data_shadow {
 
     explicit data_shadow(DataBlockHead* other_handle) : m_handle(other_handle) {}
 
-    ~data_shadow() {}
-
     data_shadow(data_shadow const& other)
-        : m_handle(other.m_handle) {}
+        : data_shadow(other.m_handle) {}
 };
 
-struct data_holder {
-    DataBlockHead* m_handle;
+struct data_holder : public data_shadow {
+    explicit data_holder(DataBlockHead* other_handle) : data_shadow(other_handle) {}
 
-    explicit data_holder(DataBlockHead* other_handle) : m_handle(other_handle) {}
+    data_holder& operator=(data_holder other) {
+        std::swap(this->m_handle, other.m_handle);
+        return *this;
+    }
 
     ~data_holder() {
         tobj_drop(this->m_handle);
     }
 
-    operator data_shadow() const& {
-        return data_shadow(m_handle);
-    }
-
     data_holder(data_shadow const& other)
-        : m_handle(tobj_dup(other.m_handle)) {}
+        : data_holder(tobj_dup(other.m_handle)) {}
 
     data_holder(data_holder const& other)
-        : m_handle(tobj_dup(other.m_handle)) {}
+        : data_holder(tobj_dup(other.m_handle)) {}
 
     data_holder(data_holder&& other)
-        : m_handle(other.m_handle) {
+        : data_holder(other.m_handle) {
         other.m_handle = nullptr;
-    }
-
-    data_holder& operator=(data_holder other) {
-        std::swap(this->m_handle, other.m_handle);
-        return *this;
     }
 };
 
@@ -164,15 +156,13 @@ struct impl_holder;
 template<typename Impl, typename... InfoContainers>
 struct impl_shadow {
     using impl_type = Impl;
- 
+
     data_block_impl<Impl>* m_handle;
 
     explicit impl_shadow(data_block_impl<Impl>* other_handle) : m_handle(other_handle) {}
 
-    ~impl_shadow() {}
-
     impl_shadow(impl_shadow<Impl, InfoContainers...> const& other)
-        : m_handle(other.m_handle) {}
+        : impl_shadow(other.m_handle) {}
 
     template<typename InterfaceHolder, std::enable_if_t<interface_holder_traits<InterfaceHolder>::value, int> = 0>
     operator InterfaceHolder() const& {
@@ -204,41 +194,27 @@ struct impl_shadow {
 };
 
 template<typename Impl, typename... InfoContainers>
-struct impl_holder {
-    using impl_type = Impl;
- 
-    data_block_impl<Impl>* m_handle;
+struct impl_holder : public impl_shadow<Impl, InfoContainers...> {
+    explicit impl_holder(data_block_impl<Impl>* other_handle) : impl_shadow<Impl, InfoContainers...>(other_handle) {}
 
-    explicit impl_holder(data_block_impl<Impl>* other_handle) : m_handle(other_handle) {}
+    impl_holder& operator=(impl_holder other) {
+        std::swap(this->m_handle, other.m_handle);
+        return *this;
+    }
 
     ~impl_holder() {
         tobj_drop(this->m_handle);
     }
 
-    operator impl_shadow<Impl, InfoContainers...>() const& {
-        return impl_shadow<Impl, InfoContainers...>(m_handle);
-    }
-
     impl_holder(impl_shadow<Impl, InfoContainers...> const& other)
-        : m_handle(static_cast<data_block_impl<Impl>*>(tobj_dup(other.m_handle))) {}
+        : impl_holder(static_cast<data_block_impl<Impl>*>(tobj_dup(other.m_handle))) {}
 
     impl_holder(impl_holder<Impl, InfoContainers...> const& other)
-        : m_handle(static_cast<data_block_impl<Impl>*>(tobj_dup(other.m_handle))) {}
+        : impl_holder(static_cast<data_block_impl<Impl>*>(tobj_dup(other.m_handle))) {}
 
     impl_holder(impl_holder<Impl, InfoContainers...>&& other)
-        : m_handle(other.m_handle) {
+        : impl_holder(other.m_handle) {
         other.m_handle = nullptr;
-    }
-
-    template<typename InterfaceHolder, std::enable_if_t<interface_holder_traits<InterfaceHolder>::value, int> = 0>
-    operator InterfaceHolder() && {
-        using InfoContainer = typename interface_holder_traits<InterfaceHolder>::info_container;
-        DataBlockHead* ret_handle = this->m_handle;
-        this->m_handle = nullptr;
-        return InterfaceHolder{{
-            static_cast<typename InfoContainer::vtable_t const*>(typeinfo_impl<Impl, InfoContainers...>::template vtbl_ptr<InfoContainer>),
-            ret_handle,
-        }};
     }
 
     template<typename InterfaceHolder, std::enable_if_t<interface_holder_traits<InterfaceHolder>::value, int> = 0>
@@ -261,17 +237,15 @@ struct impl_holder {
         }};
     }
 
-    impl_holder& operator=(impl_holder other) {
-        std::swap(this->m_handle, other.m_handle);
-        return *this;
-    }
-
-    Impl* operator->() const {
-        return this->m_handle;
-    }
-
-    Impl& operator*() const {
-        return *this->m_handle;
+    template<typename InterfaceHolder, std::enable_if_t<interface_holder_traits<InterfaceHolder>::value, int> = 0>
+    operator InterfaceHolder() && {
+        using InfoContainer = typename interface_holder_traits<InterfaceHolder>::info_container;
+        DataBlockHead* ret_handle = this->m_handle;
+        this->m_handle = nullptr;
+        return InterfaceHolder{{
+            static_cast<typename InfoContainer::vtable_t const*>(typeinfo_impl<Impl, InfoContainers...>::template vtbl_ptr<InfoContainer>),
+            ret_handle,
+        }};
     }
 };
 
