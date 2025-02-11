@@ -1043,6 +1043,70 @@ class CppProjCodeGenerator:
         iface_cpp_proj_defn_target.write(
             f"namespace {pkg_cpp_proj_info.weakspace} {{\n"
             f"struct {iface_cpp_proj_info.name} {{\n"
+            f"    static constexpr bool is_holder = false;\n"
+            f"    using vtable_t = {iface_abi_info.vtable};\n"
+            f"    static constexpr void const* iid = &{iface_abi_info.iid};\n"
+            f"    template<typename Impl>\n"
+            f"    struct methods_impl {{\n"
+        )
+        for method in iface.methods:
+            method_cpp_proj_info = IfaceMethodDeclCppProjInfo.get(self.am, method)
+            params_abi = [f"{iface_abi_info.as_param} tobj"]
+            for param in method.params:
+                type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.resolved_ty)
+                type_cpp_proj_info = TypeCppProjInfo.get(
+                    self.am, param.ty_ref.resolved_ty
+                )
+                params_abi.append(f"{type_abi_info.as_param} {param.name}")
+            params_abi_str = ", ".join(params_abi)
+            if return_ty_ref := method.return_ty_ref:
+                type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
+                type_cpp_proj_info = TypeCppProjInfo.get(
+                    self.am, return_ty_ref.resolved_ty
+                )
+                abi_return_ty_name = type_abi_info.as_field
+            else:
+                abi_return_ty_name = "void"
+            iface_cpp_proj_defn_target.write(
+                f"        static {abi_return_ty_name} {method.name}({params_abi_str});\n"
+            )
+        iface_cpp_proj_defn_target.write(
+            f"    }};\n"
+            f"    template<typename Impl>\n"
+            f"    static constexpr {iface_abi_info.ftable} ftbl_impl = {{\n"
+        )
+        for method in iface.methods:
+            method_cpp_proj_info = IfaceMethodDeclCppProjInfo.get(self.am, method)
+            iface_cpp_proj_defn_target.write(
+                f"        .{method.name} = &methods_impl<Impl>::{method.name},\n"
+            )
+        iface_cpp_proj_defn_target.write(
+            f"    }};\n"
+            f"    template<typename Impl>\n"
+            f"    static constexpr {iface_abi_info.vtable} vtbl_impl = {{\n"
+        )
+        for ancestor_info in iface_abi_info.ancestor_list:
+            ancestor_cpp_proj_info = IfaceDeclCppProjInfo.get(
+                self.am, ancestor_info.iface
+            )
+            iface_cpp_proj_defn_target.write(
+                f"        .{ancestor_info.ftbl_ptr} = &{ancestor_cpp_proj_info.weak_name}::template ftbl_impl<Impl>,\n"
+            )
+        iface_cpp_proj_defn_target.write(
+            f"    }};\n"
+            f"    template<typename Impl>\n"
+            f"    static constexpr IdMapItem idmap_impl[{len(iface_abi_info.ancestor_dict)}] = {{\n"
+        )
+        for ancestor, info in iface_abi_info.ancestor_dict.items():
+            if ancestor is not iface:
+                ancestor_cpp_proj_info = IfaceDeclCppProjInfo.get(self.am, ancestor)
+                iface_cpp_proj_defn_target.include(ancestor_cpp_proj_info.impl_header)
+            ancestor_abi_info = IfaceDeclABIInfo.get(self.am, ancestor)
+            iface_cpp_proj_defn_target.write(
+                f"        {{&{ancestor_abi_info.iid}, &vtbl_impl<Impl>.{info.ftbl_ptr}}},\n"
+            )
+        iface_cpp_proj_defn_target.write(
+            f"    }};\n"
             f"    {iface_abi_info.as_field} m_handle;\n"
             f"    explicit {iface_cpp_proj_info.name}({iface_abi_info.as_param} other_handle) : m_handle(other_handle) {{}}\n"
             f"    explicit {iface_cpp_proj_info.name}(::taihe::core::data_view other)\n"
@@ -1112,6 +1176,7 @@ class CppProjCodeGenerator:
         iface_cpp_proj_defn_target.write(
             f"namespace {pkg_cpp_proj_info.namespace} {{\n"
             f"struct {iface_cpp_proj_info.name} : public {iface_cpp_proj_info.weak_name} {{\n"
+            f"    static constexpr bool is_holder = true;\n"
             f"    explicit {iface_cpp_proj_info.name}({iface_abi_info.as_field} other_handle) : {iface_cpp_proj_info.weak_name}(other_handle) {{}}\n"
             f"    {iface_cpp_proj_info.name}& operator=({iface_cpp_proj_info.full_name} other) {{\n"
             f"        ::std::swap(this->m_handle, other.m_handle);\n"
@@ -1192,12 +1257,7 @@ class CppProjCodeGenerator:
             iface_abi_info,
             iface_cpp_proj_info,
             iface_cpp_proj_impl_target,
-        )
-        self.gen_iface_inspector(
-            iface,
-            iface_abi_info,
-            iface_cpp_proj_info,
-            iface_cpp_proj_impl_target,
+            pkg_cpp_proj_info,
         )
 
     def gen_iface_methods(
@@ -1249,14 +1309,10 @@ class CppProjCodeGenerator:
         iface_abi_info: IfaceDeclABIInfo,
         iface_cpp_proj_info: IfaceDeclCppProjInfo,
         iface_cpp_proj_impl_target: COutputBuffer,
+        pkg_cpp_proj_info: PackageCppProjInfo,
     ):
         iface_cpp_proj_impl_target.write(
-            f"namespace taihe::core {{\n"
-            f"template<>\n"
-            f"struct info_container<{iface_abi_info.mangled_name}> {{\n"
-            f"    template<typename Impl>\n"
-            f"    struct ftable_space {{\n"
-            f"        struct method_table {{\n"
+            f"namespace {pkg_cpp_proj_info.weakspace} {{\n"
         )
         for method in iface.methods:
             method_cpp_proj_info = IfaceMethodDeclCppProjInfo.get(self.am, method)
@@ -1283,67 +1339,9 @@ class CppProjCodeGenerator:
                 abi_return_ty_name = "void"
                 abi_result = cpp_result
             iface_cpp_proj_impl_target.write(
-                f"            static {abi_return_ty_name} {method.name}({params_abi_str}) {{\n"
-                f"                return {abi_result};\n"
-                f"            }}\n"
+                f"template<typename Impl>\n"
+                f"{abi_return_ty_name} {iface_cpp_proj_info.name}::methods_impl<Impl>::{method.name}({params_abi_str}) {{\n"
+                f"    return {abi_result};\n"
+                f"}}\n"
             )
-        iface_cpp_proj_impl_target.write(
-            f"        }};\n"
-            f"        static constexpr {iface_abi_info.ftable} ftbl = {{\n"
-        )
-        for method in iface.methods:
-            method_cpp_proj_info = IfaceMethodDeclCppProjInfo.get(self.am, method)
-            iface_cpp_proj_impl_target.write(
-                f"            .{method.name} = &method_table::{method.name},\n"
-            )
-        iface_cpp_proj_impl_target.write(
-            f"        }};\n"
-            f"    }};\n"
-            f"    using vtable_t = {iface_abi_info.vtable};\n"
-            f"    static constexpr void const* iid = &{iface_abi_info.iid};\n"
-            f"    static constexpr uint64_t list_len = {len(iface_abi_info.ancestor_list)};\n"
-            f"    static constexpr uint64_t dict_len = {len(iface_abi_info.ancestor_dict)};\n"
-            f"    template<typename Impl>\n"
-            f"    struct typeinfo_space {{\n"
-            f"        static constexpr {iface_abi_info.vtable} vtbl = {{\n"
-        )
-        for ancestor_info in iface_abi_info.ancestor_list:
-            ancestor_abi_info = IfaceDeclABIInfo.get(self.am, ancestor_info.iface)
-            iface_cpp_proj_impl_target.write(
-                f"            .{ancestor_info.ftbl_ptr} = &::taihe::core::info_container<{ancestor_abi_info.mangled_name}>::template ftable_space<Impl>::ftbl,\n"
-            )
-        iface_cpp_proj_impl_target.write(
-            f"        }};\n"
-            f"        static constexpr IdMapItem idmap[{len(iface_abi_info.ancestor_dict)}] = {{\n"
-        )
-        for ancestor, info in iface_abi_info.ancestor_dict.items():
-            if ancestor is not iface:
-                ancestor_cpp_proj_info = IfaceDeclCppProjInfo.get(self.am, ancestor)
-                iface_cpp_proj_impl_target.include(ancestor_cpp_proj_info.impl_header)
-            ancestor_abi_info = IfaceDeclABIInfo.get(self.am, ancestor)
-            iface_cpp_proj_impl_target.write(
-                f"            {{&{ancestor_abi_info.iid}, &vtbl.{info.ftbl_ptr}}},\n"
-            )
-        iface_cpp_proj_impl_target.write("        };\n" "    };\n" "};\n" "}\n")
-
-    def gen_iface_inspector(
-        self,
-        iface: IfaceDecl,
-        iface_abi_info: IfaceDeclABIInfo,
-        iface_cpp_proj_info: IfaceDeclCppProjInfo,
-        iface_cpp_proj_impl_target: COutputBuffer,
-    ):
-        iface_cpp_proj_impl_target.write(
-            f"namespace taihe::core {{\n"
-            f"template<>\n"
-            f"struct interface_holder_traits<{iface_cpp_proj_info.full_name}> {{\n"
-            f"    static constexpr bool value = true;\n"
-            f"    using info_container = ::taihe::core::info_container<{iface_abi_info.mangled_name}>;\n"
-            f"}};\n"
-            f"template<>\n"
-            f"struct interface_view_traits<{iface_cpp_proj_info.weak_name}> {{\n"
-            f"    static constexpr bool value = true;\n"
-            f"    using info_container = ::taihe::core::info_container<{iface_abi_info.mangled_name}>;\n"
-            f"}};\n"
-            f"}}\n"
-        )
+        iface_cpp_proj_impl_target.write("}\n")
