@@ -26,8 +26,8 @@ struct interface_holder_traits {
     static constexpr bool value = false;
 };
 
-template<typename InterfaceShadow>
-struct interface_shadow_traits {
+template<typename InterfaceView>
+struct interface_view_traits {
     static constexpr bool value = false;
 };
 }
@@ -37,20 +37,20 @@ struct interface_shadow_traits {
 //////////////////////
 
 namespace taihe::core {
-struct data_shadow;
+struct data_view;
 struct data_holder;
 
-struct data_shadow {
+struct data_view {
     DataBlockHead* m_handle;
 
-    explicit data_shadow(DataBlockHead* other_handle) : m_handle(other_handle) {}
+    explicit data_view(DataBlockHead* other_handle) : m_handle(other_handle) {}
 
-    data_shadow(data_shadow const& other)
-        : data_shadow(other.m_handle) {}
+    data_view(data_view const& other)
+        : data_view(other.m_handle) {}
 };
 
-struct data_holder : public data_shadow {
-    explicit data_holder(DataBlockHead* other_handle) : data_shadow(other_handle) {}
+struct data_holder : public data_view {
+    explicit data_holder(DataBlockHead* other_handle) : data_view(other_handle) {}
 
     data_holder& operator=(data_holder other) {
         std::swap(this->m_handle, other.m_handle);
@@ -61,7 +61,7 @@ struct data_holder : public data_shadow {
         tobj_drop(this->m_handle);
     }
 
-    data_holder(data_shadow const& other)
+    data_holder(data_view const& other)
         : data_holder(tobj_dup(other.m_handle)) {}
 
     data_holder(data_holder const& other)
@@ -73,11 +73,11 @@ struct data_holder : public data_shadow {
     }
 };
 
-inline bool same_impl(adl_helper_t, data_shadow lhs, data_shadow rhs) {
+inline bool same_impl(adl_helper_t, data_view lhs, data_view rhs) {
     return lhs.m_handle == rhs.m_handle;
 }
 
-inline std::size_t hash_impl(adl_helper_t, data_shadow val) {
+inline std::size_t hash_impl(adl_helper_t, data_view val) {
     return (std::size_t)val.m_handle;
 }
 }
@@ -148,21 +148,21 @@ struct typeinfo_impl {
 
 namespace taihe::core {
 template<typename Impl, typename... InfoContainers>
-struct impl_shadow;
+struct impl_view;
 
 template<typename Impl, typename... InfoContainers>
 struct impl_holder;
 
 template<typename Impl, typename... InfoContainers>
-struct impl_shadow {
+struct impl_view {
     using impl_type = Impl;
 
     data_block_impl<Impl>* m_handle;
 
-    explicit impl_shadow(data_block_impl<Impl>* other_handle) : m_handle(other_handle) {}
+    explicit impl_view(data_block_impl<Impl>* other_handle) : m_handle(other_handle) {}
 
-    impl_shadow(impl_shadow<Impl, InfoContainers...> const& other)
-        : impl_shadow(other.m_handle) {}
+    impl_view(impl_view<Impl, InfoContainers...> const& other)
+        : impl_view(other.m_handle) {}
 
     template<typename InterfaceHolder, std::enable_if_t<interface_holder_traits<InterfaceHolder>::value, int> = 0>
     operator InterfaceHolder() const& {
@@ -174,11 +174,11 @@ struct impl_shadow {
         }};
     }
 
-    template<typename InterfaceShadow, std::enable_if_t<interface_shadow_traits<InterfaceShadow>::value, int> = 0>
-    operator InterfaceShadow() const& {
-        using InfoContainer = typename interface_shadow_traits<InterfaceShadow>::info_container;
+    template<typename InterfaceView, std::enable_if_t<interface_view_traits<InterfaceView>::value, int> = 0>
+    operator InterfaceView() const& {
+        using InfoContainer = typename interface_view_traits<InterfaceView>::info_container;
         DataBlockHead* ret_handle = this->m_handle;
-        return InterfaceShadow{{
+        return InterfaceView{{
             static_cast<typename InfoContainer::vtable_t const*>(typeinfo_impl<Impl, InfoContainers...>::template vtbl_ptr<InfoContainer>),
             ret_handle,
         }};
@@ -194,8 +194,8 @@ struct impl_shadow {
 };
 
 template<typename Impl, typename... InfoContainers>
-struct impl_holder : public impl_shadow<Impl, InfoContainers...> {
-    explicit impl_holder(data_block_impl<Impl>* other_handle) : impl_shadow<Impl, InfoContainers...>(other_handle) {}
+struct impl_holder : public impl_view<Impl, InfoContainers...> {
+    explicit impl_holder(data_block_impl<Impl>* other_handle) : impl_view<Impl, InfoContainers...>(other_handle) {}
 
     impl_holder& operator=(impl_holder other) {
         std::swap(this->m_handle, other.m_handle);
@@ -206,7 +206,7 @@ struct impl_holder : public impl_shadow<Impl, InfoContainers...> {
         tobj_drop(this->m_handle);
     }
 
-    impl_holder(impl_shadow<Impl, InfoContainers...> const& other)
+    impl_holder(impl_view<Impl, InfoContainers...> const& other)
         : impl_holder(static_cast<data_block_impl<Impl>*>(tobj_dup(other.m_handle))) {}
 
     impl_holder(impl_holder<Impl, InfoContainers...> const& other)
@@ -227,11 +227,11 @@ struct impl_holder : public impl_shadow<Impl, InfoContainers...> {
         }};
     }
 
-    template<typename InterfaceShadow, std::enable_if_t<interface_shadow_traits<InterfaceShadow>::value, int> = 0>
-    operator InterfaceShadow() const& {
-        using InfoContainer = typename interface_shadow_traits<InterfaceShadow>::info_container;
+    template<typename InterfaceView, std::enable_if_t<interface_view_traits<InterfaceView>::value, int> = 0>
+    operator InterfaceView() const& {
+        using InfoContainer = typename interface_view_traits<InterfaceView>::info_container;
         DataBlockHead* ret_handle = this->m_handle;
-        return InterfaceShadow{{
+        return InterfaceView{{
             static_cast<typename InfoContainer::vtable_t const*>(typeinfo_impl<Impl, InfoContainers...>::template vtbl_ptr<InfoContainer>),
             ret_handle,
         }};

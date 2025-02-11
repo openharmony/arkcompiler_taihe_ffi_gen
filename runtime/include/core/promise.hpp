@@ -17,7 +17,7 @@ template<typename V, typename E>
 using promise_holder = impl_holder<promise<V, E>>;
 
 template<typename V, typename E>
-using promise_shadow = impl_shadow<promise<V, E>>;
+using promise_view = impl_view<promise<V, E>>;
 
 template<typename V, typename E, typename... InterfaceHolders>
 auto make_promise() {

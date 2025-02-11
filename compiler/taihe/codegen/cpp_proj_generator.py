@@ -1017,7 +1017,7 @@ class CppProjCodeGenerator:
         iface_cpp_proj_defn_target.include("core/object.hpp")
         iface_cpp_proj_defn_target.include(iface_cpp_proj_info.decl_header)
         iface_cpp_proj_defn_target.include(iface_abi_info.defn_header)
-        self.gen_iface_shadow_defn(
+        self.gen_iface_view_defn(
             iface,
             iface_abi_info,
             iface_cpp_proj_info,
@@ -1032,7 +1032,7 @@ class CppProjCodeGenerator:
             iface_cpp_proj_defn_target,
         )
 
-    def gen_iface_shadow_defn(
+    def gen_iface_view_defn(
         self,
         iface: IfaceDecl,
         iface_abi_info: IfaceDeclABIInfo,
@@ -1045,13 +1045,13 @@ class CppProjCodeGenerator:
             f"struct {iface_cpp_proj_info.name} {{\n"
             f"    {iface_abi_info.as_field} m_handle;\n"
             f"    explicit {iface_cpp_proj_info.name}({iface_abi_info.as_param} other_handle) : m_handle(other_handle) {{}}\n"
-            f"    explicit {iface_cpp_proj_info.name}(::taihe::core::data_shadow other)\n"
+            f"    explicit {iface_cpp_proj_info.name}(::taihe::core::data_view other)\n"
             f"        : {iface_cpp_proj_info.name}({iface_abi_info.dynamic_cast}(other.m_handle)) {{\n"
             f"        other.m_handle = nullptr;\n"
             f"    }}\n"
-            f"    operator ::taihe::core::data_shadow() const& {{\n"
+            f"    operator ::taihe::core::data_view() const& {{\n"
             f"        {iface_abi_info.as_field} ret_handle = this->m_handle;\n"
-            f"        return ::taihe::core::data_shadow(ret_handle.data_ptr);\n"
+            f"        return ::taihe::core::data_view(ret_handle.data_ptr);\n"
             f"    }}\n"
             f"    operator ::taihe::core::data_holder() const& {{\n"
             f"        {iface_abi_info.as_field} ret_handle = {iface_abi_info.copy_func}(this->m_handle);\n"
@@ -1132,9 +1132,9 @@ class CppProjCodeGenerator:
             f"        : {iface_cpp_proj_info.name}({iface_abi_info.dynamic_cast}(other.m_handle)) {{\n"
             f"        other.m_handle = nullptr;\n"
             f"    }}\n"
-            f"    operator ::taihe::core::data_shadow() const& {{\n"
+            f"    operator ::taihe::core::data_view() const& {{\n"
             f"        {iface_abi_info.as_field} ret_handle = this->m_handle;\n"
-            f"        return ::taihe::core::data_shadow(ret_handle.data_ptr);\n"
+            f"        return ::taihe::core::data_view(ret_handle.data_ptr);\n"
             f"    }}\n"
             f"    operator ::taihe::core::data_holder() const& {{\n"
             f"        {iface_abi_info.as_field} ret_handle = {iface_abi_info.copy_func}(this->m_handle);\n"
@@ -1341,7 +1341,7 @@ class CppProjCodeGenerator:
             f"    using info_container = ::taihe::core::info_container<{iface_abi_info.mangled_name}>;\n"
             f"}};\n"
             f"template<>\n"
-            f"struct interface_shadow_traits<{iface_cpp_proj_info.weak_name}> {{\n"
+            f"struct interface_view_traits<{iface_cpp_proj_info.weak_name}> {{\n"
             f"    static constexpr bool value = true;\n"
             f"    using info_container = ::taihe::core::info_container<{iface_abi_info.mangled_name}>;\n"
             f"}};\n"
