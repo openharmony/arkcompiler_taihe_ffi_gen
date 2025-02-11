@@ -5,7 +5,9 @@
 #include <taihe/string.abi.h>
 
 static inline struct TStringData *to_heap(struct TString tstr) {
-  if (tstr.flags & TSTRING_REF) return NULL;
+  if (tstr.flags & TSTRING_REF) {
+    return NULL;
+  }
   return (struct TStringData *)((char *)tstr.ptr - offsetof(struct TStringData, buffer));
 }
 
@@ -29,20 +31,21 @@ struct TString tstr_new(const char *value TH_NONNULL, size_t len) {
 
 struct TString tstr_dup(struct TString tstr) {
   struct TStringData *sh = to_heap(tstr);
-  if (sh) {
-    tref_inc(&sh->count);
-    return tstr;
+  if (!sh) {
+    return tstr_new(tstr.ptr, tstr.length);
   }
-  return tstr_new(tstr.ptr, tstr.length);
+  tref_inc(&sh->count);
+  return tstr;
 }
 
 void tstr_drop(struct TString tstr) {
   struct TStringData *sh = to_heap(tstr);
-  if (sh && tref_dec(&sh->count)) {
-    free(sh);
+  if (!sh) {
     return;
   }
-  return;
+  if (tref_dec(&sh->count)) {
+    free(sh);
+  }
 }
 
 struct TString tstr_concat(struct TString left, struct TString right) {

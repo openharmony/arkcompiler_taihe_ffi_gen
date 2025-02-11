@@ -161,19 +161,19 @@ int main() {
         std::cout << "-------- Testing Map --------" << std::endl;
         map<string, IBase> map_0;
         map<string, IBase> map_1 = map_0;
-        map_0.set<0>("a", make_holder<UserType, IBase>("a"));
-        map_0.set<0>("b", make_holder<UserType, IBase>("b"));
+        map_0.emplace<0>("a", make_holder<UserType, IBase>("a"));
+        map_0.emplace<0>("b", make_holder<UserType, IBase>("b"));
         fillMap(map_0);
-        if (auto ptr = map_1.get("a")) {
+        if (auto ptr = map_1.find("a")) {
             std::cout << "a: " << ptr->getId() << std::endl;
         }
-        if (auto ptr = map_1.get("b")) {
+        if (auto ptr = map_1.find("b")) {
             std::cout << "b: " << ptr->getId() << std::endl;
         }
-        if (auto ptr = map_1.get("c")) {
+        if (auto ptr = map_1.find("c")) {
             std::cout << "c: " << ptr->getId() << std::endl;
         }
-        if (auto ptr = map_1.get("d")) {
+        if (auto ptr = map_1.find("d")) {
             std::cout << "d: " << ptr->getId() << std::endl;
         }
     }

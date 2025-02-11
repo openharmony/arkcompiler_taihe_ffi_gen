@@ -326,19 +326,12 @@ class SetTypeCppProjInfo(AbstractAnalysis[SetType], AbstractTypeCppProjInfo):
     def __init__(self, am: AnalysisManager, t: SetType) -> None:
         abi_info = TypeABIInfo.get(am, t)
         key_ty_cpp_proj_info = TypeCppProjInfo.get(am, t.key_ty)
-        val_ty_cpp_proj_info = TypeCppProjInfo.get(am, BOOL)
-        self.decl_headers = [
-            "core/map.hpp",
-            *key_ty_cpp_proj_info.decl_headers,
-            *val_ty_cpp_proj_info.decl_headers,
-        ]
-        self.defn_headers = [
-            "core/map.hpp",
-            *key_ty_cpp_proj_info.decl_headers,
-            *val_ty_cpp_proj_info.decl_headers,
-        ]
-        self.as_holder = f"::taihe::core::map<{key_ty_cpp_proj_info.as_holder}, {val_ty_cpp_proj_info.as_holder}>"
-        self.as_param = f"::taihe::core::map<{key_ty_cpp_proj_info.as_holder}, {val_ty_cpp_proj_info.as_holder}> const&"
+        self.decl_headers = ["core/map.hpp", *key_ty_cpp_proj_info.decl_headers]
+        self.defn_headers = ["core/map.hpp", *key_ty_cpp_proj_info.decl_headers]
+        self.as_holder = (
+            f"::taihe::core::map<{key_ty_cpp_proj_info.as_holder}, std::nullptr_t>"
+        )
+        self.as_param = f"::taihe::core::map<{key_ty_cpp_proj_info.as_holder}, std::nullptr_t> const&"
         self.return_from_abi = (
             lambda val: f"::taihe::core::cast_from_abi<{self.as_holder}, {abi_info.as_field}>({val})"
         )

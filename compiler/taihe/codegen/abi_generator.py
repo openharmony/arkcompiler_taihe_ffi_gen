@@ -284,23 +284,10 @@ class MapTypeABIInfo(AbstractAnalysis[MapType], AbstractTypeABIInfo):
 class SetTypeABIInfo(AbstractAnalysis[SetType], AbstractTypeABIInfo):
     def __init__(self, am: AnalysisManager, t: SetType) -> None:
         key_ty_abi_info = TypeABIInfo.get(am, t.key_ty)
-        val_ty_abi_info = TypeABIInfo.get(am, BOOL)
-        self.decl_headers = [
-            "core/map.hpp",
-            *key_ty_abi_info.decl_headers,
-            *val_ty_abi_info.decl_headers,
-        ]
-        self.defn_headers = [
-            "core/map.hpp",
-            *key_ty_abi_info.decl_headers,
-            *val_ty_abi_info.decl_headers,
-        ]
-        self.as_field = (
-            f"TMapData<{key_ty_abi_info.as_field}, {val_ty_abi_info.as_field}>*"
-        )
-        self.as_param = (
-            f"TMapData<{key_ty_abi_info.as_field}, {val_ty_abi_info.as_field}>* const*"
-        )
+        self.decl_headers = ["core/map.hpp", *key_ty_abi_info.decl_headers]
+        self.defn_headers = ["core/map.hpp", *key_ty_abi_info.decl_headers]
+        self.as_field = f"TMapData<{key_ty_abi_info.as_field}, std::nullptr_t>*"
+        self.as_param = f"TMapData<{key_ty_abi_info.as_field}, std::nullptr_t>* const*"
         self.copy_func = "tmap_dup"
         self.drop_func = "tmap_drop"
 

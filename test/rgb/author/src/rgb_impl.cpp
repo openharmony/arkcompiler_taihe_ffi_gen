@@ -158,9 +158,9 @@ void fillVecImpl(vector<IBase> const& target) {
 }
 
 void fillMapImpl(map<string, IBase> const& target) {
-    target.set<1>("a", make_holder<AuthorType, IBase>("a"));
-    target.set<0>("b", make_holder<AuthorType, IBase>("b"));
-    target.set<0>("c", make_holder<AuthorType, IBase>("c"));
+    target.emplace<1>("a", make_holder<AuthorType, IBase>("a"));
+    target.emplace<0>("b", make_holder<AuthorType, IBase>("b"));
+    target.emplace<0>("c", make_holder<AuthorType, IBase>("c"));
 }
 
 TH_EXPORT_CPP_API_makeRectangle(makeRectangleImpl)
