@@ -12,7 +12,7 @@ using namespace taihe::core;
 void show_array(array_view<IBase> arr, string_view sv) {
     std::cout << sv << ": ";
     for (auto item : arr) {
-        std::cout << item.getId() << ", ";
+        std::cout << item->getId() << ", ";
     }
     std::cout << std::endl;
 }
@@ -127,10 +127,10 @@ int main() {
     Color color_single = Color::make_yellow();
 
     circle_original->show();
-    circle_ref.show();
-    rect.show();
+    circle_ref->show();
+    rect->show();
     copyColor(rect, circle_ref);
-    rect.show();
+    rect->show();
 
     // array
     {
@@ -152,7 +152,7 @@ int main() {
         vector<IBase> vec_1 = vec_0;
         fillVec(vec_0);
         for (int i = 0; i < vec_1.size(); i++) {
-            std::cout << vec_1[i].getId() << std::endl;
+            std::cout << vec_1[i]->getId() << std::endl;
         }
     }
 
@@ -165,16 +165,16 @@ int main() {
         map_0.emplace<0>("b", make_holder<UserType, IBase>("b"));
         fillMap(map_0);
         if (auto ptr = map_1.find("a")) {
-            std::cout << "a: " << ptr->getId() << std::endl;
+            std::cout << "a: " << (*ptr)->getId() << std::endl;
         }
         if (auto ptr = map_1.find("b")) {
-            std::cout << "b: " << ptr->getId() << std::endl;
+            std::cout << "b: " << (*ptr)->getId() << std::endl;
         }
         if (auto ptr = map_1.find("c")) {
-            std::cout << "c: " << ptr->getId() << std::endl;
+            std::cout << "c: " << (*ptr)->getId() << std::endl;
         }
         if (auto ptr = map_1.find("d")) {
-            std::cout << "d: " << ptr->getId() << std::endl;
+            std::cout << "d: " << (*ptr)->getId() << std::endl;
         }
     }
 }

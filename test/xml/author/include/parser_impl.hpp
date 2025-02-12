@@ -18,7 +18,7 @@ struct ExpatParserState {
         m_stack.emplace_back(name);
         for (const char** iter = attrs; *iter; iter += 2) {
             if (auto callback = m_option.attributeValueCallbackFunction.get_value_ptr()) {
-                (*callback)(iter[0], iter[1]);
+                (**callback)(iter[0], iter[1]);
             }
         }
     }
@@ -32,7 +32,7 @@ struct ExpatParserState {
             return;
         }
         if (auto callback = m_option.tagValueCallbackFunction.get_value_ptr()) {
-            (*callback)(m_stack.back(), taihe::core::string_view(data, len));
+            (**callback)(m_stack.back(), taihe::core::string_view(data, len));
         }
     }
 };

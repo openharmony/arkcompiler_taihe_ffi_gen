@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
 
     auto parser = makeXmlPullParser(content, static_tag<OptString::tag_t::UNDEFINED>);
 
-    parser.parseXml({
+    parser->parseXml({
         .supportDoctype = OptBool::make_UNDEFINED(),
         .ignoreNameSpace = OptBool::make_UNDEFINED(),
         .tagValueCallbackFunction = OptCallbackKV::make_value(

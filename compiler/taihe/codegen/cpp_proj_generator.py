@@ -1044,104 +1044,14 @@ class CppProjCodeGenerator:
             f"namespace {pkg_cpp_proj_info.weakspace} {{\n"
             f"struct {iface_cpp_proj_info.name} {{\n"
             f"    static constexpr bool is_holder = false;\n"
-            f"    using vtable_t = {iface_abi_info.vtable};\n"
+        )
+        # base infos
+        iface_cpp_proj_defn_target.write(
             f"    static constexpr void const* iid = &{iface_abi_info.iid};\n"
-            f"    template<typename Impl>\n"
-            f"    struct methods_impl {{\n"
+            f"    using vtable_t = {iface_abi_info.vtable};\n"
         )
-        for method in iface.methods:
-            method_cpp_proj_info = IfaceMethodDeclCppProjInfo.get(self.am, method)
-            params_abi = [f"{iface_abi_info.as_param} tobj"]
-            for param in method.params:
-                type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.resolved_ty)
-                type_cpp_proj_info = TypeCppProjInfo.get(
-                    self.am, param.ty_ref.resolved_ty
-                )
-                params_abi.append(f"{type_abi_info.as_param} {param.name}")
-            params_abi_str = ", ".join(params_abi)
-            if return_ty_ref := method.return_ty_ref:
-                type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
-                type_cpp_proj_info = TypeCppProjInfo.get(
-                    self.am, return_ty_ref.resolved_ty
-                )
-                abi_return_ty_name = type_abi_info.as_field
-            else:
-                abi_return_ty_name = "void"
-            iface_cpp_proj_defn_target.write(
-                f"        static {abi_return_ty_name} {method.name}({params_abi_str});\n"
-            )
-        iface_cpp_proj_defn_target.write(
-            f"    }};\n"
-            f"    template<typename Impl>\n"
-            f"    static constexpr {iface_abi_info.ftable} ftbl_impl = {{\n"
-        )
-        for method in iface.methods:
-            method_cpp_proj_info = IfaceMethodDeclCppProjInfo.get(self.am, method)
-            iface_cpp_proj_defn_target.write(
-                f"        .{method.name} = &methods_impl<Impl>::{method.name},\n"
-            )
-        iface_cpp_proj_defn_target.write(
-            f"    }};\n"
-            f"    template<typename Impl>\n"
-            f"    static constexpr {iface_abi_info.vtable} vtbl_impl = {{\n"
-        )
-        for ancestor_info in iface_abi_info.ancestor_list:
-            ancestor_cpp_proj_info = IfaceDeclCppProjInfo.get(
-                self.am, ancestor_info.iface
-            )
-            iface_cpp_proj_defn_target.write(
-                f"        .{ancestor_info.ftbl_ptr} = &{ancestor_cpp_proj_info.weak_name}::template ftbl_impl<Impl>,\n"
-            )
-        iface_cpp_proj_defn_target.write(
-            f"    }};\n"
-            f"    template<typename Impl>\n"
-            f"    static constexpr IdMapItem idmap_impl[{len(iface_abi_info.ancestor_dict)}] = {{\n"
-        )
-        for ancestor, info in iface_abi_info.ancestor_dict.items():
-            if ancestor is not iface:
-                ancestor_cpp_proj_info = IfaceDeclCppProjInfo.get(self.am, ancestor)
-                iface_cpp_proj_defn_target.include(ancestor_cpp_proj_info.impl_header)
-            ancestor_abi_info = IfaceDeclABIInfo.get(self.am, ancestor)
-            iface_cpp_proj_defn_target.write(
-                f"        {{&{ancestor_abi_info.iid}, &vtbl_impl<Impl>.{info.ftbl_ptr}}},\n"
-            )
-        iface_cpp_proj_defn_target.write(
-            f"    }};\n"
-            f"    {iface_abi_info.as_field} m_handle;\n"
-            f"    explicit {iface_cpp_proj_info.name}({iface_abi_info.as_param} other_handle) : m_handle(other_handle) {{}}\n"
-            f"    explicit {iface_cpp_proj_info.name}(::taihe::core::data_view other)\n"
-            f"        : {iface_cpp_proj_info.name}({iface_abi_info.dynamic_cast}(other.m_handle)) {{\n"
-            f"        other.m_handle = nullptr;\n"
-            f"    }}\n"
-            f"    operator ::taihe::core::data_view() const& {{\n"
-            f"        {iface_abi_info.as_field} ret_handle = this->m_handle;\n"
-            f"        return ::taihe::core::data_view(ret_handle.data_ptr);\n"
-            f"    }}\n"
-            f"    operator ::taihe::core::data_holder() const& {{\n"
-            f"        {iface_abi_info.as_field} ret_handle = {iface_abi_info.copy_func}(this->m_handle);\n"
-            f"        return ::taihe::core::data_holder(ret_handle.data_ptr);\n"
-            f"    }}\n"
-        )
-        for ancestor, info in iface_abi_info.ancestor_dict.items():
-            if info.offset == 0:
-                continue
-            ancestor_cpp_proj_info = IfaceDeclCppProjInfo.get(self.am, ancestor)
-            iface_cpp_proj_defn_target.include(ancestor_cpp_proj_info.defn_header)
-            iface_cpp_proj_defn_target.write(
-                f"    operator {ancestor_cpp_proj_info.weak_name}() const& {{\n"
-                f"        {iface_abi_info.as_field} ret_handle = this->m_handle;\n"
-                f"        return {ancestor_cpp_proj_info.weak_name}({info.static_cast}(ret_handle));\n"
-                f"    }}\n"
-                f"    operator {ancestor_cpp_proj_info.full_name}() const& {{\n"
-                f"        {iface_abi_info.as_field} ret_handle = {iface_abi_info.copy_func}(this->m_handle);\n"
-                f"        return {ancestor_cpp_proj_info.full_name}({info.static_cast}(ret_handle));\n"
-                f"    }}\n"
-            )
-        iface_cpp_proj_defn_target.write(
-            "    explicit operator bool() const& {\n"
-            "        return this->m_handle.vtbl_ptr;\n"
-            "    }\n"
-        )
+        # user methods
+        iface_cpp_proj_defn_target.write("    struct virtual_type {\n")
         for method in iface.methods:
             method_cpp_proj_info = IfaceMethodDeclCppProjInfo.get(self.am, method)
             params_cpp = []
@@ -1161,7 +1071,114 @@ class CppProjCodeGenerator:
             else:
                 cpp_return_ty_name = "void"
             iface_cpp_proj_defn_target.write(
-                f"    {cpp_return_ty_name} {method_cpp_proj_info.name}({params_cpp_str}) const;\n"
+                f"        {cpp_return_ty_name} {method_cpp_proj_info.name}({params_cpp_str}) const;\n"
+            )
+        iface_cpp_proj_defn_target.write("    };\n")
+        # author methods
+        iface_cpp_proj_defn_target.write(
+            "    template<typename Impl>\n" "    struct methods_impl {\n"
+        )
+        for method in iface.methods:
+            params_abi = [f"{iface_abi_info.as_param} tobj"]
+            for param in method.params:
+                type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.resolved_ty)
+                type_cpp_proj_info = TypeCppProjInfo.get(
+                    self.am, param.ty_ref.resolved_ty
+                )
+                params_abi.append(f"{type_abi_info.as_param} {param.name}")
+            params_abi_str = ", ".join(params_abi)
+            if return_ty_ref := method.return_ty_ref:
+                type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
+                type_cpp_proj_info = TypeCppProjInfo.get(
+                    self.am, return_ty_ref.resolved_ty
+                )
+                abi_return_ty_name = type_abi_info.as_field
+            else:
+                abi_return_ty_name = "void"
+            iface_cpp_proj_defn_target.write(
+                f"        static {abi_return_ty_name} {method.name}({params_abi_str});\n"
+            )
+        iface_cpp_proj_defn_target.write("    };\n")
+        # FTable implementation
+        iface_cpp_proj_defn_target.write(
+            f"    template<typename Impl>\n"
+            f"    static constexpr {iface_abi_info.ftable} ftbl_impl = {{\n"
+        )
+        for method in iface.methods:
+            iface_cpp_proj_defn_target.write(
+                f"        .{method.name} = &methods_impl<Impl>::{method.name},\n"
+            )
+        iface_cpp_proj_defn_target.write("    };\n")
+        # VTable implementation
+        iface_cpp_proj_defn_target.write(
+            f"    template<typename Impl>\n"
+            f"    static constexpr {iface_abi_info.vtable} vtbl_impl = {{\n"
+        )
+        for ancestor_info in iface_abi_info.ancestor_list:
+            ancestor_cpp_proj_info = IfaceDeclCppProjInfo.get(
+                self.am, ancestor_info.iface
+            )
+            iface_cpp_proj_defn_target.write(
+                f"        .{ancestor_info.ftbl_ptr} = &{ancestor_cpp_proj_info.weak_name}::template ftbl_impl<Impl>,\n"
+            )
+        iface_cpp_proj_defn_target.write("    };\n")
+        # IdMap implementation
+        iface_cpp_proj_defn_target.write(
+            f"    template<typename Impl>\n"
+            f"    static constexpr IdMapItem idmap_impl[{len(iface_abi_info.ancestor_dict)}] = {{\n"
+        )
+        for ancestor, info in iface_abi_info.ancestor_dict.items():
+            if ancestor is not iface:
+                ancestor_cpp_proj_info = IfaceDeclCppProjInfo.get(self.am, ancestor)
+                iface_cpp_proj_defn_target.include(ancestor_cpp_proj_info.defn_header)
+            ancestor_abi_info = IfaceDeclABIInfo.get(self.am, ancestor)
+            iface_cpp_proj_defn_target.write(
+                f"        {{&{ancestor_abi_info.iid}, &vtbl_impl<Impl>.{info.ftbl_ptr}}},\n"
+            )
+        iface_cpp_proj_defn_target.write("    };\n")
+        # class field
+        iface_cpp_proj_defn_target.write(f"    {iface_abi_info.as_field} m_handle;\n")
+        # class methods
+        iface_cpp_proj_defn_target.write(
+            "    explicit operator bool() const& {\n"
+            "        return this->m_handle.vtbl_ptr;\n"
+            "    }\n"
+            "    virtual_type const& operator*() const {\n"
+            "        return *reinterpret_cast<virtual_type const*>(&this->m_handle);\n"
+            "    }\n"
+            "    virtual_type const* operator->() const {\n"
+            "        return reinterpret_cast<virtual_type const*>(&this->m_handle);\n"
+            "    }\n"
+        )
+        # convert methods
+        iface_cpp_proj_defn_target.write(
+            f"    explicit {iface_cpp_proj_info.name}({iface_abi_info.as_param} other_handle) : m_handle(other_handle) {{}}\n"
+            f"    explicit {iface_cpp_proj_info.name}(::taihe::core::data_view other)\n"
+            f"        : {iface_cpp_proj_info.name}({iface_abi_info.dynamic_cast}(other.m_handle)) {{\n"
+            f"        other.m_handle = nullptr;\n"
+            f"    }}\n"
+            f"    operator ::taihe::core::data_view() const& {{\n"
+            f"        {iface_abi_info.as_field} ret_handle = this->m_handle;\n"
+            f"        return ::taihe::core::data_view(ret_handle.data_ptr);\n"
+            f"    }}\n"
+            f"    operator ::taihe::core::data_holder() const& {{\n"
+            f"        {iface_abi_info.as_field} ret_handle = {iface_abi_info.copy_func}(this->m_handle);\n"
+            f"        return ::taihe::core::data_holder(ret_handle.data_ptr);\n"
+            f"    }}\n"
+        )
+        for ancestor, info in iface_abi_info.ancestor_dict.items():
+            if info.offset == 0:
+                continue
+            ancestor_cpp_proj_info = IfaceDeclCppProjInfo.get(self.am, ancestor)
+            iface_cpp_proj_defn_target.write(
+                f"    operator {ancestor_cpp_proj_info.weak_name}() const& {{\n"
+                f"        {iface_abi_info.as_field} ret_handle = this->m_handle;\n"
+                f"        return {ancestor_cpp_proj_info.weak_name}({info.static_cast}(ret_handle));\n"
+                f"    }}\n"
+                f"    operator {ancestor_cpp_proj_info.full_name}() const& {{\n"
+                f"        {iface_abi_info.as_field} ret_handle = {iface_abi_info.copy_func}(this->m_handle);\n"
+                f"        return {ancestor_cpp_proj_info.full_name}({info.static_cast}(ret_handle));\n"
+                f"    }}\n"
             )
         iface_cpp_proj_defn_target.write("};\n" "}\n")
 
@@ -1177,6 +1194,9 @@ class CppProjCodeGenerator:
             f"namespace {pkg_cpp_proj_info.namespace} {{\n"
             f"struct {iface_cpp_proj_info.name} : public {iface_cpp_proj_info.weak_name} {{\n"
             f"    static constexpr bool is_holder = true;\n"
+        )
+        # convert methods
+        iface_cpp_proj_defn_target.write(
             f"    explicit {iface_cpp_proj_info.name}({iface_abi_info.as_field} other_handle) : {iface_cpp_proj_info.weak_name}(other_handle) {{}}\n"
             f"    {iface_cpp_proj_info.name}& operator=({iface_cpp_proj_info.full_name} other) {{\n"
             f"        ::std::swap(this->m_handle, other.m_handle);\n"
@@ -1215,7 +1235,6 @@ class CppProjCodeGenerator:
             if info.offset == 0:
                 continue
             ancestor_cpp_proj_info = IfaceDeclCppProjInfo.get(self.am, ancestor)
-            iface_cpp_proj_defn_target.include(ancestor_cpp_proj_info.defn_header)
             iface_cpp_proj_defn_target.write(
                 f"    operator {ancestor_cpp_proj_info.weak_name}() const& {{\n"
                 f"        {iface_abi_info.as_field} ret_handle = this->m_handle;\n"
@@ -1245,14 +1264,14 @@ class CppProjCodeGenerator:
         )
         iface_cpp_proj_impl_target.include(iface_cpp_proj_info.defn_header)
         iface_cpp_proj_impl_target.include(iface_abi_info.impl_header)
-        self.gen_iface_methods(
+        self.gen_iface_user_methods(
             iface,
             iface_abi_info,
             iface_cpp_proj_info,
             iface_cpp_proj_impl_target,
             pkg_cpp_proj_info,
         )
-        self.gen_iface_infos(
+        self.gen_iface_author_methods(
             iface,
             iface_abi_info,
             iface_cpp_proj_info,
@@ -1260,7 +1279,7 @@ class CppProjCodeGenerator:
             pkg_cpp_proj_info,
         )
 
-    def gen_iface_methods(
+    def gen_iface_user_methods(
         self,
         iface: IfaceDecl,
         iface_abi_info: IfaceDeclABIInfo,
@@ -1275,7 +1294,9 @@ class CppProjCodeGenerator:
             method_abi_info = IfaceMethodDeclABIInfo.get(self.am, method)
             method_cpp_proj_info = IfaceMethodDeclCppProjInfo.get(self.am, method)
             params_cpp = []
-            args_into_abi = ["this->m_handle"]
+            args_into_abi = [
+                f"*reinterpret_cast<{iface_abi_info.mangled_name} const*>(this)"
+            ]
             for param in method.params:
                 type_cpp_proj_info = TypeCppProjInfo.get(
                     self.am, param.ty_ref.resolved_ty
@@ -1297,13 +1318,13 @@ class CppProjCodeGenerator:
                 cpp_return_ty_name = "void"
                 cpp_result = abi_result
             iface_cpp_proj_impl_target.write(
-                f"inline {cpp_return_ty_name} {iface_cpp_proj_info.name}::{method_cpp_proj_info.name}({params_cpp_str}) const {{\n"
+                f"inline {cpp_return_ty_name} {iface_cpp_proj_info.name}::virtual_type::{method_cpp_proj_info.name}({params_cpp_str}) const {{\n"
                 f"    return {cpp_result};\n"
                 f"}}\n"
             )
         iface_cpp_proj_impl_target.write("}\n")
 
-    def gen_iface_infos(
+    def gen_iface_author_methods(
         self,
         iface: IfaceDecl,
         iface_abi_info: IfaceDeclABIInfo,

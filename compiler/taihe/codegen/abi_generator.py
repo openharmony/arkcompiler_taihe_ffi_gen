@@ -126,7 +126,7 @@ class IfaceDeclABIInfo(AbstractAnalysis[IfaceDecl]):
         self.ftable = encode(segments, DeclKind.FTABLE)
         self.vtable = encode(segments, DeclKind.VTABLE)
         self.iid = encode(segments, DeclKind.IID)
-        self.dynamic_cast = f"cast_to_{self.mangled_name}"
+        self.dynamic_cast = encode(segments, DeclKind.DYNAMIC_CAST)
         self.ancestor_list: list[AncestorItemInfo] = []
         self.ancestor_dict: dict[IfaceDecl, UniqueAncestorInfo] = {}
         self.ancestors = [d]
@@ -143,12 +143,11 @@ class IfaceDeclABIInfo(AbstractAnalysis[IfaceDecl]):
                     ftbl_ptr=ftbl_ptr,
                 )
             )
-            ancestor_abi_info = IfaceDeclABIInfo.get(am, ancestor) if i != 0 else self
             self.ancestor_dict.setdefault(
                 ancestor,
                 UniqueAncestorInfo(
                     offset=i,
-                    static_cast=f"cast_{self.mangled_name}_to_{ancestor_abi_info.mangled_name}",
+                    static_cast=encode([*segments, str(i)], DeclKind.STATIC_CAST),
                     ftbl_ptr=ftbl_ptr,
                 ),
             )

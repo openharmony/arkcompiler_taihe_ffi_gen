@@ -74,7 +74,7 @@ IShowable makeColoredRectangleImpl(string_view id, ColorOrRGBOrName const& color
 }
 
 void copyColorImpl(weak::IColorable dst, weak::IColorable src) {
-    dst.setColor(src.getColor());
+    dst->setColor(src->getColor());
 }
 
 struct Visitor {
