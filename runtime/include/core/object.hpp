@@ -19,9 +19,6 @@ struct data_view {
     DataBlockHead* m_handle;
 
     explicit data_view(DataBlockHead* other_handle) : m_handle(other_handle) {}
-
-    data_view(data_view const& other)
-        : data_view(other.m_handle) {}
 };
 
 struct data_holder : public data_view {
@@ -101,9 +98,6 @@ struct impl_view {
     data_block_impl<Impl>* m_handle;
 
     explicit impl_view(data_block_impl<Impl>* other_handle) : m_handle(other_handle) {}
-
-    impl_view(impl_view<Impl, InterfaceHolders...> const& other)
-        : impl_view(other.m_handle) {}
 
     template<typename InterfaceView, std::enable_if_t<!InterfaceView::is_holder, int> = 0>
     operator InterfaceView() const& {
