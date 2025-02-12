@@ -410,19 +410,19 @@ class CppProjCodeGenerator:
         pkg_cpp_proj_target.include("taihe/common.hpp")
         pkg_cpp_proj_target.include(f"{pkg_abi_info.header}")
         for struct in pkg.structs:
-            self.gen_struct_files(struct, pkg_cpp_proj_target, pkg_cpp_proj_info)
+            self.gen_struct_files(struct, pkg_cpp_proj_info, pkg_cpp_proj_target)
         for enum in pkg.enums:
-            self.gen_enum_files(enum, pkg_cpp_proj_target, pkg_cpp_proj_info)
+            self.gen_enum_files(enum, pkg_cpp_proj_info, pkg_cpp_proj_target)
         for iface in pkg.interfaces:
-            self.gen_iface_files(iface, pkg_cpp_proj_target, pkg_cpp_proj_info)
+            self.gen_iface_files(iface, pkg_cpp_proj_info, pkg_cpp_proj_target)
         for func in pkg.functions:
-            self.gen_func(func, pkg_cpp_proj_target, pkg_cpp_proj_info)
+            self.gen_func(func, pkg_cpp_proj_info, pkg_cpp_proj_target)
 
     def gen_func(
         self,
         func: GlobFuncDecl,
-        pkg_cpp_proj_target: COutputBuffer,
         pkg_cpp_proj_info: PackageCppProjInfo,
+        pkg_cpp_proj_target: COutputBuffer,
     ):
         func_cpp_proj_info = GlobFuncDeclCppProjInfo.get(self.am, func)
         func_abi_info = GlobFuncDeclABIInfo.get(self.am, func)
@@ -455,8 +455,8 @@ class CppProjCodeGenerator:
     def gen_struct_files(
         self,
         struct: StructDecl,
-        pkg_cpp_proj_target: COutputBuffer,
         pkg_cpp_proj_info: PackageCppProjInfo,
+        pkg_cpp_proj_target: COutputBuffer,
     ):
         struct_abi_info = StructDeclABIInfo.get(self.am, struct)
         struct_cpp_proj_info = StructDeclCppProjInfo.get(self.am, struct)
@@ -505,26 +505,30 @@ class CppProjCodeGenerator:
         struct_cpp_proj_defn_target.include(struct_abi_info.defn_header)
         self.gen_struct_defn(
             struct,
-            struct_cpp_proj_defn_target,
+            struct_abi_info,
             struct_cpp_proj_info,
+            struct_cpp_proj_defn_target,
             pkg_cpp_proj_info,
         )
         self.gen_struct_hash(
             struct,
-            struct_cpp_proj_defn_target,
+            struct_abi_info,
             struct_cpp_proj_info,
+            struct_cpp_proj_defn_target,
         )
         self.gen_struct_same(
             struct,
-            struct_cpp_proj_defn_target,
+            struct_abi_info,
             struct_cpp_proj_info,
+            struct_cpp_proj_defn_target,
         )
 
     def gen_struct_defn(
         self,
         struct: StructDecl,
-        struct_cpp_proj_defn_target: COutputBuffer,
+        struct_abi_info: StructDeclABIInfo,
         struct_cpp_proj_info: StructDeclCppProjInfo,
+        struct_cpp_proj_defn_target: COutputBuffer,
         pkg_cpp_proj_info: PackageCppProjInfo,
     ):
         struct_cpp_proj_defn_target.write(
@@ -543,8 +547,9 @@ class CppProjCodeGenerator:
     def gen_struct_same(
         self,
         struct: StructDecl,
-        struct_cpp_proj_defn_target: COutputBuffer,
+        struct_abi_info: StructDeclABIInfo,
         struct_cpp_proj_info: StructDeclCppProjInfo,
+        struct_cpp_proj_defn_target: COutputBuffer,
     ):
         conds = []
         for field in struct.fields:
@@ -561,8 +566,9 @@ class CppProjCodeGenerator:
     def gen_struct_hash(
         self,
         struct: StructDecl,
-        struct_cpp_proj_defn_target: COutputBuffer,
+        struct_abi_info: StructDeclABIInfo,
         struct_cpp_proj_info: StructDeclCppProjInfo,
+        struct_cpp_proj_defn_target: COutputBuffer,
     ):
         struct_cpp_proj_defn_target.write(
             f"namespace taihe::core {{\n"
@@ -578,8 +584,8 @@ class CppProjCodeGenerator:
     def gen_enum_files(
         self,
         enum: EnumDecl,
-        pkg_cpp_proj_target: COutputBuffer,
         pkg_cpp_proj_info: PackageCppProjInfo,
+        pkg_cpp_proj_target: COutputBuffer,
     ):
         enum_cpp_proj_info = EnumDeclCppProjInfo.get(self.am, enum)
         enum_abi_info = EnumDeclABIInfo.get(self.am, enum)
@@ -628,28 +634,30 @@ class CppProjCodeGenerator:
         enum_cpp_proj_defn_target.include(enum_abi_info.defn_header)
         self.gen_enum_defn(
             enum,
-            enum_cpp_proj_defn_target,
-            enum_cpp_proj_info,
             enum_abi_info,
+            enum_cpp_proj_info,
+            enum_cpp_proj_defn_target,
             pkg_cpp_proj_info,
         )
         self.gen_enum_same(
             enum,
-            enum_cpp_proj_defn_target,
+            enum_abi_info,
             enum_cpp_proj_info,
+            enum_cpp_proj_defn_target,
         )
         self.gen_enum_hash(
             enum,
-            enum_cpp_proj_defn_target,
+            enum_abi_info,
             enum_cpp_proj_info,
+            enum_cpp_proj_defn_target,
         )
 
     def gen_enum_defn(
         self,
         enum: EnumDecl,
-        enum_cpp_proj_defn_target: COutputBuffer,
-        enum_cpp_proj_info: EnumDeclCppProjInfo,
         enum_abi_info: EnumDeclABIInfo,
+        enum_cpp_proj_info: EnumDeclCppProjInfo,
+        enum_cpp_proj_defn_target: COutputBuffer,
         pkg_cpp_proj_info: PackageCppProjInfo,
     ):
         enum_cpp_proj_defn_target.write(
@@ -913,8 +921,9 @@ class CppProjCodeGenerator:
     def gen_enum_same(
         self,
         enum: EnumDecl,
-        enum_cpp_proj_defn_target: COutputBuffer,
+        enum_abi_info: EnumDeclABIInfo,
         enum_cpp_proj_info: EnumDeclCppProjInfo,
+        enum_cpp_proj_defn_target: COutputBuffer,
     ):
         conds = []
         for item in enum.items:
@@ -937,8 +946,9 @@ class CppProjCodeGenerator:
     def gen_enum_hash(
         self,
         enum: EnumDecl,
-        enum_cpp_proj_defn_target: COutputBuffer,
+        enum_abi_info: EnumDeclABIInfo,
         enum_cpp_proj_info: EnumDeclCppProjInfo,
+        enum_cpp_proj_defn_target: COutputBuffer,
     ):
         enum_cpp_proj_defn_target.write(
             f"namespace taihe::core {{\n"
@@ -960,8 +970,8 @@ class CppProjCodeGenerator:
     def gen_iface_files(
         self,
         iface: IfaceDecl,
-        pkg_cpp_proj_target: COutputBuffer,
         pkg_cpp_proj_info: PackageCppProjInfo,
+        pkg_cpp_proj_target: COutputBuffer,
     ):
         iface_abi_info = IfaceDeclABIInfo.get(self.am, iface)
         iface_cpp_proj_info = IfaceDeclCppProjInfo.get(self.am, iface)
@@ -1021,15 +1031,15 @@ class CppProjCodeGenerator:
             iface,
             iface_abi_info,
             iface_cpp_proj_info,
-            pkg_cpp_proj_info,
             iface_cpp_proj_defn_target,
+            pkg_cpp_proj_info,
         )
         self.gen_iface_holder_defn(
             iface,
             iface_abi_info,
             iface_cpp_proj_info,
-            pkg_cpp_proj_info,
             iface_cpp_proj_defn_target,
+            pkg_cpp_proj_info,
         )
 
     def gen_iface_view_defn(
@@ -1037,8 +1047,8 @@ class CppProjCodeGenerator:
         iface: IfaceDecl,
         iface_abi_info: IfaceDeclABIInfo,
         iface_cpp_proj_info: IfaceDeclCppProjInfo,
-        pkg_cpp_proj_info: PackageCppProjInfo,
         iface_cpp_proj_defn_target: COutputBuffer,
+        pkg_cpp_proj_info: PackageCppProjInfo,
     ):
         iface_cpp_proj_defn_target.write(
             f"namespace {pkg_cpp_proj_info.weakspace} {{\n"
@@ -1187,8 +1197,8 @@ class CppProjCodeGenerator:
         iface: IfaceDecl,
         iface_abi_info: IfaceDeclABIInfo,
         iface_cpp_proj_info: IfaceDeclCppProjInfo,
-        pkg_cpp_proj_info: PackageCppProjInfo,
         iface_cpp_proj_defn_target: COutputBuffer,
+        pkg_cpp_proj_info: PackageCppProjInfo,
     ):
         iface_cpp_proj_defn_target.write(
             f"namespace {pkg_cpp_proj_info.namespace} {{\n"
@@ -1287,9 +1297,6 @@ class CppProjCodeGenerator:
         iface_cpp_proj_impl_target: COutputBuffer,
         pkg_cpp_proj_info: PackageCppProjInfo,
     ):
-        iface_cpp_proj_impl_target.write(
-            f"namespace {pkg_cpp_proj_info.weakspace} {{\n"
-        )
         for method in iface.methods:
             method_abi_info = IfaceMethodDeclABIInfo.get(self.am, method)
             method_cpp_proj_info = IfaceMethodDeclCppProjInfo.get(self.am, method)
@@ -1318,11 +1325,12 @@ class CppProjCodeGenerator:
                 cpp_return_ty_name = "void"
                 cpp_result = abi_result
             iface_cpp_proj_impl_target.write(
+                f"namespace {pkg_cpp_proj_info.weakspace} {{\n"
                 f"inline {cpp_return_ty_name} {iface_cpp_proj_info.name}::virtual_type::{method_cpp_proj_info.name}({params_cpp_str}) const {{\n"
                 f"    return {cpp_result};\n"
                 f"}}\n"
+                f"}}\n"
             )
-        iface_cpp_proj_impl_target.write("}\n")
 
     def gen_iface_author_methods(
         self,
@@ -1332,9 +1340,6 @@ class CppProjCodeGenerator:
         iface_cpp_proj_impl_target: COutputBuffer,
         pkg_cpp_proj_info: PackageCppProjInfo,
     ):
-        iface_cpp_proj_impl_target.write(
-            f"namespace {pkg_cpp_proj_info.weakspace} {{\n"
-        )
         for method in iface.methods:
             method_cpp_proj_info = IfaceMethodDeclCppProjInfo.get(self.am, method)
             params_abi = [f"{iface_abi_info.as_param} tobj"]
@@ -1360,9 +1365,10 @@ class CppProjCodeGenerator:
                 abi_return_ty_name = "void"
                 abi_result = cpp_result
             iface_cpp_proj_impl_target.write(
+                f"namespace {pkg_cpp_proj_info.weakspace} {{\n"
                 f"template<typename Impl>\n"
                 f"{abi_return_ty_name} {iface_cpp_proj_info.name}::methods_impl<Impl>::{method.name}({params_abi_str}) {{\n"
                 f"    return {abi_result};\n"
                 f"}}\n"
+                f"}}\n"
             )
-        iface_cpp_proj_impl_target.write("}\n")
