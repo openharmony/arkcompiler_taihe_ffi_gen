@@ -156,8 +156,12 @@ public:
     // 其他内部实现……
 };
 
+// 创建接口对象
 rgb::show::IShowable circle =
     taihe::core::make_holder<ColoredCircle, rgb::show::IShowable>("A", 10, color_114514);
+
+// 调用接口方法
+circle->show();
 ```
 
 ### 5.1 接口的生命周期管理
@@ -171,7 +175,7 @@ rgb::show::IShowable circle =
 
 ```cpp
 void copyColorImpl(rgb::base::weak::IColorable dst, rgb::base::weak::IColorable src) {
-    dst.setColor(src.getColor());
+    dst->setColor(src->getColor());
 }
 ```
 
