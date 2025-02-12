@@ -11,27 +11,6 @@
 
 #include <taihe/common.hpp>
 
-template<typename abi_field_t>
-struct TArray {
-    std::size_t m_size;
-    abi_field_t* m_data;
-};
-
-template<typename abi_field_t>
-TArray<abi_field_t> tarr_dup(TArray<abi_field_t> a) {
-    TArray<abi_field_t> b;
-    b.m_size = a.m_size;
-    b.m_data = (abi_field_t*)malloc(a.m_size * sizeof(abi_field_t));
-    std::uninitialized_copy_n(a.m_data, a.m_size, b.m_data);
-    return b;
-}
-
-template<typename abi_field_t>
-void tarr_drop(TArray<abi_field_t> a) {
-    std::destroy_n(a.m_data, a.m_size);
-    free(a.m_data);
-}
-
 namespace taihe::core {
 template<typename cpp_owner_t>
 struct array_view;

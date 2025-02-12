@@ -78,8 +78,6 @@ class EnumDeclABIInfo(AbstractAnalysis[EnumDecl]):
         self.as_field = f"struct {self.mangled_name}"
         self.as_param = f"struct {self.mangled_name} const*"
         self.has_data = any(item.ty_ref for item in d.items)
-        self.copy_func = encode(segments, DeclKind.COPY)
-        self.drop_func = encode(segments, DeclKind.DROP)
 
 
 class StructDeclABIInfo(AbstractAnalysis[StructDecl]):
@@ -92,8 +90,6 @@ class StructDeclABIInfo(AbstractAnalysis[StructDecl]):
         self.mangled_name = encode(segments, DeclKind.STRUCT)
         self.as_field = f"struct {self.mangled_name}"
         self.as_param = f"struct {self.mangled_name} const*"
-        self.copy_func = encode(segments, DeclKind.COPY)
-        self.drop_func = encode(segments, DeclKind.DROP)
 
 
 @dataclass
@@ -160,8 +156,6 @@ class AbstractTypeABIInfo(metaclass=ABCMeta):
     as_field: str
     # type as parameter
     as_param: str
-    copy_func: str | None
-    drop_func: str | None
 
 
 class EnumTypeABIInfo(AbstractAnalysis[EnumType], AbstractTypeABIInfo):
@@ -171,8 +165,6 @@ class EnumTypeABIInfo(AbstractAnalysis[EnumType], AbstractTypeABIInfo):
         self.defn_headers = [enum_abi_info.defn_header]
         self.as_field = enum_abi_info.as_field
         self.as_param = enum_abi_info.as_param
-        self.copy_func = enum_abi_info.copy_func
-        self.drop_func = enum_abi_info.drop_func
 
 
 class StructTypeABIInfo(AbstractAnalysis[StructType], AbstractTypeABIInfo):
@@ -182,8 +174,6 @@ class StructTypeABIInfo(AbstractAnalysis[StructType], AbstractTypeABIInfo):
         self.defn_headers = [struct_abi_info.defn_header]
         self.as_field = struct_abi_info.as_field
         self.as_param = struct_abi_info.as_param
-        self.copy_func = struct_abi_info.copy_func
-        self.drop_func = struct_abi_info.drop_func
 
 
 class IfaceTypeABIInfo(AbstractAnalysis[IfaceType], AbstractTypeABIInfo):
@@ -193,8 +183,6 @@ class IfaceTypeABIInfo(AbstractAnalysis[IfaceType], AbstractTypeABIInfo):
         self.defn_headers = [iface_abi_info.defn_header]
         self.as_field = iface_abi_info.as_field
         self.as_param = iface_abi_info.as_param
-        self.copy_func = iface_abi_info.copy_func
-        self.drop_func = iface_abi_info.drop_func
 
 
 class ScalarTypeABIInfo(AbstractAnalysis[ScalarType], AbstractTypeABIInfo):
@@ -218,8 +206,6 @@ class ScalarTypeABIInfo(AbstractAnalysis[ScalarType], AbstractTypeABIInfo):
         self.defn_headers = ["taihe/string.abi.h"]
         self.as_param = res
         self.as_field = res
-        self.copy_func = None
-        self.drop_func = None
 
 
 class SpecialTypeABIInfo(AbstractAnalysis[SpecialType], AbstractTypeABIInfo):
@@ -230,65 +216,38 @@ class SpecialTypeABIInfo(AbstractAnalysis[SpecialType], AbstractTypeABIInfo):
         self.defn_headers = ["taihe/string.abi.h"]
         self.as_field = "struct TString"
         self.as_param = "struct TString"
-        self.copy_func = "tstr_dup"
-        self.drop_func = "tstr_drop"
 
 
 class ArrayTypeABIInfo(AbstractAnalysis[ArrayType], AbstractTypeABIInfo):
     def __init__(self, am: AnalysisManager, t: ArrayType) -> None:
-        arg_ty_abi_info = TypeABIInfo.get(am, t.item_ty)
-        self.decl_headers = ["core/array.hpp", *arg_ty_abi_info.decl_headers]
-        self.defn_headers = ["core/array.hpp", *arg_ty_abi_info.decl_headers]
-        self.as_field = f"TArray<{arg_ty_abi_info.as_field}>"
-        self.as_param = f"TArray<{arg_ty_abi_info.as_field}>"
-        self.copy_func = "tarr_dup"
-        self.drop_func = "tarr_drop"
+        self.decl_headers = ["taihe/array.abi.h"]
+        self.defn_headers = ["taihe/array.abi.h"]
+        self.as_field = "struct TArray"
+        self.as_param = "struct TArray"
 
 
 class VectorTypeABIInfo(AbstractAnalysis[VectorType], AbstractTypeABIInfo):
     def __init__(self, am: AnalysisManager, t: VectorType) -> None:
-        val_ty_abi_info = TypeABIInfo.get(am, t.val_ty)
-        self.decl_headers = ["core/vector.hpp", *val_ty_abi_info.decl_headers]
-        self.defn_headers = ["core/vector.hpp", *val_ty_abi_info.decl_headers]
-        self.as_field = f"TVectorData<{val_ty_abi_info.as_field}>*"
-        self.as_param = f"TVectorData<{val_ty_abi_info.as_field}>* const*"
-        self.copy_func = "tvec_dup"
-        self.drop_func = "tvec_drop"
+        self.decl_headers = []
+        self.defn_headers = []
+        self.as_field = "void*"
+        self.as_param = "void* const*"
 
 
 class MapTypeABIInfo(AbstractAnalysis[MapType], AbstractTypeABIInfo):
     def __init__(self, am: AnalysisManager, t: MapType) -> None:
-        key_ty_abi_info = TypeABIInfo.get(am, t.key_ty)
-        val_ty_abi_info = TypeABIInfo.get(am, t.val_ty)
-        self.decl_headers = [
-            "core/map.hpp",
-            *key_ty_abi_info.decl_headers,
-            *val_ty_abi_info.decl_headers,
-        ]
-        self.defn_headers = [
-            "core/map.hpp",
-            *key_ty_abi_info.decl_headers,
-            *val_ty_abi_info.decl_headers,
-        ]
-        self.as_field = (
-            f"TMapData<{key_ty_abi_info.as_field}, {val_ty_abi_info.as_field}>*"
-        )
-        self.as_param = (
-            f"TMapData<{key_ty_abi_info.as_field}, {val_ty_abi_info.as_field}>* const*"
-        )
-        self.copy_func = "tmap_dup"
-        self.drop_func = "tmap_drop"
+        self.decl_headers = []
+        self.defn_headers = []
+        self.as_field = "void*"
+        self.as_param = "void* const*"
 
 
 class SetTypeABIInfo(AbstractAnalysis[SetType], AbstractTypeABIInfo):
     def __init__(self, am: AnalysisManager, t: SetType) -> None:
-        key_ty_abi_info = TypeABIInfo.get(am, t.key_ty)
-        self.decl_headers = ["core/map.hpp", *key_ty_abi_info.decl_headers]
-        self.defn_headers = ["core/map.hpp", *key_ty_abi_info.decl_headers]
-        self.as_field = f"TMapData<{key_ty_abi_info.as_field}, std::nullptr_t>*"
-        self.as_param = f"TMapData<{key_ty_abi_info.as_field}, std::nullptr_t>* const*"
-        self.copy_func = "tmap_dup"
-        self.drop_func = "tmap_drop"
+        self.decl_headers = []
+        self.defn_headers = []
+        self.as_field = "void*"
+        self.as_param = "void* const*"
 
 
 class TypeABIInfo(TypeVisitor[AbstractTypeABIInfo]):
@@ -414,8 +373,6 @@ class ABICodeGenerator:
         struct_abi_defn_target.include("taihe/common.h")
         struct_abi_defn_target.include(struct_abi_info.decl_header)
         self.gen_struct_type_defn(struct, struct_abi_info, struct_abi_defn_target)
-        self.gen_struct_copy_func(struct, struct_abi_info, struct_abi_defn_target)
-        self.gen_struct_drop_func(struct, struct_abi_info, struct_abi_defn_target)
 
     def gen_struct_type_defn(
         self,
@@ -429,45 +386,6 @@ class ABICodeGenerator:
             struct_abi_defn_target.include(*ty_info.defn_headers)
             struct_abi_defn_target.write(f"  {ty_info.as_field} {field.name};\n")
         struct_abi_defn_target.write("};\n")
-
-    def gen_struct_copy_func(
-        self,
-        struct: StructDecl,
-        struct_abi_info: StructDeclABIInfo,
-        struct_abi_defn_target: COutputBuffer,
-    ):
-        struct_abi_defn_target.write(
-            f"TH_INLINE struct {struct_abi_info.mangled_name} {struct_abi_info.copy_func}(struct {struct_abi_info.mangled_name} data) {{\n"
-            f"  struct {struct_abi_info.mangled_name} result;\n"
-        )
-        for field in struct.fields:
-            ty_info = TypeABIInfo.get(self.am, field.ty_ref.resolved_ty)
-            if ty_info.copy_func is not None:
-                struct_abi_defn_target.write(
-                    f"  result.{field.name} = {ty_info.copy_func}(data.{field.name});\n"
-                )
-            else:
-                struct_abi_defn_target.write(
-                    f"  result.{field.name} = data.{field.name};\n"
-                )
-        struct_abi_defn_target.write("  return result;\n" "}\n")
-
-    def gen_struct_drop_func(
-        self,
-        struct: StructDecl,
-        struct_abi_info: StructDeclABIInfo,
-        struct_abi_defn_target: COutputBuffer,
-    ):
-        struct_abi_defn_target.write(
-            f"TH_INLINE void {struct_abi_info.drop_func}(struct {struct_abi_info.mangled_name} data) {{\n"
-        )
-        for field in struct.fields:
-            ty_info = TypeABIInfo.get(self.am, field.ty_ref.resolved_ty)
-            if ty_info.drop_func is not None:
-                struct_abi_defn_target.write(
-                    f"  {ty_info.drop_func}(data.{field.name});\n"
-                )
-        struct_abi_defn_target.write("}\n")
 
     def gen_enum_files(
         self,
@@ -500,8 +418,6 @@ class ABICodeGenerator:
         enum_abi_defn_target.include("taihe/common.h")
         enum_abi_defn_target.include(enum_abi_info.decl_header)
         self.gen_enum_union_defn(enum, enum_abi_info, enum_abi_defn_target)
-        self.gen_enum_copy_func(enum, enum_abi_info, enum_abi_defn_target)
-        self.gen_enum_drop_func(enum, enum_abi_info, enum_abi_defn_target)
 
     def gen_enum_union_defn(
         self,
@@ -526,57 +442,6 @@ class ABICodeGenerator:
             f"  union {enum_abi_info.union_name} data;\n"
             f"}};\n"
         )
-
-    def gen_enum_copy_func(
-        self,
-        enum: EnumDecl,
-        enum_abi_info: EnumDeclABIInfo,
-        enum_abi_defn_target: COutputBuffer,
-    ):
-        enum_abi_defn_target.write(
-            f"TH_INLINE struct {enum_abi_info.mangled_name} {enum_abi_info.copy_func}(struct {enum_abi_info.mangled_name} data) {{\n"
-            f"  struct {enum_abi_info.mangled_name} result;\n"
-            f"  switch (result.tag = data.tag) {{\n"
-        )
-        for item in enum.items:
-            if item.ty_ref is None:
-                continue
-            ty_info = TypeABIInfo.get(self.am, item.ty_ref.resolved_ty)
-            if ty_info.copy_func is not None:
-                enum_abi_defn_target.write(
-                    f"  case {item.value}:\n"
-                    f"    result.data.{item.name} = {ty_info.copy_func}(data.data.{item.name});\n"
-                    f"    return result;\n"
-                )
-            else:
-                enum_abi_defn_target.write(
-                    f"  case {item.value}:\n"
-                    f"    result.data.{item.name} = data.data.{item.name};\n"
-                    f"    return result;\n"
-                )
-        enum_abi_defn_target.write("  default:\n" "    return result;\n" "  }\n" "}\n")
-
-    def gen_enum_drop_func(
-        self,
-        enum: EnumDecl,
-        enum_abi_info: EnumDeclABIInfo,
-        enum_abi_defn_target: COutputBuffer,
-    ):
-        enum_abi_defn_target.write(
-            f"TH_INLINE void {enum_abi_info.drop_func}(struct {enum_abi_info.mangled_name} data) {{\n"
-            f"  switch (data.tag) {{\n"
-        )
-        for item in enum.items:
-            if item.ty_ref is None:
-                continue
-            ty_info = TypeABIInfo.get(self.am, item.ty_ref.resolved_ty)
-            if ty_info.copy_func is not None:
-                enum_abi_defn_target.write(
-                    f"  case {item.value}:\n"
-                    f"    {ty_info.drop_func}(data.data.{item.name});\n"
-                    f"    break;\n"
-                )
-        enum_abi_defn_target.write("  default:\n" "    break;\n" "  }\n" "}\n")
 
     def gen_iface_files(
         self,

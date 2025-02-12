@@ -1,88 +1,9 @@
 #pragma once
 
 #include <algorithm>
-#include <cstddef>
-#include <cstdlib>
-
-#include <taihe/common.hpp>
 #include <utility>
 
-template<typename T>
-struct TVectorData {
-    TRefCount count;
-    std::size_t cap;
-    T *data;
-    std::size_t len;
-};
-
-template<typename T>
-TVectorData<T>* tvec_new(std::size_t cap) {
-    TVectorData<T>* handle = reinterpret_cast<TVectorData<T>*>(malloc(sizeof(TVectorData<T>)));
-    tref_set(&handle->count, 1);
-    handle->cap = cap;
-    handle->data = reinterpret_cast<T*>(malloc(sizeof(T) * cap));
-    handle->len = 0;
-    return handle;
-}
-
-template<typename T>
-void tvec_resize(TVectorData<T>* handle, std::size_t cap) {
-    if (cap < handle->len) {
-        return;
-    }
-    handle->cap = cap;
-    handle->data = reinterpret_cast<T*>(realloc(handle->data, sizeof(T) * cap));
-}
-
-template<typename T, typename ...Args>
-T* tvec_push(TVectorData<T>* handle, Args&&... args) {
-    std::size_t required_cap = handle->len + 1;
-    if (required_cap > handle->cap) {
-        tvec_resize(handle, std::max(required_cap, handle->cap * 2));
-    }
-    T* location = &handle->data[handle->len];
-    new (location) T{std::forward<Args>(args)...};
-    ++handle->len;
-    return location;
-}
-
-template<typename T>
-void tvec_pop(TVectorData<T>* handle) {
-    if (handle->len == 0) {
-        return;
-    }
-    std::destroy_at(&handle->data[handle->len]);
-    --handle->len;
-}
-
-template<typename T>
-void tvec_clear(TVectorData<T>* handle) {
-    for (std::size_t i = 0; i < handle->len; i++) {
-        std::destroy_at(&handle->data[i]);
-    }
-    handle->len = 0;
-}
-
-template<typename T>
-TVectorData<T>* tvec_dup(TVectorData<T>* handle) {
-    if (!handle) {
-        return nullptr;
-    }
-    tref_inc(&handle->count);
-    return handle;
-}
-
-template<typename T>
-void tvec_drop(TVectorData<T>* handle) {
-    if (!handle) {
-        return;
-    }
-    if (tref_dec(&handle->count)) {
-        tvec_clear(handle);
-        free(handle->data);
-        free(handle);
-    }
-}
+#include <taihe/common.hpp>
 
 namespace taihe::core {
 template<typename T>
@@ -97,17 +18,36 @@ public:
     using iterator = T*;
     using const_iterator = const T*;
 
-    vector() : m_handle(tvec_new<T>(0)) {}
-
-    ~vector() {
-        tvec_drop(m_handle);
+    vector(std::size_t cap = 0) : m_handle(reinterpret_cast<TVectorData*>(malloc(sizeof(TVectorData)))) {
+        tref_set(&m_handle->count, 1);
+        m_handle->cap = cap;
+        m_handle->data = reinterpret_cast<T*>(malloc(sizeof(T) * cap));
+        m_handle->len = 0;
     }
 
-    vector(const vector& other)
-        : m_handle(tvec_dup(other.m_handle)) {}
+    void reserve(std::size_t cap) const {
+        if (cap < m_handle->len) {
+            return;
+        }
+        m_handle->cap = cap;
+        m_handle->data = reinterpret_cast<T*>(realloc(m_handle->data, sizeof(T) * cap));
+    }
 
-    vector(vector&& other) noexcept
-        : m_handle(other.m_handle) {
+    ~vector() {
+        if (m_handle && tref_dec(&m_handle->count)) {
+            this->clear();
+            free(m_handle->data);
+            free(m_handle);
+        }
+    }
+
+    vector(const vector& other) : m_handle(other.m_handle) {
+        if (m_handle) {
+            tref_inc(&m_handle->count);
+        }
+    }
+
+    vector(vector&& other) noexcept : m_handle(other.m_handle) {
         other.m_handle = nullptr;
     }
 
@@ -124,13 +64,16 @@ public:
         return m_handle->cap;
     }
 
-    void reserve(std::size_t reserved_cap) const {
-        tvec_resize(m_handle, reserved_cap);
-    }
-
     template <typename... Args>
     T& emplace_back(Args&&... args) const {
-        return *tvec_push(m_handle, std::forward<Args>(args)...);
+        std::size_t required_cap = m_handle->len + 1;
+        if (required_cap > m_handle->cap) {
+            this->reserve(std::max(required_cap, m_handle->cap * 2));
+        }
+        T* location = &m_handle->data[m_handle->len];
+        new (location) T{std::forward<Args>(args)...};
+        ++m_handle->len;
+        return *location;
     }
 
     T& push_back(T&& value) const {
@@ -146,11 +89,18 @@ public:
     }
 
     void pop_back() const {
-        tvec_pop(m_handle);
+        if (m_handle->len == 0) {
+            return;
+        }
+        std::destroy_at(&m_handle->data[m_handle->len]);
+        --m_handle->len;
     }
 
     void clear() const noexcept {
-        tvec_clear(m_handle);
+        for (std::size_t i = 0; i < m_handle->len; i++) {
+            std::destroy_at(&m_handle->data[i]);
+        }
+        m_handle->len = 0;
     }
 
     friend bool same_impl(vector const& lhs, vector const& rhs) {
@@ -162,6 +112,11 @@ public:
     }
 
 private:
-    TVectorData<T>* m_handle;
+    struct TVectorData {
+        TRefCount count;
+        std::size_t cap;
+        T *data;
+        std::size_t len;
+    } *m_handle;
 };
 }
