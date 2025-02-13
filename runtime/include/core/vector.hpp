@@ -119,4 +119,14 @@ private:
         std::size_t len;
     } *m_handle;
 };
+
+template<typename T>
+struct cpp_type_traits<vector<T>> {
+    using abi_t = void*;
+};
+
+template<typename T>
+struct cpp_type_traits<vector<T> const&> {
+    using abi_t = void* const*;
+};
 }

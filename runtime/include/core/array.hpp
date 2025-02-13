@@ -10,6 +10,7 @@
 #include <cstddef>
 
 #include <taihe/common.hpp>
+#include <taihe/array.abi.h>
 
 namespace taihe::core {
 template<typename cpp_owner_t>
@@ -220,5 +221,15 @@ struct array : public array_view<cpp_owner_t> {
             this->m_data = nullptr;
         }
     }
+};
+
+template<typename cpp_owner_t>
+struct cpp_type_traits<array_view<cpp_owner_t>> {
+    using abi_t = TArray;
+};
+
+template<typename cpp_owner_t>
+struct cpp_type_traits<array<cpp_owner_t>> {
+    using abi_t = TArray;
 };
 }

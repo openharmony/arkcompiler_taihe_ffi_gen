@@ -156,4 +156,14 @@ private:
         std::size_t size;
     } *m_handle;
 };
+
+template<typename K, typename V>
+struct cpp_type_traits<map<K, V>> {
+    using abi_t = void*;
+};
+
+template<typename K, typename V>
+struct cpp_type_traits<map<K, V> const&> {
+    using abi_t = void* const*;
+};
 }

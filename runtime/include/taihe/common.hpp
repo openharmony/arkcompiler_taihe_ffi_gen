@@ -8,29 +8,28 @@
 #include <taihe/common.h>
 
 namespace taihe::core {
-template<typename cpp_t, typename abi_t>
-inline abi_t move_into_abi(cpp_t &&cpp_val) {
-    abi_t abi_val;
+template<typename cpp_t, typename = void>
+struct cpp_type_traits;
+
+template<typename cpp_t>
+struct cpp_type_traits<cpp_t, std::enable_if_t<std::is_arithmetic_v<cpp_t>>> {
+    using abi_t = cpp_t;
+};
+
+template<typename cpp_t>
+using as_abi_t = typename cpp_type_traits<cpp_t>::abi_t;
+
+template<typename cpp_t, std::enable_if_t<!std::is_reference_v<cpp_t>, int> = 0>
+inline as_abi_t<cpp_t> into_abi(cpp_t cpp_val) {
+    as_abi_t<cpp_t> abi_val;
     new (&abi_val) cpp_t(std::move(cpp_val));
     return abi_val;
 }
 
-template<typename cpp_t, typename abi_t>
-inline abi_t copy_into_abi(cpp_t const &cpp_val) {
-    abi_t abi_val;
-    new (&abi_val) cpp_t(cpp_val);
-    return abi_val;
-}
-
-template<typename cpp_t, typename abi_t>
-inline abi_t cast_into_abi(cpp_t const &cpp_val) {
-    return reinterpret_cast<abi_t const &>(cpp_val);
-}
-
-template<typename cpp_t, typename abi_t>
-inline cpp_t cast_from_abi(abi_t const &abi_val) {
+template<typename cpp_t, std::enable_if_t<!std::is_reference_v<cpp_t>, int> = 0>
+inline cpp_t from_abi(as_abi_t<cpp_t> abi_val) {
     union temp {
-        abi_t abi_val;
+        as_abi_t<cpp_t> abi_val;
         cpp_t cpp_val;
         temp() {}
         ~temp() {}
@@ -39,13 +38,13 @@ inline cpp_t cast_from_abi(abi_t const &abi_val) {
     return res.cpp_val;
 }
 
-template<typename cpp_t, typename abi_t>
-inline abi_t cast_ref_into_abi(cpp_t cpp_val) {
-    return reinterpret_cast<abi_t>(&cpp_val);
+template<typename cpp_t, std::enable_if_t<std::is_reference_v<cpp_t>, int> = 0>
+inline as_abi_t<cpp_t> into_abi(cpp_t cpp_val) {
+    return reinterpret_cast<as_abi_t<cpp_t>>(&cpp_val);
 }
 
-template<typename cpp_t, typename abi_t>
-inline cpp_t cast_ref_from_abi(abi_t abi_val) {
+template<typename cpp_t, std::enable_if_t<std::is_reference_v<cpp_t>, int> = 0>
+inline cpp_t from_abi(as_abi_t<cpp_t> abi_val) {
     return reinterpret_cast<cpp_t>(*abi_val);
 }
 

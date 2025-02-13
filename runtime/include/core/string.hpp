@@ -245,4 +245,14 @@ inline std::size_t hash_impl(adl_helper_t, string_view val) {
 inline bool same_impl(adl_helper_t, string_view lhs, string_view rhs) {
     return lhs == rhs;
 }
+
+template<>
+struct cpp_type_traits<string_view> {
+    using abi_t = TString;
+};
+
+template<>
+struct cpp_type_traits<string> {
+    using abi_t = TString;
+};
 }

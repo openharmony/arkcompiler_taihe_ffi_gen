@@ -85,4 +85,14 @@ inline auto into_callback(Impl&& impl) {
         &callback_method_impl<Impl, Return, CBArgs...>,
     };
 }
+
+template<typename Return, typename ...CBArgs>
+struct cpp_type_traits<callback_view<Return, CBArgs...>> {
+    using abi_t = TCallback;
+};
+
+template<typename Return, typename ...CBArgs>
+struct cpp_type_traits<callback<Return, CBArgs...>> {
+    using abi_t = TCallback;
+};
 }
