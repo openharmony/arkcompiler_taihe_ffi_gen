@@ -195,6 +195,24 @@ int main() {
         }
     }
 
+    // set
+    {
+        std::cout << "-------- Testing Set --------" << std::endl;
+        set<string> set_0;
+        set<string> set_1 = set_0;
+        set_0.emplace("a");
+        fillSet(set_0);
+        if (set_1.find("a")) {
+            std::cout << "a exists" << std::endl;
+        }
+        if (set_1.find("b")) {
+            std::cout << "b exists" << std::endl;
+        }
+        if (set_1.find("c")) {
+            std::cout << "c exists" << std::endl;
+        }
+    }
+
     {
         std::cout << "-------- Testing Callback --------" << std::endl;
         auto cb_0 = make_callback<MyCallback, string, string_view, string_view>();

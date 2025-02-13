@@ -199,7 +199,7 @@ class VectorTypeCppProjInfo(AbstractAnalysis[VectorType], AbstractTypeCppProjInf
         self.decl_headers = ["core/vector.hpp", *val_ty_cpp_proj_info.decl_headers]
         self.defn_headers = ["core/vector.hpp", *val_ty_cpp_proj_info.decl_headers]
         self.as_field = f"::taihe::core::vector<{val_ty_cpp_proj_info.as_field}>"
-        self.as_param = f"::taihe::core::vector<{val_ty_cpp_proj_info.as_field}> const&"
+        self.as_param = f"::taihe::core::vector_view<{val_ty_cpp_proj_info.as_field}>"
 
 
 class MapTypeCppProjInfo(AbstractAnalysis[MapType], AbstractTypeCppProjInfo):
@@ -217,18 +217,16 @@ class MapTypeCppProjInfo(AbstractAnalysis[MapType], AbstractTypeCppProjInfo):
             *val_ty_cpp_proj_info.decl_headers,
         ]
         self.as_field = f"::taihe::core::map<{key_ty_cpp_proj_info.as_field}, {val_ty_cpp_proj_info.as_field}>"
-        self.as_param = f"::taihe::core::map<{key_ty_cpp_proj_info.as_field}, {val_ty_cpp_proj_info.as_field}> const&"
+        self.as_param = f"::taihe::core::map_view<{key_ty_cpp_proj_info.as_field}, {val_ty_cpp_proj_info.as_field}>"
 
 
 class SetTypeCppProjInfo(AbstractAnalysis[SetType], AbstractTypeCppProjInfo):
     def __init__(self, am: AnalysisManager, t: SetType) -> None:
         key_ty_cpp_proj_info = TypeCppProjInfo.get(am, t.key_ty)
-        self.decl_headers = ["core/map.hpp", *key_ty_cpp_proj_info.decl_headers]
-        self.defn_headers = ["core/map.hpp", *key_ty_cpp_proj_info.decl_headers]
-        self.as_field = (
-            f"::taihe::core::map<{key_ty_cpp_proj_info.as_field}, std::nullptr_t>"
-        )
-        self.as_param = f"::taihe::core::map<{key_ty_cpp_proj_info.as_field}, std::nullptr_t> const&"
+        self.decl_headers = ["core/set.hpp", *key_ty_cpp_proj_info.decl_headers]
+        self.defn_headers = ["core/set.hpp", *key_ty_cpp_proj_info.decl_headers]
+        self.as_field = f"::taihe::core::set<{key_ty_cpp_proj_info.as_field}>"
+        self.as_param = f"::taihe::core::set_view<{key_ty_cpp_proj_info.as_field}>"
 
 
 class TypeCppProjInfo(TypeVisitor[AbstractTypeCppProjInfo]):
@@ -1103,7 +1101,7 @@ class CppProjCodeGenerator:
         )
         # convert methods
         iface_cpp_proj_defn_target.write(
-            f"    explicit {iface_cpp_proj_info.name}({iface_abi_info.as_param} other_handle) : m_handle(other_handle) {{}}\n"
+            f"    explicit {iface_cpp_proj_info.name}({iface_abi_info.as_param} handle) : m_handle(handle) {{}}\n"
             f"    explicit {iface_cpp_proj_info.name}(::taihe::core::data_view other)\n"
             f"        : {iface_cpp_proj_info.name}({iface_abi_info.dynamic_cast}(other.m_handle)) {{\n"
             f"        other.m_handle = nullptr;\n"
@@ -1148,7 +1146,7 @@ class CppProjCodeGenerator:
         )
         # convert methods
         iface_cpp_proj_defn_target.write(
-            f"    explicit {iface_cpp_proj_info.name}({iface_abi_info.as_field} other_handle) : {iface_cpp_proj_info.weak_name}(other_handle) {{}}\n"
+            f"    explicit {iface_cpp_proj_info.name}({iface_abi_info.as_field} handle) : {iface_cpp_proj_info.weak_name}(handle) {{}}\n"
             f"    {iface_cpp_proj_info.name}& operator=({iface_cpp_proj_info.full_name} other) {{\n"
             f"        ::std::swap(this->m_handle, other.m_handle);\n"
             f"        return *this;\n"

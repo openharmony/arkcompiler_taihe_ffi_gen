@@ -231,7 +231,7 @@ class VectorTypeABIInfo(AbstractAnalysis[VectorType], AbstractTypeABIInfo):
         self.decl_headers = []
         self.defn_headers = []
         self.as_field = "void*"
-        self.as_param = "void* const*"
+        self.as_param = "void*"
 
 
 class MapTypeABIInfo(AbstractAnalysis[MapType], AbstractTypeABIInfo):
@@ -239,7 +239,7 @@ class MapTypeABIInfo(AbstractAnalysis[MapType], AbstractTypeABIInfo):
         self.decl_headers = []
         self.defn_headers = []
         self.as_field = "void*"
-        self.as_param = "void* const*"
+        self.as_param = "void*"
 
 
 class SetTypeABIInfo(AbstractAnalysis[SetType], AbstractTypeABIInfo):
@@ -247,7 +247,7 @@ class SetTypeABIInfo(AbstractAnalysis[SetType], AbstractTypeABIInfo):
         self.decl_headers = []
         self.defn_headers = []
         self.as_field = "void*"
-        self.as_param = "void* const*"
+        self.as_param = "void*"
 
 
 class TypeABIInfo(TypeVisitor[AbstractTypeABIInfo]):

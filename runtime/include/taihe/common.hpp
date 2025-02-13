@@ -16,6 +16,11 @@ struct cpp_type_traits<cpp_t, std::enable_if_t<std::is_arithmetic_v<cpp_t>>> {
     using abi_t = cpp_t;
 };
 
+template<>
+struct cpp_type_traits<void> {
+    using abi_t = void;
+};
+
 template<typename cpp_t>
 using as_abi_t = typename cpp_type_traits<cpp_t>::abi_t;
 

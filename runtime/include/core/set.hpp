@@ -5,14 +5,14 @@
 #include <taihe/common.hpp>
 
 namespace taihe::core {
-template<typename K, typename V>
-struct map_view;
+template<typename K>
+struct set_view;
 
-template<typename K, typename V>
-struct map;
+template<typename K>
+struct set;
 
-template<typename K, typename V>
-struct map_view {
+template<typename K>
+struct set_view {
     void reserve(std::size_t cap) const {
         if (cap == 0) {
             return;
@@ -53,22 +53,18 @@ struct map_view {
         m_handle->size = 0;
     }
 
-    template<bool cover = false, typename... Args>
-    V* emplace(K key, Args&&... args) const {
+    template<typename ...Args>
+    bool emplace(K key) const {
         std::size_t index = taihe::core::hash(key) % m_handle->cap;
         item_t* current = m_handle->bucket[index];
         while (current) {
             if (taihe::core::same(current->key, key)) {
-                if (cover) {
-                    current->val = V{std::forward<Args>(args)...};
-                }
-                return &current->val;
+                return false;
             }
             current = current->next;
         }
         item_t* item = new item_t{
             .key = std::move(key),
-            .val = V{std::forward<Args>(args)...},
             .next = m_handle->bucket[index],
         };
         m_handle->bucket[index] = item;
@@ -77,19 +73,19 @@ struct map_view {
         if (required_cap >= m_handle->cap) {
             reserve(required_cap * 2);
         }
-        return &item->val;
+        return true;
     }
 
-    V* find(K const& key) const {
+    bool find(K const& key) const {
         std::size_t index = taihe::core::hash(key) % m_handle->cap;
         item_t* current = m_handle->bucket[index];
         while (current) {
             if (taihe::core::same(current->key, key)) {
-                return &current->val;
+                return true;
             }
             current = current->next;
         }
-        return nullptr;
+        return false;
     }
 
     bool erase(K const& key) const {
@@ -109,18 +105,17 @@ struct map_view {
         return false;
     }
 
-    friend bool same_impl(map_view lhs, map_view rhs) {
+    friend bool same_impl(set_view lhs, set_view rhs) {
         return lhs.m_handle == rhs.m_handle;
     }
 
-    friend std::size_t hash_impl(map_view val) {
+    friend std::size_t hash_impl(set_view val) {
         return val.m_handle;
     }
 
 private:
     struct item_t {
         K key;
-        V val;
         item_t* next;
     };
 
@@ -131,18 +126,18 @@ private:
         std::size_t size;
     } *m_handle;
 
-    explicit map_view(data_t* handle) : m_handle(handle) {}
+    explicit set_view(data_t* data) : m_handle(data) {}
 
-    friend struct map<K, V>;
+    friend struct set<K>;
 };
 
-template<typename K, typename V>
-struct map : map_view<K, V> {
-    using typename map_view<K, V>::item_t;
-    using typename map_view<K, V>::data_t;
-    using map_view<K, V>::m_handle;
+template<typename K>
+struct set : set_view<K> {
+    using typename set_view<K>::item_t;
+    using typename set_view<K>::data_t;
+    using set_view<K>::m_handle;
 
-    map(std::size_t cap = 16) : map(reinterpret_cast<data_t*>(calloc(1, sizeof(data_t)))) {
+    set(std::size_t cap = 16) : set(reinterpret_cast<data_t*>(calloc(1, sizeof(data_t)))) {
         item_t** bucket = reinterpret_cast<item_t**>(calloc(cap, sizeof(item_t*)));
         tref_set(&m_handle->count, 1);
         m_handle->cap = cap;
@@ -150,28 +145,28 @@ struct map : map_view<K, V> {
         m_handle->size = 0;
     }
 
-    map(map<K, V> && other) noexcept : map(other.m_handle) {
+    set(set<K> && other) noexcept : set(other.m_handle) {
         other.m_handle = nullptr;
     }
 
-    map(map<K, V> const& other) : map(other.m_handle) {
+    set(set<K> const& other) : set(other.m_handle) {
         if (m_handle) {
             tref_inc(&m_handle->count);
         }
     }
 
-    map(map_view<K, V> const& other) : map(other.m_handle) {
+    set(set_view<K> const& other) : set(other.m_handle) {
         if (m_handle) {
             tref_inc(&m_handle->count);
         }
     }
 
-    map& operator=(map other) {
+    set& operator=(set other) {
         std::swap(this->m_handle, other.m_handle);
         return *this;
     }
 
-    ~map() {
+    ~set() {
         if (m_handle && tref_dec(&m_handle->count)) {
             this->clear();
             free(m_handle->bucket);
@@ -180,16 +175,16 @@ struct map : map_view<K, V> {
     }
 
 private:
-    explicit map(data_t* handle) : map_view<K, V>(handle) {}
+    explicit set(data_t* data) : set_view<K>(data) {}
 };
 
-template<typename K, typename V>
-struct cpp_type_traits<map<K, V>> {
+template<typename K>
+struct cpp_type_traits<set<K>> {
     using abi_t = void*;
 };
 
-template<typename K, typename V>
-struct cpp_type_traits<map_view<K, V>> {
+template<typename K>
+struct cpp_type_traits<set_view<K>> {
     using abi_t = void*;
 };
 }

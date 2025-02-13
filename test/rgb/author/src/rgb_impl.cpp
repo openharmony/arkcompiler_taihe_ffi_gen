@@ -151,16 +151,21 @@ struct AuthorType {
     std::string getId() { return "AuthorType(" + this->id + ")"; }
 };
 
-void fillVecImpl(vector<IBase> const& target) {
+void fillVecImpl(vector_view<IBase> target) {
     target.push_back(make_holder<AuthorType, IBase>("0"));
     target.push_back(make_holder<AuthorType, IBase>("1"));
     target.push_back(make_holder<AuthorType, IBase>("2"));
 }
 
-void fillMapImpl(map<string, IBase> const& target) {
+void fillMapImpl(map_view<string, IBase> target) {
     target.emplace<1>("a", make_holder<AuthorType, IBase>("a"));
     target.emplace<0>("b", make_holder<AuthorType, IBase>("b"));
     target.emplace<0>("c", make_holder<AuthorType, IBase>("c"));
+}
+
+void fillSetImpl(set_view<string> target) {
+    target.emplace("a");
+    target.emplace("b");
 }
 
 TH_EXPORT_CPP_API_makeRectangle(makeRectangleImpl)
@@ -170,3 +175,4 @@ TH_EXPORT_CPP_API_toString(colorToStringImpl)
 TH_EXPORT_CPP_API_exchange(exchangeImpl)
 TH_EXPORT_CPP_API_fillVec(fillVecImpl)
 TH_EXPORT_CPP_API_fillMap(fillMapImpl)
+TH_EXPORT_CPP_API_fillSet(fillSetImpl)

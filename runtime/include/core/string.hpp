@@ -25,7 +25,7 @@ struct string_view {
     using const_iterator = const_pointer;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-    explicit string_view(struct TString m_data) : m_data(m_data) {}
+    explicit string_view(struct TString handle) : m_handle(handle) {}
 
     string_view(const char* value TH_NONNULL)
         : string_view(tstr_new_ref(value, strlen(value))) {}
@@ -43,7 +43,7 @@ struct string_view {
         : string_view(value.data(), value.size()) {}
 
     operator std::string_view() const noexcept {
-        return { tstr_buf(m_data), tstr_len(m_data) };
+        return { tstr_buf(m_handle), tstr_len(m_handle) };
     }
 
     // methods
@@ -51,41 +51,41 @@ struct string_view {
         if (pos >= size()) {
             throw std::out_of_range("Index out of range");
         }
-        return tstr_buf(m_data)[pos];
+        return tstr_buf(m_handle)[pos];
     }
 
     bool empty() const noexcept {
-        return tstr_len(m_data) == 0;
+        return tstr_len(m_handle) == 0;
     }
 
     size_type size() const noexcept {
-        return tstr_len(m_data);
+        return tstr_len(m_handle);
     }
 
     const_reference front() const {
         if (empty()) {
             throw std::out_of_range("Empty string");
         }
-        return tstr_buf(m_data)[0];
+        return tstr_buf(m_handle)[0];
     }
 
     const_reference back() const {
         if (empty()) {
             throw std::out_of_range("Empty string");
         }
-        return tstr_buf(m_data)[size() - 1];
+        return tstr_buf(m_handle)[size() - 1];
     }
 
     const_pointer c_str() const noexcept {
-        return tstr_buf(m_data);
+        return tstr_buf(m_handle);
     }
 
     const_pointer data() const noexcept {
-        return tstr_buf(m_data);
+        return tstr_buf(m_handle);
     }
 
     const_iterator begin() const noexcept {
-        return tstr_buf(m_data);
+        return tstr_buf(m_handle);
     }
 
     const_iterator cbegin() const noexcept {
@@ -93,7 +93,7 @@ struct string_view {
     }
 
     const_iterator end() const noexcept {
-        return tstr_buf(m_data) + tstr_len(m_data);
+        return tstr_buf(m_handle) + tstr_len(m_handle);
     }
 
     const_iterator cend() const noexcept {
@@ -117,16 +117,16 @@ struct string_view {
     }
 
 protected:
-    friend struct string;
+    struct TString m_handle;
 
-    struct TString m_data;
+    friend struct string;
 
     friend string concat(string_view left, string_view right);
     friend string substr(string_view sv, std::size_t pos, std::size_t len);
 };
 
 struct string : public string_view {
-    explicit string(struct TString m_data) : string_view(m_data) {}
+    explicit string(struct TString handle) : string_view(handle) {}
 
     string(const char* value TH_NONNULL)
         : string(tstr_new(value, std::strlen(value))) {}
@@ -145,36 +145,36 @@ struct string : public string_view {
 
     // constructors
     string(string_view const& other)
-        : string(tstr_dup(other.m_data)) {}
+        : string(tstr_dup(other.m_handle)) {}
 
     string(string const& other)
-        : string(tstr_dup(other.m_data)) {}
+        : string(tstr_dup(other.m_handle)) {}
 
     string(string&& other) noexcept
-        : string(other.m_data) {
-        other.m_data.ptr = NULL;
+        : string(other.m_handle) {
+        other.m_handle.ptr = NULL;
     }
 
     // assignment
     string& operator=(string other) {
-        std::swap(this->m_data, other.m_data);
+        std::swap(this->m_handle, other.m_handle);
         return *this;
     }
 
     // destructor
     ~string() {
-        if (m_data.ptr != NULL) {
-            tstr_drop(m_data);
+        if (m_handle.ptr != NULL) {
+            tstr_drop(m_handle);
         }
     }
 };
 
 inline string substr(string_view sv, std::size_t pos, std::size_t len) {
-    return string(tstr_substr(sv.m_data, pos, len));
+    return string(tstr_substr(sv.m_handle, pos, len));
 }
 
 inline string concat(string_view left, string_view right) {
-    return string(tstr_concat(left.m_data, right.m_data));
+    return string(tstr_concat(left.m_handle, right.m_handle));
 }
 
 inline bool operator==(string_view lhs, string_view rhs) {

@@ -3,6 +3,7 @@
 #include <taihe/common.hpp>
 
 #include <taihe/callback.abi.h>
+#include <type_traits>
 
 namespace taihe::core {
 template<typename Return, typename ...CBArgs>
@@ -13,21 +14,26 @@ struct callback;
 
 template<typename Return, typename ...CBArgs>
 struct callback_view {
+    typedef as_abi_t<Return> (*func_t)(TCallbackData* data, as_abi_t<CBArgs>... args);
     TCallbackData* m_data;
-    Return (*m_func)(TCallbackData* data, CBArgs... args);
+    func_t m_func;
 
-    callback_view(TCallbackData* data, Return (*func)(TCallbackData* data, CBArgs... args))
-        : m_data(data), m_func(func) {}
+    callback_view(TCallbackData* data, func_t func) : m_data(data), m_func(func) {}
 
     Return operator()(CBArgs... args) {
-        return m_func(m_data, args...);
+        if constexpr (std::is_same_v<Return, void>) {
+            return m_func(m_data, into_abi<CBArgs>(args)...);
+        } else {
+            return from_abi<Return>(m_func(m_data, into_abi<CBArgs>(args)...));
+        }
     }
 };
 
 template<typename Return, typename ...CBArgs>
 struct callback : callback_view<Return, CBArgs...> {
-    callback(TCallbackData* data, Return (*func)(TCallbackData* data, CBArgs... args))
-        : callback_view<Return, CBArgs...>(data, func) {}
+    using typename callback_view<Return, CBArgs...>::func_t;
+
+    callback(TCallbackData* data, func_t func) : callback_view<Return, CBArgs...>(data, func) {}
 
     callback(callback<Return, CBArgs...> && other)
         : callback{other.m_data, other.m_func} {
@@ -61,8 +67,12 @@ struct callback_data_impl : TCallbackData, Impl {
 };
 
 template<typename Impl, typename Return, typename... CBArgs>
-Return callback_method_impl(TCallbackData* data, CBArgs... args) {
-    return (*static_cast<callback_data_impl<Impl>*>(data))(args...);
+as_abi_t<Return> callback_method_impl(TCallbackData* data, as_abi_t<CBArgs>... args) {
+    if constexpr (std::is_same_v<void, Return>) {
+        return (*static_cast<callback_data_impl<Impl>*>(data))(from_abi<CBArgs>(args)...);
+    } else {
+        return into_abi<Return>((*static_cast<callback_data_impl<Impl>*>(data))(from_abi<CBArgs>(args)...));
+    }
 }
 
 template<typename Impl>
