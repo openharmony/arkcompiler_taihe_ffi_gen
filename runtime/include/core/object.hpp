@@ -76,8 +76,10 @@ constexpr void static_concat(T (&r)[S], uint64_t j, T const (&a)[N], T const (&.
 template<typename Impl>
 struct data_block_impl : DataBlockHead, Impl {
     template<typename... Args>
-    data_block_impl(TypeInfo const* rtti_ptr, TRefCount m_count, Args&&... args)
-        : DataBlockHead{rtti_ptr, m_count}, Impl(std::forward<Args>(args)...) {}
+    data_block_impl(TypeInfo const* rtti_ptr, Args&&... args)
+        : Impl(std::forward<Args>(args)...) {
+        tobj_init(this, rtti_ptr);
+    }
 };
 
 template<typename Impl>
@@ -230,18 +232,16 @@ struct impl_holder : public impl_view<Impl, InterfaceHolders...> {
 template<typename Impl, typename... InterfaceHolders, typename... Args>
 inline auto make_holder(Args&&... args) {
     using ImplHolder = impl_holder<Impl, InterfaceHolders...>;
-    data_block_impl<Impl>* handle = reinterpret_cast<data_block_impl<Impl>*>(malloc(sizeof(data_block_impl<Impl>)));
-    tobj_init( handle, reinterpret_cast<TypeInfo const*>(&ImplHolder::rtti));
-    new (static_cast<Impl*>(handle)) Impl(std::forward<Args>(args)...);
-    return ImplHolder{handle};
+    return ImplHolder{
+        new data_block_impl<Impl>(reinterpret_cast<TypeInfo const*>(&ImplHolder::rtti), std::forward<Args>(args)...),
+    };
 }
 
 template<typename... InterfaceHolders, typename Impl>
 inline auto into_holder(Impl&& impl) {
     using ImplHolder = impl_holder<Impl, InterfaceHolders...>;
-    data_block_impl<Impl>* handle = reinterpret_cast<data_block_impl<Impl>*>(malloc(sizeof(data_block_impl<Impl>)));
-    tobj_init(handle, reinterpret_cast<TypeInfo const*>(&ImplHolder::rtti));
-    new (static_cast<Impl*>(handle)) Impl(std::forward<Impl>(impl));
-    return ImplHolder{handle};
+    return ImplHolder{
+        new data_block_impl<Impl>(reinterpret_cast<TypeInfo const*>(&ImplHolder::rtti), std::forward<Impl>(impl)),
+    };
 }
 }

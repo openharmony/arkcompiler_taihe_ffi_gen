@@ -1,6 +1,8 @@
 #include "rgb.base.proj.hpp"
 #include "rgb.show.proj.hpp"
 
+#include <core/callback.hpp>
+
 #include <iostream>
 #include <cmath>
 #include <iomanip>
@@ -75,6 +77,21 @@ struct UserType {
     }
 
     std::string getId() { return "UserType(" + this->id + ")"; }
+};
+
+struct MyCallback {
+    MyCallback() {
+        std::cout << "Callback " << this << " made" << std::endl;
+    }
+
+    ~MyCallback() {
+        std::cout << "Callback " << this << " deleted" << std::endl;
+    }
+
+    string operator()(string_view a, string_view b) {
+        std::cout << "Callback " << this << " called" << std::endl;
+        return concat(a, b);
+    }
 };
 
 int main() {
@@ -176,5 +193,13 @@ int main() {
         if (auto ptr = map_1.find("d")) {
             std::cout << "d: " << (*ptr)->getId() << std::endl;
         }
+    }
+
+    {
+        std::cout << "-------- Testing Callback --------" << std::endl;
+        auto cb_0 = make_callback<MyCallback, string, string_view, string_view>();
+        auto cb_1 = cb_0;
+        auto res = cb_1("abc", "123");
+        std::cout << "res = " << res << std::endl;
     }
 }
