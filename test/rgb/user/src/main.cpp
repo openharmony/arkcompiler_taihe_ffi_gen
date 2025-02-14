@@ -11,14 +11,6 @@ using namespace rgb::base;
 using namespace rgb::show;
 using namespace taihe::core;
 
-void show_array(array_view<IBase> arr, string_view sv) {
-    std::cout << sv << ": ";
-    for (auto item : arr) {
-        std::cout << item->getId() << ", ";
-    }
-    std::cout << std::endl;
-}
-
 class ColoredCircle {
     float r;
     std::string name;
@@ -26,17 +18,17 @@ class ColoredCircle {
     ColorOrRGBOrName myColor;
 
 public:
+    string getId() {
+        return name;
+    }
+
     ColoredCircle(string_view id, float r, ColorOrRGBOrName const& color)
         : name(id), r(r), myColor(color) {
-        std::cout << "new " << this << std::endl;
+        std::cout << getId() << " made" << std::endl;
     }
 
     ~ColoredCircle() {
-        std::cout << "del " << this << std::endl;
-    }
-
-    string getId() {
-        return name;
+        std::cout << getId() << " deleted" << std::endl;
     }
 
     float calculateArea() {
@@ -66,35 +58,43 @@ public:
 };
 
 struct UserType {
-    std::string id;
+    string id;
 
-    UserType(std::string const& id) : id(id) {
-        std::cout << this->getId() << " made" << std::endl;
+    auto getId() { return "UserType(" + std::string(id) + ")"; }
+
+    UserType(string_view id) : id(id) {
+        std::cout << getId() << " made" << std::endl;
     }
 
     ~UserType() {
-        std::cout << this->getId() << " deleted" << std::endl;
+        std::cout << getId() << " deleted" << std::endl;
     }
-
-    std::string getId() { return "UserType(" + this->id + ")"; }
 };
 
 struct MyCallback {
-    string x;
+    string f;
 
-    MyCallback(string_view x): x(x) {
-        std::cout << "Callback " << x << " made" << std::endl;
+    MyCallback(string_view f): f(f) {
+        std::cout << "Callback " << f << " made" << std::endl;
     }
 
     ~MyCallback() {
-        std::cout << "Callback " << x << " deleted" << std::endl;
+        std::cout << "Callback " << f << " deleted" << std::endl;
     }
 
-    string operator()(string_view a) {
-        std::cout << "Callback " << x << " called" << std::endl;
-        return "(" + std::string(x) + ": " + std::string(a) + ")";
+    string operator()(string_view a, string_view b) {
+        std::cout << "Callback " << f << " called" << std::endl;
+        return std::string(f) + "(" + a.c_str() + ", " + b.c_str() + ")";
     }
 };
+
+void show_array(array_view<IBase> arr, string_view sv) {
+    std::cout << sv << ": ";
+    for (auto item : arr) {
+        std::cout << item->getId() << ", ";
+    }
+    std::cout << std::endl;
+}
 
 int main() {
     Color yellow = Color::make_yellow();
@@ -202,18 +202,10 @@ int main() {
 
         fillMap(map_0);
 
-        if (auto ptr = map_1.find("a")) {
-            std::cout << "a: " << (*ptr)->getId() << std::endl;
-        }
-        if (auto ptr = map_1.find("b")) {
-            std::cout << "b: " << (*ptr)->getId() << std::endl;
-        }
-        if (auto ptr = map_1.find("c")) {
-            std::cout << "c: " << (*ptr)->getId() << std::endl;
-        }
-        if (auto ptr = map_1.find("d")) {
-            std::cout << "d: " << (*ptr)->getId() << std::endl;
-        }
+        if (auto ptr = map_1.find("a")) std::cout << "a: " << (*ptr)->getId() << std::endl;
+        if (auto ptr = map_1.find("b")) std::cout << "b: " << (*ptr)->getId() << std::endl;
+        if (auto ptr = map_1.find("c")) std::cout << "c: " << (*ptr)->getId() << std::endl;
+        if (auto ptr = map_1.find("d")) std::cout << "d: " << (*ptr)->getId() << std::endl;
     }
 
     // set
@@ -227,26 +219,16 @@ int main() {
 
         fillSet(set_0);
 
-        if (set_1.find("a")) {
-            std::cout << "a exists" << std::endl;
-        }
-        if (set_1.find("b")) {
-            std::cout << "b exists" << std::endl;
-        }
-        if (set_1.find("c")) {
-            std::cout << "c exists" << std::endl;
-        }
+        if (set_1.find("a")) std::cout << "a exists" << std::endl;
+        if (set_1.find("b")) std::cout << "b exists" << std::endl;
+        if (set_1.find("c")) std::cout << "c exists" << std::endl;
     }
 
     {
         std::cout << "-------- Testing Callback --------" << std::endl;
 
-        auto cb_x = testCallback(
-            make_callback<MyCallback, string, string_view>("a"),
-            make_callback<MyCallback, string, string_view>("b"));
+        auto tmp = currying(make_callback<MyCallback, string, string_view, string_view>("f"))("abc");
 
-        auto res = cb_x("abc");
-
-        std::cout << "res = " << res << std::endl;
+        std::cout << "res = " << tmp("123") << std::endl;
     }
 }

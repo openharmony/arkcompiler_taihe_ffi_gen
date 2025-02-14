@@ -27,4 +27,4 @@ function exchange(dst: IBase[], src: IBase[]): IBase[];
 function fillVec(dst: Vector<IBase>): void;
 function fillMap(dst: Map<String, IBase>): void;
 function fillSet(dst: Set<String>): void;
-function testCallback(f: (x: String) => String, g: (x: String) => String): (x: String) => String;
+function currying(f: (x: String, y: String) => String): (x: String) => (y: String) => String;

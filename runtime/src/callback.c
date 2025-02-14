@@ -1,8 +1,6 @@
 #include <taihe/common.h>
 #include <taihe/callback.abi.h>
 
-#include <stdio.h>
-
 void tcb_init(struct TCallbackData* data_ptr, void (*free)(struct TCallbackData*)) {
   data_ptr->free = free;
   tref_set(&data_ptr->m_count, 1);

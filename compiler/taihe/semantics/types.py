@@ -173,7 +173,7 @@ class SetType(Type, metaclass=ABCMeta):
     @property
     @override
     def repr(self):
-        return f"Set<{self.key_ty}>"
+        return f"Set<{self.key_ty.repr}>"
 
 
 @dataclass(frozen=True, repr=False)
@@ -188,7 +188,7 @@ class CallbackType(Type, metaclass=ABCMeta):
     @property
     @override
     def repr(self):
-        return_fmt = ty if (ty := self.return_ty) else "void"
+        return_fmt = ty.repr if (ty := self.return_ty) else "void"
         params_fmt = ", ".join(ty.repr for ty in self.params_ty)
         return f"({params_fmt}) -> {return_fmt}"
 
