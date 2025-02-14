@@ -4,7 +4,7 @@ from abc import ABCMeta, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, Optional, Protocol
 
 from typing_extensions import override
 
@@ -31,10 +31,10 @@ class Type(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def description(self) -> str: ...
+    def repr(self) -> str: ...
 
     def __repr__(self) -> str:
-        return f"<{self.__class__.__qualname__} {self.description}>"
+        return f"<{self.__class__.__qualname__} {self.repr}>"
 
     @abstractmethod
     def _accept(self, v: "TypeVisitor") -> Any: ...
@@ -55,7 +55,7 @@ class BuiltinTypeKind(Enum):
     STRING = 0x10
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, repr=False)
 class BuiltinType(Type, metaclass=ABCMeta):
     """Represents built-in types, including scalars and strings.
 
@@ -69,8 +69,8 @@ class BuiltinType(Type, metaclass=ABCMeta):
 
     @property
     @override
-    def description(self):
-        return f"builtin type {self.name}"
+    def repr(self):
+        return f"{self.name}"
 
 
 @dataclass(frozen=True, repr=False)
@@ -119,11 +119,9 @@ BUILTIN_TYPES: dict[str, Type] = {
 ####################
 
 
+@dataclass(frozen=True, repr=False)
 class ArrayType(Type, metaclass=ABCMeta):
     item_ty: Type
-
-    def __init__(self, item_ty: Type):
-        self.item_ty = item_ty
 
     @override
     def _accept(self, v: "TypeVisitor") -> Any:
@@ -131,15 +129,13 @@ class ArrayType(Type, metaclass=ABCMeta):
 
     @property
     @override
-    def description(self):
-        return f"array of ({self.item_ty.description})"
+    def repr(self):
+        return f"array of ({self.item_ty.repr})"
 
 
+@dataclass(frozen=True, repr=False)
 class VectorType(Type, metaclass=ABCMeta):
     val_ty: Type
-
-    def __init__(self, val_ty: Type):
-        self.val_ty = val_ty
 
     @override
     def _accept(self, v: "TypeVisitor") -> Any:
@@ -147,17 +143,14 @@ class VectorType(Type, metaclass=ABCMeta):
 
     @property
     @override
-    def description(self):
-        return f"vector of ({self.val_ty.description})"
+    def repr(self):
+        return f"Vector<{self.val_ty.repr}>"
 
 
+@dataclass(frozen=True, repr=False)
 class MapType(Type, metaclass=ABCMeta):
     key_ty: Type
     val_ty: Type
-
-    def __init__(self, key_ty: Type, val_ty: Type):
-        self.key_ty = key_ty
-        self.val_ty = val_ty
 
     @override
     def _accept(self, v: "TypeVisitor") -> Any:
@@ -165,15 +158,13 @@ class MapType(Type, metaclass=ABCMeta):
 
     @property
     @override
-    def description(self):
-        return f"map from ({self.key_ty}) to ({self.val_ty})"
+    def repr(self):
+        return f"Map<{self.key_ty.repr}, {self.val_ty.repr}>"
 
 
+@dataclass(frozen=True, repr=False)
 class SetType(Type, metaclass=ABCMeta):
     key_ty: Type
-
-    def __init__(self, key_ty: Type):
-        self.key_ty = key_ty
 
     @override
     def _accept(self, v: "TypeVisitor") -> Any:
@@ -181,8 +172,25 @@ class SetType(Type, metaclass=ABCMeta):
 
     @property
     @override
-    def description(self):
-        return f"set of ({self.key_ty})"
+    def repr(self):
+        return f"Set<{self.key_ty}>"
+
+
+@dataclass(frozen=True, repr=False)
+class CallbackType(Type, metaclass=ABCMeta):
+    return_ty: Optional[Type]
+    params_ty: list[Type]
+
+    @override
+    def _accept(self, v: "TypeVisitor") -> Any:
+        return v.visit_callback_type(self)
+
+    @property
+    @override
+    def repr(self):
+        return_fmt = ty if (ty := self.return_ty) else "void"
+        params_fmt = ", ".join(ty.repr for ty in self.params_ty)
+        return f"({params_fmt}) -> {return_fmt}"
 
 
 # Builtin Generics Map
@@ -201,50 +209,34 @@ BUILTIN_GENERICS: dict[str, Callable[[*tuple[Type, ...]], Type]] = {  # pyre-ign
 class UserType(Type, metaclass=ABCMeta):
     ty_decl: "TypeDecl"
 
+    @property
+    @override
+    def repr(self):
+        return f"{self.ty_decl.full_name}"
 
+
+@dataclass(frozen=True, repr=False)
 class StructType(UserType):
     ty_decl: "StructDecl"
-
-    def __init__(self, decl: "StructDecl"):
-        self.ty_decl = decl
 
     @override
     def _accept(self, v: "TypeVisitor") -> Any:
         return v.visit_struct_type(self)
 
-    @property
-    @override
-    def description(self):
-        return f"struct type {self.ty_decl.full_name}"
 
-
+@dataclass(frozen=True, repr=False)
 class EnumType(UserType):
     ty_decl: "EnumDecl"
-
-    def __init__(self, decl: "EnumDecl"):
-        self.ty_decl = decl
 
     @override
     def _accept(self, v: "TypeVisitor") -> Any:
         return v.visit_enum_type(self)
 
-    @property
-    @override
-    def description(self):
-        return f"enum type {self.ty_decl.full_name}"
 
-
+@dataclass(frozen=True, repr=False)
 class IfaceType(UserType):
     ty_decl: "IfaceDecl"
-
-    def __init__(self, decl: "IfaceDecl"):
-        self.ty_decl = decl
 
     @override
     def _accept(self, v: "TypeVisitor") -> Any:
         return v.visit_iface_type(self)
-
-    @property
-    @override
-    def description(self):
-        return f"interface type {self.ty_decl.full_name}"

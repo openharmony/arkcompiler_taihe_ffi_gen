@@ -17,8 +17,8 @@ struct cpp_type_traits<cpp_t, std::enable_if_t<std::is_arithmetic_v<cpp_t>>> {
 };
 
 template<>
-struct cpp_type_traits<void> {
-    using abi_t = void;
+struct cpp_type_traits<TVoid> {
+    using abi_t = TVoid;
 };
 
 template<typename cpp_t>

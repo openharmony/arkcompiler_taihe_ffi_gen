@@ -234,7 +234,7 @@ class _ResolveImportsPass(DeclVisitor):
             try:
                 d.resolved_ty = generic(*args_ty)
             except TypeError:
-                self.diag.emit(GenericArgumentsError(d.unresolved_name, loc=d.loc))
+                self.diag.emit(GenericArgumentsError(d.unresolved_repr, loc=d.loc))
             return
 
         # Fallback

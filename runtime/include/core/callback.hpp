@@ -21,11 +21,7 @@ struct callback_view {
     callback_view(TCallbackData* data, func_t func) : m_data(data), m_func(func) {}
 
     Return operator()(CBArgs... args) {
-        if constexpr (std::is_same_v<Return, void>) {
-            return m_func(m_data, into_abi<CBArgs>(args)...);
-        } else {
-            return from_abi<Return>(m_func(m_data, into_abi<CBArgs>(args)...));
-        }
+        return from_abi<Return>(m_func(m_data, into_abi<CBArgs>(args)...));
     }
 };
 
@@ -68,11 +64,7 @@ struct callback_data_impl : TCallbackData, Impl {
 
 template<typename Impl, typename Return, typename... CBArgs>
 as_abi_t<Return> callback_method_impl(TCallbackData* data, as_abi_t<CBArgs>... args) {
-    if constexpr (std::is_same_v<void, Return>) {
-        return (*static_cast<callback_data_impl<Impl>*>(data))(from_abi<CBArgs>(args)...);
-    } else {
-        return into_abi<Return>((*static_cast<callback_data_impl<Impl>*>(data))(from_abi<CBArgs>(args)...));
-    }
+    return into_abi<Return>((*static_cast<callback_data_impl<Impl>*>(data))(from_abi<CBArgs>(args)...));
 }
 
 template<typename Impl>

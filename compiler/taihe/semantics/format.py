@@ -40,11 +40,11 @@ class _PrettyPrinter(DeclVisitor):
         self.indent = 0
 
     def get_type_ref_decl(self, d: TypeRefDecl) -> str:
-        real_type = "<error type>" if not d.resolved_ty else d.resolved_ty.description
+        real_type = "<error type>" if not d.resolved_ty else d.resolved_ty.repr
         return (
-            f"{d.unresolved_name} {AnsiStyle.GREEN}/* {real_type} */{AnsiStyle.RESET}"
+            f"{d.unresolved_repr} {AnsiStyle.GREEN}/* {real_type} */{AnsiStyle.RESET}"
             if d.is_resolved
-            else d.unresolved_name
+            else d.unresolved_repr
         )
 
     def get_package_ref_decl(self, d: PackageRefDecl) -> str:
@@ -127,10 +127,10 @@ class _PrettyPrinter(DeclVisitor):
         func_kw = self.as_keyword("function")
 
         fmt_args = ", ".join(self.get_param_decl(x) for x in d.params)
-        ret = f"-> {self.get_type_ref_decl(d.return_ty_ref)}" if d.return_ty_ref else ""
+        ret = self.get_type_ref_decl(d.return_ty_ref) if d.return_ty_ref else "void"
 
         self.buffer.write(self.indent * 2 * " ")
-        self.buffer.write(f"{func_kw} {d.name}({fmt_args}){ret};\n")
+        self.buffer.write(f"{func_kw} {d.name}({fmt_args}): {ret};\n")
 
     @override
     def visit_enum_item_decl(self, d: EnumItemDecl):
@@ -193,10 +193,10 @@ class _PrettyPrinter(DeclVisitor):
         self.write_attr(d)
 
         fmt_args = ", ".join(self.get_param_decl(x) for x in d.params)
-        ret = f"-> {self.get_type_ref_decl(d.return_ty_ref)}" if d.return_ty_ref else ""
+        ret = self.get_type_ref_decl(d.return_ty_ref) if d.return_ty_ref else "void"
 
         self.buffer.write(self.indent * 2 * " ")
-        self.buffer.write(f"{d.name}({fmt_args}){ret};\n")
+        self.buffer.write(f"{d.name}({fmt_args}): {ret};\n")
 
     @override
     def visit_iface_decl(self, d: IfaceDecl):

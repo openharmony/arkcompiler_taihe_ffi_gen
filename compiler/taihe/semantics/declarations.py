@@ -132,12 +132,34 @@ class TypeRefDecl(Decl, metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def unresolved_name(self) -> str: ...
+    def unresolved_repr(self) -> str: ...
 
     @property
     @override
     def description(self) -> str:
-        return f"type reference {self.unresolved_name}"
+        return f"type reference {self.unresolved_repr}"
+
+
+class ParamDecl(NamedDecl):
+    ty_ref: TypeRefDecl
+
+    def __init__(
+        self,
+        loc: Optional[SourceLocation],
+        name: str,
+        ty_ref: TypeRefDecl,
+    ):
+        super().__init__(loc, name)
+        self.ty_ref = ty_ref
+
+    @override
+    def _accept(self, v: "DeclVisitor") -> Any:
+        return v.visit_param_decl(self)
+
+    @property
+    @override
+    def description(self) -> str:
+        return f"parameter {self.name}"
 
 
 class SimpleTypeRefDecl(TypeRefDecl):
@@ -158,7 +180,7 @@ class SimpleTypeRefDecl(TypeRefDecl):
 
     @property
     @override
-    def unresolved_name(self):
+    def unresolved_repr(self):
         return self.symbol
 
 
@@ -183,8 +205,8 @@ class GenericTypeRefDecl(TypeRefDecl):
 
     @property
     @override
-    def unresolved_name(self):
-        args_fmt = ", ".join(arg.unresolved_name for arg in self.args_ty_ref)
+    def unresolved_repr(self):
+        args_fmt = ", ".join(arg.unresolved_repr for arg in self.args_ty_ref)
         return f"{self.symbol}<{args_fmt}>"
 
 
@@ -206,8 +228,39 @@ class ArrayTypeRefDecl(TypeRefDecl):
 
     @property
     @override
-    def unresolved_name(self):
-        return f"{self.item_ty_ref.unresolved_name}[]"
+    def unresolved_repr(self):
+        return f"{self.item_ty_ref.unresolved_repr}[]"
+
+
+class CallbackTypeRefDecl(TypeRefDecl):
+    params: list[ParamDecl]
+    return_ty_ref: Optional[TypeRefDecl]
+
+    def __init__(
+        self,
+        loc: Optional[SourceLocation],
+        return_ty_ref: Optional[TypeRefDecl] = None,
+        resolved_ty: Optional[Type] = None,
+    ):
+        super().__init__(loc, resolved_ty)
+        self.params = []
+        self.return_ty_ref = return_ty_ref
+
+    def add_param(self, p: ParamDecl):
+        self.params.append(p)
+
+    @override
+    def _accept(self, v: "DeclVisitor") -> Any:
+        return v.visit_callback_type_ref_decl(self)
+
+    @property
+    @override
+    def unresolved_repr(self) -> str:
+        args_fmt = ", ".join(
+            f"{param.name}: {param.ty_ref.unresolved_repr}" for param in self.params
+        )
+        ret_fmt = ty_ref.unresolved_repr if (ty_ref := self.return_ty_ref) else "void"
+        return f"({args_fmt}) -> {ret_fmt}"
 
 
 #####################
@@ -365,28 +418,6 @@ class DeclarationImportDecl(ImportDecl):
 ######################
 # Other Declarations #
 ######################
-
-
-class ParamDecl(NamedDecl):
-    ty_ref: TypeRefDecl
-
-    def __init__(
-        self,
-        loc: Optional[SourceLocation],
-        name: str,
-        ty_ref: TypeRefDecl,
-    ):
-        super().__init__(loc, name)
-        self.ty_ref = ty_ref
-
-    @override
-    def _accept(self, v: "DeclVisitor") -> Any:
-        return v.visit_param_decl(self)
-
-    @property
-    @override
-    def description(self) -> str:
-        return f"parameter {self.name}"
 
 
 class EnumItemDecl(NamedDecl):

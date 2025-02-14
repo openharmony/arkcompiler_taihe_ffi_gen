@@ -8,6 +8,7 @@ from taihe.parse.ast_generation import generate_ast
 from taihe.semantics.declarations import (
     ArrayTypeRefDecl,
     AttrItemDecl,
+    CallbackTypeRefDecl,
     DeclarationImportDecl,
     DeclarationRefDecl,
     EnumDecl,
@@ -24,7 +25,6 @@ from taihe.semantics.declarations import (
     SimpleTypeRefDecl,
     StructDecl,
     StructFieldDecl,
-    TypeRefDecl,
 )
 from taihe.utils.diagnostics import AbstractDiagnosticsManager
 from taihe.utils.sources import SourceBase, SourceLocation
@@ -197,8 +197,13 @@ class AstConverter(ExprEvaluator):
         return ArrayTypeRefDecl(loc, item)
 
     @override
-    def visit_ParenthesisType(self, node: ast.ParenthesisType) -> TypeRefDecl:
-        return self.visit(node.inner_ty)
+    def visit_CallbackType(self, node: ast.CallbackType) -> CallbackTypeRefDecl:
+        if ty := node.return_ty:
+            d = CallbackTypeRefDecl(self.loc(node), self.visit(ty))
+        else:
+            d = CallbackTypeRefDecl(self.loc(node))
+        self.diag.for_each(node.parameters, lambda p: d.add_param(self.visit(p)))
+        return d
 
     @override
     def visit_UsePackage(self, node: ast.UsePackage) -> Iterable[PackageImportDecl]:

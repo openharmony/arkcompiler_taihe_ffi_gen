@@ -17,6 +17,7 @@ from typing import Generic, Optional, TypeVar
 from taihe.semantics.declarations import (
     ArrayTypeRefDecl,
     AttrItemDecl,
+    CallbackTypeRefDecl,
     Decl,
     DeclarationImportDecl,
     DeclarationRefDecl,
@@ -43,6 +44,7 @@ from taihe.semantics.declarations import (
 from taihe.semantics.types import (
     ArrayType,
     BuiltinType,
+    CallbackType,
     EnumType,
     IfaceType,
     MapType,
@@ -136,6 +138,9 @@ class TypeVisitor(Generic[T]):
     def visit_set_type(self, t: SetType) -> T:
         return self.visit_type(t)
 
+    def visit_callback_type(self, t: CallbackType) -> T:
+        return self.visit_type(t)
+
 
 class DeclVisitor:
     """Traverses a declaration and its child declarations, also traversing the type hierarchy.
@@ -194,6 +199,15 @@ class DeclVisitor:
 
     def visit_array_type_ref_decl(self, d: ArrayTypeRefDecl) -> None:
         self.handle_decl(d.item_ty_ref)
+
+        return self.visit_type_ref_decl(d)
+
+    def visit_callback_type_ref_decl(self, d: CallbackTypeRefDecl) -> None:
+        for i in d.params:
+            self.handle_decl(i)
+
+        if d.return_ty_ref:
+            self.handle_decl(d.return_ty_ref)
 
         return self.visit_type_ref_decl(d)
 

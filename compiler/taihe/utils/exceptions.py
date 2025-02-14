@@ -184,7 +184,7 @@ class SymbolConflictWithNamespaceError(DiagError):
 
 @dataclass
 class ExtendsTypeError(DiagError):
-    MSG = "expected an interface, got {ty.description}"
+    MSG = "{ty.repr} cannot be parent of an interface"
 
     ty: "Type"
 
