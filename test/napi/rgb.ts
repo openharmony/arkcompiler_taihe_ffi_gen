@@ -1,0 +1,30 @@
+export class RGB {
+    constructor(r: number, g: number, b: number){
+      this.r = r;
+      this.g = g;
+      this.b = b;
+    }
+    r: number;
+    g: number;
+    b: number;
+  }
+
+export class Color {
+  constructor(name: string, flag: boolean, price: number, rgb: RGB){
+    this.name = name;
+    this.flag = flag;
+    this.price = price;
+    this.rgb = rgb;
+  }
+  name: string;
+  flag: boolean;
+  price: number;
+  rgb: RGB;
+}
+
+export class Theme {
+  constructor(color: Color) {
+    this.color = color;
+  }
+  color: Color;
+}

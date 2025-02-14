@@ -1,3 +1,28 @@
 function add(a: i32, b: i32): i32;
 function mul(a: i32, b: i32): bool;
 function sub(a: f32, b: f64, c: bool): f64;
+
+struct RGB {
+    r: i32;
+    g: i32;
+    b: i32;
+}
+
+function from_rgb(rgb: RGB): i32;
+function to_rgb(a: i32): RGB;
+
+struct Color {
+    name: String;
+    flag: bool;
+    price: f32;
+    rgb: RGB;
+}
+
+function from_color(color: Color): f32;
+function to_color(a: String, b: bool, c: f32, d: RGB): Color;
+
+struct Theme {
+    color: Color;
+}
+function from_theme(theme: Theme): RGB;
+function to_theme(a: Color): Theme;

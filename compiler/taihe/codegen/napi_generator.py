@@ -1,14 +1,12 @@
 from typing import Optional
 
+from typing_extensions import override
+
 from taihe.codegen.abi_generator import (
     COutputBuffer,
 )
 from taihe.codegen.cpp_proj_generator import PackageCppProjInfo
-from taihe.semantics.declarations import (
-    GlobFuncDecl,
-    Package,
-    PackageGroup,
-)
+from taihe.semantics.declarations import GlobFuncDecl, Package, PackageGroup, StructDecl
 from taihe.semantics.types import (
     BOOL,
     F32,
@@ -67,7 +65,6 @@ class TypeNapiInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
             self.from_c_to_js_func = f"napi_get_boolean"
         else:
             self.from_c_to_js_func = f"napi_create_{as_napi}"
-        self.from_c_to_js_param = "env, value, &result"
         if as_napi is None or as_c is None:
             raise ValueError
 
@@ -76,7 +73,18 @@ class TypeNapiInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
             self.as_c = "taihe::core::string"
             self.from_js_to_c_func = "napi_get_value_string_utf8"
             self.from_c_to_js_func = "napi_create_string_utf8"
-            self.from_c_to_js_param = "env, value.c_str(), value.size(), &result"
+
+    @override
+    def visit_struct_decl(self, d: StructDecl) -> None:
+        struct_napi_info = StructDeclNapiInfo.get(self.am, d)
+        self.as_c = struct_napi_info.full_name
+
+
+class StructDeclNapiInfo(AbstractAnalysis[StructDecl]):
+    def __init__(self, am: AnalysisManager, d: StructDecl) -> None:
+        p = d.node_parent
+        assert p
+        self.full_name = "::".join(p.segments) + "::" + d.name
 
 
 class NapiCodeGenerator:
@@ -117,6 +125,10 @@ class NapiCodeGenerator:
         pkg_napi_target.include(pkg_cpp_proj_info.header)
 
         desc = []
+        for struct in pkg.structs:
+            self.gen_struct_constructor(struct, pkg_napi_target)
+            func_desc = f'        {{"make_{struct.name}", nullptr, construct_js_{struct.name}, nullptr, nullptr, nullptr, napi_default, nullptr}}'
+            desc.append(func_desc)
         for func in pkg.functions:
             self.gen_func(func, pkg_napi_info, pkg_napi_target)
             func_desc = f'        {{"{func.name}", nullptr, napi_{func.name}, nullptr, nullptr, nullptr, napi_default, nullptr}}'
@@ -141,7 +153,7 @@ class NapiCodeGenerator:
             f"    .nm_flags = 0,\n"
             f"    .nm_filename = nullptr,\n"
             f"    .nm_register_func = Init,\n"
-            f'   .nm_modname = "entry",\n'
+            f'    .nm_modname = "entry",\n'
             f"    .nm_priv = ((void*)0),\n"
             f"    .reserved = {{ 0 }},\n"
             f"}};\n"
@@ -161,7 +173,7 @@ class NapiCodeGenerator:
             f"static napi_value {func.name}(napi_env env, napi_callback_info info)\n"
             f"{{\n"
         )
-        self.gen_func_get_cb_info(func, pkg_napi_target)
+        self.gen_func_get_cb_info(len(func.params), pkg_napi_target)
         args = [f"args[{i}]" for i in range(len(func.params))]
         args_str = ", ".join(args)
         pkg_napi_target.write(
@@ -170,6 +182,23 @@ class NapiCodeGenerator:
             f"    return res;\n"
         )
         pkg_napi_target.write(f"}}\n")
+
+    def gen_struct_constructor(
+        self, struct: StructDecl, pkg_napi_target: COutputBuffer
+    ):
+        pkg_napi_target.write(
+            f"static napi_value construct_js_{struct.name}(napi_env env, napi_callback_info info) {{\n"
+            f"    napi_value obj = nullptr;\n"
+            f"    napi_create_object(env, &obj);\n"
+        )
+        self.gen_func_get_cb_info(len(struct.fields), pkg_napi_target)
+        for i, field in enumerate(struct.fields):
+            pkg_napi_target.write(
+                f"    napi_value {struct.name}_{field.name} = nullptr;\n"
+                f'    napi_create_string_utf8(env, "{field.name}", NAPI_AUTO_LENGTH, &{struct.name}_{field.name});\n'
+                f"    napi_set_property(env, obj, {struct.name}_{field.name}, args[{i}]);\n"
+            )
+        pkg_napi_target.write(f"    return obj;\n" f"}}\n")
 
     def gen_func(
         self,
@@ -181,39 +210,109 @@ class NapiCodeGenerator:
             f"static napi_value napi_{func.name}(napi_env env, napi_callback_info info)\n"
             f"{{\n"
         )
-        self.gen_func_get_cb_info(func, pkg_napi_target)
+        self.gen_func_get_cb_info(len(func.params), pkg_napi_target)
         args_str = self.gen_func_get_value(func, pkg_napi_target)
         full_func_name = pkg_napi_info.full_name + "::" + func.name
         self.gen_func_return_value(func, pkg_napi_target, args_str, full_func_name)
         pkg_napi_target.write(f"}}\n")
 
-    def gen_func_get_cb_info(self, func: GlobFuncDecl, pkg_napi_target: COutputBuffer):
+    def gen_func_get_cb_info(self, params_num: int, pkg_napi_target: COutputBuffer):
         pkg_napi_target.write(
-            f"    size_t argc = {len(func.params)};\n"
-            f"    napi_value args[{len(func.params)}] = {{nullptr}};\n"
+            f"    size_t argc = {params_num};\n"
+            f"    napi_value args[{params_num}] = {{nullptr}};\n"
             f"    napi_get_cb_info(env, info, &argc, args , nullptr, nullptr);\n"
         )
 
     def gen_func_get_value(self, func: GlobFuncDecl, pkg_napi_target: COutputBuffer):
         args = []
         for i, param in enumerate(func.params):
-            if param.ty_ref.resolved_ty == STRING:
-                pkg_napi_target.write(
-                    f"    size_t length{i} = 0;\n"
-                    f"    napi_get_value_string_utf8(env, args[{i}], nullptr, 0, &length{i});\n"
-                    f"    char value{i}[length{i} + 1];\n"
-                    f"    napi_get_value_string_utf8(env, args[{i}], value{i}, length{i} + 1, &length{i});\n"
-                    f"    taihe::core::string_view th_value{i}(value{i});\n"
+            value_ty = param.ty_ref.resolved_ty
+            if isinstance(value_ty, ScalarType):
+                self.gen_func_get_js_scalar_value(
+                    value_ty, pkg_napi_target, f"args[{i}]", f"value{i}"
                 )
-                args.append(f"th_value{i}")
-                continue
-            type_napi_param_info = TypeNapiInfo.get(self.am, param.ty_ref.resolved_ty)
-            pkg_napi_target.write(
-                f"    {type_napi_param_info.as_c} value{i};\n"
-                f"    {type_napi_param_info.from_js_to_c_func}(env, args[{i}], &value{i});\n"
-            )
+            if isinstance(value_ty, SpecialType):
+                self.gen_func_get_js_special_value(
+                    value_ty, pkg_napi_target, f"args[{i}]", f"value{i}"
+                )
+            if isinstance(value_ty, StructDecl):
+                self.gen_func_get_js_struct_value(
+                    value_ty, pkg_napi_target, f"args[{i}]", f"value{i}"
+                )
             args.append(f"value{i}")
         return ", ".join(args)
+
+    def gen_func_get_js_struct_value(
+        self,
+        value_ty: StructDecl,
+        pkg_napi_target: COutputBuffer,
+        value: str,
+        result: str,
+    ):
+        struct_napi_info = StructDeclNapiInfo.get(self.am, value_ty)
+        pkg_napi_target.write(f"    {struct_napi_info.full_name} {result};\n")
+        for field in value_ty.fields:
+            struct_field_result = f"{value_ty.name}_{field.name}_" + result
+            struct_field_value = struct_field_result + "_value"
+            pkg_napi_target.write(
+                f"    napi_value {struct_field_value} = nullptr;\n"
+                f'    napi_get_named_property(env, {value}, "{field.name}", &{struct_field_value});\n'
+            )
+            if isinstance(field.ty_ref.resolved_ty, ScalarType):
+                self.gen_func_get_js_scalar_value(
+                    field.ty_ref.resolved_ty,
+                    pkg_napi_target,
+                    struct_field_value,
+                    struct_field_result,
+                )
+            if isinstance(field.ty_ref.resolved_ty, SpecialType):
+                self.gen_func_get_js_special_value(
+                    field.ty_ref.resolved_ty,
+                    pkg_napi_target,
+                    struct_field_value,
+                    struct_field_result,
+                )
+            if isinstance(field.ty_ref.resolved_ty, StructDecl):
+                self.gen_func_get_js_struct_value(
+                    field.ty_ref.resolved_ty,
+                    pkg_napi_target,
+                    struct_field_value,
+                    struct_field_result,
+                )
+            pkg_napi_target.write(
+                f"    {result}.{field.name} = {struct_field_result};\n"
+            )
+
+    def gen_func_get_js_scalar_value(
+        self,
+        value_ty: ScalarType,
+        pkg_napi_target: COutputBuffer,
+        value: str,
+        result: str,
+    ):
+        type_napi_param_info = TypeNapiInfo.get(self.am, value_ty)
+        pkg_napi_target.write(
+            f"    {type_napi_param_info.as_c} {result};\n"
+            f"    {type_napi_param_info.from_js_to_c_func}(env, {value}, &{result});\n"
+        )
+
+    def gen_func_get_js_special_value(
+        self,
+        value_ty: SpecialType,
+        pkg_napi_target: COutputBuffer,
+        value: str,
+        result: str,
+    ):
+        if value_ty == STRING:
+            pkg_napi_target.write(
+                f"    size_t length_{result} = 0;\n"
+                f"    napi_get_value_string_utf8(env, {value}, nullptr, 0, &length_{result});\n"
+                f"    char c_value_{result}[length_{result} + 1];\n"
+                f"    napi_get_value_string_utf8(env, {value}, c_value_{result}, length_{result} + 1, &length_{result});\n"
+                f"    taihe::core::string_view {result}(c_value_{result});\n"
+            )
+        else:
+            raise ValueError(value_ty)
 
     def gen_func_return_value(
         self,
@@ -223,19 +322,91 @@ class NapiCodeGenerator:
         full_func_name: str,
     ):
         if func.return_ty_ref:
-            type_napi_return_info = TypeNapiInfo.get(
-                self.am, func.return_ty_ref.resolved_ty
-            )
+            value_ty = func.return_ty_ref.resolved_ty
+            type_napi_return_info = TypeNapiInfo.get(self.am, value_ty)
             pkg_napi_target.write(
                 f"    {type_napi_return_info.as_c} value = {full_func_name}({args_str});\n"
-                f"    napi_value result;\n"
-                f"    {type_napi_return_info.from_c_to_js_func}({type_napi_return_info.from_c_to_js_param});\n"
-                f"    return result;\n"
             )
+            if isinstance(value_ty, ScalarType):
+                self.gen_func_create_js_scalar_value(
+                    value_ty, pkg_napi_target, "value", "result"
+                )
+            if isinstance(value_ty, SpecialType):
+                self.gen_func_create_js_special_value(
+                    value_ty, pkg_napi_target, "value", "result"
+                )
+            if isinstance(value_ty, StructDecl):
+                self.gen_func_create_js_struct_value(
+                    value_ty, pkg_napi_target, "value", "result"
+                )
         else:
             pkg_napi_target.write(
                 f"    {full_func_name}({args_str});\n"
-                f"    napi_value result;\n"
+                f"    napi_value result = nullptr;\n"
                 f"    napi_get_undefined(env, &result);\n"
-                f"    return result;\n"
             )
+        pkg_napi_target.write(f"    return result;\n")
+
+    def gen_func_create_js_struct_value(
+        self,
+        value_ty: StructDecl,
+        pkg_napi_target: COutputBuffer,
+        value: str,
+        result: str,
+    ):
+        pkg_napi_target.write(
+            f"    napi_value {result} = nullptr;\n"
+            f"    napi_create_object(env, &{result});\n"
+        )
+        for field in value_ty.fields:
+            struct_field_result = f"{value_ty.name}_{field.name}_return"
+            if isinstance(field.ty_ref.resolved_ty, ScalarType):
+                self.gen_func_create_js_scalar_value(
+                    field.ty_ref.resolved_ty,
+                    pkg_napi_target,
+                    f"{value}.{field.name}",
+                    struct_field_result,
+                )
+            if isinstance(field.ty_ref.resolved_ty, SpecialType):
+                self.gen_func_create_js_special_value(
+                    field.ty_ref.resolved_ty,
+                    pkg_napi_target,
+                    f"{value}.{field.name}",
+                    struct_field_result,
+                )
+            if isinstance(field.ty_ref.resolved_ty, StructDecl):
+                self.gen_func_create_js_struct_value(
+                    field.ty_ref.resolved_ty,
+                    pkg_napi_target,
+                    f"{value}.{field.name}",
+                    struct_field_result,
+                )
+            pkg_napi_target.write(
+                f'    napi_set_named_property(env, {result}, "{field.name}", {struct_field_result});\n'
+            )
+
+    def gen_func_create_js_scalar_value(
+        self,
+        value_ty: ScalarType,
+        pkg_napi_target: COutputBuffer,
+        value: str,
+        result: str,
+    ):
+        type_napi_param_info = TypeNapiInfo.get(self.am, value_ty)
+        pkg_napi_target.write(
+            f"    napi_value {result} = nullptr;\n"
+            f"    {type_napi_param_info.from_c_to_js_func}(env, {value}, &{result});\n"
+        )
+
+    def gen_func_create_js_special_value(
+        self,
+        value_ty: SpecialType,
+        pkg_napi_target: COutputBuffer,
+        value: str,
+        result: str,
+    ):
+        type_napi_param_info = TypeNapiInfo.get(self.am, value_ty)
+        pkg_napi_target.write(
+            f"    napi_value {result} = nullptr;\n"
+            f"    {type_napi_param_info.from_c_to_js_func}(env, {value}.c_str(), {value}.size(), &{result});\n"
+        )
