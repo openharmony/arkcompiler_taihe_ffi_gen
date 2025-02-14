@@ -6,40 +6,40 @@
 #include <type_traits>
 
 namespace taihe::core {
-template<typename Return, typename ...CBArgs>
+template<typename Return, typename... Params>
 struct callback_view;
 
-template<typename Return, typename ...CBArgs>
+template<typename Return, typename... Params>
 struct callback;
 
-template<typename Return, typename ...CBArgs>
+template<typename Return, typename... Params>
 struct callback_view {
-    typedef as_abi_t<Return> (*func_t)(TCallbackData* data, as_abi_t<CBArgs>... args);
+    typedef as_abi_t<Return> (*func_t)(TCallbackData* data, as_abi_t<Params>... params);
     TCallbackData* m_data;
     func_t m_func;
 
     callback_view(TCallbackData* data, func_t func) : m_data(data), m_func(func) {}
 
-    Return operator()(CBArgs... args) const {
-        return from_abi<Return>(m_func(m_data, into_abi<CBArgs>(args)...));
+    Return operator()(Params... params) const {
+        return from_abi<Return>(m_func(m_data, into_abi<Params>(params)...));
     }
 };
 
-template<typename Return, typename ...CBArgs>
-struct callback : callback_view<Return, CBArgs...> {
-    using typename callback_view<Return, CBArgs...>::func_t;
+template<typename Return, typename... Params>
+struct callback : callback_view<Return, Params...> {
+    using typename callback_view<Return, Params...>::func_t;
 
-    callback(TCallbackData* data, func_t func) : callback_view<Return, CBArgs...>(data, func) {}
+    callback(TCallbackData* data, func_t func) : callback_view<Return, Params...>(data, func) {}
 
-    callback(callback<Return, CBArgs...> && other)
+    callback(callback<Return, Params...> && other)
         : callback{other.m_data, other.m_func} {
         other.m_data = nullptr;
     }
 
-    callback(callback<Return, CBArgs...> const& other)
+    callback(callback<Return, Params...> const& other)
         : callback{tcb_dup(other.m_data), other.m_func} {}
 
-    callback(callback_view<Return, CBArgs...> const& other)
+    callback(callback_view<Return, Params...> const& other)
         : callback{tcb_dup(other.m_data), other.m_func} {}
 
     ~callback() {
@@ -62,9 +62,9 @@ struct callback_data_impl : TCallbackData, Impl {
     }
 };
 
-template<typename Impl, typename Return, typename... CBArgs>
-as_abi_t<Return> callback_method_impl(TCallbackData* data, as_abi_t<CBArgs>... args) {
-    return into_abi<Return>((*static_cast<callback_data_impl<Impl>*>(data))(from_abi<CBArgs>(args)...));
+template<typename Impl, typename Return, typename... Params>
+as_abi_t<Return> callback_func_impl(TCallbackData* data, as_abi_t<Params>... params) {
+    return into_abi<Return>((*static_cast<callback_data_impl<Impl>*>(data))(from_abi<Params>(params)...));
 }
 
 template<typename Impl>
@@ -72,29 +72,29 @@ void callback_free_impl(TCallbackData* data) {
     delete static_cast<callback_data_impl<Impl>*>(data);
 }
 
-template<typename Impl, typename Return, typename... CBArgs, typename ...Args>
+template<typename Impl, typename Return, typename... Params, typename... Args>
 inline auto make_callback(Args&&... args) {
-    return callback<Return, CBArgs...>{
+    return callback<Return, Params...>{
         new callback_data_impl<Impl>(&callback_free_impl<Impl>, std::forward<Args>(args)...),
-        &callback_method_impl<Impl, Return, CBArgs...>,
+        &callback_func_impl<Impl, Return, Params...>,
     };
 }
 
-template<typename Return, typename... CBArgs, typename Impl>
+template<typename Return, typename... Params, typename Impl>
 inline auto into_callback(Impl&& impl) {
-    return callback<Return, CBArgs...>{
+    return callback<Return, Params...>{
         new callback_data_impl<Impl>(&callback_free_impl<Impl>, std::forward<Impl>(impl)),
-        &callback_method_impl<Impl, Return, CBArgs...>,
+        &callback_func_impl<Impl, Return, Params...>,
     };
 }
 
-template<typename Return, typename ...CBArgs>
-struct cpp_type_traits<callback_view<Return, CBArgs...>> {
+template<typename Return, typename... Params>
+struct cpp_type_traits<callback_view<Return, Params...>> {
     using abi_t = TCallback;
 };
 
-template<typename Return, typename ...CBArgs>
-struct cpp_type_traits<callback<Return, CBArgs...>> {
+template<typename Return, typename... Params>
+struct cpp_type_traits<callback<Return, Params...>> {
     using abi_t = TCallback;
 };
 }
