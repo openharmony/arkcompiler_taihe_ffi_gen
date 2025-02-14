@@ -80,17 +80,19 @@ struct UserType {
 };
 
 struct MyCallback {
-    MyCallback() {
-        std::cout << "Callback " << this << " made" << std::endl;
+    string x;
+
+    MyCallback(string_view x): x(x) {
+        std::cout << "Callback " << x << " made" << std::endl;
     }
 
     ~MyCallback() {
-        std::cout << "Callback " << this << " deleted" << std::endl;
+        std::cout << "Callback " << x << " deleted" << std::endl;
     }
 
-    string operator()(string_view a, string_view b) {
-        std::cout << "Callback " << this << " called" << std::endl;
-        return concat(a, b);
+    string operator()(string_view a) {
+        std::cout << "Callback " << x << " called" << std::endl;
+        return "(" + std::string(x) + ": " + std::string(a) + ")";
     }
 };
 
@@ -215,9 +217,10 @@ int main() {
 
     {
         std::cout << "-------- Testing Callback --------" << std::endl;
-        auto cb_0 = make_callback<MyCallback, string, string_view, string_view>();
-        auto cb_1 = cb_0;
-        auto res = cb_1("abc", "123");
+        auto cb_x = testCallback(
+            make_callback<MyCallback, string, string_view>("a"),
+            make_callback<MyCallback, string, string_view>("b"));
+        auto res = cb_x("abc");
         std::cout << "res = " << res << std::endl;
     }
 }

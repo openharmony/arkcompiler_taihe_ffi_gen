@@ -34,6 +34,7 @@ from taihe.semantics.types import (
     U32,
     U64,
     ArrayType,
+    CallbackType,
     EnumType,
     IfaceType,
     MapType,
@@ -108,8 +109,8 @@ class IfaceDeclCppProjInfo(AbstractAnalysis[IfaceDecl]):
 class AbstractTypeCppProjInfo(metaclass=ABCMeta):
     decl_headers: list[str]
     defn_headers: list[str]
-    as_field: str | None
-    as_param: str | None
+    as_field: str
+    as_param: str
 
     def return_from_abi(self, val):
         return f"::taihe::core::from_abi<{self.as_field}>({val})"
@@ -188,7 +189,7 @@ class ArrayTypeCppProjInfo(AbstractAnalysis[ArrayType], AbstractTypeCppProjInfo)
     def __init__(self, am: AnalysisManager, t: ArrayType) -> None:
         arg_ty_cpp_proj_info = TypeCppProjInfo.get(am, t.item_ty)
         self.decl_headers = ["core/array.hpp", *arg_ty_cpp_proj_info.decl_headers]
-        self.defn_headers = ["core/array.hpp", *arg_ty_cpp_proj_info.decl_headers]
+        self.defn_headers = ["core/array.hpp", *arg_ty_cpp_proj_info.defn_headers]
         self.as_field = f"::taihe::core::array<{arg_ty_cpp_proj_info.as_field}>"
         self.as_param = f"::taihe::core::array_view<{arg_ty_cpp_proj_info.as_field}>"
 
@@ -197,7 +198,7 @@ class VectorTypeCppProjInfo(AbstractAnalysis[VectorType], AbstractTypeCppProjInf
     def __init__(self, am: AnalysisManager, t: VectorType) -> None:
         val_ty_cpp_proj_info = TypeCppProjInfo.get(am, t.val_ty)
         self.decl_headers = ["core/vector.hpp", *val_ty_cpp_proj_info.decl_headers]
-        self.defn_headers = ["core/vector.hpp", *val_ty_cpp_proj_info.decl_headers]
+        self.defn_headers = ["core/vector.hpp", *val_ty_cpp_proj_info.defn_headers]
         self.as_field = f"::taihe::core::vector<{val_ty_cpp_proj_info.as_field}>"
         self.as_param = f"::taihe::core::vector_view<{val_ty_cpp_proj_info.as_field}>"
 
@@ -213,8 +214,8 @@ class MapTypeCppProjInfo(AbstractAnalysis[MapType], AbstractTypeCppProjInfo):
         ]
         self.defn_headers = [
             "core/map.hpp",
-            *key_ty_cpp_proj_info.decl_headers,
-            *val_ty_cpp_proj_info.decl_headers,
+            *key_ty_cpp_proj_info.defn_headers,
+            *val_ty_cpp_proj_info.defn_headers,
         ]
         self.as_field = f"::taihe::core::map<{key_ty_cpp_proj_info.as_field}, {val_ty_cpp_proj_info.as_field}>"
         self.as_param = f"::taihe::core::map_view<{key_ty_cpp_proj_info.as_field}, {val_ty_cpp_proj_info.as_field}>"
@@ -224,9 +225,43 @@ class SetTypeCppProjInfo(AbstractAnalysis[SetType], AbstractTypeCppProjInfo):
     def __init__(self, am: AnalysisManager, t: SetType) -> None:
         key_ty_cpp_proj_info = TypeCppProjInfo.get(am, t.key_ty)
         self.decl_headers = ["core/set.hpp", *key_ty_cpp_proj_info.decl_headers]
-        self.defn_headers = ["core/set.hpp", *key_ty_cpp_proj_info.decl_headers]
+        self.defn_headers = ["core/set.hpp", *key_ty_cpp_proj_info.defn_headers]
         self.as_field = f"::taihe::core::set<{key_ty_cpp_proj_info.as_field}>"
         self.as_param = f"::taihe::core::set_view<{key_ty_cpp_proj_info.as_field}>"
+
+
+class CallbackTypeCppProjInfo(AbstractAnalysis[CallbackType], AbstractTypeCppProjInfo):
+    def __init__(self, am: AnalysisManager, t: CallbackType) -> None:
+        if t.return_ty:
+            return_ty_cpp_proj_info = TypeCppProjInfo.get(am, t.return_ty)
+            return_ty_decl_headers = return_ty_cpp_proj_info.decl_headers
+            return_ty_defn_headers = return_ty_cpp_proj_info.defn_headers
+            return_ty_as_field = return_ty_cpp_proj_info.as_field
+        else:
+            return_ty_decl_headers = []
+            return_ty_defn_headers = []
+            return_ty_as_field = "void"
+        params_ty_decl_headers = []
+        params_ty_defn_headers = []
+        params_ty_as_param = []
+        for param_ty in t.params_ty:
+            param_ty_cpp_proj_info = TypeCppProjInfo.get(am, param_ty)
+            params_ty_decl_headers.extend(param_ty_cpp_proj_info.decl_headers)
+            params_ty_defn_headers.extend(param_ty_cpp_proj_info.defn_headers)
+            params_ty_as_param.append(param_ty_cpp_proj_info.as_param)
+        args_fmt = ", ".join((return_ty_as_field, *params_ty_as_param))
+        self.decl_headers = [
+            "core/callback.hpp",
+            *return_ty_decl_headers,
+            *params_ty_decl_headers,
+        ]
+        self.defn_headers = [
+            "core/callback.hpp",
+            *return_ty_defn_headers,
+            *params_ty_defn_headers,
+        ]
+        self.as_field = f"::taihe::core::callback<{args_fmt}>"
+        self.as_param = f"::taihe::core::callback_view<{args_fmt}>"
 
 
 class TypeCppProjInfo(TypeVisitor[AbstractTypeCppProjInfo]):
@@ -273,6 +308,10 @@ class TypeCppProjInfo(TypeVisitor[AbstractTypeCppProjInfo]):
     @override
     def visit_set_type(self, t: SetType) -> AbstractTypeCppProjInfo:
         return SetTypeCppProjInfo.get(self.am, t)
+
+    @override
+    def visit_callback_type(self, t: CallbackType) -> AbstractTypeCppProjInfo:
+        return CallbackTypeCppProjInfo.get(self.am, t)
 
 
 class CppProjCodeGenerator:

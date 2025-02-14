@@ -20,7 +20,7 @@ struct callback_view {
 
     callback_view(TCallbackData* data, func_t func) : m_data(data), m_func(func) {}
 
-    Return operator()(CBArgs... args) {
+    Return operator()(CBArgs... args) const {
         return from_abi<Return>(m_func(m_data, into_abi<CBArgs>(args)...));
     }
 };

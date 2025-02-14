@@ -36,7 +36,7 @@ specField
       LEFT_BRACE (InterfaceFieldLst_fields += interfaceField)* RIGHT_BRACE # interface
     | (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
       KW_FUNCTION token_name = ID
-      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS (COLON (TypeOpt_return_ty = type))? SEMICOLON # globalFunction
+      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS (COLON (TypeOpt_return_ty = type | KW_VOID))? SEMICOLON # globalFunction
     ;
 
 structField
@@ -54,7 +54,7 @@ enumField
 interfaceField
     : (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
       token_name = ID
-      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS (COLON (TypeOpt_return_ty = type))? SEMICOLON # interfaceFunction
+      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS (COLON (TypeOpt_return_ty = type | KW_VOID))? SEMICOLON # interfaceFunction
     ;
 
 interfaceParent
@@ -90,7 +90,7 @@ type
     | (PkgNameOpt_pkg_name = pkgName DOT)? token_decl_name = ID LESS_THAN (TypeLst_args += type (COMMA TypeLst_args += type)*)? GREATER_THAN # genericType
     | Type_item = type LEFT_BRACKET RIGHT_BRACKET # arrayType
     | <assoc = right>
-      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS ARROW (TypeOpt_return_ty = type) # callbackType
+      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS ARROW (TypeOpt_return_ty = type | KW_VOID) # callbackType
     ;
 
 ////////////////
@@ -329,6 +329,10 @@ KW_TRUE
 
 KW_FALSE
     : 'FALSE'
+    ;
+
+KW_VOID
+    : 'void'
     ;
 
 STRING_LITERAL

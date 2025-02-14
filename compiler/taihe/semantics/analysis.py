@@ -5,6 +5,7 @@ from typing_extensions import override
 
 from taihe.semantics.declarations import (
     ArrayTypeRefDecl,
+    CallbackTypeRefDecl,
     DeclarationImportDecl,
     DeclarationRefDecl,
     EnumDecl,
@@ -25,6 +26,7 @@ from taihe.semantics.types import (
     BUILTIN_GENERICS,
     BUILTIN_TYPES,
     ArrayType,
+    CallbackType,
     UserType,
 )
 from taihe.semantics.visitor import DeclVisitor
@@ -218,8 +220,7 @@ class _ResolveImportsPass(DeclVisitor):
             return
         d.is_resolved = True
 
-        for arg_ty_ref in d.args_ty_ref:
-            self.handle_decl(arg_ty_ref)
+        super().visit_generic_type_ref_decl(d)
 
         args_ty: list[Type] = []
         for arg_ty_ref in d.args_ty_ref:
@@ -247,15 +248,38 @@ class _ResolveImportsPass(DeclVisitor):
             return
         d.is_resolved = True
 
-        self.handle_decl(d.item_ty_ref)
-        item_ty = d.item_ty_ref.resolved_ty
+        super().visit_array_type_ref_decl(d)
 
-        if item_ty is None:
+        if (item_ty := d.item_ty_ref.resolved_ty) is None:
             # No need to repeatedly throw exceptions
             return
 
         d.resolved_ty = ArrayType(item_ty)
         return
+
+    @override
+    def visit_callback_type_ref_decl(self, d: CallbackTypeRefDecl) -> None:
+        if d.is_resolved:
+            return
+        d.is_resolved = True
+
+        super().visit_callback_type_ref_decl(d)
+
+        if d.return_ty_ref:
+            if (return_ty := d.return_ty_ref.resolved_ty) is None:
+                # No need to repeatedly throw exceptions
+                return
+        else:
+            return_ty = None
+
+        params_ty: list[Type] = []
+        for param in d.params:
+            if (arg_ty := param.ty_ref.resolved_ty) is None:
+                # No need to repeatedly throw exceptions
+                return
+            params_ty.append(arg_ty)
+
+        d.resolved_ty = CallbackType(return_ty, tuple(params_ty))
 
 
 class _CalculateEnumItemValuePass(DeclVisitor):

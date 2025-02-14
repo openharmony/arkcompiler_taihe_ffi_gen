@@ -27,6 +27,7 @@ from taihe.semantics.types import (
     U32,
     U64,
     ArrayType,
+    CallbackType,
     EnumType,
     IfaceType,
     MapType,
@@ -226,6 +227,14 @@ class ArrayTypeABIInfo(AbstractAnalysis[ArrayType], AbstractTypeABIInfo):
         self.as_param = "struct TArray"
 
 
+class CallbackTypeABIInfo(AbstractAnalysis[CallbackType], AbstractTypeABIInfo):
+    def __init__(self, am: AnalysisManager, t: CallbackType) -> None:
+        self.decl_headers = ["taihe/callback.abi.h"]
+        self.defn_headers = ["taihe/callback.abi.h"]
+        self.as_field = "struct TCallback"
+        self.as_param = "struct TCallback"
+
+
 class VectorTypeABIInfo(AbstractAnalysis[VectorType], AbstractTypeABIInfo):
     def __init__(self, am: AnalysisManager, t: VectorType) -> None:
         self.decl_headers = []
@@ -294,6 +303,10 @@ class TypeABIInfo(TypeVisitor[AbstractTypeABIInfo]):
     @override
     def visit_set_type(self, t: SetType) -> AbstractTypeABIInfo:
         return SetTypeABIInfo.get(self.am, t)
+
+    @override
+    def visit_callback_type(self, t: CallbackType) -> AbstractTypeABIInfo:
+        return CallbackTypeABIInfo.get(self.am, t)
 
 
 class ABICodeGenerator:

@@ -51,8 +51,6 @@
 #define TH_IS_SAME __builtin_types_compatible_p
 #endif
 
-struct TVoid {};
-
 ////////////////////////
 // REFERENCE COUNTING //
 ////////////////////////

@@ -179,7 +179,7 @@ class SetType(Type, metaclass=ABCMeta):
 @dataclass(frozen=True, repr=False)
 class CallbackType(Type, metaclass=ABCMeta):
     return_ty: Optional[Type]
-    params_ty: list[Type]
+    params_ty: tuple[Type, ...]
 
     @override
     def _accept(self, v: "TypeVisitor") -> Any:
