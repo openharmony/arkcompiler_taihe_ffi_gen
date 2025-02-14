@@ -1,4 +1,4 @@
-import { add, mul, sub, from_rgb, to_rgb, make_RGB, make_Color, to_color, from_color, make_Theme, from_theme, to_theme } from "./integer"
+import { add, mul, sub, from_rgb, to_rgb, make_RGB, make_Color, to_color, from_color, make_Theme, from_theme, to_theme, show } from "./integer"
 import { concat, to_i32, from_i32 } from "./string";
 import { RGB, Color, Theme } from "./rgb"
 
@@ -45,6 +45,9 @@ function main() {
   console.log("from js theme: ", result14);
   let result15 = to_theme(color);
   console.log("to theme: ", result15);
+
+  let result16 = show();
+  console.log("show: ", result16);
 }
 
 main();

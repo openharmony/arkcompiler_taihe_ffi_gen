@@ -26,3 +26,4 @@ struct Theme {
 }
 function from_theme(theme: Theme): RGB;
 function to_theme(a: Color): Theme;
+function show(): String;

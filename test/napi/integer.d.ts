@@ -12,3 +12,4 @@ export function to_color(a: String, b: boolean, c: number, d: RGB): Color;
 export function make_Theme(a: Color): Theme;
 export function from_theme(theme: Theme): RGB;
 export function to_theme(a: Color): Theme;
+export function show(): String;

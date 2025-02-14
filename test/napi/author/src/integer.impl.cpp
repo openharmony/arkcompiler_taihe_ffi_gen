@@ -52,6 +52,10 @@ integer::Theme ohos_to_theme(integer::Color color) {
     return theme;
 }
 
+taihe::core::string ohos_show() {
+    return "success";
+}
+
 TH_EXPORT_CPP_API_add(ohos_int_add)
 TH_EXPORT_CPP_API_mul(ohos_int_mul)
 TH_EXPORT_CPP_API_sub(ohos_int_sub)
@@ -61,3 +65,4 @@ TH_EXPORT_CPP_API_from_color(ohos_from_color)
 TH_EXPORT_CPP_API_to_color(ohos_to_color)
 TH_EXPORT_CPP_API_from_theme(ohos_from_theme)
 TH_EXPORT_CPP_API_to_theme(ohos_to_theme)
+TH_EXPORT_CPP_API_show(ohos_show)
