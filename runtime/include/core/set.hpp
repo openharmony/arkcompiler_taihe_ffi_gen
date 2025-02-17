@@ -105,12 +105,12 @@ struct set_view {
         return false;
     }
 
-    friend bool same_impl(set_view lhs, set_view rhs) {
+    friend bool same_impl(adl_helper_t, set_view lhs, set_view rhs) {
         return lhs.m_handle == rhs.m_handle;
     }
 
-    friend std::size_t hash_impl(set_view val) {
-        return val.m_handle;
+    friend std::size_t hash_impl(adl_helper_t, set_view val) {
+        return (std::size_t)val.m_handle;
     }
 
 private:

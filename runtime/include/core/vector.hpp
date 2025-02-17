@@ -79,12 +79,12 @@ public:
         m_handle->len = 0;
     }
 
-    friend bool same_impl(vector_view lhs, vector_view rhs) {
+    friend bool same_impl(adl_helper_t, vector_view lhs, vector_view rhs) {
         return lhs.m_handle == rhs.m_handle;
     }
 
-    friend std::size_t hash_impl(vector_view val) {
-        return val.m_handle;
+    friend std::size_t hash_impl(adl_helper_t, vector_view val) {
+        return (std::size_t)val.m_handle;
     }
 
 protected:

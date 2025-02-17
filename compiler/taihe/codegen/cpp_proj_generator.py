@@ -65,7 +65,7 @@ class GlobFuncDeclCppProjInfo(AbstractAnalysis[GlobFuncDecl]):
 class IfaceMethodDeclCppProjInfo(AbstractAnalysis[IfaceMethodDecl]):
     def __init__(self, am: AnalysisManager, f: IfaceMethodDecl) -> None:
         # TODO: Supports projection to any C++ function name based on attributes
-        self.name = "operator()" if f.attrs.get("functor") else f.name
+        self.name = f.name
 
 
 class StructDeclCppProjInfo(AbstractAnalysis[StructDecl]):

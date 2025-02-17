@@ -109,12 +109,12 @@ struct map_view {
         return false;
     }
 
-    friend bool same_impl(map_view lhs, map_view rhs) {
+    friend bool same_impl(adl_helper_t, map_view lhs, map_view rhs) {
         return lhs.m_handle == rhs.m_handle;
     }
 
-    friend std::size_t hash_impl(map_view val) {
-        return val.m_handle;
+    friend std::size_t hash_impl(adl_helper_t, map_view val) {
+        return (std::size_t)val.m_handle;
     }
 
 private:

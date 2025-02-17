@@ -27,8 +27,8 @@ int main(int argc, char** argv) {
         .supportDoctype = OptBool::make_UNDEFINED(),
         .ignoreNameSpace = OptBool::make_UNDEFINED(),
         .tagValueCallbackFunction = OptCallbackKV::make_value(
-            into_holder<CallbackKV>(
-                [](taihe::core::string_view name, taihe::core::string_view value) {
+            callback<bool(taihe::core::string_view, taihe::core::string_view)>::from(
+                [](taihe::core::string_view name, taihe::core::string_view value) -> bool {
                     std::cout << "(tag) "
                               << std::string_view(name)
                               << ": "
@@ -39,8 +39,8 @@ int main(int argc, char** argv) {
             )
         ),
         .attributeValueCallbackFunction = OptCallbackKV::make_value(
-            into_holder<CallbackKV>(
-                [](taihe::core::string_view name, taihe::core::string_view value) {
+            callback<bool(taihe::core::string_view, taihe::core::string_view)>::from(
+                [](taihe::core::string_view name, taihe::core::string_view value) -> bool {
                     std::cout << "(attribute) "
                               << std::string_view(name)
                               << ": "

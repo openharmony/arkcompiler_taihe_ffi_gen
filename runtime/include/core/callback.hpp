@@ -2,7 +2,6 @@
 
 #include <taihe/common.hpp>
 
-#include <functional>
 #include <taihe/callback.abi.h>
 #include <type_traits>
 
@@ -10,16 +9,15 @@ namespace taihe::core {
 template<typename Impl>
 struct callback_data_impl : TCallbackData, Impl {
     template<typename... Args>
-    callback_data_impl(void (*free)(struct TCallbackData *), Args&&... args)
+    callback_data_impl(Args&&... args)
         : Impl(std::forward<Args>(args)...) {
-        tcb_init(this, free);
+        tcb_init(this, &free_impl);
+    }
+
+    static void free_impl(TCallbackData* data) {
+        delete static_cast<callback_data_impl<Impl>*>(data);
     }
 };
-
-template<typename Impl>
-void callback_free_impl(TCallbackData* data) {
-    delete static_cast<callback_data_impl<Impl>*>(data);
-}
 }
 
 namespace taihe::core {
@@ -38,19 +36,10 @@ struct callback_view<Return(Params...)> {
 
     callback_view(TCallbackData* data, func_t func) : m_data(data), m_func(func) {}
 
-    Return operator()(Params... params) const {
-        return from_abi<Return>(m_func(m_data, into_abi<Params>(params)...));
-    }
-
-    template<typename Impl>
-    static as_abi_t<Return> func_impl(TCallbackData* data, as_abi_t<Params>... params) {
-        return into_abi<Return>((*static_cast<callback_data_impl<Impl>*>(data))(from_abi<Params>(params)...));
-    }
-
     template<typename Impl, typename ...Args>
     static callback<Return(Params...)> from(Args&&... args) {
         return callback<Return(Params...)>{
-            new callback_data_impl<Impl>(&callback_free_impl<Impl>, std::forward<Args>(args)...),
+            new callback_data_impl<Impl>(std::forward<Args>(args)...),
             &func_impl<Impl>,
         };
     }
@@ -58,9 +47,26 @@ struct callback_view<Return(Params...)> {
     template<typename Impl, typename ...Args>
     static callback<Return(Params...)> from(Impl&& impl) {
         return callback<Return(Params...)>{
-            new callback_data_impl<Impl>(&callback_free_impl<Impl>, std::forward<Impl>(impl)),
+            new callback_data_impl<Impl>(std::forward<Impl>(impl)),
             &func_impl<Impl>,
         };
+    }
+
+    template<typename Impl>
+    static as_abi_t<Return> func_impl(TCallbackData* data, as_abi_t<Params>... params) {
+        return into_abi<Return>((*static_cast<callback_data_impl<Impl>*>(data))(from_abi<Params>(params)...));
+    }
+
+    Return operator()(Params... params) const {
+        return from_abi<Return>(m_func(m_data, into_abi<Params>(params)...));
+    }
+
+    friend bool same_impl(adl_helper_t, callback_view lhs, callback_view rhs) {
+        return lhs.m_data == lhs.m_data;
+    }
+
+    friend std::size_t hash_impl(adl_helper_t, callback_view val) {
+        return (std::size_t)val.m_data;
     }
 };
 
