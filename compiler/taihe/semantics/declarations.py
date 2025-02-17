@@ -140,28 +140,6 @@ class TypeRefDecl(Decl, metaclass=ABCMeta):
         return f"type reference {self.unresolved_repr}"
 
 
-class ParamDecl(NamedDecl):
-    ty_ref: TypeRefDecl
-
-    def __init__(
-        self,
-        loc: Optional[SourceLocation],
-        name: str,
-        ty_ref: TypeRefDecl,
-    ):
-        super().__init__(loc, name)
-        self.ty_ref = ty_ref
-
-    @override
-    def _accept(self, v: "DeclVisitor") -> Any:
-        return v.visit_param_decl(self)
-
-    @property
-    @override
-    def description(self) -> str:
-        return f"parameter {self.name}"
-
-
 class SimpleTypeRefDecl(TypeRefDecl):
     symbol: str
 
@@ -208,6 +186,28 @@ class GenericTypeRefDecl(TypeRefDecl):
     def unresolved_repr(self):
         args_fmt = ", ".join(arg.unresolved_repr for arg in self.args_ty_ref)
         return f"{self.symbol}<{args_fmt}>"
+
+
+class ParamDecl(NamedDecl):
+    ty_ref: TypeRefDecl
+
+    def __init__(
+        self,
+        loc: Optional[SourceLocation],
+        name: str,
+        ty_ref: TypeRefDecl,
+    ):
+        super().__init__(loc, name)
+        self.ty_ref = ty_ref
+
+    @override
+    def _accept(self, v: "DeclVisitor") -> Any:
+        return v.visit_param_decl(self)
+
+    @property
+    @override
+    def description(self) -> str:
+        return f"parameter {self.name}"
 
 
 class CallbackTypeRefDecl(TypeRefDecl):

@@ -227,8 +227,9 @@ int main() {
     {
         std::cout << "-------- Testing Callback --------" << std::endl;
 
-        auto tmp = currying(make_callback<MyCallback, string, string_view, string_view>("f"))("abc");
+        auto tmp = currying(callback<string(string_view, string_view)>::from<MyCallback>("f"))("abc");
+        auto res = tmp("123");
 
-        std::cout << "res = " << tmp("123") << std::endl;
+        std::cout << "res = " << res << std::endl;
     }
 }

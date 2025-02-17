@@ -249,7 +249,7 @@ class CallbackTypeCppProjInfo(AbstractAnalysis[CallbackType], AbstractTypeCppPro
             params_ty_decl_headers.extend(param_ty_cpp_proj_info.decl_headers)
             params_ty_defn_headers.extend(param_ty_cpp_proj_info.defn_headers)
             params_ty_as_param.append(param_ty_cpp_proj_info.as_param)
-        args_fmt = ", ".join((return_ty_as_field, *params_ty_as_param))
+        params_fmt = ", ".join(params_ty_as_param)
         self.decl_headers = [
             "core/callback.hpp",
             *return_ty_decl_headers,
@@ -260,8 +260,8 @@ class CallbackTypeCppProjInfo(AbstractAnalysis[CallbackType], AbstractTypeCppPro
             *return_ty_defn_headers,
             *params_ty_defn_headers,
         ]
-        self.as_field = f"::taihe::core::callback<{args_fmt}>"
-        self.as_param = f"::taihe::core::callback_view<{args_fmt}>"
+        self.as_field = f"::taihe::core::callback<{return_ty_as_field}({params_fmt})>"
+        self.as_param = f"::taihe::core::callback_view<{return_ty_as_field}({params_fmt})>"
 
 
 class TypeCppProjInfo(TypeVisitor[AbstractTypeCppProjInfo]):

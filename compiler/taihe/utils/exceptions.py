@@ -164,7 +164,7 @@ class PackageNotInScopeError(DiagError):
 
 @dataclass
 class GenericArgumentsError(DiagError):
-    MSG = "Generic arguments error while handling {name!r}"
+    MSG = "Invalid generic arguments in {name!r}"
 
     name: str
 

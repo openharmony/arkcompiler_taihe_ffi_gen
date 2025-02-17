@@ -168,10 +168,10 @@ void fillSetImpl(set_view<string> target) {
     target.emplace("b");
 }
 
-callback<callback<string, string_view>, string_view> curryingImpl(callback_view<string, string_view, string_view> f) {
-    return into_callback<callback<string, string_view>, string_view>(
-        [f = callback<string, string_view, string_view>(f)](string_view x) -> callback<string, string_view> {
-            return into_callback<string, string_view>([f = f, x = string(x)](string_view y) -> string {
+callback<callback<string(string_view)>(string_view)> curryingImpl(callback_view<string(string_view, string_view)> f) {
+    return callback<callback<string(string_view)>(string_view)>::from(
+        [f = callback<string(string_view, string_view)>(f)](string_view x) -> callback<string(string_view)> {
+            return callback<string(string_view)>::from([f = f, x = string(x)](string_view y) -> string {
                 return f(x, y);
             });
         }
