@@ -210,28 +210,6 @@ class GenericTypeRefDecl(TypeRefDecl):
         return f"{self.symbol}<{args_fmt}>"
 
 
-class ArrayTypeRefDecl(TypeRefDecl):
-    item_ty_ref: TypeRefDecl
-
-    def __init__(
-        self,
-        loc: Optional[SourceLocation],
-        item_ty_ref: TypeRefDecl,
-        resolved_ty: Optional[Type] = None,
-    ):
-        super().__init__(loc, resolved_ty)
-        self.item_ty_ref = item_ty_ref
-
-    @override
-    def _accept(self, v: "DeclVisitor") -> Any:
-        return v.visit_array_type_ref_decl(self)
-
-    @property
-    @override
-    def unresolved_repr(self):
-        return f"{self.item_ty_ref.unresolved_repr}[]"
-
-
 class CallbackTypeRefDecl(TypeRefDecl):
     params: list[ParamDecl]
     return_ty_ref: Optional[TypeRefDecl]
