@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, TypeVar
 from typing_extensions import override
 
 from taihe.semantics.declarations import (
-    ArrayTypeRefDecl,
     CallbackTypeRefDecl,
     DeclarationImportDecl,
     DeclarationRefDecl,
@@ -25,7 +24,6 @@ from taihe.semantics.declarations import (
 from taihe.semantics.types import (
     BUILTIN_GENERICS,
     BUILTIN_TYPES,
-    ArrayType,
     CallbackType,
     UserType,
 )
@@ -240,21 +238,6 @@ class _ResolveImportsPass(DeclVisitor):
 
         # Fallback
         self.diag.emit(DeclarationNotInScopeError(decl_name, loc=d.loc))
-        return
-
-    @override
-    def visit_array_type_ref_decl(self, d: ArrayTypeRefDecl) -> None:
-        if d.is_resolved:
-            return
-        d.is_resolved = True
-
-        super().visit_array_type_ref_decl(d)
-
-        if (item_ty := d.item_ty_ref.resolved_ty) is None:
-            # No need to repeatedly throw exceptions
-            return
-
-        d.resolved_ty = ArrayType(item_ty)
         return
 
     @override

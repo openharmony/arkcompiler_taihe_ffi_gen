@@ -75,7 +75,7 @@ function inner(): void;  // SymbolConflictWithNamespaceError
 
 function bad_func(a: i32, a: i32): void;  // DeclConflictError
 
-function good_func(a: i32, b: Bar<A, B>): String;  // OK
+function good_func(a: i32, b: Map<TestIface, TestIface>): String;  // OK
 
 // Interfaces
 
@@ -89,7 +89,7 @@ interface BadIface
 {
     a(x: String): void;
     a(x: i32): void;  // DeclConflictError
-    b(x: i32, x: CArray<i32>): void;  // DeclConflictError
+    b(x: i32, x: Array<i32>): void;  // DeclConflictError
 }
 
 // Cycle Detection

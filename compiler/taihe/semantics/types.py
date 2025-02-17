@@ -130,7 +130,7 @@ class ArrayType(Type, metaclass=ABCMeta):
     @property
     @override
     def repr(self):
-        return f"array of ({self.item_ty.repr})"
+        return f"Array<{self.item_ty.repr}>"
 
 
 @dataclass(frozen=True, repr=False)
@@ -195,6 +195,7 @@ class CallbackType(Type, metaclass=ABCMeta):
 
 # Builtin Generics Map
 BUILTIN_GENERICS: dict[str, Callable[[*tuple[Type, ...]], Type]] = {  # pyre-ignore
+    "Array": lambda *args: ArrayType(*args),
     "Vector": lambda *args: VectorType(*args),
     "Map": lambda *args: MapType(*args),
     "Set": lambda *args: SetType(*args),

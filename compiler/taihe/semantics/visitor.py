@@ -15,7 +15,6 @@ Design:
 from typing import Generic, Optional, TypeVar
 
 from taihe.semantics.declarations import (
-    ArrayTypeRefDecl,
     AttrItemDecl,
     CallbackTypeRefDecl,
     Decl,
@@ -194,11 +193,6 @@ class DeclVisitor:
     def visit_generic_type_ref_decl(self, d: GenericTypeRefDecl) -> None:
         for i in d.args_ty_ref:
             self.handle_decl(i)
-
-        return self.visit_type_ref_decl(d)
-
-    def visit_array_type_ref_decl(self, d: ArrayTypeRefDecl) -> None:
-        self.handle_decl(d.item_ty_ref)
 
         return self.visit_type_ref_decl(d)
 

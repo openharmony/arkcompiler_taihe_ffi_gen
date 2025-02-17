@@ -169,32 +169,24 @@ class AstConverter(ExprEvaluator):
 
     @override
     def visit_UserType(self, node: ast.UserType) -> SimpleTypeRefDecl:
+        loc = self.loc(node)
         if node.pkg_name:
-            loc = self.loc(node)
-            name = pkg2str(node.pkg_name) + "." + str(node.decl_name)
+            symbol = pkg2str(node.pkg_name) + "." + str(node.decl_name)
         else:
-            loc = self.loc(node.decl_name)
-            name = str(node.decl_name)
-        ty_ref = SimpleTypeRefDecl(loc, name)
+            symbol = str(node.decl_name)
+        ty_ref = SimpleTypeRefDecl(loc, symbol)
         return ty_ref
 
     @override
     def visit_GenericType(self, node: ast.GenericType) -> GenericTypeRefDecl:
-        if node.pkg_name:
-            loc = self.loc(node)
-            name = pkg2str(node.pkg_name) + "." + str(node.decl_name)
-        else:
-            loc = self.loc(node.decl_name)
-            name = str(node.decl_name)
-        args = [self.visit(arg) for arg in node.args]
-        ty_ref = GenericTypeRefDecl(loc, name, args)
-        return ty_ref
-
-    @override
-    def visit_ArrayType(self, node: ast.ArrayType) -> ArrayTypeRefDecl:
         loc = self.loc(node)
-        item = self.visit(node.item)
-        return ArrayTypeRefDecl(loc, item)
+        if node.pkg_name:
+            symbol = pkg2str(node.pkg_name) + "." + str(node.decl_name)
+        else:
+            symbol = str(node.decl_name)
+        args = [self.visit(arg) for arg in node.args]
+        ty_ref = GenericTypeRefDecl(loc, symbol, args)
+        return ty_ref
 
     @override
     def visit_CallbackType(self, node: ast.CallbackType) -> CallbackTypeRefDecl:
