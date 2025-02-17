@@ -261,7 +261,9 @@ class CallbackTypeCppProjInfo(AbstractAnalysis[CallbackType], AbstractTypeCppPro
             *params_ty_defn_headers,
         ]
         self.as_field = f"::taihe::core::callback<{return_ty_as_field}({params_fmt})>"
-        self.as_param = f"::taihe::core::callback_view<{return_ty_as_field}({params_fmt})>"
+        self.as_param = (
+            f"::taihe::core::callback_view<{return_ty_as_field}({params_fmt})>"
+        )
 
 
 class TypeCppProjInfo(TypeVisitor[AbstractTypeCppProjInfo]):
