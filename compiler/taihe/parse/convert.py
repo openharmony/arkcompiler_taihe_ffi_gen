@@ -6,7 +6,6 @@ from typing_extensions import override
 from taihe.parse import Visitor, ast
 from taihe.parse.ast_generation import generate_ast
 from taihe.semantics.declarations import (
-    ArrayTypeRefDecl,
     AttrItemDecl,
     CallbackTypeRefDecl,
     DeclarationImportDecl,
