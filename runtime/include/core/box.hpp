@@ -17,7 +17,7 @@ struct box;
 
 template<typename cpp_owner_t>
 struct box_view {
-    explicit box_view(cpp_owner_t *handle) noexcept : m_handle(handle) {} // main constructor
+    box_view(cpp_owner_t *handle) noexcept : m_handle(handle) {} // main constructor
     
     cpp_owner_t* operator->() const {
         return m_handle;
@@ -45,7 +45,7 @@ protected:
 
 template<typename cpp_owner_t>
 struct box : public box_view<cpp_owner_t> {
-    explicit box(cpp_owner_t *handle) noexcept : box_view<cpp_owner_t>(handle) {} // main constructor
+    box(cpp_owner_t *handle) noexcept : box_view<cpp_owner_t>(handle) {} // main constructor
 
     template<typename... Args>
     static box make(Args&&... args) {

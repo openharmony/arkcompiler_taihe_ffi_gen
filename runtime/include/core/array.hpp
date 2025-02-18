@@ -32,7 +32,7 @@ struct array_view {
     using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-    explicit array_view(pointer data, size_type size) noexcept : m_data(data), m_size(size) {} // main constructor
+    array_view(pointer data, size_type size) noexcept : m_data(data), m_size(size) {} // main constructor
 
     template<typename C>
     array_view(std::initializer_list<C> value) noexcept
@@ -181,7 +181,7 @@ struct array : public array_view<cpp_owner_t> {
     using typename array_view<cpp_owner_t>::pointer;
     using typename array_view<cpp_owner_t>::size_type;
 
-    explicit array(pointer data, size_type size) noexcept : array_view<cpp_owner_t>(data, size) {} // main constructor
+    array(pointer data, size_type size) noexcept : array_view<cpp_owner_t>(data, size) {} // main constructor
 
     array(pointer data, size_type size, copy_data_t) noexcept
         : array((cpp_owner_t*)malloc(size * sizeof(cpp_owner_t)), size) {

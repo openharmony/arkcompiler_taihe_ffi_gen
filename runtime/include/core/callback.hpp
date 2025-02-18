@@ -1,9 +1,9 @@
 #pragma once
 
-#include <taihe/common.hpp>
-
-#include <taihe/callback.abi.h>
 #include <type_traits>
+
+#include <taihe/common.hpp>
+#include <taihe/callback.abi.h>
 
 namespace taihe::core {
 template<typename Impl>
@@ -44,7 +44,7 @@ struct callback_view<Return(Params...)> {
         };
     }
 
-    template<typename Impl, typename ...Args>
+    template<typename Impl>
     static callback<Return(Params...)> from(Impl&& impl) {
         return callback<Return(Params...)>{
             new callback_data_impl<Impl>(std::forward<Impl>(impl)),

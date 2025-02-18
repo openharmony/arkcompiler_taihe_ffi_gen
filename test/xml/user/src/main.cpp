@@ -21,14 +21,14 @@ int main(int argc, char** argv) {
 
     BufferType content = {buffer.str()};
 
-    auto parser = makeXmlPullParser(content, static_tag<OptString::tag_t::UNDEFINED>);
+    auto parser = makeXmlPullParser(content, nullptr);
 
     parser->parseXml({
-        .supportDoctype = OptBool::make_UNDEFINED(),
-        .ignoreNameSpace = OptBool::make_UNDEFINED(),
-        .tagValueCallbackFunction = OptCallbackKV::make_value(
-            callback<bool(taihe::core::string_view, taihe::core::string_view)>::from(
-                [](taihe::core::string_view name, taihe::core::string_view value) -> bool {
+        .supportDoctype = nullptr,
+        .ignoreNameSpace = nullptr,
+        .tagValueCallbackFunction = box<callback<bool(string_view, string_view)>>::make(
+            callback<bool(string_view, string_view)>::from(
+                [](string_view name, string_view value) -> bool {
                     std::cout << "(tag) "
                               << std::string_view(name)
                               << ": "
@@ -38,9 +38,9 @@ int main(int argc, char** argv) {
                 }
             )
         ),
-        .attributeValueCallbackFunction = OptCallbackKV::make_value(
-            callback<bool(taihe::core::string_view, taihe::core::string_view)>::from(
-                [](taihe::core::string_view name, taihe::core::string_view value) -> bool {
+        .attributeValueCallbackFunction = box<callback<bool(string_view, string_view)>>::make(
+            callback<bool(string_view, string_view)>::from(
+                [](string_view name, string_view value) -> bool {
                     std::cout << "(attribute) "
                               << std::string_view(name)
                               << ": "
@@ -50,6 +50,6 @@ int main(int argc, char** argv) {
                 }
             )
         ),
-        .tokenValueCallbackFunction = OptCallbackEvent::make_UNDEFINED(),
+        .tokenValueCallbackFunction = nullptr,
     });
 }

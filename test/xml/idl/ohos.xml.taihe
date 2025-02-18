@@ -7,11 +7,6 @@ struct BufferType {
     content: String;
 }
 
-enum OptString {
-    UNDEFINED;
-    value: String;
-}
-
 interface XmlSerializer {
     setAttributes(name: String, value: String): void;
     addEmptyElement(name: String): void;
@@ -25,7 +20,7 @@ interface XmlSerializer {
     setDocType(text: String): void;
 }
 
-function makeXmlSerializer(buffer: BufferType, encoding: OptString): XmlSerializer;
+function makeXmlSerializer(buffer: BufferType, encoding: Box<String>): XmlSerializer;
 
 enum EventType {
     START_DOCUMENT;
@@ -54,26 +49,12 @@ interface ParseInfo {
     getAttributeCount(): u64;
 }
 
-enum OptBool {
-    UNDEFINED;
-    value: bool;
-}
-
-enum OptCallbackEvent {
-    UNDEFINED;
-    value: (eventType: EventType, value: ParseInfo) => bool;
-}
-enum OptCallbackKV {
-    UNDEFINED;
-    value: (name: String, value: String) => bool;
-}
-
 struct ParseOptions {
-    supportDoctype: OptBool;
-    ignoreNameSpace: OptBool;
-    tagValueCallbackFunction: OptCallbackKV;
-    attributeValueCallbackFunction: OptCallbackKV;
-    tokenValueCallbackFunction: OptCallbackEvent;
+    supportDoctype: Box<bool>;
+    ignoreNameSpace: Box<bool>;
+    tagValueCallbackFunction: Box<(name: String, value: String) => bool>;
+    attributeValueCallbackFunction: Box<(name: String, value: String) => bool>;
+    tokenValueCallbackFunction: Box<(eventType: EventType, value: ParseInfo) => bool>;
 }
 
 interface XmlPullParser {
@@ -81,4 +62,4 @@ interface XmlPullParser {
     parseXml(option: ParseOptions): void;
 }
 
-function makeXmlPullParser(buffer: BufferType, encoding: OptString): XmlPullParser;
+function makeXmlPullParser(buffer: BufferType, encoding: Box<String>): XmlPullParser;
