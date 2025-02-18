@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Optional
 
+from typing_extensions import override
+
 from taihe.utils.diagnostics import DiagError, DiagNote, DiagWarn
 from taihe.utils.sources import SourceLocation
 
@@ -21,13 +23,14 @@ if TYPE_CHECKING:
 
 @dataclass
 class PackageRedefNote(DiagNote):
-    MSG = "previously occurred here"
+    @property
+    @override
+    def format_msg(self) -> str:
+        return "previously occurred here"
 
 
 @dataclass
 class PackageRedefError(DiagError):
-    MSG = "package name {pkg!r} is duplicated"
-
     pkg_name: str
     prev_loc: Optional[SourceLocation] = field(kw_only=True)
 
@@ -35,22 +38,28 @@ class PackageRedefError(DiagError):
         if self.prev_loc:
             yield PackageRedefNote(loc=self.prev_loc)
 
+    @property
+    @override
+    def format_msg(self) -> str:
+        return f"package name {self.pkg_name!r} is duplicated"
+
 
 @dataclass
 class DeclRedefNote(DiagNote):
-    MSG = "conflict with {prev.description}"
-
     prev: "NamedDecl"
 
     def __init__(self, prev: "NamedDecl"):
         self.prev = prev
         self.loc = prev.loc
 
+    @property
+    @override
+    def format_msg(self) -> str:
+        return f"conflict with {self.prev.description}"
+
 
 @dataclass
 class DeclRedefError(DiagError):
-    MSG = "redefinition of {current.description}"
-
     prev: "NamedDecl"
     current: "NamedDecl"
 
@@ -63,22 +72,28 @@ class DeclRedefError(DiagError):
         if self.prev.loc:
             yield DeclRedefNote(self.prev)
 
+    @property
+    @override
+    def format_msg(self) -> str:
+        return f"redefinition of {self.current.description}"
+
 
 @dataclass
 class EnumValueConflictNote(DiagNote):
-    MSG = "conflict with {prev.description}"
-
     prev: "EnumItemDecl"
 
     def __init__(self, prev: "EnumItemDecl"):
         self.prev = prev
         self.loc = prev.loc
 
+    @property
+    @override
+    def format_msg(self) -> str:
+        return f"conflict with {self.prev.description}"
+
 
 @dataclass
 class EnumValueConflictError(DiagError):
-    MSG = "value {current.value} of {current.description} is repeated"
-
     prev: "EnumItemDecl"
     current: "EnumItemDecl"
 
@@ -91,22 +106,28 @@ class EnumValueConflictError(DiagError):
         if self.prev.loc:
             yield DeclRedefNote(self.prev)
 
+    @property
+    @override
+    def format_msg(self) -> str:
+        return f"value {self.current.value} of {self.current.description} is repeated"
+
 
 @dataclass
 class AttrRedefNote(DiagNote):
-    MSG = "conflict with {prev.description}"
-
     prev: "AttrItemDecl"
 
     def __init__(self, prev: "AttrItemDecl"):
         self.prev = prev
         self.loc = prev.loc
 
+    @property
+    @override
+    def format_msg(self) -> str:
+        return f"conflict with {self.prev.description}"
+
 
 @dataclass
 class AttrRedefError(DiagError):
-    MSG = "duplicate {current.description}"
-
     prev: "AttrItemDecl"
     current: "AttrItemDecl"
 
@@ -119,60 +140,86 @@ class AttrRedefError(DiagError):
         if self.prev.loc:
             yield AttrRedefNote(self.prev)
 
+    @property
+    @override
+    def format_msg(self) -> str:
+        return f"duplicate {self.current.description}"
+
 
 @dataclass
 class IDLSyntaxError(DiagError):
-    MSG = "unexpected {token!r}"
-
     token: str
+
+    @property
+    @override
+    def format_msg(self) -> str:
+        return f"unexpected {self.token!r}"
 
 
 @dataclass
 class PackageNotExistError(DiagError):
-    MSG = "package {name!r} not exist"
-
     name: str
+
+    @property
+    @override
+    def format_msg(self) -> str:
+        return f"package {self.name!r} not exist"
 
 
 @dataclass
 class DeclNotExistError(DiagError):
-    MSG = "declaration {name!r} not exist"
-
     name: str
+
+    @property
+    @override
+    def format_msg(self) -> str:
+        return f"declaration {self.name!r} not exist"
 
 
 @dataclass
 class NotATypeError(DiagError):
-    MSG = "{name!r} is not a type name"
-
     name: str
+
+    @property
+    @override
+    def format_msg(self) -> str:
+        return f"{self.name!r} is not a type name"
 
 
 @dataclass
 class DeclarationNotInScopeError(DiagError):
-    MSG = "declaration name {name!r} is not declared or imported in this scope"
-
     name: str
+
+    @property
+    @override
+    def format_msg(self) -> str:
+        return (
+            f"declaration name {self.name!r} is not declared or imported in this scope"
+        )
 
 
 @dataclass
 class PackageNotInScopeError(DiagError):
-    MSG = "package name {name!r} is not imported in this scope"
-
     name: str
+
+    @property
+    @override
+    def format_msg(self) -> str:
+        return f"package name {self.name!r} is not imported in this scope"
 
 
 @dataclass
 class GenericArgumentsError(DiagError):
-    MSG = "Invalid generic arguments in {name!r}"
-
     name: str
+
+    @property
+    @override
+    def format_msg(self) -> str:
+        return f"Invalid generic arguments in {self.name!r}"
 
 
 @dataclass
 class SymbolConflictWithNamespaceError(DiagError):
-    MSG = "declaration of {decl.description} in {pkg.description} shadows a file-level declaration"
-
     decl: "PackageLevelDecl"
     pkg: "Package"
 
@@ -181,27 +228,36 @@ class SymbolConflictWithNamespaceError(DiagError):
         self.loc = decl.loc
         self.pkg = pkg
 
+    @property
+    @override
+    def format_msg(self) -> str:
+        return f"declaration of {self.decl.description} in {self.pkg.description} shadows a file-level declaration"
+
 
 @dataclass
 class ExtendsTypeError(DiagError):
-    MSG = "{ty.repr} cannot be parent of an interface"
-
     ty: "Type"
 
     def __init__(self, decl: "IfaceParentDecl", ty: "Type"):
         self.loc = decl.ty_ref.loc
         self.ty = ty
 
+    @property
+    @override
+    def format_msg(self) -> str:
+        return f"{self.ty.representation} cannot be parent of an interface"
+
 
 @dataclass
 class DuplicateExtendsNote(DiagNote):
-    MSG = "previously extended here"
+    @property
+    @override
+    def format_msg(self) -> str:
+        return "previously extended here"
 
 
 @dataclass
 class DuplicateExtendsWarn(DiagWarn):
-    MSG = "{parent_iface.description} is extended multiple times by {iface.description}"
-
     iface: "IfaceDecl"
     parent_iface: "IfaceDecl"
     prev_loc: Optional["SourceLocation"]
@@ -210,11 +266,14 @@ class DuplicateExtendsWarn(DiagWarn):
         if self.prev_loc:
             yield DuplicateExtendsNote(loc=self.prev_loc)
 
+    @property
+    @override
+    def format_msg(self) -> str:
+        return f"{self.parent_iface.description} is extended multiple times by {self.iface.description}"
+
 
 @dataclass
 class RecursiveReferenceNote(DiagNote):
-    MSG = "referenced by {decl.description}"
-
     decl: "TypeDecl"
 
     def __init__(
@@ -224,11 +283,14 @@ class RecursiveReferenceNote(DiagNote):
         self.loc = last[1].loc
         self.decl = last[0]
 
+    @property
+    @override
+    def format_msg(self) -> str:
+        return f"referenced by {self.decl.description}"
+
 
 @dataclass
 class RecursiveReferenceError(DiagError):
-    MSG = "cycle detected in {decl.description}"
-
     decl: "TypeDecl"
     other: list[tuple["TypeDecl", "TypeRefDecl"]]
 
@@ -244,3 +306,8 @@ class RecursiveReferenceError(DiagError):
     def notes(self):
         for n in self.other:
             yield RecursiveReferenceNote(n)
+
+    @property
+    @override
+    def format_msg(self) -> str:
+        return f"cycle detected in {self.decl.description}"

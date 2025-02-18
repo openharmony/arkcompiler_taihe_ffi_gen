@@ -31,10 +31,10 @@ class Type(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def repr(self) -> str: ...
+    def representation(self) -> str: ...
 
     def __repr__(self) -> str:
-        return f"<{self.__class__.__qualname__} {self.repr}>"
+        return f"<{self.__class__.__qualname__} {self.representation}>"
 
     @abstractmethod
     def _accept(self, v: "TypeVisitor") -> Any: ...
@@ -69,7 +69,7 @@ class BuiltinType(Type, metaclass=ABCMeta):
 
     @property
     @override
-    def repr(self):
+    def representation(self):
         return f"{self.name}"
 
 
@@ -120,64 +120,7 @@ BUILTIN_TYPES: dict[str, Type] = {
 
 
 @dataclass(frozen=True, repr=False)
-class ArrayType(Type, metaclass=ABCMeta):
-    item_ty: Type
-
-    @override
-    def _accept(self, v: "TypeVisitor") -> Any:
-        return v.visit_array_type(self)
-
-    @property
-    @override
-    def repr(self):
-        return f"Array<{self.item_ty.repr}>"
-
-
-@dataclass(frozen=True, repr=False)
-class VectorType(Type, metaclass=ABCMeta):
-    val_ty: Type
-
-    @override
-    def _accept(self, v: "TypeVisitor") -> Any:
-        return v.visit_vector_type(self)
-
-    @property
-    @override
-    def repr(self):
-        return f"Vector<{self.val_ty.repr}>"
-
-
-@dataclass(frozen=True, repr=False)
-class MapType(Type, metaclass=ABCMeta):
-    key_ty: Type
-    val_ty: Type
-
-    @override
-    def _accept(self, v: "TypeVisitor") -> Any:
-        return v.visit_map_type(self)
-
-    @property
-    @override
-    def repr(self):
-        return f"Map<{self.key_ty.repr}, {self.val_ty.repr}>"
-
-
-@dataclass(frozen=True, repr=False)
-class SetType(Type, metaclass=ABCMeta):
-    key_ty: Type
-
-    @override
-    def _accept(self, v: "TypeVisitor") -> Any:
-        return v.visit_set_type(self)
-
-    @property
-    @override
-    def repr(self):
-        return f"Set<{self.key_ty.repr}>"
-
-
-@dataclass(frozen=True, repr=False)
-class CallbackType(Type, metaclass=ABCMeta):
+class CallbackType(Type):
     return_ty: Optional[Type]
     params_ty: tuple[Type, ...]
 
@@ -187,10 +130,71 @@ class CallbackType(Type, metaclass=ABCMeta):
 
     @property
     @override
-    def repr(self):
-        return_fmt = ty.repr if (ty := self.return_ty) else "void"
-        params_fmt = ", ".join(ty.repr for ty in self.params_ty)
+    def representation(self):
+        return_fmt = ty.representation if (ty := self.return_ty) else "void"
+        params_fmt = ", ".join(ty.representation for ty in self.params_ty)
         return f"({params_fmt}) -> {return_fmt}"
+
+
+class GenericType(Type, metaclass=ABCMeta):
+    pass
+
+
+@dataclass(frozen=True, repr=False)
+class ArrayType(GenericType):
+    item_ty: Type
+
+    @override
+    def _accept(self, v: "TypeVisitor") -> Any:
+        return v.visit_array_type(self)
+
+    @property
+    @override
+    def representation(self):
+        return f"Array<{self.item_ty.representation}>"
+
+
+@dataclass(frozen=True, repr=False)
+class VectorType(GenericType):
+    val_ty: Type
+
+    @override
+    def _accept(self, v: "TypeVisitor") -> Any:
+        return v.visit_vector_type(self)
+
+    @property
+    @override
+    def representation(self):
+        return f"Vector<{self.val_ty.representation}>"
+
+
+@dataclass(frozen=True, repr=False)
+class MapType(GenericType):
+    key_ty: Type
+    val_ty: Type
+
+    @override
+    def _accept(self, v: "TypeVisitor") -> Any:
+        return v.visit_map_type(self)
+
+    @property
+    @override
+    def representation(self):
+        return f"Map<{self.key_ty.representation}, {self.val_ty.representation}>"
+
+
+@dataclass(frozen=True, repr=False)
+class SetType(GenericType):
+    key_ty: Type
+
+    @override
+    def _accept(self, v: "TypeVisitor") -> Any:
+        return v.visit_set_type(self)
+
+    @property
+    @override
+    def representation(self):
+        return f"Set<{self.key_ty.representation}>"
 
 
 # Builtin Generics Map
@@ -212,7 +216,7 @@ class UserType(Type, metaclass=ABCMeta):
 
     @property
     @override
-    def repr(self):
+    def representation(self):
         return f"{self.ty_decl.full_name}"
 
 

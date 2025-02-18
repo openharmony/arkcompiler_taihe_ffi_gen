@@ -27,7 +27,7 @@ from taihe.semantics.types import (
     CallbackType,
     UserType,
 )
-from taihe.semantics.visitor import DeclVisitor
+from taihe.semantics.visitor import RecursiveDeclVisitor
 from taihe.utils.diagnostics import AbstractDiagnosticsManager
 from taihe.utils.exceptions import (
     DeclarationNotInScopeError,
@@ -81,7 +81,7 @@ def _check_decl_confilct_with_namespace(
                 diag.emit(SymbolConflictWithNamespaceError(d, p))
 
 
-class _ResolveImportsPass(DeclVisitor):
+class _ResolveImportsPass(RecursiveDeclVisitor):
     """Resolves imports and type references within a package group."""
 
     diag: AbstractDiagnosticsManager
@@ -265,7 +265,7 @@ class _ResolveImportsPass(DeclVisitor):
         d.resolved_ty = CallbackType(return_ty, tuple(params_ty))
 
 
-class _CalculateEnumItemValuePass(DeclVisitor):
+class _CalculateEnumItemValuePass(RecursiveDeclVisitor):
     """Calculate Enum Values."""
 
     diag: AbstractDiagnosticsManager
@@ -286,7 +286,7 @@ class _CalculateEnumItemValuePass(DeclVisitor):
             value += 1
 
 
-class _CheckFieldNameCollisionErrorPass(DeclVisitor):
+class _CheckFieldNameCollisionErrorPass(RecursiveDeclVisitor):
     """Check for duplicate field names in declarations and name anonymous declarations."""
 
     diag: AbstractDiagnosticsManager
@@ -332,7 +332,7 @@ class _CheckFieldNameCollisionErrorPass(DeclVisitor):
                 self.diag.emit(DeclRedefError(prev, f))
 
 
-class _CheckRecursiveInclusionPass(DeclVisitor):
+class _CheckRecursiveInclusionPass(RecursiveDeclVisitor):
     """Validates struct fields for type correctness and cycles."""
 
     diag: AbstractDiagnosticsManager

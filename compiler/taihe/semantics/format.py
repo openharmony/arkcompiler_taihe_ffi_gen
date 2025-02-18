@@ -10,6 +10,7 @@ from taihe.semantics.declarations import (
     Decl,
     DeclarationImportDecl,
     DeclarationRefDecl,
+    DeclProtocol,
     EnumDecl,
     EnumItemDecl,
     GlobFuncDecl,
@@ -25,22 +26,24 @@ from taihe.semantics.declarations import (
     StructFieldDecl,
     TypeRefDecl,
 )
-from taihe.semantics.visitor import DeclVisitor
+from taihe.semantics.visitor import RecursiveDeclVisitor
 from taihe.utils.diagnostics import AnsiStyle
 
 
-def pretty_print(x: Decl, buffer: TextIO):
+def pretty_print(x: DeclProtocol, buffer: TextIO):
     printer = _PrettyPrinter(buffer)
     printer.handle_decl(x)
 
 
-class _PrettyPrinter(DeclVisitor):
+class _PrettyPrinter(RecursiveDeclVisitor):
     def __init__(self, buffer: TextIO):
         self.buffer = buffer
         self.indent = 0
 
     def get_type_ref_decl(self, d: TypeRefDecl) -> str:
-        real_type = "<error type>" if not d.resolved_ty else d.resolved_ty.repr
+        real_type = (
+            "<error type>" if not d.resolved_ty else d.resolved_ty.representation
+        )
         return (
             f"{d.unresolved_repr} {AnsiStyle.GREEN}/* {real_type} */{AnsiStyle.RESET}"
             if d.is_resolved
