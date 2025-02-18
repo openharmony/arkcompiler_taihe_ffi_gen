@@ -29,11 +29,7 @@ int main(int argc, char** argv) {
         .tagValueCallbackFunction = box<callback<bool(string_view, string_view)>>::make(
             callback<bool(string_view, string_view)>::from(
                 [](string_view name, string_view value) -> bool {
-                    std::cout << "(tag) "
-                              << std::string_view(name)
-                              << ": "
-                              << std::string_view(value)
-                              << std::endl;
+                    std::cout << "(tag) " << name << ": " << value << std::endl;
                     return true;
                 }
             )
@@ -41,11 +37,7 @@ int main(int argc, char** argv) {
         .attributeValueCallbackFunction = box<callback<bool(string_view, string_view)>>::make(
             callback<bool(string_view, string_view)>::from(
                 [](string_view name, string_view value) -> bool {
-                    std::cout << "(attribute) "
-                              << std::string_view(name)
-                              << ": "
-                              << std::string_view(value)
-                              << std::endl;
+                    std::cout << "(attribute) " << name << ": " << value << std::endl;
                     return true;
                 }
             )
