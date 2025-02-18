@@ -32,39 +32,39 @@ struct array_view {
     using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-    array_view(size_type size, pointer data) noexcept : m_data(data), m_size(size) {} // main constructor
+    explicit array_view(pointer data, size_type size) noexcept : m_data(data), m_size(size) {} // main constructor
 
     template<typename C>
     array_view(std::initializer_list<C> value) noexcept
-        : array_view(static_cast<size_type>(value.size()), value.begin()) {}
+        : array_view(value.begin(), static_cast<size_type>(value.size())) {}
 
     template<typename C, size_type N>
     array_view(C (&value)[N]) noexcept
-        : array_view(N, value) {}
+        : array_view(value, N) {}
 
     template<typename C>
     array_view(std::vector<C>& value) noexcept
-        : array_view(static_cast<size_type>(value.size()), value.data()) {}
+        : array_view(value.data(), static_cast<size_type>(value.size())) {}
 
     template<typename C>
     array_view(std::vector<C> const& value) noexcept
-        : array_view(static_cast<size_type>(value.size()), value.data()) {}
+        : array_view(value.data(), static_cast<size_type>(value.size())) {}
 
     template<typename C, size_t N>
     array_view(std::array<C, N>& value) noexcept
-        : array_view(static_cast<size_type>(value.size()), value.data()) {}
+        : array_view(value.data(), static_cast<size_type>(value.size())) {}
 
     template<typename C, size_t N>
     array_view(std::array<C, N> const& value) noexcept
-        : array_view(static_cast<size_type>(value.size()), value.data()) {}
+        : array_view(value.data(), static_cast<size_type>(value.size())) {}
 
     template<typename C>
     array_view(array_view<C> const& other) noexcept
-        : array_view(other.size(), other.data()) {}
+        : array_view(other.data(), other.size()) {}
 
     template<typename C>
     array_view(array<C> const& other) noexcept
-        : array_view(other.size(), other.data()) {}
+        : array_view(other.data(), other.size()) {}
 
     reference operator[](size_type const pos) const noexcept {
         TH_ASSERT(pos < size(), "Pos should be less than array's size");
@@ -181,21 +181,23 @@ struct array : public array_view<cpp_owner_t> {
     using typename array_view<cpp_owner_t>::pointer;
     using typename array_view<cpp_owner_t>::size_type;
 
-    array(size_type size, pointer data) noexcept : array_view<cpp_owner_t>(size, data) {} // main constructor
-
-    array(size_t size, cpp_owner_t const& arg)
-        : array(size, (cpp_owner_t*)malloc(size * sizeof(cpp_owner_t))) {
-        std::uninitialized_fill_n(this->m_data, size, arg);
-    }
+    explicit array(pointer data, size_type size) noexcept : array_view<cpp_owner_t>(data, size) {} // main constructor
 
     array(pointer data, size_type size, copy_data_t) noexcept
-        : array(size, (cpp_owner_t*)malloc(size * sizeof(cpp_owner_t))) {
+        : array((cpp_owner_t*)malloc(size * sizeof(cpp_owner_t)), size) {
         std::uninitialized_copy_n(data, size, this->m_data);
     }
 
     array(pointer data, size_type size, move_data_t) noexcept
-        : array(size, (cpp_owner_t*)malloc(size * sizeof(cpp_owner_t))) {
+        : array((cpp_owner_t*)malloc(size * sizeof(cpp_owner_t)), size) {
         std::uninitialized_move_n(data, size, this->m_data);
+    }
+
+    template<typename... Args>
+    static array make(size_type size, Args&&... args) {
+        pointer data = (cpp_owner_t*)malloc(size * sizeof(cpp_owner_t));
+        std::uninitialized_fill_n(data, size, cpp_owner_t(std::forward<Args>(args)...));
+        return array(data, size);
     }
 
     array(array_view<cpp_owner_t> const& other)
@@ -205,7 +207,7 @@ struct array : public array_view<cpp_owner_t> {
         : array(other.data(), other.size(), copy_data_t{}) {}
 
     array(array<cpp_owner_t>&& other)
-        : array(std::exchange(other.m_size, 0), std::exchange(other.m_data, nullptr)) {}
+        : array(std::exchange(other.m_data, nullptr), std::exchange(other.m_size, 0)) {}
 
     array &operator=(array other) {
         std::swap(this->m_size, other.m_size);

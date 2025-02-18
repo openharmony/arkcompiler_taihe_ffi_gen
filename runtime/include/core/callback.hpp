@@ -34,7 +34,7 @@ struct callback_view<Return(Params...)> {
     TCallbackData* m_data;
     func_t m_func;
 
-    callback_view(TCallbackData* data, func_t func) : m_data(data), m_func(func) {}
+    explicit callback_view(TCallbackData* data, func_t func) : m_data(data), m_func(func) {}
 
     template<typename Impl, typename ...Args>
     static callback<Return(Params...)> from(Args&&... args) {
@@ -74,7 +74,7 @@ template<typename Return, typename... Params>
 struct callback<Return(Params...)> : callback_view<Return(Params...)> {
     using typename callback_view<Return(Params...)>::func_t;
 
-    callback(TCallbackData* data, func_t func) : callback_view<Return(Params...)>(data, func) {}
+    explicit callback(TCallbackData* data, func_t func) : callback_view<Return(Params...)>(data, func) {}
 
     callback(callback<Return(Params...)> && other)
         : callback{other.m_data, other.m_func} {

@@ -155,6 +155,20 @@ class ArrayType(GenericType):
 
 
 @dataclass(frozen=True, repr=False)
+class BoxType(GenericType):
+    item_ty: Type
+
+    @override
+    def _accept(self, v: "TypeVisitor") -> Any:
+        return v.visit_box_type(self)
+
+    @property
+    @override
+    def representation(self):
+        return f"Box<{self.item_ty.representation}>"
+
+
+@dataclass(frozen=True, repr=False)
 class VectorType(GenericType):
     val_ty: Type
 
@@ -200,6 +214,7 @@ class SetType(GenericType):
 # Builtin Generics Map
 BUILTIN_GENERICS: dict[str, Callable[[*tuple[Type, ...]], Type]] = {  # pyre-ignore
     "Array": lambda *args: ArrayType(*args),
+    "Box": lambda *args: BoxType(*args),
     "Vector": lambda *args: VectorType(*args),
     "Map": lambda *args: MapType(*args),
     "Set": lambda *args: SetType(*args),

@@ -44,6 +44,7 @@ from taihe.semantics.declarations import (
 )
 from taihe.semantics.types import (
     ArrayType,
+    BoxType,
     BuiltinType,
     CallbackType,
     EnumType,
@@ -132,6 +133,9 @@ class TypeVisitor(Generic[T]):
         return self.visit_type(t)
 
     def visit_array_type(self, t: ArrayType) -> T:
+        return self.visit_generic_type(t)
+
+    def visit_box_type(self, t: BoxType) -> T:
         return self.visit_generic_type(t)
 
     def visit_vector_type(self, t: VectorType) -> T:

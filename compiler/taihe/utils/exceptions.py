@@ -260,7 +260,7 @@ class DuplicateExtendsNote(DiagNote):
 class DuplicateExtendsWarn(DiagWarn):
     iface: "IfaceDecl"
     parent_iface: "IfaceDecl"
-    prev_loc: Optional["SourceLocation"]
+    prev_loc: Optional["SourceLocation"] = field(kw_only=True)
 
     def notes(self):
         if self.prev_loc:

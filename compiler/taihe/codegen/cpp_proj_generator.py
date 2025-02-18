@@ -34,6 +34,7 @@ from taihe.semantics.types import (
     U32,
     U64,
     ArrayType,
+    BoxType,
     CallbackType,
     EnumType,
     IfaceType,
@@ -194,6 +195,15 @@ class ArrayTypeCppProjInfo(AbstractAnalysis[ArrayType], AbstractTypeCppProjInfo)
         self.as_param = f"::taihe::core::array_view<{arg_ty_cpp_proj_info.as_field}>"
 
 
+class BoxTypeCppProjInfo(AbstractAnalysis[BoxType], AbstractTypeCppProjInfo):
+    def __init__(self, am: AnalysisManager, t: BoxType) -> None:
+        arg_ty_cpp_proj_info = TypeCppProjInfo.get(am, t.item_ty)
+        self.decl_headers = ["core/box.hpp", *arg_ty_cpp_proj_info.decl_headers]
+        self.defn_headers = ["core/box.hpp", *arg_ty_cpp_proj_info.defn_headers]
+        self.as_field = f"::taihe::core::box<{arg_ty_cpp_proj_info.as_field}>"
+        self.as_param = f"::taihe::core::box_view<{arg_ty_cpp_proj_info.as_field}>"
+
+
 class VectorTypeCppProjInfo(AbstractAnalysis[VectorType], AbstractTypeCppProjInfo):
     def __init__(self, am: AnalysisManager, t: VectorType) -> None:
         val_ty_cpp_proj_info = TypeCppProjInfo.get(am, t.val_ty)
@@ -298,6 +308,10 @@ class TypeCppProjInfo(TypeVisitor[AbstractTypeCppProjInfo]):
     @override
     def visit_array_type(self, t: ArrayType) -> AbstractTypeCppProjInfo:
         return ArrayTypeCppProjInfo.get(self.am, t)
+
+    @override
+    def visit_box_type(self, t: BoxType) -> AbstractTypeCppProjInfo:
+        return BoxTypeCppProjInfo.get(self.am, t)
 
     @override
     def visit_vector_type(self, t: VectorType) -> AbstractTypeCppProjInfo:
@@ -890,7 +904,6 @@ class CppProjCodeGenerator:
         conds_fmt = " || ".join(conds)
         enum_cpp_proj_defn_target.write(
             f"namespace taihe::core {{\n"
-            f"using ::taihe::core::same;"
             f"inline bool same_impl(adl_helper_t, {enum_cpp_proj_info.as_param} lhs, {enum_cpp_proj_info.as_param} rhs) {{\n"
             f"    return {conds_fmt};\n"
             f"}}\n"

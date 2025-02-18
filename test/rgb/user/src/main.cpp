@@ -163,17 +163,34 @@ int main() {
     {
         std::cout << "-------- Testing Array --------" << std::endl;
 
-        auto dst = array<IBase>(5, make_holder<UserType, IBase>("x"));
-        auto src = array<IBase>(2, make_holder<UserType, IBase>("y"));
+        auto dst = array<IBase>::make(5, make_holder<UserType, IBase>("x"));
+        auto src = array<IBase>::make(2, make_holder<UserType, IBase>("y"));
 
         show_array(dst, "dst");
         show_array(src, "src");
 
-        auto res = exchange(dst, src);
+        auto res = exchangeArr(dst, src);
 
         show_array(dst, "dst");
         show_array(src, "src");
         show_array(res, "res");
+    }
+
+    // array
+    {
+        std::cout << "-------- Testing Boxes --------" << std::endl;
+
+        auto dst = box<IBase>::make(make_holder<UserType, IBase>("s"));
+        auto src = box<IBase>::make(make_holder<UserType, IBase>("t"));
+
+        std::cout << "dst = " << (*dst)->getId() << std::endl;
+        std::cout << "src = " << (*src)->getId() << std::endl;
+
+        auto res = exchangeBox(dst, src);
+
+        std::cout << "dst = " << (*dst)->getId() << std::endl;
+        std::cout << "src = " << (*src)->getId() << std::endl;
+        std::cout << "res = " << (*res)->getId() << std::endl;
     }
 
     // vector

@@ -27,6 +27,7 @@ from taihe.semantics.types import (
     U32,
     U64,
     ArrayType,
+    BoxType,
     CallbackType,
     EnumType,
     IfaceType,
@@ -227,6 +228,14 @@ class ArrayTypeABIInfo(AbstractAnalysis[ArrayType], AbstractTypeABIInfo):
         self.as_param = "struct TArray"
 
 
+class BoxTypeABIInfo(AbstractAnalysis[BoxType], AbstractTypeABIInfo):
+    def __init__(self, am: AnalysisManager, t: BoxType) -> None:
+        self.decl_headers = []
+        self.defn_headers = []
+        self.as_field = "void*"
+        self.as_param = "void*"
+
+
 class CallbackTypeABIInfo(AbstractAnalysis[CallbackType], AbstractTypeABIInfo):
     def __init__(self, am: AnalysisManager, t: CallbackType) -> None:
         self.decl_headers = ["taihe/callback.abi.h"]
@@ -295,6 +304,10 @@ class TypeABIInfo(TypeVisitor[AbstractTypeABIInfo]):
     @override
     def visit_vector_type(self, t: VectorType) -> AbstractTypeABIInfo:
         return VectorTypeABIInfo.get(self.am, t)
+
+    @override
+    def visit_box_type(self, t: BoxType) -> AbstractTypeABIInfo:
+        return BoxTypeABIInfo.get(self.am, t)
 
     @override
     def visit_map_type(self, t: MapType) -> AbstractTypeABIInfo:
