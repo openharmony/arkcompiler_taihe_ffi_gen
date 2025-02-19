@@ -86,7 +86,7 @@ integer::IBase makeIBaseImpl(taihe::core::string_view id) {
 }
 
 void copyIBaseImpl(integer::weak::IBase a, integer::weak::IBase b) {
-    a.setId(b.getId());
+    a->setId(b->getId());
     return;
 }
 
