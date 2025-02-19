@@ -1,0 +1,94 @@
+# 整体设计
+
+不论是读写文件，还是获取 GPS 定位，App 都需要依赖 OS 提供的 API，才能调用各类软硬件能力。Taihe 是为 OS 设计的 API 编程模型，连接了外部应用的 API 消费者和 OS 的内部能力。
+
+具体地，OS 开发者编写接口合约描述文件后，Taihe 会自动生成 OS 侧的接口层代码，以及各语言的桥接代码，从而让各语言都能方便高效地调用 OS 内部能力。
+
+## 目标和非目标
+
+Taihe 的目标包括：
+
+- **高性能**：基于原生代码，提供类 C 的性能，避免托管代码的虚拟机执行和对象转换开销。
+- **易开发**：精选少量的核心语言特性，辅助代码生成，让各类语言的开发者都可以获得类原生语言的开发体验。
+- **可演进**：设计稳定的 ABI 保证 OS/App 二进制解耦。OS 组件升级时，现有 App 无需重编译。
+
+在当前阶段，Taihe 存在下列约束：
+
+- **不考虑现有 API 接口的兼容替代**。现有的 C API、NodeJS API 等接口未能完全和实现解耦，接口内包含大量逻辑，导致兼容这些接口需要大量的工作。
+- **不支持各类编程语言互相调用**，只支持上层应用的各种编程语言调用底座的 C/C++ 实现。这样的约束让我们只考虑将 C++ 实现向外暴露的场景，用有限的资源支持最重要的工作。
+- **不支持直接转换现有的 C++ 实现**。现有的 C++ 代码未能良好分离接口和实现，全自动转换会暴露不必要的内部实现，增加后期维护的成本。
+
+## 系统上下文
+
+Taihe 通过一套二进制接口标准 (ABI)，连接了 API 的作者和消费者。
+
+### 运行态
+
+在运行态，以 C++ 为例：
+
+1. **程序（消费侧）**，业务逻辑：调用 Taihe 提供的 C++ API。
+2. **程序（消费侧）**，*Taihe 转换*：将 C++ API 转换为 Taihe ABI，从而跨越程序和库之间的二进制边界。
+3. **库（作者侧）**，*Taihe 转发*：从 Taihe ABI 转发至 C++ 内部实现。
+4. **库（作者侧）**，内部实现：按照 Taihe C++ 接口标准，实现 API 背后的逻辑。
+
+### 开发态
+
+由于底层的 ABI 标准不适合业务逻辑的开发，Taihe 自动生成转换和转发的代码。
+
+以使用 C++ 封装传感器能力为例：
+
+1. **`sensors.taihe`**: 权威描述
+   - OS 侧编写，说明对外暴露的能力，包括数据结构和函数。
+   - 此描述是接口的权威描述，生成的代码、人工编写的代码均需要和此描述保持一致。
+2. **`abi/sensors.h`**: ABI 标准
+   - 自动生成的 C 头文件，包含函数声明、结构体、枚举值。
+   - 此文件是接口的 ABI 描述，基于 C 语言标准，描述对象的内存布局、调用约定、符号名称等信息。
+   - 此文件既可用于 C 和 C++，也可用于其他语言的 FFI 工具链。
+3. **`impl/sensors.{h,cc}`**: ABI 转发至作者侧实现
+   - 自动生成的 C++ 头文件，方便作者侧将现有 C++ 代码对接到 Taihe ABI。
+   - 头文件提供了模板类；现有的 C++ 类以继承的方式，可以自动对接 Taihe 接口。
+4. **`consumer/sensors.h`**: 消费侧 API 调用转换至 ABI
+   - 自动生成的 C++ 头文件，提供舒适的 C++ API 供业务逻辑使用 Taihe ABI。
+
+## 编译器
+
+### 整体流程
+
+Taihe 遵从经典的“三阶段”编译器设计，具体地：
+
+1. **前端 (Frontend)**：源代码（文本） → 中间表示（IR）。
+   - 例如，字符串 `"function foo();"` 经过词法分析、语法分析后，从一棵抽象语法树转换成了数据结构“函数声明” (`FuncDecl`)。
+   - 在 Taihe 代码仓内，该部分由 `taihe.parse` 部分完成。
+2. **语义分析 (Semantics)**：IR → IR。部分分析结果被附加于 IR 上，同时进行检查。
+   - 例如，程序 `function foo(x: BadType, y: GoodType);` 引入了不存在的类型 `BadType`，语义分析在此向用户报告错误。
+   - 在 Taihe 代码仓内，该部分由 `taihe.semantics` 部分完成。
+3. **代码生成 (Code Generation)**：IR → 源代码。
+   - 在 Taihe 代码仓内，该部分由 `taihe.codegen` 部分完成。
+
+为了将这些阶段连接在一起，Taihe 提供了编译器驱动 (Driver)。例如，在编译 Taihe 源文件时，驱动根据用户的请求，将这些阶段连接在一起。在 Taihe 代码仓内，该部分由 `taihe.driver` 部分完成。
+
+### 文法解析
+
+Taihe 对源码的解析基于 ANTLR 框架，并对 ANTLR 做了扩展。
+
+文件结构上：
+
+- `compiler/Taihe.g4`：根据 ANTLR 描述了 IDL 的文法规则。
+- `compiler/generate-grammer`：在编译器运行前执行，自动生成代码。
+  - 生成 `TaiheLexer` 以及 `TaiheParser`，负责词法和语法分析。
+  - 生成 `TaiheAST`，负责存储 AST 节点。
+  - 生成 `TaiheVisitor`，使用 Visitor 设计模式，简化 AST 的访问。
+
+执行顺序上：
+
+1. `taihe.parse.ast_generation.generate_ast`：借助 ANTLR，将文本解析为 AST `taihe.parse.antlr.TaiheAST.Spec`
+2. `taihe.parse.convert.AstConverter`：遍历 AST，构造 IR `taihe.semantics.declarations.Package`
+
+### 语义分析
+
+Taihe 的中间表示包括：
+
+- `taihe.semantics.declarations`：定义了 IR 中“声明”的概念，例如结构体、枚举值。
+- `taihe.semantics.types`：定义了 IR 中“类型”的概念，例如标量、字符串。
+
+## TODO 运行时

@@ -656,14 +656,14 @@ class CppProjCodeGenerator:
         enum_cpp_proj_defn_target.write("    };\n")
         # destructor
         enum_cpp_proj_defn_target.write(
-            f"    ~{enum_cpp_proj_info.name}() {{\n" f"        switch (this->tag) {{\n"
+            f"    ~{enum_cpp_proj_info.name}() {{\n" f"        switch (m_tag) {{\n"
         )
         for item in enum.items:
             if item.ty_ref is None:
                 continue
             enum_cpp_proj_defn_target.write(
                 f"        case tag_t::{item.name}:\n"
-                f"            ::std::destroy_at(&this->data.{item.name});\n"
+                f"            ::std::destroy_at(&m_data.{item.name});\n"
                 f"            break;\n"
             )
         enum_cpp_proj_defn_target.write(
@@ -671,15 +671,15 @@ class CppProjCodeGenerator:
         )
         # copy constructor
         enum_cpp_proj_defn_target.write(
-            f"    {enum_cpp_proj_info.name}({enum_cpp_proj_info.name} const& other) : tag(other.tag) {{\n"
-            f"        switch (this->tag) {{\n"
+            f"    {enum_cpp_proj_info.name}({enum_cpp_proj_info.name} const& other) : m_tag(other.m_tag) {{\n"
+            f"        switch (m_tag) {{\n"
         )
         for item in enum.items:
             if item.ty_ref is None:
                 continue
             enum_cpp_proj_defn_target.write(
                 f"        case tag_t::{item.name}:\n"
-                f"            new (&this->data.{item.name}) decltype(this->data.{item.name})(other.data.{item.name});\n"
+                f"            new (&m_data.{item.name}) decltype(m_data.{item.name})(other.m_data.{item.name});\n"
                 f"            break;\n"
             )
         enum_cpp_proj_defn_target.write(
@@ -687,15 +687,15 @@ class CppProjCodeGenerator:
         )
         # move constructor
         enum_cpp_proj_defn_target.write(
-            f"    {enum_cpp_proj_info.name}({enum_cpp_proj_info.name}&& other) : tag(other.tag) {{\n"
-            f"        switch (this->tag) {{\n"
+            f"    {enum_cpp_proj_info.name}({enum_cpp_proj_info.name}&& other) : m_tag(other.m_tag) {{\n"
+            f"        switch (m_tag) {{\n"
         )
         for item in enum.items:
             if item.ty_ref is None:
                 continue
             enum_cpp_proj_defn_target.write(
                 f"        case tag_t::{item.name}:\n"
-                f"            new (&this->data.{item.name}) decltype(this->data.{item.name})(::std::move(other.data.{item.name}));\n"
+                f"            new (&m_data.{item.name}) decltype(m_data.{item.name})(::std::move(other.m_data.{item.name}));\n"
                 f"            break;\n"
             )
         enum_cpp_proj_defn_target.write(
@@ -725,13 +725,13 @@ class CppProjCodeGenerator:
         for item in enum.items:
             if item.ty_ref is None:
                 enum_cpp_proj_defn_target.write(
-                    f"    {enum_cpp_proj_info.name}(::taihe::core::static_tag_t<tag_t::{item.name}>) : tag(tag_t::{item.name}) {{}}\n"
+                    f"    {enum_cpp_proj_info.name}(::taihe::core::static_tag_t<tag_t::{item.name}>) : m_tag(tag_t::{item.name}) {{}}\n"
                 )
             else:
                 enum_cpp_proj_defn_target.write(
                     f"    template<typename... Args>\n"
-                    f"    {enum_cpp_proj_info.name}(::taihe::core::static_tag_t<tag_t::{item.name}>, Args&&... args) : tag(tag_t::{item.name}) {{\n"
-                    f"        new (&this->data.{item.name}) decltype(this->data.{item.name})(::std::forward<Args>(args)...);\n"
+                    f"    {enum_cpp_proj_info.name}(::taihe::core::static_tag_t<tag_t::{item.name}>, Args&&... args) : m_tag(tag_t::{item.name}) {{\n"
+                    f"        new (&m_data.{item.name}) decltype(m_data.{item.name})(::std::forward<Args>(args)...);\n"
                     f"    }}\n"
                 )
         # creator
@@ -746,7 +746,7 @@ class CppProjCodeGenerator:
             f"    template<tag_t tag, typename... Args>\n"
             f"    {enum_cpp_proj_info.name} const& emplace(Args&&... args) {{\n"
             f"        ::std::destroy_at(this);\n"
-            f"        this->tag = tag;\n"
+            f"        m_tag = tag;\n"
             f"        new (this) {enum_cpp_proj_info.name}(::taihe::core::static_tag<tag>, ::std::forward<Args>(args)...);\n"
             f"        return *this;\n"
             f"    }}\n"
@@ -759,14 +759,14 @@ class CppProjCodeGenerator:
             if item.ty_ref:
                 enum_cpp_proj_defn_target.write(
                     f"        if constexpr (tag == tag_t::{item.name}) {{\n"
-                    f"            return this->data.{item.name};\n"
+                    f"            return m_data.{item.name};\n"
                     f"        }}\n"
                 )
         enum_cpp_proj_defn_target.write("    }\n")
         enum_cpp_proj_defn_target.write(
             "    template<tag_t tag>\n"
             "    auto* get_ptr() {\n"
-            "        return this->tag == tag ? &get_ref<tag>() : nullptr;\n"
+            "        return m_tag == tag ? &get_ref<tag>() : nullptr;\n"
             "    }\n"
         )
         # const getter
@@ -777,24 +777,24 @@ class CppProjCodeGenerator:
             if item.ty_ref:
                 enum_cpp_proj_defn_target.write(
                     f"        if constexpr (tag == tag_t::{item.name}) {{\n"
-                    f"            return this->data.{item.name};\n"
+                    f"            return m_data.{item.name};\n"
                     f"        }}\n"
                 )
         enum_cpp_proj_defn_target.write("    }\n")
         enum_cpp_proj_defn_target.write(
             "    template<tag_t tag>\n"
             "    auto const* get_ptr() const {\n"
-            "        return this->tag == tag ? &get_ref<tag>() : nullptr;\n"
+            "        return m_tag == tag ? &get_ref<tag>() : nullptr;\n"
             "    }\n"
         )
         # checker
         enum_cpp_proj_defn_target.write(
             "    template<tag_t tag>\n"
             "    bool holds() const {\n"
-            "        return this->tag == tag;\n"
+            "        return m_tag == tag;\n"
             "    }\n"
             "    tag_t get_tag() const {\n"
-            "        return this->tag;\n"
+            "        return m_tag;\n"
             "    }\n"
         )
         # named
@@ -806,37 +806,37 @@ class CppProjCodeGenerator:
                 f"    }}\n"
                 f"    template<typename... Args>\n"
                 f"    {enum_cpp_proj_info.name} const& emplace_{item.name}(Args&&... args) {{\n"
-                f"        return this->emplace<tag_t::{item.name}>(::std::forward<Args>(args)...);\n"
+                f"        return emplace<tag_t::{item.name}>(::std::forward<Args>(args)...);\n"
                 f"    }}\n"
                 f"    bool holds_{item.name}() const {{\n"
-                f"        return this->holds<tag_t::{item.name}>();\n"
+                f"        return holds<tag_t::{item.name}>();\n"
                 f"    }}\n"
             )
             if item.ty_ref:
                 enum_cpp_proj_defn_target.write(
                     f"    auto* get_{item.name}_ptr() {{\n"
-                    f"        return this->get_ptr<tag_t::{item.name}>();\n"
+                    f"        return get_ptr<tag_t::{item.name}>();\n"
                     f"    }}\n"
                     f"    auto const* get_{item.name}_ptr() const {{\n"
-                    f"        return this->get_ptr<tag_t::{item.name}>();\n"
+                    f"        return get_ptr<tag_t::{item.name}>();\n"
                     f"    }}\n"
                     f"    auto& get_{item.name}_ref() {{\n"
-                    f"        return this->get_ref<tag_t::{item.name}>();\n"
+                    f"        return get_ref<tag_t::{item.name}>();\n"
                     f"    }}\n"
                     f"    auto const& get_{item.name}_ref() const {{\n"
-                    f"        return this->get_ref<tag_t::{item.name}>();\n"
+                    f"        return get_ref<tag_t::{item.name}>();\n"
                     f"    }}\n"
                 )
         # non_const visitor
         enum_cpp_proj_defn_target.write(
             "    template<typename Visitor>\n"
             "    auto accept_template(Visitor&& visitor) {\n"
-            "        switch (this->tag) {\n"
+            "        switch (m_tag) {\n"
         )
         for item in enum.items:
             result = f"::taihe::core::static_tag<tag_t::{item.name}>"
             if item.ty_ref:
-                result += f", this->data.{item.name}"
+                result += f", m_data.{item.name}"
             enum_cpp_proj_defn_target.write(
                 f"        case tag_t::{item.name}:\n"
                 f"            return visitor({result});\n"
@@ -845,10 +845,10 @@ class CppProjCodeGenerator:
         enum_cpp_proj_defn_target.write(
             "    template<typename Visitor>\n"
             "    auto accept(Visitor&& visitor) {\n"
-            "        switch (this->tag) {\n"
+            "        switch (m_tag) {\n"
         )
         for item in enum.items:
-            result = "" if item.ty_ref is None else f"this->data.{item.name}"
+            result = "" if item.ty_ref is None else f"m_data.{item.name}"
             enum_cpp_proj_defn_target.write(
                 f"        case tag_t::{item.name}:\n"
                 f"            return visitor.{item.name}({result});\n"
@@ -858,12 +858,12 @@ class CppProjCodeGenerator:
         enum_cpp_proj_defn_target.write(
             "    template<typename Visitor>\n"
             "    auto accept_template(Visitor&& visitor) const {\n"
-            "        switch (this->tag) {\n"
+            "        switch (m_tag) {\n"
         )
         for item in enum.items:
             result = f"::taihe::core::static_tag<tag_t::{item.name}>"
             if item.ty_ref:
-                result += f", this->data.{item.name}"
+                result += f", m_data.{item.name}"
             enum_cpp_proj_defn_target.write(
                 f"        case tag_t::{item.name}:\n"
                 f"            return visitor({result});\n"
@@ -872,10 +872,10 @@ class CppProjCodeGenerator:
         enum_cpp_proj_defn_target.write(
             "    template<typename Visitor>\n"
             "    auto accept(Visitor&& visitor) const {\n"
-            "        switch (this->tag) {\n"
+            "        switch (m_tag) {\n"
         )
         for item in enum.items:
-            result = "" if item.ty_ref is None else f"this->data.{item.name}"
+            result = "" if item.ty_ref is None else f"m_data.{item.name}"
             enum_cpp_proj_defn_target.write(
                 f"        case tag_t::{item.name}:\n"
                 f"            return visitor.{item.name}({result});\n"
@@ -883,7 +883,7 @@ class CppProjCodeGenerator:
         enum_cpp_proj_defn_target.write("        }\n" "    }\n")
         # finally
         enum_cpp_proj_defn_target.write(
-            "private:\n" "    tag_t tag;\n" "    storage_t data;\n" "};\n" "}\n"
+            "private:\n" "    tag_t m_tag;\n" "    storage_t m_data;\n" "};\n" "}\n"
         )
 
     def gen_enum_same(
@@ -1144,13 +1144,13 @@ class CppProjCodeGenerator:
         # class methods
         iface_cpp_proj_defn_target.write(
             "    explicit operator bool() const& {\n"
-            "        return this->m_handle.vtbl_ptr;\n"
+            "        return m_handle.vtbl_ptr;\n"
             "    }\n"
             "    virtual_type const& operator*() const {\n"
-            "        return *reinterpret_cast<virtual_type const*>(&this->m_handle);\n"
+            "        return *reinterpret_cast<virtual_type const*>(&m_handle);\n"
             "    }\n"
             "    virtual_type const* operator->() const {\n"
-            "        return reinterpret_cast<virtual_type const*>(&this->m_handle);\n"
+            "        return reinterpret_cast<virtual_type const*>(&m_handle);\n"
             "    }\n"
         )
         # convert methods
@@ -1161,11 +1161,11 @@ class CppProjCodeGenerator:
             f"        other.m_handle = nullptr;\n"
             f"    }}\n"
             f"    operator ::taihe::core::data_view() const& {{\n"
-            f"        {iface_abi_info.as_field} ret_handle = this->m_handle;\n"
+            f"        {iface_abi_info.as_field} ret_handle = m_handle;\n"
             f"        return ::taihe::core::data_view(ret_handle.data_ptr);\n"
             f"    }}\n"
             f"    operator ::taihe::core::data_holder() const& {{\n"
-            f"        {iface_abi_info.as_field} ret_handle = {iface_abi_info.copy_func}(this->m_handle);\n"
+            f"        {iface_abi_info.as_field} ret_handle = {iface_abi_info.copy_func}(m_handle);\n"
             f"        return ::taihe::core::data_holder(ret_handle.data_ptr);\n"
             f"    }}\n"
         )
@@ -1175,11 +1175,11 @@ class CppProjCodeGenerator:
             ancestor_cpp_proj_info = IfaceDeclCppProjInfo.get(self.am, ancestor)
             iface_cpp_proj_defn_target.write(
                 f"    operator {ancestor_cpp_proj_info.weak_name}() const& {{\n"
-                f"        {iface_abi_info.as_field} ret_handle = this->m_handle;\n"
+                f"        {iface_abi_info.as_field} ret_handle = m_handle;\n"
                 f"        return {ancestor_cpp_proj_info.weak_name}({info.static_cast}(ret_handle));\n"
                 f"    }}\n"
                 f"    operator {ancestor_cpp_proj_info.full_name}() const& {{\n"
-                f"        {iface_abi_info.as_field} ret_handle = {iface_abi_info.copy_func}(this->m_handle);\n"
+                f"        {iface_abi_info.as_field} ret_handle = {iface_abi_info.copy_func}(m_handle);\n"
                 f"        return {ancestor_cpp_proj_info.full_name}({info.static_cast}(ret_handle));\n"
                 f"    }}\n"
             )
@@ -1202,11 +1202,11 @@ class CppProjCodeGenerator:
         iface_cpp_proj_defn_target.write(
             f"    explicit {iface_cpp_proj_info.name}({iface_abi_info.as_field} handle) : {iface_cpp_proj_info.weak_name}(handle) {{}}\n"
             f"    {iface_cpp_proj_info.name}& operator=({iface_cpp_proj_info.full_name} other) {{\n"
-            f"        ::std::swap(this->m_handle, other.m_handle);\n"
+            f"        ::std::swap(m_handle, other.m_handle);\n"
             f"        return *this;\n"
             f"    }}\n"
             f"    ~{iface_cpp_proj_info.name}() {{\n"
-            f"        {iface_abi_info.drop_func}(this->m_handle);\n"
+            f"        {iface_abi_info.drop_func}(m_handle);\n"
             f"    }}\n"
             f"    {iface_cpp_proj_info.name}({iface_cpp_proj_info.weak_name} const& other)\n"
             f"        : {iface_cpp_proj_info.name}({iface_abi_info.copy_func}(other.m_handle)) {{}}\n"
@@ -1221,16 +1221,16 @@ class CppProjCodeGenerator:
             f"        other.m_handle = nullptr;\n"
             f"    }}\n"
             f"    operator ::taihe::core::data_view() const& {{\n"
-            f"        {iface_abi_info.as_field} ret_handle = this->m_handle;\n"
+            f"        {iface_abi_info.as_field} ret_handle = m_handle;\n"
             f"        return ::taihe::core::data_view(ret_handle.data_ptr);\n"
             f"    }}\n"
             f"    operator ::taihe::core::data_holder() const& {{\n"
-            f"        {iface_abi_info.as_field} ret_handle = {iface_abi_info.copy_func}(this->m_handle);\n"
+            f"        {iface_abi_info.as_field} ret_handle = {iface_abi_info.copy_func}(m_handle);\n"
             f"        return ::taihe::core::data_holder(ret_handle.data_ptr);\n"
             f"    }}\n"
             f"    operator ::taihe::core::data_holder() && {{\n"
-            f"        {iface_abi_info.as_field} ret_handle = this->m_handle;\n"
-            f"        this->m_handle.data_ptr = nullptr;\n"
+            f"        {iface_abi_info.as_field} ret_handle = m_handle;\n"
+            f"        m_handle.data_ptr = nullptr;\n"
             f"        return ::taihe::core::data_holder(ret_handle.data_ptr);\n"
             f"    }}\n"
         )
@@ -1240,16 +1240,16 @@ class CppProjCodeGenerator:
             ancestor_cpp_proj_info = IfaceDeclCppProjInfo.get(self.am, ancestor)
             iface_cpp_proj_defn_target.write(
                 f"    operator {ancestor_cpp_proj_info.weak_name}() const& {{\n"
-                f"        {iface_abi_info.as_field} ret_handle = this->m_handle;\n"
+                f"        {iface_abi_info.as_field} ret_handle = m_handle;\n"
                 f"        return {ancestor_cpp_proj_info.weak_name}({info.static_cast}(ret_handle));\n"
                 f"    }}\n"
                 f"    operator {ancestor_cpp_proj_info.full_name}() const& {{\n"
-                f"        {iface_abi_info.as_field} ret_handle = {iface_abi_info.copy_func}(this->m_handle);\n"
+                f"        {iface_abi_info.as_field} ret_handle = {iface_abi_info.copy_func}(m_handle);\n"
                 f"        return {ancestor_cpp_proj_info.full_name}({info.static_cast}(ret_handle));\n"
                 f"    }}\n"
                 f"    operator {ancestor_cpp_proj_info.full_name}() && {{\n"
-                f"        {iface_abi_info.as_field} ret_handle = this->m_handle;\n"
-                f"        this->m_handle.data_ptr = nullptr;\n"
+                f"        {iface_abi_info.as_field} ret_handle = m_handle;\n"
+                f"        m_handle.data_ptr = nullptr;\n"
                 f"        return {ancestor_cpp_proj_info.full_name}({info.static_cast}(ret_handle));\n"
                 f"    }}\n"
             )

@@ -1,7 +1,6 @@
 """Defines the type system."""
 
 from abc import ABCMeta, abstractmethod
-from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Optional, Protocol
@@ -211,8 +210,12 @@ class SetType(GenericType):
         return f"Set<{self.key_ty.representation}>"
 
 
+class GenericBuilder(Protocol):
+    def __call__(self, *args: Type) -> Type: ...
+
+
 # Builtin Generics Map
-BUILTIN_GENERICS: dict[str, Callable[[*tuple[Type, ...]], Type]] = {  # pyre-ignore
+BUILTIN_GENERICS: dict[str, GenericBuilder] = {
     "Array": lambda *args: ArrayType(*args),
     "Box": lambda *args: BoxType(*args),
     "Vector": lambda *args: VectorType(*args),
