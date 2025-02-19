@@ -10,8 +10,8 @@ string::op::StringPair ohos_split_str(taihe::core::string_view pstr, int32_t n) 
         n = n + l;
     }
     return {
-        pstr.substr(0, n),
-        pstr.substr(n, l - n),
+        taihe::core::substr(pstr, 0, n),
+        taihe::core::substr(pstr, n, l - n),
     };
 }
 

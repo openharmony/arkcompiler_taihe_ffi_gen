@@ -21,3 +21,10 @@ interface IShowable: IColorable, IShape {
 
 function makeRectangle(id: String, h: f32, w: f32): IShape;
 function makeColoredRectangle(id: String, c: ColorOrRGBOrName, h: f32, w: f32): IShowable;
+
+function exchangeArr(dst: Array<IBase>, src: Array<IBase>): Array<IBase>;
+function exchangeBox(dst: Box<IBase>, src: Box<IBase>): Box<IBase>;
+function fillVec(dst: Vector<IBase>): void;
+function fillMap(dst: Map<String, IBase>): void;
+function fillSet(dst: Set<String>): void;
+function currying(f: (x: String, y: String) => String): (x: String) => (y: String) => String;

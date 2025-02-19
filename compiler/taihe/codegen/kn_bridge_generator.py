@@ -2,7 +2,8 @@ from typing import Any, Optional
 
 from taihe.codegen.abi_generator import COutputBuffer
 from taihe.semantics.declarations import (
-    BaseFuncDecl,
+    GlobFuncDecl,
+    IfaceMethodDecl,
     Package,
     PackageGroup,
 )
@@ -34,8 +35,8 @@ class KNBridgePackageInfo(AbstractAnalysis[Package]):
         self.source = f"{p.name}.api.cpp"
 
 
-class KNBridgeFuncBaseDeclInfo(AbstractAnalysis[BaseFuncDecl]):
-    def __init__(self, am: AnalysisManager, f: BaseFuncDecl) -> None:
+class KNBridgeFuncBaseDeclInfo(AbstractAnalysis[GlobFuncDecl | IfaceMethodDecl]):
+    def __init__(self, am: AnalysisManager, f: GlobFuncDecl | IfaceMethodDecl) -> None:
         self.name = f.name
         self.konan_proj_name = f.attrs["konan_name"].value
         assert isinstance(self.konan_proj_name, str)
@@ -60,27 +61,27 @@ class KNBridgeFuncBaseDeclInfo(AbstractAnalysis[BaseFuncDecl]):
         self.params_str = ", ".join(params)
         self.konan_params_only_ty = ", ".join(konan_params_only_ty)
         self.convert_params_str = ", ".join(convert_params)
-        if f.return_ty_ref is None:
-            self.return_ty_header = None
-            self.return_ty_name = "void"
-            self.return_ty_str = ""
-        else:
-            ty_info = KNBridgeTypeInfo.get(am, f.return_ty_ref.resolved_ty)
+        if return_ty_ref := f.return_ty_ref:
+            ty_info = KNBridgeTypeInfo.get(am, return_ty_ref.resolved_ty)
             self.return_ty_header = ty_info.header
             self.return_ty_name = ty_info.as_retval
             if ty_info.retval_covert_func:
                 self.return_ty_str = f"{ty_info.retval_covert_func}(result)"
             else:
                 self.return_ty_str = "result"
+        else:
+            self.return_ty_header = None
+            self.return_ty_name = "void"
+            self.return_ty_str = ""
 
-        if f.return_ty_ref is None:
+        if return_ty_ref := f.return_ty_ref:
+            ty_info = KNBridgeTypeInfo.get(am, return_ty_ref.resolved_ty)
+            self.return_ty_konan_header = ty_info.header
+            self.return_ty_konan_name = ty_info.as_konan_retval
+        else:
             self.return_ty_konan_header = None
             self.return_ty_konan_name = "void"
             self.return_ty_konan_str = ""
-        else:
-            ty_info = KNBridgeTypeInfo.get(am, f.return_ty_ref.resolved_ty)
-            self.return_ty_konan_header = ty_info.header
-            self.return_ty_konan_name = ty_info.as_konan_retval
 
 
 class KNBridgeTypeInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
@@ -94,6 +95,7 @@ class KNBridgeTypeInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
         self.as_konan_retval = None
         self.param_covert_func = None
         self.retval_covert_func = None
+        assert t
         self.handle_type(t)
 
     def visit_scalar_type(self, t: ScalarType):

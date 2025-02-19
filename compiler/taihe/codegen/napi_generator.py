@@ -1,15 +1,13 @@
 from typing import Optional
 
-from typing_extensions import override
-
 from taihe.codegen.abi_generator import (
     COutputBuffer,
 )
 from taihe.codegen.cpp_proj_generator import PackageCppProjInfo
 from taihe.semantics.declarations import (
-    BaseFuncDecl,
     GlobFuncDecl,
     IfaceDecl,
+    IfaceMethodDecl,
     Package,
     PackageGroup,
     StructDecl,
@@ -46,6 +44,7 @@ class TypeNapiInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
         self.from_c_to_js_func = None
         self.from_js_to_c_func = None
         self.from_c_to_js_param = None
+        assert t
         self.handle_type(t)
 
     def visit_scalar_type(self, t: ScalarType):
@@ -81,12 +80,10 @@ class TypeNapiInfo(AbstractAnalysis[Optional[Type]], TypeVisitor[None]):
             self.from_js_to_c_func = "napi_get_value_string_utf8"
             self.from_c_to_js_func = "napi_create_string_utf8"
 
-    @override
     def visit_struct_decl(self, d: StructDecl) -> None:
         struct_napi_info = StructDeclNapiInfo.get(self.am, d)
         self.as_c = struct_napi_info.full_name
 
-    @override
     def visit_iface_decl(self, d: IfaceDecl) -> None:
         iface_napi_info = IfaceDeclNapiInfo.get(self.am, d)
         self.as_c = iface_napi_info.full_name
@@ -243,7 +240,9 @@ class NapiCodeGenerator:
             f"    napi_get_cb_info(env, info, &argc, args , nullptr, nullptr);\n"
         )
 
-    def gen_func_get_value(self, func: BaseFuncDecl, pkg_napi_target: COutputBuffer):
+    def gen_func_get_value(
+        self, func: GlobFuncDecl | IfaceMethodDecl, pkg_napi_target: COutputBuffer
+    ):
         args = []
         for i, param in enumerate(func.params):
             value_ty = param.ty_ref.resolved_ty
@@ -355,13 +354,13 @@ class NapiCodeGenerator:
 
     def gen_func_return_value(
         self,
-        func: BaseFuncDecl,
+        func: GlobFuncDecl | IfaceMethodDecl,
         pkg_napi_target: COutputBuffer,
         args_str: str,
         full_func_name: str,
     ):
-        if func.return_ty_ref:
-            value_ty = func.return_ty_ref.resolved_ty
+        if return_ty_ref := func.return_ty_ref:
+            value_ty = return_ty_ref.resolved_ty
             type_napi_return_info = TypeNapiInfo.get(self.am, value_ty)
             if isinstance(value_ty, IfaceDecl):
                 pkg_napi_target.write(

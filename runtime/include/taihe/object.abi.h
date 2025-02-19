@@ -24,13 +24,13 @@ struct IdMapItem {
 // # Members
 // - `version`: A 64-bit unsigned integer representing the version of the type information.
 // - `len`: Size of the type information in bytes.
-// - `inside_func_len`: Size of inside functions.
+// - `pre_idmap_func_count`: Size of inside functions.
 // - `addref`: Function pointer to a addref function for `TObject`.
 // - `release`: Function pointer to a release function for `TObject`.
 // - `idmap`: A flexible array of `IdMapItem` structures for ID-to-vtable mapping.
 struct TypeInfo {
   uint64_t version;
-  void (*free_ptr)(struct DataBlockHead*);
+  void (*free)(struct DataBlockHead*);
   uint64_t len;
   struct IdMapItem idmap[];
 };
@@ -40,6 +40,8 @@ struct DataBlockHead {
   struct TypeInfo const* rtti_ptr;
   TRefCount m_count;
 };
+
+TH_EXPORT void tobj_init(struct DataBlockHead* data_ptr, struct TypeInfo const* rtti_ptr);
 
 // Increments the reference count of the given TObject.
 // # Arguments

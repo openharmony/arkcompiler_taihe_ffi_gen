@@ -36,7 +36,7 @@ specField
       LEFT_BRACE (InterfaceFieldLst_fields += interfaceField)* RIGHT_BRACE # interface
     | (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
       KW_FUNCTION token_name = ID
-      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS COLON (TypeOpt_return_ty = type | KW_VOID)? SEMICOLON # globalFunction
+      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS (COLON (TypeOpt_return_ty = type | KW_VOID))? SEMICOLON # globalFunction
     ;
 
 structField
@@ -54,7 +54,7 @@ enumField
 interfaceField
     : (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
       token_name = ID
-      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS COLON (TypeOpt_return_ty = type | KW_VOID)? SEMICOLON # interfaceFunction
+      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS (COLON (TypeOpt_return_ty = type | KW_VOID))? SEMICOLON # interfaceFunction
     ;
 
 interfaceParent
@@ -86,11 +86,10 @@ attrVal
 //////////
 
 type
-    : token_name = (KW_I8 | KW_I16 | KW_I32 | KW_I64 | KW_U8 | KW_U16 | KW_U32 | KW_U64 | KW_F32 | KW_F64 | KW_BOOL | KW_STRING) # primitiveType
-    | (PkgNameOpt_pkg_name = pkgName DOT)? token_decl_name = ID # userType
-    | token_name = ID LEFT_PARENTHESIS (TypeLst_args += type (COMMA TypeLst_args += type)*)? RIGHT_PARENTHESIS # genericType
+    : (PkgNameOpt_pkg_name = pkgName DOT)? token_decl_name = ID # userType
+    | (PkgNameOpt_pkg_name = pkgName DOT)? token_decl_name = ID LESS_THAN (TypeLst_args += type (COMMA TypeLst_args += type)*)? GREATER_THAN # genericType
     | <assoc = right>
-      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS ARROW (TypeOpt_return_ty = type | KW_VOID)? # functionType
+      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS ARROW (TypeOpt_return_ty = type | KW_VOID) # callbackType
     ;
 
 ////////////////
@@ -201,6 +200,10 @@ AT
 
 DOLLAR
     : '$'
+    ;
+
+QUESTION_MARK
+    : '?'
     ;
 
 LEFT_SHIFT
@@ -319,64 +322,16 @@ KW_FUNCTION
     : 'function'
     ;
 
-KW_I8
-    : 'i8'
-    ;
-
-KW_I16
-    : 'i16'
-    ;
-
-KW_I32
-    : 'i32'
-    ;
-
-KW_I64
-    : 'i64'
-    ;
-
-KW_U8
-    : 'u8'
-    ;
-
-KW_U16
-    : 'u16'
-    ;
-
-KW_U32
-    : 'u32'
-    ;
-
-KW_U64
-    : 'u64'
-    ;
-
-KW_F32
-    : 'f32'
-    ;
-
-KW_F64
-    : 'f64'
-    ;
-
-KW_BOOL
-    : 'bool'
-    ;
-
-KW_STRING
-    : 'String'
-    ;
-
-KW_VOID
-    : 'void'
-    ;
-
 KW_TRUE
     : 'TRUE'
     ;
 
 KW_FALSE
     : 'FALSE'
+    ;
+
+KW_VOID
+    : 'void'
     ;
 
 STRING_LITERAL

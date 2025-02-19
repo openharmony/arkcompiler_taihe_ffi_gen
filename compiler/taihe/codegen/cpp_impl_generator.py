@@ -1,5 +1,4 @@
 from taihe.codegen.abi_generator import (
-    COutputBuffer,
     GlobFuncDeclABIInfo,
     PackageABIInfo,
     TypeABIInfo,
@@ -14,7 +13,7 @@ from taihe.semantics.declarations import (
     PackageGroup,
 )
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
-from taihe.utils.outputs import OutputManager
+from taihe.utils.outputs import COutputBuffer, OutputManager
 
 
 class PackageCppImplInfo(AbstractAnalysis[Package]):
@@ -55,7 +54,7 @@ class CppImplCodeGenerator:
         for param in func.params:
             type_cpp_proj_info = TypeCppProjInfo.get(self.am, param.ty_ref.resolved_ty)
             type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.resolved_ty)
-            pkg_cpp_impl_target.include(type_cpp_proj_info.header_defn)
+            pkg_cpp_impl_target.include(*type_cpp_proj_info.defn_headers)
             cpp_params.append(f"{type_cpp_proj_info.as_param} {param.name}")
             args_from_abi.append(type_cpp_proj_info.pass_from_abi(param.name))
             abi_params.append(f"{type_abi_info.as_param} {param.name}")
@@ -66,9 +65,9 @@ class CppImplCodeGenerator:
         if return_ty_ref := func.return_ty_ref:
             type_cpp_proj_info = TypeCppProjInfo.get(self.am, return_ty_ref.resolved_ty)
             type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
-            pkg_cpp_impl_target.include(type_cpp_proj_info.header_defn)
+            pkg_cpp_impl_target.include(*type_cpp_proj_info.defn_headers)
             abi_return_ty_name = type_abi_info.as_field
-            cpp_return_ty_name = type_cpp_proj_info.as_owner
+            cpp_return_ty_name = type_cpp_proj_info.as_field
             abi_result = type_cpp_proj_info.return_into_abi(cpp_result)
         else:
             abi_return_ty_name = "void"

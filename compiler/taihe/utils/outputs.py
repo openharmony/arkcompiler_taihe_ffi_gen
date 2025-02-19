@@ -1,8 +1,12 @@
 """Manage output files."""
 
 from abc import ABC, abstractmethod
+from io import StringIO
+from os import makedirs, path
 from pathlib import Path
 from typing import Generic, ParamSpec, TypeVar
+
+from typing_extensions import override
 
 P = ParamSpec("P")
 T = TypeVar("T", bound="OutputBase")
@@ -35,6 +39,33 @@ class OutputBase(ABC, Generic[P]):
     @abstractmethod
     def save_as(self, file_path: Path):
         """Save the output to the specified file path."""
+
+
+class COutputBuffer(OutputBase[bool]):
+    """Represents a C or C++ target file."""
+
+    def __init__(self, is_header: bool):
+        self.is_header = is_header
+        self.headers: dict[str, None] = {}
+        self.code = StringIO()
+
+    @override
+    def save_as(self, file_path: Path):
+        if not path.exists(file_path.parent):
+            makedirs(file_path.parent, exist_ok=True)
+        with open(file_path, "w", encoding="utf-8") as dst:
+            if self.is_header:
+                dst.write(f"#pragma once\n")
+            for header in self.headers:
+                dst.write(f'#include "{header}"\n')
+            dst.write(self.code.getvalue())
+
+    def write(self, code: str):
+        self.code.write(code)
+
+    def include(self, *headers: str, back=False):
+        for header in headers:
+            self.headers.setdefault(header, None)
 
 
 class OutputManager:

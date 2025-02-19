@@ -2,16 +2,22 @@
 
 from abc import ABCMeta, abstractmethod
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, Protocol
+from typing import TYPE_CHECKING, Any, Optional, Protocol
 
 from typing_extensions import override
 
-from taihe.semantics.types import Type
+from taihe.semantics.types import (
+    EnumType,
+    IfaceType,
+    StructType,
+    Type,
+    UserType,
+)
 from taihe.utils.exceptions import AttrRedefError, DeclRedefError
 from taihe.utils.sources import SourceLocation
 
 if TYPE_CHECKING:
-    from taihe.semantics.visitor import DeclVisitor, TypeVisitor
+    from taihe.semantics.visitor import DeclVisitor
 
 ################
 # Declarations #
@@ -22,75 +28,44 @@ class DeclProtocol(Protocol):
     def _accept(self, v: "DeclVisitor") -> Any: ...
 
 
-class Decl(DeclProtocol, metaclass=ABCMeta):
+class Decl(metaclass=ABCMeta):
     """Represents any declaration."""
+
+    loc: Optional[SourceLocation]
 
     attrs: dict[str, "AttrItemDecl"]
 
-    def __init__(self):
+    def __init__(self, loc: Optional[SourceLocation]):
+        self.loc = loc
         self.attrs = {}
 
     def add_attr(self, i: "AttrItemDecl"):
         i.node_parent = self
         if prev := self.attrs.get(i.name, None):
             raise AttrRedefError(prev, i)
-        else:
-            self.attrs[i.name] = i
-
-
-class NamedDecl(Decl, metaclass=ABCMeta):
-    """Represents a declaration with a unique semantic identity within a PackageGroup symbol tree.
-
-    A `NamedDecl` is defined as any declaration that:
-    1. Exists as a meaningful entity in the symbol tree of a `PackageGroup`.
-    2. Has a fully qualified name that allows it to be uniquely identified by traversing the symbol
-       tree.
-
-    Examples:
-    - Given the file `example.package.x` containing the declaration:
-      ```
-      @[info = "xxx"]
-      struct A {
-          name: example.package.y.B;
-      }
-      ```
-      - `StructDecl("A")` is a `NamedDecl` because it corresponds to `example.package.x.A`.
-      - `StructFieldDecl("name")` is a `NamedDecl` because it corresponds to
-        `example.package.x.A.name`.
-      - `AttrItemDecl("info")` is **not** a `NamedDecl` because it does not correspond to
-        `example.package.x.A.info`.
-      - `TypeRefDecl("example.package.y.B")` is **not** a `NamedDecl` because it does not correspond
-        to `example.package.x.A.example.package.y.B`.
-
-    By adhering to the rules, `NamedDecl` ensures that all identified declarations are semantically
-    meaningful and uniquely resolvable within the hierarchical structure of the symbol tree.
-    """
-
-    KIND: ClassVar[str]
-
-    name: str
-    loc: Optional[SourceLocation]
-
-    def __init__(
-        self,
-        name: str,
-        loc: Optional[SourceLocation],
-    ):
-        super().__init__()
-        self.name = name
-        self.loc = loc
-
-    @property
-    def description(self) -> str:
-        """Describes the object in a human-friendly way."""
-        return f"{self.KIND} {self.name!r}"
+        self.attrs[i.name] = i
 
     @property
     @abstractmethod
-    def symbol_tables(self) -> dict[str, Iterable["NamedDecl"]]: ...
+    def description(self) -> str: ...
 
     def __repr__(self) -> str:
-        return f"<{self.description} at {self.loc}>"
+        return f"<{self.__class__.__qualname__} {self.description}>"
+
+    @abstractmethod
+    def _accept(self, v: "DeclVisitor") -> Any: ...
+
+
+class NamedDecl(Decl, metaclass=ABCMeta):
+    name: str
+
+    def __init__(
+        self,
+        loc: Optional[SourceLocation],
+        name: str,
+    ):
+        super().__init__(loc)
+        self.name = name
 
 
 #############
@@ -98,44 +73,36 @@ class NamedDecl(Decl, metaclass=ABCMeta):
 #############
 
 
-class AttrItemDecl(Decl):
-    name: str
-    loc: Optional[SourceLocation]
-
+class AttrItemDecl(NamedDecl):
     value: bool | int | str | None
     node_parent: Optional[Decl]
 
     def __init__(
         self,
-        name: str,
         loc: Optional[SourceLocation],
+        name: str,
         value: bool | int | str | None = None,
     ):
-        super().__init__()
-        self.name = name
-        self.loc = loc
+        super().__init__(loc, name)
         self.value = value
         self.node_parent = None
-
-    @property
-    def description(self) -> str:
-        """Describes the object in a human-friendly way."""
-        return f"attribute {self.name!r}"
-
-    def __repr__(self) -> str:
-        return f"<{self.description} of {self.node_parent} at {self.loc}>"
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_attr_item_decl(self)
 
+    @property
+    @override
+    def description(self) -> str:
+        return f"attribute {self.name}"
 
-##############
-# References #
-##############
+
+###################
+# Type References #
+###################
 
 
-class TypeRefDecl(Decl):
+class TypeRefDecl(Decl, metaclass=ABCMeta):
     """Repersents a reference to a `Type`.
 
     Each user of a `Type` must be encapsulated in a `TypeRefDecl`.
@@ -144,53 +111,154 @@ class TypeRefDecl(Decl):
 
     For example:
     ```
-    struct Foo { ... }.     // `Foo` is a `TypeDecl`.
+    struct Foo { ... }      // `Foo` is a `TypeDecl`.
 
-    fn func(foo: mut Foo);  // `mut Foo` is `TypeRefDecl(ty=TypeDecl('Foo'), qual=MUT)`.
+    fn func(foo: Foo);      // `Foo` is `TypeRefDecl(ty=UserType(ty_decl=TypeDecl('Foo')))`.
     fn func(foo: BadType);  // `BadType` is `TypeRefDecl(ty=None)`.
     ```
     """
-
-    symbol: str
-    loc: Optional[SourceLocation]
 
     resolved_ty: Optional[Type]
     is_resolved: bool
 
     def __init__(
         self,
-        symbol: str,
         loc: Optional[SourceLocation],
         resolved_ty: Optional[Type] = None,
     ):
-        super().__init__()
-        self.symbol = symbol
-        self.loc = loc
+        super().__init__(loc)
         self.resolved_ty = resolved_ty
         self.is_resolved = resolved_ty is not None
 
-    def _accept(self, v: "DeclVisitor") -> Any:
-        return v.visit_type_ref_decl(self)
+    @property
+    @abstractmethod
+    def unresolved_repr(self) -> str: ...
 
-    def __repr__(self) -> str:
-        return f"<type reference {self.symbol} at {self.loc}>"
+    @property
+    @override
+    def description(self) -> str:
+        return f"type reference {self.unresolved_repr}"
+
+
+class SimpleTypeRefDecl(TypeRefDecl):
+    symbol: str
+
+    def __init__(
+        self,
+        loc: Optional[SourceLocation],
+        symbol: str,
+        resolved_ty: Optional[Type] = None,
+    ):
+        super().__init__(loc, resolved_ty)
+        self.symbol = symbol
+
+    @override
+    def _accept(self, v: "DeclVisitor") -> Any:
+        return v.visit_simple_type_ref_decl(self)
+
+    @property
+    @override
+    def unresolved_repr(self):
+        return self.symbol
+
+
+class GenericTypeRefDecl(TypeRefDecl):
+    symbol: str
+    args_ty_ref: list[TypeRefDecl]
+
+    def __init__(
+        self,
+        loc: Optional[SourceLocation],
+        symbol: str,
+        args_ty_ref: list[TypeRefDecl],
+        resolved_ty: Optional[Type] = None,
+    ):
+        super().__init__(loc, resolved_ty)
+        self.symbol = symbol
+        self.args_ty_ref = args_ty_ref
+
+    @override
+    def _accept(self, v: "DeclVisitor") -> Any:
+        return v.visit_generic_type_ref_decl(self)
+
+    @property
+    @override
+    def unresolved_repr(self):
+        args_fmt = ", ".join(arg.unresolved_repr for arg in self.args_ty_ref)
+        return f"{self.symbol}<{args_fmt}>"
+
+
+class ParamDecl(NamedDecl):
+    ty_ref: TypeRefDecl
+
+    def __init__(
+        self,
+        loc: Optional[SourceLocation],
+        name: str,
+        ty_ref: TypeRefDecl,
+    ):
+        super().__init__(loc, name)
+        self.ty_ref = ty_ref
+
+    @override
+    def _accept(self, v: "DeclVisitor") -> Any:
+        return v.visit_param_decl(self)
+
+    @property
+    @override
+    def description(self) -> str:
+        return f"parameter {self.name}"
+
+
+class CallbackTypeRefDecl(TypeRefDecl):
+    params: list[ParamDecl]
+    return_ty_ref: Optional[TypeRefDecl]
+
+    def __init__(
+        self,
+        loc: Optional[SourceLocation],
+        return_ty_ref: Optional[TypeRefDecl] = None,
+        resolved_ty: Optional[Type] = None,
+    ):
+        super().__init__(loc, resolved_ty)
+        self.params = []
+        self.return_ty_ref = return_ty_ref
+
+    def add_param(self, p: ParamDecl):
+        self.params.append(p)
+
+    @override
+    def _accept(self, v: "DeclVisitor") -> Any:
+        return v.visit_callback_type_ref_decl(self)
+
+    @property
+    @override
+    def unresolved_repr(self) -> str:
+        args_fmt = ", ".join(
+            f"{param.name}: {param.ty_ref.unresolved_repr}" for param in self.params
+        )
+        ret_fmt = ty_ref.unresolved_repr if (ty_ref := self.return_ty_ref) else "void"
+        return f"({args_fmt}) -> {ret_fmt}"
+
+
+#####################
+# Import References #
+#####################
 
 
 class PackageRefDecl(Decl):
     symbol: str
-    loc: Optional[SourceLocation]
 
     is_resolved: bool
     resolved_pkg: Optional["Package"]
 
     def __init__(
         self,
-        symbol: str,
         loc: Optional[SourceLocation],
+        symbol: str,
     ):
-        super().__init__()
+        super().__init__(loc)
         self.symbol = symbol
-        self.loc = loc
         self.is_resolved = False
         self.resolved_pkg = None
 
@@ -198,28 +266,28 @@ class PackageRefDecl(Decl):
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_package_ref_decl(self)
 
-    def __repr__(self) -> str:
-        return f"<package reference {self.symbol} at {self.loc}>"
+    @property
+    @override
+    def description(self) -> str:
+        return f"package reference {self.symbol}"
 
 
 class DeclarationRefDecl(Decl):
     symbol: str
-    loc: Optional[SourceLocation]
 
     pkg_ref: PackageRefDecl
 
     is_resolved: bool
-    resolved_decl: Optional["TypeDecl"]
+    resolved_decl: Optional["PackageLevelDecl"]
 
     def __init__(
         self,
-        symbol: str,
         loc: Optional[SourceLocation],
+        symbol: str,
         pkg_ref: PackageRefDecl,
     ):
-        super().__init__()
+        super().__init__(loc)
         self.symbol = symbol
-        self.loc = loc
         self.pkg_ref = pkg_ref
         self.is_resolved = False
         self.resolved_decl = None
@@ -228,8 +296,10 @@ class DeclarationRefDecl(Decl):
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_decl_ref_decl(self)
 
-    def __repr__(self) -> str:
-        return f"<declaration reference {self.symbol} at {self.loc}>"
+    @property
+    @override
+    def description(self) -> str:
+        return f"type reference {self.symbol}"
 
 
 #######################
@@ -266,16 +336,14 @@ class ImportDecl(NamedDecl, metaclass=ABCMeta):
 
 
 class PackageImportDecl(ImportDecl):
-    KIND = "package import"
-
     pkg_ref: PackageRefDecl
 
     def __init__(
         self,
         pkg_ref: PackageRefDecl,
         *,
-        name: str = "",
         loc: Optional[SourceLocation] = None,
+        name: str = "",
     ):
         super().__init__(
             name=name or pkg_ref.symbol,
@@ -287,26 +355,24 @@ class PackageImportDecl(ImportDecl):
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_package_import_decl(self)
 
-    @property
-    @override
-    def symbol_tables(self) -> dict[str, Iterable["NamedDecl"]]:
-        return {}
-
     def is_alias(self) -> bool:
         return self.name != self.pkg_ref.symbol
 
+    @property
+    @override
+    def description(self) -> str:
+        return f"package import {self.name}"
+
 
 class DeclarationImportDecl(ImportDecl):
-    KIND = "package declaration"
-
     decl_ref: DeclarationRefDecl
 
     def __init__(
         self,
         decl_ref: DeclarationRefDecl,
         *,
-        name: str = "",
         loc: Optional[SourceLocation] = None,
+        name: str = "",
     ):
         super().__init__(
             name=name or decl_ref.symbol,
@@ -318,13 +384,13 @@ class DeclarationImportDecl(ImportDecl):
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_decl_import_decl(self)
 
-    @property
-    @override
-    def symbol_tables(self) -> dict[str, Iterable["NamedDecl"]]:
-        return {}
-
     def is_alias(self) -> bool:
         return self.name != self.decl_ref.symbol
+
+    @property
+    @override
+    def description(self) -> str:
+        return f"declaration import {self.name}"
 
 
 ######################
@@ -332,91 +398,19 @@ class DeclarationImportDecl(ImportDecl):
 ######################
 
 
-class PackageLevelDecl(NamedDecl, metaclass=ABCMeta):
-    node_parent: Optional["Package"] = None
-
-
-class ParamDecl(NamedDecl):
-    KIND = "function parameter"
-
-    ty_ref: TypeRefDecl
-    node_parent: Optional["BaseFuncDecl"]
-
-    def __init__(
-        self,
-        name: str,
-        loc: Optional[SourceLocation],
-        ty_ref: TypeRefDecl,
-    ):
-        super().__init__(name, loc)
-        self.ty_ref = ty_ref
-        self.node_parent = None
-
-    @override
-    def _accept(self, v: "DeclVisitor") -> Any:
-        return v.visit_param_decl(self)
-
-    @property
-    @override
-    def symbol_tables(self) -> dict[str, Iterable["NamedDecl"]]:
-        return {}
-
-
-class BaseFuncDecl(NamedDecl, metaclass=ABCMeta):
-    params: list[ParamDecl]
-    return_ty_ref: Optional[TypeRefDecl]
-
-    def __init__(
-        self,
-        name: str,
-        loc: Optional[SourceLocation],
-        return_ty_ref: Optional[TypeRefDecl] = None,
-    ):
-        super().__init__(name, loc)
-        self.params = []
-        self.return_ty_ref = return_ty_ref
-
-    @property
-    @override
-    def symbol_tables(self) -> dict[str, Iterable["NamedDecl"]]:
-        return {"param": self.params}
-
-    def add_param(self, p: ParamDecl):
-        p.node_parent = self
-        self.params.append(p)
-
-
-class GlobFuncDecl(BaseFuncDecl, PackageLevelDecl):
-    KIND = "non-member function"
-
-    @override
-    def _accept(self, v: "DeclVisitor") -> Any:
-        return v.visit_glob_func_decl(self)
-
-
-class TypeDecl(PackageLevelDecl, Type, metaclass=ABCMeta):
-    pass
-
-
-class DataTypeDecl(TypeDecl, metaclass=ABCMeta):
-    pass
-
-
 class EnumItemDecl(NamedDecl):
-    KIND = "enum item"
-
     ty_ref: Optional[TypeRefDecl]
     value: Optional[int]
     node_parent: Optional["EnumDecl"]
 
     def __init__(
         self,
-        name: str,
         loc: Optional[SourceLocation],
+        name: str,
         ty_ref: Optional[TypeRefDecl] = None,
         value: Optional[int] = None,
     ):
-        super().__init__(name, loc)
+        super().__init__(loc, name)
         self.ty_ref = ty_ref
         self.value = value
         self.node_parent = None
@@ -427,46 +421,21 @@ class EnumItemDecl(NamedDecl):
 
     @property
     @override
-    def symbol_tables(self) -> dict[str, Iterable["NamedDecl"]]:
-        return {}
-
-
-class EnumDecl(DataTypeDecl):
-    KIND = "enum"
-
-    items: list[EnumItemDecl]
-
-    def __init__(self, name: str, loc: Optional[SourceLocation]):
-        super().__init__(name, loc)
-        self.items = []
-
-    @override
-    def _accept(self, v: "DeclVisitor | TypeVisitor") -> Any:
-        return v.visit_enum_decl(self)
-
-    @property
-    @override
-    def symbol_tables(self) -> dict[str, Iterable["NamedDecl"]]:
-        return {"item": self.items}
-
-    def add_item(self, f: EnumItemDecl):
-        f.node_parent = self
-        self.items.append(f)
+    def description(self) -> str:
+        return f"enum item {self.name}"
 
 
 class StructFieldDecl(NamedDecl):
-    KIND = "struct field"
-
     ty_ref: TypeRefDecl
     node_parent: Optional["StructDecl"]
 
     def __init__(
         self,
-        name: str,
         loc: Optional[SourceLocation],
+        name: str,
         ty_ref: TypeRefDecl,
     ):
-        super().__init__(name, loc)
+        super().__init__(loc, name)
         self.ty_ref = ty_ref
         self.node_parent = None
 
@@ -476,46 +445,20 @@ class StructFieldDecl(NamedDecl):
 
     @property
     @override
-    def symbol_tables(self) -> dict[str, Iterable["NamedDecl"]]:
-        return {}
+    def description(self) -> str:
+        return f"struct field {self.name}"
 
 
-class StructDecl(DataTypeDecl):
-    KIND = "struct"
-
-    fields: list[StructFieldDecl]
-
-    def __init__(self, name: str, loc: Optional[SourceLocation]):
-        super().__init__(name, loc)
-        self.fields = []
-
-    @override
-    def _accept(self, v: "TypeVisitor | DeclVisitor") -> Any:
-        return v.visit_struct_decl(self)
-
-    @property
-    @override
-    def symbol_tables(self) -> dict[str, Iterable["NamedDecl"]]:
-        return {"field": self.fields}
-
-    def add_field(self, f: StructFieldDecl):
-        f.node_parent = self
-        self.fields.append(f)
-
-
-class IfaceParentDecl(NamedDecl):
-    KIND = "function return type"
-
+class IfaceParentDecl(Decl):
     ty_ref: TypeRefDecl
     node_parent: Optional["IfaceDecl"]
 
     def __init__(
         self,
-        name: str,
         loc: Optional[SourceLocation],
         ty_ref: TypeRefDecl,
     ):
-        super().__init__(name, loc)
+        super().__init__(loc)
         self.ty_ref = ty_ref
         self.node_parent = None
 
@@ -525,50 +468,167 @@ class IfaceParentDecl(NamedDecl):
 
     @property
     @override
-    def symbol_tables(self) -> dict[str, Iterable["NamedDecl"]]:
-        return {}
+    def description(self) -> str:
+        return f"interface parent ({self.ty_ref.description})"
 
 
-class IfaceMethodDecl(BaseFuncDecl):
-    KIND = "interface method"
-
+class IfaceMethodDecl(NamedDecl):
     node_parent: Optional["IfaceDecl"] = None
+    params: list[ParamDecl]
+    return_ty_ref: Optional[TypeRefDecl]
+
+    def __init__(
+        self,
+        loc: Optional[SourceLocation],
+        name: str,
+        return_ty_ref: Optional[TypeRefDecl] = None,
+    ):
+        super().__init__(loc, name)
+        self.params = []
+        self.return_ty_ref = return_ty_ref
+
+    def add_param(self, p: ParamDecl):
+        self.params.append(p)
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_iface_func_decl(self)
 
+    @property
+    @override
+    def description(self) -> str:
+        return f"interface method {self.name}"
+
+
+##############################
+# Package Level Declarations #
+##############################
+
+
+class PackageLevelDecl(NamedDecl, metaclass=ABCMeta):
+    node_parent: Optional["Package"] = None
+
+    @property
+    def full_name(self):
+        return f"{self.node_parent.name}.{self.name}" if self.node_parent else self.name
+
+
+class GlobFuncDecl(PackageLevelDecl):
+    params: list[ParamDecl]
+    return_ty_ref: Optional[TypeRefDecl]
+
+    def __init__(
+        self,
+        loc: Optional[SourceLocation],
+        name: str,
+        return_ty_ref: Optional[TypeRefDecl] = None,
+    ):
+        super().__init__(loc, name)
+        self.params = []
+        self.return_ty_ref = return_ty_ref
+
+    def add_param(self, p: ParamDecl):
+        self.params.append(p)
+
+    @override
+    def _accept(self, v: "DeclVisitor") -> Any:
+        return v.visit_glob_func_decl(self)
+
+    @property
+    @override
+    def description(self) -> str:
+        return f"function {self.name}"
+
+
+#####################
+# Type Declarations #
+#####################
+
+
+class TypeDecl(PackageLevelDecl, metaclass=ABCMeta):
+    @abstractmethod
+    def as_type(self) -> UserType: ...
+
+
+class EnumDecl(TypeDecl):
+    items: list["EnumItemDecl"]
+
+    def __init__(self, loc: Optional[SourceLocation], name: str):
+        super().__init__(loc, name)
+        self.items = []
+
+    @override
+    def _accept(self, v: "DeclVisitor") -> Any:
+        return v.visit_enum_decl(self)
+
+    def add_item(self, f: "EnumItemDecl"):
+        f.node_parent = self
+        self.items.append(f)
+
+    @override
+    def as_type(self) -> UserType:
+        return EnumType(self)
+
+    @property
+    @override
+    def description(self) -> str:
+        return f"enum {self.name}"
+
+
+class StructDecl(TypeDecl):
+    fields: list["StructFieldDecl"]
+
+    def __init__(self, loc: Optional[SourceLocation], name: str):
+        super().__init__(loc, name)
+        self.fields = []
+
+    @override
+    def _accept(self, v: "DeclVisitor") -> Any:
+        return v.visit_struct_decl(self)
+
+    def add_field(self, f: "StructFieldDecl"):
+        f.node_parent = self
+        self.fields.append(f)
+
+    @override
+    def as_type(self) -> UserType:
+        return StructType(self)
+
+    @property
+    @override
+    def description(self) -> str:
+        return f"struct {self.name}"
+
 
 class IfaceDecl(TypeDecl):
-    KIND = "interface"
+    methods: list["IfaceMethodDecl"]
+    parents: list["IfaceParentDecl"]
 
-    methods: list[IfaceMethodDecl]
-    parents: list[IfaceParentDecl]
-
-    def __init__(self, name: str, loc: Optional[SourceLocation]):
-        super().__init__(name, loc)
+    def __init__(self, loc: Optional[SourceLocation], name: str):
+        super().__init__(loc, name)
         self.methods = []
         self.parents = []
 
     @override
-    def _accept(self, v: "TypeVisitor | DeclVisitor") -> Any:
+    def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_iface_decl(self)
 
-    @property
-    @override
-    def symbol_tables(self) -> dict[str, Iterable["NamedDecl"]]:
-        return {
-            "method": self.methods,
-            "parent": self.parents,
-        }
-
-    def add_method(self, f: IfaceMethodDecl):
+    def add_method(self, f: "IfaceMethodDecl"):
         f.node_parent = self
         self.methods.append(f)
 
-    def add_parent(self, p: IfaceParentDecl):
+    def add_parent(self, p: "IfaceParentDecl"):
         p.node_parent = self
         self.parents.append(p)
+
+    @override
+    def as_type(self) -> UserType:
+        return IfaceType(self)
+
+    @property
+    @override
+    def description(self) -> str:
+        return f"interface {self.name}"
 
 
 ######################
@@ -578,8 +638,6 @@ class IfaceDecl(TypeDecl):
 
 class Package(NamedDecl):
     """A collection of named identities sharing the same scope."""
-
-    KIND = "package"
 
     # Symbols
     imports: dict[str, ImportDecl]
@@ -596,7 +654,7 @@ class Package(NamedDecl):
     interfaces: list[IfaceDecl]
 
     def __init__(self, name: str, loc: Optional[SourceLocation]):
-        super().__init__(name, loc)
+        super().__init__(loc, name)
 
         self.imports = {}
         self.decls = {}
@@ -609,33 +667,28 @@ class Package(NamedDecl):
         self.enums = []
         self.interfaces = []
 
-    def __repr__(self) -> str:
-        return f"{self.__class__.__qualname__}<{self.name!r}>"
-
     @property
     def segments(self) -> list[str]:
         return self.name.split(".")
 
+    @property
+    def children(self) -> Iterable[NamedDecl]:
+        yield from self.pkg_imports
+        yield from self.decl_imports
+
+        yield from self.functions
+        yield from self.structs
+        yield from self.enums
+        yield from self.interfaces
+
+    @override
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_package(self)
-
-    @property
-    @override
-    def symbol_tables(self) -> dict[str, Iterable["NamedDecl"]]:
-        return {
-            "pkg_imports": self.pkg_imports,
-            "decl_imports": self.decl_imports,
-            "functions": self.functions,
-            "structs": self.structs,
-            "enums": self.enums,
-            "interfaces": self.interfaces,
-        }
 
     def _register_to_decl(self, d: PackageLevelDecl):
         if prev := self.decls.get(d.name, None):
             raise DeclRedefError(prev, d)
-        else:
-            self.decls[d.name] = d
+        self.decls[d.name] = d
 
     def add_function(self, f: GlobFuncDecl):
         f.node_parent = self
@@ -672,8 +725,7 @@ class Package(NamedDecl):
     def _register_to_import(self, i: ImportDecl):
         if prev := self.imports.get(i.name, None):
             raise DeclRedefError(prev, i)
-        else:
-            self.imports[i.name] = i
+        self.imports[i.name] = i
 
     def add_decl_import(self, i: DeclarationImportDecl):
         i.node_parent = self
@@ -693,8 +745,13 @@ class Package(NamedDecl):
         else:
             raise NotImplementedError(f"unexpected import {i.description}")
 
+    @property
+    @override
+    def description(self) -> str:
+        return f"package {self.name}"
 
-class PackageGroup(Decl):
+
+class PackageGroup:
     """Stores all known packages for a compilation instance."""
 
     package_dict: dict[str, Package]

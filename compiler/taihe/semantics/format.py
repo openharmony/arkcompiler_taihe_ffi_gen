@@ -7,13 +7,15 @@ from typing_extensions import override
 
 from taihe.semantics.declarations import (
     AttrItemDecl,
-    BaseFuncDecl,
     Decl,
     DeclarationImportDecl,
     DeclarationRefDecl,
+    DeclProtocol,
     EnumDecl,
     EnumItemDecl,
+    GlobFuncDecl,
     IfaceDecl,
+    IfaceMethodDecl,
     IfaceParentDecl,
     Package,
     PackageGroup,
@@ -22,47 +24,30 @@ from taihe.semantics.declarations import (
     ParamDecl,
     StructDecl,
     StructFieldDecl,
-    TypeDecl,
     TypeRefDecl,
 )
-from taihe.semantics.types import (
-    BuiltinType,
-)
-from taihe.semantics.visitor import DeclVisitor, TypeVisitor
+from taihe.semantics.visitor import RecursiveDeclVisitor
 from taihe.utils.diagnostics import AnsiStyle
 
 
-def pretty_print(x: Decl, buffer: TextIO):
+def pretty_print(x: DeclProtocol, buffer: TextIO):
     printer = _PrettyPrinter(buffer)
     printer.handle_decl(x)
 
 
-class _TypeNamePrinter(TypeVisitor[str]):
-    @override
-    def visit_type_decl(self, d: TypeDecl):
-        return f"{pkg.name}.{d.name}" if (pkg := d.node_parent) else d.name
-
-    @override
-    def visit_builtin_type(self, t: BuiltinType):
-        return t.name
-
-
-class _PrettyPrinter(DeclVisitor):
+class _PrettyPrinter(RecursiveDeclVisitor):
     def __init__(self, buffer: TextIO):
         self.buffer = buffer
         self.indent = 0
-        self.type_name_printer = _TypeNamePrinter()
 
     def get_type_ref_decl(self, d: TypeRefDecl) -> str:
         real_type = (
-            "<error type>"
-            if not d.resolved_ty
-            else self.type_name_printer.handle_type(d.resolved_ty)
+            "<error type>" if not d.resolved_ty else d.resolved_ty.representation
         )
         return (
-            f"{d.symbol} {AnsiStyle.GREEN}/* {real_type} */{AnsiStyle.RESET}"
+            f"{d.unresolved_repr} {AnsiStyle.GREEN}/* {real_type} */{AnsiStyle.RESET}"
             if d.is_resolved
-            else d.symbol
+            else d.unresolved_repr
         )
 
     def get_package_ref_decl(self, d: PackageRefDecl) -> str:
@@ -139,23 +124,16 @@ class _PrettyPrinter(DeclVisitor):
         )
 
     @override
-    def visit_base_func_decl(self, d: BaseFuncDecl):
+    def visit_glob_func_decl(self, d: GlobFuncDecl):
         self.write_attr(d)
 
-        func_kw = self.as_keyword("fn")
+        func_kw = self.as_keyword("function")
 
         fmt_args = ", ".join(self.get_param_decl(x) for x in d.params)
-        ret = f"-> {self.get_type_ref_decl(d.return_ty_ref)}" if d.return_ty_ref else ""
+        ret = self.get_type_ref_decl(d.return_ty_ref) if d.return_ty_ref else "void"
 
         self.buffer.write(self.indent * 2 * " ")
-        self.buffer.write(f"{func_kw} {d.name}({fmt_args}){ret};\n")
-
-    @override
-    def visit_struct_field_decl(self, d: StructFieldDecl):
-        self.write_attr(d)
-
-        self.buffer.write(self.indent * 2 * " ")
-        self.buffer.write(f"{d.name}: {self.get_type_ref_decl(d.ty_ref)};\n")
+        self.buffer.write(f"{func_kw} {d.name}({fmt_args}): {ret};\n")
 
     @override
     def visit_enum_item_decl(self, d: EnumItemDecl):
@@ -190,6 +168,13 @@ class _PrettyPrinter(DeclVisitor):
         self.buffer.write("}\n")
 
     @override
+    def visit_struct_field_decl(self, d: StructFieldDecl):
+        self.write_attr(d)
+
+        self.buffer.write(self.indent * 2 * " ")
+        self.buffer.write(f"{d.name}: {self.get_type_ref_decl(d.ty_ref)};\n")
+
+    @override
     def visit_struct_decl(self, d: StructDecl):
         self.write_attr(d)
 
@@ -205,6 +190,16 @@ class _PrettyPrinter(DeclVisitor):
             self.indent -= 1
             self.buffer.write(self.indent * 2 * " ")
         self.buffer.write("}\n")
+
+    @override
+    def visit_iface_func_decl(self, d: IfaceMethodDecl):
+        self.write_attr(d)
+
+        fmt_args = ", ".join(self.get_param_decl(x) for x in d.params)
+        ret = self.get_type_ref_decl(d.return_ty_ref) if d.return_ty_ref else "void"
+
+        self.buffer.write(self.indent * 2 * " ")
+        self.buffer.write(f"{d.name}({fmt_args}): {ret};\n")
 
     @override
     def visit_iface_decl(self, d: IfaceDecl):

@@ -1,18 +1,27 @@
 #pragma once
 
 #include <array>
+#include <memory>
+#include <type_traits>
+#include <utility>
 #include <vector>
+#include <stdexcept>
+#include <cstdlib>
 #include <cstddef>
 
 #include <taihe/common.hpp>
+#include <taihe/array.abi.h>
 
 namespace taihe::core {
+template<typename cpp_owner_t>
+struct array_view;
 
-struct take_ownership_from_abi_t {};
+template<typename cpp_owner_t>
+struct array;
 
-template <typename T>
+template<typename cpp_owner_t>
 struct array_view {
-    using value_type = T;
+    using value_type = cpp_owner_t;
     using size_type = std::size_t;
     using reference = value_type&;
     using const_reference = value_type const&;
@@ -23,138 +32,64 @@ struct array_view {
     using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-    array_view() noexcept = default;
+    array_view(pointer data, size_type size) noexcept : m_data(data), m_size(size) {} // main constructor
 
-    array_view(pointer data, size_type size) noexcept
-        : m_data(data)
-        , m_size(size) {}
+    template<typename C>
+    array_view(std::initializer_list<C> value) noexcept
+        : array_view(value.begin(), static_cast<size_type>(value.size())) {}
 
-    array_view(pointer first, pointer last) noexcept
-        : m_data(first)
-        , m_size(static_cast<size_type>(last - first)) {}
-
-    array_view(std::initializer_list<value_type> value) noexcept :           
-        array_view(const_cast<pointer>(value.begin()), static_cast<size_type>(value.size())) {}
-
-    template <typename C, size_type N>
+    template<typename C, size_type N>
     array_view(C (&value)[N]) noexcept
         : array_view(value, N) {}
 
-    template <typename C>
+    template<typename C>
     array_view(std::vector<C>& value) noexcept
-        : array_view(data(value), static_cast<size_type>(value.size())) {}
+        : array_view(value.data(), static_cast<size_type>(value.size())) {}
 
-    template <typename C>
+    template<typename C>
     array_view(std::vector<C> const& value) noexcept
-        : array_view(data(value), static_cast<size_type>(value.size())) {}
+        : array_view(value.data(), static_cast<size_type>(value.size())) {}
 
-    template <typename C, size_t N>
+    template<typename C, size_t N>
     array_view(std::array<C, N>& value) noexcept
         : array_view(value.data(), static_cast<size_type>(value.size())) {}
 
-    template <typename C, size_t N>
+    template<typename C, size_t N>
     array_view(std::array<C, N> const& value) noexcept
         : array_view(value.data(), static_cast<size_type>(value.size())) {}
 
-    template <typename OtherType>
-    array_view(array_view<OtherType> const& other,
-        std::enable_if_t<std::is_convertible_v<OtherType(*)[], T(*)[]>, int> = 0) noexcept
+    template<typename C>
+    array_view(array_view<C> const& other) noexcept
         : array_view(other.data(), other.size()) {}
 
-    reference operator[](size_type const pos) noexcept {
+    template<typename C>
+    array_view(array<C> const& other) noexcept
+        : array_view(other.data(), other.size()) {}
+
+    reference operator[](size_type const pos) const noexcept {
         TH_ASSERT(pos < size(), "Pos should be less than array's size");
         return m_data[pos];
     }
 
-    const_reference operator[](size_type const pos) const noexcept {
-        TH_ASSERT(pos < size(), "Pos should be less than array's size");
-        return m_data[pos];
-    }
-
-    reference at(size_type const pos) {
+    reference at(size_type const pos) const {
         if (size() <= pos) {
             throw std::out_of_range("Invalid array subscript");
         }
         return m_data[pos];
     }
 
-    const_reference at(size_type const pos) const {
-        if (size() <= pos) {
-            throw std::out_of_range("Invalid array subscript");
-        }
-        return m_data[pos];
-    }
-
-    reference front() noexcept {
+    reference front() const noexcept {
         TH_ASSERT(m_size > 0, "Array's size should be greater than 0");
         return *m_data;
     }
 
-    const_reference front() const noexcept {
-        TH_ASSERT(m_size > 0, "Array's size should be greater than 0");
-        return *m_data;
-    }
-
-    reference back() noexcept {
-        TH_ASSERT(m_size > 0, "Array's size should be greater than 0");
-        return m_data[m_size - 1];
-    }
-
-    const_reference back() const noexcept {
+    reference back() const noexcept {
         TH_ASSERT(m_size > 0, "Array's size should be greater than 0");
         return m_data[m_size - 1];
     }
 
     pointer data() const noexcept {
         return m_data;
-    }
-
-    iterator begin() noexcept {
-        return m_data;
-    }
-
-    const_iterator begin() const noexcept {
-        return m_data;
-    }
-
-    const_iterator cbegin() const noexcept {
-        return m_data;
-    }
-
-    iterator end() noexcept {
-        return m_data + m_size;
-    }
-
-    const_iterator end() const noexcept {
-        return m_data + m_size;
-    }
-
-    const_iterator cend() const noexcept {
-        return m_data + m_size;
-    }
-
-    reverse_iterator rbegin() noexcept {
-        return reverse_iterator(end());
-    }
-
-    const_reverse_iterator rbegin() const noexcept {
-        return const_reverse_iterator(end());
-    }
-
-    const_reverse_iterator crbegin() const noexcept {
-        return rbegin();
-    }
-
-    reverse_iterator rend() noexcept {
-        return reverse_iterator(begin());
-    }
-
-    const_reverse_iterator rend() const noexcept {
-        return const_reverse_iterator(begin());
-    }
-
-    const_reverse_iterator crend() const noexcept {
-        return rend();
     }
 
     bool empty() const noexcept {
@@ -165,164 +100,138 @@ struct array_view {
         return m_size;
     }
 
+    iterator begin() const noexcept {
+        return m_data;
+    }
+
+    const_iterator cbegin() const noexcept {
+        return m_data;
+    }
+
+    iterator end() const noexcept {
+        return m_data + m_size;
+    }
+
+    const_iterator cend() const noexcept {
+        return m_data + m_size;
+    }
+
+    reverse_iterator rbegin() const noexcept {
+        return m_data + m_size;
+    }
+
+    const_reverse_iterator crbegin() const noexcept {
+        return m_data + m_size;
+    }
+
+    reverse_iterator rend() const noexcept {
+        return m_data;
+    }
+
+    const_reverse_iterator crend() const noexcept {
+        return m_data;
+    }
+
+    friend bool operator==(array_view left, array_view right) noexcept {
+        return std::equal(left.begin(), left.end(), right.begin(), right.end());
+    }
+
+    friend bool operator!=(array_view left, array_view right) noexcept { return !(left == right); }
+
+    friend bool operator<(array_view left, array_view right) noexcept {
+        return std::lexicographical_compare(left.begin(), left.end(), right.begin(), right.end());
+    }
+
+    friend bool operator>(array_view left, array_view right) noexcept { return right < left; }
+
+    friend bool operator<=(array_view left, array_view right) noexcept { return !(right < left); }
+
+    friend bool operator>=(array_view left, array_view right) noexcept { return !(left < right); }
+
+    friend std::size_t hash_impl(adl_helper_t, array_view val) {
+        std::size_t seed = 0;
+        for (std::size_t i = 0; i < val.size(); i++) {
+            seed ^= hash(val[i]) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+        }
+        return seed;
+    }
+
+    friend bool same_impl(adl_helper_t, array_view lhs, array_view rhs) {
+        if (lhs.size() != rhs.size()) {
+            return false;
+        }
+        for (std::size_t i = 0; i < lhs.size() && i < rhs.size(); i++) {
+            if (!same(lhs[i], rhs[i])) {
+                return false;
+            }
+        }
+        return true;
+    }
+
 protected:
-    pointer m_data{ nullptr };
-    size_type m_size{ 0 };
-
-private:
-    template <typename C>
-    auto data(std::vector<C> const& value) noexcept {
-        static_assert(!std::is_same_v<C, bool>, "Cannot use std::vector<bool> as an array_view. Consider std::array or std::unique_ptr<bool[]>.");
-        return value.data();
-    }
-
-    template <typename C>
-    auto data(std::vector<C>& value) noexcept {
-        static_assert(!std::is_same_v<C, bool>, "Cannot use std::vector<bool> as an array_view. Consider std::array or std::unique_ptr<bool[]>.");
-        return value.data();
-    }
+    std::size_t m_size;
+    cpp_owner_t* m_data;
 };
 
-/* C++ 20 
- * template <typename C, size_t N> array_view(C(&value)[N]) -> array_view<C>;
- * template <typename C> array_view(std::vector<C>& value) -> array_view<C>;
- * template <typename C> array_view(std::vector<C> const& value) -> array_view<C const>;
- * template <typename C, size_t N> array_view(std::array<C, N>& value) -> array_view<C>;
- * template <typename C, size_t N> array_view(std::array<C, N> const& value) -> array_view<C const>;
- */
+struct copy_data_t {};
+struct move_data_t {};
 
-template <typename T>
-struct array : array_view<T> {
-    using typename array_view<T>::value_type;
-    using typename array_view<T>::size_type;
-    using typename array_view<T>::reference;
-    using typename array_view<T>::const_reference;
-    using typename array_view<T>::pointer;
-    using typename array_view<T>::const_pointer;
-    using typename array_view<T>::iterator;
-    using typename array_view<T>::const_iterator;
-    using typename array_view<T>::reverse_iterator;
-    using typename array_view<T>::const_reverse_iterator;
+template<typename cpp_owner_t>
+struct array : public array_view<cpp_owner_t> {
+    using typename array_view<cpp_owner_t>::pointer;
+    using typename array_view<cpp_owner_t>::size_type;
 
-    array(array const&) = delete;
-    array& operator=(array const&) = delete;
+    array(pointer data, size_type size) noexcept : array_view<cpp_owner_t>(data, size) {} // main constructor
 
-    array() noexcept = default;
-
-    explicit array(size_type const count)
-        : array(count, value_type()) {}
-
-    array(void* ptr, uint32_t const count, take_ownership_from_abi_t) noexcept
-        : array_view<T>(static_cast<value_type*>(ptr), static_cast<value_type*>(ptr) + count) {}
-
-    array(size_type const count, value_type const& value) {
-        alloc(count);
-        std::uninitialized_fill_n(this->m_data, count, value);
+    array(pointer data, size_type size, copy_data_t) noexcept
+        : array((cpp_owner_t*)malloc(size * sizeof(cpp_owner_t)), size) {
+        std::uninitialized_copy_n(data, size, this->m_data);
     }
 
-    template <typename InIt, typename = std::void_t<typename std::iterator_traits<InIt>::difference_type>>
-    array(InIt first, InIt last) {
-        alloc(static_cast<size_type>(std::distance(first, last)));
-        std::uninitialized_copy(first, last, this->begin());
+    array(pointer data, size_type size, move_data_t) noexcept
+        : array((cpp_owner_t*)malloc(size * sizeof(cpp_owner_t)), size) {
+        std::uninitialized_move_n(data, size, this->m_data);
     }
 
-    template <typename U>
-    explicit array(std::vector<U> const& value) 
-        : array(value.begin(), value.end()) {}
-
-    template <typename U, size_t N>
-    explicit array(std::array<U, N> const& value)
-        : array(value.begin(), value.end()) {}
-
-    template <typename U, size_t N>
-    explicit array(U const(&value)[N])
-        : array(value, value + N) {}
-
-    array(std::initializer_list<value_type> value)
-        : array(value.begin(), value.end()) {}
-
-    template <typename U, typename = std::enable_if_t<std::is_convertible_v<U, T>>>
-    array(std::initializer_list<U> value)
-        : array(value.begin(), value.end()) {}
-
-    array(array&& other) noexcept
-        : array_view<T>(other.m_data, other.m_size) {
-        other.m_data = nullptr;
-        other.m_size = 0;
+    template<typename... Args>
+    static array make(size_type size, Args&&... args) {
+        pointer data = (cpp_owner_t*)malloc(size * sizeof(cpp_owner_t));
+        std::uninitialized_fill_n(data, size, cpp_owner_t(std::forward<Args>(args)...));
+        return array(data, size);
     }
 
-    array& operator=(array&& other) noexcept {
-        clear();
-        this->m_data = other.m_data;
-        this->m_size = other.m_size;
-        other.m_data = nullptr;
-        other.m_size = 0;
-        return*this;
+    array(array_view<cpp_owner_t> const& other)
+        : array(other.data(), other.size(), copy_data_t{}) {}
+
+    array(array<cpp_owner_t> const& other)
+        : array(other.data(), other.size(), copy_data_t{}) {}
+
+    array(array<cpp_owner_t>&& other)
+        : array(std::exchange(other.m_data, nullptr), std::exchange(other.m_size, 0)) {}
+
+    array &operator=(array other) {
+        std::swap(this->m_size, other.m_size);
+        std::swap(this->m_data, other.m_data);
+        return *this;
     }
 
-    ~array() noexcept {
-        clear();
-    }
-
-    void clear() noexcept {
-        if (this->m_data == nullptr) { return; }
-        std::destroy(this->begin(), this->end());
-        free(this->m_data);
-        this->m_data = nullptr;
-        this->m_size = 0;
-    }
-
-    friend void swap(array& left, array& right) noexcept {
-        std::swap(left.m_data, right.m_data);
-        std::swap(left.m_size, right.m_size);
-    }
-
-private:
-    void alloc(size_type const size) {
-        TH_ASSERT(this->empty(), "this array should be empty");
-
-        if (0 != size) {
-            size_t bytes_required = sizeof(value_type) * size;
-            this->m_data = static_cast<value_type*>(malloc(bytes_required));
-
-            if (this->m_data == nullptr) {
-                throw std::bad_alloc();
-            }
-
-            this->m_size = size;
+    ~array() {
+        if (this->m_data) {
+            std::destroy_n(this->m_data, this->m_size);
+            free(this->m_data);
+            this->m_size = 0;
+            this->m_data = nullptr;
         }
     }
 };
 
-namespace impl {
-    template <typename T, typename U>
-    inline constexpr bool array_comparable = std::is_same_v<std::remove_cv_t<T>, std::remove_cv_t<U>>;
-}
+template<typename cpp_owner_t>
+struct cpp_type_traits<array_view<cpp_owner_t>> {
+    using abi_t = TArray;
+};
 
-template <typename T, typename U, 
-    std::enable_if_t<impl::array_comparable<T, U>, int> = 0>
-bool operator==(array_view<T> const& left, array_view<U> const& right) noexcept {
-    return std::equal(left.begin(), left.end(), right.begin(), right.end());
-}
-
-template <typename T, typename U,
-    std::enable_if_t<impl::array_comparable<T, U>, int> = 0>
-bool operator<(array_view<T> const& left, array_view<U> const& right) noexcept {
-    return std::lexicographical_compare(left.begin(), left.end(), right.begin(), right.end());
-}
-
-template <typename T, typename U, std::enable_if_t<impl::array_comparable<T, U>, int> = 0>
-bool operator!=(array_view<T> const& left, array_view<U> const& right) noexcept { return !(left == right); }
-template <typename T, typename U,std::enable_if_t<impl::array_comparable<T, U>, int> = 0>
-bool operator>(array_view<T> const& left, array_view<U> const& right) noexcept { return right < left; }
-template <typename T, typename U,std::enable_if_t<impl::array_comparable<T, U>, int> = 0>
-bool operator<=(array_view<T> const& left, array_view<U> const& right) noexcept { return !(right < left); }
-template <typename T, typename U, std::enable_if_t<impl::array_comparable<T, U>, int> = 0>
-bool operator>=(array_view<T> const& left, array_view<U> const& right) noexcept { return !(left < right); }
-
-/////////////////////////////
-///////// abi func //////////
-/////////////////////////////
-////// to be continued //////
-/////////////////////////////
+template<typename cpp_owner_t>
+struct cpp_type_traits<array<cpp_owner_t>> {
+    using abi_t = TArray;
+};
 }

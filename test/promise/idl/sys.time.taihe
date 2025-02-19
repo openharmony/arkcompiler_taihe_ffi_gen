@@ -1,16 +1,12 @@
-interface ICallbackString {
-    [functor] call(val: String): void;
-}
-
-interface ICallbackVoid {
+interface ICallback {
     [functor] call(): void;
 }
 
-function setTimeout(cb: ICallbackVoid, ms: u64): void;
+function setTimeout(cb: ICallback, ms: u64): void;
 
-interface ICaller {
-    setValue(str: String): void;
-    waitForValue(cb: ICallbackString): void;
+interface IPromiseStringString {
+    resolve(val: String): void;
+    reject(err: String): void;
 }
 
-function makeCaller(): ICaller;
+function getInputWithTimeout(promise: IPromiseStringString, ms: u64): void;

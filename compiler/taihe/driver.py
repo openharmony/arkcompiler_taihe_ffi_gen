@@ -96,8 +96,9 @@ class CompilerInstance:
             pretty_print(self.package_group, sys.stdout)
 
     def generate(self):
-        if self.diagnostics_manager.current_max_level >= Level.ERROR:
+        if self.diagnostics_manager.current_max_level() >= Level.ERROR:
             return
+
         if not self.invocation.out_dir:
             return
 
@@ -121,12 +122,10 @@ class CompilerInstance:
             CppProjCodeGenerator(self.target_manager, self.analysis_manager).generate(
                 self.package_group
             )
-
         if self.invocation.gen_author:
             CImplCodeGenerator(self.target_manager, self.analysis_manager).generate(
                 self.package_group
             )
-
             CppImplCodeGenerator(self.target_manager, self.analysis_manager).generate(
                 self.package_group
             )

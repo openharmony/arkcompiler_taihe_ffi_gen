@@ -1,4 +1,3 @@
-#include <vector>
 #include <thread>
 #include <chrono>
 
@@ -7,30 +6,41 @@
 
 using namespace sys::time;
 
-void setTimeoutImpl(weak::ICallbackVoid cb, uint64_t ms) {
-    std::thread([cb = ICallbackVoid(cb), ms]() {
+void setTimeoutImpl(weak::ICallback cb, uint64_t ms) {
+    std::thread([cb = ICallback(cb), ms]() {
         std::this_thread::sleep_for(std::chrono::milliseconds(ms));
-        cb();
+        (*cb)();
     }).detach();
 }
 
-struct CallerImpl {
-    std::vector<ICallbackString> vec;
+TH_EXPORT_CPP_API_setTimeout(setTimeoutImpl)
 
-    void setValue(taihe::core::string_view state) {
-        for (weak::ICallbackString cb : vec) {
-            cb(state);
+#include <iostream>
+#include <sys/select.h>
+#include <unistd.h>
+
+using namespace std;
+
+void getInputWithTimeoutImpl(weak::IPromiseStringString ps, uint64_t s) {
+    std::thread([ps = IPromiseStringString(ps), s]() {
+        fd_set readSet;
+        FD_ZERO(&readSet);
+        FD_SET(STDIN_FILENO, &readSet);
+
+        struct timeval tv = {(decltype(tv.tv_sec))s, 0};
+
+        if (select(STDIN_FILENO + 1, &readSet, NULL, NULL, &tv) < 0) {
+            perror("select");
         }
-    }
 
-    void waitForValue(weak::ICallbackString cb) {
-        vec.emplace_back(cb);
-    }
-};
-
-auto makeCallerImpl() {
-    return taihe::core::make_holder<CallerImpl, ICaller>();
+        if (FD_ISSET(STDIN_FILENO, &readSet)) {
+            std::string input;
+            std::cin >> input;
+            ps->resolve(input);
+        } else {
+            ps->reject("Timeout");
+        }
+    }).detach();
 }
 
-TH_EXPORT_CPP_API_makeCaller(makeCallerImpl)
-TH_EXPORT_CPP_API_setTimeout(setTimeoutImpl)
+TH_EXPORT_CPP_API_getInputWithTimeout(getInputWithTimeoutImpl)

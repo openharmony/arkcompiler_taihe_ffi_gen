@@ -1,23 +1,33 @@
-from typing import TypeVar
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, TypeVar
 
 from typing_extensions import override
 
 from taihe.semantics.declarations import (
-    DataTypeDecl,
+    CallbackTypeRefDecl,
     DeclarationImportDecl,
     DeclarationRefDecl,
     EnumDecl,
+    GenericTypeRefDecl,
+    GlobFuncDecl,
     IfaceDecl,
+    IfaceMethodDecl,
     NamedDecl,
     Package,
     PackageGroup,
     PackageImportDecl,
     PackageRefDecl,
+    SimpleTypeRefDecl,
     StructDecl,
     TypeDecl,
-    TypeRefDecl,
 )
-from taihe.semantics.visitor import DeclVisitor
+from taihe.semantics.types import (
+    BUILTIN_GENERICS,
+    BUILTIN_TYPES,
+    CallbackType,
+    UserType,
+)
+from taihe.semantics.visitor import RecursiveDeclVisitor
 from taihe.utils.diagnostics import AbstractDiagnosticsManager
 from taihe.utils.exceptions import (
     DeclarationNotInScopeError,
@@ -26,13 +36,17 @@ from taihe.utils.exceptions import (
     DuplicateExtendsWarn,
     EnumValueConflictError,
     ExtendsTypeError,
+    GenericArgumentsError,
     NotATypeError,
     PackageNotExistError,
     PackageNotInScopeError,
-    RecursiveExtensionError,
-    RecursiveInclusionError,
+    RecursiveReferenceError,
     SymbolConflictWithNamespaceError,
 )
+
+if TYPE_CHECKING:
+    from taihe.semantics.declarations import IfaceParentDecl, TypeRefDecl
+    from taihe.semantics.types import Type
 
 
 def analyze_semantics(pg: PackageGroup, diag: AbstractDiagnosticsManager):
@@ -41,7 +55,6 @@ def analyze_semantics(pg: PackageGroup, diag: AbstractDiagnosticsManager):
     _ResolveImportsPass(diag).handle_decl(pg)
     _CheckFieldNameCollisionErrorPass(diag).handle_decl(pg)
     _CalculateEnumItemValuePass(diag).handle_decl(pg)
-    _CheckIfaceParentsPass(diag).handle_decl(pg)
     _CheckRecursiveInclusionPass(diag).handle_decl(pg)
 
 
@@ -68,7 +81,7 @@ def _check_decl_confilct_with_namespace(
                 diag.emit(SymbolConflictWithNamespaceError(d, p))
 
 
-class _ResolveImportsPass(DeclVisitor):
+class _ResolveImportsPass(RecursiveDeclVisitor):
     """Resolves imports and type references within a package group."""
 
     diag: AbstractDiagnosticsManager
@@ -89,112 +102,170 @@ class _ResolveImportsPass(DeclVisitor):
         return self._current_pkg_group
 
     @override
-    def visit_package(self, p: Package):
+    def visit_package(self, p: Package) -> None:
         self._current_pkg = p
         super().visit_package(p)
         self._current_pkg = None
 
     @override
-    def visit_package_group(self, g: PackageGroup):
+    def visit_package_group(self, g: PackageGroup) -> None:
         self._current_pkg_group = g
         super().visit_package_group(g)
         self._current_pkg_group = None
 
     @override
-    def visit_package_ref_decl(self, d: PackageRefDecl):
+    def visit_package_ref_decl(self, d: PackageRefDecl) -> None:
         if d.is_resolved:
             return
-
-        if pkg := self.pkg_group.lookup(d.symbol):
-            d.resolved_pkg = pkg
-        else:
-            self.diag.emit(PackageNotExistError(d.symbol, loc=d.loc))
-            d.resolved_pkg = None
-
         d.is_resolved = True
 
+        if (pkg := self.pkg_group.lookup(d.symbol)) is None:
+            self.diag.emit(PackageNotExistError(d.symbol, loc=d.loc))
+            return
+
+        d.resolved_pkg = pkg
+        return
+
     @override
-    def visit_decl_ref_decl(self, d: DeclarationRefDecl):
+    def visit_decl_ref_decl(self, d: DeclarationRefDecl) -> None:
         if d.is_resolved:
             return
+        d.is_resolved = True
 
         self.handle_decl(d.pkg_ref)
 
         if (pkg := d.pkg_ref.resolved_pkg) is None:
-            # No need to repeatedly throw exceptions for package import errors
-            d.resolved_decl = None
-        elif isinstance(decl := pkg.decls.get(d.symbol), TypeDecl):
-            d.resolved_decl = decl
-        elif decl:
-            self.diag.emit(NotATypeError(d.symbol, loc=d.loc))
-            d.resolved_decl = None
-        else:
-            self.diag.emit(DeclNotExistError(d.symbol, loc=d.loc))
-            d.resolved_decl = None
-
-        d.pkg_ref.is_resolved = True
-
-    def visit_type_ref_decl(self, d: TypeRefDecl):
-        if d.is_resolved:
+            # No need to repeatedly throw exceptions
             return
 
-        xs = d.symbol.rsplit(".", maxsplit=1)
+        if (decl := pkg.decls.get(d.symbol)) is None:
+            self.diag.emit(DeclNotExistError(d.symbol, loc=d.loc))
+            return
 
-        # fn foo(x: com.example.Bar)
-        if len(xs) == 2:
+        d.resolved_decl = decl
+        return
+
+    @override
+    def visit_simple_type_ref_decl(self, d: SimpleTypeRefDecl) -> None:
+        if d.is_resolved:
+            return
+        d.is_resolved = True
+
+        if len(xs := d.symbol.rsplit(".", maxsplit=1)) == 2:
             pkg_name, decl_name = xs
 
             # Find the corresponding imported package according to the package name
-            if not isinstance(
-                import_pkg := self.pkg.imports.get(pkg_name), PackageImportDecl
-            ):
+            import_pkg = self.pkg.imports.get(pkg_name)
+
+            if not isinstance(import_pkg, PackageImportDecl):
                 self.diag.emit(PackageNotInScopeError(pkg_name, loc=d.loc))
-                d.resolved_ty = None
-            elif (pkg := import_pkg.pkg_ref.resolved_pkg) is None:
-                # No need to repeatedly throw exceptions for package import errors
-                d.resolved_ty = None
+                return
 
             # Then find the corresponding type declaration from the package
-            elif isinstance(decl := pkg.decls.get(decl_name), TypeDecl):
-                d.resolved_ty = decl
-            elif decl:
-                self.diag.emit(NotATypeError(decl_name, loc=d.loc))
-                d.resolved_ty = None
-            else:
+            if (pkg := import_pkg.pkg_ref.resolved_pkg) is None:
+                # No need to repeatedly throw exceptions
+                return
+
+            if (decl := pkg.decls.get(decl_name)) is None:
                 self.diag.emit(DeclNotExistError(decl_name, loc=d.loc))
-                d.resolved_ty = None
+                return
 
-        # fn foo(x: Bar)
-        elif len(xs) == 1:
-            decl_name = xs[0]
-
-            # Find types declared in the current package
-            if isinstance(decl := self.pkg.decls.get(decl_name), TypeDecl):
-                d.resolved_ty = decl
-            elif decl:
+            if not isinstance(decl, TypeDecl):
                 self.diag.emit(NotATypeError(decl_name, loc=d.loc))
-                d.resolved_ty = None
+                return
 
-            # If that fails, continue looking for imported type declarations
-            elif not isinstance(
-                import_decl := self.pkg.imports.get(decl_name), DeclarationImportDecl
-            ):
-                self.diag.emit(DeclarationNotInScopeError(decl_name, loc=d.loc))
-                d.resolved_ty = None
-            elif (decl := import_decl.decl_ref.resolved_decl) is None:
-                # No need to repeatedly throw exceptions for declaration import errors
-                d.resolved_ty = None
-            else:
-                d.resolved_ty = decl
+            d.resolved_ty = decl.as_type()
+            return
 
-        # Should not be reached
-        else:
-            raise ValueError("unexpected format for type reference")
+        decl_name = xs[0]
 
+        # Find Builtin Types
+        if decl := BUILTIN_TYPES.get(decl_name):
+            d.resolved_ty = decl
+            return
+
+        # Find types declared in the current package
+        if decl := self.pkg.decls.get(decl_name):
+            if not isinstance(decl, TypeDecl):
+                self.diag.emit(NotATypeError(decl_name, loc=d.loc))
+                return
+
+            d.resolved_ty = decl.as_type()
+            return
+
+        # Look for imported type declarations
+        import_decl = self.pkg.imports.get(decl_name)
+
+        if isinstance(import_decl, DeclarationImportDecl):
+            if (decl := import_decl.decl_ref.resolved_decl) is None:
+                # No need to repeatedly throw exceptions
+                return
+
+            if not isinstance(decl, TypeDecl):
+                self.diag.emit(NotATypeError(decl_name, loc=d.loc))
+                return
+
+            d.resolved_ty = decl.as_type()
+            return
+
+        # Fallback
+        self.diag.emit(DeclarationNotInScopeError(decl_name, loc=d.loc))
+        return
+
+    @override
+    def visit_generic_type_ref_decl(self, d: GenericTypeRefDecl) -> None:
+        if d.is_resolved:
+            return
         d.is_resolved = True
 
+        super().visit_generic_type_ref_decl(d)
 
-class _CalculateEnumItemValuePass(DeclVisitor):
+        args_ty: list[Type] = []
+        for arg_ty_ref in d.args_ty_ref:
+            if (arg_ty := arg_ty_ref.resolved_ty) is None:
+                # No need to repeatedly throw exceptions
+                return
+            args_ty.append(arg_ty)
+
+        decl_name = d.symbol
+
+        if generic := BUILTIN_GENERICS.get(decl_name):
+            try:
+                d.resolved_ty = generic(*args_ty)
+            except TypeError:
+                self.diag.emit(GenericArgumentsError(d.unresolved_repr, loc=d.loc))
+            return
+
+        # Fallback
+        self.diag.emit(DeclarationNotInScopeError(decl_name, loc=d.loc))
+        return
+
+    @override
+    def visit_callback_type_ref_decl(self, d: CallbackTypeRefDecl) -> None:
+        if d.is_resolved:
+            return
+        d.is_resolved = True
+
+        super().visit_callback_type_ref_decl(d)
+
+        if d.return_ty_ref:
+            if (return_ty := d.return_ty_ref.resolved_ty) is None:
+                # No need to repeatedly throw exceptions
+                return
+        else:
+            return_ty = None
+
+        params_ty: list[Type] = []
+        for param in d.params:
+            if (arg_ty := param.ty_ref.resolved_ty) is None:
+                # No need to repeatedly throw exceptions
+                return
+            params_ty.append(arg_ty)
+
+        d.resolved_ty = CallbackType(return_ty, tuple(params_ty))
+
+
+class _CalculateEnumItemValuePass(RecursiveDeclVisitor):
     """Calculate Enum Values."""
 
     diag: AbstractDiagnosticsManager
@@ -215,7 +286,7 @@ class _CalculateEnumItemValuePass(DeclVisitor):
             value += 1
 
 
-class _CheckFieldNameCollisionErrorPass(DeclVisitor):
+class _CheckFieldNameCollisionErrorPass(RecursiveDeclVisitor):
     """Check for duplicate field names in declarations and name anonymous declarations."""
 
     diag: AbstractDiagnosticsManager
@@ -224,60 +295,44 @@ class _CheckFieldNameCollisionErrorPass(DeclVisitor):
         self.diag = diag
 
     @override
-    def visit_named_decl(self, d: NamedDecl) -> None:
-        names = {}
-        for field_name, children in d.symbol_tables.items():
-            for i, f in enumerate(children):
-                if not f.name:
-                    f.name = f"{field_name}_{i}"
-                if (prev := names.setdefault(f.name, f)) != f:
-                    self.diag.emit(DeclRedefError(prev, f))
+    def visit_glob_func_decl(self, d: GlobFuncDecl) -> None:
+        self.check_collision_helper(d.params)
+        return super().visit_glob_func_decl(d)
 
-        return super().visit_named_decl(d)
+    @override
+    def visit_iface_func_decl(self, d: IfaceMethodDecl) -> None:
+        self.check_collision_helper(d.params)
+        return super().visit_iface_func_decl(d)
 
+    @override
+    def visit_struct_decl(self, d: StructDecl) -> None:
+        self.check_collision_helper(d.fields)
+        return super().visit_struct_decl(d)
 
-class _CheckIfaceParentsPass(DeclVisitor):
-    """Validates interface inheritance for correctness and cycles."""
+    @override
+    def visit_enum_decl(self, d: EnumDecl) -> None:
+        self.check_collision_helper(d.items)
+        return super().visit_enum_decl(d)
 
-    diag: AbstractDiagnosticsManager
-
-    def __init__(self, diag: AbstractDiagnosticsManager):
-        self.diag = diag
-        self.parent_table: dict[
-            IfaceDecl, list[tuple[tuple[IfaceDecl, TypeRefDecl], IfaceDecl]]
-        ] = {}
-
-    def visit_package_group(self, g: PackageGroup) -> None:
-        self.parent_table = {}
-        super().visit_package_group(g)
-        cycles = detect_cycles(self.parent_table)
-        for cycle in cycles:
-            last, *other = cycle[::-1]
-            self.diag.emit(RecursiveExtensionError(last, other))
-
+    @override
     def visit_iface_decl(self, d: IfaceDecl) -> None:
-        parent_iface_list = self.parent_table.setdefault(d, [])
-        parent_iface_dict = {}
-        for parent in d.parents:
-            if (parent_iface := parent.ty_ref.resolved_ty) is None:
-                pass
-            elif not isinstance(parent_iface, IfaceDecl):
-                self.diag.emit(ExtendsTypeError(parent))
-            else:
-                parent_iface_list.append(((d, parent.ty_ref), parent_iface))
-                prev = parent_iface_dict.setdefault(parent_iface, parent)
-                if prev != parent:
-                    self.diag.emit(
-                        DuplicateExtendsWarn(
-                            d,
-                            parent_iface,
-                            loc=parent.ty_ref.loc,
-                            prev_loc=prev.ty_ref.loc,
-                        )
-                    )
+        self.check_collision_helper(d.methods)
+        return super().visit_iface_decl(d)
+
+    @override
+    def visit_package(self, p: Package) -> None:
+        self.check_collision_helper(p.children)
+        return super().visit_package(p)
+
+    def check_collision_helper(self, children: Iterable[NamedDecl]):
+        names = {}
+        for f in children:
+            assert f.name
+            if (prev := names.setdefault(f.name, f)) != f:
+                self.diag.emit(DeclRedefError(prev, f))
 
 
-class _CheckRecursiveInclusionPass(DeclVisitor):
+class _CheckRecursiveInclusionPass(RecursiveDeclVisitor):
     """Validates struct fields for type correctness and cycles."""
 
     diag: AbstractDiagnosticsManager
@@ -285,8 +340,8 @@ class _CheckRecursiveInclusionPass(DeclVisitor):
     def __init__(self, diag: AbstractDiagnosticsManager):
         self.diag = diag
         self.type_table: dict[
-            DataTypeDecl,
-            list[tuple[tuple[DataTypeDecl, TypeRefDecl], DataTypeDecl]],
+            TypeDecl,
+            list[tuple[tuple[TypeDecl, TypeRefDecl], TypeDecl]],
         ] = {}
 
     def visit_package_group(self, g: PackageGroup) -> None:
@@ -295,22 +350,51 @@ class _CheckRecursiveInclusionPass(DeclVisitor):
         cycles = detect_cycles(self.type_table)
         for cycle in cycles:
             last, *other = cycle[::-1]
-            self.diag.emit(RecursiveInclusionError(last, other))
+            self.diag.emit(RecursiveReferenceError(last, other))
 
-    def visit_data_type_decl(self, d: DataTypeDecl) -> None:
+    def visit_data_type_decl(self, d: TypeDecl) -> None:
         raise NotImplementedError()
+
+    def visit_iface_decl(self, d: IfaceDecl) -> None:
+        parent_iface_list = self.type_table.setdefault(d, [])
+        parent_iface_dict: dict[IfaceDecl, IfaceParentDecl] = {}
+        for parent in d.parents:
+            if (parent_ty := parent.ty_ref.resolved_ty) is None:
+                continue
+            if not isinstance(parent_ty, UserType) or not isinstance(
+                parent_iface := parent_ty.ty_decl, IfaceDecl
+            ):
+                self.diag.emit(ExtendsTypeError(parent, parent_ty))
+                continue
+            parent_iface_list.append(((d, parent.ty_ref), parent_iface))
+            prev = parent_iface_dict.setdefault(parent_iface, parent)
+            if prev != parent:
+                self.diag.emit(
+                    DuplicateExtendsWarn(
+                        d,
+                        parent_iface,
+                        loc=parent.ty_ref.loc,
+                        prev_loc=prev.ty_ref.loc,
+                    )
+                )
 
     def visit_struct_decl(self, d: StructDecl) -> None:
         type_list = self.type_table.setdefault(d, [])
         for f in d.fields:
-            if isinstance((ty := f.ty_ref.resolved_ty), DataTypeDecl):
-                type_list.append(((d, f.ty_ref), ty))
+            if isinstance(ty := f.ty_ref.resolved_ty, UserType) and isinstance(
+                decl := ty.ty_decl, TypeDecl
+            ):
+                type_list.append(((d, f.ty_ref), decl))
 
     def visit_enum_decl(self, d: EnumDecl) -> None:
         type_list = self.type_table.setdefault(d, [])
         for i in d.items:
-            if i.ty_ref and isinstance((ty := i.ty_ref.resolved_ty), DataTypeDecl):
-                type_list.append(((d, i.ty_ref), ty))
+            if i.ty_ref is None:
+                continue
+            if isinstance(ty := i.ty_ref.resolved_ty, UserType) and isinstance(
+                decl := ty.ty_decl, TypeDecl
+            ):
+                type_list.append(((d, i.ty_ref), decl))
 
 
 V = TypeVar("V")
