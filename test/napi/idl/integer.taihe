@@ -27,3 +27,11 @@ struct Theme {
 function from_theme(theme: Theme): RGB;
 function to_theme(a: Color): Theme;
 function show(): String;
+
+interface IBase {
+    getId(): String;
+    setId(s: String): void;
+}
+
+function makeIBase(id: String): IBase;
+function copyIBase(a: IBase, b: IBase): void;

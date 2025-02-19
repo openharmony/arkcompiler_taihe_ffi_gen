@@ -9,9 +9,11 @@ popd
 
 # 编译 napi.cpp
 clang -c -fvisibility=hidden -fPIC -O0 -std=gnu11 -o build/string.c.o ../../runtime/src/string.c -I ../../runtime/include
+clang -c -fvisibility=hidden -fPIC -O0 -std=gnu11 -o build/object.c.o ../../runtime/src/object.c -I ../../runtime/include
 clang++ -c -fvisibility=hidden -fPIC -O0 -std=gnu++20 -o build/integer.impl.cpp.o author/src/integer.impl.cpp -I ../../runtime/include -I author_test/include
 clang++ -c -fvisibility=hidden -fPIC -O0 -std=gnu++20 -o build/integer.napi.cpp.o napi_test/integer.napi.cpp -I ../../runtime/include -I author_test/include
-clang++ -fPIC -o integer.node build/string.c.o build/integer.impl.cpp.o build/integer.napi.cpp.o -shared
+clang -c -fvisibility=hidden -fPIC -O0 -std=gnu11 -o build/integer.interface.c.o author_test/src/integer.IBase.c -I ../../runtime/include -I author_test/include
+clang++ -fPIC -o integer.node build/integer.interface.c.o build/object.c.o build/string.c.o build/integer.impl.cpp.o build/integer.napi.cpp.o -shared
 
 clang++ -c -fvisibility=hidden -fPIC -O0 -std=gnu++20 -o build/string.impl.cpp.o author/src/string.impl.cpp -I ../../runtime/include -I author_test/include
 clang++ -c -fvisibility=hidden -fPIC -O0 -std=gnu++20 -o build/string.napi.cpp.o napi_test/string.napi.cpp -I ../../runtime/include -I author_test/include

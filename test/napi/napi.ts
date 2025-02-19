@@ -1,4 +1,4 @@
-import { add, mul, sub, from_rgb, to_rgb, make_RGB, make_Color, to_color, from_color, make_Theme, from_theme, to_theme, show } from "./integer"
+import { add, mul, sub, from_rgb, to_rgb, make_RGB, make_Color, to_color, from_color, make_Theme, from_theme, to_theme, show, makeIBase, copyIBase } from "./integer"
 import { concat, to_i32, from_i32 } from "./string";
 import { RGB, Color, Theme } from "./rgb"
 
@@ -48,6 +48,13 @@ function main() {
 
   let result16 = show();
   console.log("show: ", result16);
+  let result17 = makeIBase("abc");
+  console.log("makeIBase: ", result17.getId())
+  result17.setId("xyz")
+  console.log("setIBase: ", result17.getId())
+  let result18 = makeIBase("test");
+  copyIBase(result18, result17);
+  console.log("copyIBase: ", result17.getId(), result18.getId());
 }
 
 main();

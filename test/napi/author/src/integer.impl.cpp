@@ -1,5 +1,6 @@
 #include "integer.impl.hpp"
 #include "integer.proj.hpp"
+#include <iostream>
 
 int32_t ohos_int_add(int32_t a, int32_t b) {
     return a + b;
@@ -56,6 +57,39 @@ taihe::core::string ohos_show() {
     return "success";
 }
 
+
+class Student {
+    protected:
+        taihe::core::string id;
+    public:
+        Student(taihe::core::string_view id)
+            : id(id) {
+            std::cout << "new " << this << std::endl;
+        }
+
+        ~Student() {
+            std::cout << "del " << this << std::endl;
+        }
+
+        taihe::core::string getId() {
+            return id;
+        }
+
+        void setId(taihe::core::string_view s) {
+            id = s;
+            return;
+        }
+};
+
+integer::IBase makeIBaseImpl(taihe::core::string_view id) {
+    return make_holder<Student, integer::IBase>(id);
+}
+
+void copyIBaseImpl(integer::weak::IBase a, integer::weak::IBase b) {
+    a.setId(b.getId());
+    return;
+}
+
 TH_EXPORT_CPP_API_add(ohos_int_add)
 TH_EXPORT_CPP_API_mul(ohos_int_mul)
 TH_EXPORT_CPP_API_sub(ohos_int_sub)
@@ -66,3 +100,5 @@ TH_EXPORT_CPP_API_to_color(ohos_to_color)
 TH_EXPORT_CPP_API_from_theme(ohos_from_theme)
 TH_EXPORT_CPP_API_to_theme(ohos_to_theme)
 TH_EXPORT_CPP_API_show(ohos_show)
+TH_EXPORT_CPP_API_makeIBase(makeIBaseImpl)
+TH_EXPORT_CPP_API_copyIBase(copyIBaseImpl)
