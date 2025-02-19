@@ -213,7 +213,7 @@ class NapiCodeGenerator:
             pkg_napi_target.write(
                 f"    napi_value {struct.name}_{field.name} = nullptr;\n"
                 f'    napi_create_string_utf8(env, "{field.name}", NAPI_AUTO_LENGTH, &{struct.name}_{field.name});\n'
-                f"    napi_set_property(env, obj, {struct.name}_{field.name}, args[{i}]);\n"
+                f'    napi_set_named_property(env, obj, "{field.name}", args[{i}]);\n'
             )
         pkg_napi_target.write(f"    return obj;\n" f"}}\n")
 
@@ -263,8 +263,6 @@ class NapiCodeGenerator:
                 self.gen_func_get_js_iface_value(
                     value_ty, pkg_napi_target, f"args[{i}]", f"value{i}"
                 )
-                args.append(f"*value{i}")
-                continue
             args.append(f"value{i}")
         return ", ".join(args)
 
@@ -299,6 +297,13 @@ class NapiCodeGenerator:
                 )
             if isinstance(field.ty_ref.resolved_ty, StructType):
                 self.gen_func_get_js_struct_value(
+                    field.ty_ref.resolved_ty,
+                    pkg_napi_target,
+                    struct_field_value,
+                    struct_field_result,
+                )
+            if isinstance(field.ty_ref.resolved_ty, IfaceType):
+                self.gen_func_get_js_iface_value(
                     field.ty_ref.resolved_ty,
                     pkg_napi_target,
                     struct_field_value,
@@ -359,8 +364,9 @@ class NapiCodeGenerator:
     ):
         iface_cpp_info = IfaceDeclCppProjInfo.get(self.am, value_ty.ty_decl)
         pkg_napi_target.write(
-            f"    {iface_cpp_info.as_field}* {result};\n"
-            f"    napi_unwrap(env, {value}, reinterpret_cast<void **>(&{result}));\n"
+            f"    {iface_cpp_info.as_field}* {result}_;\n"
+            f"    napi_unwrap(env, {value}, reinterpret_cast<void **>(&{result}_));\n"
+            f"    {iface_cpp_info.as_field} {result} = *{result}_;\n"
         )
 
     def gen_func_return_value(
@@ -373,17 +379,14 @@ class NapiCodeGenerator:
         if return_ty_ref := func.return_ty_ref:
             value_ty = return_ty_ref.resolved_ty
             type_napi_return_info = TypeNapiInfo.get(self.am, value_ty)
+            pkg_napi_target.write(
+                f"    {type_napi_return_info.as_c} value = {full_func_name}({args_str});\n"
+            )
             if isinstance(value_ty, IfaceType):
-                pkg_napi_target.write(
-                    f"    {type_napi_return_info.as_c}* value_ptr = new {type_napi_return_info.as_c}({full_func_name}({args_str}));\n"
-                )
                 self.gen_func_create_js_iface_value(
-                    value_ty, pkg_napi_target, "value_ptr", "result"
+                    value_ty, pkg_napi_target, "value", "result"
                 )
             else:
-                pkg_napi_target.write(
-                    f"    {type_napi_return_info.as_c} value = {full_func_name}({args_str});\n"
-                )
                 if isinstance(value_ty, ScalarType):
                     self.gen_func_create_js_scalar_value(
                         value_ty, pkg_napi_target, "value", "result"
@@ -394,6 +397,10 @@ class NapiCodeGenerator:
                     )
                 if isinstance(value_ty, StructType):
                     self.gen_func_create_js_struct_value(
+                        value_ty, pkg_napi_target, "value", "result"
+                    )
+                if isinstance(value_ty, IfaceType):
+                    self.gen_func_create_js_iface_value(
                         value_ty, pkg_napi_target, "value", "result"
                     )
         else:
@@ -438,6 +445,13 @@ class NapiCodeGenerator:
                     f"{value}.{field.name}",
                     struct_field_result,
                 )
+            if isinstance(field.ty_ref.resolved_ty, IfaceType):
+                self.gen_func_create_js_iface_value(
+                    field.ty_ref.resolved_ty,
+                    pkg_napi_target,
+                    f"{value}.{field.name}",
+                    struct_field_result,
+                )
             pkg_napi_target.write(
                 f'    napi_set_named_property(env, {result}, "{field.name}", {struct_field_result});\n'
             )
@@ -477,6 +491,7 @@ class NapiCodeGenerator:
     ):
         iface_cpp_info = IfaceDeclCppProjInfo.get(self.am, value_ty.ty_decl)
         pkg_napi_target.write(
+            f"    {iface_cpp_info.as_field}* value_ptr = new {iface_cpp_info.as_field}({value});\n"
             f"    napi_value {result} = nullptr;\n"
             f"    napi_create_object(env, &{result});\n\n"
         )
@@ -487,13 +502,13 @@ class NapiCodeGenerator:
                 f"      [](napi_env env, napi_callback_info info) -> napi_value {{\n"
                 f"    napi_value thisobj;\n"
                 f"    napi_get_cb_info(env, info, nullptr, nullptr, &thisobj, nullptr);\n"
-                f"    {iface_cpp_info.as_field}* {value};\n"
-                f"    napi_unwrap(env, thisobj, reinterpret_cast<void**>(&{value}));\n"
+                f"    {iface_cpp_info.as_field}* value_ptr;\n"
+                f"    napi_unwrap(env, thisobj, reinterpret_cast<void**>(&value_ptr));\n"
             )
             self.gen_func_get_cb_info(len(func.params), pkg_napi_target)
             args_str = self.gen_func_get_value(func, pkg_napi_target)
             self.gen_func_return_value(
-                func, pkg_napi_target, args_str, f"(*{value})->{func.name}"
+                func, pkg_napi_target, args_str, f"(*value_ptr)->{func.name}"
             )
             pkg_napi_target.write(
                 f"    }}, nullptr, &{value_ty.ty_decl.name}_{func.name});\n"
@@ -501,7 +516,7 @@ class NapiCodeGenerator:
             )
 
         pkg_napi_target.write(
-            f"    napi_wrap(env, {result}, {value}, [](napi_env env, void* finalize_data, void* finalize_hint) {{\n"
+            f"    napi_wrap(env, {result}, value_ptr, [](napi_env env, void* finalize_data, void* finalize_hint) {{\n"
             f"      delete static_cast<{iface_cpp_info.as_field}*>(finalize_data);\n"
             f"    }}, nullptr, nullptr);\n"
         )

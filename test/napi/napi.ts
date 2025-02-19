@@ -37,17 +37,9 @@ function main() {
   let result12 = to_color("white", true, 3.12, rgb);
   console.log("to color: ", result12);
 
-  let result13 = make_Theme(color);
-  console.log("make_Theme: ", result13);
-  const theme = new Theme(color);
-  console.log("new theme: ", theme);
-  let result14 = from_theme(theme);
-  console.log("from js theme: ", result14);
-  let result15 = to_theme(color);
-  console.log("to theme: ", result15);
-
   let result16 = show();
   console.log("show: ", result16);
+
   let result17 = makeIBase("abc");
   console.log("makeIBase: ", result17.getId())
   result17.setId("xyz")
@@ -55,6 +47,15 @@ function main() {
   let result18 = makeIBase("test");
   copyIBase(result18, result17);
   console.log("copyIBase: ", result17.getId(), result18.getId());
+
+  let result13 = make_Theme(color, result17);
+  console.log("make_Theme: ", result13, result13.ibase.getId());
+  const theme = new Theme(color);   // 不支持 js 实现 interface
+  console.log("new theme: ", theme);
+  let result14 = from_theme(result13);
+  console.log("from js theme: ", result14);
+  let result15 = to_theme(color, result17);
+  console.log("to theme: ", result15, result15.ibase.getId());
 }
 
 main();

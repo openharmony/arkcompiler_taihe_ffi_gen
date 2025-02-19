@@ -27,4 +27,10 @@ export class Theme {
     this.color = color;
   }
   color: Color;
+  ibase: IBase;
+}
+
+export interface IBase {
+  getId(): String;
+  setId(id: String): void;
 }

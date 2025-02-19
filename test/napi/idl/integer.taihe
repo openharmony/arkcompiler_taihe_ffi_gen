@@ -23,9 +23,10 @@ function to_color(a: String, b: bool, c: f32, d: RGB): Color;
 
 struct Theme {
     color: Color;
+    ibase: IBase;
 }
 function from_theme(theme: Theme): RGB;
-function to_theme(a: Color): Theme;
+function to_theme(a: Color, b: IBase): Theme;
 function show(): String;
 
 interface IBase {

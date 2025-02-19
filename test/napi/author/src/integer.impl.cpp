@@ -48,11 +48,6 @@ integer::RGB ohos_from_theme(integer::Theme const& theme) {
     return theme.color.rgb;
 }
 
-integer::Theme ohos_to_theme(integer::Color color) {
-    integer::Theme theme{color};
-    return theme;
-}
-
 taihe::core::string ohos_show() {
     return "success";
 }
@@ -88,6 +83,11 @@ integer::IBase makeIBaseImpl(taihe::core::string_view id) {
 void copyIBaseImpl(integer::weak::IBase a, integer::weak::IBase b) {
     a->setId(b->getId());
     return;
+}
+
+integer::Theme ohos_to_theme(integer::Color color, integer::weak::IBase ibase) {
+    integer::Theme theme{color, ibase};
+    return theme;
 }
 
 TH_EXPORT_CPP_API_add(ohos_int_add)
