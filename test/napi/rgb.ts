@@ -37,4 +37,5 @@ export interface IBase {
 
 export interface IShape extends IBase {
   calculateArea(): number;
+  as_IBase();
 }

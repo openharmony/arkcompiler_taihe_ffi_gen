@@ -1,6 +1,16 @@
-import { add, mul, sub, from_rgb, to_rgb, make_RGB, make_Color, to_color, from_color, make_Theme, from_theme, to_theme, show, makeIBase, copyIBase, makeIShape } from "./integer"
+import { add, mul, sub, from_rgb, to_rgb, make_RGB, make_Color, to_color, from_color, make_Theme, from_theme, to_theme, show, makeIBase, copyIBase, makeIShape, as_IShape, impl_IBase } from "./integer"
 import { concat, to_i32, from_i32 } from "./string";
 import { RGB, Color, Theme } from "./rgb"
+
+class BaseImpl {
+  getId(): String {
+    return "js_object";
+  }
+  setId(id: String): void {
+    console.log("setting js object id");
+    return;
+  }
+}
 
 function main() {
   let result1 = mul(20, 2);
@@ -59,8 +69,26 @@ function main() {
 
   let shape1 = makeIShape("001", 2.4, 3.5);
   console.log("Shape: ", shape1.calculateArea());
-  copyIBase(result18, shape1);
-  console.log("copyIBase: ", shape1.getId(), result18.getId());
+  let as_base = shape1.as_IBase();
+  copyIBase(result18, as_base);
+  console.log("copyIBase: ", as_base.getId(), result18.getId());
+  let base_as_shape = as_IShape(as_base);
+  if (base_as_shape === undefined){
+    console.log("cannot convert")
+  } else {
+    console.log("base_as_shape: ", base_as_shape.calculateArea());
+  }
+  let base_as_shape1 = as_IShape(result17);
+  if (base_as_shape1 === undefined){
+    console.log("cannot convert")
+  } else {
+    console.log("base_as_shape1: ", base_as_shape1.calculateArea());
+  }
+
+  let baseImpl = new BaseImpl();
+  let impl_ibase = impl_IBase(baseImpl);
+  copyIBase(result17, impl_ibase);
+  console.log(impl_ibase.getId(), result17.getId())
 }
 
 main();
