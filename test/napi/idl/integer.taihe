@@ -34,5 +34,11 @@ interface IBase {
     setId(s: String): void;
 }
 
+interface IShape: IBase {
+    calculateArea(): f32;
+}
+
 function makeIBase(id: String): IBase;
 function copyIBase(a: IBase, b: IBase): void;
+
+function makeIShape(id: String, a: f32, b: f32): IShape;

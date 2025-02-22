@@ -53,16 +53,16 @@ taihe::core::string ohos_show() {
 }
 
 
-class Student {
+class Base {
     protected:
         taihe::core::string id;
     public:
-        Student(taihe::core::string_view id)
+        Base(taihe::core::string_view id)
             : id(id) {
             std::cout << "new " << this << std::endl;
         }
 
-        ~Student() {
+        ~Base() {
             std::cout << "del " << this << std::endl;
         }
 
@@ -76,8 +76,42 @@ class Student {
         }
 };
 
+class Shape {
+    protected:
+        taihe::core::string id;
+        float a;
+        float b;
+    public:
+        Shape(taihe::core::string_view id, float a, float b)
+            : id(id), a(a), b(b) {
+            std::cout << "new " << this << std::endl;
+        }
+
+        ~Shape() {
+            std::cout << "del " << this << std::endl;
+        }
+
+        taihe::core::string getId() {
+            return id;
+        }
+
+        void setId(taihe::core::string_view s) {
+            id = s;
+            return;
+        }
+
+        float calculateArea() {
+            return a*b;
+        }
+
+};
+
 integer::IBase makeIBaseImpl(taihe::core::string_view id) {
-    return make_holder<Student, integer::IBase>(id);
+    return make_holder<Base, integer::IBase>(id);
+}
+
+integer::IShape makeIShapeImpl(taihe::core::string_view id, float a, float b) {
+    return make_holder<Shape, integer::IShape>(id, a, b);
 }
 
 void copyIBaseImpl(integer::weak::IBase a, integer::weak::IBase b) {
@@ -102,3 +136,4 @@ TH_EXPORT_CPP_API_to_theme(ohos_to_theme)
 TH_EXPORT_CPP_API_show(ohos_show)
 TH_EXPORT_CPP_API_makeIBase(makeIBaseImpl)
 TH_EXPORT_CPP_API_copyIBase(copyIBaseImpl)
+TH_EXPORT_CPP_API_makeIShape(makeIShapeImpl)

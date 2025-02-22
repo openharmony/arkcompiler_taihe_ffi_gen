@@ -1,4 +1,4 @@
-import { add, mul, sub, from_rgb, to_rgb, make_RGB, make_Color, to_color, from_color, make_Theme, from_theme, to_theme, show, makeIBase, copyIBase } from "./integer"
+import { add, mul, sub, from_rgb, to_rgb, make_RGB, make_Color, to_color, from_color, make_Theme, from_theme, to_theme, show, makeIBase, copyIBase, makeIShape } from "./integer"
 import { concat, to_i32, from_i32 } from "./string";
 import { RGB, Color, Theme } from "./rgb"
 
@@ -56,6 +56,11 @@ function main() {
   console.log("from js theme: ", result14);
   let result15 = to_theme(color, result17);
   console.log("to theme: ", result15, result15.ibase.getId());
+
+  let shape1 = makeIShape("001", 2.4, 3.5);
+  console.log("Shape: ", shape1.calculateArea());
+  copyIBase(result18, shape1);
+  console.log("copyIBase: ", shape1.getId(), result18.getId());
 }
 
 main();

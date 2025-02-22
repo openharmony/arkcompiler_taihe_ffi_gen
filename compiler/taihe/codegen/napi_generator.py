@@ -3,6 +3,7 @@ from abc import ABCMeta
 
 from taihe.codegen.abi_generator import (
     COutputBuffer,
+    IfaceDeclABIInfo
 )
 from taihe.codegen.cpp_proj_generator import (
     TypeCppProjInfo,
@@ -146,7 +147,7 @@ class NapiCodeGenerator:
 
         desc = []
         for iface in pkg.interfaces:
-            self.gen_iface_func(pkg_napi_target, iface)
+            self.gen_iface(pkg_napi_target, iface)
         for struct in pkg.structs:
             self.gen_struct_constructor(struct, pkg_napi_target)
             func_desc = f'        {{"make_{struct.name}", nullptr, construct_js_{struct.name}, nullptr, nullptr, nullptr, napi_default, nullptr}}'
@@ -179,13 +180,16 @@ class NapiCodeGenerator:
             f"}}\n"
         )
 
-    def gen_iface_func(self, pkg_napi_target: COutputBuffer, iface: IfaceDecl):
+    def gen_iface(self, pkg_napi_target: COutputBuffer, iface: IfaceDecl):
         iface_cpp_info = IfaceDeclCppProjInfo.get(self.am, iface)
         pkg_napi_target.write(
             f"inline {iface_cpp_info.as_field} get_{iface.name}(napi_env env, napi_value js_obj) {{\n"
-            f"    {iface_cpp_info.as_field}* c_obj_;\n"
-            f"    napi_unwrap(env, js_obj, reinterpret_cast<void **>(&c_obj_));\n"
-            f"    {iface_cpp_info.as_field} c_obj = *c_obj_;\n"
+            f"    struct {{\n"
+            f"        void* vtbl_ptr;\n"
+            f"        ::taihe::core::data_holder holder;\n"
+            f"    }}* buffer;\n"
+            f"    napi_unwrap(env, js_obj, reinterpret_cast<void **>(&buffer));\n"
+            f"    {iface_cpp_info.as_field} c_obj = {iface_cpp_info.as_field}(buffer->holder);\n"
             f"    return c_obj;\n"
             f"}}\n"
         )
@@ -196,21 +200,12 @@ class NapiCodeGenerator:
             f"    napi_value js_obj = nullptr;\n"
             f"    napi_create_object(env, &js_obj);\n\n"
         )
-        for func in iface.methods:
-            pkg_napi_target.write(
-                f"    napi_value {iface.name}_{func.name};\n"
-                f'    napi_create_function(env, "{func.name}", NAPI_AUTO_LENGTH, \n'
-                f"      [](napi_env env, napi_callback_info info) -> napi_value {{\n"
-                f"    napi_value thisobj;\n"
-                f"    napi_get_cb_info(env, info, nullptr, nullptr, &thisobj, nullptr);\n"
-                f"    {iface_cpp_info.as_field}* value_ptr;\n"
-                f"    napi_unwrap(env, thisobj, reinterpret_cast<void**>(&value_ptr));\n"
-            )
-            self.gen_func_content(func, pkg_napi_target, f"(*value_ptr)->{func.name}")
-            pkg_napi_target.write(
-                f"    }}, nullptr, &{iface.name}_{func.name});\n"
-                f'    napi_set_named_property(env, js_obj, "{func.name}", {iface.name}_{func.name});\n\n'
-            )
+
+        iface_abi_info = IfaceDeclABIInfo.get(self.am, iface)
+        for ancestor in iface_abi_info.ancestor_dict:
+            iface_ance_cpp_info = IfaceDeclCppProjInfo.get(self.am, ancestor)
+            for func in ancestor.methods:
+                self.gen_iface_func(func, pkg_napi_target, iface.name, iface_cpp_info.as_field, iface_ance_cpp_info.as_param)
 
         pkg_napi_target.write(
             f"    napi_wrap(env, js_obj, value_ptr, [](napi_env env, void* finalize_data, void* finalize_hint) {{\n"
@@ -218,6 +213,22 @@ class NapiCodeGenerator:
             f"    }}, nullptr, nullptr);\n"
             f"    return js_obj;\n"
             f"}}\n"
+        )
+
+    def gen_iface_func(self, func: IfaceMethodDecl, pkg_napi_target: COutputBuffer, iface_name: str, iface_cpp_type: str, iface_ancest_cpp_type: str):
+        pkg_napi_target.write(
+            f"    napi_value {iface_name}_{func.name};\n"
+            f'    napi_create_function(env, "{func.name}", NAPI_AUTO_LENGTH, \n'
+            f"      [](napi_env env, napi_callback_info info) -> napi_value {{\n"
+            f"    napi_value thisobj;\n"
+            f"    napi_get_cb_info(env, info, nullptr, nullptr, &thisobj, nullptr);\n"
+            f"    {iface_cpp_type}* value_ptr;\n"
+            f"    napi_unwrap(env, thisobj, reinterpret_cast<void**>(&value_ptr));\n"
+        )
+        self.gen_func_content(func, pkg_napi_target, f"{iface_ancest_cpp_type}(*value_ptr)->{func.name}")
+        pkg_napi_target.write(
+            f"    }}, nullptr, &{iface_name}_{func.name});\n"
+            f'    napi_set_named_property(env, js_obj, "{func.name}", {iface_name}_{func.name});\n\n'
         )
 
     def gen_module_init(self, desc_str: str, pkg_napi_target: COutputBuffer):

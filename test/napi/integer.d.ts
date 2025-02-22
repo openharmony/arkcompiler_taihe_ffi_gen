@@ -1,4 +1,4 @@
-import { RGB, Color, Theme, IBase } from "./rgb"
+import { RGB, Color, Theme, IBase, IShape } from "./rgb"
 
 export function add(a: number, b: number): number;
 export function mul(a: number, b: number): boolean;
@@ -15,3 +15,4 @@ export function to_theme(a: Color, b: IBase): Theme;
 export function show(): String;
 export function makeIBase(s: String): IBase;
 export function copyIBase(a: IBase, b: IBase);
+export function makeIShape(s: String, a: number, b: number): IShape;

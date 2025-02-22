@@ -34,3 +34,7 @@ export interface IBase {
   getId(): String;
   setId(id: String): void;
 }
+
+export interface IShape extends IBase {
+  calculateArea(): number;
+}
