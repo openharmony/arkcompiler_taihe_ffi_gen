@@ -48,7 +48,6 @@ class AbstractTypeNapiInfo(metaclass=ABCMeta):
     @abstractmethod
     def get_value_from_js(
         self,
-        value_ty,
         pkg_napi_target: COutputBuffer,
         value: str,
         result: str,
@@ -59,7 +58,6 @@ class AbstractTypeNapiInfo(metaclass=ABCMeta):
     @abstractmethod
     def create_value_as_js(
         self,
-        value_ty,
         pkg_napi_target: COutputBuffer,
         value: str,
         result: str,
@@ -71,6 +69,8 @@ class AbstractTypeNapiInfo(metaclass=ABCMeta):
 class ScalarTypeNapiInfo(AbstractAnalysis[ScalarType], AbstractTypeNapiInfo):
     def __init__(self, am: AnalysisManager, t: ScalarType):
         self.am = am
+        self.type = t
+
         as_napi = {
             BOOL: "bool",
             F32: "double",
@@ -99,30 +99,27 @@ class ScalarTypeNapiInfo(AbstractAnalysis[ScalarType], AbstractTypeNapiInfo):
 
     def get_value_from_js(
         self,
-        value_ty: ScalarType,
         pkg_napi_target: COutputBuffer,
         value: str,
         result: str,
         space_num: int,
     ):
-        scalar_napi_info = ScalarTypeNapiInfo.get(self.am, value_ty)
-        scalar_cpp_info = ScalarTypeCppProjInfo.get(self.am, value_ty)
+        scalar_cpp_info = ScalarTypeCppProjInfo.get(self.am, self.type)
         pkg_napi_target.write(
-            f"{space_num * ' '}{scalar_napi_info.as_napi_c} {result}_tmp;\n"
-            f"{space_num * ' '}{scalar_napi_info.from_js_to_c_func}(env, {value}, &{result}_tmp);\n"
+            f"{space_num * ' '}{self.as_napi_c} {result}_tmp;\n"
+            f"{space_num * ' '}{self.from_js_to_c_func}(env, {value}, &{result}_tmp);\n"
             f"{space_num * ' '}{scalar_cpp_info.as_field} {result} = {result}_tmp;\n"
         )
         return
 
     def create_value_as_js(
         self,
-        value_ty: ScalarType,
         pkg_napi_target: COutputBuffer,
         value: str,
         result: str,
         space_num: int,
     ):
-        type_napi_param_info = ScalarTypeNapiInfo.get(self.am, value_ty)
+        type_napi_param_info = ScalarTypeNapiInfo.get(self.am, self.type)
         pkg_napi_target.write(
             f"{space_num * ' '}napi_value {result} = nullptr;\n"
             f"{space_num * ' '}{type_napi_param_info.from_c_to_js_func}(env, {value}, &{result});\n"
@@ -132,6 +129,7 @@ class ScalarTypeNapiInfo(AbstractAnalysis[ScalarType], AbstractTypeNapiInfo):
 class SpecialTypeNapiInfo(AbstractAnalysis[SpecialType], AbstractTypeNapiInfo):
     def __init__(self, am: AnalysisManager, t: SpecialType):
         self.am = am
+        self.type = t
         if t == STRING:
             self.as_napi_c = "taihe::core::string"
             self.from_js_to_c_func = "napi_get_value_string_utf8"
@@ -139,26 +137,24 @@ class SpecialTypeNapiInfo(AbstractAnalysis[SpecialType], AbstractTypeNapiInfo):
 
     def get_value_from_js(
         self,
-        value_ty: SpecialType,
         pkg_napi_target: COutputBuffer,
         value: str,
         result: str,
         space_num: int,
     ):
-        if value_ty == STRING:
+        if self.type == STRING:
             pkg_napi_target.write(
                 f"{space_num * ' '}taihe::core::string {result} = get_string(env, {value});\n"
             )
 
     def create_value_as_js(
         self,
-        value_ty: SpecialType,
         pkg_napi_target: COutputBuffer,
         value: str,
         result: str,
         space_num: int,
     ):
-        if value_ty == STRING:
+        if self.type == STRING:
             pkg_napi_target.write(
                 f"{space_num * ' '}napi_value {result} = create_string(env, {value});\n"
             )
@@ -169,30 +165,29 @@ class StrcutTypeNapiInfo(AbstractAnalysis[StructType], AbstractTypeNapiInfo):
         struct_napi_info = StructDeclCppProjInfo.get(am, t.ty_decl)
         self.as_napi_c = struct_napi_info.as_field
         self.am = am
+        self.type = t
 
     def get_value_from_js(
         self,
-        value_ty: StructType,
         pkg_napi_target: COutputBuffer,
         value: str,
         result: str,
         space_num: int,
     ):
-        struct_cpp_info = StructDeclCppProjInfo.get(self.am, value_ty.ty_decl)
+        struct_cpp_info = StructDeclCppProjInfo.get(self.am, self.type.ty_decl)
         pkg_napi_target.write(
-            f"{space_num * ' '}{struct_cpp_info.as_field} {result} = get_{value_ty.ty_decl.name}(env, {value});\n"
+            f"{space_num * ' '}{struct_cpp_info.as_field} {result} = get_{self.type.ty_decl.name}(env, {value});\n"
         )
 
     def create_value_as_js(
         self,
-        value_ty: StructType,
         pkg_napi_target: COutputBuffer,
         value: str,
         result: str,
         space_num: int,
     ):
         pkg_napi_target.write(
-            f"{space_num * ' '}napi_value {result} = create_{value_ty.ty_decl.name}(env, std::move({value}));\n"
+            f"{space_num * ' '}napi_value {result} = create_{self.type.ty_decl.name}(env, std::move({value}));\n"
         )
 
 
@@ -201,30 +196,29 @@ class IfaceTypeNapiInfo(AbstractAnalysis[IfaceType], AbstractTypeNapiInfo):
         iface_napi_info = IfaceDeclCppProjInfo.get(am, t.ty_decl)
         self.as_napi_c = iface_napi_info.as_field
         self.am = am
+        self.type = t
 
     def get_value_from_js(
         self,
-        value_ty: IfaceType,
         pkg_napi_target: COutputBuffer,
         value: str,
         result: str,
         space_num: int,
     ):
-        iface_cpp_info = IfaceDeclCppProjInfo.get(self.am, value_ty.ty_decl)
+        iface_cpp_info = IfaceDeclCppProjInfo.get(self.am, self.type.ty_decl)
         pkg_napi_target.write(
-            f"{space_num * ' '}{iface_cpp_info.as_field} {result} = get_{value_ty.ty_decl.name}(env, {value});\n"
+            f"{space_num * ' '}{iface_cpp_info.as_field} {result} = get_{self.type.ty_decl.name}(env, {value});\n"
         )
 
     def create_value_as_js(
         self,
-        value_ty: IfaceType,
         pkg_napi_target: COutputBuffer,
         value: str,
         result: str,
         space_num: int,
     ):
         pkg_napi_target.write(
-            f"{space_num * ' '}napi_value {result} = create_{value_ty.ty_decl.name}(env, std::move({value}));\n"
+            f"{space_num * ' '}napi_value {result} = create_{self.type.ty_decl.name}(env, std::move({value}));\n"
         )
 
 
@@ -351,7 +345,7 @@ class NapiCodeGenerator:
         )
 
         pkg_napi_target.write(
-            f"inline napi_value create_{iface.name}(napi_env env, {iface_cpp_info.as_param} c_obj) {{\n"
+            f"inline napi_value create_{iface.name}(napi_env env, {iface_cpp_info.as_field} c_obj) {{\n"
             f"    {iface_cpp_info.as_field}* value_ptr = new {iface_cpp_info.as_field}(std::move(c_obj));\n"
             f"    napi_value js_obj = nullptr;\n"
             f"    napi_create_object(env, &js_obj);\n"
@@ -438,7 +432,7 @@ class NapiCodeGenerator:
             f"    napi_value args[1] = {{nullptr}};\n"
             f"    napi_get_cb_info(env, info, &argc, args , nullptr, nullptr);\n"
             f"    {iface_cpp_info.as_field} res = taihe::core::make_holder<NAPI_{iface.name}Impl, {iface_cpp_info.as_field}>(env, args[0]);\n"
-            f"    return create_{iface.name}(env, res);\n"
+            f"    return create_{iface.name}(env, std::move(res));\n"
             f"}}\n"
         )
 
@@ -668,7 +662,7 @@ class NapiCodeGenerator:
         space_num: int,
     ):
         type_info = TypeNapiInfo.get(self.am, value_ty)
-        type_info.get_value_from_js(value_ty, pkg_napi_target, value, result, space_num)
+        type_info.get_value_from_js(pkg_napi_target, value, result, space_num)
 
     def gen_func_create_value_as_js(
         self,
@@ -679,6 +673,4 @@ class NapiCodeGenerator:
         space_num: int,
     ):
         type_info = TypeNapiInfo.get(self.am, value_ty)
-        type_info.create_value_as_js(
-            value_ty, pkg_napi_target, value, result, space_num
-        )
+        type_info.create_value_as_js(pkg_napi_target, value, result, space_num)

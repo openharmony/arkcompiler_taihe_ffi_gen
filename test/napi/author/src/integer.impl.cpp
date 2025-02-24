@@ -114,7 +114,7 @@ integer::IShape makeIShapeImpl(taihe::core::string_view id, float a, float b) {
     return make_holder<Shape, integer::IShape>(id, a, b);
 }
 
-void copyIBaseImpl(integer::weak::IBase a, integer::weak::IBase b) {
+void ohos_copyIBase(integer::weak::IBase a, integer::weak::IBase b) {
     a->setId(b->getId());
     return;
 }
@@ -135,5 +135,5 @@ TH_EXPORT_CPP_API_from_theme(ohos_from_theme)
 TH_EXPORT_CPP_API_to_theme(ohos_to_theme)
 TH_EXPORT_CPP_API_show(ohos_show)
 TH_EXPORT_CPP_API_makeIBase(makeIBaseImpl)
-TH_EXPORT_CPP_API_copyIBase(copyIBaseImpl)
+TH_EXPORT_CPP_API_copyIBase(ohos_copyIBase)
 TH_EXPORT_CPP_API_makeIShape(makeIShapeImpl)
