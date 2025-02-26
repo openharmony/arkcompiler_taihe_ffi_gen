@@ -39,4 +39,4 @@ int main() {
 
 ## 加入 Taihe 的开发
 
-参见：[文档索引](./docs/README.org)
+参见：[文档索引](./docs/README.md)

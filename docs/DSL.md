@@ -23,8 +23,8 @@
    struct Foo {}
    struct Bar {}
 
-   function func1(bar: example1.Foo): (); // OK
-   function func2(foo: Foo): ();          // OK
+   function func1(bar: example1.Foo): void; // OK
+   function func2(foo: Foo): void;          // OK
    ```
 
 2. **导入其他包并生成别名**
@@ -32,12 +32,12 @@
    ```rust
    // example.test1.taihe
    use example.types as myfoo;
-   function func3(foo: myfoo.Foo): ();    // OK
+   function func3(foo: myfoo.Foo): void;    // OK
 
    // example.test2.taihe
    from example.types use Bar, Foo as Foobar;
-   function func4(foo: Foobar): ();       // OK
-   function func5(foo: Bar): ();          // OK
+   function func4(foo: Foobar): void;       // OK
+   function func5(foo: Bar): void;          // OK
    ```
 
 3. **包间互相隔离，无从属关系**
@@ -47,22 +47,22 @@
    use types as mytypes;          // Error: package `types` does not exist
    from example.types use Foo;    // OK
    use example.types;             // OK
-   function func6(foo: Foo): ();           // OK
-   function func7(foo: example.types.Foo): (); // OK
+   function func6(foo: Foo): void;           // OK
+   function func7(foo: example.types.Foo): void; // OK
    ```
 
 ## 基础类型
 
 提供以下基础类型：
 
-- **整型**  
+- **整型**
   - 无符号：`u8`, `u16`, `u32`, `u64`
   - 有符号：`i8`, `i16`, `i32`, `i64`
-- **浮点型**  
+- **浮点型**
   - `f32`, `f64`
-- **布尔型**  
+- **布尔型**
   - `bool`
-- **字符串类型**  
+- **字符串类型**
   - `String`
 
 ## 函数
@@ -114,7 +114,7 @@ enum Bar {
 }
 ```
 
-1. **省略值**  
+1. **省略值**
    - 第一个枚举成员默认为 0，其后成员值依次递增。
    ```rust
    enum Foo {
@@ -125,7 +125,7 @@ enum Bar {
    }
    ```
 
-2. **值不可重复**  
+2. **值不可重复**
    - 不同枚举成员的值不能相同。
    ```rust
    enum Foo {
@@ -140,7 +140,7 @@ enum Bar {
    }
    ```
 
-3. **联合体功能（Tagged Union）**  
+3. **联合体功能（Tagged Union）**
    - 枚举元素可包含不同类型。
    - 使用时，枚举类型充当联合体，实际数据类型由标签值决定：
    ```rust
@@ -163,10 +163,10 @@ enum Bar {
      name: String = 0x3;     // 3
    }
    // 用法示例：
-   // if ColorName.tag == 0 : 表示 undefined
-   // if ColorName.tag == 1 : 数据类型为 Color
-   // if ColorName.tag == 2 : 数据类型为 RGB
-   // if ColorName.tag == 3 : 数据类型为 String
+   // ColorName.tag == 0 => 表示 undefined
+   // ColorName.tag == 1 => 数据类型为 Color
+   // ColorName.tag == 2 => 数据类型为 RGB
+   // ColorName.tag == 3 => 数据类型为 String
    ```
 
 ## 接口
@@ -186,18 +186,6 @@ interface Derived: BaseA, BaseB {
 }
 ```
 
-通过在接口方法前添加 `functor` 属性将接口声明为函子（即在受支持的语言中，该接口方法将被映射为对括号表达式的重载）。
-```rust
-interface MyCallback {
-  [functor] call(a: u64): u64;
-}
-```
-
-```cpp
-MyCallback cb = ...;
-uint64_t ret = cb(42);
-```
-
 ## 属性
 
 属性定义为键值对，支持附加在多种元素上。
@@ -208,7 +196,7 @@ uint64_t ret = cb(42);
 function func_1(color: RGB): void;
 ```
 
-1. **属性可省略值**  
+1. **属性可省略值**
    默认值为 `None`：
    ```rust
    [tuple]
@@ -218,13 +206,13 @@ function func_1(color: RGB): void;
    }
    ```
 
-2. **文件级属性**  
+2. **文件级属性**
    每个文件仅能有一个文件级属性，位于文件末尾：
    ```rust
    [file_info = "测试"]
    ```
 
-3. **属性定义位置**  
+3. **属性定义位置**
    属性需紧邻目标元素上方：
    ```rust
    [tuple]
@@ -246,19 +234,22 @@ function func_1(color: RGB): void;
      }
      struct Bar {
        val: i32;
-     } // OK
+     }
+     // OK
 
      struct RecursiveStruct {
        e: RecursiveEnum;
      }
      enum RecursiveEnum {
-       s: RecursiveStruct;  // Error: recursive inclusion
+       s: RecursiveStruct;
      }
+     // Error: recursive inclusion
      ```
 
-2. **接口递归扩展**  
+2. **接口递归扩展**
    接口间不能递归继承：
    ```rust
    interface RecursiveIfaceA: RecursiveIfaceB {}
-   interface RecursiveIfaceB: RecursiveIfaceA {}  // Error
+   interface RecursiveIfaceB: RecursiveIfaceA {}
+   // Error
    ```

@@ -1,58 +1,19 @@
 #pragma once
 
-#include <vector>
-#include <cstddef>
-#include <cstdlib>
+#include <algorithm>
+#include <utility>
 
 #include <taihe/common.hpp>
 
-template<typename T>
-struct TVector {
-    TRefCount count;
-    std::size_t len;
-    std::size_t cap;
-    T data[];
-};
-
-template<typename T>
-TVector<T>* tvec_dup(TVector<T>* handle) {
-    if (handle) {
-        tref_inc(&handle->count);
-    }
-    return handle;
-}
-
-template<typename T>
-void tvec_drop(TVector<T>* handle) {
-    if (handle && tref_dec(&handle->count)) {
-        for (std::size_t i = 0; i < handle->len; i++) {
-            std::destroy_at(&handle->data[i]);
-        }
-        free(handle);
-    }
-}
-
-template<typename T>
-TVector<T> tvec_new(std::size_t cap) {
-    size_t bytes_required = sizeof(TVector<T>) + sizeof(T) * cap;
-    TVector<T>* handle = reinterpret_cast<TVector<T>*>(malloc(bytes_required));
-    tref_set(&handle->count, 1);
-    handle->len = 0;
-    handle->cap = cap;
-    return handle;
-}
-
-template<typename T>
-TVector<T>* tvec_resize(TVector<T>* handle, std::size_t cap) {
-    size_t bytes_required = sizeof(TVector<T>) + sizeof(T) * cap;
-    handle = reinterpret_cast<TVector<T>*>(realloc(handle, bytes_required));
-    handle->cap = cap;
-    return handle;
-}
-
 namespace taihe::core {
 template<typename T>
-struct vector {
+struct vector_view;
+
+template<typename T>
+struct vector;
+
+template<typename T>
+struct vector_view {
 public:
     using value_type = T;
     using size_type = std::size_t;
@@ -63,29 +24,12 @@ public:
     using iterator = T*;
     using const_iterator = const T*;
 
-    vector() : m_handle(tvec_new<T>(0)) {}
-
-    explicit vector(size_type cap) 
-        : m_handle(tvec_new<T>(cap)) {}
-
-    explicit vector(TVector<T>* handle)
-        : m_handle(handle) {}
-
-    ~vector() {
-        tvec_drop(m_handle);
-    }
-
-    vector(const vector& other)
-        : m_handle(tvec_dup(other.m_handle)) {}
-
-    vector(vector&& other) noexcept
-        : m_handle(other.m_handle) {
-        other.m_handle = nullptr;
-    }
-
-    vector& operator=(vector other) {
-        std::swap(this->m_handle, other.m_handle);
-        return *this;
+    void reserve(std::size_t cap) const {
+        if (cap < m_handle->len) {
+            return;
+        }
+        m_handle->cap = cap;
+        m_handle->buffer = reinterpret_cast<T*>(realloc(m_handle->buffer, sizeof(T) * cap));
     }
 
     std::size_t size() const noexcept {
@@ -96,79 +40,118 @@ public:
         return m_handle->cap;
     }
 
-    void reserve(std::size_t requird_cap) {
-        if (requird_cap > m_handle->cap) {
-            std::size_t new_cap = std::max(requird_cap, m_handle->cap * 2);
-            m_handle = tvec_resize(m_handle, new_cap);
-        }
-    }
-
-    void push_back(T&& value) {
-        reserve(m_handle->len + 1);
-        new (&m_handle->data[m_handle->len]) T(std::move(value));
-        ++m_handle->len;
-    }
-
-    void push_back(T const& value) {
-        reserve(m_handle->len + 1);
-        new (&m_handle->data[m_handle->len]) T(value);
-        ++m_handle->len;
-    }
-
     template <typename... Args>
-    T& emplace_back(Args&&... args) {
-        reserve(m_handle->len + 1);
-        T* location = &m_handle->data[m_handle->len];
-        new (location) T(std::forward<Args>(args)...);
+    T& emplace_back(Args&&... args) const {
+        std::size_t required_cap = m_handle->len + 1;
+        if (required_cap > m_handle->cap) {
+            this->reserve(std::max(required_cap, m_handle->cap * 2));
+        }
+        T* location = &m_handle->buffer[m_handle->len];
+        new (location) T{std::forward<Args>(args)...};
         ++m_handle->len;
         return *location;
     }
 
-    void pop_back() {
-        if (m_handle->len > 0) {
-            --m_handle->len;
-            std::destroy_at(&m_handle->data[m_handle->len]);
-        }
+    T& push_back(T&& value) const {
+        return emplace_back(std::move(value));
     }
 
-    void clear() noexcept {
+    T& push_back(T const& value) const {
+        return emplace_back(value);
+    }
+
+    T& operator[](std::size_t index) const {
+        return m_handle->buffer[index];
+    }
+
+    void pop_back() const {
+        if (m_handle->len == 0) {
+            return;
+        }
+        std::destroy_at(&m_handle->buffer[m_handle->len]);
+        --m_handle->len;
+    }
+
+    void clear() const noexcept {
         for (std::size_t i = 0; i < m_handle->len; i++) {
-            std::destroy_at(&m_handle->data[i]);
+            std::destroy_at(&m_handle->buffer[i]);
         }
         m_handle->len = 0;
     }
 
-    T& operator[](std::size_t index) {
-        return m_handle->data[index];
+    friend bool same_impl(adl_helper_t, vector_view lhs, vector_view rhs) {
+        return lhs.m_handle == rhs.m_handle;
     }
 
-    const T& operator[](std::size_t index) const {
-        return m_handle->data[index];
+    friend std::size_t hash_impl(adl_helper_t, vector_view val) {
+        return (std::size_t)val.m_handle;
+    }
+
+protected:
+    struct data_t {
+        TRefCount count;
+        std::size_t cap;
+        T *buffer;
+        std::size_t len;
+    } *m_handle;
+
+    explicit vector_view(data_t* handle) : m_handle(handle) {}
+
+    friend struct vector<T>;
+};
+
+template<typename T>
+struct vector : vector_view<T> {
+    using typename vector_view<T>::data_t;
+    using vector_view<T>::m_handle;
+
+    vector(std::size_t cap = 0) : vector(reinterpret_cast<data_t*>(malloc(sizeof(data_t)))) {
+        tref_set(&m_handle->count, 1);
+        m_handle->cap = cap;
+        m_handle->buffer = reinterpret_cast<T*>(malloc(sizeof(T) * cap));
+        m_handle->len = 0;
+    }
+
+    vector(vector<T>&& other) noexcept : vector(other.m_handle) {
+        other.m_handle = nullptr;
+    }
+
+    vector(const vector<T>& other) : vector(other.m_handle) {
+        if (m_handle) {
+            tref_inc(&m_handle->count);
+        }
+    }
+
+    vector(const vector_view<T>& other) : vector(other.m_handle) {
+        if (m_handle) {
+            tref_inc(&m_handle->count);
+        }
+    }
+
+    vector& operator=(vector other) {
+        std::swap(this->m_handle, other.m_handle);
+        return *this;
+    }
+
+    ~vector() {
+        if (m_handle && tref_dec(&m_handle->count)) {
+            this->clear();
+            free(m_handle->buffer);
+            free(m_handle);
+        }
     }
 
 private:
-    TVector<T>* m_handle;
-
-    template<typename cpp_t, typename abi_t>
-    friend abi_t into_abi(cpp_t val);
-    template<typename cpp_t, typename abi_t>
-    friend cpp_t from_abi(abi_t val);
+    explicit vector(data_t* handle): vector_view<T>(handle) {}
 };
 
-
-
-// returning from abi
 template<typename T>
-inline taihe::core::vector<T> from_abi(TVector<T>* _val) {
-    TVector<T>* r_handle = _val;
-    return taihe::core::vector<T>(r_handle);
-}
+struct cpp_type_traits<vector<T>> {
+    using abi_t = void*;
+};
 
-// returning into abi
 template<typename T>
-inline TVector<T>* into_abi(taihe::core::vector<T> _val) {
-    TVector<T> *r_handle = _val.m_handle;
-    _val.m_handle = nullptr;
-    return r_handle;
-}
+struct cpp_type_traits<vector_view<T>> {
+    using abi_t = void*;
+};
 }

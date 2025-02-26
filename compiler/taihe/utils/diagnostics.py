@@ -37,7 +37,6 @@ def _passthrough(x):
 
 
 def _discard(x):
-    del x
     return ""
 
 
@@ -57,22 +56,15 @@ class Level(IntEnum):
 
 
 @dataclass
-class DiagBase:
+class DiagBase(ABC):
     """The base class for diagnostic messages."""
 
-    LEVEL: ClassVar[Level] = Level.ERROR
-    LEVEL_DESC: ClassVar[str] = "<todo-diagbase-desc>"
-    STYLE = AnsiStyle.CYAN
-
-    MSG: ClassVar[str] = "<todo-diagbase-msg>"
-    """The template for generating diagnostic message."""
+    LEVEL: ClassVar[Level]
+    LEVEL_DESC: ClassVar[str]
+    STYLE: ClassVar[str]
 
     loc: Optional["SourceLocation"] = field(kw_only=True)
     """The source location where the diagnostic refers to."""
-
-    def format_msg(self) -> str:
-        """Returns the rendered diagnostic mesasge."""
-        return self.MSG.format(**self.__dict__)
 
     def notes(self) -> Iterable["DiagNote"]:
         """Returns the associated notes."""
@@ -82,11 +74,15 @@ class DiagBase:
         return (
             f"{f(AnsiStyle.BRIGHT)}{self.loc or '???'}: "  # "example.taihe:7:20: "
             f"{f(self.STYLE)}{self.LEVEL_DESC}{f(AnsiStyle.RESET)}: "  # "error: "
-            f"{self.format_msg()}{f(AnsiStyle.RESET_ALL)}"  # "redefinition of ..."
+            f"{self.format_msg}{f(AnsiStyle.RESET_ALL)}"  # "redefinition of ..."
         )
 
     def __str__(self) -> str:
         return self._format(_discard)
+
+    @property
+    @abstractmethod
+    def format_msg(self) -> str: ...
 
 
 ######################################
@@ -122,16 +118,6 @@ class DiagFatalError(DiagError):
 
 
 ########################
-
-
-@dataclass
-class AdhocDiagNote(DiagNote):
-    """Helper for constructing an ad-hoc DiagNote."""
-
-    msg: str
-
-    def format_msg(self) -> str:
-        return self.msg
 
 
 class AbstractDiagnosticsManager(ABC):
@@ -183,10 +169,8 @@ class AbstractDiagnosticsManager(ABC):
 class DiagnosticsManager(AbstractDiagnosticsManager):
     """Manages diagnostic messages."""
 
-    current_max_level: Level
-
     def __init__(self, out: TextIO = stderr):
-        self.current_max_level = Level.NOTE
+        self._max_level_record = Level.NOTE
         self._out = out
         if self._out.isatty():
             self._color_filter_fn = _passthrough
@@ -230,9 +214,10 @@ class DiagnosticsManager(AbstractDiagnosticsManager):
                 for col in range(1, len(line_content) + 1)
             )
 
+            f = self._color_filter_fn
             self._write(
                 f"{'':{MAX_LINE_NO_SPACE}} | "
-                f"{self._color_filter_fn(AnsiStyle.GREEN + AnsiStyle.BRIGHT)}{markers}{self._color_filter_fn(AnsiStyle.RESET_ALL)}\n"
+                f"{f(AnsiStyle.GREEN + AnsiStyle.BRIGHT)}{markers}{f(AnsiStyle.RESET_ALL)}\n"
             )
 
     def _render(self, d: DiagBase):
@@ -242,8 +227,11 @@ class DiagnosticsManager(AbstractDiagnosticsManager):
 
     def emit(self, diag: DiagBase) -> None:
         """Emits a new diagnostic message."""
-        self.current_max_level = max(self.current_max_level, diag.LEVEL)
+        self._max_level_record = max(self._max_level_record, diag.LEVEL)
         self._render(diag)
         for n in diag.notes():
             self._render(n)
         stderr.flush()
+
+    def current_max_level(self):
+        return self._max_level_record

@@ -64,6 +64,8 @@ class DeclKind(Enum):
     VTABLE = "vtable"
     COPY = "copy"
     DROP = "drop"
+    DYNAMIC_CAST = "dcast"
+    STATIC_CAST = "scast"
 
 
 def _encode_uleb8(value: int) -> list[int]:

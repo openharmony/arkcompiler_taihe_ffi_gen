@@ -100,11 +100,11 @@ if (rgb_ptr != nullptr) {
 
 #### 4.4.2 不安全获取数据指针
 
-使用 `unsafe_get_variant_name_ptr()` 方法可以直接获取数据指针，但不会检查变体类型是否正确。用户需要自行保证调用的正确性。例如：
+使用 `get_variant_name_ref()` 方法可以直接获取成员数据的引用，但不会检查变体类型是否正确。用户需要自行保证调用的正确性。例如：
 
 ```cpp
 if (color_114514.holds_rgb()) {
-    rgb::base::RGB* rgb_ptr = color_114514.unsafe_get_rgb_ptr();
+    rgb::base::RGB& rgb_ref = color_114514.get_rgb_ref();
     // 使用 rgb_ptr ...
 }
 ```
@@ -130,8 +130,8 @@ using Tag = ColorVariant::tag_t;
 ColorVariant color = ColorVariant::make<Tag::rgb>(RGB{0x11, 0x45, 0x14});
 color.emplace<Tag::name>("Miku");
 bool has_name = color.holds<Tag::name>();
-auto* safe_ptr = color.get_ptr<Tag::name>();
-auto* unsafe_ptr = color.unsafe_get_ptr<Tag::name>();
+auto* ptr = color.get_ptr<Tag::name>();
+auto& ref = color.get_ref<Tag::name>();
 ```
 
 ---
@@ -156,8 +156,12 @@ public:
     // 其他内部实现……
 };
 
+// 创建接口对象
 rgb::show::IShowable circle =
     taihe::core::make_holder<ColoredCircle, rgb::show::IShowable>("A", 10, color_114514);
+
+// 调用接口方法
+circle->show();
 ```
 
 ### 5.1 接口的生命周期管理
@@ -171,7 +175,7 @@ rgb::show::IShowable circle =
 
 ```cpp
 void copyColorImpl(rgb::base::weak::IColorable dst, rgb::base::weak::IColorable src) {
-    dst.setColor(src.getColor());
+    dst->setColor(src->getColor());
 }
 ```
 

@@ -9,7 +9,7 @@ using namespace sys::time;
 void setTimeoutImpl(weak::ICallback cb, uint64_t ms) {
     std::thread([cb = ICallback(cb), ms]() {
         std::this_thread::sleep_for(std::chrono::milliseconds(ms));
-        cb();
+        (*cb)();
     }).detach();
 }
 
@@ -36,9 +36,9 @@ void getInputWithTimeoutImpl(weak::IPromiseStringString ps, uint64_t s) {
         if (FD_ISSET(STDIN_FILENO, &readSet)) {
             std::string input;
             std::cin >> input;
-            ps.resolve(input);
+            ps->resolve(input);
         } else {
-            ps.reject("Timeout");
+            ps->reject("Timeout");
         }
     }).detach();
 }

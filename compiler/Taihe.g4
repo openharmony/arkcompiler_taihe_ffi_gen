@@ -12,7 +12,7 @@ spec
 
 use
     : KW_USE PkgName_pkg_name = pkgName (KW_AS tokenOpt_pkg_alias = ID)? SEMICOLON # usePackage
-    | KW_FROM PkgName_pkg_name = pkgName KW_USE (DeclAliasPairLst_decl_alias_pairs += declAliasPair COMMA)* DeclAliasPairLst_decl_alias_pairs += declAliasPair SEMICOLON # useSymbol
+    | KW_FROM PkgName_pkg_name = pkgName KW_USE DeclAliasPairLst_decl_alias_pairs += declAliasPair (COMMA DeclAliasPairLst_decl_alias_pairs += declAliasPair)* SEMICOLON # useSymbol
     ;
 
 pkgName
@@ -29,7 +29,7 @@ specField
       LEFT_BRACE (StructFieldLst_fields += structField)* RIGHT_BRACE # struct
     | (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
       KW_ENUM token_name = ID
-      LEFT_BRACE (EnumFieldLst_fields += enumField)+ RIGHT_BRACE # enum
+      LEFT_BRACE (EnumFieldLst_fields += enumField)* RIGHT_BRACE # enum
     | (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
       KW_INTERFACE token_name = ID
       (COLON InterfaceParentLst_extends += interfaceParent (COMMA InterfaceParentLst_extends += interfaceParent)*)?
@@ -72,7 +72,9 @@ parameter
 ///////////////
 
 attrItem
-    : token_name = ID (ASSIGN_TO AttrValOpt_val = attrVal)?
+    : token_name = ID # emptyAttrItem
+    | token_name = ID ASSIGN_TO AttrVal_val = attrVal # simpleAttrItem
+    | token_name = ID LEFT_PARENTHESIS (AttrValLst_vals = attrVal (COMMA AttrValLst_vals = attrVal)*)? RIGHT_PARENTHESIS # tupleAttrItem
     ;
 
 attrVal
@@ -86,14 +88,11 @@ attrVal
 //////////
 
 type
-    : LEFT_PARENTHESIS Type_inner_ty = type RIGHT_PARENTHESIS # parenthesisType
-    | token_name = (KW_I8 | KW_I16 | KW_I32 | KW_I64 | KW_U8 | KW_U16 | KW_U32 | KW_U64 | KW_F32 | KW_F64 | KW_BOOL | KW_STRING) # primitiveType
-    | (PkgNameOpt_pkg_name = pkgName DOT)? token_decl_name = ID # userType
-    | (PkgNameOpt_pkg_name = pkgName DOT)? token_decl_name = ID LESS_THAN (TypeLst_args += type (COMMA TypeLst_args += type)*)? GREATER_THAN # genericType
-    | Type_item_ty = type LEFT_BRACKET RIGHT_BRACKET # arrayType
-    | Type_item_ty = type QUESTION_MARK # optionalType
+    : PkgName_pkg_name = pkgName DOT token_decl_name = ID # longType
+    | token_decl_name = ID # shortType
+    | token_decl_name = ID LESS_THAN (TypeLst_args += type (COMMA TypeLst_args += type)*)? GREATER_THAN # genericType
     | <assoc = right>
-      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS ARROW (TypeOpt_return_ty = type | KW_VOID) # functionType
+      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS ARROW (TypeOpt_return_ty = type | KW_VOID) # callbackType
     ;
 
 ////////////////
@@ -326,64 +325,16 @@ KW_FUNCTION
     : 'function'
     ;
 
-KW_I8
-    : 'i8'
-    ;
-
-KW_I16
-    : 'i16'
-    ;
-
-KW_I32
-    : 'i32'
-    ;
-
-KW_I64
-    : 'i64'
-    ;
-
-KW_U8
-    : 'u8'
-    ;
-
-KW_U16
-    : 'u16'
-    ;
-
-KW_U32
-    : 'u32'
-    ;
-
-KW_U64
-    : 'u64'
-    ;
-
-KW_F32
-    : 'f32'
-    ;
-
-KW_F64
-    : 'f64'
-    ;
-
-KW_BOOL
-    : 'bool'
-    ;
-
-KW_STRING
-    : 'String'
-    ;
-
-KW_VOID
-    : 'void'
-    ;
-
 KW_TRUE
     : 'TRUE'
     ;
 
 KW_FALSE
     : 'FALSE'
+    ;
+
+KW_VOID
+    : 'void'
     ;
 
 STRING_LITERAL

@@ -13,8 +13,7 @@ from taihe.utils.exceptions import (
     PackageNotExistError,
     PackageNotInScopeError,
     PackageRedefError,
-    RecursiveExtensionError,
-    RecursiveInclusionError,
+    RecursiveReferenceError,
     SymbolConflictWithNamespaceError,
 )
 from taihe.utils.sources import SourceManager
@@ -312,7 +311,7 @@ def test_recursive_inclusion():
         "}\n"
     )
     test_instance.run()
-    test_instance.assert_has_error(RecursiveInclusionError)
+    test_instance.assert_has_error(RecursiveReferenceError)
 
 
 def test_extends_type():
@@ -336,19 +335,6 @@ def test_duplicate_extends():
     )
     test_instance.run()
     test_instance.assert_has_error(DuplicateExtendsWarn)
-
-
-def test_recursive_extension():
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance()
-    test_instance.add_source(
-        "package",
-        "interface RecursiveIfaceA: RecursiveIfaceB {}\n"
-        "interface RecursiveIfaceB: RecursiveIfaceC {}\n"
-        "interface RecursiveIfaceC: RecursiveIfaceA {}\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(RecursiveExtensionError)
 
 
 def test_idl_syntax():

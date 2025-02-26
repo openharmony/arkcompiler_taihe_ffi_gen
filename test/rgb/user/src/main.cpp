@@ -1,6 +1,10 @@
+#include "core/object.hpp"
 #include "rgb.base.proj.hpp"
 #include "rgb.show.proj.hpp"
 
+#include <core/callback.hpp>
+
+#include <cstddef>
 #include <iostream>
 #include <cmath>
 #include <iomanip>
@@ -16,17 +20,17 @@ class ColoredCircle {
     ColorOrRGBOrName myColor;
 
 public:
+    string getId() {
+        return name;
+    }
+
     ColoredCircle(string_view id, float r, ColorOrRGBOrName const& color)
         : name(id), r(r), myColor(color) {
-        std::cout << "new " << this << std::endl;
+        std::cout << getId() << " made" << std::endl;
     }
 
     ~ColoredCircle() {
-        std::cout << "del " << this << std::endl;
-    }
-
-    string getId() {
-        return name;
+        std::cout << getId() << " deleted" << std::endl;
     }
 
     float calculateArea() {
@@ -55,6 +59,49 @@ public:
     }
 };
 
+struct UserType {
+    string id;
+
+    auto getId() { return "UserType(" + std::string(id) + ")"; }
+
+    void userMethod() {
+        std::cout << "User Method Called;" << std::endl;
+    }
+
+    UserType(string_view id) : id(id) {
+        std::cout << getId() << " made" << std::endl;
+    }
+
+    ~UserType() {
+        std::cout << getId() << " deleted" << std::endl;
+    }
+};
+
+struct MyCallback {
+    string f;
+
+    MyCallback(string_view f): f(f) {
+        std::cout << "Callback " << f << " made" << std::endl;
+    }
+
+    ~MyCallback() {
+        std::cout << "Callback " << f << " deleted" << std::endl;
+    }
+
+    string operator()(string_view a, string_view b) {
+        std::cout << "Callback " << f << " called" << std::endl;
+        return std::string(f) + "(" + a.c_str() + ", " + b.c_str() + ")";
+    }
+};
+
+void show_array(array_view<IBase> arr, string_view sv) {
+    std::cout << sv << ": ";
+    for (auto item : arr) {
+        std::cout << item->getId() << ", ";
+    }
+    std::cout << std::endl;
+}
+
 int main() {
     Color yellow = Color::make_yellow();
     ColorOrRGBOrName color_114514 = ColorOrRGBOrName::make_rgb(RGB{0x11, 0x45, 0x14});
@@ -62,52 +109,167 @@ int main() {
     ColorOrRGBOrName color_miku = ColorOrRGBOrName::make_name("Miku");
     ColorOrRGBOrName color_unknown = ColorOrRGBOrName::make_undefined();
 
-    std::cout << toString(color_114514) << std::endl;
-    std::cout << toString(color_yellow) << std::endl;
-    std::cout << toString(color_miku) << std::endl;
-    std::cout << toString(color_unknown) << std::endl;
+    {
+        std::cout << "-------- Testing Union --------" << std::endl;
 
-    if (string* safe_ptr = color_miku.get_name_ptr(); safe_ptr != nullptr) {
-        std::cout << "color_miku is holding name, name is " << *safe_ptr << std::endl;
-    } else {
-        std::cout << "Error" << std::endl;
+        std::cout << toString(color_114514) << std::endl;
+        std::cout << toString(color_yellow) << std::endl;
+        std::cout << toString(color_miku) << std::endl;
+        std::cout << toString(color_unknown) << std::endl;
+
+        if (string* name_ptr = color_miku.get_name_ptr()) {
+            std::cout << "color_miku is holding name, name is " << *name_ptr << std::endl;
+        } else {
+            std::cout << "Error" << std::endl;
+        }
+
+        if (color_miku.holds_name()) {
+            string& name_ref = color_miku.get_name_ref();
+            std::cout << "color_miku is holding name, name is " << name_ref << std::endl;
+        } else {
+            std::cout << "Error" << std::endl;
+        }
+
+        color_miku.emplace_rgb(RGB{0x39, 0xC5, 0xBB});
+        std::cout << toString(color_miku) << std::endl;
+
+        switch (color_miku.get_tag()) {
+        case ColorOrRGBOrName::tag_t::color:
+            std::cout << "color_miku is holding color" << std::endl;
+            break;
+        case ColorOrRGBOrName::tag_t::rgb:
+            std::cout << "color_miku is holding rgb" << std::endl;
+            break;
+        case ColorOrRGBOrName::tag_t::name:
+            std::cout << "color_miku is holding name" << std::endl;
+            break;
+        default:
+            std::cout << "color_miku is holding other stuff" << std::endl;
+            break;
+        }
     }
 
-    if (color_miku.holds_name()) {
-        string* color_ptr_name_ptr = color_miku.get_name_ptr();
-        std::cout << "color_miku is holding name, name is " << *color_ptr_name_ptr << std::endl;
-    } else {
-        std::cout << "Error" << std::endl;
+    {
+        std::cout << "-------- Testing Interface Call --------" << std::endl;
+
+        IShowable colored_circ = make_holder<ColoredCircle, IShowable>("Circ", 10, color_114514);
+        IShowable colored_rect = makeColoredRectangle("Rect", color_yellow, 5, 5);
+
+        colored_circ->show();
+        colored_rect->show();
+        copyColor(colored_rect, colored_circ);
+        colored_rect->show();
+
+        impl_holder<UserType, IBase> obj = make_holder<UserType, IBase>("obj");
+
+        // `impl_holder<Impl, Iface...>` can call methods of Impl itself that are not defined in the interface.
+        obj->userMethod();
     }
 
-    color_miku.emplace_rgb(RGB{0x39, 0xC5, 0xBB});
-    std::cout << toString(color_miku) << std::endl;
+    {
+        std::cout << "-------- Testing Interface Cast --------" << std::endl;
 
-    rgb::base::ColorOrRGBOrName::tag_t tag = color_miku.get_tag();
-    switch (color_miku.get_tag()) {
-    case ColorOrRGBOrName::tag_t::color:
-        std::cout << "color_miku is holding color" << std::endl;
-        break;
-    case ColorOrRGBOrName::tag_t::rgb:
-        std::cout << "color_miku is holding rgb" << std::endl;
-        break;
-    case ColorOrRGBOrName::tag_t::name:
-        std::cout << "color_miku is holding name" << std::endl;
-        break;
-    default:
-        std::cout << "color_miku is holding other stuff" << std::endl;
-        break;
+        IBase ibase_a = makeColoredRectangle("A", color_yellow, 1, 2);
+        IBase ibase_b = makeRectangle("B", 3, 4);
+
+        if (weak::IColorable icolorable_a = weak::IColorable(ibase_a)) {
+            std::cout << "A Dynamic Cast success" << std::endl;
+        } else {
+            std::cout << "A Dynamic Cast failed" << std::endl;
+        }
+
+        if (weak::IColorable icolorable_b = weak::IColorable(ibase_b)) {
+            std::cout << "B Dynamic Cast success" << std::endl;
+        } else {
+            std::cout << "B Dynamic Cast failed" << std::endl;
+        }
+
+        // You can also dynamic cast a `data_holder`.
+        data_holder obj = make_holder<UserType, IBase>("obj");
+
+        if (weak::IBase obj_as_ibase = weak::IBase(obj)) {
+            std::cout << "obj Dynamic Cast success" << std::endl;
+        } else {
+            std::cout << "obj Dynamic Cast failed" << std::endl;
+        }
     }
 
-    // User implements the interface
-    auto circle = make_holder<ColoredCircle, IShowable>("A", 10, color_114514);
-    auto rect = makeColoredRectangle("B", color_yellow, 5, 5);
-    Color color_single = Color::make_yellow();
-    weak::IShowable circle_as_showable = circle;
+    {
+        std::cout << "-------- Testing Array --------" << std::endl;
 
-    circle->show();
-    circle_as_showable.show();
-    rect.show();
-    copyColor(rect, circle);
-    rect.show();
+        auto dst = array<IBase>::make(5, make_holder<UserType, IBase>("x"));
+        auto src = array<IBase>::make(2, make_holder<UserType, IBase>("y"));
+
+        show_array(dst, "dst");
+        show_array(src, "src");
+
+        auto res = exchangeArr(dst, src);
+
+        show_array(dst, "dst");
+        show_array(src, "src");
+        show_array(res, "res");
+    }
+
+    {
+        std::cout << "-------- Testing Box --------" << std::endl;
+
+        IBase obj = make_holder<UserType, IBase>("some");
+
+        testBox(&obj);
+        testBox(NULL);
+    }
+
+    {
+        std::cout << "-------- Testing Vector --------" << std::endl;
+
+        vector<IBase> vec_0;
+        vector<IBase> vec_1 = vec_0;
+
+        fillVec(vec_0);
+
+        for (int i = 0; i < vec_1.size(); i++) {
+            std::cout << vec_1[i]->getId() << std::endl;
+        }
+    }
+
+    {
+        std::cout << "-------- Testing Map --------" << std::endl;
+
+        map<string, IBase> map_0;
+        map<string, IBase> map_1 = map_0;
+
+        map_0.emplace<0>("a", make_holder<UserType, IBase>("a"));
+        map_0.emplace<0>("b", make_holder<UserType, IBase>("b"));
+
+        fillMap(map_0);
+
+        if (auto ptr = map_1.find("a")) std::cout << "a: " << (*ptr)->getId() << std::endl;
+        if (auto ptr = map_1.find("b")) std::cout << "b: " << (*ptr)->getId() << std::endl;
+        if (auto ptr = map_1.find("c")) std::cout << "c: " << (*ptr)->getId() << std::endl;
+        if (auto ptr = map_1.find("d")) std::cout << "d: " << (*ptr)->getId() << std::endl;
+    }
+
+    {
+        std::cout << "-------- Testing Set --------" << std::endl;
+
+        set<string> set_0;
+        set<string> set_1 = set_0;
+
+        set_0.emplace("a");
+
+        fillSet(set_0);
+
+        if (set_1.find("a")) std::cout << "a exists" << std::endl;
+        if (set_1.find("b")) std::cout << "b exists" << std::endl;
+        if (set_1.find("c")) std::cout << "c exists" << std::endl;
+    }
+
+    {
+        std::cout << "-------- Testing Callback --------" << std::endl;
+
+        auto tmp = currying(callback<string(string_view, string_view)>::from<MyCallback>("f"))("abc");
+        auto res = tmp("123");
+
+        std::cout << "res = " << res << std::endl;
+    }
 }

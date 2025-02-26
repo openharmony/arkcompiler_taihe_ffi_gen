@@ -7,8 +7,8 @@ from typing import Optional
 
 from taihe.codegen.abi_generator import ABICodeGenerator
 from taihe.codegen.c_impl_generator import CImplCodeGenerator
+from taihe.codegen.cpp_generator import CppCodeGenerator
 from taihe.codegen.cpp_impl_generator import CppImplCodeGenerator
-from taihe.codegen.cpp_proj_generator import CppProjCodeGenerator
 from taihe.parse.convert import AstConverter
 from taihe.semantics.analysis import analyze_semantics
 from taihe.semantics.declarations import PackageGroup
@@ -92,25 +92,22 @@ class CompilerInstance:
             pretty_print(self.package_group, sys.stdout)
 
     def generate(self):
-        if self.diagnostics_manager.current_max_level >= Level.ERROR:
+        if self.diagnostics_manager.current_max_level() >= Level.ERROR:
             return
+
         if not self.invocation.out_dir:
             return
 
         ABICodeGenerator(self.target_manager, self.analysis_manager).generate(
             self.package_group
         )
-
-        if self.invocation.gen_author or self.invocation.gen_user:
-            CppProjCodeGenerator(self.target_manager, self.analysis_manager).generate(
-                self.package_group
-            )
-
+        CppCodeGenerator(self.target_manager, self.analysis_manager).generate(
+            self.package_group
+        )
         if self.invocation.gen_author:
             CImplCodeGenerator(self.target_manager, self.analysis_manager).generate(
                 self.package_group
             )
-
             CppImplCodeGenerator(self.target_manager, self.analysis_manager).generate(
                 self.package_group
             )
