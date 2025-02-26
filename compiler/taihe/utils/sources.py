@@ -6,8 +6,6 @@ from dataclasses import dataclass
 from os import PathLike
 from pathlib import Path
 
-from taihe.utils.diagnostics import DiagnosticsManager
-
 
 @dataclass(frozen=True)
 class SourceBase(ABC):
@@ -45,21 +43,13 @@ class SourceBuffer(SourceBase):
 class SourceManager:
     """Manages all input files throughout the compilation."""
 
-    _pkg_to_source: dict[str, SourceBase]
+    src_list: list[SourceBase]
 
     def __init__(self):
-        self._pkg_to_source = {}
+        self.src_list = []
 
     def _add(self, sb: SourceBase):
-        # Avoid circular import
-        from taihe.utils.exceptions import PackageRedefError
-
-        if prev := self._pkg_to_source.get(sb.pkg_name, None):
-            raise PackageRedefError(
-                sb.pkg_name, loc=SourceLocation(sb), prev_loc=SourceLocation(prev)
-            )
-        else:
-            self._pkg_to_source[sb.pkg_name] = sb
+        self.src_list.append(sb)
 
     def add_buffer(self, pkg_name: str, buf: str, source_identifier: str = ""):
         sid = source_identifier or f"<source-buffer-{pkg_name}>"
@@ -70,18 +60,15 @@ class SourceManager:
         pkg_name = p.stem
         self._add(SourceFile(str(p), pkg_name))
 
-    def add_directory(self, path: PathLike, diag: DiagnosticsManager):
+    def add_directory(self, path: PathLike):
         """Adds all `.taihe` files inside a directory. Subdirectories are ignored."""
         d = Path(path)
-        files = d.glob("*.taihe")
-        diag.for_each(files, lambda f: self.add_file(f))
-
-    def lookup(self, pkg_name: str) -> SourceBase | None:
-        return self._pkg_to_source.get(pkg_name, None)
+        for file in d.glob("*.taihe"):
+            self.add_file(file)
 
     @property
     def sources(self) -> Iterable[SourceBase]:
-        return self._pkg_to_source.values()
+        return self.src_list
 
 
 @dataclass

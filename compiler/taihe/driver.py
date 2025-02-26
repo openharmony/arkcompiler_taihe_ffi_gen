@@ -76,13 +76,14 @@ class CompilerInstance:
 
     def scan(self):
         for src_dir in self.invocation.src_dirs:
-            self.source_manager.add_directory(Path(src_dir), self.diagnostics_manager)
+            self.source_manager.add_directory(Path(src_dir))
 
     def parse(self):
         for src in self.source_manager.sources:
             conv = AstConverter(src, self.diagnostics_manager)
             pkg = conv.convert()
-            self.package_group.add(pkg)
+            with self.diagnostics_manager.capture_error():
+                self.package_group.add(pkg)
 
     def validate(self):
         analyze_semantics(self.package_group, self.diagnostics_manager)
