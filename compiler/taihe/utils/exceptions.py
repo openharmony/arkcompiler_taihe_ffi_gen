@@ -13,7 +13,7 @@ if TYPE_CHECKING:
         IfaceDecl,
         IfaceParentDecl,
         NamedDecl,
-        Package,
+        PackageDecl,
         PackageLevelDecl,
         Type,
         TypeDecl,
@@ -221,9 +221,9 @@ class GenericArgumentsError(DiagError):
 @dataclass
 class SymbolConflictWithNamespaceError(DiagError):
     decl: "PackageLevelDecl"
-    pkg: "Package"
+    pkg: "PackageDecl"
 
-    def __init__(self, decl: "PackageLevelDecl", pkg: "Package"):
+    def __init__(self, decl: "PackageLevelDecl", pkg: "PackageDecl"):
         self.decl = decl
         self.loc = decl.loc
         self.pkg = pkg

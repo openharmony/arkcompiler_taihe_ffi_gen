@@ -25,15 +25,27 @@ template<typename cpp_t>
 using as_abi_t = typename cpp_type_traits<cpp_t>::abi_t;
 
 template<typename cpp_t, std::enable_if_t<!std::is_reference_v<cpp_t>, int> = 0>
-inline as_abi_t<cpp_t> into_abi(cpp_t cpp_val) {
+inline as_abi_t<cpp_t> into_abi(cpp_t&& cpp_val) {
     as_abi_t<cpp_t> abi_val;
     new (&abi_val) cpp_t(std::move(cpp_val));
     return abi_val;
 }
 
 template<typename cpp_t, std::enable_if_t<!std::is_reference_v<cpp_t>, int> = 0>
-inline cpp_t from_abi(as_abi_t<cpp_t> abi_val) {
-    return std::move(reinterpret_cast<cpp_t&>(abi_val));
+inline as_abi_t<cpp_t> into_abi(cpp_t& cpp_val) {
+    as_abi_t<cpp_t> abi_val;
+    new (&abi_val) cpp_t(std::move(cpp_val));
+    return abi_val;
+}
+
+template<typename cpp_t, std::enable_if_t<!std::is_reference_v<cpp_t>, int> = 0>
+inline cpp_t&& from_abi(as_abi_t<cpp_t>& abi_val) {
+    return reinterpret_cast<cpp_t&&>(abi_val);
+}
+
+template<typename cpp_t, std::enable_if_t<!std::is_reference_v<cpp_t>, int> = 0>
+inline cpp_t&& from_abi(as_abi_t<cpp_t>&& abi_val) {
+    return reinterpret_cast<cpp_t&&>(abi_val);
 }
 
 template<typename cpp_t, std::enable_if_t<std::is_reference_v<cpp_t>, int> = 0>

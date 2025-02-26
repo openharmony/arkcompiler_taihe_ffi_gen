@@ -1,8 +1,10 @@
+#include "core/object.hpp"
 #include "rgb.base.proj.hpp"
 #include "rgb.show.proj.hpp"
 
 #include <core/callback.hpp>
 
+#include <cstddef>
 #include <iostream>
 #include <cmath>
 #include <iomanip>
@@ -62,6 +64,10 @@ struct UserType {
 
     auto getId() { return "UserType(" + std::string(id) + ")"; }
 
+    void userMethod() {
+        std::cout << "User Method Called;" << std::endl;
+    }
+
     UserType(string_view id) : id(id) {
         std::cout << getId() << " made" << std::endl;
     }
@@ -103,7 +109,6 @@ int main() {
     ColorOrRGBOrName color_miku = ColorOrRGBOrName::make_name("Miku");
     ColorOrRGBOrName color_unknown = ColorOrRGBOrName::make_undefined();
 
-    // test union
     {
         std::cout << "-------- Testing Union --------" << std::endl;
 
@@ -144,22 +149,51 @@ int main() {
         }
     }
 
-    // interface
     {
-        std::cout << "-------- Testing Interface --------" << std::endl;
+        std::cout << "-------- Testing Interface Call --------" << std::endl;
 
-        auto circle_original = make_holder<ColoredCircle, IShowable>("A", 10, color_114514);
-        weak::IShowable circle_ref = circle_original;
-        IShowable rect = makeColoredRectangle("B", color_yellow, 5, 5);
+        IShowable colored_circ = make_holder<ColoredCircle, IShowable>("Circ", 10, color_114514);
+        IShowable colored_rect = makeColoredRectangle("Rect", color_yellow, 5, 5);
 
-        circle_original->show();
-        circle_ref->show();
-        rect->show();
-        copyColor(rect, circle_ref);
-        rect->show();
+        colored_circ->show();
+        colored_rect->show();
+        copyColor(colored_rect, colored_circ);
+        colored_rect->show();
+
+        impl_holder<UserType, IBase> obj = make_holder<UserType, IBase>("obj");
+
+        // `impl_holder<Impl, Iface...>` can call methods of Impl itself that are not defined in the interface.
+        obj->userMethod();
     }
 
-    // array
+    {
+        std::cout << "-------- Testing Interface Cast --------" << std::endl;
+
+        IBase ibase_a = makeColoredRectangle("A", color_yellow, 1, 2);
+        IBase ibase_b = makeRectangle("B", 3, 4);
+
+        if (weak::IColorable icolorable_a = weak::IColorable(ibase_a)) {
+            std::cout << "A Dynamic Cast success" << std::endl;
+        } else {
+            std::cout << "A Dynamic Cast failed" << std::endl;
+        }
+
+        if (weak::IColorable icolorable_b = weak::IColorable(ibase_b)) {
+            std::cout << "B Dynamic Cast success" << std::endl;
+        } else {
+            std::cout << "B Dynamic Cast failed" << std::endl;
+        }
+
+        // You can also dynamic cast a `data_holder`.
+        data_holder obj = make_holder<UserType, IBase>("obj");
+
+        if (weak::IBase obj_as_ibase = weak::IBase(obj)) {
+            std::cout << "obj Dynamic Cast success" << std::endl;
+        } else {
+            std::cout << "obj Dynamic Cast failed" << std::endl;
+        }
+    }
+
     {
         std::cout << "-------- Testing Array --------" << std::endl;
 
@@ -176,24 +210,15 @@ int main() {
         show_array(res, "res");
     }
 
-    // array
     {
-        std::cout << "-------- Testing Boxes --------" << std::endl;
+        std::cout << "-------- Testing Box --------" << std::endl;
 
-        auto dst = box<IBase>::make(make_holder<UserType, IBase>("s"));
-        auto src = box<IBase>::make(make_holder<UserType, IBase>("t"));
+        IBase obj = make_holder<UserType, IBase>("some");
 
-        std::cout << "dst = " << (*dst)->getId() << std::endl;
-        std::cout << "src = " << (*src)->getId() << std::endl;
-
-        auto res = exchangeBox(dst, src);
-
-        std::cout << "dst = " << (*dst)->getId() << std::endl;
-        std::cout << "src = " << (*src)->getId() << std::endl;
-        std::cout << "res = " << (*res)->getId() << std::endl;
+        testBox(&obj);
+        testBox(NULL);
     }
 
-    // vector
     {
         std::cout << "-------- Testing Vector --------" << std::endl;
 
@@ -207,7 +232,6 @@ int main() {
         }
     }
 
-    // map
     {
         std::cout << "-------- Testing Map --------" << std::endl;
 
@@ -225,7 +249,6 @@ int main() {
         if (auto ptr = map_1.find("d")) std::cout << "d: " << (*ptr)->getId() << std::endl;
     }
 
-    // set
     {
         std::cout << "-------- Testing Set --------" << std::endl;
 

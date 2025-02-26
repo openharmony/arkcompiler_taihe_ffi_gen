@@ -4,7 +4,12 @@
 #include <taihe/common.h>
 #include <taihe/string.abi.h>
 
-static inline struct TStringData *to_heap(struct TString tstr) {
+// Converts a TString into its corresponding heap-allocated TStringData structure.
+//
+// # Returns
+// - A pointer to the TStringData structure if the TString is heap-allocated.
+// - `NULL` if the TString is a reference (TSTRING_REF is set).
+TH_INLINE struct TStringData *to_heap(struct TString tstr) {
   if (tstr.flags & TSTRING_REF) {
     return NULL;
   }
@@ -26,6 +31,14 @@ struct TString tstr_new(const char *value TH_NONNULL, size_t len) {
   memcpy(buf, value, sizeof(char) * len);
   buf[len] = '\0';
   tstr.length = len;
+  return tstr;
+}
+
+struct TString tstr_new_ref(const char* buf TH_NONNULL, size_t len) {
+  struct TString tstr;
+  tstr.flags = TSTRING_REF;
+  tstr.length = len;
+  tstr.ptr = buf;
   return tstr;
 }
 

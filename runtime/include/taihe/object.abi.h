@@ -41,9 +41,15 @@ struct DataBlockHead {
   TRefCount m_count;
 };
 
+// Initializes the TObject with the given runtime typeinfo.
+//
+// # Arguments
+// - `data_ptr`: The data pointer.
+// - `rtti_ptr`: The runtime typeinfo pointer.
 TH_EXPORT void tobj_init(struct DataBlockHead* data_ptr, struct TypeInfo const* rtti_ptr);
 
 // Increments the reference count of the given TObject.
+//
 // # Arguments
 // - `data_ptr`: The data pointer.
 //
@@ -52,6 +58,7 @@ TH_EXPORT void tobj_init(struct DataBlockHead* data_ptr, struct TypeInfo const* 
 TH_EXPORT struct DataBlockHead* tobj_dup(struct DataBlockHead* data_ptr);
 
 // Decrements the reference count of the given TObject. If the reference count reaches zero, the object is destroyed.
+//
 // # Arguments
 // - `tobj`: The data pointer.
 //

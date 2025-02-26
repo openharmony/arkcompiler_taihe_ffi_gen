@@ -7,6 +7,7 @@
 #include <cstddef>
 
 #include <taihe/common.hpp>
+#include <taihe/box.abi.h>
 
 namespace taihe::core {
 template<typename cpp_owner_t>
@@ -17,13 +18,13 @@ struct box;
 
 template<typename cpp_owner_t>
 struct box_view {
-    box_view(cpp_owner_t *handle) noexcept : m_handle(handle) {} // main constructor
+    box_view(cpp_owner_t const* handle) noexcept : m_handle(handle) {} // main constructor
     
-    cpp_owner_t* operator->() const {
+    cpp_owner_t const* operator->() const {
         return m_handle;
     }
 
-    cpp_owner_t& operator*() const {
+    cpp_owner_t const& operator*() const {
         return *m_handle;
     }
 
@@ -40,12 +41,12 @@ struct box_view {
     }
 
 protected:
-    cpp_owner_t* m_handle;
+    cpp_owner_t const* m_handle;
 };
 
 template<typename cpp_owner_t>
 struct box : public box_view<cpp_owner_t> {
-    box(cpp_owner_t *handle) noexcept : box_view<cpp_owner_t>(handle) {} // main constructor
+    box(cpp_owner_t const* handle) noexcept : box_view<cpp_owner_t>(handle) {} // main constructor
 
     template<typename... Args>
     static box make(Args&&... args) {
@@ -75,11 +76,11 @@ struct box : public box_view<cpp_owner_t> {
 
 template<typename cpp_owner_t>
 struct cpp_type_traits<box_view<cpp_owner_t>> {
-    using abi_t = void*;
+    using abi_t = struct TBox;
 };
 
 template<typename cpp_owner_t>
 struct cpp_type_traits<box<cpp_owner_t>> {
-    using abi_t = void*;
+    using abi_t = struct TBox;
 };
 }

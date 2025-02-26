@@ -5,19 +5,18 @@ from typing_extensions import override
 
 from taihe.semantics.declarations import (
     CallbackTypeRefDecl,
-    DeclarationImportDecl,
     DeclarationRefDecl,
     EnumDecl,
     GenericTypeRefDecl,
     GlobFuncDecl,
     IfaceDecl,
     IfaceMethodDecl,
+    LongTypeRefDecl,
     NamedDecl,
-    Package,
+    PackageDecl,
     PackageGroup,
-    PackageImportDecl,
     PackageRefDecl,
-    SimpleTypeRefDecl,
+    ShortTypeRefDecl,
     StructDecl,
     TypeDecl,
 )
@@ -92,7 +91,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
         self.diag = diag
 
     @property
-    def pkg(self) -> Package:
+    def pkg(self) -> PackageDecl:
         assert self._current_pkg
         return self._current_pkg
 
@@ -102,9 +101,9 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
         return self._current_pkg_group
 
     @override
-    def visit_package(self, p: Package) -> None:
+    def visit_package_decl(self, p: PackageDecl) -> None:
         self._current_pkg = p
-        super().visit_package(p)
+        super().visit_package_decl(p)
         self._current_pkg = None
 
     @override
@@ -119,12 +118,13 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
             return
         d.is_resolved = True
 
-        if (pkg := self.pkg_group.lookup(d.symbol)) is None:
+        pkg = self.pkg_group.lookup(d.symbol)
+
+        if pkg is None:
             self.diag.emit(PackageNotExistError(d.symbol, loc=d.loc))
             return
 
         d.resolved_pkg = pkg
-        return
 
     @override
     def visit_decl_ref_decl(self, d: DeclarationRefDecl) -> None:
@@ -134,83 +134,94 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
 
         self.handle_decl(d.pkg_ref)
 
-        if (pkg := d.pkg_ref.resolved_pkg) is None:
+        pkg = d.pkg_ref.resolved_pkg
+
+        if pkg is None:
             # No need to repeatedly throw exceptions
             return
 
-        if (decl := pkg.decls.get(d.symbol)) is None:
+        decl = pkg.decls.get(d.symbol)
+
+        if decl is None:
             self.diag.emit(DeclNotExistError(d.symbol, loc=d.loc))
             return
 
         d.resolved_decl = decl
-        return
 
     @override
-    def visit_simple_type_ref_decl(self, d: SimpleTypeRefDecl) -> None:
+    def visit_long_type_ref_decl(self, d: LongTypeRefDecl) -> None:
         if d.is_resolved:
             return
         d.is_resolved = True
 
-        if len(xs := d.symbol.rsplit(".", maxsplit=1)) == 2:
-            pkg_name, decl_name = xs
+        # Find the corresponding imported package according to the package name
+        pkg_import = self.pkg.pkg_imports.get(d.pkname)
 
-            # Find the corresponding imported package according to the package name
-            import_pkg = self.pkg.imports.get(pkg_name)
-
-            if not isinstance(import_pkg, PackageImportDecl):
-                self.diag.emit(PackageNotInScopeError(pkg_name, loc=d.loc))
-                return
-
-            # Then find the corresponding type declaration from the package
-            if (pkg := import_pkg.pkg_ref.resolved_pkg) is None:
-                # No need to repeatedly throw exceptions
-                return
-
-            if (decl := pkg.decls.get(decl_name)) is None:
-                self.diag.emit(DeclNotExistError(decl_name, loc=d.loc))
-                return
-
-            if not isinstance(decl, TypeDecl):
-                self.diag.emit(NotATypeError(decl_name, loc=d.loc))
-                return
-
-            d.resolved_ty = decl.as_type()
+        if pkg_import is None:
+            self.diag.emit(PackageNotInScopeError(d.pkname, loc=d.loc))
             return
 
-        decl_name = xs[0]
+        # Then find the corresponding type declaration from the package
+        pkg = pkg_import.pkg_ref.resolved_pkg
+
+        if pkg is None:
+            # No need to repeatedly throw exceptions
+            return
+
+        decl = pkg.decls.get(d.symbol)
+
+        if decl is None:
+            self.diag.emit(DeclNotExistError(d.symbol, loc=d.loc))
+            return
+
+        if not isinstance(decl, TypeDecl):
+            self.diag.emit(NotATypeError(d.symbol, loc=d.loc))
+            return
+
+        d.resolved_ty = decl.as_type()
+
+    @override
+    def visit_short_type_ref_decl(self, d: ShortTypeRefDecl) -> None:
+        if d.is_resolved:
+            return
+        d.is_resolved = True
 
         # Find Builtin Types
-        if decl := BUILTIN_TYPES.get(decl_name):
+        decl = BUILTIN_TYPES.get(d.symbol)
+
+        if decl:
             d.resolved_ty = decl
             return
 
         # Find types declared in the current package
-        if decl := self.pkg.decls.get(decl_name):
+        decl = self.pkg.decls.get(d.symbol)
+
+        if decl:
             if not isinstance(decl, TypeDecl):
-                self.diag.emit(NotATypeError(decl_name, loc=d.loc))
+                self.diag.emit(NotATypeError(d.symbol, loc=d.loc))
                 return
 
             d.resolved_ty = decl.as_type()
             return
 
         # Look for imported type declarations
-        import_decl = self.pkg.imports.get(decl_name)
+        decl_import = self.pkg.decl_imports.get(d.symbol)
 
-        if isinstance(import_decl, DeclarationImportDecl):
-            if (decl := import_decl.decl_ref.resolved_decl) is None:
-                # No need to repeatedly throw exceptions
-                return
-
-            if not isinstance(decl, TypeDecl):
-                self.diag.emit(NotATypeError(decl_name, loc=d.loc))
-                return
-
-            d.resolved_ty = decl.as_type()
+        if decl_import is None:
+            self.diag.emit(DeclarationNotInScopeError(d.symbol, loc=d.loc))
             return
 
-        # Fallback
-        self.diag.emit(DeclarationNotInScopeError(decl_name, loc=d.loc))
-        return
+        decl = decl_import.decl_ref.resolved_decl
+
+        if decl is None:
+            # No need to repeatedly throw exceptions
+            return
+
+        if not isinstance(decl, TypeDecl):
+            self.diag.emit(NotATypeError(d.symbol, loc=d.loc))
+            return
+
+        d.resolved_ty = decl.as_type()
 
     @override
     def visit_generic_type_ref_decl(self, d: GenericTypeRefDecl) -> None:
@@ -222,23 +233,24 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
 
         args_ty: list[Type] = []
         for arg_ty_ref in d.args_ty_ref:
-            if (arg_ty := arg_ty_ref.resolved_ty) is None:
+            arg_ty = arg_ty_ref.resolved_ty
+            if arg_ty is None:
                 # No need to repeatedly throw exceptions
                 return
             args_ty.append(arg_ty)
 
         decl_name = d.symbol
 
-        if generic := BUILTIN_GENERICS.get(decl_name):
-            try:
-                d.resolved_ty = generic(*args_ty)
-            except TypeError:
-                self.diag.emit(GenericArgumentsError(d.unresolved_repr, loc=d.loc))
+        generic = BUILTIN_GENERICS.get(decl_name)
+
+        if generic is None:
+            self.diag.emit(DeclarationNotInScopeError(decl_name, loc=d.loc))
             return
 
-        # Fallback
-        self.diag.emit(DeclarationNotInScopeError(decl_name, loc=d.loc))
-        return
+        try:
+            d.resolved_ty = generic(*args_ty)
+        except TypeError:
+            self.diag.emit(GenericArgumentsError(d.unresolved_repr, loc=d.loc))
 
     @override
     def visit_callback_type_ref_decl(self, d: CallbackTypeRefDecl) -> None:
@@ -249,7 +261,8 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
         super().visit_callback_type_ref_decl(d)
 
         if d.return_ty_ref:
-            if (return_ty := d.return_ty_ref.resolved_ty) is None:
+            return_ty = d.return_ty_ref.resolved_ty
+            if return_ty is None:
                 # No need to repeatedly throw exceptions
                 return
         else:
@@ -257,7 +270,8 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
 
         params_ty: list[Type] = []
         for param in d.params:
-            if (arg_ty := param.ty_ref.resolved_ty) is None:
+            arg_ty = param.ty_ref.resolved_ty
+            if arg_ty is None:
                 # No need to repeatedly throw exceptions
                 return
             params_ty.append(arg_ty)
@@ -320,9 +334,9 @@ class _CheckFieldNameCollisionErrorPass(RecursiveDeclVisitor):
         return super().visit_iface_decl(d)
 
     @override
-    def visit_package(self, p: Package) -> None:
-        self.check_collision_helper(p.children)
-        return super().visit_package(p)
+    def visit_package_decl(self, p: PackageDecl) -> None:
+        self.check_collision_helper(p.decls.values())
+        return super().visit_package_decl(p)
 
     def check_collision_helper(self, children: Iterable[NamedDecl]):
         names = {}
@@ -352,18 +366,16 @@ class _CheckRecursiveInclusionPass(RecursiveDeclVisitor):
             last, *other = cycle[::-1]
             self.diag.emit(RecursiveReferenceError(last, other))
 
-    def visit_data_type_decl(self, d: TypeDecl) -> None:
-        raise NotImplementedError()
-
     def visit_iface_decl(self, d: IfaceDecl) -> None:
         parent_iface_list = self.type_table.setdefault(d, [])
         parent_iface_dict: dict[IfaceDecl, IfaceParentDecl] = {}
         for parent in d.parents:
             if (parent_ty := parent.ty_ref.resolved_ty) is None:
                 continue
-            if not isinstance(parent_ty, UserType) or not isinstance(
-                parent_iface := parent_ty.ty_decl, IfaceDecl
-            ):
+            if not isinstance(parent_ty, UserType):
+                self.diag.emit(ExtendsTypeError(parent, parent_ty))
+                continue
+            if not isinstance(parent_iface := parent_ty.ty_decl, IfaceDecl):
                 self.diag.emit(ExtendsTypeError(parent, parent_ty))
                 continue
             parent_iface_list.append(((d, parent.ty_ref), parent_iface))
@@ -381,20 +393,16 @@ class _CheckRecursiveInclusionPass(RecursiveDeclVisitor):
     def visit_struct_decl(self, d: StructDecl) -> None:
         type_list = self.type_table.setdefault(d, [])
         for f in d.fields:
-            if isinstance(ty := f.ty_ref.resolved_ty, UserType) and isinstance(
-                decl := ty.ty_decl, TypeDecl
-            ):
-                type_list.append(((d, f.ty_ref), decl))
+            if isinstance(ty := f.ty_ref.resolved_ty, UserType):
+                type_list.append(((d, f.ty_ref), ty.ty_decl))
 
     def visit_enum_decl(self, d: EnumDecl) -> None:
         type_list = self.type_table.setdefault(d, [])
         for i in d.items:
             if i.ty_ref is None:
                 continue
-            if isinstance(ty := i.ty_ref.resolved_ty, UserType) and isinstance(
-                decl := ty.ty_decl, TypeDecl
-            ):
-                type_list.append(((d, i.ty_ref), decl))
+            if isinstance(ty := i.ty_ref.resolved_ty, UserType):
+                type_list.append(((d, i.ty_ref), ty.ty_decl))
 
 
 V = TypeVar("V")

@@ -137,10 +137,12 @@ array<IBase> exchangeArrImpl(array_view<IBase> dst, array_view<IBase> src) {
     return res;
 }
 
-box<IBase> exchangeBoxImpl(box_view<IBase> dst, box_view<IBase> src) {
-    auto res = box<IBase>::make(std::move(*dst));
-    *dst = *src;
-    return res;
+void testBoxImpl(box_view<IBase> box) {
+    if (box) {
+        std::cout << "box is not empty, " << (*box)->getId() << " is in the box" << std::endl;
+    } else {
+        std::cout << "box is empty" << std::endl;
+    }
 }
 
 struct AuthorType {
@@ -189,7 +191,7 @@ TH_EXPORT_CPP_API_makeColoredRectangle(makeColoredRectangleImpl)
 TH_EXPORT_CPP_API_copyColor(copyColorImpl)
 TH_EXPORT_CPP_API_toString(colorToStringImpl)
 TH_EXPORT_CPP_API_exchangeArr(exchangeArrImpl)
-TH_EXPORT_CPP_API_exchangeBox(exchangeBoxImpl)
+TH_EXPORT_CPP_API_testBox(testBoxImpl)
 TH_EXPORT_CPP_API_fillVec(fillVecImpl)
 TH_EXPORT_CPP_API_fillMap(fillMapImpl)
 TH_EXPORT_CPP_API_fillSet(fillSetImpl)

@@ -7,8 +7,8 @@ from typing import Optional
 
 from taihe.codegen.abi_generator import ABICodeGenerator
 from taihe.codegen.c_impl_generator import CImplCodeGenerator
+from taihe.codegen.cpp_generator import CppCodeGenerator
 from taihe.codegen.cpp_impl_generator import CppImplCodeGenerator
-from taihe.codegen.cpp_proj_generator import CppProjCodeGenerator
 from taihe.codegen.kn_bridge_generator import KNBridgeCodeGenerator
 from taihe.codegen.napi_generator import NapiCodeGenerator
 from taihe.parse.convert import AstConverter
@@ -102,31 +102,25 @@ class CompilerInstance:
         if not self.invocation.out_dir:
             return
 
-        if self.invocation.gen_napi:
-            NapiCodeGenerator(self.target_manager, self.analysis_manager).generate(
-                self.package_group
-            )
-
-        if self.invocation.gen_knbridge:
-            KNBridgeCodeGenerator(self.target_manager, self.analysis_manager).generate(
-                self.package_group
-            )
-            NapiCodeGenerator(self.target_manager, self.analysis_manager).generate(
-                self.package_group, True
-            )
-
-        if self.invocation.gen_author or self.invocation.gen_user:
-            ABICodeGenerator(self.target_manager, self.analysis_manager).generate(
-                self.package_group
-            )
-            CppProjCodeGenerator(self.target_manager, self.analysis_manager).generate(
-                self.package_group
-            )
+        ABICodeGenerator(self.target_manager, self.analysis_manager).generate(
+            self.package_group
+        )
+        CppCodeGenerator(self.target_manager, self.analysis_manager).generate(
+            self.package_group
+        )
         if self.invocation.gen_author:
             CImplCodeGenerator(self.target_manager, self.analysis_manager).generate(
                 self.package_group
             )
             CppImplCodeGenerator(self.target_manager, self.analysis_manager).generate(
+                self.package_group
+            )
+        if self.invocation.gen_napi:
+            NapiCodeGenerator(self.target_manager, self.analysis_manager).generate(
+                self.package_group
+            )
+        if self.invocation.gen_knbridge:
+            KNBridgeCodeGenerator(self.target_manager, self.analysis_manager).generate(
                 self.package_group
             )
 

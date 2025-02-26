@@ -104,15 +104,7 @@ struct array_view {
         return m_data;
     }
 
-    const_iterator cbegin() const noexcept {
-        return m_data;
-    }
-
     iterator end() const noexcept {
-        return m_data + m_size;
-    }
-
-    const_iterator cend() const noexcept {
         return m_data + m_size;
     }
 
@@ -120,12 +112,20 @@ struct array_view {
         return m_data + m_size;
     }
 
-    const_reverse_iterator crbegin() const noexcept {
+    reverse_iterator rend() const noexcept {
+        return m_data;
+    }
+
+    const_iterator cbegin() const noexcept {
+        return m_data;
+    }
+
+    const_iterator cend() const noexcept {
         return m_data + m_size;
     }
 
-    reverse_iterator rend() const noexcept {
-        return m_data;
+    const_reverse_iterator crbegin() const noexcept {
+        return m_data + m_size;
     }
 
     const_reverse_iterator crend() const noexcept {
@@ -183,12 +183,14 @@ struct array : public array_view<cpp_owner_t> {
 
     array(pointer data, size_type size) noexcept : array_view<cpp_owner_t>(data, size) {} // main constructor
 
-    array(pointer data, size_type size, copy_data_t) noexcept
+    template<typename C>
+    array(C *data, size_type size, copy_data_t) noexcept
         : array((cpp_owner_t*)malloc(size * sizeof(cpp_owner_t)), size) {
         std::uninitialized_copy_n(data, size, this->m_data);
     }
 
-    array(pointer data, size_type size, move_data_t) noexcept
+    template<typename C>
+    array(C *data, size_type size, move_data_t) noexcept
         : array((cpp_owner_t*)malloc(size * sizeof(cpp_owner_t)), size) {
         std::uninitialized_move_n(data, size, this->m_data);
     }

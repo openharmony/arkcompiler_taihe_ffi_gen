@@ -68,11 +68,6 @@ struct data_block_impl : DataBlockHead, Impl {
     }
 };
 
-template<typename Impl>
-inline static void delete_impl(DataBlockHead *data_ptr) {
-    delete static_cast<::taihe::core::data_block_impl<Impl>*>(data_ptr);
-}
-
 template<typename Impl, typename... InterfaceHolders>
 struct impl_view;
 
@@ -130,7 +125,7 @@ public:
         uint64_t len;
         struct IdMapItem idmap[((sizeof(InterfaceHolders::template idmap_impl<Impl>) / sizeof(IdMapItem)) + ... + 1)] = {};
     } rtti = [] {
-        struct typeinfo_t rtti = {0, &delete_impl<Impl>, 0};
+        struct typeinfo_t rtti = {0, [](DataBlockHead *data_ptr) { delete static_cast<data_block_impl<Impl>*>(data_ptr); }, 0};
         ([&] {
             for (std::size_t j = 0; j < sizeof(InterfaceHolders::template idmap_impl<Impl>) / sizeof(IdMapItem); rtti.len++, j++) {
                 rtti.idmap[rtti.len] = InterfaceHolders::template idmap_impl<Impl>[j];

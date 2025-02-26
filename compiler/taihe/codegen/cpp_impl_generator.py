@@ -1,22 +1,22 @@
 from taihe.codegen.abi_generator import (
-    GlobFuncDeclABIInfo,
+    GlobFuncABIInfo,
     PackageABIInfo,
     TypeABIInfo,
 )
-from taihe.codegen.cpp_proj_generator import (
-    TypeCppProjInfo,
+from taihe.codegen.cpp_generator import (
+    TypeCppInfo,
 )
 from taihe.semantics.declarations import (
     GlobFuncDecl,
-    Package,
+    PackageDecl,
     PackageGroup,
 )
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
 from taihe.utils.outputs import COutputBuffer, OutputManager
 
 
-class PackageCppImplInfo(AbstractAnalysis[Package]):
-    def __init__(self, am: AnalysisManager, p: Package) -> None:
+class PackageCppImplInfo(AbstractAnalysis[PackageDecl]):
+    def __init__(self, am: AnalysisManager, p: PackageDecl) -> None:
         self.header = f"{p.name}.impl.hpp"
 
 
@@ -34,7 +34,7 @@ class CppImplCodeGenerator:
         for pkg in pg.packages:
             self.gen_package_file(pkg)
 
-    def gen_package_file(self, pkg: Package):
+    def gen_package_file(self, pkg: PackageDecl):
         pkg_cpp_impl_info = PackageCppImplInfo.get(self.am, pkg)
         pkg_cpp_impl_target = COutputBuffer.create(
             self.tm, f"include/{pkg_cpp_impl_info.header}", True
@@ -50,26 +50,26 @@ class CppImplCodeGenerator:
         func: GlobFuncDecl,
         pkg_cpp_impl_target: COutputBuffer,
     ):
-        func_abi_info = GlobFuncDeclABIInfo.get(self.am, func)
+        func_abi_info = GlobFuncABIInfo.get(self.am, func)
         func_cpp_impl_info = GlobFuncCppImplInfo.get(self.am, func)
         func_impl = "CPP_FUNC_IMPL"
         args_from_abi = []
         abi_params = []
         for param in func.params:
-            type_cpp_proj_info = TypeCppProjInfo.get(self.am, param.ty_ref.resolved_ty)
+            type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
             type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.resolved_ty)
-            pkg_cpp_impl_target.include(*type_cpp_proj_info.defn_headers)
-            args_from_abi.append(type_cpp_proj_info.pass_from_abi(param.name))
+            pkg_cpp_impl_target.include(*type_cpp_info.defn_headers)
+            args_from_abi.append(type_cpp_info.pass_from_abi(param.name))
             abi_params.append(f"{type_abi_info.as_param} {param.name}")
         args_from_abi_str = ", ".join(args_from_abi)
         abi_params_str = ", ".join(abi_params)
         cpp_result = f"{func_impl}({args_from_abi_str})"
         if return_ty_ref := func.return_ty_ref:
-            type_cpp_proj_info = TypeCppProjInfo.get(self.am, return_ty_ref.resolved_ty)
+            type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
             type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
-            pkg_cpp_impl_target.include(*type_cpp_proj_info.defn_headers)
+            pkg_cpp_impl_target.include(*type_cpp_info.defn_headers)
             abi_return_ty_name = type_abi_info.as_field
-            abi_result = type_cpp_proj_info.return_into_abi(cpp_result)
+            abi_result = type_cpp_info.return_into_abi(cpp_result)
         else:
             abi_return_ty_name = "void"
             abi_result = cpp_result

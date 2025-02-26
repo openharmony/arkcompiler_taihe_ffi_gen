@@ -17,11 +17,12 @@ from taihe.semantics.declarations import (
     IfaceDecl,
     IfaceMethodDecl,
     IfaceParentDecl,
-    Package,
+    LongTypeRefDecl,
+    PackageDecl,
     PackageImportDecl,
     PackageRefDecl,
     ParamDecl,
-    SimpleTypeRefDecl,
+    ShortTypeRefDecl,
     StructDecl,
     StructFieldDecl,
 )
@@ -158,34 +159,45 @@ class AstConverter(ExprEvaluator):
         # Remember, token.column is 0-based.
         return SourceLocation(self.source, *t._beg, *t._end)
 
+    # Attributes
+
     @override
-    def visit_AttrItem(self, node: ast.AttrItem) -> AttrItemDecl:
-        if val := node.val:
-            d = AttrItemDecl(self.loc(node.name), str(node.name), self.visit(val.expr))
-        else:
-            d = AttrItemDecl(self.loc(node.name), str(node.name))
+    def visit_EmptyAttrItem(self, node: ast.EmptyAttrItem) -> AttrItemDecl:
+        d = AttrItemDecl(self.loc(node.name), str(node.name))
         return d
 
     @override
-    def visit_UserType(self, node: ast.UserType) -> SimpleTypeRefDecl:
+    def visit_SimpleAttrItem(self, node: ast.SimpleAttrItem) -> AttrItemDecl:
+        d = AttrItemDecl(self.loc(node.name), str(node.name), self.visit(node.val.expr))
+        return d
+
+    @override
+    def visit_TupleAttrItem(self, node: ast.TupleAttrItem) -> AttrItemDecl:
+        value = tuple(self.visit(val.expr) for val in node.vals)
+        d = AttrItemDecl(self.loc(node.name), str(node.name), value)
+        return d
+
+    # Type References
+
+    @override
+    def visit_LongType(self, node: ast.LongType) -> LongTypeRefDecl:
         loc = self.loc(node)
-        if node.pkg_name:
-            symbol = pkg2str(node.pkg_name) + "." + str(node.decl_name)
-        else:
-            symbol = str(node.decl_name)
-        ty_ref = SimpleTypeRefDecl(loc, symbol)
-        return ty_ref
+        pkname = pkg2str(node.pkg_name)
+        symbol = str(node.decl_name)
+        return LongTypeRefDecl(loc, pkname, symbol)
+
+    @override
+    def visit_ShortType(self, node: ast.ShortType) -> ShortTypeRefDecl:
+        loc = self.loc(node)
+        symbol = str(node.decl_name)
+        return ShortTypeRefDecl(loc, symbol)
 
     @override
     def visit_GenericType(self, node: ast.GenericType) -> GenericTypeRefDecl:
         loc = self.loc(node)
-        if node.pkg_name:
-            symbol = pkg2str(node.pkg_name) + "." + str(node.decl_name)
-        else:
-            symbol = str(node.decl_name)
+        symbol = str(node.decl_name)
         args = [self.visit(arg) for arg in node.args]
-        ty_ref = GenericTypeRefDecl(loc, symbol, args)
-        return ty_ref
+        return GenericTypeRefDecl(loc, symbol, args)
 
     @override
     def visit_CallbackType(self, node: ast.CallbackType) -> CallbackTypeRefDecl:
@@ -195,6 +207,8 @@ class AstConverter(ExprEvaluator):
             d = CallbackTypeRefDecl(self.loc(node))
         self.diag.for_each(node.parameters, lambda p: d.add_param(self.visit(p)))
         return d
+
+    # Uses
 
     @override
     def visit_UsePackage(self, node: ast.UsePackage) -> Iterable[PackageImportDecl]:
@@ -227,6 +241,8 @@ class AstConverter(ExprEvaluator):
                     d_ref,
                 )
             yield d
+
+    # Declarations
 
     @override
     def visit_StructProperty(self, node: ast.StructProperty) -> StructFieldDecl:
@@ -298,16 +314,18 @@ class AstConverter(ExprEvaluator):
         self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
         return d
 
+    # Package
+
     @override
-    def visit_Spec(self, node: ast.Spec) -> Package:
-        pkg = Package(self.source.pkg_name, SourceLocation(self.source))
+    def visit_Spec(self, node: ast.Spec) -> PackageDecl:
+        pkg = PackageDecl(self.source.pkg_name, SourceLocation(self.source))
         for u in node.uses:
             self.diag.for_each(self.visit(u), pkg.add_import)
         self.diag.for_each(node.fields, lambda n: pkg.add_declaration(self.visit(n)))
         self.diag.for_each(node.attrs, lambda a: pkg.add_attr(self.visit(a)))
         return pkg
 
-    def convert(self) -> Package:
+    def convert(self) -> PackageDecl:
         """Converts the whole source code buffer to a package."""
         ast = generate_ast(self.source, self.diag)
 

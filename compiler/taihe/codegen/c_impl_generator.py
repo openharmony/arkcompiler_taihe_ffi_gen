@@ -1,19 +1,19 @@
 from taihe.codegen.abi_generator import (
-    GlobFuncDeclABIInfo,
+    GlobFuncABIInfo,
     PackageABIInfo,
     TypeABIInfo,
 )
 from taihe.semantics.declarations import (
     GlobFuncDecl,
-    Package,
+    PackageDecl,
     PackageGroup,
 )
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
 from taihe.utils.outputs import COutputBuffer, OutputManager
 
 
-class PackageCImplInfo(AbstractAnalysis[Package]):
-    def __init__(self, am: AnalysisManager, p: Package) -> None:
+class PackageCImplInfo(AbstractAnalysis[PackageDecl]):
+    def __init__(self, am: AnalysisManager, p: PackageDecl) -> None:
         self.header = f"{p.name}.impl.h"
 
 
@@ -31,7 +31,7 @@ class CImplCodeGenerator:
         for pkg in pg.packages:
             self.gen_package_file(pkg)
 
-    def gen_package_file(self, pkg: Package):
+    def gen_package_file(self, pkg: PackageDecl):
         pkg_c_impl_info = PackageCImplInfo.get(self.am, pkg)
         pkg_c_impl_target = COutputBuffer.create(
             self.tm, f"include/{pkg_c_impl_info.header}", True
@@ -47,7 +47,7 @@ class CImplCodeGenerator:
         func: GlobFuncDecl,
         pkg_c_impl_target: COutputBuffer,
     ):
-        func_abi_info = GlobFuncDeclABIInfo.get(self.am, func)
+        func_abi_info = GlobFuncABIInfo.get(self.am, func)
         func_c_impl_info = GlobFuncCImplInfo.get(self.am, func)
         func_impl = "C_FUNC_IMPL"
         params = []

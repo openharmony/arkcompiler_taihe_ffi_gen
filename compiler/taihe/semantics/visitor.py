@@ -31,12 +31,13 @@ from taihe.semantics.declarations import (
     IfaceMethodDecl,
     IfaceParentDecl,
     ImportDecl,
-    Package,
+    LongTypeRefDecl,
+    PackageDecl,
     PackageGroup,
     PackageImportDecl,
     PackageRefDecl,
     ParamDecl,
-    SimpleTypeRefDecl,
+    ShortTypeRefDecl,
     StructDecl,
     StructFieldDecl,
     TypeDecl,
@@ -188,7 +189,10 @@ class DeclVisitor(Generic[T]):
     def visit_type_ref_decl(self, d: TypeRefDecl) -> T:
         return self.visit_decl(d)
 
-    def visit_simple_type_ref_decl(self, d: SimpleTypeRefDecl) -> T:
+    def visit_short_type_ref_decl(self, d: ShortTypeRefDecl) -> T:
+        return self.visit_type_ref_decl(d)
+
+    def visit_long_type_ref_decl(self, d: LongTypeRefDecl) -> T:
         return self.visit_type_ref_decl(d)
 
     def visit_generic_type_ref_decl(self, d: GenericTypeRefDecl) -> T:
@@ -255,7 +259,7 @@ class DeclVisitor(Generic[T]):
 
     ### Package ###
 
-    def visit_package(self, p: Package) -> T:
+    def visit_package_decl(self, p: PackageDecl) -> T:
         return self.visit_decl(p)
 
     def visit_package_group(self, g: PackageGroup) -> T:
@@ -290,7 +294,11 @@ class RecursiveDeclVisitor(DeclVisitor[None]):
         return self.visit_decl(d)
 
     @override
-    def visit_simple_type_ref_decl(self, d: SimpleTypeRefDecl) -> None:
+    def visit_short_type_ref_decl(self, d: ShortTypeRefDecl) -> None:
+        return self.visit_type_ref_decl(d)
+
+    @override
+    def visit_long_type_ref_decl(self, d: LongTypeRefDecl) -> None:
         return self.visit_type_ref_decl(d)
 
     @override
@@ -420,10 +428,10 @@ class RecursiveDeclVisitor(DeclVisitor[None]):
     ### Package ###
 
     @override
-    def visit_package(self, p: Package) -> None:
-        for i in p.pkg_imports:
+    def visit_package_decl(self, p: PackageDecl) -> None:
+        for i in p.pkg_imports.values():
             self.handle_decl(i)
-        for i in p.decl_imports:
+        for i in p.decl_imports.values():
             self.handle_decl(i)
 
         for i in p.functions:
