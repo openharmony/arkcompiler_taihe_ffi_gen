@@ -54,7 +54,7 @@ struct map_view {
     }
 
     template<bool cover = false, typename... Args>
-    V* emplace(K key, Args&&... args) const {
+    V* emplace(as_param_t<K> key, Args&&... args) const {
         std::size_t index = taihe::core::hash(key) % m_handle->cap;
         item_t* current = m_handle->bucket[index];
         while (current) {
@@ -67,7 +67,7 @@ struct map_view {
             current = current->next;
         }
         item_t* item = new item_t{
-            .key = std::move(key),
+            .key = key,
             .val = V{std::forward<Args>(args)...},
             .next = m_handle->bucket[index],
         };
@@ -80,7 +80,7 @@ struct map_view {
         return &item->val;
     }
 
-    V* find(K const& key) const {
+    V* find(as_param_t<K> key) const {
         std::size_t index = taihe::core::hash(key) % m_handle->cap;
         item_t* current = m_handle->bucket[index];
         while (current) {
@@ -92,7 +92,7 @@ struct map_view {
         return nullptr;
     }
 
-    bool erase(K const& key) const {
+    bool erase(as_param_t<K> key) const {
         std::size_t index = taihe::core::hash(key) % m_handle->cap;
         item_t** current_ptr = &m_handle->bucket[index];
         while (*current_ptr) {
@@ -184,12 +184,17 @@ private:
 };
 
 template<typename K, typename V>
-struct cpp_type_traits<map<K, V>> {
-    using abi_t = void*;
+struct as_abi<map<K, V>> {
+    using type = void*;
 };
 
 template<typename K, typename V>
-struct cpp_type_traits<map_view<K, V>> {
-    using abi_t = void*;
+struct as_abi<map_view<K, V>> {
+    using type = void*;
+};
+
+template<typename K, typename V>
+struct as_param<map<K, V>> {
+    using type = map_view<K, V>;
 };
 }

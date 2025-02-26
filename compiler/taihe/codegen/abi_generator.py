@@ -77,7 +77,7 @@ class EnumABIInfo(AbstractAnalysis[EnumDecl]):
         self.tag_type = "size_t"
         self.union_name = encode(segments, DeclKind.ENUM_UNION)
         self.mangled_name = encode(segments, DeclKind.ENUM_STRUCT)
-        self.as_field = f"struct {self.mangled_name}"
+        self.as_owner = f"struct {self.mangled_name}"
         self.as_param = f"struct {self.mangled_name} const*"
         self.has_data = any(item.ty_ref for item in d.items)
 
@@ -90,7 +90,7 @@ class StructABIInfo(AbstractAnalysis[StructDecl]):
         self.decl_header = f"{p.name}.{d.name}.abi.0.hpp"
         self.defn_header = f"{p.name}.{d.name}.abi.1.hpp"
         self.mangled_name = encode(segments, DeclKind.STRUCT)
-        self.as_field = f"struct {self.mangled_name}"
+        self.as_owner = f"struct {self.mangled_name}"
         self.as_param = f"struct {self.mangled_name} const*"
 
 
@@ -117,7 +117,7 @@ class IfaceABIInfo(AbstractAnalysis[IfaceDecl]):
         self.impl_header = f"{p.name}.{d.name}.abi.2.hpp"
         self.src = f"{p.name}.{d.name}.cpp"
         self.mangled_name = encode(segments, DeclKind.INTERFACE)
-        self.as_field = f"struct {self.mangled_name}"
+        self.as_owner = f"struct {self.mangled_name}"
         self.as_param = f"struct {self.mangled_name}"
         self.copy_func = encode(segments, DeclKind.COPY)
         self.drop_func = encode(segments, DeclKind.DROP)
@@ -155,7 +155,7 @@ class AbstractTypeABIInfo(metaclass=ABCMeta):
     decl_headers: list[str]
     defn_headers: list[str]
     # type as struct field / union field / return value
-    as_field: str
+    as_owner: str
     # type as parameter
     as_param: str
 
@@ -165,7 +165,7 @@ class EnumTypeABIInfo(AbstractAnalysis[EnumType], AbstractTypeABIInfo):
         enum_abi_info = EnumABIInfo.get(am, t.ty_decl)
         self.decl_headers = [enum_abi_info.decl_header]
         self.defn_headers = [enum_abi_info.defn_header]
-        self.as_field = enum_abi_info.as_field
+        self.as_owner = enum_abi_info.as_owner
         self.as_param = enum_abi_info.as_param
 
 
@@ -174,7 +174,7 @@ class StructTypeABIInfo(AbstractAnalysis[StructType], AbstractTypeABIInfo):
         struct_abi_info = StructABIInfo.get(am, t.ty_decl)
         self.decl_headers = [struct_abi_info.decl_header]
         self.defn_headers = [struct_abi_info.defn_header]
-        self.as_field = struct_abi_info.as_field
+        self.as_owner = struct_abi_info.as_owner
         self.as_param = struct_abi_info.as_param
 
 
@@ -183,7 +183,7 @@ class IfaceTypeABIInfo(AbstractAnalysis[IfaceType], AbstractTypeABIInfo):
         iface_abi_info = IfaceABIInfo.get(am, t.ty_decl)
         self.decl_headers = [iface_abi_info.decl_header]
         self.defn_headers = [iface_abi_info.defn_header]
-        self.as_field = iface_abi_info.as_field
+        self.as_owner = iface_abi_info.as_owner
         self.as_param = iface_abi_info.as_param
 
 
@@ -207,7 +207,7 @@ class ScalarTypeABIInfo(AbstractAnalysis[ScalarType], AbstractTypeABIInfo):
         self.decl_headers = ["taihe/string.abi.h"]
         self.defn_headers = ["taihe/string.abi.h"]
         self.as_param = res
-        self.as_field = res
+        self.as_owner = res
 
 
 class SpecialTypeABIInfo(AbstractAnalysis[SpecialType], AbstractTypeABIInfo):
@@ -216,7 +216,7 @@ class SpecialTypeABIInfo(AbstractAnalysis[SpecialType], AbstractTypeABIInfo):
             raise ValueError
         self.decl_headers = ["taihe/string.abi.h"]
         self.defn_headers = ["taihe/string.abi.h"]
-        self.as_field = "struct TString"
+        self.as_owner = "struct TString"
         self.as_param = "struct TString"
 
 
@@ -224,7 +224,7 @@ class ArrayTypeABIInfo(AbstractAnalysis[ArrayType], AbstractTypeABIInfo):
     def __init__(self, am: AnalysisManager, t: ArrayType) -> None:
         self.decl_headers = ["taihe/array.abi.h"]
         self.defn_headers = ["taihe/array.abi.h"]
-        self.as_field = "struct TArray"
+        self.as_owner = "struct TArray"
         self.as_param = "struct TArray"
 
 
@@ -232,7 +232,7 @@ class BoxTypeABIInfo(AbstractAnalysis[BoxType], AbstractTypeABIInfo):
     def __init__(self, am: AnalysisManager, t: BoxType) -> None:
         self.decl_headers = ["taihe/box.abi.h"]
         self.defn_headers = ["taihe/box.abi.h"]
-        self.as_field = "struct TBox"
+        self.as_owner = "struct TBox"
         self.as_param = "struct TBox"
 
 
@@ -240,7 +240,7 @@ class CallbackTypeABIInfo(AbstractAnalysis[CallbackType], AbstractTypeABIInfo):
     def __init__(self, am: AnalysisManager, t: CallbackType) -> None:
         self.decl_headers = []
         self.defn_headers = []
-        self.as_field = "void*"
+        self.as_owner = "void*"
         self.as_param = "void*"
 
 
@@ -248,7 +248,7 @@ class VectorTypeABIInfo(AbstractAnalysis[VectorType], AbstractTypeABIInfo):
     def __init__(self, am: AnalysisManager, t: VectorType) -> None:
         self.decl_headers = []
         self.defn_headers = []
-        self.as_field = "void*"
+        self.as_owner = "void*"
         self.as_param = "void*"
 
 
@@ -256,7 +256,7 @@ class MapTypeABIInfo(AbstractAnalysis[MapType], AbstractTypeABIInfo):
     def __init__(self, am: AnalysisManager, t: MapType) -> None:
         self.decl_headers = []
         self.defn_headers = []
-        self.as_field = "void*"
+        self.as_owner = "void*"
         self.as_param = "void*"
 
 
@@ -264,7 +264,7 @@ class SetTypeABIInfo(AbstractAnalysis[SetType], AbstractTypeABIInfo):
     def __init__(self, am: AnalysisManager, t: SetType) -> None:
         self.decl_headers = []
         self.defn_headers = []
-        self.as_field = "void*"
+        self.as_owner = "void*"
         self.as_param = "void*"
 
 
@@ -361,7 +361,7 @@ class ABICodeGenerator:
         if return_ty_ref := func.return_ty_ref:
             type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
             pkg_abi_target.include(*type_abi_info.decl_headers)
-            return_ty_name = type_abi_info.as_field
+            return_ty_name = type_abi_info.as_owner
         else:
             return_ty_name = "void"
         pkg_abi_target.write(
@@ -410,7 +410,7 @@ class ABICodeGenerator:
         for field in struct.fields:
             type_abi_info = TypeABIInfo.get(self.am, field.ty_ref.resolved_ty)
             struct_abi_defn_target.include(*type_abi_info.defn_headers)
-            struct_abi_defn_target.write(f"  {type_abi_info.as_field} {field.name};\n")
+            struct_abi_defn_target.write(f"  {type_abi_info.as_owner} {field.name};\n")
         struct_abi_defn_target.write("};\n")
 
     def gen_enum_files(
@@ -459,7 +459,7 @@ class ABICodeGenerator:
             type_abi_info = TypeABIInfo.get(self.am, item.ty_ref.resolved_ty)
             enum_abi_defn_target.include(*type_abi_info.defn_headers)
             enum_abi_defn_target.write(
-                f"  {type_abi_info.as_field} {item.name}; // {item.value}\n"
+                f"  {type_abi_info.as_owner} {item.name}; // {item.value}\n"
             )
         enum_abi_defn_target.write(
             f"}};\n"
@@ -529,7 +529,7 @@ class ABICodeGenerator:
             if return_ty_ref := method.return_ty_ref:
                 type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
                 iface_abi_defn_target.include(*type_abi_info.decl_headers)
-                return_ty_name = type_abi_info.as_field
+                return_ty_name = type_abi_info.as_owner
             else:
                 return_ty_name = "void"
             iface_abi_defn_target.write(
@@ -668,7 +668,7 @@ class ABICodeGenerator:
             if return_ty_ref := method.return_ty_ref:
                 type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
                 iface_abi_impl_target.include(*type_abi_info.defn_headers)
-                return_ty_name = type_abi_info.as_field
+                return_ty_name = type_abi_info.as_owner
             else:
                 return_ty_name = "void"
             iface_abi_impl_target.write(

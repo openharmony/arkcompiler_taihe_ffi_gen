@@ -101,12 +101,17 @@ struct callback<Return(Params...)> : callback_view<Return(Params...)> {
 };
 
 template<typename Return, typename... Params>
-struct cpp_type_traits<callback_view<Return(Params...)>> {
-    using abi_t = void*;
+struct as_abi<callback_view<Return(Params...)>> {
+    using type = void*;
 };
 
 template<typename Return, typename... Params>
-struct cpp_type_traits<callback<Return(Params...)>> {
-    using abi_t = void*;
+struct as_abi<callback<Return(Params...)>> {
+    using type = void*;
+};
+
+template<typename Return, typename... Params>
+struct as_param<callback<Return(Params...)>> {
+    using type = callback_view<Return(Params...)>;
 };
 }

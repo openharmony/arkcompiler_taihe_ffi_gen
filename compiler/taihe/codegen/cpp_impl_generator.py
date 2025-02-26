@@ -68,7 +68,7 @@ class CppImplCodeGenerator:
             type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
             type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
             pkg_cpp_impl_target.include(*type_cpp_info.defn_headers)
-            abi_return_ty_name = type_abi_info.as_field
+            abi_return_ty_name = type_abi_info.as_owner
             abi_result = type_cpp_info.return_into_abi(cpp_result)
         else:
             abi_return_ty_name = "void"

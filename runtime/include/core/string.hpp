@@ -247,12 +247,17 @@ inline bool same_impl(adl_helper_t, string_view lhs, string_view rhs) {
 }
 
 template<>
-struct cpp_type_traits<string_view> {
-    using abi_t = TString;
+struct as_abi<string_view> {
+    using type = TString;
 };
 
 template<>
-struct cpp_type_traits<string> {
-    using abi_t = TString;
+struct as_abi<string> {
+    using type = TString;
+};
+
+template<>
+struct as_param<string> {
+    using type = string_view;
 };
 }

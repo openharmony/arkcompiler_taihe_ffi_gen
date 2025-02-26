@@ -9,20 +9,31 @@
 
 namespace taihe::core {
 template<typename cpp_t, typename = void>
-struct cpp_type_traits;
+struct as_abi;
 
 template<typename cpp_t>
-struct cpp_type_traits<cpp_t, std::enable_if_t<std::is_arithmetic_v<cpp_t>>> {
-    using abi_t = cpp_t;
+using as_abi_t = typename as_abi<cpp_t>::type;
+
+template<typename cpp_owner_t, typename = void>
+struct as_param;
+
+template<typename cpp_owner_t>
+using as_param_t = typename as_param<cpp_owner_t>::type;
+
+template<typename cpp_t>
+struct as_abi<cpp_t, std::enable_if_t<std::is_arithmetic_v<cpp_t>>> {
+    using type = cpp_t;
+};
+
+template<typename cpp_owner_t>
+struct as_param<cpp_owner_t, std::enable_if_t<std::is_arithmetic_v<cpp_owner_t>>> {
+    using type = cpp_owner_t;
 };
 
 template<>
-struct cpp_type_traits<void> {
-    using abi_t = void;
+struct as_abi<void> {
+    using type = void;
 };
-
-template<typename cpp_t>
-using as_abi_t = typename cpp_type_traits<cpp_t>::abi_t;
 
 template<typename cpp_t, std::enable_if_t<!std::is_reference_v<cpp_t>, int> = 0>
 inline as_abi_t<cpp_t> into_abi(cpp_t&& cpp_val) {

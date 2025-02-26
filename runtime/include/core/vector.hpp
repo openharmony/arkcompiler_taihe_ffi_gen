@@ -146,12 +146,17 @@ private:
 };
 
 template<typename T>
-struct cpp_type_traits<vector<T>> {
-    using abi_t = void*;
+struct as_abi<vector<T>> {
+    using type = void*;
 };
 
 template<typename T>
-struct cpp_type_traits<vector_view<T>> {
-    using abi_t = void*;
+struct as_abi<vector_view<T>> {
+    using type = void*;
+};
+
+template<typename T>
+struct as_param<vector<T>> {
+    using type = vector_view<T>;
 };
 }

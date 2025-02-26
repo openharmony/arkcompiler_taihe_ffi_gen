@@ -54,7 +54,7 @@ struct set_view {
     }
 
     template<typename ...Args>
-    bool emplace(K key) const {
+    bool emplace(as_param_t<K> key) const {
         std::size_t index = taihe::core::hash(key) % m_handle->cap;
         item_t* current = m_handle->bucket[index];
         while (current) {
@@ -76,7 +76,7 @@ struct set_view {
         return true;
     }
 
-    bool find(K const& key) const {
+    bool find(as_param_t<K> key) const {
         std::size_t index = taihe::core::hash(key) % m_handle->cap;
         item_t* current = m_handle->bucket[index];
         while (current) {
@@ -88,7 +88,7 @@ struct set_view {
         return false;
     }
 
-    bool erase(K const& key) const {
+    bool erase(as_param_t<K> key) const {
         std::size_t index = taihe::core::hash(key) % m_handle->cap;
         item_t** current_ptr = &m_handle->bucket[index];
         while (*current_ptr) {
@@ -179,12 +179,17 @@ private:
 };
 
 template<typename K>
-struct cpp_type_traits<set<K>> {
-    using abi_t = void*;
+struct as_abi<set<K>> {
+    using type = void*;
 };
 
 template<typename K>
-struct cpp_type_traits<set_view<K>> {
-    using abi_t = void*;
+struct as_abi<set_view<K>> {
+    using type = void*;
+};
+
+template<typename K>
+struct as_param<set<K>> {
+    using type = set_view<K>;
 };
 }

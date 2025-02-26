@@ -75,12 +75,17 @@ struct box : public box_view<cpp_owner_t> {
 };
 
 template<typename cpp_owner_t>
-struct cpp_type_traits<box_view<cpp_owner_t>> {
-    using abi_t = struct TBox;
+struct as_abi<box_view<cpp_owner_t>> {
+    using type = struct TBox;
 };
 
 template<typename cpp_owner_t>
-struct cpp_type_traits<box<cpp_owner_t>> {
-    using abi_t = struct TBox;
+struct as_abi<box<cpp_owner_t>> {
+    using type = struct TBox;
+};
+
+template<typename cpp_owner_t>
+struct as_param<box<cpp_owner_t>> {
+    using type = box_view<cpp_owner_t>;
 };
 }

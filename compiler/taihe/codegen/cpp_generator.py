@@ -78,7 +78,7 @@ class StructCppInfo(AbstractAnalysis[StructDecl]):
         self.defn_header = f"{p.name}.{d.name}.proj.1.hpp"
         self.name = d.name
         self.full_name = "::" + "::".join(p.segments) + "::" + self.name
-        self.as_field = self.full_name
+        self.as_owner = self.full_name
         self.as_param = self.full_name + " const&"
 
 
@@ -90,7 +90,7 @@ class EnumCppInfo(AbstractAnalysis[EnumDecl]):
         self.defn_header = f"{p.name}.{d.name}.proj.1.hpp"
         self.name = d.name
         self.full_name = "::" + "::".join(p.segments) + "::" + self.name
-        self.as_field = self.full_name
+        self.as_owner = self.full_name
         self.as_param = self.full_name + " const&"
 
 
@@ -104,21 +104,21 @@ class IfaceCppInfo(AbstractAnalysis[IfaceDecl]):
         self.name = d.name
         self.full_name = "::" + "::".join(p.segments) + "::" + self.name
         self.weak_name = "::" + "::".join(p.segments) + "::weak::" + self.name
-        self.as_field = self.full_name
+        self.as_owner = self.full_name
         self.as_param = self.weak_name
 
 
 class AbstractTypeCppInfo(metaclass=ABCMeta):
     decl_headers: list[str]
     defn_headers: list[str]
-    as_field: str
+    as_owner: str
     as_param: str
 
     def return_from_abi(self, val):
-        return f"::taihe::core::from_abi<{self.as_field}>({val})"
+        return f"::taihe::core::from_abi<{self.as_owner}>({val})"
 
     def return_into_abi(self, val):
-        return f"::taihe::core::into_abi<{self.as_field}>({val})"
+        return f"::taihe::core::into_abi<{self.as_owner}>({val})"
 
     def pass_from_abi(self, val):
         return f"::taihe::core::from_abi<{self.as_param}>({val})"
@@ -132,7 +132,7 @@ class EnumTypeCppInfo(AbstractAnalysis[EnumType], AbstractTypeCppInfo):
         enum_cpp_info = EnumCppInfo.get(am, t.ty_decl)
         self.decl_headers = [enum_cpp_info.decl_header]
         self.defn_headers = [enum_cpp_info.defn_header]
-        self.as_field = enum_cpp_info.as_field
+        self.as_owner = enum_cpp_info.as_owner
         self.as_param = enum_cpp_info.as_param
 
 
@@ -141,7 +141,7 @@ class StructTypeCppInfo(AbstractAnalysis[StructType], AbstractTypeCppInfo):
         struct_cpp_info = StructCppInfo.get(am, t.ty_decl)
         self.decl_headers = [struct_cpp_info.decl_header]
         self.defn_headers = [struct_cpp_info.defn_header]
-        self.as_field = struct_cpp_info.as_field
+        self.as_owner = struct_cpp_info.as_owner
         self.as_param = struct_cpp_info.as_param
 
 
@@ -150,7 +150,7 @@ class IfaceTypeCppInfo(AbstractAnalysis[IfaceType], AbstractTypeCppInfo):
         iface_cpp_info = IfaceCppInfo.get(am, t.ty_decl)
         self.decl_headers = [iface_cpp_info.decl_header]
         self.defn_headers = [iface_cpp_info.defn_header]
-        self.as_field = iface_cpp_info.as_field
+        self.as_owner = iface_cpp_info.as_owner
         self.as_param = iface_cpp_info.as_param
 
 
@@ -174,7 +174,7 @@ class ScalarTypeCppInfo(AbstractAnalysis[ScalarType], AbstractTypeCppInfo):
         self.decl_headers = []
         self.defn_headers = []
         self.as_param = res
-        self.as_field = res
+        self.as_owner = res
 
 
 class SpecialTypeCppInfo(AbstractAnalysis[SpecialType], AbstractTypeCppInfo):
@@ -183,7 +183,7 @@ class SpecialTypeCppInfo(AbstractAnalysis[SpecialType], AbstractTypeCppInfo):
             raise ValueError
         self.decl_headers = ["core/string.hpp"]
         self.defn_headers = ["core/string.hpp"]
-        self.as_field = "::taihe::core::string"
+        self.as_owner = "::taihe::core::string"
         self.as_param = "::taihe::core::string_view"
 
 
@@ -192,8 +192,8 @@ class ArrayTypeCppInfo(AbstractAnalysis[ArrayType], AbstractTypeCppInfo):
         arg_ty_cpp_info = TypeCppInfo.get(am, t.item_ty)
         self.decl_headers = ["core/array.hpp", *arg_ty_cpp_info.decl_headers]
         self.defn_headers = ["core/array.hpp", *arg_ty_cpp_info.defn_headers]
-        self.as_field = f"::taihe::core::array<{arg_ty_cpp_info.as_field}>"
-        self.as_param = f"::taihe::core::array_view<{arg_ty_cpp_info.as_field}>"
+        self.as_owner = f"::taihe::core::array<{arg_ty_cpp_info.as_owner}>"
+        self.as_param = f"::taihe::core::array_view<{arg_ty_cpp_info.as_owner}>"
 
 
 class BoxTypeCppInfo(AbstractAnalysis[BoxType], AbstractTypeCppInfo):
@@ -201,8 +201,8 @@ class BoxTypeCppInfo(AbstractAnalysis[BoxType], AbstractTypeCppInfo):
         arg_ty_cpp_info = TypeCppInfo.get(am, t.item_ty)
         self.decl_headers = ["core/box.hpp", *arg_ty_cpp_info.decl_headers]
         self.defn_headers = ["core/box.hpp", *arg_ty_cpp_info.defn_headers]
-        self.as_field = f"::taihe::core::box<{arg_ty_cpp_info.as_field}>"
-        self.as_param = f"::taihe::core::box_view<{arg_ty_cpp_info.as_field}>"
+        self.as_owner = f"::taihe::core::box<{arg_ty_cpp_info.as_owner}>"
+        self.as_param = f"::taihe::core::box_view<{arg_ty_cpp_info.as_owner}>"
 
 
 class VectorTypeCppInfo(AbstractAnalysis[VectorType], AbstractTypeCppInfo):
@@ -210,8 +210,8 @@ class VectorTypeCppInfo(AbstractAnalysis[VectorType], AbstractTypeCppInfo):
         val_ty_cpp_info = TypeCppInfo.get(am, t.val_ty)
         self.decl_headers = ["core/vector.hpp", *val_ty_cpp_info.decl_headers]
         self.defn_headers = ["core/vector.hpp", *val_ty_cpp_info.defn_headers]
-        self.as_field = f"::taihe::core::vector<{val_ty_cpp_info.as_field}>"
-        self.as_param = f"::taihe::core::vector_view<{val_ty_cpp_info.as_field}>"
+        self.as_owner = f"::taihe::core::vector<{val_ty_cpp_info.as_owner}>"
+        self.as_param = f"::taihe::core::vector_view<{val_ty_cpp_info.as_owner}>"
 
 
 class MapTypeCppInfo(AbstractAnalysis[MapType], AbstractTypeCppInfo):
@@ -228,8 +228,8 @@ class MapTypeCppInfo(AbstractAnalysis[MapType], AbstractTypeCppInfo):
             *key_ty_cpp_info.defn_headers,
             *val_ty_cpp_info.defn_headers,
         ]
-        self.as_field = f"::taihe::core::map<{key_ty_cpp_info.as_field}, {val_ty_cpp_info.as_field}>"
-        self.as_param = f"::taihe::core::map_view<{key_ty_cpp_info.as_field}, {val_ty_cpp_info.as_field}>"
+        self.as_owner = f"::taihe::core::map<{key_ty_cpp_info.as_owner}, {val_ty_cpp_info.as_owner}>"
+        self.as_param = f"::taihe::core::map_view<{key_ty_cpp_info.as_owner}, {val_ty_cpp_info.as_owner}>"
 
 
 class SetTypeCppInfo(AbstractAnalysis[SetType], AbstractTypeCppInfo):
@@ -237,8 +237,8 @@ class SetTypeCppInfo(AbstractAnalysis[SetType], AbstractTypeCppInfo):
         key_ty_cpp_info = TypeCppInfo.get(am, t.key_ty)
         self.decl_headers = ["core/set.hpp", *key_ty_cpp_info.decl_headers]
         self.defn_headers = ["core/set.hpp", *key_ty_cpp_info.defn_headers]
-        self.as_field = f"::taihe::core::set<{key_ty_cpp_info.as_field}>"
-        self.as_param = f"::taihe::core::set_view<{key_ty_cpp_info.as_field}>"
+        self.as_owner = f"::taihe::core::set<{key_ty_cpp_info.as_owner}>"
+        self.as_param = f"::taihe::core::set_view<{key_ty_cpp_info.as_owner}>"
 
 
 class CallbackTypeCppInfo(AbstractAnalysis[CallbackType], AbstractTypeCppInfo):
@@ -247,11 +247,11 @@ class CallbackTypeCppInfo(AbstractAnalysis[CallbackType], AbstractTypeCppInfo):
             return_ty_cpp_info = TypeCppInfo.get(am, t.return_ty)
             return_ty_decl_headers = return_ty_cpp_info.decl_headers
             return_ty_defn_headers = return_ty_cpp_info.defn_headers
-            return_ty_as_field = return_ty_cpp_info.as_field
+            return_ty_as_owner = return_ty_cpp_info.as_owner
         else:
             return_ty_decl_headers = []
             return_ty_defn_headers = []
-            return_ty_as_field = "void"
+            return_ty_as_owner = "void"
         params_ty_decl_headers = []
         params_ty_defn_headers = []
         params_ty_as_param = []
@@ -271,9 +271,9 @@ class CallbackTypeCppInfo(AbstractAnalysis[CallbackType], AbstractTypeCppInfo):
             *return_ty_defn_headers,
             *params_ty_defn_headers,
         ]
-        self.as_field = f"::taihe::core::callback<{return_ty_as_field}({params_fmt})>"
+        self.as_owner = f"::taihe::core::callback<{return_ty_as_owner}({params_fmt})>"
         self.as_param = (
-            f"::taihe::core::callback_view<{return_ty_as_field}({params_fmt})>"
+            f"::taihe::core::callback_view<{return_ty_as_owner}({params_fmt})>"
         )
 
 
@@ -378,7 +378,7 @@ class CppCodeGenerator:
         if return_ty_ref := func.return_ty_ref:
             type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
             pkg_cpp_target.include(*type_cpp_info.defn_headers)
-            cpp_return_ty_name = type_cpp_info.as_field
+            cpp_return_ty_name = type_cpp_info.as_owner
             cpp_result = type_cpp_info.return_from_abi(abi_result)
         else:
             cpp_return_ty_name = "void"
@@ -484,7 +484,7 @@ class CppCodeGenerator:
             type_cpp_info = TypeCppInfo.get(self.am, field.ty_ref.resolved_ty)
             struct_cpp_defn_target.include(*type_cpp_info.defn_headers)
             struct_cpp_defn_target.write(
-                f"    {type_cpp_info.as_field} {field.name};\n"
+                f"    {type_cpp_info.as_owner} {field.name};\n"
             )
         # finally
         struct_cpp_defn_target.write("};\n" "}\n")
@@ -535,12 +535,16 @@ class CppCodeGenerator:
         struct_cpp_defn_target.write(
             f"namespace taihe::core {{\n"
             f"template<>\n"
-            f"struct cpp_type_traits<{struct_cpp_info.as_field}> {{\n"
-            f"    using abi_t = {struct_abi_info.as_field};\n"
+            f"struct as_abi<{struct_cpp_info.as_owner}> {{\n"
+            f"    using type = {struct_abi_info.as_owner};\n"
             f"}};\n"
             f"template<>\n"
-            f"struct cpp_type_traits<{struct_cpp_info.as_param}> {{\n"
-            f"    using abi_t = {struct_abi_info.as_param};\n"
+            f"struct as_abi<{struct_cpp_info.as_param}> {{\n"
+            f"    using type = {struct_abi_info.as_param};\n"
+            f"}};\n"
+            f"template<>\n"
+            f"struct as_param<{struct_cpp_info.as_owner}> {{\n"
+            f"    using type = {struct_cpp_info.as_param};\n"
             f"}};\n"
             f"}}\n"
         )
@@ -653,7 +657,7 @@ class CppCodeGenerator:
             type_cpp_info = TypeCppInfo.get(self.am, item.ty_ref.resolved_ty)
             enum_cpp_defn_target.include(*type_cpp_info.defn_headers)
             enum_cpp_defn_target.write(
-                f"        {type_cpp_info.as_field} {item.name};\n"
+                f"        {type_cpp_info.as_owner} {item.name};\n"
             )
         enum_cpp_defn_target.write("    };\n")
         # destructor
@@ -942,12 +946,16 @@ class CppCodeGenerator:
         enum_cpp_defn_target.write(
             f"namespace taihe::core {{\n"
             f"template<>\n"
-            f"struct cpp_type_traits<{enum_cpp_info.as_field}> {{\n"
-            f"    using abi_t = {enum_abi_info.as_field};\n"
+            f"struct as_abi<{enum_cpp_info.as_owner}> {{\n"
+            f"    using type = {enum_abi_info.as_owner};\n"
             f"}};\n"
             f"template<>\n"
-            f"struct cpp_type_traits<{enum_cpp_info.as_param}> {{\n"
-            f"    using abi_t = {enum_abi_info.as_param};\n"
+            f"struct as_abi<{enum_cpp_info.as_param}> {{\n"
+            f"    using type = {enum_abi_info.as_param};\n"
+            f"}};\n"
+            f"template<>\n"
+            f"struct as_param<{enum_cpp_info.as_owner}> {{\n"
+            f"    using type = {enum_cpp_info.as_param};\n"
             f"}};\n"
             f"}}\n"
         )
@@ -1064,7 +1072,7 @@ class CppCodeGenerator:
             if return_ty_ref := method.return_ty_ref:
                 type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
                 iface_cpp_defn_target.include(*type_cpp_info.decl_headers)
-                cpp_return_ty_name = type_cpp_info.as_field
+                cpp_return_ty_name = type_cpp_info.as_owner
             else:
                 cpp_return_ty_name = "void"
             iface_cpp_defn_target.write(
@@ -1083,7 +1091,7 @@ class CppCodeGenerator:
             params_abi_str = ", ".join(params_abi)
             if return_ty_ref := method.return_ty_ref:
                 type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
-                abi_return_ty_name = type_abi_info.as_field
+                abi_return_ty_name = type_abi_info.as_owner
             else:
                 abi_return_ty_name = "void"
             iface_cpp_defn_target.write(
@@ -1126,7 +1134,7 @@ class CppCodeGenerator:
             )
         iface_cpp_defn_target.write("    };\n")
         # class field
-        iface_cpp_defn_target.write(f"    {iface_abi_info.as_field} m_handle;\n")
+        iface_cpp_defn_target.write(f"    {iface_abi_info.as_owner} m_handle;\n")
         # class methods
         iface_cpp_defn_target.write(
             "    explicit operator bool() const& {\n"
@@ -1147,11 +1155,11 @@ class CppCodeGenerator:
             f"        other.m_handle = nullptr;\n"
             f"    }}\n"
             f"    operator ::taihe::core::data_view() const& {{\n"
-            f"        {iface_abi_info.as_field} ret_handle = m_handle;\n"
+            f"        {iface_abi_info.as_owner} ret_handle = m_handle;\n"
             f"        return ::taihe::core::data_view(ret_handle.data_ptr);\n"
             f"    }}\n"
             f"    operator ::taihe::core::data_holder() const& {{\n"
-            f"        {iface_abi_info.as_field} ret_handle = {iface_abi_info.copy_func}(m_handle);\n"
+            f"        {iface_abi_info.as_owner} ret_handle = {iface_abi_info.copy_func}(m_handle);\n"
             f"        return ::taihe::core::data_holder(ret_handle.data_ptr);\n"
             f"    }}\n"
         )
@@ -1161,11 +1169,11 @@ class CppCodeGenerator:
             ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
             iface_cpp_defn_target.write(
                 f"    operator {ancestor_cpp_info.weak_name}() const& {{\n"
-                f"        {iface_abi_info.as_field} ret_handle = m_handle;\n"
+                f"        {iface_abi_info.as_owner} ret_handle = m_handle;\n"
                 f"        return {ancestor_cpp_info.weak_name}({info.static_cast}(ret_handle));\n"
                 f"    }}\n"
                 f"    operator {ancestor_cpp_info.full_name}() const& {{\n"
-                f"        {iface_abi_info.as_field} ret_handle = {iface_abi_info.copy_func}(m_handle);\n"
+                f"        {iface_abi_info.as_owner} ret_handle = {iface_abi_info.copy_func}(m_handle);\n"
                 f"        return {ancestor_cpp_info.full_name}({info.static_cast}(ret_handle));\n"
                 f"    }}\n"
             )
@@ -1186,7 +1194,7 @@ class CppCodeGenerator:
         )
         # convert methods
         iface_cpp_defn_target.write(
-            f"    explicit {iface_cpp_info.name}({iface_abi_info.as_field} handle) : {iface_cpp_info.weak_name}(handle) {{}}\n"
+            f"    explicit {iface_cpp_info.name}({iface_abi_info.as_owner} handle) : {iface_cpp_info.weak_name}(handle) {{}}\n"
             f"    {iface_cpp_info.name}& operator=({iface_cpp_info.full_name} other) {{\n"
             f"        ::std::swap(m_handle, other.m_handle);\n"
             f"        return *this;\n"
@@ -1207,15 +1215,15 @@ class CppCodeGenerator:
             f"        other.m_handle = nullptr;\n"
             f"    }}\n"
             f"    operator ::taihe::core::data_view() const& {{\n"
-            f"        {iface_abi_info.as_field} ret_handle = m_handle;\n"
+            f"        {iface_abi_info.as_owner} ret_handle = m_handle;\n"
             f"        return ::taihe::core::data_view(ret_handle.data_ptr);\n"
             f"    }}\n"
             f"    operator ::taihe::core::data_holder() const& {{\n"
-            f"        {iface_abi_info.as_field} ret_handle = {iface_abi_info.copy_func}(m_handle);\n"
+            f"        {iface_abi_info.as_owner} ret_handle = {iface_abi_info.copy_func}(m_handle);\n"
             f"        return ::taihe::core::data_holder(ret_handle.data_ptr);\n"
             f"    }}\n"
             f"    operator ::taihe::core::data_holder() && {{\n"
-            f"        {iface_abi_info.as_field} ret_handle = m_handle;\n"
+            f"        {iface_abi_info.as_owner} ret_handle = m_handle;\n"
             f"        m_handle.data_ptr = nullptr;\n"
             f"        return ::taihe::core::data_holder(ret_handle.data_ptr);\n"
             f"    }}\n"
@@ -1226,15 +1234,15 @@ class CppCodeGenerator:
             ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
             iface_cpp_defn_target.write(
                 f"    operator {ancestor_cpp_info.weak_name}() const& {{\n"
-                f"        {iface_abi_info.as_field} ret_handle = m_handle;\n"
+                f"        {iface_abi_info.as_owner} ret_handle = m_handle;\n"
                 f"        return {ancestor_cpp_info.weak_name}({info.static_cast}(ret_handle));\n"
                 f"    }}\n"
                 f"    operator {ancestor_cpp_info.full_name}() const& {{\n"
-                f"        {iface_abi_info.as_field} ret_handle = {iface_abi_info.copy_func}(m_handle);\n"
+                f"        {iface_abi_info.as_owner} ret_handle = {iface_abi_info.copy_func}(m_handle);\n"
                 f"        return {ancestor_cpp_info.full_name}({info.static_cast}(ret_handle));\n"
                 f"    }}\n"
                 f"    operator {ancestor_cpp_info.full_name}() && {{\n"
-                f"        {iface_abi_info.as_field} ret_handle = m_handle;\n"
+                f"        {iface_abi_info.as_owner} ret_handle = m_handle;\n"
                 f"        m_handle.data_ptr = nullptr;\n"
                 f"        return {ancestor_cpp_info.full_name}({info.static_cast}(ret_handle));\n"
                 f"    }}\n"
@@ -1251,12 +1259,16 @@ class CppCodeGenerator:
         iface_cpp_defn_target.write(
             f"namespace taihe::core {{\n"
             f"template<>\n"
-            f"struct cpp_type_traits<{iface_cpp_info.as_field}> {{\n"
-            f"    using abi_t = {iface_abi_info.as_field};\n"
+            f"struct as_abi<{iface_cpp_info.as_owner}> {{\n"
+            f"    using type = {iface_abi_info.as_owner};\n"
             f"}};\n"
             f"template<>\n"
-            f"struct cpp_type_traits<{iface_cpp_info.as_param}> {{\n"
-            f"    using abi_t = {iface_abi_info.as_param};\n"
+            f"struct as_abi<{iface_cpp_info.as_param}> {{\n"
+            f"    using type = {iface_abi_info.as_param};\n"
+            f"}};\n"
+            f"template<>\n"
+            f"struct as_param<{iface_cpp_info.as_owner}> {{\n"
+            f"    using type = {iface_cpp_info.as_param};\n"
             f"}};\n"
             f"}}\n"
         )
@@ -1314,7 +1326,7 @@ class CppCodeGenerator:
             if return_ty_ref := method.return_ty_ref:
                 type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
                 iface_cpp_impl_target.include(*type_cpp_info.defn_headers)
-                cpp_return_ty_name = type_cpp_info.as_field
+                cpp_return_ty_name = type_cpp_info.as_owner
                 cpp_result = type_cpp_info.return_from_abi(abi_result)
             else:
                 cpp_return_ty_name = "void"
@@ -1350,7 +1362,7 @@ class CppCodeGenerator:
             if return_ty_ref := method.return_ty_ref:
                 type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
                 type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
-                abi_return_ty_name = type_abi_info.as_field
+                abi_return_ty_name = type_abi_info.as_owner
                 abi_result = type_cpp_info.return_into_abi(cpp_result)
             else:
                 abi_return_ty_name = "void"

@@ -228,12 +228,17 @@ struct array : public array_view<cpp_owner_t> {
 };
 
 template<typename cpp_owner_t>
-struct cpp_type_traits<array_view<cpp_owner_t>> {
-    using abi_t = TArray;
+struct as_abi<array_view<cpp_owner_t>> {
+    using type = TArray;
 };
 
 template<typename cpp_owner_t>
-struct cpp_type_traits<array<cpp_owner_t>> {
-    using abi_t = TArray;
+struct as_abi<array<cpp_owner_t>> {
+    using type = TArray;
+};
+
+template<typename cpp_owner_t>
+struct as_param<array<cpp_owner_t>> {
+    using type = array_view<cpp_owner_t>;
 };
 }
