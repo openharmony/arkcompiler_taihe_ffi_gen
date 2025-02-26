@@ -70,32 +70,6 @@ class ScalarTypeNapiInfo(AbstractAnalysis[ScalarType], AbstractTypeNapiInfo):
     def __init__(self, am: AnalysisManager, t: ScalarType):
         self.am = am
         self.type = t
-        self.as_napi_c = {
-            BOOL: "bool",
-            F32: "double",
-            F64: "double",
-            I32: "int32_t",
-            I64: "int64_t",
-            U32: "uint32_t",
-        }[t]
-        self.from_js_to_c_func = {
-            BOOL: "napi_get_value_bool",
-            F32: "napi_get_value_double",
-            F64: "napi_get_value_double",
-            I32: "napi_get_value_int32",
-            I64: "napi_get_value_int64",
-            U32: "napi_get_value_uint32",
-        }[t]
-        self.from_c_to_js_func = {
-            BOOL: "napi_get_boolean",
-            F32: "napi_create_double",
-            F64: "napi_create_double",
-            I32: "napi_create_int32",
-            I64: "napi_create_int64",
-            U32: "napi_create_uint32",
-        }[t]
-        if self.as_napi_c is None:
-            raise ValueError
 
     def get_value_from_js(
         self,
@@ -104,13 +78,28 @@ class ScalarTypeNapiInfo(AbstractAnalysis[ScalarType], AbstractTypeNapiInfo):
         result: str,
         space_num: int,
     ):
+        as_napi_c = {
+            BOOL: "bool",
+            F32: "double",
+            F64: "double",
+            I32: "int32_t",
+            I64: "int64_t",
+            U32: "uint32_t",
+        }[self.type]
+        from_js_to_c_func = {
+            BOOL: "napi_get_value_bool",
+            F32: "napi_get_value_double",
+            F64: "napi_get_value_double",
+            I32: "napi_get_value_int32",
+            I64: "napi_get_value_int64",
+            U32: "napi_get_value_uint32",
+        }[self.type]
         scalar_cpp_info = ScalarTypeCppInfo.get(self.am, self.type)
         pkg_napi_target.write(
-            f"{space_num * ' '}{self.as_napi_c} {result}_tmp;\n"
-            f"{space_num * ' '}{self.from_js_to_c_func}(env, {value}, &{result}_tmp);\n"
+            f"{space_num * ' '}{as_napi_c} {result}_tmp;\n"
+            f"{space_num * ' '}{from_js_to_c_func}(env, {value}, &{result}_tmp);\n"
             f"{space_num * ' '}{scalar_cpp_info.as_field} {result} = {result}_tmp;\n"
         )
-        return
 
     def create_value_as_js(
         self,
@@ -119,10 +108,17 @@ class ScalarTypeNapiInfo(AbstractAnalysis[ScalarType], AbstractTypeNapiInfo):
         result: str,
         space_num: int,
     ):
-        type_napi_param_info = ScalarTypeNapiInfo.get(self.am, self.type)
+        from_c_to_js_func = {
+            BOOL: "napi_get_boolean",
+            F32: "napi_create_double",
+            F64: "napi_create_double",
+            I32: "napi_create_int32",
+            I64: "napi_create_int64",
+            U32: "napi_create_uint32",
+        }[self.type]
         pkg_napi_target.write(
             f"{space_num * ' '}napi_value {result} = nullptr;\n"
-            f"{space_num * ' '}{type_napi_param_info.from_c_to_js_func}(env, {value}, &{result});\n"
+            f"{space_num * ' '}{from_c_to_js_func}(env, {value}, &{result});\n"
         )
 
 
@@ -130,10 +126,6 @@ class SpecialTypeNapiInfo(AbstractAnalysis[SpecialType], AbstractTypeNapiInfo):
     def __init__(self, am: AnalysisManager, t: SpecialType):
         self.am = am
         self.type = t
-        if t == STRING:
-            self.as_napi_c = "taihe::core::string"
-            self.from_js_to_c_func = "napi_get_value_string_utf8"
-            self.from_c_to_js_func = "napi_create_string_utf8"
 
     def get_value_from_js(
         self,
@@ -144,7 +136,11 @@ class SpecialTypeNapiInfo(AbstractAnalysis[SpecialType], AbstractTypeNapiInfo):
     ):
         if self.type == STRING:
             pkg_napi_target.write(
-                f"{space_num * ' '}taihe::core::string {result} = get_string(env, {value});\n"
+                f"{space_num * ' '}size_t {result}_len = 0;\n"
+                f"{space_num * ' '}napi_get_value_string_utf8(env, {value}, nullptr, 0, &{result}_len);\n"
+                f"{space_num * ' '}TString {result}_abi;\n"
+                f"{space_num * ' '}napi_get_value_string_utf8(env, {value}, tstr_initialize(&{result}_abi, {result}_len + 1), {result}_len + 1, &{result}_len);\n"
+                f"{space_num * ' '}taihe::core::string {result}({result}_abi);\n"
             )
 
     def create_value_as_js(
@@ -156,7 +152,8 @@ class SpecialTypeNapiInfo(AbstractAnalysis[SpecialType], AbstractTypeNapiInfo):
     ):
         if self.type == STRING:
             pkg_napi_target.write(
-                f"{space_num * ' '}napi_value {result} = create_string(env, {value});\n"
+                f"{space_num * ' '}napi_value {result} = nullptr;\n"
+                f"{space_num * ' '}napi_create_string_utf8(env, {value}.c_str(), {value}.size(), &{result});\n"
             )
 
 
@@ -174,9 +171,9 @@ class StrcutTypeNapiInfo(AbstractAnalysis[StructType], AbstractTypeNapiInfo):
         result: str,
         space_num: int,
     ):
-        struct_cpp_info = StructCppInfo.get(self.am, self.type.ty_decl)
+        type_cpp_info = TypeCppInfo.get(self.am, self.type)
         pkg_napi_target.write(
-            f"{space_num * ' '}{struct_cpp_info.as_field} {result} = get_{self.type.ty_decl.name}(env, {value});\n"
+            f"{space_num * ' '}{type_cpp_info.as_field} {result} = get_{self.type.ty_decl.name}(env, {value});\n"
         )
 
     def create_value_as_js(
@@ -205,9 +202,9 @@ class IfaceTypeNapiInfo(AbstractAnalysis[IfaceType], AbstractTypeNapiInfo):
         result: str,
         space_num: int,
     ):
-        iface_cpp_info = IfaceCppInfo.get(self.am, self.type.ty_decl)
+        type_cpp_info = TypeCppInfo.get(self.am, self.type)
         pkg_napi_target.write(
-            f"{space_num * ' '}{iface_cpp_info.as_field} {result} = get_{self.type.ty_decl.name}(env, {value});\n"
+            f"{space_num * ' '}{type_cpp_info.as_field} {result} = get_{self.type.ty_decl.name}(env, {value});\n"
         )
 
     def create_value_as_js(
@@ -269,8 +266,6 @@ class NapiCodeGenerator:
         pkg_napi_target.include("node/node_api.h")
         pkg_napi_target.include(pkg_cpp_info.header)
 
-        self.gen_string_convert_func(pkg_napi_target)
-
         desc = []
         for iface in pkg.interfaces:
             self.gen_iface(pkg_napi_target, iface)
@@ -290,29 +285,6 @@ class NapiCodeGenerator:
 
         desc_str = ", \n".join(desc)
         self.gen_module_init(desc_str, pkg_napi_target)
-
-    def gen_string_convert_func(
-        self,
-        pkg_napi_target: COutputBuffer,
-    ):
-        pkg_napi_target.write(
-            f"inline taihe::core::string get_string(napi_env env, napi_value js_obj) {{\n"
-            f"    size_t len_c_obj = 0;\n"
-            f"    napi_get_value_string_utf8(env, js_obj, nullptr, 0, &len_c_obj);\n"
-            f"    char char_c_obj[len_c_obj + 1];\n"
-            f"    napi_get_value_string_utf8(env, js_obj, char_c_obj, len_c_obj + 1, &len_c_obj);\n"
-            f"    taihe::core::string c_obj(char_c_obj);\n"
-            f"    return c_obj;\n"
-            f"}}\n"
-        )
-
-        pkg_napi_target.write(
-            f"inline napi_value create_string(napi_env env, taihe::core::string_view c_obj) {{\n"
-            f"    napi_value js_obj = nullptr;\n"
-            f"    napi_create_string_utf8(env, c_obj.c_str(), c_obj.size(), &js_obj);\n"
-            f"    return js_obj;\n"
-            f"}}\n"
-        )
 
     def gen_iface(
         self,
@@ -351,9 +323,9 @@ class NapiCodeGenerator:
         iface_cpp_info = IfaceCppInfo.get(self.am, iface)
         pkg_napi_target.write(
             f"inline {iface_cpp_info.as_field} get_{iface.name}(napi_env env, napi_value js_obj) {{\n"
-            f"    {iface_cpp_info.as_field}* c_obj_;\n"
-            f"    napi_unwrap(env, js_obj, reinterpret_cast<void **>(&c_obj_));\n"
-            f"    {iface_cpp_info.as_field} c_obj = *c_obj_;\n"
+            f"    {iface_cpp_info.as_field}* c_ptr;\n"
+            f"    napi_unwrap(env, js_obj, reinterpret_cast<void **>(&c_ptr));\n"
+            f"    {iface_cpp_info.as_field} c_obj = *c_ptr;\n"
             f"    return c_obj;\n"
             f"}}\n"
         )
@@ -368,7 +340,7 @@ class NapiCodeGenerator:
             f"    }};\n"
             f"    napi_define_properties(env, js_obj, sizeof(desc) / sizeof(desc[0]), desc);\n"
             f"    napi_wrap(env, js_obj, value_ptr, [](napi_env env, void* finalize_data, void* finalize_hint) {{\n"
-            f"      delete static_cast<{iface_cpp_info.as_field}*>(finalize_data);\n"
+            f"        delete static_cast<{iface_cpp_info.as_field}*>(finalize_data);\n"
             f"    }}, nullptr, nullptr);\n"
             f"    return js_obj;\n"
             f"}}\n"
