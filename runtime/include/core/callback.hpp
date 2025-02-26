@@ -55,14 +55,6 @@ struct callback_view<Return(Params...)> {
     Return operator()(Params... params) const {
         return from_abi<Return>(data_ptr->m_func(data_ptr, into_abi<Params>(params)...));
     }
-
-    friend bool same_impl(adl_helper_t, callback_view lhs, callback_view rhs) {
-        return lhs.data_ptr == lhs.data_ptr;
-    }
-
-    friend std::size_t hash_impl(adl_helper_t, callback_view val) {
-        return (std::size_t)val.data_ptr;
-    }
 };
 
 template<typename Return, typename... Params>
@@ -99,6 +91,16 @@ struct callback<Return(Params...)> : callback_view<Return(Params...)> {
         return *this;
     }
 };
+
+template<typename Return, typename... Params>
+inline bool same_impl(adl_helper_t, callback_view<Return(Params...)> lhs, callback_view<Return(Params...)> rhs) {
+    return lhs.data_ptr == lhs.data_ptr;
+}
+
+template<typename Return, typename... Params>
+inline std::size_t hash_impl(adl_helper_t, callback_view<Return(Params...)> val) {
+    return (std::size_t)val.data_ptr;
+}
 
 template<typename Return, typename... Params>
 struct as_abi<callback_view<Return(Params...)>> {

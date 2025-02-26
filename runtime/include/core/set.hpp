@@ -104,14 +104,6 @@ struct set_view {
         return false;
     }
 
-    friend bool same_impl(adl_helper_t, set_view lhs, set_view rhs) {
-        return lhs.m_handle == rhs.m_handle;
-    }
-
-    friend std::size_t hash_impl(adl_helper_t, set_view val) {
-        return (std::size_t)val.m_handle;
-    }
-
 private:
     struct item_t {
         K key;
@@ -128,6 +120,9 @@ private:
     explicit set_view(data_t* data) : m_handle(data) {}
 
     friend struct set<K>;
+
+    friend bool taihe::core::same_impl(adl_helper_t, set_view lhs, set_view rhs);
+    friend std::size_t taihe::core::hash_impl(adl_helper_t, set_view val);
 };
 
 template<typename K>
@@ -176,6 +171,16 @@ struct set : set_view<K> {
 private:
     explicit set(data_t* data) : set_view<K>(data) {}
 };
+
+template<typename K>
+inline bool same_impl(adl_helper_t, set_view<K> lhs, set_view<K> rhs) {
+    return lhs.m_handle == rhs.m_handle;
+}
+
+template<typename K>
+inline std::size_t hash_impl(adl_helper_t, set_view<K> val) {
+    return (std::size_t)val.m_handle;
+}
 
 template<typename K>
 struct as_abi<set<K>> {

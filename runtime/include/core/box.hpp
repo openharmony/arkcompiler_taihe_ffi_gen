@@ -32,14 +32,6 @@ struct box_view {
         return m_handle;
     }
 
-    friend std::size_t hash_impl(adl_helper_t, box_view val) {
-        return val ? hash(*val) + 0x9e3779b9 : 0;
-    }
-
-    friend bool same_impl(adl_helper_t, box_view lhs, box_view rhs) {
-        return !lhs && !rhs || same(*lhs, *rhs);
-    }
-
 protected:
     cpp_owner_t const* m_handle;
 };
@@ -73,6 +65,16 @@ struct box : public box_view<cpp_owner_t> {
         }
     }
 };
+
+template<typename cpp_owner_t>
+inline std::size_t hash_impl(adl_helper_t, box_view<cpp_owner_t> val) {
+    return val ? hash(*val) + 0x9e3779b9 : 0;
+}
+
+template<typename cpp_owner_t>
+inline bool same_impl(adl_helper_t, box_view<cpp_owner_t> lhs, box_view<cpp_owner_t> rhs) {
+    return !lhs && !rhs || same(*lhs, *rhs);
+}
 
 template<typename cpp_owner_t>
 struct as_abi<box_view<cpp_owner_t>> {

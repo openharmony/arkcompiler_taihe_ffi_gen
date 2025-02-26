@@ -109,14 +109,6 @@ struct map_view {
         return false;
     }
 
-    friend bool same_impl(adl_helper_t, map_view lhs, map_view rhs) {
-        return lhs.m_handle == rhs.m_handle;
-    }
-
-    friend std::size_t hash_impl(adl_helper_t, map_view val) {
-        return (std::size_t)val.m_handle;
-    }
-
 private:
     struct item_t {
         K key;
@@ -134,6 +126,9 @@ private:
     explicit map_view(data_t* handle) : m_handle(handle) {}
 
     friend struct map<K, V>;
+
+    friend bool taihe::core::same_impl(adl_helper_t, map_view lhs, map_view rhs);
+    friend std::size_t taihe::core::hash_impl(adl_helper_t, map_view val);
 };
 
 template<typename K, typename V>
@@ -182,6 +177,16 @@ struct map : map_view<K, V> {
 private:
     explicit map(data_t* handle) : map_view<K, V>(handle) {}
 };
+
+template<typename K, typename V>
+inline bool same_impl(adl_helper_t, map_view<K, V> lhs, map_view<K, V> rhs) {
+    return lhs.m_handle == rhs.m_handle;
+}
+
+template<typename K, typename V>
+inline std::size_t hash_impl(adl_helper_t, map_view<K, V> val) {
+    return (std::size_t)val.m_handle;
+}
 
 template<typename K, typename V>
 struct as_abi<map<K, V>> {

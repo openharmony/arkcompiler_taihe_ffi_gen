@@ -148,26 +148,6 @@ struct array_view {
 
     friend bool operator>=(array_view left, array_view right) noexcept { return !(left < right); }
 
-    friend std::size_t hash_impl(adl_helper_t, array_view val) {
-        std::size_t seed = 0;
-        for (std::size_t i = 0; i < val.size(); i++) {
-            seed ^= hash(val[i]) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-        }
-        return seed;
-    }
-
-    friend bool same_impl(adl_helper_t, array_view lhs, array_view rhs) {
-        if (lhs.size() != rhs.size()) {
-            return false;
-        }
-        for (std::size_t i = 0; i < lhs.size() && i < rhs.size(); i++) {
-            if (!same(lhs[i], rhs[i])) {
-                return false;
-            }
-        }
-        return true;
-    }
-
 protected:
     std::size_t m_size;
     cpp_owner_t* m_data;
@@ -226,6 +206,28 @@ struct array : public array_view<cpp_owner_t> {
         }
     }
 };
+
+template<typename cpp_owner_t>
+inline std::size_t hash_impl(adl_helper_t, array_view<cpp_owner_t> val) {
+    std::size_t seed = 0;
+    for (std::size_t i = 0; i < val.size(); i++) {
+        seed ^= hash(val[i]) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    }
+    return seed;
+}
+
+template<typename cpp_owner_t>
+inline bool same_impl(adl_helper_t, array_view<cpp_owner_t> lhs, array_view<cpp_owner_t> rhs) {
+    if (lhs.size() != rhs.size()) {
+        return false;
+    }
+    for (std::size_t i = 0; i < lhs.size() && i < rhs.size(); i++) {
+        if (!same(lhs[i], rhs[i])) {
+            return false;
+        }
+    }
+    return true;
+}
 
 template<typename cpp_owner_t>
 struct as_abi<array_view<cpp_owner_t>> {
