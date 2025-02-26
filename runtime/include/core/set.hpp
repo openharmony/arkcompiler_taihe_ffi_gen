@@ -53,7 +53,6 @@ struct set_view {
         m_handle->size = 0;
     }
 
-    template<typename ...Args>
     bool emplace(as_param_t<K> key) const {
         std::size_t index = taihe::core::hash(key) % m_handle->cap;
         item_t* current = m_handle->bucket[index];
