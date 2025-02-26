@@ -4,7 +4,7 @@ from taihe.codegen.abi_generator import COutputBuffer
 from taihe.semantics.declarations import (
     GlobFuncDecl,
     IfaceMethodDecl,
-    Package,
+    PackageDecl,
     PackageGroup,
 )
 from taihe.semantics.types import (
@@ -29,8 +29,8 @@ from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
 from taihe.utils.outputs import OutputManager
 
 
-class KNBridgePackageInfo(AbstractAnalysis[Package]):
-    def __init__(self, am: AnalysisManager, p: Package) -> None:
+class KNBridgePackageInfo(AbstractAnalysis[PackageDecl]):
+    def __init__(self, am: AnalysisManager, p: PackageDecl) -> None:
         self.header = f"{p.name}.api.h"
         self.source = f"{p.name}.api.cpp"
 
@@ -158,7 +158,7 @@ class KNBridgeCodeGenerator:
             self.gen_package_header_file(pkg)
             self.gen_package_source_file(pkg)
 
-    def gen_package_header_file(self, pkg: Package):
+    def gen_package_header_file(self, pkg: PackageDecl):
         kn_bridge_pkg_info = KNBridgePackageInfo.get(self.am, pkg)
         kn_bridge_pkg_target = COutputBuffer.create(
             self.tm, f"include/{kn_bridge_pkg_info.header}", True
@@ -181,7 +181,7 @@ class KNBridgeCodeGenerator:
 
         self.gen_package_th_tyundef(kn_bridge_pkg_target)
 
-    def gen_package_source_file(self, pkg: Package):
+    def gen_package_source_file(self, pkg: PackageDecl):
         kn_bridge_pkg_info = KNBridgePackageInfo.get(self.am, pkg)
         kn_bridge_pkg_target = COutputBuffer.create(
             self.tm, f"include/{kn_bridge_pkg_info.source}", True
@@ -458,7 +458,10 @@ class KNBridgeCodeGenerator:
                 )
 
     def gen_typedef_struct(
-        self, pkg: Package, kn_bridge_pkg_target: COutputBuffer, kn_bridge_pkg_name: str
+        self,
+        pkg: PackageDecl,
+        kn_bridge_pkg_target: COutputBuffer,
+        kn_bridge_pkg_name: str,
     ):
         for predefinedType in self.kn_predefined_type_list:
             kn_bridge_pkg_target.write(
@@ -481,7 +484,10 @@ class KNBridgeCodeGenerator:
             )
 
     def gen_struct_func(
-        self, pkg: Package, kn_bridge_pkg_target: COutputBuffer, kn_bridge_pkg_name: str
+        self,
+        pkg: PackageDecl,
+        kn_bridge_pkg_target: COutputBuffer,
+        kn_bridge_pkg_name: str,
     ):
         for predefinedType in self.kn_predefined_type_list:
             if predefinedType != "Unit":
@@ -516,7 +522,10 @@ class KNBridgeCodeGenerator:
             )
 
     def gen_singleton_struct(
-        self, pkg: Package, kn_bridge_pkg_target: COutputBuffer, kn_bridge_pkg_name: str
+        self,
+        pkg: PackageDecl,
+        kn_bridge_pkg_target: COutputBuffer,
+        kn_bridge_pkg_name: str,
     ):
         kn_bridge_pkg_target.write(
             f"static {kn_bridge_pkg_name}_ExportedSymbols __konan_symbols = {{\n"
@@ -551,13 +560,19 @@ class KNBridgeCodeGenerator:
         kn_bridge_pkg_target.write(f"    }},\n" f"  }},\n" f"}};\n")
 
     def gen_func_impl(
-        self, pkg: Package, kn_bridge_pkg_target: COutputBuffer, kn_bridge_pkg_name: str
+        self,
+        pkg: PackageDecl,
+        kn_bridge_pkg_target: COutputBuffer,
+        kn_bridge_pkg_name: str,
     ):
         self.gen_iface_func_impl(pkg, kn_bridge_pkg_target, kn_bridge_pkg_name)
         self.gen_toplevel_func_impl(pkg, kn_bridge_pkg_target, kn_bridge_pkg_name)
 
     def gen_iface_func_impl(
-        self, pkg: Package, kn_bridge_pkg_target: COutputBuffer, kn_bridge_pkg_name: str
+        self,
+        pkg: PackageDecl,
+        kn_bridge_pkg_target: COutputBuffer,
+        kn_bridge_pkg_name: str,
     ):
         for iface in pkg.interfaces:
             for func in iface.methods:
@@ -592,7 +607,10 @@ class KNBridgeCodeGenerator:
                 )
 
     def gen_toplevel_func_impl(
-        self, pkg: Package, kn_bridge_pkg_target: COutputBuffer, kn_bridge_pkg_name: str
+        self,
+        pkg: PackageDecl,
+        kn_bridge_pkg_target: COutputBuffer,
+        kn_bridge_pkg_name: str,
     ):
         for func in pkg.functions:
             kn_bridge_func_info = KNBridgeFuncBaseDeclInfo.get(self.am, func)

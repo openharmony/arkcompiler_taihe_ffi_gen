@@ -2,19 +2,22 @@ from abc import ABCMeta, abstractmethod
 
 from typing_extensions import override
 
-from taihe.codegen.abi_generator import COutputBuffer, IfaceDeclABIInfo
-from taihe.codegen.cpp_proj_generator import (
-    IfaceDeclCppProjInfo,
-    PackageCppProjInfo,
-    ScalarTypeCppProjInfo,
-    StructDeclCppProjInfo,
-    TypeCppProjInfo,
+from taihe.codegen.abi_generator import (
+    COutputBuffer,
+    IfaceABIInfo,
+)
+from taihe.codegen.cpp_generator import (
+    IfaceCppInfo,
+    PackageCppInfo,
+    ScalarTypeCppInfo,
+    StructCppInfo,
+    TypeCppInfo,
 )
 from taihe.semantics.declarations import (
     GlobFuncDecl,
     IfaceDecl,
     IfaceMethodDecl,
-    Package,
+    PackageDecl,
     PackageGroup,
     StructDecl,
 )
@@ -37,10 +40,9 @@ from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
 from taihe.utils.outputs import OutputManager
 
 
-class PackageNapiInfo(AbstractAnalysis[Package]):
-    def __init__(self, am: AnalysisManager, p: Package) -> None:
+class PackageNapiInfo(AbstractAnalysis[PackageDecl]):
+    def __init__(self, am: AnalysisManager, p: PackageDecl) -> None:
         self.header = f"{p.name}.napi.cpp"
-        self.kn_header = f"kn_{p.name}.napi.cpp"
         self.full_name = "::".join(p.segments)
 
 
@@ -52,8 +54,7 @@ class AbstractTypeNapiInfo(metaclass=ABCMeta):
         value: str,
         result: str,
         space_num: int,
-    ):
-        pass
+    ): ...
 
     @abstractmethod
     def create_value_as_js(
@@ -62,24 +63,13 @@ class AbstractTypeNapiInfo(metaclass=ABCMeta):
         value: str,
         result: str,
         space_num: int,
-    ):
-        pass
+    ): ...
 
 
 class ScalarTypeNapiInfo(AbstractAnalysis[ScalarType], AbstractTypeNapiInfo):
     def __init__(self, am: AnalysisManager, t: ScalarType):
         self.am = am
         self.type = t
-
-        as_napi = {
-            BOOL: "bool",
-            F32: "double",
-            F64: "double",
-            I32: "int32",
-            I64: "int64",
-            U32: "uint32",
-        }[t]
-
         self.as_napi_c = {
             BOOL: "bool",
             F32: "double",
@@ -88,13 +78,23 @@ class ScalarTypeNapiInfo(AbstractAnalysis[ScalarType], AbstractTypeNapiInfo):
             I64: "int64_t",
             U32: "uint32_t",
         }[t]
-
-        self.from_js_to_c_func = f"napi_get_value_{as_napi}"
-        if t == BOOL:
-            self.from_c_to_js_func = f"napi_get_boolean"
-        else:
-            self.from_c_to_js_func = f"napi_create_{as_napi}"
-        if as_napi is None or self.as_napi_c is None:
+        self.from_js_to_c_func = {
+            BOOL: "napi_get_value_bool",
+            F32: "napi_get_value_double",
+            F64: "napi_get_value_double",
+            I32: "napi_get_value_int32",
+            I64: "napi_get_value_int64",
+            U32: "napi_get_value_uint32",
+        }[t]
+        self.from_c_to_js_func = {
+            BOOL: "napi_get_boolean",
+            F32: "napi_create_double",
+            F64: "napi_create_double",
+            I32: "napi_create_int32",
+            I64: "napi_create_int64",
+            U32: "napi_create_uint32",
+        }[t]
+        if self.as_napi_c is None:
             raise ValueError
 
     def get_value_from_js(
@@ -104,7 +104,7 @@ class ScalarTypeNapiInfo(AbstractAnalysis[ScalarType], AbstractTypeNapiInfo):
         result: str,
         space_num: int,
     ):
-        scalar_cpp_info = ScalarTypeCppProjInfo.get(self.am, self.type)
+        scalar_cpp_info = ScalarTypeCppInfo.get(self.am, self.type)
         pkg_napi_target.write(
             f"{space_num * ' '}{self.as_napi_c} {result}_tmp;\n"
             f"{space_num * ' '}{self.from_js_to_c_func}(env, {value}, &{result}_tmp);\n"
@@ -162,7 +162,7 @@ class SpecialTypeNapiInfo(AbstractAnalysis[SpecialType], AbstractTypeNapiInfo):
 
 class StrcutTypeNapiInfo(AbstractAnalysis[StructType], AbstractTypeNapiInfo):
     def __init__(self, am: AnalysisManager, t: StructType):
-        struct_napi_info = StructDeclCppProjInfo.get(am, t.ty_decl)
+        struct_napi_info = StructCppInfo.get(am, t.ty_decl)
         self.as_napi_c = struct_napi_info.as_field
         self.am = am
         self.type = t
@@ -174,7 +174,7 @@ class StrcutTypeNapiInfo(AbstractAnalysis[StructType], AbstractTypeNapiInfo):
         result: str,
         space_num: int,
     ):
-        struct_cpp_info = StructDeclCppProjInfo.get(self.am, self.type.ty_decl)
+        struct_cpp_info = StructCppInfo.get(self.am, self.type.ty_decl)
         pkg_napi_target.write(
             f"{space_num * ' '}{struct_cpp_info.as_field} {result} = get_{self.type.ty_decl.name}(env, {value});\n"
         )
@@ -193,7 +193,7 @@ class StrcutTypeNapiInfo(AbstractAnalysis[StructType], AbstractTypeNapiInfo):
 
 class IfaceTypeNapiInfo(AbstractAnalysis[IfaceType], AbstractTypeNapiInfo):
     def __init__(self, am: AnalysisManager, t: IfaceType):
-        iface_napi_info = IfaceDeclCppProjInfo.get(am, t.ty_decl)
+        iface_napi_info = IfaceCppInfo.get(am, t.ty_decl)
         self.as_napi_c = iface_napi_info.as_field
         self.am = am
         self.type = t
@@ -205,7 +205,7 @@ class IfaceTypeNapiInfo(AbstractAnalysis[IfaceType], AbstractTypeNapiInfo):
         result: str,
         space_num: int,
     ):
-        iface_cpp_info = IfaceDeclCppProjInfo.get(self.am, self.type.ty_decl)
+        iface_cpp_info = IfaceCppInfo.get(self.am, self.type.ty_decl)
         pkg_napi_target.write(
             f"{space_num * ' '}{iface_cpp_info.as_field} {result} = get_{self.type.ty_decl.name}(env, {value});\n"
         )
@@ -257,14 +257,17 @@ class NapiCodeGenerator:
         for pkg in pg.packages:
             self.gen_package_file(pkg)
 
-    def gen_package_file(self, pkg: Package):
+    def gen_package_file(
+        self,
+        pkg: PackageDecl,
+    ):
         pkg_napi_info = PackageNapiInfo.get(self.am, pkg)
-        pkg_cpp_proj_info = PackageCppProjInfo.get(self.am, pkg)
+        pkg_cpp_info = PackageCppInfo.get(self.am, pkg)
         pkg_napi_target = COutputBuffer.create(
             self.tm, f"{pkg_napi_info.header}", False
         )
         pkg_napi_target.include("node/node_api.h")
-        pkg_napi_target.include(pkg_cpp_proj_info.header)
+        pkg_napi_target.include(pkg_cpp_info.header)
 
         self.gen_string_convert_func(pkg_napi_target)
 
@@ -288,7 +291,10 @@ class NapiCodeGenerator:
         desc_str = ", \n".join(desc)
         self.gen_module_init(desc_str, pkg_napi_target)
 
-    def gen_string_convert_func(self, pkg_napi_target: COutputBuffer):
+    def gen_string_convert_func(
+        self,
+        pkg_napi_target: COutputBuffer,
+    ):
         pkg_napi_target.write(
             f"inline taihe::core::string get_string(napi_env env, napi_value js_obj) {{\n"
             f"    size_t len_c_obj = 0;\n"
@@ -308,8 +314,12 @@ class NapiCodeGenerator:
             f"}}\n"
         )
 
-    def gen_iface(self, pkg_napi_target: COutputBuffer, iface: IfaceDecl):
-        iface_cpp_info = IfaceDeclCppProjInfo.get(self.am, iface)
+    def gen_iface(
+        self,
+        pkg_napi_target: COutputBuffer,
+        iface: IfaceDecl,
+    ):
+        iface_cpp_info = IfaceCppInfo.get(self.am, iface)
         desc = []
 
         for func in iface.methods:
@@ -319,22 +329,26 @@ class NapiCodeGenerator:
             func_desc = f'        {{"{func.name}", nullptr, napi_hidden_{iface.name}_{func.name}, nullptr, nullptr, nullptr, napi_default, nullptr}}'
             desc.append(func_desc)
 
-        iface_abi_info = IfaceDeclABIInfo.get(self.am, iface)
+        iface_abi_info = IfaceABIInfo.get(self.am, iface)
         for ancestor in iface_abi_info.ancestor_dict:
-            if ancestor != iface:
-                self.gen_iface_up_convert_func(
-                    pkg_napi_target, iface.name, iface_cpp_info.as_field, ancestor.name
-                )
-                func_desc = f'        {{"as_{ancestor.name}", nullptr, napi_hidden_{iface.name}_as{ancestor.name}, nullptr, nullptr, nullptr, napi_default, nullptr}}'
-                desc.append(func_desc)
+            if ancestor == iface:
+                continue
+            self.gen_iface_up_cast_func(
+                pkg_napi_target, iface.name, iface_cpp_info.as_field, ancestor.name
+            )
+            func_desc = f'        {{"as_{ancestor.name}", nullptr, napi_hidden_{iface.name}_as_{ancestor.name}, nullptr, nullptr, nullptr, napi_default, nullptr}}'
+            desc.append(func_desc)
 
         desc_str = ",\n".join(desc)
         self.gen_iface_convert_func(pkg_napi_target, iface, desc_str)
 
     def gen_iface_convert_func(
-        self, pkg_napi_target: COutputBuffer, iface: IfaceDecl, desc_str: str
+        self,
+        pkg_napi_target: COutputBuffer,
+        iface: IfaceDecl,
+        desc_str: str,
     ):
-        iface_cpp_info = IfaceDeclCppProjInfo.get(self.am, iface)
+        iface_cpp_info = IfaceCppInfo.get(self.am, iface)
         pkg_napi_target.write(
             f"inline {iface_cpp_info.as_field} get_{iface.name}(napi_env env, napi_value js_obj) {{\n"
             f"    {iface_cpp_info.as_field}* c_obj_;\n"
@@ -360,10 +374,10 @@ class NapiCodeGenerator:
             f"}}\n"
         )
 
-        self.gen_iface_down_convert_func(pkg_napi_target, iface)
+        self.gen_iface_down_cast_func(pkg_napi_target, iface)
         self.gen_iface_impl_func(pkg_napi_target, iface)
 
-    def gen_iface_up_convert_func(
+    def gen_iface_up_cast_func(
         self,
         pkg_napi_target: COutputBuffer,
         iface_name: str,
@@ -371,7 +385,7 @@ class NapiCodeGenerator:
         base_iface_name: str,
     ):
         pkg_napi_target.write(
-            f"static napi_value napi_hidden_{iface_name}_as{base_iface_name}(napi_env env, napi_callback_info info) {{\n"
+            f"static napi_value napi_hidden_{iface_name}_as_{base_iface_name}(napi_env env, napi_callback_info info) {{\n"
             f"    napi_value thisobj;\n"
             f"    napi_get_cb_info(env, info, nullptr, nullptr, &thisobj, nullptr);\n"
             f"    {iface_cpp_type}* value_ptr;\n"
@@ -381,10 +395,12 @@ class NapiCodeGenerator:
             f"}}\n"
         )
 
-    def gen_iface_down_convert_func(
-        self, pkg_napi_target: COutputBuffer, iface: IfaceDecl
+    def gen_iface_down_cast_func(
+        self,
+        pkg_napi_target: COutputBuffer,
+        iface: IfaceDecl,
     ):
-        iface_cpp_info = IfaceDeclCppProjInfo.get(self.am, iface)
+        iface_cpp_info = IfaceCppInfo.get(self.am, iface)
         pkg_napi_target.write(
             f"static napi_value as_{iface.name}(napi_env env, napi_callback_info info) {{\n"
             f"    size_t argc = 1;\n"
@@ -406,9 +422,13 @@ class NapiCodeGenerator:
             f"}}\n"
         )
 
-    def gen_iface_impl_func(self, pkg_napi_target: COutputBuffer, iface: IfaceDecl):
-        iface_cpp_info = IfaceDeclCppProjInfo.get(self.am, iface)
-        iface_abi_info = IfaceDeclABIInfo.get(self.am, iface)
+    def gen_iface_impl_func(
+        self,
+        pkg_napi_target: COutputBuffer,
+        iface: IfaceDecl,
+    ):
+        iface_cpp_info = IfaceCppInfo.get(self.am, iface)
+        iface_abi_info = IfaceABIInfo.get(self.am, iface)
         pkg_napi_target.write(
             f"static napi_value impl_{iface.name}(napi_env env, napi_callback_info info) {{\n"
             f"    struct NAPI_{iface.name}Impl {{\n"
@@ -425,7 +445,6 @@ class NapiCodeGenerator:
         for ancestor in iface_abi_info.ancestor_dict:
             for func in ancestor.methods:
                 self.gen_iface_impl_struct_member_func(func, pkg_napi_target)
-
         pkg_napi_target.write(
             f"    }};\n"
             f"    size_t argc = 1;\n"
@@ -437,18 +456,18 @@ class NapiCodeGenerator:
         )
 
     def gen_iface_impl_struct_member_func(
-        self, func: IfaceMethodDecl, pkg_napi_target: COutputBuffer
+        self,
+        func: IfaceMethodDecl,
+        pkg_napi_target: COutputBuffer,
     ):
         params_cpp = []
         for param in func.params:
-            type_cpp_proj_info = TypeCppProjInfo.get(self.am, param.ty_ref.resolved_ty)
-            params_cpp.append(f"{type_cpp_proj_info.as_param} {param.name}")
+            type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
+            params_cpp.append(f"{type_cpp_info.as_param} {param.name}")
         params_cpp_str = ", ".join(params_cpp)
 
         if func.return_ty_ref:
-            return_ty_info = TypeCppProjInfo.get(
-                self.am, func.return_ty_ref.resolved_ty
-            )
+            return_ty_info = TypeCppInfo.get(self.am, func.return_ty_ref.resolved_ty)
             return_ty_str = return_ty_info.as_field
         else:
             return_ty_str = "void"
@@ -513,7 +532,11 @@ class NapiCodeGenerator:
         self.gen_func_content(func, pkg_napi_target, f"(*value_ptr)->{func.name}", 4)
         pkg_napi_target.write(f"}}\n")
 
-    def gen_module_init(self, desc_str: str, pkg_napi_target: COutputBuffer):
+    def gen_module_init(
+        self,
+        desc_str: str,
+        pkg_napi_target: COutputBuffer,
+    ):
         pkg_napi_target.write(
             f"EXTERN_C_START\n"
             f"napi_value Init(napi_env env, napi_value exports) {{\n"
@@ -540,7 +563,9 @@ class NapiCodeGenerator:
         )
 
     def gen_struct_constructor(
-        self, struct: StructDecl, pkg_napi_target: COutputBuffer
+        self,
+        struct: StructDecl,
+        pkg_napi_target: COutputBuffer,
     ):
         pkg_napi_target.write(
             f"static napi_value construct_js_{struct.name}(napi_env env, napi_callback_info info) {{\n"
@@ -555,9 +580,11 @@ class NapiCodeGenerator:
         pkg_napi_target.write(f"    return obj;\n" f"}}\n")
 
     def gen_struct_convert_func(
-        self, struct: StructDecl, pkg_napi_target: COutputBuffer
+        self,
+        struct: StructDecl,
+        pkg_napi_target: COutputBuffer,
     ):
-        struct_cpp_info = StructDeclCppProjInfo.get(self.am, struct)
+        struct_cpp_info = StructCppInfo.get(self.am, struct)
         pkg_napi_target.write(
             f"inline {struct_cpp_info.as_field} get_{struct.name}(napi_env env, napi_value js_obj) {{\n"
         )
@@ -630,7 +657,7 @@ class NapiCodeGenerator:
 
         if return_ty_ref := func.return_ty_ref:
             value_ty = return_ty_ref.resolved_ty
-            cpp_return_info = TypeCppProjInfo.get(self.am, value_ty)
+            cpp_return_info = TypeCppInfo.get(self.am, value_ty)
             pkg_napi_target.write(
                 f"    {cpp_return_info.as_field} value = {func_name}({args_str});\n"
             )
@@ -645,7 +672,11 @@ class NapiCodeGenerator:
             )
         pkg_napi_target.write(f"    return result;\n")
 
-    def gen_func_get_cb_info(self, params_num: int, pkg_napi_target: COutputBuffer):
+    def gen_func_get_cb_info(
+        self,
+        params_num: int,
+        pkg_napi_target: COutputBuffer,
+    ):
         if params_num:
             pkg_napi_target.write(
                 f"    size_t argc = {params_num};\n"
