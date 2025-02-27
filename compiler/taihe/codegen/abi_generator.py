@@ -475,13 +475,13 @@ class ABICodeGenerator:
         pkg_abi_target: COutputBuffer,
     ):
         iface_abi_info = IfaceABIInfo.get(self.am, iface)
-        self.gen_iface_decl__file(iface, iface_abi_info)
+        self.gen_iface_decl_file(iface, iface_abi_info)
         self.gen_iface_defn_file(iface, iface_abi_info)
         self.gen_iface_impl_file(iface, iface_abi_info)
         self.gen_iface_src_file(iface, iface_abi_info)
         pkg_abi_target.include(iface_abi_info.defn_header)
 
-    def gen_iface_decl__file(
+    def gen_iface_decl_file(
         self,
         iface: IfaceDecl,
         iface_abi_info: IfaceABIInfo,
