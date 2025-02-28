@@ -1151,9 +1151,7 @@ class CppCodeGenerator:
         iface_cpp_defn_target.write(
             f"    explicit {iface_cpp_info.name}({iface_abi_info.as_param} handle) : m_handle(handle) {{}}\n"
             f"    explicit {iface_cpp_info.name}(::taihe::core::data_view other)\n"
-            f"        : {iface_cpp_info.name}({iface_abi_info.dynamic_cast}(other.m_handle)) {{\n"
-            f"        other.m_handle = nullptr;\n"
-            f"    }}\n"
+            f"        : {iface_cpp_info.name}({iface_abi_info.dynamic_cast}(other.data_ptr)) {{}}\n"
             f"    operator ::taihe::core::data_view() const& {{\n"
             f"        {iface_abi_info.as_owner} ret_handle = m_handle;\n"
             f"        return ::taihe::core::data_view(ret_handle.data_ptr);\n"
@@ -1211,8 +1209,8 @@ class CppCodeGenerator:
             f"        other.m_handle.data_ptr = nullptr;\n"
             f"    }}\n"
             f"    explicit {iface_cpp_info.name}(::taihe::core::data_holder other)\n"
-            f"        : {iface_cpp_info.name}({iface_abi_info.dynamic_cast}(other.m_handle)) {{\n"
-            f"        other.m_handle = nullptr;\n"
+            f"        : {iface_cpp_info.name}({iface_abi_info.dynamic_cast}(other.data_ptr)) {{\n"
+            f"        other.data_ptr = nullptr;\n"
             f"    }}\n"
             f"    operator ::taihe::core::data_view() const& {{\n"
             f"        {iface_abi_info.as_owner} ret_handle = m_handle;\n"
@@ -1358,7 +1356,7 @@ class CppCodeGenerator:
                 args_from_abi.append(type_cpp_info.pass_from_abi(param.name))
             params_abi_str = ", ".join(params_abi)
             args_from_abi_str = ", ".join(args_from_abi)
-            cpp_result = f"static_cast<Impl*>(static_cast<::taihe::core::data_block_impl<Impl>*>(tobj.data_ptr))->{method_cpp_info.impl_name}({args_from_abi_str})"
+            cpp_result = f"::taihe::core::cast_data_ptr<Impl>(tobj.data_ptr)->{method_cpp_info.impl_name}({args_from_abi_str})"
             if return_ty_ref := method.return_ty_ref:
                 type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
                 type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
