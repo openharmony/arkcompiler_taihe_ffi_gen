@@ -1,4 +1,4 @@
-import { add, mul, sub, from_rgb, to_rgb, makeRGB, makeColor, to_color, from_color, makeTheme, from_theme, to_theme, show, makeIBase, copyIBase, makeIShape, as_IShape, impl_IBase, process_color_rgb_name } from "./integer"
+import { add, mul, sub, from_rgb, to_rgb, to_color, from_color, makeTheme, from_theme, to_theme, show, makeIBase, copyIBase, makeIShape, as_IShape, impl_IBase, process_color_rgb_name } from "./integer"
 import { concat, to_i32, from_i32 } from "./string";
 import { RGB, Color, Theme, ColorOrRGBOrName } from "./rgb"
 
@@ -28,17 +28,11 @@ function main() {
 
   let result7 = to_rgb(16);
   console.log("to_rgb: ", result7);
-  const rgb_c = makeRGB(1, 2, 3);
-  console.log("make_RGB: ", rgb_c);
   const rgb = new RGB(10, 2, 3);
   console.log("new RGB: ", rgb);
   let result8 = from_rgb(rgb);
   console.log("from js RGB: ", result8);
-  let result9 = from_rgb(rgb_c);
-  console.log("from c RGB: ", result9) 
 
-  let result10 = makeColor("blue");
-  console.log("make_Color: ", result10);
   const color = new Color("blue", true, 3.14, rgb);
   console.log("new color: ", color);
   let result11 = from_color(color);
@@ -58,11 +52,9 @@ function main() {
   copyIBase(result18, result17);
   console.log("copyIBase: ", result17.getId(), result18.getId());
 
-  let result13 = makeTheme(color, result17);
-  console.log("make_Theme: ", result13, result13.ibase.getId());
-  const theme = new Theme(color);   // 不支持 js 实现 interface
+  const theme = new Theme(color, result17);
   console.log("new theme: ", theme);
-  let result14 = from_theme(result13);
+  let result14 = from_theme(theme);
   console.log("from js theme: ", result14);
   let result15 = to_theme(color, result17);
   console.log("to theme: ", result15, result15.ibase.getId());

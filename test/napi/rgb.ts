@@ -23,8 +23,9 @@ export class Color {
 }
 
 export class Theme {
-  constructor(color: Color) {
+  constructor(color: Color, ibase: IBase) {
     this.color = color;
+    this.ibase = ibase;
   }
   color: Color;
   ibase: IBase;

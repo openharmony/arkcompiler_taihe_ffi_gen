@@ -16,6 +16,6 @@ export function show(): String;
 export function makeIBase(s: String): IBase;
 export function copyIBase(a: IBase, b: IBase);
 export function makeIShape(s: String, a: number, b: number): IShape;
-export function as_IShape(a: IBase): IShape;
+export function as_IShape(a: any): IShape;
 export function impl_IBase(a: any): IBase;
 export function process_color_rgb_name(a: ColorOrRGBOrName): ColorOrRGBOrName;

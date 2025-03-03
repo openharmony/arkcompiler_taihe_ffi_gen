@@ -280,7 +280,7 @@ class TypeNapiInfo(TypeVisitor[AbstractTypeNapiInfo]):
     @override
     def visit_special_type(self, t: SpecialType) -> AbstractTypeNapiInfo:
         return SpecialTypeNapiInfo.get(self.am, t)
-    
+
     @override
     def visit_enum_type(self, t: EnumType) -> AbstractTypeNapiInfo:
         return EnumTypeNapiInfo.get(self.am, t)
@@ -315,9 +315,6 @@ class NapiCodeGenerator:
             func_desc = f'        {{"impl_{iface.name}", nullptr, impl_{iface.name}, nullptr, nullptr, nullptr, napi_default, nullptr}}'
             desc.append(func_desc)
         for struct in pkg.structs:
-            self.gen_struct_constructor(struct, pkg_napi_target)
-            func_desc = f'        {{"make{struct.name}", nullptr, construct_js_{struct.name}, nullptr, nullptr, nullptr, napi_default, nullptr}}'
-            desc.append(func_desc)
             self.gen_struct_convert_func(struct, pkg_napi_target)
         for enum in pkg.enums:
             self.gen_enum_convert_func(enum, pkg_napi_target)
@@ -577,23 +574,6 @@ class NapiCodeGenerator:
             f"}}\n"
         )
 
-    def gen_struct_constructor(
-        self,
-        struct: StructDecl,
-        pkg_napi_target: COutputBuffer,
-    ):
-        pkg_napi_target.write(
-            f"static napi_value construct_js_{struct.name}(napi_env env, napi_callback_info info) {{\n"
-            f"    napi_value obj = nullptr;\n"
-            f"    napi_create_object(env, &obj);\n"
-        )
-        self.gen_func_get_cb_info(len(struct.fields), pkg_napi_target)
-        for i, field in enumerate(struct.fields):
-            pkg_napi_target.write(
-                f'    napi_set_named_property(env, obj, "{field.name}", args[{i}]);\n'
-            )
-        pkg_napi_target.write(f"    return obj;\n" f"}}\n")
-
     def gen_struct_convert_func(
         self,
         struct: StructDecl,
@@ -621,7 +601,9 @@ class NapiCodeGenerator:
         pkg_napi_target.write(f"    {struct_cpp_info.as_field} c_obj = {{\n")
         for field in struct.fields:
             cpp_result_name = f"{field.name}_c"
-            pkg_napi_target.write(f"        .{field.name} = std::move({cpp_result_name}),\n")
+            pkg_napi_target.write(
+                f"        .{field.name} = std::move({cpp_result_name}),\n"
+            )
         pkg_napi_target.write(f"    }};\n" f"    return c_obj;\n" f"}}\n")
 
         pkg_napi_target.write(
@@ -678,10 +660,12 @@ class NapiCodeGenerator:
                 f"    case static_cast<int>({enum_cpp_info.full_name}::tag_t::{item.name}): {{\n"
                 f'        napi_get_named_property(env, js_obj, "value", &js_value);'
             )
-            self.gen_func_get_value_from_js(item.ty_ref.resolved_ty, pkg_napi_target, "js_value", "c_value", 8)
+            self.gen_func_get_value_from_js(
+                item.ty_ref.resolved_ty, pkg_napi_target, "js_value", "c_value", 8
+            )
             pkg_napi_target.write(
                 f"        return {enum_cpp_info.full_name}::make_{item.name}(std::move(c_value));\n"
-                f'    }}\n'
+                f"    }}\n"
             )
         pkg_napi_target.write(
             f"    default:\n"
@@ -705,11 +689,17 @@ class NapiCodeGenerator:
             pkg_napi_target.write(
                 f"    case {enum_cpp_info.full_name}::tag_t::{item.name}: {{\n"
             )
-            self.gen_func_create_value_as_js(item.ty_ref.resolved_ty, pkg_napi_target, f"c_obj.get_{item.name}_ref()", "js_value", 8)
+            self.gen_func_create_value_as_js(
+                item.ty_ref.resolved_ty,
+                pkg_napi_target,
+                f"c_obj.get_{item.name}_ref()",
+                "js_value",
+                8,
+            )
             pkg_napi_target.write(
                 f'        napi_set_named_property(env, js_obj, "value", js_value);\n'
                 f"        break;\n"
-                f'    }}\n'
+                f"    }}\n"
             )
         pkg_napi_target.write(
             f"    default:\n"
