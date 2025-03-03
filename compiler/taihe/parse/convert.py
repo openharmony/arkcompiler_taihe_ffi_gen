@@ -168,7 +168,8 @@ class AstConverter(ExprEvaluator):
 
     @override
     def visit_SimpleAttrItem(self, node: ast.SimpleAttrItem) -> AttrItemDecl:
-        d = AttrItemDecl(self.loc(node.name), str(node.name), self.visit(node.val.expr))
+        value = self.visit(node.val.expr)
+        d = AttrItemDecl(self.loc(node.name), str(node.name), value)
         return d
 
     @override
