@@ -39,3 +39,24 @@ export interface IShape extends IBase {
   calculateArea(): number;
   as_IBase();
 }
+
+export type ColorOrRGBOrName =
+  | { readonly tag: ColorOrRGBOrName.tags.undefined }
+  | { readonly tag: ColorOrRGBOrName.tags.color; readonly value: Color }
+  | { readonly tag: ColorOrRGBOrName.tags.rgb; readonly value: RGB }
+  | { readonly tag: ColorOrRGBOrName.tags.name; readonly value: string };
+
+export namespace ColorOrRGBOrName {
+  export enum tags {
+    undefined = 0,
+    color = 1,
+    rgb = 2,
+    name = 3,
+  }
+  export namespace ctor {
+    undefined: () => { return { tag: ColorOrRGBOrName.tags.undefined } }
+    color: (value: Color) => { return { tag: ColorOrRGBOrName.tags.color, value: value } }
+    rgb: (value: RGB) => { return { tag: ColorOrRGBOrName.tags.rgb, value: value }}
+    name: (value: string) => {return { tag: ColorOrRGBOrName.tags.rgb, value: value }}
+  }
+}

@@ -1,6 +1,6 @@
-import { add, mul, sub, from_rgb, to_rgb, make_RGB, make_Color, to_color, from_color, make_Theme, from_theme, to_theme, show, makeIBase, copyIBase, makeIShape, as_IShape, impl_IBase } from "./integer"
+import { add, mul, sub, from_rgb, to_rgb, makeRGB, makeColor, to_color, from_color, makeTheme, from_theme, to_theme, show, makeIBase, copyIBase, makeIShape, as_IShape, impl_IBase, process_color_rgb_name } from "./integer"
 import { concat, to_i32, from_i32 } from "./string";
-import { RGB, Color, Theme } from "./rgb"
+import { RGB, Color, Theme, ColorOrRGBOrName } from "./rgb"
 
 class BaseImpl {
   getId(): String {
@@ -28,7 +28,7 @@ function main() {
 
   let result7 = to_rgb(16);
   console.log("to_rgb: ", result7);
-  const rgb_c = make_RGB(1, 2, 3);
+  const rgb_c = makeRGB(1, 2, 3);
   console.log("make_RGB: ", rgb_c);
   const rgb = new RGB(10, 2, 3);
   console.log("new RGB: ", rgb);
@@ -37,7 +37,7 @@ function main() {
   let result9 = from_rgb(rgb_c);
   console.log("from c RGB: ", result9) 
 
-  let result10 = make_Color("blue");
+  let result10 = makeColor("blue");
   console.log("make_Color: ", result10);
   const color = new Color("blue", true, 3.14, rgb);
   console.log("new color: ", color);
@@ -58,7 +58,7 @@ function main() {
   copyIBase(result18, result17);
   console.log("copyIBase: ", result17.getId(), result18.getId());
 
-  let result13 = make_Theme(color, result17);
+  let result13 = makeTheme(color, result17);
   console.log("make_Theme: ", result13, result13.ibase.getId());
   const theme = new Theme(color);   // 不支持 js 实现 interface
   console.log("new theme: ", theme);
@@ -70,8 +70,9 @@ function main() {
   let shape1 = makeIShape("001", 2.4, 3.5);
   console.log("Shape: ", shape1.calculateArea());
   let as_base = shape1.as_IBase();
+  console.log("copyIBase1: ", as_base.getId(), result18.getId());
   copyIBase(result18, as_base);
-  console.log("copyIBase: ", as_base.getId(), result18.getId());
+  console.log("copyIBase2: ", as_base.getId(), result18.getId());
   let base_as_shape = as_IShape(as_base);
   if (base_as_shape === undefined){
     console.log("cannot convert")
@@ -88,7 +89,12 @@ function main() {
   let baseImpl = new BaseImpl();
   let impl_ibase = impl_IBase(baseImpl);
   copyIBase(result17, impl_ibase);
-  console.log(impl_ibase.getId(), result17.getId())
+  console.log("copy ibase: ", impl_ibase.getId(), result17.getId());
+
+  const colorObject: ColorOrRGBOrName = { tag: ColorOrRGBOrName.tags.color, value: color };
+  console.log(process_color_rgb_name(colorObject));
+
+
 }
 
 main();

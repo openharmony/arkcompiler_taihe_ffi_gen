@@ -42,3 +42,12 @@ function makeIBase(id: String): IBase;
 function copyIBase(a: IBase, b: IBase): void;
 
 function makeIShape(id: String, a: f32, b: f32): IShape;
+
+enum ColorOrRGBOrName {
+    undefined = 0x0;
+    color: Color = 0x1;
+    rgb: RGB = 0x2;
+    name: String = 0x3;
+}
+
+function process_color_rgb_name(a: ColorOrRGBOrName): ColorOrRGBOrName;

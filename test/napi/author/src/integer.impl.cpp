@@ -124,6 +124,25 @@ integer::Theme ohos_to_theme(integer::Color color, integer::weak::IBase ibase) {
     return theme;
 }
 
+::integer::ColorOrRGBOrName ohos_process_color_rgb_name(::integer::ColorOrRGBOrName a) {
+    switch (a.get_tag()) {
+    case ::integer::ColorOrRGBOrName::tag_t::color:
+        std::cout << "ColorOrRGBOrName object is color" << std::endl;
+        break;
+    case ::integer::ColorOrRGBOrName::tag_t::rgb:
+        std::cout << "ColorOrRGBOrName object is rgb" << std::endl;
+        break;
+    case ::integer::ColorOrRGBOrName::tag_t::name:
+        std::cout << "ColorOrRGBOrName object is name" << std::endl;
+        break;
+    default:
+        std::cout << "ColorOrRGBOrName object is undefined" << std::endl;
+        break;
+    }
+    ::integer::ColorOrRGBOrName result = ::integer::ColorOrRGBOrName::make_rgb(::integer::RGB{10, 9, 8});
+    return result;
+}
+
 TH_EXPORT_CPP_API_add(ohos_int_add)
 TH_EXPORT_CPP_API_mul(ohos_int_mul)
 TH_EXPORT_CPP_API_sub(ohos_int_sub)
@@ -137,3 +156,4 @@ TH_EXPORT_CPP_API_show(ohos_show)
 TH_EXPORT_CPP_API_makeIBase(makeIBaseImpl)
 TH_EXPORT_CPP_API_copyIBase(ohos_copyIBase)
 TH_EXPORT_CPP_API_makeIShape(makeIShapeImpl)
+TH_EXPORT_CPP_API_process_color_rgb_name(ohos_process_color_rgb_name)

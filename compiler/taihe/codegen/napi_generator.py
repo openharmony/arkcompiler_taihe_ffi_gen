@@ -7,6 +7,7 @@ from taihe.codegen.abi_generator import (
     IfaceABIInfo,
 )
 from taihe.codegen.cpp_generator import (
+    EnumCppInfo,
     IfaceCppInfo,
     PackageCppInfo,
     ScalarTypeCppInfo,
@@ -14,6 +15,7 @@ from taihe.codegen.cpp_generator import (
     TypeCppInfo,
 )
 from taihe.semantics.declarations import (
+    EnumDecl,
     GlobFuncDecl,
     IfaceDecl,
     IfaceMethodDecl,
@@ -29,6 +31,7 @@ from taihe.semantics.types import (
     I64,
     STRING,
     U32,
+    EnumType,
     IfaceType,
     ScalarType,
     SpecialType,
@@ -139,7 +142,10 @@ class SpecialTypeNapiInfo(AbstractAnalysis[SpecialType], AbstractTypeNapiInfo):
                 f"{space_num * ' '}size_t {result}_len = 0;\n"
                 f"{space_num * ' '}napi_get_value_string_utf8(env, {value}, nullptr, 0, &{result}_len);\n"
                 f"{space_num * ' '}TString {result}_abi;\n"
-                f"{space_num * ' '}napi_get_value_string_utf8(env, {value}, tstr_initialize(&{result}_abi, {result}_len + 1), {result}_len + 1, &{result}_len);\n"
+                f"{space_num * ' '}char* {result}_buf = tstr_initialize(&{result}_abi, {result}_len + 1);\n"
+                f"{space_num * ' '}napi_get_value_string_utf8(env, {value}, {result}_buf, {result}_len + 1, &{result}_len);\n"
+                f"{space_num * ' '}{result}_buf[{result}_len] = '\\0';\n"
+                f"{space_num * ' '}{result}_abi.length = {result}_len;\n"
                 f"{space_num * ' '}taihe::core::string {result}({result}_abi);\n"
             )
 
@@ -219,6 +225,37 @@ class IfaceTypeNapiInfo(AbstractAnalysis[IfaceType], AbstractTypeNapiInfo):
         )
 
 
+class EnumTypeNapiInfo(AbstractAnalysis[EnumType], AbstractTypeNapiInfo):
+    def __init__(self, am: AnalysisManager, t: EnumType):
+        enum_napi_info = EnumCppInfo.get(am, t.ty_decl)
+        self.as_napi_c = enum_napi_info.as_field
+        self.am = am
+        self.type = t
+
+    def get_value_from_js(
+        self,
+        pkg_napi_target: COutputBuffer,
+        value: str,
+        result: str,
+        space_num: int,
+    ):
+        type_cpp_info = TypeCppInfo.get(self.am, self.type)
+        pkg_napi_target.write(
+            f"{space_num * ' '}{type_cpp_info.as_field} {result} = get_{self.type.ty_decl.name}(env, {value});\n"
+        )
+
+    def create_value_as_js(
+        self,
+        pkg_napi_target: COutputBuffer,
+        value: str,
+        result: str,
+        space_num: int,
+    ):
+        pkg_napi_target.write(
+            f"{space_num * ' '}napi_value {result} = create_{self.type.ty_decl.name}(env, std::move({value}));\n"
+        )
+
+
 class TypeNapiInfo(TypeVisitor[AbstractTypeNapiInfo]):
     def __init__(self, am: AnalysisManager):
         self.am = am
@@ -243,6 +280,10 @@ class TypeNapiInfo(TypeVisitor[AbstractTypeNapiInfo]):
     @override
     def visit_special_type(self, t: SpecialType) -> AbstractTypeNapiInfo:
         return SpecialTypeNapiInfo.get(self.am, t)
+    
+    @override
+    def visit_enum_type(self, t: EnumType) -> AbstractTypeNapiInfo:
+        return EnumTypeNapiInfo.get(self.am, t)
 
 
 class NapiCodeGenerator:
@@ -275,9 +316,11 @@ class NapiCodeGenerator:
             desc.append(func_desc)
         for struct in pkg.structs:
             self.gen_struct_constructor(struct, pkg_napi_target)
-            func_desc = f'        {{"make_{struct.name}", nullptr, construct_js_{struct.name}, nullptr, nullptr, nullptr, napi_default, nullptr}}'
+            func_desc = f'        {{"make{struct.name}", nullptr, construct_js_{struct.name}, nullptr, nullptr, nullptr, napi_default, nullptr}}'
             desc.append(func_desc)
             self.gen_struct_convert_func(struct, pkg_napi_target)
+        for enum in pkg.enums:
+            self.gen_enum_convert_func(enum, pkg_napi_target)
         for func in pkg.functions:
             self.gen_func(func, pkg_napi_info, pkg_napi_target)
             func_desc = f'        {{"{func.name}", nullptr, napi_{func.name}, nullptr, nullptr, nullptr, napi_default, nullptr}}'
@@ -561,21 +604,24 @@ class NapiCodeGenerator:
             f"inline {struct_cpp_info.as_field} get_{struct.name}(napi_env env, napi_value js_obj) {{\n"
         )
         for field in struct.fields:
+            napi_value_name = f"{field.name}_v"
+            cpp_result_name = f"{field.name}_c"
             pkg_napi_target.write(
-                f"    napi_value {field.name}_v = nullptr;\n"
-                f'    napi_get_named_property(env, js_obj, "{field.name}", &{field.name}_v);\n'
+                f"    napi_value {napi_value_name} = nullptr;\n"
+                f'    napi_get_named_property(env, js_obj, "{field.name}", &{napi_value_name});\n'
             )
             self.gen_func_get_value_from_js(
                 field.ty_ref.resolved_ty,
                 pkg_napi_target,
-                f"{field.name}_v",
-                field.name,
+                napi_value_name,
+                cpp_result_name,
                 4,
             )
 
         pkg_napi_target.write(f"    {struct_cpp_info.as_field} c_obj = {{\n")
         for field in struct.fields:
-            pkg_napi_target.write(f"        .{field.name} = std::move({field.name}),\n")
+            cpp_result_name = f"{field.name}_c"
+            pkg_napi_target.write(f"        .{field.name} = std::move({cpp_result_name}),\n")
         pkg_napi_target.write(f"    }};\n" f"    return c_obj;\n" f"}}\n")
 
         pkg_napi_target.write(
@@ -595,6 +641,83 @@ class NapiCodeGenerator:
                 f'    napi_set_named_property(env, js_obj, "{field.name}", {field.name});\n'
             )
         pkg_napi_target.write(f"    return js_obj;\n" f"}}\n")
+
+    def gen_enum_constructor(
+        self,
+        struct: StructDecl,
+        pkg_napi_target: COutputBuffer,
+    ):
+        pkg_napi_target.write(
+            f"static napi_value construct_js_{struct.name}(napi_env env, napi_callback_info info) {{\n"
+            f"    napi_value obj = nullptr;\n"
+            f"    napi_create_object(env, &obj);\n"
+        )
+        self.gen_func_get_cb_info(len(struct.fields), pkg_napi_target)
+        for i, field in enumerate(struct.fields):
+            pkg_napi_target.write(
+                f'    napi_set_named_property(env, obj, "{field.name}", args[{i}]);\n'
+            )
+        pkg_napi_target.write(f"    return obj;\n" f"}}\n")
+
+    def gen_enum_convert_func(self, enum: EnumDecl, pkg_napi_target: COutputBuffer):
+        enum_cpp_info = EnumCppInfo.get(self.am, enum)
+        pkg_napi_target.write(
+            f"inline {enum_cpp_info.as_field} get_{enum.name}(napi_env env, napi_value js_obj) {{\n"
+            f"    {enum_cpp_info.as_field}* c_obj;\n"
+            f"    napi_value js_tag;\n"
+            f'    napi_get_named_property(env, js_obj, "tag", &js_tag);\n'
+            f"    int32_t c_tag;\n"
+            f"    napi_get_value_int32(env, js_tag, &c_tag);\n"
+            f"    napi_value js_value;\n"
+            f"    switch (c_tag) {{\n"
+        )
+        for item in enum.items:
+            if item.ty_ref is None:
+                continue
+            pkg_napi_target.write(
+                f"    case static_cast<int>({enum_cpp_info.full_name}::tag_t::{item.name}): {{\n"
+                f'        napi_get_named_property(env, js_obj, "value", &js_value);'
+            )
+            self.gen_func_get_value_from_js(item.ty_ref.resolved_ty, pkg_napi_target, "js_value", "c_value", 8)
+            pkg_napi_target.write(
+                f"        return {enum_cpp_info.full_name}::make_{item.name}(std::move(c_value));\n"
+                f'    }}\n'
+            )
+        pkg_napi_target.write(
+            f"    default:\n"
+            f"        return {enum_cpp_info.full_name}::make_undefined();\n"
+            f"    }}\n"
+            f"}}\n"
+        )
+
+        pkg_napi_target.write(
+            f"inline napi_value create_{enum.name}(napi_env env, {enum_cpp_info.as_field} c_obj) {{\n"
+            f"    napi_value js_obj;\n"
+            f"    napi_create_object(env, &js_obj);\n"
+            f"    napi_value js_tag;\n"
+            f"    napi_create_int32(env, static_cast<int>(c_obj.get_tag()), &js_tag);\n"
+            f'    napi_set_named_property(env, js_obj, "tag", js_tag);\n'
+            f"    switch (c_obj.get_tag()) {{\n"
+        )
+        for item in enum.items:
+            if item.ty_ref is None:
+                continue
+            pkg_napi_target.write(
+                f"    case {enum_cpp_info.full_name}::tag_t::{item.name}: {{\n"
+            )
+            self.gen_func_create_value_as_js(item.ty_ref.resolved_ty, pkg_napi_target, f"c_obj.get_{item.name}_ref()", "js_value", 8)
+            pkg_napi_target.write(
+                f'        napi_set_named_property(env, js_obj, "value", js_value);\n'
+                f"        break;\n"
+                f'    }}\n'
+            )
+        pkg_napi_target.write(
+            f"    default:\n"
+            f"        break;\n"
+            f"    }}\n"
+            f"    return js_obj;\n"
+            f"}}\n"
+        )
 
     def gen_func(
         self,
