@@ -47,7 +47,8 @@ TH_INLINE size_t tstr_len(struct TString tstr) {
 // - Pointer to the allocated buffer.
 //
 // # Notes
-// - The caller is responsible for managing memory properly.
+// - The caller is responsible for setting the string length.
+// - Reference count is set to 1 after called.
 TH_EXPORT char *tstr_initialize(struct TString *tstr_ptr, uint32_t capacity);
 
 // Creates a new heap-allocated TString by copying an existing string.
