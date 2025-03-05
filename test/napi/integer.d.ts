@@ -19,3 +19,5 @@ export function makeIShape(s: String, a: number, b: number): IShape;
 export function as_IShape(a: any): IShape;
 export function impl_IBase(a: any): IBase;
 export function process_color_rgb_name(a: ColorOrRGBOrName): ColorOrRGBOrName;
+export function reverse_vector(a: Array<number>): Array<number>;
+export function reverse_map(a: Map<string, number>): Map<string, number>;

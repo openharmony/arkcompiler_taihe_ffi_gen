@@ -51,3 +51,5 @@ enum ColorOrRGBOrName {
 }
 
 function process_color_rgb_name(a: ColorOrRGBOrName): ColorOrRGBOrName;
+function reverse_vector(a: Vector<i32>): Vector<i32>;
+function reverse_map(a: Map<String, i32>): Map<String, i32>;

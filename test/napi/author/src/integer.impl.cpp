@@ -143,6 +143,19 @@ integer::Theme ohos_to_theme(integer::Color color, integer::weak::IBase ibase) {
     return result;
 }
 
+taihe::core::vector<int32_t> ohos_reverse_vector(taihe::core::vector_view<int32_t> a) {
+    taihe::core::vector<int32_t> result;
+    for(int i = a.size() - 1; i >= 0; i--) {
+        result.push_back(a[i]);
+    }
+    return result;
+}
+
+taihe::core::map<taihe::core::string, int32_t> ohos_reverse_map(taihe::core::map_view<taihe::core::string, int32_t> a) {
+    taihe::core::map<int32_t, taihe::core::string> result;
+    return a;
+}
+
 TH_EXPORT_CPP_API_add(ohos_int_add)
 TH_EXPORT_CPP_API_mul(ohos_int_mul)
 TH_EXPORT_CPP_API_sub(ohos_int_sub)
@@ -157,3 +170,5 @@ TH_EXPORT_CPP_API_makeIBase(makeIBaseImpl)
 TH_EXPORT_CPP_API_copyIBase(ohos_copyIBase)
 TH_EXPORT_CPP_API_makeIShape(makeIShapeImpl)
 TH_EXPORT_CPP_API_process_color_rgb_name(ohos_process_color_rgb_name)
+TH_EXPORT_CPP_API_reverse_vector(ohos_reverse_vector)
+TH_EXPORT_CPP_API_reverse_map(ohos_reverse_map)

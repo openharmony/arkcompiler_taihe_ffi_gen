@@ -654,14 +654,14 @@ class NapiCodeGenerator:
             f"    switch (c_tag) {{\n"
         )
         for item in enum.items:
-            if item.ty_ref is None:
+            if (ty_ref := item.ty_ref) is None:
                 continue
             pkg_napi_target.write(
                 f"    case static_cast<int>({enum_cpp_info.full_name}::tag_t::{item.name}): {{\n"
                 f'        napi_get_named_property(env, js_obj, "value", &js_value);'
             )
             self.gen_func_get_value_from_js(
-                item.ty_ref.resolved_ty, pkg_napi_target, "js_value", "c_value", 8
+                ty_ref.resolved_ty, pkg_napi_target, "js_value", "c_value", 8
             )
             pkg_napi_target.write(
                 f"        return {enum_cpp_info.full_name}::make_{item.name}(std::move(c_value));\n"
@@ -684,13 +684,13 @@ class NapiCodeGenerator:
             f"    switch (c_obj.get_tag()) {{\n"
         )
         for item in enum.items:
-            if item.ty_ref is None:
+            if (ty_ref := item.ty_ref) is None:
                 continue
             pkg_napi_target.write(
                 f"    case {enum_cpp_info.full_name}::tag_t::{item.name}: {{\n"
             )
             self.gen_func_create_value_as_js(
-                item.ty_ref.resolved_ty,
+                ty_ref.resolved_ty,
                 pkg_napi_target,
                 f"c_obj.get_{item.name}_ref()",
                 "js_value",
