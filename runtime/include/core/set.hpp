@@ -43,7 +43,6 @@ struct set_view {
 
     void clear() const {
         for (std::size_t i = 0; i < m_handle->cap; i++) {
-            item_t** current_ptr = &m_handle->bucket[i];
             while (m_handle->bucket[i]) {
                 item_t* next = m_handle->bucket[i]->next;
                 delete m_handle->bucket[i];
@@ -102,6 +101,17 @@ struct set_view {
             }
         }
         return false;
+    }
+
+    template<typename Visitor>
+    void accept(Visitor &&visitor) {
+        for (std::size_t i = 0; i < m_handle->cap; i++) {
+            item_t* current = m_handle->bucket[i];
+            while (current) {
+                visitor(current->key);
+                current = current->next;
+            }
+        }
     }
 
 private:

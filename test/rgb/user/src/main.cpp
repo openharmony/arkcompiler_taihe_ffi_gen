@@ -13,52 +13,6 @@ using namespace rgb::base;
 using namespace rgb::show;
 using namespace taihe::core;
 
-class ColoredCircle {
-    float r;
-    std::string name;
-
-    ColorOrRGBOrName myColor;
-
-public:
-    string getId() {
-        return name;
-    }
-
-    ColoredCircle(string_view id, float r, ColorOrRGBOrName const& color)
-        : name(id), r(r), myColor(color) {
-        std::cout << getId() << " made" << std::endl;
-    }
-
-    ~ColoredCircle() {
-        std::cout << getId() << " deleted" << std::endl;
-    }
-
-    float calculateArea() {
-        return M_PI * r * r;
-    }
-
-    ColorOrRGBOrName getColor() {
-        return myColor;
-    }
-
-    void setColor(ColorOrRGBOrName const& color) {
-        myColor = color;
-    }
-
-    void show() {
-        std::string content = "circle " + name + ": r = " + std::to_string(r);
-        if (auto ptr = myColor.get_ptr<ColorOrRGBOrName::tag_t::color>()) {
-            std::cout << "\033[" << 30 + (int)ptr->get_tag() << "m" << content << "\033[39m" << std::endl;
-        } else if (auto ptr = myColor.get_ptr<ColorOrRGBOrName::tag_t::rgb>()) {
-            std::cout << "\033[38;2;" << (int)ptr->r << ";" << (int)ptr->g << ";" << (int)ptr->b << "m" << content << "\033[39m" << std::endl;
-        } else if (auto ptr = myColor.get_ptr<ColorOrRGBOrName::tag_t::name>()) {
-            std::cout << "(" << ptr->c_str() << ") " << content << std::endl;
-        } else {
-            std::cout << content << std::endl;
-        }
-    }
-};
-
 struct UserType {
     string id;
 
@@ -76,31 +30,6 @@ struct UserType {
         std::cout << getId() << " deleted" << std::endl;
     }
 };
-
-struct MyCallback {
-    string f;
-
-    MyCallback(string_view f): f(f) {
-        std::cout << "Callback " << f << " made" << std::endl;
-    }
-
-    ~MyCallback() {
-        std::cout << "Callback " << f << " deleted" << std::endl;
-    }
-
-    string operator()(string_view a, string_view b) {
-        std::cout << "Callback " << f << " called" << std::endl;
-        return std::string(f) + "(" + a.c_str() + ", " + b.c_str() + ")";
-    }
-};
-
-void show_array(array_view<IBase> arr, string_view sv) {
-    std::cout << sv << ": ";
-    for (auto item : arr) {
-        std::cout << item->getId() << ", ";
-    }
-    std::cout << std::endl;
-}
 
 int main() {
     Color yellow = Color::make_yellow();
@@ -152,10 +81,37 @@ int main() {
     {
         std::cout << "-------- Testing Interface Call --------" << std::endl;
 
-        IShowable colored_circ = make_holder<ColoredCircle, IShowable>("Circ", 10, color_114514);
+        class MyColoredObject {
+            std::string name;
+
+            ColorOrRGBOrName myColor;
+
+        public:
+            string getId() {
+                return name;
+            }
+
+            MyColoredObject(string_view id, ColorOrRGBOrName const& color)
+                : name(id), myColor(color) {
+                std::cout << getId() << " made" << std::endl;
+            }
+
+            ~MyColoredObject() {
+                std::cout << getId() << " deleted" << std::endl;
+            }
+
+            ColorOrRGBOrName getColor() {
+                return myColor;
+            }
+
+            void setColor(ColorOrRGBOrName const& color) {
+                myColor = color;
+            }
+        };
+
+        IColorable colored_circ = make_holder<MyColoredObject, IColorable>("Circ", color_114514);
         IShowable colored_rect = makeColoredRectangle("Rect", color_yellow, 5, 5);
 
-        colored_circ->show();
         colored_rect->show();
         copyColor(colored_rect, colored_circ);
         colored_rect->show();
@@ -197,6 +153,14 @@ int main() {
     {
         std::cout << "-------- Testing Array --------" << std::endl;
 
+        auto show_array = [](array_view<IBase> arr, string_view sv) {
+            std::cout << sv << ": ";
+            for (auto item : arr) {
+                std::cout << item->getId() << ", ";
+            }
+            std::cout << std::endl;
+        };
+
         auto dst = array<IBase>::make(5, make_holder<UserType, IBase>("x"));
         auto src = array<IBase>::make(2, make_holder<UserType, IBase>("y"));
 
@@ -227,9 +191,9 @@ int main() {
 
         fillVec(vec_0);
 
-        for (int i = 0; i < vec_1.size(); i++) {
-            std::cout << vec_1[i]->getId() << std::endl;
-        }
+        std::cout << "Vector = ";
+        for (int i = 0; i < vec_1.size(); i++) { std::cout << vec_1[i]->getId() << ", "; }
+        std::cout << std::endl;
     }
 
     {
@@ -243,10 +207,9 @@ int main() {
 
         fillMap(map_0);
 
-        if (auto ptr = map_1.find("a")) std::cout << "a: " << (*ptr)->getId() << std::endl;
-        if (auto ptr = map_1.find("b")) std::cout << "b: " << (*ptr)->getId() << std::endl;
-        if (auto ptr = map_1.find("c")) std::cout << "c: " << (*ptr)->getId() << std::endl;
-        if (auto ptr = map_1.find("d")) std::cout << "d: " << (*ptr)->getId() << std::endl;
+        std::cout << "Map = ";
+        map_1.accept([](string_view key, weak::IBase value) { std::cout << key << ": " << value->getId() << ", ";});
+        std::cout << std::endl;
     }
 
     {
@@ -259,13 +222,30 @@ int main() {
 
         fillSet(set_0);
 
-        if (set_1.find("a")) std::cout << "a exists" << std::endl;
-        if (set_1.find("b")) std::cout << "b exists" << std::endl;
-        if (set_1.find("c")) std::cout << "c exists" << std::endl;
+        std::cout << "Set = ";
+        set_1.accept([](string_view key) { std::cout << key << ", "; });
+        std::cout << std::endl;
     }
 
     {
         std::cout << "-------- Testing Callback --------" << std::endl;
+
+        struct MyCallback {
+            string f;
+
+            MyCallback(string_view f): f(f) {
+                std::cout << "Callback " << f << " made" << std::endl;
+            }
+
+            ~MyCallback() {
+                std::cout << "Callback " << f << " deleted" << std::endl;
+            }
+
+            string operator()(string_view a, string_view b) {
+                std::cout << "Callback " << f << " called" << std::endl;
+                return std::string(f) + "(" + a.c_str() + ", " + b.c_str() + ")";
+            }
+        };
 
         auto tmp = currying(callback<string(string_view, string_view)>::from<MyCallback>("f"))("abc");
         auto res = tmp("123");
