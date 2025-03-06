@@ -74,6 +74,9 @@ IShowable makeColoredRectangleImpl(string_view id, ColorOrRGBOrName const& color
 }
 
 void copyColorImpl(weak::IColorable dst, weak::IColorable src) {
+    std::cout << "copying color form "
+        << weak::IBase(src)->getId() << " to "
+        << weak::IBase(dst)->getId() << "." << std::endl;
     dst->setColor(src->getColor());
 }
 

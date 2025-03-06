@@ -12,7 +12,6 @@ from taihe.utils.exceptions import (
     NotATypeError,
     PackageNotExistError,
     PackageNotInScopeError,
-    PackageRedefError,
     RecursiveReferenceError,
     SymbolConflictWithNamespaceError,
 )
@@ -48,14 +47,14 @@ class SemanticTestCompilerInstance:
 
     def collect(self):
         for pkg_name, source in self.test_buffers:
-            with self.diagnostics_manager.capture_error():
-                self.source_manager.add_buffer(pkg_name, source)
+            self.source_manager.add_buffer(pkg_name, source)
 
     def parse(self):
         for src in self.source_manager.sources:
             conv = AstConverter(src, self.diagnostics_manager)
             pkg = conv.convert()
-            self.package_group.add(pkg)
+            with self.diagnostics_manager.capture_error():
+                self.package_group.add(pkg)
 
     def validate(self):
         analyze_semantics(self.package_group, self.diagnostics_manager)
@@ -214,7 +213,7 @@ def test_package_redef():
     test_instance.add_source("package", "")
     test_instance.add_source("package", "")
     test_instance.run()
-    test_instance.assert_has_error(PackageRedefError)
+    test_instance.assert_has_error(DeclRedefError)
 
 
 def test_symbol_conflict_namespace():

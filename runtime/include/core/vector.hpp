@@ -79,14 +79,6 @@ public:
         m_handle->len = 0;
     }
 
-    friend bool same_impl(adl_helper_t, vector_view lhs, vector_view rhs) {
-        return lhs.m_handle == rhs.m_handle;
-    }
-
-    friend std::size_t hash_impl(adl_helper_t, vector_view val) {
-        return (std::size_t)val.m_handle;
-    }
-
 protected:
     struct data_t {
         TRefCount count;
@@ -98,6 +90,9 @@ protected:
     explicit vector_view(data_t* handle) : m_handle(handle) {}
 
     friend struct vector<T>;
+
+    friend bool taihe::core::same_impl(adl_helper_t, vector_view lhs, vector_view rhs);
+    friend std::size_t taihe::core::hash_impl(adl_helper_t, vector_view val);
 };
 
 template<typename T>
@@ -146,12 +141,27 @@ private:
 };
 
 template<typename T>
-struct cpp_type_traits<vector<T>> {
-    using abi_t = void*;
+inline bool same_impl(adl_helper_t, vector_view<T> lhs, vector_view<T> rhs) {
+    return lhs.m_handle == rhs.m_handle;
+}
+
+template<typename T>
+inline std::size_t hash_impl(adl_helper_t, vector_view<T> val) {
+    return (std::size_t)val.m_handle;
+}
+
+template<typename T>
+struct as_abi<vector<T>> {
+    using type = void*;
 };
 
 template<typename T>
-struct cpp_type_traits<vector_view<T>> {
-    using abi_t = void*;
+struct as_abi<vector_view<T>> {
+    using type = void*;
+};
+
+template<typename T>
+struct as_param<vector<T>> {
+    using type = vector_view<T>;
 };
 }

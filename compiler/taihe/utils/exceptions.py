@@ -4,11 +4,9 @@ from typing import TYPE_CHECKING, Optional
 from typing_extensions import override
 
 from taihe.utils.diagnostics import DiagError, DiagNote, DiagWarn
-from taihe.utils.sources import SourceLocation
 
 if TYPE_CHECKING:
     from taihe.semantics.declarations import (
-        AttrItemDecl,
         EnumItemDecl,
         IfaceDecl,
         IfaceParentDecl,
@@ -19,24 +17,7 @@ if TYPE_CHECKING:
         TypeDecl,
         TypeRefDecl,
     )
-
-
-@dataclass
-class PackageRedefNote(DiagNote):
-    @property
-    @override
-    def format_msg(self) -> str:
-        return "previously occurred here"
-
-
-@dataclass
-class PackageRedefError(DiagError):
-    pkg_name: str
-    prev_loc: Optional[SourceLocation] = field(kw_only=True)
-
-    def notes(self):
-        if self.prev_loc:
-            yield PackageRedefNote(loc=self.prev_loc)
+    from taihe.utils.sources import SourceLocation
 
     @property
     @override
@@ -110,35 +91,6 @@ class EnumValueConflictError(DiagError):
     @override
     def format_msg(self) -> str:
         return f"value {self.current.value} of {self.current.description} is repeated"
-
-
-@dataclass
-class AttrRedefNote(DiagNote):
-    prev: "AttrItemDecl"
-
-    def __init__(self, prev: "AttrItemDecl"):
-        self.prev = prev
-        self.loc = prev.loc
-
-    @property
-    @override
-    def format_msg(self) -> str:
-        return f"conflict with {self.prev.description}"
-
-
-@dataclass
-class AttrRedefError(DiagError):
-    prev: "AttrItemDecl"
-    current: "AttrItemDecl"
-
-    def __init__(self, prev: "AttrItemDecl", current: "AttrItemDecl"):
-        self.prev = prev
-        self.current = current
-        self.loc = current.loc
-
-    def notes(self):
-        if self.prev.loc:
-            yield AttrRedefNote(self.prev)
 
     @property
     @override

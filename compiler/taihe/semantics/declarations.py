@@ -13,7 +13,7 @@ from taihe.semantics.types import (
     Type,
     UserType,
 )
-from taihe.utils.exceptions import AttrRedefError, DeclRedefError
+from taihe.utils.exceptions import DeclRedefError
 from taihe.utils.sources import SourceLocation
 
 if TYPE_CHECKING:
@@ -42,7 +42,7 @@ class Decl(metaclass=ABCMeta):
     def add_attr(self, i: "AttrItemDecl"):
         i.node_parent = self
         if prev := self.attrs.get(i.name, None):
-            raise AttrRedefError(prev, i)
+            raise DeclRedefError(prev, i)
         self.attrs[i.name] = i
 
     @property
@@ -74,14 +74,14 @@ class NamedDecl(Decl, metaclass=ABCMeta):
 
 
 class AttrItemDecl(NamedDecl):
-    value: bool | int | str | tuple[bool | int | str, ...] | None
+    value: Any
     node_parent: Optional[Decl]
 
     def __init__(
         self,
         loc: Optional[SourceLocation],
         name: str,
-        value: bool | int | str | tuple[bool | int | str, ...] | None = None,
+        value: Any = None,
     ):
         super().__init__(loc, name)
         self.value = value
@@ -775,9 +775,10 @@ class PackageGroup:
     def lookup(self, name: str) -> Optional["PackageDecl"]:
         return self.package_dict.get(name, None)
 
-    def add(self, pkg: PackageDecl):
-        assert pkg.name not in self.package_dict
-        self.package_dict[pkg.name] = pkg
+    def add(self, d: PackageDecl):
+        if prev := self.package_dict.get(d.name, None):
+            raise DeclRedefError(prev, d)
+        self.package_dict[d.name] = d
 
     @property
     def packages(self) -> Iterable[PackageDecl]:

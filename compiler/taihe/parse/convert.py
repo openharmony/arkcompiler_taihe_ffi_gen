@@ -168,7 +168,8 @@ class AstConverter(ExprEvaluator):
 
     @override
     def visit_SimpleAttrItem(self, node: ast.SimpleAttrItem) -> AttrItemDecl:
-        d = AttrItemDecl(self.loc(node.name), str(node.name), self.visit(node.val.expr))
+        value = self.visit(node.val.expr)
+        d = AttrItemDecl(self.loc(node.name), str(node.name), value)
         return d
 
     @override
@@ -328,5 +329,4 @@ class AstConverter(ExprEvaluator):
     def convert(self) -> PackageDecl:
         """Converts the whole source code buffer to a package."""
         ast = generate_ast(self.source, self.diag)
-
         return self.visit_Spec(ast)

@@ -43,7 +43,6 @@ struct set_view {
 
     void clear() const {
         for (std::size_t i = 0; i < m_handle->cap; i++) {
-            item_t** current_ptr = &m_handle->bucket[i];
             while (m_handle->bucket[i]) {
                 item_t* next = m_handle->bucket[i]->next;
                 delete m_handle->bucket[i];
@@ -53,8 +52,7 @@ struct set_view {
         m_handle->size = 0;
     }
 
-    template<typename ...Args>
-    bool emplace(K key) const {
+    bool emplace(as_param_t<K> key) const {
         std::size_t index = taihe::core::hash(key) % m_handle->cap;
         item_t* current = m_handle->bucket[index];
         while (current) {
@@ -76,7 +74,7 @@ struct set_view {
         return true;
     }
 
-    bool find(K const& key) const {
+    bool find(as_param_t<K> key) const {
         std::size_t index = taihe::core::hash(key) % m_handle->cap;
         item_t* current = m_handle->bucket[index];
         while (current) {
@@ -88,7 +86,7 @@ struct set_view {
         return false;
     }
 
-    bool erase(K const& key) const {
+    bool erase(as_param_t<K> key) const {
         std::size_t index = taihe::core::hash(key) % m_handle->cap;
         item_t** current_ptr = &m_handle->bucket[index];
         while (*current_ptr) {
@@ -105,12 +103,15 @@ struct set_view {
         return false;
     }
 
-    friend bool same_impl(adl_helper_t, set_view lhs, set_view rhs) {
-        return lhs.m_handle == rhs.m_handle;
-    }
-
-    friend std::size_t hash_impl(adl_helper_t, set_view val) {
-        return (std::size_t)val.m_handle;
+    template<typename Visitor>
+    void accept(Visitor &&visitor) {
+        for (std::size_t i = 0; i < m_handle->cap; i++) {
+            item_t* current = m_handle->bucket[i];
+            while (current) {
+                visitor(current->key);
+                current = current->next;
+            }
+        }
     }
 
 private:
@@ -129,6 +130,9 @@ private:
     explicit set_view(data_t* data) : m_handle(data) {}
 
     friend struct set<K>;
+
+    friend bool taihe::core::same_impl(adl_helper_t, set_view lhs, set_view rhs);
+    friend std::size_t taihe::core::hash_impl(adl_helper_t, set_view val);
 };
 
 template<typename K>
@@ -179,12 +183,27 @@ private:
 };
 
 template<typename K>
-struct cpp_type_traits<set<K>> {
-    using abi_t = void*;
+inline bool same_impl(adl_helper_t, set_view<K> lhs, set_view<K> rhs) {
+    return lhs.m_handle == rhs.m_handle;
+}
+
+template<typename K>
+inline std::size_t hash_impl(adl_helper_t, set_view<K> val) {
+    return (std::size_t)val.m_handle;
+}
+
+template<typename K>
+struct as_abi<set<K>> {
+    using type = void*;
 };
 
 template<typename K>
-struct cpp_type_traits<set_view<K>> {
-    using abi_t = void*;
+struct as_abi<set_view<K>> {
+    using type = void*;
+};
+
+template<typename K>
+struct as_param<set<K>> {
+    using type = set_view<K>;
 };
 }

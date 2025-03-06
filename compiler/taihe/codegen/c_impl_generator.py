@@ -62,7 +62,7 @@ class CImplCodeGenerator:
         if return_ty_ref := func.return_ty_ref:
             type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
             pkg_c_impl_target.include(*type_abi_info.defn_headers)
-            return_ty_name = type_abi_info.as_field
+            return_ty_name = type_abi_info.as_owner
         else:
             return_ty_name = "void"
         pkg_c_impl_target.write(

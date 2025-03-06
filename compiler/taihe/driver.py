@@ -9,8 +9,6 @@ from taihe.codegen.abi_generator import ABICodeGenerator
 from taihe.codegen.c_impl_generator import CImplCodeGenerator
 from taihe.codegen.cpp_generator import CppCodeGenerator
 from taihe.codegen.cpp_impl_generator import CppImplCodeGenerator
-from taihe.codegen.kn_bridge_generator import KNBridgeCodeGenerator
-from taihe.codegen.napi_generator import NapiCodeGenerator
 from taihe.parse.convert import AstConverter
 from taihe.semantics.analysis import analyze_semantics
 from taihe.semantics.declarations import PackageGroup
@@ -80,13 +78,14 @@ class CompilerInstance:
 
     def scan(self):
         for src_dir in self.invocation.src_dirs:
-            self.source_manager.add_directory(Path(src_dir), self.diagnostics_manager)
+            self.source_manager.add_directory(Path(src_dir))
 
     def parse(self):
         for src in self.source_manager.sources:
             conv = AstConverter(src, self.diagnostics_manager)
             pkg = conv.convert()
-            self.package_group.add(pkg)
+            with self.diagnostics_manager.capture_error():
+                self.package_group.add(pkg)
 
     def validate(self):
         analyze_semantics(self.package_group, self.diagnostics_manager)
