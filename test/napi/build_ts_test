@@ -22,7 +22,7 @@ clang++ -fPIC -o string.node build/string.c.o build/string.impl.cpp.o build/stri
 
 
 # 编译 ts
-tsc napi.ts
+tsc --target ES2020 --module commonjs napi.ts
 
 # 运行
 node napi.js

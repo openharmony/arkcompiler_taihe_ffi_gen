@@ -19,11 +19,6 @@ if TYPE_CHECKING:
     )
     from taihe.utils.sources import SourceLocation
 
-    @property
-    @override
-    def format_msg(self) -> str:
-        return f"package name {self.pkg_name!r} is duplicated"
-
 
 @dataclass
 class DeclRedefNote(DiagNote):
@@ -91,11 +86,6 @@ class EnumValueConflictError(DiagError):
     @override
     def format_msg(self) -> str:
         return f"value {self.current.value} of {self.current.description} is repeated"
-
-    @property
-    @override
-    def format_msg(self) -> str:
-        return f"duplicate {self.current.description}"
 
 
 @dataclass

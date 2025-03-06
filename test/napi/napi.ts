@@ -1,4 +1,4 @@
-import { add, mul, sub, from_rgb, to_rgb, to_color, from_color, makeTheme, from_theme, to_theme, show, makeIBase, copyIBase, makeIShape, as_IShape, impl_IBase, process_color_rgb_name, reverse_vector, reverse_map } from "./integer"
+import { add, mul, sub, from_rgb, to_rgb, to_color, from_color, from_theme, to_theme, show, makeIBase, copyIBase, makeIShape, as_IShape, impl_IBase, process_color_rgb_name, reverse_vector, reverse_map, add_set } from "./integer"
 import { concat, to_i32, from_i32 } from "./string";
 import { RGB, Color, Theme, ColorOrRGBOrName } from "./rgb"
 
@@ -87,14 +87,25 @@ function main() {
   console.log(process_color_rgb_name(colorObject));
 
   let array = [1, 2, 3, 4, 5];
+  console.log(array)
   console.log(reverse_vector(array));
-  let set = new Set();
+
   let map = new Map([
     ["a", 1],
     ["b", 2],
     ["c", 3]
   ]);
-  console.log(reverse_map(map));
+  console.log(map)
+  let map1 = reverse_map(map)
+  console.log(map1)
+  map1.set(4, "d")
+  console.log(map1)
+
+  let set = new Set([6, 7, 8, 9, 10]);
+  console.log(set)
+  let set1 = add_set(set)
+  console.log(set1)
+  console.log(add_set(set1))
 
 }
 

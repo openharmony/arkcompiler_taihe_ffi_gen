@@ -9,10 +9,13 @@ from taihe.codegen.abi_generator import (
 from taihe.codegen.cpp_generator import (
     EnumCppInfo,
     IfaceCppInfo,
+    MapTypeCppInfo,
     PackageCppInfo,
     ScalarTypeCppInfo,
+    SetTypeCppInfo,
     StructCppInfo,
     TypeCppInfo,
+    VectorTypeCppInfo,
 )
 from taihe.semantics.declarations import (
     EnumDecl,
@@ -33,10 +36,13 @@ from taihe.semantics.types import (
     U32,
     EnumType,
     IfaceType,
+    MapType,
     ScalarType,
+    SetType,
     SpecialType,
     StructType,
     Type,
+    VectorType,
 )
 from taihe.semantics.visitor import TypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
@@ -101,7 +107,7 @@ class ScalarTypeNapiInfo(AbstractAnalysis[ScalarType], AbstractTypeNapiInfo):
         pkg_napi_target.write(
             f"{space_num * ' '}{as_napi_c} {result}_tmp;\n"
             f"{space_num * ' '}{from_js_to_c_func}(env, {value}, &{result}_tmp);\n"
-            f"{space_num * ' '}{scalar_cpp_info.as_field} {result} = {result}_tmp;\n"
+            f"{space_num * ' '}{scalar_cpp_info.as_owner} {result} = {result}_tmp;\n"
         )
 
     def create_value_as_js(
@@ -166,7 +172,7 @@ class SpecialTypeNapiInfo(AbstractAnalysis[SpecialType], AbstractTypeNapiInfo):
 class StrcutTypeNapiInfo(AbstractAnalysis[StructType], AbstractTypeNapiInfo):
     def __init__(self, am: AnalysisManager, t: StructType):
         struct_napi_info = StructCppInfo.get(am, t.ty_decl)
-        self.as_napi_c = struct_napi_info.as_field
+        self.as_napi_c = struct_napi_info.as_owner
         self.am = am
         self.type = t
 
@@ -179,7 +185,7 @@ class StrcutTypeNapiInfo(AbstractAnalysis[StructType], AbstractTypeNapiInfo):
     ):
         type_cpp_info = TypeCppInfo.get(self.am, self.type)
         pkg_napi_target.write(
-            f"{space_num * ' '}{type_cpp_info.as_field} {result} = get_{self.type.ty_decl.name}(env, {value});\n"
+            f"{space_num * ' '}{type_cpp_info.as_owner} {result} = get_{self.type.ty_decl.name}(env, {value});\n"
         )
 
     def create_value_as_js(
@@ -197,7 +203,7 @@ class StrcutTypeNapiInfo(AbstractAnalysis[StructType], AbstractTypeNapiInfo):
 class IfaceTypeNapiInfo(AbstractAnalysis[IfaceType], AbstractTypeNapiInfo):
     def __init__(self, am: AnalysisManager, t: IfaceType):
         iface_napi_info = IfaceCppInfo.get(am, t.ty_decl)
-        self.as_napi_c = iface_napi_info.as_field
+        self.as_napi_c = iface_napi_info.as_owner
         self.am = am
         self.type = t
 
@@ -210,7 +216,7 @@ class IfaceTypeNapiInfo(AbstractAnalysis[IfaceType], AbstractTypeNapiInfo):
     ):
         type_cpp_info = TypeCppInfo.get(self.am, self.type)
         pkg_napi_target.write(
-            f"{space_num * ' '}{type_cpp_info.as_field} {result} = get_{self.type.ty_decl.name}(env, {value});\n"
+            f"{space_num * ' '}{type_cpp_info.as_owner} {result} = get_{self.type.ty_decl.name}(env, {value});\n"
         )
 
     def create_value_as_js(
@@ -228,7 +234,7 @@ class IfaceTypeNapiInfo(AbstractAnalysis[IfaceType], AbstractTypeNapiInfo):
 class EnumTypeNapiInfo(AbstractAnalysis[EnumType], AbstractTypeNapiInfo):
     def __init__(self, am: AnalysisManager, t: EnumType):
         enum_napi_info = EnumCppInfo.get(am, t.ty_decl)
-        self.as_napi_c = enum_napi_info.as_field
+        self.as_napi_c = enum_napi_info.as_owner
         self.am = am
         self.type = t
 
@@ -241,7 +247,7 @@ class EnumTypeNapiInfo(AbstractAnalysis[EnumType], AbstractTypeNapiInfo):
     ):
         type_cpp_info = TypeCppInfo.get(self.am, self.type)
         pkg_napi_target.write(
-            f"{space_num * ' '}{type_cpp_info.as_field} {result} = get_{self.type.ty_decl.name}(env, {value});\n"
+            f"{space_num * ' '}{type_cpp_info.as_owner} {result} = get_{self.type.ty_decl.name}(env, {value});\n"
         )
 
     def create_value_as_js(
@@ -253,6 +259,96 @@ class EnumTypeNapiInfo(AbstractAnalysis[EnumType], AbstractTypeNapiInfo):
     ):
         pkg_napi_target.write(
             f"{space_num * ' '}napi_value {result} = create_{self.type.ty_decl.name}(env, std::move({value}));\n"
+        )
+
+
+class VectorTypeNapiInfo(AbstractAnalysis[VectorType], AbstractTypeNapiInfo):
+    def __init__(self, am: AnalysisManager, t: VectorType):
+        vector_napi_info = VectorTypeCppInfo.get(am, t)
+        self.as_napi_c = vector_napi_info.as_owner
+        self.am = am
+        self.type = t
+
+    def get_value_from_js(
+        self,
+        pkg_napi_target: COutputBuffer,
+        value: str,
+        result: str,
+        space_num: int,
+    ):
+        pkg_napi_target.write(
+            f"{space_num * ' '}{self.as_napi_c} {result} = napi_convert<{self.as_napi_c}>::get(env, {value});\n"
+        )
+
+    def create_value_as_js(
+        self,
+        pkg_napi_target: COutputBuffer,
+        value: str,
+        result: str,
+        space_num: int,
+    ):
+        pkg_napi_target.write(
+            f"{space_num * ' '}napi_value {result} = napi_convert<{self.as_napi_c}>::create(env, std::move({value}));\n"
+        )
+
+
+class MapTypeNapiInfo(AbstractAnalysis[MapType], AbstractTypeNapiInfo):
+    def __init__(self, am: AnalysisManager, t: MapType):
+        map_napi_info = MapTypeCppInfo.get(am, t)
+        self.as_napi_c = map_napi_info.as_owner
+        self.am = am
+        self.type = t
+
+    def get_value_from_js(
+        self,
+        pkg_napi_target: COutputBuffer,
+        value: str,
+        result: str,
+        space_num: int,
+    ):
+        pkg_napi_target.write(
+            f"{space_num * ' '}{self.as_napi_c} {result} = napi_convert<{self.as_napi_c}>::get(env, {value});\n"
+        )
+
+    def create_value_as_js(
+        self,
+        pkg_napi_target: COutputBuffer,
+        value: str,
+        result: str,
+        space_num: int,
+    ):
+        pkg_napi_target.write(
+            f"{space_num * ' '}napi_value {result} = napi_convert<{self.as_napi_c}>::create(env, std::move({value}));\n"
+        )
+
+
+class SetTypeNapiInfo(AbstractAnalysis[SetType], AbstractTypeNapiInfo):
+    def __init__(self, am: AnalysisManager, t: SetType):
+        set_napi_info = SetTypeCppInfo.get(am, t)
+        self.as_napi_c = set_napi_info.as_owner
+        self.am = am
+        self.type = t
+
+    def get_value_from_js(
+        self,
+        pkg_napi_target: COutputBuffer,
+        value: str,
+        result: str,
+        space_num: int,
+    ):
+        pkg_napi_target.write(
+            f"{space_num * ' '}{self.as_napi_c} {result} = napi_convert<{self.as_napi_c}>::get(env, {value});\n"
+        )
+
+    def create_value_as_js(
+        self,
+        pkg_napi_target: COutputBuffer,
+        value: str,
+        result: str,
+        space_num: int,
+    ):
+        pkg_napi_target.write(
+            f"{space_num * ' '}napi_value {result} = napi_convert<{self.as_napi_c}>::create(env, std::move({value}));\n"
         )
 
 
@@ -285,6 +381,18 @@ class TypeNapiInfo(TypeVisitor[AbstractTypeNapiInfo]):
     def visit_enum_type(self, t: EnumType) -> AbstractTypeNapiInfo:
         return EnumTypeNapiInfo.get(self.am, t)
 
+    @override
+    def visit_vector_type(self, t: VectorType) -> AbstractTypeNapiInfo:
+        return VectorTypeNapiInfo.get(self.am, t)
+
+    @override
+    def visit_map_type(self, t: MapType) -> AbstractTypeNapiInfo:
+        return MapTypeNapiInfo.get(self.am, t)
+
+    @override
+    def visit_set_type(self, t: SetType) -> AbstractTypeNapiInfo:
+        return SetTypeNapiInfo.get(self.am, t)
+
 
 class NapiCodeGenerator:
     def __init__(self, tm: OutputManager, am: AnalysisManager):
@@ -305,6 +413,7 @@ class NapiCodeGenerator:
             self.tm, f"{pkg_napi_info.header}", False
         )
         pkg_napi_target.include("node/node_api.h")
+        pkg_napi_target.include("napi.convert.hpp")
         pkg_napi_target.include(pkg_cpp_info.header)
 
         desc = []
@@ -336,7 +445,7 @@ class NapiCodeGenerator:
 
         for func in iface.methods:
             self.gen_iface_method(
-                func, pkg_napi_target, iface.name, iface_cpp_info.as_field
+                func, pkg_napi_target, iface.name, iface_cpp_info.as_owner
             )
             func_desc = f'        {{"{func.name}", nullptr, napi_hidden_{iface.name}_{func.name}, nullptr, nullptr, nullptr, napi_default, nullptr}}'
             desc.append(func_desc)
@@ -346,7 +455,7 @@ class NapiCodeGenerator:
             if ancestor == iface:
                 continue
             self.gen_iface_up_cast_func(
-                pkg_napi_target, iface.name, iface_cpp_info.as_field, ancestor.name
+                pkg_napi_target, iface.name, iface_cpp_info.as_owner, ancestor.name
             )
             func_desc = f'        {{"as_{ancestor.name}", nullptr, napi_hidden_{iface.name}_as_{ancestor.name}, nullptr, nullptr, nullptr, napi_default, nullptr}}'
             desc.append(func_desc)
@@ -362,17 +471,17 @@ class NapiCodeGenerator:
     ):
         iface_cpp_info = IfaceCppInfo.get(self.am, iface)
         pkg_napi_target.write(
-            f"inline {iface_cpp_info.as_field} get_{iface.name}(napi_env env, napi_value js_obj) {{\n"
-            f"    {iface_cpp_info.as_field}* c_ptr;\n"
+            f"inline {iface_cpp_info.as_owner} get_{iface.name}(napi_env env, napi_value js_obj) {{\n"
+            f"    {iface_cpp_info.as_owner}* c_ptr;\n"
             f"    napi_unwrap(env, js_obj, reinterpret_cast<void **>(&c_ptr));\n"
-            f"    {iface_cpp_info.as_field} c_obj = *c_ptr;\n"
+            f"    {iface_cpp_info.as_owner} c_obj = *c_ptr;\n"
             f"    return c_obj;\n"
             f"}}\n"
         )
 
         pkg_napi_target.write(
-            f"inline napi_value create_{iface.name}(napi_env env, {iface_cpp_info.as_field} c_obj) {{\n"
-            f"    {iface_cpp_info.as_field}* value_ptr = new {iface_cpp_info.as_field}(std::move(c_obj));\n"
+            f"inline napi_value create_{iface.name}(napi_env env, {iface_cpp_info.as_owner} c_obj) {{\n"
+            f"    {iface_cpp_info.as_owner}* value_ptr = new {iface_cpp_info.as_owner}(std::move(c_obj));\n"
             f"    napi_value js_obj = nullptr;\n"
             f"    napi_create_object(env, &js_obj);\n"
             f"    napi_property_descriptor desc[] = {{\n"
@@ -380,7 +489,7 @@ class NapiCodeGenerator:
             f"    }};\n"
             f"    napi_define_properties(env, js_obj, sizeof(desc) / sizeof(desc[0]), desc);\n"
             f"    napi_wrap(env, js_obj, value_ptr, [](napi_env env, void* finalize_data, void* finalize_hint) {{\n"
-            f"        delete static_cast<{iface_cpp_info.as_field}*>(finalize_data);\n"
+            f"        delete static_cast<{iface_cpp_info.as_owner}*>(finalize_data);\n"
             f"    }}, nullptr, nullptr);\n"
             f"    return js_obj;\n"
             f"}}\n"
@@ -462,7 +571,7 @@ class NapiCodeGenerator:
             f"    size_t argc = 1;\n"
             f"    napi_value args[1] = {{nullptr}};\n"
             f"    napi_get_cb_info(env, info, &argc, args , nullptr, nullptr);\n"
-            f"    {iface_cpp_info.as_field} res = taihe::core::make_holder<NAPI_{iface.name}Impl, {iface_cpp_info.as_field}>(env, args[0]);\n"
+            f"    {iface_cpp_info.as_owner} res = taihe::core::make_holder<NAPI_{iface.name}Impl, {iface_cpp_info.as_owner}>(env, args[0]);\n"
             f"    return create_{iface.name}(env, std::move(res));\n"
             f"}}\n"
         )
@@ -480,7 +589,7 @@ class NapiCodeGenerator:
 
         if func.return_ty_ref:
             return_ty_info = TypeCppInfo.get(self.am, func.return_ty_ref.resolved_ty)
-            return_ty_str = return_ty_info.as_field
+            return_ty_str = return_ty_info.as_owner
         else:
             return_ty_str = "void"
 
@@ -581,7 +690,7 @@ class NapiCodeGenerator:
     ):
         struct_cpp_info = StructCppInfo.get(self.am, struct)
         pkg_napi_target.write(
-            f"inline {struct_cpp_info.as_field} get_{struct.name}(napi_env env, napi_value js_obj) {{\n"
+            f"inline {struct_cpp_info.as_owner} get_{struct.name}(napi_env env, napi_value js_obj) {{\n"
         )
         for field in struct.fields:
             napi_value_name = f"{field.name}_v"
@@ -598,7 +707,7 @@ class NapiCodeGenerator:
                 4,
             )
 
-        pkg_napi_target.write(f"    {struct_cpp_info.as_field} c_obj = {{\n")
+        pkg_napi_target.write(f"    {struct_cpp_info.as_owner} c_obj = {{\n")
         for field in struct.fields:
             cpp_result_name = f"{field.name}_c"
             pkg_napi_target.write(
@@ -644,8 +753,8 @@ class NapiCodeGenerator:
     def gen_enum_convert_func(self, enum: EnumDecl, pkg_napi_target: COutputBuffer):
         enum_cpp_info = EnumCppInfo.get(self.am, enum)
         pkg_napi_target.write(
-            f"inline {enum_cpp_info.as_field} get_{enum.name}(napi_env env, napi_value js_obj) {{\n"
-            f"    {enum_cpp_info.as_field}* c_obj;\n"
+            f"inline {enum_cpp_info.as_owner} get_{enum.name}(napi_env env, napi_value js_obj) {{\n"
+            f"    {enum_cpp_info.as_owner}* c_obj;\n"
             f"    napi_value js_tag;\n"
             f'    napi_get_named_property(env, js_obj, "tag", &js_tag);\n'
             f"    int32_t c_tag;\n"
@@ -675,7 +784,7 @@ class NapiCodeGenerator:
         )
 
         pkg_napi_target.write(
-            f"inline napi_value create_{enum.name}(napi_env env, {enum_cpp_info.as_field} c_obj) {{\n"
+            f"inline napi_value create_{enum.name}(napi_env env, {enum_cpp_info.as_owner} c_obj) {{\n"
             f"    napi_value js_obj;\n"
             f"    napi_create_object(env, &js_obj);\n"
             f"    napi_value js_tag;\n"
@@ -744,7 +853,7 @@ class NapiCodeGenerator:
             value_ty = return_ty_ref.resolved_ty
             cpp_return_info = TypeCppInfo.get(self.am, value_ty)
             pkg_napi_target.write(
-                f"    {cpp_return_info.as_field} value = {func_name}({args_str});\n"
+                f"    {cpp_return_info.as_owner} value = {func_name}({args_str});\n"
             )
             self.gen_func_create_value_as_js(
                 value_ty, pkg_napi_target, "value", "result", space_num

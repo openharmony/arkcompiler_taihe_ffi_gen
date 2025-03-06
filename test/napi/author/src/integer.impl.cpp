@@ -151,9 +151,20 @@ taihe::core::vector<int32_t> ohos_reverse_vector(taihe::core::vector_view<int32_
     return result;
 }
 
-taihe::core::map<taihe::core::string, int32_t> ohos_reverse_map(taihe::core::map_view<taihe::core::string, int32_t> a) {
+taihe::core::map<int32_t, taihe::core::string> ohos_reverse_map(taihe::core::map_view<taihe::core::string, int32_t> a) {
     taihe::core::map<int32_t, taihe::core::string> result;
-    return a;
+    a.accept([&result](taihe::core::string key, int32_t value) { 
+        result.emplace(value, key);
+    });
+    return result;
+}
+
+taihe::core::set<int32_t> ohos_add_set(taihe::core::set<int32_t> a) {
+    taihe::core::set<int32_t> result;
+    a.accept([&result](int32_t element) { 
+        result.emplace(element + 1);
+    });
+    return result;
 }
 
 TH_EXPORT_CPP_API_add(ohos_int_add)
@@ -172,3 +183,4 @@ TH_EXPORT_CPP_API_makeIShape(makeIShapeImpl)
 TH_EXPORT_CPP_API_process_color_rgb_name(ohos_process_color_rgb_name)
 TH_EXPORT_CPP_API_reverse_vector(ohos_reverse_vector)
 TH_EXPORT_CPP_API_reverse_map(ohos_reverse_map)
+TH_EXPORT_CPP_API_add_set(ohos_add_set)
