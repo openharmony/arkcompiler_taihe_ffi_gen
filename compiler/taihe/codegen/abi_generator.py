@@ -54,7 +54,7 @@ class GlobFuncABIInfo(AbstractAnalysis[GlobFuncDecl]):
         p = f.node_parent
         assert p
         segments = [*p.segments, f.name]
-        self.mangled_name = encode(segments, DeclKind.FUNCTION)
+        self.mangled_name = encode(segments, DeclKind.FUNC)
 
 
 class IfaceMethodABIInfo(AbstractAnalysis[IfaceMethodDecl]):
@@ -64,7 +64,7 @@ class IfaceMethodABIInfo(AbstractAnalysis[IfaceMethodDecl]):
         p = d.node_parent
         assert p
         segments = [*p.segments, d.name, f.name]
-        self.mangled_name = encode(segments, DeclKind.FUNCTION)
+        self.mangled_name = encode(segments, DeclKind.FUNC)
 
 
 class EnumABIInfo(AbstractAnalysis[EnumDecl]):
@@ -75,8 +75,8 @@ class EnumABIInfo(AbstractAnalysis[EnumDecl]):
         self.decl_header = f"{p.name}.{d.name}.abi.0.hpp"
         self.defn_header = f"{p.name}.{d.name}.abi.1.hpp"
         self.tag_type = "size_t"
-        self.union_name = encode(segments, DeclKind.ENUM_UNION)
-        self.mangled_name = encode(segments, DeclKind.ENUM_STRUCT)
+        self.union_name = encode(segments, DeclKind.UNION)
+        self.mangled_name = encode(segments, DeclKind.TYPE)
         self.as_owner = f"struct {self.mangled_name}"
         self.as_param = f"struct {self.mangled_name} const*"
         self.has_data = any(item.ty_ref for item in d.items)
@@ -89,7 +89,7 @@ class StructABIInfo(AbstractAnalysis[StructDecl]):
         segments = [*p.segments, d.name]
         self.decl_header = f"{p.name}.{d.name}.abi.0.hpp"
         self.defn_header = f"{p.name}.{d.name}.abi.1.hpp"
-        self.mangled_name = encode(segments, DeclKind.STRUCT)
+        self.mangled_name = encode(segments, DeclKind.TYPE)
         self.as_owner = f"struct {self.mangled_name}"
         self.as_param = f"struct {self.mangled_name} const*"
 
@@ -116,7 +116,7 @@ class IfaceABIInfo(AbstractAnalysis[IfaceDecl]):
         self.defn_header = f"{p.name}.{d.name}.abi.1.hpp"
         self.impl_header = f"{p.name}.{d.name}.abi.2.hpp"
         self.src = f"{p.name}.{d.name}.cpp"
-        self.mangled_name = encode(segments, DeclKind.INTERFACE)
+        self.mangled_name = encode(segments, DeclKind.TYPE)
         self.as_owner = f"struct {self.mangled_name}"
         self.as_param = f"struct {self.mangled_name}"
         self.copy_func = encode(segments, DeclKind.COPY)

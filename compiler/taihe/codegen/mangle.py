@@ -51,21 +51,19 @@ from enum import Enum
 
 
 class DeclKind(Enum):
-    FUNCTION = "f"
-    RETURN_T = "r"
-    STRUCT = "s"
-    ENUM_TAG = "t"
-    ENUM_UNION = "u"
-    ENUM_STRUCT = "e"
-    ENUM_ITEM = "v"
-    INTERFACE = "i"
-    IID = "iid"
+    FUNC = "f"
+    TYPE = "t"
+    IID = "i"
+    UNION = "union"
     FTABLE = "ftable"
     VTABLE = "vtable"
     COPY = "copy"
     DROP = "drop"
-    DYNAMIC_CAST = "dcast"
-    STATIC_CAST = "scast"
+    DYNAMIC_CAST = "dynamic"
+    STATIC_CAST = "static"
+
+    ANI_FUNC = "ani"
+    NAPI_FUNC = "napi"
 
 
 def _encode_uleb8(value: int) -> list[int]:

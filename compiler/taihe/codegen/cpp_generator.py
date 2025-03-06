@@ -54,13 +54,15 @@ from taihe.utils.outputs import COutputBuffer, OutputManager
 class PackageCppInfo(AbstractAnalysis[PackageDecl]):
     def __init__(self, am: AnalysisManager, p: PackageDecl) -> None:
         self.header = f"{p.name}.proj.hpp"
-        self.namespace = "::".join(p.segments)
-        self.weakspace = "::".join(p.segments) + "::weak"
 
 
 class GlobFuncCppInfo(AbstractAnalysis[GlobFuncDecl]):
     def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
+        p = f.node_parent
+        assert p
+        self.namespace = "::".join(p.segments)
         self.call_name = f.name
+        self.full_name = "::" + self.namespace + "::" + self.call_name
 
 
 class IfaceMethodCppInfo(AbstractAnalysis[IfaceMethodDecl]):
@@ -76,8 +78,9 @@ class StructCppInfo(AbstractAnalysis[StructDecl]):
         assert p
         self.decl_header = f"{p.name}.{d.name}.proj.0.hpp"
         self.defn_header = f"{p.name}.{d.name}.proj.1.hpp"
+        self.namespace = "::".join(p.segments)
         self.name = d.name
-        self.full_name = "::" + "::".join(p.segments) + "::" + self.name
+        self.full_name = "::" + self.namespace + "::" + self.name
         self.as_owner = self.full_name
         self.as_param = self.full_name + " const&"
 
@@ -88,8 +91,9 @@ class EnumCppInfo(AbstractAnalysis[EnumDecl]):
         assert p
         self.decl_header = f"{p.name}.{d.name}.proj.0.hpp"
         self.defn_header = f"{p.name}.{d.name}.proj.1.hpp"
+        self.namespace = "::".join(p.segments)
         self.name = d.name
-        self.full_name = "::" + "::".join(p.segments) + "::" + self.name
+        self.full_name = "::" + self.namespace + "::" + self.name
         self.as_owner = self.full_name
         self.as_param = self.full_name + " const&"
 
@@ -101,11 +105,14 @@ class IfaceCppInfo(AbstractAnalysis[IfaceDecl]):
         self.decl_header = f"{p.name}.{d.name}.proj.0.hpp"
         self.defn_header = f"{p.name}.{d.name}.proj.1.hpp"
         self.impl_header = f"{p.name}.{d.name}.proj.2.hpp"
-        self.name = d.name
-        self.full_name = "::" + "::".join(p.segments) + "::" + self.name
-        self.weak_name = "::" + "::".join(p.segments) + "::weak::" + self.name
-        self.as_owner = self.full_name
-        self.as_param = self.weak_name
+        self.norm_name = d.name
+        self.weak_name = d.name
+        self.namespace = "::".join(p.segments)
+        self.weakspace = "::".join(p.segments) + "::weak"
+        self.full_norm_name = "::" + self.namespace + "::" + self.norm_name
+        self.full_weak_name = "::" + self.weakspace + "::" + self.weak_name
+        self.as_owner = self.full_norm_name
+        self.as_param = self.full_weak_name
 
 
 class AbstractTypeCppInfo(metaclass=ABCMeta):
@@ -349,18 +356,17 @@ class CppCodeGenerator:
         pkg_cpp_target.include("taihe/common.hpp")
         pkg_cpp_target.include(f"{pkg_abi_info.header}")
         for struct in pkg.structs:
-            self.gen_struct_files(struct, pkg_cpp_info, pkg_cpp_target)
+            self.gen_struct_files(struct, pkg_cpp_target)
         for enum in pkg.enums:
-            self.gen_enum_files(enum, pkg_cpp_info, pkg_cpp_target)
+            self.gen_enum_files(enum, pkg_cpp_target)
         for iface in pkg.interfaces:
-            self.gen_iface_files(iface, pkg_cpp_info, pkg_cpp_target)
+            self.gen_iface_files(iface, pkg_cpp_target)
         for func in pkg.functions:
-            self.gen_func(func, pkg_cpp_info, pkg_cpp_target)
+            self.gen_func(func, pkg_cpp_target)
 
     def gen_func(
         self,
         func: GlobFuncDecl,
-        pkg_cpp_info: PackageCppInfo,
         pkg_cpp_target: COutputBuffer,
     ):
         func_cpp_info = GlobFuncCppInfo.get(self.am, func)
@@ -384,7 +390,7 @@ class CppCodeGenerator:
             cpp_return_ty_name = "void"
             cpp_result = abi_result
         pkg_cpp_target.write(
-            f"namespace {pkg_cpp_info.namespace} {{\n"
+            f"namespace {func_cpp_info.namespace} {{\n"
             f"inline {cpp_return_ty_name} {func_cpp_info.call_name}({params_cpp_str}) {{\n"
             f"    return {cpp_result};\n"
             f"}}\n"
@@ -394,7 +400,6 @@ class CppCodeGenerator:
     def gen_struct_files(
         self,
         struct: StructDecl,
-        pkg_cpp_info: PackageCppInfo,
         pkg_cpp_target: COutputBuffer,
     ):
         struct_abi_info = StructABIInfo.get(self.am, struct)
@@ -403,13 +408,11 @@ class CppCodeGenerator:
             struct,
             struct_abi_info,
             struct_cpp_info,
-            pkg_cpp_info,
         )
         self.gen_struct_defn_file(
             struct,
             struct_abi_info,
             struct_cpp_info,
-            pkg_cpp_info,
         )
         pkg_cpp_target.include(struct_cpp_info.defn_header)
 
@@ -418,13 +421,12 @@ class CppCodeGenerator:
         struct: StructDecl,
         struct_abi_info: StructABIInfo,
         struct_cpp_info: StructCppInfo,
-        pkg_cpp_info: PackageCppInfo,
     ):
         struct_cpp_decl_target = COutputBuffer.create(
             self.tm, f"include/{struct_cpp_info.decl_header}", True
         )
         struct_cpp_decl_target.write(
-            f"namespace {pkg_cpp_info.namespace} {{\n"
+            f"namespace {struct_cpp_info.namespace} {{\n"
             f"struct {struct_cpp_info.name};\n"
             f"}}\n"
         )
@@ -434,7 +436,6 @@ class CppCodeGenerator:
         struct: StructDecl,
         struct_abi_info: StructABIInfo,
         struct_cpp_info: StructCppInfo,
-        pkg_cpp_info: PackageCppInfo,
     ):
         struct_cpp_defn_target = COutputBuffer.create(
             self.tm, f"include/{struct_cpp_info.defn_header}", True
@@ -447,7 +448,6 @@ class CppCodeGenerator:
             struct_abi_info,
             struct_cpp_info,
             struct_cpp_defn_target,
-            pkg_cpp_info,
         )
         self.gen_struct_hash(
             struct,
@@ -474,10 +474,9 @@ class CppCodeGenerator:
         struct_abi_info: StructABIInfo,
         struct_cpp_info: StructCppInfo,
         struct_cpp_defn_target: COutputBuffer,
-        pkg_cpp_info: PackageCppInfo,
     ):
         struct_cpp_defn_target.write(
-            f"namespace {pkg_cpp_info.namespace} {{\n"
+            f"namespace {struct_cpp_info.namespace} {{\n"
             f"struct {struct_cpp_info.name} {{\n"
         )
         for field in struct.fields:
@@ -552,7 +551,6 @@ class CppCodeGenerator:
     def gen_enum_files(
         self,
         enum: EnumDecl,
-        pkg_cpp_info: PackageCppInfo,
         pkg_cpp_target: COutputBuffer,
     ):
         enum_cpp_info = EnumCppInfo.get(self.am, enum)
@@ -561,13 +559,11 @@ class CppCodeGenerator:
             enum,
             enum_abi_info,
             enum_cpp_info,
-            pkg_cpp_info,
         )
         self.gen_enum_defn_file(
             enum,
             enum_abi_info,
             enum_cpp_info,
-            pkg_cpp_info,
         )
         pkg_cpp_target.include(enum_cpp_info.defn_header)
 
@@ -576,13 +572,12 @@ class CppCodeGenerator:
         enum: EnumDecl,
         enum_abi_info: EnumABIInfo,
         enum_cpp_info: EnumCppInfo,
-        pkg_cpp_info: PackageCppInfo,
     ):
         enum_cpp_decl_target = COutputBuffer.create(
             self.tm, f"include/{enum_cpp_info.decl_header}", True
         )
         enum_cpp_decl_target.write(
-            f"namespace {pkg_cpp_info.namespace} {{\n"
+            f"namespace {enum_cpp_info.namespace} {{\n"
             f"struct {enum_cpp_info.name};\n"
             f"}}\n"
         )
@@ -592,7 +587,6 @@ class CppCodeGenerator:
         enum: EnumDecl,
         enum_abi_info: EnumABIInfo,
         enum_cpp_info: EnumCppInfo,
-        pkg_cpp_info: PackageCppInfo,
     ):
         enum_cpp_defn_target = COutputBuffer.create(
             self.tm, f"include/{enum_cpp_info.defn_header}", True
@@ -605,7 +599,6 @@ class CppCodeGenerator:
             enum_abi_info,
             enum_cpp_info,
             enum_cpp_defn_target,
-            pkg_cpp_info,
         )
         self.gen_enum_same(
             enum,
@@ -632,10 +625,9 @@ class CppCodeGenerator:
         enum_abi_info: EnumABIInfo,
         enum_cpp_info: EnumCppInfo,
         enum_cpp_defn_target: COutputBuffer,
-        pkg_cpp_info: PackageCppInfo,
     ):
         enum_cpp_defn_target.write(
-            f"namespace {pkg_cpp_info.namespace} {{\n"
+            f"namespace {enum_cpp_info.namespace} {{\n"
             f"struct {enum_cpp_info.name} {{\n"
         )
         # tag type
@@ -963,7 +955,6 @@ class CppCodeGenerator:
     def gen_iface_files(
         self,
         iface: IfaceDecl,
-        pkg_cpp_info: PackageCppInfo,
         pkg_cpp_target: COutputBuffer,
     ):
         iface_abi_info = IfaceABIInfo.get(self.am, iface)
@@ -972,19 +963,16 @@ class CppCodeGenerator:
             iface,
             iface_abi_info,
             iface_cpp_info,
-            pkg_cpp_info,
         )
         self.gen_iface_defn_file(
             iface,
             iface_abi_info,
             iface_cpp_info,
-            pkg_cpp_info,
         )
         self.gen_iface_impl_file(
             iface,
             iface_abi_info,
             iface_cpp_info,
-            pkg_cpp_info,
         )
         pkg_cpp_target.include(iface_cpp_info.impl_header)
 
@@ -993,17 +981,16 @@ class CppCodeGenerator:
         iface: IfaceDecl,
         iface_abi_info: IfaceABIInfo,
         iface_cpp_info: IfaceCppInfo,
-        pkg_cpp_info: PackageCppInfo,
     ):
         iface_cpp_decl_target = COutputBuffer.create(
             self.tm, f"include/{iface_cpp_info.decl_header}", True
         )
         iface_cpp_decl_target.write(
-            f"namespace {pkg_cpp_info.namespace} {{\n"
-            f"struct {iface_cpp_info.name};\n"
+            f"namespace {iface_cpp_info.weakspace} {{\n"
+            f"struct {iface_cpp_info.weak_name};\n"
             f"}}\n"
-            f"namespace {pkg_cpp_info.weakspace} {{\n"
-            f"struct {iface_cpp_info.name};\n"
+            f"namespace {iface_cpp_info.namespace} {{\n"
+            f"struct {iface_cpp_info.norm_name};\n"
             f"}}\n"
         )
 
@@ -1012,7 +999,6 @@ class CppCodeGenerator:
         iface: IfaceDecl,
         iface_abi_info: IfaceABIInfo,
         iface_cpp_info: IfaceCppInfo,
-        pkg_cpp_info: PackageCppInfo,
     ):
         iface_cpp_defn_target = COutputBuffer.create(
             self.tm, f"include/{iface_cpp_info.defn_header}", True
@@ -1025,14 +1011,12 @@ class CppCodeGenerator:
             iface_abi_info,
             iface_cpp_info,
             iface_cpp_defn_target,
-            pkg_cpp_info,
         )
         self.gen_iface_holder_defn(
             iface,
             iface_abi_info,
             iface_cpp_info,
             iface_cpp_defn_target,
-            pkg_cpp_info,
         )
         self.gen_iface_type_traits(
             iface,
@@ -1047,11 +1031,10 @@ class CppCodeGenerator:
         iface_abi_info: IfaceABIInfo,
         iface_cpp_info: IfaceCppInfo,
         iface_cpp_defn_target: COutputBuffer,
-        pkg_cpp_info: PackageCppInfo,
     ):
         iface_cpp_defn_target.write(
-            f"namespace {pkg_cpp_info.weakspace} {{\n"
-            f"struct {iface_cpp_info.name} {{\n"
+            f"namespace {iface_cpp_info.weakspace} {{\n"
+            f"struct {iface_cpp_info.weak_name} {{\n"
             f"    static constexpr bool is_holder = false;\n"
         )
         # base infos
@@ -1116,7 +1099,7 @@ class CppCodeGenerator:
         for ancestor_info in iface_abi_info.ancestor_list:
             ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor_info.iface)
             iface_cpp_defn_target.write(
-                f"        .{ancestor_info.ftbl_ptr} = &{ancestor_cpp_info.weak_name}::template ftbl_impl<Impl>,\n"
+                f"        .{ancestor_info.ftbl_ptr} = &{ancestor_cpp_info.full_weak_name}::template ftbl_impl<Impl>,\n"
             )
         iface_cpp_defn_target.write("    };\n")
         # IdMap implementation
@@ -1149,9 +1132,9 @@ class CppCodeGenerator:
         )
         # convert methods
         iface_cpp_defn_target.write(
-            f"    explicit {iface_cpp_info.name}({iface_abi_info.as_param} handle) : m_handle(handle) {{}}\n"
-            f"    explicit {iface_cpp_info.name}(::taihe::core::data_view other)\n"
-            f"        : {iface_cpp_info.name}({iface_abi_info.dynamic_cast}(other.data_ptr)) {{}}\n"
+            f"    explicit {iface_cpp_info.weak_name}({iface_abi_info.as_param} handle) : m_handle(handle) {{}}\n"
+            f"    explicit {iface_cpp_info.weak_name}(::taihe::core::data_view other)\n"
+            f"        : {iface_cpp_info.weak_name}({iface_abi_info.dynamic_cast}(other.data_ptr)) {{}}\n"
             f"    operator ::taihe::core::data_view() const& {{\n"
             f"        {iface_abi_info.as_owner} ret_handle = m_handle;\n"
             f"        return ::taihe::core::data_view(ret_handle.data_ptr);\n"
@@ -1166,13 +1149,13 @@ class CppCodeGenerator:
                 continue
             ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
             iface_cpp_defn_target.write(
-                f"    operator {ancestor_cpp_info.weak_name}() const& {{\n"
+                f"    operator {ancestor_cpp_info.full_weak_name}() const& {{\n"
                 f"        {iface_abi_info.as_owner} ret_handle = m_handle;\n"
-                f"        return {ancestor_cpp_info.weak_name}({info.static_cast}(ret_handle));\n"
+                f"        return {ancestor_cpp_info.full_weak_name}({info.static_cast}(ret_handle));\n"
                 f"    }}\n"
-                f"    operator {ancestor_cpp_info.full_name}() const& {{\n"
+                f"    operator {ancestor_cpp_info.full_norm_name}() const& {{\n"
                 f"        {iface_abi_info.as_owner} ret_handle = {iface_abi_info.copy_func}(m_handle);\n"
-                f"        return {ancestor_cpp_info.full_name}({info.static_cast}(ret_handle));\n"
+                f"        return {ancestor_cpp_info.full_norm_name}({info.static_cast}(ret_handle));\n"
                 f"    }}\n"
             )
         iface_cpp_defn_target.write("};\n" "}\n")
@@ -1183,33 +1166,32 @@ class CppCodeGenerator:
         iface_abi_info: IfaceABIInfo,
         iface_cpp_info: IfaceCppInfo,
         iface_cpp_defn_target: COutputBuffer,
-        pkg_cpp_info: PackageCppInfo,
     ):
         iface_cpp_defn_target.write(
-            f"namespace {pkg_cpp_info.namespace} {{\n"
-            f"struct {iface_cpp_info.name} : public {iface_cpp_info.weak_name} {{\n"
+            f"namespace {iface_cpp_info.namespace} {{\n"
+            f"struct {iface_cpp_info.norm_name} : public {iface_cpp_info.full_weak_name} {{\n"
             f"    static constexpr bool is_holder = true;\n"
         )
         # convert methods
         iface_cpp_defn_target.write(
-            f"    explicit {iface_cpp_info.name}({iface_abi_info.as_owner} handle) : {iface_cpp_info.weak_name}(handle) {{}}\n"
-            f"    {iface_cpp_info.name}& operator=({iface_cpp_info.full_name} other) {{\n"
+            f"    explicit {iface_cpp_info.norm_name}({iface_abi_info.as_owner} handle) : {iface_cpp_info.full_weak_name}(handle) {{}}\n"
+            f"    {iface_cpp_info.norm_name}& operator=({iface_cpp_info.full_norm_name} other) {{\n"
             f"        ::std::swap(m_handle, other.m_handle);\n"
             f"        return *this;\n"
             f"    }}\n"
-            f"    ~{iface_cpp_info.name}() {{\n"
+            f"    ~{iface_cpp_info.norm_name}() {{\n"
             f"        {iface_abi_info.drop_func}(m_handle);\n"
             f"    }}\n"
-            f"    {iface_cpp_info.name}({iface_cpp_info.weak_name} const& other)\n"
-            f"        : {iface_cpp_info.name}({iface_abi_info.copy_func}(other.m_handle)) {{}}\n"
-            f"    {iface_cpp_info.name}({iface_cpp_info.full_name} const& other)\n"
-            f"        : {iface_cpp_info.name}({iface_abi_info.copy_func}(other.m_handle)) {{}}\n"
-            f"    {iface_cpp_info.name}({iface_cpp_info.full_name} && other)\n"
-            f"        : {iface_cpp_info.name}(other.m_handle) {{\n"
+            f"    {iface_cpp_info.norm_name}({iface_cpp_info.full_weak_name} const& other)\n"
+            f"        : {iface_cpp_info.norm_name}({iface_abi_info.copy_func}(other.m_handle)) {{}}\n"
+            f"    {iface_cpp_info.norm_name}({iface_cpp_info.full_norm_name} const& other)\n"
+            f"        : {iface_cpp_info.norm_name}({iface_abi_info.copy_func}(other.m_handle)) {{}}\n"
+            f"    {iface_cpp_info.norm_name}({iface_cpp_info.full_norm_name} && other)\n"
+            f"        : {iface_cpp_info.norm_name}(other.m_handle) {{\n"
             f"        other.m_handle.data_ptr = nullptr;\n"
             f"    }}\n"
-            f"    explicit {iface_cpp_info.name}(::taihe::core::data_holder other)\n"
-            f"        : {iface_cpp_info.name}({iface_abi_info.dynamic_cast}(other.data_ptr)) {{\n"
+            f"    explicit {iface_cpp_info.norm_name}(::taihe::core::data_holder other)\n"
+            f"        : {iface_cpp_info.norm_name}({iface_abi_info.dynamic_cast}(other.data_ptr)) {{\n"
             f"        other.data_ptr = nullptr;\n"
             f"    }}\n"
             f"    operator ::taihe::core::data_view() const& {{\n"
@@ -1231,18 +1213,18 @@ class CppCodeGenerator:
                 continue
             ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
             iface_cpp_defn_target.write(
-                f"    operator {ancestor_cpp_info.weak_name}() const& {{\n"
+                f"    operator {ancestor_cpp_info.full_weak_name}() const& {{\n"
                 f"        {iface_abi_info.as_owner} ret_handle = m_handle;\n"
-                f"        return {ancestor_cpp_info.weak_name}({info.static_cast}(ret_handle));\n"
+                f"        return {ancestor_cpp_info.full_weak_name}({info.static_cast}(ret_handle));\n"
                 f"    }}\n"
-                f"    operator {ancestor_cpp_info.full_name}() const& {{\n"
+                f"    operator {ancestor_cpp_info.full_norm_name}() const& {{\n"
                 f"        {iface_abi_info.as_owner} ret_handle = {iface_abi_info.copy_func}(m_handle);\n"
-                f"        return {ancestor_cpp_info.full_name}({info.static_cast}(ret_handle));\n"
+                f"        return {ancestor_cpp_info.full_norm_name}({info.static_cast}(ret_handle));\n"
                 f"    }}\n"
-                f"    operator {ancestor_cpp_info.full_name}() && {{\n"
+                f"    operator {ancestor_cpp_info.full_norm_name}() && {{\n"
                 f"        {iface_abi_info.as_owner} ret_handle = m_handle;\n"
                 f"        m_handle.data_ptr = nullptr;\n"
-                f"        return {ancestor_cpp_info.full_name}({info.static_cast}(ret_handle));\n"
+                f"        return {ancestor_cpp_info.full_norm_name}({info.static_cast}(ret_handle));\n"
                 f"    }}\n"
             )
         iface_cpp_defn_target.write("};\n" "}\n")
@@ -1276,7 +1258,6 @@ class CppCodeGenerator:
         iface: IfaceDecl,
         iface_abi_info: IfaceABIInfo,
         iface_cpp_info: IfaceCppInfo,
-        pkg_cpp_info: PackageCppInfo,
     ):
         iface_cpp_impl_target = COutputBuffer.create(
             self.tm, f"include/{iface_cpp_info.impl_header}", True
@@ -1288,14 +1269,12 @@ class CppCodeGenerator:
             iface_abi_info,
             iface_cpp_info,
             iface_cpp_impl_target,
-            pkg_cpp_info,
         )
         self.gen_iface_author_methods(
             iface,
             iface_abi_info,
             iface_cpp_info,
             iface_cpp_impl_target,
-            pkg_cpp_info,
         )
 
     def gen_iface_user_methods(
@@ -1304,7 +1283,6 @@ class CppCodeGenerator:
         iface_abi_info: IfaceABIInfo,
         iface_cpp_info: IfaceCppInfo,
         iface_cpp_impl_target: COutputBuffer,
-        pkg_cpp_info: PackageCppInfo,
     ):
         for method in iface.methods:
             method_abi_info = IfaceMethodABIInfo.get(self.am, method)
@@ -1330,8 +1308,8 @@ class CppCodeGenerator:
                 cpp_return_ty_name = "void"
                 cpp_result = abi_result
             iface_cpp_impl_target.write(
-                f"namespace {pkg_cpp_info.weakspace} {{\n"
-                f"inline {cpp_return_ty_name} {iface_cpp_info.name}::virtual_type::{method_cpp_info.call_name}({params_cpp_str}) const {{\n"
+                f"namespace {iface_cpp_info.weakspace} {{\n"
+                f"inline {cpp_return_ty_name} {iface_cpp_info.weak_name}::virtual_type::{method_cpp_info.call_name}({params_cpp_str}) const {{\n"
                 f"    return {cpp_result};\n"
                 f"}}\n"
                 f"}}\n"
@@ -1343,7 +1321,6 @@ class CppCodeGenerator:
         iface_abi_info: IfaceABIInfo,
         iface_cpp_info: IfaceCppInfo,
         iface_cpp_impl_target: COutputBuffer,
-        pkg_cpp_info: PackageCppInfo,
     ):
         for method in iface.methods:
             method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
@@ -1366,9 +1343,9 @@ class CppCodeGenerator:
                 abi_return_ty_name = "void"
                 abi_result = cpp_result
             iface_cpp_impl_target.write(
-                f"namespace {pkg_cpp_info.weakspace} {{\n"
+                f"namespace {iface_cpp_info.weakspace} {{\n"
                 f"template<typename Impl>\n"
-                f"{abi_return_ty_name} {iface_cpp_info.name}::methods_impl<Impl>::{method.name}({params_abi_str}) {{\n"
+                f"{abi_return_ty_name} {iface_cpp_info.weak_name}::methods_impl<Impl>::{method.name}({params_abi_str}) {{\n"
                 f"    return {abi_result};\n"
                 f"}}\n"
                 f"}}\n"

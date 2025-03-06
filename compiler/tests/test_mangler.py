@@ -4,13 +4,12 @@ from taihe.codegen.mangle import DeclKind, decode, encode
 def test_name_mangler():
     """Comprehensive test suite for NameMangler."""
     test_cases = [
-        (["a", "b_c", "d", "e_f_g"], DeclKind.FUNCTION),
-        (["pkg", "sub_pkg", "name"], DeclKind.ENUM_TAG),
-        (["x", "y", "z"], DeclKind.STRUCT),
-        (["a_b_c"], DeclKind.FUNCTION),
-        (["a"], DeclKind.FUNCTION),
-        (["a_b", "c_d_e"], DeclKind.FUNCTION),
-        (["test", "with____multiple", "consecutive"], DeclKind.FUNCTION),
+        (["a", "b_c", "d", "e_f_g"], DeclKind.FUNC),
+        (["x", "y", "z"], DeclKind.TYPE),
+        (["a_b_c"], DeclKind.FUNC),
+        (["a"], DeclKind.FUNC),
+        (["a_b", "c_d_e"], DeclKind.FUNC),
+        (["test", "with____multiple", "consecutive"], DeclKind.FUNC),
     ]
 
     for segments, kind in test_cases:
