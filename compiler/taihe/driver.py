@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 from taihe.codegen.abi_generator import ABICodeGenerator
+from taihe.codegen.ani_generator import ANICodeGenerator, STSCodeGenerator
 from taihe.codegen.c_impl_generator import CImplCodeGenerator
 from taihe.codegen.cpp_generator import CppCodeGenerator
 from taihe.codegen.cpp_impl_generator import CppImplCodeGenerator
@@ -39,6 +40,7 @@ class CompilerInvocation:
 
     gen_author: bool = False
     gen_user: bool = False
+    gen_ani: bool = False
 
     quiet: bool = False
 
@@ -110,6 +112,13 @@ class CompilerInstance:
                 self.package_group
             )
             CppImplCodeGenerator(self.target_manager, self.analysis_manager).generate(
+                self.package_group
+            )
+        if self.invocation.gen_ani:
+            ANICodeGenerator(self.target_manager, self.analysis_manager).generate(
+                self.package_group
+            )
+            STSCodeGenerator(self.target_manager, self.analysis_manager).generate(
                 self.package_group
             )
 
