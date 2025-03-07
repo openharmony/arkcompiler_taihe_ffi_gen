@@ -74,7 +74,7 @@ parameter
 attrItem
     : token_name = ID # emptyAttrItem
     | token_name = ID ASSIGN_TO AttrVal_val = attrVal # simpleAttrItem
-    | token_name = ID LEFT_PARENTHESIS (AttrValLst_vals = attrVal (COMMA AttrValLst_vals = attrVal)*)? RIGHT_PARENTHESIS # tupleAttrItem
+    | token_name = ID LEFT_PARENTHESIS (AttrValLst_vals += attrVal (COMMA AttrValLst_vals += attrVal)*)? RIGHT_PARENTHESIS # tupleAttrItem
     ;
 
 attrVal

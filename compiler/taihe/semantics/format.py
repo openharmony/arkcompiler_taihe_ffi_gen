@@ -64,19 +64,22 @@ class _PrettyPrinter(RecursiveDeclVisitor):
         res = f"{d.name}: {self.get_type_ref_decl(d.ty_ref)}"
         return self.with_attr(d, res)
 
+    def get_attr_val(self, d: bool | str | int) -> str:
+        if isinstance(d, bool):
+            return "TRUE" if d else "FALSE"
+        if isinstance(d, int):
+            return str(d)
+        if isinstance(d, str):
+            return '"' + encode(d, "unicode-escape").decode() + '"'
+
     def get_attr_item(self, d: AttrItemDecl) -> str:
         if d.value is None:
             return d.name
-        elif isinstance(d.value, bool):
-            value = "TRUE" if d.value else "FALSE"
-        elif isinstance(d.value, int):
-            value = str(d.value)
-        elif isinstance(d.value, str):
-            value = '"' + encode(d.value, "unicode-escape").decode() + '"'
-        else:
-            raise ValueError()
-
-        return f"{d.name} = {value}"
+        if isinstance(d.value, tuple):
+            s = ", ".join(self.get_attr_val(v) for v in d.value)
+            return f"{d.name}({s})"
+        s = self.get_attr_val(d.value)
+        return f"{d.name} = {s}"
 
     def as_keyword(self, s) -> str:
         return f"{AnsiStyle.CYAN}{s}{AnsiStyle.RESET}"
