@@ -38,7 +38,7 @@ class CImplCodeGenerator:
         )
         pkg_abi_info = PackageABIInfo.get(self.am, pkg)
         pkg_c_impl_target.include("taihe/common.h")
-        pkg_c_impl_target.include(f"{pkg_abi_info.header}")
+        pkg_c_impl_target.include(pkg_abi_info.header)
         for func in pkg.functions:
             self.gen_func(func, pkg_c_impl_target)
 

@@ -354,7 +354,7 @@ class CppCodeGenerator:
         )
         pkg_abi_info = PackageABIInfo.get(self.am, pkg)
         pkg_cpp_target.include("taihe/common.hpp")
-        pkg_cpp_target.include(f"{pkg_abi_info.header}")
+        pkg_cpp_target.include(pkg_abi_info.header)
         for struct in pkg.structs:
             self.gen_struct_files(struct, pkg_cpp_target)
         for enum in pkg.enums:

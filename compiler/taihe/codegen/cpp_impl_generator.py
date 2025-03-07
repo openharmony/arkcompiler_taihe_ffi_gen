@@ -41,7 +41,7 @@ class CppImplCodeGenerator:
         )
         pkg_abi_info = PackageABIInfo.get(self.am, pkg)
         pkg_cpp_impl_target.include("taihe/common.hpp")
-        pkg_cpp_impl_target.include(f"{pkg_abi_info.header}")
+        pkg_cpp_impl_target.include(pkg_abi_info.header)
         for func in pkg.functions:
             self.gen_func(func, pkg_cpp_impl_target)
 

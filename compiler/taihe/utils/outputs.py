@@ -41,7 +41,22 @@ class OutputBase(ABC, Generic[P]):
         """Save the output to the specified file path."""
 
 
-class COutputBuffer(OutputBase[bool]):
+class OutputBuffer(OutputBase[[]]):
+    """Represents a C or C++ target file."""
+
+    def __init__(self):
+        self.code = StringIO()
+
+    @override
+    def save_as(self, file_path: Path):
+        with open(file_path, "w", encoding="utf-8") as dst:
+            dst.write(self.code.getvalue())
+
+    def write(self, code: str):
+        self.code.write(code)
+
+
+class COutputBuffer(OutputBase[[bool]]):
     """Represents a C or C++ target file."""
 
     def __init__(self, is_header: bool):
