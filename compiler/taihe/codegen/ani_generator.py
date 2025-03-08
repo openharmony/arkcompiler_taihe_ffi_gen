@@ -1,4 +1,4 @@
-from abc import ABCMeta
+from abc import ABCMeta, abstractmethod
 
 from typing_extensions import override
 
@@ -64,6 +64,7 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
         assert p
         segments = [*p.segments, f.name]
         self.mangled_name = encode(segments, DeclKind.ANI_FUNC)
+        self.prx_name = f"__proxy_{f.name}"
         self.sts_name = f.name
 
 
@@ -82,7 +83,6 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
     def __init__(self, am: AnalysisManager, d: StructDecl) -> None:
         p = d.node_parent
         assert p
-        self.header = f"{p.name}.{d.name}.ani.hpp"
         self.sts_name = d.name
         pkg_ani_info = PackageANIInfo.get(am, p)
         self.cls_name = f"L{pkg_ani_info.lib_name}/{self.sts_name};"
@@ -92,7 +92,6 @@ class EnumANIInfo(AbstractAnalysis[EnumDecl]):
     def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
         p = d.node_parent
         assert p
-        self.header = f"{p.name}.{d.name}.ani.hpp"
         self.sts_name = d.name
         pkg_ani_info = PackageANIInfo.get(am, p)
         self.cls_name = f"L{pkg_ani_info.lib_name}/{self.sts_name};"
@@ -102,64 +101,198 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
     def __init__(self, am: AnalysisManager, d: IfaceDecl) -> None:
         p = d.node_parent
         assert p
-        self.header = f"{p.name}.{d.name}.ani.hpp"
         self.sts_name = d.name
         pkg_ani_info = PackageANIInfo.get(am, p)
         self.cls_name = f"L{pkg_ani_info.lib_name}/{self.sts_name};"
 
 
 class AbstractTypeANIInfo(metaclass=ABCMeta):
-    ani_type: str
+    ani_type_as_param: list[str]
+    ani_type_as_owner: str
+
+    def return_from_ani_to_cpp(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        value: str,
+        result: str,
+    ):
+        raise NotImplementedError
+
+    def return_from_cpp_to_ani(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        value: str,
+        result: str,
+    ):
+        raise NotImplementedError
+
+    def pass_from_ani_to_cpp(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        values: list[str],
+        result: str,
+    ):
+        raise NotImplementedError
+
+    def pass_from_cpp_to_ani(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        value: str,
+        results: list[str],
+    ):
+        raise NotImplementedError
+
     sts_type: str
-    headers: list[str]
+    prx_type_as_param: list[str]
+    prx_type_as_owner: str
 
-    def __init__(self, am: AnalysisManager, t: Type):
-        self.cpp_info = TypeCppInfo.get(am, t)
+    def return_from_sts_to_prx(
+        self,
+        target: OutputBuffer,
+        offset: int,
+        value: str,
+        result: str,
+    ):
+        raise NotImplementedError
 
-    def return_from_ani(self, env, val):
-        return f"taihe::core::ani_convert<{self.cpp_info.as_owner}>::from_ani({env}, {val})"
+    def return_from_prx_to_sts(
+        self,
+        target: OutputBuffer,
+        offset: int,
+        value: str,
+        result: str,
+    ):
+        raise NotImplementedError
 
-    def return_into_ani(self, env, val):
-        return f"taihe::core::ani_convert<{self.cpp_info.as_owner}>::into_ani({env}, {val})"
+    def pass_from_sts_to_prx(
+        self,
+        target: OutputBuffer,
+        offset: int,
+        value: str,
+        results: list[str],
+    ):
+        raise NotImplementedError
 
-    def pass_from_ani(self, env, val):
-        return f"taihe::core::ani_convert<{self.cpp_info.as_param}>::from_ani({env}, {val})"
+    def pass_from_prx_to_sts(
+        self,
+        target: OutputBuffer,
+        offset: int,
+        values: list[str],
+        result: str,
+    ):
+        raise NotImplementedError
 
-    def pass_into_ani(self, env, val):
-        return f"taihe::core::ani_convert<{self.cpp_info.as_param}>::into_ani({env}, {val})"
+    ani_type_as_array: str
 
+    def array_from_cpp_to_ani(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        size: str,
+        value: str,
+        result: str,
+    ):
+        pass
 
-class EnumTypeANIInfo(AbstractAnalysis[EnumType], AbstractTypeANIInfo):
-    def __init__(self, am: AnalysisManager, t: EnumType):
-        AbstractTypeANIInfo.__init__(self, am, t)
-        enum_ani_info = EnumANIInfo.get(am, t.ty_decl)
-        self.sts_type = enum_ani_info.sts_name
-        self.ani_type = "ani_object"
-        self.headers = [enum_ani_info.header]
+    def array_from_ani_to_cpp(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        size: str,
+        value: str,
+        buffer: str,
+    ):
+        pass
 
 
 class StructTypeANIInfo(AbstractAnalysis[StructType], AbstractTypeANIInfo):
     def __init__(self, am: AnalysisManager, t: StructType):
-        AbstractTypeANIInfo.__init__(self, am, t)
+        self.t = t
+        self.am = am
         struct_ani_info = StructANIInfo.get(am, t.ty_decl)
         self.sts_type = struct_ani_info.sts_name
+        self.prx_type_as_owner = struct_ani_info.sts_name
+        self.prx_type_as_param = []
+        self.ani_type_as_owner = "ani_object"
+        self.ani_type_as_param = []
+        self.ani_type_as_array = "ani_array_ref"
+        for field in t.ty_decl.fields:
+            type_ani_info = TypeANIInfo.get(am, field.ty_ref.resolved_ty)
+            self.prx_type_as_param.extend(type_ani_info.prx_type_as_param)
+            self.ani_type_as_param.extend(type_ani_info.ani_type_as_param)
+
+    def pass_from_ani_to_cpp(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        values: list[str],
+        result: str,
+    ):
+        partial_results = []
+        for i, field in enumerate(self.t.ty_decl.fields):
+            type_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
+            partial_result = f"{result}_{i}"
+            type_ani_info.pass_from_ani_to_cpp(
+                target,
+                offset,
+                env,
+                values,
+                partial_result,
+            )
+            partial_results.append(partial_result)
+        moved_partial_results = ", ".join(
+            f"std::move({partial_result})" for partial_result in partial_results
+        )
+        type_cpp_info = TypeCppInfo.get(self.am, self.t)
+        target.write(
+            f"{' ' * offset}{type_cpp_info.as_owner} {result} = {{{moved_partial_results}}};\n"
+        )
+
+    def pass_from_sts_to_prx(
+        self,
+        target: OutputBuffer,
+        offset: int,
+        value: str,
+        results: list[str],
+    ):
+        for field in self.t.ty_decl.fields:
+            type_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
+            type_ani_info.pass_from_sts_to_prx(
+                target,
+                offset,
+                f"{value}.{field.name}",
+                results,
+            )
+
+
+class EnumTypeANIInfo(AbstractAnalysis[EnumType], AbstractTypeANIInfo):
+    def __init__(self, am: AnalysisManager, t: EnumType):
+        enum_ani_info = EnumANIInfo.get(am, t.ty_decl)
+        self.sts_type = enum_ani_info.sts_name
         self.ani_type = "ani_object"
-        self.headers = [struct_ani_info.header]
 
 
 class IfaceTypeANIInfo(AbstractAnalysis[IfaceType], AbstractTypeANIInfo):
     def __init__(self, am: AnalysisManager, t: IfaceType):
-        AbstractTypeANIInfo.__init__(self, am, t)
         iface_ani_info = IfaceANIInfo.get(am, t.ty_decl)
         self.sts_type = iface_ani_info.sts_name
         self.ani_type = "ani_object"
-        self.headers = [iface_ani_info.header]
 
 
 class ScalarTypeANIInfo(AbstractAnalysis[ScalarType], AbstractTypeANIInfo):
     def __init__(self, am: AnalysisManager, t: ScalarType):
-        AbstractTypeANIInfo.__init__(self, am, t)
-        res = {
+        sts_type = {
             BOOL: "boolean",
             F32: "float",
             F64: "double",
@@ -169,74 +302,414 @@ class ScalarTypeANIInfo(AbstractAnalysis[ScalarType], AbstractTypeANIInfo):
             I64: "long",
             U16: "char",
         }.get(t)
-        if res is None:
+        if sts_type is None:
             raise ValueError
-        self.sts_type = res
-        self.ani_type = f"ani_{res}"
-        self.headers = ["ani_runtime.hpp"]
+        self.sts_type = sts_type
+        self.prx_type_as_param = [sts_type]
+        self.prx_type_as_owner = sts_type
+        self.ani_type_as_param = [f"ani_{sts_type}"]
+        self.ani_type_as_owner = f"ani_{sts_type}"
+        self.ani_type_as_array = f"ani_array_{sts_type}"
+        self.cpp_info = TypeCppInfo.get(am, t)
+
+    def pass_from_ani_to_cpp(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        values: list[str],
+        result: str,
+    ):
+        value = values.pop(0)
+        target.write(f"{' ' * offset}{self.cpp_info.as_param} {result} = {value};\n")
+
+    def pass_from_cpp_to_ani(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        value: str,
+        results: list[str],
+    ):
+        result = results.pop(0)
+        target.write(f"{' ' * offset}{self.ani_type_as_param} {result} = {value};\n")
+
+    def return_from_ani_to_cpp(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        value: str,
+        result: str,
+    ):
+        target.write(f"{' ' * offset}{self.ani_type_as_owner} {result} = {value};\n")
+
+    def return_from_cpp_to_ani(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        value: str,
+        result: str,
+    ):
+        target.write(f"{' ' * offset}{self.cpp_info.as_owner} {result} = {value};\n")
+
+    def pass_from_prx_to_sts(
+        self,
+        target: OutputBuffer,
+        offset: int,
+        values: list[str],
+        result: str,
+    ):
+        value = values.pop(0)
+        target.write(f"{' ' * offset}let {result}: {self.sts_type} = {value};\n")
+
+    def pass_from_sts_to_prx(
+        self,
+        target: OutputBuffer,
+        offset: int,
+        value: str,
+        results: list[str],
+    ):
+        result = results.pop(0)
+        target.write(f"{' ' * offset}let {result}: {self.sts_type} = {value};\n")
+
+    def return_from_prx_to_sts(
+        self,
+        target: OutputBuffer,
+        offset: int,
+        value: str,
+        result: str,
+    ):
+        target.write(f"{' ' * offset}let {result}: {self.sts_type} = {value};\n")
+
+    def return_from_sts_to_prx(
+        self,
+        target: OutputBuffer,
+        offset: int,
+        value: str,
+        result: str,
+    ):
+        target.write(f"{' ' * offset}let {result}: {self.sts_type} = {value};\n")
+
+    def array_from_ani_to_cpp(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        size: str,
+        value: str,
+        buffer: str,
+    ):
+        suffix = self.sts_type[0].upper() + self.sts_type[1:]
+        target.write(
+            f"{' ' * offset}{env}->Array_GetRegion_{suffix}({value}, 0, {size}, {buffer});\n"
+        )
+
+    def array_from_cpp_to_ani(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        size: str,
+        value: str,
+        result: str,
+    ):
+        suffix = self.sts_type[0].upper() + self.sts_type[1:]
+        target.write(
+            f"{' ' * offset}{self.ani_type_as_array} {result};\n"
+            f"{' ' * offset}{env}->Array_New_{suffix}({size}, &{result});\n"
+            f"{' ' * offset}{env}->Array_SetRegion_{suffix}({result}, 0, {size}, {value});\n"
+        )
 
 
 class SpecialTypeANIInfo(AbstractAnalysis[SpecialType], AbstractTypeANIInfo):
     def __init__(self, am: AnalysisManager, t: SpecialType):
-        AbstractTypeANIInfo.__init__(self, am, t)
         if t != STRING:
             raise ValueError
         self.sts_type = "string"
-        self.ani_type = "ani_string"
-        self.headers = ["ani_runtime.hpp"]
+        self.prx_type_as_param = ["string"]
+        self.prx_type_as_owner = "string"
+        self.ani_type_as_param = ["ani_string"]
+        self.ani_type_as_owner = "ani_string"
+        self.ani_type_as_array = "ani_array_ref"
+        self.cpp_info = TypeCppInfo.get(am, t)
+
+    def pass_from_ani_to_cpp(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        values: list[str],
+        result: str,
+    ):
+        value = values.pop(0)
+        length = f"{result}_len"
+        tstr = f"{result}_tstr"
+        buffer = f"{result}_buf"
+        target.write(
+            f"{' ' * offset}ani_size {length};\n"
+            f"{' ' * offset}{env}->String_GetUTF8Size({value}, &{length});\n"
+            f"{' ' * offset}TString {tstr};\n"
+            f"{' ' * offset}char* {buffer} = tstr_initialize(&{tstr}, {length} + 1);\n"
+            f"{' ' * offset}{env}->String_GetUTF8({value}, {buffer}, {length} + 1, &{length});\n"
+            f"{' ' * offset}{buffer}[{length}] = '\\0';\n"
+            f"{' ' * offset}{tstr}.length = {length};\n"
+            f"{' ' * offset}taihe::core::string {result} = taihe::core::string({tstr});\n"
+        )
+
+    def pass_from_cpp_to_ani(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        value: str,
+        results: list[str],
+    ):
+        result = results.pop(0)
+        target.write(
+            f"{' ' * offset}ani_string {result};\n"
+            f"{' ' * offset}{env}->String_NewUTF8({value}.c_str(), {value}.size(), &{result});\n"
+        )
+
+    def return_from_ani_to_cpp(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        value: str,
+        result: str,
+    ):
+        length = f"{result}_len"
+        tstr = f"{result}_tstr"
+        buffer = f"{result}_buf"
+        target.write(
+            f"{' ' * offset}ani_size {length};\n"
+            f"{' ' * offset}{env}->String_GetUTF8Size({value}, &{length});\n"
+            f"{' ' * offset}TString {tstr};\n"
+            f"{' ' * offset}char* {buffer} = tstr_initialize(&{tstr}, {length} + 1);\n"
+            f"{' ' * offset}{env}->String_GetUTF8({value}, {buffer}, {length} + 1, &{length});\n"
+            f"{' ' * offset}{buffer}[{length}] = '\\0';\n"
+            f"{' ' * offset}{tstr}.length = {length};\n"
+            f"{' ' * offset}taihe::core::string {result} = taihe::core::string({tstr});\n"
+        )
+
+    def return_from_cpp_to_ani(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        value: str,
+        result: str,
+    ):
+        target.write(
+            f"{' ' * offset}ani_string {result};\n"
+            f"{' ' * offset}{env}->String_NewUTF8({value}.c_str(), {value}.size(), &{result});\n"
+        )
+
+    def pass_from_prx_to_sts(
+        self,
+        target: OutputBuffer,
+        offset: int,
+        values: list[str],
+        result: str,
+    ):
+        value = values.pop(0)
+        target.write(f"{' ' * offset}let {result}: {self.sts_type} = {value};\n")
+
+    def pass_from_sts_to_prx(
+        self,
+        target: OutputBuffer,
+        offset: int,
+        value: str,
+        results: list[str],
+    ):
+        result = results.pop(0)
+        target.write(f"{' ' * offset}let {result}: {self.sts_type} = {value};\n")
+
+    def return_from_prx_to_sts(
+        self,
+        target: OutputBuffer,
+        offset: int,
+        value: str,
+        result: str,
+    ):
+        target.write(f"{' ' * offset}let {result}: {self.sts_type} = {value};\n")
+
+    def return_from_sts_to_prx(
+        self,
+        target: OutputBuffer,
+        offset: int,
+        value: str,
+        result: str,
+    ):
+        target.write(f"{' ' * offset}let {result}: {self.sts_type} = {value};\n")
+
+    def array_from_ani_to_cpp(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        size: str,
+        value: str,
+        buffer: str,
+    ):
+        target.write(
+            f"{' ' * offset}for (size_t _i = 0; _i < {size}; _i++) {{\n"
+            f"{' ' * offset}    ani_string _str;\n"
+            f"{' ' * offset}    {env}->Array_Get_Ref({value}, _i, reinterpret_cast<ani_ref*>(&_str));\n"
+            f"{' ' * offset}    ani_size _size;\n"
+            f"{' ' * offset}    {env}->String_GetUTF8Size(_str, &_size);\n"
+            f"{' ' * offset}    TString _tstr;\n"
+            f"{' ' * offset}    char* _buf = tstr_initialize(&_tstr, _size + 1);\n"
+            f"{' ' * offset}    {env}->String_GetUTF8(_str, _buf, _size + 1, &_size);\n"
+            f"{' ' * offset}    _buf[_size] = '\\0';\n"
+            f"{' ' * offset}    _tstr.length = _size;\n"
+            f"{' ' * offset}    new (&{buffer}[_i]) taihe::core::string(_tstr);\n"
+            f"{' ' * offset}}}\n"
+        )
+
+    def array_from_cpp_to_ani(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        size: str,
+        value: str,
+        result: str,
+    ):
+        target.write(
+            f"{' ' * offset}{self.ani_type_as_array} {result};\n"
+            f"{' ' * offset}{env}->Array_New_Ref({size}, &{result});\n"
+            f"{' ' * offset}for (size_t _i = 0; _i < {size}; _i++) {{\n"
+            f"{' ' * offset}    ani_string _str;\n"
+            f"{' ' * offset}    {env}->String_NewUTF8({value}[_i].c_str(), {value}[_i].size(), &_str);\n"
+            f"{' ' * offset}    {env}->Array_Set_Ref({result}, _i, _str);\n"
+            f"{' ' * offset}}}\n"
+        )
 
 
 class ArrayTypeANIInfo(AbstractAnalysis[ArrayType], AbstractTypeANIInfo):
     def __init__(self, am: AnalysisManager, t: ArrayType) -> None:
-        AbstractTypeANIInfo.__init__(self, am, t)
+        item_ty_ani_info = TypeANIInfo.get(am, t.item_ty)
+        self.sts_type = f"({item_ty_ani_info.sts_type})[]"
+        self.prx_type_as_param = [f"({item_ty_ani_info.sts_type})[]"]
+        self.prx_type_as_owner = f"({item_ty_ani_info.sts_type})[]"
+        self.ani_type_as_param = [item_ty_ani_info.ani_type_as_array]
+        self.ani_type_as_owner = item_ty_ani_info.ani_type_as_array
+        self.ani_type_as_array = "ani_array_ref"
+        self.am = am
+        self.t = t
+
+    def pass_from_ani_to_cpp(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        values: list[str],
+        result: str,
+    ):
+        cpp_info = TypeCppInfo.get(self.am, self.t)
+        value = values.pop(0)
+        size = f"{result}_size"
+        buffer = f"{result}_buffer"
+        cpp_ty_ani_info = TypeCppInfo.get(self.am, self.t.item_ty)
+        target.write(
+            f"{' ' * offset}size_t {size};\n"
+            f"{' ' * offset}{env}->Array_GetLength({value}, &{size});\n"
+            f"{' ' * offset}{cpp_ty_ani_info.as_owner}* {buffer} = ({cpp_ty_ani_info.as_owner}*)malloc({size} * sizeof({cpp_ty_ani_info.as_owner}));\n"
+        )
+        item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
+        item_ty_ani_info.array_from_ani_to_cpp(target, offset, env, size, value, buffer)
+        target.write(f"{' ' * offset}{cpp_info.as_owner} {result}({buffer}, {size});\n")
+
+    def pass_from_sts_to_prx(
+        self,
+        target: OutputBuffer,
+        offset: int,
+        value: str,
+        results: list[str],
+    ):
+        item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
+        result = results.pop(0)
+        target.write(
+            f"{' ' * offset}let {result}: {self.prx_type_as_param[0]} = {value};\n"
+        )
 
 
 class BoxTypeANIInfo(AbstractAnalysis[BoxType], AbstractTypeANIInfo):
     def __init__(self, am: AnalysisManager, t: BoxType) -> None:
-        AbstractTypeANIInfo.__init__(self, am, t)
+        pass
 
 
 class VectorTypeANIInfo(AbstractAnalysis[VectorType], AbstractTypeANIInfo):
     def __init__(self, am: AnalysisManager, t: VectorType) -> None:
-        AbstractTypeANIInfo.__init__(self, am, t)
         val_ty_ani_info = TypeANIInfo.get(am, t.val_ty)
         self.sts_type = f"Array<{val_ty_ani_info.sts_type}>"
-        self.ani_type = "ani_object"
-        self.headers = [
-            "ani_runtime.hpp",
-            *val_ty_ani_info.headers,
-        ]
+        self.prx_type_as_param = [f"({val_ty_ani_info.sts_type})[]"]
+        self.prx_type_as_owner = f"({val_ty_ani_info.sts_type})[]"
+        self.ani_type_as_param = [val_ty_ani_info.ani_type_as_array]
+        self.ani_type_as_owner = val_ty_ani_info.ani_type_as_array
+        self.ani_type_as_array = "ani_array_ref"
+        self.am = am
+        self.t = t
+
+    def pass_from_ani_to_cpp(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        values: list[str],
+        result: str,
+    ):
+        cpp_info = TypeCppInfo.get(self.am, self.t)
+        value = values.pop(0)
+        size = f"{result}_size"
+        buffer = f"{result}_buffer"
+        cpp_ty_ani_info = TypeCppInfo.get(self.am, self.t.val_ty)
+        target.write(
+            f"{' ' * offset}size_t {size};\n"
+            f"{' ' * offset}{env}->Array_GetLength({value}, &{size});\n"
+            f"{' ' * offset}{cpp_ty_ani_info.as_owner}* {buffer} = ({cpp_ty_ani_info.as_owner}*)malloc({size} * sizeof({cpp_ty_ani_info.as_owner}));\n"
+        )
+        val_ty_ani_info = TypeANIInfo.get(self.am, self.t.val_ty)
+        val_ty_ani_info.array_from_ani_to_cpp(target, offset, env, size, value, buffer)
+        target.write(
+            f"{' ' * offset}{cpp_info.as_owner} {result}({size});\n"
+            f"{' ' * offset}for (int _i = 0; _i < {size}; _i++) {{\n"
+            f"{' ' * offset}    {result}.push_back(std::move({buffer}[_i]));\n"
+            f"{' ' * offset}}}\n"
+            f"{' ' * offset}free({buffer});\n"
+        )
+
+    def pass_from_sts_to_prx(
+        self,
+        target: OutputBuffer,
+        offset: int,
+        value: str,
+        results: list[str],
+    ):
+        val_ty_ani_info = TypeANIInfo.get(self.am, self.t.val_ty)
+        result = results.pop(0)
+        target.write(
+            f"{' ' * offset}let {result}: {self.prx_type_as_param[0]} = new {val_ty_ani_info.prx_type_as_owner}[{value}.length];\n"
+            f"{' ' * offset}for (let i = 0; i < {value}.length; i++) {{ {result}[i] = {value}[i]; }}\n"
+        )
 
 
 class MapTypeANIInfo(AbstractAnalysis[MapType], AbstractTypeANIInfo):
     def __init__(self, am: AnalysisManager, t: MapType) -> None:
-        AbstractTypeANIInfo.__init__(self, am, t)
-        key_ty_ani_info = TypeANIInfo.get(am, t.key_ty)
-        val_ty_ani_info = TypeANIInfo.get(am, t.val_ty)
-        self.sts_type = f"Map<{key_ty_ani_info.sts_type}, {val_ty_ani_info.sts_type}>"
-        self.ani_type = "ani_object"
-        self.headers = [
-            "ani_runtime.hpp",
-            *key_ty_ani_info.headers,
-            *val_ty_ani_info.headers,
-        ]
+        pass
 
 
 class SetTypeANIInfo(AbstractAnalysis[SetType], AbstractTypeANIInfo):
     def __init__(self, am: AnalysisManager, t: SetType) -> None:
-        AbstractTypeANIInfo.__init__(self, am, t)
-        key_ty_ani_info = TypeANIInfo.get(am, t.key_ty)
-        self.sts_type = f"Set<{key_ty_ani_info.sts_type}>"
-        self.ani_type = "ani_object"
-        self.headers = [
-            "ani_runtime.hpp",
-            *key_ty_ani_info.headers,
-        ]
+        pass
 
 
 class CallbackTypeANIInfo(AbstractAnalysis[CallbackType], AbstractTypeANIInfo):
     def __init__(self, am: AnalysisManager, t: CallbackType) -> None:
-        AbstractTypeANIInfo.__init__(self, am, t)
+        pass
 
 
 class TypeANIInfo(TypeVisitor[AbstractTypeANIInfo]):
@@ -306,19 +779,36 @@ class STSCodeGenerator:
         pkg_ani_info = PackageANIInfo.get(self.am, pkg)
         pkg_sts_target = OutputBuffer.create(self.tm, f"{pkg_ani_info.sts}")
         pkg_sts_target.write(f'loadLibrary("{pkg_ani_info.lib_name}");\n')
-        for struct in pkg.structs:
-            self.gen_struct(struct, pkg_sts_target)
-        for enum in pkg.enums:
-            self.gen_enum(enum, pkg_sts_target)
-        for iface in pkg.interfaces:
-            self.gen_iface(iface, pkg_sts_target)
         for func in pkg.functions:
-            self.gen_func(func, pkg_sts_target)
+            self.gen_func_proxy(func, pkg_sts_target)
+        for func in pkg.functions:
+            self.gen_func_impl(func, pkg_sts_target)
 
-    def gen_func(
+    def gen_func_proxy(
         self,
         func: GlobFuncDecl,
-        pkg_ani_target: OutputBuffer,
+        pkg_sts_target: OutputBuffer,
+    ):
+        func_ani_info = GlobFuncANIInfo.get(self.am, func)
+        params_prx = []
+        for param in func.params:
+            type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
+            for i, prx_type in enumerate(type_ani_info.prx_type_as_param):
+                params_prx.append(f"{param.name}_proxy_{i}: {prx_type}")
+        params_prx_str = ", ".join(params_prx)
+        if return_ty_ref := func.return_ty_ref:
+            type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
+            pxy_return_ty_name = type_ani_info.prx_type_as_owner
+        else:
+            pxy_return_ty_name = "void"
+        pkg_sts_target.write(
+            f"native function {func_ani_info.prx_name}({params_prx_str}): {pxy_return_ty_name};\n"
+        )
+
+    def gen_func_impl(
+        self,
+        func: GlobFuncDecl,
+        pkg_sts_target: OutputBuffer,
     ):
         func_ani_info = GlobFuncANIInfo.get(self.am, func)
         params_sts = []
@@ -331,47 +821,32 @@ class STSCodeGenerator:
             sts_return_ty_name = type_ani_info.sts_type
         else:
             sts_return_ty_name = "void"
-        pkg_ani_target.write(
-            f"native function {func_ani_info.sts_name}({params_sts_str}): {sts_return_ty_name};\n"
+        pkg_sts_target.write(
+            f"function {func_ani_info.sts_name}({params_sts_str}): {sts_return_ty_name} {{\n"
         )
-
-    def gen_struct(
-        self,
-        struct: StructDecl,
-        pkg_ani_target: OutputBuffer,
-    ):
-        struct_ani_info = StructANIInfo.get(self.am, struct)
-        pkg_ani_target.write(
-            f"export class {struct_ani_info.sts_name} {{\n" f"    constructor(\n"
-        )
-        for field in struct.fields:
-            type_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
-            pkg_ani_target.write(f"        {field.name}: {type_ani_info.sts_type},\n")
-        pkg_ani_target.write("    ) {\n")
-        for field in struct.fields:
-            type_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
-            pkg_ani_target.write(f"        this.{field.name} = {field.name};\n")
-        pkg_ani_target.write("    }\n")
-        for field in struct.fields:
-            type_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
-            pkg_ani_target.write(
-                f"    public {field.name}: {type_ani_info.sts_type};\n"
+        params_prx = []
+        for param in func.params:
+            type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
+            results_prx = []
+            for i, prx_type in enumerate(type_ani_info.prx_type_as_param):
+                results_prx.append(f"{param.name}_proxy_{i}")
+                params_prx.append(f"{param.name}_proxy_{i}")
+            type_ani_info.pass_from_sts_to_prx(
+                pkg_sts_target, 4, param.name, results_prx
             )
-        pkg_ani_target.write("}\n")
-
-    def gen_enum(
-        self,
-        enum: EnumDecl,
-        pkg_ani_target: OutputBuffer,
-    ):
-        pass
-
-    def gen_iface(
-        self,
-        iface: IfaceDecl,
-        pkg_ani_target: OutputBuffer,
-    ):
-        pass
+        params_prx_str = ", ".join(params_prx)
+        if return_ty_ref := func.return_ty_ref:
+            type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
+            pkg_sts_target.write(
+                f"    let result_proxy = {func_ani_info.prx_name}({params_prx_str});\n"
+            )
+            type_ani_info.return_from_prx_to_sts(
+                pkg_sts_target, 4, "result_proxy", "result"
+            )
+            pkg_sts_target.write(f"    return result;\n")
+        else:
+            pkg_sts_target.write(f"    {func_ani_info.prx_name}({params_prx_str});\n")
+        pkg_sts_target.write("}\n")
 
 
 class ANICodeGenerator:
@@ -389,14 +864,6 @@ class ANICodeGenerator:
         pkg_cpp_info = PackageCppInfo.get(self.am, pkg)
         pkg_ani_target.include("ani.h")
         pkg_ani_target.include(pkg_cpp_info.header)
-        for struct in pkg.structs:
-            self.gen_struct_file(struct)
-        for enum in pkg.enums:
-            self.gen_enum_file(enum)
-        for iface in pkg.interfaces:
-            self.gen_iface_file(iface)
-        for iface in pkg.interfaces:
-            self.gen_iface_methods(iface, pkg_ani_target)
         for func in pkg.functions:
             self.gen_func(func, pkg_ani_target)
         pkg_ani_target.write(
@@ -418,7 +885,7 @@ class ANICodeGenerator:
         for func in pkg.functions:
             func_ani_info = GlobFuncANIInfo.get(self.am, func)
             pkg_ani_target.write(
-                f'        {{"{func_ani_info.sts_name}", nullptr, reinterpret_cast<void*>({func_ani_info.mangled_name})}},\n'
+                f'        {{"{func_ani_info.prx_name}", nullptr, reinterpret_cast<void*>({func_ani_info.mangled_name})}},\n'
             )
         pkg_ani_target.write(
             "    };\n"
@@ -442,181 +909,44 @@ class ANICodeGenerator:
             "[[maybe_unused]] ani_env *env",
             "[[maybe_unused]] ani_object object",
         ]
-        args_cpp = []
+        param_values_list = []
         for param in func.params:
             type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
-            pkg_ani_target.include(*type_ani_info.headers)
-            params_ani.append(f"{type_ani_info.ani_type} {param.name}")
-            args_cpp.append(type_ani_info.pass_from_ani("env", param.name))
+            param_values = []
+            for i, ani_type in enumerate(type_ani_info.ani_type_as_param):
+                params_ani.append(f"{ani_type} {param.name}_proxy_{i}")
+                param_values.append(f"{param.name}_proxy_{i}")
+            param_values_list.append(param_values)
         params_ani_str = ", ".join(params_ani)
-        args_cpp_str = ", ".join(args_cpp)
-        cpp_result = f"{func_cpp_info.full_name}({args_cpp_str})"
         if return_ty_ref := func.return_ty_ref:
             type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
-            pkg_ani_target.include(*type_ani_info.headers)
-            ani_return_ty_name = type_ani_info.ani_type
-            ani_result = type_ani_info.return_into_ani("env", cpp_result)
+            ani_return_ty_name = type_ani_info.ani_type_as_owner
         else:
             ani_return_ty_name = "void"
-            ani_result = cpp_result
         pkg_ani_target.write(
             f"static {ani_return_ty_name} {func_ani_info.mangled_name}({params_ani_str}) {{\n"
-            f"    return {ani_result};\n"
-            f"}}\n"
         )
-
-    def gen_struct_file(
-        self,
-        struct: StructDecl,
-    ):
-        struct_cpp_info = StructCppInfo.get(self.am, struct)
-        struct_ani_info = StructANIInfo.get(self.am, struct)
-        struct_ani_target = COutputBuffer.create(
-            self.tm, f"include/{struct_ani_info.header}", True
-        )
-        struct_ani_target.include(struct_cpp_info.defn_header)
-        for field in struct.fields:
-            type_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
-            struct_ani_target.include(*type_ani_info.headers)
-        # owner
-        struct_ani_target.write(
-            f"namespace taihe::core {{\n"
-            f"template<>\n"
-            f"struct ani_convert<{struct_cpp_info.as_owner}> {{\n"
-        )
-        # return into abi
-        struct_ani_target.write(
-            f"    static ani_object into_ani(ani_env* env, {struct_cpp_info.full_name}&& value) {{\n"
-        )
-        fields_ani = []
-        for field in struct.fields:
-            type_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
-            field_ani = type_ani_info.return_into_ani(
-                "env", f"std::move(value.{field.name})"
+        args_cpp = []
+        for param, param_values in zip(func.params, param_values_list):
+            type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
+            type_ani_info.pass_from_ani_to_cpp(
+                pkg_ani_target, 4, "env", param_values, param.name
             )
-            struct_ani_target.write(
-                f"        {type_ani_info.ani_type} {field.name}_value = {field_ani};\n"
+            args_cpp.append(param.name)
+        args_cpp_str = ", ".join(args_cpp)
+        if return_ty_ref := func.return_ty_ref:
+            type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
+            cpp_return_ty_name = type_cpp_info.as_owner
+            pkg_ani_target.write(
+                f"    {cpp_return_ty_name} result = {func_cpp_info.full_name}({args_cpp_str});\n"
             )
-            fields_ani.append(f"{field.name}_value")
-        fields_ani_str = ", ".join(fields_ani)
-        struct_ani_target.write(
-            f"        ani_object obj;\n"
-            f'        static const char *className = "{struct_ani_info.cls_name}";\n'
-            f"        ani_class cls;\n"
-            f"        env->FindClass(className, &cls);\n"
-            f"        ani_method ctor;\n"
-            f'        env->Class_FindMethod(cls, "<ctor>", nullptr, &ctor);\n'
-            f"        env->Object_New(cls, ctor, &obj, {fields_ani_str});\n"
-            f"        return obj;\n"
-            f"    }}\n"
-        )
-        # return from abi
-        struct_ani_target.write(
-            f"    static {struct_cpp_info.full_name} from_ani(ani_env* env, ani_object obj) {{\n"
-            f'        static const char *className = "{struct_ani_info.cls_name}";\n'
-            f"        ani_class cls;\n"
-            f"        env->FindClass(className, &cls);\n"
-        )
-        fields_cpp = []
-        for field in struct.fields:
-            type_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
-            struct_ani_target.write(
-                f"        {type_ani_info.ani_type} {field.name}_value;\n"
-                f'        taihe::core::ani_helper<{type_ani_info.ani_type}>::Object_GetPropertyByName(env, obj, "{field.name}", reinterpret_cast<taihe::core::ani_helper<{type_ani_info.ani_type}>::ani_base*>(&{field.name}_value));\n'
+            type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
+            type_ani_info.return_from_cpp_to_ani(
+                pkg_ani_target, 4, "env", "result", "result_proxy"
             )
-            fields_cpp.append(
-                type_ani_info.return_from_ani("env", f"{field.name}_value")
+            pkg_ani_target.write("    return result_proxy;\n")
+        else:
+            pkg_ani_target.write(
+                f"    {func_cpp_info.full_name}({args_cpp_str});\n" f"    return;\n"
             )
-        fields_cpp_str = ", ".join(fields_cpp)
-        struct_ani_target.write(
-            f"        return {struct_cpp_info.full_name}{{{fields_cpp_str}}};\n"
-            f"    }}\n"
-        )
-        struct_ani_target.write("};\n")
-        struct_ani_target.write("}\n")
-        # param
-        struct_ani_target.write(
-            f"namespace taihe::core {{\n"
-            f"template<>\n"
-            f"struct ani_convert<{struct_cpp_info.as_param}> {{\n"
-        )
-        # pass into abi
-        struct_ani_target.write(
-            f"    static ani_object into_ani(ani_env* env, {struct_cpp_info.full_name} const& value) {{\n"
-        )
-        fields_ani = []
-        for field in struct.fields:
-            type_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
-            field_ani = type_ani_info.pass_into_ani("env", f"value.{field.name}")
-            struct_ani_target.write(
-                f"        {type_ani_info.ani_type} {field.name}_value = {field_ani};\n"
-            )
-            fields_ani.append(f"{field.name}_value")
-        fields_ani_str = ", ".join(fields_ani)
-        struct_ani_target.write(
-            f"        ani_object obj;\n"
-            f'        static const char *className = "{struct_ani_info.cls_name}";\n'
-            f"        ani_class cls;\n"
-            f"        env->FindClass(className, &cls);\n"
-            f"        ani_method ctor;\n"
-            f'        env->Class_FindMethod(cls, "<ctor>", nullptr, &ctor);\n'
-            f"        env->Object_New(cls, ctor, &obj, {fields_ani_str});\n"
-            f"        return obj;\n"
-            f"    }}\n"
-        )
-        # pass from abi
-        struct_ani_target.write(
-            f"    static {struct_cpp_info.full_name} from_ani(ani_env* env, ani_object obj) {{\n"
-            f'        static const char *className = "{struct_ani_info.cls_name}";\n'
-            f"        ani_class cls;\n"
-            f"        env->FindClass(className, &cls);\n"
-        )
-        fields_cpp = []
-        for field in struct.fields:
-            type_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
-            struct_ani_target.write(
-                f"        {type_ani_info.ani_type} {field.name}_value;\n"
-                f'        taihe::core::ani_helper<{type_ani_info.ani_type}>::Object_GetPropertyByName(env, obj, "{field.name}", reinterpret_cast<taihe::core::ani_helper<{type_ani_info.ani_type}>::ani_base*>(&{field.name}_value));\n'
-            )
-            fields_cpp.append(type_ani_info.pass_from_ani("env", f"{field.name}_value"))
-        fields_cpp_str = ", ".join(fields_cpp)
-        struct_ani_target.write(
-            f"        return {struct_cpp_info.full_name}{{{fields_cpp_str}}};\n"
-            f"    }}\n"
-        )
-        struct_ani_target.write("};\n")
-        struct_ani_target.write("}\n")
-
-    def gen_enum_file(
-        self,
-        enum: EnumDecl,
-    ):
-        enum_ani_info = EnumANIInfo.get(self.am, enum)
-        enum_cpp_info = EnumCppInfo.get(self.am, enum)
-        enum_ani_target = COutputBuffer.create(
-            self.tm, f"include/{enum_ani_info.header}", True
-        )
-        enum_ani_target.include(enum_cpp_info.defn_header)
-        for item in enum.items:
-            if item.ty_ref is None:
-                continue
-            type_ani_info = TypeANIInfo.get(self.am, item.ty_ref.resolved_ty)
-            enum_ani_target.include(*type_ani_info.headers)
-
-    def gen_iface_file(
-        self,
-        iface: IfaceDecl,
-    ):
-        iface_ani_info = IfaceANIInfo.get(self.am, iface)
-        iface_cpp_info = IfaceCppInfo.get(self.am, iface)
-        iface_ani_target = COutputBuffer.create(
-            self.tm, f"include/{iface_ani_info.header}", True
-        )
-        iface_ani_target.include(iface_cpp_info.defn_header)
-
-    def gen_iface_methods(
-        self,
-        iface: IfaceDecl,
-        pkg_ani_target: COutputBuffer,
-    ):
-        pass
+        pkg_ani_target.write("}\n")

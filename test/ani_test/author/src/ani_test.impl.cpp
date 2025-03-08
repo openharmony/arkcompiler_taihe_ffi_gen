@@ -1,49 +1,50 @@
-#include "ani_test.impl.hpp"
+#include <ani_test.impl.hpp>
 
-#include <iostream>
+using namespace ani_test;
+using namespace taihe::core;
 
-taihe::core::string ohos_input_str() {
-    std::string str;
-    std::cin >> str;
-    return taihe::core::string(str);
+static int32_t GetNumberArg0() {
+  static int counter = 0;
+  return ++counter;
 }
 
-template <bool endl>
-void ohos_print_str(taihe::core::string_view pstr) {
-    if (endl) {
-        std::cout << pstr.c_str() << std::endl;
-    } else {
-        std::cout << pstr.c_str() << std::flush;
-    }
+static int32_t GetNumberArg4(int32_t x, int32_t y, int32_t z, int32_t w) {
+  return x + y + z + w;
 }
 
-TH_EXPORT_CPP_API_input(ohos_input_str)
-TH_EXPORT_CPP_API_print(ohos_print_str<false>)
-TH_EXPORT_CPP_API_println(ohos_print_str<true>)
-
-ani_test::StringPair ohos_split_str(taihe::core::string_view pstr, int32_t n) {
-    int32_t l = pstr.size();
-    if (n > l) {
-        n = l;
-    } else if (n + l < 0) {
-        n = 0;
-    } else if (n < 0) {
-        n = n + l;
-    }
-    return {
-        taihe::core::substr(pstr, 0, n),
-        taihe::core::substr(pstr, n, l - n),
-    };
+static void parseOption(Option const& opt) {
+  // std::cout << "src: " << opt.src << std::endl;
+  // std::cout << "dest: " << opt.dest << std::endl;
+  // for (const auto &s : opt.files) {
+  //   std::cout << "files: " << s.c_str() << std::endl;
+  // }
 }
 
-taihe::core::string ohos_int_to_str(int32_t n) {
-    return taihe::core::to_string(n);
+static void optionArg1(string str, Option const& obj1) {
+  parseOption(obj1);
 }
 
-int32_t ohos_str_to_int(taihe::core::string_view pstr) {
-    return std::atoi(pstr.c_str());
+static void optionArg2(string str, Option const& obj1, Option const& obj2) {
+  parseOption(obj1);
+  parseOption(obj2);
 }
 
-TH_EXPORT_CPP_API_split(ohos_split_str)
-TH_EXPORT_CPP_API_to_i32(ohos_str_to_int)
-TH_EXPORT_CPP_API_from_i32(ohos_int_to_str)
+static void optionArg3(string str, Option const& obj1, Option const& obj2, Option const& obj3) {
+  parseOption(obj1);
+  parseOption(obj2);
+  parseOption(obj3);
+}
+
+static void optionPrim(double num) {
+  double res = num;
+}
+
+TH_EXPORT_CPP_API_getNumberArg0(GetNumberArg0)
+TH_EXPORT_CPP_API_getNumberArg4(GetNumberArg4)
+
+TH_EXPORT_CPP_API_optionPrim(optionPrim)
+TH_EXPORT_CPP_API_optionArg1(optionArg1)
+TH_EXPORT_CPP_API_optionArg2(optionArg2)
+TH_EXPORT_CPP_API_optionArg3(optionArg3)
+
+

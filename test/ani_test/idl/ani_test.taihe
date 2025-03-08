@@ -1,12 +1,12 @@
-function concat(a: String, b: String): String;
-struct StringPair {
-    _0: String;
-    _1: String;
+struct Option {
+    src: String;
+    dest: f64;
+    files: Array<String>;
 }
-function split(a: String, n: i32): StringPair;
-function to_i32(a: String): i32;
-function from_i32(a: i32): String;
+function optionPrim(num: f64): void;
+function optionArg1(str: String, op1: Option): void;
+function optionArg2(str: String, op1: Option, op2: Option): void;
+function optionArg3(str: String, op1: Option, op2: Option, op3: Option): void;
 
-function input(): String;
-function print(a: String): void;
-function println(a: String): void;
+function getNumberArg0(): i32;
+function getNumberArg4(x: i32, y: i32, z: i32, w: i32): i32;
