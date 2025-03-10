@@ -109,7 +109,22 @@ BIGINT = BigIntType()
 
 # Builtin Types map
 BUILTIN_TYPES: dict[str, Type] = {
-    ty.name: ty for ty in [BOOL, I8, I16, I32, I64, U8, U16, U32, U64, F32, F64, STRING, BIGINT]
+    ty.name: ty
+    for ty in [
+        BOOL,
+        I8,
+        I16,
+        I32,
+        I64,
+        U8,
+        U16,
+        U32,
+        U64,
+        F32,
+        F64,
+        STRING,
+        BIGINT,
+    ]
 }
 
 
