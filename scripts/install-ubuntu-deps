@@ -1,5 +1,8 @@
 #!/bin/bash
 
+set -eu
+set -o pipefail
+
 # Global variables
 LOGFILE="/var/log/mirror-update.log"
 SOURCES_LIST="/etc/apt/sources.list"
@@ -186,25 +189,31 @@ main_update_apt_mirror() {
 
 main_install_packages() {
     apt update
-    apt install --yes python3 pip python3-poetry clang antlr4
+    apt install --yes python3 pip virtualenv clang antlr4
 }
 
 main() {
     main_update_apt_mirror
     main_install_packages
+
     update_pip_mirror
 
+    log "INFO" "Setting up venv"
+    virtualenv compiler/.venv
+    source compiler/.venv/bin/activate
+
     log "INFO" "Setting up poetry"
+    pip install poetry
     poetry config virtualenvs.in-project true
     (cd compiler && poetry install)
 
     log "INFO" "Generating antlr4 grammar"
-    source compiler/.venv/bin/activate
     (cd compiler && ./generate-grammar)
 
     log "INFO" "Completed!"
     echo "Hint: run the following command to begin:"
-    echo "./compiler/run-test test/string"
+    echo "  source ./compiler/.venv/bin/activate"
+    echo "  ./compiler/run-test test/string"
 }
 
 # Set up trap for cleanup

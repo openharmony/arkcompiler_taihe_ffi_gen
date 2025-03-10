@@ -39,6 +39,6 @@ int main() {
 
 ## 加入 Taihe 的开发
 
-Ubuntu 环境：运行 `./scripts/install-ubundu-deps` 来一键安装环境
+Ubuntu 环境：运行 `./scripts/install-ubuntu-deps` 来一键安装环境
 
 开发和使用：参见 [文档索引](./docs/README.md)
