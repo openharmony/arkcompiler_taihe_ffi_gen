@@ -82,7 +82,7 @@ class StringType(BuiltinType):
 
 @dataclass(frozen=True, repr=False)
 class BigIntType(BuiltinType):
-    name: str = "String"
+    name: str = "BigInt"
 
     @override
     def _accept(self, v: "TypeVisitor") -> Any:
@@ -105,10 +105,11 @@ U32 = ScalarType("u32", 32, is_signed=False)
 U64 = ScalarType("u64", 64, is_signed=False)
 
 STRING = StringType()
+BIGINT = BigIntType()
 
 # Builtin Types map
 BUILTIN_TYPES: dict[str, Type] = {
-    ty.name: ty for ty in [BOOL, I8, I16, I32, I64, U8, U16, U32, U64, F32, F64, STRING]
+    ty.name: ty for ty in [BOOL, I8, I16, I32, I64, U8, U16, U32, U64, F32, F64, STRING, BIGINT]
 }
 
 
