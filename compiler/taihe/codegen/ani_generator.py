@@ -557,7 +557,7 @@ class SpecialTypeANIInfo(AbstractAnalysis[StringType], AbstractTypeANIInfo):
     ):
         prx_result = prx_results.pop(0)
         target.write(
-            f"{' ' * offset}let {prx_result}: {self.prx_type_as_param[0]} = {sts_value};\n"
+            f"{' ' * offset}let {prx_result}: {self.prx_type_as_owner} = {sts_value};\n"
         )
 
     @override
@@ -685,9 +685,22 @@ class ArrayTypeANIInfo(AbstractAnalysis[ArrayType], AbstractTypeANIInfo):
         prx_results: list[str],
     ):
         prx_result = prx_results.pop(0)
-        target.write(
-            f"{' ' * offset}let {prx_result}: {self.prx_type_as_param[0]} = {sts_value};\n"
-        )
+        val_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
+        if val_ty_ani_info.prx_type_as_owner == val_ty_ani_info.sts_type:
+            target.write(
+                f"{' ' * offset}let {prx_result}: {val_ty_ani_info.prx_type_as_owner}[] = {sts_value};\n"
+            )
+        else:
+            target.write(
+                f"{' ' * offset}let {prx_result}: {val_ty_ani_info.prx_type_as_owner}[] = new {val_ty_ani_info.prx_type_as_owner}[{sts_value}.length];\n"
+                f"{' ' * offset}for (let i = 0; i < {sts_value}.length; i++) {{\n"
+            )
+            val_ty_ani_info.return_from_sts_to_prx(
+                target, offset + 4, f"{sts_value}[i]", "item"
+            )
+            target.write(
+                f"{' ' * offset}    {prx_result}[i] = item;\n" f"{' ' * offset}}}\n"
+            )
 
 
 class BoxTypeANIInfo(AbstractAnalysis[BoxType], AbstractTypeANIInfo):
@@ -730,10 +743,11 @@ class VectorTypeANIInfo(AbstractAnalysis[VectorType], AbstractTypeANIInfo):
         val_ty_ani_info.array_from_ani_to_cpp(
             target, offset, env, size, ani_value, buffer
         )
+        i = "_i"
         target.write(
             f"{' ' * offset}{cpp_info.as_owner} {cpp_result}({size});\n"
-            f"{' ' * offset}for (int _i = 0; _i < {size}; _i++) {{\n"
-            f"{' ' * offset}    {cpp_result}.push_back(std::move({buffer}[_i]));\n"
+            f"{' ' * offset}for (int {i} = 0; {i} < {size}; {i}++) {{\n"
+            f"{' ' * offset}    {cpp_result}.emplace_back(std::move({buffer}[{i}]));\n"
             f"{' ' * offset}}}\n"
             f"{' ' * offset}free({buffer});\n"
         )
@@ -746,17 +760,84 @@ class VectorTypeANIInfo(AbstractAnalysis[VectorType], AbstractTypeANIInfo):
         sts_value: str,
         prx_results: list[str],
     ):
-        val_ty_ani_info = TypeANIInfo.get(self.am, self.t.val_ty)
         prx_result = prx_results.pop(0)
+        val_ty_ani_info = TypeANIInfo.get(self.am, self.t.val_ty)
         target.write(
-            f"{' ' * offset}let {prx_result}: {self.prx_type_as_param[0]} = new {val_ty_ani_info.prx_type_as_owner}[{sts_value}.length];\n"
-            f"{' ' * offset}for (let i = 0; i < {sts_value}.length; i++) {{ {prx_result}[i] = {sts_value}[i]; }}\n"
+            f"{' ' * offset}let {prx_result}: {val_ty_ani_info.prx_type_as_owner}[] = new {val_ty_ani_info.prx_type_as_owner}[{sts_value}.length];\n"
+            f"{' ' * offset}for (let i = 0; i < {sts_value}.length; i++) {{\n"
+        )
+        val_ty_ani_info.return_from_sts_to_prx(
+            target, offset + 4, f"{sts_value}[i]", "val"
+        )
+        target.write(
+            f"{' ' * offset}    {prx_result}[i] = val;\n" f"{' ' * offset}}}\n"
         )
 
 
 class MapTypeANIInfo(AbstractAnalysis[MapType], AbstractTypeANIInfo):
     def __init__(self, am: AnalysisManager, t: MapType) -> None:
-        pass
+        val_ty_ani_info = TypeANIInfo.get(am, t.val_ty)
+        self.sts_type = f"Array<{val_ty_ani_info.sts_type}>"
+        self.prx_type_as_param = [f"({val_ty_ani_info.sts_type})[]"]
+        self.prx_type_as_owner = f"({val_ty_ani_info.sts_type})[]"
+        self.ani_type_as_param = [val_ty_ani_info.ani_type_as_array]
+        self.ani_type_as_owner = val_ty_ani_info.ani_type_as_array
+        self.ani_type_as_array = "ani_array_ref"
+        self.am = am
+        self.t = t
+
+    @override
+    def pass_from_ani_to_cpp(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        ani_values: list[str],
+        cpp_result: str,
+    ):
+        cpp_info = TypeCppInfo.get(self.am, self.t)
+        ani_value = ani_values.pop(0)
+        size = f"{cpp_result}_size"
+        buffer = f"{cpp_result}_buffer"
+        cpp_ty_ani_info = TypeCppInfo.get(self.am, self.t.val_ty)
+        target.write(
+            f"{' ' * offset}size_t {size};\n"
+            f"{' ' * offset}{env}->Array_GetLength({ani_value}, &{size});\n"
+            f"{' ' * offset}{cpp_ty_ani_info.as_owner}* {buffer} = ({cpp_ty_ani_info.as_owner}*)malloc({size} * sizeof({cpp_ty_ani_info.as_owner}));\n"
+        )
+        val_ty_ani_info = TypeANIInfo.get(self.am, self.t.val_ty)
+        val_ty_ani_info.array_from_ani_to_cpp(
+            target, offset, env, size, ani_value, buffer
+        )
+        i = "_i"
+        target.write(
+            f"{' ' * offset}{cpp_info.as_owner} {cpp_result}({size});\n"
+            f"{' ' * offset}for (int {i} = 0; {i} < {size}; {i}++) {{\n"
+            f"{' ' * offset}    {cpp_result}.emplace_back(std::move({buffer}[{i}]));\n"
+            f"{' ' * offset}}}\n"
+            f"{' ' * offset}free({buffer});\n"
+        )
+
+    @override
+    def pass_from_sts_to_prx(
+        self,
+        target: OutputBuffer,
+        offset: int,
+        sts_value: str,
+        prx_results: list[str],
+    ):
+        prx_result = prx_results.pop(0)
+        val_ty_ani_info = TypeANIInfo.get(self.am, self.t.val_ty)
+        target.write(
+            f"{' ' * offset}let {prx_result}: {val_ty_ani_info.prx_type_as_owner}[] = new {val_ty_ani_info.prx_type_as_owner}[{sts_value}.length];\n"
+            f"{' ' * offset}for (let i = 0; i < {sts_value}.length; i++) {{\n"
+        )
+        val_ty_ani_info.return_from_sts_to_prx(
+            target, offset + 4, f"{sts_value}[i]", "val"
+        )
+        target.write(
+            f"{' ' * offset}    {prx_result}[i] = val;\n" f"{' ' * offset}}}\n"
+        )
 
 
 class SetTypeANIInfo(AbstractAnalysis[SetType], AbstractTypeANIInfo):
