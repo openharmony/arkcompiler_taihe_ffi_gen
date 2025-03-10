@@ -416,6 +416,7 @@ class NapiCodeGenerator:
         pkg_napi_target.include("napi.convert.hpp")
         pkg_napi_target.include(pkg_cpp_info.header)
 
+        self.gen_func_decl(pkg_napi_target, pkg)
         desc = []
         for iface in pkg.interfaces:
             self.gen_iface(pkg_napi_target, iface)
@@ -434,6 +435,28 @@ class NapiCodeGenerator:
 
         desc_str = ", \n".join(desc)
         self.gen_module_init(desc_str, pkg_napi_target)
+
+    def gen_func_decl(self, pkg_napi_target: COutputBuffer, pkg: PackageDecl):
+        for iface in pkg.interfaces:
+            iface_cpp_info = IfaceCppInfo.get(self.am, iface)
+            pkg_napi_target.write(
+                f"inline {iface_cpp_info.as_owner} get_{iface.name}(napi_env env, napi_value js_obj);\n"
+                f"inline napi_value create_{iface.name}(napi_env env, {iface_cpp_info.as_owner} const& c_obj);\n"
+                f"static napi_value as_{iface.name}(napi_env env, napi_callback_info info);\n"
+                f"static napi_value impl_{iface.name}(napi_env env, napi_callback_info info);\n"
+            )
+        for struct in pkg.structs:
+            struct_cpp_info = StructCppInfo.get(self.am, struct)
+            pkg_napi_target.write(
+                f"inline {struct_cpp_info.as_owner} get_{struct.name}(napi_env env, napi_value js_obj);\n"
+                f"inline napi_value create_{struct.name}(napi_env env, {struct_cpp_info.as_owner} const& c_obj);\n"
+            )
+        for enum in pkg.enums:
+            enum_cpp_info = EnumCppInfo.get(self.am, enum)
+            pkg_napi_target.write(
+                f"inline {enum_cpp_info.as_owner} get_{enum.name}(napi_env env, napi_value js_obj);\n"
+                f"inline napi_value create_{enum.name}(napi_env env, {enum_cpp_info.as_owner} const& c_obj);\n"
+            )
 
     def gen_iface(
         self,
@@ -480,7 +503,7 @@ class NapiCodeGenerator:
         )
 
         pkg_napi_target.write(
-            f"inline napi_value create_{iface.name}(napi_env env, {iface_cpp_info.as_owner} c_obj) {{\n"
+            f"inline napi_value create_{iface.name}(napi_env env, {iface_cpp_info.as_owner} const& c_obj) {{\n"
             f"    {iface_cpp_info.as_owner}* value_ptr = new {iface_cpp_info.as_owner}(std::move(c_obj));\n"
             f"    napi_value js_obj = nullptr;\n"
             f"    napi_create_object(env, &js_obj);\n"
@@ -534,7 +557,7 @@ class NapiCodeGenerator:
             f"    napi_unwrap(env, args[0], reinterpret_cast<void**>(&buffer));\n"
             f"    napi_value result = nullptr;\n"
             f"    if ({iface_cpp_info.as_param} c_obj = {iface_cpp_info.as_param}(buffer->holder)) {{\n"
-            f"        result = create_{iface.name}(env, c_obj);\n"
+            f"        result = create_{iface.name}(env, std::move(c_obj));\n"
             f"        return result;\n"
             f"    }} else {{\n"
             f"        napi_get_undefined(env, &result);\n"
@@ -784,7 +807,7 @@ class NapiCodeGenerator:
         )
 
         pkg_napi_target.write(
-            f"inline napi_value create_{enum.name}(napi_env env, {enum_cpp_info.as_owner} c_obj) {{\n"
+            f"inline napi_value create_{enum.name}(napi_env env, {enum_cpp_info.as_owner} const& c_obj) {{\n"
             f"    napi_value js_obj;\n"
             f"    napi_create_object(env, &js_obj);\n"
             f"    napi_value js_tag;\n"
