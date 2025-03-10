@@ -18,7 +18,7 @@ TH_INLINE struct TStringData *to_heap(struct TString tstr) {
 
 char *tstr_initialize(struct TString *tstr_ptr, uint32_t capacity) {
   size_t bytes_required = sizeof(struct TStringData) + sizeof(char) * capacity;
-  struct TStringData *sh = malloc(bytes_required);
+  struct TStringData *sh = (struct TStringData *)malloc(bytes_required);
   tref_set(&sh->count, 1);
   tstr_ptr->flags = 0;
   tstr_ptr->ptr = sh->buffer;
