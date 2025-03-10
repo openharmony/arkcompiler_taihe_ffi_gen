@@ -45,6 +45,7 @@ from taihe.semantics.declarations import (
 )
 from taihe.semantics.types import (
     ArrayType,
+    BigIntType,
     BoxType,
     BuiltinType,
     CallbackType,
@@ -102,14 +103,17 @@ class TypeVisitor(Generic[T]):
 
     ### Built-in types ###
 
-    def visit_builtin_simple_type(self, t: BuiltinType) -> T:
+    def visit_builtin_type(self, t: BuiltinType) -> T:
         return self.visit_type(t)
 
     def visit_scalar_type(self, t: ScalarType) -> T:
-        return self.visit_builtin_simple_type(t)
+        return self.visit_builtin_type(t)
 
     def visit_string_type(self, t: StringType) -> T:
-        return self.visit_builtin_simple_type(t)
+        return self.visit_builtin_type(t)
+
+    def visit_bigint_type(self, t: BigIntType) -> T:
+        return self.visit_builtin_type(t)
 
     ### UserTypes ###
 
