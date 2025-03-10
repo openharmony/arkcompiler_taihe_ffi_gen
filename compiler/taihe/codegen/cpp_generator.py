@@ -41,7 +41,7 @@ from taihe.semantics.types import (
     MapType,
     ScalarType,
     SetType,
-    SpecialType,
+    StringType,
     StructType,
     Type,
     VectorType,
@@ -184,8 +184,8 @@ class ScalarTypeCppInfo(AbstractAnalysis[ScalarType], AbstractTypeCppInfo):
         self.as_owner = res
 
 
-class SpecialTypeCppInfo(AbstractAnalysis[SpecialType], AbstractTypeCppInfo):
-    def __init__(self, am: AnalysisManager, t: SpecialType):
+class StringTypeCppInfo(AbstractAnalysis[StringType], AbstractTypeCppInfo):
+    def __init__(self, am: AnalysisManager, t: StringType):
         if t != STRING:
             raise ValueError
         self.decl_headers = ["core/string.hpp"]
@@ -310,8 +310,8 @@ class TypeCppInfo(TypeVisitor[AbstractTypeCppInfo]):
         return ScalarTypeCppInfo.get(self.am, t)
 
     @override
-    def visit_special_type(self, t: SpecialType) -> AbstractTypeCppInfo:
-        return SpecialTypeCppInfo.get(self.am, t)
+    def visit_string_type(self, t: StringType) -> AbstractTypeCppInfo:
+        return StringTypeCppInfo.get(self.am, t)
 
     @override
     def visit_array_type(self, t: ArrayType) -> AbstractTypeCppInfo:

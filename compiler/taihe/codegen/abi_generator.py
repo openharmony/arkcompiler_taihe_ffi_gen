@@ -34,7 +34,7 @@ from taihe.semantics.types import (
     MapType,
     ScalarType,
     SetType,
-    SpecialType,
+    StringType,
     StructType,
     Type,
     VectorType,
@@ -210,8 +210,8 @@ class ScalarTypeABIInfo(AbstractAnalysis[ScalarType], AbstractTypeABIInfo):
         self.as_owner = res
 
 
-class SpecialTypeABIInfo(AbstractAnalysis[SpecialType], AbstractTypeABIInfo):
-    def __init__(self, am: AnalysisManager, t: SpecialType) -> None:
+class StringTypeABIInfo(AbstractAnalysis[StringType], AbstractTypeABIInfo):
+    def __init__(self, am: AnalysisManager, t: StringType) -> None:
         if t != STRING:
             raise ValueError
         self.decl_headers = ["taihe/string.abi.h"]
@@ -294,8 +294,8 @@ class TypeABIInfo(TypeVisitor[AbstractTypeABIInfo]):
         return ScalarTypeABIInfo.get(self.am, t)
 
     @override
-    def visit_special_type(self, t: SpecialType) -> AbstractTypeABIInfo:
-        return SpecialTypeABIInfo.get(self.am, t)
+    def visit_string_type(self, t: StringType) -> AbstractTypeABIInfo:
+        return StringTypeABIInfo.get(self.am, t)
 
     @override
     def visit_array_type(self, t: ArrayType) -> AbstractTypeABIInfo:

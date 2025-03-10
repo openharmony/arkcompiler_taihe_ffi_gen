@@ -2,7 +2,6 @@
 
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
-from enum import Enum
 from typing import TYPE_CHECKING, Any, Optional, Protocol
 
 from typing_extensions import override
@@ -44,16 +43,6 @@ class Type(metaclass=ABCMeta):
 ##################
 
 
-class BuiltinTypeKind(Enum):
-    VOID = 0
-
-    BOOL = 1
-    INTEGER = 2
-    FLOAT = 3
-
-    STRING = 0x10
-
-
 @dataclass(frozen=True, repr=False)
 class BuiltinType(Type, metaclass=ABCMeta):
     """Represents built-in types, including scalars and strings.
@@ -64,7 +53,6 @@ class BuiltinType(Type, metaclass=ABCMeta):
     """
 
     name: str
-    kind: BuiltinTypeKind
 
     @property
     @override
@@ -84,28 +72,39 @@ class ScalarType(BuiltinType):
 
 
 @dataclass(frozen=True, repr=False)
-class SpecialType(BuiltinType):
+class StringType(BuiltinType):
+    name: str = "String"
+
     @override
     def _accept(self, v: "TypeVisitor") -> Any:
-        return v.visit_special_type(self)
+        return v.visit_string_type(self)
 
 
-BOOL = ScalarType("bool", BuiltinTypeKind.BOOL, 8, is_signed=False)
+@dataclass(frozen=True, repr=False)
+class BigIntType(BuiltinType):
+    name: str = "String"
 
-F32 = ScalarType("f32", BuiltinTypeKind.FLOAT, 32, is_signed=True, is_float=True)
-F64 = ScalarType("f64", BuiltinTypeKind.FLOAT, 64, is_signed=True, is_float=True)
+    @override
+    def _accept(self, v: "TypeVisitor") -> Any:
+        return v.visit_bigint_type(self)
 
-I8 = ScalarType("i8", BuiltinTypeKind.INTEGER, 8, is_signed=True)
-I16 = ScalarType("i16", BuiltinTypeKind.INTEGER, 16, is_signed=True)
-I32 = ScalarType("i32", BuiltinTypeKind.INTEGER, 32, is_signed=True)
-I64 = ScalarType("i64", BuiltinTypeKind.INTEGER, 64, is_signed=True)
 
-U8 = ScalarType("u8", BuiltinTypeKind.INTEGER, 8, is_signed=False)
-U16 = ScalarType("u16", BuiltinTypeKind.INTEGER, 16, is_signed=False)
-U32 = ScalarType("u32", BuiltinTypeKind.INTEGER, 32, is_signed=False)
-U64 = ScalarType("u64", BuiltinTypeKind.INTEGER, 64, is_signed=False)
+BOOL = ScalarType("bool", 8, is_signed=False)
 
-STRING = SpecialType("String", BuiltinTypeKind.STRING)
+F32 = ScalarType("f32", 32, is_signed=True, is_float=True)
+F64 = ScalarType("f64", 64, is_signed=True, is_float=True)
+
+I8 = ScalarType("i8", 8, is_signed=True)
+I16 = ScalarType("i16", 16, is_signed=True)
+I32 = ScalarType("i32", 32, is_signed=True)
+I64 = ScalarType("i64", 64, is_signed=True)
+
+U8 = ScalarType("u8", 8, is_signed=False)
+U16 = ScalarType("u16", 16, is_signed=False)
+U32 = ScalarType("u32", 32, is_signed=False)
+U64 = ScalarType("u64", 64, is_signed=False)
+
+STRING = StringType()
 
 # Builtin Types map
 BUILTIN_TYPES: dict[str, Type] = {
