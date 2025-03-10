@@ -1,13 +1,10 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta
 
 from typing_extensions import override
 
 from taihe.codegen.cpp_generator import (
-    EnumCppInfo,
     GlobFuncCppInfo,
-    IfaceCppInfo,
     PackageCppInfo,
-    StructCppInfo,
     TypeCppInfo,
 )
 from taihe.codegen.mangle import DeclKind, encode
@@ -38,7 +35,7 @@ from taihe.semantics.types import (
     MapType,
     ScalarType,
     SetType,
-    SpecialType,
+    StringType,
     StructType,
     Type,
     VectorType,
@@ -64,7 +61,7 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
         assert p
         segments = [*p.segments, f.name]
         self.mangled_name = encode(segments, DeclKind.ANI_FUNC)
-        self.prx_name = f"__proxy_{f.name}"
+        self.prx_name = f"taihe_ani_proxy_{f.name}"
         self.sts_name = f.name
 
 
@@ -115,8 +112,8 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
         target: COutputBuffer,
         offset: int,
         env: str,
-        value: str,
-        result: str,
+        ani_value: str,
+        cpp_result: str,
     ):
         raise NotImplementedError
 
@@ -125,8 +122,8 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
         target: COutputBuffer,
         offset: int,
         env: str,
-        value: str,
-        result: str,
+        cpp_value: str,
+        ani_result: str,
     ):
         raise NotImplementedError
 
@@ -135,8 +132,8 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
         target: COutputBuffer,
         offset: int,
         env: str,
-        values: list[str],
-        result: str,
+        ani_values: list[str],
+        cpp_result: str,
     ):
         raise NotImplementedError
 
@@ -145,8 +142,8 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
         target: COutputBuffer,
         offset: int,
         env: str,
-        value: str,
-        results: list[str],
+        cpp_value: str,
+        ani_results: list[str],
     ):
         raise NotImplementedError
 
@@ -158,8 +155,8 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
         self,
         target: OutputBuffer,
         offset: int,
-        value: str,
-        result: str,
+        sts_value: str,
+        prx_result: str,
     ):
         raise NotImplementedError
 
@@ -167,8 +164,8 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
         self,
         target: OutputBuffer,
         offset: int,
-        value: str,
-        result: str,
+        prx_value: str,
+        sts_result: str,
     ):
         raise NotImplementedError
 
@@ -176,8 +173,8 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
         self,
         target: OutputBuffer,
         offset: int,
-        value: str,
-        results: list[str],
+        sts_value: str,
+        prx_results: list[str],
     ):
         raise NotImplementedError
 
@@ -185,8 +182,8 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
         self,
         target: OutputBuffer,
         offset: int,
-        values: list[str],
-        result: str,
+        prx_values: list[str],
+        sts_result: str,
     ):
         raise NotImplementedError
 
@@ -198,8 +195,8 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
         offset: int,
         env: str,
         size: str,
-        value: str,
-        result: str,
+        cpp_array_value: str,
+        ani_array_result: str,
     ):
         pass
 
@@ -209,8 +206,8 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
         offset: int,
         env: str,
         size: str,
-        value: str,
-        buffer: str,
+        ani_array_value: str,
+        cpp_array_buffer: str,
     ):
         pass
 
@@ -231,48 +228,48 @@ class StructTypeANIInfo(AbstractAnalysis[StructType], AbstractTypeANIInfo):
             self.prx_type_as_param.extend(type_ani_info.prx_type_as_param)
             self.ani_type_as_param.extend(type_ani_info.ani_type_as_param)
 
+    @override
     def pass_from_ani_to_cpp(
         self,
         target: COutputBuffer,
         offset: int,
         env: str,
-        values: list[str],
-        result: str,
+        ani_values: list[str],
+        cpp_result: str,
     ):
-        partial_results = []
+        moved_partial_results = []
         for i, field in enumerate(self.t.ty_decl.fields):
             type_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
-            partial_result = f"{result}_{i}"
+            partial_result = f"{cpp_result}_{i}"
             type_ani_info.pass_from_ani_to_cpp(
                 target,
                 offset,
                 env,
-                values,
+                ani_values,
                 partial_result,
             )
-            partial_results.append(partial_result)
-        moved_partial_results = ", ".join(
-            f"std::move({partial_result})" for partial_result in partial_results
-        )
+            moved_partial_results.append(f"std::move({partial_result})")
+        moved_partial_results_str = ", ".join(moved_partial_results)
         type_cpp_info = TypeCppInfo.get(self.am, self.t)
         target.write(
-            f"{' ' * offset}{type_cpp_info.as_owner} {result} = {{{moved_partial_results}}};\n"
+            f"{' ' * offset}{type_cpp_info.as_owner} {cpp_result} = {{{moved_partial_results_str}}};\n"
         )
 
+    @override
     def pass_from_sts_to_prx(
         self,
         target: OutputBuffer,
         offset: int,
-        value: str,
-        results: list[str],
+        sts_value: str,
+        prx_results: list[str],
     ):
         for field in self.t.ty_decl.fields:
             type_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
             type_ani_info.pass_from_sts_to_prx(
                 target,
                 offset,
-                f"{value}.{field.name}",
-                results,
+                f"{sts_value}.{field.name}",
+                prx_results,
             )
 
 
@@ -312,119 +309,145 @@ class ScalarTypeANIInfo(AbstractAnalysis[ScalarType], AbstractTypeANIInfo):
         self.ani_type_as_array = f"ani_array_{sts_type}"
         self.cpp_info = TypeCppInfo.get(am, t)
 
+    @override
     def pass_from_ani_to_cpp(
         self,
         target: COutputBuffer,
         offset: int,
         env: str,
-        values: list[str],
-        result: str,
+        ani_values: list[str],
+        cpp_result: str,
     ):
-        value = values.pop(0)
-        target.write(f"{' ' * offset}{self.cpp_info.as_param} {result} = {value};\n")
+        ani_value = ani_values.pop(0)
+        target.write(
+            f"{' ' * offset}{self.cpp_info.as_param} {cpp_result} = {ani_value};\n"
+        )
 
+    @override
     def pass_from_cpp_to_ani(
         self,
         target: COutputBuffer,
         offset: int,
         env: str,
-        value: str,
-        results: list[str],
+        cpp_value: str,
+        ani_results: list[str],
     ):
-        result = results.pop(0)
-        target.write(f"{' ' * offset}{self.ani_type_as_param} {result} = {value};\n")
+        ani_result = ani_results.pop(0)
+        target.write(
+            f"{' ' * offset}{self.ani_type_as_param} {ani_result} = {cpp_value};\n"
+        )
 
+    @override
     def return_from_ani_to_cpp(
         self,
         target: COutputBuffer,
         offset: int,
         env: str,
-        value: str,
-        result: str,
+        ani_value: str,
+        cpp_result: str,
     ):
-        target.write(f"{' ' * offset}{self.ani_type_as_owner} {result} = {value};\n")
+        target.write(
+            f"{' ' * offset}{self.ani_type_as_owner} {cpp_result} = {ani_value};\n"
+        )
 
+    @override
     def return_from_cpp_to_ani(
         self,
         target: COutputBuffer,
         offset: int,
         env: str,
-        value: str,
-        result: str,
+        cpp_value: str,
+        ani_result: str,
     ):
-        target.write(f"{' ' * offset}{self.cpp_info.as_owner} {result} = {value};\n")
+        target.write(
+            f"{' ' * offset}{self.cpp_info.as_owner} {ani_result} = {cpp_value};\n"
+        )
 
+    @override
     def pass_from_prx_to_sts(
         self,
         target: OutputBuffer,
         offset: int,
-        values: list[str],
-        result: str,
+        prx_values: list[str],
+        sts_result: str,
     ):
-        value = values.pop(0)
-        target.write(f"{' ' * offset}let {result}: {self.sts_type} = {value};\n")
+        prx_value = prx_values.pop(0)
+        target.write(
+            f"{' ' * offset}let {sts_result}: {self.sts_type} = {prx_value};\n"
+        )
 
+    @override
     def pass_from_sts_to_prx(
         self,
         target: OutputBuffer,
         offset: int,
-        value: str,
-        results: list[str],
+        sts_value: str,
+        prx_results: list[str],
     ):
-        result = results.pop(0)
-        target.write(f"{' ' * offset}let {result}: {self.sts_type} = {value};\n")
+        prx_result = prx_results.pop(0)
+        target.write(
+            f"{' ' * offset}let {prx_result}: {self.sts_type} = {sts_value};\n"
+        )
 
+    @override
     def return_from_prx_to_sts(
         self,
         target: OutputBuffer,
         offset: int,
-        value: str,
-        result: str,
+        prx_value: str,
+        sts_result: str,
     ):
-        target.write(f"{' ' * offset}let {result}: {self.sts_type} = {value};\n")
+        target.write(
+            f"{' ' * offset}let {sts_result}: {self.sts_type} = {prx_value};\n"
+        )
 
+    @override
     def return_from_sts_to_prx(
         self,
         target: OutputBuffer,
         offset: int,
-        value: str,
-        result: str,
+        sts_value: str,
+        prx_result: str,
     ):
-        target.write(f"{' ' * offset}let {result}: {self.sts_type} = {value};\n")
+        target.write(
+            f"{' ' * offset}let {prx_result}: {self.sts_type} = {sts_value};\n"
+        )
 
+    @override
     def array_from_ani_to_cpp(
         self,
         target: COutputBuffer,
         offset: int,
         env: str,
         size: str,
-        value: str,
-        buffer: str,
+        ani_array_value: str,
+        cpp_array_buffer: str,
     ):
         suffix = self.sts_type[0].upper() + self.sts_type[1:]
         target.write(
-            f"{' ' * offset}{env}->Array_GetRegion_{suffix}({value}, 0, {size}, {buffer});\n"
+            f"{' ' * offset}{env}->Array_GetRegion_{suffix}({ani_array_value}, 0, {size}, {cpp_array_buffer});\n"
         )
 
+    @override
     def array_from_cpp_to_ani(
         self,
         target: COutputBuffer,
         offset: int,
         env: str,
         size: str,
-        value: str,
-        result: str,
+        cpp_array_value: str,
+        ani_array_result: str,
     ):
         suffix = self.sts_type[0].upper() + self.sts_type[1:]
         target.write(
-            f"{' ' * offset}{self.ani_type_as_array} {result};\n"
-            f"{' ' * offset}{env}->Array_New_{suffix}({size}, &{result});\n"
-            f"{' ' * offset}{env}->Array_SetRegion_{suffix}({result}, 0, {size}, {value});\n"
+            f"{' ' * offset}{self.ani_type_as_array} {ani_array_result};\n"
+            f"{' ' * offset}{env}->Array_New_{suffix}({size}, &{ani_array_result});\n"
+            f"{' ' * offset}{env}->Array_SetRegion_{suffix}({ani_array_result}, 0, {size}, {cpp_array_value});\n"
         )
 
 
-class SpecialTypeANIInfo(AbstractAnalysis[SpecialType], AbstractTypeANIInfo):
-    def __init__(self, am: AnalysisManager, t: SpecialType):
+class SpecialTypeANIInfo(AbstractAnalysis[StringType], AbstractTypeANIInfo):
+    def __init__(self, am: AnalysisManager, t: StringType):
         if t != STRING:
             raise ValueError
         self.sts_type = "string"
@@ -435,156 +458,181 @@ class SpecialTypeANIInfo(AbstractAnalysis[SpecialType], AbstractTypeANIInfo):
         self.ani_type_as_array = "ani_array_ref"
         self.cpp_info = TypeCppInfo.get(am, t)
 
+    @override
     def pass_from_ani_to_cpp(
         self,
         target: COutputBuffer,
         offset: int,
         env: str,
-        values: list[str],
-        result: str,
+        ani_values: list[str],
+        cpp_result: str,
     ):
-        value = values.pop(0)
-        length = f"{result}_len"
-        tstr = f"{result}_tstr"
-        buffer = f"{result}_buf"
+        ani_value = ani_values.pop(0)
+        length = f"{cpp_result}_len"
+        tstr = f"{cpp_result}_tstr"
+        buffer = f"{cpp_result}_buf"
         target.write(
             f"{' ' * offset}ani_size {length};\n"
-            f"{' ' * offset}{env}->String_GetUTF8Size({value}, &{length});\n"
+            f"{' ' * offset}{env}->String_GetUTF8Size({ani_value}, &{length});\n"
             f"{' ' * offset}TString {tstr};\n"
             f"{' ' * offset}char* {buffer} = tstr_initialize(&{tstr}, {length} + 1);\n"
-            f"{' ' * offset}{env}->String_GetUTF8({value}, {buffer}, {length} + 1, &{length});\n"
+            f"{' ' * offset}{env}->String_GetUTF8({ani_value}, {buffer}, {length} + 1, &{length});\n"
             f"{' ' * offset}{buffer}[{length}] = '\\0';\n"
             f"{' ' * offset}{tstr}.length = {length};\n"
-            f"{' ' * offset}taihe::core::string {result} = taihe::core::string({tstr});\n"
+            f"{' ' * offset}taihe::core::string {cpp_result} = taihe::core::string({tstr});\n"
         )
 
+    @override
     def pass_from_cpp_to_ani(
         self,
         target: COutputBuffer,
         offset: int,
         env: str,
-        value: str,
-        results: list[str],
+        cpp_value: str,
+        ani_results: list[str],
     ):
-        result = results.pop(0)
+        ani_result = ani_results.pop(0)
         target.write(
-            f"{' ' * offset}ani_string {result};\n"
-            f"{' ' * offset}{env}->String_NewUTF8({value}.c_str(), {value}.size(), &{result});\n"
+            f"{' ' * offset}ani_string {ani_result};\n"
+            f"{' ' * offset}{env}->String_NewUTF8({cpp_value}.c_str(), {cpp_value}.size(), &{ani_result});\n"
         )
 
+    @override
     def return_from_ani_to_cpp(
         self,
         target: COutputBuffer,
         offset: int,
         env: str,
-        value: str,
-        result: str,
+        ani_value: str,
+        cpp_result: str,
     ):
-        length = f"{result}_len"
-        tstr = f"{result}_tstr"
-        buffer = f"{result}_buf"
+        length = f"{cpp_result}_len"
+        tstr = f"{cpp_result}_tstr"
+        buffer = f"{cpp_result}_buf"
         target.write(
             f"{' ' * offset}ani_size {length};\n"
-            f"{' ' * offset}{env}->String_GetUTF8Size({value}, &{length});\n"
+            f"{' ' * offset}{env}->String_GetUTF8Size({ani_value}, &{length});\n"
             f"{' ' * offset}TString {tstr};\n"
             f"{' ' * offset}char* {buffer} = tstr_initialize(&{tstr}, {length} + 1);\n"
-            f"{' ' * offset}{env}->String_GetUTF8({value}, {buffer}, {length} + 1, &{length});\n"
+            f"{' ' * offset}{env}->String_GetUTF8({ani_value}, {buffer}, {length} + 1, &{length});\n"
             f"{' ' * offset}{buffer}[{length}] = '\\0';\n"
             f"{' ' * offset}{tstr}.length = {length};\n"
-            f"{' ' * offset}taihe::core::string {result} = taihe::core::string({tstr});\n"
+            f"{' ' * offset}taihe::core::string {cpp_result} = taihe::core::string({tstr});\n"
         )
 
+    @override
     def return_from_cpp_to_ani(
         self,
         target: COutputBuffer,
         offset: int,
         env: str,
-        value: str,
-        result: str,
+        cpp_value: str,
+        ani_result: str,
     ):
         target.write(
-            f"{' ' * offset}ani_string {result};\n"
-            f"{' ' * offset}{env}->String_NewUTF8({value}.c_str(), {value}.size(), &{result});\n"
+            f"{' ' * offset}ani_string {ani_result};\n"
+            f"{' ' * offset}{env}->String_NewUTF8({cpp_value}.c_str(), {cpp_value}.size(), &{ani_result});\n"
         )
 
+    @override
     def pass_from_prx_to_sts(
         self,
         target: OutputBuffer,
         offset: int,
-        values: list[str],
-        result: str,
+        prx_values: list[str],
+        sts_result: str,
     ):
-        value = values.pop(0)
-        target.write(f"{' ' * offset}let {result}: {self.sts_type} = {value};\n")
+        prx_value = prx_values.pop(0)
+        target.write(
+            f"{' ' * offset}let {sts_result}: {self.sts_type} = {prx_value};\n"
+        )
 
+    @override
     def pass_from_sts_to_prx(
         self,
         target: OutputBuffer,
         offset: int,
-        value: str,
-        results: list[str],
+        sts_value: str,
+        prx_results: list[str],
     ):
-        result = results.pop(0)
-        target.write(f"{' ' * offset}let {result}: {self.sts_type} = {value};\n")
+        prx_result = prx_results.pop(0)
+        target.write(
+            f"{' ' * offset}let {prx_result}: {self.prx_type_as_param[0]} = {sts_value};\n"
+        )
 
+    @override
     def return_from_prx_to_sts(
         self,
         target: OutputBuffer,
         offset: int,
-        value: str,
-        result: str,
+        prx_value: str,
+        sts_result: str,
     ):
-        target.write(f"{' ' * offset}let {result}: {self.sts_type} = {value};\n")
+        target.write(
+            f"{' ' * offset}let {sts_result}: {self.sts_type} = {prx_value};\n"
+        )
 
+    @override
     def return_from_sts_to_prx(
         self,
         target: OutputBuffer,
         offset: int,
-        value: str,
-        result: str,
+        sts_value: str,
+        prx_result: str,
     ):
-        target.write(f"{' ' * offset}let {result}: {self.sts_type} = {value};\n")
+        target.write(
+            f"{' ' * offset}let {prx_result}: {self.prx_type_as_owner} = {sts_value};\n"
+        )
 
+    @override
     def array_from_ani_to_cpp(
         self,
         target: COutputBuffer,
         offset: int,
         env: str,
         size: str,
-        value: str,
-        buffer: str,
+        ani_array_value: str,
+        cpp_array_buffer: str,
     ):
+        ani_value = "_str"
+        length = "_len"
+        tstr = "_tstr"
+        buffer = "_buf"
+        i = "_i"
         target.write(
-            f"{' ' * offset}for (size_t _i = 0; _i < {size}; _i++) {{\n"
-            f"{' ' * offset}    ani_string _str;\n"
-            f"{' ' * offset}    {env}->Array_Get_Ref({value}, _i, reinterpret_cast<ani_ref*>(&_str));\n"
-            f"{' ' * offset}    ani_size _size;\n"
-            f"{' ' * offset}    {env}->String_GetUTF8Size(_str, &_size);\n"
-            f"{' ' * offset}    TString _tstr;\n"
-            f"{' ' * offset}    char* _buf = tstr_initialize(&_tstr, _size + 1);\n"
-            f"{' ' * offset}    {env}->String_GetUTF8(_str, _buf, _size + 1, &_size);\n"
-            f"{' ' * offset}    _buf[_size] = '\\0';\n"
-            f"{' ' * offset}    _tstr.length = _size;\n"
-            f"{' ' * offset}    new (&{buffer}[_i]) taihe::core::string(_tstr);\n"
+            f"{' ' * offset}for (size_t {i} = 0; {i} < {size}; {i}++) {{\n"
+            f"{' ' * offset}    ani_string {ani_value};\n"
+            f"{' ' * offset}    {env}->Array_Get_Ref({ani_array_value}, {i}, reinterpret_cast<ani_ref*>(&{ani_value}));\n"
+            f"{' ' * offset}    ani_size {length};\n"
+            f"{' ' * offset}    {env}->String_GetUTF8Size({ani_value}, &{length});\n"
+            f"{' ' * offset}    TString {tstr};\n"
+            f"{' ' * offset}    char* {buffer} = tstr_initialize(&{tstr}, {length} + 1);\n"
+            f"{' ' * offset}    {env}->String_GetUTF8({ani_value}, {buffer}, {length} + 1, &{length});\n"
+            f"{' ' * offset}    {buffer}[{length}] = '\\0';\n"
+            f"{' ' * offset}    {tstr}.length = {length};\n"
+            f"{' ' * offset}    new (&{cpp_array_buffer}[{i}]) taihe::core::string({tstr});\n"
             f"{' ' * offset}}}\n"
         )
 
+    @override
     def array_from_cpp_to_ani(
         self,
         target: COutputBuffer,
         offset: int,
         env: str,
         size: str,
-        value: str,
-        result: str,
+        cpp_array_value: str,
+        ani_array_result: str,
     ):
+        ani_value = "_str"
+        i = "_i"
         target.write(
-            f"{' ' * offset}{self.ani_type_as_array} {result};\n"
-            f"{' ' * offset}{env}->Array_New_Ref({size}, &{result});\n"
-            f"{' ' * offset}for (size_t _i = 0; _i < {size}; _i++) {{\n"
-            f"{' ' * offset}    ani_string _str;\n"
-            f"{' ' * offset}    {env}->String_NewUTF8({value}[_i].c_str(), {value}[_i].size(), &_str);\n"
-            f"{' ' * offset}    {env}->Array_Set_Ref({result}, _i, _str);\n"
+            f"{' ' * offset}{self.ani_type_as_array} {ani_array_result};\n"
+            f"{' ' * offset}{env}->Array_New_Ref({size}, &{ani_array_result});\n"
+            f"{' ' * offset}for (size_t {i} = 0; {i} < {size}; {i}++) {{\n"
+            f"{' ' * offset}    ani_string {ani_value};\n"
+            f"{' ' * offset}    {env}->String_NewUTF8({cpp_array_value}[{i}].c_str(), {cpp_array_value}[{i}].size(), &{ani_value});\n"
+            f"{' ' * offset}    {env}->Array_Set_Ref({ani_array_result}, {i}, {ani_value});\n"
             f"{' ' * offset}}}\n"
         )
 
@@ -601,39 +649,44 @@ class ArrayTypeANIInfo(AbstractAnalysis[ArrayType], AbstractTypeANIInfo):
         self.am = am
         self.t = t
 
+    @override
     def pass_from_ani_to_cpp(
         self,
         target: COutputBuffer,
         offset: int,
         env: str,
-        values: list[str],
-        result: str,
+        ani_values: list[str],
+        cpp_result: str,
     ):
         cpp_info = TypeCppInfo.get(self.am, self.t)
-        value = values.pop(0)
-        size = f"{result}_size"
-        buffer = f"{result}_buffer"
-        cpp_ty_ani_info = TypeCppInfo.get(self.am, self.t.item_ty)
+        ani_value = ani_values.pop(0)
+        size = f"{cpp_result}_size"
+        buffer = f"{cpp_result}_buffer"
+        item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
         target.write(
             f"{' ' * offset}size_t {size};\n"
-            f"{' ' * offset}{env}->Array_GetLength({value}, &{size});\n"
-            f"{' ' * offset}{cpp_ty_ani_info.as_owner}* {buffer} = ({cpp_ty_ani_info.as_owner}*)malloc({size} * sizeof({cpp_ty_ani_info.as_owner}));\n"
+            f"{' ' * offset}{env}->Array_GetLength({ani_value}, &{size});\n"
+            f"{' ' * offset}{item_ty_cpp_info.as_owner}* {buffer} = ({item_ty_cpp_info.as_owner}*)malloc({size} * sizeof({item_ty_cpp_info.as_owner}));\n"
         )
         item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
-        item_ty_ani_info.array_from_ani_to_cpp(target, offset, env, size, value, buffer)
-        target.write(f"{' ' * offset}{cpp_info.as_owner} {result}({buffer}, {size});\n")
+        item_ty_ani_info.array_from_ani_to_cpp(
+            target, offset, env, size, ani_value, buffer
+        )
+        target.write(
+            f"{' ' * offset}{cpp_info.as_owner} {cpp_result}({buffer}, {size});\n"
+        )
 
+    @override
     def pass_from_sts_to_prx(
         self,
         target: OutputBuffer,
         offset: int,
-        value: str,
-        results: list[str],
+        sts_value: str,
+        prx_results: list[str],
     ):
-        item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
-        result = results.pop(0)
+        prx_result = prx_results.pop(0)
         target.write(
-            f"{' ' * offset}let {result}: {self.prx_type_as_param[0]} = {value};\n"
+            f"{' ' * offset}let {prx_result}: {self.prx_type_as_param[0]} = {sts_value};\n"
         )
 
 
@@ -654,46 +707,50 @@ class VectorTypeANIInfo(AbstractAnalysis[VectorType], AbstractTypeANIInfo):
         self.am = am
         self.t = t
 
+    @override
     def pass_from_ani_to_cpp(
         self,
         target: COutputBuffer,
         offset: int,
         env: str,
-        values: list[str],
-        result: str,
+        ani_values: list[str],
+        cpp_result: str,
     ):
         cpp_info = TypeCppInfo.get(self.am, self.t)
-        value = values.pop(0)
-        size = f"{result}_size"
-        buffer = f"{result}_buffer"
+        ani_value = ani_values.pop(0)
+        size = f"{cpp_result}_size"
+        buffer = f"{cpp_result}_buffer"
         cpp_ty_ani_info = TypeCppInfo.get(self.am, self.t.val_ty)
         target.write(
             f"{' ' * offset}size_t {size};\n"
-            f"{' ' * offset}{env}->Array_GetLength({value}, &{size});\n"
+            f"{' ' * offset}{env}->Array_GetLength({ani_value}, &{size});\n"
             f"{' ' * offset}{cpp_ty_ani_info.as_owner}* {buffer} = ({cpp_ty_ani_info.as_owner}*)malloc({size} * sizeof({cpp_ty_ani_info.as_owner}));\n"
         )
         val_ty_ani_info = TypeANIInfo.get(self.am, self.t.val_ty)
-        val_ty_ani_info.array_from_ani_to_cpp(target, offset, env, size, value, buffer)
+        val_ty_ani_info.array_from_ani_to_cpp(
+            target, offset, env, size, ani_value, buffer
+        )
         target.write(
-            f"{' ' * offset}{cpp_info.as_owner} {result}({size});\n"
+            f"{' ' * offset}{cpp_info.as_owner} {cpp_result}({size});\n"
             f"{' ' * offset}for (int _i = 0; _i < {size}; _i++) {{\n"
-            f"{' ' * offset}    {result}.push_back(std::move({buffer}[_i]));\n"
+            f"{' ' * offset}    {cpp_result}.push_back(std::move({buffer}[_i]));\n"
             f"{' ' * offset}}}\n"
             f"{' ' * offset}free({buffer});\n"
         )
 
+    @override
     def pass_from_sts_to_prx(
         self,
         target: OutputBuffer,
         offset: int,
-        value: str,
-        results: list[str],
+        sts_value: str,
+        prx_results: list[str],
     ):
         val_ty_ani_info = TypeANIInfo.get(self.am, self.t.val_ty)
-        result = results.pop(0)
+        prx_result = prx_results.pop(0)
         target.write(
-            f"{' ' * offset}let {result}: {self.prx_type_as_param[0]} = new {val_ty_ani_info.prx_type_as_owner}[{value}.length];\n"
-            f"{' ' * offset}for (let i = 0; i < {value}.length; i++) {{ {result}[i] = {value}[i]; }}\n"
+            f"{' ' * offset}let {prx_result}: {self.prx_type_as_param[0]} = new {val_ty_ani_info.prx_type_as_owner}[{sts_value}.length];\n"
+            f"{' ' * offset}for (let i = 0; i < {sts_value}.length; i++) {{ {prx_result}[i] = {sts_value}[i]; }}\n"
         )
 
 
@@ -738,7 +795,7 @@ class TypeANIInfo(TypeVisitor[AbstractTypeANIInfo]):
         return ScalarTypeANIInfo.get(self.am, t)
 
     @override
-    def visit_special_type(self, t: SpecialType) -> AbstractTypeANIInfo:
+    def visit_string_type(self, t: StringType) -> AbstractTypeANIInfo:
         return SpecialTypeANIInfo.get(self.am, t)
 
     @override
@@ -794,7 +851,8 @@ class STSCodeGenerator:
         for param in func.params:
             type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
             for i, prx_type in enumerate(type_ani_info.prx_type_as_param):
-                params_prx.append(f"{param.name}_proxy_{i}: {prx_type}")
+                param_prx = f"{param.name}_proxy_{i}"
+                params_prx.append(f"{param_prx}: {prx_type}")
         params_prx_str = ", ".join(params_prx)
         if return_ty_ref := func.return_ty_ref:
             type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
@@ -827,23 +885,26 @@ class STSCodeGenerator:
         params_prx = []
         for param in func.params:
             type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
-            results_prx = []
+            param_prx_results = []
             for i, prx_type in enumerate(type_ani_info.prx_type_as_param):
-                results_prx.append(f"{param.name}_proxy_{i}")
-                params_prx.append(f"{param.name}_proxy_{i}")
+                param_prx = f"{param.name}_proxy_{i}"
+                param_prx_results.append(param_prx)
+                params_prx.append(param_prx)
             type_ani_info.pass_from_sts_to_prx(
-                pkg_sts_target, 4, param.name, results_prx
+                pkg_sts_target, 4, param.name, param_prx_results
             )
         params_prx_str = ", ".join(params_prx)
         if return_ty_ref := func.return_ty_ref:
             type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
+            result_prx_value = "result_proxy"
+            result_sts_result = "result"
             pkg_sts_target.write(
-                f"    let result_proxy = {func_ani_info.prx_name}({params_prx_str});\n"
+                f"    let {result_prx_value} = {func_ani_info.prx_name}({params_prx_str});\n"
             )
             type_ani_info.return_from_prx_to_sts(
-                pkg_sts_target, 4, "result_proxy", "result"
+                pkg_sts_target, 4, result_prx_value, result_sts_result
             )
-            pkg_sts_target.write(f"    return result;\n")
+            pkg_sts_target.write(f"    return {result_sts_result};\n")
         else:
             pkg_sts_target.write(f"    {func_ani_info.prx_name}({params_prx_str});\n")
         pkg_sts_target.write("}\n")
@@ -909,14 +970,15 @@ class ANICodeGenerator:
             "[[maybe_unused]] ani_env *env",
             "[[maybe_unused]] ani_object object",
         ]
-        param_values_list = []
+        params_values_list = []
         for param in func.params:
             type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
-            param_values = []
+            param_ani_values = []
             for i, ani_type in enumerate(type_ani_info.ani_type_as_param):
-                params_ani.append(f"{ani_type} {param.name}_proxy_{i}")
-                param_values.append(f"{param.name}_proxy_{i}")
-            param_values_list.append(param_values)
+                param_ani = f"{param.name}_proxy_{i}"
+                param_ani_values.append(param_ani)
+                params_ani.append(f"{ani_type} {param_ani}")
+            params_values_list.append(param_ani_values)
         params_ani_str = ", ".join(params_ani)
         if return_ty_ref := func.return_ty_ref:
             type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
@@ -927,24 +989,26 @@ class ANICodeGenerator:
             f"static {ani_return_ty_name} {func_ani_info.mangled_name}({params_ani_str}) {{\n"
         )
         args_cpp = []
-        for param, param_values in zip(func.params, param_values_list):
+        for param, param_ani_values in zip(func.params, params_values_list):
             type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
             type_ani_info.pass_from_ani_to_cpp(
-                pkg_ani_target, 4, "env", param_values, param.name
+                pkg_ani_target, 4, "env", param_ani_values, param.name
             )
             args_cpp.append(param.name)
         args_cpp_str = ", ".join(args_cpp)
         if return_ty_ref := func.return_ty_ref:
             type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
             cpp_return_ty_name = type_cpp_info.as_owner
+            result_cpp_value = "result"
+            result_ani_result = "result_proxy"
             pkg_ani_target.write(
-                f"    {cpp_return_ty_name} result = {func_cpp_info.full_name}({args_cpp_str});\n"
+                f"    {cpp_return_ty_name} {result_cpp_value} = {func_cpp_info.full_name}({args_cpp_str});\n"
             )
             type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
             type_ani_info.return_from_cpp_to_ani(
-                pkg_ani_target, 4, "env", "result", "result_proxy"
+                pkg_ani_target, 4, "env", result_cpp_value, result_ani_result
             )
-            pkg_ani_target.write("    return result_proxy;\n")
+            pkg_ani_target.write(f"    return {result_ani_result};\n")
         else:
             pkg_ani_target.write(
                 f"    {func_cpp_info.full_name}({args_cpp_str});\n" f"    return;\n"

@@ -20,16 +20,16 @@ static void parseOption(Option const& opt) {
   // }
 }
 
-static void optionArg1(string str, Option const& obj1) {
+static void optionArg1(string_view str, Option const& obj1) {
   parseOption(obj1);
 }
 
-static void optionArg2(string str, Option const& obj1, Option const& obj2) {
+static void optionArg2(string_view str, Option const& obj1, Option const& obj2) {
   parseOption(obj1);
   parseOption(obj2);
 }
 
-static void optionArg3(string str, Option const& obj1, Option const& obj2, Option const& obj3) {
+static void optionArg3(string_view str, Option const& obj1, Option const& obj2, Option const& obj3) {
   parseOption(obj1);
   parseOption(obj2);
   parseOption(obj3);
@@ -46,5 +46,3 @@ TH_EXPORT_CPP_API_optionPrim(optionPrim)
 TH_EXPORT_CPP_API_optionArg1(optionArg1)
 TH_EXPORT_CPP_API_optionArg2(optionArg2)
 TH_EXPORT_CPP_API_optionArg3(optionArg3)
-
-

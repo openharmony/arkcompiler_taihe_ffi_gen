@@ -54,7 +54,7 @@ from taihe.semantics.types import (
     MapType,
     ScalarType,
     SetType,
-    SpecialType,
+    StringType,
     StructType,
     Type,
     TypeProtocol,
@@ -108,7 +108,7 @@ class TypeVisitor(Generic[T]):
     def visit_scalar_type(self, t: ScalarType) -> T:
         return self.visit_builtin_simple_type(t)
 
-    def visit_special_type(self, t: SpecialType) -> T:
+    def visit_string_type(self, t: StringType) -> T:
         return self.visit_builtin_simple_type(t)
 
     ### UserTypes ###
