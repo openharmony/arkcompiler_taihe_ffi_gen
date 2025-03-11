@@ -46,13 +46,13 @@ from taihe.semantics.declarations import (
 from taihe.semantics.types import (
     ArrayType,
     BigIntType,
-    BoxType,
     BuiltinType,
     CallbackType,
     EnumType,
     GenericType,
     IfaceType,
     MapType,
+    OptionalType,
     ScalarType,
     SetType,
     StringType,
@@ -140,7 +140,7 @@ class TypeVisitor(Generic[T]):
     def visit_array_type(self, t: ArrayType) -> T:
         return self.visit_generic_type(t)
 
-    def visit_box_type(self, t: BoxType) -> T:
+    def visit_optional_type(self, t: OptionalType) -> T:
         return self.visit_generic_type(t)
 
     def visit_vector_type(self, t: VectorType) -> T:

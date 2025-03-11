@@ -2,6 +2,6 @@
 
 #include <taihe/common.h>
 
-struct TBox {
+struct TOptional {
     void const* m_data;
 };
