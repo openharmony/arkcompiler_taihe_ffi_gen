@@ -15,8 +15,8 @@ compiler/taihe/parse/antlr
 .coverage.*
 
 # Temporary directories
-test/*/author_test
-test/*/user_test
+test/*/author_generated
+test/*/user_generated
 
 # files
 *.log

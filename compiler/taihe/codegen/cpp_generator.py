@@ -186,8 +186,6 @@ class ScalarTypeCppInfo(AbstractAnalysis[ScalarType], AbstractTypeCppInfo):
 
 class StringTypeCppInfo(AbstractAnalysis[StringType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: StringType):
-        if t != STRING:
-            raise ValueError
         self.decl_headers = ["core/string.hpp"]
         self.defn_headers = ["core/string.hpp"]
         self.as_owner = "::taihe::core::string"

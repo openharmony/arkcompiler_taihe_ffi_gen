@@ -212,8 +212,6 @@ class ScalarTypeABIInfo(AbstractAnalysis[ScalarType], AbstractTypeABIInfo):
 
 class StringTypeABIInfo(AbstractAnalysis[StringType], AbstractTypeABIInfo):
     def __init__(self, am: AnalysisManager, t: StringType) -> None:
-        if t != STRING:
-            raise ValueError
         self.decl_headers = ["taihe/string.abi.h"]
         self.defn_headers = ["taihe/string.abi.h"]
         self.as_owner = "struct TString"
