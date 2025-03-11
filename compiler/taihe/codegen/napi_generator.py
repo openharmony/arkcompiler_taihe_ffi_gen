@@ -496,7 +496,9 @@ class NapiCodeGenerator:
         pkg_napi_target.write(
             f"inline {iface_cpp_info.as_owner} get_{iface.name}(napi_env env, napi_value js_obj) {{\n"
             f"    {iface_cpp_info.as_owner}* c_ptr;\n"
-            f"    napi_unwrap(env, js_obj, reinterpret_cast<void **>(&c_ptr));\n"
+            f"    napi_value external_value;\n"
+            f'    napi_get_named_property(env, js_obj, "external", &external_value);\n'
+            f"    napi_get_value_external(env, external_value, reinterpret_cast<void**>(&c_ptr));\n"
             f"    {iface_cpp_info.as_owner} c_obj = *c_ptr;\n"
             f"    return c_obj;\n"
             f"}}\n"
@@ -511,9 +513,11 @@ class NapiCodeGenerator:
             f"{desc_str}\n"
             f"    }};\n"
             f"    napi_define_properties(env, js_obj, sizeof(desc) / sizeof(desc[0]), desc);\n"
-            f"    napi_wrap(env, js_obj, value_ptr, [](napi_env env, void* finalize_data, void* finalize_hint) {{\n"
+            f"    napi_value external = nullptr;\n"
+            f"    napi_create_external(env, value_ptr, [](napi_env env, void* finalize_data, void* finalize_hint) {{\n"
             f"        delete static_cast<{iface_cpp_info.as_owner}*>(finalize_data);\n"
-            f"    }}, nullptr, nullptr);\n"
+            f"    }}, nullptr, &external);\n"
+            f'    napi_set_named_property(env, js_obj, "external", external);\n'
             f"    return js_obj;\n"
             f"}}\n"
         )
@@ -533,7 +537,9 @@ class NapiCodeGenerator:
             f"    napi_value thisobj;\n"
             f"    napi_get_cb_info(env, info, nullptr, nullptr, &thisobj, nullptr);\n"
             f"    {iface_cpp_type}* value_ptr;\n"
-            f"    napi_unwrap(env, thisobj, reinterpret_cast<void**>(&value_ptr));\n"
+            f"    napi_value external_value;\n"
+            f'    napi_get_named_property(env, thisobj, "external", &external_value);\n'
+            f"    napi_get_value_external(env, external_value, reinterpret_cast<void**>(&value_ptr));\n"
             f"    napi_value base_obj = create_{base_iface_name}(env, *value_ptr);\n"
             f"    return base_obj;\n"
             f"}}\n"
@@ -554,7 +560,9 @@ class NapiCodeGenerator:
             f"        void* vtbl_ptr;\n"
             f"        ::taihe::core::data_holder holder;\n"
             f"    }}* buffer;\n"
-            f"    napi_unwrap(env, args[0], reinterpret_cast<void**>(&buffer));\n"
+            f"    napi_value external_value;\n"
+            f'    napi_get_named_property(env, args[0], "external", &external_value);\n'
+            f"    napi_get_value_external(env, external_value, reinterpret_cast<void**>(&buffer));\n"
             f"    napi_value result = nullptr;\n"
             f"    if ({iface_cpp_info.as_param} c_obj = {iface_cpp_info.as_param}(buffer->holder)) {{\n"
             f"        result = create_{iface.name}(env, std::move(c_obj));\n"
@@ -671,7 +679,9 @@ class NapiCodeGenerator:
             f"    napi_value thisobj;\n"
             f"    napi_get_cb_info(env, info, nullptr, nullptr, &thisobj, nullptr);\n"
             f"    {iface_cpp_type}* value_ptr;\n"
-            f"    napi_unwrap(env, thisobj, reinterpret_cast<void**>(&value_ptr));\n"
+            f"    napi_value external_value;\n"
+            f'    napi_get_named_property(env, thisobj, "external", &external_value);\n'
+            f"    napi_get_value_external(env, external_value, reinterpret_cast<void**>(&value_ptr));\n"
         )
         self.gen_func_content(func, pkg_napi_target, f"(*value_ptr)->{func.name}", 4)
         pkg_napi_target.write(f"}}\n")
