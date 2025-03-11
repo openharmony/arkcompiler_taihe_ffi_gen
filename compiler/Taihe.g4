@@ -105,7 +105,7 @@ intExpr
     | token_op = (PLUS | MINUS | TILDE) IntExpr_expr = intExpr # unaryIntExpr
     | IntExpr_left = intExpr token_op = (STAR | SLASH | PERCENT) IntExpr_right = intExpr # binaryIntExpr
     | IntExpr_left = intExpr token_op = (PLUS | MINUS) IntExpr_right = intExpr # binaryIntExpr
-    | IntExpr_left = intExpr token_op = (LEFT_SHIFT | RIGHT_SHIFT) IntExpr_right = intExpr # binaryIntExpr
+    | IntExpr_left = intExpr (token_ch = LESS_THAN LESS_THAN | token_ch = GREATER_THAN GREATER_THAN) IntExpr_right = intExpr # binaryIntShiftExpr
     | IntExpr_left = intExpr token_op = AMPERSAND IntExpr_right = intExpr # binaryIntExpr
     | IntExpr_left = intExpr token_op = CARET IntExpr_right = intExpr # binaryIntExpr
     | IntExpr_left = intExpr token_op = PIPE IntExpr_right = intExpr # binaryIntExpr
@@ -207,14 +207,6 @@ DOLLAR
 
 QUESTION_MARK
     : '?'
-    ;
-
-LEFT_SHIFT
-    : '<<'
-    ;
-
-RIGHT_SHIFT
-    : '>>'
     ;
 
 TILDE
