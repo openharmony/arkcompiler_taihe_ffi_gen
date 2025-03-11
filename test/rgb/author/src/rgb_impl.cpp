@@ -140,11 +140,11 @@ array<IBase> exchangeArrImpl(array_view<IBase> dst, array_view<IBase> src) {
     return res;
 }
 
-void testBoxImpl(box_view<IBase> box) {
-    if (box) {
-        std::cout << "box is not empty, " << (*box)->getId() << " is in the box" << std::endl;
+void testOptionalImpl(optional_view<IBase> optional) {
+    if (optional) {
+        std::cout << "optional is not empty, " << (*optional)->getId() << " is in the optional" << std::endl;
     } else {
-        std::cout << "box is empty" << std::endl;
+        std::cout << "optional is empty" << std::endl;
     }
 }
 
@@ -194,7 +194,7 @@ TH_EXPORT_CPP_API_makeColoredRectangle(makeColoredRectangleImpl)
 TH_EXPORT_CPP_API_copyColor(copyColorImpl)
 TH_EXPORT_CPP_API_toString(colorToStringImpl)
 TH_EXPORT_CPP_API_exchangeArr(exchangeArrImpl)
-TH_EXPORT_CPP_API_testBox(testBoxImpl)
+TH_EXPORT_CPP_API_testOptional(testOptionalImpl)
 TH_EXPORT_CPP_API_fillVec(fillVecImpl)
 TH_EXPORT_CPP_API_fillMap(fillMapImpl)
 TH_EXPORT_CPP_API_fillSet(fillSetImpl)

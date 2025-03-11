@@ -28,17 +28,16 @@ from taihe.semantics.types import (
     I16,
     I32,
     I64,
-    STRING,
     U8,
     U16,
     U32,
     U64,
     ArrayType,
-    BoxType,
     CallbackType,
     EnumType,
     IfaceType,
     MapType,
+    OptionalType,
     ScalarType,
     SetType,
     StringType,
@@ -201,13 +200,13 @@ class ArrayTypeCppInfo(AbstractAnalysis[ArrayType], AbstractTypeCppInfo):
         self.as_param = f"::taihe::core::array_view<{arg_ty_cpp_info.as_owner}>"
 
 
-class BoxTypeCppInfo(AbstractAnalysis[BoxType], AbstractTypeCppInfo):
-    def __init__(self, am: AnalysisManager, t: BoxType) -> None:
+class OptionalTypeCppInfo(AbstractAnalysis[OptionalType], AbstractTypeCppInfo):
+    def __init__(self, am: AnalysisManager, t: OptionalType) -> None:
         arg_ty_cpp_info = TypeCppInfo.get(am, t.item_ty)
-        self.decl_headers = ["core/box.hpp", *arg_ty_cpp_info.decl_headers]
-        self.defn_headers = ["core/box.hpp", *arg_ty_cpp_info.defn_headers]
-        self.as_owner = f"::taihe::core::box<{arg_ty_cpp_info.as_owner}>"
-        self.as_param = f"::taihe::core::box_view<{arg_ty_cpp_info.as_owner}>"
+        self.decl_headers = ["core/optional.hpp", *arg_ty_cpp_info.decl_headers]
+        self.defn_headers = ["core/optional.hpp", *arg_ty_cpp_info.defn_headers]
+        self.as_owner = f"::taihe::core::optional<{arg_ty_cpp_info.as_owner}>"
+        self.as_param = f"::taihe::core::optional_view<{arg_ty_cpp_info.as_owner}>"
 
 
 class VectorTypeCppInfo(AbstractAnalysis[VectorType], AbstractTypeCppInfo):
@@ -316,8 +315,8 @@ class TypeCppInfo(TypeVisitor[AbstractTypeCppInfo]):
         return ArrayTypeCppInfo.get(self.am, t)
 
     @override
-    def visit_box_type(self, t: BoxType) -> AbstractTypeCppInfo:
-        return BoxTypeCppInfo.get(self.am, t)
+    def visit_optional_type(self, t: OptionalType) -> AbstractTypeCppInfo:
+        return OptionalTypeCppInfo.get(self.am, t)
 
     @override
     def visit_vector_type(self, t: VectorType) -> AbstractTypeCppInfo:

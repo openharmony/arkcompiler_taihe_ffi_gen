@@ -169,17 +169,17 @@ class ArrayType(GenericType):
 
 
 @dataclass(frozen=True, repr=False)
-class BoxType(GenericType):
+class OptionalType(GenericType):
     item_ty: Type
 
     @override
     def _accept(self, v: "TypeVisitor") -> Any:
-        return v.visit_box_type(self)
+        return v.visit_optional_type(self)
 
     @property
     @override
     def representation(self):
-        return f"Box<{self.item_ty.representation}>"
+        return f"Optional<{self.item_ty.representation}>"
 
 
 @dataclass(frozen=True, repr=False)
@@ -232,7 +232,7 @@ class GenericBuilder(Protocol):
 # Builtin Generics Map
 BUILTIN_GENERICS: dict[str, GenericBuilder] = {
     "Array": lambda *args: ArrayType(*args),
-    "Box": lambda *args: BoxType(*args),
+    "Optional": lambda *args: OptionalType(*args),
     "Vector": lambda *args: VectorType(*args),
     "Map": lambda *args: MapType(*args),
     "Set": lambda *args: SetType(*args),

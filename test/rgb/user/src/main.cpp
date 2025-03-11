@@ -175,12 +175,12 @@ int main() {
     }
 
     {
-        std::cout << "-------- Testing Box --------" << std::endl;
+        std::cout << "-------- Testing Optional --------" << std::endl;
 
         IBase obj = make_holder<UserType, IBase>("some");
 
-        testBox(&obj);
-        testBox(NULL);
+        testOptional(&obj);
+        testOptional(NULL);
     }
 
     {
