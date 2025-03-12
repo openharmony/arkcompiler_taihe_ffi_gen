@@ -3,10 +3,10 @@ from abc import ABCMeta
 from typing_extensions import override
 
 from taihe.codegen.cpp_generator import (
+    EnumCppInfo,
     GlobFuncCppInfo,
     PackageCppInfo,
     TypeCppInfo,
-    EnumCppInfo,
 )
 from taihe.codegen.mangle import DeclKind, encode
 from taihe.semantics.declarations import (
@@ -28,11 +28,11 @@ from taihe.semantics.types import (
     I64,
     STRING,
     ArrayType,
-    OptionalType,
     CallbackType,
     EnumType,
     IfaceType,
     MapType,
+    OptionalType,
     ScalarType,
     SetType,
     StringType,
@@ -316,6 +316,7 @@ class StructTypeANIInfo(AbstractAnalysis[StructType], AbstractTypeANIInfo):
                 self.ani_split_base,
                 self.ani_split_suff,
                 self.flat_field_names,
+                strict=False,
             )
         ):
             ani_item = f"{cpp_result}_item_{i}"
@@ -1901,10 +1902,20 @@ class STSCodeGenerator:
         type_ani_info = StructTypeANIInfo.get(self.am, struct.as_type())
         pkg_sts_target.write(f"class {struct_ani_info.prx_name} {{\n")
         for flat_field_name, prx_type in zip(
-            type_ani_info.flat_field_names, type_ani_info.prx_split_type
+            type_ani_info.flat_field_names, type_ani_info.prx_split_type, strict=False
         ):
             pkg_sts_target.write(f"    {flat_field_name}: {prx_type};\n")
-        pkg_sts_target.write("}\n")
+        pkg_sts_target.write("    constructor(\n")
+        for flat_field_name, prx_type in zip(
+            type_ani_info.flat_field_names, type_ani_info.prx_split_type, strict=False
+        ):
+            pkg_sts_target.write(f"        {flat_field_name}: {prx_type},\n")
+        pkg_sts_target.write("    ) {\n")
+        for flat_field_name in type_ani_info.flat_field_names:
+            pkg_sts_target.write(
+                f"        this.{flat_field_name} = {flat_field_name};\n"
+            )
+        pkg_sts_target.write("    }\n" "}\n")
 
     def gen_struct_inner(
         self,
@@ -1918,7 +1929,14 @@ class STSCodeGenerator:
         for field in struct.fields:
             ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
             pkg_sts_target.write(f"    {field.name}: {ty_ani_info.sts_type};\n")
-        pkg_sts_target.write("}\n")
+        pkg_sts_target.write("    constructor(\n")
+        for field in struct.fields:
+            ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
+            pkg_sts_target.write(f"        {field.name}: {ty_ani_info.sts_type},\n")
+        pkg_sts_target.write("    ) {\n")
+        for field in struct.fields:
+            pkg_sts_target.write(f"        this.{field.name} = {field.name};\n")
+        pkg_sts_target.write("    }\n" "}\n")
 
     def gen_enum_interface(
         self,
@@ -1952,6 +1970,10 @@ class STSCodeGenerator:
             f"class {enum_ani_info.prx_name} {{\n"
             f"    tag: {type_ani_info.prx_split_type[0]};\n"
             f"    value: {type_ani_info.prx_split_type[1]};\n"
+            f"    constructor(tag: {type_ani_info.prx_split_type[0]}, value: {type_ani_info.prx_split_type[1]}) {{\n"
+            f"        this.tag = tag;\n"
+            f"        this.value = value;\n"
+            f"    }}\n"
             f"}}\n"
         )
 
@@ -1973,6 +1995,10 @@ class STSCodeGenerator:
             f"class {enum_ani_info.sts_ctor} implements {enum_ani_info.sts_name} {{\n"
             f"    tag: int;\n"
             f"    value: {sts_value_types_str};\n"
+            f"    constructor(tag: int, value: {sts_value_types_str}) {{\n"
+            f"        this.tag = tag;\n"
+            f"        this.value = value;\n"
+            f"    }}\n"
             f"}}\n"
         )
 
@@ -2056,7 +2082,9 @@ class ANICodeGenerator:
             f"static {ani_return_ty_name} {func_ani_info.mangled_name}({params_ani_str}) {{\n"
         )
         args_cpp = []
-        for param, param_ani_values in zip(func.params, params_values_list):
+        for param, param_ani_values in zip(
+            func.params, params_values_list, strict=False
+        ):
             type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
             type_ani_info.from_ani_split(
                 pkg_ani_target, 4, "env", param_ani_values, param.name
