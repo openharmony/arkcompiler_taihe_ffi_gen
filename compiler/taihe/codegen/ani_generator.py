@@ -27,7 +27,6 @@ from taihe.semantics.types import (
     I32,
     I64,
     STRING,
-    U16,
     ArrayType,
     OptionalType,
     CallbackType,
@@ -930,7 +929,6 @@ class ScalarTypeANIInfo(AbstractAnalysis[ScalarType], AbstractTypeANIInfo):
             I16: "short",
             I32: "int",
             I64: "long",
-            U16: "char",
         }.get(t)
         if sts_type is None:
             raise ValueError
@@ -1882,7 +1880,7 @@ class ANICodeGenerator:
     def gen_package_file(self, pkg: PackageDecl):
         pkg_ani_info = PackageANIInfo.get(self.am, pkg)
         pkg_ani_target = COutputBuffer.create(
-            self.tm, f"include/{pkg_ani_info.src}", False
+            self.tm, f"src/{pkg_ani_info.src}", False
         )
         pkg_cpp_info = PackageCppInfo.get(self.am, pkg)
         pkg_ani_target.include("ani.h")
