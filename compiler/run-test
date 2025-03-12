@@ -144,11 +144,12 @@ def main(
     create_directory(author_generated_src_dir)
     create_directory(author_generated_include_dir)
 
-    print("Generating author codes...")
+    print("Generating author and ani codes...")
     CompilerInstance(
         CompilerInvocation(
             src_dirs=[idl_dir],
             out_dir=author_generated_dir,
+            gen_ani=True,
             gen_author=True,
             quiet=True,
         )
@@ -156,17 +157,6 @@ def main(
     print("Done.")
 
     if generate_and_compile_ani:
-        print("Generating ani codes...")
-        CompilerInstance(
-            CompilerInvocation(
-                src_dirs=[idl_dir],
-                out_dir=author_generated_dir,
-                gen_ani=True,
-                quiet=True,
-            )
-        ).run()
-        print("Done.")
-
         panda_home = get_panda_home()
         panda_include = Path(f"{panda_home}../plugins/ets/runtime/ani")
         lib_name = target_path.name
