@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 
+import argparse
 import os
 import shutil
 import subprocess
 from pathlib import Path
-import argparse
+
 from taihe.driver import CompilerInstance, CompilerInvocation
 
 CXX = os.getenv("CXX", "clang++")
@@ -63,8 +64,37 @@ def link(output_file, *input_files, shared, link_options):
     run_command(command)
 
 
+def get_panda_home():
+    panda_home = os.getenv("PANDA_HOME")
+    if panda_home is None:
+        return "PANDA_HOME is not set."
+    return panda_home
+
+
+def compile_abc(output_dir, input_dir, panda_home):
+    output_files = []
+    for input_file in input_dir.iterdir():
+        name = input_file.name
+        if name.endswith(".ets"):
+            output_file = output_dir / f"{name}.abc"
+            command = f"{panda_home}bin/es2panda {input_file} --output {output_file} --extension sts"
+            run_command(command)
+            command_dump = f"{panda_home}bin/ark_disasm {output_file} {output_file}.dump"
+            run_command(command_dump)
+            output_files.append(output_file)
+    return output_files
+
+
+def link_abc(output_dir, *input_files, panda_home):
+    command = f"{panda_home}bin/ark_link --output {output_dir}/main.abc -- "
+    for input_file in input_files:
+        command += f" {input_file}"
+    run_command(command)
+
+
 def main(
     target_dir: str,
+    generate_and_compile_ani: bool,
     generate_only: bool,
     generate_and_compile: bool,
     opt_level: str,
@@ -124,6 +154,71 @@ def main(
         )
     ).run()
     print("Done.")
+
+    if generate_and_compile_ani:
+        print("Generating ani codes...")
+        CompilerInstance(
+            CompilerInvocation(
+                src_dirs=[idl_dir],
+                out_dir=author_generated_dir,
+                gen_ani=True,
+                quiet=True,
+            )
+        ).run()
+        print("Done.")
+
+        panda_home = get_panda_home()
+        panda_include = Path(f"{panda_home}../plugins/ets/runtime/ani")
+        lib_name = target_path.name
+        create_directory(build_author_generated_dir)
+
+        link(
+            f"{build_author_generated_dir}/lib{lib_name}.so",
+            *compile(
+                build_author_generated_dir,
+                runtime_src_dir,
+                runtime_include_dir,
+                opt_level=opt_level,
+            ),
+            *compile(
+                build_author_generated_dir,
+                author_src_dir,
+                runtime_include_dir,
+                author_generated_include_dir,
+                author_include_dir,
+                opt_level=opt_level,
+            ),
+            *compile(
+                build_author_generated_dir,
+                author_generated_src_dir,
+                panda_include,
+                runtime_include_dir,
+                author_generated_include_dir,
+                opt_level=opt_level,
+            ),
+            shared=True, link_options=["-Wl"]
+        )
+        link_abc(
+            build_author_generated_dir,
+            *compile_abc(
+                build_author_generated_dir,
+                author_generated_dir,
+                panda_home
+            ),
+            *compile_abc(
+                build_author_generated_dir,
+                user_dir,
+                panda_home
+            ),
+            panda_home=panda_home
+        )
+        run_command(f"LD_LIBRARY_PATH={build_author_generated_dir} "
+            f"{panda_home}bin/ark "
+            f"--boot-panda-files={panda_home}plugins/ets/etsstdlib.abc "
+            f"--load-runtimes=ets "
+            f"{build_author_generated_dir}/main.abc "
+            "main.ETSGLOBAL::main")
+        return
 
     create_directory(user_generated_src_dir)
     create_directory(user_generated_include_dir)
@@ -211,6 +306,12 @@ if __name__ == "__main__":
         help="The target directory containing source files for the project",
     )
     parser.add_argument(
+        "-ani",
+        "--generate-and-compile-ani",
+        action="store_true",
+        help="To generate and compile ani files and ets files",
+    )
+    parser.add_argument(
         "-g",
         "--generate-only",
         action="store_true",
@@ -257,6 +358,7 @@ if __name__ == "__main__":
 
     main(
         args.target_directory,
+        args.generate_and_compile_ani,
         args.generate_only,
         args.generate_and_compile,
         args.optimization,
