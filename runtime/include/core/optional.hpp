@@ -40,6 +40,8 @@ template<typename cpp_owner_t>
 struct optional : public optional_view<cpp_owner_t> {
     optional(cpp_owner_t const* handle) noexcept : optional_view<cpp_owner_t>(handle) {} // main constructor
 
+    optional() noexcept : optional_view<cpp_owner_t>(nullptr) {}
+
     template<typename... Args>
     static optional make(Args&&... args) {
         return optional(new cpp_owner_t(std::forward<Args>(args)...));
