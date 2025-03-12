@@ -262,10 +262,7 @@ class StructTypeANIInfo(AbstractAnalysis[StructType], AbstractTypeANIInfo):
         self.ani_whole_base = "ani_ref"
         self.ani_whole_suff = "Ref"
         self.ani_array_type = "ani_array_ref"
-        self.field_names = [
-            f"_{i}"
-            for (i, _) in enumerate(zip(self.prx_split_type, self.ani_split_type))
-        ]
+        self.flat_field_names = [f"_{i}" for i in range(len(self.prx_split_type))]
 
     @override
     def from_ani_split(
@@ -318,7 +315,7 @@ class StructTypeANIInfo(AbstractAnalysis[StructType], AbstractTypeANIInfo):
                 self.ani_split_type,
                 self.ani_split_base,
                 self.ani_split_suff,
-                self.field_names,
+                self.flat_field_names,
             )
         ):
             ani_item = f"{cpp_result}_item_{i}"
@@ -449,7 +446,7 @@ class StructTypeANIInfo(AbstractAnalysis[StructType], AbstractTypeANIInfo):
         sts_result: str,
     ):
         prx_values = []
-        for i, field_name in enumerate(self.field_names):
+        for i, field_name in enumerate(self.flat_field_names):
             prx_values.append(f"{prx_value}.{field_name}")
         self.from_prx_split(target, offset, prx_values, sts_result)
 
@@ -1797,11 +1794,6 @@ class STSCodeGenerator:
         pkg_sts_target.write(f'loadLibrary("{pkg_ani_info.lib_name}");\n')
 
         for struct in pkg.structs:
-            self.gen_struct_interface(struct, pkg_sts_target)
-        for enum in pkg.enums:
-            self.gen_enum_interface(enum, pkg_sts_target)
-
-        for struct in pkg.structs:
             self.gen_struct_proxy(struct, pkg_sts_target)
         for enum in pkg.enums:
             self.gen_enum_proxy(enum, pkg_sts_target)
@@ -1812,6 +1804,11 @@ class STSCodeGenerator:
             self.gen_struct_inner(struct, pkg_sts_target)
         for enum in pkg.enums:
             self.gen_enum_inner(enum, pkg_sts_target)
+
+        for struct in pkg.structs:
+            self.gen_struct_interface(struct, pkg_sts_target)
+        for enum in pkg.enums:
+            self.gen_enum_interface(enum, pkg_sts_target)
         for func in pkg.functions:
             self.gen_func_impl(func, pkg_sts_target)
 
@@ -1889,17 +1886,11 @@ class STSCodeGenerator:
         pkg_sts_target: OutputBuffer,
     ):
         struct_ani_info = StructANIInfo.get(self.am, struct)
-        pkg_sts_target.write(
-            f"export interface {struct_ani_info.sts_name} {{\n"
-        )
+        pkg_sts_target.write(f"export interface {struct_ani_info.sts_name} {{\n")
         for field in struct.fields:
             ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
-            pkg_sts_target.write(
-                f"    {field.name}: {ty_ani_info.sts_type};\n"
-            )
-        pkg_sts_target.write(
-            "}\n"
-        )
+            pkg_sts_target.write(f"    {field.name}: {ty_ani_info.sts_type};\n")
+        pkg_sts_target.write("}\n")
 
     def gen_struct_proxy(
         self,
@@ -1908,17 +1899,12 @@ class STSCodeGenerator:
     ):
         struct_ani_info = StructANIInfo.get(self.am, struct)
         type_ani_info = StructTypeANIInfo.get(self.am, struct.as_type())
-        pkg_sts_target.write(
-            f"export interface {struct_ani_info.sts_name} {{\n"
-        )
-        for flat in struct.fields:
-            ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
-            pkg_sts_target.write(
-                f"    {field.name}: {ty_ani_info.sts_type};\n"
-            )
-        pkg_sts_target.write(
-            "}\n"
-        )
+        pkg_sts_target.write(f"class {struct_ani_info.prx_name} {{\n")
+        for flat_field_name, prx_type in zip(
+            type_ani_info.flat_field_names, type_ani_info.prx_split_type
+        ):
+            pkg_sts_target.write(f"    {flat_field_name}: {prx_type};\n")
+        pkg_sts_target.write("}\n")
 
     def gen_struct_inner(
         self,
@@ -1927,16 +1913,12 @@ class STSCodeGenerator:
     ):
         struct_ani_info = StructANIInfo.get(self.am, struct)
         pkg_sts_target.write(
-            f"export interface {struct_ani_info.sts_name} {{\n"
+            f"class {struct_ani_info.sts_ctor} implements {struct_ani_info.sts_name} {{\n"
         )
         for field in struct.fields:
             ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
-            pkg_sts_target.write(
-                f"    {field.name}: {ty_ani_info.sts_type};\n"
-            )
-        pkg_sts_target.write(
-            "}\n"
-        )
+            pkg_sts_target.write(f"    {field.name}: {ty_ani_info.sts_type};\n")
+        pkg_sts_target.write("}\n")
 
     def gen_enum_interface(
         self,
@@ -1964,14 +1946,35 @@ class STSCodeGenerator:
         enum: EnumDecl,
         pkg_sts_target: OutputBuffer,
     ):
-        pass
+        enum_ani_info = EnumANIInfo.get(self.am, enum)
+        type_ani_info = EnumTypeANIInfo.get(self.am, enum.as_type())
+        pkg_sts_target.write(
+            f"class {enum_ani_info.prx_name} {{\n"
+            f"    tag: {type_ani_info.prx_split_type[0]};\n"
+            f"    value: {type_ani_info.prx_split_type[1]};\n"
+            f"}}\n"
+        )
 
     def gen_enum_inner(
         self,
         enum: EnumDecl,
         pkg_sts_target: OutputBuffer,
     ):
-        pass
+        enum_ani_info = EnumANIInfo.get(self.am, enum)
+        sts_value_types = []
+        for item in enum.items:
+            if item.ty_ref is None:
+                sts_value_types.append("undefined")
+                continue
+            ty_ani_info = TypeANIInfo.get(self.am, item.ty_ref.resolved_ty)
+            sts_value_types.append(f"{ty_ani_info.sts_type}")
+        sts_value_types_str = " | ".join(sts_value_types)
+        pkg_sts_target.write(
+            f"class {enum_ani_info.sts_ctor} implements {enum_ani_info.sts_name} {{\n"
+            f"    tag: int;\n"
+            f"    value: {sts_value_types_str};\n"
+            f"}}\n"
+        )
 
 
 class ANICodeGenerator:
