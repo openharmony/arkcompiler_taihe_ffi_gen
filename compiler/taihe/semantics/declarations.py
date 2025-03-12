@@ -591,7 +591,7 @@ class EnumDecl(TypeDecl):
         self.items.append(f)
 
     @override
-    def as_type(self) -> UserType:
+    def as_type(self) -> EnumType:
         return EnumType(self)
 
     @property
@@ -616,7 +616,7 @@ class StructDecl(TypeDecl):
         self.fields.append(f)
 
     @override
-    def as_type(self) -> UserType:
+    def as_type(self) -> StructType:
         return StructType(self)
 
     @property
@@ -647,7 +647,7 @@ class IfaceDecl(TypeDecl):
         self.parents.append(p)
 
     @override
-    def as_type(self) -> UserType:
+    def as_type(self) -> IfaceType:
         return IfaceType(self)
 
     @property
