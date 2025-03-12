@@ -81,7 +81,7 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
         p = d.node_parent
         assert p
         self.sts_name = d.name
-        self.sts_ctor = d.name
+        self.sts_ctor = f"{d.name}_inner"
         self.prx_name = f"{d.name}_proxy"
         pkg_ani_info = PackageANIInfo.get(am, p)
         self.cls_name = f"L{pkg_ani_info.lib_name}/{self.prx_name};"
@@ -92,7 +92,7 @@ class EnumANIInfo(AbstractAnalysis[EnumDecl]):
         p = d.node_parent
         assert p
         self.sts_name = d.name
-        self.sts_ctor = d.name
+        self.sts_ctor = f"{d.name}_inner"
         self.prx_name = f"{d.name}_proxy"
         pkg_ani_info = PackageANIInfo.get(am, p)
         self.cls_name = f"L{pkg_ani_info.lib_name}/{self.prx_name};"
@@ -1349,12 +1349,12 @@ class StringTypeANIInfo(AbstractAnalysis[StringType], AbstractTypeANIInfo):
 class ArrayTypeANIInfo(AbstractAnalysis[ArrayType], AbstractTypeANIInfo):
     def __init__(self, am: AnalysisManager, t: ArrayType) -> None:
         item_ty_ani_info = TypeANIInfo.get(am, t.item_ty)
-        self.sts_type = f"({item_ty_ani_info.sts_type})[]"
-        self.prx_split_type = [f"({item_ty_ani_info.prx_whole_type})[]"]
+        self.sts_type = f"({item_ty_ani_info.sts_type}[])"
+        self.prx_split_type = [f"({item_ty_ani_info.prx_whole_type}[])"]
         self.ani_split_type = [item_ty_ani_info.ani_array_type]
         self.ani_split_base = ["ani_ref"]
         self.ani_split_suff = ["Ref"]
-        self.prx_whole_type = f"({item_ty_ani_info.prx_whole_type})[]"
+        self.prx_whole_type = f"({item_ty_ani_info.prx_whole_type}[])"
         self.ani_whole_type = item_ty_ani_info.ani_array_type
         self.ani_whole_base = "ani_ref"
         self.ani_whole_suff = "Ref"
@@ -1793,9 +1793,25 @@ class STSCodeGenerator:
     def gen_package_file(self, pkg: PackageDecl):
         pkg_ani_info = PackageANIInfo.get(self.am, pkg)
         pkg_sts_target = OutputBuffer.create(self.tm, pkg_ani_info.sts)
+
         pkg_sts_target.write(f'loadLibrary("{pkg_ani_info.lib_name}");\n')
+
+        for struct in pkg.structs:
+            self.gen_struct_interface(struct, pkg_sts_target)
+        for enum in pkg.enums:
+            self.gen_enum_interface(enum, pkg_sts_target)
+
+        for struct in pkg.structs:
+            self.gen_struct_proxy(struct, pkg_sts_target)
+        for enum in pkg.enums:
+            self.gen_enum_proxy(enum, pkg_sts_target)
         for func in pkg.functions:
             self.gen_func_proxy(func, pkg_sts_target)
+
+        for struct in pkg.structs:
+            self.gen_struct_inner(struct, pkg_sts_target)
+        for enum in pkg.enums:
+            self.gen_enum_inner(enum, pkg_sts_target)
         for func in pkg.functions:
             self.gen_func_impl(func, pkg_sts_target)
 
@@ -1838,7 +1854,7 @@ class STSCodeGenerator:
         else:
             sts_return_ty_name = "void"
         pkg_sts_target.write(
-            f"function {func_ani_info.sts_name}({params_sts_str}): {sts_return_ty_name} {{\n"
+            f"export function {func_ani_info.sts_name}({params_sts_str}): {sts_return_ty_name} {{\n"
         )
         params_prx = []
         for param in func.params:
@@ -1867,6 +1883,96 @@ class STSCodeGenerator:
             pkg_sts_target.write(f"    {func_ani_info.prx_name}({params_prx_str});\n")
         pkg_sts_target.write("}\n")
 
+    def gen_struct_interface(
+        self,
+        struct: StructDecl,
+        pkg_sts_target: OutputBuffer,
+    ):
+        struct_ani_info = StructANIInfo.get(self.am, struct)
+        pkg_sts_target.write(
+            f"export interface {struct_ani_info.sts_name} {{\n"
+        )
+        for field in struct.fields:
+            ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
+            pkg_sts_target.write(
+                f"    {field.name}: {ty_ani_info.sts_type};\n"
+            )
+        pkg_sts_target.write(
+            "}\n"
+        )
+
+    def gen_struct_proxy(
+        self,
+        struct: StructDecl,
+        pkg_sts_target: OutputBuffer,
+    ):
+        struct_ani_info = StructANIInfo.get(self.am, struct)
+        type_ani_info = StructTypeANIInfo.get(self.am, struct.as_type())
+        pkg_sts_target.write(
+            f"export interface {struct_ani_info.sts_name} {{\n"
+        )
+        for flat in struct.fields:
+            ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
+            pkg_sts_target.write(
+                f"    {field.name}: {ty_ani_info.sts_type};\n"
+            )
+        pkg_sts_target.write(
+            "}\n"
+        )
+
+    def gen_struct_inner(
+        self,
+        struct: StructDecl,
+        pkg_sts_target: OutputBuffer,
+    ):
+        struct_ani_info = StructANIInfo.get(self.am, struct)
+        pkg_sts_target.write(
+            f"export interface {struct_ani_info.sts_name} {{\n"
+        )
+        for field in struct.fields:
+            ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
+            pkg_sts_target.write(
+                f"    {field.name}: {ty_ani_info.sts_type};\n"
+            )
+        pkg_sts_target.write(
+            "}\n"
+        )
+
+    def gen_enum_interface(
+        self,
+        enum: EnumDecl,
+        pkg_sts_target: OutputBuffer,
+    ):
+        enum_ani_info = EnumANIInfo.get(self.am, enum)
+        sts_value_types = []
+        for item in enum.items:
+            if item.ty_ref is None:
+                sts_value_types.append("undefined")
+                continue
+            ty_ani_info = TypeANIInfo.get(self.am, item.ty_ref.resolved_ty)
+            sts_value_types.append(f"{ty_ani_info.sts_type}")
+        sts_value_types_str = " | ".join(sts_value_types)
+        pkg_sts_target.write(
+            f"export interface {enum_ani_info.sts_name} {{\n"
+            f"    tag: int;\n"
+            f"    value: {sts_value_types_str};\n"
+            f"}}\n"
+        )
+
+    def gen_enum_proxy(
+        self,
+        enum: EnumDecl,
+        pkg_sts_target: OutputBuffer,
+    ):
+        pass
+
+    def gen_enum_inner(
+        self,
+        enum: EnumDecl,
+        pkg_sts_target: OutputBuffer,
+    ):
+        pass
+
 
 class ANICodeGenerator:
     def __init__(self, tm: OutputManager, am: AnalysisManager):
@@ -1879,9 +1985,7 @@ class ANICodeGenerator:
 
     def gen_package_file(self, pkg: PackageDecl):
         pkg_ani_info = PackageANIInfo.get(self.am, pkg)
-        pkg_ani_target = COutputBuffer.create(
-            self.tm, f"src/{pkg_ani_info.src}", False
-        )
+        pkg_ani_target = COutputBuffer.create(self.tm, f"src/{pkg_ani_info.src}", False)
         pkg_cpp_info = PackageCppInfo.get(self.am, pkg)
         pkg_ani_target.include("ani.h")
         pkg_ani_target.include(pkg_cpp_info.header)
