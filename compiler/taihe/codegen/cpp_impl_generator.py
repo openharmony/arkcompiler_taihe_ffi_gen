@@ -139,7 +139,6 @@ class CppImplSourcesGenerator:
         cpp_params_str = ", ".join(cpp_params)
         if return_ty_ref := func.return_ty_ref:
             type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
-            print(return_ty_ref.resolved_ty)
             cpp_return_ty_name = self._mask(type_cpp_info.as_owner)
         else:
             cpp_return_ty_name = "void"

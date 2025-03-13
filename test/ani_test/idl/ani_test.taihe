@@ -3,6 +3,20 @@ struct Option {
     dest: f64;
     files: Array<String>;
 }
+
+enum Union {
+    empty;
+    iValue: i32;
+    fValue: f32;
+    sValue: String;
+}
+
+function testUnion(u: Union): void;
+function getUnion(v: i32): Union;
+function getOption(): Option;
+
+function testOptionalDouble(x: Optional<f64>): void;
+
 function optionPrim(num: f64): void;
 function optionArg1(str: String, op1: Option): void;
 function optionArg2(str: String, op1: Option, op2: Option): void;

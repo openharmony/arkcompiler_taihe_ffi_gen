@@ -409,21 +409,21 @@ class EnumTypeANIInfo(AbstractAnalysis[EnumType], AbstractTypeANIInfo):
         ani_value: str,
         cpp_result: str,
     ):
-        ani_value_tag = f"{cpp_result}_tag"
-        ani_value_val = f"{cpp_result}_value"
+        ani_value_tag = f"{cpp_result}_ani_tag"
+        ani_value_val = f"{cpp_result}_ani_value"
         target.write(
             f"{' ' * offset}ani_int {ani_value_tag};\n"
             f"{' ' * offset}{env}->Object_GetPropertyByName_Int({ani_value}, \"tag\", &{ani_value_tag});\n"
             f"{' ' * offset}ani_ref {ani_value_val};\n"
             f"{' ' * offset}{env}->Object_GetPropertyByName_Ref({ani_value}, \"value\", &{ani_value_val});\n"
         )
-        cpp_tag = f"{cpp_result}_tag"
+        cpp_value_tag = f"{cpp_result}_tag"
         enum_cpp_info = EnumCppInfo.get(self.am, self.t.ty_decl)
         type_cpp_info = TypeCppInfo.get(self.am, self.t)
         target.write(
             f"{' ' * offset}{type_cpp_info.as_owner} {cpp_result} = [=] {{\n"
-            f"{' ' * offset}    {enum_cpp_info.full_name}::tag_t {cpp_tag} = ({enum_cpp_info.full_name}::tag_t){ani_value_tag};\n"
-            f"{' ' * offset}    switch ({cpp_tag}) {{\n"
+            f"{' ' * offset}    {enum_cpp_info.full_name}::tag_t {cpp_value_tag} = ({enum_cpp_info.full_name}::tag_t){ani_value_tag};\n"
+            f"{' ' * offset}    switch ({cpp_value_tag}) {{\n"
         )
         for item in self.t.ty_decl.items:
             target.write(
@@ -440,7 +440,7 @@ class EnumTypeANIInfo(AbstractAnalysis[EnumType], AbstractTypeANIInfo):
                     target,
                     offset + 8,
                     env,
-                    ani_value,
+                    ani_value_val,
                     cpp_result_spec,
                 )
                 target.write(
@@ -613,7 +613,9 @@ class ScalarTypeANIInfo(AbstractAnalysis[ScalarType], AbstractTypeANIInfo):
         ani_value: str,
         cpp_result: str,
     ):
-        target.write(f"{' ' * offset}{self.ani_type} {cpp_result} = {ani_value};\n")
+        target.write(
+            f"{' ' * offset}{self.cpp_info.as_owner} {cpp_result} = {ani_value};\n"
+        )
 
     @override
     def into_ani(
@@ -624,9 +626,7 @@ class ScalarTypeANIInfo(AbstractAnalysis[ScalarType], AbstractTypeANIInfo):
         cpp_value: str,
         ani_result: str,
     ):
-        target.write(
-            f"{' ' * offset}{self.cpp_info.as_owner} {ani_result} = {cpp_value};\n"
-        )
+        target.write(f"{' ' * offset}{self.ani_type} {ani_result} = {cpp_value};\n")
 
     @override
     def from_ani_array(
@@ -671,10 +671,17 @@ class ScalarTypeANIInfo(AbstractAnalysis[ScalarType], AbstractTypeANIInfo):
         ani_ctor = f"{ani_result}_ctor"
         ani_value = f"{ani_result}_ani"
         target.write(
-            f"{' ' * offset}ani_class {ani_class};\n"
-            f"{' ' * offset}{env}->FindClass(\"Lstd/core/{self.ani_type.suffix};\", &{ani_class});\n"
-            f"{' ' * offset}ani_method {ani_ctor};\n"
-            f"{' ' * offset}{env}->Class_FindMethod({ani_class}, \"<ctor>\", nullptr, &{ani_ctor});\n"
+            f"{' ' * offset}static ani_class {ani_class} = [=] {{\n"
+            f"{' ' * offset}    ani_class {ani_class};\n"
+            f"{' ' * offset}    {env}->FindClass(\"Lstd/core/{self.ani_type.suffix};\", &{ani_class});\n"
+            f"{' ' * offset}    {env}->GlobalReference_Create({ani_class}, reinterpret_cast<ani_ref*>(&{ani_class}));\n"
+            f"{' ' * offset}    return {ani_class};\n"
+            f"{' ' * offset}}}();\n"
+            f"{' ' * offset}static ani_method {ani_ctor} = [=] {{\n"
+            f"{' ' * offset}    ani_method {ani_ctor};\n"
+            f"{' ' * offset}    {env}->Class_FindMethod({ani_class}, \"<ctor>\", nullptr, &{ani_ctor});\n"
+            f"{' ' * offset}    return {ani_ctor};\n"
+            f"{' ' * offset}}}();\n"
             f"{' ' * offset}ani_object {ani_result};\n"
         )
         self.into_ani(target, offset, env, cpp_value, ani_value)
@@ -695,10 +702,17 @@ class ScalarTypeANIInfo(AbstractAnalysis[ScalarType], AbstractTypeANIInfo):
         ani_getter = f"{cpp_result}_get"
         ani_result = f"{cpp_result}_ani"
         target.write(
-            f"{' ' * offset}ani_class {ani_class};\n"
-            f"{' ' * offset}{env}->FindClass(\"Lstd/core/{self.ani_type.suffix};\", &{ani_class});\n"
-            f"{' ' * offset}ani_method {ani_getter};\n"
-            f"{' ' * offset}{env}->Class_FindMethod({ani_class}, \"{self.sts_type}Value\", nullptr, &{ani_getter});\n"
+            f"{' ' * offset}static ani_class {ani_class} = [=] {{\n"
+            f"{' ' * offset}    ani_class {ani_class};\n"
+            f"{' ' * offset}    {env}->FindClass(\"Lstd/core/{self.ani_type.suffix};\", &{ani_class});\n"
+            f"{' ' * offset}    {env}->GlobalReference_Create({ani_class}, reinterpret_cast<ani_ref*>(&{ani_class}));\n"
+            f"{' ' * offset}    return {ani_class};\n"
+            f"{' ' * offset}}}();\n"
+            f"{' ' * offset}static ani_method {ani_getter} = [=] {{\n"
+            f"{' ' * offset}    ani_method {ani_getter};\n"
+            f"{' ' * offset}    {env}->Class_FindMethod({ani_class}, \"{self.sts_type}Value\", nullptr, &{ani_getter});\n"
+            f"{' ' * offset}    return {ani_getter};\n"
+            f"{' ' * offset}}}();\n"
             f"{' ' * offset}{self.ani_type} {ani_result};\n"
             f"{' ' * offset}{env}->Object_CallMethod_{self.ani_type.suffix}((ani_object){ani_value}, {ani_getter}, &{ani_result});\n"
         )
@@ -939,7 +953,7 @@ class OptionalTypeANIInfo(AbstractAnalysis[OptionalType], AbstractTypeANIInfo):
         item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
         item_ty_ani_info.from_ani_boxed(target, offset + 4, env, ani_value, cpp_spec)
         target.write(
-            f"{' ' * offset}    *{cpp_pointer} = std::move({cpp_spec});\n"
+            f"{' ' * offset}    {cpp_pointer} = new {item_ty_cpp_info.as_owner}(std::move({cpp_spec}));\n"
             f"{' ' * offset}}};\n"
             f"{' ' * offset}{cpp_info.as_owner} {cpp_result}({cpp_pointer});\n"
         )
@@ -1103,7 +1117,7 @@ class STSCodeGenerator:
     #     pkg_sts_target: OutputBuffer,
     # ):
     #     struct_ani_info = StructANIInfo.get(self.am, struct)
-    #     pkg_sts_target.write(f"export interface {struct_ani_info.sts_name} {{\n")
+    #     pkg_sts_target.write(f"export interface {struct_ani_info.sts_iface} {{\n")
     #     for field in struct.fields:
     #         ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
     #         pkg_sts_target.write(f"    {field.name}: {ty_ani_info.sts_type};\n")
@@ -1116,7 +1130,7 @@ class STSCodeGenerator:
     # ):
     #     struct_ani_info = StructANIInfo.get(self.am, struct)
     #     pkg_sts_target.write(
-    #         f"class {struct_ani_info.sts_ctor} implements {struct_ani_info.sts_name} {{\n"
+    #         f"class {struct_ani_info.sts_inner} implements {struct_ani_info.sts_iface} {{\n"
     #     )
     #     for field in struct.fields:
     #         ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
@@ -1164,7 +1178,7 @@ class STSCodeGenerator:
     #         sts_value_types.append(f"{ty_ani_info.sts_type}")
     #     sts_value_types_str = " | ".join(sts_value_types)
     #     pkg_sts_target.write(
-    #         f"export interface {enum_ani_info.sts_name} {{\n"
+    #         f"export interface {enum_ani_info.sts_iface} {{\n"
     #         f"    tag: int;\n"
     #         f"    value: {sts_value_types_str};\n"
     #         f"}}\n"
@@ -1185,7 +1199,7 @@ class STSCodeGenerator:
     #         sts_value_types.append(f"{ty_ani_info.sts_type}")
     #     sts_value_types_str = " | ".join(sts_value_types)
     #     pkg_sts_target.write(
-    #         f"class {enum_ani_info.sts_ctor} implements {enum_ani_info.sts_name} {{\n"
+    #         f"class {enum_ani_info.sts_inner} implements {enum_ani_info.sts_iface} {{\n"
     #         f"    tag: int;\n"
     #         f"    value: {sts_value_types_str};\n"
     #         f"    constructor(tag: int, value: {sts_value_types_str}) {{\n"
