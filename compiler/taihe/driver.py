@@ -5,11 +5,25 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-from taihe.codegen.abi_generator import ABICodeGenerator
-from taihe.codegen.ani_generator import ANICodeGenerator, STSCodeGenerator
-from taihe.codegen.c_impl_generator import CImplCodeGenerator
-from taihe.codegen.cpp_generator import CppCodeGenerator
-from taihe.codegen.cpp_impl_generator import CppImplCodeGenerator
+from taihe.codegen.abi_generator import (
+    ABIHeadersGenerator,
+    ABISourcesGenerator,
+)
+from taihe.codegen.ani_generator import (
+    ANICodeGenerator,
+    STSCodeGenerator,
+)
+from taihe.codegen.c_impl_generator import (
+    CImplHeadersGenerator,
+    CImplSourcesGenerator,
+)
+from taihe.codegen.cpp_generator import (
+    CppHeadersGenerator,
+)
+from taihe.codegen.cpp_impl_generator import (
+    CppImplHeadersGenerator,
+    CppImplSourcesGenerator,
+)
 from taihe.parse.convert import AstConverter
 from taihe.semantics.analysis import analyze_semantics
 from taihe.semantics.declarations import PackageGroup
@@ -101,19 +115,28 @@ class CompilerInstance:
         if not self.invocation.out_dir:
             return
 
-        ABICodeGenerator(self.target_manager, self.analysis_manager).generate(
+        ABIHeadersGenerator(self.target_manager, self.analysis_manager).generate(
             self.package_group
         )
-        CppCodeGenerator(self.target_manager, self.analysis_manager).generate(
+        CppHeadersGenerator(self.target_manager, self.analysis_manager).generate(
             self.package_group
         )
         if self.invocation.gen_author:
-            CImplCodeGenerator(self.target_manager, self.analysis_manager).generate(
+            ABISourcesGenerator(self.target_manager, self.analysis_manager).generate(
                 self.package_group
             )
-            CppImplCodeGenerator(self.target_manager, self.analysis_manager).generate(
+            CImplHeadersGenerator(self.target_manager, self.analysis_manager).generate(
                 self.package_group
             )
+            CppImplHeadersGenerator(
+                self.target_manager, self.analysis_manager
+            ).generate(self.package_group)
+            CImplSourcesGenerator(self.target_manager, self.analysis_manager).generate(
+                self.package_group
+            )
+            CppImplSourcesGenerator(
+                self.target_manager, self.analysis_manager
+            ).generate(self.package_group)
         if self.invocation.gen_ani:
             ANICodeGenerator(self.target_manager, self.analysis_manager).generate(
                 self.package_group

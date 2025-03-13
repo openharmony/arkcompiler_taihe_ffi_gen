@@ -319,7 +319,7 @@ class TypeABIInfo(TypeVisitor[AbstractTypeABIInfo]):
         return CallbackTypeABIInfo.get(self.am, t)
 
 
-class ABICodeGenerator:
+class ABIHeadersGenerator:
     def __init__(self, tm: OutputManager, am: AnalysisManager):
         self.tm = tm
         self.am = am
@@ -407,7 +407,9 @@ class ABICodeGenerator:
         for field in struct.fields:
             type_abi_info = TypeABIInfo.get(self.am, field.ty_ref.resolved_ty)
             struct_abi_defn_target.include(*type_abi_info.defn_headers)
-            struct_abi_defn_target.write(f"  {type_abi_info.as_owner} {field.name};\n")
+            struct_abi_defn_target.write(
+                f"    {type_abi_info.as_owner} {field.name};\n"
+            )
         struct_abi_defn_target.write("};\n")
 
     def gen_enum_files(
@@ -456,13 +458,13 @@ class ABICodeGenerator:
             type_abi_info = TypeABIInfo.get(self.am, item.ty_ref.resolved_ty)
             enum_abi_defn_target.include(*type_abi_info.defn_headers)
             enum_abi_defn_target.write(
-                f"  {type_abi_info.as_owner} {item.name}; // {item.value}\n"
+                f"    {type_abi_info.as_owner} {item.name}; // {item.value}\n"
             )
         enum_abi_defn_target.write(
             f"}};\n"
             f"struct {enum_abi_info.mangled_name} {{\n"
-            f"  {enum_abi_info.tag_type} m_tag;\n"
-            f"  union {enum_abi_info.union_name} m_data;\n"
+            f"    {enum_abi_info.tag_type} m_tag;\n"
+            f"    union {enum_abi_info.union_name} m_data;\n"
             f"}};\n"
         )
 
@@ -475,8 +477,7 @@ class ABICodeGenerator:
         self.gen_iface_decl_file(iface, iface_abi_info)
         self.gen_iface_defn_file(iface, iface_abi_info)
         self.gen_iface_impl_file(iface, iface_abi_info)
-        self.gen_iface_src_file(iface, iface_abi_info)
-        pkg_abi_target.include(iface_abi_info.defn_header)
+        pkg_abi_target.include(iface_abi_info.impl_header)
 
     def gen_iface_decl_file(
         self,
@@ -530,7 +531,7 @@ class ABICodeGenerator:
             else:
                 return_ty_name = "void"
             iface_abi_defn_target.write(
-                f"  {return_ty_name} (*{method.name})({params_str});\n"
+                f"    {return_ty_name} (*{method.name})({params_str});\n"
             )
         iface_abi_defn_target.write("};\n")
 
@@ -544,7 +545,7 @@ class ABICodeGenerator:
         for ancestor_item_info in iface_abi_info.ancestor_list:
             ancestor_abi_info = IfaceABIInfo.get(self.am, ancestor_item_info.iface)
             iface_abi_defn_target.write(
-                f"  struct {ancestor_abi_info.ftable} const* {ancestor_item_info.ftbl_ptr};\n"
+                f"    struct {ancestor_abi_info.ftable} const* {ancestor_item_info.ftbl_ptr};\n"
             )
         iface_abi_defn_target.write("};\n")
 
@@ -556,8 +557,8 @@ class ABICodeGenerator:
     ):
         iface_abi_defn_target.write(
             f"struct {iface_abi_info.mangled_name} {{\n"
-            f"  struct {iface_abi_info.vtable} const* vtbl_ptr;\n"
-            f"  struct DataBlockHead* data_ptr;\n"
+            f"    struct {iface_abi_info.vtable} const* vtbl_ptr;\n"
+            f"    struct DataBlockHead* data_ptr;\n"
             f"}};\n"
         )
 
@@ -574,10 +575,10 @@ class ABICodeGenerator:
             iface_abi_defn_target.include(ancestor_abi_info.defn_header)
             iface_abi_defn_target.write(
                 f"TH_INLINE struct {ancestor_abi_info.mangled_name} {info.static_cast}(struct {iface_abi_info.mangled_name} tobj) {{\n"
-                f"  struct {ancestor_abi_info.mangled_name} result;\n"
-                f"  result.vtbl_ptr = (struct {ancestor_abi_info.vtable} const*)((void* const*)tobj.vtbl_ptr + {info.offset});\n"
-                f"  result.data_ptr = tobj.data_ptr;\n"
-                f"  return result;\n"
+                f"    struct {ancestor_abi_info.mangled_name} result;\n"
+                f"    result.vtbl_ptr = (struct {ancestor_abi_info.vtable} const*)((void* const*)tobj.vtbl_ptr + {info.offset});\n"
+                f"    result.data_ptr = tobj.data_ptr;\n"
+                f"    return result;\n"
                 f"}}\n"
             )
 
@@ -589,17 +590,17 @@ class ABICodeGenerator:
     ):
         iface_abi_defn_target.write(
             f"TH_INLINE struct {iface_abi_info.mangled_name} {iface_abi_info.dynamic_cast}(struct DataBlockHead* data_ptr) {{\n"
-            f"  struct TypeInfo const* rtti_ptr = data_ptr->rtti_ptr;\n"
-            f"  struct {iface_abi_info.mangled_name} result;\n"
-            f"  result.data_ptr = data_ptr;"
-            f"  for (size_t i = 0; i < rtti_ptr->len; i++) {{\n"
-            f"    if (rtti_ptr->idmap[i].id == {iface_abi_info.iid}) {{\n"
-            f"      result.vtbl_ptr = (struct {iface_abi_info.vtable}*)rtti_ptr->idmap[i].vtbl_ptr;\n"
-            f"      return result;\n"
+            f"    struct TypeInfo const* rtti_ptr = data_ptr->rtti_ptr;\n"
+            f"    struct {iface_abi_info.mangled_name} result;\n"
+            f"    result.data_ptr = data_ptr;"
+            f"    for (size_t i = 0; i < rtti_ptr->len; i++) {{\n"
+            f"        if (rtti_ptr->idmap[i].id == {iface_abi_info.iid}) {{\n"
+            f"            result.vtbl_ptr = (struct {iface_abi_info.vtable}*)rtti_ptr->idmap[i].vtbl_ptr;\n"
+            f"            return result;\n"
+            f"        }}\n"
             f"    }}\n"
-            f"  }}\n"
-            f"  result.vtbl_ptr = NULL;\n"
-            f"  return result;\n"
+            f"    result.vtbl_ptr = NULL;\n"
+            f"    return result;\n"
             f"}}\n"
         )
 
@@ -611,11 +612,11 @@ class ABICodeGenerator:
     ):
         iface_abi_defn_target.write(
             f"TH_INLINE struct {iface_abi_info.mangled_name} {iface_abi_info.copy_func}(struct {iface_abi_info.mangled_name} tobj) {{\n"
-            f"  struct DataBlockHead* data_ptr = tobj.data_ptr;\n"
-            f"  if (data_ptr) {{\n"
-            f"    tref_inc(&data_ptr->m_count);\n"
-            f"  }}\n"
-            f"  return tobj;\n"
+            f"    struct DataBlockHead* data_ptr = tobj.data_ptr;\n"
+            f"    if (data_ptr) {{\n"
+            f"        tref_inc(&data_ptr->m_count);\n"
+            f"    }}\n"
+            f"    return tobj;\n"
             f"}}\n"
         )
 
@@ -627,10 +628,10 @@ class ABICodeGenerator:
     ):
         iface_abi_defn_target.write(
             f"TH_INLINE void {iface_abi_info.drop_func}(struct {iface_abi_info.mangled_name} tobj) {{\n"
-            f"  struct DataBlockHead* data_ptr = tobj.data_ptr;\n"
-            f"  if (data_ptr && tref_dec(&data_ptr->m_count)) {{\n"
-            f"    data_ptr->rtti_ptr->free(data_ptr);\n"
-            f"  }}\n"
+            f"    struct DataBlockHead* data_ptr = tobj.data_ptr;\n"
+            f"    if (data_ptr && tref_dec(&data_ptr->m_count)) {{\n"
+            f"        data_ptr->rtti_ptr->free(data_ptr);\n"
+            f"    }}\n"
             f"}}\n"
         )
 
@@ -670,15 +671,29 @@ class ABICodeGenerator:
                 return_ty_name = "void"
             iface_abi_impl_target.write(
                 f"TH_INLINE {return_ty_name} {method_abi_info.mangled_name}({params_str}) {{\n"
-                f"  return tobj.vtbl_ptr->{iface_abi_info.ancestor_dict[iface].ftbl_ptr}->{method.name}({args_str});\n"
+                f"    return tobj.vtbl_ptr->{iface_abi_info.ancestor_dict[iface].ftbl_ptr}->{method.name}({args_str});\n"
                 f"}}\n"
             )
 
-    def gen_iface_src_file(
+
+class ABISourcesGenerator:
+    def __init__(self, tm: OutputManager, am: AnalysisManager):
+        self.tm = tm
+        self.am = am
+
+    def generate(self, pg: PackageGroup):
+        for pkg in pg.packages:
+            self.gen_package_file(pkg)
+
+    def gen_package_file(self, pkg: PackageDecl):
+        for iface in pkg.interfaces:
+            self.gen_iface_file(iface)
+
+    def gen_iface_file(
         self,
         iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
     ):
+        iface_abi_info = IfaceABIInfo.get(self.am, iface)
         abi_iface_src_target = COutputBuffer.create(
             self.tm, f"src/{iface_abi_info.src}", False
         )

@@ -18,6 +18,7 @@ from taihe.utils.outputs import COutputBuffer, OutputManager
 class PackageCppImplInfo(AbstractAnalysis[PackageDecl]):
     def __init__(self, am: AnalysisManager, p: PackageDecl) -> None:
         self.header = f"{p.name}.impl.hpp"
+        self.source = f"{p.name}.impl.cpp"
 
 
 class GlobFuncCppImplInfo(AbstractAnalysis[GlobFuncDecl]):
@@ -25,7 +26,7 @@ class GlobFuncCppImplInfo(AbstractAnalysis[GlobFuncDecl]):
         self.macro = f"TH_EXPORT_CPP_API_{f.name}"
 
 
-class CppImplCodeGenerator:
+class CppImplHeadersGenerator:
     def __init__(self, tm: OutputManager, am: AnalysisManager):
         self.tm = tm
         self.am = am
@@ -78,4 +79,47 @@ class CppImplCodeGenerator:
             f"    {abi_return_ty_name} {func_abi_info.mangled_name}({abi_params_str}) {{ \\\n"
             f"        return {abi_result}; \\\n"
             f"    }}\n"
+        )
+
+
+class CppImplSourcesGenerator:
+    def __init__(self, tm: OutputManager, am: AnalysisManager):
+        self.tm = tm
+        self.am = am
+
+    def generate(self, pg: PackageGroup):
+        for pkg in pg.packages:
+            self.gen_package_file(pkg)
+
+    def gen_package_file(self, pkg: PackageDecl):
+        pkg_cpp_impl_info = PackageCppImplInfo.get(self.am, pkg)
+        pkg_cpp_impl_target = COutputBuffer.create(
+            self.tm, f"temp/{pkg_cpp_impl_info.source}", False
+        )
+        pkg_cpp_impl_target.include(pkg_cpp_impl_info.header)
+        for func in pkg.functions:
+            self.gen_func(func, pkg_cpp_impl_target)
+
+    def gen_func(
+        self,
+        func: GlobFuncDecl,
+        pkg_cpp_impl_target: COutputBuffer,
+    ):
+        func_cpp_impl_info = GlobFuncCppImplInfo.get(self.am, func)
+        func_cpp_impl_name = f"{func.name}_impl"
+        cpp_params = []
+        for param in func.params:
+            type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
+            cpp_params.append(f"{type_cpp_info.as_param} {param.name}")
+        abi_params_str = ", ".join(cpp_params)
+        if return_ty_ref := func.return_ty_ref:
+            type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
+            cpp_return_ty_name = type_cpp_info.as_owner
+        else:
+            cpp_return_ty_name = "void"
+        pkg_cpp_impl_target.write(
+            f"{cpp_return_ty_name} {func_cpp_impl_name}({abi_params_str}) {{ \\\n"
+            f"    // TODO\n"
+            f"}}\n"
+            f"{func_cpp_impl_info.macro}({func_cpp_impl_name})\n"
         )
