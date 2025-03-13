@@ -1,0 +1,7 @@
+interface IBase {
+    getId(): String;
+    getIBase(): IBase;
+}
+
+function add(a: i32, b: i32): i32;
+function makeIBase(): IBase;
