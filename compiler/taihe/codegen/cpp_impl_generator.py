@@ -1,3 +1,6 @@
+import re
+from collections.abc import Callable
+
 from taihe.codegen.abi_generator import (
     GlobFuncABIInfo,
     IfaceABIInfo,
@@ -100,13 +103,18 @@ class CppImplSourcesGenerator:
             self.tm, f"temp/{pkg_cpp_impl_info.source}", False
         )
         pkg_cpp_impl_target.include(pkg_cpp_impl_info.header)
+        pkg_cpp_impl_target.write(
+            f"// Please delete this include when you implement\n"
+            f"#include <stdexcept>"
+        )
         self.gen_using_namespace(pkg_cpp_impl_target)
-        self.gen_anonymous_namespace_left(pkg_cpp_impl_target)
-        for iface in pkg.interfaces:
-            self.gen_iface(iface, pkg_cpp_impl_target)
-        for func in pkg.functions:
-            self.gen_func(func, pkg_cpp_impl_target)
-        self.gen_anonymous_namespace_right(pkg_cpp_impl_target)
+        self.gen_anonymous_namespace_block(
+            pkg_cpp_impl_target,
+            content_generator=lambda: [
+                self.gen_iface(iface, pkg_cpp_impl_target) for iface in pkg.interfaces
+            ]
+            + [self.gen_func(func, pkg_cpp_impl_target) for func in pkg.functions],
+        )
         for func in pkg.functions:
             self.gen_func_macro(func, pkg_cpp_impl_target)
 
@@ -135,7 +143,7 @@ class CppImplSourcesGenerator:
             cpp_return_ty_name = "void"
         pkg_cpp_impl_target.write(
             f"{cpp_return_ty_name} {func_cpp_impl_name}({cpp_params_str}) {{\n"
-            f'    throw "Function {func_cpp_impl_name} not implemented";\n'
+            f'    throw std::runtime_error("Function {func_cpp_impl_name} Not implemented");\n'
             f"}}\n"
         )
 
@@ -175,7 +183,7 @@ class CppImplSourcesGenerator:
             cpp_return_ty_name = "void"
         pkg_cpp_impl_target.write(
             f"    {cpp_return_ty_name} {func_cpp_impl_name}({cpp_params_str}) {{\n"
-            f'        throw "Function {iface_name}::{func_cpp_impl_name} not implemented";\n'
+            f'        throw std::runtime_error("Function {iface_name}::{func_cpp_impl_name} Not implemented");\n'
             f"    }}\n\n"
         )
 
@@ -185,7 +193,14 @@ class CppImplSourcesGenerator:
     ) -> str:
         prefix = "::taihe::core::"
         if input_str.startswith(prefix):
-            return input_str[len(prefix) :]
+            input_str = input_str[len(prefix) :]
+
+        input_str = re.sub(r"<\s*::taihe::core::", "<", input_str)
+
+        input_str = re.sub(r",\s*::taihe::core::", ", ", input_str)
+
+        input_str = re.sub(r"\(\s*::taihe::core::", "(", input_str)
+
         return input_str
 
     def gen_func_macro(
@@ -197,14 +212,13 @@ class CppImplSourcesGenerator:
         func_cpp_impl_name = f"{func.name}"
         pkg_cpp_impl_target.write(f"{func_cpp_impl_info.macro}({func_cpp_impl_name})\n")
 
-    def gen_anonymous_namespace_left(
+    def gen_anonymous_namespace_block(
         self,
         pkg_cpp_impl_target: COutputBuffer,
+        content_generator: Callable[[], None],
     ):
-        pkg_cpp_impl_target.write(f"namespace {{\n" f"\n")
+        pkg_cpp_impl_target.write(f"namespace {{\n\n")
 
-    def gen_anonymous_namespace_right(
-        self,
-        pkg_cpp_impl_target: COutputBuffer,
-    ):
-        pkg_cpp_impl_target.write(f"\n" f"}}\n" f"\n")
+        content_generator()
+
+        pkg_cpp_impl_target.write(f"\n}}\n\n")
