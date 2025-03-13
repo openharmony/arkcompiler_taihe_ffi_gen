@@ -1089,7 +1089,7 @@ class STSCodeGenerator:
         else:
             sts_return_ty_name = "void"
         pkg_sts_target.write(
-            f"native function {func_ani_info.sts_name}({params_sts_str}): {sts_return_ty_name};\n"
+            f"export native function {func_ani_info.sts_name}({params_sts_str}): {sts_return_ty_name};\n"
         )
 
     def gen_struct_interface(
