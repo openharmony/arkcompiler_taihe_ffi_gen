@@ -1236,6 +1236,7 @@ class ANICodeGenerator:
         pkg_cpp_info = PackageCppInfo.get(self.am, pkg)
         pkg_ani_target.include("ani.h")
         pkg_ani_target.include(pkg_cpp_info.header)
+        pkg_ani_target.include("core/runtime.hpp")
         for func in pkg.functions:
             self.gen_func(func, pkg_ani_target)
         pkg_ani_target.write(
@@ -1245,6 +1246,10 @@ class ANICodeGenerator:
             "        return ANI_ERROR;\n"
             "    }\n"
         )
+        pkg_ani_target.write(
+            "taihe::core::set_env(env);\n"
+        )
+
         pkg_ani_target.write(
             f"    {{\n"
             f'    static const char *className = "{pkg_ani_info.cls_name}";\n'

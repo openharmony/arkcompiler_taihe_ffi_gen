@@ -247,12 +247,14 @@ def main(
             *compile(
                 build_author_generated_dir,
                 runtime_src_dir,
+                panda_include,
                 runtime_include_dir,
                 opt_level=opt_level,
             ),
             *compile(
                 build_author_generated_dir,
                 author_src_dir,
+                panda_include,
                 runtime_include_dir,
                 author_generated_include_dir,
                 author_include_dir,
