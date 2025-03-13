@@ -17,6 +17,9 @@ from taihe.semantics.declarations import (
     PackageDecl,
     PackageGroup,
 )
+from taihe.semantics.types import (
+    IfaceType,
+)
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
 from taihe.utils.outputs import COutputBuffer, OutputManager
 
@@ -138,14 +141,22 @@ class CppImplSourcesGenerator:
         cpp_params_str = ", ".join(cpp_params)
         if return_ty_ref := func.return_ty_ref:
             type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
+            print(return_ty_ref.resolved_ty)
             cpp_return_ty_name = self._mask(type_cpp_info.as_owner)
         else:
             cpp_return_ty_name = "void"
         pkg_cpp_impl_target.write(
             f"{cpp_return_ty_name} {func_cpp_impl_name}({cpp_params_str}) {{\n"
-            f'    throw std::runtime_error("Function {func_cpp_impl_name} Not implemented");\n'
-            f"}}\n"
         )
+        if isinstance(return_ty_ref.resolved_ty, IfaceType):
+            pkg_cpp_impl_target.write(
+                f"    return make_holder<{self._get_last_part(cpp_return_ty_name)}, {cpp_return_ty_name}>();\n"
+            )
+        else:
+            pkg_cpp_impl_target.write(
+                f'    throw std::runtime_error("Function {func_cpp_impl_name} Not implemented");\n'
+            )
+        pkg_cpp_impl_target.write(f"}}\n")
 
     def gen_iface(
         self,
@@ -183,9 +194,16 @@ class CppImplSourcesGenerator:
             cpp_return_ty_name = "void"
         pkg_cpp_impl_target.write(
             f"    {cpp_return_ty_name} {func_cpp_impl_name}({cpp_params_str}) {{\n"
-            f'        throw std::runtime_error("Function {iface_name}::{func_cpp_impl_name} Not implemented");\n'
-            f"    }}\n\n"
         )
+        if isinstance(return_ty_ref.resolved_ty, IfaceType):
+            pkg_cpp_impl_target.write(
+                f"        return make_holder<{self._get_last_part(cpp_return_ty_name)}, {cpp_return_ty_name}>();\n"
+            )
+        else:
+            pkg_cpp_impl_target.write(
+                f'        throw std::runtime_error("Function {iface_name}::{func_cpp_impl_name} Not implemented");\n'
+            )
+        pkg_cpp_impl_target.write(f"    }}\n")
 
     def _mask(
         self,
@@ -202,6 +220,9 @@ class CppImplSourcesGenerator:
         input_str = re.sub(r"\(\s*::taihe::core::", "(", input_str)
 
         return input_str
+
+    def _get_last_part(self, s: str) -> str:
+        return s.split("::")[-1]
 
     def gen_func_macro(
         self,
