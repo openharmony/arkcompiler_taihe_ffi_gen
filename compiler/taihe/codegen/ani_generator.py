@@ -28,17 +28,17 @@ from taihe.semantics.types import (
     I64,
     STRING,
     ArrayType,
-    CallbackType,
+    # CallbackType,
     EnumType,
-    IfaceType,
-    MapType,
+    # IfaceType,
+    # MapType,
     OptionalType,
     ScalarType,
-    SetType,
+    # SetType,
     StringType,
     StructType,
     Type,
-    VectorType,
+    # VectorType,
 )
 from taihe.semantics.visitor import TypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
@@ -148,32 +148,30 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
     def __init__(self, am: AnalysisManager, d: StructDecl) -> None:
         p = d.node_parent
         assert p
-        self.sts_name = d.name
-        self.sts_ctor = f"{d.name}_inner"
-        self.prx_name = f"{d.name}_proxy"
+        self.sts_iface = d.name
+        self.sts_inner = d.name
         pkg_ani_info = PackageANIInfo.get(am, p)
-        self.cls_name = f"L{pkg_ani_info.lib_name}/{self.prx_name};"
+        self.cls_name = f"L{pkg_ani_info.lib_name}/{self.sts_inner};"
 
 
 class EnumANIInfo(AbstractAnalysis[EnumDecl]):
     def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
         p = d.node_parent
         assert p
-        self.sts_name = d.name
-        self.sts_ctor = f"{d.name}_inner"
-        self.prx_name = f"{d.name}_proxy"
+        self.sts_iface = d.name
+        self.sts_inner = d.name
         pkg_ani_info = PackageANIInfo.get(am, p)
-        self.cls_name = f"L{pkg_ani_info.lib_name}/{self.prx_name};"
+        self.cls_name = f"L{pkg_ani_info.lib_name}/{self.sts_inner};"
 
 
 class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
     def __init__(self, am: AnalysisManager, d: IfaceDecl) -> None:
         p = d.node_parent
         assert p
-        self.sts_name = d.name
-        self.prx_name = f"{d.name}_proxy"
+        self.sts_iface = d.name
+        self.sts_inner = d.name
         pkg_ani_info = PackageANIInfo.get(am, p)
-        self.cls_name = f"L{pkg_ani_info.lib_name}/{self.prx_name};"
+        self.cls_name = f"L{pkg_ani_info.lib_name}/{self.sts_inner};"
 
 
 class AbstractTypeANIInfo(metaclass=ABCMeta):
@@ -248,7 +246,7 @@ class StructTypeANIInfo(AbstractAnalysis[StructType], AbstractTypeANIInfo):
         self.t = t
         self.am = am
         struct_ani_info = StructANIInfo.get(am, t.ty_decl)
-        self.sts_type = struct_ani_info.sts_name
+        self.sts_type = struct_ani_info.sts_iface
         self.ani_type = ANI_OBJECT
 
     @override
@@ -399,7 +397,7 @@ class EnumTypeANIInfo(AbstractAnalysis[EnumType], AbstractTypeANIInfo):
         self.t = t
         self.am = am
         enum_ani_info = EnumANIInfo.get(am, t.ty_decl)
-        self.sts_type = enum_ani_info.sts_name
+        self.sts_type = enum_ani_info.sts_iface
         self.ani_type = ANI_OBJECT
 
     @override
@@ -586,9 +584,9 @@ class EnumTypeANIInfo(AbstractAnalysis[EnumType], AbstractTypeANIInfo):
         )
 
 
-class IfaceTypeANIInfo(AbstractAnalysis[IfaceType], AbstractTypeANIInfo):
-    def __init__(self, am: AnalysisManager, t: IfaceType):
-        pass
+# class IfaceTypeANIInfo(AbstractAnalysis[IfaceType], AbstractTypeANIInfo):
+#     def __init__(self, am: AnalysisManager, t: IfaceType):
+#         pass
 
 
 class ScalarTypeANIInfo(AbstractAnalysis[ScalarType], AbstractTypeANIInfo):
@@ -972,24 +970,24 @@ class OptionalTypeANIInfo(AbstractAnalysis[OptionalType], AbstractTypeANIInfo):
         )
 
 
-class VectorTypeANIInfo(AbstractAnalysis[VectorType], AbstractTypeANIInfo):
-    def __init__(self, am: AnalysisManager, t: VectorType) -> None:
-        pass
+# class VectorTypeANIInfo(AbstractAnalysis[VectorType], AbstractTypeANIInfo):
+#     def __init__(self, am: AnalysisManager, t: VectorType) -> None:
+#         pass
 
 
-class MapTypeANIInfo(AbstractAnalysis[MapType], AbstractTypeANIInfo):
-    def __init__(self, am: AnalysisManager, t: MapType) -> None:
-        pass
+# class MapTypeANIInfo(AbstractAnalysis[MapType], AbstractTypeANIInfo):
+#     def __init__(self, am: AnalysisManager, t: MapType) -> None:
+#         pass
 
 
-class SetTypeANIInfo(AbstractAnalysis[SetType], AbstractTypeANIInfo):
-    def __init__(self, am: AnalysisManager, t: SetType) -> None:
-        pass
+# class SetTypeANIInfo(AbstractAnalysis[SetType], AbstractTypeANIInfo):
+#     def __init__(self, am: AnalysisManager, t: SetType) -> None:
+#         pass
 
 
-class CallbackTypeANIInfo(AbstractAnalysis[CallbackType], AbstractTypeANIInfo):
-    def __init__(self, am: AnalysisManager, t: CallbackType) -> None:
-        pass
+# class CallbackTypeANIInfo(AbstractAnalysis[CallbackType], AbstractTypeANIInfo):
+#     def __init__(self, am: AnalysisManager, t: CallbackType) -> None:
+#         pass
 
 
 class TypeANIInfo(TypeVisitor[AbstractTypeANIInfo]):
@@ -1009,9 +1007,9 @@ class TypeANIInfo(TypeVisitor[AbstractTypeANIInfo]):
     def visit_struct_type(self, t: StructType) -> AbstractTypeANIInfo:
         return StructTypeANIInfo.get(self.am, t)
 
-    @override
-    def visit_iface_type(self, t: IfaceType) -> AbstractTypeANIInfo:
-        return IfaceTypeANIInfo.get(self.am, t)
+    # @override
+    # def visit_iface_type(self, t: IfaceType) -> AbstractTypeANIInfo:
+    #     return IfaceTypeANIInfo.get(self.am, t)
 
     @override
     def visit_scalar_type(self, t: ScalarType) -> AbstractTypeANIInfo:
@@ -1029,21 +1027,21 @@ class TypeANIInfo(TypeVisitor[AbstractTypeANIInfo]):
     def visit_optional_type(self, t: OptionalType) -> AbstractTypeANIInfo:
         return OptionalTypeANIInfo.get(self.am, t)
 
-    @override
-    def visit_vector_type(self, t: VectorType) -> AbstractTypeANIInfo:
-        return VectorTypeANIInfo.get(self.am, t)
+    # @override
+    # def visit_vector_type(self, t: VectorType) -> AbstractTypeANIInfo:
+    #     return VectorTypeANIInfo.get(self.am, t)
 
-    @override
-    def visit_map_type(self, t: MapType) -> AbstractTypeANIInfo:
-        return MapTypeANIInfo.get(self.am, t)
+    # @override
+    # def visit_map_type(self, t: MapType) -> AbstractTypeANIInfo:
+    #     return MapTypeANIInfo.get(self.am, t)
 
-    @override
-    def visit_set_type(self, t: SetType) -> AbstractTypeANIInfo:
-        return SetTypeANIInfo.get(self.am, t)
+    # @override
+    # def visit_set_type(self, t: SetType) -> AbstractTypeANIInfo:
+    #     return SetTypeANIInfo.get(self.am, t)
 
-    @override
-    def visit_callback_type(self, t: CallbackType) -> AbstractTypeANIInfo:
-        return CallbackTypeANIInfo.get(self.am, t)
+    # @override
+    # def visit_callback_type(self, t: CallbackType) -> AbstractTypeANIInfo:
+    #     return CallbackTypeANIInfo.get(self.am, t)
 
 
 class STSCodeGenerator:
@@ -1061,18 +1059,23 @@ class STSCodeGenerator:
 
         pkg_sts_target.write(f'loadLibrary("{pkg_ani_info.lib_name}");\n')
 
+        # for struct in pkg.structs:
+        #     self.gen_struct_inner(struct, pkg_sts_target)
+        # for enum in pkg.enums:
+        #     self.gen_enum_inner(enum, pkg_sts_target)
+
+        # for struct in pkg.structs:
+        #     self.gen_struct_interface(struct, pkg_sts_target)
+        # for enum in pkg.enums:
+        #     self.gen_enum_interface(enum, pkg_sts_target)
+
         for struct in pkg.structs:
-            self.gen_struct_interface(struct, pkg_sts_target)
+            self.gen_struct(struct, pkg_sts_target)
         for enum in pkg.enums:
-            self.gen_enum_interface(enum, pkg_sts_target)
+            self.gen_enum(enum, pkg_sts_target)
 
         for func in pkg.functions:
             self.gen_func(func, pkg_sts_target)
-
-        for struct in pkg.structs:
-            self.gen_struct_inner(struct, pkg_sts_target)
-        for enum in pkg.enums:
-            self.gen_enum_inner(enum, pkg_sts_target)
 
     def gen_func(
         self,
@@ -1094,27 +1097,46 @@ class STSCodeGenerator:
             f"export native function {func_ani_info.sts_name}({params_sts_str}): {sts_return_ty_name};\n"
         )
 
-    def gen_struct_interface(
-        self,
-        struct: StructDecl,
-        pkg_sts_target: OutputBuffer,
-    ):
-        struct_ani_info = StructANIInfo.get(self.am, struct)
-        pkg_sts_target.write(f"export interface {struct_ani_info.sts_name} {{\n")
-        for field in struct.fields:
-            ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
-            pkg_sts_target.write(f"    {field.name}: {ty_ani_info.sts_type};\n")
-        pkg_sts_target.write("}\n")
+    # def gen_struct_interface(
+    #     self,
+    #     struct: StructDecl,
+    #     pkg_sts_target: OutputBuffer,
+    # ):
+    #     struct_ani_info = StructANIInfo.get(self.am, struct)
+    #     pkg_sts_target.write(f"export interface {struct_ani_info.sts_name} {{\n")
+    #     for field in struct.fields:
+    #         ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
+    #         pkg_sts_target.write(f"    {field.name}: {ty_ani_info.sts_type};\n")
+    #     pkg_sts_target.write("}\n")
 
-    def gen_struct_inner(
+    # def gen_struct_inner(
+    #     self,
+    #     struct: StructDecl,
+    #     pkg_sts_target: OutputBuffer,
+    # ):
+    #     struct_ani_info = StructANIInfo.get(self.am, struct)
+    #     pkg_sts_target.write(
+    #         f"class {struct_ani_info.sts_ctor} implements {struct_ani_info.sts_name} {{\n"
+    #     )
+    #     for field in struct.fields:
+    #         ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
+    #         pkg_sts_target.write(f"    {field.name}: {ty_ani_info.sts_type};\n")
+    #     pkg_sts_target.write("    constructor(\n")
+    #     for field in struct.fields:
+    #         ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
+    #         pkg_sts_target.write(f"        {field.name}: {ty_ani_info.sts_type},\n")
+    #     pkg_sts_target.write("    ) {\n")
+    #     for field in struct.fields:
+    #         pkg_sts_target.write(f"        this.{field.name} = {field.name};\n")
+    #     pkg_sts_target.write("    }\n" "}\n")
+
+    def gen_struct(
         self,
         struct: StructDecl,
         pkg_sts_target: OutputBuffer,
     ):
         struct_ani_info = StructANIInfo.get(self.am, struct)
-        pkg_sts_target.write(
-            f"class {struct_ani_info.sts_ctor} implements {struct_ani_info.sts_name} {{\n"
-        )
+        pkg_sts_target.write(f"export class {struct_ani_info.sts_inner} {{\n")
         for field in struct.fields:
             ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
             pkg_sts_target.write(f"    {field.name}: {ty_ani_info.sts_type};\n")
@@ -1127,28 +1149,53 @@ class STSCodeGenerator:
             pkg_sts_target.write(f"        this.{field.name} = {field.name};\n")
         pkg_sts_target.write("    }\n" "}\n")
 
-    def gen_enum_interface(
-        self,
-        enum: EnumDecl,
-        pkg_sts_target: OutputBuffer,
-    ):
-        enum_ani_info = EnumANIInfo.get(self.am, enum)
-        sts_value_types = []
-        for item in enum.items:
-            if item.ty_ref is None:
-                sts_value_types.append("undefined")
-                continue
-            ty_ani_info = TypeANIInfo.get(self.am, item.ty_ref.resolved_ty)
-            sts_value_types.append(f"{ty_ani_info.sts_type}")
-        sts_value_types_str = " | ".join(sts_value_types)
-        pkg_sts_target.write(
-            f"export interface {enum_ani_info.sts_name} {{\n"
-            f"    tag: int;\n"
-            f"    value: {sts_value_types_str};\n"
-            f"}}\n"
-        )
+    # def gen_enum_interface(
+    #     self,
+    #     enum: EnumDecl,
+    #     pkg_sts_target: OutputBuffer,
+    # ):
+    #     enum_ani_info = EnumANIInfo.get(self.am, enum)
+    #     sts_value_types = []
+    #     for item in enum.items:
+    #         if item.ty_ref is None:
+    #             sts_value_types.append("undefined")
+    #             continue
+    #         ty_ani_info = TypeANIInfo.get(self.am, item.ty_ref.resolved_ty)
+    #         sts_value_types.append(f"{ty_ani_info.sts_type}")
+    #     sts_value_types_str = " | ".join(sts_value_types)
+    #     pkg_sts_target.write(
+    #         f"export interface {enum_ani_info.sts_name} {{\n"
+    #         f"    tag: int;\n"
+    #         f"    value: {sts_value_types_str};\n"
+    #         f"}}\n"
+    #     )
 
-    def gen_enum_inner(
+    # def gen_enum_inner(
+    #     self,
+    #     enum: EnumDecl,
+    #     pkg_sts_target: OutputBuffer,
+    # ):
+    #     enum_ani_info = EnumANIInfo.get(self.am, enum)
+    #     sts_value_types = []
+    #     for item in enum.items:
+    #         if item.ty_ref is None:
+    #             sts_value_types.append("undefined")
+    #             continue
+    #         ty_ani_info = TypeANIInfo.get(self.am, item.ty_ref.resolved_ty)
+    #         sts_value_types.append(f"{ty_ani_info.sts_type}")
+    #     sts_value_types_str = " | ".join(sts_value_types)
+    #     pkg_sts_target.write(
+    #         f"class {enum_ani_info.sts_ctor} implements {enum_ani_info.sts_name} {{\n"
+    #         f"    tag: int;\n"
+    #         f"    value: {sts_value_types_str};\n"
+    #         f"    constructor(tag: int, value: {sts_value_types_str}) {{\n"
+    #         f"        this.tag = tag;\n"
+    #         f"        this.value = value;\n"
+    #         f"    }}\n"
+    #         f"}}\n"
+    #     )
+
+    def gen_enum(
         self,
         enum: EnumDecl,
         pkg_sts_target: OutputBuffer,
@@ -1163,7 +1210,7 @@ class STSCodeGenerator:
             sts_value_types.append(f"{ty_ani_info.sts_type}")
         sts_value_types_str = " | ".join(sts_value_types)
         pkg_sts_target.write(
-            f"class {enum_ani_info.sts_ctor} implements {enum_ani_info.sts_name} {{\n"
+            f"export class {enum_ani_info.sts_inner} {{\n"
             f"    tag: int;\n"
             f"    value: {sts_value_types_str};\n"
             f"    constructor(tag: int, value: {sts_value_types_str}) {{\n"
@@ -1253,7 +1300,7 @@ class ANICodeGenerator:
             f"static {ani_return_ty_name} {func_ani_info.mangled_name}({params_ani_str}) {{\n"
         )
         for param, ani_param_name, cpp_arg_name in zip(
-            func.params, ani_param_names, args_cpp
+            func.params, ani_param_names, args_cpp, strict=False
         ):
             type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
             type_ani_info.from_ani(

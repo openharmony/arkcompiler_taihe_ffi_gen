@@ -106,10 +106,8 @@ class CppImplSourcesGenerator:
             self.tm, f"temp/{pkg_cpp_impl_info.source}", False
         )
         pkg_cpp_impl_target.include(pkg_cpp_impl_info.header)
-        pkg_cpp_impl_target.write(
-            f"// Please delete this include when you implement\n"
-            f"#include <stdexcept>\n"
-        )
+        pkg_cpp_impl_target.write("// Please delete this include when you implement\n")
+        pkg_cpp_impl_target.include("stdexcept")
         self.gen_using_namespace(pkg_cpp_impl_target)
         self.gen_anonymous_namespace_block(
             pkg_cpp_impl_target,
@@ -148,9 +146,9 @@ class CppImplSourcesGenerator:
         pkg_cpp_impl_target.write(
             f"{cpp_return_ty_name} {func_cpp_impl_name}({cpp_params_str}) {{\n"
         )
-        if isinstance(return_ty_ref.resolved_ty, IfaceType):
+        if return_ty_ref and isinstance(return_ty_ref.resolved_ty, IfaceType):
             pkg_cpp_impl_target.write(
-                f"    return make_holder<{self._get_last_part(cpp_return_ty_name)}, {cpp_return_ty_name}>();\n"
+                f"    return make_holder<{return_ty_ref.resolved_ty.ty_decl.name}, {cpp_return_ty_name}>();\n"
             )
         else:
             pkg_cpp_impl_target.write(
@@ -164,14 +162,11 @@ class CppImplSourcesGenerator:
         pkg_cpp_impl_target: COutputBuffer,
     ):
         perantsList = IfaceABIInfo.get(self.am, iface).ancestor_dict
-        class_method_list = []
 
         pkg_cpp_impl_target.write(f"class {iface.name} {{\n" f"public:\n")
         for ifaceperant in perantsList:
             for func in ifaceperant.methods:
-                if func.name not in class_method_list:
-                    class_method_list.append(func.name)
-                    self._gen_class_method_impl(iface.name, func, pkg_cpp_impl_target)
+                self._gen_class_method_impl(iface.name, func, pkg_cpp_impl_target)
 
         pkg_cpp_impl_target.write(f"}};\n\n")
 
@@ -195,9 +190,9 @@ class CppImplSourcesGenerator:
         pkg_cpp_impl_target.write(
             f"    {cpp_return_ty_name} {func_cpp_impl_name}({cpp_params_str}) {{\n"
         )
-        if isinstance(return_ty_ref.resolved_ty, IfaceType):
+        if return_ty_ref and isinstance(return_ty_ref.resolved_ty, IfaceType):
             pkg_cpp_impl_target.write(
-                f"        return make_holder<{self._get_last_part(cpp_return_ty_name)}, {cpp_return_ty_name}>();\n"
+                f"        return make_holder<{return_ty_ref.resolved_ty.ty_decl.name}, {cpp_return_ty_name}>();\n"
             )
         else:
             pkg_cpp_impl_target.write(
@@ -221,9 +216,6 @@ class CppImplSourcesGenerator:
 
         return input_str
 
-    def _get_last_part(self, s: str) -> str:
-        return s.split("::")[-1]
-
     def gen_func_macro(
         self,
         func: GlobFuncDecl,
@@ -236,7 +228,7 @@ class CppImplSourcesGenerator:
     def gen_anonymous_namespace_block(
         self,
         pkg_cpp_impl_target: COutputBuffer,
-        content_generator: Callable[[], None],
+        content_generator: Callable[[], list[None]],
     ):
         pkg_cpp_impl_target.write(f"namespace {{\n\n")
 
