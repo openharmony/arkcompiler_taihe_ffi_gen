@@ -65,7 +65,7 @@ class CppImplHeadersGenerator:
         for param in func.params:
             type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
             type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.resolved_ty)
-            pkg_cpp_impl_target.include(*type_cpp_info.defn_headers)
+            pkg_cpp_impl_target.include(*type_cpp_info.impl_headers)
             args_from_abi.append(type_cpp_info.pass_from_abi(param.name))
             abi_params.append(f"{type_abi_info.as_param} {param.name}")
         args_from_abi_str = ", ".join(args_from_abi)
@@ -74,7 +74,7 @@ class CppImplHeadersGenerator:
         if return_ty_ref := func.return_ty_ref:
             type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
             type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
-            pkg_cpp_impl_target.include(*type_cpp_info.defn_headers)
+            pkg_cpp_impl_target.include(*type_cpp_info.impl_headers)
             abi_return_ty_name = type_abi_info.as_owner
             abi_result = type_cpp_info.return_into_abi(cpp_result)
         else:

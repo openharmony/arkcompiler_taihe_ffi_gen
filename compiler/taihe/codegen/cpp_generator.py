@@ -76,7 +76,7 @@ class StructCppInfo(AbstractAnalysis[StructDecl]):
         p = d.node_parent
         assert p
         self.decl_header = f"{p.name}.{d.name}.proj.0.hpp"
-        self.defn_header = f"{p.name}.{d.name}.proj.1.hpp"
+        self.impl_header = f"{p.name}.{d.name}.proj.1.hpp"
         self.namespace = "::".join(p.segments)
         self.name = d.name
         self.full_name = "::" + self.namespace + "::" + self.name
@@ -89,7 +89,7 @@ class EnumCppInfo(AbstractAnalysis[EnumDecl]):
         p = d.node_parent
         assert p
         self.decl_header = f"{p.name}.{d.name}.proj.0.hpp"
-        self.defn_header = f"{p.name}.{d.name}.proj.1.hpp"
+        self.impl_header = f"{p.name}.{d.name}.proj.1.hpp"
         self.namespace = "::".join(p.segments)
         self.name = d.name
         self.full_name = "::" + self.namespace + "::" + self.name
@@ -116,7 +116,7 @@ class IfaceCppInfo(AbstractAnalysis[IfaceDecl]):
 
 class AbstractTypeCppInfo(metaclass=ABCMeta):
     decl_headers: list[str]
-    defn_headers: list[str]
+    impl_headers: list[str]
     as_owner: str
     as_param: str
 
@@ -137,7 +137,7 @@ class EnumTypeCppInfo(AbstractAnalysis[EnumType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: EnumType):
         enum_cpp_info = EnumCppInfo.get(am, t.ty_decl)
         self.decl_headers = [enum_cpp_info.decl_header]
-        self.defn_headers = [enum_cpp_info.defn_header]
+        self.impl_headers = [enum_cpp_info.impl_header]
         self.as_owner = enum_cpp_info.as_owner
         self.as_param = enum_cpp_info.as_param
 
@@ -146,7 +146,7 @@ class StructTypeCppInfo(AbstractAnalysis[StructType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: StructType):
         struct_cpp_info = StructCppInfo.get(am, t.ty_decl)
         self.decl_headers = [struct_cpp_info.decl_header]
-        self.defn_headers = [struct_cpp_info.defn_header]
+        self.impl_headers = [struct_cpp_info.impl_header]
         self.as_owner = struct_cpp_info.as_owner
         self.as_param = struct_cpp_info.as_param
 
@@ -155,7 +155,7 @@ class IfaceTypeCppInfo(AbstractAnalysis[IfaceType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: IfaceType):
         iface_cpp_info = IfaceCppInfo.get(am, t.ty_decl)
         self.decl_headers = [iface_cpp_info.decl_header]
-        self.defn_headers = [iface_cpp_info.defn_header]
+        self.impl_headers = [iface_cpp_info.impl_header]
         self.as_owner = iface_cpp_info.as_owner
         self.as_param = iface_cpp_info.as_param
 
@@ -178,7 +178,7 @@ class ScalarTypeCppInfo(AbstractAnalysis[ScalarType], AbstractTypeCppInfo):
         if res is None:
             raise ValueError
         self.decl_headers = []
-        self.defn_headers = []
+        self.impl_headers = []
         self.as_param = res
         self.as_owner = res
 
@@ -186,7 +186,7 @@ class ScalarTypeCppInfo(AbstractAnalysis[ScalarType], AbstractTypeCppInfo):
 class StringTypeCppInfo(AbstractAnalysis[StringType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: StringType):
         self.decl_headers = ["core/string.hpp"]
-        self.defn_headers = ["core/string.hpp"]
+        self.impl_headers = ["core/string.hpp"]
         self.as_owner = "::taihe::core::string"
         self.as_param = "::taihe::core::string_view"
 
@@ -195,7 +195,7 @@ class ArrayTypeCppInfo(AbstractAnalysis[ArrayType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: ArrayType) -> None:
         arg_ty_cpp_info = TypeCppInfo.get(am, t.item_ty)
         self.decl_headers = ["core/array.hpp", *arg_ty_cpp_info.decl_headers]
-        self.defn_headers = ["core/array.hpp", *arg_ty_cpp_info.defn_headers]
+        self.impl_headers = ["core/array.hpp", *arg_ty_cpp_info.impl_headers]
         self.as_owner = f"::taihe::core::array<{arg_ty_cpp_info.as_owner}>"
         self.as_param = f"::taihe::core::array_view<{arg_ty_cpp_info.as_owner}>"
 
@@ -204,7 +204,7 @@ class OptionalTypeCppInfo(AbstractAnalysis[OptionalType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: OptionalType) -> None:
         arg_ty_cpp_info = TypeCppInfo.get(am, t.item_ty)
         self.decl_headers = ["core/optional.hpp", *arg_ty_cpp_info.decl_headers]
-        self.defn_headers = ["core/optional.hpp", *arg_ty_cpp_info.defn_headers]
+        self.impl_headers = ["core/optional.hpp", *arg_ty_cpp_info.impl_headers]
         self.as_owner = f"::taihe::core::optional<{arg_ty_cpp_info.as_owner}>"
         self.as_param = f"::taihe::core::optional_view<{arg_ty_cpp_info.as_owner}>"
 
@@ -213,7 +213,7 @@ class VectorTypeCppInfo(AbstractAnalysis[VectorType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: VectorType) -> None:
         val_ty_cpp_info = TypeCppInfo.get(am, t.val_ty)
         self.decl_headers = ["core/vector.hpp", *val_ty_cpp_info.decl_headers]
-        self.defn_headers = ["core/vector.hpp", *val_ty_cpp_info.defn_headers]
+        self.impl_headers = ["core/vector.hpp", *val_ty_cpp_info.impl_headers]
         self.as_owner = f"::taihe::core::vector<{val_ty_cpp_info.as_owner}>"
         self.as_param = f"::taihe::core::vector_view<{val_ty_cpp_info.as_owner}>"
 
@@ -227,10 +227,10 @@ class MapTypeCppInfo(AbstractAnalysis[MapType], AbstractTypeCppInfo):
             *key_ty_cpp_info.decl_headers,
             *val_ty_cpp_info.decl_headers,
         ]
-        self.defn_headers = [
+        self.impl_headers = [
             "core/map.hpp",
-            *key_ty_cpp_info.defn_headers,
-            *val_ty_cpp_info.defn_headers,
+            *key_ty_cpp_info.impl_headers,
+            *val_ty_cpp_info.impl_headers,
         ]
         self.as_owner = f"::taihe::core::map<{key_ty_cpp_info.as_owner}, {val_ty_cpp_info.as_owner}>"
         self.as_param = f"::taihe::core::map_view<{key_ty_cpp_info.as_owner}, {val_ty_cpp_info.as_owner}>"
@@ -240,7 +240,7 @@ class SetTypeCppInfo(AbstractAnalysis[SetType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: SetType) -> None:
         key_ty_cpp_info = TypeCppInfo.get(am, t.key_ty)
         self.decl_headers = ["core/set.hpp", *key_ty_cpp_info.decl_headers]
-        self.defn_headers = ["core/set.hpp", *key_ty_cpp_info.defn_headers]
+        self.impl_headers = ["core/set.hpp", *key_ty_cpp_info.impl_headers]
         self.as_owner = f"::taihe::core::set<{key_ty_cpp_info.as_owner}>"
         self.as_param = f"::taihe::core::set_view<{key_ty_cpp_info.as_owner}>"
 
@@ -250,7 +250,7 @@ class CallbackTypeCppInfo(AbstractAnalysis[CallbackType], AbstractTypeCppInfo):
         if t.return_ty:
             return_ty_cpp_info = TypeCppInfo.get(am, t.return_ty)
             return_ty_decl_headers = return_ty_cpp_info.decl_headers
-            return_ty_defn_headers = return_ty_cpp_info.defn_headers
+            return_ty_defn_headers = return_ty_cpp_info.impl_headers
             return_ty_as_owner = return_ty_cpp_info.as_owner
         else:
             return_ty_decl_headers = []
@@ -262,7 +262,7 @@ class CallbackTypeCppInfo(AbstractAnalysis[CallbackType], AbstractTypeCppInfo):
         for param_ty in t.params_ty:
             param_ty_cpp_info = TypeCppInfo.get(am, param_ty)
             params_ty_decl_headers.extend(param_ty_cpp_info.decl_headers)
-            params_ty_defn_headers.extend(param_ty_cpp_info.defn_headers)
+            params_ty_defn_headers.extend(param_ty_cpp_info.impl_headers)
             params_ty_as_param.append(param_ty_cpp_info.as_param)
         params_fmt = ", ".join(params_ty_as_param)
         self.decl_headers = [
@@ -270,7 +270,7 @@ class CallbackTypeCppInfo(AbstractAnalysis[CallbackType], AbstractTypeCppInfo):
             *return_ty_decl_headers,
             *params_ty_decl_headers,
         ]
-        self.defn_headers = [
+        self.impl_headers = [
             "core/callback.hpp",
             *return_ty_defn_headers,
             *params_ty_defn_headers,
@@ -372,7 +372,7 @@ class CppHeadersGenerator:
         args_into_abi = []
         for param in func.params:
             type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
-            pkg_cpp_target.include(*type_cpp_info.defn_headers)
+            pkg_cpp_target.include(*type_cpp_info.impl_headers)
             params_cpp.append(f"{type_cpp_info.as_param} {param.name}")
             args_into_abi.append(type_cpp_info.pass_into_abi(param.name))
         params_cpp_str = ", ".join(params_cpp)
@@ -380,7 +380,7 @@ class CppHeadersGenerator:
         abi_result = f"{func_abi_info.mangled_name}({args_into_abi_str})"
         if return_ty_ref := func.return_ty_ref:
             type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
-            pkg_cpp_target.include(*type_cpp_info.defn_headers)
+            pkg_cpp_target.include(*type_cpp_info.impl_headers)
             cpp_return_ty_name = type_cpp_info.as_owner
             cpp_result = type_cpp_info.return_from_abi(abi_result)
         else:
@@ -406,12 +406,12 @@ class CppHeadersGenerator:
             struct_abi_info,
             struct_cpp_info,
         )
-        self.gen_struct_defn_file(
+        self.gen_struct_impl_file(
             struct,
             struct_abi_info,
             struct_cpp_info,
         )
-        pkg_cpp_target.include(struct_cpp_info.defn_header)
+        pkg_cpp_target.include(struct_cpp_info.impl_header)
 
     def gen_struct_decl_file(
         self,
@@ -428,18 +428,18 @@ class CppHeadersGenerator:
             f"}}\n"
         )
 
-    def gen_struct_defn_file(
+    def gen_struct_impl_file(
         self,
         struct: StructDecl,
         struct_abi_info: StructABIInfo,
         struct_cpp_info: StructCppInfo,
     ):
         struct_cpp_defn_target = COutputBuffer.create(
-            self.tm, f"include/{struct_cpp_info.defn_header}", True
+            self.tm, f"include/{struct_cpp_info.impl_header}", True
         )
         struct_cpp_defn_target.include("taihe/common.hpp")
         struct_cpp_defn_target.include(struct_cpp_info.decl_header)
-        struct_cpp_defn_target.include(struct_abi_info.defn_header)
+        struct_cpp_defn_target.include(struct_abi_info.impl_header)
         self.gen_struct_defn(
             struct,
             struct_abi_info,
@@ -478,7 +478,7 @@ class CppHeadersGenerator:
         )
         for field in struct.fields:
             type_cpp_info = TypeCppInfo.get(self.am, field.ty_ref.resolved_ty)
-            struct_cpp_defn_target.include(*type_cpp_info.defn_headers)
+            struct_cpp_defn_target.include(*type_cpp_info.impl_headers)
             struct_cpp_defn_target.write(
                 f"    {type_cpp_info.as_owner} {field.name};\n"
             )
@@ -557,12 +557,12 @@ class CppHeadersGenerator:
             enum_abi_info,
             enum_cpp_info,
         )
-        self.gen_enum_defn_file(
+        self.gen_enum_impl_file(
             enum,
             enum_abi_info,
             enum_cpp_info,
         )
-        pkg_cpp_target.include(enum_cpp_info.defn_header)
+        pkg_cpp_target.include(enum_cpp_info.impl_header)
 
     def gen_enum_decl_file(
         self,
@@ -579,18 +579,18 @@ class CppHeadersGenerator:
             f"}}\n"
         )
 
-    def gen_enum_defn_file(
+    def gen_enum_impl_file(
         self,
         enum: EnumDecl,
         enum_abi_info: EnumABIInfo,
         enum_cpp_info: EnumCppInfo,
     ):
         enum_cpp_defn_target = COutputBuffer.create(
-            self.tm, f"include/{enum_cpp_info.defn_header}", True
+            self.tm, f"include/{enum_cpp_info.impl_header}", True
         )
         enum_cpp_defn_target.include("taihe/common.hpp")
         enum_cpp_defn_target.include(enum_cpp_info.decl_header)
-        enum_cpp_defn_target.include(enum_abi_info.defn_header)
+        enum_cpp_defn_target.include(enum_abi_info.impl_header)
         self.gen_enum_defn(
             enum,
             enum_abi_info,
@@ -644,7 +644,7 @@ class CppHeadersGenerator:
             if item.ty_ref is None:
                 continue
             type_cpp_info = TypeCppInfo.get(self.am, item.ty_ref.resolved_ty)
-            enum_cpp_defn_target.include(*type_cpp_info.defn_headers)
+            enum_cpp_defn_target.include(*type_cpp_info.impl_headers)
             enum_cpp_defn_target.write(
                 f"        {type_cpp_info.as_owner} {item.name};\n"
             )
@@ -1105,9 +1105,6 @@ class CppHeadersGenerator:
             f"    static constexpr IdMapItem idmap_impl[{len(iface_abi_info.ancestor_dict)}] = {{\n"
         )
         for ancestor, info in iface_abi_info.ancestor_dict.items():
-            if ancestor is not iface:
-                ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
-                iface_cpp_defn_target.include(ancestor_cpp_info.defn_header)
             ancestor_abi_info = IfaceABIInfo.get(self.am, ancestor)
             iface_cpp_defn_target.write(
                 f"        {{&{ancestor_abi_info.iid}, &vtbl_impl<Impl>.{info.ftbl_ptr}}},\n"
@@ -1145,6 +1142,7 @@ class CppHeadersGenerator:
             if info.offset == 0:
                 continue
             ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
+            iface_cpp_defn_target.include(ancestor_cpp_info.defn_header)
             iface_cpp_defn_target.write(
                 f"    operator {ancestor_cpp_info.full_weak_name}() const& {{\n"
                 f"        {iface_abi_info.as_owner} ret_handle = m_handle;\n"
@@ -1290,7 +1288,7 @@ class CppHeadersGenerator:
             ]
             for param in method.params:
                 type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
-                iface_cpp_impl_target.include(*type_cpp_info.defn_headers)
+                iface_cpp_impl_target.include(*type_cpp_info.impl_headers)
                 params_cpp.append(f"{type_cpp_info.as_param} {param.name}")
                 args_into_abi.append(type_cpp_info.pass_into_abi(param.name))
             params_cpp_str = ", ".join(params_cpp)
@@ -1298,7 +1296,7 @@ class CppHeadersGenerator:
             abi_result = f"{method_abi_info.mangled_name}({args_into_abi_str})"
             if return_ty_ref := method.return_ty_ref:
                 type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
-                iface_cpp_impl_target.include(*type_cpp_info.defn_headers)
+                iface_cpp_impl_target.include(*type_cpp_info.impl_headers)
                 cpp_return_ty_name = type_cpp_info.as_owner
                 cpp_result = type_cpp_info.return_from_abi(abi_result)
             else:
