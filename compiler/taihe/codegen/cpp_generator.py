@@ -335,7 +335,7 @@ class TypeCppInfo(TypeVisitor[AbstractTypeCppInfo]):
         return CallbackTypeCppInfo.get(self.am, t)
 
 
-class CppCodeGenerator:
+class CppHeadersGenerator:
     def __init__(self, tm: OutputManager, am: AnalysisManager):
         self.tm = tm
         self.am = am

@@ -15,6 +15,7 @@ from taihe.utils.outputs import COutputBuffer, OutputManager
 class PackageCImplInfo(AbstractAnalysis[PackageDecl]):
     def __init__(self, am: AnalysisManager, p: PackageDecl) -> None:
         self.header = f"{p.name}.impl.h"
+        self.source = f"{p.name}.impl.c"
 
 
 class GlobFuncCImplInfo(AbstractAnalysis[GlobFuncDecl]):
@@ -22,7 +23,7 @@ class GlobFuncCImplInfo(AbstractAnalysis[GlobFuncDecl]):
         self.macro = f"TH_EXPORT_C_API_{f.name}"
 
 
-class CImplCodeGenerator:
+class CImplHeadersGenerator:
     def __init__(self, tm: OutputManager, am: AnalysisManager):
         self.tm = tm
         self.am = am
@@ -67,7 +68,50 @@ class CImplCodeGenerator:
             return_ty_name = "void"
         pkg_c_impl_target.write(
             f"#define {func_c_impl_info.macro}({func_impl}) \\\n"
-            f"  {return_ty_name} {func_abi_info.mangled_name}({params_str}) {{ \\\n"
-            f"    return {func_impl}({args_str}); \\\n"
-            f"  }}\n"
+            f"    {return_ty_name} {func_abi_info.mangled_name}({params_str}) {{ \\\n"
+            f"        return {func_impl}({args_str}); \\\n"
+            f"    }}\n"
+        )
+
+
+class CImplSourcesGenerator:
+    def __init__(self, tm: OutputManager, am: AnalysisManager):
+        self.tm = tm
+        self.am = am
+
+    def generate(self, pg: PackageGroup):
+        for pkg in pg.packages:
+            self.gen_package_file(pkg)
+
+    def gen_package_file(self, pkg: PackageDecl):
+        pkg_c_impl_info = PackageCImplInfo.get(self.am, pkg)
+        pkg_c_impl_target = COutputBuffer.create(
+            self.tm, f"temp/{pkg_c_impl_info.source}", False
+        )
+        pkg_c_impl_target.include(pkg_c_impl_info.header)
+        for func in pkg.functions:
+            self.gen_func(func, pkg_c_impl_target)
+
+    def gen_func(
+        self,
+        func: GlobFuncDecl,
+        pkg_c_impl_target: COutputBuffer,
+    ):
+        func_c_impl_info = GlobFuncCImplInfo.get(self.am, func)
+        func_c_impl_name = f"{func.name}_impl"
+        params = []
+        for param in func.params:
+            type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.resolved_ty)
+            params.append(f"{type_abi_info.as_param} {param.name}")
+        params_str = ", ".join(params)
+        if return_ty_ref := func.return_ty_ref:
+            type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
+            return_ty_name = type_abi_info.as_owner
+        else:
+            return_ty_name = "void"
+        pkg_c_impl_target.write(
+            f"{return_ty_name} {func_c_impl_name}({params_str}) {{ \\\n"
+            f"    // TODO\n"
+            f"}}\n"
+            f"{func_c_impl_info.macro}({func_c_impl_name})\n"
         )
