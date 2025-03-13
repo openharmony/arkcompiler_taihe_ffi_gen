@@ -1,5 +1,6 @@
 from taihe.codegen.abi_generator import (
     GlobFuncABIInfo,
+    IfaceABIInfo,
     PackageABIInfo,
     TypeABIInfo,
 )
@@ -8,6 +9,8 @@ from taihe.codegen.cpp_generator import (
 )
 from taihe.semantics.declarations import (
     GlobFuncDecl,
+    IfaceDecl,
+    IfaceMethodDecl,
     PackageDecl,
     PackageGroup,
 )
@@ -97,29 +100,111 @@ class CppImplSourcesGenerator:
             self.tm, f"temp/{pkg_cpp_impl_info.source}", False
         )
         pkg_cpp_impl_target.include(pkg_cpp_impl_info.header)
+        self.gen_using_namespace(pkg_cpp_impl_target)
+        self.gen_anonymous_namespace_left(pkg_cpp_impl_target)
+        for iface in pkg.interfaces:
+            self.gen_iface(iface, pkg_cpp_impl_target)
         for func in pkg.functions:
             self.gen_func(func, pkg_cpp_impl_target)
+        self.gen_anonymous_namespace_right(pkg_cpp_impl_target)
+        for func in pkg.functions:
+            self.gen_func_macro(func, pkg_cpp_impl_target)
+
+    def gen_using_namespace(
+        self,
+        pkg_cpp_impl_target: COutputBuffer,
+    ):
+
+        pkg_cpp_impl_target.write(f"using namespace taihe::core;\n")
 
     def gen_func(
         self,
         func: GlobFuncDecl,
         pkg_cpp_impl_target: COutputBuffer,
     ):
-        func_cpp_impl_info = GlobFuncCppImplInfo.get(self.am, func)
-        func_cpp_impl_name = f"{func.name}_impl"
+        func_cpp_impl_name = f"{func.name}"
         cpp_params = []
         for param in func.params:
             type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
-            cpp_params.append(f"{type_cpp_info.as_param} {param.name}")
+            cpp_params.append(f"{self._mask(type_cpp_info.as_param)} {param.name}")
         cpp_params_str = ", ".join(cpp_params)
         if return_ty_ref := func.return_ty_ref:
             type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
-            cpp_return_ty_name = type_cpp_info.as_owner
+            cpp_return_ty_name = self._mask(type_cpp_info.as_owner)
         else:
             cpp_return_ty_name = "void"
         pkg_cpp_impl_target.write(
-            f"{cpp_return_ty_name} {func_cpp_impl_name}({cpp_params_str}) {{ \\\n"
-            f"    // TODO\n"
+            f"{cpp_return_ty_name} {func_cpp_impl_name}({cpp_params_str}) {{\n"
+            f'    throw "Function {func_cpp_impl_name} not implemented";\n'
             f"}}\n"
-            f"{func_cpp_impl_info.macro}({func_cpp_impl_name})\n"
         )
+
+    def gen_iface(
+        self,
+        iface: IfaceDecl,
+        pkg_cpp_impl_target: COutputBuffer,
+    ):
+        perantsList = IfaceABIInfo.get(self.am, iface).ancestor_dict
+        class_method_list = []
+
+        pkg_cpp_impl_target.write(f"class {iface.name} {{\n" f"public:\n")
+        for ifaceperant in perantsList:
+            for func in ifaceperant.methods:
+                if func.name not in class_method_list:
+                    class_method_list.append(func.name)
+                    self._gen_class_method_impl(iface.name, func, pkg_cpp_impl_target)
+
+        pkg_cpp_impl_target.write(f"}};\n\n")
+
+    def _gen_class_method_impl(
+        self,
+        iface_name: str,
+        func: IfaceMethodDecl,
+        pkg_cpp_impl_target: COutputBuffer,
+    ):
+        func_cpp_impl_name = f"{func.name}"
+        cpp_params = []
+        for param in func.params:
+            type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
+            cpp_params.append(f"{self._mask(type_cpp_info.as_param)} {param.name}")
+        cpp_params_str = ", ".join(cpp_params)
+        if return_ty_ref := func.return_ty_ref:
+            type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
+            cpp_return_ty_name = self._mask(type_cpp_info.as_owner)
+        else:
+            cpp_return_ty_name = "void"
+        pkg_cpp_impl_target.write(
+            f"    {cpp_return_ty_name} {func_cpp_impl_name}({cpp_params_str}) {{\n"
+            f'        throw "Function {iface_name}::{func_cpp_impl_name} not implemented";\n'
+            f"    }}\n\n"
+        )
+
+    def _mask(
+        self,
+        input_str: str,
+    ) -> str:
+        prefix = "::taihe::core::"
+        if input_str.startswith(prefix):
+            return input_str[len(prefix) :]
+        return input_str
+
+    def gen_func_macro(
+        self,
+        func: GlobFuncDecl,
+        pkg_cpp_impl_target: COutputBuffer,
+    ):
+        func_cpp_impl_info = GlobFuncCppImplInfo.get(self.am, func)
+        func_cpp_impl_name = f"{func.name}"
+        pkg_cpp_impl_target.write(f"{func_cpp_impl_info.macro}({func_cpp_impl_name})\n")
+
+    def gen_anonymous_namespace_left(
+        self,
+        pkg_cpp_impl_target: COutputBuffer,
+    ):
+        pkg_cpp_impl_target.write(f"namespace {{\n" f"\n")
+
+    def gen_anonymous_namespace_right(
+        self,
+        pkg_cpp_impl_target: COutputBuffer,
+    ):
+        pkg_cpp_impl_target.write(f"\n" f"}}\n" f"\n")

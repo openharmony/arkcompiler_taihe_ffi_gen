@@ -110,7 +110,7 @@ class CImplSourcesGenerator:
         else:
             return_ty_name = "void"
         pkg_c_impl_target.write(
-            f"{return_ty_name} {func_c_impl_name}({params_str}) {{ \\\n"
+            f"{return_ty_name} {func_c_impl_name}({params_str}) {{\n"
             f"    // TODO\n"
             f"}}\n"
             f"{func_c_impl_info.macro}({func_c_impl_name})\n"
