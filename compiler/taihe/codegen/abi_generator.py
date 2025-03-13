@@ -407,7 +407,9 @@ class ABIHeadersGenerator:
         for field in struct.fields:
             type_abi_info = TypeABIInfo.get(self.am, field.ty_ref.resolved_ty)
             struct_abi_defn_target.include(*type_abi_info.defn_headers)
-            struct_abi_defn_target.write(f"    {type_abi_info.as_owner} {field.name};\n")
+            struct_abi_defn_target.write(
+                f"    {type_abi_info.as_owner} {field.name};\n"
+            )
         struct_abi_defn_target.write("};\n")
 
     def gen_enum_files(
