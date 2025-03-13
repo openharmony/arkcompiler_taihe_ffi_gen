@@ -18,6 +18,9 @@ compiler/taihe/parse/antlr
 test/*/author_generated
 test/*/user_generated
 
+cookbook/*/author_generated
+cookbook/*/user_generated
+
 # files
 *.log
 
