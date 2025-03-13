@@ -105,7 +105,7 @@ class CppImplSourcesGenerator:
         pkg_cpp_impl_target.include(pkg_cpp_impl_info.header)
         pkg_cpp_impl_target.write(
             f"// Please delete this include when you implement\n"
-            f"#include <stdexcept>"
+            f"#include <stdexcept>\n"
         )
         self.gen_using_namespace(pkg_cpp_impl_target)
         self.gen_anonymous_namespace_block(
