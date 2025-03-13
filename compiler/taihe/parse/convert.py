@@ -138,6 +138,16 @@ class ExprEvaluator(Visitor):
         )
 
     @override
+    def visit_BinaryIntShiftExpr(self, node: ast.BinaryIntShiftExpr) -> int:
+        return {
+            "<": int.__lshift__,
+            ">": int.__rshift__,
+        }[node.ch.text](
+            int(self.visit(node.left)),
+            int(self.visit(node.right)),
+        )
+
+    @override
     def visit_LiteralStringExpr(self, node: ast.LiteralStringExpr) -> str:
         return "".join(decode(val.text[1:-1], "unicode-escape") for val in node.vals)
 

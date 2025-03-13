@@ -21,17 +21,16 @@ from taihe.semantics.types import (
     I16,
     I32,
     I64,
-    STRING,
     U8,
     U16,
     U32,
     U64,
     ArrayType,
-    BoxType,
     CallbackType,
     EnumType,
     IfaceType,
     MapType,
+    OptionalType,
     ScalarType,
     SetType,
     StringType,
@@ -212,8 +211,6 @@ class ScalarTypeABIInfo(AbstractAnalysis[ScalarType], AbstractTypeABIInfo):
 
 class StringTypeABIInfo(AbstractAnalysis[StringType], AbstractTypeABIInfo):
     def __init__(self, am: AnalysisManager, t: StringType) -> None:
-        if t != STRING:
-            raise ValueError
         self.decl_headers = ["taihe/string.abi.h"]
         self.defn_headers = ["taihe/string.abi.h"]
         self.as_owner = "struct TString"
@@ -228,12 +225,12 @@ class ArrayTypeABIInfo(AbstractAnalysis[ArrayType], AbstractTypeABIInfo):
         self.as_param = "struct TArray"
 
 
-class BoxTypeABIInfo(AbstractAnalysis[BoxType], AbstractTypeABIInfo):
-    def __init__(self, am: AnalysisManager, t: BoxType) -> None:
-        self.decl_headers = ["taihe/box.abi.h"]
-        self.defn_headers = ["taihe/box.abi.h"]
-        self.as_owner = "struct TBox"
-        self.as_param = "struct TBox"
+class OptionalTypeABIInfo(AbstractAnalysis[OptionalType], AbstractTypeABIInfo):
+    def __init__(self, am: AnalysisManager, t: OptionalType) -> None:
+        self.decl_headers = ["taihe/optional.abi.h"]
+        self.defn_headers = ["taihe/optional.abi.h"]
+        self.as_owner = "struct TOptional"
+        self.as_param = "struct TOptional"
 
 
 class CallbackTypeABIInfo(AbstractAnalysis[CallbackType], AbstractTypeABIInfo):
@@ -306,8 +303,8 @@ class TypeABIInfo(TypeVisitor[AbstractTypeABIInfo]):
         return VectorTypeABIInfo.get(self.am, t)
 
     @override
-    def visit_box_type(self, t: BoxType) -> AbstractTypeABIInfo:
-        return BoxTypeABIInfo.get(self.am, t)
+    def visit_optional_type(self, t: OptionalType) -> AbstractTypeABIInfo:
+        return OptionalTypeABIInfo.get(self.am, t)
 
     @override
     def visit_map_type(self, t: MapType) -> AbstractTypeABIInfo:
