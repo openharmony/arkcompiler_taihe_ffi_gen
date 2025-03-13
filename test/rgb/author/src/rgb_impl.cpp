@@ -1,5 +1,3 @@
-#include "rgb.show.proj.hpp"
-#include "rgb.base.proj.hpp"
 #include "rgb.show.impl.hpp"
 #include "rgb.base.impl.hpp"
 
