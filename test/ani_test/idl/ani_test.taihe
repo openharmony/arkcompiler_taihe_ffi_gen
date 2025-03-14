@@ -11,6 +11,17 @@ enum Union {
     sValue: String;
 }
 
+interface Foo {
+    bar(): Bar;
+}
+
+interface Bar {
+    foo(): void;
+}
+
+function needFoo(foo: Foo): void;
+function getFoo(): Foo;
+
 function testUnion(u: Union): void;
 function getUnion(v: i32): Union;
 function getOption(): Option;
