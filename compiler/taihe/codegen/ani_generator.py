@@ -130,7 +130,9 @@ class PackageANIInfo(AbstractAnalysis[PackageDecl]):
         self.namespace = "::".join(p.segments)
         self.sts = f"{p.name}.ets"
         self.lib_name = (
-            ani_lib_item.value if (ani_lib_item := p.attrs.get("ani_lib")) else p.name
+            ani_lib_item.value
+            if (ani_lib_item := p.attrs.get("ani_lib"))
+            else "/".join(p.segments)
         )
         self.impl_desc = f"L{self.lib_name}/ETSGLOBAL;"
 
