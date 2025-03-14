@@ -419,7 +419,7 @@ class StructTypeANIInfo(AbstractAnalysis[StructType], AbstractTypeANIInfo):
             f"{' ' * offset}ani_method {ani_result_ctor};\n"
             f"{' ' * offset}{env}->Class_FindMethod({ani_result_cls}, \"<ctor>\", nullptr, &{ani_result_ctor});\n"
             f"{' ' * offset}ani_object {ani_result};\n"
-            f"{' ' * offset}{env}->Object_New({ani_result_cls}, {ani_result_ctor}, &{ani_result}, {ani_field_results_trailing});\n"
+            f"{' ' * offset}{env}->Object_New({ani_result_cls}, {ani_result_ctor}, &{ani_result}{ani_field_results_trailing});\n"
         )
 
 
@@ -559,8 +559,8 @@ class IfaceTypeANIInfo(AbstractAnalysis[IfaceType], AbstractTypeANIInfo):
             f"{' ' * offset}struct {cpp_iface_name} {{\n"
             f"{' ' * offset}    ani_env* env;\n"
             f"{' ' * offset}    ani_object ref;\n"
-            f"{' ' * offset}    {cpp_iface_name}(ani_env* env, ani_object obj) {{\n"
-            f"{' ' * offset}        env->GlobalReference_Create(obj, &reinterpret_cast<ani_ref*>(&ref));\n"
+            f"{' ' * offset}    {cpp_iface_name}(ani_env* env, ani_object obj) : env(env) {{\n"
+            f"{' ' * offset}        env->GlobalReference_Create(obj, reinterpret_cast<ani_ref*>(&ref));\n"
             f"{' ' * offset}    }}\n"
             f"{' ' * offset}    ~{cpp_iface_name}() {{\n"
             f"{' ' * offset}        env->GlobalReference_Delete(ref);\n"
@@ -609,7 +609,7 @@ class IfaceTypeANIInfo(AbstractAnalysis[IfaceType], AbstractTypeANIInfo):
                     )
                     target.write(
                         f"{' ' * offset}        {type_ani_info.ani_type} {result_ani_name};\n"
-                        f"{' ' * offset}        this->env.Object_CallMethod_{type_ani_info.ani_type.suffix}(this->ref, \"{method_ani_info.sts_name}\", nullptr, &{result_ani_name}{args_ani_trailing});\n"
+                        f"{' ' * offset}        this->env->Object_CallMethodByName_{type_ani_info.ani_type.suffix}(this->ref, \"{method_ani_info.sts_name}\", nullptr, reinterpret_cast<{type_ani_info.ani_type.base}*>(&{result_ani_name}){args_ani_trailing});\n"
                     )
                     type_ani_info.from_ani(
                         target, offset + 8, env, result_ani_name, result_cpp_name
@@ -617,7 +617,7 @@ class IfaceTypeANIInfo(AbstractAnalysis[IfaceType], AbstractTypeANIInfo):
                     target.write(f"{' ' * offset}        return {result_cpp_name};\n")
                 else:
                     target.write(
-                        f"{' ' * offset}        this->env.Object_CallMethod_Void(this->ref, \"{method_ani_info.sts_name}\", nullptr{args_ani_trailing});\n"
+                        f"{' ' * offset}        this->env->Object_CallMethodByName_Void(this->ref, \"{method_ani_info.sts_name}\", nullptr{args_ani_trailing});\n"
                     )
                 target.write(f"{' ' * offset}    }}\n")
         target.write(f"{' ' * offset}}};\n")
@@ -642,7 +642,7 @@ class IfaceTypeANIInfo(AbstractAnalysis[IfaceType], AbstractTypeANIInfo):
         target.write(
             f"{' ' * offset}{self.cpp_info.as_owner} {cpp_value_copy} = {cpp_value};\n"
             f"{' ' * offset}ani_long {ani_result_vtbl_ptr} = reinterpret_cast<ani_long>({cpp_value_copy}.m_handle.vtbl_ptr);\n"
-            f"{' ' * offset}ani_long {ani_result_vtbl_ptr} = reinterpret_cast<ani_long>({cpp_value_copy}.m_handle.data_ptr);\n"
+            f"{' ' * offset}ani_long {ani_result_data_ptr} = reinterpret_cast<ani_long>({cpp_value_copy}.m_handle.data_ptr);\n"
             f"{' ' * offset}{cpp_value_copy}.m_handle.data_ptr = nullptr;\n"
             f"{' ' * offset}ani_class {ani_result_cls};\n"
             f"{' ' * offset}{env}->FindClass(\"{self.impl_desc}\", &{ani_result_cls});\n"

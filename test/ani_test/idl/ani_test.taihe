@@ -12,14 +12,10 @@ enum Union {
 }
 
 interface Foo {
-    bar(): Bar;
+    bar(): void;
 }
 
-interface Bar {
-    foo(): void;
-}
-
-function needFoo(foo: Foo): void;
+function callBar(foo: Foo, time: i32): void;
 function getFoo(): Foo;
 
 function testUnion(u: Union): void;

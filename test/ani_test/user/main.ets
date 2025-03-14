@@ -23,4 +23,15 @@ function main() {
     console.log(ani_test.getUnion(3))
 
     ani_test.testOptionalDouble(3.0 as double)
+
+    let impl_foo = ani_test.getFoo();
+    impl_foo.bar();
+
+    class FooUser implements ani_test.Foo {
+        constructor() {}
+        bar(): void {
+            console.log("Test!")
+        }
+    }
+    ani_test.callBar(new FooUser(), 3 as int);
 }

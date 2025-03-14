@@ -88,3 +88,28 @@ TH_EXPORT_CPP_API_testUnion(testUnion)
 TH_EXPORT_CPP_API_getUnion(getUnion)
 TH_EXPORT_CPP_API_getOption(getOption)
 TH_EXPORT_CPP_API_testOptionalDouble(testOptionalDouble)
+
+void callBar(weak::Foo foo, int32_t time) {
+  std::cout << "callBar" << std::endl;
+  for (int i = 0; i < time; i++) {
+    foo->bar();
+  }
+}
+
+Foo getFoo() {
+  struct FooImpl {
+    FooImpl() {
+      std::cout << "FooImpl()" << std::endl;
+    }
+    ~FooImpl() {
+      std::cout << "~FooImpl()" << std::endl;
+    }
+    void bar() {
+      std::cout << "FooImpl::bar()" << std::endl;
+    }
+  };
+  return make_holder<FooImpl, Foo>();
+}
+
+TH_EXPORT_CPP_API_callBar(callBar)
+TH_EXPORT_CPP_API_getFoo(getFoo)
