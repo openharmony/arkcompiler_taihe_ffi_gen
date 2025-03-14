@@ -33,7 +33,7 @@ from taihe.semantics.types import (
     ArrayType,
     # CallbackType,
     EnumType,
-    # IfaceType,
+    IfaceType,
     # MapType,
     OpaqueType,
     OptionalType,
@@ -135,8 +135,8 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
         p = f.node_parent
         assert p
         segments = [*p.segments, f.name]
-        self.mangled_name = encode(segments, DeclKind.ANI_FUNC)
         self.sts_name = f.name
+        self.mangled_name = encode(segments, DeclKind.ANI_FUNC)
 
 
 class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
@@ -146,8 +146,8 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
         p = d.node_parent
         assert p
         segments = [*p.segments, d.name, f.name]
-        self.mangled_name = encode(segments, DeclKind.ANI_FUNC)
         self.sts_name = f.name
+        self.mangled_name = encode(segments, DeclKind.ANI_FUNC)
 
 
 class StructANIInfo(AbstractAnalysis[StructDecl]):
@@ -177,7 +177,7 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
         p = d.node_parent
         assert p
         self.sts_type = d.name
-        self.sts_impl = d.name
+        self.sts_impl = f"{d.name}_inner"
         pkg_ani_info = PackageANIInfo.get(am, p)
         self.type_desc = f"L{pkg_ani_info.lib_name}/{self.sts_type};"
         self.impl_desc = f"L{pkg_ani_info.lib_name}/{self.sts_impl};"
@@ -528,9 +528,40 @@ class EnumTypeANIInfo(AbstractAnalysis[EnumType], AbstractTypeANIInfo):
         )
 
 
-# class IfaceTypeANIInfo(AbstractAnalysis[IfaceType], AbstractTypeANIInfo):
-#     def __init__(self, am: AnalysisManager, t: IfaceType):
-#         pass
+class IfaceTypeANIInfo(AbstractAnalysis[IfaceType], AbstractTypeANIInfo):
+    def __init__(self, am: AnalysisManager, t: IfaceType):
+        AbstractTypeANIInfo.__init__(self, am, t)
+        self.t = t
+        self.am = am
+        iface_ani_info = IfaceANIInfo.get(am, t.ty_decl)
+        self.ani_type = ANI_OBJECT
+        self.sts_type = iface_ani_info.sts_type
+        self.type_desc = iface_ani_info.type_desc
+        self.impl_desc = iface_ani_info.impl_desc
+
+    @override
+    def from_ani(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        ani_value: str,
+        cpp_result: str,
+    ):
+        # TODO
+        pass
+
+    @override
+    def into_ani(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        cpp_value: str,
+        ani_result: str,
+    ):
+        # TODO
+        pass
 
 
 class ScalarTypeANIInfo(AbstractAnalysis[ScalarType], AbstractTypeANIInfo):
@@ -867,11 +898,15 @@ class STSCodeGenerator:
         #     self.gen_struct_inner(struct, pkg_sts_target)
         # for enum in pkg.enums:
         #     self.gen_enum_inner(enum, pkg_sts_target)
+        for iface in pkg.interfaces:
+            self.gen_iface_inner(iface, pkg_sts_target)
 
         # for struct in pkg.structs:
         #     self.gen_struct_interface(struct, pkg_sts_target)
         # for enum in pkg.enums:
         #     self.gen_enum_interface(enum, pkg_sts_target)
+        for iface in pkg.interfaces:
+            self.gen_iface_interface(iface, pkg_sts_target)
 
         for struct in pkg.structs:
             self.gen_struct(struct, pkg_sts_target)
@@ -907,7 +942,7 @@ class STSCodeGenerator:
     #     pkg_sts_target: OutputBuffer,
     # ):
     #     struct_ani_info = StructANIInfo.get(self.am, struct)
-    #     pkg_sts_target.write(f"export interface {struct_ani_info.sts_iface} {{\n")
+    #     pkg_sts_target.write(f"export interface {struct_ani_info.sts_type} {{\n")
     #     for field in struct.fields:
     #         ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
     #         pkg_sts_target.write(f"    {field.name}: {ty_ani_info.sts_type};\n")
@@ -920,7 +955,7 @@ class STSCodeGenerator:
     # ):
     #     struct_ani_info = StructANIInfo.get(self.am, struct)
     #     pkg_sts_target.write(
-    #         f"class {struct_ani_info.sts_inner} implements {struct_ani_info.sts_iface} {{\n"
+    #         f"class {struct_ani_info.sts_impl} implements {struct_ani_info.sts_type} {{\n"
     #     )
     #     for field in struct.fields:
     #         ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
@@ -968,7 +1003,7 @@ class STSCodeGenerator:
     #         sts_value_types.append(f"{ty_ani_info.sts_type}")
     #     sts_value_types_str = " | ".join(sts_value_types)
     #     pkg_sts_target.write(
-    #         f"export interface {enum_ani_info.sts_iface} {{\n"
+    #         f"export interface {enum_ani_info.sts_type} {{\n"
     #         f"    tag: int;\n"
     #         f"    value: {sts_value_types_str};\n"
     #         f"}}\n"
@@ -989,7 +1024,7 @@ class STSCodeGenerator:
     #         sts_value_types.append(f"{ty_ani_info.sts_type}")
     #     sts_value_types_str = " | ".join(sts_value_types)
     #     pkg_sts_target.write(
-    #         f"class {enum_ani_info.sts_inner} implements {enum_ani_info.sts_iface} {{\n"
+    #         f"class {enum_ani_info.sts_impl} implements {enum_ani_info.sts_type} {{\n"
     #         f"    tag: int;\n"
     #         f"    value: {sts_value_types_str};\n"
     #         f"    constructor(tag: int, value: {sts_value_types_str}) {{\n"
@@ -1024,6 +1059,29 @@ class STSCodeGenerator:
             f"}}\n"
         )
 
+    def gen_iface_interface(
+        self,
+        iface: IfaceDecl,
+        pkg_sts_target: OutputBuffer,
+    ):
+        iface_ani_info = IfaceANIInfo.get(self.am, iface)
+        # TODO
+        pkg_sts_target.write(f"export interface {iface_ani_info.sts_type} {{\n" f"}}\n")
+
+    def gen_iface_inner(
+        self,
+        iface: IfaceDecl,
+        pkg_sts_target: OutputBuffer,
+    ):
+        iface_ani_info = IfaceANIInfo.get(self.am, iface)
+        # TODO
+        pkg_sts_target.write(
+            f"class {iface_ani_info.sts_impl} implements {iface_ani_info.sts_type} {{\n"
+            f"    _data_ptr: long;"
+            f"    _vtbl_ptr: long;"
+            f"}}\n"
+        )
+
 
 class ANICodeGenerator:
     def __init__(self, tm: OutputManager, am: AnalysisManager):
@@ -1037,45 +1095,70 @@ class ANICodeGenerator:
     def gen_package_file(self, pkg: PackageDecl):
         pkg_ani_info = PackageANIInfo.get(self.am, pkg)
         pkg_cpp_info = PackageCppInfo.get(self.am, pkg)
-        pkg_ani_source_target = COutputBuffer.create(
-            self.tm, f"src/{pkg_ani_info.source}", False
-        )
         pkg_ani_header_target = COutputBuffer.create(
             self.tm, f"include/{pkg_ani_info.header}", True
         )
-        pkg_ani_source_target.include(pkg_cpp_info.header)
-        pkg_ani_source_target.include(pkg_ani_info.header)
-        for func in pkg.functions:
-            self.gen_func(func, pkg_ani_source_target)
         pkg_ani_header_target.include("core/runtime.hpp")
         pkg_ani_header_target.write(
             f"namespace {pkg_ani_info.namespace} {{\n"
             f"ani_status ANIRegister(ani_env *env);\n"
             f"}}\n"
         )
+        pkg_ani_source_target = COutputBuffer.create(
+            self.tm, f"src/{pkg_ani_info.source}", False
+        )
+        pkg_ani_source_target.include(pkg_cpp_info.header)
+        pkg_ani_source_target.include(pkg_ani_info.header)
+        for func in pkg.functions:
+            self.gen_func(func, pkg_ani_source_target)
+        for iface in pkg.interfaces:
+            for method in iface.methods:
+                self.gen_method(method, pkg_ani_source_target)
+        # register infos
+        register_infos: list[tuple[str, list[tuple[str, str]]]] = []
+        impl_desc = pkg_ani_info.impl_desc
+        func_infos = []
+        for func in pkg.functions:
+            glob_func_info = GlobFuncANIInfo.get(self.am, func)
+            sts_name = glob_func_info.sts_name
+            mangled_name = glob_func_info.mangled_name
+            func_infos.append((sts_name, mangled_name))
+        register_infos.append((impl_desc, func_infos))
+        for iface in pkg.interfaces:
+            iface_ani_info = IfaceANIInfo.get(self.am, iface)
+            impl_desc = iface_ani_info.impl_desc
+            func_infos = []
+            for method in iface.methods:
+                iface_method_info = IfaceMethodANIInfo.get(self.am, method)
+                sts_name = iface_method_info.sts_name
+                mangled_name = iface_method_info.mangled_name
+                func_infos.append((sts_name, mangled_name))
+            register_infos.append((impl_desc, func_infos))
         pkg_ani_source_target.write(
             f"namespace {pkg_ani_info.namespace} {{\n"
             f"ani_status ANIRegister(ani_env *env) {{\n"
-            f"    ani_class cls;\n"
-            f'    if (ANI_OK != env->FindClass("{pkg_ani_info.impl_desc}", &cls)) {{\n'
-            f"        return ANI_ERROR;\n"
-            f"    }}\n"
-            f"    ani_native_function methods[] = {{\n"
         )
-        for func in pkg.functions:
-            func_ani_info = GlobFuncANIInfo.get(self.am, func)
+        for impl_desc, func_infos in register_infos:
             pkg_ani_source_target.write(
-                f'        {{"{func_ani_info.sts_name}", nullptr, reinterpret_cast<void*>({func_ani_info.mangled_name})}},\n'
+                f"    {{\n"
+                f"    ani_class cls;\n"
+                f'    if (ANI_OK != env->FindClass("{impl_desc}", &cls)) {{\n'
+                f"        return ANI_ERROR;\n"
+                f"    }}\n"
+                f"    ani_native_function methods[] = {{\n"
             )
-        pkg_ani_source_target.write(
-            "    };\n"
-            "    if (ANI_OK != env->Class_BindNativeMethods(cls, methods, sizeof(methods) / sizeof(ani_native_function))) {\n"
-            "        return ANI_ERROR;\n"
-            "    }\n"
-            "    return ANI_OK;\n"
-            "}\n"
-            "}\n"
-        )
+            for sts_name, mangled_name in func_infos:
+                pkg_ani_source_target.write(
+                    f'        {{"{sts_name}", nullptr, reinterpret_cast<void*>({mangled_name})}},\n'
+                )
+            pkg_ani_source_target.write(
+                "    };\n"
+                "    if (ANI_OK != env->Class_BindNativeMethods(cls, methods, sizeof(methods) / sizeof(ani_native_function))) {\n"
+                "        return ANI_ERROR;\n"
+                "    }\n"
+                "    }\n"
+            )
+        pkg_ani_source_target.write("    return ANI_OK;\n" "}\n" "}\n")
 
     def gen_func(
         self,
@@ -1132,3 +1215,11 @@ class ANICodeGenerator:
                 f"    {func_cpp_info.full_name}({args_cpp_str});\n" f"    return;\n"
             )
         pkg_ani_source_target.write("}\n")
+
+    def gen_method(
+        self,
+        method: IfaceMethodDecl,
+        pkg_ani_source_target: COutputBuffer,
+    ):
+        # TODO
+        pass
