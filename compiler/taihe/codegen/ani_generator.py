@@ -1255,12 +1255,11 @@ class ANICodeGenerator:
         pkg_ani_header_target = COutputBuffer.create(
             self.tm, f"include/{pkg_ani_info.header}", True
         )
-        pkg_ani_source_target.include("core/runtime.hpp")
         pkg_ani_source_target.include(pkg_cpp_info.header)
         pkg_ani_source_target.include(pkg_ani_info.header)
         for func in pkg.functions:
             self.gen_func(func, pkg_ani_source_target)
-        pkg_ani_header_target.include("ani.h")
+        pkg_ani_header_target.include("core/runtime.hpp")
         pkg_ani_header_target.write(
             f"namespace {pkg_ani_info.namespace} {{\n"
             f"ani_status ANIRegister(ani_env *env);\n"
