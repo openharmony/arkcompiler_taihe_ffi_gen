@@ -2,11 +2,12 @@
 #include <iostream>
 #include "core/runtime.hpp"
 
-void maythrow_impl(int32_t a) {
+int32_t maythrow_impl(int32_t a) {
     if (a == 0) {
         taihe::core::throw_error("some error happen");
+        return -1;
     } else {
-        std::cout << "success" << std::endl;
+        return a + 10;
     }
 }
 
