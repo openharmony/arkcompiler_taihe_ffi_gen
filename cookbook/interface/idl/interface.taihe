@@ -1,0 +1,7 @@
+interface window {
+    getheight(): i32;
+    setheight(b: i32): void;
+}
+
+function get_interface(): window;
+function check_interface(a: window): void;
