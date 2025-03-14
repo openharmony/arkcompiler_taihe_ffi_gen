@@ -52,6 +52,7 @@ from taihe.semantics.types import (
     GenericType,
     IfaceType,
     MapType,
+    OpaqueType,
     OptionalType,
     ScalarType,
     SetType,
@@ -107,6 +108,9 @@ class TypeVisitor(Generic[T]):
         return self.visit_type(t)
 
     def visit_scalar_type(self, t: ScalarType) -> T:
+        return self.visit_builtin_type(t)
+
+    def visit_opaque_type(self, t: OpaqueType) -> T:
         return self.visit_builtin_type(t)
 
     def visit_string_type(self, t: StringType) -> T:

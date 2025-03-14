@@ -37,6 +37,7 @@ from taihe.semantics.types import (
     EnumType,
     IfaceType,
     MapType,
+    OpaqueType,
     OptionalType,
     ScalarType,
     SetType,
@@ -183,6 +184,14 @@ class ScalarTypeCppInfo(AbstractAnalysis[ScalarType], AbstractTypeCppInfo):
         self.as_owner = res
 
 
+class OpaqueTypeCppInfo(AbstractAnalysis[OpaqueType], AbstractTypeCppInfo):
+    def __init__(self, am: AnalysisManager, arg: OpaqueType) -> None:
+        self.decl_headers = []
+        self.impl_headers = []
+        self.as_param = "uintptr_t"
+        self.as_owner = "uintptr_t"
+
+
 class StringTypeCppInfo(AbstractAnalysis[StringType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: StringType):
         self.decl_headers = ["core/string.hpp"]
@@ -305,6 +314,10 @@ class TypeCppInfo(TypeVisitor[AbstractTypeCppInfo]):
     @override
     def visit_scalar_type(self, t: ScalarType) -> AbstractTypeCppInfo:
         return ScalarTypeCppInfo.get(self.am, t)
+
+    @override
+    def visit_opaque_type(self, t: OpaqueType) -> AbstractTypeCppInfo:
+        return OpaqueTypeCppInfo.get(self.am, t)
 
     @override
     def visit_string_type(self, t: StringType) -> AbstractTypeCppInfo:

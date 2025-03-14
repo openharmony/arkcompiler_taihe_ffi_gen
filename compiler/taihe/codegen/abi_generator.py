@@ -30,6 +30,7 @@ from taihe.semantics.types import (
     EnumType,
     IfaceType,
     MapType,
+    OpaqueType,
     OptionalType,
     ScalarType,
     SetType,
@@ -203,10 +204,18 @@ class ScalarTypeABIInfo(AbstractAnalysis[ScalarType], AbstractTypeABIInfo):
         }.get(t)
         if res is None:
             raise ValueError
-        self.decl_headers = ["taihe/string.abi.h"]
-        self.impl_headers = ["taihe/string.abi.h"]
+        self.decl_headers = []
+        self.impl_headers = []
         self.as_param = res
         self.as_owner = res
+
+
+class OpaqueTypeABIInfo(AbstractAnalysis[OpaqueType], AbstractTypeABIInfo):
+    def __init__(self, am: AnalysisManager, arg: OpaqueType) -> None:
+        self.decl_headers = []
+        self.impl_headers = []
+        self.as_param = "uintptr_t"
+        self.as_owner = "uintptr_t"
 
 
 class StringTypeABIInfo(AbstractAnalysis[StringType], AbstractTypeABIInfo):
@@ -289,6 +298,10 @@ class TypeABIInfo(TypeVisitor[AbstractTypeABIInfo]):
     @override
     def visit_scalar_type(self, t: ScalarType) -> AbstractTypeABIInfo:
         return ScalarTypeABIInfo.get(self.am, t)
+
+    @override
+    def visit_opaque_type(self, t: OpaqueType) -> AbstractTypeABIInfo:
+        return OpaqueTypeABIInfo.get(self.am, t)
 
     @override
     def visit_string_type(self, t: StringType) -> AbstractTypeABIInfo:
