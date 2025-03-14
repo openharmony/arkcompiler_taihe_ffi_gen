@@ -72,6 +72,15 @@ class ScalarType(BuiltinType):
 
 
 @dataclass(frozen=True, repr=False)
+class OpaqueType(BuiltinType):
+    name: str = "Opaque"
+
+    @override
+    def _accept(self, v: "TypeVisitor") -> Any:
+        return v.visit_opaque_type(self)
+
+
+@dataclass(frozen=True, repr=False)
 class StringType(BuiltinType):
     name: str = "String"
 
@@ -107,6 +116,8 @@ U64 = ScalarType("u64", 64, is_signed=False)
 STRING = StringType()
 BIGINT = BigIntType()
 
+OPAQUE = OpaqueType()
+
 # Builtin Types map
 BUILTIN_TYPES: dict[str, Type] = {
     ty.name: ty
@@ -124,6 +135,7 @@ BUILTIN_TYPES: dict[str, Type] = {
         F64,
         STRING,
         BIGINT,
+        OPAQUE,
     ]
 }
 
