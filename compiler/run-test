@@ -240,7 +240,7 @@ def main(
         create_arktsconfig(panda_home, build_author_generated_dir)
 
         panda_include = panda_home / "../ohos_arm64/include/plugins/ets/runtime/ani"
-        lib_name = target_path.name
+        lib_name = target_path.absolute().name
 
         link(
             f"{build_author_generated_dir}/lib{lib_name}.so",
