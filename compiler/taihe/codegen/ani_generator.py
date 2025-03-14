@@ -116,7 +116,9 @@ ANI_STRING = ANIType(hint="string", base=ANI_REF)
 
 class PackageANIInfo(AbstractAnalysis[PackageDecl]):
     def __init__(self, am: AnalysisManager, p: PackageDecl) -> None:
-        self.src = f"{p.name}.ani.cpp"
+        self.header = f"{p.name}.ani.hpp"
+        self.source = f"{p.name}.ani.cpp"
+        self.namespace = "::".join(p.segments)
         self.sts = f"{p.name}.ets"
         self.lib_name = (
             ani_lib_item.value if (ani_lib_item := p.attrs.get("ani_lib")) else p.name
@@ -1246,53 +1248,52 @@ class ANICodeGenerator:
 
     def gen_package_file(self, pkg: PackageDecl):
         pkg_ani_info = PackageANIInfo.get(self.am, pkg)
-        pkg_ani_target = COutputBuffer.create(self.tm, f"src/{pkg_ani_info.src}", False)
         pkg_cpp_info = PackageCppInfo.get(self.am, pkg)
-        pkg_ani_target.include("ani.h")
-        pkg_ani_target.include(pkg_cpp_info.header)
-        pkg_ani_target.include("core/runtime.hpp")
+        pkg_ani_source_target = COutputBuffer.create(
+            self.tm, f"src/{pkg_ani_info.source}", False
+        )
+        pkg_ani_header_target = COutputBuffer.create(
+            self.tm, f"include/{pkg_ani_info.header}", True
+        )
+        pkg_ani_source_target.include("core/runtime.hpp")
+        pkg_ani_source_target.include(pkg_cpp_info.header)
+        pkg_ani_source_target.include(pkg_ani_info.header)
         for func in pkg.functions:
-            self.gen_func(func, pkg_ani_target)
-        pkg_ani_target.write(
-            "ANI_EXPORT ani_status ANI_Constructor(ani_vm *vm, uint32_t *result) {\n"
-            "    ani_env *env;\n"
-            "    if (ANI_OK != vm->GetEnv(ANI_VERSION_1, &env)) {\n"
-            "        return ANI_ERROR;\n"
-            "    }\n"
+            self.gen_func(func, pkg_ani_source_target)
+        pkg_ani_header_target.include("ani.h")
+        pkg_ani_header_target.write(
+            f"namespace {pkg_ani_info.namespace} {{\n"
+            f"ani_status ANIRegister(ani_env *env);\n"
+            f"}}\n"
         )
-        pkg_ani_target.write(
-            "taihe::core::set_env(env);\n"
-        )
-
-        pkg_ani_target.write(
-            f"    {{\n"
-            f'    static const char *className = "{pkg_ani_info.cls_name}";\n'
+        pkg_ani_source_target.write(
+            f"namespace {pkg_ani_info.namespace} {{\n"
+            f"ani_status ANIRegister(ani_env *env) {{\n"
             f"    ani_class cls;\n"
-            f"    if (ANI_OK != env->FindClass(className, &cls)) {{\n"
+            f'    if (ANI_OK != env->FindClass("{pkg_ani_info.cls_name}", &cls)) {{\n'
             f"        return ANI_ERROR;\n"
             f"    }}\n"
             f"    ani_native_function methods[] = {{\n"
         )
         for func in pkg.functions:
             func_ani_info = GlobFuncANIInfo.get(self.am, func)
-            pkg_ani_target.write(
+            pkg_ani_source_target.write(
                 f'        {{"{func_ani_info.sts_name}", nullptr, reinterpret_cast<void*>({func_ani_info.mangled_name})}},\n'
             )
-        pkg_ani_target.write(
+        pkg_ani_source_target.write(
             "    };\n"
             "    if (ANI_OK != env->Class_BindNativeMethods(cls, methods, sizeof(methods) / sizeof(ani_native_function))) {\n"
             "        return ANI_ERROR;\n"
             "    }\n"
-            "    }\n"
-        )
-        pkg_ani_target.write(
-            "    *result = ANI_VERSION_1;\n" "    return ANI_OK;\n" "}\n"
+            "    return ANI_OK;\n"
+            "}\n"
+            "}\n"
         )
 
     def gen_func(
         self,
         func: GlobFuncDecl,
-        pkg_ani_target: COutputBuffer,
+        pkg_ani_source_target: COutputBuffer,
     ):
         func_ani_info = GlobFuncANIInfo.get(self.am, func)
         func_cpp_info = GlobFuncCppInfo.get(self.am, func)
@@ -1315,7 +1316,7 @@ class ANICodeGenerator:
             ani_return_ty_name = type_ani_info.ani_type
         else:
             ani_return_ty_name = "void"
-        pkg_ani_target.write(
+        pkg_ani_source_target.write(
             f"static {ani_return_ty_name} {func_ani_info.mangled_name}({params_ani_str}) {{\n"
         )
         for param, ani_param_name, cpp_arg_name in zip(
@@ -1323,7 +1324,7 @@ class ANICodeGenerator:
         ):
             type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
             type_ani_info.from_ani(
-                pkg_ani_target, 4, "env", ani_param_name, cpp_arg_name
+                pkg_ani_source_target, 4, "env", ani_param_name, cpp_arg_name
             )
         args_cpp_str = ", ".join(args_cpp)
         if return_ty_ref := func.return_ty_ref:
@@ -1331,14 +1332,16 @@ class ANICodeGenerator:
             cpp_return_ty_name = type_cpp_info.as_owner
             cpp_result = "cpp_result"
             ani_result = "ani_result"
-            pkg_ani_target.write(
+            pkg_ani_source_target.write(
                 f"    {cpp_return_ty_name} {cpp_result} = {func_cpp_info.full_name}({args_cpp_str});\n"
             )
             type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
-            type_ani_info.into_ani(pkg_ani_target, 4, "env", cpp_result, ani_result)
-            pkg_ani_target.write(f"    return {ani_result};\n")
+            type_ani_info.into_ani(
+                pkg_ani_source_target, 4, "env", cpp_result, ani_result
+            )
+            pkg_ani_source_target.write(f"    return {ani_result};\n")
         else:
-            pkg_ani_target.write(
+            pkg_ani_source_target.write(
                 f"    {func_cpp_info.full_name}({args_cpp_str});\n" f"    return;\n"
             )
-        pkg_ani_target.write("}\n")
+        pkg_ani_source_target.write("}\n")
