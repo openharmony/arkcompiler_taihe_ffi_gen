@@ -710,7 +710,7 @@ class ScalarTypeANIInfo(AbstractAnalysis[ScalarType], AbstractTypeANIInfo):
             f"{' ' * offset}}}();\n"
             f"{' ' * offset}static ani_method {ani_getter} = [=] {{\n"
             f"{' ' * offset}    ani_method {ani_getter};\n"
-            f"{' ' * offset}    {env}->Class_FindMethod({ani_class}, \"{self.sts_type}Value\", nullptr, &{ani_getter});\n"
+            f"{' ' * offset}    {env}->Class_FindMethod({ani_class}, \"unboxed\", nullptr, &{ani_getter});\n"
             f"{' ' * offset}    return {ani_getter};\n"
             f"{' ' * offset}}}();\n"
             f"{' ' * offset}{self.ani_type} {ani_result};\n"

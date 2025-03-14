@@ -5,7 +5,7 @@ function main() {
         [
             new huks.HuksParam(
                 new huks.HuksTag(2 << 28 | 1, undefined),
-                new huks.HuksParamValue(1, 123 as double)
+                new huks.HuksParamValue(0, true)
             ),
             new huks.HuksParam(
                 new huks.HuksTag(5 << 28 | 9, undefined),
