@@ -127,7 +127,7 @@ class CppImplSourcesGenerator:
         pkg_cpp_impl_target: COutputBuffer,
     ):
 
-        pkg_cpp_impl_target.write(f"using namespace taihe::core;\n")
+        pkg_cpp_impl_target.write("using namespace taihe::core;\n")
 
     def gen_func(
         self,
@@ -156,7 +156,7 @@ class CppImplSourcesGenerator:
             pkg_cpp_impl_target.write(
                 f'    throw std::runtime_error("Function {func_cpp_impl_name} Not implemented");\n'
             )
-        pkg_cpp_impl_target.write(f"}}\n")
+        pkg_cpp_impl_target.write("}\n")
 
     def gen_iface(
         self,
@@ -170,7 +170,7 @@ class CppImplSourcesGenerator:
             for func in ifaceperant.methods:
                 self._gen_class_method_impl(iface.name, func, pkg_cpp_impl_target)
 
-        pkg_cpp_impl_target.write(f"}};\n\n")
+        pkg_cpp_impl_target.write("};\n\n")
 
     def _gen_class_method_impl(
         self,
@@ -201,7 +201,7 @@ class CppImplSourcesGenerator:
             pkg_cpp_impl_target.write(
                 f'        throw std::runtime_error("Function {iface_name}::{func_cpp_impl_name} Not implemented");\n'
             )
-        pkg_cpp_impl_target.write(f"    }}\n")
+        pkg_cpp_impl_target.write("    }\n")
 
     def _mask(
         self,
@@ -233,8 +233,8 @@ class CppImplSourcesGenerator:
         pkg_cpp_impl_target: COutputBuffer,
         content_generator: Callable[[], list[None]],
     ):
-        pkg_cpp_impl_target.write(f"namespace {{\n\n")
+        pkg_cpp_impl_target.write("namespace {\n\n")
 
         content_generator()
 
-        pkg_cpp_impl_target.write(f"\n}}\n\n")
+        pkg_cpp_impl_target.write("\n}\n\n")
