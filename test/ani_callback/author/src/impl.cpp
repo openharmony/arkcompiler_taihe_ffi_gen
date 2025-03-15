@@ -1,0 +1,54 @@
+#include <ani_callback.impl.hpp>
+#include <cstdint>
+#include <iostream>
+#include "core/runtime.hpp"
+
+int32_t add_impl(int32_t a, int32_t b) {
+    if (a == 0) {
+        taihe::core::throw_error("some error happen in add impl");
+        return b;
+    } else {
+        std::cout << "add impl " << a + b << std::endl;
+        return a + b;
+    }
+}
+
+::ani_callback::IBase getIBase_impl() {
+    struct AuthorIBase {
+      taihe::core::string name;
+      AuthorIBase() : name("My IBase") {
+        std::cout << "AuthorIBase(" << this->name << ") is constructing" << std::endl;
+      }
+      ~AuthorIBase() {
+        std::cout << "AuthorIBase(" << this->name << ") is destructing" << std::endl;
+      }
+      taihe::core::string get() {
+        std::cout << "AuthorIBase(" << this->name << ") is calling get()" << std::endl;
+        return name;
+      }
+      void set(taihe::core::string_view a) {
+        std::cout << "AuthorIBase(" << this->name << ") is calling set()" << std::endl;
+        name = a;
+        return;
+      }
+    };
+    return taihe::core::make_holder<AuthorIBase, ::ani_callback::IBase>();
+}
+
+void fromStructSync_impl(::ani_callback::Data const& data) {
+    std::cout << data.a.c_str() << " " << data.b.c_str() << " "  << data.c << std::endl;
+    return;
+}
+
+::ani_callback::Data toStructSync_impl(taihe::core::string_view a, taihe::core::string_view b, int32_t c) {
+    if (c == 0) {
+        taihe::core::throw_error("some error happen in toStructSync_impl");
+        return {a, b, c};
+    }
+    return {a, b, c};
+}
+
+TH_EXPORT_CPP_API_addSync(add_impl);
+TH_EXPORT_CPP_API_getIBase(getIBase_impl);
+TH_EXPORT_CPP_API_fromStructSync(fromStructSync_impl);
+TH_EXPORT_CPP_API_toStructSync(toStructSync_impl);

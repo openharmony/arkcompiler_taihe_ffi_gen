@@ -1,0 +1,22 @@
+[gen_async="add", gen_promise="add"]
+function addSync(a: i32, b: i32): i32;
+
+interface IBase {
+    get(): String;
+    set(a: String): void;
+}
+
+[gen_async="getIBaseAsync", gen_promise="getIBasePromise"]
+function getIBase(): IBase;
+
+struct Data {
+  a: String;
+  b: String;
+  c: i32;
+}
+
+[gen_async="fromStruct", gen_promise="fromStruct"]
+function fromStructSync(data: Data): void;
+
+[gen_async="toStruct", gen_promise="toStruct"]
+function toStructSync(a: String, b: String, c: i32): Data;
