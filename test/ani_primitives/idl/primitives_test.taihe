@@ -33,3 +33,7 @@ function baseFunc17(a:f32,b:bool):void;
 function baseFunc18(a:f32,b:String):void;
 function baseFunc19(a:f64,b:String):void;
 function baseFunc20(a:f64,b:bool):void;
+function baseFunc21(option1:Optional<i32>,option2:Optional<i64>):void;
+function baseFunc22(option1:Optional<f32>,option2:Optional<f64>):void;
+function baseFunc23(option1:Optional<String>,option2:Optional<bool>):void;
+function baseFunc24(option1:Optional<i16>,option2:Optional<i64>):void;

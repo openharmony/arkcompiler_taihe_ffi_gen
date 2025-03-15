@@ -69,28 +69,28 @@ function testFunH2(){
     assertEQ(res,"9223372034707292160")
 }
 
-// function baseFunc1(){
-//     let res = test_primitives.baseFunc1(3.0)
-//     assertEQ(res,4.0)
-// }
+function baseFunc1(){
+     let res = test_primitives.baseFunc1(3.0 as float)
+     assertEQ(res,4.0)
+}
 
-// function baseFunc2(){
-//     test_primitives.baseFunc2(3.0)
-// }
+function baseFunc2(){
+    test_primitives.baseFunc2(3.0 as float)
+}
 
 
-// function baseFunc3(){
-//     let res =test_primitives.baseFunc3(3.0,3.14159265)
-//     console.log("tests baseFunc3"+res)
-// }
+function baseFunc3(){
+    let res =test_primitives.baseFunc3(3.0 as float,3.14159265 as double)
+    console.log("tests baseFunc3"+res)
+}
 
 function baseFunc4(){
-    let res =test_primitives.baseFunc4(3.0)
+    let res =test_primitives.baseFunc4(3.0 as double)
     console.log("tests baseFunc3"+res)
 }
 
 function baseFunc5(){
-    test_primitives.baseFunc5(3.14159)
+    test_primitives.baseFunc5(3.14159 as double)
 }
 
 function baseFunc6(){
@@ -121,22 +121,20 @@ function baseFunc8_1(){
     assertEQ(res,"testbaseFunc88")
 }
 
-//function baseFunc9(){
-//    test_primitives.baseFunc9("testbaseFunc9",32,9223372036854775807,true,3.1)
-//}
+function baseFunc9(){
+   test_primitives.baseFunc9("testbaseFunc9",32,9223372036854775807,true,3.1 as float)
+}
 
 
 //Type 'double' is not compatible with type 'float' at index 2 [main.ets:71:58]
 // function testFunI1(){
-//     let res = test_primitives.baseIFunc(3.1415926535897931,4.3)
-//     console.log("run main ... test_primitives ..."+res)
-//     assertEQ(res,"-9223372034707292162")
+//     let res = test_primitives.baseIFunc(3.1415926535897931 as double,4.3 as float)
+//     assertEQ(res,"7.4415926535897931")
 // }
 
 // function testFunI2(){
-//     let res = test_primitives.baseIFunc(-1234567890.1234567,-123.4)
-//     console.log("run main ... test_primitives ..."+res)
-//     assertEQ(res,"9223372034707292160")
+//     let res = test_primitives.baseIFunc(-1234567890.1234567 as double,-123.4 as float) 
+//     assertEQ(res,"-1234568013.5234567")
 // }
 
 
@@ -169,9 +167,9 @@ function baseFunc14_1(){
     test_primitives.baseFunc14(92233720368547758,false)
 }
 
-//function baseFunc15(){
-//   test_primitives.baseFunc15(32,3.15)
-//}
+function baseFunc15(){
+  test_primitives.baseFunc15(32,3.15 as float)
+}
 
 function baseFunc16(){
     test_primitives.baseFunc16(32,3.141592653589793)
@@ -182,21 +180,21 @@ function baseFunc16_1(){
 }
 
 
-//function baseFunc17(){
-//    test_primitives.baseFunc17(123.456,true)
-//}
+function baseFunc17(){
+   test_primitives.baseFunc17(123.456 as float,true)
+}
 
-//function baseFunc17_1(){
-//    test_primitives.baseFunc17(3.14159,false)
-//}
+function baseFunc17_1(){
+   test_primitives.baseFunc17(3.14159 as float,false)
+}
 
-//function baseFunc18(){
-//    test_primitives.baseFunc18(123.456,"testbaseFunc18")
-//}
+function baseFunc18(){
+   test_primitives.baseFunc18(123.456 as float,"testbaseFunc18")
+}
 
-//function baseFunc18_1(){
-//   test_primitives.baseFunc18(3.14159,"testbaseFunc18")
-//}
+function baseFunc18_1(){
+  test_primitives.baseFunc18(3.14159 as float,"testbaseFunc18")
+}
 
 function baseFunc19(){
     test_primitives.baseFunc19(3.141592653589793,"testbaseFunc19")
@@ -208,6 +206,22 @@ function baseFunc20(){
 
 function baseFunc20_1(){
     test_primitives.baseFunc20(3.141592653589793,false)
+}
+
+function baseFunc21(){
+    test_primitives.baseFunc21(32 as int,65535 as long)
+}
+
+function baseFunc21_1(){
+    test_primitives.baseFunc21(undefined,65535 as long)
+}
+
+function baseFunc21_2(){
+    test_primitives.baseFunc21(undefined,undefined)
+}
+
+function baseFunc21_3(){
+    test_primitives.baseFunc21(32 as int,undefined)
 }
 
 function main() {
@@ -229,9 +243,9 @@ function main() {
     suite.addTest("check testFunH2", testFunH2)
     // suite.addTest("check testFunI1", testFunI1)
     // suite.addTest("check testFunI2", testFunI2)
-    // suite.addTest("check testbaseFunc1", baseFunc1)
-    // suite.addTest("check testbaseFunc2", baseFunc2)
-    // suite.addTest("check testbaseFunc3", baseFunc3)
+    suite.addTest("check testbaseFunc1", baseFunc1)
+    suite.addTest("check testbaseFunc2", baseFunc2)
+    suite.addTest("check testbaseFunc3", baseFunc3)
     suite.addTest("check testbaseFunc4", baseFunc4)
     suite.addTest("check testbaseFunc5", baseFunc5)
     suite.addTest("check testbaseFunc6", baseFunc6)
@@ -240,7 +254,7 @@ function main() {
     suite.addTest("check testbaseFunc6_1", baseFunc6_1)
     suite.addTest("check testbaseFunc7_1", baseFunc7_1)
     suite.addTest("check testbaseFunc8_1", baseFunc8_1)
-    // suite.addTest("check testbaseFunc9", baseFunc9)
+    suite.addTest("check testbaseFunc9", baseFunc9)
     suite.addTest("check testbaseFunc10", baseFunc10)
     suite.addTest("check testbaseFunc11", baseFunc11)
     suite.addTest("check testbaseFunc11_1", baseFunc11_1)
@@ -248,17 +262,19 @@ function main() {
     suite.addTest("check testbaseFunc13", baseFunc13)
     suite.addTest("check testbaseFunc14", baseFunc14)
     suite.addTest("check testbaseFunc14_1", baseFunc14_1)
-    //suite.addTest("check testbaseFunc15", baseFunc15)
+    suite.addTest("check testbaseFunc15", baseFunc15)
     suite.addTest("check testbaseFunc16", baseFunc16)
     suite.addTest("check testbaseFunc16_1", baseFunc16_1)
-    //suite.addTest("check testbaseFunc17", baseFunc17)
-    //suite.addTest("check testbaseFunc17_1", baseFunc17_1)
-    //suite.addTest("check testbaseFunc18", baseFunc18)
-    //suite.addTest("check testbaseFunc18_1", baseFunc18_1)
+    suite.addTest("check testbaseFunc17", baseFunc17)
+    suite.addTest("check testbaseFunc17_1", baseFunc17_1)
+    suite.addTest("check testbaseFunc18", baseFunc18)
+    suite.addTest("check testbaseFunc18_1", baseFunc18_1)
     suite.addTest("check testbaseFunc19", baseFunc19)
     suite.addTest("check testbaseFunc20", baseFunc20)
     suite.addTest("check testbaseFunc20_1", baseFunc20_1)
+    suite.addTest("check testbaseFunc21", baseFunc21)
+    suite.addTest("check testbaseFunc21_1", baseFunc21_1)
+    suite.addTest("check testbaseFunc21_2", baseFunc21_2)
+    suite.addTest("check testbaseFunc21_3", baseFunc21_3)
     suite.run()
-    // console.log(test_primitives.baseFFunc(1,12345.678))
-    // console.log(test_primitives.baseFFunc(1,3.4e38))
 }

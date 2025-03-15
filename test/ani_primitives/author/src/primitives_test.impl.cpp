@@ -68,12 +68,12 @@ namespace
   }
   string baseHFunc(int32_t a, int64_t b)
   {
-    int64_t sum = static_cast<int64_t>(a) + b;
+    int64_t sum = a + b;
     return std::to_string(sum);
   }
   string baseIFunc(double a, float b)
   {
-    double sum = static_cast<double>(a) + b;
+    double sum = a + b;
     return std::to_string(sum);
   }
 
@@ -251,8 +251,8 @@ namespace
     std::cout << "baseFunc19 is a  " << a << std::endl;
     std::cout << "baseFunc19 is b  " << b << std::endl;
   }
-}
-void baseFunc20(double a, bool b)
+
+  void baseFunc20(double a, bool b)
 {
   if (b)
   {
@@ -264,6 +264,47 @@ void baseFunc20(double a, bool b)
     std::cout << "baseFunc20 is a  " << a << std::endl;
     std::cout << "baseFunc20 is b  " << b << std::endl;
   }
+}
+
+
+void baseFunc21(optional_view<int32_t> option1, optional_view<int64_t> option2) {
+  if (option1) {
+    std::cout << *option1 << std::endl;
+  } else if(option2){
+    std::cout << *option2 << std::endl;
+  } else {
+    std::cout << "Null" << std::endl;
+  }
+}
+void baseFunc22(optional_view<float> option1, optional_view<double> option2) {
+  if (option1) {
+    std::cout << *option1 << std::endl;
+  } else if(option2){
+    std::cout << *option2 << std::endl;
+  } else {
+    std::cout << "Null" << std::endl;
+  }
+}
+void baseFunc23(optional_view<string> option1, optional_view<bool> option2) {
+  if (option1) {
+    std::cout << *option1 << std::endl;
+  } else if(option2){
+    std::cout << *option2 << std::endl;
+  } else {
+    std::cout << "Null" << std::endl;
+  }
+}
+void baseFunc24(optional_view<int16_t> option1, optional_view<int64_t> option2) {
+  if (option1) {
+    std::cout << *option1 << std::endl;
+  } else if(option2){
+    std::cout << *option2 << std::endl;
+  } else {
+    std::cout << "Null" << std::endl;
+  }
+
+}
+
 }
 
 TH_EXPORT_CPP_API_multiply(multiply)
@@ -294,3 +335,7 @@ TH_EXPORT_CPP_API_baseFunc17(baseFunc17)
 TH_EXPORT_CPP_API_baseFunc18(baseFunc18)
 TH_EXPORT_CPP_API_baseFunc19(baseFunc19)
 TH_EXPORT_CPP_API_baseFunc20(baseFunc20)
+TH_EXPORT_CPP_API_baseFunc21(baseFunc21)
+TH_EXPORT_CPP_API_baseFunc22(baseFunc22)
+TH_EXPORT_CPP_API_baseFunc23(baseFunc23)
+TH_EXPORT_CPP_API_baseFunc24(baseFunc24)
