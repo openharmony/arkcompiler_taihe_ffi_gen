@@ -8,6 +8,7 @@ from taihe.codegen.abi_generator import (
     TypeABIInfo,
 )
 from taihe.codegen.cpp_generator import (
+    IfaceMethodCppInfo,
     TypeCppInfo,
 )
 from taihe.semantics.declarations import (
@@ -106,7 +107,9 @@ class CppImplSourcesGenerator:
             self.tm, f"temp/{pkg_cpp_impl_info.source}", False
         )
         pkg_cpp_impl_target.include(pkg_cpp_impl_info.header)
-        pkg_cpp_impl_target.write("// Please delete this include when you implement\n")
+        pkg_cpp_impl_target.write(
+            "// Please delete <stdexcept> include when you implement\n"
+        )
         pkg_cpp_impl_target.include("stdexcept")
         self.gen_using_namespace(pkg_cpp_impl_target)
         self.gen_anonymous_namespace_block(
@@ -175,7 +178,8 @@ class CppImplSourcesGenerator:
         func: IfaceMethodDecl,
         pkg_cpp_impl_target: COutputBuffer,
     ):
-        func_cpp_impl_name = f"{func.name}"
+        method_cpp_info = IfaceMethodCppInfo.get(self.am, func)
+        func_cpp_impl_name = method_cpp_info.impl_name
         cpp_params = []
         for param in func.params:
             type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
