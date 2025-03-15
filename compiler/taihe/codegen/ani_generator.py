@@ -993,7 +993,7 @@ class NsTreeNode:
             child.display(level + 1)
 
 
-class Tree:
+class NsTree:
     def __init__(self):
         self.root = NsTreeNode("root")
 
