@@ -1,0 +1,17 @@
+function add_i8(a: i8, b: i8): i8;
+function sub_i16(a: i16, b: i16): i16;
+function mul_i32(a: i32, b: i32): i32;
+function div_i64(a: i64, b: i64): i64;
+
+function add_f32(a: f32, b: f32): f32;
+function sub_f32(a: f32, b: f32): f32;
+function add_f64(a: f32, b: f64): f64;
+function sub_f64(a: f32, b: f64): f64;
+function mul_f64(a: f32, b: f32): f64;
+
+function check(a : bool, b : bool): bool;
+
+function concatx(a: String, b: String): String;
+function splitx(a: String, n: i32): String;
+function to_i32(a: String): i32;
+function from_i32(a: i32): String;
