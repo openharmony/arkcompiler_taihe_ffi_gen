@@ -138,10 +138,12 @@ class CppImplSourcesGenerator:
         cpp_params = []
         for param in func.params:
             type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
+            pkg_cpp_impl_target.include(*type_cpp_info.impl_headers)
             cpp_params.append(f"{self._mask(type_cpp_info.as_param)} {param.name}")
         cpp_params_str = ", ".join(cpp_params)
         if return_ty_ref := func.return_ty_ref:
             type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
+            pkg_cpp_impl_target.include(*type_cpp_info.impl_headers)
             cpp_return_ty_name = self._mask(type_cpp_info.as_owner)
         else:
             cpp_return_ty_name = "void"
@@ -183,10 +185,12 @@ class CppImplSourcesGenerator:
         cpp_params = []
         for param in func.params:
             type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
+            pkg_cpp_impl_target.include(*type_cpp_info.impl_headers)
             cpp_params.append(f"{self._mask(type_cpp_info.as_param)} {param.name}")
         cpp_params_str = ", ".join(cpp_params)
         if return_ty_ref := func.return_ty_ref:
             type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
+            pkg_cpp_impl_target.include(*type_cpp_info.impl_headers)
             cpp_return_ty_name = self._mask(type_cpp_info.as_owner)
         else:
             cpp_return_ty_name = "void"
