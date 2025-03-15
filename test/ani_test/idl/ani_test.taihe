@@ -27,5 +27,13 @@ interface Foo {
     bar(): void;
 }
 
+interface A {
+    b(): B;
+}
+
+interface B {
+    a(): A;
+}
+
 function makeFoo(list: Array<String>): Array<Foo>;
 function callBar(arr: Array<Foo>): void;
