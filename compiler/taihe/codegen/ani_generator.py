@@ -970,6 +970,41 @@ class TypeANIInfo(TypeVisitor[AbstractTypeANIInfo]):
     #     return CallbackTypeANIInfo.get(self.am, t)
 
 
+class NsTreeNode:
+    def __init__(self, name: str):
+        self.name: str = name
+        self.children = {}
+        self.pkgs: list[PackageDecl] = []
+
+    def add_path(self, path_parts: list[str], pkg: PackageDecl):
+        if not path_parts:
+            self.pkgs.append(pkg)
+            return
+        head, *tail = path_parts
+        if head not in self.children:
+            self.children[head] = NsTreeNode(head)
+        self.children[head].add_path(tail, pkg)
+
+    def display(self, level=0):
+        # This function use to test NsTreeNode
+        indent = "  " * level
+        print(f"{indent}{self.name} : {self.pkgs if self.pkgs else ''}")
+        for child in self.children.values():
+            child.display(level + 1)
+
+
+class Tree:
+    def __init__(self):
+        self.root = NsTreeNode("root")
+
+    def add(self, path: str, pkg_name: PackageDecl):
+        parts = path.split(".")
+        self.root.add_path(parts, pkg_name)
+
+    def display(self):
+        self.root.display()
+
+
 class STSCodeGenerator:
     def __init__(self, tm: OutputManager, am: AnalysisManager):
         self.tm = tm
