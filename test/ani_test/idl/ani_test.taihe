@@ -1,8 +1,11 @@
-struct Option {
+struct Data {
     src: String;
     dest: f64;
     files: Array<String>;
 }
+
+function makeData(): Data;
+function showData(s: Data): void;
 
 enum Union {
     empty;
@@ -11,23 +14,18 @@ enum Union {
     sValue: String;
 }
 
+function makeUnion(v: i32): Union;
+function showUnion(u: Union): void;
+
+function showOptionalInt(x: Optional<i32>): void;
+function makeOptionalInt(b: bool): Optional<i32>;
+
+function showArrayInt(x: Array<i32>): void;
+function makeArrayInt(n: i32, v: i32): Array<i32>;
+
 interface Foo {
     bar(): void;
 }
 
+function makeFoo(list: Array<String>): Array<Foo>;
 function callBar(arr: Array<Foo>): void;
-function getFoo(list: Array<String>): Array<Foo>;
-
-function testUnion(u: Union): void;
-function getUnion(v: i32): Union;
-function getOption(): Option;
-
-function testOptionalDouble(x: Optional<f64>): void;
-
-function optionPrim(num: f64): void;
-function optionArg1(str: String, op1: Option): void;
-function optionArg2(str: String, op1: Option, op2: Option): void;
-function optionArg3(str: String, op1: Option, op2: Option, op3: Option): void;
-
-function getNumberArg0(): i32;
-function getNumberArg4(x: i32, y: i32, z: i32, w: i32): i32;

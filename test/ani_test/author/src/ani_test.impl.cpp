@@ -1,65 +1,26 @@
-#include <ani_test.impl.hpp>
+#include "ani_test.impl.hpp"
 
-using namespace ani_test;
 using namespace taihe::core;
+using namespace ani_test;
 
-static int32_t GetNumberArg0() {
-  static int counter = 0;
-  return ++counter;
+namespace {
+Data makeData() {
+  return Data{
+      string("C++ Object"),
+      (float)1.0,
+      array<string>::make(2, "file.txt"),
+  };
 }
 
-static int32_t GetNumberArg4(int32_t x, int32_t y, int32_t z, int32_t w) {
-  return x + y + z + w;
-}
-
-static void parseOption(Option const& opt) {
-  std::cout << "src: " << opt.src << std::endl;
-  std::cout << "dest: " << opt.dest << std::endl;
-  for (const auto &s : opt.files) {
-    std::cout << "files: " << s.c_str() << std::endl;
+void showData(Data const &s) {
+  std::cout << "src: " << s.src << std::endl;
+  std::cout << "dest: " << s.dest << std::endl;
+  for (const auto &s : s.files) {
+    std::cout << "file: " << s.c_str() << std::endl;
   }
 }
 
-static void optionArg1(string_view str, Option const& obj1) {
-  parseOption(obj1);
-}
-
-static void optionArg2(string_view str, Option const& obj1, Option const& obj2) {
-  parseOption(obj1);
-  parseOption(obj2);
-}
-
-static void optionArg3(string_view str, Option const& obj1, Option const& obj2, Option const& obj3) {
-  parseOption(obj1);
-  parseOption(obj2);
-  parseOption(obj3);
-}
-
-static void optionPrim(double num) {
-  double res = num;
-}
-
-TH_EXPORT_CPP_API_getNumberArg0(GetNumberArg0)
-TH_EXPORT_CPP_API_getNumberArg4(GetNumberArg4)
-
-TH_EXPORT_CPP_API_optionPrim(optionPrim)
-TH_EXPORT_CPP_API_optionArg1(optionArg1)
-TH_EXPORT_CPP_API_optionArg2(optionArg2)
-TH_EXPORT_CPP_API_optionArg3(optionArg3)
-
-static void testUnion(Union u) {
-  if (auto iPtr = u.get_iValue_ptr()) {
-    std::cout << "i " << *iPtr << std::endl;
-  } else if (auto fPtr = u.get_fValue_ptr()) {
-    std::cout << "f " << *fPtr << std::endl;
-  } else if (auto sPtr = u.get_sValue_ptr()) {
-    std::cout << "s " << *sPtr << std::endl;
-  } else {
-    std::cout << "e" << std::endl;
-  }
-}
-
-static Union getUnion(int32_t v) {
+Union makeUnion(int32_t v) {
   switch (v) {
     case 1:
       return Union::make_iValue(100);
@@ -72,31 +33,46 @@ static Union getUnion(int32_t v) {
   }
 }
 
-static Option getOption() {
-  return Option{string("C++ Object"), (float)1.0, array<string>::make(2, "file.txt"), };
-}
-
-static void testOptionalDouble(optional_view<double> test) {
-  if (test) {
-    std::cout << *test << std::endl;
+void showUnion(Union const &u) {
+  if (auto iPtr = u.get_iValue_ptr()) {
+    std::cout << "I " << *iPtr << std::endl;
+  } else if (auto fPtr = u.get_fValue_ptr()) {
+    std::cout << "F " << *fPtr << std::endl;
+  } else if (auto sPtr = u.get_sValue_ptr()) {
+    std::cout << "S " << *sPtr << std::endl;
   } else {
-    std::cout << "Error" << std::endl;
+    std::cout << "E" << std::endl;
   }
 }
 
-TH_EXPORT_CPP_API_testUnion(testUnion)
-TH_EXPORT_CPP_API_getUnion(getUnion)
-TH_EXPORT_CPP_API_getOption(getOption)
-TH_EXPORT_CPP_API_testOptionalDouble(testOptionalDouble)
-
-void callBar(array_view<Foo> arr) {
-  std::cout << "callBar" << std::endl;
-  for (weak::Foo foo : arr) {
-    foo->bar();
+void showOptionalInt(optional_view<int32_t> x) {
+  if (x) {
+    std::cout << *x << std::endl;
+  } else {
+    std::cout << "Null" << std::endl;
   }
 }
 
-array<Foo> getFoo(array<string> list) {
+optional<int32_t> makeOptionalInt(bool b) {
+  if (b) {
+    return optional<int32_t>::make(10);
+  } else {
+    return optional<int32_t>(nullptr);
+  }
+}
+
+void showArrayInt(array_view<int32_t> x) {
+  for (auto i : x) {
+    std::cout << i << ", ";
+  }
+  std::cout << std::endl;
+}
+
+array<int32_t> makeArrayInt(int32_t n, int32_t v) {
+  return array<int32_t>::make(n, v);
+}
+
+array<Foo> makeFoo(array_view<string> list) {
   struct AuthorFoo {
     string name;
     AuthorFoo(string_view name) : name(name) {
@@ -116,5 +92,19 @@ array<Foo> getFoo(array<string> list) {
   return array<Foo>(vec.data(), vec.size(), move_data_t{});
 }
 
+void callBar(array_view<Foo> arr) {
+  for (weak::Foo foo : arr) {
+    foo->bar();
+  }
+}
+} // namespace
+
+TH_EXPORT_CPP_API_makeData(makeData) TH_EXPORT_CPP_API_showData(showData)
+TH_EXPORT_CPP_API_makeUnion(makeUnion)
+TH_EXPORT_CPP_API_showUnion(showUnion)
+TH_EXPORT_CPP_API_showOptionalInt(showOptionalInt)
+TH_EXPORT_CPP_API_makeOptionalInt(makeOptionalInt)
+TH_EXPORT_CPP_API_showArrayInt(showArrayInt)
+TH_EXPORT_CPP_API_makeArrayInt(makeArrayInt)
+TH_EXPORT_CPP_API_makeFoo(makeFoo)
 TH_EXPORT_CPP_API_callBar(callBar)
-TH_EXPORT_CPP_API_getFoo(getFoo)

@@ -1,30 +1,43 @@
 import * as ani_test from "../author_generated/ani_test"
-function main() {
-    console.log("hello main")
-    console.log(ani_test.getNumberArg4(1, 2, 3, 4))
 
-    const option: ani_test.Option = new ani_test.Option(
+loadLibrary("ani_test")
+
+function main() {
+    // struct
+    const option: ani_test.Data = new ani_test.Data(
         "path/to/source",
         123,
         ["file1.txt", "file2.txt", "file3.txt"]
     )
-    ani_test.optionArg1("option1", option)
+    ani_test.showData(option)
 
-    console.log(ani_test.getOption())
+    console.log(ani_test.makeData())
 
-    ani_test.testUnion(new ani_test.Union(0, undefined))
-    ani_test.testUnion(new ani_test.Union(1, 1 as int))
-    ani_test.testUnion(new ani_test.Union(2, 2 as float))
-    ani_test.testUnion(new ani_test.Union(3, "Hello from STS!"))
+    // union
+    ani_test.showUnion(new ani_test.Union(0, undefined))
+    ani_test.showUnion(new ani_test.Union(1, 1 as int))
+    ani_test.showUnion(new ani_test.Union(2, 2 as float))
+    ani_test.showUnion(new ani_test.Union(3, "Hello from STS!"))
 
-    console.log(ani_test.getUnion(0))
-    console.log(ani_test.getUnion(1))
-    console.log(ani_test.getUnion(2))
-    console.log(ani_test.getUnion(3))
+    console.log(ani_test.makeUnion(0))
+    console.log(ani_test.makeUnion(1))
+    console.log(ani_test.makeUnion(2))
+    console.log(ani_test.makeUnion(3))
 
-    ani_test.testOptionalDouble(3.0 as double)
+    // optional
+    ani_test.showOptionalInt(100 as int)
+    ani_test.showOptionalInt(undefined)
 
-    let impl_foo_list = ani_test.getFoo(["A", "B", "C"]);
+    console.log(ani_test.makeOptionalInt(true))
+    console.log(ani_test.makeOptionalInt(false))
+
+    // array
+    ani_test.showArrayInt([1, 2, 3])
+
+    console.log(ani_test.makeArrayInt(10, 123))
+
+    // interface
+    let impl_foo_list = ani_test.makeFoo(["A", "B", "C"]);
     for (let i = 0; i < impl_foo_list.length; i++) {
         impl_foo_list[i].bar();
     }

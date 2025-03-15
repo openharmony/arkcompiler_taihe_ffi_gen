@@ -129,12 +129,12 @@ class PackageANIInfo(AbstractAnalysis[PackageDecl]):
         self.source = f"{p.name}.ani.cpp"
         self.namespace = "::".join(p.segments)
         self.sts = f"{p.name}.ets"
-        self.lib_name = (
+        self.pkg_name = (
             ani_lib_item.value
             if (ani_lib_item := p.attrs.get("ani_lib"))
             else "/".join(p.segments)
         )
-        self.impl_desc = f"L{self.lib_name}/ETSGLOBAL;"
+        self.impl_desc = f"L{self.pkg_name}/ETSGLOBAL;"
 
 
 class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
@@ -164,8 +164,8 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
         self.sts_type = d.name
         self.sts_impl = d.name
         pkg_ani_info = PackageANIInfo.get(am, p)
-        self.type_desc = f"L{pkg_ani_info.lib_name}/{self.sts_type};"
-        self.impl_desc = f"L{pkg_ani_info.lib_name}/{self.sts_impl};"
+        self.type_desc = f"L{pkg_ani_info.pkg_name}/{self.sts_type};"
+        self.impl_desc = f"L{pkg_ani_info.pkg_name}/{self.sts_impl};"
 
 
 class EnumANIInfo(AbstractAnalysis[EnumDecl]):
@@ -175,8 +175,8 @@ class EnumANIInfo(AbstractAnalysis[EnumDecl]):
         self.sts_type = d.name
         self.sts_impl = d.name
         pkg_ani_info = PackageANIInfo.get(am, p)
-        self.type_desc = f"L{pkg_ani_info.lib_name}/{self.sts_type};"
-        self.impl_desc = f"L{pkg_ani_info.lib_name}/{self.sts_impl};"
+        self.type_desc = f"L{pkg_ani_info.pkg_name}/{self.sts_type};"
+        self.impl_desc = f"L{pkg_ani_info.pkg_name}/{self.sts_impl};"
 
 
 class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
@@ -186,8 +186,8 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
         self.sts_type = d.name
         self.sts_impl = f"{d.name}_inner"
         pkg_ani_info = PackageANIInfo.get(am, p)
-        self.type_desc = f"L{pkg_ani_info.lib_name}/{self.sts_type};"
-        self.impl_desc = f"L{pkg_ani_info.lib_name}/{self.sts_impl};"
+        self.type_desc = f"L{pkg_ani_info.pkg_name}/{self.sts_type};"
+        self.impl_desc = f"L{pkg_ani_info.pkg_name}/{self.sts_impl};"
 
 
 class AbstractTypeANIInfo(metaclass=ABCMeta):
@@ -970,10 +970,10 @@ class TypeANIInfo(TypeVisitor[AbstractTypeANIInfo]):
     #     return CallbackTypeANIInfo.get(self.am, t)
 
 
-class NsTreeNode:
+class Namespace:
     def __init__(self, name: str):
         self.name: str = name
-        self.children = {}
+        self.children_namespaces: dict[str, Namespace] = {}
         self.pkgs: list[PackageDecl] = []
 
     def add_path(self, path_parts: list[str], pkg: PackageDecl):
@@ -981,21 +981,19 @@ class NsTreeNode:
             self.pkgs.append(pkg)
             return
         head, *tail = path_parts
-        if head not in self.children:
-            self.children[head] = NsTreeNode(head)
-        self.children[head].add_path(tail, pkg)
+        child = self.children_namespaces.setdefault(head, Namespace(head))
+        child.add_path(tail, pkg)
 
     def display(self, level=0):
         # This function use to test NsTreeNode
-        indent = "  " * level
-        print(f"{indent}{self.name} : {self.pkgs if self.pkgs else ''}")
-        for child in self.children.values():
+        print(f"{'  ' * level}{self.name} : {self.pkgs if self.pkgs else ''}")
+        for child in self.children_namespaces.values():
             child.display(level + 1)
 
 
 class NsTree:
     def __init__(self):
-        self.root = NsTreeNode("root")
+        self.root = Namespace("root")
 
     def add(self, path: str, pkg_name: PackageDecl):
         parts = path.split(".")
@@ -1018,7 +1016,7 @@ class STSCodeGenerator:
         pkg_ani_info = PackageANIInfo.get(self.am, pkg)
         pkg_sts_target = OutputBuffer.create(self.tm, pkg_ani_info.sts)
 
-        pkg_sts_target.write(f'loadLibrary("{pkg_ani_info.lib_name}");\n')
+        # pkg_sts_target.write(f'loadLibrary("{self.lib_name}");\n')
 
         # for struct in pkg.structs:
         #     self.gen_struct_inner(struct, pkg_sts_target)
@@ -1248,6 +1246,29 @@ class ANICodeGenerator:
     def generate(self, pg: PackageGroup):
         for pkg in pg.packages:
             self.gen_package_file(pkg)
+        # ANI_Constructor
+        constructor_file = "ani_constructor.cpp"
+        constructor_target = COutputBuffer.create(
+            self.tm, f"src/{constructor_file}", False
+        )
+        constructor_target.write(
+            "ANI_EXPORT ani_status ANI_Constructor(ani_vm *vm, uint32_t *result) {\n"
+            "    ani_env *env;\n"
+            "    if (ANI_OK != vm->GetEnv(ANI_VERSION_1, &env)) {\n"
+            "        return ANI_ERROR;\n"
+            "    }\n"
+        )
+        for pkg in pg.packages:
+            pkg_ani_info = PackageANIInfo.get(self.am, pkg)
+            constructor_target.include(pkg_ani_info.header)
+            constructor_target.write(
+                f"    if (ANI_OK != {pkg_ani_info.namespace}::ANIRegister(env)) {{\n"
+                f"        return ANI_ERROR;\n"
+                f"    }}\n"
+            )
+        constructor_target.write(
+            "    *result = ANI_VERSION_1;\n" "    return ANI_OK;\n" "}\n"
+        )
 
     def gen_package_file(self, pkg: PackageDecl):
         pkg_ani_info = PackageANIInfo.get(self.am, pkg)
@@ -1345,6 +1366,7 @@ class ANICodeGenerator:
             ani_return_ty_name = "void"
         pkg_ani_source_target.write(
             f"static {ani_return_ty_name} {func_ani_info.mangled_name}({params_ani_str}) {{\n"
+            f"    taihe::core::set_env(env);\n"
         )
         for param, ani_param_name, cpp_arg_name in zip(
             func.params, ani_param_names, args_cpp, strict=True
@@ -1404,6 +1426,7 @@ class ANICodeGenerator:
             ani_return_ty_name = "void"
         pkg_ani_source_target.write(
             f"static {ani_return_ty_name} {method_ani_info.mangled_name}({params_ani_str}) {{\n"
+            f"    taihe::core::set_env(env);\n"
         )
         for param, ani_param_name, cpp_arg_name in zip(
             method.params, ani_param_names, args_cpp, strict=False
