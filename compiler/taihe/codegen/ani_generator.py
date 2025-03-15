@@ -1184,6 +1184,7 @@ class ANICodeGenerator:
     def generate(self, pg: PackageGroup):
         for pkg in pg.packages:
             self.gen_package(pkg)
+        self.gen_constructor(pg)
 
     def gen_constructor(self, pg: PackageGroup):
         constructor_file = "ani_constructor.cpp"
