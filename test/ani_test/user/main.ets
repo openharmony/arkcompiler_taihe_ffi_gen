@@ -24,14 +24,19 @@ function main() {
 
     ani_test.testOptionalDouble(3.0 as double)
 
-    let impl_foo = ani_test.getFoo();
-    impl_foo.bar();
+    let impl_foo_list = ani_test.getFoo(["A", "B", "C"]);
+    for (let i = 0; i < impl_foo_list.length; i++) {
+        impl_foo_list[i].bar();
+    }
 
-    class FooUser implements ani_test.Foo {
-        constructor() {}
+    class UserFoo implements ani_test.Foo {
+        name: string;
+        constructor(name: string) {
+            this.name = name;
+        }
         bar(): void {
-            console.log("Test!")
+            console.log("UserFoo(" + this.name + ") is calling bar()")
         }
     }
-    ani_test.callBar(new FooUser(), 3 as int);
+    ani_test.callBar([new UserFoo("X"), new UserFoo("Y"), new UserFoo("Z")]);
 }

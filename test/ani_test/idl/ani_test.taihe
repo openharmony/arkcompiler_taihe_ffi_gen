@@ -15,8 +15,8 @@ interface Foo {
     bar(): void;
 }
 
-function callBar(foo: Foo, time: i32): void;
-function getFoo(): Foo;
+function callBar(arr: Array<Foo>): void;
+function getFoo(list: Array<String>): Array<Foo>;
 
 function testUnion(u: Union): void;
 function getUnion(v: i32): Union;

@@ -89,26 +89,31 @@ TH_EXPORT_CPP_API_getUnion(getUnion)
 TH_EXPORT_CPP_API_getOption(getOption)
 TH_EXPORT_CPP_API_testOptionalDouble(testOptionalDouble)
 
-void callBar(weak::Foo foo, int32_t time) {
+void callBar(array_view<Foo> arr) {
   std::cout << "callBar" << std::endl;
-  for (int i = 0; i < time; i++) {
+  for (weak::Foo foo : arr) {
     foo->bar();
   }
 }
 
-Foo getFoo() {
-  struct FooImpl {
-    FooImpl() {
-      std::cout << "FooImpl()" << std::endl;
+array<Foo> getFoo(array<string> list) {
+  struct AuthorFoo {
+    string name;
+    AuthorFoo(string_view name) : name(name) {
+      std::cout << "AuthorFoo(" << this->name << ") is constructing" << std::endl;
     }
-    ~FooImpl() {
-      std::cout << "~FooImpl()" << std::endl;
+    ~AuthorFoo() {
+      std::cout << "AuthorFoo(" << this->name << ") is destructing" << std::endl;
     }
     void bar() {
-      std::cout << "FooImpl::bar()" << std::endl;
+      std::cout << "AuthorFoo(" << this->name << ") is calling bar()" << std::endl;
     }
   };
-  return make_holder<FooImpl, Foo>();
+  std::vector<Foo> vec;
+  for (string_view name: list) {
+    vec.push_back(make_holder<AuthorFoo, Foo>(name));
+  }
+  return array<Foo>(vec.data(), vec.size(), move_data_t{});
 }
 
 TH_EXPORT_CPP_API_callBar(callBar)
