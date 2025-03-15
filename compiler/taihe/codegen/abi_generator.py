@@ -46,7 +46,7 @@ from taihe.utils.outputs import COutputBuffer, OutputManager
 
 class PackageABIInfo(AbstractAnalysis[PackageDecl]):
     def __init__(self, am: AnalysisManager, p: PackageDecl) -> None:
-        self.header = f"{p.name}.abi.hpp"
+        self.header = f"{p.name}.abi.h"
 
 
 class GlobFuncABIInfo(AbstractAnalysis[GlobFuncDecl]):
@@ -72,8 +72,8 @@ class EnumABIInfo(AbstractAnalysis[EnumDecl]):
         p = d.node_parent
         assert p
         segments = [*p.segments, d.name]
-        self.decl_header = f"{p.name}.{d.name}.abi.0.hpp"
-        self.impl_header = f"{p.name}.{d.name}.abi.1.hpp"
+        self.decl_header = f"{p.name}.{d.name}.abi.0.h"
+        self.impl_header = f"{p.name}.{d.name}.abi.1.h"
         self.tag_type = "size_t"
         self.union_name = encode(segments, DeclKind.UNION)
         self.mangled_name = encode(segments, DeclKind.TYPE)
@@ -87,8 +87,8 @@ class StructABIInfo(AbstractAnalysis[StructDecl]):
         p = d.node_parent
         assert p
         segments = [*p.segments, d.name]
-        self.decl_header = f"{p.name}.{d.name}.abi.0.hpp"
-        self.impl_header = f"{p.name}.{d.name}.abi.1.hpp"
+        self.decl_header = f"{p.name}.{d.name}.abi.0.h"
+        self.impl_header = f"{p.name}.{d.name}.abi.1.h"
         self.mangled_name = encode(segments, DeclKind.TYPE)
         self.as_owner = f"struct {self.mangled_name}"
         self.as_param = f"struct {self.mangled_name} const*"
@@ -112,9 +112,9 @@ class IfaceABIInfo(AbstractAnalysis[IfaceDecl]):
         p = d.node_parent
         assert p
         segments = [*p.segments, d.name]
-        self.decl_header = f"{p.name}.{d.name}.abi.0.hpp"
-        self.defn_header = f"{p.name}.{d.name}.abi.1.hpp"
-        self.impl_header = f"{p.name}.{d.name}.abi.2.hpp"
+        self.decl_header = f"{p.name}.{d.name}.abi.0.h"
+        self.defn_header = f"{p.name}.{d.name}.abi.1.h"
+        self.impl_header = f"{p.name}.{d.name}.abi.2.h"
         self.src = f"{p.name}.{d.name}.cpp"
         self.mangled_name = encode(segments, DeclKind.TYPE)
         self.as_owner = f"struct {self.mangled_name}"
