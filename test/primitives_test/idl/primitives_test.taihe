@@ -1,0 +1,35 @@
+function multiply(a: i32, b: i32): i32;
+function baseCFunc(testBoolean : i32): bool;
+function baseAFunc(testBoolean : bool): void;
+function baseBFunc(testBoolean : bool): bool;
+// String
+struct Foo {
+  testNum: i32;
+  testStr: String;
+}
+function baseDFunc(testBoolean : String): bool;
+function baseEFunc(b:Foo):String;
+function baseHFunc(a:i32,b:i64):String;
+function baseIFunc(a:f64,b:f32):String;
+function baseFFunc(a:i16,b:f32):String;
+function baseFunc1(b:f32):f32;
+function baseFunc2(b:f32):void;
+function baseFunc3(a:f32,b:f64):f64;
+function baseFunc4(b:f64):f64;
+function baseFunc5(b:f64):void;
+function baseFunc6(a:String):void;
+function baseFunc7(a:String):String;
+function baseFunc8(a:String,b:i32):String;
+function baseFunc9(a:String,b:i32,c:i64,d:bool,e:f32):void;
+// void
+function baseFunc10():void;
+function baseFunc11(a:i32,b:bool):void;
+function baseFunc12(a:i32,b:i64):void;
+function baseFunc13(a:i32,b:String):void;
+function baseFunc14(a:i64,b:bool):void;
+function baseFunc15(a:i64,b:f32):void;
+function baseFunc16(a:i64,b:f64):void;
+function baseFunc17(a:f32,b:bool):void;
+function baseFunc18(a:f32,b:String):void;
+function baseFunc19(a:f64,b:String):void;
+function baseFunc20(a:f64,b:bool):void;
