@@ -183,6 +183,9 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
     def __init__(self, am: AnalysisManager, d: IfaceDecl) -> None:
         p = d.node_parent
         assert p
+        segments = [*p.segments, d.name]
+        self.mangled_name = encode(segments, DeclKind.ANI_DECL)
+        self.header = f"{p.name}.{d.name}.ani.h"
         self.sts_type = d.name
         self.sts_impl = f"{d.name}_inner"
         pkg_ani_info = PackageANIInfo.get(am, p)
@@ -556,75 +559,10 @@ class IfaceTypeANIInfo(AbstractAnalysis[IfaceType], AbstractTypeANIInfo):
         ani_value: str,
         cpp_result: str,
     ):
-        cpp_iface_name = f"{cpp_result}_impl"
+        iface_ani_info = IfaceANIInfo.get(self.am, self.t.ty_decl)
+        target.include(iface_ani_info.header)
         target.write(
-            f"{' ' * offset}struct {cpp_iface_name} {{\n"
-            f"{' ' * offset}    ani_env* env;\n"
-            f"{' ' * offset}    ani_object ref;\n"
-            f"{' ' * offset}    {cpp_iface_name}(ani_env* env, ani_object obj) : env(env) {{\n"
-            f"{' ' * offset}        env->GlobalReference_Create(obj, reinterpret_cast<ani_ref*>(&ref));\n"
-            f"{' ' * offset}    }}\n"
-            f"{' ' * offset}    ~{cpp_iface_name}() {{\n"
-            f"{' ' * offset}        env->GlobalReference_Delete(ref);\n"
-            f"{' ' * offset}    }}\n"
-        )
-        iface_abi_info = IfaceABIInfo.get(self.am, self.t.ty_decl)
-        for ancestor in iface_abi_info.ancestor_dict:
-            for method in ancestor.methods:
-                method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
-                method_ani_info = IfaceMethodANIInfo.get(self.am, method)
-                cpp_param_pairs = []
-                cpp_param_names = []
-                ani_arg_names = []
-                for param in method.params:
-                    cpp_param_name = f"{param.name}_cpp"
-                    ani_arg_name = f"{param.name}_ani"
-                    type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
-                    cpp_param_pairs.append(f"{type_cpp_info.as_param} {cpp_param_name}")
-                    cpp_param_names.append(cpp_param_name)
-                    ani_arg_names.append(ani_arg_name)
-                params_cpp_str = ", ".join(cpp_param_pairs)
-                if method.return_ty_ref:
-                    type_cpp_info = TypeCppInfo.get(
-                        self.am, method.return_ty_ref.resolved_ty
-                    )
-                    cpp_return_ty_name = type_cpp_info.as_owner
-                else:
-                    cpp_return_ty_name = "void"
-                target.write(
-                    f"{' ' * offset}    {cpp_return_ty_name} {method_cpp_info.impl_name}({params_cpp_str}) {{\n"
-                )
-                args_ani = []
-                for param, cpp_param_name, ani_arg_name in zip(
-                    method.params, cpp_param_names, ani_arg_names, strict=False
-                ):
-                    type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
-                    type_ani_info.into_ani(
-                        target, offset + 8, env, cpp_param_name, ani_arg_name
-                    )
-                args_ani_trailing = "".join(f", {arg_ani}" for arg_ani in args_ani)
-                result_ani_name = "result_ani"
-                result_cpp_name = "result_cpp"
-                if method.return_ty_ref:
-                    type_ani_info = TypeANIInfo.get(
-                        self.am, method.return_ty_ref.resolved_ty
-                    )
-                    target.write(
-                        f"{' ' * offset}        {type_ani_info.ani_type} {result_ani_name};\n"
-                        f"{' ' * offset}        this->env->Object_CallMethodByName_{type_ani_info.ani_type.suffix}(this->ref, \"{method_ani_info.sts_name}\", nullptr, reinterpret_cast<{type_ani_info.ani_type.base}*>(&{result_ani_name}){args_ani_trailing});\n"
-                    )
-                    type_ani_info.from_ani(
-                        target, offset + 8, env, result_ani_name, result_cpp_name
-                    )
-                    target.write(f"{' ' * offset}        return {result_cpp_name};\n")
-                else:
-                    target.write(
-                        f"{' ' * offset}        this->env->Object_CallMethodByName_Void(this->ref, \"{method_ani_info.sts_name}\", nullptr{args_ani_trailing});\n"
-                    )
-                target.write(f"{' ' * offset}    }}\n")
-        target.write(f"{' ' * offset}}};\n")
-        target.write(
-            f"{' ' * offset}{self.cpp_info.as_owner} {cpp_result} = taihe::core::make_holder<{cpp_iface_name}, {self.cpp_info.as_owner}>({env}, {ani_value});\n"
+            f"{' ' * offset}{self.cpp_info.as_owner} {cpp_result} = taihe::core::make_holder<{iface_ani_info.mangled_name}, {self.cpp_info.as_owner}>({env}, {ani_value});\n"
         )
 
     @override
@@ -1245,8 +1183,9 @@ class ANICodeGenerator:
 
     def generate(self, pg: PackageGroup):
         for pkg in pg.packages:
-            self.gen_package_file(pkg)
-        # ANI_Constructor
+            self.gen_package(pkg)
+
+    def gen_constructor(self, pg: PackageGroup):
         constructor_file = "ani_constructor.cpp"
         constructor_target = COutputBuffer.create(
             self.tm, f"src/{constructor_file}", False
@@ -1270,9 +1209,20 @@ class ANICodeGenerator:
             "    *result = ANI_VERSION_1;\n" "    return ANI_OK;\n" "}\n"
         )
 
-    def gen_package_file(self, pkg: PackageDecl):
+    def gen_package(self, pkg: PackageDecl):
+        for iface in pkg.interfaces:
+            self.gen_iface_file(iface)
         pkg_ani_info = PackageANIInfo.get(self.am, pkg)
         pkg_cpp_info = PackageCppInfo.get(self.am, pkg)
+        self.gen_package_header(pkg, pkg_ani_info, pkg_cpp_info)
+        self.gen_package_source(pkg, pkg_ani_info, pkg_cpp_info)
+
+    def gen_package_header(
+        self,
+        pkg: PackageDecl,
+        pkg_ani_info: PackageANIInfo,
+        pkg_cpp_info: PackageCppInfo,
+    ):
         pkg_ani_header_target = COutputBuffer.create(
             self.tm, f"include/{pkg_ani_info.header}", True
         )
@@ -1282,11 +1232,19 @@ class ANICodeGenerator:
             f"ani_status ANIRegister(ani_env *env);\n"
             f"}}\n"
         )
+
+    def gen_package_source(
+        self,
+        pkg: PackageDecl,
+        pkg_ani_info: PackageANIInfo,
+        pkg_cpp_info: PackageCppInfo,
+    ):
         pkg_ani_source_target = COutputBuffer.create(
             self.tm, f"src/{pkg_ani_info.source}", False
         )
         pkg_ani_source_target.include(pkg_cpp_info.header)
         pkg_ani_source_target.include(pkg_ani_info.header)
+        # generate functions
         for func in pkg.functions:
             self.gen_func(func, pkg_ani_source_target)
         for iface in pkg.interfaces:
@@ -1413,8 +1371,8 @@ class ANICodeGenerator:
         args_cpp = []
         for param in method.params:
             type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
-            ani_param_name = f"ani_param_{param.name}"
-            cpp_arg_name = f"cpp_arg_{param.name}"
+            ani_param_name = f"{param.name}_ani"
+            cpp_arg_name = f"{param.name}_cpp"
             params_ani.append(f"{type_ani_info.ani_type} {ani_param_name}")
             ani_param_names.append(ani_param_name)
             args_cpp.append(cpp_arg_name)
@@ -1464,3 +1422,78 @@ class ANICodeGenerator:
                 f"    return;\n"
             )
         pkg_ani_source_target.write("}\n")
+
+    def gen_iface_file(
+        self,
+        iface: IfaceDecl,
+    ):
+        iface_abi_info = IfaceABIInfo.get(self.am, iface)
+        iface_ani_info = IfaceANIInfo.get(self.am, iface)
+        iface_ani_target = COutputBuffer.create(
+            self.tm, f"include/{iface_ani_info.header}", False
+        )
+        iface_ani_target.write(
+            f"struct {iface_ani_info.mangled_name} {{\n"
+            f"    ani_env* env;\n"
+            f"    ani_object ref;\n"
+            f"    {iface_ani_info.mangled_name}(ani_env* env, ani_object obj) : env(env) {{\n"
+            f"        env->GlobalReference_Create(obj, reinterpret_cast<ani_ref*>(&ref));\n"
+            f"    }}\n"
+            f"    ~{iface_ani_info.mangled_name}() {{\n"
+            f"        env->GlobalReference_Delete(ref);\n"
+            f"    }}\n"
+        )
+        for ancestor in iface_abi_info.ancestor_dict:
+            for method in ancestor.methods:
+                method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
+                method_ani_info = IfaceMethodANIInfo.get(self.am, method)
+                cpp_param_pairs = []
+                cpp_param_names = []
+                ani_arg_names = []
+                for param in method.params:
+                    cpp_param_name = f"{param.name}_cpp"
+                    ani_arg_name = f"{param.name}_ani"
+                    type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
+                    cpp_param_pairs.append(f"{type_cpp_info.as_param} {cpp_param_name}")
+                    cpp_param_names.append(cpp_param_name)
+                    ani_arg_names.append(ani_arg_name)
+                params_cpp_str = ", ".join(cpp_param_pairs)
+                if method.return_ty_ref:
+                    type_cpp_info = TypeCppInfo.get(
+                        self.am, method.return_ty_ref.resolved_ty
+                    )
+                    cpp_return_ty_name = type_cpp_info.as_owner
+                else:
+                    cpp_return_ty_name = "void"
+                iface_ani_target.write(
+                    f"    {cpp_return_ty_name} {method_cpp_info.impl_name}({params_cpp_str}) {{\n"
+                )
+                args_ani = []
+                for param, cpp_param_name, ani_arg_name in zip(
+                    method.params, cpp_param_names, ani_arg_names, strict=False
+                ):
+                    type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
+                    type_ani_info.into_ani(
+                        iface_ani_target, 8, "env", cpp_param_name, ani_arg_name
+                    )
+                args_ani_trailing = "".join(f", {arg_ani}" for arg_ani in args_ani)
+                result_ani_name = "result_ani"
+                result_cpp_name = "result_cpp"
+                if method.return_ty_ref:
+                    type_ani_info = TypeANIInfo.get(
+                        self.am, method.return_ty_ref.resolved_ty
+                    )
+                    iface_ani_target.write(
+                        f"        {type_ani_info.ani_type} {result_ani_name};\n"
+                        f'        this->env->Object_CallMethodByName_{type_ani_info.ani_type.suffix}(this->ref, "{method_ani_info.sts_name}", nullptr, reinterpret_cast<{type_ani_info.ani_type.base}*>(&{result_ani_name}){args_ani_trailing});\n'
+                    )
+                    type_ani_info.from_ani(
+                        iface_ani_target, 8, "env", result_ani_name, result_cpp_name
+                    )
+                    iface_ani_target.write(f"        return {result_cpp_name};\n")
+                else:
+                    iface_ani_target.write(
+                        f'        this->env->Object_CallMethodByName_Void(this->ref, "{method_ani_info.sts_name}", nullptr{args_ani_trailing});\n'
+                    )
+                iface_ani_target.write("    }\n")
+        iface_ani_target.write("};\n")

@@ -62,8 +62,10 @@ class DeclKind(Enum):
     DYNAMIC_CAST = "dynamic"
     STATIC_CAST = "static"
 
-    ANI_FUNC = "ani"
-    NAPI_FUNC = "napi"
+    NAPI_FUNC = "NAPI"
+
+    ANI_FUNC = "ANIFunc"
+    ANI_DECL = "ANIDecl"
 
 
 def _encode_uleb8(value: int) -> list[int]:
