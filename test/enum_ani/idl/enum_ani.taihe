@@ -1,0 +1,9 @@
+enum Color {
+    red = 1;
+    yellow = 2;
+    blue = 3;
+}
+
+function addEnum(color: Color, n: i32): i32;
+
+function getEnum(n: i32): Color;

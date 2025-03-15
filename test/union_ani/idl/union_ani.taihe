@@ -1,0 +1,21 @@
+enum Color {
+  RED = 11;
+  GREEN = 22;
+  BLUE = 33;
+}
+
+struct RGB {
+  r: i32;
+  g: i32;
+  b: i32;
+}
+
+enum ColorName {
+  undefined = 0;
+  color: Color = 1;     
+  rgb: RGB = 2;         
+  name: String = 3;     
+}
+
+function printUnion(data: ColorName): String;
+function makeUnion(n: i32): ColorName;
