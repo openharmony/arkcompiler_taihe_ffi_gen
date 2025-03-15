@@ -65,7 +65,8 @@ class DeclKind(Enum):
     NAPI_FUNC = "NAPI"
 
     ANI_FUNC = "ANIFunc"
-    ANI_DECL = "ANIDecl"
+    FROM_ANI = "fromANI"
+    INTO_ANI = "intoANI"
 
 
 def _encode_uleb8(value: int) -> list[int]:
