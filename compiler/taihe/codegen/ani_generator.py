@@ -1578,7 +1578,7 @@ class ANICodeGenerator:
                     iface_ani_target.write(
                         f'            this->env->Object_CallMethodByName_Void(this->ref, "{method_ani_info.sts_name}", nullptr{args_ani_trailing});\n'
                     )
-                iface_ani_target.write("    }\n")
+                iface_ani_target.write("        }\n")
         iface_ani_target.write(
             f"    }};\n"
             f"    return taihe::core::make_holder<cpp_impl_t, {iface_cpp_info.as_owner}>(env, ani_obj);\n"
