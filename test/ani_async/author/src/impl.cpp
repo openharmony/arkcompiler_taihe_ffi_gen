@@ -1,4 +1,4 @@
-#include <ani_callback.impl.hpp>
+#include <async_test.impl.hpp>
 #include <cstdint>
 #include <iostream>
 #include "core/runtime.hpp"
@@ -13,7 +13,7 @@ int32_t add_impl(int32_t a, int32_t b) {
     }
 }
 
-::ani_callback::IBase getIBase_impl() {
+::async_test::IBase getIBase_impl() {
     struct AuthorIBase {
       taihe::core::string name;
       AuthorIBase() : name("My IBase") {
@@ -32,15 +32,15 @@ int32_t add_impl(int32_t a, int32_t b) {
         return;
       }
     };
-    return taihe::core::make_holder<AuthorIBase, ::ani_callback::IBase>();
+    return taihe::core::make_holder<AuthorIBase, ::async_test::IBase>();
 }
 
-void fromStructSync_impl(::ani_callback::Data const& data) {
+void fromStructSync_impl(::async_test::Data const& data) {
     std::cout << data.a.c_str() << " " << data.b.c_str() << " "  << data.c << std::endl;
     return;
 }
 
-::ani_callback::Data toStructSync_impl(taihe::core::string_view a, taihe::core::string_view b, int32_t c) {
+::async_test::Data toStructSync_impl(taihe::core::string_view a, taihe::core::string_view b, int32_t c) {
     if (c == 0) {
         taihe::core::throw_error("some error happen in toStructSync_impl");
         return {a, b, c};
