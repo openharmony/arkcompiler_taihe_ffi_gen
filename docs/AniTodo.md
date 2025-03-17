@@ -46,7 +46,7 @@ export class Matrix2D {
 
 - 案例目标：用 Taihe 生成带有 property 和 method 的 Class
 
-## Class: 方法型
+## Class: 继承
 
 - d.ts 场景（application/UIAbilityContext.d.ts）
 
@@ -65,47 +65,20 @@ export default class UIAbilityContext extends Context {
 
 - 现有 ANI 实现：https://gitee.com/openharmony/ability_ability_runtime/blob/OpenHarmony_feature_20241108/frameworks/ets/ani/ui_ability/ets/application/UIAbilityContext.ets#L37
 
-- 案例目标：用 Taihe 生成带有 property 和 method 的 Class
-
 ## Interface: 方法型
 
 ```typescript
-export interface CommonEventSubscriber {
-    getCode(callback: AsyncCallback<number>): void;
-    getCode(): Promise<number>;
-    getCodeSync(): number;
-    setCode(code: number, callback: AsyncCallback<void>): void;
-    setCode(code: number): Promise<void>;
-    setCodeSync(code: number): void;
-    getData(callback: AsyncCallback<string>): void;
-    getData(): Promise<string>;
-    getDataSync(): string;
-    setData(data: string, callback: AsyncCallback<void>): void;
-    setData(data: string): Promise<void>;
-    setDataSync(data: string): void;
-    setCodeAndData(code: number, data: string, callback: AsyncCallback<void>): void;
-    setCodeAndData(code: number, data: string): Promise<void>;
-    setCodeAndDataSync(code: number, data: string): void;
-    isOrderedCommonEvent(callback: AsyncCallback<boolean>): void;
-    isOrderedCommonEvent(): Promise<boolean>;
-    isOrderedCommonEventSync(): boolean;
-    isStickyCommonEvent(callback: AsyncCallback<boolean>): void;
-    isStickyCommonEvent(): Promise<boolean>;
-    isStickyCommonEventSync(): boolean;
-    abortCommonEvent(callback: AsyncCallback<void>): void;
-    abortCommonEvent(): Promise<void>;
-    abortCommonEventSync(): void;
-    clearAbortCommonEvent(callback: AsyncCallback<void>): void;
-    clearAbortCommonEvent(): Promise<void>;
-    clearAbortCommonEventSync(): void;
-    getAbortCommonEvent(callback: AsyncCallback<boolean>): void;
-    getAbortCommonEvent(): Promise<boolean>;
-    getAbortCommonEventSync(): boolean;
-    getSubscribeInfo(callback: AsyncCallback<CommonEventSubscribeInfo>): void;
-    getSubscribeInfo(): Promise<CommonEventSubscribeInfo>;
-    getSubscribeInfoSync(): CommonEventSubscribeInfo;
-    finishCommonEvent(callback: AsyncCallback<void>): void;
-    finishCommonEvent(): Promise<void>;
+// @ohos.abilityAccessCtrl.d.ts
+interface AtManager {
+    verifyAccessToken(tokenID: number, permissionName: Permissions): Promise<GrantStatus>;
+    verifyAccessToken(tokenID: number, permissionName: string): Promise<GrantStatus>;
+    verifyAccessTokenSync(tokenID: number, permissionName: Permissions): GrantStatus;
+    checkAccessToken(tokenID: number, permissionName: Permissions): Promise<GrantStatus>;
+    checkAccessTokenSync(tokenID: number, permissionName: Permissions): GrantStatus;
+    requestPermissionsFromUser(context: Context, permissionList: Array<Permissions>, requestCallback: AsyncCallback<PermissionRequestResult>): void;
+    requestPermissionsFromUser(context: Context, permissionList: Array<Permissions>): Promise<PermissionRequestResult>;
+    requestPermissionOnSetting(context: Context, permissionList: Array<Permissions>): Promise<Array<GrantStatus>>;
+    requestGlobalSwitch(context: Context, type: SwitchType): Promise<boolean>;
 }
 ```
 
@@ -130,11 +103,10 @@ export interface CommonEventSubscriber {
 
 - 模板化代码，可自动生成
 
-## Namespace
-
-- d.ts 场景：@ohos.request.d.ts
+## Namespace: 嵌套
 
 ```typescript
+// @ohos.request.d.ts
 declare namespace request {
     namespace agent {
         enum Action {
@@ -145,11 +117,94 @@ declare namespace request {
 }
 ```
 
-## Others
-- wantConstants: enum with string
-- ohos.application.formBindingData: namespace
-- const
-- callback: on/off
-- @ohos.contract.d.ts
-  - static readonly
-- @ohos.intl.d.ts: multiple constructors and overload
+## Namespace: 合并其他类型
+```typescript
+// @ohos.app.form.formBindingData.d.ts
+declare namespace formBindingData {
+    function createFormBindingData(obj?: Object | string): FormBindingData;
+    interface FormBindingData {
+        data: Object;
+        proxies?: Array<ProxyData>;
+    }
+    interface ProxyData {
+        key: string;
+        subscriberId?: string;
+    }
+}
+export default formBindingData;
+```
+
+## Constants: Enum with String
+
+```typescript
+// ./@ohos.app.ability.wantConstant.d.ts
+declare namespace wantConstant {
+    export enum Params {
+        ABILITY_BACK_TO_OTHER_MISSION_STACK = 'ability.params.backToOtherMissionStack',
+        ABILITY_RECOVERY_RESTART = 'ohos.ability.params.abilityRecoveryRestart',
+        CONTENT_TITLE_KEY = 'ohos.extra.param.key.contentTitle',
+        SHARE_ABSTRACT_KEY = 'ohos.extra.param.key.shareAbstract',
+        SHARE_URL_KEY = 'ohos.extra.param.key.shareUrl',
+        SUPPORT_CONTINUE_PAGE_STACK_KEY = 'ohos.extra.param.key.supportContinuePageStack',
+        SUPPORT_CONTINUE_SOURCE_EXIT_KEY = 'ohos.extra.param.key.supportContinueSourceExit',
+        SHOW_MODE_KEY = 'ohos.extra.param.key.showMode',
+        PARAMS_STREAM = 'ability.params.stream',
+        APP_CLONE_INDEX_KEY = 'ohos.extra.param.key.appCloneIndex',
+        CALLER_REQUEST_CODE = 'ohos.extra.param.key.callerRequestCode',
+        PAGE_PATH = 'ohos.param.atomicservice.pagePath',
+        ROUTER_NAME = 'ohos.param.atomicservice.routerName',
+        PAGE_SOURCE_FILE = 'ohos.param.atomicservice.pageSourceFile',
+        BUILD_FUNCTION = 'ohos.param.atomicservice.buildFunction',
+        SUB_PACKAGE_NAME = 'ohos.param.atomicservice.subpackageName'
+    }
+    export enum Flags {
+        FLAG_AUTH_READ_URI_PERMISSION = 0x00000001,
+        FLAG_AUTH_WRITE_URI_PERMISSION = 0x00000002,
+        FLAG_AUTH_PERSISTABLE_URI_PERMISSION = 0x00000040,
+        FLAG_INSTALL_ON_DEMAND = 0x00000800,
+        FLAG_START_WITHOUT_TIPS = 0x40000000
+    }
+    export enum ShowMode {
+        WINDOW = 0,
+        EMBEDDED_FULL = 1
+    }
+}
+export default wantConstant;
+```
+
+## Constants: `static readonly`
+```
+// @ohos.contact.d.ts
+class ImAddress {
+    static readonly CUSTOM_LABEL: -1;
+    static readonly IM_AIM: 0;
+    static readonly IM_MSN: 1;
+    static readonly IM_YAHOO: 2;
+    static readonly IM_SKYPE: 3;
+    static readonly IM_QQ: 4;
+    static readonly IM_ICQ: 6;
+    static readonly IM_JABBER: 7;
+    static readonly INVALID_LABEL_ID: -2;
+    imAddress: string;
+    labelName?: string;
+    labelId?: number;
+}
+```
+
+### Function: 重载
+
+```typescript
+// @ohos.intl.d.ts
+export class Collator {
+    constructor();
+    constructor(locale: string | Array<string>, options?: CollatorOptions);
+    compare(first: string, second: string): number;
+    resolvedOptions(): CollatorOptions;
+}
+```
+
+### Callback
+```typescript
+function on(type: 'locationChange', request: LocationRequest | ContinuousLocationRequest, callback: Callback<Location>): void;
+function off(type: 'locationChange', callback?: Callback<Location>): void;
+```
