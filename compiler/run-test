@@ -281,14 +281,17 @@ def main(
             *compile_abc(build_author_generated_dir, user_dir, panda_home),
             panda_home=panda_home,
         )
-        run_command(
-            f"LD_LIBRARY_PATH={build_author_generated_dir} "
-            f"{panda_home}/bin/ark "
-            f"--boot-panda-files={panda_home}/../ets/etsstdlib.abc "
-            f"--load-runtimes=ets "
-            f"{build_author_generated_dir}/main.abc "
-            "main.ETSGLOBAL::main"
-        )
+
+        # TODO Ugly hack. Refactor me.
+        if not generate_and_compile:
+            run_command(
+                f"LD_LIBRARY_PATH={build_author_generated_dir} "
+                f"{panda_home}/bin/ark "
+                f"--boot-panda-files={panda_home}/../ets/etsstdlib.abc "
+                f"--load-runtimes=ets "
+                f"{build_author_generated_dir}/main.abc "
+                "main.ETSGLOBAL::main"
+            )
         return
 
     create_directory(user_generated_src_dir)
