@@ -328,7 +328,7 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
                 f"{' ' * offset}}}();\n"
                 f"{' ' * offset}static ani_method {ani_ctor} = [=] {{\n"
                 f"{' ' * offset}    ani_method {ani_ctor};\n"
-                f"{' ' * offset}    {env}->Class_FindMethod({ani_class}, \"<ctor>\", nullptr, &{ani_ctor});\n"
+                f"{' ' * offset}    {env}->Class_FindMethod({ani_class}, \"<ctor>\", \"{self.type_desc}:V\", &{ani_ctor});\n"
                 f"{' ' * offset}    return {ani_ctor};\n"
                 f"{' ' * offset}}}();\n"
                 f"{' ' * offset}ani_object {ani_result};\n"
