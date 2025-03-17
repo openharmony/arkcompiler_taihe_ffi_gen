@@ -115,7 +115,7 @@ class IfaceABIInfo(AbstractAnalysis[IfaceDecl]):
         self.decl_header = f"{p.name}.{d.name}.abi.0.h"
         self.defn_header = f"{p.name}.{d.name}.abi.1.h"
         self.impl_header = f"{p.name}.{d.name}.abi.2.h"
-        self.src = f"{p.name}.{d.name}.cpp"
+        self.src = f"{p.name}.{d.name}.c"
         self.mangled_name = encode(segments, DeclKind.TYPE)
         self.as_owner = f"struct {self.mangled_name}"
         self.as_param = f"struct {self.mangled_name}"
