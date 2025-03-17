@@ -26,7 +26,7 @@ int main(int argc, char** argv) {
     parser->parseXml({
         .supportDoctype = nullptr,
         .ignoreNameSpace = nullptr,
-        .tagValueCallbackFunction = box<callback<bool(string_view, string_view)>>::make(
+        .tagValueCallbackFunction = optional<callback<bool(string_view, string_view)>>::make(
             callback<bool(string_view, string_view)>::from(
                 [](string_view name, string_view value) -> bool {
                     std::cout << "(tag) " << name << ": " << value << std::endl;
@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
                 }
             )
         ),
-        .attributeValueCallbackFunction = box<callback<bool(string_view, string_view)>>::make(
+        .attributeValueCallbackFunction = optional<callback<bool(string_view, string_view)>>::make(
             callback<bool(string_view, string_view)>::from(
                 [](string_view name, string_view value) -> bool {
                     std::cout << "(attribute) " << name << ": " << value << std::endl;

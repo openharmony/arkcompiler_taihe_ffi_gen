@@ -1,8 +1,4 @@
-interface ICallback {
-    [functor] call(): void;
-}
-
-function setTimeout(cb: ICallback, ms: u64): void;
+function setTimeout(cb: () => void, ms: u64): void;
 
 interface IPromiseStringString {
     resolve(val: String): void;
