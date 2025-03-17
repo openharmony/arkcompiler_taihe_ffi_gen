@@ -1,23 +1,17 @@
 #include "interface.impl.hpp"
+#include <cstdint>
 #include <iostream>
-// Please delete <stdexcept> include when you implement
+
 using namespace taihe::core;
+
 namespace {
 
-class window {
+class native_window {
+private:
+    int32_t height;
 public:
-    int32_t getheight() {
-        throw std::runtime_error("Function window::getheight Not implemented");
-    }
-    void setheight(int32_t b) {
-        throw std::runtime_error("Function window::setheight Not implemented");
-    }
-};
-
-class native_window: public window {
-    private:
-        int32_t height = 10;
-    public:
+    native_window(int32_t v)
+        : height(v) {}
     int32_t getheight() {
         return this->height;
     }
@@ -26,9 +20,10 @@ class native_window: public window {
     }
 };
 
-::interface::window get_interface() {
-    return make_holder<native_window, ::interface::window>();
+::interface::window get_interface(int32_t v) {
+    return make_holder<native_window, ::interface::window>(v);
 }
+
 void check_interface(::interface::weak::window a) {
     int32_t res = a->getheight();
     std::cout << res << std::endl;
