@@ -163,6 +163,13 @@ struct array : public array_view<cpp_owner_t> {
 
     array(pointer data, size_type size) noexcept : array_view<cpp_owner_t>(data, size) {} // main constructor
 
+    template<typename value_type>
+    array(std::initializer_list<value_type> value) noexcept
+        : array((cpp_owner_t*)malloc(value.size() * sizeof(cpp_owner_t)), static_cast<size_type>(value.size())) {
+        std::uninitialized_copy_n(value.begin(), value.size(), this->m_data);
+    }
+
+
     template<typename C>
     array(C *data, size_type size, copy_data_t) noexcept
         : array((cpp_owner_t*)malloc(size * sizeof(cpp_owner_t)), size) {
