@@ -876,6 +876,9 @@ class STSCodeGenerator:
         callback_flag = 0
         for iface in pkg.interfaces:
             self.gen_iface_interface(iface, pkg_sts_target)
+            for method in iface.methods:
+                if method.attrs.get("gen_async"):
+                    callback_flag = 1
 
         for struct in pkg.structs:
             self.gen_struct(struct, pkg_sts_target)
@@ -884,11 +887,8 @@ class STSCodeGenerator:
 
         for func in pkg.functions:
             self.gen_func(func, pkg_sts_target)
-            if async_func := func.attrs.get("gen_async"):
+            if func.attrs.get("gen_async"):
                 callback_flag = 1
-                self.gen_async_func(func, pkg_sts_target, async_func.value)
-            if promise_func := func.attrs.get("gen_promise"):
-                self.gen_promise_func(func, pkg_sts_target, promise_func.value)
         if callback_flag:
             pkg_sts_target.write(
                 f"export type AsyncCallback<T> = (err: Error, data?: T) => void;\n"
@@ -901,10 +901,13 @@ class STSCodeGenerator:
     ):
         func_ani_info = GlobFuncANIInfo.get(self.am, func)
         params_sts = []
+        params_name = []
         for param in func.params:
             type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
             params_sts.append(f"{param.name}: {type_ani_info.sts_type}")
+            params_name.append(param.name)
         params_sts_str = ", ".join(params_sts)
+        params_name_str = ", ".join(params_name)
         if return_ty_ref := func.return_ty_ref:
             type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
             sts_return_ty_name = type_ani_info.sts_type
@@ -914,93 +917,43 @@ class STSCodeGenerator:
             f"export native function {func_ani_info.sts_name}({params_sts_str}): {sts_return_ty_name};\n"
         )
 
-    def gen_async_func(
-        self, func: GlobFuncDecl, pkg_sts_target: OutputBuffer, async_func_name: str
-    ):
-        func_ani_info = GlobFuncANIInfo.get(self.am, func)
-        params_sts = []
-        params_name = []
-        for param in func.params:
-            type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
-            params_sts.append(f"{param.name}: {type_ani_info.sts_type}")
-            params_name.append(param.name)
-        params_sts_str = ", ".join(params_sts)
-        params_name_str = ", ".join(params_name)
-        if return_ty_ref := func.return_ty_ref:
-            type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
-            sts_return_ty_name = type_ani_info.sts_type
-        else:
-            sts_return_ty_name = "void"
-        params_sts.append(f"callback: AsyncCallback<{sts_return_ty_name}>")
-        params_sts_str = ", ".join(params_sts)
-        pkg_sts_target.write(
-            f"export function {async_func_name}({params_sts_str}): void {{\n"
-            f"    let p1 = launch {func_ani_info.sts_name}({params_name_str});\n"
-        )
-        if sts_return_ty_name == "void":
+        if async_func := func.attrs.get("gen_async"):
+            params_sts.append(f"callback: AsyncCallback<{sts_return_ty_name}>")
+            params_sts_str_call_method = ", ".join(params_sts)
+            async_func_name = async_func.value
             pkg_sts_target.write(
-                f"    p1.then((): void => {{\n"
-                f"        let error = new Error();\n"
-                f"        callback(error);\n"
+                f"export function {async_func_name}({params_sts_str_call_method}): void {{\n"
+                f"    let p1 = launch {func_ani_info.sts_name}({params_name_str});\n"
             )
-        else:
+            if sts_return_ty_name == "void":
+                pkg_sts_target.write(
+                    f"    p1.then((): void => {{\n"
+                    f"        let error = new Error();\n"
+                    f"        callback(error);\n"
+                )
+            else:
+                pkg_sts_target.write(
+                    f"    p1.then((ret: NullishType) => {{\n"
+                    f"            let retInner = ret as {sts_return_ty_name};\n"
+                    f"            let error = new Error();\n"
+                    f"            callback(error, retInner);\n"
+                )
             pkg_sts_target.write(
-                f"    p1.then((ret: NullishType) => {{\n"
-                f"            let retInner = ret as {sts_return_ty_name};\n"
-                f"            let error = new Error();\n"
-                f"            callback(error, retInner);\n"
+                f"    }})\n"
+                f"    .catch((ret: NullishType) => {{\n"
+                f"        let retError = ret as Error;\n"
+                f"        callback(retError);\n"
+                f"    }});\n"
+                f"}}\n"
             )
-        pkg_sts_target.write(
-            f"    }})\n"
-            f"    .catch((ret: NullishType) => {{\n"
-            f"        let retError = ret as Error;\n"
-            f"        callback(retError);\n"
-            f"    }});\n"
-            f"}}\n"
-        )
 
-    def gen_promise_func(
-        self, func: GlobFuncDecl, pkg_sts_target: OutputBuffer, promise_func_name: str
-    ):
-        func_ani_info = GlobFuncANIInfo.get(self.am, func)
-        params_sts = []
-        params_name = []
-        for param in func.params:
-            type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
-            params_sts.append(f"{param.name}: {type_ani_info.sts_type}")
-            params_name.append(param.name)
-        params_sts_str = ", ".join(params_sts)
-        params_name_str = ", ".join(params_name)
-        if return_ty_ref := func.return_ty_ref:
-            type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
-            sts_return_ty_name = type_ani_info.sts_type
-        else:
-            sts_return_ty_name = "void"
-        pkg_sts_target.write(
-            f"export function {promise_func_name}({params_sts_str}): Promise<{sts_return_ty_name}> {{\n"
-            f"    let p = new Promise<{sts_return_ty_name}> ((resolve, reject): void => {{\n"
-            f"    let p1 = launch {func_ani_info.sts_name}({params_name_str});\n"
-        )
-        if sts_return_ty_name == "void":
+        if promise_func := func.attrs.get("gen_promise"):
+            promise_func_name = promise_func.value
             pkg_sts_target.write(
-                f"    p1.then((): void => {{\n" f"        resolve(undefined);\n"
+                f"export function {promise_func_name}({params_sts_str}): Promise<{sts_return_ty_name}> {{\n"
+                f"    return launch {func_ani_info.sts_name}({params_name_str});\n"
+                f"}}\n"
             )
-        else:
-            pkg_sts_target.write(
-                f"    p1.then((ret: NullishType) => {{\n"
-                f"        let retInner = ret as {sts_return_ty_name};\n"
-                f"        resolve(retInner);\n"
-            )
-        pkg_sts_target.write(
-            f"    }})\n"
-            f"    .catch((ret: NullishType) => {{\n"
-            f"        let retError = ret as Error;\n"
-            f"        reject(retError);\n"
-            f"    }});\n"
-            f"    }});\n"
-            f"    return p;\n"
-            f"}}\n"
-        )
 
     # def gen_struct_interface(
     #     self,
@@ -1148,73 +1101,19 @@ class STSCodeGenerator:
                 f"    {iface_method_info.sts_name}({params_sts_str}): {sts_return_ty_name};\n"
             )
 
-            # if async_func := method.attrs.get("gen_async"):
-            #     async_func_name = async_func.value
-            #     pkg_sts_target.write(
-            #     f"    {async_func_name}({params_sts_str}, "
-            # f"callback: AsyncCallback<{sts_return_ty_name}>): void {{\n"
-            #     )
-            #     if sts_return_ty_name == "void":
-            #         pkg_sts_target.write(
-            #             f"        let p1 = taskpool.execute(() => {{ "
-            # f"this.{iface_method_info.sts_name}"
-            # f"({params_name_str}); return undefined; }});\n"
-            #             f"        p1.then((ret: NullishType) => {{\n"
-            #             f"            let error = new Error();\n"
-            #             f"            callback(error);\n"
-            #         )
-            #     else:
-            #         pkg_sts_target.write(
-            #         f"        let p1 = taskpool.execute(() => {{ return this."
-            # f"{iface_method_info.sts_name}"
-            # f"({params_name_str});}});\n"
-            #         f"        p1.then((ret: NullishType) => {{\n"
-            #         f"            let retInner = ret as {sts_return_ty_name};\n"
-            #         f"            let error = new Error();\n"
-            #         f"            callback(error, retInner);\n"
-            #         )
-            #     pkg_sts_target.write(
-            #     f"        }})\n"
-            #     f"        .catch((ret: NullishType) => {{\n"
-            #     f"            let retError = ret as Error;\n"
-            #     f"            callback(retError);\n"
-            #     f"        }});\n"
-            #     f"    }}\n"
-            # )
-            # if promise_func := method.attrs.get("gen_promise"):
-            #     promise_func_name = promise_func.value
-            #     pkg_sts_target.write(
-            #         f"    {promise_func_name}({params_sts_str}): "
-            # f"Promise<{sts_return_ty_name}> {{\n"
-            #         f"        let p = new Promise<{sts_return_ty_name}> "
-            # f"((resolve, reject): void => {{\n"
-            #     )
-            #     if sts_return_ty_name == "void":
-            #         pkg_sts_target.write(
-            #             f"        let p1 = taskpool.execute(() => {{ this."
-            # f"{iface_method_info.sts_name}"
-            # f"({params_name_str}); return undefined; }});\n"
-            #             f"        p1.then((ret: NullishType) => {{\n"
-            #             f"            resolve(undefined);\n"
-            #         )
-            #     else:
-            #         pkg_sts_target.write(
-            #             f"        let p1 = taskpool.execute(() => {{ return this."
-            # f"{iface_method_info.sts_name}({params_name_str});}});\n"
-            #             f"        p1.then((ret: NullishType) => {{\n"
-            #             f"            let retInner = ret as {sts_return_ty_name};\n"
-            #             f"            resolve(retInner);\n"
-            #         )
-            #     pkg_sts_target.write(
-            #         f"        }})\n"
-            #         f"        .catch((ret: NullishType) => {{\n"
-            #         f"            let retError = ret as Error;\n"
-            #         f"            reject(retError);\n"
-            #         f"        }});\n"
-            #         f"        }});\n"
-            #         f"        return p;\n"
-            #         f"    }}\n"
-            #     )
+            if async_func := method.attrs.get("gen_async"):
+                params_sts.append(f"callback: AsyncCallback<{sts_return_ty_name}>")
+                params_sts_str_with_call = ", ".join(params_sts)
+                async_func_name = async_func.value
+                pkg_sts_target.write(
+                    f"    {async_func_name}({params_sts_str_with_call}): void;\n"
+                )
+
+            if promise_func := method.attrs.get("gen_promise"):
+                promise_func_name = promise_func.value
+                pkg_sts_target.write(
+                    f"    {promise_func_name}({params_sts_str}): Promise<{sts_return_ty_name}>;\n"
+                )
 
         pkg_sts_target.write("}\n")
 
@@ -1236,10 +1135,13 @@ class STSCodeGenerator:
         for method in iface.methods:
             iface_method_info = IfaceMethodANIInfo.get(self.am, method)
             params_sts = []
+            params_name = []
             for param in method.params:
                 type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
                 params_sts.append(f"{param.name}: {type_ani_info.sts_type}")
+                params_name.append(param.name)
             params_sts_str = ", ".join(params_sts)
+            params_name_str = ", ".join(params_name)
             if return_ty_ref := method.return_ty_ref:
                 type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
                 sts_return_ty_name = type_ani_info.sts_type
@@ -1248,6 +1150,43 @@ class STSCodeGenerator:
             pkg_sts_target.write(
                 f"    native {iface_method_info.sts_name}({params_sts_str}): {sts_return_ty_name};\n"
             )
+
+            params_sts.append(f"callback: AsyncCallback<{sts_return_ty_name}>")
+            params_sts_str_with_call = ", ".join(params_sts)
+            if async_func := method.attrs.get("gen_async"):
+                async_func_name = async_func.value
+                pkg_sts_target.write(
+                    f"    {async_func_name}({params_sts_str_with_call}): void {{\n"
+                    f"        let p1 = launch this.{iface_method_info.sts_name}({params_name_str});\n"
+                )
+                if sts_return_ty_name == "void":
+                    pkg_sts_target.write(
+                        f"        p1.then((): void => {{\n"
+                        f"            let error = new Error();\n"
+                        f"            callback(error);\n"
+                    )
+                else:
+                    pkg_sts_target.write(
+                        f"        p1.then((ret: NullishType) => {{\n"
+                        f"            let retInner = ret as {sts_return_ty_name};\n"
+                        f"            let error = new Error();\n"
+                        f"            callback(error, retInner);\n"
+                    )
+                pkg_sts_target.write(
+                    f"        }})\n"
+                    f"        .catch((ret: NullishType) => {{\n"
+                    f"            let retError = ret as Error;\n"
+                    f"            callback(retError);\n"
+                    f"        }});\n"
+                    f"    }}\n"
+                )
+            if promise_func := method.attrs.get("gen_promise"):
+                promise_func_name = promise_func.value
+                pkg_sts_target.write(
+                    f"    {promise_func_name}({params_sts_str}): Promise<{sts_return_ty_name}> {{\n"
+                    f"        return launch this.{iface_method_info.sts_name}({params_name_str});\n"
+                    f"    }}\n"
+                )
         pkg_sts_target.write("}\n")
 
 

@@ -16,19 +16,13 @@ int32_t add_impl(int32_t a, int32_t b) {
 ::async_test::IBase getIBase_impl() {
     struct AuthorIBase {
       taihe::core::string name;
-      AuthorIBase() : name("My IBase") {
-        std::cout << "AuthorIBase(" << this->name << ") is constructing" << std::endl;
-      }
-      ~AuthorIBase() {
-        std::cout << "AuthorIBase(" << this->name << ") is destructing" << std::endl;
-      }
+      AuthorIBase() : name("My IBase") {}
+      ~AuthorIBase() {}
       taihe::core::string get() {
-        std::cout << "AuthorIBase(" << this->name << ") is calling get()" << std::endl;
         return name;
       }
       void set(taihe::core::string_view a) {
-        std::cout << "AuthorIBase(" << this->name << ") is calling set()" << std::endl;
-        name = a;
+        this->name = a;
         return;
       }
     };

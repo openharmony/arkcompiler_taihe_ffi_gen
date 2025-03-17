@@ -24,6 +24,24 @@ function main() {
     let ibase = async_test.getIBase();
     console.log(ibase.get());
 
+    ibase.setAsync("interface async set", (error: Error) => {
+        if (!error.message) {
+            console.log("main finsih test interface async success ");
+        } else {
+            console.log("main finsih test interface async ERROR ", error);
+        }
+    })
+    
+    let p_ibase = ibase.getPromise();
+    p_ibase.then((ret: NullishType) => {
+        let retInner = ret as string;
+        console.log("main finsih test interface async success p_ibase ", retInner)
+    })
+    .catch((ret: NullishType) => {
+        let retError = ret as Error;
+        console.error("main finsih test interface async promise ERROR p_ibase ", retError)
+    });
+
     async_test.getIBaseAsync((error: Error, data?: async_test.IBase) => {
         if (!error.message) {
             console.log("main finsih test async success ", data!.get());
@@ -63,6 +81,7 @@ function main() {
         }
     })
 
+    // In function toStruct, we set it to throw an exception if the third parameter is equal to 0.
     try {
         let retPromise = await async_test.toStruct("aaa", "bbb", 0);
         console.log("main finsih test async promise success ")
@@ -70,14 +89,14 @@ function main() {
         console.error("main finsih test async promise ERROR ", error)
     }
 
-    let retPromise = async_test.toStruct("aaa", "bbb", 1);
-    retPromise.then((ret: NullishType) => {
+    let p_struct = async_test.toStruct("aaa", "bbb", 1);
+    p_struct.then((ret: NullishType) => {
         let retInner = ret as async_test.Data;
-        console.log("main finsih test async success retPromise ", retInner)
+        console.log("main finsih test async success p_struct ", retInner)
     })
     .catch((ret: NullishType) => {
         let retError = ret as Error;
-        console.error("main finsih test async promise ERROR  retPromise ", retError)
+        console.error("main finsih test async promise ERROR  p_struct ", retError)
     });
 
 }

@@ -2,7 +2,9 @@
 function addSync(a: i32, b: i32): i32;
 
 interface IBase {
+    [gen_async="getAsync", gen_promise="getPromise"]
     get(): String;
+    [gen_async="setAsync", gen_promise="setPromise"]
     set(a: String): void;
 }
 
