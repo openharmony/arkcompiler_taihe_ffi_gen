@@ -43,7 +43,7 @@ private:
     ohos::xml::BufferType m_buffer;
 
 public:
-    ExpatParser(ohos::xml::BufferType const& buffer, taihe::core::box_view<taihe::core::string> encoding)
+    ExpatParser(ohos::xml::BufferType const& buffer, taihe::core::optional_view<taihe::core::string> encoding)
         : m_buffer(buffer) {
         if (encoding) {
             this->m_parser = XML_ParserCreate(encoding->c_str());

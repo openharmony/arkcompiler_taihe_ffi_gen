@@ -5,11 +5,12 @@
 #include "sys.time.impl.hpp"
 
 using namespace sys::time;
+using namespace taihe::core;
 
-void setTimeoutImpl(weak::ICallback cb, uint64_t ms) {
-    std::thread([cb = ICallback(cb), ms]() {
+void setTimeoutImpl(callback_view<void()> cb, uint64_t ms) {
+    std::thread([cb = callback<void()>(cb), ms]() {
         std::this_thread::sleep_for(std::chrono::milliseconds(ms));
-        (*cb)();
+        cb();
     }).detach();
 }
 

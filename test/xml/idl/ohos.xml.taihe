@@ -20,7 +20,7 @@ interface XmlSerializer {
     setDocType(text: String): void;
 }
 
-function makeXmlSerializer(buffer: BufferType, encoding: Box<String>): XmlSerializer;
+function makeXmlSerializer(buffer: BufferType, encoding: Optional<String>): XmlSerializer;
 
 enum EventType {
     START_DOCUMENT;
@@ -50,11 +50,11 @@ interface ParseInfo {
 }
 
 struct ParseOptions {
-    supportDoctype: Box<bool>;
-    ignoreNameSpace: Box<bool>;
-    tagValueCallbackFunction: Box<(name: String, value: String) => bool>;
-    attributeValueCallbackFunction: Box<(name: String, value: String) => bool>;
-    tokenValueCallbackFunction: Box<(eventType: EventType, value: ParseInfo) => bool>;
+    supportDoctype: Optional<bool>;
+    ignoreNameSpace: Optional<bool>;
+    tagValueCallbackFunction: Optional<(name: String, value: String) => bool>;
+    attributeValueCallbackFunction: Optional<(name: String, value: String) => bool>;
+    tokenValueCallbackFunction: Optional<(eventType: EventType, value: ParseInfo) => bool>;
 }
 
 interface XmlPullParser {
@@ -62,4 +62,4 @@ interface XmlPullParser {
     parseXml(option: ParseOptions): void;
 }
 
-function makeXmlPullParser(buffer: BufferType, encoding: Box<String>): XmlPullParser;
+function makeXmlPullParser(buffer: BufferType, encoding: Optional<String>): XmlPullParser;

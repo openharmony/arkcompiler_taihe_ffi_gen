@@ -12,7 +12,7 @@ template<typename T, typename E>
 auto make_future_value(T&& value, uint64_t ms) {
     return make_promise<T, E>(
         [value = std::forward<T>(value), ms](promise_view<T, E> p) {
-            setTimeout(into_holder<ICallback>([p = promise_holder<T, E>(p), value, ms]() { p->resolve(value); }), ms);
+            setTimeout(callback<void()>::from([p = promise_holder<T, E>(p), value, ms]() { p->resolve(value); }), ms);
         }
     );
 }
@@ -21,7 +21,7 @@ template<typename T, typename E>
 auto make_future_error(E&& error, uint64_t ms) {
     return make_promise<T, E>(
         [error = std::forward<E>(error), ms](promise_view<T, E> p) {
-            setTimeout(into_holder<ICallback>([p = promise_holder<T, E>(p), error, ms]() { p->reject(error); }), ms);
+            setTimeout(callback<void()>::from([p = promise_holder<T, E>(p), error, ms]() { p->reject(error); }), ms);
         }
     );
 }

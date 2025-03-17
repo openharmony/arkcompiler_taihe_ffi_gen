@@ -28,7 +28,11 @@ struct callback_view<Return(Params...)> {
                 delete static_cast<callback_data_impl<Impl>*>(data_ptr);
             };
             this->m_func = [](callback_data_t* data_ptr, as_abi_t<Params>... params) -> as_abi_t<Return> {
-                return into_abi<Return>((*static_cast<callback_data_impl<Impl>*>(data_ptr))(from_abi<Params>(params)...));
+                if constexpr (std::is_void_v<Return>) {
+                    return (*static_cast<callback_data_impl<Impl>*>(data_ptr))(from_abi<Params>(params)...);
+                } else {
+                    return into_abi<Return>((*static_cast<callback_data_impl<Impl>*>(data_ptr))(from_abi<Params>(params)...));
+                }
             };
             tref_set(&this->m_count, 1);
         }
@@ -53,7 +57,11 @@ struct callback_view<Return(Params...)> {
     }
 
     Return operator()(Params... params) const {
-        return from_abi<Return>(data_ptr->m_func(data_ptr, into_abi<Params>(params)...));
+        if constexpr (std::is_void_v<Return>) {
+            return data_ptr->m_func(data_ptr, into_abi<Params>(params)...);
+        } else {
+            return from_abi<Return>(data_ptr->m_func(data_ptr, into_abi<Params>(params)...));
+        }
     }
 };
 
