@@ -28,6 +28,7 @@ from taihe.semantics.declarations import (
 )
 from taihe.semantics.visitor import RecursiveDeclVisitor
 from taihe.utils.diagnostics import AnsiStyle
+from contextlib import contextmanager
 
 
 def pretty_print(x: DeclProtocol, buffer: TextIO):
@@ -35,10 +36,28 @@ def pretty_print(x: DeclProtocol, buffer: TextIO):
     printer.handle_decl(x)
 
 
+class IndentManager:
+    def __init__(self, unit="    "):
+        self.indent = 0
+        self.unit = unit
+
+    @contextmanager
+    def block(self):
+        try:
+            self.indent += 1
+            yield
+        finally:
+            self.indent -= 1
+
+
 class _PrettyPrinter(RecursiveDeclVisitor):
     def __init__(self, buffer: TextIO):
         self.buffer = buffer
-        self.indent = 0
+        self.im = IndentManager()
+
+    def writeln(self, content):
+        self.buffer.write(self.im.indent * self.im.unit)
+        self.buffer.write(content + "\n")
 
     def get_type_ref_decl(self, d: TypeRefDecl) -> str:
         real_type = (
@@ -96,8 +115,7 @@ class _PrettyPrinter(RecursiveDeclVisitor):
         if d.attrs:
             fmt_attrs = ", ".join(map(self.get_attr_item, d.attrs.values()))
             attr = f"{AnsiStyle.MAGENTA}[{fmt_attrs}]{AnsiStyle.RESET_ALL}"
-            self.buffer.write(self.indent * 2 * " ")
-            self.buffer.write(f"{attr}\n")
+            self.writeln(f"{attr}")
 
     @override
     def visit_package_import_decl(self, d: PackageImportDecl):
@@ -108,8 +126,7 @@ class _PrettyPrinter(RecursiveDeclVisitor):
 
         as_ = f" {as_kw} {d.name}" if d.is_alias() else ""
 
-        self.buffer.write(self.indent * 2 * " ")
-        self.buffer.write(f"{use_kw} {self.get_package_ref_decl(d.pkg_ref)}{as_};\n")
+        self.writeln(f"{use_kw} {self.get_package_ref_decl(d.pkg_ref)}{as_};")
 
     @override
     def visit_decl_import_decl(self, d: DeclarationImportDecl):
@@ -121,9 +138,8 @@ class _PrettyPrinter(RecursiveDeclVisitor):
 
         as_ = f" {as_kw} {d.name}" if d.is_alias() else ""
 
-        self.buffer.write(self.indent * 2 * " ")
-        self.buffer.write(
-            f"{from_kw} {self.get_package_ref_decl(d.decl_ref.pkg_ref)} {use_kw} {self.get_decl_ref_decl(d.decl_ref)}{as_};\n"
+        self.writeln(
+            f"{from_kw} {self.get_package_ref_decl(d.decl_ref.pkg_ref)} {use_kw} {self.get_decl_ref_decl(d.decl_ref)}{as_};"
         )
 
     @override
@@ -135,8 +151,7 @@ class _PrettyPrinter(RecursiveDeclVisitor):
         fmt_args = ", ".join(self.get_param_decl(x) for x in d.params)
         ret = self.get_type_ref_decl(d.return_ty_ref) if d.return_ty_ref else "void"
 
-        self.buffer.write(self.indent * 2 * " ")
-        self.buffer.write(f"{func_kw} {d.name}({fmt_args}): {ret};\n")
+        self.writeln(f"{func_kw} {d.name}({fmt_args}): {ret};")
 
     @override
     def visit_enum_item_decl(self, d: EnumItemDecl):
@@ -150,8 +165,7 @@ class _PrettyPrinter(RecursiveDeclVisitor):
             else f" {AnsiStyle.GREEN}// {hex(d.value)}{AnsiStyle.RESET}"
         )
 
-        self.buffer.write(self.indent * 2 * " ")
-        self.buffer.write(f"{d.name}{ty_name} = {value};{comment}\n")
+        self.writeln(f"{d.name}{ty_name} = {value};{comment}")
 
     @override
     def visit_enum_decl(self, d: EnumDecl):
@@ -159,23 +173,18 @@ class _PrettyPrinter(RecursiveDeclVisitor):
 
         enum_kw = self.as_keyword("enum")
 
-        self.buffer.write(self.indent * 2 * " ")
-        self.buffer.write(f"{enum_kw} {d.name} {{")
+        self.writeln(f"{enum_kw} {d.name} {{")
         if d.items:
-            self.buffer.write("\n")
-            self.indent += 1
-            for i in d.items:
-                self.handle_decl(i)
-            self.indent -= 1
-            self.buffer.write(self.indent * 2 * " ")
-        self.buffer.write("}\n")
+            with self.im.block():
+                for i in d.items:
+                    self.handle_decl(i)
+        self.writeln("}")
 
     @override
     def visit_struct_field_decl(self, d: StructFieldDecl):
         self.write_attr(d)
 
-        self.buffer.write(self.indent * 2 * " ")
-        self.buffer.write(f"{d.name}: {self.get_type_ref_decl(d.ty_ref)};\n")
+        self.writeln(f"{d.name}: {self.get_type_ref_decl(d.ty_ref)};")
 
     @override
     def visit_struct_decl(self, d: StructDecl):
@@ -183,16 +192,12 @@ class _PrettyPrinter(RecursiveDeclVisitor):
 
         struct_kw = self.as_keyword("struct")
 
-        self.buffer.write(self.indent * 2 * " ")
-        self.buffer.write(f"{struct_kw} {d.name} {{")
+        self.writeln(f"{struct_kw} {d.name} {{")
         if d.fields:
-            self.buffer.write("\n")
-            self.indent += 1
-            for f in d.fields:
-                self.handle_decl(f)
-            self.indent -= 1
-            self.buffer.write(self.indent * 2 * " ")
-        self.buffer.write("}\n")
+            with self.im.block():
+                for f in d.fields:
+                    self.handle_decl(f)
+        self.writeln("}")
 
     @override
     def visit_iface_func_decl(self, d: IfaceMethodDecl):
@@ -201,8 +206,7 @@ class _PrettyPrinter(RecursiveDeclVisitor):
         fmt_args = ", ".join(self.get_param_decl(x) for x in d.params)
         ret = self.get_type_ref_decl(d.return_ty_ref) if d.return_ty_ref else "void"
 
-        self.buffer.write(self.indent * 2 * " ")
-        self.buffer.write(f"{d.name}({fmt_args}): {ret};\n")
+        self.writeln(f"{d.name}({fmt_args}): {ret};")
 
     @override
     def visit_iface_decl(self, d: IfaceDecl):
@@ -216,21 +220,16 @@ class _PrettyPrinter(RecursiveDeclVisitor):
             else ""
         )
 
-        self.buffer.write(self.indent * 2 * " ")
-        self.buffer.write(f"{iface_kw} {d.name}{extends} {{")
+        self.writeln(f"{iface_kw} {d.name}{extends} {{")
         if d.methods:
-            self.buffer.write("\n")
-            self.indent += 1
-            for f in d.methods:
-                self.handle_decl(f)
-            self.indent -= 1
-            self.buffer.write(self.indent * 2 * " ")
-        self.buffer.write("}\n")
+            with self.im.block():
+                for f in d.methods:
+                    self.handle_decl(f)
+        self.writeln("}")
 
     @override
     def visit_package_decl(self, p: PackageDecl):
-        self.buffer.write(self.indent * 2 * " ")
-        self.buffer.write(f"// {self.with_attr(p, p.name)}\n")
+        self.writeln(f"// {self.with_attr(p, p.name)}")
         for d in p.pkg_imports.values():
             self.handle_decl(d)
         for d in p.decl_imports.values():
@@ -248,5 +247,5 @@ class _PrettyPrinter(RecursiveDeclVisitor):
     def visit_package_group(self, g: PackageGroup):
         for i, p in enumerate(g.packages):
             if i != 0:
-                self.buffer.write("\n")
+                self.writeln("")
             self.handle_decl(p)

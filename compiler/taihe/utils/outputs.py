@@ -8,6 +8,8 @@ from typing import Generic, ParamSpec, TypeVar
 
 from typing_extensions import override
 
+from taihe.semantics.format import IndentManager
+
 P = ParamSpec("P")
 T = TypeVar("T", bound="OutputBase")
 
@@ -62,6 +64,7 @@ class COutputBuffer(OutputBase[[bool]]):
     def __init__(self, is_header: bool):
         self.is_header = is_header
         self.headers: dict[str, None] = {}
+        self.im = IndentManager()
         self.code = StringIO()
 
     @override
@@ -77,6 +80,10 @@ class COutputBuffer(OutputBase[[bool]]):
 
     def write(self, code: str):
         self.code.write(code)
+
+    def writeln(self, *codes: str):
+        for code in codes:
+            self.code.write(self.im.indent * self.im.unit + code + "\n")
 
     def include(self, *headers: str, back=False):
         for header in headers:

@@ -16,14 +16,8 @@ compiler/taihe/parse/antlr
 
 compiler/.panda_vm
 
-# Temporary directories
-test/*/author_generated
-test/*/user_generated
-test/*/author_test
-test/*/user_test
-
-cookbook/*/author_generated
-cookbook/*/user_generated
+# Generated directories
+**/*generated
 
 # files
 *.log

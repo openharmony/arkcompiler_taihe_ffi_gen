@@ -399,12 +399,12 @@ class CppHeadersGenerator:
         else:
             cpp_return_ty_name = "void"
             cpp_result = abi_result
-        pkg_cpp_target.write(
-            f"namespace {func_cpp_info.namespace} {{\n"
-            f"inline {cpp_return_ty_name} {func_cpp_info.call_name}({params_cpp_str}) {{\n"
-            f"    return {cpp_result};\n"
-            f"}}\n"
-            f"}}\n"
+        pkg_cpp_target.writeln(
+            f"namespace {func_cpp_info.namespace} {{",
+            f"inline {cpp_return_ty_name} {func_cpp_info.call_name}({params_cpp_str}) {{",
+            f"    return {cpp_result};",
+            f"}}",
+            f"}}",
         )
 
     def gen_struct_files(
@@ -435,10 +435,10 @@ class CppHeadersGenerator:
         struct_cpp_decl_target = COutputBuffer.create(
             self.tm, f"include/{struct_cpp_info.decl_header}", True
         )
-        struct_cpp_decl_target.write(
-            f"namespace {struct_cpp_info.namespace} {{\n"
-            f"struct {struct_cpp_info.name};\n"
-            f"}}\n"
+        struct_cpp_decl_target.writeln(
+            f"namespace {struct_cpp_info.namespace} {{",
+            f"struct {struct_cpp_info.name};",
+            f"}}",
         )
 
     def gen_struct_impl_file(
@@ -485,18 +485,21 @@ class CppHeadersGenerator:
         struct_cpp_info: StructCppInfo,
         struct_cpp_defn_target: COutputBuffer,
     ):
-        struct_cpp_defn_target.write(
-            f"namespace {struct_cpp_info.namespace} {{\n"
-            f"struct {struct_cpp_info.name} {{\n"
+        struct_cpp_defn_target.writeln(
+            f"namespace {struct_cpp_info.namespace} {{",
+            f"struct {struct_cpp_info.name} {{",
         )
         for field in struct.fields:
             type_cpp_info = TypeCppInfo.get(self.am, field.ty_ref.resolved_ty)
             struct_cpp_defn_target.include(*type_cpp_info.impl_headers)
-            struct_cpp_defn_target.write(
-                f"    {type_cpp_info.as_owner} {field.name};\n"
+            struct_cpp_defn_target.writeln(
+                f"    {type_cpp_info.as_owner} {field.name};",
             )
         # finally
-        struct_cpp_defn_target.write("};\n" "}\n")
+        struct_cpp_defn_target.writeln(
+            f"}};",
+            f"}}",
+        )
 
     def gen_struct_same(
         self,
@@ -508,12 +511,12 @@ class CppHeadersGenerator:
         result = "true"
         for field in struct.fields:
             result = f"{result} && same(lhs.{field.name}, rhs.{field.name})"
-        struct_cpp_defn_target.write(
-            f"namespace taihe::core {{\n"
-            f"inline bool same_impl(adl_helper_t, {struct_cpp_info.as_param} lhs, {struct_cpp_info.as_param} rhs) {{\n"
-            f"    return {result};\n"
-            f"}}\n"
-            f"}}\n"
+        struct_cpp_defn_target.writeln(
+            f"namespace taihe::core {{",
+            f"inline bool same_impl(adl_helper_t, {struct_cpp_info.as_param} lhs, {struct_cpp_info.as_param} rhs) {{",
+            f"    return {result};",
+            f"}}",
+            f"}}",
         )
 
     def gen_struct_hash(
@@ -523,16 +526,20 @@ class CppHeadersGenerator:
         struct_cpp_info: StructCppInfo,
         struct_cpp_defn_target: COutputBuffer,
     ):
-        struct_cpp_defn_target.write(
-            f"namespace taihe::core {{\n"
-            f"inline auto hash_impl(adl_helper_t, {struct_cpp_info.as_param} val) -> ::std::size_t {{\n"
-            f"    ::std::size_t seed = 0;\n"
+        struct_cpp_defn_target.writeln(
+            f"namespace taihe::core {{",
+            f"inline auto hash_impl(adl_helper_t, {struct_cpp_info.as_param} val) -> ::std::size_t {{",
+            f"    ::std::size_t seed = 0;",
         )
         for field in struct.fields:
-            struct_cpp_defn_target.write(
-                f"    seed ^= hash(val.{field.name}) + 0x9e3779b9 + (seed << 6) + (seed >> 2);\n"
+            struct_cpp_defn_target.writeln(
+                f"    seed ^= hash(val.{field.name}) + 0x9e3779b9 + (seed << 6) + (seed >> 2);",
             )
-        struct_cpp_defn_target.write("    return seed;\n" "}\n" "}\n")
+        struct_cpp_defn_target.writeln(
+            f"    return seed;",
+            f"}}",
+            f"}}",
+        )
 
     def gen_struct_type_traits(
         self,
@@ -541,21 +548,21 @@ class CppHeadersGenerator:
         struct_cpp_info: StructCppInfo,
         struct_cpp_defn_target: COutputBuffer,
     ):
-        struct_cpp_defn_target.write(
-            f"namespace taihe::core {{\n"
-            f"template<>\n"
-            f"struct as_abi<{struct_cpp_info.as_owner}> {{\n"
-            f"    using type = {struct_abi_info.as_owner};\n"
-            f"}};\n"
-            f"template<>\n"
-            f"struct as_abi<{struct_cpp_info.as_param}> {{\n"
-            f"    using type = {struct_abi_info.as_param};\n"
-            f"}};\n"
-            f"template<>\n"
-            f"struct as_param<{struct_cpp_info.as_owner}> {{\n"
-            f"    using type = {struct_cpp_info.as_param};\n"
-            f"}};\n"
-            f"}}\n"
+        struct_cpp_defn_target.writeln(
+            f"namespace taihe::core {{",
+            f"template<>",
+            f"struct as_abi<{struct_cpp_info.as_owner}> {{",
+            f"    using type = {struct_abi_info.as_owner};",
+            f"}};",
+            f"template<>",
+            f"struct as_abi<{struct_cpp_info.as_param}> {{",
+            f"    using type = {struct_abi_info.as_param};",
+            f"}};",
+            f"template<>",
+            f"struct as_param<{struct_cpp_info.as_owner}> {{",
+            f"    using type = {struct_cpp_info.as_param};",
+            f"}};",
+            f"}}",
         )
 
     def gen_enum_files(
@@ -586,10 +593,10 @@ class CppHeadersGenerator:
         enum_cpp_decl_target = COutputBuffer.create(
             self.tm, f"include/{enum_cpp_info.decl_header}", True
         )
-        enum_cpp_decl_target.write(
-            f"namespace {enum_cpp_info.namespace} {{\n"
-            f"struct {enum_cpp_info.name};\n"
-            f"}}\n"
+        enum_cpp_decl_target.writeln(
+            f"namespace {enum_cpp_info.namespace} {{",
+            f"struct {enum_cpp_info.name};",
+            f"}}",
         )
 
     def gen_enum_impl_file(
@@ -636,261 +643,299 @@ class CppHeadersGenerator:
         enum_cpp_info: EnumCppInfo,
         enum_cpp_defn_target: COutputBuffer,
     ):
-        enum_cpp_defn_target.write(
-            f"namespace {enum_cpp_info.namespace} {{\n"
-            f"struct {enum_cpp_info.name} {{\n"
+        enum_cpp_defn_target.writeln(
+            f"namespace {enum_cpp_info.namespace} {{",
+            f"struct {enum_cpp_info.name} {{",
         )
         # tag type
-        enum_cpp_defn_target.write(
-            f"    enum class tag_t : {enum_abi_info.tag_type} {{\n"
+        enum_cpp_defn_target.writeln(
+            f"    enum class tag_t : {enum_abi_info.tag_type} {{",
         )
         for item in enum.items:
-            enum_cpp_defn_target.write(f"        {item.name} = {item.value},\n")
-        enum_cpp_defn_target.write("    };\n")
+            enum_cpp_defn_target.writeln(
+                f"        {item.name} = {item.value},",
+            )
+        enum_cpp_defn_target.writeln(
+            f"    }};",
+        )
         # storage type
-        enum_cpp_defn_target.write(
-            "    union storage_t {\n"
-            "        storage_t() {}\n"
-            "        ~storage_t() {}\n"
+        enum_cpp_defn_target.writeln(
+            f"    union storage_t {{",
+            f"        storage_t() {{}}",
+            f"        ~storage_t() {{}}",
         )
         for item in enum.items:
             if item.ty_ref is None:
                 continue
             type_cpp_info = TypeCppInfo.get(self.am, item.ty_ref.resolved_ty)
             enum_cpp_defn_target.include(*type_cpp_info.impl_headers)
-            enum_cpp_defn_target.write(
-                f"        {type_cpp_info.as_owner} {item.name};\n"
+            enum_cpp_defn_target.writeln(
+                f"        {type_cpp_info.as_owner} {item.name};",
             )
-        enum_cpp_defn_target.write("    };\n")
+        enum_cpp_defn_target.writeln(
+            f"    }};",
+        )
         # destructor
-        enum_cpp_defn_target.write(
-            f"    ~{enum_cpp_info.name}() {{\n" f"        switch (m_tag) {{\n"
+        enum_cpp_defn_target.writeln(
+            f"    ~{enum_cpp_info.name}() {{",
+            f"        switch (m_tag) {{",
         )
         for item in enum.items:
             if item.ty_ref is None:
                 continue
-            enum_cpp_defn_target.write(
-                f"        case tag_t::{item.name}:\n"
-                f"            ::std::destroy_at(&m_data.{item.name});\n"
-                f"            break;\n"
+            enum_cpp_defn_target.writeln(
+                f"        case tag_t::{item.name}:",
+                f"            ::std::destroy_at(&m_data.{item.name});",
+                f"            break;",
             )
-        enum_cpp_defn_target.write(
-            "        default:\n" "            break;\n" "        }\n" "    }\n"
+        enum_cpp_defn_target.writeln(
+            f"        default:",
+            f"            break;",
+            f"        }}",
+            f"    }}",
         )
         # copy constructor
-        enum_cpp_defn_target.write(
-            f"    {enum_cpp_info.name}({enum_cpp_info.name} const& other) : m_tag(other.m_tag) {{\n"
-            f"        switch (m_tag) {{\n"
+        enum_cpp_defn_target.writeln(
+            f"    {enum_cpp_info.name}({enum_cpp_info.name} const& other) : m_tag(other.m_tag) {{",
+            f"        switch (m_tag) {{",
         )
         for item in enum.items:
             if item.ty_ref is None:
                 continue
-            enum_cpp_defn_target.write(
-                f"        case tag_t::{item.name}:\n"
-                f"            new (&m_data.{item.name}) decltype(m_data.{item.name})(other.m_data.{item.name});\n"
-                f"            break;\n"
+            enum_cpp_defn_target.writeln(
+                f"        case tag_t::{item.name}:",
+                f"            new (&m_data.{item.name}) decltype(m_data.{item.name})(other.m_data.{item.name});",
+                f"            break;",
             )
-        enum_cpp_defn_target.write(
-            "        default:\n" "            break;\n" "        }\n" "    }\n"
+        enum_cpp_defn_target.writeln(
+            f"        default:",
+            f"            break;",
+            f"        }}",
+            f"    }}",
         )
         # move constructor
-        enum_cpp_defn_target.write(
-            f"    {enum_cpp_info.name}({enum_cpp_info.name}&& other) : m_tag(other.m_tag) {{\n"
-            f"        switch (m_tag) {{\n"
+        enum_cpp_defn_target.writeln(
+            f"    {enum_cpp_info.name}({enum_cpp_info.name}&& other) : m_tag(other.m_tag) {{",
+            f"        switch (m_tag) {{",
         )
         for item in enum.items:
             if item.ty_ref is None:
                 continue
-            enum_cpp_defn_target.write(
-                f"        case tag_t::{item.name}:\n"
-                f"            new (&m_data.{item.name}) decltype(m_data.{item.name})(::std::move(other.m_data.{item.name}));\n"
-                f"            break;\n"
+            enum_cpp_defn_target.writeln(
+                f"        case tag_t::{item.name}:",
+                f"            new (&m_data.{item.name}) decltype(m_data.{item.name})(::std::move(other.m_data.{item.name}));",
+                f"            break;",
             )
-        enum_cpp_defn_target.write(
-            "        default:\n" "            break;\n" "        }\n" "    }\n"
+        enum_cpp_defn_target.writeln(
+            f"        default:",
+            f"            break;",
+            f"        }}",
+            f"    }}",
         )
         # copy assignment
-        enum_cpp_defn_target.write(
-            f"    {enum_cpp_info.name}& operator=({enum_cpp_info.name} const& other) {{\n"
-            f"        if (this != &other) {{\n"
-            f"            ::std::destroy_at(this);\n"
-            f"            new (this) {enum_cpp_info.name}(other);\n"
-            f"        }}\n"
-            f"        return *this;\n"
-            f"    }}\n"
+        enum_cpp_defn_target.writeln(
+            f"    {enum_cpp_info.name}& operator=({enum_cpp_info.name} const& other) {{",
+            f"        if (this != &other) {{",
+            f"            ::std::destroy_at(this);",
+            f"            new (this) {enum_cpp_info.name}(other);",
+            f"        }}",
+            f"        return *this;",
+            f"    }}",
         )
         # move assignment
-        enum_cpp_defn_target.write(
-            f"    {enum_cpp_info.name}& operator=({enum_cpp_info.name}&& other) {{\n"
-            f"        if (this != &other) {{\n"
-            f"            ::std::destroy_at(this);\n"
-            f"            new (this) {enum_cpp_info.name}(::std::move(other));\n"
-            f"        }}\n"
-            f"        return *this;\n"
-            f"    }}\n"
+        enum_cpp_defn_target.writeln(
+            f"    {enum_cpp_info.name}& operator=({enum_cpp_info.name}&& other) {{",
+            f"        if (this != &other) {{",
+            f"            ::std::destroy_at(this);",
+            f"            new (this) {enum_cpp_info.name}(::std::move(other));",
+            f"        }}",
+            f"        return *this;",
+            f"    }}",
         )
         # in place constructor
         for item in enum.items:
             if item.ty_ref is None:
-                enum_cpp_defn_target.write(
-                    f"    {enum_cpp_info.name}(::taihe::core::static_tag_t<tag_t::{item.name}>) : m_tag(tag_t::{item.name}) {{}}\n"
+                enum_cpp_defn_target.writeln(
+                    f"    {enum_cpp_info.name}(::taihe::core::static_tag_t<tag_t::{item.name}>) : m_tag(tag_t::{item.name}) {{}}",
                 )
             else:
-                enum_cpp_defn_target.write(
-                    f"    template<typename... Args>\n"
-                    f"    {enum_cpp_info.name}(::taihe::core::static_tag_t<tag_t::{item.name}>, Args&&... args) : m_tag(tag_t::{item.name}) {{\n"
-                    f"        new (&m_data.{item.name}) decltype(m_data.{item.name})(::std::forward<Args>(args)...);\n"
-                    f"    }}\n"
+                enum_cpp_defn_target.writeln(
+                    f"    template<typename... Args>",
+                    f"    {enum_cpp_info.name}(::taihe::core::static_tag_t<tag_t::{item.name}>, Args&&... args) : m_tag(tag_t::{item.name}) {{",
+                    f"        new (&m_data.{item.name}) decltype(m_data.{item.name})(::std::forward<Args>(args)...);",
+                    f"    }}",
                 )
         # creator
-        enum_cpp_defn_target.write(
-            f"    template<tag_t tag, typename... Args>\n"
-            f"    static {enum_cpp_info.name} make(Args&&... args) {{\n"
-            f"        return {enum_cpp_info.name}(::taihe::core::static_tag<tag>, ::std::forward<Args>(args)...);\n"
-            f"    }}\n"
+        enum_cpp_defn_target.writeln(
+            f"    template<tag_t tag, typename... Args>",
+            f"    static {enum_cpp_info.name} make(Args&&... args) {{",
+            f"        return {enum_cpp_info.name}(::taihe::core::static_tag<tag>, ::std::forward<Args>(args)...);",
+            f"    }}",
         )
         # emplacement
-        enum_cpp_defn_target.write(
-            f"    template<tag_t tag, typename... Args>\n"
-            f"    {enum_cpp_info.name} const& emplace(Args&&... args) {{\n"
-            f"        ::std::destroy_at(this);\n"
-            f"        new (this) {enum_cpp_info.name}(::taihe::core::static_tag<tag>, ::std::forward<Args>(args)...);\n"
-            f"        return *this;\n"
-            f"    }}\n"
+        enum_cpp_defn_target.writeln(
+            f"    template<tag_t tag, typename... Args>",
+            f"    {enum_cpp_info.name} const& emplace(Args&&... args) {{",
+            f"        ::std::destroy_at(this);",
+            f"        new (this) {enum_cpp_info.name}(::taihe::core::static_tag<tag>, ::std::forward<Args>(args)...);",
+            f"        return *this;",
+            f"    }}",
         )
         # non-const getter
-        enum_cpp_defn_target.write(
-            "    template<tag_t tag>\n" "    auto& get_ref() {\n"
+        enum_cpp_defn_target.writeln(
+            f"    template<tag_t tag>",
+            f"    auto& get_ref() {{",
         )
         for item in enum.items:
             if item.ty_ref:
-                enum_cpp_defn_target.write(
-                    f"        if constexpr (tag == tag_t::{item.name}) {{\n"
-                    f"            return m_data.{item.name};\n"
-                    f"        }}\n"
+                enum_cpp_defn_target.writeln(
+                    f"        if constexpr (tag == tag_t::{item.name}) {{",
+                    f"            return m_data.{item.name};",
+                    f"        }}",
                 )
-        enum_cpp_defn_target.write("    }\n")
-        enum_cpp_defn_target.write(
-            "    template<tag_t tag>\n"
-            "    auto* get_ptr() {\n"
-            "        return m_tag == tag ? &get_ref<tag>() : nullptr;\n"
-            "    }\n"
+        enum_cpp_defn_target.writeln(
+            f"    }}",
+        )
+        enum_cpp_defn_target.writeln(
+            f"    template<tag_t tag>",
+            f"    auto* get_ptr() {{",
+            f"        return m_tag == tag ? &get_ref<tag>() : nullptr;",
+            f"    }}",
         )
         # const getter
-        enum_cpp_defn_target.write(
-            "    template<tag_t tag>\n" "    auto const& get_ref() const {\n"
+        enum_cpp_defn_target.writeln(
+            f"    template<tag_t tag>",
+            f"    auto const& get_ref() const {{",
         )
         for item in enum.items:
             if item.ty_ref:
-                enum_cpp_defn_target.write(
-                    f"        if constexpr (tag == tag_t::{item.name}) {{\n"
-                    f"            return m_data.{item.name};\n"
-                    f"        }}\n"
+                enum_cpp_defn_target.writeln(
+                    f"        if constexpr (tag == tag_t::{item.name}) {{",
+                    f"            return m_data.{item.name};",
+                    f"        }}",
                 )
-        enum_cpp_defn_target.write("    }\n")
-        enum_cpp_defn_target.write(
-            "    template<tag_t tag>\n"
-            "    auto const* get_ptr() const {\n"
-            "        return m_tag == tag ? &get_ref<tag>() : nullptr;\n"
-            "    }\n"
+        enum_cpp_defn_target.writeln(
+            f"    }}",
+        )
+        enum_cpp_defn_target.writeln(
+            f"    template<tag_t tag>",
+            f"    auto const* get_ptr() const {{",
+            f"        return m_tag == tag ? &get_ref<tag>() : nullptr;",
+            f"    }}",
         )
         # checker
-        enum_cpp_defn_target.write(
-            "    template<tag_t tag>\n"
-            "    bool holds() const {\n"
-            "        return m_tag == tag;\n"
-            "    }\n"
-            "    tag_t get_tag() const {\n"
-            "        return m_tag;\n"
-            "    }\n"
+        enum_cpp_defn_target.writeln(
+            f"    template<tag_t tag>",
+            f"    bool holds() const {{",
+            f"        return m_tag == tag;",
+            f"    }}",
+            f"    tag_t get_tag() const {{",
+            f"        return m_tag;",
+            f"    }}",
         )
         # named
         for item in enum.items:
-            enum_cpp_defn_target.write(
-                f"    template<typename... Args>\n"
-                f"    static {enum_cpp_info.name} make_{item.name}(Args&&... args) {{\n"
-                f"        return make<tag_t::{item.name}>(::std::forward<Args>(args)...);\n"
-                f"    }}\n"
-                f"    template<typename... Args>\n"
-                f"    {enum_cpp_info.name} const& emplace_{item.name}(Args&&... args) {{\n"
-                f"        return emplace<tag_t::{item.name}>(::std::forward<Args>(args)...);\n"
-                f"    }}\n"
-                f"    bool holds_{item.name}() const {{\n"
-                f"        return holds<tag_t::{item.name}>();\n"
-                f"    }}\n"
+            enum_cpp_defn_target.writeln(
+                f"    template<typename... Args>",
+                f"    static {enum_cpp_info.name} make_{item.name}(Args&&... args) {{",
+                f"        return make<tag_t::{item.name}>(::std::forward<Args>(args)...);",
+                f"    }}",
+                f"    template<typename... Args>",
+                f"    {enum_cpp_info.name} const& emplace_{item.name}(Args&&... args) {{",
+                f"        return emplace<tag_t::{item.name}>(::std::forward<Args>(args)...);",
+                f"    }}",
+                f"    bool holds_{item.name}() const {{",
+                f"        return holds<tag_t::{item.name}>();",
+                f"    }}",
             )
             if item.ty_ref:
-                enum_cpp_defn_target.write(
-                    f"    auto* get_{item.name}_ptr() {{\n"
-                    f"        return get_ptr<tag_t::{item.name}>();\n"
-                    f"    }}\n"
-                    f"    auto const* get_{item.name}_ptr() const {{\n"
-                    f"        return get_ptr<tag_t::{item.name}>();\n"
-                    f"    }}\n"
-                    f"    auto& get_{item.name}_ref() {{\n"
-                    f"        return get_ref<tag_t::{item.name}>();\n"
-                    f"    }}\n"
-                    f"    auto const& get_{item.name}_ref() const {{\n"
-                    f"        return get_ref<tag_t::{item.name}>();\n"
-                    f"    }}\n"
+                enum_cpp_defn_target.writeln(
+                    f"    auto* get_{item.name}_ptr() {{",
+                    f"        return get_ptr<tag_t::{item.name}>();",
+                    f"    }}",
+                    f"    auto const* get_{item.name}_ptr() const {{",
+                    f"        return get_ptr<tag_t::{item.name}>();",
+                    f"    }}",
+                    f"    auto& get_{item.name}_ref() {{",
+                    f"        return get_ref<tag_t::{item.name}>();",
+                    f"    }}",
+                    f"    auto const& get_{item.name}_ref() const {{",
+                    f"        return get_ref<tag_t::{item.name}>();",
+                    f"    }}",
                 )
         # non_const visitor
-        enum_cpp_defn_target.write(
-            "    template<typename Visitor>\n"
-            "    auto accept_template(Visitor&& visitor) {\n"
-            "        switch (m_tag) {\n"
+        enum_cpp_defn_target.writeln(
+            f"    template<typename Visitor>",
+            f"    auto accept_template(Visitor&& visitor) {{",
+            f"        switch (m_tag) {{",
         )
         for item in enum.items:
             result = f"::taihe::core::static_tag<tag_t::{item.name}>"
             if item.ty_ref:
                 result += f", m_data.{item.name}"
-            enum_cpp_defn_target.write(
-                f"        case tag_t::{item.name}:\n"
-                f"            return visitor({result});\n"
+            enum_cpp_defn_target.writeln(
+                f"        case tag_t::{item.name}:",
+                f"            return visitor({result});",
             )
-        enum_cpp_defn_target.write("        }\n" "    }\n")
-        enum_cpp_defn_target.write(
-            "    template<typename Visitor>\n"
-            "    auto accept(Visitor&& visitor) {\n"
-            "        switch (m_tag) {\n"
+        enum_cpp_defn_target.writeln(
+            f"        }}",
+            f"    }}",
+        )
+        enum_cpp_defn_target.writeln(
+            f"    template<typename Visitor>",
+            f"    auto accept(Visitor&& visitor) {{",
+            f"        switch (m_tag) {{",
         )
         for item in enum.items:
             result = "" if item.ty_ref is None else f"m_data.{item.name}"
-            enum_cpp_defn_target.write(
-                f"        case tag_t::{item.name}:\n"
-                f"            return visitor.{item.name}({result});\n"
+            enum_cpp_defn_target.writeln(
+                f"        case tag_t::{item.name}:",
+                f"            return visitor.{item.name}({result});",
             )
-        enum_cpp_defn_target.write("        }\n" "    }\n")
+        enum_cpp_defn_target.writeln(
+            f"        }}",
+            f"    }}",
+        )
         # const visitor
-        enum_cpp_defn_target.write(
-            "    template<typename Visitor>\n"
-            "    auto accept_template(Visitor&& visitor) const {\n"
-            "        switch (m_tag) {\n"
+        enum_cpp_defn_target.writeln(
+            f"    template<typename Visitor>",
+            f"    auto accept_template(Visitor&& visitor) const {{",
+            f"        switch (m_tag) {{",
         )
         for item in enum.items:
             result = f"::taihe::core::static_tag<tag_t::{item.name}>"
             if item.ty_ref:
                 result += f", m_data.{item.name}"
-            enum_cpp_defn_target.write(
-                f"        case tag_t::{item.name}:\n"
-                f"            return visitor({result});\n"
+            enum_cpp_defn_target.writeln(
+                f"        case tag_t::{item.name}:",
+                f"            return visitor({result});",
             )
-        enum_cpp_defn_target.write("        }\n" "    }\n")
-        enum_cpp_defn_target.write(
-            "    template<typename Visitor>\n"
-            "    auto accept(Visitor&& visitor) const {\n"
-            "        switch (m_tag) {\n"
+        enum_cpp_defn_target.writeln(
+            f"        }}",
+            f"    }}",
+        )
+        enum_cpp_defn_target.writeln(
+            f"    template<typename Visitor>",
+            f"    auto accept(Visitor&& visitor) const {{",
+            f"        switch (m_tag) {{",
         )
         for item in enum.items:
             result = "" if item.ty_ref is None else f"m_data.{item.name}"
-            enum_cpp_defn_target.write(
-                f"        case tag_t::{item.name}:\n"
-                f"            return visitor.{item.name}({result});\n"
+            enum_cpp_defn_target.writeln(
+                f"        case tag_t::{item.name}:",
+                f"            return visitor.{item.name}({result});",
             )
-        enum_cpp_defn_target.write("        }\n" "    }\n")
+        enum_cpp_defn_target.writeln(
+            f"        }}",
+            f"    }}",
+        )
         # finally
-        enum_cpp_defn_target.write(
-            "private:\n" "    tag_t m_tag;\n" "    storage_t m_data;\n" "};\n" "}\n"
+        enum_cpp_defn_target.writeln(
+            f"private:",
+            f"    tag_t m_tag;",
+            f"    storage_t m_data;",
+            f"}};",
+            f"}}",
         )
 
     def gen_enum_same(
@@ -906,12 +951,12 @@ class CppHeadersGenerator:
             if item.ty_ref:
                 cond = f"{cond} && same(lhs.get_{item.name}_ref(), rhs.get_{item.name}_ref())"
             result = f"{result} || {cond}"
-        enum_cpp_defn_target.write(
-            f"namespace taihe::core {{\n"
-            f"inline bool same_impl(adl_helper_t, {enum_cpp_info.as_param} lhs, {enum_cpp_info.as_param} rhs) {{\n"
-            f"    return {result};\n"
-            f"}}\n"
-            f"}}\n"
+        enum_cpp_defn_target.writeln(
+            f"namespace taihe::core {{",
+            f"inline bool same_impl(adl_helper_t, {enum_cpp_info.as_param} lhs, {enum_cpp_info.as_param} rhs) {{",
+            f"    return {result};",
+            f"}}",
+            f"}}",
         )
 
     def gen_enum_hash(
@@ -921,22 +966,26 @@ class CppHeadersGenerator:
         enum_cpp_info: EnumCppInfo,
         enum_cpp_defn_target: COutputBuffer,
     ):
-        enum_cpp_defn_target.write(
-            f"namespace taihe::core {{\n"
-            f"inline auto hash_impl(adl_helper_t, {enum_cpp_info.as_param} val) -> ::std::size_t {{\n"
-            f"    switch (val.get_tag()) {{\n"
-            f"        ::std::size_t seed;\n"
+        enum_cpp_defn_target.writeln(
+            f"namespace taihe::core {{",
+            f"inline auto hash_impl(adl_helper_t, {enum_cpp_info.as_param} val) -> ::std::size_t {{",
+            f"    switch (val.get_tag()) {{",
+            f"        ::std::size_t seed;",
         )
         for item in enum.items:
             val = "0x9e3779b9 + (seed << 6) + (seed >> 2)"
             if item.ty_ref:
                 val = f"{val} + hash(val.get_{item.name}_ref())"
-            enum_cpp_defn_target.write(
-                f"    case {enum_cpp_info.full_name}::tag_t::{item.name}:\n"
-                f"        seed = (::std::size_t){enum_cpp_info.full_name}::tag_t::{item.name};\n"
-                f"        return seed ^ ({val});\n"
+            enum_cpp_defn_target.writeln(
+                f"    case {enum_cpp_info.full_name}::tag_t::{item.name}:",
+                f"        seed = (::std::size_t){enum_cpp_info.full_name}::tag_t::{item.name};",
+                f"        return seed ^ ({val});",
             )
-        enum_cpp_defn_target.write("    }\n" "}\n" "}\n")
+        enum_cpp_defn_target.writeln(
+            f"    }}",
+            f"}}",
+            f"}}",
+        )
 
     def gen_enum_type_traits(
         self,
@@ -945,21 +994,21 @@ class CppHeadersGenerator:
         enum_cpp_info: EnumCppInfo,
         enum_cpp_defn_target: COutputBuffer,
     ):
-        enum_cpp_defn_target.write(
-            f"namespace taihe::core {{\n"
-            f"template<>\n"
-            f"struct as_abi<{enum_cpp_info.as_owner}> {{\n"
-            f"    using type = {enum_abi_info.as_owner};\n"
-            f"}};\n"
-            f"template<>\n"
-            f"struct as_abi<{enum_cpp_info.as_param}> {{\n"
-            f"    using type = {enum_abi_info.as_param};\n"
-            f"}};\n"
-            f"template<>\n"
-            f"struct as_param<{enum_cpp_info.as_owner}> {{\n"
-            f"    using type = {enum_cpp_info.as_param};\n"
-            f"}};\n"
-            f"}}\n"
+        enum_cpp_defn_target.writeln(
+            f"namespace taihe::core {{",
+            f"template<>",
+            f"struct as_abi<{enum_cpp_info.as_owner}> {{",
+            f"    using type = {enum_abi_info.as_owner};",
+            f"}};",
+            f"template<>",
+            f"struct as_abi<{enum_cpp_info.as_param}> {{",
+            f"    using type = {enum_abi_info.as_param};",
+            f"}};",
+            f"template<>",
+            f"struct as_param<{enum_cpp_info.as_owner}> {{",
+            f"    using type = {enum_cpp_info.as_param};",
+            f"}};",
+            f"}}",
         )
 
     def gen_iface_files(
@@ -995,13 +1044,13 @@ class CppHeadersGenerator:
         iface_cpp_decl_target = COutputBuffer.create(
             self.tm, f"include/{iface_cpp_info.decl_header}", True
         )
-        iface_cpp_decl_target.write(
-            f"namespace {iface_cpp_info.weakspace} {{\n"
-            f"struct {iface_cpp_info.weak_name};\n"
-            f"}}\n"
-            f"namespace {iface_cpp_info.namespace} {{\n"
-            f"struct {iface_cpp_info.norm_name};\n"
-            f"}}\n"
+        iface_cpp_decl_target.writeln(
+            f"namespace {iface_cpp_info.weakspace} {{",
+            f"struct {iface_cpp_info.weak_name};",
+            f"}}",
+            f"namespace {iface_cpp_info.namespace} {{",
+            f"struct {iface_cpp_info.norm_name};",
+            f"}}",
         )
 
     def gen_iface_defn_file(
@@ -1042,18 +1091,20 @@ class CppHeadersGenerator:
         iface_cpp_info: IfaceCppInfo,
         iface_cpp_defn_target: COutputBuffer,
     ):
-        iface_cpp_defn_target.write(
-            f"namespace {iface_cpp_info.weakspace} {{\n"
-            f"struct {iface_cpp_info.weak_name} {{\n"
-            f"    static constexpr bool is_holder = false;\n"
+        iface_cpp_defn_target.writeln(
+            f"namespace {iface_cpp_info.weakspace} {{",
+            f"struct {iface_cpp_info.weak_name} {{",
+            f"    static constexpr bool is_holder = false;",
         )
         # base infos
-        iface_cpp_defn_target.write(
-            f"    static constexpr void const* iid = &{iface_abi_info.iid};\n"
-            f"    using vtable_t = {iface_abi_info.vtable};\n"
+        iface_cpp_defn_target.writeln(
+            f"    static constexpr void const* iid = &{iface_abi_info.iid};",
+            f"    using vtable_t = {iface_abi_info.vtable};",
         )
         # user methods
-        iface_cpp_defn_target.write("    struct virtual_type {\n")
+        iface_cpp_defn_target.writeln(
+            f"    struct virtual_type {{",
+        )
         for method in iface.methods:
             method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
             params_cpp = []
@@ -1068,13 +1119,16 @@ class CppHeadersGenerator:
                 cpp_return_ty_name = type_cpp_info.as_owner
             else:
                 cpp_return_ty_name = "void"
-            iface_cpp_defn_target.write(
-                f"        {cpp_return_ty_name} {method_cpp_info.call_name}({params_cpp_str}) const;\n"
+            iface_cpp_defn_target.writeln(
+                f"        {cpp_return_ty_name} {method_cpp_info.call_name}({params_cpp_str}) const;",
             )
-        iface_cpp_defn_target.write("    };\n")
+        iface_cpp_defn_target.writeln(
+            f"    }};",
+        )
         # author methods
-        iface_cpp_defn_target.write(
-            "    template<typename Impl>\n" "    struct methods_impl {\n"
+        iface_cpp_defn_target.writeln(
+            f"    template<typename Impl>",
+            f"    struct methods_impl {{",
         )
         for method in iface.methods:
             params_abi = [f"{iface_abi_info.as_param} tobj"]
@@ -1087,86 +1141,99 @@ class CppHeadersGenerator:
                 abi_return_ty_name = type_abi_info.as_owner
             else:
                 abi_return_ty_name = "void"
-            iface_cpp_defn_target.write(
-                f"        static {abi_return_ty_name} {method.name}({params_abi_str});\n"
+            iface_cpp_defn_target.writeln(
+                f"        static {abi_return_ty_name} {method.name}({params_abi_str});",
             )
-        iface_cpp_defn_target.write("    };\n")
+        iface_cpp_defn_target.writeln(
+            f"    }};",
+        )
         # FTable implementation
-        iface_cpp_defn_target.write(
-            f"    template<typename Impl>\n"
-            f"    static constexpr {iface_abi_info.ftable} ftbl_impl = {{\n"
+        iface_cpp_defn_target.writeln(
+            f"    template<typename Impl>",
+            f"    static constexpr {iface_abi_info.ftable} ftbl_impl = {{",
         )
         for method in iface.methods:
-            iface_cpp_defn_target.write(
-                f"        .{method.name} = &methods_impl<Impl>::{method.name},\n"
+            iface_cpp_defn_target.writeln(
+                f"        .{method.name} = &methods_impl<Impl>::{method.name},",
             )
-        iface_cpp_defn_target.write("    };\n")
+        iface_cpp_defn_target.writeln(
+            f"    }};",
+        )
         # VTable implementation
-        iface_cpp_defn_target.write(
-            f"    template<typename Impl>\n"
-            f"    static constexpr {iface_abi_info.vtable} vtbl_impl = {{\n"
+        iface_cpp_defn_target.writeln(
+            f"    template<typename Impl>",
+            f"    static constexpr {iface_abi_info.vtable} vtbl_impl = {{",
         )
         for ancestor_info in iface_abi_info.ancestor_list:
             ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor_info.iface)
-            iface_cpp_defn_target.write(
-                f"        .{ancestor_info.ftbl_ptr} = &{ancestor_cpp_info.full_weak_name}::template ftbl_impl<Impl>,\n"
+            iface_cpp_defn_target.writeln(
+                f"        .{ancestor_info.ftbl_ptr} = &{ancestor_cpp_info.full_weak_name}::template ftbl_impl<Impl>,",
             )
-        iface_cpp_defn_target.write("    };\n")
+        iface_cpp_defn_target.writeln(
+            f"    }};",
+        )
         # IdMap implementation
-        iface_cpp_defn_target.write(
-            f"    template<typename Impl>\n"
-            f"    static constexpr IdMapItem idmap_impl[{len(iface_abi_info.ancestor_dict)}] = {{\n"
+        iface_cpp_defn_target.writeln(
+            f"    template<typename Impl>",
+            f"    static constexpr IdMapItem idmap_impl[{len(iface_abi_info.ancestor_dict)}] = {{",
         )
         for ancestor, info in iface_abi_info.ancestor_dict.items():
             ancestor_abi_info = IfaceABIInfo.get(self.am, ancestor)
-            iface_cpp_defn_target.write(
-                f"        {{&{ancestor_abi_info.iid}, &vtbl_impl<Impl>.{info.ftbl_ptr}}},\n"
+            iface_cpp_defn_target.writeln(
+                f"        {{&{ancestor_abi_info.iid}, &vtbl_impl<Impl>.{info.ftbl_ptr}}},",
             )
-        iface_cpp_defn_target.write("    };\n")
+        iface_cpp_defn_target.writeln(
+            f"    }};",
+        )
         # class field
-        iface_cpp_defn_target.write(f"    {iface_abi_info.as_owner} m_handle;\n")
+        iface_cpp_defn_target.writeln(
+            f"    {iface_abi_info.as_owner} m_handle;",
+        )
         # class methods
-        iface_cpp_defn_target.write(
-            "    explicit operator bool() const& {\n"
-            "        return m_handle.vtbl_ptr;\n"
-            "    }\n"
-            "    virtual_type const& operator*() const {\n"
-            "        return *reinterpret_cast<virtual_type const*>(&m_handle);\n"
-            "    }\n"
-            "    virtual_type const* operator->() const {\n"
-            "        return reinterpret_cast<virtual_type const*>(&m_handle);\n"
-            "    }\n"
+        iface_cpp_defn_target.writeln(
+            f"    explicit operator bool() const& {{",
+            f"        return m_handle.vtbl_ptr;",
+            f"    }}",
+            f"    virtual_type const& operator*() const {{",
+            f"        return *reinterpret_cast<virtual_type const*>(&m_handle);",
+            f"    }}",
+            f"    virtual_type const* operator->() const {{",
+            f"        return reinterpret_cast<virtual_type const*>(&m_handle);",
+            f"    }}",
         )
         # convert methods
-        iface_cpp_defn_target.write(
-            f"    explicit {iface_cpp_info.weak_name}({iface_abi_info.as_param} handle) : m_handle(handle) {{}}\n"
-            f"    explicit {iface_cpp_info.weak_name}(::taihe::core::data_view other)\n"
-            f"        : {iface_cpp_info.weak_name}({iface_abi_info.dynamic_cast}(other.data_ptr)) {{}}\n"
-            f"    operator ::taihe::core::data_view() const& {{\n"
-            f"        {iface_abi_info.as_owner} ret_handle = m_handle;\n"
-            f"        return ::taihe::core::data_view(ret_handle.data_ptr);\n"
-            f"    }}\n"
-            f"    operator ::taihe::core::data_holder() const& {{\n"
-            f"        {iface_abi_info.as_owner} ret_handle = {iface_abi_info.copy_func}(m_handle);\n"
-            f"        return ::taihe::core::data_holder(ret_handle.data_ptr);\n"
-            f"    }}\n"
+        iface_cpp_defn_target.writeln(
+            f"    explicit {iface_cpp_info.weak_name}({iface_abi_info.as_param} handle) : m_handle(handle) {{}}",
+            f"    explicit {iface_cpp_info.weak_name}(::taihe::core::data_view other)",
+            f"        : {iface_cpp_info.weak_name}({iface_abi_info.dynamic_cast}(other.data_ptr)) {{}}",
+            f"    operator ::taihe::core::data_view() const& {{",
+            f"        {iface_abi_info.as_owner} ret_handle = m_handle;",
+            f"        return ::taihe::core::data_view(ret_handle.data_ptr);",
+            f"    }}",
+            f"    operator ::taihe::core::data_holder() const& {{",
+            f"        {iface_abi_info.as_owner} ret_handle = {iface_abi_info.copy_func}(m_handle);",
+            f"        return ::taihe::core::data_holder(ret_handle.data_ptr);",
+            f"    }}",
         )
         for ancestor, info in iface_abi_info.ancestor_dict.items():
             if info.offset == 0:
                 continue
             ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
             iface_cpp_defn_target.include(ancestor_cpp_info.defn_header)
-            iface_cpp_defn_target.write(
-                f"    operator {ancestor_cpp_info.full_weak_name}() const& {{\n"
-                f"        {iface_abi_info.as_owner} ret_handle = m_handle;\n"
-                f"        return {ancestor_cpp_info.full_weak_name}({info.static_cast}(ret_handle));\n"
-                f"    }}\n"
-                f"    operator {ancestor_cpp_info.full_norm_name}() const& {{\n"
-                f"        {iface_abi_info.as_owner} ret_handle = {iface_abi_info.copy_func}(m_handle);\n"
-                f"        return {ancestor_cpp_info.full_norm_name}({info.static_cast}(ret_handle));\n"
-                f"    }}\n"
+            iface_cpp_defn_target.writeln(
+                f"    operator {ancestor_cpp_info.full_weak_name}() const& {{",
+                f"        {iface_abi_info.as_owner} ret_handle = m_handle;",
+                f"        return {ancestor_cpp_info.full_weak_name}({info.static_cast}(ret_handle));",
+                f"    }}",
+                f"    operator {ancestor_cpp_info.full_norm_name}() const& {{",
+                f"        {iface_abi_info.as_owner} ret_handle = {iface_abi_info.copy_func}(m_handle);",
+                f"        return {ancestor_cpp_info.full_norm_name}({info.static_cast}(ret_handle));",
+                f"    }}",
             )
-        iface_cpp_defn_target.write("};\n" "}\n")
+        iface_cpp_defn_target.writeln(
+            f"}};",
+            f"}}",
+        )
 
     def gen_iface_holder_defn(
         self,
@@ -1175,67 +1242,70 @@ class CppHeadersGenerator:
         iface_cpp_info: IfaceCppInfo,
         iface_cpp_defn_target: COutputBuffer,
     ):
-        iface_cpp_defn_target.write(
-            f"namespace {iface_cpp_info.namespace} {{\n"
-            f"struct {iface_cpp_info.norm_name} : public {iface_cpp_info.full_weak_name} {{\n"
-            f"    static constexpr bool is_holder = true;\n"
+        iface_cpp_defn_target.writeln(
+            f"namespace {iface_cpp_info.namespace} {{",
+            f"struct {iface_cpp_info.norm_name} : public {iface_cpp_info.full_weak_name} {{",
+            f"    static constexpr bool is_holder = true;",
         )
         # convert methods
-        iface_cpp_defn_target.write(
-            f"    explicit {iface_cpp_info.norm_name}({iface_abi_info.as_owner} handle) : {iface_cpp_info.full_weak_name}(handle) {{}}\n"
-            f"    {iface_cpp_info.norm_name}& operator=({iface_cpp_info.full_norm_name} other) {{\n"
-            f"        ::std::swap(m_handle, other.m_handle);\n"
-            f"        return *this;\n"
-            f"    }}\n"
-            f"    ~{iface_cpp_info.norm_name}() {{\n"
-            f"        {iface_abi_info.drop_func}(m_handle);\n"
-            f"    }}\n"
-            f"    {iface_cpp_info.norm_name}({iface_cpp_info.full_weak_name} const& other)\n"
-            f"        : {iface_cpp_info.norm_name}({iface_abi_info.copy_func}(other.m_handle)) {{}}\n"
-            f"    {iface_cpp_info.norm_name}({iface_cpp_info.full_norm_name} const& other)\n"
-            f"        : {iface_cpp_info.norm_name}({iface_abi_info.copy_func}(other.m_handle)) {{}}\n"
-            f"    {iface_cpp_info.norm_name}({iface_cpp_info.full_norm_name} && other)\n"
-            f"        : {iface_cpp_info.norm_name}(other.m_handle) {{\n"
-            f"        other.m_handle.data_ptr = nullptr;\n"
-            f"    }}\n"
-            f"    explicit {iface_cpp_info.norm_name}(::taihe::core::data_holder other)\n"
-            f"        : {iface_cpp_info.norm_name}({iface_abi_info.dynamic_cast}(other.data_ptr)) {{\n"
-            f"        other.data_ptr = nullptr;\n"
-            f"    }}\n"
-            f"    operator ::taihe::core::data_view() const& {{\n"
-            f"        {iface_abi_info.as_owner} ret_handle = m_handle;\n"
-            f"        return ::taihe::core::data_view(ret_handle.data_ptr);\n"
-            f"    }}\n"
-            f"    operator ::taihe::core::data_holder() const& {{\n"
-            f"        {iface_abi_info.as_owner} ret_handle = {iface_abi_info.copy_func}(m_handle);\n"
-            f"        return ::taihe::core::data_holder(ret_handle.data_ptr);\n"
-            f"    }}\n"
-            f"    operator ::taihe::core::data_holder() && {{\n"
-            f"        {iface_abi_info.as_owner} ret_handle = m_handle;\n"
-            f"        m_handle.data_ptr = nullptr;\n"
-            f"        return ::taihe::core::data_holder(ret_handle.data_ptr);\n"
-            f"    }}\n"
+        iface_cpp_defn_target.writeln(
+            f"    explicit {iface_cpp_info.norm_name}({iface_abi_info.as_owner} handle) : {iface_cpp_info.full_weak_name}(handle) {{}}",
+            f"    {iface_cpp_info.norm_name}& operator=({iface_cpp_info.full_norm_name} other) {{",
+            f"        ::std::swap(m_handle, other.m_handle);",
+            f"        return *this;",
+            f"    }}",
+            f"    ~{iface_cpp_info.norm_name}() {{",
+            f"        {iface_abi_info.drop_func}(m_handle);",
+            f"    }}",
+            f"    {iface_cpp_info.norm_name}({iface_cpp_info.full_weak_name} const& other)",
+            f"        : {iface_cpp_info.norm_name}({iface_abi_info.copy_func}(other.m_handle)) {{}}",
+            f"    {iface_cpp_info.norm_name}({iface_cpp_info.full_norm_name} const& other)",
+            f"        : {iface_cpp_info.norm_name}({iface_abi_info.copy_func}(other.m_handle)) {{}}",
+            f"    {iface_cpp_info.norm_name}({iface_cpp_info.full_norm_name} && other)",
+            f"        : {iface_cpp_info.norm_name}(other.m_handle) {{",
+            f"        other.m_handle.data_ptr = nullptr;",
+            f"    }}",
+            f"    explicit {iface_cpp_info.norm_name}(::taihe::core::data_holder other)",
+            f"        : {iface_cpp_info.norm_name}({iface_abi_info.dynamic_cast}(other.data_ptr)) {{",
+            f"        other.data_ptr = nullptr;",
+            f"    }}",
+            f"    operator ::taihe::core::data_view() const& {{",
+            f"        {iface_abi_info.as_owner} ret_handle = m_handle;",
+            f"        return ::taihe::core::data_view(ret_handle.data_ptr);",
+            f"    }}",
+            f"    operator ::taihe::core::data_holder() const& {{",
+            f"        {iface_abi_info.as_owner} ret_handle = {iface_abi_info.copy_func}(m_handle);",
+            f"        return ::taihe::core::data_holder(ret_handle.data_ptr);",
+            f"    }}",
+            f"    operator ::taihe::core::data_holder() && {{",
+            f"        {iface_abi_info.as_owner} ret_handle = m_handle;",
+            f"        m_handle.data_ptr = nullptr;",
+            f"        return ::taihe::core::data_holder(ret_handle.data_ptr);",
+            f"    }}",
         )
         for ancestor, info in iface_abi_info.ancestor_dict.items():
             if info.offset == 0:
                 continue
             ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
-            iface_cpp_defn_target.write(
-                f"    operator {ancestor_cpp_info.full_weak_name}() const& {{\n"
-                f"        {iface_abi_info.as_owner} ret_handle = m_handle;\n"
-                f"        return {ancestor_cpp_info.full_weak_name}({info.static_cast}(ret_handle));\n"
-                f"    }}\n"
-                f"    operator {ancestor_cpp_info.full_norm_name}() const& {{\n"
-                f"        {iface_abi_info.as_owner} ret_handle = {iface_abi_info.copy_func}(m_handle);\n"
-                f"        return {ancestor_cpp_info.full_norm_name}({info.static_cast}(ret_handle));\n"
-                f"    }}\n"
-                f"    operator {ancestor_cpp_info.full_norm_name}() && {{\n"
-                f"        {iface_abi_info.as_owner} ret_handle = m_handle;\n"
-                f"        m_handle.data_ptr = nullptr;\n"
-                f"        return {ancestor_cpp_info.full_norm_name}({info.static_cast}(ret_handle));\n"
-                f"    }}\n"
+            iface_cpp_defn_target.writeln(
+                f"    operator {ancestor_cpp_info.full_weak_name}() const& {{",
+                f"        {iface_abi_info.as_owner} ret_handle = m_handle;",
+                f"        return {ancestor_cpp_info.full_weak_name}({info.static_cast}(ret_handle));",
+                f"    }}",
+                f"    operator {ancestor_cpp_info.full_norm_name}() const& {{",
+                f"        {iface_abi_info.as_owner} ret_handle = {iface_abi_info.copy_func}(m_handle);",
+                f"        return {ancestor_cpp_info.full_norm_name}({info.static_cast}(ret_handle));",
+                f"    }}",
+                f"    operator {ancestor_cpp_info.full_norm_name}() && {{",
+                f"        {iface_abi_info.as_owner} ret_handle = m_handle;",
+                f"        m_handle.data_ptr = nullptr;",
+                f"        return {ancestor_cpp_info.full_norm_name}({info.static_cast}(ret_handle));",
+                f"    }}",
             )
-        iface_cpp_defn_target.write("};\n" "}\n")
+        iface_cpp_defn_target.writeln(
+            f"}};",
+            f"}}",
+        )
 
     def gen_iface_type_traits(
         self,
@@ -1244,21 +1314,21 @@ class CppHeadersGenerator:
         iface_cpp_info: IfaceCppInfo,
         iface_cpp_defn_target: COutputBuffer,
     ):
-        iface_cpp_defn_target.write(
-            f"namespace taihe::core {{\n"
-            f"template<>\n"
-            f"struct as_abi<{iface_cpp_info.as_owner}> {{\n"
-            f"    using type = {iface_abi_info.as_owner};\n"
-            f"}};\n"
-            f"template<>\n"
-            f"struct as_abi<{iface_cpp_info.as_param}> {{\n"
-            f"    using type = {iface_abi_info.as_param};\n"
-            f"}};\n"
-            f"template<>\n"
-            f"struct as_param<{iface_cpp_info.as_owner}> {{\n"
-            f"    using type = {iface_cpp_info.as_param};\n"
-            f"}};\n"
-            f"}}\n"
+        iface_cpp_defn_target.writeln(
+            f"namespace taihe::core {{",
+            f"template<>",
+            f"struct as_abi<{iface_cpp_info.as_owner}> {{",
+            f"    using type = {iface_abi_info.as_owner};",
+            f"}};",
+            f"template<>",
+            f"struct as_abi<{iface_cpp_info.as_param}> {{",
+            f"    using type = {iface_abi_info.as_param};",
+            f"}};",
+            f"template<>",
+            f"struct as_param<{iface_cpp_info.as_owner}> {{",
+            f"    using type = {iface_cpp_info.as_param};",
+            f"}};",
+            f"}}",
         )
 
     def gen_iface_impl_file(
@@ -1315,12 +1385,12 @@ class CppHeadersGenerator:
             else:
                 cpp_return_ty_name = "void"
                 cpp_result = abi_result
-            iface_cpp_impl_target.write(
-                f"namespace {iface_cpp_info.weakspace} {{\n"
-                f"inline {cpp_return_ty_name} {iface_cpp_info.weak_name}::virtual_type::{method_cpp_info.call_name}({params_cpp_str}) const {{\n"
-                f"    return {cpp_result};\n"
-                f"}}\n"
-                f"}}\n"
+            iface_cpp_impl_target.writeln(
+                f"namespace {iface_cpp_info.weakspace} {{",
+                f"inline {cpp_return_ty_name} {iface_cpp_info.weak_name}::virtual_type::{method_cpp_info.call_name}({params_cpp_str}) const {{",
+                f"    return {cpp_result};",
+                f"}}",
+                f"}}",
             )
 
     def gen_iface_author_methods(
@@ -1350,11 +1420,11 @@ class CppHeadersGenerator:
             else:
                 abi_return_ty_name = "void"
                 abi_result = cpp_result
-            iface_cpp_impl_target.write(
-                f"namespace {iface_cpp_info.weakspace} {{\n"
-                f"template<typename Impl>\n"
-                f"{abi_return_ty_name} {iface_cpp_info.weak_name}::methods_impl<Impl>::{method.name}({params_abi_str}) {{\n"
-                f"    return {abi_result};\n"
-                f"}}\n"
-                f"}}\n"
+            iface_cpp_impl_target.writeln(
+                f"namespace {iface_cpp_info.weakspace} {{",
+                f"template<typename Impl>",
+                f"{abi_return_ty_name} {iface_cpp_info.weak_name}::methods_impl<Impl>::{method.name}({params_abi_str}) {{",
+                f"    return {abi_result};",
+                f"}}",
+                f"}}",
             )
