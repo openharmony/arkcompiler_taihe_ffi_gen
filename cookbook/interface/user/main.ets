@@ -1,13 +1,17 @@
-import {window, get_interface, check_interface} from "../author_generated/interface"
-
+import { makeCalculator, ICalculator, restartCalculator } from "../author_generated/interface"
 loadLibrary("interface")
 function main() {
-    let win: window = get_interface(10);
-    let res = win.getheight();
-    console.log(res);
-    win.setheight(20);
-    res = win.getheight();
-    console.log(res);
-
-    check_interface(win)
+    let cal = makeCalculator();
+    let num1 = 1;
+    let num2 = 2;
+    let result1 = cal.add(num1, num2);
+    console.log("num1 + num2 = " + result1);
+    let result2 = cal.sub(num1, num2);
+    console.log("num1 - num2 = " + result2);
+    let result3 = cal.getLastResult();
+    console.log("Last calculation result: " + result3);
+    console.log("---restart_calculator---");
+    restartCalculator(cal);
+    let result4 = cal.getLastResult();
+    console.log("Last calculation result: " + result4);
 }

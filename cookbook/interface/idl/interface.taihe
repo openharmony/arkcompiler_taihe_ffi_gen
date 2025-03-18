@@ -1,7 +1,9 @@
-interface window {
-    getheight(): i32;
-    setheight(b: i32): void;
+interface ICalculator {
+    add(a: i32, b: i32): i32;
+    sub(a: i32, b: i32): i32;
+    getLastResult(): i32;
+    reset(): void;
 }
 
-function get_interface(v: i32): window;
-function check_interface(a: window): void;
+function makeCalculator(): ICalculator;
+function restartCalculator(a: ICalculator): void;

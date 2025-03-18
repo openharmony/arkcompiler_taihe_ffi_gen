@@ -1,35 +1,38 @@
 #include "interface.impl.hpp"
-#include <cstdint>
-#include <iostream>
-
+#include "stdexcept"
+#include "interface.ICalculator.proj.2.hpp"
+// Please delete <stdexcept> include when you implement
 using namespace taihe::core;
-
 namespace {
 
-class native_window {
-private:
-    int32_t height;
+class ICalculator {
 public:
-    native_window(int32_t v)
-        : height(v) {}
-    int32_t getheight() {
-        return this->height;
+    int32_t add(int32_t a, int32_t b) {
+        lastResult = a + b;
+        return lastResult;
     }
-    void setheight(int32_t b) {
-        this->height = b;
+    int32_t sub(int32_t a, int32_t b) {
+        lastResult = a - b;
+        return lastResult;
     }
+    int32_t getLastResult() {
+        return lastResult;
+    }
+    void reset() {
+        lastResult = 0;
+    }
+private:
+    int32_t lastResult = 0;
 };
 
-::interface::window get_interface(int32_t v) {
-    return make_holder<native_window, ::interface::window>(v);
+::interface::ICalculator makeCalculator() {
+    return make_holder<ICalculator, ::interface::ICalculator>();
+}
+void restartCalculator(::interface::weak::ICalculator a) {
+    a->reset();
 }
 
-void check_interface(::interface::weak::window a) {
-    int32_t res = a->getheight();
-    std::cout << res << std::endl;
 }
 
-}
-
-TH_EXPORT_CPP_API_get_interface(get_interface)
-TH_EXPORT_CPP_API_check_interface(check_interface)
+TH_EXPORT_CPP_API_makeCalculator(makeCalculator)
+TH_EXPORT_CPP_API_restartCalculator(restartCalculator)
