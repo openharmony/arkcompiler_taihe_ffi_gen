@@ -147,7 +147,14 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
         segments = [*p.segments, f.name]
         self.mangled_name = encode(segments, DeclKind.ANI_FUNC)
 
-        self.sts_name = f.name
+        self.sts_native_name = f.name
+
+        self.sts_params: list[tuple[str, Type | None]] = []
+        self.sts_args: list[str] = []
+        for param in f.params:
+            sts_param = (param.name, param.ty_ref.resolved_ty)
+            self.sts_params.append(sts_param)
+            self.sts_args.append(param.name)
 
 
 class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
@@ -159,7 +166,20 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
         segments = [*p.segments, d.name, f.name]
         self.mangled_name = encode(segments, DeclKind.ANI_FUNC)
 
-        self.sts_name = f.name
+        self.sts_native_name = f.name
+
+        self.sts_params: list[tuple[str, Type | None]] = []
+        self.sts_args: list[str] = []
+        for param in f.params:
+            if param.attrs.get("sts_this"):
+                self.sts_args.append("this")
+                continue
+            if sts_member := param.attrs.get("sts_member"):
+                self.sts_args.append(f"this.{sts_member.value}")
+                continue
+            sts_param = (param.name, param.ty_ref.resolved_ty)
+            self.sts_params.append(sts_param)
+            self.sts_args.append(param.name)
 
 
 class StructANIInfo(AbstractAnalysis[StructDecl]):
@@ -862,23 +882,12 @@ class STSCodeGenerator:
 
         # pkg_sts_target.write(f'loadLibrary("{self.lib_name}");\n')
 
-        # for struct in pkg.structs:
-        #     self.gen_struct_inner(struct, pkg_sts_target)
-        # for enum in pkg.enums:
-        #     self.gen_enum_inner(enum, pkg_sts_target)
         for iface in pkg.interfaces:
             self.gen_iface_inner(iface, pkg_sts_target)
 
-        # for struct in pkg.structs:
-        #     self.gen_struct_interface(struct, pkg_sts_target)
-        # for enum in pkg.enums:
-        #     self.gen_enum_interface(enum, pkg_sts_target)
         callback_flag = 0
         for iface in pkg.interfaces:
             self.gen_iface_interface(iface, pkg_sts_target)
-            for method in iface.methods:
-                if method.attrs.get("gen_async"):
-                    callback_flag = 1
 
         for struct in pkg.structs:
             self.gen_struct(struct, pkg_sts_target)
@@ -887,6 +896,13 @@ class STSCodeGenerator:
 
         for func in pkg.functions:
             self.gen_func(func, pkg_sts_target)
+
+        callback_flag = 0
+        for iface in pkg.interfaces:
+            for method in iface.methods:
+                if method.attrs.get("gen_async"):
+                    callback_flag = 1
+        for func in pkg.functions:
             if func.attrs.get("gen_async"):
                 callback_flag = 1
         if callback_flag:
@@ -914,79 +930,47 @@ class STSCodeGenerator:
         else:
             sts_return_ty_name = "void"
         pkg_sts_target.write(
-            f"export native function {func_ani_info.sts_name}({params_sts_str}): {sts_return_ty_name};\n"
+            f"native function {func_ani_info.sts_native_name}({params_sts_str}): {sts_return_ty_name};\n"
         )
-
+        # async
         if async_func := func.attrs.get("gen_async"):
             params_sts.append(f"callback: AsyncCallback<{sts_return_ty_name}>")
             params_sts_str_call_method = ", ".join(params_sts)
             async_func_name = async_func.value
             pkg_sts_target.write(
                 f"export function {async_func_name}({params_sts_str_call_method}): void {{\n"
-                f"    let p1 = launch {func_ani_info.sts_name}({params_name_str});\n"
+                f"    (launch {func_ani_info.sts_native_name}({params_name_str}))\n"
             )
             if sts_return_ty_name == "void":
                 pkg_sts_target.write(
-                    f"    p1.then((): void => {{\n"
+                    f"    .then((): void => {{\n"
                     f"        let error = new Error();\n"
                     f"        callback(error);\n"
+                    f"    }})\n"
                 )
             else:
                 pkg_sts_target.write(
-                    f"    p1.then((ret: NullishType) => {{\n"
+                    f"    .then((ret: NullishType) => {{\n"
                     f"            let retInner = ret as {sts_return_ty_name};\n"
                     f"            let error = new Error();\n"
                     f"            callback(error, retInner);\n"
+                    f"    }})\n"
                 )
             pkg_sts_target.write(
-                f"    }})\n"
                 f"    .catch((ret: NullishType) => {{\n"
                 f"        let retError = ret as Error;\n"
                 f"        callback(retError);\n"
                 f"    }});\n"
                 f"}}\n"
             )
-
+        # promise
         if promise_func := func.attrs.get("gen_promise"):
             promise_func_name = promise_func.value
             pkg_sts_target.write(
                 f"export function {promise_func_name}({params_sts_str}): Promise<{sts_return_ty_name}> {{\n"
-                f"    return launch {func_ani_info.sts_name}({params_name_str});\n"
+                f"    return launch {func_ani_info.sts_native_name}({params_name_str});\n"
                 f"}}\n"
             )
-
-    # def gen_struct_interface(
-    #     self,
-    #     struct: StructDecl,
-    #     pkg_sts_target: OutputBuffer,
-    # ):
-    #     struct_ani_info = StructANIInfo.get(self.am, struct)
-    #     pkg_sts_target.write(f"export interface {struct_ani_info.sts_type} {{\n")
-    #     for field in struct.fields:
-    #         ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
-    #         pkg_sts_target.write(f"    {field.name}: {ty_ani_info.sts_type};\n")
-    #     pkg_sts_target.write("}\n")
-
-    # def gen_struct_inner(
-    #     self,
-    #     struct: StructDecl,
-    #     pkg_sts_target: OutputBuffer,
-    # ):
-    #     struct_ani_info = StructANIInfo.get(self.am, struct)
-    #     pkg_sts_target.write(
-    #         f"class {struct_ani_info.sts_impl} implements {struct_ani_info.sts_type} {{\n"
-    #     )
-    #     for field in struct.fields:
-    #         ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
-    #         pkg_sts_target.write(f"    {field.name}: {ty_ani_info.sts_type};\n")
-    #     pkg_sts_target.write("    constructor(\n")
-    #     for field in struct.fields:
-    #         ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
-    #         pkg_sts_target.write(f"        {field.name}: {ty_ani_info.sts_type},\n")
-    #     pkg_sts_target.write("    ) {\n")
-    #     for field in struct.fields:
-    #         pkg_sts_target.write(f"        this.{field.name} = {field.name};\n")
-    #     pkg_sts_target.write("    }\n" "}\n")
 
     def gen_struct(
         self,
@@ -1006,52 +990,6 @@ class STSCodeGenerator:
         for field in struct.fields:
             pkg_sts_target.write(f"        this.{field.name} = {field.name};\n")
         pkg_sts_target.write("    }\n" "}\n")
-
-    # def gen_enum_interface(
-    #     self,
-    #     enum: EnumDecl,
-    #     pkg_sts_target: OutputBuffer,
-    # ):
-    #     enum_ani_info = EnumANIInfo.get(self.am, enum)
-    #     sts_value_types = []
-    #     for item in enum.items:
-    #         if item.ty_ref is None:
-    #             sts_value_types.append("undefined")
-    #             continue
-    #         ty_ani_info = TypeANIInfo.get(self.am, item.ty_ref.resolved_ty)
-    #         sts_value_types.append(f"{ty_ani_info.sts_type}")
-    #     sts_value_types_str = " | ".join(sts_value_types)
-    #     pkg_sts_target.write(
-    #         f"export interface {enum_ani_info.sts_type} {{\n"
-    #         f"    tag: int;\n"
-    #         f"    value: {sts_value_types_str};\n"
-    #         f"}}\n"
-    #     )
-
-    # def gen_enum_inner(
-    #     self,
-    #     enum: EnumDecl,
-    #     pkg_sts_target: OutputBuffer,
-    # ):
-    #     enum_ani_info = EnumANIInfo.get(self.am, enum)
-    #     sts_value_types = []
-    #     for item in enum.items:
-    #         if item.ty_ref is None:
-    #             sts_value_types.append("undefined")
-    #             continue
-    #         ty_ani_info = TypeANIInfo.get(self.am, item.ty_ref.resolved_ty)
-    #         sts_value_types.append(f"{ty_ani_info.sts_type}")
-    #     sts_value_types_str = " | ".join(sts_value_types)
-    #     pkg_sts_target.write(
-    #         f"class {enum_ani_info.sts_impl} implements {enum_ani_info.sts_type} {{\n"
-    #         f"    tag: int;\n"
-    #         f"    value: {sts_value_types_str};\n"
-    #         f"    constructor(tag: int, value: {sts_value_types_str}) {{\n"
-    #         f"        this.tag = tag;\n"
-    #         f"        this.value = value;\n"
-    #         f"    }}\n"
-    #         f"}}\n"
-    #     )
 
     def gen_enum(
         self,
@@ -1098,7 +1036,7 @@ class STSCodeGenerator:
             else:
                 sts_return_ty_name = "void"
             pkg_sts_target.write(
-                f"    {iface_method_info.sts_name}({params_sts_str}): {sts_return_ty_name};\n"
+                f"    {iface_method_info.sts_native_name}({params_sts_str}): {sts_return_ty_name};\n"
             )
 
             if async_func := method.attrs.get("gen_async"):
@@ -1148,43 +1086,45 @@ class STSCodeGenerator:
             else:
                 sts_return_ty_name = "void"
             pkg_sts_target.write(
-                f"    native {iface_method_info.sts_name}({params_sts_str}): {sts_return_ty_name};\n"
+                f"    native {iface_method_info.sts_native_name}({params_sts_str}): {sts_return_ty_name};\n"
             )
-
+            # async
             params_sts.append(f"callback: AsyncCallback<{sts_return_ty_name}>")
             params_sts_str_with_call = ", ".join(params_sts)
             if async_func := method.attrs.get("gen_async"):
                 async_func_name = async_func.value
                 pkg_sts_target.write(
                     f"    {async_func_name}({params_sts_str_with_call}): void {{\n"
-                    f"        let p1 = launch this.{iface_method_info.sts_name}({params_name_str});\n"
+                    f"        (launch this.{iface_method_info.sts_native_name}({params_name_str}))\n"
                 )
                 if sts_return_ty_name == "void":
                     pkg_sts_target.write(
-                        f"        p1.then((): void => {{\n"
+                        f"        .then((): void => {{\n"
                         f"            let error = new Error();\n"
                         f"            callback(error);\n"
+                        f"        }})\n"
                     )
                 else:
                     pkg_sts_target.write(
-                        f"        p1.then((ret: NullishType) => {{\n"
+                        f"        .then((ret: NullishType) => {{\n"
                         f"            let retInner = ret as {sts_return_ty_name};\n"
                         f"            let error = new Error();\n"
                         f"            callback(error, retInner);\n"
+                        f"        }})\n"
                     )
                 pkg_sts_target.write(
-                    f"        }})\n"
                     f"        .catch((ret: NullishType) => {{\n"
                     f"            let retError = ret as Error;\n"
                     f"            callback(retError);\n"
                     f"        }});\n"
                     f"    }}\n"
                 )
+            # promise
             if promise_func := method.attrs.get("gen_promise"):
                 promise_func_name = promise_func.value
                 pkg_sts_target.write(
                     f"    {promise_func_name}({params_sts_str}): Promise<{sts_return_ty_name}> {{\n"
-                    f"        return launch this.{iface_method_info.sts_name}({params_name_str});\n"
+                    f"        return launch this.{iface_method_info.sts_native_name}({params_name_str});\n"
                     f"    }}\n"
                 )
         pkg_sts_target.write("}\n")
@@ -1275,9 +1215,9 @@ class ANICodeGenerator:
         func_infos = []
         for func in pkg.functions:
             glob_func_info = GlobFuncANIInfo.get(self.am, func)
-            sts_name = glob_func_info.sts_name
+            sts_native_name = glob_func_info.sts_native_name
             mangled_name = glob_func_info.mangled_name
-            func_infos.append((sts_name, mangled_name))
+            func_infos.append((sts_native_name, mangled_name))
         register_infos.append((impl_desc, func_infos))
         for iface in pkg.interfaces:
             iface_ani_info = IfaceANIInfo.get(self.am, iface)
@@ -1285,9 +1225,9 @@ class ANICodeGenerator:
             func_infos = []
             for method in iface.methods:
                 method_ani_info = IfaceMethodANIInfo.get(self.am, method)
-                sts_name = method_ani_info.sts_name
+                sts_native_name = method_ani_info.sts_native_name
                 mangled_name = method_ani_info.mangled_name
-                func_infos.append((sts_name, mangled_name))
+                func_infos.append((sts_native_name, mangled_name))
             register_infos.append((impl_desc, func_infos))
         pkg_ani_source_target.write(
             f"namespace {pkg_ani_info.namespace} {{\n"
@@ -1302,9 +1242,9 @@ class ANICodeGenerator:
                 f"        }}\n"
                 f"        ani_native_function methods[] = {{\n"
             )
-            for sts_name, mangled_name in func_infos:
+            for sts_native_name, mangled_name in func_infos:
                 pkg_ani_source_target.write(
-                    f'            {{"{sts_name}", nullptr, reinterpret_cast<void*>({mangled_name})}},\n'
+                    f'            {{"{sts_native_name}", nullptr, reinterpret_cast<void*>({mangled_name})}},\n'
                 )
             pkg_ani_source_target.write(
                 "        };\n"
@@ -1520,7 +1460,7 @@ class ANICodeGenerator:
                     )
                     iface_ani_impl_target.write(
                         f"            {type_ani_info.ani_type} {ani_result};\n"
-                        f'            this->env->Object_CallMethodByName_{type_ani_info.ani_type.suffix}(this->ref, "{method_ani_info.sts_name}", nullptr, reinterpret_cast<{type_ani_info.ani_type.base}*>(&{ani_result}){args_ani_trailing});\n'
+                        f'            this->env->Object_CallMethodByName_{type_ani_info.ani_type.suffix}(this->ref, "{method_ani_info.sts_native_name}", nullptr, reinterpret_cast<{type_ani_info.ani_type.base}*>(&{ani_result}){args_ani_trailing});\n'
                     )
                     type_ani_info.from_ani(
                         iface_ani_impl_target, 8, "env", ani_result, cpp_result
@@ -1528,7 +1468,7 @@ class ANICodeGenerator:
                     iface_ani_impl_target.write(f"            return {cpp_result};\n")
                 else:
                     iface_ani_impl_target.write(
-                        f'            this->env->Object_CallMethodByName_Void(this->ref, "{method_ani_info.sts_name}", nullptr{args_ani_trailing});\n'
+                        f'            this->env->Object_CallMethodByName_Void(this->ref, "{method_ani_info.sts_native_name}", nullptr{args_ani_trailing});\n'
                     )
                 iface_ani_impl_target.write("        }\n")
         iface_ani_impl_target.write(
