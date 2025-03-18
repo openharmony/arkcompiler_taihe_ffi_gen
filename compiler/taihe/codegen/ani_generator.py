@@ -948,6 +948,9 @@ class STSCodeGenerator:
         func: GlobFuncDecl,
         pkg_sts_target: OutputBuffer,
     ):
+        # docstring
+        if (inject_attr := func.attrs.get("inject")) is not None:
+            pkg_sts_target.write(inject_attr.value)
         func_ani_info = GlobFuncANIInfo.get(self.am, func)
         # native
         sts_native_params = []
@@ -1022,6 +1025,9 @@ class STSCodeGenerator:
         struct: StructDecl,
         pkg_sts_target: OutputBuffer,
     ):
+        # docstring
+        if (inject_attr := struct.attrs.get("inject")) is not None:
+            pkg_sts_target.write(inject_attr.value)
         struct_ani_info = StructANIInfo.get(self.am, struct)
         pkg_sts_target.write(f"export class {struct_ani_info.sts_impl} {{\n")
         for field in struct.fields:
@@ -1041,6 +1047,9 @@ class STSCodeGenerator:
         enum: EnumDecl,
         pkg_sts_target: OutputBuffer,
     ):
+        # docstring
+        if (inject_attr := enum.attrs.get("inject")) is not None:
+            pkg_sts_target.write(inject_attr.value)
         enum_ani_info = EnumANIInfo.get(self.am, enum)
         sts_value_types = []
         for item in enum.items:
@@ -1066,9 +1075,15 @@ class STSCodeGenerator:
         iface: IfaceDecl,
         pkg_sts_target: OutputBuffer,
     ):
+        # docstring
+        if (inject_attr := iface.attrs.get("inject")) is not None:
+            pkg_sts_target.write(inject_attr.value)
         iface_ani_info = IfaceANIInfo.get(self.am, iface)
         pkg_sts_target.write(f"export interface {iface_ani_info.sts_type} {{\n")
         for method in iface.methods:
+            # docstring
+            if (inject_attr := method.attrs.get("inject")) is not None:
+                pkg_sts_target.write(inject_attr.value)
             method_ani_info = IfaceMethodANIInfo.get(self.am, method)
             sts_real_params = []
             for sts_real_param in method_ani_info.sts_real_params:
@@ -1120,6 +1135,8 @@ class STSCodeGenerator:
             f"    }}\n"
         )
         for method in iface.methods:
+            if (inject_attr := method.attrs.get("class_inject")) is not None:
+                pkg_sts_target.write(inject_attr.value)
             method_ani_info = IfaceMethodANIInfo.get(self.am, method)
             # native
             sts_native_params = []

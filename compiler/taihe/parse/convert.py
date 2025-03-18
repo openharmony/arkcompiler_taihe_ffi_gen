@@ -149,7 +149,17 @@ class ExprEvaluator(Visitor):
 
     @override
     def visit_LiteralStringExpr(self, node: ast.LiteralStringExpr) -> str:
-        return "".join(decode(val.text[1:-1], "unicode-escape") for val in node.vals)
+        return "".join(
+            decode(
+                (
+                    val.text[3:-3]
+                    if len(val.text) > 2 and val.text[1] == '"' and val.text[-2] == '"'
+                    else val.text[1:-1]
+                ),
+                "unicode-escape",
+            )
+            for val in node.vals
+        )
 
 
 class AstConverter(ExprEvaluator):
@@ -185,6 +195,12 @@ class AstConverter(ExprEvaluator):
     @override
     def visit_TupleAttrItem(self, node: ast.TupleAttrItem) -> AttrItemDecl:
         value = tuple(self.visit(val.expr) for val in node.vals)
+        d = AttrItemDecl(self.loc(node.name), str(node.name), value)
+        return d
+
+    @override
+    def visit_DocstringItem(self, node: ast.DocstringItem) -> AttrItemDecl:
+        value = self.visit(node.expr)
         d = AttrItemDecl(self.loc(node.name), str(node.name), value)
         return d
 
@@ -259,6 +275,7 @@ class AstConverter(ExprEvaluator):
     def visit_StructProperty(self, node: ast.StructProperty) -> StructFieldDecl:
         d = StructFieldDecl(self.loc(node.name), str(node.name), self.visit(node.ty))
         self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
+        self.diag.for_each(node.docstrings, lambda a: d.add_attr(self.visit(a)))
         return d
 
     @override
@@ -266,6 +283,7 @@ class AstConverter(ExprEvaluator):
         d = StructDecl(self.loc(node.name), str(node.name))
         self.diag.for_each(node.fields, lambda f: d.add_field(self.visit(f)))
         self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
+        self.diag.for_each(node.docstrings, lambda a: d.add_attr(self.visit(a)))
         return d
 
     @override
@@ -277,6 +295,7 @@ class AstConverter(ExprEvaluator):
             value=self.visit(node.expr) if node.expr else None,
         )
         self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
+        self.diag.for_each(node.docstrings, lambda a: d.add_attr(self.visit(a)))
         return d
 
     @override
@@ -284,12 +303,14 @@ class AstConverter(ExprEvaluator):
         d = EnumDecl(self.loc(node.name), str(node.name))
         self.diag.for_each(node.fields, lambda f: d.add_item(self.visit(f)))
         self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
+        self.diag.for_each(node.docstrings, lambda a: d.add_attr(self.visit(a)))
         return d
 
     @override
     def visit_Parameter(self, node: ast.Parameter) -> ParamDecl:
         d = ParamDecl(self.loc(node.name), str(node.name), self.visit(node.ty))
         self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
+        self.diag.for_each(node.docstrings, lambda a: d.add_attr(self.visit(a)))
         return d
 
     @override
@@ -300,6 +321,7 @@ class AstConverter(ExprEvaluator):
             d = IfaceMethodDecl(self.loc(node.name), str(node.name))
         self.diag.for_each(node.parameters, lambda p: d.add_param(self.visit(p)))
         self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
+        self.diag.for_each(node.docstrings, lambda a: d.add_attr(self.visit(a)))
         return d
 
     @override
@@ -313,6 +335,7 @@ class AstConverter(ExprEvaluator):
         self.diag.for_each(node.fields, lambda f: d.add_method(self.visit(f)))
         self.diag.for_each(node.extends, lambda i: d.add_parent(self.visit(i)))
         self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
+        self.diag.for_each(node.docstrings, lambda a: d.add_attr(self.visit(a)))
         return d
 
     @override
@@ -323,6 +346,7 @@ class AstConverter(ExprEvaluator):
             d = GlobFuncDecl(self.loc(node.name), str(node.name))
         self.diag.for_each(node.parameters, lambda p: d.add_param(self.visit(p)))
         self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
+        self.diag.for_each(node.docstrings, lambda a: d.add_attr(self.visit(a)))
         return d
 
     # Package
@@ -334,6 +358,7 @@ class AstConverter(ExprEvaluator):
             self.diag.for_each(self.visit(u), pkg.add_import)
         self.diag.for_each(node.fields, lambda n: pkg.add_declaration(self.visit(n)))
         self.diag.for_each(node.attrs, lambda a: pkg.add_attr(self.visit(a)))
+        self.diag.for_each(node.docstrings, lambda a: pkg.add_attr(self.visit(a)))
         return pkg
 
     def convert(self) -> PackageDecl:

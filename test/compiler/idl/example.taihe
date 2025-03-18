@@ -106,4 +106,4 @@ enum RecursiveEnum {
     s: RecursiveStruct;
 }
 
-function f(): () -> void;
+function f(): () => void;
