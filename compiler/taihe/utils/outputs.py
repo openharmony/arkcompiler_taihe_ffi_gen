@@ -64,7 +64,7 @@ class COutputBuffer(OutputBase[[bool]]):
     def __init__(self, is_header: bool):
         self.is_header = is_header
         self.headers: dict[str, None] = {}
-        self.im = IndentManager()
+        self.indent_manager = IndentManager()
         self.code = StringIO()
 
     @override
@@ -83,7 +83,7 @@ class COutputBuffer(OutputBase[[bool]]):
 
     def writeln(self, *codes: str):
         for code in codes:
-            self.code.write(self.im.indent * self.im.unit + code + "\n")
+            self.code.write(self.indent_manager.current + code + "\n")
 
     def include(self, *headers: str, back=False):
         for header in headers:

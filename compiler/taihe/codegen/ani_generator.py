@@ -1,4 +1,5 @@
 from abc import ABCMeta
+from typing import TYPE_CHECKING
 
 from typing_extensions import override
 
@@ -23,7 +24,6 @@ from taihe.semantics.declarations import (
     PackageDecl,
     PackageGroup,
     StructDecl,
-    ParamDecl,
 )
 from taihe.semantics.types import (
     BOOL,
@@ -54,6 +54,11 @@ from taihe.semantics.types import (
 from taihe.semantics.visitor import TypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
 from taihe.utils.outputs import COutputBuffer, OutputBuffer, OutputManager
+
+if TYPE_CHECKING:
+    from taihe.semantics.declarations import (
+        ParamDecl,
+    )
 
 
 class ANIType:
@@ -845,7 +850,7 @@ class TypeANIInfo(TypeVisitor[AbstractTypeANIInfo]):
     @override
     def visit_optional_type(self, t: OptionalType) -> AbstractTypeANIInfo:
         return OptionalTypeANIInfo.get(self.am, t)
-    
+
     @override
     def visit_opaque_type(self, t: OpaqueType) -> AbstractTypeANIInfo:
         return OpaqueTypeANIInfo.get(self.am, t)
