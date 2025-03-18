@@ -49,4 +49,4 @@ ani侧 `binding_Color_intoANI/fromANI()` ->
 
 taihe C++侧 `binding::Color` -> 
 
-taihe C侧函数 `struct binding_Color_t` -> 
+taihe C侧函数 `struct binding_Color_t`
