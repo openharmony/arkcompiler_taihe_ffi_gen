@@ -49,36 +49,3 @@ let sum = hello_world.add(numA, numB)
 console.log("sum is : " + sum)
 // log ouput: sum is : 3
 ```
-
-### taihe如何实现方法的绑定
-
-| 语言  |         ani         | taihe C++  | taihe C | c++ impl|
-|-------|---------------------|-----------|---------|----------|
-| 文件  | hello_world.ani.cpp | hello_world.proj.hpp | hello_world.abi.h | hello_world.impl.cpp |
-| 函数  | `{"add", nullptr, reinterpret_cast<void*>(hello_world_add_ANIFunc0)}` | `hello_world::add` | `hello_world_add_f0` | `add` |
-
-用户实际调用链条为：
-
-ets侧使用函数 `add()` -> 
-
-ani侧函数 `hello_world_add_ANIFunc0()` -> 
-
-taihe C++侧函数 `hello_world::add()` -> 
-
-taihe C侧函数 `hello_world_add_f0()` -> 
-
-实现侧函数 `add()`
-
-对应文件生成在`author_generated/`中
-
-此外，为了方便实现侧开发，在`temp/`中有生成`.impl.cpp`的预实现，用户只需要将此文件里的函数实现改为自己的实现即可
-
-`temp/hello_world.impl.cpp`
-```C++
-string add(int32_t a, int32_t b) {
-    throw std::runtime_error("Function add Not implemented");
-    // author need to modify this implement, jest like:
-    /* std::string sum = std::to_string(a + b);
-     return sum; */
-}
-```
