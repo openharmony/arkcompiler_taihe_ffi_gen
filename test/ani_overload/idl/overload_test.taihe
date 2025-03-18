@@ -1,0 +1,13 @@
+[sts_name = "add"]
+function add_int(a: i32, b: i32): i32;
+[sts_name = "add"]
+function add_str(a: String, b: String): String;
+
+interface Foo {
+    [sts_name = "bar"]
+    bar_int(a: i32): void;
+    [sts_name = "bar"]
+    bar_str(a: String): void;
+}
+
+function makeFoo(): Foo;
