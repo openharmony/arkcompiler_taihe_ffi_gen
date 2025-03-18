@@ -1538,6 +1538,7 @@ class ANICodeGenerator:
                     type_ani_info.into_ani(
                         iface_ani_impl_target, 8, "env", cpp_param_name, ani_arg_name
                     )
+                    args_ani.append(ani_arg_name)
                 args_ani_trailing = "".join(", " + arg_ani for arg_ani in args_ani)
                 ani_result = "result_ani"
                 cpp_result = "result_cpp"
