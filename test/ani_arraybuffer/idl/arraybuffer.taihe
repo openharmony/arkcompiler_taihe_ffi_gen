@@ -1,0 +1,3 @@
+function sumArrayu8(nums: Array<u8>): u8;
+function getArrayBuffer(nums: u8): Array<u8>;
+function doubleArrayBuffer(nums: Array<u8>): Array<u8>;

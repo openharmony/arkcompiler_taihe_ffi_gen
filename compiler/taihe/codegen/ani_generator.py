@@ -128,6 +128,7 @@ ANI_LONG.inner_array = ANI_ARRAY_LONG
 
 ANI_OBJECT = ANIType(hint="object", base=ANI_REF)
 ANI_STRING = ANIType(hint="string", base=ANI_REF)
+ANI_ARRAYBUFFER = ANIType(hint="arraybuffer", base=ANI_REF)
 
 
 class PackageANIInfo(AbstractAnalysis[PackageDecl]):
@@ -730,6 +731,55 @@ class ArrayTypeANIInfo(AbstractAnalysis[ArrayType], AbstractTypeANIInfo):
         )
 
 
+class ArrayBufferTypeANIInfo(AbstractAnalysis[ArrayType], AbstractTypeANIInfo):
+    def __init__(self, am: AnalysisManager, t: ArrayType) -> None:
+        AbstractTypeANIInfo.__init__(self, am, t)
+        self.ani_type = ANI_ARRAYBUFFER
+        self.sts_type = "ArrayBuffer"
+        self.type_desc = "Lescompat/ArrayBuffer;"
+        self.am = am
+        self.t = t
+
+    @override
+    def from_ani(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        ani_value: str,
+        cpp_result: str,
+    ):
+        data_ptr = f"{cpp_result}_data"
+        length = f"{cpp_result}_length"
+        target.write(
+            f"{' ' * offset}void* {data_ptr} = nullptr;\n"
+            f"{' ' * offset}size_t {length} = 0;\n"
+            f"{' ' * offset}{env}->ArrayBuffer_GetInfo(reinterpret_cast<ani_arraybuffer>({ani_value}), &{data_ptr}, &{length});\n"
+        )
+        target.write(
+            f"{' ' * offset}taihe::core::array_view<uint8_t> {cpp_result}(reinterpret_cast<uint8_t*>({data_ptr}), {length});\n"
+        )
+
+    @override
+    def into_ani(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        cpp_value: str,
+        ani_result: str,
+    ):
+        data_ptr = f"{ani_result}_data"
+        target.write(
+            f"{' ' * offset}void* {data_ptr} = nullptr;\n"
+            f"{' ' * offset}ani_arraybuffer {ani_result};\n"
+            f"{' ' * offset}{env}->CreateArrayBuffer({cpp_value}.size(), &{data_ptr}, &{ani_result});\n"
+        )
+        target.write(
+            f"{' ' * offset}memcpy({data_ptr}, {cpp_value}.data(), {cpp_value}.size());\n"
+        )
+
+
 class OptionalTypeANIInfo(AbstractAnalysis[OptionalType], AbstractTypeANIInfo):
     def __init__(self, am: AnalysisManager, t: OptionalType) -> None:
         AbstractTypeANIInfo.__init__(self, am, t)
@@ -845,7 +895,10 @@ class TypeANIInfo(TypeVisitor[AbstractTypeANIInfo]):
 
     @override
     def visit_array_type(self, t: ArrayType) -> AbstractTypeANIInfo:
-        return ArrayTypeANIInfo.get(self.am, t)
+        if t.item_ty == U8:
+            return ArrayBufferTypeANIInfo.get(self.am, t)
+        else:
+            return ArrayTypeANIInfo.get(self.am, t)
 
     @override
     def visit_optional_type(self, t: OptionalType) -> AbstractTypeANIInfo:
