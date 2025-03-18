@@ -598,8 +598,8 @@ class ScalarTypeANIInfo(AbstractAnalysis[ScalarType], AbstractTypeANIInfo):
 class OpaqueTypeANIInfo(AbstractAnalysis[OpaqueType], AbstractTypeANIInfo):
     def __init__(self, am: AnalysisManager, t: OpaqueType) -> None:
         AbstractTypeANIInfo.__init__(self, am, t)
-        self.ani_type = ANI_OBJECT
-        self.sts_type = "Object"
+        self.ani_type = ANI_REF
+        self.sts_type = "NullishType"
         self.type_desc = "Lstd/core/Object;"
 
     @override
