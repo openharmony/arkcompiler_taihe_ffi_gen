@@ -253,3 +253,13 @@ class RecursiveReferenceError(DiagError):
     @override
     def format_msg(self) -> str:
         return f"cycle detected in {self.decl.description}"
+
+
+@dataclass
+class AdhocNote(DiagNote):
+    msg: str
+
+    @property
+    @override
+    def format_msg(self) -> str:
+        return self.msg

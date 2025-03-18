@@ -1,6 +1,7 @@
 """Format the IDL files."""
 
 from codecs import encode
+from contextlib import contextmanager
 from typing import TextIO
 
 from typing_extensions import override
@@ -28,7 +29,6 @@ from taihe.semantics.declarations import (
 )
 from taihe.semantics.visitor import RecursiveDeclVisitor
 from taihe.utils.diagnostics import AnsiStyle
-from contextlib import contextmanager
 
 
 def pretty_print(x: DeclProtocol, buffer: TextIO):
@@ -48,7 +48,7 @@ class IndentManager:
             yield
         finally:
             self.level -= 1
-    
+
     @property
     def current(self):
         return self.level * self.unit

@@ -60,12 +60,6 @@ class SourceManager:
         pkg_name = p.stem
         self._add(SourceFile(str(p), pkg_name))
 
-    def add_directory(self, path: PathLike):
-        """Adds all `.taihe` files inside a directory. Subdirectories are ignored."""
-        d = Path(path)
-        for file in d.glob("*.taihe"):
-            self.add_file(file)
-
     @property
     def sources(self) -> Iterable[SourceBase]:
         return self.src_list
@@ -110,3 +104,8 @@ class SourceLocation:
             r = f"{r}:{self.start_row}:{self.start_col}"
 
         return r
+
+    @classmethod
+    def with_path(cls, path: Path) -> "SourceLocation":
+        """Returns a file-only source location, without any position information."""
+        return cls(SourceFile(str(path), path.stem))
