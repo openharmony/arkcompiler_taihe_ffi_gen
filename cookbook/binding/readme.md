@@ -32,3 +32,21 @@ taihe C侧函数 `binding_convert_color_f1()` ->
 }
 ```
 
+### taihe如何实现struct的绑定
+
+struct 在太和中是纯数据的，所以不需要用户在实现侧填写实现，使用者直接使用即可
+
+| 语言  |         ani         | taihe C++  | taihe C |
+|-------|---------------------|-----------|---------|
+| 文件  | binding.Color.ani.1.h | binding.Color.proj.1.hpp | binding.Color.abi.1.h |
+| 函数  | `binding_Color_intoANI/fromANI` | `binding::Color` | `struct binding_Color_t` |
+
+用户实际调用链条如下：
+
+ets侧使用 `new binding.Color` ->
+
+ani侧 `binding_Color_intoANI/fromANI()` ->
+
+taihe C++侧 `binding::Color` -> 
+
+taihe C侧函数 `struct binding_Color_t` -> 
