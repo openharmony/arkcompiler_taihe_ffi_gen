@@ -1,4 +1,0 @@
-function convert_arr(a: Array<i32>): Array<i32>;
-// function get_vec(): Vector<Optional<f32>>;
-// function get_map(): Map<i32, String>;
-// function get_set(): Set<i32>;
