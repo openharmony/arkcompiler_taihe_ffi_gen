@@ -74,11 +74,11 @@ class CppImplHeadersGenerator:
         else:
             abi_return_ty_name = "void"
             abi_result = cpp_result
-        pkg_cpp_impl_target.write(
-            f"#define {func_cpp_impl_info.macro}({func_impl}) \\\n"
-            f"    {abi_return_ty_name} {func_abi_info.mangled_name}({abi_params_str}) {{ \\\n"
-            f"        return {abi_result}; \\\n"
-            f"    }}\n"
+        pkg_cpp_impl_target.writeln(
+            f"#define {func_cpp_impl_info.macro}({func_impl}) \\",
+            f"    {abi_return_ty_name} {func_abi_info.mangled_name}({abi_params_str}) {{ \\",
+            f"        return {abi_result}; \\",
+            f"    }}",
         )
 
 
@@ -117,9 +117,9 @@ class CppImplSourcesGenerator:
             cpp_return_ty_name = type_cpp_info.as_owner
         else:
             cpp_return_ty_name = "void"
-        pkg_cpp_impl_target.write(
-            f"{cpp_return_ty_name} {func_cpp_impl_name}({cpp_params_str}) {{ \\\n"
-            f"    // TODO\n"
-            f"}}\n"
-            f"{func_cpp_impl_info.macro}({func_cpp_impl_name})\n"
+        pkg_cpp_impl_target.writeln(
+            f"{cpp_return_ty_name} {func_cpp_impl_name}({cpp_params_str}) {{ \\",
+            f"    // TODO",
+            f"}}",
+            f"{func_cpp_impl_info.macro}({func_cpp_impl_name})",
         )

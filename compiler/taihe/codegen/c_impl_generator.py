@@ -66,11 +66,11 @@ class CImplHeadersGenerator:
             return_ty_name = type_abi_info.as_owner
         else:
             return_ty_name = "void"
-        pkg_c_impl_target.write(
-            f"#define {func_c_impl_info.macro}({func_impl}) \\\n"
-            f"    {return_ty_name} {func_abi_info.mangled_name}({params_str}) {{ \\\n"
-            f"        return {func_impl}({args_str}); \\\n"
-            f"    }}\n"
+        pkg_c_impl_target.writeln(
+            f"#define {func_c_impl_info.macro}({func_impl}) \\",
+            f"    {return_ty_name} {func_abi_info.mangled_name}({params_str}) {{ \\",
+            f"        return {func_impl}({args_str}); \\",
+            f"    }}",
         )
 
 
@@ -109,9 +109,9 @@ class CImplSourcesGenerator:
             return_ty_name = type_abi_info.as_owner
         else:
             return_ty_name = "void"
-        pkg_c_impl_target.write(
-            f"{return_ty_name} {func_c_impl_name}({params_str}) {{ \\\n"
-            f"    // TODO\n"
-            f"}}\n"
-            f"{func_c_impl_info.macro}({func_c_impl_name})\n"
+        pkg_c_impl_target.writeln(
+            f"{return_ty_name} {func_c_impl_name}({params_str}) {{ \\",
+            f"    // TODO",
+            f"}}",
+            f"{func_c_impl_info.macro}({func_c_impl_name})",
         )

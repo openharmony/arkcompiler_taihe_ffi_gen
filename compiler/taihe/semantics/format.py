@@ -37,7 +37,7 @@ def pretty_print(x: DeclProtocol, buffer: TextIO):
 
 
 class IndentManager:
-    def __init__(self, unit="  "):
+    def __init__(self, unit="    "):
         self.indent = 0
         self.unit = unit
 
