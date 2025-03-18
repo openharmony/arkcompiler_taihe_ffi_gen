@@ -7,6 +7,7 @@ namespace {
 
 class ICalculator {
 public:
+    ICalculator(int32_t init): lastResult(init) {}
     int32_t add(int32_t a, int32_t b) {
         lastResult = a + b;
         return lastResult;
@@ -25,8 +26,8 @@ private:
     int32_t lastResult = 0;
 };
 
-::interface::ICalculator makeCalculator() {
-    return make_holder<ICalculator, ::interface::ICalculator>();
+::interface::ICalculator makeCalculator(int32_t init) {
+    return make_holder<ICalculator, ::interface::ICalculator>(init);
 }
 void restartCalculator(::interface::weak::ICalculator a) {
     a->reset();

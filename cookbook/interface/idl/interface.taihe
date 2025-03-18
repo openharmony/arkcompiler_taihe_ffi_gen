@@ -5,5 +5,5 @@ interface ICalculator {
     reset(): void;
 }
 
-function makeCalculator(): ICalculator;
+function makeCalculator(init: i32): ICalculator;
 function restartCalculator(a: ICalculator): void;

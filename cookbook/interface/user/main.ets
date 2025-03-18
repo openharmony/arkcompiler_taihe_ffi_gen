@@ -1,7 +1,7 @@
 import { makeCalculator, ICalculator, restartCalculator } from "../author_generated/interface"
 loadLibrary("interface")
 function main() {
-    let cal = makeCalculator();
+    let cal = makeCalculator(100);
     let num1 = 1;
     let num2 = 2;
     let result1 = cal.add(num1, num2);
