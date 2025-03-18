@@ -38,26 +38,29 @@ def pretty_print(x: DeclProtocol, buffer: TextIO):
 
 class IndentManager:
     def __init__(self, unit="    "):
-        self.indent = 0
+        self.level = 0
         self.unit = unit
 
     @contextmanager
-    def block(self):
+    def code_block(self):
         try:
-            self.indent += 1
+            self.level += 1
             yield
         finally:
-            self.indent -= 1
+            self.level -= 1
+    
+    @property
+    def current(self):
+        return self.level * self.unit
 
 
 class _PrettyPrinter(RecursiveDeclVisitor):
     def __init__(self, buffer: TextIO):
         self.buffer = buffer
-        self.im = IndentManager()
+        self.indent_manager = IndentManager()
 
     def writeln(self, content):
-        self.buffer.write(self.im.indent * self.im.unit)
-        self.buffer.write(content + "\n")
+        self.buffer.write(self.indent_manager.current + content + "\n")
 
     def get_type_ref_decl(self, d: TypeRefDecl) -> str:
         real_type = (
@@ -175,10 +178,10 @@ class _PrettyPrinter(RecursiveDeclVisitor):
 
         self.writeln(f"{enum_kw} {d.name} {{")
         if d.items:
-            with self.im.block():
+            with self.indent_manager.code_block():
                 for i in d.items:
                     self.handle_decl(i)
-        self.writeln("}")
+        self.writeln(f"}}")
 
     @override
     def visit_struct_field_decl(self, d: StructFieldDecl):
@@ -194,10 +197,10 @@ class _PrettyPrinter(RecursiveDeclVisitor):
 
         self.writeln(f"{struct_kw} {d.name} {{")
         if d.fields:
-            with self.im.block():
+            with self.indent_manager.code_block():
                 for f in d.fields:
                     self.handle_decl(f)
-        self.writeln("}")
+        self.writeln(f"}}")
 
     @override
     def visit_iface_func_decl(self, d: IfaceMethodDecl):
@@ -222,10 +225,10 @@ class _PrettyPrinter(RecursiveDeclVisitor):
 
         self.writeln(f"{iface_kw} {d.name}{extends} {{")
         if d.methods:
-            with self.im.block():
+            with self.indent_manager.code_block():
                 for f in d.methods:
                     self.handle_decl(f)
-        self.writeln("}")
+        self.writeln(f"}}")
 
     @override
     def visit_package_decl(self, p: PackageDecl):
@@ -247,5 +250,5 @@ class _PrettyPrinter(RecursiveDeclVisitor):
     def visit_package_group(self, g: PackageGroup):
         for i, p in enumerate(g.packages):
             if i != 0:
-                self.writeln("")
+                self.writeln(f"")
             self.handle_decl(p)
