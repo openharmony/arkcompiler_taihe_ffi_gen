@@ -33,7 +33,7 @@ from taihe.utils.analyses import AnalysisManager
 from taihe.utils.diagnostics import DiagnosticsManager, Level
 from taihe.utils.exceptions import AdhocNote
 from taihe.utils.outputs import OutputManager
-from taihe.utils.sources import SourceLocation, SourceManager
+from taihe.utils.sources import SourceFile, SourceLocation, SourceManager
 
 
 @dataclass
@@ -114,7 +114,7 @@ class CompilerInstance:
 
                 # Okay...
                 else:
-                    self.source_manager.add_file(file)
+                    self.source_manager.add_source(SourceFile(file))
 
     def parse(self):
         for src in self.source_manager.sources:

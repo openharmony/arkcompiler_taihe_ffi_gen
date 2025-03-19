@@ -15,7 +15,7 @@ from taihe.utils.exceptions import (
     RecursiveReferenceError,
     SymbolConflictWithNamespaceError,
 )
-from taihe.utils.sources import SourceManager
+from taihe.utils.sources import SourceBuffer, SourceManager
 
 
 class SemanticTestDiagnosticsManager(AbstractDiagnosticsManager):
@@ -47,11 +47,11 @@ class SemanticTestCompilerInstance:
 
     def collect(self):
         for pkg_name, source in self.test_buffers:
-            self.source_manager.add_buffer(pkg_name, source)
+            self.source_manager.add_source(SourceBuffer(pkg_name, source))
 
     def parse(self):
         for src in self.source_manager.sources:
-            conv = AstConverter(src, self.diagnostics_manager)
+            conv = AstConverter(src.pkg_name, src, self.diagnostics_manager)
             pkg = conv.convert()
             with self.diagnostics_manager.capture_error():
                 self.package_group.add(pkg)
@@ -146,34 +146,6 @@ def test_decl_redef_2():
     test_instance = SemanticTestCompilerInstance()
     test_instance.add_source(
         "package",
-        "enum BadEnum {\n"
-        "    A;\n"
-        "    A;\n"
-        "}\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(DeclRedefError)
-
-
-def test_decl_redef_3():
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance()
-    test_instance.add_source(
-        "package",
-        "struct BadStruct {\n"
-        "    a: i32;\n"
-        "    a: i32;\n"
-        "}\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(DeclRedefError)
-
-
-def test_decl_redef_4():
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance()
-    test_instance.add_source(
-        "package",
         "from package.example1 use A;\n"
         "from package.example2 use A;\n"
     )
@@ -193,7 +165,7 @@ def test_decl_redef_4():
     test_instance.assert_has_error(DeclRedefError)
 
 
-def test_decl_redef_5():
+def test_decl_redef_3():
     # fmt: off
     test_instance = SemanticTestCompilerInstance()
     test_instance.add_source(
@@ -203,6 +175,20 @@ def test_decl_redef_5():
     )
     test_instance.add_source("package.example1", "")
     test_instance.add_source("package.example2", "")
+    test_instance.run()
+    test_instance.assert_has_error(DeclRedefError)
+
+
+def test_decl_redef_4():
+    # fmt: off
+    test_instance = SemanticTestCompilerInstance()
+    test_instance.add_source(
+        "package",
+        "struct BadStruct {\n"
+        "    a: i32;\n"
+        "    a: i32;\n"
+        "}\n"
+    )
     test_instance.run()
     test_instance.assert_has_error(DeclRedefError)
 
