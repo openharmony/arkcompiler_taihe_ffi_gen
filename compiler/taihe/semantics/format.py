@@ -12,8 +12,6 @@ from taihe.semantics.declarations import (
     DeclarationImportDecl,
     DeclarationRefDecl,
     DeclProtocol,
-    EnumDecl,
-    EnumItemDecl,
     GlobFuncDecl,
     IfaceDecl,
     IfaceMethodDecl,
@@ -26,6 +24,8 @@ from taihe.semantics.declarations import (
     StructDecl,
     StructFieldDecl,
     TypeRefDecl,
+    UnionDecl,
+    UnionFieldDecl,
 )
 from taihe.semantics.visitor import RecursiveDeclVisitor
 from taihe.utils.diagnostics import AnsiStyle
@@ -157,7 +157,7 @@ class _PrettyPrinter(RecursiveDeclVisitor):
         self.writeln(f"{func_kw} {d.name}({fmt_args}): {ret};")
 
     @override
-    def visit_enum_item_decl(self, d: EnumItemDecl):
+    def visit_union_field_decl(self, d: UnionFieldDecl):
         self.write_attr(d)
 
         if d.ty_ref:
@@ -166,19 +166,19 @@ class _PrettyPrinter(RecursiveDeclVisitor):
             self.writeln(f"{d.name};")
 
     @override
-    def visit_enum_decl(self, d: EnumDecl):
+    def visit_union_decl(self, d: UnionDecl):
         self.write_attr(d)
 
-        enum_kw = self.as_keyword("enum")
+        union_kw = self.as_keyword("union")
 
-        if d.items:
-            self.writeln(f"{enum_kw} {d.name} {{")
+        if d.fields:
+            self.writeln(f"{union_kw} {d.name} {{")
             with self.indent_manager.code_block():
-                for i in d.items:
+                for i in d.fields:
                     self.handle_decl(i)
             self.writeln(f"}}")
         else:
-            self.writeln(f"{enum_kw} {d.name} {{}}")
+            self.writeln(f"{union_kw} {d.name} {{}}")
 
     @override
     def visit_struct_field_decl(self, d: StructFieldDecl):
@@ -240,7 +240,7 @@ class _PrettyPrinter(RecursiveDeclVisitor):
             self.handle_decl(d)
         for d in p.structs:
             self.handle_decl(d)
-        for d in p.enums:
+        for d in p.unions:
             self.handle_decl(d)
         for d in p.interfaces:
             self.handle_decl(d)

@@ -6,7 +6,6 @@ from typing_extensions import override
 from taihe.semantics.declarations import (
     CallbackTypeRefDecl,
     DeclarationRefDecl,
-    EnumDecl,
     GenericTypeRefDecl,
     GlobFuncDecl,
     IfaceDecl,
@@ -19,6 +18,7 @@ from taihe.semantics.declarations import (
     ShortTypeRefDecl,
     StructDecl,
     TypeDecl,
+    UnionDecl,
 )
 from taihe.semantics.types import (
     BUILTIN_GENERICS,
@@ -301,9 +301,9 @@ class _CheckFieldNameCollisionErrorPass(RecursiveDeclVisitor):
         return super().visit_struct_decl(d)
 
     @override
-    def visit_enum_decl(self, d: EnumDecl) -> None:
-        self.check_collision_helper(d.items)
-        return super().visit_enum_decl(d)
+    def visit_union_decl(self, d: UnionDecl) -> None:
+        self.check_collision_helper(d.fields)
+        return super().visit_union_decl(d)
 
     @override
     def visit_iface_decl(self, d: IfaceDecl) -> None:
@@ -373,9 +373,9 @@ class _CheckRecursiveInclusionPass(RecursiveDeclVisitor):
             if isinstance(ty := f.ty_ref.resolved_ty, UserType):
                 type_list.append(((d, f.ty_ref), ty.ty_decl))
 
-    def visit_enum_decl(self, d: EnumDecl) -> None:
+    def visit_union_decl(self, d: UnionDecl) -> None:
         type_list = self.type_table.setdefault(d, [])
-        for i in d.items:
+        for i in d.fields:
             if i.ty_ref is None:
                 continue
             if isinstance(ty := i.ty_ref.resolved_ty, UserType):

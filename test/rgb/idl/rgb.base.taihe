@@ -4,7 +4,7 @@ struct RGB {
     b: u8;
 }
 
-enum Color {
+union Color {
     black;
     red;
     green;
@@ -15,7 +15,7 @@ enum Color {
     white;
 }
 
-enum ColorOrRGBOrName {
+union ColorOrRGBOrName {
     undefined;
     color: Color;
     rgb: RGB;

@@ -8,10 +8,10 @@ from typing_extensions import override
 
 if TYPE_CHECKING:
     from taihe.semantics.declarations import (
-        EnumDecl,
         IfaceDecl,
         StructDecl,
         TypeDecl,
+        UnionDecl,
     )
     from taihe.semantics.visitor import TypeVisitor
 
@@ -275,12 +275,12 @@ class StructType(UserType):
 
 
 @dataclass(frozen=True, repr=False)
-class EnumType(UserType):
-    ty_decl: "EnumDecl"
+class UnionType(UserType):
+    ty_decl: "UnionDecl"
 
     @override
     def _accept(self, v: "TypeVisitor") -> Any:
-        return v.visit_enum_type(self)
+        return v.visit_union_type(self)
 
 
 @dataclass(frozen=True, repr=False)

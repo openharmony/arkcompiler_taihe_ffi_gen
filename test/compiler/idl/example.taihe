@@ -52,14 +52,14 @@ struct GoodStruct {
     n: i32;
 }
 
-// Enums
+// Unions
 
-enum BadEnum {
+union BadUnion {
     A: i32;
     A: u32;  // DeclConflictError
 }
 
-enum GoodEnum {
+union GoodUnion {
     A: i32;
     C: f32;
     B: u32;
@@ -98,10 +98,10 @@ interface RecursiveIfaceA: RecursiveIfaceB {}
 interface RecursiveIfaceB: RecursiveIfaceA {}  // RecursiveExtension
 
 struct RecursiveStruct {
-    e: RecursiveEnum;
+    e: RecursiveUnion;
 }
 
-enum RecursiveEnum {
+union RecursiveUnion {
     s: RecursiveStruct;
 }
 

@@ -5,13 +5,13 @@ from typing_extensions import override
 
 from taihe.codegen.mangle import DeclKind, encode
 from taihe.semantics.declarations import (
-    EnumDecl,
     GlobFuncDecl,
     IfaceDecl,
     IfaceMethodDecl,
     PackageDecl,
     PackageGroup,
     StructDecl,
+    UnionDecl,
 )
 from taihe.semantics.types import (
     BOOL,
@@ -27,7 +27,6 @@ from taihe.semantics.types import (
     U64,
     ArrayType,
     CallbackType,
-    EnumType,
     IfaceType,
     MapType,
     OpaqueType,
@@ -37,6 +36,7 @@ from taihe.semantics.types import (
     StringType,
     StructType,
     Type,
+    UnionType,
     VectorType,
 )
 from taihe.semantics.visitor import TypeVisitor
@@ -67,8 +67,8 @@ class IfaceMethodABIInfo(AbstractAnalysis[IfaceMethodDecl]):
         self.mangled_name = encode(segments, DeclKind.FUNC)
 
 
-class EnumABIInfo(AbstractAnalysis[EnumDecl]):
-    def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
+class UnionABIInfo(AbstractAnalysis[UnionDecl]):
+    def __init__(self, am: AnalysisManager, d: UnionDecl) -> None:
         p = d.node_parent
         assert p
         segments = [*p.segments, d.name]
@@ -79,7 +79,7 @@ class EnumABIInfo(AbstractAnalysis[EnumDecl]):
         self.mangled_name = encode(segments, DeclKind.TYPE)
         self.as_owner = f"struct {self.mangled_name}"
         self.as_param = f"struct {self.mangled_name} const*"
-        self.has_data = any(item.ty_ref for item in d.items)
+        self.has_data = any(item.ty_ref for item in d.fields)
 
 
 class StructABIInfo(AbstractAnalysis[StructDecl]):
@@ -160,13 +160,13 @@ class AbstractTypeABIInfo(metaclass=ABCMeta):
     as_param: str
 
 
-class EnumTypeABIInfo(AbstractAnalysis[EnumType], AbstractTypeABIInfo):
-    def __init__(self, am: AnalysisManager, t: EnumType):
-        enum_abi_info = EnumABIInfo.get(am, t.ty_decl)
-        self.decl_headers = [enum_abi_info.decl_header]
-        self.impl_headers = [enum_abi_info.impl_header]
-        self.as_owner = enum_abi_info.as_owner
-        self.as_param = enum_abi_info.as_param
+class UnionTypeABIInfo(AbstractAnalysis[UnionType], AbstractTypeABIInfo):
+    def __init__(self, am: AnalysisManager, t: UnionType):
+        union_abi_info = UnionABIInfo.get(am, t.ty_decl)
+        self.decl_headers = [union_abi_info.decl_header]
+        self.impl_headers = [union_abi_info.impl_header]
+        self.as_owner = union_abi_info.as_owner
+        self.as_param = union_abi_info.as_param
 
 
 class StructTypeABIInfo(AbstractAnalysis[StructType], AbstractTypeABIInfo):
@@ -284,8 +284,8 @@ class TypeABIInfo(TypeVisitor[AbstractTypeABIInfo]):
         return TypeABIInfo(am).handle_type(t)
 
     @override
-    def visit_enum_type(self, t: EnumType) -> AbstractTypeABIInfo:
-        return EnumTypeABIInfo.get(self.am, t)
+    def visit_union_type(self, t: UnionType) -> AbstractTypeABIInfo:
+        return UnionTypeABIInfo.get(self.am, t)
 
     @override
     def visit_struct_type(self, t: StructType) -> AbstractTypeABIInfo:
@@ -349,8 +349,8 @@ class ABIHeadersGenerator:
         pkg_abi_target.include("taihe/common.h")
         for struct in pkg.structs:
             self.gen_struct_files(struct, pkg_abi_target)
-        for enum in pkg.enums:
-            self.gen_enum_files(enum, pkg_abi_target)
+        for union in pkg.unions:
+            self.gen_union_files(union, pkg_abi_target)
         for iface in pkg.interfaces:
             self.gen_iface_files(iface, pkg_abi_target)
         for func in pkg.functions:
@@ -431,65 +431,65 @@ class ABIHeadersGenerator:
             f"}};",
         )
 
-    def gen_enum_files(
+    def gen_union_files(
         self,
-        enum: EnumDecl,
+        union: UnionDecl,
         pkg_abi_target: COutputBuffer,
     ):
-        enum_abi_info = EnumABIInfo.get(self.am, enum)
-        self.gen_enum_decl_file(enum, enum_abi_info)
-        self.gen_enum_defn_file(enum, enum_abi_info)
-        pkg_abi_target.include(enum_abi_info.impl_header)
+        union_abi_info = UnionABIInfo.get(self.am, union)
+        self.gen_union_decl_file(union, union_abi_info)
+        self.gen_union_defn_file(union, union_abi_info)
+        pkg_abi_target.include(union_abi_info.impl_header)
 
-    def gen_enum_decl_file(
+    def gen_union_decl_file(
         self,
-        enum: EnumDecl,
-        enum_abi_info: EnumABIInfo,
+        union: UnionDecl,
+        union_abi_info: UnionABIInfo,
     ):
-        enum_abi_decl_target = COutputBuffer.create(
-            self.tm, f"include/{enum_abi_info.decl_header}", True
+        union_abi_decl_target = COutputBuffer.create(
+            self.tm, f"include/{union_abi_info.decl_header}", True
         )
-        enum_abi_decl_target.writeln(
-            f"struct {enum_abi_info.mangled_name};",
+        union_abi_decl_target.writeln(
+            f"struct {union_abi_info.mangled_name};",
         )
 
-    def gen_enum_defn_file(
+    def gen_union_defn_file(
         self,
-        enum: EnumDecl,
-        enum_abi_info: EnumABIInfo,
+        union: UnionDecl,
+        union_abi_info: UnionABIInfo,
     ):
-        enum_abi_defn_target = COutputBuffer.create(
-            self.tm, f"include/{enum_abi_info.impl_header}", True
+        union_abi_defn_target = COutputBuffer.create(
+            self.tm, f"include/{union_abi_info.impl_header}", True
         )
-        enum_abi_defn_target.include("taihe/common.h")
-        enum_abi_defn_target.include(enum_abi_info.decl_header)
-        self.gen_enum_defn(enum, enum_abi_info, enum_abi_defn_target)
+        union_abi_defn_target.include("taihe/common.h")
+        union_abi_defn_target.include(union_abi_info.decl_header)
+        self.gen_union_defn(union, union_abi_info, union_abi_defn_target)
 
-    def gen_enum_defn(
+    def gen_union_defn(
         self,
-        enum: EnumDecl,
-        enum_abi_info: EnumABIInfo,
-        enum_abi_defn_target: COutputBuffer,
+        union: UnionDecl,
+        union_abi_info: UnionABIInfo,
+        union_abi_defn_target: COutputBuffer,
     ):
-        enum_abi_defn_target.writeln(
-            f"union {enum_abi_info.union_name} {{",
+        union_abi_defn_target.writeln(
+            f"union {union_abi_info.union_name} {{",
         )
-        for item in enum.items:
+        for item in union.fields:
             if item.ty_ref is None:
-                enum_abi_defn_target.writeln(
+                union_abi_defn_target.writeln(
                     f"  // {item.name}",
                 )
                 continue
             type_abi_info = TypeABIInfo.get(self.am, item.ty_ref.resolved_ty)
-            enum_abi_defn_target.include(*type_abi_info.impl_headers)
-            enum_abi_defn_target.writeln(
+            union_abi_defn_target.include(*type_abi_info.impl_headers)
+            union_abi_defn_target.writeln(
                 f"    {type_abi_info.as_owner} {item.name};",
             )
-        enum_abi_defn_target.writeln(
+        union_abi_defn_target.writeln(
             f"}};",
-            f"struct {enum_abi_info.mangled_name} {{",
-            f"    {enum_abi_info.tag_type} m_tag;",
-            f"    union {enum_abi_info.union_name} m_data;",
+            f"struct {union_abi_info.mangled_name} {{",
+            f"    {union_abi_info.tag_type} m_tag;",
+            f"    union {union_abi_info.union_name} m_data;",
             f"}};",
         )
 
