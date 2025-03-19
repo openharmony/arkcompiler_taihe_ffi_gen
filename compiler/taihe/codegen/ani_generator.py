@@ -156,10 +156,22 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
 
         self.sts_native_name = f"{f.name}_inner"
 
-        if sts_name_attr := f.attrs.get("sts_name"):
-            self.sts_real_name = sts_name_attr.value
+        if static_name_attr := f.attrs.get("sts_name"):
+            self.gen_global = static_name_attr.value
         else:
-            self.sts_real_name = f.name
+            self.gen_global = f.name
+
+        if static_name_attr := f.attrs.get("static_method"):
+            self.gen_static = static_name_attr.value
+            self.gen_global = None
+        else:
+            self.gen_static = None
+
+        if ctor_attr := f.attrs.get("ctor"):
+            self.gen_ctor = ctor_attr.value
+            self.gen_global = None
+        else:
+            self.gen_ctor = None
 
         if sts_async_attr := f.attrs.get("gen_async"):
             self.sts_async_name = sts_async_attr.value
@@ -190,9 +202,9 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
         self.sts_native_name = f"{f.name}_inner"
 
         if sts_name_attr := f.attrs.get("sts_name"):
-            self.sts_real_name = sts_name_attr.value
+            self.gen_method = sts_name_attr.value
         else:
-            self.sts_real_name = f.name
+            self.gen_method = f.name
 
         if sts_async_attr := f.attrs.get("gen_async"):
             self.sts_async_name = sts_async_attr.value
@@ -262,7 +274,12 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
         self.impl_header = f"{p.name}.{d.name}.ani.1.h"
 
         self.sts_type = d.name
-        self.sts_impl = f"{d.name}_inner"
+        if d.attrs.get("class"):
+            self.sts_impl = f"{d.name}"
+            self.is_calss = True
+        else:
+            self.sts_impl = f"{d.name}_inner"
+            self.is_calss = False
         pkg_ani_info = PackageANIInfo.get(am, p)
         self.type_desc = f"L{pkg_ani_info.pkg_name}/{self.sts_type};"
         self.impl_desc = f"L{pkg_ani_info.pkg_name}/{self.sts_impl};"
@@ -973,10 +990,26 @@ class STSCodeGenerator:
 
         # pkg_sts_target.write(f'loadLibrary("{self.lib_name}");\n')
 
-        for iface in pkg.interfaces:
-            self.gen_iface_inner(iface, pkg_sts_target)
+        static_methods: dict[str, list[tuple[str, GlobFuncDecl]]] = {}
+        construct_methods: dict[str, list[GlobFuncDecl]] = {}
+        for func in pkg.functions:
+            func_ani_info = GlobFuncANIInfo.get(self.am, func)
+            if value := func_ani_info.gen_static:
+                class_name, func_name = value
+                if class_name not in static_methods:
+                    static_methods[class_name] = []
+                static_methods[class_name].append((func_name, func))
 
-        callback_flag = 0
+            if class_name := func_ani_info.gen_ctor:
+                if class_name not in construct_methods:
+                    construct_methods[class_name] = []
+                construct_methods[class_name].append(func)
+
+        for iface in pkg.interfaces:
+            self.gen_iface_inner(
+                iface, pkg_sts_target, static_methods, construct_methods
+            )
+
         for iface in pkg.interfaces:
             self.gen_iface_interface(iface, pkg_sts_target)
 
@@ -1024,18 +1057,17 @@ class STSCodeGenerator:
         pkg_sts_target.write(
             f"native function {func_ani_info.sts_native_name}({sts_native_params_str}): {sts_return_ty_name};\n"
         )
+        if func_ani_info.gen_global is None:
+            return
         # real
         sts_real_params = []
-        sts_real_args = []
         for sts_real_param in func_ani_info.sts_real_params:
             type_ani_info = TypeANIInfo.get(self.am, sts_real_param.ty_ref.resolved_ty)
             sts_real_params.append(f"{sts_real_param.name}: {type_ani_info.sts_type}")
-            sts_real_args.append(sts_real_param.name)
         sts_real_params_str = ", ".join(sts_real_params)
-        sts_real_args_str = ", ".join(sts_real_args)
         sts_native_args_str = ", ".join(func_ani_info.sts_native_args)
         pkg_sts_target.write(
-            f"export function {func_ani_info.sts_real_name}({sts_real_params_str}): {sts_return_ty_name} {{\n"
+            f"export function {func_ani_info.gen_global}({sts_real_params_str}): {sts_return_ty_name} {{\n"
             f"    return {func_ani_info.sts_native_name}({sts_native_args_str});\n"
             f"}}\n"
         )
@@ -1046,7 +1078,7 @@ class STSCodeGenerator:
             sts_real_params_with_cb_str = ", ".join(sts_real_params_with_cb)
             pkg_sts_target.write(
                 f"export function {async_func_name}({sts_real_params_with_cb_str}): void {{\n"
-                f"    (launch {func_ani_info.sts_real_name}({sts_real_args_str}))\n"
+                f"    (launch {func_ani_info.sts_native_name}({sts_native_args_str}))\n"
             )
             if sts_return_ty_name == "void":
                 pkg_sts_target.write(
@@ -1074,7 +1106,7 @@ class STSCodeGenerator:
         if (promise_func_name := func_ani_info.sts_promise_name) is not None:
             pkg_sts_target.write(
                 f"export function {promise_func_name}({sts_real_params_str}): Promise<{sts_return_ty_name}> {{\n"
-                f"    return launch {func_ani_info.sts_real_name}({sts_real_args_str});\n"
+                f"    return launch {func_ani_info.sts_native_name}({sts_native_args_str});\n"
                 f"}}\n"
             )
 
@@ -1137,6 +1169,8 @@ class STSCodeGenerator:
         if (inject_attr := iface.attrs.get("inject")) is not None:
             pkg_sts_target.write(inject_attr.value)
         iface_ani_info = IfaceANIInfo.get(self.am, iface)
+        if iface_ani_info.is_calss:
+            return
         pkg_sts_target.write(f"export interface {iface_ani_info.sts_type} {{\n")
         for method in iface.methods:
             # docstring
@@ -1159,7 +1193,7 @@ class STSCodeGenerator:
                 sts_return_ty_name = "void"
             # real
             pkg_sts_target.write(
-                f"    {method_ani_info.sts_real_name}({sts_real_params_str}): {sts_return_ty_name};\n"
+                f"    {method_ani_info.gen_method}({sts_real_params_str}): {sts_return_ty_name};\n"
             )
             # async
             if (async_func_name := method_ani_info.sts_async_name) is not None:
@@ -1181,13 +1215,20 @@ class STSCodeGenerator:
         self,
         iface: IfaceDecl,
         pkg_sts_target: OutputBuffer,
+        static_methods: dict[str, list[tuple[str, GlobFuncDecl]]],
+        construct_methods: dict[str, list[GlobFuncDecl]],
     ):
         iface_ani_info = IfaceANIInfo.get(self.am, iface)
+        if iface_ani_info.is_calss:
+            pkg_sts_target.write(f"export class {iface_ani_info.sts_impl} {{\n")
+        else:
+            pkg_sts_target.write(
+                f"class {iface_ani_info.sts_impl} implements {iface_ani_info.sts_type} {{\n"
+            )
         pkg_sts_target.write(
-            f"class {iface_ani_info.sts_impl} implements {iface_ani_info.sts_type} {{\n"
-            f"    _vtbl_ptr: long;\n"
-            f"    _data_ptr: long;\n"
-            f"    constructor(_vtbl_ptr: long, _data_ptr: long) {{\n"
+            f"    private _vtbl_ptr: long;\n"
+            f"    private _data_ptr: long;\n"
+            f"    private constructor(_vtbl_ptr: long, _data_ptr: long) {{\n"
             f"        this._vtbl_ptr = _vtbl_ptr;\n"
             f"        this._data_ptr = _data_ptr;\n"
             f"    }}\n"
@@ -1212,7 +1253,6 @@ class STSCodeGenerator:
             )
             # real
             sts_real_params = []
-            sts_real_args = []
             for sts_real_param in method_ani_info.sts_real_params:
                 type_ani_info = TypeANIInfo.get(
                     self.am, sts_real_param.ty_ref.resolved_ty
@@ -1220,12 +1260,10 @@ class STSCodeGenerator:
                 sts_real_params.append(
                     f"{sts_real_param.name}: {type_ani_info.sts_type}"
                 )
-                sts_real_args.append(sts_real_param.name)
             sts_real_params_str = ", ".join(sts_real_params)
-            sts_real_args_str = ", ".join(sts_real_args)
             sts_native_args_str = ", ".join(method_ani_info.sts_native_args)
             pkg_sts_target.write(
-                f"    {method_ani_info.sts_real_name}({sts_real_params_str}): {sts_return_ty_name} {{\n"
+                f"    {method_ani_info.gen_method}({sts_real_params_str}): {sts_return_ty_name} {{\n"
                 f"        return this.{method_ani_info.sts_native_name}({sts_native_args_str});\n"
                 f"    }}\n"
             )
@@ -1236,7 +1274,7 @@ class STSCodeGenerator:
                 sts_real_params_with_cb_str = ", ".join(sts_real_params_with_cb)
                 pkg_sts_target.write(
                     f"    {async_func_name}({sts_real_params_with_cb_str}): void {{\n"
-                    f"        (launch this.{method_ani_info.sts_real_name}({sts_real_args_str}))\n"
+                    f"        (launch this.{method_ani_info.sts_native_name}({sts_native_args_str}))\n"
                 )
                 if sts_return_ty_name == "void":
                     pkg_sts_target.write(
@@ -1264,10 +1302,92 @@ class STSCodeGenerator:
             if (promise_func_name := method_ani_info.sts_promise_name) is not None:
                 pkg_sts_target.write(
                     f"    {promise_func_name}({sts_native_params_str}): Promise<{sts_return_ty_name}> {{\n"
-                    f"        return launch this.{method_ani_info.sts_real_name}({sts_real_args_str});\n"
+                    f"        return launch this.{method_ani_info.sts_native_name}({sts_native_args_str});\n"
                     f"    }}\n"
                 )
-        pkg_sts_target.write("}\n")
+
+        if iface_ani_info.is_calss:
+            for func in construct_methods.get(iface.name, []):
+                self.gen_class_ctor(func, pkg_sts_target)
+
+            for static_method_name, func in static_methods.get(iface.name, []):
+                self.gen_class_static_method(static_method_name, func, pkg_sts_target)
+
+        pkg_sts_target.write(f"}}\n")
+
+    def gen_class_ctor(self, func: GlobFuncDecl, pkg_sts_target: OutputBuffer):
+        func_ani_info = GlobFuncANIInfo.get(self.am, func)
+        sts_real_params = []
+        for sts_real_param in func_ani_info.sts_real_params:
+            type_ani_info = TypeANIInfo.get(self.am, sts_real_param.ty_ref.resolved_ty)
+            sts_real_params.append(f"{sts_real_param.name}: {type_ani_info.sts_type}")
+        sts_real_params_str = ", ".join(sts_real_params)
+        sts_native_args_str = ", ".join(func_ani_info.sts_native_args)
+        pkg_sts_target.write(
+            f"    constructor({sts_real_params_str}) {{\n"
+            f"        let temp = {func_ani_info.sts_native_name}({sts_native_args_str});\n"
+            f"        this._data_ptr = temp._data_ptr;\n"
+            f"        this._vtbl_ptr = temp._vtbl_ptr;\n"
+            f"    }}\n"
+        )
+
+    def gen_class_static_method(
+        self, static_method_name: str, func: GlobFuncDecl, pkg_sts_target: OutputBuffer
+    ):
+        func_ani_info = GlobFuncANIInfo.get(self.am, func)
+        if return_ty_ref := func.return_ty_ref:
+            type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
+            sts_return_ty_name = type_ani_info.sts_type
+        else:
+            sts_return_ty_name = "void"
+        sts_real_params = []
+        for sts_real_param in func_ani_info.sts_real_params:
+            type_ani_info = TypeANIInfo.get(self.am, sts_real_param.ty_ref.resolved_ty)
+            sts_real_params.append(f"{sts_real_param.name}: {type_ani_info.sts_type}")
+        sts_real_params_str = ", ".join(sts_real_params)
+        sts_native_args_str = ", ".join(func_ani_info.sts_native_args)
+        pkg_sts_target.write(
+            f"    static {static_method_name}({sts_real_params_str}): {sts_return_ty_name} {{\n"
+            f"        return {func_ani_info.sts_native_name}({sts_native_args_str});\n"
+            f"    }}\n"
+        )
+        if (async_func_name := func_ani_info.sts_async_name) is not None:
+            callback = f"callback: AsyncCallback<{sts_return_ty_name}>"
+            sts_real_params_with_cb = [*sts_real_params, callback]
+            sts_real_params_with_cb_str = ", ".join(sts_real_params_with_cb)
+            pkg_sts_target.write(
+                f"    static {async_func_name}({sts_real_params_with_cb_str}): void {{\n"
+                f"        (launch {func_ani_info.sts_native_name}({sts_native_args_str}))\n"
+            )
+            if sts_return_ty_name == "void":
+                pkg_sts_target.write(
+                    f"        .then((): void => {{\n"
+                    f"            let error = new Error();\n"
+                    f"            callback(error);\n"
+                    f"        }})\n"
+                )
+            else:
+                pkg_sts_target.write(
+                    f"        .then((ret: NullishType) => {{\n"
+                    f"                let retInner = ret as {sts_return_ty_name};\n"
+                    f"                let error = new Error();\n"
+                    f"                callback(error, retInner);\n"
+                    f"        }})\n"
+                )
+            pkg_sts_target.write(
+                f"        .catch((ret: NullishType) => {{\n"
+                f"            let retError = ret as Error;\n"
+                f"            callback(retError);\n"
+                f"        }});\n"
+                f"    }}\n"
+            )
+        # promise
+        if (promise_func_name := func_ani_info.sts_promise_name) is not None:
+            pkg_sts_target.write(
+                f"    static {promise_func_name}({sts_real_params_str}): Promise<{sts_return_ty_name}> {{\n"
+                f"        return launch {func_ani_info.sts_native_name}({sts_native_args_str});\n"
+                f"    }}\n"
+            )
 
 
 class ANICodeGenerator:

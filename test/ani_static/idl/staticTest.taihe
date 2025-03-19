@@ -1,0 +1,30 @@
+[class]
+interface IBase {
+    get(): String;
+    set(a: String): void;
+}
+
+[static_method("IBase", "sumSync")]
+function sumSync(a: i32, b: i32): i32;
+
+[static_method("IBase", "addSync"), gen_async="add", gen_promise="add"]
+function addSync(a: i32, b: i32): i32;
+
+[ctor = "IBase"]
+function getIBase(name: String): IBase;
+
+[ctor = "IBase"]
+function getIBase_test(name: String, test: String): IBase;
+
+interface ITest {
+    get(): String;
+    set(a: String): void;
+}
+
+// if you add a static method / constructor for an interface, it will not work.
+// just like: 
+[static_method("ITest", "static_test")]
+function static_func(a: i32, b: i32): i32;
+
+[ctor = "ITest"]
+function ctor_func(): ITest;

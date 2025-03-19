@@ -1,8 +1,14 @@
-from taihe.parse.convert import AstConverter
+from taihe.parse.convert import (
+    AstConverter,
+    IgnoredFileReason,
+    IgnoredFileWarn,
+    normalize_pkg_name,
+)
 from taihe.semantics.analysis import analyze_semantics
 from taihe.semantics.declarations import PackageGroup
 from taihe.utils.diagnostics import AbstractDiagnosticsManager, DiagBase
 from taihe.utils.exceptions import (
+    AdhocNote,
     DeclarationNotInScopeError,
     DeclNotExistError,
     DeclRedefError,
@@ -15,7 +21,7 @@ from taihe.utils.exceptions import (
     RecursiveReferenceError,
     SymbolConflictWithNamespaceError,
 )
-from taihe.utils.sources import SourceManager
+from taihe.utils.sources import SourceLocation, SourceManager
 
 
 class SemanticTestDiagnosticsManager(AbstractDiagnosticsManager):
@@ -51,7 +57,25 @@ class SemanticTestCompilerInstance:
 
     def parse(self):
         for src in self.source_manager.sources:
-            conv = AstConverter(src, self.diagnostics_manager)
+            pkg_name_raw = src.pkg_name
+            pkg_name_norm = normalize_pkg_name(pkg_name_raw)
+
+            # invalid package name
+            if pkg_name_raw != pkg_name_norm:
+                loc = SourceLocation(src)
+                self.diagnostics_manager.emit(
+                    IgnoredFileWarn(
+                        IgnoredFileReason.INVALID_PKG_NAME,
+                        note=AdhocNote(
+                            f"consider using `{pkg_name_norm}` instead of `{pkg_name_raw}`",
+                            loc=loc,
+                        ),
+                        loc=loc,
+                    )
+                )
+                continue
+
+            conv = AstConverter(pkg_name_norm, src, self.diagnostics_manager)
             pkg = conv.convert()
             with self.diagnostics_manager.capture_error():
                 self.package_group.add(pkg)
@@ -342,7 +366,7 @@ def test_idl_syntax():
     test_instance.add_source(
         "package",
         "struct A {\n"
-        "    a;\n"
+        "    a: @;\n"
         "}\n"
     )
     test_instance.run()
