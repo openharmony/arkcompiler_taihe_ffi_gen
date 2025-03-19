@@ -221,6 +221,18 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
         else:
             self.sts_promise_name = None
 
+        self.gen_getter = None
+        if (getter_attr := f.attrs.get("getter")) and len(f.attrs) == 1:
+            if getter_field := getter_attr.value:
+                self.gen_getter = getter_field
+                self.gen_method = None
+
+        self.gen_setter = None
+        if (setter_attr := f.attrs.get("setter")) and len(f.attrs) == 1:
+            if setter_field := setter_attr.value:
+                self.gen_setter = setter_field
+                self.gen_method = None
+
         self.sts_real_params: list[ParamDecl] = []
         self.sts_native_args: list[str] = []
         for param in f.params:
@@ -1334,10 +1346,21 @@ class STSCodeGenerator:
                 sts_return_ty_name = type_ani_info.sts_type
             else:
                 sts_return_ty_name = "void"
+            # getter
+            if getter_field := method_ani_info.gen_getter:
+                pkg_sts_target.write(
+                    f"    get {getter_field}({sts_real_params_str}): {sts_return_ty_name};\n"
+                )
+            # setter
+            if setter_field := method_ani_info.gen_setter:
+                pkg_sts_target.write(
+                    f"    set {setter_field}({sts_real_params_str});\n"
+                )
             # real
-            pkg_sts_target.write(
-                f"    {method_ani_info.gen_method}({sts_real_params_str}): {sts_return_ty_name};\n"
-            )
+            if real_method := method_ani_info.gen_method:
+                pkg_sts_target.write(
+                    f"    {real_method}({sts_real_params_str}): {sts_return_ty_name};\n"
+                )
             # async
             if (async_func_name := method_ani_info.sts_async_name) is not None:
                 callback = f"callback: AsyncCallback<{sts_return_ty_name}>"
@@ -1394,7 +1417,6 @@ class STSCodeGenerator:
             pkg_sts_target.write(
                 f"    native {method_ani_info.sts_native_name}({sts_native_params_str}): {sts_return_ty_name};\n"
             )
-            # real
             sts_real_params = []
             for sts_real_param in method_ani_info.sts_real_params:
                 type_ani_info = TypeANIInfo.get(
@@ -1405,11 +1427,27 @@ class STSCodeGenerator:
                 )
             sts_real_params_str = ", ".join(sts_real_params)
             sts_native_args_str = ", ".join(method_ani_info.sts_native_args)
-            pkg_sts_target.write(
-                f"    {method_ani_info.gen_method}({sts_real_params_str}): {sts_return_ty_name} {{\n"
-                f"        return this.{method_ani_info.sts_native_name}({sts_native_args_str});\n"
-                f"    }}\n"
-            )
+            # getter
+            if getter_field := method_ani_info.gen_getter:
+                pkg_sts_target.write(
+                    f"    get {getter_field}({sts_real_params_str}): {sts_return_ty_name} {{\n"
+                    f"        return this.{method_ani_info.sts_native_name}({sts_native_args_str});\n"
+                    f"    }}\n"
+                )
+            # setter
+            if setter_field := method_ani_info.gen_setter:
+                pkg_sts_target.write(
+                    f"    set {setter_field}({sts_real_params_str}) {{\n"
+                    f"        this.{method_ani_info.sts_native_name}({sts_native_args_str});\n"
+                    f"    }}\n"
+                )
+            # real
+            if real_method := method_ani_info.gen_method:
+                pkg_sts_target.write(
+                    f"    {real_method}({sts_real_params_str}): {sts_return_ty_name} {{\n"
+                    f"        return this.{method_ani_info.sts_native_name}({sts_native_args_str});\n"
+                    f"    }}\n"
+                )
             # async
             if (async_func_name := method_ani_info.sts_async_name) is not None:
                 callback = f"callback: AsyncCallback<{sts_return_ty_name}>"
