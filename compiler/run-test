@@ -73,7 +73,7 @@ def compile_abc(output_dir, input_dir, panda_home):
         name = input_file.name
         if name.endswith(".ets"):
             output_file = output_dir / f"{name}.abc"
-            command = f"{panda_home}/bin/es2panda {input_file} --output {output_file} --extension sts --arktsconfig {output_dir}/arktsconfig.json"
+            command = f"{panda_home}/bin/es2panda {input_file} --output {output_file} --extension ets --arktsconfig {output_dir}/arktsconfig.json"
             run_command(command)
             command_dump = (
                 f"{panda_home}/bin/ark_disasm {output_file} {output_file}.dump"
@@ -123,6 +123,7 @@ def download_file(target_file: Path, username: str, password: str, url: str):
 
 def extract_file(target_file, extract_dir, version_file, version):
     try:
+        shutil.rmtree(extract_dir)
         os.makedirs(extract_dir, exist_ok=True)
         with tarfile.open(target_file, "r:gz") as tar:
             tar.extractall(path=extract_dir)
@@ -137,7 +138,7 @@ def download_panda_vm(extract_dir: Path):
     username = "koala-pub"
     password = "y3t!n0therP"
 
-    url = "https://nexus.bz-openlab.ru:10443/repository/koala-npm/%40panda/sdk/-/sdk-1.5.0-dev.21851.tgz"
+    url = "https://nexus.bz-openlab.ru:10443/repository/koala-npm/%40panda/sdk/-/sdk-1.5.0-dev.23816.tgz"
     target_file = extract_dir / url.split("/")[-1]
     version_file = extract_dir / "version.txt"
     version = target_file.stem

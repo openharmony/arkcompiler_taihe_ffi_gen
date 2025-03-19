@@ -25,6 +25,7 @@ run-core-tests() {
     echo "Testing non-ANI tests..."
     for test_dir in $(find ../test/* -maxdepth 0 -type d -not -path "../test/ani_*" \
                            -and -not -path "../test/compiler" \
+                           -and -not -path "../test/promise" \ # TODO: Depends on ANI
                            -and -not -path "../test/impl_test"); do
         echo "Testing: $test_dir"
         coverage run --parallel-mode ./run-test "$test_dir" --generate-and-compile -ani
