@@ -6,7 +6,7 @@
 
 第一步 在taihe文件中声明
 
-interface需要写一个make函数创建，所以`.taihe`文件中需要有一个makeIface函数用于创建一个被实现的接口
+interface需要写一个函数创建interface的实现，所以`.taihe`文件中需要有一个函数用于创建一个被实现的接口,如下方的`makeIface`函数
 
 `interface/idl/interface.taihe`
 ```taihe

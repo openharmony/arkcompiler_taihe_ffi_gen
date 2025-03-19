@@ -1,0 +1,2 @@
+function is_string(s: Opaque): bool;
+function get_objects(): Array<Opaque>;
