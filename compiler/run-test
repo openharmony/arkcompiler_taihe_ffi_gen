@@ -123,14 +123,14 @@ def download_file(target_file: Path, username: str, password: str, url: str):
 
 def extract_file(target_file, extract_dir, version_file, version):
     try:
-        shutil.rmtree(extract_dir)
+        shutil.rmtree(extract_dir / "package", ignore_errors=True)
         os.makedirs(extract_dir, exist_ok=True)
         with tarfile.open(target_file, "r:gz") as tar:
             tar.extractall(path=extract_dir)
         with open(version_file, "w") as vf:
             vf.write(version)
     except Exception as e:
-        print(f"extrace error: {e}")
+        print(f"extract error: {e}")
         sys.exit(1)
 
 
