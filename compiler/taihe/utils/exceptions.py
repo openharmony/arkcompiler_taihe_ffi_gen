@@ -69,26 +69,6 @@ class EnumValueConflictNote(DiagNote):
 
 
 @dataclass
-class EnumValueConflictError(DiagError):
-    prev: "EnumItemDecl"
-    current: "EnumItemDecl"
-
-    def __init__(self, prev: "EnumItemDecl", current: "EnumItemDecl"):
-        self.prev = prev
-        self.current = current
-        self.loc = current.loc
-
-    def notes(self):
-        if self.prev.loc:
-            yield DeclRedefNote(self.prev)
-
-    @property
-    @override
-    def format_msg(self) -> str:
-        return f"value {self.current.value} of {self.current.description} is repeated"
-
-
-@dataclass
 class IDLSyntaxError(DiagError):
     token: str
 

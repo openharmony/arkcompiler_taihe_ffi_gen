@@ -33,7 +33,6 @@ from taihe.utils.exceptions import (
     DeclNotExistError,
     DeclRedefError,
     DuplicateExtendsWarn,
-    EnumValueConflictError,
     ExtendsTypeError,
     GenericArgumentsError,
     NotATypeError,
@@ -53,7 +52,6 @@ def analyze_semantics(pg: PackageGroup, diag: AbstractDiagnosticsManager):
     _check_decl_confilct_with_namespace(pg, diag)
     _ResolveImportsPass(diag).handle_decl(pg)
     _CheckFieldNameCollisionErrorPass(diag).handle_decl(pg)
-    _CalculateEnumItemValuePass(diag).handle_decl(pg)
     _CheckRecursiveInclusionPass(diag).handle_decl(pg)
 
 
@@ -277,27 +275,6 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
             params_ty.append(arg_ty)
 
         d.resolved_ty = CallbackType(return_ty, tuple(params_ty))
-
-
-class _CalculateEnumItemValuePass(RecursiveDeclVisitor):
-    """Calculate Enum Values."""
-
-    diag: AbstractDiagnosticsManager
-
-    def __init__(self, diag: AbstractDiagnosticsManager):
-        self.diag = diag
-
-    def visit_enum_decl(self, d: EnumDecl) -> None:
-        values = {}
-        value = 0
-        for i in d.items:
-            if i.value is None:
-                i.value = value
-            else:
-                value = i.value
-            if (prev := values.setdefault(value, i)) != i:
-                self.diag.emit(EnumValueConflictError(prev, i))
-            value += 1
 
 
 class _CheckFieldNameCollisionErrorPass(RecursiveDeclVisitor):

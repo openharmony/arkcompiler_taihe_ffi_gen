@@ -653,7 +653,7 @@ class CppHeadersGenerator:
         )
         for item in enum.items:
             enum_cpp_defn_target.writeln(
-                f"        {item.name} = {item.value},",
+                f"        {item.name},",
             )
         enum_cpp_defn_target.writeln(
             f"    }};",

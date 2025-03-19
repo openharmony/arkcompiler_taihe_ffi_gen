@@ -319,12 +319,10 @@ class AstConverter(ExprEvaluator):
 
     @override
     def visit_EnumProperty(self, node: ast.EnumProperty) -> EnumItemDecl:
-        d = EnumItemDecl(
-            self.loc(node.name),
-            str(node.name),
-            ty_ref=self.visit(node.ty) if node.ty else None,
-            value=self.visit(node.expr) if node.expr else None,
-        )
+        if ty := node.ty:
+            d = EnumItemDecl(self.loc(node.name), str(node.name), self.visit(ty))
+        else:
+            d = EnumItemDecl(self.loc(node.name), str(node.name))
         self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
         return d
 

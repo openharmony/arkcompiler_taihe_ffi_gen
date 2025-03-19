@@ -477,13 +477,13 @@ class ABIHeadersGenerator:
         for item in enum.items:
             if item.ty_ref is None:
                 enum_abi_defn_target.writeln(
-                    f"  // {item.value}",
+                    f"  // {item.name}",
                 )
                 continue
             type_abi_info = TypeABIInfo.get(self.am, item.ty_ref.resolved_ty)
             enum_abi_defn_target.include(*type_abi_info.impl_headers)
             enum_abi_defn_target.writeln(
-                f"    {type_abi_info.as_owner} {item.name}; // {item.value}",
+                f"    {type_abi_info.as_owner} {item.name};",
             )
         enum_abi_defn_target.writeln(
             f"}};",

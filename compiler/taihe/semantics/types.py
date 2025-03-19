@@ -159,7 +159,7 @@ class CallbackType(Type):
     def representation(self):
         return_fmt = ty.representation if (ty := self.return_ty) else "void"
         params_fmt = ", ".join(ty.representation for ty in self.params_ty)
-        return f"({params_fmt}) -> {return_fmt}"
+        return f"({params_fmt}) => {return_fmt}"
 
 
 class GenericType(Type, metaclass=ABCMeta):

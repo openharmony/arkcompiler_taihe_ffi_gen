@@ -160,15 +160,10 @@ class _PrettyPrinter(RecursiveDeclVisitor):
     def visit_enum_item_decl(self, d: EnumItemDecl):
         self.write_attr(d)
 
-        ty_name = f": {self.get_type_ref_decl(d.ty_ref)}" if d.ty_ref else ""
-        value = "unknown" if d.value is None else str(d.value)
-        comment = (
-            ""
-            if d.value is None
-            else f" {AnsiStyle.GREEN}// {hex(d.value)}{AnsiStyle.RESET}"
-        )
-
-        self.writeln(f"{d.name}{ty_name} = {value};{comment}")
+        if d.ty_ref:
+            self.writeln(f"{d.name}: {self.get_type_ref_decl(d.ty_ref)};")
+        else:
+            self.writeln(f"{d.name};")
 
     @override
     def visit_enum_decl(self, d: EnumDecl):
@@ -176,12 +171,14 @@ class _PrettyPrinter(RecursiveDeclVisitor):
 
         enum_kw = self.as_keyword("enum")
 
-        self.writeln(f"{enum_kw} {d.name} {{")
         if d.items:
+            self.writeln(f"{enum_kw} {d.name} {{")
             with self.indent_manager.code_block():
                 for i in d.items:
                     self.handle_decl(i)
-        self.writeln(f"}}")
+            self.writeln(f"}}")
+        else:
+            self.writeln(f"{enum_kw} {d.name} {{}}")
 
     @override
     def visit_struct_field_decl(self, d: StructFieldDecl):
@@ -195,12 +192,14 @@ class _PrettyPrinter(RecursiveDeclVisitor):
 
         struct_kw = self.as_keyword("struct")
 
-        self.writeln(f"{struct_kw} {d.name} {{")
         if d.fields:
+            self.writeln(f"{struct_kw} {d.name} {{")
             with self.indent_manager.code_block():
                 for f in d.fields:
                     self.handle_decl(f)
-        self.writeln(f"}}")
+            self.writeln(f"}}")
+        else:
+            self.writeln(f"{struct_kw} {d.name} {{}}")
 
     @override
     def visit_iface_func_decl(self, d: IfaceMethodDecl):
@@ -217,18 +216,20 @@ class _PrettyPrinter(RecursiveDeclVisitor):
 
         iface_kw = self.as_keyword("interface")
 
-        extends = (
-            ": " + ", ".join(self.get_parent_decl(e) for e in d.parents)
+        decl = (
+            f"{d.name}: " + ", ".join(self.get_parent_decl(e) for e in d.parents)
             if d.parents
-            else ""
+            else d.name
         )
 
-        self.writeln(f"{iface_kw} {d.name}{extends} {{")
         if d.methods:
+            self.writeln(f"{iface_kw} {decl} {{")
             with self.indent_manager.code_block():
                 for f in d.methods:
                     self.handle_decl(f)
-        self.writeln(f"}}")
+            self.writeln(f"}}")
+        else:
+            self.writeln(f"{iface_kw} {decl} {{}}")
 
     @override
     def visit_package_decl(self, p: PackageDecl):

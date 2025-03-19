@@ -263,7 +263,7 @@ class CallbackTypeRefDecl(TypeRefDecl):
             f"{param.name}: {param.ty_ref.unresolved_repr}" for param in self.params
         )
         ret_fmt = ty_ref.unresolved_repr if (ty_ref := self.return_ty_ref) else "void"
-        return f"({args_fmt}) -> {ret_fmt}"
+        return f"({args_fmt}) => {ret_fmt}"
 
 
 #####################
@@ -425,7 +425,6 @@ class DeclarationImportDecl(ImportDecl):
 
 class EnumItemDecl(NamedDecl):
     ty_ref: Optional[TypeRefDecl]
-    value: Optional[int]
     node_parent: Optional["EnumDecl"]
 
     def __init__(
@@ -433,11 +432,9 @@ class EnumItemDecl(NamedDecl):
         loc: Optional[SourceLocation],
         name: str,
         ty_ref: Optional[TypeRefDecl] = None,
-        value: Optional[int] = None,
     ):
         super().__init__(loc, name)
         self.ty_ref = ty_ref
-        self.value = value
         self.node_parent = None
 
     @override
