@@ -1,0 +1,24 @@
+interface ICpu {
+    add(a: i32, b: i32): i32;
+    sub(a: i32, b: i32): i32;  
+}
+
+function makeCpu(): ICpu;
+
+function getCpuSize(r : Map<String, ICpu>) : i32;
+
+function getASize(r : Map<i32, Opaque>) : i32;
+
+function getStringIntSize(r : Map<String, i32>) : i32;
+
+function createStringString(a : i32) : Map<String, String>;
+
+struct Data {
+  a: String;
+  b: i32;
+}
+
+function getMapfromArray(d : Array<Data>): Map<String, i32>;
+
+function getDatafromMap(m : Map<String, Data>, k : String) : Data;
+

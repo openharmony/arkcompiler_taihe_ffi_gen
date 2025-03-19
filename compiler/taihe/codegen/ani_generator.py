@@ -41,7 +41,7 @@ from taihe.semantics.types import (
     # CallbackType,
     EnumType,
     IfaceType,
-    # MapType,
+    MapType,
     OpaqueType,
     OptionalType,
     ScalarType,
@@ -866,9 +866,96 @@ class OptionalTypeANIInfo(AbstractAnalysis[OptionalType], AbstractTypeANIInfo):
 #         pass
 
 
-# class MapTypeANIInfo(AbstractAnalysis[MapType], AbstractTypeANIInfo):
-#     def __init__(self, am: AnalysisManager, t: MapType) -> None:
-#         pass
+class MapTypeANIInfo(AbstractAnalysis[MapType], AbstractTypeANIInfo):
+    def __init__(self, am: AnalysisManager, t: MapType) -> None:
+        AbstractTypeANIInfo.__init__(self, am, t)
+        key_ty_ani_info = TypeANIInfo.get(am, t.key_ty)
+        val_ty_ani_info = TypeANIInfo.get(am, t.val_ty)
+        self.ani_type = ANI_OBJECT
+        self.sts_type = (
+            f"Record<{key_ty_ani_info.sts_type}, {val_ty_ani_info.sts_type}>"
+        )
+        self.type_desc = "Lescompat/Record;"
+        self.am = am
+        self.t = t
+
+    @override
+    def from_ani(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        ani_value: str,
+        cpp_result: str,
+    ):
+        cpp_info = TypeCppInfo.get(self.am, self.t)
+        ani_ref_keys = f"{cpp_result}_keys"
+        ani_key_value = f"{cpp_result}_key"
+        ani_value_obj = f"{cpp_result}_val"
+        key_ty_ani_info = TypeANIInfo.get(self.am, self.t.key_ty)
+        val_ty_ani_info = TypeANIInfo.get(self.am, self.t.val_ty)
+        target.write(
+            f"{' ' * offset}ani_ref {ani_ref_keys};\n"
+            f"{' ' * offset}{env}->Object_CallMethodByName_Ref({ani_value}, \"keys\", nullptr, &{ani_ref_keys});\n"
+            f"{' ' * offset}{cpp_info.as_owner} {cpp_result};\n"
+            f"{' ' * offset}while (true) {{\n"
+            f"{' ' * offset}    ani_ref next;\n"
+            f"{' ' * offset}    ani_boolean done;\n"
+            f"{' ' * offset}    {env}->Object_CallMethodByName_Ref(static_cast<ani_object>({ani_ref_keys}), \"next\", nullptr, &next);\n"
+            f"{' ' * offset}    {env}->Object_GetFieldByName_Boolean(static_cast<ani_object>(next), \"done\", &done);\n"
+            f"{' ' * offset}    if (done) break;\n"
+            f"{' ' * offset}    ani_ref {ani_key_value};\n"
+            f"{' ' * offset}    {env}->Object_GetFieldByName_Ref(static_cast<ani_object>(next), \"value\", &{ani_key_value});\n"
+            f"{' ' * offset}    ani_ref {ani_value_obj};\n"
+            f"{' ' * offset}    {env}->Object_CallMethodByName_Ref({ani_value}, \"$_get\", nullptr, &{ani_value_obj}, {ani_key_value});\n"
+        )
+        key_cpp_spec = f"{cpp_result}_key_spec"
+        val_cpp_spec = f"{cpp_result}_val_spec"
+        key_ty_ani_info.from_ani_boxed(
+            target, offset + 4, env, ani_key_value, key_cpp_spec
+        )
+        val_ty_ani_info.from_ani_boxed(
+            target, offset + 4, env, ani_value_obj, val_cpp_spec
+        )
+        target.write(
+            f"{' ' * offset}    {cpp_result}.emplace({key_cpp_spec}, {val_cpp_spec});\n"
+            f"{' ' * offset}}}\n"
+        )
+
+    @override
+    def into_ani(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        cpp_value: str,
+        ani_result: str,
+    ):
+        key_ty_cpp_info = TypeCppInfo.get(self.am, self.t.key_ty)
+        val_ty_cpp_info = TypeCppInfo.get(self.am, self.t.val_ty)
+        key_ty_ani_info = TypeANIInfo.get(self.am, self.t.key_ty)
+        val_ty_ani_info = TypeANIInfo.get(self.am, self.t.val_ty)
+        ani_class = f"{ani_result}_class"
+        ani_method = f"{ani_result}_method"
+        cpp_key = f"{ani_result}_key"
+        cpp_val = f"{ani_result}_val"
+        target.write(
+            f"{' ' * offset} ani_class {ani_class};\n"
+            f"{' ' * offset} {env}->FindClass(\"{self.type_desc}\", &{ani_class});\n"
+            f"{' ' * offset} ani_method {ani_method};\n"
+            f"{' ' * offset} {env}->Class_FindMethod({ani_class}, \"<ctor>\", nullptr, &{ani_method});\n"
+            f"{' ' * offset} ani_object {ani_result};\n"
+            f"{' ' * offset} {env}->Object_New({ani_class}, {ani_method}, &{ani_result});\n"
+            f"{' ' * offset} {cpp_value}.accept([=]({key_ty_cpp_info.as_param} {cpp_key}, {val_ty_cpp_info.as_param} {cpp_val}) {{\n"
+        )
+        key_ani_spec = f"{ani_result}_key_spec"
+        val_ani_spec = f"{ani_result}_val_spec"
+        key_ty_ani_info.into_ani_boxed(target, offset + 4, env, cpp_key, key_ani_spec)
+        val_ty_ani_info.into_ani_boxed(target, offset + 4, env, cpp_val, val_ani_spec)
+        target.write(
+            f"{' ' * offset}    env->Object_CallMethodByName_Void({ani_result}, \"$_set\", nullptr, {key_ani_spec}, {val_ani_spec});\n"
+            f"{' ' * offset} }});\n"
+        )
 
 
 # class SetTypeANIInfo(AbstractAnalysis[SetType], AbstractTypeANIInfo):
@@ -929,9 +1016,9 @@ class TypeANIInfo(TypeVisitor[AbstractTypeANIInfo]):
     # def visit_vector_type(self, t: VectorType) -> AbstractTypeANIInfo:
     #     return VectorTypeANIInfo.get(self.am, t)
 
-    # @override
-    # def visit_map_type(self, t: MapType) -> AbstractTypeANIInfo:
-    #     return MapTypeANIInfo.get(self.am, t)
+    @override
+    def visit_map_type(self, t: MapType) -> AbstractTypeANIInfo:
+        return MapTypeANIInfo.get(self.am, t)
 
     # @override
     # def visit_set_type(self, t: SetType) -> AbstractTypeANIInfo:
