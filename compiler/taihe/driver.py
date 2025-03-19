@@ -24,14 +24,20 @@ from taihe.codegen.cpp_impl_generator import (
     CppImplHeadersGenerator,
     CppImplSourcesGenerator,
 )
-from taihe.parse.convert import AstConverter
+from taihe.parse.convert import (
+    AstConverter,
+    IgnoredFileReason,
+    IgnoredFileWarn,
+    normalize_pkg_name,
+)
 from taihe.semantics.analysis import analyze_semantics
 from taihe.semantics.declarations import PackageGroup
 from taihe.semantics.format import pretty_print
 from taihe.utils.analyses import AnalysisManager
 from taihe.utils.diagnostics import DiagnosticsManager, Level
+from taihe.utils.exceptions import AdhocNote
 from taihe.utils.outputs import OutputManager
-from taihe.utils.sources import SourceManager
+from taihe.utils.sources import SourceLocation, SourceManager
 
 
 @dataclass
@@ -91,12 +97,51 @@ class CompilerInstance:
     ##########################
 
     def scan(self):
+        """Adds all `.taihe` files inside a directory. Subdirectories are ignored."""
         for src_dir in self.invocation.src_dirs:
-            self.source_manager.add_directory(Path(src_dir))
+            d = Path(src_dir)
+            for file in d.iterdir():
+                loc = SourceLocation.with_path(file)
+                # subdirectories are ignored
+                if not file.is_file():
+                    w = IgnoredFileWarn(IgnoredFileReason.IS_DIRECTORY, loc=loc)
+                    self.diagnostics_manager.emit(w)
+
+                # unexpected file extension
+                elif file.suffix != ".taihe":
+                    target = d.with_suffix(".taihe").name
+                    w = IgnoredFileWarn(
+                        IgnoredFileReason.EXTENSION_MISMATCH,
+                        loc=loc,
+                        note=AdhocNote(f"consider renaming to `{target}`", loc=loc),
+                    )
+                    self.diagnostics_manager.emit(w)
+
+                # Okay...
+                else:
+                    self.source_manager.add_file(file)
 
     def parse(self):
         for src in self.source_manager.sources:
-            conv = AstConverter(src, self.diagnostics_manager)
+            pkg_name_raw = src.pkg_name
+            pkg_name_norm = normalize_pkg_name(pkg_name_raw)
+
+            # invalid package name
+            if pkg_name_raw != pkg_name_norm:
+                loc = SourceLocation(src)
+                self.diagnostics_manager.emit(
+                    IgnoredFileWarn(
+                        IgnoredFileReason.INVALID_PKG_NAME,
+                        note=AdhocNote(
+                            f"consider using `{pkg_name_norm}` instead of `{pkg_name_raw}`",
+                            loc=loc,
+                        ),
+                        loc=loc,
+                    )
+                )
+                continue
+
+            conv = AstConverter(pkg_name_norm, src, self.diagnostics_manager)
             pkg = conv.convert()
             with self.diagnostics_manager.capture_error():
                 self.package_group.add(pkg)

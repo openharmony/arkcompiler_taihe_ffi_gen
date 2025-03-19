@@ -1,5 +1,8 @@
 from codecs import decode
 from collections.abc import Iterable
+from dataclasses import dataclass
+from enum import Enum
+from typing import Optional
 
 from typing_extensions import override
 
@@ -26,8 +29,49 @@ from taihe.semantics.declarations import (
     StructDecl,
     StructFieldDecl,
 )
-from taihe.utils.diagnostics import AbstractDiagnosticsManager
+from taihe.utils.diagnostics import AbstractDiagnosticsManager, DiagNote, DiagWarn
 from taihe.utils.sources import SourceBase, SourceLocation
+
+
+class IgnoredFileReason(Enum):
+    IS_DIRECTORY = "subdirectories are ignored"
+    EXTENSION_MISMATCH = "unexpected file extension"
+    INVALID_PKG_NAME = "invalid package name"
+
+
+@dataclass
+class IgnoredFileWarn(DiagWarn):
+    reason: IgnoredFileReason
+    note: Optional[DiagNote] = None
+
+    @property
+    @override
+    def format_msg(self) -> str:
+        return f"unrecognized file: {self.reason.value}"
+
+    def notes(self):
+        if self.note:
+            yield self.note
+
+
+def normalize_pkg_name(name: str):
+    def to_valid_identifier(s: str):
+        """Converts a string to valid, C-style identifier."""
+        # First, remove all non-alphanumeric characters.
+        if not s.isalnum():
+            s = "".join(char for char in s if char.isalnum())
+        # Next, ensure that the segment doesn't begin with a digit.
+        if s and s[0].isnumeric():
+            # If so, we inject "_" in the beginning.
+            s = "_" + s
+        return s
+
+    # First, split the package name into segments.
+    segments = name.split(".")
+    # Next, make sure that each segment is valid.
+    translated_segments = (to_valid_identifier(s) for s in segments)
+    # Finally, reconstruct the package name.
+    return ".".join(s for s in translated_segments if s)
 
 
 def pkg2str(pkg_name: ast.PkgName) -> str:
@@ -171,7 +215,10 @@ class AstConverter(ExprEvaluator):
     source: SourceBase
     diag: AbstractDiagnosticsManager
 
-    def __init__(self, source: SourceBase, diag: AbstractDiagnosticsManager):
+    def __init__(
+        self, pkg_name: str, source: SourceBase, diag: AbstractDiagnosticsManager
+    ):
+        self.pkg_name = pkg_name
         self.source = source
         self.diag = diag
 
@@ -353,7 +400,7 @@ class AstConverter(ExprEvaluator):
 
     @override
     def visit_Spec(self, node: ast.Spec) -> PackageDecl:
-        pkg = PackageDecl(self.source.pkg_name, SourceLocation(self.source))
+        pkg = PackageDecl(self.pkg_name, SourceLocation(self.source))
         for u in node.uses:
             self.diag.for_each(self.visit(u), pkg.add_import)
         self.diag.for_each(node.fields, lambda n: pkg.add_declaration(self.visit(n)))
