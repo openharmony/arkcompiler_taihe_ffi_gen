@@ -1,5 +1,5 @@
 from abc import ABCMeta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from typing_extensions import override
 
@@ -145,6 +145,11 @@ class PackageANIInfo(AbstractAnalysis[PackageDecl]):
             else "/".join(p.segments)
         )
         self.impl_desc = f"L{self.pkg_name}/ETSGLOBAL;"
+
+        self.is_namespace = False
+        if "namespace" in p.attrs:
+            self.is_namespace = True
+            self.ns_impl_desc = f"L{self.pkg_name};"
 
 
 class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
@@ -1033,11 +1038,11 @@ class Namespace:
     def __init__(self, name: str):
         self.name: str = name
         self.children_namespaces: dict[str, Namespace] = {}
-        self.pkgs: list[PackageDecl] = []
+        self.cur_pkg: Optional[PackageDecl] = None
 
     def add_path(self, path_parts: list[str], pkg: PackageDecl):
         if not path_parts:
-            self.pkgs.append(pkg)
+            self.cur_pkg = pkg
             return
         head, *tail = path_parts
         child = self.children_namespaces.setdefault(head, Namespace(head))
@@ -1045,14 +1050,14 @@ class Namespace:
 
     def display(self, level=0):
         # This function use to test NsTreeNode
-        print(f"{'  ' * level}{self.name} : {self.pkgs if self.pkgs else ''}")
+        print(f"{'  ' * level}{self.name} : {self.cur_pkg if self.cur_pkg else ''}")
         for child in self.children_namespaces.values():
             child.display(level + 1)
 
 
 class NsTree:
-    def __init__(self):
-        self.root = Namespace("root")
+    def __init__(self, root_name: str):
+        self.root = Namespace(root_name)
 
     def add(self, path: str, pkg_name: PackageDecl):
         parts = path.split(".")
@@ -1066,15 +1071,66 @@ class STSCodeGenerator:
     def __init__(self, tm: OutputManager, am: AnalysisManager):
         self.tm = tm
         self.am = am
+        self.ns_tree_list: dict[str, NsTree] = {}
+        self.generated_pkg_list: list[PackageDecl] = []
 
     def generate(self, pg: PackageGroup):
         for pkg in pg.packages:
-            self.gen_package_file(pkg)
+            if "namespace" in pkg.attrs:
+                attr_item = pkg.attrs["namespace"]
+                root_pkg = attr_item.value[0]
+                if root_pkg not in self.ns_tree_list:
+                    self.ns_tree_list.setdefault(root_pkg, NsTree(root_pkg))
+                self.ns_tree_list[root_pkg].add(attr_item.value[1], pkg)
+            else:
+                continue
 
-    def gen_package_file(self, pkg: PackageDecl):
+        for pkg in pg.packages:
+            self.gen_ns_package_file(pkg)
+
+        for pkg in pg.packages:
+            self.gen_normal_package_file(pkg)
+
+    def gen_ns_package_file(self, pkg: PackageDecl):
+        pkg_ani_info = PackageANIInfo.get(self.am, pkg)
+        pkg_sts_target = OutputBuffer.create(self.tm, pkg_ani_info.sts)
+        pkg_sts_target.indent_manager.level = -1
+
+        if pkg.name in self.ns_tree_list:
+            cur_ns_tree = self.ns_tree_list[pkg.name].root
+            self.gen_namespace(cur_ns_tree, pkg_sts_target)
+
+    def gen_normal_package_file(self, pkg: PackageDecl):
         pkg_ani_info = PackageANIInfo.get(self.am, pkg)
         pkg_sts_target = OutputBuffer.create(self.tm, pkg_ani_info.sts)
 
+        if pkg not in self.generated_pkg_list:
+            self.gen_package_types(pkg, pkg_sts_target)
+
+    def gen_namespace(
+        self,
+        cur_ns: Namespace,
+        pkg_sts_target: OutputBuffer,
+    ):
+        pkg = cur_ns.cur_pkg
+        if pkg:
+            pkg_sts_target.write(f"export namespace {cur_ns.name} {{\n")
+            with pkg_sts_target.indent_manager.code_block():
+                self.gen_package_types(pkg, pkg_sts_target)
+
+        with pkg_sts_target.indent_manager.code_block():
+            for child in cur_ns.children_namespaces.values():
+                self.gen_namespace(child, pkg_sts_target)
+
+        if pkg:
+            pkg_sts_target.write(f"}}\n")
+
+    def gen_package_types(
+        self,
+        pkg: PackageDecl,
+        pkg_sts_target: OutputBuffer,
+    ):
+        self.generated_pkg_list.append(pkg)
         # pkg_sts_target.write(f'loadLibrary("{self.lib_name}");\n')
 
         static_methods: dict[str, list[tuple[str, GlobFuncDecl]]] = {}
@@ -1552,20 +1608,24 @@ class ANICodeGenerator:
         pkg_ani_source_target.include(pkg_ani_info.header)
         # generate functions
         for func in pkg.functions:
-            self.gen_func(func, pkg_ani_source_target)
+            self.gen_func(func, pkg_ani_source_target, pkg_ani_info.is_namespace)
         for iface in pkg.interfaces:
             for method in iface.methods:
                 self.gen_method(iface, method, pkg_ani_source_target)
         # register infos
-        register_infos: list[tuple[str, list[tuple[str, str]]]] = []
-        impl_desc = pkg_ani_info.impl_desc
+        register_infos: list[tuple[str, list[tuple[str, str]], bool]] = []
+        impl_desc = (
+            pkg_ani_info.ns_impl_desc
+            if pkg_ani_info.is_namespace
+            else pkg_ani_info.impl_desc
+        )
         func_infos = []
         for func in pkg.functions:
             glob_func_info = GlobFuncANIInfo.get(self.am, func)
             sts_native_name = glob_func_info.sts_native_name
             mangled_name = glob_func_info.mangled_name
             func_infos.append((sts_native_name, mangled_name))
-        register_infos.append((impl_desc, func_infos))
+        register_infos.append((impl_desc, func_infos, pkg_ani_info.is_namespace))
         for iface in pkg.interfaces:
             iface_ani_info = IfaceANIInfo.get(self.am, iface)
             impl_desc = iface_ani_info.impl_desc
@@ -1575,16 +1635,24 @@ class ANICodeGenerator:
                 sts_native_name = method_ani_info.sts_native_name
                 mangled_name = method_ani_info.mangled_name
                 func_infos.append((sts_native_name, mangled_name))
-            register_infos.append((impl_desc, func_infos))
+            register_infos.append((impl_desc, func_infos, False))
         pkg_ani_source_target.write(
             f"namespace {pkg_ani_info.namespace} {{\n"
             f"ani_status ANIRegister(ani_env *env) {{\n"
         )
-        for impl_desc, func_infos in register_infos:
+        for impl_desc, func_infos, is_namespace in register_infos:
+            if is_namespace:
+                ani_type = "ani_namespace"
+                ani_find_func = "FindNamespace"
+                ani_bind_func = "Namespace_BindNativeFunctions"
+            else:
+                ani_type = "ani_class"
+                ani_find_func = "FindClass"
+                ani_bind_func = "Class_BindNativeMethods"
             pkg_ani_source_target.write(
                 f"    {{\n"
-                f"        ani_class cls;\n"
-                f'        if (ANI_OK != env->FindClass("{impl_desc}", &cls)) {{\n'
+                f"        {ani_type} ani_env;\n"
+                f'        if (ANI_OK != env->{ani_find_func}("{impl_desc}", &ani_env)) {{\n'
                 f"            return ANI_ERROR;\n"
                 f"        }}\n"
                 f"        ani_native_function methods[] = {{\n"
@@ -1593,12 +1661,13 @@ class ANICodeGenerator:
                 pkg_ani_source_target.write(
                     f'            {{"{sts_native_name}", nullptr, reinterpret_cast<void*>({mangled_name})}},\n'
                 )
+
             pkg_ani_source_target.write(
-                "        };\n"
-                "        if (ANI_OK != env->Class_BindNativeMethods(cls, methods, sizeof(methods) / sizeof(ani_native_function))) {\n"
-                "            return ANI_ERROR;\n"
-                "        }\n"
-                "    }\n"
+                f"        }};\n"
+                f"        if (ANI_OK != env->{ani_bind_func}(ani_env, methods, sizeof(methods) / sizeof(ani_native_function))) {{\n"
+                f"            return ANI_ERROR;\n"
+                f"        }}\n"
+                f"    }}\n"
             )
         pkg_ani_source_target.write("    return ANI_OK;\n" "}\n" "}\n")
 
@@ -1606,13 +1675,19 @@ class ANICodeGenerator:
         self,
         func: GlobFuncDecl,
         pkg_ani_source_target: COutputBuffer,
+        is_namespace: bool,
     ):
         func_ani_info = GlobFuncANIInfo.get(self.am, func)
         func_cpp_info = GlobFuncCppInfo.get(self.am, func)
-        params_ani = [
-            "[[maybe_unused]] ani_env *env",
-            "[[maybe_unused]] ani_object object",
-        ]
+        if is_namespace:
+            params_ani = [
+                "[[maybe_unused]] ani_env *env",
+            ]
+        else:
+            params_ani = [
+                "[[maybe_unused]] ani_env *env",
+                "[[maybe_unused]] ani_object object",
+            ]
         ani_param_names = []
         args_cpp = []
         for param in func.params:

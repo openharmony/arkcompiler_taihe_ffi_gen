@@ -48,6 +48,7 @@ class OutputBuffer(OutputBase[[]]):
 
     def __init__(self):
         self.code = StringIO()
+        self.indent_manager = IndentManager()
 
     @override
     def save_as(self, file_path: Path):
@@ -55,7 +56,8 @@ class OutputBuffer(OutputBase[[]]):
             dst.write(self.code.getvalue())
 
     def write(self, code: str):
-        self.code.write(code)
+        for line in code.splitlines():
+            self.code.write(self.indent_manager.current + line + "\n")
 
 
 class COutputBuffer(OutputBase[[bool]]):
@@ -100,6 +102,9 @@ class OutputManager:
     def output_to(self, dst_dir: Path):
         """Save all managed outputs to a target directory."""
         for filename, target in self.targets.items():
+            if isinstance(target, OutputBuffer):
+                if target.code.getvalue() == "":
+                    continue
             target.save_as(dst_dir / filename)
 
     def get_or_create(
