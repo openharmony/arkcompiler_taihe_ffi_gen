@@ -55,11 +55,13 @@ class IgnoredFileWarn(DiagWarn):
 
 
 def normalize_pkg_name(name: str):
+    def is_allowed(char: str):
+        return char.isalnum() or char == "_"
+
     def to_valid_identifier(s: str):
         """Converts a string to valid, C-style identifier."""
-        # First, remove all non-alphanumeric characters.
-        if not s.isalnum():
-            s = "".join(char for char in s if char.isalnum())
+        # First, remove all non-alphanumeric characters, excluding "_".
+        s = "".join(char for char in s if is_allowed(char))
         # Next, ensure that the segment doesn't begin with a digit.
         if s and s[0].isnumeric():
             # If so, we inject "_" in the beginning.
