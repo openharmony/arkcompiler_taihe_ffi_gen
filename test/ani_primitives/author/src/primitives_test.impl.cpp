@@ -1,8 +1,364 @@
 #include "primitives_test.impl.hpp"
+#include "stdexcept"
+#include "core/string.hpp"
+#include "core/optional.hpp"
+#include "core/runtime.hpp"
+#include "primitives_test.Foo.proj.1.hpp"
+#include "primitives_test.Bar.proj.1.hpp"
+#include "primitives_test.primitivesVoid.proj.2.hpp"
 // Please delete this include when you implement
 using namespace taihe::core;
 namespace
 {
+
+  class primitivesVoid {
+    public:
+        void testBaseFunc1() {
+          std::cout << "testBaseFunc1 is true " << std::endl; 
+        }
+        void testBaseFunc2(int32_t option1, bool option2) {
+            if (option2)
+          {
+            std::cout << "testBaseFunc2 is option1  " << option1 << std::endl;
+            std::cout << "testBaseFunc2 is option2  " << option2 << std::endl;
+          }
+          else
+          {
+            std::cout << "testBaseFunc2 is option1  " << option1 << std::endl;
+            std::cout << "testBaseFunc2 is option2  " << option2 << std::endl;
+          }  
+        }
+        void testBaseFunc3(int32_t option1, int64_t option2) {
+          std::cout << "testBaseFunc3 is option1  " << option1 << std::endl;
+          std::cout << "testBaseFunc3 is option2  " << option2 << std::endl;
+        }
+        void testBaseFunc4(int32_t option1, string_view option2) {
+          std::cout << "testBaseFunc4 is option1  " << option1 << std::endl;
+          std::cout << "testBaseFunc4 is option2  " << option2 << std::endl;
+        }
+        void testBaseFunc5(int64_t option1, bool option2) {
+          if (option2)
+          {
+            std::cout << "testBaseFunc5 is option1  " << option1 << std::endl;
+            std::cout << "testBaseFunc5 is option2  " << option2 << std::endl;
+          }
+          else
+          {
+            std::cout << "testBaseFunc5 is option1  " << option1 << std::endl;
+            std::cout << "testBaseFunc5 is option2  " << option2 << std::endl;
+          }  
+        }
+        void testBaseFunc6(int64_t option1, float option2) {
+          std::cout << "testBaseFunc6 is option1  " << option1 << std::endl;
+          std::cout << "testBaseFunc6 is option2  " << option2 << std::endl;
+        }
+        void testBaseFunc7(int64_t option1, double option2) {
+          std::cout << "testBaseFunc7 is option1  " << option1 << std::endl;
+          std::cout << "testBaseFunc7 is option2  " << option2 << std::endl;
+        }
+        void testBaseFunc8(float option1, bool option2) {
+          if (option2)
+          {
+            std::cout << "testBaseFunc8 is option1  " << option1 << std::endl;
+            std::cout << "testBaseFunc8 is option2  " << option2 << std::endl;
+          }
+          else
+          {
+            std::cout << "testBaseFunc8 is option1  " << option1 << std::endl;
+            std::cout << "testBaseFunc8 is option2  " << option2 << std::endl;
+          }
+        }
+        void testBaseFunc9(float option1, string_view option2) {
+          std::cout << "testBaseFunc9 is option1  " << option1 << std::endl;
+          std::cout << "testBaseFunc9 is option2  " << option2 << std::endl;
+        }
+        void testBaseFunc10(double option1, string_view option2) {
+          std::cout << "testBaseFunc10 is option1  " << option1 << std::endl;
+          std::cout << "testBaseFunc10 is option2  " << option2 << std::endl;
+        }
+        void testBaseFunc11(double option1, bool option2) {
+          if (option1)
+          {
+            std::cout << "testBaseFunc11 is option1  " << option1 << std::endl;
+            std::cout << "testBaseFunc11 is option2  " << option2 << std::endl;
+          }
+          else
+          {
+            std::cout << "testBaseFunc11 is option1  " << option1 << std::endl;
+            std::cout << "testBaseFunc11 is option2  " << option2 << std::endl;
+          }
+        }
+        void testBaseFunc12(optional_view<int32_t> option1, optional_view<int64_t> option2) {
+          if (option1) {
+            std::cout << *option1 << std::endl;
+          } else if(option2){
+            std::cout << *option2 << std::endl;
+          } else {
+            std::cout << "Null" << std::endl;
+          }  
+        }
+        void testBaseFunc13(optional_view<float> option1, optional_view<double> option2) {
+          if (option1) {
+            std::cout << *option1 << std::endl;
+          } else if(option2){
+            std::cout << *option2 << std::endl;
+          } else {
+            std::cout << "Null" << std::endl;
+          }
+        }
+        void testBaseFunc14(optional_view<string> option1, optional_view<bool> option2) {
+          if (option1) {
+            std::cout << *option1 << std::endl;
+          } else if(option2){
+            std::cout << *option2 << std::endl;
+          } else {
+            std::cout << "Null" << std::endl;
+          }
+        }
+        void testBaseFunc15(optional_view<int16_t> option1, optional_view<int64_t> option2) {
+          if (option1) {
+            std::cout << *option1 << std::endl;
+          } else if(option2){
+            std::cout << *option2 << std::endl;
+          } else {
+            std::cout << "Null" << std::endl;
+          }
+        }
+        void testBaseFunc16(int8_t option1, int16_t option2) {
+          std::cout << "testBaseFunc16 is option1  " << (int)option1 << std::endl;
+          std::cout << "testBaseFunc16 is option2  " << (int)option2 << std::endl;
+        }
+
+        void testBaseFunc17(array_view<int32_t> option1, array_view<int8_t> option2) {
+          // 输出 option1 的内容
+          std::cout << "testBaseFunc17 option1: ";
+          for (int32_t value : option1) {
+              std::cout << value << " ";
+          }
+          std::cout << std::endl;
+
+          // 输出 option2 的内容
+          std::cout << "testBaseFunc17 option2: ";
+          for (int8_t value : option2) {
+              std::cout << value << " ";
+          }
+          std::cout << std::endl;
+
+        }
+        void testBaseFunc18(array_view<int16_t> option1, array_view<int64_t> option2) {
+             // 输出 option1 的内容
+          std::cout << "testBaseFunc18 option1: ";
+          for (int16_t value : option1) {
+              std::cout << value << " ";
+          }
+          std::cout << std::endl;
+
+          // 输出 option2 的内容
+          std::cout << "testBaseFunc18 option2: ";
+          for (int64_t value : option2) {
+              std::cout << value << " ";
+          }
+          std::cout << std::endl;
+        }
+        void testBaseFunc19(array_view<float> option1, array_view<double> option2) {
+          // 输出 option1 的内容
+          std::cout << "testBaseFunc19 option1: ";
+          for (float value : option1) {
+              std::cout << value << " ";
+          }
+          std::cout << std::endl;
+
+          // 输出 option2 的内容
+          std::cout << "testBaseFunc19 option2: ";
+          for (double value : option2) {
+              std::cout << value << " ";
+          }
+          std::cout << std::endl;
+        }
+        void testBaseFunc20(array_view<bool> option1, array_view<string> option2) {
+            // 输出 option1 的内容
+          std::cout << "testBaseFunc20 option1: ";
+          for (bool value : option1) {
+              std::cout << value << " ";
+          }
+          std::cout << std::endl;
+
+          // 输出 option2 的内容
+          std::cout << "testBaseFunc20 option2: ";
+          for (string value : option2) {
+              std::cout << value << " ";
+          }
+          std::cout << std::endl;
+        }
+        void testBaseFunc21(::primitives_test::Bar const& option1, ::primitives_test::Bar const& option2) {
+          switch (option2.get_tag()) {
+            case ::primitives_test::Bar::tag_t::RED:
+                std::cout << static_cast<int32_t>(option2.get_tag()) << " RED: " << std::endl;
+                break;
+            case ::primitives_test::Bar::tag_t::GREEN:
+                std::cout << static_cast<int32_t>(option2.get_tag()) << " GREEN: " << std::endl;
+                break;
+            case ::primitives_test::Bar::tag_t::BLUE:
+                std::cout << static_cast<int32_t>(option2.get_tag()) << " BLUE: " << std::endl;
+                break;
+          }
+        }
+    };
+
+    class primitivesBoolean {
+      public:
+          void testBaseBoolFunc1(bool option1) {
+            if (option1)
+            {
+              std::cout << "testBaseBoolFunc1 is true " << option1 << std::endl;
+            }
+            else
+            {
+              std::cout << "testBaseBoolFunc1 is false  " << option1 << std::endl;
+            }
+          }
+          int32_t testBaseBoolFunc2(bool option1) {
+              if (option1) {
+                 return 65535; 
+              } else {
+                return 0;
+              }
+          }
+          bool testBaseBoolFunc3(bool option1) {
+           if (option1) {
+              return false; 
+           } else {
+             return true;
+           }
+          }
+          bool testBaseBoolFunc4(optional_view<bool> option1) {
+            if (option1) {
+              return false; 
+            } else {
+              return true;
+            }
+          }
+          bool testBaseBoolFunc5(bool option1) {
+            if (option1) {
+              return true; 
+            } else {
+              return false;
+            }
+          }
+      };
+      class primitivesInteger {
+      public:
+          int8_t testBaseIntegerFunc1(int8_t option1) {
+            if (option1 == -1) {
+              taihe::core::throw_error("out of range The i8 maximum value is 127 and minnum values is -128");
+              return -1;
+            } 
+            return option1+1;
+          }
+          int8_t testBaseIntegerFunc2(int8_t option1, int16_t option2) {
+            if (option1 == -1) {
+              taihe::core::throw_error("out of range The i8 maximum value is 127 and minnum values is -128");
+              return -1;
+            }
+            if (option2 == -1) {
+              taihe::core::throw_error("out of range The i16 maximum value is 32767 and minnum values is -32768");
+              return -1;
+            }
+            return option1+option2;
+          }
+          void testBaseIntegerFunc3(int8_t option1, int16_t option2) {
+            std::cout << "testBaseIntegerFunc3 is option1  " << option1 << std::endl;
+            std::cout << "testBaseIntegerFunc3 is option2  " << option2 << std::endl;
+            
+          }
+          int16_t testBaseIntegerFunc4(int8_t option1, int16_t option2) {
+            return option1+option2;
+          }
+          int8_t testBaseIntegerFunc5(int8_t option1, int32_t option2) {
+            return option1+option2;
+          }
+          int32_t testBaseIntegerFunc6(int8_t option1, int32_t option2) {
+            return option1+option2;
+          }
+          void testBaseIntegerFunc7(int8_t option1, int32_t option2) {
+            if (option2 == -1) {
+              taihe::core::throw_error("out of range The i32 maximum value is 2147483647 and minnum values is -2147483648");
+            }
+            std::cout << "testBaseIntegerFunc7 is option1  " << option1 << std::endl;
+            std::cout << "testBaseIntegerFunc7 is option2  " << option2 << std::endl;
+          }
+          int64_t testBaseIntegerFunc8(int8_t option1, int64_t option2) {
+            if (option2 == -1) {
+              taihe::core::throw_error("out of range The i64 maximum value is 9223372036854775807 and minnum values is -9223372036854775808");
+              return -1;
+            }
+            return option2-option1;
+          }
+          int8_t testBaseIntegerFunc9(int8_t option1, int64_t option2) {
+            if (option1 > 127 || option1 < -128 ) {
+              taihe::core::throw_error("out of range The i8 maximum value is 127 and minnum values is -128");
+              return -1;
+            }
+            if (option2 > INT64_MAX || option2 < INT64_MIN ) {
+              taihe::core::throw_error("out of range The i64 maximum value is 9223372036854775807 and minnum values is -9223372036854775808");
+              return -1;
+            }
+            return option2-option1;
+          }
+          float testBaseIntegerFunc10(int8_t option1, float option2) {
+            return option1+option2;  
+          }
+
+          int8_t testBaseIntegerFunc11(int8_t option1, float option2) {
+            return option1+option2;  
+          }
+          double testBaseIntegerFunc12(int8_t option1, double option2) {
+
+            return option1+option2;  
+          }
+          int8_t testBaseIntegerFunc13(int8_t option1, int64_t option2) {
+            return option1+option2; 
+
+          }
+          string testBaseIntegerFunc14(int8_t option1, string_view option2) {
+            if (option2 == "testBaseIntegerFunc14") {
+              return std::string(option2) + std::to_string(option1);
+            }
+            else
+            {
+              return std::string(option2);
+            }
+          }
+          int8_t testBaseIntegerFunc15(int8_t option1, string_view option2) {
+            if (option2 == "testBaseIntegerFunc15") {
+              return option1+10;
+            }
+            else
+            {
+              return option1; 
+            }
+          }
+          bool testBaseIntegerFunc16(int8_t option1, bool option2) {
+            if (option2) {
+              return true;
+            }
+            else
+            {
+              return false; 
+            }
+          }
+          int8_t testBaseIntegerFunc17(int8_t option1, bool option2) {
+            if (option2) {
+              return option1+1;
+            }
+            else
+            {
+              return option1; 
+            }
+          }
+      };
+    
+
 
   static void parseOption(::primitives_test::Foo const &opt)
   {
@@ -305,6 +661,31 @@ void baseFunc24(optional_view<int16_t> option1, optional_view<int64_t> option2) 
 
 }
 
+void baseFunc25(optional_view<int16_t> option1, ::primitives_test::Bar const& option2) {
+  switch (option2.get_tag()) {
+    case ::primitives_test::Bar::tag_t::RED:
+        std::cout << static_cast<int32_t>(option2.get_tag()) << " RED: " << std::endl;
+        break;
+    case ::primitives_test::Bar::tag_t::GREEN:
+        std::cout << static_cast<int32_t>(option2.get_tag()) << " GREEN: " << std::endl;
+        break;
+    case ::primitives_test::Bar::tag_t::BLUE:
+        std::cout << static_cast<int32_t>(option2.get_tag()) << " BLUE: " << std::endl;
+        break;
+  }
+}
+
+::primitives_test::primitivesVoid get_interface() {
+  return make_holder<primitivesVoid, ::primitives_test::primitivesVoid>();
+}
+
+::primitives_test::primitivesBoolean get_interface_bool() {
+  return make_holder<primitivesBoolean, ::primitives_test::primitivesBoolean>();
+}
+::primitives_test::primitivesInteger get_interface_interger() {
+  return make_holder<primitivesInteger, ::primitives_test::primitivesInteger>();
+}
+
 }
 
 TH_EXPORT_CPP_API_multiply(multiply)
@@ -339,3 +720,7 @@ TH_EXPORT_CPP_API_baseFunc21(baseFunc21)
 TH_EXPORT_CPP_API_baseFunc22(baseFunc22)
 TH_EXPORT_CPP_API_baseFunc23(baseFunc23)
 TH_EXPORT_CPP_API_baseFunc24(baseFunc24)
+TH_EXPORT_CPP_API_baseFunc25(baseFunc25)
+TH_EXPORT_CPP_API_get_interface(get_interface)
+TH_EXPORT_CPP_API_get_interface_bool(get_interface_bool)
+TH_EXPORT_CPP_API_get_interface_interger(get_interface_interger)

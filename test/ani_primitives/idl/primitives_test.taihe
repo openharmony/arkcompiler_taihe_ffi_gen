@@ -37,3 +37,70 @@ function baseFunc21(option1:Optional<i32>,option2:Optional<i64>):void;
 function baseFunc22(option1:Optional<f32>,option2:Optional<f64>):void;
 function baseFunc23(option1:Optional<String>,option2:Optional<bool>):void;
 function baseFunc24(option1:Optional<i16>,option2:Optional<i64>):void;
+
+enum Bar {
+  RED = 0;
+  GREEN = 1;
+  BLUE = 2;
+}
+
+function baseFunc25(option1:Optional<i16>,option2:Bar):void;
+
+interface primitivesVoid {
+  testBaseFunc1():void;
+  testBaseFunc2(option1:i32,option2:bool):void;
+  testBaseFunc3(option1:i32,option2:i64):void;
+  testBaseFunc4(option1:i32,option2:String):void;
+  testBaseFunc5(option1:i64,option2:bool):void;
+  testBaseFunc6(option1:i64,option2:f32):void;
+  testBaseFunc7(option1:i64,option2:f64):void;
+  testBaseFunc8(option1:f32,option2:bool):void;
+  testBaseFunc9(option1:f32,option2:String):void;
+  testBaseFunc10(option1:f64,option2:String):void;
+  testBaseFunc11(option1:f64,option2:bool):void;
+  testBaseFunc12(option1:Optional<i32>,option2:Optional<i64>):void;
+  testBaseFunc13(option1:Optional<f32>,option2:Optional<f64>):void;
+  testBaseFunc14(option1:Optional<String>,option2:Optional<bool>):void;
+  testBaseFunc15(option1:Optional<i16>,option2:Optional<i64>):void;
+  testBaseFunc16(option1:i8,option2:i16):void;
+  testBaseFunc17(option1:Array<i32>,option2:Array<i8>):void;
+  testBaseFunc18(option1:Array<i16>,option2:Array<i64>):void;
+  testBaseFunc19(option1:Array<f32>,option2:Array<f64>):void;
+  testBaseFunc20(option1:Array<bool>,option2:Array<String>):void;
+  testBaseFunc21(option1:Bar,option2:Bar):void;
+}
+
+function get_interface(): primitivesVoid;
+
+
+interface primitivesBoolean {
+  testBaseBoolFunc1(option1:bool):void;
+  testBaseBoolFunc2(option1:bool):i32;
+  testBaseBoolFunc3(option1:bool):bool;
+  testBaseBoolFunc4(option1:Optional<bool>):bool;
+  [gen_async="testBaseBoolFunc5Async", gen_promise="testBaseBoolFunc5Promise"]
+  testBaseBoolFunc5(option1:bool):bool;
+}
+
+function get_interface_bool(): primitivesBoolean;
+
+interface primitivesInteger {
+  testBaseIntegerFunc1(option1:i8):i8;
+  testBaseIntegerFunc2(option1:i8,option2:i16):i8;
+  testBaseIntegerFunc3(option1:i8,option2:i16):void;
+  testBaseIntegerFunc4(option1:i8,option2:i16):i16;
+  testBaseIntegerFunc5(option1:i8,option2:i32):i8;
+  testBaseIntegerFunc6(option1:i8,option2:i32):i32;
+  testBaseIntegerFunc7(option1:i8,option2:i32):void;
+  testBaseIntegerFunc8(option1:i8,option2:i64):i64;
+  testBaseIntegerFunc9(option1:i8,option2:i64):i8;
+  testBaseIntegerFunc10(option1:i8,option2:f32):f32;
+  testBaseIntegerFunc11(option1:i8,option2:f32):i8;
+  testBaseIntegerFunc12(option1:i8,option2:f64):f64;
+  testBaseIntegerFunc13(option1:i8,option2:i64):i8;
+  testBaseIntegerFunc14(option1:i8,option2:String):String;
+  testBaseIntegerFunc15(option1:i8,option2:String):i8;
+  testBaseIntegerFunc16(option1:i8,option2:bool):bool;
+  testBaseIntegerFunc17(option1:i8,option2:bool):i8;
+}
+function get_interface_interger(): primitivesInteger;
