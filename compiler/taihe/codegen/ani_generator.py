@@ -256,12 +256,6 @@ class UnionANIInfo(AbstractAnalysis[UnionDecl]):
         self.decl_header = f"{p.name}.{d.name}.ani.0.h"
         self.impl_header = f"{p.name}.{d.name}.ani.1.h"
 
-        self.sts_type = d.name
-        self.sts_impl = d.name
-        pkg_ani_info = PackageANIInfo.get(am, p)
-        self.type_desc = f"L{pkg_ani_info.pkg_name}/{self.sts_type};"
-        self.impl_desc = f"L{pkg_ani_info.pkg_name}/{self.sts_impl};"
-
 
 class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
     def __init__(self, am: AnalysisManager, d: IfaceDecl) -> None:
@@ -376,6 +370,13 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
                 f"{' ' * offset}{env}->Array_New_{self.ani_type.suffix}({size}, &{ani_array_result});\n"
                 f"{' ' * offset}{env}->Array_SetRegion_{self.ani_type.suffix}({ani_array_result}, 0, {size}, reinterpret_cast<{self.ani_type} const*>({cpp_array_value}));\n"
             )
+
+    @property
+    def type_desc_boxed(self) -> str:
+        if self.ani_type.base == ANI_REF:
+            return self.type_desc
+        else:
+            return f"Lstd/core/{self.ani_type.suffix};"
 
     def into_ani_boxed(
         self,
@@ -494,10 +495,17 @@ class UnionTypeANIInfo(AbstractAnalysis[UnionType], AbstractTypeANIInfo):
         AbstractTypeANIInfo.__init__(self, am, t)
         self.t = t
         self.am = am
-        union_ani_info = UnionANIInfo.get(am, t.ty_decl)
-        self.ani_type = ANI_OBJECT
-        self.sts_type = union_ani_info.sts_type
-        self.type_desc = union_ani_info.type_desc
+        self.ani_type = ANI_REF
+        sts_value_types = []
+        for field in t.ty_decl.fields:
+            if field.ty_ref is None:
+                sts_value_types.append("undefined")
+                continue
+            ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
+            sts_value_types.append(f"{ty_ani_info.sts_type}")
+        sts_value_types_str = " | ".join(sts_value_types)
+        self.sts_type = f"({sts_value_types_str})"
+        self.type_desc = "Lstd/core/Object;"
 
     @override
     def from_ani(
@@ -526,7 +534,7 @@ class UnionTypeANIInfo(AbstractAnalysis[UnionType], AbstractTypeANIInfo):
         union_ani_info = UnionANIInfo.get(self.am, self.t.ty_decl)
         target.include(union_ani_info.impl_header)
         target.write(
-            f"{' ' * offset}ani_object {ani_result} = {union_ani_info.into_ani_func_name}({env}, {cpp_value});\n"
+            f"{' ' * offset}ani_ref {ani_result} = {union_ani_info.into_ani_func_name}({env}, {cpp_value});\n"
         )
 
 
@@ -1140,25 +1148,6 @@ class STSCodeGenerator:
         # docstring
         if (inject_attr := union.attrs.get("inject")) is not None:
             pkg_sts_target.write(inject_attr.value)
-        union_ani_info = UnionANIInfo.get(self.am, union)
-        sts_value_types = []
-        for field in union.fields:
-            if field.ty_ref is None:
-                sts_value_types.append("undefined")
-                continue
-            ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
-            sts_value_types.append(f"{ty_ani_info.sts_type}")
-        sts_value_types_str = " | ".join(sts_value_types)
-        pkg_sts_target.write(
-            f"export class {union_ani_info.sts_impl} {{\n"
-            f"    tag: int;\n"
-            f"    value: {sts_value_types_str};\n"
-            f"    constructor(tag: int, value: {sts_value_types_str}) {{\n"
-            f"        this.tag = tag;\n"
-            f"        this.value = value;\n"
-            f"    }}\n"
-            f"}}\n"
-        )
 
     def gen_iface_interface(
         self,
@@ -1842,8 +1831,8 @@ class ANICodeGenerator:
         union_ani_decl_target.include("ani.h")
         union_ani_decl_target.include(union_cpp_info.decl_header)
         union_ani_decl_target.write(
-            f"{union_cpp_info.as_owner} {union_ani_info.from_ani_func_name}(ani_env* env, ani_object ani_obj);\n"
-            f"ani_object {union_ani_info.into_ani_func_name}(ani_env* env, {union_cpp_info.as_param} cpp_obj);\n"
+            f"{union_cpp_info.as_owner} {union_ani_info.from_ani_func_name}(ani_env* env, ani_ref ani_obj);\n"
+            f"ani_ref {union_ani_info.into_ani_func_name}(ani_env* env, {union_cpp_info.as_param} cpp_obj);\n"
         )
         # implementation
         union_ani_impl_target = COutputBuffer.create(
@@ -1853,25 +1842,28 @@ class ANICodeGenerator:
         union_ani_impl_target.include(union_cpp_info.impl_header)
         # from ani
         union_ani_impl_target.write(
-            f"inline {union_cpp_info.as_owner} {union_ani_info.from_ani_func_name}(ani_env* env, ani_object ani_obj) {{\n"
-            f"    ani_int ani_tag;\n"
-            f'    env->Object_GetPropertyByName_Int(ani_obj, "tag", &ani_tag);\n'
-            f"    ani_ref ani_value;\n"
-            f'    env->Object_GetPropertyByName_Ref(ani_obj, "value", &ani_value);\n'
-            f"    {union_cpp_info.full_name}::tag_t cpp_tag = ({union_cpp_info.full_name}::tag_t)ani_tag;\n"
-            f"    switch (cpp_tag) {{\n"
+            f"inline {union_cpp_info.as_owner} {union_ani_info.from_ani_func_name}(ani_env* env, ani_ref ani_value) {{\n"
         )
         for field in union.fields:
-            union_ani_impl_target.write(
-                f"    case {union_cpp_info.full_name}::tag_t::{field.name}: {{\n"
-            )
+            is_field = f"is_{field.name}"
+            union_ani_impl_target.write(f"    ani_boolean {is_field};\n")
             if field.ty_ref is None:
                 union_ani_impl_target.write(
+                    f"    env->Reference_IsUndefined(ani_value, &{is_field});\n"
+                    f"    if ({is_field}) {{\n"
                     f"        return {union_cpp_info.full_name}::make_{field.name}();\n"
+                    f"    }}\n"
                 )
             else:
-                cpp_result_spec = f"cpp_field_{field.name}"
                 type_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
+                filed_class = f"{field.name}_cls"
+                union_ani_impl_target.write(
+                    f"    ani_class {filed_class};\n"
+                    f'    env->FindClass("{type_ani_info.type_desc_boxed}", &{filed_class});\n'
+                    f"    env->Object_InstanceOf((ani_object)ani_value, {filed_class}, &{is_field});\n"
+                    f"    if ({is_field}) {{\n"
+                )
+                cpp_result_spec = f"cpp_field_{field.name}"
                 type_ani_info.from_ani_boxed(
                     union_ani_impl_target,
                     8,
@@ -1881,15 +1873,14 @@ class ANICodeGenerator:
                 )
                 union_ani_impl_target.write(
                     f"        return {union_cpp_info.full_name}::make_{field.name}(std::move({cpp_result_spec}));\n"
+                    f"    }}\n"
                 )
-            union_ani_impl_target.write("    }\n")
-        union_ani_impl_target.write("    }\n" "}\n")
+        union_ani_impl_target.write(f"}}\n")
         # into ani
         union_ani_impl_target.write(
-            f"inline ani_object {union_ani_info.into_ani_func_name}(ani_env* env, {union_cpp_info.as_param} cpp_obj) {{\n"
-            f"    ani_int ani_tag = (int)cpp_obj.get_tag();\n"
+            f"inline ani_ref {union_ani_info.into_ani_func_name}(ani_env* env, {union_cpp_info.as_param} cpp_value) {{\n"
             f"    ani_ref ani_value;\n"
-            f"    switch (cpp_obj.get_tag()) {{\n"
+            f"    switch (cpp_value.get_tag()) {{\n"
         )
         for field in union.fields:
             union_ani_impl_target.write(
@@ -1904,19 +1895,10 @@ class ANICodeGenerator:
                     union_ani_impl_target,
                     8,
                     "env",
-                    f"cpp_obj.get_{field.name}_ref()",
+                    f"cpp_value.get_{field.name}_ref()",
                     ani_result_spec,
                 )
                 union_ani_impl_target.write(f"        ani_value = {ani_result_spec};\n")
             union_ani_impl_target.write("        break;\n" "    }\n")
         union_ani_impl_target.write("    }\n")
-        union_ani_impl_target.write(
-            f"    ani_class ani_obj_cls;\n"
-            f'    env->FindClass("{union_ani_info.impl_desc}", &ani_obj_cls);\n'
-            f"    ani_method ani_obj_ctor;\n"
-            f'    env->Class_FindMethod(ani_obj_cls, "<ctor>", nullptr, &ani_obj_ctor);\n'
-            f"    ani_object ani_obj;\n"
-            f"    env->Object_New(ani_obj_cls, ani_obj_ctor, &ani_obj, ani_tag, ani_value);\n"
-            f"    return ani_obj;\n"
-            f"}}\n"
-        )
+        union_ani_impl_target.write(f"    return ani_value;\n" f"}}\n")
