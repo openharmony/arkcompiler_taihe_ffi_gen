@@ -8,10 +8,10 @@ from typing_extensions import override
 
 if TYPE_CHECKING:
     from taihe.semantics.declarations import (
-        EnumDecl,
         IfaceDecl,
         StructDecl,
         TypeDecl,
+        UnionDecl,
     )
     from taihe.semantics.visitor import TypeVisitor
 
@@ -159,7 +159,7 @@ class CallbackType(Type):
     def representation(self):
         return_fmt = ty.representation if (ty := self.return_ty) else "void"
         params_fmt = ", ".join(ty.representation for ty in self.params_ty)
-        return f"({params_fmt}) -> {return_fmt}"
+        return f"({params_fmt}) => {return_fmt}"
 
 
 class GenericType(Type, metaclass=ABCMeta):
@@ -275,12 +275,12 @@ class StructType(UserType):
 
 
 @dataclass(frozen=True, repr=False)
-class EnumType(UserType):
-    ty_decl: "EnumDecl"
+class UnionType(UserType):
+    ty_decl: "UnionDecl"
 
     @override
     def _accept(self, v: "TypeVisitor") -> Any:
-        return v.visit_enum_type(self)
+        return v.visit_union_type(self)
 
 
 @dataclass(frozen=True, repr=False)

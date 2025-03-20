@@ -7,7 +7,6 @@ from taihe.utils.diagnostics import DiagError, DiagNote, DiagWarn
 
 if TYPE_CHECKING:
     from taihe.semantics.declarations import (
-        EnumItemDecl,
         IfaceDecl,
         IfaceParentDecl,
         NamedDecl,
@@ -52,40 +51,6 @@ class DeclRedefError(DiagError):
     @override
     def format_msg(self) -> str:
         return f"redefinition of {self.current.description}"
-
-
-@dataclass
-class EnumValueConflictNote(DiagNote):
-    prev: "EnumItemDecl"
-
-    def __init__(self, prev: "EnumItemDecl"):
-        self.prev = prev
-        self.loc = prev.loc
-
-    @property
-    @override
-    def format_msg(self) -> str:
-        return f"conflict with {self.prev.description}"
-
-
-@dataclass
-class EnumValueConflictError(DiagError):
-    prev: "EnumItemDecl"
-    current: "EnumItemDecl"
-
-    def __init__(self, prev: "EnumItemDecl", current: "EnumItemDecl"):
-        self.prev = prev
-        self.current = current
-        self.loc = current.loc
-
-    def notes(self):
-        if self.prev.loc:
-            yield DeclRedefNote(self.prev)
-
-    @property
-    @override
-    def format_msg(self) -> str:
-        return f"value {self.current.value} of {self.current.description} is repeated"
 
 
 @dataclass

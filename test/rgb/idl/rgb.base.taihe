@@ -4,22 +4,22 @@ struct RGB {
     b: u8;
 }
 
-enum Color {
-    black = 0x0;
-    red = 0x1;
-    green = 0x2;
-    yellow = 0x3;
-    blue = 0x4;
-    magenta = 0x5;
-    cyan = 0x6;
-    white = 0x7;
+union Color {
+    black;
+    red;
+    green;
+    yellow;
+    blue;
+    magenta;
+    cyan;
+    white;
 }
 
-enum ColorOrRGBOrName {
-    undefined = 0x0;
-    color: Color = 0x1;
-    rgb: RGB = 0x2;
-    name: String = 0x3;
+union ColorOrRGBOrName {
+    undefined;
+    color: Color;
+    rgb: RGB;
+    name: String;
 }
 
 function toString(color: ColorOrRGBOrName): String;

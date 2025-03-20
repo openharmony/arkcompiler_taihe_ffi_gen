@@ -7,10 +7,10 @@ from typing import TYPE_CHECKING, Any, Optional, Protocol
 from typing_extensions import override
 
 from taihe.semantics.types import (
-    EnumType,
     IfaceType,
     StructType,
     Type,
+    UnionType,
     UserType,
 )
 from taihe.utils.exceptions import DeclRedefError
@@ -263,7 +263,7 @@ class CallbackTypeRefDecl(TypeRefDecl):
             f"{param.name}: {param.ty_ref.unresolved_repr}" for param in self.params
         )
         ret_fmt = ty_ref.unresolved_repr if (ty_ref := self.return_ty_ref) else "void"
-        return f"({args_fmt}) -> {ret_fmt}"
+        return f"({args_fmt}) => {ret_fmt}"
 
 
 #####################
@@ -423,31 +423,28 @@ class DeclarationImportDecl(ImportDecl):
 ######################
 
 
-class EnumItemDecl(NamedDecl):
+class UnionFieldDecl(NamedDecl):
     ty_ref: Optional[TypeRefDecl]
-    value: Optional[int]
-    node_parent: Optional["EnumDecl"]
+    node_parent: Optional["UnionDecl"]
 
     def __init__(
         self,
         loc: Optional[SourceLocation],
         name: str,
         ty_ref: Optional[TypeRefDecl] = None,
-        value: Optional[int] = None,
     ):
         super().__init__(loc, name)
         self.ty_ref = ty_ref
-        self.value = value
         self.node_parent = None
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
-        return v.visit_enum_item_decl(self)
+        return v.visit_union_field_decl(self)
 
     @property
     @override
     def description(self) -> str:
-        return f"enum item {self.name}"
+        return f"union field {self.name}"
 
 
 class StructFieldDecl(NamedDecl):
@@ -575,29 +572,29 @@ class TypeDecl(PackageLevelDecl, metaclass=ABCMeta):
     def as_type(self) -> UserType: ...
 
 
-class EnumDecl(TypeDecl):
-    items: list["EnumItemDecl"]
+class UnionDecl(TypeDecl):
+    fields: list["UnionFieldDecl"]
 
     def __init__(self, loc: Optional[SourceLocation], name: str):
         super().__init__(loc, name)
-        self.items = []
+        self.fields = []
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
-        return v.visit_enum_decl(self)
+        return v.visit_union_decl(self)
 
-    def add_item(self, f: "EnumItemDecl"):
+    def add_field(self, f: "UnionFieldDecl"):
         f.node_parent = self
-        self.items.append(f)
+        self.fields.append(f)
 
     @override
-    def as_type(self) -> EnumType:
-        return EnumType(self)
+    def as_type(self) -> UnionType:
+        return UnionType(self)
 
     @property
     @override
     def description(self) -> str:
-        return f"enum {self.name}"
+        return f"union {self.name}"
 
 
 class StructDecl(TypeDecl):
@@ -674,7 +671,7 @@ class PackageDecl(NamedDecl):
     # Things that the package contains.
     functions: list[GlobFuncDecl]
     structs: list[StructDecl]
-    enums: list[EnumDecl]
+    unions: list[UnionDecl]
     interfaces: list[IfaceDecl]
 
     def __init__(self, name: str, loc: Optional[SourceLocation]):
@@ -686,7 +683,7 @@ class PackageDecl(NamedDecl):
         self.decl_imports = {}
         self.functions = []
         self.structs = []
-        self.enums = []
+        self.unions = []
         self.interfaces = []
 
     @property
@@ -712,9 +709,9 @@ class PackageDecl(NamedDecl):
         self.structs.append(s)
         self._register_to_decl(s)
 
-    def add_enum(self, e: EnumDecl):
+    def add_union(self, e: UnionDecl):
         e.node_parent = self
-        self.enums.append(e)
+        self.unions.append(e)
         self._register_to_decl(e)
 
     def add_interface(self, i: IfaceDecl):
@@ -727,8 +724,8 @@ class PackageDecl(NamedDecl):
             self.add_function(d)
         elif isinstance(d, StructDecl):
             self.add_struct(d)
-        elif isinstance(d, EnumDecl):
-            self.add_enum(d)
+        elif isinstance(d, UnionDecl):
+            self.add_union(d)
         elif isinstance(d, IfaceDecl):
             self.add_interface(d)
         else:

@@ -28,8 +28,8 @@ specField
       KW_STRUCT token_name = ID
       LEFT_BRACE (StructFieldLst_fields += structField)* RIGHT_BRACE # struct
     | (DocstringItemLst_docstrings += docstringItem)* (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
-      KW_ENUM token_name = ID
-      LEFT_BRACE (EnumFieldLst_fields += enumField)* RIGHT_BRACE # enum
+      KW_UNION token_name = ID
+      LEFT_BRACE (UnionFieldLst_fields += unionField)* RIGHT_BRACE # union
     | (DocstringItemLst_docstrings += docstringItem)* (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
       KW_INTERFACE token_name = ID
       (COLON InterfaceParentLst_extends += interfaceParent (COMMA InterfaceParentLst_extends += interfaceParent)*)?
@@ -45,10 +45,10 @@ structField
       COLON Type_ty = type SEMICOLON # structProperty
     ;
 
-enumField
+unionField
     : (DocstringItemLst_docstrings += docstringItem)* (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
       token_name = ID
-      (COLON TypeOpt_ty = type)? (ASSIGN_TO IntExprOpt_expr = intExpr)? SEMICOLON # enumProperty
+      (COLON TypeOpt_ty = type)? SEMICOLON # unionProperty
     ;
 
 interfaceField
@@ -301,8 +301,8 @@ KW_TYPE
     : 'type'
     ;
 
-KW_ENUM
-    : 'enum'
+KW_UNION
+    : 'union'
     ;
 
 KW_STRUCT

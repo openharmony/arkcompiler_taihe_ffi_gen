@@ -13,8 +13,6 @@ from taihe.semantics.declarations import (
     CallbackTypeRefDecl,
     DeclarationImportDecl,
     DeclarationRefDecl,
-    EnumDecl,
-    EnumItemDecl,
     GenericTypeRefDecl,
     GlobFuncDecl,
     IfaceDecl,
@@ -28,6 +26,8 @@ from taihe.semantics.declarations import (
     ShortTypeRefDecl,
     StructDecl,
     StructFieldDecl,
+    UnionDecl,
+    UnionFieldDecl,
 )
 from taihe.utils.diagnostics import AbstractDiagnosticsManager, DiagNote, DiagWarn
 from taihe.utils.sources import SourceBase, SourceLocation
@@ -336,21 +336,19 @@ class AstConverter(ExprEvaluator):
         return d
 
     @override
-    def visit_EnumProperty(self, node: ast.EnumProperty) -> EnumItemDecl:
-        d = EnumItemDecl(
-            self.loc(node.name),
-            str(node.name),
-            ty_ref=self.visit(node.ty) if node.ty else None,
-            value=self.visit(node.expr) if node.expr else None,
-        )
+    def visit_UnionProperty(self, node: ast.UnionProperty) -> UnionFieldDecl:
+        if ty := node.ty:
+            d = UnionFieldDecl(self.loc(node.name), str(node.name), self.visit(ty))
+        else:
+            d = UnionFieldDecl(self.loc(node.name), str(node.name))
         self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
         self.diag.for_each(node.docstrings, lambda a: d.add_attr(self.visit(a)))
         return d
 
     @override
-    def visit_Enum(self, node: ast.Enum) -> EnumDecl:
-        d = EnumDecl(self.loc(node.name), str(node.name))
-        self.diag.for_each(node.fields, lambda f: d.add_item(self.visit(f)))
+    def visit_Union(self, node: ast.Union) -> UnionDecl:
+        d = UnionDecl(self.loc(node.name), str(node.name))
+        self.diag.for_each(node.fields, lambda f: d.add_field(self.visit(f)))
         self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
         self.diag.for_each(node.docstrings, lambda a: d.add_attr(self.visit(a)))
         return d
