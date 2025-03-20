@@ -7,6 +7,7 @@ from taihe.codegen.abi_generator import (
     IfaceABIInfo,
 )
 from taihe.codegen.cpp_generator import (
+    CallbackTypeCppInfo,
     GlobFuncCppInfo,
     IfaceCppInfo,
     IfaceMethodCppInfo,
@@ -38,6 +39,7 @@ from taihe.semantics.types import (
     U32,
     U64,
     ArrayType,
+    CallbackType,
     IfaceType,
     MapType,
     OpaqueType,
@@ -988,9 +990,106 @@ class MapTypeANIInfo(AbstractAnalysis[MapType], AbstractTypeANIInfo):
 #         pass
 
 
-# class CallbackTypeANIInfo(AbstractAnalysis[CallbackType], AbstractTypeANIInfo):
-#     def __init__(self, am: AnalysisManager, t: CallbackType) -> None:
-#         pass
+class CallbackTypeANIInfo(AbstractAnalysis[CallbackType], AbstractTypeANIInfo):
+    def __init__(self, am: AnalysisManager, t: CallbackType) -> None:
+        AbstractTypeANIInfo.__init__(self, am, t)
+        self.ani_type = ANI_OBJECT
+        self.am = am
+        self.t = t
+        params_ty_sts = []
+        for index, param_ty in enumerate(self.t.params_ty):
+            param_ty_sts_info = TypeANIInfo.get(self.am, param_ty)
+            params_ty_sts.append(f"arg_{index}: {param_ty_sts_info.sts_type}")
+        params_ty_sts_str = ", ".join(params_ty_sts)
+        if self.t.return_ty:
+            return_ty_sts_info = TypeANIInfo.get(self.am, self.t.return_ty)
+            return_ty_sts = return_ty_sts_info.sts_type
+        else:
+            return_ty_sts = "void"
+        self.sts_type = f"({params_ty_sts_str})=>{return_ty_sts}"
+        self.type_desc = f"Lstd/core/Function{len(self.t.params_ty)};"
+
+    @override
+    def from_ani(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        ani_value: str,
+        cpp_result: str,
+    ):
+        cb_cpp_info = CallbackTypeCppInfo.get(self.am, self.t)
+        params_ty_as_param = []
+        for index, param_ty in enumerate(self.t.params_ty):
+            cpp_arg = f"cpp_arg_{index}"
+            param_ty_cpp_info = TypeCppInfo.get(self.am, param_ty)
+            params_ty_as_param.append(f"{param_ty_cpp_info.as_param} {cpp_arg}")
+        params_str = ", ".join(params_ty_as_param)
+
+        if self.t.return_ty:
+            return_ty_cpp_info = TypeCppInfo.get(self.am, self.t.return_ty)
+            return_ty_as_owner = return_ty_cpp_info.as_owner
+        else:
+            return_ty_as_owner = "void"
+
+        target.write(
+            f"{' ' * offset}struct cpp_impl_cb {{\n"
+            f"{' ' * offset}    ani_env* env;\n"
+            f"{' ' * offset}    ani_object cb_obj;\n"
+            f"{' ' * offset}    cpp_impl_cb(ani_env* env, ani_object obj): env(env) {{\n"
+            f"{' ' * offset}        env->GlobalReference_Create(obj, reinterpret_cast<ani_ref*>(&cb_obj));\n"
+            f"{' ' * offset}    }}\n"
+            f"{' ' * offset}    ~cpp_impl_cb() {{\n"
+            f"{' ' * offset}        env->GlobalReference_Delete(cb_obj);\n"
+            f"{' ' * offset}    }}\n"
+            f"{' ' * offset}    {return_ty_as_owner} operator()({params_str}) {{\n"
+        )
+        cpp_args_boxed = []
+        for index, param_ty in enumerate(self.t.params_ty):
+            param_ty_ani_info = TypeANIInfo.get(self.am, param_ty)
+            cpp_arg = f"cpp_arg_{index}"
+            ani_arg = f"ani_arg_{index}"
+            param_ty_ani_info.into_ani_boxed(target, offset + 8, env, cpp_arg, ani_arg)
+            cpp_args_boxed.append(ani_arg)
+        cpp_args_boxed_str = ", ".join(cpp_args_boxed)
+
+        if self.t.params_ty:
+            target.write(
+                f"{' ' * offset}        ani_ref cb_argv[] = {{{cpp_args_boxed_str}}};\n"
+            )
+            cb_argv = "cb_argv"
+        else:
+            cb_argv = "nullptr"
+        target.write(
+            f"{' ' * offset}        ani_ref cb_result;\n"
+            f"{' ' * offset}        this->env->FunctionalObject_Call(static_cast<ani_fn_object>(this->cb_obj), {len(cpp_args_boxed)}, {cb_argv}, &cb_result);\n"
+        )
+
+        if self.t.return_ty:
+            return_ty_ani_info = TypeANIInfo.get(self.am, self.t.return_ty)
+            return_ty_ani_info.from_ani_boxed(
+                target, offset + 8, env, "cb_result", "cpp_cb_result"
+            )
+            target.write(f"{' ' * offset}        return cpp_cb_result;\n")
+        else:
+            target.write(f"{' ' * offset}        return;\n")
+
+        target.write(
+            f"{' ' * offset}    }}\n"
+            f"{' ' * offset}}};\n"
+            f"{' ' * offset}auto {cpp_result} = {cb_cpp_info.as_owner}::from<cpp_impl_cb>({env}, {ani_value});\n"
+        )
+
+    @override
+    def into_ani(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        cpp_value: str,
+        ani_result: str,
+    ):
+        target.write(f"{' ' * offset}ani_object {ani_result};\n")
 
 
 class TypeANIInfo(TypeVisitor[AbstractTypeANIInfo]):
@@ -1049,9 +1148,9 @@ class TypeANIInfo(TypeVisitor[AbstractTypeANIInfo]):
     # def visit_set_type(self, t: SetType) -> AbstractTypeANIInfo:
     #     return SetTypeANIInfo.get(self.am, t)
 
-    # @override
-    # def visit_callback_type(self, t: CallbackType) -> AbstractTypeANIInfo:
-    #     return CallbackTypeANIInfo.get(self.am, t)
+    @override
+    def visit_callback_type(self, t: CallbackType) -> AbstractTypeANIInfo:
+        return CallbackTypeANIInfo.get(self.am, t)
 
 
 class Namespace:
