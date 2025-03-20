@@ -93,5 +93,24 @@ interface primitivesInteger {
   testBaseIntegerFunc15(option1:i8,option2:String):i8;
   testBaseIntegerFunc16(option1:i8,option2:bool):bool;
   testBaseIntegerFunc17(option1:i8,option2:bool):i8;
+  testBaseIntegerFunc18(option1:i16):i16;
+  testBaseIntegerFunc19(option1:i16):void;
+  testBaseIntegerFunc20(option1:i16,option2:i32):i16;
+  testBaseIntegerFunc21(option1:i16,option2:i64):i16;
+  testBaseIntegerFunc22(option1:i32):i32;
+  testBaseIntegerFunc23(option1:i32):void;
+  testBaseIntegerFunc24(option1:i32,option2:i64):i32;
+  testBaseIntegerFunc25(option1:i32,option2:i8):i32;
+  testBaseIntegerFunc26(option1:i64):i64;
+  testBaseIntegerFunc27(option1:i64):void;
+  testBaseIntegerFunc28(option1:i64,option2:String):String;
+  testBaseIntegerFunc29(option1:i64,option2:String):i64;
+  testBaseIntegerFunc30(option1:f32):f32;
+  testBaseIntegerFunc31(option1:f32):void;
+  testBaseIntegerFunc32(option1:f32,option2:f64):f32;
+  testBaseIntegerFunc33(option1:f32,option2:f64):f64;
+  testBaseIntegerFunc34(option1:f64):f64;
+  testBaseIntegerFunc35(option1:f64):void;
+
 }
 function get_interface_interger(): primitivesInteger;

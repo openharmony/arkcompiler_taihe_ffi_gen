@@ -3,6 +3,9 @@
 #include "core/string.hpp"
 #include "core/optional.hpp"
 #include "core/runtime.hpp"
+#include <iostream>
+#include <iomanip>
+#include "primitives_test.primitivesVoid.proj.2.hpp"
 // Please delete this include when you implement
 using namespace taihe::core;
 namespace
@@ -137,7 +140,7 @@ namespace
           // 输出 option2 的内容
           std::cout << "testBaseFunc17 option2: ";
           for (int8_t value : option2) {
-              std::cout << value << " ";
+              std::cout << (int)value << " ";
           }
           std::cout << std::endl;
 
@@ -160,6 +163,7 @@ namespace
         void testBaseFunc19(array_view<float> option1, array_view<double> option2) {
           // 输出 option1 的内容
           std::cout << "testBaseFunc19 option1: ";
+          // std::cout << std::fixed << std::setprecision(6); // float 保留 6 位小数
           for (float value : option1) {
               std::cout << value << " ";
           }
@@ -167,6 +171,7 @@ namespace
 
           // 输出 option2 的内容
           std::cout << "testBaseFunc19 option2: ";
+          // std::cout << std::fixed << std::setprecision(15); // double 保留 15 位小数
           for (double value : option2) {
               std::cout << value << " ";
           }
@@ -251,7 +256,7 @@ namespace
             return option1+option2;
           }
           void testBaseIntegerFunc3(int8_t option1, int16_t option2) {
-            std::cout << "testBaseIntegerFunc3 is option1  " << option1 << std::endl;
+            std::cout << "testBaseIntegerFunc3 is option1  " << (int)option1 << std::endl;
             std::cout << "testBaseIntegerFunc3 is option2  " << option2 << std::endl;
             
           }
@@ -268,7 +273,7 @@ namespace
             if (option2 == -1) {
               taihe::core::throw_error("out of range The i32 maximum value is 2147483647 and minnum values is -2147483648");
             }
-            std::cout << "testBaseIntegerFunc7 is option1  " << option1 << std::endl;
+            std::cout << "testBaseIntegerFunc7 is option1  " << (int)option1 << std::endl;
             std::cout << "testBaseIntegerFunc7 is option2  " << option2 << std::endl;
           }
           int64_t testBaseIntegerFunc8(int8_t option1, int64_t option2) {
@@ -340,6 +345,128 @@ namespace
               return option1; 
             }
           }
+
+        int16_t testBaseIntegerFunc18(int16_t option1) {
+            // 检查结果是否超出 int16_t 的范围
+            int32_t result = static_cast<int32_t>(option1) * 10; // 使用 int32_t 避免溢出
+            if (result > INT16_MAX || result < INT16_MIN) {
+                taihe::core::throw_error("testBaseIntegerFunc18: result exceeds int16_t range");
+            }
+            // 返回结果
+            return static_cast<int16_t>(result);
+        }
+
+        void testBaseIntegerFunc19(int16_t option1) {
+          std::cout << "testBaseIntegerFunc19 is option1  " << option1 << std::endl;
+        }
+        int16_t testBaseIntegerFunc20(int16_t option1, int32_t option2) {
+            // 检查结果是否超出 int16_t 的范围
+            int32_t result = static_cast<int32_t>(option1) + option2; // 使用 int32_t 避免溢出
+            if (result > INT16_MAX || result < INT16_MIN) {
+                taihe::core::throw_error("testBaseIntegerFunc20: result exceeds int16_t range");
+            }
+            // 返回结果
+            return static_cast<int16_t>(result);
+        }
+        int16_t testBaseIntegerFunc21(int16_t option1, int64_t option2) {
+             // 检查结果是否超出 int16_t 的范围
+             int64_t result = static_cast<int64_t>(option1) + option2; 
+             if (result > INT16_MAX || result < INT16_MIN) {
+                taihe::core::throw_error("testBaseIntegerFunc21: result exceeds int16_t range");
+             }
+             // 返回结果
+             return static_cast<int16_t>(result);
+        }
+        int32_t testBaseIntegerFunc22(int32_t option1) {
+          // 检查结果是否超出 int32_t 的范围
+          int64_t result = static_cast<int32_t>(option1) *100; 
+          if (result > INT32_MAX || result < INT32_MIN) {
+             taihe::core::throw_error("testBaseIntegerFunc22: result exceeds int32_t range");
+          }
+          // 返回结果
+          return static_cast<int32_t>(result);
+        }
+        void testBaseIntegerFunc23(int32_t option1) {
+          if (option1 > INT32_MAX || option1 < INT32_MIN) {
+            taihe::core::throw_error("testBaseIntegerFunc23: result exceeds int32_t range");
+          }
+          std::cout << "testBaseIntegerFunc23 is option1  " << option1 << std::endl;
+        }
+        int32_t testBaseIntegerFunc24(int32_t option1, int64_t option2) {
+          // 检查结果是否超出 int32_t 的范围
+          int64_t result = static_cast<int64_t>(option1) +option2; 
+          if (result > INT32_MAX || result < INT32_MIN) {
+             taihe::core::throw_error("testBaseIntegerFunc24: result exceeds int32_t range");
+          }
+          // 返回结果
+          return static_cast<int32_t>(result);
+        }
+        int32_t testBaseIntegerFunc25(int32_t option1, int8_t option2) {
+          // 检查结果是否超出 int32_t 的范围
+          int32_t result = static_cast<int32_t>(option2) +option1; 
+          if (result > INT32_MAX || result < INT32_MIN) {
+             taihe::core::throw_error("testBaseIntegerFunc25: result exceeds int32_t range");
+          }
+          // 返回结果
+          return static_cast<int32_t>(result);
+        }
+        int64_t testBaseIntegerFunc26(int64_t option1) {
+          // 检查结果是否超出 int32_t 的范围
+          int64_t result = option1*100; 
+          if (result > INT64_MAX || result < INT64_MIN) {
+             taihe::core::throw_error("testBaseIntegerFunc25: result exceeds int64_t range");
+          }
+          // 返回结果
+          return static_cast<int64_t>(result);
+        }
+        void testBaseIntegerFunc27(int64_t option1) {
+          std::cout << "testBaseIntegerFunc27 is option1  " << option1 << std::endl;
+        }
+        string testBaseIntegerFunc28(int64_t option1, string_view option2) {
+            if (option2 == "testBaseIntegerFunc28") {
+              return std::string(option2) + std::to_string(option1);
+            } else {
+              return std::string(option2);
+            }
+        }
+        int64_t testBaseIntegerFunc29(int64_t option1, string_view option2) {
+          if (option2 == "testBaseIntegerFunc29"){
+            int64_t result = option1*10; 
+            if (result > INT64_MAX || result < INT64_MIN) {
+              taihe::core::throw_error("testBaseIntegerFunc29: result exceeds int32_t range");
+            }
+            // 返回结果
+            return static_cast<int64_t>(result);
+          } else {
+            return option1;
+          }
+        }
+        float testBaseIntegerFunc30(float option1) {
+            return option1+1.0;
+        }
+        void testBaseIntegerFunc31(float option1) {
+          std::cout << std::fixed << std::setprecision(6); // float 保留 6 位小数
+          std::cout << "testBaseIntegerFunc31 is option1  " << option1 << std::endl;
+        }
+        float testBaseIntegerFunc32(float option1, double option2) {
+            return option1+option2;
+        }
+        double testBaseIntegerFunc33(float option1, double option2) {
+          double result = static_cast<double>(option1) + option2;
+          // 打印调试信息，保留 6 位小数
+          std::cout << std::fixed << std::setprecision(6);
+          std::cout << "Debug: option1 = " << option1 << ", option2 = " << option2
+              << ", result = " << result << std::endl;
+          return result;
+        }
+        double testBaseIntegerFunc34(double option1) {
+            return option1+1;
+        }
+        void testBaseIntegerFunc35(double option1) {
+          std::cout << std::fixed << std::setprecision(15); // float 保留 6 位小数
+          std::cout << "testBaseIntegerFunc35 is option1  " << option1 << std::endl;
+        }
+
       };
     
 
@@ -413,8 +540,9 @@ namespace
   }
   string baseIFunc(double a, float b)
   {
-    double sum = a + b;
-    return std::to_string(sum);
+    double result = static_cast<double>(b) + a;
+    std::cout << "baseIFunc is true " << result << std::endl;
+    return std::to_string(result);
   }
 
   float baseFunc1(float b)
