@@ -12,6 +12,8 @@ from taihe.semantics.declarations import (
     DeclarationImportDecl,
     DeclarationRefDecl,
     DeclProtocol,
+    EnumDecl,
+    EnumItemDecl,
     GlobFuncDecl,
     IfaceDecl,
     IfaceMethodDecl,
@@ -86,10 +88,12 @@ class _PrettyPrinter(RecursiveDeclVisitor):
         res = f"{d.name}: {self.get_type_ref_decl(d.ty_ref)}"
         return self.with_attr(d, res)
 
-    def get_attr_val(self, d: bool | str | int) -> str:
+    def get_value(self, d: bool | str | float | int) -> str:
         if isinstance(d, bool):
             return "TRUE" if d else "FALSE"
         if isinstance(d, int):
+            return str(d)
+        if isinstance(d, float):
             return str(d)
         if isinstance(d, str):
             return '"' + encode(d, "unicode-escape").decode() + '"'
@@ -98,9 +102,9 @@ class _PrettyPrinter(RecursiveDeclVisitor):
         if d.value is None:
             return d.name
         if isinstance(d.value, tuple):
-            s = ", ".join(self.get_attr_val(v) for v in d.value)
+            s = ", ".join(self.get_value(v) for v in d.value)
             return f"{d.name}({s})"
-        s = self.get_attr_val(d.value)
+        s = self.get_value(d.value)
         return f"{d.name} = {s}"
 
     def as_keyword(self, s) -> str:
@@ -166,6 +170,34 @@ class _PrettyPrinter(RecursiveDeclVisitor):
             self.writeln(f"{d.name};")
 
     @override
+    def visit_enum_item_decl(self, d: EnumItemDecl) -> None:
+        self.write_attr(d)
+
+        if d.value is None:
+            self.writeln(f"{d.name},")
+        else:
+            self.writeln(f"{d.name} = {self.get_value(d.value)},")
+
+    @override
+    def visit_enum_decl(self, d: EnumDecl) -> None:
+        self.write_attr(d)
+
+        enum_kw = self.as_keyword("enum")
+
+        full_decl = (
+            f"{d.name}: {self.get_type_ref_decl(d.ty_ref)}" if d.ty_ref else d.name
+        )
+
+        if d.items:
+            self.writeln(f"{enum_kw} {full_decl} {{")
+            with self.indent_manager.code_block():
+                for i in d.items:
+                    self.handle_decl(i)
+            self.writeln(f"}}")
+        else:
+            self.writeln(f"{enum_kw} {full_decl} {{}}")
+
+    @override
     def visit_union_decl(self, d: UnionDecl):
         self.write_attr(d)
 
@@ -174,8 +206,8 @@ class _PrettyPrinter(RecursiveDeclVisitor):
         if d.fields:
             self.writeln(f"{union_kw} {d.name} {{")
             with self.indent_manager.code_block():
-                for i in d.fields:
-                    self.handle_decl(i)
+                for f in d.fields:
+                    self.handle_decl(f)
             self.writeln(f"}}")
         else:
             self.writeln(f"{union_kw} {d.name} {{}}")
@@ -216,20 +248,20 @@ class _PrettyPrinter(RecursiveDeclVisitor):
 
         iface_kw = self.as_keyword("interface")
 
-        decl = (
+        full_decl = (
             f"{d.name}: " + ", ".join(self.get_parent_decl(e) for e in d.parents)
             if d.parents
             else d.name
         )
 
         if d.methods:
-            self.writeln(f"{iface_kw} {decl} {{")
+            self.writeln(f"{iface_kw} {full_decl} {{")
             with self.indent_manager.code_block():
                 for f in d.methods:
                     self.handle_decl(f)
             self.writeln(f"}}")
         else:
-            self.writeln(f"{iface_kw} {decl} {{}}")
+            self.writeln(f"{iface_kw} {full_decl} {{}}")
 
     @override
     def visit_package_decl(self, p: PackageDecl):
@@ -243,6 +275,8 @@ class _PrettyPrinter(RecursiveDeclVisitor):
         for d in p.unions:
             self.handle_decl(d)
         for d in p.interfaces:
+            self.handle_decl(d)
+        for d in p.enums:
             self.handle_decl(d)
         for d in p.functions:
             self.handle_decl(d)

@@ -20,6 +20,15 @@ from example.foo use Nonexist as MyNonexist;  // DeclNotExistError
 from example.bar use Bar as Foobar;
 from example.foo use Foo as Foobar;  // DeclConflictError
 
+// Enums
+
+enum A: i32 {
+    A = 1,
+    B = "123",
+    C = 1.0,
+    D,
+}
+
 // Structs
 
 struct ResolveTypesTester {

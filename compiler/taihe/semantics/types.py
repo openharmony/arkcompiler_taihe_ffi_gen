@@ -8,6 +8,7 @@ from typing_extensions import override
 
 if TYPE_CHECKING:
     from taihe.semantics.declarations import (
+        EnumDecl,
         IfaceDecl,
         StructDecl,
         TypeDecl,
@@ -263,6 +264,15 @@ class UserType(Type, metaclass=ABCMeta):
     @override
     def representation(self):
         return f"{self.ty_decl.full_name}"
+
+
+@dataclass(frozen=True, repr=False)
+class EnumType(UserType):
+    ty_decl: "EnumDecl"
+
+    @override
+    def _accept(self, v: "TypeVisitor") -> Any:
+        return v.visit_enum_type(self)
 
 
 @dataclass(frozen=True, repr=False)

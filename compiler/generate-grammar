@@ -132,13 +132,16 @@ def generate_TaiheVisitor():
                 for sub_type in subclasses:
                     sub_kind = sub_type.__name__
                     attr_kind = sub_kind[:-7]
-                    type_list.append((attr_kind, sub_type))
-            else:
-                file.write(
-                    f"    def visit_{node_kind}(self, node: TaiheAST.{node_kind}) -> Any:\n"
-                    f"        raise NotImplementedError()\n"
-                    f"\n"
-                )
+                    file.write(
+                        f"    def visit_{attr_kind}(self, node: TaiheAST.{attr_kind}) -> Any:\n"
+                        f"        return self.visit_{node_kind}(node)\n"
+                        f"\n"
+                    )
+            file.write(
+                f"    def visit_{node_kind}(self, node: TaiheAST.{node_kind}) -> Any:\n"
+                f"        raise NotImplementedError()\n"
+                f"\n"
+            )
 
 
 def run_antlr():

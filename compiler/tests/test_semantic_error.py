@@ -7,13 +7,13 @@ from taihe.utils.exceptions import (
     DeclNotExistError,
     DeclRedefError,
     DuplicateExtendsWarn,
-    ExtendsTypeError,
     IDLSyntaxError,
     NotATypeError,
     PackageNotExistError,
     PackageNotInScopeError,
     RecursiveReferenceError,
     SymbolConflictWithNamespaceError,
+    TypeUsageError,
 )
 from taihe.utils.sources import SourceBuffer, SourceManager
 
@@ -307,7 +307,7 @@ def test_extends_type():
         "interface BadIface: i32 {}\n"
     )
     test_instance.run()
-    test_instance.assert_has_error(ExtendsTypeError)
+    test_instance.assert_has_error(TypeUsageError)
 
 
 def test_duplicate_extends():

@@ -1,11 +1,12 @@
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from typing_extensions import override
 
 from taihe.semantics.declarations import (
     CallbackTypeRefDecl,
     DeclarationRefDecl,
+    EnumDecl,
     GenericTypeRefDecl,
     GlobFuncDecl,
     IfaceDecl,
@@ -21,8 +22,20 @@ from taihe.semantics.declarations import (
     UnionDecl,
 )
 from taihe.semantics.types import (
+    BOOL,
     BUILTIN_GENERICS,
     BUILTIN_TYPES,
+    F32,
+    F64,
+    I8,
+    I16,
+    I32,
+    I64,
+    STRING,
+    U8,
+    U16,
+    U32,
+    U64,
     CallbackType,
     UserType,
 )
@@ -33,13 +46,14 @@ from taihe.utils.exceptions import (
     DeclNotExistError,
     DeclRedefError,
     DuplicateExtendsWarn,
-    ExtendsTypeError,
+    EnumValueError,
     GenericArgumentsError,
     NotATypeError,
     PackageNotExistError,
     PackageNotInScopeError,
     RecursiveReferenceError,
     SymbolConflictWithNamespaceError,
+    TypeUsageError,
 )
 
 if TYPE_CHECKING:
@@ -52,6 +66,7 @@ def analyze_semantics(pg: PackageGroup, diag: AbstractDiagnosticsManager):
     _check_decl_confilct_with_namespace(pg, diag)
     _ResolveImportsPass(diag).handle_decl(pg)
     _CheckFieldNameCollisionErrorPass(diag).handle_decl(pg)
+    _CheckEnumTypePass(diag).handle_decl(pg)
     _CheckRecursiveInclusionPass(diag).handle_decl(pg)
 
 
@@ -296,6 +311,11 @@ class _CheckFieldNameCollisionErrorPass(RecursiveDeclVisitor):
         return super().visit_iface_func_decl(d)
 
     @override
+    def visit_enum_decl(self, d: EnumDecl) -> None:
+        self.check_collision_helper(d.items)
+        return super().visit_enum_decl(d)
+
+    @override
     def visit_struct_decl(self, d: StructDecl) -> None:
         self.check_collision_helper(d.fields)
         return super().visit_struct_decl(d)
@@ -321,6 +341,47 @@ class _CheckFieldNameCollisionErrorPass(RecursiveDeclVisitor):
             assert f.name
             if (prev := names.setdefault(f.name, f)) != f:
                 self.diag.emit(DeclRedefError(prev, f))
+
+
+class _CheckEnumTypePass(RecursiveDeclVisitor):
+    """Validated enum item types."""
+
+    diag: AbstractDiagnosticsManager
+
+    def __init__(self, diag: AbstractDiagnosticsManager):
+        self.diag = diag
+
+    def visit_enum_decl(self, d: EnumDecl) -> None:
+        def is_int(val):
+            return not isinstance(val, bool) and isinstance(val, int)
+
+        if d.ty_ref:
+            if d.ty_ref.resolved_ty is None:
+                return
+            valid_table: dict[Type, Any] = {
+                I8: lambda val: is_int(val) and -(2**7) <= val < 2**7,
+                I16: lambda val: is_int(val) and -(2**15) <= val < 2**15,
+                I32: lambda val: is_int(val) and -(2**31) <= val < 2**31,
+                I64: lambda val: is_int(val) and -(2**63) <= val < 2**63,
+                U8: lambda val: is_int(val) and 0 <= val < 2**8,
+                U16: lambda val: is_int(val) and 0 <= val < 2**16,
+                U32: lambda val: is_int(val) and 0 <= val < 2**32,
+                U64: lambda val: is_int(val) and 0 <= val < 2**64,
+                BOOL: lambda val: isinstance(val, bool),
+                F32: lambda val: isinstance(val, float),
+                F64: lambda val: isinstance(val, float),
+                STRING: lambda val: isinstance(val, str),
+            }
+            is_valid = valid_table.get(d.ty_ref.resolved_ty)
+            if is_valid is None:
+                self.diag.emit(TypeUsageError(d.ty_ref))  # pyre-ignore
+                return
+        else:
+            is_valid = lambda val: val is None
+
+        for item in d.items:
+            if not is_valid(item.value):
+                self.diag.emit(EnumValueError(item, d))
 
 
 class _CheckRecursiveInclusionPass(RecursiveDeclVisitor):
@@ -350,10 +411,10 @@ class _CheckRecursiveInclusionPass(RecursiveDeclVisitor):
             if (parent_ty := parent.ty_ref.resolved_ty) is None:
                 continue
             if not isinstance(parent_ty, UserType):
-                self.diag.emit(ExtendsTypeError(parent, parent_ty))
+                self.diag.emit(TypeUsageError(parent.ty_ref))
                 continue
             if not isinstance(parent_iface := parent_ty.ty_decl, IfaceDecl):
-                self.diag.emit(ExtendsTypeError(parent, parent_ty))
+                self.diag.emit(TypeUsageError(parent.ty_ref))
                 continue
             parent_iface_list.append(((d, parent.ty_ref), parent_iface))
             prev = parent_iface_dict.setdefault(parent_iface, parent)

@@ -6,7 +6,7 @@ grammar Taihe;
 
 spec
     : (UseLst_uses += use)* (SpecFieldLst_fields += specField)*
-      (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
+      (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)* COMMA?)? RIGHT_BRACKET)?
       EOF
     ;
 
@@ -24,46 +24,54 @@ declAliasPair
     ;
 
 specField
-    : (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
+    : (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)* COMMA?)? RIGHT_BRACKET)?
+      KW_ENUM token_name = ID (COLON TypeOpt_enum_ty = type)?
+      LEFT_BRACE (EnumItemLst_fields += enumItem (COMMA EnumItemLst_fields += enumItem)* COMMA?)? RIGHT_BRACE # enum
+    | (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)* COMMA?)? RIGHT_BRACKET)?
       KW_STRUCT token_name = ID
       LEFT_BRACE (StructFieldLst_fields += structField)* RIGHT_BRACE # struct
-    | (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
+    | (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)* COMMA?)? RIGHT_BRACKET)?
       KW_UNION token_name = ID
       LEFT_BRACE (UnionFieldLst_fields += unionField)* RIGHT_BRACE # union
-    | (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
+    | (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)* COMMA?)? RIGHT_BRACKET)?
       KW_INTERFACE token_name = ID
-      (COLON InterfaceParentLst_extends += interfaceParent (COMMA InterfaceParentLst_extends += interfaceParent)*)?
+      (COLON InterfaceParentLst_extends += interfaceParent (COMMA InterfaceParentLst_extends += interfaceParent)* COMMA?)?
       LEFT_BRACE (InterfaceFieldLst_fields += interfaceField)* RIGHT_BRACE # interface
-    | (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
+    | (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)* COMMA?)? RIGHT_BRACKET)?
       KW_FUNCTION token_name = ID
-      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS (COLON (TypeOpt_return_ty = type | KW_VOID))? SEMICOLON # globalFunction
+      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)* COMMA?)? RIGHT_PARENTHESIS (COLON (TypeOpt_return_ty = type | KW_VOID))? SEMICOLON # globalFunction
+    ;
+
+enumItem
+    : (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)* COMMA?)? RIGHT_BRACKET)?
+      token_name = ID (ASSIGN_TO AttrValOpt_val = attrVal)? # enumProperty
     ;
 
 structField
-    : (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
+    : (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)* COMMA?)? RIGHT_BRACKET)?
       token_name = ID
       COLON Type_ty = type SEMICOLON # structProperty
     ;
 
 unionField
-    : (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
+    : (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)* COMMA?)? RIGHT_BRACKET)?
       token_name = ID
       (COLON TypeOpt_ty = type)? SEMICOLON # unionProperty
     ;
 
 interfaceField
-    : (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
+    : (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)* COMMA?)? RIGHT_BRACKET)?
       token_name = ID
-      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS (COLON (TypeOpt_return_ty = type | KW_VOID))? SEMICOLON # interfaceFunction
+      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)* COMMA?)? RIGHT_PARENTHESIS (COLON (TypeOpt_return_ty = type | KW_VOID))? SEMICOLON # interfaceFunction
     ;
 
 interfaceParent
-    : (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
+    : (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)* COMMA?)? RIGHT_BRACKET)?
       Type_ty = type
     ;
 
 parameter
-    : (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)*)? RIGHT_BRACKET)?
+    : (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)* COMMA?)? RIGHT_BRACKET)?
       token_name = ID COLON Type_ty = type
     ;
 
@@ -72,14 +80,14 @@ parameter
 ///////////////
 
 attrItem
-    : token_name = ID # emptyAttrItem
-    | token_name = ID ASSIGN_TO AttrVal_val = attrVal # simpleAttrItem
-    | token_name = ID LEFT_PARENTHESIS (AttrValLst_vals += attrVal (COMMA AttrValLst_vals += attrVal)*)? RIGHT_PARENTHESIS # tupleAttrItem
+    : token_name = ID (ASSIGN_TO AttrValOpt_val = attrVal)? # simpleAttrItem
+    | token_name = ID LEFT_PARENTHESIS (AttrValLst_vals += attrVal (COMMA AttrValLst_vals += attrVal)* COMMA?)? RIGHT_PARENTHESIS # tupleAttrItem
     ;
 
 attrVal
     : StringExpr_expr = stringExpr # stringAttrVal
     | IntExpr_expr = intExpr # intAttrVal
+    | FloatExpr_expr = floatExpr # floatAttrVal
     | BoolExpr_expr = boolExpr # boolAttrVal
     ;
 
@@ -90,14 +98,23 @@ attrVal
 type
     : PkgName_pkg_name = pkgName DOT token_decl_name = ID # longType
     | token_decl_name = ID # shortType
-    | token_decl_name = ID LESS_THAN (TypeLst_args += type (COMMA TypeLst_args += type)*)? GREATER_THAN # genericType
+    | token_decl_name = ID LESS_THAN (TypeLst_args += type (COMMA TypeLst_args += type)* COMMA?)? GREATER_THAN # genericType
     | <assoc = right>
-      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)*)? RIGHT_PARENTHESIS ARROW (TypeOpt_return_ty = type | KW_VOID) # callbackType
+      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)* COMMA?)? RIGHT_PARENTHESIS ARROW (TypeOpt_return_ty = type | KW_VOID) # callbackType
     ;
 
 ////////////////
 // Expression //
 ////////////////
+
+floatExpr
+    : token_val = FLOAT_LITERAL # literalFloatExpr
+    | LEFT_PARENTHESIS FloatExpr_expr = floatExpr RIGHT_PARENTHESIS # parenthesisFloatExpr
+    | token_op = (PLUS | MINUS | TILDE) FloatExpr_expr = floatExpr # unaryFloatExpr
+    | FloatExpr_left = floatExpr token_op = (STAR | SLASH) FloatExpr_right = floatExpr # binaryFloatExpr
+    | FloatExpr_left = floatExpr token_op = (PLUS | MINUS) FloatExpr_right = floatExpr # binaryFloatExpr
+    | KW_IF BoolExpr_cond = boolExpr KW_THEN FloatExpr_then_expr = floatExpr KW_ELSE FloatExpr_else_expr = floatExpr # conditionalFloatExpr
+    ;
 
 intExpr
     : token_val = (DEC_LITERAL | OCT_LITERAL | HEX_LITERAL | BIN_LITERAL) # literalIntExpr
@@ -116,13 +133,15 @@ boolExpr
     : token_val = (KW_TRUE | KW_FALSE) # literalBoolExpr
     | LEFT_PARENTHESIS BoolExpr_expr = boolExpr RIGHT_PARENTHESIS # parenthesisBoolExpr
     | token_op = EXCLAMATION BoolExpr_expr = boolExpr # unaryBoolExpr
-    | IntExpr_left = intExpr token_op = (EQUAL_TO | NOT_EQUAL_TO | LESS_EQUAL_TO | GREATER_EQUAL_TO | LESS_THAN | GREATER_THAN) IntExpr_right = intExpr # comparisonBoolExpr
+    | IntExpr_left = intExpr token_op = (EQUAL_TO | NOT_EQUAL_TO | LESS_EQUAL_TO | GREATER_EQUAL_TO | LESS_THAN | GREATER_THAN) IntExpr_right = intExpr # intComparisonBoolExpr
+    | FloatExpr_left = floatExpr token_op = (EQUAL_TO | NOT_EQUAL_TO | LESS_EQUAL_TO | GREATER_EQUAL_TO | LESS_THAN | GREATER_THAN) FloatExpr_right = floatExpr # floatComparisonBoolExpr
     | BoolExpr_left = boolExpr token_op = (AND | OR) BoolExpr_right = boolExpr # binaryBoolExpr
     | KW_IF BoolExpr_cond = boolExpr KW_THEN BoolExpr_then_expr = boolExpr KW_ELSE BoolExpr_else_expr = boolExpr # conditionalBoolExpr
     ;
 
 stringExpr
     : tokenLst_vals += STRING_LITERAL+ # literalStringExpr
+    | LEFT_PARENTHESIS StringExpr_expr = stringExpr RIGHT_PARENTHESIS # parenthesisStringExpr
     ;
 
 ///////////
@@ -285,16 +304,8 @@ KW_FROM
     : 'from'
     ;
 
-KW_STATIC
-    : 'static'
-    ;
-
-KW_CONST
-    : 'const'
-    ;
-
-KW_TYPE
-    : 'type'
+KW_ENUM
+    : 'enum'
     ;
 
 KW_UNION
@@ -307,10 +318,6 @@ KW_STRUCT
 
 KW_INTERFACE
     : 'interface'
-    ;
-
-KW_CONSTRUCTOR
-    : 'constructor'
     ;
 
 KW_FUNCTION
@@ -376,6 +383,10 @@ OCT_LITERAL
 
 BIN_LITERAL
     : '0b' HEX_DIGIT+
+    ;
+
+FLOAT_LITERAL
+    : DIGIT* '.' DIGIT*
     ;
 
 ID

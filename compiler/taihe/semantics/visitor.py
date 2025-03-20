@@ -23,6 +23,8 @@ from taihe.semantics.declarations import (
     DeclarationImportDecl,
     DeclarationRefDecl,
     DeclProtocol,
+    EnumDecl,
+    EnumItemDecl,
     GenericTypeRefDecl,
     GlobFuncDecl,
     IfaceDecl,
@@ -48,6 +50,7 @@ from taihe.semantics.types import (
     BigIntType,
     BuiltinType,
     CallbackType,
+    EnumType,
     GenericType,
     IfaceType,
     MapType,
@@ -123,6 +126,9 @@ class TypeVisitor(Generic[T]):
 
     def visit_user_type(self, t: UserType) -> T:
         return self.visit_type(t)
+
+    def visit_enum_type(self, t: EnumType) -> T:
+        return self.visit_user_type(t)
 
     def visit_struct_type(self, t: StructType) -> T:
         return self.visit_user_type(t)
@@ -237,6 +243,14 @@ class DeclVisitor(Generic[T]):
 
     def visit_type_decl(self, d: TypeDecl) -> T:
         return self.visit_decl(d)
+
+    ### Enum ###
+
+    def visit_enum_item_decl(self, d: EnumItemDecl) -> T:
+        return self.visit_decl(d)
+
+    def visit_enum_decl(self, d: EnumDecl) -> T:
+        return self.visit_type_decl(d)
 
     ### Struct ###
 
@@ -374,6 +388,22 @@ class RecursiveDeclVisitor(DeclVisitor[None]):
     def visit_type_decl(self, d: TypeDecl) -> None:
         return self.visit_decl(d)
 
+    ### Enum ###
+
+    @override
+    def visit_enum_item_decl(self, d: EnumItemDecl) -> None:
+        return self.visit_decl(d)
+
+    @override
+    def visit_enum_decl(self, d: EnumDecl) -> None:
+        if d.ty_ref:
+            self.handle_decl(d.ty_ref)
+
+        for i in d.items:
+            self.handle_decl(i)
+
+        return self.visit_type_decl(d)
+
     ### Struct ###
 
     @override
@@ -443,6 +473,8 @@ class RecursiveDeclVisitor(DeclVisitor[None]):
             self.handle_decl(i)
 
         for i in p.functions:
+            self.handle_decl(i)
+        for i in p.enums:
             self.handle_decl(i)
         for i in p.structs:
             self.handle_decl(i)

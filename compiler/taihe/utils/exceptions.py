@@ -7,8 +7,9 @@ from taihe.utils.diagnostics import DiagError, DiagNote, DiagWarn
 
 if TYPE_CHECKING:
     from taihe.semantics.declarations import (
+        EnumDecl,
+        EnumItemDecl,
         IfaceDecl,
-        IfaceParentDecl,
         NamedDecl,
         PackageDecl,
         PackageLevelDecl,
@@ -142,17 +143,39 @@ class SymbolConflictWithNamespaceError(DiagError):
 
 
 @dataclass
-class ExtendsTypeError(DiagError):
+class TypeUsageError(DiagError):
     ty: "Type"
 
-    def __init__(self, decl: "IfaceParentDecl", ty: "Type"):
-        self.loc = decl.ty_ref.loc
-        self.ty = ty
+    def __init__(self, ty_ref: "TypeRefDecl"):
+        assert ty_ref.resolved_ty
+        self.ty = ty_ref.resolved_ty
+        self.loc = ty_ref.loc
 
     @property
     @override
     def format_msg(self) -> str:
-        return f"{self.ty.representation} cannot be parent of an interface"
+        return f"{self.ty.representation} cannot be used in this context"
+
+
+@dataclass
+class EnumValueError(DiagError):
+    item: "EnumItemDecl"
+    enum: "EnumDecl"
+
+    def __init__(self, item: "EnumItemDecl", enum: "EnumDecl"):
+        self.loc = item.loc
+        self.item = item
+        self.enum = enum
+
+    @property
+    @override
+    def format_msg(self) -> str:
+        if self.enum.ty_ref is None:
+            type_repr = "empty"
+        else:
+            assert self.enum.ty_ref.resolved_ty
+            type_repr = self.enum.ty_ref.resolved_ty.representation
+        return f"value of {self.item.description} ({self.item.value}) is conflict with {self.enum.description}, should be {type_repr}"
 
 
 @dataclass

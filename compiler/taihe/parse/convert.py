@@ -2,7 +2,7 @@ from codecs import decode
 from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional
 
 from typing_extensions import override
 
@@ -13,6 +13,8 @@ from taihe.semantics.declarations import (
     CallbackTypeRefDecl,
     DeclarationImportDecl,
     DeclarationRefDecl,
+    EnumDecl,
+    EnumItemDecl,
     GenericTypeRefDecl,
     GlobFuncDecl,
     IfaceDecl,
@@ -84,6 +86,8 @@ def pkg2str(pkg_name: ast.PkgName) -> str:
 
 
 class ExprEvaluator(Visitor):
+    # Bool Expr
+
     @override
     def visit_LiteralBoolExpr(self, node: ast.LiteralBoolExpr) -> bool:
         return {
@@ -92,7 +96,7 @@ class ExprEvaluator(Visitor):
         }[node.val.text]
 
     @override
-    def visit_ComparisonBoolExpr(self, node: ast.ComparisonBoolExpr) -> bool:
+    def visit_IntComparisonBoolExpr(self, node: ast.IntComparisonBoolExpr) -> bool:
         return {
             ">": int.__gt__,
             "<": int.__lt__,
@@ -103,6 +107,20 @@ class ExprEvaluator(Visitor):
         }[node.op.text](
             int(self.visit(node.left)),
             int(self.visit(node.right)),
+        )
+
+    @override
+    def visit_FloatComparisonBoolExpr(self, node: ast.FloatComparisonBoolExpr) -> bool:
+        return {
+            ">": float.__gt__,
+            "<": float.__lt__,
+            ">=": float.__ge__,
+            "<=": float.__le__,
+            "==": float.__eq__,
+            "!=": float.__ne__,
+        }[node.op.text](
+            float(self.visit(node.left)),
+            float(self.visit(node.right)),
         )
 
     @override
@@ -131,6 +149,8 @@ class ExprEvaluator(Visitor):
             if self.visit(node.cond)
             else self.visit(node.else_expr)
         )
+
+    # Int Expr
 
     @override
     def visit_LiteralIntExpr(self, node: ast.LiteralIntExpr) -> int:
@@ -193,6 +213,47 @@ class ExprEvaluator(Visitor):
             int(self.visit(node.right)),
         )
 
+    # Float Expr
+
+    @override
+    def visit_LiteralFloatExpr(self, node: ast.LiteralFloatExpr) -> float:
+        return float(node.val.text)
+
+    @override
+    def visit_ParenthesisFloatExpr(self, node: ast.ParenthesisFloatExpr) -> float:
+        return self.visit(node.expr)
+
+    @override
+    def visit_ConditionalFloatExpr(self, node: ast.ConditionalFloatExpr) -> Any:
+        return (
+            self.visit(node.then_expr)
+            if self.visit(node.cond)
+            else self.visit(node.else_expr)
+        )
+
+    @override
+    def visit_UnaryFloatExpr(self, node: ast.UnaryFloatExpr) -> float:
+        return {
+            "-": float.__neg__,
+            "+": float.__pos__,
+        }[node.op.text](
+            float(self.visit(node.expr)),
+        )
+
+    @override
+    def visit_BinaryFloatExpr(self, node: ast.BinaryFloatExpr) -> float:
+        return {
+            "+": float.__add__,
+            "-": float.__sub__,
+            "*": float.__mul__,
+            "/": float.__truediv__,
+        }[node.op.text](
+            float(self.visit(node.left)),
+            float(self.visit(node.right)),
+        )
+
+    # String Expr
+
     @override
     def visit_LiteralStringExpr(self, node: ast.LiteralStringExpr) -> str:
         return "".join(decode(val.text[1:-1], "unicode-escape") for val in node.vals)
@@ -221,19 +282,20 @@ class AstConverter(ExprEvaluator):
     # Attributes
 
     @override
-    def visit_EmptyAttrItem(self, node: ast.EmptyAttrItem) -> AttrItemDecl:
-        d = AttrItemDecl(self.loc(node.name), str(node.name))
-        return d
+    def visit_AttrVal(self, node: ast.AttrVal) -> Any:
+        return self.visit(node.expr)
 
     @override
     def visit_SimpleAttrItem(self, node: ast.SimpleAttrItem) -> AttrItemDecl:
-        value = self.visit(node.val.expr)
-        d = AttrItemDecl(self.loc(node.name), str(node.name), value)
+        if node.val:
+            d = AttrItemDecl(self.loc(node.name), str(node.name), self.visit(node.val))
+        else:
+            d = AttrItemDecl(self.loc(node.name), str(node.name))
         return d
 
     @override
     def visit_TupleAttrItem(self, node: ast.TupleAttrItem) -> AttrItemDecl:
-        value = tuple(self.visit(val.expr) for val in node.vals)
+        value = tuple(self.visit(val) for val in node.vals)
         d = AttrItemDecl(self.loc(node.name), str(node.name), value)
         return d
 
@@ -314,6 +376,25 @@ class AstConverter(ExprEvaluator):
     def visit_Struct(self, node: ast.Struct) -> StructDecl:
         d = StructDecl(self.loc(node.name), str(node.name))
         self.diag.for_each(node.fields, lambda f: d.add_field(self.visit(f)))
+        self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
+        return d
+
+    @override
+    def visit_EnumProperty(self, node: ast.EnumProperty) -> EnumItemDecl:
+        if node.val:
+            d = EnumItemDecl(self.loc(node.name), str(node.name), self.visit(node.val))
+        else:
+            d = EnumItemDecl(self.loc(node.name), str(node.name))
+        self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
+        return d
+
+    @override
+    def visit_Enum(self, node: ast.Enum) -> EnumDecl:
+        if ty := node.enum_ty:
+            d = EnumDecl(self.loc(node.name), str(node.name), self.visit(ty))
+        else:
+            d = EnumDecl(self.loc(node.name), str(node.name))
+        self.diag.for_each(node.fields, lambda a: d.add_item(self.visit(a)))
         self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
         return d
 
