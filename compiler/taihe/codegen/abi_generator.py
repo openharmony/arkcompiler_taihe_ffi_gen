@@ -79,7 +79,7 @@ class UnionABIInfo(AbstractAnalysis[UnionDecl]):
         self.mangled_name = encode(segments, DeclKind.TYPE)
         self.as_owner = f"struct {self.mangled_name}"
         self.as_param = f"struct {self.mangled_name} const*"
-        self.has_data = any(item.ty_ref for item in d.fields)
+        self.has_data = any(field.ty_ref for field in d.fields)
 
 
 class StructABIInfo(AbstractAnalysis[StructDecl]):
@@ -474,16 +474,16 @@ class ABIHeadersGenerator:
         union_abi_defn_target.writeln(
             f"union {union_abi_info.union_name} {{",
         )
-        for item in union.fields:
-            if item.ty_ref is None:
+        for field in union.fields:
+            if field.ty_ref is None:
                 union_abi_defn_target.writeln(
-                    f"  // {item.name}",
+                    f"  // {field.name}",
                 )
                 continue
-            type_abi_info = TypeABIInfo.get(self.am, item.ty_ref.resolved_ty)
+            type_abi_info = TypeABIInfo.get(self.am, field.ty_ref.resolved_ty)
             union_abi_defn_target.include(*type_abi_info.impl_headers)
             union_abi_defn_target.writeln(
-                f"    {type_abi_info.as_owner} {item.name};",
+                f"    {type_abi_info.as_owner} {field.name};",
             )
         union_abi_defn_target.writeln(
             f"}};",

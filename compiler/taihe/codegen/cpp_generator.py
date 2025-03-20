@@ -651,9 +651,9 @@ class CppHeadersGenerator:
         union_cpp_defn_target.writeln(
             f"    enum class tag_t : {union_abi_info.tag_type} {{",
         )
-        for item in union.fields:
+        for field in union.fields:
             union_cpp_defn_target.writeln(
-                f"        {item.name},",
+                f"        {field.name},",
             )
         union_cpp_defn_target.writeln(
             f"    }};",
@@ -664,13 +664,13 @@ class CppHeadersGenerator:
             f"        storage_t() {{}}",
             f"        ~storage_t() {{}}",
         )
-        for item in union.fields:
-            if item.ty_ref is None:
+        for field in union.fields:
+            if field.ty_ref is None:
                 continue
-            type_cpp_info = TypeCppInfo.get(self.am, item.ty_ref.resolved_ty)
+            type_cpp_info = TypeCppInfo.get(self.am, field.ty_ref.resolved_ty)
             union_cpp_defn_target.include(*type_cpp_info.impl_headers)
             union_cpp_defn_target.writeln(
-                f"        {type_cpp_info.as_owner} {item.name};",
+                f"        {type_cpp_info.as_owner} {field.name};",
             )
         union_cpp_defn_target.writeln(
             f"    }};",
@@ -680,12 +680,12 @@ class CppHeadersGenerator:
             f"    ~{union_cpp_info.name}() {{",
             f"        switch (m_tag) {{",
         )
-        for item in union.fields:
-            if item.ty_ref is None:
+        for field in union.fields:
+            if field.ty_ref is None:
                 continue
             union_cpp_defn_target.writeln(
-                f"        case tag_t::{item.name}:",
-                f"            ::std::destroy_at(&m_data.{item.name});",
+                f"        case tag_t::{field.name}:",
+                f"            ::std::destroy_at(&m_data.{field.name});",
                 f"            break;",
             )
         union_cpp_defn_target.writeln(
@@ -699,12 +699,12 @@ class CppHeadersGenerator:
             f"    {union_cpp_info.name}({union_cpp_info.name} const& other) : m_tag(other.m_tag) {{",
             f"        switch (m_tag) {{",
         )
-        for item in union.fields:
-            if item.ty_ref is None:
+        for field in union.fields:
+            if field.ty_ref is None:
                 continue
             union_cpp_defn_target.writeln(
-                f"        case tag_t::{item.name}:",
-                f"            new (&m_data.{item.name}) decltype(m_data.{item.name})(other.m_data.{item.name});",
+                f"        case tag_t::{field.name}:",
+                f"            new (&m_data.{field.name}) decltype(m_data.{field.name})(other.m_data.{field.name});",
                 f"            break;",
             )
         union_cpp_defn_target.writeln(
@@ -718,12 +718,12 @@ class CppHeadersGenerator:
             f"    {union_cpp_info.name}({union_cpp_info.name}&& other) : m_tag(other.m_tag) {{",
             f"        switch (m_tag) {{",
         )
-        for item in union.fields:
-            if item.ty_ref is None:
+        for field in union.fields:
+            if field.ty_ref is None:
                 continue
             union_cpp_defn_target.writeln(
-                f"        case tag_t::{item.name}:",
-                f"            new (&m_data.{item.name}) decltype(m_data.{item.name})(::std::move(other.m_data.{item.name}));",
+                f"        case tag_t::{field.name}:",
+                f"            new (&m_data.{field.name}) decltype(m_data.{field.name})(::std::move(other.m_data.{field.name}));",
                 f"            break;",
             )
         union_cpp_defn_target.writeln(
@@ -753,16 +753,16 @@ class CppHeadersGenerator:
             f"    }}",
         )
         # in place constructor
-        for item in union.fields:
-            if item.ty_ref is None:
+        for field in union.fields:
+            if field.ty_ref is None:
                 union_cpp_defn_target.writeln(
-                    f"    {union_cpp_info.name}(::taihe::core::static_tag_t<tag_t::{item.name}>) : m_tag(tag_t::{item.name}) {{}}",
+                    f"    {union_cpp_info.name}(::taihe::core::static_tag_t<tag_t::{field.name}>) : m_tag(tag_t::{field.name}) {{}}",
                 )
             else:
                 union_cpp_defn_target.writeln(
                     f"    template<typename... Args>",
-                    f"    {union_cpp_info.name}(::taihe::core::static_tag_t<tag_t::{item.name}>, Args&&... args) : m_tag(tag_t::{item.name}) {{",
-                    f"        new (&m_data.{item.name}) decltype(m_data.{item.name})(::std::forward<Args>(args)...);",
+                    f"    {union_cpp_info.name}(::taihe::core::static_tag_t<tag_t::{field.name}>, Args&&... args) : m_tag(tag_t::{field.name}) {{",
+                    f"        new (&m_data.{field.name}) decltype(m_data.{field.name})(::std::forward<Args>(args)...);",
                     f"    }}",
                 )
         # creator
@@ -786,11 +786,11 @@ class CppHeadersGenerator:
             f"    template<tag_t tag>",
             f"    auto& get_ref() {{",
         )
-        for item in union.fields:
-            if item.ty_ref:
+        for field in union.fields:
+            if field.ty_ref:
                 union_cpp_defn_target.writeln(
-                    f"        if constexpr (tag == tag_t::{item.name}) {{",
-                    f"            return m_data.{item.name};",
+                    f"        if constexpr (tag == tag_t::{field.name}) {{",
+                    f"            return m_data.{field.name};",
                     f"        }}",
                 )
         union_cpp_defn_target.writeln(
@@ -807,11 +807,11 @@ class CppHeadersGenerator:
             f"    template<tag_t tag>",
             f"    auto const& get_ref() const {{",
         )
-        for item in union.fields:
-            if item.ty_ref:
+        for field in union.fields:
+            if field.ty_ref:
                 union_cpp_defn_target.writeln(
-                    f"        if constexpr (tag == tag_t::{item.name}) {{",
-                    f"            return m_data.{item.name};",
+                    f"        if constexpr (tag == tag_t::{field.name}) {{",
+                    f"            return m_data.{field.name};",
                     f"        }}",
                 )
         union_cpp_defn_target.writeln(
@@ -834,33 +834,33 @@ class CppHeadersGenerator:
             f"    }}",
         )
         # named
-        for item in union.fields:
+        for field in union.fields:
             union_cpp_defn_target.writeln(
                 f"    template<typename... Args>",
-                f"    static {union_cpp_info.name} make_{item.name}(Args&&... args) {{",
-                f"        return make<tag_t::{item.name}>(::std::forward<Args>(args)...);",
+                f"    static {union_cpp_info.name} make_{field.name}(Args&&... args) {{",
+                f"        return make<tag_t::{field.name}>(::std::forward<Args>(args)...);",
                 f"    }}",
                 f"    template<typename... Args>",
-                f"    {union_cpp_info.name} const& emplace_{item.name}(Args&&... args) {{",
-                f"        return emplace<tag_t::{item.name}>(::std::forward<Args>(args)...);",
+                f"    {union_cpp_info.name} const& emplace_{field.name}(Args&&... args) {{",
+                f"        return emplace<tag_t::{field.name}>(::std::forward<Args>(args)...);",
                 f"    }}",
-                f"    bool holds_{item.name}() const {{",
-                f"        return holds<tag_t::{item.name}>();",
+                f"    bool holds_{field.name}() const {{",
+                f"        return holds<tag_t::{field.name}>();",
                 f"    }}",
             )
-            if item.ty_ref:
+            if field.ty_ref:
                 union_cpp_defn_target.writeln(
-                    f"    auto* get_{item.name}_ptr() {{",
-                    f"        return get_ptr<tag_t::{item.name}>();",
+                    f"    auto* get_{field.name}_ptr() {{",
+                    f"        return get_ptr<tag_t::{field.name}>();",
                     f"    }}",
-                    f"    auto const* get_{item.name}_ptr() const {{",
-                    f"        return get_ptr<tag_t::{item.name}>();",
+                    f"    auto const* get_{field.name}_ptr() const {{",
+                    f"        return get_ptr<tag_t::{field.name}>();",
                     f"    }}",
-                    f"    auto& get_{item.name}_ref() {{",
-                    f"        return get_ref<tag_t::{item.name}>();",
+                    f"    auto& get_{field.name}_ref() {{",
+                    f"        return get_ref<tag_t::{field.name}>();",
                     f"    }}",
-                    f"    auto const& get_{item.name}_ref() const {{",
-                    f"        return get_ref<tag_t::{item.name}>();",
+                    f"    auto const& get_{field.name}_ref() const {{",
+                    f"        return get_ref<tag_t::{field.name}>();",
                     f"    }}",
                 )
         # non_const visitor
@@ -869,12 +869,12 @@ class CppHeadersGenerator:
             f"    auto accept_template(Visitor&& visitor) {{",
             f"        switch (m_tag) {{",
         )
-        for item in union.fields:
-            result = f"::taihe::core::static_tag<tag_t::{item.name}>"
-            if item.ty_ref:
-                result += f", m_data.{item.name}"
+        for field in union.fields:
+            result = f"::taihe::core::static_tag<tag_t::{field.name}>"
+            if field.ty_ref:
+                result += f", m_data.{field.name}"
             union_cpp_defn_target.writeln(
-                f"        case tag_t::{item.name}:",
+                f"        case tag_t::{field.name}:",
                 f"            return visitor({result});",
             )
         union_cpp_defn_target.writeln(
@@ -886,11 +886,11 @@ class CppHeadersGenerator:
             f"    auto accept(Visitor&& visitor) {{",
             f"        switch (m_tag) {{",
         )
-        for item in union.fields:
-            result = "" if item.ty_ref is None else f"m_data.{item.name}"
+        for field in union.fields:
+            result = "" if field.ty_ref is None else f"m_data.{field.name}"
             union_cpp_defn_target.writeln(
-                f"        case tag_t::{item.name}:",
-                f"            return visitor.{item.name}({result});",
+                f"        case tag_t::{field.name}:",
+                f"            return visitor.{field.name}({result});",
             )
         union_cpp_defn_target.writeln(
             f"        }}",
@@ -902,12 +902,12 @@ class CppHeadersGenerator:
             f"    auto accept_template(Visitor&& visitor) const {{",
             f"        switch (m_tag) {{",
         )
-        for item in union.fields:
-            result = f"::taihe::core::static_tag<tag_t::{item.name}>"
-            if item.ty_ref:
-                result += f", m_data.{item.name}"
+        for field in union.fields:
+            result = f"::taihe::core::static_tag<tag_t::{field.name}>"
+            if field.ty_ref:
+                result += f", m_data.{field.name}"
             union_cpp_defn_target.writeln(
-                f"        case tag_t::{item.name}:",
+                f"        case tag_t::{field.name}:",
                 f"            return visitor({result});",
             )
         union_cpp_defn_target.writeln(
@@ -919,11 +919,11 @@ class CppHeadersGenerator:
             f"    auto accept(Visitor&& visitor) const {{",
             f"        switch (m_tag) {{",
         )
-        for item in union.fields:
-            result = "" if item.ty_ref is None else f"m_data.{item.name}"
+        for field in union.fields:
+            result = "" if field.ty_ref is None else f"m_data.{field.name}"
             union_cpp_defn_target.writeln(
-                f"        case tag_t::{item.name}:",
-                f"            return visitor.{item.name}({result});",
+                f"        case tag_t::{field.name}:",
+                f"            return visitor.{field.name}({result});",
             )
         union_cpp_defn_target.writeln(
             f"        }}",
@@ -946,10 +946,10 @@ class CppHeadersGenerator:
         union_cpp_defn_target: COutputBuffer,
     ):
         result = "false"
-        for item in union.fields:
-            cond = f"lhs.holds_{item.name}() && rhs.holds_{item.name}()"
-            if item.ty_ref:
-                cond = f"{cond} && same(lhs.get_{item.name}_ref(), rhs.get_{item.name}_ref())"
+        for field in union.fields:
+            cond = f"lhs.holds_{field.name}() && rhs.holds_{field.name}()"
+            if field.ty_ref:
+                cond = f"{cond} && same(lhs.get_{field.name}_ref(), rhs.get_{field.name}_ref())"
             result = f"{result} || {cond}"
         union_cpp_defn_target.writeln(
             f"namespace taihe::core {{",
@@ -972,13 +972,13 @@ class CppHeadersGenerator:
             f"    switch (val.get_tag()) {{",
             f"        ::std::size_t seed;",
         )
-        for item in union.fields:
+        for field in union.fields:
             val = "0x9e3779b9 + (seed << 6) + (seed >> 2)"
-            if item.ty_ref:
-                val = f"{val} + hash(val.get_{item.name}_ref())"
+            if field.ty_ref:
+                val = f"{val} + hash(val.get_{field.name}_ref())"
             union_cpp_defn_target.writeln(
-                f"    case {union_cpp_info.full_name}::tag_t::{item.name}:",
-                f"        seed = (::std::size_t){union_cpp_info.full_name}::tag_t::{item.name};",
+                f"    case {union_cpp_info.full_name}::tag_t::{field.name}:",
+                f"        seed = (::std::size_t){union_cpp_info.full_name}::tag_t::{field.name};",
                 f"        return seed ^ ({val});",
             )
         union_cpp_defn_target.writeln(
