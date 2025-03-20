@@ -1,0 +1,38 @@
+interface IBase {
+    [onoff, gen_async="getAsync"]
+    onGet(): String;
+    [onoff, gen_async="getNewAsync"]
+    onGetNew(): String;
+    [onoff,gen_async="setAsync"]
+    offSet(a: String): void;
+    [onoff,gen_async="setNewAsync"]
+    offSetNew(a: String): void;
+}
+
+function getIBase(a: String, b: String): IBase;
+
+// on test
+[onoff, gen_async="onFooAsync"]
+function onFoo(a: i32): void;
+
+[onoff, gen_async="onBarAsync"]
+function onBar(a: i32): void;
+
+[onoff = "baz", gen_async="onBazAsync"]
+function onBaz(a: String): void;
+
+[onoff = "qux", gen_async="onQuxAsync"]
+function onQux(a: String, b: i32): void;
+
+// off test
+[onoff, gen_async="offFooAsync"]
+function offFoo(a: i32): void;
+
+[onoff, gen_async="offBarAsync"]
+function offBar(a: i32): void;
+
+[onoff = "baz", gen_async="offBazAsync"]
+function offBaz(a: String): void;
+
+[onoff = "qux", gen_async="offQuxAsync"]
+function offQux(a: String, b: i32): void;

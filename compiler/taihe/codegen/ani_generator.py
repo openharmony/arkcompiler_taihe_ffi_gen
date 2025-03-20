@@ -1,3 +1,4 @@
+import re
 from abc import ABCMeta
 from typing import TYPE_CHECKING, Optional
 
@@ -160,6 +161,8 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
         self.mangled_name = encode(segments, DeclKind.ANI_FUNC)
 
         self.sts_native_name = f"{f.name}_inner"
+        self.sts_on = False
+        self.sts_off = False
 
         if static_name_attr := f.attrs.get("sts_name"):
             self.gen_global = static_name_attr.value
@@ -188,6 +191,22 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
         else:
             self.sts_promise_name = None
 
+        if sts_onoff_type := f.attrs.get("onoff"):
+            assert f.name.startswith("on") or f.name.startswith("off")
+            if f.name.startswith("on"):
+                self.sts_on = True
+            elif f.name.startswith("off"):
+                self.sts_off = True
+            if sts_onoff_type.value is None:
+                onoff_type = re.sub(r"^(on|off)", "", f.name)
+                if onoff_type:  # guaranteed to be non-empty
+                    onoff_type = onoff_type[0].lower() + onoff_type[1:]
+                self.sts_onoff_type = onoff_type
+            else:
+                self.sts_onoff_type = sts_onoff_type.value
+        else:
+            self.sts_onoff_type = None
+
         self.sts_real_params: list[ParamDecl] = []
         self.sts_native_args: list[str] = []
         for param in f.params:
@@ -203,6 +222,8 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
         assert p
         segments = [*p.segments, d.name, f.name]
         self.mangled_name = encode(segments, DeclKind.ANI_FUNC)
+        self.sts_on = False
+        self.sts_off = False
 
         self.sts_native_name = f"{f.name}_inner"
 
@@ -232,6 +253,22 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
             if setter_field := setter_attr.value:
                 self.gen_setter = setter_field
                 self.gen_method = None
+
+        if sts_onoff_type := f.attrs.get("onoff"):
+            assert f.name.startswith("on") or f.name.startswith("off")
+            if f.name.startswith("on"):
+                self.sts_on = True
+            elif f.name.startswith("off"):
+                self.sts_off = True
+            if sts_onoff_type.value is None:
+                onoff_type = re.sub(r"^(on|off)", "", f.name)
+                if onoff_type:  # guaranteed to be non-empty
+                    onoff_type = onoff_type[0].lower() + onoff_type[1:]
+                self.sts_onoff_type = onoff_type
+            else:
+                self.sts_onoff_type = sts_onoff_type.value
+        else:
+            self.sts_onoff_type = None
 
         self.sts_real_params: list[ParamDecl] = []
         self.sts_native_args: list[str] = []
@@ -1240,7 +1277,7 @@ class STSCodeGenerator:
                 self.gen_namespace(child, pkg_sts_target)
 
         if pkg:
-            pkg_sts_target.write(f"}}\n")
+            pkg_sts_target.write("}\n")
 
     def gen_package_types(
         self,
@@ -1252,6 +1289,9 @@ class STSCodeGenerator:
 
         static_methods: dict[str, list[tuple[str, GlobFuncDecl]]] = {}
         construct_methods: dict[str, list[GlobFuncDecl]] = {}
+        on_param_map: dict[str, list[GlobFuncDecl]] = {}
+        off_param_map: dict[str, list[GlobFuncDecl]] = {}
+
         for func in pkg.functions:
             func_ani_info = GlobFuncANIInfo.get(self.am, func)
             if value := func_ani_info.gen_static:
@@ -1289,10 +1329,211 @@ class STSCodeGenerator:
         for func in pkg.functions:
             if func.attrs.get("gen_async"):
                 callback_flag = 1
+
+        # on/off
+        for func in pkg.functions:
+            func_ani_info = GlobFuncANIInfo.get(self.am, func)
+            if func_ani_info.sts_onoff_type:
+                if func_ani_info.sts_on:
+                    params_key = self.get_type_str(func)
+                    on_param_map.setdefault(params_key, []).append(func)
+                elif func_ani_info.sts_off:
+                    params_key = self.get_type_str(func)
+                    off_param_map.setdefault(params_key, []).append(func)
+
+        for _, value in on_param_map.items():
+            self.gen_onoff_func("on", value, pkg_sts_target)
+
+        for _, value in off_param_map.items():
+            self.gen_onoff_func("off", value, pkg_sts_target)
+
         if callback_flag:
             pkg_sts_target.write(
-                f"export type AsyncCallback<T> = (err: Error, data?: T) => void;\n"
+                "export type AsyncCallback<T> = (err: Error, data?: T) => void;\n"
             )
+
+    def get_type_str(
+        self,
+        func: GlobFuncDecl | IfaceMethodDecl,
+    ) -> str:
+        param_type_str = ""
+        params = func.params
+        for param in params:
+            type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
+            param_type_str += type_ani_info.sts_type
+        return param_type_str
+
+    def gen_onoff_func(
+        self,
+        onoroff: str,
+        func_list: list[GlobFuncDecl],
+        pkg_sts_target: OutputBuffer,
+    ):
+        sts_real_params = []
+        args_list = []
+        params = func_list[0].params
+        needAsync = 0
+        async_func_list = []
+        sts_real_params.append("type: string")
+        for index, param in enumerate(params):
+            type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
+            sts_real_params.append(f"arg{index}: {type_ani_info.sts_type}")
+            args_list.append(f"arg{index}")
+        sts_real_params_str = ", ".join(sts_real_params)
+        args_str = ", ".join(args_list)
+        if return_ty_ref := func_list[0].return_ty_ref:
+            type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
+            sts_return_ty_name = type_ani_info.sts_type
+        else:
+            sts_return_ty_name = "void"
+
+        pkg_sts_target.write(
+            f"export function {onoroff}({sts_real_params_str}): void {{\n"
+            "    switch(type) {"
+        )
+        for func in func_list:
+            func_ani_info = GlobFuncANIInfo.get(self.am, func)
+            if func_ani_info.sts_async_name is not None:
+                async_func_list.append(func)
+                needAsync += 1
+
+            pkg_sts_target.write(
+                f'        case "{func_ani_info.sts_onoff_type}": {func_ani_info.sts_native_name}({args_str}); break;\n'
+            )
+
+        pkg_sts_target.write(
+            "        default: throw new Error(`Unknown type: ${type}`);\n"
+            "    }\n"
+            "}\n"
+        )
+
+        if needAsync == 0:
+            return
+
+        sts_real_params.append(f"callback: AsyncCallback<{sts_return_ty_name}>")
+        sts_real_params_async_str = ", ".join(sts_real_params)
+        args_list.append("callback")
+        args_async_str = ", ".join(args_list)
+
+        pkg_sts_target.write(
+            f"export function {onoroff}({sts_real_params_async_str}): void {{\n"
+            "    switch(type) {"
+        )
+
+        for func in func_list:
+            func_ani_info = GlobFuncANIInfo.get(self.am, func)
+            if async_func_name := func_ani_info.sts_async_name:
+                pkg_sts_target.write(
+                    f'        case "{func_ani_info.sts_onoff_type}": {async_func_name}({args_async_str}); break;\n'
+                )
+
+        pkg_sts_target.write("    }\n" "}\n")
+
+    def gen_onoff_method(
+        self,
+        onoroff: str,
+        method_list: list[IfaceMethodDecl],
+        pkg_sts_target: OutputBuffer,
+    ):
+        sts_real_params = []
+        args_list = []
+        params = method_list[0].params
+        needAsync = 0
+        async_method_list = []
+        sts_real_params.append("type: string")
+        for index, param in enumerate(params):
+            type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
+            sts_real_params.append(f"arg{index}: {type_ani_info.sts_type}")
+            args_list.append(f"arg{index}")
+        sts_real_params_str = ", ".join(sts_real_params)
+        args_str = ", ".join(args_list)
+        if return_ty_ref := method_list[0].return_ty_ref:
+            type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
+            sts_return_ty_name = type_ani_info.sts_type
+        else:
+            sts_return_ty_name = "void"
+
+        pkg_sts_target.write(
+            f"    {onoroff}({sts_real_params_str}): void {{\n" "        switch(type) {"
+        )
+
+        for method in method_list:
+            method_ani_info = IfaceMethodANIInfo.get(self.am, method)
+            if method_ani_info.sts_async_name is not None:
+                async_method_list.append(method)
+                needAsync += 1
+
+            pkg_sts_target.write(
+                f'            case "{method_ani_info.sts_onoff_type}": this.{method_ani_info.sts_native_name}({args_str}); break;\n'
+            )
+
+        pkg_sts_target.write(
+            "            default: throw new Error(`Unknown type: ${type}`);\n"
+            "        }\n"
+            "    }\n"
+        )
+
+        if needAsync == 0:
+            return
+
+        sts_real_params.append(f"callback: AsyncCallback<{sts_return_ty_name}>")
+        sts_real_params_async_str = ", ".join(sts_real_params)
+        args_list.append("callback")
+        args_async_str = ", ".join(args_list)
+
+        pkg_sts_target.write(
+            f"    {onoroff}({sts_real_params_async_str}): void {{\n"
+            "        switch(type) {"
+        )
+
+        for method in method_list:
+            method_ani_info = IfaceMethodANIInfo.get(self.am, method)
+            if async_func_name := method_ani_info.sts_async_name:
+                pkg_sts_target.write(
+                    f'            case "{method_ani_info.sts_onoff_type}": this.{async_func_name}({args_async_str}); break;\n'
+                )
+
+        pkg_sts_target.write("        }\n" "    }\n")
+
+    def gen_onoff_method_decl(
+        self,
+        onoroff: str,
+        method_list: list[IfaceMethodDecl],
+        pkg_sts_target: OutputBuffer,
+    ):
+        sts_real_params = []
+        args_list = []
+        params = method_list[0].params
+        needAsync = 0
+        async_method_list = []
+        sts_real_params.append("type: string")
+        for index, param in enumerate(params):
+            type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
+            sts_real_params.append(f"arg{index}: {type_ani_info.sts_type}")
+            args_list.append(f"arg{index}")
+        sts_real_params_str = ", ".join(sts_real_params)
+        if return_ty_ref := method_list[0].return_ty_ref:
+            type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
+            sts_return_ty_name = type_ani_info.sts_type
+        else:
+            sts_return_ty_name = "void"
+
+        pkg_sts_target.write(f"    {onoroff}({sts_real_params_str}): void;\n")
+
+        for method in method_list:
+            method_ani_info = IfaceMethodANIInfo.get(self.am, method)
+            if method_ani_info.sts_async_name is not None:
+                async_method_list.append(method)
+                needAsync += 1
+
+        if needAsync == 0:
+            return
+
+        sts_real_params.append(f"callback: AsyncCallback<{sts_return_ty_name}>")
+        sts_real_params_async_str = ", ".join(sts_real_params)
+        args_list.append("callback")
+
+        pkg_sts_target.write(f"    {onoroff}({sts_real_params_async_str}): void;\n")
 
     def gen_func(
         self,
@@ -1342,10 +1583,10 @@ class STSCodeGenerator:
             )
             if sts_return_ty_name == "void":
                 pkg_sts_target.write(
-                    f"    .then((): void => {{\n"
-                    f"        let error = new Error();\n"
-                    f"        callback(error);\n"
-                    f"    }})\n"
+                    "    .then((): void => {\n"
+                    "        let error = new Error();\n"
+                    "        callback(error);\n"
+                    "    })\n"
                 )
             else:
                 pkg_sts_target.write(
@@ -1356,11 +1597,11 @@ class STSCodeGenerator:
                     f"    }})\n"
                 )
             pkg_sts_target.write(
-                f"    .catch((ret: NullishType) => {{\n"
-                f"        let retError = ret as Error;\n"
-                f"        callback(retError);\n"
-                f"    }});\n"
-                f"}}\n"
+                "    .catch((ret: NullishType) => {\n"
+                "        let retError = ret as Error;\n"
+                "        callback(retError);\n"
+                "    });\n"
+                "}\n"
             )
         # promise
         if (promise_func_name := func_ani_info.sts_promise_name) is not None:
@@ -1407,6 +1648,9 @@ class STSCodeGenerator:
         pkg_sts_target: OutputBuffer,
     ):
         # docstring
+        on_param_map: dict[str, list[IfaceMethodDecl]] = {}
+        off_param_map: dict[str, list[IfaceMethodDecl]] = {}
+
         if (inject_attr := iface.attrs.get("inject")) is not None:
             pkg_sts_target.write(inject_attr.value)
         iface_ani_info = IfaceANIInfo.get(self.am, iface)
@@ -1460,6 +1704,19 @@ class STSCodeGenerator:
                 pkg_sts_target.write(
                     f"    {promise_func_name}({sts_real_params_str}): Promise<{sts_return_ty_name}>;\n"
                 )
+            # on/off
+            if method_ani_info.sts_onoff_type:
+                if method_ani_info.sts_on:
+                    params_key = self.get_type_str(method)
+                    on_param_map.setdefault(params_key, []).append(method)
+                elif method_ani_info.sts_off:
+                    params_key = self.get_type_str(method)
+                    off_param_map.setdefault(params_key, []).append(method)
+
+        for _, value in on_param_map.items():
+            self.gen_onoff_method_decl("on", value, pkg_sts_target)
+        for _, value in off_param_map.items():
+            self.gen_onoff_method_decl("off", value, pkg_sts_target)
 
         pkg_sts_target.write("}\n")
 
@@ -1470,6 +1727,9 @@ class STSCodeGenerator:
         static_methods: dict[str, list[tuple[str, GlobFuncDecl]]],
         construct_methods: dict[str, list[GlobFuncDecl]],
     ):
+        on_param_map: dict[str, list[IfaceMethodDecl]] = {}
+        off_param_map: dict[str, list[IfaceMethodDecl]] = {}
+
         iface_ani_info = IfaceANIInfo.get(self.am, iface)
         if iface_ani_info.is_calss:
             pkg_sts_target.write(f"export class {iface_ani_info.sts_impl} {{\n")
@@ -1478,12 +1738,12 @@ class STSCodeGenerator:
                 f"class {iface_ani_info.sts_impl} implements {iface_ani_info.sts_type} {{\n"
             )
         pkg_sts_target.write(
-            f"    private _vtbl_ptr: long;\n"
-            f"    private _data_ptr: long;\n"
-            f"    private constructor(_vtbl_ptr: long, _data_ptr: long) {{\n"
-            f"        this._vtbl_ptr = _vtbl_ptr;\n"
-            f"        this._data_ptr = _data_ptr;\n"
-            f"    }}\n"
+            "    private _vtbl_ptr: long;\n"
+            "    private _data_ptr: long;\n"
+            "    private constructor(_vtbl_ptr: long, _data_ptr: long) {\n"
+            "        this._vtbl_ptr = _vtbl_ptr;\n"
+            "        this._data_ptr = _data_ptr;\n"
+            "    }\n"
         )
         for method in iface.methods:
             if (inject_attr := method.attrs.get("class_inject")) is not None:
@@ -1545,10 +1805,10 @@ class STSCodeGenerator:
                 )
                 if sts_return_ty_name == "void":
                     pkg_sts_target.write(
-                        f"        .then((): void => {{\n"
-                        f"            let error = new Error();\n"
-                        f"            callback(error);\n"
-                        f"        }})\n"
+                        "        .then((): void => {\n"
+                        "            let error = new Error();\n"
+                        "            callback(error);\n"
+                        "        })\n"
                     )
                 else:
                     pkg_sts_target.write(
@@ -1559,11 +1819,11 @@ class STSCodeGenerator:
                         f"        }})\n"
                     )
                 pkg_sts_target.write(
-                    f"        .catch((ret: NullishType) => {{\n"
-                    f"            let retError = ret as Error;\n"
-                    f"            callback(retError);\n"
-                    f"        }});\n"
-                    f"    }}\n"
+                    "        .catch((ret: NullishType) => {\n"
+                    "            let retError = ret as Error;\n"
+                    "            callback(retError);\n"
+                    "        });\n"
+                    "    }\n"
                 )
             # promise
             if (promise_func_name := method_ani_info.sts_promise_name) is not None:
@@ -1572,6 +1832,21 @@ class STSCodeGenerator:
                     f"        return launch this.{method_ani_info.sts_native_name}({sts_native_args_str});\n"
                     f"    }}\n"
                 )
+
+            # on/off
+            if method_ani_info.sts_onoff_type:
+                if method_ani_info.sts_on:
+                    params_key = self.get_type_str(method)
+                    on_param_map.setdefault(params_key, []).append(method)
+                elif method_ani_info.sts_off:
+                    params_key = self.get_type_str(method)
+                    off_param_map.setdefault(params_key, []).append(method)
+
+        for _, value in on_param_map.items():
+            self.gen_onoff_method("on", value, pkg_sts_target)
+
+        for _, value in off_param_map.items():
+            self.gen_onoff_method("off", value, pkg_sts_target)
 
         if iface_ani_info.is_calss:
             for func in construct_methods.get(iface.name, []):
@@ -1628,10 +1903,10 @@ class STSCodeGenerator:
             )
             if sts_return_ty_name == "void":
                 pkg_sts_target.write(
-                    f"        .then((): void => {{\n"
-                    f"            let error = new Error();\n"
-                    f"            callback(error);\n"
-                    f"        }})\n"
+                    "        .then((): void => {\n"
+                    "            let error = new Error();\n"
+                    "            callback(error);\n"
+                    "        })\n"
                 )
             else:
                 pkg_sts_target.write(
@@ -1642,11 +1917,11 @@ class STSCodeGenerator:
                     f"        }})\n"
                 )
             pkg_sts_target.write(
-                f"        .catch((ret: NullishType) => {{\n"
-                f"            let retError = ret as Error;\n"
-                f"            callback(retError);\n"
-                f"        }});\n"
-                f"    }}\n"
+                "        .catch((ret: NullishType) => {\n"
+                "            let retError = ret as Error;\n"
+                "            callback(retError);\n"
+                "        });\n"
+                "    }\n"
             )
         # promise
         if (promise_func_name := func_ani_info.sts_promise_name) is not None:
@@ -1696,8 +1971,8 @@ class ANICodeGenerator:
             self.gen_iface_file(iface)
         for struct in pkg.structs:
             self.gen_struct_file(struct)
-        for union in pkg.unions:
-            self.gen_union_file(union)
+        # for union in pkg.unions:
+        #     self.gen_union_file(union)
         pkg_ani_info = PackageANIInfo.get(self.am, pkg)
         pkg_cpp_info = PackageCppInfo.get(self.am, pkg)
         self.gen_package_header(pkg, pkg_ani_info, pkg_cpp_info)
@@ -2198,4 +2473,4 @@ class ANICodeGenerator:
                 union_ani_impl_target.write(f"        ani_value = {ani_result_spec};\n")
             union_ani_impl_target.write("        break;\n" "    }\n")
         union_ani_impl_target.write("    }\n")
-        union_ani_impl_target.write(f"    return ani_value;\n" f"}}\n")
+        union_ani_impl_target.write("    return ani_value;\n" "}\n")
