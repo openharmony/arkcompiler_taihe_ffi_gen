@@ -7,23 +7,23 @@ from taihe.codegen.abi_generator import (
     IfaceABIInfo,
 )
 from taihe.codegen.cpp_generator import (
-    EnumCppInfo,
     GlobFuncCppInfo,
     IfaceCppInfo,
     IfaceMethodCppInfo,
     PackageCppInfo,
     StructCppInfo,
     TypeCppInfo,
+    UnionCppInfo,
 )
 from taihe.codegen.mangle import DeclKind, encode
 from taihe.semantics.declarations import (
-    EnumDecl,
     GlobFuncDecl,
     IfaceDecl,
     IfaceMethodDecl,
     PackageDecl,
     PackageGroup,
     StructDecl,
+    UnionDecl,
 )
 from taihe.semantics.types import (
     BOOL,
@@ -38,8 +38,6 @@ from taihe.semantics.types import (
     U32,
     U64,
     ArrayType,
-    # CallbackType,
-    EnumType,
     IfaceType,
     # MapType,
     OpaqueType,
@@ -50,6 +48,8 @@ from taihe.semantics.types import (
     StructType,
     Type,
     # VectorType,
+    # CallbackType,
+    UnionType,
 )
 from taihe.semantics.visitor import TypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
@@ -246,8 +246,8 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
         self.impl_desc = f"L{pkg_ani_info.pkg_name}/{self.sts_impl};"
 
 
-class EnumANIInfo(AbstractAnalysis[EnumDecl]):
-    def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
+class UnionANIInfo(AbstractAnalysis[UnionDecl]):
+    def __init__(self, am: AnalysisManager, d: UnionDecl) -> None:
         p = d.node_parent
         assert p
         segments = [*p.segments, d.name]
@@ -489,15 +489,15 @@ class StructTypeANIInfo(AbstractAnalysis[StructType], AbstractTypeANIInfo):
         )
 
 
-class EnumTypeANIInfo(AbstractAnalysis[EnumType], AbstractTypeANIInfo):
-    def __init__(self, am: AnalysisManager, t: EnumType):
+class UnionTypeANIInfo(AbstractAnalysis[UnionType], AbstractTypeANIInfo):
+    def __init__(self, am: AnalysisManager, t: UnionType):
         AbstractTypeANIInfo.__init__(self, am, t)
         self.t = t
         self.am = am
-        enum_ani_info = EnumANIInfo.get(am, t.ty_decl)
+        union_ani_info = UnionANIInfo.get(am, t.ty_decl)
         self.ani_type = ANI_OBJECT
-        self.sts_type = enum_ani_info.sts_type
-        self.type_desc = enum_ani_info.type_desc
+        self.sts_type = union_ani_info.sts_type
+        self.type_desc = union_ani_info.type_desc
 
     @override
     def from_ani(
@@ -508,10 +508,10 @@ class EnumTypeANIInfo(AbstractAnalysis[EnumType], AbstractTypeANIInfo):
         ani_value: str,
         cpp_result: str,
     ):
-        enum_ani_info = EnumANIInfo.get(self.am, self.t.ty_decl)
-        target.include(enum_ani_info.impl_header)
+        union_ani_info = UnionANIInfo.get(self.am, self.t.ty_decl)
+        target.include(union_ani_info.impl_header)
         target.write(
-            f"{' ' * offset}{self.cpp_info.as_owner} {cpp_result} = {enum_ani_info.from_ani_func_name}({env}, {ani_value});\n"
+            f"{' ' * offset}{self.cpp_info.as_owner} {cpp_result} = {union_ani_info.from_ani_func_name}({env}, {ani_value});\n"
         )
 
     @override
@@ -523,10 +523,10 @@ class EnumTypeANIInfo(AbstractAnalysis[EnumType], AbstractTypeANIInfo):
         cpp_value: str,
         ani_result: str,
     ):
-        enum_ani_info = EnumANIInfo.get(self.am, self.t.ty_decl)
-        target.include(enum_ani_info.impl_header)
+        union_ani_info = UnionANIInfo.get(self.am, self.t.ty_decl)
+        target.include(union_ani_info.impl_header)
         target.write(
-            f"{' ' * offset}ani_object {ani_result} = {enum_ani_info.into_ani_func_name}({env}, {cpp_value});\n"
+            f"{' ' * offset}ani_object {ani_result} = {union_ani_info.into_ani_func_name}({env}, {cpp_value});\n"
         )
 
 
@@ -891,8 +891,8 @@ class TypeANIInfo(TypeVisitor[AbstractTypeANIInfo]):
         return TypeANIInfo(am).handle_type(t)
 
     @override
-    def visit_enum_type(self, t: EnumType) -> AbstractTypeANIInfo:
-        return EnumTypeANIInfo.get(self.am, t)
+    def visit_union_type(self, t: UnionType) -> AbstractTypeANIInfo:
+        return UnionTypeANIInfo.get(self.am, t)
 
     @override
     def visit_struct_type(self, t: StructType) -> AbstractTypeANIInfo:
@@ -1015,8 +1015,8 @@ class STSCodeGenerator:
 
         for struct in pkg.structs:
             self.gen_struct(struct, pkg_sts_target)
-        for enum in pkg.enums:
-            self.gen_enum(enum, pkg_sts_target)
+        for union in pkg.unions:
+            self.gen_union(union, pkg_sts_target)
 
         for func in pkg.functions:
             self.gen_func(func, pkg_sts_target)
@@ -1132,25 +1132,25 @@ class STSCodeGenerator:
             pkg_sts_target.write(f"        this.{field.name} = {field.name};\n")
         pkg_sts_target.write("    }\n" "}\n")
 
-    def gen_enum(
+    def gen_union(
         self,
-        enum: EnumDecl,
+        union: UnionDecl,
         pkg_sts_target: OutputBuffer,
     ):
         # docstring
-        if (inject_attr := enum.attrs.get("inject")) is not None:
+        if (inject_attr := union.attrs.get("inject")) is not None:
             pkg_sts_target.write(inject_attr.value)
-        enum_ani_info = EnumANIInfo.get(self.am, enum)
+        union_ani_info = UnionANIInfo.get(self.am, union)
         sts_value_types = []
-        for item in enum.items:
-            if item.ty_ref is None:
+        for field in union.fields:
+            if field.ty_ref is None:
                 sts_value_types.append("undefined")
                 continue
-            ty_ani_info = TypeANIInfo.get(self.am, item.ty_ref.resolved_ty)
+            ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
             sts_value_types.append(f"{ty_ani_info.sts_type}")
         sts_value_types_str = " | ".join(sts_value_types)
         pkg_sts_target.write(
-            f"export class {enum_ani_info.sts_impl} {{\n"
+            f"export class {union_ani_info.sts_impl} {{\n"
             f"    tag: int;\n"
             f"    value: {sts_value_types_str};\n"
             f"    constructor(tag: int, value: {sts_value_types_str}) {{\n"
@@ -1429,8 +1429,8 @@ class ANICodeGenerator:
             self.gen_iface_file(iface)
         for struct in pkg.structs:
             self.gen_struct_file(struct)
-        for enum in pkg.enums:
-            self.gen_enum_file(enum)
+        for union in pkg.unions:
+            self.gen_union_file(union)
         pkg_ani_info = PackageANIInfo.get(self.am, pkg)
         pkg_cpp_info = PackageCppInfo.get(self.am, pkg)
         self.gen_package_header(pkg, pkg_ani_info, pkg_cpp_info)
@@ -1830,89 +1830,89 @@ class ANICodeGenerator:
             f"}}\n"
         )
 
-    def gen_enum_file(
+    def gen_union_file(
         self,
-        enum: EnumDecl,
+        union: UnionDecl,
     ):
-        enum_cpp_info = EnumCppInfo.get(self.am, enum)
-        enum_ani_info = EnumANIInfo.get(self.am, enum)
-        enum_ani_decl_target = COutputBuffer.create(
-            self.tm, f"include/{enum_ani_info.decl_header}", True
+        union_cpp_info = UnionCppInfo.get(self.am, union)
+        union_ani_info = UnionANIInfo.get(self.am, union)
+        union_ani_decl_target = COutputBuffer.create(
+            self.tm, f"include/{union_ani_info.decl_header}", True
         )
-        enum_ani_decl_target.include("ani.h")
-        enum_ani_decl_target.include(enum_cpp_info.decl_header)
-        enum_ani_decl_target.write(
-            f"{enum_cpp_info.as_owner} {enum_ani_info.from_ani_func_name}(ani_env* env, ani_object ani_obj);\n"
-            f"ani_object {enum_ani_info.into_ani_func_name}(ani_env* env, {enum_cpp_info.as_param} cpp_obj);\n"
+        union_ani_decl_target.include("ani.h")
+        union_ani_decl_target.include(union_cpp_info.decl_header)
+        union_ani_decl_target.write(
+            f"{union_cpp_info.as_owner} {union_ani_info.from_ani_func_name}(ani_env* env, ani_object ani_obj);\n"
+            f"ani_object {union_ani_info.into_ani_func_name}(ani_env* env, {union_cpp_info.as_param} cpp_obj);\n"
         )
         # implementation
-        enum_ani_impl_target = COutputBuffer.create(
-            self.tm, f"include/{enum_ani_info.impl_header}", True
+        union_ani_impl_target = COutputBuffer.create(
+            self.tm, f"include/{union_ani_info.impl_header}", True
         )
-        enum_ani_impl_target.include(enum_ani_info.decl_header)
-        enum_ani_impl_target.include(enum_cpp_info.impl_header)
+        union_ani_impl_target.include(union_ani_info.decl_header)
+        union_ani_impl_target.include(union_cpp_info.impl_header)
         # from ani
-        enum_ani_impl_target.write(
-            f"inline {enum_cpp_info.as_owner} {enum_ani_info.from_ani_func_name}(ani_env* env, ani_object ani_obj) {{\n"
+        union_ani_impl_target.write(
+            f"inline {union_cpp_info.as_owner} {union_ani_info.from_ani_func_name}(ani_env* env, ani_object ani_obj) {{\n"
             f"    ani_int ani_tag;\n"
             f'    env->Object_GetPropertyByName_Int(ani_obj, "tag", &ani_tag);\n'
             f"    ani_ref ani_value;\n"
             f'    env->Object_GetPropertyByName_Ref(ani_obj, "value", &ani_value);\n'
-            f"    {enum_cpp_info.full_name}::tag_t cpp_tag = ({enum_cpp_info.full_name}::tag_t)ani_tag;\n"
+            f"    {union_cpp_info.full_name}::tag_t cpp_tag = ({union_cpp_info.full_name}::tag_t)ani_tag;\n"
             f"    switch (cpp_tag) {{\n"
         )
-        for item in enum.items:
-            enum_ani_impl_target.write(
-                f"    case {enum_cpp_info.full_name}::tag_t::{item.name}: {{\n"
+        for field in union.fields:
+            union_ani_impl_target.write(
+                f"    case {union_cpp_info.full_name}::tag_t::{field.name}: {{\n"
             )
-            if item.ty_ref is None:
-                enum_ani_impl_target.write(
-                    f"        return {enum_cpp_info.full_name}::make_{item.name}();\n"
+            if field.ty_ref is None:
+                union_ani_impl_target.write(
+                    f"        return {union_cpp_info.full_name}::make_{field.name}();\n"
                 )
             else:
-                cpp_result_spec = f"cpp_item_{item.name}"
-                type_ani_info = TypeANIInfo.get(self.am, item.ty_ref.resolved_ty)
+                cpp_result_spec = f"cpp_field_{field.name}"
+                type_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
                 type_ani_info.from_ani_boxed(
-                    enum_ani_impl_target,
+                    union_ani_impl_target,
                     8,
                     "env",
                     "ani_value",
                     cpp_result_spec,
                 )
-                enum_ani_impl_target.write(
-                    f"        return {enum_cpp_info.full_name}::make_{item.name}(std::move({cpp_result_spec}));\n"
+                union_ani_impl_target.write(
+                    f"        return {union_cpp_info.full_name}::make_{field.name}(std::move({cpp_result_spec}));\n"
                 )
-            enum_ani_impl_target.write("    }\n")
-        enum_ani_impl_target.write("    }\n" "}\n")
+            union_ani_impl_target.write("    }\n")
+        union_ani_impl_target.write("    }\n" "}\n")
         # into ani
-        enum_ani_impl_target.write(
-            f"inline ani_object {enum_ani_info.into_ani_func_name}(ani_env* env, {enum_cpp_info.as_param} cpp_obj) {{\n"
+        union_ani_impl_target.write(
+            f"inline ani_object {union_ani_info.into_ani_func_name}(ani_env* env, {union_cpp_info.as_param} cpp_obj) {{\n"
             f"    ani_int ani_tag = (int)cpp_obj.get_tag();\n"
             f"    ani_ref ani_value;\n"
             f"    switch (cpp_obj.get_tag()) {{\n"
         )
-        for item in enum.items:
-            enum_ani_impl_target.write(
-                f"    case {enum_cpp_info.full_name}::tag_t::{item.name}: {{\n"
+        for field in union.fields:
+            union_ani_impl_target.write(
+                f"    case {union_cpp_info.full_name}::tag_t::{field.name}: {{\n"
             )
-            if item.ty_ref is None:
-                enum_ani_impl_target.write("        env->GetUndefined(&ani_value);\n")
+            if field.ty_ref is None:
+                union_ani_impl_target.write("        env->GetUndefined(&ani_value);\n")
             else:
-                ani_result_spec = f"ani_item_{item.name}"
-                type_ani_info = TypeANIInfo.get(self.am, item.ty_ref.resolved_ty)
+                ani_result_spec = f"ani_field_{field.name}"
+                type_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
                 type_ani_info.into_ani_boxed(
-                    enum_ani_impl_target,
+                    union_ani_impl_target,
                     8,
                     "env",
-                    f"cpp_obj.get_{item.name}_ref()",
+                    f"cpp_obj.get_{field.name}_ref()",
                     ani_result_spec,
                 )
-                enum_ani_impl_target.write(f"        ani_value = {ani_result_spec};\n")
-            enum_ani_impl_target.write("        break;\n" "    }\n")
-        enum_ani_impl_target.write("    }\n")
-        enum_ani_impl_target.write(
+                union_ani_impl_target.write(f"        ani_value = {ani_result_spec};\n")
+            union_ani_impl_target.write("        break;\n" "    }\n")
+        union_ani_impl_target.write("    }\n")
+        union_ani_impl_target.write(
             f"    ani_class ani_obj_cls;\n"
-            f'    env->FindClass("{enum_ani_info.impl_desc}", &ani_obj_cls);\n'
+            f'    env->FindClass("{union_ani_info.impl_desc}", &ani_obj_cls);\n'
             f"    ani_method ani_obj_ctor;\n"
             f'    env->Class_FindMethod(ani_obj_cls, "<ctor>", nullptr, &ani_obj_ctor);\n'
             f"    ani_object ani_obj;\n"

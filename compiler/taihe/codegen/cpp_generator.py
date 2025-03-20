@@ -3,22 +3,22 @@ from abc import ABCMeta
 from typing_extensions import override
 
 from taihe.codegen.abi_generator import (
-    EnumABIInfo,
     GlobFuncABIInfo,
     IfaceABIInfo,
     IfaceMethodABIInfo,
     PackageABIInfo,
     StructABIInfo,
     TypeABIInfo,
+    UnionABIInfo,
 )
 from taihe.semantics.declarations import (
-    EnumDecl,
     GlobFuncDecl,
     IfaceDecl,
     IfaceMethodDecl,
     PackageDecl,
     PackageGroup,
     StructDecl,
+    UnionDecl,
 )
 from taihe.semantics.types import (
     BOOL,
@@ -34,7 +34,6 @@ from taihe.semantics.types import (
     U64,
     ArrayType,
     CallbackType,
-    EnumType,
     IfaceType,
     MapType,
     OpaqueType,
@@ -44,6 +43,7 @@ from taihe.semantics.types import (
     StringType,
     StructType,
     Type,
+    UnionType,
     VectorType,
 )
 from taihe.semantics.visitor import TypeVisitor
@@ -85,8 +85,8 @@ class StructCppInfo(AbstractAnalysis[StructDecl]):
         self.as_param = self.full_name + " const&"
 
 
-class EnumCppInfo(AbstractAnalysis[EnumDecl]):
-    def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
+class UnionCppInfo(AbstractAnalysis[UnionDecl]):
+    def __init__(self, am: AnalysisManager, d: UnionDecl) -> None:
         p = d.node_parent
         assert p
         self.decl_header = f"{p.name}.{d.name}.proj.0.hpp"
@@ -134,13 +134,13 @@ class AbstractTypeCppInfo(metaclass=ABCMeta):
         return f"::taihe::core::into_abi<{self.as_param}>({val})"
 
 
-class EnumTypeCppInfo(AbstractAnalysis[EnumType], AbstractTypeCppInfo):
-    def __init__(self, am: AnalysisManager, t: EnumType):
-        enum_cpp_info = EnumCppInfo.get(am, t.ty_decl)
-        self.decl_headers = [enum_cpp_info.decl_header]
-        self.impl_headers = [enum_cpp_info.impl_header]
-        self.as_owner = enum_cpp_info.as_owner
-        self.as_param = enum_cpp_info.as_param
+class UnionTypeCppInfo(AbstractAnalysis[UnionType], AbstractTypeCppInfo):
+    def __init__(self, am: AnalysisManager, t: UnionType):
+        union_cpp_info = UnionCppInfo.get(am, t.ty_decl)
+        self.decl_headers = [union_cpp_info.decl_header]
+        self.impl_headers = [union_cpp_info.impl_header]
+        self.as_owner = union_cpp_info.as_owner
+        self.as_param = union_cpp_info.as_param
 
 
 class StructTypeCppInfo(AbstractAnalysis[StructType], AbstractTypeCppInfo):
@@ -300,8 +300,8 @@ class TypeCppInfo(TypeVisitor[AbstractTypeCppInfo]):
         return TypeCppInfo(am).handle_type(t)
 
     @override
-    def visit_enum_type(self, t: EnumType) -> AbstractTypeCppInfo:
-        return EnumTypeCppInfo.get(self.am, t)
+    def visit_union_type(self, t: UnionType) -> AbstractTypeCppInfo:
+        return UnionTypeCppInfo.get(self.am, t)
 
     @override
     def visit_struct_type(self, t: StructType) -> AbstractTypeCppInfo:
@@ -367,8 +367,8 @@ class CppHeadersGenerator:
         pkg_cpp_target.include(pkg_abi_info.header)
         for struct in pkg.structs:
             self.gen_struct_files(struct, pkg_cpp_target)
-        for enum in pkg.enums:
-            self.gen_enum_files(enum, pkg_cpp_target)
+        for union in pkg.unions:
+            self.gen_union_files(union, pkg_cpp_target)
         for iface in pkg.interfaces:
             self.gen_iface_files(iface, pkg_cpp_target)
         for func in pkg.functions:
@@ -565,266 +565,266 @@ class CppHeadersGenerator:
             f"}}",
         )
 
-    def gen_enum_files(
+    def gen_union_files(
         self,
-        enum: EnumDecl,
+        union: UnionDecl,
         pkg_cpp_target: COutputBuffer,
     ):
-        enum_cpp_info = EnumCppInfo.get(self.am, enum)
-        enum_abi_info = EnumABIInfo.get(self.am, enum)
-        self.gen_enum_decl_file(
-            enum,
-            enum_abi_info,
-            enum_cpp_info,
+        union_cpp_info = UnionCppInfo.get(self.am, union)
+        union_abi_info = UnionABIInfo.get(self.am, union)
+        self.gen_union_decl_file(
+            union,
+            union_abi_info,
+            union_cpp_info,
         )
-        self.gen_enum_impl_file(
-            enum,
-            enum_abi_info,
-            enum_cpp_info,
+        self.gen_union_impl_file(
+            union,
+            union_abi_info,
+            union_cpp_info,
         )
-        pkg_cpp_target.include(enum_cpp_info.impl_header)
+        pkg_cpp_target.include(union_cpp_info.impl_header)
 
-    def gen_enum_decl_file(
+    def gen_union_decl_file(
         self,
-        enum: EnumDecl,
-        enum_abi_info: EnumABIInfo,
-        enum_cpp_info: EnumCppInfo,
+        union: UnionDecl,
+        union_abi_info: UnionABIInfo,
+        union_cpp_info: UnionCppInfo,
     ):
-        enum_cpp_decl_target = COutputBuffer.create(
-            self.tm, f"include/{enum_cpp_info.decl_header}", True
+        union_cpp_decl_target = COutputBuffer.create(
+            self.tm, f"include/{union_cpp_info.decl_header}", True
         )
-        enum_cpp_decl_target.writeln(
-            f"namespace {enum_cpp_info.namespace} {{",
-            f"struct {enum_cpp_info.name};",
+        union_cpp_decl_target.writeln(
+            f"namespace {union_cpp_info.namespace} {{",
+            f"struct {union_cpp_info.name};",
             f"}}",
         )
 
-    def gen_enum_impl_file(
+    def gen_union_impl_file(
         self,
-        enum: EnumDecl,
-        enum_abi_info: EnumABIInfo,
-        enum_cpp_info: EnumCppInfo,
+        union: UnionDecl,
+        union_abi_info: UnionABIInfo,
+        union_cpp_info: UnionCppInfo,
     ):
-        enum_cpp_defn_target = COutputBuffer.create(
-            self.tm, f"include/{enum_cpp_info.impl_header}", True
+        union_cpp_defn_target = COutputBuffer.create(
+            self.tm, f"include/{union_cpp_info.impl_header}", True
         )
-        enum_cpp_defn_target.include("taihe/common.hpp")
-        enum_cpp_defn_target.include(enum_cpp_info.decl_header)
-        enum_cpp_defn_target.include(enum_abi_info.impl_header)
-        self.gen_enum_defn(
-            enum,
-            enum_abi_info,
-            enum_cpp_info,
-            enum_cpp_defn_target,
+        union_cpp_defn_target.include("taihe/common.hpp")
+        union_cpp_defn_target.include(union_cpp_info.decl_header)
+        union_cpp_defn_target.include(union_abi_info.impl_header)
+        self.gen_union_defn(
+            union,
+            union_abi_info,
+            union_cpp_info,
+            union_cpp_defn_target,
         )
-        self.gen_enum_same(
-            enum,
-            enum_abi_info,
-            enum_cpp_info,
-            enum_cpp_defn_target,
+        self.gen_union_same(
+            union,
+            union_abi_info,
+            union_cpp_info,
+            union_cpp_defn_target,
         )
-        self.gen_enum_hash(
-            enum,
-            enum_abi_info,
-            enum_cpp_info,
-            enum_cpp_defn_target,
+        self.gen_union_hash(
+            union,
+            union_abi_info,
+            union_cpp_info,
+            union_cpp_defn_target,
         )
-        self.gen_enum_type_traits(
-            enum,
-            enum_abi_info,
-            enum_cpp_info,
-            enum_cpp_defn_target,
+        self.gen_union_type_traits(
+            union,
+            union_abi_info,
+            union_cpp_info,
+            union_cpp_defn_target,
         )
 
-    def gen_enum_defn(
+    def gen_union_defn(
         self,
-        enum: EnumDecl,
-        enum_abi_info: EnumABIInfo,
-        enum_cpp_info: EnumCppInfo,
-        enum_cpp_defn_target: COutputBuffer,
+        union: UnionDecl,
+        union_abi_info: UnionABIInfo,
+        union_cpp_info: UnionCppInfo,
+        union_cpp_defn_target: COutputBuffer,
     ):
-        enum_cpp_defn_target.writeln(
-            f"namespace {enum_cpp_info.namespace} {{",
-            f"struct {enum_cpp_info.name} {{",
+        union_cpp_defn_target.writeln(
+            f"namespace {union_cpp_info.namespace} {{",
+            f"struct {union_cpp_info.name} {{",
         )
         # tag type
-        enum_cpp_defn_target.writeln(
-            f"    enum class tag_t : {enum_abi_info.tag_type} {{",
+        union_cpp_defn_target.writeln(
+            f"    enum class tag_t : {union_abi_info.tag_type} {{",
         )
-        for item in enum.items:
-            enum_cpp_defn_target.writeln(
-                f"        {item.name} = {item.value},",
+        for item in union.fields:
+            union_cpp_defn_target.writeln(
+                f"        {item.name},",
             )
-        enum_cpp_defn_target.writeln(
+        union_cpp_defn_target.writeln(
             f"    }};",
         )
         # storage type
-        enum_cpp_defn_target.writeln(
+        union_cpp_defn_target.writeln(
             f"    union storage_t {{",
             f"        storage_t() {{}}",
             f"        ~storage_t() {{}}",
         )
-        for item in enum.items:
+        for item in union.fields:
             if item.ty_ref is None:
                 continue
             type_cpp_info = TypeCppInfo.get(self.am, item.ty_ref.resolved_ty)
-            enum_cpp_defn_target.include(*type_cpp_info.impl_headers)
-            enum_cpp_defn_target.writeln(
+            union_cpp_defn_target.include(*type_cpp_info.impl_headers)
+            union_cpp_defn_target.writeln(
                 f"        {type_cpp_info.as_owner} {item.name};",
             )
-        enum_cpp_defn_target.writeln(
+        union_cpp_defn_target.writeln(
             f"    }};",
         )
         # destructor
-        enum_cpp_defn_target.writeln(
-            f"    ~{enum_cpp_info.name}() {{",
+        union_cpp_defn_target.writeln(
+            f"    ~{union_cpp_info.name}() {{",
             f"        switch (m_tag) {{",
         )
-        for item in enum.items:
+        for item in union.fields:
             if item.ty_ref is None:
                 continue
-            enum_cpp_defn_target.writeln(
+            union_cpp_defn_target.writeln(
                 f"        case tag_t::{item.name}:",
                 f"            ::std::destroy_at(&m_data.{item.name});",
                 f"            break;",
             )
-        enum_cpp_defn_target.writeln(
+        union_cpp_defn_target.writeln(
             f"        default:",
             f"            break;",
             f"        }}",
             f"    }}",
         )
         # copy constructor
-        enum_cpp_defn_target.writeln(
-            f"    {enum_cpp_info.name}({enum_cpp_info.name} const& other) : m_tag(other.m_tag) {{",
+        union_cpp_defn_target.writeln(
+            f"    {union_cpp_info.name}({union_cpp_info.name} const& other) : m_tag(other.m_tag) {{",
             f"        switch (m_tag) {{",
         )
-        for item in enum.items:
+        for item in union.fields:
             if item.ty_ref is None:
                 continue
-            enum_cpp_defn_target.writeln(
+            union_cpp_defn_target.writeln(
                 f"        case tag_t::{item.name}:",
                 f"            new (&m_data.{item.name}) decltype(m_data.{item.name})(other.m_data.{item.name});",
                 f"            break;",
             )
-        enum_cpp_defn_target.writeln(
+        union_cpp_defn_target.writeln(
             f"        default:",
             f"            break;",
             f"        }}",
             f"    }}",
         )
         # move constructor
-        enum_cpp_defn_target.writeln(
-            f"    {enum_cpp_info.name}({enum_cpp_info.name}&& other) : m_tag(other.m_tag) {{",
+        union_cpp_defn_target.writeln(
+            f"    {union_cpp_info.name}({union_cpp_info.name}&& other) : m_tag(other.m_tag) {{",
             f"        switch (m_tag) {{",
         )
-        for item in enum.items:
+        for item in union.fields:
             if item.ty_ref is None:
                 continue
-            enum_cpp_defn_target.writeln(
+            union_cpp_defn_target.writeln(
                 f"        case tag_t::{item.name}:",
                 f"            new (&m_data.{item.name}) decltype(m_data.{item.name})(::std::move(other.m_data.{item.name}));",
                 f"            break;",
             )
-        enum_cpp_defn_target.writeln(
+        union_cpp_defn_target.writeln(
             f"        default:",
             f"            break;",
             f"        }}",
             f"    }}",
         )
         # copy assignment
-        enum_cpp_defn_target.writeln(
-            f"    {enum_cpp_info.name}& operator=({enum_cpp_info.name} const& other) {{",
+        union_cpp_defn_target.writeln(
+            f"    {union_cpp_info.name}& operator=({union_cpp_info.name} const& other) {{",
             f"        if (this != &other) {{",
             f"            ::std::destroy_at(this);",
-            f"            new (this) {enum_cpp_info.name}(other);",
+            f"            new (this) {union_cpp_info.name}(other);",
             f"        }}",
             f"        return *this;",
             f"    }}",
         )
         # move assignment
-        enum_cpp_defn_target.writeln(
-            f"    {enum_cpp_info.name}& operator=({enum_cpp_info.name}&& other) {{",
+        union_cpp_defn_target.writeln(
+            f"    {union_cpp_info.name}& operator=({union_cpp_info.name}&& other) {{",
             f"        if (this != &other) {{",
             f"            ::std::destroy_at(this);",
-            f"            new (this) {enum_cpp_info.name}(::std::move(other));",
+            f"            new (this) {union_cpp_info.name}(::std::move(other));",
             f"        }}",
             f"        return *this;",
             f"    }}",
         )
         # in place constructor
-        for item in enum.items:
+        for item in union.fields:
             if item.ty_ref is None:
-                enum_cpp_defn_target.writeln(
-                    f"    {enum_cpp_info.name}(::taihe::core::static_tag_t<tag_t::{item.name}>) : m_tag(tag_t::{item.name}) {{}}",
+                union_cpp_defn_target.writeln(
+                    f"    {union_cpp_info.name}(::taihe::core::static_tag_t<tag_t::{item.name}>) : m_tag(tag_t::{item.name}) {{}}",
                 )
             else:
-                enum_cpp_defn_target.writeln(
+                union_cpp_defn_target.writeln(
                     f"    template<typename... Args>",
-                    f"    {enum_cpp_info.name}(::taihe::core::static_tag_t<tag_t::{item.name}>, Args&&... args) : m_tag(tag_t::{item.name}) {{",
+                    f"    {union_cpp_info.name}(::taihe::core::static_tag_t<tag_t::{item.name}>, Args&&... args) : m_tag(tag_t::{item.name}) {{",
                     f"        new (&m_data.{item.name}) decltype(m_data.{item.name})(::std::forward<Args>(args)...);",
                     f"    }}",
                 )
         # creator
-        enum_cpp_defn_target.writeln(
+        union_cpp_defn_target.writeln(
             f"    template<tag_t tag, typename... Args>",
-            f"    static {enum_cpp_info.name} make(Args&&... args) {{",
-            f"        return {enum_cpp_info.name}(::taihe::core::static_tag<tag>, ::std::forward<Args>(args)...);",
+            f"    static {union_cpp_info.name} make(Args&&... args) {{",
+            f"        return {union_cpp_info.name}(::taihe::core::static_tag<tag>, ::std::forward<Args>(args)...);",
             f"    }}",
         )
         # emplacement
-        enum_cpp_defn_target.writeln(
+        union_cpp_defn_target.writeln(
             f"    template<tag_t tag, typename... Args>",
-            f"    {enum_cpp_info.name} const& emplace(Args&&... args) {{",
+            f"    {union_cpp_info.name} const& emplace(Args&&... args) {{",
             f"        ::std::destroy_at(this);",
-            f"        new (this) {enum_cpp_info.name}(::taihe::core::static_tag<tag>, ::std::forward<Args>(args)...);",
+            f"        new (this) {union_cpp_info.name}(::taihe::core::static_tag<tag>, ::std::forward<Args>(args)...);",
             f"        return *this;",
             f"    }}",
         )
         # non-const getter
-        enum_cpp_defn_target.writeln(
+        union_cpp_defn_target.writeln(
             f"    template<tag_t tag>",
             f"    auto& get_ref() {{",
         )
-        for item in enum.items:
+        for item in union.fields:
             if item.ty_ref:
-                enum_cpp_defn_target.writeln(
+                union_cpp_defn_target.writeln(
                     f"        if constexpr (tag == tag_t::{item.name}) {{",
                     f"            return m_data.{item.name};",
                     f"        }}",
                 )
-        enum_cpp_defn_target.writeln(
+        union_cpp_defn_target.writeln(
             f"    }}",
         )
-        enum_cpp_defn_target.writeln(
+        union_cpp_defn_target.writeln(
             f"    template<tag_t tag>",
             f"    auto* get_ptr() {{",
             f"        return m_tag == tag ? &get_ref<tag>() : nullptr;",
             f"    }}",
         )
         # const getter
-        enum_cpp_defn_target.writeln(
+        union_cpp_defn_target.writeln(
             f"    template<tag_t tag>",
             f"    auto const& get_ref() const {{",
         )
-        for item in enum.items:
+        for item in union.fields:
             if item.ty_ref:
-                enum_cpp_defn_target.writeln(
+                union_cpp_defn_target.writeln(
                     f"        if constexpr (tag == tag_t::{item.name}) {{",
                     f"            return m_data.{item.name};",
                     f"        }}",
                 )
-        enum_cpp_defn_target.writeln(
+        union_cpp_defn_target.writeln(
             f"    }}",
         )
-        enum_cpp_defn_target.writeln(
+        union_cpp_defn_target.writeln(
             f"    template<tag_t tag>",
             f"    auto const* get_ptr() const {{",
             f"        return m_tag == tag ? &get_ref<tag>() : nullptr;",
             f"    }}",
         )
         # checker
-        enum_cpp_defn_target.writeln(
+        union_cpp_defn_target.writeln(
             f"    template<tag_t tag>",
             f"    bool holds() const {{",
             f"        return m_tag == tag;",
@@ -834,14 +834,14 @@ class CppHeadersGenerator:
             f"    }}",
         )
         # named
-        for item in enum.items:
-            enum_cpp_defn_target.writeln(
+        for item in union.fields:
+            union_cpp_defn_target.writeln(
                 f"    template<typename... Args>",
-                f"    static {enum_cpp_info.name} make_{item.name}(Args&&... args) {{",
+                f"    static {union_cpp_info.name} make_{item.name}(Args&&... args) {{",
                 f"        return make<tag_t::{item.name}>(::std::forward<Args>(args)...);",
                 f"    }}",
                 f"    template<typename... Args>",
-                f"    {enum_cpp_info.name} const& emplace_{item.name}(Args&&... args) {{",
+                f"    {union_cpp_info.name} const& emplace_{item.name}(Args&&... args) {{",
                 f"        return emplace<tag_t::{item.name}>(::std::forward<Args>(args)...);",
                 f"    }}",
                 f"    bool holds_{item.name}() const {{",
@@ -849,7 +849,7 @@ class CppHeadersGenerator:
                 f"    }}",
             )
             if item.ty_ref:
-                enum_cpp_defn_target.writeln(
+                union_cpp_defn_target.writeln(
                     f"    auto* get_{item.name}_ptr() {{",
                     f"        return get_ptr<tag_t::{item.name}>();",
                     f"    }}",
@@ -864,73 +864,73 @@ class CppHeadersGenerator:
                     f"    }}",
                 )
         # non_const visitor
-        enum_cpp_defn_target.writeln(
+        union_cpp_defn_target.writeln(
             f"    template<typename Visitor>",
             f"    auto accept_template(Visitor&& visitor) {{",
             f"        switch (m_tag) {{",
         )
-        for item in enum.items:
+        for item in union.fields:
             result = f"::taihe::core::static_tag<tag_t::{item.name}>"
             if item.ty_ref:
                 result += f", m_data.{item.name}"
-            enum_cpp_defn_target.writeln(
+            union_cpp_defn_target.writeln(
                 f"        case tag_t::{item.name}:",
                 f"            return visitor({result});",
             )
-        enum_cpp_defn_target.writeln(
+        union_cpp_defn_target.writeln(
             f"        }}",
             f"    }}",
         )
-        enum_cpp_defn_target.writeln(
+        union_cpp_defn_target.writeln(
             f"    template<typename Visitor>",
             f"    auto accept(Visitor&& visitor) {{",
             f"        switch (m_tag) {{",
         )
-        for item in enum.items:
+        for item in union.fields:
             result = "" if item.ty_ref is None else f"m_data.{item.name}"
-            enum_cpp_defn_target.writeln(
+            union_cpp_defn_target.writeln(
                 f"        case tag_t::{item.name}:",
                 f"            return visitor.{item.name}({result});",
             )
-        enum_cpp_defn_target.writeln(
+        union_cpp_defn_target.writeln(
             f"        }}",
             f"    }}",
         )
         # const visitor
-        enum_cpp_defn_target.writeln(
+        union_cpp_defn_target.writeln(
             f"    template<typename Visitor>",
             f"    auto accept_template(Visitor&& visitor) const {{",
             f"        switch (m_tag) {{",
         )
-        for item in enum.items:
+        for item in union.fields:
             result = f"::taihe::core::static_tag<tag_t::{item.name}>"
             if item.ty_ref:
                 result += f", m_data.{item.name}"
-            enum_cpp_defn_target.writeln(
+            union_cpp_defn_target.writeln(
                 f"        case tag_t::{item.name}:",
                 f"            return visitor({result});",
             )
-        enum_cpp_defn_target.writeln(
+        union_cpp_defn_target.writeln(
             f"        }}",
             f"    }}",
         )
-        enum_cpp_defn_target.writeln(
+        union_cpp_defn_target.writeln(
             f"    template<typename Visitor>",
             f"    auto accept(Visitor&& visitor) const {{",
             f"        switch (m_tag) {{",
         )
-        for item in enum.items:
+        for item in union.fields:
             result = "" if item.ty_ref is None else f"m_data.{item.name}"
-            enum_cpp_defn_target.writeln(
+            union_cpp_defn_target.writeln(
                 f"        case tag_t::{item.name}:",
                 f"            return visitor.{item.name}({result});",
             )
-        enum_cpp_defn_target.writeln(
+        union_cpp_defn_target.writeln(
             f"        }}",
             f"    }}",
         )
         # finally
-        enum_cpp_defn_target.writeln(
+        union_cpp_defn_target.writeln(
             f"private:",
             f"    tag_t m_tag;",
             f"    storage_t m_data;",
@@ -938,75 +938,75 @@ class CppHeadersGenerator:
             f"}}",
         )
 
-    def gen_enum_same(
+    def gen_union_same(
         self,
-        enum: EnumDecl,
-        enum_abi_info: EnumABIInfo,
-        enum_cpp_info: EnumCppInfo,
-        enum_cpp_defn_target: COutputBuffer,
+        union: UnionDecl,
+        union_abi_info: UnionABIInfo,
+        union_cpp_info: UnionCppInfo,
+        union_cpp_defn_target: COutputBuffer,
     ):
         result = "false"
-        for item in enum.items:
+        for item in union.fields:
             cond = f"lhs.holds_{item.name}() && rhs.holds_{item.name}()"
             if item.ty_ref:
                 cond = f"{cond} && same(lhs.get_{item.name}_ref(), rhs.get_{item.name}_ref())"
             result = f"{result} || {cond}"
-        enum_cpp_defn_target.writeln(
+        union_cpp_defn_target.writeln(
             f"namespace taihe::core {{",
-            f"inline bool same_impl(adl_helper_t, {enum_cpp_info.as_param} lhs, {enum_cpp_info.as_param} rhs) {{",
+            f"inline bool same_impl(adl_helper_t, {union_cpp_info.as_param} lhs, {union_cpp_info.as_param} rhs) {{",
             f"    return {result};",
             f"}}",
             f"}}",
         )
 
-    def gen_enum_hash(
+    def gen_union_hash(
         self,
-        enum: EnumDecl,
-        enum_abi_info: EnumABIInfo,
-        enum_cpp_info: EnumCppInfo,
-        enum_cpp_defn_target: COutputBuffer,
+        union: UnionDecl,
+        union_abi_info: UnionABIInfo,
+        union_cpp_info: UnionCppInfo,
+        union_cpp_defn_target: COutputBuffer,
     ):
-        enum_cpp_defn_target.writeln(
+        union_cpp_defn_target.writeln(
             f"namespace taihe::core {{",
-            f"inline auto hash_impl(adl_helper_t, {enum_cpp_info.as_param} val) -> ::std::size_t {{",
+            f"inline auto hash_impl(adl_helper_t, {union_cpp_info.as_param} val) -> ::std::size_t {{",
             f"    switch (val.get_tag()) {{",
             f"        ::std::size_t seed;",
         )
-        for item in enum.items:
+        for item in union.fields:
             val = "0x9e3779b9 + (seed << 6) + (seed >> 2)"
             if item.ty_ref:
                 val = f"{val} + hash(val.get_{item.name}_ref())"
-            enum_cpp_defn_target.writeln(
-                f"    case {enum_cpp_info.full_name}::tag_t::{item.name}:",
-                f"        seed = (::std::size_t){enum_cpp_info.full_name}::tag_t::{item.name};",
+            union_cpp_defn_target.writeln(
+                f"    case {union_cpp_info.full_name}::tag_t::{item.name}:",
+                f"        seed = (::std::size_t){union_cpp_info.full_name}::tag_t::{item.name};",
                 f"        return seed ^ ({val});",
             )
-        enum_cpp_defn_target.writeln(
+        union_cpp_defn_target.writeln(
             f"    }}",
             f"}}",
             f"}}",
         )
 
-    def gen_enum_type_traits(
+    def gen_union_type_traits(
         self,
-        enum: EnumDecl,
-        enum_abi_info: EnumABIInfo,
-        enum_cpp_info: EnumCppInfo,
-        enum_cpp_defn_target: COutputBuffer,
+        union: UnionDecl,
+        union_abi_info: UnionABIInfo,
+        union_cpp_info: UnionCppInfo,
+        union_cpp_defn_target: COutputBuffer,
     ):
-        enum_cpp_defn_target.writeln(
+        union_cpp_defn_target.writeln(
             f"namespace taihe::core {{",
             f"template<>",
-            f"struct as_abi<{enum_cpp_info.as_owner}> {{",
-            f"    using type = {enum_abi_info.as_owner};",
+            f"struct as_abi<{union_cpp_info.as_owner}> {{",
+            f"    using type = {union_abi_info.as_owner};",
             f"}};",
             f"template<>",
-            f"struct as_abi<{enum_cpp_info.as_param}> {{",
-            f"    using type = {enum_abi_info.as_param};",
+            f"struct as_abi<{union_cpp_info.as_param}> {{",
+            f"    using type = {union_abi_info.as_param};",
             f"}};",
             f"template<>",
-            f"struct as_param<{enum_cpp_info.as_owner}> {{",
-            f"    using type = {enum_cpp_info.as_param};",
+            f"struct as_param<{union_cpp_info.as_owner}> {{",
+            f"    using type = {union_cpp_info.as_param};",
             f"}};",
             f"}}",
         )

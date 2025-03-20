@@ -23,8 +23,6 @@ from taihe.semantics.declarations import (
     DeclarationImportDecl,
     DeclarationRefDecl,
     DeclProtocol,
-    EnumDecl,
-    EnumItemDecl,
     GenericTypeRefDecl,
     GlobFuncDecl,
     IfaceDecl,
@@ -42,13 +40,14 @@ from taihe.semantics.declarations import (
     StructFieldDecl,
     TypeDecl,
     TypeRefDecl,
+    UnionDecl,
+    UnionFieldDecl,
 )
 from taihe.semantics.types import (
     ArrayType,
     BigIntType,
     BuiltinType,
     CallbackType,
-    EnumType,
     GenericType,
     IfaceType,
     MapType,
@@ -60,6 +59,7 @@ from taihe.semantics.types import (
     StructType,
     Type,
     TypeProtocol,
+    UnionType,
     UserType,
     VectorType,
 )
@@ -127,7 +127,7 @@ class TypeVisitor(Generic[T]):
     def visit_struct_type(self, t: StructType) -> T:
         return self.visit_user_type(t)
 
-    def visit_enum_type(self, t: EnumType) -> T:
+    def visit_union_type(self, t: UnionType) -> T:
         return self.visit_user_type(t)
 
     def visit_iface_type(self, t: IfaceType) -> T:
@@ -246,12 +246,12 @@ class DeclVisitor(Generic[T]):
     def visit_struct_decl(self, d: StructDecl) -> T:
         return self.visit_type_decl(d)
 
-    ### Enum ###
+    ### Union ###
 
-    def visit_enum_item_decl(self, d: EnumItemDecl) -> T:
+    def visit_union_field_decl(self, d: UnionFieldDecl) -> T:
         return self.visit_decl(d)
 
-    def visit_enum_decl(self, d: EnumDecl) -> T:
+    def visit_union_decl(self, d: UnionDecl) -> T:
         return self.visit_type_decl(d)
 
     ### Interface ###
@@ -389,18 +389,18 @@ class RecursiveDeclVisitor(DeclVisitor[None]):
 
         return self.visit_type_decl(d)
 
-    ### Enum ###
+    ### Union ###
 
     @override
-    def visit_enum_item_decl(self, d: EnumItemDecl) -> None:
+    def visit_union_field_decl(self, d: UnionFieldDecl) -> None:
         if d.ty_ref:
             self.handle_decl(d.ty_ref)
 
         return self.visit_decl(d)
 
     @override
-    def visit_enum_decl(self, d: EnumDecl) -> None:
-        for i in d.items:
+    def visit_union_decl(self, d: UnionDecl) -> None:
+        for i in d.fields:
             self.handle_decl(i)
 
         return self.visit_type_decl(d)
@@ -446,7 +446,7 @@ class RecursiveDeclVisitor(DeclVisitor[None]):
             self.handle_decl(i)
         for i in p.structs:
             self.handle_decl(i)
-        for i in p.enums:
+        for i in p.unions:
             self.handle_decl(i)
         for i in p.interfaces:
             self.handle_decl(i)

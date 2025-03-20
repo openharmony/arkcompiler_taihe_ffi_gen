@@ -3,7 +3,6 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from dataclasses import dataclass
-from os import PathLike
 from pathlib import Path
 
 
@@ -11,11 +10,13 @@ from pathlib import Path
 class SourceBase(ABC):
     """Base class reprensenting all kinds of source code."""
 
-    source_identifier: str
-    pkg_name: str
+    @property
+    @abstractmethod
+    def source_identifier(self) -> str: ...
 
-    def __str__(self) -> str:
-        return f"Package {self.pkg_name} (in {self.source_identifier})"
+    @property
+    @abstractmethod
+    def pkg_name(self) -> str: ...
 
     @abstractmethod
     def read(self) -> list[str]: ...
@@ -25,8 +26,18 @@ class SourceBase(ABC):
 class SourceFile(SourceBase):
     """Represents a file-based source code."""
 
+    path: Path
+
+    @property
+    def source_identifier(self) -> str:
+        return str(self.path)
+
+    @property
+    def pkg_name(self) -> str:
+        return self.path.stem
+
     def read(self) -> list[str]:
-        with open(self.source_identifier) as f:
+        with open(self.path) as f:
             return f.readlines()
 
 
@@ -34,7 +45,16 @@ class SourceFile(SourceBase):
 class SourceBuffer(SourceBase):
     """Represents a string-based source code."""
 
+    name: str
     buf: str
+
+    @property
+    def source_identifier(self) -> str:
+        return f"<source-buffer-{self.pkg_name}>"
+
+    @property
+    def pkg_name(self) -> str:
+        return self.name
 
     def read(self) -> list[str]:
         return self.buf.splitlines()
@@ -48,17 +68,8 @@ class SourceManager:
     def __init__(self):
         self.src_list = []
 
-    def _add(self, sb: SourceBase):
+    def add_source(self, sb: SourceBase):
         self.src_list.append(sb)
-
-    def add_buffer(self, pkg_name: str, buf: str, source_identifier: str = ""):
-        sid = source_identifier or f"<source-buffer-{pkg_name}>"
-        self._add(SourceBuffer(sid, pkg_name, buf))
-
-    def add_file(self, path: PathLike):
-        p = Path(path)
-        pkg_name = p.stem
-        self._add(SourceFile(str(p), pkg_name))
 
     @property
     def sources(self) -> Iterable[SourceBase]:
@@ -108,4 +119,4 @@ class SourceLocation:
     @classmethod
     def with_path(cls, path: Path) -> "SourceLocation":
         """Returns a file-only source location, without any position information."""
-        return cls(SourceFile(str(path), path.stem))
+        return cls(SourceFile(path))

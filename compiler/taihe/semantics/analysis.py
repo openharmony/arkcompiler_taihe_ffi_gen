@@ -6,7 +6,6 @@ from typing_extensions import override
 from taihe.semantics.declarations import (
     CallbackTypeRefDecl,
     DeclarationRefDecl,
-    EnumDecl,
     GenericTypeRefDecl,
     GlobFuncDecl,
     IfaceDecl,
@@ -19,6 +18,7 @@ from taihe.semantics.declarations import (
     ShortTypeRefDecl,
     StructDecl,
     TypeDecl,
+    UnionDecl,
 )
 from taihe.semantics.types import (
     BUILTIN_GENERICS,
@@ -33,7 +33,6 @@ from taihe.utils.exceptions import (
     DeclNotExistError,
     DeclRedefError,
     DuplicateExtendsWarn,
-    EnumValueConflictError,
     ExtendsTypeError,
     GenericArgumentsError,
     NotATypeError,
@@ -53,7 +52,6 @@ def analyze_semantics(pg: PackageGroup, diag: AbstractDiagnosticsManager):
     _check_decl_confilct_with_namespace(pg, diag)
     _ResolveImportsPass(diag).handle_decl(pg)
     _CheckFieldNameCollisionErrorPass(diag).handle_decl(pg)
-    _CalculateEnumItemValuePass(diag).handle_decl(pg)
     _CheckRecursiveInclusionPass(diag).handle_decl(pg)
 
 
@@ -279,27 +277,6 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
         d.resolved_ty = CallbackType(return_ty, tuple(params_ty))
 
 
-class _CalculateEnumItemValuePass(RecursiveDeclVisitor):
-    """Calculate Enum Values."""
-
-    diag: AbstractDiagnosticsManager
-
-    def __init__(self, diag: AbstractDiagnosticsManager):
-        self.diag = diag
-
-    def visit_enum_decl(self, d: EnumDecl) -> None:
-        values = {}
-        value = 0
-        for i in d.items:
-            if i.value is None:
-                i.value = value
-            else:
-                value = i.value
-            if (prev := values.setdefault(value, i)) != i:
-                self.diag.emit(EnumValueConflictError(prev, i))
-            value += 1
-
-
 class _CheckFieldNameCollisionErrorPass(RecursiveDeclVisitor):
     """Check for duplicate field names in declarations and name anonymous declarations."""
 
@@ -324,9 +301,9 @@ class _CheckFieldNameCollisionErrorPass(RecursiveDeclVisitor):
         return super().visit_struct_decl(d)
 
     @override
-    def visit_enum_decl(self, d: EnumDecl) -> None:
-        self.check_collision_helper(d.items)
-        return super().visit_enum_decl(d)
+    def visit_union_decl(self, d: UnionDecl) -> None:
+        self.check_collision_helper(d.fields)
+        return super().visit_union_decl(d)
 
     @override
     def visit_iface_decl(self, d: IfaceDecl) -> None:
@@ -396,9 +373,9 @@ class _CheckRecursiveInclusionPass(RecursiveDeclVisitor):
             if isinstance(ty := f.ty_ref.resolved_ty, UserType):
                 type_list.append(((d, f.ty_ref), ty.ty_decl))
 
-    def visit_enum_decl(self, d: EnumDecl) -> None:
+    def visit_union_decl(self, d: UnionDecl) -> None:
         type_list = self.type_table.setdefault(d, [])
-        for i in d.items:
+        for i in d.fields:
             if i.ty_ref is None:
                 continue
             if isinstance(ty := i.ty_ref.resolved_ty, UserType):

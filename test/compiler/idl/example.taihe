@@ -52,19 +52,18 @@ struct GoodStruct {
     n: i32;
 }
 
-// Enums
+// Unions
 
-enum BadEnum {
-    A;
-    A = -1;  // DeclConflictError
-    C = 0; // EnumValueConflictError
+union BadUnion {
+    A: i32;
+    A: u32;  // DeclConflictError
 }
 
-enum GoodEnum {
-    A;
-    B;
-    C = if (7 << 1 + 1) + (3 * 3 - 2 & 11) == 31 && 1 + 1 == 2 then 42 else 10;  // OK (should equal to 42)
-    D;  // should be 43
+union GoodUnion {
+    A: i32;
+    C: f32;
+    B: u32;
+    D;
 }
 
 // Functions
@@ -99,10 +98,10 @@ interface RecursiveIfaceA: RecursiveIfaceB {}
 interface RecursiveIfaceB: RecursiveIfaceA {}  // RecursiveExtension
 
 struct RecursiveStruct {
-    e: RecursiveEnum;
+    e: RecursiveUnion;
 }
 
-enum RecursiveEnum {
+union RecursiveUnion {
     s: RecursiveStruct;
 }
 
