@@ -126,6 +126,14 @@ try {
 } catch (error) {
     console.error("main finsih test async promise ERROR ", error)
 }
+
+// Log output:
+// addSync:  3
+// async success  30
+// async promise success 
+// MyStr
+// interface async success 
+// interface async success p_istringholder  interface async set
 ```
 
 #### Know more, Code better

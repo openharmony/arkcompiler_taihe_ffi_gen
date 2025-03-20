@@ -1,0 +1,4 @@
+[sts_name = "add"]
+function sum_two(a: i32, b: i32): i32;
+[sts_name = "add"]
+function sum_arr(a: Array<i32>): i32;

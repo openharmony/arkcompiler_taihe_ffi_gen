@@ -12,8 +12,10 @@
 
 ### [arraybuffer](./arrbuffer/readme.md)
 
-### [async](./async/readme.md)
+### [异步](./async/readme.md)
+
+### [重载](./overload/readme.md)
 
 ### To do 
 
-#### optional | asysc promise | overload | inject
+#### optional | inject
