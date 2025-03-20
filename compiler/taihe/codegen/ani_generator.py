@@ -140,12 +140,10 @@ class PackageANIInfo(AbstractAnalysis[PackageDecl]):
 
         self.namespace = "::".join(p.segments)
 
-        self.sts = f"{p.name}.ets"
-        self.pkg_name = (
-            ani_lib_item.value
-            if (ani_lib_item := p.attrs.get("ani_lib"))
-            else "/".join(p.segments)
-        )
+        # TODO: hack at
+        assert p.loc
+        self.sts = f"{p.loc.file.pkg_name}.ets"
+        self.pkg_name = "/".join(p.loc.file.pkg_name.split("."))
         self.impl_desc = f"L{self.pkg_name}/ETSGLOBAL;"
 
         self.is_namespace = False

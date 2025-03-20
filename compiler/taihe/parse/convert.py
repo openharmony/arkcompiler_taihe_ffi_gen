@@ -56,7 +56,8 @@ class IgnoredFileWarn(DiagWarn):
 
 def normalize_pkg_name(name: str):
     def is_allowed(char: str):
-        return char.isalnum() or char == "_"
+        # TODO: hack at
+        return char.isalnum() or char == "_" or char == "@"
 
     def to_valid_identifier(s: str):
         """Converts a string to valid, C-style identifier."""

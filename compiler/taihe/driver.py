@@ -141,6 +141,8 @@ class CompilerInstance:
                 )
                 continue
 
+            # TODO: hack at
+            pkg_name_norm = pkg_name_norm.replace("@", "")
             conv = AstConverter(pkg_name_norm, src, self.diagnostics_manager)
             pkg = conv.convert()
             with self.diagnostics_manager.capture_error():
