@@ -44,20 +44,24 @@ class OutputBase(ABC, Generic[P]):
 
 
 class OutputBuffer(OutputBase[[]]):
-    """Represents a C or C++ target file."""
+    """Represents a general target file."""
 
     def __init__(self):
-        self.code = StringIO()
         self.indent_manager = IndentManager()
+        self.code = StringIO()
 
     @override
     def save_as(self, file_path: Path):
         with open(file_path, "w", encoding="utf-8") as dst:
             dst.write(self.code.getvalue())
 
-    def write(self, code: str):
-        for line in code.splitlines():
-            self.code.write(self.indent_manager.current + line + "\n")
+    def write(self, codes: str):
+        for code in codes.splitlines():
+            self.code.write(self.indent_manager.current + code + "\n")
+
+    def writeln(self, *codes: str):
+        for code in codes:
+            self.code.write(self.indent_manager.current + code + "\n")
 
 
 class COutputBuffer(OutputBase[[bool]]):
@@ -80,8 +84,9 @@ class COutputBuffer(OutputBase[[bool]]):
                 dst.write(f'#include "{header}"\n')
             dst.write(self.code.getvalue())
 
-    def write(self, code: str):
-        self.code.write(code)
+    def write(self, codes: str):
+        for code in codes.splitlines():
+            self.code.write(self.indent_manager.current + code + "\n")
 
     def writeln(self, *codes: str):
         for code in codes:
@@ -102,8 +107,6 @@ class OutputManager:
     def output_to(self, dst_dir: Path):
         """Save all managed outputs to a target directory."""
         for filename, target in self.targets.items():
-            if isinstance(target, OutputBuffer) and target.code.getvalue() == "":
-                continue
             target.save_as(dst_dir / filename)
 
     def get_or_create(

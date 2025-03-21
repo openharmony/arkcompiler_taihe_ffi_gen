@@ -71,7 +71,7 @@ class IfaceMethodABIInfo(AbstractAnalysis[IfaceMethodDecl]):
 
 class EnumABIInfo(AbstractAnalysis[EnumDecl]):
     def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
-        self.abi_type = "size_t"
+        self.abi_type = "int"
 
 
 class UnionABIInfo(AbstractAnalysis[UnionDecl]):
@@ -81,7 +81,7 @@ class UnionABIInfo(AbstractAnalysis[UnionDecl]):
         segments = [*p.segments, d.name]
         self.decl_header = f"{p.name}.{d.name}.abi.0.h"
         self.impl_header = f"{p.name}.{d.name}.abi.1.h"
-        self.tag_type = "size_t"
+        self.tag_type = "int"
         self.union_name = encode(segments, DeclKind.UNION)
         self.mangled_name = encode(segments, DeclKind.TYPE)
         self.as_owner = f"struct {self.mangled_name}"

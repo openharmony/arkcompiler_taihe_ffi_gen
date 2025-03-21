@@ -443,30 +443,27 @@ class CppHeadersGenerator:
             assert ty
             if ty == STRING:
                 as_owner = "char const*"
-                formatter = dumps
             else:
                 ty_cpp_info = TypeCppInfo.get(self.am, ty)
                 as_owner = ty_cpp_info.as_owner
-                if ty == BOOL:
-                    formatter = lambda val: ["false", "true"][val]
-                else:
-                    formatter = str
             enum_cpp_target.writeln(
-                f"    {as_owner} get_value() const {{",
-                f"        static {as_owner} table[] = {{",
+                f"    static constexpr {as_owner} table[] = {{",
             )
             for item in enum.items:
                 enum_cpp_target.writeln(
-                    f"            {formatter(item.value)},",
+                    f"        {dumps(item.value)},",
                 )
             enum_cpp_target.writeln(
-                f"        }};",
-                f"        return table[(size_t)key];",
+                f"    }};",
+            )
+            enum_cpp_target.writeln(
+                f"    {as_owner} get_value() const {{",
+                f"        return table[({enum_abi_info.abi_type})key];",
                 f"    }}",
             )
             enum_cpp_target.writeln(
                 f"    operator {as_owner}() const {{",
-                f"        return get_value();",
+                f"        return table[({enum_abi_info.abi_type})key];",
                 f"    }}",
             )
         enum_cpp_target.writeln(
