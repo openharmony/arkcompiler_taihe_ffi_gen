@@ -433,6 +433,7 @@ class CppHeadersGenerator:
             f"    {enum_cpp_info.name}({enum_cpp_info.name} const& other) : key(other.key) {{}}",
             f"    {enum_cpp_info.name}& operator=({enum_cpp_info.name} other) {{",
             f"        key = other.key;",
+            f"        return *this;",
             f"    }}",
             f"    key_t get_key() const {{",
             f"        return this->key;",
