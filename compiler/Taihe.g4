@@ -27,7 +27,7 @@ specField
     : (DocstringItemLst_docstrings += docstringItem)* (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)* COMMA?)? RIGHT_BRACKET)?
       KW_ENUM token_name = ID (COLON TypeOpt_enum_ty = type)?
       LEFT_BRACE (EnumItemLst_fields += enumItem (COMMA EnumItemLst_fields += enumItem)* COMMA?)? RIGHT_BRACE # enum
-    | (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)* COMMA?)? RIGHT_BRACKET)?
+    | (DocstringItemLst_docstrings += docstringItem)* (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)* COMMA?)? RIGHT_BRACKET)?
       KW_STRUCT token_name = ID
       LEFT_BRACE (StructFieldLst_fields += structField)* RIGHT_BRACE # struct
     | (DocstringItemLst_docstrings += docstringItem)* (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)* COMMA?)? RIGHT_BRACKET)?
