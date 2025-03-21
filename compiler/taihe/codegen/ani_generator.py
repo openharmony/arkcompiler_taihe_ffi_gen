@@ -1430,7 +1430,7 @@ class STSCodeGenerator:
             )
 
         pkg_sts_target.write(
-            f"        default: throw new Error(`Unknown type: ${type}`);\n"
+            f"        default: throw new Error(`Unknown type: ${{type}}`);\n"
             f"    }}\n"
             f"}}\n"
         )
@@ -1455,7 +1455,11 @@ class STSCodeGenerator:
                     f'        case "{func_ani_info.sts_onoff_type}": {async_func_name}({args_async_str}); break;\n'
                 )
 
-        pkg_sts_target.write(f"    }}\n" f"}}\n")
+        pkg_sts_target.write(
+            f"        default: throw new Error(`Unknown type: ${{type}}`);\n"
+            f"    }}\n"
+            f"}}\n"
+        )
 
     def gen_onoff_method(
         self,
@@ -1497,7 +1501,7 @@ class STSCodeGenerator:
             )
 
         pkg_sts_target.write(
-            f"            default: throw new Error(`Unknown type: ${type}`);\n"
+            f"            default: throw new Error(`Unknown type: ${{type}}`);\n"
             f"        }}\n"
             f"    }}\n"
         )
@@ -1522,7 +1526,11 @@ class STSCodeGenerator:
                     f'            case "{method_ani_info.sts_onoff_type}": this.{async_func_name}({args_async_str}); break;\n'
                 )
 
-        pkg_sts_target.write(f"        }}\n" f"    }}\n")
+        pkg_sts_target.write(
+            f"            default: throw new Error(`Unknown type: ${{type}}`);\n"
+            f"        }}\n"
+            f"    }}\n"
+        )
 
     def gen_onoff_method_decl(
         self,
