@@ -39,21 +39,20 @@ def pretty_print(x: DeclProtocol, buffer: TextIO):
 
 
 class IndentManager:
-    def __init__(self, unit="    "):
-        self.level = 0
-        self.unit = unit
+    def __init__(self):
+        self.count = 0
 
     @contextmanager
-    def code_block(self):
+    def code_block(self, n=4):
         try:
-            self.level += 1
+            self.count += n
             yield
         finally:
-            self.level -= 1
+            self.count -= n
 
     @property
     def current(self):
-        return self.level * self.unit
+        return self.count * " "
 
 
 class _PrettyPrinter(RecursiveDeclVisitor):
