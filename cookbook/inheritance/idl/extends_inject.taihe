@@ -1,0 +1,20 @@
+[class]
+interface InnerPerson {
+    getPseron(): Opaque;
+    getInnerPerson(): InnerPerson;
+}
+
+function makePerson(): InnerPerson;
+
+inject """
+import Person from '../user/Person';
+export class Man extends Person {
+    getPerson(): Person {
+        return this.innerPerson.getPseron() as Person;
+    };
+    innerPerson: InnerPerson;
+    constructor() {
+        this.innerPerson = makePerson(); 
+    }
+}
+"""
