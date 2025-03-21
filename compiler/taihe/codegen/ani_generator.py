@@ -2532,7 +2532,7 @@ class ANICodeGenerator:
                     f"        return {union_cpp_info.full_name}::make_{field.name}(std::move({cpp_result_spec}));\n"
                     f"    }}\n"
                 )
-        union_ani_impl_target.write(f"}}\n")
+        union_ani_impl_target.write(f"    __builtin_unreachable();\n" f"}}\n")
         # into ani
         union_ani_impl_target.write(
             f"inline ani_ref {union_ani_info.into_ani_func_name}(ani_env* env, {union_cpp_info.as_param} cpp_value) {{\n"
