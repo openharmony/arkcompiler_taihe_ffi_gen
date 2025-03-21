@@ -75,9 +75,7 @@ class SemanticTestCompilerInstance:
                 )
                 continue
 
-            conv = AstConverter(
-                pkg_name_norm, src.pkg_name, src, self.diagnostics_manager
-            )
+            conv = AstConverter(pkg_name_norm, src, self.diagnostics_manager)
             pkg = conv.convert()
             with self.diagnostics_manager.capture_error():
                 self.package_group.add(pkg)

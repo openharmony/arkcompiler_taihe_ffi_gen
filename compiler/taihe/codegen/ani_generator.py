@@ -1106,7 +1106,7 @@ class CallbackTypeANIInfo(AbstractAnalysis[CallbackType], AbstractTypeANIInfo):
             return_ty_sts = return_ty_sts_info.sts_type
         else:
             return_ty_sts = "void"
-        self.sts_type = f"({params_ty_sts_str})=>{return_ty_sts}"
+        self.sts_type = f"(({params_ty_sts_str}) => {return_ty_sts})"
         self.type_desc = f"Lstd/core/Function{len(self.t.params_ty)};"
 
     @override
@@ -1317,7 +1317,6 @@ class STSCodeGenerator:
     def gen_ns_package_file(self, pkg: PackageDecl):
         pkg_ani_info = PackageANIInfo.get(self.am, pkg)
         pkg_sts_target = OutputBuffer.create(self.tm, pkg_ani_info.sts)
-        pkg_sts_target.indent_manager.level = -1
 
         if pkg.name in self.ns_tree_list:
             cur_ns_tree = self.ns_tree_list[pkg.name].root

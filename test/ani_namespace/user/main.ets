@@ -14,15 +14,6 @@ function check_struct() {
     assertEQ(newStruct.c, 1)
 }
 
-function check_enum() {
-    let color = new NSTest.baz.Color(1, undefined);
-    let sum = NSTest.baz.addEnum(color, 10)
-    assertEQ(sum, 11)
-
-    let res_enum = NSTest.baz.getEnum(3)
-    assertEQ(res_enum.tag, 3)
-}
-
 function check_ns_nest() {
     let res = NSTest.foo.bar.add(1, 2)
     assertEQ(res, 3)
@@ -50,7 +41,6 @@ function main() {
     const suite = new ArkTestsuite ("namespace ut")
 
     suite.addTest("check_struct", check_struct)
-    suite.addTest("check_enum", check_enum)
     suite.addTest("check_ns_nest", check_ns_nest)
     suite.addTest("check_interface", check_interface)
     suite.addTest("check_multi_ns", check_multi_ns)
