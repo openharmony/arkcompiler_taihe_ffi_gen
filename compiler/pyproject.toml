@@ -73,10 +73,9 @@ lint.ignore = [
     # -> "line length already regulated by black"
     "PT011", # "pytest.raises() should specify expected exception"
     # -> "would imply to update tests every time you update exception message"
-    "SIM102", # "Use a single `if` statement instead of nested `if` statements"
-    # -> "too restrictive"
+    "SIM108",
     "F541", # "f-string without any placeholders"
-    # -> "some of them are for aesthetic reasons"
+    "E731",
     "D100",
     "D101",
     "D102",

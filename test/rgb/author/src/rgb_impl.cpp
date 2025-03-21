@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <iomanip>
+#include <string>
 #include <variant>
 
 using namespace rgb::base;
@@ -52,11 +53,11 @@ public:
     void show() {
         std::string content = "rectangle " + name + ": h = " + std::to_string(h) + ", w = " + std::to_string(w);
         if (auto ptr = myColor.get_ptr<ColorOrRGBOrName::tag_t::color>()) {
-            std::cout << "\033[" << 30 + (int)ptr->get_tag() << "m" << content << "\033[39m" << std::endl;
+            std::cout << "\033[" << 30 + (int)*ptr << "m" << content << "\033[39m" << std::endl;
         } else if (auto ptr = myColor.get_ptr<ColorOrRGBOrName::tag_t::rgb>()) {
             std::cout << "\033[38;2;" << (int)ptr->r << ";" << (int)ptr->g << ";" << (int)ptr->b << "m" << content << "\033[39m" << std::endl;
         } else if (auto ptr = myColor.get_ptr<ColorOrRGBOrName::tag_t::name>()) {
-            std::cout << "(" << ptr->c_str() << ") " << content << std::endl;
+            std::cout << "(" << *ptr << ") " << content << std::endl;
         } else {
             std::cout << content << std::endl;
         }
@@ -95,31 +96,10 @@ string colorToStringImpl(ColorOrRGBOrName const& color) {
             return oss.str();
         }
         string operator()(static_tag_t<ColorOrRGBOrName::tag_t::color>, const Color& val) {
-            return val.accept_template(*this);
+            return std::to_string(val.get_value());
         }
-        string operator()(static_tag_t<Color::tag_t::black>) {
-            return "Black";
-        }
-        string operator()(static_tag_t<Color::tag_t::red>) {
-            return "Red";
-        }
-        string operator()(static_tag_t<Color::tag_t::green>) {
-            return "Green";
-        }
-        string operator()(static_tag_t<Color::tag_t::yellow>) {
-            return "Yellow";
-        }
-        string operator()(static_tag_t<Color::tag_t::blue>) {
-            return "Blue";
-        }
-        string operator()(static_tag_t<Color::tag_t::magenta>) {
-            return "Magenta";
-        }
-        string operator()(static_tag_t<Color::tag_t::cyan>) {
-            return "Cyan";
-        }
-        string operator()(static_tag_t<Color::tag_t::white>) {
-            return "White";
+        string operator()(static_tag_t<ColorOrRGBOrName::tag_t::name>, const Name& val) {
+            return string(val);
         }
         string operator()(static_tag_t<ColorOrRGBOrName::tag_t::undefined>) {
             return "Undefined";

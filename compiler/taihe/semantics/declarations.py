@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Optional, Protocol
 from typing_extensions import override
 
 from taihe.semantics.types import (
+    EnumType,
     IfaceType,
     StructType,
     Type,
@@ -418,9 +419,33 @@ class DeclarationImportDecl(ImportDecl):
         return f"declaration import {self.name}"
 
 
-######################
-# Other Declarations #
-######################
+############################
+# Field Level Declarations #
+############################
+
+
+class EnumItemDecl(NamedDecl):
+    node_parent: Optional["EnumDecl"]
+    value: int | float | str | bool | None
+
+    def __init__(
+        self,
+        loc: Optional[SourceLocation],
+        name: str,
+        value: int | float | str | bool | None = None,
+    ):
+        super().__init__(loc, name)
+        self.value = value
+        self.node_parent = None
+
+    @override
+    def _accept(self, v: "DeclVisitor") -> Any:
+        return v.visit_enum_item_decl(self)
+
+    @property
+    @override
+    def description(self):
+        return f"enum item {self.name}"
 
 
 class UnionFieldDecl(NamedDecl):
@@ -572,6 +597,38 @@ class TypeDecl(PackageLevelDecl, metaclass=ABCMeta):
     def as_type(self) -> UserType: ...
 
 
+class EnumDecl(TypeDecl):
+    items: list["EnumItemDecl"]
+    ty_ref: Optional[TypeRefDecl]
+
+    def __init__(
+        self,
+        loc: Optional[SourceLocation],
+        name: str,
+        ty_ref: Optional[TypeRefDecl] = None,
+    ):
+        super().__init__(loc, name)
+        self.items = []
+        self.ty_ref = ty_ref
+
+    @override
+    def _accept(self, v: "DeclVisitor") -> Any:
+        return v.visit_enum_decl(self)
+
+    def add_item(self, i: "EnumItemDecl"):
+        i.node_parent = self
+        self.items.append(i)
+
+    @override
+    def as_type(self) -> EnumType:
+        return EnumType(self)
+
+    @property
+    @override
+    def description(self) -> str:
+        return f"enum {self.name}"
+
+
 class UnionDecl(TypeDecl):
     fields: list["UnionFieldDecl"]
 
@@ -673,6 +730,7 @@ class PackageDecl(NamedDecl):
     structs: list[StructDecl]
     unions: list[UnionDecl]
     interfaces: list[IfaceDecl]
+    enums: list[EnumDecl]
 
     def __init__(self, name: str, loc: Optional[SourceLocation]):
         super().__init__(loc, name)
@@ -685,6 +743,7 @@ class PackageDecl(NamedDecl):
         self.structs = []
         self.unions = []
         self.interfaces = []
+        self.enums = []
 
     @property
     def segments(self) -> list[str]:
@@ -704,15 +763,20 @@ class PackageDecl(NamedDecl):
         self.functions.append(f)
         self._register_to_decl(f)
 
+    def add_enum(self, e: EnumDecl):
+        e.node_parent = self
+        self.enums.append(e)
+        self._register_to_decl(e)
+
     def add_struct(self, s: StructDecl):
         s.node_parent = self
         self.structs.append(s)
         self._register_to_decl(s)
 
-    def add_union(self, e: UnionDecl):
-        e.node_parent = self
-        self.unions.append(e)
-        self._register_to_decl(e)
+    def add_union(self, u: UnionDecl):
+        u.node_parent = self
+        self.unions.append(u)
+        self._register_to_decl(u)
 
     def add_interface(self, i: IfaceDecl):
         i.node_parent = self
@@ -728,6 +792,8 @@ class PackageDecl(NamedDecl):
             self.add_union(d)
         elif isinstance(d, IfaceDecl):
             self.add_interface(d)
+        elif isinstance(d, EnumDecl):
+            self.add_enum(d)
         else:
             raise NotImplementedError(f"unexpected declaration {d.description}")
 

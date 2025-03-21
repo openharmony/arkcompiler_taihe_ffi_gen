@@ -32,10 +32,9 @@ struct UserType {
 };
 
 int main() {
-    Color yellow = Color::make_yellow();
     ColorOrRGBOrName color_114514 = ColorOrRGBOrName::make_rgb(RGB{0x11, 0x45, 0x14});
-    ColorOrRGBOrName color_yellow = ColorOrRGBOrName::make_color(yellow);
-    ColorOrRGBOrName color_miku = ColorOrRGBOrName::make_name("Miku");
+    ColorOrRGBOrName color_yellow = ColorOrRGBOrName::make_color(Color::key_t::yellow);
+    ColorOrRGBOrName color_miku = ColorOrRGBOrName::make_name(Name::key_t::BLUE);
     ColorOrRGBOrName color_unknown = ColorOrRGBOrName::make_undefined();
 
     {
@@ -46,14 +45,14 @@ int main() {
         std::cout << toString(color_miku) << std::endl;
         std::cout << toString(color_unknown) << std::endl;
 
-        if (string* name_ptr = color_miku.get_name_ptr()) {
+        if (Name* name_ptr = color_miku.get_name_ptr()) {
             std::cout << "color_miku is holding name, name is " << *name_ptr << std::endl;
         } else {
             std::cout << "Error" << std::endl;
         }
 
         if (color_miku.holds_name()) {
-            string& name_ref = color_miku.get_name_ref();
+            Name name_ref = color_miku.get_name_ref();
             std::cout << "color_miku is holding name, name is " << name_ref << std::endl;
         } else {
             std::cout << "Error" << std::endl;

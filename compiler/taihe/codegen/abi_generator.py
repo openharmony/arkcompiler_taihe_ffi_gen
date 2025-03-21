@@ -5,6 +5,7 @@ from typing_extensions import override
 
 from taihe.codegen.mangle import DeclKind, encode
 from taihe.semantics.declarations import (
+    EnumDecl,
     GlobFuncDecl,
     IfaceDecl,
     IfaceMethodDecl,
@@ -27,6 +28,7 @@ from taihe.semantics.types import (
     U64,
     ArrayType,
     CallbackType,
+    EnumType,
     IfaceType,
     MapType,
     OpaqueType,
@@ -65,6 +67,11 @@ class IfaceMethodABIInfo(AbstractAnalysis[IfaceMethodDecl]):
         assert p
         segments = [*p.segments, d.name, f.name]
         self.mangled_name = encode(segments, DeclKind.FUNC)
+
+
+class EnumABIInfo(AbstractAnalysis[EnumDecl]):
+    def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
+        self.abi_type = "size_t"
 
 
 class UnionABIInfo(AbstractAnalysis[UnionDecl]):
@@ -158,6 +165,15 @@ class AbstractTypeABIInfo(metaclass=ABCMeta):
     as_owner: str
     # type as parameter
     as_param: str
+
+
+class EnumTypeABIInfo(AbstractAnalysis[EnumType], AbstractTypeABIInfo):
+    def __init__(self, am: AnalysisManager, t: EnumType) -> None:
+        enum_abi_info = EnumABIInfo.get(am, t.ty_decl)
+        self.decl_headers = []
+        self.impl_headers = []
+        self.as_owner = enum_abi_info.abi_type
+        self.as_param = enum_abi_info.abi_type
 
 
 class UnionTypeABIInfo(AbstractAnalysis[UnionType], AbstractTypeABIInfo):
@@ -282,6 +298,10 @@ class TypeABIInfo(TypeVisitor[AbstractTypeABIInfo]):
     def get(am: AnalysisManager, t: Type | None):
         assert t is not None
         return TypeABIInfo(am).handle_type(t)
+
+    @override
+    def visit_enum_type(self, t: EnumType) -> AbstractTypeABIInfo:
+        return EnumTypeABIInfo.get(self.am, t)
 
     @override
     def visit_union_type(self, t: UnionType) -> AbstractTypeABIInfo:
