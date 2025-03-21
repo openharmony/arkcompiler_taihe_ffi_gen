@@ -276,21 +276,6 @@ function baseFunc24_3(){
     test_primitives.baseFunc24(32767 as short,undefined)
 }
 
-function baseFunc25(){
-    let bar = new test_primitives.Bar(1, undefined);
-    test_primitives.baseFunc25(32767 as short,bar)
-}
-
-function baseFunc25_1(){
-    let bar = new test_primitives.Bar(2, undefined);
-    test_primitives.baseFunc25(32767 as short,bar)
-}
-
-function baseFunc25_2(){
-    let bar = new test_primitives.Bar(0, undefined);
-    test_primitives.baseFunc25(32767 as short,bar)
-}
-
 
 function testCaseBaseFunc1(){
     primitivesTest.testBaseFunc1()
@@ -457,25 +442,6 @@ function testCaseBaseFunc20(){
     let booleanArray: boolean[] = [true, false, false, true, true];
     let strArray: string[] = ["test1","test111","12345~!<>?|{}[]","test333","@#$$%^&&*123"];
     primitivesTest.testBaseFunc20(booleanArray ,strArray)
-}
-
-
-function testCaseBaseFunc21(){
-    let bar1 = new test_primitives.Bar(1, undefined);
-    let bar2 = new test_primitives.Bar(2, undefined);
-    primitivesTest.testBaseFunc21(bar1 ,bar2)
-}
-
-function testCaseBaseFunc21_1(){
-    let bar1 = new test_primitives.Bar(2, undefined);
-    let bar2 = new test_primitives.Bar(1, undefined);
-    primitivesTest.testBaseFunc21(bar1 ,bar2)
-}
-
-function testCaseBaseFunc21_2(){
-    let bar1 = new test_primitives.Bar(0, undefined);
-    let bar2 = new test_primitives.Bar(0, undefined);
-    primitivesTest.testBaseFunc21(bar1 ,bar2)
 }
 
 
@@ -762,9 +728,6 @@ function main() {
     suite.addTest("check testbaseFunc24_1", baseFunc24_1)
     suite.addTest("check testbaseFunc24_2", baseFunc24_2)
     suite.addTest("check testbaseFunc24_3", baseFunc24_3)
-    suite.addTest("check testbaseFunc25", baseFunc25)
-    suite.addTest("check testbaseFunc25_1", baseFunc25_1)
-    suite.addTest("check testbaseFunc25_2", baseFunc25_2)
     suite.addTest("check testCaseBaseFunc1", testCaseBaseFunc1)
     suite.addTest("check testCaseBaseFunc2", testCaseBaseFunc2)
     suite.addTest("check testCaseBaseFunc2_1", testCaseBaseFunc2_1)
@@ -804,9 +767,6 @@ function main() {
     suite.addTest("check testCaseBaseFunc18", testCaseBaseFunc18)
     suite.addTest("check testCaseBaseFunc19", testCaseBaseFunc19)
     suite.addTest("check testCaseBaseFunc20", testCaseBaseFunc20)
-    suite.addTest("check testCaseBaseFunc21", testCaseBaseFunc21)
-    suite.addTest("check testCaseBaseFunc21_1", testCaseBaseFunc21_1)
-    suite.addTest("check testCaseBaseFunc21_2", testCaseBaseFunc21_2)
     suite.addTest("check testCaseBaseIntegerFunc1", testCaseBaseIntegerFunc1)
     suite.addTest("check testCaseBaseIntegerFunc1_1", testCaseBaseIntegerFunc1_1)
     suite.addTest("check testCaseBaseIntegerFunc2", testCaseBaseIntegerFunc2)

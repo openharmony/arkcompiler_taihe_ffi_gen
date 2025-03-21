@@ -3,9 +3,6 @@
 #include "core/string.hpp"
 #include "core/optional.hpp"
 #include "core/runtime.hpp"
-#include "primitives_test.Foo.proj.1.hpp"
-#include "primitives_test.Bar.proj.1.hpp"
-#include "primitives_test.primitivesVoid.proj.2.hpp"
 // Please delete this include when you implement
 using namespace taihe::core;
 namespace
@@ -189,19 +186,6 @@ namespace
               std::cout << value << " ";
           }
           std::cout << std::endl;
-        }
-        void testBaseFunc21(::primitives_test::Bar const& option1, ::primitives_test::Bar const& option2) {
-          switch (option2.get_tag()) {
-            case ::primitives_test::Bar::tag_t::RED:
-                std::cout << static_cast<int32_t>(option2.get_tag()) << " RED: " << std::endl;
-                break;
-            case ::primitives_test::Bar::tag_t::GREEN:
-                std::cout << static_cast<int32_t>(option2.get_tag()) << " GREEN: " << std::endl;
-                break;
-            case ::primitives_test::Bar::tag_t::BLUE:
-                std::cout << static_cast<int32_t>(option2.get_tag()) << " BLUE: " << std::endl;
-                break;
-          }
         }
     };
 
@@ -661,20 +645,6 @@ void baseFunc24(optional_view<int16_t> option1, optional_view<int64_t> option2) 
 
 }
 
-void baseFunc25(optional_view<int16_t> option1, ::primitives_test::Bar const& option2) {
-  switch (option2.get_tag()) {
-    case ::primitives_test::Bar::tag_t::RED:
-        std::cout << static_cast<int32_t>(option2.get_tag()) << " RED: " << std::endl;
-        break;
-    case ::primitives_test::Bar::tag_t::GREEN:
-        std::cout << static_cast<int32_t>(option2.get_tag()) << " GREEN: " << std::endl;
-        break;
-    case ::primitives_test::Bar::tag_t::BLUE:
-        std::cout << static_cast<int32_t>(option2.get_tag()) << " BLUE: " << std::endl;
-        break;
-  }
-}
-
 ::primitives_test::primitivesVoid get_interface() {
   return make_holder<primitivesVoid, ::primitives_test::primitivesVoid>();
 }
@@ -720,7 +690,6 @@ TH_EXPORT_CPP_API_baseFunc21(baseFunc21)
 TH_EXPORT_CPP_API_baseFunc22(baseFunc22)
 TH_EXPORT_CPP_API_baseFunc23(baseFunc23)
 TH_EXPORT_CPP_API_baseFunc24(baseFunc24)
-TH_EXPORT_CPP_API_baseFunc25(baseFunc25)
 TH_EXPORT_CPP_API_get_interface(get_interface)
 TH_EXPORT_CPP_API_get_interface_bool(get_interface_bool)
 TH_EXPORT_CPP_API_get_interface_interger(get_interface_interger)
