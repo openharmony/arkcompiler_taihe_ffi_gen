@@ -102,9 +102,8 @@ class OutputManager:
     def output_to(self, dst_dir: Path):
         """Save all managed outputs to a target directory."""
         for filename, target in self.targets.items():
-            if isinstance(target, OutputBuffer):
-                if target.code.getvalue() == "":
-                    continue
+            if isinstance(target, OutputBuffer) and target.code.getvalue() == "":
+                continue
             target.save_as(dst_dir / filename)
 
     def get_or_create(

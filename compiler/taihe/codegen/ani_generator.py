@@ -243,16 +243,22 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
             self.sts_promise_name = None
 
         self.gen_getter = None
-        if (getter_attr := f.attrs.get("getter")) and len(f.attrs) == 1:
-            if getter_field := getter_attr.value:
-                self.gen_getter = getter_field
-                self.gen_method = None
+        if (
+            (getter_attr := f.attrs.get("getter"))
+            and len(f.attrs) == 1
+            and (getter_field := getter_attr.value)
+        ):
+            self.gen_getter = getter_field
+            self.gen_method = None
 
         self.gen_setter = None
-        if (setter_attr := f.attrs.get("setter")) and len(f.attrs) == 1:
-            if setter_field := setter_attr.value:
-                self.gen_setter = setter_field
-                self.gen_method = None
+        if (
+            (setter_attr := f.attrs.get("setter"))
+            and len(f.attrs) == 1
+            and (setter_field := setter_attr.value)
+        ):
+            self.gen_setter = setter_field
+            self.gen_method = None
 
         if sts_onoff_type := f.attrs.get("onoff"):
             assert f.name.startswith("on") or f.name.startswith("off")
