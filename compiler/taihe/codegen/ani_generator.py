@@ -1,5 +1,6 @@
 import re
 from abc import ABCMeta
+from json import dumps
 from typing import TYPE_CHECKING, Optional
 
 from typing_extensions import override
@@ -9,6 +10,7 @@ from taihe.codegen.abi_generator import (
 )
 from taihe.codegen.cpp_generator import (
     CallbackTypeCppInfo,
+    EnumCppInfo,
     GlobFuncCppInfo,
     IfaceCppInfo,
     IfaceMethodCppInfo,
@@ -19,6 +21,7 @@ from taihe.codegen.cpp_generator import (
 )
 from taihe.codegen.mangle import DeclKind, encode
 from taihe.semantics.declarations import (
+    EnumDecl,
     GlobFuncDecl,
     IfaceDecl,
     IfaceMethodDecl,
@@ -41,6 +44,7 @@ from taihe.semantics.types import (
     U64,
     ArrayType,
     CallbackType,
+    EnumType,
     IfaceType,
     MapType,
     OpaqueType,
@@ -130,6 +134,7 @@ ANI_ARRAY_LONG = ANIArrayType(hint="array_long", base=ANI_REF)
 ANI_LONG.inner_array = ANI_ARRAY_LONG
 
 ANI_OBJECT = ANIType(hint="object", base=ANI_REF)
+ANI_ENUM_ITEM = ANIType(hint="enum_item", base=ANI_REF)
 ANI_STRING = ANIType(hint="string", base=ANI_REF)
 ANI_ARRAYBUFFER = ANIType(hint="arraybuffer", base=ANI_REF)
 
@@ -287,6 +292,15 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
                 continue
             self.sts_real_params.append(param)
             self.sts_native_args.append(param.name)
+
+
+class EnumANIInfo(AbstractAnalysis[EnumDecl]):
+    def __init__(self, am: AnalysisManager, d: UnionDecl) -> None:
+        p = d.node_parent
+        assert p
+        self.sts_type = d.name
+        pkg_ani_info = PackageANIInfo.get(am, p)
+        self.type_desc = f"L{pkg_ani_info.pkg_name}/{self.sts_type};"
 
 
 class StructANIInfo(AbstractAnalysis[StructDecl]):
@@ -507,6 +521,51 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
                 f"{' ' * offset}{env}->Object_CallMethod_{self.ani_type.suffix}((ani_object){ani_value}, {ani_getter}, &{ani_result});\n"
             )
             self.from_ani(target, offset, env, ani_result, cpp_result)
+
+
+class EnumTypeANIInfo(AbstractAnalysis[EnumType], AbstractTypeANIInfo):
+    def __init__(self, am: AnalysisManager, t: EnumType):
+        AbstractTypeANIInfo.__init__(self, am, t)
+        self.t = t
+        self.am = am
+        enum_ani_info = EnumANIInfo.get(am, t.ty_decl)
+        self.ani_type = ANI_ENUM_ITEM
+        self.sts_type = enum_ani_info.sts_type
+        self.type_desc = enum_ani_info.type_desc
+
+    @override
+    def from_ani(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        ani_value: str,
+        cpp_result: str,
+    ):
+        ani_index = f"{cpp_result}_ani"
+        enum_cpp_info = EnumCppInfo.get(self.am, self.t.ty_decl)
+        target.write(
+            f"{' ' * offset}ani_size {ani_index};\n"
+            f"{' ' * offset}{env}->EnumItem_GetIndex({ani_value}, &{ani_index});\n"
+            f"{' ' * offset}{enum_cpp_info.full_name} {cpp_result}(({enum_cpp_info.full_name}::key_t){ani_index});\n"
+        )
+
+    @override
+    def into_ani(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        cpp_value: str,
+        ani_result: str,
+    ):
+        cls = f"{ani_result}_cls"
+        target.write(
+            f"{' ' * offset}ani_enum {cls};\n"
+            f"{' ' * offset}{env}->FindEnum(\"{self.type_desc}\", &{cls});\n"
+            f"{' ' * offset}ani_enum_item {ani_result};\n"
+            f"{' ' * offset}{env}->Enum_GetEnumItemByIndex({cls}, (ani_size){cpp_value}.get_key(), &{ani_result});\n"
+        )
 
 
 class StructTypeANIInfo(AbstractAnalysis[StructType], AbstractTypeANIInfo):
@@ -1008,13 +1067,13 @@ class MapTypeANIInfo(AbstractAnalysis[MapType], AbstractTypeANIInfo):
         cpp_key = f"{ani_result}_key"
         cpp_val = f"{ani_result}_val"
         target.write(
-            f"{' ' * offset} ani_class {ani_class};\n"
-            f"{' ' * offset} {env}->FindClass(\"{self.type_desc}\", &{ani_class});\n"
-            f"{' ' * offset} ani_method {ani_method};\n"
-            f"{' ' * offset} {env}->Class_FindMethod({ani_class}, \"<ctor>\", nullptr, &{ani_method});\n"
-            f"{' ' * offset} ani_object {ani_result};\n"
-            f"{' ' * offset} {env}->Object_New({ani_class}, {ani_method}, &{ani_result});\n"
-            f"{' ' * offset} {cpp_value}.accept([=]({key_ty_cpp_info.as_param} {cpp_key}, {val_ty_cpp_info.as_param} {cpp_val}) {{\n"
+            f"{' ' * offset}ani_class {ani_class};\n"
+            f"{' ' * offset}{env}->FindClass(\"{self.type_desc}\", &{ani_class});\n"
+            f"{' ' * offset}ani_method {ani_method};\n"
+            f"{' ' * offset}{env}->Class_FindMethod({ani_class}, \"<ctor>\", nullptr, &{ani_method});\n"
+            f"{' ' * offset}ani_object {ani_result};\n"
+            f"{' ' * offset}{env}->Object_New({ani_class}, {ani_method}, &{ani_result});\n"
+            f"{' ' * offset}{cpp_value}.accept([=]({key_ty_cpp_info.as_param} {cpp_key}, {val_ty_cpp_info.as_param} {cpp_val}) {{\n"
         )
         key_ani_spec = f"{ani_result}_key_spec"
         val_ani_spec = f"{ani_result}_val_spec"
@@ -1022,7 +1081,7 @@ class MapTypeANIInfo(AbstractAnalysis[MapType], AbstractTypeANIInfo):
         val_ty_ani_info.into_ani_boxed(target, offset + 4, env, cpp_val, val_ani_spec)
         target.write(
             f"{' ' * offset}    env->Object_CallMethodByName_Void({ani_result}, \"$_set\", nullptr, {key_ani_spec}, {val_ani_spec});\n"
-            f"{' ' * offset} }});\n"
+            f"{' ' * offset}}});\n"
         )
 
 
@@ -1141,6 +1200,10 @@ class TypeANIInfo(TypeVisitor[AbstractTypeANIInfo]):
     def get(am: AnalysisManager, t: Type | None) -> AbstractTypeANIInfo:
         assert t is not None
         return TypeANIInfo(am).handle_type(t)
+
+    @override
+    def visit_enum_type(self, t: EnumType) -> AbstractTypeANIInfo:
+        return EnumTypeANIInfo.get(self.am, t)
 
     @override
     def visit_union_type(self, t: UnionType) -> AbstractTypeANIInfo:
@@ -1283,7 +1346,7 @@ class STSCodeGenerator:
                 self.gen_namespace(child, pkg_sts_target)
 
         if pkg:
-            pkg_sts_target.write("}\n")
+            pkg_sts_target.write(f"}}\n")
 
     def gen_package_types(
         self,
@@ -1319,6 +1382,8 @@ class STSCodeGenerator:
         for iface in pkg.interfaces:
             self.gen_iface_interface(iface, pkg_sts_target)
 
+        for enum in pkg.enums:
+            self.gen_enum(enum, pkg_sts_target)
         for struct in pkg.structs:
             self.gen_struct(struct, pkg_sts_target)
         for union in pkg.unions:
@@ -1355,7 +1420,7 @@ class STSCodeGenerator:
 
         if callback_flag:
             pkg_sts_target.write(
-                "export type AsyncCallback<T> = (err: Error, data?: T) => void;\n"
+                f"export type AsyncCallback<T> = (err: Error, data?: T) => void;\n"
             )
 
     def get_type_str(
@@ -1395,7 +1460,7 @@ class STSCodeGenerator:
 
         pkg_sts_target.write(
             f"export function {onoroff}({sts_real_params_str}): void {{\n"
-            "    switch(type) {"
+            f"    switch(type) {{"
         )
         for func in func_list:
             func_ani_info = GlobFuncANIInfo.get(self.am, func)
@@ -1408,9 +1473,9 @@ class STSCodeGenerator:
             )
 
         pkg_sts_target.write(
-            "        default: throw new Error(`Unknown type: ${type}`);\n"
-            "    }\n"
-            "}\n"
+            f"        default: throw new Error(`Unknown type: ${type}`);\n"
+            f"    }}\n"
+            f"}}\n"
         )
 
         if needAsync == 0:
@@ -1423,7 +1488,7 @@ class STSCodeGenerator:
 
         pkg_sts_target.write(
             f"export function {onoroff}({sts_real_params_async_str}): void {{\n"
-            "    switch(type) {"
+            f"    switch(type) {{"
         )
 
         for func in func_list:
@@ -1433,7 +1498,7 @@ class STSCodeGenerator:
                     f'        case "{func_ani_info.sts_onoff_type}": {async_func_name}({args_async_str}); break;\n'
                 )
 
-        pkg_sts_target.write("    }\n" "}\n")
+        pkg_sts_target.write(f"    }}\n" f"}}\n")
 
     def gen_onoff_method(
         self,
@@ -1460,7 +1525,8 @@ class STSCodeGenerator:
             sts_return_ty_name = "void"
 
         pkg_sts_target.write(
-            f"    {onoroff}({sts_real_params_str}): void {{\n" "        switch(type) {"
+            f"    {onoroff}({sts_real_params_str}): void {{\n"
+            f"        switch(type) {{"
         )
 
         for method in method_list:
@@ -1474,9 +1540,9 @@ class STSCodeGenerator:
             )
 
         pkg_sts_target.write(
-            "            default: throw new Error(`Unknown type: ${type}`);\n"
-            "        }\n"
-            "    }\n"
+            f"            default: throw new Error(`Unknown type: ${type}`);\n"
+            f"        }}\n"
+            f"    }}\n"
         )
 
         if needAsync == 0:
@@ -1489,7 +1555,7 @@ class STSCodeGenerator:
 
         pkg_sts_target.write(
             f"    {onoroff}({sts_real_params_async_str}): void {{\n"
-            "        switch(type) {"
+            f"        switch(type) {{"
         )
 
         for method in method_list:
@@ -1499,7 +1565,7 @@ class STSCodeGenerator:
                     f'            case "{method_ani_info.sts_onoff_type}": this.{async_func_name}({args_async_str}); break;\n'
                 )
 
-        pkg_sts_target.write("        }\n" "    }\n")
+        pkg_sts_target.write(f"        }}\n" f"    }}\n")
 
     def gen_onoff_method_decl(
         self,
@@ -1589,10 +1655,10 @@ class STSCodeGenerator:
             )
             if sts_return_ty_name == "void":
                 pkg_sts_target.write(
-                    "    .then((): void => {\n"
-                    "        let error = new Error();\n"
-                    "        callback(error);\n"
-                    "    })\n"
+                    f"    .then((): void => {{\n"
+                    f"        let error = new Error();\n"
+                    f"        callback(error);\n"
+                    f"    }})\n"
                 )
             else:
                 pkg_sts_target.write(
@@ -1603,11 +1669,11 @@ class STSCodeGenerator:
                     f"    }})\n"
                 )
             pkg_sts_target.write(
-                "    .catch((ret: NullishType) => {\n"
-                "        let retError = ret as Error;\n"
-                "        callback(retError);\n"
-                "    });\n"
-                "}\n"
+                f"    .catch((ret: NullishType) => {{\n"
+                f"        let retError = ret as Error;\n"
+                f"        callback(retError);\n"
+                f"    }});\n"
+                f"}}\n"
             )
         # promise
         if (promise_func_name := func_ani_info.sts_promise_name) is not None:
@@ -1630,14 +1696,28 @@ class STSCodeGenerator:
         for field in struct.fields:
             ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
             pkg_sts_target.write(f"    {field.name}: {ty_ani_info.sts_type};\n")
-        pkg_sts_target.write("    constructor(\n")
+        pkg_sts_target.write(f"    constructor(\n")
         for field in struct.fields:
             ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
             pkg_sts_target.write(f"        {field.name}: {ty_ani_info.sts_type},\n")
-        pkg_sts_target.write("    ) {\n")
+        pkg_sts_target.write(f"    ) {{\n")
         for field in struct.fields:
             pkg_sts_target.write(f"        this.{field.name} = {field.name};\n")
-        pkg_sts_target.write("    }\n" "}\n")
+        pkg_sts_target.write(f"    }}\n" f"}}\n")
+
+    def gen_enum(
+        self,
+        enum: EnumDecl,
+        pkg_sts_target: OutputBuffer,
+    ):
+        # docstring
+        if (inject_attr := enum.attrs.get("inject")) is not None:
+            pkg_sts_target.write(inject_attr.value)
+        enum_ani_info = EnumANIInfo.get(self.am, enum)
+        pkg_sts_target.write(f"export enum {enum_ani_info.sts_type} {{\n")
+        for item in enum.items:
+            pkg_sts_target.write(f"    {item.name} = {dumps(item.value)},\n")
+        pkg_sts_target.write(f"}}\n")
 
     def gen_union(
         self,
@@ -1724,7 +1804,7 @@ class STSCodeGenerator:
         for _, value in off_param_map.items():
             self.gen_onoff_method_decl("off", value, pkg_sts_target)
 
-        pkg_sts_target.write("}\n")
+        pkg_sts_target.write(f"}}\n")
 
     def gen_iface_inner(
         self,
@@ -1744,12 +1824,12 @@ class STSCodeGenerator:
                 f"class {iface_ani_info.sts_impl} implements {iface_ani_info.sts_type} {{\n"
             )
         pkg_sts_target.write(
-            "    private _vtbl_ptr: long;\n"
-            "    private _data_ptr: long;\n"
-            "    private constructor(_vtbl_ptr: long, _data_ptr: long) {\n"
-            "        this._vtbl_ptr = _vtbl_ptr;\n"
-            "        this._data_ptr = _data_ptr;\n"
-            "    }\n"
+            f"    private _vtbl_ptr: long;\n"
+            f"    private _data_ptr: long;\n"
+            f"    private constructor(_vtbl_ptr: long, _data_ptr: long) {{\n"
+            f"        this._vtbl_ptr = _vtbl_ptr;\n"
+            f"        this._data_ptr = _data_ptr;\n"
+            f"    }}\n"
         )
         for method in iface.methods:
             if (inject_attr := method.attrs.get("class_inject")) is not None:
@@ -1811,10 +1891,10 @@ class STSCodeGenerator:
                 )
                 if sts_return_ty_name == "void":
                     pkg_sts_target.write(
-                        "        .then((): void => {\n"
-                        "            let error = new Error();\n"
-                        "            callback(error);\n"
-                        "        })\n"
+                        f"        .then((): void => {{\n"
+                        f"            let error = new Error();\n"
+                        f"            callback(error);\n"
+                        f"        }})\n"
                     )
                 else:
                     pkg_sts_target.write(
@@ -1825,11 +1905,11 @@ class STSCodeGenerator:
                         f"        }})\n"
                     )
                 pkg_sts_target.write(
-                    "        .catch((ret: NullishType) => {\n"
-                    "            let retError = ret as Error;\n"
-                    "            callback(retError);\n"
-                    "        });\n"
-                    "    }\n"
+                    f"        .catch((ret: NullishType) => {{\n"
+                    f"            let retError = ret as Error;\n"
+                    f"            callback(retError);\n"
+                    f"        }});\n"
+                    f"    }}\n"
                 )
             # promise
             if (promise_func_name := method_ani_info.sts_promise_name) is not None:
@@ -1909,10 +1989,10 @@ class STSCodeGenerator:
             )
             if sts_return_ty_name == "void":
                 pkg_sts_target.write(
-                    "        .then((): void => {\n"
-                    "            let error = new Error();\n"
-                    "            callback(error);\n"
-                    "        })\n"
+                    f"        .then((): void => {{\n"
+                    f"            let error = new Error();\n"
+                    f"            callback(error);\n"
+                    f"        }})\n"
                 )
             else:
                 pkg_sts_target.write(
@@ -1923,11 +2003,11 @@ class STSCodeGenerator:
                     f"        }})\n"
                 )
             pkg_sts_target.write(
-                "        .catch((ret: NullishType) => {\n"
-                "            let retError = ret as Error;\n"
-                "            callback(retError);\n"
-                "        });\n"
-                "    }\n"
+                f"        .catch((ret: NullishType) => {{\n"
+                f"            let retError = ret as Error;\n"
+                f"            callback(retError);\n"
+                f"        }});\n"
+                f"    }}\n"
             )
         # promise
         if (promise_func_name := func_ani_info.sts_promise_name) is not None:
@@ -1954,11 +2034,11 @@ class ANICodeGenerator:
             self.tm, f"src/{constructor_file}", False
         )
         constructor_target.write(
-            "ANI_EXPORT ani_status ANI_Constructor(ani_vm *vm, uint32_t *result) {\n"
-            "    ani_env *env;\n"
-            "    if (ANI_OK != vm->GetEnv(ANI_VERSION_1, &env)) {\n"
-            "        return ANI_ERROR;\n"
-            "    }\n"
+            f"ANI_EXPORT ani_status ANI_Constructor(ani_vm *vm, uint32_t *result) {{\n"
+            f"    ani_env *env;\n"
+            f"    if (ANI_OK != vm->GetEnv(ANI_VERSION_1, &env)) {{\n"
+            f"        return ANI_ERROR;\n"
+            f"    }}\n"
         )
         for pkg in pg.packages:
             pkg_ani_info = PackageANIInfo.get(self.am, pkg)
@@ -1969,7 +2049,7 @@ class ANICodeGenerator:
                 f"    }}\n"
             )
         constructor_target.write(
-            "    *result = ANI_VERSION_1;\n" "    return ANI_OK;\n" "}\n"
+            f"    *result = ANI_VERSION_1;\n" f"    return ANI_OK;\n" f"}}\n"
         )
 
     def gen_package(self, pkg: PackageDecl):
@@ -1977,8 +2057,8 @@ class ANICodeGenerator:
             self.gen_iface_file(iface)
         for struct in pkg.structs:
             self.gen_struct_file(struct)
-        # for union in pkg.unions:
-        #     self.gen_union_file(union)
+        for union in pkg.unions:
+            self.gen_union_file(union)
         pkg_ani_info = PackageANIInfo.get(self.am, pkg)
         pkg_cpp_info = PackageCppInfo.get(self.am, pkg)
         self.gen_package_header(pkg, pkg_ani_info, pkg_cpp_info)
@@ -2074,7 +2154,7 @@ class ANICodeGenerator:
                 f"        }}\n"
                 f"    }}\n"
             )
-        pkg_ani_source_target.write("    return ANI_OK;\n" "}\n" "}\n")
+        pkg_ani_source_target.write(f"    return ANI_OK;\n" f"}}\n" f"}}\n")
 
     def gen_func(
         self,
@@ -2137,7 +2217,7 @@ class ANICodeGenerator:
             pkg_ani_source_target.write(
                 f"    {func_cpp_info.full_name}({args_cpp_str});\n" f"    return;\n"
             )
-        pkg_ani_source_target.write("}\n")
+        pkg_ani_source_target.write(f"}}\n")
 
     def gen_method(
         self,
@@ -2207,7 +2287,7 @@ class ANICodeGenerator:
                 f"    cpp_iface->{method_cpp_info.call_name}({args_cpp_str});\n"
                 f"    return;\n"
             )
-        pkg_ani_source_target.write("}\n")
+        pkg_ani_source_target.write(f"}}\n")
 
     def gen_iface_file(
         self,
@@ -2298,7 +2378,7 @@ class ANICodeGenerator:
                     iface_ani_impl_target.write(
                         f'            this->env->Object_CallMethodByName_Void(this->ref, "{method_ani_info.sts_native_name}", nullptr{args_ani_trailing});\n'
                     )
-                iface_ani_impl_target.write("        }\n")
+                iface_ani_impl_target.write(f"        }}\n")
         iface_ani_impl_target.write(
             f"    }};\n"
             f"    return taihe::core::make_holder<cpp_impl_t, {iface_cpp_info.as_owner}>(env, ani_obj);\n"
@@ -2465,7 +2545,7 @@ class ANICodeGenerator:
                 f"    case {union_cpp_info.full_name}::tag_t::{field.name}: {{\n"
             )
             if field.ty_ref is None:
-                union_ani_impl_target.write("        env->GetUndefined(&ani_value);\n")
+                union_ani_impl_target.write(f"        env->GetUndefined(&ani_value);\n")
             else:
                 ani_result_spec = f"ani_field_{field.name}"
                 type_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
@@ -2477,6 +2557,6 @@ class ANICodeGenerator:
                     ani_result_spec,
                 )
                 union_ani_impl_target.write(f"        ani_value = {ani_result_spec};\n")
-            union_ani_impl_target.write("        break;\n" "    }\n")
-        union_ani_impl_target.write("    }\n")
-        union_ani_impl_target.write("    return ani_value;\n" "}\n")
+            union_ani_impl_target.write(f"        break;\n" f"    }}\n")
+        union_ani_impl_target.write(f"    }}\n")
+        union_ani_impl_target.write(f"    return ani_value;\n" f"}}\n")

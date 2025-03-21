@@ -7,7 +7,7 @@ struct Data {
 function makeData(): Data;
 function showData(s: Data): void;
 
-enum Union {
+union Union {
     empty;
     iValue: i32;
     fValue: f32;

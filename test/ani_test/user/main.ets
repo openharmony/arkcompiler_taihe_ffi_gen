@@ -14,10 +14,10 @@ function main() {
     console.log(ani_test.makeData())
 
     // union
-    ani_test.showUnion(new ani_test.Union(0, undefined))
-    ani_test.showUnion(new ani_test.Union(1, 1 as int))
-    ani_test.showUnion(new ani_test.Union(2, 2 as float))
-    ani_test.showUnion(new ani_test.Union(3, "Hello from STS!"))
+    ani_test.showUnion(undefined)
+    ani_test.showUnion(1 as int)
+    ani_test.showUnion(2 as float)
+    ani_test.showUnion("Hello from STS!")
 
     console.log(ani_test.makeUnion(0))
     console.log(ani_test.makeUnion(1))

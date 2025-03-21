@@ -1,9 +1,8 @@
-enum Color {
-    red = 1;
-    yellow = 2;
-    blue = 3;
+enum Color: String {
+    RED = "Red",
+    GREEN = "Green",
+    BLUE = "Blue",
 }
 
-function addEnum(color: Color, n: i32): i32;
-
-function getEnum(n: i32): Color;
+function nextEnum(color: Color): Color;
+function showEnum(color: Color): void;
