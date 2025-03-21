@@ -358,7 +358,7 @@ class _CheckEnumTypePass(RecursiveDeclVisitor):
         if d.ty_ref:
             if d.ty_ref.resolved_ty is None:
                 return
-            valid_table: dict[Type, Any] = {
+            valid_checker_table: dict[Type, Any] = {
                 I8: lambda val: is_int(val) and -(2**7) <= val < 2**7,
                 I16: lambda val: is_int(val) and -(2**15) <= val < 2**15,
                 I32: lambda val: is_int(val) and -(2**31) <= val < 2**31,
@@ -372,15 +372,15 @@ class _CheckEnumTypePass(RecursiveDeclVisitor):
                 F64: lambda val: isinstance(val, float),
                 STRING: lambda val: isinstance(val, str),
             }
-            is_valid = valid_table.get(d.ty_ref.resolved_ty)
-            if is_valid is None:
+            valid_checker = valid_checker_table.get(d.ty_ref.resolved_ty)
+            if valid_checker is None:
                 self.diag.emit(TypeUsageError(d.ty_ref))  # pyre-ignore
                 return
         else:
-            is_valid = lambda val: val is None
+            valid_checker = lambda val: val is None
 
         for item in d.items:
-            if not is_valid(item.value):
+            if not valid_checker(item.value):
                 self.diag.emit(EnumValueError(item, d))
 
 
@@ -403,6 +403,9 @@ class _CheckRecursiveInclusionPass(RecursiveDeclVisitor):
         for cycle in cycles:
             last, *other = cycle[::-1]
             self.diag.emit(RecursiveReferenceError(last, other))
+
+    def visit_enum_decl(self, d: EnumDecl) -> None:
+        self.type_table[d] = []
 
     def visit_iface_decl(self, d: IfaceDecl) -> None:
         parent_iface_list = self.type_table.setdefault(d, [])

@@ -1,8 +1,10 @@
 from abc import ABCMeta
+from json import dumps
 
 from typing_extensions import override
 
 from taihe.codegen.abi_generator import (
+    EnumABIInfo,
     GlobFuncABIInfo,
     IfaceABIInfo,
     IfaceMethodABIInfo,
@@ -12,6 +14,7 @@ from taihe.codegen.abi_generator import (
     UnionABIInfo,
 )
 from taihe.semantics.declarations import (
+    EnumDecl,
     GlobFuncDecl,
     IfaceDecl,
     IfaceMethodDecl,
@@ -28,12 +31,14 @@ from taihe.semantics.types import (
     I16,
     I32,
     I64,
+    STRING,
     U8,
     U16,
     U32,
     U64,
     ArrayType,
     CallbackType,
+    EnumType,
     IfaceType,
     MapType,
     OpaqueType,
@@ -70,6 +75,18 @@ class IfaceMethodCppInfo(AbstractAnalysis[IfaceMethodDecl]):
         # TODO: Supports projection to any C++ function name based on attributes
         self.call_name = f.name
         self.impl_name = f.name
+
+
+class EnumCppInfo(AbstractAnalysis[EnumDecl]):
+    def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
+        p = d.node_parent
+        assert p
+        self.header = f"{p.name}.{d.name}.proj.0.hpp"
+        self.namespace = "::".join(p.segments)
+        self.name = d.name
+        self.full_name = "::" + self.namespace + "::" + self.name
+        self.as_owner = self.full_name
+        self.as_param = self.full_name
 
 
 class StructCppInfo(AbstractAnalysis[StructDecl]):
@@ -132,6 +149,15 @@ class AbstractTypeCppInfo(metaclass=ABCMeta):
 
     def pass_into_abi(self, val):
         return f"::taihe::core::into_abi<{self.as_param}>({val})"
+
+
+class EnumTypeCppInfo(AbstractAnalysis[EnumType], AbstractTypeCppInfo):
+    def __init__(self, am: AnalysisManager, t: EnumType):
+        enum_cpp_info = EnumCppInfo.get(am, t.ty_decl)
+        self.decl_headers = [enum_cpp_info.header]
+        self.impl_headers = [enum_cpp_info.header]
+        self.as_owner = enum_cpp_info.as_owner
+        self.as_param = enum_cpp_info.as_param
 
 
 class UnionTypeCppInfo(AbstractAnalysis[UnionType], AbstractTypeCppInfo):
@@ -300,6 +326,10 @@ class TypeCppInfo(TypeVisitor[AbstractTypeCppInfo]):
         return TypeCppInfo(am).handle_type(t)
 
     @override
+    def visit_enum_type(self, t: EnumType) -> AbstractTypeCppInfo:
+        return EnumTypeCppInfo.get(self.am, t)
+
+    @override
     def visit_union_type(self, t: UnionType) -> AbstractTypeCppInfo:
         return UnionTypeCppInfo.get(self.am, t)
 
@@ -365,6 +395,8 @@ class CppHeadersGenerator:
         pkg_abi_info = PackageABIInfo.get(self.am, pkg)
         pkg_cpp_target.include("taihe/common.hpp")
         pkg_cpp_target.include(pkg_abi_info.header)
+        for enum in pkg.enums:
+            self.gen_enum_file(enum, pkg_cpp_target)
         for struct in pkg.structs:
             self.gen_struct_files(struct, pkg_cpp_target)
         for union in pkg.unions:
@@ -373,6 +405,104 @@ class CppHeadersGenerator:
             self.gen_iface_files(iface, pkg_cpp_target)
         for func in pkg.functions:
             self.gen_func(func, pkg_cpp_target)
+
+    def gen_enum_file(
+        self,
+        enum: EnumDecl,
+        pkg_cpp_target: COutputBuffer,
+    ):
+        enum_abi_info = EnumABIInfo.get(self.am, enum)
+        enum_cpp_info = EnumCppInfo.get(self.am, enum)
+        enum_cpp_target = COutputBuffer.create(
+            self.tm, f"include/{enum_cpp_info.header}", True
+        )
+        enum_cpp_target.writeln(
+            f"namespace {enum_cpp_info.namespace} {{",
+        )
+        enum_cpp_target.writeln(
+            f"struct {enum_cpp_info.name} {{",
+            f"    enum class key_t: {enum_abi_info.abi_type} {{",
+        )
+        for item in enum.items:
+            enum_cpp_target.writeln(
+                f"        {item.name},",
+            )
+        enum_cpp_target.writeln(
+            f"    }};",
+            f"    {enum_cpp_info.name}(key_t key) : key(key) {{}}",
+            f"    {enum_cpp_info.name}({enum_cpp_info.name} const& other) : key(other.key) {{}}",
+            f"    {enum_cpp_info.name}& operator=({enum_cpp_info.name} other) {{",
+            f"        key = other.key;",
+            f"    }}",
+            f"    key_t get_key() const {{",
+            f"        return this->key;",
+            f"    }}",
+        )
+        if enum.ty_ref:
+            ty = enum.ty_ref.resolved_ty
+            assert ty
+            if ty == STRING:
+                as_owner = "char const*"
+                formatter = dumps
+            else:
+                ty_cpp_info = TypeCppInfo.get(self.am, ty)
+                as_owner = ty_cpp_info.as_owner
+                if ty == BOOL:
+                    formatter = lambda val: ["false", "true"][val]
+                else:
+                    formatter = str
+            enum_cpp_target.writeln(
+                f"    {as_owner} get_value() const {{",
+                f"        static {as_owner} table[] = {{",
+            )
+            for item in enum.items:
+                enum_cpp_target.writeln(
+                    f"            {formatter(item.value)},",
+                )
+            enum_cpp_target.writeln(
+                f"        }};",
+                f"        return table[(size_t)key];",
+                f"    }}",
+            )
+            enum_cpp_target.writeln(
+                f"    operator {as_owner}() const {{",
+                f"        return get_value();",
+                f"    }}",
+            )
+        enum_cpp_target.writeln(
+            f"private:",
+            f"    key_t key;",
+            f"}};",
+            f"}}",
+        )
+        # others
+        enum_cpp_target.writeln(
+            f"namespace taihe::core {{",
+            f"inline bool same_impl(adl_helper_t, {enum_cpp_info.full_name} lhs, {enum_cpp_info.full_name} rhs) {{",
+            f"    return lhs.get_key() == rhs.get_key();",
+            f"}}",
+            f"}}",
+        )
+        enum_cpp_target.writeln(
+            f"namespace taihe::core {{",
+            f"inline auto hash_impl(adl_helper_t, {enum_cpp_info.as_param} val) -> ::std::size_t {{",
+            f"    return ::std::hash<{enum_abi_info.abi_type}>{{}}(({enum_abi_info.abi_type})val.get_key());",
+            f"}}",
+            f"}}",
+        )
+        enum_cpp_target.writeln(
+            f"namespace taihe::core {{",
+            f"template<>",
+            f"struct as_abi<{enum_cpp_info.full_name}> {{",
+            f"    using type = {enum_abi_info.abi_type};",
+            f"}};",
+            f"template<>",
+            f"struct as_param<{enum_cpp_info.full_name}> {{",
+            f"    using type = {enum_cpp_info.full_name};",
+            f"}};",
+            f"}}",
+        )
+        pkg_cpp_target.include(enum_cpp_info.header)
 
     def gen_func(
         self,
