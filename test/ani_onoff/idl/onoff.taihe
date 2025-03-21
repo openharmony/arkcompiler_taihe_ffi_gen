@@ -1,38 +1,28 @@
 interface IBase {
-    [onoff, gen_async="getAsync"]
-    onGet(): String;
-    [onoff, gen_async="getNewAsync"]
-    onGetNew(): String;
-    [onoff,gen_async="setAsync"]
-    offSet(a: String): void;
-    [onoff,gen_async="setNewAsync"]
-    offSetNew(a: String): void;
+    [onoff]
+    onSet(a: () => void): void;
+    [onoff]
+    offSet(a: () => void): void;
 }
 
 function getIBase(a: String, b: String): IBase;
 
 // on test
-[onoff, gen_async="onFooAsync"]
-function onFoo(a: i32): void;
+[onoff]
+function onFoo(a: () => void): void;
 
-[onoff, gen_async="onBarAsync"]
-function onBar(a: i32): void;
+[onoff]
+function onBar(a: () => void): void;
 
-[onoff = "baz", gen_async="onBazAsync"]
-function onBaz(a: String): void;
-
-[onoff = "qux", gen_async="onQuxAsync"]
-function onQux(a: String, b: i32): void;
+[onoff = "baz"]
+function onBaz(a: i32, cb: () => void): void;
 
 // off test
-[onoff, gen_async="offFooAsync"]
-function offFoo(a: i32): void;
+[onoff]
+function offFoo(a: () => void): void;
 
-[onoff, gen_async="offBarAsync"]
-function offBar(a: i32): void;
+[onoff]
+function offBar(a: () => void): void;
 
-[onoff = "baz", gen_async="offBazAsync"]
-function offBaz(a: String): void;
-
-[onoff = "qux", gen_async="offQuxAsync"]
-function offQux(a: String, b: i32): void;
+[onoff = "baz"]
+function offBaz(a: i32, cb: () => void): void;
