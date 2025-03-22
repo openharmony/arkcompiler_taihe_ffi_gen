@@ -22,3 +22,5 @@ function getMapfromArray(d : Array<Data>): Map<String, i32>;
 
 function getDatafromMap(m : Map<String, Data>, k : String) : Data;
 
+function foreachMap(r: Map<String, String>);
+

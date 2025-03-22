@@ -7,8 +7,7 @@ class A {
     constructor() {}
 }
 
-function main() {
-
+function getCpuSize() {
     // test function getCpuSize(r: Record<string, ICpu>): int
     let cpu0 : ICpu = record_test.makeCpu();
     let cpu1 : ICpu = record_test.makeCpu();
@@ -19,7 +18,9 @@ function main() {
     let ret0 : int = record_test.getCpuSize(cpus);
     console.log(ret0);
     assertEQ(ret0, 2);
+}
 
+function getASize() {
     // test function getASize(r: Record<int, NullishType>): int
     let a = new A();
     let b = new A();
@@ -32,7 +33,9 @@ function main() {
     let ret1 : int = record_test.getASize(As);
     console.log(ret1);
     assertEQ(ret1, 3);
+}
 
+function getStringIntSize() {
     // test function getStringIntSize(r: Record<string, int>): int
     let record : Record<string, int> = {
         'aaa': 0,
@@ -43,12 +46,16 @@ function main() {
     let ret2 : int = record_test.getStringIntSize(record);
     console.log(ret2);
     assertEQ(ret2, 4);
+}
 
+function createStringString() {
     // test function createStringString(a: int): Record<string, string>
     let strRecord : Record<string, string> = record_test.createStringString(5);
     console.log(`Key: 0, Value: ` + strRecord["0"]);
     assertEQ(strRecord["0"], "abc");
+}
 
+function getMapfromArray() {
     // test function getMapfromArray(d: (Data[])): Record<string, int>
     let d0 : Data = new Data('a', 1);
     let d1 : Data = new Data('b', 2);
@@ -57,7 +64,9 @@ function main() {
     let dataRecord : Record<string, int> = record_test.getMapfromArray(data);
     console.log(`Key: b, Value: ` + dataRecord["b"]);
     assertEQ(dataRecord["b"], 2);
+}
 
+function getDatafromMap() {
     // test function getDatafromMap(m: Record<string, Data>, k: string): Data
     let data1 : Data = new Data('aaa', 1);
     let data2 : Data = new Data('bbb', 2);
@@ -70,5 +79,30 @@ function main() {
     let d : Data = record_test.getDatafromMap(drecord, 'bb');
     console.log(`Data Value: ` + d.a);
     assertEQ(d.a, "bbb");
+}
+
+function foreachMap() {
+    let recordStrForeach : Record<string, string> = {
+        'key1': 'v1',
+        'key2': 'v2',
+        'key3': 'v3',
+        'key4': 'v4',
+    };
+    record_test.foreachMap(recordStrForeach);
+}
+
+function main() {
+
+    console.log("##############start#############")
+    const suite = new ArkTestsuite ("record ut")
+
+    suite.addTest("get Cpu Size test", getCpuSize)
+    suite.addTest("get A Size test", getASize)
+    suite.addTest("get String Int Size test", getStringIntSize)
+    suite.addTest("create String String test", createStringString)
+    suite.addTest("get Map from Array test", getMapfromArray)
+    suite.addTest("get Data from Map test", getDatafromMap)
+    suite.addTest("foreach Map test", foreachMap)
+    suite.run()
 }
 
