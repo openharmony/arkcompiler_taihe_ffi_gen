@@ -1,0 +1,62 @@
+enum Color: String {
+    RED = "Red",
+    GREEN = "Green",
+    BLUE = "Blue",
+}
+struct Data {
+  data1: String;
+  data2: bool;
+  data3: i32;
+}
+
+function baseFunctionTest1():void;
+function baseFunctionTest2(param1:i8):void;
+function baseFunctionTest3(param1:i16):void;
+function baseFunctionTest4(param1:i32):void;
+function baseFunctionTest5(param1:i64):void;
+function baseFunctionTest6(param1:f32):void;
+function baseFunctionTest7(param1:f64):void;
+function baseFunctionTest8(param1:String):void;
+function baseFunctionTest9(param1:bool):void;
+function baseFunctionTest10(param1:Array<i8>):void;
+function baseFunctionTest11(param1:Array<i16>):void;
+function baseFunctionTest12(param1:Optional<i16>):void;
+function baseFunctionTest13(param1:Optional<i64>):void;
+function baseFunctionTest14(param1:Array<u8>):void;
+function baseFunctionTest15(param1:Map<String, i32>):void;
+function baseFunctionTest16(param1:i8):i8;
+function baseFunctionTest17(param1:i16):i16;
+function baseFunctionTest18(param1:i32):i32;
+function baseFunctionTest19(param1:i64):i64;
+function baseFunctionTest20(param1:f32):f32;
+function baseFunctionTest21(param1:f64):f64;
+function baseFunctionTest22(param1:String):String;
+function baseFunctionTest23(param1:bool):bool;
+function baseFunctionTest24(param1:Array<i8>):Array<i8>;
+function baseFunctionTest25(param1:Array<i16>):Array<i16>;
+function baseFunctionTest26(param1:Optional<i16>):Optional<i16>;
+function baseFunctionTest27(param1:Optional<i64>):Optional<i64>;
+function baseFunctionTest28(param1:Array<u8>):Array<u8>;
+function baseFunctionTest29(param1:Map<String, i32>):Map<String, i32>;
+function baseFunctionTest30(param1:Color):Color;
+function baseFunctionTest31(param1:Color):void;
+function baseFunctionTest32(param1:i8,param2:i16,param3:i32,param4:i64,param5:f32,param6:f64,param7:String,param8:bool,param9:Array<i16>,param10:Array<i64>):i16;
+function baseFunctionTest33(param1:i8,param2:i16,param3:i32,param4:i64,param5:f32,param6:f64,param7:String,param8:bool,param9:Array<i8>,param10:Array<i32>):i32;
+function baseFunctionTest34(param1:i8,param2:i16,param3:i32,param4:i64,param5:f32,param6:f64,param7:String,param8:bool,param9:Array<String>,param10:Array<i64>):i64;
+function baseFunctionTest35(param1:i8,param2:i16,param3:i32,param4:i64,param5:f32,param6:f64,param7:String,param8:bool,param9:Array<bool>,param10:Array<i64>):i8;
+function baseFunctionTest36(param1:i8,param2:i16,param3:i32,param4:i64,param5:f32,param6:f64,param7:String,param8:bool,param9:Array<i8>,param10:Array<i64>):Array<i32>;
+function baseFunctionTest37(param1:i8,param2:i16,param3:i32,param4:i64,param5:f32,param6:f64,param7:String,param8:bool,param9:Array<i32>,param10:Array<i64>):Array<i64>;
+function baseFunctionTest38(param1:i8,param2:i16,param3:i32,param4:i64,param5:f32,param6:f64,param7:String,param8:bool,param9:Array<i8>,param10:Array<i16>):String;
+function baseFunctionTest39(param1:i8,param2:i16,param3:i32,param4:i64,param5:f32,param6:f64,param7:String,param8:bool,param9:Array<bool>,param10:Array<i32>):bool;
+function baseFunctionTest40(param1:i8,param2:i16,param3:i32,param4:i64,param5:f32,param6:f64,param7:String,param8:bool,param9:Array<i8>,param10:Array<u8>):Array<i8>;
+function baseFunctionTest41(param1:i8,param2:i16,param3:i32,param4:i64,param5:f32,param6:f64,param7:String,param8:bool,param9:Array<i16>,param10:Array<i64>):void;
+[sts_name = "baseFunctionTest42"]
+function baseFunctionTest42_int(param1: i32, param2: i16): i32;
+[sts_name = "baseFunctionTest42"]
+function baseFunctionTest42_container(param1: Optional<i32>,param2: Map<String,i32>): i32;
+[sts_name = "baseFunctionTest42"]
+function baseFunctionTest42_void(): i32;
+[sts_name = "baseFunctionTest42"]
+function baseFunctionTest42_struct(param1: Data): void;
+
+[namespace("ns_alltest", "functiontest")]
