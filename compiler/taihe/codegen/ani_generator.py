@@ -1327,6 +1327,9 @@ class STSCodeGenerator:
         ctor_methods: dict[str, list[GlobFuncDecl]] = {}
         global_funcs: list[GlobFuncDecl] = []
 
+        if (inject_attr := pkg.attrs.get("inject")) is not None:
+            pkg_sts_target.write(inject_attr.value)
+
         # native funcs
         for func in pkg.functions:
             func_ani_info = GlobFuncANIInfo.get(self.am, func)
