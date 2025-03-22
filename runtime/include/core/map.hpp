@@ -119,13 +119,141 @@ struct map_view {
         }
     }
 
-private:
     struct item_t {
         K key;
         V val;
         item_t* next;
     };
 
+    struct iterator {
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = std::pair<const K&, V&>;
+        using difference_type = std::ptrdiff_t;
+        using pointer = value_type*;
+        using reference = value_type&;
+
+        iterator(item_t** bucket, item_t* current, std::size_t index, std::size_t cap)
+            : bucket(bucket), current(current), index(index), cap(cap) {}
+
+        value_type operator*() const {
+            return {current->key, current->val};
+        }
+
+        iterator& operator++() {
+            if (current->next) {
+                current = current->next;
+            } else {
+                ++index;
+                while (index < cap && !bucket[index]) {
+                    ++index;
+                }
+                current = (index < cap) ? bucket[index] : nullptr;
+            }
+            return *this;
+        }
+
+        iterator operator++(int) {
+            iterator tmp = *this;
+            ++(*this);
+            return tmp;
+        }
+
+        bool operator==(const iterator& other) const {
+            return current == other.current;
+        }
+
+        bool operator!=(const iterator& other) const {
+            return !(*this == other);
+        }
+
+    private:
+        item_t** bucket;
+        item_t* current;
+        std::size_t index;
+        std::size_t cap;
+    };
+
+    struct const_iterator {
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = std::pair<const K&, const V&>;
+        using difference_type = std::ptrdiff_t;
+        using pointer = value_type*;
+        using reference = value_type&;
+
+        const_iterator(item_t** bucket, item_t* current, std::size_t index, std::size_t cap)
+            : bucket(bucket), current(current), index(index), cap(cap) {}
+
+        value_type operator*() const {
+            return {current->key, current->val};
+        }
+
+        const_iterator& operator++() {
+            if (current->next) {
+                current = current->next;
+            } else {
+                ++index;
+                while (index < cap && !bucket[index]) {
+                    ++index;
+                }
+                current = (index < cap) ? bucket[index] : nullptr;
+            }
+            return *this;
+        }
+
+        const_iterator operator++(int) {
+            const_iterator tmp = *this;
+            ++(*this);
+            return tmp;
+        }
+
+        bool operator==(const const_iterator& other) const {
+            return current == other.current;
+        }
+
+        bool operator!=(const const_iterator& other) const {
+            return !(*this == other);
+        }
+
+    private:
+        item_t** bucket;
+        item_t* current;
+        std::size_t index;
+        std::size_t cap;
+    };
+
+    iterator begin() {
+        std::size_t index = 0;
+        while (index < m_handle->cap && !m_handle->bucket[index]) {
+            ++index;
+        }
+        return iterator(m_handle->bucket, (index < m_handle->cap) ? m_handle->bucket[index] : nullptr, index, m_handle->cap);
+    }
+
+    iterator end() {
+        return iterator(m_handle->bucket, nullptr, m_handle->cap, m_handle->cap);
+    }
+
+    const_iterator begin() const {
+        std::size_t index = 0;
+        while (index < m_handle->cap && !m_handle->bucket[index]) {
+            ++index;
+        }
+        return const_iterator(m_handle->bucket, (index < m_handle->cap) ? m_handle->bucket[index] : nullptr, index, m_handle->cap);
+    }
+
+    const_iterator end() const {
+        return const_iterator(m_handle->bucket, nullptr, m_handle->cap, m_handle->cap);
+    }
+
+    const_iterator cbegin() const {
+        return begin();
+    }
+
+    const_iterator cend() const {
+        return end();
+    }
+
+private:
     struct data_t {
         TRefCount count;
         std::size_t cap;
