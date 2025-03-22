@@ -277,6 +277,17 @@ function baseFunc24_3(){
     test_primitives.baseFunc24(32767 as short,undefined)
 }
 
+function baseFunc25(){
+    test_primitives.baseFunc25(32767 as short,test_primitives.Bar.GREEN)
+}
+
+function baseFunc25_1(){
+    test_primitives.baseFunc25(32767 as short,test_primitives.Bar.BLUE)
+}
+
+function baseFunc25_2(){
+    test_primitives.baseFunc25(32767 as short,test_primitives.Bar.RED)
+}
 
 function testCaseBaseFunc1(){
     primitivesTest.testBaseFunc1()
@@ -447,6 +458,17 @@ function testCaseBaseFunc20(){
     primitivesTest.testBaseFunc20(booleanArray ,strArray)
 }
 
+function testCaseBaseFunc21(){
+    primitivesTest.testBaseFunc21(test_primitives.Bar.GREEN ,test_primitives.Bar.BLUE)
+}
+
+function testCaseBaseFunc21_1(){
+    primitivesTest.testBaseFunc21(test_primitives.Bar.BLUE ,test_primitives.Bar.GREEN)
+}
+
+function testCaseBaseFunc21_2(){
+    primitivesTest.testBaseFunc21(test_primitives.Bar.RED ,test_primitives.Bar.RED)
+}
 
 function testCaseBaseIntegerFunc1(){
     try {

@@ -38,6 +38,14 @@ function baseFunc22(option1:Optional<f32>,option2:Optional<f64>):void;
 function baseFunc23(option1:Optional<String>,option2:Optional<bool>):void;
 function baseFunc24(option1:Optional<i16>,option2:Optional<i64>):void;
 
+enum Bar:i8 {
+  RED = 0,
+  GREEN = 1,
+  BLUE = 2,
+}
+
+function baseFunc25(option1:Optional<i16>,option2:Bar):void;
+
 interface primitivesVoid {
   testBaseFunc1():void;
   testBaseFunc2(option1:i32,option2:bool):void;
@@ -59,6 +67,7 @@ interface primitivesVoid {
   testBaseFunc18(option1:Array<i16>,option2:Array<i64>):void;
   testBaseFunc19(option1:Array<f32>,option2:Array<f64>):void;
   testBaseFunc20(option1:Array<bool>,option2:Array<String>):void;
+  testBaseFunc21(option1:Bar,option2:Bar):void;
 }
 
 function get_interface(): primitivesVoid;

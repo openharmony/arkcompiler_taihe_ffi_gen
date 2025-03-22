@@ -192,6 +192,20 @@ namespace
           }
           std::cout << std::endl;
         }
+
+        void testBaseFunc21(::primitives_test::Bar const& option1, ::primitives_test::Bar const& option2) {
+          switch (option2.get_key()) {
+            case ::primitives_test::Bar::key_t::RED:
+                std::cout << static_cast<int32_t>(option2.get_key()) << " RED: " << std::endl;
+                break;
+            case ::primitives_test::Bar::key_t::GREEN:
+                std::cout << static_cast<int32_t>(option2.get_key()) << " GREEN: " << std::endl;
+                break;
+            case ::primitives_test::Bar::key_t::BLUE:
+                std::cout << static_cast<int32_t>(option2.get_key()) << " BLUE: " << std::endl;
+                break;
+          }
+        }
     };
 
     class primitivesBoolean {
@@ -771,6 +785,20 @@ void baseFunc24(optional_view<int16_t> option1, optional_view<int64_t> option2) 
     std::cout << "Null" << std::endl;
   }
 
+}
+
+void baseFunc25(optional_view<int16_t> option1, ::primitives_test::Bar const& option2) {
+  switch (option2.get_key()) {
+    case ::primitives_test::Bar::key_t::RED:
+        std::cout << static_cast<int32_t>(option2.get_key()) << " RED: " << std::endl;
+        break;
+    case ::primitives_test::Bar::key_t::GREEN:
+        std::cout << static_cast<int32_t>(option2.get_key()) << " GREEN: " << std::endl;
+        break;
+    case ::primitives_test::Bar::key_t::BLUE:
+        std::cout << static_cast<int32_t>(option2.get_key()) << " BLUE: " << std::endl;
+        break;
+  }
 }
 
 ::primitives_test::primitivesVoid get_interface() {
