@@ -4,10 +4,10 @@ interface IBase {
     set(a: String): void;
 }
 
-[static_method("IBase", "sumSync")]
+[static_method = "IBase"]
 function sumSync(a: i32, b: i32): i32;
 
-[static_method("IBase", "addSync"), gen_async="add", gen_promise="add"]
+[static_method = "IBase", gen_async="add", gen_promise="add"]
 function addSync(a: i32, b: i32): i32;
 
 [ctor = "IBase"]
@@ -21,9 +21,7 @@ interface ITest {
     set(a: String): void;
 }
 
-// if you add a static method / constructor for an interface, it will not work.
-// just like: 
-[static_method("ITest", "static_test")]
+[static_method = "ITest", sts_name = "static_test"]
 function static_func(a: i32, b: i32): i32;
 
 [ctor = "ITest"]
