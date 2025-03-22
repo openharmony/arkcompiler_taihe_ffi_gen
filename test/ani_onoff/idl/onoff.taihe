@@ -8,10 +8,10 @@ interface IBase {
 function getIBase(a: String, b: String): IBase;
 
 // on test
-[onoff]
+[onoff, static_method = "IBase"]
 function onFoo(a: () => void): void;
 
-[onoff]
+[onoff, static_method = "IBase"]
 function onBar(a: () => void): void;
 
 [onoff = "baz"]
