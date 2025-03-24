@@ -163,6 +163,10 @@ struct array : public array_view<cpp_owner_t> {
     std::uninitialized_move_n(data, size, this->m_data);
   }
 
+  template <typename value_type>
+  array(std::initializer_list<value_type> value) noexcept
+      : array(value.begin(), value.size(), copy_data_t{}) {}
+
   template <typename... Args>
   static array make(size_type size, Args&&... args) {
     pointer data = (cpp_owner_t*)malloc(size * sizeof(cpp_owner_t));

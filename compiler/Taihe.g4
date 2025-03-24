@@ -346,6 +346,7 @@ KW_VOID
 
 STRING_LITERAL
     : '"' (ESCAPE_SEQUENCE | ~ ('\\' | '"'))* '"'
+    | '"""' .*? '"""'
     ;
 
 fragment ESCAPE_SEQUENCE

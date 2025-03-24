@@ -1,6 +1,6 @@
 """Format the IDL files."""
 
-from codecs import encode
+from json import dumps
 from typing import TextIO
 
 from typing_extensions import override
@@ -73,11 +73,11 @@ class _PrettyPrinter(RecursiveDeclVisitor):
         if isinstance(d, bool):
             return "TRUE" if d else "FALSE"
         if isinstance(d, int):
-            return str(d)
+            return dumps(d)
         if isinstance(d, float):
-            return str(d)
+            return dumps(d)
         if isinstance(d, str):
-            return '"' + encode(d, "unicode-escape").decode() + '"'
+            return dumps(d)
 
     def as_keyword(self, s) -> str:
         return f"{AnsiStyle.CYAN}{s}{AnsiStyle.RESET}"

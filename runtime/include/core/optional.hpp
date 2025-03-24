@@ -21,6 +21,8 @@ struct optional_view {
   optional_view(cpp_owner_t const* handle) noexcept
       : m_handle(handle) {}  // main constructor
 
+  optional_view() noexcept : m_handle() {}
+
   cpp_owner_t const* operator->() const { return m_handle; }
 
   cpp_owner_t const& operator*() const { return *m_handle; }
@@ -35,6 +37,8 @@ template <typename cpp_owner_t>
 struct optional : public optional_view<cpp_owner_t> {
   optional(cpp_owner_t const* handle) noexcept
       : optional_view<cpp_owner_t>(handle) {}  // main constructor
+
+  optional() noexcept : optional_view<cpp_owner_t>() {}
 
   template <typename... Args>
   static optional make(Args&&... args) {
