@@ -49,9 +49,8 @@ class Decl(metaclass=ABCMeta):
 
     def get_attr_item(self, name: str) -> Optional["AttrItemDecl"]:
         if attr_list := self.attrs.get(name, []):
-            assert (
-                len(attr_list) == 1
-            ), f"{self.description} should have only one {name} attribute"
+            if len(attr_list) != 1:
+                raise TypeError(f"{self.description} have too many {name} attribute")
             return attr_list[0]
         else:
             return None
