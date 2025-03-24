@@ -113,7 +113,7 @@ def generate_ast(source: SourceBase, diag: AbstractDiagnosticsManager) -> TaiheA
     if isinstance(source, SourceBuffer):
         input_stream = InputStream(source.buf)
     elif isinstance(source, SourceFile):
-        input_stream = FileStream(source.source_identifier)
+        input_stream = FileStream(source.source_identifier, encoding="utf-8")
     else:
         raise NotImplementedError
 

@@ -114,4 +114,7 @@ union RecursiveUnion {
     s: RecursiveStruct;
 }
 
+@test
+@test("abc", 123, 1.0, TRUE)
+@code("""code = "my_code";""")
 function f(): () => void;
