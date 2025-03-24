@@ -54,7 +54,6 @@ from taihe.semantics.types import (
     StructType,
     Type,
     # VectorType,
-    # CallbackType,
     UnionType,
 )
 from taihe.semantics.visitor import TypeVisitor
@@ -493,17 +492,10 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
             ani_ctor = f"{ani_result}_ctor"
             ani_value = f"{ani_result}_ani"
             target.write(
-                f"{' ' * offset}static ani_class {ani_class} = [=] {{\n"
-                f"{' ' * offset}    ani_class {ani_class};\n"
-                f"{' ' * offset}    {env}->FindClass(\"Lstd/core/{self.ani_type.suffix};\", &{ani_class});\n"
-                f"{' ' * offset}    {env}->GlobalReference_Create({ani_class}, reinterpret_cast<ani_ref*>(&{ani_class}));\n"
-                f"{' ' * offset}    return {ani_class};\n"
-                f"{' ' * offset}}}();\n"
-                f"{' ' * offset}static ani_method {ani_ctor} = [=] {{\n"
-                f"{' ' * offset}    ani_method {ani_ctor};\n"
-                f"{' ' * offset}    {env}->Class_FindMethod({ani_class}, \"<ctor>\", \"{self.type_desc}:V\", &{ani_ctor});\n"
-                f"{' ' * offset}    return {ani_ctor};\n"
-                f"{' ' * offset}}}();\n"
+                f"{' ' * offset}ani_class {ani_class};\n"
+                f"{' ' * offset}{env}->FindClass(\"Lstd/core/{self.ani_type.suffix};\", &{ani_class});\n"
+                f"{' ' * offset}ani_method {ani_ctor};\n"
+                f"{' ' * offset}{env}->Class_FindMethod({ani_class}, \"<ctor>\", \"{self.type_desc}:V\", &{ani_ctor});\n"
                 f"{' ' * offset}ani_object {ani_result};\n"
             )
             self.into_ani(target, offset, env, cpp_value, ani_value)
@@ -532,17 +524,10 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
             ani_getter = f"{cpp_result}_get"
             ani_result = f"{cpp_result}_ani"
             target.write(
-                f"{' ' * offset}static ani_class {ani_class} = [=] {{\n"
-                f"{' ' * offset}    ani_class {ani_class};\n"
-                f"{' ' * offset}    {env}->FindClass(\"Lstd/core/{self.ani_type.suffix};\", &{ani_class});\n"
-                f"{' ' * offset}    {env}->GlobalReference_Create({ani_class}, reinterpret_cast<ani_ref*>(&{ani_class}));\n"
-                f"{' ' * offset}    return {ani_class};\n"
-                f"{' ' * offset}}}();\n"
-                f"{' ' * offset}static ani_method {ani_getter} = [=] {{\n"
-                f"{' ' * offset}    ani_method {ani_getter};\n"
-                f"{' ' * offset}    {env}->Class_FindMethod({ani_class}, \"unboxed\", nullptr, &{ani_getter});\n"
-                f"{' ' * offset}    return {ani_getter};\n"
-                f"{' ' * offset}}}();\n"
+                f"{' ' * offset}ani_class {ani_class};\n"
+                f"{' ' * offset}{env}->FindClass(\"Lstd/core/{self.ani_type.suffix};\", &{ani_class});\n"
+                f"{' ' * offset}ani_method {ani_getter};\n"
+                f"{' ' * offset}{env}->Class_FindMethod({ani_class}, \"unboxed\", nullptr, &{ani_getter});\n"
                 f"{' ' * offset}{self.ani_type} {ani_result};\n"
                 f"{' ' * offset}{env}->Object_CallMethod_{self.ani_type.suffix}((ani_object){ani_value}, {ani_getter}, &{ani_result});\n"
             )
@@ -2217,7 +2202,7 @@ class ANICodeGenerator:
                     )
                     iface_ani_impl_target.write(
                         f"            {type_ani_info.ani_type} {ani_result};\n"
-                        f'            this->env->Object_CallMethodByName_{type_ani_info.ani_type.suffix}(this->ref, "{method_ani_info.sts_native_name}", nullptr, reinterpret_cast<{type_ani_info.ani_type.base}*>(&{ani_result}){args_ani_trailing});\n'
+                        f'            this->env->Object_CallMethodByName_{type_ani_info.ani_type.suffix}(this->ref, "{method_ani_info.ani_method_name}", nullptr, reinterpret_cast<{type_ani_info.ani_type.base}*>(&{ani_result}){args_ani_trailing});\n'
                     )
                     type_ani_info.from_ani(
                         iface_ani_impl_target, 8, "env", ani_result, cpp_result
