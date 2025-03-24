@@ -1,12 +1,8 @@
 interface Foo {
-    inject """
-    name: string
-"""
-    class_inject """
-    name: string = "foo_default_name";
-"""
-    with_name([sts_member="name"] name: String): void;
-    with_this([sts_this] thiz: Opaque): void;
+    // @!inject("""name: string""")
+    // @!inject("""name: string = "foo_default_name";""")
+    with_name(name: String): void;
+    with_this(@sts_this thiz: Opaque): void;
 }
 
 function makeFoo(): Foo;
