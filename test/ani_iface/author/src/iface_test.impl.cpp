@@ -27,9 +27,11 @@ public:
     std::cout << __func__ << std::endl;
     return make_holder<Foo, ::iface_test::Foo>();
 }
-void printFooName(::iface_test::weak::Foo foo) {
+
+string printFooName(::iface_test::weak::Foo foo) {
     auto name = foo->getName();
     std::cout << __func__ << ": " << name << std::endl;
+    return name;
 }
 
 }

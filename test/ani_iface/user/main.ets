@@ -16,19 +16,44 @@ class SubPerson implements Person {
     readonly name: string = "";
 }
 
-function main() {
-    console.log("run main ... IfaceTest ...")
-
+function getIfaceName() {
     let foo = IfaceTest.getFooIface();
-    console.log("foo.name is " + foo.name)
+    let name = foo.name;
+    console.log("foo.name is " + name)
+    assertEQ(name, "foo")
+}
 
+function setIfaceName() {
+    let foo = IfaceTest.getFooIface();
     foo.name = "alice"
-    console.log("foo.name is " + foo.name)
+    let name = foo.name;
+    console.log("foo.name is " + name)
+    assertEQ(name, "alice")
+}
 
+function printFooName() {
+    let foo = IfaceTest.getFooIface();
     foo.name = "bob"
-    IfaceTest.printFooName(foo)
+    let name = IfaceTest.printFooName(foo)
+    console.log("foo.name is " + name)
+    assertEQ(name, "bob")
+}
 
+function setSubFooName() {
     let subFoo = new SubFoo()
     subFoo.name = "aaa"
-    console.log("subFoo.name is " + subFoo.name)
+    let name = subFoo.name
+    console.log("subFoo.name is " + name)
+    assertEQ(name, "aaa")
+}
+
+function main() {
+    console.log("run main ... IfacePropTest ...")
+
+    const suite = new ArkTestsuite("IfacePropTest")
+    suite.addTest("getIfaceName", getIfaceName)
+    suite.addTest("setIfaceName", setIfaceName)
+    suite.addTest("printFooName", printFooName)
+    suite.addTest("setSubFooName", setSubFooName)
+    suite.run()
 }

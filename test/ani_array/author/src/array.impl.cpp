@@ -11,7 +11,7 @@ int32_t sumArray(array_view<int32_t> nums, int32_t base) {
     return std::accumulate(nums.begin(), nums.end(), base);
 }
 
-int32_t getArrayValue(array_view<int32_t> nums, int32_t idx) {
+int64_t getArrayValue(array_view<int64_t> nums, int32_t idx) {
     if (idx >= 0 && idx < nums.size()) {
         return nums[idx];
     }

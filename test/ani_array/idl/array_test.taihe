@@ -1,5 +1,5 @@
 function sumArray(nums: Array<i32>, base: i32): i32;
 
-function getArrayValue(nums: Array<i32>, idx: i32): i32;
+function getArrayValue(nums: Array<i64>, idx: i32): i64;
 
 function makeArray(value: i32, num: i32): Array<i32>;

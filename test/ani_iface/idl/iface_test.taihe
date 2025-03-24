@@ -5,4 +5,4 @@ interface Foo {
 }
 
 function getFooIface(): Foo;
-function printFooName(foo: Foo): void;
+function printFooName(foo: Foo): String;
