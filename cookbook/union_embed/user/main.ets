@@ -1,0 +1,36 @@
+import {createResource, Resource} from "../author_generated/@hms.core.map.map_inner"
+
+import * as map from "./@hms.core.map.map"
+import {Image, Image_inner} from "./@ohos.multimedia.image"
+
+loadLibrary("union_embed");
+
+function main() {
+    let BaseOverlay_cls = new map.BaseOverlay_inner()
+    let BasePriorityOverlay_cls = new map.BasePriorityOverlay_inner()
+    let Bubble_cls = new map.Bubble_inner()
+
+    console.log(BaseOverlay_cls.getId())
+    console.log(BaseOverlay_cls.getZIndex())
+
+    console.log(BasePriorityOverlay_cls.getId())
+    console.log(BasePriorityOverlay_cls.getZIndex())
+    console.log(BasePriorityOverlay_cls.getMaxZoom())
+    console.log(BasePriorityOverlay_cls.getMinZoom())
+
+    console.log(Bubble_cls.getId())
+    console.log(Bubble_cls.getZIndex())
+    console.log(Bubble_cls.getMaxZoom())
+    console.log(Bubble_cls.getMinZoom())
+
+    let Resource_cls = createResource()
+    let image_cls = new Image_inner()
+    let array_union_input: (string|Image|Resource)[] =
+        ["aaa", Resource_cls, image_cls];
+    let promise_res = await Bubble_cls.setIcons(array_union_input);
+
+
+    let array_array_input: ((Resource[])[]) =
+        [[Resource_cls, Resource_cls], [Resource_cls]]
+    Bubble_cls.setPositions(array_array_input)
+}

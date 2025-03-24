@@ -7,4 +7,3 @@ function main() {
     let sum = hello_world.add(1, 2);
     console.log("1 + 2 = " + sum);
 }
-

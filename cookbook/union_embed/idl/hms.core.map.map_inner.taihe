@@ -1,0 +1,30 @@
+@!namespace("@hms.core.map.map_inner")
+
+interface Resource {
+    foo(a: i32);
+}
+
+function createResource(): Resource;
+
+// union中存在Opaque必须放在最后，且不允许定义多个Opaque，规格无法支持
+union icons_type {
+    type_string: String;
+    type_Resource: Resource;
+    type_Image: Opaque;
+}
+
+@class
+interface map_inner {
+    // BaseOverlay中的方法
+    getId(): String;
+    getZIndex(): i32;
+    // BasePriorityOverlay中的方法
+    getMaxZoom(): i32;
+    getMinZoom(): i32;
+    // Bubble中的方法
+    @gen_promise("setIcons")
+    setIcons_sync(icons: Array<icons_type>): i32;
+    setPositions(positions: Array<Array<Resource>>): void;
+}
+
+function make_map_inner(): map_inner;
