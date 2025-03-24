@@ -44,6 +44,17 @@ class Decl(metaclass=ABCMeta):
         i.node_parent = self
         self.attrs.setdefault(i.name, []).append(i)
 
+    def get_attr_list(self, name: str) -> list["AttrItemDecl"]:
+        return self.attrs.get(name, [])
+
+    def get_attr_item(self, name: str) -> Optional["AttrItemDecl"]:
+        if attr_list := self.attrs.get(name, []):
+            if len(attr_list) != 1:
+                raise TypeError(f"{self.description} have too many {name} attribute")
+            return attr_list[0]
+        else:
+            return None
+
     @property
     @abstractmethod
     def description(self) -> str: ...
@@ -73,14 +84,14 @@ class NamedDecl(Decl, metaclass=ABCMeta):
 
 
 class AttrItemDecl(NamedDecl):
-    args: tuple[Any]
+    args: tuple[Any, ...]
     node_parent: Optional[Decl]
 
     def __init__(
         self,
         loc: Optional[SourceLocation],
         name: str,
-        value: tuple[Any],
+        value: tuple[Any, ...],
     ):
         super().__init__(loc, name)
         self.args = value
