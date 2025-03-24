@@ -1,4 +1,5 @@
 import * as IfaceTest from "../author_generated/iface_test"
+import * as IfaceReadonlyTest from "../author_generated/iface_readonly_test"
 
 loadLibrary("ani_iface")
 
@@ -23,6 +24,13 @@ function getIfaceName() {
     assertEQ(name, "foo")
 }
 
+function getIfaceReadonlyName() {
+    let noo = IfaceReadonlyTest.getNooIface();
+    let nooName = noo.name;
+    console.log("noo.name is " + nooName)
+    assertEQ(nooName, "noo")
+}
+
 function setIfaceName() {
     let foo = IfaceTest.getFooIface();
     foo.name = "alice"
@@ -39,6 +47,13 @@ function printFooName() {
     assertEQ(name, "bob")
 }
 
+function printNooName() {
+    let noo = IfaceReadonlyTest.getNooIface();
+    let name = IfaceReadonlyTest.printNooName(noo)
+    console.log("noo.name is " + name)
+    assertEQ(name, "noo")
+}
+
 function setSubFooName() {
     let subFoo = new SubFoo()
     subFoo.name = "aaa"
@@ -52,8 +67,10 @@ function main() {
 
     const suite = new ArkTestsuite("IfacePropTest")
     suite.addTest("getIfaceName", getIfaceName)
+    suite.addTest("getIfaceReadonlyName", getIfaceReadonlyName)
     suite.addTest("setIfaceName", setIfaceName)
     suite.addTest("printFooName", printFooName)
+    suite.addTest("printNooName", printNooName)
     suite.addTest("setSubFooName", setSubFooName)
     suite.run()
 }
