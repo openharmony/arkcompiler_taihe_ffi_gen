@@ -76,17 +76,20 @@ array<Foo> makeFoo(array_view<string> list) {
   struct AuthorFoo {
     string name;
     AuthorFoo(string_view name) : name(name) {
-      std::cout << "AuthorFoo(" << this->name << ") is constructing" << std::endl;
+      std::cout << "AuthorFoo(" << this->name << ") is constructing"
+                << std::endl;
     }
     ~AuthorFoo() {
-      std::cout << "AuthorFoo(" << this->name << ") is destructing" << std::endl;
+      std::cout << "AuthorFoo(" << this->name << ") is destructing"
+                << std::endl;
     }
     void bar() {
-      std::cout << "AuthorFoo(" << this->name << ") is calling bar()" << std::endl;
+      std::cout << "AuthorFoo(" << this->name << ") is calling bar()"
+                << std::endl;
     }
   };
   std::vector<Foo> vec;
-  for (string_view name: list) {
+  for (string_view name : list) {
     vec.push_back(make_holder<AuthorFoo, Foo>(name));
   }
   return array<Foo>(vec.data(), vec.size(), move_data_t{});
@@ -97,14 +100,14 @@ void callBar(array_view<Foo> arr) {
     foo->bar();
   }
 }
-} // namespace
+}  // namespace
 
 TH_EXPORT_CPP_API_makeData(makeData) TH_EXPORT_CPP_API_showData(showData)
-TH_EXPORT_CPP_API_makeUnion(makeUnion)
-TH_EXPORT_CPP_API_showUnion(showUnion)
-TH_EXPORT_CPP_API_showOptionalInt(showOptionalInt)
-TH_EXPORT_CPP_API_makeOptionalInt(makeOptionalInt)
-TH_EXPORT_CPP_API_showArrayInt(showArrayInt)
-TH_EXPORT_CPP_API_makeArrayInt(makeArrayInt)
-TH_EXPORT_CPP_API_makeFoo(makeFoo)
-TH_EXPORT_CPP_API_callBar(callBar)
+    TH_EXPORT_CPP_API_makeUnion(makeUnion)
+        TH_EXPORT_CPP_API_showUnion(showUnion)
+            TH_EXPORT_CPP_API_showOptionalInt(showOptionalInt)
+                TH_EXPORT_CPP_API_makeOptionalInt(makeOptionalInt)
+                    TH_EXPORT_CPP_API_showArrayInt(showArrayInt)
+                        TH_EXPORT_CPP_API_makeArrayInt(makeArrayInt)
+                            TH_EXPORT_CPP_API_makeFoo(makeFoo)
+                                TH_EXPORT_CPP_API_callBar(callBar)

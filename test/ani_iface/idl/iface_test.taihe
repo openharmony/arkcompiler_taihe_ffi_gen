@@ -1,7 +1,7 @@
 interface Foo {
     bar(): void;
-    [setter = "name"] setName(name: String): void;
-    [getter = "name"] getName(): String;
+    @set("name") setName(name: String): void;
+    @get("name") getName(): String;
 }
 
 function getFooIface(): Foo;

@@ -1,12 +1,12 @@
-[sts_name = "add"]
+@overload("add")
 function add_int(a: i32, b: i32): i32;
-[sts_name = "add"]
+@overload("add")
 function add_str(a: String, b: String): String;
 
 interface Foo {
-    [sts_name = "bar"]
+    @overload("bar")
     bar_int(a: i32): void;
-    [sts_name = "bar"]
+    @overload("bar")
     bar_str(a: String): void;
 }
 

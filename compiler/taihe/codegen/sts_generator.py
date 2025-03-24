@@ -71,45 +71,45 @@ class STSCodeGenerator:
     def gen_namespace_or_module(self, ns: Namespace, pkg_sts_target: OutputBuffer):
         for child_ns_name, child_ns in ns.children.items():
             pkg_sts_target.write(f"export namespace {child_ns_name} {{\n")
-            with pkg_sts_target.indent_manager.code_block():
+            with pkg_sts_target.indent_manager.offset(4):
                 self.gen_namespace_or_module(child_ns, pkg_sts_target)
             pkg_sts_target.write(f"}}\n")
         for pkg in ns.packages:
             self.gen_package(pkg, pkg_sts_target)
 
-    def stat_onoff_funcs(self, funcs: list[GlobFuncDecl]):
-        glob_func_onoff_map: dict[
+    def stat_on_off_funcs(self, funcs: list[GlobFuncDecl]):
+        glob_func_on_off_map: dict[
             tuple[str, tuple[Type, ...]], list[tuple[str, GlobFuncDecl]]
         ] = {}
         for func in funcs:
             func_ani_info = GlobFuncANIInfo.get(self.am, func)
-            if func_ani_info.onoff_type is not None:
-                func_name, type_name = func_ani_info.onoff_type
+            if func_ani_info.on_off_type is not None:
+                func_name, type_name = func_ani_info.on_off_type
                 real_params_ty = []
                 for real_param in func_ani_info.sts_real_params:
                     assert real_param.ty_ref.resolved_ty
                     real_params_ty.append(real_param.ty_ref.resolved_ty)
-                glob_func_onoff_map.setdefault(
+                glob_func_on_off_map.setdefault(
                     (func_name, tuple(real_params_ty)), []
                 ).append((type_name, func))
-        return glob_func_onoff_map
+        return glob_func_on_off_map
 
-    def stat_onoff_methods(self, methods: list[IfaceMethodDecl]):
-        method_onoff_map: dict[
+    def stat_on_off_methods(self, methods: list[IfaceMethodDecl]):
+        method_on_off_map: dict[
             tuple[str, tuple[Type, ...]], list[tuple[str, IfaceMethodDecl]]
         ] = {}
         for method in methods:
             method_ani_info = IfaceMethodANIInfo.get(self.am, method)
-            if method_ani_info.onoff_type is not None:
-                method_name, type_name = method_ani_info.onoff_type
+            if method_ani_info.on_off_type is not None:
+                method_name, type_name = method_ani_info.on_off_type
                 real_params_ty = []
                 for real_param in method_ani_info.sts_real_params:
                     assert real_param.ty_ref.resolved_ty
                     real_params_ty.append(real_param.ty_ref.resolved_ty)
-                method_onoff_map.setdefault(
+                method_on_off_map.setdefault(
                     (method_name, tuple(real_params_ty)), []
                 ).append((type_name, method))
-        return method_onoff_map
+        return method_on_off_map
 
     def gen_package(self, pkg: PackageDecl, pkg_sts_target: OutputBuffer):
         self.gen_native_funcs(pkg.functions, pkg_sts_target)
@@ -163,9 +163,9 @@ class STSCodeGenerator:
         funcs: list[GlobFuncDecl],
         pkg_sts_target: OutputBuffer,
     ):
-        # onoff
-        glob_func_onoff_map = self.stat_onoff_funcs(funcs)
-        for (func_name, real_params_ty), func_list in glob_func_onoff_map.items():
+        # on_off
+        glob_func_on_off_map = self.stat_on_off_funcs(funcs)
+        for (func_name, real_params_ty), func_list in glob_func_on_off_map.items():
             sts_real_params = []
             sts_real_args = []
             sts_real_params.append("type: string")
@@ -267,7 +267,7 @@ class STSCodeGenerator:
     ):
         enum_ani_info = EnumANIInfo.get(self.am, enum)
         pkg_sts_target.write(f"export enum {enum_ani_info.sts_type} {{\n")
-        with pkg_sts_target.indent_manager.code_block():
+        with pkg_sts_target.indent_manager.offset(4):
             for item in enum.items:
                 pkg_sts_target.write(f"{item.name} = {dumps(item.value)},\n")
         pkg_sts_target.write(f"}}\n")
@@ -286,7 +286,7 @@ class STSCodeGenerator:
     ):
         struct_ani_info = StructANIInfo.get(self.am, struct)
         pkg_sts_target.write(f"export class {struct_ani_info.sts_impl} {{\n")
-        with pkg_sts_target.indent_manager.code_block():
+        with pkg_sts_target.indent_manager.offset(4):
             for field in struct.fields:
                 ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
                 pkg_sts_target.write(f"    {field.name}: {ty_ani_info.sts_type};\n")
@@ -309,7 +309,7 @@ class STSCodeGenerator:
         if iface_ani_info.sts_type == iface_ani_info.sts_impl:  # no interface
             return
         pkg_sts_target.write(f"export interface {iface_ani_info.sts_type} {{\n")
-        with pkg_sts_target.indent_manager.code_block():
+        with pkg_sts_target.indent_manager.offset(4):
             self.gen_iface_methods_decl(iface.methods, pkg_sts_target)
         pkg_sts_target.write(f"}}\n")
 
@@ -318,9 +318,9 @@ class STSCodeGenerator:
         methods: list[IfaceMethodDecl],
         pkg_sts_target: OutputBuffer,
     ):
-        # onoff
-        method_onoff_map = self.stat_onoff_methods(methods)
-        for (method_name, real_params_ty), _ in method_onoff_map.items():
+        # on_off
+        method_on_off_map = self.stat_on_off_methods(methods)
+        for (method_name, real_params_ty), _ in method_on_off_map.items():
             sts_real_params = []
             sts_real_params.append("type: string")
             for index, param_ty in enumerate(real_params_ty):
@@ -386,7 +386,7 @@ class STSCodeGenerator:
             pkg_sts_target.write(
                 f"class {iface_ani_info.sts_impl} implements {iface_ani_info.sts_type} {{\n"
             )
-        with pkg_sts_target.indent_manager.code_block():
+        with pkg_sts_target.indent_manager.offset(4):
             pkg_sts_target.write(
                 f"private _vtbl_ptr: long;\n"
                 f"private _data_ptr: long;\n"
@@ -427,9 +427,9 @@ class STSCodeGenerator:
         funcs: list[GlobFuncDecl],
         pkg_sts_target: OutputBuffer,
     ):
-        # onoff
-        func_onoff_map = self.stat_onoff_funcs(funcs)
-        for (func_name, real_params_ty), func_list in func_onoff_map.items():
+        # on_off
+        func_on_off_map = self.stat_on_off_funcs(funcs)
+        for (func_name, real_params_ty), func_list in func_on_off_map.items():
             sts_real_params = []
             sts_real_args = []
             sts_real_params.append("type: string")
@@ -551,9 +551,9 @@ class STSCodeGenerator:
         methods: list[IfaceMethodDecl],
         pkg_sts_target: OutputBuffer,
     ):
-        # onoff
-        method_onoff_map = self.stat_onoff_methods(methods)
-        for (method_name, real_params_ty), method_list in method_onoff_map.items():
+        # on_off
+        method_on_off_map = self.stat_on_off_methods(methods)
+        for (method_name, real_params_ty), method_list in method_on_off_map.items():
             sts_real_params = []
             sts_real_args = []
             sts_real_params.append("type: string")

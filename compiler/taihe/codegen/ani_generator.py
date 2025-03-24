@@ -144,8 +144,8 @@ class PackageANIInfo(AbstractAnalysis[PackageDecl]):
         self.cpp_ns = "::".join(p.segments)
 
         # TODO: hack at
-        if namespace_attr := p.attrs.get("namespace"):
-            self.module, self.sts_ns = namespace_attr.value
+        if namespace_attr := p.get_attr_item("namespace"):
+            self.module, self.sts_ns = namespace_attr.args
             self.ani_path = "/".join(self.module.split(".") + self.sts_ns.split("."))
             self.impl_desc = f"L{self.ani_path};"
         else:
@@ -168,7 +168,7 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
         self.sts_native_name = f"{f.name}_inner"
 
         self.sts_func_name = None
-        self.onoff_type = None
+        self.on_off_type = None
 
         self.sts_static_scope = None
         self.sts_ctor_scope = None
@@ -176,42 +176,42 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
         self.sts_async_name = None
         self.sts_promise_name = None
 
-        if sts_name_attr := f.attrs.get("sts_name"):
-            self.sts_func_name = sts_name_attr.value
+        if overload_attr := f.get_attr_item("overload"):
+            (self.sts_func_name,) = overload_attr.args
 
-        elif onoff_attr := f.attrs.get("onoff"):
+        elif on_off_attr := f.get_attr_item("on_off"):
             assert f.name.startswith("on") or f.name.startswith("off")
 
             if f.name.startswith("on"):
-                if onoff_attr.value is None:
+                if not on_off_attr.args:
                     type_name = f.name[2:]
                     type_name = type_name[0].lower() + type_name[1:]
                 else:
-                    type_name = onoff_attr.value
-                self.onoff_type = ("on", type_name)
+                    (type_name,) = on_off_attr.args
+                self.on_off_type = ("on", type_name)
 
             if f.name.startswith("off"):
-                if onoff_attr.value is None:
+                if not on_off_attr.args:
                     type_name = f.name[3:]
                     type_name = type_name[0].lower() + type_name[1:]
                 else:
-                    type_name = onoff_attr.value
-                self.onoff_type = ("off", type_name)
+                    (type_name,) = on_off_attr.args
+                self.on_off_type = ("off", type_name)
 
         else:
             self.sts_func_name = f.name
 
-        if sts_name_attr := f.attrs.get("static_method"):
-            self.sts_static_scope = sts_name_attr.value
+        if overload_attr := f.get_attr_item("static"):
+            (self.sts_static_scope,) = overload_attr.args
 
-        if ctor_attr := f.attrs.get("ctor"):
-            self.sts_ctor_scope = ctor_attr.value
+        if ctor_attr := f.get_attr_item("ctor"):
+            (self.sts_ctor_scope,) = ctor_attr.args
 
-        if sts_async_attr := f.attrs.get("gen_async"):
-            self.sts_async_name = sts_async_attr.value
+        if sts_async_attr := f.get_attr_item("gen_async"):
+            (self.sts_async_name,) = sts_async_attr.args
 
-        if sts_promise_attr := f.attrs.get("gen_promise"):
-            self.sts_promise_name = sts_promise_attr.value
+        if sts_promise_attr := f.get_attr_item("gen_promise"):
+            (self.sts_promise_name,) = sts_promise_attr.args
 
         self.sts_real_params: list[ParamDecl] = []
         for param in f.params:
@@ -239,69 +239,69 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
         self.sts_method_name = None
         self.get_name = None
         self.set_name = None
-        self.onoff_type = None
+        self.on_off_type = None
 
         self.ani_method_name = None
 
         self.sts_async_name = None
         self.sts_promise_name = None
 
-        if sts_name_attr := f.attrs.get("sts_name"):
-            self.sts_method_name = sts_name_attr.value
-            self.ani_method_name = sts_name_attr.value
+        if overload_attr := f.get_attr_item("overload"):
+            (self.sts_method_name,) = overload_attr.args
+            (self.ani_method_name,) = overload_attr.args
 
-        elif onoff_attr := f.attrs.get("onoff"):
+        elif on_off_attr := f.get_attr_item("on_off"):
             assert f.name.startswith("on") or f.name.startswith("off")
 
             if f.name.startswith("on"):
-                if onoff_attr.value is None:
+                if not on_off_attr.args:
                     type_name = f.name[2:]
                     type_name = type_name[0].lower() + type_name[1:]
                 else:
-                    type_name = onoff_attr.value
-                self.onoff_type = ("on", type_name)
+                    (type_name,) = on_off_attr.args
+                self.on_off_type = ("on", type_name)
                 self.ani_method_name = "on"
 
             if f.name.startswith("off"):
-                if onoff_attr.value is None:
+                if not on_off_attr.args:
                     type_name = f.name[3:]
                     type_name = type_name[0].lower() + type_name[1:]
                 else:
-                    type_name = onoff_attr.value
-                self.onoff_type = ("off", type_name)
+                    (type_name,) = on_off_attr.args
+                self.on_off_type = ("off", type_name)
                 self.ani_method_name = "off"
 
-        elif getter_attr := f.attrs.get("getter"):
+        elif get_attr := f.get_attr_item("get"):
             assert f.name.startswith("get")
-            if getter_attr.value is None:
+            if not get_attr.args:
                 get_name = f.name[3:]
                 self.get_name = get_name[0].lower() + get_name[1:]
             else:
-                self.get_name = getter_attr.value
+                (self.get_name,) = get_attr.args
             self.ani_method_name = f"<get>{self.get_name}"
 
-        elif setter_attr := f.attrs.get("setter"):
+        elif set_attr := f.get_attr_item("set"):
             assert f.name.startswith("set")
-            if setter_attr.value is None:
+            if not set_attr.args:
                 set_name = f.name[3:]
                 self.set_name = set_name[0].lower() + set_name[1:]
             else:
-                self.set_name = setter_attr.value
+                (self.set_name,) = set_attr.args
             self.ani_method_name = f"<set>{self.set_name}"
 
         else:
             self.sts_method_name = f.name
             self.ani_method_name = f.name
 
-        if sts_async_attr := f.attrs.get("gen_async"):
-            self.sts_async_name = sts_async_attr.value
+        if sts_async_attr := f.get_attr_item("gen_async"):
+            (self.sts_async_name,) = sts_async_attr.args
 
-        if sts_promise_attr := f.attrs.get("gen_promise"):
-            self.sts_promise_name = sts_promise_attr.value
+        if sts_promise_attr := f.get_attr_item("gen_promise"):
+            (self.sts_promise_name,) = sts_promise_attr.args
 
         self.sts_real_params: list[ParamDecl] = []
         for param in f.params:
-            if param.attrs.get("sts_this"):
+            if param.get_attr_item("sts_this"):
                 continue
             self.sts_real_params.append(param)
 
@@ -309,7 +309,7 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
         arg = iter(sts_real_args)
         sts_native_args: list[str] = []
         for param in self.f.params:
-            if param.attrs.get("sts_this"):
+            if param.get_attr_item("sts_this"):
                 sts_native_args.append(this)
                 continue
             sts_native_args.append(next(arg))
@@ -365,7 +365,7 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
         self.impl_header = f"{p.name}.{d.name}.ani.1.h"
 
         self.sts_type = d.name
-        if d.attrs.get("class"):
+        if d.get_attr_item("class"):
             self.sts_impl = f"{d.name}"
         else:
             self.sts_impl = f"{d.name}_inner"
