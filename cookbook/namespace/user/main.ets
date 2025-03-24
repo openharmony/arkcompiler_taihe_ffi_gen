@@ -1,7 +1,7 @@
 import * as NSTest from "../author_generated/ns_test"
 import * as NewNS from "../author_generated/new_ns"
 
-loadLibrary("ani_namespace")
+loadLibrary("namespace")
 
 function check_struct() {
     let data = new NSTest.baz.Data("abc", "efg", 3);

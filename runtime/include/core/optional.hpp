@@ -28,7 +28,7 @@ struct optional_view {
         return *m_handle;
     }
 
-    operator bool() const {
+    explicit operator bool() const {
         return m_handle;
     }
 
