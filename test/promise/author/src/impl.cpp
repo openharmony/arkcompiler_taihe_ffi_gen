@@ -44,4 +44,4 @@ void getInputWithTimeoutImpl(weak::IPromiseStringString ps, uint64_t s) {
     }).detach();
 }
 
-TH_EXPORT_CPP_API_getInputWithTimeout(getInputWithTimeoutImpl)
+TH_EXPORT_CPP_API_getInputWithTimeout(getInputWithTimeoutImpl);

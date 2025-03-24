@@ -167,13 +167,13 @@ callback<callback<string(string_view)>(string_view)> curryingImpl(callback_view<
     );
 }
 
-TH_EXPORT_CPP_API_makeRectangle(makeRectangleImpl)
-TH_EXPORT_CPP_API_makeColoredRectangle(makeColoredRectangleImpl)
-TH_EXPORT_CPP_API_copyColor(copyColorImpl)
-TH_EXPORT_CPP_API_toString(colorToStringImpl)
-TH_EXPORT_CPP_API_exchangeArr(exchangeArrImpl)
-TH_EXPORT_CPP_API_testOptional(testOptionalImpl)
-TH_EXPORT_CPP_API_fillVec(fillVecImpl)
-TH_EXPORT_CPP_API_fillMap(fillMapImpl)
-TH_EXPORT_CPP_API_fillSet(fillSetImpl)
-TH_EXPORT_CPP_API_currying(curryingImpl)
+TH_EXPORT_CPP_API_makeRectangle(makeRectangleImpl);
+TH_EXPORT_CPP_API_makeColoredRectangle(makeColoredRectangleImpl);
+TH_EXPORT_CPP_API_copyColor(copyColorImpl);
+TH_EXPORT_CPP_API_toString(colorToStringImpl);
+TH_EXPORT_CPP_API_exchangeArr(exchangeArrImpl);
+TH_EXPORT_CPP_API_testOptional(testOptionalImpl);
+TH_EXPORT_CPP_API_fillVec(fillVecImpl);
+TH_EXPORT_CPP_API_fillMap(fillMapImpl);
+TH_EXPORT_CPP_API_fillSet(fillSetImpl);
+TH_EXPORT_CPP_API_currying(curryingImpl);

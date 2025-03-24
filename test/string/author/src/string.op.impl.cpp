@@ -23,6 +23,6 @@ int32_t ohos_str_to_int(taihe::core::string_view pstr) {
     return std::atoi(pstr.c_str());
 }
 
-TH_EXPORT_CPP_API_split(ohos_split_str)
-TH_EXPORT_CPP_API_to_i32(ohos_str_to_int)
-TH_EXPORT_CPP_API_from_i32(ohos_int_to_str)
+TH_EXPORT_CPP_API_split(ohos_split_str);
+TH_EXPORT_CPP_API_to_i32(ohos_str_to_int);
+TH_EXPORT_CPP_API_from_i32(ohos_int_to_str);

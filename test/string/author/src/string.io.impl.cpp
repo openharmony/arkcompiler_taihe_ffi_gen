@@ -17,6 +17,6 @@ void ohos_print_str(taihe::core::string_view pstr) {
     }
 }
 
-TH_EXPORT_CPP_API_input(ohos_input_str)
-TH_EXPORT_CPP_API_print(ohos_print_str<false>)
-TH_EXPORT_CPP_API_println(ohos_print_str<true>)
+TH_EXPORT_CPP_API_input(ohos_input_str);
+TH_EXPORT_CPP_API_print(ohos_print_str<false>);
+TH_EXPORT_CPP_API_println(ohos_print_str<true>);
