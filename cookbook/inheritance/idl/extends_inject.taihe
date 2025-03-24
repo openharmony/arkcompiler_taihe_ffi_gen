@@ -1,4 +1,4 @@
-[class]
+@class
 interface InnerPerson {
     getPseron(): Opaque;
     getInnerPerson(): InnerPerson;
@@ -6,7 +6,7 @@ interface InnerPerson {
 
 function makePerson(): InnerPerson;
 
-inject """
+@!sts_inject("""
 import Person from '../user/Person';
 export class Man extends Person {
     getPerson(): Person {
@@ -17,4 +17,4 @@ export class Man extends Person {
         this.innerPerson = makePerson(); 
     }
 }
-"""
+""")

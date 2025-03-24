@@ -10,7 +10,7 @@ function sumArray() {
 }
 
 function getArrayValue() {
-    let nums: long[] = [35, 45, 55];
+    let nums: int[] = [35, 45, 55];
     let res = ArrayTest.getArrayValue(nums, 2)
     console.log("index 2 is " + res)
     assertEQ(res, 55)

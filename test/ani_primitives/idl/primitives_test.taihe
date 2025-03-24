@@ -70,7 +70,6 @@ interface primitivesVoid {
   testBaseFunc18(option1:Array<i16>,option2:Array<i64>):void;
   testBaseFunc19(option1:Array<f32>,option2:Array<f64>):void;
   testBaseFunc20(option1:Array<bool>,option2:Array<String>):void;
-  testBaseFunc21(option1:Bar,option2:Bar):void;
 }
 
 function get_interface(): primitivesVoid;

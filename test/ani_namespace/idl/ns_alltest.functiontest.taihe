@@ -1,8 +1,11 @@
+@!namespace("ns_alltest", "functiontest")
+
 enum Color: String {
     RED = "Red",
     GREEN = "Green",
     BLUE = "Blue",
 }
+
 struct Data {
   data1: String;
   data2: bool;
@@ -50,13 +53,12 @@ function baseFunctionTest38(param1:i8,param2:i16,param3:i32,param4:i64,param5:f3
 function baseFunctionTest39(param1:i8,param2:i16,param3:i32,param4:i64,param5:f32,param6:f64,param7:String,param8:bool,param9:Array<bool>,param10:Array<i32>):bool;
 function baseFunctionTest40(param1:i8,param2:i16,param3:i32,param4:i64,param5:f32,param6:f64,param7:String,param8:bool,param9:Array<i8>,param10:Array<u8>):Array<i8>;
 function baseFunctionTest41(param1:i8,param2:i16,param3:i32,param4:i64,param5:f32,param6:f64,param7:String,param8:bool,param9:Array<i16>,param10:Array<i64>):void;
-[sts_name = "baseFunctionTest42"]
-function baseFunctionTest42_int(param1: i32, param2: i16): i32;
-[sts_name = "baseFunctionTest42"]
-function baseFunctionTest42_container(param1: Optional<i32>,param2: Map<String,i32>): i32;
-[sts_name = "baseFunctionTest42"]
-function baseFunctionTest42_void(): i32;
-[sts_name = "baseFunctionTest42"]
-function baseFunctionTest42_struct(param1: Data): void;
 
-[namespace("ns_alltest", "functiontest")]
+@overload("baseFunctionTest42")
+function baseFunctionTest42_int(param1: i32, param2: i16): i32;
+@overload("baseFunctionTest42")
+function baseFunctionTest42_container(param1: Optional<i32>,param2: Map<String,i32>): i32;
+@overload("baseFunctionTest42")
+function baseFunctionTest42_void(): i32;
+@overload("baseFunctionTest42")
+function baseFunctionTest42_struct(param1: Data): void;

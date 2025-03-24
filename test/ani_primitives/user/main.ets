@@ -458,18 +458,6 @@ function testCaseBaseFunc20(){
     primitivesTest.testBaseFunc20(booleanArray ,strArray)
 }
 
-function testCaseBaseFunc21(){
-    primitivesTest.testBaseFunc21(test_primitives.Bar.GREEN ,test_primitives.Bar.BLUE)
-}
-
-function testCaseBaseFunc21_1(){
-    primitivesTest.testBaseFunc21(test_primitives.Bar.BLUE ,test_primitives.Bar.GREEN)
-}
-
-function testCaseBaseFunc21_2(){
-    primitivesTest.testBaseFunc21(test_primitives.Bar.RED ,test_primitives.Bar.RED)
-}
-
 function testCaseBaseIntegerFunc1(){
     try {
         let temp = 255 as byte;

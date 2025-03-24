@@ -1,17 +1,17 @@
-[class]
+@class
 interface InnerBaseContext {
     getApplicationContext(): Opaque;
     getTestContext(): Opaque;
     setSupportedProcessCacheSync(isSupported : bool): void;
     setSupportedProcessCache(isSupported : bool): void;
     getType(ctxType: String): String;
-    [setter = "name"] setName(name: String): void;
-    [getter = "name"] getName(): String;
+    @set setName(name: String): void;
+    @get getName(): String;
 }
 
 function makeBaseContext(init: i32): InnerBaseContext;
 
-inject """
+@!sts_inject("""
 export class EventHub {
 }
 export class BaseContext {
@@ -64,5 +64,4 @@ export default class ApplicationContext extends Context {
         });
     }
 }
-"""
-
+""")

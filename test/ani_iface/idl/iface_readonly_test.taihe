@@ -1,6 +1,6 @@
 interface Noo {
     bar(): void;
-    [getter = "name"] getName(): String;
+    @get getName(): String;
 }
 
 function getNooIface(): Noo;

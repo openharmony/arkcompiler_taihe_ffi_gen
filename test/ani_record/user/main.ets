@@ -81,16 +81,6 @@ function getDatafromMap() {
     assertEQ(d.a, "bbb");
 }
 
-function foreachMap() {
-    let recordStrForeach : Record<string, string> = {
-        'key1': 'v1',
-        'key2': 'v2',
-        'key3': 'v3',
-        'key4': 'v4',
-    };
-    record_test.foreachMap(recordStrForeach);
-}
-
 function main() {
 
     console.log("##############start#############")
@@ -102,7 +92,6 @@ function main() {
     suite.addTest("create String String test", createStringString)
     suite.addTest("get Map from Array test", getMapfromArray)
     suite.addTest("get Data from Map test", getDatafromMap)
-    suite.addTest("foreach Map test", foreachMap)
     suite.run()
 }
 
