@@ -1,14 +1,13 @@
 """Manage output files."""
 
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
 from io import StringIO
 from os import makedirs, path
 from pathlib import Path
 from typing import Generic, ParamSpec, TypeVar
 
 from typing_extensions import override
-
-from taihe.semantics.format import IndentManager
 
 P = ParamSpec("P")
 T = TypeVar("T", bound="OutputBase")
@@ -43,6 +42,23 @@ class OutputBase(ABC, Generic[P]):
         """Save the output to the specified file path."""
 
 
+class IndentManager:
+    def __init__(self):
+        self.count = 0
+
+    @contextmanager
+    def offset(self, n=4):
+        try:
+            self.count += n
+            yield
+        finally:
+            self.count -= n
+
+    @property
+    def current(self):
+        return self.count * " "
+
+
 class OutputBuffer(OutputBase[[]]):
     """Represents a general target file."""
 
@@ -54,6 +70,13 @@ class OutputBuffer(OutputBase[[]]):
     def save_as(self, file_path: Path):
         with open(file_path, "w", encoding="utf-8") as dst:
             dst.write(self.code.getvalue())
+
+    @contextmanager
+    def code_block(self, start: str, end: str, n=4):
+        self.writeln(start)
+        with self.indent_manager.offset(n):
+            yield
+        self.writeln(end)
 
     def write(self, codes: str):
         for code in codes.splitlines():
@@ -73,6 +96,21 @@ class COutputBuffer(OutputBase[[bool]]):
         self.indent_manager = IndentManager()
         self.code = StringIO()
 
+    @contextmanager
+    def code_block(self, start: str, end: str, n=4):
+        self.writeln(start)
+        with self.indent_manager.offset(n):
+            yield
+        self.writeln(end)
+
+    def write(self, codes: str):
+        for code in codes.splitlines():
+            self.code.write(self.indent_manager.current + code + "\n")
+
+    def writeln(self, *codes: str):
+        for code in codes:
+            self.code.write(self.indent_manager.current + code + "\n")
+
     @override
     def save_as(self, file_path: Path):
         if not path.exists(file_path.parent):
@@ -83,14 +121,6 @@ class COutputBuffer(OutputBase[[bool]]):
             for header in self.headers:
                 dst.write(f'#include "{header}"\n')
             dst.write(self.code.getvalue())
-
-    def write(self, codes: str):
-        for code in codes.splitlines():
-            self.code.write(self.indent_manager.current + code + "\n")
-
-    def writeln(self, *codes: str):
-        for code in codes:
-            self.code.write(self.indent_manager.current + code + "\n")
 
     def include(self, *headers: str, back=False):
         for header in headers:

@@ -352,7 +352,7 @@ def test_idl_syntax():
     test_instance.add_source(
         "package",
         "struct A {\n"
-        "    a: @;\n"
+        "    a: $;\n"
         "}\n"
     )
     test_instance.run()

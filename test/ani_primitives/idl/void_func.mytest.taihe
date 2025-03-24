@@ -1,3 +1,5 @@
+@!namespace("void_func", "mytest")
+
 enum BarTest: u8 {
   A = 1,
   B = 2,
@@ -20,4 +22,3 @@ function myfunc13(option1:Optional<f32>,option2:Optional<f64>):void;
 function myfunc14(option1:Optional<String>,option2:Optional<bool>):void;
 function myfunc15(option1:Optional<i16>,option2:Optional<i64>):void;
 function myfunc16(option1:Optional<i16>,option2:BarTest):void;
-[namespace("void_func", "mytest")]

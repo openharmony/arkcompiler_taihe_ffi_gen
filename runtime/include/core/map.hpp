@@ -1,343 +1,337 @@
 #pragma once
 
+#include <taihe/common.hpp>
 #include <utility>
 
-#include <taihe/common.hpp>
-
 namespace taihe::core {
-template<typename K, typename V>
+template <typename K, typename V>
 struct map_view;
 
-template<typename K, typename V>
+template <typename K, typename V>
 struct map;
 
-template<typename K, typename V>
+template <typename K, typename V>
 struct map_view {
-    void reserve(std::size_t cap) const {
-        if (cap == 0) {
-            return;
-        }
-        item_t** bucket = reinterpret_cast<item_t**>(calloc(cap, sizeof(item_t*)));
-        for (std::size_t i = 0; i < m_handle->cap; i++) {
-            item_t* current = m_handle->bucket[i];
-            while (current) {
-                item_t* next = current->next;
-                std::size_t index = taihe::core::hash(current->key) % cap;
-                current->next = bucket[index];
-                bucket[index] = current;
-                current = next;
-            }
-        }
-        free(m_handle->bucket);
-        m_handle->cap = cap;
-        m_handle->bucket = bucket;
+  void reserve(std::size_t cap) const {
+    if (cap == 0) {
+      return;
     }
-
-    std::size_t size() const noexcept {
-        return m_handle->size;
+    item_t** bucket = reinterpret_cast<item_t**>(calloc(cap, sizeof(item_t*)));
+    for (std::size_t i = 0; i < m_handle->cap; i++) {
+      item_t* current = m_handle->bucket[i];
+      while (current) {
+        item_t* next = current->next;
+        std::size_t index = taihe::core::hash(current->key) % cap;
+        current->next = bucket[index];
+        bucket[index] = current;
+        current = next;
+      }
     }
+    free(m_handle->bucket);
+    m_handle->cap = cap;
+    m_handle->bucket = bucket;
+  }
 
-    std::size_t capacity() const noexcept {
-        return m_handle->cap;
+  std::size_t size() const noexcept { return m_handle->size; }
+
+  std::size_t capacity() const noexcept { return m_handle->cap; }
+
+  void clear() const {
+    for (std::size_t i = 0; i < m_handle->cap; i++) {
+      while (m_handle->bucket[i]) {
+        item_t* next = m_handle->bucket[i]->next;
+        delete m_handle->bucket[i];
+        m_handle->bucket[i] = next;
+      }
     }
+    m_handle->size = 0;
+  }
 
-    void clear() const {
-        for (std::size_t i = 0; i < m_handle->cap; i++) {
-            while (m_handle->bucket[i]) {
-                item_t* next = m_handle->bucket[i]->next;
-                delete m_handle->bucket[i];
-                m_handle->bucket[i] = next;
-            }
+  template <bool cover = false, typename... Args>
+  V* emplace(as_param_t<K> key, Args&&... args) const {
+    std::size_t index = taihe::core::hash(key) % m_handle->cap;
+    item_t* current = m_handle->bucket[index];
+    while (current) {
+      if (taihe::core::same(current->key, key)) {
+        if (cover) {
+          current->val = V{std::forward<Args>(args)...};
         }
-        m_handle->size = 0;
+        return &current->val;
+      }
+      current = current->next;
     }
-
-    template<bool cover = false, typename... Args>
-    V* emplace(as_param_t<K> key, Args&&... args) const {
-        std::size_t index = taihe::core::hash(key) % m_handle->cap;
-        item_t* current = m_handle->bucket[index];
-        while (current) {
-            if (taihe::core::same(current->key, key)) {
-                if (cover) {
-                    current->val = V{std::forward<Args>(args)...};
-                }
-                return &current->val;
-            }
-            current = current->next;
-        }
-        item_t* item = new item_t{
-            .key = key,
-            .val = V{std::forward<Args>(args)...},
-            .next = m_handle->bucket[index],
-        };
-        m_handle->bucket[index] = item;
-        m_handle->size++;
-        std::size_t required_cap = m_handle->size;
-        if (required_cap >= m_handle->cap) {
-            reserve(required_cap * 2);
-        }
-        return &item->val;
-    }
-
-    V* find(as_param_t<K> key) const {
-        std::size_t index = taihe::core::hash(key) % m_handle->cap;
-        item_t* current = m_handle->bucket[index];
-        while (current) {
-            if (taihe::core::same(current->key, key)) {
-                return &current->val;
-            }
-            current = current->next;
-        }
-        return nullptr;
-    }
-
-    bool erase(as_param_t<K> key) const {
-        std::size_t index = taihe::core::hash(key) % m_handle->cap;
-        item_t** current_ptr = &m_handle->bucket[index];
-        while (*current_ptr) {
-            if (taihe::core::same((*current_ptr)->key, key)) {
-                item_t* current = *current_ptr;
-                *current_ptr = (*current_ptr)->next;
-                delete current;
-                m_handle->size--;
-                return true;
-            } else {
-                current_ptr = &(*current_ptr)->next;
-            }
-        }
-        return false;
-    }
-
-    template<typename Visitor>
-    void accept(Visitor &&visitor) {
-        for (std::size_t i = 0; i < m_handle->cap; i++) {
-            item_t* current = m_handle->bucket[i];
-            while (current) {
-                visitor(current->key, current->val);
-                current = current->next;
-            }
-        }
-    }
-
-    struct item_t {
-        K key;
-        V val;
-        item_t* next;
+    item_t* item = new item_t{
+        .key = key,
+        .val = V{std::forward<Args>(args)...},
+        .next = m_handle->bucket[index],
     };
+    m_handle->bucket[index] = item;
+    m_handle->size++;
+    std::size_t required_cap = m_handle->size;
+    if (required_cap >= m_handle->cap) {
+      reserve(required_cap * 2);
+    }
+    return &item->val;
+  }
 
-    struct iterator {
-        using iterator_category = std::forward_iterator_tag;
-        using value_type = std::pair<const K&, V&>;
-        using difference_type = std::ptrdiff_t;
-        using pointer = value_type*;
-        using reference = value_type&;
+  V* find(as_param_t<K> key) const {
+    std::size_t index = taihe::core::hash(key) % m_handle->cap;
+    item_t* current = m_handle->bucket[index];
+    while (current) {
+      if (taihe::core::same(current->key, key)) {
+        return &current->val;
+      }
+      current = current->next;
+    }
+    return nullptr;
+  }
 
-        iterator(item_t** bucket, item_t* current, std::size_t index, std::size_t cap)
-            : bucket(bucket), current(current), index(index), cap(cap) {}
+  bool erase(as_param_t<K> key) const {
+    std::size_t index = taihe::core::hash(key) % m_handle->cap;
+    item_t** current_ptr = &m_handle->bucket[index];
+    while (*current_ptr) {
+      if (taihe::core::same((*current_ptr)->key, key)) {
+        item_t* current = *current_ptr;
+        *current_ptr = (*current_ptr)->next;
+        delete current;
+        m_handle->size--;
+        return true;
+      } else {
+        current_ptr = &(*current_ptr)->next;
+      }
+    }
+    return false;
+  }
 
-        value_type operator*() const {
-            return {current->key, current->val};
+  template <typename Visitor>
+  void accept(Visitor&& visitor) {
+    for (std::size_t i = 0; i < m_handle->cap; i++) {
+      item_t* current = m_handle->bucket[i];
+      while (current) {
+        visitor(current->key, current->val);
+        current = current->next;
+      }
+    }
+  }
+
+  struct item_t {
+    K key;
+    V val;
+    item_t* next;
+  };
+
+  struct iterator {
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = std::pair<const K&, V&>;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type*;
+    using reference = value_type&;
+
+    iterator(item_t** bucket, item_t* current, std::size_t index,
+             std::size_t cap)
+        : bucket(bucket), current(current), index(index), cap(cap) {}
+
+    value_type operator*() const { return {current->key, current->val}; }
+
+    iterator& operator++() {
+      if (current->next) {
+        current = current->next;
+      } else {
+        ++index;
+        while (index < cap && !bucket[index]) {
+          ++index;
         }
-
-        iterator& operator++() {
-            if (current->next) {
-                current = current->next;
-            } else {
-                ++index;
-                while (index < cap && !bucket[index]) {
-                    ++index;
-                }
-                current = (index < cap) ? bucket[index] : nullptr;
-            }
-            return *this;
-        }
-
-        iterator operator++(int) {
-            iterator tmp = *this;
-            ++(*this);
-            return tmp;
-        }
-
-        bool operator==(const iterator& other) const {
-            return current == other.current;
-        }
-
-        bool operator!=(const iterator& other) const {
-            return !(*this == other);
-        }
-
-    private:
-        item_t** bucket;
-        item_t* current;
-        std::size_t index;
-        std::size_t cap;
-    };
-
-    struct const_iterator {
-        using iterator_category = std::forward_iterator_tag;
-        using value_type = std::pair<const K&, const V&>;
-        using difference_type = std::ptrdiff_t;
-        using pointer = value_type*;
-        using reference = value_type&;
-
-        const_iterator(item_t** bucket, item_t* current, std::size_t index, std::size_t cap)
-            : bucket(bucket), current(current), index(index), cap(cap) {}
-
-        value_type operator*() const {
-            return {current->key, current->val};
-        }
-
-        const_iterator& operator++() {
-            if (current->next) {
-                current = current->next;
-            } else {
-                ++index;
-                while (index < cap && !bucket[index]) {
-                    ++index;
-                }
-                current = (index < cap) ? bucket[index] : nullptr;
-            }
-            return *this;
-        }
-
-        const_iterator operator++(int) {
-            const_iterator tmp = *this;
-            ++(*this);
-            return tmp;
-        }
-
-        bool operator==(const const_iterator& other) const {
-            return current == other.current;
-        }
-
-        bool operator!=(const const_iterator& other) const {
-            return !(*this == other);
-        }
-
-    private:
-        item_t** bucket;
-        item_t* current;
-        std::size_t index;
-        std::size_t cap;
-    };
-
-    iterator begin() {
-        std::size_t index = 0;
-        while (index < m_handle->cap && !m_handle->bucket[index]) {
-            ++index;
-        }
-        return iterator(m_handle->bucket, (index < m_handle->cap) ? m_handle->bucket[index] : nullptr, index, m_handle->cap);
+        current = (index < cap) ? bucket[index] : nullptr;
+      }
+      return *this;
     }
 
-    iterator end() {
-        return iterator(m_handle->bucket, nullptr, m_handle->cap, m_handle->cap);
+    iterator operator++(int) {
+      iterator tmp = *this;
+      ++(*this);
+      return tmp;
     }
 
-    const_iterator begin() const {
-        std::size_t index = 0;
-        while (index < m_handle->cap && !m_handle->bucket[index]) {
-            ++index;
+    bool operator==(const iterator& other) const {
+      return current == other.current;
+    }
+
+    bool operator!=(const iterator& other) const { return !(*this == other); }
+
+   private:
+    item_t** bucket;
+    item_t* current;
+    std::size_t index;
+    std::size_t cap;
+  };
+
+  struct const_iterator {
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = std::pair<const K&, const V&>;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type*;
+    using reference = value_type&;
+
+    const_iterator(item_t** bucket, item_t* current, std::size_t index,
+                   std::size_t cap)
+        : bucket(bucket), current(current), index(index), cap(cap) {}
+
+    value_type operator*() const { return {current->key, current->val}; }
+
+    const_iterator& operator++() {
+      if (current->next) {
+        current = current->next;
+      } else {
+        ++index;
+        while (index < cap && !bucket[index]) {
+          ++index;
         }
-        return const_iterator(m_handle->bucket, (index < m_handle->cap) ? m_handle->bucket[index] : nullptr, index, m_handle->cap);
+        current = (index < cap) ? bucket[index] : nullptr;
+      }
+      return *this;
     }
 
-    const_iterator end() const {
-        return const_iterator(m_handle->bucket, nullptr, m_handle->cap, m_handle->cap);
+    const_iterator operator++(int) {
+      const_iterator tmp = *this;
+      ++(*this);
+      return tmp;
     }
 
-    const_iterator cbegin() const {
-        return begin();
+    bool operator==(const const_iterator& other) const {
+      return current == other.current;
     }
 
-    const_iterator cend() const {
-        return end();
+    bool operator!=(const const_iterator& other) const {
+      return !(*this == other);
     }
 
-private:
-    struct data_t {
-        TRefCount count;
-        std::size_t cap;
-        item_t** bucket;
-        std::size_t size;
-    } *m_handle;
+   private:
+    item_t** bucket;
+    item_t* current;
+    std::size_t index;
+    std::size_t cap;
+  };
 
-    explicit map_view(data_t* handle) : m_handle(handle) {}
+  iterator begin() {
+    std::size_t index = 0;
+    while (index < m_handle->cap && !m_handle->bucket[index]) {
+      ++index;
+    }
+    return iterator(m_handle->bucket,
+                    (index < m_handle->cap) ? m_handle->bucket[index] : nullptr,
+                    index, m_handle->cap);
+  }
 
-    friend struct map<K, V>;
+  iterator end() {
+    return iterator(m_handle->bucket, nullptr, m_handle->cap, m_handle->cap);
+  }
 
-    friend bool taihe::core::same_impl(adl_helper_t, map_view lhs, map_view rhs);
-    friend std::size_t taihe::core::hash_impl(adl_helper_t, map_view val);
+  const_iterator begin() const {
+    std::size_t index = 0;
+    while (index < m_handle->cap && !m_handle->bucket[index]) {
+      ++index;
+    }
+    return const_iterator(
+        m_handle->bucket,
+        (index < m_handle->cap) ? m_handle->bucket[index] : nullptr, index,
+        m_handle->cap);
+  }
+
+  const_iterator end() const {
+    return const_iterator(m_handle->bucket, nullptr, m_handle->cap,
+                          m_handle->cap);
+  }
+
+  const_iterator cbegin() const { return begin(); }
+
+  const_iterator cend() const { return end(); }
+
+ private:
+  struct data_t {
+    TRefCount count;
+    std::size_t cap;
+    item_t** bucket;
+    std::size_t size;
+  }* m_handle;
+
+  explicit map_view(data_t* handle) : m_handle(handle) {}
+
+  friend struct map<K, V>;
+
+  friend bool taihe::core::same_impl(adl_helper_t, map_view lhs, map_view rhs);
+  friend std::size_t taihe::core::hash_impl(adl_helper_t, map_view val);
 };
 
-template<typename K, typename V>
+template <typename K, typename V>
 struct map : map_view<K, V> {
-    using typename map_view<K, V>::item_t;
-    using typename map_view<K, V>::data_t;
-    using map_view<K, V>::m_handle;
+  using typename map_view<K, V>::item_t;
+  using typename map_view<K, V>::data_t;
+  using map_view<K, V>::m_handle;
 
-    map(std::size_t cap = 16) : map(reinterpret_cast<data_t*>(calloc(1, sizeof(data_t)))) {
-        item_t** bucket = reinterpret_cast<item_t**>(calloc(cap, sizeof(item_t*)));
-        tref_set(&m_handle->count, 1);
-        m_handle->cap = cap;
-        m_handle->bucket = bucket;
-        m_handle->size = 0;
+  map(std::size_t cap = 16)
+      : map(reinterpret_cast<data_t*>(calloc(1, sizeof(data_t)))) {
+    item_t** bucket = reinterpret_cast<item_t**>(calloc(cap, sizeof(item_t*)));
+    tref_set(&m_handle->count, 1);
+    m_handle->cap = cap;
+    m_handle->bucket = bucket;
+    m_handle->size = 0;
+  }
+
+  map(map<K, V>&& other) noexcept : map(other.m_handle) {
+    other.m_handle = nullptr;
+  }
+
+  map(map<K, V> const& other) : map(other.m_handle) {
+    if (m_handle) {
+      tref_inc(&m_handle->count);
     }
+  }
 
-    map(map<K, V> && other) noexcept : map(other.m_handle) {
-        other.m_handle = nullptr;
+  map(map_view<K, V> const& other) : map(other.m_handle) {
+    if (m_handle) {
+      tref_inc(&m_handle->count);
     }
+  }
 
-    map(map<K, V> const& other) : map(other.m_handle) {
-        if (m_handle) {
-            tref_inc(&m_handle->count);
-        }
+  map& operator=(map other) {
+    std::swap(this->m_handle, other.m_handle);
+    return *this;
+  }
+
+  ~map() {
+    if (m_handle && tref_dec(&m_handle->count)) {
+      this->clear();
+      free(m_handle->bucket);
+      free(m_handle);
     }
+  }
 
-    map(map_view<K, V> const& other) : map(other.m_handle) {
-        if (m_handle) {
-            tref_inc(&m_handle->count);
-        }
-    }
-
-    map& operator=(map other) {
-        std::swap(this->m_handle, other.m_handle);
-        return *this;
-    }
-
-    ~map() {
-        if (m_handle && tref_dec(&m_handle->count)) {
-            this->clear();
-            free(m_handle->bucket);
-            free(m_handle);
-        }
-    }
-
-private:
-    explicit map(data_t* handle) : map_view<K, V>(handle) {}
+ private:
+  explicit map(data_t* handle) : map_view<K, V>(handle) {}
 };
 
-template<typename K, typename V>
+template <typename K, typename V>
 inline bool same_impl(adl_helper_t, map_view<K, V> lhs, map_view<K, V> rhs) {
-    return lhs.m_handle == rhs.m_handle;
+  return lhs.m_handle == rhs.m_handle;
 }
 
-template<typename K, typename V>
+template <typename K, typename V>
 inline std::size_t hash_impl(adl_helper_t, map_view<K, V> val) {
-    return (std::size_t)val.m_handle;
+  return (std::size_t)val.m_handle;
 }
 
-template<typename K, typename V>
+template <typename K, typename V>
 struct as_abi<map<K, V>> {
-    using type = void*;
+  using type = void*;
 };
 
-template<typename K, typename V>
+template <typename K, typename V>
 struct as_abi<map_view<K, V>> {
-    using type = void*;
+  using type = void*;
 };
 
-template<typename K, typename V>
+template <typename K, typename V>
 struct as_param<map<K, V>> {
-    using type = map_view<K, V>;
+  using type = map_view<K, V>;
 };
-}
+}  // namespace taihe::core

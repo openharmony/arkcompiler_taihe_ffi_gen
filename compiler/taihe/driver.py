@@ -11,7 +11,6 @@ from taihe.codegen.abi_generator import (
 )
 from taihe.codegen.ani_generator import (
     ANICodeGenerator,
-    STSCodeGenerator,
 )
 from taihe.codegen.c_impl_generator import (
     CImplHeadersGenerator,
@@ -23,6 +22,9 @@ from taihe.codegen.cpp_generator import (
 from taihe.codegen.cpp_impl_generator import (
     CppImplHeadersGenerator,
     CppImplSourcesGenerator,
+)
+from taihe.codegen.sts_generator import (
+    STSCodeGenerator,
 )
 from taihe.parse.convert import (
     AstConverter,

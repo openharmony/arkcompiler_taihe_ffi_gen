@@ -2,11 +2,13 @@ function multiply(a: i32, b: i32): i32;
 function baseCFunc(testBoolean : i32): bool;
 function baseAFunc(testBoolean : bool): void;
 function baseBFunc(testBoolean : bool): bool;
+
 // String
 struct Foo {
   testNum: i32;
   testStr: String;
 }
+
 function baseDFunc(testBoolean : String): bool;
 function baseEFunc(b:Foo):String;
 function baseHFunc(a:i32,b:i64):String;
@@ -21,6 +23,7 @@ function baseFunc6(a:String):void;
 function baseFunc7(a:String):String;
 function baseFunc8(a:String,b:i32):String;
 function baseFunc9(a:String,b:i32,c:i64,d:bool,e:f32):void;
+
 // void
 function baseFunc10():void;
 function baseFunc11(a:i32,b:bool):void;
@@ -72,13 +75,14 @@ interface primitivesVoid {
 
 function get_interface(): primitivesVoid;
 
-
 interface primitivesBoolean {
   testBaseBoolFunc1(option1:bool):void;
   testBaseBoolFunc2(option1:bool):i32;
   testBaseBoolFunc3(option1:bool):bool;
   testBaseBoolFunc4(option1:Optional<bool>):bool;
-  [gen_async="testBaseBoolFunc5Async", gen_promise="testBaseBoolFunc5Promise"]
+
+  @gen_async("testBaseBoolFunc5Async")
+  @gen_promise("testBaseBoolFunc5Promise")
   testBaseBoolFunc5(option1:bool):bool;
 }
 
@@ -120,6 +124,6 @@ interface primitivesInteger {
   testBaseIntegerFunc33(option1:f32,option2:f64):f64;
   testBaseIntegerFunc34(option1:f64):f64;
   testBaseIntegerFunc35(option1:f64):void;
-
 }
+
 function get_interface_interger(): primitivesInteger;

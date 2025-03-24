@@ -1,28 +1,29 @@
 interface IBase {
-    [onoff]
+    @on_off
     onSet(a: () => void): void;
-    [onoff]
+
+    @on_off
     offSet(a: () => void): void;
 }
 
 function getIBase(a: String, b: String): IBase;
 
 // on test
-[onoff]
+@on_off
 function onFoo(a: () => void): void;
 
-[onoff]
+@on_off
 function onBar(a: () => void): void;
 
-[onoff = "baz"]
+@on_off("my_baz")
 function onBaz(a: i32, cb: () => void): void;
 
 // off test
-[onoff]
+@on_off
 function offFoo(a: () => void): void;
 
-[onoff]
+@on_off
 function offBar(a: () => void): void;
 
-[onoff = "baz"]
+@on_off("my_baz")
 function offBaz(a: i32, cb: () => void): void;

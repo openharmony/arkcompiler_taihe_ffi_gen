@@ -1,5 +1,4 @@
 from abc import ABCMeta
-from json import dumps
 from typing import TYPE_CHECKING
 
 from typing_extensions import override
@@ -54,12 +53,11 @@ from taihe.semantics.types import (
     StructType,
     Type,
     # VectorType,
-    # CallbackType,
     UnionType,
 )
 from taihe.semantics.visitor import TypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
-from taihe.utils.outputs import COutputBuffer, OutputBuffer, OutputManager
+from taihe.utils.outputs import COutputBuffer, OutputManager
 
 if TYPE_CHECKING:
     from taihe.semantics.declarations import (
@@ -146,8 +144,8 @@ class PackageANIInfo(AbstractAnalysis[PackageDecl]):
         self.cpp_ns = "::".join(p.segments)
 
         # TODO: hack at
-        if namespace_attr := p.attrs.get("namespace"):
-            self.module, self.sts_ns = namespace_attr.value
+        if namespace_attr := p.get_attr_item("namespace"):
+            self.module, self.sts_ns = namespace_attr.args
             self.ani_path = "/".join(self.module.split(".") + self.sts_ns.split("."))
             self.impl_desc = f"L{self.ani_path};"
         else:
@@ -157,9 +155,16 @@ class PackageANIInfo(AbstractAnalysis[PackageDecl]):
             self.ani_path = "/".join(self.module.split("."))
             self.impl_desc = f"L{self.ani_path}/ETSGLOBAL;"
 
+        self.injected_codes: list[str] = []
+        for injected in p.get_attr_list("sts_inject"):
+            (code,) = injected.args
+            self.injected_codes.append(code)
+
 
 class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
     def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
+        self.f = f
+
         p = f.node_parent
         assert p
         segments = [*p.segments, f.name]
@@ -176,52 +181,57 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
         self.sts_async_name = None
         self.sts_promise_name = None
 
-        if sts_name_attr := f.attrs.get("sts_name"):
-            self.sts_func_name = sts_name_attr.value
+        if overload_attr := f.get_attr_item("overload"):
+            (self.sts_func_name,) = overload_attr.args
 
-        elif onoff_attr := f.attrs.get("onoff"):
+        elif on_off_attr := f.get_attr_item("on_off"):
             assert f.name.startswith("on") or f.name.startswith("off")
 
             if f.name.startswith("on"):
-                if onoff_attr.value is None:
+                if not on_off_attr.args:
                     type_name = f.name[2:]
                     type_name = type_name[0].lower() + type_name[1:]
                 else:
-                    type_name = onoff_attr.value
+                    (type_name,) = on_off_attr.args
                 self.on_off_type = ("on", type_name)
 
             if f.name.startswith("off"):
-                if onoff_attr.value is None:
+                if not on_off_attr.args:
                     type_name = f.name[3:]
                     type_name = type_name[0].lower() + type_name[1:]
                 else:
-                    type_name = onoff_attr.value
+                    (type_name,) = on_off_attr.args
                 self.on_off_type = ("off", type_name)
 
         else:
             self.sts_func_name = f.name
 
-        if sts_name_attr := f.attrs.get("static_method"):
-            self.sts_static_scope = sts_name_attr.value
+        if overload_attr := f.get_attr_item("static"):
+            (self.sts_static_scope,) = overload_attr.args
 
-        if ctor_attr := f.attrs.get("ctor"):
-            self.sts_ctor_scope = ctor_attr.value
+        if ctor_attr := f.get_attr_item("ctor"):
+            (self.sts_ctor_scope,) = ctor_attr.args
 
-        if sts_async_attr := f.attrs.get("gen_async"):
-            self.sts_async_name = sts_async_attr.value
+        if sts_async_attr := f.get_attr_item("gen_async"):
+            (self.sts_async_name,) = sts_async_attr.args
 
-        if sts_promise_attr := f.attrs.get("gen_promise"):
-            self.sts_promise_name = sts_promise_attr.value
+        if sts_promise_attr := f.get_attr_item("gen_promise"):
+            (self.sts_promise_name,) = sts_promise_attr.args
 
         self.sts_real_params: list[ParamDecl] = []
-        self.sts_native_args: list[str] = []
         for param in f.params:
             self.sts_real_params.append(param)
-            self.sts_native_args.append(param.name)
+
+    def call_native_with(self, sts_real_args: list[str]) -> str:
+        sts_native_args = sts_real_args
+        sts_native_args_str = ", ".join(sts_native_args)
+        return f"{self.sts_native_name}({sts_native_args_str})"
 
 
 class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
     def __init__(self, am: AnalysisManager, f: IfaceMethodDecl) -> None:
+        self.f = f
+
         d = f.node_parent
         assert d
         p = d.node_parent
@@ -241,70 +251,75 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
         self.sts_async_name = None
         self.sts_promise_name = None
 
-        if sts_name_attr := f.attrs.get("sts_name"):
-            self.sts_method_name = sts_name_attr.value
-            self.ani_method_name = sts_name_attr.value
+        if overload_attr := f.get_attr_item("overload"):
+            (self.sts_method_name,) = overload_attr.args
+            (self.ani_method_name,) = overload_attr.args
 
-        elif onoff_attr := f.attrs.get("onoff"):
+        elif on_off_attr := f.get_attr_item("on_off"):
             assert f.name.startswith("on") or f.name.startswith("off")
 
             if f.name.startswith("on"):
-                if onoff_attr.value is None:
+                if not on_off_attr.args:
                     type_name = f.name[2:]
                     type_name = type_name[0].lower() + type_name[1:]
                 else:
-                    type_name = onoff_attr.value
+                    (type_name,) = on_off_attr.args
                 self.on_off_type = ("on", type_name)
                 self.ani_method_name = "on"
 
             if f.name.startswith("off"):
-                if onoff_attr.value is None:
+                if not on_off_attr.args:
                     type_name = f.name[3:]
                     type_name = type_name[0].lower() + type_name[1:]
                 else:
-                    type_name = onoff_attr.value
+                    (type_name,) = on_off_attr.args
                 self.on_off_type = ("off", type_name)
                 self.ani_method_name = "off"
 
-        elif getter_attr := f.attrs.get("getter"):
+        elif get_attr := f.get_attr_item("get"):
             assert f.name.startswith("get")
-            if getter_attr.value is None:
+            if not get_attr.args:
                 get_name = f.name[3:]
                 self.get_name = get_name[0].lower() + get_name[1:]
             else:
-                self.get_name = getter_attr.value
+                (self.get_name,) = get_attr.args
             self.ani_method_name = f"<get>{self.get_name}"
 
-        elif setter_attr := f.attrs.get("setter"):
+        elif set_attr := f.get_attr_item("set"):
             assert f.name.startswith("set")
-            if setter_attr.value is None:
+            if not set_attr.args:
                 set_name = f.name[3:]
                 self.set_name = set_name[0].lower() + set_name[1:]
             else:
-                self.set_name = setter_attr.value
+                (self.set_name,) = set_attr.args
             self.ani_method_name = f"<set>{self.set_name}"
 
         else:
             self.sts_method_name = f.name
             self.ani_method_name = f.name
 
-        if sts_async_attr := f.attrs.get("gen_async"):
-            self.sts_async_name = sts_async_attr.value
+        if sts_async_attr := f.get_attr_item("gen_async"):
+            (self.sts_async_name,) = sts_async_attr.args
 
-        if sts_promise_attr := f.attrs.get("gen_promise"):
-            self.sts_promise_name = sts_promise_attr.value
+        if sts_promise_attr := f.get_attr_item("gen_promise"):
+            (self.sts_promise_name,) = sts_promise_attr.args
 
         self.sts_real_params: list[ParamDecl] = []
-        self.sts_native_args: list[str] = []
         for param in f.params:
-            if param.attrs.get("sts_this"):
-                self.sts_native_args.append("this")
-                continue
-            if sts_member_attr := param.attrs.get("sts_member"):
-                self.sts_native_args.append(f"this.{sts_member_attr.value}")
+            if param.get_attr_item("sts_this"):
                 continue
             self.sts_real_params.append(param)
-            self.sts_native_args.append(param.name)
+
+    def call_native_with(self, this: str, sts_real_args: list[str]) -> str:
+        arg = iter(sts_real_args)
+        sts_native_args: list[str] = []
+        for param in self.f.params:
+            if param.get_attr_item("sts_this"):
+                sts_native_args.append(this)
+                continue
+            sts_native_args.append(next(arg))
+        sts_native_args_str = ", ".join(sts_native_args)
+        return f"{this}.{self.sts_native_name}({sts_native_args_str})"
 
 
 class EnumANIInfo(AbstractAnalysis[EnumDecl]):
@@ -355,13 +370,22 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
         self.impl_header = f"{p.name}.{d.name}.ani.1.h"
 
         self.sts_type = d.name
-        if d.attrs.get("class"):
+        if d.get_attr_item("class"):
             self.sts_impl = f"{d.name}"
         else:
             self.sts_impl = f"{d.name}_inner"
         pkg_ani_info = PackageANIInfo.get(am, p)
         self.type_desc = f"L{pkg_ani_info.ani_path}/{self.sts_type};"
         self.impl_desc = f"L{pkg_ani_info.ani_path}/{self.sts_impl};"
+
+        self.iface_injected_codes: list[str] = []
+        for iface_injected in d.get_attr_list("sts_inject_into_interface"):
+            (code,) = iface_injected.args
+            self.iface_injected_codes.append(code)
+        self.class_injected_codes: list[str] = []
+        for class_injected in d.get_attr_list("sts_inject_into_class"):
+            (code,) = class_injected.args
+            self.class_injected_codes.append(code)
 
 
 class AbstractTypeANIInfo(metaclass=ABCMeta):
@@ -478,17 +502,10 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
             ani_ctor = f"{ani_result}_ctor"
             ani_value = f"{ani_result}_ani"
             target.write(
-                f"{' ' * offset}static ani_class {ani_class} = [=] {{\n"
-                f"{' ' * offset}    ani_class {ani_class};\n"
-                f"{' ' * offset}    {env}->FindClass(\"Lstd/core/{self.ani_type.suffix};\", &{ani_class});\n"
-                f"{' ' * offset}    {env}->GlobalReference_Create({ani_class}, reinterpret_cast<ani_ref*>(&{ani_class}));\n"
-                f"{' ' * offset}    return {ani_class};\n"
-                f"{' ' * offset}}}();\n"
-                f"{' ' * offset}static ani_method {ani_ctor} = [=] {{\n"
-                f"{' ' * offset}    ani_method {ani_ctor};\n"
-                f"{' ' * offset}    {env}->Class_FindMethod({ani_class}, \"<ctor>\", \"{self.type_desc}:V\", &{ani_ctor});\n"
-                f"{' ' * offset}    return {ani_ctor};\n"
-                f"{' ' * offset}}}();\n"
+                f"{' ' * offset}ani_class {ani_class};\n"
+                f"{' ' * offset}{env}->FindClass(\"Lstd/core/{self.ani_type.suffix};\", &{ani_class});\n"
+                f"{' ' * offset}ani_method {ani_ctor};\n"
+                f"{' ' * offset}{env}->Class_FindMethod({ani_class}, \"<ctor>\", \"{self.type_desc}:V\", &{ani_ctor});\n"
                 f"{' ' * offset}ani_object {ani_result};\n"
             )
             self.into_ani(target, offset, env, cpp_value, ani_value)
@@ -517,17 +534,10 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
             ani_getter = f"{cpp_result}_get"
             ani_result = f"{cpp_result}_ani"
             target.write(
-                f"{' ' * offset}static ani_class {ani_class} = [=] {{\n"
-                f"{' ' * offset}    ani_class {ani_class};\n"
-                f"{' ' * offset}    {env}->FindClass(\"Lstd/core/{self.ani_type.suffix};\", &{ani_class});\n"
-                f"{' ' * offset}    {env}->GlobalReference_Create({ani_class}, reinterpret_cast<ani_ref*>(&{ani_class}));\n"
-                f"{' ' * offset}    return {ani_class};\n"
-                f"{' ' * offset}}}();\n"
-                f"{' ' * offset}static ani_method {ani_getter} = [=] {{\n"
-                f"{' ' * offset}    ani_method {ani_getter};\n"
-                f"{' ' * offset}    {env}->Class_FindMethod({ani_class}, \"unboxed\", nullptr, &{ani_getter});\n"
-                f"{' ' * offset}    return {ani_getter};\n"
-                f"{' ' * offset}}}();\n"
+                f"{' ' * offset}ani_class {ani_class};\n"
+                f"{' ' * offset}{env}->FindClass(\"Lstd/core/{self.ani_type.suffix};\", &{ani_class});\n"
+                f"{' ' * offset}ani_method {ani_getter};\n"
+                f"{' ' * offset}{env}->Class_FindMethod({ani_class}, \"unboxed\", nullptr, &{ani_getter});\n"
                 f"{' ' * offset}{self.ani_type} {ani_result};\n"
                 f"{' ' * offset}{env}->Object_CallMethod_{self.ani_type.suffix}((ani_object){ani_value}, {ani_getter}, &{ani_result});\n"
             )
@@ -1136,22 +1146,20 @@ class CallbackTypeANIInfo(AbstractAnalysis[CallbackType], AbstractTypeANIInfo):
             param_ty_cpp_info = TypeCppInfo.get(self.am, param_ty)
             params_ty_as_param.append(f"{param_ty_cpp_info.as_param} {cpp_arg}")
         params_str = ", ".join(params_ty_as_param)
-
         if self.t.return_ty:
             return_ty_cpp_info = TypeCppInfo.get(self.am, self.t.return_ty)
             return_ty_as_owner = return_ty_cpp_info.as_owner
         else:
             return_ty_as_owner = "void"
-
         target.write(
             f"{' ' * offset}struct cpp_impl_cb {{\n"
             f"{' ' * offset}    ani_env* env;\n"
-            f"{' ' * offset}    ani_object cb_obj;\n"
+            f"{' ' * offset}    ani_object ref;\n"
             f"{' ' * offset}    cpp_impl_cb(ani_env* env, ani_object obj): env(env) {{\n"
-            f"{' ' * offset}        env->GlobalReference_Create(obj, reinterpret_cast<ani_ref*>(&cb_obj));\n"
+            f"{' ' * offset}        env->GlobalReference_Create(obj, reinterpret_cast<ani_ref*>(&ref));\n"
             f"{' ' * offset}    }}\n"
             f"{' ' * offset}    ~cpp_impl_cb() {{\n"
-            f"{' ' * offset}        env->GlobalReference_Delete(cb_obj);\n"
+            f"{' ' * offset}        env->GlobalReference_Delete(ref);\n"
             f"{' ' * offset}    }}\n"
             f"{' ' * offset}    {return_ty_as_owner} operator()({params_str}) {{\n"
         )
@@ -1163,28 +1171,19 @@ class CallbackTypeANIInfo(AbstractAnalysis[CallbackType], AbstractTypeANIInfo):
             param_ty_ani_info.into_ani_boxed(target, offset + 8, env, cpp_arg, ani_arg)
             cpp_args_boxed.append(ani_arg)
         cpp_args_boxed_str = ", ".join(cpp_args_boxed)
-
-        if self.t.params_ty:
-            target.write(
-                f"{' ' * offset}        ani_ref cb_argv[] = {{{cpp_args_boxed_str}}};\n"
-            )
-            cb_argv = "cb_argv"
-        else:
-            cb_argv = "nullptr"
         target.write(
-            f"{' ' * offset}        ani_ref cb_result;\n"
-            f"{' ' * offset}        this->env->FunctionalObject_Call(static_cast<ani_fn_object>(this->cb_obj), {len(cpp_args_boxed)}, {cb_argv}, &cb_result);\n"
+            f"{' ' * offset}        ani_ref ani_argv[] = {{{cpp_args_boxed_str}}};\n"
+            f"{' ' * offset}        ani_ref ani_result;\n"
+            f"{' ' * offset}        this->env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.params_ty)}, ani_argv, &ani_result);\n"
         )
-
         if self.t.return_ty:
             return_ty_ani_info = TypeANIInfo.get(self.am, self.t.return_ty)
             return_ty_ani_info.from_ani_boxed(
-                target, offset + 8, env, "cb_result", "cpp_cb_result"
+                target, offset + 8, "env", "ani_result", "cpp_result"
             )
-            target.write(f"{' ' * offset}        return cpp_cb_result;\n")
+            target.write(f"{' ' * offset}        return cpp_result;\n")
         else:
             target.write(f"{' ' * offset}        return;\n")
-
         target.write(
             f"{' ' * offset}    }}\n"
             f"{' ' * offset}}};\n"
@@ -1200,6 +1199,7 @@ class CallbackTypeANIInfo(AbstractAnalysis[CallbackType], AbstractTypeANIInfo):
         cpp_value: str,
         ani_result: str,
     ):
+        # TODO: Callback into ani
         target.write(f"{' ' * offset}ani_object {ani_result};\n")
 
 
@@ -1280,562 +1280,6 @@ class Namespace:
         head, *tail = path_parts
         child = self.children.setdefault(head, Namespace())
         child.add_path(tail, pkg)
-
-
-class STSCodeGenerator:
-    def __init__(self, tm: OutputManager, am: AnalysisManager):
-        self.tm = tm
-        self.am = am
-
-    def generate(self, pg: PackageGroup):
-        ns_dict: dict[str, Namespace] = {}
-
-        for pkg in pg.packages:
-            pkg_ani_info = PackageANIInfo.get(self.am, pkg)
-            if pkg_ani_info.sts_ns:
-                sts_ns_parts = pkg_ani_info.sts_ns.split()
-            else:
-                sts_ns_parts = []
-            ns_dict.setdefault(pkg_ani_info.module, Namespace()).add_path(
-                sts_ns_parts, pkg
-            )
-
-        for module, ns in ns_dict.items():
-            self.gen_module_file(module, ns)
-
-    def gen_module_file(self, module: str, ns: Namespace):
-        module_sts_file = f"{module}.ets"
-
-        pkg_sts_target = OutputBuffer.create(self.tm, module_sts_file)
-
-        # pkg_sts_target.write(f'loadLibrary("{self.lib_name}");\n')
-
-        self.gen_namespace_or_module(ns, pkg_sts_target)
-
-    def gen_namespace_or_module(self, ns: Namespace, pkg_sts_target: OutputBuffer):
-        for child_ns_name, child_ns in ns.children.items():
-            pkg_sts_target.write(f"export namespace {child_ns_name} {{\n")
-            with pkg_sts_target.indent_manager.code_block():
-                self.gen_namespace_or_module(child_ns, pkg_sts_target)
-            pkg_sts_target.write(f"}}\n")
-
-        for pkg in ns.packages:
-            self.gen_package(pkg, pkg_sts_target)
-
-    def gen_package(self, pkg: PackageDecl, pkg_sts_target: OutputBuffer):
-        static_methods: dict[str, list[GlobFuncDecl]] = {}
-        ctor_methods: dict[str, list[GlobFuncDecl]] = {}
-        global_funcs: list[GlobFuncDecl] = []
-
-        if (inject_attr := pkg.attrs.get("inject")) is not None:
-            pkg_sts_target.write(inject_attr.value)
-
-        # native funcs
-        for func in pkg.functions:
-            func_ani_info = GlobFuncANIInfo.get(self.am, func)
-            sts_native_params = []
-            for param in func.params:
-                type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
-                sts_native_params.append(f"{param.name}: {type_ani_info.sts_type}")
-            sts_native_params_str = ", ".join(sts_native_params)
-            if return_ty_ref := func.return_ty_ref:
-                type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
-                sts_return_ty_name = type_ani_info.sts_type
-            else:
-                sts_return_ty_name = "void"
-            pkg_sts_target.write(
-                f"native function {func_ani_info.sts_native_name}({sts_native_params_str}): {sts_return_ty_name};\n"
-            )
-
-        for func in pkg.functions:
-            func_ani_info = GlobFuncANIInfo.get(self.am, func)
-            if class_name := func_ani_info.sts_static_scope:
-                static_methods.setdefault(class_name, []).append(func)
-            elif class_name := func_ani_info.sts_ctor_scope:
-                ctor_methods.setdefault(class_name, []).append(func)
-            else:
-                global_funcs.append(func)
-
-        # on/off
-        on_off_map: dict[
-            tuple[str, tuple[Type, ...]], list[tuple[str, GlobFuncDecl]]
-        ] = {}
-
-        for global_func in global_funcs:
-            func_ani_info = GlobFuncANIInfo.get(self.am, global_func)
-            if func_ani_info.on_off_type is not None:
-                func_name, type_name = func_ani_info.on_off_type
-                real_params_ty = []
-                for real_param in func_ani_info.sts_real_params:
-                    assert real_param.ty_ref.resolved_ty
-                    real_params_ty.append(real_param.ty_ref.resolved_ty)
-                on_off_map.setdefault((func_name, tuple(real_params_ty)), []).append(
-                    (type_name, global_func)
-                )
-
-        for global_func in global_funcs:
-            func_ani_info = GlobFuncANIInfo.get(self.am, global_func)
-            if func_ani_info.sts_func_name is not None:
-                # TODO: hack inject
-                if (inject_attr := global_func.attrs.get("inject")) is not None:
-                    pkg_sts_target.write(inject_attr.value)
-
-                func_ani_info = GlobFuncANIInfo.get(self.am, global_func)
-                sts_real_params = []
-                for sts_real_param in func_ani_info.sts_real_params:
-                    type_ani_info = TypeANIInfo.get(
-                        self.am, sts_real_param.ty_ref.resolved_ty
-                    )
-                    sts_real_params.append(
-                        f"{sts_real_param.name}: {type_ani_info.sts_type}"
-                    )
-                sts_real_params_str = ", ".join(sts_real_params)
-                sts_native_args_str = ", ".join(func_ani_info.sts_native_args)
-                if return_ty_ref := global_func.return_ty_ref:
-                    type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
-                    sts_return_ty_name = type_ani_info.sts_type
-                else:
-                    sts_return_ty_name = "void"
-                pkg_sts_target.write(
-                    f"export function {func_ani_info.sts_func_name}({sts_real_params_str}): {sts_return_ty_name} {{\n"
-                    f"    return {func_ani_info.sts_native_name}({sts_native_args_str});\n"
-                    f"}}\n"
-                )
-                # promise
-                if (promise_func_name := func_ani_info.sts_promise_name) is not None:
-                    pkg_sts_target.write(
-                        f"export function {promise_func_name}({sts_real_params_str}): Promise<{sts_return_ty_name}> {{\n"
-                        f"    return launch {func_ani_info.sts_native_name}({sts_native_args_str});\n"
-                        f"}}\n"
-                    )
-                # async
-                if (async_func_name := func_ani_info.sts_async_name) is not None:
-                    if return_ty_ref := global_func.return_ty_ref:
-                        callback = f"callback: (err: Error, data?: {sts_return_ty_name}) => void"
-                        then_params = "ret: NullishType"
-                        then_args = f"new Error(), ret as {sts_return_ty_name}"
-                    else:
-                        callback = "callback: (err: Error) => void"
-                        then_params = ""
-                        then_args = "new Error()"
-                    sts_real_params_with_cb = [*sts_real_params, callback]
-                    sts_real_params_with_cb_str = ", ".join(sts_real_params_with_cb)
-                    pkg_sts_target.write(
-                        f"export function {async_func_name}({sts_real_params_with_cb_str}): void {{\n"
-                        f"    (launch {func_ani_info.sts_native_name}({sts_native_args_str}))\n"
-                        f"    .then(({then_params}): void => {{\n"
-                        f"        callback({then_args});\n"
-                        f"    }})\n"
-                        f"    .catch((ret: NullishType): void => {{\n"
-                        f"        callback(ret as Error);\n"
-                        f"    }});\n"
-                        f"}}\n"
-                    )
-
-        for (func_name, real_params_ty), func_list in on_off_map.items():
-            sts_real_params = []
-            args_list = []
-            sts_real_params.append("type: string")
-            for index, param_ty in enumerate(real_params_ty):
-                type_ani_info = TypeANIInfo.get(self.am, param_ty)
-                sts_real_params.append(f"arg{index}: {type_ani_info.sts_type}")
-                args_list.append(f"arg{index}")
-            sts_real_params_str = ", ".join(sts_real_params)
-            args_str = ", ".join(args_list)
-            pkg_sts_target.write(
-                f"export function {func_name}({sts_real_params_str}): void {{\n"
-                f"    switch(type) {{"
-            )
-            for type_name, func in func_list:
-                func_ani_info = GlobFuncANIInfo.get(self.am, func)
-                pkg_sts_target.write(
-                    f'        case "{type_name}": {func_ani_info.sts_native_name}({args_str}); break;\n'
-                )
-            pkg_sts_target.write(
-                f"        default: throw new Error(`Unknown type: ${{type}}`);\n"
-                f"    }}\n"
-                f"}}\n"
-            )
-
-        for enum in pkg.enums:
-            self.gen_enum(enum, pkg_sts_target)
-        for struct in pkg.structs:
-            self.gen_struct(struct, pkg_sts_target)
-        for union in pkg.unions:
-            self.gen_union(union, pkg_sts_target)
-        for iface in pkg.interfaces:
-            self.gen_iface_interface(iface, pkg_sts_target)
-        for iface in pkg.interfaces:
-            self.gen_iface_class(
-                iface,
-                pkg_sts_target,
-                static_methods,
-                ctor_methods,
-            )
-
-    def gen_enum(
-        self,
-        enum: EnumDecl,
-        pkg_sts_target: OutputBuffer,
-    ):
-        # TODO: hack inject
-        if (inject_attr := enum.attrs.get("inject")) is not None:
-            pkg_sts_target.write(inject_attr.value)
-
-        enum_ani_info = EnumANIInfo.get(self.am, enum)
-        pkg_sts_target.write(f"export enum {enum_ani_info.sts_type} {{\n")
-        for item in enum.items:
-            pkg_sts_target.write(f"    {item.name} = {dumps(item.value)},\n")
-        pkg_sts_target.write(f"}}\n")
-
-    def gen_union(
-        self,
-        union: UnionDecl,
-        pkg_sts_target: OutputBuffer,
-    ):
-        # TODO: hack inject
-        if (inject_attr := union.attrs.get("inject")) is not None:
-            pkg_sts_target.write(inject_attr.value)
-
-    def gen_struct(
-        self,
-        struct: StructDecl,
-        pkg_sts_target: OutputBuffer,
-    ):
-        # TODO: hack inject
-        if (inject_attr := struct.attrs.get("inject")) is not None:
-            pkg_sts_target.write(inject_attr.value)
-
-        struct_ani_info = StructANIInfo.get(self.am, struct)
-        pkg_sts_target.write(f"export class {struct_ani_info.sts_impl} {{\n")
-        for field in struct.fields:
-            ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
-            pkg_sts_target.write(f"    {field.name}: {ty_ani_info.sts_type};\n")
-        pkg_sts_target.write(f"    constructor(\n")
-        for field in struct.fields:
-            ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
-            pkg_sts_target.write(f"        {field.name}: {ty_ani_info.sts_type},\n")
-        pkg_sts_target.write(f"    ) {{\n")
-        for field in struct.fields:
-            pkg_sts_target.write(f"        this.{field.name} = {field.name};\n")
-        pkg_sts_target.write(f"    }}\n" f"}}\n")
-
-    def gen_iface_interface(
-        self,
-        iface: IfaceDecl,
-        pkg_sts_target: OutputBuffer,
-    ):
-        # TODO: hack inject
-        if (inject_attr := iface.attrs.get("inject")) is not None:
-            pkg_sts_target.write(inject_attr.value)
-
-        # on/off
-        on_off_map: dict[
-            tuple[str, tuple[Type, ...]], list[tuple[str, IfaceMethodDecl]]
-        ] = {}
-
-        iface_ani_info = IfaceANIInfo.get(self.am, iface)
-        if iface_ani_info.sts_type == iface_ani_info.sts_impl:  # no interface
-            return
-        pkg_sts_target.write(f"export interface {iface_ani_info.sts_type} {{\n")
-        for method in iface.methods:
-            # TODO: hack inject
-            if (inject_attr := method.attrs.get("inject")) is not None:
-                pkg_sts_target.write(inject_attr.value)
-
-            method_ani_info = IfaceMethodANIInfo.get(self.am, method)
-            sts_real_params = []
-            for real_param in method_ani_info.sts_real_params:
-                type_ani_info = TypeANIInfo.get(self.am, real_param.ty_ref.resolved_ty)
-                sts_real_params.append(f"{real_param.name}: {type_ani_info.sts_type}")
-            sts_real_params_str = ", ".join(sts_real_params)
-            if return_ty_ref := method.return_ty_ref:
-                type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
-                sts_return_ty_name = type_ani_info.sts_type
-            else:
-                sts_return_ty_name = "void"
-            # real
-            if real_method := method_ani_info.sts_method_name:
-                pkg_sts_target.write(
-                    f"    {real_method}({sts_real_params_str}): {sts_return_ty_name};\n"
-                )
-                # promise
-                if (promise_func_name := method_ani_info.sts_promise_name) is not None:
-                    pkg_sts_target.write(
-                        f"    {promise_func_name}({sts_real_params_str}): Promise<{sts_return_ty_name}>;\n"
-                    )
-                # async
-                if (async_func_name := method_ani_info.sts_async_name) is not None:
-                    if return_ty_ref := method.return_ty_ref:
-                        callback = f"callback: (err: Error, data?: {sts_return_ty_name}) => void"
-                    else:
-                        callback = "callback: (err: Error) => void"
-                    sts_real_params_with_cb = [*sts_real_params, callback]
-                    sts_real_params_with_cb_str = ", ".join(sts_real_params_with_cb)
-                    pkg_sts_target.write(
-                        f"    {async_func_name}({sts_real_params_with_cb_str}): void;\n"
-                    )
-            # getter
-            if get_name := method_ani_info.get_name:
-                pkg_sts_target.write(
-                    f"    get {get_name}({sts_real_params_str}): {sts_return_ty_name};\n"
-                )
-            # setter
-            if set_name := method_ani_info.set_name:
-                pkg_sts_target.write(f"    set {set_name}({sts_real_params_str});\n")
-            # on/off
-            if method_ani_info.on_off_type is not None:
-                method_name, type_name = method_ani_info.on_off_type
-                real_params_ty = []
-                for real_param in method_ani_info.sts_real_params:
-                    assert real_param.ty_ref.resolved_ty
-                    real_params_ty.append(real_param.ty_ref.resolved_ty)
-                on_off_map.setdefault((method_name, tuple(real_params_ty)), []).append(
-                    (type_name, method)
-                )
-
-        for (method_name, real_params_ty), _ in on_off_map.items():
-            sts_real_params = []
-            args_list = []
-            sts_real_params.append("type: string")
-            for index, param_ty in enumerate(real_params_ty):
-                type_ani_info = TypeANIInfo.get(self.am, param_ty)
-                sts_real_params.append(f"arg{index}: {type_ani_info.sts_type}")
-                args_list.append(f"arg{index}")
-            sts_real_params_str = ", ".join(sts_real_params)
-            pkg_sts_target.write(f"    {method_name}({sts_real_params_str}): void;\n")
-
-        pkg_sts_target.write(f"}}\n")
-
-    def gen_iface_class(
-        self,
-        iface: IfaceDecl,
-        pkg_sts_target: OutputBuffer,
-        static_methods: dict[str, list[GlobFuncDecl]],
-        construct_methods: dict[str, list[GlobFuncDecl]],
-    ):
-        # on/off
-        on_off_map: dict[
-            tuple[str, tuple[Type, ...]], list[tuple[str, IfaceMethodDecl]]
-        ] = {}
-
-        iface_ani_info = IfaceANIInfo.get(self.am, iface)
-        if iface_ani_info.sts_impl == iface_ani_info.sts_type:
-            pkg_sts_target.write(f"export class {iface_ani_info.sts_impl} {{\n")
-        else:
-            pkg_sts_target.write(
-                f"class {iface_ani_info.sts_impl} implements {iface_ani_info.sts_type} {{\n"
-            )
-        pkg_sts_target.write(
-            f"    private _vtbl_ptr: long;\n"
-            f"    private _data_ptr: long;\n"
-            f"    private constructor(_vtbl_ptr: long, _data_ptr: long) {{\n"
-            f"        this._vtbl_ptr = _vtbl_ptr;\n"
-            f"        this._data_ptr = _data_ptr;\n"
-            f"    }}\n"
-        )
-
-        # native funcs
-        for method in iface.methods:
-            # TODO: hack inject
-            if (inject_attr := method.attrs.get("class_inject")) is not None:
-                pkg_sts_target.write(inject_attr.value)
-
-            method_ani_info = IfaceMethodANIInfo.get(self.am, method)
-            sts_native_params = []
-            for param in method.params:
-                type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
-                sts_native_params.append(f"{param.name}: {type_ani_info.sts_type}")
-            sts_native_params_str = ", ".join(sts_native_params)
-            if return_ty_ref := method.return_ty_ref:
-                type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
-                sts_return_ty_name = type_ani_info.sts_type
-            else:
-                sts_return_ty_name = "void"
-            pkg_sts_target.write(
-                f"    native {method_ani_info.sts_native_name}({sts_native_params_str}): {sts_return_ty_name};\n"
-            )
-
-        for method in iface.methods:
-            method_ani_info = IfaceMethodANIInfo.get(self.am, method)
-            sts_real_params = []
-            for sts_real_param in method_ani_info.sts_real_params:
-                type_ani_info = TypeANIInfo.get(
-                    self.am, sts_real_param.ty_ref.resolved_ty
-                )
-                sts_real_params.append(
-                    f"{sts_real_param.name}: {type_ani_info.sts_type}"
-                )
-            sts_real_params_str = ", ".join(sts_real_params)
-            sts_native_args_str = ", ".join(method_ani_info.sts_native_args)
-            if return_ty_ref := method.return_ty_ref:
-                type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
-                sts_return_ty_name = type_ani_info.sts_type
-            else:
-                sts_return_ty_name = "void"
-            # real
-            if real_method := method_ani_info.sts_method_name:
-                pkg_sts_target.write(
-                    f"    {real_method}({sts_real_params_str}): {sts_return_ty_name} {{\n"
-                    f"        return this.{method_ani_info.sts_native_name}({sts_native_args_str});\n"
-                    f"    }}\n"
-                )
-                # promise
-                if (promise_func_name := method_ani_info.sts_promise_name) is not None:
-                    pkg_sts_target.write(
-                        f"    {promise_func_name}({sts_real_params_str}): Promise<{sts_return_ty_name}> {{\n"
-                        f"        return launch this.{method_ani_info.sts_native_name}({sts_native_args_str});\n"
-                        f"    }}\n"
-                    )
-                # async
-                if (async_func_name := method_ani_info.sts_async_name) is not None:
-                    if return_ty_ref := method.return_ty_ref:
-                        callback = f"callback: (err: Error, data?: {sts_return_ty_name}) => void"
-                        then_params = "ret: NullishType"
-                        then_args = f"new Error(), ret as {sts_return_ty_name}"
-                    else:
-                        callback = "callback: (err: Error) => void"
-                        then_params = ""
-                        then_args = "new Error()"
-                    sts_real_params_with_cb = [*sts_real_params, callback]
-                    sts_real_params_with_cb_str = ", ".join(sts_real_params_with_cb)
-                    pkg_sts_target.write(
-                        f"    {async_func_name}({sts_real_params_with_cb_str}): void {{\n"
-                        f"        (launch this.{method_ani_info.sts_native_name}({sts_native_args_str}))\n"
-                        f"        .then(({then_params}): void => {{\n"
-                        f"            callback({then_args});\n"
-                        f"        }})\n"
-                        f"        .catch((ret: NullishType): void => {{\n"
-                        f"            callback(ret as Error);\n"
-                        f"        }});\n"
-                        f"    }}\n"
-                    )
-            # getter
-            if get_name := method_ani_info.get_name:
-                pkg_sts_target.write(
-                    f"    get {get_name}({sts_real_params_str}): {sts_return_ty_name} {{\n"
-                    f"        return this.{method_ani_info.sts_native_name}({sts_native_args_str});\n"
-                    f"    }}\n"
-                )
-            # setter
-            if set_name := method_ani_info.set_name:
-                pkg_sts_target.write(
-                    f"    set {set_name}({sts_real_params_str}) {{\n"
-                    f"        return this.{method_ani_info.sts_native_name}({sts_native_args_str});\n"
-                    f"    }}\n"
-                )
-
-            if method_ani_info.on_off_type is not None:
-                method_name, type_name = method_ani_info.on_off_type
-                real_params_ty = []
-                for real_param in method_ani_info.sts_real_params:
-                    assert real_param.ty_ref.resolved_ty
-                    real_params_ty.append(real_param.ty_ref.resolved_ty)
-                on_off_map.setdefault((method_name, tuple(real_params_ty)), []).append(
-                    (type_name, method)
-                )
-
-        for (method_name, real_params_ty), method_list in on_off_map.items():
-            sts_real_params = []
-            args_list = []
-            sts_real_params.append("type: string")
-            for index, param_ty in enumerate(real_params_ty):
-                type_ani_info = TypeANIInfo.get(self.am, param_ty)
-                sts_real_params.append(f"arg{index}: {type_ani_info.sts_type}")
-                args_list.append(f"arg{index}")
-            sts_real_params_str = ", ".join(sts_real_params)
-            args_str = ", ".join(args_list)
-            pkg_sts_target.write(
-                f"    {method_name}({sts_real_params_str}): void {{\n"
-                f"        switch(type) {{"
-            )
-            for type_name, method in method_list:
-                method_ani_info = IfaceMethodANIInfo.get(self.am, method)
-                pkg_sts_target.write(
-                    f'            case "{type_name}": return this.{method_ani_info.sts_native_name}({args_str});\n'
-                )
-            pkg_sts_target.write(
-                f"            default: throw new Error(`Unknown type: ${{type}}`);\n"
-                f"        }}\n"
-                f"    }}\n"
-            )
-
-        for func in construct_methods.get(iface.name, []):
-            func_ani_info = GlobFuncANIInfo.get(self.am, func)
-            sts_real_params = []
-            for sts_real_param in func_ani_info.sts_real_params:
-                type_ani_info = TypeANIInfo.get(
-                    self.am, sts_real_param.ty_ref.resolved_ty
-                )
-                sts_real_params.append(
-                    f"{sts_real_param.name}: {type_ani_info.sts_type}"
-                )
-            sts_real_params_str = ", ".join(sts_real_params)
-            sts_native_args_str = ", ".join(func_ani_info.sts_native_args)
-            pkg_sts_target.write(
-                f"    constructor({sts_real_params_str}) {{\n"
-                f"        let temp = {func_ani_info.sts_native_name}({sts_native_args_str}) as {iface_ani_info.sts_impl};\n"
-                f"        this._data_ptr = temp._data_ptr;\n"
-                f"        this._vtbl_ptr = temp._vtbl_ptr;\n"
-                f"    }}\n"
-            )
-
-        for func in static_methods.get(iface.name, []):
-            func_ani_info = GlobFuncANIInfo.get(self.am, func)
-            if return_ty_ref := func.return_ty_ref:
-                type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
-                sts_return_ty_name = type_ani_info.sts_type
-            else:
-                sts_return_ty_name = "void"
-            sts_real_params = []
-            for sts_real_param in func_ani_info.sts_real_params:
-                type_ani_info = TypeANIInfo.get(
-                    self.am, sts_real_param.ty_ref.resolved_ty
-                )
-                sts_real_params.append(
-                    f"{sts_real_param.name}: {type_ani_info.sts_type}"
-                )
-            sts_real_params_str = ", ".join(sts_real_params)
-            sts_native_args_str = ", ".join(func_ani_info.sts_native_args)
-            pkg_sts_target.write(
-                f"    static {func_ani_info.sts_func_name}({sts_real_params_str}): {sts_return_ty_name} {{\n"
-                f"        return {func_ani_info.sts_native_name}({sts_native_args_str});\n"
-                f"    }}\n"
-            )
-            # promise
-            if (promise_func_name := func_ani_info.sts_promise_name) is not None:
-                pkg_sts_target.write(
-                    f"    static {promise_func_name}({sts_real_params_str}): Promise<{sts_return_ty_name}> {{\n"
-                    f"        return launch {func_ani_info.sts_native_name}({sts_native_args_str});\n"
-                    f"    }}\n"
-                )
-            # async
-            if (async_func_name := func_ani_info.sts_async_name) is not None:
-                if return_ty_ref := func.return_ty_ref:
-                    callback = (
-                        f"callback: (err: Error, data?: {sts_return_ty_name}) => void"
-                    )
-                    then_params = "ret: NullishType"
-                    then_args = f"new Error(), ret as {sts_return_ty_name}"
-                else:
-                    callback = "callback: (err: Error) => void"
-                    then_params = ""
-                    then_args = "new Error()"
-                sts_real_params_with_cb = [*sts_real_params, callback]
-                sts_real_params_with_cb_str = ", ".join(sts_real_params_with_cb)
-                pkg_sts_target.write(
-                    f"    static {async_func_name}({sts_real_params_with_cb_str}): void {{\n"
-                    f"        (launch {func_ani_info.sts_native_name}({sts_native_args_str}))\n"
-                    f"        .then(({then_params}): void => {{\n"
-                    f"            callback({then_args});\n"
-                    f"        }})\n"
-                    f"        .catch((ret: NullishType): void => {{\n"
-                    f"            callback(ret as Error);\n"
-                    f"        }});\n"
-                    f"    }}\n"
-                )
-
-        pkg_sts_target.write(f"}}\n")
 
 
 class ANICodeGenerator:
@@ -2179,7 +1623,7 @@ class ANICodeGenerator:
                     )
                     iface_ani_impl_target.write(
                         f"            {type_ani_info.ani_type} {ani_result};\n"
-                        f'            this->env->Object_CallMethodByName_{type_ani_info.ani_type.suffix}(this->ref, "{method_ani_info.sts_native_name}", nullptr, reinterpret_cast<{type_ani_info.ani_type.base}*>(&{ani_result}){args_ani_trailing});\n'
+                        f'            this->env->Object_CallMethodByName_{type_ani_info.ani_type.suffix}(this->ref, "{method_ani_info.ani_method_name}", nullptr, reinterpret_cast<{type_ani_info.ani_type.base}*>(&{ani_result}){args_ani_trailing});\n'
                     )
                     type_ani_info.from_ani(
                         iface_ani_impl_target, 8, "env", ani_result, cpp_result
@@ -2187,7 +1631,7 @@ class ANICodeGenerator:
                     iface_ani_impl_target.write(f"            return {cpp_result};\n")
                 else:
                     iface_ani_impl_target.write(
-                        f'            this->env->Object_CallMethodByName_Void(this->ref, "{method_ani_info.sts_native_name}", nullptr{args_ani_trailing});\n'
+                        f'            this->env->Object_CallMethodByName_Void(this->ref, "{method_ani_info.ani_method_name}", nullptr{args_ani_trailing});\n'
                     )
                 iface_ani_impl_target.write(f"        }}\n")
         iface_ani_impl_target.write(
