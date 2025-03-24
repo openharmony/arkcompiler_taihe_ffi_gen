@@ -1,3 +1,5 @@
+@!namespace("ns_test", "foo")
+
 interface window {
     getheight(): i32;
     setheight(b: i32): void;
@@ -5,5 +7,3 @@ interface window {
 
 function get_interface(v: i32): window;
 function check_interface(a: window): void;
-
-[namespace("ns_test", "foo")]

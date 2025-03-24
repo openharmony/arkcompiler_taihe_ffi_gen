@@ -1,10 +1,10 @@
-#include "onoff.impl.hpp"
+#include "on_off.impl.hpp"
 
 #include <iostream>
 
 #include "core/callback.hpp"
 #include "core/string.hpp"
-#include "onoff.IBase.proj.2.hpp"
+#include "on_off.IBase.proj.2.hpp"
 #include "stdexcept"
 // Please delete <stdexcept> include when you implement
 using namespace taihe::core;
@@ -27,8 +27,8 @@ class IBase {
   string new_str;
 };
 
-::onoff::IBase getIBase(string_view a, string_view b) {
-  return make_holder<IBase, ::onoff::IBase>(a, b);
+::on_off::IBase getIBase(string_view a, string_view b) {
+  return make_holder<IBase, ::on_off::IBase>(a, b);
 }
 void onFoo(callback_view<void()> a) {
   a();

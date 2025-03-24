@@ -135,6 +135,10 @@ class STSCodeGenerator:
             self.gen_iface_interface(iface, pkg_sts_target)
         for iface in pkg.interfaces:
             self.gen_iface_class(iface, pkg_sts_target, statics_map, ctors_map)
+        # TODO: hack inject
+        pkg_ani_info = PackageANIInfo.get(self.am, pkg)
+        for injected in pkg_ani_info.injected_codes:
+            pkg_sts_target.write(injected)
 
     def gen_native_funcs(
         self,
@@ -311,6 +315,9 @@ class STSCodeGenerator:
         pkg_sts_target.write(f"export interface {iface_ani_info.sts_type} {{\n")
         with pkg_sts_target.indent_manager.offset(4):
             self.gen_iface_methods_decl(iface.methods, pkg_sts_target)
+            # TODO: hack inject
+            for injected in iface_ani_info.iface_injected_codes:
+                pkg_sts_target.write(injected)
         pkg_sts_target.write(f"}}\n")
 
     def gen_iface_methods_decl(
@@ -420,6 +427,9 @@ class STSCodeGenerator:
             self.gen_static_funcs(statics_map.get(iface.name, []), pkg_sts_target)
             self.gen_native_methods(iface.methods, pkg_sts_target)
             self.gen_iface_methods(iface.methods, pkg_sts_target)
+            # TODO: hack inject
+            for injected in iface_ani_info.class_injected_codes:
+                pkg_sts_target.write(injected)
         pkg_sts_target.write(f"}}\n")
 
     def gen_static_funcs(

@@ -1,9 +1,9 @@
-import * as onoff_test from "../author_generated/onoff"
+import * as on_off_test from "../author_generated/on_off"
 
-loadLibrary("ani_onoff")
+loadLibrary("ani_on_off")
 
 function main() {
-    let a = onoff_test.getIBase("hello", "world")
+    let a = on_off_test.getIBase("hello", "world")
     
     try {
         a.on("set", () => {
@@ -21,21 +21,21 @@ function main() {
     }
     // toplevel func on
     try {
-        onoff_test.on("foo", () => {
+        on_off_test.on("foo", () => {
         console.log("void input void output callback!");
     })
     } catch (error) {
         console.error("main finsih test ERROR ", error)
     }
     try {
-        onoff_test.on("bar", () => {
+        on_off_test.on("bar", () => {
         console.log("void input void output callback!");
     })
     } catch (error) {
         console.error("main finsih test ERROR ", error)
     }
     try {
-        onoff_test.on("baz", 1, () => {
+        on_off_test.on("my_baz", 1, () => {
         console.log("void input void output callback!");
     })
     } catch (error) {
@@ -44,21 +44,21 @@ function main() {
 
     // toplevel func off
     try {
-        onoff_test.off("foo", () => {
+        on_off_test.off("foo", () => {
         console.log("void input void output callback!");
     })
     } catch (error) {
         console.error("main finsih test ERROR ", error)
     }
     try {
-        onoff_test.off("bar", () => {
+        on_off_test.off("bar", () => {
         console.log("void input void output callback!");
     })
     } catch (error) {
         console.error("main finsih test ERROR ", error)
     }
     try {
-        onoff_test.off("baz", 2, () => {
+        on_off_test.off("my_baz", 2, () => {
         console.log("void input void output callback!");
     })
     } catch (error) {
@@ -67,14 +67,14 @@ function main() {
 
     // undefined
     try {
-        onoff_test.on("ABC", () => {
+        on_off_test.on("ABC", () => {
         console.log("void input void output callback!");
     })
     } catch (error) {
         console.error("main finsih test ERROR ", error)
     }
     try {
-        onoff_test.off("ABC", () => {
+        on_off_test.off("ABC", () => {
         console.log("void input void output callback!");
     })
     } catch (error) {

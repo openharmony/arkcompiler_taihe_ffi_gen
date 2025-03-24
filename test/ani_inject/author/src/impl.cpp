@@ -8,7 +8,6 @@ namespace {
 
 class Foo {
  public:
-  void with_name(string_view name) { std::cout << name << std::endl; }
   void with_this(uintptr_t thiz) { std::cout << thiz << std::endl; }
 };
 

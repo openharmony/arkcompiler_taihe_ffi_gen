@@ -1,6 +1,5 @@
 #include <iostream>
 
-#include "enum_test.Color.proj.0.hpp"
 #include "enum_test.impl.hpp"
 #include "stdexcept"
 // Please delete <stdexcept> include when you implement

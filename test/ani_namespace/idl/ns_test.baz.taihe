@@ -1,3 +1,5 @@
+@!namespace("ns_test", "baz")
+
 struct Data {
   a: String;
   b: String;
@@ -6,5 +8,3 @@ struct Data {
 
 function concatStruct(data: Data): String;
 function makeStruct(a: String, b: String, c: i32): Data;
-
-[namespace("ns_test", "baz")]

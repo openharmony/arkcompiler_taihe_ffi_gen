@@ -155,6 +155,11 @@ class PackageANIInfo(AbstractAnalysis[PackageDecl]):
             self.ani_path = "/".join(self.module.split("."))
             self.impl_desc = f"L{self.ani_path}/ETSGLOBAL;"
 
+        self.injected_codes: list[str] = []
+        for injected in p.get_attr_list("sts_inject"):
+            (code,) = injected.args
+            self.injected_codes.append(code)
+
 
 class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
     def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
@@ -372,6 +377,15 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
         pkg_ani_info = PackageANIInfo.get(am, p)
         self.type_desc = f"L{pkg_ani_info.ani_path}/{self.sts_type};"
         self.impl_desc = f"L{pkg_ani_info.ani_path}/{self.sts_impl};"
+
+        self.iface_injected_codes: list[str] = []
+        for iface_injected in d.get_attr_list("sts_inject_into_interface"):
+            (code,) = iface_injected.args
+            self.iface_injected_codes.append(code)
+        self.class_injected_codes: list[str] = []
+        for class_injected in d.get_attr_list("sts_inject_into_class"):
+            (code,) = class_injected.args
+            self.class_injected_codes.append(code)
 
 
 class AbstractTypeANIInfo(metaclass=ABCMeta):
