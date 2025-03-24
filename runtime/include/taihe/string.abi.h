@@ -28,14 +28,10 @@ struct TStringData {
 //////////////////
 
 // Returns the buffer of the TString.
-TH_INLINE const char* tstr_buf(struct TString tstr) {
-  return tstr.ptr;
-}
+TH_INLINE const char* tstr_buf(struct TString tstr) { return tstr.ptr; }
 
 // Returns the length of the TString.
-TH_INLINE size_t tstr_len(struct TString tstr) {
-  return tstr.length;
-}
+TH_INLINE size_t tstr_len(struct TString tstr) { return tstr.length; }
 
 // Allocates memory and initializes a TString with a given capacity.
 //
@@ -49,7 +45,7 @@ TH_INLINE size_t tstr_len(struct TString tstr) {
 // # Notes
 // - The caller is responsible for setting the string length.
 // - Reference count is set to 1 after called.
-TH_EXPORT char *tstr_initialize(struct TString *tstr_ptr, uint32_t capacity);
+TH_EXPORT char* tstr_initialize(struct TString* tstr_ptr, uint32_t capacity);
 
 // Creates a new heap-allocated TString by copying an existing string.
 //
@@ -110,8 +106,9 @@ TH_EXPORT struct TString tstr_dup(struct TString tstr);
 // - A new TString containing the concatenation of `left` and `right`.
 //
 // # Notes
-// - The resulting TString object contains the concatenation of `left` and `right`.
-// - The reference counts of both `left` and `right` are incremented. 
+// - The resulting TString object contains the concatenation of `left` and
+// `right`.
+// - The reference counts of both `left` and `right` are incremented.
 //   Remember to call `tstr_drop` after use to manage memory correctly.
 TH_EXPORT struct TString tstr_concat(struct TString left, struct TString right);
 
@@ -119,13 +116,16 @@ TH_EXPORT struct TString tstr_concat(struct TString left, struct TString right);
 //
 // # Parameters
 // - `s`: The source TString object to extract the substring from.
-// - `pos`: The starting position of the substring within the source TString object. 
+// - `pos`: The starting position of the substring within the source TString
+// object.
 // - `len`: The length of the substring to extract.
 //
 // # Returns
 // - A new TString containing the extracted substring.
 //
 // # Notes
-// - The resulting TString object is a substring of `s` starting from `pos` with a length of `len`.
+// - The resulting TString object is a substring of `s` starting from `pos` with
+// a length of `len`.
 // - Remember to call `tstr_drop` after use to manage memory correctly.
-TH_EXPORT struct TString tstr_substr(struct TString tstr, size_t pos, size_t len);
+TH_EXPORT struct TString tstr_substr(struct TString tstr, size_t pos,
+                                     size_t len);
