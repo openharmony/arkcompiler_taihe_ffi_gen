@@ -252,7 +252,7 @@ struct map_view {
     std::size_t cap;
     item_t** bucket;
     std::size_t size;
-  } * m_handle;
+  }* m_handle;
 
   explicit map_view(data_t* handle) : m_handle(handle) {}
 

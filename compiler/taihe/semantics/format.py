@@ -1,7 +1,6 @@
 """Format the IDL files."""
 
 from codecs import encode
-from contextlib import contextmanager
 from typing import TextIO
 
 from typing_extensions import override
@@ -30,28 +29,12 @@ from taihe.semantics.declarations import (
 )
 from taihe.semantics.visitor import RecursiveDeclVisitor
 from taihe.utils.diagnostics import AnsiStyle
+from taihe.utils.outputs import IndentManager
 
 
 def pretty_print(x: DeclProtocol, buffer: TextIO):
     printer = _PrettyPrinter(buffer)
     printer.handle_decl(x)
-
-
-class IndentManager:
-    def __init__(self):
-        self.count = 0
-
-    @contextmanager
-    def code_block(self, n=4):
-        try:
-            self.count += n
-            yield
-        finally:
-            self.count -= n
-
-    @property
-    def current(self):
-        return self.count * " "
 
 
 class _PrettyPrinter(RecursiveDeclVisitor):
@@ -193,7 +176,7 @@ class _PrettyPrinter(RecursiveDeclVisitor):
 
         if d.items:
             self.writeln(f"{enum_kw} {full_decl} {{")
-            with self.indent_manager.code_block():
+            with self.indent_manager.offset():
                 for i in d.items:
                     self.handle_decl(i)
             self.writeln(f"}}")
@@ -208,7 +191,7 @@ class _PrettyPrinter(RecursiveDeclVisitor):
 
         if d.fields:
             self.writeln(f"{union_kw} {d.name} {{")
-            with self.indent_manager.code_block():
+            with self.indent_manager.offset():
                 for f in d.fields:
                     self.handle_decl(f)
             self.writeln(f"}}")
@@ -229,7 +212,7 @@ class _PrettyPrinter(RecursiveDeclVisitor):
 
         if d.fields:
             self.writeln(f"{struct_kw} {d.name} {{")
-            with self.indent_manager.code_block():
+            with self.indent_manager.offset():
                 for f in d.fields:
                     self.handle_decl(f)
             self.writeln(f"}}")
@@ -259,7 +242,7 @@ class _PrettyPrinter(RecursiveDeclVisitor):
 
         if d.methods:
             self.writeln(f"{iface_kw} {full_decl} {{")
-            with self.indent_manager.code_block():
+            with self.indent_manager.offset():
                 for f in d.methods:
                     self.handle_decl(f)
             self.writeln(f"}}")

@@ -75,7 +75,7 @@ struct vector_view {
     std::size_t cap;
     T* buffer;
     std::size_t len;
-  } * m_handle;
+  }* m_handle;
 
   explicit vector_view(data_t* handle) : m_handle(handle) {}
 

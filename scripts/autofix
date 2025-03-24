@@ -5,16 +5,16 @@
 source "$(dirname "$0")/common_lib.sh"
 init_py_env
 
- # Python
- black taihe tests
- ruff check taihe tests --fix
- 
- # Cpp, runtime
- find ../runtime/include ../runtime/src -type f \
-     | clang-format --verbose -i  @/dev/stdin
- 
- # Cpp, tests
- find ../test/ \
-      \( -name '*.c' -or -name '*.cpp' -or -name '*.h' -or -name '*.hpp' \) \
-      -not -path '*generated*' -type f \
-     | clang-format --verbose -i  @/dev/stdin
+# Python
+black taihe tests
+ruff check taihe tests --fix
+
+# Cpp, runtime
+find ../runtime/include ../runtime/src -type f |
+    clang-format --verbose -i @/dev/stdin
+
+# Cpp, tests
+find ../test/ \
+    \( -name '*.c' -or -name '*.cpp' -or -name '*.h' -or -name '*.hpp' \) \
+    -not -path '*generated*' -type f |
+    clang-format --verbose -i @/dev/stdin
