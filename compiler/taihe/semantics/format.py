@@ -7,7 +7,6 @@ from typing import TextIO
 from typing_extensions import override
 
 from taihe.semantics.declarations import (
-    AttrItemDecl,
     Decl,
     DeclarationImportDecl,
     DeclarationRefDecl,
@@ -97,30 +96,35 @@ class _PrettyPrinter(RecursiveDeclVisitor):
         if isinstance(d, str):
             return '"' + encode(d, "unicode-escape").decode() + '"'
 
-    def get_attr_item(self, d: AttrItemDecl) -> str:
-        if d.value is None:
-            return d.name
-        if isinstance(d.value, tuple):
-            s = ", ".join(self.get_value(v) for v in d.value)
-            return f"{d.name}({s})"
-        s = self.get_value(d.value)
-        return f"{d.name} = {s}"
-
     def as_keyword(self, s) -> str:
         return f"{AnsiStyle.CYAN}{s}{AnsiStyle.RESET}"
 
+    def get_format_attr(self, d: Decl) -> list[str]:
+        formatted_attributes = []
+        for key, items in d.attrs.items():
+            for item in items:
+                if item.args:
+                    values_fmt = ", ".join(self.get_value(arg) for arg in item.args)
+                    formatted_attributes.append(f"{key}({values_fmt})")
+                else:
+                    formatted_attributes.append(key)
+        return formatted_attributes
+
     def with_attr(self, d: Decl, s: str) -> str:
-        if d.attrs:
-            fmt_attrs = ", ".join(map(self.get_attr_item, d.attrs.values()))
-            attr = f"{AnsiStyle.MAGENTA}[{fmt_attrs}]{AnsiStyle.RESET_ALL}"
-            return f"{attr} {s}"
-        else:
+        if not d.attrs:
             return s
+        fmt_attrs = " ".join(f"@{item}" for item in self.get_format_attr(d))
+        attr = f"{AnsiStyle.MAGENTA}{fmt_attrs}{AnsiStyle.RESET_ALL}"
+        return f"{attr} {s}"
+
+    def write_pkg_attr(self, d: PackageDecl):
+        for item in self.get_format_attr(d):
+            attr = f"{AnsiStyle.MAGENTA}@!{item}{AnsiStyle.RESET_ALL}"
+            self.writeln(f"{attr}")
 
     def write_attr(self, d: Decl):
-        if d.attrs:
-            fmt_attrs = ", ".join(map(self.get_attr_item, d.attrs.values()))
-            attr = f"{AnsiStyle.MAGENTA}[{fmt_attrs}]{AnsiStyle.RESET_ALL}"
+        for item in self.get_format_attr(d):
+            attr = f"{AnsiStyle.MAGENTA}@{item}{AnsiStyle.RESET_ALL}"
             self.writeln(f"{attr}")
 
     @override
@@ -264,7 +268,8 @@ class _PrettyPrinter(RecursiveDeclVisitor):
 
     @override
     def visit_package_decl(self, p: PackageDecl):
-        self.writeln(f"// {self.with_attr(p, p.name)}")
+        self.writeln(f"// {p.name}")
+        self.write_pkg_attr(p)
         for d in p.pkg_imports.values():
             self.handle_decl(d)
         for d in p.decl_imports.values():

@@ -34,7 +34,7 @@ class Decl(metaclass=ABCMeta):
 
     loc: Optional[SourceLocation]
 
-    attrs: dict[str, "AttrItemDecl"]
+    attrs: dict[str, list["AttrItemDecl"]]
 
     def __init__(self, loc: Optional[SourceLocation]):
         self.loc = loc
@@ -42,9 +42,7 @@ class Decl(metaclass=ABCMeta):
 
     def add_attr(self, i: "AttrItemDecl"):
         i.node_parent = self
-        if prev := self.attrs.get(i.name, None):
-            raise DeclRedefError(prev, i)
-        self.attrs[i.name] = i
+        self.attrs.setdefault(i.name, []).append(i)
 
     @property
     @abstractmethod
@@ -75,17 +73,17 @@ class NamedDecl(Decl, metaclass=ABCMeta):
 
 
 class AttrItemDecl(NamedDecl):
-    value: Any
+    args: tuple[Any]
     node_parent: Optional[Decl]
 
     def __init__(
         self,
         loc: Optional[SourceLocation],
         name: str,
-        value: Any = None,
+        value: tuple[Any],
     ):
         super().__init__(loc, name)
-        self.value = value
+        self.args = value
         self.node_parent = None
 
     @override
