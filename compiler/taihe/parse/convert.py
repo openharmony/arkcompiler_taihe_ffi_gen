@@ -58,8 +58,7 @@ class IgnoredFileWarn(DiagWarn):
 
 def normalize_pkg_name(name: str):
     def is_allowed(char: str):
-        # TODO: hack at
-        return char.isalnum() or char == "_" or char == "@"
+        return char.isalnum() or char == "_"
 
     def to_valid_identifier(s: str):
         """Converts a string to valid, C-style identifier."""
@@ -261,7 +260,9 @@ class ExprEvaluator(Visitor):
             decode(
                 (
                     val.text[3:-3]
-                    if len(val.text) > 2 and val.text[1] == '"' and val.text[-2] == '"'
+                    if len(val.text) > 2
+                    and val.text.startswith('"""')
+                    and val.text.endswith('"""')
                     else val.text[1:-1]
                 ),
                 "unicode-escape",
@@ -295,26 +296,6 @@ class AstConverter(ExprEvaluator):
     @override
     def visit_AttrVal(self, node: ast.AttrVal) -> Any:
         return self.visit(node.expr)
-
-    @override
-    def visit_SimpleAttrItem(self, node: ast.SimpleAttrItem) -> AttrItemDecl:
-        if node.val:
-            d = AttrItemDecl(self.loc(node.name), str(node.name), self.visit(node.val))
-        else:
-            d = AttrItemDecl(self.loc(node.name), str(node.name))
-        return d
-
-    @override
-    def visit_TupleAttrItem(self, node: ast.TupleAttrItem) -> AttrItemDecl:
-        value = tuple(self.visit(val) for val in node.vals)
-        d = AttrItemDecl(self.loc(node.name), str(node.name), value)
-        return d
-
-    @override
-    def visit_DocstringItem(self, node: ast.DocstringItem) -> AttrItemDecl:
-        value = self.visit(node.expr)
-        d = AttrItemDecl(self.loc(node.name), str(node.name), value)
-        return d
 
     # Type References
 
@@ -387,15 +368,14 @@ class AstConverter(ExprEvaluator):
     def visit_StructProperty(self, node: ast.StructProperty) -> StructFieldDecl:
         d = StructFieldDecl(self.loc(node.name), str(node.name), self.visit(node.ty))
         self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
-        self.diag.for_each(node.docstrings, lambda a: d.add_attr(self.visit(a)))
         return d
 
     @override
     def visit_Struct(self, node: ast.Struct) -> StructDecl:
         d = StructDecl(self.loc(node.name), str(node.name))
         self.diag.for_each(node.fields, lambda f: d.add_field(self.visit(f)))
-        self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
-        self.diag.for_each(node.docstrings, lambda a: d.add_attr(self.visit(a)))
+        self.diag.for_each(node.declattrs, lambda a: d.add_attr(self.visit(a)))
+        self.diag.for_each(node.scopeattrs, lambda a: d.add_attr(self.visit(a)))
         return d
 
     @override
@@ -414,7 +394,7 @@ class AstConverter(ExprEvaluator):
         else:
             d = EnumDecl(self.loc(node.name), str(node.name))
         self.diag.for_each(node.fields, lambda a: d.add_item(self.visit(a)))
-        self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
+        self.diag.for_each(node.declattrs, lambda a: d.add_attr(self.visit(a)))
         return d
 
     @override
@@ -424,22 +404,20 @@ class AstConverter(ExprEvaluator):
         else:
             d = UnionFieldDecl(self.loc(node.name), str(node.name))
         self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
-        self.diag.for_each(node.docstrings, lambda a: d.add_attr(self.visit(a)))
         return d
 
     @override
     def visit_Union(self, node: ast.Union) -> UnionDecl:
         d = UnionDecl(self.loc(node.name), str(node.name))
         self.diag.for_each(node.fields, lambda f: d.add_field(self.visit(f)))
-        self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
-        self.diag.for_each(node.docstrings, lambda a: d.add_attr(self.visit(a)))
+        self.diag.for_each(node.declattrs, lambda a: d.add_attr(self.visit(a)))
+        self.diag.for_each(node.scopeattrs, lambda a: d.add_attr(self.visit(a)))
         return d
 
     @override
     def visit_Parameter(self, node: ast.Parameter) -> ParamDecl:
         d = ParamDecl(self.loc(node.name), str(node.name), self.visit(node.ty))
         self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
-        self.diag.for_each(node.docstrings, lambda a: d.add_attr(self.visit(a)))
         return d
 
     @override
@@ -450,7 +428,6 @@ class AstConverter(ExprEvaluator):
             d = IfaceMethodDecl(self.loc(node.name), str(node.name))
         self.diag.for_each(node.parameters, lambda p: d.add_param(self.visit(p)))
         self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
-        self.diag.for_each(node.docstrings, lambda a: d.add_attr(self.visit(a)))
         return d
 
     @override
@@ -463,8 +440,8 @@ class AstConverter(ExprEvaluator):
         d = IfaceDecl(self.loc(node.name), str(node.name))
         self.diag.for_each(node.fields, lambda f: d.add_method(self.visit(f)))
         self.diag.for_each(node.extends, lambda i: d.add_parent(self.visit(i)))
-        self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
-        self.diag.for_each(node.docstrings, lambda a: d.add_attr(self.visit(a)))
+        self.diag.for_each(node.declattrs, lambda a: d.add_attr(self.visit(a)))
+        self.diag.for_each(node.scopeattrs, lambda a: d.add_attr(self.visit(a)))
         return d
 
     @override
@@ -475,7 +452,18 @@ class AstConverter(ExprEvaluator):
             d = GlobFuncDecl(self.loc(node.name), str(node.name))
         self.diag.for_each(node.parameters, lambda p: d.add_param(self.visit(p)))
         self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
-        self.diag.for_each(node.docstrings, lambda a: d.add_attr(self.visit(a)))
+        return d
+
+    @override
+    def visit_DeclAttr(self, node: ast.DeclAttr) -> AttrItemDecl:
+        value = tuple(self.visit(val) for val in node.vals)
+        d = AttrItemDecl(self.loc(node.name), str(node.name), value)
+        return d
+
+    @override
+    def visit_ScopeAttr(self, node: ast.ScopeAttr) -> AttrItemDecl:
+        value = tuple(self.visit(val) for val in node.vals)
+        d = AttrItemDecl(self.loc(node.name), str(node.name), value)
         return d
 
     # Package
@@ -487,7 +475,6 @@ class AstConverter(ExprEvaluator):
             self.diag.for_each(self.visit(u), pkg.add_import)
         self.diag.for_each(node.fields, lambda n: pkg.add_declaration(self.visit(n)))
         self.diag.for_each(node.attrs, lambda a: pkg.add_attr(self.visit(a)))
-        self.diag.for_each(node.docstrings, lambda a: pkg.add_attr(self.visit(a)))
         return pkg
 
     def convert(self) -> PackageDecl:

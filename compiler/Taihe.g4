@@ -5,9 +5,17 @@ grammar Taihe;
 /////////////
 
 spec
-    : (UseLst_uses += use)* (SpecFieldLst_fields += specField)*
-      (DocstringItemLst_docstrings += docstringItem)* (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)* COMMA?)? RIGHT_BRACKET)?
+    : (ScopeAttrLst_attrs += scopeAttr)*
+      (UseLst_uses += use)* (SpecFieldLst_fields += specField | ScopeAttrLst_attrs += scopeAttr)*
       EOF
+    ;
+
+scopeAttr
+    : AT EXCLAMATION token_name = ID (LEFT_PARENTHESIS (AttrValLst_vals += attrVal (COMMA AttrValLst_vals += attrVal)* COMMA?)? RIGHT_PARENTHESIS)?
+    ;
+
+declAttr
+    : AT token_name = ID (LEFT_PARENTHESIS (AttrValLst_vals += attrVal (COMMA AttrValLst_vals += attrVal)* COMMA?)? RIGHT_PARENTHESIS)?
     ;
 
 use
@@ -24,64 +32,60 @@ declAliasPair
     ;
 
 specField
-    : (DocstringItemLst_docstrings += docstringItem)* (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)* COMMA?)? RIGHT_BRACKET)?
+    : (DeclAttrLst_declattrs += declAttr)*
       KW_ENUM token_name = ID (COLON TypeOpt_enum_ty = type)?
       LEFT_BRACE (EnumItemLst_fields += enumItem (COMMA EnumItemLst_fields += enumItem)* COMMA?)? RIGHT_BRACE # enum
-    | (DocstringItemLst_docstrings += docstringItem)* (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)* COMMA?)? RIGHT_BRACKET)?
+    | (DeclAttrLst_declattrs += declAttr)*
       KW_STRUCT token_name = ID
-      LEFT_BRACE (StructFieldLst_fields += structField)* RIGHT_BRACE # struct
-    | (DocstringItemLst_docstrings += docstringItem)* (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)* COMMA?)? RIGHT_BRACKET)?
+      LEFT_BRACE (StructFieldLst_fields += structField | ScopeAttrLst_scopeattrs += scopeAttr)* RIGHT_BRACE # struct
+    | (DeclAttrLst_declattrs += declAttr)*
       KW_UNION token_name = ID
-      LEFT_BRACE (UnionFieldLst_fields += unionField)* RIGHT_BRACE # union
-    | (DocstringItemLst_docstrings += docstringItem)* (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)* COMMA?)? RIGHT_BRACKET)?
+      LEFT_BRACE (UnionFieldLst_fields += unionField | ScopeAttrLst_scopeattrs += scopeAttr)* RIGHT_BRACE # union
+    | (DeclAttrLst_declattrs += declAttr)*
       KW_INTERFACE token_name = ID
       (COLON InterfaceParentLst_extends += interfaceParent (COMMA InterfaceParentLst_extends += interfaceParent)* COMMA?)?
-      LEFT_BRACE (InterfaceFieldLst_fields += interfaceField)* RIGHT_BRACE # interface
-    | (DocstringItemLst_docstrings += docstringItem)* (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)* COMMA?)? RIGHT_BRACKET)?
+      LEFT_BRACE (InterfaceFieldLst_fields += interfaceField | ScopeAttrLst_scopeattrs += scopeAttr)* RIGHT_BRACE # interface
+    | (DeclAttrLst_attrs += declAttr)*
       KW_FUNCTION token_name = ID
       LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)* COMMA?)? RIGHT_PARENTHESIS (COLON (TypeOpt_return_ty = type | KW_VOID))? SEMICOLON # globalFunction
     ;
 
 enumItem
-    : (DocstringItemLst_docstrings += docstringItem)* (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)* COMMA?)? RIGHT_BRACKET)?
+    : (DeclAttrLst_attrs += declAttr)*
       token_name = ID (ASSIGN_TO AttrValOpt_val = attrVal)? # enumProperty
     ;
 
 structField
-    : (DocstringItemLst_docstrings += docstringItem)* (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)* COMMA?)? RIGHT_BRACKET)?
+    : (DeclAttrLst_attrs += declAttr)*
       token_name = ID
       COLON Type_ty = type SEMICOLON # structProperty
     ;
 
 unionField
-    : (DocstringItemLst_docstrings += docstringItem)* (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)* COMMA?)? RIGHT_BRACKET)?
+    : (DeclAttrLst_attrs += declAttr)*
       token_name = ID
       (COLON TypeOpt_ty = type)? SEMICOLON # unionProperty
     ;
 
 interfaceField
-    : (DocstringItemLst_docstrings += docstringItem)* (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)* COMMA?)? RIGHT_BRACKET)?
+    : (DeclAttrLst_attrs += declAttr)*
       token_name = ID
       LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)* COMMA?)? RIGHT_PARENTHESIS (COLON (TypeOpt_return_ty = type | KW_VOID))? SEMICOLON # interfaceFunction
     ;
 
 interfaceParent
-    : (DocstringItemLst_docstrings += docstringItem)* (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)* COMMA?)? RIGHT_BRACKET)?
+    : (DeclAttrLst_attrs += declAttr)*
       Type_ty = type
     ;
 
 parameter
-    : (DocstringItemLst_docstrings += docstringItem)* (LEFT_BRACKET (AttrItemLst_attrs += attrItem (COMMA AttrItemLst_attrs += attrItem)* COMMA?)? RIGHT_BRACKET)?
+    : (DeclAttrLst_attrs += declAttr)*
       token_name = ID COLON Type_ty = type
     ;
 
 ///////////////
 // Attribute //
 ///////////////
-
-docstringItem
-    : token_name = ID StringExpr_expr = stringExpr
-    ;
 
 attrItem
     : token_name = ID (ASSIGN_TO AttrValOpt_val = attrVal)? # simpleAttrItem

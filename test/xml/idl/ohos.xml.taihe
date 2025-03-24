@@ -23,17 +23,17 @@ interface XmlSerializer {
 function makeXmlSerializer(buffer: BufferType, encoding: Optional<String>): XmlSerializer;
 
 enum EventType {
-    START_DOCUMENT;
-    END_DOCUMENT;
-    START_TAG;
-    END_TAG;
-    TEXT;
-    CDSECT;
-    COMMENT;
-    DOCDECL;
-    INSTRUCTION;
-    ENTITY_REFERENCE;
-    WHITESPACE;
+    START_DOCUMENT,
+    END_DOCUMENT,
+    START_TAG,
+    END_TAG,
+    TEXT,
+    CDSECT,
+    COMMENT,
+    DOCDECL,
+    INSTRUCTION,
+    ENTITY_REFERENCE,
+    WHITESPACE,
 }
 
 interface ParseInfo {
