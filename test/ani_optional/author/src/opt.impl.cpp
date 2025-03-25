@@ -1,0 +1,48 @@
+#include "opt.impl.hpp"
+
+#include <iostream>
+
+#include "core/array.hpp"
+#include "core/optional.hpp"
+#include "core/string.hpp"
+#include "opt.ReturnResult.proj.1.hpp"
+
+using namespace taihe::core;
+namespace {
+void showOptionalInt(optional_view<int32_t> x) {
+  if (x) {
+    std::cout << *x << std::endl;
+  } else {
+    std::cout << "Null" << std::endl;
+  }
+}
+optional<int32_t> makeOptionalInt(bool b) {
+  if (b) {
+    return optional<int32_t>::make(10);
+  } else {
+    return optional<int32_t>(nullptr);
+  }
+}
+optional<array<int32_t>> makeOptionalArray(bool b, int32_t val, int32_t num) {
+  if (b) {
+    return optional<array<int32_t>>::make(array<int32_t>::make(num, val));
+  } else {
+    return optional<array<int32_t>>(nullptr);
+  }
+}
+optional<string> sendReturnResult(::opt::ReturnResult const& result) {
+  if (result.results) {
+    string ret = "";
+    for (auto str : *result.results) {
+      ret = concat(ret, str);
+    }
+    return optional<string>::make(ret);
+  } else {
+    return optional<string>(nullptr);
+  }
+}
+}  // namespace
+TH_EXPORT_CPP_API_showOptionalInt(showOptionalInt);
+TH_EXPORT_CPP_API_makeOptionalInt(makeOptionalInt);
+TH_EXPORT_CPP_API_makeOptionalArray(makeOptionalArray);
+TH_EXPORT_CPP_API_sendReturnResult(sendReturnResult);

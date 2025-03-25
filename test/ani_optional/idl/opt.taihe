@@ -1,0 +1,10 @@
+function showOptionalInt(x: Optional<i32>): void;
+
+function makeOptionalInt(b: bool): Optional<i32>;
+
+function makeOptionalArray(b: bool, val: i32, num: i32): Optional<Array<i32>>;
+
+struct ReturnResult {
+    results: Optional<Array<String>>;
+}
+function sendReturnResult(result: ReturnResult): Optional<String>;
