@@ -268,6 +268,14 @@ class STSCodeGenerator:
         pkg_sts_target: OutputBuffer,
     ):
         enum_ani_info = EnumANIInfo.get(self.am, enum)
+        if enum_ani_info.const:
+            assert enum.ty_ref
+            type_ani_info = TypeANIInfo.get(self.am, enum.ty_ref.resolved_ty)
+            for item in enum.items:
+                pkg_sts_target.write(
+                    f"export const {item.name}: {type_ani_info.sts_type} = {dumps(item.value)};\n"
+                )
+            return
         pkg_sts_target.write(f"export enum {enum_ani_info.sts_type_name} {{\n")
         with pkg_sts_target.indent_manager.offset(4):
             for item in enum.items:

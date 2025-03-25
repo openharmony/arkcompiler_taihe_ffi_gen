@@ -19,3 +19,9 @@ enum Weekday {
 
 function nextEnumWeekday(day: Weekday): Weekday;
 function showEnumWeekday(day: Weekday): void;
+
+@const
+enum Flags: f64 {
+    FLAG_A = 1.0,
+    FLAG_B = 1.0 + 1.0,
+}

@@ -338,6 +338,8 @@ class EnumANIInfo(AbstractAnalysis[EnumDecl]):
         self.module = pkg_ani_info.module
         self.sts_type = f"{pkg_ani_info.imported_name}.{self.sts_type_name}"
 
+        self.const = d.get_attr_item("const") is not None
+
 
 class StructANIInfo(AbstractAnalysis[StructDecl]):
     def __init__(self, am: AnalysisManager, d: StructDecl) -> None:
