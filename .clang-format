@@ -1,1 +1,5 @@
 BasedOnStyle: Google
+---
+Language: JavaScript
+JavaScriptQuotes: Double
+IndentWidth: 4
