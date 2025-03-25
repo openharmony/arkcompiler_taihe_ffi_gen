@@ -6,3 +6,16 @@ enum Color: String {
 
 function nextEnum(color: Color): Color;
 function showEnum(color: Color): void;
+
+enum Weekday {
+    MONDAY,
+    TUESDAY,
+    WEDNESDAY,
+    THURSDAY,
+    FRIDAY,
+    SATURDAY,
+    SUNDAY
+}
+
+function nextEnumWeekday(day: Weekday): Weekday;
+function showEnumWeekday(day: Weekday): void;
