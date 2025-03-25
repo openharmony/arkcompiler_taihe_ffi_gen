@@ -57,7 +57,7 @@ struct set_view {
       current = current->next;
     }
     item_t* item = new item_t{
-        .key = std::move(key),
+        .key = key,
         .next = m_handle->bucket[index],
     };
     m_handle->bucket[index] = item;
@@ -109,12 +109,86 @@ struct set_view {
     }
   }
 
- private:
+  template <typename Visitor>
+  void accept(Visitor&& visitor) const {
+    for (std::size_t i = 0; i < m_handle->cap; i++) {
+      item_t* current = m_handle->bucket[i];
+      while (current) {
+        visitor(current->key);
+        current = current->next;
+      }
+    }
+  }
+
   struct item_t {
     K key;
     item_t* next;
   };
 
+  struct iterator {
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = K const&;
+    using difference_type = std::ptrdiff_t;
+    using pointer = K const*;
+    using reference = K const&;
+
+    iterator(item_t** bucket, item_t* current, std::size_t index,
+             std::size_t cap)
+        : bucket(bucket), current(current), index(index), cap(cap) {}
+
+    value_type operator*() const { return current->key; }
+
+    iterator& operator++() {
+      if (current->next) {
+        current = current->next;
+      } else {
+        ++index;
+        while (index < cap && !bucket[index]) {
+          ++index;
+        }
+        current = (index < cap) ? bucket[index] : nullptr;
+      }
+      return *this;
+    }
+
+    iterator operator++(int) {
+      iterator tmp = *this;
+      ++(*this);
+      return tmp;
+    }
+
+    bool operator==(const iterator& other) const {
+      return current == other.current;
+    }
+
+    bool operator!=(const iterator& other) const { return !(*this == other); }
+
+   private:
+    item_t** bucket;
+    item_t* current;
+    std::size_t index;
+    std::size_t cap;
+  };
+
+  iterator begin() const {
+    std::size_t index = 0;
+    while (index < m_handle->cap && !m_handle->bucket[index]) {
+      ++index;
+    }
+    return iterator(m_handle->bucket,
+                    (index < m_handle->cap) ? m_handle->bucket[index] : nullptr,
+                    index, m_handle->cap);
+  }
+
+  iterator end() const {
+    return iterator(m_handle->bucket, nullptr, m_handle->cap, m_handle->cap);
+  }
+
+  iterator cbegin() const { return begin(); }
+
+  iterator cend() const { return end(); }
+
+ private:
   struct data_t {
     TRefCount count;
     std::size_t cap;
@@ -122,7 +196,7 @@ struct set_view {
     std::size_t size;
   }* m_handle;
 
-  explicit set_view(data_t* data) : m_handle(data) {}
+  explicit set_view(data_t* handle) : m_handle(handle) {}
 
   friend struct set<K>;
 
@@ -175,7 +249,7 @@ struct set : set_view<K> {
   }
 
  private:
-  explicit set(data_t* data) : set_view<K>(data) {}
+  explicit set(data_t* handle) : set_view<K>(handle) {}
 };
 
 template <typename K>
