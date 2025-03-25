@@ -369,6 +369,8 @@ class UnionANIInfo(AbstractAnalysis[UnionDecl]):
         self.decl_header = f"{p.name}.{d.name}.ani.0.h"
         self.impl_header = f"{p.name}.{d.name}.ani.1.h"
 
+        self.sts_type_name = d.name
+
 
 class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
     def __init__(self, am: AnalysisManager, d: IfaceDecl) -> None:
@@ -649,16 +651,9 @@ class UnionTypeANIInfo(AbstractAnalysis[UnionType], AbstractTypeANIInfo):
         AbstractTypeANIInfo.__init__(self, am, t)
         self.t = t
         self.am = am
+        union_ani_info = UnionANIInfo.get(self.am, t.ty_decl)
         self.ani_type = ANI_REF
-        sts_types = []
-        for field in t.ty_decl.fields:
-            if field.ty_ref is None:
-                sts_types.append("undefined")
-                continue
-            ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
-            sts_types.append(f"{ty_ani_info.sts_type}")
-        sts_types_str = " | ".join(sts_types)
-        self.sts_type = f"({sts_types_str})"
+        self.sts_type = union_ani_info.sts_type_name
         self.type_desc = "Lstd/core/Object;"
 
     @override
@@ -1771,22 +1766,26 @@ class ANICodeGenerator:
         union_ani_impl_target.write(
             f"inline {union_cpp_info.as_owner} {union_ani_info.from_ani_func_name}(ani_env* env, ani_ref ani_value) {{\n"
         )
+        # `Reference_IsUndefined` should be called before `Object_InstanceOf`
         for field in union.fields:
-            is_field = f"is_{field.name}"
-            union_ani_impl_target.write(f"    ani_boolean {is_field};\n")
             if field.ty_ref is None:
+                is_field = f"is_{field.name}"
                 union_ani_impl_target.write(
+                    f"    ani_boolean {is_field};\n"
                     f"    env->Reference_IsUndefined(ani_value, &{is_field});\n"
                     f"    if ({is_field}) {{\n"
                     f"        return {union_cpp_info.full_name}::make_{field.name}();\n"
                     f"    }}\n"
                 )
-            else:
-                type_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
+        for field in union.fields:
+            if field.ty_ref is not None:
+                is_field = f"is_{field.name}"
                 filed_class = f"{field.name}_cls"
+                type_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
                 union_ani_impl_target.write(
                     f"    ani_class {filed_class};\n"
                     f'    env->FindClass("{type_ani_info.type_desc_boxed}", &{filed_class});\n'
+                    f"    ani_boolean {is_field};\n"
                     f"    env->Object_InstanceOf((ani_object)ani_value, {filed_class}, &{is_field});\n"
                     f"    if ({is_field}) {{\n"
                 )

@@ -9,6 +9,7 @@ from taihe.codegen.ani_generator import (
     PackageANIInfo,
     StructANIInfo,
     TypeANIInfo,
+    UnionANIInfo,
 )
 from taihe.semantics.declarations import (
     EnumDecl,
@@ -281,7 +282,18 @@ class STSCodeGenerator:
         union: UnionDecl,
         pkg_sts_target: OutputBuffer,
     ):
-        pass
+        union_ani_info = UnionANIInfo.get(self.am, union)
+        sts_types = []
+        for field in union.fields:
+            if field.ty_ref is None:
+                sts_types.append("undefined")
+                continue
+            ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
+            sts_types.append(f"{ty_ani_info.sts_type}")
+        sts_types_str = " | ".join(sts_types)
+        pkg_sts_target.write(
+            f"type {union_ani_info.sts_type_name} = {sts_types_str};\n"
+        )
 
     def gen_struct(
         self,
