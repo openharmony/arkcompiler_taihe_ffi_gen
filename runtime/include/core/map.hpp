@@ -114,6 +114,17 @@ struct map_view {
     }
   }
 
+  template <typename Visitor>
+  void accept(Visitor&& visitor) const {
+    for (std::size_t i = 0; i < m_handle->cap; i++) {
+      item_t* current = m_handle->bucket[i];
+      while (current) {
+        visitor(current->key, current->val);
+        current = current->next;
+      }
+    }
+  }
+
   struct item_t {
     K key;
     V val;

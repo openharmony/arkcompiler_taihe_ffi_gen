@@ -206,6 +206,12 @@ int main() {
       std::cout << key << ": " << value->getId() << ", ";
     });
     std::cout << std::endl;
+
+    std::cout << "Map = ";
+    for (auto const& [key, value] : map_1) {
+      std::cout << key << ": " << value->getId() << ", ";
+    }
+    std::cout << std::endl;
   }
 
   {
@@ -220,6 +226,12 @@ int main() {
 
     std::cout << "Set = ";
     set_1.accept([](string_view key) { std::cout << key << ", "; });
+    std::cout << std::endl;
+
+    std::cout << "Set = ";
+    for (auto const& key : set_1) {
+      std::cout << key << ", ";
+    }
     std::cout << std::endl;
   }
 
