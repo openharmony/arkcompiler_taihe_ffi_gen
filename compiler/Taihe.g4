@@ -5,8 +5,7 @@ grammar Taihe;
 /////////////
 
 spec
-    : (ScopeAttrLst_attrs += scopeAttr)*
-      (UseLst_uses += use)* (SpecFieldLst_fields += specField | ScopeAttrLst_attrs += scopeAttr)*
+    : (UseLst_uses += use | SpecFieldLst_fields += specField | ScopeAttrLst_attrs += scopeAttr)*
       EOF
     ;
 
