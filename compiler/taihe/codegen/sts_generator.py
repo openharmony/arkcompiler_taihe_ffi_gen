@@ -63,13 +63,63 @@ class STSCodeGenerator:
         module_sts_file = f"{module}.ets"
         pkg_sts_target = OutputBuffer.create(self.tm, module_sts_file)
         # pkg_sts_target.write(f'loadLibrary("{self.lib_name}");\n')
-        self.gen_namespace_or_module(ns, pkg_sts_target)
+        import_list = self.get_namespace_imports(ns, pkg_sts_target)
 
-    def gen_namespace_or_module(self, ns: Namespace, pkg_sts_target: OutputBuffer):
+        import_dict = {
+            imported_mod_name: module for module, imported_mod_name in import_list
+        }
+
+        for imported_mod_name, module in import_dict.items():
+            pkg_sts_target.write(
+                f'import * as {imported_mod_name} from "./{module}";\n'
+            )
+
+        self.gen_namespace(ns, pkg_sts_target)
+
+    def get_namespace_imports(self, ns: Namespace, pkg_sts_target: OutputBuffer):
+        import_list = []
+        for child_ns in ns.children.values():
+            import_list.extend(self.get_namespace_imports(child_ns, pkg_sts_target))
+        for pkg in ns.packages:
+            import_list.extend(self.get_package_imports(pkg, pkg_sts_target))
+        return import_list
+
+    def get_package_imports(self, pkg: PackageDecl, pkg_sts_target: OutputBuffer):
+        import_list = []
+        for struct in pkg.structs:
+            for field in struct.fields:
+                type_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
+                import_list.extend(type_ani_info.import_list)
+        for union in pkg.unions:
+            for field in union.fields:
+                if field.ty_ref is None:
+                    continue
+                type_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
+                import_list.extend(type_ani_info.import_list)
+        for func in pkg.functions:
+            for param in func.params:
+                type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
+                import_list.extend(type_ani_info.import_list)
+            if func.return_ty_ref:
+                type_ani_info = TypeANIInfo.get(self.am, func.return_ty_ref.resolved_ty)
+                import_list.extend(type_ani_info.import_list)
+        for iface in pkg.interfaces:
+            for method in iface.methods:
+                for param in method.params:
+                    type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
+                    import_list.extend(type_ani_info.import_list)
+                if method.return_ty_ref:
+                    type_ani_info = TypeANIInfo.get(
+                        self.am, method.return_ty_ref.resolved_ty
+                    )
+                    import_list.extend(type_ani_info.import_list)
+        return import_list
+
+    def gen_namespace(self, ns: Namespace, pkg_sts_target: OutputBuffer):
         for child_ns_name, child_ns in ns.children.items():
             pkg_sts_target.write(f"export namespace {child_ns_name} {{\n")
             with pkg_sts_target.indent_manager.offset(4):
-                self.gen_namespace_or_module(child_ns, pkg_sts_target)
+                self.gen_namespace(child_ns, pkg_sts_target)
             pkg_sts_target.write(f"}}\n")
         for pkg in ns.packages:
             self.gen_package(pkg, pkg_sts_target)
@@ -292,7 +342,7 @@ class STSCodeGenerator:
             sts_types.append(f"{ty_ani_info.sts_type}")
         sts_types_str = " | ".join(sts_types)
         pkg_sts_target.write(
-            f"type {union_ani_info.sts_type_name} = {sts_types_str};\n"
+            f"export type {union_ani_info.sts_type_name} = {sts_types_str};\n"
         )
 
     def gen_struct(
