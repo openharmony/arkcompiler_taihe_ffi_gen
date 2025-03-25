@@ -960,7 +960,7 @@ class OptionalTypeANIInfo(AbstractAnalysis[OptionalType], AbstractTypeANIInfo):
         item_ty_ani_info = TypeANIInfo.get(am, t.item_ty)
         self.ani_type = ANI_REF
         self.sts_type = f"({item_ty_ani_info.sts_type} | undefined)"
-        self.type_desc = item_ty_ani_info.type_desc
+        self.type_desc = item_ty_ani_info.type_desc_boxed
         self.am = am
         self.t = t
 
