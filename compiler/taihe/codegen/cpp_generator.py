@@ -1229,6 +1229,39 @@ class CppHeadersGenerator:
             f"    static constexpr void const* iid = &{iface_abi_info.iid};",
             f"    using vtable_t = {iface_abi_info.vtable};",
         )
+        # class field
+        iface_cpp_defn_target.writeln(
+            f"    {iface_abi_info.as_owner} m_handle;",
+        )
+        # convert methods
+        iface_cpp_defn_target.writeln(
+            f"    explicit {iface_cpp_info.weak_name}({iface_abi_info.as_param} handle) : m_handle(handle) {{}}",
+            f"    explicit {iface_cpp_info.weak_name}(::taihe::core::data_view other)",
+            f"        : {iface_cpp_info.weak_name}({iface_abi_info.dynamic_cast}(other.data_ptr)) {{}}",
+            f"    operator ::taihe::core::data_view() const& {{",
+            f"        {iface_abi_info.as_owner} ret_handle = m_handle;",
+            f"        return ::taihe::core::data_view(ret_handle.data_ptr);",
+            f"    }}",
+            f"    operator ::taihe::core::data_holder() const& {{",
+            f"        {iface_abi_info.as_owner} ret_handle = {iface_abi_info.copy_func}(m_handle);",
+            f"        return ::taihe::core::data_holder(ret_handle.data_ptr);",
+            f"    }}",
+        )
+        for ancestor, info in iface_abi_info.ancestor_dict.items():
+            if info.offset == 0:
+                continue
+            ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
+            iface_cpp_defn_target.include(ancestor_cpp_info.defn_header)
+            iface_cpp_defn_target.writeln(
+                f"    operator {ancestor_cpp_info.full_weak_name}() const& {{",
+                f"        {iface_abi_info.as_owner} ret_handle = m_handle;",
+                f"        return {ancestor_cpp_info.full_weak_name}({info.static_cast}(ret_handle));",
+                f"    }}",
+                f"    operator {ancestor_cpp_info.full_norm_name}() const& {{",
+                f"        {iface_abi_info.as_owner} ret_handle = {iface_abi_info.copy_func}(m_handle);",
+                f"        return {ancestor_cpp_info.full_norm_name}({info.static_cast}(ret_handle));",
+                f"    }}",
+            )
         # user methods
         iface_cpp_defn_target.writeln(
             f"    struct virtual_type {{",
@@ -1313,11 +1346,7 @@ class CppHeadersGenerator:
         iface_cpp_defn_target.writeln(
             f"    }};",
         )
-        # class field
-        iface_cpp_defn_target.writeln(
-            f"    {iface_abi_info.as_owner} m_handle;",
-        )
-        # class methods
+        # utility methods
         iface_cpp_defn_target.writeln(
             f"    explicit operator bool() const& {{",
             f"        return m_handle.vtbl_ptr;",
@@ -1329,35 +1358,6 @@ class CppHeadersGenerator:
             f"        return reinterpret_cast<virtual_type const*>(&m_handle);",
             f"    }}",
         )
-        # convert methods
-        iface_cpp_defn_target.writeln(
-            f"    explicit {iface_cpp_info.weak_name}({iface_abi_info.as_param} handle) : m_handle(handle) {{}}",
-            f"    explicit {iface_cpp_info.weak_name}(::taihe::core::data_view other)",
-            f"        : {iface_cpp_info.weak_name}({iface_abi_info.dynamic_cast}(other.data_ptr)) {{}}",
-            f"    operator ::taihe::core::data_view() const& {{",
-            f"        {iface_abi_info.as_owner} ret_handle = m_handle;",
-            f"        return ::taihe::core::data_view(ret_handle.data_ptr);",
-            f"    }}",
-            f"    operator ::taihe::core::data_holder() const& {{",
-            f"        {iface_abi_info.as_owner} ret_handle = {iface_abi_info.copy_func}(m_handle);",
-            f"        return ::taihe::core::data_holder(ret_handle.data_ptr);",
-            f"    }}",
-        )
-        for ancestor, info in iface_abi_info.ancestor_dict.items():
-            if info.offset == 0:
-                continue
-            ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
-            iface_cpp_defn_target.include(ancestor_cpp_info.defn_header)
-            iface_cpp_defn_target.writeln(
-                f"    operator {ancestor_cpp_info.full_weak_name}() const& {{",
-                f"        {iface_abi_info.as_owner} ret_handle = m_handle;",
-                f"        return {ancestor_cpp_info.full_weak_name}({info.static_cast}(ret_handle));",
-                f"    }}",
-                f"    operator {ancestor_cpp_info.full_norm_name}() const& {{",
-                f"        {iface_abi_info.as_owner} ret_handle = {iface_abi_info.copy_func}(m_handle);",
-                f"        return {ancestor_cpp_info.full_norm_name}({info.static_cast}(ret_handle));",
-                f"    }}",
-            )
         iface_cpp_defn_target.writeln(
             f"}};",
             f"}}",
@@ -1470,6 +1470,11 @@ class CppHeadersGenerator:
         )
         iface_cpp_impl_target.include(iface_cpp_info.defn_header)
         iface_cpp_impl_target.include(iface_abi_info.impl_header)
+        for ancestor, info in iface_abi_info.ancestor_dict.items():
+            if info.offset == 0:
+                continue
+            ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
+            iface_cpp_impl_target.include(ancestor_cpp_info.impl_header)
         self.gen_iface_user_methods(
             iface,
             iface_abi_info,

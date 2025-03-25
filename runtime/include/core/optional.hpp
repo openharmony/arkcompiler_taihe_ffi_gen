@@ -27,7 +27,7 @@ struct optional_view {
 
   cpp_owner_t const& operator*() const { return *m_handle; }
 
-  operator bool() const { return m_handle; }
+  explicit operator bool() const { return m_handle; }
 
  protected:
   cpp_owner_t const* m_handle;
