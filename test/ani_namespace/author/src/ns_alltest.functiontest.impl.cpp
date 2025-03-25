@@ -381,7 +381,7 @@ void baseFunctionTest11(array_view<int16_t> param1) {
 }
 void baseFunctionTest12(optional_view<int16_t> param1) {
   if (param1) {
-    std::cout << "NameSpaceImpl: " << __func__ << " param1 " << param1
+    std::cout << "NameSpaceImpl: " << __func__ << " param1 " << *param1
               << std::endl;
   } else {
     std::cout << "NameSpaceImpl: " << __func__ << " param1 is null"
@@ -390,7 +390,7 @@ void baseFunctionTest12(optional_view<int16_t> param1) {
 }
 void baseFunctionTest13(optional_view<int64_t> param1) {
   if (param1) {
-    std::cout << "NameSpaceImpl: " << __func__ << " param1 " << param1
+    std::cout << "NameSpaceImpl: " << __func__ << " param1 " << *param1
               << std::endl;
   } else {
     std::cout << "NameSpaceImpl: " << __func__ << " param1 is null"
