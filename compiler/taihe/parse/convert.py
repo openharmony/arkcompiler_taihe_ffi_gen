@@ -1,3 +1,5 @@
+"""Convert AST to IR."""
+
 from codecs import decode
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -31,7 +33,11 @@ from taihe.semantics.declarations import (
     UnionDecl,
     UnionFieldDecl,
 )
-from taihe.utils.diagnostics import AbstractDiagnosticsManager, DiagNote, DiagWarn
+from taihe.utils.diagnostics import (
+    AbstractDiagnosticsManager,
+    DiagNote,
+    DiagWarn,
+)
 from taihe.utils.sources import SourceBase, SourceLocation
 
 
@@ -280,10 +286,7 @@ class AstConverter(ExprEvaluator):
     source: SourceBase
     diag: AbstractDiagnosticsManager
 
-    def __init__(
-        self, pkg_name: str, source: SourceBase, diag: AbstractDiagnosticsManager
-    ):
-        self.pkg_name = pkg_name
+    def __init__(self, source: SourceBase, diag: AbstractDiagnosticsManager):
         self.source = source
         self.diag = diag
 
@@ -470,7 +473,7 @@ class AstConverter(ExprEvaluator):
 
     @override
     def visit_Spec(self, node: ast.Spec) -> PackageDecl:
-        pkg = PackageDecl(self.pkg_name, SourceLocation(self.source))
+        pkg = PackageDecl(self.source.pkg_name, SourceLocation(self.source))
         for u in node.uses:
             self.diag.for_each(self.visit(u), pkg.add_import)
         self.diag.for_each(node.fields, lambda n: pkg.add_declaration(self.visit(n)))

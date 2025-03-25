@@ -51,7 +51,7 @@ class SemanticTestCompilerInstance:
 
     def parse(self):
         for src in self.source_manager.sources:
-            conv = AstConverter(src.pkg_name, src, self.diagnostics_manager)
+            conv = AstConverter(src, self.diagnostics_manager)
             pkg = conv.convert()
             with self.diagnostics_manager.capture_error():
                 self.package_group.add(pkg)

@@ -424,7 +424,7 @@ MULTI_LINE_COMMENT
     ;
 
 SINGLE_LINE_COMMENT
-    : '//' ~ ('\n' | '\r')* '\r'? '\n' -> channel (HIDDEN)
+    : '//' ~ ('\n' | '\r')* '\r'? '\n'? -> channel (HIDDEN)
     ;
 
 ERROR_CHAR

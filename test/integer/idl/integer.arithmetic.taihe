@@ -1,7 +1,6 @@
 function add_i32(a: i32, b: i32): i32;
 function sub_i32(a: i32, b: i32): i32;
 function mul_i32(a: i32, b: i32): i32;
-[tuple]
 struct i32Pair {
     _0: i32;
     _i: i32;
