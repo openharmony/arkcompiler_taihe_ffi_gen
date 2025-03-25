@@ -175,7 +175,7 @@ class EnumValueError(DiagError):
         else:
             assert self.enum.ty_ref.resolved_ty
             type_repr = self.enum.ty_ref.resolved_ty.representation
-        return f"value of {self.item.description} ({self.item.value}) is conflict with {self.enum.description}, should be {type_repr}"
+        return f"value of {self.item.description} ({self.item.value}) is conflict with {self.enum.description} ({type_repr})"
 
 
 @dataclass
