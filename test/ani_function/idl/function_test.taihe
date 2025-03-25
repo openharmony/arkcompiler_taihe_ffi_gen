@@ -1,0 +1,45 @@
+union MyUnion {
+    iValue: i32;
+    fValue: f32;
+    sValue: String;
+}
+
+interface Foo {
+    @overload("bar")
+    bar(): void;
+    @overload("bar")
+    bar_int(a: i32): void;
+    @overload("bar")
+    bar_str(a: String): void;
+    @overload("bar")
+    bar_union(a: String, b: MyUnion): void;
+    @overload("baropt")
+    bar_union_opt(a: String, name: Optional<String>): void;
+
+    test_cb_v(f: () => void): void;
+    test_cb_i(f: (a: i32) => void): void;
+    test_cb_s(f: (a: String, b: bool) => void): void;
+    test_cb_rs(f: (a: i64) => i64): String;
+
+    @gen_async("add")
+    addSync(a: i32, b: i32): i32;
+}
+
+@class
+interface FooCls {
+    get(): String;
+}
+
+@static("FooCls")
+function static_func_add(a: i32, b: i32): i32;
+
+@static("FooCls")
+function static_func_sub(a: i32, b: i32): i32;
+
+@ctor("FooCls")
+function getFooCls1(name: String): FooCls;
+
+@ctor("FooCls")
+function getFooCls2(name: String, test: String): FooCls;
+
+function makeFoo(): Foo;
