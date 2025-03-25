@@ -1164,7 +1164,9 @@ class MapTypeANIInfo(AbstractAnalysis[MapType], AbstractTypeANIInfo):
             f"{' ' * offset}{env}->Class_FindMethod({ani_class}, \"<ctor>\", nullptr, &{ani_method});\n"
             f"{' ' * offset}ani_object {ani_result};\n"
             f"{' ' * offset}{env}->Object_New({ani_class}, {ani_method}, &{ani_result});\n"
-            f"{' ' * offset}{cpp_value}.accept([=]({key_ty_cpp_info.as_param} {cpp_key}, {val_ty_cpp_info.as_param} {cpp_val}) {{\n"
+            f"{' ' * offset}for (const auto& [key, val] : {cpp_value}) {{\n"
+            f"{' ' * offset}    {key_ty_cpp_info.as_param} {cpp_key} = key;\n"
+            f"{' ' * offset}    {val_ty_cpp_info.as_param} {cpp_val} = val;\n"
         )
         key_ani_spec = f"{ani_result}_key_spec"
         val_ani_spec = f"{ani_result}_val_spec"
@@ -1172,7 +1174,7 @@ class MapTypeANIInfo(AbstractAnalysis[MapType], AbstractTypeANIInfo):
         val_ty_ani_info.into_ani_boxed(target, offset + 4, env, cpp_val, val_ani_spec)
         target.write(
             f"{' ' * offset}    env->Object_CallMethodByName_Void({ani_result}, \"$_set\", nullptr, {key_ani_spec}, {val_ani_spec});\n"
-            f"{' ' * offset}}});\n"
+            f"{' ' * offset}}}\n"
         )
 
 
