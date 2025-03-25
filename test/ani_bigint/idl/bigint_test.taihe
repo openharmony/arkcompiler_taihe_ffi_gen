@@ -1,0 +1,70 @@
+@!sts_inject("""
+function bigIntToArrayInt64(a : BigInt) : long[] {
+    let array : Array<long> = new Array<long>(0);
+    let tmp : BigInt = a;
+    if (tmp === 0n) {
+        array.push(0);
+    }
+    while (tmp !== 0n) {
+        let big = BigInt.asIntN(64, tmp);
+        let lg : long = big.getLong();
+        array.push(lg);
+        tmp = tmp >> 64n;
+    }
+    let out : long[] = new long[array.length];
+    for (let i = 0; i < array.length; i++) {
+        out[array.length as int - 1 - i] = array[i];
+        console.info("array:" + array[i]);
+    }
+    return out;
+}
+
+function arrayInt64ToBigInt(a : long[]) : BigInt {
+    let big: BigInt = 0n;
+    for (let i = 0; i < a.length; i++) {
+        let tmp: BigInt = new BigInt(a[i]);
+        big = (big << 64n) | tmp;
+    }
+    return big;
+}
+
+export function Bigint01(a : number, b : BigInt) : boolean {
+    let array : long[] = bigIntToArrayInt64(b);
+    return bigint01(a, array);
+}
+
+export function Bigint02(a: number) : number {
+    return bigint02(a);
+}
+
+export function Bigint03(a : BigInt) : BigInt {
+    let array : long[] = bigIntToArrayInt64(a);
+    array = bigint03(array);
+    return arrayInt64ToBigInt(array);
+}
+
+export function Bigint04(a : BigInt) : void {
+    let array : long[] = bigIntToArrayInt64(a);
+    bigint04(array);
+}
+
+export function Bigint05(a : number, b : BigInt) : BigInt {
+    let array : long[] = bigIntToArrayInt64(b);
+    array = bigint05(a, array);
+    return arrayInt64ToBigInt(array);
+}
+
+export function Bigint06(a : number, b : BigInt) : number {
+    let array : long[] = bigIntToArrayInt64(b);
+    return bigint06(a, array);
+}
+
+""")
+
+function bigint01(a : f64, b : Array<i64>) : bool;
+function bigint02(a : f64) : f64;
+function bigint03(a : Array<i64>) : Array<i64>;
+function bigint04(a : Array<i64>) : void;
+function bigint05(a : f64, b : Array<i64>) : Array<i64>;
+function bigint06(a : f64, b : Array<i64>) : f64;
+
