@@ -1373,6 +1373,20 @@ class ANICodeGenerator:
         for iface in pkg.interfaces:
             for method in iface.methods:
                 self.gen_method(iface, method, pkg_ani_source_target)
+
+            iface_abi_info = IfaceABIInfo.get(self.am, iface)
+            for ancestor in iface_abi_info.ancestor_dict:
+                if ancestor == iface:
+                    continue
+                for method in ancestor.methods:
+                    p = iface.node_parent
+                    assert p
+                    segments = [*p.segments, iface.name, method.name]
+                    mangled_name = encode(segments, DeclKind.ANI_FUNC)
+                    self.gen_method(
+                        iface, method, pkg_ani_source_target, ancestor, mangled_name
+                    )
+
         # register infos
         register_infos: list[tuple[str, list[tuple[str, str]], bool]] = []
         impl_desc = pkg_ani_info.impl_desc
@@ -1392,6 +1406,20 @@ class ANICodeGenerator:
                 sts_native_name = method_ani_info.sts_native_name
                 mangled_name = method_ani_info.mangled_name
                 func_infos.append((sts_native_name, mangled_name))
+
+            iface_abi_info = IfaceABIInfo.get(self.am, iface)
+            for ancestor in iface_abi_info.ancestor_dict:
+                if ancestor == iface:
+                    continue
+                for method in ancestor.methods:
+                    method_ani_info = IfaceMethodANIInfo.get(self.am, method)
+                    sts_native_name = method_ani_info.sts_native_name
+                    p = iface.node_parent
+                    assert p
+                    segments = [*p.segments, iface.name, method.name]
+                    mangled_name = encode(segments, DeclKind.ANI_FUNC)
+                    func_infos.append((sts_native_name, mangled_name))
+
             register_infos.append((impl_desc, func_infos, False))
         pkg_ani_source_target.write(
             f"namespace {pkg_ani_info.cpp_ns} {{\n"
@@ -1491,6 +1519,8 @@ class ANICodeGenerator:
         iface: IfaceDecl,
         method: IfaceMethodDecl,
         pkg_ani_source_target: COutputBuffer,
+        ancestor: IfaceDecl | None = None,
+        mangled_name: str | None = None,
     ):
         method_ani_info = IfaceMethodANIInfo.get(self.am, method)
         method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
@@ -1515,7 +1545,7 @@ class ANICodeGenerator:
         else:
             ani_return_ty_name = "void"
         pkg_ani_source_target.write(
-            f"static {ani_return_ty_name} {method_ani_info.mangled_name}({params_ani_str}) {{\n"
+            f"static {ani_return_ty_name} {mangled_name or method_ani_info.mangled_name}({params_ani_str}) {{\n"
             f"    taihe::core::set_env(env);\n"
         )
         for param, ani_param_name, cpp_arg_name in zip(
@@ -1535,13 +1565,18 @@ class ANICodeGenerator:
             f"    {iface_abi_info.vtable}* cpp_vtbl_ptr = reinterpret_cast<{iface_abi_info.vtable}*>(ani_vtbl_ptr);\n"
             f"    {iface_cpp_info.full_weak_name} cpp_iface = {iface_cpp_info.full_weak_name}({{cpp_vtbl_ptr, cpp_data_ptr}});\n"
         )
+        if ancestor:
+            ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
+            cpp_iface_str = f"{ancestor_cpp_info.as_param}(cpp_iface)"
+        else:
+            cpp_iface_str = "cpp_iface"
         if return_ty_ref := method.return_ty_ref:
             type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
             cpp_return_ty_name = type_cpp_info.as_owner
             cpp_result = "cpp_result"
             ani_result = "ani_result"
             pkg_ani_source_target.write(
-                f"    {cpp_return_ty_name} {cpp_result} = cpp_iface->{method_cpp_info.call_name}({args_cpp_str});\n"
+                f"    {cpp_return_ty_name} {cpp_result} = {cpp_iface_str}->{method_cpp_info.call_name}({args_cpp_str});\n"
             )
             type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
             type_ani_info.into_ani(
@@ -1550,7 +1585,7 @@ class ANICodeGenerator:
             pkg_ani_source_target.write(f"    return {ani_result};\n")
         else:
             pkg_ani_source_target.write(
-                f"    cpp_iface->{method_cpp_info.call_name}({args_cpp_str});\n"
+                f"    {cpp_iface_str}->{method_cpp_info.call_name}({args_cpp_str});\n"
                 f"    return;\n"
             )
         pkg_ani_source_target.write(f"}}\n")

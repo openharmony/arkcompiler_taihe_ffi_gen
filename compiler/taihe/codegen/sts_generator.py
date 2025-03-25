@@ -1,6 +1,9 @@
 from json import dumps
 from typing import TYPE_CHECKING
 
+from taihe.codegen.abi_generator import (
+    IfaceABIInfo,
+)
 from taihe.codegen.ani_generator import (
     EnumANIInfo,
     GlobFuncANIInfo,
@@ -21,6 +24,7 @@ from taihe.semantics.declarations import (
     StructDecl,
     UnionDecl,
 )
+from taihe.semantics.types import IfaceType
 from taihe.utils.analyses import AnalysisManager
 from taihe.utils.outputs import OutputBuffer, OutputManager
 
@@ -332,7 +336,22 @@ class STSCodeGenerator:
         iface_ani_info = IfaceANIInfo.get(self.am, iface)
         if iface_ani_info.sts_type_name == iface_ani_info.sts_impl_name:  # no interface
             return
-        pkg_sts_target.write(f"export interface {iface_ani_info.sts_type_name} {{\n")
+        ancestors = []
+        for ancestor_iface in iface.parents:
+            if isinstance(ancestor_iface.ty_ref.resolved_ty, IfaceType):
+                ancestor_iface_ani_info = IfaceANIInfo.get(
+                    self.am, ancestor_iface.ty_ref.resolved_ty.ty_decl
+                )
+                ancestors.append(ancestor_iface_ani_info.sts_type_name)
+
+        if ancestors:
+            ancestors_str = " extends " + ", ".join(ancestors)
+        else:
+            ancestors_str = ""
+
+        pkg_sts_target.write(
+            f"export interface {iface_ani_info.sts_type_name}{ancestors_str} {{\n"
+        )
         with pkg_sts_target.indent_manager.offset(4):
             # TODO: hack inject
             for injected in iface_ani_info.iface_injected_codes:
@@ -448,9 +467,14 @@ class STSCodeGenerator:
                     f"}}\n"
                 )
             self.gen_static_funcs(statics_map.get(iface.name, []), pkg_sts_target)
-            self.gen_native_methods(iface.methods, pkg_sts_target)
-            self.gen_iface_methods(iface.methods, pkg_sts_target)
+            self.gen_ancestor_methods(iface, pkg_sts_target)
         pkg_sts_target.write(f"}}\n")
+
+    def gen_ancestor_methods(self, iface: IfaceDecl, pkg_sts_target: OutputBuffer):
+        iface_ani_info = IfaceABIInfo.get(self.am, iface)
+        for ancestor_iface in iface_ani_info.ancestor_dict:
+            self.gen_native_methods(ancestor_iface.methods, pkg_sts_target)
+            self.gen_iface_methods(ancestor_iface.methods, pkg_sts_target)
 
     def gen_static_funcs(
         self,

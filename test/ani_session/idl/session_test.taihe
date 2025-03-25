@@ -1,0 +1,36 @@
+interface IfaceA {
+    func_a(): String;
+}
+
+interface IfaceB: IfaceA {
+    func_b(): String;
+}
+
+interface IfaceC {
+    func_c(): String;
+}
+
+interface IfaceD: IfaceB, IfaceC {
+    func_d(): String;
+}
+
+function getIfaceD(): IfaceD;
+
+interface Session {
+    beginConfig(): void;
+}
+
+interface PhotoSession: Session, IfaceA, IfaceC {
+    canPreconfig(): bool;
+}
+
+interface VideoSession: Session, IfaceA, IfaceC {
+    canPreconfig(): bool;
+}
+
+union session_type {
+    ps: PhotoSession;
+    vs: VideoSession;
+}
+
+function getSession(ty: i32): session_type;
