@@ -145,15 +145,20 @@ class PackageANIInfo(AbstractAnalysis[PackageDecl]):
 
         # TODO: hack at
         if namespace_attr := p.get_attr_item("namespace"):
-            self.module, self.sts_ns = namespace_attr.args
-            self.ani_path = "/".join(self.module.split(".") + self.sts_ns.split("."))
+            self.module, *sts_ns_parts = namespace_attr.args
+            self.sts_ns_parts = []
+            for sts_ns_part in sts_ns_parts:
+                self.sts_ns_parts.extend(sts_ns_part.split("."))
+        else:
+            self.module = p.name
+            self.sts_ns_parts = []
+        if self.sts_ns_parts:
+            self.ani_path = "/".join(self.module.split(".") + self.sts_ns_parts)
             self.impl_desc = f"L{self.ani_path};"
         else:
-            assert p.loc
-            self.module = p.loc.file.pkg_name
-            self.sts_ns = None
             self.ani_path = "/".join(self.module.split("."))
             self.impl_desc = f"L{self.ani_path}/ETSGLOBAL;"
+        self.imported_name = "__" + "_".join(p.name.split("."))
 
         self.injected_codes: list[str] = []
         for injected in p.get_attr_list("sts_inject"):
@@ -326,9 +331,12 @@ class EnumANIInfo(AbstractAnalysis[EnumDecl]):
     def __init__(self, am: AnalysisManager, d: UnionDecl) -> None:
         p = d.node_parent
         assert p
-        self.sts_type = d.name
         pkg_ani_info = PackageANIInfo.get(am, p)
-        self.type_desc = f"L{pkg_ani_info.ani_path}/{self.sts_type};"
+        self.sts_type_name = d.name
+        self.type_desc = f"L{pkg_ani_info.ani_path}/{self.sts_type_name};"
+
+        self.module = pkg_ani_info.module
+        self.sts_type = f"{pkg_ani_info.imported_name}.{self.sts_type_name}"
 
 
 class StructANIInfo(AbstractAnalysis[StructDecl]):
@@ -341,11 +349,14 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
         self.decl_header = f"{p.name}.{d.name}.ani.0.h"
         self.impl_header = f"{p.name}.{d.name}.ani.1.h"
 
-        self.sts_type = d.name
-        self.sts_impl = d.name
         pkg_ani_info = PackageANIInfo.get(am, p)
-        self.type_desc = f"L{pkg_ani_info.ani_path}/{self.sts_type};"
-        self.impl_desc = f"L{pkg_ani_info.ani_path}/{self.sts_impl};"
+        self.sts_type_name = d.name
+        self.sts_impl_name = d.name
+        self.type_desc = f"L{pkg_ani_info.ani_path}/{self.sts_type_name};"
+        self.impl_desc = f"L{pkg_ani_info.ani_path}/{self.sts_impl_name};"
+
+        self.module = pkg_ani_info.module
+        self.sts_type = f"{pkg_ani_info.imported_name}.{self.sts_type_name}"
 
 
 class UnionANIInfo(AbstractAnalysis[UnionDecl]):
@@ -369,14 +380,17 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
         self.decl_header = f"{p.name}.{d.name}.ani.0.h"
         self.impl_header = f"{p.name}.{d.name}.ani.1.h"
 
-        self.sts_type = d.name
-        if d.get_attr_item("class"):
-            self.sts_impl = f"{d.name}"
-        else:
-            self.sts_impl = f"{d.name}_inner"
         pkg_ani_info = PackageANIInfo.get(am, p)
-        self.type_desc = f"L{pkg_ani_info.ani_path}/{self.sts_type};"
-        self.impl_desc = f"L{pkg_ani_info.ani_path}/{self.sts_impl};"
+        self.sts_type_name = d.name
+        if d.get_attr_item("class"):
+            self.sts_impl_name = f"{d.name}"
+        else:
+            self.sts_impl_name = f"{d.name}_inner"
+        self.type_desc = f"L{pkg_ani_info.ani_path}/{self.sts_type_name};"
+        self.impl_desc = f"L{pkg_ani_info.ani_path}/{self.sts_impl_name};"
+
+        self.module = pkg_ani_info.module
+        self.sts_type = f"{pkg_ani_info.imported_name}.{self.sts_type_name}"
 
         self.iface_injected_codes: list[str] = []
         for iface_injected in d.get_attr_list("sts_inject_into_interface"):
@@ -551,7 +565,7 @@ class EnumTypeANIInfo(AbstractAnalysis[EnumType], AbstractTypeANIInfo):
         self.am = am
         enum_ani_info = EnumANIInfo.get(am, t.ty_decl)
         self.ani_type = ANI_ENUM_ITEM
-        self.sts_type = enum_ani_info.sts_type
+        self.sts_type = enum_ani_info.sts_type_name
         self.type_desc = enum_ani_info.type_desc
 
     @override
@@ -596,7 +610,7 @@ class StructTypeANIInfo(AbstractAnalysis[StructType], AbstractTypeANIInfo):
         self.am = am
         struct_ani_info = StructANIInfo.get(am, t.ty_decl)
         self.ani_type = ANI_OBJECT
-        self.sts_type = struct_ani_info.sts_type
+        self.sts_type = struct_ani_info.sts_type_name
         self.type_desc = struct_ani_info.type_desc
 
     @override
@@ -636,15 +650,15 @@ class UnionTypeANIInfo(AbstractAnalysis[UnionType], AbstractTypeANIInfo):
         self.t = t
         self.am = am
         self.ani_type = ANI_REF
-        sts_value_types = []
+        sts_types = []
         for field in t.ty_decl.fields:
             if field.ty_ref is None:
-                sts_value_types.append("undefined")
+                sts_types.append("undefined")
                 continue
             ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
-            sts_value_types.append(f"{ty_ani_info.sts_type}")
-        sts_value_types_str = " | ".join(sts_value_types)
-        self.sts_type = f"({sts_value_types_str})"
+            sts_types.append(f"{ty_ani_info.sts_type}")
+        sts_types_str = " | ".join(sts_types)
+        self.sts_type = f"({sts_types_str})"
         self.type_desc = "Lstd/core/Object;"
 
     @override
@@ -685,7 +699,7 @@ class IfaceTypeANIInfo(AbstractAnalysis[IfaceType], AbstractTypeANIInfo):
         self.am = am
         iface_ani_info = IfaceANIInfo.get(am, t.ty_decl)
         self.ani_type = ANI_OBJECT
-        self.sts_type = iface_ani_info.sts_type
+        self.sts_type = iface_ani_info.sts_type_name
         self.type_desc = iface_ani_info.type_desc
 
     @override
@@ -1358,7 +1372,7 @@ class ANICodeGenerator:
         pkg_ani_source_target.include(pkg_ani_info.header)
         # generate functions
         for func in pkg.functions:
-            self.gen_func(func, pkg_ani_source_target, pkg_ani_info.sts_ns is not None)
+            self.gen_func(func, pkg_ani_source_target, bool(pkg_ani_info.sts_ns_parts))
         for iface in pkg.interfaces:
             for method in iface.methods:
                 self.gen_method(iface, method, pkg_ani_source_target)
@@ -1371,7 +1385,7 @@ class ANICodeGenerator:
             sts_native_name = glob_func_info.sts_native_name
             mangled_name = glob_func_info.mangled_name
             func_infos.append((sts_native_name, mangled_name))
-        register_infos.append((impl_desc, func_infos, pkg_ani_info.sts_ns is not None))
+        register_infos.append((impl_desc, func_infos, bool(pkg_ani_info.sts_ns_parts)))
         for iface in pkg.interfaces:
             iface_ani_info = IfaceANIInfo.get(self.am, iface)
             impl_desc = iface_ani_info.impl_desc

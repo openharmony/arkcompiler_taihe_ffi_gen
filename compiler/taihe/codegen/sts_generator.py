@@ -52,12 +52,8 @@ class STSCodeGenerator:
         ns_dict: dict[str, Namespace] = {}
         for pkg in pg.packages:
             pkg_ani_info = PackageANIInfo.get(self.am, pkg)
-            if pkg_ani_info.sts_ns:
-                sts_ns_parts = pkg_ani_info.sts_ns.split()
-            else:
-                sts_ns_parts = []
             ns_dict.setdefault(pkg_ani_info.module, Namespace()).add_path(
-                sts_ns_parts, pkg
+                pkg_ani_info.sts_ns_parts, pkg
             )
         for module, ns in ns_dict.items():
             self.gen_module_file(module, ns)
@@ -271,7 +267,7 @@ class STSCodeGenerator:
         pkg_sts_target: OutputBuffer,
     ):
         enum_ani_info = EnumANIInfo.get(self.am, enum)
-        pkg_sts_target.write(f"export enum {enum_ani_info.sts_type} {{\n")
+        pkg_sts_target.write(f"export enum {enum_ani_info.sts_type_name} {{\n")
         with pkg_sts_target.indent_manager.offset(4):
             for item in enum.items:
                 pkg_sts_target.write(f"{item.name} = {dumps(item.value)},\n")
@@ -290,7 +286,7 @@ class STSCodeGenerator:
         pkg_sts_target: OutputBuffer,
     ):
         struct_ani_info = StructANIInfo.get(self.am, struct)
-        pkg_sts_target.write(f"export class {struct_ani_info.sts_impl} {{\n")
+        pkg_sts_target.write(f"export class {struct_ani_info.sts_impl_name} {{\n")
         with pkg_sts_target.indent_manager.offset(4):
             for field in struct.fields:
                 ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
@@ -311,9 +307,9 @@ class STSCodeGenerator:
         pkg_sts_target: OutputBuffer,
     ):
         iface_ani_info = IfaceANIInfo.get(self.am, iface)
-        if iface_ani_info.sts_type == iface_ani_info.sts_impl:  # no interface
+        if iface_ani_info.sts_type_name == iface_ani_info.sts_impl_name:  # no interface
             return
-        pkg_sts_target.write(f"export interface {iface_ani_info.sts_type} {{\n")
+        pkg_sts_target.write(f"export interface {iface_ani_info.sts_type_name} {{\n")
         with pkg_sts_target.indent_manager.offset(4):
             # TODO: hack inject
             for injected in iface_ani_info.iface_injected_codes:
@@ -388,11 +384,11 @@ class STSCodeGenerator:
         ctors_map: dict[str, list[GlobFuncDecl]],
     ):
         iface_ani_info = IfaceANIInfo.get(self.am, iface)
-        if iface_ani_info.sts_impl == iface_ani_info.sts_type:
-            pkg_sts_target.write(f"export class {iface_ani_info.sts_impl} {{\n")
+        if iface_ani_info.sts_impl_name == iface_ani_info.sts_type_name:
+            pkg_sts_target.write(f"export class {iface_ani_info.sts_impl_name} {{\n")
         else:
             pkg_sts_target.write(
-                f"class {iface_ani_info.sts_impl} implements {iface_ani_info.sts_type} {{\n"
+                f"class {iface_ani_info.sts_impl_name} implements {iface_ani_info.sts_type_name} {{\n"
             )
         with pkg_sts_target.indent_manager.offset(4):
             # TODO: hack inject
@@ -423,7 +419,7 @@ class STSCodeGenerator:
                 sts_native_call = ctor_ani_info.call_native_with(sts_real_args)
                 pkg_sts_target.write(
                     f"constructor({sts_real_params_str}) {{\n"
-                    f"    let temp = {sts_native_call} as {iface_ani_info.sts_impl};\n"
+                    f"    let temp = {sts_native_call} as {iface_ani_info.sts_impl_name};\n"
                     f"    this._data_ptr = temp._data_ptr;\n"
                     f"    this._vtbl_ptr = temp._vtbl_ptr;\n"
                     f"}}\n"
