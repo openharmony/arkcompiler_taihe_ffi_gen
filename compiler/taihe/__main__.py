@@ -36,6 +36,11 @@ def main():
         action="store_true",
         help="generate ani headers and source",
     )
+    parser.add_argument(
+        "--cimpl",
+        action="store_true",
+        help="generate cimpl headers and source",
+    )
     args = parser.parse_args()
     invocation = CompilerInvocation(
         src_dirs=[Path(d) for d in args.src_dirs],
@@ -43,6 +48,7 @@ def main():
         gen_author=args.author,
         gen_user=args.user,
         gen_ani=args.ani,
+        gen_cimpl=args.cimpl,
     )
     instance = CompilerInstance(invocation)
     instance.run()

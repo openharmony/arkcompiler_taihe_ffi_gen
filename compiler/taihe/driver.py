@@ -63,6 +63,7 @@ class CompilerInvocation:
     gen_author: bool = False
     gen_user: bool = False
     gen_ani: bool = False
+    gen_cimpl: bool = False
 
     quiet: bool = False
 
@@ -174,15 +175,9 @@ class CompilerInstance:
             ABISourcesGenerator(self.target_manager, self.analysis_manager).generate(
                 self.package_group
             )
-            CImplHeadersGenerator(self.target_manager, self.analysis_manager).generate(
-                self.package_group
-            )
             CppImplHeadersGenerator(
                 self.target_manager, self.analysis_manager
             ).generate(self.package_group)
-            CImplSourcesGenerator(self.target_manager, self.analysis_manager).generate(
-                self.package_group
-            )
             CppImplSourcesGenerator(
                 self.target_manager, self.analysis_manager
             ).generate(self.package_group)
@@ -191,6 +186,13 @@ class CompilerInstance:
                 self.package_group
             )
             STSCodeGenerator(self.target_manager, self.analysis_manager).generate(
+                self.package_group
+            )
+        if self.invocation.gen_cimpl:
+            CImplHeadersGenerator(self.target_manager, self.analysis_manager).generate(
+                self.package_group
+            )
+            CImplSourcesGenerator(self.target_manager, self.analysis_manager).generate(
                 self.package_group
             )
 

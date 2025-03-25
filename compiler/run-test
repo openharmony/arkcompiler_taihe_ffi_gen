@@ -171,6 +171,7 @@ def main(
     generate_and_compile_ani: bool,
     generate_only: bool,
     generate_and_compile: bool,
+    generate_c_impl: bool,
     opt_level: str,
     author_link_options: list[str],
     user_link_options: list[str],
@@ -226,6 +227,7 @@ def main(
             gen_ani=True,
             gen_author=True,
             quiet=True,
+            gen_cimpl=generate_c_impl,
         )
     ).run()
     print("Done.")
@@ -399,6 +401,12 @@ if __name__ == "__main__":
         help="Generate source and header files and Compile them",
     )
     parser.add_argument(
+        "-cimpl",
+        "--generate-c-impl",
+        action="store_true",
+        help="Generate C implement header and C implement template",
+    )
+    parser.add_argument(
         "-a",
         "--author-link-options",
         type=str,
@@ -436,6 +444,7 @@ if __name__ == "__main__":
         args.generate_and_compile_ani,
         args.generate_only,
         args.generate_and_compile,
+        args.generate_c_impl,
         args.optimization,
         args.author_link_options,
         args.user_link_options,
