@@ -270,7 +270,10 @@ class STSCodeGenerator:
         pkg_sts_target.write(f"export enum {enum_ani_info.sts_type_name} {{\n")
         with pkg_sts_target.indent_manager.offset(4):
             for item in enum.items:
-                pkg_sts_target.write(f"{item.name} = {dumps(item.value)},\n")
+                if item.value is None:
+                    pkg_sts_target.write(f"{item.name},\n")
+                else:
+                    pkg_sts_target.write(f"{item.name} = {dumps(item.value)},\n")
         pkg_sts_target.write(f"}}\n")
 
     def gen_union(
