@@ -829,55 +829,69 @@ get_interface_performance20() {
 
 }  // namespace
 
-TH_EXPORT_CPP_API_baseFunctionTest1(baseFunctionTest1) TH_EXPORT_CPP_API_baseFunctionTest2(
-    baseFunctionTest2) TH_EXPORT_CPP_API_baseFunctionTest3(baseFunctionTest3) TH_EXPORT_CPP_API_baseFunctionTest4(baseFunctionTest4)
-    TH_EXPORT_CPP_API_baseFunctionTest5(baseFunctionTest5) TH_EXPORT_CPP_API_baseFunctionTest6(
-        baseFunctionTest6) TH_EXPORT_CPP_API_baseFunctionTest7(baseFunctionTest7)
-        TH_EXPORT_CPP_API_baseFunctionTest8(baseFunctionTest8) TH_EXPORT_CPP_API_baseFunctionTest9(
-            baseFunctionTest9) TH_EXPORT_CPP_API_baseFunctionTest10(baseFunctionTest10)
-            TH_EXPORT_CPP_API_baseFunctionTest11(baseFunctionTest11) TH_EXPORT_CPP_API_baseFunctionTest12(
-                baseFunctionTest12) TH_EXPORT_CPP_API_baseFunctionTest13(baseFunctionTest13)
-                TH_EXPORT_CPP_API_baseFunctionTest14(baseFunctionTest14) TH_EXPORT_CPP_API_baseFunctionTest15(
-                    baseFunctionTest15) TH_EXPORT_CPP_API_baseFunctionTest16(baseFunctionTest16)
-                    TH_EXPORT_CPP_API_baseFunctionTest17(baseFunctionTest17) TH_EXPORT_CPP_API_baseFunctionTest18(
-                        baseFunctionTest18) TH_EXPORT_CPP_API_baseFunctionTest19(baseFunctionTest19)
-                        TH_EXPORT_CPP_API_baseFunctionTest20(baseFunctionTest20) TH_EXPORT_CPP_API_baseFunctionTest21(
-                            baseFunctionTest21) TH_EXPORT_CPP_API_baseFunctionTest22(baseFunctionTest22)
-                            TH_EXPORT_CPP_API_baseFunctionTest23(baseFunctionTest23) TH_EXPORT_CPP_API_baseFunctionTest24(baseFunctionTest24) TH_EXPORT_CPP_API_baseFunctionTest25(baseFunctionTest25) TH_EXPORT_CPP_API_baseFunctionTest26(baseFunctionTest26) TH_EXPORT_CPP_API_baseFunctionTest27(baseFunctionTest27) TH_EXPORT_CPP_API_baseFunctionTest28(baseFunctionTest28) TH_EXPORT_CPP_API_baseFunctionTest29(baseFunctionTest29) TH_EXPORT_CPP_API_baseFunctionTest30(baseFunctionTest30) TH_EXPORT_CPP_API_baseFunctionTest31(baseFunctionTest31) TH_EXPORT_CPP_API_baseFunctionTest32(baseFunctionTest32) TH_EXPORT_CPP_API_baseFunctionTest33(baseFunctionTest33) TH_EXPORT_CPP_API_baseFunctionTest34(baseFunctionTest34) TH_EXPORT_CPP_API_baseFunctionTest35(baseFunctionTest35) TH_EXPORT_CPP_API_baseFunctionTest36(baseFunctionTest36) TH_EXPORT_CPP_API_baseFunctionTest37(baseFunctionTest37) TH_EXPORT_CPP_API_baseFunctionTest38(
-                                baseFunctionTest38) TH_EXPORT_CPP_API_baseFunctionTest39(baseFunctionTest39)
-                                TH_EXPORT_CPP_API_baseFunctionTest40(baseFunctionTest40) TH_EXPORT_CPP_API_baseFunctionTest41(
-                                    baseFunctionTest41) TH_EXPORT_CPP_API_baseFunctionTest42_int(baseFunctionTest42_int)
-                                    TH_EXPORT_CPP_API_baseFunctionTest42_container(baseFunctionTest42_container) TH_EXPORT_CPP_API_baseFunctionTest42_void(
-                                        baseFunctionTest42_void) TH_EXPORT_CPP_API_baseFunctionTest42_struct(baseFunctionTest42_struct)
-                                        TH_EXPORT_CPP_API_get_interface_NameSpace(get_interface_NameSpace) TH_EXPORT_CPP_API_get_interface_performance1(
-                                            get_interface_performance1) TH_EXPORT_CPP_API_get_interface_performance2(get_interface_performance2)
-                                            TH_EXPORT_CPP_API_get_interface_performance3(get_interface_performance3) TH_EXPORT_CPP_API_get_interface_performance4(
-                                                get_interface_performance4) TH_EXPORT_CPP_API_get_interface_performance5(get_interface_performance5)
-                                                TH_EXPORT_CPP_API_get_interface_performance6(
-                                                    get_interface_performance6) TH_EXPORT_CPP_API_get_interface_performance7(get_interface_performance7)
-                                                    TH_EXPORT_CPP_API_get_interface_performance8(
-                                                        get_interface_performance8)
-                                                        TH_EXPORT_CPP_API_get_interface_performance9(
-                                                            get_interface_performance9)
-                                                            TH_EXPORT_CPP_API_get_interface_performance10(
-                                                                get_interface_performance10)
-                                                                TH_EXPORT_CPP_API_get_interface_performance11(
-                                                                    get_interface_performance11)
-                                                                    TH_EXPORT_CPP_API_get_interface_performance12(
-                                                                        get_interface_performance12)
-                                                                        TH_EXPORT_CPP_API_get_interface_performance13(
-                                                                            get_interface_performance13)
-                                                                            TH_EXPORT_CPP_API_get_interface_performance14(
-                                                                                get_interface_performance14)
-                                                                                TH_EXPORT_CPP_API_get_interface_performance15(
-                                                                                    get_interface_performance15)
-                                                                                    TH_EXPORT_CPP_API_get_interface_performance16(
-                                                                                        get_interface_performance16)
-                                                                                        TH_EXPORT_CPP_API_get_interface_performance17(
-                                                                                            get_interface_performance17)
-                                                                                            TH_EXPORT_CPP_API_get_interface_performance18(
-                                                                                                get_interface_performance18)
-                                                                                                TH_EXPORT_CPP_API_get_interface_performance19(
-                                                                                                    get_interface_performance19)
-                                                                                                    TH_EXPORT_CPP_API_get_interface_performance20(
-                                                                                                        get_interface_performance20)
+TH_EXPORT_CPP_API_baseFunctionTest1(baseFunctionTest1);
+TH_EXPORT_CPP_API_baseFunctionTest2(baseFunctionTest2);
+TH_EXPORT_CPP_API_baseFunctionTest3(baseFunctionTest3);
+TH_EXPORT_CPP_API_baseFunctionTest4(baseFunctionTest4);
+TH_EXPORT_CPP_API_baseFunctionTest5(baseFunctionTest5);
+TH_EXPORT_CPP_API_baseFunctionTest6(baseFunctionTest6);
+TH_EXPORT_CPP_API_baseFunctionTest7(baseFunctionTest7);
+TH_EXPORT_CPP_API_baseFunctionTest8(baseFunctionTest8);
+TH_EXPORT_CPP_API_baseFunctionTest9(baseFunctionTest9);
+TH_EXPORT_CPP_API_baseFunctionTest10(baseFunctionTest10);
+TH_EXPORT_CPP_API_baseFunctionTest11(baseFunctionTest11);
+TH_EXPORT_CPP_API_baseFunctionTest12(baseFunctionTest12);
+TH_EXPORT_CPP_API_baseFunctionTest13(baseFunctionTest13);
+TH_EXPORT_CPP_API_baseFunctionTest14(baseFunctionTest14);
+TH_EXPORT_CPP_API_baseFunctionTest15(baseFunctionTest15);
+TH_EXPORT_CPP_API_baseFunctionTest16(baseFunctionTest16);
+TH_EXPORT_CPP_API_baseFunctionTest17(baseFunctionTest17);
+TH_EXPORT_CPP_API_baseFunctionTest18(baseFunctionTest18);
+TH_EXPORT_CPP_API_baseFunctionTest19(baseFunctionTest19);
+TH_EXPORT_CPP_API_baseFunctionTest20(baseFunctionTest20);
+TH_EXPORT_CPP_API_baseFunctionTest21(baseFunctionTest21);
+TH_EXPORT_CPP_API_baseFunctionTest22(baseFunctionTest22);
+TH_EXPORT_CPP_API_baseFunctionTest23(baseFunctionTest23);
+TH_EXPORT_CPP_API_baseFunctionTest24(baseFunctionTest24);
+TH_EXPORT_CPP_API_baseFunctionTest25(baseFunctionTest25);
+TH_EXPORT_CPP_API_baseFunctionTest26(baseFunctionTest26);
+TH_EXPORT_CPP_API_baseFunctionTest27(baseFunctionTest27);
+TH_EXPORT_CPP_API_baseFunctionTest28(baseFunctionTest28);
+TH_EXPORT_CPP_API_baseFunctionTest29(baseFunctionTest29);
+TH_EXPORT_CPP_API_baseFunctionTest30(baseFunctionTest30);
+TH_EXPORT_CPP_API_baseFunctionTest31(baseFunctionTest31);
+TH_EXPORT_CPP_API_baseFunctionTest32(baseFunctionTest32);
+TH_EXPORT_CPP_API_baseFunctionTest33(baseFunctionTest33);
+TH_EXPORT_CPP_API_baseFunctionTest34(baseFunctionTest34);
+TH_EXPORT_CPP_API_baseFunctionTest35(baseFunctionTest35);
+TH_EXPORT_CPP_API_baseFunctionTest36(baseFunctionTest36);
+TH_EXPORT_CPP_API_baseFunctionTest37(baseFunctionTest37);
+TH_EXPORT_CPP_API_baseFunctionTest38(baseFunctionTest38);
+TH_EXPORT_CPP_API_baseFunctionTest39(baseFunctionTest39);
+TH_EXPORT_CPP_API_baseFunctionTest40(baseFunctionTest40);
+TH_EXPORT_CPP_API_baseFunctionTest41(baseFunctionTest41);
+TH_EXPORT_CPP_API_baseFunctionTest42_int(baseFunctionTest42_int);
+TH_EXPORT_CPP_API_baseFunctionTest42_container(baseFunctionTest42_container);
+TH_EXPORT_CPP_API_baseFunctionTest42_void(baseFunctionTest42_void);
+TH_EXPORT_CPP_API_baseFunctionTest42_struct(baseFunctionTest42_struct);
+TH_EXPORT_CPP_API_get_interface_NameSpace(get_interface_NameSpace);
+TH_EXPORT_CPP_API_get_interface_performance1(get_interface_performance1);
+TH_EXPORT_CPP_API_get_interface_performance2(get_interface_performance2);
+TH_EXPORT_CPP_API_get_interface_performance3(get_interface_performance3);
+TH_EXPORT_CPP_API_get_interface_performance4(get_interface_performance4);
+TH_EXPORT_CPP_API_get_interface_performance5(get_interface_performance5);
+TH_EXPORT_CPP_API_get_interface_performance6(get_interface_performance6);
+TH_EXPORT_CPP_API_get_interface_performance7(get_interface_performance7);
+TH_EXPORT_CPP_API_get_interface_performance8(get_interface_performance8);
+TH_EXPORT_CPP_API_get_interface_performance9(get_interface_performance9);
+TH_EXPORT_CPP_API_get_interface_performance10(get_interface_performance10);
+TH_EXPORT_CPP_API_get_interface_performance11(get_interface_performance11);
+TH_EXPORT_CPP_API_get_interface_performance12(get_interface_performance12);
+TH_EXPORT_CPP_API_get_interface_performance13(get_interface_performance13);
+TH_EXPORT_CPP_API_get_interface_performance14(get_interface_performance14);
+TH_EXPORT_CPP_API_get_interface_performance15(get_interface_performance15);
+TH_EXPORT_CPP_API_get_interface_performance16(get_interface_performance16);
+TH_EXPORT_CPP_API_get_interface_performance17(get_interface_performance17);
+TH_EXPORT_CPP_API_get_interface_performance18(get_interface_performance18);
+TH_EXPORT_CPP_API_get_interface_performance19(get_interface_performance19);
+TH_EXPORT_CPP_API_get_interface_performance20(get_interface_performance20);

@@ -36,5 +36,5 @@ void showEnumWeekday(::enum_test::Weekday day) {
 }  // namespace
 TH_EXPORT_CPP_API_nextEnum(nextEnum);
 TH_EXPORT_CPP_API_showEnum(showEnum);
-TH_EXPORT_CPP_API_nextEnumWeekday(nextEnumWeekday)
-    TH_EXPORT_CPP_API_showEnumWeekday(showEnumWeekday)
+TH_EXPORT_CPP_API_nextEnumWeekday(nextEnumWeekday);
+TH_EXPORT_CPP_API_showEnumWeekday(showEnumWeekday);
