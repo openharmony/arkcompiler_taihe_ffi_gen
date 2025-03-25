@@ -1,14 +1,10 @@
 from taihe.parse.convert import (
     AstConverter,
-    IgnoredFileReason,
-    IgnoredFileWarn,
-    normalize_pkg_name,
 )
 from taihe.semantics.analysis import analyze_semantics
 from taihe.semantics.declarations import PackageGroup
 from taihe.utils.diagnostics import AbstractDiagnosticsManager, DiagBase
 from taihe.utils.exceptions import (
-    AdhocNote,
     DeclarationNotInScopeError,
     DeclNotExistError,
     DeclRedefError,
@@ -21,7 +17,7 @@ from taihe.utils.exceptions import (
     SymbolConflictWithNamespaceError,
     TypeUsageError,
 )
-from taihe.utils.sources import SourceBuffer, SourceLocation, SourceManager
+from taihe.utils.sources import SourceBuffer, SourceManager
 
 
 class SemanticTestDiagnosticsManager(AbstractDiagnosticsManager):
