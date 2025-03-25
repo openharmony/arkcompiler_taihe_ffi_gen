@@ -22,3 +22,85 @@ function getMapfromArray(d : Array<Data>): Map<String, i32>;
 
 function getDatafromMap(m : Map<String, Data>, k : String) : Data;
 
+function foreachMap(r: Map<String, String>);
+
+
+function mapfunc01(m : Map<String, bool>): bool;
+function mapfunc02(m : Map<String, i8>): bool;
+function mapfunc03(m : Map<String, i16>): bool;
+function mapfunc04(m : Map<String, i32>): bool;
+function mapfunc05(m : Map<String, i64>): bool;
+function mapfunc06(m : Map<String, f32>): bool;
+function mapfunc07(m : Map<String, f64>): bool;
+function mapfunc08(m : Map<String, String>): bool;
+function mapfunc09(m : Map<String, Array<i8>>): bool;
+function mapfunc10(m : Map<String, Array<i16>>): bool;
+function mapfunc11(m : Map<String, Array<i32>>): bool;
+function mapfunc12(m : Map<String, Array<i64>>): bool;
+function mapfunc13(m : Map<String, Array<Array<u8>>>): bool;
+function mapfunc14(m : Map<String, Array<bool>>): bool;
+function mapfunc15(m : Map<String, Array<String>>): bool;
+union TypeUnion {
+    a : i32;
+    b : bool;
+    c : String;
+}
+function mapfunc16(m : Map<String, TypeUnion>): bool;
+enum Color: String {
+    RED = "Red",
+    GREEN = "Green",
+    BLUE = "Blue",
+}
+function mapfunc17(m : Map<String, Color>): bool;
+struct Pair {
+    a : String;
+    b : bool;
+}
+function mapfunc18(m : Map<String, Pair>): bool;
+
+interface ICpuZero {
+    add(a: i32, b: i32): i32;
+    sub(a: i32, b: i32): i32;
+}
+function makeICpuZero(): ICpuZero;
+function mapfunc19(m : Map<String, ICpuZero>): bool;
+
+@class
+interface ICpuInfo {
+    add(a: i32, b: i32): i32;
+    sub(a: i32, b: i32): i32;
+}
+function makeICpuInfo(): ICpuInfo;
+function mapfunc20(m : Map<String, ICpuInfo>): bool;
+
+function mapfunc21(m : Map<String, Opaque>): bool;
+function mapfunc22(m : Map<String, Map<String, bool>>): bool;
+function mapfunc23(m : Map<String, Map<String, i32>>): bool;
+function mapfunc24(m : Map<String, Map<String, Array<i32>>>): bool;
+function mapfunc25(m : Map<String, Map<String, String>>): bool;
+function mapfunc26(): Map<String, bool>;
+function mapfunc27(): Map<String, i8>;
+function mapfunc28(): Map<String, i16>;
+function mapfunc29(): Map<String, i32>;
+function mapfunc30(): Map<String, i64>;
+function mapfunc31(): Map<String, f32>;
+function mapfunc32(): Map<String, f64>;
+function mapfunc33(): Map<String, String>;
+function mapfunc34(): Map<String, Array<i8>>;
+function mapfunc35(): Map<String, Array<i16>>;
+function mapfunc36(): Map<String, Array<i32>>;
+function mapfunc37(): Map<String, Array<i64>>;
+function mapfunc38(): Map<String, Array<u8>>;
+function mapfunc39(): Map<String, Array<bool>>;
+function mapfunc40(): Map<String, Array<String>>;
+function mapfunc41(): Map<String, TypeUnion>;
+function mapfunc42(): Map<String, Color>;
+function mapfunc43(): Map<String, Pair>;
+function mapfunc44(): Map<String, ICpuZero>;
+function mapfunc45(): Map<String, ICpuInfo>;
+function mapfunc46(): Map<String, Opaque>;
+function mapfunc47(): Map<String, Map<String, bool>>;
+function mapfunc48(): Map<String, Map<String, i32>>;
+function mapfunc49(): Map<String, Map<String, Array<i32>>>;
+function mapfunc50(): Map<String, Map<String, String>>;
+function mapfunc51(op : Optional< Map<String, String>>): Map<String, Map<String, String>>;

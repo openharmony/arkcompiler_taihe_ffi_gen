@@ -1,5 +1,5 @@
 import * as record_test from "../author_generated/record_test"
-import {Data, ICpu} from "../author_generated/record_test"
+import {Color, Data, ICpu, ICpuInfo, ICpuZero, Pair} from "../author_generated/record_test"
 
 loadLibrary("ani_record")
 
@@ -81,15 +81,470 @@ function getDatafromMap() {
     assertEQ(d.a, "bbb");
 }
 
-function main() {
-    console.log("##############start#############")
-    const suite = new ArkTestsuite("record ut")
+function foreachMap() {
+    let recordStrForeach: Record<string, string> = {
+        "key1": "v1",
+        "key2": "v2",
+        "key3": "v3",
+        "key4": "v4",
+    };
+    record_test.foreachMap(recordStrForeach);
+}
 
+function main() {
+    console.log("##############record ut start#############")
+    const suite = new ArkTestsuite("record ut")
     suite.addTest("get Cpu Size test", getCpuSize)
     suite.addTest("get A Size test", getASize)
     suite.addTest("get String Int Size test", getStringIntSize)
     suite.addTest("create String String test", createStringString)
     suite.addTest("get Map from Array test", getMapfromArray)
     suite.addTest("get Data from Map test", getDatafromMap)
+    suite.addTest("foreach Map test", foreachMap)
+    suite.addTest("testMapfunc01", testMapfunc01)
+    suite.addTest("testMapfunc02", testMapfunc02)
+    suite.addTest("testMapfunc03", testMapfunc03)
+    suite.addTest("testMapfunc04", testMapfunc04)
+    suite.addTest("testMapfunc05", testMapfunc05)
+    suite.addTest("testMapfunc06", testMapfunc06)
+    suite.addTest("testMapfunc07", testMapfunc07)
+    suite.addTest("testMapfunc08", testMapfunc08)
+    suite.addTest("testMapfunc09", testMapfunc09)
+    suite.addTest("testMapfunc10", testMapfunc10)
+    suite.addTest("testMapfunc11", testMapfunc11)
+    suite.addTest("testMapfunc12", testMapfunc12)
+    suite.addTest("testMapfunc13", testMapfunc13)
+    suite.addTest("testMapfunc14", testMapfunc14)
+    suite.addTest("testMapfunc15", testMapfunc15)
+    suite.addTest("testMapfunc16", testMapfunc16)
+    suite.addTest("testMapfunc17", testMapfunc17)
+    suite.addTest("testMapfunc18", testMapfunc18)
+    suite.addTest("testMapfunc19", testMapfunc19)
+    suite.addTest("testMapfunc20", testMapfunc20)
+    suite.addTest("testMapfunc21", testMapfunc21)
+    suite.addTest("testMapfunc22", testMapfunc22)
+    suite.addTest("testMapfunc23", testMapfunc23)
+    suite.addTest("testMapfunc24", testMapfunc24)
+    suite.addTest("testMapfunc25", testMapfunc25)
+    suite.addTest("testMapfunc26", testMapfunc26)
+    suite.addTest("testMapfunc27", testMapfunc27)
+    suite.addTest("testMapfunc28", testMapfunc28)
+    suite.addTest("testMapfunc29", testMapfunc29)
+    suite.addTest("testMapfunc30", testMapfunc30)
+    suite.addTest("testMapfunc31", testMapfunc31)
+    suite.addTest("testMapfunc32", testMapfunc32)
+    suite.addTest("testMapfunc33", testMapfunc33)
+    suite.addTest("testMapfunc34", testMapfunc34)
+    suite.addTest("testMapfunc35", testMapfunc35)
+    suite.addTest("testMapfunc36", testMapfunc36)
+    suite.addTest("testMapfunc37", testMapfunc37)
+    suite.addTest("testMapfunc38", testMapfunc38)
+    suite.addTest("testMapfunc39", testMapfunc39)
+    suite.addTest("testMapfunc40", testMapfunc40)
+    suite.addTest("testMapfunc41", testMapfunc41)
+    suite.addTest("testMapfunc42", testMapfunc42)
+    suite.addTest("testMapfunc43", testMapfunc43)
+    suite.addTest("testMapfunc44", testMapfunc44)
+    suite.addTest("testMapfunc45", testMapfunc45)
+    suite.addTest("testMapfunc46", testMapfunc46)
+    suite.addTest("testMapfunc47", testMapfunc47)
+    suite.addTest("testMapfunc48", testMapfunc48)
+    suite.addTest("testMapfunc49", testMapfunc49)
+    suite.addTest("testMapfunc50", testMapfunc50)
+    suite.addTest("testMapfunc51", testMapfunc51)
     suite.run()
+    console.log("##############record ut end#############")
+}
+
+
+// function mapfunc01(m: Record<string, boolean>): boolean
+function testMapfunc01() {
+    let testData: Record<string, boolean> = {"key1": true, "key2": false};
+    let result: boolean = record_test.mapfunc01(testData);
+    assertEQ(result, true);
+}
+
+// function mapfunc02(m: Record<string, byte>): boolean
+function testMapfunc02() {
+    let testData:
+        Record<string, byte> = {"key1": 123 as byte, "key2": 45 as byte};
+    let result: boolean = record_test.mapfunc02(testData);
+    assertEQ(result, true);
+}
+
+// function mapfunc03(m: Record<string, short>): boolean
+function testMapfunc03() {
+    let testData:
+        Record<string, short> = {"key1": 1234 as short, "key2": 5678 as short};
+    let result: boolean = record_test.mapfunc03(testData);
+    assertEQ(result, true);
+}
+
+// function mapfunc04(m: Record<string, int>): boolean
+function testMapfunc04() {
+    let testData:
+        Record<string, int> = {"key1": 12345 as int, "key2": 67890 as int};
+    let result: boolean = record_test.mapfunc04(testData);
+    assertEQ(result, true);
+}
+
+// function mapfunc05(m: Record<string, long>): boolean
+function testMapfunc05() {
+    let testData:
+        Record<string, long> = {"key1": 123456 as long, "key2": 789012 as long};
+    let result: boolean = record_test.mapfunc05(testData);
+    assertEQ(result, true);
+}
+
+// function mapfunc06(m: Record<string, float>): boolean
+function testMapfunc06() {
+    let testData: Record<string, float> = {
+        "key1": 123.45 as float,
+        "key2": 67.89 as float
+    };
+    let result: boolean = record_test.mapfunc06(testData);
+    assertEQ(result, true);
+}
+
+// function mapfunc07(m: Record<string, double>): boolean
+function testMapfunc07() {
+    let testData: Record<string, double> = {
+        "key1": 123.456 as double,
+        "key2": 789.012 as double
+    };
+    let result: boolean = record_test.mapfunc07(testData);
+    assertEQ(result, true);
+}
+
+// function mapfunc08(m: Record<string, string>): boolean
+function testMapfunc08() {
+    let testData: Record<string, string> = {"key1": "value1", "key2": "value2"};
+    let result: boolean = record_test.mapfunc08(testData);
+    assertEQ(result, true);
+}
+
+// function mapfunc09(m: Record<string, (byte[])>): boolean
+function testMapfunc09() {
+    let testData: Record<string, (byte[])> = {
+        "key1": [1 as byte, 2 as byte, 3 as byte],
+        "key2": [4 as byte, 5 as byte, 6 as byte]
+    };
+    let result: boolean = record_test.mapfunc09(testData);
+    assertEQ(result, true);
+}
+
+// function mapfunc10(m: Record<string, (short[])>): boolean
+function testMapfunc10() {
+    let testData: Record<string, (short[])> = {
+        "key1": [123 as short, 456 as short],
+        "key2": [789 as short, 1011 as short]
+    };
+    let result: boolean = record_test.mapfunc10(testData);
+    assertEQ(result, true);
+}
+
+// function mapfunc11(m: Record<string, (int[])>): boolean
+function testMapfunc11() {
+    let testData: Record<string, (int[])> = {
+        "key1": [1234 as int, 5678 as int],
+        "key2": [9012 as int, 3456 as int]
+    };
+    let result: boolean = record_test.mapfunc11(testData);
+    assertEQ(result, true);
+}
+
+// function mapfunc12(m: Record<string, (long[])>): boolean
+function testMapfunc12() {
+    let testData: Record<string, (long[])> = {
+        "key1": [12345 as long, 67890 as long],
+        "key2": [11111 as long, 22222 as long]
+    };
+    let result: boolean = record_test.mapfunc12(testData);
+    assertEQ(result, true);
+}
+
+// function mapfunc13(m: Record<string, (ArrayBuffer[])>): boolean
+function testMapfunc13() {
+    let testData: Record<string, (ArrayBuffer[])> = {
+        "key1": [new ArrayBuffer(8), new ArrayBuffer(8)],
+        "key2": [new ArrayBuffer(8), new ArrayBuffer(8)]
+    };
+    let result: boolean = record_test.mapfunc13(testData);
+    assertEQ(result, true);
+}
+
+// function mapfunc14(m: Record<string, (boolean[])>): boolean
+function testMapfunc14() {
+    let testData: Record<string, (boolean[])> = {
+        "key1": [true, false],
+        "key2": [false, true]
+    };
+    let result: boolean = record_test.mapfunc14(testData);
+    assertEQ(result, true);
+}
+
+// function mapfunc15(m: Record<string, (string[])>): boolean
+function testMapfunc15() {
+    let testData: Record<string, (string[])> = {
+        "key1": ["value1", "value2"],
+        "key2": ["value3", "value4"]
+    };
+    let result: boolean = record_test.mapfunc15(testData);
+    assertEQ(result, true);
+}
+
+// function mapfunc16(m: Record<string, (int | boolean | string)>): boolean
+function testMapfunc16() {
+    let testData: Record<string, (int|boolean|string)> = {
+        "key1": 123,
+        "key2": true,
+        "key3": "value"
+    };
+    let result: boolean = record_test.mapfunc16(testData);
+    assertEQ(result, true);
+}
+
+// function mapfunc17(m: Record<string, Color>): boolean
+function testMapfunc17() {
+    let testData:
+        Record<string, Color> = {"key1": Color.RED, "key2": Color.GREEN};
+    let result: boolean = record_test.mapfunc17(testData);
+    assertEQ(result, true);
+}
+
+// function mapfunc18(m: Record<string, Pair>): boolean
+function testMapfunc18() {
+    let testData: Record<string, Pair> = {
+        "key1": new Pair("one", true),
+        "key2": new Pair("two", false)
+    };
+    let result: boolean = record_test.mapfunc18(testData);
+    assertEQ(result, true);
+}
+
+// function mapfunc19(m: Record<string, ICpuZero>): boolean
+function testMapfunc19() {
+    let a: ICpuZero = record_test.makeICpuZero();
+    let b: ICpuZero = record_test.makeICpuZero();
+    let testData: Record<string, ICpuZero> = {"key1": a, "key2": b};
+    let result: boolean = record_test.mapfunc19(testData);
+    assertEQ(result, true);
+}
+
+// function mapfunc20(m: Record<string, ICpuInfo>): boolean
+function testMapfunc20() {
+    let a: ICpuInfo = record_test.makeICpuInfo();
+    let b: ICpuInfo = record_test.makeICpuInfo();
+    let testData: Record<string, ICpuInfo> = {"key1": a, "key2": a};
+    let result: boolean = record_test.mapfunc20(testData);
+    assertEQ(result, true);
+}
+
+// function mapfunc21(m: Record<string, NullishType>): boolean
+function testMapfunc21() {
+    let testData: Record<string, NullishType> = {"key1": null, "key2": null};
+    let result: boolean = record_test.mapfunc21(testData);
+    assertEQ(result, true);
+}
+
+// function mapfunc22(m: Record<string, Record<string, boolean>>): boolean
+function testMapfunc22() {
+    let testData: Record<string, Record<string, boolean>> = {
+        "key1": {"subkey1": true, "subkey2": false},
+        "key2": {"subkey3": true, "subkey4": false}
+    };
+    let result: boolean = record_test.mapfunc22(testData);
+    assertEQ(result, true);
+}
+
+// function mapfunc23(m: Record<string, Record<string, int>>): boolean
+function testMapfunc23() {
+    let testData: Record<string, Record<string, int>> = {
+        "key1": {"subkey1": 100, "subkey2": 200},
+        "key2": {"subkey3": 300, "subkey4": 400}
+    };
+    let result: boolean = record_test.mapfunc23(testData);
+    assertEQ(result, true);
+}
+
+// function mapfunc24(m: Record<string, Record<string, (int[])>>): boolean
+function testMapfunc24() {
+    let testData: Record<string, Record<string, (int[])>> = {
+        "key1": {"subkey1": [1, 2, 3], "subkey2": [4, 5, 6]},
+        "key2": {"subkey3": [7, 8, 9], "subkey4": [10, 11, 12]}
+    };
+    let result: boolean = record_test.mapfunc24(testData);
+    assertEQ(result, true);
+}
+
+// function mapfunc25(m: Record<string, Record<string, string>>): boolean
+function testMapfunc25() {
+    let testData: Record<string, Record<string, string>> = {
+        "key1": {"subkey1": "value1", "subkey2": "value2"},
+        "key2": {"subkey3": "value3", "subkey4": "value4"}
+    };
+    let result: boolean = record_test.mapfunc25(testData);
+    assertEQ(result, true);
+}
+
+// function mapfunc26(): Record<string, boolean>
+function testMapfunc26() {
+    let result: Record<string, boolean> = record_test.mapfunc26();
+    assertEQ(result.has("key1"), true);
+}
+
+// function mapfunc27(): Record<string, byte>
+function testMapfunc27() {
+    let result: Record<string, byte> = record_test.mapfunc27();
+    assertEQ(result.has("key1"), true);
+}
+
+// function mapfunc28(): Record<string, short>
+function testMapfunc28() {
+    let result: Record<string, short> = record_test.mapfunc28();
+    assertEQ(result.has("key1"), true);
+}
+
+// function mapfunc29(): Record<string, int>
+function testMapfunc29() {
+    let result: Record<string, int> = record_test.mapfunc29();
+    assertEQ(result.has("key1"), true);
+}
+
+// function mapfunc30(): Record<string, long>
+function testMapfunc30() {
+    let result: Record<string, long> = record_test.mapfunc30();
+    assertEQ(result.has("key1"), true);
+}
+
+// function mapfunc31(): Record<string, float>
+function testMapfunc31() {
+    let result: Record<string, float> = record_test.mapfunc31();
+    assertEQ(result.has("key1"), true);
+}
+
+// function mapfunc32(): Record<string, double>
+function testMapfunc32() {
+    let result: Record<string, double> = record_test.mapfunc32();
+    assertEQ(result.has("key1"), true);
+}
+
+// function mapfunc33(): Record<string, string>
+function testMapfunc33() {
+    let result: Record<string, string> = record_test.mapfunc33();
+    assertEQ(result.has("key1"), true);
+}
+
+// function mapfunc34(): Record<string, (byte[])>
+function testMapfunc34() {
+    let result: Record<string, (byte[])> = record_test.mapfunc34();
+    assertEQ(result.has("key1"), true);
+}
+
+// function mapfunc35(): Record<string, (short[])>
+function testMapfunc35() {
+    let result: Record<string, (short[])> = record_test.mapfunc35();
+    assertEQ(result.has("key1"), true);
+}
+
+// function mapfunc36(): Record<string, (int[])>
+function testMapfunc36() {
+    let result: Record<string, (int[])> = record_test.mapfunc36();
+    assertEQ(result.has("key1"), true);
+}
+
+// function mapfunc37(): Record<string, (long[])>
+function testMapfunc37() {
+    let result: Record<string, (long[])> = record_test.mapfunc37();
+    assertEQ(result.has("key1"), true);
+}
+
+// function mapfunc38(): Record<string, ArrayBuffer>
+function testMapfunc38() {
+    let result: Record<string, ArrayBuffer> = record_test.mapfunc38();
+    assertEQ(result.has("key1"), true);
+}
+
+// function mapfunc39(): Record<string, (boolean[])>
+function testMapfunc39() {
+    let result: Record<string, (boolean[])> = record_test.mapfunc39();
+    assertEQ(result.has("key1"), true);
+}
+
+// function mapfunc40(): Record<string, (string[])>
+function testMapfunc40() {
+    let result: Record<string, (string[])> = record_test.mapfunc40();
+    assertEQ(result.has("key1"), true);
+}
+
+// function mapfunc41(): Record<string, (int | boolean | string)>
+function testMapfunc41() {
+    let result: Record<string, (int|boolean|string)> = record_test.mapfunc41();
+    assertEQ(result.has("key1"), true);
+}
+
+// function mapfunc42(): Record<string, Color>
+function testMapfunc42() {
+    let result: Record<string, Color> = record_test.mapfunc42();
+    assertEQ(result.has("key1"), true);
+}
+
+// function mapfunc43(): Record<string, Pair>
+function testMapfunc43() {
+    let result: Record<string, Pair> = record_test.mapfunc43();
+    assertEQ(result.has("key1"), true);
+}
+
+// function mapfunc44(): Record<string, ICpuZero>
+function testMapfunc44() {
+    let result: Record<string, ICpuZero> = record_test.mapfunc44();
+    assertEQ(result.has("key1"), true);
+}
+
+// function mapfunc45(): Record<string, ICpuInfo>
+function testMapfunc45() {
+    let result: Record<string, ICpuInfo> = record_test.mapfunc45();
+    assertEQ(result.has("key1"), true);
+}
+
+// function mapfunc46(): Record<string, NullishType>
+function testMapfunc46() {
+    let result: Record<string, NullishType> = record_test.mapfunc46();
+    assertEQ(result.has("key1"), true);
+}
+
+// function mapfunc47(): Record<string, Record<string, boolean>>
+function testMapfunc47() {
+    let result: Record<string, Record<string, boolean>> =
+        record_test.mapfunc47();
+    assertEQ(result.has("key1"), true);
+}
+
+// function mapfunc48(): Record<string, Record<string, int>>
+function testMapfunc48() {
+    let result: Record<string, Record<string, int>> = record_test.mapfunc48();
+    assertEQ(result.has("key1"), true);
+}
+
+// function mapfunc49(): Record<string, Record<string, (int[])>>
+function testMapfunc49() {
+    let result: Record<string, Record<string, (int[])>> =
+        record_test.mapfunc49();
+    assertEQ(result.has("key1"), true);
+}
+
+// function mapfunc50(): Record<string, Record<string, string>>
+function testMapfunc50() {
+    let result: Record<string, Record<string, string>> =
+        record_test.mapfunc50();
+    assertEQ(result.has("key1"), true);
+}
+
+// function mapfunc51(op: (Record<string, string> | undefined)): Record<string,
+// Record<string, string>>
+function testMapfunc51() {
+    let testData: Record<string, string> = {"key1": "value1", "key2": "value2"};
+    let result: Record<string, Record<string, string>> =
+        record_test.mapfunc51(testData);
+    assertEQ(result.has("key1"), true);
 }
