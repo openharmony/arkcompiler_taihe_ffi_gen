@@ -120,35 +120,34 @@ class CompilerInstance:
                     )
                     self.diagnostics_manager.emit(w)
 
-                # Okay...
                 else:
-                    self.source_manager.add_source(SourceFile(file))
+                    source = SourceFile(file)
+                    orig_name = source.pkg_name
+                    norm_name = normalize_pkg_name(orig_name)
+
+                    # invalid package name
+                    if norm_name != orig_name:
+                        loc = SourceLocation(source)
+                        self.diagnostics_manager.emit(
+                            IgnoredFileWarn(
+                                IgnoredFileReason.INVALID_PKG_NAME,
+                                note=AdhocNote(
+                                    f"consider using `{norm_name}` instead of `{orig_name}`",
+                                    loc=loc,
+                                ),
+                                loc=loc,
+                            )
+                        )
+
+                    # Okay...
+                    else:
+                        self.source_manager.add_source(source)
 
     def parse(self):
         for src in self.source_manager.sources:
-            pkg_name_raw = src.pkg_name
-            pkg_name_norm = normalize_pkg_name(pkg_name_raw)
-
-            # invalid package name
-            if pkg_name_raw != pkg_name_norm:
-                loc = SourceLocation(src)
-                self.diagnostics_manager.emit(
-                    IgnoredFileWarn(
-                        IgnoredFileReason.INVALID_PKG_NAME,
-                        note=AdhocNote(
-                            f"consider using `{pkg_name_norm}` instead of `{pkg_name_raw}`",
-                            loc=loc,
-                        ),
-                        loc=loc,
-                    )
-                )
-                continue
-
-            # TODO: hack at
-            pkg_name_norm = pkg_name_norm.replace("@", "")
-            conv = AstConverter(pkg_name_norm, src, self.diagnostics_manager)
-            pkg = conv.convert()
             with self.diagnostics_manager.capture_error():
+                conv = AstConverter(src, self.diagnostics_manager)
+                pkg = conv.convert()
                 self.package_group.add(pkg)
 
     def validate(self):
