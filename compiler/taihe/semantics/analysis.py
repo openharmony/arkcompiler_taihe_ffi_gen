@@ -355,82 +355,81 @@ class _CheckEnumTypePass(RecursiveDeclVisitor):
         def is_int(val):
             return not isinstance(val, bool) and isinstance(val, int)
 
-        if d.ty_ref:
-            if d.ty_ref.resolved_ty is None:
-                return
-            table: dict[Type, Any] = {
-                I8: (
-                    lambda val: is_int(val) and -(2**7) <= val < 2**7,
-                    lambda prev, item: prev + 1,
-                    lambda item: 0,
-                ),
-                I16: (
-                    lambda val: is_int(val) and -(2**15) <= val < 2**15,
-                    lambda prev, item: prev + 1,
-                    lambda item: 0,
-                ),
-                I32: (
-                    lambda val: is_int(val) and -(2**31) <= val < 2**31,
-                    lambda prev, item: prev + 1,
-                    lambda item: 0,
-                ),
-                I64: (
-                    lambda val: is_int(val) and -(2**63) <= val < 2**63,
-                    lambda prev, item: prev + 1,
-                    lambda item: 0,
-                ),
-                U8: (
-                    lambda val: is_int(val) and 0 <= val < 2**8,
-                    lambda prev, item: prev + 1,
-                    lambda item: 0,
-                ),
-                U16: (
-                    lambda val: is_int(val) and 0 <= val < 2**16,
-                    lambda prev, item: prev + 1,
-                    lambda item: 0,
-                ),
-                U32: (
-                    lambda val: is_int(val) and 0 <= val < 2**32,
-                    lambda prev, item: prev + 1,
-                    lambda item: 0,
-                ),
-                U64: (
-                    lambda val: is_int(val) and 0 <= val < 2**64,
-                    lambda prev, item: prev + 1,
-                    lambda item: 0,
-                ),
-                BOOL: (
-                    lambda val: isinstance(val, bool),
-                    lambda prev, item: False,
-                    lambda item: False,
-                ),
-                F32: (
-                    lambda val: isinstance(val, float),
-                    lambda prev, item: 0.0,
-                    lambda item: 0.0,
-                ),
-                F64: (
-                    lambda val: isinstance(val, float),
-                    lambda prev, item: 0.0,
-                    lambda item: 0.0,
-                ),
-                STRING: (
-                    lambda val: isinstance(val, str),
-                    lambda prev, item: item.name,
-                    lambda item: item.name,
-                ),
-            }
-            lambda_pair = table.get(d.ty_ref.resolved_ty)
-            if lambda_pair is None:
-                self.diag.emit(TypeUsageError(d.ty_ref))  # pyre-ignore
-                return
-            valid, next, default = lambda_pair
-        else:
-            valid, next, default = (
-                lambda val: val is None,
-                lambda prev, item: None,
-                lambda item: None,
-            )
+        if d.ty_ref is None:
+            for item in d.items:
+                if item.value is not None:
+                    self.diag.emit(EnumValueError(item, d))
+            return
+
+        if d.ty_ref.resolved_ty is None:
+            return
+
+        table: dict[Type, tuple[Any, Any, Any]] = {
+            I8: (
+                lambda val: is_int(val) and -(2**7) <= val < 2**7,
+                lambda prev, item: prev + 1,
+                lambda item: 0,
+            ),
+            I16: (
+                lambda val: is_int(val) and -(2**15) <= val < 2**15,
+                lambda prev, item: prev + 1,
+                lambda item: 0,
+            ),
+            I32: (
+                lambda val: is_int(val) and -(2**31) <= val < 2**31,
+                lambda prev, item: prev + 1,
+                lambda item: 0,
+            ),
+            I64: (
+                lambda val: is_int(val) and -(2**63) <= val < 2**63,
+                lambda prev, item: prev + 1,
+                lambda item: 0,
+            ),
+            U8: (
+                lambda val: is_int(val) and 0 <= val < 2**8,
+                lambda prev, item: prev + 1,
+                lambda item: 0,
+            ),
+            U16: (
+                lambda val: is_int(val) and 0 <= val < 2**16,
+                lambda prev, item: prev + 1,
+                lambda item: 0,
+            ),
+            U32: (
+                lambda val: is_int(val) and 0 <= val < 2**32,
+                lambda prev, item: prev + 1,
+                lambda item: 0,
+            ),
+            U64: (
+                lambda val: is_int(val) and 0 <= val < 2**64,
+                lambda prev, item: prev + 1,
+                lambda item: 0,
+            ),
+            BOOL: (
+                lambda val: isinstance(val, bool),
+                lambda prev, item: False,
+                lambda item: False,
+            ),
+            F32: (
+                lambda val: isinstance(val, float),
+                lambda prev, item: 0.0,
+                lambda item: 0.0,
+            ),
+            F64: (
+                lambda val: isinstance(val, float),
+                lambda prev, item: 0.0,
+                lambda item: 0.0,
+            ),
+            STRING: (
+                lambda val: isinstance(val, str),
+                lambda prev, item: item.name,
+                lambda item: item.name,
+            ),
+        }
+        if (lambda_pair := table.get(d.ty_ref.resolved_ty)) is None:
+            self.diag.emit(TypeUsageError(d.ty_ref))  # pyre-ignore
+            return
+        valid, next, default = lambda_pair
 
         prev = None
         for item in d.items:
