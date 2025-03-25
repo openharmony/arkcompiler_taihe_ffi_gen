@@ -1,3 +1,24 @@
 function sumArrayu8(nums: Array<u8>): u8;
 function getArrayBuffer(nums: u8): Array<u8>;
 function doubleArrayBuffer(nums: Array<u8>): Array<u8>;
+function sumArrayi8(nums: Array<i8>): i8;
+function getArrayi8(nums: i8): Array<i8>;
+function doublei8(nums: Array<i8>): Array<i8>;
+function sumArrayi16(nums: Array<i16>): i16;
+function getArrayi16(nums: i16): Array<i16>;
+function doublei16(nums: Array<i16>): Array<i16>;
+function sumArrayi32(nums: Array<i32>): i32;
+function getArrayi32(nums: i32): Array<i32>;
+function doublei32(nums: Array<i32>): Array<i32>;
+function sumArrayi64(nums: Array<i64>): i64;
+function getArrayi64(nums: i64): Array<i64>;
+function doublei64(nums: Array<i64>): Array<i64>;
+
+function sumArrayf32(nums: Array<f32>): f32;
+function getArrayf32(nums: f32): Array<f32>;
+function doublef32(nums: Array<f32>): Array<f32>;
+
+function sumArrayf64(nums: Array<f64>): f64;
+function getArrayf64(nums: f64): Array<f64>;
+function doublef64(nums: Array<f64>): Array<f64>;
+

@@ -90,6 +90,186 @@ function arraybuffer_dataview() {
     assertEQ(sumArrayBufferFromUint8Array, 27);  // 8 + 9 + 10 = 27
 }
 
+function arrayi8_input() {
+    let int8Array: byte[] = [1, 2, 3, 4, 5];
+    let sumArrayi8 = arraybuffer.sumArrayi8(int8Array)
+    console.log("sumArrayi8 is " + sumArrayi8)
+    assertEQ(sumArrayi8, 15)
+}
+
+function arrayi8_return() {
+    let arrayi8 = arraybuffer.getArrayi8(4 as byte)
+    console.log("getArrayi8 length: " + arrayi8.length);
+    assertEQ(arrayi8.length, 4)
+    for (let i = 0; i < arrayi8.length; i++) {
+        console.log(`getArrayi8 Byte at index ${i}: ${arrayi8[i]}`);
+        assertEQ(arrayi8[i], 4)
+    }
+}
+
+function arrayi8_inout() {
+    let numbers2: byte[] = [3, 4, 5, 6, 7];
+    let doubleArrayBuffer = arraybuffer.doublei8(numbers2)
+    console.log("arrayi8_inout length: " + doubleArrayBuffer.length);
+    assertEQ(doubleArrayBuffer.length, 5)
+
+    for (let i = 0; i < doubleArrayBuffer.length; i++) {
+        console.log(
+            `arrayi8_inout Byte at index ${i}: ${doubleArrayBuffer[i]}`);
+        assertEQ(doubleArrayBuffer[i], numbers2[i] * 2)
+    }
+}
+
+function arrayi16_input() {
+    let int16Array: short[] = [1, 2, 3, 4, 5];
+    let sumArrayi16 = arraybuffer.sumArrayi16(int16Array)
+    console.log("sumArrayi16 is " + sumArrayi16)
+    assertEQ(sumArrayi16, 15)
+}
+
+function arrayi16_return() {
+    let arrayi16 = arraybuffer.getArrayi16(4 as short)
+    console.log("arrayi16 length: " + arrayi16.length);
+    assertEQ(arrayi16.length, 4)
+    for (let i = 0; i < arrayi16.length; i++) {
+        console.log(`arrayi16 Short at index ${i}: ${arrayi16[i]}`);
+        assertEQ(arrayi16[i], 4)
+    }
+}
+
+function arrayi16_inout() {
+    let numbers2: short[] = [3, 4, 5, 6, 7];
+    let doubleArrayBuffer = arraybuffer.doublei16(numbers2)
+    console.log("arrayi16_inout length: " + doubleArrayBuffer.length);
+    assertEQ(doubleArrayBuffer.length, 5)
+
+    for (let i = 0; i < doubleArrayBuffer.length; i++) {
+        console.log(
+            `arrayi16_inout Short at index ${i}: ${doubleArrayBuffer[i]}`);
+        assertEQ(doubleArrayBuffer[i], numbers2[i] * 2)
+    }
+}
+
+function arrayi32_input() {
+    let int32Array: int[] = [1, 2, 3, 4, 5];
+    let sumArrayi32 = arraybuffer.sumArrayi32(int32Array)
+    console.log("sumArrayi32 is " + sumArrayi32)
+    assertEQ(sumArrayi32, 15)
+}
+
+function arrayi32_return() {
+    let arrayi32 = arraybuffer.getArrayi32(4)
+    console.log("arrayi32 length: " + arrayi32.length);
+    assertEQ(arrayi32.length, 4)
+    for (let i = 0; i < arrayi32.length; i++) {
+        console.log(`arrayi32 int at index ${i}: ${arrayi32[i]}`);
+        assertEQ(arrayi32[i], 4)
+    }
+}
+
+function arrayi32_inout() {
+    let numbers2: int[] = [3, 4, 5, 6, 7];
+    let doubleArrayBuffer = arraybuffer.doublei32(numbers2)
+    console.log("arrayi16_inout length: " + doubleArrayBuffer.length);
+    assertEQ(doubleArrayBuffer.length, 5)
+
+    for (let i = 0; i < doubleArrayBuffer.length; i++) {
+        console.log(
+            `arrayi16_inout int at index ${i}: ${doubleArrayBuffer[i]}`);
+        assertEQ(doubleArrayBuffer[i], numbers2[i] * 2)
+    }
+}
+
+function arrayi64_input() {
+    let int64Array: long[] = [10, 20, 30, 40, 50];
+    let sumArrayi64 = arraybuffer.sumArrayi64(int64Array)
+    console.log("sumArrayi64 is " + sumArrayi64)
+    assertEQ(sumArrayi64, 150)
+}
+
+function arrayi64_return() {
+    let arrayi64 = arraybuffer.getArrayi64(4)
+    console.log("arrayi64 length: " + arrayi64.length);
+    assertEQ(arrayi64.length, 4)
+    for (let i = 0; i < arrayi64.length; i++) {
+        console.log(`arrayi64 int at index ${i}: ${arrayi64[i]}`);
+        assertEQ(arrayi64[i], 4)
+    }
+}
+
+function arrayi64_inout() {
+    let numbers2: long[] = [30, 40, 50, 60, 70];
+    let doubleArrayBuffer = arraybuffer.doublei64(numbers2)
+    console.log("arrayi16_inout length: " + doubleArrayBuffer.length);
+    assertEQ(doubleArrayBuffer.length, 5)
+
+    for (let i = 0; i < doubleArrayBuffer.length; i++) {
+        console.log(
+            `arrayi16_inout long at index ${i}: ${doubleArrayBuffer[i]}`);
+        assertEQ(doubleArrayBuffer[i], numbers2[i] * 2)
+    }
+}
+
+function arrayf32_input() {
+    let f32Array: float[] = [10, 20, 30, 40, 50];
+    let sumArrayf32 = arraybuffer.sumArrayf32(f32Array)
+    console.log("sumArrayf32 is " + sumArrayf32)
+    assertEQ(sumArrayf32, 150)
+}
+
+function arrayf32_return() {
+    let arrayf32 = arraybuffer.getArrayf32(4)
+    console.log("arrayf32 length: " + arrayf32.length);
+    assertEQ(arrayf32.length, 4)
+    for (let i = 0; i < arrayf32.length; i++) {
+        console.log(`arrayf32 float at index ${i}: ${arrayf32[i]}`);
+        assertEQ(arrayf32[i], 4)
+    }
+}
+
+function arrayf32_inout() {
+    let numbers2: float[] = [30, 40, 50, 60, 70];
+    let doubleArrayBuffer = arraybuffer.doublef32(numbers2)
+    console.log("arrayi16_inout length: " + doubleArrayBuffer.length);
+    assertEQ(doubleArrayBuffer.length, 5)
+
+    for (let i = 0; i < doubleArrayBuffer.length; i++) {
+        console.log(
+            `arrayi16_inout long at index ${i}: ${doubleArrayBuffer[i]}`);
+        assertEQ(doubleArrayBuffer[i], numbers2[i] * 2)
+    }
+}
+
+function arrayf64_input() {
+    let f64Array: double[] = [10, 20, 30, 40, 50];
+    let sumArrayf64 = arraybuffer.sumArrayf64(f64Array)
+    console.log("sumArrayf64 is " + sumArrayf64)
+    assertEQ(sumArrayf64, 150)
+}
+
+function arrayf64_return() {
+    let arrayf64 = arraybuffer.getArrayf64(4)
+    console.log("arrayf64 length: " + arrayf64.length);
+    assertEQ(arrayf64.length, 4)
+    for (let i = 0; i < arrayf64.length; i++) {
+        console.log(`arrayf64 double at index ${i}: ${arrayf64[i]}`);
+        assertEQ(arrayf64[i], 4)
+    }
+}
+
+function arrayf64_inout() {
+    let numbers2: double[] = [30, 40, 50, 60, 70];
+    let doubleArrayBuffer = arraybuffer.doublef64(numbers2)
+    console.log("arrayi16_inout length: " + doubleArrayBuffer.length);
+    assertEQ(doubleArrayBuffer.length, 5)
+
+    for (let i = 0; i < doubleArrayBuffer.length; i++) {
+        console.log(
+            `arrayi16_inout double at index ${i}: ${doubleArrayBuffer[i]}`);
+        assertEQ(doubleArrayBuffer[i], numbers2[i] * 2)
+    }
+}
+
 function main() {
     const suite = new ArkTestsuite("arraybuffer testcase")
 
@@ -99,5 +279,29 @@ function main() {
     suite.addTest(
         "arraybuffer_uint8toarraybuffer", arraybuffer_uint8toarraybuffer)
     suite.addTest("arraybuffer_dataview", arraybuffer_dataview)
+
+    suite.addTest("arrayi8_input", arrayi8_input)
+    suite.addTest("arrayi8_return", arrayi8_return)
+    suite.addTest("arrayi8_return", arrayi8_inout)
+
+    suite.addTest("arrayi16_input", arrayi16_input)
+    suite.addTest("arrayi16_return", arrayi16_return)
+    suite.addTest("arrayi16_inout", arrayi16_inout)
+
+    suite.addTest("arrayi32_input", arrayi32_input)
+    suite.addTest("arrayi32_return", arrayi32_return)
+    suite.addTest("arrayi32_inout", arrayi32_inout)
+
+    suite.addTest("arrayi64_input", arrayi64_input)
+    suite.addTest("arrayi64_return", arrayi64_return)
+    suite.addTest("arrayi64_inout", arrayi64_inout)
+
+    suite.addTest("arrayf32_input", arrayf32_input)
+    suite.addTest("arrayf32_return", arrayf32_return)
+    suite.addTest("arrayf32_inout", arrayf32_inout)
+
+    suite.addTest("arrayf64_input", arrayf64_input)
+    suite.addTest("arrayf64_return", arrayf64_return)
+    suite.addTest("arrayf64_inout", arrayf64_inout)
     suite.run()
 }
