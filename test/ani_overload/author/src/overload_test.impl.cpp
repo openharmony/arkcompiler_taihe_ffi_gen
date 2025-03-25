@@ -9,13 +9,9 @@ using namespace taihe::core;
 namespace {
 
 class Foo {
-public:
-    int32_t bar_int(int32_t a) {
-        return a;
-    }
-    string bar_str(string_view a) {
-        return a;
-    }
+ public:
+  int32_t bar_int(int32_t a) { return a; }
+  string bar_str(string_view a) { return a; }
 };
 
 int32_t add_int(int32_t a, int32_t b) { return a + b; }

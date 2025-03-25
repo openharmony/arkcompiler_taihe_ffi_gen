@@ -28,7 +28,7 @@ function main() {
 
     suite.addTest("test add numbers", test_add_numbers);
     suite.addTest("test add strings", test_add_strings);
-    
+
     let foo = OverloadTest.makeFoo();
 
     suite.addTest("test Foo bar with number", () => test_Foo_bar_number(foo));

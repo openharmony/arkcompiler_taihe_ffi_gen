@@ -3,7 +3,8 @@ loadLibrary("ani_async");
 
 function main() {
     console.log("main ets")
-    // In function addSync, we set it to throw an exception if the first parameter is equal to 0.
+    // In function addSync, we set it to throw an exception if the first
+    // parameter is equal to 0.
     console.log("in main ets: ", async_test.addSync(1, 2))
 
     async_test.add(10, 20, (error: Error, data?: int) => {
@@ -31,16 +32,20 @@ function main() {
             console.log("main finsih test interface async ERROR ", error);
         }
     })
-    
+
     let p_ibase = ibase.getPromise();
-    p_ibase.then((ret: NullishType) => {
-        let retInner = ret as string;
-        console.log("main finsih test interface async success p_ibase ", retInner)
-    })
-    .catch((ret: NullishType) => {
-        let retError = ret as Error;
-        console.error("main finsih test interface async promise ERROR p_ibase ", retError)
-    });
+    p_ibase
+        .then((ret: NullishType) => {
+            let retInner = ret as string;
+            console.log(
+                "main finsih test interface async success p_ibase ", retInner)
+        })
+        .catch((ret: NullishType) => {
+            let retError = ret as Error;
+            console.error(
+                "main finsih test interface async promise ERROR p_ibase ",
+                retError)
+        });
 
     async_test.getIBaseAsync((error: Error, data?: async_test.IBase) => {
         if (!error.message) {
@@ -73,15 +78,17 @@ function main() {
         console.error("main finsih test async promise ERROR ", error)
     }
 
-    async_test.toStruct("aaa", "bbb", 1, (error: Error, data?: async_test.Data) => {
-        if (!error.message) {
-            console.log("main finsih test async success ", data);
-        } else {
-            console.log("main finsih test async ERROR ", error);
-        }
-    })
+    async_test.toStruct(
+        "aaa", "bbb", 1, (error: Error, data?: async_test.Data) => {
+            if (!error.message) {
+                console.log("main finsih test async success ", data);
+            } else {
+                console.log("main finsih test async ERROR ", error);
+            }
+        })
 
-    // In function toStruct, we set it to throw an exception if the third parameter is equal to 0.
+    // In function toStruct, we set it to throw an exception if the third
+    // parameter is equal to 0.
     try {
         let retPromise = await async_test.toStruct("aaa", "bbb", 0);
         console.log("main finsih test async promise success ")
@@ -90,13 +97,14 @@ function main() {
     }
 
     let p_struct = async_test.toStruct("aaa", "bbb", 1);
-    p_struct.then((ret: NullishType) => {
-        let retInner = ret as async_test.Data;
-        console.log("main finsih test async success p_struct ", retInner)
-    })
-    .catch((ret: NullishType) => {
-        let retError = ret as Error;
-        console.error("main finsih test async promise ERROR  p_struct ", retError)
-    });
-
+    p_struct
+        .then((ret: NullishType) => {
+            let retInner = ret as async_test.Data;
+            console.log("main finsih test async success p_struct ", retInner)
+        })
+        .catch((ret: NullishType) => {
+            let retError = ret as Error;
+            console.error(
+                "main finsih test async promise ERROR  p_struct ", retError)
+        });
 }

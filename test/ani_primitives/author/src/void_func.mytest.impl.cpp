@@ -116,7 +116,7 @@ void myfunc16(optional_view<int16_t> option1,
       break;
   }
 }
-}
+}  // namespace
 TH_EXPORT_CPP_API_myfunc1(myfunc1);
 TH_EXPORT_CPP_API_myfunc2(myfunc2);
 TH_EXPORT_CPP_API_myfunc3(myfunc3);

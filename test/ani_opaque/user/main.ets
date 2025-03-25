@@ -34,7 +34,8 @@ function main() {
 
     suite.addTest("test is_string with object", test_is_string_with_object);
     suite.addTest("test is_string with string", test_is_string_with_string);
-    suite.addTest("test is_string with undefined", test_is_string_with_undefined);
+    suite.addTest(
+        "test is_string with undefined", test_is_string_with_undefined);
     suite.addTest("test get_objects", test_get_objects);
 
     suite.run();

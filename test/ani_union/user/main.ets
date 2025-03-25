@@ -51,7 +51,8 @@ function main() {
     console.log("##############start#############");
     const suite = new ArkTestsuite("UnionTest Tests");
 
-    suite.addTest("test printUnion with undefined", test_printUnion_with_undefined);
+    suite.addTest(
+        "test printUnion with undefined", test_printUnion_with_undefined);
     suite.addTest("test printUnion with string", test_printUnion_with_string);
     suite.addTest("test printUnion with number", test_printUnion_with_number);
     suite.addTest("test printUnion with pair", test_printUnion_with_pair);

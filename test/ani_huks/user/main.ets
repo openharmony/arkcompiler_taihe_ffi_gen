@@ -18,14 +18,10 @@ function main() {
         [
             new huks.HuksParam(
                 huks.HuksTag.HUKS_TAG_KEY_SIZE,
-                huks.HuksKeySize.HUKS_RSA_KEY_SIZE_512 as number
-            ),
-            new huks.HuksParam(
-                huks.HuksTag.HUKS_TAG_KEY,
-                arrbuf1
-            ),
-        ], arrbuf2
-    );
+                huks.HuksKeySize.HUKS_RSA_KEY_SIZE_512 as number),
+            new huks.HuksParam(huks.HuksTag.HUKS_TAG_KEY, arrbuf1),
+        ],
+        arrbuf2);
 
     console.log(huksOptions)
 

@@ -11,7 +11,8 @@ function main() {
     assertEQ(res, "abcefg3")
 
     let newStruct = StructTest.makeStruct("aaa", "bbb", 1)
-    console.log("new struct is " + newStruct.a + " " + newStruct.b + " " + newStruct.c)
+    console.log(
+        "new struct is " + newStruct.a + " " + newStruct.b + " " + newStruct.c)
     assertEQ(newStruct.a, "aaa")
     assertEQ(newStruct.b, "bbb")
     assertEQ(newStruct.c, 1)

@@ -42,7 +42,7 @@ map<string, int32_t> getMapfromArray(array_view<::record_test::Data> d) {
   }
   return {iter->a, iter->b};
 }
-}
+}  // namespace
 TH_EXPORT_CPP_API_makeCpu(makeCpu);
 TH_EXPORT_CPP_API_getCpuSize(getCpuSize);
 TH_EXPORT_CPP_API_getASize(getASize);
