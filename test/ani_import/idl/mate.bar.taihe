@@ -1,0 +1,7 @@
+@!namespace("mate", "bar")
+
+from mate.foo use FooType;
+
+struct BarType {}
+
+function testFoo(foo: FooType): void;

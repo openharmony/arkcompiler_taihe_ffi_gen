@@ -1,0 +1,10 @@
+from mate.bar use BarType;
+from nova use NovaType;
+
+enum PuraType: i32 {
+    A = 1,
+    B = 2,
+}
+
+function testBar(bar: BarType): void;
+function testNova(nove: NovaType): void;
