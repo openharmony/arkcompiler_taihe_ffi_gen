@@ -59,16 +59,25 @@ class IndentManager:
         return self.count * " "
 
 
-class OutputBuffer(OutputBase[[]]):
+class STSOutputBuffer(OutputBase[[]]):
     """Represents a general target file."""
 
     def __init__(self):
         self.indent_manager = IndentManager()
         self.code = StringIO()
+        self.import_list = []
 
     @override
     def save_as(self, file_path: Path):
+        if not path.exists(file_path.parent):
+            makedirs(file_path.parent, exist_ok=True)
         with open(file_path, "w", encoding="utf-8") as dst:
+            import_dict = {
+                import_name: module_name
+                for module_name, import_name in self.import_list
+            }
+            for import_name, module_name in import_dict.items():
+                dst.write(f'import * as {import_name} from "./{module_name}";\n')
             dst.write(self.code.getvalue())
 
     @contextmanager
@@ -85,6 +94,9 @@ class OutputBuffer(OutputBase[[]]):
     def writeln(self, *codes: str):
         for code in codes:
             self.code.write(self.indent_manager.current + code + "\n")
+
+    def imports(self, import_list: list[tuple[str, str]]):
+        self.import_list.extend(import_list)
 
 
 class COutputBuffer(OutputBase[[bool]]):

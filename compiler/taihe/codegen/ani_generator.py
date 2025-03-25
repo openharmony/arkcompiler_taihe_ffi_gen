@@ -57,7 +57,7 @@ from taihe.semantics.types import (
 )
 from taihe.semantics.visitor import TypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
-from taihe.utils.outputs import COutputBuffer, OutputManager
+from taihe.utils.outputs import COutputBuffer, OutputManager, STSOutputBuffer
 
 if TYPE_CHECKING:
     from taihe.semantics.declarations import (
@@ -138,6 +138,8 @@ ANI_ARRAYBUFFER = ANIType(hint="arraybuffer", base=ANI_REF)
 
 class PackageANIInfo(AbstractAnalysis[PackageDecl]):
     def __init__(self, am: AnalysisManager, p: PackageDecl) -> None:
+        self.am = am
+
         self.header = f"{p.name}.ani.hpp"
         self.source = f"{p.name}.ani.cpp"
 
@@ -152,14 +154,13 @@ class PackageANIInfo(AbstractAnalysis[PackageDecl]):
             self.module = p.name
             self.sts_ns_parts = []
 
+        self.imported_mod_name = "_" + "_".join(self.module.split("."))
+
         self.ani_path = "/".join(self.module.split(".") + self.sts_ns_parts)
         if self.sts_ns_parts:
             self.impl_desc = f"L{self.ani_path};"
         else:
             self.impl_desc = f"L{self.ani_path}/ETSGLOBAL;"
-
-        self.imported_mod_name = "_" + "_".join(self.module.split("."))
-        self.imported_ns_name = ".".join([self.imported_mod_name, *self.sts_ns_parts])
 
         self.injected_codes: list[str] = []
         for injected in p.get_attr_list("sts_inject"):
@@ -168,6 +169,23 @@ class PackageANIInfo(AbstractAnalysis[PackageDecl]):
 
     def is_namespace(self):
         return len(self.sts_ns_parts) > 0
+
+    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer, sts_name: str):
+        pkg_ani_info = PackageANIInfo.get(self.am, pkg)
+        if pkg_ani_info.module == self.module:
+            self_sts_ns_parts = iter(self.sts_ns_parts)
+            for else_sts_ns_part in pkg_ani_info.sts_ns_parts:
+                try:
+                    if next(self_sts_ns_parts) != else_sts_ns_part:
+                        break
+                except Exception:
+                    break
+            else:
+                relative_name = ".".join([*self_sts_ns_parts, sts_name])
+                return relative_name
+        target.imports([(self.module, self.imported_mod_name)])
+        relative_name = ".".join([self.imported_mod_name, *self.sts_ns_parts, sts_name])
+        return relative_name
 
 
 class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
@@ -335,13 +353,13 @@ class EnumANIInfo(AbstractAnalysis[EnumDecl]):
     def __init__(self, am: AnalysisManager, d: UnionDecl) -> None:
         p = d.node_parent
         assert p
-        pkg_ani_info = PackageANIInfo.get(am, p)
-        self.sts_type_name = d.name
-        self.type_desc = f"L{pkg_ani_info.ani_path}/{self.sts_type_name};"
 
-        self.module = pkg_ani_info.module
-        self.imported_mod_name = pkg_ani_info.imported_mod_name
-        self.sts_type = f"{pkg_ani_info.imported_ns_name}.{self.sts_type_name}"
+        self.pkg_ani_info = PackageANIInfo.get(am, p)
+        self.sts_type_name = d.name
+        self.type_desc = f"L{self.pkg_ani_info.ani_path}/{self.sts_type_name};"
+
+    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer):
+        return self.pkg_ani_info.sts_type_in(pkg, target, self.sts_type_name)
 
 
 class StructANIInfo(AbstractAnalysis[StructDecl]):
@@ -354,15 +372,14 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
         self.decl_header = f"{p.name}.{d.name}.ani.0.h"
         self.impl_header = f"{p.name}.{d.name}.ani.1.h"
 
-        pkg_ani_info = PackageANIInfo.get(am, p)
+        self.pkg_ani_info = PackageANIInfo.get(am, p)
         self.sts_type_name = d.name
         self.sts_impl_name = d.name
-        self.type_desc = f"L{pkg_ani_info.ani_path}/{self.sts_type_name};"
-        self.impl_desc = f"L{pkg_ani_info.ani_path}/{self.sts_impl_name};"
+        self.type_desc = f"L{self.pkg_ani_info.ani_path}/{self.sts_type_name};"
+        self.impl_desc = f"L{self.pkg_ani_info.ani_path}/{self.sts_impl_name};"
 
-        self.module = pkg_ani_info.module
-        self.imported_mod_name = pkg_ani_info.imported_mod_name
-        self.sts_type = f"{pkg_ani_info.imported_ns_name}.{self.sts_type_name}"
+    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer):
+        return self.pkg_ani_info.sts_type_in(pkg, target, self.sts_type_name)
 
 
 class UnionANIInfo(AbstractAnalysis[UnionDecl]):
@@ -375,12 +392,12 @@ class UnionANIInfo(AbstractAnalysis[UnionDecl]):
         self.decl_header = f"{p.name}.{d.name}.ani.0.h"
         self.impl_header = f"{p.name}.{d.name}.ani.1.h"
 
-        pkg_ani_info = PackageANIInfo.get(am, p)
+        self.pkg_ani_info = PackageANIInfo.get(am, p)
         self.sts_type_name = d.name
+        self.type_desc = "Lstd/core/Object;"
 
-        self.module = pkg_ani_info.module
-        self.imported_mod_name = pkg_ani_info.imported_mod_name
-        self.sts_type = f"{pkg_ani_info.imported_ns_name}.{self.sts_type_name}"
+    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer):
+        return self.pkg_ani_info.sts_type_in(pkg, target, self.sts_type_name)
 
 
 class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
@@ -393,18 +410,14 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
         self.decl_header = f"{p.name}.{d.name}.ani.0.h"
         self.impl_header = f"{p.name}.{d.name}.ani.1.h"
 
-        pkg_ani_info = PackageANIInfo.get(am, p)
+        self.pkg_ani_info = PackageANIInfo.get(am, p)
         self.sts_type_name = d.name
         if d.get_attr_item("class"):
             self.sts_impl_name = f"{d.name}"
         else:
             self.sts_impl_name = f"{d.name}_inner"
-        self.type_desc = f"L{pkg_ani_info.ani_path}/{self.sts_type_name};"
-        self.impl_desc = f"L{pkg_ani_info.ani_path}/{self.sts_impl_name};"
-
-        self.module = pkg_ani_info.module
-        self.imported_mod_name = pkg_ani_info.imported_mod_name
-        self.sts_type = f"{pkg_ani_info.imported_ns_name}.{self.sts_type_name}"
+        self.type_desc = f"L{self.pkg_ani_info.ani_path}/{self.sts_type_name};"
+        self.impl_desc = f"L{self.pkg_ani_info.ani_path}/{self.sts_impl_name};"
 
         self.iface_injected_codes: list[str] = []
         for iface_injected in d.get_attr_list("sts_inject_into_interface"):
@@ -415,15 +428,19 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
             (code,) = class_injected.args
             self.class_injected_codes.append(code)
 
+    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer):
+        return self.pkg_ani_info.sts_type_in(pkg, target, self.sts_type_name)
+
 
 class AbstractTypeANIInfo(metaclass=ABCMeta):
     ani_type: ANIType
-    sts_type: str
     type_desc: str
-    import_list: list[tuple[str, str]]
 
     def __init__(self, am: AnalysisManager, t: Type):
         self.cpp_info = TypeCppInfo.get(am, t)
+
+    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+        raise NotImplementedError
 
     def from_ani(
         self,
@@ -578,11 +595,13 @@ class EnumTypeANIInfo(AbstractAnalysis[EnumType], AbstractTypeANIInfo):
         AbstractTypeANIInfo.__init__(self, am, t)
         enum_ani_info = EnumANIInfo.get(am, t.ty_decl)
         self.ani_type = ANI_ENUM_ITEM
-        self.sts_type = enum_ani_info.sts_type
         self.type_desc = enum_ani_info.type_desc
-        self.import_list = [(enum_ani_info.module, enum_ani_info.imported_mod_name)]
         self.am = am
         self.t = t
+
+    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+        enum_ani_info = EnumANIInfo.get(self.am, self.t.ty_decl)
+        return enum_ani_info.sts_type_in(pkg, target)
 
     @override
     def from_ani(
@@ -624,11 +643,13 @@ class StructTypeANIInfo(AbstractAnalysis[StructType], AbstractTypeANIInfo):
         AbstractTypeANIInfo.__init__(self, am, t)
         struct_ani_info = StructANIInfo.get(am, t.ty_decl)
         self.ani_type = ANI_OBJECT
-        self.sts_type = struct_ani_info.sts_type
         self.type_desc = struct_ani_info.type_desc
-        self.import_list = [(struct_ani_info.module, struct_ani_info.imported_mod_name)]
         self.am = am
         self.t = t
+
+    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+        struct_ani_info = StructANIInfo.get(self.am, self.t.ty_decl)
+        return struct_ani_info.sts_type_in(pkg, target)
 
     @override
     def from_ani(
@@ -666,11 +687,13 @@ class UnionTypeANIInfo(AbstractAnalysis[UnionType], AbstractTypeANIInfo):
         AbstractTypeANIInfo.__init__(self, am, t)
         union_ani_info = UnionANIInfo.get(am, t.ty_decl)
         self.ani_type = ANI_REF
-        self.sts_type = union_ani_info.sts_type
-        self.type_desc = "Lstd/core/Object;"
-        self.import_list = [(union_ani_info.module, union_ani_info.imported_mod_name)]
+        self.type_desc = union_ani_info.type_desc
         self.am = am
         self.t = t
+
+    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+        union_ani_info = UnionANIInfo.get(self.am, self.t.ty_decl)
+        return union_ani_info.sts_type_in(pkg, target)
 
     @override
     def from_ani(
@@ -708,11 +731,13 @@ class IfaceTypeANIInfo(AbstractAnalysis[IfaceType], AbstractTypeANIInfo):
         AbstractTypeANIInfo.__init__(self, am, t)
         iface_ani_info = IfaceANIInfo.get(am, t.ty_decl)
         self.ani_type = ANI_OBJECT
-        self.sts_type = iface_ani_info.sts_type
         self.type_desc = iface_ani_info.type_desc
-        self.import_list = [(iface_ani_info.module, iface_ani_info.imported_mod_name)]
         self.am = am
         self.t = t
+
+    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+        iface_ani_info = IfaceANIInfo.get(self.am, self.t.ty_decl)
+        return iface_ani_info.sts_type_in(pkg, target)
 
     @override
     def from_ani(
@@ -761,10 +786,12 @@ class ScalarTypeANIInfo(AbstractAnalysis[ScalarType], AbstractTypeANIInfo):
             U32: ("int", ANI_INT, "I"),
             U64: ("long", ANI_LONG, "J"),
         }[t]
-        self.ani_type = ani_type
         self.sts_type = sts_type
+        self.ani_type = ani_type
         self.type_desc = type_desc
-        self.import_list = []
+
+    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+        return self.sts_type
 
     @override
     def from_ani(
@@ -797,9 +824,10 @@ class OpaqueTypeANIInfo(AbstractAnalysis[OpaqueType], AbstractTypeANIInfo):
     def __init__(self, am: AnalysisManager, t: OpaqueType) -> None:
         AbstractTypeANIInfo.__init__(self, am, t)
         self.ani_type = ANI_REF
-        self.sts_type = "NullishType"
         self.type_desc = "Lstd/core/Object;"
-        self.import_list = []
+
+    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+        return "NullishType"
 
     @override
     def from_ani(
@@ -832,9 +860,10 @@ class StringTypeANIInfo(AbstractAnalysis[StringType], AbstractTypeANIInfo):
     def __init__(self, am: AnalysisManager, t: StringType):
         AbstractTypeANIInfo.__init__(self, am, t)
         self.ani_type = ANI_STRING
-        self.sts_type = "string"
         self.type_desc = "Lstd/core/String;"
-        self.import_list = []
+
+    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+        return "string"
 
     @override
     def from_ani(
@@ -879,11 +908,14 @@ class ArrayTypeANIInfo(AbstractAnalysis[ArrayType], AbstractTypeANIInfo):
         AbstractTypeANIInfo.__init__(self, am, t)
         item_ty_ani_info = TypeANIInfo.get(am, t.item_ty)
         self.ani_type = item_ty_ani_info.ani_type.array
-        self.sts_type = f"({item_ty_ani_info.sts_type}[])"
         self.type_desc = f"[{item_ty_ani_info.type_desc}"
-        self.import_list = item_ty_ani_info.import_list
         self.am = am
         self.t = t
+
+    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+        item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
+        sts_type = item_ty_ani_info.sts_type_in(pkg, target)
+        return f"({sts_type}[])"
 
     @override
     def from_ani(
@@ -930,11 +962,10 @@ class ArrayBufferTypeANIInfo(AbstractAnalysis[ArrayType], AbstractTypeANIInfo):
     def __init__(self, am: AnalysisManager, t: ArrayType) -> None:
         AbstractTypeANIInfo.__init__(self, am, t)
         self.ani_type = ANI_ARRAYBUFFER
-        self.sts_type = "ArrayBuffer"
         self.type_desc = "Lescompat/ArrayBuffer;"
-        self.import_list = []
-        self.am = am
-        self.t = t
+
+    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+        return "ArrayBuffer"
 
     @override
     def from_ani(
@@ -981,11 +1012,14 @@ class OptionalTypeANIInfo(AbstractAnalysis[OptionalType], AbstractTypeANIInfo):
         AbstractTypeANIInfo.__init__(self, am, t)
         item_ty_ani_info = TypeANIInfo.get(am, t.item_ty)
         self.ani_type = ANI_REF
-        self.sts_type = f"({item_ty_ani_info.sts_type} | undefined)"
         self.type_desc = item_ty_ani_info.type_desc
-        self.import_list = item_ty_ani_info.import_list
         self.am = am
         self.t = t
+
+    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+        item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
+        sts_type = item_ty_ani_info.sts_type_in(pkg, target)
+        return f"({sts_type} | undefined)"
 
     @override
     def from_ani(
@@ -1049,16 +1083,17 @@ class OptionalTypeANIInfo(AbstractAnalysis[OptionalType], AbstractTypeANIInfo):
 class MapTypeANIInfo(AbstractAnalysis[MapType], AbstractTypeANIInfo):
     def __init__(self, am: AnalysisManager, t: MapType) -> None:
         AbstractTypeANIInfo.__init__(self, am, t)
-        key_ty_ani_info = TypeANIInfo.get(am, t.key_ty)
-        val_ty_ani_info = TypeANIInfo.get(am, t.val_ty)
         self.ani_type = ANI_OBJECT
-        self.sts_type = (
-            f"Record<{key_ty_ani_info.sts_type}, {val_ty_ani_info.sts_type}>"
-        )
         self.type_desc = "Lescompat/Record;"
-        self.import_list = key_ty_ani_info.import_list + val_ty_ani_info.import_list
         self.am = am
         self.t = t
+
+    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+        key_ty_ani_info = TypeANIInfo.get(self.am, self.t.key_ty)
+        val_ty_ani_info = TypeANIInfo.get(self.am, self.t.val_ty)
+        key_sts_type = key_ty_ani_info.sts_type_in(pkg, target)
+        val_sts_type = val_ty_ani_info.sts_type_in(pkg, target)
+        return f"Record<{key_sts_type}, {val_sts_type}>"
 
     @override
     def from_ani(
@@ -1148,23 +1183,24 @@ class CallbackTypeANIInfo(AbstractAnalysis[CallbackType], AbstractTypeANIInfo):
     def __init__(self, am: AnalysisManager, t: CallbackType) -> None:
         AbstractTypeANIInfo.__init__(self, am, t)
         self.ani_type = ANI_OBJECT
-        params_ty_sts = []
-        self.import_list = []
-        for index, param_ty in enumerate(t.params_ty):
-            param_ty_sts_info = TypeANIInfo.get(am, param_ty)
-            params_ty_sts.append(f"arg_{index}: {param_ty_sts_info.sts_type}")
-            self.import_list.extend(param_ty_sts_info.import_list)
-        params_ty_sts_str = ", ".join(params_ty_sts)
-        if t.return_ty:
-            return_ty_sts_info = TypeANIInfo.get(am, t.return_ty)
-            return_ty_sts = return_ty_sts_info.sts_type
-            self.import_list.extend(return_ty_sts_info.import_list)
-        else:
-            return_ty_sts = "void"
-        self.sts_type = f"(({params_ty_sts_str}) => {return_ty_sts})"
         self.type_desc = f"Lstd/core/Function{len(t.params_ty)};"
         self.am = am
         self.t = t
+
+    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+        params_ty_sts = []
+        for index, param_ty in enumerate(self.t.params_ty):
+            param_ty_sts_info = TypeANIInfo.get(self.am, param_ty)
+            prm_sts_type = param_ty_sts_info.sts_type_in(pkg, target)
+            params_ty_sts.append(f"arg_{index}: {prm_sts_type}")
+        params_ty_sts_str = ", ".join(params_ty_sts)
+        if self.t.return_ty:
+            return_ty_sts_info = TypeANIInfo.get(self.am, self.t.return_ty)
+            ret_sts_type = return_ty_sts_info.sts_type_in(pkg, target)
+            return_ty_sts = ret_sts_type
+        else:
+            return_ty_sts = "void"
+        return f"(({params_ty_sts_str}) => {return_ty_sts})"
 
     @override
     def from_ani(

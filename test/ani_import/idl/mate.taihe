@@ -1,0 +1,9 @@
+from mate.bar use BarType;
+
+union MateType {
+    sValue: String;
+    bValue: bool;
+    xValue;
+}
+
+function testBar(bar: BarType): void;
