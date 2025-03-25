@@ -1,5 +1,5 @@
-import * as NSTest from "../author_generated/ns_test"
 import * as NewNS from "../author_generated/new_ns"
+import * as NSTest from "../author_generated/ns_test"
 
 loadLibrary("namespace")
 
@@ -7,7 +7,7 @@ function check_struct() {
     let data = new NSTest.baz.Data("abc", "efg", 3);
     let res_struct = NSTest.baz.concatStruct(data)
     assertEQ(res_struct, "abcefg3")
-    
+
     let newStruct = NSTest.baz.makeStruct("aaa", "bbb", 1)
     assertEQ(newStruct.a, "aaa")
     assertEQ(newStruct.b, "bbb")
@@ -38,7 +38,7 @@ function check_multi_ns() {
 
 
 function main() {
-    const suite = new ArkTestsuite ("namespace ut")
+    const suite = new ArkTestsuite("namespace ut")
 
     suite.addTest("check_struct", check_struct)
     suite.addTest("check_ns_nest", check_ns_nest)

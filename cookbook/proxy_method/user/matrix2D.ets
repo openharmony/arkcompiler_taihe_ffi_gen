@@ -2,19 +2,19 @@ import * as proxy from "../author_generated/matrix2D__"
 loadLibrary("proxy_method");
 
 export class Matrix2D {
-    scaleX: (int | undefined);
-    scaleY: (int | undefined);
-    rotateX: (int | undefined);
-    rotateY: (int | undefined);
-    translateX: (int | undefined);
-    translateY: (int | undefined);
+    scaleX: (int|undefined);
+    scaleY: (int|undefined);
+    rotateX: (int|undefined);
+    rotateY: (int|undefined);
+    translateX: (int|undefined);
+    translateY: (int|undefined);
     constructor(
-        scaleX: (int | undefined),
-        scaleY: (int | undefined),
-        rotateX: (int | undefined),
-        rotateY: (int | undefined),
-        translateX: (int | undefined),
-        translateY: (int | undefined),
+        scaleX: (int|undefined),
+        scaleY: (int|undefined),
+        rotateX: (int|undefined),
+        rotateY: (int|undefined),
+        translateX: (int|undefined),
+        translateY: (int|undefined),
     ) {
         this.scaleX = scaleX;
         this.scaleY = scaleY;
@@ -34,7 +34,9 @@ export class Matrix2D {
     }
 
     as_Matrix2D() {
-        return new proxy.Matrix2D(this.scaleX, this.scaleY, this.rotateX, this.rotateY, this.translateX, this.translateY)
+        return new proxy.Matrix2D(
+            this.scaleX, this.scaleY, this.rotateX, this.rotateY,
+            this.translateX, this.translateY)
     }
 
     identity(): Matrix2D {
@@ -44,7 +46,8 @@ export class Matrix2D {
         return new Matrix2D(proxy.invert(this.as_Matrix2D()));
     }
     multiply(other?: Matrix2D): Matrix2D {
-        return new Matrix2D(proxy.multiply(this.as_Matrix2D(), other?.as_Matrix2D()));
+        return new Matrix2D(
+            proxy.multiply(this.as_Matrix2D(), other?.as_Matrix2D()));
     }
     rotate(rx?: int, ry?: int): Matrix2D {
         return new Matrix2D(proxy.rotate(this.as_Matrix2D(), rx, ry));
@@ -56,4 +59,3 @@ export class Matrix2D {
         return new Matrix2D(proxy.scale(this.as_Matrix2D(), sx, sy));
     }
 }
-

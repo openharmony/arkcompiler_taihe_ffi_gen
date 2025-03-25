@@ -31,15 +31,16 @@ function main() {
             console.log("interface async ERROR ", error);
         }
     })
-    
-    let p_istringholder = istringholder.getPromise();
-    p_istringholder.then((ret: NullishType) => {
-        let retInner = ret as string;
-        console.log("interface async success p_istringholder ", retInner)
-    })
-    .catch((ret: NullishType) => {
-        let retError = ret as Error;
-        console.error("interface async promise ERROR p_istringholder ", retError)
-    });
 
+    let p_istringholder = istringholder.getPromise();
+    p_istringholder
+        .then((ret: NullishType) => {
+            let retInner = ret as string;
+            console.log("interface async success p_istringholder ", retInner)
+        })
+        .catch((ret: NullishType) => {
+            let retError = ret as Error;
+            console.error(
+                "interface async promise ERROR p_istringholder ", retError)
+        });
 }

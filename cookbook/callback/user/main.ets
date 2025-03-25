@@ -15,7 +15,7 @@ function main() {
     });
     console.log("global function output: ", result);
     callback_lib.cb_struct((a: callback_lib.Person) => {
-        let person = new callback_lib.Person(a.name + " Swift", a.age + 18 ); 
+        let person = new callback_lib.Person(a.name + " Swift", a.age + 18);
         return person;
     });
 }

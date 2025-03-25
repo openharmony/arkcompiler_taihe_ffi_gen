@@ -4,7 +4,7 @@ loadLibrary("override")
 
 function main() {
     class MyAbility extends UIAbility {
-        constructor () {
+        constructor() {
             super();
         }
         onForeground(): void {
