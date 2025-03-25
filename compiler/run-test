@@ -439,14 +439,18 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    main(
-        args.target_directory,
-        args.generate_and_compile_ani,
-        args.generate_only,
-        args.generate_and_compile,
-        args.generate_c_impl,
-        args.optimization,
-        args.author_link_options,
-        args.user_link_options,
-        args.run_args,
-    )
+    try:
+        main(
+            args.target_directory,
+            args.generate_and_compile_ani,
+            args.generate_only,
+            args.generate_and_compile,
+            args.generate_c_impl,
+            args.optimization,
+            args.author_link_options,
+            args.user_link_options,
+            args.run_args,
+        )
+    except KeyboardInterrupt:
+        print("Interrupted. Bye-bye!", file=sys.stderr)
+        sys.exit(1)
