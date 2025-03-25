@@ -1,6 +1,6 @@
 ## 目录
 
-### [一个简单的开始————Hello World](./hello_world/readme.md)
+### [Hello World：将 C++ 函数绑定到 ArkTS](./hello_world/README.md)
 
 ### [taihe如何实现方法的绑定](./binding/readme.md)
 

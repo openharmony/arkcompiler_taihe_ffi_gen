@@ -1,10 +1,10 @@
-import * as hello_world from "../author_generated/hello_world"
-loadLibrary("hello_world")
+// 导入自动生成的代码
+import * as hello_world from "../author_generated/hello_world";
+// 加载 C++ 库
+loadLibrary("hello_world");
+
 function main() {
-    let numA: Int = 1
-    console.log("numA is : " + numA)
-    let numB: Int = 2
-    console.log("numB is : " + numB)
-    let sum = hello_world.add(numA, numB)
-    console.log("sum is : " + sum)
+    let sum = hello_world.add(1, 2);
+    console.log("1 + 2 = " + sum);
 }
+
