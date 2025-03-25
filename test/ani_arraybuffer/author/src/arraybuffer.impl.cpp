@@ -22,6 +22,6 @@ array<uint8_t> doubleArrayBuffer(array_view<uint8_t> nums) {
 
 }  // namespace
 
-TH_EXPORT_CPP_API_sumArrayu8(sumArrayu8)
-    TH_EXPORT_CPP_API_getArrayBuffer(getArrayBuffer)
-        TH_EXPORT_CPP_API_doubleArrayBuffer(doubleArrayBuffer)
+TH_EXPORT_CPP_API_sumArrayu8(sumArrayu8);
+TH_EXPORT_CPP_API_getArrayBuffer(getArrayBuffer);
+TH_EXPORT_CPP_API_doubleArrayBuffer(doubleArrayBuffer);

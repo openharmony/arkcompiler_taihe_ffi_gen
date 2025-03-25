@@ -15,5 +15,5 @@ string concatStruct(::ns_test::baz::Data const& data) {
 
 }  // namespace
 
-TH_EXPORT_CPP_API_concatStruct(concatStruct)
-    TH_EXPORT_CPP_API_makeStruct(makeStruct)
+TH_EXPORT_CPP_API_concatStruct(concatStruct);
+TH_EXPORT_CPP_API_makeStruct(makeStruct);

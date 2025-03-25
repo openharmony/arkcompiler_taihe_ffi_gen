@@ -18,4 +18,4 @@ array<string> convert_arr(array_view<int32_t> a, string_view str) {
 
 }
 
-TH_EXPORT_CPP_API_convert_arr(convert_arr)
+TH_EXPORT_CPP_API_convert_arr(convert_arr);

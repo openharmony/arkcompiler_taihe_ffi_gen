@@ -35,5 +35,5 @@ void restartCalculator(::interface::weak::ICalculator a) {
 
 }
 
-TH_EXPORT_CPP_API_makeCalculator(makeCalculator)
-TH_EXPORT_CPP_API_restartCalculator(restartCalculator)
+TH_EXPORT_CPP_API_makeCalculator(makeCalculator);
+TH_EXPORT_CPP_API_restartCalculator(restartCalculator);

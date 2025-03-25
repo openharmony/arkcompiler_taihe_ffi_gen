@@ -116,16 +116,20 @@ void myfunc16(optional_view<int16_t> option1,
       break;
   }
 }
-}  // namespace
-TH_EXPORT_CPP_API_myfunc1(myfunc1) TH_EXPORT_CPP_API_myfunc2(myfunc2)
-    TH_EXPORT_CPP_API_myfunc3(myfunc3) TH_EXPORT_CPP_API_myfunc4(myfunc4)
-        TH_EXPORT_CPP_API_myfunc5(myfunc5) TH_EXPORT_CPP_API_myfunc6(myfunc6)
-            TH_EXPORT_CPP_API_myfunc7(myfunc7) TH_EXPORT_CPP_API_myfunc8(
-                myfunc8) TH_EXPORT_CPP_API_myfunc9(myfunc9)
-                TH_EXPORT_CPP_API_myfunc10(myfunc10)
-                    TH_EXPORT_CPP_API_myfunc11(myfunc11)
-                        TH_EXPORT_CPP_API_myfunc12(myfunc12)
-                            TH_EXPORT_CPP_API_myfunc13(myfunc13)
-                                TH_EXPORT_CPP_API_myfunc14(myfunc14)
-                                    TH_EXPORT_CPP_API_myfunc15(myfunc15)
-                                        TH_EXPORT_CPP_API_myfunc16(myfunc16)
+}
+TH_EXPORT_CPP_API_myfunc1(myfunc1);
+TH_EXPORT_CPP_API_myfunc2(myfunc2);
+TH_EXPORT_CPP_API_myfunc3(myfunc3);
+TH_EXPORT_CPP_API_myfunc4(myfunc4);
+TH_EXPORT_CPP_API_myfunc5(myfunc5);
+TH_EXPORT_CPP_API_myfunc6(myfunc6);
+TH_EXPORT_CPP_API_myfunc7(myfunc7);
+TH_EXPORT_CPP_API_myfunc8(myfunc8);
+TH_EXPORT_CPP_API_myfunc9(myfunc9);
+TH_EXPORT_CPP_API_myfunc10(myfunc10);
+TH_EXPORT_CPP_API_myfunc11(myfunc11);
+TH_EXPORT_CPP_API_myfunc12(myfunc12);
+TH_EXPORT_CPP_API_myfunc13(myfunc13);
+TH_EXPORT_CPP_API_myfunc14(myfunc14);
+TH_EXPORT_CPP_API_myfunc15(myfunc15);
+TH_EXPORT_CPP_API_myfunc16(myfunc16);

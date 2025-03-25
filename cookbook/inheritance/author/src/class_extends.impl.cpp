@@ -75,4 +75,4 @@ private:
     return make_holder<InnerBaseContext, ::class_extends::InnerBaseContext>();
 }
 }
-TH_EXPORT_CPP_API_makeBaseContext(makeBaseContext)
+TH_EXPORT_CPP_API_makeBaseContext(makeBaseContext);

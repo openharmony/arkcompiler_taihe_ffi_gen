@@ -34,5 +34,5 @@ string printFooName(::iface_test::weak::Foo foo) {
 
 }  // namespace
 
-TH_EXPORT_CPP_API_getFooIface(getFooIface)
-    TH_EXPORT_CPP_API_printFooName(printFooName)
+TH_EXPORT_CPP_API_getFooIface(getFooIface);
+TH_EXPORT_CPP_API_printFooName(printFooName);

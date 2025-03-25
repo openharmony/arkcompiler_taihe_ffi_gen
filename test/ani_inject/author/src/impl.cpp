@@ -15,4 +15,4 @@ class Foo {
 
 }  // namespace
 
-TH_EXPORT_CPP_API_makeFoo(makeFoo)
+TH_EXPORT_CPP_API_makeFoo(makeFoo);

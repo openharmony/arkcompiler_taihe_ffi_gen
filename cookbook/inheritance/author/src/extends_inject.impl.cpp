@@ -28,4 +28,4 @@ public:
     return make_holder<InnerPerson, ::extends_inject::InnerPerson>();
 }
 }
-TH_EXPORT_CPP_API_makePerson(makePerson)
+TH_EXPORT_CPP_API_makePerson(makePerson);

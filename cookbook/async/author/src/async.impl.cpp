@@ -25,5 +25,5 @@ int32_t addSync(int32_t a, int32_t b) {
     return make_holder<IStringHolder, ::async::IStringHolder>();
 }
 }
-TH_EXPORT_CPP_API_addSync(addSync)
-TH_EXPORT_CPP_API_makeIStringHolder(makeIStringHolder)
+TH_EXPORT_CPP_API_addSync(addSync);
+TH_EXPORT_CPP_API_makeIStringHolder(makeIStringHolder);

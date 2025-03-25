@@ -692,34 +692,38 @@ void baseFunc24(optional_view<int16_t> option1,
 
 }  // namespace
 
-TH_EXPORT_CPP_API_multiply(multiply) TH_EXPORT_CPP_API_baseCFunc(
-    baseCFunc) TH_EXPORT_CPP_API_baseAFunc(baseAFunc) TH_EXPORT_CPP_API_baseBFunc(baseBFunc)
-    TH_EXPORT_CPP_API_baseDFunc(baseDFunc) TH_EXPORT_CPP_API_baseEFunc(
-        baseEFunc) TH_EXPORT_CPP_API_baseHFunc(baseHFunc)
-        TH_EXPORT_CPP_API_baseIFunc(baseIFunc) TH_EXPORT_CPP_API_baseFunc1(
-            baseFunc1) TH_EXPORT_CPP_API_baseFunc2(baseFunc2)
-            TH_EXPORT_CPP_API_baseFunc3(baseFunc3) TH_EXPORT_CPP_API_baseFunc4(
-                baseFunc4) TH_EXPORT_CPP_API_baseFunc5(baseFunc5)
-                TH_EXPORT_CPP_API_baseFunc6(baseFunc6) TH_EXPORT_CPP_API_baseFunc7(
-                    baseFunc7) TH_EXPORT_CPP_API_baseFunc8(baseFunc8)
-                    TH_EXPORT_CPP_API_baseFunc9(baseFunc9) TH_EXPORT_CPP_API_baseFunc10(
-                        baseFunc10) TH_EXPORT_CPP_API_baseFunc11(baseFunc11)
-                        TH_EXPORT_CPP_API_baseFunc12(baseFunc12) TH_EXPORT_CPP_API_baseFunc13(
-                            baseFunc13) TH_EXPORT_CPP_API_baseFunc14(baseFunc14)
-                            TH_EXPORT_CPP_API_baseFunc15(baseFunc15) TH_EXPORT_CPP_API_baseFunc16(
-                                baseFunc16) TH_EXPORT_CPP_API_baseFunc17(baseFunc17)
-                                TH_EXPORT_CPP_API_baseFunc18(
-                                    baseFunc18) TH_EXPORT_CPP_API_baseFunc19(baseFunc19)
-                                    TH_EXPORT_CPP_API_baseFunc20(
-                                        baseFunc20) TH_EXPORT_CPP_API_baseFunc21(baseFunc21)
-                                        TH_EXPORT_CPP_API_baseFunc22(baseFunc22)
-                                            TH_EXPORT_CPP_API_baseFunc23(
-                                                baseFunc23)
-                                                TH_EXPORT_CPP_API_baseFunc24(
-                                                    baseFunc24)
-                                                    TH_EXPORT_CPP_API_get_interface(
-                                                        get_interface)
-                                                        TH_EXPORT_CPP_API_get_interface_bool(
-                                                            get_interface_bool)
-                                                            TH_EXPORT_CPP_API_get_interface_interger(
-                                                                get_interface_interger)
+TH_EXPORT_CPP_API_multiply(multiply);
+TH_EXPORT_CPP_API_baseCFunc(baseCFunc);
+TH_EXPORT_CPP_API_baseAFunc(baseAFunc);
+TH_EXPORT_CPP_API_baseBFunc(baseBFunc);
+TH_EXPORT_CPP_API_baseDFunc(baseDFunc);
+TH_EXPORT_CPP_API_baseEFunc(baseEFunc);
+TH_EXPORT_CPP_API_baseHFunc(baseHFunc);
+TH_EXPORT_CPP_API_baseIFunc(baseIFunc);
+TH_EXPORT_CPP_API_baseFunc1(baseFunc1);
+TH_EXPORT_CPP_API_baseFunc2(baseFunc2);
+TH_EXPORT_CPP_API_baseFunc3(baseFunc3);
+TH_EXPORT_CPP_API_baseFunc4(baseFunc4);
+TH_EXPORT_CPP_API_baseFunc5(baseFunc5);
+TH_EXPORT_CPP_API_baseFunc6(baseFunc6);
+TH_EXPORT_CPP_API_baseFunc7(baseFunc7);
+TH_EXPORT_CPP_API_baseFunc8(baseFunc8);
+TH_EXPORT_CPP_API_baseFunc9(baseFunc9);
+TH_EXPORT_CPP_API_baseFunc10(baseFunc10);
+TH_EXPORT_CPP_API_baseFunc11(baseFunc11);
+TH_EXPORT_CPP_API_baseFunc12(baseFunc12);
+TH_EXPORT_CPP_API_baseFunc13(baseFunc13);
+TH_EXPORT_CPP_API_baseFunc14(baseFunc14);
+TH_EXPORT_CPP_API_baseFunc15(baseFunc15);
+TH_EXPORT_CPP_API_baseFunc16(baseFunc16);
+TH_EXPORT_CPP_API_baseFunc17(baseFunc17);
+TH_EXPORT_CPP_API_baseFunc18(baseFunc18);
+TH_EXPORT_CPP_API_baseFunc19(baseFunc19);
+TH_EXPORT_CPP_API_baseFunc20(baseFunc20);
+TH_EXPORT_CPP_API_baseFunc21(baseFunc21);
+TH_EXPORT_CPP_API_baseFunc22(baseFunc22);
+TH_EXPORT_CPP_API_baseFunc23(baseFunc23);
+TH_EXPORT_CPP_API_baseFunc24(baseFunc24);
+TH_EXPORT_CPP_API_get_interface(get_interface);
+TH_EXPORT_CPP_API_get_interface_bool(get_interface_bool);
+TH_EXPORT_CPP_API_get_interface_interger(get_interface_interger);

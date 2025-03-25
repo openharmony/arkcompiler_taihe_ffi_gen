@@ -26,6 +26,6 @@ string printNooName(::iface_readonly_test::weak::Noo noo) {
     return name;
 }
 }
-TH_EXPORT_CPP_API_getNooIface(getNooIface)
-TH_EXPORT_CPP_API_printNooName(printNooName)
+TH_EXPORT_CPP_API_getNooIface(getNooIface);
+TH_EXPORT_CPP_API_printNooName(printNooName);
 

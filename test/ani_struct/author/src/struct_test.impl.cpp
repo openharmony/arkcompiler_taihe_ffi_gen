@@ -15,5 +15,5 @@ string concatStruct(::struct_test::Data const& data) {
 
 }  // namespace
 
-TH_EXPORT_CPP_API_concatStruct(concatStruct)
-    TH_EXPORT_CPP_API_makeStruct(makeStruct)
+TH_EXPORT_CPP_API_concatStruct(concatStruct);
+TH_EXPORT_CPP_API_makeStruct(makeStruct);

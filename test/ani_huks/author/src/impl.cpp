@@ -162,30 +162,29 @@ string getSdkVersion(::huks::HuksOptions const& options) {
 }
 }  // namespace
 
-TH_EXPORT_CPP_API_generateKey(generateKey) TH_EXPORT_CPP_API_generateKeyItem(
-    generateKeyItem) TH_EXPORT_CPP_API_deleteKey(deleteKey)
-    TH_EXPORT_CPP_API_deleteKeyItem(deleteKeyItem) TH_EXPORT_CPP_API_importKey(
-        importKey) TH_EXPORT_CPP_API_importKeyItem(importKeyItem)
-        TH_EXPORT_CPP_API_importWrappedKeyItem(
-            importWrappedKeyItem) TH_EXPORT_CPP_API_exportKey(exportKey)
-            TH_EXPORT_CPP_API_exportKeyItem(
-                exportKeyItem) TH_EXPORT_CPP_API_getKeyProperties(getKeyProperties)
-                TH_EXPORT_CPP_API_getKeyItemProperties(
-                    getKeyItemProperties) TH_EXPORT_CPP_API_isKeyExist(isKeyExist)
-                    TH_EXPORT_CPP_API_isKeyItemExist(
-                        isKeyItemExist) TH_EXPORT_CPP_API_hasKeyItem(hasKeyItem)
-                        TH_EXPORT_CPP_API_init(init) TH_EXPORT_CPP_API_initSession(
-                            initSession) TH_EXPORT_CPP_API_update(update)
-                            TH_EXPORT_CPP_API_updateSession(
-                                updateSession) TH_EXPORT_CPP_API_finish(finish)
-                                TH_EXPORT_CPP_API_finishSession(
-                                    finishSession) TH_EXPORT_CPP_API_abort(abort)
-                                    TH_EXPORT_CPP_API_abortSession(abortSession)
-                                        TH_EXPORT_CPP_API_attestKeyItem(
-                                            attestKeyItem)
-                                            TH_EXPORT_CPP_API_anonAttestKeyItem(
-                                                anonAttestKeyItem)
-                                                TH_EXPORT_CPP_API_getSdkVersion(
-                                                    getSdkVersion)
-                                                    TH_EXPORT_CPP_API_listAliases(
-                                                        listAliases)
+TH_EXPORT_CPP_API_generateKey(generateKey);
+TH_EXPORT_CPP_API_generateKeyItem(generateKeyItem);
+TH_EXPORT_CPP_API_deleteKey(deleteKey);
+TH_EXPORT_CPP_API_deleteKeyItem(deleteKeyItem);
+TH_EXPORT_CPP_API_importKey(importKey);
+TH_EXPORT_CPP_API_importKeyItem(importKeyItem);
+TH_EXPORT_CPP_API_importWrappedKeyItem(importWrappedKeyItem);
+TH_EXPORT_CPP_API_exportKey(exportKey);
+TH_EXPORT_CPP_API_exportKeyItem(exportKeyItem);
+TH_EXPORT_CPP_API_getKeyProperties(getKeyProperties);
+TH_EXPORT_CPP_API_getKeyItemProperties(getKeyItemProperties);
+TH_EXPORT_CPP_API_isKeyExist(isKeyExist);
+TH_EXPORT_CPP_API_isKeyItemExist(isKeyItemExist);
+TH_EXPORT_CPP_API_hasKeyItem(hasKeyItem);
+TH_EXPORT_CPP_API_init(init);
+TH_EXPORT_CPP_API_initSession(initSession);
+TH_EXPORT_CPP_API_update(update);
+TH_EXPORT_CPP_API_updateSession(updateSession);
+TH_EXPORT_CPP_API_finish(finish);
+TH_EXPORT_CPP_API_finishSession(finishSession);
+TH_EXPORT_CPP_API_abort(abort);
+TH_EXPORT_CPP_API_abortSession(abortSession);
+TH_EXPORT_CPP_API_attestKeyItem(attestKeyItem);
+TH_EXPORT_CPP_API_anonAttestKeyItem(anonAttestKeyItem);
+TH_EXPORT_CPP_API_getSdkVersion(getSdkVersion);
+TH_EXPORT_CPP_API_listAliases(listAliases);

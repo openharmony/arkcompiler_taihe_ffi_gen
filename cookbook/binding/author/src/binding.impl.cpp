@@ -11,4 +11,4 @@ namespace {
 
 }
 
-TH_EXPORT_CPP_API_convert_color(convert_color)
+TH_EXPORT_CPP_API_convert_color(convert_color);

@@ -306,7 +306,7 @@ function testCasebaseFunctionTest36(){
     let int64Array:long[] = [9223372036854775807,-100,121,-2147483648,-9223372036854775808];
     let res = namespaceTest.functiontest.baseFunctionTest36(10 as byte,11 as short,12,10000,3.14 as float,-2.0002,"test1",true,int8Array,int64Array);
     assertEQ(res.length,int8Array.length)
-    let tempResult:int[] = [34,35,36,37,38]
+    let tempResult:int[] = [34,35,36,37,38];
     for (let i:int = 0; i < res.length; i++) {
         assertEQ(res[i], tempResult[i])
     }
@@ -327,7 +327,7 @@ function testCasebaseFunctionTest37(){
     let int64Array:long[] = [100,-100,121,-200,0];
     let res = namespaceTest.functiontest.baseFunctionTest37(10 as byte,11 as short,12,10000,3.14 as float,-2.0002,"test1",true,intArray,int64Array);
     assertEQ(res.length,int64Array.length)
-    let tempResult:int[] = [133,-67,154,-167,33]
+    let tempResult:int[] = [133,-67,154,-167,33];
     for (let i:int = 0; i < res.length; i++) {
         assertEQ(res[i], tempResult[i])
     }

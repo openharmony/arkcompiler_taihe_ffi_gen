@@ -77,9 +77,9 @@ namespace {
 
 }
 
-TH_EXPORT_CPP_API_identity(identity)
-TH_EXPORT_CPP_API_invert(invert)
-TH_EXPORT_CPP_API_multiply(multiply)
-TH_EXPORT_CPP_API_rotate(rotate)
-TH_EXPORT_CPP_API_translate(translate)
-TH_EXPORT_CPP_API_scale(scale)
+TH_EXPORT_CPP_API_identity(identity);
+TH_EXPORT_CPP_API_invert(invert);
+TH_EXPORT_CPP_API_multiply(multiply);
+TH_EXPORT_CPP_API_rotate(rotate);
+TH_EXPORT_CPP_API_translate(translate);
+TH_EXPORT_CPP_API_scale(scale);

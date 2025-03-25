@@ -36,5 +36,6 @@ string printUnion(::union_ani::Union const& data) {
   }
   return ::union_ani::Union::make_uValue();
 }
-}  // namespace
-TH_EXPORT_CPP_API_printUnion(printUnion) TH_EXPORT_CPP_API_makeUnion(makeUnion)
+}
+TH_EXPORT_CPP_API_printUnion(printUnion);
+TH_EXPORT_CPP_API_makeUnion(makeUnion);

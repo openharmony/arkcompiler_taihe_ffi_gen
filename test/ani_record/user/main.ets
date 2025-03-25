@@ -14,7 +14,7 @@ function getCpuSize() {
     let cpus : Record<string, ICpu> = {
         'cpu0': cpu0,
         'cpu1': cpu1,
-    }    
+    };
     let ret0 : int = record_test.getCpuSize(cpus);
     console.log(ret0);
     assertEQ(ret0, 2);
@@ -29,7 +29,7 @@ function getASize() {
         0: a,
         1: b,
         2: c,
-    }   
+    };
     let ret1 : int = record_test.getASize(As);
     console.log(ret1);
     assertEQ(ret1, 3);

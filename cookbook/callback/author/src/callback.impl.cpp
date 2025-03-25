@@ -22,7 +22,7 @@ void cb_struct(callback_view<::callback::Person(::callback::Person const&)> f) {
     return;
 }
 }
-TH_EXPORT_CPP_API_cb_void_void(cb_void_void)
-TH_EXPORT_CPP_API_cb_i_void(cb_i_void)
-TH_EXPORT_CPP_API_cb_str_str(cb_str_str)
-TH_EXPORT_CPP_API_cb_struct(cb_struct)
+TH_EXPORT_CPP_API_cb_void_void(cb_void_void);
+TH_EXPORT_CPP_API_cb_i_void(cb_i_void);
+TH_EXPORT_CPP_API_cb_str_str(cb_str_str);
+TH_EXPORT_CPP_API_cb_struct(cb_struct);

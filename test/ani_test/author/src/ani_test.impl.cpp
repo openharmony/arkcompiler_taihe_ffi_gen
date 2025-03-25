@@ -102,12 +102,13 @@ void callBar(array_view<Foo> arr) {
 }
 }  // namespace
 
-TH_EXPORT_CPP_API_makeData(makeData) TH_EXPORT_CPP_API_showData(showData)
-    TH_EXPORT_CPP_API_makeUnion(makeUnion)
-        TH_EXPORT_CPP_API_showUnion(showUnion)
-            TH_EXPORT_CPP_API_showOptionalInt(showOptionalInt)
-                TH_EXPORT_CPP_API_makeOptionalInt(makeOptionalInt)
-                    TH_EXPORT_CPP_API_showArrayInt(showArrayInt)
-                        TH_EXPORT_CPP_API_makeArrayInt(makeArrayInt)
-                            TH_EXPORT_CPP_API_makeFoo(makeFoo)
-                                TH_EXPORT_CPP_API_callBar(callBar)
+TH_EXPORT_CPP_API_makeData(makeData);
+TH_EXPORT_CPP_API_showData(showData);
+TH_EXPORT_CPP_API_makeUnion(makeUnion);
+TH_EXPORT_CPP_API_showUnion(showUnion);
+TH_EXPORT_CPP_API_showOptionalInt(showOptionalInt);
+TH_EXPORT_CPP_API_makeOptionalInt(makeOptionalInt);
+TH_EXPORT_CPP_API_showArrayInt(showArrayInt);
+TH_EXPORT_CPP_API_makeArrayInt(makeArrayInt);
+TH_EXPORT_CPP_API_makeFoo(makeFoo);
+TH_EXPORT_CPP_API_callBar(callBar);

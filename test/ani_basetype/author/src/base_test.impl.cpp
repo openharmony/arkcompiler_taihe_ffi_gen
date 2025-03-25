@@ -43,14 +43,17 @@ int32_t to_i32(string_view a) { return std::atoi(a.c_str()); }
 string from_i32(int32_t a) { return taihe::core::to_string(a); }
 }  // namespace
 
-TH_EXPORT_CPP_API_add_i8(add_i8) TH_EXPORT_CPP_API_sub_i16(sub_i16)
-    TH_EXPORT_CPP_API_mul_i32(mul_i32) TH_EXPORT_CPP_API_div_i64(div_i64)
-        TH_EXPORT_CPP_API_add_f32(add_f32) TH_EXPORT_CPP_API_sub_f32(sub_f32)
-            TH_EXPORT_CPP_API_add_f64(add_f64)
-                TH_EXPORT_CPP_API_sub_f64(sub_f64)
-                    TH_EXPORT_CPP_API_mul_f64(mul_f64)
-                        TH_EXPORT_CPP_API_check(check)
-                            TH_EXPORT_CPP_API_concatx(concatx)
-                                TH_EXPORT_CPP_API_splitx(splitx)
-                                    TH_EXPORT_CPP_API_to_i32(to_i32)
-                                        TH_EXPORT_CPP_API_from_i32(from_i32)
+TH_EXPORT_CPP_API_add_i8(add_i8);
+TH_EXPORT_CPP_API_sub_i16(sub_i16);
+TH_EXPORT_CPP_API_mul_i32(mul_i32);
+TH_EXPORT_CPP_API_div_i64(div_i64);
+TH_EXPORT_CPP_API_add_f32(add_f32);
+TH_EXPORT_CPP_API_sub_f32(sub_f32);
+TH_EXPORT_CPP_API_add_f64(add_f64);
+TH_EXPORT_CPP_API_sub_f64(sub_f64);
+TH_EXPORT_CPP_API_mul_f64(mul_f64);
+TH_EXPORT_CPP_API_check(check);
+TH_EXPORT_CPP_API_concatx(concatx);
+TH_EXPORT_CPP_API_splitx(splitx);
+TH_EXPORT_CPP_API_to_i32(to_i32);
+TH_EXPORT_CPP_API_from_i32(from_i32);

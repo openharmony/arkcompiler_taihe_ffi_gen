@@ -8,6 +8,9 @@ namespace {
 ::enum_test::Color nextEnum(::enum_test::Color color) {
   return (::enum_test::Color::key_t)(((int)color.get_key() + 1) % 3);
 }
-void showEnum(::enum_test::Color color) { std::cout << color << std::endl; }
-}  // namespace
-TH_EXPORT_CPP_API_nextEnum(nextEnum) TH_EXPORT_CPP_API_showEnum(showEnum)
+void showEnum(::enum_test::Color color) {
+    std::cout << color << std::endl;
+}
+}
+TH_EXPORT_CPP_API_nextEnum(nextEnum);
+TH_EXPORT_CPP_API_showEnum(showEnum);

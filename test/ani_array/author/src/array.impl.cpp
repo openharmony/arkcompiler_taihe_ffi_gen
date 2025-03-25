@@ -26,6 +26,6 @@ array<int32_t> makeArray(int32_t value, int32_t num) {
 
 }  // namespace
 
-TH_EXPORT_CPP_API_sumArray(sumArray)
-    TH_EXPORT_CPP_API_getArrayValue(getArrayValue)
-        TH_EXPORT_CPP_API_makeArray(makeArray)
+TH_EXPORT_CPP_API_sumArray(sumArray);
+TH_EXPORT_CPP_API_getArrayValue(getArrayValue);
+TH_EXPORT_CPP_API_makeArray(makeArray);

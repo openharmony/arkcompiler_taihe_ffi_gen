@@ -16,5 +16,5 @@ int32_t sum_arr(array_view<int32_t> a) {
     return result;
 }
 }
-TH_EXPORT_CPP_API_sum_two(sum_two)
-TH_EXPORT_CPP_API_sum_arr(sum_arr)
+TH_EXPORT_CPP_API_sum_two(sum_two);
+TH_EXPORT_CPP_API_sum_arr(sum_arr);

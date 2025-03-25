@@ -236,7 +236,7 @@ class CppImplSourcesGenerator:
         func_cpp_impl_info = GlobFuncCppImplInfo.get(self.am, func)
         func_cpp_impl_name = f"{func.name}"
         pkg_cpp_impl_target.writeln(
-            f"{func_cpp_impl_info.macro}({func_cpp_impl_name})",
+            f"{func_cpp_impl_info.macro}({func_cpp_impl_name});",
         )
 
     def gen_anonymous_namespace_block(

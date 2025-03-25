@@ -10,4 +10,4 @@ int32_t add(int32_t a, int32_t b) { return a + b; }
 
 }  // namespace
 
-TH_EXPORT_CPP_API_add(add)
+TH_EXPORT_CPP_API_add(add);

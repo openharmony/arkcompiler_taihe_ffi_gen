@@ -22,5 +22,5 @@ array<uintptr_t> get_objects() {
     return array<uintptr_t>({(uintptr_t)ani_arr_0, (uintptr_t)ani_arr_1});
 }
 }
-TH_EXPORT_CPP_API_is_string(is_string)
-TH_EXPORT_CPP_API_get_objects(get_objects)
+TH_EXPORT_CPP_API_is_string(is_string);
+TH_EXPORT_CPP_API_get_objects(get_objects);
