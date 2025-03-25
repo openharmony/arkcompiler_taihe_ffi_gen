@@ -1,0 +1,9 @@
+function concatString(a: String, b: String): String;
+function makeString(a: String, b: i32): String;
+struct StringPair {
+    _0: String;
+    _1: String;
+}
+function split(a: String, n: i32): StringPair;
+function to_i32(a: String): i32;
+function from_i32(a: i32): String;

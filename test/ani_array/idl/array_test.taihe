@@ -1,3 +1,23 @@
 function sumArray(nums: Array<i32>, base: i32): i32;
-function getArrayValue(nums: Array<i32>, idx: i32): i32;
-function makeArray(value: i32, num: i32): Array<i32>;
+
+function getArrayValue(nums: Array<i64>, idx: i32): i64;
+
+function toStingArray(nums: Array<i32>): Array<String>;
+
+function makeIntArray(value: i32, num: i32): Array<i32>;
+
+enum Color: String {
+    RED = "Red",
+    GREEN = "Green",
+    BLUE = "Blue",
+}
+function makeEnumArray(value: Color, num: i32): Array<Color>;
+
+function makeRecordArray(key: String, val: i64, num: i32): Array<Map<String, i64>>;
+
+struct Data {
+    a: String;
+    b: String;
+    c: i32;
+}
+function makeStructArray(a: String, b: String, c: i32, num: i32): Array<Data>;
