@@ -6,12 +6,36 @@ class A {
     constructor() {}
 }
 
+function test_is_string_with_object() {
+    const a = new A();
+    const result = test.is_string(a);
+    assertEQ(result, false)
+}
+
+function test_is_string_with_string() {
+    const result = test.is_string("hello");
+    assertEQ(result, true)
+}
+
+function test_is_string_with_undefined() {
+    const result = test.is_string(undefined);
+    assertEQ(result, false)
+}
+
+function test_get_objects() {
+    const objects = test.get_objects();
+    assertEQ(objects[0], "AAA")
+    assertEQ(objects[1], undefined)
+}
+
 function main() {
-    let a = new A();
+    console.log("##############start#############");
+    const suite = new ArkTestsuite("Test Suite");
 
-    console.log(test.is_string(a));
-    console.log(test.is_string("hello"));
-    console.log(test.is_string(undefined));
+    suite.addTest("test is_string with object", test_is_string_with_object);
+    suite.addTest("test is_string with string", test_is_string_with_string);
+    suite.addTest("test is_string with undefined", test_is_string_with_undefined);
+    suite.addTest("test get_objects", test_get_objects);
 
-    console.log(test.get_objects());
+    suite.run();
 }

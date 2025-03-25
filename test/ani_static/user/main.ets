@@ -1,28 +1,34 @@
 import * as lib from "../author_generated/staticTest"
 loadLibrary("ani_static");
 
-function main() {
-    console.log("main ets")
-    console.log("static method sum: ", lib.IBase.sumSync(10, 20))
-    console.log("static method add: ", lib.IBase.addSync(10, 20))
-    lib.IBase.add(10, 20, (error: Error, data?: int) => {
-        if (!error.message) {
-            console.log("main finsih test async success ", data);
-        } else {
-            console.log("main finsih test async ERROR ", error);
-        }
-    })
+function test_sumSync() {
+    const result = lib.IBase.sumSync(10, 20);
+    assertEQ(result, 200);
+}
 
-    try {
-        let retPromise = await lib.IBase.add(0, 2);
-        console.log("main finsih test async promise success ")
-    } catch (error) {
-        console.error("main finsih test async promise ERROR ", error)
-    }
+function test_addSync() {
+    const result = lib.IBase.addSync(10, 20);
+    assertEQ(result, 30);
+}
 
+function test_new_class() {
     let test = new lib.IBase("hello");
-    console.log("new class: ", test.get());
+    assertEQ(test.get(), "hello");
+}
 
+function test_new_class_with_two_args() {
     let test_1 = new lib.IBase("hello", "test");
-    console.log("new class constructor 1: ", test_1.get());
+    assertEQ(test_1.get(), "test");
+}
+
+function main() {
+    console.log("##############start#############");
+    const suite = new ArkTestsuite("IBase Tests");
+
+    suite.addTest("test sumSync", test_sumSync);
+    suite.addTest("test addSync", test_addSync);
+    suite.addTest("test new class", test_new_class);
+    suite.addTest("test new class with two args", test_new_class_with_two_args);
+
+    suite.run();
 }

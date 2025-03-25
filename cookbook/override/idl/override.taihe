@@ -1,0 +1,10 @@
+@class
+interface UIAbility {
+    onForeground(): void;
+    onBackground(): void;
+}
+
+@ctor("UIAbility")
+function getUIAbility(): UIAbility;
+
+function useUIAbility(a: UIAbility): void;

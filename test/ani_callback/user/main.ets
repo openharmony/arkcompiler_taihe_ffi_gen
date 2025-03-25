@@ -2,27 +2,52 @@ import * as lib from "../author_generated/callbackTest"
 
 loadLibrary("ani_callback")
 
-function main() {
+function test_void_input_void_output() {
     lib.test_cb_v(() => {
         console.log("void input void output callback!");
     });
-    lib.test_cb_i((a: int) => {
-        console.log("int input void output callback! input is: ", a);
+}
+
+function test_int_input_void_output() {
+    lib.test_cb_i((a) => {
+        assertEQ(a, 1);
     });
-    lib.test_cb_s((a: string, b: boolean) => {
+}
+
+function test_string_boolean_input() {
+    lib.test_cb_s((a, b) => {
         if (b) {
-            console.log("param b is true and param a is: ", a);
-        } else {
-            console.log("param b is false");
+            assertEQ(a, "hello");
         }
     });
-    let result = lib.test_cb_rs((a: string) => {
-        console.log("param a is: ", a);
+}
+
+function test_string_return_value() {
+    let result = lib.test_cb_rs((a) => {
         return "my return value";
     });
-    console.log("global function output: ", result);
-    lib.test_cb_struct((a: lib.Data) => {
-        let data = new lib.Data(a.a + "main", a.b + "main", a.c + 100 ); 
+    assertEQ(result, "my return value");
+}
+
+function test_struct_input() {
+    lib.test_cb_struct((a) => {
+        let data = new lib.Data(a.a + "main", a.b + "main", a.c + 100);
+        assertEQ(data.a, "amain");
+        assertEQ(data.b, "bmain");
+        assertEQ(data.c, 101);
         return data;
     });
+}
+
+function main() {
+    console.log("##############start#############");
+    const suite = new ArkTestsuite("Callback Tests");
+
+    suite.addTest("test void input void output", test_void_input_void_output);
+    suite.addTest("test int input void output", test_int_input_void_output);
+    suite.addTest("test string boolean input", test_string_boolean_input);
+    suite.addTest("test string return value", test_string_return_value);
+    suite.addTest("test struct input", test_struct_input);
+
+    suite.run();
 }
