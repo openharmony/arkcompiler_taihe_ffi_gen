@@ -31,8 +31,8 @@ function check_struct_C() {
 }
 
 function check_struct_D() {
-    let ins_d: StructExtendTest.D = {param4: 400} let res_d =
-        StructExtendTest.create_D()
+    let ins_d: StructExtendTest.D = {param4: 400};
+    let res_d = StructExtendTest.create_D()
     assertEQ(res_d.param4, 4)
 }
 
