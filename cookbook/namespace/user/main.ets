@@ -4,7 +4,7 @@ import * as NSTest from "../author_generated/ns_test"
 loadLibrary("namespace")
 
 function check_struct() {
-    let data = new NSTest.baz.Data("abc", "efg", 3);
+    let data: NSTest.baz.Data = {a: "abc", b: "efg", c: 3};
     let res_struct = NSTest.baz.concatStruct(data)
     assertEQ(res_struct, "abcefg3")
 

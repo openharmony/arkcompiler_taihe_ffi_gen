@@ -55,8 +55,8 @@ function testFunD2() {
 }
 
 function testFunE() {
-    const option: test_primitives.Foo =
-        new test_primitives.Foo(2147483647, "path/to/source")
+    const option:
+        test_primitives.Foo = {testNum: 2147483647, testStr: "path/to/source"};
     try {
         let res = test_primitives.baseEFunc(option)
         assertEQ(res, "success")

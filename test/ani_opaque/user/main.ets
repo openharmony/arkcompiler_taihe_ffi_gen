@@ -28,7 +28,7 @@ function test_get_object() {
 }
 
 function test_is_object_with_union() {
-    const a = new test.Person("aaa");
+    const a: test.Person = {name: "aaa"};
     assertEQ(test.is_opaque(a), true);
     assertEQ(test.is_opaque("bbb"), false);
 }

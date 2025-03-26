@@ -564,9 +564,8 @@ function testCasebaseFunctionTest44() {
 }
 
 function testCasebaseFunctionTest45() {
-    const testData: namespaceTest.functiontest.Data =
-        new namespaceTest.functiontest.Data(
-            "baseFunctionTest42", true, 2147483647)
+    const testData: namespaceTest.functiontest
+        .Data = {data1: "baseFunctionTest42", data2: true, data3: 2147483647};
     namespaceTest.functiontest.baseFunctionTest42(testData);
 }
 

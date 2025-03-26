@@ -62,7 +62,7 @@ function main() {
         console.error("main finsih test async promise ERROR ", error)
     }
 
-    let data = new async_test.Data("abc", "efg", 3);
+    let data: async_test.Data = {a: "abc", b: "efg", c: 3};
     async_test.fromStruct(data, (error: Error) => {
         if (!error.message) {
             console.log("main finsih test async success ");

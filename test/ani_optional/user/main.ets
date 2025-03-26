@@ -35,14 +35,14 @@ function makeOptionalArray_1() {
 }
 
 function sendReturnResult() {
-    let result = new OptTest.ReturnResult(["ab", "cd", "ef"])
+    let result: OptTest.ReturnResult = {results: ["ab", "cd", "ef"]};
     let res = OptTest.sendReturnResult(result)
     console.log(res)
     assertTrue(res != undefined);
 }
 
 function sendReturnResult_1() {
-    let result = new OptTest.ReturnResult(undefined)
+    let result: OptTest.ReturnResult = {results: undefined};
     let res = OptTest.sendReturnResult(result)
     console.log(res)
     assertTrue(res == undefined);
