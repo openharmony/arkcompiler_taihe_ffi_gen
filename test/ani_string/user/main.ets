@@ -43,6 +43,17 @@ function print() {
     StringIo.println(" ---");
 }
 
+function testPlayString() {
+    let playStr = StringOp.makePlayStringIface();
+    assertEQ(playStr.name, "PlayString")
+
+    let res = playStr.pickString(["abc", "edf", "xyz"], 1, 2)
+    assertEQ(res, "edfxyz")
+
+    res = playStr.pickString(["abc", "edf", "xyz"], 0, 1)
+    assertEQ(res, "abcedf")
+}
+
 function main() {
     console.log("run main ... StringTest ...")
 
@@ -55,5 +66,6 @@ function main() {
     suite.addTest("input", input)
     suite.addTest("println", println)
     suite.addTest("print", print)
+    suite.addTest("testPlayString", testPlayString)
     suite.run()
 }
