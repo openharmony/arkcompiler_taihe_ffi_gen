@@ -5,7 +5,7 @@ loadLibrary("ani_struct")
 function main() {
     console.log("run main ... StructTest ...")
 
-    let data = new StructTest.Data("abc", "efg", 3);
+    let data: StructTest.Data = {a: "abc", b: "efg", c: 3};
     let res = StructTest.concatStruct(data)
     console.log("result is " + res)
     assertEQ(res, "abcefg3")

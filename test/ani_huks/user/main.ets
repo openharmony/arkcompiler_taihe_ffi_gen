@@ -14,14 +14,16 @@ function main() {
     for (let i = 0; i < numbers2.length; i++) {
         arrbuf2.set(i, numbers2[i]);
     }
-    const huksOptions: huks.HuksOptions = new huks.HuksOptions(
-        [
-            new huks.HuksParam(
-                huks.HuksTag.HUKS_TAG_KEY_SIZE,
-                huks.HuksKeySize.HUKS_RSA_KEY_SIZE_512 as number),
-            new huks.HuksParam(huks.HuksTag.HUKS_TAG_KEY, arrbuf1),
-        ],
-        arrbuf2);
+    const huksParam1: huks.HuksParam = {
+        tag: huks.HuksTag.HUKS_TAG_KEY_SIZE,
+        value: huks.HuksKeySize.HUKS_RSA_KEY_SIZE_512 as number
+    };
+    const huksParam2:
+        huks.HuksParam = {tag: huks.HuksTag.HUKS_TAG_KEY, value: arrbuf1};
+    const huksOptions: huks.HuksOptions = {
+        properties: [huksParam1, huksParam2],
+        inData: arrbuf2
+    };
 
     console.log(huksOptions)
 

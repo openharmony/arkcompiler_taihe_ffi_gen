@@ -22,6 +22,17 @@ function test_is_string_with_undefined() {
     assertEQ(result, false)
 }
 
+function test_get_object() {
+    const object = test.get_object();
+    assertEQ(object, "BBB")
+}
+
+function test_is_object_with_union() {
+    const a: test.Person = {name: "aaa"};
+    assertEQ(test.is_opaque(a), true);
+    assertEQ(test.is_opaque("bbb"), false);
+}
+
 function test_get_objects() {
     const objects = test.get_objects();
     assertEQ(objects[0], "AAA")

@@ -31,7 +31,8 @@ function test_string_return_value() {
 
 function test_struct_input() {
     lib.test_cb_struct((a) => {
-        let data = new lib.Data(a.a + "main", a.b + "main", a.c + 100);
+        let data:
+            lib.Data = {a: (a.a + "main"), b: (a.b + "main"), c: (a.c + 100)};
         assertEQ(data.a, "amain");
         assertEQ(data.b, "bmain");
         assertEQ(data.c, 101);

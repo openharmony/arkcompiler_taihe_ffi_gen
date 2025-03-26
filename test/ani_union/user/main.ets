@@ -18,7 +18,8 @@ function test_printUnion_with_number() {
 }
 
 function test_printUnion_with_pair() {
-    let res = UnionTest.printUnion(new UnionTest.Pair("a", "b"));
+    let pair: UnionTest.Pair = {a: "a", b: "b"};
+    let res = UnionTest.printUnion(pair);
     assertEQ(res, "p")
 }
 

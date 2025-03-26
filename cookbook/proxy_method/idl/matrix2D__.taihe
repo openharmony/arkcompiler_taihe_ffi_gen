@@ -1,8 +1,8 @@
 struct Matrix2D {
     scaleX: Optional<i32>;
     scaleY: Optional<i32>;
-    rotateY: Optional<i32>;
     rotateX: Optional<i32>;
+    rotateY: Optional<i32>;
     translateX: Optional<i32>;
     translateY: Optional<i32>;
 }

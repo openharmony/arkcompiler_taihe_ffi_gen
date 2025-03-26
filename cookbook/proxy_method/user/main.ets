@@ -2,7 +2,14 @@ import * as lib from "./matrix2D"
 loadLibrary("proxy_method");
 
 function main() {
-    const matrix: lib.Matrix2D = new lib.Matrix2D(1, 1, -5, 5, 10, 10);
+    const matrix: lib.Matrix2D = {
+        scaleX: 1,
+        scaleY: 1,
+        rotateX: -5,
+        rotateY: 5,
+        translateX: 10,
+        translateY: 10
+    };
     const matrix_i: lib.Matrix2D = matrix.identity();
     console.log("main matrix2D identity: ", matrix.identity());
     console.log("main matrix2D invert: ", matrix.invert());

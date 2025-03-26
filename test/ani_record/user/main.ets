@@ -57,9 +57,9 @@ function createStringString() {
 
 function getMapfromArray() {
     // test function getMapfromArray(d: (Data[])): Record<string, int>
-    let d0: Data = new Data("a", 1);
-    let d1: Data = new Data("b", 2);
-    let d2: Data = new Data("c", 3);
+    let d0: Data = {a: "a", b: 1};
+    let d1: Data = {a: "b", b: 2};
+    let d2: Data = {a: "c", b: 3};
     let data: Data[] = [d0, d1, d2];
     let dataRecord: Record<string, int> = record_test.getMapfromArray(data);
     console.log(`Key: b, Value: ` + dataRecord["b"]);
@@ -68,9 +68,9 @@ function getMapfromArray() {
 
 function getDatafromMap() {
     // test function getDatafromMap(m: Record<string, Data>, k: string): Data
-    let data1: Data = new Data("aaa", 1);
-    let data2: Data = new Data("bbb", 2);
-    let data3: Data = new Data("ccc", 3);
+    let data1: Data = {a: "aaa", b: 1};
+    let data2: Data = {a: "bbb", b: 2};
+    let data3: Data = {a: "ccc", b: 3};
     let drecord: Record<string, Data> = {
         "aa": data1,
         "bb": data2,
@@ -314,10 +314,9 @@ function testMapfunc17() {
 
 // function mapfunc18(m: Record<string, Pair>): boolean
 function testMapfunc18() {
-    let testData: Record<string, Pair> = {
-        "key1": new Pair("one", true),
-        "key2": new Pair("two", false)
-    };
+    let pair1: Pair = {a: "one", b: true};
+    let pair2: Pair = {a: "two", b: false};
+    let testData: Record<string, Pair> = {"key1": pair1, "key2": pair2};
     let result: boolean = record_test.mapfunc18(testData);
     assertEQ(result, true);
 }

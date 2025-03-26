@@ -4,8 +4,11 @@ loadLibrary("ani_test")
 
 function main() {
     // struct
-    const option: ani_test.Data = new ani_test.Data(
-        "path/to/source", 123, ["file1.txt", "file2.txt", "file3.txt"])
+    const option: ani_test.Data = {
+        src: "path/to/source",
+        dest: 123,
+        files: ["file1.txt", "file2.txt", "file3.txt"]
+    };
     ani_test.showData(option)
 
     console.log(ani_test.makeData())
