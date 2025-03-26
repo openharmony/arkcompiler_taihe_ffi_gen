@@ -359,21 +359,14 @@ class STSCodeGenerator:
         iface_ani_info = IfaceANIInfo.get(self.am, iface)
         if iface_ani_info.sts_type_name == iface_ani_info.sts_impl_name:  # no interface
             return
-        ancestors = []
-        for ancestor_iface in iface.parents:
-            if isinstance(ancestor_iface.ty_ref.resolved_ty, IfaceType):
-                ancestor_iface_ani_info = IfaceANIInfo.get(
-                    self.am, ancestor_iface.ty_ref.resolved_ty.ty_decl
-                )
-                ancestors.append(ancestor_iface_ani_info.sts_type_name)
-
-        if ancestors:
-            ancestors_str = " extends " + ", ".join(ancestors)
-        else:
-            ancestors_str = ""
-
+        parents = []
+        for parent in iface.parents:
+            if isinstance(ty := parent.ty_ref.resolved_ty, IfaceType):
+                parent_ani_info = IfaceANIInfo.get(self.am, ty.ty_decl)
+                parents.append(parent_ani_info.sts_type_name)
+        extends_str = " extends " + ", ".join(parents) if parents else ""
         target.write(
-            f"export interface {iface_ani_info.sts_type_name}{ancestors_str} {{\n"
+            f"export interface {iface_ani_info.sts_type_name}{extends_str} {{\n"
         )
         with target.indent_manager.offset(4):
             # TODO: hack inject
@@ -456,7 +449,15 @@ class STSCodeGenerator:
     ):
         iface_ani_info = IfaceANIInfo.get(self.am, iface)
         if iface_ani_info.sts_impl_name == iface_ani_info.sts_type_name:
-            target.write(f"export class {iface_ani_info.sts_impl_name} {{\n")
+            parents = []
+            for parent in iface.parents:
+                if isinstance(ty := parent.ty_ref.resolved_ty, IfaceType):
+                    parent_ani_info = IfaceANIInfo.get(self.am, ty.ty_decl)
+                    parents.append(parent_ani_info.sts_type_name)
+            implements_str = " implements " + ", ".join(parents) if parents else ""
+            target.write(
+                f"export class {iface_ani_info.sts_impl_name}{implements_str} {{\n"
+            )
         else:
             target.write(
                 f"class {iface_ani_info.sts_impl_name} implements {iface_ani_info.sts_type_name} {{\n"
@@ -497,9 +498,9 @@ class STSCodeGenerator:
                 )
             self.gen_static_funcs(pkg, statics_map.get(iface.name, []), target)
             iface_abi_info = IfaceABIInfo.get(self.am, iface)
-            for ancestor_iface in iface_abi_info.ancestor_dict:
-                self.gen_native_methods(pkg, ancestor_iface.methods, target)
-                self.gen_iface_methods(pkg, ancestor_iface.methods, target)
+            for ancestor in iface_abi_info.ancestor_dict:
+                self.gen_native_methods(pkg, ancestor.methods, target)
+                self.gen_iface_methods(pkg, ancestor.methods, target)
         target.write(f"}}\n")
 
     def gen_static_funcs(
