@@ -48,15 +48,34 @@ string makeString(string_view a, int32_t b) {
       substr(a, n, l - n),
   };
 }
+array<string> split2(string_view a, int32_t n) {
+  int32_t l = a.size();
+  if (n > l) {
+    n = l;
+  } else if (n + l < 0) {
+    n = 0;
+  } else if (n < 0) {
+    n = n + l;
+  }
+  auto result = array<string>::make(2, "");
+  result[0] = substr(a, 0, n);
+  result[1] = substr(a, n, l - n);
+  return result;
+}
 int32_t to_i32(string_view a) { return std::atoi(a.c_str()); }
 string from_i32(int32_t a) { return to_string(a); }
 ::string_op::PlayString makePlayStringIface() {
   return make_holder<PlayString, ::string_op::PlayString>();
 }
+float to_f32(string_view a) { return std::atof(a.c_str()); }
+string from_f32(float a) { return to_string(a); }
 }  // namespace
 TH_EXPORT_CPP_API_concatString(concatString);
 TH_EXPORT_CPP_API_makeString(makeString);
 TH_EXPORT_CPP_API_split(split);
+TH_EXPORT_CPP_API_split2(split2);
 TH_EXPORT_CPP_API_to_i32(to_i32);
 TH_EXPORT_CPP_API_from_i32(from_i32);
 TH_EXPORT_CPP_API_makePlayStringIface(makePlayStringIface);
+TH_EXPORT_CPP_API_to_f32(to_f32);
+TH_EXPORT_CPP_API_from_f32(from_f32);

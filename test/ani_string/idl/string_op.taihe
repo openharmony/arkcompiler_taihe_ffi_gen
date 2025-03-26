@@ -5,9 +5,9 @@ struct StringPair {
     _1: String;
 }
 function split(a: String, n: i32): StringPair;
+function split2(a: String, n: i32): Array<String>;
 function to_i32(a: String): i32;
 function from_i32(a: i32): String;
-
 interface PlayString {
     pickString(nums: Array<String>, n1: i32, n2: i32): String;
     @get
@@ -15,5 +15,6 @@ interface PlayString {
     @set
     setName(name: String): void;
 }
-
 function makePlayStringIface(): PlayString;
+function to_f32(a: String): f32;
+function from_f32(a: f32): String;
