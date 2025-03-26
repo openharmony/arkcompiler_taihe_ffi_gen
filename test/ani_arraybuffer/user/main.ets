@@ -270,6 +270,60 @@ function arrayf64_inout() {
     }
 }
 
+function int8Array_inout() {
+    let buf: Int8Array = new Int8Array([10, 20, 30, 40]);
+    let ret = arraybuffer.doubleInt8Array(buf);
+    for (let i = 0; i < ret.length; i++) {
+        console.log(`Int8Array_inout->  index ${i}: ${ret[i]}`);
+        assertEQ(ret[i], buf[i] * 2)
+    }
+}
+
+function int16Array_inout() {
+    let buf: Int16Array = new Int16Array([10, 20, 30, 40]);
+    let ret = arraybuffer.doubleInt16Array(buf);
+    for (let i = 0; i < ret.length; i++) {
+        console.log(`int16Array_inout->  index ${i}: ${ret[i]}`);
+        assertEQ(ret[i], buf[i] * 2)
+    }
+}
+
+function int32Array_inout() {
+    let buf: Int32Array = new Int32Array([10, 20, 30, 40]);
+    let ret = arraybuffer.doubleInt32Array(buf);
+    for (let i = 0; i < ret.length; i++) {
+        console.log(`Int32Array_inout->  index ${i}: ${ret[i]}`);
+        assertEQ(ret[i], buf[i] * 2)
+    }
+}
+
+function uint8Array_inout() {
+    let buf: Uint8Array = new Uint8Array([10, 20, 30, 40]);
+    let ret = arraybuffer.doubleUint8Array(buf);
+    for (let i = 0; i < ret.length; i++) {
+        console.log(`uint8Array_inout->  index ${i}: ${ret[i]}`);
+        assertEQ(ret[i], buf[i] * 2)
+    }
+}
+
+function uint16Array_inout() {
+    let buf: Uint16Array = new Uint16Array([10, 20, 30, 40]);
+    let ret = arraybuffer.doubleUint16Array(buf);
+    for (let i = 0; i < ret.length; i++) {
+        console.log(`uint16Array_inout->  index ${i}: ${ret[i]}`);
+        assertEQ(ret[i], buf[i] * 2)
+    }
+}
+
+function uint32Array_inout() {
+    let buf: Uint32Array = new Uint32Array([10, 20, 30, 40]);
+    let ret = arraybuffer.doubleUint32Array(buf);
+    for (let i = 0; i < ret.length; i++) {
+        console.log(`uint32Array_inout->  index ${i}: ${ret[i]}`);
+        assertEQ(ret[i], buf[i] * 2)
+    }
+}
+
 function main() {
     const suite = new ArkTestsuite("arraybuffer testcase")
 
@@ -303,5 +357,13 @@ function main() {
     suite.addTest("arrayf64_input", arrayf64_input)
     suite.addTest("arrayf64_return", arrayf64_return)
     suite.addTest("arrayf64_inout", arrayf64_inout)
+
+    suite.addTest("int8Array_inout", int8Array_inout)
+    suite.addTest("int16Array_inout", int16Array_inout)
+    suite.addTest("int32Array_inout", int32Array_inout)
+
+    suite.addTest("uint8Array_inout", uint8Array_inout)
+    suite.addTest("uint16Array_inout", uint16Array_inout)
+    suite.addTest("uint32Array_inout", uint32Array_inout)
     suite.run()
 }

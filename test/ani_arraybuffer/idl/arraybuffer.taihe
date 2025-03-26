@@ -22,3 +22,50 @@ function sumArrayf64(nums: Array<f64>): f64;
 function getArrayf64(nums: f64): Array<f64>;
 function doublef64(nums: Array<f64>): Array<f64>;
 
+@!sts_inject("""
+export function doubleInt8Array(int8Array: Int8Array): Int8Array  {
+    const arrayBuffer: ArrayBuffer = int8Array.buffer as ArrayBuffer;
+    let result = doubleArrayBuffer(arrayBuffer);
+    return new Int8Array(result);
+}
+""")
+
+@!sts_inject("""
+export function doubleInt16Array(int16Array: Int16Array): Int16Array  {
+    const arrayBuffer: ArrayBuffer = int16Array.buffer as ArrayBuffer;
+    let result = doubleArrayBuffer(arrayBuffer);
+    return new Int16Array(result);
+}
+""")
+
+@!sts_inject("""
+export function doubleInt32Array(int32Array: Int32Array): Int32Array  {
+    const arrayBuffer: ArrayBuffer = int32Array.buffer as ArrayBuffer;
+    let result = doubleArrayBuffer(arrayBuffer);
+    return new Int32Array(result);
+}
+""")
+
+@!sts_inject("""
+export function doubleUint8Array(uint8Array: Uint8Array): Uint8Array  {
+    const arrayBuffer: ArrayBuffer = uint8Array.buffer as ArrayBuffer;
+    let result = doubleArrayBuffer(arrayBuffer);
+    return new Uint8Array(result);
+}
+""")
+
+@!sts_inject("""
+export function doubleUint16Array(uint16Array: Uint16Array): Uint16Array  {
+    const arrayBuffer: ArrayBuffer = uint16Array.buffer as ArrayBuffer;
+    let result = doubleArrayBuffer(arrayBuffer);
+    return new Uint16Array(result);
+}
+""")
+
+@!sts_inject("""
+export function doubleUint32Array(uint32Array: Uint32Array): Uint32Array  {
+    const arrayBuffer: ArrayBuffer = uint32Array.buffer as ArrayBuffer;
+    let result = doubleArrayBuffer(arrayBuffer);
+    return new Uint32Array(result);
+}
+""")
