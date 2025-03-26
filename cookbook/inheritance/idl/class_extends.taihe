@@ -1,67 +1,36 @@
-@class
-interface InnerBaseContext {
-    getApplicationContext(): Opaque;
-    getTestContext(): Opaque;
-    setSupportedProcessCacheSync(isSupported : bool): void;
-    setSupportedProcessCache(isSupported : bool): void;
-    getType(ctxType: String): String;
+interface BaseContext {
     @set setName(name: String): void;
     @get getName(): String;
+    getType(ctxType: String): String;
 }
 
-function makeBaseContext(init: i32): InnerBaseContext;
+function makeBaseContext(): BaseContext;
 
-@!sts_inject("""
-export class EventHub {
-}
-export class BaseContext {
-    stageMode: boolean;
-    name: string;
-    innerBaseContext: InnerBaseContext;
-    constructor() {
-        this.innerBaseContext = makeBaseContext(0); 
-        this.name = "";
-    }
-    setName(name: string): void {
-        this.innerBaseContext.name = name;
-    }
-    getName(): string {
-        return this.innerBaseContext.name;
-    }
-
-    getType(ctxType: string): string {
-        return this.innerBaseContext.getType(ctxType);
-    }
+interface Context: BaseContext {
+    @set setStageMode(stageMode: bool): void;
+    @get getStageMode(): bool;
+    @!sts_inject_into_interface("""getApplicationContext():ApplicationContext | undefined {};""")
+    @!sts_inject_into_class("""private applicationContext?: ApplicationContext;
+getApplicationContext():ApplicationContext | undefined {
+    return this.applicationContext as ApplicationContext | undefined;
+}""")
 }
 
-export class Context extends BaseContext {
-    area: int = 0;
-    filesDir: string = "";
-    tempDir: string = "";
-    private applicationContext?: ApplicationContext;
-    getApplicationContext():ApplicationContext | undefined {
-        return this.applicationContext as ApplicationContext | undefined;
-    }
+function makeContext(): Context;
+
+interface TestContext: BaseContext {
+    @!sts_inject_into_interface("""getTestContext():ApplicationContext | undefined {};""")
+    @!sts_inject_into_class("""private testContext?: ApplicationContext;
+getTestContext():ApplicationContext | undefined {
+    return this.testContext as ApplicationContext | undefined;
+}""")
 }
 
-export class TestContext extends BaseContext {
-    private testContext?: ApplicationContext;
-    getTestContext():ApplicationContext | undefined {
-        return this.testContext as ApplicationContext | undefined;
-    }
+function makeTestContext(): TestContext;
+
+interface ApplicationContext: Context {
+    @gen_async("setSupportedProcessCache")
+    setSupportedProcessCacheSync(isSupported : bool) :void;
 }
 
-export default class ApplicationContext extends Context {
-    public setSupportedProcessCacheSync(isSupported : boolean) :void {
-        this.innerBaseContext.setSupportedProcessCacheSync(isSupported);
-    }
-    public nativeApplicationContext:long = 0;
-
-    setSupportedProcessCache(isSupported : boolean):void {
-        let p1 = launch this.setSupportedProcessCacheSync(isSupported);
-        p1.then<void>(():void=>{
-            console.log("call setSupportedProcessCache 333");
-        });
-    }
-}
-""")
+function makeApplicationContext(): ApplicationContext;

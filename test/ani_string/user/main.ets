@@ -19,6 +19,12 @@ function split() {
     assertEQ(strPair._1, "cd")
 }
 
+function split2() {
+    let strArray = StringOp.split2("abcd", 2);
+    assertEQ(strArray[0], "ab")
+    assertEQ(strArray[1], "cd")
+}
+
 function to_i32() {
     let num = StringOp.to_i32("123");
     assertEQ(num, 123)
@@ -27,6 +33,16 @@ function to_i32() {
 function from_i32() {
     let str = StringOp.from_i32(123);
     assertEQ(str, "123")
+}
+
+function to_f32() {
+    let num = StringOp.to_f32("123.123");
+    assertEQ((num - 123.123) > -1e-6 || (num - 123.123) < 1e-6, true)
+}
+
+function from_f32() {
+    let str = StringOp.from_f32(123.123f);
+    assertEQ(str, "123.123")
 }
 
 function input() {
@@ -43,6 +59,17 @@ function print() {
     StringIo.println(" ---");
 }
 
+function testPlayString() {
+    let playStr = StringOp.makePlayStringIface();
+    assertEQ(playStr.name, "PlayString")
+
+    let res = playStr.pickString(["abc", "edf", "xyz"], 1, 2)
+    assertEQ(res, "edfxyz")
+
+    res = playStr.pickString(["abc", "edf", "xyz"], 0, 1)
+    assertEQ(res, "abcedf")
+}
+
 function main() {
     console.log("run main ... StringTest ...")
 
@@ -50,10 +77,14 @@ function main() {
     suite.addTest("concatString", concatString)
     suite.addTest("makeString", makeString)
     suite.addTest("split", split)
+    suite.addTest("split2", split2)
     suite.addTest("to_i32", to_i32)
     suite.addTest("from_i32", from_i32)
+    suite.addTest("to_f32", to_f32)
+    suite.addTest("from_f32", from_f32)
     suite.addTest("input", input)
     suite.addTest("println", println)
     suite.addTest("print", print)
+    suite.addTest("testPlayString", testPlayString)
     suite.run()
 }

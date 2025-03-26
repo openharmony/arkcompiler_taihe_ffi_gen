@@ -64,6 +64,44 @@ function makeStructArray() {
     }
 }
 
+function makeIntArray2() {
+    let arr = ArrayTest.makeIntArray(5, 3);
+    let arr2 = ArrayTest.makeIntArray2(arr, 3);
+    assertEQ(arr2.length, 3);
+    for (let i = 0; i < arr2.length; i++) {
+        assertEQ(arr2[i].length, 3)
+    }
+}
+
+function changeEnumArray() {
+    let arr = ArrayTest.makeEnumArray(ArrayTest.Color.GREEN, 5);
+    let arr2 = ArrayTest.changeEnumArray(arr, ArrayTest.Color.BLUE);
+    assertEQ(arr.length, arr2.length)
+    for (let i = 0; i < arr2.length; i++) {
+        assertEQ(arr2[i], ArrayTest.Color.BLUE)
+    }
+}
+
+function changeRecordArray() {
+    let arr = ArrayTest.makeRecordArray("k", 128, 3)
+    let arr2 = ArrayTest.changeRecordArray(arr, "v", 21);
+    assertEQ(arr.length, arr2.length)
+    for (let i = 0; i < arr2.length; i++) {
+        assertEQ(arr2[i]["v"], 21)
+    }
+}
+
+function changeStructArray() {
+    let arr = ArrayTest.makeStructArray("a", "b", 5, 3)
+    let arr2 = ArrayTest.changeStructArray(arr, "aa", "bb", 3);
+    assertEQ(arr.length, arr2.length)
+    for (let i = 0; i < arr2.length; i++) {
+        assertEQ(arr2[i].a, "aa")
+        assertEQ(arr2[i].b, "bb")
+        assertEQ(arr2[i].c, 3)
+    }
+}
+
 function main() {
     console.log("run main ... ArrayTest ...")
 
@@ -72,8 +110,12 @@ function main() {
     suite.addTest("getArrayValue", getArrayValue)
     suite.addTest("toStingArray", toStingArray)
     suite.addTest("makeIntArray", makeIntArray)
+    suite.addTest("makeIntArray2", makeIntArray2)
     suite.addTest("makeEnumArray", makeEnumArray)
+    suite.addTest("changeEnumArray", changeEnumArray)
     suite.addTest("makeRecordArray", makeRecordArray)
+    suite.addTest("changeRecordArray", changeRecordArray)
     suite.addTest("makeStructArray", makeStructArray)
+    suite.addTest("changeStructArray", changeStructArray)
     suite.run()
 }

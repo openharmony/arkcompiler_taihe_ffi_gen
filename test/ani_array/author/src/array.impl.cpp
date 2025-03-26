@@ -45,6 +45,34 @@ array<::array_test::Data> makeStructArray(string_view a, string_view b,
                                           int32_t c, int32_t num) {
   return array<::array_test::Data>::make(num, ::array_test::Data{a, b, c});
 }
+array<array<int32_t>> makeIntArray2(array_view<int32_t> value, int32_t num) {
+  return array<array<int32_t>>::make(num, value);
+}
+array<::array_test::Color> changeEnumArray(
+    array_view<::array_test::Color> value, ::array_test::Color color) {
+  auto result = array<::array_test::Color>::make(value.size(), value[0]);
+  std::transform(value.begin(), value.end(), result.begin(),
+                 [color](::array_test::Color c) { return color; });
+  return result;
+}
+array<map<string, int64_t>> changeRecordArray(
+    array_view<map<string, int64_t>> value, string_view k, int64_t v) {
+  auto result = array<map<string, int64_t>>::make(value.size(), value[0]);
+  map<string, int64_t> record;
+  record.emplace(k, v);
+  std::transform(value.begin(), value.end(), result.begin(),
+                 [record](map<string, int64_t> m) { return record; });
+  return result;
+}
+array<::array_test::Data> changeStructArray(
+    array_view<::array_test::Data> value, string_view a, string_view b,
+    int32_t c) {
+  auto result = array<::array_test::Data>::make(value.size(), value[0]);
+  std::transform(
+      value.begin(), value.end(), result.begin(),
+      [a, b, c](::array_test::Data d) { return ::array_test::Data{a, b, c}; });
+  return result;
+}
 }  // namespace
 TH_EXPORT_CPP_API_sumArray(sumArray);
 TH_EXPORT_CPP_API_getArrayValue(getArrayValue);
@@ -53,3 +81,7 @@ TH_EXPORT_CPP_API_makeIntArray(makeIntArray);
 TH_EXPORT_CPP_API_makeEnumArray(makeEnumArray);
 TH_EXPORT_CPP_API_makeRecordArray(makeRecordArray);
 TH_EXPORT_CPP_API_makeStructArray(makeStructArray);
+TH_EXPORT_CPP_API_makeIntArray2(makeIntArray2);
+TH_EXPORT_CPP_API_changeEnumArray(changeEnumArray);
+TH_EXPORT_CPP_API_changeRecordArray(changeRecordArray);
+TH_EXPORT_CPP_API_changeStructArray(changeStructArray);

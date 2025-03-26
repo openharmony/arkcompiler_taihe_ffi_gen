@@ -12,6 +12,12 @@ interface IfaceC {
 
 interface IfaceD: IfaceB, IfaceC {
     func_d(): String;
+    @set("name") setName(name: String): void;
+    @get("name") getName(): String;
+    @on_off
+    onSet(a: () => void): void;
+    @on_off
+    offSet(a: () => void): void;
 }
 
 function getIfaceD(): IfaceD;

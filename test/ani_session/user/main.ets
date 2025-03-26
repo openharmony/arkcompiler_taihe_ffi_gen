@@ -18,7 +18,24 @@ function test_func_c(my_iface: lib.IfaceD) {
 
 function test_func_d(my_iface: lib.IfaceD) {
     const result = my_iface.func_d();
+    assertEQ(my_iface.name, "IfaceD");
+    my_iface.name = "new name";
+    assertEQ(my_iface.name, "new name");
     assertEQ(result, "d");
+    try {
+        my_iface.on("set", () => {
+            console.log("void input void output callback!");
+        })
+    } catch (error) {
+        console.error("main finsih test ERROR ", error)
+    }
+    try {
+        my_iface.off("set", () => {
+            console.log("void input void output callback!");
+        })
+    } catch (error) {
+        console.error("main finsih test ERROR ", error)
+    }
 }
 
 function main() {

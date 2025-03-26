@@ -5,6 +5,7 @@
 
 #include "core/array.hpp"
 #include "core/runtime.hpp"
+#include "opaque_test.Union.proj.1.hpp"
 #include "stdexcept"
 // Please delete <stdexcept> include when you implement
 using namespace taihe::core;
@@ -27,7 +28,25 @@ array<uintptr_t> get_objects() {
   return array<uintptr_t>({(uintptr_t)ani_arr_0, (uintptr_t)ani_arr_1});
 }
 
+uintptr_t get_object() {
+  ani_env* env = get_env();
+  ani_string ani_arr_0;
+  env->String_NewUTF8("BBB", 3, &ani_arr_0);
+  return (uintptr_t)ani_arr_0;
+}
+
+bool is_opaque(::opaque_test::Union const& s) {
+  ani_boolean res;
+  ani_class cls;
+  ani_env* env = get_env();
+  if (s.get_tag() == ::opaque_test::Union::tag_t::oValue) {
+    return (ani_boolean) true;
+  }
+  return (ani_boolean) false;
+}
 }  // namespace
 
 TH_EXPORT_CPP_API_is_string(is_string);
+TH_EXPORT_CPP_API_get_object(get_object);
 TH_EXPORT_CPP_API_get_objects(get_objects);
+TH_EXPORT_CPP_API_is_opaque(is_opaque);

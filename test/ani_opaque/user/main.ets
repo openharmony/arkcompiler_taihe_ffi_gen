@@ -47,6 +47,8 @@ function main() {
     suite.addTest("test is_string with string", test_is_string_with_string);
     suite.addTest(
         "test is_string with undefined", test_is_string_with_undefined);
+    suite.addTest("test is_string with union", test_is_object_with_union);
+    suite.addTest("test get_object", test_get_object);
     suite.addTest("test get_objects", test_get_objects);
 
     suite.run();

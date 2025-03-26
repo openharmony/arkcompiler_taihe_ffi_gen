@@ -55,7 +55,10 @@ void offBaz(int32_t a, callback_view<void()> cb) {
   std::cout << "offBaz" << std::endl;
 }
 }  // namespace
-TH_EXPORT_CPP_API_getIBase(getIBase) TH_EXPORT_CPP_API_onFoo(onFoo)
-    TH_EXPORT_CPP_API_onBar(onBar) TH_EXPORT_CPP_API_onBaz(onBaz)
-        TH_EXPORT_CPP_API_offFoo(offFoo) TH_EXPORT_CPP_API_offBar(offBar)
-            TH_EXPORT_CPP_API_offBaz(offBaz)
+TH_EXPORT_CPP_API_getIBase(getIBase);
+TH_EXPORT_CPP_API_onFoo(onFoo);
+TH_EXPORT_CPP_API_onBar(onBar);
+TH_EXPORT_CPP_API_onBaz(onBaz);
+TH_EXPORT_CPP_API_offFoo(offFoo);
+TH_EXPORT_CPP_API_offBar(offBar);
+TH_EXPORT_CPP_API_offBaz(offBaz);
