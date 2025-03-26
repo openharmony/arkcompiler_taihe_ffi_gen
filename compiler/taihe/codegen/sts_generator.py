@@ -24,7 +24,7 @@ from taihe.semantics.declarations import (
     StructDecl,
     UnionDecl,
 )
-from taihe.semantics.types import IfaceType
+from taihe.semantics.types import IfaceType, StructType
 from taihe.utils.analyses import AnalysisManager
 from taihe.utils.outputs import OutputManager, STSOutputBuffer
 
@@ -132,10 +132,12 @@ class STSCodeGenerator:
         self.gen_global_funcs(pkg, funcs, target)
         for enum in pkg.enums:
             self.gen_enum(pkg, enum, target)
-        for struct in pkg.structs:
-            self.gen_struct(pkg, struct, target)
         for union in pkg.unions:
             self.gen_union(pkg, union, target)
+        for struct in pkg.structs:
+            self.gen_struct_interface(pkg, struct, target)
+        for struct in pkg.structs:
+            self.gen_struct_class(pkg, struct, target)
         for iface in pkg.interfaces:
             self.gen_iface_interface(pkg, iface, target)
         for iface in pkg.interfaces:
@@ -310,43 +312,69 @@ class STSCodeGenerator:
         sts_types_str = " | ".join(sts_types)
         target.write(f"export type {union_ani_info.sts_type_name} = {sts_types_str};\n")
 
-    def gen_struct(
+    def gen_struct_interface(
         self,
         pkg: PackageDecl,
         struct: StructDecl,
         target: STSOutputBuffer,
     ):
         struct_ani_info = StructANIInfo.get(self.am, struct)
-        if struct_ani_info.parent:
-            target.write(
-                f"export class {struct_ani_info.sts_impl_name} extends {struct_ani_info.parent[0].name} {{\n"
-            )
-        else:
-            target.write(f"export class {struct_ani_info.sts_impl_name} {{\n")
-
+        if struct_ani_info.sts_type_name == struct_ani_info.sts_impl_name:
+            # no interface
+            return
+        parents = []
+        for parent in struct_ani_info.sts_parents:
+            ty = parent.ty_ref.resolved_ty
+            assert isinstance(ty, StructType)
+            parent_ani_info = StructANIInfo.get(self.am, ty.ty_decl)
+            parents.append(parent_ani_info.sts_type_name)
+        extends_str = " extends " + ", ".join(parents) if parents else ""
+        target.write(
+            f"export interface {struct_ani_info.sts_type_name}{extends_str} {{\n"
+        )
         with target.indent_manager.offset(4):
-            for field in struct_ani_info.current_fields:
+            for field in struct_ani_info.sts_fields:
                 ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
                 target.write(
                     f"    {field.name}: {ty_ani_info.sts_type_in(pkg, target)};\n"
                 )
+        target.write(f"}}\n")
+
+    def gen_struct_class(
+        self,
+        pkg: PackageDecl,
+        struct: StructDecl,
+        target: STSOutputBuffer,
+    ):
+        struct_ani_info = StructANIInfo.get(self.am, struct)
+        if struct_ani_info.sts_impl_name == struct_ani_info.sts_type_name:
+            parents = []
+            for parent in struct_ani_info.sts_parents:
+                ty = parent.ty_ref.resolved_ty
+                assert isinstance(ty, StructType)
+                parent_ani_info = StructANIInfo.get(self.am, ty.ty_decl)
+                parents.append(parent_ani_info.sts_type_name)
+            implements_str = " implements " + ", ".join(parents) if parents else ""
+            target.write(
+                f"export class {struct_ani_info.sts_impl_name}{implements_str} {{\n"
+            )
+        else:
+            target.write(
+                f"class {struct_ani_info.sts_impl_name} implements {struct_ani_info.sts_type_name} {{\n"
+            )
+        with target.indent_manager.offset(4):
+            for _, final in struct_ani_info.sts_final_fields:
+                ty_ani_info = TypeANIInfo.get(self.am, final.ty_ref.resolved_ty)
+                target.write(f"{final.name}: {ty_ani_info.sts_type_in(pkg, target)};\n")
             target.write(f"constructor(\n")
-            for field in struct_ani_info.all_fields:
-                ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
+            for _, final in struct_ani_info.sts_final_fields:
+                ty_ani_info = TypeANIInfo.get(self.am, final.ty_ref.resolved_ty)
                 target.write(
-                    f"    {field.name}: {ty_ani_info.sts_type_in(pkg, target)},\n"
+                    f"    {final.name}: {ty_ani_info.sts_type_in(pkg, target)},\n"
                 )
             target.write(f") {{\n")
-
-            parent_list = [
-                item for sublist in struct_ani_info.parent_fields for item in sublist
-            ]
-            parent_field_names = ", ".join([field.name for field in parent_list])
-            if parent_field_names:
-                target.write(f"    super({parent_field_names});\n")
-
-            for field in struct_ani_info.current_fields:
-                target.write(f"    this.{field.name} = {field.name};\n")
+            for _, final in struct_ani_info.sts_final_fields:
+                target.write(f"    this.{final.name} = {final.name};\n")
             target.write(f"}}\n")
         target.write(f"}}\n")
 
@@ -357,13 +385,15 @@ class STSCodeGenerator:
         target: STSOutputBuffer,
     ):
         iface_ani_info = IfaceANIInfo.get(self.am, iface)
-        if iface_ani_info.sts_type_name == iface_ani_info.sts_impl_name:  # no interface
+        if iface_ani_info.sts_type_name == iface_ani_info.sts_impl_name:
+            # no interface
             return
         parents = []
         for parent in iface.parents:
-            if isinstance(ty := parent.ty_ref.resolved_ty, IfaceType):
-                parent_ani_info = IfaceANIInfo.get(self.am, ty.ty_decl)
-                parents.append(parent_ani_info.sts_type_name)
+            ty = parent.ty_ref.resolved_ty
+            assert isinstance(ty, IfaceType)
+            parent_ani_info = IfaceANIInfo.get(self.am, ty.ty_decl)
+            parents.append(parent_ani_info.sts_type_name)
         extends_str = " extends " + ", ".join(parents) if parents else ""
         target.write(
             f"export interface {iface_ani_info.sts_type_name}{extends_str} {{\n"
@@ -451,9 +481,10 @@ class STSCodeGenerator:
         if iface_ani_info.sts_impl_name == iface_ani_info.sts_type_name:
             parents = []
             for parent in iface.parents:
-                if isinstance(ty := parent.ty_ref.resolved_ty, IfaceType):
-                    parent_ani_info = IfaceANIInfo.get(self.am, ty.ty_decl)
-                    parents.append(parent_ani_info.sts_type_name)
+                ty = parent.ty_ref.resolved_ty
+                assert isinstance(ty, IfaceType)
+                parent_ani_info = IfaceANIInfo.get(self.am, ty.ty_decl)
+                parents.append(parent_ani_info.sts_type_name)
             implements_str = " implements " + ", ".join(parents) if parents else ""
             target.write(
                 f"export class {iface_ani_info.sts_impl_name}{implements_str} {{\n"
