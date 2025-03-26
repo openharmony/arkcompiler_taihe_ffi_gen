@@ -335,9 +335,7 @@ class STSCodeGenerator:
         with target.indent_manager.offset(4):
             for field in struct_ani_info.sts_fields:
                 ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
-                target.write(
-                    f"    {field.name}: {ty_ani_info.sts_type_in(pkg, target)};\n"
-                )
+                target.write(f"{field.name}: {ty_ani_info.sts_type_in(pkg, target)};\n")
         target.write(f"}}\n")
 
     def gen_struct_class(

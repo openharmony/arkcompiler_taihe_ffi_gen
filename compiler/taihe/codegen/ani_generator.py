@@ -496,9 +496,9 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
         cpp_array_buffer: str,
     ):
         if self.ani_type.base == ANI_REF:
-            ani_value = "_ani_val"
-            cpp_result = "_cpp_res"
-            i = "_i"
+            ani_value = f"{cpp_array_buffer}_ani_item"
+            cpp_result = f"{cpp_array_buffer}_cpp_item"
+            i = f"{cpp_array_buffer}_i"
             target.write(
                 f"{' ' * offset}for (size_t {i} = 0; {i} < {size}; {i}++) {{\n"
                 f"{' ' * offset}    {self.ani_type} {ani_value};\n"
@@ -525,8 +525,8 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
     ):
         if self.ani_type.base == ANI_REF:
             ani_class = f"{ani_array_result}_cls"
-            ani_result = "_ani_res"
-            i = "_i"
+            ani_result = f"{ani_array_result}_ani_item"
+            i = f"{ani_array_result}_i"
             target.write(
                 f"{' ' * offset}ani_array_ref {ani_array_result};\n"
                 f"{' ' * offset}ani_class {ani_class};\n"
@@ -1129,36 +1129,37 @@ class MapTypeANIInfo(AbstractAnalysis[MapType], AbstractTypeANIInfo):
         cpp_result: str,
     ):
         cpp_info = TypeCppInfo.get(self.am, self.t)
-        ani_ref_keys = f"{cpp_result}_keys"
-        ani_key_obj = f"{cpp_result}_key"
-        ani_val_obj = f"{cpp_result}_val"
+        ani_iter = f"{cpp_result}_ani_iter"
+        ani_item = f"{cpp_result}_ani_item"
+        ani_key = f"{cpp_result}_ani_key"
+        ani_val = f"{cpp_result}_ani_val"
+        cpp_key = f"{cpp_result}_cpp_key"
+        cpp_val = f"{cpp_result}_cpp_val"
         key_ty_ani_info = TypeANIInfo.get(self.am, self.t.key_ty)
         val_ty_ani_info = TypeANIInfo.get(self.am, self.t.val_ty)
         target.write(
-            f"{' ' * offset}ani_ref {ani_ref_keys};\n"
-            f"{' ' * offset}{env}->Object_CallMethodByName_Ref({ani_value}, \"keys\", nullptr, &{ani_ref_keys});\n"
+            f"{' ' * offset}ani_ref {ani_iter};\n"
+            f"{' ' * offset}{env}->Object_CallMethodByName_Ref({ani_value}, \"$_iterator\", nullptr, &{ani_iter});\n"
             f"{' ' * offset}{cpp_info.as_owner} {cpp_result};\n"
             f"{' ' * offset}while (true) {{\n"
             f"{' ' * offset}    ani_ref next;\n"
             f"{' ' * offset}    ani_boolean done;\n"
-            f"{' ' * offset}    {env}->Object_CallMethodByName_Ref(static_cast<ani_object>({ani_ref_keys}), \"next\", nullptr, &next);\n"
+            f"{' ' * offset}    {env}->Object_CallMethodByName_Ref(static_cast<ani_object>({ani_iter}), \"next\", nullptr, &next);\n"
             f"{' ' * offset}    {env}->Object_GetFieldByName_Boolean(static_cast<ani_object>(next), \"done\", &done);\n"
-            f"{' ' * offset}    if (done) break;\n"
-            f"{' ' * offset}    ani_ref {ani_key_obj};\n"
-            f"{' ' * offset}    {env}->Object_GetFieldByName_Ref(static_cast<ani_object>(next), \"value\", &{ani_key_obj});\n"
-            f"{' ' * offset}    ani_ref {ani_val_obj};\n"
-            f"{' ' * offset}    {env}->Object_CallMethodByName_Ref({ani_value}, \"$_get\", nullptr, &{ani_val_obj}, {ani_key_obj});\n"
+            f"{' ' * offset}    if (done) {{;\n"
+            f"{' ' * offset}        break;\n"
+            f"{' ' * offset}    }};\n"
+            f"{' ' * offset}    ani_ref {ani_item};\n"
+            f"{' ' * offset}    {env}->Object_GetFieldByName_Ref(static_cast<ani_object>(next), \"value\", &{ani_item});\n"
+            f"{' ' * offset}    ani_ref {ani_key};\n"
+            f"{' ' * offset}    {env}->TupleValue_GetItem_Ref(static_cast<ani_tuple_value>({ani_item}), 0, &{ani_key});\n"
+            f"{' ' * offset}    ani_ref {ani_val};\n"
+            f"{' ' * offset}    {env}->TupleValue_GetItem_Ref(static_cast<ani_tuple_value>({ani_item}), 1, &{ani_val});\n"
         )
-        key_cpp_spec = f"{cpp_result}_key_spec"
-        val_cpp_spec = f"{cpp_result}_val_spec"
-        key_ty_ani_info.from_ani_boxed(
-            target, offset + 4, env, ani_key_obj, key_cpp_spec
-        )
-        val_ty_ani_info.from_ani_boxed(
-            target, offset + 4, env, ani_val_obj, val_cpp_spec
-        )
+        key_ty_ani_info.from_ani_boxed(target, offset + 4, env, ani_key, cpp_key)
+        val_ty_ani_info.from_ani_boxed(target, offset + 4, env, ani_val, cpp_val)
         target.write(
-            f"{' ' * offset}    {cpp_result}.emplace({key_cpp_spec}, {val_cpp_spec});\n"
+            f"{' ' * offset}    {cpp_result}.emplace({cpp_key}, {cpp_val});\n"
             f"{' ' * offset}}}\n"
         )
 
@@ -1171,14 +1172,14 @@ class MapTypeANIInfo(AbstractAnalysis[MapType], AbstractTypeANIInfo):
         cpp_value: str,
         ani_result: str,
     ):
-        key_ty_cpp_info = TypeCppInfo.get(self.am, self.t.key_ty)
-        val_ty_cpp_info = TypeCppInfo.get(self.am, self.t.val_ty)
         key_ty_ani_info = TypeANIInfo.get(self.am, self.t.key_ty)
         val_ty_ani_info = TypeANIInfo.get(self.am, self.t.val_ty)
         ani_class = f"{ani_result}_class"
         ani_method = f"{ani_result}_method"
-        cpp_key = f"{ani_result}_key"
-        cpp_val = f"{ani_result}_val"
+        cpp_key = f"{ani_result}_cpp_key"
+        cpp_val = f"{ani_result}_cpp_val"
+        ani_key = f"{ani_result}_ani_key"
+        ani_val = f"{ani_result}_ani_val"
         target.write(
             f"{' ' * offset}ani_class {ani_class};\n"
             f"{' ' * offset}{env}->FindClass(\"{self.type_desc}\", &{ani_class});\n"
@@ -1186,16 +1187,12 @@ class MapTypeANIInfo(AbstractAnalysis[MapType], AbstractTypeANIInfo):
             f"{' ' * offset}{env}->Class_FindMethod({ani_class}, \"<ctor>\", nullptr, &{ani_method});\n"
             f"{' ' * offset}ani_object {ani_result};\n"
             f"{' ' * offset}{env}->Object_New({ani_class}, {ani_method}, &{ani_result});\n"
-            f"{' ' * offset}for (const auto& [key, val] : {cpp_value}) {{\n"
-            f"{' ' * offset}    {key_ty_cpp_info.as_param} {cpp_key} = key;\n"
-            f"{' ' * offset}    {val_ty_cpp_info.as_param} {cpp_val} = val;\n"
+            f"{' ' * offset}for (const auto& [{cpp_key}, {cpp_val}] : {cpp_value}) {{\n"
         )
-        key_ani_spec = f"{ani_result}_key_spec"
-        val_ani_spec = f"{ani_result}_val_spec"
-        key_ty_ani_info.into_ani_boxed(target, offset + 4, env, cpp_key, key_ani_spec)
-        val_ty_ani_info.into_ani_boxed(target, offset + 4, env, cpp_val, val_ani_spec)
+        key_ty_ani_info.into_ani_boxed(target, offset + 4, env, cpp_key, ani_key)
+        val_ty_ani_info.into_ani_boxed(target, offset + 4, env, cpp_val, ani_val)
         target.write(
-            f"{' ' * offset}    env->Object_CallMethodByName_Void({ani_result}, \"$_set\", nullptr, {key_ani_spec}, {val_ani_spec});\n"
+            f"{' ' * offset}    env->Object_CallMethodByName_Void({ani_result}, \"$_set\", nullptr, {ani_key}, {ani_val});\n"
             f"{' ' * offset}}}\n"
         )
 
@@ -1559,8 +1556,8 @@ class ANICodeGenerator:
         args_cpp = []
         for param in func.params:
             type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
-            ani_param_name = f"{param.name}_ani"
-            cpp_arg_name = f"{param.name}_cpp"
+            ani_param_name = f"ani_arg_{param.name}"
+            cpp_arg_name = f"cpp_arg_{param.name}"
             params_ani.append(f"{type_ani_info.ani_type} {ani_param_name}")
             ani_param_names.append(ani_param_name)
             args_cpp.append(cpp_arg_name)
@@ -1620,8 +1617,8 @@ class ANICodeGenerator:
         args_cpp = []
         for param in method.params:
             type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
-            ani_param_name = f"{param.name}_ani"
-            cpp_arg_name = f"{param.name}_cpp"
+            ani_param_name = f"ani_arg_{param.name}"
+            cpp_arg_name = f"cpp_arg_{param.name}"
             params_ani.append(f"{type_ani_info.ani_type} {ani_param_name}")
             ani_param_names.append(ani_param_name)
             args_cpp.append(cpp_arg_name)
@@ -1721,8 +1718,8 @@ class ANICodeGenerator:
                 cpp_param_names = []
                 ani_arg_names = []
                 for param in method.params:
-                    cpp_param_name = f"{param.name}_cpp"
-                    ani_arg_name = f"{param.name}_ani"
+                    cpp_param_name = f"cpp_arg_{param.name}"
+                    ani_arg_name = f"ani_arg_{param.name}"
                     type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
                     cpp_param_pairs.append(f"{type_cpp_info.as_param} {cpp_param_name}")
                     cpp_param_names.append(cpp_param_name)
@@ -1748,8 +1745,8 @@ class ANICodeGenerator:
                     )
                     args_ani.append(ani_arg_name)
                 args_ani_trailing = "".join(", " + arg_ani for arg_ani in args_ani)
-                ani_result = "result_ani"
-                cpp_result = "result_cpp"
+                ani_result = "ani_result"
+                cpp_result = "cpp_result"
                 if method.return_ty_ref:
                     type_ani_info = TypeANIInfo.get(
                         self.am, method.return_ty_ref.resolved_ty
@@ -1893,7 +1890,7 @@ class ANICodeGenerator:
         # `Reference_IsUndefined` should be called before `Object_InstanceOf`
         for field in union.fields:
             if field.ty_ref is None:
-                is_field = f"is_{field.name}"
+                is_field = f"ani_is_{field.name}"
                 union_ani_impl_target.write(
                     f"    ani_boolean {is_field};\n"
                     f"    env->Reference_IsUndefined(ani_value, &{is_field});\n"
@@ -1903,8 +1900,8 @@ class ANICodeGenerator:
                 )
         for field in union.fields:
             if field.ty_ref is not None:
-                is_field = f"is_{field.name}"
-                filed_class = f"{field.name}_cls"
+                is_field = f"ani_is_{field.name}"
+                filed_class = f"ani_cls_{field.name}"
                 type_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
                 union_ani_impl_target.write(
                     f"    ani_class {filed_class};\n"
