@@ -43,7 +43,7 @@ function check_struct_E() {
     let ins_e: StructExtendTest.E = {
         param4: 400,
         param5: 500
-    }
+    };
     let res_e = StructExtendTest.create_E()
     assertEQ(res_e.param4, 4)
     assertEQ(res_e.param5, 5)

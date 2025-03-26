@@ -72,9 +72,9 @@ function testPlayString() {
 
 function concatString2() {
     let s = "a";
-    let sArr: string[] = ["b", "c", "d"] let numbersU8: byte[] =
-        [1, 2, 3, 4] let buffer: ArrayBuffer =
-            new ArrayBuffer(numbersU8.length);
+    let sArr: string[] = ["b", "c", "d"];
+    let numbersU8: byte[] = [1, 2, 3, 4];
+    let buffer: ArrayBuffer = new ArrayBuffer(numbersU8.length);
     for (let i = 0; i < numbersU8.length; i++) {
         buffer.set(i, numbersU8[i]);
     }
