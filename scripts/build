@@ -8,14 +8,7 @@ build-runtime-libs() {
     echo "Building the runtime"
     local build_dir="runtime/out" arch="$(uname -m)"
 
-    libtaihe=""
-    if [ "$(uname)" == "Darwin" ]; then
-        libtaihe="libtaihe-rt.dylib"
-    elif [ "$(uname)" == "Linux" ]; then
-        libtaihe="libtaihe-rt.so"
-    else
-        echo "Unsupported platform"
-    fi
+    libtaihe="lib/libth_runtime.a"
 
     cmake -S runtime -B "$build_dir" -G Ninja
     cmake --build "$build_dir"

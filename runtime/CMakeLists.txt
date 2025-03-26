@@ -15,12 +15,22 @@ set(CMAKE_CXX_VISIBILITY_PRESET "hidden")
 # Handy for development use.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_library(taihe-rt SHARED
-  src/string.c
-  src/object.c
+
+set(TH_SOURCE src/string.c
+              src/object.c 
+              src/runtime.cpp)
+
+add_library(th_runtime STATIC ${TH_SOURCE})
+
+set_target_properties(th_runtime PROPERTIES
+    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
 )
 
-target_include_directories(taihe-rt PUBLIC include)
+target_include_directories(th_runtime PUBLIC 
+    include 
+    ../compiler/.panda_vm/package/ohos_arm64/include/plugins/ets/runtime/ani)
+
+target_compile_options(th_runtime PRIVATE -fPIC)
 
 # Add test directory
 if (ENABLE_RT_TEST)
