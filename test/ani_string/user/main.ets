@@ -70,11 +70,25 @@ function testPlayString() {
     assertEQ(res, "abcedf")
 }
 
+function concatString2() {
+    let s = "a";
+    let sArr: string[] = ["b", "c", "d"] let numbersU8: byte[] =
+        [1, 2, 3, 4] let buffer: ArrayBuffer =
+            new ArrayBuffer(numbersU8.length);
+    for (let i = 0; i < numbersU8.length; i++) {
+        buffer.set(i, numbersU8[i]);
+    }
+    assertEQ(StringOp.concatString2(s, 1, sArr, true, buffer), "abcd1234");
+    assertEQ(StringOp.concatString2(s, 1, sArr, false, buffer), "a");
+}
+
+
 function main() {
     console.log("run main ... StringTest ...")
 
     const suite = new ArkTestsuite("StringTest")
     suite.addTest("concatString", concatString)
+    suite.addTest("concatString2", concatString2)
     suite.addTest("makeString", makeString)
     suite.addTest("split", split)
     suite.addTest("split2", split2)
