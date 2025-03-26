@@ -107,9 +107,7 @@ class CppImplSourcesGenerator:
             self.tm, f"temp/{pkg_cpp_impl_info.source}", False
         )
         pkg_cpp_impl_target.include(pkg_cpp_impl_info.header)
-        pkg_cpp_impl_target.writeln(
-            "// Please delete <stdexcept> include when you implement",
-        )
+        pkg_cpp_impl_target.include("core/runtime.hpp")
         pkg_cpp_impl_target.include("stdexcept")
         self.gen_using_namespace(pkg_cpp_impl_target)
         self.gen_anonymous_namespace_block(
@@ -157,7 +155,9 @@ class CppImplSourcesGenerator:
             )
         else:
             pkg_cpp_impl_target.writeln(
-                f'    throw std::runtime_error("Function {func_cpp_impl_name} Not implemented");',
+                f"    // The parameters in the make_holder function should be of the same type",
+                f"    // as the parameters in the constructor of the actual implementation class.",
+                f'    throw std::runtime_error("{func_cpp_impl_name} not implemented");',
             )
         pkg_cpp_impl_target.writeln(
             f"}}",
@@ -173,6 +173,9 @@ class CppImplSourcesGenerator:
         pkg_cpp_impl_target.writeln(
             f"class {iface.name} {{",
             f"public:",
+            f"    {iface.name}() {{",
+            f"        // Don't forget to implement the constructor.",
+            f"    }}",
         )
         for ifaceperant in perantsList:
             for func in ifaceperant.methods:
@@ -206,11 +209,13 @@ class CppImplSourcesGenerator:
         )
         if return_ty_ref and isinstance(return_ty_ref.resolved_ty, IfaceType):
             pkg_cpp_impl_target.writeln(
+                f"        // The parameters in the make_holder function should be of the same type",
+                f"        // as the parameters in the constructor of the actual implementation class.",
                 f"        return make_holder<{return_ty_ref.resolved_ty.ty_decl.name}, {cpp_return_ty_name}>();",
             )
         else:
             pkg_cpp_impl_target.writeln(
-                f'        throw std::runtime_error("Function {iface_name}::{func_cpp_impl_name} Not implemented");',
+                f'        throw std::runtime_error("{iface_name}::{func_cpp_impl_name} not implemented");',
             )
         pkg_cpp_impl_target.writeln(
             f"    }}",

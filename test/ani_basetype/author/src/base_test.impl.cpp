@@ -11,7 +11,7 @@ int16_t sub_i16(int16_t a, int16_t b) { return a - b; }
 int32_t mul_i32(int32_t a, int32_t b) { return a * b; }
 int64_t div_i64(int64_t a, int64_t b) {
   if (b == 0) {
-    taihe::core::throw_error("some error happen");
+    taihe::core::set_error("some error happen");
     return -1;
   }
   return a / b;

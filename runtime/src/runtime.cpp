@@ -7,7 +7,7 @@ void set_env(ani_env *env) { cur_env = env; }
 
 ani_env *get_env() { return cur_env; }
 
-void ani_throw_error(ani_env *env, taihe::core::string msg) {
+void ani_set_error(ani_env *env, taihe::core::string_view msg) {
   ani_boolean result_obj = ANI_FALSE;
   ani_class errCls;
   const char *className = "Lescompat/Error;";
@@ -35,8 +35,8 @@ void ani_throw_error(ani_env *env, taihe::core::string msg) {
   env->ThrowError(static_cast<ani_error>(errObj));
 }
 
-void throw_error(taihe::core::string msg) {
+void set_error(taihe::core::string_view msg) {
   ani_env *env = get_env();
-  ani_throw_error(env, msg);
+  ani_set_error(env, msg);
 }
 }  // namespace taihe::core

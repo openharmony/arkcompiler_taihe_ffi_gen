@@ -6,7 +6,7 @@
 
 int32_t add_impl(int32_t a, int32_t b) {
   if (a == 0) {
-    taihe::core::throw_error("some error happen in add impl");
+    taihe::core::set_error("some error happen in add impl");
     return b;
   } else {
     std::cout << "add impl " << a + b << std::endl;
