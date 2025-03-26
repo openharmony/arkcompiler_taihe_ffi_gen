@@ -1,43 +1,53 @@
-import ApplicationContext from "../author_generated/class_extends";
-import {BaseContext, Context, TestContext} from "../author_generated/class_extends";
+import * as lib from "../author_generated/class_extends";
 import * as extends_inject from "../author_generated/extends_inject"
-import {Man} from "../author_generated/extends_inject";
 
 loadLibrary("inheritance")
 
 
 function base_context_test() {
-    let baseContext = new BaseContext();
-    baseContext.setName("BaseContext");
-    assertEQ(baseContext.getName(), "BaseContext");
+    let baseContext = lib.makeBaseContext();
+    baseContext.name = "BaseContext";
+    assertEQ(baseContext.name, "BaseContext");
     assertEQ(baseContext.getType("BCTX"), "BaseContextTypeBCTX");
 }
 
 function context_extends_test() {
-    let context = new Context();
+    let context = lib.makeContext();
     context.stageMode = true;
     assertEQ(context.stageMode, true)
-    assertEQ(context.getName(), "");
-    context.setName("Context");
-    assertEQ(context.getName(), "Context");
+    assertEQ(context.name, "");
+    context.name = "Context";
+    assertEQ(context.name, "Context");
     context.getApplicationContext();
     assertEQ(context.getType("CTX"), "ContextTypeCTX");
 }
 
 function application_context_extends_test() {
-    let applicationContext = new ApplicationContext();
+    let applicationContext = lib.makeApplicationContext();
     applicationContext.setSupportedProcessCacheSync(true);
     applicationContext.setSupportedProcessCacheSync(false);
-    applicationContext.setSupportedProcessCache(true);
-    applicationContext.setSupportedProcessCache(false);
-    applicationContext.setName("ApplicationContext");
-    assertEQ(applicationContext.getName(), "ApplicationContext");
+    applicationContext.setSupportedProcessCache(true, (error: Error) => {
+        if (!error.message) {
+            console.log("call setSupportedProcessCache 333");
+        } else {
+            console.log("call setSupportedProcessCache ERROR ", error);
+        }
+    })
+    applicationContext.setSupportedProcessCache(false, (error: Error) => {
+        if (!error.message) {
+            console.log("call setSupportedProcessCache 333");
+        } else {
+            console.log("call setSupportedProcessCache ERROR ", error);
+        }
+    })
+    applicationContext.name = "ApplicationContext";
+    assertEQ(applicationContext.name, "ApplicationContext");
     assertEQ(applicationContext.stageMode, false)
     assertEQ(applicationContext.getType("ACTX"), "AppContextACTX");
 }
 
 function test_context_extends() {
-    let testContext = new TestContext();
+    let testContext = lib.makeTestContext();
     testContext.getTestContext();
     assertEQ(testContext.getType("TCTX"), "TestContextTCTX");
     // error, getApplicationContext does not exist on type TestContext
@@ -45,7 +55,7 @@ function test_context_extends() {
 }
 
 function extends_inject_test() {
-    let man = new Man();
+    let man = new extends_inject.Man();
     let person = man.getPerson();
     assertEQ(person.name, "zhangsan");
     console.log(`person.name: ${person.name}`);

@@ -31,11 +31,23 @@ class IfaceC {
   }
 };
 class IfaceD {
+  string name_{"IfaceD"};
+
  public:
   string func_d() { return "d"; }
   string func_b() { return "b"; }
   string func_a() { return "a"; }
   string func_c() { return "c"; }
+  string getName() { return name_; }
+  void setName(string_view name) { name_ = name; }
+  void onSet(callback_view<void()> a) {
+    a();
+    std::cout << "IfaceD::onSet" << std::endl;
+  }
+  void offSet(callback_view<void()> a) {
+    a();
+    std::cout << "IfaceD::offSet" << std::endl;
+  }
 };
 ::session_test::IfaceD getIfaceD() {
   return make_holder<IfaceD, ::session_test::IfaceD>();
