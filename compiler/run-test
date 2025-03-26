@@ -138,7 +138,7 @@ def download_panda_vm(extract_dir: Path):
     username = "koala-pub"
     password = "y3t!n0therP"
 
-    url = "https://nexus.bz-openlab.ru:10443/repository/koala-npm/%40panda/sdk/-/sdk-1.5.0-dev.25175.tgz"
+    url = "https://nexus.bz-openlab.ru:10443/repository/koala-npm/%40panda/sdk/-/sdk-1.5.0-dev.24929.tgz"
     target_file = extract_dir / url.split("/")[-1]
     version_file = extract_dir / "version.txt"
     version = target_file.stem

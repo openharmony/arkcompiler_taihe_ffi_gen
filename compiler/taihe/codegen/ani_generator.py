@@ -1130,8 +1130,8 @@ class MapTypeANIInfo(AbstractAnalysis[MapType], AbstractTypeANIInfo):
     ):
         cpp_info = TypeCppInfo.get(self.am, self.t)
         ani_ref_keys = f"{cpp_result}_keys"
-        ani_key_value = f"{cpp_result}_key"
-        ani_value_obj = f"{cpp_result}_val"
+        ani_key_obj = f"{cpp_result}_key"
+        ani_val_obj = f"{cpp_result}_val"
         key_ty_ani_info = TypeANIInfo.get(self.am, self.t.key_ty)
         val_ty_ani_info = TypeANIInfo.get(self.am, self.t.val_ty)
         target.write(
@@ -1144,18 +1144,18 @@ class MapTypeANIInfo(AbstractAnalysis[MapType], AbstractTypeANIInfo):
             f"{' ' * offset}    {env}->Object_CallMethodByName_Ref(static_cast<ani_object>({ani_ref_keys}), \"next\", nullptr, &next);\n"
             f"{' ' * offset}    {env}->Object_GetFieldByName_Boolean(static_cast<ani_object>(next), \"done\", &done);\n"
             f"{' ' * offset}    if (done) break;\n"
-            f"{' ' * offset}    ani_ref {ani_key_value};\n"
-            f"{' ' * offset}    {env}->Object_GetFieldByName_Ref(static_cast<ani_object>(next), \"value\", &{ani_key_value});\n"
-            f"{' ' * offset}    ani_ref {ani_value_obj};\n"
-            f"{' ' * offset}    {env}->Object_CallMethodByName_Ref({ani_value}, \"$_get\", nullptr, &{ani_value_obj}, {ani_key_value});\n"
+            f"{' ' * offset}    ani_ref {ani_key_obj};\n"
+            f"{' ' * offset}    {env}->Object_GetFieldByName_Ref(static_cast<ani_object>(next), \"value\", &{ani_key_obj});\n"
+            f"{' ' * offset}    ani_ref {ani_val_obj};\n"
+            f"{' ' * offset}    {env}->Object_CallMethodByName_Ref({ani_value}, \"$_get\", nullptr, &{ani_val_obj}, {ani_key_obj});\n"
         )
         key_cpp_spec = f"{cpp_result}_key_spec"
         val_cpp_spec = f"{cpp_result}_val_spec"
         key_ty_ani_info.from_ani_boxed(
-            target, offset + 4, env, ani_key_value, key_cpp_spec
+            target, offset + 4, env, ani_key_obj, key_cpp_spec
         )
         val_ty_ani_info.from_ani_boxed(
-            target, offset + 4, env, ani_value_obj, val_cpp_spec
+            target, offset + 4, env, ani_val_obj, val_cpp_spec
         )
         target.write(
             f"{' ' * offset}    {cpp_result}.emplace({key_cpp_spec}, {val_cpp_spec});\n"

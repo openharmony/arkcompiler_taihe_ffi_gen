@@ -3,15 +3,17 @@ import * as StructExtendTest from "../author_generated/struct_extend"
 loadLibrary("ani_struct_extend")
 
 function check_struct_A() {
-    let ins_a: StructExtendTest.A = {param1: 100}
-    StructExtendTest.check_A(ins_a)
+    let ins_a:
+        StructExtendTest.A = {param1: 100} StructExtendTest.check_A(ins_a)
     let res_a = StructExtendTest.create_A()
     assertEQ(res_a.param1, 1)
 }
 
 function check_struct_B() {
-    let ins_b: StructExtendTest.B = {param1: 100, param2: 200}
-    StructExtendTest.check_B(ins_b)
+    let ins_b: StructExtendTest.B = {
+        param1: 100,
+        param2: 200
+    } StructExtendTest.check_B(ins_b)
     let res_b = StructExtendTest.create_B()
     assertEQ(res_b.param1, 1)
     assertEQ(res_b.param2, 2)
@@ -33,15 +35,17 @@ function check_struct_C() {
 }
 
 function check_struct_D() {
-    let ins_d: StructExtendTest.D = {param4: 400}
-    StructExtendTest.check_D(ins_d)
+    let ins_d:
+        StructExtendTest.D = {param4: 400} StructExtendTest.check_D(ins_d)
     let res_d = StructExtendTest.create_D()
     assertEQ(res_d.param4, 4)
 }
 
 function check_struct_E() {
-    let ins_e: StructExtendTest.E = {param4: 400, param5: 500}
-    StructExtendTest.check_E(ins_e)
+    let ins_e: StructExtendTest.E = {
+        param4: 400,
+        param5: 500
+    } StructExtendTest.check_E(ins_e)
     let res_e = StructExtendTest.create_E()
     assertEQ(res_e.param4, 4)
     assertEQ(res_e.param5, 5)
