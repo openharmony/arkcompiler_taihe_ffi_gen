@@ -101,6 +101,16 @@ function changeStructArray() {
         assertEQ(arr2[i].c, 3)
     }
 }
+function fetchBinaryData() {
+    ArrayTest.fetchBinaryData(5, (error: Error, data?: float[]) => {
+        if (!error.message) {
+            console.log("main finsih test async success ");
+            assertEQ(data?.length, 5);
+        } else {
+            console.log("main finsih test async ERROR ", error);
+        }
+    })
+}
 
 function main() {
     console.log("run main ... ArrayTest ...")
@@ -117,5 +127,6 @@ function main() {
     suite.addTest("changeRecordArray", changeRecordArray)
     suite.addTest("makeStructArray", makeStructArray)
     suite.addTest("changeStructArray", changeStructArray)
+    suite.addTest("fetchBinaryData", fetchBinaryData)
     suite.run()
 }

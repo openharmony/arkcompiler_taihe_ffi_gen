@@ -9,10 +9,7 @@ function check_struct_A() {
 }
 
 function check_struct_B() {
-    let ins_b: StructExtendTest.B = {
-        param1: 100,
-        param2: 200
-    };
+    let ins_b: StructExtendTest.B = {param1: 100, param2: 200};
     let res_b = StructExtendTest.create_B()
     assertEQ(res_b.param1, 1)
     assertEQ(res_b.param2, 2)
@@ -34,16 +31,13 @@ function check_struct_C() {
 }
 
 function check_struct_D() {
-    let ins_d: StructExtendTest.D = {param4: 400}
-    let res_d = StructExtendTest.create_D()
+    let ins_d: StructExtendTest.D = {param4: 400} let res_d =
+        StructExtendTest.create_D()
     assertEQ(res_d.param4, 4)
 }
 
 function check_struct_E() {
-    let ins_e: StructExtendTest.E = {
-        param4: 400,
-        param5: 500
-    };
+    let ins_e: StructExtendTest.E = {param4: 400, param5: 500};
     let res_e = StructExtendTest.create_E()
     assertEQ(res_e.param4, 4)
     assertEQ(res_e.param5, 5)

@@ -4,6 +4,7 @@
 #include "array_test.Data.proj.1.hpp"
 #include "array_test.impl.hpp"
 #include "core/map.hpp"
+#include "core/runtime.hpp"
 #include "core/string.hpp"
 #include "stdexcept"
 // Please delete <stdexcept> include when you implement
@@ -73,6 +74,14 @@ array<::array_test::Data> changeStructArray(
       [a, b, c](::array_test::Data d) { return ::array_test::Data{a, b, c}; });
   return result;
 }
+array<float> fetchBinaryDataSync(int32_t num) {
+  if (num <= 0) {
+    taihe::core::throw_error("some error happen in fetchBinaryDataSync");
+    return array<float>::make(0);
+  } else {
+    return array<float>::make(num);
+  }
+}
 }  // namespace
 TH_EXPORT_CPP_API_sumArray(sumArray);
 TH_EXPORT_CPP_API_getArrayValue(getArrayValue);
@@ -85,3 +94,4 @@ TH_EXPORT_CPP_API_makeIntArray2(makeIntArray2);
 TH_EXPORT_CPP_API_changeEnumArray(changeEnumArray);
 TH_EXPORT_CPP_API_changeRecordArray(changeRecordArray);
 TH_EXPORT_CPP_API_changeStructArray(changeStructArray);
+TH_EXPORT_CPP_API_fetchBinaryDataSync(fetchBinaryDataSync);
