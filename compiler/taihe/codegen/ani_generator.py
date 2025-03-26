@@ -62,6 +62,7 @@ from taihe.utils.outputs import COutputBuffer, OutputManager, STSOutputBuffer
 if TYPE_CHECKING:
     from taihe.semantics.declarations import (
         ParamDecl,
+        StructFieldDecl,
     )
 
 
@@ -368,6 +369,7 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
     def __init__(self, am: AnalysisManager, d: StructDecl) -> None:
         p = d.node_parent
         assert p
+        self.am = am
         segments = [*p.segments, d.name]
         self.from_ani_func_name = encode(segments, DeclKind.FROM_ANI)
         self.into_ani_func_name = encode(segments, DeclKind.INTO_ANI)
@@ -379,6 +381,49 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
         self.sts_impl_name = d.name
         self.type_desc = f"L{self.pkg_ani_info.ani_path}/{self.sts_type_name};"
         self.impl_desc = f"L{self.pkg_ani_info.ani_path}/{self.sts_impl_name};"
+
+        self.parent: list[StructDecl] = []
+        self.current_fields: list[StructFieldDecl] = []
+        self.parent_fields: list[list[StructFieldDecl]] = []
+        self.parent_name_list: list[str] = []
+        self.parent_name = ""
+
+        for field in d.fields:
+            if "extends" in field.attrs:
+                ty = field.ty_ref.resolved_ty
+                assert ty
+                assert isinstance(
+                    field.ty_ref.resolved_ty, StructType
+                ), "expects @extends a struct type"
+                self.parent.append(field.ty_ref.resolved_ty.ty_decl)
+                self.parent_name = field.name
+                self.parent_name_list.extend(self.parent_name)
+            else:
+                self.current_fields.append(field)
+
+        for parent_struct in self.parent:
+            self._collect_parent_fields(parent_struct)
+
+        hierarchical_paths = []
+        current_path = ""
+        for i, name in enumerate(self.parent_name_list):
+            if i == 0:
+                current_path = name
+            else:
+                current_path = current_path + "." + name
+            hierarchical_paths.append(current_path)
+        self.parent_name_list = hierarchical_paths[::-1]
+
+        self.all_fields = [
+            item for sublist in self.parent_fields for item in sublist
+        ] + self.current_fields
+
+    def _collect_parent_fields(self, struct: StructDecl) -> None:
+        parent_struct_ani_info = StructANIInfo.get(self.am, struct)
+        self.parent_name_list.extend(parent_struct_ani_info.parent_name)
+        for parent_struct in parent_struct_ani_info.parent:
+            self._collect_parent_fields(parent_struct)
+        self.parent_fields.append(parent_struct_ani_info.current_fields)
 
     def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer):
         return self.pkg_ani_info.sts_type_in(pkg, target, self.sts_type_name)
@@ -1793,7 +1838,7 @@ class ANICodeGenerator:
             f"inline {struct_cpp_info.as_owner} {struct_ani_info.from_ani_func_name}(ani_env* env, ani_object ani_obj) {{\n"
         )
         cpp_field_results = []
-        for field in struct.fields:
+        for field in struct_ani_info.all_fields:
             type_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
             ani_field_value = f"ani_field_{field.name}"
             cpp_field_result = f"cpp_field_{field.name}"
@@ -1818,7 +1863,8 @@ class ANICodeGenerator:
             f"inline ani_object {struct_ani_info.into_ani_func_name}(ani_env* env, {struct_cpp_info.as_param} cpp_obj) {{\n"
         )
         ani_field_results = []
-        for field in struct.fields:
+
+        def process_field(field, parent_name=None):
             ani_field_result = f"ani_field_{field.name}"
             ani_field_results.append(ani_field_result)
             type_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
@@ -1826,9 +1872,21 @@ class ANICodeGenerator:
                 struct_ani_impl_target,
                 4,
                 "env",
-                f"cpp_obj.{field.name}",
+                (
+                    f"cpp_obj.{parent_name}.{field.name}"
+                    if parent_name
+                    else f"cpp_obj.{field.name}"
+                ),
                 ani_field_result,
             )
+
+        for i in range(len(struct_ani_info.parent_fields)):
+            for field in struct_ani_info.parent_fields[i]:
+                process_field(field, struct_ani_info.parent_name_list[i])
+
+        for field in struct_ani_info.current_fields:
+            process_field(field)
+
         ani_field_results_trailing = "".join(
             ", " + ani_field_result for ani_field_result in ani_field_results
         )

@@ -1,0 +1,37 @@
+struct A {
+    param1: i32;
+}
+
+struct B {
+    @extends a: A;
+    param2: i32;
+}
+
+struct C {
+    @extends b: B;
+    param3: i32;
+}
+
+function check_A(i: A);
+function create_A(): A;
+
+function check_B(i: B);
+function create_B(): B;
+
+function check_C(i: C);
+function create_C(): C;
+
+struct D {
+    param4: i32;
+}
+
+struct E {
+    @extends d: D;
+    param5: i32;
+}
+
+function check_D(i: D);
+function create_D(): D;
+
+function check_E(i: E);
+function create_E(): E;

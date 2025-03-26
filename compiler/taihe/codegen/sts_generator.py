@@ -317,21 +317,35 @@ class STSCodeGenerator:
         target: STSOutputBuffer,
     ):
         struct_ani_info = StructANIInfo.get(self.am, struct)
-        target.write(f"export class {struct_ani_info.sts_impl_name} {{\n")
+        if struct_ani_info.parent:
+            target.write(
+                f"export class {struct_ani_info.sts_impl_name} extends {struct_ani_info.parent[0].name} {{\n"
+            )
+        else:
+            target.write(f"export class {struct_ani_info.sts_impl_name} {{\n")
+
         with target.indent_manager.offset(4):
-            for field in struct.fields:
+            for field in struct_ani_info.current_fields:
                 ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
                 target.write(
                     f"    {field.name}: {ty_ani_info.sts_type_in(pkg, target)};\n"
                 )
             target.write(f"constructor(\n")
-            for field in struct.fields:
+            for field in struct_ani_info.all_fields:
                 ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
                 target.write(
                     f"    {field.name}: {ty_ani_info.sts_type_in(pkg, target)},\n"
                 )
             target.write(f") {{\n")
-            for field in struct.fields:
+
+            parent_list = [
+                item for sublist in struct_ani_info.parent_fields for item in sublist
+            ]
+            parent_field_names = ", ".join([field.name for field in parent_list])
+            if parent_field_names:
+                target.write(f"    super({parent_field_names});\n")
+
+            for field in struct_ani_info.current_fields:
                 target.write(f"    this.{field.name} = {field.name};\n")
             target.write(f"}}\n")
         target.write(f"}}\n")
