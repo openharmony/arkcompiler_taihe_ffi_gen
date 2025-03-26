@@ -49,6 +49,7 @@ from taihe.utils.outputs import COutputBuffer, OutputManager
 class PackageABIInfo(AbstractAnalysis[PackageDecl]):
     def __init__(self, am: AnalysisManager, p: PackageDecl) -> None:
         self.header = f"{p.name}.abi.h"
+        self.src = f"{p.name}.abi.c"
 
 
 class GlobFuncABIInfo(AbstractAnalysis[GlobFuncDecl]):
@@ -122,7 +123,6 @@ class IfaceABIInfo(AbstractAnalysis[IfaceDecl]):
         self.decl_header = f"{p.name}.{d.name}.abi.0.h"
         self.defn_header = f"{p.name}.{d.name}.abi.1.h"
         self.impl_header = f"{p.name}.{d.name}.abi.2.h"
-        self.src = f"{p.name}.{d.name}.c"
         self.mangled_name = encode(segments, DeclKind.TYPE)
         self.as_owner = f"struct {self.mangled_name}"
         self.as_param = f"struct {self.mangled_name}"
@@ -741,18 +741,20 @@ class ABISourcesGenerator:
             self.gen_package_file(pkg)
 
     def gen_package_file(self, pkg: PackageDecl):
+        pkg_abi_info = PackageABIInfo.get(self.am, pkg)
+        pkg_abi_src_target = COutputBuffer.create(
+            self.tm, f"src/{pkg_abi_info.src}", False
+        )
         for iface in pkg.interfaces:
-            self.gen_iface_file(iface)
+            self.gen_iface_file(iface, pkg_abi_src_target)
 
     def gen_iface_file(
         self,
         iface: IfaceDecl,
+        pkg_abi_src_target: COutputBuffer,
     ):
         iface_abi_info = IfaceABIInfo.get(self.am, iface)
-        abi_iface_src_target = COutputBuffer.create(
-            self.tm, f"src/{iface_abi_info.src}", False
-        )
-        abi_iface_src_target.include(iface_abi_info.defn_header)
-        abi_iface_src_target.writeln(
+        pkg_abi_src_target.include(iface_abi_info.defn_header)
+        pkg_abi_src_target.writeln(
             f"void const* const {iface_abi_info.iid} = &{iface_abi_info.iid};",
         )
