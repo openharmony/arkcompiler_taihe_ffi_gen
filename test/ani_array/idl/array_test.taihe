@@ -21,3 +21,7 @@ struct Data {
     c: i32;
 }
 function makeStructArray(a: String, b: String, c: i32, num: i32): Array<Data>;
+function makeIntArray2(value: Array<i32>, num: i32): Array<Array<i32>>;
+function changeEnumArray(value: Array<Color>, color: Color): Array<Color>;
+function changeRecordArray(value: Array<Map<String, i64>>, k: String, v: i64): Array<Map<String, i64>>;
+function changeStructArray(value: Array<Data>, a: String, b: String, c: i32): Array<Data>;
