@@ -426,7 +426,7 @@ class _CheckEnumTypePass(RecursiveDeclVisitor):
                 lambda item: item.name,
             ),
         }
-        if (lambda_pair := table.get(d.ty_ref.resolved_ty)) is None:
+        if (lambda_pair := table.get(d.ty_ref.resolved_ty)) is None:  # pyre-ignore
             self.diag.emit(TypeUsageError(d.ty_ref))  # pyre-ignore
             return
         valid, next, default = lambda_pair
