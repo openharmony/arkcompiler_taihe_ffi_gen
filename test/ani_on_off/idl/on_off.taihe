@@ -27,3 +27,15 @@ function offBar(a: () => void): void;
 
 @on_off("my_baz")
 function offBaz(a: i32, cb: () => void): void;
+
+@class
+interface BaseCls {
+}
+
+@static("BaseCls")
+@on_off
+function onFooStatic(a: () => void): void;
+
+@static("BaseCls")
+@on_off
+function offFooStatic(a: () => void): void;
