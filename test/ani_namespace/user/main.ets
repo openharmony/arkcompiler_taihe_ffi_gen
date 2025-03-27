@@ -1,3 +1,4 @@
+import * as namespace2Test from "../author_generated/my_ns"
 import * as namespaceTest from "../author_generated/ns_alltest"
 
 loadLibrary("ani_namespace")
@@ -902,12 +903,309 @@ function testInter20basePerformanceFunctionTest2() {
     assertEQ(res, 10)
 }
 
+// namespace2
+function primitives_noreturn() {
+    namespace2Test.outer.inner.primitives_noreturn(
+        1 as int, 2 as double, true, "hello", 3 as byte)
+}
+function primitives_return() {
+    let res = namespace2Test.outer.inner.primitives_return(
+        1 as int, 2 as double, true, "hello", 3 as byte)
+    console.log(res);
+}
 
+function containers_noreturn() {
+    let arri8: byte[] = [1, 2, 3];
+    let arri16: short[] = [1, 2, 3, 4];
+    let arri32: int[] = [1, 2, 3, 4, 5];
+    let arrf32: float[] = [1.1, 1.2, 1.3];
+    let arrf64: double[] = [1.123, 2.123, 3.123];
+
+    namespace2Test.outer.inner.containers_noreturn(
+        arri8, arri16, arrf32, arrf64, "union_string")
+    namespace2Test.outer.inner.containers_noreturn(
+        arri8, arri16, arrf32, arrf64, 1 as byte)
+}
+function containers_return() {
+    let arri8: byte[] = [1, 2, 3];
+    let arri16: short[] = [1, 2, 3, 4];
+    let arri32: int[] = [1, 2, 3, 4, 5];
+    let arrf32: float[] = [1.1, 1.2, 1.3];
+    let arrf64: double[] = [1.123, 2.123, 3.123];
+
+    let res1 = namespace2Test.outer.inner.containers_return(
+        arri8, arri16, arrf32, arrf64, "union_string")
+    let res2 = namespace2Test.outer.inner.containers_return(
+        arri8, arri16, arrf32, arrf64, 1 as byte)
+    console.log(res1 + " " + res2)
+}
+function enum_noreturn() {
+    let color1 = namespace2Test.outer.inner.Color.red;
+    let color2 = namespace2Test.outer.inner.Color.yellow;
+    let color3 = namespace2Test.outer.inner.Color.blue;
+    let color4 = namespace2Test.outer.inner.Color.green;
+    let color5 = namespace2Test.outer.inner.Color.black;
+
+    namespace2Test.outer.inner.enum_noreturn(
+        color1, color2, color3, color4, color5)
+}
+function enum_return() {
+    let color1 = namespace2Test.outer.inner.Color.red;
+    let color2 = namespace2Test.outer.inner.Color.yellow;
+    let color3 = namespace2Test.outer.inner.Color.blue;
+    let color4 = namespace2Test.outer.inner.Color.green;
+    let color5 = namespace2Test.outer.inner.Color.black;
+
+    let res = namespace2Test.outer.inner.enum_return(
+        color1, color2, color3, color4, color5)
+    console.log(res)
+}
+
+let instance: namespace2Test.outer.inner.TestInterface =
+    namespace2Test.outer.inner.get_interface();
+
+function interface_noparam_noreturn() {
+    instance.noparam_noreturn()
+}
+
+function interface_primitives_noreturn() {
+    instance.primitives_noreturn(1 as byte)
+}
+function interface_primitives_noreturn1() {
+    instance.primitives_noreturn1(12 as short)
+}
+function interface_primitives_noreturn2() {
+    instance.primitives_noreturn2(123 as int)
+}
+function interface_primitives_noreturn3() {
+    instance.primitives_noreturn3(1.1 as float)
+}
+function interface_primitives_noreturn4() {
+    instance.primitives_noreturn4(1.1234 as double)
+}
+function interface_primitives_noreturn5() {
+    instance.primitives_noreturn5(true)
+}
+function interface_primitives_noreturn6() {
+    instance.primitives_noreturn6("hello")
+}
+function interface_primitives_noreturn7() {
+    instance.primitives_noreturn7(1234)
+}
+
+function interface_primitives_return() {
+    instance.primitives_return(123 as int)
+}
+function interface_containers_noreturn1() {
+    let arri8: byte[] = [1, 2, 3, 4, 5];
+    instance.containers_noreturn1(arri8)
+}
+function interface_containers_noreturn2() {
+    instance.containers_noreturn2("union string")
+    instance.containers_noreturn2(1 as byte)
+}
+function interface_containers_noreturn3() {
+    let numbersU8: byte[] = [1, 2, 3, 4, 5];
+    let arrbuf1: ArrayBuffer = new ArrayBuffer(numbersU8.length);
+    instance.containers_noreturn3(arrbuf1)
+}
+function interface_containers_noreturn4() {
+    let color1 = namespace2Test.outer.inner.Color.red;
+    instance.containers_noreturn4(color1)
+}
+function interface_containers_noreturn5() {
+    let record: Record<string, int> = {
+        "test1": 0,
+        "test2": 1,
+        "test3": 2,
+        "test4": 3,
+    };
+    instance.containers_noreturn5(record)
+}
+
+
+
+function interface_containers_return() {
+    let res = instance.containers_return(123 as byte)
+    console.log(res)
+}
+
+function interface_ErrorResponse() {
+    let _struct: namespace2Test.outer.inner.ErrorResponse =
+        instance.func_ErrorResponse()
+}
+
+function overload1() {
+    instance.overloadFunc(1 as byte, 2 as byte)
+}
+function overload2() {
+    let arri8: byte[] = [1, 2, 3, 4, 5];
+    let numbersU8: byte[] = [1, 2, 3, 4, 5];
+    let arrbuf1: ArrayBuffer = new ArrayBuffer(numbersU8.length);
+    let s = instance.overloadFunc(arri8, arrbuf1)
+    console.log(s)
+}
+function overload3() {
+    instance.overloadFunc()
+}
+function overload4() {
+    let mystruct: namespace2Test.outer.inner.Mystruct = {
+        _string: "hello",
+        _i8: 1 as byte
+    };
+    instance.overloadFunc(mystruct)
+}
+
+function ns_5() {
+    namespace2Test.test1.test2.test3.test4.test5.funtest1(
+        123 as int, 1.234 as double)
+}
+
+function test20interface() {
+    let instance_1: namespace2Test.outer.inner.test1 =
+        namespace2Test.outer.inner.get_interface_1();
+    let instance_20: namespace2Test.outer.inner.test20 =
+        namespace2Test.outer.inner.get_interface_20();
+    instance_1.fun1()
+    instance_20.fun2()
+}
+
+// attribute
+function testattributeString() {
+    let name = namespace2Test.outer.inner.printTestInterfaceName(instance)
+    console.log("instance.name is " + name)
+    assertEQ(name, "String")
+}
+function testattributei8() {
+    let i8 = namespace2Test.outer.inner.printTestInterfaceNumberi8(instance)
+    console.log("instance.i8 is " + i8)
+    assertEQ(i8, -128)
+}
+function testattributei16() {
+    let i16 = namespace2Test.outer.inner.printTestInterfaceNumberi16(instance)
+    console.log("instance.i16 is " + i16)
+    assertEQ(i16, -32768)
+}
+function testattributei32() {
+    let i32 = namespace2Test.outer.inner.printTestInterfaceNumberi32(instance)
+    console.log("instance.i32 is " + i32)
+    assertEQ(i32, -2147483648)
+}
+function testattributei64() {
+    let i64 = namespace2Test.outer.inner.printTestInterfaceNumberi64(instance)
+    console.log("instance.i64 is " + i64)
+    assertEQ(i64, 1000 as long)
+}
+function testattributef32() {
+    let f32 = namespace2Test.outer.inner.printTestInterfaceNumberf32(instance)
+    console.log("instance.f32 is " + f32)
+    assertEQ(f32, 3.1415927 as float)
+}
+function testattributef64() {
+    let f64 = namespace2Test.outer.inner.printTestInterfaceNumberf64(instance)
+    console.log("instance.f64 is " + f64)
+    assertEQ(f64, 3.141592653589793)
+}
+function testattributebool() {
+    let b = namespace2Test.outer.inner.printTestInterfacebool(instance)
+    assertEQ(b, true)
+}
+function testattributeArrayBuffer() {
+    namespace2Test.outer.inner.printTestInterfaceArraybuffer(instance)
+}
+function testattributeArray() {
+    namespace2Test.outer.inner.printTestInterfaceArray(instance)
+}
+function testattributeUnion() {
+    namespace2Test.outer.inner.printTestInterfaceUnion(instance)
+}
+function testattributeRecord() {
+    namespace2Test.outer.inner.printTestInterfaceRecord(instance)
+}
+function testattributeEnum() {
+    namespace2Test.outer.inner.printTestInterfaceEnum(instance)
+}
+
+function testinheritance() {
+    let instancetestA: namespace2Test.outer.inner.testA =
+        namespace2Test.outer.inner.get_interface_A()
+    instancetestA.fun1()
+    let instancetestB: namespace2Test.outer.inner.testB =
+        namespace2Test.outer.inner.get_interface_B()
+    instancetestB.fun2()
+    let instancetestC: namespace2Test.outer.inner.testC =
+        namespace2Test.outer.inner.get_interface_C()
+    instancetestC.fun3()
+}
 
 function main() {
     console.log("run main ... ani_namespace_test begin ...")
     const suite = new ArkTestsuite("test function namespace_test")
+    // namespace2
+    suite.addTest("primitives_noreturn", primitives_noreturn)
+    suite.addTest("primitives_return", primitives_return)
+    suite.addTest("containers_noreturn", containers_noreturn)
+    suite.addTest("containers_return", containers_return)
+    suite.addTest("enum_noreturn", enum_noreturn)
+    suite.addTest("enum_return", enum_return)
 
+    suite.addTest("interface_primitives_return", interface_primitives_return)
+    suite.addTest(
+        "interface_containers_noreturn1", interface_containers_noreturn1)
+    suite.addTest(
+        "interface_containers_noreturn2", interface_containers_noreturn2)
+    suite.addTest(
+        "interface_containers_noreturn3", interface_containers_noreturn3)
+    suite.addTest(
+        "interface_containers_noreturn3", interface_containers_noreturn4)
+    suite.addTest(
+        "interface_containers_noreturn3", interface_containers_noreturn5)
+    suite.addTest("interface_containers_return", interface_containers_return)
+
+    suite.addTest("interface_ErrorResponse", interface_ErrorResponse)
+
+    suite.addTest("overload1", overload1)
+    suite.addTest("overload2", overload2)
+    suite.addTest("overload3", overload3)
+    suite.addTest("overload4", overload4)
+
+    suite.addTest("interface_noparam_noreturn", interface_noparam_noreturn)
+    suite.addTest(
+        "interface_primitives_noreturn", interface_primitives_noreturn)
+    suite.addTest(
+        "interface_primitives_noreturn1", interface_primitives_noreturn1)
+    suite.addTest(
+        "interface_primitives_noreturn2", interface_primitives_noreturn2)
+    suite.addTest(
+        "interface_primitives_noreturn3", interface_primitives_noreturn3)
+    suite.addTest(
+        "interface_primitives_noreturn4", interface_primitives_noreturn4)
+    suite.addTest(
+        "interface_primitives_noreturn5", interface_primitives_noreturn5)
+    suite.addTest(
+        "interface_primitives_noreturn6", interface_primitives_noreturn6)
+    suite.addTest(
+        "interface_primitives_noreturn7", interface_primitives_noreturn7)
+
+    suite.addTest("test20interface", test20interface)
+    suite.addTest("ns_5", ns_5)
+
+    suite.addTest("testattributeString", testattributeString)
+    suite.addTest("testattributei8", testattributei8)
+    suite.addTest("testattributei16", testattributei16);
+    suite.addTest("testattributei32", testattributei32);
+    suite.addTest("testattributei64", testattributei64);
+    suite.addTest("testattributef32", testattributef32);
+    suite.addTest("testattributef64", testattributef64);
+    suite.addTest("testattributebool", testattributebool);
+    suite.addTest("testattributeArrayBuffer", testattributeArrayBuffer);
+    suite.addTest("testattributeArray", testattributeArray);
+    suite.addTest("testattributeUnion", testattributeUnion);
+    suite.addTest("testattributeRecord", testattributeRecord);
+    suite.addTest("testattributeEnum", testattributeEnum);
+    suite.addTest("testinheritance", testinheritance);
+
+    // namespace1
     suite.addTest("check testCasebaseFunctionTest1", testCasebaseFunctionTest1)
     suite.addTest("check testCasebaseFunctionTest2", testCasebaseFunctionTest2)
     suite.addTest("check testCasebaseFunctionTest3", testCasebaseFunctionTest3)
