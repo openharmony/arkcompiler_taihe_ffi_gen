@@ -57,7 +57,7 @@ class CompilerInvocation:
     gen_author: bool = False
     gen_user: bool = False
 
-    quiet: bool = False
+    debug: bool = False
 
 
 class CompilerInstance:
@@ -146,7 +146,7 @@ class CompilerInstance:
         analyze_semantics(self.package_group, self.diagnostics_manager)
 
     def show(self):
-        if not self.invocation.quiet:
+        if self.invocation.debug:
             pretty_print(self.package_group, sys.stdout)
 
     def generate(self):
