@@ -1,5 +1,8 @@
 #include "core/array.hpp"
 
+#include <algorithm>
+#include <numeric>
+
 #include "array_test.Color.proj.0.hpp"
 #include "array_test.Data.proj.1.hpp"
 #include "array_test.impl.hpp"
@@ -7,10 +10,6 @@
 #include "core/runtime.hpp"
 #include "core/string.hpp"
 #include "stdexcept"
-// Please delete <stdexcept> include when you implement
-
-#include <algorithm>
-#include <numeric>
 
 using namespace taihe::core;
 namespace {
@@ -82,6 +81,13 @@ array<float> fetchBinaryDataSync(int32_t num) {
     return array<float>::make(num);
   }
 }
+array<array<::array_test::Data>> makeStructArrayArray(string_view a,
+                                                      string_view b, int32_t c,
+                                                      int32_t num1,
+                                                      int32_t num2) {
+  auto arr = array<::array_test::Data>::make(num1, ::array_test::Data{a, b, c});
+  return array<array<::array_test::Data>>::make(num2, arr);
+}
 }  // namespace
 TH_EXPORT_CPP_API_sumArray(sumArray);
 TH_EXPORT_CPP_API_getArrayValue(getArrayValue);
@@ -95,3 +101,4 @@ TH_EXPORT_CPP_API_changeEnumArray(changeEnumArray);
 TH_EXPORT_CPP_API_changeRecordArray(changeRecordArray);
 TH_EXPORT_CPP_API_changeStructArray(changeStructArray);
 TH_EXPORT_CPP_API_fetchBinaryDataSync(fetchBinaryDataSync);
+TH_EXPORT_CPP_API_makeStructArrayArray(makeStructArrayArray);

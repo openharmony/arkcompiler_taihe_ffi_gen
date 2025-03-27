@@ -28,3 +28,5 @@ function changeStructArray(value: Array<Data>, a: String, b: String, c: i32): Ar
 @gen_async("fetchBinaryData")
 @gen_promise("fetchBinaryData")
 function fetchBinaryDataSync(num:i32): Array<f32>;
+function makeStructArrayArray(a: String, b: String, c: i32, num1: i32, num2: i32): Array<Array<Data>>;
+
