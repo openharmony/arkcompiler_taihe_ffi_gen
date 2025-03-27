@@ -2,6 +2,7 @@
 @gen_promise("add")
 function addSync(a: i32, b: i32): i32;
 
+@class
 interface IBase {
     @gen_async("getAsync")
     @gen_promise("getPromise")
@@ -15,6 +16,11 @@ interface IBase {
 @gen_async("getIBaseAsync")
 @gen_promise("getIBasePromise")
 function getIBase(): IBase;
+
+@static("IBase")
+@gen_async("printAsync")
+@gen_promise("printPromise")
+function printSync(): void;
 
 struct Data {
   a: String;

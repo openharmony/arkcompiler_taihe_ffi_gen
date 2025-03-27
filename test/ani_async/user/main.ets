@@ -47,6 +47,14 @@ function main() {
                 retError)
         });
 
+    async_test.IBase.printAsync((error: Error) => {
+        if (!error.message) {
+            console.log("main finsih test printAsync success ");
+        } else {
+            console.log("main finsih test printAsync ERROR ", error);
+        }
+    })
+
     async_test.getIBaseAsync((error: Error, data?: async_test.IBase) => {
         if (!error.message) {
             console.log("main finsih test async success ", data!.get());
