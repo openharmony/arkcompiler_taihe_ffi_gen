@@ -3,7 +3,14 @@
 #include <cstdint>
 #include <iostream>
 
+#include "core/callback.hpp"
+#include "core/runtime.hpp"
+#include "core/string.hpp"
 #include "session_test.IfaceD.proj.2.hpp"
+#include "session_test.IfaceE.proj.2.hpp"
+#include "session_test.session_type.proj.1.hpp"
+#include "stdexcept"
+
 using namespace taihe::core;
 namespace {
 class IfaceA {
@@ -52,6 +59,16 @@ class IfaceD {
 ::session_test::IfaceD getIfaceD() {
   return make_holder<IfaceD, ::session_test::IfaceD>();
 }
+class IfaceE {
+ public:
+  string func_e() { return "ee"; }
+  string func_b() { return "bb"; }
+  string func_a() { return "aa"; }
+  string func_c() { return "cc"; }
+};
+::session_test::IfaceE getIfaceE() {
+  return make_holder<IfaceE, ::session_test::IfaceE>();
+}
 class Session {
  public:
   void beginConfig() {
@@ -95,4 +112,5 @@ class VideoSession {
 }
 }  // namespace
 TH_EXPORT_CPP_API_getIfaceD(getIfaceD);
+TH_EXPORT_CPP_API_getIfaceE(getIfaceE);
 TH_EXPORT_CPP_API_getSession(getSession);

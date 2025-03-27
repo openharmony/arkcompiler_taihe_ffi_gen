@@ -10,6 +10,10 @@ interface IfaceC {
     func_c(): String;
 }
 
+interface IfaceCA : IfaceA {
+    func_c(): String;
+}
+
 interface IfaceD: IfaceB, IfaceC {
     func_d(): String;
     @set("name") setName(name: String): void;
@@ -21,6 +25,13 @@ interface IfaceD: IfaceB, IfaceC {
 }
 
 function getIfaceD(): IfaceD;
+
+@class
+interface IfaceE : IfaceB, IfaceCA  {
+    func_e(): String;
+}
+
+function getIfaceE(): IfaceE;
 
 interface Session {
     beginConfig(): void;

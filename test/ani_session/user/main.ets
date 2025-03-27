@@ -38,6 +38,17 @@ function test_func_d(my_iface: lib.IfaceD) {
     }
 }
 
+function test_func_e(my_iface: lib.IfaceE) {
+    let result = my_iface.func_a();
+    assertEQ(result, "aa");
+    result = my_iface.func_b();
+    assertEQ(result, "bb");
+    result = my_iface.func_c();
+    assertEQ(result, "cc");
+    result = my_iface.func_e();
+    assertEQ(result, "ee");
+}
+
 function main() {
     console.log("##############start#############");
     let ps = lib.getSession(1);
@@ -54,11 +65,13 @@ function main() {
 
     const suite = new ArkTestsuite("Interface Tests");
     const my_iface = lib.getIfaceD();
+    const my_iface_e = lib.getIfaceE();
 
     suite.addTest("test func_a", () => {test_func_a(my_iface)});
     suite.addTest("test func_b", () => {test_func_b(my_iface)});
     suite.addTest("test func_c", () => {test_func_c(my_iface)});
     suite.addTest("test func_d", () => {test_func_d(my_iface)});
+    suite.addTest("test func_e", () => {test_func_e(my_iface_e)});
 
     suite.run();
 }
