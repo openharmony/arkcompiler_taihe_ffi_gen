@@ -271,7 +271,7 @@ function arrayf64_inout() {
 }
 
 function int8Array_inout() {
-    let buf: Int8Array = new Int8Array([10, 20, 30, 40]);
+    let buf: Int8Array = new Int8Array([10, 20, 30, 60]);
     let ret = arraybuffer.doubleInt8Array(buf);
     for (let i = 0; i < ret.length; i++) {
         console.log(`Int8Array_inout->  index ${i}: ${ret[i]}`);
@@ -280,7 +280,7 @@ function int8Array_inout() {
 }
 
 function int16Array_inout() {
-    let buf: Int16Array = new Int16Array([10, 20, 30, 40]);
+    let buf: Int16Array = new Int16Array([1000, 2000, 3000, 4000]);
     let ret = arraybuffer.doubleInt16Array(buf);
     for (let i = 0; i < ret.length; i++) {
         console.log(`int16Array_inout->  index ${i}: ${ret[i]}`);
@@ -289,7 +289,7 @@ function int16Array_inout() {
 }
 
 function int32Array_inout() {
-    let buf: Int32Array = new Int32Array([10, 20, 30, 40]);
+    let buf: Int32Array = new Int32Array([100000, 200000, 300000, 400000]);
     let ret = arraybuffer.doubleInt32Array(buf);
     for (let i = 0; i < ret.length; i++) {
         console.log(`Int32Array_inout->  index ${i}: ${ret[i]}`);
@@ -307,7 +307,7 @@ function uint8Array_inout() {
 }
 
 function uint16Array_inout() {
-    let buf: Uint16Array = new Uint16Array([10, 20, 30, 40]);
+    let buf: Uint16Array = new Uint16Array([1000, 2000, 3000, 4000]);
     let ret = arraybuffer.doubleUint16Array(buf);
     for (let i = 0; i < ret.length; i++) {
         console.log(`uint16Array_inout->  index ${i}: ${ret[i]}`);
@@ -316,7 +316,7 @@ function uint16Array_inout() {
 }
 
 function uint32Array_inout() {
-    let buf: Uint32Array = new Uint32Array([10, 20, 30, 40]);
+    let buf: Uint32Array = new Uint32Array([100000, 200000, 300000, 400000]);
     let ret = arraybuffer.doubleUint32Array(buf);
     for (let i = 0; i < ret.length; i++) {
         console.log(`uint32Array_inout->  index ${i}: ${ret[i]}`);
