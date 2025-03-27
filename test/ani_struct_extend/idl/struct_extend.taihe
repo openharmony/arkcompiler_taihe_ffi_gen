@@ -35,3 +35,34 @@ function create_D(): D;
 
 function check_E(i: E);
 function create_E(): E;
+
+@class
+interface Bar {
+    getE(): E;
+    setE(e: E);
+}
+
+@ctor("Bar")
+function getBar(e: E): Bar;
+
+struct F {
+    barF: Bar;
+}
+
+struct G {
+    @extends f: F;
+    barG: Bar;
+}
+
+@class
+struct H {
+    @extends g: G;
+    barh: Bar;
+}
+
+function check_Bar(bar: Bar): bool;
+function check_F(f: F): bool;
+function check_G(g: G): bool;
+function create_Bar(e: E): Bar;
+function create_F(e: E): F;
+function create_G(e: E): G;

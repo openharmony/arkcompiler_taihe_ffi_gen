@@ -2,15 +2,33 @@
 
 #include <iostream>
 
+#include "core/runtime.hpp"
 #include "stdexcept"
 #include "struct_extend.A.proj.1.hpp"
 #include "struct_extend.B.proj.1.hpp"
+#include "struct_extend.Bar.proj.2.hpp"
 #include "struct_extend.C.proj.1.hpp"
 #include "struct_extend.D.proj.1.hpp"
 #include "struct_extend.E.proj.1.hpp"
-// Please delete <stdexcept> include when you implement
+#include "struct_extend.F.proj.1.hpp"
+#include "struct_extend.G.proj.1.hpp"
 using namespace taihe::core;
 namespace {
+class Bar {
+ public:
+  Bar(::struct_extend::E const& e) {
+    this->e_.d.param4 = e.d.param4;
+    this->e_.param5 = e.param5;
+  }
+  ::struct_extend::E getE() { return e_; }
+  void setE(::struct_extend::E const& e) {
+    this->e_.d.param4 = e.d.param4;
+    this->e_.param5 = e.param5;
+  }
+
+ private:
+  ::struct_extend::E e_;
+};
 void check_A(::struct_extend::A const& i) {
   std::cout << i.param1 << std::endl;
 }
@@ -35,6 +53,28 @@ void check_E(::struct_extend::E const& i) {
   std::cout << i.param5 << std::endl;
 }
 ::struct_extend::E create_E() { return {{4}, 5}; }
+::struct_extend::Bar getBar(::struct_extend::E const& e) {
+  return make_holder<Bar, ::struct_extend::Bar>(e);
+}
+bool check_Bar(::struct_extend::weak::Bar bar) { return true; }
+bool check_F(::struct_extend::F const& f) { return true; }
+bool check_G(::struct_extend::G const& g) { return true; }
+::struct_extend::Bar create_Bar(::struct_extend::E const& e) {
+  return make_holder<Bar, ::struct_extend::Bar>(e);
+}
+::struct_extend::F create_F(::struct_extend::E const& e) {
+  ::struct_extend::F f{
+      .barF = make_holder<Bar, ::struct_extend::Bar>(e),
+  };
+  return f;
+}
+::struct_extend::G create_G(::struct_extend::E const& e) {
+  ::struct_extend::G g{
+      .f = create_F(e),
+      .barG = make_holder<Bar, ::struct_extend::Bar>(e),
+  };
+  return g;
+}
 }  // namespace
 TH_EXPORT_CPP_API_check_A(check_A);
 TH_EXPORT_CPP_API_create_A(create_A);
@@ -46,3 +86,10 @@ TH_EXPORT_CPP_API_check_D(check_D);
 TH_EXPORT_CPP_API_create_D(create_D);
 TH_EXPORT_CPP_API_check_E(check_E);
 TH_EXPORT_CPP_API_create_E(create_E);
+TH_EXPORT_CPP_API_getBar(getBar);
+TH_EXPORT_CPP_API_check_Bar(check_Bar);
+TH_EXPORT_CPP_API_check_F(check_F);
+TH_EXPORT_CPP_API_check_G(check_G);
+TH_EXPORT_CPP_API_create_Bar(create_Bar);
+TH_EXPORT_CPP_API_create_F(create_F);
+TH_EXPORT_CPP_API_create_G(create_G);
