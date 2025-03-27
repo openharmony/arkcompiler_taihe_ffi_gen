@@ -63,9 +63,9 @@ class CompilerInvocation:
     gen_author: bool = False
     gen_user: bool = False
     gen_ani: bool = False
-    gen_cimpl: bool = False
+    gen_c_impl: bool = False
 
-    quiet: bool = False
+    debug: bool = False
 
 
 class CompilerInstance:
@@ -154,7 +154,7 @@ class CompilerInstance:
         analyze_semantics(self.package_group, self.diagnostics_manager)
 
     def show(self):
-        if not self.invocation.quiet:
+        if self.invocation.debug:
             pretty_print(self.package_group, sys.stdout)
 
     def generate(self):
@@ -187,7 +187,7 @@ class CompilerInstance:
             STSCodeGenerator(self.target_manager, self.analysis_manager).generate(
                 self.package_group
             )
-        if self.invocation.gen_cimpl:
+        if self.invocation.gen_c_impl:
             CImplHeadersGenerator(self.target_manager, self.analysis_manager).generate(
                 self.package_group
             )

@@ -37,9 +37,14 @@ def main():
         help="generate ani headers and source",
     )
     parser.add_argument(
-        "--cimpl",
+        "--c-impl",
         action="store_true",
         help="generate cimpl headers and source",
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="debug mode",
     )
     args = parser.parse_args()
     invocation = CompilerInvocation(
@@ -48,7 +53,8 @@ def main():
         gen_author=args.author,
         gen_user=args.user,
         gen_ani=args.ani,
-        gen_cimpl=args.cimpl,
+        gen_c_impl=args.c_impl,
+        debug=args.debug,
     )
     instance = CompilerInstance(invocation)
     instance.run()

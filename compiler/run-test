@@ -226,8 +226,7 @@ def main(
             out_dir=author_generated_dir,
             gen_ani=True,
             gen_author=True,
-            quiet=True,
-            gen_cimpl=generate_c_impl,
+            gen_c_impl=generate_c_impl,
         )
     ).run()
     print("Done.")
@@ -306,7 +305,6 @@ def main(
             src_dirs=[idl_dir],
             out_dir=user_generated_dir,
             gen_user=True,
-            quiet=True,
         )
     ).run()
     print("Done.")
