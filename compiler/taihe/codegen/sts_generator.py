@@ -361,17 +361,20 @@ class STSCodeGenerator:
                 f"class {struct_ani_info.sts_impl_name} implements {struct_ani_info.sts_type_name} {{\n"
             )
         with target.indent_manager.offset(4):
-            for _, final in struct_ani_info.sts_final_fields:
+            for parts in struct_ani_info.sts_final_fields:
+                final = parts[-1]
                 ty_ani_info = TypeANIInfo.get(self.am, final.ty_ref.resolved_ty)
                 target.write(f"{final.name}: {ty_ani_info.sts_type_in(pkg, target)};\n")
             target.write(f"constructor(\n")
-            for _, final in struct_ani_info.sts_final_fields:
+            for parts in struct_ani_info.sts_final_fields:
+                final = parts[-1]
                 ty_ani_info = TypeANIInfo.get(self.am, final.ty_ref.resolved_ty)
                 target.write(
                     f"    {final.name}: {ty_ani_info.sts_type_in(pkg, target)},\n"
                 )
             target.write(f") {{\n")
-            for _, final in struct_ani_info.sts_final_fields:
+            for parts in struct_ani_info.sts_final_fields:
+                final = parts[-1]
                 target.write(f"    this.{final.name} = {final.name};\n")
             target.write(f"}}\n")
         target.write(f"}}\n")

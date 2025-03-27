@@ -3,12 +3,16 @@ struct Pair {
   b: String;
 }
 
-union Union {
-  sValue: String;
-  iValue: i32;
-  pValue: Pair;
-  uValue;
+union InnerUnion {
+  stringValue: String;
+  pairValue: Pair;
+  undefinedValue;
 }
 
-function printUnion(data: Union): String;
-function makeUnion(kind: String): Union;
+union MyUnion {
+  innerValue: InnerUnion;
+  floatValue: f32;
+}
+
+function printMyUnion(data: MyUnion): String;
+function makeMyUnion(kind: String): MyUnion;

@@ -2,39 +2,39 @@ import * as UnionTest from "../author_generated/union_ani"
 
 loadLibrary("ani_union")
 
-function test_printUnion_with_undefined() {
-    let res = UnionTest.printUnion(undefined);
+function test_printMyUnion_with_undefined() {
+    let res = UnionTest.printMyUnion(undefined);
     assertEQ(res, "u")
 }
 
-function test_printUnion_with_string() {
-    let res = UnionTest.printUnion("name");
+function test_printMyUnion_with_string() {
+    let res = UnionTest.printMyUnion("name");
     assertEQ(res, "s")
 }
 
-function test_printUnion_with_number() {
-    let res = UnionTest.printUnion(123);
-    assertEQ(res, "i")
+function test_printMyUnion_with_number() {
+    let res = UnionTest.printMyUnion(123.456 as float);
+    assertEQ(res, "f")
 }
 
-function test_printUnion_with_pair() {
+function test_printMyUnion_with_pair() {
     let pair: UnionTest.Pair = {a: "a", b: "b"};
-    let res = UnionTest.printUnion(pair);
+    let res = UnionTest.printMyUnion(pair);
     assertEQ(res, "p")
 }
 
-function test_makeUnion_string() {
-    const result = UnionTest.makeUnion("s");
+function test_makeMyUnion_string() {
+    const result = UnionTest.makeMyUnion("s");
     assertEQ(result, "string");
 }
 
-function test_makeUnion_number() {
-    const result = UnionTest.makeUnion("i");
+function test_makeMyUnion_number() {
+    const result = UnionTest.makeMyUnion("f");
     assertEQ(result, 123);
 }
 
-function test_makeUnion_pair() {
-    const result = UnionTest.makeUnion("p");
+function test_makeMyUnion_pair() {
+    const result = UnionTest.makeMyUnion("p");
     if (result instanceof UnionTest.Pair) {
         assertEQ(result.a, "a");
         assertEQ(result.b, "b");
@@ -43,8 +43,8 @@ function test_makeUnion_pair() {
     }
 }
 
-function test_makeUnion_undefined() {
-    const result = UnionTest.makeUnion("u");
+function test_makeMyUnion_undefined() {
+    const result = UnionTest.makeMyUnion("u");
     assertEQ(result, undefined);
 }
 
@@ -53,14 +53,16 @@ function main() {
     const suite = new ArkTestsuite("UnionTest Tests");
 
     suite.addTest(
-        "test printUnion with undefined", test_printUnion_with_undefined);
-    suite.addTest("test printUnion with string", test_printUnion_with_string);
-    suite.addTest("test printUnion with number", test_printUnion_with_number);
-    suite.addTest("test printUnion with pair", test_printUnion_with_pair);
-    suite.addTest("test makeUnion string", test_makeUnion_string);
-    suite.addTest("test makeUnion number", test_makeUnion_number);
-    suite.addTest("test makeUnion pair", test_makeUnion_pair);
-    suite.addTest("test makeUnion undefined", test_makeUnion_undefined);
+        "test printMyUnion with undefined", test_printMyUnion_with_undefined);
+    suite.addTest(
+        "test printMyUnion with string", test_printMyUnion_with_string);
+    suite.addTest(
+        "test printMyUnion with number", test_printMyUnion_with_number);
+    suite.addTest("test printMyUnion with pair", test_printMyUnion_with_pair);
+    suite.addTest("test makeMyUnion string", test_makeMyUnion_string);
+    suite.addTest("test makeMyUnion number", test_makeMyUnion_number);
+    suite.addTest("test makeMyUnion pair", test_makeMyUnion_pair);
+    suite.addTest("test makeMyUnion undefined", test_makeMyUnion_undefined);
 
     suite.run();
 }

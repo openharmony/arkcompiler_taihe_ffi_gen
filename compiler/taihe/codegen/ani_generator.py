@@ -63,6 +63,7 @@ if TYPE_CHECKING:
     from taihe.semantics.declarations import (
         ParamDecl,
         StructFieldDecl,
+        UnionFieldDecl,
     )
 
 
@@ -393,6 +394,16 @@ class UnionANIInfo(AbstractAnalysis[UnionDecl]):
         self.sts_type_name = d.name
         self.type_desc = "Lstd/core/Object;"
 
+        self.sts_final_fields: list[list[UnionFieldDecl]] = []
+        for field in d.fields:
+            if field.ty_ref and isinstance(ty := field.ty_ref.resolved_ty, UnionType):
+                inner_ani_info = UnionANIInfo.get(am, ty.ty_decl)
+                self.sts_final_fields.extend(
+                    [field, *parts] for parts in inner_ani_info.sts_final_fields
+                )
+            else:
+                self.sts_final_fields.append([field])
+
     def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer):
         return self.pkg_ani_info.sts_type_in(pkg, target, self.sts_type_name)
 
@@ -418,7 +429,7 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
 
         self.sts_fields: list[StructFieldDecl] = []
         self.sts_parents: list[StructFieldDecl] = []
-        self.sts_final_fields: list[tuple[list[StructFieldDecl], StructFieldDecl]] = []
+        self.sts_final_fields: list[list[StructFieldDecl]] = []
         for field in d.fields:
             if field.get_attr_item("extends"):
                 ty = field.ty_ref.resolved_ty
@@ -431,12 +442,11 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
                 ), f"{field.loc}: cannot extend an @class struct"
                 self.sts_parents.append(field)
                 self.sts_final_fields.extend(
-                    ([field, *parts], final)
-                    for parts, final in parent_ani_info.sts_final_fields
+                    [field, *parts] for parts in parent_ani_info.sts_final_fields
                 )
             else:
                 self.sts_fields.append(field)
-                self.sts_final_fields.append(([], field))
+                self.sts_final_fields.append([field])
 
     def is_class(self):
         return self.sts_type_name == self.sts_impl_name
@@ -1830,7 +1840,8 @@ class ANICodeGenerator:
             f"inline {struct_cpp_info.as_owner} {struct_ani_info.from_ani_func_name}(ani_env* env, ani_object ani_obj) {{\n"
         )
         cpp_field_results = []
-        for _, final in struct_ani_info.sts_final_fields:
+        for parts in struct_ani_info.sts_final_fields:
+            final = parts[-1]
             type_ani_info = TypeANIInfo.get(self.am, final.ty_ref.resolved_ty)
             ani_field_value = f"ani_field_{final.name}"
             cpp_field_result = f"cpp_field_{final.name}"
@@ -1854,15 +1865,15 @@ class ANICodeGenerator:
         struct_ani_impl_target.write(
             f"inline ani_object {struct_ani_info.into_ani_func_name}(ani_env* env, {struct_cpp_info.as_param} cpp_obj) {{\n"
         )
-        for parts, final in struct_ani_info.sts_final_fields:
+        for parts in struct_ani_info.sts_final_fields:
+            final = parts[-1]
             ani_field_result = f"ani_field_{final.name}"
             type_ani_info = TypeANIInfo.get(self.am, final.ty_ref.resolved_ty)
-            cpp_obj_name = ".".join(("cpp_obj", *(part.name for part in parts)))
             type_ani_info.into_ani(
                 struct_ani_impl_target,
                 4,
                 "env",
-                f"{cpp_obj_name}.{final.name}",
+                ".".join(("cpp_obj", *(part.name for part in parts))),
                 ani_field_result,
             )
             ani_field_results.append(ani_field_result)
@@ -1906,21 +1917,43 @@ class ANICodeGenerator:
             f"inline {union_cpp_info.as_owner} {union_ani_info.from_ani_func_name}(ani_env* env, ani_ref ani_value) {{\n"
         )
         # `Reference_IsUndefined` should be called before `Object_InstanceOf`
-        for field in union.fields:
-            if field.ty_ref is None:
-                is_field = f"ani_is_{field.name}"
+        for parts in union_ani_info.sts_final_fields:
+            final = parts[-1]
+            if final.ty_ref is None:
+                static_tags = []
+                for part in parts:
+                    assert part.node_parent
+                    path_cpp_info = UnionCppInfo.get(self.am, part.node_parent)
+                    static_tags.append(
+                        f"taihe::core::static_tag<{path_cpp_info.full_name}::tag_t::{part.name}>"
+                    )
+                static_tags_str = ", ".join(static_tags)
+                full_name = "_".join(part.name for part in parts)
+                is_field = f"ani_is_{full_name}"
                 union_ani_impl_target.write(
                     f"    ani_boolean {is_field};\n"
                     f"    env->Reference_IsUndefined(ani_value, &{is_field});\n"
                     f"    if ({is_field}) {{\n"
-                    f"        return {union_cpp_info.full_name}::make_{field.name}();\n"
+                    f"        return {union_cpp_info.full_name}({static_tags_str});\n"
                     f"    }}\n"
                 )
-        for field in union.fields:
-            if field.ty_ref is not None:
-                is_field = f"ani_is_{field.name}"
-                filed_class = f"ani_cls_{field.name}"
-                type_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
+        for parts in union_ani_info.sts_final_fields:
+            final = parts[-1]
+            if final.ty_ref is not None:
+                static_tags = []
+                for part in parts:
+                    assert part.node_parent
+                    path_cpp_info = UnionCppInfo.get(self.am, part.node_parent)
+                    static_tags.append(
+                        f"taihe::core::static_tag<{path_cpp_info.full_name}::tag_t::{part.name}>"
+                    )
+                static_tags_str = ", ".join(static_tags)
+                type_ani_info = TypeANIInfo.get(
+                    self.am, final.ty_ref.resolved_ty  # pyre-ignore
+                )
+                full_name = "_".join(part.name for part in parts)
+                is_field = f"ani_is_{full_name}"
+                filed_class = f"ani_cls_{full_name}"
                 union_ani_impl_target.write(
                     f"    ani_class {filed_class};\n"
                     f'    env->FindClass("{type_ani_info.type_desc_boxed}", &{filed_class});\n'
@@ -1928,7 +1961,7 @@ class ANICodeGenerator:
                     f"    env->Object_InstanceOf((ani_object)ani_value, {filed_class}, &{is_field});\n"
                     f"    if ({is_field}) {{\n"
                 )
-                cpp_result_spec = f"cpp_field_{field.name}"
+                cpp_result_spec = f"cpp_field_{full_name}"
                 type_ani_info.from_ani_boxed(
                     union_ani_impl_target,
                     8,
@@ -1937,7 +1970,7 @@ class ANICodeGenerator:
                     cpp_result_spec,
                 )
                 union_ani_impl_target.write(
-                    f"        return {union_cpp_info.full_name}::make_{field.name}(std::move({cpp_result_spec}));\n"
+                    f"        return {union_cpp_info.full_name}({static_tags_str}, std::move({cpp_result_spec}));\n"
                     f"    }}\n"
                 )
         union_ani_impl_target.write(f"    __builtin_unreachable();\n" f"}}\n")

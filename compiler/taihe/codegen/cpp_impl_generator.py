@@ -151,12 +151,12 @@ class CppImplSourcesGenerator:
         )
         if return_ty_ref and isinstance(return_ty_ref.resolved_ty, IfaceType):
             pkg_cpp_impl_target.writeln(
+                f"    // The parameters in the make_holder function should be of the same type",
+                f"    // as the parameters in the constructor of the actual implementation class.",
                 f"    return make_holder<{return_ty_ref.resolved_ty.ty_decl.name}, {cpp_return_ty_name}>();",
             )
         else:
             pkg_cpp_impl_target.writeln(
-                f"    // The parameters in the make_holder function should be of the same type",
-                f"    // as the parameters in the constructor of the actual implementation class.",
                 f'    throw std::runtime_error("{func_cpp_impl_name} not implemented");',
             )
         pkg_cpp_impl_target.writeln(

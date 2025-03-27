@@ -1,41 +1,50 @@
 #include "union_ani.impl.hpp"
 
+#include "core/runtime.hpp"
 #include "core/string.hpp"
 #include "stdexcept"
-#include "union_ani.Union.proj.1.hpp"
-// Please delete <stdexcept> include when you implement
+#include "union_ani.MyUnion.proj.1.hpp"
 using namespace taihe::core;
 namespace {
-string printUnion(::union_ani::Union const& data) {
+string printInnerUnion(::union_ani::InnerUnion const& data) {
   switch (data.get_tag()) {
-    case ::union_ani::Union::tag_t::sValue:
-      std::cout << "s: " << data.get_sValue_ref() << std::endl;
+    case ::union_ani::InnerUnion::tag_t::stringValue:
+      std::cout << "s: " << data.get_stringValue_ref() << std::endl;
       return "s";
-    case ::union_ani::Union::tag_t::iValue:
-      std::cout << "i: " << data.get_iValue_ref() << std::endl;
-      return "i";
-    case ::union_ani::Union::tag_t::pValue:
-      std::cout << "p: " << data.get_pValue_ref().a << ", "
-                << data.get_pValue_ref().b << std::endl;
+    case ::union_ani::InnerUnion::tag_t::pairValue:
+      std::cout << "p: " << data.get_pairValue_ref().a << ", "
+                << data.get_pairValue_ref().b << std::endl;
       return "p";
-    case ::union_ani::Union::tag_t::uValue:
+    case ::union_ani::InnerUnion::tag_t::undefinedValue:
       std::cout << "u" << std::endl;
       return "u";
   }
 }
-::union_ani::Union makeUnion(string_view kind) {
-  if (kind == "s") {
-    return ::union_ani::Union::make_sValue("string");
+string printMyUnion(::union_ani::MyUnion const& data) {
+  switch (data.get_tag()) {
+    case ::union_ani::MyUnion::tag_t::innerValue:
+      return printInnerUnion(data.get_innerValue_ref());
+    case ::union_ani::MyUnion::tag_t::floatValue:
+      std::cout << "f: " << data.get_floatValue_ref() << std::endl;
+      return "f";
   }
-  if (kind == "i") {
-    return ::union_ani::Union::make_iValue(123);
+}
+::union_ani::MyUnion makeMyUnion(string_view kind) {
+  if (kind == "s") {
+    return ::union_ani::MyUnion::make_innerValue(
+        ::union_ani::InnerUnion::make_stringValue("string"));
   }
   if (kind == "p") {
     ::union_ani::Pair pair = {"a", "b"};
-    return ::union_ani::Union::make_pValue(pair);
+    return ::union_ani::MyUnion::make_innerValue(
+        ::union_ani::InnerUnion::make_pairValue(pair));
   }
-  return ::union_ani::Union::make_uValue();
+  if (kind == "f") {
+    return ::union_ani::MyUnion::make_floatValue(123);
+  }
+  return ::union_ani::MyUnion::make_innerValue(
+      ::union_ani::InnerUnion::make_undefinedValue());
 }
 }  // namespace
-TH_EXPORT_CPP_API_printUnion(printUnion);
-TH_EXPORT_CPP_API_makeUnion(makeUnion);
+TH_EXPORT_CPP_API_printMyUnion(printMyUnion);
+TH_EXPORT_CPP_API_makeMyUnion(makeMyUnion);
