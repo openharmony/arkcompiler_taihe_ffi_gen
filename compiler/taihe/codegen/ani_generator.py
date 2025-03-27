@@ -213,7 +213,9 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
             (self.sts_func_name,) = overload_attr.args
 
         elif on_off_attr := f.get_attr_item("on_off"):
-            assert f.name.startswith("on") or f.name.startswith("off")
+            assert f.name.startswith(
+                ("on", "off")
+            ), f'{f.loc}: @on_off method name must start with "on" or "off"'
 
             if f.name.startswith("on"):
                 if not on_off_attr.args:
@@ -284,7 +286,9 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
             (self.ani_method_name,) = overload_attr.args
 
         elif on_off_attr := f.get_attr_item("on_off"):
-            assert f.name.startswith("on") or f.name.startswith("off")
+            assert f.name.startswith(
+                ("on", "off")
+            ), f'{f.loc}: @on_off method name must start with "on" or "off"'
 
             if f.name.startswith("on"):
                 if not on_off_attr.args:
@@ -305,8 +309,13 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
                 self.ani_method_name = "off"
 
         elif get_attr := f.get_attr_item("get"):
-            assert f.name.startswith("get")
+            assert len(f.params) == 0, f"{f.loc}: @get method should take no parameters"
+            assert f.return_ty_ref, f"{f.loc}: @get method cannot return void"
+
             if not get_attr.args:
+                assert f.name.startswith(
+                    "get"
+                ), f'{f.loc}: @get method name must start with "get" if the property name is omitted'
                 get_name = f.name[3:]
                 self.get_name = get_name[0].lower() + get_name[1:]
             else:
@@ -314,8 +323,13 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
             self.ani_method_name = f"<get>{self.get_name}"
 
         elif set_attr := f.get_attr_item("set"):
-            assert f.name.startswith("set")
+            assert len(f.params) == 1, f"{f.loc}: @set method should have one parameter"
+            assert f.return_ty_ref is None, f"{f.loc}: @set method should return void"
+
             if not set_attr.args:
+                assert f.name.startswith(
+                    "set"
+                ), f'{f.loc}: @set method name must start with "set" if the property name is omitted'
                 set_name = f.name[3:]
                 self.set_name = set_name[0].lower() + set_name[1:]
             else:
@@ -365,11 +379,28 @@ class EnumANIInfo(AbstractAnalysis[EnumDecl]):
         return self.pkg_ani_info.sts_type_in(pkg, target, self.sts_type_name)
 
 
+class UnionANIInfo(AbstractAnalysis[UnionDecl]):
+    def __init__(self, am: AnalysisManager, d: UnionDecl) -> None:
+        p = d.node_parent
+        assert p
+        segments = [*p.segments, d.name]
+        self.from_ani_func_name = encode(segments, DeclKind.FROM_ANI)
+        self.into_ani_func_name = encode(segments, DeclKind.INTO_ANI)
+        self.decl_header = f"{p.name}.{d.name}.ani.0.h"
+        self.impl_header = f"{p.name}.{d.name}.ani.1.h"
+
+        self.pkg_ani_info = PackageANIInfo.get(am, p)
+        self.sts_type_name = d.name
+        self.type_desc = "Lstd/core/Object;"
+
+    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer):
+        return self.pkg_ani_info.sts_type_in(pkg, target, self.sts_type_name)
+
+
 class StructANIInfo(AbstractAnalysis[StructDecl]):
     def __init__(self, am: AnalysisManager, d: StructDecl) -> None:
         p = d.node_parent
         assert p
-        self.am = am
         segments = [*p.segments, d.name]
         self.from_ani_func_name = encode(segments, DeclKind.FROM_ANI)
         self.into_ani_func_name = encode(segments, DeclKind.INTO_ANI)
@@ -391,8 +422,13 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
         for field in d.fields:
             if field.get_attr_item("extends"):
                 ty = field.ty_ref.resolved_ty
-                assert isinstance(ty, StructType), "expects @extends a struct type"
-                parent_ani_info = StructANIInfo.get(self.am, ty.ty_decl)
+                assert isinstance(
+                    ty, StructType
+                ), f"{field.loc}: @extends expects a struct type field"
+                parent_ani_info = StructANIInfo.get(am, ty.ty_decl)
+                assert (
+                    not parent_ani_info.is_class()
+                ), f"{field.loc}: cannot extend an @class struct"
                 self.sts_parents.append(field)
                 self.sts_final_fields.extend(
                     ([field, *parts], final)
@@ -402,23 +438,8 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
                 self.sts_fields.append(field)
                 self.sts_final_fields.append(([], field))
 
-    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer):
-        return self.pkg_ani_info.sts_type_in(pkg, target, self.sts_type_name)
-
-
-class UnionANIInfo(AbstractAnalysis[UnionDecl]):
-    def __init__(self, am: AnalysisManager, d: UnionDecl) -> None:
-        p = d.node_parent
-        assert p
-        segments = [*p.segments, d.name]
-        self.from_ani_func_name = encode(segments, DeclKind.FROM_ANI)
-        self.into_ani_func_name = encode(segments, DeclKind.INTO_ANI)
-        self.decl_header = f"{p.name}.{d.name}.ani.0.h"
-        self.impl_header = f"{p.name}.{d.name}.ani.1.h"
-
-        self.pkg_ani_info = PackageANIInfo.get(am, p)
-        self.sts_type_name = d.name
-        self.type_desc = "Lstd/core/Object;"
+    def is_class(self):
+        return self.sts_type_name == self.sts_impl_name
 
     def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer):
         return self.pkg_ani_info.sts_type_in(pkg, target, self.sts_type_name)
@@ -451,6 +472,17 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
         for class_injected in d.get_attr_list("sts_inject_into_class"):
             (code,) = class_injected.args
             self.class_injected_codes.append(code)
+
+        for parent in d.parents:
+            ty = parent.ty_ref.resolved_ty
+            assert isinstance(ty, IfaceType)
+            parent_ani_info = IfaceANIInfo.get(am, ty.ty_decl)
+            assert (
+                not parent_ani_info.is_class()
+            ), f"{parent.loc}: cannot extend an @class interface"
+
+    def is_class(self):
+        return self.sts_type_name == self.sts_impl_name
 
     def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer):
         return self.pkg_ani_info.sts_type_in(pkg, target, self.sts_type_name)
@@ -1361,20 +1393,6 @@ class TypeANIInfo(TypeVisitor[AbstractTypeANIInfo]):
     @override
     def visit_callback_type(self, t: CallbackType) -> AbstractTypeANIInfo:
         return CallbackTypeANIInfo.get(self.am, t)
-
-
-class Namespace:
-    def __init__(self):
-        self.children: dict[str, Namespace] = {}
-        self.packages: list[PackageDecl] = []
-
-    def add_path(self, path_parts: list[str], pkg: PackageDecl):
-        if not path_parts:
-            self.packages.append(pkg)
-            return
-        head, *tail = path_parts
-        child = self.children.setdefault(head, Namespace())
-        child.add_path(tail, pkg)
 
 
 class ANICodeGenerator:

@@ -319,7 +319,7 @@ class STSCodeGenerator:
         target: STSOutputBuffer,
     ):
         struct_ani_info = StructANIInfo.get(self.am, struct)
-        if struct_ani_info.sts_type_name == struct_ani_info.sts_impl_name:
+        if struct_ani_info.is_class():
             # no interface
             return
         parents = []
@@ -345,7 +345,7 @@ class STSCodeGenerator:
         target: STSOutputBuffer,
     ):
         struct_ani_info = StructANIInfo.get(self.am, struct)
-        if struct_ani_info.sts_impl_name == struct_ani_info.sts_type_name:
+        if struct_ani_info.is_class():
             parents = []
             for parent in struct_ani_info.sts_parents:
                 ty = parent.ty_ref.resolved_ty
@@ -383,7 +383,7 @@ class STSCodeGenerator:
         target: STSOutputBuffer,
     ):
         iface_ani_info = IfaceANIInfo.get(self.am, iface)
-        if iface_ani_info.sts_type_name == iface_ani_info.sts_impl_name:
+        if iface_ani_info.is_class():
             # no interface
             return
         parents = []
@@ -476,7 +476,7 @@ class STSCodeGenerator:
         ctors_map: dict[str, list[GlobFuncDecl]],
     ):
         iface_ani_info = IfaceANIInfo.get(self.am, iface)
-        if iface_ani_info.sts_impl_name == iface_ani_info.sts_type_name:
+        if iface_ani_info.is_class():
             parents = []
             for parent in iface.parents:
                 ty = parent.ty_ref.resolved_ty
