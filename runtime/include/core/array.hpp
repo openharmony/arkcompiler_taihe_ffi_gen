@@ -213,8 +213,10 @@ template <typename cpp_owner_t>
 inline std::size_t hash_impl(adl_helper_t, array_view<cpp_owner_t> val) {
   std::size_t seed = 0;
   static constexpr std::size_t GOLDEN_RATIO_CONSTANT = 0x9e3779b9;
+  static constexpr std::size_t LEFT_SHIFT_BITS = 6;
+  static constexpr std::size_t RIGHT_SHIFT_BITS = 2;
   for (std::size_t i = 0; i < val.size(); i++) {
-    seed ^= hash(val[i]) + GOLDEN_RATIO_CONSTANT + (seed << 6) + (seed >> 2);
+    seed ^= hash(val[i]) + GOLDEN_RATIO_CONSTANT + (seed << LEFT_SHIFT_BITS) + (seed >> RIGHT_SHIFT_BITS);
   }
   return seed;
 }
