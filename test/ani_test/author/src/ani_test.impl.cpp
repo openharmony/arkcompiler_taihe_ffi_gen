@@ -92,7 +92,7 @@ array<Foo> makeFoo(array_view<string> list) {
   for (string_view name : list) {
     vec.push_back(make_holder<AuthorFoo, Foo>(name));
   }
-  return array<Foo>(vec.data(), vec.size(), move_data_t{});
+  return array<Foo>(move_data_t{}, vec.data(), vec.size());
 }
 
 void callBar(array_view<Foo> arr) {
