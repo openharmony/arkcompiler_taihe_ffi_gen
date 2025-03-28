@@ -163,10 +163,17 @@ struct array : public array_view<cpp_owner_t> {
     std::uninitialized_move_n(data, size, this->m_data);
   }
 
+  array(size_type size)
+      : array((cpp_owner_t*)malloc(size * sizeof(cpp_owner_t)), size) {
+    std::uninitialized_default_construct_n(this->m_data, size);
+  }
+
   array(size_type size, const cpp_owner_t& value)
       : array((cpp_owner_t*)malloc(size * sizeof(cpp_owner_t)), size) {
     std::uninitialized_fill_n(this->m_data, size, value);
   }
+
+  static array make(size_type size) { return array(size); }
 
   static array make(size_type size, const cpp_owner_t& value) {
     return array(size, value);
