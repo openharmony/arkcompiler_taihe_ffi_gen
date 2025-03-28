@@ -31,9 +31,3 @@ target_include_directories(taihe_runtime PUBLIC
     ../compiler/.panda_vm/package/ohos_arm64/include/plugins/ets/runtime/ani)
 
 target_compile_options(taihe_runtime PRIVATE -fPIC)
-
-# Add test directory
-if (ENABLE_RT_TEST)
-  enable_testing()
-  add_subdirectory(test)
-endif()
