@@ -1,6 +1,6 @@
-import * as base_test from "../author_generated/base_test"
+import * as base_test from "../author_generated/base_test";
 
-loadLibrary("ani_basetype")
+loadLibrary("ani_basetype");
 
 function main() {
     console.log("base_test start");

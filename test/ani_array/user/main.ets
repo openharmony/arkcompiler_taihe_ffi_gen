@@ -1,6 +1,6 @@
-import * as ArrayTest from "../author_generated/array_test"
+import * as ArrayTest from "../author_generated/array_test";
 
-loadLibrary("ani_array")
+loadLibrary("ani_array");
 
 function sumArray() {
     let numbers: int[] = [1, 2, 3, 4, 5];

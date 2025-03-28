@@ -1,7 +1,7 @@
-import * as IfaceReadonlyTest from "../author_generated/iface_readonly_test"
-import * as IfaceTest from "../author_generated/iface_test"
+import * as IfaceReadonlyTest from "../author_generated/iface_readonly_test";
+import * as IfaceTest from "../author_generated/iface_test";
 
-loadLibrary("ani_iface")
+loadLibrary("ani_iface");
 
 class SubFoo implements IfaceTest.Foo {
     bar(): void {}

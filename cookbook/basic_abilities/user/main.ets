@@ -1,5 +1,5 @@
-import * as basic_abilities from "../author_generated/basic_abilities"
-loadLibrary("basic_abilities")
+import * as basic_abilities from "../author_generated/basic_abilities";
+loadLibrary("basic_abilities");
 function main() {
     let input_arr: int[] = [1, 2, 3, 4, 5];
     let input_str: String = "hello";

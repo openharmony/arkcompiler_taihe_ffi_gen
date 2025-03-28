@@ -1,6 +1,6 @@
-import {UIAbility, useUIAbility} from "../author_generated/override"
+import {UIAbility, useUIAbility} from "../author_generated/override";
 
-loadLibrary("override")
+loadLibrary("override");
 
 function main() {
     class MyAbility extends UIAbility {

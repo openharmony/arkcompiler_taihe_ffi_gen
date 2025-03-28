@@ -1,7 +1,7 @@
-import {createResource, Resource} from "../author_generated/@hms.core.map.map_inner"
+import {createResource, Resource} from "../author_generated/@hms.core.map.map_inner";
 
-import * as map from "./@hms.core.map.map"
-import {Image, Image_inner} from "./@ohos.multimedia.image"
+import * as map from "./@hms.core.map.map";
+import {Image, Image_inner} from "./@ohos.multimedia.image";
 
 loadLibrary("union_embed");
 

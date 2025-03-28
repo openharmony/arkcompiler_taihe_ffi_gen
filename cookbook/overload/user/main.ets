@@ -1,6 +1,6 @@
-import * as overload from "../author_generated/overload"
+import * as overload from "../author_generated/overload";
 
-loadLibrary("overload")
+loadLibrary("overload");
 
 function main() {
     let a: int = 1

@@ -1,6 +1,6 @@
-import * as test from "../author_generated/inject_test"
+import * as test from "../author_generated/inject_test";
 
-loadLibrary("ani_inject")
+loadLibrary("ani_inject");
 
 function main() {
     let foo = test.makeFoo();

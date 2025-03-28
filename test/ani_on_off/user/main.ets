@@ -1,6 +1,6 @@
-import * as on_off_test from "../author_generated/on_off"
+import * as on_off_test from "../author_generated/on_off";
 
-loadLibrary("ani_on_off")
+loadLibrary("ani_on_off");
 
 function ibase_on() {
     let a = on_off_test.getIBase("hello", "world")

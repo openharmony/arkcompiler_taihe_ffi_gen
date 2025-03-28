@@ -1,7 +1,7 @@
-import * as StringIo from "../author_generated/string_io"
-import * as StringOp from "../author_generated/string_op"
+import * as StringIo from "../author_generated/string_io";
+import * as StringOp from "../author_generated/string_op";
 
-loadLibrary("ani_string")
+loadLibrary("ani_string");
 
 function concatString() {
     let str = StringOp.concatString("abc", "d");

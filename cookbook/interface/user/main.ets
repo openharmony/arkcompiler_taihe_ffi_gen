@@ -1,6 +1,6 @@
-import {ICalculator, makeCalculator, restartCalculator} from "../author_generated/interface"
+import {ICalculator, makeCalculator, restartCalculator} from "../author_generated/interface";
 
-loadLibrary("interface")
+loadLibrary("interface");
 function main() {
     let cal = makeCalculator(100);
     let num1 = 1;

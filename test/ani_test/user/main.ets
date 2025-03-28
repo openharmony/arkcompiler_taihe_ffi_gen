@@ -1,6 +1,6 @@
-import * as ani_test from "../author_generated/ani_test"
+import * as ani_test from "../author_generated/ani_test";
 
-loadLibrary("ani_test")
+loadLibrary("ani_test");
 
 function main() {
     // struct

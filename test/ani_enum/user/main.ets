@@ -1,6 +1,6 @@
-import * as EnumTest from "../author_generated/enum_test"
+import * as EnumTest from "../author_generated/enum_test";
 
-loadLibrary("ani_enum")
+loadLibrary("ani_enum");
 
 function test_nextEnum_with_color() {
     const color = EnumTest.Color.GREEN;

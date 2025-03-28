@@ -1,4 +1,4 @@
-import type image from "@ohos.multimedia.image"
+import type image from "@ohos.multimedia.image";
 
 interface BaseOverlay {
     getId(): string;

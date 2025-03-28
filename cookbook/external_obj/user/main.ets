@@ -1,6 +1,6 @@
-import * as extobj from "../author_generated/external_obj"
+import * as extobj from "../author_generated/external_obj";
 
-loadLibrary("external_obj")
+loadLibrary("external_obj");
 
 function main() {
     console.log(extobj.is_string("hello"));

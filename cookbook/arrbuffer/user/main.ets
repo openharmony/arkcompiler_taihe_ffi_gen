@@ -1,6 +1,6 @@
-import * as arrbuffer from "../author_generated/arrbuffer"
+import * as arrbuffer from "../author_generated/arrbuffer";
 
-loadLibrary("arrbuffer")
+loadLibrary("arrbuffer");
 function main() {
     let numbersU8: byte[] = [1, 1, 0, 0, 0];
     let arrbuf1: ArrayBuffer = new ArrayBuffer(numbersU8.length);

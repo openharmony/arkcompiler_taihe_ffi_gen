@@ -1,6 +1,6 @@
-import * as callback_lib from "../author_generated/callback"
+import * as callback_lib from "../author_generated/callback";
 
-loadLibrary("callback")
+loadLibrary("callback");
 
 function main() {
     callback_lib.cb_void_void(() => {

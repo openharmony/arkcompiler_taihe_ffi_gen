@@ -1,7 +1,7 @@
 import * as test_overload from "../author_generated/overload";
-import * as OverloadTest from "../author_generated/overload_test"
+import * as OverloadTest from "../author_generated/overload_test";
 
-loadLibrary("ani_overload")
+loadLibrary("ani_overload");
 
 
 function test_add_numbers() {

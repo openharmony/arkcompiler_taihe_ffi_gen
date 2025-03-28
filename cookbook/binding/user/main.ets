@@ -1,5 +1,5 @@
-import * as binding from "../author_generated/binding"
-loadLibrary("binding")
+import * as binding from "../author_generated/binding";
+loadLibrary("binding");
 function main() {
     let Color1: binding.Color = {R: 0, G: 255, B: 255};
     console.log("Color1 is " + Color1.R + " " + Color1.G + " " + Color1.B)

@@ -1,6 +1,6 @@
-import * as lib from "../author_generated/callbackTest"
+import * as lib from "../author_generated/callbackTest";
 
-loadLibrary("ani_callback")
+loadLibrary("ani_callback");
 
 function test_void_input_void_output() {
     lib.test_cb_v(() => {

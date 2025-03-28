@@ -1,6 +1,6 @@
-import * as async_test from "../author_generated/async"
+import * as async_test from "../author_generated/async";
 
-loadLibrary("async")
+loadLibrary("async");
 function main() {
     console.log("addSync: ", async_test.addSync(1, 2))
 

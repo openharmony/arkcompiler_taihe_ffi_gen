@@ -1,6 +1,6 @@
-import * as OptTest from "../author_generated/opt"
+import * as OptTest from "../author_generated/opt";
 
-loadLibrary("ani_optional")
+loadLibrary("ani_optional");
 
 function showOptionalInt() {
     OptTest.showOptionalInt(100 as int)

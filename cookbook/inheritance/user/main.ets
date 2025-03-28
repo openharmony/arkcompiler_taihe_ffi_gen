@@ -1,7 +1,7 @@
 import * as lib from "../author_generated/class_extends";
-import * as extends_inject from "../author_generated/extends_inject"
+import * as extends_inject from "../author_generated/extends_inject";
 
-loadLibrary("inheritance")
+loadLibrary("inheritance");
 
 
 function base_context_test() {

@@ -1,6 +1,6 @@
-import {maythrow} from "../author_generated/maythrow"
+import {maythrow} from "../author_generated/maythrow";
 
-loadLibrary("ani_maythrow")
+loadLibrary("ani_maythrow");
 
 function check_no_error() {
     let res = maythrow(1)

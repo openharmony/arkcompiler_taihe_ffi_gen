@@ -1,6 +1,6 @@
-import * as StructExtendTest from "../author_generated/struct_extend"
+import * as StructExtendTest from "../author_generated/struct_extend";
 
-loadLibrary("ani_struct_extend")
+loadLibrary("ani_struct_extend");
 
 function check_struct_A() {
     let ins_a: StructExtendTest.A = {param1: 100};

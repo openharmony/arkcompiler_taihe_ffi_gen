@@ -1,6 +1,6 @@
-import * as test from "../author_generated/opaque_test"
+import * as test from "../author_generated/opaque_test";
 
-loadLibrary("ani_opaque")
+loadLibrary("ani_opaque");
 
 class A {
     constructor() {}

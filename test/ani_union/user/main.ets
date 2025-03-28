@@ -1,7 +1,7 @@
-import * as UnionTest1 from "../author_generated/test_union"
-import * as UnionTest from "../author_generated/union_ani"
+import * as UnionTest1 from "../author_generated/test_union";
+import * as UnionTest from "../author_generated/union_ani";
 
-loadLibrary("ani_union")
+loadLibrary("ani_union");
 
 function test_printMyUnion_with_undefined() {
     let res = UnionTest.printMyUnion(undefined);

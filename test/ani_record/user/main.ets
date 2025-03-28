@@ -1,7 +1,7 @@
-import * as record_test from "../author_generated/record_test"
-import {Color, Data, ICpu, ICpuInfo, ICpuZero, Pair} from "../author_generated/record_test"
+import * as record_test from "../author_generated/record_test";
+import {Color, Data, ICpu, ICpuInfo, ICpuZero, Pair} from "../author_generated/record_test";
 
-loadLibrary("ani_record")
+loadLibrary("ani_record");
 
 class A {
     constructor() {}

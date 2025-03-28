@@ -1,7 +1,7 @@
-import * as namespace2Test from "../author_generated/my_ns"
-import * as namespaceTest from "../author_generated/ns_alltest"
+import * as namespace2Test from "../author_generated/my_ns";
+import * as namespaceTest from "../author_generated/ns_alltest";
 
-loadLibrary("ani_namespace")
+loadLibrary("ani_namespace");
 
 let nameInterfaceTest: namespaceTest.functiontest.testNameSpace =
     namespaceTest.functiontest.get_interface_NameSpace();

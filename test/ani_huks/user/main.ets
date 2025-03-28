@@ -1,6 +1,6 @@
-import * as huks from "../author_generated/huks"
+import * as huks from "../author_generated/huks";
 
-loadLibrary("ani_huks")
+loadLibrary("ani_huks");
 
 function main() {
     console.log("hello main huks");

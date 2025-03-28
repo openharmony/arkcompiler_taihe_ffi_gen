@@ -1,6 +1,6 @@
-import * as bigint_test from "../author_generated/bigint_test"
+import * as bigint_test from "../author_generated/bigint_test";
 
-loadLibrary("ani_bigint")
+loadLibrary("ani_bigint");
 
 function main() {
     console.info("bigint_test run start...");

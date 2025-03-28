@@ -1,5 +1,5 @@
-import * as lib from "../author_generated/session_test"
-loadLibrary("ani_session")
+import * as lib from "../author_generated/session_test";
+loadLibrary("ani_session");
 
 function test_func_a(my_iface: lib.IfaceD) {
     const result = my_iface.func_a();

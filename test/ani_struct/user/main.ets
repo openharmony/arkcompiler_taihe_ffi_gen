@@ -1,6 +1,6 @@
-import * as StructTest from "../author_generated/struct_test"
+import * as StructTest from "../author_generated/struct_test";
 
-loadLibrary("ani_struct")
+loadLibrary("ani_struct");
 
 function main() {
     console.log("run main ... StructTest ...")

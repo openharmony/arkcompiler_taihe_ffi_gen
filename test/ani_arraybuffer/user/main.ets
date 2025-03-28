@@ -1,6 +1,6 @@
-import * as arraybuffer from "../author_generated/arraybuffer"
+import * as arraybuffer from "../author_generated/arraybuffer";
 
-loadLibrary("ani_arraybuffer")
+loadLibrary("ani_arraybuffer");
 
 function arraybuffer_input() {
     // case 1 : test sumArrayu8，The input parameter is ArrayBuffer, and the

@@ -1,4 +1,4 @@
-import * as async_test from "../author_generated/async_test"
+import * as async_test from "../author_generated/async_test";
 loadLibrary("ani_async");
 
 function main() {
