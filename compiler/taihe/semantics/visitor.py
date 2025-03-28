@@ -382,7 +382,7 @@ class RecursiveDeclVisitor(DeclVisitor[None]):
 
         return self.visit_decl(d)
 
-    ### Type (Generic) ###
+    ### Type Decl ###
 
     @override
     def visit_type_decl(self, d: TypeDecl) -> None:

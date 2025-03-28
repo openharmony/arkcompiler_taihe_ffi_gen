@@ -46,7 +46,7 @@ inline bool same_impl(adl_helper_t, data_view lhs, data_view rhs) {
 }
 
 inline std::size_t hash_impl(adl_helper_t, data_view val) {
-  return (std::size_t)val.data_ptr;
+  return reinterpret_cast<std::size_t>(val.data_ptr);
 }
 }  // namespace taihe::core
 
@@ -137,19 +137,19 @@ struct impl_view {
                 sizeof(IdMapItem)) +
                ... + 1)] = {};
   } rtti = [] {
-    struct typeinfo_t rtti = {0, &del_data_ptr<Impl>};
+    struct typeinfo_t inner_rtti = {0, &del_data_ptr<Impl>};
     (
         [&] {
           for (std::size_t j = 0;
                j < sizeof(InterfaceHolders::template idmap_impl<Impl>) /
                        sizeof(IdMapItem);
-               rtti.len++, j++) {
-            rtti.idmap[rtti.len] =
+               inner_rtti.len++, j++) {
+            inner_rtti.idmap[inner_rtti.len] =
                 InterfaceHolders::template idmap_impl<Impl>[j];
           }
         }(),
         ...);
-    return rtti;
+    return inner_rtti;
   }();
 
   template <void const* InterfaceID>
