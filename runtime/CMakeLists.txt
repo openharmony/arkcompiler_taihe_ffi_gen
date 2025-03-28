@@ -20,17 +20,17 @@ set(TH_SOURCE src/string.c
               src/object.c 
               src/runtime.cpp)
 
-add_library(th_runtime STATIC ${TH_SOURCE})
+add_library(taihe_runtime STATIC ${TH_SOURCE})
 
-set_target_properties(th_runtime PROPERTIES
+set_target_properties(taihe_runtime PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
 )
 
-target_include_directories(th_runtime PUBLIC 
+target_include_directories(taihe_runtime PUBLIC 
     include 
     ../compiler/.panda_vm/package/ohos_arm64/include/plugins/ets/runtime/ani)
 
-target_compile_options(th_runtime PRIVATE -fPIC)
+target_compile_options(taihe_runtime PRIVATE -fPIC)
 
 # Add test directory
 if (ENABLE_RT_TEST)

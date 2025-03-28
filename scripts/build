@@ -8,7 +8,7 @@ build-runtime-libs() {
     echo "Building the runtime"
     local build_dir="runtime/out" arch="$(uname -m)"
 
-    libtaihe="lib/libth_runtime.a"
+    libtaihe="lib/libtaihe_runtime.a"
 
     cmake -S runtime -B "$build_dir" -G Ninja
     cmake --build "$build_dir"
@@ -33,6 +33,12 @@ build-compiler() {
     tar xf taihe-*.gz
     echo "Copying the compiler"
     mkdir -p "$compiler_dir/taihe" && cp -r taihe-*/taihe "$compiler_dir"
+
+    site_packages_dir=$(python3 -c "import site; print(site.getsitepackages()[0])")
+    mkdir -p "$compiler_dir/lib"
+    cp -r "$site_packages_dir/antlr4" "$compiler_dir/lib/"
+    cp -r "$site_packages_dir/typing_extensions.py" "$compiler_dir/lib/"
+
     popd 2>/dev/null
 
     echo "Copying the compiler wrapper"
@@ -41,7 +47,8 @@ build-compiler() {
 #!/usr/bin/bash -eu
 
 export TAIHE_ROOT="$(realpath $(dirname "$0")/..)"
-export PYTHONPATH="$TAIHE_ROOT/lib/taihe/compiler"
+export PYTHONPATH="${TAIHE_ROOT}/lib/taihe/compiler:${TAIHE_ROOT}/lib/taihe/compiler/lib:${PYTHONPATH:-}"
+
 exec python3 -m taihe "$@"
 EOF
     chmod 0755 "$taihec"
