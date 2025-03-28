@@ -1,8 +1,0 @@
-function setTimeout(cb: () => void, ms: u64): void;
-
-interface IPromiseStringString {
-    resolve(val: String): void;
-    reject(err: String): void;
-}
-
-function getInputWithTimeout(promise: IPromiseStringString, ms: u64): void;

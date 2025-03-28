@@ -21,9 +21,3 @@ add_library(taihe-rt SHARED
 )
 
 target_include_directories(taihe-rt PUBLIC include)
-
-# Add test directory
-if (ENABLE_RT_TEST)
-  enable_testing()
-  add_subdirectory(test)
-endif()
