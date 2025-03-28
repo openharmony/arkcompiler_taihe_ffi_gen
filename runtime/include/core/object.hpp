@@ -137,19 +137,19 @@ struct impl_view {
                 sizeof(IdMapItem)) +
                ... + 1)] = {};
   } rtti = [] {
-    struct typeinfo_t inner_rtti = {0, &del_data_ptr<Impl>};
+    struct typeinfo_t info = {0, &del_data_ptr<Impl>};
     (
         [&] {
           for (std::size_t j = 0;
                j < sizeof(InterfaceHolders::template idmap_impl<Impl>) /
                        sizeof(IdMapItem);
-               inner_rtti.len++, j++) {
-            inner_rtti.idmap[inner_rtti.len] =
+               info.len++, j++) {
+            info.idmap[info.len] =
                 InterfaceHolders::template idmap_impl<Impl>[j];
           }
         }(),
         ...);
-    return inner_rtti;
+    return info;
   }();
 
   template <void const* InterfaceID>

@@ -4,7 +4,7 @@ The framework ensures that analyses are uniquely identified by their type and ar
 avoiding redundant computation or memory usage.
 """
 
-from abc import ABC
+from abc import ABC, abstractmethod
 from collections.abc import Hashable
 from dataclasses import dataclass
 from typing import Generic, NoReturn, TypeVar
@@ -33,6 +33,7 @@ class AbstractAnalysis(ABC, Generic[P]):
             f"Cannot instantiate {cls.__name__}. Use `{cls.__name__}.get` instead."
         )
 
+    @abstractmethod
     def __init__(self, am: "AnalysisManager", arg: P) -> None:
         """Initialize analysis with hashable argument."""
 
