@@ -35,7 +35,7 @@ SH_COPYRIGHT = """# Copyright (c) 2025 Huawei Device Co., Ltd.
 """
 
 
-CLANG_FORMAT_STYLE = """BasedOnStyle: Google
+CLANG_FORMAT_STYLE = r"""BasedOnStyle: Google
 ---
 Language: JavaScript
 JavaScriptQuotes: Double
@@ -63,7 +63,7 @@ AlwaysBreakAfterReturnType: None
 AlwaysBreakBeforeMultilineStrings: true
 AlwaysBreakTemplateDeclarations: Yes
 BreakBeforeBinaryOperators: NonAssignment
-BreakBeforeBraces: Attach
+BreakBeforeBraces: Allman
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializers: BeforeComma
 BreakInheritanceList: BeforeComma
@@ -86,7 +86,7 @@ IndentCaseLabels: true
 IndentPPDirectives: None
 IndentWidth: 4
 NamespaceIndentation: None
-PointerAlignment: Left
+PointerAlignment: Right
 ReflowComments: true
 SortUsingDeclarations: true
 SpaceAfterCStyleCast: false
@@ -114,6 +114,9 @@ def should_ignore(file: str) -> bool:
     if file == ".clang-format":
         return True
 
+    if file == "compiler/.pyre_configuration" or file == "compiler/.watchmanconfig":
+        return True
+
     if file.startswith(".git") or "/.git" in file:
         return True
 
@@ -122,7 +125,7 @@ def should_ignore(file: str) -> bool:
 
 def format_code(file_path):
     subprocess.run(
-        ["clang-format", "-i", f"-style=file", file_path],
+        ["clang-format", "-i", "-style=file", file_path],
         check=True,
     )
 
