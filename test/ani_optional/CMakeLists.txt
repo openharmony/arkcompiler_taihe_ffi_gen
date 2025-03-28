@@ -1,9 +1,11 @@
 set(IDL_FILES
     "${CMAKE_CURRENT_LIST_DIR}/idl/opt.taihe"
+    "${CMAKE_CURRENT_LIST_DIR}/idl/optional.taihe"
 )
 
 set(GEN_ETS_FILES
     "opt.ets"
+    "optional.ets"
 )
 
 set(USER_ETS_FILES
