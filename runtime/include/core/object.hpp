@@ -46,7 +46,7 @@ inline bool same_impl(adl_helper_t, data_view lhs, data_view rhs) {
 }
 
 inline std::size_t hash_impl(adl_helper_t, data_view val) {
-  return (std::size_t)val.data_ptr;
+  return reinterpret_cast<std::size_t>(val.data_ptr);
 }
 }  // namespace taihe::core
 

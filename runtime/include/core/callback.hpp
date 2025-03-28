@@ -115,7 +115,7 @@ inline bool same_impl(adl_helper_t, callback_view<Return(Params...)> lhs,
 template <typename Return, typename... Params>
 inline std::size_t hash_impl(adl_helper_t,
                              callback_view<Return(Params...)> val) {
-  return (std::size_t)val.data_ptr;
+  return reinterpret_cast<std::size_t>(val.data_ptr);
 }
 
 template <typename Return, typename... Params>

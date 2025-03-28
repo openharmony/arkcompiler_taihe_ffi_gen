@@ -3,6 +3,8 @@
 #include <taihe/common.hpp>
 #include <utility>
 
+#define MAP_GROWTH_FACTOR 2
+
 namespace taihe::core {
 template <typename K, typename V>
 struct map_view;
@@ -69,7 +71,7 @@ struct map_view {
     m_handle->size++;
     std::size_t required_cap = m_handle->size;
     if (required_cap >= m_handle->cap) {
-      reserve(required_cap * 2);
+      reserve(required_cap * MAP_GROWTH_FACTOR);
     }
     return &item->val;
   }
@@ -328,7 +330,7 @@ inline bool same_impl(adl_helper_t, map_view<K, V> lhs, map_view<K, V> rhs) {
 
 template <typename K, typename V>
 inline std::size_t hash_impl(adl_helper_t, map_view<K, V> val) {
-  return (std::size_t)val.m_handle;
+  return reinterpret_cast<std::size_t>(val.m_handle);
 }
 
 template <typename K, typename V>
@@ -346,3 +348,7 @@ struct as_param<map<K, V>> {
   using type = map_view<K, V>;
 };
 }  // namespace taihe::core
+
+#ifdef MAP_GROWTH_FACTOR
+#undef MAP_GROWTH_FACTOR
+#endif

@@ -4,6 +4,8 @@
 #include <taihe/common.hpp>
 #include <utility>
 
+#define VEC_GROWTH_FACTOR 2
+
 namespace taihe::core {
 template <typename T>
 struct vector_view;
@@ -40,7 +42,7 @@ struct vector_view {
   T& emplace_back(Args&&... args) const {
     std::size_t required_cap = m_handle->len + 1;
     if (required_cap > m_handle->cap) {
-      this->reserve(std::max(required_cap, m_handle->cap * 2));
+      this->reserve(std::max(required_cap, m_handle->cap * VEC_GROWTH_FACTOR));
     }
     T* location = &m_handle->buffer[m_handle->len];
     new (location) T{std::forward<Args>(args)...};
@@ -139,7 +141,7 @@ inline bool same_impl(adl_helper_t, vector_view<T> lhs, vector_view<T> rhs) {
 
 template <typename T>
 inline std::size_t hash_impl(adl_helper_t, vector_view<T> val) {
-  return (std::size_t)val.m_handle;
+  return reinterpret_cast<std::size_t>(val.m_handle);
 }
 
 template <typename T>
@@ -157,3 +159,7 @@ struct as_param<vector<T>> {
   using type = vector_view<T>;
 };
 }  // namespace taihe::core
+
+#ifdef VEC_GROWTH_FACTOR
+#undef VEC_GROWTH_FACTOR
+#endif

@@ -3,6 +3,8 @@
 #include <taihe/common.hpp>
 #include <utility>
 
+#define SET_GROWTH_FACTOR 2
+
 namespace taihe::core {
 template <typename K>
 struct set_view;
@@ -64,7 +66,7 @@ struct set_view {
     m_handle->size++;
     std::size_t required_cap = m_handle->size;
     if (required_cap >= m_handle->cap) {
-      reserve(required_cap * 2);
+      reserve(required_cap * SET_GROWTH_FACTOR);
     }
     return true;
   }
@@ -259,7 +261,7 @@ inline bool same_impl(adl_helper_t, set_view<K> lhs, set_view<K> rhs) {
 
 template <typename K>
 inline std::size_t hash_impl(adl_helper_t, set_view<K> val) {
-  return (std::size_t)val.m_handle;
+  return reinterpret_cast<std::size_t>(val.m_handle);
 }
 
 template <typename K>
@@ -277,3 +279,7 @@ struct as_param<set<K>> {
   using type = set_view<K>;
 };
 }  // namespace taihe::core
+
+#ifdef SET_GROWTH_FACTOR
+#undef SET_GROWTH_FACTOR
+#endif

@@ -153,23 +153,23 @@ struct array : public array_view<cpp_owner_t> {
 
   template <typename C>
   array(copy_data_t, C* data, size_type size) noexcept
-      : array((cpp_owner_t*)malloc(size * sizeof(cpp_owner_t)), size) {
+      : array(reinterpret_cast<cpp_owner_t*>(malloc(size * sizeof(cpp_owner_t))), size) {
     std::uninitialized_copy_n(data, size, this->m_data);
   }
 
   template <typename C>
   array(move_data_t, C* data, size_type size) noexcept
-      : array((cpp_owner_t*)malloc(size * sizeof(cpp_owner_t)), size) {
+      : array(reinterpret_cast<cpp_owner_t*>(malloc(size * sizeof(cpp_owner_t))), size) {
     std::uninitialized_move_n(data, size, this->m_data);
   }
 
   array(size_type size)
-      : array((cpp_owner_t*)malloc(size * sizeof(cpp_owner_t)), size) {
+      : array(reinterpret_cast<cpp_owner_t*>(malloc(size * sizeof(cpp_owner_t))), size) {
     std::uninitialized_default_construct_n(this->m_data, size);
   }
 
   array(size_type size, const cpp_owner_t& value)
-      : array((cpp_owner_t*)malloc(size * sizeof(cpp_owner_t)), size) {
+      : array(reinterpret_cast<cpp_owner_t*>(malloc(size * sizeof(cpp_owner_t))), size) {
     std::uninitialized_fill_n(this->m_data, size, value);
   }
 
@@ -212,8 +212,9 @@ struct array : public array_view<cpp_owner_t> {
 template <typename cpp_owner_t>
 inline std::size_t hash_impl(adl_helper_t, array_view<cpp_owner_t> val) {
   std::size_t seed = 0;
+  static constexpr std::size_t GOLDEN_RATIO_CONSTANT = 0x9e3779b9;
   for (std::size_t i = 0; i < val.size(); i++) {
-    seed ^= hash(val[i]) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    seed ^= hash(val[i]) + GOLDEN_RATIO_CONSTANT + (seed << 6) + (seed >> 2);
   }
   return seed;
 }
