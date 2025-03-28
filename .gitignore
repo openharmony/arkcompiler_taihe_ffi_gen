@@ -16,6 +16,8 @@ compiler/taihe/parse/antlr
 
 compiler/.panda_vm
 
+hw_exported/
+
 # Generated directories
 **/*generated
 
