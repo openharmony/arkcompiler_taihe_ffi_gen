@@ -25,8 +25,8 @@ class DeclRedefNote(DiagNote):
     prev: "NamedDecl"
 
     def __init__(self, prev: "NamedDecl"):
+        super().__init__(loc=prev.loc)
         self.prev = prev
-        self.loc = prev.loc
 
     @property
     @override
@@ -40,9 +40,9 @@ class DeclRedefError(DiagError):
     current: "NamedDecl"
 
     def __init__(self, prev: "NamedDecl", current: "NamedDecl"):
+        super().__init__(loc=current.loc)
         self.prev = prev
         self.current = current
-        self.loc = current.loc
 
     def notes(self):
         if self.prev.loc:
@@ -132,8 +132,8 @@ class SymbolConflictWithNamespaceError(DiagError):
     pkg: "PackageDecl"
 
     def __init__(self, decl: "PackageLevelDecl", pkg: "PackageDecl"):
+        super().__init__(loc=decl.loc)
         self.decl = decl
-        self.loc = decl.loc
         self.pkg = pkg
 
     @property
@@ -147,9 +147,9 @@ class TypeUsageError(DiagError):
     ty: "Type"
 
     def __init__(self, ty_ref: "TypeRefDecl"):
+        super().__init__(loc=ty_ref.loc)
         assert ty_ref.resolved_ty
         self.ty = ty_ref.resolved_ty
-        self.loc = ty_ref.loc
 
     @property
     @override
@@ -163,7 +163,7 @@ class EnumValueError(DiagError):
     enum: "EnumDecl"
 
     def __init__(self, item: "EnumItemDecl", enum: "EnumDecl"):
-        self.loc = item.loc
+        super().__init__(loc=item.loc)
         self.item = item
         self.enum = enum
 
@@ -210,7 +210,7 @@ class RecursiveReferenceNote(DiagNote):
         self,
         last: tuple["TypeDecl", "TypeRefDecl"],
     ):
-        self.loc = last[1].loc
+        super().__init__(loc=last[1].loc)
         self.decl = last[0]
 
     @property
@@ -229,7 +229,7 @@ class RecursiveReferenceError(DiagError):
         last: tuple["TypeDecl", "TypeRefDecl"],
         other: list[tuple["TypeDecl", "TypeRefDecl"]],
     ):
-        self.loc = last[1].loc
+        super().__init__(loc=last[1].loc)
         self.decl = last[0]
         self.other = other
 

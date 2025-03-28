@@ -19,6 +19,7 @@ class OutputBase(ABC, Generic[P]):
     Created, managed and saved to file via an `OutputManager`.
     """
 
+    @abstractmethod  # pyre-ignore
     def __init__(
         self,
         *args: P.args,
