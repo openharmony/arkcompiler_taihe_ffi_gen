@@ -1288,14 +1288,15 @@ class CallbackTypeANIInfo(AbstractAnalysis[CallbackType], AbstractTypeANIInfo):
             return_ty_as_owner = return_ty_cpp_info.as_owner
         else:
             return_ty_as_owner = "void"
+        cpp_impl_cb_name = f"{cpp_result}_cpp_impl_cb"
         target.write(
-            f"{' ' * offset}struct cpp_impl_cb {{\n"
+            f"{' ' * offset}struct {cpp_impl_cb_name} {{\n"
             f"{' ' * offset}    ani_env* env;\n"
             f"{' ' * offset}    ani_object ref;\n"
-            f"{' ' * offset}    cpp_impl_cb(ani_env* env, ani_object obj): env(env) {{\n"
+            f"{' ' * offset}    {cpp_impl_cb_name}(ani_env* env, ani_object obj): env(env) {{\n"
             f"{' ' * offset}        env->GlobalReference_Create(obj, reinterpret_cast<ani_ref*>(&ref));\n"
             f"{' ' * offset}    }}\n"
-            f"{' ' * offset}    ~cpp_impl_cb() {{\n"
+            f"{' ' * offset}    ~{cpp_impl_cb_name}() {{\n"
             f"{' ' * offset}        env->GlobalReference_Delete(ref);\n"
             f"{' ' * offset}    }}\n"
             f"{' ' * offset}    {return_ty_as_owner} operator()({params_str}) {{\n"
@@ -1324,7 +1325,7 @@ class CallbackTypeANIInfo(AbstractAnalysis[CallbackType], AbstractTypeANIInfo):
         target.write(
             f"{' ' * offset}    }}\n"
             f"{' ' * offset}}};\n"
-            f"{' ' * offset}auto {cpp_result} = {cb_cpp_info.as_owner}::from<cpp_impl_cb>({env}, {ani_value});\n"
+            f"{' ' * offset}auto {cpp_result} = {cb_cpp_info.as_owner}::from<{cpp_impl_cb_name}>({env}, {ani_value});\n"
         )
 
     @override
