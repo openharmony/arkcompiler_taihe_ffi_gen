@@ -152,34 +152,35 @@ struct array : public array_view<cpp_owner_t> {
       : array_view<cpp_owner_t>(data, size) {}  // main constructor
 
   template <typename C>
-  array(C* data, size_type size, copy_data_t) noexcept
+  array(copy_data_t, C* data, size_type size) noexcept
       : array((cpp_owner_t*)malloc(size * sizeof(cpp_owner_t)), size) {
     std::uninitialized_copy_n(data, size, this->m_data);
   }
 
   template <typename C>
-  array(C* data, size_type size, move_data_t) noexcept
+  array(move_data_t, C* data, size_type size) noexcept
       : array((cpp_owner_t*)malloc(size * sizeof(cpp_owner_t)), size) {
     std::uninitialized_move_n(data, size, this->m_data);
   }
 
-  template <typename value_type>
-  array(std::initializer_list<value_type> value) noexcept
-      : array(value.begin(), value.size(), copy_data_t{}) {}
-
-  template <typename... Args>
-  static array make(size_type size, Args&&... args) {
-    pointer data = (cpp_owner_t*)malloc(size * sizeof(cpp_owner_t));
-    std::uninitialized_fill_n(data, size,
-                              cpp_owner_t(std::forward<Args>(args)...));
-    return array(data, size);
+  array(size_type size, const cpp_owner_t& value)
+      : array((cpp_owner_t*)malloc(size * sizeof(cpp_owner_t)), size) {
+    std::uninitialized_fill_n(this->m_data, size, value);
   }
 
+  static array make(size_type size, const cpp_owner_t& value) {
+    return array(size, value);
+  }
+
+  template <typename value_type>
+  array(std::initializer_list<value_type> value) noexcept
+      : array(copy_data_t{}, value.begin(), value.size()) {}
+
   array(array_view<cpp_owner_t> const& other)
-      : array(other.data(), other.size(), copy_data_t{}) {}
+      : array(copy_data_t{}, other.data(), other.size()) {}
 
   array(array<cpp_owner_t> const& other)
-      : array(other.data(), other.size(), copy_data_t{}) {}
+      : array(copy_data_t{}, other.data(), other.size()) {}
 
   array(array<cpp_owner_t>&& other)
       : array(std::exchange(other.m_data, nullptr),

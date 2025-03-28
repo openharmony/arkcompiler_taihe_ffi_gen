@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdlib>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <taihe/common.hpp>
 #include <utility>
@@ -18,31 +19,51 @@ struct optional;
 
 template <typename cpp_owner_t>
 struct optional_view {
-  optional_view(cpp_owner_t const* handle) noexcept
+  optional_view(cpp_owner_t* handle) noexcept
       : m_handle(handle) {}  // main constructor
 
-  optional_view() noexcept : m_handle() {}
+  optional_view() noexcept : optional_view(nullptr) {}
+
+  optional_view(std::nullopt_t) : optional_view(nullptr) {}
+
+  explicit operator bool() const { return m_handle; }
+
+  bool has_value() const { return m_handle; }
 
   cpp_owner_t const* operator->() const { return m_handle; }
 
   cpp_owner_t const& operator*() const { return *m_handle; }
 
-  explicit operator bool() const { return m_handle; }
+  cpp_owner_t const& value() const { return *m_handle; }
+
+  cpp_owner_t value_or(cpp_owner_t&& default_value) const {
+    if (m_handle) {
+      return *m_handle;
+    } else {
+      return std::move(default_value);
+    }
+  }
 
  protected:
-  cpp_owner_t const* m_handle;
+  cpp_owner_t* m_handle;
 };
 
 template <typename cpp_owner_t>
 struct optional : public optional_view<cpp_owner_t> {
-  optional(cpp_owner_t const* handle) noexcept
+  optional(cpp_owner_t* handle) noexcept
       : optional_view<cpp_owner_t>(handle) {}  // main constructor
 
-  optional() noexcept : optional_view<cpp_owner_t>() {}
+  optional() noexcept : optional(nullptr) {}
+
+  optional(std::nullopt_t) : optional(nullptr) {}
+
+  template <typename... Args>
+  optional(std::in_place_t, Args&&... args)
+      : optional(new cpp_owner_t(std::forward<Args>(args)...)) {}
 
   template <typename... Args>
   static optional make(Args&&... args) {
-    return optional(new cpp_owner_t(std::forward<Args>(args)...));
+    return optional(std::in_place_t{}, std::forward<Args>(args)...);
   }
 
   optional(optional_view<cpp_owner_t> const& other)

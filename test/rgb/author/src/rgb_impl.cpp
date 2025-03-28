@@ -107,7 +107,7 @@ string colorToStringImpl(ColorOrRGBOrName const& color) {
 
 array<IBase> exchangeArrImpl(array_view<IBase> dst, array_view<IBase> src) {
   auto n = std::min(dst.size(), src.size());
-  auto res = array<IBase>(dst.data(), n, move_data_t{});
+  auto res = array<IBase>(move_data_t{}, dst.data(), n);
   for (std::size_t i = 0; i < n; i++) {
     dst[i] = src[i];
   }
