@@ -482,5 +482,5 @@ class AstConverter(ExprEvaluator):
 
     def convert(self) -> PackageDecl:
         """Converts the whole source code buffer to a package."""
-        ast = generate_ast(self.source, self.diag)
-        return self.visit_Spec(ast)
+        ast_nodes = generate_ast(self.source, self.diag)
+        return self.visit_Spec(ast_nodes)

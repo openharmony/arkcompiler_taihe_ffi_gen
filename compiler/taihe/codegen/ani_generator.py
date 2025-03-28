@@ -48,11 +48,9 @@ from taihe.semantics.types import (
     OpaqueType,
     OptionalType,
     ScalarType,
-    # SetType,
     StringType,
     StructType,
     Type,
-    # VectorType,
     UnionType,
 )
 from taihe.semantics.visitor import TypeVisitor
@@ -1141,11 +1139,6 @@ class OptionalTypeANIInfo(AbstractAnalysis[OptionalType], AbstractTypeANIInfo):
         )
 
 
-# class VectorTypeANIInfo(AbstractAnalysis[VectorType], AbstractTypeANIInfo):
-#     def __init__(self, am: AnalysisManager, t: VectorType) -> None:
-#         pass
-
-
 class MapTypeANIInfo(AbstractAnalysis[MapType], AbstractTypeANIInfo):
     def __init__(self, am: AnalysisManager, t: MapType) -> None:
         AbstractTypeANIInfo.__init__(self, am, t)
@@ -1237,11 +1230,6 @@ class MapTypeANIInfo(AbstractAnalysis[MapType], AbstractTypeANIInfo):
             f"{' ' * offset}    env->Object_CallMethodByName_Void({ani_result}, \"$_set\", nullptr, {ani_key}, {ani_val});\n"
             f"{' ' * offset}}}\n"
         )
-
-
-# class SetTypeANIInfo(AbstractAnalysis[SetType], AbstractTypeANIInfo):
-#     def __init__(self, am: AnalysisManager, t: SetType) -> None:
-#         pass
 
 
 class CallbackTypeANIInfo(AbstractAnalysis[CallbackType], AbstractTypeANIInfo):
@@ -1389,17 +1377,9 @@ class TypeANIInfo(TypeVisitor[AbstractTypeANIInfo]):
     def visit_opaque_type(self, t: OpaqueType) -> AbstractTypeANIInfo:
         return OpaqueTypeANIInfo.get(self.am, t)
 
-    # @override
-    # def visit_vector_type(self, t: VectorType) -> AbstractTypeANIInfo:
-    #     return VectorTypeANIInfo.get(self.am, t)
-
     @override
     def visit_map_type(self, t: MapType) -> AbstractTypeANIInfo:
         return MapTypeANIInfo.get(self.am, t)
-
-    # @override
-    # def visit_set_type(self, t: SetType) -> AbstractTypeANIInfo:
-    #     return SetTypeANIInfo.get(self.am, t)
 
     @override
     def visit_callback_type(self, t: CallbackType) -> AbstractTypeANIInfo:

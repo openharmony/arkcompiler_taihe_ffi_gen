@@ -72,12 +72,7 @@ class _PrettyPrinter(RecursiveDeclVisitor):
     def get_value(self, d: bool | str | float | int) -> str:
         if isinstance(d, bool):
             return "TRUE" if d else "FALSE"
-        if isinstance(d, int):
-            return dumps(d)
-        if isinstance(d, float):
-            return dumps(d)
-        if isinstance(d, str):
-            return dumps(d)
+        return dumps(d)
 
     def as_keyword(self, s) -> str:
         return f"{AnsiStyle.CYAN}{s}{AnsiStyle.RESET}"
