@@ -43,10 +43,10 @@ void fromStructSync_impl(::async_test::Data const& data) {
   return {a, b, c};
 }
 
-void printSync() { std::cout << "print Sync" << std::endl; }
+void PrintSync() { std::cout << "print Sync" << std::endl; }
 
 TH_EXPORT_CPP_API_addSync(add_impl);
 TH_EXPORT_CPP_API_getIBase(getIBase_impl);
 TH_EXPORT_CPP_API_fromStructSync(fromStructSync_impl);
 TH_EXPORT_CPP_API_toStructSync(toStructSync_impl);
-TH_EXPORT_CPP_API_printSync(printSync);
+TH_EXPORT_CPP_API_PrintSync(PrintSync);

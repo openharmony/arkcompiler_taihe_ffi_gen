@@ -20,7 +20,7 @@ function getIBase(): IBase;
 @static("IBase")
 @gen_async("printAsync")
 @gen_promise("printPromise")
-function printSync(): void;
+function PrintSync(): void;
 
 struct Data {
   a: String;

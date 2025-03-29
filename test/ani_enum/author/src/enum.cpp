@@ -12,7 +12,8 @@ static constexpr std::size_t WEEKDAY_COUNT = 7;
 }
 void showEnum(::enum_test::Color color) { std::cout << color << std::endl; }
 ::enum_test::Weekday nextEnumWeekday(::enum_test::Weekday day) {
-  return (::enum_test::Weekday::key_t)(((int)day.get_key() + 1) % WEEKDAY_COUNT);
+  return (::enum_test::Weekday::key_t)(((int)day.get_key() + 1) %
+                                       WEEKDAY_COUNT);
 }
 void showEnumWeekday(::enum_test::Weekday day) {
   std::string dayStr;

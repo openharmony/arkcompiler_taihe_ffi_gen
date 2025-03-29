@@ -6,31 +6,31 @@
 using namespace taihe::core;
 namespace {
 
-int8_t add_i8(int8_t a, int8_t b) { return a + b; }
-int16_t sub_i16(int16_t a, int16_t b) { return a - b; }
-int32_t mul_i32(int32_t a, int32_t b) { return a * b; }
-int64_t div_i64(int64_t a, int64_t b) {
+int8_t AddI8(int8_t a, int8_t b) { return a + b; }
+int16_t SubI16(int16_t a, int16_t b) { return a - b; }
+int32_t MulI32(int32_t a, int32_t b) { return a * b; }
+int64_t DivI64(int64_t a, int64_t b) {
   if (b == 0) {
     taihe::core::set_error("some error happen");
     return -1;
   }
   return a / b;
 }
-float add_f32(float a, float b) { return a + b; }
-float sub_f32(float a, float b) { return a - b; }
-double add_f64(float a, double b) { return a + b; }
-double sub_f64(float a, double b) { return a - b; }
-double mul_f64(float a, float b) { return a * b; }
-bool check(bool a, bool b) {
+float AddF32(float a, float b) { return a + b; }
+float SubF32(float a, float b) { return a - b; }
+double AddF64(float a, double b) { return a + b; }
+double SubF64(float a, double b) { return a - b; }
+double MulF64(float a, float b) { return a * b; }
+bool Check(bool a, bool b) {
   if (a && b) {
     return true;
   }
   return false;
 }
-string concatx(string_view a, string_view b) {
+string Concatx(string_view a, string_view b) {
   return taihe::core::concat(a, b);
 }
-string splitx(string_view a, int32_t n) {
+string Splitx(string_view a, int32_t n) {
   int32_t size = a.size();
   if (n >= size) {
     n = size;
@@ -39,21 +39,21 @@ string splitx(string_view a, int32_t n) {
   }
   return taihe::core::substr(a, 0, n);
 }
-int32_t to_i32(string_view a) { return std::atoi(a.c_str()); }
-string from_i32(int32_t a) { return taihe::core::to_string(a); }
+int32_t ToI32(string_view a) { return std::atoi(a.c_str()); }
+string FromI32(int32_t a) { return taihe::core::to_string(a); }
 }  // namespace
 
-TH_EXPORT_CPP_API_add_i8(add_i8);
-TH_EXPORT_CPP_API_sub_i16(sub_i16);
-TH_EXPORT_CPP_API_mul_i32(mul_i32);
-TH_EXPORT_CPP_API_div_i64(div_i64);
-TH_EXPORT_CPP_API_add_f32(add_f32);
-TH_EXPORT_CPP_API_sub_f32(sub_f32);
-TH_EXPORT_CPP_API_add_f64(add_f64);
-TH_EXPORT_CPP_API_sub_f64(sub_f64);
-TH_EXPORT_CPP_API_mul_f64(mul_f64);
-TH_EXPORT_CPP_API_check(check);
-TH_EXPORT_CPP_API_concatx(concatx);
-TH_EXPORT_CPP_API_splitx(splitx);
-TH_EXPORT_CPP_API_to_i32(to_i32);
-TH_EXPORT_CPP_API_from_i32(from_i32);
+TH_EXPORT_CPP_API_AddI8(AddI8);
+TH_EXPORT_CPP_API_SubI16(SubI16);
+TH_EXPORT_CPP_API_MulI32(MulI32);
+TH_EXPORT_CPP_API_DivI64(DivI64);
+TH_EXPORT_CPP_API_AddF32(AddF32);
+TH_EXPORT_CPP_API_SubF32(SubF32);
+TH_EXPORT_CPP_API_AddF64(AddF64);
+TH_EXPORT_CPP_API_SubF64(SubF64);
+TH_EXPORT_CPP_API_MulF64(MulF64);
+TH_EXPORT_CPP_API_Check(Check);
+TH_EXPORT_CPP_API_Concatx(Concatx);
+TH_EXPORT_CPP_API_Splitx(Splitx);
+TH_EXPORT_CPP_API_ToI32(ToI32);
+TH_EXPORT_CPP_API_FromI32(FromI32);
