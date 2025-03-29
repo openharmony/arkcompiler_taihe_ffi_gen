@@ -138,6 +138,7 @@ ANI_ARRAYBUFFER = ANIType(hint="arraybuffer", base=ANI_REF)
 
 class PackageANIInfo(AbstractAnalysis[PackageDecl]):
     def __init__(self, am: AnalysisManager, p: PackageDecl) -> None:
+        super().__init__(am, p)
         self.am = am
 
         self.header = f"{p.name}.ani.hpp"
@@ -190,6 +191,7 @@ class PackageANIInfo(AbstractAnalysis[PackageDecl]):
 
 class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
     def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
+        super().__init__(am, f)
         self.f = f
 
         p = f.node_parent
@@ -259,6 +261,7 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
 
 class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
     def __init__(self, am: AnalysisManager, f: IfaceMethodDecl) -> None:
+        super().__init__(am, f)
         self.f = f
 
         d = f.node_parent
@@ -364,7 +367,8 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
 
 
 class EnumANIInfo(AbstractAnalysis[EnumDecl]):
-    def __init__(self, am: AnalysisManager, d: UnionDecl) -> None:
+    def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
+        super().__init__(am, d)
         p = d.node_parent
         assert p
 
@@ -380,6 +384,7 @@ class EnumANIInfo(AbstractAnalysis[EnumDecl]):
 
 class UnionANIInfo(AbstractAnalysis[UnionDecl]):
     def __init__(self, am: AnalysisManager, d: UnionDecl) -> None:
+        super().__init__(am, d)
         p = d.node_parent
         assert p
         segments = [*p.segments, d.name]
@@ -408,6 +413,7 @@ class UnionANIInfo(AbstractAnalysis[UnionDecl]):
 
 class StructANIInfo(AbstractAnalysis[StructDecl]):
     def __init__(self, am: AnalysisManager, d: StructDecl) -> None:
+        super().__init__(am, d)
         p = d.node_parent
         assert p
         segments = [*p.segments, d.name]
@@ -455,6 +461,7 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
 
 class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
     def __init__(self, am: AnalysisManager, d: IfaceDecl) -> None:
+        super().__init__(am, d)
         p = d.node_parent
         assert p
         segments = [*p.segments, d.name]
@@ -654,9 +661,9 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
             self.from_ani(target, offset, env, ani_result, cpp_result)
 
 
-class EnumTypeANIInfo(AbstractAnalysis[EnumType], AbstractTypeANIInfo):
+class EnumTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[EnumType]):
     def __init__(self, am: AnalysisManager, t: EnumType):
-        AbstractTypeANIInfo.__init__(self, am, t)
+        super().__init__(am, t)
         enum_ani_info = EnumANIInfo.get(am, t.ty_decl)
         self.ani_type = ANI_ENUM_ITEM
         self.type_desc = enum_ani_info.type_desc
@@ -702,9 +709,9 @@ class EnumTypeANIInfo(AbstractAnalysis[EnumType], AbstractTypeANIInfo):
         )
 
 
-class StructTypeANIInfo(AbstractAnalysis[StructType], AbstractTypeANIInfo):
+class StructTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[StructType]):
     def __init__(self, am: AnalysisManager, t: StructType):
-        AbstractTypeANIInfo.__init__(self, am, t)
+        super().__init__(am, t)
         struct_ani_info = StructANIInfo.get(am, t.ty_decl)
         self.ani_type = ANI_OBJECT
         self.type_desc = struct_ani_info.type_desc
@@ -746,9 +753,9 @@ class StructTypeANIInfo(AbstractAnalysis[StructType], AbstractTypeANIInfo):
         )
 
 
-class UnionTypeANIInfo(AbstractAnalysis[UnionType], AbstractTypeANIInfo):
+class UnionTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[UnionType]):
     def __init__(self, am: AnalysisManager, t: UnionType):
-        AbstractTypeANIInfo.__init__(self, am, t)
+        super().__init__(am, t)
         union_ani_info = UnionANIInfo.get(am, t.ty_decl)
         self.ani_type = ANI_REF
         self.type_desc = union_ani_info.type_desc
@@ -790,9 +797,9 @@ class UnionTypeANIInfo(AbstractAnalysis[UnionType], AbstractTypeANIInfo):
         )
 
 
-class IfaceTypeANIInfo(AbstractAnalysis[IfaceType], AbstractTypeANIInfo):
+class IfaceTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[IfaceType]):
     def __init__(self, am: AnalysisManager, t: IfaceType):
-        AbstractTypeANIInfo.__init__(self, am, t)
+        super().__init__(am, t)
         iface_ani_info = IfaceANIInfo.get(am, t.ty_decl)
         self.ani_type = ANI_OBJECT
         self.type_desc = iface_ani_info.type_desc
@@ -834,9 +841,9 @@ class IfaceTypeANIInfo(AbstractAnalysis[IfaceType], AbstractTypeANIInfo):
         )
 
 
-class ScalarTypeANIInfo(AbstractAnalysis[ScalarType], AbstractTypeANIInfo):
+class ScalarTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ScalarType]):
     def __init__(self, am: AnalysisManager, t: ScalarType):
-        AbstractTypeANIInfo.__init__(self, am, t)
+        super().__init__(am, t)
         sts_type, ani_type, type_desc = {
             BOOL: ("boolean", ANI_BOOLEAN, "Z"),
             F32: ("float", ANI_FLOAT, "F"),
@@ -884,9 +891,9 @@ class ScalarTypeANIInfo(AbstractAnalysis[ScalarType], AbstractTypeANIInfo):
         )
 
 
-class OpaqueTypeANIInfo(AbstractAnalysis[OpaqueType], AbstractTypeANIInfo):
+class OpaqueTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[OpaqueType]):
     def __init__(self, am: AnalysisManager, t: OpaqueType) -> None:
-        AbstractTypeANIInfo.__init__(self, am, t)
+        super().__init__(am, t)
         self.ani_type = ANI_REF
         self.type_desc = "Lstd/core/Object;"
 
@@ -920,9 +927,9 @@ class OpaqueTypeANIInfo(AbstractAnalysis[OpaqueType], AbstractTypeANIInfo):
         )
 
 
-class StringTypeANIInfo(AbstractAnalysis[StringType], AbstractTypeANIInfo):
+class StringTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[StringType]):
     def __init__(self, am: AnalysisManager, t: StringType):
-        AbstractTypeANIInfo.__init__(self, am, t)
+        super().__init__(am, t)
         self.ani_type = ANI_STRING
         self.type_desc = "Lstd/core/String;"
 
@@ -967,9 +974,9 @@ class StringTypeANIInfo(AbstractAnalysis[StringType], AbstractTypeANIInfo):
         )
 
 
-class ArrayTypeANIInfo(AbstractAnalysis[ArrayType], AbstractTypeANIInfo):
+class ArrayTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
     def __init__(self, am: AnalysisManager, t: ArrayType) -> None:
-        AbstractTypeANIInfo.__init__(self, am, t)
+        super().__init__(am, t)
         item_ty_ani_info = TypeANIInfo.get(am, t.item_ty)
         self.ani_type = item_ty_ani_info.ani_type.array
         self.type_desc = f"[{item_ty_ani_info.type_desc}"
@@ -1022,9 +1029,9 @@ class ArrayTypeANIInfo(AbstractAnalysis[ArrayType], AbstractTypeANIInfo):
         )
 
 
-class ArrayBufferTypeANIInfo(AbstractAnalysis[ArrayType], AbstractTypeANIInfo):
+class ArrayBufferTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
     def __init__(self, am: AnalysisManager, t: ArrayType) -> None:
-        AbstractTypeANIInfo.__init__(self, am, t)
+        super().__init__(am, t)
         self.ani_type = ANI_ARRAYBUFFER
         self.type_desc = "Lescompat/ArrayBuffer;"
 
@@ -1071,9 +1078,9 @@ class ArrayBufferTypeANIInfo(AbstractAnalysis[ArrayType], AbstractTypeANIInfo):
         )
 
 
-class OptionalTypeANIInfo(AbstractAnalysis[OptionalType], AbstractTypeANIInfo):
+class OptionalTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[OptionalType]):
     def __init__(self, am: AnalysisManager, t: OptionalType) -> None:
-        AbstractTypeANIInfo.__init__(self, am, t)
+        super().__init__(am, t)
         item_ty_ani_info = TypeANIInfo.get(am, t.item_ty)
         self.ani_type = ANI_REF
         self.type_desc = item_ty_ani_info.type_desc_boxed
@@ -1139,9 +1146,9 @@ class OptionalTypeANIInfo(AbstractAnalysis[OptionalType], AbstractTypeANIInfo):
         )
 
 
-class MapTypeANIInfo(AbstractAnalysis[MapType], AbstractTypeANIInfo):
+class MapTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[MapType]):
     def __init__(self, am: AnalysisManager, t: MapType) -> None:
-        AbstractTypeANIInfo.__init__(self, am, t)
+        super().__init__(am, t)
         self.ani_type = ANI_OBJECT
         self.type_desc = "Lescompat/Record;"
         self.am = am
@@ -1232,9 +1239,9 @@ class MapTypeANIInfo(AbstractAnalysis[MapType], AbstractTypeANIInfo):
         )
 
 
-class CallbackTypeANIInfo(AbstractAnalysis[CallbackType], AbstractTypeANIInfo):
+class CallbackTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[CallbackType]):
     def __init__(self, am: AnalysisManager, t: CallbackType) -> None:
-        AbstractTypeANIInfo.__init__(self, am, t)
+        super().__init__(am, t)
         self.ani_type = ANI_OBJECT
         self.type_desc = f"Lstd/core/Function{len(t.params_ty)};"
         self.am = am
