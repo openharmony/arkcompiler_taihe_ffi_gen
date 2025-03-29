@@ -281,7 +281,7 @@ struct map : map_view<K, V> {
   using typename map_view<K, V>::data_t;
   using map_view<K, V>::m_handle;
 
-  map(std::size_t cap = 16)
+  explicit map(std::size_t cap = 16)
       : map(reinterpret_cast<data_t*>(calloc(1, sizeof(data_t)))) {
     item_t** bucket = reinterpret_cast<item_t**>(calloc(cap, sizeof(item_t*)));
     tref_set(&m_handle->count, 1);

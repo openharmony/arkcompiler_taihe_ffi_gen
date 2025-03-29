@@ -93,7 +93,7 @@ struct vector : vector_view<T> {
   using typename vector_view<T>::data_t;
   using vector_view<T>::m_handle;
 
-  vector(std::size_t cap = 0)
+  explicit vector(std::size_t cap = 0)
       : vector(reinterpret_cast<data_t*>(malloc(sizeof(data_t)))) {
     tref_set(&m_handle->count, 1);
     m_handle->cap = cap;

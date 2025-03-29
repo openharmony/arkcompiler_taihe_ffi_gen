@@ -148,7 +148,7 @@ struct array : public array_view<cpp_owner_t> {
   using typename array_view<cpp_owner_t>::pointer;
   using typename array_view<cpp_owner_t>::size_type;
 
-  array(pointer data, size_type size) noexcept
+  explicit array(pointer data, size_type size) noexcept
       : array_view<cpp_owner_t>(data, size) {}  // main constructor
 
   template <typename C>

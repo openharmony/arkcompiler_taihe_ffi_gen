@@ -212,7 +212,7 @@ struct set : set_view<K> {
   using typename set_view<K>::data_t;
   using set_view<K>::m_handle;
 
-  set(std::size_t cap = 16)
+  explicit set(std::size_t cap = 16)
       : set(reinterpret_cast<data_t*>(calloc(1, sizeof(data_t)))) {
     item_t** bucket = reinterpret_cast<item_t**>(calloc(cap, sizeof(item_t*)));
     tref_set(&m_handle->count, 1);
