@@ -1078,7 +1078,7 @@ class CppHeadersGenerator:
             cond = f"lhs.holds_{field.name}() && rhs.holds_{field.name}()"
             if field.ty_ref:
                 cond = f"{cond} && same(lhs.get_{field.name}_ref(), rhs.get_{field.name}_ref())"
-            result = f"{result} || {cond}"
+            result = f"{result} || ({cond})"
         union_cpp_defn_target.writeln(
             f"namespace taihe::core {{",
             f"inline bool same_impl(adl_helper_t, {union_cpp_info.as_param} lhs, {union_cpp_info.as_param} rhs) {{",
@@ -1389,7 +1389,7 @@ class CppHeadersGenerator:
             f"        : {iface_cpp_info.norm_name}({iface_abi_info.copy_func}(other.m_handle)) {{}}",
             f"    {iface_cpp_info.norm_name}({iface_cpp_info.full_norm_name} const& other)",
             f"        : {iface_cpp_info.norm_name}({iface_abi_info.copy_func}(other.m_handle)) {{}}",
-            f"    {iface_cpp_info.norm_name}({iface_cpp_info.full_norm_name} && other)",
+            f"    {iface_cpp_info.norm_name}({iface_cpp_info.full_norm_name}&& other)",
             f"        : {iface_cpp_info.norm_name}(other.m_handle) {{",
             f"        other.m_handle.data_ptr = nullptr;",
             f"    }}",
