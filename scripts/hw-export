@@ -166,8 +166,11 @@ def should_ignore(file: str) -> bool:
 
     if file.startswith(".githooks") or file.startswith(".github"):
         return True
-
+    
     if file.startswith(("cookbook/", "docs/")):
+        return True
+    
+    if file.startswith("test/") and not file.startswith("test/ani_"):
         return True
 
     return False
