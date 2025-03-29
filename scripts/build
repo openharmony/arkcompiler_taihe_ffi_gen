@@ -4,23 +4,10 @@
 
 source "$(dirname "$0")/common_lib.sh"
 
-build-runtime-libs() {
-    echo "Building the runtime"
-    local build_dir="runtime/out" arch="$(uname -m)"
-
-    libtaihe="lib/libtaihe_runtime.a"
-
-    cmake -S runtime -B "$build_dir" -G Ninja
-    cmake --build "$build_dir"
-
-    local runtime_lib_dir="$SHARE_DIR/runtime/$arch"
-    mkdir -p "$runtime_lib_dir"
-    cp "$build_dir/$libtaihe" "$runtime_lib_dir"
-}
-
-copy-headers() {
-    echo "Copying the headers"
+copy-runtime() {
+    echo "Copying the runtime files"
     cp -r runtime/include/* "$INCLUDE_DIR"
+    cp -r runtime/src/* "$SRC_DIR"
 }
 
 build-compiler() {
@@ -67,13 +54,17 @@ main() {
     DIST="$PWD/dist"
     LIB_DIR="$DIST/lib/taihe"
     BIN_DIR="$DIST/bin"
-    SHARE_DIR="$DIST/share/taihe"
     INCLUDE_DIR="$DIST/include"
-    mkdir -p "$DIST" "$LIB_DIR" "$BIN_DIR" "$SHARE_DIR" "$INCLUDE_DIR"
+    SRC_DIR="$DIST/src/taihe/runtime"
+    mkdir -p "$DIST" "$LIB_DIR" "$BIN_DIR" "$INCLUDE_DIR" "$SRC_DIR"
+
+    GIT_COMMIT=$(git rev-parse HEAD)
+    BUILD_DATE=$(date +"%Y-%m-%d %H:%M:%S")
+    echo "Version: $GIT_COMMIT" > "$DIST/version.txt"
+    echo "Build Date: $BUILD_DATE" >> "$DIST/version.txt"
 
     # Do the job
-    build-runtime-libs
-    copy-headers
+    copy-runtime
     build-compiler
 }
 
