@@ -5,12 +5,14 @@
 // Please delete <stdexcept> include when you implement
 using namespace taihe::core;
 namespace {
+static constexpr std::size_t COLOR_COUNT = 3;
+static constexpr std::size_t WEEKDAY_COUNT = 7;
 ::enum_test::Color nextEnum(::enum_test::Color color) {
-  return (::enum_test::Color::key_t)(((int)color.get_key() + 1) % 3);
+  return (::enum_test::Color::key_t)(((int)color.get_key() + 1) % COLOR_COUNT);
 }
 void showEnum(::enum_test::Color color) { std::cout << color << std::endl; }
 ::enum_test::Weekday nextEnumWeekday(::enum_test::Weekday day) {
-  return (::enum_test::Weekday::key_t)(((int)day.get_key() + 1) % 7);
+  return (::enum_test::Weekday::key_t)(((int)day.get_key() + 1) % WEEKDAY_COUNT);
 }
 void showEnumWeekday(::enum_test::Weekday day) {
   std::string dayStr;
