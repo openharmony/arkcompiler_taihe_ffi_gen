@@ -4,10 +4,11 @@ loadLibrary("ani_basetype");
 
 function main() {
     console.log("base_test start");
-    integer_test();
-    float_test();
-    boolean_test();
-    string_test();
+    const suite = new ArkTestsuite("base_test ut")
+    suite.addTest("integer_test", integer_test);
+    suite.addTest("float_test", float_test);
+    suite.addTest("boolean_test", boolean_test);
+    suite.addTest("string_test", string_test);
     console.log("base_test end");
 }
 
