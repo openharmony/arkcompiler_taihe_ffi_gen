@@ -4,6 +4,7 @@
 
 #include <array>
 #include <exception>
+#include <stdexcept>
 #include <taihe/common.hpp>
 #include <type_traits>
 
@@ -159,7 +160,7 @@ struct impl_view {
         return rtti.idmap[i].vtbl_ptr;
       }
     }
-    throw;
+    TH_THROW(std::runtime_error, "Interface ID not found");
   }();
 };
 

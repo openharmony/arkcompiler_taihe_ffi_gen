@@ -73,7 +73,7 @@ struct array_view {
 
   reference at(size_type const pos) const {
     if (size() <= pos) {
-      throw std::out_of_range("Invalid array subscript");
+      TH_THROW(std::out_of_range, "Invalid array subscript");
     }
     return m_data[pos];
   }

@@ -49,7 +49,7 @@ struct string_view {
   // methods
   const_reference operator[](size_type pos) const {
     if (pos >= size()) {
-      throw std::out_of_range("Index out of range");
+      TH_THROW(std::out_of_range, "Index out of range");
     }
     return tstr_buf(m_handle)[pos];
   }
@@ -60,14 +60,14 @@ struct string_view {
 
   const_reference front() const {
     if (empty()) {
-      throw std::out_of_range("Empty string");
+      TH_THROW(std::out_of_range, "Empty string");
     }
     return tstr_buf(m_handle)[0];
   }
 
   const_reference back() const {
     if (empty()) {
-      throw std::out_of_range("Empty string");
+      TH_THROW(std::out_of_range, "Empty string");
     }
     return tstr_buf(m_handle)[size() - 1];
   }
@@ -188,7 +188,7 @@ inline string to_string(T value) {
   std::to_chars_result result;
   result = std::to_chars(std::begin(buffer), std::end(buffer), value);
   if (result.ec != std::errc{}) {
-    throw std::runtime_error("Conversion to char failed");
+    TH_THROW(std::runtime_error, "Conversion to char failed");
   }
   // *result.ptr = '\0'; // std::to_chars does not write '\0' at the end of the
   // buffer automatcally
@@ -202,7 +202,7 @@ inline string to_string(T value) {
   result = std::to_chars(std::begin(buffer), std::end(buffer), value,
                          std::chars_format::general);
   if (result.ec != std::errc{}) {
-    throw std::runtime_error("Conversion to char failed");
+    TH_THROW(std::runtime_error, "Conversion to char failed");
   }
   // *result.ptr = '\0'; // std::to_chars does not write '\0' at the end of the
   // buffer automatcally
