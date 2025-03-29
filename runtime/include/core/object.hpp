@@ -66,17 +66,17 @@ struct data_block_impl : DataBlockHead, Impl {
 };
 
 template <typename Impl, typename... Args>
-static DataBlockHead* new_data_ptr(TypeInfo const* rtti_ptr, Args&&... args) {
+inline DataBlockHead* new_data_ptr(TypeInfo const* rtti_ptr, Args&&... args) {
   return new data_block_impl<Impl>(rtti_ptr, std::forward<Args>(args)...);
 }
 
 template <typename Impl>
-void del_data_ptr(struct DataBlockHead* data_ptr) {
+inline void del_data_ptr(struct DataBlockHead* data_ptr) {
   delete static_cast<data_block_impl<Impl>*>(data_ptr);
 }
 
 template <typename Impl>
-Impl* cast_data_ptr(struct DataBlockHead* data_ptr) {
+inline Impl* cast_data_ptr(struct DataBlockHead* data_ptr) {
   return static_cast<Impl*>(static_cast<data_block_impl<Impl>*>(data_ptr));
 }
 
