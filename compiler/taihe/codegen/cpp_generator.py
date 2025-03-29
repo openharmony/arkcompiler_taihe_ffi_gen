@@ -58,11 +58,13 @@ from taihe.utils.outputs import COutputBuffer, OutputManager
 
 class PackageCppInfo(AbstractAnalysis[PackageDecl]):
     def __init__(self, am: AnalysisManager, p: PackageDecl) -> None:
+        super().__init__(am, p)
         self.header = f"{p.name}.proj.hpp"
 
 
 class GlobFuncCppInfo(AbstractAnalysis[GlobFuncDecl]):
     def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
+        super().__init__(am, f)
         p = f.node_parent
         assert p
         self.namespace = "::".join(p.segments)
@@ -72,6 +74,7 @@ class GlobFuncCppInfo(AbstractAnalysis[GlobFuncDecl]):
 
 class IfaceMethodCppInfo(AbstractAnalysis[IfaceMethodDecl]):
     def __init__(self, am: AnalysisManager, f: IfaceMethodDecl) -> None:
+        super().__init__(am, f)
         # TODO: Supports projection to any C++ function name based on attributes
         self.call_name = f.name
         self.impl_name = f.name
@@ -79,6 +82,7 @@ class IfaceMethodCppInfo(AbstractAnalysis[IfaceMethodDecl]):
 
 class EnumCppInfo(AbstractAnalysis[EnumDecl]):
     def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
+        super().__init__(am, d)
         p = d.node_parent
         assert p
         self.header = f"{p.name}.{d.name}.proj.0.hpp"
@@ -91,6 +95,7 @@ class EnumCppInfo(AbstractAnalysis[EnumDecl]):
 
 class StructCppInfo(AbstractAnalysis[StructDecl]):
     def __init__(self, am: AnalysisManager, d: StructDecl) -> None:
+        super().__init__(am, d)
         p = d.node_parent
         assert p
         self.decl_header = f"{p.name}.{d.name}.proj.0.hpp"
@@ -104,6 +109,7 @@ class StructCppInfo(AbstractAnalysis[StructDecl]):
 
 class UnionCppInfo(AbstractAnalysis[UnionDecl]):
     def __init__(self, am: AnalysisManager, d: UnionDecl) -> None:
+        super().__init__(am, d)
         p = d.node_parent
         assert p
         self.decl_header = f"{p.name}.{d.name}.proj.0.hpp"
@@ -117,6 +123,7 @@ class UnionCppInfo(AbstractAnalysis[UnionDecl]):
 
 class IfaceCppInfo(AbstractAnalysis[IfaceDecl]):
     def __init__(self, am: AnalysisManager, d: IfaceDecl) -> None:
+        super().__init__(am, d)
         p = d.node_parent
         assert p
         self.decl_header = f"{p.name}.{d.name}.proj.0.hpp"
@@ -153,6 +160,7 @@ class AbstractTypeCppInfo(metaclass=ABCMeta):
 
 class EnumTypeCppInfo(AbstractAnalysis[EnumType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: EnumType):
+        super().__init__(am, t)
         enum_cpp_info = EnumCppInfo.get(am, t.ty_decl)
         self.decl_headers = [enum_cpp_info.header]
         self.impl_headers = [enum_cpp_info.header]
@@ -162,6 +170,7 @@ class EnumTypeCppInfo(AbstractAnalysis[EnumType], AbstractTypeCppInfo):
 
 class UnionTypeCppInfo(AbstractAnalysis[UnionType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: UnionType):
+        super().__init__(am, t)
         union_cpp_info = UnionCppInfo.get(am, t.ty_decl)
         self.decl_headers = [union_cpp_info.decl_header]
         self.impl_headers = [union_cpp_info.impl_header]
@@ -171,6 +180,7 @@ class UnionTypeCppInfo(AbstractAnalysis[UnionType], AbstractTypeCppInfo):
 
 class StructTypeCppInfo(AbstractAnalysis[StructType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: StructType):
+        super().__init__(am, t)
         struct_cpp_info = StructCppInfo.get(am, t.ty_decl)
         self.decl_headers = [struct_cpp_info.decl_header]
         self.impl_headers = [struct_cpp_info.impl_header]
@@ -180,6 +190,7 @@ class StructTypeCppInfo(AbstractAnalysis[StructType], AbstractTypeCppInfo):
 
 class IfaceTypeCppInfo(AbstractAnalysis[IfaceType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: IfaceType):
+        super().__init__(am, t)
         iface_cpp_info = IfaceCppInfo.get(am, t.ty_decl)
         self.decl_headers = [iface_cpp_info.decl_header]
         self.impl_headers = [iface_cpp_info.impl_header]
@@ -189,6 +200,7 @@ class IfaceTypeCppInfo(AbstractAnalysis[IfaceType], AbstractTypeCppInfo):
 
 class ScalarTypeCppInfo(AbstractAnalysis[ScalarType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: ScalarType):
+        super().__init__(am, t)
         res = {
             BOOL: "bool",
             F32: "float",
@@ -211,7 +223,8 @@ class ScalarTypeCppInfo(AbstractAnalysis[ScalarType], AbstractTypeCppInfo):
 
 
 class OpaqueTypeCppInfo(AbstractAnalysis[OpaqueType], AbstractTypeCppInfo):
-    def __init__(self, am: AnalysisManager, arg: OpaqueType) -> None:
+    def __init__(self, am: AnalysisManager, t: OpaqueType) -> None:
+        super().__init__(am, t)
         self.decl_headers = []
         self.impl_headers = []
         self.as_param = "uintptr_t"
@@ -220,6 +233,7 @@ class OpaqueTypeCppInfo(AbstractAnalysis[OpaqueType], AbstractTypeCppInfo):
 
 class StringTypeCppInfo(AbstractAnalysis[StringType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: StringType):
+        super().__init__(am, t)
         self.decl_headers = ["core/string.hpp"]
         self.impl_headers = ["core/string.hpp"]
         self.as_owner = "::taihe::core::string"
@@ -228,6 +242,7 @@ class StringTypeCppInfo(AbstractAnalysis[StringType], AbstractTypeCppInfo):
 
 class ArrayTypeCppInfo(AbstractAnalysis[ArrayType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: ArrayType) -> None:
+        super().__init__(am, t)
         arg_ty_cpp_info = TypeCppInfo.get(am, t.item_ty)
         self.decl_headers = ["core/array.hpp", *arg_ty_cpp_info.decl_headers]
         self.impl_headers = ["core/array.hpp", *arg_ty_cpp_info.impl_headers]
@@ -237,6 +252,7 @@ class ArrayTypeCppInfo(AbstractAnalysis[ArrayType], AbstractTypeCppInfo):
 
 class OptionalTypeCppInfo(AbstractAnalysis[OptionalType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: OptionalType) -> None:
+        super().__init__(am, t)
         arg_ty_cpp_info = TypeCppInfo.get(am, t.item_ty)
         self.decl_headers = ["core/optional.hpp", *arg_ty_cpp_info.decl_headers]
         self.impl_headers = ["core/optional.hpp", *arg_ty_cpp_info.impl_headers]
@@ -246,6 +262,7 @@ class OptionalTypeCppInfo(AbstractAnalysis[OptionalType], AbstractTypeCppInfo):
 
 class VectorTypeCppInfo(AbstractAnalysis[VectorType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: VectorType) -> None:
+        super().__init__(am, t)
         val_ty_cpp_info = TypeCppInfo.get(am, t.val_ty)
         self.decl_headers = ["core/vector.hpp", *val_ty_cpp_info.decl_headers]
         self.impl_headers = ["core/vector.hpp", *val_ty_cpp_info.impl_headers]
@@ -255,6 +272,7 @@ class VectorTypeCppInfo(AbstractAnalysis[VectorType], AbstractTypeCppInfo):
 
 class MapTypeCppInfo(AbstractAnalysis[MapType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: MapType) -> None:
+        super().__init__(am, t)
         key_ty_cpp_info = TypeCppInfo.get(am, t.key_ty)
         val_ty_cpp_info = TypeCppInfo.get(am, t.val_ty)
         self.decl_headers = [
@@ -273,6 +291,7 @@ class MapTypeCppInfo(AbstractAnalysis[MapType], AbstractTypeCppInfo):
 
 class SetTypeCppInfo(AbstractAnalysis[SetType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: SetType) -> None:
+        super().__init__(am, t)
         key_ty_cpp_info = TypeCppInfo.get(am, t.key_ty)
         self.decl_headers = ["core/set.hpp", *key_ty_cpp_info.decl_headers]
         self.impl_headers = ["core/set.hpp", *key_ty_cpp_info.impl_headers]
@@ -282,6 +301,7 @@ class SetTypeCppInfo(AbstractAnalysis[SetType], AbstractTypeCppInfo):
 
 class CallbackTypeCppInfo(AbstractAnalysis[CallbackType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: CallbackType) -> None:
+        super().__init__(am, t)
         if t.return_ty:
             return_ty_cpp_info = TypeCppInfo.get(am, t.return_ty)
             return_ty_decl_headers = return_ty_cpp_info.decl_headers

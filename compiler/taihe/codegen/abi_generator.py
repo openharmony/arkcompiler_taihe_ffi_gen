@@ -48,12 +48,14 @@ from taihe.utils.outputs import COutputBuffer, OutputManager
 
 class PackageABIInfo(AbstractAnalysis[PackageDecl]):
     def __init__(self, am: AnalysisManager, p: PackageDecl) -> None:
+        super().__init__(am, p)
         self.header = f"{p.name}.abi.h"
         self.src = f"{p.name}.abi.c"
 
 
 class GlobFuncABIInfo(AbstractAnalysis[GlobFuncDecl]):
     def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
+        super().__init__(am, f)
         p = f.node_parent
         assert p
         segments = [*p.segments, f.name]
@@ -62,6 +64,7 @@ class GlobFuncABIInfo(AbstractAnalysis[GlobFuncDecl]):
 
 class IfaceMethodABIInfo(AbstractAnalysis[IfaceMethodDecl]):
     def __init__(self, am: AnalysisManager, f: IfaceMethodDecl) -> None:
+        super().__init__(am, f)
         d = f.node_parent
         assert d
         p = d.node_parent
@@ -72,11 +75,13 @@ class IfaceMethodABIInfo(AbstractAnalysis[IfaceMethodDecl]):
 
 class EnumABIInfo(AbstractAnalysis[EnumDecl]):
     def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
+        super().__init__(am, d)
         self.abi_type = "int"
 
 
 class UnionABIInfo(AbstractAnalysis[UnionDecl]):
     def __init__(self, am: AnalysisManager, d: UnionDecl) -> None:
+        super().__init__(am, d)
         p = d.node_parent
         assert p
         segments = [*p.segments, d.name]
@@ -92,6 +97,7 @@ class UnionABIInfo(AbstractAnalysis[UnionDecl]):
 
 class StructABIInfo(AbstractAnalysis[StructDecl]):
     def __init__(self, am: AnalysisManager, d: StructDecl) -> None:
+        super().__init__(am, d)
         p = d.node_parent
         assert p
         segments = [*p.segments, d.name]
@@ -117,6 +123,7 @@ class UniqueAncestorInfo:
 
 class IfaceABIInfo(AbstractAnalysis[IfaceDecl]):
     def __init__(self, am: AnalysisManager, d: IfaceDecl) -> None:
+        super().__init__(am, d)
         p = d.node_parent
         assert p
         segments = [*p.segments, d.name]
@@ -169,6 +176,7 @@ class AbstractTypeABIInfo(metaclass=ABCMeta):
 
 class EnumTypeABIInfo(AbstractAnalysis[EnumType], AbstractTypeABIInfo):
     def __init__(self, am: AnalysisManager, t: EnumType) -> None:
+        super().__init__(am, t)
         enum_abi_info = EnumABIInfo.get(am, t.ty_decl)
         self.decl_headers = []
         self.impl_headers = []
@@ -178,6 +186,7 @@ class EnumTypeABIInfo(AbstractAnalysis[EnumType], AbstractTypeABIInfo):
 
 class UnionTypeABIInfo(AbstractAnalysis[UnionType], AbstractTypeABIInfo):
     def __init__(self, am: AnalysisManager, t: UnionType):
+        super().__init__(am, t)
         union_abi_info = UnionABIInfo.get(am, t.ty_decl)
         self.decl_headers = [union_abi_info.decl_header]
         self.impl_headers = [union_abi_info.impl_header]
@@ -187,6 +196,7 @@ class UnionTypeABIInfo(AbstractAnalysis[UnionType], AbstractTypeABIInfo):
 
 class StructTypeABIInfo(AbstractAnalysis[StructType], AbstractTypeABIInfo):
     def __init__(self, am: AnalysisManager, t: StructType) -> None:
+        super().__init__(am, t)
         struct_abi_info = StructABIInfo.get(am, t.ty_decl)
         self.decl_headers = [struct_abi_info.decl_header]
         self.impl_headers = [struct_abi_info.impl_header]
@@ -196,6 +206,7 @@ class StructTypeABIInfo(AbstractAnalysis[StructType], AbstractTypeABIInfo):
 
 class IfaceTypeABIInfo(AbstractAnalysis[IfaceType], AbstractTypeABIInfo):
     def __init__(self, am: AnalysisManager, t: IfaceType) -> None:
+        super().__init__(am, t)
         iface_abi_info = IfaceABIInfo.get(am, t.ty_decl)
         self.decl_headers = [iface_abi_info.decl_header]
         self.impl_headers = [iface_abi_info.impl_header]
@@ -205,6 +216,7 @@ class IfaceTypeABIInfo(AbstractAnalysis[IfaceType], AbstractTypeABIInfo):
 
 class ScalarTypeABIInfo(AbstractAnalysis[ScalarType], AbstractTypeABIInfo):
     def __init__(self, am: AnalysisManager, t: ScalarType):
+        super().__init__(am, t)
         res = {
             BOOL: "bool",
             F32: "float",
@@ -227,7 +239,8 @@ class ScalarTypeABIInfo(AbstractAnalysis[ScalarType], AbstractTypeABIInfo):
 
 
 class OpaqueTypeABIInfo(AbstractAnalysis[OpaqueType], AbstractTypeABIInfo):
-    def __init__(self, am: AnalysisManager, arg: OpaqueType) -> None:
+    def __init__(self, am: AnalysisManager, t: OpaqueType) -> None:
+        super().__init__(am, t)
         self.decl_headers = []
         self.impl_headers = []
         self.as_param = "uintptr_t"
@@ -236,6 +249,7 @@ class OpaqueTypeABIInfo(AbstractAnalysis[OpaqueType], AbstractTypeABIInfo):
 
 class StringTypeABIInfo(AbstractAnalysis[StringType], AbstractTypeABIInfo):
     def __init__(self, am: AnalysisManager, t: StringType) -> None:
+        super().__init__(am, t)
         self.decl_headers = ["taihe/string.abi.h"]
         self.impl_headers = ["taihe/string.abi.h"]
         self.as_owner = "struct TString"
@@ -244,6 +258,7 @@ class StringTypeABIInfo(AbstractAnalysis[StringType], AbstractTypeABIInfo):
 
 class ArrayTypeABIInfo(AbstractAnalysis[ArrayType], AbstractTypeABIInfo):
     def __init__(self, am: AnalysisManager, t: ArrayType) -> None:
+        super().__init__(am, t)
         self.decl_headers = ["taihe/array.abi.h"]
         self.impl_headers = ["taihe/array.abi.h"]
         self.as_owner = "struct TArray"
@@ -252,6 +267,7 @@ class ArrayTypeABIInfo(AbstractAnalysis[ArrayType], AbstractTypeABIInfo):
 
 class OptionalTypeABIInfo(AbstractAnalysis[OptionalType], AbstractTypeABIInfo):
     def __init__(self, am: AnalysisManager, t: OptionalType) -> None:
+        super().__init__(am, t)
         self.decl_headers = ["taihe/optional.abi.h"]
         self.impl_headers = ["taihe/optional.abi.h"]
         self.as_owner = "struct TOptional"
@@ -260,6 +276,7 @@ class OptionalTypeABIInfo(AbstractAnalysis[OptionalType], AbstractTypeABIInfo):
 
 class CallbackTypeABIInfo(AbstractAnalysis[CallbackType], AbstractTypeABIInfo):
     def __init__(self, am: AnalysisManager, t: CallbackType) -> None:
+        super().__init__(am, t)
         self.decl_headers = []
         self.impl_headers = []
         self.as_owner = "void*"
@@ -268,6 +285,7 @@ class CallbackTypeABIInfo(AbstractAnalysis[CallbackType], AbstractTypeABIInfo):
 
 class VectorTypeABIInfo(AbstractAnalysis[VectorType], AbstractTypeABIInfo):
     def __init__(self, am: AnalysisManager, t: VectorType) -> None:
+        super().__init__(am, t)
         self.decl_headers = []
         self.impl_headers = []
         self.as_owner = "void*"
@@ -276,6 +294,7 @@ class VectorTypeABIInfo(AbstractAnalysis[VectorType], AbstractTypeABIInfo):
 
 class MapTypeABIInfo(AbstractAnalysis[MapType], AbstractTypeABIInfo):
     def __init__(self, am: AnalysisManager, t: MapType) -> None:
+        super().__init__(am, t)
         self.decl_headers = []
         self.impl_headers = []
         self.as_owner = "void*"
@@ -284,6 +303,7 @@ class MapTypeABIInfo(AbstractAnalysis[MapType], AbstractTypeABIInfo):
 
 class SetTypeABIInfo(AbstractAnalysis[SetType], AbstractTypeABIInfo):
     def __init__(self, am: AnalysisManager, t: SetType) -> None:
+        super().__init__(am, t)
         self.decl_headers = []
         self.impl_headers = []
         self.as_owner = "void*"

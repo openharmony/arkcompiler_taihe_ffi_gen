@@ -17,12 +17,14 @@ from taihe.utils.outputs import COutputBuffer, OutputManager
 
 class PackageCppImplInfo(AbstractAnalysis[PackageDecl]):
     def __init__(self, am: AnalysisManager, p: PackageDecl) -> None:
+        super().__init__(am, p)
         self.header = f"{p.name}.impl.hpp"
         self.source = f"{p.name}.impl.cpp"
 
 
 class GlobFuncCppImplInfo(AbstractAnalysis[GlobFuncDecl]):
     def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
+        super().__init__(am, f)
         self.macro = f"TH_EXPORT_CPP_API_{f.name}"
 
 
