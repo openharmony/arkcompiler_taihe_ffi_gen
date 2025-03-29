@@ -7,112 +7,119 @@
 // Please delete <stdexcept> include when you implement
 using namespace taihe::core;
 namespace {
-uint8_t sumArrayu8(array_view<uint8_t> nums) {
+uint8_t SumArrayU8(array_view<uint8_t> nums) {
   return std::accumulate(nums.begin(), nums.end(), 0);
 }
-array<uint8_t> getArrayBuffer(uint8_t nums) {
+array<uint8_t> GetArrayBuffer(uint8_t nums) {
   array<uint8_t> result = array<uint8_t>::make(nums);
   std::fill(result.begin(), result.end(), nums);
   return result;
 }
-array<uint8_t> doubleArrayBuffer(array_view<uint8_t> nums) {
+array<uint8_t> DoubleArrayBuffer(array_view<uint8_t> nums) {
   array<uint8_t> result = array<uint8_t>::make(nums.size());
+  constexpr const int32_t mulTwo = 2;
   for (int i = 0; i < nums.size(); i++) {
-    result[i] = nums[i] * 2;
+    result[i] = nums[i] * mulTwo;
   }
   return result;
 }
-int8_t sumArrayi8(array_view<int8_t> nums) {
+int8_t SumArrayI8(array_view<int8_t> nums) {
   return std::accumulate(nums.begin(), nums.end(), 0);
 }
-array<int8_t> getArrayi8(int8_t nums) {
+array<int8_t> GetArrayI8(int8_t nums) {
   array<int8_t> result = array<int8_t>::make(nums);
   std::fill(result.begin(), result.end(), nums);
   return result;
 }
-array<int8_t> doublei8(array_view<int8_t> nums) {
+array<int8_t> DoubleI8(array_view<int8_t> nums) {
   array<int8_t> result = array<int8_t>::make(nums.size());
+  constexpr const int32_t mulTwo = 2;
   for (int i = 0; i < nums.size(); i++) {
-    result[i] = nums[i] * 2;
+    result[i] = nums[i] * mulTwo;
   }
   return result;
 }
-int16_t sumArrayi16(array_view<int16_t> nums) {
+int16_t SumArrayI16(array_view<int16_t> nums) {
   return std::accumulate(nums.begin(), nums.end(), 0);
 }
-array<int16_t> getArrayi16(int16_t nums) {
+array<int16_t> GetArrayI16(int16_t nums) {
   array<int16_t> result = array<int16_t>::make(nums);
   std::fill(result.begin(), result.end(), nums);
   return result;
 }
-array<int16_t> doublei16(array_view<int16_t> nums) {
+array<int16_t> DoubleI16(array_view<int16_t> nums) {
   array<int16_t> result = array<int16_t>::make(nums.size());
+  constexpr const int32_t mulTwo = 2;
   for (int i = 0; i < nums.size(); i++) {
-    result[i] = nums[i] * 2;
+    result[i] = nums[i] * mulTwo;
   }
   return result;
 }
-int32_t sumArrayi32(array_view<int32_t> nums) {
+int32_t SumArrayI32(array_view<int32_t> nums) {
   return std::accumulate(nums.begin(), nums.end(), 0);
 }
-array<int32_t> getArrayi32(int32_t nums) {
+array<int32_t> GetArrayI32(int32_t nums) {
   array<int32_t> result = array<int32_t>::make(nums);
   std::fill(result.begin(), result.end(), nums);
   return result;
 }
-array<int32_t> doublei32(array_view<int32_t> nums) {
+array<int32_t> DoubleI32(array_view<int32_t> nums) {
   array<int32_t> result = array<int32_t>::make(nums.size());
+  constexpr const int32_t mulTwo = 2;
   for (int i = 0; i < nums.size(); i++) {
-    result[i] = nums[i] * 2;
+    result[i] = nums[i] * mulTwo;
   }
   return result;
 }
-int64_t sumArrayi64(array_view<int64_t> nums) {
+int64_t SumArrayI64(array_view<int64_t> nums) {
   return std::accumulate(nums.begin(), nums.end(), 0);
 }
-array<int64_t> getArrayi64(int64_t nums) {
+array<int64_t> GetArrayI64(int64_t nums) {
   array<int64_t> result = array<int64_t>::make(nums);
   std::fill(result.begin(), result.end(), nums);
   return result;
 }
-array<int64_t> doublei64(array_view<int64_t> nums) {
+array<int64_t> DoubleI64(array_view<int64_t> nums) {
   array<int64_t> result = array<int64_t>::make(nums.size());
+  constexpr const int32_t mulTwo = 2;
   for (int i = 0; i < nums.size(); i++) {
-    result[i] = nums[i] * 2;
+    result[i] = nums[i] * mulTwo;
   }
   return result;
 }
-float sumArrayf32(array_view<float> nums) {
+float SumArrayF32(array_view<float> nums) {
   return std::accumulate(nums.begin(), nums.end(), 0);
 }
-array<float> getArrayf32(float nums) {
+array<float> GetArrayF32(float nums) {
   array<float> result = array<float>::make(nums);
   std::fill(result.begin(), result.end(), nums);
   return result;
 }
-array<float> doublef32(array_view<float> nums) {
+array<float> DoubleF32(array_view<float> nums) {
   array<float> result = array<float>::make(nums.size());
+  constexpr const int32_t mulTwo = 2;
   for (int i = 0; i < nums.size(); i++) {
-    result[i] = nums[i] * 2;
+    result[i] = nums[i] * mulTwo;
   }
   return result;
 }
-double sumArrayf64(array_view<double> nums) {
+double SumArrayF64(array_view<double> nums) {
   return std::accumulate(nums.begin(), nums.end(), 0);
 }
-array<double> getArrayf64(double nums) {
+array<double> GetArrayF64(double nums) {
   array<double> result = array<double>::make(nums);
   std::fill(result.begin(), result.end(), nums);
   return result;
 }
-array<double> doublef64(array_view<double> nums) {
+array<double> DoubleF64(array_view<double> nums) {
   array<double> result = array<double>::make(nums.size());
+  constexpr const int32_t mulTwo = 2;
   for (int i = 0; i < nums.size(); i++) {
-    result[i] = nums[i] * 2;
+    result[i] = nums[i] * mulTwo;
   }
   return result;
 }
-array<uint8_t> doubleBufferToInt8Array(array_view<uint8_t> nums) {
+array<uint8_t> DoubleBufferToInt8Array(array_view<uint8_t> nums) {
   if (nums.size() % sizeof(int8_t) != 0) {
     throw std::runtime_error("Invalid buffer size for Int32Array");
   }
@@ -120,14 +127,14 @@ array<uint8_t> doubleBufferToInt8Array(array_view<uint8_t> nums) {
   int8_t* src = reinterpret_cast<int8_t*>(nums.data());
   int8_t* dst = reinterpret_cast<int8_t*>(result.data());
   size_t count = nums.size() / sizeof(int8_t);
-
+  constexpr const int32_t mulTwo = 2;
   for (size_t i = 0; i < count; ++i) {
-    dst[i] = src[i] * 2;
+    dst[i] = src[i] * mulTwo;
   }
 
   return result;
 }
-array<uint8_t> doubleBufferToInt16Array(array_view<uint8_t> nums) {
+array<uint8_t> DoubleBufferToInt16Array(array_view<uint8_t> nums) {
   if (nums.size() % sizeof(int16_t) != 0) {
     throw std::runtime_error("Invalid buffer size for Int32Array");
   }
@@ -135,14 +142,14 @@ array<uint8_t> doubleBufferToInt16Array(array_view<uint8_t> nums) {
   int16_t* src = reinterpret_cast<int16_t*>(nums.data());
   int16_t* dst = reinterpret_cast<int16_t*>(result.data());
   size_t count = nums.size() / sizeof(int16_t);
-
+  constexpr const int32_t mulTwo = 2;
   for (size_t i = 0; i < count; ++i) {
-    dst[i] = src[i] * 2;
+    dst[i] = src[i] * mulTwo;
   }
 
   return result;
 }
-array<uint8_t> doubleBufferToInt32Array(array_view<uint8_t> nums) {
+array<uint8_t> DoubleBufferToInt32Array(array_view<uint8_t> nums) {
   if (nums.size() % sizeof(int32_t) != 0) {
     throw std::runtime_error("Invalid buffer size for Int32Array");
   }
@@ -150,14 +157,14 @@ array<uint8_t> doubleBufferToInt32Array(array_view<uint8_t> nums) {
   int32_t* src = reinterpret_cast<int32_t*>(nums.data());
   int32_t* dst = reinterpret_cast<int32_t*>(result.data());
   size_t count = nums.size() / sizeof(int32_t);
-
+  constexpr const int32_t mulTwo = 2;
   for (size_t i = 0; i < count; ++i) {
-    dst[i] = src[i] * 2;
+    dst[i] = src[i] * mulTwo;
   }
 
   return result;
 }
-array<uint8_t> doubleBufferToUint16Array(array_view<uint8_t> nums) {
+array<uint8_t> DoubleBufferToUint16Array(array_view<uint8_t> nums) {
   if (nums.size() % sizeof(uint16_t) != 0) {
     throw std::runtime_error("Invalid buffer size for Int32Array");
   }
@@ -165,14 +172,14 @@ array<uint8_t> doubleBufferToUint16Array(array_view<uint8_t> nums) {
   uint16_t* src = reinterpret_cast<uint16_t*>(nums.data());
   uint16_t* dst = reinterpret_cast<uint16_t*>(result.data());
   size_t count = nums.size() / sizeof(uint16_t);
-
+  constexpr const int32_t mulTwo = 2;
   for (size_t i = 0; i < count; ++i) {
-    dst[i] = src[i] * 2;
+    dst[i] = src[i] * mulTwo;
   }
 
   return result;
 }
-array<uint8_t> doubleBufferToUint32Array(array_view<uint8_t> nums) {
+array<uint8_t> DoubleBufferToUint32Array(array_view<uint8_t> nums) {
   if (nums.size() % sizeof(uint32_t) != 0) {
     throw std::runtime_error("Invalid buffer size for Int32Array");
   }
@@ -180,38 +187,38 @@ array<uint8_t> doubleBufferToUint32Array(array_view<uint8_t> nums) {
   uint32_t* src = reinterpret_cast<uint32_t*>(nums.data());
   uint32_t* dst = reinterpret_cast<uint32_t*>(result.data());
   size_t count = nums.size() / sizeof(uint32_t);
-
+  constexpr const int32_t mulTwo = 2;
   for (size_t i = 0; i < count; ++i) {
-    dst[i] = src[i] * 2;
+    dst[i] = src[i] * mulTwo;
   }
 
   return result;
 }
 }  // namespace
 
-TH_EXPORT_CPP_API_sumArrayu8(sumArrayu8);
-TH_EXPORT_CPP_API_getArrayBuffer(getArrayBuffer);
-TH_EXPORT_CPP_API_doubleArrayBuffer(doubleArrayBuffer);
-TH_EXPORT_CPP_API_sumArrayi8(sumArrayi8);
-TH_EXPORT_CPP_API_getArrayi8(getArrayi8);
-TH_EXPORT_CPP_API_doublei8(doublei8);
-TH_EXPORT_CPP_API_sumArrayi16(sumArrayi16);
-TH_EXPORT_CPP_API_getArrayi16(getArrayi16);
-TH_EXPORT_CPP_API_doublei16(doublei16);
-TH_EXPORT_CPP_API_sumArrayi32(sumArrayi32);
-TH_EXPORT_CPP_API_getArrayi32(getArrayi32);
-TH_EXPORT_CPP_API_doublei32(doublei32);
-TH_EXPORT_CPP_API_sumArrayi64(sumArrayi64);
-TH_EXPORT_CPP_API_getArrayi64(getArrayi64);
-TH_EXPORT_CPP_API_doublei64(doublei64);
-TH_EXPORT_CPP_API_sumArrayf32(sumArrayf32);
-TH_EXPORT_CPP_API_getArrayf32(getArrayf32);
-TH_EXPORT_CPP_API_doublef32(doublef32);
-TH_EXPORT_CPP_API_sumArrayf64(sumArrayf64);
-TH_EXPORT_CPP_API_getArrayf64(getArrayf64);
-TH_EXPORT_CPP_API_doublef64(doublef64);
-TH_EXPORT_CPP_API_doubleBufferToInt8Array(doubleBufferToInt8Array);
-TH_EXPORT_CPP_API_doubleBufferToInt16Array(doubleBufferToInt16Array);
-TH_EXPORT_CPP_API_doubleBufferToInt32Array(doubleBufferToInt32Array);
-TH_EXPORT_CPP_API_doubleBufferToUint16Array(doubleBufferToUint16Array);
-TH_EXPORT_CPP_API_doubleBufferToUint32Array(doubleBufferToUint32Array);
+TH_EXPORT_CPP_API_SumArrayU8(SumArrayU8);
+TH_EXPORT_CPP_API_GetArrayBuffer(GetArrayBuffer);
+TH_EXPORT_CPP_API_DoubleArrayBuffer(DoubleArrayBuffer);
+TH_EXPORT_CPP_API_SumArrayI8(SumArrayI8);
+TH_EXPORT_CPP_API_GetArrayI8(GetArrayI8);
+TH_EXPORT_CPP_API_DoubleI8(DoubleI8);
+TH_EXPORT_CPP_API_SumArrayI16(SumArrayI16);
+TH_EXPORT_CPP_API_GetArrayI16(GetArrayI16);
+TH_EXPORT_CPP_API_DoubleI16(DoubleI16);
+TH_EXPORT_CPP_API_SumArrayI32(SumArrayI32);
+TH_EXPORT_CPP_API_GetArrayI32(GetArrayI32);
+TH_EXPORT_CPP_API_DoubleI32(DoubleI32);
+TH_EXPORT_CPP_API_SumArrayI64(SumArrayI64);
+TH_EXPORT_CPP_API_GetArrayI64(GetArrayI64);
+TH_EXPORT_CPP_API_DoubleI64(DoubleI64);
+TH_EXPORT_CPP_API_SumArrayF32(SumArrayF32);
+TH_EXPORT_CPP_API_GetArrayF32(GetArrayF32);
+TH_EXPORT_CPP_API_DoubleF32(DoubleF32);
+TH_EXPORT_CPP_API_SumArrayF64(SumArrayF64);
+TH_EXPORT_CPP_API_GetArrayF64(GetArrayF64);
+TH_EXPORT_CPP_API_DoubleF64(DoubleF64);
+TH_EXPORT_CPP_API_DoubleBufferToInt8Array(DoubleBufferToInt8Array);
+TH_EXPORT_CPP_API_DoubleBufferToInt16Array(DoubleBufferToInt16Array);
+TH_EXPORT_CPP_API_DoubleBufferToInt32Array(DoubleBufferToInt32Array);
+TH_EXPORT_CPP_API_DoubleBufferToUint16Array(DoubleBufferToUint16Array);
+TH_EXPORT_CPP_API_DoubleBufferToUint32Array(DoubleBufferToUint32Array);

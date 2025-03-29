@@ -1,36 +1,36 @@
-function sumArrayu8(nums: Array<u8>): u8;
-function getArrayBuffer(nums: u8): Array<u8>;
-function doubleArrayBuffer(nums: Array<u8>): Array<u8>;
-function sumArrayi8(nums: Array<i8>): i8;
-function getArrayi8(nums: i8): Array<i8>;
-function doublei8(nums: Array<i8>): Array<i8>;
-function sumArrayi16(nums: Array<i16>): i16;
-function getArrayi16(nums: i16): Array<i16>;
-function doublei16(nums: Array<i16>): Array<i16>;
-function sumArrayi32(nums: Array<i32>): i32;
-function getArrayi32(nums: i32): Array<i32>;
-function doublei32(nums: Array<i32>): Array<i32>;
-function sumArrayi64(nums: Array<i64>): i64;
-function getArrayi64(nums: i64): Array<i64>;
-function doublei64(nums: Array<i64>): Array<i64>;
+function SumArrayU8(nums: Array<u8>): u8;
+function GetArrayBuffer(nums: u8): Array<u8>;
+function DoubleArrayBuffer(nums: Array<u8>): Array<u8>;
+function SumArrayI8(nums: Array<i8>): i8;
+function GetArrayI8(nums: i8): Array<i8>;
+function DoubleI8(nums: Array<i8>): Array<i8>;
+function SumArrayI16(nums: Array<i16>): i16;
+function GetArrayI16(nums: i16): Array<i16>;
+function DoubleI16(nums: Array<i16>): Array<i16>;
+function SumArrayI32(nums: Array<i32>): i32;
+function GetArrayI32(nums: i32): Array<i32>;
+function DoubleI32(nums: Array<i32>): Array<i32>;
+function SumArrayI64(nums: Array<i64>): i64;
+function GetArrayI64(nums: i64): Array<i64>;
+function DoubleI64(nums: Array<i64>): Array<i64>;
 
-function sumArrayf32(nums: Array<f32>): f32;
-function getArrayf32(nums: f32): Array<f32>;
-function doublef32(nums: Array<f32>): Array<f32>;
+function SumArrayF32(nums: Array<f32>): f32;
+function GetArrayF32(nums: f32): Array<f32>;
+function DoubleF32(nums: Array<f32>): Array<f32>;
 
-function sumArrayf64(nums: Array<f64>): f64;
-function getArrayf64(nums: f64): Array<f64>;
-function doublef64(nums: Array<f64>): Array<f64>;
+function SumArrayF64(nums: Array<f64>): f64;
+function GetArrayF64(nums: f64): Array<f64>;
+function DoubleF64(nums: Array<f64>): Array<f64>;
 
-function doubleBufferToInt8Array(nums: Array<u8>): Array<u8>;
-function doubleBufferToInt16Array(nums: Array<u8>): Array<u8>;
-function doubleBufferToInt32Array(nums: Array<u8>): Array<u8>;
-function doubleBufferToUint16Array(nums: Array<u8>): Array<u8>;
-function doubleBufferToUint32Array(nums: Array<u8>): Array<u8>;
+function DoubleBufferToInt8Array(nums: Array<u8>): Array<u8>;
+function DoubleBufferToInt16Array(nums: Array<u8>): Array<u8>;
+function DoubleBufferToInt32Array(nums: Array<u8>): Array<u8>;
+function DoubleBufferToUint16Array(nums: Array<u8>): Array<u8>;
+function DoubleBufferToUint32Array(nums: Array<u8>): Array<u8>;
 @!sts_inject("""
 export function doubleInt8Array(int8Array: Int8Array): Int8Array  {
     const arrayBuffer: ArrayBuffer = int8Array.buffer as ArrayBuffer;
-    let result = doubleBufferToInt8Array(arrayBuffer);
+    let result = DoubleBufferToInt8Array(arrayBuffer);
     return new Int8Array(result);
 }
 """)
@@ -38,7 +38,7 @@ export function doubleInt8Array(int8Array: Int8Array): Int8Array  {
 @!sts_inject("""
 export function doubleInt16Array(int16Array: Int16Array): Int16Array  {
     const arrayBuffer: ArrayBuffer = int16Array.buffer as ArrayBuffer;
-    let result = doubleBufferToInt16Array(arrayBuffer);
+    let result = DoubleBufferToInt16Array(arrayBuffer);
     return new Int16Array(result);
 }
 """)
@@ -46,7 +46,7 @@ export function doubleInt16Array(int16Array: Int16Array): Int16Array  {
 @!sts_inject("""
 export function doubleInt32Array(int32Array: Int32Array): Int32Array  {
     const arrayBuffer: ArrayBuffer = int32Array.buffer as ArrayBuffer;
-    let result = doubleBufferToInt32Array(arrayBuffer);
+    let result = DoubleBufferToInt32Array(arrayBuffer);
     return new Int32Array(result);
 }
 """)
@@ -54,7 +54,7 @@ export function doubleInt32Array(int32Array: Int32Array): Int32Array  {
 @!sts_inject("""
 export function doubleUint8Array(uint8Array: Uint8Array): Uint8Array  {
     const arrayBuffer: ArrayBuffer = uint8Array.buffer as ArrayBuffer;
-    let result = doubleArrayBuffer(arrayBuffer);
+    let result = DoubleArrayBuffer(arrayBuffer);
     return new Uint8Array(result);
 }
 """)
@@ -62,7 +62,7 @@ export function doubleUint8Array(uint8Array: Uint8Array): Uint8Array  {
 @!sts_inject("""
 export function doubleUint16Array(uint16Array: Uint16Array): Uint16Array  {
     const arrayBuffer: ArrayBuffer = uint16Array.buffer as ArrayBuffer;
-    let result = doubleBufferToUint16Array(arrayBuffer);
+    let result = DoubleBufferToUint16Array(arrayBuffer);
     return new Uint16Array(result);
 }
 """)
@@ -70,7 +70,7 @@ export function doubleUint16Array(uint16Array: Uint16Array): Uint16Array  {
 @!sts_inject("""
 export function doubleUint32Array(uint32Array: Uint32Array): Uint32Array  {
     const arrayBuffer: ArrayBuffer = uint32Array.buffer as ArrayBuffer;
-    let result = doubleBufferToUint32Array(arrayBuffer);
+    let result = DoubleBufferToUint32Array(arrayBuffer);
     return new Uint32Array(result);
 }
 """)
