@@ -8,7 +8,6 @@ void set_env(ani_env *env) { cur_env = env; }
 ani_env *get_env() { return cur_env; }
 
 void ani_set_error(ani_env *env, taihe::core::string_view msg) {
-  ani_boolean result_obj = ANI_FALSE;
   ani_class errCls;
   const char *className = "Lescompat/Error;";
   if (ANI_OK != env->FindClass(className, &errCls)) {
