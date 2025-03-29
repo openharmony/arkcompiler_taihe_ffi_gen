@@ -64,6 +64,7 @@ class STSOutputBuffer(OutputBase[[]]):
     """Represents a general target file."""
 
     def __init__(self):
+        super().__init__()
         self.indent_manager = IndentManager()
         self.code = StringIO()
         self.import_list = []
