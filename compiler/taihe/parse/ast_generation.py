@@ -97,11 +97,11 @@ def visit(node_kind: str, ctx, pos_dict: dict) -> Any:
                 node = visit(node_kind[:-3], ctx, pos_dict)
         return node
     beg, end = pos_dict[ctx]
-    if node_kind == "token":
-        return TaiheAST.token(_beg=beg, _end=end, text=ctx.text)
+    if node_kind == "TOKEN":
+        return TaiheAST.TOKEN(_beg=beg, _end=end, text=ctx.text)
     kwargs = {"_beg": beg, "_end": end}
     for attr_full_name, attr_ctx in ctx.__dict__.items():
-        if attr_full_name[0].isupper() or attr_full_name.startswith("token"):
+        if attr_full_name[0].isupper():
             attr_kind_name, attr_name = attr_full_name.split("_", 1)
             kwargs[attr_name] = visit(attr_kind_name, attr_ctx, pos_dict)
     real_kind = ctx.__class__.__name__[:-7]

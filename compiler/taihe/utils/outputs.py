@@ -104,6 +104,7 @@ class COutputBuffer(OutputBase[[bool]]):
     """Represents a C or C++ target file."""
 
     def __init__(self, is_header: bool):
+        super().__init__(is_header)
         self.is_header = is_header
         self.headers: dict[str, None] = {}
         self.indent_manager = IndentManager()

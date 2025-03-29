@@ -50,7 +50,7 @@ struct optional_view {
 
 template <typename cpp_owner_t>
 struct optional : public optional_view<cpp_owner_t> {
-  optional(cpp_owner_t* handle) noexcept
+  explicit optional(cpp_owner_t* handle) noexcept
       : optional_view<cpp_owner_t>(handle) {}  // main constructor
 
   optional() noexcept : optional(nullptr) {}
