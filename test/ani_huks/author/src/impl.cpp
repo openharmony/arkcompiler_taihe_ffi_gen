@@ -11,8 +11,9 @@ std::string dataAsString(array_view<uint8_t> data) {
   std::string res;
   for (int i = 0; i < data.size(); i++) {
     uint8_t c = static_cast<uint8_t>(data[i]);
-    res += "0123456789abcdef"[data[i] / 16];
-    res += "0123456789abcdef"[data[i] % 16];
+    static constexpr const char* const TEST_STR = "0123456789abcdef";
+    res += TEST_STR[data[i] / 16];
+    res += TEST_STR[data[i] % 16];
   }
   return res;
 }
