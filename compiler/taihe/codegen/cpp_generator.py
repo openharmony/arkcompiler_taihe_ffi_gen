@@ -436,11 +436,46 @@ class CppHeadersGenerator:
         enum_cpp_target = COutputBuffer.create(
             self.tm, f"include/{enum_cpp_info.header}", True
         )
+        enum_cpp_target.include("taihe/common.hpp")
+        self.gen_enum_defn(
+            enum,
+            enum_abi_info,
+            enum_cpp_info,
+            enum_cpp_target,
+        )
+        self.gen_enum_same(
+            enum,
+            enum_abi_info,
+            enum_cpp_info,
+            enum_cpp_target,
+        )
+        self.gen_enum_hash(
+            enum,
+            enum_abi_info,
+            enum_cpp_info,
+            enum_cpp_target,
+        )
+        self.gen_enum_type_traits(
+            enum,
+            enum_abi_info,
+            enum_cpp_info,
+            enum_cpp_target,
+        )
+        pkg_cpp_target.include(enum_cpp_info.header)
+
+    def gen_enum_defn(
+        self,
+        enum: EnumDecl,
+        enum_abi_info: EnumABIInfo,
+        enum_cpp_info: EnumCppInfo,
+        enum_cpp_target: COutputBuffer,
+    ):
         enum_cpp_target.writeln(
             f"namespace {enum_cpp_info.namespace} {{",
-        )
-        enum_cpp_target.writeln(
             f"struct {enum_cpp_info.name} {{",
+        )
+        # key type
+        enum_cpp_target.writeln(
             f"    enum class key_t: {enum_abi_info.abi_type} {{",
         )
         for item in enum.items:
@@ -449,50 +484,92 @@ class CppHeadersGenerator:
             )
         enum_cpp_target.writeln(
             f"    }};",
+        )
+        # basic methods
+        enum_cpp_target.writeln(
             f"    {enum_cpp_info.name}(key_t key) : key(key) {{}}",
             f"    {enum_cpp_info.name}({enum_cpp_info.name} const& other) : key(other.key) {{}}",
             f"    {enum_cpp_info.name}& operator=({enum_cpp_info.name} other) {{",
             f"        key = other.key;",
             f"        return *this;",
             f"    }}",
-            f"    key_t get_key() const {{",
-            f"        return this->key;",
-            f"    }}",
         )
-        if enum.ty_ref:
-            ty = enum.ty_ref.resolved_ty
-            assert ty
-            if ty == STRING:
-                as_owner = "char const*"
-            else:
-                ty_cpp_info = TypeCppInfo.get(self.am, ty)
-                as_owner = ty_cpp_info.as_owner
-            enum_cpp_target.writeln(
-                f"    static constexpr {as_owner} table[] = {{",
-            )
-            for item in enum.items:
-                enum_cpp_target.writeln(
-                    f"        {dumps(item.value)},",
-                )
-            enum_cpp_target.writeln(
-                f"    }};",
-            )
-            enum_cpp_target.writeln(
-                f"    {as_owner} get_value() const {{",
-                f"        return table[({enum_abi_info.abi_type})key];",
-                f"    }}",
-            )
-            enum_cpp_target.writeln(
-                f"    operator {as_owner}() const {{",
-                f"        return table[({enum_abi_info.abi_type})key];",
-                f"    }}",
-            )
+        self.gen_enum_key_getter(
+            enum,
+            enum_abi_info,
+            enum_cpp_info,
+            enum_cpp_target,
+        )
+        self.gen_enum_value_getter(
+            enum,
+            enum_abi_info,
+            enum_cpp_info,
+            enum_cpp_target,
+        )
+        # properties
         enum_cpp_target.writeln(
             f"private:",
             f"    key_t key;",
             f"}};",
             f"}}",
         )
+
+    def gen_enum_key_getter(
+        self,
+        enum: EnumDecl,
+        enum_abi_info: EnumABIInfo,
+        enum_cpp_info: EnumCppInfo,
+        enum_cpp_target: COutputBuffer,
+    ):
+        enum_cpp_target.writeln(
+            f"    key_t get_key() const {{",
+            f"        return this->key;",
+            f"    }}",
+        )
+
+    def gen_enum_value_getter(
+        self,
+        enum: EnumDecl,
+        enum_abi_info: EnumABIInfo,
+        enum_cpp_info: EnumCppInfo,
+        enum_cpp_target: COutputBuffer,
+    ):
+        if enum.ty_ref is None:
+            return
+        assert enum.ty_ref.resolved_ty
+        if enum.ty_ref.resolved_ty == STRING:
+            as_owner = "char const*"
+        else:
+            ty_cpp_info = TypeCppInfo.get(self.am, enum.ty_ref.resolved_ty)
+            as_owner = ty_cpp_info.as_owner
+        enum_cpp_target.writeln(
+            f"    static constexpr {as_owner} table[] = {{",
+        )
+        for item in enum.items:
+            enum_cpp_target.writeln(
+                f"        {dumps(item.value)},",
+            )
+        enum_cpp_target.writeln(
+            f"    }};",
+        )
+        enum_cpp_target.writeln(
+            f"    {as_owner} get_value() const {{",
+            f"        return table[({enum_abi_info.abi_type})key];",
+            f"    }}",
+        )
+        enum_cpp_target.writeln(
+            f"    operator {as_owner}() const {{",
+            f"        return table[({enum_abi_info.abi_type})key];",
+            f"    }}",
+        )
+
+    def gen_enum_same(
+        self,
+        enum: EnumDecl,
+        enum_abi_info: EnumABIInfo,
+        enum_cpp_info: EnumCppInfo,
+        enum_cpp_target: COutputBuffer,
+    ):
         # others
         enum_cpp_target.writeln(
             f"namespace taihe::core {{",
@@ -501,6 +578,14 @@ class CppHeadersGenerator:
             f"}}",
             f"}}",
         )
+
+    def gen_enum_hash(
+        self,
+        enum: EnumDecl,
+        enum_abi_info: EnumABIInfo,
+        enum_cpp_info: EnumCppInfo,
+        enum_cpp_target: COutputBuffer,
+    ):
         enum_cpp_target.writeln(
             f"namespace taihe::core {{",
             f"inline auto hash_impl(adl_helper_t, {enum_cpp_info.as_param} val) -> ::std::size_t {{",
@@ -508,6 +593,14 @@ class CppHeadersGenerator:
             f"}}",
             f"}}",
         )
+
+    def gen_enum_type_traits(
+        self,
+        enum: EnumDecl,
+        enum_abi_info: EnumABIInfo,
+        enum_cpp_info: EnumCppInfo,
+        enum_cpp_target: COutputBuffer,
+    ):
         enum_cpp_target.writeln(
             f"namespace taihe::core {{",
             f"template<>",
@@ -520,7 +613,470 @@ class CppHeadersGenerator:
             f"}};",
             f"}}",
         )
-        pkg_cpp_target.include(enum_cpp_info.header)
+
+    def gen_union_files(
+        self,
+        union: UnionDecl,
+        pkg_cpp_target: COutputBuffer,
+    ):
+        union_cpp_info = UnionCppInfo.get(self.am, union)
+        union_abi_info = UnionABIInfo.get(self.am, union)
+        self.gen_union_decl_file(
+            union,
+            union_abi_info,
+            union_cpp_info,
+        )
+        self.gen_union_impl_file(
+            union,
+            union_abi_info,
+            union_cpp_info,
+        )
+        pkg_cpp_target.include(union_cpp_info.impl_header)
+
+    def gen_union_decl_file(
+        self,
+        union: UnionDecl,
+        union_abi_info: UnionABIInfo,
+        union_cpp_info: UnionCppInfo,
+    ):
+        union_cpp_decl_target = COutputBuffer.create(
+            self.tm, f"include/{union_cpp_info.decl_header}", True
+        )
+        union_cpp_decl_target.writeln(
+            f"namespace {union_cpp_info.namespace} {{",
+            f"struct {union_cpp_info.name};",
+            f"}}",
+        )
+
+    def gen_union_impl_file(
+        self,
+        union: UnionDecl,
+        union_abi_info: UnionABIInfo,
+        union_cpp_info: UnionCppInfo,
+    ):
+        union_cpp_defn_target = COutputBuffer.create(
+            self.tm, f"include/{union_cpp_info.impl_header}", True
+        )
+        union_cpp_defn_target.include("taihe/common.hpp")
+        union_cpp_defn_target.include(union_cpp_info.decl_header)
+        union_cpp_defn_target.include(union_abi_info.impl_header)
+        self.gen_union_defn(
+            union,
+            union_abi_info,
+            union_cpp_info,
+            union_cpp_defn_target,
+        )
+        self.gen_union_same(
+            union,
+            union_abi_info,
+            union_cpp_info,
+            union_cpp_defn_target,
+        )
+        self.gen_union_hash(
+            union,
+            union_abi_info,
+            union_cpp_info,
+            union_cpp_defn_target,
+        )
+        self.gen_union_type_traits(
+            union,
+            union_abi_info,
+            union_cpp_info,
+            union_cpp_defn_target,
+        )
+
+    def gen_union_defn(
+        self,
+        union: UnionDecl,
+        union_abi_info: UnionABIInfo,
+        union_cpp_info: UnionCppInfo,
+        union_cpp_defn_target: COutputBuffer,
+    ):
+        union_cpp_defn_target.writeln(
+            f"namespace {union_cpp_info.namespace} {{",
+            f"struct {union_cpp_info.name} {{",
+        )
+        # tag type
+        union_cpp_defn_target.writeln(
+            f"    enum class tag_t : {union_abi_info.tag_type} {{",
+        )
+        for field in union.fields:
+            union_cpp_defn_target.writeln(
+                f"        {field.name},",
+            )
+        union_cpp_defn_target.writeln(
+            f"    }};",
+        )
+        # storage type
+        union_cpp_defn_target.writeln(
+            f"    union storage_t {{",
+            f"        storage_t() {{}}",
+            f"        ~storage_t() {{}}",
+        )
+        for field in union.fields:
+            if field.ty_ref is None:
+                continue
+            type_cpp_info = TypeCppInfo.get(self.am, field.ty_ref.resolved_ty)
+            union_cpp_defn_target.include(*type_cpp_info.impl_headers)
+            union_cpp_defn_target.writeln(
+                f"        {type_cpp_info.as_owner} {field.name};",
+            )
+        union_cpp_defn_target.writeln(
+            f"    }};",
+        )
+        # copy constructor
+        union_cpp_defn_target.writeln(
+            f"    {union_cpp_info.name}({union_cpp_info.name} const& other) : m_tag(other.m_tag) {{",
+            f"        switch (m_tag) {{",
+        )
+        for field in union.fields:
+            if field.ty_ref is None:
+                continue
+            union_cpp_defn_target.writeln(
+                f"        case tag_t::{field.name}:",
+                f"            new (&m_data.{field.name}) decltype(m_data.{field.name})(other.m_data.{field.name});",
+                f"            break;",
+            )
+        union_cpp_defn_target.writeln(
+            f"        default:",
+            f"            break;",
+            f"        }}",
+            f"    }}",
+        )
+        # move constructor
+        union_cpp_defn_target.writeln(
+            f"    {union_cpp_info.name}({union_cpp_info.name}&& other) : m_tag(other.m_tag) {{",
+            f"        switch (m_tag) {{",
+        )
+        for field in union.fields:
+            if field.ty_ref is None:
+                continue
+            union_cpp_defn_target.writeln(
+                f"        case tag_t::{field.name}:",
+                f"            new (&m_data.{field.name}) decltype(m_data.{field.name})(::std::move(other.m_data.{field.name}));",
+                f"            break;",
+            )
+        union_cpp_defn_target.writeln(
+            f"        default:",
+            f"            break;",
+            f"        }}",
+            f"    }}",
+        )
+        # copy assignment
+        union_cpp_defn_target.writeln(
+            f"    {union_cpp_info.name}& operator=({union_cpp_info.name} const& other) {{",
+            f"        if (this != &other) {{",
+            f"            ::std::destroy_at(this);",
+            f"            new (this) {union_cpp_info.name}(other);",
+            f"        }}",
+            f"        return *this;",
+            f"    }}",
+        )
+        # move assignment
+        union_cpp_defn_target.writeln(
+            f"    {union_cpp_info.name}& operator=({union_cpp_info.name}&& other) {{",
+            f"        if (this != &other) {{",
+            f"            ::std::destroy_at(this);",
+            f"            new (this) {union_cpp_info.name}(::std::move(other));",
+            f"        }}",
+            f"        return *this;",
+            f"    }}",
+        )
+        # destructor
+        union_cpp_defn_target.writeln(
+            f"    ~{union_cpp_info.name}() {{",
+            f"        switch (m_tag) {{",
+        )
+        for field in union.fields:
+            if field.ty_ref is None:
+                continue
+            union_cpp_defn_target.writeln(
+                f"        case tag_t::{field.name}:",
+                f"            ::std::destroy_at(&m_data.{field.name});",
+                f"            break;",
+            )
+        union_cpp_defn_target.writeln(
+            f"        default:",
+            f"            break;",
+            f"        }}",
+            f"    }}",
+        )
+        self.gen_union_methods(
+            union,
+            union_abi_info,
+            union_cpp_info,
+            union_cpp_defn_target,
+        )
+        # properties
+        union_cpp_defn_target.writeln(
+            f"private:",
+            f"    tag_t m_tag;",
+            f"    storage_t m_data;",
+            f"}};",
+            f"}}",
+        )
+
+    def gen_union_methods(
+        self,
+        union: UnionDecl,
+        union_abi_info: UnionABIInfo,
+        union_cpp_info: UnionCppInfo,
+        union_cpp_defn_target: COutputBuffer,
+    ):
+        # in place constructor
+        for field in union.fields:
+            if field.ty_ref is None:
+                union_cpp_defn_target.writeln(
+                    f"    {union_cpp_info.name}(::taihe::core::static_tag_t<tag_t::{field.name}>) : m_tag(tag_t::{field.name}) {{}}",
+                )
+            else:
+                union_cpp_defn_target.writeln(
+                    f"    template<typename... Args>",
+                    f"    {union_cpp_info.name}(::taihe::core::static_tag_t<tag_t::{field.name}>, Args&&... args) : m_tag(tag_t::{field.name}) {{",
+                    f"        new (&m_data.{field.name}) decltype(m_data.{field.name})(::std::forward<Args>(args)...);",
+                    f"    }}",
+                )
+        # creator
+        union_cpp_defn_target.writeln(
+            f"    template<tag_t tag, typename... Args>",
+            f"    static {union_cpp_info.name} make(Args&&... args) {{",
+            f"        return {union_cpp_info.name}(::taihe::core::static_tag<tag>, ::std::forward<Args>(args)...);",
+            f"    }}",
+        )
+        # emplacement
+        union_cpp_defn_target.writeln(
+            f"    template<tag_t tag, typename... Args>",
+            f"    {union_cpp_info.name} const& emplace(Args&&... args) {{",
+            f"        ::std::destroy_at(this);",
+            f"        new (this) {union_cpp_info.name}(::taihe::core::static_tag<tag>, ::std::forward<Args>(args)...);",
+            f"        return *this;",
+            f"    }}",
+        )
+        # non-const reference getter
+        union_cpp_defn_target.writeln(
+            f"    template<tag_t tag>",
+            f"    auto& get_ref() {{",
+        )
+        for field in union.fields:
+            if field.ty_ref:
+                union_cpp_defn_target.writeln(
+                    f"        if constexpr (tag == tag_t::{field.name}) {{",
+                    f"            return m_data.{field.name};",
+                    f"        }}",
+                )
+        union_cpp_defn_target.writeln(
+            f"    }}",
+        )
+        # non-const pointer getter
+        union_cpp_defn_target.writeln(
+            f"    template<tag_t tag>",
+            f"    auto* get_ptr() {{",
+            f"        return m_tag == tag ? &get_ref<tag>() : nullptr;",
+            f"    }}",
+        )
+        # const reference getter
+        union_cpp_defn_target.writeln(
+            f"    template<tag_t tag>",
+            f"    auto const& get_ref() const {{",
+        )
+        for field in union.fields:
+            if field.ty_ref:
+                union_cpp_defn_target.writeln(
+                    f"        if constexpr (tag == tag_t::{field.name}) {{",
+                    f"            return m_data.{field.name};",
+                    f"        }}",
+                )
+        union_cpp_defn_target.writeln(
+            f"    }}",
+        )
+        # const pointer getter
+        union_cpp_defn_target.writeln(
+            f"    template<tag_t tag>",
+            f"    auto const* get_ptr() const {{",
+            f"        return m_tag == tag ? &get_ref<tag>() : nullptr;",
+            f"    }}",
+        )
+        # checker
+        union_cpp_defn_target.writeln(
+            f"    template<tag_t tag>",
+            f"    bool holds() const {{",
+            f"        return m_tag == tag;",
+            f"    }}",
+            f"    tag_t get_tag() const {{",
+            f"        return m_tag;",
+            f"    }}",
+        )
+        # non_const visitor
+        union_cpp_defn_target.writeln(
+            f"    template<typename Visitor>",
+            f"    auto accept_template(Visitor&& visitor) {{",
+            f"        switch (m_tag) {{",
+        )
+        for field in union.fields:
+            result = f"::taihe::core::static_tag<tag_t::{field.name}>"
+            if field.ty_ref:
+                result += f", m_data.{field.name}"
+            union_cpp_defn_target.writeln(
+                f"        case tag_t::{field.name}:",
+                f"            return visitor({result});",
+            )
+        union_cpp_defn_target.writeln(
+            f"        }}",
+            f"    }}",
+        )
+        # const visitor
+        union_cpp_defn_target.writeln(
+            f"    template<typename Visitor>",
+            f"    auto accept_template(Visitor&& visitor) const {{",
+            f"        switch (m_tag) {{",
+        )
+        for field in union.fields:
+            result = f"::taihe::core::static_tag<tag_t::{field.name}>"
+            if field.ty_ref:
+                result += f", m_data.{field.name}"
+            union_cpp_defn_target.writeln(
+                f"        case tag_t::{field.name}:",
+                f"            return visitor({result});",
+            )
+        union_cpp_defn_target.writeln(
+            f"        }}",
+            f"    }}",
+        )
+        # named methods
+        for field in union.fields:
+            union_cpp_defn_target.writeln(
+                f"    template<typename... Args>",
+                f"    static {union_cpp_info.name} make_{field.name}(Args&&... args) {{",
+                f"        return make<tag_t::{field.name}>(::std::forward<Args>(args)...);",
+                f"    }}",
+                f"    template<typename... Args>",
+                f"    {union_cpp_info.name} const& emplace_{field.name}(Args&&... args) {{",
+                f"        return emplace<tag_t::{field.name}>(::std::forward<Args>(args)...);",
+                f"    }}",
+                f"    bool holds_{field.name}() const {{",
+                f"        return holds<tag_t::{field.name}>();",
+                f"    }}",
+            )
+            if field.ty_ref:
+                union_cpp_defn_target.writeln(
+                    f"    auto* get_{field.name}_ptr() {{",
+                    f"        return get_ptr<tag_t::{field.name}>();",
+                    f"    }}",
+                    f"    auto const* get_{field.name}_ptr() const {{",
+                    f"        return get_ptr<tag_t::{field.name}>();",
+                    f"    }}",
+                    f"    auto& get_{field.name}_ref() {{",
+                    f"        return get_ref<tag_t::{field.name}>();",
+                    f"    }}",
+                    f"    auto const& get_{field.name}_ref() const {{",
+                    f"        return get_ref<tag_t::{field.name}>();",
+                    f"    }}",
+                )
+        # named visitor
+        union_cpp_defn_target.writeln(
+            f"    template<typename Visitor>",
+            f"    auto accept(Visitor&& visitor) {{",
+            f"        switch (m_tag) {{",
+        )
+        for field in union.fields:
+            result = "" if field.ty_ref is None else f"m_data.{field.name}"
+            union_cpp_defn_target.writeln(
+                f"        case tag_t::{field.name}:",
+                f"            return visitor.{field.name}({result});",
+            )
+        union_cpp_defn_target.writeln(
+            f"        }}",
+            f"    }}",
+        )
+        # named const visitor
+        union_cpp_defn_target.writeln(
+            f"    template<typename Visitor>",
+            f"    auto accept(Visitor&& visitor) const {{",
+            f"        switch (m_tag) {{",
+        )
+        for field in union.fields:
+            result = "" if field.ty_ref is None else f"m_data.{field.name}"
+            union_cpp_defn_target.writeln(
+                f"        case tag_t::{field.name}:",
+                f"            return visitor.{field.name}({result});",
+            )
+        union_cpp_defn_target.writeln(
+            f"        }}",
+            f"    }}",
+        )
+
+    def gen_union_same(
+        self,
+        union: UnionDecl,
+        union_abi_info: UnionABIInfo,
+        union_cpp_info: UnionCppInfo,
+        union_cpp_defn_target: COutputBuffer,
+    ):
+        result = "false"
+        for field in union.fields:
+            cond = f"lhs.holds_{field.name}() && rhs.holds_{field.name}()"
+            if field.ty_ref:
+                cond = f"{cond} && same(lhs.get_{field.name}_ref(), rhs.get_{field.name}_ref())"
+            result = f"{result} || ({cond})"
+        union_cpp_defn_target.writeln(
+            f"namespace taihe::core {{",
+            f"inline bool same_impl(adl_helper_t, {union_cpp_info.as_param} lhs, {union_cpp_info.as_param} rhs) {{",
+            f"    return {result};",
+            f"}}",
+            f"}}",
+        )
+
+    def gen_union_hash(
+        self,
+        union: UnionDecl,
+        union_abi_info: UnionABIInfo,
+        union_cpp_info: UnionCppInfo,
+        union_cpp_defn_target: COutputBuffer,
+    ):
+        union_cpp_defn_target.writeln(
+            f"namespace taihe::core {{",
+            f"inline auto hash_impl(adl_helper_t, {union_cpp_info.as_param} val) -> ::std::size_t {{",
+            f"    switch (val.get_tag()) {{",
+            f"        ::std::size_t seed;",
+        )
+        for field in union.fields:
+            val = "0x9e3779b9 + (seed << 6) + (seed >> 2)"
+            if field.ty_ref:
+                val = f"{val} + hash(val.get_{field.name}_ref())"
+            union_cpp_defn_target.writeln(
+                f"    case {union_cpp_info.full_name}::tag_t::{field.name}:",
+                f"        seed = (::std::size_t){union_cpp_info.full_name}::tag_t::{field.name};",
+                f"        return seed ^ ({val});",
+            )
+        union_cpp_defn_target.writeln(
+            f"    }}",
+            f"}}",
+            f"}}",
+        )
+
+    def gen_union_type_traits(
+        self,
+        union: UnionDecl,
+        union_abi_info: UnionABIInfo,
+        union_cpp_info: UnionCppInfo,
+        union_cpp_defn_target: COutputBuffer,
+    ):
+        union_cpp_defn_target.writeln(
+            f"namespace taihe::core {{",
+            f"template<>",
+            f"struct as_abi<{union_cpp_info.as_owner}> {{",
+            f"    using type = {union_abi_info.as_owner};",
+            f"}};",
+            f"template<>",
+            f"struct as_abi<{union_cpp_info.as_param}> {{",
+            f"    using type = {union_abi_info.as_param};",
+            f"}};",
+            f"template<>",
+            f"struct as_param<{union_cpp_info.as_owner}> {{",
+            f"    using type = {union_cpp_info.as_param};",
+            f"}};",
+            f"}}",
+        )
 
     def gen_func(
         self,
@@ -713,452 +1269,6 @@ class CppHeadersGenerator:
             f"}}",
         )
 
-    def gen_union_files(
-        self,
-        union: UnionDecl,
-        pkg_cpp_target: COutputBuffer,
-    ):
-        union_cpp_info = UnionCppInfo.get(self.am, union)
-        union_abi_info = UnionABIInfo.get(self.am, union)
-        self.gen_union_decl_file(
-            union,
-            union_abi_info,
-            union_cpp_info,
-        )
-        self.gen_union_impl_file(
-            union,
-            union_abi_info,
-            union_cpp_info,
-        )
-        pkg_cpp_target.include(union_cpp_info.impl_header)
-
-    def gen_union_decl_file(
-        self,
-        union: UnionDecl,
-        union_abi_info: UnionABIInfo,
-        union_cpp_info: UnionCppInfo,
-    ):
-        union_cpp_decl_target = COutputBuffer.create(
-            self.tm, f"include/{union_cpp_info.decl_header}", True
-        )
-        union_cpp_decl_target.writeln(
-            f"namespace {union_cpp_info.namespace} {{",
-            f"struct {union_cpp_info.name};",
-            f"}}",
-        )
-
-    def gen_union_impl_file(
-        self,
-        union: UnionDecl,
-        union_abi_info: UnionABIInfo,
-        union_cpp_info: UnionCppInfo,
-    ):
-        union_cpp_defn_target = COutputBuffer.create(
-            self.tm, f"include/{union_cpp_info.impl_header}", True
-        )
-        union_cpp_defn_target.include("taihe/common.hpp")
-        union_cpp_defn_target.include(union_cpp_info.decl_header)
-        union_cpp_defn_target.include(union_abi_info.impl_header)
-        self.gen_union_defn(
-            union,
-            union_abi_info,
-            union_cpp_info,
-            union_cpp_defn_target,
-        )
-        self.gen_union_same(
-            union,
-            union_abi_info,
-            union_cpp_info,
-            union_cpp_defn_target,
-        )
-        self.gen_union_hash(
-            union,
-            union_abi_info,
-            union_cpp_info,
-            union_cpp_defn_target,
-        )
-        self.gen_union_type_traits(
-            union,
-            union_abi_info,
-            union_cpp_info,
-            union_cpp_defn_target,
-        )
-
-    def gen_union_defn(
-        self,
-        union: UnionDecl,
-        union_abi_info: UnionABIInfo,
-        union_cpp_info: UnionCppInfo,
-        union_cpp_defn_target: COutputBuffer,
-    ):
-        union_cpp_defn_target.writeln(
-            f"namespace {union_cpp_info.namespace} {{",
-            f"struct {union_cpp_info.name} {{",
-        )
-        # tag type
-        union_cpp_defn_target.writeln(
-            f"    enum class tag_t : {union_abi_info.tag_type} {{",
-        )
-        for field in union.fields:
-            union_cpp_defn_target.writeln(
-                f"        {field.name},",
-            )
-        union_cpp_defn_target.writeln(
-            f"    }};",
-        )
-        # storage type
-        union_cpp_defn_target.writeln(
-            f"    union storage_t {{",
-            f"        storage_t() {{}}",
-            f"        ~storage_t() {{}}",
-        )
-        for field in union.fields:
-            if field.ty_ref is None:
-                continue
-            type_cpp_info = TypeCppInfo.get(self.am, field.ty_ref.resolved_ty)
-            union_cpp_defn_target.include(*type_cpp_info.impl_headers)
-            union_cpp_defn_target.writeln(
-                f"        {type_cpp_info.as_owner} {field.name};",
-            )
-        union_cpp_defn_target.writeln(
-            f"    }};",
-        )
-        # destructor
-        union_cpp_defn_target.writeln(
-            f"    ~{union_cpp_info.name}() {{",
-            f"        switch (m_tag) {{",
-        )
-        for field in union.fields:
-            if field.ty_ref is None:
-                continue
-            union_cpp_defn_target.writeln(
-                f"        case tag_t::{field.name}:",
-                f"            ::std::destroy_at(&m_data.{field.name});",
-                f"            break;",
-            )
-        union_cpp_defn_target.writeln(
-            f"        default:",
-            f"            break;",
-            f"        }}",
-            f"    }}",
-        )
-        # copy constructor
-        union_cpp_defn_target.writeln(
-            f"    {union_cpp_info.name}({union_cpp_info.name} const& other) : m_tag(other.m_tag) {{",
-            f"        switch (m_tag) {{",
-        )
-        for field in union.fields:
-            if field.ty_ref is None:
-                continue
-            union_cpp_defn_target.writeln(
-                f"        case tag_t::{field.name}:",
-                f"            new (&m_data.{field.name}) decltype(m_data.{field.name})(other.m_data.{field.name});",
-                f"            break;",
-            )
-        union_cpp_defn_target.writeln(
-            f"        default:",
-            f"            break;",
-            f"        }}",
-            f"    }}",
-        )
-        # move constructor
-        union_cpp_defn_target.writeln(
-            f"    {union_cpp_info.name}({union_cpp_info.name}&& other) : m_tag(other.m_tag) {{",
-            f"        switch (m_tag) {{",
-        )
-        for field in union.fields:
-            if field.ty_ref is None:
-                continue
-            union_cpp_defn_target.writeln(
-                f"        case tag_t::{field.name}:",
-                f"            new (&m_data.{field.name}) decltype(m_data.{field.name})(::std::move(other.m_data.{field.name}));",
-                f"            break;",
-            )
-        union_cpp_defn_target.writeln(
-            f"        default:",
-            f"            break;",
-            f"        }}",
-            f"    }}",
-        )
-        # copy assignment
-        union_cpp_defn_target.writeln(
-            f"    {union_cpp_info.name}& operator=({union_cpp_info.name} const& other) {{",
-            f"        if (this != &other) {{",
-            f"            ::std::destroy_at(this);",
-            f"            new (this) {union_cpp_info.name}(other);",
-            f"        }}",
-            f"        return *this;",
-            f"    }}",
-        )
-        # move assignment
-        union_cpp_defn_target.writeln(
-            f"    {union_cpp_info.name}& operator=({union_cpp_info.name}&& other) {{",
-            f"        if (this != &other) {{",
-            f"            ::std::destroy_at(this);",
-            f"            new (this) {union_cpp_info.name}(::std::move(other));",
-            f"        }}",
-            f"        return *this;",
-            f"    }}",
-        )
-        # in place constructor
-        for field in union.fields:
-            if field.ty_ref is None:
-                union_cpp_defn_target.writeln(
-                    f"    {union_cpp_info.name}(::taihe::core::static_tag_t<tag_t::{field.name}>) : m_tag(tag_t::{field.name}) {{}}",
-                )
-            else:
-                union_cpp_defn_target.writeln(
-                    f"    template<typename... Args>",
-                    f"    {union_cpp_info.name}(::taihe::core::static_tag_t<tag_t::{field.name}>, Args&&... args) : m_tag(tag_t::{field.name}) {{",
-                    f"        new (&m_data.{field.name}) decltype(m_data.{field.name})(::std::forward<Args>(args)...);",
-                    f"    }}",
-                )
-        # creator
-        union_cpp_defn_target.writeln(
-            f"    template<tag_t tag, typename... Args>",
-            f"    static {union_cpp_info.name} make(Args&&... args) {{",
-            f"        return {union_cpp_info.name}(::taihe::core::static_tag<tag>, ::std::forward<Args>(args)...);",
-            f"    }}",
-        )
-        # emplacement
-        union_cpp_defn_target.writeln(
-            f"    template<tag_t tag, typename... Args>",
-            f"    {union_cpp_info.name} const& emplace(Args&&... args) {{",
-            f"        ::std::destroy_at(this);",
-            f"        new (this) {union_cpp_info.name}(::taihe::core::static_tag<tag>, ::std::forward<Args>(args)...);",
-            f"        return *this;",
-            f"    }}",
-        )
-        # non-const getter
-        union_cpp_defn_target.writeln(
-            f"    template<tag_t tag>",
-            f"    auto& get_ref() {{",
-        )
-        for field in union.fields:
-            if field.ty_ref:
-                union_cpp_defn_target.writeln(
-                    f"        if constexpr (tag == tag_t::{field.name}) {{",
-                    f"            return m_data.{field.name};",
-                    f"        }}",
-                )
-        union_cpp_defn_target.writeln(
-            f"    }}",
-        )
-        union_cpp_defn_target.writeln(
-            f"    template<tag_t tag>",
-            f"    auto* get_ptr() {{",
-            f"        return m_tag == tag ? &get_ref<tag>() : nullptr;",
-            f"    }}",
-        )
-        # const getter
-        union_cpp_defn_target.writeln(
-            f"    template<tag_t tag>",
-            f"    auto const& get_ref() const {{",
-        )
-        for field in union.fields:
-            if field.ty_ref:
-                union_cpp_defn_target.writeln(
-                    f"        if constexpr (tag == tag_t::{field.name}) {{",
-                    f"            return m_data.{field.name};",
-                    f"        }}",
-                )
-        union_cpp_defn_target.writeln(
-            f"    }}",
-        )
-        union_cpp_defn_target.writeln(
-            f"    template<tag_t tag>",
-            f"    auto const* get_ptr() const {{",
-            f"        return m_tag == tag ? &get_ref<tag>() : nullptr;",
-            f"    }}",
-        )
-        # checker
-        union_cpp_defn_target.writeln(
-            f"    template<tag_t tag>",
-            f"    bool holds() const {{",
-            f"        return m_tag == tag;",
-            f"    }}",
-            f"    tag_t get_tag() const {{",
-            f"        return m_tag;",
-            f"    }}",
-        )
-        # named
-        for field in union.fields:
-            union_cpp_defn_target.writeln(
-                f"    template<typename... Args>",
-                f"    static {union_cpp_info.name} make_{field.name}(Args&&... args) {{",
-                f"        return make<tag_t::{field.name}>(::std::forward<Args>(args)...);",
-                f"    }}",
-                f"    template<typename... Args>",
-                f"    {union_cpp_info.name} const& emplace_{field.name}(Args&&... args) {{",
-                f"        return emplace<tag_t::{field.name}>(::std::forward<Args>(args)...);",
-                f"    }}",
-                f"    bool holds_{field.name}() const {{",
-                f"        return holds<tag_t::{field.name}>();",
-                f"    }}",
-            )
-            if field.ty_ref:
-                union_cpp_defn_target.writeln(
-                    f"    auto* get_{field.name}_ptr() {{",
-                    f"        return get_ptr<tag_t::{field.name}>();",
-                    f"    }}",
-                    f"    auto const* get_{field.name}_ptr() const {{",
-                    f"        return get_ptr<tag_t::{field.name}>();",
-                    f"    }}",
-                    f"    auto& get_{field.name}_ref() {{",
-                    f"        return get_ref<tag_t::{field.name}>();",
-                    f"    }}",
-                    f"    auto const& get_{field.name}_ref() const {{",
-                    f"        return get_ref<tag_t::{field.name}>();",
-                    f"    }}",
-                )
-        # non_const visitor
-        union_cpp_defn_target.writeln(
-            f"    template<typename Visitor>",
-            f"    auto accept_template(Visitor&& visitor) {{",
-            f"        switch (m_tag) {{",
-        )
-        for field in union.fields:
-            result = f"::taihe::core::static_tag<tag_t::{field.name}>"
-            if field.ty_ref:
-                result += f", m_data.{field.name}"
-            union_cpp_defn_target.writeln(
-                f"        case tag_t::{field.name}:",
-                f"            return visitor({result});",
-            )
-        union_cpp_defn_target.writeln(
-            f"        }}",
-            f"    }}",
-        )
-        union_cpp_defn_target.writeln(
-            f"    template<typename Visitor>",
-            f"    auto accept(Visitor&& visitor) {{",
-            f"        switch (m_tag) {{",
-        )
-        for field in union.fields:
-            result = "" if field.ty_ref is None else f"m_data.{field.name}"
-            union_cpp_defn_target.writeln(
-                f"        case tag_t::{field.name}:",
-                f"            return visitor.{field.name}({result});",
-            )
-        union_cpp_defn_target.writeln(
-            f"        }}",
-            f"    }}",
-        )
-        # const visitor
-        union_cpp_defn_target.writeln(
-            f"    template<typename Visitor>",
-            f"    auto accept_template(Visitor&& visitor) const {{",
-            f"        switch (m_tag) {{",
-        )
-        for field in union.fields:
-            result = f"::taihe::core::static_tag<tag_t::{field.name}>"
-            if field.ty_ref:
-                result += f", m_data.{field.name}"
-            union_cpp_defn_target.writeln(
-                f"        case tag_t::{field.name}:",
-                f"            return visitor({result});",
-            )
-        union_cpp_defn_target.writeln(
-            f"        }}",
-            f"    }}",
-        )
-        union_cpp_defn_target.writeln(
-            f"    template<typename Visitor>",
-            f"    auto accept(Visitor&& visitor) const {{",
-            f"        switch (m_tag) {{",
-        )
-        for field in union.fields:
-            result = "" if field.ty_ref is None else f"m_data.{field.name}"
-            union_cpp_defn_target.writeln(
-                f"        case tag_t::{field.name}:",
-                f"            return visitor.{field.name}({result});",
-            )
-        union_cpp_defn_target.writeln(
-            f"        }}",
-            f"    }}",
-        )
-        # finally
-        union_cpp_defn_target.writeln(
-            f"private:",
-            f"    tag_t m_tag;",
-            f"    storage_t m_data;",
-            f"}};",
-            f"}}",
-        )
-
-    def gen_union_same(
-        self,
-        union: UnionDecl,
-        union_abi_info: UnionABIInfo,
-        union_cpp_info: UnionCppInfo,
-        union_cpp_defn_target: COutputBuffer,
-    ):
-        result = "false"
-        for field in union.fields:
-            cond = f"lhs.holds_{field.name}() && rhs.holds_{field.name}()"
-            if field.ty_ref:
-                cond = f"{cond} && same(lhs.get_{field.name}_ref(), rhs.get_{field.name}_ref())"
-            result = f"{result} || ({cond})"
-        union_cpp_defn_target.writeln(
-            f"namespace taihe::core {{",
-            f"inline bool same_impl(adl_helper_t, {union_cpp_info.as_param} lhs, {union_cpp_info.as_param} rhs) {{",
-            f"    return {result};",
-            f"}}",
-            f"}}",
-        )
-
-    def gen_union_hash(
-        self,
-        union: UnionDecl,
-        union_abi_info: UnionABIInfo,
-        union_cpp_info: UnionCppInfo,
-        union_cpp_defn_target: COutputBuffer,
-    ):
-        union_cpp_defn_target.writeln(
-            f"namespace taihe::core {{",
-            f"inline auto hash_impl(adl_helper_t, {union_cpp_info.as_param} val) -> ::std::size_t {{",
-            f"    switch (val.get_tag()) {{",
-            f"        ::std::size_t seed;",
-        )
-        for field in union.fields:
-            val = "0x9e3779b9 + (seed << 6) + (seed >> 2)"
-            if field.ty_ref:
-                val = f"{val} + hash(val.get_{field.name}_ref())"
-            union_cpp_defn_target.writeln(
-                f"    case {union_cpp_info.full_name}::tag_t::{field.name}:",
-                f"        seed = (::std::size_t){union_cpp_info.full_name}::tag_t::{field.name};",
-                f"        return seed ^ ({val});",
-            )
-        union_cpp_defn_target.writeln(
-            f"    }}",
-            f"}}",
-            f"}}",
-        )
-
-    def gen_union_type_traits(
-        self,
-        union: UnionDecl,
-        union_abi_info: UnionABIInfo,
-        union_cpp_info: UnionCppInfo,
-        union_cpp_defn_target: COutputBuffer,
-    ):
-        union_cpp_defn_target.writeln(
-            f"namespace taihe::core {{",
-            f"template<>",
-            f"struct as_abi<{union_cpp_info.as_owner}> {{",
-            f"    using type = {union_abi_info.as_owner};",
-            f"}};",
-            f"template<>",
-            f"struct as_abi<{union_cpp_info.as_param}> {{",
-            f"    using type = {union_abi_info.as_param};",
-            f"}};",
-            f"template<>",
-            f"struct as_param<{union_cpp_info.as_owner}> {{",
-            f"    using type = {union_cpp_info.as_param};",
-            f"}};",
-            f"}}",
-        )
-
     def gen_iface_files(
         self,
         iface: IfaceDecl,
@@ -1243,19 +1353,76 @@ class CppHeadersGenerator:
             f"namespace {iface_cpp_info.weakspace} {{",
             f"struct {iface_cpp_info.weak_name} {{",
             f"    static constexpr bool is_holder = false;",
-        )
-        # base infos
-        iface_cpp_defn_target.writeln(
-            f"    static constexpr void const* iid = &{iface_abi_info.iid};",
-            f"    using vtable_t = {iface_abi_info.vtable};",
-        )
-        # class field
-        iface_cpp_defn_target.writeln(
             f"    {iface_abi_info.as_owner} m_handle;",
-        )
-        # convert methods
-        iface_cpp_defn_target.writeln(
             f"    explicit {iface_cpp_info.weak_name}({iface_abi_info.as_param} handle) : m_handle(handle) {{}}",
+        )
+        self.gen_iface_view_dynamic_cast(
+            iface,
+            iface_abi_info,
+            iface_cpp_info,
+            iface_cpp_defn_target,
+        )
+        self.gen_iface_view_static_cast(
+            iface,
+            iface_abi_info,
+            iface_cpp_info,
+            iface_cpp_defn_target,
+        )
+        self.gen_iface_user_methods_defn(
+            iface,
+            iface_abi_info,
+            iface_cpp_info,
+            iface_cpp_defn_target,
+        )
+        self.gen_iface_impl_methods_defn(
+            iface,
+            iface_abi_info,
+            iface_cpp_info,
+            iface_cpp_defn_target,
+        )
+        self.gen_iface_ftbl(
+            iface,
+            iface_abi_info,
+            iface_cpp_info,
+            iface_cpp_defn_target,
+        )
+        self.gen_iface_vtbl(
+            iface,
+            iface_abi_info,
+            iface_cpp_info,
+            iface_cpp_defn_target,
+        )
+        self.gen_iface_idmap(
+            iface,
+            iface_abi_info,
+            iface_cpp_info,
+            iface_cpp_defn_target,
+        )
+        self.gen_iface_infos(
+            iface,
+            iface_abi_info,
+            iface_cpp_info,
+            iface_cpp_defn_target,
+        )
+        self.gen_iface_utils(
+            iface,
+            iface_abi_info,
+            iface_cpp_info,
+            iface_cpp_defn_target,
+        )
+        iface_cpp_defn_target.writeln(
+            f"}};",
+            f"}}",
+        )
+
+    def gen_iface_view_dynamic_cast(
+        self,
+        iface: IfaceDecl,
+        iface_abi_info: IfaceABIInfo,
+        iface_cpp_info: IfaceCppInfo,
+        iface_cpp_defn_target: COutputBuffer,
+    ):
+        iface_cpp_defn_target.writeln(
             f"    explicit {iface_cpp_info.weak_name}(::taihe::core::data_view other)",
             f"        : {iface_cpp_info.weak_name}({iface_abi_info.dynamic_cast}(other.data_ptr)) {{}}",
             f"    operator ::taihe::core::data_view() const& {{",
@@ -1267,6 +1434,14 @@ class CppHeadersGenerator:
             f"        return ::taihe::core::data_holder(ret_handle.data_ptr);",
             f"    }}",
         )
+
+    def gen_iface_view_static_cast(
+        self,
+        iface: IfaceDecl,
+        iface_abi_info: IfaceABIInfo,
+        iface_cpp_info: IfaceCppInfo,
+        iface_cpp_defn_target: COutputBuffer,
+    ):
         for ancestor, info in iface_abi_info.ancestor_dict.items():
             if info.offset == 0:
                 continue
@@ -1282,7 +1457,14 @@ class CppHeadersGenerator:
                 f"        return {ancestor_cpp_info.full_norm_name}({info.static_cast}(ret_handle));",
                 f"    }}",
             )
-        # user methods
+
+    def gen_iface_user_methods_defn(
+        self,
+        iface: IfaceDecl,
+        iface_abi_info: IfaceABIInfo,
+        iface_cpp_info: IfaceCppInfo,
+        iface_cpp_defn_target: COutputBuffer,
+    ):
         iface_cpp_defn_target.writeln(
             f"    struct virtual_type {{",
         )
@@ -1301,12 +1483,19 @@ class CppHeadersGenerator:
             else:
                 cpp_return_ty_name = "void"
             iface_cpp_defn_target.writeln(
-                f"        {cpp_return_ty_name} {method_cpp_info.call_name}({params_cpp_str}) const;",
+                f"        {cpp_return_ty_name} {method_cpp_info.call_name}({params_cpp_str}) const&;",
             )
         iface_cpp_defn_target.writeln(
             f"    }};",
         )
-        # author methods
+
+    def gen_iface_impl_methods_defn(
+        self,
+        iface: IfaceDecl,
+        iface_abi_info: IfaceABIInfo,
+        iface_cpp_info: IfaceCppInfo,
+        iface_cpp_defn_target: COutputBuffer,
+    ):
         iface_cpp_defn_target.writeln(
             f"    template<typename Impl>",
             f"    struct methods_impl {{",
@@ -1328,7 +1517,14 @@ class CppHeadersGenerator:
         iface_cpp_defn_target.writeln(
             f"    }};",
         )
-        # FTable implementation
+
+    def gen_iface_ftbl(
+        self,
+        iface: IfaceDecl,
+        iface_abi_info: IfaceABIInfo,
+        iface_cpp_info: IfaceCppInfo,
+        iface_cpp_defn_target: COutputBuffer,
+    ):
         iface_cpp_defn_target.writeln(
             f"    template<typename Impl>",
             f"    static constexpr {iface_abi_info.ftable} ftbl_impl = {{",
@@ -1340,7 +1536,14 @@ class CppHeadersGenerator:
         iface_cpp_defn_target.writeln(
             f"    }};",
         )
-        # VTable implementation
+
+    def gen_iface_vtbl(
+        self,
+        iface: IfaceDecl,
+        iface_abi_info: IfaceABIInfo,
+        iface_cpp_info: IfaceCppInfo,
+        iface_cpp_defn_target: COutputBuffer,
+    ):
         iface_cpp_defn_target.writeln(
             f"    template<typename Impl>",
             f"    static constexpr {iface_abi_info.vtable} vtbl_impl = {{",
@@ -1353,7 +1556,14 @@ class CppHeadersGenerator:
         iface_cpp_defn_target.writeln(
             f"    }};",
         )
-        # IdMap implementation
+
+    def gen_iface_idmap(
+        self,
+        iface: IfaceDecl,
+        iface_abi_info: IfaceABIInfo,
+        iface_cpp_info: IfaceCppInfo,
+        iface_cpp_defn_target: COutputBuffer,
+    ):
         iface_cpp_defn_target.writeln(
             f"    template<typename Impl>",
             f"    static constexpr IdMapItem idmap_impl[{len(iface_abi_info.ancestor_dict)}] = {{",
@@ -1366,21 +1576,34 @@ class CppHeadersGenerator:
         iface_cpp_defn_target.writeln(
             f"    }};",
         )
-        # utility methods
+
+    def gen_iface_infos(
+        self,
+        iface: IfaceDecl,
+        iface_abi_info: IfaceABIInfo,
+        iface_cpp_info: IfaceCppInfo,
+        iface_cpp_defn_target: COutputBuffer,
+    ):
         iface_cpp_defn_target.writeln(
-            f"    explicit operator bool() const& {{",
-            f"        return m_handle.vtbl_ptr;",
-            f"    }}",
-            f"    virtual_type const& operator*() const {{",
+            f"    static constexpr void const* iid = &{iface_abi_info.iid};",
+            f"    using vtable_t = {iface_abi_info.vtable};",
+        )
+
+    def gen_iface_utils(
+        self,
+        iface: IfaceDecl,
+        iface_abi_info: IfaceABIInfo,
+        iface_cpp_info: IfaceCppInfo,
+        iface_cpp_defn_target: COutputBuffer,
+    ):
+        iface_cpp_defn_target.writeln(
+            f"    explicit operator bool() const& {{ return m_handle.vtbl_ptr; }}",
+            f"    virtual_type const& operator*() const& {{",
             f"        return *reinterpret_cast<virtual_type const*>(&m_handle);",
             f"    }}",
-            f"    virtual_type const* operator->() const {{",
+            f"    virtual_type const* operator->() const& {{",
             f"        return reinterpret_cast<virtual_type const*>(&m_handle);",
             f"    }}",
-        )
-        iface_cpp_defn_target.writeln(
-            f"}};",
-            f"}}",
         )
 
     def gen_iface_holder_defn(
@@ -1394,9 +1617,6 @@ class CppHeadersGenerator:
             f"namespace {iface_cpp_info.namespace} {{",
             f"struct {iface_cpp_info.norm_name} : public {iface_cpp_info.full_weak_name} {{",
             f"    static constexpr bool is_holder = true;",
-        )
-        # convert methods
-        iface_cpp_defn_target.writeln(
             f"    explicit {iface_cpp_info.norm_name}({iface_abi_info.as_owner} handle) : {iface_cpp_info.full_weak_name}(handle) {{}}",
             f"    {iface_cpp_info.norm_name}& operator=({iface_cpp_info.full_norm_name} other) {{",
             f"        ::std::swap(m_handle, other.m_handle);",
@@ -1405,14 +1625,32 @@ class CppHeadersGenerator:
             f"    ~{iface_cpp_info.norm_name}() {{",
             f"        {iface_abi_info.drop_func}(m_handle);",
             f"    }}",
-            f"    {iface_cpp_info.norm_name}({iface_cpp_info.full_weak_name} const& other)",
-            f"        : {iface_cpp_info.norm_name}({iface_abi_info.copy_func}(other.m_handle)) {{}}",
-            f"    {iface_cpp_info.norm_name}({iface_cpp_info.full_norm_name} const& other)",
-            f"        : {iface_cpp_info.norm_name}({iface_abi_info.copy_func}(other.m_handle)) {{}}",
-            f"    {iface_cpp_info.norm_name}({iface_cpp_info.full_norm_name}&& other)",
-            f"        : {iface_cpp_info.norm_name}(other.m_handle) {{",
-            f"        other.m_handle.data_ptr = nullptr;",
-            f"    }}",
+        )
+        self.gen_iface_holder_dynamic_cast(
+            iface,
+            iface_abi_info,
+            iface_cpp_info,
+            iface_cpp_defn_target,
+        )
+        self.gen_iface_holder_static_cast(
+            iface,
+            iface_abi_info,
+            iface_cpp_info,
+            iface_cpp_defn_target,
+        )
+        iface_cpp_defn_target.writeln(
+            f"}};",
+            f"}}",
+        )
+
+    def gen_iface_holder_dynamic_cast(
+        self,
+        iface: IfaceDecl,
+        iface_abi_info: IfaceABIInfo,
+        iface_cpp_info: IfaceCppInfo,
+        iface_cpp_defn_target: COutputBuffer,
+    ):
+        iface_cpp_defn_target.writeln(
             f"    explicit {iface_cpp_info.norm_name}(::taihe::core::data_holder other)",
             f"        : {iface_cpp_info.norm_name}({iface_abi_info.dynamic_cast}(other.data_ptr)) {{",
             f"        other.data_ptr = nullptr;",
@@ -1429,6 +1667,24 @@ class CppHeadersGenerator:
             f"        {iface_abi_info.as_owner} ret_handle = m_handle;",
             f"        m_handle.data_ptr = nullptr;",
             f"        return ::taihe::core::data_holder(ret_handle.data_ptr);",
+            f"    }}",
+        )
+
+    def gen_iface_holder_static_cast(
+        self,
+        iface: IfaceDecl,
+        iface_abi_info: IfaceABIInfo,
+        iface_cpp_info: IfaceCppInfo,
+        iface_cpp_defn_target: COutputBuffer,
+    ):
+        iface_cpp_defn_target.writeln(
+            f"    {iface_cpp_info.norm_name}({iface_cpp_info.full_weak_name} const& other)",
+            f"        : {iface_cpp_info.norm_name}({iface_abi_info.copy_func}(other.m_handle)) {{}}",
+            f"    {iface_cpp_info.norm_name}({iface_cpp_info.full_norm_name} const& other)",
+            f"        : {iface_cpp_info.norm_name}({iface_abi_info.copy_func}(other.m_handle)) {{}}",
+            f"    {iface_cpp_info.norm_name}({iface_cpp_info.full_norm_name}&& other)",
+            f"        : {iface_cpp_info.norm_name}(other.m_handle) {{",
+            f"        other.m_handle.data_ptr = nullptr;",
             f"    }}",
         )
         for ancestor, info in iface_abi_info.ancestor_dict.items():
@@ -1450,10 +1706,6 @@ class CppHeadersGenerator:
                 f"        return {ancestor_cpp_info.full_norm_name}({info.static_cast}(ret_handle));",
                 f"    }}",
             )
-        iface_cpp_defn_target.writeln(
-            f"}};",
-            f"}}",
-        )
 
     def gen_iface_type_traits(
         self,
@@ -1540,7 +1792,7 @@ class CppHeadersGenerator:
                 cpp_result = abi_result
             iface_cpp_impl_target.writeln(
                 f"namespace {iface_cpp_info.weakspace} {{",
-                f"inline {cpp_return_ty_name} {iface_cpp_info.weak_name}::virtual_type::{method_cpp_info.call_name}({params_cpp_str}) const {{",
+                f"inline {cpp_return_ty_name} {iface_cpp_info.weak_name}::virtual_type::{method_cpp_info.call_name}({params_cpp_str}) const& {{",
                 f"    return {cpp_result};",
                 f"}}",
                 f"}}",
