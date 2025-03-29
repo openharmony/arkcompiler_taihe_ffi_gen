@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import re
 import sys
 from functools import cache
 from os import path
@@ -34,6 +35,11 @@ def get_attr_pairs(ctx):
             yield attr_full_name.split("_", 1)
 
 
+def snake_case(name):
+    """Convert CamelCase to snake_case."""
+    return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
+
+
 class Inspector:
     def __init__(self):
         self.parentCtx = None
@@ -43,7 +49,7 @@ class Inspector:
         self.stop = None
 
 
-def generate_TaiheAST():
+def generate_ast():
     with open(path.join(ANTLR_PATH, "TaiheAST.py"), "w") as file:
         file.write(
             f"from dataclasses import dataclass\n"
@@ -61,7 +67,7 @@ def generate_TaiheAST():
             f"\n"
             f"\n"
             f"    @dataclass\n"
-            f"    class token(any):\n"
+            f"    class TOKEN(any):\n"
             f"        text: str\n"
             f"\n"
             f"        def __str__(self):\n"
@@ -98,12 +104,12 @@ def generate_TaiheAST():
                 file.write(
                     f"\n"
                     f"        def _accept(self, visitor) -> Any:\n"
-                    f"            return visitor.visit_{node_kind}(self)\n"
+                    f"            return visitor.visit_{snake_case(node_kind)}(self)\n"
                     f"\n"
                 )
 
 
-def generate_TaiheVisitor():
+def generate_visitor():
     with open(path.join(ANTLR_PATH, "TaiheVisitor.py"), "w") as file:
         file.write(
             f"from {ANTLR_PKG}.TaiheAST import TaiheAST\n"
@@ -115,7 +121,7 @@ def generate_TaiheVisitor():
             f"    def visit(self, node: TaiheAST.any) -> Any:\n"
             f"        return node._accept(self)\n"
             f"\n"
-            f"    def visit_token(self, node: TaiheAST.token) -> Any:\n"
+            f"    def visit_token(self, node: TaiheAST.TOKEN) -> Any:\n"
             f"        raise NotImplementedError()\n"
             f"\n"
         )
@@ -133,12 +139,12 @@ def generate_TaiheVisitor():
                     sub_kind = sub_type.__name__
                     attr_kind = sub_kind[:-7]
                     file.write(
-                        f"    def visit_{attr_kind}(self, node: TaiheAST.{attr_kind}) -> Any:\n"
-                        f"        return self.visit_{node_kind}(node)\n"
+                        f"    def visit_{snake_case(attr_kind)}(self, node: TaiheAST.{attr_kind}) -> Any:\n"
+                        f"        return self.visit_{snake_case(node_kind)}(node)\n"
                         f"\n"
                     )
             file.write(
-                f"    def visit_{node_kind}(self, node: TaiheAST.{node_kind}) -> Any:\n"
+                f"    def visit_{snake_case(node_kind)}(self, node: TaiheAST.{node_kind}) -> Any:\n"
                 f"        raise NotImplementedError()\n"
                 f"\n"
             )
@@ -158,8 +164,8 @@ def run_antlr():
 
 def main():
     run_antlr()
-    generate_TaiheAST()
-    generate_TaiheVisitor()
+    generate_ast()
+    generate_visitor()
 
 
 if __name__ == "__main__":

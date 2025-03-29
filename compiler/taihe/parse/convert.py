@@ -95,14 +95,14 @@ class ExprEvaluator(Visitor):
     # Bool Expr
 
     @override
-    def visit_LiteralBoolExpr(self, node: ast.LiteralBoolExpr) -> bool:
+    def visit_literal_bool_expr(self, node: ast.LiteralBoolExpr) -> bool:
         return {
             "TRUE": True,
             "FALSE": False,
         }[node.val.text]
 
     @override
-    def visit_IntComparisonBoolExpr(self, node: ast.IntComparisonBoolExpr) -> bool:
+    def visit_int_comparison_bool_expr(self, node: ast.IntComparisonBoolExpr) -> bool:
         return {
             ">": int.__gt__,
             "<": int.__lt__,
@@ -116,7 +116,9 @@ class ExprEvaluator(Visitor):
         )
 
     @override
-    def visit_FloatComparisonBoolExpr(self, node: ast.FloatComparisonBoolExpr) -> bool:
+    def visit_float_comparison_bool_expr(
+        self, node: ast.FloatComparisonBoolExpr
+    ) -> bool:
         return {
             ">": float.__gt__,
             "<": float.__lt__,
@@ -130,12 +132,12 @@ class ExprEvaluator(Visitor):
         )
 
     @override
-    def visit_UnaryBoolExpr(self, node: ast.UnaryBoolExpr) -> bool:
+    def visit_unary_bool_expr(self, node: ast.UnaryBoolExpr) -> bool:
         assert node.op.text == "!"
         return not self.visit(node.expr)
 
     @override
-    def visit_BinaryBoolExpr(self, node: ast.BinaryBoolExpr) -> bool:
+    def visit_binary_bool_expr(self, node: ast.BinaryBoolExpr) -> bool:
         return {
             "&&": bool.__and__,
             "||": bool.__or__,
@@ -145,11 +147,11 @@ class ExprEvaluator(Visitor):
         )
 
     @override
-    def visit_ParenthesisBoolExpr(self, node: ast.ParenthesisBoolExpr) -> bool:
+    def visit_parenthesis_bool_expr(self, node: ast.ParenthesisBoolExpr) -> bool:
         return self.visit(node.expr)
 
     @override
-    def visit_ConditionalBoolExpr(self, node: ast.ConditionalBoolExpr) -> bool:
+    def visit_conditional_bool_expr(self, node: ast.ConditionalBoolExpr) -> bool:
         return (
             self.visit(node.then_expr)
             if self.visit(node.cond)
@@ -159,7 +161,7 @@ class ExprEvaluator(Visitor):
     # Int Expr
 
     @override
-    def visit_LiteralIntExpr(self, node: ast.LiteralIntExpr) -> int:
+    def visit_literal_int_expr(self, node: ast.LiteralIntExpr) -> int:
         text = node.val.text
         if text.startswith("0b"):
             return int(text, 2)
@@ -170,11 +172,11 @@ class ExprEvaluator(Visitor):
         return int(text)
 
     @override
-    def visit_ParenthesisIntExpr(self, node: ast.ParenthesisIntExpr) -> int:
+    def visit_parenthesis_int_expr(self, node: ast.ParenthesisIntExpr) -> int:
         return self.visit(node.expr)
 
     @override
-    def visit_ConditionalIntExpr(self, node: ast.ConditionalIntExpr) -> int:
+    def visit_conditional_int_expr(self, node: ast.ConditionalIntExpr) -> int:
         return (
             self.visit(node.then_expr)
             if self.visit(node.cond)
@@ -182,7 +184,7 @@ class ExprEvaluator(Visitor):
         )
 
     @override
-    def visit_UnaryIntExpr(self, node: ast.UnaryIntExpr) -> int:
+    def visit_unary_int_expr(self, node: ast.UnaryIntExpr) -> int:
         return {
             "-": int.__neg__,
             "+": int.__pos__,
@@ -192,7 +194,7 @@ class ExprEvaluator(Visitor):
         )
 
     @override
-    def visit_BinaryIntExpr(self, node: ast.BinaryIntExpr) -> int:
+    def visit_binary_int_expr(self, node: ast.BinaryIntExpr) -> int:
         return {
             "+": int.__add__,
             "-": int.__sub__,
@@ -210,7 +212,7 @@ class ExprEvaluator(Visitor):
         )
 
     @override
-    def visit_BinaryIntShiftExpr(self, node: ast.BinaryIntShiftExpr) -> int:
+    def visit_binary_int_shift_expr(self, node: ast.BinaryIntShiftExpr) -> int:
         return {
             "<": int.__lshift__,
             ">": int.__rshift__,
@@ -222,15 +224,15 @@ class ExprEvaluator(Visitor):
     # Float Expr
 
     @override
-    def visit_LiteralFloatExpr(self, node: ast.LiteralFloatExpr) -> float:
+    def visit_literal_float_expr(self, node: ast.LiteralFloatExpr) -> float:
         return float(node.val.text)
 
     @override
-    def visit_ParenthesisFloatExpr(self, node: ast.ParenthesisFloatExpr) -> float:
+    def visit_parenthesis_float_expr(self, node: ast.ParenthesisFloatExpr) -> float:
         return self.visit(node.expr)
 
     @override
-    def visit_ConditionalFloatExpr(self, node: ast.ConditionalFloatExpr) -> Any:
+    def visit_conditional_float_expr(self, node: ast.ConditionalFloatExpr) -> Any:
         return (
             self.visit(node.then_expr)
             if self.visit(node.cond)
@@ -238,7 +240,7 @@ class ExprEvaluator(Visitor):
         )
 
     @override
-    def visit_UnaryFloatExpr(self, node: ast.UnaryFloatExpr) -> float:
+    def visit_unary_float_expr(self, node: ast.UnaryFloatExpr) -> float:
         return {
             "-": float.__neg__,
             "+": float.__pos__,
@@ -247,7 +249,7 @@ class ExprEvaluator(Visitor):
         )
 
     @override
-    def visit_BinaryFloatExpr(self, node: ast.BinaryFloatExpr) -> float:
+    def visit_binary_float_expr(self, node: ast.BinaryFloatExpr) -> float:
         return {
             "+": float.__add__,
             "-": float.__sub__,
@@ -261,7 +263,7 @@ class ExprEvaluator(Visitor):
     # String Expr
 
     @override
-    def visit_LiteralStringExpr(self, node: ast.LiteralStringExpr) -> str:
+    def visit_literal_string_expr(self, node: ast.LiteralStringExpr) -> str:
         return "".join(
             decode(
                 (
@@ -297,33 +299,33 @@ class AstConverter(ExprEvaluator):
     # Attributes
 
     @override
-    def visit_AttrVal(self, node: ast.AttrVal) -> Any:
+    def visit_attr_val(self, node: ast.AttrVal) -> Any:
         return self.visit(node.expr)
 
     # Type References
 
     @override
-    def visit_LongType(self, node: ast.LongType) -> LongTypeRefDecl:
+    def visit_long_type(self, node: ast.LongType) -> LongTypeRefDecl:
         loc = self.loc(node)
         pkname = pkg2str(node.pkg_name)
         symbol = str(node.decl_name)
         return LongTypeRefDecl(loc, pkname, symbol)
 
     @override
-    def visit_ShortType(self, node: ast.ShortType) -> ShortTypeRefDecl:
+    def visit_short_type(self, node: ast.ShortType) -> ShortTypeRefDecl:
         loc = self.loc(node)
         symbol = str(node.decl_name)
         return ShortTypeRefDecl(loc, symbol)
 
     @override
-    def visit_GenericType(self, node: ast.GenericType) -> GenericTypeRefDecl:
+    def visit_generic_type(self, node: ast.GenericType) -> GenericTypeRefDecl:
         loc = self.loc(node)
         symbol = str(node.decl_name)
         args = [self.visit(arg) for arg in node.args]
         return GenericTypeRefDecl(loc, symbol, args)
 
     @override
-    def visit_CallbackType(self, node: ast.CallbackType) -> CallbackTypeRefDecl:
+    def visit_callback_type(self, node: ast.CallbackType) -> CallbackTypeRefDecl:
         if ty := node.return_ty:
             d = CallbackTypeRefDecl(self.loc(node), self.visit(ty))
         else:
@@ -334,7 +336,7 @@ class AstConverter(ExprEvaluator):
     # Uses
 
     @override
-    def visit_UsePackage(self, node: ast.UsePackage) -> Iterable[PackageImportDecl]:
+    def visit_use_package(self, node: ast.UsePackage) -> Iterable[PackageImportDecl]:
         p_ref = PackageRefDecl(self.loc(node.pkg_name), pkg2str(node.pkg_name))
         if node.pkg_alias:
             d = PackageImportDecl(
@@ -349,7 +351,7 @@ class AstConverter(ExprEvaluator):
         yield d
 
     @override
-    def visit_UseSymbol(self, node: ast.UseSymbol) -> Iterable[DeclarationImportDecl]:
+    def visit_use_symbol(self, node: ast.UseSymbol) -> Iterable[DeclarationImportDecl]:
         p_ref = PackageRefDecl(self.loc(node.pkg_name), pkg2str(node.pkg_name))
         for p in node.decl_alias_pairs:
             d_ref = DeclarationRefDecl(self.loc(p.decl_name), str(p.decl_name), p_ref)
@@ -368,13 +370,13 @@ class AstConverter(ExprEvaluator):
     # Declarations
 
     @override
-    def visit_StructProperty(self, node: ast.StructProperty) -> StructFieldDecl:
+    def visit_struct_property(self, node: ast.StructProperty) -> StructFieldDecl:
         d = StructFieldDecl(self.loc(node.name), str(node.name), self.visit(node.ty))
         self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
         return d
 
     @override
-    def visit_Struct(self, node: ast.Struct) -> StructDecl:
+    def visit_struct(self, node: ast.Struct) -> StructDecl:
         d = StructDecl(self.loc(node.name), str(node.name))
         self.diag.for_each(node.fields, lambda f: d.add_field(self.visit(f)))
         self.diag.for_each(node.declattrs, lambda a: d.add_attr(self.visit(a)))
@@ -382,7 +384,7 @@ class AstConverter(ExprEvaluator):
         return d
 
     @override
-    def visit_EnumProperty(self, node: ast.EnumProperty) -> EnumItemDecl:
+    def visit_enum_property(self, node: ast.EnumProperty) -> EnumItemDecl:
         if node.val:
             d = EnumItemDecl(self.loc(node.name), str(node.name), self.visit(node.val))
         else:
@@ -391,7 +393,7 @@ class AstConverter(ExprEvaluator):
         return d
 
     @override
-    def visit_Enum(self, node: ast.Enum) -> EnumDecl:
+    def visit_enum(self, node: ast.Enum) -> EnumDecl:
         if ty := node.enum_ty:
             d = EnumDecl(self.loc(node.name), str(node.name), self.visit(ty))
         else:
@@ -401,7 +403,7 @@ class AstConverter(ExprEvaluator):
         return d
 
     @override
-    def visit_UnionProperty(self, node: ast.UnionProperty) -> UnionFieldDecl:
+    def visit_union_property(self, node: ast.UnionProperty) -> UnionFieldDecl:
         if ty := node.ty:
             d = UnionFieldDecl(self.loc(node.name), str(node.name), self.visit(ty))
         else:
@@ -410,7 +412,7 @@ class AstConverter(ExprEvaluator):
         return d
 
     @override
-    def visit_Union(self, node: ast.Union) -> UnionDecl:
+    def visit_union(self, node: ast.Union) -> UnionDecl:
         d = UnionDecl(self.loc(node.name), str(node.name))
         self.diag.for_each(node.fields, lambda f: d.add_field(self.visit(f)))
         self.diag.for_each(node.declattrs, lambda a: d.add_attr(self.visit(a)))
@@ -418,13 +420,13 @@ class AstConverter(ExprEvaluator):
         return d
 
     @override
-    def visit_Parameter(self, node: ast.Parameter) -> ParamDecl:
+    def visit_parameter(self, node: ast.Parameter) -> ParamDecl:
         d = ParamDecl(self.loc(node.name), str(node.name), self.visit(node.ty))
         self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
         return d
 
     @override
-    def visit_InterfaceFunction(self, node: ast.InterfaceFunction) -> IfaceMethodDecl:
+    def visit_interface_function(self, node: ast.InterfaceFunction) -> IfaceMethodDecl:
         if ty := node.return_ty:
             d = IfaceMethodDecl(self.loc(node.name), str(node.name), self.visit(ty))
         else:
@@ -434,12 +436,12 @@ class AstConverter(ExprEvaluator):
         return d
 
     @override
-    def visit_InterfaceParent(self, node: ast.InterfaceParent) -> IfaceParentDecl:
+    def visit_interface_parent(self, node: ast.InterfaceParent) -> IfaceParentDecl:
         p = IfaceParentDecl(self.loc(node.ty), self.visit(node.ty))
         return p
 
     @override
-    def visit_Interface(self, node: ast.Interface) -> IfaceDecl:
+    def visit_interface(self, node: ast.Interface) -> IfaceDecl:
         d = IfaceDecl(self.loc(node.name), str(node.name))
         self.diag.for_each(node.fields, lambda f: d.add_method(self.visit(f)))
         self.diag.for_each(node.extends, lambda i: d.add_parent(self.visit(i)))
@@ -448,7 +450,7 @@ class AstConverter(ExprEvaluator):
         return d
 
     @override
-    def visit_GlobalFunction(self, node: ast.GlobalFunction) -> GlobFuncDecl:
+    def visit_global_function(self, node: ast.GlobalFunction) -> GlobFuncDecl:
         if ty := node.return_ty:
             d = GlobFuncDecl(self.loc(node.name), str(node.name), self.visit(ty))
         else:
@@ -458,13 +460,13 @@ class AstConverter(ExprEvaluator):
         return d
 
     @override
-    def visit_DeclAttr(self, node: ast.DeclAttr) -> AttrItemDecl:
+    def visit_decl_attr(self, node: ast.DeclAttr) -> AttrItemDecl:
         value = tuple(self.visit(val) for val in node.vals)
         d = AttrItemDecl(self.loc(node.name), str(node.name), value)
         return d
 
     @override
-    def visit_ScopeAttr(self, node: ast.ScopeAttr) -> AttrItemDecl:
+    def visit_scope_attr(self, node: ast.ScopeAttr) -> AttrItemDecl:
         value = tuple(self.visit(val) for val in node.vals)
         d = AttrItemDecl(self.loc(node.name), str(node.name), value)
         return d
@@ -472,7 +474,7 @@ class AstConverter(ExprEvaluator):
     # Package
 
     @override
-    def visit_Spec(self, node: ast.Spec) -> PackageDecl:
+    def visit_spec(self, node: ast.Spec) -> PackageDecl:
         pkg = PackageDecl(self.source.pkg_name, SourceLocation(self.source))
         for u in node.uses:
             self.diag.for_each(self.visit(u), pkg.add_import)
@@ -483,4 +485,4 @@ class AstConverter(ExprEvaluator):
     def convert(self) -> PackageDecl:
         """Converts the whole source code buffer to a package."""
         ast = generate_ast(self.source, self.diag)
-        return self.visit_Spec(ast)
+        return self.visit_spec(ast)
