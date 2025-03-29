@@ -193,61 +193,73 @@ public:
 
   ::test_union::union_primitive_2 func_union_primitive_return(
       string_view kind) {
+    std::string const s_value = "string";
+    int8_t const i8_value = 1;
     if (kind == "s") {
-      return ::test_union::union_primitive_2::make_sValue("string");
+      return ::test_union::union_primitive_2::make_sValue(s_value);
     }
     if (kind == "i8") {
-      return ::test_union::union_primitive_2::make_i8Value(1);
+      return ::test_union::union_primitive_2::make_i8Value(i8_value);
     }
   }
 
   ::test_union::union_primitive_2_1 func_union_primitive_return1(
       string_view kind) {
+    int8_t const i8_value = 1;
+    int16_t const i16_value = 12;
     if (kind == "i8") {
-      return ::test_union::union_primitive_2_1::make_i8Value(1);
+      return ::test_union::union_primitive_2_1::make_i8Value(i8_value);
     }
     if (kind == "i16") {
-      return ::test_union::union_primitive_2_1::make_i16Value(12);
+      return ::test_union::union_primitive_2_1::make_i16Value(i16_value);
     }
   }
 
   ::test_union::union_primitive_2_2 func_union_primitive_return2(
       string_view kind) {
+    int8_t const i8_value = 1;
+    int const i8_value_2 = 2;
     if (kind == "i8_1") {
-      return ::test_union::union_primitive_2_2::make_i8Value(1);
+      return ::test_union::union_primitive_2_2::make_i8Value(i8_value);
     }
     if (kind == "i8_2") {
-      return ::test_union::union_primitive_2_2::make_i8Value2(2);
+      return ::test_union::union_primitive_2_2::make_i8Value2(i8_value_2);
     }
   }
 
   ::test_union::union_primitive_2_3 func_union_primitive_return3(
       string_view kind) {
+    int16_t const i16_value = 12;
+    int const i32_value = 123;
     if (kind == "i16") {
-      return ::test_union::union_primitive_2_3::make_i16Value(12);
+      return ::test_union::union_primitive_2_3::make_i16Value(i16_value);
     }
     if (kind == "i32") {
-      return ::test_union::union_primitive_2_3::make_i32Value(123);
+      return ::test_union::union_primitive_2_3::make_i32Value(i32_value);
     }
   }
 
   ::test_union::union_primitive_2_4 func_union_primitive_return4(
       string_view kind) {
+    int const i32_value = 123;
+    float const f32_value = 1.1f;
     if (kind == "i32") {
-      return ::test_union::union_primitive_2_4::make_i32Value(123);
+      return ::test_union::union_primitive_2_4::make_i32Value(i32_value);
     }
     if (kind == "f32") {
-      return ::test_union::union_primitive_2_4::make_f32Value(1.1);
+      return ::test_union::union_primitive_2_4::make_f32Value(f32_value);
     }
   }
 
   ::test_union::union_primitive_2_5 func_union_primitive_return5(
       string_view kind) {
+    float const f32_value = 1.1f;
+    double const f64_value = 1.234;
     if (kind == "f32") {
-      return ::test_union::union_primitive_2_5::make_f32Value(1.1);
+      return ::test_union::union_primitive_2_5::make_f32Value(f32_value);
     }
     if (kind == "f64") {
-      return ::test_union::union_primitive_2_5::make_f64Value(1.234);
+      return ::test_union::union_primitive_2_5::make_f64Value(f64_value);
     }
   }
 
@@ -267,7 +279,8 @@ public:
       return ::test_union::union_primitive_2_7::make_bValue(true);
     }
     if (kind == "i8") {
-      return ::test_union::union_primitive_2_7::make_i8Value(1);
+      int8_t const i8_value = 1;
+      return ::test_union::union_primitive_2_7::make_i8Value(i8_value);
     }
   }
 
@@ -296,18 +309,21 @@ public:
       return ::test_union::union_mix_5::make_sValue("hello");
     }
     if (kind == "i8") {
-      return ::test_union::union_mix_5::make_i8Value(1);
+      int8_t const i8_value = 1;
+      return ::test_union::union_mix_5::make_i8Value(i8_value);
     }
     if (kind == "b") {
-      return ::test_union::union_mix_5::make_bValue(1);
+      return ::test_union::union_mix_5::make_bValue(true);
     }
     if (kind == "c") {
       return ::test_union::union_mix_5::make_enumValue(
           (::test_union::Color::key_t)((int)(1)));
     }
     if (kind == "arr") {
-      array<int32_t> result = array<int32_t>::make(5);
-      std::fill(result.begin(), result.end(), 3);
+      int const arr_size = 5;
+      int const arr_num = 3;
+      array<int32_t> result = array<int32_t>::make(arr_size);
+      std::fill(result.begin(), result.end(), arr_num);
       return ::test_union::union_mix_5::make_arr32(result);
     }
   }
@@ -343,28 +359,39 @@ string printUnion(::test_union::union_primitive const& data) {
   }
 }
 
-::test_union::union_primitive makeUnion(string_view kind) {
+::test_union::union_primitive makeUnion(std::string_view kind) {
+  constexpr std::string_view s_value = "string";
+  constexpr int8_t i8_value = 1;
+  constexpr int16_t i16_value = 123;
+  constexpr int32_t i32_value = 1234;
+  constexpr float f32_value = 1.12f;
+  constexpr double f64_value = 1.12345;
+  constexpr bool bool_value = true;
+
   if (kind == "s") {
-    return ::test_union::union_primitive::make_sValue("string");
+    return ::test_union::union_primitive::make_sValue(s_value);
   }
   if (kind == "i8") {
-    return ::test_union::union_primitive::make_i8Value(1);
+    return ::test_union::union_primitive::make_i8Value(i8_value);
   }
   if (kind == "i16") {
-    return ::test_union::union_primitive::make_i16Value(123);
+    return ::test_union::union_primitive::make_i16Value(i16_value);
   }
   if (kind == "i32") {
-    return ::test_union::union_primitive::make_i32Value(1234);
+    return ::test_union::union_primitive::make_i32Value(i32_value);
   }
   if (kind == "f32") {
-    return ::test_union::union_primitive::make_f32Value(1.12);
+    return ::test_union::union_primitive::make_f32Value(f32_value);
   }
   if (kind == "f64") {
-    return ::test_union::union_primitive::make_f64Value(1.12345);
+    return ::test_union::union_primitive::make_f64Value(f64_value);
   }
   if (kind == "bool") {
-    return ::test_union::union_primitive::make_bValue(true);
+    return ::test_union::union_primitive::make_bValue(bool_value);
   }
+
+  // 处理未知的kind值
+  // ...
 }
 
 ::test_union::MyInterface get_interface() {

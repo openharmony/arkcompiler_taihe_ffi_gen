@@ -241,11 +241,8 @@ function test_interface_Union_enum_map4() {
         "math": 123.45 as float,
         "english": 57.89 as float
     };
-    console.log(1)
     let instance: UnionTest1.MyInterface = UnionTest1.get_interface();
-    console.log(2)
     instance.func_color_map_value5(studentScores);
-    console.log(3)
 }
 
 function test_interface_Union_enum_map5() {
