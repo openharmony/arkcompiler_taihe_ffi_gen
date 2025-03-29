@@ -84,491 +84,478 @@ void ForeachMap(map_view<string, string> my_map) {
   };
 }
 
-
-bool Mapfunc01(map_view<string, bool> m) {
-    return true;
-}
+bool Mapfunc01(map_view<string, bool> m) { return true; }
 
 bool Mapfunc02(map_view<string, int8_t> m) {
-    const int threshold = 0;
-    for (const auto& pair : m) {
-        if (pair.second <= threshold) {
-            return false;
-        }
+  const int threshold = 0;
+  for (const auto& pair : m) {
+    if (pair.second <= threshold) {
+      return false;
     }
-    return true;
+  }
+  return true;
 }
 
 bool Mapfunc03(map_view<string, int16_t> m) {
-    const int threshold = 0;
-    for (const auto& pair : m) {
-        if (pair.second <= threshold) {
-            return false;
-        }
+  const int threshold = 0;
+  for (const auto& pair : m) {
+    if (pair.second <= threshold) {
+      return false;
     }
-    return true;
+  }
+  return true;
 }
 
 bool Mapfunc04(map_view<string, int32_t> m) {
-    const int threshold = 0;
-    for (const auto& pair : m) {
-        if (pair.second <= threshold) {
-            return false;
-        }
+  const int threshold = 0;
+  for (const auto& pair : m) {
+    if (pair.second <= threshold) {
+      return false;
     }
-    return true;
+  }
+  return true;
 }
 
 bool Mapfunc05(map_view<string, int64_t> m) {
-    const int threshold = 0;
-    for (const auto& pair : m) {
-        if (pair.second <= threshold) {
-            return false;
-        }
+  const int threshold = 0;
+  for (const auto& pair : m) {
+    if (pair.second <= threshold) {
+      return false;
     }
-    return true;
+  }
+  return true;
 }
 
 bool Mapfunc06(map_view<string, float> m) {
-    const float threshold = 0.0f;
-    for (const auto& pair : m) {
-        if (pair.second <= threshold) {
-            return false;
-        }
+  const float threshold = 0.0f;
+  for (const auto& pair : m) {
+    if (pair.second <= threshold) {
+      return false;
     }
-    return true;
+  }
+  return true;
 }
 
 bool Mapfunc07(map_view<string, double> m) {
-    const double threshold = 0.0;
-    for (const auto& pair : m) {
-        if (pair.second <= threshold) {
-            return false;
-        }
+  const double threshold = 0.0;
+  for (const auto& pair : m) {
+    if (pair.second <= threshold) {
+      return false;
     }
-    return true;
+  }
+  return true;
 }
 
 bool Mapfunc08(map_view<string, string> m) {
-    for (const auto& pair : m) {
-        if (pair.second.empty()) {
-            return false;
-        }
+  for (const auto& pair : m) {
+    if (pair.second.empty()) {
+      return false;
     }
-    return true;
+  }
+  return true;
 }
 
 bool Mapfunc09(map_view<string, array<int8_t>> m) {
-    for (const auto& pair : m) {
-        if (pair.second.empty()) {
-            return false;
-        }
+  for (const auto& pair : m) {
+    if (pair.second.empty()) {
+      return false;
     }
-    return true;
+  }
+  return true;
 }
 
 bool Mapfunc10(map_view<string, array<int16_t>> m) {
-    for (const auto& pair : m) {
-        if (pair.second.empty()) {
-            return false;
-        }
+  for (const auto& pair : m) {
+    if (pair.second.empty()) {
+      return false;
     }
-    return true;
+  }
+  return true;
 }
 
 bool Mapfunc11(map_view<string, array<int32_t>> m) {
-    for (const auto& pair : m) {
-        if (pair.second.empty()) {
-            return false;
-        }
+  for (const auto& pair : m) {
+    if (pair.second.empty()) {
+      return false;
     }
-    return true;
+  }
+  return true;
 }
 
 bool Mapfunc12(map_view<string, array<int64_t>> m) {
-    for (const auto& pair : m) {
-        if (pair.second.empty()) {
-            return false;
-        }
+  for (const auto& pair : m) {
+    if (pair.second.empty()) {
+      return false;
     }
-    return true;
+  }
+  return true;
 }
 
 bool Mapfunc13(map_view<string, array<array<uint8_t>>> m) {
-    for (const auto& pair : m) {
-        if (pair.second.empty()) {
-            return false;
-        }
+  for (const auto& pair : m) {
+    if (pair.second.empty()) {
+      return false;
     }
-    return true;
+  }
+  return true;
 }
 
 bool Mapfunc14(map_view<string, array<bool>> m) {
-    for (const auto& pair : m) {
-        if (pair.second.empty()) {
-            return false;
-        }
+  for (const auto& pair : m) {
+    if (pair.second.empty()) {
+      return false;
     }
-    return true;
+  }
+  return true;
 }
 
 bool Mapfunc15(map_view<string, array<string>> m) {
-    for (const auto& pair : m) {
-        if (pair.second.empty()) {
-            return false;
-        }
+  for (const auto& pair : m) {
+    if (pair.second.empty()) {
+      return false;
     }
-    return true;
+  }
+  return true;
 }
 
-bool Mapfunc16(map_view<string, record_test::TypeUnion> m) {
-    return true;
-}
+bool Mapfunc16(map_view<string, record_test::TypeUnion> m) { return true; }
 
-bool Mapfunc17(map_view<string, record_test::Color> m) {
-    return true;
-}
+bool Mapfunc17(map_view<string, record_test::Color> m) { return true; }
 
-bool Mapfunc18(map_view<string, record_test::Pair> m) {
-    return true;
-}
+bool Mapfunc18(map_view<string, record_test::Pair> m) { return true; }
 
 ::record_test::ICpuZero MakeICpuZero() {
-    return make_holder<ICpuZero, ::record_test::ICpuZero>();
+  return make_holder<ICpuZero, ::record_test::ICpuZero>();
 }
 
-bool Mapfunc19(map_view<string, record_test::ICpuZero> m) {
-    return true;
-}
+bool Mapfunc19(map_view<string, record_test::ICpuZero> m) { return true; }
 
 ::record_test::ICpuInfo MakeICpuInfo() {
-    return make_holder<ICpuInfo, ::record_test::ICpuInfo>();
+  return make_holder<ICpuInfo, ::record_test::ICpuInfo>();
 }
 
-bool Mapfunc20(map_view<string, record_test::ICpuInfo> m) {
-    return true;
-}
+bool Mapfunc20(map_view<string, record_test::ICpuInfo> m) { return true; }
 
 bool Mapfunc21(map_view<string, uintptr_t> m) {
-    const uintptr_t zero = 0;
-    for (const auto& pair : m) {
-        if (pair.second == zero) {
-            return false;
-        }
+  const uintptr_t zero = 0;
+  for (const auto& pair : m) {
+    if (pair.second == zero) {
+      return false;
     }
-    return true;
+  }
+  return true;
 }
 
 bool Mapfunc22(map_view<string, map<string, bool>> m) {
-    const size_t emptySize = 0;
-    for (const auto& pair : m) {
-        if (pair.second.size() == emptySize) {
-            return false;
-        }
+  const size_t emptySize = 0;
+  for (const auto& pair : m) {
+    if (pair.second.size() == emptySize) {
+      return false;
     }
-    return true;
+  }
+  return true;
 }
 
 bool Mapfunc23(map_view<string, map<string, int32_t>> m) {
-    const size_t emptySize = 0;
-    for (const auto& pair : m) {
-        if (pair.second.size() == emptySize) {
-            return false;
-        }
+  const size_t emptySize = 0;
+  for (const auto& pair : m) {
+    if (pair.second.size() == emptySize) {
+      return false;
     }
-    return true;
+  }
+  return true;
 }
 
 bool Mapfunc24(map_view<string, map<string, array<int32_t>>> m) {
-    const size_t emptySize = 0;
-    for (const auto& pair : m) {
-        if (pair.second.size() == emptySize) {
-            return false;
-        }
+  const size_t emptySize = 0;
+  for (const auto& pair : m) {
+    if (pair.second.size() == emptySize) {
+      return false;
     }
-    return true;
+  }
+  return true;
 }
 
 bool Mapfunc25(map_view<string, map<string, string>> m) {
-    const size_t emptySize = 0;
-    for (const auto& pair : m) {
-        if (pair.second.size() == emptySize) {
-            return false;
-        }
+  const size_t emptySize = 0;
+  for (const auto& pair : m) {
+    if (pair.second.size() == emptySize) {
+      return false;
     }
-    return true;
+  }
+  return true;
 }
 
 map<string, bool> Mapfunc26() {
-    map<string, bool> result;
-    const bool value1 = true;
-    const bool value2 = false;
-    result.emplace("key1", value1);
-    result.emplace("key2", value2);
-    return result;
+  map<string, bool> result;
+  const bool value1 = true;
+  const bool value2 = false;
+  result.emplace("key1", value1);
+  result.emplace("key2", value2);
+  return result;
 }
 
 map<string, int8_t> Mapfunc27() {
-    map<string, int8_t> result;
-    const int8_t value1 = 123;
-    const int8_t value2 = 45;
-    result.emplace("key1", value1);
-    result.emplace("key2", value2);
-    return result;
+  map<string, int8_t> result;
+  const int8_t value1 = 123;
+  const int8_t value2 = 45;
+  result.emplace("key1", value1);
+  result.emplace("key2", value2);
+  return result;
 }
 
 map<string, int16_t> Mapfunc28() {
-    map<string, int16_t> result;
-    const int16_t value1 = 1234;
-    const int16_t value2 = 5678;
-    result.emplace("key1", value1);
-    result.emplace("key2", value2);
-    return result;
+  map<string, int16_t> result;
+  const int16_t value1 = 1234;
+  const int16_t value2 = 5678;
+  result.emplace("key1", value1);
+  result.emplace("key2", value2);
+  return result;
 }
 
 map<string, int32_t> Mapfunc29() {
-    map<string, int32_t> result;
-    const int32_t value1 = 12345;
-    const int32_t value2 = 67890;
-    result.emplace("key1", value1);
-    result.emplace("key2", value2);
-    return result;
+  map<string, int32_t> result;
+  const int32_t value1 = 12345;
+  const int32_t value2 = 67890;
+  result.emplace("key1", value1);
+  result.emplace("key2", value2);
+  return result;
 }
 
 map<string, int64_t> Mapfunc30() {
-    map<string, int64_t> result;
-    const int64_t value1 = 123456;
-    const int64_t value2 = 789012;
-    result.emplace("key1", value1);
-    result.emplace("key2", value2);
-    return result;
+  map<string, int64_t> result;
+  const int64_t value1 = 123456;
+  const int64_t value2 = 789012;
+  result.emplace("key1", value1);
+  result.emplace("key2", value2);
+  return result;
 }
 
 map<string, float> Mapfunc31() {
-    map<string, float> result;
-    const float value1 = 123.45f;
-    const float value2 = 67.89f;
-    result.emplace("key1", value1);
-    result.emplace("key2", value2);
-    return result;
+  map<string, float> result;
+  const float value1 = 123.45f;
+  const float value2 = 67.89f;
+  result.emplace("key1", value1);
+  result.emplace("key2", value2);
+  return result;
 }
 
 map<string, double> Mapfunc32() {
-    map<string, double> result;
-    const double value1 = 123.456;
-    const double value2 = 789.012;
-    result.emplace("key1", value1);
-    result.emplace("key2", value2);
-    return result;
+  map<string, double> result;
+  const double value1 = 123.456;
+  const double value2 = 789.012;
+  result.emplace("key1", value1);
+  result.emplace("key2", value2);
+  return result;
 }
 
 map<string, string> Mapfunc33() {
-    map<string, string> result;
-    const string value1 = "value1";
-    const string value2 = "value2";
-    result.emplace("key1", value1);
-    result.emplace("key2", value2);
-    return result;
+  map<string, string> result;
+  const string value1 = "value1";
+  const string value2 = "value2";
+  result.emplace("key1", value1);
+  result.emplace("key2", value2);
+  return result;
 }
 
 map<string, array<int8_t>> Mapfunc34() {
-    map<string, array<int8_t>> result;
-    const array<int8_t> a = {1, 2, 3};
-    const array<int8_t> b = {4, 5, 6};
-    result.emplace("key1", a);
-    result.emplace("key2", b);
-    return result;
+  map<string, array<int8_t>> result;
+  const array<int8_t> a = {1, 2, 3};
+  const array<int8_t> b = {4, 5, 6};
+  result.emplace("key1", a);
+  result.emplace("key2", b);
+  return result;
 }
 
 map<string, array<int16_t>> Mapfunc35() {
-    map<string, array<int16_t>> result;
-    const array<int16_t> a = {123, 456};
-    const array<int16_t> b = {789, 1011};
-    result.emplace("key1", a);
-    result.emplace("key2", b);
-    return result;
+  map<string, array<int16_t>> result;
+  const array<int16_t> a = {123, 456};
+  const array<int16_t> b = {789, 1011};
+  result.emplace("key1", a);
+  result.emplace("key2", b);
+  return result;
 }
 
 map<string, array<int32_t>> Mapfunc36() {
-    map<string, array<int32_t>> result;
-    const array<int32_t> a = {1234, 5678};
-    const array<int32_t> b = {9012, 3456};
-    result.emplace("key1", a);
-    result.emplace("key2", b);
-    return result;
+  map<string, array<int32_t>> result;
+  const array<int32_t> a = {1234, 5678};
+  const array<int32_t> b = {9012, 3456};
+  result.emplace("key1", a);
+  result.emplace("key2", b);
+  return result;
 }
 
 map<string, array<int64_t>> Mapfunc37() {
-    map<string, array<int64_t>> result;
-    const array<int64_t> a = {12345, 67890};
-    const array<int64_t> b = {11111, 22222};
-    result.emplace("key1", a);
-    result.emplace("key2", b);
-    return result;
+  map<string, array<int64_t>> result;
+  const array<int64_t> a = {12345, 67890};
+  const array<int64_t> b = {11111, 22222};
+  result.emplace("key1", a);
+  result.emplace("key2", b);
+  return result;
 }
 
 map<string, array<uint8_t>> Mapfunc38() {
-    map<string, array<uint8_t>> result;
-    const array<uint8_t> a = {1, 2, 3};
-    const array<uint8_t> b = {4, 5, 6};
-    result.emplace("key1", a);
-    result.emplace("key2", b);
-    return result;
+  map<string, array<uint8_t>> result;
+  const array<uint8_t> a = {1, 2, 3};
+  const array<uint8_t> b = {4, 5, 6};
+  result.emplace("key1", a);
+  result.emplace("key2", b);
+  return result;
 }
 
 map<string, array<bool>> Mapfunc39() {
-    map<string, array<bool>> result;
-    const array<bool> a = {true, false};
-    const array<bool> b = {false, true};
-    result.emplace("key1", a);
-    result.emplace("key2", b);
-    return result;
+  map<string, array<bool>> result;
+  const array<bool> a = {true, false};
+  const array<bool> b = {false, true};
+  result.emplace("key1", a);
+  result.emplace("key2", b);
+  return result;
 }
 
 map<string, array<string>> Mapfunc40() {
-    map<string, array<string>> result;
-    const array<string> a = {"value1", "value2"};
-    const array<string> b = {"value3", "value4"};
-    result.emplace("key1", a);
-    result.emplace("key2", b);
-    return result;
+  map<string, array<string>> result;
+  const array<string> a = {"value1", "value2"};
+  const array<string> b = {"value3", "value4"};
+  result.emplace("key1", a);
+  result.emplace("key2", b);
+  return result;
 }
 
 map<string, record_test::TypeUnion> Mapfunc41() {
-    map<string, record_test::TypeUnion> result;
-    result.emplace("key1", record_test::TypeUnion::make_a(123));
-    result.emplace("key2", record_test::TypeUnion::make_b(true));
-    result.emplace("key3", record_test::TypeUnion::make_c("value"));
-    return result;
+  map<string, record_test::TypeUnion> result;
+  result.emplace("key1", record_test::TypeUnion::make_a(123));
+  result.emplace("key2", record_test::TypeUnion::make_b(true));
+  result.emplace("key3", record_test::TypeUnion::make_c("value"));
+  return result;
 }
 
 map<string, record_test::Color> Mapfunc42() {
-    map<string, record_test::Color> result;
-    result.emplace("key1", record_test::Color::key_t::RED);
-    result.emplace("key2", record_test::Color::key_t::GREEN);
-    return result;
+  map<string, record_test::Color> result;
+  result.emplace("key1", record_test::Color::key_t::RED);
+  result.emplace("key2", record_test::Color::key_t::GREEN);
+  return result;
 }
 
 map<string, record_test::Pair> Mapfunc43() {
-    map<string, record_test::Pair> result;
-    record_test::Pair p1{
-        .a = "one",
-        .b = true,
-    };
-    record_test::Pair p2{
-        .a = "two",
-        .b = false,
-    };
-    result.emplace("key1", p1);
-    result.emplace("key2", p2);
-    return result;
+  map<string, record_test::Pair> result;
+  record_test::Pair p1{
+      .a = "one",
+      .b = true,
+  };
+  record_test::Pair p2{
+      .a = "two",
+      .b = false,
+  };
+  result.emplace("key1", p1);
+  result.emplace("key2", p2);
+  return result;
 }
 
 map<string, record_test::ICpuZero> Mapfunc44() {
-    map<string, record_test::ICpuZero> result;
-    result.emplace("key1", make_holder<ICpuZero, ::record_test::ICpuZero>());
-    result.emplace("key2", make_holder<ICpuZero, ::record_test::ICpuZero>());
-    return result;
+  map<string, record_test::ICpuZero> result;
+  result.emplace("key1", make_holder<ICpuZero, ::record_test::ICpuZero>());
+  result.emplace("key2", make_holder<ICpuZero, ::record_test::ICpuZero>());
+  return result;
 }
 
 map<string, record_test::ICpuInfo> Mapfunc45() {
-    map<string, record_test::ICpuInfo> result;
-    result.emplace("key1", make_holder<ICpuInfo, ::record_test::ICpuInfo>());
-    result.emplace("key2", make_holder<ICpuInfo, ::record_test::ICpuInfo>());
-    return result;
+  map<string, record_test::ICpuInfo> result;
+  result.emplace("key1", make_holder<ICpuInfo, ::record_test::ICpuInfo>());
+  result.emplace("key2", make_holder<ICpuInfo, ::record_test::ICpuInfo>());
+  return result;
 }
 
 map<string, uintptr_t> Mapfunc46() {
-    map<string, uintptr_t> result;
-    result.emplace("key1", reinterpret_cast<uintptr_t>(nullptr));
-    result.emplace("key2", reinterpret_cast<uintptr_t>(nullptr));
-    return result;
+  map<string, uintptr_t> result;
+  result.emplace("key1", reinterpret_cast<uintptr_t>(nullptr));
+  result.emplace("key2", reinterpret_cast<uintptr_t>(nullptr));
+  return result;
 }
 
 map<string, map<string, bool>> Mapfunc47() {
-    map<string, map<string, bool>> result;
-    map<string, bool> m1;
-    const bool value1 = true;
-    const bool value2 = false;
-    m1.emplace("subkey1", value1);
-    m1.emplace("subkey2", value2);
-    result.emplace("key1", m1);
-    map<string, bool> m2;
-    const bool value3 = true;
-    const bool value4 = false;
-    m2.emplace("subkey3", value3);
-    m2.emplace("subkey4", value4);
-    result.emplace("key2", m2);
-    return result;
+  map<string, map<string, bool>> result;
+  map<string, bool> m1;
+  const bool value1 = true;
+  const bool value2 = false;
+  m1.emplace("subkey1", value1);
+  m1.emplace("subkey2", value2);
+  result.emplace("key1", m1);
+  map<string, bool> m2;
+  const bool value3 = true;
+  const bool value4 = false;
+  m2.emplace("subkey3", value3);
+  m2.emplace("subkey4", value4);
+  result.emplace("key2", m2);
+  return result;
 }
 
 map<string, map<string, int32_t>> Mapfunc48() {
-    map<string, map<string, int32_t>> result;
-    map<string, int32_t> m1;
-    const int32_t value1 = 100;
-    const int32_t value2 = 200;
-    m1.emplace("subkey1", value1);
-    m1.emplace("subkey2", value2);
-    result.emplace("key1", m1);
-    map<string, int32_t> m2;
-    const int32_t value3 = 300;
-    const int32_t value4 = 400;
-    m2.emplace("subkey3", value3);
-    m2.emplace("subkey4", value4);
-    result.emplace("key2", m2);
-    return result;
+  map<string, map<string, int32_t>> result;
+  map<string, int32_t> m1;
+  const int32_t value1 = 100;
+  const int32_t value2 = 200;
+  m1.emplace("subkey1", value1);
+  m1.emplace("subkey2", value2);
+  result.emplace("key1", m1);
+  map<string, int32_t> m2;
+  const int32_t value3 = 300;
+  const int32_t value4 = 400;
+  m2.emplace("subkey3", value3);
+  m2.emplace("subkey4", value4);
+  result.emplace("key2", m2);
+  return result;
 }
 
 map<string, map<string, array<int32_t>>> Mapfunc49() {
-    map<string, map<string, array<int32_t>>> result;
-    map<string, array<int32_t>> m1;
-    const array<int32_t> a1 = {1, 2, 3};
-    const array<int32_t> b1 = {4, 5, 6};
-    m1.emplace("subkey1", a1);
-    m1.emplace("subkey2", b1);
-    result.emplace("key1", m1);
-    map<string, array<int32_t>> m2;
-    const array<int32_t> a2 = {7, 8, 9};
-    const array<int32_t> b2 = {10, 11, 12};
-    m2.emplace("subkey3", a2);
-    m2.emplace("subkey4", b2);
-    result.emplace("key2", m2);
-    return result;
+  map<string, map<string, array<int32_t>>> result;
+  map<string, array<int32_t>> m1;
+  const array<int32_t> a1 = {1, 2, 3};
+  const array<int32_t> b1 = {4, 5, 6};
+  m1.emplace("subkey1", a1);
+  m1.emplace("subkey2", b1);
+  result.emplace("key1", m1);
+  map<string, array<int32_t>> m2;
+  const array<int32_t> a2 = {7, 8, 9};
+  const array<int32_t> b2 = {10, 11, 12};
+  m2.emplace("subkey3", a2);
+  m2.emplace("subkey4", b2);
+  result.emplace("key2", m2);
+  return result;
 }
 
 map<string, map<string, string>> Mapfunc50() {
-    map<string, map<string, string>> result;
-    map<string, string> m1;
-    const string value1 = "value1";
-    const string value2 = "value2";
-    m1.emplace("subkey1", value1);
-    m1.emplace("subkey2", value2);
-    result.emplace("key1", m1);
-    map<string, string> m2;
-    const string value3 = "value3";
-    const string value4 = "value4";
-    m2.emplace("subkey3", value3);
-    m2.emplace("subkey4", value4);
-    result.emplace("key2", m2);
-    return result;
+  map<string, map<string, string>> result;
+  map<string, string> m1;
+  const string value1 = "value1";
+  const string value2 = "value2";
+  m1.emplace("subkey1", value1);
+  m1.emplace("subkey2", value2);
+  result.emplace("key1", m1);
+  map<string, string> m2;
+  const string value3 = "value3";
+  const string value4 = "value4";
+  m2.emplace("subkey3", value3);
+  m2.emplace("subkey4", value4);
+  result.emplace("key2", m2);
+  return result;
 }
 
 map<string, map<string, string>> Mapfunc51(
     optional_view<map<string, string>> op) {
-    map<string, map<string, string>> result;
-    map<string, string> m1;
-    const string value1 = "value1";
-    const string value2 = "value2";
-    m1.emplace("subkey1", value1);
-    m1.emplace("subkey2", value2);
-    result.emplace("key1", m1);
-    map<string, string> m2;
-    const string value3 = "value3";
-    const string value4 = "value4";
-    m2.emplace("subkey3", value3);
-    m2.emplace("subkey4", value4);
-    result.emplace("key2", m2);
-    return result;
+  map<string, map<string, string>> result;
+  map<string, string> m1;
+  const string value1 = "value1";
+  const string value2 = "value2";
+  m1.emplace("subkey1", value1);
+  m1.emplace("subkey2", value2);
+  result.emplace("key1", m1);
+  map<string, string> m2;
+  const string value3 = "value3";
+  const string value4 = "value4";
+  m2.emplace("subkey3", value3);
+  m2.emplace("subkey4", value4);
+  result.emplace("key2", m2);
+  return result;
 }
 
 }  // namespace
