@@ -1,3 +1,5 @@
+#include <cstdlib>
+
 #include "core/array.hpp"
 #include "core/runtime.hpp"
 #include "core/string.hpp"
@@ -37,9 +39,12 @@ class map_inner {
           ani_class cls;
           ani_boolean res;
           ani_env* env = get_env();
-          env->FindClass("Limage/Image_inner;", &cls);
+          env->FindClass("L@ohos/multimedia/image/Image_inner;", &cls);
           env->Object_InstanceOf((ani_object)obj, cls, &res);
           std::cout << "type_Image: " << (int)res << std::endl;
+          if (!res) {
+            abort();
+          }
           break;
         }
       }
