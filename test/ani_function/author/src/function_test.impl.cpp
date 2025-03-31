@@ -62,6 +62,16 @@ int32_t static_func_sub(int32_t a, int32_t b) { return a - b; }
 ::function_test::Foo makeFoo() {
   return make_holder<Foo, ::function_test::Foo>();
 }
+
+static int32_t static_property = 0;
+
+int32_t getStaticProperty() {
+  return static_property;
+}
+
+void setStaticProperty(int32_t a) {
+  static_property = a;
+}
 }  // namespace
 
 TH_EXPORT_CPP_API_static_func_add(static_func_add);
@@ -69,3 +79,6 @@ TH_EXPORT_CPP_API_static_func_sub(static_func_sub);
 TH_EXPORT_CPP_API_getFooCls1(getFooCls1);
 TH_EXPORT_CPP_API_getFooCls2(getFooCls2);
 TH_EXPORT_CPP_API_makeFoo(makeFoo);
+
+TH_EXPORT_CPP_API_setStaticProperty(setStaticProperty);
+TH_EXPORT_CPP_API_getStaticProperty(getStaticProperty);

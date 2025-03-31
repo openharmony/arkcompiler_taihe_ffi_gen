@@ -87,6 +87,12 @@ function test_static_func_sub() {
     assertEQ(result, 10);
 }
 
+function test_static_property() {
+    assertEQ(FuncTest.FooCls.static_property, 0);
+    FuncTest.FooCls.static_property = 123;
+    assertEQ(FuncTest.FooCls.static_property, 123);
+}
+
 function test_new_class() {
     let test = new FuncTest.FooCls("hello");
     console.log("test_new_class test is:", test.get());
@@ -123,6 +129,8 @@ function main() {
     suite.addTest("test static func sub", test_static_func_sub);
     suite.addTest("test new class", test_new_class);
     suite.addTest("test new class with two args", test_new_class_with_two_args);
+
+    suite.addTest("test static property", test_static_property);
 
     suite.run();
 }

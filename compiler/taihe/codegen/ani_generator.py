@@ -196,14 +196,19 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
 
         self.sts_native_name = f"{f.name}_inner"
 
-        self.sts_func_name = None
-        self.on_off_type = None
-
         self.sts_static_scope = None
         self.sts_ctor_scope = None
 
-        self.sts_async_name = None
-        self.sts_promise_name = None
+        if static_attr := f.get_attr_item("static"):
+            (self.sts_static_scope,) = static_attr.args
+
+        if ctor_attr := f.get_attr_item("ctor"):
+            (self.sts_ctor_scope,) = ctor_attr.args
+
+        self.sts_func_name = None
+        self.on_off_type = None
+        self.get_name = None
+        self.set_name = None
 
         if overload_attr := f.get_attr_item("overload"):
             (self.sts_func_name,) = overload_attr.args
@@ -229,14 +234,43 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
                     (type_name,) = on_off_attr.args
                 self.on_off_type = ("off", type_name)
 
+        elif get_attr := f.get_attr_item("get"):
+            assert len(f.params) == 0, f"{f.loc}: @get method should take no parameters"
+            assert f.return_ty_ref, f"{f.loc}: @get method cannot return void"
+            assert (
+                self.sts_static_scope
+            ), f"{f.loc}: @get of global functions must be used together with @static"
+
+            if not get_attr.args:
+                assert f.name.startswith(
+                    "get"
+                ), f'{f.loc}: @get method name must start with "get" if the property name is omitted'
+                get_name = f.name[3:]
+                self.get_name = get_name[0].lower() + get_name[1:]
+            else:
+                (self.get_name,) = get_attr.args
+
+        elif set_attr := f.get_attr_item("set"):
+            assert len(f.params) == 1, f"{f.loc}: @set method should have one parameter"
+            assert f.return_ty_ref is None, f"{f.loc}: @set method should return void"
+            assert (
+                self.sts_static_scope
+            ), f"{f.loc}: @set of global functions must be used together with @static"
+
+            if not set_attr.args:
+                assert f.name.startswith(
+                    "set"
+                ), f'{f.loc}: @set method name must start with "set" if the property name is omitted'
+                set_name = f.name[3:]
+                self.set_name = set_name[0].lower() + set_name[1:]
+            else:
+                (self.set_name,) = set_attr.args
+
         else:
             self.sts_func_name = f.name
 
-        if static_attr := f.get_attr_item("static"):
-            (self.sts_static_scope,) = static_attr.args
-
-        if ctor_attr := f.get_attr_item("ctor"):
-            (self.sts_ctor_scope,) = ctor_attr.args
+        self.sts_async_name = None
+        self.sts_promise_name = None
 
         if sts_async_attr := f.get_attr_item("gen_async"):
             (self.sts_async_name,) = sts_async_attr.args
@@ -267,9 +301,6 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
         self.on_off_type = None
 
         self.ani_method_name = None
-
-        self.sts_async_name = None
-        self.sts_promise_name = None
 
         if overload_attr := f.get_attr_item("overload"):
             (self.sts_method_name,) = overload_attr.args
@@ -329,6 +360,9 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
         else:
             self.sts_method_name = f.name
             self.ani_method_name = f.name
+
+        self.sts_async_name = None
+        self.sts_promise_name = None
 
         if sts_async_attr := f.get_attr_item("gen_async"):
             (self.sts_async_name,) = sts_async_attr.args
