@@ -232,7 +232,7 @@ def main(
     print("Done.")
 
     if generate_and_compile_ani:
-        extract_dir = BASEDIR / ".panda_vm"
+        extract_dir = (BASEDIR / "../.panda_vm").resolve()
         extract_dir.mkdir(exist_ok=True)
         download_panda_vm(extract_dir)
 
