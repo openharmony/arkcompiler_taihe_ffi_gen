@@ -12,7 +12,7 @@
 #include <utility>
 #include <vector>
 
-namespace taihe::core {
+namespace taihe {
 template <typename cpp_owner_t>
 struct array_view;
 
@@ -153,23 +153,31 @@ struct array : public array_view<cpp_owner_t> {
 
   template <typename C>
   array(copy_data_t, C* data, size_type size) noexcept
-      : array(reinterpret_cast<cpp_owner_t*>(malloc(size * sizeof(cpp_owner_t))), size) {
+      : array(
+            reinterpret_cast<cpp_owner_t*>(malloc(size * sizeof(cpp_owner_t))),
+            size) {
     std::uninitialized_copy_n(data, size, this->m_data);
   }
 
   template <typename C>
   array(move_data_t, C* data, size_type size) noexcept
-      : array(reinterpret_cast<cpp_owner_t*>(malloc(size * sizeof(cpp_owner_t))), size) {
+      : array(
+            reinterpret_cast<cpp_owner_t*>(malloc(size * sizeof(cpp_owner_t))),
+            size) {
     std::uninitialized_move_n(data, size, this->m_data);
   }
 
   array(size_type size)
-      : array(reinterpret_cast<cpp_owner_t*>(malloc(size * sizeof(cpp_owner_t))), size) {
+      : array(
+            reinterpret_cast<cpp_owner_t*>(malloc(size * sizeof(cpp_owner_t))),
+            size) {
     std::uninitialized_default_construct_n(this->m_data, size);
   }
 
   array(size_type size, const cpp_owner_t& value)
-      : array(reinterpret_cast<cpp_owner_t*>(malloc(size * sizeof(cpp_owner_t))), size) {
+      : array(
+            reinterpret_cast<cpp_owner_t*>(malloc(size * sizeof(cpp_owner_t))),
+            size) {
     std::uninitialized_fill_n(this->m_data, size, value);
   }
 
@@ -216,7 +224,8 @@ inline std::size_t hash_impl(adl_helper_t, array_view<cpp_owner_t> val) {
   static constexpr std::size_t LEFT_SHIFT_BITS = 6;
   static constexpr std::size_t RIGHT_SHIFT_BITS = 2;
   for (std::size_t i = 0; i < val.size(); i++) {
-    seed ^= hash(val[i]) + GOLDEN_RATIO_CONSTANT + (seed << LEFT_SHIFT_BITS) + (seed >> RIGHT_SHIFT_BITS);
+    seed ^= hash(val[i]) + GOLDEN_RATIO_CONSTANT + (seed << LEFT_SHIFT_BITS) +
+            (seed >> RIGHT_SHIFT_BITS);
   }
   return seed;
 }
@@ -249,4 +258,4 @@ template <typename cpp_owner_t>
 struct as_param<array<cpp_owner_t>> {
   using type = array_view<cpp_owner_t>;
 };
-}  // namespace taihe::core
+}  // namespace taihe

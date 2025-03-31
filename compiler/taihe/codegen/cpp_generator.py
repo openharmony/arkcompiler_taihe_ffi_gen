@@ -146,16 +146,16 @@ class AbstractTypeCppInfo(metaclass=ABCMeta):
     as_param: str
 
     def return_from_abi(self, val):
-        return f"::taihe::core::from_abi<{self.as_owner}>({val})"
+        return f"::taihe::from_abi<{self.as_owner}>({val})"
 
     def return_into_abi(self, val):
-        return f"::taihe::core::into_abi<{self.as_owner}>({val})"
+        return f"::taihe::into_abi<{self.as_owner}>({val})"
 
     def pass_from_abi(self, val):
-        return f"::taihe::core::from_abi<{self.as_param}>({val})"
+        return f"::taihe::from_abi<{self.as_param}>({val})"
 
     def pass_into_abi(self, val):
-        return f"::taihe::core::into_abi<{self.as_param}>({val})"
+        return f"::taihe::into_abi<{self.as_param}>({val})"
 
 
 class EnumTypeCppInfo(AbstractAnalysis[EnumType], AbstractTypeCppInfo):
@@ -236,8 +236,8 @@ class StringTypeCppInfo(AbstractAnalysis[StringType], AbstractTypeCppInfo):
         super().__init__(am, t)
         self.decl_headers = ["core/string.hpp"]
         self.impl_headers = ["core/string.hpp"]
-        self.as_owner = "::taihe::core::string"
-        self.as_param = "::taihe::core::string_view"
+        self.as_owner = "::taihe::string"
+        self.as_param = "::taihe::string_view"
 
 
 class ArrayTypeCppInfo(AbstractAnalysis[ArrayType], AbstractTypeCppInfo):
@@ -246,8 +246,8 @@ class ArrayTypeCppInfo(AbstractAnalysis[ArrayType], AbstractTypeCppInfo):
         arg_ty_cpp_info = TypeCppInfo.get(am, t.item_ty)
         self.decl_headers = ["core/array.hpp", *arg_ty_cpp_info.decl_headers]
         self.impl_headers = ["core/array.hpp", *arg_ty_cpp_info.impl_headers]
-        self.as_owner = f"::taihe::core::array<{arg_ty_cpp_info.as_owner}>"
-        self.as_param = f"::taihe::core::array_view<{arg_ty_cpp_info.as_owner}>"
+        self.as_owner = f"::taihe::array<{arg_ty_cpp_info.as_owner}>"
+        self.as_param = f"::taihe::array_view<{arg_ty_cpp_info.as_owner}>"
 
 
 class OptionalTypeCppInfo(AbstractAnalysis[OptionalType], AbstractTypeCppInfo):
@@ -256,8 +256,8 @@ class OptionalTypeCppInfo(AbstractAnalysis[OptionalType], AbstractTypeCppInfo):
         arg_ty_cpp_info = TypeCppInfo.get(am, t.item_ty)
         self.decl_headers = ["core/optional.hpp", *arg_ty_cpp_info.decl_headers]
         self.impl_headers = ["core/optional.hpp", *arg_ty_cpp_info.impl_headers]
-        self.as_owner = f"::taihe::core::optional<{arg_ty_cpp_info.as_owner}>"
-        self.as_param = f"::taihe::core::optional_view<{arg_ty_cpp_info.as_owner}>"
+        self.as_owner = f"::taihe::optional<{arg_ty_cpp_info.as_owner}>"
+        self.as_param = f"::taihe::optional_view<{arg_ty_cpp_info.as_owner}>"
 
 
 class VectorTypeCppInfo(AbstractAnalysis[VectorType], AbstractTypeCppInfo):
@@ -266,8 +266,8 @@ class VectorTypeCppInfo(AbstractAnalysis[VectorType], AbstractTypeCppInfo):
         val_ty_cpp_info = TypeCppInfo.get(am, t.val_ty)
         self.decl_headers = ["core/vector.hpp", *val_ty_cpp_info.decl_headers]
         self.impl_headers = ["core/vector.hpp", *val_ty_cpp_info.impl_headers]
-        self.as_owner = f"::taihe::core::vector<{val_ty_cpp_info.as_owner}>"
-        self.as_param = f"::taihe::core::vector_view<{val_ty_cpp_info.as_owner}>"
+        self.as_owner = f"::taihe::vector<{val_ty_cpp_info.as_owner}>"
+        self.as_param = f"::taihe::vector_view<{val_ty_cpp_info.as_owner}>"
 
 
 class MapTypeCppInfo(AbstractAnalysis[MapType], AbstractTypeCppInfo):
@@ -285,8 +285,12 @@ class MapTypeCppInfo(AbstractAnalysis[MapType], AbstractTypeCppInfo):
             *key_ty_cpp_info.impl_headers,
             *val_ty_cpp_info.impl_headers,
         ]
-        self.as_owner = f"::taihe::core::map<{key_ty_cpp_info.as_owner}, {val_ty_cpp_info.as_owner}>"
-        self.as_param = f"::taihe::core::map_view<{key_ty_cpp_info.as_owner}, {val_ty_cpp_info.as_owner}>"
+        self.as_owner = (
+            f"::taihe::map<{key_ty_cpp_info.as_owner}, {val_ty_cpp_info.as_owner}>"
+        )
+        self.as_param = (
+            f"::taihe::map_view<{key_ty_cpp_info.as_owner}, {val_ty_cpp_info.as_owner}>"
+        )
 
 
 class SetTypeCppInfo(AbstractAnalysis[SetType], AbstractTypeCppInfo):
@@ -295,8 +299,8 @@ class SetTypeCppInfo(AbstractAnalysis[SetType], AbstractTypeCppInfo):
         key_ty_cpp_info = TypeCppInfo.get(am, t.key_ty)
         self.decl_headers = ["core/set.hpp", *key_ty_cpp_info.decl_headers]
         self.impl_headers = ["core/set.hpp", *key_ty_cpp_info.impl_headers]
-        self.as_owner = f"::taihe::core::set<{key_ty_cpp_info.as_owner}>"
-        self.as_param = f"::taihe::core::set_view<{key_ty_cpp_info.as_owner}>"
+        self.as_owner = f"::taihe::set<{key_ty_cpp_info.as_owner}>"
+        self.as_param = f"::taihe::set_view<{key_ty_cpp_info.as_owner}>"
 
 
 class CallbackTypeCppInfo(AbstractAnalysis[CallbackType], AbstractTypeCppInfo):
@@ -330,10 +334,8 @@ class CallbackTypeCppInfo(AbstractAnalysis[CallbackType], AbstractTypeCppInfo):
             *return_ty_defn_headers,
             *params_ty_defn_headers,
         ]
-        self.as_owner = f"::taihe::core::callback<{return_ty_as_owner}({params_fmt})>"
-        self.as_param = (
-            f"::taihe::core::callback_view<{return_ty_as_owner}({params_fmt})>"
-        )
+        self.as_owner = f"::taihe::callback<{return_ty_as_owner}({params_fmt})>"
+        self.as_param = f"::taihe::callback_view<{return_ty_as_owner}({params_fmt})>"
 
 
 class TypeCppInfo(TypeVisitor[AbstractTypeCppInfo]):
@@ -572,7 +574,7 @@ class CppHeadersGenerator:
     ):
         # others
         enum_cpp_target.writeln(
-            f"namespace taihe::core {{",
+            f"namespace taihe {{",
             f"inline bool same_impl(adl_helper_t, {enum_cpp_info.full_name} lhs, {enum_cpp_info.full_name} rhs) {{",
             f"    return lhs.get_key() == rhs.get_key();",
             f"}}",
@@ -587,7 +589,7 @@ class CppHeadersGenerator:
         enum_cpp_target: COutputBuffer,
     ):
         enum_cpp_target.writeln(
-            f"namespace taihe::core {{",
+            f"namespace taihe {{",
             f"inline auto hash_impl(adl_helper_t, {enum_cpp_info.as_param} val) -> ::std::size_t {{",
             f"    return ::std::hash<{enum_abi_info.abi_type}>{{}}(({enum_abi_info.abi_type})val.get_key());",
             f"}}",
@@ -602,7 +604,7 @@ class CppHeadersGenerator:
         enum_cpp_target: COutputBuffer,
     ):
         enum_cpp_target.writeln(
-            f"namespace taihe::core {{",
+            f"namespace taihe {{",
             f"template<>",
             f"struct as_abi<{enum_cpp_info.full_name}> {{",
             f"    using type = {enum_abi_info.abi_type};",
@@ -827,12 +829,12 @@ class CppHeadersGenerator:
         for field in union.fields:
             if field.ty_ref is None:
                 union_cpp_defn_target.writeln(
-                    f"    {union_cpp_info.name}(::taihe::core::static_tag_t<tag_t::{field.name}>) : m_tag(tag_t::{field.name}) {{}}",
+                    f"    {union_cpp_info.name}(::taihe::static_tag_t<tag_t::{field.name}>) : m_tag(tag_t::{field.name}) {{}}",
                 )
             else:
                 union_cpp_defn_target.writeln(
                     f"    template<typename... Args>",
-                    f"    {union_cpp_info.name}(::taihe::core::static_tag_t<tag_t::{field.name}>, Args&&... args) : m_tag(tag_t::{field.name}) {{",
+                    f"    {union_cpp_info.name}(::taihe::static_tag_t<tag_t::{field.name}>, Args&&... args) : m_tag(tag_t::{field.name}) {{",
                     f"        new (&m_data.{field.name}) decltype(m_data.{field.name})(::std::forward<Args>(args)...);",
                     f"    }}",
                 )
@@ -840,7 +842,7 @@ class CppHeadersGenerator:
         union_cpp_defn_target.writeln(
             f"    template<tag_t tag, typename... Args>",
             f"    static {union_cpp_info.name} make(Args&&... args) {{",
-            f"        return {union_cpp_info.name}(::taihe::core::static_tag<tag>, ::std::forward<Args>(args)...);",
+            f"        return {union_cpp_info.name}(::taihe::static_tag<tag>, ::std::forward<Args>(args)...);",
             f"    }}",
         )
         # emplacement
@@ -848,7 +850,7 @@ class CppHeadersGenerator:
             f"    template<tag_t tag, typename... Args>",
             f"    {union_cpp_info.name} const& emplace(Args&&... args) {{",
             f"        ::std::destroy_at(this);",
-            f"        new (this) {union_cpp_info.name}(::taihe::core::static_tag<tag>, ::std::forward<Args>(args)...);",
+            f"        new (this) {union_cpp_info.name}(::taihe::static_tag<tag>, ::std::forward<Args>(args)...);",
             f"        return *this;",
             f"    }}",
         )
@@ -913,7 +915,7 @@ class CppHeadersGenerator:
             f"        switch (m_tag) {{",
         )
         for field in union.fields:
-            result = f"::taihe::core::static_tag<tag_t::{field.name}>"
+            result = f"::taihe::static_tag<tag_t::{field.name}>"
             if field.ty_ref:
                 result += f", m_data.{field.name}"
             union_cpp_defn_target.writeln(
@@ -931,7 +933,7 @@ class CppHeadersGenerator:
             f"        switch (m_tag) {{",
         )
         for field in union.fields:
-            result = f"::taihe::core::static_tag<tag_t::{field.name}>"
+            result = f"::taihe::static_tag<tag_t::{field.name}>"
             if field.ty_ref:
                 result += f", m_data.{field.name}"
             union_cpp_defn_target.writeln(
@@ -1019,7 +1021,7 @@ class CppHeadersGenerator:
                 cond = f"{cond} && same(lhs.get_{field.name}_ref(), rhs.get_{field.name}_ref())"
             result = f"{result} || ({cond})"
         union_cpp_defn_target.writeln(
-            f"namespace taihe::core {{",
+            f"namespace taihe {{",
             f"inline bool same_impl(adl_helper_t, {union_cpp_info.as_param} lhs, {union_cpp_info.as_param} rhs) {{",
             f"    return {result};",
             f"}}",
@@ -1034,7 +1036,7 @@ class CppHeadersGenerator:
         union_cpp_defn_target: COutputBuffer,
     ):
         union_cpp_defn_target.writeln(
-            f"namespace taihe::core {{",
+            f"namespace taihe {{",
             f"inline auto hash_impl(adl_helper_t, {union_cpp_info.as_param} val) -> ::std::size_t {{",
             f"    switch (val.get_tag()) {{",
             f"        ::std::size_t seed;",
@@ -1062,7 +1064,7 @@ class CppHeadersGenerator:
         union_cpp_defn_target: COutputBuffer,
     ):
         union_cpp_defn_target.writeln(
-            f"namespace taihe::core {{",
+            f"namespace taihe {{",
             f"template<>",
             f"struct as_abi<{union_cpp_info.as_owner}> {{",
             f"    using type = {union_abi_info.as_owner};",
@@ -1216,7 +1218,7 @@ class CppHeadersGenerator:
         for field in struct.fields:
             result = f"{result} && same(lhs.{field.name}, rhs.{field.name})"
         struct_cpp_defn_target.writeln(
-            f"namespace taihe::core {{",
+            f"namespace taihe {{",
             f"inline bool same_impl(adl_helper_t, {struct_cpp_info.as_param} lhs, {struct_cpp_info.as_param} rhs) {{",
             f"    return {result};",
             f"}}",
@@ -1231,7 +1233,7 @@ class CppHeadersGenerator:
         struct_cpp_defn_target: COutputBuffer,
     ):
         struct_cpp_defn_target.writeln(
-            f"namespace taihe::core {{",
+            f"namespace taihe {{",
             f"inline auto hash_impl(adl_helper_t, {struct_cpp_info.as_param} val) -> ::std::size_t {{",
             f"    ::std::size_t seed = 0;",
         )
@@ -1253,7 +1255,7 @@ class CppHeadersGenerator:
         struct_cpp_defn_target: COutputBuffer,
     ):
         struct_cpp_defn_target.writeln(
-            f"namespace taihe::core {{",
+            f"namespace taihe {{",
             f"template<>",
             f"struct as_abi<{struct_cpp_info.as_owner}> {{",
             f"    using type = {struct_abi_info.as_owner};",
@@ -1423,15 +1425,15 @@ class CppHeadersGenerator:
         iface_cpp_defn_target: COutputBuffer,
     ):
         iface_cpp_defn_target.writeln(
-            f"    explicit {iface_cpp_info.weak_name}(::taihe::core::data_view other)",
+            f"    explicit {iface_cpp_info.weak_name}(::taihe::data_view other)",
             f"        : {iface_cpp_info.weak_name}({iface_abi_info.dynamic_cast}(other.data_ptr)) {{}}",
-            f"    operator ::taihe::core::data_view() const& {{",
+            f"    operator ::taihe::data_view() const& {{",
             f"        {iface_abi_info.as_owner} ret_handle = m_handle;",
-            f"        return ::taihe::core::data_view(ret_handle.data_ptr);",
+            f"        return ::taihe::data_view(ret_handle.data_ptr);",
             f"    }}",
-            f"    operator ::taihe::core::data_holder() const& {{",
+            f"    operator ::taihe::data_holder() const& {{",
             f"        {iface_abi_info.as_owner} ret_handle = {iface_abi_info.copy_func}(m_handle);",
-            f"        return ::taihe::core::data_holder(ret_handle.data_ptr);",
+            f"        return ::taihe::data_holder(ret_handle.data_ptr);",
             f"    }}",
         )
 
@@ -1651,22 +1653,22 @@ class CppHeadersGenerator:
         iface_cpp_defn_target: COutputBuffer,
     ):
         iface_cpp_defn_target.writeln(
-            f"    explicit {iface_cpp_info.norm_name}(::taihe::core::data_holder other)",
+            f"    explicit {iface_cpp_info.norm_name}(::taihe::data_holder other)",
             f"        : {iface_cpp_info.norm_name}({iface_abi_info.dynamic_cast}(other.data_ptr)) {{",
             f"        other.data_ptr = nullptr;",
             f"    }}",
-            f"    operator ::taihe::core::data_view() const& {{",
+            f"    operator ::taihe::data_view() const& {{",
             f"        {iface_abi_info.as_owner} ret_handle = m_handle;",
-            f"        return ::taihe::core::data_view(ret_handle.data_ptr);",
+            f"        return ::taihe::data_view(ret_handle.data_ptr);",
             f"    }}",
-            f"    operator ::taihe::core::data_holder() const& {{",
+            f"    operator ::taihe::data_holder() const& {{",
             f"        {iface_abi_info.as_owner} ret_handle = {iface_abi_info.copy_func}(m_handle);",
-            f"        return ::taihe::core::data_holder(ret_handle.data_ptr);",
+            f"        return ::taihe::data_holder(ret_handle.data_ptr);",
             f"    }}",
-            f"    operator ::taihe::core::data_holder() && {{",
+            f"    operator ::taihe::data_holder() && {{",
             f"        {iface_abi_info.as_owner} ret_handle = m_handle;",
             f"        m_handle.data_ptr = nullptr;",
-            f"        return ::taihe::core::data_holder(ret_handle.data_ptr);",
+            f"        return ::taihe::data_holder(ret_handle.data_ptr);",
             f"    }}",
         )
 
@@ -1715,7 +1717,7 @@ class CppHeadersGenerator:
         iface_cpp_defn_target: COutputBuffer,
     ):
         iface_cpp_defn_target.writeln(
-            f"namespace taihe::core {{",
+            f"namespace taihe {{",
             f"template<>",
             f"struct as_abi<{iface_cpp_info.as_owner}> {{",
             f"    using type = {iface_abi_info.as_owner};",
@@ -1816,7 +1818,7 @@ class CppHeadersGenerator:
                 args_from_abi.append(type_cpp_info.pass_from_abi(param.name))
             params_abi_str = ", ".join(params_abi)
             args_from_abi_str = ", ".join(args_from_abi)
-            cpp_result = f"::taihe::core::cast_data_ptr<Impl>(tobj.data_ptr)->{method_cpp_info.impl_name}({args_from_abi_str})"
+            cpp_result = f"::taihe::cast_data_ptr<Impl>(tobj.data_ptr)->{method_cpp_info.impl_name}({args_from_abi_str})"
             if return_ty_ref := method.return_ty_ref:
                 type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
                 type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)

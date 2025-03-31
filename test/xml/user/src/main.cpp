@@ -1,10 +1,11 @@
 #include <fstream>
 #include <iostream>
+#include <optional>
 #include <sstream>
 
 #include "ohos.xml.proj.hpp"
 
-using namespace taihe::core;
+using namespace taihe;
 using namespace ohos::xml;
 
 int main(int argc, char** argv) {
@@ -22,11 +23,9 @@ int main(int argc, char** argv) {
 
   BufferType content = {buffer.str()};
 
-  auto parser = makeXmlPullParser(content, nullptr);
+  auto parser = makeXmlPullParser(content, {});
 
   parser->parseXml({
-      .supportDoctype = nullptr,
-      .ignoreNameSpace = nullptr,
       .tagValueCallbackFunction =
           optional<callback<bool(string_view, string_view)>>::make(
               callback<bool(string_view, string_view)>::from(
@@ -42,6 +41,5 @@ int main(int argc, char** argv) {
                               << std::endl;
                     return true;
                   })),
-      .tokenValueCallbackFunction = nullptr,
   });
 }

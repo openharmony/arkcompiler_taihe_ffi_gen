@@ -59,14 +59,14 @@ rgb::base::ColorOrRGBOrName color_unknown = rgb::base::ColorOrRGBOrName::make_un
 也可以直接使用构造函数进行就地初始化。该方法的形式为：
 
 ```cpp
-package::name::enum_name(taihe::core::static_tag<package::name::enum_name::tag_t::variant_name>, item_init_args, ...);
+package::name::enum_name(taihe::static_tag<package::name::enum_name::tag_t::variant_name>, item_init_args, ...);
 ```
 
 例如：
 
 ```cpp
 rgb::base::ColorOrRGBOrName color_miku =
-    rgb::base::ColorOrRGBOrName(taihe::core::static_tag<rgb::base::ColorOrRGBOrName::tag_t::name>, "Miku");
+    rgb::base::ColorOrRGBOrName(taihe::static_tag<rgb::base::ColorOrRGBOrName::tag_t::name>, "Miku");
 ```
 
 ### 4.2 修改枚举类/联合体对象
@@ -138,7 +138,7 @@ auto& ref = color.get_ref<Tag::name>();
 
 ## 5. 接口
 
-用户可以通过实现 IDL 文件中定义的接口来自定义类。接口的实例化可以通过 `taihe::core::make_holder<impl_class, interface_1, interface_2, ...>(...)` 方法实现。以下是一个示例，仍以 `test/rgb/idl` 目录下 `rgb.show.taihe` 文件中定义的接口为例：
+用户可以通过实现 IDL 文件中定义的接口来自定义类。接口的实例化可以通过 `taihe::make_holder<impl_class, interface_1, interface_2, ...>(...)` 方法实现。以下是一个示例，仍以 `test/rgb/idl` 目录下 `rgb.show.taihe` 文件中定义的接口为例：
 
 ```cpp
 class ColoredCircle {
@@ -147,7 +147,7 @@ public:
     ColoredCircle(taihe:core::string_view id, float r, rgb::show::ColorOrRGBOrName const& color);
 
     // 在 IDL 中定义的接口方法
-    taihe::core::string getId();
+    taihe::string getId();
     float calculateArea();
     rgb::show::ColorOrRGBOrName getColor();
     void setColor(rgb::show::ColorOrRGBOrName const& color);
@@ -158,7 +158,7 @@ public:
 
 // 创建接口对象
 rgb::show::IShowable circle =
-    taihe::core::make_holder<ColoredCircle, rgb::show::IShowable>("A", 10, color_114514);
+    taihe::make_holder<ColoredCircle, rgb::show::IShowable>("A", 10, color_114514);
 
 // 调用接口方法
 circle->show();
