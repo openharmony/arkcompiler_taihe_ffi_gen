@@ -1,5 +1,6 @@
 import * as namespace2Test from "@generated/my_ns";
 import * as namespaceTest from "@generated/ns_alltest";
+import * as System from "std/core/System";
 
 loadLibrary("ani_namespace");
 
@@ -1344,11 +1345,11 @@ function main() {
     suite.addTest(
         "interface_primitives_noreturn7", interface_primitives_noreturn7)
 
-    suite.addTest("test20interface", test20interface)
-    suite.addTest("ns_5", ns_5)
+    suite.addTest("test20interface", test20interface);
+    suite.addTest("ns_5", ns_5);
 
-    suite.addTest("testattributeString", testattributeString)
-    suite.addTest("testattributei8", testattributei8)
+    suite.addTest("testattributeString", testattributeString);
+    suite.addTest("testattributei8", testattributei8);
     suite.addTest("testattributei16", testattributei16);
     suite.addTest("testattributei32", testattributei32);
     suite.addTest("testattributei64", testattributei64);
@@ -1363,359 +1364,359 @@ function main() {
     suite.addTest("testinheritance", testinheritance);
 
     // namespace1
-    suite.addTest("check testCasebaseFunctionTest1", testCasebaseFunctionTest1)
-    suite.addTest("check testCasebaseFunctionTest2", testCasebaseFunctionTest2)
-    suite.addTest("check testCasebaseFunctionTest3", testCasebaseFunctionTest3)
-    suite.addTest("check testCasebaseFunctionTest4", testCasebaseFunctionTest4)
-    suite.addTest("check testCasebaseFunctionTest5", testCasebaseFunctionTest5)
-    suite.addTest("check testCasebaseFunctionTest6", testCasebaseFunctionTest6)
-    suite.addTest("check testCasebaseFunctionTest7", testCasebaseFunctionTest7)
-    suite.addTest("check testCasebaseFunctionTest8", testCasebaseFunctionTest8)
-    suite.addTest("check testCasebaseFunctionTest9", testCasebaseFunctionTest9)
+    suite.addTest("check testCasebaseFunctionTest1", testCasebaseFunctionTest1);
+    suite.addTest("check testCasebaseFunctionTest2", testCasebaseFunctionTest2);
+    suite.addTest("check testCasebaseFunctionTest3", testCasebaseFunctionTest3);
+    suite.addTest("check testCasebaseFunctionTest4", testCasebaseFunctionTest4);
+    suite.addTest("check testCasebaseFunctionTest5", testCasebaseFunctionTest5);
+    suite.addTest("check testCasebaseFunctionTest6", testCasebaseFunctionTest6);
+    suite.addTest("check testCasebaseFunctionTest7", testCasebaseFunctionTest7);
+    suite.addTest("check testCasebaseFunctionTest8", testCasebaseFunctionTest8);
+    suite.addTest("check testCasebaseFunctionTest9", testCasebaseFunctionTest9);
     suite.addTest(
-        "check testCasebaseFunctionTest10", testCasebaseFunctionTest10)
+        "check testCasebaseFunctionTest10", testCasebaseFunctionTest10);
     suite.addTest(
-        "check testCasebaseFunctionTest11", testCasebaseFunctionTest11)
+        "check testCasebaseFunctionTest11", testCasebaseFunctionTest11);
     suite.addTest(
-        "check testCasebaseFunctionTest12", testCasebaseFunctionTest12)
+        "check testCasebaseFunctionTest12", testCasebaseFunctionTest12);
     suite.addTest(
-        "check testCasebaseFunctionTest12_1", testCasebaseFunctionTest12_1)
+        "check testCasebaseFunctionTest12_1", testCasebaseFunctionTest12_1);
     suite.addTest(
-        "check testCasebaseFunctionTest13", testCasebaseFunctionTest13)
+        "check testCasebaseFunctionTest13", testCasebaseFunctionTest13);
     suite.addTest(
-        "check testCasebaseFunctionTest13_1", testCasebaseFunctionTest13_1)
+        "check testCasebaseFunctionTest13_1", testCasebaseFunctionTest13_1);
     suite.addTest(
-        "check testCasebaseFunctionTest14", testCasebaseFunctionTest14)
+        "check testCasebaseFunctionTest14", testCasebaseFunctionTest14);
     suite.addTest(
-        "check testCasebaseFunctionTest15", testCasebaseFunctionTest15)
+        "check testCasebaseFunctionTest15", testCasebaseFunctionTest15);
     suite.addTest(
-        "check testCasebaseFunctionTest16", testCasebaseFunctionTest16)
+        "check testCasebaseFunctionTest16", testCasebaseFunctionTest16);
     suite.addTest(
-        "check testCasebaseFunctionTest16_1", testCasebaseFunctionTest16_1)
+        "check testCasebaseFunctionTest16_1", testCasebaseFunctionTest16_1);
     suite.addTest(
-        "check testCasebaseFunctionTest17", testCasebaseFunctionTest17)
+        "check testCasebaseFunctionTest17", testCasebaseFunctionTest17);
     suite.addTest(
-        "check testCasebaseFunctionTest17_1", testCasebaseFunctionTest17_1)
+        "check testCasebaseFunctionTest17_1", testCasebaseFunctionTest17_1);
     suite.addTest(
-        "check testCasebaseFunctionTest18", testCasebaseFunctionTest18)
+        "check testCasebaseFunctionTest18", testCasebaseFunctionTest18);
     suite.addTest(
-        "check testCasebaseFunctionTest18_1", testCasebaseFunctionTest18_1)
+        "check testCasebaseFunctionTest18_1", testCasebaseFunctionTest18_1);
     suite.addTest(
-        "check testCasebaseFunctionTest19", testCasebaseFunctionTest19)
+        "check testCasebaseFunctionTest19", testCasebaseFunctionTest19);
     suite.addTest(
-        "check testCasebaseFunctionTest20", testCasebaseFunctionTest20)
+        "check testCasebaseFunctionTest20", testCasebaseFunctionTest20);
     suite.addTest(
-        "check testCasebaseFunctionTest21", testCasebaseFunctionTest21)
+        "check testCasebaseFunctionTest21", testCasebaseFunctionTest21);
     suite.addTest(
-        "check testCasebaseFunctionTest22", testCasebaseFunctionTest22)
+        "check testCasebaseFunctionTest22", testCasebaseFunctionTest22);
     suite.addTest(
-        "check testCasebaseFunctionTest22_1", testCasebaseFunctionTest22_1)
+        "check testCasebaseFunctionTest22_1", testCasebaseFunctionTest22_1);
     suite.addTest(
-        "check testCasebaseFunctionTest23", testCasebaseFunctionTest23)
+        "check testCasebaseFunctionTest23", testCasebaseFunctionTest23);
     suite.addTest(
-        "check testCasebaseFunctionTest23_1", testCasebaseFunctionTest23_1)
+        "check testCasebaseFunctionTest23_1", testCasebaseFunctionTest23_1);
     suite.addTest(
-        "check testCasebaseFunctionTest24", testCasebaseFunctionTest24)
+        "check testCasebaseFunctionTest24", testCasebaseFunctionTest24);
     suite.addTest(
-        "check testCasebaseFunctionTest25", testCasebaseFunctionTest25)
+        "check testCasebaseFunctionTest25", testCasebaseFunctionTest25);
     suite.addTest(
-        "check testCasebaseFunctionTest26", testCasebaseFunctionTest26)
+        "check testCasebaseFunctionTest26", testCasebaseFunctionTest26);
     suite.addTest(
-        "check testCasebaseFunctionTest26_1", testCasebaseFunctionTest26_1)
+        "check testCasebaseFunctionTest26_1", testCasebaseFunctionTest26_1);
     suite.addTest(
-        "check testCasebaseFunctionTest27", testCasebaseFunctionTest27)
+        "check testCasebaseFunctionTest27", testCasebaseFunctionTest27);
     suite.addTest(
-        "check testCasebaseFunctionTest27_1", testCasebaseFunctionTest27_1)
+        "check testCasebaseFunctionTest27_1", testCasebaseFunctionTest27_1);
     suite.addTest(
-        "check testCasebaseFunctionTest28", testCasebaseFunctionTest28)
+        "check testCasebaseFunctionTest28", testCasebaseFunctionTest28);
     suite.addTest(
-        "check testCasebaseFunctionTest29", testCasebaseFunctionTest29)
+        "check testCasebaseFunctionTest29", testCasebaseFunctionTest29);
     suite.addTest(
-        "check testCasebaseFunctionTest30", testCasebaseFunctionTest30)
+        "check testCasebaseFunctionTest30", testCasebaseFunctionTest30);
     suite.addTest(
-        "check testCasebaseFunctionTest31", testCasebaseFunctionTest31)
+        "check testCasebaseFunctionTest31", testCasebaseFunctionTest31);
     suite.addTest(
-        "check testCasebaseFunctionTest32", testCasebaseFunctionTest32)
+        "check testCasebaseFunctionTest32", testCasebaseFunctionTest32);
     suite.addTest(
-        "check testCasebaseFunctionTest32_1", testCasebaseFunctionTest32_1)
+        "check testCasebaseFunctionTest32_1", testCasebaseFunctionTest32_1);
     suite.addTest(
-        "check testCasebaseFunctionTest33", testCasebaseFunctionTest33)
+        "check testCasebaseFunctionTest33", testCasebaseFunctionTest33);
     suite.addTest(
-        "check testCasebaseFunctionTest33_1", testCasebaseFunctionTest33_1)
+        "check testCasebaseFunctionTest33_1", testCasebaseFunctionTest33_1);
     suite.addTest(
-        "check testCasebaseFunctionTest34", testCasebaseFunctionTest34)
+        "check testCasebaseFunctionTest34", testCasebaseFunctionTest34);
     suite.addTest(
-        "check testCasebaseFunctionTest34_1", testCasebaseFunctionTest34_1)
+        "check testCasebaseFunctionTest34_1", testCasebaseFunctionTest34_1);
     suite.addTest(
-        "check testCasebaseFunctionTest35", testCasebaseFunctionTest35)
+        "check testCasebaseFunctionTest35", testCasebaseFunctionTest35);
     suite.addTest(
-        "check testCasebaseFunctionTest35_1", testCasebaseFunctionTest35_1)
+        "check testCasebaseFunctionTest35_1", testCasebaseFunctionTest35_1);
     suite.addTest(
-        "check testCasebaseFunctionTest36", testCasebaseFunctionTest36)
+        "check testCasebaseFunctionTest36", testCasebaseFunctionTest36);
     suite.addTest(
-        "check testCasebaseFunctionTest36_1", testCasebaseFunctionTest36_1)
+        "check testCasebaseFunctionTest36_1", testCasebaseFunctionTest36_1);
     suite.addTest(
-        "check testCasebaseFunctionTest37", testCasebaseFunctionTest37)
+        "check testCasebaseFunctionTest37", testCasebaseFunctionTest37);
     suite.addTest(
-        "check testCasebaseFunctionTest37_1", testCasebaseFunctionTest37_1)
+        "check testCasebaseFunctionTest37_1", testCasebaseFunctionTest37_1);
     suite.addTest(
-        "check testCasebaseFunctionTest38", testCasebaseFunctionTest38)
+        "check testCasebaseFunctionTest38", testCasebaseFunctionTest38);
     suite.addTest(
-        "check testCasebaseFunctionTest38_1", testCasebaseFunctionTest38_1)
+        "check testCasebaseFunctionTest38_1", testCasebaseFunctionTest38_1);
     suite.addTest(
-        "check testCasebaseFunctionTest39", testCasebaseFunctionTest39)
+        "check testCasebaseFunctionTest39", testCasebaseFunctionTest39);
     suite.addTest(
-        "check testCasebaseFunctionTest39_1", testCasebaseFunctionTest39_1)
+        "check testCasebaseFunctionTest39_1", testCasebaseFunctionTest39_1);
     suite.addTest(
-        "check testCasebaseFunctionTest40", testCasebaseFunctionTest40)
+        "check testCasebaseFunctionTest40", testCasebaseFunctionTest40);
     suite.addTest(
-        "check testCasebaseFunctionTest40_1", testCasebaseFunctionTest40_1)
+        "check testCasebaseFunctionTest40_1", testCasebaseFunctionTest40_1);
     suite.addTest(
-        "check testCasebaseFunctionTest41", testCasebaseFunctionTest41)
+        "check testCasebaseFunctionTest41", testCasebaseFunctionTest41);
     suite.addTest(
-        "check testCasebaseFunctionTest42", testCasebaseFunctionTest42)
+        "check testCasebaseFunctionTest42", testCasebaseFunctionTest42);
     suite.addTest(
-        "check testCasebaseFunctionTest42_1", testCasebaseFunctionTest42_1)
+        "check testCasebaseFunctionTest42_1", testCasebaseFunctionTest42_1);
     suite.addTest(
-        "check testCasebaseFunctionTest43", testCasebaseFunctionTest43)
+        "check testCasebaseFunctionTest43", testCasebaseFunctionTest43);
     suite.addTest(
-        "check testCasebaseFunctionTest43_1", testCasebaseFunctionTest43_1)
+        "check testCasebaseFunctionTest43_1", testCasebaseFunctionTest43_1);
     suite.addTest(
-        "check testCasebaseFunctionTest44", testCasebaseFunctionTest44)
+        "check testCasebaseFunctionTest44", testCasebaseFunctionTest44);
     suite.addTest(
-        "check testCasebaseFunctionTest45", testCasebaseFunctionTest45)
+        "check testCasebaseFunctionTest45", testCasebaseFunctionTest45);
     suite.addTest(
-        "check testCasebaseFunctionTest46", testCasebaseFunctionTest46)
+        "check testCasebaseFunctionTest46", testCasebaseFunctionTest46);
     suite.addTest(
-        "check testCasebaseFunctionTest47", testCasebaseFunctionTest47)
+        "check testCasebaseFunctionTest47", testCasebaseFunctionTest47);
     suite.addTest(
-        "check testCasebaseFunctionTest48", testCasebaseFunctionTest48)
+        "check testCasebaseFunctionTest48", testCasebaseFunctionTest48);
     suite.addTest(
-        "check testCasebaseFunctionTest49", testCasebaseFunctionTest49)
+        "check testCasebaseFunctionTest49", testCasebaseFunctionTest49);
     suite.addTest(
-        "check testCasebaseFunctionTest50", testCasebaseFunctionTest50)
+        "check testCasebaseFunctionTest50", testCasebaseFunctionTest50);
     suite.addTest(
-        "check testCasebaseFunctionTest51", testCasebaseFunctionTest51)
+        "check testCasebaseFunctionTest51", testCasebaseFunctionTest51);
     suite.addTest(
-        "check testCasebaseFunctionTest52", testCasebaseFunctionTest52)
+        "check testCasebaseFunctionTest52", testCasebaseFunctionTest52);
     suite.addTest(
-        "check testCasebaseFunctionTest53", testCasebaseFunctionTest53)
+        "check testCasebaseFunctionTest53", testCasebaseFunctionTest53);
     suite.addTest(
-        "check testCasebaseFunctionTest54", testCasebaseFunctionTest54)
+        "check testCasebaseFunctionTest54", testCasebaseFunctionTest54);
     suite.addTest(
-        "check testCasebaseFunctionTest54_1", testCasebaseFunctionTest54_1)
+        "check testCasebaseFunctionTest54_1", testCasebaseFunctionTest54_1);
     suite.addTest(
-        "check testCasebaseFunctionTest55", testCasebaseFunctionTest55)
+        "check testCasebaseFunctionTest55", testCasebaseFunctionTest55);
     suite.addTest(
-        "check testCasebaseFunctionTest56", testCasebaseFunctionTest56)
+        "check testCasebaseFunctionTest56", testCasebaseFunctionTest56);
     suite.addTest(
-        "check testCasebaseFunctionTest56_1", testCasebaseFunctionTest56_1)
+        "check testCasebaseFunctionTest56_1", testCasebaseFunctionTest56_1);
     suite.addTest(
-        "check testCasebaseFunctionTest57", testCasebaseFunctionTest57)
+        "check testCasebaseFunctionTest57", testCasebaseFunctionTest57);
     suite.addTest(
-        "check testCasebaseFunctionTest57_1", testCasebaseFunctionTest57_1)
+        "check testCasebaseFunctionTest57_1", testCasebaseFunctionTest57_1);
     // suite.addTest("check testCasebaseFunctionTest58",
-    // testCasebaseFunctionTest58)
+    // testCasebaseFunctionTest58);
     suite.addTest(
-        "check testCasebaseFunctionTest59", testCasebaseFunctionTest59)
+        "check testCasebaseFunctionTest59", testCasebaseFunctionTest59);
     suite.addTest(
-        "check testCasebaseFunctionTest60", testCasebaseFunctionTest60)
+        "check testCasebaseFunctionTest60", testCasebaseFunctionTest60);
     suite.addTest(
-        "check testCasebaseFunctionTest61", testCasebaseFunctionTest61)
+        "check testCasebaseFunctionTest61", testCasebaseFunctionTest61);
     suite.addTest(
-        "check testCasebaseFunctionTest62", testCasebaseFunctionTest62)
+        "check testCasebaseFunctionTest62", testCasebaseFunctionTest62);
     suite.addTest(
-        "check testCasebaseFunctionTest62_1", testCasebaseFunctionTest62_1)
+        "check testCasebaseFunctionTest62_1", testCasebaseFunctionTest62_1);
     suite.addTest(
-        "check testCasebaseFunctionTest63", testCasebaseFunctionTest63)
+        "check testCasebaseFunctionTest63", testCasebaseFunctionTest63);
     suite.addTest(
-        "check testCasebaseFunctionTest64", testCasebaseFunctionTest64)
+        "check testCasebaseFunctionTest64", testCasebaseFunctionTest64);
     suite.addTest(
-        "check testCasebaseFunctionTest64_1", testCasebaseFunctionTest64_1)
+        "check testCasebaseFunctionTest64_1", testCasebaseFunctionTest64_1);
     suite.addTest(
-        "check testCasebaseFunctionTest64_2", testCasebaseFunctionTest64_2)
+        "check testCasebaseFunctionTest64_2", testCasebaseFunctionTest64_2);
     // performance
     suite.addTest(
         "check testInter1BasePerformanceFunctionTest1",
-        testInter1BasePerformanceFunctionTest1)
+        testInter1BasePerformanceFunctionTest1);
     suite.addTest(
         "check testInter1BasePerformanceFunctionTest2",
-        testInter1BasePerformanceFunctionTest2)
+        testInter1BasePerformanceFunctionTest2);
     suite.addTest(
         "check testInter2BasePerformanceFunctionTest1",
-        testInter2BasePerformanceFunctionTest1)
+        testInter2BasePerformanceFunctionTest1);
     suite.addTest(
         "check testInter2BasePerformanceFunctionTest2",
-        testInter2BasePerformanceFunctionTest2)
+        testInter2BasePerformanceFunctionTest2);
     suite.addTest(
         "check testInter3BasePerformanceFunctionTest1",
-        testInter3BasePerformanceFunctionTest1)
+        testInter3BasePerformanceFunctionTest1);
     suite.addTest(
         "check testInter3BasePerformanceFunctionTest2",
-        testInter3BasePerformanceFunctionTest2)
+        testInter3BasePerformanceFunctionTest2);
     suite.addTest(
         "check testInter4BasePerformanceFunctionTest1",
-        testInter4BasePerformanceFunctionTest1)
+        testInter4BasePerformanceFunctionTest1);
     suite.addTest(
         "check testInter4BasePerformanceFunctionTest2",
-        testInter4BasePerformanceFunctionTest2)
+        testInter4BasePerformanceFunctionTest2);
     suite.addTest(
         "check testInter5BasePerformanceFunctionTest1",
-        testInter5BasePerformanceFunctionTest1)
+        testInter5BasePerformanceFunctionTest1);
     suite.addTest(
         "check testInter5BasePerformanceFunctionTest2",
-        testInter5BasePerformanceFunctionTest2)
+        testInter5BasePerformanceFunctionTest2);
     suite.addTest(
         "check testInter6BasePerformanceFunctionTest1",
-        testInter6BasePerformanceFunctionTest1)
+        testInter6BasePerformanceFunctionTest1);
     suite.addTest(
         "check testInter6BasePerformanceFunctionTest2",
-        testInter6BasePerformanceFunctionTest2)
+        testInter6BasePerformanceFunctionTest2);
     suite.addTest(
         "check testInter7BasePerformanceFunctionTest1",
-        testInter7BasePerformanceFunctionTest1)
+        testInter7BasePerformanceFunctionTest1);
     suite.addTest(
         "check testInter7BasePerformanceFunctionTest2",
-        testInter7BasePerformanceFunctionTest2)
+        testInter7BasePerformanceFunctionTest2);
     suite.addTest(
         "check testInter8BasePerformanceFunctionTest1",
-        testInter8BasePerformanceFunctionTest1)
+        testInter8BasePerformanceFunctionTest1);
     suite.addTest(
         "check testInter8BasePerformanceFunctionTest2",
-        testInter8BasePerformanceFunctionTest2)
+        testInter8BasePerformanceFunctionTest2);
     suite.addTest(
         "check testInter9BasePerformanceFunctionTest1",
-        testInter9BasePerformanceFunctionTest1)
+        testInter9BasePerformanceFunctionTest1);
     suite.addTest(
         "check testInter9BasePerformanceFunctionTest2",
-        testInter9BasePerformanceFunctionTest2)
+        testInter9BasePerformanceFunctionTest2);
     suite.addTest(
         "check testInter10BasePerformanceFunctionTest1",
-        testInter10BasePerformanceFunctionTest1)
+        testInter10BasePerformanceFunctionTest1);
     suite.addTest(
         "check testInter10BasePerformanceFunctionTest2",
-        testInter10BasePerformanceFunctionTest2)
+        testInter10BasePerformanceFunctionTest2);
     suite.addTest(
         "check testInter11BasePerformanceFunctionTest1",
-        testInter11BasePerformanceFunctionTest1)
+        testInter11BasePerformanceFunctionTest1);
     suite.addTest(
         "check testInter11BasePerformanceFunctionTest2",
-        testInter11BasePerformanceFunctionTest2)
+        testInter11BasePerformanceFunctionTest2);
     suite.addTest(
         "check testInter12BasePerformanceFunctionTest1",
-        testInter12BasePerformanceFunctionTest1)
+        testInter12BasePerformanceFunctionTest1);
     suite.addTest(
         "check testInter12BasePerformanceFunctionTest2",
-        testInter12BasePerformanceFunctionTest2)
+        testInter12BasePerformanceFunctionTest2);
     suite.addTest(
         "check testInter13BasePerformanceFunctionTest1",
-        testInter13BasePerformanceFunctionTest1)
+        testInter13BasePerformanceFunctionTest1);
     suite.addTest(
         "check testInter13BasePerformanceFunctionTest2",
-        testInter13BasePerformanceFunctionTest2)
+        testInter13BasePerformanceFunctionTest2);
     suite.addTest(
         "check testInter14BasePerformanceFunctionTest1",
-        testInter14BasePerformanceFunctionTest1)
+        testInter14BasePerformanceFunctionTest1);
     suite.addTest(
         "check testInter14BasePerformanceFunctionTest2",
-        testInter14BasePerformanceFunctionTest2)
+        testInter14BasePerformanceFunctionTest2);
     suite.addTest(
         "check testInter15BasePerformanceFunctionTest1",
-        testInter15BasePerformanceFunctionTest1)
+        testInter15BasePerformanceFunctionTest1);
     suite.addTest(
         "check testInter15BasePerformanceFunctionTest2",
-        testInter15BasePerformanceFunctionTest2)
+        testInter15BasePerformanceFunctionTest2);
     suite.addTest(
         "check testInter16BasePerformanceFunctionTest1",
-        testInter16BasePerformanceFunctionTest1)
+        testInter16BasePerformanceFunctionTest1);
     suite.addTest(
         "check testInter16BasePerformanceFunctionTest2",
-        testInter16BasePerformanceFunctionTest2)
+        testInter16BasePerformanceFunctionTest2);
     suite.addTest(
         "check testInter17BasePerformanceFunctionTest1",
-        testInter17BasePerformanceFunctionTest1)
+        testInter17BasePerformanceFunctionTest1);
     suite.addTest(
         "check testInter17BasePerformanceFunctionTest2",
-        testInter17BasePerformanceFunctionTest2)
+        testInter17BasePerformanceFunctionTest2);
     suite.addTest(
         "check testInter18BasePerformanceFunctionTest1",
-        testInter18BasePerformanceFunctionTest1)
+        testInter18BasePerformanceFunctionTest1);
     suite.addTest(
         "check testInter18BasePerformanceFunctionTest2",
-        testInter18BasePerformanceFunctionTest2)
+        testInter18BasePerformanceFunctionTest2);
     suite.addTest(
         "check testInter19BasePerformanceFunctionTest1",
-        testInter19BasePerformanceFunctionTest1)
+        testInter19BasePerformanceFunctionTest1);
     suite.addTest(
         "check testInter19BasePerformanceFunctionTest2",
-        testInter19BasePerformanceFunctionTest2)
+        testInter19BasePerformanceFunctionTest2);
     suite.addTest(
         "check testInter20BasePerformanceFunctionTest1",
-        testInter20BasePerformanceFunctionTest1)
+        testInter20BasePerformanceFunctionTest1);
     suite.addTest(
         "check testInter20BasePerformanceFunctionTest2",
-        testInter20BasePerformanceFunctionTest2)
+        testInter20BasePerformanceFunctionTest2);
     suite.addTest(
         "check testInter21BasePerformanceFunctionTest1",
-        testInter21BasePerformanceFunctionTest1)
+        testInter21BasePerformanceFunctionTest1);
     suite.addTest(
         "check testInter21BasePerformanceFunctionTest2",
-        testInter21BasePerformanceFunctionTest2)
+        testInter21BasePerformanceFunctionTest2);
     suite.addTest(
         "check testInter21BasePerformanceFunctionTest3",
-        testInter21BasePerformanceFunctionTest3)
+        testInter21BasePerformanceFunctionTest3);
     suite.addTest(
         "check testInter21BasePerformanceFunctionTest4",
-        testInter21BasePerformanceFunctionTest4)
+        testInter21BasePerformanceFunctionTest4);
     suite.addTest(
         "check testInter21BasePerformanceFunctionTest5",
-        testInter21BasePerformanceFunctionTest5)
+        testInter21BasePerformanceFunctionTest5);
 
     suite.addTest(
         "check testInter21BasePerformanceFunctionTest6",
-        testInter21BasePerformanceFunctionTest6)
+        testInter21BasePerformanceFunctionTest6);
     suite.addTest(
         "check testInter21BasePerformanceFunctionTest7",
-        testInter21BasePerformanceFunctionTest7)
+        testInter21BasePerformanceFunctionTest7);
     suite.addTest(
         "check testInter21BasePerformanceFunctionTest8",
-        testInter21BasePerformanceFunctionTest8)
+        testInter21BasePerformanceFunctionTest8);
     suite.addTest(
         "check testInter21BasePerformanceFunctionTest9",
-        testInter21BasePerformanceFunctionTest9)
+        testInter21BasePerformanceFunctionTest9);
 
     suite.addTest(
         "check testInter21BasePerformanceFunctionTest10",
-        testInter21BasePerformanceFunctionTest10)
+        testInter21BasePerformanceFunctionTest10);
 
     suite.addTest(
         "check testInter21BasePerformanceFunctionTest11",
-        testInter21BasePerformanceFunctionTest11)
+        testInter21BasePerformanceFunctionTest11);
     suite.addTest(
         "check testInter21BasePerformanceFunctionTest12",
-        testInter21BasePerformanceFunctionTest12)
+        testInter21BasePerformanceFunctionTest12);
     suite.addTest(
         "check testInter21BasePerformanceFunctionTest13",
-        testInter21BasePerformanceFunctionTest13)
+        testInter21BasePerformanceFunctionTest13);
 
     suite.addTest(
         "check testInter21BasePerformanceFunctionTest14",
-        testInter21BasePerformanceFunctionTest14)
+        testInter21BasePerformanceFunctionTest14);
     suite.addTest(
         "check testInter21BasePerformanceFunctionTest15",
-        testInter21BasePerformanceFunctionTest15)
+        testInter21BasePerformanceFunctionTest15);
     suite.addTest(
         "check testInter21BasePerformanceFunctionTest16",
-        testInter21BasePerformanceFunctionTest16)
+        testInter21BasePerformanceFunctionTest16);
     suite.addTest(
         "check testInter21BasePerformanceFunctionTest17",
-        testInter21BasePerformanceFunctionTest17)
-    suite.addTest("check testCaseIbaseInterface1", testCaseIbaseInterface1)
-    suite.addTest("check testCaseIbaseInterface2", testCaseIbaseInterface2)
-    suite.addTest("check testCaseIbaseInterface3", testCaseIbaseInterface3)
-    suite.addTest("check testCaseIbaseInterface4", testCaseIbaseInterface4)
-    suite.addTest("check testCaseConstant1", testCaseConstant1)
-    suite.addTest("check testCaseConstant2", testCaseConstant2)
-    suite.addTest("check testCaseConstant3", testCaseConstant3)
-    suite.run()
+        testInter21BasePerformanceFunctionTest17);
+    suite.addTest("check testCaseIbaseInterface1", testCaseIbaseInterface1);
+    suite.addTest("check testCaseIbaseInterface2", testCaseIbaseInterface2);
+    suite.addTest("check testCaseIbaseInterface3", testCaseIbaseInterface3);
+    suite.addTest("check testCaseIbaseInterface4", testCaseIbaseInterface4);
+    suite.addTest("check testCaseConstant1", testCaseConstant1);
+    suite.addTest("check testCaseConstant2", testCaseConstant2);
+    suite.addTest("check testCaseConstant3", testCaseConstant3);
+    System.exit(suite.run());
 }

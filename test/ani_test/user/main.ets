@@ -1,4 +1,5 @@
 import * as ani_test from "@generated/ani_test";
+import * as System from "std/core/System";
 
 loadLibrary("ani_test");
 

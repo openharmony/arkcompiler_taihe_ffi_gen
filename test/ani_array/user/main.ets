@@ -1,4 +1,5 @@
 import * as ArrayTest from "@generated/array_test";
+import * as System from "std/core/System";
 
 loadLibrary("ani_array");
 
@@ -144,5 +145,5 @@ function main() {
     suite.addTest("changeStructArray", changeStructArray)
     suite.addTest("fetchBinaryData", fetchBinaryData)
     suite.addTest("makeStructArrayArray", makeStructArrayArray)
-    suite.run()
+    System.exit(suite.run())
 }

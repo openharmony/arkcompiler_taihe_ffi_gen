@@ -1,5 +1,6 @@
 import * as lib from "@generated/class_extends";
 import * as extends_inject from "@generated/extends_inject";
+import * as System from "std/core/System";
 
 loadLibrary("inheritance");
 
@@ -73,5 +74,5 @@ function main() {
         "application context extends test", application_context_extends_test)
     suite.addTest("test context extends", test_context_extends)
     suite.addTest("extends inject test", extends_inject_test)
-    suite.run()
+    System.exit(suite.run())
 }

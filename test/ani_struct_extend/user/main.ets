@@ -1,4 +1,5 @@
 import * as StructExtendTest from "@generated/struct_extend";
+import * as System from "std/core/System";
 
 loadLibrary("ani_struct_extend");
 
@@ -92,5 +93,5 @@ function main() {
     suite.addTest("check class bar", check_class_Bar)
     suite.addTest("check struct F", check_class_Bar)
     suite.addTest("check struct G", check_class_Bar)
-    suite.run()
+    System.exit(suite.run())
 }

@@ -1,4 +1,5 @@
 import * as arraybuffer from "@generated/arraybuffer";
+import * as System from "std/core/System";
 
 loadLibrary("ani_arraybuffer");
 
@@ -365,5 +366,5 @@ function main() {
     suite.addTest("uint8Array_inout", uint8Array_inout)
     suite.addTest("uint16Array_inout", uint16Array_inout)
     suite.addTest("uint32Array_inout", uint32Array_inout)
-    suite.run()
+    System.exit(suite.run())
 }

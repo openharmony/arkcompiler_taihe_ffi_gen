@@ -1,4 +1,5 @@
 import {maythrow} from "@generated/maythrow";
+import * as System from "std/core/System";
 
 loadLibrary("ani_maythrow");
 
@@ -21,5 +22,5 @@ function main() {
 
     suite.addTest("check no error", check_no_error)
     suite.addTest("check error", check_error)
-    suite.run()
+    System.exit(suite.run())
 }

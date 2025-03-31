@@ -1,4 +1,5 @@
 import * as huks from "@generated/huks";
+import * as System from "std/core/System";
 
 loadLibrary("ani_huks");
 

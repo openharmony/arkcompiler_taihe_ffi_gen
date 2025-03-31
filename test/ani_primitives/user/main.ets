@@ -1,5 +1,6 @@
 import * as test_primitives from "@generated/primitives_test";
 import * as test_void_ns from "@generated/void_func";
+import * as System from "std/core/System";
 
 loadLibrary("ani_primitives");
 
@@ -1260,283 +1261,283 @@ function main() {
     console.log("run main ... test_primitives ...")
     const suite = new ArkTestsuite("test function primitives")
 
-    suite.addTest("check funcMultiply", testMultiply)
-    suite.addTest("check testFunC1", testFunC1)
-    suite.addTest("check testFunC2", testFunC2)
-    suite.addTest("check testFunA1", testFunA1)
-    suite.addTest("check testFunA2", testFunA2)
-    suite.addTest("check testFunB1", testFunB1)
-    suite.addTest("check testFunB2", testFunB2)
-    suite.addTest("check testFunD1", testFunD1)
-    suite.addTest("check testFunD2", testFunD2)
-    suite.addTest("check testFunE", testFunE)
-    suite.addTest("check testFunH1", testFunH1)
-    suite.addTest("check testFunH2", testFunH2)
-    suite.addTest("check testFunI1", testFunI1)
-    // suite.addTest("check testFunI2", testFunI2)
-    suite.addTest("check testbaseFunc1", baseFunc1)
-    suite.addTest("check testbaseFunc2", baseFunc2)
-    suite.addTest("check testbaseFunc3", baseFunc3)
-    suite.addTest("check testbaseFunc4", baseFunc4)
-    suite.addTest("check testbaseFunc5", baseFunc5)
-    suite.addTest("check testbaseFunc6", baseFunc6)
-    suite.addTest("check testbaseFunc7", baseFunc7)
-    suite.addTest("check testbaseFunc8", baseFunc8)
-    suite.addTest("check testbaseFunc6_1", baseFunc6_1)
-    suite.addTest("check testbaseFunc7_1", baseFunc7_1)
-    suite.addTest("check testbaseFunc8_1", baseFunc8_1)
-    suite.addTest("check testbaseFunc9", baseFunc9)
-    suite.addTest("check testbaseFunc10", baseFunc10)
-    suite.addTest("check testbaseFunc11", baseFunc11)
-    suite.addTest("check testbaseFunc11_1", baseFunc11_1)
-    suite.addTest("check testbaseFunc12", baseFunc12)
-    suite.addTest("check testbaseFunc13", baseFunc13)
-    suite.addTest("check testbaseFunc14", baseFunc14)
-    suite.addTest("check testbaseFunc14_1", baseFunc14_1)
-    suite.addTest("check testbaseFunc15", baseFunc15)
-    suite.addTest("check testbaseFunc16", baseFunc16)
-    suite.addTest("check testbaseFunc16_1", baseFunc16_1)
-    suite.addTest("check testbaseFunc17", baseFunc17)
-    suite.addTest("check testbaseFunc17_1", baseFunc17_1)
-    suite.addTest("check testbaseFunc18", baseFunc18)
-    suite.addTest("check testbaseFunc18_1", baseFunc18_1)
-    suite.addTest("check testbaseFunc19", baseFunc19)
-    suite.addTest("check testbaseFunc20", baseFunc20)
-    suite.addTest("check testbaseFunc20_1", baseFunc20_1)
-    suite.addTest("check testbaseFunc21", baseFunc21)
-    suite.addTest("check testbaseFunc21_1", baseFunc21_1)
-    suite.addTest("check testbaseFunc21_2", baseFunc21_2)
-    suite.addTest("check testbaseFunc21_3", baseFunc21_3)
-    suite.addTest("check testbaseFunc22", baseFunc22)
-    suite.addTest("check testbaseFunc22_1", baseFunc22_1)
-    suite.addTest("check testbaseFunc22_2", baseFunc22_2)
-    suite.addTest("check testbaseFunc22_3", baseFunc22_3)
-    suite.addTest("check testbaseFunc23", baseFunc23)
-    suite.addTest("check testbaseFunc23_1", baseFunc23_1)
-    suite.addTest("check testbaseFunc23_2", baseFunc23_2)
-    suite.addTest("check testbaseFunc23_3", baseFunc23_3)
-    suite.addTest("check testbaseFunc24", baseFunc24)
-    suite.addTest("check testbaseFunc24_1", baseFunc24_1)
-    suite.addTest("check testbaseFunc24_2", baseFunc24_2)
-    suite.addTest("check testbaseFunc24_3", baseFunc24_3)
-    suite.addTest("check testCaseBaseFunc1", testCaseBaseFunc1)
-    suite.addTest("check testCaseBaseFunc2", testCaseBaseFunc2)
-    suite.addTest("check testCaseBaseFunc2_1", testCaseBaseFunc2_1)
-    suite.addTest("check testCaseBaseFunc3", testCaseBaseFunc3)
-    suite.addTest("check testCaseBaseFunc4", testCaseBaseFunc4)
-    suite.addTest("check testCaseBaseFunc5", testCaseBaseFunc5)
-    suite.addTest("check testCaseBaseFunc5_1", testCaseBaseFunc5_1)
-    suite.addTest("check testCaseBaseFunc6", testCaseBaseFunc6)
-    suite.addTest("check testCaseBaseFunc7", testCaseBaseFunc7)
-    suite.addTest("check testCaseBaseFunc7_1", testCaseBaseFunc7_1)
-    suite.addTest("check testCaseBaseFunc8", testCaseBaseFunc8)
-    suite.addTest("check testCaseBaseFunc8_1", testCaseBaseFunc8_1)
-    suite.addTest("check testCaseBaseFunc9", testCaseBaseFunc9)
-    suite.addTest("check testCaseBaseFunc9_1", testCaseBaseFunc9_1)
-    suite.addTest("check testCaseBaseFunc10", testCaseBaseFunc10)
-    suite.addTest("check testCaseBaseFunc11", testCaseBaseFunc11)
-    suite.addTest("check testCaseBaseFunc11_1", testCaseBaseFunc11_1)
-    suite.addTest("check testCaseBaseFunc12", testCaseBaseFunc12)
-    suite.addTest("check testCaseBaseFunc12_1", testCaseBaseFunc12_1)
-    suite.addTest("check testCaseBaseFunc12_2", testCaseBaseFunc12_2)
-    suite.addTest("check testCaseBaseFunc12_3", testCaseBaseFunc12_3)
-    suite.addTest("check testCaseBaseFunc13", testCaseBaseFunc13)
-    suite.addTest("check testCaseBaseFunc13_1", testCaseBaseFunc13_1)
-    suite.addTest("check testCaseBaseFunc13_2", testCaseBaseFunc13_2)
-    suite.addTest("check testCaseBaseFunc13_3", testCaseBaseFunc13_3)
-    suite.addTest("check testCaseBaseFunc14", testCaseBaseFunc14)
-    suite.addTest("check testCaseBaseFunc14_1", testCaseBaseFunc14_1)
-    suite.addTest("check testCaseBaseFunc14_2", testCaseBaseFunc14_2)
-    suite.addTest("check testCaseBaseFunc14_3", testCaseBaseFunc14_3)
-    suite.addTest("check testCaseBaseFunc15", testCaseBaseFunc15)
-    suite.addTest("check testCaseBaseFunc15_1", testCaseBaseFunc15_1)
-    suite.addTest("check testCaseBaseFunc15_2", testCaseBaseFunc15_2)
-    suite.addTest("check testCaseBaseFunc15_3", testCaseBaseFunc15_3)
-    suite.addTest("check testCaseBaseFunc16", testCaseBaseFunc16)
-    suite.addTest("check testCaseBaseFunc16_1", testCaseBaseFunc16_1)
-    suite.addTest("check testCaseBaseFunc17", testCaseBaseFunc17)
-    suite.addTest("check testCaseBaseFunc18", testCaseBaseFunc18)
-    suite.addTest("check testCaseBaseFunc19", testCaseBaseFunc19)
-    suite.addTest("check testCaseBaseFunc20", testCaseBaseFunc20)
-    suite.addTest("check testCaseBaseIntegerFunc1", testCaseBaseIntegerFunc1)
+    suite.addTest("check funcMultiply", testMultiply);
+    suite.addTest("check testFunC1", testFunC1);
+    suite.addTest("check testFunC2", testFunC2);
+    suite.addTest("check testFunA1", testFunA1);
+    suite.addTest("check testFunA2", testFunA2);
+    suite.addTest("check testFunB1", testFunB1);
+    suite.addTest("check testFunB2", testFunB2);
+    suite.addTest("check testFunD1", testFunD1);
+    suite.addTest("check testFunD2", testFunD2);
+    suite.addTest("check testFunE", testFunE);
+    suite.addTest("check testFunH1", testFunH1);
+    suite.addTest("check testFunH2", testFunH2);
+    suite.addTest("check testFunI1", testFunI1);
+    // suite.addTest("check testFunI2", testFunI2);
+    suite.addTest("check testbaseFunc1", baseFunc1);
+    suite.addTest("check testbaseFunc2", baseFunc2);
+    suite.addTest("check testbaseFunc3", baseFunc3);
+    suite.addTest("check testbaseFunc4", baseFunc4);
+    suite.addTest("check testbaseFunc5", baseFunc5);
+    suite.addTest("check testbaseFunc6", baseFunc6);
+    suite.addTest("check testbaseFunc7", baseFunc7);
+    suite.addTest("check testbaseFunc8", baseFunc8);
+    suite.addTest("check testbaseFunc6_1", baseFunc6_1);
+    suite.addTest("check testbaseFunc7_1", baseFunc7_1);
+    suite.addTest("check testbaseFunc8_1", baseFunc8_1);
+    suite.addTest("check testbaseFunc9", baseFunc9);
+    suite.addTest("check testbaseFunc10", baseFunc10);
+    suite.addTest("check testbaseFunc11", baseFunc11);
+    suite.addTest("check testbaseFunc11_1", baseFunc11_1);
+    suite.addTest("check testbaseFunc12", baseFunc12);
+    suite.addTest("check testbaseFunc13", baseFunc13);
+    suite.addTest("check testbaseFunc14", baseFunc14);
+    suite.addTest("check testbaseFunc14_1", baseFunc14_1);
+    suite.addTest("check testbaseFunc15", baseFunc15);
+    suite.addTest("check testbaseFunc16", baseFunc16);
+    suite.addTest("check testbaseFunc16_1", baseFunc16_1);
+    suite.addTest("check testbaseFunc17", baseFunc17);
+    suite.addTest("check testbaseFunc17_1", baseFunc17_1);
+    suite.addTest("check testbaseFunc18", baseFunc18);
+    suite.addTest("check testbaseFunc18_1", baseFunc18_1);
+    suite.addTest("check testbaseFunc19", baseFunc19);
+    suite.addTest("check testbaseFunc20", baseFunc20);
+    suite.addTest("check testbaseFunc20_1", baseFunc20_1);
+    suite.addTest("check testbaseFunc21", baseFunc21);
+    suite.addTest("check testbaseFunc21_1", baseFunc21_1);
+    suite.addTest("check testbaseFunc21_2", baseFunc21_2);
+    suite.addTest("check testbaseFunc21_3", baseFunc21_3);
+    suite.addTest("check testbaseFunc22", baseFunc22);
+    suite.addTest("check testbaseFunc22_1", baseFunc22_1);
+    suite.addTest("check testbaseFunc22_2", baseFunc22_2);
+    suite.addTest("check testbaseFunc22_3", baseFunc22_3);
+    suite.addTest("check testbaseFunc23", baseFunc23);
+    suite.addTest("check testbaseFunc23_1", baseFunc23_1);
+    suite.addTest("check testbaseFunc23_2", baseFunc23_2);
+    suite.addTest("check testbaseFunc23_3", baseFunc23_3);
+    suite.addTest("check testbaseFunc24", baseFunc24);
+    suite.addTest("check testbaseFunc24_1", baseFunc24_1);
+    suite.addTest("check testbaseFunc24_2", baseFunc24_2);
+    suite.addTest("check testbaseFunc24_3", baseFunc24_3);
+    suite.addTest("check testCaseBaseFunc1", testCaseBaseFunc1);
+    suite.addTest("check testCaseBaseFunc2", testCaseBaseFunc2);
+    suite.addTest("check testCaseBaseFunc2_1", testCaseBaseFunc2_1);
+    suite.addTest("check testCaseBaseFunc3", testCaseBaseFunc3);
+    suite.addTest("check testCaseBaseFunc4", testCaseBaseFunc4);
+    suite.addTest("check testCaseBaseFunc5", testCaseBaseFunc5);
+    suite.addTest("check testCaseBaseFunc5_1", testCaseBaseFunc5_1);
+    suite.addTest("check testCaseBaseFunc6", testCaseBaseFunc6);
+    suite.addTest("check testCaseBaseFunc7", testCaseBaseFunc7);
+    suite.addTest("check testCaseBaseFunc7_1", testCaseBaseFunc7_1);
+    suite.addTest("check testCaseBaseFunc8", testCaseBaseFunc8);
+    suite.addTest("check testCaseBaseFunc8_1", testCaseBaseFunc8_1);
+    suite.addTest("check testCaseBaseFunc9", testCaseBaseFunc9);
+    suite.addTest("check testCaseBaseFunc9_1", testCaseBaseFunc9_1);
+    suite.addTest("check testCaseBaseFunc10", testCaseBaseFunc10);
+    suite.addTest("check testCaseBaseFunc11", testCaseBaseFunc11);
+    suite.addTest("check testCaseBaseFunc11_1", testCaseBaseFunc11_1);
+    suite.addTest("check testCaseBaseFunc12", testCaseBaseFunc12);
+    suite.addTest("check testCaseBaseFunc12_1", testCaseBaseFunc12_1);
+    suite.addTest("check testCaseBaseFunc12_2", testCaseBaseFunc12_2);
+    suite.addTest("check testCaseBaseFunc12_3", testCaseBaseFunc12_3);
+    suite.addTest("check testCaseBaseFunc13", testCaseBaseFunc13);
+    suite.addTest("check testCaseBaseFunc13_1", testCaseBaseFunc13_1);
+    suite.addTest("check testCaseBaseFunc13_2", testCaseBaseFunc13_2);
+    suite.addTest("check testCaseBaseFunc13_3", testCaseBaseFunc13_3);
+    suite.addTest("check testCaseBaseFunc14", testCaseBaseFunc14);
+    suite.addTest("check testCaseBaseFunc14_1", testCaseBaseFunc14_1);
+    suite.addTest("check testCaseBaseFunc14_2", testCaseBaseFunc14_2);
+    suite.addTest("check testCaseBaseFunc14_3", testCaseBaseFunc14_3);
+    suite.addTest("check testCaseBaseFunc15", testCaseBaseFunc15);
+    suite.addTest("check testCaseBaseFunc15_1", testCaseBaseFunc15_1);
+    suite.addTest("check testCaseBaseFunc15_2", testCaseBaseFunc15_2);
+    suite.addTest("check testCaseBaseFunc15_3", testCaseBaseFunc15_3);
+    suite.addTest("check testCaseBaseFunc16", testCaseBaseFunc16);
+    suite.addTest("check testCaseBaseFunc16_1", testCaseBaseFunc16_1);
+    suite.addTest("check testCaseBaseFunc17", testCaseBaseFunc17);
+    suite.addTest("check testCaseBaseFunc18", testCaseBaseFunc18);
+    suite.addTest("check testCaseBaseFunc19", testCaseBaseFunc19);
+    suite.addTest("check testCaseBaseFunc20", testCaseBaseFunc20);
+    suite.addTest("check testCaseBaseIntegerFunc1", testCaseBaseIntegerFunc1);
     suite.addTest(
-        "check testCaseBaseIntegerFunc1_1", testCaseBaseIntegerFunc1_1)
-    suite.addTest("check testCaseBaseIntegerFunc2", testCaseBaseIntegerFunc2)
+        "check testCaseBaseIntegerFunc1_1", testCaseBaseIntegerFunc1_1);
+    suite.addTest("check testCaseBaseIntegerFunc2", testCaseBaseIntegerFunc2);
     suite.addTest(
-        "check testCaseBaseIntegerFunc2_1", testCaseBaseIntegerFunc2_1)
+        "check testCaseBaseIntegerFunc2_1", testCaseBaseIntegerFunc2_1);
     suite.addTest(
-        "check testCaseBaseIntegerFunc2_2", testCaseBaseIntegerFunc2_2)
+        "check testCaseBaseIntegerFunc2_2", testCaseBaseIntegerFunc2_2);
     suite.addTest(
-        "check testCaseBaseIntegerFunc2_3", testCaseBaseIntegerFunc2_3)
-    suite.addTest("check testCaseBaseIntegerFunc3", testCaseBaseIntegerFunc3)
-    suite.addTest("check testCaseBaseIntegerFunc4", testCaseBaseIntegerFunc4)
+        "check testCaseBaseIntegerFunc2_3", testCaseBaseIntegerFunc2_3);
+    suite.addTest("check testCaseBaseIntegerFunc3", testCaseBaseIntegerFunc3);
+    suite.addTest("check testCaseBaseIntegerFunc4", testCaseBaseIntegerFunc4);
     suite.addTest(
-        "check testCaseBaseIntegerFunc4_1", testCaseBaseIntegerFunc4_1)
+        "check testCaseBaseIntegerFunc4_1", testCaseBaseIntegerFunc4_1);
     suite.addTest(
-        "check testCaseBaseIntegerFunc4_2", testCaseBaseIntegerFunc4_2)
-    suite.addTest("check testCaseBaseIntegerFunc5", testCaseBaseIntegerFunc5)
+        "check testCaseBaseIntegerFunc4_2", testCaseBaseIntegerFunc4_2);
+    suite.addTest("check testCaseBaseIntegerFunc5", testCaseBaseIntegerFunc5);
     suite.addTest(
-        "check testCaseBaseIntegerFunc5_1", testCaseBaseIntegerFunc5_1)
+        "check testCaseBaseIntegerFunc5_1", testCaseBaseIntegerFunc5_1);
     suite.addTest(
-        "check testCaseBaseIntegerFunc5_2", testCaseBaseIntegerFunc5_2)
-    suite.addTest("check testCaseBaseIntegerFunc6", testCaseBaseIntegerFunc6)
+        "check testCaseBaseIntegerFunc5_2", testCaseBaseIntegerFunc5_2);
+    suite.addTest("check testCaseBaseIntegerFunc6", testCaseBaseIntegerFunc6);
     suite.addTest(
-        "check testCaseBaseIntegerFunc6_1", testCaseBaseIntegerFunc6_1)
+        "check testCaseBaseIntegerFunc6_1", testCaseBaseIntegerFunc6_1);
     suite.addTest(
-        "check testCaseBaseIntegerFunc6_2", testCaseBaseIntegerFunc6_2)
-    suite.addTest("check testCaseBaseIntegerFunc7", testCaseBaseIntegerFunc7)
+        "check testCaseBaseIntegerFunc6_2", testCaseBaseIntegerFunc6_2);
+    suite.addTest("check testCaseBaseIntegerFunc7", testCaseBaseIntegerFunc7);
     suite.addTest(
-        "check testCaseBaseIntegerFunc7_1", testCaseBaseIntegerFunc7_1)
-    suite.addTest("check testCaseBaseIntegerFunc8", testCaseBaseIntegerFunc8)
+        "check testCaseBaseIntegerFunc7_1", testCaseBaseIntegerFunc7_1);
+    suite.addTest("check testCaseBaseIntegerFunc8", testCaseBaseIntegerFunc8);
     suite.addTest(
-        "check testCaseBaseIntegerFunc8_1", testCaseBaseIntegerFunc8_1)
+        "check testCaseBaseIntegerFunc8_1", testCaseBaseIntegerFunc8_1);
     suite.addTest(
-        "check testCaseBaseIntegerFunc8_2", testCaseBaseIntegerFunc8_2)
-    suite.addTest("check testCaseBaseIntegerFunc9", testCaseBaseIntegerFunc9)
+        "check testCaseBaseIntegerFunc8_2", testCaseBaseIntegerFunc8_2);
+    suite.addTest("check testCaseBaseIntegerFunc9", testCaseBaseIntegerFunc9);
     suite.addTest(
-        "check testCaseBaseIntegerFunc9_1", testCaseBaseIntegerFunc9_1)
-    suite.addTest("check testCaseBaseIntegerFunc10", testCaseBaseIntegerFunc10)
+        "check testCaseBaseIntegerFunc9_1", testCaseBaseIntegerFunc9_1);
+    suite.addTest("check testCaseBaseIntegerFunc10", testCaseBaseIntegerFunc10);
     suite.addTest(
-        "check testCaseBaseIntegerFunc10_1", testCaseBaseIntegerFunc10_1)
-    suite.addTest("check testCaseBaseIntegerFunc11", testCaseBaseIntegerFunc11)
+        "check testCaseBaseIntegerFunc10_1", testCaseBaseIntegerFunc10_1);
+    suite.addTest("check testCaseBaseIntegerFunc11", testCaseBaseIntegerFunc11);
     suite.addTest(
-        "check testCaseBaseIntegerFunc11_1", testCaseBaseIntegerFunc11_1)
-    suite.addTest("check testCaseBaseIntegerFunc12", testCaseBaseIntegerFunc12)
+        "check testCaseBaseIntegerFunc11_1", testCaseBaseIntegerFunc11_1);
+    suite.addTest("check testCaseBaseIntegerFunc12", testCaseBaseIntegerFunc12);
     suite.addTest(
-        "check testCaseBaseIntegerFunc12_1", testCaseBaseIntegerFunc12_1)
-    suite.addTest("check testCaseBaseIntegerFunc13", testCaseBaseIntegerFunc13)
+        "check testCaseBaseIntegerFunc12_1", testCaseBaseIntegerFunc12_1);
+    suite.addTest("check testCaseBaseIntegerFunc13", testCaseBaseIntegerFunc13);
     suite.addTest(
-        "check testCaseBaseIntegerFunc13_1", testCaseBaseIntegerFunc13_1)
-    suite.addTest("check testCaseBaseIntegerFunc14", testCaseBaseIntegerFunc14)
+        "check testCaseBaseIntegerFunc13_1", testCaseBaseIntegerFunc13_1);
+    suite.addTest("check testCaseBaseIntegerFunc14", testCaseBaseIntegerFunc14);
     suite.addTest(
-        "check testCaseBaseIntegerFunc14_1", testCaseBaseIntegerFunc14_1)
-    suite.addTest("check testCaseBaseIntegerFunc15", testCaseBaseIntegerFunc15)
+        "check testCaseBaseIntegerFunc14_1", testCaseBaseIntegerFunc14_1);
+    suite.addTest("check testCaseBaseIntegerFunc15", testCaseBaseIntegerFunc15);
     suite.addTest(
-        "check testCaseBaseIntegerFunc15_1", testCaseBaseIntegerFunc15_1)
-    suite.addTest("check testCaseBaseIntegerFunc16", testCaseBaseIntegerFunc16)
+        "check testCaseBaseIntegerFunc15_1", testCaseBaseIntegerFunc15_1);
+    suite.addTest("check testCaseBaseIntegerFunc16", testCaseBaseIntegerFunc16);
     suite.addTest(
-        "check testCaseBaseIntegerFunc16_1", testCaseBaseIntegerFunc16_1)
-    suite.addTest("check testCaseBaseIntegerFunc17", testCaseBaseIntegerFunc17)
+        "check testCaseBaseIntegerFunc16_1", testCaseBaseIntegerFunc16_1);
+    suite.addTest("check testCaseBaseIntegerFunc17", testCaseBaseIntegerFunc17);
     suite.addTest(
-        "check testCaseBaseIntegerFunc17_1", testCaseBaseIntegerFunc17_1)
-    suite.addTest("check testCaseBaseIntegerFunc18", testCaseBaseIntegerFunc18)
+        "check testCaseBaseIntegerFunc17_1", testCaseBaseIntegerFunc17_1);
+    suite.addTest("check testCaseBaseIntegerFunc18", testCaseBaseIntegerFunc18);
     suite.addTest(
-        "check testCaseBaseIntegerFunc18_1", testCaseBaseIntegerFunc18_1)
-    suite.addTest("check testCaseBaseIntegerFunc19", testCaseBaseIntegerFunc19)
+        "check testCaseBaseIntegerFunc18_1", testCaseBaseIntegerFunc18_1);
+    suite.addTest("check testCaseBaseIntegerFunc19", testCaseBaseIntegerFunc19);
     suite.addTest(
-        "check testCaseBaseIntegerFunc19_1", testCaseBaseIntegerFunc19_1)
-    suite.addTest("check testCaseBaseIntegerFunc20", testCaseBaseIntegerFunc20)
+        "check testCaseBaseIntegerFunc19_1", testCaseBaseIntegerFunc19_1);
+    suite.addTest("check testCaseBaseIntegerFunc20", testCaseBaseIntegerFunc20);
     suite.addTest(
-        "check testCaseBaseIntegerFunc20_1", testCaseBaseIntegerFunc20_1)
-    suite.addTest("check testCaseBaseIntegerFunc21", testCaseBaseIntegerFunc21)
+        "check testCaseBaseIntegerFunc20_1", testCaseBaseIntegerFunc20_1);
+    suite.addTest("check testCaseBaseIntegerFunc21", testCaseBaseIntegerFunc21);
     suite.addTest(
-        "check testCaseBaseIntegerFunc21_1", testCaseBaseIntegerFunc21_1)
-    suite.addTest("check testCaseBaseIntegerFunc22", testCaseBaseIntegerFunc22)
+        "check testCaseBaseIntegerFunc21_1", testCaseBaseIntegerFunc21_1);
+    suite.addTest("check testCaseBaseIntegerFunc22", testCaseBaseIntegerFunc22);
     suite.addTest(
-        "check testCaseBaseIntegerFunc22_1", testCaseBaseIntegerFunc22_1)
-    suite.addTest("check testCaseBaseIntegerFunc23", testCaseBaseIntegerFunc23)
+        "check testCaseBaseIntegerFunc22_1", testCaseBaseIntegerFunc22_1);
+    suite.addTest("check testCaseBaseIntegerFunc23", testCaseBaseIntegerFunc23);
     suite.addTest(
-        "check testCaseBaseIntegerFunc23_1", testCaseBaseIntegerFunc23_1)
-    suite.addTest("check testCaseBaseIntegerFunc24", testCaseBaseIntegerFunc24)
+        "check testCaseBaseIntegerFunc23_1", testCaseBaseIntegerFunc23_1);
+    suite.addTest("check testCaseBaseIntegerFunc24", testCaseBaseIntegerFunc24);
     suite.addTest(
-        "check testCaseBaseIntegerFunc24_1", testCaseBaseIntegerFunc24_1)
-    suite.addTest("check testCaseBaseIntegerFunc25", testCaseBaseIntegerFunc25)
+        "check testCaseBaseIntegerFunc24_1", testCaseBaseIntegerFunc24_1);
+    suite.addTest("check testCaseBaseIntegerFunc25", testCaseBaseIntegerFunc25);
     suite.addTest(
-        "check testCaseBaseIntegerFunc25_1", testCaseBaseIntegerFunc25_1)
-    suite.addTest("check testCaseBaseIntegerFunc26", testCaseBaseIntegerFunc26)
+        "check testCaseBaseIntegerFunc25_1", testCaseBaseIntegerFunc25_1);
+    suite.addTest("check testCaseBaseIntegerFunc26", testCaseBaseIntegerFunc26);
     suite.addTest(
-        "check testCaseBaseIntegerFunc26_1", testCaseBaseIntegerFunc26_1)
-    suite.addTest("check testCaseBaseIntegerFunc27", testCaseBaseIntegerFunc27)
-    suite.addTest("check testCaseBaseIntegerFunc28", testCaseBaseIntegerFunc28)
+        "check testCaseBaseIntegerFunc26_1", testCaseBaseIntegerFunc26_1);
+    suite.addTest("check testCaseBaseIntegerFunc27", testCaseBaseIntegerFunc27);
+    suite.addTest("check testCaseBaseIntegerFunc28", testCaseBaseIntegerFunc28);
     suite.addTest(
-        "check testCaseBaseIntegerFunc28_1", testCaseBaseIntegerFunc28_1)
-    suite.addTest("check testCaseBaseIntegerFunc29", testCaseBaseIntegerFunc29)
+        "check testCaseBaseIntegerFunc28_1", testCaseBaseIntegerFunc28_1);
+    suite.addTest("check testCaseBaseIntegerFunc29", testCaseBaseIntegerFunc29);
     suite.addTest(
-        "check testCaseBaseIntegerFunc29_1", testCaseBaseIntegerFunc29_1)
-    suite.addTest("check testCaseBaseIntegerFunc30", testCaseBaseIntegerFunc30)
+        "check testCaseBaseIntegerFunc29_1", testCaseBaseIntegerFunc29_1);
+    suite.addTest("check testCaseBaseIntegerFunc30", testCaseBaseIntegerFunc30);
     suite.addTest(
-        "check testCaseBaseIntegerFunc30_1", testCaseBaseIntegerFunc30_1)
-    suite.addTest("check testCaseBaseIntegerFunc31", testCaseBaseIntegerFunc31)
+        "check testCaseBaseIntegerFunc30_1", testCaseBaseIntegerFunc30_1);
+    suite.addTest("check testCaseBaseIntegerFunc31", testCaseBaseIntegerFunc31);
     suite.addTest(
-        "check testCaseBaseIntegerFunc31_1", testCaseBaseIntegerFunc31_1)
-    suite.addTest("check testCaseBaseIntegerFunc32", testCaseBaseIntegerFunc32)
+        "check testCaseBaseIntegerFunc31_1", testCaseBaseIntegerFunc31_1);
+    suite.addTest("check testCaseBaseIntegerFunc32", testCaseBaseIntegerFunc32);
     suite.addTest(
-        "check testCaseBaseIntegerFunc32_1", testCaseBaseIntegerFunc32_1)
-    suite.addTest("check testCaseBaseIntegerFunc33", testCaseBaseIntegerFunc33)
+        "check testCaseBaseIntegerFunc32_1", testCaseBaseIntegerFunc32_1);
+    suite.addTest("check testCaseBaseIntegerFunc33", testCaseBaseIntegerFunc33);
     suite.addTest(
-        "check testCaseBaseIntegerFunc33_1", testCaseBaseIntegerFunc33_1)
-    suite.addTest("check testCaseBaseIntegerFunc34", testCaseBaseIntegerFunc34)
+        "check testCaseBaseIntegerFunc33_1", testCaseBaseIntegerFunc33_1);
+    suite.addTest("check testCaseBaseIntegerFunc34", testCaseBaseIntegerFunc34);
     suite.addTest(
-        "check testCaseBaseIntegerFunc34_1", testCaseBaseIntegerFunc34_1)
-    suite.addTest("check testCaseBaseIntegerFunc35", testCaseBaseIntegerFunc35)
+        "check testCaseBaseIntegerFunc34_1", testCaseBaseIntegerFunc34_1);
+    suite.addTest("check testCaseBaseIntegerFunc35", testCaseBaseIntegerFunc35);
     suite.addTest(
-        "check testCaseBaseIntegerFunc35_1", testCaseBaseIntegerFunc35_1)
-    suite.addTest("check testCaseBaseIntegerFunc36", testCaseBaseIntegerFunc36)
-    suite.addTest("check testCaseBaseIntegerFunc37", testCaseBaseIntegerFunc37)
-    suite.addTest("check testCaseBaseIntegerFunc38", testCaseBaseIntegerFunc38)
-    suite.addTest("check testCaseBaseIntegerFunc39", testCaseBaseIntegerFunc39)
-    suite.addTest("check testCaseBaseIntegerFunc40", testCaseBaseIntegerFunc40)
-    suite.addTest("check testCaseBaseIntegerFunc41", testCaseBaseIntegerFunc41)
-    suite.addTest("check testCasetestBaseBoolFunc1", testCasetestBaseBoolFunc1)
+        "check testCaseBaseIntegerFunc35_1", testCaseBaseIntegerFunc35_1);
+    suite.addTest("check testCaseBaseIntegerFunc36", testCaseBaseIntegerFunc36);
+    suite.addTest("check testCaseBaseIntegerFunc37", testCaseBaseIntegerFunc37);
+    suite.addTest("check testCaseBaseIntegerFunc38", testCaseBaseIntegerFunc38);
+    suite.addTest("check testCaseBaseIntegerFunc39", testCaseBaseIntegerFunc39);
+    suite.addTest("check testCaseBaseIntegerFunc40", testCaseBaseIntegerFunc40);
+    suite.addTest("check testCaseBaseIntegerFunc41", testCaseBaseIntegerFunc41);
+    suite.addTest("check testCasetestBaseBoolFunc1", testCasetestBaseBoolFunc1);
     suite.addTest(
-        "check testCasetestBaseBoolFunc1_1", testCasetestBaseBoolFunc1_1)
-    suite.addTest("check testCasetestBaseBoolFunc2", testCasetestBaseBoolFunc2)
+        "check testCasetestBaseBoolFunc1_1", testCasetestBaseBoolFunc1_1);
+    suite.addTest("check testCasetestBaseBoolFunc2", testCasetestBaseBoolFunc2);
     suite.addTest(
-        "check testCasetestBaseBoolFunc2_1", testCasetestBaseBoolFunc2_1)
-    suite.addTest("check testCasetestBaseBoolFunc3", testCasetestBaseBoolFunc3)
+        "check testCasetestBaseBoolFunc2_1", testCasetestBaseBoolFunc2_1);
+    suite.addTest("check testCasetestBaseBoolFunc3", testCasetestBaseBoolFunc3);
     suite.addTest(
-        "check testCasetestBaseBoolFunc3_1", testCasetestBaseBoolFunc3_1)
-    suite.addTest("check testCasetestBaseBoolFunc4", testCasetestBaseBoolFunc4)
+        "check testCasetestBaseBoolFunc3_1", testCasetestBaseBoolFunc3_1);
+    suite.addTest("check testCasetestBaseBoolFunc4", testCasetestBaseBoolFunc4);
     suite.addTest(
-        "check testCasetestBaseBoolFunc4_1", testCasetestBaseBoolFunc4_1)
+        "check testCasetestBaseBoolFunc4_1", testCasetestBaseBoolFunc4_1);
     suite.addTest(
-        "check testCasetestBaseBoolFunc4_2", testCasetestBaseBoolFunc4_2)
-    suite.addTest("check testCasetestBaseBoolFunc5", testCasetestBaseBoolFunc5)
+        "check testCasetestBaseBoolFunc4_2", testCasetestBaseBoolFunc4_2);
+    suite.addTest("check testCasetestBaseBoolFunc5", testCasetestBaseBoolFunc5);
     suite.addTest(
-        "check testCasetestBaseBoolFunc5_1", testCasetestBaseBoolFunc5_1)
+        "check testCasetestBaseBoolFunc5_1", testCasetestBaseBoolFunc5_1);
     suite.addTest(
-        "check testCasetestBaseBoolFunc5_2", testCasetestBaseBoolFunc5_2)
+        "check testCasetestBaseBoolFunc5_2", testCasetestBaseBoolFunc5_2);
     suite.addTest(
-        "check testCasetestBaseBoolFunc5_3", testCasetestBaseBoolFunc5_3)
-    suite.addTest("check testCasetestBaseBoolFunc6", testCasetestBaseBoolFunc6)
-    suite.addTest("check testCasetestBaseBoolFunc7", testCasetestBaseBoolFunc7)
-    suite.addTest("check testCasetestBaseBoolFunc8", testCasetestBaseBoolFunc8)
+        "check testCasetestBaseBoolFunc5_3", testCasetestBaseBoolFunc5_3);
+    suite.addTest("check testCasetestBaseBoolFunc6", testCasetestBaseBoolFunc6);
+    suite.addTest("check testCasetestBaseBoolFunc7", testCasetestBaseBoolFunc7);
+    suite.addTest("check testCasetestBaseBoolFunc8", testCasetestBaseBoolFunc8);
     suite.addTest(
-        "check testCasetestBaseBoolFunc8_1", testCasetestBaseBoolFunc8_1)
+        "check testCasetestBaseBoolFunc8_1", testCasetestBaseBoolFunc8_1);
     suite.addTest(
-        "check testCasetestBaseBoolFunc8_2", testCasetestBaseBoolFunc8_2)
+        "check testCasetestBaseBoolFunc8_2", testCasetestBaseBoolFunc8_2);
     // namspacevoid test
-    suite.addTest("check testNsMyfunc1", testNsMyfunc1)
-    suite.addTest("check testNsMyfunc2", testNsMyfunc2)
-    suite.addTest("check testNsMyfunc3", testNsMyfunc3)
-    suite.addTest("check testNsMyfunc3_1", testNsMyfunc3_1)
-    suite.addTest("check testNsMyfunc4", testNsMyfunc4)
-    suite.addTest("check testNsMyfunc5", testNsMyfunc5)
-    suite.addTest("check testNsMyfunc6", testNsMyfunc6)
-    suite.addTest("check testNsMyfunc6_1", testNsMyfunc6_1)
-    suite.addTest("check testNsMyfunc7", testNsMyfunc7)
-    suite.addTest("check testNsMyfunc8", testNsMyfunc8)
-    suite.addTest("check testNsMyfunc9", testNsMyfunc9)
-    suite.addTest("check testNsMyfunc10", testNsMyfunc10)
-    suite.addTest("check testNsMyfunc11", testNsMyfunc11)
-    suite.addTest("check testNsMyfunc12", testNsMyfunc12)
-    suite.addTest("check testNsMyfunc12_1", testNsMyfunc12_1)
-    suite.addTest("check testNsMyfunc12_2", testNsMyfunc12_2)
-    suite.addTest("check testNsMyfunc13", testNsMyfunc13)
-    suite.addTest("check testNsMyfunc13_1", testNsMyfunc13_1)
-    suite.addTest("check testNsMyfunc13_2", testNsMyfunc13_2)
-    suite.addTest("check testNsMyfunc14", testNsMyfunc14)
-    suite.addTest("check testNsMyfunc14_1", testNsMyfunc14_1)
-    suite.addTest("check testNsMyfunc14_2", testNsMyfunc14_2)
-    suite.addTest("check testNsMyfunc15", testNsMyfunc15)
-    suite.addTest("check testNsMyfunc15_1", testNsMyfunc15_1)
-    suite.addTest("check testNsMyfunc15_2", testNsMyfunc15_2)
-    suite.addTest("check testNsMyfunc16", testNsMyfunc16)
-    suite.addTest("check testNsMyfunc16_1", testNsMyfunc16_1)
-    suite.addTest("check testNsMyfunc16_2", testNsMyfunc16_2)
-    suite.addTest("check testCaseConstant1", testCaseConstant1)
-    suite.addTest("check testCaseConstant2", testCaseConstant2)
-    suite.addTest("check testCaseConstant3", testCaseConstant3)
-    suite.addTest("check testCaseConstant4", testCaseConstant4)
-    suite.run()
+    suite.addTest("check testNsMyfunc1", testNsMyfunc1);
+    suite.addTest("check testNsMyfunc2", testNsMyfunc2);
+    suite.addTest("check testNsMyfunc3", testNsMyfunc3);
+    suite.addTest("check testNsMyfunc3_1", testNsMyfunc3_1);
+    suite.addTest("check testNsMyfunc4", testNsMyfunc4);
+    suite.addTest("check testNsMyfunc5", testNsMyfunc5);
+    suite.addTest("check testNsMyfunc6", testNsMyfunc6);
+    suite.addTest("check testNsMyfunc6_1", testNsMyfunc6_1);
+    suite.addTest("check testNsMyfunc7", testNsMyfunc7);
+    suite.addTest("check testNsMyfunc8", testNsMyfunc8);
+    suite.addTest("check testNsMyfunc9", testNsMyfunc9);
+    suite.addTest("check testNsMyfunc10", testNsMyfunc10);
+    suite.addTest("check testNsMyfunc11", testNsMyfunc11);
+    suite.addTest("check testNsMyfunc12", testNsMyfunc12);
+    suite.addTest("check testNsMyfunc12_1", testNsMyfunc12_1);
+    suite.addTest("check testNsMyfunc12_2", testNsMyfunc12_2);
+    suite.addTest("check testNsMyfunc13", testNsMyfunc13);
+    suite.addTest("check testNsMyfunc13_1", testNsMyfunc13_1);
+    suite.addTest("check testNsMyfunc13_2", testNsMyfunc13_2);
+    suite.addTest("check testNsMyfunc14", testNsMyfunc14);
+    suite.addTest("check testNsMyfunc14_1", testNsMyfunc14_1);
+    suite.addTest("check testNsMyfunc14_2", testNsMyfunc14_2);
+    suite.addTest("check testNsMyfunc15", testNsMyfunc15);
+    suite.addTest("check testNsMyfunc15_1", testNsMyfunc15_1);
+    suite.addTest("check testNsMyfunc15_2", testNsMyfunc15_2);
+    suite.addTest("check testNsMyfunc16", testNsMyfunc16);
+    suite.addTest("check testNsMyfunc16_1", testNsMyfunc16_1);
+    suite.addTest("check testNsMyfunc16_2", testNsMyfunc16_2);
+    suite.addTest("check testCaseConstant1", testCaseConstant1);
+    suite.addTest("check testCaseConstant2", testCaseConstant2);
+    suite.addTest("check testCaseConstant3", testCaseConstant3);
+    suite.addTest("check testCaseConstant4", testCaseConstant4);
+    System.exit(suite.run())
 }

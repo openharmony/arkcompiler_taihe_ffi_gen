@@ -1,4 +1,5 @@
 import * as StructTest from "@generated/struct_test";
+import * as System from "std/core/System";
 
 loadLibrary("ani_struct");
 

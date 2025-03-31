@@ -1,4 +1,5 @@
 import * as OptTest from "@generated/opt";
+import * as System from "std/core/System";
 
 loadLibrary("ani_optional");
 
@@ -60,5 +61,5 @@ function main() {
     suite.addTest("makeOptionalArray_1", makeOptionalArray_1)
     suite.addTest("sendReturnResult", sendReturnResult)
     suite.addTest("sendReturnResult_1", sendReturnResult_1)
-    suite.run()
+    System.exit(suite.run())
 }

@@ -1,4 +1,5 @@
 import * as bigint_test from "@generated/bigint_test";
+import * as System from "std/core/System";
 
 loadLibrary("bigint");
 
@@ -7,7 +8,7 @@ function main() {
     const suite = new ArkTestsuite("bigint_test ut")
     suite.addTest("testFromBigint", testFromBigint);
     suite.addTest("testToBigint", testToBigint);
-    suite.run();
+    System.exit(suite.run());
     console.info("bigint_test run end...");
 }
 

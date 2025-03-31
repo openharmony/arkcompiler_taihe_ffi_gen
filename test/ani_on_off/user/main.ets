@@ -1,4 +1,5 @@
 import * as on_off_test from "@generated/on_off";
+import * as System from "std/core/System";
 
 loadLibrary("ani_on_off");
 
@@ -145,5 +146,5 @@ function main() {
     suite.addTest("undefined_off", undefined_off)
     suite.addTest("basecls_static_on", basecls_static_on)
     suite.addTest("basecls_static_off", basecls_static_off)
-    suite.run()
+    System.exit(suite.run())
 }

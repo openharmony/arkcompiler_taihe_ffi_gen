@@ -1,4 +1,5 @@
 import * as async_test from "@generated/async_test";
+import * as System from "std/core/System";
 loadLibrary("ani_async");
 
 function main() {

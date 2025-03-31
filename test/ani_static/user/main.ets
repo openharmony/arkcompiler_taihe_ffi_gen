@@ -1,4 +1,5 @@
 import * as lib from "@generated/staticTest";
+import * as System from "std/core/System";
 loadLibrary("ani_static");
 
 function test_sumSync() {
@@ -30,5 +31,5 @@ function main() {
     suite.addTest("test new class", test_new_class);
     suite.addTest("test new class with two args", test_new_class_with_two_args);
 
-    suite.run();
+    System.exit(suite.run());
 }

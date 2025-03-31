@@ -1,5 +1,6 @@
 import * as UnionTest1 from "@generated/test_union";
 import * as UnionTest from "@generated/union_ani";
+import * as System from "std/core/System";
 
 loadLibrary("ani_union");
 
@@ -666,5 +667,5 @@ function main() {
     suite.addTest(
         "test_interface_Union_array_map9", test_interface_Union_array_map9);
 
-    suite.run();
+    System.exit(suite.run());
 }

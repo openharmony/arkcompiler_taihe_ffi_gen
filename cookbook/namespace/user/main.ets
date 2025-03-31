@@ -1,5 +1,6 @@
 import * as NewNS from "@generated/new_ns";
 import * as NSTest from "@generated/ns_test";
+import * as System from "std/core/System";
 
 loadLibrary("namespace");
 
@@ -44,5 +45,5 @@ function main() {
     suite.addTest("check_ns_nest", check_ns_nest)
     suite.addTest("check_interface", check_interface)
     suite.addTest("check_multi_ns", check_multi_ns)
-    suite.run()
+    System.exit(suite.run())
 }

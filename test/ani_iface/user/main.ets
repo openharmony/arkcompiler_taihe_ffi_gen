@@ -1,5 +1,6 @@
 import * as IfaceReadonlyTest from "@generated/iface_readonly_test";
 import * as IfaceTest from "@generated/iface_test";
+import * as System from "std/core/System";
 
 loadLibrary("ani_iface");
 
@@ -72,5 +73,5 @@ function main() {
     suite.addTest("printFooName", printFooName)
     suite.addTest("printNooName", printNooName)
     suite.addTest("setSubFooName", setSubFooName)
-    suite.run()
+    System.exit(suite.run())
 }
