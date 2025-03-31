@@ -12,7 +12,7 @@
 // Raw Data Handler //
 //////////////////////
 
-namespace taihe::core {
+namespace taihe {
 struct data_view;
 struct data_holder;
 
@@ -49,13 +49,13 @@ inline bool same_impl(adl_helper_t, data_view lhs, data_view rhs) {
 inline std::size_t hash_impl(adl_helper_t, data_view val) {
   return reinterpret_cast<std::size_t>(val.data_ptr);
 }
-}  // namespace taihe::core
+}  // namespace taihe
 
 ///////////////////////////////////////
 // Specific Impl Type Object Handler //
 ///////////////////////////////////////
 
-namespace taihe::core {
+namespace taihe {
 template <typename Impl>
 struct data_block_impl : DataBlockHead, Impl {
   template <typename... Args>
@@ -257,4 +257,4 @@ template <typename... InterfaceHolders, typename Impl>
 inline auto into_holder(Impl&& impl) {
   return impl_holder<Impl, InterfaceHolders...>::make(std::forward<Impl>(impl));
 }
-}  // namespace taihe::core
+}  // namespace taihe

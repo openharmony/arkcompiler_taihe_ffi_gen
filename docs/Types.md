@@ -28,13 +28,13 @@
 
 | 类型 | C++ 侧投影 | C++ 侧投影（作为参数时） | 引用计数 | 说明 |
 |-------------|--------------------------|-------------------------------|----|---|
-| `Array<T>`  | `taihe::core::array<T>`  | `taihe::core::array_view<T>`  | 无 | 无引用计数的定长数组类型 |
-| `Box<T>`    | `taihe::core::box<T>`    | `taihe::core::box_view<T>`    | 无 | 无引用计数的可空引用类型 |
-| `String`    | `taihe::core::string`    | `taihe::core::string_view`    | 有 | 字符串类型，通过引用计数管理 |
-| `Vector<T>` | `taihe::core::vector<T>` | `taihe::core::vector_view<T>` | 有 | 通过引用计数管理的可变长数组 |
-| `Map<K, V>` | `taihe::core::map<K, V>` | `taihe::core::map_view<K, V>` | 有 | 通过引用计数管理的字典类型 |
-| `Set<T>`    | `taihe::core::set<T>`    | `taihe::core::set_view<T>`    | 有 | 通过引用计数管理的集合类型 |
-| `(a: A, b: B) => T` | `taihe::core::callback<T(A, B)>` | `taihe::core::callback_view<T(A, B)>` | 有 | 通过引用计数管理的函数闭包 |
+| `Array<T>`  | `taihe::array<T>`  | `taihe::array_view<T>`  | 无 | 无引用计数的定长数组类型 |
+| `Box<T>`    | `taihe::box<T>`    | `taihe::box_view<T>`    | 无 | 无引用计数的可空引用类型 |
+| `String`    | `taihe::string`    | `taihe::string_view`    | 有 | 字符串类型，通过引用计数管理 |
+| `Vector<T>` | `taihe::vector<T>` | `taihe::vector_view<T>` | 有 | 通过引用计数管理的可变长数组 |
+| `Map<K, V>` | `taihe::map<K, V>` | `taihe::map_view<K, V>` | 有 | 通过引用计数管理的字典类型 |
+| `Set<T>`    | `taihe::set<T>`    | `taihe::set_view<T>`    | 有 | 通过引用计数管理的集合类型 |
+| `(a: A, b: B) => T` | `taihe::callback<T(A, B)>` | `taihe::callback_view<T(A, B)>` | 有 | 通过引用计数管理的函数闭包 |
 
 # 用户自定义类型
 

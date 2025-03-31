@@ -6,7 +6,7 @@
 
 #define VEC_GROWTH_FACTOR 2
 
-namespace taihe::core {
+namespace taihe {
 template <typename T>
 struct vector_view;
 
@@ -83,9 +83,8 @@ struct vector_view {
 
   friend struct vector<T>;
 
-  friend bool taihe::core::same_impl(adl_helper_t, vector_view lhs,
-                                     vector_view rhs);
-  friend std::size_t taihe::core::hash_impl(adl_helper_t, vector_view val);
+  friend bool taihe::same_impl(adl_helper_t, vector_view lhs, vector_view rhs);
+  friend std::size_t taihe::hash_impl(adl_helper_t, vector_view val);
 };
 
 template <typename T>
@@ -158,7 +157,7 @@ template <typename T>
 struct as_param<vector<T>> {
   using type = vector_view<T>;
 };
-}  // namespace taihe::core
+}  // namespace taihe
 
 #ifdef VEC_GROWTH_FACTOR
 #undef VEC_GROWTH_FACTOR

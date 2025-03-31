@@ -22,7 +22,7 @@
 #endif
 #endif
 
-namespace taihe::core {
+namespace taihe {
 template <typename cpp_t, typename = void>
 struct as_abi;
 
@@ -128,4 +128,4 @@ template <typename T,
 inline bool same_impl(adl_helper_t, T lhs, T rhs) {
   return lhs == rhs;
 }
-}  // namespace taihe::core
+}  // namespace taihe

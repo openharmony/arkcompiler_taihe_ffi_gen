@@ -13,7 +13,7 @@
 #include <taihe/common.hpp>
 #include <utility>
 
-namespace taihe::core {
+namespace taihe {
 struct string_view;
 struct string;
 
@@ -240,4 +240,4 @@ template <>
 struct as_param<string> {
   using type = string_view;
 };
-}  // namespace taihe::core
+}  // namespace taihe

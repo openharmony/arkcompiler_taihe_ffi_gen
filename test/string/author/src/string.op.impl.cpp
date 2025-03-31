@@ -1,7 +1,6 @@
 #include "string.op.impl.hpp"
 
-string::op::StringPair ohos_split_str(taihe::core::string_view pstr,
-                                      int32_t n) {
+string::op::StringPair ohos_split_str(taihe::string_view pstr, int32_t n) {
   int32_t l = pstr.size();
   if (n > l) {
     n = l;
@@ -11,16 +10,14 @@ string::op::StringPair ohos_split_str(taihe::core::string_view pstr,
     n = n + l;
   }
   return {
-      taihe::core::substr(pstr, 0, n),
-      taihe::core::substr(pstr, n, l - n),
+      taihe::substr(pstr, 0, n),
+      taihe::substr(pstr, n, l - n),
   };
 }
 
-taihe::core::string ohos_int_to_str(int32_t n) {
-  return taihe::core::to_string(n);
-}
+taihe::string ohos_int_to_str(int32_t n) { return taihe::to_string(n); }
 
-int32_t ohos_str_to_int(taihe::core::string_view pstr) {
+int32_t ohos_str_to_int(taihe::string_view pstr) {
   return std::atoi(pstr.c_str());
 }
 

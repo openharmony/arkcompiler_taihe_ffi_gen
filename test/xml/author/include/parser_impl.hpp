@@ -12,7 +12,7 @@
 
 struct ExpatParserState {
   ohos::xml::ParseOptions const& m_option;
-  std::vector<taihe::core::string> m_stack;
+  std::vector<taihe::string> m_stack;
 
   void onStartElement(const char* name, const char* attrs[]) {
     m_stack.emplace_back(name);
@@ -31,7 +31,7 @@ struct ExpatParserState {
     }
     if (m_option.tagValueCallbackFunction) {
       (*m_option.tagValueCallbackFunction)(m_stack.back(),
-                                           taihe::core::string_view(data, len));
+                                           taihe::string_view(data, len));
     }
   }
 };
@@ -43,7 +43,7 @@ class ExpatParser {
 
  public:
   ExpatParser(ohos::xml::BufferType const& buffer,
-              taihe::core::optional_view<taihe::core::string> encoding)
+              taihe::optional_view<taihe::string> encoding)
       : m_buffer(buffer) {
     if (encoding) {
       this->m_parser = XML_ParserCreate(encoding->c_str());

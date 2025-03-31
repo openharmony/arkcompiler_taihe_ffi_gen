@@ -2,7 +2,7 @@
 #include "ohos.xml.proj.hpp"
 #include "parser_impl.hpp"
 
-using namespace taihe::core;
+using namespace taihe;
 using namespace ohos::xml;
 
 XmlPullParser makeXmlPullParserImpl(BufferType const& buffer,

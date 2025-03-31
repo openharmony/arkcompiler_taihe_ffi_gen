@@ -8,7 +8,7 @@
 
 using namespace rgb::base;
 using namespace rgb::show;
-using namespace taihe::core;
+using namespace taihe;
 
 class Rectangle {
  protected:

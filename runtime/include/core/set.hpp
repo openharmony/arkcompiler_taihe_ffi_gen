@@ -5,7 +5,7 @@
 
 #define SET_GROWTH_FACTOR 2
 
-namespace taihe::core {
+namespace taihe {
 template <typename K>
 struct set_view;
 
@@ -23,7 +23,7 @@ struct set_view {
       item_t* current = m_handle->bucket[i];
       while (current) {
         item_t* next = current->next;
-        std::size_t index = taihe::core::hash(current->key) % cap;
+        std::size_t index = taihe::hash(current->key) % cap;
         current->next = bucket[index];
         bucket[index] = current;
         current = next;
@@ -50,10 +50,10 @@ struct set_view {
   }
 
   bool emplace(as_param_t<K> key) const {
-    std::size_t index = taihe::core::hash(key) % m_handle->cap;
+    std::size_t index = taihe::hash(key) % m_handle->cap;
     item_t* current = m_handle->bucket[index];
     while (current) {
-      if (taihe::core::same(current->key, key)) {
+      if (taihe::same(current->key, key)) {
         return false;
       }
       current = current->next;
@@ -72,10 +72,10 @@ struct set_view {
   }
 
   bool find(as_param_t<K> key) const {
-    std::size_t index = taihe::core::hash(key) % m_handle->cap;
+    std::size_t index = taihe::hash(key) % m_handle->cap;
     item_t* current = m_handle->bucket[index];
     while (current) {
-      if (taihe::core::same(current->key, key)) {
+      if (taihe::same(current->key, key)) {
         return true;
       }
       current = current->next;
@@ -84,10 +84,10 @@ struct set_view {
   }
 
   bool erase(as_param_t<K> key) const {
-    std::size_t index = taihe::core::hash(key) % m_handle->cap;
+    std::size_t index = taihe::hash(key) % m_handle->cap;
     item_t** current_ptr = &m_handle->bucket[index];
     while (*current_ptr) {
-      if (taihe::core::same((*current_ptr)->key, key)) {
+      if (taihe::same((*current_ptr)->key, key)) {
         item_t* current = *current_ptr;
         *current_ptr = (*current_ptr)->next;
         delete current;
@@ -202,8 +202,8 @@ struct set_view {
 
   friend struct set<K>;
 
-  friend bool taihe::core::same_impl(adl_helper_t, set_view lhs, set_view rhs);
-  friend std::size_t taihe::core::hash_impl(adl_helper_t, set_view val);
+  friend bool taihe::same_impl(adl_helper_t, set_view lhs, set_view rhs);
+  friend std::size_t taihe::hash_impl(adl_helper_t, set_view val);
 };
 
 template <typename K>
@@ -278,7 +278,7 @@ template <typename K>
 struct as_param<set<K>> {
   using type = set_view<K>;
 };
-}  // namespace taihe::core
+}  // namespace taihe
 
 #ifdef SET_GROWTH_FACTOR
 #undef SET_GROWTH_FACTOR

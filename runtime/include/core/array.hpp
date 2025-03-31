@@ -12,7 +12,7 @@
 #include <utility>
 #include <vector>
 
-namespace taihe::core {
+namespace taihe {
 template <typename cpp_owner_t>
 struct array_view;
 
@@ -258,4 +258,4 @@ template <typename cpp_owner_t>
 struct as_param<array<cpp_owner_t>> {
   using type = array_view<cpp_owner_t>;
 };
-}  // namespace taihe::core
+}  // namespace taihe
