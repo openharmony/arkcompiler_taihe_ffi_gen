@@ -234,8 +234,8 @@ class OpaqueTypeCppInfo(AbstractAnalysis[OpaqueType], AbstractTypeCppInfo):
 class StringTypeCppInfo(AbstractAnalysis[StringType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: StringType):
         super().__init__(am, t)
-        self.decl_headers = ["core/string.hpp"]
-        self.impl_headers = ["core/string.hpp"]
+        self.decl_headers = ["taihe/string.hpp"]
+        self.impl_headers = ["taihe/string.hpp"]
         self.as_owner = "::taihe::string"
         self.as_param = "::taihe::string_view"
 
@@ -244,8 +244,8 @@ class ArrayTypeCppInfo(AbstractAnalysis[ArrayType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: ArrayType) -> None:
         super().__init__(am, t)
         arg_ty_cpp_info = TypeCppInfo.get(am, t.item_ty)
-        self.decl_headers = ["core/array.hpp", *arg_ty_cpp_info.decl_headers]
-        self.impl_headers = ["core/array.hpp", *arg_ty_cpp_info.impl_headers]
+        self.decl_headers = ["taihe/array.hpp", *arg_ty_cpp_info.decl_headers]
+        self.impl_headers = ["taihe/array.hpp", *arg_ty_cpp_info.impl_headers]
         self.as_owner = f"::taihe::array<{arg_ty_cpp_info.as_owner}>"
         self.as_param = f"::taihe::array_view<{arg_ty_cpp_info.as_owner}>"
 
@@ -254,8 +254,8 @@ class OptionalTypeCppInfo(AbstractAnalysis[OptionalType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: OptionalType) -> None:
         super().__init__(am, t)
         arg_ty_cpp_info = TypeCppInfo.get(am, t.item_ty)
-        self.decl_headers = ["core/optional.hpp", *arg_ty_cpp_info.decl_headers]
-        self.impl_headers = ["core/optional.hpp", *arg_ty_cpp_info.impl_headers]
+        self.decl_headers = ["taihe/optional.hpp", *arg_ty_cpp_info.decl_headers]
+        self.impl_headers = ["taihe/optional.hpp", *arg_ty_cpp_info.impl_headers]
         self.as_owner = f"::taihe::optional<{arg_ty_cpp_info.as_owner}>"
         self.as_param = f"::taihe::optional_view<{arg_ty_cpp_info.as_owner}>"
 
@@ -264,8 +264,8 @@ class VectorTypeCppInfo(AbstractAnalysis[VectorType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: VectorType) -> None:
         super().__init__(am, t)
         val_ty_cpp_info = TypeCppInfo.get(am, t.val_ty)
-        self.decl_headers = ["core/vector.hpp", *val_ty_cpp_info.decl_headers]
-        self.impl_headers = ["core/vector.hpp", *val_ty_cpp_info.impl_headers]
+        self.decl_headers = ["taihe/vector.hpp", *val_ty_cpp_info.decl_headers]
+        self.impl_headers = ["taihe/vector.hpp", *val_ty_cpp_info.impl_headers]
         self.as_owner = f"::taihe::vector<{val_ty_cpp_info.as_owner}>"
         self.as_param = f"::taihe::vector_view<{val_ty_cpp_info.as_owner}>"
 
@@ -276,12 +276,12 @@ class MapTypeCppInfo(AbstractAnalysis[MapType], AbstractTypeCppInfo):
         key_ty_cpp_info = TypeCppInfo.get(am, t.key_ty)
         val_ty_cpp_info = TypeCppInfo.get(am, t.val_ty)
         self.decl_headers = [
-            "core/map.hpp",
+            "taihe/map.hpp",
             *key_ty_cpp_info.decl_headers,
             *val_ty_cpp_info.decl_headers,
         ]
         self.impl_headers = [
-            "core/map.hpp",
+            "taihe/map.hpp",
             *key_ty_cpp_info.impl_headers,
             *val_ty_cpp_info.impl_headers,
         ]
@@ -297,8 +297,8 @@ class SetTypeCppInfo(AbstractAnalysis[SetType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: SetType) -> None:
         super().__init__(am, t)
         key_ty_cpp_info = TypeCppInfo.get(am, t.key_ty)
-        self.decl_headers = ["core/set.hpp", *key_ty_cpp_info.decl_headers]
-        self.impl_headers = ["core/set.hpp", *key_ty_cpp_info.impl_headers]
+        self.decl_headers = ["taihe/set.hpp", *key_ty_cpp_info.decl_headers]
+        self.impl_headers = ["taihe/set.hpp", *key_ty_cpp_info.impl_headers]
         self.as_owner = f"::taihe::set<{key_ty_cpp_info.as_owner}>"
         self.as_param = f"::taihe::set_view<{key_ty_cpp_info.as_owner}>"
 
@@ -325,12 +325,12 @@ class CallbackTypeCppInfo(AbstractAnalysis[CallbackType], AbstractTypeCppInfo):
             params_ty_as_param.append(param_ty_cpp_info.as_param)
         params_fmt = ", ".join(params_ty_as_param)
         self.decl_headers = [
-            "core/callback.hpp",
+            "taihe/callback.hpp",
             *return_ty_decl_headers,
             *params_ty_decl_headers,
         ]
         self.impl_headers = [
-            "core/callback.hpp",
+            "taihe/callback.hpp",
             *return_ty_defn_headers,
             *params_ty_defn_headers,
         ]
@@ -1322,7 +1322,7 @@ class CppHeadersGenerator:
         iface_cpp_defn_target = COutputBuffer.create(
             self.tm, f"include/{iface_cpp_info.defn_header}", True
         )
-        iface_cpp_defn_target.include("core/object.hpp")
+        iface_cpp_defn_target.include("taihe/object.hpp")
         iface_cpp_defn_target.include(iface_cpp_info.decl_header)
         iface_cpp_defn_target.include(iface_abi_info.defn_header)
         self.gen_iface_view_defn(

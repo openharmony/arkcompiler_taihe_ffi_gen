@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <iostream>
 
-#include "core/runtime.hpp"
+#include "taihe/runtime.hpp"
 
 int32_t add_impl(int32_t a, int32_t b) {
   if (a == 0) {
@@ -17,14 +17,21 @@ int32_t add_impl(int32_t a, int32_t b) {
 ::async_test::IBase getIBase_impl() {
   struct AuthorIBase {
     taihe::string name;
+
     AuthorIBase() : name("My IBase") {}
+
     ~AuthorIBase() {}
-    taihe::string get() { return name; }
+
+    taihe::string get() {
+      return name;
+    }
+
     void set(taihe::string_view a) {
       this->name = a;
       return;
     }
   };
+
   return taihe::make_holder<AuthorIBase, ::async_test::IBase>();
 }
 
@@ -34,8 +41,8 @@ void fromStructSync_impl(::async_test::Data const& data) {
   return;
 }
 
-::async_test::Data toStructSync_impl(taihe::string_view a,
-                                     taihe::string_view b, int32_t c) {
+::async_test::Data toStructSync_impl(taihe::string_view a, taihe::string_view b,
+                                     int32_t c) {
   if (c == 0) {
     taihe::set_error("some error happen in toStructSync_impl");
     return {a, b, c};
@@ -43,7 +50,9 @@ void fromStructSync_impl(::async_test::Data const& data) {
   return {a, b, c};
 }
 
-void PrintSync() { std::cout << "print Sync" << std::endl; }
+void PrintSync() {
+  std::cout << "print Sync" << std::endl;
+}
 
 TH_EXPORT_CPP_API_addSync(add_impl);
 TH_EXPORT_CPP_API_getIBase(getIBase_impl);

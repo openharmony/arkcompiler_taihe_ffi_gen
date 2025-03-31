@@ -1,12 +1,12 @@
 #include <cmath>
-#include <core/callback.hpp>
 #include <cstddef>
 #include <iomanip>
 #include <iostream>
+#include <taihe/callback.hpp>
 
-#include "core/object.hpp"
-#include "core/string.hpp"
 #include "impl_test.proj.hpp"
+#include "taihe/object.hpp"
+#include "taihe/string.hpp"
 
 using namespace impl_test;
 using namespace taihe;

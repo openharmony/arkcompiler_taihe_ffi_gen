@@ -1,8 +1,8 @@
 #pragma once
 
-#include <ani.h>
+#include <taihe/string.hpp>
 
-#include <core/string.hpp>
+#include <ani.h>
 
 namespace taihe {
 void set_env(ani_env *env);

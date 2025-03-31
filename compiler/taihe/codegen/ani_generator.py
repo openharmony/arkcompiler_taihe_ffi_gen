@@ -1486,7 +1486,7 @@ class ANICodeGenerator:
         pkg_ani_header_target = COutputBuffer.create(
             self.tm, f"include/{pkg_ani_info.header}", True
         )
-        pkg_ani_header_target.include("core/runtime.hpp")
+        pkg_ani_header_target.include("taihe/runtime.hpp")
         pkg_ani_header_target.write(
             f"namespace {pkg_ani_info.cpp_ns} {{\n"
             f"ani_status ANIRegister(ani_env *env);\n"

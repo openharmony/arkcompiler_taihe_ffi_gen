@@ -31,7 +31,7 @@ int32_t convert2Int(array_view<uint8_t> a) {
 
 `arraybuffer`在taihe的使用与一般的`array`是一样的, 区别主要在于sts侧对应的是`ArrayBuffer`
 
-注意到taihe提供了throw，用户在使用前需要 `#include"core/runtime.hpp"` , 然后就可以使用 `throw_error` 函数了
+注意到taihe提供了throw，用户在使用前需要 `#include"taihe/runtime.hpp"` , 然后就可以使用 `throw_error` 函数了
 
 第三步 生成并编译
 

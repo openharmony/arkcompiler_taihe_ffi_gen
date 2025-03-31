@@ -23,68 +23,64 @@
 #endif
 
 namespace taihe {
-template <typename cpp_t, typename = void>
+template<typename cpp_t, typename = void>
 struct as_abi;
 
-template <typename cpp_t>
+template<typename cpp_t>
 using as_abi_t = typename as_abi<cpp_t>::type;
 
-template <typename cpp_owner_t, typename = void>
+template<typename cpp_owner_t, typename = void>
 struct as_param;
 
-template <typename cpp_owner_t>
+template<typename cpp_owner_t>
 using as_param_t = typename as_param<cpp_owner_t>::type;
 
-template <typename cpp_t>
+template<typename cpp_t>
 struct as_abi<cpp_t, std::enable_if_t<std::is_arithmetic_v<cpp_t>>> {
   using type = cpp_t;
 };
 
-template <typename cpp_owner_t>
+template<typename cpp_owner_t>
 struct as_param<cpp_owner_t,
                 std::enable_if_t<std::is_arithmetic_v<cpp_owner_t>>> {
   using type = cpp_owner_t;
 };
 
-template <>
+template<>
 struct as_abi<void> {
   using type = void;
 };
 
-template <typename cpp_t,
-          std::enable_if_t<!std::is_reference_v<cpp_t>, int> = 0>
+template<typename cpp_t, std::enable_if_t<!std::is_reference_v<cpp_t>, int> = 0>
 inline as_abi_t<cpp_t> into_abi(cpp_t&& cpp_val) {
   as_abi_t<cpp_t> abi_val;
   new (&abi_val) cpp_t(std::move(cpp_val));
   return abi_val;
 }
 
-template <typename cpp_t,
-          std::enable_if_t<!std::is_reference_v<cpp_t>, int> = 0>
+template<typename cpp_t, std::enable_if_t<!std::is_reference_v<cpp_t>, int> = 0>
 inline as_abi_t<cpp_t> into_abi(cpp_t& cpp_val) {
   as_abi_t<cpp_t> abi_val;
   new (&abi_val) cpp_t(std::move(cpp_val));
   return abi_val;
 }
 
-template <typename cpp_t,
-          std::enable_if_t<!std::is_reference_v<cpp_t>, int> = 0>
+template<typename cpp_t, std::enable_if_t<!std::is_reference_v<cpp_t>, int> = 0>
 inline cpp_t&& from_abi(as_abi_t<cpp_t>& abi_val) {
   return reinterpret_cast<cpp_t&&>(abi_val);
 }
 
-template <typename cpp_t,
-          std::enable_if_t<!std::is_reference_v<cpp_t>, int> = 0>
+template<typename cpp_t, std::enable_if_t<!std::is_reference_v<cpp_t>, int> = 0>
 inline cpp_t&& from_abi(as_abi_t<cpp_t>&& abi_val) {
   return reinterpret_cast<cpp_t&&>(abi_val);
 }
 
-template <typename cpp_t, std::enable_if_t<std::is_reference_v<cpp_t>, int> = 0>
+template<typename cpp_t, std::enable_if_t<std::is_reference_v<cpp_t>, int> = 0>
 inline as_abi_t<cpp_t> into_abi(cpp_t cpp_val) {
   return reinterpret_cast<as_abi_t<cpp_t>>(&cpp_val);
 }
 
-template <typename cpp_t, std::enable_if_t<std::is_reference_v<cpp_t>, int> = 0>
+template<typename cpp_t, std::enable_if_t<std::is_reference_v<cpp_t>, int> = 0>
 inline cpp_t from_abi(as_abi_t<cpp_t> abi_val) {
   return reinterpret_cast<cpp_t>(*abi_val);
 }
@@ -93,10 +89,10 @@ inline cpp_t from_abi(as_abi_t<cpp_t> abi_val) {
 // enum tags //
 ///////////////
 
-template <auto tag>
+template<auto tag>
 struct static_tag_t {};
 
-template <auto tag>
+template<auto tag>
 constexpr static_tag_t<tag> static_tag = {};
 
 /////////////////////////
@@ -105,26 +101,26 @@ constexpr static_tag_t<tag> static_tag = {};
 
 struct adl_helper_t {};
 
-template <typename T>
+template<typename T>
 inline std::size_t hash(T&& val) {
   adl_helper_t adl_helper;
   return hash_impl(adl_helper, std::forward<T>(val));
 }
 
-template <typename L, typename R>
+template<typename L, typename R>
 inline bool same(L&& lhs, R&& rhs) {
   adl_helper_t adl_helper;
   return same_impl(adl_helper, std::forward<L>(lhs), std::forward<R>(rhs));
 }
 
-template <typename T,
-          typename std::enable_if_t<std::is_arithmetic_v<T>, int> = 0>
+template<typename T,
+         typename std::enable_if_t<std::is_arithmetic_v<T>, int> = 0>
 inline std::size_t hash_impl(adl_helper_t, T val) {
   return std::hash<T>{}(val);
 }
 
-template <typename T,
-          typename std::enable_if_t<std::is_arithmetic_v<T>, int> = 0>
+template<typename T,
+         typename std::enable_if_t<std::is_arithmetic_v<T>, int> = 0>
 inline bool same_impl(adl_helper_t, T lhs, T rhs) {
   return lhs == rhs;
 }

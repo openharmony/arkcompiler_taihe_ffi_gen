@@ -4,30 +4,42 @@
 #include "stdexcept"
 // Please delete <stdexcept> include when you implement
 using namespace taihe;
+
 namespace {
 
 class ICalculator {
- public:
+public:
   ICalculator(int32_t init) : lastResult(init) {}
+
   int32_t add(int32_t a, int32_t b) {
     lastResult = a + b;
     return lastResult;
   }
+
   int32_t sub(int32_t a, int32_t b) {
     lastResult = a - b;
     return lastResult;
   }
-  int32_t getLastResult() { return lastResult; }
-  void reset() { lastResult = 0; }
 
- private:
+  int32_t getLastResult() {
+    return lastResult;
+  }
+
+  void reset() {
+    lastResult = 0;
+  }
+
+private:
   int32_t lastResult = 0;
 };
 
 ::interface::ICalculator makeCalculator(int32_t init) {
   return make_holder<ICalculator, ::interface::ICalculator>(init);
 }
-void restartCalculator(::interface::weak::ICalculator a) { a->reset(); }
+
+void restartCalculator(::interface::weak::ICalculator a) {
+  a->reset();
+}
 
 }  // namespace
 

@@ -1,25 +1,25 @@
 #pragma once
 
 #include <taihe/array.abi.h>
+#include <taihe/common.hpp>
 
 #include <array>
 #include <cstddef>
 #include <cstdlib>
 #include <memory>
 #include <stdexcept>
-#include <taihe/common.hpp>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
 namespace taihe {
-template <typename cpp_owner_t>
+template<typename cpp_owner_t>
 struct array_view;
 
-template <typename cpp_owner_t>
+template<typename cpp_owner_t>
 struct array;
 
-template <typename cpp_owner_t>
+template<typename cpp_owner_t>
 struct array_view {
   using value_type = cpp_owner_t;
   using size_type = std::size_t;
@@ -35,34 +35,34 @@ struct array_view {
   array_view(pointer data, size_type size) noexcept
       : m_data(data), m_size(size) {}  // main constructor
 
-  template <typename C>
+  template<typename C>
   array_view(std::initializer_list<C> value) noexcept
       : array_view(value.begin(), static_cast<size_type>(value.size())) {}
 
-  template <typename C, size_type N>
+  template<typename C, size_type N>
   array_view(C (&value)[N]) noexcept : array_view(value, N) {}
 
-  template <typename C>
+  template<typename C>
   array_view(std::vector<C>& value) noexcept
       : array_view(value.data(), static_cast<size_type>(value.size())) {}
 
-  template <typename C>
+  template<typename C>
   array_view(std::vector<C> const& value) noexcept
       : array_view(value.data(), static_cast<size_type>(value.size())) {}
 
-  template <typename C, size_t N>
+  template<typename C, size_t N>
   array_view(std::array<C, N>& value) noexcept
       : array_view(value.data(), static_cast<size_type>(value.size())) {}
 
-  template <typename C, size_t N>
+  template<typename C, size_t N>
   array_view(std::array<C, N> const& value) noexcept
       : array_view(value.data(), static_cast<size_type>(value.size())) {}
 
-  template <typename C>
+  template<typename C>
   array_view(array_view<C> const& other) noexcept
       : array_view(other.data(), other.size()) {}
 
-  template <typename C>
+  template<typename C>
   array_view(array<C> const& other) noexcept
       : array_view(other.data(), other.size()) {}
 
@@ -88,27 +88,49 @@ struct array_view {
     return m_data[m_size - 1];
   }
 
-  pointer data() const noexcept { return m_data; }
+  pointer data() const noexcept {
+    return m_data;
+  }
 
-  bool empty() const noexcept { return m_size == 0; }
+  bool empty() const noexcept {
+    return m_size == 0;
+  }
 
-  size_type size() const noexcept { return m_size; }
+  size_type size() const noexcept {
+    return m_size;
+  }
 
-  iterator begin() const noexcept { return m_data; }
+  iterator begin() const noexcept {
+    return m_data;
+  }
 
-  iterator end() const noexcept { return m_data + m_size; }
+  iterator end() const noexcept {
+    return m_data + m_size;
+  }
 
-  reverse_iterator rbegin() const noexcept { return m_data + m_size; }
+  reverse_iterator rbegin() const noexcept {
+    return m_data + m_size;
+  }
 
-  reverse_iterator rend() const noexcept { return m_data; }
+  reverse_iterator rend() const noexcept {
+    return m_data;
+  }
 
-  const_iterator cbegin() const noexcept { return m_data; }
+  const_iterator cbegin() const noexcept {
+    return m_data;
+  }
 
-  const_iterator cend() const noexcept { return m_data + m_size; }
+  const_iterator cend() const noexcept {
+    return m_data + m_size;
+  }
 
-  const_reverse_iterator crbegin() const noexcept { return m_data + m_size; }
+  const_reverse_iterator crbegin() const noexcept {
+    return m_data + m_size;
+  }
 
-  const_reverse_iterator crend() const noexcept { return m_data; }
+  const_reverse_iterator crend() const noexcept {
+    return m_data;
+  }
 
   friend bool operator==(array_view left, array_view right) noexcept {
     return std::equal(left.begin(), left.end(), right.begin(), right.end());
@@ -135,15 +157,16 @@ struct array_view {
     return !(left < right);
   }
 
- protected:
+protected:
   std::size_t m_size;
   cpp_owner_t* m_data;
 };
 
 struct copy_data_t {};
+
 struct move_data_t {};
 
-template <typename cpp_owner_t>
+template<typename cpp_owner_t>
 struct array : public array_view<cpp_owner_t> {
   using typename array_view<cpp_owner_t>::pointer;
   using typename array_view<cpp_owner_t>::size_type;
@@ -151,7 +174,7 @@ struct array : public array_view<cpp_owner_t> {
   explicit array(pointer data, size_type size) noexcept
       : array_view<cpp_owner_t>(data, size) {}  // main constructor
 
-  template <typename C>
+  template<typename C>
   array(copy_data_t, C* data, size_type size) noexcept
       : array(
             reinterpret_cast<cpp_owner_t*>(malloc(size * sizeof(cpp_owner_t))),
@@ -159,7 +182,7 @@ struct array : public array_view<cpp_owner_t> {
     std::uninitialized_copy_n(data, size, this->m_data);
   }
 
-  template <typename C>
+  template<typename C>
   array(move_data_t, C* data, size_type size) noexcept
       : array(
             reinterpret_cast<cpp_owner_t*>(malloc(size * sizeof(cpp_owner_t))),
@@ -174,20 +197,22 @@ struct array : public array_view<cpp_owner_t> {
     std::uninitialized_default_construct_n(this->m_data, size);
   }
 
-  array(size_type size, const cpp_owner_t& value)
+  array(size_type size, cpp_owner_t const& value)
       : array(
             reinterpret_cast<cpp_owner_t*>(malloc(size * sizeof(cpp_owner_t))),
             size) {
     std::uninitialized_fill_n(this->m_data, size, value);
   }
 
-  static array make(size_type size) { return array(size); }
+  static array make(size_type size) {
+    return array(size);
+  }
 
-  static array make(size_type size, const cpp_owner_t& value) {
+  static array make(size_type size, cpp_owner_t const& value) {
     return array(size, value);
   }
 
-  template <typename value_type>
+  template<typename value_type>
   array(std::initializer_list<value_type> value) noexcept
       : array(copy_data_t{}, value.begin(), value.size()) {}
 
@@ -217,7 +242,7 @@ struct array : public array_view<cpp_owner_t> {
   }
 };
 
-template <typename cpp_owner_t>
+template<typename cpp_owner_t>
 inline std::size_t hash_impl(adl_helper_t, array_view<cpp_owner_t> val) {
   std::size_t seed = 0;
   static constexpr std::size_t GOLDEN_RATIO_CONSTANT = 0x9e3779b9;
@@ -230,7 +255,7 @@ inline std::size_t hash_impl(adl_helper_t, array_view<cpp_owner_t> val) {
   return seed;
 }
 
-template <typename cpp_owner_t>
+template<typename cpp_owner_t>
 inline bool same_impl(adl_helper_t, array_view<cpp_owner_t> lhs,
                       array_view<cpp_owner_t> rhs) {
   if (lhs.size() != rhs.size()) {
@@ -244,17 +269,17 @@ inline bool same_impl(adl_helper_t, array_view<cpp_owner_t> lhs,
   return true;
 }
 
-template <typename cpp_owner_t>
+template<typename cpp_owner_t>
 struct as_abi<array_view<cpp_owner_t>> {
   using type = TArray;
 };
 
-template <typename cpp_owner_t>
+template<typename cpp_owner_t>
 struct as_abi<array<cpp_owner_t>> {
   using type = TArray;
 };
 
-template <typename cpp_owner_t>
+template<typename cpp_owner_t>
 struct as_param<array<cpp_owner_t>> {
   using type = array_view<cpp_owner_t>;
 };

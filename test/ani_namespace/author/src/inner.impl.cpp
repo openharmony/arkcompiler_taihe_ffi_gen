@@ -1,8 +1,5 @@
 #include "inner.impl.hpp"
 
-#include "core/array.hpp"
-#include "core/map.hpp"
-#include "core/string.hpp"
 #include "inner.Color.proj.0.hpp"
 #include "inner.ErrorResponse.proj.1.hpp"
 #include "inner.Mystruct.proj.1.hpp"
@@ -12,41 +9,71 @@
 #include "inner.TestInterface.proj.2.hpp"
 #include "inner.union_primitive.proj.1.hpp"
 #include "stdexcept"
+#include "taihe/array.hpp"
+#include "taihe/map.hpp"
+#include "taihe/string.hpp"
 
 // Please delete <stdexcept> include when you implement
 using namespace taihe;
+
 namespace {
 class TestInterface {
- public:
+public:
   void Noparam_noreturn() {}
+
   void Primitives_noreturn(int8_t a) {}
+
   void Primitives_noreturn1(int16_t a) {}
+
   void Primitives_noreturn2(int32_t a) {}
+
   void Primitives_noreturn3(float a) {}
+
   void Primitives_noreturn4(double a) {}
+
   void Primitives_noreturn5(bool a) {}
+
   void Primitives_noreturn6(string_view a) {}
+
   void Primitives_noreturn7(int64_t a) {}
+
   void Primitives_noreturn8(int8_t a) {}
+
   void Primitives_noreturn9(int32_t a) {}
-  int32_t Primitives_return(int32_t a) { return 1; }
+
+  int32_t Primitives_return(int32_t a) {
+    return 1;
+  }
+
   void Containers_noreturn1(array_view<int8_t> a) {}
+
   void Containers_noreturn3(array_view<uint8_t> a) {}
+
   void Containers_noreturn2(::inner::union_primitive const& a) {}
+
   void Containers_noreturn4(::inner::Color a) {}
+
   void Containers_noreturn5(map_view<string, int32_t> a) {}
+
   string Containers_return(::inner::union_primitive const& a) {
     return "containers_return";
   }
+
   ::inner::ErrorResponse Func_ErrorResponse() {
     return {true, 10000, "test58"};
   }
+
   void OverloadFunc_i8(int8_t a, int8_t b) {}
+
   string OverloadFunc_i16(array_view<int8_t> a, array_view<uint8_t> b) {
     return "overload array";
   }
+
   void OverloadFunc_i32() {}
-  ::inner::Mystruct OverloadFunc_f32(::inner::Mystruct const& a) { return a; }
+
+  ::inner::Mystruct OverloadFunc_f32(::inner::Mystruct const& a) {
+    return a;
+  }
 
   int8_t i8 = -128;      // 范围: -128 到 127
   int16_t i16 = -32768;  // 16位有符号整数，范围: -32,768 到 32,767
@@ -67,30 +94,37 @@ class TestInterface {
     std::cout << __func__ << " " << name_ << std::endl;
     return name_;
   }
+
   int8_t geti8() {
     std::cout << __func__ << " " << i8 << std::endl;
     return i8;
   }
+
   int16_t geti16() {
     std::cout << __func__ << " " << i16 << std::endl;
     return i16;
   }
+
   int32_t geti32() {
     std::cout << __func__ << " " << i32 << std::endl;
     return i32;
   }
+
   int64_t geti64() {
     std::cout << __func__ << " " << i64 << std::endl;
     return i64;
   }
+
   float getf32() {
     std::cout << __func__ << " " << f32 << std::endl;
     return f32;
   }
+
   double getf64() {
     std::cout << __func__ << " " << f64 << std::endl;
     return f64;
   }
+
   bool getbool() {
     std::cout << __func__ << " " << flag << std::endl;
     return flag;
@@ -101,14 +135,17 @@ class TestInterface {
     std::fill(result.begin(), result.end(), 3);
     return result;
   }
+
   array<int8_t> getArray() {
     array<int8_t> result = array<int8_t>::make(5);
     std::fill(result.begin(), result.end(), 3);
     return result;
   }
+
   ::inner::union_primitive getunion() {
     return ::inner::union_primitive::make_sValue("union string");
   }
+
   map<string, int8_t> getrecord() {
     map<string, int8_t> m;
     m.emplace("key1", static_cast<int8_t>(1));
@@ -116,199 +153,263 @@ class TestInterface {
     m.emplace("key3", static_cast<int8_t>(3));
     return m;
   }
-  ::inner::Color getColorEnum() { return (::inner::Color::key_t)((int)1); }
+
+  ::inner::Color getColorEnum() {
+    return (::inner::Color::key_t)((int)1);
+  }
 };
+
 class Test1 {
- public:
+public:
   void Fun1() {}
+
   void Fun2() {}
 };
+
 class Test2 {
- public:
+public:
   void Fun1() {}
+
   void Fun2() {}
 };
+
 class Test3 {
- public:
+public:
   void Fun1() {}
+
   void Fun2() {}
 };
+
 class Test4 {
- public:
+public:
   void Fun1() {}
+
   void Fun2() {}
 };
+
 class Test5 {
- public:
+public:
   void Fun1() {}
+
   void Fun2() {}
 };
+
 class Test6 {
- public:
+public:
   void Fun1() {}
+
   void Fun2() {}
 };
+
 class Test7 {
- public:
+public:
   void Fun1() {}
+
   void Fun2() {}
 };
+
 class Test8 {
- public:
+public:
   void Fun1() {}
+
   void Fun2() {}
 };
+
 class Test9 {
- public:
+public:
   void Fun1() {}
+
   void Fun2() {}
 };
+
 class Test10 {
- public:
+public:
   void Fun1() {}
+
   void Fun2() {}
 };
+
 class Test11 {
- public:
+public:
   void Fun1() {}
+
   void Fun2() {}
 };
+
 class Test12 {
- public:
+public:
   void Fun1() {}
+
   void Fun2() {}
 };
+
 class Test13 {
- public:
+public:
   void Fun1() {}
+
   void Fun2() {}
 };
+
 class Test14 {
- public:
+public:
   void Fun1() {}
+
   void Fun2() {}
 };
+
 class Test15 {
- public:
+public:
   void Fun1() {}
+
   void Fun2() {}
 };
+
 class Test16 {
- public:
+public:
   void Fun1() {}
+
   void Fun2() {}
 };
+
 class Test17 {
- public:
+public:
   void Fun1() {}
+
   void Fun2() {}
 };
+
 class Test18 {
- public:
+public:
   void Fun1() {}
+
   void Fun2() {}
 };
+
 class Test19 {
- public:
+public:
   void Fun1() {}
+
   void Fun2() {}
 };
+
 class Test20 {
- public:
+public:
   void Fun1() {}
+
   void Fun2() {}
 };
+
 class TestA {
- public:
+public:
   string Fun1() {
     std::cout << "fun1" << std::endl;
     return "fun1";
   }
 };
+
 class TestB {
- public:
+public:
   string Fun2() {
     std::cout << "IfaceB func_b" << std::endl;
     return "fun2";
   }
+
   string Fun1() {
     std::cout << "IfaceB func_a" << std::endl;
     return "fun1";
   }
 };
+
 class TestC {
- public:
+public:
   string Fun3() {
     std::cout << "IfaceC func_c" << std::endl;
     return "fun3";
   }
+
   string Fun1() {
     std::cout << "IfaceC func_a" << std::endl;
     return "fun1";
   }
 };
+
 void Primitives_noreturn(int32_t a, double b, bool c, string_view d, int8_t e) {
 }
+
 string Primitives_return(int32_t a, double b, bool c, string_view d, int8_t e) {
   return "primitives_return";
 }
+
 void Containers_noreturn(array_view<int8_t> a, array_view<int16_t> b,
                          array_view<float> c, array_view<double> d,
                          ::inner::union_primitive const& e) {}
+
 string Containers_return(array_view<int8_t> a, array_view<int16_t> b,
                          array_view<float> c, array_view<double> d,
                          ::inner::union_primitive const& e) {
   return "containers_return";
 }
+
 void Enum_noreturn(::inner::Color a, ::inner::Color b, ::inner::Color c,
                    ::inner::Color d, ::inner::Color e) {}
+
 string Enum_return(::inner::Color a, ::inner::Color b, ::inner::Color c,
                    ::inner::Color d, ::inner::Color e) {
   return "enum_return";
 }
+
 ::inner::TestInterface get_interface() {
   return make_holder<TestInterface, ::inner::TestInterface>();
 }
+
 string PrintTestInterfaceName(::inner::weak::TestInterface testiface) {
   auto name = testiface->getName();
   std::cout << __func__ << ": " << name << std::endl;
   return name;
 }
+
 int8_t PrintTestInterfaceNumberi8(::inner::weak::TestInterface testiface) {
   auto name = testiface->geti8();
   std::cout << __func__ << ": " << (int)name << std::endl;
   return name;
 }
+
 int16_t PrintTestInterfaceNumberi16(::inner::weak::TestInterface testiface) {
   auto name = testiface->geti16();
   std::cout << __func__ << ": " << name << std::endl;
   return name;
 }
+
 int32_t PrintTestInterfaceNumberi32(::inner::weak::TestInterface testiface) {
   auto name = testiface->geti32();
   std::cout << __func__ << ": " << name << std::endl;
   return name;
 }
+
 int64_t PrintTestInterfaceNumberi64(::inner::weak::TestInterface testiface) {
   auto name = testiface->geti64();
   std::cout << __func__ << ": " << name << std::endl;
   return name;
 }
+
 float PrintTestInterfaceNumberf32(::inner::weak::TestInterface testiface) {
   auto name = testiface->getf32();
   std::cout << __func__ << ": " << name << std::endl;
   return name;
 }
+
 double PrintTestInterfaceNumberf64(::inner::weak::TestInterface testiface) {
   auto name = testiface->getf64();
   std::cout << __func__ << ": " << name << std::endl;
   return name;
 }
+
 bool PrintTestInterfacebool(::inner::weak::TestInterface testiface) {
   auto name = testiface->getbool();
   std::cout << __func__ << ": " << name << std::endl;
   return name;
 }
+
 array<uint8_t> PrintTestInterfaceArraybuffer(
     ::inner::weak::TestInterface testiface) {
   array<uint8_t> arr = testiface->getArraybuffer();
@@ -320,6 +421,7 @@ array<uint8_t> PrintTestInterfaceArraybuffer(
   }
   return arr;
 }
+
 array<int8_t> PrintTestInterfaceArray(::inner::weak::TestInterface testiface) {
   array<int8_t> arr = testiface->getArray();
   for (size_t i = 0; i < arr.size(); ++i) {
@@ -330,44 +432,53 @@ array<int8_t> PrintTestInterfaceArray(::inner::weak::TestInterface testiface) {
   }
   return arr;
 }
+
 ::inner::union_primitive PrintTestInterfaceUnion(
     ::inner::weak::TestInterface testiface) {
   ::inner::union_primitive up = testiface->getunion();
   std::cout << "s: " << up.get_sValue_ref() << std::endl;
   return up;
 }
+
 map<string, int8_t> PrintTestInterfaceRecord(
     ::inner::weak::TestInterface testiface) {
   map<string, int8_t> m = testiface->getrecord();
-  for (const auto& [key, value] : m) {
+  for (auto const& [key, value] : m) {
     std::cout << "Key: " << key << ", Value: " << static_cast<int>(value)
               << std::endl;
     // 注意：int8_t需要转为int打印，否则会输出ASCII字符
   }
   return m;
 }
+
 ::inner::Color PrintTestInterfaceEnum(::inner::weak::TestInterface testiface) {
   ::inner::Color c = testiface->getColorEnum();
   std::cout << "enum get_key " << (int)c.get_key() << std::endl;
   return c;
 }
+
 ::inner::Test1 get_interface_1() {
   return make_holder<Test1, ::inner::Test1>();
 }
+
 ::inner::Test20 get_interface_20() {
   return make_holder<Test20, ::inner::Test20>();
 }
+
 ::inner::TestA get_interface_A() {
   return make_holder<TestA, ::inner::TestA>();
 }
+
 ::inner::TestB get_interface_B() {
   return make_holder<TestB, ::inner::TestB>();
 }
+
 ::inner::TestC get_interface_C() {
   return make_holder<TestC, ::inner::TestC>();
 }
 
 }  // namespace
+
 TH_EXPORT_CPP_API_Primitives_noreturn(Primitives_noreturn);
 TH_EXPORT_CPP_API_Primitives_return(Primitives_return);
 TH_EXPORT_CPP_API_Containers_noreturn(Containers_noreturn);

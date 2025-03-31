@@ -1,9 +1,9 @@
 #pragma once
 
+#include <taihe/common.h>
+
 #include <stdint.h>
 #include <stdlib.h>
-
-#include "common.h"
 
 struct DataBlockHead;
 

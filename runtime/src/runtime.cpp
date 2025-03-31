@@ -1,15 +1,19 @@
-#include <core/runtime.hpp>
+#include <taihe/runtime.hpp>
 
 namespace taihe {
 __thread ani_env *cur_env;
 
-void set_env(ani_env *env) { cur_env = env; }
+void set_env(ani_env *env) {
+  cur_env = env;
+}
 
-ani_env *get_env() { return cur_env; }
+ani_env *get_env() {
+  return cur_env;
+}
 
 void ani_set_error(ani_env *env, taihe::string_view msg) {
   ani_class errCls;
-  const char *className = "Lescompat/Error;";
+  char const *className = "Lescompat/Error;";
   if (ANI_OK != env->FindClass(className, &errCls)) {
     std::cerr << "Not found '" << className << std::endl;
     return;

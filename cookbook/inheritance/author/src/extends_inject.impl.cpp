@@ -1,13 +1,14 @@
 #include "extends_inject.impl.hpp"
 
-#include "core/runtime.hpp"
 #include "extends_inject.InnerPerson.proj.2.hpp"
 #include "stdexcept"
+#include "taihe/runtime.hpp"
 // Please delete <stdexcept> include when you implement
 using namespace taihe;
+
 namespace {
 class InnerPerson {
- public:
+public:
   uintptr_t getPseron() {
     ani_long ani_vtbl_ptr;
     ani_long ani_data_ptr;
@@ -26,8 +27,10 @@ class InnerPerson {
     return make_holder<InnerPerson, ::extends_inject::InnerPerson>();
   }
 };
+
 ::extends_inject::InnerPerson makePerson() {
   return make_holder<InnerPerson, ::extends_inject::InnerPerson>();
 }
 }  // namespace
+
 TH_EXPORT_CPP_API_makePerson(makePerson);

@@ -2,18 +2,19 @@
 
 #include <numeric>
 
-#include "core/array.hpp"
-#include "core/map.hpp"
-#include "core/string.hpp"
 #include "overload.Color.proj.0.hpp"
 #include "overload.Mystruct.proj.1.hpp"
 #include "overload.overloadInterface.proj.2.hpp"
 #include "stdexcept"
+#include "taihe/array.hpp"
+#include "taihe/map.hpp"
+#include "taihe/string.hpp"
 // Please delete <stdexcept> include when you implement
 using namespace taihe;
+
 namespace {
 class overloadInterface {
- public:
+public:
   int8_t overloadFunc_i8(int8_t a, int8_t b) {
     std::cout << "overloadFunc_i8: a = " << (int)(a) << ", b = " << (int)(b)
               << std::endl;
@@ -67,15 +68,18 @@ class overloadInterface {
               << std::endl;
     return a;
   }
+
   int32_t overloadFunc_enum(::overload::Color const& p0) {
     std::cout << "overloadFunc_enum: color = " << p0 << std::endl;
     return static_cast<int32_t>(p0);
   }
+
   string overloadFunc_mystruct(::overload::Mystruct const& p0) {
     std::cout << "overloadFunc_mystruct: testNum = " << p0.testNum
               << ", testStr = " << p0.testStr << std::endl;
     return p0.testStr;
   }
+
   void overloadFunc_5param_1(int8_t p0, int16_t p1, int32_t p2, float p3,
                              double p4) {
     std::cout << "overloadFunc_5param_1: p0 = " << (int)p0 << ", p1 = " << p1
@@ -154,6 +158,7 @@ class overloadInterface {
               << ", p4 = " << p4 << std::endl;
     return p0;
   }
+
   void overloadFunc_10param(int8_t p0, int16_t p1, int32_t p2, float p3,
                             double p4, bool p5, string_view p6,
                             array_view<int8_t> p7, array_view<int16_t> p8,
@@ -278,6 +283,7 @@ class overloadInterface {
 
     std::cout << "]" << std::endl;
   }
+
   void overloadFunc_10param3(int8_t p0, int16_t p1, int32_t p2, float p3,
                              double p4, bool p5, string_view p6,
                              array_view<uint8_t> p7,
@@ -299,6 +305,7 @@ class overloadInterface {
               << ", testStr = " << p8.testStr << "}"
               << ", p9 = " << p9 << std::endl;
   }
+
   void overloadFunc_10param4(int8_t p0, int16_t p1, int32_t p2, float p3,
                              double p4, bool p5, string_view p6,
                              array_view<int8_t> p7, array_view<uint8_t> p8,
@@ -325,6 +332,7 @@ class overloadInterface {
 
     std::cout << "], p9 = " << p9 << std::endl;
   }
+
   int32_t overloadFunc_point(array_view<int32_t> a) {
     std::cout << "overloadFunc_point: a = [";
     for (size_t i = 0; i < a.size(); ++i) {
@@ -363,12 +371,15 @@ class overloadInterface {
 
   void overloadFunc_enum_record(::overload::Color const& p1,
                                 map_view<string, int16_t> p2) {}
+
   void overloadFunc_array_record(array_view<int32_t> p1,
                                  map_view<string, int16_t> p2) {}
 };
+
 ::overload::overloadInterface get_interface() {
   return make_holder<overloadInterface, ::overload::overloadInterface>();
 }
 
 }  // namespace
+
 TH_EXPORT_CPP_API_get_interface(get_interface);

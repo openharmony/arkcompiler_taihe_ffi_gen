@@ -45,7 +45,7 @@ array<uintptr_t> get_objects() {
 }
 ```
 
-我们可以看到有ani_env类型、ani_string类型等等，这些类型都是ani的类型，用户只需`#include "core/runtime.hpp"`即可使用
+我们可以看到有ani_env类型、ani_string类型等等，这些类型都是ani的类型，用户只需`#include "taihe/runtime.hpp"`即可使用
 
 不同于ani侧的函数，我们可以发现函数参数并没有`env`，所以，当用户希望在impl.cpp文件实现ani的部分逻辑时，需要使用 `ani_env* env = get_env();` 获取当前`env`，其余按ani侧逻辑实现即可
 

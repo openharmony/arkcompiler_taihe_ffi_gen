@@ -4,6 +4,7 @@
 #include "stdexcept"
 // Please delete <stdexcept> include when you implement
 using namespace taihe;
+
 namespace {
 
 ::binding::Color convert_color(::binding::Color const& a) {

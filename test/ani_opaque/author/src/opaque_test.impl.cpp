@@ -3,12 +3,13 @@
 #include <cstdint>
 #include <iostream>
 
-#include "core/array.hpp"
-#include "core/runtime.hpp"
 #include "opaque_test.Union.proj.1.hpp"
 #include "stdexcept"
+#include "taihe/array.hpp"
+#include "taihe/runtime.hpp"
 // Please delete <stdexcept> include when you implement
 using namespace taihe;
+
 namespace {
 
 bool is_string(uintptr_t a) {
@@ -19,6 +20,7 @@ bool is_string(uintptr_t a) {
   env->Object_InstanceOf((ani_object)a, cls, &res);
   return res;
 }
+
 array<uintptr_t> get_objects() {
   ani_env* env = get_env();
   ani_string ani_arr_0;

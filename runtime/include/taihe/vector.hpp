@@ -1,29 +1,30 @@
 #pragma once
 
-#include <algorithm>
 #include <taihe/common.hpp>
+
+#include <algorithm>
 #include <utility>
 
 #define VEC_GROWTH_FACTOR 2
 
 namespace taihe {
-template <typename T>
+template<typename T>
 struct vector_view;
 
-template <typename T>
+template<typename T>
 struct vector;
 
-template <typename T>
+template<typename T>
 struct vector_view {
- public:
+public:
   using value_type = T;
   using size_type = std::size_t;
   using reference = T&;
-  using const_reference = const T&;
+  using const_reference = T const&;
   using pointer = T*;
-  using const_pointer = const T*;
+  using const_pointer = T const*;
   using iterator = T*;
-  using const_iterator = const T*;
+  using const_iterator = T const*;
 
   void reserve(std::size_t cap) const {
     if (cap < m_handle->len) {
@@ -34,11 +35,15 @@ struct vector_view {
         reinterpret_cast<T*>(realloc(m_handle->buffer, sizeof(T) * cap));
   }
 
-  std::size_t size() const noexcept { return m_handle->len; }
+  std::size_t size() const noexcept {
+    return m_handle->len;
+  }
 
-  std::size_t capacity() const noexcept { return m_handle->cap; }
+  std::size_t capacity() const noexcept {
+    return m_handle->cap;
+  }
 
-  template <typename... Args>
+  template<typename... Args>
   T& emplace_back(Args&&... args) const {
     std::size_t required_cap = m_handle->len + 1;
     if (required_cap > m_handle->cap) {
@@ -50,11 +55,17 @@ struct vector_view {
     return *location;
   }
 
-  T& push_back(T&& value) const { return emplace_back(std::move(value)); }
+  T& push_back(T&& value) const {
+    return emplace_back(std::move(value));
+  }
 
-  T& push_back(T const& value) const { return emplace_back(value); }
+  T& push_back(T const& value) const {
+    return emplace_back(value);
+  }
 
-  T& operator[](std::size_t index) const { return m_handle->buffer[index]; }
+  T& operator[](std::size_t index) const {
+    return m_handle->buffer[index];
+  }
 
   void pop_back() const {
     if (m_handle->len == 0) {
@@ -71,7 +82,7 @@ struct vector_view {
     m_handle->len = 0;
   }
 
- protected:
+protected:
   struct data_t {
     TRefCount count;
     std::size_t cap;
@@ -87,7 +98,7 @@ struct vector_view {
   friend std::size_t taihe::hash_impl(adl_helper_t, vector_view val);
 };
 
-template <typename T>
+template<typename T>
 struct vector : vector_view<T> {
   using typename vector_view<T>::data_t;
   using vector_view<T>::m_handle;
@@ -104,13 +115,13 @@ struct vector : vector_view<T> {
     other.m_handle = nullptr;
   }
 
-  vector(const vector<T>& other) : vector(other.m_handle) {
+  vector(vector<T> const& other) : vector(other.m_handle) {
     if (m_handle) {
       tref_inc(&m_handle->count);
     }
   }
 
-  vector(const vector_view<T>& other) : vector(other.m_handle) {
+  vector(vector_view<T> const& other) : vector(other.m_handle) {
     if (m_handle) {
       tref_inc(&m_handle->count);
     }
@@ -129,31 +140,31 @@ struct vector : vector_view<T> {
     }
   }
 
- private:
+private:
   explicit vector(data_t* handle) : vector_view<T>(handle) {}
 };
 
-template <typename T>
+template<typename T>
 inline bool same_impl(adl_helper_t, vector_view<T> lhs, vector_view<T> rhs) {
   return lhs.m_handle == rhs.m_handle;
 }
 
-template <typename T>
+template<typename T>
 inline std::size_t hash_impl(adl_helper_t, vector_view<T> val) {
   return reinterpret_cast<std::size_t>(val.m_handle);
 }
 
-template <typename T>
+template<typename T>
 struct as_abi<vector<T>> {
   using type = void*;
 };
 
-template <typename T>
+template<typename T>
 struct as_abi<vector_view<T>> {
   using type = void*;
 };
 
-template <typename T>
+template<typename T>
 struct as_param<vector<T>> {
   using type = vector_view<T>;
 };

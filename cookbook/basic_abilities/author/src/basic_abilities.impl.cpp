@@ -1,10 +1,11 @@
 #include "basic_abilities.impl.hpp"
 
-#include "core/array.hpp"
-#include "core/string.hpp"
 #include "stdexcept"
+#include "taihe/array.hpp"
+#include "taihe/string.hpp"
 // Please delete <stdexcept> include when you implement
 using namespace taihe;
+
 namespace {
 
 array<string> convert_arr(array_view<int32_t> a, string_view str) {

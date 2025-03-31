@@ -1,45 +1,62 @@
 #include "function_test.impl.hpp"
 
-#include "core/optional.hpp"
-#include "core/string.hpp"
 #include "function_test.Foo.proj.2.hpp"
 #include "function_test.MyUnion.proj.1.hpp"
 #include "stdexcept"
+#include "taihe/optional.hpp"
+#include "taihe/string.hpp"
 // Please delete <stdexcept> include when you implement
 using namespace taihe;
+
 namespace {
 class Foo {
- public:
-  void bar() { std::cout << "call bar" << std::endl; }
+public:
+  void bar() {
+    std::cout << "call bar" << std::endl;
+  }
+
   void bar_int(int32_t a) {
     std::cout << "call bar_int a is :" << a << std::endl;
   }
+
   void bar_str(string_view a) {
     std::cout << "call bar_str a is :" << std::string(a) << std::endl;
   }
+
   void bar_union(string_view a, ::function_test::MyUnion const& b) {
     std::cout << "call bar_union a is :" << std::string(a) << std::endl;
     switch (b.get_tag()) {
-      case ::function_test::MyUnion::tag_t::sValue:
-        std::cout << "s: " << b.get_sValue_ref() << std::endl;
-      case ::function_test::MyUnion::tag_t::iValue:
-        std::cout << "i: " << b.get_iValue_ref() << std::endl;
-      case ::function_test::MyUnion::tag_t::fValue:
-        std::cout << "i: " << b.get_iValue_ref() << std::endl;
+    case ::function_test::MyUnion::tag_t::sValue:
+      std::cout << "s: " << b.get_sValue_ref() << std::endl;
+    case ::function_test::MyUnion::tag_t::iValue:
+      std::cout << "i: " << b.get_iValue_ref() << std::endl;
+    case ::function_test::MyUnion::tag_t::fValue:
+      std::cout << "i: " << b.get_iValue_ref() << std::endl;
     }
   }
+
   void bar_union_opt(string_view a, optional_view<string> name) {
     std::cout << "call bar_union a is :" << std::string(a) << *name
               << std::endl;
   }
 
-  void test_cb_v(callback_view<void()> f) { f(); }
-  void test_cb_i(callback_view<void(int32_t)> f) { f(1); }
-  void test_cb_s(callback_view<void(string_view, bool)> f) { f("hello", true); }
+  void test_cb_v(callback_view<void()> f) {
+    f();
+  }
+
+  void test_cb_i(callback_view<void(int32_t)> f) {
+    f(1);
+  }
+
+  void test_cb_s(callback_view<void(string_view, bool)> f) {
+    f("hello", true);
+  }
+
   string test_cb_rs(callback_view<int64_t(int64_t)> f) {
     int64_t out = f(444);
     return std::to_string(out);
   }
+
   int32_t addSync(int32_t a, int32_t b) {
     std::cout << "call addSync a and b is" << std::to_string(a)
               << std::to_string(b) << std::endl;
@@ -48,17 +65,28 @@ class Foo {
 };
 
 class FooCls {
- public:
-  string get() { return "zhangsan"; }
+public:
+  string get() {
+    return "zhangsan";
+  }
 };
-int32_t static_func_add(int32_t a, int32_t b) { return a + b; }
-int32_t static_func_sub(int32_t a, int32_t b) { return a - b; }
+
+int32_t static_func_add(int32_t a, int32_t b) {
+  return a + b;
+}
+
+int32_t static_func_sub(int32_t a, int32_t b) {
+  return a - b;
+}
+
 ::function_test::FooCls getFooCls1(string_view name) {
   return make_holder<FooCls, ::function_test::FooCls>();
 }
+
 ::function_test::FooCls getFooCls2(string_view name, string_view test) {
   return make_holder<FooCls, ::function_test::FooCls>();
 }
+
 ::function_test::Foo makeFoo() {
   return make_holder<Foo, ::function_test::Foo>();
 }

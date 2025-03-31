@@ -1,9 +1,10 @@
 #include "hello_world.impl.hpp"
 
-#include "core/string.hpp"
 #include "stdexcept"
+#include "taihe/string.hpp"
 // Please delete <stdexcept> include when you implement
 using namespace taihe;
+
 namespace {
 
 string add(int32_t a, int32_t b) {
