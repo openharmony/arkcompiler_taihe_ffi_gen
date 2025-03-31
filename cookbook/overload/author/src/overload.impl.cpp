@@ -3,7 +3,7 @@
 #include "core/array.hpp"
 #include "stdexcept"
 // Please delete <stdexcept> include when you implement
-using namespace taihe::core;
+using namespace taihe;
 namespace {
 int32_t sum_two(int32_t a, int32_t b) { return a + b; }
 int32_t sum_arr(array_view<int32_t> a) {

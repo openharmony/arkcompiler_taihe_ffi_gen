@@ -127,7 +127,7 @@ class CppImplSourcesGenerator:
         pkg_cpp_impl_target: COutputBuffer,
     ):
         pkg_cpp_impl_target.writeln(
-            f"using namespace taihe::core;",
+            f"using namespace taihe;",
         )
 
     def gen_func(
@@ -227,12 +227,12 @@ class CppImplSourcesGenerator:
         self,
         input_str: str,
     ) -> str:
-        prefix = "::taihe::core::"
+        prefix = "::taihe::"
         if input_str.startswith(prefix):
             input_str = input_str[len(prefix) :]
-        input_str = re.sub(r"<\s*::taihe::core::", "<", input_str)
-        input_str = re.sub(r",\s*::taihe::core::", ", ", input_str)
-        input_str = re.sub(r"\(\s*::taihe::core::", "(", input_str)
+        input_str = re.sub(r"<\s*::taihe::", "<", input_str)
+        input_str = re.sub(r",\s*::taihe::", ", ", input_str)
+        input_str = re.sub(r"\(\s*::taihe::", "(", input_str)
         return input_str
 
     def gen_func_macro(

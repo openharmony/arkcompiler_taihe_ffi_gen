@@ -6,7 +6,7 @@
 #include "string_op.StringPair.proj.1.hpp"
 #include "string_op.impl.hpp"
 // Please delete <stdexcept> include when you implement
-using namespace taihe::core;
+using namespace taihe;
 namespace {
 class PlayString {
   string name_{"PlayString"};

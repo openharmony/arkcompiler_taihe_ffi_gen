@@ -2,7 +2,7 @@
 
 #include "stdexcept"
 // Please delete <stdexcept> include when you implement
-using namespace taihe::core;
+using namespace taihe;
 namespace {
 int32_t myfunc2(int32_t a, int32_t b) { return a + b; }
 }  // namespace

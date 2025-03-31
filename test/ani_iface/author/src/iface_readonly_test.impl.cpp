@@ -4,7 +4,7 @@
 #include "iface_readonly_test.Noo.proj.2.hpp"
 #include "stdexcept"
 // Please delete <stdexcept> include when you implement
-using namespace taihe::core;
+using namespace taihe;
 namespace {
 class Noo {
   string name_{"noo"};

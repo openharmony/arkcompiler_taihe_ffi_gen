@@ -4,7 +4,7 @@
 #include "core/string.hpp"
 #include "stdexcept"
 #include "union_ani.MyUnion.proj.1.hpp"
-using namespace taihe::core;
+using namespace taihe;
 namespace {
 string printInnerUnion(::union_ani::InnerUnion const& data) {
   switch (data.get_tag()) {

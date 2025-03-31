@@ -11,7 +11,7 @@
 #include "core/string.hpp"
 #include "stdexcept"
 
-using namespace taihe::core;
+using namespace taihe;
 namespace {
 int32_t sumArray(array_view<int32_t> nums, int32_t base) {
   return std::accumulate(nums.begin(), nums.end(), base);
@@ -75,7 +75,7 @@ array<::array_test::Data> changeStructArray(
 }
 array<float> fetchBinaryDataSync(int32_t num) {
   if (num <= 0) {
-    taihe::core::set_error("some error happen in fetchBinaryDataSync");
+    taihe::set_error("some error happen in fetchBinaryDataSync");
     return array<float>::make(0);
   } else {
     return array<float>::make(num);

@@ -4,7 +4,7 @@
 #include "core/runtime.hpp"
 #include "stdexcept"
 // Please delete <stdexcept> include when you implement
-using namespace taihe::core;
+using namespace taihe;
 namespace {
 int32_t convert2Int(array_view<uint8_t> a) {
   int32_t num = 0;

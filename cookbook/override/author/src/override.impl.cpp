@@ -3,7 +3,7 @@
 #include <iostream>
 
 #include "override.UIAbility.proj.2.hpp"
-using namespace taihe::core;
+using namespace taihe;
 namespace {
 class UIAbility {
  public:

@@ -4,7 +4,7 @@
 #include "core/runtime.hpp"
 #include "stdexcept"
 // Please delete <stdexcept> include when you implement
-using namespace taihe::core;
+using namespace taihe;
 namespace {
 bool is_string(uintptr_t s) {
   ani_env* env = get_env();

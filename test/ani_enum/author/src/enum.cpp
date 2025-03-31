@@ -3,7 +3,7 @@
 #include "enum_test.impl.hpp"
 #include "stdexcept"
 // Please delete <stdexcept> include when you implement
-using namespace taihe::core;
+using namespace taihe;
 namespace {
 static constexpr std::size_t COLOR_COUNT = 3;
 static constexpr std::size_t WEEKDAY_COUNT = 7;

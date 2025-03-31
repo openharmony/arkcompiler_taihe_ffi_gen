@@ -5,7 +5,7 @@
 #include "core/array.hpp"
 #include "stdexcept"
 // Please delete <stdexcept> include when you implement
-using namespace taihe::core;
+using namespace taihe;
 namespace {
 bool BigInt01(double a, array_view<int64_t> b) { return true; }
 double BigInt02(double a) { return a; }

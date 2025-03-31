@@ -5,7 +5,7 @@
 #include "pura.PuraType.proj.0.hpp"
 #include "stdexcept"
 // Please delete <stdexcept> include when you implement
-using namespace taihe::core;
+using namespace taihe;
 namespace {
 void testMate(::mate::MateType const& mate) {
   throw std::runtime_error("Function testMate Not implemented");

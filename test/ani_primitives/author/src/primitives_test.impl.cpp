@@ -9,7 +9,7 @@
 #include "primitives_test.PrimitivesVoid.proj.2.hpp"
 #include "stdexcept"
 // Please delete this include when you implement
-using namespace taihe::core;
+using namespace taihe;
 namespace {
 int testInt_add10_{10};
 int testInt_add15_{15};
@@ -246,7 +246,7 @@ class PrimitivesInteger {
  public:
   int8_t TestBaseIntegerFunc1(int8_t option1) {
     if (option1 == -1) {
-      taihe::core::set_error(
+      taihe::set_error(
           "out of range The i8 maximum value is 127 and minnum values is -128");
       return -1;
     }
@@ -254,12 +254,12 @@ class PrimitivesInteger {
   }
   int8_t TestBaseIntegerFunc2(int8_t option1, int16_t option2) {
     if (option1 == -1) {
-      taihe::core::set_error(
+      taihe::set_error(
           "out of range The i8 maximum value is 127 and minnum values is -128");
       return -1;
     }
     if (option2 == -1) {
-      taihe::core::set_error(
+      taihe::set_error(
           "out of range The i16 maximum value is 32767 and minnum values is "
           "-32768");
       return -1;
@@ -282,7 +282,7 @@ class PrimitivesInteger {
   }
   void TestBaseIntegerFunc7(int8_t option1, int32_t option2) {
     if (option2 == -1) {
-      taihe::core::set_error(
+      taihe::set_error(
           "out of range The i32 maximum value is 2147483647 and minnum values "
           "is -2147483648");
     }
@@ -292,7 +292,7 @@ class PrimitivesInteger {
   }
   int64_t TestBaseIntegerFunc8(int8_t option1, int64_t option2) {
     if (option2 == -1) {
-      taihe::core::set_error(
+      taihe::set_error(
           "out of range The i64 maximum value is 9223372036854775807 and "
           "minnum values is -9223372036854775808");
       return -1;
@@ -301,12 +301,12 @@ class PrimitivesInteger {
   }
   int8_t TestBaseIntegerFunc9(int8_t option1, int64_t option2) {
     if (option1 > INT8_MAX || option1 < INT8_MIN) {
-      taihe::core::set_error(
+      taihe::set_error(
           "out of range The i8 maximum value is 127 and minnum values is -128");
       return -1;
     }
     if (option2 > INT64_MAX || option2 < INT64_MIN) {
-      taihe::core::set_error(
+      taihe::set_error(
           "out of range The i64 maximum value is 9223372036854775807 and "
           "minnum values is -9223372036854775808");
       return -1;
@@ -360,7 +360,7 @@ class PrimitivesInteger {
     int32_t result = static_cast<int32_t>(option1) *
                      testInt_add10_;  // 使用 int32_t 避免溢出
     if (result > INT16_MAX || result < INT16_MIN) {
-      taihe::core::set_error(
+      taihe::set_error(
           "TestBaseIntegerFunc18: result exceeds int16_t range");
     }
     // 返回结果
@@ -375,7 +375,7 @@ class PrimitivesInteger {
     int32_t result =
         static_cast<int32_t>(option1) + option2;  // 使用 int32_t 避免溢出
     if (result > INT16_MAX || result < INT16_MIN) {
-      taihe::core::set_error(
+      taihe::set_error(
           "TestBaseIntegerFunc20: result exceeds int16_t range");
     }
     // 返回结果
@@ -385,7 +385,7 @@ class PrimitivesInteger {
     // 检查结果是否超出 int16_t 的范围
     int64_t result = static_cast<int64_t>(option1) + option2;
     if (result > INT16_MAX || result < INT16_MIN) {
-      taihe::core::set_error(
+      taihe::set_error(
           "TestBaseIntegerFunc21: result exceeds int16_t range");
     }
     // 返回结果
@@ -395,7 +395,7 @@ class PrimitivesInteger {
     // 检查结果是否超出 int32_t 的范围
     int64_t result = static_cast<int32_t>(option1) * 100;
     if (result > INT32_MAX || result < INT32_MIN) {
-      taihe::core::set_error(
+      taihe::set_error(
           "TestBaseIntegerFunc22: result exceeds int32_t range");
     }
     // 返回结果
@@ -403,7 +403,7 @@ class PrimitivesInteger {
   }
   void TestBaseIntegerFunc23(int32_t option1) {
     if (option1 > INT32_MAX || option1 < INT32_MIN) {
-      taihe::core::set_error(
+      taihe::set_error(
           "TestBaseIntegerFunc23: result exceeds int32_t range");
     }
     std::cout << "TestBaseIntegerFunc23 is option1  " << option1 << std::endl;
@@ -412,7 +412,7 @@ class PrimitivesInteger {
     // 检查结果是否超出 int32_t 的范围
     int64_t result = static_cast<int64_t>(option1) + option2;
     if (result > INT32_MAX || result < INT32_MIN) {
-      taihe::core::set_error(
+      taihe::set_error(
           "TestBaseIntegerFunc24: result exceeds int32_t range");
     }
     // 返回结果
@@ -422,7 +422,7 @@ class PrimitivesInteger {
     // 检查结果是否超出 int32_t 的范围
     int32_t result = static_cast<int32_t>(option2) + option1;
     if (result > INT32_MAX || result < INT32_MIN) {
-      taihe::core::set_error(
+      taihe::set_error(
           "TestBaseIntegerFunc25: result exceeds int32_t range");
     }
     // 返回结果
@@ -432,7 +432,7 @@ class PrimitivesInteger {
     // 检查结果是否超出 int32_t 的范围
     int64_t result = option1 * 100;
     if (result > INT64_MAX || result < INT64_MIN) {
-      taihe::core::set_error(
+      taihe::set_error(
           "TestBaseIntegerFunc25: result exceeds int64_t range");
     }
     // 返回结果
@@ -452,7 +452,7 @@ class PrimitivesInteger {
     if (option2 == "TestBaseIntegerFunc29") {
       int64_t result = option1 * testInt_add10_;
       if (result > INT64_MAX || result < INT64_MIN) {
-        taihe::core::set_error(
+        taihe::set_error(
             "TestBaseIntegerFunc29: result exceeds int32_t range");
       }
       // 返回结果

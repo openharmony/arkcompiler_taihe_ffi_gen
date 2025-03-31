@@ -3,7 +3,7 @@
 #include "core/string.hpp"
 #include "stdexcept"
 // Please delete <stdexcept> include when you implement
-using namespace taihe::core;
+using namespace taihe;
 namespace {
 
 string add(int32_t a, int32_t b) {

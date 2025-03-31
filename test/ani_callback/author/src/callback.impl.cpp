@@ -4,12 +4,12 @@
 
 #include "callbackTest.impl.hpp"
 #include "core/string.hpp"
-using namespace taihe::core;
+using namespace taihe;
 void test_cb_v(callback_view<void()> f) { f(); }
 void test_cb_i(callback_view<void(int32_t)> f) { f(1); }
 void test_cb_s(callback_view<void(string_view, bool)> f) { f("hello", true); }
 string test_cb_rs(callback_view<string(string_view)> f) {
-  taihe::core::string out = f("hello");
+  taihe::string out = f("hello");
   return out;
 }
 void test_cb_struct(

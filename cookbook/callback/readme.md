@@ -30,7 +30,7 @@ void cb_i_void(callback_view<void(int32_t)> f) {
     f(1);
 }
 string cb_str_str(callback_view<string(string_view)> f) {
-    taihe::core::string out = f("hello");
+    taihe::string out = f("hello");
     return "hello";
 }
 void cb_struct(callback_view<::callback::Person(::callback::Person const&)> f) {

@@ -38,7 +38,7 @@
 #include "test_union.union_primitive_2_8.proj.1.hpp"
 #include "test_union.union_primitive_2_9.proj.1.hpp"
 // Please delete <stdexcept> include when you implement
-using namespace taihe::core;
+using namespace taihe;
 namespace {
 class MyInterface {
  public:

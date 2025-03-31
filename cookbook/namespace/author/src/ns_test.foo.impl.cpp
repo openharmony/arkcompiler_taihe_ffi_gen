@@ -3,7 +3,7 @@
 #include "iostream"
 #include "ns_test.foo.window.proj.2.hpp"
 // Please delete <stdexcept> include when you implement
-using namespace taihe::core;
+using namespace taihe;
 namespace {
 
 class window {

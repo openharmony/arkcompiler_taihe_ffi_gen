@@ -9,7 +9,7 @@
 #include "impl_test.proj.hpp"
 
 using namespace impl_test;
-using namespace taihe::core;
+using namespace taihe;
 
 #define TRY_CATCH_BLOCK(func)                                   \
   try {                                                         \

@@ -7,7 +7,7 @@
 #include "core/string.hpp"
 #include "opt.ReturnResult.proj.1.hpp"
 
-using namespace taihe::core;
+using namespace taihe;
 namespace {
 void showOptionalInt(optional_view<int32_t> x) {
   if (x) {

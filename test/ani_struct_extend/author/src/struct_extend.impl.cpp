@@ -12,7 +12,7 @@
 #include "struct_extend.E.proj.1.hpp"
 #include "struct_extend.F.proj.1.hpp"
 #include "struct_extend.G.proj.1.hpp"
-using namespace taihe::core;
+using namespace taihe;
 namespace {
 class Bar {
  public:

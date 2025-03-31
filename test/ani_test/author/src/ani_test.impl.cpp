@@ -1,6 +1,6 @@
 #include "ani_test.impl.hpp"
 
-using namespace taihe::core;
+using namespace taihe;
 using namespace ani_test;
 
 namespace {

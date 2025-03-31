@@ -3,7 +3,7 @@
 #include "binding.Color.proj.1.hpp"
 #include "stdexcept"
 // Please delete <stdexcept> include when you implement
-using namespace taihe::core;
+using namespace taihe;
 namespace {
 
 ::binding::Color convert_color(::binding::Color const& a) {

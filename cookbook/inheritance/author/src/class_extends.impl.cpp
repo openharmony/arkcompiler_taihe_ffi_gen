@@ -6,7 +6,7 @@
 #include "class_extends.TestContext.proj.2.hpp"
 #include "core/optional.hpp"
 #include "core/string.hpp"
-using namespace taihe::core;
+using namespace taihe;
 namespace {
 class ApplicationContext;
 class BaseContext {

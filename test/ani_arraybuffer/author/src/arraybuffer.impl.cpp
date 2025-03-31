@@ -5,7 +5,7 @@
 #include <numeric>
 #include <vector>
 // Please delete <stdexcept> include when you implement
-using namespace taihe::core;
+using namespace taihe;
 namespace {
 uint8_t SumArrayU8(array_view<uint8_t> nums) {
   return std::accumulate(nums.begin(), nums.end(), 0);

@@ -6,7 +6,7 @@
 #include "function_test.MyUnion.proj.1.hpp"
 #include "stdexcept"
 // Please delete <stdexcept> include when you implement
-using namespace taihe::core;
+using namespace taihe;
 namespace {
 class Foo {
  public:

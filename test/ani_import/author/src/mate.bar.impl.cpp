@@ -3,7 +3,7 @@
 #include "mate.foo.FooType.proj.1.hpp"
 #include "stdexcept"
 // Please delete <stdexcept> include when you implement
-using namespace taihe::core;
+using namespace taihe;
 namespace {
 void testFoo(::mate::foo::FooType const& foo) {
   throw std::runtime_error("Function testFoo Not implemented");

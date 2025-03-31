@@ -11,7 +11,7 @@
 #include "session_test.session_type.proj.1.hpp"
 #include "stdexcept"
 
-using namespace taihe::core;
+using namespace taihe;
 namespace {
 class IfaceA {
  public:

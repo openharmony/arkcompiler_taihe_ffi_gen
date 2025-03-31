@@ -5,7 +5,7 @@
 #include "stdexcept"
 #include "void_func.mytest.BarTest.proj.0.hpp"
 // Please delete <stdexcept> include when you implement
-using namespace taihe::core;
+using namespace taihe;
 namespace {
 void Myfunc1() { std::cout << "Myfunc1 is true " << std::endl; }
 void Myfunc2(int8_t option1, int16_t option2) {

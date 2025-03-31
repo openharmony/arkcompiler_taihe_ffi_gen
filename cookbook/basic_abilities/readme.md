@@ -15,7 +15,7 @@
 | `f32`      | `float`               | `float`                    |
 | `f64`      | `double`              | `double`                   |
 | `bool`     | `bool`                | `bool`                     |
-| `String`   | `taihe::core::string` | `taihe::core::string_view` |
+| `String`   | `taihe::string` | `taihe::string_view` |
 
 注：目前taihe在c++侧支持unsigned类型，但是ani侧并不支持，如果用户进行开发，请避免使用`u8`、`u16`、`u32`、`u64`, `array<` `u8` `>`是一个特例，后续在bytearray章节会介绍
     
@@ -23,11 +23,11 @@
 
 | taihe类型           |     C++ 侧投影             |     C++ 侧投影(作为参数时)      |
 |---------------------|---------------------------|--------------------------------|
-| `Array<T>`          | `taihe::core::array<T>`   | `taihe::core::array_view<T>`   |
-| `Optional<T>`       | `taihe::core::optional<T>`| `taihe::core::optional_view<T>`|
-| `Vector<T>`         | `taihe::core::vector<T>`  | `taihe::core::vector_view<T>`  |
-| `Map<K, V>`         | `taihe::core::map<K, V>`  | `taihe::core::map_view<K, V>`  |
-| `Set<T>`            | `taihe::core::set<T>`     | `taihe::core::set_view<T>`     |
+| `Array<T>`          | `taihe::array<T>`   | `taihe::array_view<T>`   |
+| `Optional<T>`       | `taihe::optional<T>`| `taihe::optional_view<T>`|
+| `Vector<T>`         | `taihe::vector<T>`  | `taihe::vector_view<T>`  |
+| `Map<K, V>`         | `taihe::map<K, V>`  | `taihe::map_view<K, V>`  |
+| `Set<T>`            | `taihe::set<T>`     | `taihe::set_view<T>`     |
 
 我们可以发现，作为参数时，string类型和容器类型的taihe类型有view类型和非view类型，其中，view类型的语义是不拥有所有权，只是对现有类型的引用，而非view类型则是拥有当前类型的所有权，用户可以根据使用场景来进行使用。
 

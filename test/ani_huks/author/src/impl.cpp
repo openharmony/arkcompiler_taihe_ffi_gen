@@ -5,7 +5,7 @@
 #include "huks.impl.hpp"
 #include "stdexcept"
 
-using namespace taihe::core;
+using namespace taihe;
 
 std::string dataAsString(array_view<uint8_t> data) {
   std::string res;

@@ -3,7 +3,7 @@
 #include "inject_test.impl.hpp"
 #include "stdexcept"
 // Please delete <stdexcept> include when you implement
-using namespace taihe::core;
+using namespace taihe;
 namespace {
 
 class Foo {

@@ -142,12 +142,12 @@ export function add(a: int, b: int): string {
 **File (Generated): `author_generated/src/hello_world.ani.cpp`**
 ```c++
 static ani_string hello_world_add_ANIFunc0([[maybe_unused]] ani_env *env, [[maybe_unused]] ani_object object, ani_int a_ani, ani_int b_ani) {
-    taihe::core::set_env(env);
+    taihe::set_env(env);
     // 转换 ArkTS 虚拟机的参数到 C++
     int32_t a_cpp = (int32_t)a_ani;
     int32_t b_cpp = (int32_t)b_ani;
     // 执行 C++ 函数
-    ::taihe::core::string cpp_result = ::hello_world::add(a_cpp, b_cpp);
+    ::taihe::string cpp_result = ::hello_world::add(a_cpp, b_cpp);
     // 将 C++ 返回值传回 ArkTS 虚拟机
     ani_string ani_result;
     env->String_NewUTF8(cpp_result.c_str(), cpp_result.size(), &ani_result);
@@ -162,7 +162,7 @@ static ani_string hello_world_add_ANIFunc0([[maybe_unused]] ani_env *env, [[mayb
 // 定义了 "TH_EXPORT_CPP_API_add" 宏
 #include "hello_world.impl.hpp"
 
-taihe::core::string my_add(int32_t a, int32_t b) {
+taihe::string my_add(int32_t a, int32_t b) {
   std::string sum = std::to_string(a + b);
   return sum;
 }

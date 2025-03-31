@@ -10,7 +10,7 @@
 #include "ns_alltest.functiontest.Color.proj.0.hpp"
 #include "ns_alltest.functiontest.Data.proj.1.hpp"
 
-using namespace taihe::core;
+using namespace taihe;
 namespace {
 int testEnum_{3};
 int testInter_{2};
@@ -28,7 +28,7 @@ class TestNameSpace {
     // 检查结果是否超出 int8_t 的范围
     int32_t result = static_cast<int32_t>(param1) + testInt_add100_;
     if (result > INT8_MAX || result < INT8_MIN) {
-      taihe::core::set_error("BaseFunctionTest44: result exceeds int8_t range");
+      taihe::set_error("BaseFunctionTest44: result exceeds int8_t range");
     }
     // 返回结果
     return static_cast<int8_t>(result);
@@ -37,7 +37,7 @@ class TestNameSpace {
     // 检查结果是否超出 int16_t 的范围
     int32_t result = static_cast<int32_t>(param1) * testInt_add100_;
     if (result > INT16_MAX || result < INT16_MIN) {
-      taihe::core::set_error(
+      taihe::set_error(
           "BaseFunctionTest45: result exceeds int16_t range");
     }
     // 返回结果
@@ -49,7 +49,7 @@ class TestNameSpace {
     std::cout << "NameSpaceImpl: " << __func__ << " result " << result
               << std::endl;
     if (result > INT32_MAX || result < INT32_MIN) {
-      taihe::core::set_error(
+      taihe::set_error(
           "BaseFunctionTest18: result exceeds int32_t range");
     }
     // 返回结果
@@ -61,7 +61,7 @@ class TestNameSpace {
     std::cout << "NameSpaceImpl: " << __func__ << " result " << result
               << std::endl;
     if (result > INT64_MAX || result < INT64_MIN) {
-      taihe::core::set_error(
+      taihe::set_error(
           "BaseFunctionTest19: result exceeds int64_t range");
     }
     // 返回结果
@@ -93,7 +93,7 @@ class TestNameSpace {
       std::cout << "NameSpaceImpl: " << __func__ << " result " << result
                 << std::endl;
       if (result > INT8_MAX || result < INT8_MIN) {
-        taihe::core::set_error(
+        taihe::set_error(
             "BaseFunctionTest53: result exceeds int8_t range");
       }
       // 返回结果
@@ -111,7 +111,7 @@ class TestNameSpace {
       std::cout << "NameSpaceImpl: " << __func__ << " result " << result
                 << std::endl;
       if (result > INT32_MAX || result < INT32_MIN) {
-        taihe::core::set_error(
+        taihe::set_error(
             "BaseFunctionTest54: result exceeds int32_t range");
       }
       // 返回结果
@@ -406,7 +406,7 @@ class TestInterfacePerformance21 {
     // 检查结果是否超出 int8_t 的范围
     int32_t result = static_cast<int32_t>(param1) + testInt_add100_;
     if (result > INT8_MAX || result < INT8_MIN) {
-      taihe::core::set_error(
+      taihe::set_error(
           "BasePerformanceFunctionTest2: result exceeds int8_t range");
     }
     // 返回结果
@@ -429,7 +429,7 @@ class TestInterfacePerformance21 {
   optional<int32_t> getOptional_test_attribute() {
     int32_t result = 1000 + testInt_add10_;
     if (result > INT32_MAX || result < INT32_MIN) {
-      taihe::core::set_error(
+      taihe::set_error(
           "getOptional_test_attribute: result exceeds int32_t range");
     }
     return optional<int32_t>::make(result);
@@ -573,7 +573,7 @@ int8_t BaseFunctionTest16(int8_t param1) {
   // 检查结果是否超出 int8_t 的范围
   int32_t result = param1 + testInt_add10_;
   if (result > INT8_MAX || result < INT8_MIN) {
-    taihe::core::set_error("BaseFunctionTest16: result exceeds int8_t range");
+    taihe::set_error("BaseFunctionTest16: result exceeds int8_t range");
   }
   // 返回结果
   return static_cast<int8_t>(result);
@@ -582,7 +582,7 @@ int16_t BaseFunctionTest17(int16_t param1) {
   // 检查结果是否超出 int16_t 的范围
   int32_t result = param1 * testInt_add10_;
   if (result > INT16_MAX || result < INT16_MIN) {
-    taihe::core::set_error("BaseFunctionTest17: result exceeds int16_t range");
+    taihe::set_error("BaseFunctionTest17: result exceeds int16_t range");
   }
   // 返回结果
   return static_cast<int16_t>(result);
@@ -593,7 +593,7 @@ int32_t BaseFunctionTest18(int32_t param1) {
   std::cout << "NameSpaceImpl: " << __func__ << " result " << result
             << std::endl;
   if (result > INT32_MAX || result < INT32_MIN) {
-    taihe::core::set_error("BaseFunctionTest18: result exceeds int32_t range");
+    taihe::set_error("BaseFunctionTest18: result exceeds int32_t range");
   }
   // 返回结果
   return static_cast<int32_t>(result);
@@ -604,7 +604,7 @@ int64_t BaseFunctionTest19(int64_t param1) {
   std::cout << "NameSpaceImpl: " << __func__ << " result " << result
             << std::endl;
   if (result > INT64_MAX || result < INT64_MIN) {
-    taihe::core::set_error("BaseFunctionTest19: result exceeds int64_t range");
+    taihe::set_error("BaseFunctionTest19: result exceeds int64_t range");
   }
   // 返回结果
   return static_cast<int64_t>(result);
@@ -648,7 +648,7 @@ optional<int16_t> BaseFunctionTest26(optional_view<int16_t> param1) {
     std::cout << "NameSpaceImpl: " << __func__ << " result " << result
               << std::endl;
     if (result > INT16_MAX || result < INT16_MIN) {
-      taihe::core::set_error(
+      taihe::set_error(
           "BaseFunctionTest26: result exceeds int16_t range");
     }
     // 返回结果
@@ -666,7 +666,7 @@ optional<int64_t> BaseFunctionTest27(optional_view<int64_t> param1) {
               << std::endl;
     int64_t result = *param1 + testInt_add10_;
     if (result > INT64_MAX || result < INT64_MIN) {
-      taihe::core::set_error(
+      taihe::set_error(
           "BaseFunctionTest27: result exceeds int16_t range");
     }
     // 返回结果
@@ -818,7 +818,7 @@ int32_t BaseFunctionTest42_int(int32_t param1, int16_t param2) {
   std::cout << "NameSpaceImpl: " << __func__ << " result " << result
             << std::endl;
   if (result > INT32_MAX || result < INT32_MIN) {
-    taihe::core::set_error(
+    taihe::set_error(
         "BaseFunctionTest42_int: result exceeds int32_t range");
   }
   // 返回结果

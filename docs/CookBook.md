@@ -108,7 +108,7 @@ string add(int32_t a, int32_t b) {
 | `f32`      | `float`               | `float`                    |
 | `f64`      | `double`              | `double`                   |
 | `bool`     | `bool`                | `bool`                     |
-| `String`   | `taihe::core::string` | `taihe::core::string_view` |
+| `String`   | `taihe::string` | `taihe::string_view` |
 
 ### 2.2 容器
 
@@ -169,11 +169,11 @@ for (let i = 0; i < output_arr.length; i++) {
 
 | taihe类型           |     C++ 侧投影             |     C++ 侧投影(作为参数时)      |
 |---------------------|---------------------------|--------------------------------|
-| `Array<T>`          | `taihe::core::array<T>`   | `taihe::core::array_view<T>`   |
-| `Optional<T>`       | `taihe::core::optional<T>`| `taihe::core::optional_view<T>`|
-| `Vector<T>`         | `taihe::core::vector<T>`  | `taihe::core::vector_view<T>`  |
-| `Map<K, V>`         | `taihe::core::map<K, V>`  | `taihe::core::map_view<K, V>`  |
-| `Set<T>`            | `taihe::core::set<T>`     | `taihe::core::set_view<T>`     |
+| `Array<T>`          | `taihe::array<T>`   | `taihe::array_view<T>`   |
+| `Optional<T>`       | `taihe::optional<T>`| `taihe::optional_view<T>`|
+| `Vector<T>`         | `taihe::vector<T>`  | `taihe::vector_view<T>`  |
+| `Map<K, V>`         | `taihe::map<K, V>`  | `taihe::map_view<K, V>`  |
+| `Set<T>`            | `taihe::set<T>`     | `taihe::set_view<T>`     |
 
 参考示例：[Link](../cookbook/container_example/)
 

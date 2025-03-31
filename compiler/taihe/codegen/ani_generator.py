@@ -978,7 +978,7 @@ class StringTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[StringType]):
             f"{' ' * offset}{env}->String_GetUTF8({ani_value}, {buffer}, {length} + 1, &{length});\n"
             f"{' ' * offset}{buffer}[{length}] = '\\0';\n"
             f"{' ' * offset}{tstr}.length = {length};\n"
-            f"{' ' * offset}taihe::core::string {cpp_result} = taihe::core::string({tstr});\n"
+            f"{' ' * offset}taihe::string {cpp_result} = taihe::string({tstr});\n"
         )
 
     @override
@@ -1077,7 +1077,7 @@ class ArrayBufferTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
             f"{' ' * offset}{env}->ArrayBuffer_GetInfo(reinterpret_cast<ani_arraybuffer>({ani_value}), &{data_ptr}, &{length});\n"
         )
         target.write(
-            f"{' ' * offset}taihe::core::array_view<uint8_t> {cpp_result}(reinterpret_cast<uint8_t*>({data_ptr}), {length});\n"
+            f"{' ' * offset}taihe::array_view<uint8_t> {cpp_result}(reinterpret_cast<uint8_t*>({data_ptr}), {length});\n"
         )
 
     @override
@@ -1614,7 +1614,7 @@ class ANICodeGenerator:
             ani_return_ty_name = "void"
         pkg_ani_source_target.write(
             f"static {ani_return_ty_name} {mangled_name}({ani_params_str}) {{\n"
-            f"    taihe::core::set_env(env);\n"
+            f"    taihe::set_env(env);\n"
         )
         for param, ani_arg, cpp_arg in zip(
             func.params, ani_args, cpp_args, strict=True
@@ -1671,7 +1671,7 @@ class ANICodeGenerator:
             ani_return_ty_name = "void"
         pkg_ani_source_target.write(
             f"static {ani_return_ty_name} {mangled_name}({ani_params_str}) {{\n"
-            f"    taihe::core::set_env(env);\n"
+            f"    taihe::set_env(env);\n"
             f"    ani_long ani_data_ptr;\n"
             f'    env->Object_GetPropertyByName_Long(object, "_data_ptr", reinterpret_cast<ani_long*>(&ani_data_ptr));\n'
             f"    ani_long ani_vtbl_ptr;\n"
@@ -1853,7 +1853,7 @@ class ANICodeGenerator:
                 iface_ani_impl_target.write(f"        }}\n")
         iface_ani_impl_target.write(
             f"    }};\n"
-            f"    return taihe::core::make_holder<cpp_impl_t, {iface_cpp_info.as_owner}>(env, ani_obj);\n"
+            f"    return taihe::make_holder<cpp_impl_t, {iface_cpp_info.as_owner}>(env, ani_obj);\n"
             f"}}\n"
         )
 
@@ -2085,7 +2085,7 @@ class ANICodeGenerator:
                 assert part.node_parent
                 path_cpp_info = UnionCppInfo.get(self.am, part.node_parent)
                 static_tags.append(
-                    f"taihe::core::static_tag<{path_cpp_info.full_name}::tag_t::{part.name}>"
+                    f"taihe::static_tag<{path_cpp_info.full_name}::tag_t::{part.name}>"
                 )
             static_tags_str = ", ".join(static_tags)
             full_name = "_".join(part.name for part in parts)

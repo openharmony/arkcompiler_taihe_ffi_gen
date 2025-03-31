@@ -3,7 +3,7 @@
 #include "stdexcept"
 #include "string_io.impl.hpp"
 // Please delete <stdexcept> include when you implement
-using namespace taihe::core;
+using namespace taihe;
 namespace {
 string input() { return "input"; }
 void print(string_view a) { std::cout << a << std::flush; }
