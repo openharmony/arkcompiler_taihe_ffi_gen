@@ -1,8 +1,0 @@
-struct Data {
-  a: String;
-  b: String;
-  c: i32;
-}
-
-function concatStruct(data: Data): String;
-function makeStruct(a: String, b: String, c: i32): Data;
