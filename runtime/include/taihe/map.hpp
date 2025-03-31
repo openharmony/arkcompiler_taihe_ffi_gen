@@ -1,18 +1,19 @@
 #pragma once
 
 #include <taihe/common.hpp>
+
 #include <utility>
 
 #define MAP_GROWTH_FACTOR 2
 
 namespace taihe {
-template <typename K, typename V>
+template<typename K, typename V>
 struct map_view;
 
-template <typename K, typename V>
+template<typename K, typename V>
 struct map;
 
-template <typename K, typename V>
+template<typename K, typename V>
 struct map_view {
   void reserve(std::size_t cap) const {
     if (cap == 0) {
@@ -34,9 +35,13 @@ struct map_view {
     m_handle->bucket = bucket;
   }
 
-  std::size_t size() const noexcept { return m_handle->size; }
+  std::size_t size() const noexcept {
+    return m_handle->size;
+  }
 
-  std::size_t capacity() const noexcept { return m_handle->cap; }
+  std::size_t capacity() const noexcept {
+    return m_handle->cap;
+  }
 
   void clear() const {
     for (std::size_t i = 0; i < m_handle->cap; i++) {
@@ -49,7 +54,7 @@ struct map_view {
     m_handle->size = 0;
   }
 
-  template <bool cover = false, typename... Args>
+  template<bool cover = false, typename... Args>
   V* emplace(as_param_t<K> key, Args&&... args) const {
     std::size_t index = taihe::hash(key) % m_handle->cap;
     item_t* current = m_handle->bucket[index];
@@ -105,7 +110,7 @@ struct map_view {
     return false;
   }
 
-  template <typename Visitor>
+  template<typename Visitor>
   void accept(Visitor&& visitor) {
     for (std::size_t i = 0; i < m_handle->cap; i++) {
       item_t* current = m_handle->bucket[i];
@@ -116,7 +121,7 @@ struct map_view {
     }
   }
 
-  template <typename Visitor>
+  template<typename Visitor>
   void accept(Visitor&& visitor) const {
     for (std::size_t i = 0; i < m_handle->cap; i++) {
       item_t* current = m_handle->bucket[i];
@@ -135,7 +140,7 @@ struct map_view {
 
   struct iterator {
     using iterator_category = std::forward_iterator_tag;
-    using value_type = std::pair<const K&, V&>;
+    using value_type = std::pair<K const&, V&>;
     using difference_type = std::ptrdiff_t;
     using pointer = value_type*;
     using reference = value_type&;
@@ -144,7 +149,9 @@ struct map_view {
              std::size_t cap)
         : bucket(bucket), current(current), index(index), cap(cap) {}
 
-    value_type operator*() const { return {current->key, current->val}; }
+    value_type operator*() const {
+      return {current->key, current->val};
+    }
 
     iterator& operator++() {
       if (current->next) {
@@ -165,13 +172,15 @@ struct map_view {
       return tmp;
     }
 
-    bool operator==(const iterator& other) const {
+    bool operator==(iterator const& other) const {
       return current == other.current;
     }
 
-    bool operator!=(const iterator& other) const { return !(*this == other); }
+    bool operator!=(iterator const& other) const {
+      return !(*this == other);
+    }
 
-   private:
+  private:
     item_t** bucket;
     item_t* current;
     std::size_t index;
@@ -180,7 +189,7 @@ struct map_view {
 
   struct const_iterator {
     using iterator_category = std::forward_iterator_tag;
-    using value_type = std::pair<const K&, const V&>;
+    using value_type = std::pair<K const&, V const&>;
     using difference_type = std::ptrdiff_t;
     using pointer = value_type*;
     using reference = value_type&;
@@ -189,7 +198,9 @@ struct map_view {
                    std::size_t cap)
         : bucket(bucket), current(current), index(index), cap(cap) {}
 
-    value_type operator*() const { return {current->key, current->val}; }
+    value_type operator*() const {
+      return {current->key, current->val};
+    }
 
     const_iterator& operator++() {
       if (current->next) {
@@ -210,15 +221,15 @@ struct map_view {
       return tmp;
     }
 
-    bool operator==(const const_iterator& other) const {
+    bool operator==(const_iterator const& other) const {
       return current == other.current;
     }
 
-    bool operator!=(const const_iterator& other) const {
+    bool operator!=(const_iterator const& other) const {
       return !(*this == other);
     }
 
-   private:
+  private:
     item_t** bucket;
     item_t* current;
     std::size_t index;
@@ -255,11 +266,15 @@ struct map_view {
                           m_handle->cap);
   }
 
-  const_iterator cbegin() const { return begin(); }
+  const_iterator cbegin() const {
+    return begin();
+  }
 
-  const_iterator cend() const { return end(); }
+  const_iterator cend() const {
+    return end();
+  }
 
- private:
+private:
   struct data_t {
     TRefCount count;
     std::size_t cap;
@@ -275,7 +290,7 @@ struct map_view {
   friend std::size_t taihe::hash_impl(adl_helper_t, map_view val);
 };
 
-template <typename K, typename V>
+template<typename K, typename V>
 struct map : map_view<K, V> {
   using typename map_view<K, V>::item_t;
   using typename map_view<K, V>::data_t;
@@ -319,31 +334,31 @@ struct map : map_view<K, V> {
     }
   }
 
- private:
+private:
   explicit map(data_t* handle) : map_view<K, V>(handle) {}
 };
 
-template <typename K, typename V>
+template<typename K, typename V>
 inline bool same_impl(adl_helper_t, map_view<K, V> lhs, map_view<K, V> rhs) {
   return lhs.m_handle == rhs.m_handle;
 }
 
-template <typename K, typename V>
+template<typename K, typename V>
 inline std::size_t hash_impl(adl_helper_t, map_view<K, V> val) {
   return reinterpret_cast<std::size_t>(val.m_handle);
 }
 
-template <typename K, typename V>
+template<typename K, typename V>
 struct as_abi<map<K, V>> {
   using type = void*;
 };
 
-template <typename K, typename V>
+template<typename K, typename V>
 struct as_abi<map_view<K, V>> {
   using type = void*;
 };
 
-template <typename K, typename V>
+template<typename K, typename V>
 struct as_param<map<K, V>> {
   using type = map_view<K, V>;
 };

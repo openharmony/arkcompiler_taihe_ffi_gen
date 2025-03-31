@@ -1,10 +1,10 @@
 #include <cmath>
-#include <core/callback.hpp>
 #include <cstddef>
 #include <iomanip>
 #include <iostream>
+#include <taihe/callback.hpp>
+#include <taihe/object.hpp>
 
-#include "core/object.hpp"
 #include "rgb.base.proj.hpp"
 #include "rgb.show.proj.hpp"
 
@@ -15,15 +15,21 @@ using namespace taihe;
 struct UserType {
   string id;
 
-  auto getId() { return "UserType(" + std::string(id) + ")"; }
+  auto getId() {
+    return "UserType(" + std::string(id) + ")";
+  }
 
-  void userMethod() { std::cout << "User Method Called;" << std::endl; }
+  void userMethod() {
+    std::cout << "User Method Called;" << std::endl;
+  }
 
   UserType(string_view id) : id(id) {
     std::cout << getId() << " made" << std::endl;
   }
 
-  ~UserType() { std::cout << getId() << " deleted" << std::endl; }
+  ~UserType() {
+    std::cout << getId() << " deleted" << std::endl;
+  }
 };
 
 int main() {
@@ -61,18 +67,18 @@ int main() {
     std::cout << toString(color_miku) << std::endl;
 
     switch (color_miku.get_tag()) {
-      case ColorOrRGBOrName::tag_t::color:
-        std::cout << "color_miku is holding color" << std::endl;
-        break;
-      case ColorOrRGBOrName::tag_t::rgb:
-        std::cout << "color_miku is holding rgb" << std::endl;
-        break;
-      case ColorOrRGBOrName::tag_t::name:
-        std::cout << "color_miku is holding name" << std::endl;
-        break;
-      default:
-        std::cout << "color_miku is holding other stuff" << std::endl;
-        break;
+    case ColorOrRGBOrName::tag_t::color:
+      std::cout << "color_miku is holding color" << std::endl;
+      break;
+    case ColorOrRGBOrName::tag_t::rgb:
+      std::cout << "color_miku is holding rgb" << std::endl;
+      break;
+    case ColorOrRGBOrName::tag_t::name:
+      std::cout << "color_miku is holding name" << std::endl;
+      break;
+    default:
+      std::cout << "color_miku is holding other stuff" << std::endl;
+      break;
     }
   }
 
@@ -84,19 +90,27 @@ int main() {
 
       ColorOrRGBOrName myColor;
 
-     public:
-      string getId() { return name; }
+    public:
+      string getId() {
+        return name;
+      }
 
       MyColoredObject(string_view id, ColorOrRGBOrName const& color)
           : name(id), myColor(color) {
         std::cout << getId() << " made" << std::endl;
       }
 
-      ~MyColoredObject() { std::cout << getId() << " deleted" << std::endl; }
+      ~MyColoredObject() {
+        std::cout << getId() << " deleted" << std::endl;
+      }
 
-      ColorOrRGBOrName getColor() { return myColor; }
+      ColorOrRGBOrName getColor() {
+        return myColor;
+      }
 
-      void setColor(ColorOrRGBOrName const& color) { myColor = color; }
+      void setColor(ColorOrRGBOrName const& color) {
+        myColor = color;
+      }
     };
 
     IColorable colored_circ =
@@ -225,7 +239,9 @@ int main() {
     fillSet(set_0);
 
     std::cout << "Set = ";
-    set_1.accept([](string_view key) { std::cout << key << ", "; });
+    set_1.accept([](string_view key) {
+      std::cout << key << ", ";
+    });
     std::cout << std::endl;
 
     std::cout << "Set = ";

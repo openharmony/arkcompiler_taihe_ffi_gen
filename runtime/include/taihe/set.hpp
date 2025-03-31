@@ -1,18 +1,19 @@
 #pragma once
 
 #include <taihe/common.hpp>
+
 #include <utility>
 
 #define SET_GROWTH_FACTOR 2
 
 namespace taihe {
-template <typename K>
+template<typename K>
 struct set_view;
 
-template <typename K>
+template<typename K>
 struct set;
 
-template <typename K>
+template<typename K>
 struct set_view {
   void reserve(std::size_t cap) const {
     if (cap == 0) {
@@ -34,9 +35,13 @@ struct set_view {
     m_handle->bucket = bucket;
   }
 
-  std::size_t size() const noexcept { return m_handle->size; }
+  std::size_t size() const noexcept {
+    return m_handle->size;
+  }
 
-  std::size_t capacity() const noexcept { return m_handle->cap; }
+  std::size_t capacity() const noexcept {
+    return m_handle->cap;
+  }
 
   void clear() const {
     for (std::size_t i = 0; i < m_handle->cap; i++) {
@@ -100,7 +105,7 @@ struct set_view {
     return false;
   }
 
-  template <typename Visitor>
+  template<typename Visitor>
   void accept(Visitor&& visitor) {
     for (std::size_t i = 0; i < m_handle->cap; i++) {
       item_t* current = m_handle->bucket[i];
@@ -111,7 +116,7 @@ struct set_view {
     }
   }
 
-  template <typename Visitor>
+  template<typename Visitor>
   void accept(Visitor&& visitor) const {
     for (std::size_t i = 0; i < m_handle->cap; i++) {
       item_t* current = m_handle->bucket[i];
@@ -138,7 +143,9 @@ struct set_view {
              std::size_t cap)
         : bucket(bucket), current(current), index(index), cap(cap) {}
 
-    value_type operator*() const { return current->key; }
+    value_type operator*() const {
+      return current->key;
+    }
 
     iterator& operator++() {
       if (current->next) {
@@ -159,13 +166,15 @@ struct set_view {
       return tmp;
     }
 
-    bool operator==(const iterator& other) const {
+    bool operator==(iterator const& other) const {
       return current == other.current;
     }
 
-    bool operator!=(const iterator& other) const { return !(*this == other); }
+    bool operator!=(iterator const& other) const {
+      return !(*this == other);
+    }
 
-   private:
+  private:
     item_t** bucket;
     item_t* current;
     std::size_t index;
@@ -186,11 +195,15 @@ struct set_view {
     return iterator(m_handle->bucket, nullptr, m_handle->cap, m_handle->cap);
   }
 
-  iterator cbegin() const { return begin(); }
+  iterator cbegin() const {
+    return begin();
+  }
 
-  iterator cend() const { return end(); }
+  iterator cend() const {
+    return end();
+  }
 
- private:
+private:
   struct data_t {
     TRefCount count;
     std::size_t cap;
@@ -206,7 +219,7 @@ struct set_view {
   friend std::size_t taihe::hash_impl(adl_helper_t, set_view val);
 };
 
-template <typename K>
+template<typename K>
 struct set : set_view<K> {
   using typename set_view<K>::item_t;
   using typename set_view<K>::data_t;
@@ -250,31 +263,31 @@ struct set : set_view<K> {
     }
   }
 
- private:
+private:
   explicit set(data_t* handle) : set_view<K>(handle) {}
 };
 
-template <typename K>
+template<typename K>
 inline bool same_impl(adl_helper_t, set_view<K> lhs, set_view<K> rhs) {
   return lhs.m_handle == rhs.m_handle;
 }
 
-template <typename K>
+template<typename K>
 inline std::size_t hash_impl(adl_helper_t, set_view<K> val) {
   return reinterpret_cast<std::size_t>(val.m_handle);
 }
 
-template <typename K>
+template<typename K>
 struct as_abi<set<K>> {
   using type = void*;
 };
 
-template <typename K>
+template<typename K>
 struct as_abi<set_view<K>> {
   using type = void*;
 };
 
-template <typename K>
+template<typename K>
 struct as_param<set<K>> {
   using type = set_view<K>;
 };

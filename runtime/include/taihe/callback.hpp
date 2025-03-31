@@ -1,16 +1,17 @@
 #pragma once
 
 #include <taihe/common.hpp>
+
 #include <type_traits>
 
 namespace taihe {
-template <typename Signature>
+template<typename Signature>
 struct callback_view;
 
-template <typename Signature>
+template<typename Signature>
 struct callback;
 
-template <typename Return, typename... Params>
+template<typename Return, typename... Params>
 struct callback_view<Return(Params...)> {
   struct callback_data_t {
     TRefCount m_count;
@@ -19,9 +20,9 @@ struct callback_view<Return(Params...)> {
                                as_abi_t<Params>... params);
   };
 
-  template <typename Impl>
+  template<typename Impl>
   struct callback_data_impl : callback_data_t, Impl {
-    template <typename... Args>
+    template<typename... Args>
     callback_data_impl(Args&&... args) : Impl(std::forward<Args>(args)...) {
       this->m_free = [](callback_data_t* data_ptr) {
         delete static_cast<callback_data_impl<Impl>*>(data_ptr);
@@ -44,14 +45,14 @@ struct callback_view<Return(Params...)> {
 
   explicit callback_view(callback_data_t* data_ptr) : data_ptr(data_ptr) {}
 
-  template <typename Impl, typename... Args>
+  template<typename Impl, typename... Args>
   static callback<Return(Params...)> from(Args&&... args) {
     return callback<Return(Params...)>{
         new callback_data_impl<Impl>(std::forward<Args>(args)...),
     };
   }
 
-  template <typename Impl>
+  template<typename Impl>
   static callback<Return(Params...)> from(Impl&& impl) {
     return callback<Return(Params...)>{
         new callback_data_impl<Impl>(std::forward<Impl>(impl)),
@@ -68,7 +69,7 @@ struct callback_view<Return(Params...)> {
   }
 };
 
-template <typename Return, typename... Params>
+template<typename Return, typename... Params>
 struct callback<Return(Params...)> : callback_view<Return(Params...)> {
   using typename callback_view<Return(Params...)>::callback_data_t;
   using callback_view<Return(Params...)>::data_ptr;
@@ -106,29 +107,29 @@ struct callback<Return(Params...)> : callback_view<Return(Params...)> {
   }
 };
 
-template <typename Return, typename... Params>
+template<typename Return, typename... Params>
 inline bool same_impl(adl_helper_t, callback_view<Return(Params...)> lhs,
                       callback_view<Return(Params...)> rhs) {
   return lhs.data_ptr == lhs.data_ptr;
 }
 
-template <typename Return, typename... Params>
+template<typename Return, typename... Params>
 inline std::size_t hash_impl(adl_helper_t,
                              callback_view<Return(Params...)> val) {
   return reinterpret_cast<std::size_t>(val.data_ptr);
 }
 
-template <typename Return, typename... Params>
+template<typename Return, typename... Params>
 struct as_abi<callback_view<Return(Params...)>> {
   using type = void*;
 };
 
-template <typename Return, typename... Params>
+template<typename Return, typename... Params>
 struct as_abi<callback<Return(Params...)>> {
   using type = void*;
 };
 
-template <typename Return, typename... Params>
+template<typename Return, typename... Params>
 struct as_param<callback<Return(Params...)>> {
   using type = callback_view<Return(Params...)>;
 };

@@ -8,7 +8,7 @@ taihe::string ohos_input_str() {
   return taihe::string(str);
 }
 
-template <bool endl>
+template<bool endl>
 void ohos_print_str(taihe::string_view pstr) {
   if (endl) {
     std::cout << pstr.c_str() << std::endl;

@@ -15,7 +15,9 @@ string::op::StringPair ohos_split_str(taihe::string_view pstr, int32_t n) {
   };
 }
 
-taihe::string ohos_int_to_str(int32_t n) { return taihe::to_string(n); }
+taihe::string ohos_int_to_str(int32_t n) {
+  return taihe::to_string(n);
+}
 
 int32_t ohos_str_to_int(taihe::string_view pstr) {
   return std::atoi(pstr.c_str());

@@ -11,34 +11,44 @@ using namespace rgb::show;
 using namespace taihe;
 
 class Rectangle {
- protected:
+protected:
   float h;
   float w;
   std::string name;
 
- public:
-  string getId() { return name; }
+public:
+  string getId() {
+    return name;
+  }
 
   Rectangle(string_view id, float h, float w) : name(id), h(h), w(w) {
     std::cout << getId() << " made" << std::endl;
   }
 
-  ~Rectangle() { std::cout << getId() << " deleted" << std::endl; }
+  ~Rectangle() {
+    std::cout << getId() << " deleted" << std::endl;
+  }
 
-  float calculateArea() { return h * w; }
+  float calculateArea() {
+    return h * w;
+  }
 };
 
 class ColoredRectangle : public Rectangle {
   ColorOrRGBOrName myColor;
 
- public:
+public:
   ColoredRectangle(string_view id, float h, float w,
                    ColorOrRGBOrName const& color)
       : Rectangle(id, h, w), myColor(color) {}
 
-  ColorOrRGBOrName getColor() { return myColor; }
+  ColorOrRGBOrName getColor() {
+    return myColor;
+  }
 
-  void setColor(ColorOrRGBOrName const& color) { myColor = color; }
+  void setColor(ColorOrRGBOrName const& color) {
+    myColor = color;
+  }
 
   void show() {
     std::string content = "rectangle " + name + ": h = " + std::to_string(h) +
@@ -83,20 +93,24 @@ string colorToStringImpl(ColorOrRGBOrName const& color) {
           << std::setw(2) << static_cast<int>(val.b);
       return oss.str();
     }
+
     string operator()(static_tag_t<ColorOrRGBOrName::tag_t::name>,
-                      const string& val) {
+                      string const& val) {
       std::ostringstream oss;
       oss << "Name: " << val.c_str();
       return oss.str();
     }
+
     string operator()(static_tag_t<ColorOrRGBOrName::tag_t::color>,
-                      const Color& val) {
+                      Color const& val) {
       return std::to_string(val.get_value());
     }
+
     string operator()(static_tag_t<ColorOrRGBOrName::tag_t::name>,
-                      const Name& val) {
+                      Name const& val) {
       return string(val);
     }
+
     string operator()(static_tag_t<ColorOrRGBOrName::tag_t::undefined>) {
       return "Undefined";
     }
@@ -126,13 +140,17 @@ void testOptionalImpl(optional_view<IBase> optional) {
 struct AuthorType {
   string id;
 
-  auto getId() { return "AuthorType(" + std::string(id) + ")"; }
+  auto getId() {
+    return "AuthorType(" + std::string(id) + ")";
+  }
 
   AuthorType(string_view id) : id(id) {
     std::cout << getId() << " made" << std::endl;
   }
 
-  ~AuthorType() { std::cout << getId() << " deleted" << std::endl; }
+  ~AuthorType() {
+    std::cout << getId() << " deleted" << std::endl;
+  }
 };
 
 void fillVecImpl(vector_view<IBase> target) {

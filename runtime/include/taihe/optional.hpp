@@ -1,23 +1,23 @@
 #pragma once
 
 #include <taihe/optional.abi.h>
+#include <taihe/common.hpp>
 
 #include <cstddef>
 #include <cstdlib>
 #include <memory>
 #include <optional>
 #include <stdexcept>
-#include <taihe/common.hpp>
 #include <utility>
 
 namespace taihe {
-template <typename cpp_owner_t>
+template<typename cpp_owner_t>
 struct optional_view;
 
-template <typename cpp_owner_t>
+template<typename cpp_owner_t>
 struct optional;
 
-template <typename cpp_owner_t>
+template<typename cpp_owner_t>
 struct optional_view {
   optional_view(cpp_owner_t* handle) noexcept
       : m_handle(handle) {}  // main constructor
@@ -26,15 +26,25 @@ struct optional_view {
 
   optional_view(std::nullopt_t) : optional_view(nullptr) {}
 
-  explicit operator bool() const { return m_handle; }
+  explicit operator bool() const {
+    return m_handle;
+  }
 
-  bool has_value() const { return m_handle; }
+  bool has_value() const {
+    return m_handle;
+  }
 
-  cpp_owner_t const* operator->() const { return m_handle; }
+  cpp_owner_t const* operator->() const {
+    return m_handle;
+  }
 
-  cpp_owner_t const& operator*() const { return *m_handle; }
+  cpp_owner_t const& operator*() const {
+    return *m_handle;
+  }
 
-  cpp_owner_t const& value() const { return *m_handle; }
+  cpp_owner_t const& value() const {
+    return *m_handle;
+  }
 
   cpp_owner_t value_or(cpp_owner_t&& default_value) const {
     if (m_handle) {
@@ -44,11 +54,11 @@ struct optional_view {
     }
   }
 
- protected:
+protected:
   cpp_owner_t* m_handle;
 };
 
-template <typename cpp_owner_t>
+template<typename cpp_owner_t>
 struct optional : public optional_view<cpp_owner_t> {
   explicit optional(cpp_owner_t* handle) noexcept
       : optional_view<cpp_owner_t>(handle) {}  // main constructor
@@ -57,11 +67,11 @@ struct optional : public optional_view<cpp_owner_t> {
 
   optional(std::nullopt_t) : optional(nullptr) {}
 
-  template <typename... Args>
+  template<typename... Args>
   optional(std::in_place_t, Args&&... args)
       : optional(new cpp_owner_t(std::forward<Args>(args)...)) {}
 
-  template <typename... Args>
+  template<typename... Args>
   static optional make(Args&&... args) {
     return optional(std::in_place_t{}, std::forward<Args>(args)...);
   }
@@ -87,28 +97,28 @@ struct optional : public optional_view<cpp_owner_t> {
   }
 };
 
-template <typename cpp_owner_t>
+template<typename cpp_owner_t>
 inline std::size_t hash_impl(adl_helper_t, optional_view<cpp_owner_t> val) {
   return val ? hash(*val) + 0x9e3779b9 : 0;
 }
 
-template <typename cpp_owner_t>
+template<typename cpp_owner_t>
 inline bool same_impl(adl_helper_t, optional_view<cpp_owner_t> lhs,
                       optional_view<cpp_owner_t> rhs) {
   return !lhs && !rhs || same(*lhs, *rhs);
 }
 
-template <typename cpp_owner_t>
+template<typename cpp_owner_t>
 struct as_abi<optional_view<cpp_owner_t>> {
   using type = struct TOptional;
 };
 
-template <typename cpp_owner_t>
+template<typename cpp_owner_t>
 struct as_abi<optional<cpp_owner_t>> {
   using type = struct TOptional;
 };
 
-template <typename cpp_owner_t>
+template<typename cpp_owner_t>
 struct as_param<optional<cpp_owner_t>> {
   using type = optional_view<cpp_owner_t>;
 };

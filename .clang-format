@@ -1,1 +1,21 @@
 BasedOnStyle: Google
+
+SpaceAfterTemplateKeyword: false
+
+IncludeBlocks: Preserve
+
+IndentWidth: 2
+AccessModifierOffset: -2
+IndentCaseLabels: false
+
+SeparateDefinitionBlocks: Always
+EmptyLineBeforeAccessModifier: Always
+
+ReferenceAlignment: Right
+PointerAlignment: Right
+QualifierAlignment: Custom
+QualifierOrder: ["static", "constexpr", "inline", "type", "const"]
+
+AllowShortBlocksOnASingleLine: Empty
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortLambdasOnASingleLine: Empty
