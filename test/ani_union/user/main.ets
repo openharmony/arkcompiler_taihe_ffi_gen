@@ -1,5 +1,5 @@
-import * as UnionTest1 from "../author_generated/test_union";
-import * as UnionTest from "../author_generated/union_ani";
+import * as UnionTest1 from "@generated/test_union";
+import * as UnionTest from "@generated/union_ani";
 
 loadLibrary("ani_union");
 

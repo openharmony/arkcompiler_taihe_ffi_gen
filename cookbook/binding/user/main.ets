@@ -1,4 +1,4 @@
-import * as binding from "../author_generated/binding";
+import * as binding from "@generated/binding";
 loadLibrary("binding");
 function main() {
     let Color1: binding.Color = {R: 0, G: 255, B: 255};

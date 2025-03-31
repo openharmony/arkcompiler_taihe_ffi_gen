@@ -1,4 +1,4 @@
-import * as lib from "../author_generated/session_test";
+import * as lib from "@generated/session_test";
 loadLibrary("ani_session");
 
 function test_func_a(my_iface: lib.IfaceD) {

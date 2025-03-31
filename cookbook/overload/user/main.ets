@@ -1,4 +1,4 @@
-import * as overload from "../author_generated/overload";
+import * as overload from "@generated/overload";
 
 loadLibrary("overload");
 

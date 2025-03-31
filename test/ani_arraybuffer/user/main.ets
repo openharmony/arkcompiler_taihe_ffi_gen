@@ -1,4 +1,4 @@
-import * as arraybuffer from "../author_generated/arraybuffer";
+import * as arraybuffer from "@generated/arraybuffer";
 
 loadLibrary("ani_arraybuffer");
 

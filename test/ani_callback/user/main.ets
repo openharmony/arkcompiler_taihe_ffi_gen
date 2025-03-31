@@ -1,4 +1,4 @@
-import * as lib from "../author_generated/callbackTest";
+import * as lib from "@generated/callbackTest";
 
 loadLibrary("ani_callback");
 

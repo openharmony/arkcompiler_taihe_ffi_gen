@@ -1,4 +1,4 @@
-import {ICalculator, makeCalculator, restartCalculator} from "../author_generated/interface";
+import {ICalculator, makeCalculator, restartCalculator} from "@generated/interface";
 
 loadLibrary("interface");
 function main() {

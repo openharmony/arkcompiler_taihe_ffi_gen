@@ -1,4 +1,4 @@
-import {maythrow} from "../author_generated/maythrow";
+import {maythrow} from "@generated/maythrow";
 
 loadLibrary("ani_maythrow");
 

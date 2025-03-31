@@ -1,4 +1,4 @@
-import * as StructTest from "../author_generated/struct_test";
+import * as StructTest from "@generated/struct_test";
 
 loadLibrary("ani_struct");
 

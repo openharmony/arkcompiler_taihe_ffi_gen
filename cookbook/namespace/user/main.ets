@@ -1,5 +1,5 @@
-import * as NewNS from "../author_generated/new_ns";
-import * as NSTest from "../author_generated/ns_test";
+import * as NewNS from "@generated/new_ns";
+import * as NSTest from "@generated/ns_test";
 
 loadLibrary("namespace");
 

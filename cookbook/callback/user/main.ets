@@ -1,4 +1,4 @@
-import * as callback_lib from "../author_generated/callback";
+import * as callback_lib from "@generated/callback";
 
 loadLibrary("callback");
 

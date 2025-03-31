@@ -1,4 +1,4 @@
-import * as StructExtendTest from "../author_generated/struct_extend";
+import * as StructExtendTest from "@generated/struct_extend";
 
 loadLibrary("ani_struct_extend");
 

@@ -1,4 +1,4 @@
-import * as on_off_test from "../author_generated/on_off";
+import * as on_off_test from "@generated/on_off";
 
 loadLibrary("ani_on_off");
 

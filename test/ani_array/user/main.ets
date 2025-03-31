@@ -1,9 +1,9 @@
-import * as ArrayTest from "../author_generated/array_test";
+import * as ArrayTest from "@generated/array_test";
 
 loadLibrary("ani_array");
 
 function sumArray() {
-    let numbers: int[] = [1, 2, 3, 4, 5];
+    let numbers: int[] = [1, 2, 3, 4, 5]
     let sum = ArrayTest.sumArray(numbers, 100)
     console.log("sum is " + sum)
     assertEQ(sum, 115)

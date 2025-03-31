@@ -1,6 +1,6 @@
-import * as mate from "../author_generated/mate";
-import * as nova from "../author_generated/nova";
-import * as pura from "../author_generated/pura";
+import * as mate from "@generated/mate";
+import * as nova from "@generated/nova";
+import * as pura from "@generated/pura";
 
 loadLibrary("ani_import");
 

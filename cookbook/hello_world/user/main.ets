@@ -1,5 +1,5 @@
 // 导入自动生成的代码
-import * as hello_world from "../author_generated/hello_world";
+import * as hello_world from "@generated/hello_world";
 // 加载 C++ 库
 loadLibrary("hello_world");
 

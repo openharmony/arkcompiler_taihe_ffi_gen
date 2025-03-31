@@ -1,4 +1,4 @@
-import * as EnumTest from "../author_generated/enum_test";
+import * as EnumTest from "@generated/enum_test";
 
 loadLibrary("ani_enum");
 

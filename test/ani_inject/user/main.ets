@@ -1,4 +1,4 @@
-import * as test from "../author_generated/inject_test";
+import * as test from "@generated/inject_test";
 
 loadLibrary("ani_inject");
 

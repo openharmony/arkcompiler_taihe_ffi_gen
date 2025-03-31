@@ -1,5 +1,5 @@
-import * as namespace2Test from "../author_generated/my_ns";
-import * as namespaceTest from "../author_generated/ns_alltest";
+import * as namespace2Test from "@generated/my_ns";
+import * as namespaceTest from "@generated/ns_alltest";
 
 loadLibrary("ani_namespace");
 

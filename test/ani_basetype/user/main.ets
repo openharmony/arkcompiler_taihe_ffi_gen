@@ -1,4 +1,4 @@
-import * as base_test from "../author_generated/base_test";
+import * as base_test from "@generated/base_test";
 
 loadLibrary("ani_basetype");
 

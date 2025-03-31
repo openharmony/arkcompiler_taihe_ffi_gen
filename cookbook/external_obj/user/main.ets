@@ -1,4 +1,4 @@
-import * as extobj from "../author_generated/external_obj";
+import * as extobj from "@generated/external_obj";
 
 loadLibrary("external_obj");
 

@@ -1,4 +1,4 @@
-import * as huks from "../author_generated/huks";
+import * as huks from "@generated/huks";
 
 loadLibrary("ani_huks");
 

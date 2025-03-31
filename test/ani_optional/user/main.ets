@@ -1,4 +1,4 @@
-import * as OptTest from "../author_generated/opt";
+import * as OptTest from "@generated/opt";
 
 loadLibrary("ani_optional");
 

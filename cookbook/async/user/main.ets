@@ -1,4 +1,4 @@
-import * as async_test from "../author_generated/async";
+import * as async_test from "@generated/async";
 
 loadLibrary("async");
 function main() {

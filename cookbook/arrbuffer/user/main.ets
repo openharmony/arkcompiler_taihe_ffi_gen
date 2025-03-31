@@ -1,4 +1,4 @@
-import * as arrbuffer from "../author_generated/arrbuffer";
+import * as arrbuffer from "@generated/arrbuffer";
 
 loadLibrary("arrbuffer");
 function main() {

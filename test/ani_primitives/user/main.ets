@@ -1,5 +1,5 @@
-import * as test_primitives from "../author_generated/primitives_test";
-import * as test_void_ns from "../author_generated/void_func";
+import * as test_primitives from "@generated/primitives_test";
+import * as test_void_ns from "@generated/void_func";
 
 loadLibrary("ani_primitives");
 

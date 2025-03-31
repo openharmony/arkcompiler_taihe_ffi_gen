@@ -1,4 +1,4 @@
-import {UIAbility, useUIAbility} from "../author_generated/override";
+import {UIAbility, useUIAbility} from "@generated/override";
 
 loadLibrary("override");
 

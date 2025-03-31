@@ -1,4 +1,4 @@
-import * as bigint_test from "../author_generated/bigint_test";
+import * as bigint_test from "@generated/bigint_test";
 
 loadLibrary("ani_bigint");
 

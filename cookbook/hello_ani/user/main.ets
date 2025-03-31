@@ -1,4 +1,4 @@
-import * as hello_ani from "../author_generated/hello_ani";
+import * as hello_ani from "@generated/hello_ani";
 loadLibrary("hello_ani");
 
 function main() {

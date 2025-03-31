@@ -1,4 +1,4 @@
-import * as lib from "../author_generated/staticTest";
+import * as lib from "@generated/staticTest";
 loadLibrary("ani_static");
 
 function test_sumSync() {

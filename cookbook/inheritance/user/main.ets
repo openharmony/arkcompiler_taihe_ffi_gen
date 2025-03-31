@@ -1,5 +1,5 @@
-import * as lib from "../author_generated/class_extends";
-import * as extends_inject from "../author_generated/extends_inject";
+import * as lib from "@generated/class_extends";
+import * as extends_inject from "@generated/extends_inject";
 
 loadLibrary("inheritance");
 

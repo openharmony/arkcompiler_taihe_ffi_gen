@@ -1,4 +1,4 @@
-import * as FuncTest from "../author_generated/function_test";
+import * as FuncTest from "@generated/function_test";
 
 loadLibrary("ani_function");
 
