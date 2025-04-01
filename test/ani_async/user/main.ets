@@ -28,13 +28,12 @@ function testIBase() {
     ibase.setAsync("interface async set", (error: Error) => {
         assertEQ(
             error.message, "", "setAsync callback should not receive an error");
-    });
 
-    // Test promise-based interface method
-    let p_ibase = ibase.getPromise();
-    assertEQ(
-        await p_ibase, "interface async set",
-        "getPromise should resolve with the value set in setAsync");
+        let p_ibase = ibase.getPromise();
+        assertEQ(
+            await p_ibase, "interface async set",
+            "getPromise should resolve with the value set in setAsync");
+    });
 }
 
 function testStaticAsyncMethods() {

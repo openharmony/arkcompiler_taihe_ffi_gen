@@ -2,7 +2,7 @@
 
 Taihe 帮你把 C++ 函数绑定到 ArkTS。如果你已经写好了大量的 C++ 代码，只须编写 Taihe 文件描述接口原型，就能将接口暴露给 ArkTS 使用。
 
-让我们用 C++ 函数 `string add(int32_t a, int32_t b)** 举个例子：
+让我们用 C++ 函数 `string add(int32_t a, int32_t b)` 举个例子：
 
 ## 第一步：编写接口原型
 

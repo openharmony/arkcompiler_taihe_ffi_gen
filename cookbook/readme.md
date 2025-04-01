@@ -2,9 +2,9 @@
 
 ### [Hello World：将 C++ 函数绑定到 ArkTS](./hello_world/README.md)
 
-### [taihe如何实现方法的绑定](./binding/readme.md)
+### [Taihe 如何实现方法的绑定](./binding/readme.md)
 
-### [taihe基础能力](./basic_abilities/readme.md)
+### [Taihe 基础能力](./basic_abilities/readme.md)
 
 ### [interface](./interface/readme.md)
 
