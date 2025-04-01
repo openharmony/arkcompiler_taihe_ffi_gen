@@ -88,18 +88,16 @@ def main(
     user_src_dir = user_dir / "src"
     user_generated_dir = target_path / "user_generated"
     user_generated_include_dir = user_generated_dir / "include"
-    user_generated_src_dir = user_generated_dir / "src"
 
     runtime_dir = BASEDIR / ".." / "runtime"
     runtime_include_dir = runtime_dir / "include"
     runtime_src_dir = runtime_dir / "src"
 
     build_dir = target_path / "build"
-    build_runtime_dir = build_dir / "runtime"
-    build_author_dir = build_dir / "author"
-    build_author_generated_dir = build_dir / "author_generated"
-    build_user_dir = build_dir / "user"
-    build_user_generated_dir = build_dir / "user_generated"
+    build_runtime_src_dir = build_dir / "runtime" / "src"
+    build_author_generated_src_dir = build_dir / "author_generated" / "src"
+    build_author_src_dir = build_dir / "author" / "src"
+    build_user_src_dir = build_dir / "user" / "src"
 
     so_file = build_dir / "libtest.so"
     elf_file = build_dir / "test"
@@ -111,9 +109,6 @@ def main(
     clean_directory(user_generated_dir)
     clean_directory(build_dir)
 
-    create_directory(author_generated_src_dir)
-    create_directory(author_generated_include_dir)
-
     print("Generating author codes...")
     CompilerInstance(
         CompilerInvocation(
@@ -123,9 +118,6 @@ def main(
         )
     ).run()
     print("Done.")
-
-    create_directory(user_generated_src_dir)
-    create_directory(user_generated_include_dir)
 
     print("Generating user codes...")
     CompilerInstance(
@@ -140,30 +132,28 @@ def main(
     if generate_only:
         return
 
-    create_directory(build_runtime_dir)
-    create_directory(build_author_dir)
-    create_directory(build_user_dir)
-    create_directory(build_author_generated_dir)
-    create_directory(build_user_generated_dir)
+    create_directory(build_runtime_src_dir)
+    create_directory(build_author_generated_src_dir)
+    create_directory(build_author_src_dir)
 
     print("Compiling to dynamic link library...")
     link(
         so_file,
         *compile(
-            build_runtime_dir,
+            build_runtime_src_dir,
             runtime_src_dir,
             runtime_include_dir,
             opt_level=opt_level,
         ),
         *compile(
-            build_author_dir,
+            build_author_src_dir,
             author_generated_src_dir,
             runtime_include_dir,
             author_generated_include_dir,
             opt_level=opt_level,
         ),
         *compile(
-            build_author_dir,
+            build_author_src_dir,
             author_src_dir,
             runtime_include_dir,
             author_generated_include_dir,
@@ -175,12 +165,14 @@ def main(
     )
     print("Done.")
 
+    create_directory(build_user_src_dir)
+
     print("Compiling to executable file...")
     link(
         elf_file,
         so_file,
         *compile(
-            build_user_dir,
+            build_user_src_dir,
             user_src_dir,
             runtime_include_dir,
             user_generated_include_dir,
