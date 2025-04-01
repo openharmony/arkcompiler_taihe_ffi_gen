@@ -116,13 +116,14 @@ struct string_view {
     return rend();
   }
 
-protected:
-  struct TString m_handle;
-
+public:
   friend struct string;
 
-  friend string concat(string_view left, string_view right);
-  friend string substr(string_view sv, std::size_t pos, std::size_t len);
+  friend string operator+(string_view left, string_view right);
+  string_view substr(std::size_t pos, std::size_t len);
+
+protected:
+  struct TString m_handle;
 };
 
 struct string : public string_view {
@@ -164,12 +165,12 @@ struct string : public string_view {
   }
 };
 
-inline string substr(string_view sv, std::size_t pos, std::size_t len) {
-  return string(tstr_substr(sv.m_handle, pos, len));
+inline string operator+(string_view left, string_view right) {
+  return string(tstr_concat(left.m_handle, right.m_handle));
 }
 
-inline string concat(string_view left, string_view right) {
-  return string(tstr_concat(left.m_handle, right.m_handle));
+inline string_view string_view::substr(std::size_t pos, std::size_t len) {
+  return string_view(tstr_substr(this->m_handle, pos, len));
 }
 
 inline bool operator==(string_view lhs, string_view rhs) {
@@ -208,7 +209,6 @@ inline string to_string(T value) {
   if (result.ec != std::errc{}) {
     TH_THROW(std::runtime_error, "Conversion to char failed");
   }
-  // *result.ptr = '\0'; // std::to_chars does not write '\0' at the end of the
   // buffer automatcally
   return string{buffer, static_cast<std::size_t>(result.ptr - buffer)};
 }
@@ -222,7 +222,6 @@ inline string to_string(T value) {
   if (result.ec != std::errc{}) {
     TH_THROW(std::runtime_error, "Conversion to char failed");
   }
-  // *result.ptr = '\0'; // std::to_chars does not write '\0' at the end of the
   // buffer automatcally
   return string{buffer, static_cast<std::size_t>(result.ptr - buffer)};
 }
