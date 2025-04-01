@@ -1,5 +1,5 @@
 from json import dumps
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from taihe.codegen.abi_generator import (
     IfaceABIInfo,
@@ -79,7 +79,7 @@ class STSCodeGenerator:
 
     def stat_on_off_funcs(self, funcs: list[GlobFuncDecl]):
         glob_func_on_off_map: dict[
-            tuple[str, tuple[Type, ...]], list[tuple[str, GlobFuncDecl]]
+            tuple[str, tuple[Type, ...], Optional[Type]], list[tuple[str, GlobFuncDecl]]
         ] = {}
         for func in funcs:
             func_ani_info = GlobFuncANIInfo.get(self.am, func)
@@ -89,14 +89,19 @@ class STSCodeGenerator:
                 for real_param in func_ani_info.sts_real_params:
                     assert real_param.ty_ref.resolved_ty
                     real_params_ty.append(real_param.ty_ref.resolved_ty)
+                if func.return_ty_ref:
+                    return_ty = func.return_ty_ref.resolved_ty
+                else:
+                    return_ty = None
                 glob_func_on_off_map.setdefault(
-                    (func_name, tuple(real_params_ty)), []
+                    (func_name, tuple(real_params_ty), return_ty), []
                 ).append((type_name, func))
         return glob_func_on_off_map
 
     def stat_on_off_methods(self, methods: list[IfaceMethodDecl]):
         method_on_off_map: dict[
-            tuple[str, tuple[Type, ...]], list[tuple[str, IfaceMethodDecl]]
+            tuple[str, tuple[Type, ...], Optional[Type]],
+            list[tuple[str, IfaceMethodDecl]],
         ] = {}
         for method in methods:
             method_ani_info = IfaceMethodANIInfo.get(self.am, method)
@@ -106,8 +111,12 @@ class STSCodeGenerator:
                 for real_param in method_ani_info.sts_real_params:
                     assert real_param.ty_ref.resolved_ty
                     real_params_ty.append(real_param.ty_ref.resolved_ty)
+                if method.return_ty_ref:
+                    return_ty = method.return_ty_ref.resolved_ty
+                else:
+                    return_ty = None
                 method_on_off_map.setdefault(
-                    (method_name, tuple(real_params_ty)), []
+                    (method_name, tuple(real_params_ty), return_ty), []
                 ).append((type_name, method))
         return method_on_off_map
 
@@ -176,7 +185,11 @@ class STSCodeGenerator:
     ):
         # on_off
         glob_func_on_off_map = self.stat_on_off_funcs(funcs)
-        for (func_name, real_params_ty), func_list in glob_func_on_off_map.items():
+        for (
+            func_name,
+            real_params_ty,
+            return_ty,
+        ), func_list in glob_func_on_off_map.items():
             sts_real_params = []
             sts_real_args = []
             sts_real_params.append("type: string")
@@ -188,8 +201,13 @@ class STSCodeGenerator:
                 )
                 sts_real_args.append(param_name)
             sts_real_params_str = ", ".join(sts_real_params)
+            if return_ty:
+                type_ani_info = TypeANIInfo.get(self.am, return_ty)
+                return_ty_str = type_ani_info.sts_type_in(pkg, target)
+            else:
+                return_ty_str = "void"
             target.write(
-                f"export function {func_name}({sts_real_params_str}): void {{\n"
+                f"export function {func_name}({sts_real_params_str}): {return_ty_str} {{\n"
                 f"    switch(type) {{"
             )
             for type_name, func in func_list:
@@ -414,7 +432,11 @@ class STSCodeGenerator:
     ):
         # on_off
         method_on_off_map = self.stat_on_off_methods(methods)
-        for (method_name, real_params_ty), _ in method_on_off_map.items():
+        for (
+            method_name,
+            real_params_ty,
+            return_ty,
+        ), _ in method_on_off_map.items():
             sts_real_params = []
             sts_real_params.append("type: string")
             for index, param_ty in enumerate(real_params_ty):
@@ -423,8 +445,13 @@ class STSCodeGenerator:
                 sts_real_params.append(
                     f"{param_name}: {type_ani_info.sts_type_in(pkg, target)}"
                 )
+            if return_ty:
+                type_ani_info = TypeANIInfo.get(self.am, return_ty)
+                return_ty_str = type_ani_info.sts_type_in(pkg, target)
+            else:
+                return_ty_str = "void"
             sts_real_params_str = ", ".join(sts_real_params)
-            target.write(f"{method_name}({sts_real_params_str}): void;\n")
+            target.write(f"{method_name}({sts_real_params_str}): {return_ty_str};\n")
         # other
         for method in methods:
             method_ani_info = IfaceMethodANIInfo.get(self.am, method)
@@ -543,7 +570,11 @@ class STSCodeGenerator:
     ):
         # on_off
         func_on_off_map = self.stat_on_off_funcs(funcs)
-        for (func_name, real_params_ty), func_list in func_on_off_map.items():
+        for (
+            func_name,
+            real_params_ty,
+            return_ty,
+        ), func_list in func_on_off_map.items():
             sts_real_params = []
             sts_real_args = []
             sts_real_params.append("type: string")
@@ -555,8 +586,13 @@ class STSCodeGenerator:
                 )
                 sts_real_args.append(param_name)
             sts_real_params_str = ", ".join(sts_real_params)
+            if return_ty:
+                type_ani_info = TypeANIInfo.get(self.am, return_ty)
+                return_ty_str = type_ani_info.sts_type_in(pkg, target)
+            else:
+                return_ty_str = "void"
             target.write(
-                f"static {func_name}({sts_real_params_str}): void {{\n"
+                f"static {func_name}({sts_real_params_str}): {return_ty_str} {{\n"
                 f"    switch(type) {{"
             )
             for type_name, func in func_list:
@@ -685,7 +721,11 @@ class STSCodeGenerator:
     ):
         # on_off
         method_on_off_map = self.stat_on_off_methods(methods)
-        for (method_name, real_params_ty), method_list in method_on_off_map.items():
+        for (
+            method_name,
+            real_params_ty,
+            return_ty,
+        ), method_list in method_on_off_map.items():
             sts_real_params = []
             sts_real_args = []
             sts_real_params.append("type: string")
@@ -697,8 +737,13 @@ class STSCodeGenerator:
                 )
                 sts_real_args.append(param_name)
             sts_real_params_str = ", ".join(sts_real_params)
+            if return_ty:
+                type_ani_info = TypeANIInfo.get(self.am, return_ty)
+                return_ty_str = type_ani_info.sts_type_in(pkg, target)
+            else:
+                return_ty_str = "void"
             target.write(
-                f"{method_name}({sts_real_params_str}): void {{\n"
+                f"{method_name}({sts_real_params_str}): {return_ty_str} {{\n"
                 f"    switch(type) {{"
             )
             for type_name, method in method_list:
