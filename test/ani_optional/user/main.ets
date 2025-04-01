@@ -1,7 +1,6 @@
+import * as OptTest from "@generated/opt";
+import * as optionalTest from "@generated/optional";
 import * as System from "std/core/System";
-
-import * as OptTest from "../author_generated/opt";
-import * as optionalTest from "../author_generated/optional";
 
 loadLibrary("ani_optional");
 
