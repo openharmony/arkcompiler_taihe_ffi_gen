@@ -542,6 +542,7 @@ class CppHeadersGenerator:
         if enum.ty_ref.resolved_ty == STRING:
             as_owner = "char const*"
         else:
+            # pyre-ignore
             ty_cpp_info = TypeCppInfo.get(self.am, enum.ty_ref.resolved_ty)
             as_owner = ty_cpp_info.as_owner
         enum_cpp_target.writeln(

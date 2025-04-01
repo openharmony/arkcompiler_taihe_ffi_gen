@@ -63,6 +63,7 @@ class IndentManager:
 class OutputBuffer(OutputBase[[]]):
     """Represents a general target file."""
 
+    @override
     def __init__(self):
         self.indent_manager = IndentManager()
         self.code = StringIO()
@@ -91,6 +92,7 @@ class OutputBuffer(OutputBase[[]]):
 class COutputBuffer(OutputBase[[bool]]):
     """Represents a C or C++ target file."""
 
+    @override
     def __init__(self, is_header: bool):
         super().__init__(is_header)
         self.is_header = is_header
