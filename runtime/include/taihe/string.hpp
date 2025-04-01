@@ -116,11 +116,12 @@ struct string_view {
     return rend();
   }
 
-public:
   friend struct string;
 
+  friend string concat(string_view left, string_view right);
+  friend string_view substr(string_view sv, std::size_t pos, std::size_t len);
   friend string operator+(string_view left, string_view right);
-  string_view substr(std::size_t pos, std::size_t len);
+  string_view substr(std::size_t pos, std::size_t len) const;
 
 protected:
   struct TString m_handle;
@@ -163,13 +164,27 @@ struct string : public string_view {
       tstr_drop(m_handle);
     }
   }
+
+  string& operator+=(string_view other);
 };
+
+inline string concat(string_view left, string_view right) {
+  return string(tstr_concat(left.m_handle, right.m_handle));
+}
 
 inline string operator+(string_view left, string_view right) {
   return string(tstr_concat(left.m_handle, right.m_handle));
 }
 
-inline string_view string_view::substr(std::size_t pos, std::size_t len) {
+inline string& string::operator+=(string_view other) {
+  return *this = *this + other;
+}
+
+inline string_view substr(string_view sv, std::size_t pos, std::size_t len) {
+  return string_view(tstr_substr(sv.m_handle, pos, len));
+}
+
+inline string_view string_view::substr(std::size_t pos, std::size_t len) const {
   return string_view(tstr_substr(this->m_handle, pos, len));
 }
 
