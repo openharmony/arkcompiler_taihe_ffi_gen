@@ -1,0 +1,4 @@
+@!typed_array
+
+function inUint16Array(v: Array<u16>): void;
+function outUint16Array(): Array<u16>;
