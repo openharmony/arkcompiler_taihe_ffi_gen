@@ -1,0 +1,81 @@
+struct Book { title: String; year: i32; category: Category; }
+enum Category: String { CPP = "C++", RUST = "Rust" }
+
+function ConstructBook(title: String, year: i32, kind: Category): Book;
+function PrintBook(b: Book);
+
+union MapOption {
+  one_book: Book;
+  many_books: Array<Book>;
+}
+function MapBookToYear(opt: MapOption): Map<String, i32>;
+function PrintBooksWithFilter(books: Array<Book>, filter: Optional<(b: Book) => bool>);
+
+// 将 Bookstore 生成为 ArkTS 的 `class`。不加此注解时生成 `interface`。
+@class
+interface Bookstore {
+  addBook(book: Book, price: f64, count: i32);
+  saleBook(book: Book);
+
+  // 使用 @get 或 @set 来替代属性。
+  @get getDiscount(): f64;
+  @set setDiscount(percent: f64);
+
+  // 使用 @get 替代只读属性。
+  @get getTotalSales(): f64;
+}
+
+// 使用 @ctor 给 Bookstore 添加构造器
+@ctor("Bookstore")
+function CreateBookstore(): Bookstore;
+
+// 使用 @static 给 Bookstore 添加静态方法。
+@static("Bookstore")
+function SayHello();
+
+@class
+struct RustBook {
+  @extends base: Book;
+  rust_version: i32;
+}
+
+@class
+struct CppBook {
+  @extends base: Book;
+  compiler: String;
+}
+
+union CppOrRustBook {
+  rust: RustBook;
+  cpp: CppBook;
+}
+
+function PrintBookAdvanced(book: CppOrRustBook);
+
+interface HasPrice { @get getPrice(): f64; }
+interface HasDiscount : HasPrice { @get getDiscount(): f64; }
+interface HasPublisher { @get getPublisher(): String; }
+@class interface FancyBook: HasPublisher, HasDiscount { @get getTitle(): String; }
+@ctor("FancyBook") function MakeFancyBook(): FancyBook;
+
+interface Path {}
+@overload("SaveBook")
+function SaveBookToInternet(url: String);
+@overload("SaveBook")
+function SaveBookToFile(p: Path);
+
+@gen_async("uploadBook")
+@gen_promise("uploadBookPromise")
+function uploadBook(b: Book): String;
+
+@on_off function onBookSold();
+@on_off function onNewBook();
+
+@!sts_inject("// Inside the main source file")
+interface Foo {
+  @!sts_inject_into_class("// In `class Foo_impl`")
+  @!sts_inject_into_interface("// In `interface Foo`")
+}
+
+function IsString(s: Opaque): bool;
+function GetStringArray(): Array<Opaque>;
