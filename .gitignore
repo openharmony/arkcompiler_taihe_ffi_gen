@@ -29,6 +29,8 @@ compiler/.panda_vm
 *.vcxproj.filters
 *.sln
 
+.panda_vm/
+
 # Visual Studio Code files and folder
 .vscode/
 
