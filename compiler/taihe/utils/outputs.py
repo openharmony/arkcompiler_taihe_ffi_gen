@@ -63,6 +63,7 @@ class IndentManager:
 class STSOutputBuffer(OutputBase[[]]):
     """Represents a general target file."""
 
+    @override
     def __init__(self):
         super().__init__()
         self.indent_manager = IndentManager()
@@ -104,6 +105,7 @@ class STSOutputBuffer(OutputBase[[]]):
 class COutputBuffer(OutputBase[[bool]]):
     """Represents a C or C++ target file."""
 
+    @override
     def __init__(self, is_header: bool):
         super().__init__(is_header)
         self.is_header = is_header

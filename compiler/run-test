@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tarfile
 from pathlib import Path
+from typing import Sequence
 
 from taihe.driver import CompilerInstance, CompilerInvocation
 
@@ -17,27 +18,27 @@ C = os.getenv("C", "clang")
 BASEDIR = Path(__file__).resolve().parent
 
 
-def run_command(command):
-    print(f"+ {command}")
-    result = subprocess.run(command, shell=True, check=True, text=True)
+def run_command(command: Sequence[Path | str], **env: Path | str):
+    print("+", *(f"{key}={val}" for key, val in env.items()), *command)
+    result = subprocess.run(command, check=True, text=True, env=dict(os.environ) | env)
     return result
 
 
-def clean_directory(directory):
+def clean_directory(directory: Path):
     if directory.exists():
         shutil.rmtree(directory)
 
 
-def create_directory(directory):
+def create_directory(directory: Path):
     directory.mkdir(parents=True, exist_ok=True)
 
 
-def copy_directory(src_directory, dst_directory):
+def copy_directory(src_directory: Path, dst_directory: Path):
     if src_directory.exists():
         shutil.copytree(src_directory, dst_directory, dirs_exist_ok=True)
 
 
-def compile(output_dir, input_dir, *include_dirs, opt_level):
+def compile(output_dir: Path, input_dir: Path, *include_dirs: Path, opt_level: str):
     output_files = []
     for input_file in input_dir.iterdir():
         name = input_file.name
@@ -48,22 +49,32 @@ def compile(output_dir, input_dir, *include_dirs, opt_level):
         else:
             compiler = CXX
             std = "gnu++17"
-        command = f"{compiler} -c -fvisibility=hidden -fPIC -O{opt_level} -std={std} -o {output_file} {input_file}"
+        command = [
+            compiler,
+            "-c",
+            "-fvisibility=hidden",
+            "-fPIC",
+            f"-O{opt_level}",
+            f"-std={std}",
+            "-o",
+            output_file,
+            input_file,
+        ]
         for include_dir in include_dirs:
-            command += f" -I {include_dir}"
+            command.extend(["-I", include_dir])
         run_command(command)
         output_files.append(output_file)
     return output_files
 
 
-def link(output_file, *input_files, shared, link_options):
-    command = f"{CXX} -fPIC -o {output_file}"
+def link(output_file: Path, *input_files: Path, shared: bool, link_options: list[str]):
+    command = [CXX, "-fPIC", "-o", output_file]
     for input_file in input_files:
-        command += f" {input_file}"
+        command.append(str(input_file))
     for link_option in link_options:
-        command += f" {link_option}"
+        command.append(str(link_option))
     if shared:
-        command += " -shared"
+        command.append("-shared")
     run_command(command)
 
 
@@ -75,20 +86,34 @@ def compile_abc(output_dir, input_dir, panda_home, config_file_path):
         name = input_file.name
         if name.endswith(".ets"):
             output_file = output_dir / f"{name}.abc"
-            command = f"{panda_home}/bin/es2panda {input_file} --output {output_file} --extension ets --arktsconfig {config_file_path}"
-            run_command(command)
-            command_dump = (
-                f"{panda_home}/bin/ark_disasm {output_file} {output_file}.dump"
+            output_dump = output_dir / f"{name}.abc.dump"
+            run_command(
+                [
+                    f"{panda_home}/bin/es2panda",
+                    input_file,
+                    "--output",
+                    output_file,
+                    "--extension",
+                    "ets",
+                    "--arktsconfig",
+                    config_file_path,
+                ]
             )
-            run_command(command_dump)
+            run_command(
+                [
+                    f"{panda_home}/bin/ark_disasm",
+                    output_file,
+                    output_dump,
+                ]
+            )
             output_files.append(output_file)
     return output_files
 
 
 def link_abc(target, *input_files, panda_home):
-    command = f"{panda_home}/bin/ark_link --output {target} --"
+    command = [f"{panda_home}/bin/ark_link", "--output", target, "--"]
     for input_file in input_files:
-        command += f" {input_file}"
+        command.append(input_file)
     run_command(command)
 
 
@@ -105,22 +130,18 @@ def download_file(target_file: Path, username: str, password: str, url: str):
         print(f"already found {target_file}, skipping download")
         return
 
-    try:
-        command = [
-            "wget",
-            "--user",
-            username,
-            "--password",
-            password,
-            "--progress=bar:force:noscroll",
-            url,
-            "-O",
-            str(target_file),
-        ]
-        subprocess.run(command, check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"download error: {e}")
-        sys.exit(1)
+    command = [
+        "wget",
+        "--user",
+        username,
+        "--password",
+        password,
+        "--progress=bar:force:noscroll",
+        url,
+        "-O",
+        str(target_file),
+    ]
+    run_command(command)
 
 
 def extract_file(target_file, extract_dir, version_file, version):
@@ -303,12 +324,14 @@ def main(
         )
 
         run_command(
-            f"LD_LIBRARY_PATH={build_dir} "
-            f"{panda_home}/bin/ark "
-            f"--boot-panda-files={panda_home}/../ets/etsstdlib.abc "
-            f"--load-runtimes=ets "
-            f"{abc_target} "
-            "main.ETSGLOBAL::main"
+            [
+                f"{panda_home}/bin/ark",
+                f"--boot-panda-files={panda_home}/../ets/etsstdlib.abc",
+                f"--load-runtimes=ets",
+                abc_target,
+                "main.ETSGLOBAL::main",
+            ],
+            LD_LIBRARY_PATH=build_dir,
         )
 
 
