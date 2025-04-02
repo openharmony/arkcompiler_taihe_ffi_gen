@@ -78,6 +78,12 @@ function testStructMethods() {
             "fromStruct callback should not receive an error");
     });
 
+    async_test.fromStruct(testData).catch((error: NullishType) => {
+        assertEQ(
+            (error as Error).message, "",
+            "fromStruct callback should not receive an error");
+    });
+
     // Test toStruct with callback
     async_test.toStruct(
         "aaa", "bbb", 1, (error: Error, data?: async_test.Data) => {

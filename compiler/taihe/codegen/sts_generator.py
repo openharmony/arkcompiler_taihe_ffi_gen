@@ -249,14 +249,12 @@ class STSCodeGenerator:
                 # promise
                 if (promise_func_name := func_ani_info.sts_promise_name) is not None:
                     if return_ty_ref := func.return_ty_ref:
-                        resolve_params = f"data: {sts_return_ty_name}"
                         resolve_args = f"ret as {sts_return_ty_name}"
                     else:
-                        resolve_params = ""
-                        resolve_args = ""
+                        resolve_args = "undefined"
                     target.write(
                         f"export function {promise_func_name}({sts_real_params_str}): Promise<{sts_return_ty_name}> {{\n"
-                        f"    return new Promise<{sts_return_ty_name}>((resolve: ({resolve_params}) => void, reject: (err: Error) => void): void => {{\n"
+                        f"    return new Promise<{sts_return_ty_name}>((resolve, reject): void => {{\n"
                         f"        taskpool.execute((): {sts_return_ty_name} => {{ return {sts_native_call}; }})\n"
                         f"        .then((ret: NullishType): void => {{\n"
                         f"            resolve({resolve_args});\n"
@@ -636,14 +634,12 @@ class STSCodeGenerator:
                 # promise
                 if (promise_func_name := func_ani_info.sts_promise_name) is not None:
                     if return_ty_ref := func.return_ty_ref:
-                        resolve_params = f"data: {sts_return_ty_name}"
                         resolve_args = f"ret as {sts_return_ty_name}"
                     else:
-                        resolve_params = ""
-                        resolve_args = ""
+                        resolve_args = "undefined"
                     target.write(
                         f"static {promise_func_name}({sts_real_params_str}): Promise<{sts_return_ty_name}> {{\n"
-                        f"    return new Promise<{sts_return_ty_name}>((resolve: ({resolve_params}) => void, reject: (err: Error) => void): void => {{\n"
+                        f"    return new Promise<{sts_return_ty_name}>((resolve, reject): void => {{\n"
                         f"        taskpool.execute((): {sts_return_ty_name} => {{ return {sts_native_call}; }})\n"
                         f"        .then((ret: NullishType): void => {{\n"
                         f"            resolve({resolve_args});\n"
@@ -789,14 +785,12 @@ class STSCodeGenerator:
                 # promise
                 if (promise_func_name := method_ani_info.sts_promise_name) is not None:
                     if return_ty_ref := method.return_ty_ref:
-                        resolve_params = f"data: {sts_return_ty_name}"
                         resolve_args = f"ret as {sts_return_ty_name}"
                     else:
-                        resolve_params = ""
-                        resolve_args = ""
+                        resolve_args = "undefined"
                     target.write(
                         f"{promise_func_name}({sts_real_params_str}): Promise<{sts_return_ty_name}> {{\n"
-                        f"    return new Promise<{sts_return_ty_name}>((resolve: ({resolve_params}) => void, reject: (err: Error) => void): void => {{\n"
+                        f"    return new Promise<{sts_return_ty_name}>((resolve, reject): void => {{\n"
                         f"        taskpool.execute((): {sts_return_ty_name} => {{ return {sts_native_call}; }})\n"
                         f"        .then((ret: NullishType): void => {{\n"
                         f"            resolve({resolve_args});\n"
