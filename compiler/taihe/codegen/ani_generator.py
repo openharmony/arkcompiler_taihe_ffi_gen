@@ -1,4 +1,5 @@
 from abc import ABCMeta
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from typing_extensions import override
@@ -157,10 +158,7 @@ class PackageANIInfo(AbstractAnalysis[PackageDecl]):
         self.imported_mod_name = "_" + "_".join(self.module.split("."))
 
         self.ani_path = "/".join(self.module.split(".") + self.sts_ns_parts)
-        if self.sts_ns_parts:
-            self.impl_desc = f"L{self.ani_path};"
-        else:
-            self.impl_desc = f"L{self.ani_path}/ETSGLOBAL;"
+        self.impl_desc = f"L{self.ani_path};"
 
         self.injected_codes: list[str] = []
         for injected in p.get_attr_list("sts_inject"):
@@ -1645,9 +1643,7 @@ class ANICodeGenerator:
         for func in pkg.functions:
             segments = [*pkg.segments, func.name]
             mangled_name = encode(segments, DeclKind.ANI_FUNC)
-            self.gen_func(
-                func, pkg_ani_source_target, mangled_name, pkg_ani_info.is_namespace()
-            )
+            self.gen_func(func, pkg_ani_source_target, mangled_name)
         for iface in pkg.interfaces:
             iface_abi_info = IfaceABIInfo.get(self.am, iface)
             for ancestor in iface_abi_info.ancestor_dict:
@@ -1661,7 +1657,8 @@ class ANICodeGenerator:
                     )
 
         # register infos
-        register_infos: list[tuple[str, list[tuple[str, str]], bool]] = []
+        register_infos: list[RegisterInfo] = []
+
         impl_desc = pkg_ani_info.impl_desc
         func_infos = []
         for func in pkg.functions:
@@ -1669,8 +1666,15 @@ class ANICodeGenerator:
             mangled_name = encode(segments, DeclKind.ANI_FUNC)
             glob_func_info = GlobFuncANIInfo.get(self.am, func)
             sts_native_name = glob_func_info.sts_native_name
-            func_infos.append((sts_native_name, mangled_name))
-        register_infos.append((impl_desc, func_infos, pkg_ani_info.is_namespace()))
+            func_infos.append(FunctionInfo(sts_native_name, mangled_name))
+        register_infos.append(
+            RegisterInfo(
+                impl_desc,
+                func_infos,
+                SCOPE_NAMESPACE if pkg_ani_info.is_namespace() else SCOPE_MODULE,
+            )
+        )
+
         for iface in pkg.interfaces:
             iface_ani_info = IfaceANIInfo.get(self.am, iface)
             impl_desc = iface_ani_info.impl_desc
@@ -1684,37 +1688,30 @@ class ANICodeGenerator:
                     mangled_name = encode(segments, DeclKind.ANI_FUNC)
                     method_ani_info = IfaceMethodANIInfo.get(self.am, method)
                     sts_native_name = method_ani_info.sts_native_name
-                    func_infos.append((sts_native_name, mangled_name))
-            register_infos.append((impl_desc, func_infos, False))
+                    func_infos.append(FunctionInfo(sts_native_name, mangled_name))
+            register_infos.append(RegisterInfo(impl_desc, func_infos, SCOPE_CLASS))
 
         pkg_ani_source_target.write(
             f"namespace {pkg_ani_info.cpp_ns} {{\n"
             f"ani_status ANIRegister(ani_env *env) {{\n"
         )
-        for impl_desc, func_infos, is_namespace in register_infos:
-            if is_namespace:
-                ani_type = "ani_namespace"
-                ani_find_func = "FindNamespace"
-                ani_bind_func = "Namespace_BindNativeFunctions"
-            else:
-                ani_type = "ani_class"
-                ani_find_func = "FindClass"
-                ani_bind_func = "Class_BindNativeMethods"
+        for info in register_infos:
+            scope = info.parent_scope
             pkg_ani_source_target.write(
                 f"    {{\n"
-                f"        {ani_type} ani_env;\n"
-                f'        if (ANI_OK != env->{ani_find_func}("{impl_desc}", &ani_env)) {{\n'
+                f"        {scope.ani_type} ani_env;\n"
+                f'        if (ANI_OK != env->{scope.ani_find_func}("{info.impl_desc}", &ani_env)) {{\n'
                 f"            return ANI_ERROR;\n"
                 f"        }}\n"
                 f"        ani_native_function methods[] = {{\n"
             )
-            for sts_native_name, mangled_name in func_infos:
+            for f in info.functions:
                 pkg_ani_source_target.write(
-                    f'            {{"{sts_native_name}", nullptr, reinterpret_cast<void*>({mangled_name})}},\n'
+                    f'            {{"{f.sts_native_name}", nullptr, reinterpret_cast<void*>({f.mangled_name})}},\n'
                 )
             pkg_ani_source_target.write(
                 f"        }};\n"
-                f"        if (ANI_OK != env->{ani_bind_func}(ani_env, methods, sizeof(methods) / sizeof(ani_native_function))) {{\n"
+                f"        if (ANI_OK != env->{scope.ani_bind_func}(ani_env, methods, sizeof(methods) / sizeof(ani_native_function))) {{\n"
                 f"            return ANI_ERROR;\n"
                 f"        }}\n"
                 f"    }}\n"
@@ -1726,13 +1723,9 @@ class ANICodeGenerator:
         func: GlobFuncDecl,
         pkg_ani_source_target: COutputBuffer,
         mangled_name: str,
-        is_namespace: bool,
     ):
         func_cpp_info = GlobFuncCppInfo.get(self.am, func)
-        ani_params = []
-        ani_params.append("[[maybe_unused]] ani_env *env")
-        if not is_namespace:
-            ani_params.append("[[maybe_unused]] ani_object object")
+        ani_params = ["[[maybe_unused]] ani_env *env"]
         ani_args = []
         cpp_args = []
         for param in func.params:
@@ -2304,3 +2297,30 @@ class ANICodeGenerator:
             union_ani_impl_target.write(f"        break;\n" f"    }}\n")
         union_ani_impl_target.write(f"    }}\n")
         union_ani_impl_target.write(f"    return ani_value;\n" f"}}\n")
+
+
+@dataclass
+class ParentScope:
+    ani_type: str
+    ani_find_func: str
+    ani_bind_func: str
+
+
+SCOPE_MODULE = ParentScope("ani_module", "FindModule", "Module_BindNativeFunctions")
+SCOPE_CLASS = ParentScope("ani_class", "FindClass", "Class_BindNativeMethods")
+SCOPE_NAMESPACE = ParentScope(
+    "ani_namespace", "FindNamespace", "Namespace_BindNativeFunctions"
+)
+
+
+@dataclass
+class FunctionInfo:
+    sts_native_name: str
+    mangled_name: str
+
+
+@dataclass
+class RegisterInfo:
+    impl_desc: str
+    functions: list[FunctionInfo]
+    parent_scope: ParentScope
