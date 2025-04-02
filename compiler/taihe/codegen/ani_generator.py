@@ -136,6 +136,43 @@ ANI_STRING = ANIType(hint="string", base=ANI_REF)
 ANI_ARRAYBUFFER = ANIType(hint="arraybuffer", base=ANI_REF)
 
 
+@dataclass
+class ANIParentScope:
+    ani_type: str
+    find: str
+    bind: str
+
+
+ANI_SCOPE_CLASS = ANIParentScope(
+    "ani_class",
+    "FindClass",
+    "Class_BindNativeMethods",
+)
+ANI_SCOPE_MODULE = ANIParentScope(
+    "ani_module",
+    "FindModule",
+    "Module_BindNativeFunctions",
+)
+ANI_SCOPE_NAMESPACE = ANIParentScope(
+    "ani_namespace",
+    "FindNamespace",
+    "Namespace_BindNativeFunctions",
+)
+
+
+@dataclass
+class ANIFunctionLikeInfo:
+    sts_native_name: str
+    mangled_name: str
+
+
+@dataclass
+class ANIRegisterInfo:
+    impl_desc: str
+    member_infos: list[ANIFunctionLikeInfo]
+    parent_scope: ANIParentScope
+
+
 class PackageANIInfo(AbstractAnalysis[PackageDecl]):
     def __init__(self, am: AnalysisManager, p: PackageDecl) -> None:
         super().__init__(am, p)
@@ -1118,19 +1155,19 @@ class TypedArrayTypeANIInfo(
         ani_byte_length = f"{cpp_result}_bl"
         ani_byte_offset = f"{cpp_result}_bo"
         ani_arrbuf = f"{cpp_result}_ab"
-        data_ptr = f"{cpp_result}_data"
-        length = f"{cpp_result}_length"
+        ani_data_ptr = f"{cpp_result}_data"
+        ani_length = f"{cpp_result}_length"
         target.write(
-            f"{' ' * offset}ani_double {ani_byte_length};\n"
-            f"{' ' * offset}ani_double {ani_byte_offset};\n"
+            f"{' ' * offset}ani_int {ani_byte_length};\n"
+            f"{' ' * offset}ani_int {ani_byte_offset};\n"
             f"{' ' * offset}ani_arraybuffer {ani_arrbuf};\n"
-            f"{' ' * offset}{env}->Object_GetPropertyByName_Double({ani_value}, \"byteLength\", &{ani_byte_length});\n"
-            f"{' ' * offset}{env}->Object_GetPropertyByName_Double({ani_value}, \"byteOffset\", &{ani_byte_offset});\n"
+            f"{' ' * offset}{env}->Object_GetPropertyByName_Int({ani_value}, \"byteLengthInt\", &{ani_byte_length});\n"
+            f"{' ' * offset}{env}->Object_GetPropertyByName_Int({ani_value}, \"byteOffsetInt\", &{ani_byte_offset});\n"
             f"{' ' * offset}{env}->Object_GetPropertyByName_Ref({ani_value}, \"buffer\", reinterpret_cast<ani_ref*>(&{ani_arrbuf}));\n"
-            f"{' ' * offset}void* {data_ptr} = nullptr;\n"
-            f"{' ' * offset}size_t {length} = 0;\n"
-            f"{' ' * offset}{env}->ArrayBuffer_GetInfo(reinterpret_cast<ani_arraybuffer>({ani_arrbuf}), &{data_ptr}, &{length});\n"
-            f"{' ' * offset}{self.cpp_info.as_param} {cpp_result}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>((char*){data_ptr} + (size_t){ani_byte_offset}), (size_t){ani_byte_length} / (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)));\n"
+            f"{' ' * offset}char* {ani_data_ptr} = nullptr;\n"
+            f"{' ' * offset}size_t {ani_length} = 0;\n"
+            f"{' ' * offset}{env}->ArrayBuffer_GetInfo(reinterpret_cast<ani_arraybuffer>({ani_arrbuf}), reinterpret_cast<void**>(&{ani_data_ptr}), &{ani_length});\n"
+            f"{' ' * offset}{self.cpp_info.as_param} {cpp_result}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>({ani_data_ptr} + {ani_byte_offset}), {ani_byte_length} / (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)));\n"
         )
 
     @override
@@ -1143,22 +1180,27 @@ class TypedArrayTypeANIInfo(
         ani_result: str,
     ):
         item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
-        data_ptr = f"{ani_result}_data"
+        ani_data_ptr = f"{ani_result}_data"
+        ani_arrbuf = f"{ani_result}_ab"
         ani_class = f"{ani_result}_cls"
         ani_method = f"{ani_result}_ctor"
-        ani_arrbuf = f"{ani_result}_ab"
-        # TODO: set length and offset
+        ani_byte_length = f"{ani_result}_bl"
+        ani_byte_offset = f"{ani_result}_bo"
         target.write(
-            f"{' ' * offset}void* {data_ptr} = nullptr;\n"
+            f"{' ' * offset}char* {ani_data_ptr} = nullptr;\n"
             f"{' ' * offset}ani_arraybuffer {ani_arrbuf};\n"
-            f"{' ' * offset}{env}->CreateArrayBuffer({cpp_value}.size() * (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)), &{data_ptr}, &{ani_arrbuf});\n"
-            f"{' ' * offset}memcpy({data_ptr}, {cpp_value}.data(), {cpp_value}.size() * (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)));\n"
+            f"{' ' * offset}{env}->CreateArrayBuffer({cpp_value}.size() * (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)), reinterpret_cast<void**>(&{ani_data_ptr}), &{ani_arrbuf});\n"
+            f"{' ' * offset}memcpy({ani_data_ptr}, {cpp_value}.data(), {cpp_value}.size() * (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)));\n"
             f"{' ' * offset}ani_class {ani_class};\n"
             f"{' ' * offset}{env}->FindClass(\"{self.type_desc}\", &{ani_class});\n"
             f"{' ' * offset}ani_method {ani_method};\n"
-            f"{' ' * offset}{env}->Class_FindMethod({ani_class}, \"<ctor>\", nullptr, &{ani_method});\n"
+            f"{' ' * offset}{env}->Class_FindMethod({ani_class}, \"<ctor>\", \"Lescompat/Buffer;Lstd/core/Double;Lstd/core/Double;:V\", &{ani_method});\n"
+            f"{' ' * offset}ani_ref {ani_byte_length};\n"
+            f"{' ' * offset}{env}->GetUndefined(&{ani_byte_length});\n"
+            f"{' ' * offset}ani_ref {ani_byte_offset};\n"
+            f"{' ' * offset}{env}->GetUndefined(&{ani_byte_offset});\n"
             f"{' ' * offset}ani_object {ani_result};\n"
-            f"{' ' * offset}{env}->Object_New({ani_class}, {ani_method}, &{ani_result}, {ani_arrbuf});\n"
+            f"{' ' * offset}{env}->Object_New({ani_class}, {ani_method}, &{ani_result}, {ani_arrbuf}, {ani_byte_length}, {ani_byte_offset});\n"
         )
 
 
@@ -1187,13 +1229,13 @@ class ArrayBufferTypeANIInfo(
         cpp_result: str,
     ):
         item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
-        data_ptr = f"{cpp_result}_data"
-        length = f"{cpp_result}_length"
+        ani_data_ptr = f"{cpp_result}_data"
+        ani_length = f"{cpp_result}_length"
         target.write(
-            f"{' ' * offset}void* {data_ptr} = nullptr;\n"
-            f"{' ' * offset}size_t {length} = 0;\n"
-            f"{' ' * offset}{env}->ArrayBuffer_GetInfo(reinterpret_cast<ani_arraybuffer>({ani_value}), &{data_ptr}, &{length});\n"
-            f"{' ' * offset}{self.cpp_info.as_param} {cpp_result}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>({data_ptr}), {length} / (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)));\n"
+            f"{' ' * offset}char* {ani_data_ptr} = nullptr;\n"
+            f"{' ' * offset}size_t {ani_length} = 0;\n"
+            f"{' ' * offset}{env}->ArrayBuffer_GetInfo(reinterpret_cast<ani_arraybuffer>({ani_value}), reinterpret_cast<void**>(&{ani_data_ptr}), &{ani_length});\n"
+            f"{' ' * offset}{self.cpp_info.as_param} {cpp_result}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>({ani_data_ptr}), {ani_length} / (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)));\n"
         )
 
     @override
@@ -1206,12 +1248,12 @@ class ArrayBufferTypeANIInfo(
         ani_result: str,
     ):
         item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
-        data_ptr = f"{ani_result}_data"
+        ani_data_ptr = f"{ani_result}_data"
         target.write(
-            f"{' ' * offset}void* {data_ptr} = nullptr;\n"
+            f"{' ' * offset}char* {ani_data_ptr} = nullptr;\n"
             f"{' ' * offset}ani_arraybuffer {ani_result};\n"
-            f"{' ' * offset}{env}->CreateArrayBuffer({cpp_value}.size() * (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)), &{data_ptr}, &{ani_result});\n"
-            f"{' ' * offset}memcpy({data_ptr}, {cpp_value}.data(), {cpp_value}.size() * (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)));\n"
+            f"{' ' * offset}{env}->CreateArrayBuffer({cpp_value}.size() * (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)), reinterpret_cast<void**>(&{ani_data_ptr}), &{ani_result});\n"
+            f"{' ' * offset}memcpy({ani_data_ptr}, {cpp_value}.data(), {cpp_value}.size() * (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)));\n"
         )
 
 
@@ -1657,28 +1699,31 @@ class ANICodeGenerator:
                     )
 
         # register infos
-        register_infos: list[RegisterInfo] = []
+        register_infos: list[ANIRegisterInfo] = []
 
         impl_desc = pkg_ani_info.impl_desc
-        func_infos = []
+        member_infos = []
         for func in pkg.functions:
             segments = [*pkg.segments, func.name]
             mangled_name = encode(segments, DeclKind.ANI_FUNC)
             glob_func_info = GlobFuncANIInfo.get(self.am, func)
             sts_native_name = glob_func_info.sts_native_name
-            func_infos.append(FunctionInfo(sts_native_name, mangled_name))
+            member_infos.append(ANIFunctionLikeInfo(sts_native_name, mangled_name))
         register_infos.append(
-            RegisterInfo(
+            ANIRegisterInfo(
                 impl_desc,
-                func_infos,
-                SCOPE_NAMESPACE if pkg_ani_info.is_namespace() else SCOPE_MODULE,
+                member_infos,
+                (
+                    ANI_SCOPE_NAMESPACE
+                    if pkg_ani_info.is_namespace()
+                    else ANI_SCOPE_MODULE
+                ),
             )
         )
-
         for iface in pkg.interfaces:
             iface_ani_info = IfaceANIInfo.get(self.am, iface)
             impl_desc = iface_ani_info.impl_desc
-            func_infos = []
+            member_infos = []
             iface_abi_info = IfaceABIInfo.get(self.am, iface)
             for ancestor in iface_abi_info.ancestor_dict:
                 for method in ancestor.methods:
@@ -1688,30 +1733,33 @@ class ANICodeGenerator:
                     mangled_name = encode(segments, DeclKind.ANI_FUNC)
                     method_ani_info = IfaceMethodANIInfo.get(self.am, method)
                     sts_native_name = method_ani_info.sts_native_name
-                    func_infos.append(FunctionInfo(sts_native_name, mangled_name))
-            register_infos.append(RegisterInfo(impl_desc, func_infos, SCOPE_CLASS))
+                    member_infos.append(
+                        ANIFunctionLikeInfo(sts_native_name, mangled_name)
+                    )
+            register_infos.append(
+                ANIRegisterInfo(impl_desc, member_infos, ANI_SCOPE_CLASS)
+            )
 
         pkg_ani_source_target.write(
             f"namespace {pkg_ani_info.cpp_ns} {{\n"
             f"ani_status ANIRegister(ani_env *env) {{\n"
         )
-        for info in register_infos:
-            scope = info.parent_scope
+        for register_info in register_infos:
             pkg_ani_source_target.write(
                 f"    {{\n"
-                f"        {scope.ani_type} ani_env;\n"
-                f'        if (ANI_OK != env->{scope.ani_find_func}("{info.impl_desc}", &ani_env)) {{\n'
+                f"        {register_info.parent_scope.ani_type} ani_env;\n"
+                f'        if (ANI_OK != env->{register_info.parent_scope.find}("{register_info.impl_desc}", &ani_env)) {{\n'
                 f"            return ANI_ERROR;\n"
                 f"        }}\n"
                 f"        ani_native_function methods[] = {{\n"
             )
-            for f in info.functions:
+            for member_info in register_info.member_infos:
                 pkg_ani_source_target.write(
-                    f'            {{"{f.sts_native_name}", nullptr, reinterpret_cast<void*>({f.mangled_name})}},\n'
+                    f'            {{"{member_info.sts_native_name}", nullptr, reinterpret_cast<void*>({member_info.mangled_name})}},\n'
                 )
             pkg_ani_source_target.write(
                 f"        }};\n"
-                f"        if (ANI_OK != env->{scope.ani_bind_func}(ani_env, methods, sizeof(methods) / sizeof(ani_native_function))) {{\n"
+                f"        if (ANI_OK != env->{register_info.parent_scope.bind}(ani_env, methods, sizeof(methods) / sizeof(ani_native_function))) {{\n"
                 f"            return ANI_ERROR;\n"
                 f"        }}\n"
                 f"    }}\n"
@@ -1725,7 +1773,8 @@ class ANICodeGenerator:
         mangled_name: str,
     ):
         func_cpp_info = GlobFuncCppInfo.get(self.am, func)
-        ani_params = ["[[maybe_unused]] ani_env *env"]
+        ani_params = []
+        ani_params.append("[[maybe_unused]] ani_env *env")
         ani_args = []
         cpp_args = []
         for param in func.params:
@@ -2297,30 +2346,3 @@ class ANICodeGenerator:
             union_ani_impl_target.write(f"        break;\n" f"    }}\n")
         union_ani_impl_target.write(f"    }}\n")
         union_ani_impl_target.write(f"    return ani_value;\n" f"}}\n")
-
-
-@dataclass
-class ParentScope:
-    ani_type: str
-    ani_find_func: str
-    ani_bind_func: str
-
-
-SCOPE_MODULE = ParentScope("ani_module", "FindModule", "Module_BindNativeFunctions")
-SCOPE_CLASS = ParentScope("ani_class", "FindClass", "Class_BindNativeMethods")
-SCOPE_NAMESPACE = ParentScope(
-    "ani_namespace", "FindNamespace", "Namespace_BindNativeFunctions"
-)
-
-
-@dataclass
-class FunctionInfo:
-    sts_native_name: str
-    mangled_name: str
-
-
-@dataclass
-class RegisterInfo:
-    impl_desc: str
-    functions: list[FunctionInfo]
-    parent_scope: ParentScope
