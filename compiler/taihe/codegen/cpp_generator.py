@@ -75,7 +75,6 @@ class GlobFuncCppInfo(AbstractAnalysis[GlobFuncDecl]):
 class IfaceMethodCppInfo(AbstractAnalysis[IfaceMethodDecl]):
     def __init__(self, am: AnalysisManager, f: IfaceMethodDecl) -> None:
         super().__init__(am, f)
-        # TODO: Supports projection to any C++ function name based on attributes
         self.call_name = f.name
         self.impl_name = f.name
 
@@ -86,9 +85,11 @@ class EnumCppInfo(AbstractAnalysis[EnumDecl]):
         p = d.node_parent
         assert p
         self.header = f"{p.name}.{d.name}.proj.0.hpp"
+
         self.namespace = "::".join(p.segments)
         self.name = d.name
         self.full_name = "::" + self.namespace + "::" + self.name
+
         self.as_owner = self.full_name
         self.as_param = self.full_name
 
@@ -100,9 +101,11 @@ class StructCppInfo(AbstractAnalysis[StructDecl]):
         assert p
         self.decl_header = f"{p.name}.{d.name}.proj.0.hpp"
         self.impl_header = f"{p.name}.{d.name}.proj.1.hpp"
+
         self.namespace = "::".join(p.segments)
         self.name = d.name
         self.full_name = "::" + self.namespace + "::" + self.name
+
         self.as_owner = self.full_name
         self.as_param = self.full_name + " const&"
 
@@ -114,9 +117,11 @@ class UnionCppInfo(AbstractAnalysis[UnionDecl]):
         assert p
         self.decl_header = f"{p.name}.{d.name}.proj.0.hpp"
         self.impl_header = f"{p.name}.{d.name}.proj.1.hpp"
+
         self.namespace = "::".join(p.segments)
         self.name = d.name
         self.full_name = "::" + self.namespace + "::" + self.name
+
         self.as_owner = self.full_name
         self.as_param = self.full_name + " const&"
 
@@ -129,12 +134,15 @@ class IfaceCppInfo(AbstractAnalysis[IfaceDecl]):
         self.decl_header = f"{p.name}.{d.name}.proj.0.hpp"
         self.defn_header = f"{p.name}.{d.name}.proj.1.hpp"
         self.impl_header = f"{p.name}.{d.name}.proj.2.hpp"
-        self.norm_name = d.name
-        self.weak_name = d.name
+
         self.namespace = "::".join(p.segments)
-        self.weakspace = "::".join(p.segments) + "::weak"
+        self.norm_name = d.name
         self.full_norm_name = "::" + self.namespace + "::" + self.norm_name
+
+        self.weakspace = "::".join(p.segments) + "::weak"
+        self.weak_name = d.name
         self.full_weak_name = "::" + self.weakspace + "::" + self.weak_name
+
         self.as_owner = self.full_norm_name
         self.as_param = self.full_weak_name
 
