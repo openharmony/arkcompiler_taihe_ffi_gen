@@ -143,9 +143,11 @@ try {
 taihe文件
 ```taihe
 interface IStringHolder {
-    [gen_async="getAsync", gen_promise="getPromise"]
+    @gen_async("getAsync")
+    @gen_promise("getPromise")
     get(): String;
-    [gen_async="setAsync", gen_promise="setPromise"]
+    @gen_async("setAsync")
+    @gen_promise("setPromise")
     set(a: String): void;
 }
 
