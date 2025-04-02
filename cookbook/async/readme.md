@@ -39,24 +39,24 @@ sts提供了异步的支持，但是native并不支持异步
 
 第一步 在taihe文件中声明
 ```taihe
-[gen_async = "add", gen_promise = "add"]
+@gen_async("add")
+@gen_promise("add")
 function addSync(a: i32, b: i32): i32;
 ```
 
-我们可以看到函数addSync上方有一个`[xxx]`, 这是taihe的注解(annotation)语法
+我们可以看到函数addSync上方有一个`@xxx()`, 这是taihe的注解(annotation)语法
 
-taihe annotation语法格式为
-```taihe
-[xxx = "yyy"]
-
-[xxx("yyy, zzz")]
-```
+- Taihe 的注解非常灵活
+  - `@!foobar` 添加注解到**当下的词法空间**下，而 `@foobar` （注意，没有感叹号）将注解添加到**下一个元素**中。
+  - 例如，`@foobar struct Foo {}` 等价于 `struct Foo { @!foobar }`，都是在给 `struct Foo` 添加注解。
+  - 注解可以有参数，例如 `@foobar("baz")` 或 `@foobar(1, "baz")`
+  - 无参数时，括号可以省略，例如 `@foobar()` 等同于 `@foobar`
 
 taihe的注解可以作用在变量、函数、interface、struct、以及当前文件上
 
 处理作用在当前文件上时，将注解写在文件末尾，其余情况下都是写在被作用者的上方
 
-回到当前taihe文件，生成sts async 版本函数的注解格式为 `[gen_async = "{async_name}"]`，其中`{async_name}`为sts侧async版本函数的函数名；生成sts promise 版本函数的注解格式为 `[gen_promise = "{promise_name}"]`，其中`{promise_name}`为sts侧promise版本函数的函数名，这两个注解可以单独使用，也可以在interface内的函数使用
+回到当前taihe文件，生成sts async 版本函数的注解格式为 `@gen_async("{async_name}")`，其中`{async_name}`为sts侧async版本函数的函数名；生成sts promise 版本函数的注解格式为 `@gen_promise("{promise_name}")`，其中`{promise_name}`为sts侧promise版本函数的函数名，这两个注解可以单独使用，也可以在interface内的函数使用
 
 注：希望用户对promise有所了解，可以参考javascript的promise
 

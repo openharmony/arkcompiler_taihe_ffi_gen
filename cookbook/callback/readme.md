@@ -58,5 +58,3 @@ callback_lib.cb_struct((a: callback_lib.Person) => {
     return person;
 });
 ```
-
-To be Continued

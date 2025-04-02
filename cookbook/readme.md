@@ -16,8 +16,8 @@
 
 ### [重载](./overload/readme.md)
 
-### [注入](./inject/readme.md)
+### [回调](./callback/readme.md)
 
 ### To do 
 
-#### optional | static method | callback | namespace | onoff | record
+#### optional | static method | namespace | onoff | record
