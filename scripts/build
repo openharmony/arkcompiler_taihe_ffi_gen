@@ -36,7 +36,7 @@ build-compiler() {
 export TAIHE_ROOT="$(realpath $(dirname "$0")/..)"
 export PYTHONPATH="${TAIHE_ROOT}/lib/taihe/compiler:${TAIHE_ROOT}/lib/taihe/compiler/lib:${PYTHONPATH:-}"
 
-exec python3 -m taihe "$@"
+exec python3 -m taihe.cli.compiler "$@"
 EOF
     chmod 0755 "$taihec"
 }
