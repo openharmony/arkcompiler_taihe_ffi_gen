@@ -9,13 +9,15 @@ from taihe.codegen.abi_generator import (
 )
 from taihe.codegen.cpp_generator import (
     EnumCppInfo,
-    GlobFuncCppInfo,
     IfaceCppInfo,
     IfaceMethodCppInfo,
-    PackageCppInfo,
     StructCppInfo,
     TypeCppInfo,
     UnionCppInfo,
+)
+from taihe.codegen.cpp_user_generator import (
+    GlobFuncCppUserInfo,
+    PackageCppUserInfo,
 )
 from taihe.codegen.mangle import DeclKind, encode
 from taihe.semantics.declarations import (
@@ -1648,16 +1650,16 @@ class ANICodeGenerator:
         for union in pkg.unions:
             self.gen_union_files(union)
         pkg_ani_info = PackageANIInfo.get(self.am, pkg)
-        pkg_cpp_info = PackageCppInfo.get(self.am, pkg)
-        self.gen_package_header(pkg, pkg_ani_info, pkg_cpp_info)
-        self.gen_package_source(pkg, pkg_ani_info, pkg_cpp_info)
+        pkg_cpp_user_info = PackageCppUserInfo.get(self.am, pkg)
+        self.gen_package_header(pkg, pkg_ani_info, pkg_cpp_user_info)
+        self.gen_package_source(pkg, pkg_ani_info, pkg_cpp_user_info)
         self.pkg = None
 
     def gen_package_header(
         self,
         pkg: PackageDecl,
         pkg_ani_info: PackageANIInfo,
-        pkg_cpp_info: PackageCppInfo,
+        pkg_cpp_user_info: PackageCppUserInfo,
     ):
         pkg_ani_header_target = COutputBuffer.create(
             self.tm, f"include/{pkg_ani_info.header}", True
@@ -1673,13 +1675,13 @@ class ANICodeGenerator:
         self,
         pkg: PackageDecl,
         pkg_ani_info: PackageANIInfo,
-        pkg_cpp_info: PackageCppInfo,
+        pkg_cpp_user_info: PackageCppUserInfo,
     ):
         pkg_ani_source_target = COutputBuffer.create(
             self.tm, f"src/{pkg_ani_info.source}", False
         )
-        pkg_ani_source_target.include(pkg_cpp_info.header)
         pkg_ani_source_target.include(pkg_ani_info.header)
+        pkg_ani_source_target.include(pkg_cpp_user_info.header)
 
         # generate functions
         for func in pkg.functions:
@@ -1772,7 +1774,7 @@ class ANICodeGenerator:
         pkg_ani_source_target: COutputBuffer,
         mangled_name: str,
     ):
-        func_cpp_info = GlobFuncCppInfo.get(self.am, func)
+        func_cpp_user_info = GlobFuncCppUserInfo.get(self.am, func)
         ani_params = []
         ani_params.append("[[maybe_unused]] ani_env *env")
         ani_args = []
@@ -1811,14 +1813,14 @@ class ANICodeGenerator:
             cpp_res = "cpp_result"
             ani_res = "ani_result"
             pkg_ani_source_target.write(
-                f"    {cpp_return_ty_name} {cpp_res} = {func_cpp_info.full_name}({cpp_args_str});\n"
+                f"    {cpp_return_ty_name} {cpp_res} = {func_cpp_user_info.full_name}({cpp_args_str});\n"
                 f"    if (::taihe::has_error()) {{ return {type_ani_info.ani_type}{{}}; }}\n"
             )
             type_ani_info.into_ani(pkg_ani_source_target, 4, "env", cpp_res, ani_res)
             pkg_ani_source_target.write(f"    return {ani_res};\n")
         else:
             pkg_ani_source_target.write(
-                f"    {func_cpp_info.full_name}({cpp_args_str});\n"
+                f"    {func_cpp_user_info.full_name}({cpp_args_str});\n"
             )
         pkg_ani_source_target.write(f"}}\n")
 

@@ -23,6 +23,9 @@ from taihe.codegen.cpp_impl_generator import (
     CppImplHeadersGenerator,
     CppImplSourcesGenerator,
 )
+from taihe.codegen.cpp_user_generator import (
+    CppUserHeadersGenerator,
+)
 from taihe.codegen.sts_generator import (
     STSCodeGenerator,
 )
@@ -64,6 +67,7 @@ class CompilerInvocation:
     gen_user: bool = False
     gen_ani: bool = False
     gen_c_impl: bool = False
+    gen_cpp_impl: bool = True
 
     debug: bool = False
 
@@ -174,10 +178,22 @@ class CompilerInstance:
             ABISourcesGenerator(self.target_manager, self.analysis_manager).generate(
                 self.package_group
             )
-            CppImplHeadersGenerator(
-                self.target_manager, self.analysis_manager
-            ).generate(self.package_group)
-            CppImplSourcesGenerator(
+            if self.invocation.gen_cpp_impl:
+                CppImplHeadersGenerator(
+                    self.target_manager, self.analysis_manager
+                ).generate(self.package_group)
+                CppImplSourcesGenerator(
+                    self.target_manager, self.analysis_manager
+                ).generate(self.package_group)
+            if self.invocation.gen_c_impl:
+                CImplHeadersGenerator(
+                    self.target_manager, self.analysis_manager
+                ).generate(self.package_group)
+                CImplSourcesGenerator(
+                    self.target_manager, self.analysis_manager
+                ).generate(self.package_group)
+        if self.invocation.gen_user or self.invocation.gen_ani:
+            CppUserHeadersGenerator(
                 self.target_manager, self.analysis_manager
             ).generate(self.package_group)
         if self.invocation.gen_ani:
@@ -185,13 +201,6 @@ class CompilerInstance:
                 self.package_group
             )
             STSCodeGenerator(self.target_manager, self.analysis_manager).generate(
-                self.package_group
-            )
-        if self.invocation.gen_c_impl:
-            CImplHeadersGenerator(self.target_manager, self.analysis_manager).generate(
-                self.package_group
-            )
-            CImplSourcesGenerator(self.target_manager, self.analysis_manager).generate(
                 self.package_group
             )
 

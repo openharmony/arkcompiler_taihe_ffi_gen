@@ -388,11 +388,21 @@ class ABIHeadersGenerator:
         )
         pkg_abi_target.include("taihe/common.h")
         for struct in pkg.structs:
-            self.gen_struct_files(struct, pkg_abi_target)
+            struct_abi_info = StructABIInfo.get(self.am, struct)
+            self.gen_struct_decl_file(struct, struct_abi_info)
+            self.gen_struct_defn_file(struct, struct_abi_info)
+            pkg_abi_target.include(struct_abi_info.impl_header)
         for union in pkg.unions:
-            self.gen_union_files(union, pkg_abi_target)
+            union_abi_info = UnionABIInfo.get(self.am, union)
+            self.gen_union_decl_file(union, union_abi_info)
+            self.gen_union_defn_file(union, union_abi_info)
+            pkg_abi_target.include(union_abi_info.impl_header)
         for iface in pkg.interfaces:
-            self.gen_iface_files(iface, pkg_abi_target)
+            iface_abi_info = IfaceABIInfo.get(self.am, iface)
+            self.gen_iface_decl_file(iface, iface_abi_info)
+            self.gen_iface_defn_file(iface, iface_abi_info)
+            self.gen_iface_impl_file(iface, iface_abi_info)
+            pkg_abi_target.include(iface_abi_info.impl_header)
         for func in pkg.functions:
             self.gen_func(func, pkg_abi_target)
 
@@ -405,28 +415,18 @@ class ABIHeadersGenerator:
         params = []
         for param in func.params:
             type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.resolved_ty)
-            pkg_abi_target.include(*type_abi_info.impl_headers)
+            pkg_abi_target.include(*type_abi_info.decl_headers)
             params.append(f"{type_abi_info.as_param} {param.name}")
         params_str = ", ".join(params)
         if return_ty_ref := func.return_ty_ref:
             type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
-            pkg_abi_target.include(*type_abi_info.impl_headers)
+            pkg_abi_target.include(*type_abi_info.decl_headers)
             return_ty_name = type_abi_info.as_owner
         else:
             return_ty_name = "void"
         pkg_abi_target.writeln(
             f"TH_EXPORT {return_ty_name} {func_abi_info.mangled_name}({params_str});",
         )
-
-    def gen_struct_files(
-        self,
-        struct: StructDecl,
-        pkg_abi_target: COutputBuffer,
-    ):
-        struct_abi_info = StructABIInfo.get(self.am, struct)
-        self.gen_struct_decl_file(struct, struct_abi_info)
-        self.gen_struct_defn_file(struct, struct_abi_info)
-        pkg_abi_target.include(struct_abi_info.impl_header)
 
     def gen_struct_decl_file(
         self,
@@ -471,16 +471,6 @@ class ABIHeadersGenerator:
             f"}};",
         )
 
-    def gen_union_files(
-        self,
-        union: UnionDecl,
-        pkg_abi_target: COutputBuffer,
-    ):
-        union_abi_info = UnionABIInfo.get(self.am, union)
-        self.gen_union_decl_file(union, union_abi_info)
-        self.gen_union_defn_file(union, union_abi_info)
-        pkg_abi_target.include(union_abi_info.impl_header)
-
     def gen_union_decl_file(
         self,
         union: UnionDecl,
@@ -517,7 +507,7 @@ class ABIHeadersGenerator:
         for field in union.fields:
             if field.ty_ref is None:
                 union_abi_defn_target.writeln(
-                    f"  // {field.name}",
+                    f"    // {field.name}",
                 )
                 continue
             type_abi_info = TypeABIInfo.get(self.am, field.ty_ref.resolved_ty)
@@ -532,17 +522,6 @@ class ABIHeadersGenerator:
             f"    union {union_abi_info.union_name} m_data;",
             f"}};",
         )
-
-    def gen_iface_files(
-        self,
-        iface: IfaceDecl,
-        pkg_abi_target: COutputBuffer,
-    ):
-        iface_abi_info = IfaceABIInfo.get(self.am, iface)
-        self.gen_iface_decl_file(iface, iface_abi_info)
-        self.gen_iface_defn_file(iface, iface_abi_info)
-        self.gen_iface_impl_file(iface, iface_abi_info)
-        pkg_abi_target.include(iface_abi_info.impl_header)
 
     def gen_iface_decl_file(
         self,

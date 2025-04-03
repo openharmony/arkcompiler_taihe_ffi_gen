@@ -3,7 +3,7 @@
 #include <optional>
 #include <sstream>
 
-#include "ohos.xml.proj.hpp"
+#include "ohos.xml.user.hpp"
 
 using namespace taihe;
 using namespace ohos::xml;
