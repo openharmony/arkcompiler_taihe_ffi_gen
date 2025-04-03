@@ -1,9 +1,11 @@
 set(IDL_FILES
-    "${CMAKE_CURRENT_LIST_DIR}/idl/arraybuffer.taihe"
+    "${CMAKE_CURRENT_LIST_DIR}/idl/foo.taihe"
+    "${CMAKE_CURRENT_LIST_DIR}/idl/bar.taihe"
 )
 
 set(GEN_ETS_FILES
-    "arraybuffer.ets"
+    "foo.ets"
+    "bar.ets"
 )
 
 set(USER_ETS_FILES
@@ -12,4 +14,4 @@ set(USER_ETS_FILES
 
 file(GLOB AUTHOR_CPP_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_LIST_DIR}/author/src/*.cpp")
 
-add_ani_demo(ani_arraybuffer "${IDL_FILES}" "${GEN_ETS_FILES}" "" "${USER_ETS_FILES}" "${AUTHOR_CPP_FILES}" "test")
+add_ani_demo(ani_typed_array "${IDL_FILES}" "${GEN_ETS_FILES}" "" "${USER_ETS_FILES}" "${AUTHOR_CPP_FILES}" "test")
