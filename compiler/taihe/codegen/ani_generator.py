@@ -1794,7 +1794,7 @@ class ANICodeGenerator:
             ani_return_ty_name = "void"
         pkg_ani_source_target.write(
             f"static {ani_return_ty_name} {mangled_name}({ani_params_str}) {{\n"
-            f"    taihe::set_env(env);\n"
+            f"    ::taihe::set_env(env);\n"
         )
         for param, ani_arg, cpp_arg in zip(
             func.params, ani_args, cpp_args, strict=True
@@ -1804,14 +1804,15 @@ class ANICodeGenerator:
         cpp_args_str = ", ".join(cpp_args)
         if return_ty_ref := func.return_ty_ref:
             type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
+            type_ani_info = TypeANIInfo.get(
+                self.am, self.pkg, return_ty_ref.resolved_ty
+            )
             cpp_return_ty_name = type_cpp_info.as_owner
             cpp_res = "cpp_result"
             ani_res = "ani_result"
             pkg_ani_source_target.write(
                 f"    {cpp_return_ty_name} {cpp_res} = {func_cpp_info.full_name}({cpp_args_str});\n"
-            )
-            type_ani_info = TypeANIInfo.get(
-                self.am, self.pkg, return_ty_ref.resolved_ty
+                f"    if (::taihe::has_error()) {{ return {type_ani_info.ani_type}{{}}; }}\n"
             )
             type_ani_info.into_ani(pkg_ani_source_target, 4, "env", cpp_res, ani_res)
             pkg_ani_source_target.write(f"    return {ani_res};\n")
@@ -1855,7 +1856,7 @@ class ANICodeGenerator:
             ani_return_ty_name = "void"
         pkg_ani_source_target.write(
             f"static {ani_return_ty_name} {mangled_name}({ani_params_str}) {{\n"
-            f"    taihe::set_env(env);\n"
+            f"    ::taihe::set_env(env);\n"
             f"    ani_long ani_data_ptr;\n"
             f'    env->Object_GetPropertyByName_Long(object, "_data_ptr", reinterpret_cast<ani_long*>(&ani_data_ptr));\n'
             f"    ani_long ani_vtbl_ptr;\n"
@@ -1872,14 +1873,15 @@ class ANICodeGenerator:
         cpp_args_str = ", ".join(cpp_args)
         if return_ty_ref := method.return_ty_ref:
             type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
+            type_ani_info = TypeANIInfo.get(
+                self.am, self.pkg, return_ty_ref.resolved_ty
+            )
             cpp_return_ty_name = type_cpp_info.as_owner
             cpp_res = "cpp_result"
             ani_res = "ani_result"
             pkg_ani_source_target.write(
                 f"    {cpp_return_ty_name} {cpp_res} = {ancestor_cpp_info.as_param}(cpp_iface)->{method_cpp_info.call_name}({cpp_args_str});\n"
-            )
-            type_ani_info = TypeANIInfo.get(
-                self.am, self.pkg, return_ty_ref.resolved_ty
+                f"    if (::taihe::has_error()) {{ return {type_ani_info.ani_type}{{}}; }}\n"
             )
             type_ani_info.into_ani(pkg_ani_source_target, 4, "env", cpp_res, ani_res)
             pkg_ani_source_target.write(f"    return {ani_res};\n")

@@ -1,4 +1,6 @@
+#include <iostream>
 #include <taihe/runtime.hpp>
+#include "ani.h"
 
 namespace taihe {
 __thread ani_env *cur_env;
@@ -38,8 +40,28 @@ void ani_set_error(ani_env *env, taihe::string_view msg) {
   env->ThrowError(static_cast<ani_error>(errObj));
 }
 
+void ani_reset_error(ani_env *env) {
+  env->ResetError();
+}
+
+bool ani_has_error(ani_env *env) {
+  ani_boolean res;
+  env->ExistUnhandledError(&res);
+  return res;
+}
+
 void set_error(taihe::string_view msg) {
   ani_env *env = get_env();
   ani_set_error(env, msg);
+}
+
+void reset_error() {
+  ani_env *env = get_env();
+  ani_reset_error(env);
+}
+
+bool has_error() {
+  ani_env *env = get_env();
+  return ani_has_error(env);
 }
 }  // namespace taihe
