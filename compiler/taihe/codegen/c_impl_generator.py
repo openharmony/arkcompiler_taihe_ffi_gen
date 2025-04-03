@@ -115,5 +115,5 @@ class CImplSourcesGenerator:
             f"{return_ty_name} {func_c_impl_name}({params_str}) {{ \\",
             f"    // TODO",
             f"}}",
-            f"{func_c_impl_info.macro}({func_c_impl_name})",
+            f"{func_c_impl_info.macro}({func_c_impl_name});",
         )

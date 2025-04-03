@@ -123,5 +123,5 @@ class CppImplSourcesGenerator:
             f"{cpp_return_ty_name} {func_cpp_impl_name}({cpp_params_str}) {{ \\",
             f"    // TODO",
             f"}}",
-            f"{func_cpp_impl_info.macro}({func_cpp_impl_name})",
+            f"{func_cpp_impl_info.macro}({func_cpp_impl_name});",
         )

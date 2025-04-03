@@ -386,7 +386,6 @@ class ABIHeadersGenerator:
         pkg_abi_target = COutputBuffer.create(
             self.tm, f"include/{pkg_abi_info.header}", True
         )
-        pkg_abi_target.include("taihe/common.h")
         for struct in pkg.structs:
             struct_abi_info = StructABIInfo.get(self.am, struct)
             self.gen_struct_decl_file(struct, struct_abi_info)
@@ -403,6 +402,7 @@ class ABIHeadersGenerator:
             self.gen_iface_defn_file(iface, iface_abi_info)
             self.gen_iface_impl_file(iface, iface_abi_info)
             pkg_abi_target.include(iface_abi_info.impl_header)
+        pkg_abi_target.include("taihe/common.h")
         for func in pkg.functions:
             self.gen_func(func, pkg_abi_target)
 

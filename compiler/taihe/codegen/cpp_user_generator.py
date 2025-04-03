@@ -47,7 +47,10 @@ class CppUserHeadersGenerator:
         pkg_cpp_user_target = COutputBuffer.create(
             self.tm, f"include/{pkg_cpp_user_info.header}", True
         )
+        # types
         pkg_cpp_user_target.include(pkg_cpp_info.header)
+        # functions
+        pkg_cpp_user_target.include("taihe/common.hpp")
         pkg_cpp_user_target.include(pkg_abi_info.header)
         for func in pkg.functions:
             self.gen_func(func, pkg_cpp_user_target)
