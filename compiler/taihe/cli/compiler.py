@@ -5,7 +5,9 @@ from taihe.driver import CompilerInstance, CompilerInvocation
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        prog="taihec", description="generates source code from taihe files"
+    )
     parser.add_argument(
         "-I",
         dest="src_dirs",
@@ -23,23 +25,23 @@ def main():
         "--author",
         "-a",
         action="store_true",
-        help="generate files for interface author",
+        help="generate sources for API authors",
     )
     parser.add_argument(
         "--user",
         "-u",
         action="store_true",
-        help="generate files for interface user",
+        help="generate sources for API users",
     )
     parser.add_argument(
         "--ani",
         action="store_true",
-        help="generate ani headers and source",
+        help="generate sources for ANI binding",
     )
     parser.add_argument(
         "--c-impl",
         action="store_true",
-        help="generate cimpl headers and source",
+        help="generate skeleton for C implementation",
     )
     parser.add_argument(
         "--debug",
