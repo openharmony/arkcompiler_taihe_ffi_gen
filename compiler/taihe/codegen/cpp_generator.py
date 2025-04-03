@@ -426,23 +426,71 @@ class CppHeadersGenerator:
         pkg_cpp_target.include("taihe/common.hpp")
         pkg_cpp_target.include(pkg_abi_info.header)
         for enum in pkg.enums:
-            self.gen_enum_file(enum, pkg_cpp_target)
+            enum_abi_info = EnumABIInfo.get(self.am, enum)
+            enum_cpp_info = EnumCppInfo.get(self.am, enum)
+            self.gen_enum_file(enum, enum_abi_info, enum_cpp_info)
+            pkg_cpp_target.include(enum_cpp_info.header)
         for struct in pkg.structs:
-            self.gen_struct_files(struct, pkg_cpp_target)
+            struct_abi_info = StructABIInfo.get(self.am, struct)
+            struct_cpp_info = StructCppInfo.get(self.am, struct)
+            self.gen_struct_decl_file(struct, struct_abi_info, struct_cpp_info)
+            self.gen_struct_impl_file(struct, struct_abi_info, struct_cpp_info)
+            pkg_cpp_target.include(struct_cpp_info.impl_header)
         for union in pkg.unions:
-            self.gen_union_files(union, pkg_cpp_target)
+            union_cpp_info = UnionCppInfo.get(self.am, union)
+            union_abi_info = UnionABIInfo.get(self.am, union)
+            self.gen_union_decl_file(union, union_abi_info, union_cpp_info)
+            self.gen_union_impl_file(union, union_abi_info, union_cpp_info)
+            pkg_cpp_target.include(union_cpp_info.impl_header)
         for iface in pkg.interfaces:
-            self.gen_iface_files(iface, pkg_cpp_target)
+            iface_abi_info = IfaceABIInfo.get(self.am, iface)
+            iface_cpp_info = IfaceCppInfo.get(self.am, iface)
+            self.gen_iface_decl_file(iface, iface_abi_info, iface_cpp_info)
+            self.gen_iface_defn_file(iface, iface_abi_info, iface_cpp_info)
+            self.gen_iface_impl_file(iface, iface_abi_info, iface_cpp_info)
+            pkg_cpp_target.include(iface_cpp_info.impl_header)
         for func in pkg.functions:
             self.gen_func(func, pkg_cpp_target)
+
+    def gen_func(
+        self,
+        func: GlobFuncDecl,
+        pkg_cpp_target: COutputBuffer,
+    ):
+        func_cpp_info = GlobFuncCppInfo.get(self.am, func)
+        func_abi_info = GlobFuncABIInfo.get(self.am, func)
+        params_cpp = []
+        args_into_abi = []
+        for param in func.params:
+            type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
+            pkg_cpp_target.include(*type_cpp_info.impl_headers)
+            params_cpp.append(f"{type_cpp_info.as_param} {param.name}")
+            args_into_abi.append(type_cpp_info.pass_into_abi(param.name))
+        params_cpp_str = ", ".join(params_cpp)
+        args_into_abi_str = ", ".join(args_into_abi)
+        abi_result = f"{func_abi_info.mangled_name}({args_into_abi_str})"
+        if return_ty_ref := func.return_ty_ref:
+            type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
+            pkg_cpp_target.include(*type_cpp_info.impl_headers)
+            cpp_return_ty_name = type_cpp_info.as_owner
+            cpp_result = type_cpp_info.return_from_abi(abi_result)
+        else:
+            cpp_return_ty_name = "void"
+            cpp_result = abi_result
+        pkg_cpp_target.writeln(
+            f"namespace {func_cpp_info.namespace} {{",
+            f"inline {cpp_return_ty_name} {func_cpp_info.call_name}({params_cpp_str}) {{",
+            f"    return {cpp_result};",
+            f"}}",
+            f"}}",
+        )
 
     def gen_enum_file(
         self,
         enum: EnumDecl,
-        pkg_cpp_target: COutputBuffer,
+        enum_abi_info: EnumABIInfo,
+        enum_cpp_info: EnumCppInfo,
     ):
-        enum_abi_info = EnumABIInfo.get(self.am, enum)
-        enum_cpp_info = EnumCppInfo.get(self.am, enum)
         enum_cpp_target = COutputBuffer.create(
             self.tm, f"include/{enum_cpp_info.header}", True
         )
@@ -471,7 +519,6 @@ class CppHeadersGenerator:
             enum_cpp_info,
             enum_cpp_target,
         )
-        pkg_cpp_target.include(enum_cpp_info.header)
 
     def gen_enum_defn(
         self,
@@ -624,25 +671,6 @@ class CppHeadersGenerator:
             f"}};",
             f"}}",
         )
-
-    def gen_union_files(
-        self,
-        union: UnionDecl,
-        pkg_cpp_target: COutputBuffer,
-    ):
-        union_cpp_info = UnionCppInfo.get(self.am, union)
-        union_abi_info = UnionABIInfo.get(self.am, union)
-        self.gen_union_decl_file(
-            union,
-            union_abi_info,
-            union_cpp_info,
-        )
-        self.gen_union_impl_file(
-            union,
-            union_abi_info,
-            union_cpp_info,
-        )
-        pkg_cpp_target.include(union_cpp_info.impl_header)
 
     def gen_union_decl_file(
         self,
@@ -1089,58 +1117,6 @@ class CppHeadersGenerator:
             f"}}",
         )
 
-    def gen_func(
-        self,
-        func: GlobFuncDecl,
-        pkg_cpp_target: COutputBuffer,
-    ):
-        func_cpp_info = GlobFuncCppInfo.get(self.am, func)
-        func_abi_info = GlobFuncABIInfo.get(self.am, func)
-        params_cpp = []
-        args_into_abi = []
-        for param in func.params:
-            type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
-            pkg_cpp_target.include(*type_cpp_info.impl_headers)
-            params_cpp.append(f"{type_cpp_info.as_param} {param.name}")
-            args_into_abi.append(type_cpp_info.pass_into_abi(param.name))
-        params_cpp_str = ", ".join(params_cpp)
-        args_into_abi_str = ", ".join(args_into_abi)
-        abi_result = f"{func_abi_info.mangled_name}({args_into_abi_str})"
-        if return_ty_ref := func.return_ty_ref:
-            type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
-            pkg_cpp_target.include(*type_cpp_info.impl_headers)
-            cpp_return_ty_name = type_cpp_info.as_owner
-            cpp_result = type_cpp_info.return_from_abi(abi_result)
-        else:
-            cpp_return_ty_name = "void"
-            cpp_result = abi_result
-        pkg_cpp_target.writeln(
-            f"namespace {func_cpp_info.namespace} {{",
-            f"inline {cpp_return_ty_name} {func_cpp_info.call_name}({params_cpp_str}) {{",
-            f"    return {cpp_result};",
-            f"}}",
-            f"}}",
-        )
-
-    def gen_struct_files(
-        self,
-        struct: StructDecl,
-        pkg_cpp_target: COutputBuffer,
-    ):
-        struct_abi_info = StructABIInfo.get(self.am, struct)
-        struct_cpp_info = StructCppInfo.get(self.am, struct)
-        self.gen_struct_decl_file(
-            struct,
-            struct_abi_info,
-            struct_cpp_info,
-        )
-        self.gen_struct_impl_file(
-            struct,
-            struct_abi_info,
-            struct_cpp_info,
-        )
-        pkg_cpp_target.include(struct_cpp_info.impl_header)
-
     def gen_struct_decl_file(
         self,
         struct: StructDecl,
@@ -1279,30 +1255,6 @@ class CppHeadersGenerator:
             f"}};",
             f"}}",
         )
-
-    def gen_iface_files(
-        self,
-        iface: IfaceDecl,
-        pkg_cpp_target: COutputBuffer,
-    ):
-        iface_abi_info = IfaceABIInfo.get(self.am, iface)
-        iface_cpp_info = IfaceCppInfo.get(self.am, iface)
-        self.gen_iface_decl_file(
-            iface,
-            iface_abi_info,
-            iface_cpp_info,
-        )
-        self.gen_iface_defn_file(
-            iface,
-            iface_abi_info,
-            iface_cpp_info,
-        )
-        self.gen_iface_impl_file(
-            iface,
-            iface_abi_info,
-            iface_cpp_info,
-        )
-        pkg_cpp_target.include(iface_cpp_info.impl_header)
 
     def gen_iface_decl_file(
         self,
