@@ -507,7 +507,7 @@ class ABIHeadersGenerator:
         for field in union.fields:
             if field.ty_ref is None:
                 union_abi_defn_target.writeln(
-                    f"  // {field.name}",
+                    f"    // {field.name}",
                 )
                 continue
             type_abi_info = TypeABIInfo.get(self.am, field.ty_ref.resolved_ty)

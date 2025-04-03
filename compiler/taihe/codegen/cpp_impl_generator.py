@@ -38,11 +38,11 @@ class CppImplHeadersGenerator:
             self.gen_package_file(pkg)
 
     def gen_package_file(self, pkg: PackageDecl):
+        pkg_abi_info = PackageABIInfo.get(self.am, pkg)
         pkg_cpp_impl_info = PackageCppImplInfo.get(self.am, pkg)
         pkg_cpp_impl_target = COutputBuffer.create(
             self.tm, f"include/{pkg_cpp_impl_info.header}", True
         )
-        pkg_abi_info = PackageABIInfo.get(self.am, pkg)
         pkg_cpp_impl_target.include("taihe/common.hpp")
         pkg_cpp_impl_target.include(pkg_abi_info.header)
         for func in pkg.functions:

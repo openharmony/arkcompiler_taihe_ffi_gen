@@ -20,6 +20,9 @@ from taihe.codegen.cpp_impl_generator import (
     CppImplHeadersGenerator,
     CppImplSourcesGenerator,
 )
+from taihe.codegen.cpp_user_generator import (
+    CppUserHeadersGenerator,
+)
 from taihe.parse.convert import (
     AstConverter,
     IgnoredFileReason,
@@ -176,6 +179,10 @@ class CompilerInstance:
                 self.package_group
             )
             CppImplSourcesGenerator(
+                self.target_manager, self.analysis_manager
+            ).generate(self.package_group)
+        if self.invocation.gen_user:
+            CppUserHeadersGenerator(
                 self.target_manager, self.analysis_manager
             ).generate(self.package_group)
 

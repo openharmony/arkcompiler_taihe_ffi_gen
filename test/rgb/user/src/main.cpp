@@ -5,8 +5,8 @@
 #include <taihe/callback.hpp>
 #include <taihe/object.hpp>
 
-#include "rgb.base.proj.hpp"
-#include "rgb.show.proj.hpp"
+#include "rgb.base.user.hpp"
+#include "rgb.show.user.hpp"
 
 using namespace rgb::base;
 using namespace rgb::show;

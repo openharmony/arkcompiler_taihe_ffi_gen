@@ -5,7 +5,6 @@ from typing_extensions import override
 
 from taihe.codegen.abi_generator import (
     EnumABIInfo,
-    GlobFuncABIInfo,
     IfaceABIInfo,
     IfaceMethodABIInfo,
     PackageABIInfo,
@@ -15,7 +14,6 @@ from taihe.codegen.abi_generator import (
 )
 from taihe.semantics.declarations import (
     EnumDecl,
-    GlobFuncDecl,
     IfaceDecl,
     IfaceMethodDecl,
     PackageDecl,
@@ -60,16 +58,6 @@ class PackageCppInfo(AbstractAnalysis[PackageDecl]):
     def __init__(self, am: AnalysisManager, p: PackageDecl) -> None:
         super().__init__(am, p)
         self.header = f"{p.name}.proj.hpp"
-
-
-class GlobFuncCppInfo(AbstractAnalysis[GlobFuncDecl]):
-    def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
-        super().__init__(am, f)
-        p = f.node_parent
-        assert p
-        self.namespace = "::".join(p.segments)
-        self.call_name = f.name
-        self.full_name = "::" + self.namespace + "::" + self.call_name
 
 
 class IfaceMethodCppInfo(AbstractAnalysis[IfaceMethodDecl]):
@@ -415,9 +403,9 @@ class CppHeadersGenerator:
 
     def generate(self, pg: PackageGroup):
         for pkg in pg.packages:
-            self.gen_package_file(pkg)
+            self.gen_package_files(pkg)
 
-    def gen_package_file(self, pkg: PackageDecl):
+    def gen_package_files(self, pkg: PackageDecl):
         pkg_cpp_info = PackageCppInfo.get(self.am, pkg)
         pkg_cpp_target = COutputBuffer.create(
             self.tm, f"include/{pkg_cpp_info.header}", True
@@ -437,8 +425,8 @@ class CppHeadersGenerator:
             self.gen_struct_impl_file(struct, struct_abi_info, struct_cpp_info)
             pkg_cpp_target.include(struct_cpp_info.impl_header)
         for union in pkg.unions:
-            union_cpp_info = UnionCppInfo.get(self.am, union)
             union_abi_info = UnionABIInfo.get(self.am, union)
+            union_cpp_info = UnionCppInfo.get(self.am, union)
             self.gen_union_decl_file(union, union_abi_info, union_cpp_info)
             self.gen_union_impl_file(union, union_abi_info, union_cpp_info)
             pkg_cpp_target.include(union_cpp_info.impl_header)
@@ -449,41 +437,6 @@ class CppHeadersGenerator:
             self.gen_iface_defn_file(iface, iface_abi_info, iface_cpp_info)
             self.gen_iface_impl_file(iface, iface_abi_info, iface_cpp_info)
             pkg_cpp_target.include(iface_cpp_info.impl_header)
-        for func in pkg.functions:
-            self.gen_func(func, pkg_cpp_target)
-
-    def gen_func(
-        self,
-        func: GlobFuncDecl,
-        pkg_cpp_target: COutputBuffer,
-    ):
-        func_cpp_info = GlobFuncCppInfo.get(self.am, func)
-        func_abi_info = GlobFuncABIInfo.get(self.am, func)
-        params_cpp = []
-        args_into_abi = []
-        for param in func.params:
-            type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
-            pkg_cpp_target.include(*type_cpp_info.impl_headers)
-            params_cpp.append(f"{type_cpp_info.as_param} {param.name}")
-            args_into_abi.append(type_cpp_info.pass_into_abi(param.name))
-        params_cpp_str = ", ".join(params_cpp)
-        args_into_abi_str = ", ".join(args_into_abi)
-        abi_result = f"{func_abi_info.mangled_name}({args_into_abi_str})"
-        if return_ty_ref := func.return_ty_ref:
-            type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
-            pkg_cpp_target.include(*type_cpp_info.impl_headers)
-            cpp_return_ty_name = type_cpp_info.as_owner
-            cpp_result = type_cpp_info.return_from_abi(abi_result)
-        else:
-            cpp_return_ty_name = "void"
-            cpp_result = abi_result
-        pkg_cpp_target.writeln(
-            f"namespace {func_cpp_info.namespace} {{",
-            f"inline {cpp_return_ty_name} {func_cpp_info.call_name}({params_cpp_str}) {{",
-            f"    return {cpp_result};",
-            f"}}",
-            f"}}",
-        )
 
     def gen_enum_file(
         self,
