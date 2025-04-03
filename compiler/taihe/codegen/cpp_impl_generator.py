@@ -100,20 +100,20 @@ class CppImplSourcesGenerator:
         self.using_namespaces = []
 
     def mask(self, cpp_type: str):
+        pattern = r"(::)?([A-Za-z_][A-Za-z_0-9]*::)*[A-Za-z_][A-Za-z_0-9]*"
+
         def replace_ns(match):
             matched = match.group(0)
             for ns in self.using_namespaces:
-                if matched.startswith(ns + "::"):
-                    return matched[len(ns) + 2 :]
-                if matched.startswith("::" + ns + "::"):
-                    return matched[len(ns) + 4 :]
+                ns = ns + "::"
+                if matched.startswith(ns):
+                    return matched[len(ns) :]
+                ns = "::" + ns
+                if matched.startswith(ns):
+                    return matched[len(ns) :]
             return matched
 
-        pattern = r"(::)?([A-Za-z_][A-Za-z_0-9]*::)*[A-Za-z_][A-Za-z_0-9]*"
-
-        processed_type = re.sub(pattern, replace_ns, cpp_type)
-
-        return processed_type
+        return re.sub(pattern, replace_ns, cpp_type)
 
     def generate(self, pg: PackageGroup):
         for pkg in pg.packages:
@@ -220,7 +220,7 @@ class CppImplSourcesGenerator:
             )
         else:
             pkg_cpp_impl_target.writeln(
-                f'        throw std::runtime_error("{func_cpp_impl_name} not implemented");',
+                f'        TH_THROW(std::runtime_error, "{func_cpp_impl_name} not implemented");',
             )
         pkg_cpp_impl_target.writeln(
             f"    }}",
@@ -256,7 +256,7 @@ class CppImplSourcesGenerator:
             )
         else:
             pkg_cpp_impl_target.writeln(
-                f'    throw std::runtime_error("{func_cpp_impl_name} not implemented");',
+                f'    TH_THROW(std::runtime_error, "{func_cpp_impl_name} not implemented");',
             )
         pkg_cpp_impl_target.writeln(
             f"}}",
