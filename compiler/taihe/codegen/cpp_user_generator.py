@@ -3,6 +3,7 @@ from taihe.codegen.abi_generator import (
     PackageABIInfo,
 )
 from taihe.codegen.cpp_generator import (
+    PackageCppInfo,
     TypeCppInfo,
 )
 from taihe.semantics.declarations import (
@@ -41,11 +42,12 @@ class CppUserHeadersGenerator:
 
     def gen_package_file(self, pkg: PackageDecl):
         pkg_abi_info = PackageABIInfo.get(self.am, pkg)
+        pkg_cpp_info = PackageCppInfo.get(self.am, pkg)
         pkg_cpp_user_info = PackageCppUserInfo.get(self.am, pkg)
         pkg_cpp_user_target = COutputBuffer.create(
             self.tm, f"include/{pkg_cpp_user_info.header}", True
         )
-        pkg_cpp_user_target.include("taihe/common.hpp")
+        pkg_cpp_user_target.include(pkg_cpp_info.header)
         pkg_cpp_user_target.include(pkg_abi_info.header)
         for func in pkg.functions:
             self.gen_func(func, pkg_cpp_user_target)
