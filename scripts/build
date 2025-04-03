@@ -54,6 +54,10 @@ EOF
 
 }
 
+copy-documentation() {
+    cp -r cookbook "$DOC_DIR"
+}
+
 write-version() {
     local GIT_COMMIT=$(git rev-parse HEAD)
     local GIT_MESSAGE=$(git log -1 --pretty=%B | head -n 1)
@@ -81,13 +85,15 @@ main() {
     BIN_DIR="$DIST/bin"
     INCLUDE_DIR="$DIST/include"
     SRC_DIR="$DIST/src/taihe/runtime"
-    mkdir -p "$DIST" "$LIB_DIR" "$BIN_DIR" "$INCLUDE_DIR" "$SRC_DIR"
+    DOC_DIR="$DIST/share/doc/taihe"
+    mkdir -p "$DIST" "$LIB_DIR" "$BIN_DIR" "$INCLUDE_DIR" "$SRC_DIR" "$DOC_DIR"
 
     # Do the job
     copy-runtime
+    copy-documentation
     write-version
     build-compiler
-    tar -z -c -f "taihe-$VERSION.tar.gz" -C "$DIST/.." .
+    tar -z -c -f "taihe-$VERSION-$(date +"%Y%m%d").tar.gz" -C "$DIST/.." .
 }
 
 main
