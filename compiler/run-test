@@ -2,6 +2,6 @@
 
 # DEPRECATED. For backward compatibility only.
 
-from taihe.cli.run_test import main
+from taihe.cli.tryit import main
 
 main()

@@ -29,8 +29,9 @@ build-compiler() {
     popd 2>/dev/null
 
     echo "Copying the compiler wrapper"
-    local taihec="$BIN_DIR/taihec"
-    cat >"$taihec" <<'EOF'
+
+    local prog="$BIN_DIR/taihec"
+    cat >"$prog" <<'EOF'
 #!/usr/bin/bash -eu
 
 export TAIHE_ROOT="$(realpath $(dirname "$0")/..)"
@@ -38,7 +39,19 @@ export PYTHONPATH="${TAIHE_ROOT}/lib/taihe/compiler:${TAIHE_ROOT}/lib/taihe/comp
 
 exec python3 -m taihe.cli.compiler "$@"
 EOF
-    chmod 0755 "$taihec"
+    chmod 0755 "$prog"
+
+    local prog="$BIN_DIR/taihe-tryit"
+    cat >"$prog" <<'EOF'
+#!/usr/bin/bash -eu
+
+export TAIHE_ROOT="$(realpath $(dirname "$0")/..)"
+export PYTHONPATH="${TAIHE_ROOT}/lib/taihe/compiler:${TAIHE_ROOT}/lib/taihe/compiler/lib:${PYTHONPATH:-}"
+
+exec python3 -c 'from taihe.cli.tryit import *; main(BuildConfig(for_distribution=True));' "$@"
+EOF
+    chmod 0755 "$prog"
+
 }
 
 write-version() {
