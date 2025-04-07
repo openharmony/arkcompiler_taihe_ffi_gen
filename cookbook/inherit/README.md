@@ -112,6 +112,6 @@ Payment successful
 ```C++
 CreditCard card = makeCreditCard(100.0);
 // 如果想要调用 pay 方法，因为 pay 是通过继承得到的，在 C++ 侧需要转换为父类 interface
-card.pay(50.0); // false !
-Payable(card).pay(50.0); // success !
+card->pay(50.0); // false !
+Payable(card)->pay(50.0); // success !
 ```
