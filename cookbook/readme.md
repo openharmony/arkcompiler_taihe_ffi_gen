@@ -16,6 +16,8 @@
 
 ### [重载](./overload/readme.md)
 
+### [继承](./inherit/README.md)
+
 ### [回调](./callback/readme.md)
 
 ### To do 

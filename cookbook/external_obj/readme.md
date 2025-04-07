@@ -61,7 +61,7 @@ array<uintptr_t> get_objects() {
 `main.ets`
 ```TypeScript
 console.log(extobj.is_string("hello"));
-console.log(extobj.is_string(undefined));
+console.log(extobj.is_string(123));
 
 console.log(extobj.get_objects());
 // Log output:
