@@ -1,5 +1,5 @@
-import * as user from "@generated/user";
 import * as notification from "@generated/notification";
+import * as user from "@generated/user";
 
 loadLibrary("import");
 

@@ -24,15 +24,15 @@ interface INotificationService{
 function makeNotificationService(): INotificationService;
 ```
 
-taihe有两种导入方式：
+taihe 有两种导入方式：
 
-- 1 from A use B
+1. `from A use B;`
 
-- 2 use A
+2. `use A;`
 
 其中，A 为 taihe 的 pkg，B 为声明
 
-本章样例使用 `from user use IUser`，即从 `user` 包里 导入 `IUser`
+本章样例使用 `from user use IUser`，即从 `user` 包里导入 `IUser`
 
 当然也可以使用 `use user` 来导入整个 `user.taihe` 文件，但是这样做的话，在被导入的 taihe 文件 `notification.taihe` 里，使用导入的模块则需要前面跟上 pkg 名
 
@@ -46,11 +46,11 @@ interface INotificationService{
 function makeNotificationService(): INotificationService;
 ```
 
-为了避免重名的情况，支持 as 语法
+为了避免重名的情况，支持 `as` 语法：
 
-- 1 use A as C
+1. `use A as C;`
 
-- 2 from A use B as C
+2. `from A use B as C;`
 
 这里的 C 为别名
 
@@ -115,13 +115,12 @@ INotificationService makeNotificationService() {
 }
 ```
 
-此处有一个需要注意的地方在于在C++侧调用taihe interface的方法，当需要调用taihe interface的方法时，在c++侧调用方法时，需要使用->的方式调用函数，而非.的方式
+此处有一个需要注意的地方在于在 C++ 侧调用 taihe interface 的方法，当需要调用 taihe interface 的方法时，在 c++ 侧调用方法时，需要使用 `->` 的方式调用函数，而非 `.` 的方式
 
 ```C++
 a.getEmail(); // false!
 a->getEmail(); // success!
 ```
-
 
 ## 第三步：在 ets 侧使用
 

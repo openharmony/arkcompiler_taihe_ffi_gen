@@ -13,7 +13,7 @@ interface Payable{
 @class
 interface CreditCard : Payable {
     topUp(topUpAmount: f64): void;
-    @get getBalance(): f64;
+    @get("banlance") getBalance(): f64;
     @get getIntlEnabled(): bool;
     @set setIntlEnabled(tag: bool): void;
 }
@@ -21,13 +21,19 @@ interface CreditCard : Payable {
 function makeCreditCard(initAmount: f64): CreditCard;
 ```
 
-我们已经知道@是 taihe 的注释，这里我们解释 `@class` `@get` `@set` 三种注释
+我们已经知道 `@` 是 taihe 中注解的写法，这里我们解释 `@class` `@get` `@set` 三种注解
 
-`@class` taihe 是接口描述语言，所以面向对象部分都是 interface ，在 ets 侧，会默认生成 `interface CreditCard` 以及 `class CreditCard_inner implements CreditCard` 使用 `@class` 可以在ets侧直接生成 `class CreditCard`
+- `@class`
 
-`@get` 与 `@set` taihe 作为接口描述语言，并不支持在idl侧定义成员变量，使用 `@get` 与 `@set` 注释的方法在 ets 侧会对应为可读和可写，如样例中的 CreditCard 在 ets 侧会有一个只读变量 balance，以及一个可读写变量 intlEnabled，变量名为函数get set 后面的字符串，然后首字符小写
+  对于上面的接口声明，如果不添加 `@class` 注解，那么在 ets 侧会默认投影成 `interface CreditCard`. 如果需要将其投影为 `class` 则需使用 `@class` 注解，使其在 ets 侧直接生成为 `class CreditCard`.
 
-## 第二步，完成C++实现
+- `@get` 与 `@set`
+
+  taihe 的 interface 中并不支持直接定义成员变量，但可以通过 `@get` 与 `@set` 注解来说明将某特定成员方法声明为某数据成员的 getter 或 setter，如样例中的 CreditCard 在 ets 侧会有一个只读变量 balance，以及一个可读写变量 intlEnabled.
+
+  `@get` 和 `@set` 注解中可以有参数，表示该 getter 或 setter 所对应的数据成员名；也可以省略该参数，这种情况下，该方法名必须以 `get` 或 `set` 起始，对应的数据成员名会取方法名中 `get` 或 `set` 后的部分，然后将剩余部分的首字母小写（即按照小驼峰命名法）。
+
+## 第二步，完成 C++ 实现
 ```C++
 class PayableImpl {
 public:
@@ -91,7 +97,7 @@ console.log(card.intlEnabled);
 console.log(card.balance);
 // 购买一件国际商品
 console.log("Buy an international product")
-card.pay(50.0); // 子类可以直接调用父类inerface的方法
+card.pay(50.0); // 子 interface 可以直接调用父 inerface 的方法
 // 查看余额
 console.log(card.balance);
 ```
@@ -106,12 +112,12 @@ Payment successful
 950
 ```
 
-在 ets 侧，子类可以直接调用父类interface的方法，但是需要注意的是，在 c++ 侧，如果子类需要调用父类 interface 的方法，则需要手动转换一次
+在 ets 侧，子 interface 可以直接调用父 interface 的方法，但是需要注意的是，在 C++ 侧，如果子类需要调用父类 interface 的方法，则需要手动转换一次
 
 举例如下：
-```C++
+```cpp
 CreditCard card = makeCreditCard(100.0);
 // 如果想要调用 pay 方法，因为 pay 是通过继承得到的，在 C++ 侧需要转换为父类 interface
-card->pay(50.0); // false !
-Payable(card)->pay(50.0); // success !
+card->pay(50.0); // false!
+weak::Payable(card)->pay(50.0); // success!（这里建议转换为父接口的 weak 类型以避免增加引用计数带来的开销）
 ```

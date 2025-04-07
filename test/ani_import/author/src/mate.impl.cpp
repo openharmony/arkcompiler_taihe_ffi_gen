@@ -1,7 +1,7 @@
-#include "mate.proj.hpp"
 #include "mate.impl.hpp"
-#include "taihe/runtime.hpp"
+#include "mate.proj.hpp"
 #include "stdexcept"
+#include "taihe/runtime.hpp"
 
 using namespace taihe;
 using namespace mate;
@@ -10,7 +10,7 @@ namespace {
 // To be implemented.
 
 void testBar(bar::BarType const& bar) {
-    TH_THROW(std::runtime_error, "testBar not implemented");
+  TH_THROW(std::runtime_error, "testBar not implemented");
 }
 }  // namespace
 

@@ -1,7 +1,7 @@
-#include "mate.foo.proj.hpp"
 #include "mate.foo.impl.hpp"
-#include "taihe/runtime.hpp"
+#include "mate.foo.proj.hpp"
 #include "stdexcept"
+#include "taihe/runtime.hpp"
 
 using namespace taihe;
 using namespace mate::foo;
@@ -10,15 +10,15 @@ namespace {
 // To be implemented.
 
 void testMate(::mate::MateType const& mate) {
-    TH_THROW(std::runtime_error, "testMate not implemented");
+  TH_THROW(std::runtime_error, "testMate not implemented");
 }
 
 void testNova(::nova::weak::NovaType nova) {
-    TH_THROW(std::runtime_error, "testNova not implemented");
+  TH_THROW(std::runtime_error, "testNova not implemented");
 }
 
 void testPura(::pura::PuraType pura) {
-    TH_THROW(std::runtime_error, "testPura not implemented");
+  TH_THROW(std::runtime_error, "testPura not implemented");
 }
 }  // namespace
 
