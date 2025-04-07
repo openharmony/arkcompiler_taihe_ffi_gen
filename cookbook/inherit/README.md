@@ -21,11 +21,11 @@ interface CreditCard : Payable {
 function makeCreditCard(initAmount: f64): CreditCard;
 ```
 
-我们已经知道@是taihe的注释，这里我们解释`@class` `@get` `@set` 三种注释
+我们已经知道@是 taihe 的注释，这里我们解释 `@class` `@get` `@set` 三种注释
 
-`@class` taihe是接口描述语言，所以面向对象部分都是 interface ，在ets侧，会默认生成 `interface CreditCard` 以及 `class CreditCard_inner implements CreditCard` 使用 `@class` 可以在ets侧直接生成 `class CreditCard`
+`@class` taihe 是接口描述语言，所以面向对象部分都是 interface ，在 ets 侧，会默认生成 `interface CreditCard` 以及 `class CreditCard_inner implements CreditCard` 使用 `@class` 可以在ets侧直接生成 `class CreditCard`
 
-`@get` 与 `@set` taihe作为接口描述语言，并不支持在idl侧定义成员变量，使用 `@get` 与 `@set` 注释的方法在etc侧会对应为可读和可写，如样例中的 CreditCard 在 ets 侧会有一个只读变量 balance ，以及一个可读写变量 intlEnabled ，变量名为函数get set 后面的字符串，然后首字符小写
+`@get` 与 `@set` taihe 作为接口描述语言，并不支持在idl侧定义成员变量，使用 `@get` 与 `@set` 注释的方法在 ets 侧会对应为可读和可写，如样例中的 CreditCard 在 ets 侧会有一个只读变量 balance，以及一个可读写变量 intlEnabled，变量名为函数get set 后面的字符串，然后首字符小写
 
 ## 第二步，完成C++实现
 ```C++
@@ -33,9 +33,7 @@ class PayableImpl {
 public:
     PayableImpl(double num) {}
 
-    void pay(double amountDue) {
-
-    }
+    void pay(double amountDue) {}
 private:
 };
 
@@ -93,7 +91,7 @@ console.log(card.intlEnabled);
 console.log(card.balance);
 // 购买一件国际商品
 console.log("Buy an international product")
-card.pay(50.0);
+card.pay(50.0); // 子类可以直接调用父类inerface的方法
 // 查看余额
 console.log(card.balance);
 ```
@@ -108,11 +106,12 @@ Payment successful
 950
 ```
 
-在ets侧，子类调用父类 interface 方法，无需手动进行类型转换，可以直接调用方法，但是需要注意的是，在 c++ 侧，如果子类需要调用父类 interface 的方法，则需要手动转换一次
+在 ets 侧，子类可以直接调用父类interface的方法，但是需要注意的是，在 c++ 侧，如果子类需要调用父类 interface 的方法，则需要手动转换一次
+
 举例如下：
 ```C++
 CreditCard card = makeCreditCard(100.0);
-// 如果想要调用pay方法，因为pay是通过继承得到的，在C++侧需要转换为父类interface
+// 如果想要调用 pay 方法，因为 pay 是通过继承得到的，在 C++ 侧需要转换为父类 interface
 card.pay(50.0); // false !
 Payable(card).pay(50.0); // success !
 ```
