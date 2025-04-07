@@ -8,3 +8,5 @@ struct Data {
 function getDataMaythrow(): Data;
 
 function noReturnMaythrow(): void;
+
+function noReturnBusinessError(): void;

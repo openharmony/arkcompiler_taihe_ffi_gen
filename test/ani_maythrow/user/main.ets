@@ -1,5 +1,7 @@
-import {getDataMaythrow, maythrow, noReturnMaythrow} from "@generated/maythrow";
+import {getDataMaythrow, maythrow, noReturnBusinessError, noReturnMaythrow} from "@generated/maythrow";
 import * as System from "std/core/System";
+
+import {BusinessError} from "./@ohos.base.ets"
 
 loadLibrary("ani_maythrow");
 
@@ -39,6 +41,20 @@ function check_error_when_no_return() {
     assertEQ(errorMsg, "Error: error in noReturnMaythrow");
 }
 
+function check_business_error() {
+    let error_code: number = 0
+    let errorMsg: string = "";
+    try {
+        noReturnBusinessError()
+    } catch (e) {
+        e = e as BusinessError
+        error_code = e.code
+        errorMsg = e.toString();
+    }
+    assertEQ(error_code, 5)
+    assertEQ(errorMsg, "Error: error in noReturnBusinessError")
+}
+
 function main() {
     console.log("##############start#############")
     const suite = new ArkTestsuite("throw error ut")
@@ -49,5 +65,6 @@ function main() {
         "check error when return complex object",
         check_error_when_return_complex_object)
     suite.addTest("check error when no return", check_error_when_no_return)
+    suite.addTest("check business error", check_business_error)
     System.exit(suite.run())
 }

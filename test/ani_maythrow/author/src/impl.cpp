@@ -25,6 +25,11 @@ void noReturnMaythrow() {
   taihe::set_error("error in noReturnMaythrow");
 }
 
+void noReturnBusinessError() {
+  taihe::set_business_error(5, "error in noReturnBusinessError");
+}
+
 TH_EXPORT_CPP_API_maythrow(maythrow_impl);
 TH_EXPORT_CPP_API_getDataMaythrow(getDataMaythrow);
 TH_EXPORT_CPP_API_noReturnMaythrow(noReturnMaythrow);
+TH_EXPORT_CPP_API_noReturnBusinessError(noReturnBusinessError);
