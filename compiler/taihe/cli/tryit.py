@@ -34,6 +34,9 @@ class BuildConfig:
             self.runtime_include_dir = base_dir / "runtime" / "include"
             self.runtime_src_dir = base_dir / "runtime" / "src"
             self.panda_home = base_dir / ".panda_vm"
+        self.panda_include_home = (
+            self.panda_home / "package/ohos_arm64/include/plugins/ets/runtime/ani"
+        )
 
 
 class BuildSystem:
@@ -405,7 +408,6 @@ class BuildSystem:
     def setup_build_directories(self) -> None:
         """Set up necessary build directories."""
         # Clean and create directories
-        self.manage_directory(self.generated_dir, "clean")
         self.manage_directory(self.build_dir, "clean")
 
         # Create all necessary directories
@@ -426,6 +428,7 @@ class BuildSystem:
             raise FileNotFoundError(f"IDL directory not found: '{self.idl_dir}'")
 
         try:
+            self.manage_directory(self.generated_dir, "clean")
             # Import here to avoid module dependency issues
             from taihe.driver import CompilerInstance, CompilerInvocation
 
@@ -552,6 +555,51 @@ class BuildSystem:
             capture_output=False,
         )
 
+    def create_example(self):
+        self.manage_directory(self.idl_dir, "create")
+        self.manage_directory(self.author_dir, "create")
+        self.manage_directory(self.author_src_dir, "create")
+        self.manage_directory(self.user_dir, "create")
+
+        include_dirs = []
+        include_dirs.append(self.config.panda_include_home)
+        include_dirs.append(self.config.runtime_include_dir)
+        include_dirs.append(self.generated_include_dir)
+        include_dirs.append(self.author_include_dir)
+
+        taihe_content = "function sayHello(): void;\n"
+        with open(os.path.join(self.idl_dir, "hello.taihe"), "w") as f:
+            f.write(taihe_content)
+
+        impl_content = """#include "hello.impl.hpp"
+#include "iostream"
+
+void sayHello() {
+    std::cout << "Hello, World!" << std::endl;
+    return;
+}
+
+TH_EXPORT_CPP_API_sayHello(sayHello);
+"""
+        with open(os.path.join(self.author_src_dir, "hello.impl.cpp"), "w") as f:
+            f.write(impl_content)
+
+        main_content = f"""import * as hello from "@generated/hello";
+loadLibrary("{self.lib_name}");
+
+function main() {{
+    hello.sayHello();
+}}
+"""
+        with open(os.path.join(self.user_dir, "main.ets"), "w") as f:
+            f.write(main_content)
+
+        compile_commands_content = "\n".join(
+            f"-I\n{include_dir}" for include_dir in include_dirs
+        )
+        with open(os.path.join(self.target_path, "compile_flags.txt"), "w") as f:
+            f.write(compile_commands_content)
+
     def run(self) -> None:
         """Run the complete build process."""
         try:
@@ -572,9 +620,7 @@ class BuildSystem:
                 raise FileNotFoundError(f"Panda home directory not found: {panda_home}")
 
             # Path to include directory for ANI
-            panda_include_dir = (
-                package_dir / "ohos_arm64/include/plugins/ets/runtime/ani"
-            )
+            panda_include_dir = self.config.panda_include_home
 
             if not panda_include_dir.exists():
                 self.logger.warning(
@@ -622,6 +668,19 @@ def main(config: Optional[BuildConfig] = None):
         "target_directory",
         type=str,
         help="The target directory containing source files for the project",
+    )
+    parser.add_argument(
+        "-c",
+        "--create",
+        action="store_true",
+        help="Generate a simple example",
+    )
+    parser.add_argument(
+        "-g",
+        "--generate",
+        default=False,
+        action="store_true",
+        help="Generate code only",
     )
     parser.add_argument(
         "--ani",
@@ -679,6 +738,12 @@ def main(config: Optional[BuildConfig] = None):
             config=config or BuildConfig(),
             verbosity=verbosity,
         )
+        if args.create:
+            builder.create_example()
+            return
+        if args.generate:
+            builder.generate_code()
+            return
         builder.run()
     except KeyboardInterrupt:
         print("\nInterrupted. Exiting build process.", file=sys.stderr)
