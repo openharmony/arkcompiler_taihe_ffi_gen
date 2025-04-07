@@ -23,14 +23,14 @@ function test_data_struct() {
 
 function test_union() {
     // Test showUnion with different types
-    ani_test.showUnion(undefined);
+    ani_test.showUnion(null);
     ani_test.showUnion(1 as int);
     ani_test.showUnion(2 as float);
     ani_test.showUnion("Hello from STS!");
 
     // Test makeUnion returns expected values
     const union0 = ani_test.makeUnion(0);
-    assertEQ(union0, undefined);
+    assertEQ(union0, null);
 
     const union1 = ani_test.makeUnion(1);
     assertEQ(union1, 100);

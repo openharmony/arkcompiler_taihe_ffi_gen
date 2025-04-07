@@ -321,7 +321,7 @@ class STSCodeGenerator:
         sts_types = []
         for field in union.fields:
             if field.ty_ref is None:
-                sts_types.append("undefined")
+                sts_types.append("null")
                 continue
             ty_ani_info = TypeANIInfo.get(self.am, pkg, field.ty_ref.resolved_ty)
             sts_types.append(f"{ty_ani_info.sts_type_in(pkg, target)}")

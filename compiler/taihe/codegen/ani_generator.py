@@ -630,15 +630,15 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
     ):
         if self.ani_type.base == ANI_REF:
             ani_class = f"{ani_array_result}_cls"
-            ani_result = f"{ani_array_result}_ani_item"
+            ani_result = f"{ani_array_result}_item"
             i = f"{ani_array_result}_i"
             target.write(
                 f"{' ' * offset}ani_array_ref {ani_array_result};\n"
                 f"{' ' * offset}ani_class {ani_class};\n"
                 f"{' ' * offset}{env}->FindClass(\"{self.type_desc}\", &{ani_class});\n"
-                f"{' ' * offset}ani_ref undefined;\n"
-                f"{' ' * offset}{env}->GetUndefined(&undefined);\n"
-                f"{' ' * offset}{env}->Array_New_Ref({ani_class}, {size}, undefined, &{ani_array_result});\n"
+                f"{' ' * offset}ani_ref ani_undefined;\n"
+                f"{' ' * offset}{env}->GetUndefined(&ani_undefined);\n"
+                f"{' ' * offset}{env}->Array_New_Ref({ani_class}, {size}, ani_undefined, &{ani_array_result});\n"
                 f"{' ' * offset}for (size_t {i} = 0; {i} < {size}; {i}++) {{\n"
             )
             self.into_ani(
@@ -978,7 +978,7 @@ class OpaqueTypeANIInfo(
         self.type_desc = "Lstd/core/Object;"
 
     def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
-        return "NullishType"
+        return "Object"
 
     @override
     def from_ani(
@@ -2265,12 +2265,7 @@ class ANICodeGenerator:
         union_ani_impl_target.write(
             f"inline {union_cpp_info.as_owner} {union_ani_info.from_ani_func_name}(ani_env* env, ani_ref ani_value) {{\n"
         )
-        # `Reference_IsUndefined` should be called before `Object_InstanceOf`
-        sts_final_fields = sorted(
-            union_ani_info.sts_final_fields,
-            key=lambda parts: parts[-1].ty_ref is not None,
-        )
-        for parts in sts_final_fields:
+        for parts in union_ani_info.sts_final_fields:
             final = parts[-1]
             static_tags = []
             for part in parts:
@@ -2286,7 +2281,7 @@ class ANICodeGenerator:
             if final.ty_ref is None:
                 union_ani_impl_target.write(
                     f"    ani_boolean {is_field};\n"
-                    f"    env->Reference_IsUndefined(ani_value, &{is_field});\n"
+                    f"    env->Reference_IsNull(ani_value, &{is_field});\n"
                     f"    if ({is_field}) {{\n"
                     f"        return {union_cpp_info.full_name}({static_tags_str});\n"
                     f"    }}\n"
@@ -2333,7 +2328,7 @@ class ANICodeGenerator:
                 f"    case {union_cpp_info.full_name}::tag_t::{field.name}: {{\n"
             )
             if field.ty_ref is None:
-                union_ani_impl_target.write(f"        env->GetUndefined(&ani_value);\n")
+                union_ani_impl_target.write(f"        env->GetNull(&ani_value);\n")
             else:
                 ani_result_spec = f"ani_field_{field.name}"
                 type_ani_info = TypeANIInfo.get(
