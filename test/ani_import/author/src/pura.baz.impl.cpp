@@ -1,18 +1,20 @@
+#include "pura.baz.proj.hpp"
 #include "pura.baz.impl.hpp"
-
-#include "mate.foo.FooType.proj.1.hpp"
-#include "pura.baz.BazType.proj.1.hpp"
+#include "taihe/runtime.hpp"
 #include "stdexcept"
-// Please delete <stdexcept> include when you implement
+
 using namespace taihe;
+using namespace pura::baz;
 
 namespace {
+// To be implemented.
+
 void testFoo(::mate::foo::FooType const& foo) {
-  throw std::runtime_error("Function testFoo Not implemented");
+    TH_THROW(std::runtime_error, "testFoo not implemented");
 }
 
-void testBaz(::pura::baz::BazType const& baz) {
-  throw std::runtime_error("Function testBaz Not implemented");
+void testBaz(BazType const& baz) {
+    TH_THROW(std::runtime_error, "testBaz not implemented");
 }
 }  // namespace
 

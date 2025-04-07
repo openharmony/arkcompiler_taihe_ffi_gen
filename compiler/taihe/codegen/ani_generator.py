@@ -194,8 +194,6 @@ class PackageANIInfo(AbstractAnalysis[PackageDecl]):
             self.module = p.name
             self.sts_ns_parts = []
 
-        self.imported_mod_name = "_" + "_".join(self.module.split("."))
-
         self.ani_path = "/".join(self.module.split(".") + self.sts_ns_parts)
         self.impl_desc = f"L{self.ani_path};"
 
@@ -220,8 +218,10 @@ class PackageANIInfo(AbstractAnalysis[PackageDecl]):
             else:
                 relative_name = ".".join([*self_sts_ns_parts, sts_name])
                 return relative_name
-        target.imports([(self.module, self.imported_mod_name)])
-        relative_name = ".".join([self.imported_mod_name, *self.sts_ns_parts, sts_name])
+        # name mangling
+        module_imported = "_" + "".join(c if c.isalnum() else "_" for c in self.module)
+        target.imports({module_imported: self.module})
+        relative_name = ".".join([module_imported, *self.sts_ns_parts, sts_name])
         return relative_name
 
 

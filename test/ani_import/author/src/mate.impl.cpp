@@ -1,13 +1,16 @@
+#include "mate.proj.hpp"
 #include "mate.impl.hpp"
-
-#include "mate.bar.BarType.proj.1.hpp"
+#include "taihe/runtime.hpp"
 #include "stdexcept"
-// Please delete <stdexcept> include when you implement
+
 using namespace taihe;
+using namespace mate;
 
 namespace {
-void testBar(::mate::bar::BarType const& bar) {
-  throw std::runtime_error("Function testBar Not implemented");
+// To be implemented.
+
+void testBar(bar::BarType const& bar) {
+    TH_THROW(std::runtime_error, "testBar not implemented");
 }
 }  // namespace
 
