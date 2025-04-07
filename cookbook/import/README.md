@@ -118,8 +118,8 @@ INotificationService makeNotificationService() {
 此处有一个需要注意的地方在于在C++侧调用taihe interface的方法，当需要调用taihe interface的方法时，在c++侧调用方法时，需要使用->的方式调用函数，而非.的方式
 
 ```C++
-a.getEmail(); // false !
-a->getEmail(); // success !
+a.getEmail(); // false!
+a->getEmail(); // success!
 ```
 
 
