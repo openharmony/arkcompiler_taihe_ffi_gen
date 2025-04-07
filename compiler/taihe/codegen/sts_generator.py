@@ -70,10 +70,14 @@ class STSCodeGenerator:
 
     def gen_namespace(self, ns: Namespace, target: STSOutputBuffer):
         for child_ns_name, child_ns in ns.children.items():
-            target.write(f"export namespace {child_ns_name} {{\n")
+            target.writeln(
+                f"export namespace {child_ns_name} {{",
+            )
             with target.indent_manager.offset(4):
                 self.gen_namespace(child_ns, target)
-            target.write(f"}}\n")
+            target.writeln(
+                f"}}",
+            )
         for pkg in ns.packages:
             self.gen_package(pkg, target)
 
@@ -124,7 +128,7 @@ class STSCodeGenerator:
         # TODO: hack inject
         pkg_ani_info = PackageANIInfo.get(self.am, pkg)
         for injected in pkg_ani_info.injected_codes:
-            target.write(injected)
+            target.writeln(injected)
 
         self.gen_native_funcs(pkg, pkg.functions, target)
         ctors_map: dict[str, list[GlobFuncDecl]] = {}
@@ -173,8 +177,8 @@ class STSCodeGenerator:
                 sts_return_ty_name = type_ani_info.sts_type_in(pkg, target)
             else:
                 sts_return_ty_name = "void"
-            target.write(
-                f"native function {func_ani_info.sts_native_name}({sts_native_params_str}): {sts_return_ty_name};\n"
+            target.writeln(
+                f"native function {func_ani_info.sts_native_name}({sts_native_params_str}): {sts_return_ty_name};",
             )
 
     def gen_global_funcs(
@@ -206,18 +210,20 @@ class STSCodeGenerator:
                 return_ty_str = type_ani_info.sts_type_in(pkg, target)
             else:
                 return_ty_str = "void"
-            target.write(
-                f"export function {func_name}({sts_real_params_str}): {return_ty_str} {{\n"
-                f"    switch(type) {{"
+            target.writeln(
+                f"export function {func_name}({sts_real_params_str}): {return_ty_str} {{",
+                f"    switch(type) {{",
             )
             for type_name, func in func_list:
                 func_ani_info = GlobFuncANIInfo.get(self.am, func)
                 sts_native_call = func_ani_info.call_native_with(sts_real_args)
-                target.write(f'        case "{type_name}": return {sts_native_call};\n')
-            target.write(
-                f"        default: throw new Error(`Unknown type: ${{type}}`);\n"
-                f"    }}\n"
-                f"}}\n"
+                target.writeln(
+                    f'        case "{type_name}": return {sts_native_call};\n'
+                )
+            target.writeln(
+                f"        default: throw new Error(`Unknown type: ${{type}}`);",
+                f"    }}",
+                f"}}",
             )
         # other
         for func in funcs:
@@ -241,10 +247,10 @@ class STSCodeGenerator:
                 sts_return_ty_name = "void"
             # real
             if func_ani_info.sts_func_name is not None:
-                target.write(
-                    f"export function {func_ani_info.sts_func_name}({sts_real_params_str}): {sts_return_ty_name} {{\n"
-                    f"    return {sts_native_call};\n"
-                    f"}}\n"
+                target.writeln(
+                    f"export function {func_ani_info.sts_func_name}({sts_real_params_str}): {sts_return_ty_name} {{",
+                    f"    return {sts_native_call};",
+                    f"}}",
                 )
                 # promise
                 if (promise_func_name := func_ani_info.sts_promise_name) is not None:
@@ -252,18 +258,18 @@ class STSCodeGenerator:
                         resolve_args = f"ret as {sts_return_ty_name}"
                     else:
                         resolve_args = "undefined"
-                    target.write(
-                        f"export function {promise_func_name}({sts_real_params_str}): Promise<{sts_return_ty_name}> {{\n"
-                        f"    return new Promise<{sts_return_ty_name}>((resolve, reject): void => {{\n"
-                        f"        taskpool.execute((): {sts_return_ty_name} => {{ return {sts_native_call}; }})\n"
-                        f"        .then((ret: NullishType): void => {{\n"
-                        f"            resolve({resolve_args});\n"
-                        f"        }})\n"
-                        f"        .catch((ret: NullishType): void => {{\n"
-                        f"            reject(ret as Error);\n"
-                        f"        }});\n"
-                        f"    }});\n"
-                        f"}}\n"
+                    target.writeln(
+                        f"export function {promise_func_name}({sts_real_params_str}): Promise<{sts_return_ty_name}> {{",
+                        f"    return new Promise<{sts_return_ty_name}>((resolve, reject): void => {{",
+                        f"        taskpool.execute((): {sts_return_ty_name} => {{ return {sts_native_call}; }})",
+                        f"        .then((ret: NullishType): void => {{",
+                        f"            resolve({resolve_args});",
+                        f"        }})",
+                        f"        .catch((ret: NullishType): void => {{",
+                        f"            reject(ret as Error);",
+                        f"        }});",
+                        f"    }});",
+                        f"}}",
                     )
                 # async
                 if (async_func_name := func_ani_info.sts_async_name) is not None:
@@ -275,16 +281,16 @@ class STSCodeGenerator:
                         then_args = "new Error()"
                     sts_real_params_with_cb = [*sts_real_params, callback]
                     sts_real_params_with_cb_str = ", ".join(sts_real_params_with_cb)
-                    target.write(
-                        f"export function {async_func_name}({sts_real_params_with_cb_str}): void {{\n"
-                        f"    taskpool.execute((): {sts_return_ty_name} => {{ return {sts_native_call}; }})\n"
-                        f"    .then((ret: NullishType): void => {{\n"
-                        f"        callback({then_args});\n"
-                        f"    }})\n"
-                        f"    .catch((ret: NullishType): void => {{\n"
-                        f"        callback(ret as Error);\n"
-                        f"    }});\n"
-                        f"}}\n"
+                    target.writeln(
+                        f"export function {async_func_name}({sts_real_params_with_cb_str}): void {{",
+                        f"    taskpool.execute((): {sts_return_ty_name} => {{ return {sts_native_call}; }})",
+                        f"    .then((ret: NullishType): void => {{",
+                        f"        callback({then_args});",
+                        f"    }})",
+                        f"    .catch((ret: NullishType): void => {{",
+                        f"        callback(ret as Error);",
+                        f"    }});",
+                        f"}}",
                     )
 
     def gen_enum(
@@ -298,18 +304,26 @@ class STSCodeGenerator:
             assert enum.ty_ref
             type_ani_info = TypeANIInfo.get(self.am, pkg, enum.ty_ref.resolved_ty)
             for item in enum.items:
-                target.write(
-                    f"export const {item.name}: {type_ani_info.sts_type_in(pkg, target)} = {dumps(item.value)};\n"
+                target.writeln(
+                    f"export const {item.name}: {type_ani_info.sts_type_in(pkg, target)} = {dumps(item.value)};",
                 )
             return
-        target.write(f"export enum {enum_ani_info.sts_type_name} {{\n")
+        target.writeln(
+            f"export enum {enum_ani_info.sts_type_name} {{",
+        )
         with target.indent_manager.offset(4):
             for item in enum.items:
                 if item.value is None:
-                    target.write(f"{item.name},\n")
+                    target.writeln(
+                        f"{item.name},",
+                    )
                 else:
-                    target.write(f"{item.name} = {dumps(item.value)},\n")
-        target.write(f"}}\n")
+                    target.writeln(
+                        f"{item.name} = {dumps(item.value)},",
+                    )
+        target.writeln(
+            f"}}",
+        )
 
     def gen_union(
         self,
@@ -326,7 +340,9 @@ class STSCodeGenerator:
             ty_ani_info = TypeANIInfo.get(self.am, pkg, field.ty_ref.resolved_ty)
             sts_types.append(f"{ty_ani_info.sts_type_in(pkg, target)}")
         sts_types_str = " | ".join(sts_types)
-        target.write(f"export type {union_ani_info.sts_type_name} = {sts_types_str};\n")
+        target.writeln(
+            f"export type {union_ani_info.sts_type_name} = {sts_types_str};",
+        )
 
     def gen_struct_interface(
         self,
@@ -345,14 +361,18 @@ class STSCodeGenerator:
             parent_ani_info = StructANIInfo.get(self.am, ty.ty_decl)
             parents.append(parent_ani_info.sts_type_name)
         extends_str = " extends " + ", ".join(parents) if parents else ""
-        target.write(
-            f"export interface {struct_ani_info.sts_type_name}{extends_str} {{\n"
+        target.writeln(
+            f"export interface {struct_ani_info.sts_type_name}{extends_str} {{",
         )
         with target.indent_manager.offset(4):
             for field in struct_ani_info.sts_fields:
                 ty_ani_info = TypeANIInfo.get(self.am, pkg, field.ty_ref.resolved_ty)
-                target.write(f"{field.name}: {ty_ani_info.sts_type_in(pkg, target)};\n")
-        target.write(f"}}\n")
+                target.writeln(
+                    f"{field.name}: {ty_ani_info.sts_type_in(pkg, target)};",
+                )
+        target.writeln(
+            f"}}",
+        )
 
     def gen_struct_class(
         self,
@@ -369,31 +389,43 @@ class STSCodeGenerator:
                 parent_ani_info = StructANIInfo.get(self.am, ty.ty_decl)
                 parents.append(parent_ani_info.sts_type_name)
             implements_str = " implements " + ", ".join(parents) if parents else ""
-            target.write(
-                f"export class {struct_ani_info.sts_impl_name}{implements_str} {{\n"
+            target.writeln(
+                f"export class {struct_ani_info.sts_impl_name}{implements_str} {{",
             )
         else:
-            target.write(
-                f"class {struct_ani_info.sts_impl_name} implements {struct_ani_info.sts_type_name} {{\n"
+            target.writeln(
+                f"class {struct_ani_info.sts_impl_name} implements {struct_ani_info.sts_type_name} {{",
             )
         with target.indent_manager.offset(4):
             for parts in struct_ani_info.sts_final_fields:
                 final = parts[-1]
                 ty_ani_info = TypeANIInfo.get(self.am, pkg, final.ty_ref.resolved_ty)
-                target.write(f"{final.name}: {ty_ani_info.sts_type_in(pkg, target)};\n")
-            target.write(f"constructor(\n")
+                target.writeln(
+                    f"{final.name}: {ty_ani_info.sts_type_in(pkg, target)};",
+                )
+            target.writeln(
+                f"constructor(",
+            )
             for parts in struct_ani_info.sts_final_fields:
                 final = parts[-1]
                 ty_ani_info = TypeANIInfo.get(self.am, pkg, final.ty_ref.resolved_ty)
-                target.write(
-                    f"    {final.name}: {ty_ani_info.sts_type_in(pkg, target)},\n"
+                target.writeln(
+                    f"    {final.name}: {ty_ani_info.sts_type_in(pkg, target)},",
                 )
-            target.write(f") {{\n")
+            target.writeln(
+                f") {{",
+            )
             for parts in struct_ani_info.sts_final_fields:
                 final = parts[-1]
-                target.write(f"    this.{final.name} = {final.name};\n")
-            target.write(f"}}\n")
-        target.write(f"}}\n")
+                target.writeln(
+                    f"    this.{final.name} = {final.name};",
+                )
+            target.writeln(
+                f"}}",
+            )
+        target.writeln(
+            f"}}",
+        )
 
     def gen_iface_interface(
         self,
@@ -412,15 +444,17 @@ class STSCodeGenerator:
             parent_ani_info = IfaceANIInfo.get(self.am, ty.ty_decl)
             parents.append(parent_ani_info.sts_type_name)
         extends_str = " extends " + ", ".join(parents) if parents else ""
-        target.write(
-            f"export interface {iface_ani_info.sts_type_name}{extends_str} {{\n"
+        target.writeln(
+            f"export interface {iface_ani_info.sts_type_name}{extends_str} {{",
         )
         with target.indent_manager.offset(4):
             # TODO: hack inject
             for injected in iface_ani_info.iface_injected_codes:
-                target.write(injected)
+                target.writeln(injected)
             self.gen_iface_methods_decl(pkg, iface.methods, target)
-        target.write(f"}}\n")
+        target.writeln(
+            f"}}",
+        )
 
     def gen_iface_methods_decl(
         self,
@@ -449,7 +483,9 @@ class STSCodeGenerator:
             else:
                 return_ty_str = "void"
             sts_real_params_str = ", ".join(sts_real_params)
-            target.write(f"{method_name}({sts_real_params_str}): {return_ty_str};\n")
+            target.writeln(
+                f"{method_name}({sts_real_params_str}): {return_ty_str};",
+            )
         # other
         for method in methods:
             method_ani_info = IfaceMethodANIInfo.get(self.am, method)
@@ -469,13 +505,13 @@ class STSCodeGenerator:
                 sts_return_ty_name = "void"
             # real
             if real_method := method_ani_info.sts_method_name:
-                target.write(
-                    f"{real_method}({sts_real_params_str}): {sts_return_ty_name};\n"
+                target.writeln(
+                    f"{real_method}({sts_real_params_str}): {sts_return_ty_name};",
                 )
                 # promise
                 if (promise_func_name := method_ani_info.sts_promise_name) is not None:
-                    target.write(
-                        f"{promise_func_name}({sts_real_params_str}): Promise<{sts_return_ty_name}>;\n"
+                    target.writeln(
+                        f"{promise_func_name}({sts_real_params_str}): Promise<{sts_return_ty_name}>;",
                     )
                 # async
                 if (async_func_name := method_ani_info.sts_async_name) is not None:
@@ -485,17 +521,19 @@ class STSCodeGenerator:
                         callback = "callback: (err: Error) => void"
                     sts_real_params_with_cb = [*sts_real_params, callback]
                     sts_real_params_with_cb_str = ", ".join(sts_real_params_with_cb)
-                    target.write(
-                        f"{async_func_name}({sts_real_params_with_cb_str}): void;\n"
+                    target.writeln(
+                        f"{async_func_name}({sts_real_params_with_cb_str}): void;",
                     )
             # getter
             if get_name := method_ani_info.get_name:
-                target.write(
-                    f"get {get_name}({sts_real_params_str}): {sts_return_ty_name};\n"
+                target.writeln(
+                    f"get {get_name}({sts_real_params_str}): {sts_return_ty_name};",
                 )
             # setter
             if set_name := method_ani_info.set_name:
-                target.write(f"set {set_name}({sts_real_params_str});\n")
+                target.writeln(
+                    f"set {set_name}({sts_real_params_str});",
+                )
 
     def gen_iface_class(
         self,
@@ -514,24 +552,24 @@ class STSCodeGenerator:
                 parent_ani_info = IfaceANIInfo.get(self.am, ty.ty_decl)
                 parents.append(parent_ani_info.sts_type_name)
             implements_str = " implements " + ", ".join(parents) if parents else ""
-            target.write(
-                f"export class {iface_ani_info.sts_impl_name}{implements_str} {{\n"
+            target.writeln(
+                f"export class {iface_ani_info.sts_impl_name}{implements_str} {{",
             )
         else:
-            target.write(
-                f"class {iface_ani_info.sts_impl_name} implements {iface_ani_info.sts_type_name} {{\n"
+            target.writeln(
+                f"class {iface_ani_info.sts_impl_name} implements {iface_ani_info.sts_type_name} {{",
             )
         with target.indent_manager.offset(4):
             # TODO: hack inject
             for injected in iface_ani_info.class_injected_codes:
-                target.write(injected)
-            target.write(
-                f"private _vtbl_ptr: long;\n"
-                f"private _data_ptr: long;\n"
-                f"private constructor(_vtbl_ptr: long, _data_ptr: long) {{\n"
-                f"    this._vtbl_ptr = _vtbl_ptr;\n"
-                f"    this._data_ptr = _data_ptr;\n"
-                f"}}\n"
+                target.writeln(injected)
+            target.writeln(
+                f"private _vtbl_ptr: long;",
+                f"private _data_ptr: long;",
+                f"private constructor(_vtbl_ptr: long, _data_ptr: long) {{",
+                f"    this._vtbl_ptr = _vtbl_ptr;",
+                f"    this._data_ptr = _data_ptr;",
+                f"}}",
             )
             ctors = ctors_map.get(iface.name, [])
             for tor in ctors:
@@ -548,19 +586,21 @@ class STSCodeGenerator:
                     sts_real_args.append(sts_real_param.name)
                 sts_real_params_str = ", ".join(sts_real_params)
                 sts_native_call = ctor_ani_info.call_native_with(sts_real_args)
-                target.write(
-                    f"constructor({sts_real_params_str}) {{\n"
-                    f"    let temp = {sts_native_call} as {iface_ani_info.sts_impl_name};\n"
-                    f"    this._data_ptr = temp._data_ptr;\n"
-                    f"    this._vtbl_ptr = temp._vtbl_ptr;\n"
-                    f"}}\n"
+                target.writeln(
+                    f"constructor({sts_real_params_str}) {{",
+                    f"    let temp = {sts_native_call} as {iface_ani_info.sts_impl_name};",
+                    f"    this._data_ptr = temp._data_ptr;",
+                    f"    this._vtbl_ptr = temp._vtbl_ptr;",
+                    f"}}",
                 )
             self.gen_static_funcs(pkg, statics_map.get(iface.name, []), target)
             iface_abi_info = IfaceABIInfo.get(self.am, iface)
             for ancestor in iface_abi_info.ancestor_dict:
                 self.gen_native_methods(pkg, ancestor.methods, target)
                 self.gen_iface_methods(pkg, ancestor.methods, target)
-        target.write(f"}}\n")
+        target.writeln(
+            f"}}",
+        )
 
     def gen_static_funcs(
         self,
@@ -591,18 +631,20 @@ class STSCodeGenerator:
                 return_ty_str = type_ani_info.sts_type_in(pkg, target)
             else:
                 return_ty_str = "void"
-            target.write(
-                f"static {func_name}({sts_real_params_str}): {return_ty_str} {{\n"
-                f"    switch(type) {{"
+            target.writeln(
+                f"static {func_name}({sts_real_params_str}): {return_ty_str} {{",
+                f"    switch(type) {{",
             )
             for type_name, func in func_list:
                 func_ani_info = GlobFuncANIInfo.get(self.am, func)
                 sts_native_call = func_ani_info.call_native_with(sts_real_args)
-                target.write(f'        case "{type_name}": return {sts_native_call};\n')
-            target.write(
-                f"        default: throw new Error(`Unknown type: ${{type}}`);\n"
-                f"    }}\n"
-                f"}}\n"
+                target.writeln(
+                    f'        case "{type_name}": return {sts_native_call};\n'
+                )
+            target.writeln(
+                f"        default: throw new Error(`Unknown type: ${{type}}`);",
+                f"    }}",
+                f"}}",
             )
         # other
         for func in funcs:
@@ -626,10 +668,10 @@ class STSCodeGenerator:
                 sts_return_ty_name = "void"
             # real
             if func_ani_info.sts_func_name is not None:
-                target.write(
-                    f"static {func_ani_info.sts_func_name}({sts_real_params_str}): {sts_return_ty_name} {{\n"
-                    f"    return {sts_native_call};\n"
-                    f"}}\n"
+                target.writeln(
+                    f"static {func_ani_info.sts_func_name}({sts_real_params_str}): {sts_return_ty_name} {{",
+                    f"    return {sts_native_call};",
+                    f"}}",
                 )
                 # promise
                 if (promise_func_name := func_ani_info.sts_promise_name) is not None:
@@ -637,18 +679,18 @@ class STSCodeGenerator:
                         resolve_args = f"ret as {sts_return_ty_name}"
                     else:
                         resolve_args = "undefined"
-                    target.write(
-                        f"static {promise_func_name}({sts_real_params_str}): Promise<{sts_return_ty_name}> {{\n"
-                        f"    return new Promise<{sts_return_ty_name}>((resolve, reject): void => {{\n"
-                        f"        taskpool.execute((): {sts_return_ty_name} => {{ return {sts_native_call}; }})\n"
-                        f"        .then((ret: NullishType): void => {{\n"
-                        f"            resolve({resolve_args});\n"
-                        f"        }})\n"
-                        f"        .catch((ret: NullishType): void => {{\n"
-                        f"            reject(ret as Error);\n"
-                        f"        }});\n"
-                        f"    }});\n"
-                        f"}}\n"
+                    target.writeln(
+                        f"static {promise_func_name}({sts_real_params_str}): Promise<{sts_return_ty_name}> {{",
+                        f"    return new Promise<{sts_return_ty_name}>((resolve, reject): void => {{",
+                        f"        taskpool.execute((): {sts_return_ty_name} => {{ return {sts_native_call}; }})",
+                        f"        .then((ret: NullishType): void => {{",
+                        f"            resolve({resolve_args});",
+                        f"        }})",
+                        f"        .catch((ret: NullishType): void => {{",
+                        f"            reject(ret as Error);",
+                        f"        }});",
+                        f"    }});",
+                        f"}}",
                     )
                 # async
                 if (async_func_name := func_ani_info.sts_async_name) is not None:
@@ -660,30 +702,30 @@ class STSCodeGenerator:
                         then_args = "new Error()"
                     sts_real_params_with_cb = [*sts_real_params, callback]
                     sts_real_params_with_cb_str = ", ".join(sts_real_params_with_cb)
-                    target.write(
-                        f"static {async_func_name}({sts_real_params_with_cb_str}): void {{\n"
-                        f"    taskpool.execute((): {sts_return_ty_name} => {{ return {sts_native_call}; }})\n"
-                        f"    .then((ret: NullishType): void => {{\n"
-                        f"        callback({then_args});\n"
-                        f"    }})\n"
-                        f"    .catch((ret: NullishType): void => {{\n"
-                        f"        callback(ret as Error);\n"
-                        f"    }});\n"
-                        f"}}\n"
+                    target.writeln(
+                        f"static {async_func_name}({sts_real_params_with_cb_str}): void {{",
+                        f"    taskpool.execute((): {sts_return_ty_name} => {{ return {sts_native_call}; }})",
+                        f"    .then((ret: NullishType): void => {{",
+                        f"        callback({then_args});",
+                        f"    }})",
+                        f"    .catch((ret: NullishType): void => {{",
+                        f"        callback(ret as Error);",
+                        f"    }});",
+                        f"}}",
                     )
             # getter
             if get_name := func_ani_info.get_name:
-                target.write(
-                    f"static get {get_name}({sts_real_params_str}): {sts_return_ty_name} {{\n"
-                    f"    return {sts_native_call};\n"
-                    f"}}\n"
+                target.writeln(
+                    f"static get {get_name}({sts_real_params_str}): {sts_return_ty_name} {{",
+                    f"    return {sts_native_call};",
+                    f"}}",
                 )
             # setter
             if set_name := func_ani_info.set_name:
-                target.write(
-                    f"static set {set_name}({sts_real_params_str}) {{\n"
-                    f"    return {sts_native_call};\n"
-                    f"}}\n"
+                target.writeln(
+                    f"static set {set_name}({sts_real_params_str}) {{",
+                    f"    return {sts_native_call};",
+                    f"}}",
                 )
 
     def gen_native_methods(
@@ -707,8 +749,8 @@ class STSCodeGenerator:
                 sts_return_ty_name = type_ani_info.sts_type_in(pkg, target)
             else:
                 sts_return_ty_name = "void"
-            target.write(
-                f"native {method_ani_info.sts_native_name}({sts_native_params_str}): {sts_return_ty_name};\n"
+            target.writeln(
+                f"native {method_ani_info.sts_native_name}({sts_native_params_str}): {sts_return_ty_name};",
             )
 
     def gen_iface_methods(
@@ -740,20 +782,22 @@ class STSCodeGenerator:
                 return_ty_str = type_ani_info.sts_type_in(pkg, target)
             else:
                 return_ty_str = "void"
-            target.write(
-                f"{method_name}({sts_real_params_str}): {return_ty_str} {{\n"
-                f"    switch(type) {{"
+            target.writeln(
+                f"{method_name}({sts_real_params_str}): {return_ty_str} {{",
+                f"    switch(type) {{",
             )
             for type_name, method in method_list:
                 method_ani_info = IfaceMethodANIInfo.get(self.am, method)
                 sts_native_call = method_ani_info.call_native_with(
                     "this", sts_real_args
                 )
-                target.write(f'        case "{type_name}": return {sts_native_call};\n')
-            target.write(
-                f"        default: throw new Error(`Unknown type: ${{type}}`);\n"
-                f"    }}\n"
-                f"}}\n"
+                target.writeln(
+                    f'        case "{type_name}": return {sts_native_call};\n'
+                )
+            target.writeln(
+                f"        default: throw new Error(`Unknown type: ${{type}}`);",
+                f"    }}",
+                f"}}",
             )
         # other
         for method in methods:
@@ -777,10 +821,10 @@ class STSCodeGenerator:
                 sts_return_ty_name = "void"
             # real
             if real_method := method_ani_info.sts_method_name:
-                target.write(
-                    f"{real_method}({sts_real_params_str}): {sts_return_ty_name} {{\n"
-                    f"    return {sts_native_call};\n"
-                    f"}}\n"
+                target.writeln(
+                    f"{real_method}({sts_real_params_str}): {sts_return_ty_name} {{",
+                    f"    return {sts_native_call};",
+                    f"}}",
                 )
                 # promise
                 if (promise_func_name := method_ani_info.sts_promise_name) is not None:
@@ -788,18 +832,18 @@ class STSCodeGenerator:
                         resolve_args = f"ret as {sts_return_ty_name}"
                     else:
                         resolve_args = "undefined"
-                    target.write(
-                        f"{promise_func_name}({sts_real_params_str}): Promise<{sts_return_ty_name}> {{\n"
-                        f"    return new Promise<{sts_return_ty_name}>((resolve, reject): void => {{\n"
-                        f"        taskpool.execute((): {sts_return_ty_name} => {{ return {sts_native_call}; }})\n"
-                        f"        .then((ret: NullishType): void => {{\n"
-                        f"            resolve({resolve_args});\n"
-                        f"        }})\n"
-                        f"        .catch((ret: NullishType): void => {{\n"
-                        f"            reject(ret as Error);\n"
-                        f"        }});\n"
-                        f"    }});\n"
-                        f"}}\n"
+                    target.writeln(
+                        f"{promise_func_name}({sts_real_params_str}): Promise<{sts_return_ty_name}> {{",
+                        f"    return new Promise<{sts_return_ty_name}>((resolve, reject): void => {{",
+                        f"        taskpool.execute((): {sts_return_ty_name} => {{ return {sts_native_call}; }})",
+                        f"        .then((ret: NullishType): void => {{",
+                        f"            resolve({resolve_args});",
+                        f"        }})",
+                        f"        .catch((ret: NullishType): void => {{",
+                        f"            reject(ret as Error);",
+                        f"        }});",
+                        f"    }});",
+                        f"}}",
                     )
                 # async
                 if (async_func_name := method_ani_info.sts_async_name) is not None:
@@ -811,28 +855,28 @@ class STSCodeGenerator:
                         then_args = "new Error()"
                     sts_real_params_with_cb = [*sts_real_params, callback]
                     sts_real_params_with_cb_str = ", ".join(sts_real_params_with_cb)
-                    target.write(
-                        f"{async_func_name}({sts_real_params_with_cb_str}): void {{\n"
-                        f"    taskpool.execute((): {sts_return_ty_name} => {{ return {sts_native_call}; }})\n"
-                        f"    .then((ret: NullishType): void => {{\n"
-                        f"        callback({then_args});\n"
-                        f"    }})\n"
-                        f"    .catch((ret: NullishType): void => {{\n"
-                        f"        callback(ret as Error);\n"
-                        f"    }});\n"
-                        f"}}\n"
+                    target.writeln(
+                        f"{async_func_name}({sts_real_params_with_cb_str}): void {{",
+                        f"    taskpool.execute((): {sts_return_ty_name} => {{ return {sts_native_call}; }})",
+                        f"    .then((ret: NullishType): void => {{",
+                        f"        callback({then_args});",
+                        f"    }})",
+                        f"    .catch((ret: NullishType): void => {{",
+                        f"        callback(ret as Error);",
+                        f"    }});",
+                        f"}}",
                     )
             # getter
             if get_name := method_ani_info.get_name:
-                target.write(
-                    f"get {get_name}({sts_real_params_str}): {sts_return_ty_name} {{\n"
-                    f"    return {sts_native_call};\n"
-                    f"}}\n"
+                target.writeln(
+                    f"get {get_name}({sts_real_params_str}): {sts_return_ty_name} {{",
+                    f"    return {sts_native_call};",
+                    f"}}",
                 )
             # setter
             if set_name := method_ani_info.set_name:
-                target.write(
-                    f"set {set_name}({sts_real_params_str}) {{\n"
-                    f"    return {sts_native_call};\n"
-                    f"}}\n"
+                target.writeln(
+                    f"set {set_name}({sts_real_params_str}) {{",
+                    f"    return {sts_native_call};",
+                    f"}}",
                 )
