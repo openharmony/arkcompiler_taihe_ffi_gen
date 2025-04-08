@@ -1,0 +1,1 @@
+function getUserSetting(settings: Map<String, String>, key: String): Optional<String>;

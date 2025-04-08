@@ -1,0 +1,95 @@
+# optional
+
+本章节介绍 `Optional` 与 `Map`
+
+taihe Optional 在 ets 中对应 | undefined , 如 optional\<String\> 对应 string | undefined
+
+taihe Map 在 ets 中对应 Record
+
+下面以 用户设置 场景为例进行介绍
+
+## 第一步：编写接口原型
+
+**File: `idl/userSettings.taihe`**
+```taihe
+function getUserSetting(settings: Map<String, String>, key: String): Optional<String>;
+```
+
+该函数用于根据 key 查找用户设置，返回一个 Optional\<String\> 类型
+
+## 第二步: 完成 C++ 实现
+
+**File: `author/src/userSettings.impl.cpp`**
+```C++
+optional<string> getUserSetting(map_view<string, string> settings, string_view key) {
+    auto iter = settings.find(key);
+    if (iter == nullptr) {
+        return optional<string>(std::nullopt);
+    }
+    return optional<string>(std::in_place_t{}, *iter);
+}
+```
+
+这里对 C++ 实现中的 optional 与 map 进行介绍
+
+1. `taihe::optional`
+
+- 创建空 optional
+
+    创建空 opional 的方法如下，其中 T 改为对应类型
+    ```C++
+    optional<T>(std::nullopt);
+    ```
+
+- 创建非空 optional
+
+    创建非空 optional 的方法如下，其中 T 改为对应类型，val 使用对应类型的变量
+    ```C++
+    optional<T>(std::in_place_t{}, val);
+    ```
+
+2. `taihe::map`
+
+- `find()`
+
+    使用 `find()` 函数可以查找 key 对应的 value，查找成功时，返回 value 的指针，查找失败时，返回 `nullptr`
+
+- 遍历
+
+    可以使用如下方法对 map 进行遍历
+
+    ```C++
+    for (auto it = settings.begin(); it != settings.end(); ++it) {
+        auto const& [key, value] = *it;
+        std::cout << "Key: " << key << ", Value: " << value << std::endl;
+    }
+
+    for (auto const& [key, value] : settings) {
+        std::cout << "Key: " << key << ", Value: " << value << std::endl;
+    }
+    ```
+
+另外需要注意的时，生成 temp 文件夹下，使用了 `using namespace userSettings;`，如果直接编译会编译不通过，因为该样例没有任何对象，所以没有 include 这个命名空间，如果在 taihe 文件没有使用对象的场景下，需要手动将该语句删除
+
+希望读者明白生成的 temp 文件夹下的文件是用于作为参考，而非让使用者直接作为模板套用
+
+## 第三步：在 ets 侧使用
+```typescript
+// 初始化Record
+let Settings: Record<string, string> = {
+    "theme": "dark",
+    "fontSize": "14px",
+    "language": "en-US",
+};
+// 查找设置
+let setting1 = userSettings.getUserSetting(Settings, "theme");
+let setting2 = userSettings.getUserSetting(Settings, "autosave");
+console.log("theme: " + setting1);
+console.log("autosave: " + setting2);
+```
+
+Output：
+```sh
+theme: dark
+autosave: undefined
+```
