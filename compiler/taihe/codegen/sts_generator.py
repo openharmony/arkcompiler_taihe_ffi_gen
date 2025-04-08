@@ -130,6 +130,8 @@ class STSCodeGenerator:
         for injected in pkg_ani_info.injected_codes:
             target.writeln(injected)
 
+        # TODO: finalizer
+        self.gen_finalizer(target)
         self.gen_native_funcs(pkg, pkg.functions, target)
         ctors_map: dict[str, list[GlobFuncDecl]] = {}
         statics_map: dict[str, list[GlobFuncDecl]] = {}
@@ -155,6 +157,15 @@ class STSCodeGenerator:
             self.gen_iface_interface(pkg, iface, target)
         for iface in pkg.interfaces:
             self.gen_iface_class(pkg, iface, target, statics_map, ctors_map)
+
+    def gen_finalizer(
+        self,
+        target: STSOutputBuffer,
+    ):
+        target.writeln(
+            f"export native function localFinalizer(data_ptr: long): void;",
+            f"export const localDestroyRegister = new FinalizationRegistry<long>(localFinalizer);",
+        )
 
     def gen_native_funcs(
         self,
@@ -218,7 +229,7 @@ class STSCodeGenerator:
                 func_ani_info = GlobFuncANIInfo.get(self.am, func)
                 sts_native_call = func_ani_info.call_native_with(sts_real_args)
                 target.writeln(
-                    f'        case "{type_name}": return {sts_native_call};\n'
+                    f'        case "{type_name}": return {sts_native_call};',
                 )
             target.writeln(
                 f"        default: throw new Error(`Unknown type: ${{type}}`);",
@@ -569,6 +580,7 @@ class STSCodeGenerator:
                 f"private constructor(_vtbl_ptr: long, _data_ptr: long) {{",
                 f"    this._vtbl_ptr = _vtbl_ptr;",
                 f"    this._data_ptr = _data_ptr;",
+                f"    localDestroyRegister.register(this, this._data_ptr)",
                 f"}}",
             )
             ctors = ctors_map.get(iface.name, [])
@@ -639,7 +651,7 @@ class STSCodeGenerator:
                 func_ani_info = GlobFuncANIInfo.get(self.am, func)
                 sts_native_call = func_ani_info.call_native_with(sts_real_args)
                 target.writeln(
-                    f'        case "{type_name}": return {sts_native_call};\n'
+                    f'        case "{type_name}": return {sts_native_call};',
                 )
             target.writeln(
                 f"        default: throw new Error(`Unknown type: ${{type}}`);",
@@ -792,7 +804,7 @@ class STSCodeGenerator:
                     "this", sts_real_args
                 )
                 target.writeln(
-                    f'        case "{type_name}": return {sts_native_call};\n'
+                    f'        case "{type_name}": return {sts_native_call};',
                 )
             target.writeln(
                 f"        default: throw new Error(`Unknown type: ${{type}}`);",
