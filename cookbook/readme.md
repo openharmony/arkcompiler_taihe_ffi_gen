@@ -8,6 +8,8 @@
 
 ### [interface](./interface/readme.md)
 
+### [enum 与 union](./enum_union/README.md)
+
 ### [external object](./external_obj/readme.md)
 
 ### [arraybuffer](./arrbuffer/readme.md)

@@ -1,0 +1,20 @@
+enum MessageType {
+    Text,
+    Number
+}
+
+union MessageData {
+    textVal: String;
+    numVal: i64;
+}
+
+struct Message {
+    type: MessageType;
+    data: MessageData;
+}
+
+function createTextMessage(str: String): Message;
+
+function createNumberMessage(num: i64): Message;
+
+function processMessage(msg: Message): void;
