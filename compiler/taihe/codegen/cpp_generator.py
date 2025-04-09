@@ -545,12 +545,12 @@ class CppHeadersGenerator:
     ):
         if enum.ty_ref is None:
             return
-        assert enum.ty_ref.resolved_ty
-        if enum.ty_ref.resolved_ty == STRING:
+        assert enum.ty_ref.maybe_resolved_ty
+        if enum.ty_ref.maybe_resolved_ty == STRING:
             as_owner = "char const*"
         else:
             # pyre-ignore
-            ty_cpp_info = TypeCppInfo.get(self.am, enum.ty_ref.resolved_ty)
+            ty_cpp_info = TypeCppInfo.get(self.am, enum.ty_ref.maybe_resolved_ty)
             as_owner = ty_cpp_info.as_owner
         enum_cpp_target.writeln(
             f"    static constexpr {as_owner} table[] = {{",
@@ -707,7 +707,7 @@ class CppHeadersGenerator:
         for field in union.fields:
             if field.ty_ref is None:
                 continue
-            type_cpp_info = TypeCppInfo.get(self.am, field.ty_ref.resolved_ty)
+            type_cpp_info = TypeCppInfo.get(self.am, field.ty_ref.maybe_resolved_ty)
             union_cpp_defn_target.include(*type_cpp_info.impl_headers)
             union_cpp_defn_target.writeln(
                 f"        {type_cpp_info.as_owner} {field.name};",
@@ -1133,7 +1133,7 @@ class CppHeadersGenerator:
             f"struct {struct_cpp_info.name} {{",
         )
         for field in struct.fields:
-            type_cpp_info = TypeCppInfo.get(self.am, field.ty_ref.resolved_ty)
+            type_cpp_info = TypeCppInfo.get(self.am, field.ty_ref.maybe_resolved_ty)
             struct_cpp_defn_target.include(*type_cpp_info.impl_headers)
             struct_cpp_defn_target.writeln(
                 f"    {type_cpp_info.as_owner} {field.name};",
@@ -1387,12 +1387,14 @@ class CppHeadersGenerator:
             method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
             params_cpp = []
             for param in method.params:
-                type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
+                type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.maybe_resolved_ty)
                 iface_cpp_defn_target.include(*type_cpp_info.decl_headers)
                 params_cpp.append(f"{type_cpp_info.as_param} {param.name}")
             params_cpp_str = ", ".join(params_cpp)
             if return_ty_ref := method.return_ty_ref:
-                type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
+                type_cpp_info = TypeCppInfo.get(
+                    self.am, return_ty_ref.maybe_resolved_ty
+                )
                 iface_cpp_defn_target.include(*type_cpp_info.decl_headers)
                 cpp_return_ty_name = type_cpp_info.as_owner
             else:
@@ -1418,11 +1420,13 @@ class CppHeadersGenerator:
         for method in iface.methods:
             params_abi = [f"{iface_abi_info.as_param} tobj"]
             for param in method.params:
-                type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.resolved_ty)
+                type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.maybe_resolved_ty)
                 params_abi.append(f"{type_abi_info.as_param} {param.name}")
             params_abi_str = ", ".join(params_abi)
             if return_ty_ref := method.return_ty_ref:
-                type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
+                type_abi_info = TypeABIInfo.get(
+                    self.am, return_ty_ref.maybe_resolved_ty
+                )
                 abi_return_ty_name = type_abi_info.as_owner
             else:
                 abi_return_ty_name = "void"
@@ -1690,7 +1694,7 @@ class CppHeadersGenerator:
                 f"*reinterpret_cast<{iface_abi_info.mangled_name} const*>(this)"
             ]
             for param in method.params:
-                type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
+                type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.maybe_resolved_ty)
                 iface_cpp_impl_target.include(*type_cpp_info.impl_headers)
                 params_cpp.append(f"{type_cpp_info.as_param} {param.name}")
                 args_into_abi.append(type_cpp_info.pass_into_abi(param.name))
@@ -1698,7 +1702,9 @@ class CppHeadersGenerator:
             args_into_abi_str = ", ".join(args_into_abi)
             abi_result = f"{method_abi_info.mangled_name}({args_into_abi_str})"
             if return_ty_ref := method.return_ty_ref:
-                type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
+                type_cpp_info = TypeCppInfo.get(
+                    self.am, return_ty_ref.maybe_resolved_ty
+                )
                 iface_cpp_impl_target.include(*type_cpp_info.impl_headers)
                 cpp_return_ty_name = type_cpp_info.as_owner
                 cpp_result = type_cpp_info.return_from_abi(abi_result)
@@ -1725,16 +1731,20 @@ class CppHeadersGenerator:
             params_abi = [f"{iface_abi_info.as_param} tobj"]
             args_from_abi = []
             for param in method.params:
-                type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.resolved_ty)
-                type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
+                type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.maybe_resolved_ty)
+                type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.maybe_resolved_ty)
                 params_abi.append(f"{type_abi_info.as_param} {param.name}")
                 args_from_abi.append(type_cpp_info.pass_from_abi(param.name))
             params_abi_str = ", ".join(params_abi)
             args_from_abi_str = ", ".join(args_from_abi)
             cpp_result = f"::taihe::cast_data_ptr<Impl>(tobj.data_ptr)->{method_cpp_info.impl_name}({args_from_abi_str})"
             if return_ty_ref := method.return_ty_ref:
-                type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
-                type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
+                type_abi_info = TypeABIInfo.get(
+                    self.am, return_ty_ref.maybe_resolved_ty
+                )
+                type_cpp_info = TypeCppInfo.get(
+                    self.am, return_ty_ref.maybe_resolved_ty
+                )
                 abi_return_ty_name = type_abi_info.as_owner
                 abi_result = type_cpp_info.return_into_abi(cpp_result)
             else:

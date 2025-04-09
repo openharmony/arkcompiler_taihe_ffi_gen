@@ -56,14 +56,14 @@ class CImplHeadersGenerator:
         params = []
         args = []
         for param in func.params:
-            type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.resolved_ty)
+            type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.maybe_resolved_ty)
             pkg_c_impl_target.include(*type_abi_info.impl_headers)
             params.append(f"{type_abi_info.as_param} {param.name}")
             args.append(param.name)
         params_str = ", ".join(params)
         args_str = ", ".join(args)
         if return_ty_ref := func.return_ty_ref:
-            type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
+            type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.maybe_resolved_ty)
             pkg_c_impl_target.include(*type_abi_info.impl_headers)
             return_ty_name = type_abi_info.as_owner
         else:
@@ -103,11 +103,11 @@ class CImplSourcesGenerator:
         func_c_impl_name = f"{func.name}_impl"
         params = []
         for param in func.params:
-            type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.resolved_ty)
+            type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.maybe_resolved_ty)
             params.append(f"{type_abi_info.as_param} {param.name}")
         params_str = ", ".join(params)
         if return_ty_ref := func.return_ty_ref:
-            type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
+            type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.maybe_resolved_ty)
             return_ty_name = type_abi_info.as_owner
         else:
             return_ty_name = "void"

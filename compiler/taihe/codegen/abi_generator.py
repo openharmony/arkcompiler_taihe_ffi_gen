@@ -143,7 +143,7 @@ class IfaceABIInfo(AbstractAnalysis[IfaceDecl]):
         self.ancestor_dict: dict[IfaceDecl, UniqueAncestorInfo] = {}
         self.ancestors = [d]
         for extend in d.parents:
-            ty = extend.ty_ref.resolved_ty
+            ty = extend.ty_ref.maybe_resolved_ty
             assert isinstance(ty, IfaceType)
             extend_abi_info = IfaceABIInfo.get(am, ty.ty_decl)
             self.ancestors.extend(extend_abi_info.ancestors)
@@ -414,12 +414,12 @@ class ABIHeadersGenerator:
         func_abi_info = GlobFuncABIInfo.get(self.am, func)
         params = []
         for param in func.params:
-            type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.resolved_ty)
+            type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.maybe_resolved_ty)
             pkg_abi_target.include(*type_abi_info.decl_headers)
             params.append(f"{type_abi_info.as_param} {param.name}")
         params_str = ", ".join(params)
         if return_ty_ref := func.return_ty_ref:
-            type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
+            type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.maybe_resolved_ty)
             pkg_abi_target.include(*type_abi_info.decl_headers)
             return_ty_name = type_abi_info.as_owner
         else:
@@ -462,7 +462,7 @@ class ABIHeadersGenerator:
             f"struct {struct_abi_info.mangled_name} {{",
         )
         for field in struct.fields:
-            type_abi_info = TypeABIInfo.get(self.am, field.ty_ref.resolved_ty)
+            type_abi_info = TypeABIInfo.get(self.am, field.ty_ref.maybe_resolved_ty)
             struct_abi_defn_target.include(*type_abi_info.impl_headers)
             struct_abi_defn_target.writeln(
                 f"    {type_abi_info.as_owner} {field.name};",
@@ -510,7 +510,7 @@ class ABIHeadersGenerator:
                     f"    // {field.name}",
                 )
                 continue
-            type_abi_info = TypeABIInfo.get(self.am, field.ty_ref.resolved_ty)
+            type_abi_info = TypeABIInfo.get(self.am, field.ty_ref.maybe_resolved_ty)
             union_abi_defn_target.include(*type_abi_info.impl_headers)
             union_abi_defn_target.writeln(
                 f"    {type_abi_info.as_owner} {field.name};",
@@ -568,12 +568,14 @@ class ABIHeadersGenerator:
         for method in iface.methods:
             params = [f"{iface_abi_info.as_param} tobj"]
             for param in method.params:
-                type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.resolved_ty)
+                type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.maybe_resolved_ty)
                 iface_abi_defn_target.include(*type_abi_info.decl_headers)
                 params.append(f"{type_abi_info.as_param} {param.name}")
             params_str = ", ".join(params)
             if return_ty_ref := method.return_ty_ref:
-                type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
+                type_abi_info = TypeABIInfo.get(
+                    self.am, return_ty_ref.maybe_resolved_ty
+                )
                 iface_abi_defn_target.include(*type_abi_info.decl_headers)
                 return_ty_name = type_abi_info.as_owner
             else:
@@ -711,14 +713,16 @@ class ABIHeadersGenerator:
             params = [f"{iface_abi_info.as_param} tobj"]
             args = ["tobj"]
             for param in method.params:
-                type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.resolved_ty)
+                type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.maybe_resolved_ty)
                 iface_abi_impl_target.include(*type_abi_info.impl_headers)
                 params.append(f"{type_abi_info.as_param} {param.name}")
                 args.append(param.name)
             params_str = ", ".join(params)
             args_str = ", ".join(args)
             if return_ty_ref := method.return_ty_ref:
-                type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
+                type_abi_info = TypeABIInfo.get(
+                    self.am, return_ty_ref.maybe_resolved_ty
+                )
                 iface_abi_impl_target.include(*type_abi_info.impl_headers)
                 return_ty_name = type_abi_info.as_owner
             else:

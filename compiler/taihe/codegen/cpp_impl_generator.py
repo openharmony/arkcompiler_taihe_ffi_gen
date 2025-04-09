@@ -59,8 +59,8 @@ class CppImplHeadersGenerator:
         args_from_abi = []
         abi_params = []
         for param in func.params:
-            type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
-            type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.resolved_ty)
+            type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.maybe_resolved_ty)
+            type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.maybe_resolved_ty)
             pkg_cpp_impl_target.include(*type_cpp_info.impl_headers)
             args_from_abi.append(type_cpp_info.pass_from_abi(param.name))
             abi_params.append(f"{type_abi_info.as_param} {param.name}")
@@ -68,8 +68,8 @@ class CppImplHeadersGenerator:
         abi_params_str = ", ".join(abi_params)
         cpp_result = f"{func_impl}({args_from_abi_str})"
         if return_ty_ref := func.return_ty_ref:
-            type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
-            type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
+            type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.maybe_resolved_ty)
+            type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.maybe_resolved_ty)
             pkg_cpp_impl_target.include(*type_cpp_info.impl_headers)
             abi_return_ty_name = type_abi_info.as_owner
             abi_result = type_cpp_info.return_into_abi(cpp_result)
@@ -111,11 +111,11 @@ class CppImplSourcesGenerator:
         func_cpp_impl_name = f"{func.name}_impl"
         cpp_params = []
         for param in func.params:
-            type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
+            type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.maybe_resolved_ty)
             cpp_params.append(f"{type_cpp_info.as_param} {param.name}")
         cpp_params_str = ", ".join(cpp_params)
         if return_ty_ref := func.return_ty_ref:
-            type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
+            type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.maybe_resolved_ty)
             cpp_return_ty_name = type_cpp_info.as_owner
         else:
             cpp_return_ty_name = "void"

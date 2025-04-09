@@ -47,7 +47,9 @@ class _PrettyPrinter(RecursiveDeclVisitor):
 
     def get_type_ref_decl(self, d: TypeRefDecl) -> str:
         real_type = (
-            "<error type>" if not d.resolved_ty else d.resolved_ty.representation
+            "<error type>"
+            if not d.maybe_resolved_ty
+            else d.maybe_resolved_ty.representation
         )
         return (
             f"{d.unresolved_repr} {AnsiStyle.GREEN}/* {real_type} */{AnsiStyle.RESET}"
