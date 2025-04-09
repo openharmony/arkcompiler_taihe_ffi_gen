@@ -338,7 +338,6 @@ class _CheckFieldNameCollisionErrorPass(RecursiveDeclVisitor):
     def check_collision_helper(self, children: Iterable[NamedDecl]):
         names = {}
         for f in children:
-            assert f.name
             if (prev := names.setdefault(f.name, f)) != f:
                 self.diag.emit(DeclRedefError(prev, f))
 

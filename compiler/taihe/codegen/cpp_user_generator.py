@@ -24,9 +24,7 @@ class PackageCppUserInfo(AbstractAnalysis[PackageDecl]):
 class GlobFuncCppUserInfo(AbstractAnalysis[GlobFuncDecl]):
     def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
         super().__init__(am, f)
-        p = f.node_parent
-        assert p
-        self.namespace = "::".join(p.segments)
+        self.namespace = "::".join(f.parent_pkg.segments)
         self.call_name = f.name
         self.full_name = "::" + self.namespace + "::" + self.call_name
 
@@ -65,7 +63,7 @@ class CppUserHeadersGenerator:
         params_cpp = []
         args_into_abi = []
         for param in func.params:
-            type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.maybe_resolved_ty)
+            type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
             pkg_cpp_target.include(*type_cpp_info.impl_headers)
             params_cpp.append(f"{type_cpp_info.as_param} {param.name}")
             args_into_abi.append(type_cpp_info.pass_into_abi(param.name))
@@ -73,7 +71,7 @@ class CppUserHeadersGenerator:
         args_into_abi_str = ", ".join(args_into_abi)
         abi_result = f"{func_abi_info.mangled_name}({args_into_abi_str})"
         if return_ty_ref := func.return_ty_ref:
-            type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.maybe_resolved_ty)
+            type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
             pkg_cpp_target.include(*type_cpp_info.impl_headers)
             cpp_return_ty_name = type_cpp_info.as_owner
             cpp_result = type_cpp_info.return_from_abi(abi_result)

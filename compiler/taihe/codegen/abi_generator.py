@@ -56,20 +56,14 @@ class PackageABIInfo(AbstractAnalysis[PackageDecl]):
 class GlobFuncABIInfo(AbstractAnalysis[GlobFuncDecl]):
     def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
         super().__init__(am, f)
-        p = f.node_parent
-        assert p
-        segments = [*p.segments, f.name]
+        segments = [*f.parent_pkg.segments, f.name]
         self.mangled_name = encode(segments, DeclKind.FUNC)
 
 
 class IfaceMethodABIInfo(AbstractAnalysis[IfaceMethodDecl]):
     def __init__(self, am: AnalysisManager, f: IfaceMethodDecl) -> None:
         super().__init__(am, f)
-        d = f.node_parent
-        assert d
-        p = d.node_parent
-        assert p
-        segments = [*p.segments, d.name, f.name]
+        segments = [*f.parent_pkg.segments, f.parent_iface.name, f.name]
         self.mangled_name = encode(segments, DeclKind.FUNC)
 
 
@@ -82,11 +76,9 @@ class EnumABIInfo(AbstractAnalysis[EnumDecl]):
 class UnionABIInfo(AbstractAnalysis[UnionDecl]):
     def __init__(self, am: AnalysisManager, d: UnionDecl) -> None:
         super().__init__(am, d)
-        p = d.node_parent
-        assert p
-        segments = [*p.segments, d.name]
-        self.decl_header = f"{p.name}.{d.name}.abi.0.h"
-        self.impl_header = f"{p.name}.{d.name}.abi.1.h"
+        segments = [*d.parent_pkg.segments, d.name]
+        self.decl_header = f"{d.parent_pkg.name}.{d.name}.abi.0.h"
+        self.impl_header = f"{d.parent_pkg.name}.{d.name}.abi.1.h"
         self.tag_type = "int"
         self.union_name = encode(segments, DeclKind.UNION)
         self.mangled_name = encode(segments, DeclKind.TYPE)
@@ -98,11 +90,9 @@ class UnionABIInfo(AbstractAnalysis[UnionDecl]):
 class StructABIInfo(AbstractAnalysis[StructDecl]):
     def __init__(self, am: AnalysisManager, d: StructDecl) -> None:
         super().__init__(am, d)
-        p = d.node_parent
-        assert p
-        segments = [*p.segments, d.name]
-        self.decl_header = f"{p.name}.{d.name}.abi.0.h"
-        self.impl_header = f"{p.name}.{d.name}.abi.1.h"
+        segments = [*d.parent_pkg.segments, d.name]
+        self.decl_header = f"{d.parent_pkg.name}.{d.name}.abi.0.h"
+        self.impl_header = f"{d.parent_pkg.name}.{d.name}.abi.1.h"
         self.mangled_name = encode(segments, DeclKind.TYPE)
         self.as_owner = f"struct {self.mangled_name}"
         self.as_param = f"struct {self.mangled_name} const*"
@@ -124,12 +114,10 @@ class UniqueAncestorInfo:
 class IfaceABIInfo(AbstractAnalysis[IfaceDecl]):
     def __init__(self, am: AnalysisManager, d: IfaceDecl) -> None:
         super().__init__(am, d)
-        p = d.node_parent
-        assert p
-        segments = [*p.segments, d.name]
-        self.decl_header = f"{p.name}.{d.name}.abi.0.h"
-        self.defn_header = f"{p.name}.{d.name}.abi.1.h"
-        self.impl_header = f"{p.name}.{d.name}.abi.2.h"
+        segments = [*d.parent_pkg.segments, d.name]
+        self.decl_header = f"{d.parent_pkg.name}.{d.name}.abi.0.h"
+        self.defn_header = f"{d.parent_pkg.name}.{d.name}.abi.1.h"
+        self.impl_header = f"{d.parent_pkg.name}.{d.name}.abi.2.h"
         self.mangled_name = encode(segments, DeclKind.TYPE)
         self.as_owner = f"struct {self.mangled_name}"
         self.as_param = f"struct {self.mangled_name}"
@@ -143,7 +131,7 @@ class IfaceABIInfo(AbstractAnalysis[IfaceDecl]):
         self.ancestor_dict: dict[IfaceDecl, UniqueAncestorInfo] = {}
         self.ancestors = [d]
         for extend in d.parents:
-            ty = extend.ty_ref.maybe_resolved_ty
+            ty = extend.ty_ref.resolved_ty
             assert isinstance(ty, IfaceType)
             extend_abi_info = IfaceABIInfo.get(am, ty.ty_decl)
             self.ancestors.extend(extend_abi_info.ancestors)
@@ -315,8 +303,7 @@ class TypeABIInfo(TypeVisitor[AbstractTypeABIInfo]):
         self.am = am
 
     @staticmethod
-    def get(am: AnalysisManager, t: Type | None):
-        assert t is not None
+    def get(am: AnalysisManager, t: Type):
         return TypeABIInfo(am).handle_type(t)
 
     @override
@@ -414,12 +401,12 @@ class ABIHeadersGenerator:
         func_abi_info = GlobFuncABIInfo.get(self.am, func)
         params = []
         for param in func.params:
-            type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.maybe_resolved_ty)
+            type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.resolved_ty)
             pkg_abi_target.include(*type_abi_info.decl_headers)
             params.append(f"{type_abi_info.as_param} {param.name}")
         params_str = ", ".join(params)
         if return_ty_ref := func.return_ty_ref:
-            type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.maybe_resolved_ty)
+            type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
             pkg_abi_target.include(*type_abi_info.decl_headers)
             return_ty_name = type_abi_info.as_owner
         else:
@@ -462,7 +449,7 @@ class ABIHeadersGenerator:
             f"struct {struct_abi_info.mangled_name} {{",
         )
         for field in struct.fields:
-            type_abi_info = TypeABIInfo.get(self.am, field.ty_ref.maybe_resolved_ty)
+            type_abi_info = TypeABIInfo.get(self.am, field.ty_ref.resolved_ty)
             struct_abi_defn_target.include(*type_abi_info.impl_headers)
             struct_abi_defn_target.writeln(
                 f"    {type_abi_info.as_owner} {field.name};",
@@ -510,7 +497,7 @@ class ABIHeadersGenerator:
                     f"    // {field.name}",
                 )
                 continue
-            type_abi_info = TypeABIInfo.get(self.am, field.ty_ref.maybe_resolved_ty)
+            type_abi_info = TypeABIInfo.get(self.am, field.ty_ref.resolved_ty)
             union_abi_defn_target.include(*type_abi_info.impl_headers)
             union_abi_defn_target.writeln(
                 f"    {type_abi_info.as_owner} {field.name};",
@@ -568,14 +555,12 @@ class ABIHeadersGenerator:
         for method in iface.methods:
             params = [f"{iface_abi_info.as_param} tobj"]
             for param in method.params:
-                type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.maybe_resolved_ty)
+                type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.resolved_ty)
                 iface_abi_defn_target.include(*type_abi_info.decl_headers)
                 params.append(f"{type_abi_info.as_param} {param.name}")
             params_str = ", ".join(params)
             if return_ty_ref := method.return_ty_ref:
-                type_abi_info = TypeABIInfo.get(
-                    self.am, return_ty_ref.maybe_resolved_ty
-                )
+                type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
                 iface_abi_defn_target.include(*type_abi_info.decl_headers)
                 return_ty_name = type_abi_info.as_owner
             else:
@@ -713,16 +698,14 @@ class ABIHeadersGenerator:
             params = [f"{iface_abi_info.as_param} tobj"]
             args = ["tobj"]
             for param in method.params:
-                type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.maybe_resolved_ty)
+                type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.resolved_ty)
                 iface_abi_impl_target.include(*type_abi_info.impl_headers)
                 params.append(f"{type_abi_info.as_param} {param.name}")
                 args.append(param.name)
             params_str = ", ".join(params)
             args_str = ", ".join(args)
             if return_ty_ref := method.return_ty_ref:
-                type_abi_info = TypeABIInfo.get(
-                    self.am, return_ty_ref.maybe_resolved_ty
-                )
+                type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
                 iface_abi_impl_target.include(*type_abi_info.impl_headers)
                 return_ty_name = type_abi_info.as_owner
             else:

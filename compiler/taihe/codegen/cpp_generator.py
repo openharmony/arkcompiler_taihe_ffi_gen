@@ -70,11 +70,9 @@ class IfaceMethodCppInfo(AbstractAnalysis[IfaceMethodDecl]):
 class EnumCppInfo(AbstractAnalysis[EnumDecl]):
     def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
         super().__init__(am, d)
-        p = d.node_parent
-        assert p
-        self.header = f"{p.name}.{d.name}.proj.0.hpp"
+        self.header = f"{d.parent_pkg.name}.{d.name}.proj.0.hpp"
 
-        self.namespace = "::".join(p.segments)
+        self.namespace = "::".join(d.parent_pkg.segments)
         self.name = d.name
         self.full_name = "::" + self.namespace + "::" + self.name
 
@@ -85,12 +83,10 @@ class EnumCppInfo(AbstractAnalysis[EnumDecl]):
 class StructCppInfo(AbstractAnalysis[StructDecl]):
     def __init__(self, am: AnalysisManager, d: StructDecl) -> None:
         super().__init__(am, d)
-        p = d.node_parent
-        assert p
-        self.decl_header = f"{p.name}.{d.name}.proj.0.hpp"
-        self.impl_header = f"{p.name}.{d.name}.proj.1.hpp"
+        self.decl_header = f"{d.parent_pkg.name}.{d.name}.proj.0.hpp"
+        self.impl_header = f"{d.parent_pkg.name}.{d.name}.proj.1.hpp"
 
-        self.namespace = "::".join(p.segments)
+        self.namespace = "::".join(d.parent_pkg.segments)
         self.name = d.name
         self.full_name = "::" + self.namespace + "::" + self.name
 
@@ -101,12 +97,10 @@ class StructCppInfo(AbstractAnalysis[StructDecl]):
 class UnionCppInfo(AbstractAnalysis[UnionDecl]):
     def __init__(self, am: AnalysisManager, d: UnionDecl) -> None:
         super().__init__(am, d)
-        p = d.node_parent
-        assert p
-        self.decl_header = f"{p.name}.{d.name}.proj.0.hpp"
-        self.impl_header = f"{p.name}.{d.name}.proj.1.hpp"
+        self.decl_header = f"{d.parent_pkg.name}.{d.name}.proj.0.hpp"
+        self.impl_header = f"{d.parent_pkg.name}.{d.name}.proj.1.hpp"
 
-        self.namespace = "::".join(p.segments)
+        self.namespace = "::".join(d.parent_pkg.segments)
         self.name = d.name
         self.full_name = "::" + self.namespace + "::" + self.name
 
@@ -117,17 +111,15 @@ class UnionCppInfo(AbstractAnalysis[UnionDecl]):
 class IfaceCppInfo(AbstractAnalysis[IfaceDecl]):
     def __init__(self, am: AnalysisManager, d: IfaceDecl) -> None:
         super().__init__(am, d)
-        p = d.node_parent
-        assert p
-        self.decl_header = f"{p.name}.{d.name}.proj.0.hpp"
-        self.defn_header = f"{p.name}.{d.name}.proj.1.hpp"
-        self.impl_header = f"{p.name}.{d.name}.proj.2.hpp"
+        self.decl_header = f"{d.parent_pkg.name}.{d.name}.proj.0.hpp"
+        self.defn_header = f"{d.parent_pkg.name}.{d.name}.proj.1.hpp"
+        self.impl_header = f"{d.parent_pkg.name}.{d.name}.proj.2.hpp"
 
-        self.namespace = "::".join(p.segments)
+        self.namespace = "::".join(d.parent_pkg.segments)
         self.norm_name = d.name
         self.full_norm_name = "::" + self.namespace + "::" + self.norm_name
 
-        self.weakspace = "::".join(p.segments) + "::weak"
+        self.weakspace = "::".join(d.parent_pkg.segments) + "::weak"
         self.weak_name = d.name
         self.full_weak_name = "::" + self.weakspace + "::" + self.weak_name
 
@@ -302,8 +294,8 @@ class SetTypeCppInfo(AbstractAnalysis[SetType], AbstractTypeCppInfo):
 class CallbackTypeCppInfo(AbstractAnalysis[CallbackType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: CallbackType) -> None:
         super().__init__(am, t)
-        if t.return_ty:
-            return_ty_cpp_info = TypeCppInfo.get(am, t.return_ty)
+        if return_ty := t.return_ty:
+            return_ty_cpp_info = TypeCppInfo.get(am, return_ty)
             return_ty_decl_headers = return_ty_cpp_info.decl_headers
             return_ty_defn_headers = return_ty_cpp_info.impl_headers
             return_ty_as_owner = return_ty_cpp_info.as_owner
@@ -339,8 +331,7 @@ class TypeCppInfo(TypeVisitor[AbstractTypeCppInfo]):
         self.am = am
 
     @staticmethod
-    def get(am: AnalysisManager, t: Type | None) -> AbstractTypeCppInfo:
-        assert t is not None
+    def get(am: AnalysisManager, t: Type) -> AbstractTypeCppInfo:
         return TypeCppInfo(am).handle_type(t)
 
     @override
@@ -545,12 +536,11 @@ class CppHeadersGenerator:
     ):
         if enum.ty_ref is None:
             return
-        assert enum.ty_ref.maybe_resolved_ty
-        if enum.ty_ref.maybe_resolved_ty == STRING:
+        if enum.ty_ref.resolved_ty == STRING:
             as_owner = "char const*"
         else:
             # pyre-ignore
-            ty_cpp_info = TypeCppInfo.get(self.am, enum.ty_ref.maybe_resolved_ty)
+            ty_cpp_info = TypeCppInfo.get(self.am, enum.ty_ref.resolved_ty)
             as_owner = ty_cpp_info.as_owner
         enum_cpp_target.writeln(
             f"    static constexpr {as_owner} table[] = {{",
@@ -707,7 +697,7 @@ class CppHeadersGenerator:
         for field in union.fields:
             if field.ty_ref is None:
                 continue
-            type_cpp_info = TypeCppInfo.get(self.am, field.ty_ref.maybe_resolved_ty)
+            type_cpp_info = TypeCppInfo.get(self.am, field.ty_ref.resolved_ty)
             union_cpp_defn_target.include(*type_cpp_info.impl_headers)
             union_cpp_defn_target.writeln(
                 f"        {type_cpp_info.as_owner} {field.name};",
@@ -1133,7 +1123,7 @@ class CppHeadersGenerator:
             f"struct {struct_cpp_info.name} {{",
         )
         for field in struct.fields:
-            type_cpp_info = TypeCppInfo.get(self.am, field.ty_ref.maybe_resolved_ty)
+            type_cpp_info = TypeCppInfo.get(self.am, field.ty_ref.resolved_ty)
             struct_cpp_defn_target.include(*type_cpp_info.impl_headers)
             struct_cpp_defn_target.writeln(
                 f"    {type_cpp_info.as_owner} {field.name};",
@@ -1387,14 +1377,12 @@ class CppHeadersGenerator:
             method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
             params_cpp = []
             for param in method.params:
-                type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.maybe_resolved_ty)
+                type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
                 iface_cpp_defn_target.include(*type_cpp_info.decl_headers)
                 params_cpp.append(f"{type_cpp_info.as_param} {param.name}")
             params_cpp_str = ", ".join(params_cpp)
             if return_ty_ref := method.return_ty_ref:
-                type_cpp_info = TypeCppInfo.get(
-                    self.am, return_ty_ref.maybe_resolved_ty
-                )
+                type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
                 iface_cpp_defn_target.include(*type_cpp_info.decl_headers)
                 cpp_return_ty_name = type_cpp_info.as_owner
             else:
@@ -1420,13 +1408,11 @@ class CppHeadersGenerator:
         for method in iface.methods:
             params_abi = [f"{iface_abi_info.as_param} tobj"]
             for param in method.params:
-                type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.maybe_resolved_ty)
+                type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.resolved_ty)
                 params_abi.append(f"{type_abi_info.as_param} {param.name}")
             params_abi_str = ", ".join(params_abi)
             if return_ty_ref := method.return_ty_ref:
-                type_abi_info = TypeABIInfo.get(
-                    self.am, return_ty_ref.maybe_resolved_ty
-                )
+                type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
                 abi_return_ty_name = type_abi_info.as_owner
             else:
                 abi_return_ty_name = "void"
@@ -1694,7 +1680,7 @@ class CppHeadersGenerator:
                 f"*reinterpret_cast<{iface_abi_info.mangled_name} const*>(this)"
             ]
             for param in method.params:
-                type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.maybe_resolved_ty)
+                type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
                 iface_cpp_impl_target.include(*type_cpp_info.impl_headers)
                 params_cpp.append(f"{type_cpp_info.as_param} {param.name}")
                 args_into_abi.append(type_cpp_info.pass_into_abi(param.name))
@@ -1702,9 +1688,7 @@ class CppHeadersGenerator:
             args_into_abi_str = ", ".join(args_into_abi)
             abi_result = f"{method_abi_info.mangled_name}({args_into_abi_str})"
             if return_ty_ref := method.return_ty_ref:
-                type_cpp_info = TypeCppInfo.get(
-                    self.am, return_ty_ref.maybe_resolved_ty
-                )
+                type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
                 iface_cpp_impl_target.include(*type_cpp_info.impl_headers)
                 cpp_return_ty_name = type_cpp_info.as_owner
                 cpp_result = type_cpp_info.return_from_abi(abi_result)
@@ -1731,20 +1715,16 @@ class CppHeadersGenerator:
             params_abi = [f"{iface_abi_info.as_param} tobj"]
             args_from_abi = []
             for param in method.params:
-                type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.maybe_resolved_ty)
-                type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.maybe_resolved_ty)
+                type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.resolved_ty)
+                type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
                 params_abi.append(f"{type_abi_info.as_param} {param.name}")
                 args_from_abi.append(type_cpp_info.pass_from_abi(param.name))
             params_abi_str = ", ".join(params_abi)
             args_from_abi_str = ", ".join(args_from_abi)
             cpp_result = f"::taihe::cast_data_ptr<Impl>(tobj.data_ptr)->{method_cpp_info.impl_name}({args_from_abi_str})"
             if return_ty_ref := method.return_ty_ref:
-                type_abi_info = TypeABIInfo.get(
-                    self.am, return_ty_ref.maybe_resolved_ty
-                )
-                type_cpp_info = TypeCppInfo.get(
-                    self.am, return_ty_ref.maybe_resolved_ty
-                )
+                type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
+                type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
                 abi_return_ty_name = type_abi_info.as_owner
                 abi_result = type_cpp_info.return_into_abi(cpp_result)
             else:
