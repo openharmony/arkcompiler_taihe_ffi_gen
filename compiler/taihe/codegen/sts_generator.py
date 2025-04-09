@@ -130,8 +130,6 @@ class STSCodeGenerator:
         for injected in pkg_ani_info.injected_codes:
             target.writeln(injected)
 
-        # TODO: finalizer
-        self.gen_finalizer(target)
         self.gen_native_funcs(pkg, pkg.functions, target)
         ctors_map: dict[str, list[GlobFuncDecl]] = {}
         statics_map: dict[str, list[GlobFuncDecl]] = {}
@@ -157,15 +155,6 @@ class STSCodeGenerator:
             self.gen_iface_interface(pkg, iface, target)
         for iface in pkg.interfaces:
             self.gen_iface_class(pkg, iface, target, statics_map, ctors_map)
-
-    def gen_finalizer(
-        self,
-        target: STSOutputBuffer,
-    ):
-        target.writeln(
-            f"export native function localFinalizer(data_ptr: long): void;",
-            f"export const localDestroyRegister = new FinalizationRegistry<long>(localFinalizer);",
-        )
 
     def gen_native_funcs(
         self,
@@ -577,10 +566,12 @@ class STSCodeGenerator:
             target.writeln(
                 f"private _vtbl_ptr: long;",
                 f"private _data_ptr: long;",
+                f"private static native _finalize(data_ptr: long): void;",
+                f"private static _registry = new FinalizationRegistry<long>((data_ptr: long) => {{ {iface_ani_info.sts_impl_name}._finalize(data_ptr); }});",
                 f"private constructor(_vtbl_ptr: long, _data_ptr: long) {{",
                 f"    this._vtbl_ptr = _vtbl_ptr;",
                 f"    this._data_ptr = _data_ptr;",
-                f"    localDestroyRegister.register(this, this._data_ptr)",
+                f"    {iface_ani_info.sts_impl_name}._registry.register(this, this._data_ptr)",
                 f"}}",
             )
             ctors = ctors_map.get(iface.name, [])

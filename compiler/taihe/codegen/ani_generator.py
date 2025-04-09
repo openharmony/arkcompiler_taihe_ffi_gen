@@ -1736,9 +1736,6 @@ class ANICodeGenerator:
         pkg_ani_source_target.include(pkg_ani_info.header)
         pkg_ani_source_target.include(pkg_cpp_user_info.header)
 
-        # TODO: finalizer
-        pkg_ani_source_target.include("taihe/object.hpp")
-        self.gen_finalizer(pkg_ani_source_target)
         # generate functions
         for func in pkg.functions:
             segments = [*pkg.segments, func.name]
@@ -1755,38 +1752,43 @@ class ANICodeGenerator:
                     self.gen_method(
                         iface, method, pkg_ani_source_target, ancestor, mangled_name
                     )
+            # TODO: finalizer
+            pkg_ani_source_target.include("taihe/object.hpp")
+            p = iface.node_parent
+            assert p
+            segments = [*p.segments, iface.name, "static_finalize"]
+            mangled_name = encode(segments, DeclKind.ANI_FUNC)
+            self.gen_finalizer(pkg_ani_source_target, mangled_name)
 
         # register infos
         register_infos: list[ANIRegisterInfo] = []
 
-        impl_desc = pkg_ani_info.impl_desc
-        member_infos = []
-        # TODO: finalizer
-        member_infos.append(
-            ANIFunctionLikeInfo("localFinalizer", "local_finalizer_impl")
+        pkg_register_info = ANIRegisterInfo(
+            impl_desc=pkg_ani_info.impl_desc,
+            member_infos=[],
+            parent_scope=(
+                ANI_SCOPE_NAMESPACE if pkg_ani_info.is_namespace() else ANI_SCOPE_MODULE
+            ),
         )
+        register_infos.append(pkg_register_info)
         for func in pkg.functions:
             segments = [*pkg.segments, func.name]
             mangled_name = encode(segments, DeclKind.ANI_FUNC)
-            glob_func_info = GlobFuncANIInfo.get(self.am, func)
-            sts_native_name = glob_func_info.sts_native_name
-            member_infos.append(ANIFunctionLikeInfo(sts_native_name, mangled_name))
-        register_infos.append(
-            ANIRegisterInfo(
-                impl_desc,
-                member_infos,
-                (
-                    ANI_SCOPE_NAMESPACE
-                    if pkg_ani_info.is_namespace()
-                    else ANI_SCOPE_MODULE
-                ),
+            func_ani_info = GlobFuncANIInfo.get(self.am, func)
+            func_info = ANIFunctionLikeInfo(
+                sts_native_name=func_ani_info.sts_native_name,
+                mangled_name=mangled_name,
             )
-        )
+            pkg_register_info.member_infos.append(func_info)
         for iface in pkg.interfaces:
-            iface_ani_info = IfaceANIInfo.get(self.am, iface)
-            impl_desc = iface_ani_info.impl_desc
-            member_infos = []
             iface_abi_info = IfaceABIInfo.get(self.am, iface)
+            iface_ani_info = IfaceANIInfo.get(self.am, iface)
+            iface_register_info = ANIRegisterInfo(
+                impl_desc=iface_ani_info.impl_desc,
+                member_infos=[],
+                parent_scope=ANI_SCOPE_CLASS,
+            )
+            register_infos.append(iface_register_info)
             for ancestor in iface_abi_info.ancestor_dict:
                 for method in ancestor.methods:
                     p = iface.node_parent
@@ -1794,13 +1796,22 @@ class ANICodeGenerator:
                     segments = [*p.segments, iface.name, method.name]
                     mangled_name = encode(segments, DeclKind.ANI_FUNC)
                     method_ani_info = IfaceMethodANIInfo.get(self.am, method)
-                    sts_native_name = method_ani_info.sts_native_name
-                    member_infos.append(
-                        ANIFunctionLikeInfo(sts_native_name, mangled_name)
+                    method_info = ANIFunctionLikeInfo(
+                        sts_native_name=method_ani_info.sts_native_name,
+                        mangled_name=mangled_name,
                     )
-            register_infos.append(
-                ANIRegisterInfo(impl_desc, member_infos, ANI_SCOPE_CLASS)
+                    iface_register_info.member_infos.append(method_info)
+            # TODO: finalizer
+            pkg_ani_source_target.include("taihe/object.hpp")
+            p = iface.node_parent
+            assert p
+            segments = [*p.segments, iface.name, "static_finalize"]
+            mangled_name = encode(segments, DeclKind.ANI_FUNC)
+            finalizer_info = ANIFunctionLikeInfo(
+                sts_native_name="_finalize",
+                mangled_name=mangled_name,
             )
+            iface_register_info.member_infos.append(finalizer_info)
 
         pkg_ani_source_target.writeln(
             f"namespace {pkg_ani_info.cpp_ns} {{",
@@ -1835,9 +1846,10 @@ class ANICodeGenerator:
     def gen_finalizer(
         self,
         pkg_ani_source_target: COutputBuffer,
+        mangled_name: str,
     ):
         pkg_ani_source_target.writeln(
-            f"static void local_finalizer_impl([[maybe_unused]] ani_env *env, ani_long data_ptr) {{",
+            f"static void {mangled_name}([[maybe_unused]] ani_env *env, [[maybe_unused]] ani_class clazz, ani_long data_ptr) {{",
             f"    ::taihe::data_holder(reinterpret_cast<DataBlockHead*>(data_ptr));",
             f"}}",
         )

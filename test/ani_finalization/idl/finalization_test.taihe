@@ -1,0 +1,5 @@
+interface Foo {
+    introduce(): void;
+}
+
+function makeFoo(): Foo;
