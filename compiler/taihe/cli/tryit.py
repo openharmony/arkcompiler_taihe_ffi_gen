@@ -256,6 +256,7 @@ class BuildSystem:
             url,
             "-O",
             str(target_file),
+            "--no-check-certificate",
         ]
 
         self.run_command(command, capture_output=False)
