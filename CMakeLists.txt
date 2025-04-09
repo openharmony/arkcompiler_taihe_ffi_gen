@@ -262,6 +262,7 @@ function(compile_dylib target_name target_path user_cpp_files build_demo_dir)
   target_compile_options(${target_name} PRIVATE "-Wno-attributes")
   set_target_properties(${target_name} PROPERTIES LINKER_LANGUAGE CXX)
   target_link_libraries(${target_name} PRIVATE th_runtime)
+  target_link_options(${target_name} PRIVATE "-Wl,--no-undefined")
   target_include_directories(${target_name} PUBLIC "${build_demo_dir}/author_generated/include/" TH_RUNTIME_INCLUDE_DIR)
 endfunction()
 
