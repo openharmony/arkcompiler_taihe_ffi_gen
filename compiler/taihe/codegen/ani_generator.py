@@ -1509,13 +1509,14 @@ class CallbackTypeANIInfo(
         cpp_impl_class = f"{cpp_result}_cpp_impl_t"
         target.writeln(
             f"struct {cpp_impl_class} {{",
-            f"    ani_env* env;",
             f"    ani_ref ref;",
-            f"    {cpp_impl_class}(ani_env* env, ani_fn_object obj): env(env) {{",
-            f"        this->env->GlobalReference_Create(obj, &this->ref);",
+            f"    {cpp_impl_class}(ani_fn_object obj) {{",
+            f"        ani_env *env = ::taihe::get_env();",
+            f"        env->GlobalReference_Create(obj, &this->ref);",
             f"    }}",
             f"    ~{cpp_impl_class}() {{",
-            f"        this->env->GlobalReference_Delete(this->ref);",
+            f"        ani_env *env = ::taihe::get_env();",
+            f"        env->GlobalReference_Delete(this->ref);",
             f"    }}",
         )
         inner_cpp_params = []
@@ -1536,13 +1537,14 @@ class CallbackTypeANIInfo(
             return_ty_as_owner = "void"
         target.writeln(
             f"    {return_ty_as_owner} operator()({cpp_params_str}) {{",
+            f"        ani_env *env = ::taihe::get_env();",
         )
         for inner_ani_arg, inner_cpp_arg, param_ty in zip(
             inner_ani_args, inner_cpp_args, self.t.params_ty, strict=True
         ):
             param_ty_ani_info = TypeANIInfo.get(self.am, self.pkg, param_ty)
             param_ty_ani_info.into_ani_boxed(
-                target, 8, "this->env", inner_cpp_arg, inner_ani_arg
+                target, 8, "env", inner_cpp_arg, inner_ani_arg
             )
         inner_ani_args_str = ", ".join(inner_ani_args)
         if self.t.return_ty:
@@ -1551,11 +1553,11 @@ class CallbackTypeANIInfo(
             target.writeln(
                 f"        ani_ref ani_argv[] = {{{inner_ani_args_str}}};",
                 f"        ani_ref {inner_ani_res};",
-                f"        this->env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.params_ty)}, ani_argv, &{inner_ani_res});",
+                f"        env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.params_ty)}, ani_argv, &{inner_ani_res});",
             )
             return_ty_ani_info = TypeANIInfo.get(self.am, self.pkg, self.t.return_ty)
             return_ty_ani_info.from_ani_boxed(
-                target, 8, "this->env", inner_ani_res, inner_cpp_res
+                target, 8, "env", inner_ani_res, inner_cpp_res
             )
             target.writeln(
                 f"        return {inner_cpp_res};",
@@ -1565,7 +1567,7 @@ class CallbackTypeANIInfo(
             target.writeln(
                 f"        ani_ref ani_argv[] = {{{inner_ani_args_str}}};",
                 f"        ani_ref {inner_ani_res};",
-                f"        this->env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.params_ty)}, ani_argv, &{inner_ani_res});",
+                f"        env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.params_ty)}, ani_argv, &{inner_ani_res});",
                 f"        return;",
             )
         target.writeln(
@@ -1573,7 +1575,7 @@ class CallbackTypeANIInfo(
         )
         target.writeln(
             f"}};",
-            f"{self.cpp_info.as_owner} {cpp_result} = {self.cpp_info.as_owner}::from<{cpp_impl_class}>({env}, {ani_value});",
+            f"{self.cpp_info.as_owner} {cpp_result} = {self.cpp_info.as_owner}::from<{cpp_impl_class}>({ani_value});",
         )
 
     @override
@@ -2048,13 +2050,14 @@ class ANICodeGenerator:
         iface_ani_impl_target.writeln(
             f"inline {iface_cpp_info.as_owner} {iface_ani_info.from_ani_func_name}(ani_env* env, ani_object ani_obj) {{",
             f"    struct cpp_impl_t {{",
-            f"        ani_env* env;",
             f"        ani_ref ref;",
-            f"        cpp_impl_t(ani_env* env, ani_object obj) : env(env) {{",
-            f"            this->env->GlobalReference_Create(obj, &this->ref);",
+            f"        cpp_impl_t(ani_object obj) {{",
+            f"            ani_env *env = ::taihe::get_env();",
+            f"            env->GlobalReference_Create(obj, &this->ref);",
             f"        }}",
             f"        ~cpp_impl_t() {{",
-            f"            this->env->GlobalReference_Delete(this->ref);",
+            f"            ani_env *env = ::taihe::get_env();",
+            f"            env->GlobalReference_Delete(this->ref);",
             f"        }}",
         )
         for ancestor in iface_abi_info.ancestor_dict:
@@ -2081,6 +2084,7 @@ class ANICodeGenerator:
                     cpp_return_ty_name = "void"
                 iface_ani_impl_target.writeln(
                     f"        {cpp_return_ty_name} {method_cpp_info.impl_name}({inner_cpp_params_str}) {{",
+                    f"            ani_env *env = ::taihe::get_env();",
                 )
                 for param, inner_cpp_arg, inner_ani_arg in zip(
                     method.params, inner_cpp_args, inner_ani_args, strict=True
@@ -2091,7 +2095,7 @@ class ANICodeGenerator:
                     type_ani_info.into_ani(
                         iface_ani_impl_target,
                         8,
-                        "this->env",
+                        "env",
                         inner_cpp_arg,
                         inner_ani_arg,
                     )
@@ -2106,12 +2110,12 @@ class ANICodeGenerator:
                     )
                     iface_ani_impl_target.writeln(
                         f"            {type_ani_info.ani_type} {inner_ani_res};",
-                        f'            this->env->Object_CallMethodByName_{type_ani_info.ani_type.suffix}(static_cast<ani_object>(this->ref), "{method_ani_info.ani_method_name}", nullptr, reinterpret_cast<{type_ani_info.ani_type.base}*>(&{inner_ani_res}){inner_ani_args_trailing});\n',
+                        f'            env->Object_CallMethodByName_{type_ani_info.ani_type.suffix}(static_cast<ani_object>(this->ref), "{method_ani_info.ani_method_name}", nullptr, reinterpret_cast<{type_ani_info.ani_type.base}*>(&{inner_ani_res}){inner_ani_args_trailing});\n',
                     )
                     type_ani_info.from_ani(
                         iface_ani_impl_target,
                         8,
-                        "this->env",
+                        "env",
                         inner_ani_res,
                         inner_cpp_res,
                     )
@@ -2120,14 +2124,14 @@ class ANICodeGenerator:
                     )
                 else:
                     iface_ani_impl_target.writeln(
-                        f'            this->env->Object_CallMethodByName_Void(static_cast<ani_object>(this->ref), "{method_ani_info.ani_method_name}", nullptr{inner_ani_args_trailing});',
+                        f'            env->Object_CallMethodByName_Void(static_cast<ani_object>(this->ref), "{method_ani_info.ani_method_name}", nullptr{inner_ani_args_trailing});',
                     )
                 iface_ani_impl_target.writeln(
                     f"        }}",
                 )
         iface_ani_impl_target.writeln(
             f"    }};",
-            f"    return taihe::make_holder<cpp_impl_t, {iface_cpp_info.as_owner}>(env, ani_obj);",
+            f"    return taihe::make_holder<cpp_impl_t, {iface_cpp_info.as_owner}>(ani_obj);",
             f"}}",
         )
 
