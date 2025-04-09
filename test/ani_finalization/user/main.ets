@@ -15,8 +15,12 @@ function test_finalization() {
     let flag: int = 0;
 
     let foo: Test.Foo|null = Test.makeFoo();
-    foo.addCallback(() => { flag = 42; })
-    foo.addCallback(() => { console.log("Bye!"); })
+    foo.addCallback(() => {
+        flag = 42;
+    })
+    foo.addCallback(() => {
+        console.log("Bye!");
+    })
     foo = null;
 
     console.log("...")
