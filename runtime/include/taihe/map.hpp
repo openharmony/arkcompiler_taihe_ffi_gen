@@ -236,7 +236,7 @@ struct map_view {
     std::size_t cap;
   };
 
-  iterator begin() {
+  iterator begin() const {
     std::size_t index = 0;
     while (index < m_handle->cap && !m_handle->bucket[index]) {
       ++index;
@@ -246,11 +246,11 @@ struct map_view {
                     index, m_handle->cap);
   }
 
-  iterator end() {
+  iterator end() const {
     return iterator(m_handle->bucket, nullptr, m_handle->cap, m_handle->cap);
   }
 
-  const_iterator begin() const {
+  const_iterator cbegin() const {
     std::size_t index = 0;
     while (index < m_handle->cap && !m_handle->bucket[index]) {
       ++index;
@@ -261,17 +261,9 @@ struct map_view {
         m_handle->cap);
   }
 
-  const_iterator end() const {
+  const_iterator cend() const {
     return const_iterator(m_handle->bucket, nullptr, m_handle->cap,
                           m_handle->cap);
-  }
-
-  const_iterator cbegin() const {
-    return begin();
-  }
-
-  const_iterator cend() const {
-    return end();
   }
 
 private:

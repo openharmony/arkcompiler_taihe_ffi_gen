@@ -193,7 +193,7 @@ int main() {
     std::cout << "-------- Testing Vector --------" << std::endl;
 
     vector<IBase> vec_0;
-    vector<IBase> vec_1 = vec_0;
+    vector<IBase> const vec_1 = vec_0;
 
     fillVec(vec_0);
 
@@ -202,13 +202,19 @@ int main() {
       std::cout << vec_1[i]->getId() << ", ";
     }
     std::cout << std::endl;
+
+    std::cout << "Vector = ";
+    for (auto const& item : vec_1) {
+      std::cout << item->getId() << ", ";
+    }
+    std::cout << std::endl;
   }
 
   {
     std::cout << "-------- Testing Map --------" << std::endl;
 
     map<string, IBase> map_0;
-    map<string, IBase> map_1 = map_0;
+    map<string, IBase> const map_1 = map_0;
 
     map_0.emplace<0>("a", make_holder<UserType, IBase>("a"));
     map_0.emplace<0>("b", make_holder<UserType, IBase>("b"));
@@ -232,7 +238,7 @@ int main() {
     std::cout << "-------- Testing Set --------" << std::endl;
 
     set<string> set_0;
-    set<string> set_1 = set_0;
+    set<string> const set_1 = set_0;
 
     set_0.emplace("a");
 

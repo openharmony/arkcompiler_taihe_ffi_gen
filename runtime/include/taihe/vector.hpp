@@ -20,9 +20,7 @@ public:
   using value_type = T;
   using size_type = std::size_t;
   using reference = T&;
-  using const_reference = T const&;
   using pointer = T*;
-  using const_pointer = T const*;
   using iterator = T*;
   using const_iterator = T const*;
 
@@ -80,6 +78,22 @@ public:
       std::destroy_at(&m_handle->buffer[i]);
     }
     m_handle->len = 0;
+  }
+
+  iterator begin() const {
+    return m_handle->buffer;
+  }
+
+  iterator end() const {
+    return m_handle->buffer + m_handle->len;
+  }
+
+  const_iterator cbegin() const {
+    return begin();
+  }
+
+  const_iterator cend() const {
+    return end();
   }
 
 protected:
