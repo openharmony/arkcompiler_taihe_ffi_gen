@@ -4,6 +4,7 @@
 #include "taihe/runtime.hpp"
 
 #include <iostream>
+#include <taihe/vector.hpp>
 
 using namespace taihe;
 using namespace finalization_test;
@@ -12,17 +13,23 @@ namespace {
 // To be implemented.
 
 class FooImpl {
+  vector<callback<void()>> callbacks;
+
 public:
   FooImpl() {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
   }
 
-  ~FooImpl() {
+  void addCallback(callback_view<void()> callback) {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
+    callbacks.emplace_back(callback);
   }
 
-  void introduce() {
+  ~FooImpl() {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
+    for (callback_view<void()> callback : callbacks) {
+      callback();
+    }
   }
 };
 

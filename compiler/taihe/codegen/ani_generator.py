@@ -1850,6 +1850,7 @@ class ANICodeGenerator:
     ):
         pkg_ani_source_target.writeln(
             f"static void {mangled_name}([[maybe_unused]] ani_env *env, [[maybe_unused]] ani_class clazz, ani_long data_ptr) {{",
+            f"    ::taihe::set_env(env);",
             f"    ::taihe::data_holder(reinterpret_cast<DataBlockHead*>(data_ptr));",
             f"}}",
         )

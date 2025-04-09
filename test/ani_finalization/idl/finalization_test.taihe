@@ -1,5 +1,5 @@
 interface Foo {
-    introduce(): void;
+    addCallback(callback: () => void): void;
 }
 
 function makeFoo(): Foo;
