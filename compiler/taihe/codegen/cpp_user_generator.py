@@ -24,9 +24,7 @@ class PackageCppUserInfo(AbstractAnalysis[PackageDecl]):
 class GlobFuncCppUserInfo(AbstractAnalysis[GlobFuncDecl]):
     def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
         super().__init__(am, f)
-        p = f.node_parent
-        assert p
-        self.namespace = "::".join(p.segments)
+        self.namespace = "::".join(f.parent_pkg.segments)
         self.call_name = f.name
         self.full_name = "::" + self.namespace + "::" + self.call_name
 

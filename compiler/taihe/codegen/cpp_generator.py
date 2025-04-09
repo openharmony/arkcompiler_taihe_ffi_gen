@@ -70,11 +70,9 @@ class IfaceMethodCppInfo(AbstractAnalysis[IfaceMethodDecl]):
 class EnumCppInfo(AbstractAnalysis[EnumDecl]):
     def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
         super().__init__(am, d)
-        p = d.node_parent
-        assert p
-        self.header = f"{p.name}.{d.name}.proj.0.hpp"
+        self.header = f"{d.parent_pkg.name}.{d.name}.proj.0.hpp"
 
-        self.namespace = "::".join(p.segments)
+        self.namespace = "::".join(d.parent_pkg.segments)
         self.name = d.name
         self.full_name = "::" + self.namespace + "::" + self.name
 
@@ -85,12 +83,10 @@ class EnumCppInfo(AbstractAnalysis[EnumDecl]):
 class StructCppInfo(AbstractAnalysis[StructDecl]):
     def __init__(self, am: AnalysisManager, d: StructDecl) -> None:
         super().__init__(am, d)
-        p = d.node_parent
-        assert p
-        self.decl_header = f"{p.name}.{d.name}.proj.0.hpp"
-        self.impl_header = f"{p.name}.{d.name}.proj.1.hpp"
+        self.decl_header = f"{d.parent_pkg.name}.{d.name}.proj.0.hpp"
+        self.impl_header = f"{d.parent_pkg.name}.{d.name}.proj.1.hpp"
 
-        self.namespace = "::".join(p.segments)
+        self.namespace = "::".join(d.parent_pkg.segments)
         self.name = d.name
         self.full_name = "::" + self.namespace + "::" + self.name
 
@@ -101,12 +97,10 @@ class StructCppInfo(AbstractAnalysis[StructDecl]):
 class UnionCppInfo(AbstractAnalysis[UnionDecl]):
     def __init__(self, am: AnalysisManager, d: UnionDecl) -> None:
         super().__init__(am, d)
-        p = d.node_parent
-        assert p
-        self.decl_header = f"{p.name}.{d.name}.proj.0.hpp"
-        self.impl_header = f"{p.name}.{d.name}.proj.1.hpp"
+        self.decl_header = f"{d.parent_pkg.name}.{d.name}.proj.0.hpp"
+        self.impl_header = f"{d.parent_pkg.name}.{d.name}.proj.1.hpp"
 
-        self.namespace = "::".join(p.segments)
+        self.namespace = "::".join(d.parent_pkg.segments)
         self.name = d.name
         self.full_name = "::" + self.namespace + "::" + self.name
 
@@ -117,17 +111,15 @@ class UnionCppInfo(AbstractAnalysis[UnionDecl]):
 class IfaceCppInfo(AbstractAnalysis[IfaceDecl]):
     def __init__(self, am: AnalysisManager, d: IfaceDecl) -> None:
         super().__init__(am, d)
-        p = d.node_parent
-        assert p
-        self.decl_header = f"{p.name}.{d.name}.proj.0.hpp"
-        self.defn_header = f"{p.name}.{d.name}.proj.1.hpp"
-        self.impl_header = f"{p.name}.{d.name}.proj.2.hpp"
+        self.decl_header = f"{d.parent_pkg.name}.{d.name}.proj.0.hpp"
+        self.defn_header = f"{d.parent_pkg.name}.{d.name}.proj.1.hpp"
+        self.impl_header = f"{d.parent_pkg.name}.{d.name}.proj.2.hpp"
 
-        self.namespace = "::".join(p.segments)
+        self.namespace = "::".join(d.parent_pkg.segments)
         self.norm_name = d.name
         self.full_norm_name = "::" + self.namespace + "::" + self.norm_name
 
-        self.weakspace = "::".join(p.segments) + "::weak"
+        self.weakspace = "::".join(d.parent_pkg.segments) + "::weak"
         self.weak_name = d.name
         self.full_weak_name = "::" + self.weakspace + "::" + self.weak_name
 
@@ -302,8 +294,8 @@ class SetTypeCppInfo(AbstractAnalysis[SetType], AbstractTypeCppInfo):
 class CallbackTypeCppInfo(AbstractAnalysis[CallbackType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: CallbackType) -> None:
         super().__init__(am, t)
-        if t.return_ty:
-            return_ty_cpp_info = TypeCppInfo.get(am, t.return_ty)
+        if return_ty := t.return_ty:
+            return_ty_cpp_info = TypeCppInfo.get(am, return_ty)
             return_ty_decl_headers = return_ty_cpp_info.decl_headers
             return_ty_defn_headers = return_ty_cpp_info.impl_headers
             return_ty_as_owner = return_ty_cpp_info.as_owner
@@ -339,8 +331,7 @@ class TypeCppInfo(TypeVisitor[AbstractTypeCppInfo]):
         self.am = am
 
     @staticmethod
-    def get(am: AnalysisManager, t: Type | None) -> AbstractTypeCppInfo:
-        assert t is not None
+    def get(am: AnalysisManager, t: Type) -> AbstractTypeCppInfo:
         return TypeCppInfo(am).handle_type(t)
 
     @override
@@ -545,7 +536,6 @@ class CppHeadersGenerator:
     ):
         if enum.ty_ref is None:
             return
-        assert enum.ty_ref.resolved_ty
         if enum.ty_ref.resolved_ty == STRING:
             as_owner = "char const*"
         else:
