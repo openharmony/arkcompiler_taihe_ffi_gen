@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 
 # Build the project and package into "dist/"
 
@@ -32,7 +32,7 @@ build-compiler() {
 
     local prog="$BIN_DIR/taihec"
     cat >"$prog" <<'EOF'
-#!/usr/bin/bash -eu
+#!/bin/bash -eu
 
 export TAIHE_ROOT="$(realpath $(dirname "$0")/..)"
 export PYTHONPATH="${TAIHE_ROOT}/lib/taihe/compiler:${TAIHE_ROOT}/lib/taihe/compiler/lib:${PYTHONPATH:-}"
@@ -43,7 +43,7 @@ EOF
 
     local prog="$BIN_DIR/taihe-tryit"
     cat >"$prog" <<'EOF'
-#!/usr/bin/bash -eu
+#!/bin/bash -eu
 
 export TAIHE_ROOT="$(realpath $(dirname "$0")/..)"
 export PYTHONPATH="${TAIHE_ROOT}/lib/taihe/compiler:${TAIHE_ROOT}/lib/taihe/compiler/lib:${PYTHONPATH:-}"

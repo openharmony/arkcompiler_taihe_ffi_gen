@@ -1,4 +1,4 @@
-#!/usr/bin/bash -eux
+#!/bin/bash -eux
 # Install pre-commit git hoook.
 
 cd "$(dirname $0)/.."
