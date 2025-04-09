@@ -214,6 +214,9 @@ class GenericTypeRefDecl(TypeRefDecl):
         self.symbol = symbol
         self.args_ty_ref = args_ty_ref
 
+        for arg_ty_ref in args_ty_ref:
+            arg_ty_ref.node_parent = self
+
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_generic_type_ref_decl(self)
@@ -245,6 +248,8 @@ class ParamDecl(NamedDecl):
         super().__init__(loc, name)
         self.ty_ref = ty_ref
 
+        ty_ref.node_parent = self
+
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_param_decl(self)
@@ -268,7 +273,11 @@ class CallbackTypeRefDecl(TypeRefDecl):
         self.params = []
         self.return_ty_ref = return_ty_ref
 
+        if return_ty_ref:
+            return_ty_ref.node_parent = self
+
     def add_param(self, p: ParamDecl):
+        p.node_parent = self
         self.params.append(p)
 
     @override
@@ -358,6 +367,8 @@ class DeclarationRefDecl(Decl):
         self.symbol = symbol
         self.pkg_ref = pkg_ref
 
+        pkg_ref.node_parent = self
+
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_decl_ref_decl(self)
@@ -423,6 +434,8 @@ class PackageImportDecl(ImportDecl):
         )
         self.pkg_ref = pkg_ref
 
+        pkg_ref.node_parent = self
+
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_package_import_decl(self)
@@ -451,6 +464,8 @@ class DeclarationImportDecl(ImportDecl):
             loc=loc or decl_ref.loc,
         )
         self.decl_ref = decl_ref
+
+        decl_ref.node_parent = self
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
@@ -528,6 +543,9 @@ class UnionFieldDecl(NamedDecl):
         super().__init__(loc, name)
         self.ty_ref = ty_ref
 
+        if ty_ref:
+            ty_ref.node_parent = self
+
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_union_field_decl(self)
@@ -562,6 +580,8 @@ class StructFieldDecl(NamedDecl):
         super().__init__(loc, name)
         self.ty_ref = ty_ref
 
+        ty_ref.node_parent = self
+
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_struct_field_decl(self)
@@ -594,6 +614,8 @@ class IfaceParentDecl(Decl):
     ):
         super().__init__(loc)
         self.ty_ref = ty_ref
+
+        ty_ref.node_parent = self
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
@@ -631,7 +653,11 @@ class IfaceMethodDecl(NamedDecl):
         self.params = []
         self.return_ty_ref = return_ty_ref
 
+        if return_ty_ref:
+            return_ty_ref.node_parent = self
+
     def add_param(self, p: ParamDecl):
+        p.node_parent = self
         self.params.append(p)
 
     @override
@@ -677,7 +703,11 @@ class GlobFuncDecl(PackageLevelDecl):
         self.params = []
         self.return_ty_ref = return_ty_ref
 
+        if return_ty_ref:
+            return_ty_ref.node_parent = self
+
     def add_param(self, p: ParamDecl):
+        p.node_parent = self
         self.params.append(p)
 
     @override
@@ -713,6 +743,9 @@ class EnumDecl(TypeDecl):
         super().__init__(loc, name)
         self.items = []
         self.ty_ref = ty_ref
+
+        if ty_ref:
+            ty_ref.node_parent = self
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
