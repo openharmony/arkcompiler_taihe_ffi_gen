@@ -48,6 +48,11 @@ def main():
         action="store_true",
         help="debug mode",
     )
+    parser.add_argument(
+        "--sts-keep-name",
+        action="store_true",
+        help="keep original function and interface method names",
+    )
     args = parser.parse_args()
     invocation = CompilerInvocation(
         src_dirs=[Path(d) for d in args.src_dirs],
@@ -57,6 +62,7 @@ def main():
         gen_ani=args.ani,
         gen_c_impl=args.c_impl,
         debug=args.debug,
+        sts_keep_name=args.sts_keep_name,
     )
     instance = CompilerInstance(invocation)
     instance.run()

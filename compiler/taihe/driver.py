@@ -36,7 +36,7 @@ from taihe.parse.convert import (
     normalize_pkg_name,
 )
 from taihe.semantics.analysis import analyze_semantics
-from taihe.semantics.declarations import PackageGroup
+from taihe.semantics.declarations import AttrItemDecl, PackageGroup
 from taihe.semantics.format import pretty_print
 from taihe.utils.analyses import AnalysisManager
 from taihe.utils.diagnostics import DiagnosticsManager, Level
@@ -70,6 +70,7 @@ class CompilerInvocation:
     gen_cpp_impl: bool = True
 
     debug: bool = False
+    sts_keep_name: bool = False
 
 
 class CompilerInstance:
@@ -206,9 +207,18 @@ class CompilerInstance:
 
         self.target_manager.output_to(self.invocation.out_dir)
 
+    def add_pkg_attr(self):
+        if not self.invocation.sts_keep_name:
+            return
+        for pkg in self.package_group.packages:
+            if not pkg.get_attr_item("sts_keep_name"):
+                d = AttrItemDecl(None, "sts_keep_name", ())
+                pkg.add_attr(d)
+
     def run(self):
         self.scan()
         self.parse()
         self.validate()
+        self.add_pkg_attr()
         self.show()
         self.generate()

@@ -44,9 +44,11 @@ class BuildSystem:
         target_dir: str,
         generate_and_compile_ani: bool,
         opt_level: str,
+        sts_keep_name: bool,
         config: Optional[BuildConfig] = None,
         verbosity: int = logging.INFO,
     ):
+        self.sts_keep_name = sts_keep_name
         self.config = config if config is not None else BuildConfig()
         self.logger = self._setup_logger(verbosity)
 
@@ -436,6 +438,7 @@ class BuildSystem:
                     out_dir=self.generated_dir,
                     gen_ani=True,
                     gen_author=True,
+                    sts_keep_name=self.sts_keep_name,
                 )
             ).run()
 
@@ -650,6 +653,11 @@ def main(config: Optional[BuildConfig] = None):
         default=0,
         help="Increase verbosity (can be used multiple times)",
     )
+    parser.add_argument(
+        "--sts-keep-name",
+        action="store_true",
+        help="keep original function and interface method names",
+    )
 
     args = parser.parse_args()
 
@@ -669,6 +677,7 @@ def main(config: Optional[BuildConfig] = None):
             args.target_directory,
             args.ani,
             args.optimization,
+            sts_keep_name=args.sts_keep_name,
             config=config or BuildConfig(),
             verbosity=verbosity,
         )

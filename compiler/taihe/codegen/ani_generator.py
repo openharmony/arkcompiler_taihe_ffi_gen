@@ -253,10 +253,10 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
 
         elif on_off_attr := f.get_attr_item("on_off"):
             assert f.name.startswith(
-                ("on", "off")
+                ("on", "off", "On", "Off")
             ), f'{f.loc}: @on_off method name must start with "on" or "off"'
 
-            if f.name.startswith("on"):
+            if f.name.startswith(("on", "On")):
                 if not on_off_attr.args:
                     type_name = f.name[2:]
                     type_name = type_name[0].lower() + type_name[1:]
@@ -264,7 +264,7 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
                     (type_name,) = on_off_attr.args
                 self.on_off_type = ("on", type_name)
 
-            if f.name.startswith("off"):
+            if f.name.startswith(("off", "Off")):
                 if not on_off_attr.args:
                     type_name = f.name[3:]
                     type_name = type_name[0].lower() + type_name[1:]
@@ -281,7 +281,7 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
 
             if not get_attr.args:
                 assert f.name.startswith(
-                    "get"
+                    ("get", "Get")
                 ), f'{f.loc}: @get method name must start with "get" if the property name is omitted'
                 get_name = f.name[3:]
                 self.get_name = get_name[0].lower() + get_name[1:]
@@ -297,7 +297,7 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
 
             if not set_attr.args:
                 assert f.name.startswith(
-                    "set"
+                    ("set", "Set")
                 ), f'{f.loc}: @set method name must start with "set" if the property name is omitted'
                 set_name = f.name[3:]
                 self.set_name = set_name[0].lower() + set_name[1:]
@@ -305,7 +305,10 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
                 (self.set_name,) = set_attr.args
 
         else:
-            self.sts_func_name = f.name
+            if f.parent_pkg.get_attr_item("sts_keep_name"):
+                self.sts_func_name = f.name
+            else:
+                self.sts_func_name = f.name[0].lower() + f.name[1:]
 
         self.sts_async_name = None
         self.sts_promise_name = None
@@ -346,10 +349,10 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
 
         elif on_off_attr := f.get_attr_item("on_off"):
             assert f.name.startswith(
-                ("on", "off")
+                ("on", "off", "On", "Off")
             ), f'{f.loc}: @on_off method name must start with "on" or "off"'
 
-            if f.name.startswith("on"):
+            if f.name.startswith(("on", "On")):
                 if not on_off_attr.args:
                     type_name = f.name[2:]
                     type_name = type_name[0].lower() + type_name[1:]
@@ -358,7 +361,7 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
                 self.on_off_type = ("on", type_name)
                 self.ani_method_name = "on"
 
-            if f.name.startswith("off"):
+            if f.name.startswith(("off", "Off")):
                 if not on_off_attr.args:
                     type_name = f.name[3:]
                     type_name = type_name[0].lower() + type_name[1:]
@@ -373,7 +376,7 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
 
             if not get_attr.args:
                 assert f.name.startswith(
-                    "get"
+                    ("get", "Get")
                 ), f'{f.loc}: @get method name must start with "get" if the property name is omitted'
                 get_name = f.name[3:]
                 self.get_name = get_name[0].lower() + get_name[1:]
@@ -387,7 +390,7 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
 
             if not set_attr.args:
                 assert f.name.startswith(
-                    "set"
+                    ("set", "Set")
                 ), f'{f.loc}: @set method name must start with "set" if the property name is omitted'
                 set_name = f.name[3:]
                 self.set_name = set_name[0].lower() + set_name[1:]
@@ -396,8 +399,12 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
             self.ani_method_name = f"<set>{self.set_name}"
 
         else:
-            self.sts_method_name = f.name
-            self.ani_method_name = f.name
+            if f.parent_pkg.get_attr_item("sts_keep_name"):
+                self.sts_method_name = f.name
+                self.ani_method_name = f.name
+            else:
+                self.sts_method_name = f.name[0].lower() + f.name[1:]
+                self.ani_method_name = f.name[0].lower() + f.name[1:]
 
         self.sts_async_name = None
         self.sts_promise_name = None
