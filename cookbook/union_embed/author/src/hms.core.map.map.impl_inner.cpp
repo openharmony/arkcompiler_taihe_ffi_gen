@@ -15,7 +15,8 @@ namespace {
 class Resource {
 public:
   void foo(int32_t a) {
-    std::cout << "type_Resource: " << "foo: " << a << std::endl;
+    std::cout << "type_Resource: "
+              << "foo: " << a << std::endl;
   }
 };
 

@@ -437,14 +437,14 @@ class BuildSystem:
         self.logger.info("Generating author and ani codes...")
 
         instance = CompilerInstance(
-                CompilerInvocation(
-                    src_dirs=[self.idl_dir],
-                    out_dir=self.generated_dir,
-                    gen_ani=True,
-                    gen_author=True,
-                    sts_keep_name=self.sts_keep_name,
-                )
+            CompilerInvocation(
+                src_dirs=[self.idl_dir],
+                out_dir=self.generated_dir,
+                gen_ani=True,
+                gen_author=True,
+                sts_keep_name=self.sts_keep_name,
             )
+        )
 
         if not instance.run():
             raise RuntimeError(f"Code generation failed")
