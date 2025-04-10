@@ -92,15 +92,6 @@ class StringType(BuiltinType):
         return v.visit_string_type(self)
 
 
-@dataclass(frozen=True, repr=False)
-class BigIntType(BuiltinType):
-    name: str = "BigInt"
-
-    @override
-    def _accept(self, v: "TypeVisitor") -> Any:
-        return v.visit_bigint_type(self)
-
-
 BOOL = ScalarType("bool", 8, is_signed=False)
 
 F32 = ScalarType("f32", 32, is_signed=True, is_float=True)
@@ -117,7 +108,6 @@ U32 = ScalarType("u32", 32, is_signed=False)
 U64 = ScalarType("u64", 64, is_signed=False)
 
 STRING = StringType()
-BIGINT = BigIntType()
 
 OPAQUE = OpaqueType()
 
@@ -137,7 +127,6 @@ BUILTIN_TYPES: dict[str, Type] = {
         F32,
         F64,
         STRING,
-        BIGINT,
         OPAQUE,
     ]
 }
