@@ -215,6 +215,8 @@ class CompilerInstance:
                 pkg.add_attr(d)
 
     def run(self):
+        self.diagnostics_manager.reset_max_level()
+
         self.scan()
         self.parse()
         self.validate()

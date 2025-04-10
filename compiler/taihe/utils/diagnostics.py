@@ -172,12 +172,12 @@ class DiagnosticsManager(AbstractDiagnosticsManager):
     """Manages diagnostic messages."""
 
     def __init__(self, out: TextIO = stderr):
-        self._max_level_record = Level.NOTE
         self._out = out
         if self._out.isatty():
             self._color_filter_fn = _passthrough
         else:
             self._color_filter_fn = _discard
+        self.reset_max_level()
 
     def _write(self, s: str):
         self._out.write(s)
@@ -234,6 +234,9 @@ class DiagnosticsManager(AbstractDiagnosticsManager):
         for n in diag.notes():
             self._render(n)
         stderr.flush()
+
+    def reset_max_level(self):
+        self._max_level_record = -1
 
     def current_max_level(self):
         return self._max_level_record
