@@ -19,6 +19,12 @@ def run_command(command: list[Path | str]):
     return result
 
 
+def generate_code(invocation: CompilerInvocation):
+    instance = CompilerInstance(invocation)
+    if not instance.run():
+        raise RuntimeError("Compilation error")
+
+
 def clean_directory(directory: Path):
     if directory.exists():
         shutil.rmtree(directory)
@@ -119,23 +125,23 @@ def main(
     clean_directory(build_dir)
 
     print("Generating author codes...")
-    CompilerInstance(
+    generate_code(
         CompilerInvocation(
             src_dirs=[idl_dir],
             out_dir=author_generated_dir,
             gen_author=True,
         )
-    ).run()
+    )
     print("Done.")
 
     print("Generating user codes...")
-    CompilerInstance(
+    generate_code(
         CompilerInvocation(
             src_dirs=[idl_dir],
             out_dir=user_generated_dir,
             gen_user=True,
         )
-    ).run()
+    )
     print("Done.")
 
     if generate_only:

@@ -188,6 +188,8 @@ class CompilerInstance:
         self.target_manager.output_to(self.invocation.out_dir)
 
     def run(self):
+        self.diagnostics_manager.reset_max_level()
+
         self.scan()
         self.parse()
         self.validate()
