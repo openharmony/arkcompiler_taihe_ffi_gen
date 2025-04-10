@@ -33,7 +33,7 @@ from taihe.semantics.analysis import analyze_semantics
 from taihe.semantics.declarations import PackageGroup
 from taihe.semantics.format import pretty_print
 from taihe.utils.analyses import AnalysisManager
-from taihe.utils.diagnostics import DiagnosticsManager, Level
+from taihe.utils.diagnostics import DiagnosticsManager
 from taihe.utils.exceptions import AdhocNote
 from taihe.utils.outputs import OutputManager
 from taihe.utils.sources import SourceFile, SourceLocation, SourceManager
@@ -148,12 +148,11 @@ class CompilerInstance:
     def validate(self):
         analyze_semantics(self.package_group, self.diagnostics_manager)
 
-    def show(self):
         if self.invocation.debug:
             pretty_print(self.package_group, sys.stdout)
 
     def generate(self):
-        if self.diagnostics_manager.current_max_level() >= Level.ERROR:
+        if self.diagnostics_manager.has_errors():
             return
 
         if not self.invocation.out_dir:
@@ -192,5 +191,6 @@ class CompilerInstance:
         self.scan()
         self.parse()
         self.validate()
-        self.show()
         self.generate()
+
+        return not self.diagnostics_manager.has_errors()

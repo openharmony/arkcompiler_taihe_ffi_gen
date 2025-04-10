@@ -1,4 +1,5 @@
 import argparse
+import sys
 from pathlib import Path
 
 from taihe.driver import CompilerInstance, CompilerInvocation
@@ -45,8 +46,10 @@ def main():
         debug=args.debug,
     )
     instance = CompilerInstance(invocation)
-    instance.run()
+    if not instance.run():
+        return -1
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

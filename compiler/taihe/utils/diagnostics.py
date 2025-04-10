@@ -235,3 +235,6 @@ class DiagnosticsManager(AbstractDiagnosticsManager):
 
     def current_max_level(self):
         return self._max_level_record
+
+    def has_errors(self):
+        return self.current_max_level() >= Level.ERROR
