@@ -430,9 +430,13 @@ class BuildSystem:
             # Import here to avoid module dependency issues
             from taihe.driver import CompilerInstance, CompilerInvocation
 
-            self.logger.info("Generating author and ani codes...")
+        except ImportError as e:
+            self.logger.error(f"Failed to import taihe module: {e}")
+            raise
 
-            CompilerInstance(
+        self.logger.info("Generating author and ani codes...")
+
+        instance = CompilerInstance(
                 CompilerInvocation(
                     src_dirs=[self.idl_dir],
                     out_dir=self.generated_dir,
@@ -440,15 +444,10 @@ class BuildSystem:
                     gen_author=True,
                     sts_keep_name=self.sts_keep_name,
                 )
-            ).run()
+            )
 
-            self.logger.info("Code generation complete.")
-        except ImportError as e:
-            self.logger.error(f"Failed to import taihe module: {e}")
-            raise
-        except Exception as e:
-            self.logger.error(f"Code generation failed: {e}")
-            raise
+        if not instance.run():
+            raise RuntimeError(f"Code generation failed")
 
     def compile_shared_library(self, panda_include_dir: Path) -> Path:
         """Compile the shared library."""
