@@ -1,10 +1,8 @@
 set(IDL_FILES
-    "${CMAKE_CURRENT_LIST_DIR}/idl/foo.taihe"
     "${CMAKE_CURRENT_LIST_DIR}/idl/bar.taihe"
 )
 
 set(GEN_ETS_FILES
-    "foo.ets"
     "bar.ets"
 )
 

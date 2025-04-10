@@ -1,3 +1,4 @@
+import * as bigint_new from "@generated/bigint_new";
 import * as bigint_test from "@generated/bigint_test";
 import * as System from "std/core/System";
 
@@ -12,6 +13,9 @@ function main() {
     suite.addTest("testBigint04", testBigint04);
     suite.addTest("testBigint05", testBigint05);
     suite.addTest("testBigint06", testBigint06);
+
+    console.log(bigint_new.processBigInt(1n));
+
     System.exit(suite.run());
     console.info("bigint_test run end...");
 }

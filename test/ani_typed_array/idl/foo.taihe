@@ -1,2 +1,0 @@
-function inArrayBuffer(v: Array<u16>): void;
-function outArrayBuffer(): Array<u16>;

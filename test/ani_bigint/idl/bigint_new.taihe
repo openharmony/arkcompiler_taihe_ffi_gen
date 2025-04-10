@@ -1,0 +1,3 @@
+@!BigInt
+
+function processBigInt(a: Array<u64>): Array<u64>;
