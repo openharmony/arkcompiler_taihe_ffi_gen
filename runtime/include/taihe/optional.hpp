@@ -105,7 +105,7 @@ inline std::size_t hash_impl(adl_helper_t, optional_view<cpp_owner_t> val) {
 template<typename cpp_owner_t>
 inline bool same_impl(adl_helper_t, optional_view<cpp_owner_t> lhs,
                       optional_view<cpp_owner_t> rhs) {
-  return !lhs && !rhs || same(*lhs, *rhs);
+  return (!lhs && !rhs) || same(*lhs, *rhs);
 }
 
 template<typename cpp_owner_t>
