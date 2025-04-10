@@ -263,7 +263,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
         try:
             d.maybe_resolved_ty = generic(*args_ty)
         except TypeError:
-            self.diag.emit(GenericArgumentsError(d.unresolved_repr, loc=d.loc))
+            self.diag.emit(GenericArgumentsError(d.text, loc=d.loc))
 
     @override
     def visit_callback_type_ref_decl(self, d: CallbackTypeRefDecl) -> None:

@@ -30,11 +30,11 @@ class Type(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def representation(self) -> str:
+    def signature(self) -> str:
         """Return the representation of the type."""
 
     def __repr__(self) -> str:
-        return f"<{self.__class__.__qualname__} {self.representation}>"
+        return f"<{self.__class__.__qualname__} {self.signature}>"
 
     @abstractmethod
     def _accept(self, v: "TypeVisitor") -> Any:
@@ -59,7 +59,7 @@ class BuiltinType(Type, metaclass=ABCMeta):
 
     @property
     @override
-    def representation(self):
+    def signature(self):
         return f"{self.name}"
 
 
@@ -148,9 +148,9 @@ class CallbackType(Type):
 
     @property
     @override
-    def representation(self):
-        return_fmt = ty.representation if (ty := self.return_ty) else "void"
-        params_fmt = ", ".join(ty.representation for ty in self.params_ty)
+    def signature(self):
+        return_fmt = ty.signature if (ty := self.return_ty) else "void"
+        params_fmt = ", ".join(ty.signature for ty in self.params_ty)
         return f"({params_fmt}) => {return_fmt}"
 
 
@@ -168,8 +168,8 @@ class ArrayType(GenericType):
 
     @property
     @override
-    def representation(self):
-        return f"Array<{self.item_ty.representation}>"
+    def signature(self):
+        return f"Array<{self.item_ty.signature}>"
 
 
 @dataclass(frozen=True, repr=False)
@@ -182,8 +182,8 @@ class OptionalType(GenericType):
 
     @property
     @override
-    def representation(self):
-        return f"Optional<{self.item_ty.representation}>"
+    def signature(self):
+        return f"Optional<{self.item_ty.signature}>"
 
 
 @dataclass(frozen=True, repr=False)
@@ -196,8 +196,8 @@ class VectorType(GenericType):
 
     @property
     @override
-    def representation(self):
-        return f"Vector<{self.val_ty.representation}>"
+    def signature(self):
+        return f"Vector<{self.val_ty.signature}>"
 
 
 @dataclass(frozen=True, repr=False)
@@ -211,8 +211,8 @@ class MapType(GenericType):
 
     @property
     @override
-    def representation(self):
-        return f"Map<{self.key_ty.representation}, {self.val_ty.representation}>"
+    def signature(self):
+        return f"Map<{self.key_ty.signature}, {self.val_ty.signature}>"
 
 
 @dataclass(frozen=True, repr=False)
@@ -225,8 +225,8 @@ class SetType(GenericType):
 
     @property
     @override
-    def representation(self):
-        return f"Set<{self.key_ty.representation}>"
+    def signature(self):
+        return f"Set<{self.key_ty.signature}>"
 
 
 class GenericBuilder(Protocol):
@@ -253,7 +253,7 @@ class UserType(Type, metaclass=ABCMeta):
 
     @property
     @override
-    def representation(self):
+    def signature(self):
         return f"{self.ty_decl.full_name}"
 
 

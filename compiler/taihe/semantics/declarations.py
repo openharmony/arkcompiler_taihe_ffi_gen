@@ -167,86 +167,13 @@ class TypeRefDecl(DeclWithParent[Decl], metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def unresolved_repr(self) -> str:
+    def text(self) -> str:
         """Return the original representation of the type reference."""
 
     @property
     @override
     def description(self) -> str:
-        return f"type reference {self.unresolved_repr}"
-
-
-class ShortTypeRefDecl(TypeRefDecl):
-    symbol: str
-
-    def __init__(
-        self,
-        loc: Optional[SourceLocation],
-        symbol: str,
-    ):
-        super().__init__(loc)
-        self.symbol = symbol
-
-    @override
-    def _accept(self, v: "DeclVisitor") -> Any:
-        return v.visit_short_type_ref_decl(self)
-
-    @property
-    @override
-    def unresolved_repr(self):
-        return self.symbol
-
-
-class LongTypeRefDecl(TypeRefDecl):
-    pkname: str
-    symbol: str
-
-    def __init__(
-        self,
-        loc: Optional[SourceLocation],
-        pkname: str,
-        symbol: str,
-    ):
-        super().__init__(loc)
-        self.pkname = pkname
-        self.symbol = symbol
-
-    @override
-    def _accept(self, v: "DeclVisitor") -> Any:
-        return v.visit_long_type_ref_decl(self)
-
-    @property
-    @override
-    def unresolved_repr(self):
-        return f"{self.pkname}.{self.symbol}"
-
-
-class GenericTypeRefDecl(TypeRefDecl):
-    symbol: str
-    args_ty_ref: list[TypeRefDecl]
-
-    def __init__(
-        self,
-        loc: Optional[SourceLocation],
-        symbol: str,
-        args_ty_ref: list[TypeRefDecl],
-    ):
-        super().__init__(loc)
-        self.symbol = symbol
-        self.args_ty_ref = args_ty_ref
-
-        for arg_ty_ref in args_ty_ref:
-            arg_ty_ref.set_parent(self)
-
-    @override
-    def _accept(self, v: "DeclVisitor") -> Any:
-        return v.visit_generic_type_ref_decl(self)
-
-    @property
-    @override
-    def unresolved_repr(self):
-        args_fmt = ", ".join(arg.unresolved_repr for arg in self.args_ty_ref)
-        return f"{self.symbol}<{args_fmt}>"
+        return f"type reference {self.text}"
 
 
 class ParamDecl(NamedDeclWithParent[Decl]):
@@ -270,6 +197,79 @@ class ParamDecl(NamedDeclWithParent[Decl]):
     @override
     def description(self) -> str:
         return f"parameter {self.name}"
+
+
+class ShortTypeRefDecl(TypeRefDecl):
+    symbol: str
+
+    def __init__(
+        self,
+        loc: Optional[SourceLocation],
+        symbol: str,
+    ):
+        super().__init__(loc)
+        self.symbol = symbol
+
+    @override
+    def _accept(self, v: "DeclVisitor") -> Any:
+        return v.visit_short_type_ref_decl(self)
+
+    @property
+    @override
+    def text(self) -> str:
+        return self.symbol
+
+
+class LongTypeRefDecl(TypeRefDecl):
+    pkname: str
+    symbol: str
+
+    def __init__(
+        self,
+        loc: Optional[SourceLocation],
+        pkname: str,
+        symbol: str,
+    ):
+        super().__init__(loc)
+        self.pkname = pkname
+        self.symbol = symbol
+
+    @override
+    def _accept(self, v: "DeclVisitor") -> Any:
+        return v.visit_long_type_ref_decl(self)
+
+    @property
+    @override
+    def text(self) -> str:
+        return f"{self.pkname}.{self.symbol}"
+
+
+class GenericTypeRefDecl(TypeRefDecl):
+    symbol: str
+    args_ty_ref: list[TypeRefDecl]
+
+    def __init__(
+        self,
+        loc: Optional[SourceLocation],
+        symbol: str,
+    ):
+        super().__init__(loc)
+        self.symbol = symbol
+        self.args_ty_ref = []
+
+    @override
+    def _accept(self, v: "DeclVisitor") -> Any:
+        return v.visit_generic_type_ref_decl(self)
+
+    def add_arg_ty_ref(self, p: TypeRefDecl):
+        p.set_parent(self)
+        self.args_ty_ref.append(p)
+
+    @property
+    @override
+    def text(self) -> str:
+        args_fmt = ", ".join(arg_ty_ref.text for arg_ty_ref in self.args_ty_ref)
+        return f"{self.symbol}<{args_fmt}>"
 
 
 class CallbackTypeRefDecl(TypeRefDecl):
@@ -298,11 +298,11 @@ class CallbackTypeRefDecl(TypeRefDecl):
 
     @property
     @override
-    def unresolved_repr(self) -> str:
+    def text(self) -> str:
         args_fmt = ", ".join(
-            f"{param.name}: {param.ty_ref.unresolved_repr}" for param in self.params
+            f"{param.name}: {param.ty_ref.text}" for param in self.params
         )
-        ret_fmt = ty_ref.unresolved_repr if (ty_ref := self.return_ty_ref) else "void"
+        ret_fmt = ty_ref.text if (ty_ref := self.return_ty_ref) else "void"
         return f"({args_fmt}) => {ret_fmt}"
 
 

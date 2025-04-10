@@ -103,10 +103,14 @@ attrVal
 //////////
 
 type
-    : PkgName_pkg_name = pkgName DOT TOKEN_decl_name = ID # longType
-    | TOKEN_decl_name = ID # shortType
-    | TOKEN_decl_name = ID LESS_THAN (TypeLst_args += type (COMMA TypeLst_args += type)* COMMA?)? GREATER_THAN # genericType
+    : (DeclAttrLst_forward_attrs += declAttr)*
+      PkgName_pkg_name = pkgName DOT TOKEN_decl_name = ID # longType
+    | (DeclAttrLst_forward_attrs += declAttr)*
+      TOKEN_decl_name = ID # shortType
+    | (DeclAttrLst_forward_attrs += declAttr)*
+      TOKEN_decl_name = ID LESS_THAN (TypeLst_args += type (COMMA TypeLst_args += type)* COMMA?)? GREATER_THAN # genericType
     | <assoc = right>
+      (DeclAttrLst_forward_attrs += declAttr)*
       LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)* COMMA?)? RIGHT_PARENTHESIS ARROW (TypeOpt_return_ty = type | KW_VOID) # callbackType
     ;
 
