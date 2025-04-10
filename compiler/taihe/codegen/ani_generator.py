@@ -1308,6 +1308,42 @@ class ArrayBufferTypeANIInfo(
         )
 
 
+class BigIntTypeANIInfo(
+    AbstractTypeANIInfo,
+    AbstractAnalysis[[PackageDecl, ArrayType]],
+):
+    def __init__(self, am: AnalysisManager, pkg: PackageDecl, t: ArrayType) -> None:
+        super().__init__(am, pkg, t)
+        self.ani_type = ANI_OBJECT
+        self.type_desc = "Lescompat/BigInt;"
+        self.am = am
+        self.pkg = pkg
+        self.t = t
+
+    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+        return "BigInt"
+
+    @override
+    def from_ani_impl(
+        self,
+        target: COutputBuffer,
+        env: str,
+        ani_value: str,
+        cpp_result: str,
+    ):
+        pass
+
+    @override
+    def into_ani_impl(
+        self,
+        target: COutputBuffer,
+        env: str,
+        cpp_value: str,
+        ani_result: str,
+    ):
+        pass
+    
+
 class OptionalTypeANIInfo(
     AbstractTypeANIInfo,
     AbstractAnalysis[[PackageDecl, OptionalType]],
