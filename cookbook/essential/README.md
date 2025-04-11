@@ -111,7 +111,9 @@ PrintBook: Rust for Rustaceans, year 2021, kind = Rust
   - `union`: 表示多个类型间的选择，对应 ArkTS 投影 `type Foo = Bar | Baz;`
   - `Optional<T>`: 表示可空的对象，对应 ArkTS 投影 `foo: Bar | undefined`
   - `Array<T>`: 表示数组，对应 ArkTS 投影 `foo: T[]`
-  - `Array<u8>`: 表示 ArkTS 的 `ArrayBuffer`（本文未给出示例），是 `u8` 的特殊用法。
+  - `@arraybuffer Array<u8>`: 表示 ArkTS 的 `ArrayBuffer`（本文未给出示例），是 `u8` 的特殊用法。
+  - `@typedarray Array<u8>`: 表示 ArkTS 的 `Uint8Array`
+  - `@bigint Array<u64>`: 表示 ArkTS 的 `BigInt`
   - `(arg: ArgT) => RetT` 表示回调函数，对应 ArkTS 投影 `(arg: ArgT) => RetT`
 
 - 让我们用高级特性举个例子。在 Taihe 文件中引入这些代码

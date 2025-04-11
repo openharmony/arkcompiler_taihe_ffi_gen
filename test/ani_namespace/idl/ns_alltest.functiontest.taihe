@@ -24,7 +24,7 @@ function BaseFunctionTest10(param1:Array<i8>):void;
 function BaseFunctionTest11(param1:Array<i16>):void;
 function BaseFunctionTest12(param1:Optional<i16>):void;
 function BaseFunctionTest13(param1:Optional<i64>):void;
-function BaseFunctionTest14(param1:Array<u8>):void;
+function BaseFunctionTest14(param1:@arraybuffer Array<u8>):void;
 function BaseFunctionTest15(param1:Map<String, i32>):void;
 function BaseFunctionTest16(param1:i8):i8;
 function BaseFunctionTest17(param1:i16):i16;
@@ -38,7 +38,7 @@ function BaseFunctionTest24(param1:Array<i8>):Array<i8>;
 function BaseFunctionTest25(param1:Array<i16>):Array<i16>;
 function BaseFunctionTest26(param1:Optional<i16>):Optional<i16>;
 function BaseFunctionTest27(param1:Optional<i64>):Optional<i64>;
-function BaseFunctionTest28(param1:Array<u8>):Array<u8>;
+function BaseFunctionTest28(param1:@arraybuffer Array<u8>):@arraybuffer Array<u8>;
 function BaseFunctionTest29(param1:Map<String, i32>):Map<String, i32>;
 function BaseFunctionTest30(param1:Color):Color;
 function BaseFunctionTest31(param1:Color):void;
@@ -50,7 +50,7 @@ function BaseFunctionTest36(param1:i8,param2:i16,param8:bool,param9:Array<i8>,pa
 function BaseFunctionTest37(param1:i8,param2:i16,param3:i32,param8:bool,param10:Array<i64>):Array<i64>;
 function BaseFunctionTest38(param1:i8,param7:String,param8:bool,param9:Array<i8>,param10:Array<i16>):String;
 function BaseFunctionTest39(param2:i16,param7:String,param8:bool,param9:Array<bool>,param10:Array<i32>):bool;
-function BaseFunctionTest40(param6:f64,param7:String,param8:bool,param9:Array<i8>,param10:Array<u8>):Array<i8>;
+function BaseFunctionTest40(param6:f64,param7:String,param8:bool,param9:Array<i8>,param10:@arraybuffer Array<u8>):Array<i8>;
 function BaseFunctionTest41(param1:i8,param2:i16,param3:i32,param4:i64,param5:f32):void;
 @overload("BaseFunctionTest42")
 function BaseFunctionTest42_int(param1: i32, param2: i16): i32;
@@ -80,7 +80,7 @@ interface TestNameSpace {
     BaseFunctionTest49(param1:f64):f64;
     BaseFunctionTest50(param1:String):String;
     BaseFunctionTest51(param1:bool):bool;
-    BaseFunctionTest52(param1:Array<u8>):Array<u8>;
+    BaseFunctionTest52(param1:@arraybuffer Array<u8>):@arraybuffer Array<u8>;
     BaseFunctionTest53(param1:Optional<i8>):Optional<i8>;
     BaseFunctionTest54(param1:Optional<i32>):Optional<i32>;
     BaseFunctionTest55(param1:Map<i16,Data>):Map<i16,Data>;
@@ -232,7 +232,7 @@ interface TestInterfacePerformance21 {
   @get  getf64_test_attribute():f64;
   @get  getStr_test_attribute():String;
   @get  getbool_test_attribute():bool;
-  @get  get_ArrayBuffer_test_attribute():Array<u8>;
+  @get  get_ArrayBuffer_test_attribute():@arraybuffer Array<u8>;
   @get  getOptional_test_attribute():Optional<i32>;
   @get  getRecord_test_attribute():Map<i32,Data>;
   @get  getUnion_test_attribute():TestUnionName;

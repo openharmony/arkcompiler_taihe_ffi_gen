@@ -6,10 +6,8 @@ Taihe 可以使用注解的方式来使用 typed array 注解为 `@!typed_array`
 
 **File: `idl/typedarray.taihe`**
 ```taihe
-@!typed_array
-
-function createUint16Array(): Array<u16>;
-function printUint16Array(arr: Array<u16>): void;
+function createUint16Array(): @typedarray Array<u16>;
+function printUint16Array(arr: @typedarray Array<u16>): void;
 ```
 
 目前该注解只能作用于太和文件，使用该注解后，taihe所有的 Array\<ux\>都会对接为 TypedArray

@@ -1,4 +1,2 @@
-@!typed_array
-
-function createUint16Array(): Array<u16>;
-function printUint16Array(arr: Array<u16>): void;
+function createUint16Array(): @typedarray Array<u16>;
+function printUint16Array(arr: @typedarray Array<u16>): void;

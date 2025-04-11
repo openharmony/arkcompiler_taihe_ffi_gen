@@ -37,7 +37,7 @@ function Mapfunc09(m : Map<String, Array<i8>>): bool;
 function Mapfunc10(m : Map<String, Array<i16>>): bool;
 function Mapfunc11(m : Map<String, Array<i32>>): bool;
 function Mapfunc12(m : Map<String, Array<i64>>): bool;
-function Mapfunc13(m : Map<String, Array<Array<u8>>>): bool;
+function Mapfunc13(m : Map<String, Array<@arraybuffer Array<u8>>>): bool;
 function Mapfunc14(m : Map<String, Array<bool>>): bool;
 function Mapfunc15(m : Map<String, Array<String>>): bool;
 union TypeUnion {
@@ -90,7 +90,7 @@ function Mapfunc34(): Map<String, Array<i8>>;
 function Mapfunc35(): Map<String, Array<i16>>;
 function Mapfunc36(): Map<String, Array<i32>>;
 function Mapfunc37(): Map<String, Array<i64>>;
-function Mapfunc38(): Map<String, Array<u8>>;
+function Mapfunc38(): Map<String, @arraybuffer Array<u8>>;
 function Mapfunc39(): Map<String, Array<bool>>;
 function Mapfunc40(): Map<String, Array<String>>;
 function Mapfunc41(): Map<String, TypeUnion>;
