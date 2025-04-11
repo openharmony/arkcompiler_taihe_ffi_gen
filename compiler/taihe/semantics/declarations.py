@@ -29,6 +29,8 @@ if TYPE_CHECKING:
 
 @dataclass
 class AttrItemDecl:
+    """Represents an attribute item."""
+
     loc: Optional[SourceLocation]
     name: str
     args: tuple[Any, ...]
@@ -86,10 +88,12 @@ class Decl(metaclass=ABCMeta):
     @property
     @abstractmethod
     def parent_pkg(self) -> "PackageDecl":
-        """Get the package containing this declaration."""
+        """Return the parent package of this declaration."""
 
 
 class NamedDecl(Decl, metaclass=ABCMeta):
+    """Represents a declaration with a name."""
+
     name: str
 
     def __init__(
@@ -306,6 +310,23 @@ class CallbackTypeRefDecl(TypeRefDecl):
         return f"({args_fmt}) => {ret_fmt}"
 
 
+class AdhocTypeRefDecl(TypeRefDecl):
+    def __init__(
+        self,
+        loc: Optional[SourceLocation],
+    ):
+        super().__init__(loc)
+
+    @override
+    def _accept(self, v: "DeclVisitor") -> Any:
+        return v.visit_adhoc_type_ref_decl(self)
+
+    @property
+    @override
+    def text(self) -> str:
+        return "?"
+
+
 #####################
 # Import References #
 #####################
@@ -389,13 +410,16 @@ class ImportDecl(NamedDeclWithParent["PackageDecl"], metaclass=ABCMeta):
     ```
     >>> use foo;
     PackageImportDecl(name='foo', pkg_ref=PackageRefDecl(name='foo'))
+
     >>> use foo as bar;
     PackageImportDecl(name='bar', pkg_ref=PackageRefDecl(name='foo'))
+
     >>> from foo use Bar;
     DeclarationImportDecl(
         name='Bar',
         decl_ref=DeclarationRefDecl(name='Bar', pkg_ref=PackageRefDecl(name='foo')),
     )
+
     >>> from foo use Bar as Baz;
     DeclarationImportDecl(
         name='Baz',
@@ -667,7 +691,7 @@ class GlobFuncDecl(PackageLevelDecl):
 
 class TypeDecl(PackageLevelDecl, metaclass=ABCMeta):
     @abstractmethod
-    def as_type(self) -> UserType:
+    def as_type(self, ty_ref: TypeRefDecl) -> UserType:
         """Return the type decalaration as type."""
 
 
@@ -697,8 +721,8 @@ class EnumDecl(TypeDecl):
         self.items.append(i)
 
     @override
-    def as_type(self) -> EnumType:
-        return EnumType(self)
+    def as_type(self, ty_ref: TypeRefDecl) -> EnumType:
+        return EnumType(ty_ref, self)
 
     @property
     @override
@@ -722,8 +746,8 @@ class UnionDecl(TypeDecl):
         self.fields.append(f)
 
     @override
-    def as_type(self) -> UnionType:
-        return UnionType(self)
+    def as_type(self, ty_ref: TypeRefDecl) -> UnionType:
+        return UnionType(ty_ref, self)
 
     @property
     @override
@@ -747,8 +771,8 @@ class StructDecl(TypeDecl):
         self.fields.append(f)
 
     @override
-    def as_type(self) -> StructType:
-        return StructType(self)
+    def as_type(self, ty_ref: TypeRefDecl) -> StructType:
+        return StructType(ty_ref, self)
 
     @property
     @override
@@ -778,8 +802,8 @@ class IfaceDecl(TypeDecl):
         self.parents.append(p)
 
     @override
-    def as_type(self) -> IfaceType:
-        return IfaceType(self)
+    def as_type(self, ty_ref: TypeRefDecl) -> IfaceType:
+        return IfaceType(ty_ref, self)
 
     @property
     @override

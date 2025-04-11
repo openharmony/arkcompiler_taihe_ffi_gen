@@ -1,5 +1,5 @@
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, TypeVar
 
 from typing_extensions import override
 
@@ -22,21 +22,12 @@ from taihe.semantics.declarations import (
     UnionDecl,
 )
 from taihe.semantics.types import (
-    BOOL,
     BUILTIN_GENERICS,
     BUILTIN_TYPES,
-    F32,
-    F64,
-    I8,
-    I16,
-    I32,
-    I64,
-    STRING,
-    U8,
-    U16,
-    U32,
-    U64,
     CallbackType,
+    ScalarKind,
+    ScalarType,
+    StringType,
     UserType,
 )
 from taihe.semantics.visitor import RecursiveDeclVisitor
@@ -191,7 +182,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
             self.diag.emit(NotATypeError(d.symbol, loc=d.loc))
             return
 
-        d.maybe_resolved_ty = decl.as_type()
+        decl.as_type(d)
 
     @override
     def visit_short_type_ref_decl(self, d: ShortTypeRefDecl) -> None:
@@ -200,10 +191,10 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
         d.is_resolved = True
 
         # Find Builtin Types
-        decl = BUILTIN_TYPES.get(d.symbol)
+        builder = BUILTIN_TYPES.get(d.symbol)
 
-        if decl:
-            d.maybe_resolved_ty = decl
+        if builder:
+            builder(d)
             return
 
         # Find types declared in the current package
@@ -214,7 +205,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
                 self.diag.emit(NotATypeError(d.symbol, loc=d.loc))
                 return
 
-            d.maybe_resolved_ty = decl.as_type()
+            decl.as_type(d)
             return
 
         # Look for imported type declarations
@@ -234,7 +225,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
             self.diag.emit(NotATypeError(d.symbol, loc=d.loc))
             return
 
-        d.maybe_resolved_ty = decl.as_type()
+        decl.as_type(d)
 
     @override
     def visit_generic_type_ref_decl(self, d: GenericTypeRefDecl) -> None:
@@ -254,14 +245,14 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
 
         decl_name = d.symbol
 
-        generic = BUILTIN_GENERICS.get(decl_name)
+        builder = BUILTIN_GENERICS.get(decl_name)
 
-        if generic is None:
+        if builder is None:
             self.diag.emit(DeclarationNotInScopeError(decl_name, loc=d.loc))
             return
 
         try:
-            d.maybe_resolved_ty = generic(*args_ty)
+            builder(d, *args_ty)
         except TypeError:
             self.diag.emit(GenericArgumentsError(d.text, loc=d.loc))
 
@@ -289,7 +280,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
                 return
             params_ty.append(arg_ty)
 
-        d.maybe_resolved_ty = CallbackType(return_ty, tuple(params_ty))
+        CallbackType(d, return_ty, tuple(params_ty))
 
 
 class _CheckFieldNameCollisionErrorPass(RecursiveDeclVisitor):
@@ -360,81 +351,66 @@ class _CheckEnumTypePass(RecursiveDeclVisitor):
                     self.diag.emit(EnumValueError(item, d))
             return
 
-        if d.ty_ref.maybe_resolved_ty is None:
-            return
-
-        table: dict[Type, tuple[Any, Any, Any]] = {
-            I8: (
-                lambda val: is_int(val) and -(2**7) <= val < 2**7,
-                lambda prev, item: prev + 1,
-                lambda item: 0,
-            ),
-            I16: (
-                lambda val: is_int(val) and -(2**15) <= val < 2**15,
-                lambda prev, item: prev + 1,
-                lambda item: 0,
-            ),
-            I32: (
-                lambda val: is_int(val) and -(2**31) <= val < 2**31,
-                lambda prev, item: prev + 1,
-                lambda item: 0,
-            ),
-            I64: (
-                lambda val: is_int(val) and -(2**63) <= val < 2**63,
-                lambda prev, item: prev + 1,
-                lambda item: 0,
-            ),
-            U8: (
-                lambda val: is_int(val) and 0 <= val < 2**8,
-                lambda prev, item: prev + 1,
-                lambda item: 0,
-            ),
-            U16: (
-                lambda val: is_int(val) and 0 <= val < 2**16,
-                lambda prev, item: prev + 1,
-                lambda item: 0,
-            ),
-            U32: (
-                lambda val: is_int(val) and 0 <= val < 2**32,
-                lambda prev, item: prev + 1,
-                lambda item: 0,
-            ),
-            U64: (
-                lambda val: is_int(val) and 0 <= val < 2**64,
-                lambda prev, item: prev + 1,
-                lambda item: 0,
-            ),
-            BOOL: (
-                lambda val: isinstance(val, bool),
-                lambda prev, item: False,
-                lambda item: False,
-            ),
-            F32: (
-                lambda val: isinstance(val, float),
-                lambda prev, item: 0.0,
-                lambda item: 0.0,
-            ),
-            F64: (
-                lambda val: isinstance(val, float),
-                lambda prev, item: 0.0,
-                lambda item: 0.0,
-            ),
-            STRING: (
-                lambda val: isinstance(val, str),
-                lambda prev, item: item.name,
-                lambda item: item.name,
-            ),
-        }
         # pyre-ignore
-        if (lambda_pair := table.get(d.ty_ref.maybe_resolved_ty)) is None:
-            self.diag.emit(TypeUsageError(d.ty_ref))  # pyre-ignore
-            return
-        valid, next, default = lambda_pair
+        match d.ty_ref.maybe_resolved_ty:
+            case ScalarType(_, ScalarKind.I8):
+                valid = lambda val: is_int(val) and -(2**7) <= val < 2**7
+                increment = lambda prev, item: prev + 1
+                default = lambda item: 0
+            case ScalarType(_, ScalarKind.I16):
+                valid = lambda val: is_int(val) and -(2**15) <= val < 2**15
+                increment = lambda prev, item: prev + 1
+                default = lambda item: 0
+            case ScalarType(_, ScalarKind.I32):
+                valid = lambda val: is_int(val) and -(2**31) <= val < 2**31
+                increment = lambda prev, item: prev + 1
+                default = lambda item: 0
+            case ScalarType(_, ScalarKind.I64):
+                valid = lambda val: is_int(val) and -(2**63) <= val < 2**63
+                increment = lambda prev, item: prev + 1
+                default = lambda item: 0
+            case ScalarType(_, ScalarKind.U8):
+                valid = lambda val: is_int(val) and 0 <= val < 2**8
+                increment = lambda prev, item: prev + 1
+                default = lambda item: 0
+            case ScalarType(_, ScalarKind.U16):
+                valid = lambda val: is_int(val) and 0 <= val < 2**16
+                increment = lambda prev, item: prev + 1
+                default = lambda item: 0
+            case ScalarType(_, ScalarKind.U32):
+                valid = lambda val: is_int(val) and 0 <= val < 2**32
+                increment = lambda prev, item: prev + 1
+                default = lambda item: 0
+            case ScalarType(_, ScalarKind.U64):
+                valid = lambda val: is_int(val) and 0 <= val < 2**64
+                increment = lambda prev, item: prev + 1
+                default = lambda item: 0
+            case ScalarType(_, ScalarKind.BOOL):
+                valid = lambda val: isinstance(val, bool)
+                increment = lambda prev, item: False
+                default = lambda item: False
+            case ScalarType(_, ScalarKind.F32):
+                valid = lambda val: isinstance(val, float)
+                increment = lambda prev, item: 0.0
+                default = lambda item: 0.0
+            case ScalarType(_, ScalarKind.F64):
+                valid = lambda val: isinstance(val, float)
+                increment = lambda prev, item: 0.0
+                default = lambda item: 0.0
+            case StringType():
+                valid = lambda val: isinstance(val, str)
+                increment = lambda prev, item: item.name
+                default = lambda item: item.name
+            case None:
+                return
+            case _:
+                self.diag.emit(TypeUsageError(d.ty_ref))  # pyre-ignore
+                return
 
         prev = None
         for item in d.items:
             if item.value is None:
-                item.value = default(item) if prev is None else next(prev, item)
+                item.value = default(item) if prev is None else increment(prev, item)
             if not valid(item.value):
                 self.diag.emit(EnumValueError(item, d))
                 prev = None

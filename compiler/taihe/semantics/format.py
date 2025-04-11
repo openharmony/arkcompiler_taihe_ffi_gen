@@ -55,9 +55,7 @@ class _PrettyPrinter(DeclVisitor):
         if not d.is_resolved or self.no_resolved_ty:
             return type_ref_repr
         real_type = (
-            d.maybe_resolved_ty.signature
-            if d.maybe_resolved_ty
-            else "<error type>"
+            d.maybe_resolved_ty.signature if d.maybe_resolved_ty else "<error type>"
         )
         return f"{type_ref_repr} {AnsiStyle.GREEN}/* {real_type} */{AnsiStyle.RESET}"
 
