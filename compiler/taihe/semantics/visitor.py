@@ -17,6 +17,7 @@ from typing import Generic, Optional, TypeVar
 from typing_extensions import override
 
 from taihe.semantics.declarations import (
+    AdhocTypeRefDecl,
     CallbackTypeRefDecl,
     Decl,
     DeclarationImportDecl,
@@ -198,6 +199,9 @@ class DeclVisitor(Generic[T]):
     def visit_type_ref_decl(self, d: TypeRefDecl) -> T:
         return self.visit_decl(d)
 
+    def visit_adhoc_type_ref_decl(self, d: AdhocTypeRefDecl) -> T:
+        return self.visit_type_ref_decl(d)
+
     def visit_short_type_ref_decl(self, d: ShortTypeRefDecl) -> T:
         return self.visit_type_ref_decl(d)
 
@@ -304,6 +308,10 @@ class RecursiveDeclVisitor(DeclVisitor[None]):
     @override
     def visit_type_ref_decl(self, d: TypeRefDecl) -> None:
         return self.visit_decl(d)
+
+    @override
+    def visit_adhoc_type_ref_decl(self, d: AdhocTypeRefDecl) -> None:
+        return self.visit_type_ref_decl(d)
 
     @override
     def visit_short_type_ref_decl(self, d: ShortTypeRefDecl) -> None:

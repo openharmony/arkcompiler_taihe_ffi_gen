@@ -306,23 +306,22 @@ class AstConverter(ExprEvaluator):
 
     @override
     def visit_long_type(self, node: ast.LongType) -> LongTypeRefDecl:
-        loc = self.loc(node)
-        pkname = pkg2str(node.pkg_name)
-        symbol = str(node.decl_name)
-        return LongTypeRefDecl(loc, pkname, symbol)
+        d = LongTypeRefDecl(self.loc(node), pkg2str(node.pkg_name), str(node.decl_name))
+        self.diag.for_each(node.forward_attrs, lambda a: d.add_attr(self.visit(a)))
+        return d
 
     @override
     def visit_short_type(self, node: ast.ShortType) -> ShortTypeRefDecl:
-        loc = self.loc(node)
-        symbol = str(node.decl_name)
-        return ShortTypeRefDecl(loc, symbol)
+        d = ShortTypeRefDecl(self.loc(node), str(node.decl_name))
+        self.diag.for_each(node.forward_attrs, lambda a: d.add_attr(self.visit(a)))
+        return d
 
     @override
     def visit_generic_type(self, node: ast.GenericType) -> GenericTypeRefDecl:
-        loc = self.loc(node)
-        symbol = str(node.decl_name)
-        args = [self.visit(arg) for arg in node.args]
-        return GenericTypeRefDecl(loc, symbol, args)
+        d = GenericTypeRefDecl(self.loc(node), str(node.decl_name))
+        self.diag.for_each(node.args, lambda a: d.add_arg_ty_ref(self.visit(a)))
+        self.diag.for_each(node.forward_attrs, lambda a: d.add_attr(self.visit(a)))
+        return d
 
     @override
     def visit_callback_type(self, node: ast.CallbackType) -> CallbackTypeRefDecl:
@@ -331,6 +330,7 @@ class AstConverter(ExprEvaluator):
         else:
             d = CallbackTypeRefDecl(self.loc(node))
         self.diag.for_each(node.parameters, lambda p: d.add_param(self.visit(p)))
+        self.diag.for_each(node.forward_attrs, lambda a: d.add_attr(self.visit(a)))
         return d
 
     # Uses

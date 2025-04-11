@@ -2,6 +2,7 @@
 
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
+from enum import Enum
 from typing import TYPE_CHECKING, Any, Optional, Protocol
 
 from typing_extensions import override
@@ -12,6 +13,7 @@ if TYPE_CHECKING:
         IfaceDecl,
         StructDecl,
         TypeDecl,
+        TypeRefDecl,
         UnionDecl,
     )
     from taihe.semantics.visitor import TypeVisitor
@@ -25,16 +27,22 @@ class TypeProtocol(Protocol):
     def _accept(self, v: "TypeVisitor") -> Any: ...
 
 
+@dataclass(frozen=True, repr=False)
 class Type(metaclass=ABCMeta):
-    """Represents a concrete type."""
+    """Base class for all types."""
+
+    ty_ref: "TypeRefDecl"
+
+    def __post_init__(self):
+        self.ty_ref.maybe_resolved_ty = self
 
     @property
     @abstractmethod
-    def representation(self) -> str:
+    def signature(self) -> str:
         """Return the representation of the type."""
 
     def __repr__(self) -> str:
-        return f"<{self.__class__.__qualname__} {self.representation}>"
+        return f"<{self.__class__.__qualname__} {self.signature}>"
 
     @abstractmethod
     def _accept(self, v: "TypeVisitor") -> Any:
@@ -48,87 +56,88 @@ class Type(metaclass=ABCMeta):
 
 @dataclass(frozen=True, repr=False)
 class BuiltinType(Type, metaclass=ABCMeta):
-    """Represents built-in types, including scalars and strings.
+    """Represents a built-in type."""
 
-    Invariant: all primitive types must be directy obtained with `lookup` or
-    using the exported values such as `VOID`. Do not copy or construct it on
-    your own. This design allows tests such as `my_type is VOID`.
-    """
 
-    name: str
+class ScalarKind(Enum):
+    """Enumeration of scalar types."""
 
-    @property
-    @override
-    def representation(self):
-        return f"{self.name}"
+    BOOL = ("bool", 8, False, False)
+    F32 = ("f32", 32, True, True)
+    F64 = ("f64", 64, True, True)
+    I8 = ("i8", 8, True, False)
+    I16 = ("i16", 16, True, False)
+    I32 = ("i32", 32, True, False)
+    I64 = ("i64", 64, True, False)
+    U8 = ("u8", 8, False, False)
+    U16 = ("u16", 16, False, False)
+    U32 = ("u32", 32, False, False)
+    U64 = ("u64", 64, False, False)
+
+    def __init__(self, symbol: str, width: int, is_signed: bool, is_float: bool):
+        self.symbol = symbol
+        self.width = width
+        self.is_signed = is_signed
+        self.is_float = is_float
 
 
 @dataclass(frozen=True, repr=False)
 class ScalarType(BuiltinType):
-    width: int
-    is_signed: bool
-    is_float: bool = False
+    kind: ScalarKind
 
     @override
     def _accept(self, v: "TypeVisitor") -> Any:
         return v.visit_scalar_type(self)
 
+    @property
+    @override
+    def signature(self):
+        return self.kind.name
+
 
 @dataclass(frozen=True, repr=False)
 class OpaqueType(BuiltinType):
-    name: str = "Opaque"
-
     @override
     def _accept(self, v: "TypeVisitor") -> Any:
         return v.visit_opaque_type(self)
 
+    @property
+    @override
+    def signature(self):
+        return "Opaque"
+
 
 @dataclass(frozen=True, repr=False)
 class StringType(BuiltinType):
-    name: str = "String"
-
     @override
     def _accept(self, v: "TypeVisitor") -> Any:
         return v.visit_string_type(self)
 
+    @property
+    @override
+    def signature(self):
+        return "String"
 
-BOOL = ScalarType("bool", 8, is_signed=False)
 
-F32 = ScalarType("f32", 32, is_signed=True, is_float=True)
-F64 = ScalarType("f64", 64, is_signed=True, is_float=True)
+class BuiltinBuilder(Protocol):
+    def __call__(self, ty_ref: "TypeRefDecl") -> BuiltinType: ...
 
-I8 = ScalarType("i8", 8, is_signed=True)
-I16 = ScalarType("i16", 16, is_signed=True)
-I32 = ScalarType("i32", 32, is_signed=True)
-I64 = ScalarType("i64", 64, is_signed=True)
 
-U8 = ScalarType("u8", 8, is_signed=False)
-U16 = ScalarType("u16", 16, is_signed=False)
-U32 = ScalarType("u32", 32, is_signed=False)
-U64 = ScalarType("u64", 64, is_signed=False)
-
-STRING = StringType()
-
-OPAQUE = OpaqueType()
-
-# Builtin Types map
-BUILTIN_TYPES: dict[str, Type] = {
-    ty.name: ty
-    for ty in [
-        BOOL,
-        I8,
-        I16,
-        I32,
-        I64,
-        U8,
-        U16,
-        U32,
-        U64,
-        F32,
-        F64,
-        STRING,
-        OPAQUE,
-    ]
+# Builtin Types Map
+BUILTIN_TYPES: dict[str, BuiltinBuilder] = {
+    "bool": lambda ty_ref: ScalarType(ty_ref, ScalarKind.BOOL),
+    "f32": lambda ty_ref: ScalarType(ty_ref, ScalarKind.F32),
+    "f64": lambda ty_ref: ScalarType(ty_ref, ScalarKind.F64),
+    "i8": lambda ty_ref: ScalarType(ty_ref, ScalarKind.I8),
+    "i16": lambda ty_ref: ScalarType(ty_ref, ScalarKind.I16),
+    "i32": lambda ty_ref: ScalarType(ty_ref, ScalarKind.I32),
+    "i64": lambda ty_ref: ScalarType(ty_ref, ScalarKind.I64),
+    "u8": lambda ty_ref: ScalarType(ty_ref, ScalarKind.U8),
+    "u16": lambda ty_ref: ScalarType(ty_ref, ScalarKind.U16),
+    "u32": lambda ty_ref: ScalarType(ty_ref, ScalarKind.U32),
+    "u64": lambda ty_ref: ScalarType(ty_ref, ScalarKind.U64),
+    "String": lambda ty_ref: StringType(ty_ref),
+    "Opaque": lambda ty_ref: OpaqueType(ty_ref),
 }
 
 
@@ -148,9 +157,9 @@ class CallbackType(Type):
 
     @property
     @override
-    def representation(self):
-        return_fmt = ty.representation if (ty := self.return_ty) else "void"
-        params_fmt = ", ".join(ty.representation for ty in self.params_ty)
+    def signature(self):
+        return_fmt = ty.signature if (ty := self.return_ty) else "void"
+        params_fmt = ", ".join(ty.signature for ty in self.params_ty)
         return f"({params_fmt}) => {return_fmt}"
 
 
@@ -168,8 +177,8 @@ class ArrayType(GenericType):
 
     @property
     @override
-    def representation(self):
-        return f"Array<{self.item_ty.representation}>"
+    def signature(self):
+        return f"Array<{self.item_ty.signature}>"
 
 
 @dataclass(frozen=True, repr=False)
@@ -182,8 +191,8 @@ class OptionalType(GenericType):
 
     @property
     @override
-    def representation(self):
-        return f"Optional<{self.item_ty.representation}>"
+    def signature(self):
+        return f"Optional<{self.item_ty.signature}>"
 
 
 @dataclass(frozen=True, repr=False)
@@ -196,8 +205,8 @@ class VectorType(GenericType):
 
     @property
     @override
-    def representation(self):
-        return f"Vector<{self.val_ty.representation}>"
+    def signature(self):
+        return f"Vector<{self.val_ty.signature}>"
 
 
 @dataclass(frozen=True, repr=False)
@@ -211,8 +220,8 @@ class MapType(GenericType):
 
     @property
     @override
-    def representation(self):
-        return f"Map<{self.key_ty.representation}, {self.val_ty.representation}>"
+    def signature(self):
+        return f"Map<{self.key_ty.signature}, {self.val_ty.signature}>"
 
 
 @dataclass(frozen=True, repr=False)
@@ -225,21 +234,21 @@ class SetType(GenericType):
 
     @property
     @override
-    def representation(self):
-        return f"Set<{self.key_ty.representation}>"
+    def signature(self):
+        return f"Set<{self.key_ty.signature}>"
 
 
 class GenericBuilder(Protocol):
-    def __call__(self, *args: Type) -> Type: ...
+    def __call__(self, ty_ref: "TypeRefDecl", *args: Type) -> GenericType: ...
 
 
 # Builtin Generics Map
 BUILTIN_GENERICS: dict[str, GenericBuilder] = {
-    "Array": lambda *args: ArrayType(*args),
-    "Optional": lambda *args: OptionalType(*args),
-    "Vector": lambda *args: VectorType(*args),
-    "Map": lambda *args: MapType(*args),
-    "Set": lambda *args: SetType(*args),
+    "Array": lambda ty_ref, *args: ArrayType(ty_ref, *args),
+    "Optional": lambda ty_ref, *args: OptionalType(ty_ref, *args),
+    "Vector": lambda ty_ref, *args: VectorType(ty_ref, *args),
+    "Map": lambda ty_ref, *args: MapType(ty_ref, *args),
+    "Set": lambda ty_ref, *args: SetType(ty_ref, *args),
 }
 
 
@@ -248,12 +257,13 @@ BUILTIN_GENERICS: dict[str, GenericBuilder] = {
 ##############
 
 
+@dataclass(frozen=True, repr=False)
 class UserType(Type, metaclass=ABCMeta):
     ty_decl: "TypeDecl"
 
     @property
     @override
-    def representation(self):
+    def signature(self):
         return f"{self.ty_decl.full_name}"
 
 

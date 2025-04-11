@@ -6,28 +6,32 @@ from typing import TextIO
 from typing_extensions import override
 
 from taihe.semantics.declarations import (
+    CallbackTypeRefDecl,
     Decl,
     DeclarationImportDecl,
     DeclarationRefDecl,
     DeclProtocol,
     EnumDecl,
     EnumItemDecl,
+    GenericTypeRefDecl,
     GlobFuncDecl,
     IfaceDecl,
     IfaceMethodDecl,
     IfaceParentDecl,
+    LongTypeRefDecl,
     PackageDecl,
     PackageGroup,
     PackageImportDecl,
     PackageRefDecl,
     ParamDecl,
+    ShortTypeRefDecl,
     StructDecl,
     StructFieldDecl,
     TypeRefDecl,
     UnionDecl,
     UnionFieldDecl,
 )
-from taihe.semantics.visitor import RecursiveDeclVisitor
+from taihe.semantics.visitor import DeclVisitor
 from taihe.utils.diagnostics import AnsiStyle
 from taihe.utils.outputs import IndentManager
 
@@ -37,25 +41,42 @@ def pretty_print(x: DeclProtocol, buffer: TextIO):
     printer.handle_decl(x)
 
 
-class _PrettyPrinter(RecursiveDeclVisitor):
-    def __init__(self, buffer: TextIO):
+class _PrettyPrinter(DeclVisitor):
+    def __init__(self, buffer: TextIO, no_resolved_ty=False):
         self.buffer = buffer
         self.indent_manager = IndentManager()
+        self.no_resolved_ty = no_resolved_ty
 
     def writeln(self, content):
         self.buffer.write(self.indent_manager.current + content + "\n")
 
     def get_type_ref_decl(self, d: TypeRefDecl) -> str:
-        if not d.is_resolved:
-            return d.unresolved_repr
+        type_ref_repr = self.handle_decl(d)
+        if not d.is_resolved or self.no_resolved_ty:
+            return type_ref_repr
         real_type = (
-            d.maybe_resolved_ty.representation
-            if d.maybe_resolved_ty
-            else "<error type>"
+            d.maybe_resolved_ty.signature if d.maybe_resolved_ty else "<error type>"
         )
-        return (
-            f"{d.unresolved_repr} {AnsiStyle.GREEN}/* {real_type} */{AnsiStyle.RESET}"
-        )
+        return f"{type_ref_repr} {AnsiStyle.GREEN}/* {real_type} */{AnsiStyle.RESET}"
+
+    @override
+    def visit_long_type_ref_decl(self, d: LongTypeRefDecl) -> str:
+        return self.with_attr(d, f"{d.pkname}.{d.symbol}")
+
+    @override
+    def visit_short_type_ref_decl(self, d: ShortTypeRefDecl) -> str:
+        return self.with_attr(d, d.symbol)
+
+    @override
+    def visit_generic_type_ref_decl(self, d: GenericTypeRefDecl) -> str:
+        args_fmt = ", ".join(map(self.get_type_ref_decl, d.args_ty_ref))
+        return self.with_attr(d, f"{d.symbol}<{args_fmt}>")
+
+    @override
+    def visit_callback_type_ref_decl(self, d: CallbackTypeRefDecl) -> str:
+        fmt_args = ", ".join(map(self.get_param_decl, d.params))
+        ret = self.get_type_ref_decl(d.return_ty_ref) if d.return_ty_ref else "void"
+        return self.with_attr(d, f"({fmt_args}) => {ret}")
 
     def get_package_ref_decl(self, d: PackageRefDecl) -> str:
         return d.symbol
@@ -84,7 +105,7 @@ class _PrettyPrinter(RecursiveDeclVisitor):
         for key, items in d.attrs.items():
             for item in items:
                 if item.args:
-                    values_fmt = ", ".join(self.get_value(arg) for arg in item.args)
+                    values_fmt = ", ".join(map(self.get_value, item.args))
                     formatted_attributes.append(f"{key}({values_fmt})")
                 else:
                     formatted_attributes.append(key)
@@ -138,7 +159,7 @@ class _PrettyPrinter(RecursiveDeclVisitor):
 
         func_kw = self.as_keyword("function")
 
-        fmt_args = ", ".join(self.get_param_decl(x) for x in d.params)
+        fmt_args = ", ".join(map(self.get_param_decl, d.params))
         ret = self.get_type_ref_decl(d.return_ty_ref) if d.return_ty_ref else "void"
 
         self.writeln(f"{func_kw} {d.name}({fmt_args}): {ret};")
@@ -220,7 +241,7 @@ class _PrettyPrinter(RecursiveDeclVisitor):
     def visit_iface_func_decl(self, d: IfaceMethodDecl):
         self.write_attr(d)
 
-        fmt_args = ", ".join(self.get_param_decl(x) for x in d.params)
+        fmt_args = ", ".join(map(self.get_param_decl, d.params))
         ret = self.get_type_ref_decl(d.return_ty_ref) if d.return_ty_ref else "void"
 
         self.writeln(f"{d.name}({fmt_args}): {ret};")
@@ -232,7 +253,7 @@ class _PrettyPrinter(RecursiveDeclVisitor):
         iface_kw = self.as_keyword("interface")
 
         full_decl = (
-            f"{d.name}: " + ", ".join(self.get_parent_decl(e) for e in d.parents)
+            f"{d.name}: " + ", ".join(map(self.get_parent_decl, d.parents))
             if d.parents
             else d.name
         )
