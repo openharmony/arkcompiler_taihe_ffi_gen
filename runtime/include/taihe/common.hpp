@@ -99,6 +99,8 @@ constexpr static_tag_t<tag> static_tag = {};
 // hash and comparison //
 /////////////////////////
 
+// These functions are used for taihe::map and taihe::set
+
 struct adl_helper_t {};
 
 template<typename T>
@@ -113,15 +115,25 @@ inline bool same(L&& lhs, R&& rhs) {
   return same_impl(adl_helper, std::forward<L>(lhs), std::forward<R>(rhs));
 }
 
-template<typename T,
-         typename std::enable_if_t<std::is_arithmetic_v<T>, int> = 0>
+template<typename T, typename std::enable_if_t<std::is_integral_v<T>, int> = 0>
+inline bool same_impl(adl_helper_t, T lhs, T rhs) {
+  return lhs == rhs;
+}
+
+template<typename T, typename std::enable_if_t<std::is_integral_v<T>, int> = 0>
 inline std::size_t hash_impl(adl_helper_t, T val) {
-  return std::hash<T>{}(val);
+  return val;
 }
 
 template<typename T,
-         typename std::enable_if_t<std::is_arithmetic_v<T>, int> = 0>
+         typename std::enable_if_t<std::is_floating_point_v<T>, int> = 0>
 inline bool same_impl(adl_helper_t, T lhs, T rhs) {
-  return lhs == rhs;
+  return std::hash<T>{}(lhs) == std::hash<T>{}(rhs);
+}
+
+template<typename T,
+         typename std::enable_if_t<std::is_floating_point_v<T>, int> = 0>
+inline std::size_t hash_impl(adl_helper_t, T val) {
+  return std::hash<T>{}(val);
 }
 }  // namespace taihe

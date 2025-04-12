@@ -59,10 +59,12 @@ inline std::size_t hash_impl(adl_helper_t, data_view val) {
 
 namespace taihe {
 template<typename Impl>
-struct data_block_impl : DataBlockHead, Impl {
+struct data_block_impl : DataBlockHead {
+  Impl impl;
+
   template<typename... Args>
   data_block_impl(TypeInfo const* rtti_ptr, Args&&... args)
-      : Impl(std::forward<Args>(args)...) {
+      : impl(std::forward<Args>(args)...) {
     tobj_init(this, rtti_ptr);
   }
 };
@@ -79,7 +81,7 @@ inline void del_data_ptr(struct DataBlockHead* data_ptr) {
 
 template<typename Impl>
 inline Impl* cast_data_ptr(struct DataBlockHead* data_ptr) {
-  return static_cast<Impl*>(static_cast<data_block_impl<Impl>*>(data_ptr));
+  return &static_cast<data_block_impl<Impl>*>(data_ptr)->impl;
 }
 
 template<typename Impl, typename... InterfaceHolders>

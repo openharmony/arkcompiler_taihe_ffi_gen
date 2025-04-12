@@ -21,22 +21,29 @@ struct callback_view<Return(Params...)> {
   };
 
   template<typename Impl>
-  struct callback_data_impl : callback_data_t, Impl {
+  struct callback_data_impl : callback_data_t {
+    Impl impl;
+
+    static void c_free(callback_data_t* data_ptr) {
+      delete static_cast<callback_data_impl<Impl>*>(data_ptr);
+    };
+
+    static as_abi_t<Return> c_call(callback_data_t* data_ptr,
+                                   as_abi_t<Params>... params) {
+      if constexpr (std::is_void_v<Return>) {
+        return static_cast<callback_data_impl<Impl>*>(data_ptr)->impl(
+            from_abi<Params>(params)...);
+      } else {
+        return into_abi<Return>(
+            static_cast<callback_data_impl<Impl>*>(data_ptr)->impl(
+                from_abi<Params>(params)...));
+      }
+    };
+
     template<typename... Args>
-    callback_data_impl(Args&&... args) : Impl(std::forward<Args>(args)...) {
-      this->m_free = [](callback_data_t* data_ptr) {
-        delete static_cast<callback_data_impl<Impl>*>(data_ptr);
-      };
-      this->m_func = [](callback_data_t* data_ptr,
-                        as_abi_t<Params>... params) -> as_abi_t<Return> {
-        if constexpr (std::is_void_v<Return>) {
-          return (*static_cast<callback_data_impl<Impl>*>(data_ptr))(
-              from_abi<Params>(params)...);
-        } else {
-          return into_abi<Return>((*static_cast<callback_data_impl<Impl>*>(
-              data_ptr))(from_abi<Params>(params)...));
-        }
-      };
+    callback_data_impl(Args&&... args) : impl(std::forward<Args>(args)...) {
+      this->m_free = &c_free;
+      this->m_func = &c_call;
       tref_set(&this->m_count, 1);
     }
   };
