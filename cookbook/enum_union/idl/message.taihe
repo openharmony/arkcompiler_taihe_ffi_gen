@@ -1,6 +1,6 @@
-enum MessageType {
-    Text,
-    Number
+enum MessageType: i32 {
+    Text = 1,
+    Number = 2,
 }
 
 union MessageData {

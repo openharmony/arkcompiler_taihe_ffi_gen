@@ -8,9 +8,9 @@
 
 **File: `idl/message.taihe`**
 ```taihe
-enum MessageType {
-    Text,
-    Number
+enum MessageType: i32 {
+    Text = 1;
+    Number = 2;
 }
 
 union MessageData {
@@ -30,23 +30,16 @@ function createNumberMessage(num: i64): Message;
 function processMessage(msg: Message): void;
 ```
 
-enum 有三种语法
+enum 有2种语法
 
-1. key
-    ```
-    enum MessageType {
-        Text,
-        Number
-    }
-    ```
-2. key -> int
+1. key -> int
     ```
     enum MessageType: i32 {
         Text = 0,
         Number = 1
     }
     ```
-3. key -> string
+2. key -> string
     ```
     enum MessageType: String {
         Text = "Text",
