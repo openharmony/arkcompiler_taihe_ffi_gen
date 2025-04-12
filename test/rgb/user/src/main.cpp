@@ -198,7 +198,7 @@ int main() {
     fillVec(vec_0);
 
     std::cout << "Vector = ";
-    for (int i = 0; i < vec_1.size(); i++) {
+    for (size_t i = 0; i < vec_1.size(); i++) {
       std::cout << vec_1[i]->getId() << ", ";
     }
     std::cout << std::endl;

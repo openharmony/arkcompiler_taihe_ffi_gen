@@ -21,7 +21,7 @@ public:
     return name;
   }
 
-  Rectangle(string_view id, float h, float w) : name(id), h(h), w(w) {
+  Rectangle(string_view id, float h, float w) : h(h), w(w), name(id) {
     std::cout << getId() << " made" << std::endl;
   }
 
@@ -53,14 +53,16 @@ public:
   void show() {
     std::string content = "rectangle " + name + ": h = " + std::to_string(h) +
                           ", w = " + std::to_string(w);
-    if (auto ptr = myColor.get_ptr<ColorOrRGBOrName::tag_t::color>()) {
-      std::cout << "\033[" << 30 + (int)*ptr << "m" << content << "\033[39m"
+    if (auto color_ptr = myColor.get_ptr<ColorOrRGBOrName::tag_t::color>()) {
+      std::cout << "\033[" << 30 + (int)*color_ptr << "m" << content
+                << "\033[39m" << std::endl;
+    } else if (auto rgb_ptr = myColor.get_ptr<ColorOrRGBOrName::tag_t::rgb>()) {
+      std::cout << "\033[38;2;" << (int)rgb_ptr->r << ";" << (int)rgb_ptr->g
+                << ";" << (int)rgb_ptr->b << "m" << content << "\033[39m"
                 << std::endl;
-    } else if (auto ptr = myColor.get_ptr<ColorOrRGBOrName::tag_t::rgb>()) {
-      std::cout << "\033[38;2;" << (int)ptr->r << ";" << (int)ptr->g << ";"
-                << (int)ptr->b << "m" << content << "\033[39m" << std::endl;
-    } else if (auto ptr = myColor.get_ptr<ColorOrRGBOrName::tag_t::name>()) {
-      std::cout << "(" << *ptr << ") " << content << std::endl;
+    } else if (auto name_ptr =
+                   myColor.get_ptr<ColorOrRGBOrName::tag_t::name>()) {
+      std::cout << "(" << *name_ptr << ") " << content << std::endl;
     } else {
       std::cout << content << std::endl;
     }

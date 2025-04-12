@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from enum import Enum
 import os
 import shutil
 import subprocess
@@ -7,205 +8,318 @@ from pathlib import Path
 import argparse
 from taihe.driver import CompilerInstance, CompilerInvocation
 
-CXX = os.getenv("CXX", "clang++")
-C = os.getenv("C", "clang")
 
-BASEDIR = Path(__file__).resolve().parent
-
-
-def run_command(command: list[Path | str]):
-    print("+", *command)
-    result = subprocess.run(command, check=True, text=True)
-    return result
+class CommandRunner:
+    @staticmethod
+    def run(command: list[Path | str]):
+        print("+", *command)
+        result = subprocess.run(command, check=True, text=True)
+        return result
 
 
-def generate_code(invocation: CompilerInvocation):
-    instance = CompilerInstance(invocation)
-    if not instance.run():
-        raise RuntimeError("Compilation error")
+class CodeGenerator:
+    def __init__(
+        self,
+        idl_dir: Path,
+        output_dir: Path,
+        gen_author: bool = False,
+        gen_user: bool = False,
+    ):
+        self.idl_dir = idl_dir
+        self.output_dir = output_dir
+        self.gen_author = gen_author
+        self.gen_user = gen_user
 
-
-def clean_directory(directory: Path):
-    if directory.exists():
-        shutil.rmtree(directory)
-
-
-def create_directory(directory: Path):
-    directory.mkdir(parents=True, exist_ok=True)
-
-
-def copy_directory(src_directory: Path, dst_directory: Path):
-    if src_directory.exists():
-        shutil.copytree(src_directory, dst_directory, dirs_exist_ok=True)
-
-
-def compile(output_dir: Path, input_dir: Path, *include_dirs: Path, opt_level: str):
-    output_files = []
-    for input_file in input_dir.iterdir():
-        name = input_file.name
-        output_file = output_dir / f"{name}.o"
-        if name.endswith(".c"):
-            compiler = C
-            std = "gnu11"
-        else:
-            compiler = CXX
-            std = "gnu++17"
-        command = [
-            compiler,
-            "-c",
-            "-fvisibility=hidden",
-            "-fPIC",
-            f"-O{opt_level}",
-            f"-std={std}",
-            "-o",
-            output_file,
-            input_file,
-        ]
-        for include_dir in include_dirs:
-            command.extend(["-I", include_dir])
-        run_command(command)
-        output_files.append(output_file)
-    return output_files
-
-
-def link(output_file: Path, *input_files: Path, shared: bool, link_options: list[str]):
-    command = [CXX, "-fPIC", "-o", output_file]
-    for input_file in input_files:
-        command.append(str(input_file))
-    for link_option in link_options:
-        command.append(str(link_option))
-    if shared:
-        command.append("-shared")
-    run_command(command)
-
-
-def main(
-    target_dir: str,
-    generate_only: bool,
-    opt_level: str,
-    author_link_options: list[str],
-    user_link_options: list[str],
-    run_args: list[str],
-):
-    target_path = Path(target_dir)
-
-    idl_dir = target_path / "idl"
-
-    author_dir = target_path / "author"
-    author_include_dir = author_dir / "include"
-    author_src_dir = author_dir / "src"
-    author_generated_dir = target_path / "author_generated"
-    author_generated_include_dir = author_generated_dir / "include"
-    author_generated_src_dir = author_generated_dir / "src"
-
-    user_dir = target_path / "user"
-    user_include_dir = user_dir / "include"
-    user_src_dir = user_dir / "src"
-    user_generated_dir = target_path / "user_generated"
-    user_generated_include_dir = user_generated_dir / "include"
-
-    runtime_dir = BASEDIR / ".." / "runtime"
-    runtime_include_dir = runtime_dir / "include"
-    runtime_src_dir = runtime_dir / "src"
-
-    build_dir = target_path / "build"
-    build_runtime_src_dir = build_dir / "runtime" / "src"
-    build_author_generated_src_dir = build_dir / "author_generated" / "src"
-    build_author_src_dir = build_dir / "author" / "src"
-    build_user_src_dir = build_dir / "user" / "src"
-
-    so_file = build_dir / "libtest.so"
-    elf_file = build_dir / "test"
-
-    if not idl_dir.is_dir():
-        raise FileNotFoundError(f"'{idl_dir}' is not an valid directory.")
-
-    clean_directory(author_generated_dir)
-    clean_directory(user_generated_dir)
-    clean_directory(build_dir)
-
-    print("Generating author codes...")
-    generate_code(
-        CompilerInvocation(
-            src_dirs=[idl_dir],
-            out_dir=author_generated_dir,
-            gen_author=True,
+    def generate(self):
+        invocation = CompilerInvocation(
+            src_dirs=[self.idl_dir],
+            out_dir=self.output_dir,
+            gen_author=self.gen_author,
+            gen_user=self.gen_user,
         )
-    )
-    print("Done.")
+        instance = CompilerInstance(invocation)
+        if not instance.run():
+            raise RuntimeError("Compilation error")
 
-    print("Generating user codes...")
-    generate_code(
-        CompilerInvocation(
-            src_dirs=[idl_dir],
-            out_dir=user_generated_dir,
-            gen_user=True,
+
+class DirectoryManager:
+    @staticmethod
+    def clean(directory: Path):
+        if directory.exists():
+            shutil.rmtree(directory)
+
+    @staticmethod
+    def create(directory: Path):
+        directory.mkdir(parents=True, exist_ok=True)
+
+    @staticmethod
+    def copy(src_directory: Path, dst_directory: Path):
+        if src_directory.exists():
+            shutil.copytree(src_directory, dst_directory, dirs_exist_ok=True)
+
+
+class WarningOptions(Enum):
+    none = []
+    base = [
+        "-Werror",
+        "-Wextra",
+        "-Wimplicit-fallthrough",
+        "-Wthread-safety",
+        "-Wno-missing-field-initializers",
+        "-Wno-unused-parameter",
+        "-Wno-c++11-narrowing",
+        "-Wno-unneeded-internal-declaration",
+        "-Wno-error=c99-designator",
+        "-Wno-error=anon-enum-enum-conversion",
+        "-Wno-error=sizeof-array-div",
+        "-Wno-error=implicit-fallthrough",
+        "-Wno-error=reorder-init-list",
+        "-Wno-error=range-loop-construct",
+    ]
+    huawei = [
+        "-Werror",
+        "-Wextra",
+        "-Wimplicit-fallthrough",
+        "-Wthread-safety",
+        "-Wno-missing-field-initializers",
+        "-Wno-unused-parameter",
+        "-Wno-c++11-narrowing",
+        "-Wno-unneeded-internal-declaration",
+        "-Wno-error=c99-designator",
+        "-Wno-error=anon-enum-enum-conversion",
+        "-Wno-error=sizeof-array-div",
+        "-Wno-error=implicit-fallthrough",
+        "-Wno-error=reorder-init-list",
+        "-Wno-error=range-loop-construct",
+        "-Wno-error=deprecated-copy",
+        "-Wno-error=implicit-int-float-conversion",
+        "-Wno-error=inconsistent-dllimport",
+        "-Wno-error=unknown-warning-option",
+        "-Wno-error=sign-compare",
+        "-Wno-error=int-in-bool-context",
+        "-Wno-error=return-stack-address",
+        "-Wno-error=dangling-gsl",
+        "-Wno-unused-but-set-variable",
+        "-Wno-deprecated-declarations",
+        "-Wno-unused-but-set-parameter",
+        "-Wno-null-pointer-subtraction",
+        "-Wno-unqualified-std-cast-call",
+        "-Wno-user-defined-warnings",
+        "-Wno-unused-lambda-capture",
+        "-Wno-null-pointer-arithmetic",
+        "-Wno-enum-compare-switch",
+        "-fno-ident",
+        "-fdata-sections",
+        "-ffunction-sections",
+        "-fomit-frame-pointer",
+        "-gdwarf-3",
+        "-g2",
+        "-ggnu-pubnames",
+        "-fno-common",
+        "-Wheader-hygiene",
+        "-Wstring-conversion",
+        "-Wtautological-overlap-compare",
+        "-Wall",
+        "-Wno-attributes",
+        "-Wdate-time",
+        "-Wformat=2",
+        "-Wfloat-equal",
+        "-Wshadow",
+    ]
+
+
+class Compiler:
+    def __init__(self, c_compiler: str, cxx_compiler: str):
+        self.c_compiler = c_compiler
+        self.cxx_compiler = cxx_compiler
+
+    def compile(
+        self,
+        output_dir: Path,
+        input_dir: Path,
+        *include_dirs: Path,
+        opt_level: str,
+        warning_options: WarningOptions,
+    ):
+        output_files = []
+        for input_file in input_dir.iterdir():
+            name = input_file.name
+            output_file = output_dir / f"{name}.o"
+            if name.endswith(".c"):
+                compiler = self.c_compiler
+                std = "gnu11"
+            else:
+                compiler = self.cxx_compiler
+                std = "gnu++17"
+            command = [
+                compiler,
+                "-c",
+                "-fvisibility=hidden",
+                "-fPIC",
+                f"-O{opt_level}",
+                f"-std={std}",
+                "-o",
+                output_file,
+                input_file,
+            ]
+            command.extend(warning_options.value)
+            for include_dir in include_dirs:
+                command.extend(["-I", include_dir])
+            CommandRunner.run(command)
+            output_files.append(output_file)
+        return output_files
+
+
+class Linker:
+    def __init__(self, linker: str):
+        self.linker = linker
+
+    def link(
+        self,
+        output_file: Path,
+        *input_files: Path,
+        shared: bool,
+        link_options: list[str],
+    ):
+        command = [self.linker, "-fPIC", "-o", output_file]
+        for input_file in input_files:
+            command.append(str(input_file))
+        for link_option in link_options:
+            command.append(str(link_option))
+        if shared:
+            command.append("-shared")
+        CommandRunner.run(command)
+
+
+class BuildPipeline:
+    def __init__(self, base_dir: Path, target_dir: Path, c: str, cxx: str):
+        self.base_dir = base_dir
+        self.target_dir = target_dir
+        self.compiler = Compiler(
+            c_compiler=c,
+            cxx_compiler=cxx,
         )
-    )
-    print("Done.")
+        self.linker = Linker(linker=cxx)
 
-    if generate_only:
-        return
+    def build(
+        self,
+        generate_only: bool,
+        author_link_options: list[str],
+        user_link_options: list[str],
+        run_args: list[str],
+        opt_level: str,
+        warning_options: WarningOptions,
+    ):
+        target_path = Path(self.target_dir)
 
-    create_directory(build_runtime_src_dir)
-    create_directory(build_author_generated_src_dir)
-    create_directory(build_author_src_dir)
+        idl_dir = target_path / "idl"
 
-    print("Compiling to dynamic link library...")
-    link(
-        so_file,
-        *compile(
-            build_runtime_src_dir,
-            runtime_src_dir,
-            runtime_include_dir,
-            opt_level=opt_level,
-        ),
-        *compile(
-            build_author_src_dir,
-            author_generated_src_dir,
-            runtime_include_dir,
-            author_generated_include_dir,
-            opt_level=opt_level,
-        ),
-        *compile(
-            build_author_src_dir,
-            author_src_dir,
-            runtime_include_dir,
-            author_generated_include_dir,
-            author_include_dir,
-            opt_level=opt_level,
-        ),
-        shared=True,
-        link_options=author_link_options,
-    )
-    print("Done.")
+        author_dir = target_path / "author"
+        author_include_dir = author_dir / "include"
+        author_src_dir = author_dir / "src"
+        author_generated_dir = target_path / "author_generated"
+        author_generated_include_dir = author_generated_dir / "include"
+        author_generated_src_dir = author_generated_dir / "src"
 
-    create_directory(build_user_src_dir)
+        user_dir = target_path / "user"
+        user_include_dir = user_dir / "include"
+        user_src_dir = user_dir / "src"
+        user_generated_dir = target_path / "user_generated"
+        user_generated_include_dir = user_generated_dir / "include"
 
-    print("Compiling to executable file...")
-    link(
-        elf_file,
-        so_file,
-        *compile(
-            build_user_src_dir,
-            user_src_dir,
-            runtime_include_dir,
-            user_generated_include_dir,
-            user_include_dir,
-            opt_level=opt_level,
-        ),
-        shared=False,
-        link_options=user_link_options,
-    )
-    print("Done.")
+        runtime_dir = self.base_dir / ".." / "runtime"
+        runtime_include_dir = runtime_dir / "include"
+        runtime_src_dir = runtime_dir / "src"
 
-    print("Done. Running...")
-    run_command([elf_file, *run_args])
+        build_dir = target_path / "build"
+        build_runtime_src_dir = build_dir / "runtime" / "src"
+        build_author_generated_src_dir = build_dir / "author_generated" / "src"
+        build_author_src_dir = build_dir / "author" / "src"
+        build_user_src_dir = build_dir / "user" / "src"
+
+        so_file = build_dir / "libtest.so"
+        elf_file = build_dir / "test"
+
+        idl_dir = self.target_dir / "idl"
+        author_generated_dir = self.target_dir / "author_generated"
+        user_generated_dir = self.target_dir / "user_generated"
+        build_dir = self.target_dir / "build"
+        so_file = build_dir / "libtest.so"
+        elf_file = build_dir / "test"
+
+        DirectoryManager.clean(author_generated_dir)
+        DirectoryManager.clean(user_generated_dir)
+        DirectoryManager.clean(build_dir)
+
+        print("Generating author codes...")
+        CodeGenerator(idl_dir, author_generated_dir, gen_author=True).generate()
+
+        if not generate_only:
+            DirectoryManager.create(build_runtime_src_dir)
+            DirectoryManager.create(build_author_generated_src_dir)
+            DirectoryManager.create(build_author_src_dir)
+
+            print("Compiling to dynamic link library...")
+            self.linker.link(
+                so_file,
+                *self.compiler.compile(
+                    build_runtime_src_dir,
+                    runtime_src_dir,
+                    runtime_include_dir,
+                    opt_level=opt_level,
+                    warning_options=warning_options,
+                ),
+                *self.compiler.compile(
+                    build_author_src_dir,
+                    author_generated_src_dir,
+                    runtime_include_dir,
+                    author_generated_include_dir,
+                    opt_level=opt_level,
+                    warning_options=warning_options,
+                ),
+                *self.compiler.compile(
+                    build_author_src_dir,
+                    author_src_dir,
+                    runtime_include_dir,
+                    author_generated_include_dir,
+                    author_include_dir,
+                    opt_level=opt_level,
+                    warning_options=warning_options,
+                ),
+                shared=True,
+                link_options=author_link_options,
+            )
+
+        print("Generating user codes...")
+        CodeGenerator(idl_dir, user_generated_dir, gen_user=True).generate()
+
+        if not generate_only:
+            DirectoryManager.create(build_user_src_dir)
+
+            print("Compiling to executable file...")
+            self.linker.link(
+                elf_file,
+                so_file,
+                *self.compiler.compile(
+                    build_user_src_dir,
+                    user_src_dir,
+                    runtime_include_dir,
+                    user_generated_include_dir,
+                    user_include_dir,
+                    opt_level=opt_level,
+                    warning_options=warning_options,
+                ),
+                shared=False,
+                link_options=user_link_options,
+            )
+
+        print("Running...")
+        CommandRunner.run([elf_file, *run_args])
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(
-        description="Build and run project from a target directory",
+        description="Build and run project from a target directory"
     )
     parser.add_argument(
         "target_directory",
@@ -251,14 +365,49 @@ if __name__ == "__main__":
         const="",
         help="Optimization level for compilation",
     )
+    parser.add_argument(
+        "--clang-version",
+        type=str,
+        default=None,
+        help="Clang version to use for compilation",
+    )
+    parser.add_argument(
+        "-W",
+        "--warning-options",
+        type=str,
+        choices=[w.name for w in WarningOptions],
+        default=WarningOptions.base.name,
+        help="Warning options for compilation",
+    )
 
     args = parser.parse_args()
 
-    main(
-        args.target_directory,
-        args.generate_only,
-        args.optimization,
-        args.author_link_options,
-        args.user_link_options,
-        args.run_args,
+    if args.clang_version is not None:
+        if not args.clang_version.isdigit():
+            raise ValueError("Clang version must be a number")
+        c = f"clang-{args.clang_version}"
+        cxx = f"clang++-{args.clang_version}"
+    else:
+        c = "clang"
+        cxx = "clang++"
+
+    warning_options = WarningOptions[args.warning_options]
+
+    pipeline = BuildPipeline(
+        base_dir=Path(__file__).resolve().parent,
+        target_dir=Path(args.target_directory),
+        c=os.getenv("C", c),
+        cxx=os.getenv("CXX", cxx),
     )
+    pipeline.build(
+        generate_only=args.generate_only,
+        author_link_options=args.author_link_options,
+        user_link_options=args.user_link_options,
+        run_args=args.run_args,
+        opt_level=args.optimization,
+        warning_options=warning_options,
+    )
+
+
+if __name__ == "__main__":
+    main()
