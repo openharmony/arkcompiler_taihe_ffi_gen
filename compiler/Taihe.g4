@@ -151,8 +151,9 @@ boolExpr
     ;
 
 stringExpr
-    : TOKENLst_vals += STRING_LITERAL+ # literalStringExpr
-    | LEFT_PARENTHESIS StringExpr_expr = stringExpr RIGHT_PARENTHESIS # parenthesisStringExpr
+    : TOKEN_val = STRING_LITERAL # literalStringExpr
+    | TOKEN_val = DOCSTRING_LITERAL # literalDocStringExpr
+    | StringExpr_left = stringExpr StringExpr_right = stringExpr # binaryStringExpr
     ;
 
 ///////////
@@ -336,11 +337,11 @@ KW_FUNCTION
     ;
 
 KW_TRUE
-    : 'TRUE'
+    : 'true'
     ;
 
 KW_FALSE
-    : 'FALSE'
+    : 'false'
     ;
 
 KW_VOID
@@ -349,7 +350,10 @@ KW_VOID
 
 STRING_LITERAL
     : '"' (ESCAPE_SEQUENCE | ~ ('\\' | '"'))* '"'
-    | '"""' .*? '"""'
+    ;
+
+DOCSTRING_LITERAL
+    : '"""' .*? '"""'
     ;
 
 fragment ESCAPE_SEQUENCE

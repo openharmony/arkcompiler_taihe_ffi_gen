@@ -1,6 +1,5 @@
 """Format the IDL files."""
 
-from json import dumps
 from typing import TextIO
 
 from typing_extensions import override
@@ -8,9 +7,9 @@ from typing_extensions import override
 from taihe.semantics.declarations import (
     CallbackTypeRefDecl,
     Decl,
+    DeclProtocol,
     DeclarationImportDecl,
     DeclarationRefDecl,
-    DeclProtocol,
     EnumDecl,
     EnumItemDecl,
     GenericTypeRefDecl,
@@ -36,19 +35,50 @@ from taihe.utils.diagnostics import AnsiStyle
 from taihe.utils.outputs import IndentManager
 
 
-def pretty_print(x: DeclProtocol, buffer: TextIO):
-    printer = _PrettyPrinter(buffer)
-    printer.handle_decl(x)
+def pretty_print(
+    decl: DeclProtocol,
+    buffer: TextIO,
+    no_resolved_ty=False,
+    colorize=True,
+) -> None:
+    printer = _PrettyPrinter(buffer, no_resolved_ty, colorize)
+    printer.handle_decl(decl)
 
 
 class _PrettyPrinter(DeclVisitor):
-    def __init__(self, buffer: TextIO, no_resolved_ty=False):
+    def __init__(self, buffer: TextIO, no_resolved_ty=False, colorize=True):
         self.buffer = buffer
         self.indent_manager = IndentManager()
         self.no_resolved_ty = no_resolved_ty
+        if colorize:
+            self.as_keyword = lambda s: f"{AnsiStyle.CYAN}{s}{AnsiStyle.RESET}"
+            self.as_attr = lambda s: f"{AnsiStyle.MAGENTA}{s}{AnsiStyle.RESET}"
+            self.as_comment = lambda s: f"{AnsiStyle.GREEN}{s}{AnsiStyle.RESET}"
+        else:
+            self.as_keyword = lambda s: s
+            self.as_attr = lambda s: s
+            self.as_comment = lambda s: s
 
     def writeln(self, content):
         self.buffer.write(self.indent_manager.current + content + "\n")
+
+    def with_attr(self, d: Decl, s: str) -> str:
+        if not d.attrs:
+            return s
+        fmt_attrs = " ".join(
+            self.as_attr(f"@{item}") for item in self.get_format_attr(d)
+        )
+        return f"{fmt_attrs} {s}"
+
+    def write_pkg_attr(self, d: PackageDecl):
+        for item in self.get_format_attr(d):
+            attr = self.as_attr(f"@!{item}")
+            self.writeln(f"{attr}")
+
+    def write_attr(self, d: Decl):
+        for item in self.get_format_attr(d):
+            attr = self.as_attr(f"@{item}")
+            self.writeln(f"{attr}")
 
     def get_type_ref_decl(self, d: TypeRefDecl) -> str:
         type_ref_repr = self.handle_decl(d)
@@ -57,7 +87,8 @@ class _PrettyPrinter(DeclVisitor):
         real_type = (
             d.maybe_resolved_ty.signature if d.maybe_resolved_ty else "<error type>"
         )
-        return f"{type_ref_repr} {AnsiStyle.GREEN}/* {real_type} */{AnsiStyle.RESET}"
+        comment = self.as_comment(f"/* {real_type} */")
+        return f"{type_ref_repr} {comment}"
 
     @override
     def visit_long_type_ref_decl(self, d: LongTypeRefDecl) -> str:
@@ -92,18 +123,15 @@ class _PrettyPrinter(DeclVisitor):
         res = f"{d.name}: {self.get_type_ref_decl(d.ty_ref)}"
         return self.with_attr(d, res)
 
-    def get_value(self, d: bool | str | float | int) -> str:
-        if isinstance(d, bool):
-            return "TRUE" if d else "FALSE"
-        if isinstance(d, int):
-            return dumps(d)
-        if isinstance(d, float):
-            return dumps(d)
-        if isinstance(d, str):
-            return dumps(d)
-
-    def as_keyword(self, s) -> str:
-        return f"{AnsiStyle.CYAN}{s}{AnsiStyle.RESET}"
+    def get_value(self, obj: bool | str | float | int) -> str:
+        if isinstance(obj, str):
+            return obj.encode("unicode_escape").decode("utf-8")
+        if isinstance(obj, bool):
+            return "true" if obj else "false"
+        if isinstance(obj, int):
+            return f"{obj:d}"
+        if isinstance(obj, float):
+            return f"{obj:f}"
 
     def get_format_attr(self, d: Decl) -> list[str]:
         formatted_attributes = []
@@ -115,23 +143,6 @@ class _PrettyPrinter(DeclVisitor):
                 else:
                     formatted_attributes.append(key)
         return formatted_attributes
-
-    def with_attr(self, d: Decl, s: str) -> str:
-        if not d.attrs:
-            return s
-        fmt_attrs = " ".join(f"@{item}" for item in self.get_format_attr(d))
-        attr = f"{AnsiStyle.MAGENTA}{fmt_attrs}{AnsiStyle.RESET_ALL}"
-        return f"{attr} {s}"
-
-    def write_pkg_attr(self, d: PackageDecl):
-        for item in self.get_format_attr(d):
-            attr = f"{AnsiStyle.MAGENTA}@!{item}{AnsiStyle.RESET_ALL}"
-            self.writeln(f"{attr}")
-
-    def write_attr(self, d: Decl):
-        for item in self.get_format_attr(d):
-            attr = f"{AnsiStyle.MAGENTA}@{item}{AnsiStyle.RESET_ALL}"
-            self.writeln(f"{attr}")
 
     @override
     def visit_package_import_decl(self, d: PackageImportDecl):
@@ -280,15 +291,7 @@ class _PrettyPrinter(DeclVisitor):
             self.handle_decl(d)
         for d in p.decl_imports.values():
             self.handle_decl(d)
-        for d in p.structs:
-            self.handle_decl(d)
-        for d in p.unions:
-            self.handle_decl(d)
-        for d in p.interfaces:
-            self.handle_decl(d)
-        for d in p.enums:
-            self.handle_decl(d)
-        for d in p.functions:
+        for d in p.decls.values():
             self.handle_decl(d)
 
     @override
