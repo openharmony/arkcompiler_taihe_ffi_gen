@@ -48,6 +48,7 @@ enum 有2种语法
     ```
 
 ## 第二步：完成 C++ 实现
+
 **File: `author/src/message.impl.cpp`**
 ```C++
 Message createTextMessage(string_view str) {
@@ -89,6 +90,7 @@ void processMessage(Message const& msg) {
     以本例 union 为例，用户可以使用 `get_textVal_ref()` 与 `get_numVal_ref()` 来获取 union 的值，即：使用`get_{union_item}_ref` 来获取 union 的值
 
 ## 第三步：在 ets 侧使用
+
 ```typescript
 // 创建文本信息
 let textMsg = message.createTextMessage("hello");

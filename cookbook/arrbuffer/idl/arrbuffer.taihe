@@ -1,1 +1,0 @@
-function convert2Int(a: @arraybuffer Array<u8>): i32;

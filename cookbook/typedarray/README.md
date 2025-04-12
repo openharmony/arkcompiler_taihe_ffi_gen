@@ -1,6 +1,6 @@
 # TypedArray
 
-Taihe 可以使用注解的方式来使用 typed array 注解为 `@!typed_array`
+太和支持 TS 语言中的 TypedArray 类型，如 Uint8Array, Int8Array 等，其对应的注解为在相应的 `Array<T>` 上添加注解 `@typedarray`，例如，`Uint8Array` 在太和中表示为 `@typedarray Array<u8>`，`Int8Array` 表示为 `@typedarray Array<i8>`。
 
 ## 第一步：编写接口原型
 
@@ -9,8 +9,6 @@ Taihe 可以使用注解的方式来使用 typed array 注解为 `@!typed_array`
 function createUint16Array(): @typedarray Array<u16>;
 function printUint16Array(arr: @typedarray Array<u16>): void;
 ```
-
-目前该注解只能作用于太和文件，使用该注解后，taihe所有的 Array\<ux\>都会对接为 TypedArray
 
 ## 第二步：完成 C++ 实现
 
@@ -29,6 +27,7 @@ void printUint16Array(array_view<uint16_t> arr) {
 ```
 
 ## 第三步：在 ets 侧使用
+
 ```typescript
 // ets侧创建, c++侧调用
 let arrbuf = new ArrayBuffer(8);
