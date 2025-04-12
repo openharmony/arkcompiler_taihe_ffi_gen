@@ -1,6 +1,5 @@
 """Convert AST to IR."""
 
-from codecs import decode
 from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import Enum
@@ -97,8 +96,8 @@ class ExprEvaluator(Visitor):
     @override
     def visit_literal_bool_expr(self, node: ast.LiteralBoolExpr) -> bool:
         return {
-            "TRUE": True,
-            "FALSE": False,
+            "true": True,
+            "false": False,
         }[node.val.text]
 
     @override
@@ -264,19 +263,15 @@ class ExprEvaluator(Visitor):
 
     @override
     def visit_literal_string_expr(self, node: ast.LiteralStringExpr) -> str:
-        return "".join(
-            decode(
-                (
-                    val.text[3:-3]
-                    if len(val.text) > 2
-                    and val.text.startswith('"""')
-                    and val.text.endswith('"""')
-                    else val.text[1:-1]
-                ),
-                "unicode-escape",
-            )
-            for val in node.vals
-        )
+        return node.val.text[1:-1].encode("utf-8").decode("unicode_escape")
+
+    @override
+    def visit_literal_doc_string_expr(self, node: ast.LiteralDocStringExpr) -> str:
+        return node.val.text[3:-3]
+
+    @override
+    def visit_binary_string_expr(self, node: ast.BinaryStringExpr) -> str:
+        return self.visit(node.left) + self.visit(node.right)
 
 
 class AstConverter(ExprEvaluator):

@@ -1,8 +1,13 @@
 from contextlib import suppress
 from typing import Any
 
-from antlr4 import CommonTokenStream, FileStream, InputStream, TerminalNode, Token
+from antlr4.CommonTokenStream import CommonTokenStream
 from antlr4.error.ErrorListener import ErrorListener
+from antlr4.FileStream import FileStream
+from antlr4.InputStream import InputStream
+from antlr4.ParserRuleContext import ParserRuleContext
+from antlr4.Token import Token
+from antlr4.tree.Tree import ErrorNodeImpl, TerminalNodeImpl
 
 from taihe.parse.antlr.TaiheAST import TaiheAST
 from taihe.parse.antlr.TaiheLexer import TaiheLexer
@@ -33,15 +38,23 @@ def add_pos(ctx, pos_dict: dict):
     if isinstance(ctx, Token):
         beg, end = get_pos(ctx)
         pos_dict[ctx] = beg, end
-    elif isinstance(ctx, TerminalNode):
+        return
+    if isinstance(ctx, TerminalNodeImpl | ErrorNodeImpl):
         add_pos(ctx.symbol, pos_dict)
         pos_dict[ctx] = pos_dict[ctx.symbol]
-    else:
-        for child in ctx.children:
+        return
+    if isinstance(ctx, ParserRuleContext):
+        pairs = []
+        for child in ctx.children or []:
             add_pos(child, pos_dict)
-        beg, _ = pos_dict[ctx.children[0]]
-        _, end = pos_dict[ctx.children[-1]]
+            if (pair := pos_dict.get(child)) is not None:
+                pairs.append(pair)
+        if not pairs:
+            return
+        (beg, _), *_ = pairs
+        *_, (_, end) = pairs
         pos_dict[ctx] = beg, end
+        return
 
 
 class TaiheErrorListener(ErrorListener):

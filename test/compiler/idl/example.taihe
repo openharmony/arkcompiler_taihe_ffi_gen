@@ -127,6 +127,6 @@ union RecursiveUnion {
 }
 
 @test
-@test("abc", 123, 1.0, TRUE)
+@test("abc", 123, 1.0, true)
 @code("""code = "my_code";""")
 function f(): @arg_attr(123) @no_arg_attr (@param_attr x: @inner_attr i32) => void;
