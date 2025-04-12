@@ -1,2 +1,0 @@
-function inUint16Array(v: @typedarray Array<u16>): void;
-function outUint16Array(): @typedarray Array<u16>;

@@ -1235,16 +1235,16 @@ class TypedArrayTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
         ani_data = f"{cpp_result}_data"
         ani_length = f"{cpp_result}_length"
         target.writeln(
-            f"ani_int {ani_byte_length};",
-            f"ani_int {ani_byte_offset};",
+            f"ani_double {ani_byte_length};",
+            f"ani_double {ani_byte_offset};",
             f"ani_arraybuffer {ani_arrbuf};",
-            f'{env}->Object_GetPropertyByName_Int({ani_value}, "byteLengthInt", &{ani_byte_length});',
-            f'{env}->Object_GetPropertyByName_Int({ani_value}, "byteOffsetInt", &{ani_byte_offset});',
+            f'{env}->Object_GetPropertyByName_Double({ani_value}, "byteLength", &{ani_byte_length});',
+            f'{env}->Object_GetPropertyByName_Double({ani_value}, "byteOffset", &{ani_byte_offset});',
             f'{env}->Object_GetPropertyByName_Ref({ani_value}, "buffer", reinterpret_cast<ani_ref*>(&{ani_arrbuf}));',
             f"char* {ani_data} = nullptr;",
             f"size_t {ani_length} = 0;",
             f"{env}->ArrayBuffer_GetInfo(reinterpret_cast<ani_arraybuffer>({ani_arrbuf}), reinterpret_cast<void**>(&{ani_data}), &{ani_length});",
-            f"{self.cpp_info.as_param} {cpp_result}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>({ani_data} + {ani_byte_offset}), {ani_byte_length} / (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)));",
+            f"{self.cpp_info.as_param} {cpp_result}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>({ani_data} + (size_t){ani_byte_offset}), (size_t){ani_byte_length} / (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)));",
         )
 
     @override
