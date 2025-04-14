@@ -9,6 +9,8 @@ from collections.abc import Hashable
 from dataclasses import dataclass
 from typing import Generic, NoReturn, ParamSpec, TypeVar
 
+from taihe.utils.diagnostics import DiagnosticsManager
+
 P = ParamSpec("P")
 A = TypeVar("A", bound="AbstractAnalysis")
 
@@ -57,8 +59,11 @@ class AbstractAnalysis(ABC, Generic[P]):
 class AnalysisManager:
     """Manages caching and retrieval of analysis instances."""
 
-    def __init__(self) -> None:
+    diagnostics_manager: DiagnosticsManager
+
+    def __init__(self, diagnostics_manager: DiagnosticsManager) -> None:
         self._cache: dict[CacheKey, AbstractAnalysis] = {}
+        self.diagnostics_manager = diagnostics_manager
 
     def get_or_create(self, analysis_type: type[A], *args, **kwargs) -> A:
         """Get existing analysis or create new one if not cached."""

@@ -7,11 +7,11 @@ from typing import TYPE_CHECKING, Any, Generic, Optional, Protocol, TypeVar
 
 from typing_extensions import override
 
+from taihe.semantics.format import PrettyFormatter
 from taihe.semantics.types import (
     EnumType,
     IfaceType,
     StructType,
-    Type,
     UnionType,
     UserType,
 )
@@ -19,6 +19,7 @@ from taihe.utils.exceptions import DeclRedefError
 from taihe.utils.sources import SourceLocation
 
 if TYPE_CHECKING:
+    from taihe.semantics.types import Type
     from taihe.semantics.visitor import DeclVisitor
 
 
@@ -33,7 +34,7 @@ class AttrItemDecl:
 
     loc: Optional[SourceLocation]
     name: str
-    args: tuple[Any, ...]
+    args: tuple[Any, ...] = ()
 
 
 ################
@@ -50,7 +51,7 @@ class Decl(metaclass=ABCMeta):
 
     loc: Optional[SourceLocation]
 
-    attrs: dict[str, list["AttrItemDecl"]]
+    attrs: dict[str, list[AttrItemDecl]]
 
     def __init__(
         self,
@@ -59,13 +60,13 @@ class Decl(metaclass=ABCMeta):
         self.loc = loc
         self.attrs = {}
 
-    def add_attr(self, i: "AttrItemDecl"):
+    def add_attr(self, i: AttrItemDecl):
         self.attrs.setdefault(i.name, []).append(i)
 
-    def get_attr_list(self, name: str) -> list["AttrItemDecl"]:
+    def get_attr_list(self, name: str) -> list[AttrItemDecl]:
         return self.attrs.get(name, [])
 
-    def get_attr_item(self, name: str) -> Optional["AttrItemDecl"]:
+    def get_attr_item(self, name: str) -> Optional[AttrItemDecl]:
         attr_list = self.attrs.get(name, [])
         if len(attr_list) == 0:
             return None
@@ -156,7 +157,7 @@ class TypeRefDecl(DeclWithParent[Decl], metaclass=ABCMeta):
     """
 
     is_resolved: bool = False
-    maybe_resolved_ty: Optional[Type] = None
+    maybe_resolved_ty: Optional["Type"] = None
 
     @property
     def resolved_ty(self):
@@ -170,9 +171,8 @@ class TypeRefDecl(DeclWithParent[Decl], metaclass=ABCMeta):
         super().__init__(loc)
 
     @property
-    @abstractmethod
     def text(self) -> str:
-        """Return the original representation of the type reference."""
+        return PrettyFormatter().get_type_ref_decl(self)
 
     @property
     @override
@@ -218,11 +218,6 @@ class ShortTypeRefDecl(TypeRefDecl):
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_short_type_ref_decl(self)
 
-    @property
-    @override
-    def text(self) -> str:
-        return self.symbol
-
 
 class LongTypeRefDecl(TypeRefDecl):
     pkname: str
@@ -241,11 +236,6 @@ class LongTypeRefDecl(TypeRefDecl):
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_long_type_ref_decl(self)
-
-    @property
-    @override
-    def text(self) -> str:
-        return f"{self.pkname}.{self.symbol}"
 
 
 class GenericTypeRefDecl(TypeRefDecl):
@@ -268,12 +258,6 @@ class GenericTypeRefDecl(TypeRefDecl):
     def add_arg_ty_ref(self, p: TypeRefDecl):
         p.set_parent(self)
         self.args_ty_ref.append(p)
-
-    @property
-    @override
-    def text(self) -> str:
-        args_fmt = ", ".join(arg_ty_ref.text for arg_ty_ref in self.args_ty_ref)
-        return f"{self.symbol}<{args_fmt}>"
 
 
 class CallbackTypeRefDecl(TypeRefDecl):
@@ -300,15 +284,6 @@ class CallbackTypeRefDecl(TypeRefDecl):
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_callback_type_ref_decl(self)
 
-    @property
-    @override
-    def text(self) -> str:
-        args_fmt = ", ".join(
-            f"{param.name}: {param.ty_ref.text}" for param in self.params
-        )
-        ret_fmt = ty_ref.text if (ty_ref := self.return_ty_ref) else "void"
-        return f"({args_fmt}) => {ret_fmt}"
-
 
 class AdhocTypeRefDecl(TypeRefDecl):
     def __init__(
@@ -320,11 +295,6 @@ class AdhocTypeRefDecl(TypeRefDecl):
     @override
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_adhoc_type_ref_decl(self)
-
-    @property
-    @override
-    def text(self) -> str:
-        return "?"
 
 
 #####################
@@ -696,7 +666,7 @@ class TypeDecl(PackageLevelDecl, metaclass=ABCMeta):
 
 
 class EnumDecl(TypeDecl):
-    items: list["EnumItemDecl"]
+    items: list[EnumItemDecl]
     ty_ref: Optional[TypeRefDecl]
 
     def __init__(
@@ -716,7 +686,7 @@ class EnumDecl(TypeDecl):
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_enum_decl(self)
 
-    def add_item(self, i: "EnumItemDecl"):
+    def add_item(self, i: EnumItemDecl):
         i.set_parent(self)
         self.items.append(i)
 
@@ -731,7 +701,7 @@ class EnumDecl(TypeDecl):
 
 
 class UnionDecl(TypeDecl):
-    fields: list["UnionFieldDecl"]
+    fields: list[UnionFieldDecl]
 
     def __init__(self, loc: Optional[SourceLocation], name: str):
         super().__init__(loc, name)
@@ -741,7 +711,7 @@ class UnionDecl(TypeDecl):
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_union_decl(self)
 
-    def add_field(self, f: "UnionFieldDecl"):
+    def add_field(self, f: UnionFieldDecl):
         f.set_parent(self)
         self.fields.append(f)
 
@@ -756,7 +726,7 @@ class UnionDecl(TypeDecl):
 
 
 class StructDecl(TypeDecl):
-    fields: list["StructFieldDecl"]
+    fields: list[StructFieldDecl]
 
     def __init__(self, loc: Optional[SourceLocation], name: str):
         super().__init__(loc, name)
@@ -766,7 +736,7 @@ class StructDecl(TypeDecl):
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_struct_decl(self)
 
-    def add_field(self, f: "StructFieldDecl"):
+    def add_field(self, f: StructFieldDecl):
         f.set_parent(self)
         self.fields.append(f)
 
@@ -781,8 +751,8 @@ class StructDecl(TypeDecl):
 
 
 class IfaceDecl(TypeDecl):
-    methods: list["IfaceMethodDecl"]
-    parents: list["IfaceParentDecl"]
+    methods: list[IfaceMethodDecl]
+    parents: list[IfaceParentDecl]
 
     def __init__(self, loc: Optional[SourceLocation], name: str):
         super().__init__(loc, name)
@@ -793,11 +763,11 @@ class IfaceDecl(TypeDecl):
     def _accept(self, v: "DeclVisitor") -> Any:
         return v.visit_iface_decl(self)
 
-    def add_method(self, f: "IfaceMethodDecl"):
+    def add_method(self, f: IfaceMethodDecl):
         f.set_parent(self)
         self.methods.append(f)
 
-    def add_parent(self, p: "IfaceParentDecl"):
+    def add_parent(self, p: IfaceParentDecl):
         p.set_parent(self)
         self.parents.append(p)
 
@@ -941,7 +911,7 @@ class PackageGroup:
     def _accept(self, v: "DeclVisitor"):
         return v.visit_package_group(self)
 
-    def lookup(self, name: str) -> Optional["PackageDecl"]:
+    def lookup(self, name: str) -> Optional[PackageDecl]:
         return self.package_dict.get(name, None)
 
     def add(self, d: PackageDecl):
