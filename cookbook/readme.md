@@ -14,7 +14,8 @@
 
 ## 第三章：进阶与扩展
 - [external object](./external_obj/readme.md)
-- [arraybuffer](./arrbuffer/readme.md)
+- [arraybuffer](./arraybuffer/readme.md)
+- [bigint](./bigint/README.md)
 - [异步](./async/readme.md)
 - [重载](./overload/readme.md)
 - [回调](./callback/readme.md)
@@ -27,4 +28,4 @@
 
 ### To do 
 
-#### static method | namespace | onoff | bigint
+#### static method | namespace | onoff

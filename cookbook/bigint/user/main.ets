@@ -1,30 +1,10 @@
-import * as bigint_test from "@generated/bigint_test";
-import * as System from "std/core/System";
+import * as bigint from "@generated/bigint";
 
 loadLibrary("bigint");
 
 function main() {
-    console.info("bigint_test run start...");
-    const suite = new ArkTestsuite("bigint_test ut")
-    suite.addTest("testFromBigint", testFromBigint);
-    suite.addTest("testToBigint", testToBigint);
-    System.exit(suite.run());
-    console.info("bigint_test run end...");
-}
-
-function testFromBigint() {
-    // test function GetNumfromBigint(b : BigInt) : long
-    let big: BigInt = 666666666666666666666666666255n;
-    let num: long = bigint_test.GetNumfromBigint(big);
-    console.info("num : " + num);
-    let result = (big % 256n).getLong();
-    assertEQ(num, result);
-}
-
-function testToBigint() {
-    // test function GenBigint(lg : long[]) : BigInt
-    let array: long[] = [36140072416, 3384629513536841999];
-    let result: BigInt = bigint_test.GenBigint(array);
-    console.info("result : " + result);
-    assertEQ(result, 666666666666666666666666666255n);
+    let num1: BigInt = bigint.processBigInt(18446744073709551616n)
+    console.log(num1)
+    let num2: BigInt = bigint.processBigInt(-65535n)
+    console.log(num2);
 }

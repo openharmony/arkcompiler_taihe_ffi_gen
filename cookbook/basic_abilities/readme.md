@@ -1,4 +1,4 @@
-### taihe基础能力
+# taihe基础能力
 
 类型对应参照表
 
@@ -35,14 +35,14 @@
 
 依然是开发流程 3 步走
 
-第一步 在 Taihe 文件中声明
+## 第一步 在 Taihe 文件中声明
 
 `basic_abilities/idl/basic_abilities.taihe`
 ```taihe
 function convert_arr(a: Array<i32>, str: String): Array<String>;
 ```
 
-第二步 实现声明的函数
+## 第二步 实现声明的函数
 
 `basic_abilities/author/src/basic_abilities.impl.cpp`
 
@@ -61,7 +61,7 @@ array<string> convert_arr(array_view<int32_t> a, string_view str) {
 }
 ```
 
-第三步 生成并编译
+## 第三步 生成并编译
 
 `compiler/`
 ```sh
@@ -85,13 +85,13 @@ for (let i = 0; i < output_arr.length; i++) {
 // arr [3] val hello
 ```
 
-### Know more, Code better
+## Know more, Code better
 
 在此例子中，我们使用了 string 和 array 用户可能对于实现侧对 Taihe string 和 array 有些困惑，在此介绍 Taihe runtime 的 string 和 array 类型在实现侧的使用
 
 我们假设你已经拥有 C++ 的知识
 
-#### taihe string
+### taihe string
 
 1. string 使用引用计数进行自动的生命周期管理, 用户只需要正常使用 string
 
@@ -157,7 +157,7 @@ for (let i = 0; i < output_arr.length; i++) {
     // 如果用户希望获得更好的性能，在不需要拷贝的场景则不使用 string 类型
     ```
 
-#### taihe array
+### taihe array
 
 1. 为方便用户使用，提供了许多相关的操作函数便于用户开发
 

@@ -1,9 +1,9 @@
 set(IDL_FILES
-    "${CMAKE_CURRENT_LIST_DIR}/idl/bigint_test.taihe"
+    "${CMAKE_CURRENT_LIST_DIR}/idl/bigint.taihe"
 )
 
 set(GEN_ETS_FILES
-    "bigint_test.ets"
+    "bigint.ets"
 )
 
 set(USER_ETS_FILES
