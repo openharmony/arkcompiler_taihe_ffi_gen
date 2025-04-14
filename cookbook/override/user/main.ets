@@ -13,4 +13,5 @@ function main() {
     }
     let my_uiability: UIAbility = new MyAbility();
     useUIAbility(my_uiability);
+    MyAbility.logLifecycle("using uiability")
 }

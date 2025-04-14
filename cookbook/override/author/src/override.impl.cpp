@@ -25,7 +25,12 @@ void useUIAbility(::override::weak::UIAbility a) {
   a->onForeground();
   a->onBackground();
 }
+
+void logLifecycle(string_view str) {
+  std::cout << "[UIAbility]: " << str << std::endl;
+}
 }  // namespace
 
 TH_EXPORT_CPP_API_getUIAbility(getUIAbility);
 TH_EXPORT_CPP_API_useUIAbility(useUIAbility);
+TH_EXPORT_CPP_API_logLifecycle(logLifecycle);
