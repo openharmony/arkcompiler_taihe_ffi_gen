@@ -23,17 +23,17 @@ class BuildConfig:
 
         current_file = Path(__file__).resolve()
         if for_distribution:
-            base_dir = current_file.parents[5]
+            self.base_dir = current_file.parents[5]
             # Inside the distributed repository: dist/lib/taihe/ compiler/taihe/cli/compiler.py
-            self.runtime_include_dir = base_dir / "include"
-            self.runtime_src_dir = base_dir / "src" / "taihe" / "runtime"
-            self.panda_home = base_dir / "var" / "taihe" / "panda_vm"
+            self.runtime_include_dir = self.base_dir / "include"
+            self.runtime_src_dir = self.base_dir / "src" / "taihe" / "runtime"
+            self.panda_home = self.base_dir / "var" / "taihe" / "panda_vm"
         else:
             # Inside the git repository: repo/ compiler/taihe/cli/run_test.py
-            base_dir = current_file.parents[3]
-            self.runtime_include_dir = base_dir / "runtime" / "include"
-            self.runtime_src_dir = base_dir / "runtime" / "src"
-            self.panda_home = base_dir / ".panda_vm"
+            self.base_dir = current_file.parents[3]
+            self.runtime_include_dir = self.base_dir / "runtime" / "include"
+            self.runtime_src_dir = self.base_dir / "runtime" / "src"
+            self.panda_home = self.base_dir / ".panda_vm"
         self.panda_include_home = (
             self.panda_home / "package/ohos_arm64/include/plugins/ets/runtime/ani"
         )
@@ -136,29 +136,32 @@ class BuildSystem:
                 self.logger.error(f"Standard error: {e.stderr}")
             raise
 
-    def manage_directory(
-        self, directory: Path, action: str = "create", src_dir: Optional[Path] = None
-    ) -> None:
-        """Manage directories (create, clean, or copy)."""
+    def create_directory(self, directory: Path) -> None:
         try:
-            if action == "clean" and directory.exists():
-                shutil.rmtree(directory)
-                self.logger.debug(f"Cleaned directory: {directory}")
-            elif action == "create":
-                directory.mkdir(parents=True, exist_ok=True)
-                self.logger.debug(f"Created directory: {directory}")
-            elif action == "copy" and src_dir:
-                if not src_dir.exists():
-                    self.logger.warning(f"Source directory does not exist: {src_dir}")
-                    return
-
-                if not directory.exists():
-                    directory.mkdir(parents=True)
-
-                shutil.copytree(src_dir, directory, dirs_exist_ok=True)
-                self.logger.debug(f"Copied {src_dir} to {directory}")
+            directory.mkdir(parents=True, exist_ok=True)
+            self.logger.debug(f"Created directory: {directory}")
         except Exception as e:
-            self.logger.error(f"Error managing directory {directory}: {e}")
+            self.logger.error(f"Error create directory {directory}: {e}")
+            raise
+
+    def clean_directory(self, directory: Path) -> None:
+        if not directory.exists():
+            return
+        try:
+            shutil.rmtree(directory)
+            self.logger.debug(f"Cleaned directory: {directory}")
+        except Exception as e:
+            self.logger.error(f"Error clean directory {directory}: {e}")
+            raise
+
+    def copy_directory(self, src_dir: Path, dest_dir: Path) -> None:
+        try:
+            if not src_dir.exists():
+                src_dir.mkdir(parents=True)
+            shutil.copytree(src_dir, src_dir, dirs_exist_ok=True)
+            self.logger.debug(f"Copied {src_dir} to {src_dir}")
+        except Exception as e:
+            self.logger.error(f"Error copying from {src_dir} to {dest_dir}: {e}")
             raise
 
     def compile(
@@ -266,7 +269,7 @@ class BuildSystem:
             raise FileNotFoundError(f"Failed to download {url}")
 
     def extract_file(
-        self, target_file: Path, extract_dir: Path, version_file: Path, version: str
+        self, target_file: Path, extract_dir: Path, version_file: Optional[Path] = None, version: Optional[str] = None
     ) -> None:
         """Extract a tar.gz file."""
         try:
@@ -290,8 +293,9 @@ class BuildSystem:
                 # Extract safely
                 tar.extractall(path=extract_dir)
 
-            with open(version_file, "w") as vf:
-                vf.write(version)
+            if version_file and version:
+                with open(version_file, "w") as vf:
+                    vf.write(version)
 
             self.logger.info(f"Extracted {target_file} to {extract_dir}")
         except Exception as e:
@@ -408,7 +412,7 @@ class BuildSystem:
     def setup_build_directories(self) -> None:
         """Set up necessary build directories."""
         # Clean and create directories
-        self.manage_directory(self.build_dir, "clean")
+        self.clean_directory(self.build_dir)
 
         # Create all necessary directories
         for directory in [
@@ -420,7 +424,7 @@ class BuildSystem:
             self.build_system_dir,
             self.build_user_dir,
         ]:
-            self.manage_directory(directory, "create")
+            self.create_directory(directory)
 
     def generate_code(self) -> None:
         """Generate code from IDL files."""
@@ -428,7 +432,7 @@ class BuildSystem:
             raise FileNotFoundError(f"IDL directory not found: '{self.idl_dir}'")
 
         try:
-            self.manage_directory(self.generated_dir, "clean")
+            self.clean_directory(self.generated_dir)
             # Import here to avoid module dependency issues
             from taihe.driver import CompilerInstance, CompilerInvocation
 
@@ -556,10 +560,10 @@ class BuildSystem:
         )
 
     def create_example(self):
-        self.manage_directory(self.idl_dir, "create")
-        self.manage_directory(self.author_dir, "create")
-        self.manage_directory(self.author_src_dir, "create")
-        self.manage_directory(self.user_dir, "create")
+        self.create_directory(self.idl_dir)
+        self.create_directory(self.author_dir)
+        self.create_directory(self.author_src_dir)
+        self.create_directory(self.user_dir)
 
         include_dirs = []
         include_dirs.append(self.config.panda_include_home)
@@ -610,7 +614,7 @@ function main() {{
 
             # Set up paths for Panda VM
             extract_dir = self.config.panda_home.resolve()
-            self.manage_directory(extract_dir, "create")
+            self.create_directory(extract_dir)
 
             # Download and extract Panda VM
             package_dir = self.download_panda_vm(extract_dir)
@@ -627,7 +631,7 @@ function main() {{
                     f"ANI include directory not found: {panda_include_dir}"
                 )
                 # Create a fallback include directory
-                self.manage_directory(panda_include_dir, "create")
+                self.create_directory(panda_include_dir)
 
             # Compile the shared library
             self.compile_shared_library(panda_include_dir)
@@ -693,7 +697,6 @@ def main(config: Optional[BuildConfig] = None):
         action="store_true",
         help="[DEPRECATED] Generate and compile ANI files and ETS files",
     )
-
     parser.add_argument(
         "-O",
         "--optimization",
