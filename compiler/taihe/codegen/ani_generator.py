@@ -75,7 +75,7 @@ class ANIType:
     def array(self) -> "ANIArrayType":
         assert self.base.inner_array
         return self.base.inner_array
-    
+
     def __hash__(self) -> int:
         return hash(self.hint)
 
@@ -93,7 +93,7 @@ class ANIBaseType(ANIType):
     def __init__(self, hint: str):
         super().__init__(hint, self)
         self.inner_array = None
-    
+
     def __hash__(self) -> int:
         return hash(self.hint)
 
@@ -155,7 +155,7 @@ class ANIFuncLike:
     @property
     def suffix(self) -> str:
         return self.hint[0].upper() + self.hint[1:]
-    
+
     def __hash__(self) -> int:
         return hash(self.hint)
 
@@ -175,7 +175,7 @@ class ANIScope:
     @property
     def suffix(self) -> str:
         return self.hint[0].upper() + self.hint[1:]
-    
+
     def __hash__(self) -> int:
         return hash(self.hint)
 
@@ -1125,6 +1125,9 @@ class OpaqueTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[OpaqueType]):
         self.type_desc = "Lstd/core/Object;"
 
     def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+        if sts_type_attr := self.t.ty_ref.get_attr_item("sts_type"):
+            (sts_type,) = sts_type_attr.args
+            return sts_type
         return "Object"
 
     @override

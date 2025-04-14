@@ -1,10 +1,10 @@
 from json import dumps
+from typing import TYPE_CHECKING
 
 from taihe.codegen.abi_generator import (
     IfaceABIInfo,
 )
 from taihe.codegen.ani_generator import (
-    ANIBaseType,
     EnumANIInfo,
     GlobFuncANIInfo,
     IfaceANIInfo,
@@ -27,6 +27,9 @@ from taihe.semantics.declarations import (
 from taihe.semantics.types import IfaceType, StructType
 from taihe.utils.analyses import AnalysisManager
 from taihe.utils.outputs import OutputManager, STSOutputBuffer
+
+if TYPE_CHECKING:
+    from taihe.codegen.ani_generator import ANIBaseType
 
 
 class Namespace:
@@ -195,7 +198,7 @@ class STSCodeGenerator:
             for index in range(len(sts_params_ani_type)):
                 param_name = f"p_{index}"
                 sts_param_i_types = []
-                for type_name, func in func_list:
+                for _, func in func_list:
                     param_ty = func.params[index].ty_ref.resolved_ty
                     type_ani_info = TypeANIInfo.get(self.am, param_ty)
                     sts_param_i_types.append(type_ani_info.sts_type_in(pkg, target))
@@ -204,7 +207,7 @@ class STSCodeGenerator:
                 sts_args.append(param_name)
             sts_params_str = ", ".join(sts_params)
             sts_return_ty_names = set()
-            for type_name, func in func_list:
+            for _, func in func_list:
                 if return_ty_ref := func.return_ty_ref:
                     type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
                     sts_return_ty_names.add(type_ani_info.sts_type_in(pkg, target))
@@ -483,7 +486,7 @@ class STSCodeGenerator:
             for index in range(len(sts_params_ani_type)):
                 param_name = f"p_{index}"
                 sts_param_i_types = []
-                for type_name, method in method_list:
+                for _, method in method_list:
                     param_ty = method.params[index].ty_ref.resolved_ty
                     type_ani_info = TypeANIInfo.get(self.am, param_ty)
                     sts_param_i_types.append(type_ani_info.sts_type_in(pkg, target))
@@ -491,7 +494,7 @@ class STSCodeGenerator:
                 sts_params.append(f"{param_name}: {sts_param_ty_name}")
             sts_params_str = ", ".join(sts_params)
             sts_return_ty_names = set()
-            for type_name, method in method_list:
+            for _, method in method_list:
                 if return_ty_ref := method.return_ty_ref:
                     type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
                     sts_return_ty_names.add(type_ani_info.sts_type_in(pkg, target))
@@ -636,7 +639,7 @@ class STSCodeGenerator:
             for index in range(len(sts_params_ani_type)):
                 param_name = f"p_{index}"
                 sts_param_i_types = []
-                for type_name, func in func_list:
+                for _, func in func_list:
                     param_ty = func.params[index].ty_ref.resolved_ty
                     type_ani_info = TypeANIInfo.get(self.am, param_ty)
                     sts_param_i_types.append(type_ani_info.sts_type_in(pkg, target))
@@ -645,7 +648,7 @@ class STSCodeGenerator:
                 sts_args.append(param_name)
             sts_params_str = ", ".join(sts_params)
             sts_return_ty_names = set()
-            for type_name, func in func_list:
+            for _, func in func_list:
                 if return_ty_ref := func.return_ty_ref:
                     type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
                     sts_return_ty_names.add(type_ani_info.sts_type_in(pkg, target))
@@ -796,7 +799,7 @@ class STSCodeGenerator:
             for index in range(len(sts_params_ani_type)):
                 param_name = f"p_{index}"
                 sts_param_i_types = []
-                for type_name, method in method_list:
+                for _, method in method_list:
                     param_ty = method.params[index].ty_ref.resolved_ty
                     type_ani_info = TypeANIInfo.get(self.am, param_ty)
                     sts_param_i_types.append(type_ani_info.sts_type_in(pkg, target))
@@ -805,7 +808,7 @@ class STSCodeGenerator:
                 sts_args.append(param_name)
             sts_params_str = ", ".join(sts_params)
             sts_return_ty_names = set()
-            for type_name, method in method_list:
+            for _, method in method_list:
                 if return_ty_ref := method.return_ty_ref:
                     type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
                     sts_return_ty_names.add(type_ani_info.sts_type_in(pkg, target))

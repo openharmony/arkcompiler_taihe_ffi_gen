@@ -81,7 +81,7 @@ void offFooStatic(callback_view<void()> a) {
 }
 
 void onFuncI(callback_view<void(int32_t)> a) {
-  const int i = 1;
+  int const i = 1;
   a(i);
   std::cout << "onFunI" << std::endl;
 }
@@ -92,7 +92,7 @@ void onFuncB(callback_view<void(bool)> a) {
 }
 
 void offFuncI(callback_view<void(int32_t)> a) {
-  const int i = 1;
+  int const i = 1;
   a(i);
   std::cout << "offFunI" << std::endl;
 }
