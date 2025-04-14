@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Optional
 
 from typing_extensions import override
 
-from taihe.utils.diagnostics import DiagError, DiagNote, DiagWarn
+from taihe.utils.diagnostics import DiagError, DiagFatalError, DiagNote, DiagWarn
 
 if TYPE_CHECKING:
     from taihe.semantics.declarations import (
@@ -245,6 +245,36 @@ class RecursiveReferenceError(DiagError):
 
 @dataclass
 class AdhocNote(DiagNote):
+    msg: str
+
+    @property
+    @override
+    def format_msg(self) -> str:
+        return self.msg
+
+
+@dataclass
+class AdhocWarn(DiagWarn):
+    msg: str
+
+    @property
+    @override
+    def format_msg(self) -> str:
+        return self.msg
+
+
+@dataclass
+class AdhocError(DiagError):
+    msg: str
+
+    @property
+    @override
+    def format_msg(self) -> str:
+        return self.msg
+
+
+@dataclass
+class AdhocFatalError(DiagFatalError):
     msg: str
 
     @property
