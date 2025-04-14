@@ -134,7 +134,7 @@ function basecls_static_off() {
 function toplevelFuncIOn() {
     // toplevel func on
     try {
-        on_off_test.on("funcI", (arg0: Int) => {
+        on_off_test.on("funcI", (arg0: int): void => {
             console.log("void input void output callback!");
         })
     } catch (error) {
@@ -145,7 +145,7 @@ function toplevelFuncIOn() {
 function toplevelFuncBOn() {
     // toplevel func on
     try {
-        on_off_test.on("funcB", (arg0: Boolean) => {
+        on_off_test.on("funcB", (arg0: boolean): void => {
             console.log("void input void output callback!");
         })
     } catch (error) {
@@ -156,7 +156,7 @@ function toplevelFuncBOn() {
 function toplevelFuncIOff() {
     // toplevel func off
     try {
-        on_off_test.off("funcI", (arg0: Int) => {
+        on_off_test.off("funcI", (arg0: int): void => {
             console.log("void input void output callback!");
         })
     } catch (error) {
@@ -167,7 +167,7 @@ function toplevelFuncIOff() {
 function toplevelFuncBOff() {
     // toplevel func off
     try {
-        on_off_test.off("funcB", (arg0: Boolean) => {
+        on_off_test.off("funcB", (arg0: boolean): void => {
             console.log("void input void output callback!");
         })
     } catch (error) {

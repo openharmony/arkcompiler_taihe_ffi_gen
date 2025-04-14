@@ -75,11 +75,15 @@ class ANIType:
     def array(self) -> "ANIArrayType":
         assert self.base.inner_array
         return self.base.inner_array
+    
+    def __hash__(self) -> int:
+        return hash(self.hint)
 
 
 @dataclass(repr=False)
 class ANIArrayType(ANIType):
-    pass
+    def __hash__(self) -> int:
+        return hash(self.hint)
 
 
 @dataclass(repr=False)
@@ -89,6 +93,9 @@ class ANIBaseType(ANIType):
     def __init__(self, hint: str):
         super().__init__(hint, self)
         self.inner_array = None
+    
+    def __hash__(self) -> int:
+        return hash(self.hint)
 
 
 ANI_REF = ANIBaseType(hint="ref")
@@ -148,6 +155,9 @@ class ANIFuncLike:
     @property
     def suffix(self) -> str:
         return self.hint[0].upper() + self.hint[1:]
+    
+    def __hash__(self) -> int:
+        return hash(self.hint)
 
 
 ANI_FUNCTION = ANIFuncLike("function")
@@ -165,6 +175,9 @@ class ANIScope:
     @property
     def suffix(self) -> str:
         return self.hint[0].upper() + self.hint[1:]
+    
+    def __hash__(self) -> int:
+        return hash(self.hint)
 
 
 ANI_CLASS = ANIScope("class", ANI_METHOD)
@@ -557,6 +570,15 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
         self.type_desc = f"L{self.pkg_ani_info.ani_path}/{self.sts_type_name};"
         self.impl_desc = f"L{self.pkg_ani_info.ani_path}/{self.sts_impl_name};"
 
+        self.interface_injected_codes: list[str] = []
+        for iface_injected in d.get_attr_list("sts_inject_into_interface"):
+            (code,) = iface_injected.args
+            self.interface_injected_codes.append(code)
+        self.class_injected_codes: list[str] = []
+        for class_injected in d.get_attr_list("sts_inject_into_class"):
+            (code,) = class_injected.args
+            self.class_injected_codes.append(code)
+
         self.sts_fields: list[StructFieldDecl] = []
         self.sts_parents: list[StructFieldDecl] = []
         self.sts_final_fields: list[list[StructFieldDecl]] = []
@@ -613,10 +635,10 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
         self.type_desc = f"L{self.pkg_ani_info.ani_path}/{self.sts_type_name};"
         self.impl_desc = f"L{self.pkg_ani_info.ani_path}/{self.sts_impl_name};"
 
-        self.iface_injected_codes: list[str] = []
+        self.interface_injected_codes: list[str] = []
         for iface_injected in d.get_attr_list("sts_inject_into_interface"):
             (code,) = iface_injected.args
-            self.iface_injected_codes.append(code)
+            self.interface_injected_codes.append(code)
         self.class_injected_codes: list[str] = []
         for class_injected in d.get_attr_list("sts_inject_into_class"):
             (code,) = class_injected.args
@@ -1097,6 +1119,8 @@ class ScalarTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ScalarType]):
 class OpaqueTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[OpaqueType]):
     def __init__(self, am: AnalysisManager, t: OpaqueType) -> None:
         super().__init__(am, t)
+        self.am = am
+        self.t = t
         self.ani_type = ANI_REF
         self.type_desc = "Lstd/core/Object;"
 
