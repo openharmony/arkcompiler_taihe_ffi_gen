@@ -32,7 +32,7 @@ declAliasPair
 
 specField
     : (DeclAttrLst_forward_attrs += declAttr)*
-      KW_ENUM TOKEN_name = ID (COLON TypeOpt_enum_ty = type)?
+      KW_ENUM TOKEN_name = ID COLON Type_enum_ty = type
       LEFT_BRACE (EnumItemLst_fields += enumItem (COMMA EnumItemLst_fields += enumItem)* COMMA?)? RIGHT_BRACE # enum
     | (DeclAttrLst_forward_attrs += declAttr)*
       KW_STRUCT TOKEN_name = ID

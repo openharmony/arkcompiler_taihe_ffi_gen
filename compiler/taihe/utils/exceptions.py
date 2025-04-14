@@ -170,12 +170,8 @@ class EnumValueError(DiagError):
     @property
     @override
     def format_msg(self) -> str:
-        if self.enum.ty_ref is None:
-            type_repr = "empty"
-        else:
-            assert self.enum.ty_ref.maybe_resolved_ty
-            type_repr = self.enum.ty_ref.maybe_resolved_ty.signature
-        return f"value of {self.item.description} ({self.item.value}) is conflict with {self.enum.description} ({type_repr})"
+        assert self.enum.ty_ref.maybe_resolved_ty
+        return f"value of {self.item.description} ({self.item.value}) is conflict with {self.enum.description} ({self.enum.ty_ref.maybe_resolved_ty.signature})"
 
 
 @dataclass

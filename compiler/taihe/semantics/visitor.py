@@ -395,8 +395,7 @@ class RecursiveDeclVisitor(DeclVisitor[None]):
 
     @override
     def visit_enum_decl(self, d: "EnumDecl") -> None:
-        if d.ty_ref:
-            self.handle_decl(d.ty_ref)
+        self.handle_decl(d.ty_ref)
 
         for i in d.items:
             self.handle_decl(i)
