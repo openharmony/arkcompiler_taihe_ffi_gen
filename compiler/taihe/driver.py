@@ -31,7 +31,7 @@ from taihe.parse.convert import (
 )
 from taihe.semantics.analysis import analyze_semantics
 from taihe.semantics.declarations import PackageGroup
-from taihe.semantics.format import pretty_print
+from taihe.semantics.format import PrettyPrinter
 from taihe.utils.analyses import AnalysisManager
 from taihe.utils.diagnostics import DiagnosticsManager
 from taihe.utils.exceptions import AdhocNote
@@ -84,10 +84,10 @@ class CompilerInstance:
 
     def __init__(self, invocation: CompilerInvocation):
         self.invocation = invocation
-        self.source_manager = SourceManager()
         self.diagnostics_manager = DiagnosticsManager()
+        self.analysis_manager = AnalysisManager(self.diagnostics_manager)
+        self.source_manager = SourceManager()
         self.package_group = PackageGroup()
-        self.analysis_manager = AnalysisManager()
         self.target_manager = OutputManager()
 
     ##########################
@@ -149,13 +149,17 @@ class CompilerInstance:
         analyze_semantics(self.package_group, self.diagnostics_manager)
 
         if self.invocation.debug:
-            pretty_print(self.package_group, sys.stdout)
+            PrettyPrinter(
+                sys.stdout,
+                show_resolved=True,
+                colorize=True,
+            ).handle_decl(self.package_group)
 
     def generate(self):
-        if self.diagnostics_manager.has_errors():
+        if not self.invocation.out_dir:
             return
 
-        if not self.invocation.out_dir:
+        if self.diagnostics_manager.has_errors():
             return
 
         ABIHeadersGenerator(self.target_manager, self.analysis_manager).generate(
@@ -184,6 +188,9 @@ class CompilerInstance:
             CppUserHeadersGenerator(
                 self.target_manager, self.analysis_manager
             ).generate(self.package_group)
+
+        if self.diagnostics_manager.has_errors():
+            return
 
         self.target_manager.output_to(self.invocation.out_dir)
 
