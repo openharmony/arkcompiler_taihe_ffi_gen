@@ -76,14 +76,10 @@ class ANIType:
         assert self.base.inner_array
         return self.base.inner_array
 
-    def __hash__(self) -> int:
-        return hash(self.hint)
-
 
 @dataclass(repr=False)
 class ANIArrayType(ANIType):
-    def __hash__(self) -> int:
-        return hash(self.hint)
+    pass
 
 
 @dataclass(repr=False)
@@ -93,9 +89,6 @@ class ANIBaseType(ANIType):
     def __init__(self, hint: str):
         super().__init__(hint, self)
         self.inner_array = None
-
-    def __hash__(self) -> int:
-        return hash(self.hint)
 
 
 ANI_REF = ANIBaseType(hint="ref")
@@ -209,15 +202,15 @@ class PackageANIInfo(AbstractAnalysis[PackageDecl]):
         self.cpp_ns = "::".join(p.segments)
 
         if namespace_attr := p.get_attr_item("namespace"):
-            self.module, *sts_ns_parts = namespace_attr.args
+            self.module_name, *sts_ns_parts = namespace_attr.args
             self.sts_ns_parts = []
             for sts_ns_part in sts_ns_parts:
                 self.sts_ns_parts.extend(sts_ns_part.split("."))
         else:
-            self.module = p.name
+            self.module_name = p.name
             self.sts_ns_parts = []
 
-        self.ani_path = "/".join(self.module.split(".") + self.sts_ns_parts)
+        self.ani_path = "/".join(self.module_name.split(".") + self.sts_ns_parts)
         self.impl_desc = f"L{self.ani_path};"
 
         self.injected_codes: list[str] = []
@@ -225,13 +218,18 @@ class PackageANIInfo(AbstractAnalysis[PackageDecl]):
             (code,) = injected.args
             self.injected_codes.append(code)
 
+        self.module_injected_codes: list[str] = []
+        for module_injected in p.get_attr_list("sts_inject_into_module"):
+            (code,) = module_injected.args
+            self.module_injected_codes.append(code)
+
     @property
     def scope(self):
         return ANI_NAMESPACE if len(self.sts_ns_parts) > 0 else ANI_MODULE
 
     def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer, sts_name: str):
         pkg_ani_info = PackageANIInfo.get(self.am, pkg)
-        if pkg_ani_info.module == self.module:
+        if pkg_ani_info.module_name == self.module_name:
             self_sts_ns_parts = iter(self.sts_ns_parts)
             for else_sts_ns_part in pkg_ani_info.sts_ns_parts:
                 try:
@@ -243,9 +241,9 @@ class PackageANIInfo(AbstractAnalysis[PackageDecl]):
                 relative_name = ".".join([*self_sts_ns_parts, sts_name])
                 return relative_name
         # name mangling
-        module_imported = "_" + "".join(c if c.isalnum() else "_" for c in self.module)
-        target.imports({module_imported: self.module})
-        relative_name = ".".join([module_imported, *self.sts_ns_parts, sts_name])
+        import_name = "_" + "".join(c if c.isalnum() else "_" for c in self.module_name)
+        target.import_module(import_name, self.module_name)
+        relative_name = ".".join([import_name, *self.sts_ns_parts, sts_name])
         return relative_name
 
 

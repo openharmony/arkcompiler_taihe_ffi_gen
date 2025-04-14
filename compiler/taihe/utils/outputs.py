@@ -94,8 +94,8 @@ class STSOutputBuffer(OutputBase[[]]):
         for code in codes:
             self.code.write(self.indent_manager.current + code + "\n")
 
-    def imports(self, import_dict: dict[str, str]):
-        self.import_dict.update(import_dict)
+    def import_module(self, import_name: str, module_name: str):
+        self.import_dict.setdefault(import_name, module_name)
 
 
 class COutputBuffer(OutputBase[[bool]]):
