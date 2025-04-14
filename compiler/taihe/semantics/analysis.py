@@ -345,13 +345,6 @@ class _CheckEnumTypePass(RecursiveDeclVisitor):
         def is_int(val):
             return not isinstance(val, bool) and isinstance(val, int)
 
-        if d.ty_ref is None:
-            for item in d.items:
-                if item.value is not None:
-                    self.diag.emit(EnumValueError(item, d))
-            return
-
-        # pyre-ignore
         match d.ty_ref.maybe_resolved_ty:
             case ScalarType(_, ScalarKind.I8):
                 valid = lambda val: is_int(val) and -(2**7) <= val < 2**7
@@ -404,7 +397,7 @@ class _CheckEnumTypePass(RecursiveDeclVisitor):
             case None:
                 return
             case _:
-                self.diag.emit(TypeUsageError(d.ty_ref))  # pyre-ignore
+                self.diag.emit(TypeUsageError(d.ty_ref))
                 return
 
         prev = None

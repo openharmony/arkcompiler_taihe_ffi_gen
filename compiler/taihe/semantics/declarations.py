@@ -667,20 +667,19 @@ class TypeDecl(PackageLevelDecl, metaclass=ABCMeta):
 
 class EnumDecl(TypeDecl):
     items: list[EnumItemDecl]
-    ty_ref: Optional[TypeRefDecl]
+    ty_ref: TypeRefDecl
 
     def __init__(
         self,
         loc: Optional[SourceLocation],
         name: str,
-        ty_ref: Optional[TypeRefDecl] = None,
+        ty_ref: TypeRefDecl,
     ):
         super().__init__(loc, name)
         self.items = []
         self.ty_ref = ty_ref
 
-        if ty_ref:
-            ty_ref.set_parent(self)
+        ty_ref.set_parent(self)
 
     @override
     def _accept(self, v: "DeclVisitor") -> Any:

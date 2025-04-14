@@ -200,9 +200,7 @@ class PrettyPrinter(PrettyFormatter):
 
         enum_kw = self.as_keyword("enum")
 
-        full_decl = (
-            f"{d.name}: {self.get_type_ref_decl(d.ty_ref)}" if d.ty_ref else d.name
-        )
+        full_decl = f"{d.name}: {self.get_type_ref_decl(d.ty_ref)}"
 
         if d.items:
             self.writeln(f"{enum_kw} {full_decl} {{")

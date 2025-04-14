@@ -523,8 +523,6 @@ class CppHeadersGenerator:
         enum_cpp_info: EnumCppInfo,
         enum_cpp_target: COutputBuffer,
     ):
-        if enum.ty_ref is None:
-            return
         match enum.ty_ref.resolved_ty:
             case StringType():
                 as_owner = "char const*"
