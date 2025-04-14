@@ -13,10 +13,10 @@
 - [Optional](./optional/README.md)
 
 ## 第三章：进阶与扩展
+- [异步](./async/readme.md)
 - [external object](./external_obj/readme.md)
 - [arraybuffer](./arraybuffer/readme.md)
 - [bigint](./bigint/README.md)
-- [异步](./async/readme.md)
 - [重载](./overload/readme.md)
 - [回调](./callback/readme.md)
 - [TypedArray](./typedarray/README.md)
