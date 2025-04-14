@@ -299,7 +299,7 @@ class STSCodeGenerator:
         target: STSOutputBuffer,
     ):
         enum_ani_info = EnumANIInfo.get(self.am, enum)
-        if enum_ani_info.const and enum.ty_ref:
+        if enum_ani_info.const:
             type_ani_info = TypeANIInfo.get(self.am, enum.ty_ref.resolved_ty)
             for item in enum.items:
                 target.writeln(

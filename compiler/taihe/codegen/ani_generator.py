@@ -47,7 +47,9 @@ from taihe.semantics.types import (
 )
 from taihe.semantics.visitor import TypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
+from taihe.utils.exceptions import AdhocError
 from taihe.utils.outputs import COutputBuffer, OutputManager, STSOutputBuffer
+from taihe.utils.sources import SourceLocation
 
 if TYPE_CHECKING:
     from taihe.semantics.declarations import (
@@ -126,6 +128,14 @@ ANI_FN_OBJECT = ANIType(hint="fn_object", base=ANI_REF)
 ANI_ENUM_ITEM = ANIType(hint="enum_item", base=ANI_REF)
 ANI_STRING = ANIType(hint="string", base=ANI_REF)
 ANI_ARRAYBUFFER = ANIType(hint="arraybuffer", base=ANI_REF)
+
+
+def raise_adhoc_error(
+    am: AnalysisManager,
+    msg: str,
+    loc: SourceLocation | None,
+):
+    am.diagnostics_manager.emit(AdhocError(msg, loc=loc))
 
 
 @dataclass(repr=False)
@@ -251,57 +261,80 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
             (self.sts_func_name,) = overload_attr.args
 
         elif on_off_attr := f.get_attr_item("on_off"):
-            assert f.name.startswith(
-                ("on", "off", "On", "Off")
-            ), f'{f.loc}: @on_off method name must start with "on" or "off"'
+            if not f.name.startswith(("on", "off", "On", "Off")):
+                raise_adhoc_error(
+                    am,
+                    '@on_off method name must start with "On/on/Off/off"',
+                    f.loc,
+                )
 
             if f.name.startswith(("on", "On")):
-                if not on_off_attr.args:
+                if on_off_attr.args:
+                    (type_name,) = on_off_attr.args
+                else:
                     type_name = f.name[2:]
                     type_name = type_name[0].lower() + type_name[1:]
-                else:
-                    (type_name,) = on_off_attr.args
                 self.on_off_type = ("on", type_name)
 
             if f.name.startswith(("off", "Off")):
-                if not on_off_attr.args:
+                if on_off_attr.args:
+                    (type_name,) = on_off_attr.args
+                else:
                     type_name = f.name[3:]
                     type_name = type_name[0].lower() + type_name[1:]
-                else:
-                    (type_name,) = on_off_attr.args
                 self.on_off_type = ("off", type_name)
 
         elif get_attr := f.get_attr_item("get"):
-            assert len(f.params) == 0, f"{f.loc}: @get method should take no parameters"
-            assert f.return_ty_ref, f"{f.loc}: @get method cannot return void"
-            assert (
-                self.sts_static_scope
-            ), f"{f.loc}: @get of global functions must be used together with @static"
+            if not self.sts_static_scope:
+                raise_adhoc_error(
+                    am,
+                    f"@get of global functions must be used together with @static",
+                    f.loc,
+                )
+            if len(f.params) != 0 or f.return_ty_ref is None:
+                raise_adhoc_error(
+                    am,
+                    f"@get method should take no parameters and return non-void",
+                    f.loc,
+                )
 
-            if not get_attr.args:
-                assert f.name.startswith(
-                    ("get", "Get")
-                ), f'{f.loc}: @get method name must start with "get" if the property name is omitted'
+            if get_attr.args:
+                (self.get_name,) = get_attr.args
+            elif f.name.startswith(("get", "Get")):
                 get_name = f.name[3:]
                 self.get_name = get_name[0].lower() + get_name[1:]
             else:
-                (self.get_name,) = get_attr.args
+                raise_adhoc_error(
+                    am,
+                    '@get method name must start with "Get/get"',
+                    f.loc,
+                )
 
         elif set_attr := f.get_attr_item("set"):
-            assert len(f.params) == 1, f"{f.loc}: @set method should have one parameter"
-            assert f.return_ty_ref is None, f"{f.loc}: @set method should return void"
-            assert (
-                self.sts_static_scope
-            ), f"{f.loc}: @set of global functions must be used together with @static"
+            if not self.sts_static_scope:
+                raise_adhoc_error(
+                    am,
+                    f"@set of global functions must be used together with @static",
+                    f.loc,
+                )
+            if len(f.params) != 1 or f.return_ty_ref is not None:
+                raise_adhoc_error(
+                    am,
+                    f"@set method should have one parameter and return void",
+                    f.loc,
+                )
 
-            if not set_attr.args:
-                assert f.name.startswith(
-                    ("set", "Set")
-                ), f'{f.loc}: @set method name must start with "set" if the property name is omitted'
+            if set_attr.args:
+                (self.set_name,) = set_attr.args
+            elif f.name.startswith(("set", "Set")):
                 set_name = f.name[3:]
                 self.set_name = set_name[0].lower() + set_name[1:]
             else:
-                (self.set_name,) = set_attr.args
+                raise_adhoc_error(
+                    am,
+                    '@set method name must start with "Set/set"',
+                    f.loc,
+                )
 
         else:
             if f.parent_pkg.get_attr_item("sts_keep_name"):
@@ -347,54 +380,71 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
             (self.ani_method_name,) = overload_attr.args
 
         elif on_off_attr := f.get_attr_item("on_off"):
-            assert f.name.startswith(
-                ("on", "off", "On", "Off")
-            ), f'{f.loc}: @on_off method name must start with "on" or "off"'
+            if not f.name.startswith(("on", "off", "On", "Off")):
+                raise_adhoc_error(
+                    am,
+                    '@on_off method name must start with "On/on/Off/off"',
+                    f.loc,
+                )
 
             if f.name.startswith(("on", "On")):
-                if not on_off_attr.args:
+                if on_off_attr.args:
+                    (type_name,) = on_off_attr.args
+                else:
                     type_name = f.name[2:]
                     type_name = type_name[0].lower() + type_name[1:]
-                else:
-                    (type_name,) = on_off_attr.args
                 self.on_off_type = ("on", type_name)
                 self.ani_method_name = "on"
 
             if f.name.startswith(("off", "Off")):
-                if not on_off_attr.args:
+                if on_off_attr.args:
+                    (type_name,) = on_off_attr.args
+                else:
                     type_name = f.name[3:]
                     type_name = type_name[0].lower() + type_name[1:]
-                else:
-                    (type_name,) = on_off_attr.args
                 self.on_off_type = ("off", type_name)
                 self.ani_method_name = "off"
 
         elif get_attr := f.get_attr_item("get"):
-            assert len(f.params) == 0, f"{f.loc}: @get method should take no parameters"
-            assert f.return_ty_ref, f"{f.loc}: @get method cannot return void"
+            if len(f.params) != 0 or f.return_ty_ref is None:
+                raise_adhoc_error(
+                    am,
+                    f"@get method should take no parameters and return non-void",
+                    f.loc,
+                )
 
-            if not get_attr.args:
-                assert f.name.startswith(
-                    ("get", "Get")
-                ), f'{f.loc}: @get method name must start with "get" if the property name is omitted'
+            if get_attr.args:
+                (self.get_name,) = get_attr.args
+            elif f.name.startswith(("get", "Get")):
                 get_name = f.name[3:]
                 self.get_name = get_name[0].lower() + get_name[1:]
             else:
-                (self.get_name,) = get_attr.args
+                raise_adhoc_error(
+                    am,
+                    '@get method name must start with "Get/get"',
+                    f.loc,
+                )
             self.ani_method_name = f"<get>{self.get_name}"
 
         elif set_attr := f.get_attr_item("set"):
-            assert len(f.params) == 1, f"{f.loc}: @set method should have one parameter"
-            assert f.return_ty_ref is None, f"{f.loc}: @set method should return void"
+            if len(f.params) != 1 or f.return_ty_ref is not None:
+                raise_adhoc_error(
+                    am,
+                    f"@set method should have one parameter and return void",
+                    f.loc,
+                )
 
-            if not set_attr.args:
-                assert f.name.startswith(
-                    ("set", "Set")
-                ), f'{f.loc}: @set method name must start with "set" if the property name is omitted'
+            if set_attr.args:
+                (self.set_name,) = set_attr.args
+            elif f.name.startswith(("set", "Set")):
                 set_name = f.name[3:]
                 self.set_name = set_name[0].lower() + set_name[1:]
             else:
-                (self.set_name,) = set_attr.args
+                raise_adhoc_error(
+                    am,
+                    '@set method name must start with "Set/set"',
+                    f.loc,
+                )
             self.ani_method_name = f"<set>{self.set_name}"
 
         else:
@@ -441,6 +491,22 @@ class EnumANIInfo(AbstractAnalysis[EnumDecl]):
         self.type_desc = f"L{self.pkg_ani_info.ani_path}/{self.sts_type_name};"
 
         self.const = d.get_attr_item("const") is not None
+
+        if (
+            not self.const
+            and isinstance(d.ty_ref.resolved_ty, ScalarType)
+            and d.ty_ref.resolved_ty.kind
+            in (
+                ScalarKind.BOOL,
+                ScalarKind.F32,
+                ScalarKind.F64,
+            )
+        ):
+            raise_adhoc_error(
+                am,
+                f"{d.description} without @const cannot have type {d.ty_ref.resolved_ty.signature}",
+                d.loc,
+            )
 
     def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer):
         return self.pkg_ani_info.sts_type_in(pkg, target, self.sts_type_name)
@@ -495,20 +561,30 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
         self.sts_parents: list[StructFieldDecl] = []
         self.sts_final_fields: list[list[StructFieldDecl]] = []
         for field in d.fields:
-            if field.get_attr_item("extends"):
+            try:
+                if not field.get_attr_item("extends"):
+                    raise RuntimeError
                 ty = field.ty_ref.resolved_ty
-                assert isinstance(
-                    ty, StructType
-                ), f"{field.loc}: @extends expects a struct type field"
+                if not isinstance(ty, StructType):
+                    raise_adhoc_error(
+                        am,
+                        "@extends expects a struct type field",
+                        field.loc,
+                    )
+                    raise RuntimeError
                 parent_ani_info = StructANIInfo.get(am, ty.ty_decl)
-                assert (
-                    not parent_ani_info.is_class()
-                ), f"{field.loc}: cannot extend an @class struct"
+                if parent_ani_info.is_class():
+                    raise_adhoc_error(
+                        am,
+                        "cannot extend an @class struct",
+                        field.loc,
+                    )
+                    raise RuntimeError
                 self.sts_parents.append(field)
                 self.sts_final_fields.extend(
                     [field, *parts] for parts in parent_ani_info.sts_final_fields
                 )
-            else:
+            except RuntimeError:
                 self.sts_fields.append(field)
                 self.sts_final_fields.append([field])
 
@@ -550,9 +626,12 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
             ty = parent.ty_ref.resolved_ty
             assert isinstance(ty, IfaceType)
             parent_ani_info = IfaceANIInfo.get(am, ty.ty_decl)
-            assert (
-                not parent_ani_info.is_class()
-            ), f"{parent.loc}: cannot extend an @class interface"
+            if parent_ani_info.is_class():
+                raise_adhoc_error(
+                    am,
+                    f"cannot extend an @class interface",
+                    parent.loc,
+                )
 
     def is_class(self):
         return self.sts_type_name == self.sts_impl_name
@@ -794,6 +873,12 @@ class EnumTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[EnumType]):
         enum_ani_info = EnumANIInfo.get(self.am, self.t.ty_decl)
         self.ani_type = ANI_ENUM_ITEM
         self.type_desc = enum_ani_info.type_desc
+        if enum_ani_info.const:
+            raise_adhoc_error(
+                am,
+                f"@const {t.ty_decl.description} cannot be used as type",
+                t.ty_ref.loc,
+            )
 
     def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
         enum_ani_info = EnumANIInfo.get(self.am, self.t.ty_decl)
@@ -1096,6 +1181,20 @@ class ArrayTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
         item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
         self.ani_type = item_ty_ani_info.ani_type.array
         self.type_desc = f"[{item_ty_ani_info.type_desc}"
+        # TODO: remove this check
+        if isinstance(self.t.item_ty, ScalarType) and self.t.item_ty.kind in (
+            ScalarKind.U8,
+            ScalarKind.U16,
+            ScalarKind.U32,
+            ScalarKind.U64,
+        ):
+            raise_adhoc_error(
+                am,
+                f"Array of unsigned integer types is not supported, "
+                f"if you want to use ArrayBuffer, please use @arraybuffer Array<{self.t.item_ty.ty_ref.text}>, "
+                f"if you want to use TypedArray, please use @typedarray Array<{self.t.item_ty.ty_ref.text}>",
+                self.t.ty_ref.loc,
+            )
 
     def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
         item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
@@ -1151,7 +1250,11 @@ class ArrayBufferTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
             ScalarKind.I8,
             ScalarKind.U8,
         ):
-            raise ValueError
+            raise_adhoc_error(
+                am,
+                f"@arraybuffer only supports Array<i8> or Array<i8>",
+                t.ty_ref.loc,
+            )
         self.ani_type = ANI_ARRAYBUFFER
         self.type_desc = "Lescompat/ArrayBuffer;"
 
@@ -1198,23 +1301,32 @@ class TypedArrayTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
         super().__init__(am, t)
         self.am = am
         self.t = t
-        if not isinstance(t.item_ty, ScalarType):
-            raise ValueError
-        sts_type = {
-            ScalarKind.F32: "Float32Array",
-            ScalarKind.F64: "Float64Array",
-            ScalarKind.I8: "Int8Array",
-            ScalarKind.I16: "Int16Array",
-            ScalarKind.I32: "Int32Array",
-            ScalarKind.I64: "BigInt64Array",
-            ScalarKind.U8: "Uint8Array",
-            ScalarKind.U16: "Uint16Array",
-            ScalarKind.U32: "Uint32Array",
-            ScalarKind.U64: "BigUint64Array",
-        }.get(t.item_ty.kind)
-        if not sts_type:
-            raise ValueError
-        self.sts_type = sts_type
+        if (
+            not isinstance(t.item_ty, ScalarType)
+            or (
+                sts_type := {
+                    ScalarKind.F32: "Float32Array",
+                    ScalarKind.F64: "Float64Array",
+                    ScalarKind.I8: "Int8Array",
+                    ScalarKind.I16: "Int16Array",
+                    ScalarKind.I32: "Int32Array",
+                    ScalarKind.I64: "BigInt64Array",
+                    ScalarKind.U8: "Uint8Array",
+                    ScalarKind.U16: "Uint16Array",
+                    ScalarKind.U32: "Uint32Array",
+                    ScalarKind.U64: "BigUint64Array",
+                }.get(t.item_ty.kind)
+            )
+            is None
+        ):
+            raise_adhoc_error(
+                am,
+                f"@typedarray does not supports Array<{t.item_ty.ty_ref.text}>",
+                t.ty_ref.loc,
+            )
+            self.sts_type = ""
+        else:
+            self.sts_type = sts_type
         self.ani_type = ANI_OBJECT
         self.type_desc = f"Lescompat/{sts_type};"
 
@@ -1296,7 +1408,11 @@ class BigIntTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
             ScalarKind.U32,
             ScalarKind.U64,
         ):
-            raise ValueError
+            raise_adhoc_error(
+                am,
+                f"@bigint does not supports Array<{t.item_ty.ty_ref.text}>",
+                t.ty_ref.loc,
+            )
         self.ani_type = ANI_OBJECT
         self.type_desc = "Lescompat/BigInt;"
 
@@ -1424,7 +1540,7 @@ class OptionalTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[OptionalType]):
         )
 
 
-class MapTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[MapType]):
+class RecordTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[MapType]):
     def __init__(self, am: AnalysisManager, t: MapType) -> None:
         super().__init__(am, t)
         self.am = am
@@ -1513,6 +1629,53 @@ class MapTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[MapType]):
         target.writeln(
             f'    {env}->Object_CallMethodByName_Void({ani_result}, "$_set", nullptr, {ani_key}, {ani_val});',
             f"}}",
+        )
+
+
+class MapTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[MapType]):
+    def __init__(self, am: AnalysisManager, t: MapType) -> None:
+        super().__init__(am, t)
+        self.am = am
+        self.t = t
+        self.ani_type = ANI_OBJECT
+        self.type_desc = "Lescompat/Map;"
+        raise_adhoc_error(
+            am,
+            f"Map is not supported yet, "
+            f"if you want to use Record, "
+            f"please use @record Map<{self.t.key_ty.ty_ref.text}, {self.t.val_ty.ty_ref.text}>",
+            self.t.ty_ref.loc,
+        )
+
+    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+        key_ty_ani_info = TypeANIInfo.get(self.am, self.t.key_ty)
+        val_ty_ani_info = TypeANIInfo.get(self.am, self.t.val_ty)
+        key_sts_type = key_ty_ani_info.sts_type_in(pkg, target)
+        val_sts_type = val_ty_ani_info.sts_type_in(pkg, target)
+        return f"Map<{key_sts_type}, {val_sts_type}>"
+
+    @override
+    def from_ani_impl(
+        self,
+        target: COutputBuffer,
+        env: str,
+        ani_value: str,
+        cpp_result: str,
+    ):
+        target.writeln(
+            f"{self.cpp_info.as_owner} {cpp_result};",
+        )
+
+    @override
+    def into_ani_impl(
+        self,
+        target: COutputBuffer,
+        env: str,
+        cpp_value: str,
+        ani_result: str,
+    ):
+        target.writeln(
+            f"ani_object {ani_result} = {{}};",
         )
 
 
@@ -1684,6 +1847,8 @@ class TypeANIInfo(TypeVisitor[AbstractTypeANIInfo]):
 
     @override
     def visit_map_type(self, t: MapType) -> AbstractTypeANIInfo:
+        if t.ty_ref.attrs.get("record"):
+            return RecordTypeANIInfo.get(self.am, t)
         return MapTypeANIInfo.get(self.am, t)
 
     @override

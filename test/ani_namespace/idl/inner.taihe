@@ -50,7 +50,7 @@ interface TestInterface{
     Containers_noreturn2(a: union_primitive): void;
     Containers_noreturn3(a: @arraybuffer Array<u8>): void;
     Containers_noreturn4(a: Color): void;
-    Containers_noreturn5(a: Map<String, i32>): void;
+    Containers_noreturn5(a: @record Map<String, i32>): void;
 
 
     Containers_return(a: union_primitive): String;
@@ -80,7 +80,7 @@ interface TestInterface{
     @get getArraybuffer(): @arraybuffer Array<u8>;
     @get getArray():Array<i8>;
     @get getunion():union_primitive;
-    @get getrecord():Map<String, i8>;
+    @get getrecord():@record Map<String, i8>;
     @get getColorEnum():Color;
 
 }
@@ -209,7 +209,7 @@ function PrintTestInterfaceArraybuffer(testiface: TestInterface): @arraybuffer A
 
 function PrintTestInterfaceArray(testiface: TestInterface): Array<i8>;
 function PrintTestInterfaceUnion(testiface: TestInterface): union_primitive;
-function PrintTestInterfaceRecord(testiface: TestInterface): Map<String, i8>;
+function PrintTestInterfaceRecord(testiface: TestInterface): @record Map<String, i8>;
 function PrintTestInterfaceEnum(testiface: TestInterface): Color;
 
 function get_interface_1(): Test1;

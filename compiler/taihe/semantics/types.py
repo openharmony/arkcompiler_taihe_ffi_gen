@@ -92,7 +92,7 @@ class ScalarType(BuiltinType):
     @property
     @override
     def signature(self):
-        return self.kind.name
+        return self.kind.symbol
 
 
 @dataclass(frozen=True, repr=False)

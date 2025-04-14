@@ -42,11 +42,6 @@
 function convert_arr(a: Array<i32>, str: String): Array<String>;
 ```
 
-<!-- function get_vec(): Vector<Optional<f32>>;
-function get_map(): Map<i32, String>;
-function get_set(): Set<i32>;
-``` -->
-
 第二步 实现声明的函数
 
 `basic_abilities/author/src/basic_abilities.impl.cpp`

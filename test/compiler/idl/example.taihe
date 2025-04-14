@@ -95,7 +95,7 @@ function inner(): void;  // SymbolConflictWithNamespaceError
 
 function bad_func(a: i32, a: i32): void;  // DeclConflictError
 
-function good_func(a: i32, b: Map<TestIface, TestIface>): String;  // OK
+function good_func(a: i32, b: @record Map<TestIface, TestIface>): String;  // OK
 
 // Interfaces
 

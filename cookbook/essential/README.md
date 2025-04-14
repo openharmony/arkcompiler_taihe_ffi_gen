@@ -125,7 +125,7 @@ union MapOption {
   many_book: Array<Book>;
 }
 // 数组，union 和 HashMap。本函数接收一本书或多本书，返回书名所对应的出版年份。
-function MapBookToYear(opt: MapOption): Map<String, i32>;
+function MapBookToYear(opt: MapOption): @record Map<String, i32>;
 
 // 回调函数和可选参数。本函数接收一个可选的过滤器回调，Print 函数将只打印通过过滤的书。
 function PrintBooksWithFilter(all_books: Array<Book>, filter: Optional<(b: Book) => bool>);

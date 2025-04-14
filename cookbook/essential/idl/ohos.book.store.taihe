@@ -8,7 +8,7 @@ union MapOption {
   one_book: Book;
   many_books: Array<Book>;
 }
-function MapBookToYear(opt: MapOption): Map<String, i32>;
+function MapBookToYear(opt: MapOption): @record Map<String, i32>;
 function PrintBooksWithFilter(books: Array<Book>, filter: Optional<(b: Book) => bool>);
 
 // 将 Bookstore 生成为 ArkTS 的 `class`。不加此注解时生成 `interface`。

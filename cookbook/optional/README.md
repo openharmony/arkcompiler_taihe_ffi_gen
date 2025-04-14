@@ -12,7 +12,7 @@ taihe Map 在 ets 中对应 Record
 
 **File: `idl/userSettings.taihe`**
 ```taihe
-function getUserSetting(settings: Map<String, String>, key: String): Optional<String>;
+function getUserSetting(settings: @record Map<String, String>, key: String): Optional<String>;
 ```
 
 该函数用于根据 key 查找用户设置，返回一个 Optional\<String\> 类型
