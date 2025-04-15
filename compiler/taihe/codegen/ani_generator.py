@@ -78,17 +78,17 @@ def check_attr_args(
     if len(pattern) >= 2 and pattern[-1] == "*":
         trailing = pattern[-2]
         pattern = pattern[:-2]
+    if trailing == "/" and len(attr.args) != len(pattern):
+        raise_adhoc_error(
+            am,
+            f"@{attr.name} expects exactly {len(pattern)} arguments",
+            attr.loc,
+        )
+        return False
     if len(attr.args) < len(pattern):
         raise_adhoc_error(
             am,
             f"@{attr.name} expects at least {len(pattern)} arguments",
-            attr.loc,
-        )
-        return False
-    if trailing == "/" and len(attr.args) > len(pattern):
-        raise_adhoc_error(
-            am,
-            f"@{attr.name} expects {len(pattern)} arguments",
             attr.loc,
         )
         return False
@@ -348,13 +348,13 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
             if not self.sts_static_scope:
                 raise_adhoc_error(
                     am,
-                    f"@get of global functions must be used together with @static",
+                    "@get of global functions must be used together with @static",
                     f.loc,
                 )
             if len(f.params) != 0 or f.return_ty_ref is None:
                 raise_adhoc_error(
                     am,
-                    f"@get method should take no parameters and return non-void",
+                    "@get method should take no parameters and return non-void",
                     f.loc,
                 )
 
@@ -366,7 +366,7 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
             else:
                 raise_adhoc_error(
                     am,
-                    '@get method name must start with "Get/get"',
+                    '@get method name must start with "Get/get" or have @get argument',
                     f.loc,
                 )
 
@@ -374,13 +374,13 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
             if not self.sts_static_scope:
                 raise_adhoc_error(
                     am,
-                    f"@set of global functions must be used together with @static",
+                    "@set of global functions must be used together with @static",
                     f.loc,
                 )
             if len(f.params) != 1 or f.return_ty_ref is not None:
                 raise_adhoc_error(
                     am,
-                    f"@set method should have one parameter and return void",
+                    "@set method should have one parameter and return void",
                     f.loc,
                 )
 
@@ -392,7 +392,7 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
             else:
                 raise_adhoc_error(
                     am,
-                    '@set method name must start with "Set/set"',
+                    '@set method name must start with "Set/set" or have @set argument',
                     f.loc,
                 )
 
@@ -475,7 +475,7 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
             if len(f.params) != 0 or f.return_ty_ref is None:
                 raise_adhoc_error(
                     am,
-                    f"@get method should take no parameters and return non-void",
+                    "@get method should take no parameters and return non-void",
                     f.loc,
                 )
 
@@ -487,7 +487,7 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
             else:
                 raise_adhoc_error(
                     am,
-                    '@get method name must start with "Get/get"',
+                    '@get method name must start with "Get/get" or have @get argument',
                     f.loc,
                 )
             self.ani_method_name = f"<get>{self.get_name}"
@@ -496,7 +496,7 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
             if len(f.params) != 1 or f.return_ty_ref is not None:
                 raise_adhoc_error(
                     am,
-                    f"@set method should have one parameter and return void",
+                    "@set method should have one parameter and return void",
                     f.loc,
                 )
 
@@ -508,7 +508,7 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
             else:
                 raise_adhoc_error(
                     am,
-                    '@set method name must start with "Set/set"',
+                    '@set method name must start with "Set/set" or have @set argument',
                     f.loc,
                 )
             self.ani_method_name = f"<set>{self.set_name}"
@@ -649,7 +649,7 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
                 if not isinstance(ty, StructType):
                     raise_adhoc_error(
                         am,
-                        "@extends expects a struct type field",
+                        "struct cannot extend non-struct type",
                         field.loc,
                     )
                     raise RuntimeError
@@ -657,7 +657,7 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
                 if parent_ani_info.is_class():
                     raise_adhoc_error(
                         am,
-                        "cannot extend an @class struct",
+                        "struct cannot extend an @class struct",
                         field.loc,
                     )
                     raise RuntimeError
@@ -712,7 +712,7 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
             if parent_ani_info.is_class():
                 raise_adhoc_error(
                     am,
-                    f"cannot extend an @class interface",
+                    "interface cannot extend an @class interface",
                     parent.loc,
                 )
 
@@ -1182,16 +1182,19 @@ class OpaqueTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[OpaqueType]):
         super().__init__(am, t)
         self.am = am
         self.t = t
-        self.ani_type = ANI_REF
-        self.type_desc = "Lstd/core/Object;"
-
-    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+        self.ani_type = ANI_OBJECT
         if (
             sts_type_attr := self.t.ty_ref.get_last_attr("sts_type")
-        ) and check_attr_args(self.am, sts_type_attr, "s"):
-            (sts_type,) = sts_type_attr.args
-            return sts_type
-        return "Object"
+        ) and check_attr_args(self.am, sts_type_attr, "ss"):
+            (sts_type, type_desc) = sts_type_attr.args
+            self.sts_type = sts_type
+            self.type_desc = type_desc
+        else:
+            self.sts_type = "Object"
+            self.type_desc = "Lstd/core/Object;"
+
+    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+        return self.sts_type
 
     @override
     def from_ani_impl(
@@ -1342,7 +1345,7 @@ class ArrayBufferTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
         ):
             raise_adhoc_error(
                 am,
-                f"@arraybuffer only supports Array<i8> or Array<i8>",
+                "@arraybuffer only supports Array<i8> or Array<i8>",
                 t.ty_ref.loc,
             )
         self.ani_type = ANI_ARRAYBUFFER
@@ -1414,11 +1417,11 @@ class TypedArrayTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
                 f"@typedarray does not supports Array<{t.item_ty.ty_ref.text}>",
                 t.ty_ref.loc,
             )
-            self.sts_type = ""
+            self.sts_type = "TypedArray"
         else:
             self.sts_type = sts_type
         self.ani_type = ANI_OBJECT
-        self.type_desc = f"Lescompat/{sts_type};"
+        self.type_desc = f"Lescompat/{self.sts_type};"
 
     def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
         return self.sts_type
@@ -1732,7 +1735,7 @@ class MapTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[MapType]):
         raise_adhoc_error(
             am,
             f"Map is not supported yet, "
-            f"if you want to use Record, "
+            f"if you want to use TS Record type, "
             f"please use @record Map<{self.t.key_ty.ty_ref.text}, {self.t.val_ty.ty_ref.text}>",
             self.t.ty_ref.loc,
         )

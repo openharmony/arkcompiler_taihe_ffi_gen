@@ -1,5 +1,5 @@
 function is_string(s: Opaque): bool;
-function get_object(): @sts_type("string") Opaque;
+function get_object(): @sts_type("string", "Lstd/core/String;") Opaque;
 function get_objects(): Array<Opaque>;
 union Union {
   sValue: String;

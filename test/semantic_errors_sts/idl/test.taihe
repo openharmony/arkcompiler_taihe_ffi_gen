@@ -1,0 +1,40 @@
+@!namespace(0) // Error: the 1st argument of @namespace should be a string
+
+@class
+interface IFoo {
+    @set SetName(): String; // Error: @set should have a parameter and a return void
+    @get GetName(name: String): void; // Error: @get should have no parameter and a return nothing
+
+    @get Name(): String; // Error: if @get does not have a parameter, it's name should start with "get" or "Get"
+}
+
+@class
+interface IBar: IFoo { // Error: cannot extend a @class interface
+    @get("name") MyGetter(): String; // OK
+    @get GetName(): String; // OK
+}
+
+@class
+struct SFoo {
+    a: @bigint Array<f32>; // Error: Array<f32> cannot be @bigint
+    b: @typedarray Array<String>; // Error: Array<String> cannot be @typedarray
+    c: @arraybuffer Array<u64>; // Error: Array<u64> cannot be @arraybuffer
+    d: @sts_type("Type") Opaque; // Error: @sts_type expects 2 arguments (sts type and sts descriptor)
+}
+
+@class
+struct SBar {
+    @extends base: SFoo; // Error: cannot extend an @class struct
+    @extends other: i32; // Error: cannot extend non-struct type
+}
+
+@const
+enum EFoo: i32 {
+    A = 1,
+    B = 2,
+    C = 3,
+}
+
+function foo(e: EFoo): void; // Error: @const enum cannot be used as a typedarray
+
+enum EBar: f32 {} // Error: enum with f32 type has to be @const
