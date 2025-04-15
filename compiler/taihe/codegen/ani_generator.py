@@ -273,15 +273,9 @@ class PackageANIInfo(AbstractAnalysis[PackageDecl]):
     def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer, sts_name: str):
         pkg_ani_info = PackageANIInfo.get(self.am, pkg)
         if pkg_ani_info.module_name == self.module_name:
-            self_sts_ns_parts = iter(self.sts_ns_parts)
-            for else_sts_ns_part in pkg_ani_info.sts_ns_parts:
-                try:
-                    if next(self_sts_ns_parts) != else_sts_ns_part:
-                        break
-                except Exception:
-                    break
-            else:
-                relative_name = ".".join([*self_sts_ns_parts, sts_name])
+            length = len(pkg_ani_info.sts_ns_parts)
+            if self.sts_ns_parts[:length] == pkg_ani_info.sts_ns_parts:
+                relative_name = ".".join(self.sts_ns_parts[length:] + [sts_name])
                 return relative_name
         # name mangling
         import_name = "_" + "".join(c if c.isalnum() else "_" for c in self.module_name)
