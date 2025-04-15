@@ -28,4 +28,4 @@
 
 ### To do 
 
-#### static method | namespace | onoff
+#### onoff
