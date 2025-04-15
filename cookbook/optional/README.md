@@ -1,10 +1,10 @@
 # optional
 
-本章节介绍 `Optional` 与 `Map`
+本章节介绍 `Optional` 与 `Record`
 
 taihe Optional 在 ets 中对应 | undefined , 如 optional\<String\> 对应 string | undefined
 
-taihe Map 在 ets 中对应 Record
+taihe 使用给 Map 增加注解的方式，支持 ets 中的 Record
 
 下面以 用户设置 场景为例进行介绍
 
@@ -16,6 +16,8 @@ function getUserSetting(settings: @record Map<String, String>, key: String): Opt
 ```
 
 该函数用于根据 key 查找用户设置，返回一个 Optional\<String\> 类型
+
+`@record` 注解的使用方法为增加在 Map 类型前面，这样在 sts 侧会对应 @record 类型
 
 ## 第二步: 完成 C++ 实现
 

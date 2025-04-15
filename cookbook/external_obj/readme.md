@@ -36,7 +36,7 @@ export interface Person {
 
 `@sts_inject` 注解用于将注解内的字符串写入生成的sts文件, `@!sts_inject` 添加注解到 当下的词法空间下，而 `@sts_inject`（注意，没有感叹号）将注解添加到下一个元素中。
 
-`@sts_type` 注解用于指定 `Opaque` 在 sts 侧的类型，使用方法是在类型 `Opaque` 前面增加 `@sts_type("\<type_name\>", "\<type_descriptor\>")`
+`@sts_type` 注解用于指定 `Opaque` 在 sts 侧的类型，使用方法是在类型 `Opaque` 前面增加 `@sts_type("\<type_name\>", "\<type_descriptor\>")`, \<type_name\> 为sts类型名，\<type_descriptor\> 为 ani 签名
 
 ## 第二步 实现声明的接口
 
