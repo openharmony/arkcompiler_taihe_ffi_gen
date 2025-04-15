@@ -21,6 +21,7 @@ from taihe.codegen.cpp_user_generator import (
 )
 from taihe.codegen.mangle import DeclKind, encode
 from taihe.semantics.declarations import (
+    AttrItemDecl,
     EnumDecl,
     GlobFuncDecl,
     IfaceDecl,
@@ -57,6 +58,52 @@ if TYPE_CHECKING:
         StructFieldDecl,
         UnionFieldDecl,
     )
+
+
+def raise_adhoc_error(
+    am: AnalysisManager,
+    msg: str,
+    loc: SourceLocation | None,
+):
+    am.diagnostics_manager.emit(AdhocError(msg, loc=loc))
+
+
+def check_attr_args(
+    am: AnalysisManager,
+    attr: AttrItemDecl,
+    pattern: str,
+) -> bool:
+    expect_dict = {"s": str, "i": int, "f": float, "b": bool}
+    trailing = "/"
+    if len(pattern) >= 2 and pattern[-1] == "*":
+        trailing = pattern[-2]
+        pattern = pattern[:-2]
+    if len(attr.args) < len(pattern):
+        raise_adhoc_error(
+            am,
+            f"@{attr.name} expects at least {len(pattern)} arguments",
+            attr.loc,
+        )
+        return False
+    if trailing == "/" and len(attr.args) > len(pattern):
+        raise_adhoc_error(
+            am,
+            f"@{attr.name} expects {len(pattern)} arguments",
+            attr.loc,
+        )
+        return False
+    result = []
+    for i, arg in enumerate(attr.args):
+        p = pattern[i] if i < len(pattern) else trailing
+        if not isinstance(arg, expect_dict[p]):
+            raise_adhoc_error(
+                am,
+                f"@{attr.name} expects {i + 1}th argument to be {expect_dict[p].__name__}",
+                attr.loc,
+            )
+            return False
+        result.append(arg)
+    return True
 
 
 @dataclass(repr=False)
@@ -130,14 +177,6 @@ ANI_STRING = ANIType(hint="string", base=ANI_REF)
 ANI_ARRAYBUFFER = ANIType(hint="arraybuffer", base=ANI_REF)
 
 
-def raise_adhoc_error(
-    am: AnalysisManager,
-    msg: str,
-    loc: SourceLocation | None,
-):
-    am.diagnostics_manager.emit(AdhocError(msg, loc=loc))
-
-
 @dataclass(repr=False)
 class ANIFuncLike:
     hint: str
@@ -201,7 +240,9 @@ class PackageANIInfo(AbstractAnalysis[PackageDecl]):
 
         self.cpp_ns = "::".join(p.segments)
 
-        if namespace_attr := p.get_attr_item("namespace"):
+        if (namespace_attr := p.get_last_attr("namespace")) and check_attr_args(
+            am, namespace_attr, "ss*"
+        ):
             self.module_name, *sts_ns_parts = namespace_attr.args
             self.sts_ns_parts = []
             for sts_ns_part in sts_ns_parts:
@@ -214,14 +255,16 @@ class PackageANIInfo(AbstractAnalysis[PackageDecl]):
         self.impl_desc = f"L{self.ani_path};"
 
         self.injected_codes: list[str] = []
-        for injected in p.get_attr_list("sts_inject"):
-            (code,) = injected.args
-            self.injected_codes.append(code)
+        for injected in p.get_all_attrs("sts_inject"):
+            if check_attr_args(am, injected, "s"):
+                (code,) = injected.args
+                self.injected_codes.append(code)
 
         self.module_injected_codes: list[str] = []
-        for module_injected in p.get_attr_list("sts_inject_into_module"):
-            (code,) = module_injected.args
-            self.module_injected_codes.append(code)
+        for module_injected in p.get_all_attrs("sts_inject_into_module"):
+            if check_attr_args(am, module_injected, "s"):
+                (code,) = module_injected.args
+                self.module_injected_codes.append(code)
 
     @property
     def scope(self):
@@ -257,10 +300,14 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
         self.sts_static_scope = None
         self.sts_ctor_scope = None
 
-        if static_attr := f.get_attr_item("static"):
+        if (static_attr := f.get_last_attr("static")) and check_attr_args(
+            am, static_attr, "s"
+        ):
             (self.sts_static_scope,) = static_attr.args
 
-        if ctor_attr := f.get_attr_item("ctor"):
+        if (ctor_attr := f.get_last_attr("ctor")) and check_attr_args(
+            am, ctor_attr, "s"
+        ):
             (self.sts_ctor_scope,) = ctor_attr.args
 
         self.sts_func_name = None
@@ -268,10 +315,12 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
         self.get_name = None
         self.set_name = None
 
-        if overload_attr := f.get_attr_item("overload"):
+        if (overload_attr := f.get_last_attr("overload")) and check_attr_args(
+            am, overload_attr, "s"
+        ):
             (self.sts_func_name,) = overload_attr.args
 
-        elif on_off_attr := f.get_attr_item("on_off"):
+        elif on_off_attr := f.get_last_attr("on_off"):
             if not f.name.startswith(("on", "off", "On", "Off")):
                 raise_adhoc_error(
                     am,
@@ -280,7 +329,7 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
                 )
 
             if f.name.startswith(("on", "On")):
-                if on_off_attr.args:
+                if on_off_attr.args and check_attr_args(am, on_off_attr, "s"):
                     (type_name,) = on_off_attr.args
                 else:
                     type_name = f.name[2:]
@@ -288,14 +337,14 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
                 self.on_off_type = ("on", type_name)
 
             if f.name.startswith(("off", "Off")):
-                if on_off_attr.args:
+                if on_off_attr.args and check_attr_args(am, on_off_attr, "s"):
                     (type_name,) = on_off_attr.args
                 else:
                     type_name = f.name[3:]
                     type_name = type_name[0].lower() + type_name[1:]
                 self.on_off_type = ("off", type_name)
 
-        elif get_attr := f.get_attr_item("get"):
+        elif get_attr := f.get_last_attr("get"):
             if not self.sts_static_scope:
                 raise_adhoc_error(
                     am,
@@ -309,7 +358,7 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
                     f.loc,
                 )
 
-            if get_attr.args:
+            if get_attr.args and check_attr_args(am, get_attr, "s"):
                 (self.get_name,) = get_attr.args
             elif f.name.startswith(("get", "Get")):
                 get_name = f.name[3:]
@@ -321,7 +370,7 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
                     f.loc,
                 )
 
-        elif set_attr := f.get_attr_item("set"):
+        elif set_attr := f.get_last_attr("set"):
             if not self.sts_static_scope:
                 raise_adhoc_error(
                     am,
@@ -335,7 +384,7 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
                     f.loc,
                 )
 
-            if set_attr.args:
+            if set_attr.args and check_attr_args(am, set_attr, "s"):
                 (self.set_name,) = set_attr.args
             elif f.name.startswith(("set", "Set")):
                 set_name = f.name[3:]
@@ -348,7 +397,7 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
                 )
 
         else:
-            if f.parent_pkg.get_attr_item("sts_keep_name"):
+            if f.parent_pkg.get_last_attr("sts_keep_name"):
                 self.sts_func_name = f.name
             else:
                 self.sts_func_name = f.name[0].lower() + f.name[1:]
@@ -356,10 +405,14 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
         self.sts_async_name = None
         self.sts_promise_name = None
 
-        if sts_async_attr := f.get_attr_item("gen_async"):
+        if (sts_async_attr := f.get_last_attr("gen_async")) and check_attr_args(
+            am, sts_async_attr, "s"
+        ):
             (self.sts_async_name,) = sts_async_attr.args
 
-        if sts_promise_attr := f.get_attr_item("gen_promise"):
+        if (sts_promise_attr := f.get_last_attr("gen_promise")) and check_attr_args(
+            am, sts_promise_attr, "s"
+        ):
             (self.sts_promise_name,) = sts_promise_attr.args
 
         self.sts_params: list[ParamDecl] = []
@@ -386,11 +439,13 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
 
         self.ani_method_name = None
 
-        if overload_attr := f.get_attr_item("overload"):
+        if (overload_attr := f.get_last_attr("overload")) and check_attr_args(
+            am, overload_attr, "s"
+        ):
             (self.sts_method_name,) = overload_attr.args
             (self.ani_method_name,) = overload_attr.args
 
-        elif on_off_attr := f.get_attr_item("on_off"):
+        elif on_off_attr := f.get_last_attr("on_off"):
             if not f.name.startswith(("on", "off", "On", "Off")):
                 raise_adhoc_error(
                     am,
@@ -399,7 +454,7 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
                 )
 
             if f.name.startswith(("on", "On")):
-                if on_off_attr.args:
+                if on_off_attr.args and check_attr_args(am, on_off_attr, "s"):
                     (type_name,) = on_off_attr.args
                 else:
                     type_name = f.name[2:]
@@ -408,7 +463,7 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
                 self.ani_method_name = "on"
 
             if f.name.startswith(("off", "Off")):
-                if on_off_attr.args:
+                if on_off_attr.args and check_attr_args(am, on_off_attr, "s"):
                     (type_name,) = on_off_attr.args
                 else:
                     type_name = f.name[3:]
@@ -416,7 +471,7 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
                 self.on_off_type = ("off", type_name)
                 self.ani_method_name = "off"
 
-        elif get_attr := f.get_attr_item("get"):
+        elif get_attr := f.get_last_attr("get"):
             if len(f.params) != 0 or f.return_ty_ref is None:
                 raise_adhoc_error(
                     am,
@@ -424,7 +479,7 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
                     f.loc,
                 )
 
-            if get_attr.args:
+            if get_attr.args and check_attr_args(am, get_attr, "s"):
                 (self.get_name,) = get_attr.args
             elif f.name.startswith(("get", "Get")):
                 get_name = f.name[3:]
@@ -437,7 +492,7 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
                 )
             self.ani_method_name = f"<get>{self.get_name}"
 
-        elif set_attr := f.get_attr_item("set"):
+        elif set_attr := f.get_last_attr("set"):
             if len(f.params) != 1 or f.return_ty_ref is not None:
                 raise_adhoc_error(
                     am,
@@ -445,7 +500,7 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
                     f.loc,
                 )
 
-            if set_attr.args:
+            if set_attr.args and check_attr_args(am, set_attr, "s"):
                 (self.set_name,) = set_attr.args
             elif f.name.startswith(("set", "Set")):
                 set_name = f.name[3:]
@@ -459,7 +514,7 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
             self.ani_method_name = f"<set>{self.set_name}"
 
         else:
-            if f.parent_pkg.get_attr_item("sts_keep_name"):
+            if f.parent_pkg.get_last_attr("sts_keep_name"):
                 self.sts_method_name = f.name
                 self.ani_method_name = f.name
             else:
@@ -469,15 +524,19 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
         self.sts_async_name = None
         self.sts_promise_name = None
 
-        if sts_async_attr := f.get_attr_item("gen_async"):
+        if (sts_async_attr := f.get_last_attr("gen_async")) and check_attr_args(
+            am, sts_async_attr, "s"
+        ):
             (self.sts_async_name,) = sts_async_attr.args
 
-        if sts_promise_attr := f.get_attr_item("gen_promise"):
+        if (sts_promise_attr := f.get_last_attr("gen_promise")) and check_attr_args(
+            am, sts_promise_attr, "s"
+        ):
             (self.sts_promise_name,) = sts_promise_attr.args
 
         self.sts_params: list[ParamDecl] = []
         for param in f.params:
-            if param.get_attr_item("sts_this"):
+            if param.get_last_attr("sts_this"):
                 continue
             self.sts_params.append(param)
 
@@ -485,7 +544,7 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
         arg = iter(sts_args)
         sts_native_args: list[str] = []
         for param in self.f.params:
-            if param.get_attr_item("sts_this"):
+            if param.get_last_attr("sts_this"):
                 sts_native_args.append(this)
                 continue
             sts_native_args.append(next(arg))
@@ -501,7 +560,7 @@ class EnumANIInfo(AbstractAnalysis[EnumDecl]):
         self.sts_type_name = d.name
         self.type_desc = f"L{self.pkg_ani_info.ani_path}/{self.sts_type_name};"
 
-        self.const = d.get_attr_item("const") is not None
+        self.const = d.get_last_attr("const") is not None
 
         if (
             not self.const
@@ -561,7 +620,7 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
 
         self.pkg_ani_info = PackageANIInfo.get(am, d.parent_pkg)
         self.sts_type_name = d.name
-        if d.get_attr_item("class"):
+        if d.get_last_attr("class"):
             self.sts_impl_name = f"{d.name}"
         else:
             self.sts_impl_name = f"{d.name}_inner"
@@ -569,20 +628,22 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
         self.impl_desc = f"L{self.pkg_ani_info.ani_path}/{self.sts_impl_name};"
 
         self.interface_injected_codes: list[str] = []
-        for iface_injected in d.get_attr_list("sts_inject_into_interface"):
-            (code,) = iface_injected.args
-            self.interface_injected_codes.append(code)
+        for iface_injected in d.get_all_attrs("sts_inject_into_interface"):
+            if check_attr_args(am, iface_injected, "s"):
+                (code,) = iface_injected.args
+                self.interface_injected_codes.append(code)
         self.class_injected_codes: list[str] = []
-        for class_injected in d.get_attr_list("sts_inject_into_class"):
-            (code,) = class_injected.args
-            self.class_injected_codes.append(code)
+        for class_injected in d.get_all_attrs("sts_inject_into_class"):
+            if check_attr_args(am, class_injected, "s"):
+                (code,) = class_injected.args
+                self.class_injected_codes.append(code)
 
         self.sts_fields: list[StructFieldDecl] = []
         self.sts_parents: list[StructFieldDecl] = []
         self.sts_final_fields: list[list[StructFieldDecl]] = []
         for field in d.fields:
             try:
-                if not field.get_attr_item("extends"):
+                if not field.get_last_attr("extends"):
                     raise RuntimeError
                 ty = field.ty_ref.resolved_ty
                 if not isinstance(ty, StructType):
@@ -626,7 +687,7 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
 
         self.pkg_ani_info = PackageANIInfo.get(am, d.parent_pkg)
         self.sts_type_name = d.name
-        if d.get_attr_item("class"):
+        if d.get_last_attr("class"):
             self.sts_impl_name = f"{d.name}"
         else:
             self.sts_impl_name = f"{d.name}_inner"
@@ -634,13 +695,15 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
         self.impl_desc = f"L{self.pkg_ani_info.ani_path}/{self.sts_impl_name};"
 
         self.interface_injected_codes: list[str] = []
-        for iface_injected in d.get_attr_list("sts_inject_into_interface"):
-            (code,) = iface_injected.args
-            self.interface_injected_codes.append(code)
+        for iface_injected in d.get_all_attrs("sts_inject_into_interface"):
+            if check_attr_args(am, iface_injected, "s"):
+                (code,) = iface_injected.args
+                self.interface_injected_codes.append(code)
         self.class_injected_codes: list[str] = []
-        for class_injected in d.get_attr_list("sts_inject_into_class"):
-            (code,) = class_injected.args
-            self.class_injected_codes.append(code)
+        for class_injected in d.get_all_attrs("sts_inject_into_class"):
+            if check_attr_args(am, class_injected, "s"):
+                (code,) = class_injected.args
+                self.class_injected_codes.append(code)
 
         for parent in d.parents:
             ty = parent.ty_ref.resolved_ty
@@ -1123,7 +1186,9 @@ class OpaqueTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[OpaqueType]):
         self.type_desc = "Lstd/core/Object;"
 
     def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
-        if sts_type_attr := self.t.ty_ref.get_attr_item("sts_type"):
+        if (
+            sts_type_attr := self.t.ty_ref.get_last_attr("sts_type")
+        ) and check_attr_args(self.am, sts_type_attr, "s"):
             (sts_type,) = sts_type_attr.args
             return sts_type
         return "Object"

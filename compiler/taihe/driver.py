@@ -217,7 +217,7 @@ class CompilerInstance:
         if not self.invocation.sts_keep_name:
             return
         for pkg in self.package_group.packages:
-            if not pkg.get_attr_item("sts_keep_name"):
+            if not pkg.get_last_attr("sts_keep_name"):
                 d = AttrItemDecl(None, "sts_keep_name", ())
                 pkg.add_attr(d)
 
