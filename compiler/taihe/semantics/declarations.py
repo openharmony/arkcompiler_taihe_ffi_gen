@@ -63,16 +63,11 @@ class Decl(metaclass=ABCMeta):
     def add_attr(self, i: AttrItemDecl):
         self.attrs.setdefault(i.name, []).append(i)
 
-    def get_attr_list(self, name: str) -> list[AttrItemDecl]:
+    def get_all_attrs(self, name: str) -> Iterable[AttrItemDecl]:
         return self.attrs.get(name, [])
 
-    def get_attr_item(self, name: str) -> Optional[AttrItemDecl]:
-        attr_list = self.attrs.get(name, [])
-        if len(attr_list) == 0:
-            return None
-        if len(attr_list) == 1:
-            return attr_list[0]
-        raise TypeError(f"{self.description} have too many {name} attribute")
+    def get_last_attr(self, name: str) -> Optional[AttrItemDecl]:
+        return self.attrs.get(name, [None])[-1]
 
     @property
     @abstractmethod
