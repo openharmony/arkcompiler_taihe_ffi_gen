@@ -13,6 +13,7 @@ IndentCaseLabels: false
 SeparateDefinitionBlocks: Always
 EmptyLineBeforeAccessModifier: Always
 
+DerivePointerAlignment: false
 ReferenceAlignment: Right
 PointerAlignment: Right
 QualifierAlignment: Custom

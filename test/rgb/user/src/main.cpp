@@ -48,7 +48,7 @@ int main() {
     std::cout << toString(color_miku) << std::endl;
     std::cout << toString(color_unknown) << std::endl;
 
-    if (Name* name_ptr = color_miku.get_name_ptr()) {
+    if (Name *name_ptr = color_miku.get_name_ptr()) {
       std::cout << "color_miku is holding name, name is " << *name_ptr
                 << std::endl;
     } else {
@@ -95,7 +95,7 @@ int main() {
         return name;
       }
 
-      MyColoredObject(string_view id, ColorOrRGBOrName const& color)
+      MyColoredObject(string_view id, ColorOrRGBOrName const &color)
           : name(id), myColor(color) {
         std::cout << getId() << " made" << std::endl;
       }
@@ -108,7 +108,7 @@ int main() {
         return myColor;
       }
 
-      void setColor(ColorOrRGBOrName const& color) {
+      void setColor(ColorOrRGBOrName const &color) {
         myColor = color;
       }
     };
@@ -204,7 +204,7 @@ int main() {
     std::cout << std::endl;
 
     std::cout << "Vector = ";
-    for (auto const& item : vec_1) {
+    for (auto const &item : vec_1) {
       std::cout << item->getId() << ", ";
     }
     std::cout << std::endl;
@@ -228,7 +228,7 @@ int main() {
     std::cout << std::endl;
 
     std::cout << "Map = ";
-    for (auto const& [key, value] : map_1) {
+    for (auto const &[key, value] : map_1) {
       std::cout << key << ": " << value->getId() << ", ";
     }
     std::cout << std::endl;
@@ -251,7 +251,7 @@ int main() {
     std::cout << std::endl;
 
     std::cout << "Set = ";
-    for (auto const& key : set_1) {
+    for (auto const &key : set_1) {
       std::cout << key << ", ";
     }
     std::cout << std::endl;

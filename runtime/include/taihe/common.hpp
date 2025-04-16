@@ -52,27 +52,27 @@ struct as_abi<void> {
 };
 
 template<typename cpp_t, std::enable_if_t<!std::is_reference_v<cpp_t>, int> = 0>
-inline as_abi_t<cpp_t> into_abi(cpp_t&& cpp_val) {
+inline as_abi_t<cpp_t> into_abi(cpp_t &&cpp_val) {
   as_abi_t<cpp_t> abi_val;
   new (&abi_val) cpp_t(std::move(cpp_val));
   return abi_val;
 }
 
 template<typename cpp_t, std::enable_if_t<!std::is_reference_v<cpp_t>, int> = 0>
-inline as_abi_t<cpp_t> into_abi(cpp_t& cpp_val) {
+inline as_abi_t<cpp_t> into_abi(cpp_t &cpp_val) {
   as_abi_t<cpp_t> abi_val;
   new (&abi_val) cpp_t(std::move(cpp_val));
   return abi_val;
 }
 
 template<typename cpp_t, std::enable_if_t<!std::is_reference_v<cpp_t>, int> = 0>
-inline cpp_t&& from_abi(as_abi_t<cpp_t>& abi_val) {
-  return reinterpret_cast<cpp_t&&>(abi_val);
+inline cpp_t &&from_abi(as_abi_t<cpp_t> &abi_val) {
+  return reinterpret_cast<cpp_t &&>(abi_val);
 }
 
 template<typename cpp_t, std::enable_if_t<!std::is_reference_v<cpp_t>, int> = 0>
-inline cpp_t&& from_abi(as_abi_t<cpp_t>&& abi_val) {
-  return reinterpret_cast<cpp_t&&>(abi_val);
+inline cpp_t &&from_abi(as_abi_t<cpp_t> &&abi_val) {
+  return reinterpret_cast<cpp_t &&>(abi_val);
 }
 
 template<typename cpp_t, std::enable_if_t<std::is_reference_v<cpp_t>, int> = 0>
@@ -104,13 +104,13 @@ constexpr static_tag_t<tag> static_tag = {};
 struct adl_helper_t {};
 
 template<typename T>
-inline std::size_t hash(T&& val) {
+inline std::size_t hash(T &&val) {
   adl_helper_t adl_helper;
   return hash_impl(adl_helper, std::forward<T>(val));
 }
 
 template<typename L, typename R>
-inline bool same(L&& lhs, R&& rhs) {
+inline bool same(L &&lhs, R &&rhs) {
   adl_helper_t adl_helper;
   return same_impl(adl_helper, std::forward<L>(lhs), std::forward<R>(rhs));
 }

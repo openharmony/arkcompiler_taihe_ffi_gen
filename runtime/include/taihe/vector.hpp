@@ -19,10 +19,10 @@ struct vector_view {
 public:
   using value_type = T;
   using size_type = std::size_t;
-  using reference = T&;
-  using pointer = T*;
-  using iterator = T*;
-  using const_iterator = T const*;
+  using reference = T &;
+  using pointer = T *;
+  using iterator = T *;
+  using const_iterator = T const *;
 
   void reserve(std::size_t cap) const {
     if (cap < m_handle->len) {
@@ -30,7 +30,7 @@ public:
     }
     m_handle->cap = cap;
     m_handle->buffer =
-        reinterpret_cast<T*>(realloc(m_handle->buffer, sizeof(T) * cap));
+        reinterpret_cast<T *>(realloc(m_handle->buffer, sizeof(T) * cap));
   }
 
   std::size_t size() const noexcept {
@@ -42,26 +42,26 @@ public:
   }
 
   template<typename... Args>
-  T& emplace_back(Args&&... args) const {
+  T &emplace_back(Args &&...args) const {
     std::size_t required_cap = m_handle->len + 1;
     if (required_cap > m_handle->cap) {
       this->reserve(std::max(required_cap, m_handle->cap * VEC_GROWTH_FACTOR));
     }
-    T* location = &m_handle->buffer[m_handle->len];
+    T *location = &m_handle->buffer[m_handle->len];
     new (location) T{std::forward<Args>(args)...};
     ++m_handle->len;
     return *location;
   }
 
-  T& push_back(T&& value) const {
+  T &push_back(T &&value) const {
     return emplace_back(std::move(value));
   }
 
-  T& push_back(T const& value) const {
+  T &push_back(T const &value) const {
     return emplace_back(value);
   }
 
-  T& operator[](std::size_t index) const {
+  T &operator[](std::size_t index) const {
     return m_handle->buffer[index];
   }
 
@@ -100,11 +100,11 @@ protected:
   struct data_t {
     TRefCount count;
     std::size_t cap;
-    T* buffer;
+    T *buffer;
     std::size_t len;
-  }* m_handle;
+  } *m_handle;
 
-  explicit vector_view(data_t* handle) : m_handle(handle) {}
+  explicit vector_view(data_t *handle) : m_handle(handle) {}
 
   friend struct vector<T>;
 
@@ -118,30 +118,30 @@ struct vector : vector_view<T> {
   using vector_view<T>::m_handle;
 
   explicit vector(std::size_t cap = 0)
-      : vector(reinterpret_cast<data_t*>(malloc(sizeof(data_t)))) {
+      : vector(reinterpret_cast<data_t *>(malloc(sizeof(data_t)))) {
     tref_set(&m_handle->count, 1);
     m_handle->cap = cap;
-    m_handle->buffer = reinterpret_cast<T*>(malloc(sizeof(T) * cap));
+    m_handle->buffer = reinterpret_cast<T *>(malloc(sizeof(T) * cap));
     m_handle->len = 0;
   }
 
-  vector(vector<T>&& other) noexcept : vector(other.m_handle) {
+  vector(vector<T> &&other) noexcept : vector(other.m_handle) {
     other.m_handle = nullptr;
   }
 
-  vector(vector<T> const& other) : vector(other.m_handle) {
+  vector(vector<T> const &other) : vector(other.m_handle) {
     if (m_handle) {
       tref_inc(&m_handle->count);
     }
   }
 
-  vector(vector_view<T> const& other) : vector(other.m_handle) {
+  vector(vector_view<T> const &other) : vector(other.m_handle) {
     if (m_handle) {
       tref_inc(&m_handle->count);
     }
   }
 
-  vector& operator=(vector other) {
+  vector &operator=(vector other) {
     std::swap(this->m_handle, other.m_handle);
     return *this;
   }
@@ -155,7 +155,7 @@ struct vector : vector_view<T> {
   }
 
 private:
-  explicit vector(data_t* handle) : vector_view<T>(handle) {}
+  explicit vector(data_t *handle) : vector_view<T>(handle) {}
 };
 
 template<typename T>
@@ -170,12 +170,12 @@ inline std::size_t hash_impl(adl_helper_t, vector_view<T> val) {
 
 template<typename T>
 struct as_abi<vector<T>> {
-  using type = void*;
+  using type = void *;
 };
 
 template<typename T>
 struct as_abi<vector_view<T>> {
-  using type = void*;
+  using type = void *;
 };
 
 template<typename T>

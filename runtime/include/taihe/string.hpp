@@ -20,17 +20,17 @@ struct string;
 struct string_view {
   using value_type = char;
   using size_type = std::size_t;
-  using const_reference = value_type const&;
-  using const_pointer = value_type const*;
+  using const_reference = value_type const &;
+  using const_pointer = value_type const *;
   using const_iterator = const_pointer;
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
   explicit string_view(struct TString handle) : m_handle(handle) {}
 
-  string_view(char const* value TH_NONNULL)
+  string_view(char const *value TH_NONNULL)
       : string_view(tstr_new_ref(value, strlen(value))) {}
 
-  string_view(char const* value TH_NONNULL, size_type size)
+  string_view(char const *value TH_NONNULL, size_type size)
       : string_view(tstr_new_ref(value, size)) {}
 
   string_view(std::initializer_list<char> value)
@@ -39,7 +39,7 @@ struct string_view {
   string_view(std::string_view value)
       : string_view(value.data(), value.size()) {}
 
-  string_view(std::string const& value)
+  string_view(std::string const &value)
       : string_view(value.data(), value.size()) {}
 
   operator std::string_view() const noexcept {
@@ -130,10 +130,10 @@ protected:
 struct string : public string_view {
   explicit string(struct TString handle) : string_view(handle) {}
 
-  string(char const* value TH_NONNULL)
+  string(char const *value TH_NONNULL)
       : string(tstr_new(value, std::strlen(value))) {}
 
-  string(char const* value TH_NONNULL, size_type size)
+  string(char const *value TH_NONNULL, size_type size)
       : string(tstr_new(value, size)) {}
 
   string(std::initializer_list<char> value)
@@ -141,19 +141,19 @@ struct string : public string_view {
 
   string(std::string_view value) : string(value.data(), value.size()) {}
 
-  string(std::string const& value) : string(value.data(), value.size()) {}
+  string(std::string const &value) : string(value.data(), value.size()) {}
 
   // constructors
-  string(string_view const& other) : string(tstr_dup(other.m_handle)) {}
+  string(string_view const &other) : string(tstr_dup(other.m_handle)) {}
 
-  string(string const& other) : string(tstr_dup(other.m_handle)) {}
+  string(string const &other) : string(tstr_dup(other.m_handle)) {}
 
-  string(string&& other) noexcept : string(other.m_handle) {
+  string(string &&other) noexcept : string(other.m_handle) {
     other.m_handle.ptr = NULL;
   }
 
   // assignment
-  string& operator=(string other) {
+  string &operator=(string other) {
     std::swap(this->m_handle, other.m_handle);
     return *this;
   }
@@ -165,7 +165,7 @@ struct string : public string_view {
     }
   }
 
-  string& operator+=(string_view other);
+  string &operator+=(string_view other);
 };
 
 inline string concat(string_view left, string_view right) {
@@ -176,7 +176,7 @@ inline string operator+(string_view left, string_view right) {
   return string(tstr_concat(left.m_handle, right.m_handle));
 }
 
-inline string& string::operator+=(string_view other) {
+inline string &string::operator+=(string_view other) {
   return *this = *this + other;
 }
 
@@ -212,7 +212,7 @@ inline bool operator>=(string_view lhs, string_view rhs) {
   return std::string_view(lhs) >= std::string_view(rhs);
 }
 
-inline std::ostream& operator<<(std::ostream& os, string_view sv) {
+inline std::ostream &operator<<(std::ostream &os, string_view sv) {
   return os << std::string_view(sv);
 }
 

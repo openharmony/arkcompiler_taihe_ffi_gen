@@ -23,12 +23,12 @@ template<typename cpp_owner_t>
 struct array_view {
   using value_type = cpp_owner_t;
   using size_type = std::size_t;
-  using reference = value_type&;
-  using const_reference = value_type const&;
-  using pointer = value_type*;
-  using const_pointer = value_type const*;
-  using iterator = value_type*;
-  using const_iterator = value_type const*;
+  using reference = value_type &;
+  using const_reference = value_type const &;
+  using pointer = value_type *;
+  using const_pointer = value_type const *;
+  using iterator = value_type *;
+  using const_iterator = value_type const *;
   using reverse_iterator = std::reverse_iterator<iterator>;
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
@@ -43,27 +43,27 @@ struct array_view {
   array_view(C (&value)[N]) noexcept : array_view(value, N) {}
 
   template<typename C>
-  array_view(std::vector<C>& value) noexcept
+  array_view(std::vector<C> &value) noexcept
       : array_view(value.data(), static_cast<size_type>(value.size())) {}
 
   template<typename C>
-  array_view(std::vector<C> const& value) noexcept
+  array_view(std::vector<C> const &value) noexcept
       : array_view(value.data(), static_cast<size_type>(value.size())) {}
 
   template<typename C, size_t N>
-  array_view(std::array<C, N>& value) noexcept
+  array_view(std::array<C, N> &value) noexcept
       : array_view(value.data(), static_cast<size_type>(value.size())) {}
 
   template<typename C, size_t N>
-  array_view(std::array<C, N> const& value) noexcept
+  array_view(std::array<C, N> const &value) noexcept
       : array_view(value.data(), static_cast<size_type>(value.size())) {}
 
   template<typename C>
-  array_view(array_view<C> const& other) noexcept
+  array_view(array_view<C> const &other) noexcept
       : array_view(other.data(), other.size()) {}
 
   template<typename C>
-  array_view(array<C> const& other) noexcept
+  array_view(array<C> const &other) noexcept
       : array_view(other.data(), other.size()) {}
 
   reference operator[](size_type const pos) const noexcept {
@@ -159,7 +159,7 @@ struct array_view {
 
 protected:
   std::size_t m_size;
-  cpp_owner_t* m_data;
+  cpp_owner_t *m_data;
 };
 
 struct copy_data_t {};
@@ -175,31 +175,31 @@ struct array : public array_view<cpp_owner_t> {
       : array_view<cpp_owner_t>(data, size) {}  // main constructor
 
   template<typename C>
-  array(copy_data_t, C* data, size_type size) noexcept
+  array(copy_data_t, C *data, size_type size) noexcept
       : array(
-            reinterpret_cast<cpp_owner_t*>(malloc(size * sizeof(cpp_owner_t))),
+            reinterpret_cast<cpp_owner_t *>(malloc(size * sizeof(cpp_owner_t))),
             size) {
     std::uninitialized_copy_n(data, size, this->m_data);
   }
 
   template<typename C>
-  array(move_data_t, C* data, size_type size) noexcept
+  array(move_data_t, C *data, size_type size) noexcept
       : array(
-            reinterpret_cast<cpp_owner_t*>(malloc(size * sizeof(cpp_owner_t))),
+            reinterpret_cast<cpp_owner_t *>(malloc(size * sizeof(cpp_owner_t))),
             size) {
     std::uninitialized_move_n(data, size, this->m_data);
   }
 
   array(size_type size)
       : array(
-            reinterpret_cast<cpp_owner_t*>(malloc(size * sizeof(cpp_owner_t))),
+            reinterpret_cast<cpp_owner_t *>(malloc(size * sizeof(cpp_owner_t))),
             size) {
     std::uninitialized_default_construct_n(this->m_data, size);
   }
 
-  array(size_type size, cpp_owner_t const& value)
+  array(size_type size, cpp_owner_t const &value)
       : array(
-            reinterpret_cast<cpp_owner_t*>(malloc(size * sizeof(cpp_owner_t))),
+            reinterpret_cast<cpp_owner_t *>(malloc(size * sizeof(cpp_owner_t))),
             size) {
     std::uninitialized_fill_n(this->m_data, size, value);
   }
@@ -208,7 +208,7 @@ struct array : public array_view<cpp_owner_t> {
     return array(size);
   }
 
-  static array make(size_type size, cpp_owner_t const& value) {
+  static array make(size_type size, cpp_owner_t const &value) {
     return array(size, value);
   }
 
@@ -216,17 +216,17 @@ struct array : public array_view<cpp_owner_t> {
   array(std::initializer_list<value_type> value) noexcept
       : array(copy_data_t{}, value.begin(), value.size()) {}
 
-  array(array_view<cpp_owner_t> const& other)
+  array(array_view<cpp_owner_t> const &other)
       : array(copy_data_t{}, other.data(), other.size()) {}
 
-  array(array<cpp_owner_t> const& other)
+  array(array<cpp_owner_t> const &other)
       : array(copy_data_t{}, other.data(), other.size()) {}
 
-  array(array<cpp_owner_t>&& other)
+  array(array<cpp_owner_t> &&other)
       : array(std::exchange(other.m_data, nullptr),
               std::exchange(other.m_size, 0)) {}
 
-  array& operator=(array other) {
+  array &operator=(array other) {
     std::swap(this->m_size, other.m_size);
     std::swap(this->m_data, other.m_data);
     return *this;

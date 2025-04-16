@@ -3,5 +3,5 @@
 #include <taihe/common.h>
 
 struct TOptional {
-  void const* m_data;
+  void const *m_data;
 };
