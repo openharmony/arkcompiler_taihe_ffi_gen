@@ -40,7 +40,7 @@ public:
 
   int32_t setIcons_sync(
       array_view<::hms::core::map::map_inner::icons_type> icons) {
-    for (auto const& element : icons) {
+    for (auto const &element : icons) {
       switch (element.get_tag()) {
       case ::hms::core::map::map_inner::icons_type::tag_t::type_string:
         std::cout << "type_string: " << element.get_type_string_ref()
@@ -50,10 +50,10 @@ public:
         element.get_type_Resource_ref()->foo(0);
         break;
       case ::hms::core::map::map_inner::icons_type::tag_t::type_Image: {
-        auto& obj = element.get_type_Image_ref();
+        auto &obj = element.get_type_Image_ref();
         ani_class cls;
         ani_boolean res;
-        ani_env* env = get_env();
+        ani_env *env = get_env();
         env->FindClass("L@ohos/multimedia/image/Image_inner;", &cls);
         env->Object_InstanceOf((ani_object)obj, cls, &res);
         std::cout << "type_Image: " << (int)res << std::endl;

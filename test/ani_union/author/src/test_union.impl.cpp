@@ -43,8 +43,8 @@ using namespace taihe;
 namespace {
 class MyInterface {
 public:
-  string func_union_primitive(::test_union::union_primitive const& data,
-                              ::test_union::union_primitive const& data2) {
+  string func_union_primitive(::test_union::union_primitive const &data,
+                              ::test_union::union_primitive const &data2) {
     switch (data.get_tag()) {
     case ::test_union::union_primitive::tag_t::sValue:
       std::cout << "s: " << data.get_sValue_ref() << std::endl;
@@ -71,123 +71,123 @@ public:
   }
 
   string func_union_primitive_5param(
-      ::test_union::union_primitive const& data1,
-      ::test_union::union_primitive const& data2,
-      ::test_union::union_primitive const& data3,
-      ::test_union::union_primitive const& data4,
-      ::test_union::union_primitive const& data5) {
+      ::test_union::union_primitive const &data1,
+      ::test_union::union_primitive const &data2,
+      ::test_union::union_primitive const &data3,
+      ::test_union::union_primitive const &data4,
+      ::test_union::union_primitive const &data5) {
     return "func_union_primitive_5param";
   }
 
-  string func_color_map_value1(::test_union::color_map_value1 const& data1) {
+  string func_color_map_value1(::test_union::color_map_value1 const &data1) {
     return "func_color_map_value1";
   }
 
-  string func_color_map_value2(::test_union::color_map_value2 const& data1) {
+  string func_color_map_value2(::test_union::color_map_value2 const &data1) {
     return "func_color_map_value2";
   }
 
-  string func_color_map_value3(::test_union::color_map_value3 const& data1) {
+  string func_color_map_value3(::test_union::color_map_value3 const &data1) {
     return "func_color_map_value3";
   }
 
-  string func_color_map_value4(::test_union::color_map_value4 const& data1) {
+  string func_color_map_value4(::test_union::color_map_value4 const &data1) {
     return "func_color_map_value4";
   }
 
-  string func_color_map_value5(::test_union::color_map_value5 const& data1) {
+  string func_color_map_value5(::test_union::color_map_value5 const &data1) {
     return "func_color_map_value5";
   }
 
-  string func_color_map_value6(::test_union::color_map_value6 const& data1) {
+  string func_color_map_value6(::test_union::color_map_value6 const &data1) {
     return "func_color_map_value6";
   }
 
-  string func_color_map_value7(::test_union::color_map_value7 const& data1) {
+  string func_color_map_value7(::test_union::color_map_value7 const &data1) {
     return "func_color_map_value7";
   }
 
-  string func_color_map_value8(::test_union::color_map_value8 const& data1) {
+  string func_color_map_value8(::test_union::color_map_value8 const &data1) {
     return "func_color_map_value8";
   }
 
-  string func_color_map_value9(::test_union::color_map_value9 const& data1) {
+  string func_color_map_value9(::test_union::color_map_value9 const &data1) {
     return "func_color_map_value9";
   }
 
-  string func_color_map_value10(::test_union::color_map_value9 const& data1,
-                                ::test_union::color_map_value9 const& data2) {
+  string func_color_map_value10(::test_union::color_map_value9 const &data1,
+                                ::test_union::color_map_value9 const &data2) {
     return "func_color_map_value10";
   }
 
-  string func_union_array_map1(::test_union::UnionArrayMap1 const& data1,
-                               ::test_union::UnionArrayMap1 const& data2) {
+  string func_union_array_map1(::test_union::UnionArrayMap1 const &data1,
+                               ::test_union::UnionArrayMap1 const &data2) {
     return "func_union_array_map1";
   }
 
-  string func_union_array_map2(::test_union::UnionArrayMap2 const& data1,
-                               ::test_union::UnionArrayMap2 const& data2) {
+  string func_union_array_map2(::test_union::UnionArrayMap2 const &data1,
+                               ::test_union::UnionArrayMap2 const &data2) {
     return "func_union_array_map2";
   }
 
-  string func_union_array_map3(::test_union::UnionArrayMap3 const& data1,
-                               ::test_union::UnionArrayMap3 const& data2) {
+  string func_union_array_map3(::test_union::UnionArrayMap3 const &data1,
+                               ::test_union::UnionArrayMap3 const &data2) {
     return "func_union_array_map3";
   }
 
-  string func_union_array_map4(::test_union::UnionArrayMap4 const& data1,
-                               ::test_union::UnionArrayMap4 const& data2) {
+  string func_union_array_map4(::test_union::UnionArrayMap4 const &data1,
+                               ::test_union::UnionArrayMap4 const &data2) {
     return "func_union_array_map4";
   }
 
-  string func_union_array_map5(::test_union::UnionArrayMap5 const& data1,
-                               ::test_union::UnionArrayMap5 const& data2) {
+  string func_union_array_map5(::test_union::UnionArrayMap5 const &data1,
+                               ::test_union::UnionArrayMap5 const &data2) {
     return "func_union_array_map5";
   }
 
-  string func_union_array_map6(::test_union::UnionArrayMap6 const& data1,
-                               ::test_union::UnionArrayMap6 const& data2) {
+  string func_union_array_map6(::test_union::UnionArrayMap6 const &data1,
+                               ::test_union::UnionArrayMap6 const &data2) {
     return "func_union_array_map6";
   }
 
-  string func_union_array_map7(::test_union::UnionArrayMap7 const& data1,
-                               ::test_union::UnionArrayMap7 const& data2) {
+  string func_union_array_map7(::test_union::UnionArrayMap7 const &data1,
+                               ::test_union::UnionArrayMap7 const &data2) {
     return "func_union_array_map7";
   }
 
-  string func_union_array_map8(::test_union::UnionArrayMap8 const& data1,
-                               ::test_union::UnionArrayMap8 const& data2) {
+  string func_union_array_map8(::test_union::UnionArrayMap8 const &data1,
+                               ::test_union::UnionArrayMap8 const &data2) {
     return "func_union_array_map8";
   }
 
-  string func_union_array_map9(::test_union::UnionArrayMap9 const& data1,
-                               ::test_union::UnionArrayMap9 const& data2) {
+  string func_union_array_map9(::test_union::UnionArrayMap9 const &data1,
+                               ::test_union::UnionArrayMap9 const &data2) {
     return "func_union_array_map9";
   }
 
-  string func_union_array_map10(::test_union::UnionArrayMap1 const& data1,
-                                ::test_union::UnionArrayMap2 const& data2) {
+  string func_union_array_map10(::test_union::UnionArrayMap1 const &data1,
+                                ::test_union::UnionArrayMap2 const &data2) {
     return "func_union_array_map10";
   }
 
-  string func_union_mix(::test_union::union_mix const& data1,
-                        ::test_union::union_mix const& data2,
-                        ::test_union::union_mix const& data3,
-                        ::test_union::union_mix const& data4,
-                        ::test_union::union_mix const& data5) {
+  string func_union_mix(::test_union::union_mix const &data1,
+                        ::test_union::union_mix const &data2,
+                        ::test_union::union_mix const &data3,
+                        ::test_union::union_mix const &data4,
+                        ::test_union::union_mix const &data5) {
     return "func_union_mix";
   }
 
-  string func_union_mix_10param(::test_union::union_mix const& data1,
-                                ::test_union::union_mix const& data2,
-                                ::test_union::union_mix const& data3,
-                                ::test_union::union_mix const& data4,
-                                ::test_union::union_mix const& data5,
-                                ::test_union::union_mix const& data6,
-                                ::test_union::union_mix const& data7,
-                                ::test_union::union_mix const& data8,
-                                ::test_union::union_mix const& data9,
-                                ::test_union::union_mix const& data10) {
+  string func_union_mix_10param(::test_union::union_mix const &data1,
+                                ::test_union::union_mix const &data2,
+                                ::test_union::union_mix const &data3,
+                                ::test_union::union_mix const &data4,
+                                ::test_union::union_mix const &data5,
+                                ::test_union::union_mix const &data6,
+                                ::test_union::union_mix const &data7,
+                                ::test_union::union_mix const &data8,
+                                ::test_union::union_mix const &data9,
+                                ::test_union::union_mix const &data10) {
     return "func_union_mix_10param";
   }
 
@@ -333,7 +333,7 @@ public:
   }
 };
 
-string printUnion(::test_union::union_primitive const& data) {
+string printUnion(::test_union::union_primitive const &data) {
   switch (data.get_tag()) {
   case ::test_union::union_primitive::tag_t::sValue:
     std::cout << "s: " << data.get_sValue_ref() << std::endl;

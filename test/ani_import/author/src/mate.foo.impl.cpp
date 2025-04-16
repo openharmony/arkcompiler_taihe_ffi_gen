@@ -9,7 +9,7 @@ using namespace mate::foo;
 namespace {
 // To be implemented.
 
-void testMate(::mate::MateType const& mate) {
+void testMate(::mate::MateType const &mate) {
   TH_THROW(std::runtime_error, "testMate not implemented");
 }
 

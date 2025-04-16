@@ -16,7 +16,7 @@ public:
   }
 };
 
-void testBar(::mate::bar::BarType const& bar) {
+void testBar(::mate::bar::BarType const &bar) {
   TH_THROW(std::runtime_error, "testBar not implemented");
 }
 

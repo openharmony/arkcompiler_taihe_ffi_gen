@@ -118,7 +118,7 @@ void Myfunc15(optional_view<int16_t> option1, optional_view<int64_t> option2) {
 }
 
 void Myfunc16(optional_view<int16_t> option1,
-              ::void_func::mytest::BarTest const& option2) {
+              ::void_func::mytest::BarTest const &option2) {
   switch (option2.get_key()) {
   case ::void_func::mytest::BarTest::key_t::A:
     std::cout << static_cast<int32_t>(option2.get_key()) << " A: " << std::endl;

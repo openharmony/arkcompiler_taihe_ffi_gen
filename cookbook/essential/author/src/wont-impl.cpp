@@ -14,7 +14,7 @@ void SaveBookToFile(weak::Path p) {
   TH_THROW(std::runtime_error, "SaveBookToFile not implemented");
 }
 
-string uploadBook(Book const& b) {
+string uploadBook(Book const &b) {
   TH_THROW(std::runtime_error, "uploadBook not implemented");
 }
 

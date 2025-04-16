@@ -35,7 +35,7 @@ int32_t add_impl(int32_t a, int32_t b) {
   return taihe::make_holder<AuthorIBase, ::async_test::IBase>();
 }
 
-void fromStructSync_impl(::async_test::Data const& data) {
+void fromStructSync_impl(::async_test::Data const &data) {
   std::cout << data.a.c_str() << " " << data.b.c_str() << " " << data.c
             << std::endl;
   return;

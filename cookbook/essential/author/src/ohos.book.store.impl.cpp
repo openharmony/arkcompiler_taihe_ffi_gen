@@ -20,7 +20,7 @@ Book ConstructBook(string_view title, int32_t year, Category kind) {
   return Book{title, year, kind};
 }
 
-void PrintBook(Book const& b) {
+void PrintBook(Book const &b) {
   printf("PrintBook: %s, year %d, kind = %s\n",
          b.title.c_str(),  // 使用 taihe::string::c_str() 获取字符串。
          b.year,
@@ -28,15 +28,15 @@ void PrintBook(Book const& b) {
   );
 }
 
-map<string, int32_t> MapBookToYear(MapOption const& opt) {
+map<string, int32_t> MapBookToYear(MapOption const &opt) {
   map<string, int32_t> ret;
   // 通过 get_tag() 判断类型，通过 get_xxx_ref() 获得对应的值。
   if (opt.get_tag() == MapOption::tag_t::one_book) {
-    Book const& book = opt.get_one_book_ref();
+    Book const &book = opt.get_one_book_ref();
     ret.emplace(book.title, book.year);
   } else {
     // 使用标准的 STL 风格访问 many_books 数组。
-    for (auto const& book : opt.get_many_books_ref()) {
+    for (auto const &book : opt.get_many_books_ref()) {
       ret.emplace(book.title, book.year);
     }
   }
@@ -44,8 +44,8 @@ map<string, int32_t> MapBookToYear(MapOption const& opt) {
 }
 
 void PrintBooksWithFilter(array_view<Book> books,
-                          optional_view<callback<bool(Book const&)>> filter) {
-  for (auto& book : books) {
+                          optional_view<callback<bool(Book const &)>> filter) {
+  for (auto &book : books) {
     bool should_print = true;
     // 判断 Optional 是否有值。
     if (filter) {
@@ -64,16 +64,16 @@ class BookstoreImpl {
   std::unordered_map<std::string, std::pair<double, int32_t>> m_books = {};
 
 public:
-  void addBook(Book const& book, double price, int32_t count) {
+  void addBook(Book const &book, double price, int32_t count) {
     m_books.emplace(std::string{book.title}, std::make_pair(price, count));
     PrintBook(book);
     printf("addBook: price = %lf, count = %d\n", price, count);
   }
 
-  void saleBook(Book const& book) {
+  void saleBook(Book const &book) {
     auto iter = m_books.find(std::string{book.title});
     auto price = iter->second.first;
-    auto& count = iter->second.second;
+    auto &count = iter->second.second;
     if (count == 0) {
       // 使用 taihe::set_error 抛异常。
       taihe::set_error(book.title + " has been sold out");
@@ -108,7 +108,7 @@ void SayHello() {
   printf("Welcome to my book store!\n");
 }
 
-void PrintBookAdvanced(CppOrRustBook const& book) {
+void PrintBookAdvanced(CppOrRustBook const &book) {
   if (book.holds_rust()) {
     RustBook the_book = book.get_rust_ref();
     PrintBook(the_book.base);
@@ -149,14 +149,14 @@ FancyBook MakeFancyBook() {
 bool IsString(uintptr_t s) {
   ani_boolean res;
   ani_class cls;
-  ani_env* env = get_env();
+  ani_env *env = get_env();
   env->FindClass("Lstd/core/String;", &cls);
   env->Object_InstanceOf((ani_object)s, cls, &res);
   return res;
 }
 
 array<uintptr_t> GetStringArray() {
-  ani_env* env = get_env();
+  ani_env *env = get_env();
   // 首个元素为字符串 "AAA"
   ani_string ani_arr_0;
   env->String_NewUTF8("AAA", 3, &ani_arr_0);

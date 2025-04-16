@@ -146,8 +146,8 @@ array<uint8_t> DoubleBufferToInt8Array(array_view<uint8_t> nums) {
     throw std::runtime_error("Invalid buffer size for Int32Array");
   }
   array<uint8_t> result = array<uint8_t>::make(nums.size());
-  int8_t* src = reinterpret_cast<int8_t*>(nums.data());
-  int8_t* dst = reinterpret_cast<int8_t*>(result.data());
+  int8_t *src = reinterpret_cast<int8_t *>(nums.data());
+  int8_t *dst = reinterpret_cast<int8_t *>(result.data());
   size_t count = nums.size() / sizeof(int8_t);
   constexpr int32_t const mulTwo = 2;
   for (size_t i = 0; i < count; ++i) {
@@ -162,8 +162,8 @@ array<uint8_t> DoubleBufferToInt16Array(array_view<uint8_t> nums) {
     throw std::runtime_error("Invalid buffer size for Int32Array");
   }
   array<uint8_t> result = array<uint8_t>::make(nums.size());
-  int16_t* src = reinterpret_cast<int16_t*>(nums.data());
-  int16_t* dst = reinterpret_cast<int16_t*>(result.data());
+  int16_t *src = reinterpret_cast<int16_t *>(nums.data());
+  int16_t *dst = reinterpret_cast<int16_t *>(result.data());
   size_t count = nums.size() / sizeof(int16_t);
   constexpr int32_t const mulTwo = 2;
   for (size_t i = 0; i < count; ++i) {
@@ -178,8 +178,8 @@ array<uint8_t> DoubleBufferToInt32Array(array_view<uint8_t> nums) {
     throw std::runtime_error("Invalid buffer size for Int32Array");
   }
   array<uint8_t> result = array<uint8_t>::make(nums.size());
-  int32_t* src = reinterpret_cast<int32_t*>(nums.data());
-  int32_t* dst = reinterpret_cast<int32_t*>(result.data());
+  int32_t *src = reinterpret_cast<int32_t *>(nums.data());
+  int32_t *dst = reinterpret_cast<int32_t *>(result.data());
   size_t count = nums.size() / sizeof(int32_t);
   constexpr int32_t const mulTwo = 2;
   for (size_t i = 0; i < count; ++i) {
@@ -194,8 +194,8 @@ array<uint8_t> DoubleBufferToUint16Array(array_view<uint8_t> nums) {
     throw std::runtime_error("Invalid buffer size for Int32Array");
   }
   array<uint8_t> result = array<uint8_t>::make(nums.size());
-  uint16_t* src = reinterpret_cast<uint16_t*>(nums.data());
-  uint16_t* dst = reinterpret_cast<uint16_t*>(result.data());
+  uint16_t *src = reinterpret_cast<uint16_t *>(nums.data());
+  uint16_t *dst = reinterpret_cast<uint16_t *>(result.data());
   size_t count = nums.size() / sizeof(uint16_t);
   constexpr int32_t const mulTwo = 2;
   for (size_t i = 0; i < count; ++i) {
@@ -210,8 +210,8 @@ array<uint8_t> DoubleBufferToUint32Array(array_view<uint8_t> nums) {
     throw std::runtime_error("Invalid buffer size for Int32Array");
   }
   array<uint8_t> result = array<uint8_t>::make(nums.size());
-  uint32_t* src = reinterpret_cast<uint32_t*>(nums.data());
-  uint32_t* dst = reinterpret_cast<uint32_t*>(result.data());
+  uint32_t *src = reinterpret_cast<uint32_t *>(nums.data());
+  uint32_t *dst = reinterpret_cast<uint32_t *>(result.data());
   size_t count = nums.size() / sizeof(uint32_t);
   constexpr int32_t const mulTwo = 2;
   for (size_t i = 0; i < count; ++i) {

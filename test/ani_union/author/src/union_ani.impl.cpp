@@ -7,7 +7,7 @@
 using namespace taihe;
 
 namespace {
-string printInnerUnion(::union_ani::InnerUnion const& data) {
+string printInnerUnion(::union_ani::InnerUnion const &data) {
   switch (data.get_tag()) {
   case ::union_ani::InnerUnion::tag_t::stringValue:
     std::cout << "s: " << data.get_stringValue_ref() << std::endl;
@@ -22,7 +22,7 @@ string printInnerUnion(::union_ani::InnerUnion const& data) {
   }
 }
 
-string printMyUnion(::union_ani::MyUnion const& data) {
+string printMyUnion(::union_ani::MyUnion const &data) {
   switch (data.get_tag()) {
   case ::union_ani::MyUnion::tag_t::innerValue:
     return printInnerUnion(data.get_innerValue_ref());

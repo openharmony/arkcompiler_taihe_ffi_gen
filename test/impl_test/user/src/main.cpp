@@ -14,7 +14,7 @@ using namespace taihe;
 #define TRY_CATCH_BLOCK(func)                                   \
   try {                                                         \
     func;                                                       \
-  } catch (std::runtime_error const& e) {                       \
+  } catch (std::runtime_error const &e) {                       \
     std::cerr << "Caught exception: " << e.what() << std::endl; \
   } catch (...) {                                               \
     std::cerr << "Caught unknown exception!" << std::endl;      \

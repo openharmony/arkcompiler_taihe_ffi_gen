@@ -34,7 +34,7 @@ optional<array<int32_t>> makeOptionalArray(bool b, int32_t val, int32_t num) {
   }
 }
 
-optional<string> sendReturnResult(::opt::ReturnResult const& result) {
+optional<string> sendReturnResult(::opt::ReturnResult const &result) {
   if (result.results) {
     string ret = "";
     for (auto str : *result.results) {

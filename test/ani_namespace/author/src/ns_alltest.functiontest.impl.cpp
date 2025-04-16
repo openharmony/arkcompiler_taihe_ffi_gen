@@ -138,7 +138,7 @@ public:
   map<int16_t, ::ns_alltest::functiontest::Data> BaseFunctionTest55(
       map_view<int16_t, ::ns_alltest::functiontest::Data> param1) {
     map<int16_t, ::ns_alltest::functiontest::Data> m;
-    for (auto const& [key, value] : param1) {
+    for (auto const &[key, value] : param1) {
       m.emplace(key, value);
     }
     return m;
@@ -688,7 +688,7 @@ void BaseFunctionTest15(map_view<string, int32_t> param1) {
   std::cout << "NameSpaceImpl: " << __func__
             << " param1 contents:" << std::endl;
   // 遍历 map_view 并输出 key 和 value
-  for (auto const& pair : param1) {
+  for (auto const &pair : param1) {
     std::cout << "  Key: " << pair.first << ", Value: " << pair.second
               << std::endl;
   }
@@ -987,7 +987,7 @@ int32_t BaseFunctionTest42_void() {
   return INT32_MAX;
 }
 
-void BaseFunctionTest42_struct(::ns_alltest::functiontest::Data const& param1) {
+void BaseFunctionTest42_struct(::ns_alltest::functiontest::Data const &param1) {
   std::cout << "NameSpaceImpl: " << __func__ << "data1: " << param1.data1
             << std::endl;
   std::cout << "NameSpaceImpl: " << __func__ << "data2: " << param1.data2
@@ -999,13 +999,13 @@ void BaseFunctionTest42_struct(::ns_alltest::functiontest::Data const& param1) {
 void BaseFunctionTest59(map_view<string, string> param1) {
   std::cout << "Using begin() and end() for traversal:" << std::endl;
   for (auto it = param1.begin(); it != param1.end(); ++it) {
-    auto const& [key, value] = *it;
+    auto const &[key, value] = *it;
     std::cout << "Key: " << key << ", Value: " << value << std::endl;
   }
 }
 
 bool BaseFunctionTest60(map_view<int64_t, bool> param1) {
-  for (auto const& pair : param1) {
+  for (auto const &pair : param1) {
     if (pair.first <= 0) {
       return false;
     }

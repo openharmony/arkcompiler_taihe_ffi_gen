@@ -13,7 +13,7 @@ public:
     ani_long ani_vtbl_ptr;
     ani_long ani_data_ptr;
     ani_class ani_obj_cls;
-    ani_env* env = get_env();
+    ani_env *env = get_env();
     env->FindClass("LPerson/Person;", &ani_obj_cls);
     ani_method ani_obj_ctor;
     env->Class_FindMethod(ani_obj_cls, "<ctor>", nullptr, &ani_obj_ctor);

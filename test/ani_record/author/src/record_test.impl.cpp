@@ -93,25 +93,25 @@ map<string, int32_t> GetMapfromArray(array_view<::record_test::Data> d) {
 void ForeachMap(map_view<string, string> my_map) {
   std::cout << "Using begin() and end() for traversal:" << std::endl;
   for (auto it = my_map.begin(); it != my_map.end(); ++it) {
-    auto const& [key, value] = *it;
+    auto const &[key, value] = *it;
     std::cout << "Key: " << key << ", Value: " << value << std::endl;
   }
 
   std::cout << "Using range-based for loop for traversal:" << std::endl;
-  for (auto const& [key, value] : my_map) {
+  for (auto const &[key, value] : my_map) {
     std::cout << "Key: " << key << ", Value: " << value << std::endl;
   }
 
   std::cout << "Using const iterator for traversal:" << std::endl;
-  auto const& const_map = my_map;
+  auto const &const_map = my_map;
   for (auto it = const_map.begin(); it != const_map.end(); ++it) {
-    auto const& [key, value] = *it;
+    auto const &[key, value] = *it;
     std::cout << "Key: " << key << ", Value: " << value << std::endl;
   }
 
   std::cout << "Using cbegin() and cend() for traversal:" << std::endl;
   for (auto it = my_map.cbegin(); it != my_map.cend(); ++it) {
-    auto const& [key, value] = *it;
+    auto const &[key, value] = *it;
     std::cout << "Key: " << key << ", Value: " << value << std::endl;
   };
 }
@@ -122,7 +122,7 @@ bool Mapfunc01(map_view<string, bool> m) {
 
 bool Mapfunc02(map_view<string, int8_t> m) {
   int const threshold = 0;
-  for (auto const& pair : m) {
+  for (auto const &pair : m) {
     if (pair.second <= threshold) {
       return false;
     }
@@ -132,7 +132,7 @@ bool Mapfunc02(map_view<string, int8_t> m) {
 
 bool Mapfunc03(map_view<string, int16_t> m) {
   int const threshold = 0;
-  for (auto const& pair : m) {
+  for (auto const &pair : m) {
     if (pair.second <= threshold) {
       return false;
     }
@@ -142,7 +142,7 @@ bool Mapfunc03(map_view<string, int16_t> m) {
 
 bool Mapfunc04(map_view<string, int32_t> m) {
   int const threshold = 0;
-  for (auto const& pair : m) {
+  for (auto const &pair : m) {
     if (pair.second <= threshold) {
       return false;
     }
@@ -152,7 +152,7 @@ bool Mapfunc04(map_view<string, int32_t> m) {
 
 bool Mapfunc05(map_view<string, int64_t> m) {
   int const threshold = 0;
-  for (auto const& pair : m) {
+  for (auto const &pair : m) {
     if (pair.second <= threshold) {
       return false;
     }
@@ -162,7 +162,7 @@ bool Mapfunc05(map_view<string, int64_t> m) {
 
 bool Mapfunc06(map_view<string, float> m) {
   float const threshold = 0.0f;
-  for (auto const& pair : m) {
+  for (auto const &pair : m) {
     if (pair.second <= threshold) {
       return false;
     }
@@ -172,7 +172,7 @@ bool Mapfunc06(map_view<string, float> m) {
 
 bool Mapfunc07(map_view<string, double> m) {
   double const threshold = 0.0;
-  for (auto const& pair : m) {
+  for (auto const &pair : m) {
     if (pair.second <= threshold) {
       return false;
     }
@@ -181,7 +181,7 @@ bool Mapfunc07(map_view<string, double> m) {
 }
 
 bool Mapfunc08(map_view<string, string> m) {
-  for (auto const& pair : m) {
+  for (auto const &pair : m) {
     if (pair.second.empty()) {
       return false;
     }
@@ -190,7 +190,7 @@ bool Mapfunc08(map_view<string, string> m) {
 }
 
 bool Mapfunc09(map_view<string, array<int8_t>> m) {
-  for (auto const& pair : m) {
+  for (auto const &pair : m) {
     if (pair.second.empty()) {
       return false;
     }
@@ -199,7 +199,7 @@ bool Mapfunc09(map_view<string, array<int8_t>> m) {
 }
 
 bool Mapfunc10(map_view<string, array<int16_t>> m) {
-  for (auto const& pair : m) {
+  for (auto const &pair : m) {
     if (pair.second.empty()) {
       return false;
     }
@@ -208,7 +208,7 @@ bool Mapfunc10(map_view<string, array<int16_t>> m) {
 }
 
 bool Mapfunc11(map_view<string, array<int32_t>> m) {
-  for (auto const& pair : m) {
+  for (auto const &pair : m) {
     if (pair.second.empty()) {
       return false;
     }
@@ -217,7 +217,7 @@ bool Mapfunc11(map_view<string, array<int32_t>> m) {
 }
 
 bool Mapfunc12(map_view<string, array<int64_t>> m) {
-  for (auto const& pair : m) {
+  for (auto const &pair : m) {
     if (pair.second.empty()) {
       return false;
     }
@@ -226,7 +226,7 @@ bool Mapfunc12(map_view<string, array<int64_t>> m) {
 }
 
 bool Mapfunc13(map_view<string, array<array<uint8_t>>> m) {
-  for (auto const& pair : m) {
+  for (auto const &pair : m) {
     if (pair.second.empty()) {
       return false;
     }
@@ -235,7 +235,7 @@ bool Mapfunc13(map_view<string, array<array<uint8_t>>> m) {
 }
 
 bool Mapfunc14(map_view<string, array<bool>> m) {
-  for (auto const& pair : m) {
+  for (auto const &pair : m) {
     if (pair.second.empty()) {
       return false;
     }
@@ -244,7 +244,7 @@ bool Mapfunc14(map_view<string, array<bool>> m) {
 }
 
 bool Mapfunc15(map_view<string, array<string>> m) {
-  for (auto const& pair : m) {
+  for (auto const &pair : m) {
     if (pair.second.empty()) {
       return false;
     }
@@ -282,7 +282,7 @@ bool Mapfunc20(map_view<string, record_test::ICpuInfo> m) {
 
 bool Mapfunc21(map_view<string, uintptr_t> m) {
   uintptr_t const zero = 0;
-  for (auto const& pair : m) {
+  for (auto const &pair : m) {
     if (pair.second == zero) {
       return false;
     }
@@ -292,7 +292,7 @@ bool Mapfunc21(map_view<string, uintptr_t> m) {
 
 bool Mapfunc22(map_view<string, map<string, bool>> m) {
   size_t const emptySize = 0;
-  for (auto const& pair : m) {
+  for (auto const &pair : m) {
     if (pair.second.size() == emptySize) {
       return false;
     }
@@ -302,7 +302,7 @@ bool Mapfunc22(map_view<string, map<string, bool>> m) {
 
 bool Mapfunc23(map_view<string, map<string, int32_t>> m) {
   size_t const emptySize = 0;
-  for (auto const& pair : m) {
+  for (auto const &pair : m) {
     if (pair.second.size() == emptySize) {
       return false;
     }
@@ -312,7 +312,7 @@ bool Mapfunc23(map_view<string, map<string, int32_t>> m) {
 
 bool Mapfunc24(map_view<string, map<string, array<int32_t>>> m) {
   size_t const emptySize = 0;
-  for (auto const& pair : m) {
+  for (auto const &pair : m) {
     if (pair.second.size() == emptySize) {
       return false;
     }
@@ -322,7 +322,7 @@ bool Mapfunc24(map_view<string, map<string, array<int32_t>>> m) {
 
 bool Mapfunc25(map_view<string, map<string, string>> m) {
   size_t const emptySize = 0;
-  for (auto const& pair : m) {
+  for (auto const &pair : m) {
     if (pair.second.size() == emptySize) {
       return false;
     }

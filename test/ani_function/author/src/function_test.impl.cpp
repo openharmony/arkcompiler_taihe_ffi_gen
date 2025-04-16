@@ -23,7 +23,7 @@ public:
     std::cout << "call bar_str a is :" << std::string(a) << std::endl;
   }
 
-  void bar_union(string_view a, ::function_test::MyUnion const& b) {
+  void bar_union(string_view a, ::function_test::MyUnion const &b) {
     std::cout << "call bar_union a is :" << std::string(a) << std::endl;
     switch (b.get_tag()) {
     case ::function_test::MyUnion::tag_t::sValue:

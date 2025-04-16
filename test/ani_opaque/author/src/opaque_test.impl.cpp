@@ -15,14 +15,14 @@ namespace {
 bool is_string(uintptr_t a) {
   ani_boolean res;
   ani_class cls;
-  ani_env* env = get_env();
+  ani_env *env = get_env();
   env->FindClass("Lstd/core/String;", &cls);
   env->Object_InstanceOf((ani_object)a, cls, &res);
   return res;
 }
 
 array<uintptr_t> get_objects() {
-  ani_env* env = get_env();
+  ani_env *env = get_env();
   ani_string ani_arr_0;
   env->String_NewUTF8("AAA", 3, &ani_arr_0);
   ani_ref ani_arr_1;
@@ -31,16 +31,16 @@ array<uintptr_t> get_objects() {
 }
 
 uintptr_t get_object() {
-  ani_env* env = get_env();
+  ani_env *env = get_env();
   ani_string ani_arr_0;
   env->String_NewUTF8("BBB", 3, &ani_arr_0);
   return (uintptr_t)ani_arr_0;
 }
 
-bool is_opaque(::opaque_test::Union const& s) {
+bool is_opaque(::opaque_test::Union const &s) {
   ani_boolean res;
   ani_class cls;
-  ani_env* env = get_env();
+  ani_env *env = get_env();
   if (s.get_tag() == ::opaque_test::Union::tag_t::oValue) {
     return (ani_boolean) true;
   }

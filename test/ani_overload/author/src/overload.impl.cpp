@@ -66,12 +66,12 @@ public:
     return a;
   }
 
-  int32_t OverloadFuncEnum(::overload::Color const& p0) {
+  int32_t OverloadFuncEnum(::overload::Color const &p0) {
     std::cout << "OverloadFuncEnum: color = " << p0 << std::endl;
     return static_cast<int32_t>(p0);
   }
 
-  string OverloadFuncMystruct(::overload::Mystruct const& p0) {
+  string OverloadFuncMystruct(::overload::Mystruct const &p0) {
     std::cout << "OverloadFuncMystruct: testNum = " << p0.testNum
               << ", testStr = " << p0.testStr << std::endl;
     return p0.testStr;
@@ -194,8 +194,8 @@ public:
   void OverloadFunc10param1(int8_t p0, int16_t p1, int32_t p2, float p3,
                             double p4, bool p5, string_view p6,
                             array_view<int8_t> p7,
-                            ::overload::Mystruct const& p8,
-                            ::overload::Color const& p9) {
+                            ::overload::Mystruct const &p8,
+                            ::overload::Color const &p9) {
     std::cout << "OverloadFunc10param1: p0 = " << static_cast<int>(p0)
               << ", p1 = " << p1 << ", p2 = " << p2 << ", p3 = " << p3
               << ", p4 = " << p4 << ", p5 = " << p5 << ", p6 = " << p6
@@ -213,8 +213,8 @@ public:
               << ", p9 = " << p9 << std::endl;
   }
 
-  void OverloadFunc10param2(int8_t p0, ::overload::Mystruct const& p1,
-                            ::overload::Color const& p2, array_view<float> p3,
+  void OverloadFunc10param2(int8_t p0, ::overload::Mystruct const &p1,
+                            ::overload::Color const &p2, array_view<float> p3,
                             array_view<double> p4, array_view<bool> p5,
                             array_view<string> p6, array_view<int8_t> p7,
                             array_view<int16_t> p8, array_view<int32_t> p9) {
@@ -284,8 +284,8 @@ public:
   void OverloadFunc10param3(int8_t p0, int16_t p1, int32_t p2, float p3,
                             double p4, bool p5, string_view p6,
                             array_view<uint8_t> p7,
-                            ::overload::Mystruct const& p8,
-                            ::overload::Color const& p9) {
+                            ::overload::Mystruct const &p8,
+                            ::overload::Color const &p9) {
     std::cout << "OverloadFunc10param3: p0 = " << static_cast<int>(p0)
               << ", p1 = " << p1 << ", p2 = " << p2 << ", p3 = " << p3
               << ", p4 = " << p4 << ", p5 = " << p5 << ", p6 = " << p6
@@ -306,7 +306,7 @@ public:
   void OverloadFunc10param4(int8_t p0, int16_t p1, int32_t p2, float p3,
                             double p4, bool p5, string_view p6,
                             array_view<int8_t> p7, array_view<uint8_t> p8,
-                            ::overload::Color const& p9) {
+                            ::overload::Color const &p9) {
     std::cout << "OverloadFunc10param4: p0 = " << static_cast<int>(p0)
               << ", p1 = " << p1 << ", p2 = " << p2 << ", p3 = " << p3
               << ", p4 = " << p4 << ", p5 = " << p5 << ", p6 = " << p6
@@ -366,7 +366,7 @@ public:
     return std::accumulate(a.begin(), a.end(), 0);
   }
 
-  void OverloadFuncEnumRecord(::overload::Color const& p1,
+  void OverloadFuncEnumRecord(::overload::Color const &p1,
                               map_view<string, int16_t> p2) {
     // Function body
   }

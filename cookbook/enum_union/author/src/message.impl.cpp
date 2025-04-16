@@ -17,7 +17,7 @@ Message createNumberMessage(int64_t num) {
   return {MessageType::key_t::Number, MessageData::make_numVal(num)};
 }
 
-void processMessage(Message const& msg) {
+void processMessage(Message const &msg) {
   switch (msg.type.get_key()) {
   case MessageType::key_t::Text:
     std::cout << "text: " << msg.data.get_textVal_ref() << std::endl;

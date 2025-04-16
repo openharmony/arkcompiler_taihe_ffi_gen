@@ -49,13 +49,13 @@ public:
 
   void Containers_noreturn3(array_view<uint8_t> a) {}
 
-  void Containers_noreturn2(::inner::union_primitive const& a) {}
+  void Containers_noreturn2(::inner::union_primitive const &a) {}
 
   void Containers_noreturn4(::inner::Color a) {}
 
   void Containers_noreturn5(map_view<string, int32_t> a) {}
 
-  string Containers_return(::inner::union_primitive const& a) {
+  string Containers_return(::inner::union_primitive const &a) {
     return "containers_return";
   }
 
@@ -71,7 +71,7 @@ public:
 
   void OverloadFunc_i32() {}
 
-  ::inner::Mystruct OverloadFunc_f32(::inner::Mystruct const& a) {
+  ::inner::Mystruct OverloadFunc_f32(::inner::Mystruct const &a) {
     return a;
   }
 
@@ -342,11 +342,11 @@ string Primitives_return(int32_t a, double b, bool c, string_view d, int8_t e) {
 
 void Containers_noreturn(array_view<int8_t> a, array_view<int16_t> b,
                          array_view<float> c, array_view<double> d,
-                         ::inner::union_primitive const& e) {}
+                         ::inner::union_primitive const &e) {}
 
 string Containers_return(array_view<int8_t> a, array_view<int16_t> b,
                          array_view<float> c, array_view<double> d,
-                         ::inner::union_primitive const& e) {
+                         ::inner::union_primitive const &e) {
   return "containers_return";
 }
 
@@ -443,7 +443,7 @@ array<int8_t> PrintTestInterfaceArray(::inner::weak::TestInterface testiface) {
 map<string, int8_t> PrintTestInterfaceRecord(
     ::inner::weak::TestInterface testiface) {
   map<string, int8_t> m = testiface->getrecord();
-  for (auto const& [key, value] : m) {
+  for (auto const &[key, value] : m) {
     std::cout << "Key: " << key << ", Value: " << static_cast<int>(value)
               << std::endl;
     // 注意：int8_t需要转为int打印，否则会输出ASCII字符

@@ -43,7 +43,7 @@ public:
 
   void func_Array(optional_view<array<int32_t>> param1) {
     std::cout << "func_Array: [";
-    for (auto const& elem : *param1) {
+    for (auto const &elem : *param1) {
       std::cout << elem << " ";
     }
     std::cout << "]" << std::endl;
@@ -51,7 +51,7 @@ public:
 
   void func_Buffer(optional_view<array<uint8_t>> param1) {
     std::cout << "func_Array: [";
-    for (auto const& elem : *param1) {
+    for (auto const &elem : *param1) {
       std::cout << (int)elem << " ";
     }
     std::cout << "]" << std::endl;
@@ -64,7 +64,7 @@ public:
 
   void func_Map(optional_view<map<string, int32_t>> param1) {
     for (auto it = (*param1).begin(); it != (*param1).end(); ++it) {
-      auto const& [key, value] = *it;
+      auto const &[key, value] = *it;
       std::cout << "Key: " << key << ", Value: " << value << std::endl;
     }
   }
