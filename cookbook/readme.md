@@ -22,6 +22,7 @@
 - [TypedArray](./typedarray/README.md)
 - [override](./override/readme.md)
 - [on 与 off](./on_off/README.md)
+- [纯数据类型继承](./struct_extends/README.md)
 
 ## 附录
 

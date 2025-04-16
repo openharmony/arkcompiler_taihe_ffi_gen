@@ -254,7 +254,7 @@ function CreateBookstore(): Bookstore;
 function SayHello();
 ```
 
-**File: idl/ohos.book.store.taihe**
+**File: idl/ohos.book.store.ets**
 ```typescript
 export class Bookstore {
     // Taihe 内部使用两个指针管理 Native 对象。
