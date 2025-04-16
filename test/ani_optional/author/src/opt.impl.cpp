@@ -47,7 +47,10 @@ optional<string> sendReturnResult(::opt::ReturnResult const &result) {
 }
 }  // namespace
 
+// because these macros are auto-generate, lint will cause false positive.
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_showOptionalInt(showOptionalInt);
 TH_EXPORT_CPP_API_makeOptionalInt(makeOptionalInt);
 TH_EXPORT_CPP_API_makeOptionalArray(makeOptionalArray);
 TH_EXPORT_CPP_API_sendReturnResult(sendReturnResult);
+// NOLINTEND

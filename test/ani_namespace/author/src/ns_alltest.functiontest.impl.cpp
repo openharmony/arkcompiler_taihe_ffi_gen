@@ -1156,6 +1156,8 @@ get_interface_performance21() {
 
 }  // namespace
 
+// because these macros are auto-generate, lint will cause false positive.
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_BaseFunctionTest1(BaseFunctionTest1);
 TH_EXPORT_CPP_API_BaseFunctionTest2(BaseFunctionTest2);
 TH_EXPORT_CPP_API_BaseFunctionTest3(BaseFunctionTest3);
@@ -1227,3 +1229,4 @@ TH_EXPORT_CPP_API_get_interface_performance20(get_interface_performance20);
 TH_EXPORT_CPP_API_get_interface_performance21(get_interface_performance21);
 TH_EXPORT_CPP_API_get_interface_IbaseInterface2(get_interface_IbaseInterface2);
 TH_EXPORT_CPP_API_get_interface_IbaseInterface3(get_interface_IbaseInterface3);
+// NOLINTEND

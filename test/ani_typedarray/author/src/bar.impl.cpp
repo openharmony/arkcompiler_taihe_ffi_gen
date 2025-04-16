@@ -111,6 +111,8 @@ array<double> newFloat64Array(int64_t n, double v) {
 }
 }  // namespace
 
+// because these macros are auto-generate, lint will cause false positive.
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_sumUint8Array(sumUint8Array);
 TH_EXPORT_CPP_API_newUint8Array(newUint8Array);
 TH_EXPORT_CPP_API_sumUint16Array(sumUint16Array);
@@ -131,3 +133,4 @@ TH_EXPORT_CPP_API_sumFloat32Array(sumFloat32Array);
 TH_EXPORT_CPP_API_newFloat32Array(newFloat32Array);
 TH_EXPORT_CPP_API_sumFloat64Array(sumFloat64Array);
 TH_EXPORT_CPP_API_newFloat64Array(newFloat64Array);
+// NOLINTEND

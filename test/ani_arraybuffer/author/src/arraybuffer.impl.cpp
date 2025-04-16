@@ -222,6 +222,8 @@ array<uint8_t> DoubleBufferToUint32Array(array_view<uint8_t> nums) {
 }
 }  // namespace
 
+// because these macros are auto-generate, lint will cause false positive.
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_SumArrayU8(SumArrayU8);
 TH_EXPORT_CPP_API_GetArrayBuffer(GetArrayBuffer);
 TH_EXPORT_CPP_API_DoubleArrayBuffer(DoubleArrayBuffer);
@@ -248,3 +250,4 @@ TH_EXPORT_CPP_API_DoubleBufferToInt16Array(DoubleBufferToInt16Array);
 TH_EXPORT_CPP_API_DoubleBufferToInt32Array(DoubleBufferToInt32Array);
 TH_EXPORT_CPP_API_DoubleBufferToUint16Array(DoubleBufferToUint16Array);
 TH_EXPORT_CPP_API_DoubleBufferToUint32Array(DoubleBufferToUint32Array);
+// NOLINTEND

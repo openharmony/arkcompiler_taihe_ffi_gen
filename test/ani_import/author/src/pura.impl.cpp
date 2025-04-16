@@ -22,6 +22,9 @@ void testMyStruct(::test::inner::MyStruct const &s) {
 }
 }  // namespace
 
+// because these macros are auto-generate, lint will cause false positive.
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_testBar(testBar);
 TH_EXPORT_CPP_API_testNova(testNova);
 TH_EXPORT_CPP_API_testMyStruct(testMyStruct);
+// NOLINTEND

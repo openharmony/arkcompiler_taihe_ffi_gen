@@ -188,6 +188,8 @@ string getSdkVersion(::huks::HuksOptions const &options) {
 }
 }  // namespace
 
+// because these macros are auto-generate, lint will cause false positive.
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_generateKey(generateKey);
 TH_EXPORT_CPP_API_generateKeyItem(generateKeyItem);
 TH_EXPORT_CPP_API_deleteKey(deleteKey);
@@ -214,3 +216,4 @@ TH_EXPORT_CPP_API_attestKeyItem(attestKeyItem);
 TH_EXPORT_CPP_API_anonAttestKeyItem(anonAttestKeyItem);
 TH_EXPORT_CPP_API_getSdkVersion(getSdkVersion);
 TH_EXPORT_CPP_API_listAliases(listAliases);
+// NOLINTEND

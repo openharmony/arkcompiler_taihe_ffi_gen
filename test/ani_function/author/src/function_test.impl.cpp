@@ -102,6 +102,8 @@ void setStaticProperty(int32_t a) {
 }
 }  // namespace
 
+// because these macros are auto-generate, lint will cause false positive.
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_static_func_add(static_func_add);
 TH_EXPORT_CPP_API_static_func_sub(static_func_sub);
 TH_EXPORT_CPP_API_getFooCls1(getFooCls1);
@@ -110,3 +112,4 @@ TH_EXPORT_CPP_API_makeFoo(makeFoo);
 
 TH_EXPORT_CPP_API_setStaticProperty(setStaticProperty);
 TH_EXPORT_CPP_API_getStaticProperty(getStaticProperty);
+// NOLINTEND

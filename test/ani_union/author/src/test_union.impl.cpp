@@ -399,6 +399,9 @@ string printUnion(::test_union::union_primitive const &data) {
 }
 }  // namespace
 
+// because these macros are auto-generate, lint will cause false positive.
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_printUnion(printUnion);
 TH_EXPORT_CPP_API_makeUnion(makeUnion);
 TH_EXPORT_CPP_API_get_interface(get_interface);
+// NOLINTEND

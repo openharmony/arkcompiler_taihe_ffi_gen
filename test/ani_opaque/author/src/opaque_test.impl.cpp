@@ -48,7 +48,10 @@ bool is_opaque(::opaque_test::Union const &s) {
 }
 }  // namespace
 
+// because these macros are auto-generate, lint will cause false positive.
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_is_string(is_string);
 TH_EXPORT_CPP_API_get_object(get_object);
 TH_EXPORT_CPP_API_get_objects(get_objects);
 TH_EXPORT_CPP_API_is_opaque(is_opaque);
+// NOLINTEND

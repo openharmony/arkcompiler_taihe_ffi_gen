@@ -29,8 +29,11 @@ void test_cb_struct(
   return;
 }
 
+// because these macros are auto-generate, lint will cause false positive.
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_test_cb_v(test_cb_v);
 TH_EXPORT_CPP_API_test_cb_i(test_cb_i);
 TH_EXPORT_CPP_API_test_cb_s(test_cb_s);
 TH_EXPORT_CPP_API_test_cb_rs(test_cb_rs);
 TH_EXPORT_CPP_API_test_cb_struct(test_cb_struct);
+// NOLINTEND

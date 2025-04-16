@@ -106,6 +106,8 @@ void callBar(array_view<Foo> arr) {
 }
 }  // namespace
 
+// because these macros are auto-generate, lint will cause false positive.
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_makeData(makeData);
 TH_EXPORT_CPP_API_showData(showData);
 TH_EXPORT_CPP_API_makeUnion(makeUnion);
@@ -116,3 +118,4 @@ TH_EXPORT_CPP_API_showArrayInt(showArrayInt);
 TH_EXPORT_CPP_API_makeArrayInt(makeArrayInt);
 TH_EXPORT_CPP_API_makeFoo(makeFoo);
 TH_EXPORT_CPP_API_callBar(callBar);
+// NOLINTEND

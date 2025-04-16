@@ -825,6 +825,8 @@ bool TestBaseBoolFunc6() {
 
 }  // namespace
 
+// because these macros are auto-generate, lint will cause false positive.
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_Multiply(Multiply);
 TH_EXPORT_CPP_API_BaseCFunc(BaseCFunc);
 TH_EXPORT_CPP_API_BaseAFunc(BaseAFunc);
@@ -861,3 +863,4 @@ TH_EXPORT_CPP_API_get_interface(get_interface);
 TH_EXPORT_CPP_API_get_interface_bool(get_interface_bool);
 TH_EXPORT_CPP_API_TestBaseBoolFunc6(TestBaseBoolFunc6);
 TH_EXPORT_CPP_API_get_interface_interger(get_interface_interger);
+// NOLINTEND

@@ -479,6 +479,8 @@ map<string, int8_t> PrintTestInterfaceRecord(
 
 }  // namespace
 
+// because these macros are auto-generate, lint will cause false positive.
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_Primitives_noreturn(Primitives_noreturn);
 TH_EXPORT_CPP_API_Primitives_return(Primitives_return);
 TH_EXPORT_CPP_API_Containers_noreturn(Containers_noreturn);
@@ -504,3 +506,4 @@ TH_EXPORT_CPP_API_get_interface_20(get_interface_20);
 TH_EXPORT_CPP_API_get_interface_A(get_interface_A);
 TH_EXPORT_CPP_API_get_interface_B(get_interface_B);
 TH_EXPORT_CPP_API_get_interface_C(get_interface_C);
+// NOLINTEND

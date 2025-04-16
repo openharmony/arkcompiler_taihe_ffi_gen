@@ -604,6 +604,8 @@ map<string, map<string, string>> Mapfunc51(
 
 }  // namespace
 
+// because these macros are auto-generate, lint will cause false positive.
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_MakeCpu(MakeCpu);
 TH_EXPORT_CPP_API_GetCpuSize(GetCpuSize);
 TH_EXPORT_CPP_API_GetASize(GetASize);
@@ -665,3 +667,4 @@ TH_EXPORT_CPP_API_Mapfunc48(Mapfunc48);
 TH_EXPORT_CPP_API_Mapfunc49(Mapfunc49);
 TH_EXPORT_CPP_API_Mapfunc50(Mapfunc50);
 TH_EXPORT_CPP_API_Mapfunc51(Mapfunc51);
+// NOLINTEND

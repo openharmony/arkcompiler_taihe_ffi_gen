@@ -22,4 +22,7 @@ array<uint64_t> processBigInt(array_view<uint64_t> a) {
 }
 }  // namespace
 
+// because these macros are auto-generate, lint will cause false positive.
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_processBigInt(processBigInt);
+// NOLINTEND
