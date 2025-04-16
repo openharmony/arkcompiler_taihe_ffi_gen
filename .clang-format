@@ -22,6 +22,9 @@ QualifierOrder: ["static", "constexpr", "inline", "type", "const"]
 AllowShortBlocksOnASingleLine: Empty
 AllowShortFunctionsOnASingleLine: Empty
 AllowShortLambdasOnASingleLine: Empty
+
+FixNamespaceComments: true
+ShortNamespaceLines: 0
 ---
 Language: JavaScript
 JavaScriptQuotes: Double
