@@ -62,7 +62,8 @@ void showOptionalInt(optional_view<int32_t> x) {
 
 optional<int32_t> makeOptionalInt(bool b) {
   if (b) {
-    return optional<int32_t>::make(10);
+    int32_t const optionalIntValue = 10;
+    return optional<int32_t>::make(optionalIntValue);
   } else {
     return optional<int32_t>(nullptr);
   }
