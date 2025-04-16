@@ -873,7 +873,8 @@ array<uint8_t> BaseFunctionTest28(array_view<uint8_t> param1) {
 map<string, int32_t> BaseFunctionTest29(map_view<string, int32_t> param1) {
   map<string, int32_t> m;
   for (std::size_t i = 0; i < param1.size(); ++i) {
-    m.emplace("test" + std::to_string(i), testInt_add10_ + static_cast<int32_t>(i));
+    m.emplace("test" + std::to_string(i),
+              testInt_add10_ + static_cast<int32_t>(i));
   }
   return m;
 }

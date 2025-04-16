@@ -49,7 +49,7 @@ string printMyUnion(::union_ani::MyUnion const &data) {
   return ::union_ani::MyUnion::make_innerValue(
       ::union_ani::InnerUnion::make_undefinedValue());
 }
-} // namespace
+}  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
 // NOLINTBEGIN

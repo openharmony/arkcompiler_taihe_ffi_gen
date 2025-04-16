@@ -43,7 +43,7 @@ void showEnumWeekday(::enum_test::Weekday day) {
   }
   std::cout << dayStr << std::endl;
 }
-} // namespace
+}  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
 // NOLINTBEGIN

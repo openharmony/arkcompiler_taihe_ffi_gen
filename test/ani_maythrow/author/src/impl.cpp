@@ -31,7 +31,7 @@ void noReturnBusinessError() {
   int errorcode = 5;
   taihe::set_business_error(errorcode, "error in noReturnBusinessError");
 }
-} // namespace
+}  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
 // NOLINTBEGIN

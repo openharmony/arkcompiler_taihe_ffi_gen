@@ -54,7 +54,7 @@ void fromStructSync_impl(::async_test::Data const &data) {
 void PrintSync() {
   std::cout << "print Sync" << std::endl;
 }
-} // namespace
+}  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
 // NOLINTBEGIN

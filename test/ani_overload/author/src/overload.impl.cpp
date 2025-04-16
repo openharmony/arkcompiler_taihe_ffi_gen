@@ -332,7 +332,7 @@ public:
     std::cout << "], p9 = " << p9 << std::endl;
   }
 
-// NOLINTEND(readability-function-size)
+  // NOLINTEND(readability-function-size)
 
   int32_t OverloadFuncPoint(array_view<int32_t> a) {
     std::cout << "OverloadFuncPoint: a = [";
@@ -389,5 +389,5 @@ public:
 
 // because these macros are auto-generate, lint will cause false positive.
 // NOLINTBEGIN
-TH_EXPORT_CPP_API_get_interface(get_interface)
+TH_EXPORT_CPP_API_get_interface(get_interface);
 // NOLINTEND

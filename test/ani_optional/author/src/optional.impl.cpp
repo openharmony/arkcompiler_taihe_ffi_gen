@@ -179,7 +179,7 @@ void printTestInterfaceArraybuffer(
 
 // because these macros are auto-generate, lint will cause false positive.
 // NOLINTBEGIN
-TH_EXPORT_CPP_API_get_interface(get_interface)
+TH_EXPORT_CPP_API_get_interface(get_interface);
 TH_EXPORT_CPP_API_printTestInterfaceName(printTestInterfaceName);
 TH_EXPORT_CPP_API_printTestInterfaceNumberi8(printTestInterfaceNumberi8);
 TH_EXPORT_CPP_API_printTestInterfaceNumberi16(printTestInterfaceNumberi16);

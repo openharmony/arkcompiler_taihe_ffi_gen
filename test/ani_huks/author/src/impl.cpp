@@ -19,7 +19,7 @@ std::string dataAsString(array_view<uint8_t> data) {
   }
   return res;
 }
-} // namespace
+}  // namespace
 
 namespace {
 ::huks::HuksResult generateKey(string_view keyAlias,
