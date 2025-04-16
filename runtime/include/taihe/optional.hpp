@@ -77,10 +77,10 @@ struct optional : public optional_view<cpp_owner_t> {
   }
 
   optional(optional_view<cpp_owner_t> const &other)
-      : optional(other.m_handle ? new cpp_owner_t(*other.m_handle) : nullptr) {}
+      : optional(other ? new cpp_owner_t(*other) : nullptr) {}
 
   optional(optional<cpp_owner_t> const &other)
-      : optional(other.m_handle ? new cpp_owner_t(*other.m_handle) : nullptr) {}
+      : optional(other ? new cpp_owner_t(*other) : nullptr) {}
 
   optional(optional<cpp_owner_t> &&other)
       : optional(std::exchange(other.m_handle, nullptr)) {}
