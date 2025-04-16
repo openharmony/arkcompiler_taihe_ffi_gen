@@ -178,6 +178,8 @@ public:
     return "func_union_mix";
   }
 
+  // This is corn case for function parameters, so skip lint error
+  // NOLINTNEXTLINE(readability-function-size)
   string func_union_mix_10param(::test_union::union_mix const &data1,
                                 ::test_union::union_mix const &data2,
                                 ::test_union::union_mix const &data3,
@@ -197,8 +199,7 @@ public:
     int8_t const i8_value = 1;
     if (kind == "s") {
       return ::test_union::union_primitive_2::make_sValue(s_value);
-    }
-    if (kind == "i8") {
+    } else {
       return ::test_union::union_primitive_2::make_i8Value(i8_value);
     }
   }
@@ -209,8 +210,7 @@ public:
     int16_t const i16_value = 12;
     if (kind == "i8") {
       return ::test_union::union_primitive_2_1::make_i8Value(i8_value);
-    }
-    if (kind == "i16") {
+    } else {
       return ::test_union::union_primitive_2_1::make_i16Value(i16_value);
     }
   }
@@ -221,8 +221,7 @@ public:
     int const i8_value_2 = 2;
     if (kind == "i8_1") {
       return ::test_union::union_primitive_2_2::make_i8Value(i8_value);
-    }
-    if (kind == "i8_2") {
+    } else {
       return ::test_union::union_primitive_2_2::make_i8Value2(i8_value_2);
     }
   }
@@ -233,8 +232,7 @@ public:
     int const i32_value = 123;
     if (kind == "i16") {
       return ::test_union::union_primitive_2_3::make_i16Value(i16_value);
-    }
-    if (kind == "i32") {
+    } else {
       return ::test_union::union_primitive_2_3::make_i32Value(i32_value);
     }
   }
@@ -245,8 +243,7 @@ public:
     float const f32_value = 1.1f;
     if (kind == "i32") {
       return ::test_union::union_primitive_2_4::make_i32Value(i32_value);
-    }
-    if (kind == "f32") {
+    } else {
       return ::test_union::union_primitive_2_4::make_f32Value(f32_value);
     }
   }
@@ -257,8 +254,7 @@ public:
     double const f64_value = 1.234;
     if (kind == "f32") {
       return ::test_union::union_primitive_2_5::make_f32Value(f32_value);
-    }
-    if (kind == "f64") {
+    } else {
       return ::test_union::union_primitive_2_5::make_f64Value(f64_value);
     }
   }
@@ -267,8 +263,7 @@ public:
       string_view kind) {
     if (kind == "s") {
       return ::test_union::union_primitive_2_6::make_sValue("hello");
-    }
-    if (kind == "b") {
+    } else {
       return ::test_union::union_primitive_2_6::make_bValue(true);
     }
   }
@@ -277,8 +272,7 @@ public:
       string_view kind) {
     if (kind == "b") {
       return ::test_union::union_primitive_2_7::make_bValue(true);
-    }
-    if (kind == "i8") {
+    } else {
       int8_t const i8_value = 1;
       return ::test_union::union_primitive_2_7::make_i8Value(i8_value);
     }
@@ -288,8 +282,7 @@ public:
       string_view kind) {
     if (kind == "b") {
       return ::test_union::union_primitive_2_8::make_bValue(true);
-    }
-    if (kind == "b1") {
+    } else {
       return ::test_union::union_primitive_2_8::make_b1Value(false);
     }
   }
@@ -298,8 +291,7 @@ public:
       string_view kind) {
     if (kind == "s") {
       return ::test_union::union_primitive_2_9::make_sValue("hello");
-    }
-    if (kind == "s1") {
+    } else {
       return ::test_union::union_primitive_2_9::make_s1Value("world");
     }
   }
@@ -318,8 +310,7 @@ public:
     if (kind == "c") {
       return ::test_union::union_mix_5::make_enumValue(
           (::test_union::Color::key_t)((int)(1)));
-    }
-    if (kind == "arr") {
+    } else {
       int const arr_size = 5;
       int const arr_num = 3;
       array<int32_t> result = array<int32_t>::make(arr_size);

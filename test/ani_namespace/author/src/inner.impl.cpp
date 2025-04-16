@@ -131,14 +131,18 @@ public:
   }
 
   array<uint8_t> getArraybuffer() {
-    array<uint8_t> result = array<uint8_t>::make(5);
-    std::fill(result.begin(), result.end(), 3);
+    int const len = 5;
+    int const member = 3;
+    array<uint8_t> result = array<uint8_t>::make(len);
+    std::fill(result.begin(), result.end(), member);
     return result;
   }
 
   array<int8_t> getArray() {
-    array<int8_t> result = array<int8_t>::make(5);
-    std::fill(result.begin(), result.end(), 3);
+    int const len = 5;
+    int const member = 3;
+    array<int8_t> result = array<int8_t>::make(len);
+    std::fill(result.begin(), result.end(), member);
     return result;
   }
 
@@ -148,9 +152,12 @@ public:
 
   map<string, int8_t> getrecord() {
     map<string, int8_t> m;
-    m.emplace("key1", static_cast<int8_t>(1));
-    m.emplace("key2", static_cast<int8_t>(2));
-    m.emplace("key3", static_cast<int8_t>(3));
+    int const key1num = 1;
+    int const key2num = 2;
+    int const key3num = 3;
+    m.emplace("key1", static_cast<int8_t>(key1num));
+    m.emplace("key2", static_cast<int8_t>(key2num));
+    m.emplace("key3", static_cast<int8_t>(key3num));
     return m;
   }
 

@@ -74,27 +74,33 @@ public:
   }
 
   taihe::optional<int8_t> geti8() {
-    return taihe::optional<int8_t>::make(1);
+    int8_t const geti8_value = 1;
+    return taihe::optional<int8_t>::make(geti8_value);
   }
 
   taihe::optional<int16_t> geti16() {
-    return taihe::optional<int16_t>::make(100);
+    int16_t const geti16_value = 100;
+    return taihe::optional<int16_t>::make(geti16_value);
   }
 
   taihe::optional<int32_t> geti32() {
-    return taihe::optional<int32_t>::make(1024);  // 默认返回0
+    int32_t const geti32_value = 1024;
+    return taihe::optional<int32_t>::make(geti32_value);  // 默认返回0
   }
 
   taihe::optional<int64_t> geti64() {
-    return taihe::optional<int64_t>::make(999999);  // 默认返回0
+    int64_t const geti64_value = 999999;
+    return taihe::optional<int64_t>::make(geti64_value);  // 默认返回0
   }
 
   taihe::optional<float> getf32() {
-    return taihe::optional<float>::make(0.0f);
+    float const getf32_value = 0.0f;
+    return taihe::optional<float>::make(getf32_value);
   }
 
   taihe::optional<double> getf64() {
-    return taihe::optional<double>::make(0.0);
+    double const getf64_value = 0.0;
+    return taihe::optional<double>::make(getf64_value);
   }
 
   taihe::optional<bool> getbool() {
@@ -102,8 +108,8 @@ public:
   }
 
   taihe::optional<array<uint8_t>> getArraybuffer() {
-    int arr_size = 10;
-    int arr_num = 6;
+    int const arr_size = 10;
+    int const arr_num = 6;
     return taihe::optional<array<uint8_t>>::make(
         array<uint8_t>::make(arr_size, arr_num));
   }

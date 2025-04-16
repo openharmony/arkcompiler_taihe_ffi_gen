@@ -21,12 +21,19 @@ void showData(Data const &s) {
 }
 
 Union makeUnion(int32_t v) {
+  int32_t const case1Key = 1;
+  int32_t const case2Key = 2;
+  int32_t const case3Key = 3;
+
+  int32_t const case1Value = 100;
+  float const case2Value = 0.5f;
+
   switch (v) {
-  case 1:
-    return Union::make_iValue(100);
-  case 2:
-    return Union::make_fValue(0.5);
-  case 3:
+  case case1Key:
+    return Union::make_iValue(case1Value);
+  case case2Key:
+    return Union::make_fValue(case2Value);
+  case case3Key:
     return Union::make_sValue("Hello from C++!");
   default:
     return Union::make_empty();

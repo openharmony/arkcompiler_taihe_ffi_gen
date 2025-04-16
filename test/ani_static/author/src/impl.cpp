@@ -4,6 +4,7 @@
 #include "staticTest.impl.hpp"
 #include "taihe/runtime.hpp"
 
+namespace {
 int32_t add_impl(int32_t a, int32_t b) {
   if (a == 0) {
     taihe::set_error("some error happen in add impl");
@@ -21,7 +22,7 @@ int32_t sum_impl(int32_t a, int32_t b) {
 struct AuthorIBase {
   taihe::string name;
 
-  AuthorIBase(taihe::string_view name) : name(name) {}
+  explicit AuthorIBase(taihe::string_view name) : name(name) {}
 
   AuthorIBase(taihe::string_view name, taihe::string_view t) : name(t) {}
 
@@ -71,6 +72,7 @@ int32_t static_func(int32_t a, int32_t b) {
 ::staticTest::ITest ctor_func() {
   return taihe::make_holder<ITest, ::staticTest::ITest>();
 }
+} // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
 // NOLINTBEGIN

@@ -72,7 +72,8 @@ public:
   }
 
   float BaseFunctionTest48(float param1) {
-    return param1 - 10;
+    int const baseFunctionTest48Value = 10;
+    return param1 - baseFunctionTest48Value;
   }
 
   double BaseFunctionTest49(double param1) {
@@ -93,7 +94,7 @@ public:
 
   array<uint8_t> BaseFunctionTest52(array_view<uint8_t> param1) {
     array<uint8_t> result = array<uint8_t>::make(param1.size());
-    for (int i = 0; i < param1.size(); i++) {
+    for (std::size_t i = 0; i < param1.size(); i++) {
       result[i] = param1[i] + testInt_add10_;
     }
     return result;
@@ -184,8 +185,10 @@ public:
 };
 
 class TestInterfacePerformance2 {
-  int testInt_add5_{5};
-  int testInt_add10_{10};
+  int const num1 = 5;
+  int const num2 = 10;
+  int testInt_add5_{num1};
+  int testInt_add10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -198,8 +201,10 @@ public:
 };
 
 class TestInterfacePerformance3 {
-  int testInt_add5_{5};
-  int testInt_add10_{10};
+  int const num1 = 5;
+  int const num2 = 10;
+  int testInt_add5_{num1};
+  int testInt_add10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -212,8 +217,10 @@ public:
 };
 
 class TestInterfacePerformance4 {
-  int testInt_add5_{5};
-  int testInt_add10_{10};
+  int const num1 = 5;
+  int const num2 = 10;
+  int testInt_add5_{num1};
+  int testInt_add10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -226,8 +233,10 @@ public:
 };
 
 class TestInterfacePerformance5 {
-  int testInt_add5_{5};
-  int testInt_add10_{10};
+  int const num1 = 5;
+  int const num2 = 10;
+  int testInt_add5_{num1};
+  int testInt_add10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -240,8 +249,10 @@ public:
 };
 
 class TestInterfacePerformance6 {
-  int testInt_add5_{5};
-  int testInt_add10_{10};
+  int const num1 = 5;
+  int const num2 = 10;
+  int testInt_add5_{num1};
+  int testInt_add10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -254,8 +265,10 @@ public:
 };
 
 class TestInterfacePerformance7 {
-  int testInt_add5_{5};
-  int testInt_add10_{10};
+  int const num1 = 5;
+  int const num2 = 10;
+  int testInt_add5_{num1};
+  int testInt_add10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -268,8 +281,10 @@ public:
 };
 
 class TestInterfacePerformance8 {
-  int testInt_add5_{5};
-  int testInt_add10_{10};
+  int const num1 = 5;
+  int const num2 = 10;
+  int testInt_add5_{num1};
+  int testInt_add10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -282,8 +297,10 @@ public:
 };
 
 class TestInterfacePerformance9 {
-  int testInt_add5_{5};
-  int testInt_add10_{10};
+  int const num1 = 5;
+  int const num2 = 10;
+  int testInt_add5_{num1};
+  int testInt_add10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -296,8 +313,10 @@ public:
 };
 
 class TestInterfacePerformance10 {
-  int testInt_add5_{5};
-  int testInt_add10_{10};
+  int const num1 = 5;
+  int const num2 = 10;
+  int testInt_add5_{num1};
+  int testInt_add10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -310,8 +329,10 @@ public:
 };
 
 class TestInterfacePerformance11 {
-  int testInt_add5_{5};
-  int testInt_add10_{10};
+  int const num1 = 5;
+  int const num2 = 10;
+  int testInt_add5_{num1};
+  int testInt_add10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -324,8 +345,10 @@ public:
 };
 
 class TestInterfacePerformance12 {
-  int testInt_add5_{5};
-  int testInt_add10_{10};
+  int const num1 = 5;
+  int const num2 = 10;
+  int testInt_add5_{num1};
+  int testInt_add10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -338,8 +361,10 @@ public:
 };
 
 class TestInterfacePerformance13 {
-  int testInt_add5_{5};
-  int testInt_add10_{10};
+  int const num1 = 5;
+  int const num2 = 10;
+  int testInt_add5_{num1};
+  int testInt_add10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -352,8 +377,10 @@ public:
 };
 
 class TestInterfacePerformance14 {
-  int testInt_add5_{5};
-  int testInt_add10_{10};
+  int const num1 = 5;
+  int const num2 = 10;
+  int testInt_add5_{num1};
+  int testInt_add10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -366,8 +393,10 @@ public:
 };
 
 class TestInterfacePerformance15 {
-  int testInt_add5_{5};
-  int testInt_add10_{10};
+  int const num1 = 5;
+  int const num2 = 10;
+  int testInt_add5_{num1};
+  int testInt_add10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -380,8 +409,10 @@ public:
 };
 
 class TestInterfacePerformance16 {
-  int testInt_add5_{5};
-  int testInt_add10_{10};
+  int const num1 = 5;
+  int const num2 = 10;
+  int testInt_add5_{num1};
+  int testInt_add10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -394,8 +425,10 @@ public:
 };
 
 class TestInterfacePerformance17 {
-  int testInt_add5_{5};
-  int testInt_add10_{10};
+  int const num1 = 5;
+  int const num2 = 10;
+  int testInt_add5_{num1};
+  int testInt_add10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -408,8 +441,10 @@ public:
 };
 
 class TestInterfacePerformance18 {
-  int testInt_add5_{5};
-  int testInt_add10_{10};
+  int const num1 = 5;
+  int const num2 = 10;
+  int testInt_add5_{num1};
+  int testInt_add10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -422,8 +457,10 @@ public:
 };
 
 class TestInterfacePerformance19 {
-  int testInt_add5_{5};
-  int testInt_add10_{10};
+  int const num1 = 5;
+  int const num2 = 10;
+  int testInt_add5_{num1};
+  int testInt_add10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -436,8 +473,10 @@ public:
 };
 
 class TestInterfacePerformance20 {
-  int testInt_add5_{5};
-  int testInt_add10_{10};
+  int const num1 = 5;
+  int const num2 = 10;
+  int testInt_add5_{num1};
+  int testInt_add10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -491,11 +530,13 @@ public:
   }
 
   float getf32_test_attribute() {
-    return 3.14;
+    float const getf32TestAttributeRes = 3.14;
+    return getf32TestAttributeRes;
   }
 
   double getf64_test_attribute() {
-    return -1.23;
+    double const getf64TestAttributeRes = -1.23;
+    return getf64TestAttributeRes;
   }
 
   string getStr_test_attribute() {
@@ -528,13 +569,15 @@ public:
         .data2 = true,
         .data3 = 100,
     };
-    result.emplace(100, p1);
+    int32_t const getRecordTestAttributeKey1 = 100;
+    result.emplace(getRecordTestAttributeKey1, p1);
     ::ns_alltest::functiontest::Data p2{
         .data1 = "two",
         .data2 = false,
         .data3 = 101,
     };
-    result.emplace(101, p2);
+    int32_t const getRecordTestAttributeKey2 = 101;
+    result.emplace(getRecordTestAttributeKey2, p2);
     return result;
   }
 
@@ -598,8 +641,8 @@ void BaseFunctionTest1() {
 }
 
 void BaseFunctionTest2(int8_t param1) {
-  std::cout << "NameSpaceImpl: " << __func__ << " param1 " << (int)param1
-            << std::endl;
+  std::cout << "NameSpaceImpl: " << __func__ << " param1 "
+            << static_cast<int>(param1) << std::endl;
 }
 
 void BaseFunctionTest3(int16_t param1) {
@@ -641,7 +684,7 @@ void BaseFunctionTest10(array_view<int8_t> param1) {
   // 输出 param1 的内容
   std::cout << "NameSpaceImpl: " << __func__ << " param1 ";
   for (int8_t value : param1) {
-    std::cout << (int)value << " ";
+    std::cout << static_cast<int>(value) << " ";
   }
   std::cout << std::endl;
 }
@@ -743,7 +786,8 @@ float BaseFunctionTest20(float param1) {
 }
 
 double BaseFunctionTest21(double param1) {
-  return param1 + 1.01;
+  double const baseFunctionTest21Value = 1.01;
+  return param1 + baseFunctionTest21Value;
 }
 
 string BaseFunctionTest22(string_view param1) {
@@ -764,7 +808,7 @@ bool BaseFunctionTest23(bool param1) {
 
 array<int8_t> BaseFunctionTest24(array_view<int8_t> param1) {
   array<int8_t> result = array<int8_t>::make(param1.size());
-  for (int i = 0; i < param1.size(); i++) {
+  for (std::size_t i = 0; i < param1.size(); i++) {
     result[i] = param1[i] * testInter_;
   }
   return result;
@@ -772,7 +816,7 @@ array<int8_t> BaseFunctionTest24(array_view<int8_t> param1) {
 
 array<int16_t> BaseFunctionTest25(array_view<int16_t> param1) {
   array<int16_t> result = array<int16_t>::make(param1.size());
-  for (int i = 0; i < param1.size(); i++) {
+  for (std::size_t i = 0; i < param1.size(); i++) {
     result[i] = param1[i] + testInter_;
   }
   return result;
@@ -818,7 +862,7 @@ optional<int64_t> BaseFunctionTest27(optional_view<int64_t> param1) {
 
 array<uint8_t> BaseFunctionTest28(array_view<uint8_t> param1) {
   array<uint8_t> result = array<uint8_t>::make(param1.size());
-  for (int i = 0; i < param1.size(); i++) {
+  for (std::size_t i = 0; i < param1.size(); i++) {
     result[i] = param1[i] * testInt_add10_;
   }
   return result;
@@ -826,7 +870,7 @@ array<uint8_t> BaseFunctionTest28(array_view<uint8_t> param1) {
 
 map<string, int32_t> BaseFunctionTest29(map_view<string, int32_t> param1) {
   map<string, int32_t> m;
-  for (int i = 0; i < param1.size(); ++i) {
+  for (std::size_t i = 0; i < param1.size(); ++i) {
     m.emplace("test" + std::to_string(i), testInt_add10_ + i);
   }
   return m;
@@ -884,13 +928,13 @@ array<int32_t> BaseFunctionTest36(int8_t param1, int16_t param2, bool param8,
                                   array_view<int64_t> param10) {
   if (param8) {
     array<int32_t> result = array<int32_t>::make(param9.size());
-    for (int i = 0; i < param9.size(); i++) {
+    for (std::size_t i = 0; i < param9.size(); i++) {
       result[i] = param9[i] + param1 + param2;
     }
     return result;
   } else {
     array<int32_t> result = array<int32_t>::make(param10.size());
-    for (int i = 0; i < param10.size(); i++) {
+    for (std::size_t i = 0; i < param10.size(); i++) {
       result[i] = static_cast<int32_t>(param10[i]);
     }
     return result;
@@ -901,13 +945,13 @@ array<int64_t> BaseFunctionTest37(int8_t param1, int16_t param2, int32_t param3,
                                   bool param8, array_view<int64_t> param10) {
   if (param8) {
     array<int64_t> result = array<int64_t>::make(param10.size());
-    for (int i = 0; i < param10.size(); i++) {
+    for (std::size_t i = 0; i < param10.size(); i++) {
       result[i] = param10[i] + param1 + param2 + param3;
     }
     return result;
   } else {
     array<int64_t> result = array<int64_t>::make(param10.size());
-    for (int i = 0; i < param10.size(); i++) {
+    for (std::size_t i = 0; i < param10.size(); i++) {
       result[i] = param10[i] * testInt_add10_;
     }
     return result;
@@ -939,13 +983,13 @@ array<int8_t> BaseFunctionTest40(double param6, string_view param7, bool param8,
                                  array_view<uint8_t> param10) {
   if (param8) {
     array<int8_t> result = array<int8_t>::make(param9.size());
-    for (int i = 0; i < param9.size(); i++) {
+    for (std::size_t i = 0; i < param9.size(); i++) {
       result[i] = param9[i] * testInter_;
     }
     return result;
   } else {
     array<int8_t> result = array<int8_t>::make(param9.size());
-    for (int i = 0; i < param9.size(); i++) {
+    for (std::size_t i = 0; i < param9.size(); i++) {
       result[i] = param9[i] + testInt_add10_;
     }
     return result;

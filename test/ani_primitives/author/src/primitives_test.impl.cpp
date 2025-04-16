@@ -140,8 +140,10 @@ public:
   }
 
   void TestBaseFunc16(int8_t option1, int16_t option2) {
-    std::cout << "TestBaseFunc16 is option1  " << (int)option1 << std::endl;
-    std::cout << "TestBaseFunc16 is option2  " << (int)option2 << std::endl;
+    std::cout << "TestBaseFunc16 is option1  " << static_cast<int>(option1)
+              << std::endl;
+    std::cout << "TestBaseFunc16 is option2  " << static_cast<int>(option2)
+              << std::endl;
   }
 
   void TestBaseFunc17(array_view<int32_t> option1, array_view<int8_t> option2) {
@@ -300,8 +302,8 @@ public:
   }
 
   void TestBaseIntegerFunc3(int8_t option1, int16_t option2) {
-    std::cout << "TestBaseIntegerFunc3 is option1  " << (int)option1
-              << std::endl;
+    std::cout << "TestBaseIntegerFunc3 is option1  "
+              << static_cast<int>(option1) << std::endl;
     std::cout << "TestBaseIntegerFunc3 is option2  " << option2 << std::endl;
   }
 
@@ -323,8 +325,8 @@ public:
           "out of range The i32 maximum value is 2147483647 and minnum values "
           "is -2147483648");
     }
-    std::cout << "TestBaseIntegerFunc7 is option1  " << (int)option1
-              << std::endl;
+    std::cout << "TestBaseIntegerFunc7 is option1  "
+              << static_cast<int>(option1) << std::endl;
     std::cout << "TestBaseIntegerFunc7 is option2  " << option2 << std::endl;
   }
 
@@ -558,11 +560,13 @@ public:
   }
 
   float getf32testattribute() {
-    return 3.14;
+    float const getf32TestAttributeValue = 3.14;
+    return getf32TestAttributeValue;
   }
 
   double getf64testattribute() {
-    return 123.45678;
+    double const getf64TestAttributeValue = 123.45678;
+    return getf64TestAttributeValue;
   }
 };
 

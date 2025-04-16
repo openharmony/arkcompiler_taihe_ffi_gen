@@ -4,6 +4,7 @@
 
 #include "taihe/runtime.hpp"
 
+namespace {
 int32_t add_impl(int32_t a, int32_t b) {
   if (a == 0) {
     taihe::set_error("some error happen in add impl");
@@ -53,6 +54,7 @@ void fromStructSync_impl(::async_test::Data const &data) {
 void PrintSync() {
   std::cout << "print Sync" << std::endl;
 }
+} // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
 // NOLINTBEGIN

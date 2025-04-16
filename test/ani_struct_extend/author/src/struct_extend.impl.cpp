@@ -17,7 +17,7 @@ using namespace taihe;
 namespace {
 class Bar {
 public:
-  Bar(::struct_extend::E const &e) {
+  explicit Bar(::struct_extend::E const &e) {
     this->e_.d.param4 = e.d.param4;
     this->e_.param5 = e.param5;
   }
