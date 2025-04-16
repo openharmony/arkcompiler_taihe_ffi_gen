@@ -604,6 +604,41 @@ function main() {{
         with open(os.path.join(self.target_path, "compile_flags.txt"), "w") as f:
             f.write(compile_commands_content)
 
+    def upgrade_code(self, repo_url: str):
+        filename = repo_url.split("/")[-1]
+        version = repo_url.split("/")[-2]
+        extract_dir = self.config.base_dir.parent
+        target_file = extract_dir / filename
+        version_file = self.config.base_dir / "version.txt"
+        with open(version_file) as vf:
+            version_str = vf.read()
+            local_version = version_str.splitlines()[0].split(":")[-1].strip()
+        if local_version == version:
+            self.logger.info(f"Already at version {version}")
+            return
+
+        try:
+            self.download_file(target_file, repo_url)
+            temp_dir = extract_dir / "temp_upgrade"
+            if temp_dir.exists():
+                shutil.rmtree(temp_dir)
+            temp_dir.mkdir(parents=True)
+            self.extract_file(target_file, temp_dir)
+
+            extracted_subdir = temp_dir / "taihe"
+            current_subdir = self.config.base_dir
+            shutil.rmtree(current_subdir)
+            shutil.copytree(extracted_subdir, current_subdir) 
+
+            shutil.rmtree(temp_dir)
+            if target_file.exists():
+                target_file.unlink()
+
+            self.logger.info(f"Successfully upgraded code to version {version}")            
+        except Exception as e:
+            self.logger.error(f"Upgrade failed: {e}")
+            raise
+
     def run(self) -> None:
         """Run the complete build process."""
         try:
@@ -687,6 +722,11 @@ def main(config: Optional[BuildConfig] = None):
         help="Generate code only",
     )
     parser.add_argument(
+        "--upgrade",
+        type=str,
+        help="Update using the specified URL"
+    )
+    parser.add_argument(
         "--ani",
         "--generate-and-compile-ani",
         action="store_true",
@@ -741,6 +781,9 @@ def main(config: Optional[BuildConfig] = None):
             config=config or BuildConfig(),
             verbosity=verbosity,
         )
+        if args.upgrade:
+            builder.upgrade_code(args.upgrade)
+            return
         if args.create:
             builder.create_example()
             return
