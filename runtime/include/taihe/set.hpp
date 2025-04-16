@@ -19,11 +19,12 @@ struct set_view {
     if (cap == 0) {
       return;
     }
-    item_t** bucket = reinterpret_cast<item_t**>(calloc(cap, sizeof(item_t*)));
+    item_t **bucket =
+        reinterpret_cast<item_t **>(calloc(cap, sizeof(item_t *)));
     for (std::size_t i = 0; i < m_handle->cap; i++) {
-      item_t* current = m_handle->bucket[i];
+      item_t *current = m_handle->bucket[i];
       while (current) {
-        item_t* next = current->next;
+        item_t *next = current->next;
         std::size_t index = taihe::hash(current->key) % cap;
         current->next = bucket[index];
         bucket[index] = current;
@@ -46,7 +47,7 @@ struct set_view {
   void clear() const {
     for (std::size_t i = 0; i < m_handle->cap; i++) {
       while (m_handle->bucket[i]) {
-        item_t* next = m_handle->bucket[i]->next;
+        item_t *next = m_handle->bucket[i]->next;
         delete m_handle->bucket[i];
         m_handle->bucket[i] = next;
       }
@@ -56,14 +57,14 @@ struct set_view {
 
   bool emplace(as_param_t<K> key) const {
     std::size_t index = taihe::hash(key) % m_handle->cap;
-    item_t* current = m_handle->bucket[index];
+    item_t *current = m_handle->bucket[index];
     while (current) {
       if (taihe::same(current->key, key)) {
         return false;
       }
       current = current->next;
     }
-    item_t* item = new item_t{
+    item_t *item = new item_t{
         .key = key,
         .next = m_handle->bucket[index],
     };
@@ -78,7 +79,7 @@ struct set_view {
 
   bool find(as_param_t<K> key) const {
     std::size_t index = taihe::hash(key) % m_handle->cap;
-    item_t* current = m_handle->bucket[index];
+    item_t *current = m_handle->bucket[index];
     while (current) {
       if (taihe::same(current->key, key)) {
         return true;
@@ -90,10 +91,10 @@ struct set_view {
 
   bool erase(as_param_t<K> key) const {
     std::size_t index = taihe::hash(key) % m_handle->cap;
-    item_t** current_ptr = &m_handle->bucket[index];
+    item_t **current_ptr = &m_handle->bucket[index];
     while (*current_ptr) {
       if (taihe::same((*current_ptr)->key, key)) {
-        item_t* current = *current_ptr;
+        item_t *current = *current_ptr;
         *current_ptr = (*current_ptr)->next;
         delete current;
         m_handle->size--;
@@ -106,9 +107,9 @@ struct set_view {
   }
 
   template<typename Visitor>
-  void accept(Visitor&& visitor) {
+  void accept(Visitor &&visitor) {
     for (std::size_t i = 0; i < m_handle->cap; i++) {
-      item_t* current = m_handle->bucket[i];
+      item_t *current = m_handle->bucket[i];
       while (current) {
         visitor(current->key);
         current = current->next;
@@ -117,9 +118,9 @@ struct set_view {
   }
 
   template<typename Visitor>
-  void accept(Visitor&& visitor) const {
+  void accept(Visitor &&visitor) const {
     for (std::size_t i = 0; i < m_handle->cap; i++) {
-      item_t* current = m_handle->bucket[i];
+      item_t *current = m_handle->bucket[i];
       while (current) {
         visitor(current->key);
         current = current->next;
@@ -129,17 +130,17 @@ struct set_view {
 
   struct item_t {
     K key;
-    item_t* next;
+    item_t *next;
   };
 
   struct iterator {
     using iterator_category = std::forward_iterator_tag;
-    using value_type = K const&;
+    using value_type = K const &;
     using difference_type = std::ptrdiff_t;
-    using pointer = K const*;
-    using reference = K const&;
+    using pointer = K const *;
+    using reference = K const &;
 
-    iterator(item_t** bucket, item_t* current, std::size_t index,
+    iterator(item_t **bucket, item_t *current, std::size_t index,
              std::size_t cap)
         : bucket(bucket), current(current), index(index), cap(cap) {}
 
@@ -147,7 +148,7 @@ struct set_view {
       return current->key;
     }
 
-    iterator& operator++() {
+    iterator &operator++() {
       if (current->next) {
         current = current->next;
       } else {
@@ -166,17 +167,17 @@ struct set_view {
       return tmp;
     }
 
-    bool operator==(iterator const& other) const {
+    bool operator==(iterator const &other) const {
       return current == other.current;
     }
 
-    bool operator!=(iterator const& other) const {
+    bool operator!=(iterator const &other) const {
       return !(*this == other);
     }
 
   private:
-    item_t** bucket;
-    item_t* current;
+    item_t **bucket;
+    item_t *current;
     std::size_t index;
     std::size_t cap;
   };
@@ -207,11 +208,11 @@ private:
   struct data_t {
     TRefCount count;
     std::size_t cap;
-    item_t** bucket;
+    item_t **bucket;
     std::size_t size;
-  }* m_handle;
+  } *m_handle;
 
-  explicit set_view(data_t* handle) : m_handle(handle) {}
+  explicit set_view(data_t *handle) : m_handle(handle) {}
 
   friend struct set<K>;
 
@@ -226,31 +227,32 @@ struct set : set_view<K> {
   using set_view<K>::m_handle;
 
   explicit set(std::size_t cap = 16)
-      : set(reinterpret_cast<data_t*>(calloc(1, sizeof(data_t)))) {
-    item_t** bucket = reinterpret_cast<item_t**>(calloc(cap, sizeof(item_t*)));
+      : set(reinterpret_cast<data_t *>(calloc(1, sizeof(data_t)))) {
+    item_t **bucket =
+        reinterpret_cast<item_t **>(calloc(cap, sizeof(item_t *)));
     tref_set(&m_handle->count, 1);
     m_handle->cap = cap;
     m_handle->bucket = bucket;
     m_handle->size = 0;
   }
 
-  set(set<K>&& other) noexcept : set(other.m_handle) {
+  set(set<K> &&other) noexcept : set(other.m_handle) {
     other.m_handle = nullptr;
   }
 
-  set(set<K> const& other) : set(other.m_handle) {
+  set(set<K> const &other) : set(other.m_handle) {
     if (m_handle) {
       tref_inc(&m_handle->count);
     }
   }
 
-  set(set_view<K> const& other) : set(other.m_handle) {
+  set(set_view<K> const &other) : set(other.m_handle) {
     if (m_handle) {
       tref_inc(&m_handle->count);
     }
   }
 
-  set& operator=(set other) {
+  set &operator=(set other) {
     std::swap(this->m_handle, other.m_handle);
     return *this;
   }
@@ -264,7 +266,7 @@ struct set : set_view<K> {
   }
 
 private:
-  explicit set(data_t* handle) : set_view<K>(handle) {}
+  explicit set(data_t *handle) : set_view<K>(handle) {}
 };
 
 template<typename K>
@@ -279,12 +281,12 @@ inline std::size_t hash_impl(adl_helper_t, set_view<K> val) {
 
 template<typename K>
 struct as_abi<set<K>> {
-  using type = void*;
+  using type = void *;
 };
 
 template<typename K>
 struct as_abi<set_view<K>> {
-  using type = void*;
+  using type = void *;
 };
 
 template<typename K>

@@ -15,8 +15,8 @@ template<typename Return, typename... Params>
 struct callback_view<Return(Params...)> {
   struct callback_data_t {
     TRefCount m_count;
-    void (*m_free)(struct callback_data_t*);
-    as_abi_t<Return> (*m_func)(callback_data_t* data_ptr,
+    void (*m_free)(struct callback_data_t *);
+    as_abi_t<Return> (*m_func)(callback_data_t *data_ptr,
                                as_abi_t<Params>... params);
   };
 
@@ -24,43 +24,43 @@ struct callback_view<Return(Params...)> {
   struct callback_data_impl : callback_data_t {
     Impl impl;
 
-    static void c_free(callback_data_t* data_ptr) {
-      delete static_cast<callback_data_impl<Impl>*>(data_ptr);
+    static void c_free(callback_data_t *data_ptr) {
+      delete static_cast<callback_data_impl<Impl> *>(data_ptr);
     };
 
-    static as_abi_t<Return> c_call(callback_data_t* data_ptr,
+    static as_abi_t<Return> c_call(callback_data_t *data_ptr,
                                    as_abi_t<Params>... params) {
       if constexpr (std::is_void_v<Return>) {
-        return static_cast<callback_data_impl<Impl>*>(data_ptr)->impl(
+        return static_cast<callback_data_impl<Impl> *>(data_ptr)->impl(
             from_abi<Params>(params)...);
       } else {
         return into_abi<Return>(
-            static_cast<callback_data_impl<Impl>*>(data_ptr)->impl(
+            static_cast<callback_data_impl<Impl> *>(data_ptr)->impl(
                 from_abi<Params>(params)...));
       }
     };
 
     template<typename... Args>
-    callback_data_impl(Args&&... args) : impl(std::forward<Args>(args)...) {
+    callback_data_impl(Args &&...args) : impl(std::forward<Args>(args)...) {
       this->m_free = &c_free;
       this->m_func = &c_call;
       tref_set(&this->m_count, 1);
     }
   };
 
-  callback_data_t* data_ptr;
+  callback_data_t *data_ptr;
 
-  explicit callback_view(callback_data_t* data_ptr) : data_ptr(data_ptr) {}
+  explicit callback_view(callback_data_t *data_ptr) : data_ptr(data_ptr) {}
 
   template<typename Impl, typename... Args>
-  static callback<Return(Params...)> from(Args&&... args) {
+  static callback<Return(Params...)> from(Args &&...args) {
     return callback<Return(Params...)>{
         new callback_data_impl<Impl>(std::forward<Args>(args)...),
     };
   }
 
   template<typename Impl>
-  static callback<Return(Params...)> from(Impl&& impl) {
+  static callback<Return(Params...)> from(Impl &&impl) {
     return callback<Return(Params...)>{
         new callback_data_impl<Impl>(std::forward<Impl>(impl)),
     };
@@ -81,21 +81,21 @@ struct callback<Return(Params...)> : callback_view<Return(Params...)> {
   using typename callback_view<Return(Params...)>::callback_data_t;
   using callback_view<Return(Params...)>::data_ptr;
 
-  explicit callback(callback_data_t* data_ptr)
+  explicit callback(callback_data_t *data_ptr)
       : callback_view<Return(Params...)>(data_ptr) {}
 
-  callback(callback<Return(Params...)>&& other) : callback{other.data_ptr} {
+  callback(callback<Return(Params...)> &&other) : callback{other.data_ptr} {
     other.data_ptr = nullptr;
   }
 
-  callback(callback<Return(Params...)> const& other)
+  callback(callback<Return(Params...)> const &other)
       : callback{other.data_ptr} {
     if (data_ptr) {
       tref_inc(&data_ptr->m_count);
     }
   }
 
-  callback(callback_view<Return(Params...)> const& other)
+  callback(callback_view<Return(Params...)> const &other)
       : callback{other.data_ptr} {
     if (data_ptr) {
       tref_inc(&data_ptr->m_count);
@@ -108,7 +108,7 @@ struct callback<Return(Params...)> : callback_view<Return(Params...)> {
     }
   }
 
-  callback& operator=(callback other) {
+  callback &operator=(callback other) {
     std::swap(data_ptr, other.data_ptr);
     return *this;
   }
@@ -128,12 +128,12 @@ inline std::size_t hash_impl(adl_helper_t,
 
 template<typename Return, typename... Params>
 struct as_abi<callback_view<Return(Params...)>> {
-  using type = void*;
+  using type = void *;
 };
 
 template<typename Return, typename... Params>
 struct as_abi<callback<Return(Params...)>> {
-  using type = void*;
+  using type = void *;
 };
 
 template<typename Return, typename... Params>

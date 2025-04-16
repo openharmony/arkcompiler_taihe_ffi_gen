@@ -8,7 +8,7 @@
 using namespace taihe;
 using namespace ohos::xml;
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   if (argc != 2) {
     std::cerr << "Should have 1 argument!" << std::endl;
     return 1;

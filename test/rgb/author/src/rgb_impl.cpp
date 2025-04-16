@@ -39,14 +39,14 @@ class ColoredRectangle : public Rectangle {
 
 public:
   ColoredRectangle(string_view id, float h, float w,
-                   ColorOrRGBOrName const& color)
+                   ColorOrRGBOrName const &color)
       : Rectangle(id, h, w), myColor(color) {}
 
   ColorOrRGBOrName getColor() {
     return myColor;
   }
 
-  void setColor(ColorOrRGBOrName const& color) {
+  void setColor(ColorOrRGBOrName const &color) {
     myColor = color;
   }
 
@@ -74,7 +74,7 @@ IShape makeRectangleImpl(string_view id, float h, float w) {
 }
 
 IShowable makeColoredRectangleImpl(string_view id,
-                                   ColorOrRGBOrName const& color, float h,
+                                   ColorOrRGBOrName const &color, float h,
                                    float w) {
   return make_holder<ColoredRectangle, IShowable>(id, h, w, color);
 }
@@ -85,10 +85,10 @@ void copyColorImpl(weak::IColorable dst, weak::IColorable src) {
   dst->setColor(src->getColor());
 }
 
-string colorToStringImpl(ColorOrRGBOrName const& color) {
+string colorToStringImpl(ColorOrRGBOrName const &color) {
   static struct Visitor {
     string operator()(static_tag_t<ColorOrRGBOrName::tag_t::rgb>,
-                      const RGB& val) {
+                      const RGB &val) {
       std::ostringstream oss;
       oss << "#" << std::hex << std::setfill('0') << std::setw(2)
           << static_cast<int>(val.r) << std::setw(2) << static_cast<int>(val.g)
@@ -97,19 +97,19 @@ string colorToStringImpl(ColorOrRGBOrName const& color) {
     }
 
     string operator()(static_tag_t<ColorOrRGBOrName::tag_t::name>,
-                      string const& val) {
+                      string const &val) {
       std::ostringstream oss;
       oss << "Name: " << val.c_str();
       return oss.str();
     }
 
     string operator()(static_tag_t<ColorOrRGBOrName::tag_t::color>,
-                      Color const& val) {
+                      Color const &val) {
       return std::to_string(val.get_value());
     }
 
     string operator()(static_tag_t<ColorOrRGBOrName::tag_t::name>,
-                      Name const& val) {
+                      Name const &val) {
       return string(val);
     }
 

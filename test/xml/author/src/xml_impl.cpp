@@ -4,14 +4,14 @@
 using namespace taihe;
 using namespace ohos::xml;
 
-XmlPullParser makeXmlPullParserImpl(BufferType const& buffer,
+XmlPullParser makeXmlPullParserImpl(BufferType const &buffer,
                                     optional_view<string> encoding) {
   return make_holder<ExpatParser, XmlPullParser>(buffer, encoding);
 }
 
 TH_EXPORT_CPP_API_makeXmlPullParser(makeXmlPullParserImpl);
 
-XmlSerializer makeXmlSerializerImpl(BufferType const& buffer,
+XmlSerializer makeXmlSerializerImpl(BufferType const &buffer,
                                     optional_view<string> encoding) {
   throw;
 }

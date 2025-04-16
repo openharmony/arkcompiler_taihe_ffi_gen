@@ -4,5 +4,5 @@
 
 struct TArray {
   size_t m_size;
-  void* m_data;
+  void *m_data;
 };

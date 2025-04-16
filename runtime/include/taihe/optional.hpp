@@ -19,7 +19,7 @@ struct optional;
 
 template<typename cpp_owner_t>
 struct optional_view {
-  optional_view(cpp_owner_t* handle) noexcept
+  optional_view(cpp_owner_t *handle) noexcept
       : m_handle(handle) {}  // main constructor
 
   optional_view() noexcept : optional_view(nullptr) {}
@@ -34,19 +34,19 @@ struct optional_view {
     return m_handle;
   }
 
-  cpp_owner_t const* operator->() const {
+  cpp_owner_t const *operator->() const {
     return m_handle;
   }
 
-  cpp_owner_t const& operator*() const {
+  cpp_owner_t const &operator*() const {
     return *m_handle;
   }
 
-  cpp_owner_t const& value() const {
+  cpp_owner_t const &value() const {
     return *m_handle;
   }
 
-  cpp_owner_t value_or(cpp_owner_t&& default_value) const {
+  cpp_owner_t value_or(cpp_owner_t &&default_value) const {
     if (m_handle) {
       return *m_handle;
     } else {
@@ -55,12 +55,12 @@ struct optional_view {
   }
 
 protected:
-  cpp_owner_t* m_handle;
+  cpp_owner_t *m_handle;
 };
 
 template<typename cpp_owner_t>
 struct optional : public optional_view<cpp_owner_t> {
-  explicit optional(cpp_owner_t* handle) noexcept
+  explicit optional(cpp_owner_t *handle) noexcept
       : optional_view<cpp_owner_t>(handle) {}  // main constructor
 
   optional() noexcept : optional(nullptr) {}
@@ -68,24 +68,24 @@ struct optional : public optional_view<cpp_owner_t> {
   optional(std::nullopt_t) : optional(nullptr) {}
 
   template<typename... Args>
-  optional(std::in_place_t, Args&&... args)
+  optional(std::in_place_t, Args &&...args)
       : optional(new cpp_owner_t(std::forward<Args>(args)...)) {}
 
   template<typename... Args>
-  static optional make(Args&&... args) {
+  static optional make(Args &&...args) {
     return optional(std::in_place_t{}, std::forward<Args>(args)...);
   }
 
-  optional(optional_view<cpp_owner_t> const& other)
+  optional(optional_view<cpp_owner_t> const &other)
       : optional(new cpp_owner_t(*other)) {}
 
-  optional(optional<cpp_owner_t> const& other)
+  optional(optional<cpp_owner_t> const &other)
       : optional(new cpp_owner_t(*other)) {}
 
-  optional(optional<cpp_owner_t>&& other)
+  optional(optional<cpp_owner_t> &&other)
       : optional(std::exchange(other.m_handle, nullptr)) {}
 
-  optional& operator=(optional other) {
+  optional &operator=(optional other) {
     std::swap(this->m_handle, other.m_handle);
     return *this;
   }

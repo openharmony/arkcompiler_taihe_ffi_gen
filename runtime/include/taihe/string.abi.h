@@ -16,7 +16,7 @@ enum TStringFlags {
 struct TString {
   uint32_t flags;
   uint32_t length;
-  char const* ptr;  // always valid and non-null
+  char const *ptr;  // always valid and non-null
 };
 
 struct TStringData {
@@ -29,7 +29,7 @@ struct TStringData {
 //////////////////
 
 // Returns the buffer of the TString.
-TH_INLINE const char* tstr_buf(struct TString tstr) {
+TH_INLINE const char *tstr_buf(struct TString tstr) {
   return tstr.ptr;
 }
 
@@ -50,7 +50,7 @@ TH_INLINE size_t tstr_len(struct TString tstr) {
 // # Notes
 // - The caller is responsible for setting the string length.
 // - Reference count is set to 1 after called.
-TH_EXPORT char* tstr_initialize(struct TString* tstr_ptr, uint32_t capacity);
+TH_EXPORT char *tstr_initialize(struct TString *tstr_ptr, uint32_t capacity);
 
 // Creates a new heap-allocated TString by copying an existing string.
 //
@@ -63,7 +63,7 @@ TH_EXPORT char* tstr_initialize(struct TString* tstr_ptr, uint32_t capacity);
 //
 // # Notes
 // - The returned TString must be freed using `tstr_drop`.
-TH_EXPORT struct TString tstr_new(char const* buf TH_NONNULL, size_t len);
+TH_EXPORT struct TString tstr_new(char const *buf TH_NONNULL, size_t len);
 
 // Creates a TString from an existing string.
 //
@@ -80,7 +80,7 @@ TH_EXPORT struct TString tstr_new(char const* buf TH_NONNULL, size_t len);
 // - `NULL`, if the string is not null-terminated, or the length is too large.
 //    In this case, the original `tstr` is still uninitialized and should not be
 //    used.
-TH_EXPORT struct TString tstr_new_ref(char const* buf TH_NONNULL, size_t len);
+TH_EXPORT struct TString tstr_new_ref(char const *buf TH_NONNULL, size_t len);
 
 // Frees a TString, releasing allocated memory if applicable.
 //
