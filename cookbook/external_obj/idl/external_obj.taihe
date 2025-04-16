@@ -3,4 +3,4 @@
 function is_string(s: Opaque): bool;
 function get_objects(): Array<Opaque>;
 
-function processPerson(person: @sts_type("Person", "Lother/subsystem/Person;") Opaque): void;
+function processPerson(person: @sts_type("Person") Opaque): void;

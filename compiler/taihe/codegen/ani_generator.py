@@ -1179,13 +1179,12 @@ class OpaqueTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[OpaqueType]):
         self.ani_type = ANI_OBJECT
         if (
             sts_type_attr := self.t.ty_ref.get_last_attr("sts_type")
-        ) and check_attr_args(self.am, sts_type_attr, "ss"):
-            (sts_type, type_desc) = sts_type_attr.args
+        ) and check_attr_args(self.am, sts_type_attr, "s"):
+            (sts_type,) = sts_type_attr.args
             self.sts_type = sts_type
-            self.type_desc = type_desc
         else:
             self.sts_type = "Object"
-            self.type_desc = "Lstd/core/Object;"
+        self.type_desc = "Lstd/core/Object;"
 
     def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
         return self.sts_type

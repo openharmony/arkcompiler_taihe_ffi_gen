@@ -19,7 +19,7 @@ struct SFoo {
     a: @bigint Array<f32>; // Error: Array<f32> cannot be @bigint
     b: @typedarray Array<String>; // Error: Array<String> cannot be @typedarray
     c: @arraybuffer Array<u64>; // Error: Array<u64> cannot be @arraybuffer
-    d: @sts_type("Type") Opaque; // Error: @sts_type expects 2 arguments (sts type and sts descriptor)
+    d: @sts_type("Type", "xxx") Opaque; // Error: @sts_type expects 1 argument
 }
 
 @class
