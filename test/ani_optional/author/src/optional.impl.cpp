@@ -74,33 +74,33 @@ public:
   }
 
   taihe::optional<int8_t> geti8() {
-    int8_t const geti8_value = 1;
-    return taihe::optional<int8_t>::make(geti8_value);
+    int8_t const geti8Value = 1;
+    return taihe::optional<int8_t>::make(geti8Value);
   }
 
   taihe::optional<int16_t> geti16() {
-    int16_t const geti16_value = 100;
-    return taihe::optional<int16_t>::make(geti16_value);
+    int16_t const geti16Value = 100;
+    return taihe::optional<int16_t>::make(geti16Value);
   }
 
   taihe::optional<int32_t> geti32() {
-    int32_t const geti32_value = 1024;
-    return taihe::optional<int32_t>::make(geti32_value);  // 默认返回0
+    int32_t const geti32Value = 1024;
+    return taihe::optional<int32_t>::make(geti32Value);  // 默认返回0
   }
 
   taihe::optional<int64_t> geti64() {
-    int64_t const geti64_value = 999999;
-    return taihe::optional<int64_t>::make(geti64_value);  // 默认返回0
+    int64_t const geti64Value = 999999;
+    return taihe::optional<int64_t>::make(geti64Value);  // 默认返回0
   }
 
   taihe::optional<float> getf32() {
-    float const getf32_value = 0.0f;
-    return taihe::optional<float>::make(getf32_value);
+    float const getf32Value = 0.0f;
+    return taihe::optional<float>::make(getf32Value);
   }
 
   taihe::optional<double> getf64() {
-    double const getf64_value = 0.0;
-    return taihe::optional<double>::make(getf64_value);
+    double const getf64Value = 0.0;
+    return taihe::optional<double>::make(getf64Value);
   }
 
   taihe::optional<bool> getbool() {
@@ -119,11 +119,6 @@ public:
   return make_holder<ExampleInterface, ::optional::ExampleInterface>();
 }
 
-// string printFooName(::optional::weak::ExampleInterface param) {
-//     auto name = foo->getName();
-//     std::cout << __func__ << ": " << name << std::endl;
-//     return name;
-// }
 void printTestInterfaceName(::optional::weak::ExampleInterface testiface) {
   auto res = testiface->getName();
   std::cout << __func__ << ": " << *res << std::endl;

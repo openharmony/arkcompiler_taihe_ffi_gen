@@ -15,9 +15,9 @@ using namespace taihe;
 namespace {
 int testEnum_{3};
 int testInter_{2};
-int testInt_add10_{10};
+int testIntAdd10_{10};
 int testInt_add100_{100};
-int testInt_add5_{5};
+int testIntAdd5_{5};
 
 class TestNameSpace {
   string testStr_{"testNameSpace"};
@@ -95,7 +95,7 @@ public:
   array<uint8_t> BaseFunctionTest52(array_view<uint8_t> param1) {
     array<uint8_t> result = array<uint8_t>::make(param1.size());
     for (std::size_t i = 0; i < param1.size(); i++) {
-      result[i] = param1[i] + testInt_add10_;
+      result[i] = param1[i] + testIntAdd10_;
     }
     return result;
   }
@@ -173,8 +173,8 @@ public:
 class TestInterfacePerformance1 {
   int const num1 = 5;
   int const num2 = 10;
-  int testInt_add5_{num1};
-  int testInt_add10_{num2};
+  int testIntAdd5_{num1};
+  int testIntAdd10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -182,15 +182,15 @@ public:
   }
 
   int8_t BasePerformanceFunctionTest2(int8_t param1) {
-    return (param1 + testInt_add5_) / testInt_add10_;
+    return (param1 + testIntAdd5_) / testIntAdd10_;
   }
 };
 
 class TestInterfacePerformance2 {
   int const num1 = 5;
   int const num2 = 10;
-  int testInt_add5_{num1};
-  int testInt_add10_{num2};
+  int testIntAdd5_{num1};
+  int testIntAdd10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -198,15 +198,15 @@ public:
   }
 
   int8_t BasePerformanceFunctionTest2(int8_t param1) {
-    return (param1 + testInt_add5_) / testInt_add10_;
+    return (param1 + testIntAdd5_) / testIntAdd10_;
   }
 };
 
 class TestInterfacePerformance3 {
   int const num1 = 5;
   int const num2 = 10;
-  int testInt_add5_{num1};
-  int testInt_add10_{num2};
+  int testIntAdd5_{num1};
+  int testIntAdd10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -214,15 +214,15 @@ public:
   }
 
   int8_t BasePerformanceFunctionTest2(int8_t param1) {
-    return (param1 + testInt_add5_) / testInt_add10_;
+    return (param1 + testIntAdd5_) / testIntAdd10_;
   }
 };
 
 class TestInterfacePerformance4 {
   int const num1 = 5;
   int const num2 = 10;
-  int testInt_add5_{num1};
-  int testInt_add10_{num2};
+  int testIntAdd5_{num1};
+  int testIntAdd10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -230,15 +230,15 @@ public:
   }
 
   int8_t BasePerformanceFunctionTest2(int8_t param1) {
-    return (param1 + testInt_add5_) / testInt_add10_;
+    return (param1 + testIntAdd5_) / testIntAdd10_;
   }
 };
 
 class TestInterfacePerformance5 {
   int const num1 = 5;
   int const num2 = 10;
-  int testInt_add5_{num1};
-  int testInt_add10_{num2};
+  int testIntAdd5_{num1};
+  int testIntAdd10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -246,15 +246,15 @@ public:
   }
 
   int8_t BasePerformanceFunctionTest2(int8_t param1) {
-    return (param1 + testInt_add5_) / testInt_add10_;
+    return (param1 + testIntAdd5_) / testIntAdd10_;
   }
 };
 
 class TestInterfacePerformance6 {
   int const num1 = 5;
   int const num2 = 10;
-  int testInt_add5_{num1};
-  int testInt_add10_{num2};
+  int testIntAdd5_{num1};
+  int testIntAdd10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -262,15 +262,15 @@ public:
   }
 
   int8_t BasePerformanceFunctionTest2(int8_t param1) {
-    return (param1 + testInt_add5_) / testInt_add10_;
+    return (param1 + testIntAdd5_) / testIntAdd10_;
   }
 };
 
 class TestInterfacePerformance7 {
   int const num1 = 5;
   int const num2 = 10;
-  int testInt_add5_{num1};
-  int testInt_add10_{num2};
+  int testIntAdd5_{num1};
+  int testIntAdd10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -278,15 +278,15 @@ public:
   }
 
   int8_t BasePerformanceFunctionTest2(int8_t param1) {
-    return (param1 + testInt_add5_) / testInt_add10_;
+    return (param1 + testIntAdd5_) / testIntAdd10_;
   }
 };
 
 class TestInterfacePerformance8 {
   int const num1 = 5;
   int const num2 = 10;
-  int testInt_add5_{num1};
-  int testInt_add10_{num2};
+  int testIntAdd5_{num1};
+  int testIntAdd10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -294,15 +294,15 @@ public:
   }
 
   int8_t BasePerformanceFunctionTest2(int8_t param1) {
-    return (param1 + testInt_add5_) / testInt_add10_;
+    return (param1 + testIntAdd5_) / testIntAdd10_;
   }
 };
 
 class TestInterfacePerformance9 {
   int const num1 = 5;
   int const num2 = 10;
-  int testInt_add5_{num1};
-  int testInt_add10_{num2};
+  int testIntAdd5_{num1};
+  int testIntAdd10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -310,15 +310,15 @@ public:
   }
 
   int8_t BasePerformanceFunctionTest2(int8_t param1) {
-    return (param1 + testInt_add5_) / testInt_add10_;
+    return (param1 + testIntAdd5_) / testIntAdd10_;
   }
 };
 
 class TestInterfacePerformance10 {
   int const num1 = 5;
   int const num2 = 10;
-  int testInt_add5_{num1};
-  int testInt_add10_{num2};
+  int testIntAdd5_{num1};
+  int testIntAdd10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -326,15 +326,15 @@ public:
   }
 
   int8_t BasePerformanceFunctionTest2(int8_t param1) {
-    return (param1 + testInt_add5_) / testInt_add10_;
+    return (param1 + testIntAdd5_) / testIntAdd10_;
   }
 };
 
 class TestInterfacePerformance11 {
   int const num1 = 5;
   int const num2 = 10;
-  int testInt_add5_{num1};
-  int testInt_add10_{num2};
+  int testIntAdd5_{num1};
+  int testIntAdd10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -342,15 +342,15 @@ public:
   }
 
   int8_t BasePerformanceFunctionTest2(int8_t param1) {
-    return (param1 + testInt_add5_) / testInt_add10_;
+    return (param1 + testIntAdd5_) / testIntAdd10_;
   }
 };
 
 class TestInterfacePerformance12 {
   int const num1 = 5;
   int const num2 = 10;
-  int testInt_add5_{num1};
-  int testInt_add10_{num2};
+  int testIntAdd5_{num1};
+  int testIntAdd10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -358,15 +358,15 @@ public:
   }
 
   int8_t BasePerformanceFunctionTest2(int8_t param1) {
-    return (param1 + testInt_add5_) / testInt_add10_;
+    return (param1 + testIntAdd5_) / testIntAdd10_;
   }
 };
 
 class TestInterfacePerformance13 {
   int const num1 = 5;
   int const num2 = 10;
-  int testInt_add5_{num1};
-  int testInt_add10_{num2};
+  int testIntAdd5_{num1};
+  int testIntAdd10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -374,15 +374,15 @@ public:
   }
 
   int8_t BasePerformanceFunctionTest2(int8_t param1) {
-    return (param1 + testInt_add5_) / testInt_add10_;
+    return (param1 + testIntAdd5_) / testIntAdd10_;
   }
 };
 
 class TestInterfacePerformance14 {
   int const num1 = 5;
   int const num2 = 10;
-  int testInt_add5_{num1};
-  int testInt_add10_{num2};
+  int testIntAdd5_{num1};
+  int testIntAdd10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -390,15 +390,15 @@ public:
   }
 
   int8_t BasePerformanceFunctionTest2(int8_t param1) {
-    return (param1 + testInt_add5_) / testInt_add10_;
+    return (param1 + testIntAdd5_) / testIntAdd10_;
   }
 };
 
 class TestInterfacePerformance15 {
   int const num1 = 5;
   int const num2 = 10;
-  int testInt_add5_{num1};
-  int testInt_add10_{num2};
+  int testIntAdd5_{num1};
+  int testIntAdd10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -406,15 +406,15 @@ public:
   }
 
   int8_t BasePerformanceFunctionTest2(int8_t param1) {
-    return (param1 + testInt_add5_) / testInt_add10_;
+    return (param1 + testIntAdd5_) / testIntAdd10_;
   }
 };
 
 class TestInterfacePerformance16 {
   int const num1 = 5;
   int const num2 = 10;
-  int testInt_add5_{num1};
-  int testInt_add10_{num2};
+  int testIntAdd5_{num1};
+  int testIntAdd10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -422,15 +422,15 @@ public:
   }
 
   int8_t BasePerformanceFunctionTest2(int8_t param1) {
-    return (param1 + testInt_add5_) / testInt_add10_;
+    return (param1 + testIntAdd5_) / testIntAdd10_;
   }
 };
 
 class TestInterfacePerformance17 {
   int const num1 = 5;
   int const num2 = 10;
-  int testInt_add5_{num1};
-  int testInt_add10_{num2};
+  int testIntAdd5_{num1};
+  int testIntAdd10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -438,15 +438,15 @@ public:
   }
 
   int8_t BasePerformanceFunctionTest2(int8_t param1) {
-    return (param1 + testInt_add5_) / testInt_add10_;
+    return (param1 + testIntAdd5_) / testIntAdd10_;
   }
 };
 
 class TestInterfacePerformance18 {
   int const num1 = 5;
   int const num2 = 10;
-  int testInt_add5_{num1};
-  int testInt_add10_{num2};
+  int testIntAdd5_{num1};
+  int testIntAdd10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -454,15 +454,15 @@ public:
   }
 
   int8_t BasePerformanceFunctionTest2(int8_t param1) {
-    return (param1 + testInt_add5_) / testInt_add10_;
+    return (param1 + testIntAdd5_) / testIntAdd10_;
   }
 };
 
 class TestInterfacePerformance19 {
   int const num1 = 5;
   int const num2 = 10;
-  int testInt_add5_{num1};
-  int testInt_add10_{num2};
+  int testIntAdd5_{num1};
+  int testIntAdd10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -470,15 +470,15 @@ public:
   }
 
   int8_t BasePerformanceFunctionTest2(int8_t param1) {
-    return (param1 + testInt_add5_) / testInt_add10_;
+    return (param1 + testIntAdd5_) / testIntAdd10_;
   }
 };
 
 class TestInterfacePerformance20 {
   int const num1 = 5;
   int const num2 = 10;
-  int testInt_add5_{num1};
-  int testInt_add10_{num2};
+  int testIntAdd5_{num1};
+  int testIntAdd10_{num2};
 
 public:
   void BasePerformanceFunctionTest1() {
@@ -486,7 +486,7 @@ public:
   }
 
   int8_t BasePerformanceFunctionTest2(int8_t param1) {
-    return (param1 + testInt_add5_) / testInt_add10_;
+    return (param1 + testIntAdd5_) / testIntAdd10_;
   }
 };
 
@@ -550,13 +550,13 @@ public:
   }
 
   array<uint8_t> get_ArrayBuffer_test_attribute() {
-    array<uint8_t> result = array<uint8_t>::make(testInt_add10_);
-    std::fill(result.begin(), result.end(), testInt_add10_);
+    array<uint8_t> result = array<uint8_t>::make(testIntAdd10_);
+    std::fill(result.begin(), result.end(), testIntAdd10_);
     return result;
   }
 
   optional<int32_t> getOptional_test_attribute() {
-    int32_t result = 1000 + testInt_add10_;
+    int32_t result = 1000 + testIntAdd10_;
     if (result > INT32_MAX || result < INT32_MIN) {
       taihe::set_error(
           "getOptional_test_attribute: result exceeds int32_t range");
@@ -741,7 +741,7 @@ void BaseFunctionTest15(map_view<string, int32_t> param1) {
 
 int8_t BaseFunctionTest16(int8_t param1) {
   // 检查结果是否超出 int8_t 的范围
-  int32_t result = param1 + testInt_add10_;
+  int32_t result = param1 + testIntAdd10_;
   if (result > INT8_MAX || result < INT8_MIN) {
     taihe::set_error("BaseFunctionTest16: result exceeds int8_t range");
   }
@@ -751,7 +751,7 @@ int8_t BaseFunctionTest16(int8_t param1) {
 
 int16_t BaseFunctionTest17(int16_t param1) {
   // 检查结果是否超出 int16_t 的范围
-  int32_t result = param1 * testInt_add10_;
+  int32_t result = param1 * testIntAdd10_;
   if (result > INT16_MAX || result < INT16_MIN) {
     taihe::set_error("BaseFunctionTest17: result exceeds int16_t range");
   }
@@ -773,7 +773,7 @@ int32_t BaseFunctionTest18(int32_t param1) {
 
 int64_t BaseFunctionTest19(int64_t param1) {
   // 检查结果是否超出 int64_t 的范围
-  int64_t result = param1 * testInt_add10_;
+  int64_t result = param1 * testIntAdd10_;
   std::cout << "NameSpaceImpl: " << __func__ << " result " << result
             << std::endl;
   if (result > INT64_MAX || result < INT64_MIN) {
@@ -829,7 +829,7 @@ optional<int16_t> BaseFunctionTest26(optional_view<int16_t> param1) {
     // 检查结果是否超出 int16_t 的范围
     std::cout << "NameSpaceImpl: " << __func__ << " param1 " << *param1
               << std::endl;
-    int32_t result = static_cast<int32_t>(*param1) + testInt_add10_;
+    int32_t result = static_cast<int32_t>(*param1) + testIntAdd10_;
     std::cout << "NameSpaceImpl: " << __func__ << " result " << result
               << std::endl;
     if (result > INT16_MAX || result < INT16_MIN) {
@@ -849,7 +849,7 @@ optional<int64_t> BaseFunctionTest27(optional_view<int64_t> param1) {
     // 检查结果是否超出 int64_t 的范围
     std::cout << "NameSpaceImpl: " << __func__ << " param1 " << *param1
               << std::endl;
-    int64_t result = *param1 + testInt_add10_;
+    int64_t result = *param1 + testIntAdd10_;
     if (result > INT64_MAX || result < INT64_MIN) {
       taihe::set_error("BaseFunctionTest27: result exceeds int16_t range");
     }
@@ -865,7 +865,7 @@ optional<int64_t> BaseFunctionTest27(optional_view<int64_t> param1) {
 array<uint8_t> BaseFunctionTest28(array_view<uint8_t> param1) {
   array<uint8_t> result = array<uint8_t>::make(param1.size());
   for (std::size_t i = 0; i < param1.size(); i++) {
-    result[i] = param1[i] * testInt_add10_;
+    result[i] = param1[i] * testIntAdd10_;
   }
   return result;
 }
@@ -874,7 +874,7 @@ map<string, int32_t> BaseFunctionTest29(map_view<string, int32_t> param1) {
   map<string, int32_t> m;
   for (std::size_t i = 0; i < param1.size(); ++i) {
     m.emplace("test" + std::to_string(i),
-              testInt_add10_ + static_cast<int32_t>(i));
+              testIntAdd10_ + static_cast<int32_t>(i));
   }
   return m;
 }
@@ -955,7 +955,7 @@ array<int64_t> BaseFunctionTest37(int8_t param1, int16_t param2, int32_t param3,
   } else {
     array<int64_t> result = array<int64_t>::make(param10.size());
     for (std::size_t i = 0; i < param10.size(); i++) {
-      result[i] = param10[i] * testInt_add10_;
+      result[i] = param10[i] * testIntAdd10_;
     }
     return result;
   }
@@ -993,7 +993,7 @@ array<int8_t> BaseFunctionTest40(double param6, string_view param7, bool param8,
   } else {
     array<int8_t> result = array<int8_t>::make(param9.size());
     for (std::size_t i = 0; i < param9.size(); i++) {
-      result[i] = param9[i] + testInt_add10_;
+      result[i] = param9[i] + testIntAdd10_;
     }
     return result;
   }
@@ -1022,7 +1022,7 @@ int32_t BaseFunctionTest42_int(int32_t param1, int16_t param2) {
 int32_t BaseFunctionTest42_container(optional_view<int32_t> param1,
                                      map_view<string, int32_t> param2) {
   if (param1) {
-    return *param1 + testInt_add10_;
+    return *param1 + testIntAdd10_;
   } else {
     std::cout << "NameSpaceImpl: " << __func__ << " param1 is null"
               << std::endl;
