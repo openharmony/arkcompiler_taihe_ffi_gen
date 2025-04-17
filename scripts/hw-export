@@ -207,7 +207,7 @@ def process_python_code(text: str) -> str:
         return f"{line}{indent}    ..."
 
     text = re.sub(
-        r"(\n\s*def\s+\w+\s*\(.*\)\s*->\s*\w+:\s*)\.\.\.",
+        r"(\s*def\s+\w+\s*\([^)]*\)\s*(?:->\s*(?:[^:\s]|\[[^\]]*\])+)?:\s*)\.\.\.",
         adjust_indent,
         text,
     )
@@ -243,6 +243,21 @@ def add_python_encoding_header(text: str) -> str:
         return "\n".join([lines[0]] + header + lines[1:]) + "\n"
     else:
         return "\n".join(header + lines) + "\n"
+
+
+def add_shebang(text: str) -> str:
+    lines = text.splitlines()
+    header = ["#!/bin/bash"]
+    if lines and lines[0].startswith("#!"):
+        return text
+    else:
+        return "\n".join(header + lines) + "\n"
+
+def add_python_nolint(text: str) -> str:
+    lines = text.splitlines()
+    nolint_header = ["# flake8: noqa", "# pylint: skip-file"]
+    return "\n".join(nolint_header + lines) + "\n"
+
 
 def is_text_file(file: Path):
     try:
@@ -320,9 +335,13 @@ def process_file(
     elif file.endswith((".taihe", ".cpp", ".c", ".hpp", ".h", ".ets", ".ts", ".g4")):
         text = add_c_style_copyright(text)
     else:
+        if file.endswith((".py")):
+            text = add_python_nolint(text)
         text = add_sh_style_copyright(text)
         if file.endswith((".py")):
             text = add_python_encoding_header(text)
+        elif file.endswith(("common_lib.sh")):
+            text = add_shebang(text)
 
     if file.endswith(".c"):
         text = format_code(text, clang_format_path, "text.c")
