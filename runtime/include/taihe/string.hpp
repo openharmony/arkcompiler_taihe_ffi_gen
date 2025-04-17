@@ -219,8 +219,8 @@ inline std::ostream &operator<<(std::ostream &os, string_view sv) {
 template<typename T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
 inline string to_string(T value) {
   char buffer[32];
-  std::to_chars_result result;
-  result = std::to_chars(std::begin(buffer), std::end(buffer), value);
+  std::to_chars_result result =
+      std::to_chars(std::begin(buffer), std::end(buffer), value);
   if (result.ec != std::errc{}) {
     TH_THROW(std::runtime_error, "Conversion to char failed");
   }
@@ -231,9 +231,8 @@ inline string to_string(T value) {
 template<typename T, std::enable_if_t<std::is_floating_point_v<T>, int> = 0>
 inline string to_string(T value) {
   char buffer[32];
-  std::to_chars_result result;
-  result = std::to_chars(std::begin(buffer), std::end(buffer), value,
-                         std::chars_format::general);
+  std::to_chars_result result = std::to_chars(
+      std::begin(buffer), std::end(buffer), value, std::chars_format::general);
   if (result.ec != std::errc{}) {
     TH_THROW(std::runtime_error, "Conversion to char failed");
   }

@@ -9,7 +9,7 @@
 
 #ifdef __cplusplus
 #ifdef __EXCEPTIONS
-#define TH_THROW(error_type, message) throw error_type(message);
+#define TH_THROW(error_type, message) throw error_type(message)
 #else
 #define TH_THROW(error_type, message)                                \
   do {                                                               \
