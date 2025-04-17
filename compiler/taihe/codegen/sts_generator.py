@@ -84,7 +84,7 @@ class STSCodeGenerator:
                 f"}}",
             )
         # TODO: BigInt
-        self.gen_bigint_util_func(target)
+        self.gen_utils(target)
 
     def stat_on_off_funcs(
         self,
@@ -259,8 +259,10 @@ class STSCodeGenerator:
             if return_ty_ref := func.return_ty_ref:
                 type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
                 sts_return_ty_name = type_ani_info.sts_type_in(pkg, target)
+                sts_resolved_ty_name = type_ani_info.sts_type_in(pkg, target)
             else:
                 sts_return_ty_name = "void"
+                sts_resolved_ty_name = "undefined"
             # real
             if (sts_func_name := func_ani_info.sts_func_name) is not None:
                 target.writeln(
@@ -270,16 +272,12 @@ class STSCodeGenerator:
                 )
                 # promise
                 if (sts_promise_name := func_ani_info.sts_promise_name) is not None:
-                    if return_ty_ref := func.return_ty_ref:
-                        resolve_args = f"ret as {sts_return_ty_name}"
-                    else:
-                        resolve_args = "undefined"
                     target.writeln(
                         f"export function {sts_promise_name}({sts_params_str}): Promise<{sts_return_ty_name}> {{",
                         f"    return new Promise<{sts_return_ty_name}>((resolve, reject): void => {{",
                         f"        taskpool.execute((): {sts_return_ty_name} => {{ return {sts_native_call}; }})",
                         f"        .then((ret: NullishType): void => {{",
-                        f"            resolve({resolve_args});",
+                        f"            resolve(ret as {sts_resolved_ty_name});",
                         f"        }})",
                         f"        .catch((ret: NullishType): void => {{",
                         f"            reject(ret as Error);",
@@ -289,21 +287,16 @@ class STSCodeGenerator:
                     )
                 # async
                 if (sts_async_name := func_ani_info.sts_async_name) is not None:
-                    if return_ty_ref := func.return_ty_ref:
-                        callback = f"callback: (err: Error, data?: {sts_return_ty_name}) => void"
-                        then_args = f"new Error(), ret as {sts_return_ty_name}"
-                    else:
-                        callback = "callback: (err: Error) => void"
-                        then_args = "new Error()"
-                    sts_params_with_cb_str = ", ".join([*sts_params, callback])
+                    callback_param = f"callback: __AsyncCallback<{sts_return_ty_name}>"
+                    sts_params_with_cb_str = ", ".join([*sts_params, callback_param])
                     target.writeln(
                         f"export function {sts_async_name}({sts_params_with_cb_str}): void {{",
                         f"    taskpool.execute((): {sts_return_ty_name} => {{ return {sts_native_call}; }})",
                         f"    .then((ret: NullishType): void => {{",
-                        f"        callback({then_args});",
+                        f"        callback(new Error(), ret as {sts_resolved_ty_name});",
                         f"    }})",
                         f"    .catch((ret: NullishType): void => {{",
-                        f"        callback(ret as Error);",
+                        f"        callback(ret as Error, undefined);",
                         f"    }});",
                         f"}}",
                     )
@@ -539,11 +532,8 @@ class STSCodeGenerator:
                     )
                 # async
                 if (sts_async_name := method_ani_info.sts_async_name) is not None:
-                    if return_ty_ref := method.return_ty_ref:
-                        callback = f"callback: (err: Error, data?: {sts_return_ty_name}) => void"
-                    else:
-                        callback = "callback: (err: Error) => void"
-                    sts_params_with_cb_str = ", ".join([*sts_params, callback])
+                    callback_param = f"callback: __AsyncCallback<{sts_return_ty_name}>"
+                    sts_params_with_cb_str = ", ".join([*sts_params, callback_param])
                     target.writeln(
                         f"{sts_async_name}({sts_params_with_cb_str}): void;",
                     )
@@ -702,8 +692,10 @@ class STSCodeGenerator:
             if return_ty_ref := func.return_ty_ref:
                 type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
                 sts_return_ty_name = type_ani_info.sts_type_in(pkg, target)
+                sts_resolved_ty_name = type_ani_info.sts_type_in(pkg, target)
             else:
                 sts_return_ty_name = "void"
+                sts_resolved_ty_name = "undefined"
             # real
             if (sts_func_name := func_ani_info.sts_func_name) is not None:
                 target.writeln(
@@ -713,16 +705,12 @@ class STSCodeGenerator:
                 )
                 # promise
                 if (sts_promise_name := func_ani_info.sts_promise_name) is not None:
-                    if return_ty_ref := func.return_ty_ref:
-                        resolve_args = f"ret as {sts_return_ty_name}"
-                    else:
-                        resolve_args = "undefined"
                     target.writeln(
                         f"static {sts_promise_name}({sts_params_str}): Promise<{sts_return_ty_name}> {{",
                         f"    return new Promise<{sts_return_ty_name}>((resolve, reject): void => {{",
                         f"        taskpool.execute((): {sts_return_ty_name} => {{ return {sts_native_call}; }})",
                         f"        .then((ret: NullishType): void => {{",
-                        f"            resolve({resolve_args});",
+                        f"            resolve(ret as {sts_resolved_ty_name});",
                         f"        }})",
                         f"        .catch((ret: NullishType): void => {{",
                         f"            reject(ret as Error);",
@@ -732,21 +720,16 @@ class STSCodeGenerator:
                     )
                 # async
                 if (sts_async_name := func_ani_info.sts_async_name) is not None:
-                    if return_ty_ref := func.return_ty_ref:
-                        callback = f"callback: (err: Error, data?: {sts_return_ty_name}) => void"
-                        then_args = f"new Error(), ret as {sts_return_ty_name}"
-                    else:
-                        callback = "callback: (err: Error) => void"
-                        then_args = "new Error()"
-                    sts_params_with_cb_str = ", ".join([*sts_params, callback])
+                    callback_param = f"callback: __AsyncCallback<{sts_return_ty_name}>"
+                    sts_params_with_cb_str = ", ".join([*sts_params, callback_param])
                     target.writeln(
                         f"static {sts_async_name}({sts_params_with_cb_str}): void {{",
                         f"    taskpool.execute((): {sts_return_ty_name} => {{ return {sts_native_call}; }})",
                         f"    .then((ret: NullishType): void => {{",
-                        f"        callback({then_args});",
+                        f"        callback(new Error(), ret as {sts_resolved_ty_name});",
                         f"    }})",
                         f"    .catch((ret: NullishType): void => {{",
-                        f"        callback(ret as Error);",
+                        f"        callback(ret as Error, undefined);",
                         f"    }});",
                         f"}}",
                     )
@@ -864,8 +847,10 @@ class STSCodeGenerator:
             if return_ty_ref := method.return_ty_ref:
                 type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
                 sts_return_ty_name = type_ani_info.sts_type_in(pkg, target)
+                sts_resolved_ty_name = type_ani_info.sts_type_in(pkg, target)
             else:
                 sts_return_ty_name = "void"
+                sts_resolved_ty_name = "undefined"
             # real
             if (sts_method_name := method_ani_info.sts_method_name) is not None:
                 target.writeln(
@@ -875,16 +860,12 @@ class STSCodeGenerator:
                 )
                 # promise
                 if (sts_promise_name := method_ani_info.sts_promise_name) is not None:
-                    if return_ty_ref := method.return_ty_ref:
-                        resolve_args = f"ret as {sts_return_ty_name}"
-                    else:
-                        resolve_args = "undefined"
                     target.writeln(
                         f"{sts_promise_name}({sts_params_str}): Promise<{sts_return_ty_name}> {{",
                         f"    return new Promise<{sts_return_ty_name}>((resolve, reject): void => {{",
                         f"        taskpool.execute((): {sts_return_ty_name} => {{ return {sts_native_call}; }})",
                         f"        .then((ret: NullishType): void => {{",
-                        f"            resolve({resolve_args});",
+                        f"            resolve(ret as {sts_resolved_ty_name});",
                         f"        }})",
                         f"        .catch((ret: NullishType): void => {{",
                         f"            reject(ret as Error);",
@@ -894,21 +875,16 @@ class STSCodeGenerator:
                     )
                 # async
                 if (sts_async_name := method_ani_info.sts_async_name) is not None:
-                    if return_ty_ref := method.return_ty_ref:
-                        callback = f"callback: (err: Error, data?: {sts_return_ty_name}) => void"
-                        then_args = f"new Error(), ret as {sts_return_ty_name}"
-                    else:
-                        callback = "callback: (err: Error) => void"
-                        then_args = "new Error()"
-                    sts_params_with_cb_str = ", ".join([*sts_params, callback])
+                    callback_param = f"callback: __AsyncCallback<{sts_return_ty_name}>"
+                    sts_params_with_cb_str = ", ".join([*sts_params, callback_param])
                     target.writeln(
                         f"{sts_async_name}({sts_params_with_cb_str}): void {{",
                         f"    taskpool.execute((): {sts_return_ty_name} => {{ return {sts_native_call}; }})",
                         f"    .then((ret: NullishType): void => {{",
-                        f"        callback({then_args});",
+                        f"        callback(new Error(), ret as {sts_resolved_ty_name});",
                         f"    }})",
                         f"    .catch((ret: NullishType): void => {{",
-                        f"        callback(ret as Error);",
+                        f"        callback(ret as Error, undefined);",
                         f"    }});",
                         f"}}",
                     )
@@ -927,10 +903,13 @@ class STSCodeGenerator:
                     f"}}",
                 )
 
-    def gen_bigint_util_func(
+    def gen_utils(
         self,
         target: STSOutputBuffer,
     ):
+        target.writeln(
+            "type __AsyncCallback<T> = (err: Error, result: T | undefined) => void;",
+        )
         target.writeln(
             "function __fromArrayBufferToBigInt(arr: ArrayBuffer): BigInt {",
             "    let res: BigInt = 0n;",
