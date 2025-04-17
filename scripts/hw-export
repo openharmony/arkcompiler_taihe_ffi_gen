@@ -166,11 +166,15 @@ def should_ignore(file: str) -> bool:
 
     if file.startswith(".githooks") or file.startswith(".github"):
         return True
-    
+
     if file.startswith(("cookbook/", "docs/")):
         return True
-    
-    if file.startswith("test/") and not file.startswith("test/ani_"):
+
+    if (
+        file.startswith("test/")
+        and not file.startswith("test/ani_")
+        and not file == "test/CMakeLists.txt"
+    ):
         return True
 
     return False
@@ -235,6 +239,80 @@ def is_text_file(file: Path):
         return False  # 不能作为UTF-8解码，可能是二进制文件
 
 
+def add_nolint_guards(text: str, filename: str) -> str:
+    # 只处理.hpp文件和common.h文件
+    if not (filename.endswith(".hpp") or filename.endswith("common.h")):
+        return text
+
+    lines = text.splitlines()
+    result_lines = []
+
+    # 找到第一个#define所在的行
+    define_line_index = -1
+    for i, line in enumerate(lines):
+        if line.strip().startswith("#define"):
+            define_line_index = i
+            break
+
+    if define_line_index == -1:
+        return text
+
+    # 找到最后一个#endif所在的行
+    endif_line_index = -1
+    for i in range(len(lines) - 1, -1, -1):
+        if lines[i].strip().startswith("#endif"):
+            endif_line_index = i
+            break
+
+    if endif_line_index == -1:
+        return text
+
+    # 构建结果
+    result_lines = (
+        lines[: define_line_index + 1]  # 包含#define
+        + ["// NOLINTBEGIN"]  # 在#define后添加NOLINTBEGIN
+        + lines[define_line_index + 1 : endif_line_index]
+        + ["// NOLINTEND"]  # 在#endif前添加NOLINTEND
+        + lines[endif_line_index:]  # 包含#endif
+    )
+
+    return "\n".join(result_lines)
+
+
+def remove_single_line_comments(text: str) -> str:
+    return "\n".join(
+        line for line in text.splitlines() if not line.strip().startswith("//")
+    )
+
+
+def convert_to_include_guard(text: str, filename: str) -> str:
+    # 如果已经有 include guard，就不要改变它
+    if "#pragma once" not in text:
+        return text
+
+    # 生成 include guard 宏名
+    guard_name = filename.upper().replace(".", "_").replace("/", "_").replace("\\", "_")
+    guard_name = f"{guard_name}_"
+
+    # 删除已存在的 #pragma once
+    lines = text.splitlines()
+    filtered_lines = [line for line in lines if not line.strip() == "#pragma once"]
+
+    # 添加 include guard
+    guard_lines = [
+        f"#ifndef {guard_name}",
+        f"#define {guard_name}",
+        "",
+    ]
+
+    # 在文件末尾添加 #endif
+    if filtered_lines and filtered_lines[-1].strip():
+        filtered_lines.append("")
+    filtered_lines.append(f"#endif  // {guard_name}")
+
+    return "\n".join(guard_lines + filtered_lines)
+
+
 def process_file(
     input_dir: Path, output_dir: Path, file: str, clang_format_path: Path
 ) -> None:
@@ -253,6 +331,24 @@ def process_file(
     with open(input_path, "r") as input:
         text = input.read()
 
+    # 对于 C/C++ 源文件和头文件，删除单行注释
+    if file.endswith((".c", ".cpp", ".h", ".hpp")):
+        text = remove_single_line_comments(text)
+
+    # 对于头文件，转换 #pragma once 为 include guard
+    if file.endswith((".h", ".hpp")):
+        text = convert_to_include_guard(text, file)
+
+    # 添加 NOLINT guards
+    text = add_nolint_guards(text, file)
+
+    if file.endswith((".md", ".json", ".pyre_configuration", ".watchmanconfig")):
+        pass
+    elif file.endswith((".taihe", ".cpp", ".c", ".hpp", ".h", ".ets", ".ts", ".g4")):
+        text = add_c_style_copyright(text)
+    else:
+        text = add_sh_style_copyright(text)
+
     if file.endswith(".c"):
         text = format_code(text, clang_format_path, "text.c")
     if file.endswith(".cpp"):
@@ -265,13 +361,6 @@ def process_file(
         text = format_code(text, clang_format_path, "text.js")
     if file.endswith(".py"):
         text = process_python_code(text)
-
-    if file.endswith((".md", ".json", ".pyre_configuration", ".watchmanconfig")):
-        pass
-    elif file.endswith((".taihe", ".cpp", ".c", ".hpp", ".h", ".ets", ".ts", ".g4")):
-        text = add_c_style_copyright(text)
-    else:
-        text = add_sh_style_copyright(text)
 
     with open(output_path, "w") as output:
         output.write(text)
