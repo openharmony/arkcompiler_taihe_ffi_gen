@@ -229,6 +229,20 @@ def add_sh_style_copyright(text: str) -> str:
 
     return "".join(line + "\n" for line in lines)
 
+def add_python_encoding_header(text: str) -> str:
+    lines = text.splitlines()
+
+    header = ["# coding=utf-8", "#"]
+
+    # 如果已有 encoding 声明，就不重复加
+    if any("coding=" in line for line in lines[:2]):
+        return text
+
+    # 保持 shebang 在第一行
+    if lines and lines[0].startswith("#!"):
+        return "\n".join([lines[0]] + header + lines[1:]) + "\n"
+    else:
+        return "\n".join(header + lines) + "\n"
 
 def is_text_file(file: Path):
     try:
@@ -307,6 +321,8 @@ def process_file(
         text = add_c_style_copyright(text)
     else:
         text = add_sh_style_copyright(text)
+        if file.endswith((".py")):
+            text = add_python_encoding_header(text)
 
     if file.endswith(".c"):
         text = format_code(text, clang_format_path, "text.c")
