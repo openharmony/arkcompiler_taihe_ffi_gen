@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from pathlib import Path
-import re
+from dataclasses import dataclass
 import shutil
 import subprocess
 
@@ -200,19 +200,41 @@ def format_code(text: str, clang_format_path: Path, assume_filename: str) -> str
     return process.stdout
 
 
-def process_python_code(text: str) -> str:
-    def adjust_indent(match):
-        line = match.group(1)
-        indent = re.match(r"^(\s*)", line).group(1)
-        return f"{line}{indent}    ..."
+def py_move_ellipsis(text: str) -> str:
+    result = []
+    for line in text.splitlines():
+        if line.rstrip().endswith(": ..."):
+            count = len(line) - len(line.lstrip())
+            result.append(line.rstrip()[:-4])
+            result.append(" " * count + "    ...")
+        else:
+            result.append(line)
+    return "\n".join(result)
 
-    text = re.sub(
-        r"(\s*def\s+\w+\s*\([^)]*\)\s*(?:->\s*(?:[^:\s]|\[[^\]]*\])+)?:\s*)\.\.\.",
-        adjust_indent,
-        text,
-    )
 
-    return text
+def py_remove_asserts(text: str) -> str:
+    @dataclass
+    class AssertBlock:
+        indent: int
+        inner_count: int = 0
+
+    result = []
+    assert_block: AssertBlock | None = None
+    for line in text.splitlines():
+        indent = len(line) - len(line.lstrip())
+        if assert_block is not None:
+            if indent == assert_block.indent:
+                if assert_block.inner_count == 0:
+                    result.append(line)
+                assert_block = None
+            else:
+                assert_block.inner_count += 1
+        elif line.lstrip().startswith("assert "):
+            assert_block = AssertBlock(indent=indent)
+            result.append(" " * indent + "pass")
+        else:
+            result.append(line)
+    return "\n".join(result)
 
 
 def add_c_style_copyright(text: str) -> str:
@@ -228,6 +250,7 @@ def add_sh_style_copyright(text: str) -> str:
         lines = [SH_COPYRIGHT] + lines
 
     return "".join(line + "\n" for line in lines)
+
 
 def add_python_encoding_header(text: str) -> str:
     lines = text.splitlines()
@@ -252,11 +275,6 @@ def add_shebang(text: str) -> str:
         return text
     else:
         return "\n".join(header + lines) + "\n"
-
-def add_python_nolint(text: str) -> str:
-    lines = text.splitlines()
-    nolint_header = ["# flake8: noqa", "# pylint: skip-file"]
-    return "\n".join(nolint_header + lines) + "\n"
 
 
 def is_text_file(file: Path):
@@ -335,8 +353,6 @@ def process_file(
     elif file.endswith((".taihe", ".cpp", ".c", ".hpp", ".h", ".ets", ".ts", ".g4")):
         text = add_c_style_copyright(text)
     else:
-        if file.endswith((".py")):
-            text = add_python_nolint(text)
         text = add_sh_style_copyright(text)
         if file.endswith((".py")):
             text = add_python_encoding_header(text)
@@ -354,7 +370,8 @@ def process_file(
     elif file.endswith((".ts", ".ets")):
         text = format_code(text, clang_format_path, "text.js")
     if file.endswith(".py"):
-        text = process_python_code(text)
+        text = py_move_ellipsis(text)
+        text = py_remove_asserts(text)
 
     with open(output_path, "w") as output:
         output.write(text)
