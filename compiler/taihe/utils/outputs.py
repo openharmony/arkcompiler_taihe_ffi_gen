@@ -47,6 +47,10 @@ class IndentManager:
     def __init__(self):
         self.count = 0
 
+    @property
+    def current(self):
+        return self.count * " "
+
     @contextmanager
     def offset(self, n=4):
         try:
@@ -54,10 +58,6 @@ class IndentManager:
             yield
         finally:
             self.count -= n
-
-    @property
-    def current(self):
-        return self.count * " "
 
 
 class OutputBuffer(OutputBase[[]]):

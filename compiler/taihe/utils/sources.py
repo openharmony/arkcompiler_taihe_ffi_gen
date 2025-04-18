@@ -68,12 +68,12 @@ class SourceManager:
     def __init__(self):
         self.src_list = []
 
-    def add_source(self, sb: SourceBase):
-        self.src_list.append(sb)
-
     @property
     def sources(self) -> Iterable[SourceBase]:
         return self.src_list
+
+    def add_source(self, sb: SourceBase):
+        self.src_list.append(sb)
 
 
 @dataclass

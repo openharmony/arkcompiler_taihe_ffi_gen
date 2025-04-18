@@ -36,13 +36,13 @@ class Type(metaclass=ABCMeta):
     def __post_init__(self):
         self.ty_ref.maybe_resolved_ty = self
 
+    def __repr__(self) -> str:
+        return f"<{self.__class__.__qualname__} {self.signature}>"
+
     @property
     @abstractmethod
     def signature(self) -> str:
         """Return the representation of the type."""
-
-    def __repr__(self) -> str:
-        return f"<{self.__class__.__qualname__} {self.signature}>"
 
     @abstractmethod
     def _accept(self, v: "TypeVisitor") -> Any:
@@ -85,38 +85,38 @@ class ScalarKind(Enum):
 class ScalarType(BuiltinType):
     kind: ScalarKind
 
-    @override
-    def _accept(self, v: "TypeVisitor") -> Any:
-        return v.visit_scalar_type(self)
-
     @property
     @override
     def signature(self):
         return self.kind.name
 
+    @override
+    def _accept(self, v: "TypeVisitor") -> Any:
+        return v.visit_scalar_type(self)
+
 
 @dataclass(frozen=True, repr=False)
 class OpaqueType(BuiltinType):
-    @override
-    def _accept(self, v: "TypeVisitor") -> Any:
-        return v.visit_opaque_type(self)
-
     @property
     @override
     def signature(self):
         return "Opaque"
 
+    @override
+    def _accept(self, v: "TypeVisitor") -> Any:
+        return v.visit_opaque_type(self)
+
 
 @dataclass(frozen=True, repr=False)
 class StringType(BuiltinType):
-    @override
-    def _accept(self, v: "TypeVisitor") -> Any:
-        return v.visit_string_type(self)
-
     @property
     @override
     def signature(self):
         return "String"
+
+    @override
+    def _accept(self, v: "TypeVisitor") -> Any:
+        return v.visit_string_type(self)
 
 
 class BuiltinBuilder(Protocol):
@@ -151,16 +151,16 @@ class CallbackType(Type):
     return_ty: Optional[Type]
     params_ty: tuple[Type, ...]
 
-    @override
-    def _accept(self, v: "TypeVisitor") -> Any:
-        return v.visit_callback_type(self)
-
     @property
     @override
     def signature(self):
         return_fmt = ty.signature if (ty := self.return_ty) else "void"
         params_fmt = ", ".join(ty.signature for ty in self.params_ty)
         return f"({params_fmt}) => {return_fmt}"
+
+    @override
+    def _accept(self, v: "TypeVisitor") -> Any:
+        return v.visit_callback_type(self)
 
 
 class GenericType(Type, metaclass=ABCMeta):
@@ -171,42 +171,42 @@ class GenericType(Type, metaclass=ABCMeta):
 class ArrayType(GenericType):
     item_ty: Type
 
-    @override
-    def _accept(self, v: "TypeVisitor") -> Any:
-        return v.visit_array_type(self)
-
     @property
     @override
     def signature(self):
         return f"Array<{self.item_ty.signature}>"
+
+    @override
+    def _accept(self, v: "TypeVisitor") -> Any:
+        return v.visit_array_type(self)
 
 
 @dataclass(frozen=True, repr=False)
 class OptionalType(GenericType):
     item_ty: Type
 
-    @override
-    def _accept(self, v: "TypeVisitor") -> Any:
-        return v.visit_optional_type(self)
-
     @property
     @override
     def signature(self):
         return f"Optional<{self.item_ty.signature}>"
+
+    @override
+    def _accept(self, v: "TypeVisitor") -> Any:
+        return v.visit_optional_type(self)
 
 
 @dataclass(frozen=True, repr=False)
 class VectorType(GenericType):
     val_ty: Type
 
-    @override
-    def _accept(self, v: "TypeVisitor") -> Any:
-        return v.visit_vector_type(self)
-
     @property
     @override
     def signature(self):
         return f"Vector<{self.val_ty.signature}>"
+
+    @override
+    def _accept(self, v: "TypeVisitor") -> Any:
+        return v.visit_vector_type(self)
 
 
 @dataclass(frozen=True, repr=False)
@@ -214,28 +214,28 @@ class MapType(GenericType):
     key_ty: Type
     val_ty: Type
 
-    @override
-    def _accept(self, v: "TypeVisitor") -> Any:
-        return v.visit_map_type(self)
-
     @property
     @override
     def signature(self):
         return f"Map<{self.key_ty.signature}, {self.val_ty.signature}>"
+
+    @override
+    def _accept(self, v: "TypeVisitor") -> Any:
+        return v.visit_map_type(self)
 
 
 @dataclass(frozen=True, repr=False)
 class SetType(GenericType):
     key_ty: Type
 
-    @override
-    def _accept(self, v: "TypeVisitor") -> Any:
-        return v.visit_set_type(self)
-
     @property
     @override
     def signature(self):
         return f"Set<{self.key_ty.signature}>"
+
+    @override
+    def _accept(self, v: "TypeVisitor") -> Any:
+        return v.visit_set_type(self)
 
 
 class GenericBuilder(Protocol):
