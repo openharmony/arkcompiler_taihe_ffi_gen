@@ -108,10 +108,10 @@ public:
   }
 
   taihe::optional<array<uint8_t>> getArraybuffer() {
-    int const arr_size = 10;
-    int const arr_num = 6;
+    int const arrSize = 10;
+    int const arrNum = 6;
     return taihe::optional<array<uint8_t>>::make(
-        array<uint8_t>::make(arr_size, arr_num));
+        array<uint8_t>::make(arrSize, arrNum));
   }
 };
 
