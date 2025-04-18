@@ -109,6 +109,17 @@ class COutputBuffer(OutputBase[[bool]]):
         self.indent_manager = IndentManager()
         self.code = StringIO()
 
+    @override
+    def save_as(self, file_path: Path):
+        if not path.exists(file_path.parent):
+            makedirs(file_path.parent, exist_ok=True)
+        with open(file_path, "w", encoding="utf-8") as dst:
+            if self.is_header:
+                dst.write(f"#pragma once\n")
+            for header in self.headers:
+                dst.write(f'#include "{header}"\n')
+            dst.write(self.code.getvalue())
+
     @contextmanager
     def code_block(self, start: str, end: str, n=4):
         self.writeln(start)
@@ -124,18 +135,7 @@ class COutputBuffer(OutputBase[[bool]]):
         for code in codes:
             self.code.write(self.indent_manager.current + code + "\n")
 
-    @override
-    def save_as(self, file_path: Path):
-        if not path.exists(file_path.parent):
-            makedirs(file_path.parent, exist_ok=True)
-        with open(file_path, "w", encoding="utf-8") as dst:
-            if self.is_header:
-                dst.write(f"#pragma once\n")
-            for header in self.headers:
-                dst.write(f'#include "{header}"\n')
-            dst.write(self.code.getvalue())
-
-    def include(self, *headers: str, back=False):
+    def include(self, *headers: str):
         for header in headers:
             self.headers.setdefault(header, None)
 
