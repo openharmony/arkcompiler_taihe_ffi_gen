@@ -22,7 +22,7 @@ interface XmlSerializer {
 
 function makeXmlSerializer(buffer: BufferType, encoding: Optional<String>): XmlSerializer;
 
-enum EventType {
+enum EventType: i32 {
     START_DOCUMENT,
     END_DOCUMENT,
     START_TAG,

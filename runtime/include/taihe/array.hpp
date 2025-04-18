@@ -190,14 +190,14 @@ struct array : public array_view<cpp_owner_t> {
     std::uninitialized_move_n(data, size, this->m_data);
   }
 
-  array(size_type size)
+  explicit array(size_type size)
       : array(
             reinterpret_cast<cpp_owner_t *>(malloc(size * sizeof(cpp_owner_t))),
             size) {
     std::uninitialized_default_construct_n(this->m_data, size);
   }
 
-  array(size_type size, cpp_owner_t const &value)
+  explicit array(size_type size, cpp_owner_t const &value)
       : array(
             reinterpret_cast<cpp_owner_t *>(malloc(size * sizeof(cpp_owner_t))),
             size) {
