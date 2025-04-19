@@ -27,6 +27,4 @@
 ## 附录
 
 - [Essential Sheet](./essential/README.md)
-
-### To do
-#### 功能速查表
+- [特性样例速查表](./quick_ref/README.md)
