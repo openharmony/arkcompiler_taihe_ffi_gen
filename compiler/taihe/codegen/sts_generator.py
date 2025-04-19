@@ -107,6 +107,31 @@ class STSCodeGenerator:
                 ).append((type_name, func))
         return glob_func_on_off_map
 
+    def stat_good_on_off_funcs(
+        self,
+        funcs: list[GlobFuncDecl],
+    ):
+        on_off_funcs = self.stat_on_off_funcs(funcs)
+        return [
+            (method_name, type_name, method)
+            for (method_name, type_name), method_list in on_off_funcs.items()
+            if len(method_list) == 1
+            for type_name, method in method_list
+        ]
+
+    def stat_bad_on_off_funcs(
+        self,
+        funcs: list[GlobFuncDecl],
+    ):
+        on_off_funcs = self.stat_on_off_funcs(funcs)
+        bad_on_off_funcs: dict[str, list[tuple[str, GlobFuncDecl]]] = {}
+        for (method_name, type_name), method_list in on_off_funcs.items():
+            if len(method_list) <= 1:
+                continue
+            for type_name, method in method_list:
+                bad_on_off_funcs.setdefault(method_name, []).append((type_name, method))
+        return bad_on_off_funcs
+
     def stat_on_off_methods(
         self,
         methods: list[IfaceMethodDecl],
@@ -127,6 +152,33 @@ class STSCodeGenerator:
                     (method_name, tuple(sts_params_ty)), []
                 ).append((type_name, method))
         return method_on_off_map
+
+    def stat_good_on_off_methods(
+        self,
+        methods: list[IfaceMethodDecl],
+    ):
+        on_off_methods = self.stat_on_off_methods(methods)
+        return [
+            (method_name, type_name, method)
+            for (method_name, type_name), method_list in on_off_methods.items()
+            if len(method_list) == 1
+            for type_name, method in method_list
+        ]
+
+    def stat_bad_on_off_methods(
+        self,
+        methods: list[IfaceMethodDecl],
+    ):
+        on_off_methods = self.stat_on_off_methods(methods)
+        bad_on_off_methods: dict[str, list[tuple[str, IfaceMethodDecl]]] = {}
+        for (method_name, type_name), method_list in on_off_methods.items():
+            if len(method_list) <= 1:
+                continue
+            for type_name, method in method_list:
+                bad_on_off_methods.setdefault(method_name, []).append(
+                    (type_name, method)
+                )
+        return bad_on_off_methods
 
     def gen_package(self, pkg: PackageDecl, target: STSOutputBuffer):
         # TODO: hack inject
@@ -191,48 +243,68 @@ class STSCodeGenerator:
         funcs: list[GlobFuncDecl],
         target: STSOutputBuffer,
     ):
-        # on_off
-        glob_func_on_off_map = self.stat_on_off_funcs(funcs)
-        for (
-            func_name,
-            sts_params_ani_desc,
-        ), func_list in glob_func_on_off_map.items():
-            sts_params = []
-            sts_args_any = []
-            sts_params.append("type: string")
-            for index in range(len(sts_params_ani_desc)):
-                param_name = f"p_{index}"
-                sts_param_i_types = []
-                for _, func in func_list:
-                    func_ani_info = GlobFuncANIInfo.get(self.am, func)
-                    param_ty = func_ani_info.sts_params[index].ty_ref.resolved_ty
-                    type_ani_info = TypeANIInfo.get(self.am, param_ty)
-                    sts_param_i_types.append(type_ani_info.sts_type_in(pkg, target))
-                sts_param_ty_name = " | ".join(sts_param_i_types)
-                sts_params.append(f"{param_name}: {sts_param_ty_name}")
-                sts_args_any.append(param_name)
+        # good on_off
+        good_on_off_funcs = self.stat_good_on_off_funcs(funcs)
+        for func_name, type_name, func in good_on_off_funcs:
+            func_ani_info = GlobFuncANIInfo.get(self.am, func)
+            sts_params = ["type: String"]
+            sts_args = []
+            for sts_param in func_ani_info.sts_params:
+                type_ani_info = TypeANIInfo.get(self.am, sts_param.ty_ref.resolved_ty)
+                sts_params.append(
+                    f"{sts_param.name}: {type_ani_info.sts_type_in(pkg, target)}"
+                )
+                sts_args.append(sts_param.name)
             sts_params_str = ", ".join(sts_params)
-            sts_return_ty_names = set()
-            for _, func in func_list:
-                if return_ty_ref := func.return_ty_ref:
-                    type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
-                    sts_return_ty_names.add(type_ani_info.sts_type_in(pkg, target))
-                else:
-                    sts_return_ty_names.add("void")
-            sts_return_ty_name = sts_return_ty_names.pop()
+            sts_native_call = func_ani_info.call_native_with(sts_args)
+            if return_ty_ref := func.return_ty_ref:
+                type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
+                sts_return_ty_name = type_ani_info.sts_type_in(pkg, target)
+            else:
+                sts_return_ty_name = "void"
             target.writeln(
                 f"export function {func_name}({sts_params_str}): {sts_return_ty_name} {{",
-                f"    switch(type) {{",
+                f"    if (type !== '{type_name}') {{",
+                f"        throw new Error(`Invalid type: ${{type}}`);",
+                f"    }}",
+                f"    return {sts_native_call};",
+                f"}}",
+            )
+        # bad on_off
+        bad_on_off_funcs = self.stat_bad_on_off_funcs(funcs)
+        for func_name, func_list in bad_on_off_funcs.items():
+            max_sts_params = max(
+                len(GlobFuncANIInfo.get(self.am, func).sts_params)
+                for _, func in func_list
+            )
+            sts_params = ["type: Object | String"]
+            sts_args = []
+            for index in range(max_sts_params):
+                param_types = []
+                for _, func in func_list:
+                    func_ani_info = GlobFuncANIInfo.get(self.am, func)
+                    if index < len(func_ani_info.sts_params):
+                        param_ty = func_ani_info.sts_params[index].ty_ref.resolved_ty
+                        type_ani_info = TypeANIInfo.get(self.am, param_ty)
+                        param_types.append(type_ani_info.sts_type_in(pkg, target))
+                param_types_str = " | ".join(["Object", *param_types])
+                param_name = f"p_{index}"
+                sts_params.append(f"{param_name}?: {param_types_str}")
+                sts_args.append(param_name)
+            sts_params_str = ", ".join(sts_params)
+            target.writeln(
+                f"export function {func_name}({sts_params_str}): void {{",
+                f"    switch (type as String) {{",
             )
             for type_name, func in func_list:
                 func_ani_info = GlobFuncANIInfo.get(self.am, func)
                 sts_args_fix = []
-                for sts_arg_any, param in zip(
-                    sts_args_any, func_ani_info.sts_params, strict=True
+                for sts_arg, param in zip(
+                    sts_args, func_ani_info.sts_params, strict=False
                 ):
                     type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
                     sts_args_fix.append(
-                        f"{sts_arg_any} as {type_ani_info.sts_type_in(pkg, target)}"
+                        f"{sts_arg} as {type_ani_info.sts_type_in(pkg, target)}"
                     )
                 sts_native_call = func_ani_info.call_native_with(sts_args_fix)
                 target.writeln(
@@ -475,35 +547,47 @@ class STSCodeGenerator:
         methods: list[IfaceMethodDecl],
         target: STSOutputBuffer,
     ):
-        # on_off
-        method_on_off_map = self.stat_on_off_methods(methods)
-        for (
-            method_name,
-            sts_params_ani_desc,
-        ), method_list in method_on_off_map.items():
-            sts_params = []
-            sts_params.append("type: string")
-            for index in range(len(sts_params_ani_desc)):
-                param_name = f"p_{index}"
-                sts_param_i_types = []
-                for _, method in method_list:
-                    method_ani_info = IfaceMethodANIInfo.get(self.am, method)
-                    param_ty = method_ani_info.sts_params[index].ty_ref.resolved_ty
-                    type_ani_info = TypeANIInfo.get(self.am, param_ty)
-                    sts_param_i_types.append(type_ani_info.sts_type_in(pkg, target))
-                sts_param_ty_name = " | ".join(sts_param_i_types)
-                sts_params.append(f"{param_name}: {sts_param_ty_name}")
+        # good on_off
+        good_on_off_methods = self.stat_good_on_off_methods(methods)
+        for method_name, _, method in good_on_off_methods:
+            method_ani_info = IfaceMethodANIInfo.get(self.am, method)
+            sts_params = ["type: String"]
+            for sts_param in method_ani_info.sts_params:
+                type_ani_info = TypeANIInfo.get(self.am, sts_param.ty_ref.resolved_ty)
+                sts_params.append(
+                    f"{sts_param.name}: {type_ani_info.sts_type_in(pkg, target)}"
+                )
             sts_params_str = ", ".join(sts_params)
-            sts_return_ty_names = set()
-            for _, method in method_list:
-                if return_ty_ref := method.return_ty_ref:
-                    type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
-                    sts_return_ty_names.add(type_ani_info.sts_type_in(pkg, target))
-                else:
-                    sts_return_ty_names.add("void")
-            sts_return_ty_name = sts_return_ty_names.pop()
+            if return_ty_ref := method.return_ty_ref:
+                type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
+                sts_return_ty_name = type_ani_info.sts_type_in(pkg, target)
+            else:
+                sts_return_ty_name = "void"
             target.writeln(
                 f"{method_name}({sts_params_str}): {sts_return_ty_name};",
+            )
+        # bad on_off
+        bad_on_off_methods = self.stat_bad_on_off_methods(methods)
+        for method_name, method_list in bad_on_off_methods.items():
+            max_sts_params = max(
+                len(IfaceMethodANIInfo.get(self.am, method).sts_params)
+                for _, method in method_list
+            )
+            sts_params = ["type: Object | String"]
+            for index in range(max_sts_params):
+                param_types = []
+                for _, method in method_list:
+                    method_ani_info = IfaceMethodANIInfo.get(self.am, method)
+                    if index < len(method_ani_info.sts_params):
+                        param_ty = method_ani_info.sts_params[index].ty_ref.resolved_ty
+                        type_ani_info = TypeANIInfo.get(self.am, param_ty)
+                        param_types.append(type_ani_info.sts_type_in(pkg, target))
+                param_types_str = " | ".join(["Object", *param_types])
+                param_name = f"p_{index}"
+                sts_params.append(f"{param_name}?: {param_types_str}")
+            sts_params_str = ", ".join(sts_params)
+            target.writeln(
+                f"{method_name}({sts_params_str}): void;",
             )
         # other
         for method in methods:
@@ -624,48 +708,68 @@ class STSCodeGenerator:
         funcs: list[GlobFuncDecl],
         target: STSOutputBuffer,
     ):
-        # on_off
-        func_on_off_map = self.stat_on_off_funcs(funcs)
-        for (
-            func_name,
-            sts_params_ani_desc,
-        ), func_list in func_on_off_map.items():
-            sts_params = []
-            sts_args_any = []
-            sts_params.append("type: string")
-            for index in range(len(sts_params_ani_desc)):
-                param_name = f"p_{index}"
-                sts_param_i_types = []
-                for _, func in func_list:
-                    func_ani_info = GlobFuncANIInfo.get(self.am, func)
-                    param_ty = func_ani_info.sts_params[index].ty_ref.resolved_ty
-                    type_ani_info = TypeANIInfo.get(self.am, param_ty)
-                    sts_param_i_types.append(type_ani_info.sts_type_in(pkg, target))
-                sts_param_ty_name = " | ".join(sts_param_i_types)
-                sts_params.append(f"{param_name}: {sts_param_ty_name}")
-                sts_args_any.append(param_name)
+        # good on_off
+        good_on_off_funcs = self.stat_good_on_off_funcs(funcs)
+        for func_name, type_name, func in good_on_off_funcs:
+            func_ani_info = GlobFuncANIInfo.get(self.am, func)
+            sts_params = ["type: String"]
+            sts_args = []
+            for sts_param in func_ani_info.sts_params:
+                type_ani_info = TypeANIInfo.get(self.am, sts_param.ty_ref.resolved_ty)
+                sts_params.append(
+                    f"{sts_param.name}: {type_ani_info.sts_type_in(pkg, target)}"
+                )
+                sts_args.append(sts_param.name)
             sts_params_str = ", ".join(sts_params)
-            sts_return_ty_names = set()
-            for _, func in func_list:
-                if return_ty_ref := func.return_ty_ref:
-                    type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
-                    sts_return_ty_names.add(type_ani_info.sts_type_in(pkg, target))
-                else:
-                    sts_return_ty_names.add("void")
-            sts_return_ty_name = sts_return_ty_names.pop()
+            sts_native_call = func_ani_info.call_native_with(sts_args)
+            if return_ty_ref := func.return_ty_ref:
+                type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
+                sts_return_ty_name = type_ani_info.sts_type_in(pkg, target)
+            else:
+                sts_return_ty_name = "void"
             target.writeln(
                 f"static {func_name}({sts_params_str}): {sts_return_ty_name} {{",
-                f"    switch(type) {{",
+                f"    if (type !== '{type_name}') {{",
+                f"        throw new Error(`Invalid type: ${{type}}`);",
+                f"    }}",
+                f"    return {sts_native_call};",
+                f"}}",
+            )
+        # bad on_off
+        bad_on_off_funcs = self.stat_bad_on_off_funcs(funcs)
+        for func_name, func_list in bad_on_off_funcs.items():
+            max_sts_params = max(
+                len(GlobFuncANIInfo.get(self.am, func).sts_params)
+                for _, func in func_list
+            )
+            sts_params = ["type: Object | String"]
+            sts_args = []
+            for index in range(max_sts_params):
+                param_types = []
+                for _, func in func_list:
+                    func_ani_info = GlobFuncANIInfo.get(self.am, func)
+                    if index < len(func_ani_info.sts_params):
+                        param_ty = func_ani_info.sts_params[index].ty_ref.resolved_ty
+                        type_ani_info = TypeANIInfo.get(self.am, param_ty)
+                        param_types.append(type_ani_info.sts_type_in(pkg, target))
+                param_types_str = " | ".join(["Object", *param_types])
+                param_name = f"p_{index}"
+                sts_params.append(f"{param_name}?: {param_types_str}")
+                sts_args.append(param_name)
+            sts_params_str = ", ".join(sts_params)
+            target.writeln(
+                f"static {func_name}({sts_params_str}): void {{",
+                f"    switch (type as String) {{",
             )
             for type_name, func in func_list:
                 func_ani_info = GlobFuncANIInfo.get(self.am, func)
                 sts_args_fix = []
-                for sts_arg_any, param in zip(
-                    sts_args_any, func_ani_info.sts_params, strict=True
+                for sts_arg, param in zip(
+                    sts_args, func_ani_info.sts_params, strict=False
                 ):
                     type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
                     sts_args_fix.append(
-                        f"{sts_arg_any} as {type_ani_info.sts_type_in(pkg, target)}"
+                        f"{sts_arg} as {type_ani_info.sts_type_in(pkg, target)}"
                     )
                 sts_native_call = func_ani_info.call_native_with(sts_args_fix)
                 target.writeln(
@@ -779,48 +883,68 @@ class STSCodeGenerator:
         methods: list[IfaceMethodDecl],
         target: STSOutputBuffer,
     ):
-        # on_off
-        method_on_off_map = self.stat_on_off_methods(methods)
-        for (
-            method_name,
-            sts_params_ani_desc,
-        ), method_list in method_on_off_map.items():
-            sts_params = []
-            sts_args_any = []
-            sts_params.append("type: string")
-            for index in range(len(sts_params_ani_desc)):
-                param_name = f"p_{index}"
-                sts_param_i_types = []
-                for _, method in method_list:
-                    method_ani_info = IfaceMethodANIInfo.get(self.am, method)
-                    param_ty = method_ani_info.sts_params[index].ty_ref.resolved_ty
-                    type_ani_info = TypeANIInfo.get(self.am, param_ty)
-                    sts_param_i_types.append(type_ani_info.sts_type_in(pkg, target))
-                sts_param_ty_name = " | ".join(sts_param_i_types)
-                sts_params.append(f"{param_name}: {sts_param_ty_name}")
-                sts_args_any.append(param_name)
+        # good on_off
+        good_on_off_methods = self.stat_good_on_off_methods(methods)
+        for method_name, type_name, method in good_on_off_methods:
+            method_ani_info = IfaceMethodANIInfo.get(self.am, method)
+            sts_params = ["type: String"]
+            sts_args = []
+            for sts_param in method_ani_info.sts_params:
+                type_ani_info = TypeANIInfo.get(self.am, sts_param.ty_ref.resolved_ty)
+                sts_params.append(
+                    f"{sts_param.name}: {type_ani_info.sts_type_in(pkg, target)}"
+                )
+                sts_args.append(sts_param.name)
             sts_params_str = ", ".join(sts_params)
-            sts_return_ty_names = set()
-            for _, method in method_list:
-                if return_ty_ref := method.return_ty_ref:
-                    type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
-                    sts_return_ty_names.add(type_ani_info.sts_type_in(pkg, target))
-                else:
-                    sts_return_ty_names.add("void")
-            sts_return_ty_name = sts_return_ty_names.pop()
+            sts_native_call = method_ani_info.call_native_with("this", sts_args)
+            if return_ty_ref := method.return_ty_ref:
+                type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
+                sts_return_ty_name = type_ani_info.sts_type_in(pkg, target)
+            else:
+                sts_return_ty_name = "void"
             target.writeln(
                 f"{method_name}({sts_params_str}): {sts_return_ty_name} {{",
-                f"    switch(type) {{",
+                f"    if (type !== '{type_name}') {{",
+                f"        throw new Error(`Invalid type: ${{type}}`);",
+                f"    }}",
+                f"    return {sts_native_call};",
+                f"}}",
+            )
+        # bad on_off
+        bad_on_off_methods = self.stat_bad_on_off_methods(methods)
+        for method_name, method_list in bad_on_off_methods.items():
+            max_sts_params = max(
+                len(IfaceMethodANIInfo.get(self.am, method).sts_params)
+                for _, method in method_list
+            )
+            sts_params = ["type: Object | String"]
+            sts_args = []
+            for index in range(max_sts_params):
+                param_types = []
+                for _, method in method_list:
+                    method_ani_info = IfaceMethodANIInfo.get(self.am, method)
+                    if index < len(method_ani_info.sts_params):
+                        param_ty = method_ani_info.sts_params[index].ty_ref.resolved_ty
+                        type_ani_info = TypeANIInfo.get(self.am, param_ty)
+                        param_types.append(type_ani_info.sts_type_in(pkg, target))
+                param_types_str = " | ".join(["Object", *param_types])
+                param_name = f"p_{index}"
+                sts_params.append(f"{param_name}?: {param_types_str}")
+                sts_args.append(param_name)
+            sts_params_str = ", ".join(sts_params)
+            target.writeln(
+                f"{method_name}({sts_params_str}): void {{",
+                f"    switch (type as String) {{",
             )
             for type_name, method in method_list:
                 method_ani_info = IfaceMethodANIInfo.get(self.am, method)
                 sts_args_fix = []
-                for sts_arg_any, param in zip(
-                    sts_args_any, method_ani_info.sts_params, strict=True
+                for sts_arg, param in zip(
+                    sts_args, method_ani_info.sts_params, strict=False
                 ):
                     type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
                     sts_args_fix.append(
-                        f"{sts_arg_any} as {type_ani_info.sts_type_in(pkg, target)}"
+                        f"{sts_arg} as {type_ani_info.sts_type_in(pkg, target)}"
                     )
                 sts_native_call = method_ani_info.call_native_with("this", sts_args_fix)
                 target.writeln(
