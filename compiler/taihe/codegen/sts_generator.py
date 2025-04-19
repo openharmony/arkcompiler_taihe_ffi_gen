@@ -96,15 +96,19 @@ class STSCodeGenerator:
         ] = {}
         for func in funcs:
             func_ani_info = GlobFuncANIInfo.get(self.am, func)
-            if func_ani_info.on_off_type is not None:
-                func_name, type_name = func_ani_info.on_off_type
-                sts_params_ty: list[str] = []
-                for sts_param in func_ani_info.sts_params:
-                    ty_ani_info = TypeANIInfo.get(self.am, sts_param.ty_ref.resolved_ty)
-                    sts_params_ty.append(ty_ani_info.type_desc)
-                glob_func_on_off_map.setdefault(
-                    (func_name, tuple(sts_params_ty)), []
-                ).append((type_name, func))
+            if func_ani_info.sts_func_name is None:
+                continue
+            if func_ani_info.on_off_type is None:
+                continue
+            func_name = func_ani_info.sts_func_name
+            type_name = func_ani_info.on_off_type
+            sts_params_ty: list[str] = []
+            for sts_param in func_ani_info.sts_params:
+                ty_ani_info = TypeANIInfo.get(self.am, sts_param.ty_ref.resolved_ty)
+                sts_params_ty.append(ty_ani_info.type_desc)
+            glob_func_on_off_map.setdefault(
+                (func_name, tuple(sts_params_ty)), []
+            ).append((type_name, func))
         return glob_func_on_off_map
 
     def stat_good_on_off_funcs(
@@ -142,15 +146,19 @@ class STSCodeGenerator:
         ] = {}
         for method in methods:
             method_ani_info = IfaceMethodANIInfo.get(self.am, method)
-            if method_ani_info.on_off_type is not None:
-                method_name, type_name = method_ani_info.on_off_type
-                sts_params_ty: list[str] = []
-                for sts_param in method_ani_info.sts_params:
-                    ty_ani_info = TypeANIInfo.get(self.am, sts_param.ty_ref.resolved_ty)
-                    sts_params_ty.append(ty_ani_info.type_desc)
-                method_on_off_map.setdefault(
-                    (method_name, tuple(sts_params_ty)), []
-                ).append((type_name, method))
+            if method_ani_info.sts_method_name is None:
+                continue
+            if method_ani_info.on_off_type is None:
+                continue
+            method_name = method_ani_info.sts_method_name
+            type_name = method_ani_info.on_off_type
+            sts_params_ty: list[str] = []
+            for sts_param in method_ani_info.sts_params:
+                ty_ani_info = TypeANIInfo.get(self.am, sts_param.ty_ref.resolved_ty)
+                sts_params_ty.append(ty_ani_info.type_desc)
+            method_on_off_map.setdefault(
+                (method_name, tuple(sts_params_ty)), []
+            ).append((type_name, method))
         return method_on_off_map
 
     def stat_good_on_off_methods(
@@ -264,10 +272,14 @@ class STSCodeGenerator:
                 sts_return_ty_name = "void"
             target.writeln(
                 f"export function {func_name}({sts_params_str}): {sts_return_ty_name} {{",
+            )
+            target.writeln(
                 f"    if (type !== '{type_name}') {{",
                 f"        throw new Error(`Invalid type: ${{type}}`);",
                 f"    }}",
                 f"    return {sts_native_call};",
+            )
+            target.writeln(
                 f"}}",
             )
         # bad on_off
@@ -294,6 +306,8 @@ class STSCodeGenerator:
             sts_params_str = ", ".join(sts_params)
             target.writeln(
                 f"export function {func_name}({sts_params_str}): void {{",
+            )
+            target.writeln(
                 f"    switch (type as String) {{",
             )
             for type_name, func in func_list:
@@ -313,6 +327,8 @@ class STSCodeGenerator:
             target.writeln(
                 f"        default: throw new Error(`Unknown type: ${{type}}`);",
                 f"    }}",
+            )
+            target.writeln(
                 f"}}",
             )
         # other
@@ -335,11 +351,17 @@ class STSCodeGenerator:
             else:
                 sts_return_ty_name = "void"
                 sts_resolved_ty_name = "undefined"
-            # real
-            if (sts_func_name := func_ani_info.sts_func_name) is not None:
+            # normal
+            if (
+                sts_func_name := func_ani_info.sts_func_name
+            ) is not None and func_ani_info.on_off_type is None:
                 target.writeln(
                     f"export function {sts_func_name}({sts_params_str}): {sts_return_ty_name} {{",
+                )
+                target.writeln(
                     f"    return {sts_native_call};",
+                )
+                target.writeln(
                     f"}}",
                 )
                 # promise
@@ -347,7 +369,13 @@ class STSCodeGenerator:
                     target.writeln(
                         f"export function {sts_promise_name}({sts_params_str}): Promise<{sts_return_ty_name}> {{",
                         f"    return new Promise<{sts_return_ty_name}>((resolve, reject): void => {{",
-                        f"        taskpool.execute((): {sts_return_ty_name} => {{ return {sts_native_call}; }})",
+                        f"        taskpool.execute((): {sts_return_ty_name} => {{",
+                    )
+                    target.writeln(
+                        f"            return {sts_native_call};",
+                    )
+                    target.writeln(
+                        f"        }})",
                         f"        .then((ret: NullishType): void => {{",
                         f"            resolve(ret as {sts_resolved_ty_name});",
                         f"        }})",
@@ -363,7 +391,13 @@ class STSCodeGenerator:
                     sts_params_with_cb_str = ", ".join([*sts_params, callback_param])
                     target.writeln(
                         f"export function {sts_async_name}({sts_params_with_cb_str}): void {{",
-                        f"    taskpool.execute((): {sts_return_ty_name} => {{ return {sts_native_call}; }})",
+                        f"    taskpool.execute((): {sts_return_ty_name} => {{",
+                    )
+                    target.writeln(
+                        f"        return {sts_native_call};",
+                    )
+                    target.writeln(
+                        f"    }})",
                         f"    .then((ret: NullishType): void => {{",
                         f"        callback(new Error(), ret as {sts_resolved_ty_name});",
                         f"    }})",
@@ -604,8 +638,10 @@ class STSCodeGenerator:
                 sts_return_ty_name = type_ani_info.sts_type_in(pkg, target)
             else:
                 sts_return_ty_name = "void"
-            # real
-            if (sts_method_name := method_ani_info.sts_method_name) is not None:
+            # normal
+            if (
+                sts_method_name := method_ani_info.sts_method_name
+            ) is not None and method_ani_info.on_off_type is None:
                 target.writeln(
                     f"{sts_method_name}({sts_params_str}): {sts_return_ty_name};",
                 )
@@ -729,10 +765,14 @@ class STSCodeGenerator:
                 sts_return_ty_name = "void"
             target.writeln(
                 f"static {func_name}({sts_params_str}): {sts_return_ty_name} {{",
+            )
+            target.writeln(
                 f"    if (type !== '{type_name}') {{",
                 f"        throw new Error(`Invalid type: ${{type}}`);",
                 f"    }}",
                 f"    return {sts_native_call};",
+            )
+            target.writeln(
                 f"}}",
             )
         # bad on_off
@@ -759,6 +799,8 @@ class STSCodeGenerator:
             sts_params_str = ", ".join(sts_params)
             target.writeln(
                 f"static {func_name}({sts_params_str}): void {{",
+            )
+            target.writeln(
                 f"    switch (type as String) {{",
             )
             for type_name, func in func_list:
@@ -778,6 +820,8 @@ class STSCodeGenerator:
             target.writeln(
                 f"        default: throw new Error(`Unknown type: ${{type}}`);",
                 f"    }}",
+            )
+            target.writeln(
                 f"}}",
             )
         # other
@@ -800,11 +844,17 @@ class STSCodeGenerator:
             else:
                 sts_return_ty_name = "void"
                 sts_resolved_ty_name = "undefined"
-            # real
-            if (sts_func_name := func_ani_info.sts_func_name) is not None:
+            # normal
+            if (
+                sts_func_name := func_ani_info.sts_func_name
+            ) is not None and func_ani_info.on_off_type is None:
                 target.writeln(
                     f"static {sts_func_name}({sts_params_str}): {sts_return_ty_name} {{",
+                )
+                target.writeln(
                     f"    return {sts_native_call};",
+                )
+                target.writeln(
                     f"}}",
                 )
                 # promise
@@ -812,7 +862,13 @@ class STSCodeGenerator:
                     target.writeln(
                         f"static {sts_promise_name}({sts_params_str}): Promise<{sts_return_ty_name}> {{",
                         f"    return new Promise<{sts_return_ty_name}>((resolve, reject): void => {{",
-                        f"        taskpool.execute((): {sts_return_ty_name} => {{ return {sts_native_call}; }})",
+                        f"        taskpool.execute((): {sts_return_ty_name} => {{",
+                    )
+                    target.writeln(
+                        f"            return {sts_native_call};",
+                    )
+                    target.writeln(
+                        f"        }})",
                         f"        .then((ret: NullishType): void => {{",
                         f"            resolve(ret as {sts_resolved_ty_name});",
                         f"        }})",
@@ -828,7 +884,13 @@ class STSCodeGenerator:
                     sts_params_with_cb_str = ", ".join([*sts_params, callback_param])
                     target.writeln(
                         f"static {sts_async_name}({sts_params_with_cb_str}): void {{",
-                        f"    taskpool.execute((): {sts_return_ty_name} => {{ return {sts_native_call}; }})",
+                        f"    taskpool.execute((): {sts_return_ty_name} => {{",
+                    )
+                    target.writeln(
+                        f"        return {sts_native_call};",
+                    )
+                    target.writeln(
+                        f"    }})",
                         f"    .then((ret: NullishType): void => {{",
                         f"        callback(new Error(), ret as {sts_resolved_ty_name});",
                         f"    }})",
@@ -904,10 +966,14 @@ class STSCodeGenerator:
                 sts_return_ty_name = "void"
             target.writeln(
                 f"{method_name}({sts_params_str}): {sts_return_ty_name} {{",
+            )
+            target.writeln(
                 f"    if (type !== '{type_name}') {{",
                 f"        throw new Error(`Invalid type: ${{type}}`);",
                 f"    }}",
                 f"    return {sts_native_call};",
+            )
+            target.writeln(
                 f"}}",
             )
         # bad on_off
@@ -934,6 +1000,8 @@ class STSCodeGenerator:
             sts_params_str = ", ".join(sts_params)
             target.writeln(
                 f"{method_name}({sts_params_str}): void {{",
+            )
+            target.writeln(
                 f"    switch (type as String) {{",
             )
             for type_name, method in method_list:
@@ -953,6 +1021,8 @@ class STSCodeGenerator:
             target.writeln(
                 f"        default: throw new Error(`Unknown type: ${{type}}`);",
                 f"    }}",
+            )
+            target.writeln(
                 f"}}",
             )
         # other
@@ -975,11 +1045,17 @@ class STSCodeGenerator:
             else:
                 sts_return_ty_name = "void"
                 sts_resolved_ty_name = "undefined"
-            # real
-            if (sts_method_name := method_ani_info.sts_method_name) is not None:
+            # normal
+            if (
+                sts_method_name := method_ani_info.sts_method_name
+            ) is not None and method_ani_info.on_off_type is None:
                 target.writeln(
                     f"{sts_method_name}({sts_params_str}): {sts_return_ty_name} {{",
+                )
+                target.writeln(
                     f"    return {sts_native_call};",
+                )
+                target.writeln(
                     f"}}",
                 )
                 # promise
@@ -987,7 +1063,13 @@ class STSCodeGenerator:
                     target.writeln(
                         f"{sts_promise_name}({sts_params_str}): Promise<{sts_return_ty_name}> {{",
                         f"    return new Promise<{sts_return_ty_name}>((resolve, reject): void => {{",
-                        f"        taskpool.execute((): {sts_return_ty_name} => {{ return {sts_native_call}; }})",
+                        f"        taskpool.execute((): {sts_return_ty_name} => {{",
+                    )
+                    target.writeln(
+                        f"            return {sts_native_call};",
+                    )
+                    target.writeln(
+                        f"        }})",
                         f"        .then((ret: NullishType): void => {{",
                         f"            resolve(ret as {sts_resolved_ty_name});",
                         f"        }})",
@@ -1003,7 +1085,13 @@ class STSCodeGenerator:
                     sts_params_with_cb_str = ", ".join([*sts_params, callback_param])
                     target.writeln(
                         f"{sts_async_name}({sts_params_with_cb_str}): void {{",
-                        f"    taskpool.execute((): {sts_return_ty_name} => {{ return {sts_native_call}; }})",
+                        f"    taskpool.execute((): {sts_return_ty_name} => {{",
+                    )
+                    target.writeln(
+                        f"        return {sts_native_call};",
+                    )
+                    target.writeln(
+                        f"    }})",
                         f"    .then((ret: NullishType): void => {{",
                         f"        callback(new Error(), ret as {sts_resolved_ty_name});",
                         f"    }})",
