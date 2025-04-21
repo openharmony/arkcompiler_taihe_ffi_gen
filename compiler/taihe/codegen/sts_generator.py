@@ -12,6 +12,7 @@ from taihe.codegen.ani_generator import (
     StructANIInfo,
     TypeANIInfo,
     UnionANIInfo,
+    UnionFieldANIInfo,
 )
 from taihe.semantics.declarations import (
     EnumDecl,
@@ -23,7 +24,7 @@ from taihe.semantics.declarations import (
     StructDecl,
     UnionDecl,
 )
-from taihe.semantics.types import IfaceType, StructType
+from taihe.semantics.types import Type
 from taihe.utils.analyses import AnalysisManager
 from taihe.utils.outputs import OutputManager, STSOutputBuffer
 
@@ -447,11 +448,15 @@ class STSCodeGenerator:
         union_ani_info = UnionANIInfo.get(self.am, union)
         sts_types = []
         for field in union.fields:
-            if field.ty_ref is None:
-                sts_types.append("null")
-                continue
-            ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
-            sts_types.append(f"{ty_ani_info.sts_type_in(pkg, target)}")
+            field_ani_info = UnionFieldANIInfo.get(self.am, field)
+            match field_ani_info.field_ty:
+                case "null":
+                    sts_types.append("null")
+                case "undefined":
+                    sts_types.append("undefined")
+                case field_ty if isinstance(field_ty, Type):
+                    ty_ani_info = TypeANIInfo.get(self.am, field_ty)
+                    sts_types.append(ty_ani_info.sts_type_in(pkg, target))
         sts_types_str = " | ".join(sts_types)
         target.writeln(
             f"export type {union_ani_info.sts_type_name} = {sts_types_str};",

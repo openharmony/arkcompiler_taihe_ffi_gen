@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from typing_extensions import override
 
@@ -30,6 +30,7 @@ from taihe.semantics.declarations import (
     PackageGroup,
     StructDecl,
     UnionDecl,
+    UnionFieldDecl,
 )
 from taihe.semantics.types import (
     ArrayType,
@@ -56,7 +57,6 @@ if TYPE_CHECKING:
     from taihe.semantics.declarations import (
         ParamDecl,
         StructFieldDecl,
-        UnionFieldDecl,
     )
 
 
@@ -698,6 +698,28 @@ class EnumANIInfo(AbstractAnalysis[EnumDecl]):
 
     def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer):
         return self.pkg_ani_info.sts_type_in(pkg, target, self.sts_type_name)
+
+
+class UnionFieldANIInfo(AbstractAnalysis[UnionFieldDecl]):
+    field_ty: Type | None | Literal["null", "undefined"]
+
+    def __init__(self, am: AnalysisManager, d: UnionFieldDecl) -> None:
+        super().__init__(am, d)
+        if d.ty_ref is None:
+            if d.get_last_attr("null"):
+                self.field_ty = "null"
+                return
+            if d.get_last_attr("undefined"):
+                self.field_ty = "undefined"
+                return
+            raise_adhoc_error(
+                am,
+                f"union field {d.name} must have a type or have @null/@undefined attribute",
+                d.loc,
+            )
+            self.field_ty = None
+        else:
+            self.field_ty = d.ty_ref.resolved_ty
 
 
 class UnionANIInfo(AbstractAnalysis[UnionDecl]):
@@ -2777,8 +2799,8 @@ class ANICodeGenerator:
             static_tags_str = ", ".join(static_tags)
             full_name = "_".join(part.name for part in parts)
             is_field = f"ani_is_{full_name}"
-            field_class = f"ani_cls_{full_name}"
-            if final.ty_ref is None:
+            final_ani_info = UnionFieldANIInfo.get(self.am, final)
+            if final_ani_info.field_ty == "null":
                 union_ani_impl_target.writeln(
                     f"    ani_boolean {is_field};",
                     f"    env->Reference_IsNull(ani_value, &{is_field});",
@@ -2786,8 +2808,29 @@ class ANICodeGenerator:
                     f"        return {union_cpp_info.full_name}({static_tags_str});",
                     f"    }}",
                 )
-            else:
-                type_ani_info = TypeANIInfo.get(self.am, final.ty_ref.resolved_ty)
+            if final_ani_info.field_ty == "undefined":
+                union_ani_impl_target.writeln(
+                    f"    ani_boolean {is_field};",
+                    f"    env->Reference_IsUndefined(ani_value, &{is_field});",
+                    f"    if ({is_field}) {{",
+                    f"        return {union_cpp_info.full_name}({static_tags_str});",
+                    f"    }}",
+                )
+        for parts in union_ani_info.sts_final_fields:
+            final = parts[-1]
+            static_tags = []
+            for part in parts:
+                path_cpp_info = UnionCppInfo.get(self.am, part.parent_union)
+                static_tags.append(
+                    f"taihe::static_tag<{path_cpp_info.full_name}::tag_t::{part.name}>"
+                )
+            static_tags_str = ", ".join(static_tags)
+            full_name = "_".join(part.name for part in parts)
+            is_field = f"ani_is_{full_name}"
+            field_class = f"ani_cls_{full_name}"
+            final_ani_info = UnionFieldANIInfo.get(self.am, final)
+            if isinstance(final_ty := final_ani_info.field_ty, Type):
+                type_ani_info = TypeANIInfo.get(self.am, final_ty)
                 union_ani_impl_target.writeln(
                     f"    ani_class {field_class};",
                     f'    env->FindClass("{type_ani_info.type_desc_boxed}", &{field_class});',
@@ -2825,26 +2868,32 @@ class ANICodeGenerator:
             f"    switch (cpp_value.get_tag()) {{",
         )
         for field in union.fields:
+            field_ani_info = UnionFieldANIInfo.get(self.am, field)
             union_ani_impl_target.writeln(
                 f"    case {union_cpp_info.full_name}::tag_t::{field.name}: {{",
             )
-            if field.ty_ref is None:
-                union_ani_impl_target.writeln(
-                    f"        env->GetNull(&ani_value);",
-                )
-            else:
-                ani_result_spec = f"ani_field_{field.name}"
-                type_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
-                type_ani_info.into_ani_boxed(
-                    union_ani_impl_target,
-                    8,
-                    "env",
-                    f"cpp_value.get_{field.name}_ref()",
-                    ani_result_spec,
-                )
-                union_ani_impl_target.writeln(
-                    f"        ani_value = {ani_result_spec};",
-                )
+            match field_ani_info.field_ty:
+                case "null":
+                    union_ani_impl_target.writeln(
+                        f"        env->GetNull(&ani_value);",
+                    )
+                case "undefined":
+                    union_ani_impl_target.writeln(
+                        f"        env->GetUndefined(&ani_value);",
+                    )
+                case field_ty if isinstance(field_ty, Type):
+                    ani_result_spec = f"ani_field_{field.name}"
+                    type_ani_info = TypeANIInfo.get(self.am, field_ty)
+                    type_ani_info.into_ani_boxed(
+                        union_ani_impl_target,
+                        8,
+                        "env",
+                        f"cpp_value.get_{field.name}_ref()",
+                        ani_result_spec,
+                    )
+                    union_ani_impl_target.writeln(
+                        f"        ani_value = {ani_result_spec};",
+                    )
             union_ani_impl_target.writeln(
                 f"        break;",
                 f"    }}",
