@@ -29,6 +29,7 @@ from taihe.semantics.declarations import (
     PackageDecl,
     PackageGroup,
     StructDecl,
+    StructFieldDecl,
     UnionDecl,
     UnionFieldDecl,
 )
@@ -56,7 +57,6 @@ from taihe.utils.sources import SourceLocation
 if TYPE_CHECKING:
     from taihe.semantics.declarations import (
         ParamDecl,
-        StructFieldDecl,
     )
 
 
@@ -749,6 +749,12 @@ class UnionANIInfo(AbstractAnalysis[UnionDecl]):
         return self.pkg_ani_info.sts_type_in(pkg, target, self.sts_type_name)
 
 
+class StructFieldANIInfo(AbstractAnalysis[StructFieldDecl]):
+    def __init__(self, am: AnalysisManager, d: StructFieldDecl) -> None:
+        super().__init__(am, d)
+        self.readonly = d.get_last_attr("readonly") is not None
+
+
 class StructANIInfo(AbstractAnalysis[StructDecl]):
     def __init__(self, am: AnalysisManager, d: StructDecl) -> None:
         super().__init__(am, d)
@@ -881,7 +887,7 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def from_ani_impl(
+    def _from_ani_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -899,10 +905,10 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
         cpp_result: str,
     ):
         with target.indent_manager.offset(offset):
-            self.from_ani_impl(target, env, ani_value, cpp_result)
+            self._from_ani_impl(target, env, ani_value, cpp_result)
 
     @abstractmethod
-    def into_ani_impl(
+    def _into_ani_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -920,9 +926,9 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
         ani_result: str,
     ):
         with target.indent_manager.offset(offset):
-            self.into_ani_impl(target, env, cpp_value, ani_result)
+            self._into_ani_impl(target, env, cpp_value, ani_result)
 
-    def from_ani_array_impl(
+    def _from_ani_array_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -959,11 +965,11 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
         cpp_array_buffer: str,
     ):
         with target.indent_manager.offset(offset):
-            self.from_ani_array_impl(
+            self._from_ani_array_impl(
                 target, env, ani_size, ani_array_value, cpp_array_buffer
             )
 
-    def into_ani_array_impl(
+    def _into_ani_array_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -1007,11 +1013,11 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
         ani_array_result: str,
     ):
         with target.indent_manager.offset(offset):
-            self.into_ani_array_impl(
+            self._into_ani_array_impl(
                 target, env, cpp_size, cpp_array_value, ani_array_result
             )
 
-    def into_ani_boxed_impl(
+    def _into_ani_boxed_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -1045,9 +1051,9 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
         ani_result: str,
     ):
         with target.indent_manager.offset(offset):
-            self.into_ani_boxed_impl(target, env, cpp_value, ani_result)
+            self._into_ani_boxed_impl(target, env, cpp_value, ani_result)
 
-    def from_ani_boxed_impl(
+    def _from_ani_boxed_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -1085,7 +1091,7 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
         cpp_result: str,
     ):
         with target.indent_manager.offset(offset):
-            self.from_ani_boxed_impl(target, env, ani_value, cpp_result)
+            self._from_ani_boxed_impl(target, env, ani_value, cpp_result)
 
 
 class EnumTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[EnumType]):
@@ -1109,7 +1115,7 @@ class EnumTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[EnumType]):
         return enum_ani_info.sts_type_in(pkg, target)
 
     @override
-    def from_ani_impl(
+    def _from_ani_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -1125,7 +1131,7 @@ class EnumTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[EnumType]):
         )
 
     @override
-    def into_ani_impl(
+    def _into_ani_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -1156,7 +1162,7 @@ class StructTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[StructType]):
         return struct_ani_info.sts_type_in(pkg, target)
 
     @override
-    def from_ani_impl(
+    def _from_ani_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -1170,7 +1176,7 @@ class StructTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[StructType]):
         )
 
     @override
-    def into_ani_impl(
+    def _into_ani_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -1199,7 +1205,7 @@ class UnionTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[UnionType]):
         return union_ani_info.sts_type_in(pkg, target)
 
     @override
-    def from_ani_impl(
+    def _from_ani_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -1213,7 +1219,7 @@ class UnionTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[UnionType]):
         )
 
     @override
-    def into_ani_impl(
+    def _into_ani_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -1242,7 +1248,7 @@ class IfaceTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[IfaceType]):
         return iface_ani_info.sts_type_in(pkg, target)
 
     @override
-    def from_ani_impl(
+    def _from_ani_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -1256,7 +1262,7 @@ class IfaceTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[IfaceType]):
         )
 
     @override
-    def into_ani_impl(
+    def _into_ani_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -1298,7 +1304,7 @@ class ScalarTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ScalarType]):
         return self.sts_type
 
     @override
-    def from_ani_impl(
+    def _from_ani_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -1310,7 +1316,7 @@ class ScalarTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ScalarType]):
         )
 
     @override
-    def into_ani_impl(
+    def _into_ani_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -1342,7 +1348,7 @@ class OpaqueTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[OpaqueType]):
         return self.sts_type
 
     @override
-    def from_ani_impl(
+    def _from_ani_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -1354,7 +1360,7 @@ class OpaqueTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[OpaqueType]):
         )
 
     @override
-    def into_ani_impl(
+    def _into_ani_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -1377,7 +1383,7 @@ class StringTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[StringType]):
         return "string"
 
     @override
-    def from_ani_impl(
+    def _from_ani_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -1399,7 +1405,7 @@ class StringTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[StringType]):
         )
 
     @override
-    def into_ani_impl(
+    def _into_ani_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -1442,7 +1448,7 @@ class ArrayTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
         return f"({sts_type}[])"
 
     @override
-    def from_ani_impl(
+    def _from_ani_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -1464,7 +1470,7 @@ class ArrayTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
         )
 
     @override
-    def into_ani_impl(
+    def _into_ani_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -1503,7 +1509,7 @@ class ArrayBufferTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
         return "ArrayBuffer"
 
     @override
-    def from_ani_impl(
+    def _from_ani_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -1521,7 +1527,7 @@ class ArrayBufferTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
         )
 
     @override
-    def into_ani_impl(
+    def _into_ani_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -1576,7 +1582,7 @@ class TypedArrayTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
         return self.sts_type
 
     @override
-    def from_ani_impl(
+    def _from_ani_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -1603,7 +1609,7 @@ class TypedArrayTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
         )
 
     @override
-    def into_ani_impl(
+    def _into_ani_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -1663,7 +1669,7 @@ class BigIntTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
         return "BigInt"
 
     @override
-    def from_ani_impl(
+    def _from_ani_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -1692,7 +1698,7 @@ class BigIntTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
         )
 
     @override
-    def into_ani_impl(
+    def _into_ani_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -1736,7 +1742,7 @@ class OptionalTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[OptionalType]):
         return f"({sts_type} | undefined)"
 
     @override
-    def from_ani_impl(
+    def _from_ani_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -1762,7 +1768,7 @@ class OptionalTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[OptionalType]):
         )
 
     @override
-    def into_ani_impl(
+    def _into_ani_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -1801,7 +1807,7 @@ class RecordTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[MapType]):
         return f"Record<{key_sts_type}, {val_sts_type}>"
 
     @override
-    def from_ani_impl(
+    def _from_ani_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -1845,7 +1851,7 @@ class RecordTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[MapType]):
         )
 
     @override
-    def into_ani_impl(
+    def _into_ani_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -1901,7 +1907,7 @@ class MapTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[MapType]):
         return f"Map<{key_sts_type}, {val_sts_type}>"
 
     @override
-    def from_ani_impl(
+    def _from_ani_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -1913,7 +1919,7 @@ class MapTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[MapType]):
         )
 
     @override
-    def into_ani_impl(
+    def _into_ani_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -1950,7 +1956,7 @@ class CallbackTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[CallbackType]):
         return f"(({params_ty_sts_str}) => {return_ty_sts})"
 
     @override
-    def from_ani_impl(
+    def _from_ani_impl(
         self,
         target: COutputBuffer,
         env: str,
@@ -2029,7 +2035,7 @@ class CallbackTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[CallbackType]):
         )
 
     @override
-    def into_ani_impl(
+    def _into_ani_impl(
         self,
         target: COutputBuffer,
         env: str,

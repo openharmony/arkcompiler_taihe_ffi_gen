@@ -10,6 +10,7 @@ from taihe.codegen.ani_generator import (
     IfaceMethodANIInfo,
     PackageANIInfo,
     StructANIInfo,
+    StructFieldANIInfo,
     TypeANIInfo,
     UnionANIInfo,
     UnionFieldANIInfo,
@@ -119,7 +120,7 @@ class STSCodeGenerator:
         on_off_funcs = self.stat_on_off_funcs(funcs)
         return [
             (method_name, type_name, method)
-            for (method_name, type_name), method_list in on_off_funcs.items()
+            for (method_name, _), method_list in on_off_funcs.items()
             if len(method_list) == 1
             for type_name, method in method_list
         ]
@@ -130,7 +131,7 @@ class STSCodeGenerator:
     ):
         on_off_funcs = self.stat_on_off_funcs(funcs)
         bad_on_off_funcs: dict[str, list[tuple[str, GlobFuncDecl]]] = {}
-        for (method_name, type_name), method_list in on_off_funcs.items():
+        for (method_name, _), method_list in on_off_funcs.items():
             if len(method_list) <= 1:
                 continue
             for type_name, method in method_list:
@@ -169,7 +170,7 @@ class STSCodeGenerator:
         on_off_methods = self.stat_on_off_methods(methods)
         return [
             (method_name, type_name, method)
-            for (method_name, type_name), method_list in on_off_methods.items()
+            for (method_name, _), method_list in on_off_methods.items()
             if len(method_list) == 1
             for type_name, method in method_list
         ]
@@ -180,7 +181,7 @@ class STSCodeGenerator:
     ):
         on_off_methods = self.stat_on_off_methods(methods)
         bad_on_off_methods: dict[str, list[tuple[str, IfaceMethodDecl]]] = {}
-        for (method_name, type_name), method_list in on_off_methods.items():
+        for (method_name, _), method_list in on_off_methods.items():
             if len(method_list) <= 1:
                 continue
             for type_name, method in method_list:
@@ -486,9 +487,11 @@ class STSCodeGenerator:
             for injected in struct_ani_info.interface_injected_codes:
                 target.writeln(injected)
             for field in struct_ani_info.sts_fields:
+                field_ani_info = StructFieldANIInfo.get(self.am, field)
+                readonly_str = "readonly " if field_ani_info.readonly else ""
                 ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
                 target.writeln(
-                    f"{field.name}: {ty_ani_info.sts_type_in(pkg, target)};",
+                    f"{readonly_str}{field.name}: {ty_ani_info.sts_type_in(pkg, target)};",
                 )
         target.writeln(
             f"}}",
@@ -521,9 +524,11 @@ class STSCodeGenerator:
                 target.writeln(injected)
             for parts in struct_ani_info.sts_final_fields:
                 final = parts[-1]
+                final_ani_info = StructFieldANIInfo.get(self.am, final)
+                readonly_str = "readonly " if final_ani_info.readonly else ""
                 ty_ani_info = TypeANIInfo.get(self.am, final.ty_ref.resolved_ty)
                 target.writeln(
-                    f"{final.name}: {ty_ani_info.sts_type_in(pkg, target)};",
+                    f"{readonly_str}{final.name}: {ty_ani_info.sts_type_in(pkg, target)};",
                 )
             target.writeln(
                 f"constructor(",
