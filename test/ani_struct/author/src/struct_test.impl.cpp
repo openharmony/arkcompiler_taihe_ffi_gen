@@ -1,7 +1,7 @@
-#include "struct_test.proj.hpp"
 #include "struct_test.impl.hpp"
-#include "taihe/runtime.hpp"
 #include "stdexcept"
+#include "struct_test.proj.hpp"
+#include "taihe/runtime.hpp"
 
 using namespace taihe;
 
