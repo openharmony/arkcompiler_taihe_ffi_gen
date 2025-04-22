@@ -7,7 +7,6 @@ from taihe.codegen.abi_generator import (
     EnumABIInfo,
     IfaceABIInfo,
     IfaceMethodABIInfo,
-    PackageABIInfo,
     StructABIInfo,
     TypeABIInfo,
     UnionABIInfo,
@@ -390,8 +389,6 @@ class CppHeadersGenerator:
         pkg_cpp_target = COutputBuffer.create(
             self.tm, f"include/{pkg_cpp_info.header}", True
         )
-        pkg_abi_info = PackageABIInfo.get(self.am, pkg)
-        pkg_cpp_target.include(pkg_abi_info.header)
         for enum in pkg.enums:
             enum_abi_info = EnumABIInfo.get(self.am, enum)
             enum_cpp_info = EnumCppInfo.get(self.am, enum)
