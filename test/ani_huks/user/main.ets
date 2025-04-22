@@ -1,4 +1,4 @@
-import * as huks from "@generated/huks";
+import {huks} from "@generated/@ohos.security.huks";
 import * as System from "std/core/System";
 
 loadLibrary("ani_huks");
@@ -17,17 +17,24 @@ function test_huks_generateKey() {
         arrbuf2.set(i, numbers2[i]);
     }
 
+    // Convert to Uint8Array
+    const array1: Uint8Array = new Uint8Array(arrbuf1);
+    const array2: Uint8Array = new Uint8Array(arrbuf2);
+
     // Create HUKS parameters and options
     const huksParam1: huks.HuksParam = {
         tag: huks.HuksTag.HUKS_TAG_KEY_SIZE,
         value: huks.HuksKeySize.HUKS_RSA_KEY_SIZE_512 as number
     };
-    const huksParam2:
-        huks.HuksParam = {tag: huks.HuksTag.HUKS_TAG_KEY, value: arrbuf1};
+
+    const huksParam2: huks.HuksParam = {
+        tag: huks.HuksTag.HUKS_TAG_KEY,
+        value: array1,
+    };
 
     const huksOptions: huks.HuksOptions = {
         properties: [huksParam1, huksParam2],
-        inData: arrbuf2
+        inData: array2,
     };
 
     // Test that parameters are set correctly
@@ -46,7 +53,7 @@ function test_huks_generateKey() {
     assertNE(
         huksOptions.properties![1].value, undefined,
         "Key buffer should be defined");
-    const keyBuffer = huksOptions.properties![1].value as ArrayBuffer;
+    const keyBuffer = huksOptions.properties![1].value as Uint8Array;
     for (let i = 0; i < numbers1.length; i++) {
         assertEQ(
             keyBuffer.at(i), numbers1[i],
@@ -62,7 +69,7 @@ function test_huks_generateKey() {
     }
 
     // Call the function
-    const result = huks.generateKey("alias", huksOptions);
+    const result = await huks.generateKey("alias", huksOptions);
 
     // Verify the result based on the expected output
     assertEQ(result.errorCode, 0, "Error code should be 0");
@@ -94,14 +101,14 @@ function test_huks_generateKey() {
             result.properties![i].tag, huks.HuksTag.HUKS_TAG_ACCESS_TIME,
             `Property ${i} tag should be ACCESS_TIME`);
 
-        const propBuffer = result.properties![i].value as ArrayBuffer;
+        const propBuffer = result.properties![i].value as Uint8Array;
         assertEQ(
             propBuffer.byteLength, 4,
             `Property ${i} buffer should have 4 bytes`);
 
         for (let j = 0; j < 4; j++) {
             assertEQ(
-                propBuffer.at(j), 0xcc as byte,
+                propBuffer.at(j), 0xcc,
                 `Property ${i} buffer byte ${j} should be 0xcc`);
         }
     }
