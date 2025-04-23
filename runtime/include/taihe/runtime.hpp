@@ -10,7 +10,7 @@ ani_env *get_env();
 
 class env_guard {
   ani_env *env;
-  bool is_temp;
+  bool is_attached;
 
 public:
   env_guard();

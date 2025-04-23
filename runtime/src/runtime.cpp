@@ -16,14 +16,15 @@ ani_env *get_env() {
 }
 
 env_guard::env_guard() {
-  is_temp = global_vm->GetEnv(ANI_VERSION_1, &env) != ANI_OK;
-  if (is_temp) {
-    global_vm->AttachCurrentThread(nullptr, ANI_VERSION_1, &env);
+  is_attached =
+      global_vm->AttachCurrentThread(nullptr, ANI_VERSION_1, &env) == ANI_OK;
+  if (!is_attached) {
+    global_vm->GetEnv(ANI_VERSION_1, &env);
   }
 }
 
 env_guard::~env_guard() {
-  if (is_temp) {
+  if (is_attached) {
     global_vm->DetachCurrentThread();
   }
 }
