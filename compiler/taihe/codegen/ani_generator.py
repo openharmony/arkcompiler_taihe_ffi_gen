@@ -1436,8 +1436,8 @@ class ArrayTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
             raise_adhoc_error(
                 am,
                 f"Array of unsigned integer types is not supported, "
-                f"if you want to use ArrayBuffer, please use @arraybuffer Array<{self.t.item_ty.ty_ref.text}>, "
-                f"if you want to use TypedArray, please use @typedarray Array<{self.t.item_ty.ty_ref.text}>",
+                f"if you want to use ArrayBuffer, please use `@arraybuffer Array<{self.t.item_ty.ty_ref.text}>`, "
+                f"if you want to use TypedArray, please use `@typedarray Array<{self.t.item_ty.ty_ref.text}>`",
                 self.t.ty_ref.loc,
             )
 
@@ -1894,7 +1894,7 @@ class MapTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[MapType]):
             am,
             f"Map is not supported yet, "
             f"if you want to use TS Record type, "
-            f"please use @record Map<{self.t.key_ty.ty_ref.text}, {self.t.val_ty.ty_ref.text}>",
+            f"please use `@record Map<{self.t.key_ty.ty_ref.text}, {self.t.val_ty.ty_ref.text}>`",
             self.t.ty_ref.loc,
         )
 
@@ -1971,7 +1971,8 @@ class CallbackTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[CallbackType]):
             f"        env->GlobalReference_Create(obj, &this->ref);",
             f"    }}",
             f"    ~{cpp_impl_class}() {{",
-            f"        ani_env *env = ::taihe::get_env();",
+            f"        ::taihe::env_guard guard;",
+            f"        ani_env *env = guard.get_env();",
             f"        env->GlobalReference_Delete(this->ref);",
             f"    }}",
         )
@@ -1993,7 +1994,8 @@ class CallbackTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[CallbackType]):
             return_ty_as_owner = "void"
         target.writeln(
             f"    {return_ty_as_owner} operator()({cpp_params_str}) {{",
-            f"        ani_env *env = ::taihe::get_env();",
+            f"        ::taihe::env_guard guard;",
+            f"        ani_env *env = guard.get_env();",
         )
         for inner_ani_arg, inner_cpp_arg, param_ty in zip(
             inner_ani_args, inner_cpp_args, self.t.params_ty, strict=True
@@ -2126,6 +2128,7 @@ class ANICodeGenerator:
         )
         constructor_target.writeln(
             f"ANI_EXPORT ani_status ANI_Constructor(ani_vm *vm, uint32_t *result) {{",
+            # f"    ::taihe::set_vm(vm);",
             f"    ani_env *env;",
             f"    if (ANI_OK != vm->GetEnv(ANI_VERSION_1, &env)) {{",
             f"        return ANI_ERROR;",
@@ -2256,6 +2259,12 @@ class ANICodeGenerator:
         pkg_ani_source_target.writeln(
             f"namespace {pkg_ani_info.cpp_ns} {{",
             f"ani_status ANIRegister(ani_env *env) {{",
+            # TODO: set_vm in constructor
+            f"    ani_vm *vm;",
+            f"    if (ANI_OK != env->GetVM(&vm)) {{",
+            f"        return ANI_ERROR;",
+            f"    }}",
+            f"    ::taihe::set_vm(vm);",
         )
         for register_info in register_infos:
             parent_scope = register_info.parent_scope
@@ -2291,7 +2300,6 @@ class ANICodeGenerator:
     ):
         pkg_ani_source_target.writeln(
             f"static void {mangled_name}([[maybe_unused]] ani_env *env, [[maybe_unused]] ani_class clazz, ani_long data_ptr) {{",
-            f"    ::taihe::set_env(env);",
             f"    ::taihe::data_holder(reinterpret_cast<DataBlockHead*>(data_ptr));",
             f"}}",
         )
@@ -2322,7 +2330,6 @@ class ANICodeGenerator:
             ani_return_ty_name = "void"
         pkg_ani_source_target.writeln(
             f"static {ani_return_ty_name} {mangled_name}({ani_params_str}) {{",
-            f"    ::taihe::set_env(env);",
         )
         for param, ani_arg, cpp_arg in zip(
             func.params, ani_args, cpp_args, strict=True
@@ -2384,7 +2391,6 @@ class ANICodeGenerator:
             ani_return_ty_name = "void"
         pkg_ani_source_target.writeln(
             f"static {ani_return_ty_name} {mangled_name}({ani_params_str}) {{",
-            f"    ::taihe::set_env(env);",
             f"    ani_long ani_data_ptr;",
             f'    env->Object_GetPropertyByName_Long(object, "_data_ptr", reinterpret_cast<ani_long*>(&ani_data_ptr));',
             f"    ani_long ani_vtbl_ptr;",
@@ -2501,7 +2507,8 @@ class ANICodeGenerator:
             f"            env->GlobalReference_Create(obj, &this->ref);",
             f"        }}",
             f"        ~cpp_impl_t() {{",
-            f"            ani_env *env = ::taihe::get_env();",
+            f"            ::taihe::env_guard guard;",
+            f"            ani_env *env = guard.get_env();",
             f"            env->GlobalReference_Delete(this->ref);",
             f"        }}",
         )
@@ -2527,7 +2534,8 @@ class ANICodeGenerator:
                     cpp_return_ty_name = "void"
                 iface_ani_impl_target.writeln(
                     f"        {cpp_return_ty_name} {method_cpp_info.impl_name}({inner_cpp_params_str}) {{",
-                    f"            ani_env *env = ::taihe::get_env();",
+                    f"            ::taihe::env_guard guard;",
+                    f"            ani_env *env = guard.get_env();",
                 )
                 for param, inner_cpp_arg, inner_ani_arg in zip(
                     method.params, inner_cpp_args, inner_ani_args, strict=True

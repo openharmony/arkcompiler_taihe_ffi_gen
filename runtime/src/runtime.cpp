@@ -3,14 +3,29 @@
 #include "ani.h"
 
 namespace taihe {
-__thread ani_env *cur_env;
+ani_vm *global_vm = nullptr;
 
-void set_env(ani_env *env) {
-  cur_env = env;
+void set_vm(ani_vm *vm) {
+  global_vm = vm;
 }
 
 ani_env *get_env() {
-  return cur_env;
+  ani_env *env = nullptr;
+  global_vm->GetEnv(ANI_VERSION_1, &env);
+  return env;
+}
+
+env_guard::env_guard() {
+  is_temp = global_vm->GetEnv(ANI_VERSION_1, &env) != ANI_OK;
+  if (is_temp) {
+    global_vm->AttachCurrentThread(nullptr, ANI_VERSION_1, &env);
+  }
+}
+
+env_guard::~env_guard() {
+  if (is_temp) {
+    global_vm->DetachCurrentThread();
+  }
 }
 
 static ani_object create_ani_error(ani_env *env, taihe::string_view msg) {
@@ -46,7 +61,7 @@ void ani_set_error(ani_env *env, taihe::string_view msg) {
 }
 
 void ani_set_business_error(ani_env *env, int32_t err_code,
-                            taihe ::string_view msg) {
+                            taihe::string_view msg) {
   ani_object errObj = create_ani_error(env, msg);
 
   ani_class errCls;
