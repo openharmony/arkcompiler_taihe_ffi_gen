@@ -1,10 +1,10 @@
-#include "huks.impl.hpp"
-#include "huks.proj.hpp"
+#include "ohos.security.huks.huks.impl.hpp"
+#include "ohos.security.huks.huks.proj.hpp"
 #include "stdexcept"
 #include "taihe/runtime.hpp"
 
 using namespace taihe;
-using namespace huks;
+using namespace ohos::security::huks::huks;
 
 namespace {
 // To be implemented.
@@ -42,21 +42,21 @@ HuksResult generateKeySync(string_view keyAlias, HuksOptions const &options) {
     for (auto const &property : *properties) {
       std::cout << "tag = " << (size_t)property.tag.get_value() << std::endl;
       switch (property.value.get_tag()) {
-      case huks::HuksParamValue::tag_t::bigintValue:
+      case HuksParamValue::tag_t::bigintValue:
         std::cout << "bigint "
                   << BigIntAsString(property.value.get_bigintValue_ref())
                   << std::endl;
         break;
-      case huks::HuksParamValue::tag_t::booleanValue:
+      case HuksParamValue::tag_t::booleanValue:
         std::cout << "boolean " << property.value.get_booleanValue_ref()
                   << std::endl;
         break;
-      case huks::HuksParamValue::tag_t::arrayValue:
+      case HuksParamValue::tag_t::arrayValue:
         std::cout << "array "
                   << ArrayAsString(property.value.get_arrayValue_ref())
                   << std::endl;
         break;
-      case huks::HuksParamValue::tag_t::numberValue:
+      case HuksParamValue::tag_t::numberValue:
         std::cout << "number " << property.value.get_numberValue_ref()
                   << std::endl;
         break;
@@ -65,16 +65,15 @@ HuksResult generateKeySync(string_view keyAlias, HuksOptions const &options) {
   } else {
     std::cout << "No Properties!" << std::endl;
   }
-  huks::HuksParam huksParam = {
-      .tag = huks::HuksTag::key_t::HUKS_TAG_ACCESS_TIME,
-      .value =
-          huks::HuksParamValue::make_arrayValue(array<uint8_t>::make(4, 0xcc)),
+  HuksParam huksParam = {
+      .tag = HuksTag::key_t::HUKS_TAG_ACCESS_TIME,
+      .value = HuksParamValue::make_arrayValue(array<uint8_t>::make(4, 0xcc)),
   };
-  huks::HuksResult huksResult = {
+  HuksResult huksResult = {
       .errorCode = 0.0,
       .outData = optional<array<uint8_t>>::make(array<uint8_t>::make(3, 0x12)),
-      .properties = optional<array<huks::HuksParam>>::make(
-          array<huks::HuksParam>::make(7, huksParam)),
+      .properties = optional<array<HuksParam>>::make(
+          array<HuksParam>::make(7, huksParam)),
       .certChains =
           optional<array<string>>::make(array<string>::make(5, "Hello")),
   };
