@@ -2,6 +2,7 @@
 // import type colorSpaceManager from "./@ohos.graphics.colorSpaceManager";
 // import type resourceManager from "./@ohos.resourceManager";
 // import type rpc from "./@ohos.rpc";
+use ohos.graphics.colorSpaceManager.colorSpaceManager as colorSpaceManager;
 
 @!namespace("@ohos.multimedia.image", "image")
 
@@ -667,8 +668,8 @@ function createImageSourceFdOptions(fd: i32, options: SourceOptions): ImageSourc
 function createImageSourceBuf(buf: @arraybuffer Array<u8>): ImageSource;
 @overload("createImageSource")
 function createImageSourceBufOptions(buf: @arraybuffer Array<u8>, options: SourceOptions): ImageSource;
-@overload("createImageSource")
-function createImageSourceRawfile(rawfile: resourceManager.RawFileDescriptor, options: Optional<SourceOptions>): ImageSource;
+// @overload("createImageSource")
+// function createImageSourceRawfile(rawfile: resourceManager.RawFileDescriptor, options: Optional<SourceOptions>): ImageSource;
 
 // function CreateIncrementalSource(buf: @arraybuffer Array<u8>): ImageSource;
 // function CreateIncrementalSource(buf: @arraybuffer Array<u8>, options: Optional<SourceOptions>): ImageSource;
