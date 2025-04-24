@@ -4,9 +4,10 @@ from typing import TYPE_CHECKING, Literal
 
 from typing_extensions import override
 
-from taihe.codegen.abi_generator import (
+from taihe.codegen.abi.analyses import (
     IfaceABIInfo,
 )
+from taihe.codegen.abi.mangle import DeclKind, encode
 from taihe.codegen.cpp_generator import (
     EnumCppInfo,
     IfaceCppInfo,
@@ -19,7 +20,6 @@ from taihe.codegen.cpp_user_generator import (
     GlobFuncCppUserInfo,
     PackageCppUserInfo,
 )
-from taihe.codegen.mangle import DeclKind, encode
 from taihe.semantics.declarations import (
     AttrItemDecl,
     EnumDecl,

@@ -1,6 +1,6 @@
 import re
 
-from taihe.codegen.abi_generator import (
+from taihe.codegen.abi.analyses import (
     GlobFuncABIInfo,
     IfaceABIInfo,
     PackageABIInfo,

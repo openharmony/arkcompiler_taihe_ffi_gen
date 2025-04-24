@@ -5,16 +5,16 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-from taihe.codegen.abi_generator import (
+from taihe.codegen.abi.gen_abi import (
     ABIHeadersGenerator,
     ABISourcesGenerator,
 )
-from taihe.codegen.ani_generator import (
-    ANICodeGenerator,
-)
-from taihe.codegen.c_impl_generator import (
+from taihe.codegen.abi.gen_impl import (
     CImplHeadersGenerator,
     CImplSourcesGenerator,
+)
+from taihe.codegen.ani_generator import (
+    ANICodeGenerator,
 )
 from taihe.codegen.cpp_generator import (
     CppHeadersGenerator,

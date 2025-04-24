@@ -3,7 +3,7 @@ from json import dumps
 
 from typing_extensions import override
 
-from taihe.codegen.abi_generator import (
+from taihe.codegen.abi.analyses import (
     EnumABIInfo,
     IfaceABIInfo,
     IfaceMethodABIInfo,
