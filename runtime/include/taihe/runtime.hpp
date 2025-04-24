@@ -6,6 +6,7 @@
 
 namespace taihe {
 void set_vm(ani_vm *vm);
+ani_vm *get_vm();
 ani_env *get_env();
 
 class env_guard {
@@ -26,8 +27,8 @@ public:
   }
 };
 
-void set_business_error(int32_t err_code, taihe::string_view msg);
 void set_error(taihe::string_view msg);
+void set_business_error(int32_t err_code, taihe::string_view msg);
 void reset_error();
 bool has_error();
 }  // namespace taihe

@@ -9,6 +9,10 @@ void set_vm(ani_vm *vm) {
   global_vm = vm;
 }
 
+ani_vm *get_vm() {
+  return global_vm;
+}
+
 ani_env *get_env() {
   ani_env *env = nullptr;
   global_vm->GetEnv(ANI_VERSION_1, &env);
@@ -48,10 +52,13 @@ static ani_error create_ani_error(ani_env *env, taihe::string_view msg) {
   ani_string result_string{};
   env->String_NewUTF8(msg.c_str(), msg.size(), &result_string);
 
+  ani_ref undefined;
+  env->GetUndefined(&undefined);
+
   ani_error errObj;
   if (ANI_OK != env->Object_New(errCls, errCtor,
                                 reinterpret_cast<ani_object *>(&errObj),
-                                result_string)) {
+                                result_string, undefined)) {
     std::cerr << "Create Object Failed'" << className << "'" << std::endl;
     return nullptr;
   }
