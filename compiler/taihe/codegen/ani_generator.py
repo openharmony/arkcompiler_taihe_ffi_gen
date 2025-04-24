@@ -310,10 +310,8 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
         self.sts_async_name = None
         self.sts_promise_name = None
 
-        if (
-            self.resolve_ctor()
-            or self.resolve_static()
-            and (self.resolve_getter() or self.resolve_setter())
+        if self.resolve_ctor() or (
+            self.resolve_static() and (self.resolve_getter() or self.resolve_setter())
         ):
             pass
         elif self.resolve_on_off() or self.resolve_normal():
