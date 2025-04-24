@@ -15,6 +15,7 @@ dev = [
     "coverage>=7.8.0",
     "pyre-check>=0.9.23",
     "pytest>=8.3.5",
+    "removestar>=1.5.2",
     "ruff>=0.11.6",
 ]
 
