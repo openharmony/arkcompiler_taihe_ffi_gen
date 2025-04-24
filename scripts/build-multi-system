@@ -120,7 +120,7 @@ main() {
 
     echo "Build the compiler ..."
     pushd compiler
-    ./generate-grammar && poetry build
+    ./generate-grammar && uv build
     popd 2>/dev/null
 
     if [ -d "$BASE_DIST" ]; then
