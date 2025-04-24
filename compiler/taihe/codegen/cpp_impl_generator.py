@@ -98,7 +98,7 @@ class CppImplSourcesGenerator:
     def __init__(self, tm: OutputManager, am: AnalysisManager):
         self.tm = tm
         self.am = am
-        self.using_namespaces = []
+        self.using_namespaces: list[str] = []
 
     def mask(self, cpp_type: str):
         pattern = r"(::)?([A-Za-z_][A-Za-z_0-9]*::)*[A-Za-z_][A-Za-z_0-9]*"
@@ -132,8 +132,8 @@ class CppImplSourcesGenerator:
         pkg_cpp_impl_target.include("stdexcept")
         pkg_cpp_impl_target.writeln("")
         self.using_namespaces = []
-        self.gen_using_namespace(pkg_cpp_impl_target, "taihe")
-        self.gen_using_namespace(pkg_cpp_impl_target, "::".join(pkg.segments))
+        # self.gen_using_namespace(pkg_cpp_impl_target, "taihe")
+        # self.gen_using_namespace(pkg_cpp_impl_target, "::".join(pkg.segments))
         pkg_cpp_impl_target.writeln("")
         self.gen_anonymous_namespace_block(pkg, pkg_cpp_impl_target)
         pkg_cpp_impl_target.writeln("")
@@ -147,6 +147,16 @@ class CppImplSourcesGenerator:
             "// NOLINTEND",
         )
         self.using_namespaces = []
+
+    def gen_using_namespace(
+        self,
+        pkg_cpp_impl_target: COutputBuffer,
+        namespace: str,
+    ):
+        pkg_cpp_impl_target.writeln(
+            f"using namespace {namespace};",
+        )
+        self.using_namespaces.append(namespace)
 
     def gen_anonymous_namespace_block(
         self,
@@ -166,16 +176,6 @@ class CppImplSourcesGenerator:
         pkg_cpp_impl_target.writeln(
             f"}}  // namespace",
         )
-
-    def gen_using_namespace(
-        self,
-        pkg_cpp_impl_target: COutputBuffer,
-        namespace: str,
-    ):
-        pkg_cpp_impl_target.writeln(
-            f"using namespace {namespace};",
-        )
-        self.using_namespaces.append(namespace)
 
     def gen_iface(
         self,

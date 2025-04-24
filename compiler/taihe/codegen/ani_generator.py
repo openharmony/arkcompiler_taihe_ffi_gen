@@ -1401,7 +1401,7 @@ class StringTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[StringType]):
             f"{env}->String_GetUTF8({ani_value}, {cpp_buffer}, {ani_length} + 1, &{ani_length});",
             f"{cpp_buffer}[{ani_length}] = '\\0';",
             f"{cpp_tstr}.length = {ani_length};",
-            f"taihe::string {cpp_result} = taihe::string({cpp_tstr});",
+            f"::taihe::string {cpp_result} = ::taihe::string({cpp_tstr});",
         )
 
     @override
@@ -2126,6 +2126,7 @@ class ANICodeGenerator:
         constructor_target = COutputBuffer.create(
             self.tm, f"src/{constructor_file}", False
         )
+        constructor_target.include("taihe/runtime.hpp")
         constructor_target.writeln(
             f"ANI_EXPORT ani_status ANI_Constructor(ani_vm *vm, uint32_t *result) {{",
             # f"    ::taihe::set_vm(vm);",
@@ -2259,12 +2260,16 @@ class ANICodeGenerator:
         pkg_ani_source_target.writeln(
             f"namespace {pkg_ani_info.cpp_ns} {{",
             f"ani_status ANIRegister(ani_env *env) {{",
-            # TODO: set_vm in constructor
-            f"    ani_vm *vm;",
-            f"    if (ANI_OK != env->GetVM(&vm)) {{",
-            f"        return ANI_ERROR;",
+        )
+        # TODO: set_vm in constructor
+        pkg_ani_source_target.writeln(
+            f"    if (::taihe::get_vm() == nullptr) {{",
+            f"        ani_vm *vm;",
+            f"        if (ANI_OK != env->GetVM(&vm)) {{",
+            f"            return ANI_ERROR;",
+            f"        }}",
+            f"        ::taihe::set_vm(vm);",
             f"    }}",
-            f"    ::taihe::set_vm(vm);",
         )
         for register_info in register_infos:
             parent_scope = register_info.parent_scope
@@ -2578,7 +2583,7 @@ class ANICodeGenerator:
                 )
         iface_ani_impl_target.writeln(
             f"    }};",
-            f"    return taihe::make_holder<cpp_impl_t, {iface_cpp_info.as_owner}>(env, ani_obj);",
+            f"    return ::taihe::make_holder<cpp_impl_t, {iface_cpp_info.as_owner}>(env, ani_obj);",
             f"}}",
         )
 
@@ -2808,7 +2813,7 @@ class ANICodeGenerator:
             for part in parts:
                 path_cpp_info = UnionCppInfo.get(self.am, part.parent_union)
                 static_tags.append(
-                    f"taihe::static_tag<{path_cpp_info.full_name}::tag_t::{part.name}>"
+                    f"::taihe::static_tag<{path_cpp_info.full_name}::tag_t::{part.name}>"
                 )
             static_tags_str = ", ".join(static_tags)
             full_name = "_".join(part.name for part in parts)
@@ -2836,7 +2841,7 @@ class ANICodeGenerator:
             for part in parts:
                 path_cpp_info = UnionCppInfo.get(self.am, part.parent_union)
                 static_tags.append(
-                    f"taihe::static_tag<{path_cpp_info.full_name}::tag_t::{part.name}>"
+                    f"::taihe::static_tag<{path_cpp_info.full_name}::tag_t::{part.name}>"
                 )
             static_tags_str = ", ".join(static_tags)
             full_name = "_".join(part.name for part in parts)
