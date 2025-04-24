@@ -16,14 +16,14 @@ from taihe.codegen.abi.gen_impl import (
 from taihe.codegen.ani_generator import (
     ANICodeGenerator,
 )
-from taihe.codegen.cpp_generator import (
+from taihe.codegen.cpp.gen_common import (
     CppHeadersGenerator,
 )
-from taihe.codegen.cpp_impl_generator import (
+from taihe.codegen.cpp.gen_impl import (
     CppImplHeadersGenerator,
     CppImplSourcesGenerator,
 )
-from taihe.codegen.cpp_user_generator import (
+from taihe.codegen.cpp.gen_user import (
     CppUserHeadersGenerator,
 )
 from taihe.codegen.sts_generator import (

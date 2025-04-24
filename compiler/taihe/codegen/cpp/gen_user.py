@@ -2,8 +2,10 @@ from taihe.codegen.abi.analyses import (
     GlobFuncABIInfo,
     PackageABIInfo,
 )
-from taihe.codegen.cpp_generator import (
+from taihe.codegen.cpp.analyses import (
+    GlobFuncCppUserInfo,
     PackageCppInfo,
+    PackageCppUserInfo,
     TypeCppInfo,
 )
 from taihe.semantics.declarations import (
@@ -11,22 +13,8 @@ from taihe.semantics.declarations import (
     PackageDecl,
     PackageGroup,
 )
-from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
+from taihe.utils.analyses import AnalysisManager
 from taihe.utils.outputs import COutputBuffer, OutputManager
-
-
-class PackageCppUserInfo(AbstractAnalysis[PackageDecl]):
-    def __init__(self, am: AnalysisManager, p: PackageDecl) -> None:
-        super().__init__(am, p)
-        self.header = f"{p.name}.user.hpp"
-
-
-class GlobFuncCppUserInfo(AbstractAnalysis[GlobFuncDecl]):
-    def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
-        super().__init__(am, f)
-        self.namespace = "::".join(f.parent_pkg.segments)
-        self.call_name = f.name
-        self.full_name = "::" + self.namespace + "::" + self.call_name
 
 
 class CppUserHeadersGenerator:

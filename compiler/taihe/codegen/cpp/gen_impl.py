@@ -6,7 +6,7 @@ from taihe.codegen.abi.analyses import (
     PackageABIInfo,
     TypeABIInfo,
 )
-from taihe.codegen.cpp_generator import (
+from taihe.codegen.cpp.analyses import (
     IfaceMethodCppInfo,
     PackageCppInfo,
     TypeCppInfo,

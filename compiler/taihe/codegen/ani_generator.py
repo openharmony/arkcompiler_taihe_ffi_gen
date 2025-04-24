@@ -8,17 +8,15 @@ from taihe.codegen.abi.analyses import (
     IfaceABIInfo,
 )
 from taihe.codegen.abi.mangle import DeclKind, encode
-from taihe.codegen.cpp_generator import (
+from taihe.codegen.cpp.analyses import (
     EnumCppInfo,
+    GlobFuncCppUserInfo,
     IfaceCppInfo,
     IfaceMethodCppInfo,
+    PackageCppUserInfo,
     StructCppInfo,
     TypeCppInfo,
     UnionCppInfo,
-)
-from taihe.codegen.cpp_user_generator import (
-    GlobFuncCppUserInfo,
-    PackageCppUserInfo,
 )
 from taihe.semantics.declarations import (
     AttrItemDecl,
