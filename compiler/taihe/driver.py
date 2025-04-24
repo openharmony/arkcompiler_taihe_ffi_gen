@@ -13,8 +13,11 @@ from taihe.codegen.abi.gen_impl import (
     CImplHeadersGenerator,
     CImplSourcesGenerator,
 )
-from taihe.codegen.ani_generator import (
+from taihe.codegen.ani.gen_ani import (
     ANICodeGenerator,
+)
+from taihe.codegen.ani.gen_sts import (
+    STSCodeGenerator,
 )
 from taihe.codegen.cpp.gen_common import (
     CppHeadersGenerator,
@@ -25,9 +28,6 @@ from taihe.codegen.cpp.gen_impl import (
 )
 from taihe.codegen.cpp.gen_user import (
     CppUserHeadersGenerator,
-)
-from taihe.codegen.sts_generator import (
-    STSCodeGenerator,
 )
 from taihe.parse.convert import (
     AstConverter,

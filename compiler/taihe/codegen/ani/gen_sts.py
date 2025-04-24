@@ -3,7 +3,7 @@ from json import dumps
 from taihe.codegen.abi.analyses import (
     IfaceABIInfo,
 )
-from taihe.codegen.ani_generator import (
+from taihe.codegen.ani.analyses import (
     EnumANIInfo,
     GlobFuncANIInfo,
     IfaceANIInfo,
