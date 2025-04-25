@@ -3,7 +3,6 @@ from taihe.codegen.abi.analyses import (
 )
 from taihe.codegen.abi.mangle import DeclKind, encode
 from taihe.codegen.ani.analyses import (
-    ANI_CLASS,
     ANINativeFuncInfo,
     ANIRegisterInfo,
     GlobFuncANIInfo,
@@ -163,7 +162,7 @@ class ANICodeGenerator:
             iface_register_info = ANIRegisterInfo(
                 impl_desc=iface_ani_info.impl_desc,
                 member_infos=[],
-                parent_scope=ANI_CLASS,
+                parent_scope=iface_ani_info.scope,
             )
             register_infos.append(iface_register_info)
             for ancestor in iface_abi_info.ancestor_dict:

@@ -9,23 +9,27 @@ from taihe.codegen.abi.analyses import (
     UnionABIInfo,
 )
 from taihe.codegen.cpp.analyses import (
-    AnalysisManager,
     EnumCppInfo,
-    EnumDecl,
     IfaceCppInfo,
-    IfaceDecl,
     IfaceMethodCppInfo,
     PackageCppInfo,
-    PackageDecl,
-    ScalarType,
-    StringType,
     StructCppInfo,
-    StructDecl,
     TypeCppInfo,
     UnionCppInfo,
+)
+from taihe.semantics.declarations import (
+    EnumDecl,
+    IfaceDecl,
+    PackageDecl,
+    PackageGroup,
+    StructDecl,
     UnionDecl,
 )
-from taihe.semantics.declarations import PackageGroup
+from taihe.semantics.types import (
+    ScalarType,
+    StringType,
+)
+from taihe.utils.analyses import AnalysisManager
 from taihe.utils.outputs import COutputBuffer, OutputManager
 
 

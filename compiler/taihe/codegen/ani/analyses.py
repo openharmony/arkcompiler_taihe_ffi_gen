@@ -848,6 +848,10 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
                     parent.loc,
                 )
 
+    @property
+    def scope(self):
+        return ANI_CLASS
+
     def is_class(self):
         return self.sts_type_name == self.sts_impl_name
 
