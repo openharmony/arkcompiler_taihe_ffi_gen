@@ -85,9 +85,10 @@ function test_interface() {
             console.log("UserFoo(" + this.name + ") is calling bar()");
         }
     }
-
-    const userFoos: Array<ani_test.Foo> =
-        [new UserFoo("X"), new UserFoo("Y"), new UserFoo("Z")];
+    const X: ani_test.Foo = new UserFoo("X")
+    const Y: ani_test.Foo = new UserFoo("Y")
+    const Z: ani_test.Foo = new UserFoo("Z")
+    const userFoos: Array<ani_test.Foo> = [X, Y, Z];
     assertEQ(userFoos.length, 3);
     ani_test.callBar(userFoos);
 }
