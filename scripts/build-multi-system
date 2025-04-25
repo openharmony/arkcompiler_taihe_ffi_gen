@@ -1,0 +1,144 @@
+#!/bin/bash
+
+# Build the project and package into "dist/"
+
+source "$(dirname "$0")/common_lib.sh"
+
+SYSTEM_TYPES=("linux-x86_64" "windows-x86_64" "darwin-arm64" "darwin-x86_64")
+PYTHON_REPO_URL="https://gitee.com/ASeaSalt/python-multi-platform.git"
+PYTHON_REPO_BRANCH="main"
+
+copy-runtime() {
+    local current_system=$1
+    echo "Copying the runtime files for $current_system"
+    cp -r runtime/include/* "$INCLUDE_DIR"
+    cp -r runtime/src/* "$SRC_DIR"
+}
+
+build-compiler() {
+    local current_system=$1
+    echo "Building the compiler for $current_system"
+    local compiler_dir="$LIB_DIR/compiler"
+
+    pushd compiler
+    cd dist
+    tar xf taihe-*.gz
+    echo "Copying the compiler for $current_system"
+    mkdir -p "$compiler_dir/taihe" && cp -r taihe-*/taihe "$compiler_dir"
+    
+    site_packages_dir=$(python3 -c "import site; print(site.getsitepackages()[0])")
+    mkdir -p "$compiler_dir/lib"
+    cp -r "$site_packages_dir/antlr4" "$compiler_dir/lib/"
+    cp -r "$site_packages_dir/typing_extensions.py" "$compiler_dir/lib/"
+    find "$compiler_dir/lib" -type d -name "__pycache__" -exec rm -rf {} +
+    popd 2>/dev/null
+    
+    local prog="$BIN_DIR/taihec"
+    if [ "$current_system" = "windows-x86_64" ]; then
+        cat >"${prog}.bat" <<EOF
+@echo off
+set TAIHE_ROOT=%~dp0..
+set PYTHONPATH=%TAIHE_ROOT%\lib\taihe\compiler;%TAIHE_ROOT%\lib\taihe\compiler\lib;%PYTHONPATH%
+%TAIHE_ROOT%\lib\taihe\python\bin\python3.11.exe -m taihe.cli.compiler %*
+EOF
+        chmod 0755 "$prog".bat
+    else
+        cat >"$prog" <<EOF
+#!/bin/bash -eu
+export TAIHE_ROOT="\$(realpath \$(dirname "\$0")/..)"
+export PYTHONPATH="\${TAIHE_ROOT}/lib/taihe/compiler:\${TAIHE_ROOT}/lib/taihe/compiler/lib:\${PYTHONPATH:-}"
+exec "\${TAIHE_ROOT}/lib/taihe/python/bin/python3" -m taihe.cli.compiler "\$@"
+EOF
+        chmod 0755 "$prog"
+    fi
+    
+    local prog="$BIN_DIR/taihe-tryit"
+    if [ "$current_system" = "linux-x86_64" ]; then
+        cat >"$prog" <<EOF
+#!/bin/bash -eu
+export TAIHE_ROOT="\$(realpath \$(dirname "\$0")/..)"
+export PYTHONPATH="\${TAIHE_ROOT}/lib/taihe/compiler:\${TAIHE_ROOT}/lib/taihe/compiler/lib:\${PYTHONPATH:-}"
+exec "\${TAIHE_ROOT}/lib/taihe/python/bin/python3" -c 'from taihe.cli.tryit import *; main(BuildConfig(for_distribution=True));' "\$@"
+EOF
+        chmod 0755 "$prog"
+    fi
+    
+    tar -xzvf "${CACHE_DIR}/${current_system}-python.tar.gz" -C ${LIB_DIR} > /dev/null 2>&1
+}
+
+copy-documentation() {
+    find cookbook -type d \( -name "build" -o -name "*generated" \) -prune -o -type f -exec cp --parents {} "$DOC_DIR/" \;
+}
+
+write-version() {
+    local current_system=$1
+    local GIT_COMMIT=$(git rev-parse HEAD)
+    local GIT_MESSAGE=$(git log -1 --pretty=%B | head -n 1)
+    local BUILD_DATE=$(date +"%Y-%m-%d %H:%M:%S")
+    {
+        echo "System        : $current_system"
+        echo "Version       : $VERSION"
+        echo "Last Commit   : $GIT_COMMIT"
+        echo "Commit Message: $GIT_MESSAGE"
+        echo "Build Date    : $BUILD_DATE"
+    } >"$DIST/version.txt"
+}
+
+create-package() {
+    local current_system=$1
+    local package_name="taihe-$current_system-$VERSION-$(date +"%Y%m%d")"
+    tar -p -czf "${PROJECT_DIR}/${package_name}.tar.gz" -C "${DIST}/.." . --owner=0 --group=0 --no-same-owner --no-same-permissions
+    echo "Created package for $current_system: ${package_name}"
+}
+
+setup-system-paths() {
+    local current_system=$1
+    DIST="${BASE_DIST}/taihe-$current_system/taihe"
+    LIB_DIR="${DIST}/lib/taihe"
+    BIN_DIR="${DIST}/bin"
+    INCLUDE_DIR="${DIST}/include"
+    SRC_DIR="${DIST}/src/taihe/runtime"
+    DOC_DIR="${DIST}/share/doc/taihe"
+}
+
+main() {
+    init_py_env
+    set +x
+    cd ..
+    
+    VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "TRUNK-$(git rev-parse --short=8 HEAD)")
+    echo "Version $VERSION"
+    
+    PROJECT_DIR="$(dirname "$(cd "$(dirname "$0")" && pwd)")"
+    CACHE_DIR="${PROJECT_DIR}/.cache/python-packages"
+    BASE_DIST="${PROJECT_DIR}/dist"
+
+    echo "Get python ..."
+    if [ ! -d "$CACHE_DIR" ] || [ -z "$(ls -A "$CACHE_DIR")" ]; then
+        git clone -q "${PYTHON_REPO_URL}" "${CACHE_DIR}"
+    fi
+
+    echo "Build the compiler ..."
+    pushd compiler
+    ./generate-grammar && poetry build
+    popd 2>/dev/null
+
+    if [ -d "$BASE_DIST" ]; then
+        rm -rf "$BASE_DIST"
+    fi
+    mkdir -p "$BASE_DIST"
+    
+    for system in "${SYSTEM_TYPES[@]}"; do
+        echo "Building for $system..."
+        setup-system-paths "$system"
+        mkdir -p "$DIST" "$LIB_DIR" "$BIN_DIR" "$INCLUDE_DIR" "$SRC_DIR" "$DOC_DIR"
+        
+        copy-runtime "$system"
+        copy-documentation
+        write-version "$system"
+        build-compiler "$system"
+        create-package "$system"
+    done
+}
+
+main
