@@ -1,249 +1,576 @@
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <memory>
+#include <optional>
+#include <utility>
+
+#include <taihe/array.hpp>
+#include <taihe/optional.hpp>
+#include <taihe/runtime.hpp>
+#include <taihe/string.hpp>
+
 #include "ohos.security.huks.huks.impl.hpp"
 #include "ohos.security.huks.huks.proj.hpp"
-#include "stdexcept"
-#include "taihe/runtime.hpp"
 
-using namespace taihe;
-using namespace ohos::security::huks::huks;
+#include "hks_api.h"
+#include "hks_errcode_adapter.h"
+#include "hks_errno.h"
+#include "hks_mem.h"
+#include "hks_param.h"
+#include "hks_template.h"
+#include "hks_type.h"
+#include "hks_type_enum.h"
+
+using namespace ohos::security::huks;
 
 namespace {
-// To be implemented.
+using errno_t = int32_t;
 
-std::string ArrayAsString(array_view<uint8_t> data) {
-  std::string res;
-  int const tempnum = 16;
-  for (int i = 0; i < data.size(); i++) {
-    uint8_t c = static_cast<uint8_t>(data[i]);
-    static constexpr char const *const TEST_STR = "0123456789abcdef";
-    res += TEST_STR[data[i] / tempnum];
-    res += TEST_STR[data[i] % tempnum];
+errno_t U64FromBigInt(uint64_t *valuePtr, taihe::array_view<uint64_t> bigint) {
+  if (bigint.size() == 0) {
+    *valuePtr = 0;
   }
-  return res;
+  *valuePtr = bigint[0];
+  return HKS_SUCCESS;
 }
 
-std::string BigIntAsString(array<uint64_t> const &data) {
-  std::string res;
-  for (auto const &item : data) {
-    res += std::to_string(item);
-    res += " ";
-  }
-  return res;
+errno_t BlobSetNull(HksBlob *blobPtr) {
+  blobPtr->data = nullptr;
+  blobPtr->size = 0;
+  return HKS_SUCCESS;
 }
 
-HuksResult generateKeySync(string_view keyAlias, HuksOptions const &options) {
-  std::cout << "keyAlias: " << keyAlias << std::endl;
-  if (auto inData = options.inData) {
-    std::cout << "inData = " << ArrayAsString(*inData) << std::endl;
-  } else {
-    std::cout << "No inData!" << std::endl;
+errno_t BlobMallocBuffer(HksBlob *blobPtr, size_t size) {
+  blobPtr->data = static_cast<uint8_t *>(HksMalloc(size));
+  if (blobPtr->data == nullptr) {
+    return HKS_ERROR_MALLOC_FAIL;
   }
-  if (auto properties = options.properties) {
-    std::cout << "Properties:" << std::endl;
-    for (auto const &property : *properties) {
-      std::cout << "tag = " << (size_t)property.tag.get_value() << std::endl;
-      switch (property.value.get_tag()) {
-      case HuksParamValue::tag_t::bigintValue:
-        std::cout << "bigint "
-                  << BigIntAsString(property.value.get_bigintValue_ref())
-                  << std::endl;
-        break;
-      case HuksParamValue::tag_t::booleanValue:
-        std::cout << "boolean " << property.value.get_booleanValue_ref()
-                  << std::endl;
-        break;
-      case HuksParamValue::tag_t::arrayValue:
-        std::cout << "array "
-                  << ArrayAsString(property.value.get_arrayValue_ref())
-                  << std::endl;
-        break;
-      case HuksParamValue::tag_t::numberValue:
-        std::cout << "number " << property.value.get_numberValue_ref()
-                  << std::endl;
-        break;
-      }
+  blobPtr->size = size;
+  return HKS_SUCCESS;
+}
+
+errno_t BlobFromArray(HksBlob *blobPtr, taihe::array_view<uint8_t> av) {
+  errno_t ret = BlobMallocBuffer(blobPtr, blobPtr->size);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  std::memcpy(blobPtr->data, av.data(), blobPtr->size);
+  return HKS_SUCCESS;
+}
+
+errno_t BlobFromString(HksBlob *blobPtr, taihe::string_view sv) {
+  errno_t ret = BlobMallocBuffer(blobPtr, blobPtr->size);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  std::memcpy(blobPtr->data, sv.data(), blobPtr->size);
+  return HKS_SUCCESS;
+}
+
+void BlobFree(HksBlob *blobPtr, bool const isNeedFresh = false) {
+  if (blobPtr->data != nullptr) {
+    if (isNeedFresh && blobPtr->size != 0) {
+      std::memset(blobPtr->data, 0, blobPtr->size);
     }
-  } else {
-    std::cout << "No Properties!" << std::endl;
+    HksFreeImpl(blobPtr->data);
+    blobPtr->data = nullptr;
   }
-  HuksParam huksParam = {
-      .tag = HuksTag::key_t::HUKS_TAG_ACCESS_TIME,
-      .value = HuksParamValue::make_arrayValue(array<uint8_t>::make(4, 0xcc)),
+  blobPtr->size = 0;
+}
+
+errno_t ParamParse(HksParam *hksParamPtr, huks::HuksParam taiheParam) {
+  hksParamPtr->tag = taiheParam.tag.get_value();
+  switch (GetTagType(static_cast<enum HksTag>(hksParamPtr->tag))) {
+  case HKS_TAG_TYPE_INT:
+    HKS_IF_NOT_TRUE_RETURN(taiheParam.value.holds_numberValue(), HKS_FAILURE);
+    hksParamPtr->int32Param =
+        static_cast<int32_t>(taiheParam.value.get_numberValue_ref());
+    return HKS_SUCCESS;
+  case HKS_TAG_TYPE_UINT:
+    HKS_IF_NOT_TRUE_RETURN(taiheParam.value.holds_numberValue(), HKS_FAILURE);
+    hksParamPtr->uint32Param =
+        static_cast<uint32_t>(taiheParam.value.get_numberValue_ref());
+    return HKS_SUCCESS;
+  case HKS_TAG_TYPE_BOOL:
+    HKS_IF_NOT_TRUE_RETURN(taiheParam.value.holds_booleanValue(), HKS_FAILURE);
+    hksParamPtr->boolParam = taiheParam.value.get_booleanValue_ref();
+    return HKS_SUCCESS;
+  case HKS_TAG_TYPE_ULONG:
+    HKS_IF_NOT_TRUE_RETURN(taiheParam.value.holds_bigintValue(), HKS_FAILURE);
+    return U64FromBigInt(&hksParamPtr->uint64Param,
+                         taiheParam.value.get_bigintValue_ref());
+  case HKS_TAG_TYPE_BYTES:
+    BlobSetNull(&hksParamPtr->blob);
+    HKS_IF_NOT_TRUE_RETURN(taiheParam.value.holds_arrayValue(), HKS_FAILURE);
+    return BlobFromArray(&hksParamPtr->blob,
+                         taiheParam.value.get_arrayValue_ref());
+  case HKS_TAG_TYPE_INVALID:
+    return HKS_SUCCESS;
+  default:
+    return HKS_FAILURE;
+  }
+}
+
+void ParamFree(HksParam *hksParamPtr) {
+  switch (GetTagType(static_cast<enum HksTag>(hksParamPtr->tag))) {
+  case HKS_TAG_TYPE_BYTES:
+    return BlobFree(&hksParamPtr->blob);
+  default:
+    return;
+  }
+}
+
+errno_t PropertiesParse(
+    HksParamSet **hksParamSetPtr,
+    taihe::optional_view<taihe::array<huks::HuksParam>> properties) {
+  errno_t ret = HKS_SUCCESS;
+  taihe::array<HksParam> hksParams(properties->size());
+  size_t n = 0;
+  do {
+    for (; n < properties->size(); ++n) {
+      ret = ParamParse(&hksParams[n], properties->at(n));
+      HKS_IF_NOT_SUCC_BREAK(ret);
+    }
+    ret = HksInitParamSet(hksParamSetPtr);
+    HKS_IF_NOT_SUCC_BREAK(ret);
+    ret = HksAddParams(*hksParamSetPtr, hksParams.data(), hksParams.size());
+    HKS_IF_NOT_SUCC_BREAK(ret);
+    ret = HksBuildParamSet(hksParamSetPtr);
+    HKS_IF_NOT_SUCC_BREAK(ret);
+  } while (0);
+  for (size_t i = 0; i < n; ++i) {
+    ParamFree(&hksParams[i]);
+  }
+  if (ret != HKS_SUCCESS) {
+    HksFreeParamSet(hksParamSetPtr);
+  }
+  return ret;
+}
+
+class CommonContext {
+public:
+  int32_t result = 0;
+  struct HksBlob keyAlias{0, nullptr};
+  struct HksParamSet *paramSetIn = nullptr;
+  struct HksParamSet *paramSetOut = nullptr;
+
+  CommonContext() = default;
+
+  ~CommonContext() {
+    BlobFree(&this->keyAlias);
+    if (this->paramSetOut != nullptr) {
+      HksFreeParamSet(&this->paramSetIn);
+    }
+    if (this->paramSetOut != nullptr) {
+      HksFreeParamSet(&this->paramSetOut);
+    }
+  }
+};
+
+class KeyContext : public CommonContext {
+public:
+  struct HksBlob key{0, nullptr};
+
+  KeyContext() = default;
+
+  ~KeyContext() {
+    BlobFree(&this->key, true);
+  }
+};
+
+class ImportWrappedKeyContext : public KeyContext {
+public:
+  struct HksBlob wrappingKeyAlias{0, nullptr};
+
+  ImportWrappedKeyContext() = default;
+
+  ~ImportWrappedKeyContext() {
+    BlobFree(&this->wrappingKeyAlias);
+  }
+};
+
+class SessionContext : public CommonContext {
+public:
+  struct HksBlob inData{0, nullptr};
+  struct HksBlob outData{0, nullptr};
+  struct HksBlob handle{0, nullptr};
+  struct HksBlob token{0, nullptr};
+
+  SessionContext() = default;
+
+  ~SessionContext() {
+    BlobFree(&this->token, true);
+    BlobFree(&this->handle);
+    BlobFree(&this->inData);
+    BlobFree(&this->outData, true);
+  }
+};
+
+// Main
+
+errno_t generateKeyInner(CommonContext &ctx, taihe::string_view keyAlias,
+                         huks::HuksOptions const &options) {
+  errno_t ret = HKS_SUCCESS;
+  ret = BlobFromString(&ctx.keyAlias, keyAlias);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  ret = PropertiesParse(&ctx.paramSetIn, options.properties);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  return HksGenerateKey(&ctx.keyAlias, ctx.paramSetIn, ctx.paramSetOut);
+}
+
+errno_t deleteKeyInner(CommonContext &ctx, taihe::string_view keyAlias,
+                       huks::HuksOptions const &options) {
+  errno_t ret = HKS_SUCCESS;
+  ret = BlobFromString(&ctx.keyAlias, keyAlias);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  ret = PropertiesParse(&ctx.paramSetIn, options.properties);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  return HksDeleteKey(&ctx.keyAlias, ctx.paramSetIn);
+}
+
+errno_t importKeyInner(KeyContext &ctx, taihe::string_view keyAlias,
+                       huks::HuksOptions const &options) {
+  errno_t ret = HKS_SUCCESS;
+  ret = BlobFromString(&ctx.keyAlias, keyAlias);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  ret = PropertiesParse(&ctx.paramSetIn, options.properties);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  ret = options.inData ? BlobFromArray(&ctx.key, *options.inData)
+                       : BlobSetNull(&ctx.key);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  return HksImportKey(&ctx.keyAlias, ctx.paramSetIn, &ctx.key);
+}
+
+errno_t importWrappedKeyInner(ImportWrappedKeyContext &ctx,
+                              taihe::string_view keyAlias,
+                              taihe::string_view wrappingKeyAlias,
+                              huks::HuksOptions const &options) {
+  errno_t ret = HKS_SUCCESS;
+  ret = BlobFromString(&ctx.keyAlias, keyAlias);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  ret = PropertiesParse(&ctx.paramSetIn, options.properties);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  ret = options.inData ? BlobFromArray(&ctx.key, *options.inData)
+                       : BlobSetNull(&ctx.key);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  ret = BlobFromString(&ctx.wrappingKeyAlias, wrappingKeyAlias);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  return HksImportWrappedKey(&ctx.keyAlias, &ctx.wrappingKeyAlias,
+                             ctx.paramSetIn, &ctx.key);
+}
+
+errno_t exportKeyInner(KeyContext &ctx, taihe::string_view keyAlias,
+                       huks::HuksOptions const &options) {
+  errno_t ret = HKS_SUCCESS;
+  ret = BlobFromString(&ctx.keyAlias, keyAlias);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  ret = PropertiesParse(&ctx.paramSetIn, options.properties);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  ret = BlobMallocBuffer(&ctx.key, MAX_KEY_SIZE);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  return HksExportPublicKey(&ctx.keyAlias, ctx.paramSetIn, &ctx.key);
+}
+
+errno_t isKeyExistInner(CommonContext &ctx, taihe::string_view keyAlias,
+                        huks::HuksOptions const &options) {
+  errno_t ret = HKS_SUCCESS;
+  ret = BlobFromString(&ctx.keyAlias, keyAlias);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  ret = PropertiesParse(&ctx.paramSetIn, options.properties);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  return HksKeyExist(&ctx.keyAlias, ctx.paramSetIn);
+}
+
+errno_t initSessionSync(SessionContext &ctx, taihe::string_view keyAlias,
+                        huks::HuksOptions const &options) {
+  errno_t ret = HKS_SUCCESS;
+  ret = BlobFromString(&ctx.keyAlias, keyAlias);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  ret = PropertiesParse(&ctx.paramSetIn, options.properties);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  ret = BlobMallocBuffer(&ctx.handle, HKS_MAX_KEY_LEN);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  ret = BlobMallocBuffer(&ctx.token, HKS_MAX_KEY_LEN);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  return HksInit(&ctx.keyAlias, ctx.paramSetIn, &ctx.handle, &ctx.token);
+}
+
+errno_t updateSync(SessionContext &ctx, int64_t handle,
+                   taihe::optional_view<taihe::array<uint8_t>> token,
+                   huks::HuksOptions const &options) {
+  errno_t ret = HKS_SUCCESS;
+  ret = PropertiesParse(&ctx.paramSetIn, options.properties);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  ret = options.inData ? BlobFromArray(&ctx.inData, *options.inData)
+                       : BlobSetNull(&ctx.inData);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  ret = BlobMallocBuffer(&ctx.handle, HKS_MAX_KEY_LEN);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  ret = BlobMallocBuffer(&ctx.outData, HKS_MAX_KEY_LEN);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  return HksUpdate(&ctx.handle, ctx.paramSetIn, &ctx.inData, &ctx.outData);
+}
+
+errno_t finishSync(SessionContext &ctx, int64_t handle,
+                   taihe::optional_view<taihe::array<uint8_t>> token,
+                   huks::HuksOptions const &options) {
+  errno_t ret = HKS_SUCCESS;
+  ret = PropertiesParse(&ctx.paramSetIn, options.properties);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  ret = options.inData ? BlobFromArray(&ctx.inData, *options.inData)
+                       : BlobSetNull(&ctx.inData);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  ret = BlobMallocBuffer(&ctx.handle, HKS_MAX_KEY_LEN);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  ret = BlobMallocBuffer(&ctx.outData, HKS_MAX_KEY_LEN);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  return HksFinish(&ctx.handle, ctx.paramSetIn, &ctx.inData, &ctx.outData);
+}
+
+errno_t abortSessionSync(SessionContext &ctx, int64_t handle,
+                         huks::HuksOptions const &options) {
+  errno_t ret = HKS_SUCCESS;
+  ret = PropertiesParse(&ctx.paramSetIn, options.properties);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  ret = options.inData ? BlobFromArray(&ctx.inData, *options.inData)
+                       : BlobSetNull(&ctx.inData);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  ret = BlobMallocBuffer(&ctx.handle, HKS_MAX_KEY_LEN);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  return HksAbort(&ctx.handle, ctx.paramSetIn);
+}
+
+struct CertArray {
+  std::unique_ptr<std::array<uint8_t, HKS_CERT_APP_SIZE>> appCert{};
+  std::unique_ptr<std::array<uint8_t, HKS_CERT_DEVICE_SIZE>> devCert{};
+  std::unique_ptr<std::array<uint8_t, HKS_CERT_CA_SIZE>> caCert{};
+  std::unique_ptr<std::array<uint8_t, HKS_CERT_ROOT_SIZE>> rootCert{};
+  std::unique_ptr<std::array<HksBlob, HKS_CERT_COUNT>> blob{};
+  HksCertChain chain{};
+
+  CertArray()
+      : appCert(new std::array<uint8_t, HKS_CERT_APP_SIZE>),
+        devCert(new std::array<uint8_t, HKS_CERT_DEVICE_SIZE>),
+        caCert(new std::array<uint8_t, HKS_CERT_CA_SIZE>),
+        rootCert(new std::array<uint8_t, HKS_CERT_ROOT_SIZE>),
+        blob(new std::array<HksBlob, HKS_CERT_COUNT>{{
+            {.size = HKS_CERT_APP_SIZE, .data = appCert->data()},
+            {.size = HKS_CERT_DEVICE_SIZE, .data = devCert->data()},
+            {.size = HKS_CERT_CA_SIZE, .data = caCert->data()},
+            {.size = HKS_CERT_ROOT_SIZE, .data = rootCert->data()},
+        }}),
+        chain{.certs = blob->data(), .certsCount = HKS_CERT_COUNT} {}
+};
+
+errno_t attestKey(CommonContext &ctx, CertArray &ca,
+                  taihe::string_view keyAlias,
+                  huks::HuksOptions const &options) {
+  errno_t ret = HKS_SUCCESS;
+  ret = BlobFromString(&ctx.keyAlias, keyAlias);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  ret = PropertiesParse(&ctx.paramSetIn, options.properties);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  return HksAttestKey(&ctx.keyAlias, ctx.paramSetIn, &ca.chain);
+}
+
+errno_t anonAttestKey(CommonContext &ctx, CertArray &ca,
+                      taihe::string_view keyAlias,
+                      huks::HuksOptions const &options) {
+  errno_t ret = HKS_SUCCESS;
+  ret = BlobFromString(&ctx.keyAlias, keyAlias);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  ret = PropertiesParse(&ctx.paramSetIn, options.properties);
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  return HksAnonAttestKey(&ctx.keyAlias, ctx.paramSetIn, &ca.chain);
+}
+
+// Return
+
+template<errno_t... skips>
+void SetErrorExcept(errno_t ret) {
+  if (((skips != ret) && ...)) {
+    HksResult resultInfo = HksConvertErrCode(ret);
+    taihe::set_business_error(resultInfo.errorCode, resultInfo.errorMsg);
+  }
+}
+
+taihe::array<uint8_t> GetArrayBuffer(HksBlob blob) {
+  return taihe::array<uint8_t>{taihe::copy_data_t{}, blob.data, blob.size};
+}
+
+taihe::array<taihe::string> GetArrayString(HksCertChain certChain) {
+  taihe::array<taihe::string> certs{certChain.certsCount};
+  for (size_t i = 0; i < certChain.certsCount; ++i) {
+    certs[i] = taihe::string(reinterpret_cast<char *>(certChain.certs[i].data),
+                             certChain.certs[i].size);
+  }
+  return certs;
+}
+
+void GetVoid(errno_t ret) {
+  SetErrorExcept<HKS_SUCCESS>(ret);
+  return;
+}
+
+bool GetKeyExistBool(errno_t ret) {
+  SetErrorExcept<HKS_SUCCESS, HKS_ERROR_KEY_NOT_EXIST>(ret);
+  return ret == HKS_SUCCESS;
+}
+
+huks::HuksReturnResult GetReturnResult(errno_t ret, HksBlob outData) {
+  SetErrorExcept<HKS_SUCCESS>(ret);
+  return {
+      .outData = {std::in_place, GetArrayBuffer(outData)},
   };
-  HuksResult huksResult = {
-      .errorCode = 0.0,
-      .outData = optional<array<uint8_t>>::make(array<uint8_t>::make(3, 0x12)),
-      .properties = optional<array<HuksParam>>::make(
-          array<HuksParam>::make(7, huksParam)),
-      .certChains =
-          optional<array<string>>::make(array<string>::make(5, "Hello")),
+}
+
+huks::HuksReturnResult GetReturnResult(errno_t ret, HksCertChain certChain) {
+  SetErrorExcept<HKS_SUCCESS>(ret);
+  return {
+      .certChains = {std::in_place, GetArrayString(certChain)},
   };
-  return huksResult;
 }
 
-void generateKeyItemSync(string_view keyAlias, HuksOptions const &options) {
-  TH_THROW(std::runtime_error, "generateKeyItemSync not implemented");
+huks::HuksSessionHandle GetSessionHandle(errno_t ret, HksBlob handle,
+                                         HksBlob challenge) {
+  SetErrorExcept<HKS_SUCCESS>(ret);
+  return {
+      .handle =
+          static_cast<int64_t>(*reinterpret_cast<uint64_t *>(handle.data)),
+      .challenge = {std::in_place, GetArrayBuffer(challenge)},
+  };
 }
 
-HuksResult deleteKeySync(string_view keyAlias, HuksOptions const &options) {
-  TH_THROW(std::runtime_error, "deleteKeySync not implemented");
+// Exported
+
+void generateKeyItemSync(taihe::string_view keyAlias,
+                         huks::HuksOptions const &options) {
+  CommonContext ctx;
+  errno_t ret = generateKeyInner(ctx, keyAlias, options);
+  return GetVoid(ret);
 }
 
-void deleteKeyItemSync(string_view keyAlias, HuksOptions const &options) {
-  TH_THROW(std::runtime_error, "deleteKeyItemSync not implemented");
+void deleteKeyItemSync(taihe::string_view keyAlias,
+                       huks::HuksOptions const &options) {
+  CommonContext ctx;
+  errno_t ret = deleteKeyInner(ctx, keyAlias, options);
+  return GetVoid(ret);
 }
 
-HuksResult importKeySync(string_view keyAlias, HuksOptions const &options) {
-  TH_THROW(std::runtime_error, "importKeySync not implemented");
+void importKeyItemSync(taihe::string_view keyAlias,
+                       huks::HuksOptions const &options) {
+  KeyContext ctx;
+  errno_t ret = importKeyInner(ctx, keyAlias, options);
+  return GetVoid(ret);
 }
 
-void importKeyItemSync(string_view keyAlias, HuksOptions const &options) {
-  TH_THROW(std::runtime_error, "importKeyItemSync not implemented");
+void importWrappedKeyItemSync(taihe::string_view keyAlias,
+                              taihe::string_view wrappingKeyAlias,
+                              huks::HuksOptions const &options) {
+  ImportWrappedKeyContext ctx;
+  errno_t ret = importWrappedKeyInner(ctx, keyAlias, wrappingKeyAlias, options);
+  return GetVoid(ret);
 }
 
-void importWrappedKeyItemSync(string_view keyAlias,
-                              string_view wrappingKeyAlias,
-                              HuksOptions const &options) {
-  TH_THROW(std::runtime_error, "importWrappedKeyItemSync not implemented");
+huks::HuksReturnResult exportKeyItemSync(taihe::string_view keyAlias,
+                                         huks::HuksOptions const &options) {
+  KeyContext ctx;
+  errno_t ret = exportKeyInner(ctx, keyAlias, options);
+  return GetReturnResult(ret, ctx.key);
 }
 
-HuksResult exportKeySync(string_view keyAlias, HuksOptions const &options) {
-  TH_THROW(std::runtime_error, "exportKeySync not implemented");
+bool isKeyItemExistSync(taihe::string_view keyAlias,
+                        huks::HuksOptions const &options) {
+  CommonContext ctx;
+  errno_t ret = isKeyExistInner(ctx, keyAlias, options);
+  return GetKeyExistBool(ret);
 }
 
-HuksReturnResult exportKeyItemSync(string_view keyAlias,
-                                   HuksOptions const &options) {
-  TH_THROW(std::runtime_error, "exportKeyItemSync not implemented");
+huks::HuksSessionHandle initSessionSync(taihe::string_view keyAlias,
+                                        huks::HuksOptions const &options) {
+  SessionContext ctx;
+  errno_t ret = initSessionSync(ctx, keyAlias, options);
+  return GetSessionHandle(ret, ctx.handle, ctx.token);
 }
 
-HuksResult getKeyPropertiesSync(string_view keyAlias,
-                                HuksOptions const &options) {
-  TH_THROW(std::runtime_error, "getKeyPropertiesSync not implemented");
+huks::HuksReturnResult updateSessionSync(
+    int64_t handle, huks::HuksOptions const &options,
+    taihe::optional_view<taihe::array<uint8_t>> token) {
+  SessionContext ctx;
+  errno_t ret = updateSync(ctx, handle, token, options);
+  return GetReturnResult(ret, ctx.outData);
 }
 
-HuksReturnResult getKeyItemPropertiesSync(string_view keyAlias,
-                                          HuksOptions const &options) {
-  TH_THROW(std::runtime_error, "getKeyItemPropertiesSync not implemented");
+huks::HuksReturnResult updateSessionSyncWithoutToken(
+    int64_t handle, huks::HuksOptions const &options) {
+  taihe::optional<taihe::array<uint8_t>> opt_token{std::nullopt};
+  return updateSessionSync(handle, options, opt_token);
 }
 
-bool isKeyExistSync(string_view keyAlias, HuksOptions const &options) {
-  TH_THROW(std::runtime_error, "isKeyExistSync not implemented");
+huks::HuksReturnResult updateSessionSyncWithToken(
+    int64_t handle, huks::HuksOptions const &options,
+    taihe::array_view<uint8_t> token) {
+  taihe::optional<taihe::array<uint8_t>> opt_token{std::in_place, options};
+  return updateSessionSync(handle, options, opt_token);
 }
 
-bool isKeyItemExistSync(string_view keyAlias, HuksOptions const &options) {
-  TH_THROW(std::runtime_error, "isKeyItemExistSync not implemented");
+huks::HuksReturnResult finishSessionSync(
+    int64_t handle, huks::HuksOptions const &options,
+    taihe::optional_view<taihe::array<uint8_t>> token) {
+  SessionContext ctx;
+  errno_t ret = finishSync(ctx, handle, token, options);
+  return GetReturnResult(ret, ctx.outData);
 }
 
-bool hasKeyItemSync(string_view keyAlias, HuksOptions const &options) {
-  TH_THROW(std::runtime_error, "hasKeyItemSync not implemented");
+huks::HuksReturnResult finishSessionSyncWithoutToken(
+    int64_t handle, huks::HuksOptions const &options) {
+  taihe::optional<taihe::array<uint8_t>> opt_token{std::nullopt};
+  return finishSessionSync(handle, options, opt_token);
 }
 
-HuksHandle initSync(string_view keyAlias, HuksOptions const &options) {
-  TH_THROW(std::runtime_error, "initSync not implemented");
+huks::HuksReturnResult finishSessionSyncWithToken(
+    int64_t handle, huks::HuksOptions const &options,
+    taihe::array_view<uint8_t> token) {
+  taihe::optional<taihe::array<uint8_t>> opt_token{std::in_place, options};
+  return finishSessionSync(handle, options, opt_token);
 }
 
-HuksSessionHandle initSessionSync(string_view keyAlias,
-                                  HuksOptions const &options) {
-  TH_THROW(std::runtime_error, "initSessionSync not implemented");
+void abortSessionSync(int64_t handle, huks::HuksOptions const &options) {
+  SessionContext ctx;
+  errno_t ret = abortSessionSync(ctx, handle, options);
+  return GetVoid(ret);
 }
 
-HuksResult updateSync(double handle, optional_view<array<uint8_t>> token,
-                      HuksOptions const &options) {
-  TH_THROW(std::runtime_error, "updateSync not implemented");
+huks::HuksReturnResult attestKeyItemSync(taihe::string_view keyAlias,
+                                         huks::HuksOptions const &options) {
+  CommonContext ctx;
+  CertArray ca;
+  errno_t ret = attestKey(ctx, ca, keyAlias, options);
+  return GetReturnResult(ret, ca.chain);
 }
 
-HuksReturnResult updateSessionSyncWithoutToken(double handle,
-                                               HuksOptions const &options) {
-  TH_THROW(std::runtime_error, "updateSessionSyncWithoutToken not implemented");
-}
-
-HuksReturnResult updateSessionSyncWithToken(double handle,
-                                            HuksOptions const &options,
-                                            array_view<uint8_t> token) {
-  TH_THROW(std::runtime_error, "updateSessionSyncWithToken not implemented");
-}
-
-HuksReturnResult updateSessionSync(double handle, HuksOptions const &options,
-                                   optional_view<array<uint8_t>> token) {
-  TH_THROW(std::runtime_error, "updateSessionSync not implemented");
-}
-
-HuksResult finishSync(double handle, HuksOptions const &options) {
-  TH_THROW(std::runtime_error, "finishSync not implemented");
-}
-
-HuksReturnResult finishSessionSyncWithoutToken(double handle,
-                                               HuksOptions const &options) {
-  TH_THROW(std::runtime_error, "finishSessionSyncWithoutToken not implemented");
-}
-
-HuksReturnResult finishSessionSyncWithToken(double handle,
-                                            HuksOptions const &options,
-                                            array_view<uint8_t> token) {
-  TH_THROW(std::runtime_error, "finishSessionSyncWithToken not implemented");
-}
-
-HuksReturnResult finishSessionSync(double handle, HuksOptions const &options,
-                                   optional_view<array<uint8_t>> token) {
-  TH_THROW(std::runtime_error, "finishSessionSync not implemented");
-}
-
-HuksResult abortSync(double handle, HuksOptions const &options) {
-  TH_THROW(std::runtime_error, "abortSync not implemented");
-}
-
-void abortSessionSync(double handle, HuksOptions const &options) {
-  TH_THROW(std::runtime_error, "abortSessionSync not implemented");
-}
-
-HuksReturnResult attestKeyItemSync(string_view keyAlias,
-                                   HuksOptions const &options) {
-  TH_THROW(std::runtime_error, "attestKeyItemSync not implemented");
-}
-
-HuksReturnResult anonAttestKeyItemSync(string_view keyAlias,
-                                       HuksOptions const &options) {
-  TH_THROW(std::runtime_error, "anonAttestKeyItemSync not implemented");
-}
-
-string getSdkVersion(HuksOptions const &options) {
-  TH_THROW(std::runtime_error, "getSdkVersion not implemented");
-}
-
-HuksListAliasesReturnResult listAliasesSync(HuksOptions const &options) {
-  TH_THROW(std::runtime_error, "listAliasesSync not implemented");
+huks::HuksReturnResult anonAttestKeyItemSync(taihe::string_view keyAlias,
+                                             huks::HuksOptions const &options) {
+  CommonContext ctx;
+  CertArray ca;
+  errno_t ret = anonAttestKey(ctx, ca, keyAlias, options);
+  return GetReturnResult(ret, ca.chain);
 }
 }  // namespace
 
 // Since these macros are auto-generate, lint will cause false positive.
 // NOLINTBEGIN
-TH_EXPORT_CPP_API_generateKeySync(generateKeySync);
 TH_EXPORT_CPP_API_generateKeyItemSync(generateKeyItemSync);
-TH_EXPORT_CPP_API_deleteKeySync(deleteKeySync);
 TH_EXPORT_CPP_API_deleteKeyItemSync(deleteKeyItemSync);
-TH_EXPORT_CPP_API_importKeySync(importKeySync);
 TH_EXPORT_CPP_API_importKeyItemSync(importKeyItemSync);
 TH_EXPORT_CPP_API_importWrappedKeyItemSync(importWrappedKeyItemSync);
-TH_EXPORT_CPP_API_exportKeySync(exportKeySync);
 TH_EXPORT_CPP_API_exportKeyItemSync(exportKeyItemSync);
-TH_EXPORT_CPP_API_getKeyPropertiesSync(getKeyPropertiesSync);
-TH_EXPORT_CPP_API_getKeyItemPropertiesSync(getKeyItemPropertiesSync);
-TH_EXPORT_CPP_API_isKeyExistSync(isKeyExistSync);
 TH_EXPORT_CPP_API_isKeyItemExistSync(isKeyItemExistSync);
-TH_EXPORT_CPP_API_hasKeyItemSync(hasKeyItemSync);
-TH_EXPORT_CPP_API_initSync(initSync);
 TH_EXPORT_CPP_API_initSessionSync(initSessionSync);
-TH_EXPORT_CPP_API_updateSync(updateSync);
 TH_EXPORT_CPP_API_updateSessionSyncWithoutToken(updateSessionSyncWithoutToken);
 TH_EXPORT_CPP_API_updateSessionSyncWithToken(updateSessionSyncWithToken);
 TH_EXPORT_CPP_API_updateSessionSync(updateSessionSync);
-TH_EXPORT_CPP_API_finishSync(finishSync);
 TH_EXPORT_CPP_API_finishSessionSyncWithoutToken(finishSessionSyncWithoutToken);
 TH_EXPORT_CPP_API_finishSessionSyncWithToken(finishSessionSyncWithToken);
 TH_EXPORT_CPP_API_finishSessionSync(finishSessionSync);
-TH_EXPORT_CPP_API_abortSync(abortSync);
 TH_EXPORT_CPP_API_abortSessionSync(abortSessionSync);
 TH_EXPORT_CPP_API_attestKeyItemSync(attestKeyItemSync);
 TH_EXPORT_CPP_API_anonAttestKeyItemSync(anonAttestKeyItemSync);
-TH_EXPORT_CPP_API_getSdkVersion(getSdkVersion);
-TH_EXPORT_CPP_API_listAliasesSync(listAliasesSync);
 // NOLINTEND
