@@ -31,6 +31,10 @@ int32_t add_impl(int32_t a, int32_t b) {
       this->name = a;
       return;
     }
+
+    void makeSync() {
+      TH_THROW(std::runtime_error, "makeSync not implemented");
+    }
   };
 
   return taihe::make_holder<AuthorIBase, ::async_test::IBase>();
@@ -54,6 +58,9 @@ void fromStructSync_impl(::async_test::Data const &data) {
 void PrintSync() {
   std::cout << "print Sync" << std::endl;
 }
+void makeGlobalSync() {
+  TH_THROW(std::runtime_error, "makeGlobalSync not implemented");
+}
 }  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
@@ -63,4 +70,5 @@ TH_EXPORT_CPP_API_getIBase(getIBase_impl);
 TH_EXPORT_CPP_API_fromStructSync(fromStructSync_impl);
 TH_EXPORT_CPP_API_toStructSync(toStructSync_impl);
 TH_EXPORT_CPP_API_PrintSync(PrintSync);
+TH_EXPORT_CPP_API_makeGlobalSync(makeGlobalSync);
 // NOLINTEND
