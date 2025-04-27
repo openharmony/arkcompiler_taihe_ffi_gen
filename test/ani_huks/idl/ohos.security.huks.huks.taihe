@@ -50,6 +50,10 @@ function abortSessionSync(handle: i64, options: HuksOptions): void;
 @gen_promise("attestKeyItem")
 function attestKeyItemSync(keyAlias: String, options: HuksOptions): HuksReturnResult;
 
+@gen_async("anonAttestKeyItem")
+@gen_promise("anonAttestKeyItem")
+function anonAttestKeyItemSync(keyAlias: String, options: HuksOptions): HuksReturnResult;
+
 union HuksParamValue {
     booleanValue: bool;
     numberValue: i64;

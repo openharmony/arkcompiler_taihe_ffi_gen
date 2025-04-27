@@ -117,6 +117,17 @@ void ParamFree(HksParam *hksParamPtr) {
   }
 }
 
+template<bool isNeedFresh = false>
+struct BlobGuard {
+  HksBlob data{0, nullptr};
+
+  BlobGuard() = default;
+
+  ~BlobGuard() {
+    BlobFree(&this->data, isNeedFresh);
+  }
+};
+
 errno_t PropertiesParse(
     HksParamSet **hksParamSetPtr,
     taihe::optional_view<taihe::array<huks::HuksParam>> properties) {
@@ -144,208 +155,31 @@ errno_t PropertiesParse(
   return ret;
 }
 
-class CommonContext {
-public:
-  int32_t result = 0;
-  struct HksBlob keyAlias{0, nullptr};
-  struct HksParamSet *paramSetIn = nullptr;
-  struct HksParamSet *paramSetOut = nullptr;
+void PropertiesFree(HksParamSet *hksParamSetPtr) {
+  if (hksParamSetPtr != nullptr) {
+    HksFreeParamSet(&hksParamSetPtr);
+  }
+}
 
-  CommonContext() = default;
+struct ParamSetGuard {
+  HksParamSet *data{nullptr};
 
-  ~CommonContext() {
-    BlobFree(&this->keyAlias);
-    if (this->paramSetOut != nullptr) {
-      HksFreeParamSet(&this->paramSetIn);
-    }
-    if (this->paramSetOut != nullptr) {
-      HksFreeParamSet(&this->paramSetOut);
-    }
+  ParamSetGuard() = default;
+
+  ~ParamSetGuard() {
+    PropertiesFree(this->data);
   }
 };
 
-class KeyContext : public CommonContext {
-public:
-  struct HksBlob key{0, nullptr};
-
-  KeyContext() = default;
-
-  ~KeyContext() {
-    BlobFree(&this->key, true);
-  }
-};
-
-class ImportWrappedKeyContext : public KeyContext {
-public:
-  struct HksBlob wrappingKeyAlias{0, nullptr};
-
-  ImportWrappedKeyContext() = default;
-
-  ~ImportWrappedKeyContext() {
-    BlobFree(&this->wrappingKeyAlias);
-  }
-};
-
-class SessionContext : public CommonContext {
-public:
-  struct HksBlob inData{0, nullptr};
-  struct HksBlob outData{0, nullptr};
-  struct HksBlob handle{0, nullptr};
-  struct HksBlob token{0, nullptr};
-
-  SessionContext() = default;
-
-  ~SessionContext() {
-    BlobFree(&this->token, true);
-    BlobFree(&this->handle);
-    BlobFree(&this->inData);
-    BlobFree(&this->outData, true);
-  }
-};
-
-// Main
-
-errno_t generateKeyInner(CommonContext &ctx, taihe::string_view keyAlias,
-                         huks::HuksOptions const &options) {
-  errno_t ret = HKS_SUCCESS;
-  ret = BlobFromString(&ctx.keyAlias, keyAlias);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  ret = PropertiesParse(&ctx.paramSetIn, options.properties);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  return HksGenerateKey(&ctx.keyAlias, ctx.paramSetIn, ctx.paramSetOut);
-}
-
-errno_t deleteKeyInner(CommonContext &ctx, taihe::string_view keyAlias,
-                       huks::HuksOptions const &options) {
-  errno_t ret = HKS_SUCCESS;
-  ret = BlobFromString(&ctx.keyAlias, keyAlias);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  ret = PropertiesParse(&ctx.paramSetIn, options.properties);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  return HksDeleteKey(&ctx.keyAlias, ctx.paramSetIn);
-}
-
-errno_t importKeyInner(KeyContext &ctx, taihe::string_view keyAlias,
-                       huks::HuksOptions const &options) {
-  errno_t ret = HKS_SUCCESS;
-  ret = BlobFromString(&ctx.keyAlias, keyAlias);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  ret = PropertiesParse(&ctx.paramSetIn, options.properties);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  ret = options.inData ? BlobFromArray(&ctx.key, *options.inData)
-                       : BlobSetNull(&ctx.key);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  return HksImportKey(&ctx.keyAlias, ctx.paramSetIn, &ctx.key);
-}
-
-errno_t importWrappedKeyInner(ImportWrappedKeyContext &ctx,
-                              taihe::string_view keyAlias,
-                              taihe::string_view wrappingKeyAlias,
-                              huks::HuksOptions const &options) {
-  errno_t ret = HKS_SUCCESS;
-  ret = BlobFromString(&ctx.keyAlias, keyAlias);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  ret = PropertiesParse(&ctx.paramSetIn, options.properties);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  ret = options.inData ? BlobFromArray(&ctx.key, *options.inData)
-                       : BlobSetNull(&ctx.key);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  ret = BlobFromString(&ctx.wrappingKeyAlias, wrappingKeyAlias);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  return HksImportWrappedKey(&ctx.keyAlias, &ctx.wrappingKeyAlias,
-                             ctx.paramSetIn, &ctx.key);
-}
-
-errno_t exportKeyInner(KeyContext &ctx, taihe::string_view keyAlias,
-                       huks::HuksOptions const &options) {
-  errno_t ret = HKS_SUCCESS;
-  ret = BlobFromString(&ctx.keyAlias, keyAlias);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  ret = PropertiesParse(&ctx.paramSetIn, options.properties);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  ret = BlobMallocBuffer(&ctx.key, MAX_KEY_SIZE);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  return HksExportPublicKey(&ctx.keyAlias, ctx.paramSetIn, &ctx.key);
-}
-
-errno_t isKeyExistInner(CommonContext &ctx, taihe::string_view keyAlias,
-                        huks::HuksOptions const &options) {
-  errno_t ret = HKS_SUCCESS;
-  ret = BlobFromString(&ctx.keyAlias, keyAlias);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  ret = PropertiesParse(&ctx.paramSetIn, options.properties);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  return HksKeyExist(&ctx.keyAlias, ctx.paramSetIn);
-}
-
-errno_t initSessionSync(SessionContext &ctx, taihe::string_view keyAlias,
-                        huks::HuksOptions const &options) {
-  errno_t ret = HKS_SUCCESS;
-  ret = BlobFromString(&ctx.keyAlias, keyAlias);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  ret = PropertiesParse(&ctx.paramSetIn, options.properties);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  ret = BlobMallocBuffer(&ctx.handle, HKS_MAX_KEY_LEN);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  ret = BlobMallocBuffer(&ctx.token, HKS_MAX_KEY_LEN);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  return HksInit(&ctx.keyAlias, ctx.paramSetIn, &ctx.handle, &ctx.token);
-}
-
-errno_t updateSync(SessionContext &ctx, int64_t handle,
-                   taihe::optional_view<taihe::array<uint8_t>> token,
-                   huks::HuksOptions const &options) {
-  errno_t ret = HKS_SUCCESS;
-  ret = PropertiesParse(&ctx.paramSetIn, options.properties);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  ret = options.inData ? BlobFromArray(&ctx.inData, *options.inData)
-                       : BlobSetNull(&ctx.inData);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  ret = BlobMallocBuffer(&ctx.handle, HKS_MAX_KEY_LEN);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  ret = BlobMallocBuffer(&ctx.outData, HKS_MAX_KEY_LEN);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  return HksUpdate(&ctx.handle, ctx.paramSetIn, &ctx.inData, &ctx.outData);
-}
-
-errno_t finishSync(SessionContext &ctx, int64_t handle,
-                   taihe::optional_view<taihe::array<uint8_t>> token,
-                   huks::HuksOptions const &options) {
-  errno_t ret = HKS_SUCCESS;
-  ret = PropertiesParse(&ctx.paramSetIn, options.properties);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  ret = options.inData ? BlobFromArray(&ctx.inData, *options.inData)
-                       : BlobSetNull(&ctx.inData);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  ret = BlobMallocBuffer(&ctx.handle, HKS_MAX_KEY_LEN);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  ret = BlobMallocBuffer(&ctx.outData, HKS_MAX_KEY_LEN);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  return HksFinish(&ctx.handle, ctx.paramSetIn, &ctx.inData, &ctx.outData);
-}
-
-errno_t abortSessionSync(SessionContext &ctx, int64_t handle,
-                         huks::HuksOptions const &options) {
-  errno_t ret = HKS_SUCCESS;
-  ret = PropertiesParse(&ctx.paramSetIn, options.properties);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  ret = options.inData ? BlobFromArray(&ctx.inData, *options.inData)
-                       : BlobSetNull(&ctx.inData);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  ret = BlobMallocBuffer(&ctx.handle, HKS_MAX_KEY_LEN);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  return HksAbort(&ctx.handle, ctx.paramSetIn);
-}
-
-struct CertArray {
+struct CertChainGuard {
   std::unique_ptr<std::array<uint8_t, HKS_CERT_APP_SIZE>> appCert{};
   std::unique_ptr<std::array<uint8_t, HKS_CERT_DEVICE_SIZE>> devCert{};
   std::unique_ptr<std::array<uint8_t, HKS_CERT_CA_SIZE>> caCert{};
   std::unique_ptr<std::array<uint8_t, HKS_CERT_ROOT_SIZE>> rootCert{};
   std::unique_ptr<std::array<HksBlob, HKS_CERT_COUNT>> blob{};
-  HksCertChain chain{};
+  HksCertChain data{};
 
-  CertArray()
+  CertChainGuard()
       : appCert(new std::array<uint8_t, HKS_CERT_APP_SIZE>),
         devCert(new std::array<uint8_t, HKS_CERT_DEVICE_SIZE>),
         caCert(new std::array<uint8_t, HKS_CERT_CA_SIZE>),
@@ -356,30 +190,8 @@ struct CertArray {
             {.size = HKS_CERT_CA_SIZE, .data = caCert->data()},
             {.size = HKS_CERT_ROOT_SIZE, .data = rootCert->data()},
         }}),
-        chain{.certs = blob->data(), .certsCount = HKS_CERT_COUNT} {}
+        data{.certs = blob->data(), .certsCount = HKS_CERT_COUNT} {}
 };
-
-errno_t attestKey(CommonContext &ctx, CertArray &ca,
-                  taihe::string_view keyAlias,
-                  huks::HuksOptions const &options) {
-  errno_t ret = HKS_SUCCESS;
-  ret = BlobFromString(&ctx.keyAlias, keyAlias);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  ret = PropertiesParse(&ctx.paramSetIn, options.properties);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  return HksAttestKey(&ctx.keyAlias, ctx.paramSetIn, &ca.chain);
-}
-
-errno_t anonAttestKey(CommonContext &ctx, CertArray &ca,
-                      taihe::string_view keyAlias,
-                      huks::HuksOptions const &options) {
-  errno_t ret = HKS_SUCCESS;
-  ret = BlobFromString(&ctx.keyAlias, keyAlias);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  ret = PropertiesParse(&ctx.paramSetIn, options.properties);
-  HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  return HksAnonAttestKey(&ctx.keyAlias, ctx.paramSetIn, &ca.chain);
-}
 
 // Return
 
@@ -442,60 +254,157 @@ huks::HuksSessionHandle GetSessionHandle(errno_t ret, HksBlob handle,
 
 void generateKeyItemSync(taihe::string_view keyAlias,
                          huks::HuksOptions const &options) {
-  CommonContext ctx;
-  errno_t ret = generateKeyInner(ctx, keyAlias, options);
+  BlobGuard<0> ctxKeyAlias;
+  ParamSetGuard ctxParamSetIn;
+  ParamSetGuard ctxParamSetOut;
+  errno_t ret;
+  do {
+    ret = BlobFromString(&ctxKeyAlias.data, keyAlias);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = PropertiesParse(&ctxParamSetIn.data, options.properties);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = HksGenerateKey(&ctxKeyAlias.data, ctxParamSetIn.data,
+                         ctxParamSetOut.data);
+  } while (0);
   return GetVoid(ret);
 }
 
 void deleteKeyItemSync(taihe::string_view keyAlias,
                        huks::HuksOptions const &options) {
-  CommonContext ctx;
-  errno_t ret = deleteKeyInner(ctx, keyAlias, options);
+  BlobGuard<0> ctxKeyAlias;
+  ParamSetGuard ctxParamSetIn;
+  errno_t ret;
+  do {
+    ret = BlobFromString(&ctxKeyAlias.data, keyAlias);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = PropertiesParse(&ctxParamSetIn.data, options.properties);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = HksDeleteKey(&ctxKeyAlias.data, ctxParamSetIn.data);
+  } while (0);
   return GetVoid(ret);
 }
 
 void importKeyItemSync(taihe::string_view keyAlias,
                        huks::HuksOptions const &options) {
-  KeyContext ctx;
-  errno_t ret = importKeyInner(ctx, keyAlias, options);
+  BlobGuard<0> ctxKeyAlias;
+  ParamSetGuard ctxParamSetIn;
+  BlobGuard<1> ctxKey;
+  errno_t ret;
+  do {
+    ret = BlobFromString(&ctxKeyAlias.data, keyAlias);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = PropertiesParse(&ctxParamSetIn.data, options.properties);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = options.inData ? BlobFromArray(&ctxKey.data, *options.inData)
+                         : BlobSetNull(&ctxKey.data);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = HksImportKey(&ctxKeyAlias.data, ctxParamSetIn.data, &ctxKey.data);
+  } while (0);
   return GetVoid(ret);
 }
 
 void importWrappedKeyItemSync(taihe::string_view keyAlias,
                               taihe::string_view wrappingKeyAlias,
                               huks::HuksOptions const &options) {
-  ImportWrappedKeyContext ctx;
-  errno_t ret = importWrappedKeyInner(ctx, keyAlias, wrappingKeyAlias, options);
+  BlobGuard<0> ctxKeyAlias;
+  BlobGuard<0> ctxWrappingKeyAlias;
+  ParamSetGuard ctxParamSetIn;
+  BlobGuard<1> ctxKey;
+  errno_t ret;
+  do {
+    ret = BlobFromString(&ctxKeyAlias.data, keyAlias);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = PropertiesParse(&ctxParamSetIn.data, options.properties);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = options.inData ? BlobFromArray(&ctxKey.data, *options.inData)
+                         : BlobSetNull(&ctxKey.data);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = BlobFromString(&ctxWrappingKeyAlias.data, wrappingKeyAlias);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = HksImportWrappedKey(&ctxKeyAlias.data, &ctxWrappingKeyAlias.data,
+                              ctxParamSetIn.data, &ctxKey.data);
+  } while (0);
   return GetVoid(ret);
 }
 
 huks::HuksReturnResult exportKeyItemSync(taihe::string_view keyAlias,
                                          huks::HuksOptions const &options) {
-  KeyContext ctx;
-  errno_t ret = exportKeyInner(ctx, keyAlias, options);
-  return GetReturnResult(ret, ctx.key);
+  BlobGuard<0> ctxKeyAlias;
+  ParamSetGuard ctxParamSetIn;
+  BlobGuard<1> ctxKey;
+  errno_t ret;
+  do {
+    ret = BlobFromString(&ctxKeyAlias.data, keyAlias);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = PropertiesParse(&ctxParamSetIn.data, options.properties);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = BlobMallocBuffer(&ctxKey.data, MAX_KEY_SIZE);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret =
+        HksExportPublicKey(&ctxKeyAlias.data, ctxParamSetIn.data, &ctxKey.data);
+  } while (0);
+  return GetReturnResult(ret, ctxKey.data);
 }
 
 bool isKeyItemExistSync(taihe::string_view keyAlias,
                         huks::HuksOptions const &options) {
-  CommonContext ctx;
-  errno_t ret = isKeyExistInner(ctx, keyAlias, options);
+  BlobGuard<0> ctxKeyAlias;
+  ParamSetGuard ctxParamSetIn;
+  errno_t ret;
+  do {
+    ret = BlobFromString(&ctxKeyAlias.data, keyAlias);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = PropertiesParse(&ctxParamSetIn.data, options.properties);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = HksKeyExist(&ctxKeyAlias.data, ctxParamSetIn.data);
+  } while (0);
   return GetKeyExistBool(ret);
 }
 
 huks::HuksSessionHandle initSessionSync(taihe::string_view keyAlias,
                                         huks::HuksOptions const &options) {
-  SessionContext ctx;
-  errno_t ret = initSessionSync(ctx, keyAlias, options);
-  return GetSessionHandle(ret, ctx.handle, ctx.token);
+  BlobGuard<0> ctxKeyAlias;
+  ParamSetGuard ctxParamSetIn;
+  BlobGuard<0> ctxHandle;
+  BlobGuard<1> ctxToken;
+  errno_t ret;
+  do {
+    ret = BlobFromString(&ctxKeyAlias.data, keyAlias);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = PropertiesParse(&ctxParamSetIn.data, options.properties);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = BlobMallocBuffer(&ctxHandle.data, HKS_MAX_KEY_LEN);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = BlobMallocBuffer(&ctxToken.data, HKS_MAX_KEY_LEN);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = HksInit(&ctxKeyAlias.data, ctxParamSetIn.data, &ctxHandle.data,
+                  &ctxToken.data);
+  } while (0);
+  return GetSessionHandle(ret, ctxHandle.data, ctxToken.data);
 }
 
 huks::HuksReturnResult updateSessionSync(
     int64_t handle, huks::HuksOptions const &options,
     taihe::optional_view<taihe::array<uint8_t>> token) {
-  SessionContext ctx;
-  errno_t ret = updateSync(ctx, handle, token, options);
-  return GetReturnResult(ret, ctx.outData);
+  BlobGuard<0> ctxHandle;
+  ParamSetGuard ctxParamSetIn;
+  BlobGuard<0> ctxInData;
+  BlobGuard<1> ctxOutData;
+  errno_t ret;
+  do {
+    ret = PropertiesParse(&ctxParamSetIn.data, options.properties);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = options.inData ? BlobFromArray(&ctxInData.data, *options.inData)
+                         : BlobSetNull(&ctxInData.data);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = BlobMallocBuffer(&ctxHandle.data, HKS_MAX_KEY_LEN);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = BlobMallocBuffer(&ctxOutData.data, HKS_MAX_KEY_LEN);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = HksUpdate(&ctxHandle.data, ctxParamSetIn.data, &ctxInData.data,
+                    &ctxOutData.data);
+  } while (0);
+  return GetReturnResult(ret, ctxOutData.data);
 }
 
 huks::HuksReturnResult updateSessionSyncWithoutToken(
@@ -514,9 +423,25 @@ huks::HuksReturnResult updateSessionSyncWithToken(
 huks::HuksReturnResult finishSessionSync(
     int64_t handle, huks::HuksOptions const &options,
     taihe::optional_view<taihe::array<uint8_t>> token) {
-  SessionContext ctx;
-  errno_t ret = finishSync(ctx, handle, token, options);
-  return GetReturnResult(ret, ctx.outData);
+  BlobGuard<0> ctxHandle;
+  ParamSetGuard ctxParamSetIn;
+  BlobGuard<0> ctxInData;
+  BlobGuard<1> ctxOutData;
+  errno_t ret;
+  do {
+    ret = PropertiesParse(&ctxParamSetIn.data, options.properties);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = options.inData ? BlobFromArray(&ctxInData.data, *options.inData)
+                         : BlobSetNull(&ctxInData.data);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = BlobMallocBuffer(&ctxHandle.data, HKS_MAX_KEY_LEN);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = BlobMallocBuffer(&ctxOutData.data, HKS_MAX_KEY_LEN);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = HksFinish(&ctxHandle.data, ctxParamSetIn.data, &ctxInData.data,
+                    &ctxOutData.data);
+  } while (0);
+  return GetReturnResult(ret, ctxOutData.data);
 }
 
 huks::HuksReturnResult finishSessionSyncWithoutToken(
@@ -533,25 +458,49 @@ huks::HuksReturnResult finishSessionSyncWithToken(
 }
 
 void abortSessionSync(int64_t handle, huks::HuksOptions const &options) {
-  SessionContext ctx;
-  errno_t ret = abortSessionSync(ctx, handle, options);
+  BlobGuard<0> ctxHandle;
+  ParamSetGuard ctxParamSetIn;
+  errno_t ret;
+  do {
+    ret = PropertiesParse(&ctxParamSetIn.data, options.properties);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = BlobMallocBuffer(&ctxHandle.data, HKS_MAX_KEY_LEN);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = HksAbort(&ctxHandle.data, ctxParamSetIn.data);
+  } while (0);
   return GetVoid(ret);
 }
 
 huks::HuksReturnResult attestKeyItemSync(taihe::string_view keyAlias,
                                          huks::HuksOptions const &options) {
-  CommonContext ctx;
-  CertArray ca;
-  errno_t ret = attestKey(ctx, ca, keyAlias, options);
-  return GetReturnResult(ret, ca.chain);
+  BlobGuard<0> ctxKeyAlias;
+  ParamSetGuard ctxParamSetIn;
+  CertChainGuard ctxCC;
+  errno_t ret;
+  do {
+    ret = BlobFromString(&ctxKeyAlias.data, keyAlias);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = PropertiesParse(&ctxParamSetIn.data, options.properties);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = HksAttestKey(&ctxKeyAlias.data, ctxParamSetIn.data, &ctxCC.data);
+  } while (0);
+  return GetReturnResult(ret, ctxCC.data);
 }
 
 huks::HuksReturnResult anonAttestKeyItemSync(taihe::string_view keyAlias,
                                              huks::HuksOptions const &options) {
-  CommonContext ctx;
-  CertArray ca;
-  errno_t ret = anonAttestKey(ctx, ca, keyAlias, options);
-  return GetReturnResult(ret, ca.chain);
+  BlobGuard<0> ctxKeyAlias;
+  ParamSetGuard ctxParamSetIn;
+  CertChainGuard ctxCC;
+  errno_t ret;
+  do {
+    ret = BlobFromString(&ctxKeyAlias.data, keyAlias);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = PropertiesParse(&ctxParamSetIn.data, options.properties);
+    HKS_IF_NOT_SUCC_BREAK(ret, ret);
+    ret = HksAnonAttestKey(&ctxKeyAlias.data, ctxParamSetIn.data, &ctxCC.data);
+  } while (0);
+  return GetReturnResult(ret, ctxCC.data);
 }
 }  // namespace
 
