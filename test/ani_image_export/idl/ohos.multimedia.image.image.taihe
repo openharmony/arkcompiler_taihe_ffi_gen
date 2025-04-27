@@ -1,0 +1,123 @@
+use ohos.graphics.colorSpaceManager.colorSpaceManager as colorSpaceManager;
+
+@!namespace("@ohos.multimedia.image", "image")
+
+struct Size {
+    height: i32;
+    width: i32;
+}
+
+enum PixelMapFormat: i32 {
+    UNKNOWN = 0,
+    RGB_565 = 2,
+    RGBA_8888 = 3,
+    BGRA_8888 = 4,
+    RGB_888 = 5,
+    ALPHA_8 = 6,
+    RGBA_F16 = 7,
+    NV21 = 8,
+    NV12 = 9,
+    RGBA_1010102 = 10,
+    YCBCR_P010 = 11,
+    YCRCB_P010 = 12
+}
+
+enum DecodingDynamicRange: i32 {
+    AUTO = 0,
+    SDR = 1,
+    HDR = 2
+}
+
+enum AntiAliasingLevel: i32 {
+    NONE = 0,
+    LOW = 1,
+    MEDIUM = 2,
+    HIGH = 3
+}
+
+struct DecodingOptions {
+    index: Optional<i32>;
+    sampleSize: Optional<i32>;
+    rotate: Optional<i32>;
+    editable: Optional<bool>;
+    desiredSize: Optional<Size>;
+    desiredRegion: Optional<Region>;
+    desiredPixelFormat: Optional<PixelMapFormat>;
+    fitDensity: Optional<i32>;
+    desiredColorSpace: Optional<colorSpaceManager.ColorSpaceManager>;
+    desiredDynamicRange: Optional<DecodingDynamicRange>;
+}
+
+enum AlphaType: i32 {
+    UNKNOWN = 0,
+    OPAQUE = 1,
+    PREMUL = 2,
+    UNPREMUL = 3
+}
+
+union NullableString {
+    str: String;
+    @null null;
+}
+
+struct Region {
+    size: Size;
+    x: i32;
+    y: i32;
+}
+
+interface PixelMap {
+    @gen_promise("createAlphaPixelmap")
+    createAlphaPixelmapSync(): PixelMap;
+
+    @gen_promise("getImageInfo")
+    getImageInfoSync(): ImageInfo;
+
+    getBytesNumberPerRow(): i32;
+    getPixelBytesNumber(): i32;
+
+    @gen_promise("readPixelsToBuffer")
+    readPixelsToBufferSync(buff: @arraybuffer Array<u8>);
+
+    @overload("scaleSync")
+    scaleSyncWithoutLevel(x: f64, y: f64): void;
+    @overload("scaleSync")
+    scaleSyncWithLevel(x: f64, y: f64, level: AntiAliasingLevel): void;
+
+    @gen_promise("crop")
+    cropSync(region: Region): void;
+
+    flipSync(horizontal: bool, vertical: bool): void;
+
+    @gen_promise("release")
+    releaseSync(): void;
+
+    getInner(): i64;
+}
+
+struct ImageInfo {
+    size: Size;
+    density: i32;
+    stride: i32;
+    pixelFormat: PixelMapFormat;
+    alphaType: AlphaType;
+    mimeType: String;
+    isHdr: bool;
+}
+
+interface ImageSource {
+    @gen_async("getImageInfo")
+    getImageInfoSync(index: i32): ImageInfo;
+
+    @gen_promise("createPixelMap")
+    createPixelMapSync(options: Optional<DecodingOptions>): PixelMap;
+
+    modifyImageProperty(key: String, value: String): void;
+
+    @gen_promise("modifyImageProperties")
+    modifyImagePropertiesSync(records: @record Map<String, NullableString>): void;
+
+    @gen_promise("getImageProperties")
+    getImagePropertiesSync(key: Array<String>): @record Map<String, NullableString>;
+    release(): void;
+}
