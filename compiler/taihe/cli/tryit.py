@@ -44,11 +44,9 @@ class BuildSystem:
         target_dir: str,
         generate_and_compile_ani: bool,
         opt_level: str,
-        sts_keep_name: bool,
         config: Optional[BuildConfig] = None,
         verbosity: int = logging.INFO,
     ):
-        self.sts_keep_name = sts_keep_name
         self.config = config if config is not None else BuildConfig()
         self.logger = self._setup_logger(verbosity)
 
@@ -428,7 +426,8 @@ class BuildSystem:
 
         try:
             # Import here to avoid module dependency issues
-            from taihe.driver import CompilerInstance, CompilerInvocation
+            from taihe.driver.backend import BackendRegistry
+            from taihe.driver.contexts import CompilerInstance, CompilerInvocation
 
         except ImportError as e:
             self.logger.error(f"Failed to import taihe module: {e}")
@@ -436,13 +435,16 @@ class BuildSystem:
 
         self.logger.info("Generating author and ani codes...")
 
+        registry = BackendRegistry()
+        registry.register_all()
+        backends = registry.collect_required_backends(["ani-bridge", "cpp-author"])
+
+        # TODO: cmdline
         instance = CompilerInstance(
             CompilerInvocation(
                 src_dirs=[self.idl_dir],
                 out_dir=self.generated_dir,
-                gen_ani=True,
-                gen_author=True,
-                sts_keep_name=self.sts_keep_name,
+                backends=[b() for b in backends],  # pyre-ignore
             )
         )
 
@@ -652,11 +654,6 @@ def main(config: Optional[BuildConfig] = None):
         default=0,
         help="Increase verbosity (can be used multiple times)",
     )
-    parser.add_argument(
-        "--sts-keep-name",
-        action="store_true",
-        help="keep original function and interface method names",
-    )
 
     args = parser.parse_args()
 
@@ -676,7 +673,6 @@ def main(config: Optional[BuildConfig] = None):
             args.target_directory,
             args.ani,
             args.optimization,
-            sts_keep_name=args.sts_keep_name,
             config=config or BuildConfig(),
             verbosity=verbosity,
         )

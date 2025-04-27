@@ -7,25 +7,26 @@ from taihe.codegen.abi.analyses import (
     TypeABIInfo,
     UnionABIInfo,
 )
+from taihe.driver.backend import Backend
+from taihe.driver.contexts import CompilerInstance
 from taihe.semantics.declarations import (
     GlobFuncDecl,
     IfaceDecl,
     PackageDecl,
-    PackageGroup,
     StructDecl,
     UnionDecl,
 )
-from taihe.utils.analyses import AnalysisManager
-from taihe.utils.outputs import COutputBuffer, OutputManager
+from taihe.utils.outputs import COutputBuffer
 
 
-class ABIHeadersGenerator:
-    def __init__(self, tm: OutputManager, am: AnalysisManager):
-        self.tm = tm
-        self.am = am
+class ABIHeadersGenerator(Backend):
+    def __init__(self, ci: CompilerInstance):
+        self.tm = ci.target_manager
+        self.am = ci.analysis_manager
+        self.pg = ci.package_group
 
-    def generate(self, pg: PackageGroup):
-        for pkg in pg.packages:
+    def generate(self):
+        for pkg in self.pg.packages:
             self.gen_package_file(pkg)
 
     def gen_package_file(self, pkg: PackageDecl):
@@ -377,13 +378,14 @@ class ABIHeadersGenerator:
             )
 
 
-class ABISourcesGenerator:
-    def __init__(self, tm: OutputManager, am: AnalysisManager):
-        self.tm = tm
-        self.am = am
+class ABISourcesGenerator(Backend):
+    def __init__(self, ci: CompilerInstance):
+        self.tm = ci.target_manager
+        self.am = ci.analysis_manager
+        self.pg = ci.package_group
 
-    def generate(self, pg: PackageGroup):
-        for pkg in pg.packages:
+    def generate(self):
+        for pkg in self.pg.packages:
             self.gen_package_file(pkg)
 
     def gen_package_file(self, pkg: PackageDecl):
