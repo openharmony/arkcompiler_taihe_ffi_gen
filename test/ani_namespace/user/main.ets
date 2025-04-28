@@ -1057,11 +1057,11 @@ function testCaseConstant3() {
 }
 // namespace2
 function primitives_noreturn() {
-    namespace2Test.outer.inner.Primitives_noreturn(
+    namespace2Test.inner.Primitives_noreturn(
         1 as int, 2 as double, true, "hello", 3 as byte)
 }
 function primitives_return() {
-    let res = namespace2Test.outer.inner.Primitives_return(
+    let res = namespace2Test.inner.Primitives_return(
         1 as int, 2 as double, true, "hello", 3 as byte)
     console.log(res);
 }
@@ -1073,9 +1073,9 @@ function containers_noreturn() {
     let arrf32: float[] = [1.1, 1.2, 1.3];
     let arrf64: double[] = [1.123, 2.123, 3.123];
 
-    namespace2Test.outer.inner.Containers_noreturn(
+    namespace2Test.inner.Containers_noreturn(
         arri8, arri16, arrf32, arrf64, "union_string")
-    namespace2Test.outer.inner.Containers_noreturn(
+    namespace2Test.inner.Containers_noreturn(
         arri8, arri16, arrf32, arrf64, 1 as byte)
 }
 function containers_return() {
@@ -1085,36 +1085,35 @@ function containers_return() {
     let arrf32: float[] = [1.1, 1.2, 1.3];
     let arrf64: double[] = [1.123, 2.123, 3.123];
 
-    let res1 = namespace2Test.outer.inner.Containers_return(
+    let res1 = namespace2Test.inner.Containers_return(
         arri8, arri16, arrf32, arrf64, "union_string")
-    let res2 = namespace2Test.outer.inner.Containers_return(
+    let res2 = namespace2Test.inner.Containers_return(
         arri8, arri16, arrf32, arrf64, 1 as byte)
     console.log(res1 + " " + res2)
 }
 function enum_noreturn() {
-    let color1 = namespace2Test.outer.inner.Color.red;
-    let color2 = namespace2Test.outer.inner.Color.yellow;
-    let color3 = namespace2Test.outer.inner.Color.blue;
-    let color4 = namespace2Test.outer.inner.Color.green;
-    let color5 = namespace2Test.outer.inner.Color.black;
+    let color1 = namespace2Test.inner.Color.red;
+    let color2 = namespace2Test.inner.Color.yellow;
+    let color3 = namespace2Test.inner.Color.blue;
+    let color4 = namespace2Test.inner.Color.green;
+    let color5 = namespace2Test.inner.Color.black;
 
-    namespace2Test.outer.inner.Enum_noreturn(
-        color1, color2, color3, color4, color5)
+    namespace2Test.inner.Enum_noreturn(color1, color2, color3, color4, color5)
 }
 function enum_return() {
-    let color1 = namespace2Test.outer.inner.Color.red;
-    let color2 = namespace2Test.outer.inner.Color.yellow;
-    let color3 = namespace2Test.outer.inner.Color.blue;
-    let color4 = namespace2Test.outer.inner.Color.green;
-    let color5 = namespace2Test.outer.inner.Color.black;
+    let color1 = namespace2Test.inner.Color.red;
+    let color2 = namespace2Test.inner.Color.yellow;
+    let color3 = namespace2Test.inner.Color.blue;
+    let color4 = namespace2Test.inner.Color.green;
+    let color5 = namespace2Test.inner.Color.black;
 
-    let res = namespace2Test.outer.inner.Enum_return(
-        color1, color2, color3, color4, color5)
+    let res =
+        namespace2Test.inner.Enum_return(color1, color2, color3, color4, color5)
     console.log(res)
 }
 
-let instance: namespace2Test.outer.inner.TestInterface =
-    namespace2Test.outer.inner.get_interface();
+let instance: namespace2Test.inner.TestInterface =
+    namespace2Test.inner.get_interface();
 
 function interface_noparam_noreturn() {
     instance.Noparam_noreturn()
@@ -1162,7 +1161,7 @@ function interface_containers_noreturn3() {
     instance.Containers_noreturn3(arrbuf1)
 }
 function interface_containers_noreturn4() {
-    let color1 = namespace2Test.outer.inner.Color.red;
+    let color1 = namespace2Test.inner.Color.red;
     instance.Containers_noreturn4(color1)
 }
 function interface_containers_noreturn5() {
@@ -1183,7 +1182,7 @@ function interface_containers_return() {
 }
 
 function interface_ErrorResponse() {
-    let _struct: namespace2Test.outer.inner.ErrorResponse =
+    let _struct: namespace2Test.inner.ErrorResponse =
         instance.Func_ErrorResponse()
 }
 
@@ -1201,92 +1200,89 @@ function overload3() {
     instance.OverloadFunc()
 }
 function overload4() {
-    let mystruct: namespace2Test.outer.inner.Mystruct = {
-        _string: "hello",
-        _i8: 1 as byte
-    };
+    let mystruct:
+        namespace2Test.inner.Mystruct = {_string: "hello", _i8: 1 as byte};
     instance.OverloadFunc(mystruct)
 }
 
 function ns_5() {
-    namespace2Test.test1.test2.test3.test4.test5.Funtest1(
-        123 as int, 1.234 as double)
+    namespace2Test.test1.Funtest1(123 as int, 1.234 as double)
 }
 
 function test20interface() {
-    let instance_1: namespace2Test.outer.inner.Test1 =
-        namespace2Test.outer.inner.get_interface_1();
-    let instance_20: namespace2Test.outer.inner.Test20 =
-        namespace2Test.outer.inner.get_interface_20();
+    let instance_1: namespace2Test.inner.Test1 =
+        namespace2Test.inner.get_interface_1();
+    let instance_20: namespace2Test.inner.Test20 =
+        namespace2Test.inner.get_interface_20();
     instance_1.Fun1()
     instance_20.Fun2()
 }
 
 // attribute
 function testattributeString() {
-    let name = namespace2Test.outer.inner.PrintTestInterfaceName(instance)
+    let name = namespace2Test.inner.PrintTestInterfaceName(instance)
     console.log("instance.name is " + name)
     assertEQ(name, "String")
 }
 function testattributei8() {
-    let i8 = namespace2Test.outer.inner.PrintTestInterfaceNumberi8(instance)
+    let i8 = namespace2Test.inner.PrintTestInterfaceNumberi8(instance)
     console.log("instance.i8 is " + i8)
     assertEQ(i8, -128)
 }
 function testattributei16() {
-    let i16 = namespace2Test.outer.inner.PrintTestInterfaceNumberi16(instance)
+    let i16 = namespace2Test.inner.PrintTestInterfaceNumberi16(instance)
     console.log("instance.i16 is " + i16)
     assertEQ(i16, -32768)
 }
 function testattributei32() {
-    let i32 = namespace2Test.outer.inner.PrintTestInterfaceNumberi32(instance)
+    let i32 = namespace2Test.inner.PrintTestInterfaceNumberi32(instance)
     console.log("instance.i32 is " + i32)
     assertEQ(i32, -2147483648)
 }
 function testattributei64() {
-    let i64 = namespace2Test.outer.inner.PrintTestInterfaceNumberi64(instance)
+    let i64 = namespace2Test.inner.PrintTestInterfaceNumberi64(instance)
     console.log("instance.i64 is " + i64)
     assertEQ(i64, 1000 as long)
 }
 function testattributef32() {
-    let f32 = namespace2Test.outer.inner.PrintTestInterfaceNumberf32(instance)
+    let f32 = namespace2Test.inner.PrintTestInterfaceNumberf32(instance)
     console.log("instance.f32 is " + f32)
     assertEQ(f32, 3.1415927 as float)
 }
 function testattributef64() {
-    let f64 = namespace2Test.outer.inner.PrintTestInterfaceNumberf64(instance)
+    let f64 = namespace2Test.inner.PrintTestInterfaceNumberf64(instance)
     console.log("instance.f64 is " + f64)
     assertEQ(f64, 3.141592653589793)
 }
 function testattributebool() {
-    let b = namespace2Test.outer.inner.PrintTestInterfacebool(instance)
+    let b = namespace2Test.inner.PrintTestInterfacebool(instance)
     assertEQ(b, true)
 }
 function testattributeArrayBuffer() {
-    namespace2Test.outer.inner.PrintTestInterfaceArraybuffer(instance)
+    namespace2Test.inner.PrintTestInterfaceArraybuffer(instance)
 }
 function testattributeArray() {
-    namespace2Test.outer.inner.PrintTestInterfaceArray(instance)
+    namespace2Test.inner.PrintTestInterfaceArray(instance)
 }
 function testattributeUnion() {
-    namespace2Test.outer.inner.PrintTestInterfaceUnion(instance)
+    namespace2Test.inner.PrintTestInterfaceUnion(instance)
 }
 function testattributeRecord() {
-    namespace2Test.outer.inner.PrintTestInterfaceRecord(instance)
+    namespace2Test.inner.PrintTestInterfaceRecord(instance)
 }
 function testattributeEnum() {
-    namespace2Test.outer.inner.PrintTestInterfaceEnum(instance)
+    namespace2Test.inner.PrintTestInterfaceEnum(instance)
 }
 
 function testinheritance() {
-    let instancetestA: namespace2Test.outer.inner.TestA =
-        namespace2Test.outer.inner.get_interface_A()
+    let instancetestA: namespace2Test.inner.TestA =
+        namespace2Test.inner.get_interface_A()
     instancetestA.Fun1()
-    let instancetestB: namespace2Test.outer.inner.TestB =
-        namespace2Test.outer.inner.get_interface_B()
+    let instancetestB: namespace2Test.inner.TestB =
+        namespace2Test.inner.get_interface_B()
     instancetestB.Fun2()
-    let instancetestC: namespace2Test.outer.inner.TestC =
-        namespace2Test.outer.inner.get_interface_C()
+    let instancetestC: namespace2Test.inner.TestC =
+        namespace2Test.inner.get_interface_C()
     instancetestC.Fun3()
 }
 
