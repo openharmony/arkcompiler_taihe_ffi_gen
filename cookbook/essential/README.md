@@ -277,7 +277,7 @@ export class Bookstore {
 
 - 接下来实现 C++ 部分。
   - Taihe 标准库提供了 `make_holder<ImplT, IfaceT...>` 来将 C++ 类绑定到 Taihe 接口
-  - Taihe 标准库提供了 `set_error` 来抛异常。
+  - Taihe 标准库提供了 `set_error`, `set_business_error` 来抛异常。
   - 全部的状态都保存在 C++ 中。
 
 **File: author/src/ohos.book.store.impl.cpp**
@@ -299,8 +299,8 @@ public:
     auto price = iter->second.first;
     auto& count = iter->second.second;
     if (count == 0) {
-      // 使用 taihe::set_error 抛异常。
-      taihe::set_error(book.title + " has been sold out");
+      // 使用 taihe::set_business_error 抛异常。
+      taihe::set_business_error(1, book.title + " has been sold out");
       return;
     }
 

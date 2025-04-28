@@ -93,7 +93,7 @@ array<::array_test::Data> changeStructArray(
 
 array<float> fetchBinaryDataSync(int32_t num) {
   if (num <= 0) {
-    taihe::set_error("some error happen in fetchBinaryDataSync");
+    taihe::set_business_error(1, "some error happen in fetchBinaryDataSync");
     return array<float>::make(0);
   } else {
     return array<float>::make(num);

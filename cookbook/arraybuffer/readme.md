@@ -19,7 +19,7 @@ int32_t convert2Int(array_view<uint8_t> a) {
     if (a.size() >= 4) { 
         num = *(int32_t*)a.begin();
     } else {
-        set_error("ArrayBuffer len < 4");
+        set_business_error(1, "ArrayBuffer len < 4");
     }
     return num;
 }

@@ -75,8 +75,8 @@ public:
     auto price = iter->second.first;
     auto &count = iter->second.second;
     if (count == 0) {
-      // 使用 taihe::set_error 抛异常。
-      taihe::set_error(book.title + " has been sold out");
+      // 使用 taihe::set_business_error 抛异常。
+      taihe::set_business_error(1, book.title + " has been sold out");
       return;
     }
 

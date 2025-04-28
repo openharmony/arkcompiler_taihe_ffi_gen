@@ -105,14 +105,23 @@ function changeStructArray() {
 }
 
 function fetchBinaryData() {
-    ArrayTest.fetchBinaryData(5, (error: Error, data?: float[]) => {
-        if (!error.message) {
-            console.log("main finsih test async success ");
-            assertEQ(data?.length, 5);
-        } else {
-            console.log("main finsih test async ERROR ", error);
-        }
-    })
+    let promise = new Promise<Array<float>>(
+        (resolve, reject) => {ArrayTest.fetchBinaryData(
+            5, (error: BusinessError, data: Array<float>) => {
+                if (error.code !== 0) {
+                    reject(error);
+                } else {
+                    resolve(data);
+                }
+            })});
+    let data: Array<float>;
+    let error: BusinessError;
+    try {
+        data = await promise;
+    } catch (e) {
+        error = e as BusinessError;
+    }
+    assertEQ(data.length, 5);
 }
 
 function makeStructArrayArray() {
