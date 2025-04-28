@@ -531,7 +531,7 @@ class ANICodeGenerator:
             f"    ani_class ani_obj_cls;",
             f'    env->FindClass("{iface_ani_info.impl_desc}", &ani_obj_cls);',
             f"    ani_method ani_obj_ctor;",
-            f'    env->Class_FindMethod(ani_obj_cls, "<ctor>", nullptr, &ani_obj_ctor);',
+            f'    env->Class_FindMethod(ani_obj_cls, "<ctor>", "JJ:V", &ani_obj_ctor);',
             f"    ani_object ani_obj;",
             f"    env->Object_New(ani_obj_cls, ani_obj_ctor, &ani_obj, ani_vtbl_ptr, ani_data_ptr);",
             f"    return ani_obj;",
