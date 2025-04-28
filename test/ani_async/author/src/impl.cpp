@@ -61,6 +61,7 @@ void fromStructSync_impl(::async_test::Data const &data) {
 void PrintSync() {
   std::cout << "print Sync" << std::endl;
 }
+
 void makeGlobalSync() {
   TH_THROW(std::runtime_error, "makeGlobalSync not implemented");
 }

@@ -29,7 +29,7 @@ public:
   void mytestNew() {
     TH_THROW(std::runtime_error, "mytestNew not implemented");
   }
-  
+
   int32_t onTest() {
     TH_THROW(std::runtime_error, "onTest not implemented");
   }
@@ -40,14 +40,14 @@ private:
 };
 
 class ColorImpl {
-  public:
-    ColorImpl() {
-        // Don't forget to implement the constructor.
-    }
+public:
+  ColorImpl() {
+    // Don't forget to implement the constructor.
+  }
 
-    int32_t add(int32_t a) {
-        TH_THROW(std::runtime_error, "add not implemented");
-    }
+  int32_t add(int32_t a) {
+    TH_THROW(std::runtime_error, "add not implemented");
+  }
 };
 
 class BaseCls {

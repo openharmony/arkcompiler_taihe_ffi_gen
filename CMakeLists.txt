@@ -76,19 +76,49 @@ function(setup_panda_sdk)
 
   file(MAKE_DIRECTORY "${PANDA_EXTRACT_DIR}")
 
-  # Download Panda SDK
-  if(NOT EXISTS "${PANDA_SDK_PATH}")
-    message(STATUS "Downloading Panda SDK...")
+  set(PANDA_SDK_VERSION_FILE "${PANDA_EXTRACT_DIR}/.panda_sdk_version")
+  string(REPLACE ".tgz" "" PANDA_SDK_VERSION "${PANDA_SDK_FILENAME}")
+
+  # 读取本地保存的版本信息
+  if(EXISTS "${PANDA_SDK_VERSION_FILE}")
+    file(READ "${PANDA_SDK_VERSION_FILE}" EXISTING_PANDA_SDK_VERSION)
+    string(STRIP "${EXISTING_PANDA_SDK_VERSION}" EXISTING_PANDA_SDK_VERSION)
+  else()
+    set(EXISTING_PANDA_SDK_VERSION "")
+  endif()
+
+  # 检查版本是否匹配
+  if(NOT "${EXISTING_PANDA_SDK_VERSION}" STREQUAL "${PANDA_SDK_VERSION}")
+    message(STATUS "Panda SDK version mismatch or missing. Expected: ${PANDA_SDK_VERSION}, Found: ${EXISTING_PANDA_SDK_VERSION}")
+
+    # 删除旧的包和解压目录
+    file(GLOB OLD_SDK_FILES "${PANDA_EXTRACT_DIR}/sdk-*.tgz")
+    foreach(file ${OLD_SDK_FILES})
+      message(STATUS "Removing old Panda SDK file: ${file}")
+      file(REMOVE "${file}")
+    endforeach()
+    file(REMOVE_RECURSE "${PANDA_HOME}")
+
+    set(NEED_DOWNLOAD TRUE)
+  else()
+    set(NEED_DOWNLOAD FALSE)
+  endif()
+
+  # Download Panda SDK if needed
+  if(NOT EXISTS "${PANDA_SDK_PATH}" OR NEED_DOWNLOAD)
+    message(STATUS "Downloading Panda SDK: ${PANDA_SDK_FILENAME}")
     execute_process(
       COMMAND curl -u koala-pub:y3t!n0therP -L -o "${PANDA_SDK_PATH}" "${PANDA_SDK_URL}"
       RESULT_VARIABLE DOWNLOAD_RESULT
     )
     if(NOT DOWNLOAD_RESULT EQUAL 0)
-      message(FATAL_ERROR "Failed to download Panda SDK! Please check the URL or credentials.")
+      message(FATAL_ERROR "Failed to download Panda SDK!")
     endif()
+
+    file(REMOVE_RECURSE "${PANDA_HOME}")
   endif()
 
-  # Extract Panda SDK
+  # Extract Panda SDK if needed
   if(NOT EXISTS "${PANDA_HOME}")
     message(STATUS "Extracting Panda SDK...")
     execute_process(
@@ -99,6 +129,9 @@ function(setup_panda_sdk)
     if(NOT EXTRACT_RESULT EQUAL 0)
       message(FATAL_ERROR "Failed to extract Panda SDK!")
     endif()
+
+    # 保存当前版本信息
+    file(WRITE "${PANDA_SDK_VERSION_FILE}" "${PANDA_SDK_VERSION}")
   endif()
 
   # Set environment variable
@@ -119,6 +152,8 @@ function(setup_panda_sdk)
   endif()
 
 endfunction()
+
+
 
 
 # 生成 arktsconfig.json
