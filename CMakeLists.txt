@@ -76,7 +76,7 @@ function(setup_panda_sdk)
 
   file(MAKE_DIRECTORY "${PANDA_EXTRACT_DIR}")
 
-  set(PANDA_SDK_VERSION_FILE "${PANDA_EXTRACT_DIR}/.panda_sdk_version")
+  set(PANDA_SDK_VERSION_FILE "${PANDA_EXTRACT_DIR}/version.txt")
   string(REPLACE ".tgz" "" PANDA_SDK_VERSION "${PANDA_SDK_FILENAME}")
 
   # 读取本地保存的版本信息
@@ -90,15 +90,6 @@ function(setup_panda_sdk)
   # 检查版本是否匹配
   if(NOT "${EXISTING_PANDA_SDK_VERSION}" STREQUAL "${PANDA_SDK_VERSION}")
     message(STATUS "Panda SDK version mismatch or missing. Expected: ${PANDA_SDK_VERSION}, Found: ${EXISTING_PANDA_SDK_VERSION}")
-
-    # 删除旧的包和解压目录
-    file(GLOB OLD_SDK_FILES "${PANDA_EXTRACT_DIR}/sdk-*.tgz")
-    foreach(file ${OLD_SDK_FILES})
-      message(STATUS "Removing old Panda SDK file: ${file}")
-      file(REMOVE "${file}")
-    endforeach()
-    file(REMOVE_RECURSE "${PANDA_HOME}")
-
     set(NEED_DOWNLOAD TRUE)
   else()
     set(NEED_DOWNLOAD FALSE)
