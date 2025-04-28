@@ -1,5 +1,6 @@
 import * as record_test from "@generated/record_test";
 import {Color, Data, ICpu, ICpuInfo, ICpuZero, Pair} from "@generated/record_test";
+import {BusinessError} from "@ohos.base";
 import * as System from "std/core/System";
 
 loadLibrary("ani_record");

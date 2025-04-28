@@ -1,4 +1,5 @@
 import * as wrap_interface from "@generated/wrap_interface";
+import {BusinessError} from "@ohos.base";
 
 loadLibrary("unwrap_obj");
 

@@ -1,6 +1,7 @@
-import { BusinessError } from "@ohos.base";
 import * as async_test from "@generated/async_test";
+import {BusinessError} from "@ohos.base";
 import * as System from "std/core/System";
+
 loadLibrary("ani_async");
 
 function testSyncAdd() {
@@ -23,7 +24,8 @@ function testSyncAdd() {
             err = e as BusinessError;
         }
         assertEQ(err.code, 1, "addSync should throw an error");
-        assertEQ(err.message, "some error happen in add impl",
+        assertEQ(
+            err.message, "some error happen in add impl",
             "addSync should throw an error when first parameter is 0");
     }
     console.log("testSyncAdd end");
@@ -67,7 +69,8 @@ function testAsyncAdd() {
             err = e as BusinessError;
         }
         assertEQ(err.code, 1, "add callback should receive an err");
-        assertEQ(err.message, "some error happen in add impl",
+        assertEQ(
+            err.message, "some error happen in add impl",
             "add callback should receive an err when first parameter is 0");
     }
     console.log("testAsyncAdd end");
@@ -93,7 +96,8 @@ function testPromiseAdd() {
             err = e as BusinessError;
         }
         assertEQ(err.code, 1, "add promise should throw an error");
-        assertEQ(err.message, "some error happen in add impl",
+        assertEQ(
+            err.message, "some error happen in add impl",
             "add promise should throw an error when first parameter is 0");
     }
     console.log("testPromiseAdd end");
@@ -114,12 +118,13 @@ function testStaticAsyncMethods() {
 }
 
 function testStructMethods() {
-    await async_test.fromStruct({a: "abc", b: "efg", c: 3}); // should not throw an error
+    await async_test.fromStruct(
+        {a: "abc", b: "efg", c: 3});  // should not throw an error
 
     {
         let err: BusinessError;
         try {
-            await async_test.fromStruct({ a: "abc", b: "efg", c: 0 });
+            await async_test.fromStruct({a: "abc", b: "efg", c: 0});
         } catch (e) {
             err = e as BusinessError;
         }

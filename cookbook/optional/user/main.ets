@@ -1,4 +1,5 @@
 import * as userSettings from "@generated/userSettings";
+import {BusinessError} from "@ohos.base";
 loadLibrary("optional");
 
 function main() {

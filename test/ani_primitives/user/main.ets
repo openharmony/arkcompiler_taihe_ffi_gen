@@ -1,5 +1,6 @@
 import * as test_primitives from "@generated/primitives_test";
 import * as test_void_ns from "@generated/void_func";
+import {BusinessError} from "@ohos.base";
 import * as System from "std/core/System";
 
 loadLibrary("ani_primitives");

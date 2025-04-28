@@ -1,5 +1,6 @@
 import * as namespace2Test from "@generated/my_ns";
 import * as namespaceTest from "@generated/ns_alltest";
+import {BusinessError} from "@ohos.base";
 import * as System from "std/core/System";
 
 loadLibrary("ani_namespace");
@@ -986,23 +987,16 @@ function testInter21BasePerformanceFunctionTest14() {
     let res: Record<int, namespaceTest.functiontest.Data> =
         testInterfacePerformance21.record_test_attribute;
     console.log("testInter21BasePerformanceFunctionTest14 ", res)
-    if (res[100]) {
-        const item = res[100];
-        assertEQ(item?.data1, "one");
-        assertEQ(item?.data2, true);
-        assertEQ(item?.data3, 100);
-    }
-    else {
-        assert false;
-    }
-    if (res[101]) {
-        const item = res[101];
-        assertEQ(item?.data1, "two");
-        assertEQ(item?.data2, false);
-        assertEQ(item?.data3, 101);
-    } else {
-        assert false;
-    }
+    const item = res[100];
+    assertNE(item, undefined);
+    assertEQ(item?.data1, "one");
+    assertEQ(item?.data2, true);
+    assertEQ(item?.data3, 100);
+    const item1 = res[101];
+    assertNE(item1, undefined);
+    assertEQ(item1?.data1, "two");
+    assertEQ(item1?.data2, false);
+    assertEQ(item1?.data3, 101);
 }
 
 function testInter21BasePerformanceFunctionTest15() {

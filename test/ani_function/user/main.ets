@@ -1,4 +1,5 @@
 import * as FuncTest from "@generated/function_test";
+import {BusinessError} from "@ohos.base";
 import * as System from "std/core/System";
 
 loadLibrary("ani_function");

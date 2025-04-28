@@ -1,4 +1,5 @@
 import * as on_off_test from "@generated/on_off";
+import {BusinessError} from "@ohos.base";
 import * as System from "std/core/System";
 
 loadLibrary("ani_on_off");

@@ -1,4 +1,5 @@
 import * as threadTest from "@generated/thread_test";
+import {BusinessError} from "@ohos.base";
 
 loadLibrary("ani_thread");
 
