@@ -1415,7 +1415,7 @@ class ArrayTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
         self.t = t
         item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
         self.ani_type = item_ty_ani_info.ani_type.array
-        self.type_desc = f"[{item_ty_ani_info.type_desc}"
+        self.type_desc = f"Lescompat/Array;"
         # TODO: remove this check
         if isinstance(self.t.item_ty, ScalarType) and self.t.item_ty.kind in (
             ScalarKind.U8,
@@ -1435,7 +1435,7 @@ class ArrayTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
     def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
         item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
         sts_type = item_ty_ani_info.sts_type_in(pkg, target)
-        return f"({sts_type}[])"
+        return f"Array<{sts_type}>"
 
     @override
     def _from_ani_impl(

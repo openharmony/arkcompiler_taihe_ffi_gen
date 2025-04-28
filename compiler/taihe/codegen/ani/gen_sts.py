@@ -56,12 +56,39 @@ class STSCodeGenerator:
             ns_dict.setdefault(pkg_ani_info.module_name, Namespace()).add_path(
                 pkg_ani_info.sts_ns_parts, pkg
             )
+        self.gen_ohos_base()
         for module, ns in ns_dict.items():
             self.gen_module_file(module, ns)
+
+    def gen_ohos_base(self):
+        target = STSOutputBuffer.create(self.tm, "@ohos.base.ets")
+        target.writeln(
+            f"export class BusinessError<T = void> extends Error {{",
+            f"    code: number;",
+            f"    data?: T;",
+            f"    constructor() {{",
+            f"        super();",
+            f"        this.code = 0;",
+            f"    }}",
+            f"    constructor(code: number, error: Error) {{",
+            f"        super(error.name, error.message, new ErrorOptions(error.cause));",
+            f"        this.code = code;",
+            f"    }}",
+            f"    constructor(code: number, data: T, error: Error) {{",
+            f"        super(error.name, error.message, new ErrorOptions(error.cause));",
+            f"        this.code = code;",
+            f"        this.data = data;",
+            f"    }}",
+            f"}}",
+            f"export type AsyncCallback<T, E = void> = (error: BusinessError<E>, data: T) => void;",
+        )
 
     def gen_module_file(self, module: str, ns: Namespace):
         module_sts_file = f"{module}.ets"
         target = STSOutputBuffer.create(self.tm, module_sts_file)
+        target.writeln(
+            f"import {{ AsyncCallback, BusinessError }} from '@ohos.base';",
+        )
         self.gen_module_injected_codes(ns, target)
         self.gen_namespace(ns, target)
 
@@ -389,7 +416,7 @@ class STSCodeGenerator:
                     )
                 # async
                 if (sts_async_name := func_ani_info.sts_async_name) is not None:
-                    callback_param = f"callback: __AsyncCallback<{sts_return_ty_name}>"
+                    callback_param = f"callback: AsyncCallback<{sts_return_ty_name}>"
                     sts_params_with_cb_str = ", ".join([*sts_params, callback_param])
                     target.writeln(
                         f"export function {sts_async_name}({sts_params_with_cb_str}): void {{",
@@ -401,10 +428,11 @@ class STSCodeGenerator:
                     target.writeln(
                         f"    }})",
                         f"    .then((ret: NullishType): void => {{",
-                        f"        callback(new Error(), ret as {sts_resolved_ty_name});",
+                        f"        callback(new BusinessError(), ret as {sts_resolved_ty_name});",
                         f"    }})",
                         f"    .catch((ret: NullishType): void => {{",
-                        f"        callback(ret as Error, undefined);",
+                        f"        let data: {sts_resolved_ty_name};",
+                        f"        callback(ret as BusinessError, data);",
                         f"    }});",
                         f"}}",
                     )
@@ -647,7 +675,7 @@ class STSCodeGenerator:
                     )
                 # async
                 if (sts_async_name := method_ani_info.sts_async_name) is not None:
-                    callback_param = f"callback: __AsyncCallback<{sts_return_ty_name}>"
+                    callback_param = f"callback: AsyncCallback<{sts_return_ty_name}>"
                     sts_params_with_cb_str = ", ".join([*sts_params, callback_param])
                     target.writeln(
                         f"{sts_async_name}({sts_params_with_cb_str}): void;",
@@ -850,7 +878,7 @@ class STSCodeGenerator:
                     )
                 # async
                 if (sts_async_name := func_ani_info.sts_async_name) is not None:
-                    callback_param = f"callback: __AsyncCallback<{sts_return_ty_name}>"
+                    callback_param = f"callback: AsyncCallback<{sts_return_ty_name}>"
                     sts_params_with_cb_str = ", ".join([*sts_params, callback_param])
                     target.writeln(
                         f"static {sts_async_name}({sts_params_with_cb_str}): void {{",
@@ -862,10 +890,11 @@ class STSCodeGenerator:
                     target.writeln(
                         f"    }})",
                         f"    .then((ret: NullishType): void => {{",
-                        f"        callback(new Error(), ret as {sts_resolved_ty_name});",
+                        f"        callback(new BusinessError(), ret as {sts_resolved_ty_name});",
                         f"    }})",
                         f"    .catch((ret: NullishType): void => {{",
-                        f"        callback(ret as Error, undefined);",
+                        f"        let data: {sts_resolved_ty_name};",
+                        f"        callback(ret as BusinessError, data);",
                         f"    }});",
                         f"}}",
                     )
@@ -1027,7 +1056,7 @@ class STSCodeGenerator:
                     )
                 # async
                 if (sts_async_name := method_ani_info.sts_async_name) is not None:
-                    callback_param = f"callback: __AsyncCallback<{sts_return_ty_name}>"
+                    callback_param = f"callback: AsyncCallback<{sts_return_ty_name}>"
                     sts_params_with_cb_str = ", ".join([*sts_params, callback_param])
                     target.writeln(
                         f"{sts_async_name}({sts_params_with_cb_str}): void {{",
@@ -1039,10 +1068,11 @@ class STSCodeGenerator:
                     target.writeln(
                         f"    }})",
                         f"    .then((ret: NullishType): void => {{",
-                        f"        callback(new Error(), ret as {sts_resolved_ty_name});",
+                        f"        callback(new BusinessError(), ret as {sts_resolved_ty_name});",
                         f"    }})",
                         f"    .catch((ret: NullishType): void => {{",
-                        f"        callback(ret as Error, undefined);",
+                        f"        let data: {sts_resolved_ty_name};",
+                        f"        callback(ret as BusinessError, data);",
                         f"    }});",
                         f"}}",
                     )
@@ -1065,9 +1095,6 @@ class STSCodeGenerator:
         self,
         target: STSOutputBuffer,
     ):
-        target.writeln(
-            "type __AsyncCallback<T> = (err: Error, result: T | undefined) => void;",
-        )
         target.writeln(
             "function __fromArrayBufferToBigInt(arr: ArrayBuffer): BigInt {",
             "    let res: BigInt = 0n;",

@@ -1,4 +1,5 @@
 import * as bigint from "@generated/bigint";
+import {BusinessError} from "@ohos.base";
 
 loadLibrary("bigint");
 

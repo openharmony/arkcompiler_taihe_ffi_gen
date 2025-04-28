@@ -1,4 +1,5 @@
 import {Book, Bookstore, Category, ConstructBook, CppBook, FancyBook, GetStringArray, IsString, MapBookToYear, PrintBook, PrintBookAdvanced, PrintBooksWithFilter, RustBook} from "@generated/ohos.book.store";
+import {BusinessError} from "@ohos.base";
 
 loadLibrary("essential");
 

@@ -1,5 +1,6 @@
 import * as lib from "@generated/class_extends";
 import * as extends_inject from "@generated/extends_inject";
+import {BusinessError} from "@ohos.base";
 import * as System from "std/core/System";
 
 loadLibrary("inheritance");

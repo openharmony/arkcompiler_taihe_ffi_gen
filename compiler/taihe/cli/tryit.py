@@ -19,7 +19,7 @@ class BuildConfig:
         self.cc = os.getenv("CC", "clang")
         self.panda_username = "koala-pub"
         self.panda_password = "y3t!n0therP"
-        self.panda_url = "https://nexus.bz-openlab.ru:10443/repository/koala-npm/%40panda/sdk/-/sdk-1.5.0-dev.26258.tgz"
+        self.panda_url = "https://nexus.bz-openlab.ru:10443/repository/koala-npm/%40panda/sdk/-/sdk-1.5.0-dev.29115.tgz"
 
         current_file = Path(__file__).resolve()
         if for_distribution:
@@ -319,6 +319,7 @@ class BuildSystem:
                 "paths": {
                     "std": [str(panda_home / "../ets/stdlib/std")],
                     "escompat": [str(panda_home / "../ets/stdlib/escompat")],
+                    "@ohos.base": [str(self.generated_dir / "@ohos.base.ets")],
                     "@generated": [str(self.generated_dir)],
                     "@system": [str(self.system_dir)],
                 },

@@ -7,7 +7,7 @@
 namespace {
 int32_t add_impl(int32_t a, int32_t b) {
   if (a == 0) {
-    taihe::set_error("some error happen in add impl");
+    taihe::set_business_error(1, "some error happen in add impl");
     return b;
   } else {
     std::cout << "add impl " << a + b << std::endl;
@@ -43,13 +43,16 @@ int32_t add_impl(int32_t a, int32_t b) {
 void fromStructSync_impl(::async_test::Data const &data) {
   std::cout << data.a.c_str() << " " << data.b.c_str() << " " << data.c
             << std::endl;
+  if (data.c == 0) {
+    taihe::set_business_error(1, "some error happen in fromStructSync_impl");
+  }
   return;
 }
 
 ::async_test::Data toStructSync_impl(taihe::string_view a, taihe::string_view b,
                                      int32_t c) {
   if (c == 0) {
-    taihe::set_error("some error happen in toStructSync_impl");
+    taihe::set_business_error(1, "some error happen in toStructSync_impl");
     return {a, b, c};
   }
   return {a, b, c};

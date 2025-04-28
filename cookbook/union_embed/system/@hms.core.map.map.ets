@@ -1,4 +1,5 @@
 import {make_map_inner, Resource} from "@generated/@hms.core.map.map_inner";
+import {BusinessError} from "@ohos.base";
 
 import {Image} from "./@ohos.multimedia.image";
 
@@ -40,7 +41,23 @@ export class BasePriorityOverlay_inner extends BaseOverlay_inner implements
 
 export class Bubble_inner extends BasePriorityOverlay_inner implements Bubble {
     setIcons(icons: ((string | Image | Resource)[])): Promise<int> {
-        return launch this.map_inner_cls.setIcons_sync(icons);
+        // return launch this.map_inner_cls.setIcons_sync(icons);
+        return new Promise<int>((resolve, reject): void => {
+            taskpool
+                .execute(
+                    ():
+                        int => {
+                            return this.map_inner_cls.setIcons_sync(icons);
+                        })
+                .then(
+                    (ret: NullishType):
+                        void => {
+                            resolve(ret as int);
+                        })
+                .catch((ret: NullishType): void => {
+                    reject(ret as Error);
+                });
+        });
     }
     setPositions(positions: ((Resource[])[])): void {
         return this.map_inner_cls.setPositions(positions);

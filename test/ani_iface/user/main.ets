@@ -1,5 +1,6 @@
 import * as IfaceReadonlyTest from "@generated/iface_readonly_test";
 import * as IfaceTest from "@generated/iface_test";
+import {BusinessError} from "@ohos.base";
 import * as System from "std/core/System";
 
 loadLibrary("ani_iface");

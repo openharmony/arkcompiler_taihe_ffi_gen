@@ -1,4 +1,5 @@
 import {UIAbility, useUIAbility} from "@generated/override";
+import {BusinessError} from "@ohos.base";
 
 loadLibrary("override");
 

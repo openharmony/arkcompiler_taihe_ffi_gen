@@ -1,5 +1,6 @@
 import * as UnionTest1 from "@generated/test_union";
 import * as UnionTest from "@generated/union_ani";
+import {BusinessError} from "@ohos.base";
 import * as System from "std/core/System";
 
 loadLibrary("ani_union");

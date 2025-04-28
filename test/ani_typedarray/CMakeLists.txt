@@ -3,6 +3,7 @@ set(IDL_FILES
 )
 
 set(GEN_ETS_FILES
+    "@ohos.base.ets"
     "bar.ets"
 )
 

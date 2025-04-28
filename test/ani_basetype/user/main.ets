@@ -1,4 +1,5 @@
 import * as base_test from "@generated/base_test";
+import {BusinessError} from "@ohos.base";
 import * as System from "std/core/System";
 
 loadLibrary("ani_basetype");

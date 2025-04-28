@@ -1,4 +1,5 @@
 import * as arraybuffer from "@generated/arraybuffer";
+import {BusinessError} from "@ohos.base";
 import * as System from "std/core/System";
 
 loadLibrary("ani_arraybuffer");

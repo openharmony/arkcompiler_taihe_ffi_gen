@@ -1,4 +1,5 @@
 import * as extobj from "@generated/external_obj";
+import {BusinessError} from "@ohos.base";
 import {Person} from "@system/other.subsystem";
 
 loadLibrary("external_obj");

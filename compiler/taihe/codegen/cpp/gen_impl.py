@@ -116,6 +116,14 @@ class CppImplSourcesGenerator:
 
         return re.sub(pattern, replace_ns, cpp_type)
 
+    @property
+    def make_holder(self):
+        return self.mask("taihe::make_holder")
+
+    @property
+    def runtime_error(self):
+        return self.mask("std::runtime_error")
+
     def generate(self, pg: PackageGroup):
         for pkg in pg.packages:
             self.gen_package_file(pkg)
@@ -224,11 +232,11 @@ class CppImplSourcesGenerator:
             pkg_cpp_impl_target.writeln(
                 f"        // The parameters in the make_holder function should be of the same type",
                 f"        // as the parameters in the constructor of the actual implementation class.",
-                f"        return make_holder<{impl_name}, {cpp_return_ty_name}>();",
+                f"        return {self.make_holder}<{impl_name}, {cpp_return_ty_name}>();",
             )
         else:
             pkg_cpp_impl_target.writeln(
-                f'        TH_THROW(std::runtime_error, "{func_cpp_impl_name} not implemented");',
+                f'        TH_THROW({self.runtime_error}, "{func_cpp_impl_name} not implemented");',
             )
         pkg_cpp_impl_target.writeln(
             f"    }}",
@@ -258,11 +266,11 @@ class CppImplSourcesGenerator:
             pkg_cpp_impl_target.writeln(
                 f"    // The parameters in the make_holder function should be of the same type",
                 f"    // as the parameters in the constructor of the actual implementation class.",
-                f"    return make_holder<{impl_name}, {cpp_return_ty_name}>();",
+                f"    return {self.make_holder}<{impl_name}, {cpp_return_ty_name}>();",
             )
         else:
             pkg_cpp_impl_target.writeln(
-                f'    TH_THROW(std::runtime_error, "{func_cpp_impl_name} not implemented");',
+                f'    TH_THROW({self.runtime_error}, "{func_cpp_impl_name} not implemented");',
             )
         pkg_cpp_impl_target.writeln(
             f"}}",
