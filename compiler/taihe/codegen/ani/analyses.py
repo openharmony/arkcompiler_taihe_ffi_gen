@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Literal
 from typing_extensions import override
 
 from taihe.codegen.abi.mangle import DeclKind, encode
+from taihe.codegen.ani.writer import StsWriter
 from taihe.codegen.cpp.analyses import (
     EnumCppInfo,
     TypeCppInfo,
@@ -39,7 +40,7 @@ from taihe.semantics.types import (
 from taihe.semantics.visitor import TypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
 from taihe.utils.exceptions import AdhocError
-from taihe.utils.outputs import COutputBuffer, STSOutputBuffer
+from taihe.utils.outputs import COutputBuffer
 from taihe.utils.sources import SourceLocation
 
 if TYPE_CHECKING:
@@ -265,7 +266,7 @@ class PackageANIInfo(AbstractAnalysis[PackageDecl]):
     def scope(self):
         return ANI_NAMESPACE if len(self.sts_ns_parts) > 0 else ANI_MODULE
 
-    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer, sts_name: str):
+    def sts_type_in(self, pkg: PackageDecl, target: StsWriter, sts_name: str):
         pkg_ani_info = PackageANIInfo.get(self.am, pkg)
         if pkg_ani_info.module_name == self.module_name:
             length = len(pkg_ani_info.sts_ns_parts)
@@ -682,7 +683,7 @@ class EnumANIInfo(AbstractAnalysis[EnumDecl]):
                 d.loc,
             )
 
-    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer):
+    def sts_type_in(self, pkg: PackageDecl, target: StsWriter):
         return self.pkg_ani_info.sts_type_in(pkg, target, self.sts_type_name)
 
 
@@ -731,7 +732,7 @@ class UnionANIInfo(AbstractAnalysis[UnionDecl]):
             else:
                 self.sts_final_fields.append([field])
 
-    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer):
+    def sts_type_in(self, pkg: PackageDecl, target: StsWriter):
         return self.pkg_ani_info.sts_type_in(pkg, target, self.sts_type_name)
 
 
@@ -804,7 +805,7 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
     def is_class(self):
         return self.sts_type_name == self.sts_impl_name
 
-    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer):
+    def sts_type_in(self, pkg: PackageDecl, target: StsWriter):
         return self.pkg_ani_info.sts_type_in(pkg, target, self.sts_type_name)
 
 
@@ -855,7 +856,7 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
     def is_class(self):
         return self.sts_type_name == self.sts_impl_name
 
-    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer):
+    def sts_type_in(self, pkg: PackageDecl, target: StsWriter):
         return self.pkg_ani_info.sts_type_in(pkg, target, self.sts_type_name)
 
 
@@ -873,7 +874,7 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
         return f"Lstd/core/{self.ani_type.suffix};"
 
     @abstractmethod
-    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+    def sts_type_in(self, pkg: PackageDecl, target: StsWriter) -> str:
         pass
 
     @abstractmethod
@@ -1100,7 +1101,7 @@ class EnumTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[EnumType]):
             )
 
     @override
-    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+    def sts_type_in(self, pkg: PackageDecl, target: StsWriter) -> str:
         enum_ani_info = EnumANIInfo.get(self.am, self.t.ty_decl)
         return enum_ani_info.sts_type_in(pkg, target)
 
@@ -1147,7 +1148,7 @@ class StructTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[StructType]):
         self.type_desc = struct_ani_info.type_desc
 
     @override
-    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+    def sts_type_in(self, pkg: PackageDecl, target: StsWriter) -> str:
         struct_ani_info = StructANIInfo.get(self.am, self.t.ty_decl)
         return struct_ani_info.sts_type_in(pkg, target)
 
@@ -1190,7 +1191,7 @@ class UnionTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[UnionType]):
         self.type_desc = union_ani_info.type_desc
 
     @override
-    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+    def sts_type_in(self, pkg: PackageDecl, target: StsWriter) -> str:
         union_ani_info = UnionANIInfo.get(self.am, self.t.ty_decl)
         return union_ani_info.sts_type_in(pkg, target)
 
@@ -1233,7 +1234,7 @@ class IfaceTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[IfaceType]):
         self.type_desc = iface_ani_info.type_desc
 
     @override
-    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+    def sts_type_in(self, pkg: PackageDecl, target: StsWriter) -> str:
         iface_ani_info = IfaceANIInfo.get(self.am, self.t.ty_decl)
         return iface_ani_info.sts_type_in(pkg, target)
 
@@ -1290,7 +1291,7 @@ class ScalarTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ScalarType]):
         self.type_desc = type_desc
 
     @override
-    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+    def sts_type_in(self, pkg: PackageDecl, target: StsWriter) -> str:
         return self.sts_type
 
     @override
@@ -1334,7 +1335,7 @@ class OpaqueTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[OpaqueType]):
         self.type_desc = "Lstd/core/Object;"
 
     @override
-    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+    def sts_type_in(self, pkg: PackageDecl, target: StsWriter) -> str:
         return self.sts_type
 
     @override
@@ -1369,7 +1370,7 @@ class StringTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[StringType]):
         self.type_desc = "Lstd/core/String;"
 
     @override
-    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+    def sts_type_in(self, pkg: PackageDecl, target: StsWriter) -> str:
         return "string"
 
     @override
@@ -1432,7 +1433,7 @@ class ArrayTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
             )
 
     @override
-    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+    def sts_type_in(self, pkg: PackageDecl, target: StsWriter) -> str:
         item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
         sts_type = item_ty_ani_info.sts_type_in(pkg, target)
         return f"Array<{sts_type}>"
@@ -1495,7 +1496,7 @@ class ArrayBufferTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
         self.type_desc = "Lescompat/ArrayBuffer;"
 
     @override
-    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+    def sts_type_in(self, pkg: PackageDecl, target: StsWriter) -> str:
         return "ArrayBuffer"
 
     @override
@@ -1568,7 +1569,7 @@ class TypedArrayTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
         self.type_desc = f"Lescompat/{self.sts_type};"
 
     @override
-    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+    def sts_type_in(self, pkg: PackageDecl, target: StsWriter) -> str:
         return self.sts_type
 
     @override
@@ -1655,7 +1656,7 @@ class BigIntTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
         self.type_desc = "Lescompat/BigInt;"
 
     @override
-    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+    def sts_type_in(self, pkg: PackageDecl, target: StsWriter) -> str:
         return "BigInt"
 
     @override
@@ -1726,7 +1727,7 @@ class OptionalTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[OptionalType]):
         self.type_desc = item_ty_ani_info.type_desc_boxed
 
     @override
-    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+    def sts_type_in(self, pkg: PackageDecl, target: StsWriter) -> str:
         item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
         sts_type = item_ty_ani_info.sts_type_in(pkg, target)
         return f"({sts_type} | undefined)"
@@ -1789,7 +1790,7 @@ class RecordTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[MapType]):
         self.type_desc = "Lescompat/Record;"
 
     @override
-    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+    def sts_type_in(self, pkg: PackageDecl, target: StsWriter) -> str:
         key_ty_ani_info = TypeANIInfo.get(self.am, self.t.key_ty)
         val_ty_ani_info = TypeANIInfo.get(self.am, self.t.val_ty)
         key_sts_type = key_ty_ani_info.sts_type_in(pkg, target)
@@ -1889,7 +1890,7 @@ class MapTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[MapType]):
         )
 
     @override
-    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+    def sts_type_in(self, pkg: PackageDecl, target: StsWriter) -> str:
         key_ty_ani_info = TypeANIInfo.get(self.am, self.t.key_ty)
         val_ty_ani_info = TypeANIInfo.get(self.am, self.t.val_ty)
         key_sts_type = key_ty_ani_info.sts_type_in(pkg, target)
@@ -1930,7 +1931,7 @@ class CallbackTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[CallbackType]):
         self.type_desc = f"Lstd/core/Function{len(t.params_ty)};"
 
     @override
-    def sts_type_in(self, pkg: PackageDecl, target: STSOutputBuffer) -> str:
+    def sts_type_in(self, pkg: PackageDecl, target: StsWriter) -> str:
         params_ty_sts = []
         for index, param_ty in enumerate(self.t.params_ty):
             param_ty_sts_info = TypeANIInfo.get(self.am, param_ty)

@@ -15,6 +15,7 @@ from taihe.codegen.ani.analyses import (
     UnionANIInfo,
     UnionFieldANIInfo,
 )
+from taihe.codegen.ani.writer import StsWriter
 from taihe.semantics.declarations import (
     EnumDecl,
     GlobFuncDecl,
@@ -27,7 +28,7 @@ from taihe.semantics.declarations import (
 )
 from taihe.semantics.types import Type
 from taihe.utils.analyses import AnalysisManager
-from taihe.utils.outputs import OutputManager, STSOutputBuffer
+from taihe.utils.outputs import OutputManager
 
 
 class Namespace:
@@ -61,57 +62,50 @@ class STSCodeGenerator:
             self.gen_module_file(module, ns)
 
     def gen_ohos_base(self):
-        target = STSOutputBuffer.create(self.tm, "@ohos.base.ets")
-        target.writeln(
-            f"export class BusinessError<T = void> extends Error {{",
-            f"    code: number;",
-            f"    data?: T;",
-            f"    constructor() {{",
-            f"        super();",
-            f"        this.code = 0;",
-            f"    }}",
-            f"    constructor(code: number, error: Error) {{",
-            f"        super(error.name, error.message, new ErrorOptions(error.cause));",
-            f"        this.code = code;",
-            f"    }}",
-            f"    constructor(code: number, data: T, error: Error) {{",
-            f"        super(error.name, error.message, new ErrorOptions(error.cause));",
-            f"        this.code = code;",
-            f"        this.data = data;",
-            f"    }}",
-            f"}}",
-            f"export type AsyncCallback<T, E = void> = (error: BusinessError<E>, data: T) => void;",
-        )
+        with StsWriter(self.tm, "@ohos.base.ets") as target:
+            target.writelns(
+                f"export class BusinessError<T = void> extends Error {{",
+                f"    code: number;",
+                f"    data?: T;",
+                f"    constructor() {{",
+                f"        super();",
+                f"        this.code = 0;",
+                f"    }}",
+                f"    constructor(code: number, error: Error) {{",
+                f"        super(error.name, error.message, new ErrorOptions(error.cause));",
+                f"        this.code = code;",
+                f"    }}",
+                f"    constructor(code: number, data: T, error: Error) {{",
+                f"        super(error.name, error.message, new ErrorOptions(error.cause));",
+                f"        this.code = code;",
+                f"        this.data = data;",
+                f"    }}",
+                f"}}",
+                f"export type AsyncCallback<T, E = void> = (error: BusinessError<E>, data: T) => void;",
+            )
 
     def gen_module_file(self, module: str, ns: Namespace):
-        module_sts_file = f"{module}.ets"
-        target = STSOutputBuffer.create(self.tm, module_sts_file)
-        target.writeln(
-            f"import {{ AsyncCallback, BusinessError }} from '@ohos.base';",
-        )
-        self.gen_module_injected_codes(ns, target)
-        self.gen_namespace(ns, target)
+        with StsWriter(self.tm, f"{module}.ets") as target:
+            target.writeln(
+                f"import {{ AsyncCallback, BusinessError }} from '@ohos.base';",
+            )
+            self.gen_module_injected_codes(ns, target)
+            self.gen_namespace(ns, target)
 
-    def gen_module_injected_codes(self, ns: Namespace, target: STSOutputBuffer):
+    def gen_module_injected_codes(self, ns: Namespace, target: StsWriter):
         for pkg in ns.packages:
             pkg_ani_info = PackageANIInfo.get(self.am, pkg)
             for injected in pkg_ani_info.module_injected_codes:
-                target.writeln(injected)
+                target.write_block(injected)
         for _, child_ns in ns.children.items():
             self.gen_module_injected_codes(child_ns, target)
 
-    def gen_namespace(self, ns: Namespace, target: STSOutputBuffer):
+    def gen_namespace(self, ns: Namespace, target: StsWriter):
         for pkg in ns.packages:
             self.gen_package(pkg, target)
         for child_ns_name, child_ns in ns.children.items():
-            target.writeln(
-                f"export namespace {child_ns_name} {{",
-            )
-            with target.indent_manager.offset(4):
+            with target.indented(f"export namespace {child_ns_name} {{", "}"):
                 self.gen_namespace(child_ns, target)
-            target.writeln(
-                f"}}",
-            )
         # TODO: BigInt
         self.gen_utils(target)
 
@@ -217,11 +211,11 @@ class STSCodeGenerator:
                 )
         return bad_on_off_methods
 
-    def gen_package(self, pkg: PackageDecl, target: STSOutputBuffer):
+    def gen_package(self, pkg: PackageDecl, target: StsWriter):
         # TODO: hack inject
         pkg_ani_info = PackageANIInfo.get(self.am, pkg)
         for injected in pkg_ani_info.injected_codes:
-            target.writeln(injected)
+            target.write_block(injected)
 
         self.gen_native_funcs(pkg, pkg.functions, target)
         ctors_map: dict[str, list[GlobFuncDecl]] = {}
@@ -253,7 +247,7 @@ class STSCodeGenerator:
         self,
         pkg: PackageDecl,
         funcs: list[GlobFuncDecl],
-        target: STSOutputBuffer,
+        target: StsWriter,
     ):
         # native funcs
         for func in funcs:
@@ -278,7 +272,7 @@ class STSCodeGenerator:
         self,
         pkg: PackageDecl,
         funcs: list[GlobFuncDecl],
-        target: STSOutputBuffer,
+        target: StsWriter,
     ):
         # good on_off
         good_on_off_funcs = self.stat_good_on_off_funcs(funcs)
@@ -299,16 +293,12 @@ class STSCodeGenerator:
                 sts_return_ty_name = type_ani_info.sts_type_in(pkg, target)
             else:
                 sts_return_ty_name = "void"
-            target.writeln(
+            target.writelns(
                 f"export function {func_name}({sts_params_str}): {sts_return_ty_name} {{",
-            )
-            target.writeln(
                 f"    if (type !== '{type_name}') {{",
                 f"        throw new Error(`Invalid type: ${{type}}`);",
                 f"    }}",
                 f"    return {sts_native_call};",
-            )
-            target.writeln(
                 f"}}",
             )
         # bad on_off
@@ -353,7 +343,7 @@ class STSCodeGenerator:
                 target.writeln(
                     f'        case "{type_name}": return {sts_native_call};',
                 )
-            target.writeln(
+            target.writelns(
                 f"        default: throw new Error(`Unknown type: ${{type}}`);",
                 f"    }}",
             )
@@ -395,7 +385,7 @@ class STSCodeGenerator:
                 )
                 # promise
                 if (sts_promise_name := func_ani_info.sts_promise_name) is not None:
-                    target.writeln(
+                    target.writelns(
                         f"export function {sts_promise_name}({sts_params_str}): Promise<{sts_return_ty_name}> {{",
                         f"    return new Promise<{sts_return_ty_name}>((resolve, reject): void => {{",
                         f"        taskpool.execute((): {sts_return_ty_name} => {{",
@@ -403,7 +393,7 @@ class STSCodeGenerator:
                     target.writeln(
                         f"            return {sts_native_call};",
                     )
-                    target.writeln(
+                    target.writelns(
                         f"        }})",
                         f"        .then((ret: NullishType): void => {{",
                         f"            resolve(ret as {sts_resolved_ty_name});",
@@ -418,14 +408,14 @@ class STSCodeGenerator:
                 if (sts_async_name := func_ani_info.sts_async_name) is not None:
                     callback_param = f"callback: AsyncCallback<{sts_return_ty_name}>"
                     sts_params_with_cb_str = ", ".join([*sts_params, callback_param])
-                    target.writeln(
+                    target.writelns(
                         f"export function {sts_async_name}({sts_params_with_cb_str}): void {{",
                         f"    taskpool.execute((): {sts_return_ty_name} => {{",
                     )
                     target.writeln(
                         f"        return {sts_native_call};",
                     )
-                    target.writeln(
+                    target.writelns(
                         f"    }})",
                         f"    .then((ret: NullishType): void => {{",
                         f"        callback(new BusinessError(), ret as {sts_resolved_ty_name});",
@@ -441,7 +431,7 @@ class STSCodeGenerator:
         self,
         pkg: PackageDecl,
         enum: EnumDecl,
-        target: STSOutputBuffer,
+        target: StsWriter,
     ):
         enum_ani_info = EnumANIInfo.get(self.am, enum)
         if enum_ani_info.const:
@@ -451,10 +441,7 @@ class STSCodeGenerator:
                     f"export const {item.name}: {type_ani_info.sts_type_in(pkg, target)} = {dumps(item.value)};",
                 )
             return
-        target.writeln(
-            f"export enum {enum_ani_info.sts_type_name} {{",
-        )
-        with target.indent_manager.offset(4):
+        with target.indented(f"export enum {enum_ani_info.sts_type_name} {{", "}"):
             for item in enum.items:
                 if item.value is None:
                     target.writeln(
@@ -464,15 +451,12 @@ class STSCodeGenerator:
                     target.writeln(
                         f"{item.name} = {dumps(item.value)},",
                     )
-        target.writeln(
-            f"}}",
-        )
 
     def gen_union(
         self,
         pkg: PackageDecl,
         union: UnionDecl,
-        target: STSOutputBuffer,
+        target: StsWriter,
     ):
         union_ani_info = UnionANIInfo.get(self.am, union)
         sts_types = []
@@ -495,7 +479,7 @@ class STSCodeGenerator:
         self,
         pkg: PackageDecl,
         struct: StructDecl,
-        target: STSOutputBuffer,
+        target: StsWriter,
     ):
         struct_ani_info = StructANIInfo.get(self.am, struct)
         if struct_ani_info.is_class():
@@ -507,13 +491,12 @@ class STSCodeGenerator:
             parent_ani_info = TypeANIInfo.get(self.am, parent_ty)
             parents.append(parent_ani_info.sts_type_in(pkg, target))
         extends_str = " extends " + ", ".join(parents) if parents else ""
-        target.writeln(
-            f"export interface {struct_ani_info.sts_type_name}{extends_str} {{",
-        )
-        with target.indent_manager.offset(4):
+        with target.indented(
+            f"export interface {struct_ani_info.sts_type_name}{extends_str} {{", "}"
+        ):
             # TODO: hack inject
             for injected in struct_ani_info.interface_injected_codes:
-                target.writeln(injected)
+                target.write_block(injected)
             for field in struct_ani_info.sts_fields:
                 field_ani_info = StructFieldANIInfo.get(self.am, field)
                 readonly_str = "readonly " if field_ani_info.readonly else ""
@@ -521,17 +504,15 @@ class STSCodeGenerator:
                 target.writeln(
                     f"{readonly_str}{field.name}: {ty_ani_info.sts_type_in(pkg, target)};",
                 )
-        target.writeln(
-            f"}}",
-        )
 
     def gen_struct_class(
         self,
         pkg: PackageDecl,
         struct: StructDecl,
-        target: STSOutputBuffer,
+        target: StsWriter,
     ):
         struct_ani_info = StructANIInfo.get(self.am, struct)
+        sts_decl = ""
         if struct_ani_info.is_class():
             parents = []
             for parent in struct_ani_info.sts_parents:
@@ -539,54 +520,42 @@ class STSCodeGenerator:
                 parent_ani_info = TypeANIInfo.get(self.am, parent_ty)
                 parents.append(parent_ani_info.sts_type_in(pkg, target))
             implements_str = " implements " + ", ".join(parents) if parents else ""
-            target.writeln(
-                f"export class {struct_ani_info.sts_impl_name}{implements_str} {{",
+            sts_decl = (
+                f"export class {struct_ani_info.sts_impl_name}{implements_str} {{"
             )
         else:
-            target.writeln(
-                f"class {struct_ani_info.sts_impl_name} implements {struct_ani_info.sts_type_name} {{",
-            )
-        with target.indent_manager.offset(4):
+            sts_decl = f"class {struct_ani_info.sts_impl_name} implements {struct_ani_info.sts_type_name} {{"
+
+        with target.indented(sts_decl, "}"):
             # TODO: hack inject
             for injected in struct_ani_info.class_injected_codes:
-                target.writeln(injected)
+                target.write_block(injected)
             for parts in struct_ani_info.sts_final_fields:
                 final = parts[-1]
                 final_ani_info = StructFieldANIInfo.get(self.am, final)
                 readonly_str = "readonly " if final_ani_info.readonly else ""
                 ty_ani_info = TypeANIInfo.get(self.am, final.ty_ref.resolved_ty)
                 target.writeln(
-                    f"{readonly_str}{final.name}: {ty_ani_info.sts_type_in(pkg, target)};",
+                    f"{readonly_str}{final.name}: {ty_ani_info.sts_type_in(pkg, target)};"
                 )
-            target.writeln(
-                f"constructor(",
-            )
-            for parts in struct_ani_info.sts_final_fields:
-                final = parts[-1]
-                ty_ani_info = TypeANIInfo.get(self.am, final.ty_ref.resolved_ty)
-                target.writeln(
-                    f"    {final.name}: {ty_ani_info.sts_type_in(pkg, target)},",
-                )
-            target.writeln(
-                f") {{",
-            )
-            for parts in struct_ani_info.sts_final_fields:
-                final = parts[-1]
-                target.writeln(
-                    f"    this.{final.name} = {final.name};",
-                )
-            target.writeln(
-                f"}}",
-            )
-        target.writeln(
-            f"}}",
-        )
+
+            with target.indented("constructor(", ") {"):
+                for parts in struct_ani_info.sts_final_fields:
+                    final = parts[-1]
+                    ty_ani_info = TypeANIInfo.get(self.am, final.ty_ref.resolved_ty)
+                    target.writeln(
+                        f"{final.name}: {ty_ani_info.sts_type_in(pkg, target)},"
+                    )
+            with target.indented(epilogue="}"):
+                for parts in struct_ani_info.sts_final_fields:
+                    final = parts[-1]
+                    target.writeln(f"this.{final.name} = {final.name};")
 
     def gen_iface_interface(
         self,
         pkg: PackageDecl,
         iface: IfaceDecl,
-        target: STSOutputBuffer,
+        target: StsWriter,
     ):
         iface_ani_info = IfaceANIInfo.get(self.am, iface)
         if iface_ani_info.is_class():
@@ -598,23 +567,19 @@ class STSCodeGenerator:
             parent_ani_info = TypeANIInfo.get(self.am, parent_ty)
             parents.append(parent_ani_info.sts_type_in(pkg, target))
         extends_str = " extends " + ", ".join(parents) if parents else ""
-        target.writeln(
-            f"export interface {iface_ani_info.sts_type_name}{extends_str} {{",
-        )
-        with target.indent_manager.offset(4):
+        with target.indented(
+            f"export interface {iface_ani_info.sts_type_name}{extends_str} {{", "}"
+        ):
             # TODO: hack inject
             for injected in iface_ani_info.interface_injected_codes:
-                target.writeln(injected)
+                target.write_block(injected)
             self.gen_iface_methods_decl(pkg, iface.methods, target)
-        target.writeln(
-            f"}}",
-        )
 
     def gen_iface_methods_decl(
         self,
         pkg: PackageDecl,
         methods: list[IfaceMethodDecl],
-        target: STSOutputBuffer,
+        target: StsWriter,
     ):
         # on_off
         method_on_off_map = self.stat_on_off_methods(methods)
@@ -695,11 +660,12 @@ class STSCodeGenerator:
         self,
         pkg: PackageDecl,
         iface: IfaceDecl,
-        target: STSOutputBuffer,
+        target: StsWriter,
         statics_map: dict[str, list[GlobFuncDecl]],
         ctors_map: dict[str, list[GlobFuncDecl]],
     ):
         iface_ani_info = IfaceANIInfo.get(self.am, iface)
+        sts_decl = ""
         if iface_ani_info.is_class():
             parents = []
             for parent in iface.parents:
@@ -707,18 +673,14 @@ class STSCodeGenerator:
                 parent_ani_info = TypeANIInfo.get(self.am, parent_ty)
                 parents.append(parent_ani_info.sts_type_in(pkg, target))
             implements_str = " implements " + ", ".join(parents) if parents else ""
-            target.writeln(
-                f"export class {iface_ani_info.sts_impl_name}{implements_str} {{",
-            )
+            sts_decl = f"export class {iface_ani_info.sts_impl_name}{implements_str} {{"
         else:
-            target.writeln(
-                f"class {iface_ani_info.sts_impl_name} implements {iface_ani_info.sts_type_name} {{",
-            )
-        with target.indent_manager.offset(4):
-            # TODO: hack inject
+            sts_decl = f"class {iface_ani_info.sts_impl_name} implements {iface_ani_info.sts_type_name} {{"
+
+        with target.indented(sts_decl, "}"):
             for injected in iface_ani_info.class_injected_codes:
-                target.writeln(injected)
-            target.writeln(
+                target.write_block(injected)
+            target.writelns(
                 f"private _vtbl_ptr: long;",
                 f"private _data_ptr: long;",
                 f"private static native _finalize(data_ptr: long): void;",
@@ -744,7 +706,7 @@ class STSCodeGenerator:
                     sts_args.append(sts_param.name)
                 sts_params_str = ", ".join(sts_params)
                 sts_native_call = ctor_ani_info.call_native_with(sts_args)
-                target.writeln(
+                target.writelns(
                     f"constructor({sts_params_str}) {{",
                     f"    let temp = {sts_native_call} as {iface_ani_info.sts_impl_name};",
                     f"    this._data_ptr = temp._data_ptr;",
@@ -756,15 +718,12 @@ class STSCodeGenerator:
             for ancestor in iface_abi_info.ancestor_dict:
                 self.gen_native_methods(pkg, ancestor.methods, target)
                 self.gen_iface_methods(pkg, ancestor.methods, target)
-        target.writeln(
-            f"}}",
-        )
 
     def gen_static_funcs(
         self,
         pkg: PackageDecl,
         funcs: list[GlobFuncDecl],
-        target: STSOutputBuffer,
+        target: StsWriter,
     ):
         # on_off
         func_on_off_map = self.stat_on_off_funcs(funcs)
@@ -815,7 +774,7 @@ class STSCodeGenerator:
                 target.writeln(
                     f'        case "{type_name}": return {sts_native_call};',
                 )
-            target.writeln(
+            target.writelns(
                 f"        default: throw new Error(`Unknown type: ${{type}}`);",
                 f"    }}",
             )
@@ -857,7 +816,7 @@ class STSCodeGenerator:
                 )
                 # promise
                 if (sts_promise_name := func_ani_info.sts_promise_name) is not None:
-                    target.writeln(
+                    target.writelns(
                         f"static {sts_promise_name}({sts_params_str}): Promise<{sts_return_ty_name}> {{",
                         f"    return new Promise<{sts_return_ty_name}>((resolve, reject): void => {{",
                         f"        taskpool.execute((): {sts_return_ty_name} => {{",
@@ -865,7 +824,7 @@ class STSCodeGenerator:
                     target.writeln(
                         f"            return {sts_native_call};",
                     )
-                    target.writeln(
+                    target.writelns(
                         f"        }})",
                         f"        .then((ret: NullishType): void => {{",
                         f"            resolve(ret as {sts_resolved_ty_name});",
@@ -880,14 +839,14 @@ class STSCodeGenerator:
                 if (sts_async_name := func_ani_info.sts_async_name) is not None:
                     callback_param = f"callback: AsyncCallback<{sts_return_ty_name}>"
                     sts_params_with_cb_str = ", ".join([*sts_params, callback_param])
-                    target.writeln(
+                    target.writelns(
                         f"static {sts_async_name}({sts_params_with_cb_str}): void {{",
                         f"    taskpool.execute((): {sts_return_ty_name} => {{",
                     )
                     target.writeln(
                         f"        return {sts_native_call};",
                     )
-                    target.writeln(
+                    target.writelns(
                         f"    }})",
                         f"    .then((ret: NullishType): void => {{",
                         f"        callback(new BusinessError(), ret as {sts_resolved_ty_name});",
@@ -900,14 +859,14 @@ class STSCodeGenerator:
                     )
             # getter
             if (get_name := func_ani_info.get_name) is not None:
-                target.writeln(
+                target.writelns(
                     f"static get {get_name}({sts_params_str}): {sts_return_ty_name} {{",
                     f"    return {sts_native_call};",
                     f"}}",
                 )
             # setter
             if (set_name := func_ani_info.set_name) is not None:
-                target.writeln(
+                target.writelns(
                     f"static set {set_name}({sts_params_str}) {{",
                     f"    return {sts_native_call};",
                     f"}}",
@@ -917,7 +876,7 @@ class STSCodeGenerator:
         self,
         pkg: PackageDecl,
         methods: list[IfaceMethodDecl],
-        target: STSOutputBuffer,
+        target: StsWriter,
     ):
         # native
         for method in methods:
@@ -942,7 +901,7 @@ class STSCodeGenerator:
         self,
         pkg: PackageDecl,
         methods: list[IfaceMethodDecl],
-        target: STSOutputBuffer,
+        target: StsWriter,
     ):
         # on_off
         method_on_off_map = self.stat_on_off_methods(methods)
@@ -993,7 +952,7 @@ class STSCodeGenerator:
                 target.writeln(
                     f'        case "{type_name}": return {sts_native_call};',
                 )
-            target.writeln(
+            target.writelns(
                 f"        default: throw new Error(`Unknown type: ${{type}}`);",
                 f"    }}",
             )
@@ -1035,7 +994,7 @@ class STSCodeGenerator:
                 )
                 # promise
                 if (sts_promise_name := method_ani_info.sts_promise_name) is not None:
-                    target.writeln(
+                    target.writelns(
                         f"{sts_promise_name}({sts_params_str}): Promise<{sts_return_ty_name}> {{",
                         f"    return new Promise<{sts_return_ty_name}>((resolve, reject): void => {{",
                         f"        taskpool.execute((): {sts_return_ty_name} => {{",
@@ -1043,7 +1002,7 @@ class STSCodeGenerator:
                     target.writeln(
                         f"            return {sts_native_call};",
                     )
-                    target.writeln(
+                    target.writelns(
                         f"        }})",
                         f"        .then((ret: NullishType): void => {{",
                         f"            resolve(ret as {sts_resolved_ty_name});",
@@ -1058,14 +1017,14 @@ class STSCodeGenerator:
                 if (sts_async_name := method_ani_info.sts_async_name) is not None:
                     callback_param = f"callback: AsyncCallback<{sts_return_ty_name}>"
                     sts_params_with_cb_str = ", ".join([*sts_params, callback_param])
-                    target.writeln(
+                    target.writelns(
                         f"{sts_async_name}({sts_params_with_cb_str}): void {{",
                         f"    taskpool.execute((): {sts_return_ty_name} => {{",
                     )
                     target.writeln(
                         f"        return {sts_native_call};",
                     )
-                    target.writeln(
+                    target.writelns(
                         f"    }})",
                         f"    .then((ret: NullishType): void => {{",
                         f"        callback(new BusinessError(), ret as {sts_resolved_ty_name});",
@@ -1078,14 +1037,14 @@ class STSCodeGenerator:
                     )
             # getter
             if (get_name := method_ani_info.get_name) is not None:
-                target.writeln(
+                target.writelns(
                     f"get {get_name}({sts_params_str}): {sts_return_ty_name} {{",
                     f"    return {sts_native_call};",
                     f"}}",
                 )
             # setter
             if (set_name := method_ani_info.set_name) is not None:
-                target.writeln(
+                target.writelns(
                     f"set {set_name}({sts_params_str}) {{",
                     f"    return {sts_native_call};",
                     f"}}",
@@ -1093,9 +1052,9 @@ class STSCodeGenerator:
 
     def gen_utils(
         self,
-        target: STSOutputBuffer,
+        target: StsWriter,
     ):
-        target.writeln(
+        target.writelns(
             "function __fromArrayBufferToBigInt(arr: ArrayBuffer): BigInt {",
             "    let res: BigInt = 0n;",
             "    for (let i: int = 0; i < arr.getByteLength(); i++) {",
@@ -1108,7 +1067,7 @@ class STSCodeGenerator:
             "    return res;",
             "}",
         )
-        target.writeln(
+        target.writelns(
             "function __fromBigIntToArrayBuffer(val: BigInt, blk: int): ArrayBuffer {",
             "    let n_7 = BigInt(blk * 8 - 1);",
             "    let n_8 = BigInt(blk * 8);",
