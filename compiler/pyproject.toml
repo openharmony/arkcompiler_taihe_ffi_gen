@@ -68,6 +68,7 @@ lint.ignore = [
     "D106",
     "D107", # -> "Missing docstring in public function too restrictive"
     "UP007", # Allow `Optional[T]`
+    "SIM117", # allow multiple `with` statements in code generator
 ]
 
 [tool.ruff.lint.pydocstyle]

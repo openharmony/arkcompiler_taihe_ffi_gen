@@ -78,7 +78,7 @@ class CompilerInstance:
         self.analysis_manager = AnalysisManager(self.diagnostics_manager)
         self.source_manager = SourceManager()
         self.package_group = PackageGroup()
-        self.target_manager = OutputManager()
+        self.target_manager = OutputManager(self.invocation.out_dir)
 
         self.backends = [conf.construct(self) for conf in invocation.backends]
 
@@ -151,6 +151,7 @@ class CompilerInstance:
         if self.diagnostics_manager.has_errors():
             return
 
+        # TODO: remove this after the completion of refactor
         self.target_manager.output_to(self.invocation.out_dir)
 
     def run(self):
