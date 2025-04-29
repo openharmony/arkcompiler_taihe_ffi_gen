@@ -73,7 +73,6 @@ target_include_directories(th_runtime PUBLIC
 
 # 准备 panda sdk
 function(setup_panda_sdk)
-
   file(MAKE_DIRECTORY "${PANDA_EXTRACT_DIR}")
 
   set(PANDA_SDK_VERSION_FILE "${PANDA_EXTRACT_DIR}/version.txt")
@@ -90,28 +89,45 @@ function(setup_panda_sdk)
   # 检查版本是否匹配
   if(NOT "${EXISTING_PANDA_SDK_VERSION}" STREQUAL "${PANDA_SDK_VERSION}")
     message(STATUS "Panda SDK version mismatch or missing. Expected: ${PANDA_SDK_VERSION}, Found: ${EXISTING_PANDA_SDK_VERSION}")
+    file(REMOVE_RECURSE "${PANDA_HOME}")
     set(NEED_DOWNLOAD TRUE)
   else()
     set(NEED_DOWNLOAD FALSE)
   endif()
 
-  # Download Panda SDK if needed
-  if(NOT EXISTS "${PANDA_SDK_PATH}" OR NEED_DOWNLOAD)
-    message(STATUS "Downloading Panda SDK: ${PANDA_SDK_FILENAME}")
-    execute_process(
-      COMMAND curl -u koala-pub:y3t!n0therP -L -o "${PANDA_SDK_PATH}" "${PANDA_SDK_URL}"
-      RESULT_VARIABLE DOWNLOAD_RESULT
-    )
-    if(NOT DOWNLOAD_RESULT EQUAL 0)
-      message(FATAL_ERROR "Failed to download Panda SDK!")
+  # 如果需要重新准备SDK
+  if(NEED_DOWNLOAD)
+    # 先检查本地是否已有对应的SDK包
+    set(LOCAL_SDK_PATH "${PANDA_EXTRACT_DIR}/${PANDA_SDK_VERSION}.tgz")
+    if(EXISTS "${LOCAL_SDK_PATH}")
+      message(STATUS "Found local Panda SDK package: ${LOCAL_SDK_PATH}")
+      set(PANDA_SDK_PATH "${LOCAL_SDK_PATH}")
+      set(NEED_ACTUAL_DOWNLOAD FALSE)
+    else()
+      message(STATUS "No local Panda SDK package found, will download: ${PANDA_SDK_FILENAME}")
+      set(NEED_ACTUAL_DOWNLOAD TRUE)
     endif()
 
+    # 如果确实找不到，就去下载
+    if(NEED_ACTUAL_DOWNLOAD)
+      message(STATUS "Downloading Panda SDK: ${PANDA_SDK_FILENAME}")
+      execute_process(
+        COMMAND curl -u koala-pub:y3t!n0therP -L -o "${PANDA_EXTRACT_DIR}/${PANDA_SDK_FILENAME}" "${PANDA_SDK_URL}"
+        RESULT_VARIABLE DOWNLOAD_RESULT
+      )
+      if(NOT DOWNLOAD_RESULT EQUAL 0)
+        message(FATAL_ERROR "Failed to download Panda SDK!")
+      endif()
+      set(PANDA_SDK_PATH "${PANDA_EXTRACT_DIR}/${PANDA_SDK_FILENAME}")
+    endif()
+
+    # 删除原来的解压目录
     file(REMOVE_RECURSE "${PANDA_HOME}")
   endif()
 
   # Extract Panda SDK if needed
   if(NOT EXISTS "${PANDA_HOME}")
-    message(STATUS "Extracting Panda SDK...")
+    message(STATUS "Extracting Panda SDK from ${PANDA_SDK_PATH} ...")
     execute_process(
       COMMAND ${CMAKE_COMMAND} -E tar xzf "${PANDA_SDK_PATH}"
       WORKING_DIRECTORY "${PANDA_EXTRACT_DIR}"
@@ -141,10 +157,7 @@ function(setup_panda_sdk)
   else()
     message(STATUS "Found ets_compiler: ${ETS_COMPILER}")
   endif()
-
 endfunction()
-
-
 
 
 # 生成 arktsconfig.json
