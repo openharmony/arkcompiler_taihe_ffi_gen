@@ -21,6 +21,7 @@ class AniBridgeBackendConfig(BackendConfig):
         # TODO: unify {ANI,STS}CodeGenerator
         class AniBridgeBackendImpl(Backend):
             def __init__(self, ci: CompilerInstance, config: BackendConfig):
+                super().__init__(ci)
                 assert isinstance(config, AniBridgeBackendConfig)
                 self._ci = ci
                 self.keep_name = config.keep_name

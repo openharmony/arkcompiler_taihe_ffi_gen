@@ -10,13 +10,13 @@
 using namespace taihe;
 
 namespace {
-// To be implemented.
+static constexpr int32_t THOUSAND = 1000;
 
 void invokeFromOtherThreadAfter(double sec, callback_view<void()> cb) {
   std::cerr << "-- begin invokeFromOtherThreadAfter --" << std::endl;
   std::thread thread([sec, cb = callback<void()>(cb)]() {
     std::this_thread::sleep_for(
-        std::chrono::milliseconds(static_cast<int>(sec * 1000)));
+        std::chrono::milliseconds(static_cast<int>(sec * THOUSAND)));
     std::cerr << "invokeFromOtherThreadAfter: " << sec << " seconds"
               << std::endl;
     cb();

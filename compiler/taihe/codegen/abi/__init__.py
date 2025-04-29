@@ -40,6 +40,7 @@ class CAuthorBackendConfig(BackendConfig):
         # TODO: unify CImpl{Headers,Sources}Generator
         class CImplBackendImpl(Backend):
             def __init__(self, ci: CompilerInstance):
+                super().__init__(ci)
                 self._ci = ci
 
             def generate(self):

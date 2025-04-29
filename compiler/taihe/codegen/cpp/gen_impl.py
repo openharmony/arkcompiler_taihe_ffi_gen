@@ -100,6 +100,14 @@ class CppImplSourcesGenerator:
         self.am = am
         self.using_namespaces: list[str] = []
 
+    @property
+    def make_holder(self):
+        return self.mask("taihe::make_holder")
+
+    @property
+    def runtime_error(self):
+        return self.mask("std::runtime_error")
+
     def mask(self, cpp_type: str):
         pattern = r"(::)?([A-Za-z_][A-Za-z_0-9]*::)*[A-Za-z_][A-Za-z_0-9]*"
 
@@ -115,14 +123,6 @@ class CppImplSourcesGenerator:
             return matched
 
         return re.sub(pattern, replace_ns, cpp_type)
-
-    @property
-    def make_holder(self):
-        return self.mask("taihe::make_holder")
-
-    @property
-    def runtime_error(self):
-        return self.mask("std::runtime_error")
 
     def generate(self, pg: PackageGroup):
         for pkg in pg.packages:
@@ -140,8 +140,6 @@ class CppImplSourcesGenerator:
         pkg_cpp_impl_target.include("stdexcept")
         pkg_cpp_impl_target.writeln("")
         self.using_namespaces = []
-        # self.gen_using_namespace(pkg_cpp_impl_target, "taihe")
-        # self.gen_using_namespace(pkg_cpp_impl_target, "::".join(pkg.segments))
         pkg_cpp_impl_target.writeln("")
         self.gen_anonymous_namespace_block(pkg, pkg_cpp_impl_target)
         pkg_cpp_impl_target.writeln("")

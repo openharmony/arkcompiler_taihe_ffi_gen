@@ -877,16 +877,6 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
     def sts_type_in(self, pkg: PackageDecl, target: StsWriter) -> str:
         pass
 
-    @abstractmethod
-    def _from_ani_impl(
-        self,
-        target: COutputBuffer,
-        env: str,
-        ani_value: str,
-        cpp_result: str,
-    ):
-        pass
-
     def from_ani(
         self,
         target: COutputBuffer,
@@ -898,16 +888,6 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
         with target.indent_manager.offset(offset):
             self._from_ani_impl(target, env, ani_value, cpp_result)
 
-    @abstractmethod
-    def _into_ani_impl(
-        self,
-        target: COutputBuffer,
-        env: str,
-        cpp_value: str,
-        ani_result: str,
-    ):
-        pass
-
     def into_ani(
         self,
         target: COutputBuffer,
@@ -918,6 +898,76 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
     ):
         with target.indent_manager.offset(offset):
             self._into_ani_impl(target, env, cpp_value, ani_result)
+
+    def from_ani_array(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        ani_size: str,
+        ani_array_value: str,
+        cpp_array_buffer: str,
+    ):
+        with target.indent_manager.offset(offset):
+            self._from_ani_array_impl(
+                target, env, ani_size, ani_array_value, cpp_array_buffer
+            )
+
+    def into_ani_array(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        cpp_size: str,
+        cpp_array_value: str,
+        ani_array_result: str,
+    ):
+        with target.indent_manager.offset(offset):
+            self._into_ani_array_impl(
+                target, env, cpp_size, cpp_array_value, ani_array_result
+            )
+
+    def into_ani_boxed(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        cpp_value: str,
+        ani_result: str,
+    ):
+        with target.indent_manager.offset(offset):
+            self._into_ani_boxed_impl(target, env, cpp_value, ani_result)
+
+    def from_ani_boxed(
+        self,
+        target: COutputBuffer,
+        offset: int,
+        env: str,
+        ani_value: str,
+        cpp_result: str,
+    ):
+        with target.indent_manager.offset(offset):
+            self._from_ani_boxed_impl(target, env, ani_value, cpp_result)
+
+    @abstractmethod
+    def _from_ani_impl(
+        self,
+        target: COutputBuffer,
+        env: str,
+        ani_value: str,
+        cpp_result: str,
+    ):
+        pass
+
+    @abstractmethod
+    def _into_ani_impl(
+        self,
+        target: COutputBuffer,
+        env: str,
+        cpp_value: str,
+        ani_result: str,
+    ):
+        pass
 
     def _from_ani_array_impl(
         self,
@@ -944,20 +994,6 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
         else:
             target.writeln(
                 f"{env}->Array_GetRegion_{self.ani_type.suffix}({ani_array_value}, 0, {ani_size}, reinterpret_cast<{self.ani_type}*>({cpp_array_buffer}));",
-            )
-
-    def from_ani_array(
-        self,
-        target: COutputBuffer,
-        offset: int,
-        env: str,
-        ani_size: str,
-        ani_array_value: str,
-        cpp_array_buffer: str,
-    ):
-        with target.indent_manager.offset(offset):
-            self._from_ani_array_impl(
-                target, env, ani_size, ani_array_value, cpp_array_buffer
             )
 
     def _into_ani_array_impl(
@@ -994,20 +1030,6 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
                 f"{env}->Array_SetRegion_{self.ani_type.suffix}({ani_array_result}, 0, {cpp_size}, reinterpret_cast<{self.ani_type} const*>({cpp_array_value}));",
             )
 
-    def into_ani_array(
-        self,
-        target: COutputBuffer,
-        offset: int,
-        env: str,
-        cpp_size: str,
-        cpp_array_value: str,
-        ani_array_result: str,
-    ):
-        with target.indent_manager.offset(offset):
-            self._into_ani_array_impl(
-                target, env, cpp_size, cpp_array_value, ani_array_result
-            )
-
     def _into_ani_boxed_impl(
         self,
         target: COutputBuffer,
@@ -1032,17 +1054,6 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
             target.writeln(
                 f"{env}->Object_New({ani_class}, {ani_ctor}, &{ani_result}, {ani_value});",
             )
-
-    def into_ani_boxed(
-        self,
-        target: COutputBuffer,
-        offset: int,
-        env: str,
-        cpp_value: str,
-        ani_result: str,
-    ):
-        with target.indent_manager.offset(offset):
-            self._into_ani_boxed_impl(target, env, cpp_value, ani_result)
 
     def _from_ani_boxed_impl(
         self,
@@ -1072,17 +1083,6 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
                 f"{env}->Object_CallMethod_{self.ani_type.suffix}((ani_object){ani_value}, {ani_getter}, &{ani_result});",
             )
             self.from_ani(target, 0, env, ani_result, cpp_result)
-
-    def from_ani_boxed(
-        self,
-        target: COutputBuffer,
-        offset: int,
-        env: str,
-        ani_value: str,
-        cpp_result: str,
-    ):
-        with target.indent_manager.offset(offset):
-            self._from_ani_boxed_impl(target, env, ani_value, cpp_result)
 
 
 class EnumTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[EnumType]):

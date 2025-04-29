@@ -8,7 +8,8 @@ if TYPE_CHECKING:
 
 class Backend(ABC):
     @abstractmethod
-    def __init__(self, instance: "CompilerInstance"): ...
+    def __init__(self, instance: "CompilerInstance"):
+        """Initialize the backend."""
 
     def post_process(self):
         """Post-processes the IR just after parsing.
@@ -111,7 +112,7 @@ class BackendRegistry:
             CppUserHeadersBackendConfig,
             # ani
             AniBridgeBackendConfig,
-            # print
+            # pretty print
             PrettyPrintBackendConfig,
         ]
 

@@ -20,6 +20,7 @@ class PrettyPrintBackendConfig(BackendConfig):
 
         class PrettyPrintBackendImpl(Backend):
             def __init__(self, ci: "CompilerInstance", config: BackendConfig):
+                super().__init__(ci)
                 assert isinstance(config, PrettyPrintBackendConfig)
                 self._ci = ci
                 self._config = config

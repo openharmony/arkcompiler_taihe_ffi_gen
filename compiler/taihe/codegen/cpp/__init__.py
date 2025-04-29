@@ -30,6 +30,7 @@ class CppAuthorBackendConfig(BackendConfig):
         # TODO: unify CppImpl{Headers,Sources}Generator
         class CppImplBackendImpl(Backend):
             def __init__(self, ci: CompilerInstance):
+                super().__init__(ci)
                 self._ci = ci
 
             def generate(self):
