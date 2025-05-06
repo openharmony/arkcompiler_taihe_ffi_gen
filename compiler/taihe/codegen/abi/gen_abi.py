@@ -22,7 +22,6 @@ from taihe.semantics.declarations import (
 class ABIHeadersGenerator(Backend):
     def __init__(self, ci: CompilerInstance):
         super().__init__(ci)
-        assert ci.target_manager
         self.tm = ci.target_manager
         self.am = ci.analysis_manager
         self.pg = ci.package_group

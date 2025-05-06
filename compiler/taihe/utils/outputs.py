@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Generator
 from contextlib import contextmanager
 from io import StringIO
-from os import makedirs, path
+from os import makedirs
 from pathlib import Path
 from types import TracebackType
 from typing import Any, Generic, Optional, ParamSpec, TextIO, TypeVar
@@ -76,8 +76,7 @@ class STSOutputBuffer(OutputBase[[]]):
 
     @override
     def save_as(self, file_path: Path):
-        if not path.exists(file_path.parent):
-            makedirs(file_path.parent, exist_ok=True)
+        makedirs(file_path.parent, exist_ok=True)
         with open(file_path, "w", encoding="utf-8") as dst:
             for import_name, module_name in self.import_dict.items():
                 dst.write(f'import * as {import_name} from "./{module_name}";\n')
@@ -115,8 +114,7 @@ class COutputBuffer(OutputBase[[bool]]):
 
     @override
     def save_as(self, file_path: Path):
-        if not path.exists(file_path.parent):
-            makedirs(file_path.parent, exist_ok=True)
+        makedirs(file_path.parent, exist_ok=True)
         with open(file_path, "w", encoding="utf-8") as dst:
             if self.is_header:
                 dst.write(f"#pragma once\n")
@@ -188,11 +186,11 @@ class BaseWriter:
         self._out = out
         self._indent_level = 0
         self._indent_unit = indent_unit
-        self._current_indent_string = ""
 
-    def _update_indent_string(self):
-        """Update the cached indentation string based on current indent level."""
-        self._current_indent_string = self._indent_unit * self._indent_level
+    @property
+    def current_indent_string(self):
+        """Return the current indentation string."""
+        return self._indent_unit * self._indent_level
 
     def writeln(self, line: str = ""):
         """Writes a single-line string.
@@ -207,7 +205,7 @@ class BaseWriter:
             self._out.write("\n")
             return
 
-        self._out.write(self._current_indent_string)
+        self._out.write(self.current_indent_string)
         self._out.write(line)
         self._out.write("\n")
 
@@ -231,14 +229,12 @@ class BaseWriter:
     def indent(self):
         """Increments the indent level."""
         self._indent_level += 1
-        self._update_indent_string()
 
     def dedent(self):
         """Decrements the indent level."""
         if self._indent_level <= 0:
             raise ValueError("Cannot dedent below level 0")
         self._indent_level -= 1
-        self._update_indent_string()
 
     @contextmanager
     def indented(
@@ -272,23 +268,9 @@ class FileWriter(BaseWriter, OutputBase):
         *,
         indent_unit: str = DEFAULT_INDENT,
     ):
-        BaseWriter.__init__(self, out=StringIO(), indent_unit=indent_unit)
+        super().__init__(out=StringIO(), indent_unit=indent_unit)
         assert om.dst_dir
         self._path = om.dst_dir / path
-
-    @classmethod
-    def create(cls, tm: OutputManager, path: str, **kwargs: Any) -> Self:
-        return tm.get_or_create(cls, path, **kwargs)
-
-    def write_prologue(self, f: TextIO):
-        del f
-
-    def save_as(self, file_path: Path):
-        file_path.parent.mkdir(exist_ok=True, parents=True)
-        with open(file_path, "w", encoding="utf-8") as dst:
-            assert isinstance(self._out, StringIO)
-            self.write_prologue(dst)
-            dst.write(self._out.getvalue())  # pyre-ignore
 
     def __enter__(self):
         return self
@@ -307,3 +289,17 @@ class FileWriter(BaseWriter, OutputBase):
 
         # Propagate the exception if exists
         return False
+
+    @classmethod
+    def create(cls, tm: OutputManager, path: str, **kwargs: Any) -> Self:
+        return tm.get_or_create(cls, path, **kwargs)
+
+    def write_prologue(self, f: TextIO):
+        del f
+
+    def save_as(self, file_path: Path):
+        file_path.parent.mkdir(exist_ok=True, parents=True)
+        with open(file_path, "w", encoding="utf-8") as dst:
+            assert isinstance(self._out, StringIO)
+            self.write_prologue(dst)
+            dst.write(self._out.getvalue())  # pyre-ignore
