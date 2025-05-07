@@ -19,8 +19,8 @@ function test_is_string_with_string() {
 }
 
 function test_get_object() {
-    const object = test.get_object();
-    assertEQ(object, "BBB")
+    const obj = test.get_object();
+    assertEQ(obj, "BBB")
 }
 
 function test_is_object_with_union() {
@@ -30,16 +30,16 @@ function test_is_object_with_union() {
 }
 
 function test_get_objects() {
-    const objects = test.get_objects();
-    assertEQ(objects[0], "AAA");
-    assertEQ(objects[1], undefined);
+    const objs = test.get_objects();
+    assertEQ(objs[0], "AAA");
+    assertEQ(objs[1], undefined);
 }
 
 function main() {
     console.log("##############start#############");
     const suite = new ArkTestsuite("Test Suite");
-    const objects1 = test.get_objects();
-    console.log(objects1);
+    const objs = test.get_objects();
+    console.log(objs);
 
     suite.addTest("test is_string with object", test_is_string_with_object);
     suite.addTest("test is_string with string", test_is_string_with_string);

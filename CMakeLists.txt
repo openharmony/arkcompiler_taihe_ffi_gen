@@ -42,7 +42,7 @@ set(TH_RUNTIME_SOURCE_DIR "${TH_RUNTIME_DIR}/src")
 
 
 # 设置 PANDA 路径
-set(PANDA_SDK_FILENAME "sdk-1.5.0-dev.29115.tgz")
+set(PANDA_SDK_FILENAME "sdk-1.5.0-dev.31052.tgz")
 set(PANDA_SDK_URL "https://nexus.bz-openlab.ru:10443/repository/koala-npm/%40panda/sdk/-/${PANDA_SDK_FILENAME}")
 set(PANDA_EXTRACT_DIR "${CMAKE_SOURCE_DIR}/.panda_vm")
 set(PANDA_HOME "${PANDA_EXTRACT_DIR}/package/linux_host_tools")

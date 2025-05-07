@@ -19,7 +19,7 @@ class BuildConfig:
         self.cc = os.getenv("CC", "clang")
         self.panda_username = "koala-pub"
         self.panda_password = "y3t!n0therP"
-        self.panda_url = "https://nexus.bz-openlab.ru:10443/repository/koala-npm/%40panda/sdk/-/sdk-1.5.0-dev.29115.tgz"
+        self.panda_url = "https://nexus.bz-openlab.ru:10443/repository/koala-npm/%40panda/sdk/-/sdk-1.5.0-dev.31052.tgz"
 
         current_file = Path(__file__).resolve()
         if for_distribution:

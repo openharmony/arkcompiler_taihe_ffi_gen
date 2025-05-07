@@ -44,4 +44,6 @@ function main() {
             console.error(
                 "interface async promise ERROR p_istringholder ", retError)
         });
+
+    CoroutineExtras.stopTaskpool();
 }

@@ -29,8 +29,9 @@ function main() {
         ["aaa", Resource_cls, image_cls];
     let promise_res = await Bubble_cls.setIcons(array_union_input);
 
-
     let array_array_input: ((Resource[])[]) =
         [[Resource_cls, Resource_cls], [Resource_cls]]
     Bubble_cls.setPositions(array_array_input)
+
+    CoroutineExtras.stopTaskpool();
 }
