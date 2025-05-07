@@ -1,6 +1,5 @@
 import * as async_test from "@generated/async_test";
 import {BusinessError} from "@ohos.base";
-import * as System from "std/core/System";
 
 loadLibrary("ani_async");
 
@@ -163,5 +162,5 @@ function main() {
     suite.addTest("Static Async Methods Tests", testStaticAsyncMethods);
     suite.addTest("Struct Methods Tests", testStructMethods);
 
-    System.exit(suite.run());
+    exit(suite.run());
 }

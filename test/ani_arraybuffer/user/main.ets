@@ -1,6 +1,5 @@
 import * as arraybuffer from "@generated/arraybuffer";
 import {BusinessError} from "@ohos.base";
-import * as System from "std/core/System";
 
 loadLibrary("ani_arraybuffer");
 
@@ -367,5 +366,5 @@ function main() {
     suite.addTest("uint8Array_inout", uint8Array_inout)
     suite.addTest("uint16Array_inout", uint16Array_inout)
     suite.addTest("uint32Array_inout", uint32Array_inout)
-    System.exit(suite.run())
+    exit(suite.run())
 }

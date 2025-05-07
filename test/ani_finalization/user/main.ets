@@ -1,6 +1,5 @@
 import * as Test from "@generated/finalization_test";
 import {BusinessError} from "@ohos.base";
-import * as System from "std/core/System";
 
 loadLibrary("ani_finalization");
 
@@ -39,5 +38,5 @@ function main() {
 
     suite.addTest("test finalization", test_finalization);
 
-    System.exit(suite.run());
+    exit(suite.run());
 }

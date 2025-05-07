@@ -1,6 +1,5 @@
 import * as ani_test from "@generated/ani_test";
 import {BusinessError} from "@ohos.base";
-import * as System from "std/core/System";
 
 loadLibrary("ani_test");
 
@@ -100,5 +99,5 @@ function main() {
     suite.addTest("Test Optional", test_optional);
     suite.addTest("Test Array", test_array);
     suite.addTest("Test Interface", test_interface);
-    System.exit(suite.run());
+    exit(suite.run());
 }

@@ -1,7 +1,6 @@
 import * as test_overload from "@generated/overload";
 import * as OverloadTest from "@generated/overload_test";
 import {BusinessError} from "@ohos.base";
-import * as System from "std/core/System";
 
 loadLibrary("ani_overload");
 
@@ -379,5 +378,5 @@ function main() {
     suite.addTest("testByte_10param2", test_10param2);
     suite.addTest("testByte_10param3", test_10param3);
     suite.addTest("testByte_10param4", test_10param4);
-    System.exit(suite.run());
+    exit(suite.run());
 }

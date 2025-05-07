@@ -1,6 +1,5 @@
 import * as test from "@generated/opaque_test";
 import {BusinessError} from "@ohos.base";
-import * as System from "std/core/System";
 
 loadLibrary("ani_opaque");
 
@@ -48,5 +47,5 @@ function main() {
     suite.addTest("test get_object", test_get_object);
     suite.addTest("test get_objects", test_get_objects);
 
-    System.exit(suite.run());
+    exit(suite.run());
 }

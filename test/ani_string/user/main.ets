@@ -1,7 +1,6 @@
 import * as StringIo from "@generated/string_io";
 import * as StringOp from "@generated/string_op";
 import {BusinessError} from "@ohos.base";
-import * as System from "std/core/System";
 
 loadLibrary("ani_string");
 
@@ -102,5 +101,5 @@ function main() {
     suite.addTest("println", println)
     suite.addTest("print", print)
     suite.addTest("testPlayString", testPlayString)
-    System.exit(suite.run())
+    exit(suite.run())
 }

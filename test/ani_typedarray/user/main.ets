@@ -1,6 +1,5 @@
 import * as bar from "@generated/bar";
 import {BusinessError} from "@ohos.base";
-import * as System from "std/core/System";
 
 loadLibrary("ani_typedarray");
 
@@ -99,5 +98,5 @@ function main() {
     suite.addTest("checkBigInt64Array", checkBigInt64Array);
     suite.addTest("checkFloat32Array", checkFloat32Array);
     suite.addTest("checkFloat64Array", checkFloat64Array);
-    System.exit(suite.run());
+    exit(suite.run());
 }

@@ -1,6 +1,5 @@
 import * as lib from "@generated/session_test";
 import {BusinessError} from "@ohos.base";
-import * as System from "std/core/System";
 loadLibrary("ani_session");
 
 function test_func_a(my_iface: lib.IfaceD) {
@@ -75,5 +74,5 @@ function main() {
     suite.addTest("test func_d", () => {test_func_d(my_iface)});
     suite.addTest("test func_e", () => {test_func_e(my_iface_e)});
 
-    System.exit(suite.run());
+    exit(suite.run());
 }

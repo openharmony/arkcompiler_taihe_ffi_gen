@@ -1,6 +1,5 @@
 import * as EnumTest from "@generated/enum_test";
 import {BusinessError} from "@ohos.base";
-import * as System from "std/core/System";
 
 loadLibrary("ani_enum");
 
@@ -134,5 +133,5 @@ function main() {
     suite.addTest("weekday Enum Input Test", weekdayEnumInputTest)
     suite.addTest("weekday Enum Ouput Test", weekdayEnumOuputTest)
 
-    System.exit(suite.run());
+    exit(suite.run());
 }

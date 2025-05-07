@@ -1,7 +1,6 @@
 import * as namespace2Test from "@generated/my_ns";
 import * as namespaceTest from "@generated/ns_alltest";
 import {BusinessError} from "@ohos.base";
-import * as System from "std/core/System";
 
 loadLibrary("ani_namespace");
 
@@ -1708,5 +1707,5 @@ function main() {
     suite.addTest("check testCaseConstant1", testCaseConstant1);
     suite.addTest("check testCaseConstant2", testCaseConstant2);
     suite.addTest("check testCaseConstant3", testCaseConstant3);
-    System.exit(suite.run());
+    exit(suite.run());
 }

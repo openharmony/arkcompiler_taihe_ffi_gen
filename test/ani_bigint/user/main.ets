@@ -1,7 +1,6 @@
 import * as bigint_new from "@generated/bigint_new";
 import * as bigint_test from "@generated/bigint_test";
 import {BusinessError} from "@ohos.base";
-import * as System from "std/core/System";
 
 loadLibrary("ani_bigint");
 
@@ -23,7 +22,7 @@ function main() {
     suite.addTest("testProcessBigInt_6", testProcessBigInt_6);
 
 
-    System.exit(suite.run());
+    exit(suite.run());
     console.info("bigint_test run end...");
 }
 

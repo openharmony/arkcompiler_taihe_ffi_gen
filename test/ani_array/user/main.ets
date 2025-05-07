@@ -1,6 +1,5 @@
 import * as ArrayTest from "@generated/array_test";
 import {BusinessError} from "@ohos.base";
-import * as System from "std/core/System";
 
 loadLibrary("ani_array");
 
@@ -155,5 +154,5 @@ function main() {
     suite.addTest("changeStructArray", changeStructArray)
     suite.addTest("fetchBinaryData", fetchBinaryData)
     suite.addTest("makeStructArrayArray", makeStructArrayArray)
-    System.exit(suite.run())
+    exit(suite.run())
 }
