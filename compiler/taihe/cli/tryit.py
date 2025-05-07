@@ -447,13 +447,13 @@ class BuildSystem:
             if b.NAME == "ani-bridge":
                 resolved_backends.append(b(keep_name=self.sts_keep_name))  # type: ignore
             else:
-                resolved_backends.append(b())
+                resolved_backends.append(b())  # pyre-ignore
 
         instance = CompilerInstance(
             CompilerInvocation(
                 src_dirs=[self.idl_dir],
                 out_dir=self.generated_dir,
-                backends=resolved_backends,  # pyre-ignore
+                backends=resolved_backends,
             )
         )
 
