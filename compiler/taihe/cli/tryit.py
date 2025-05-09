@@ -72,29 +72,29 @@ class Utils:
                 capture_output=capture_output,
             )
         except subprocess.CalledProcessError as e:
-            self.logger.error(f"Command failed with exit code {e.returncode}")
+            self.logger.error("Command failed with exit code %s", e.returncode)
             if e.stdout:
-                self.logger.error(f"Standard output: {e.stdout}")
+                self.logger.error("Standard output: %s", e.stdout)
             if e.stderr:
-                self.logger.error(f"Standard error: {e.stderr}")
+                self.logger.error("Standard error: %s", e.stderr)
             raise
 
     def create_directory(self, directory: Path) -> None:
         directory.mkdir(parents=True, exist_ok=True)
-        self.logger.debug(f"Created directory: {directory}")
+        self.logger.debug("Created directory: %s", directory)
 
     def clean_directory(self, directory: Path) -> None:
         if not directory.exists():
             return
         shutil.rmtree(directory)
-        self.logger.debug(f"Cleaned directory: {directory}")
+        self.logger.debug("Cleaned directory: %s", directory)
 
     def download_file(
         self, target_file: Path, url: str, user_info: Optional[UserInfo] = None
     ) -> None:
         """Download a file from a URL."""
         if target_file.exists():
-            self.logger.info(f"Already found {target_file}, skipping download")
+            self.logger.info("Already found %s, skipping download", target_file)
             return
 
         temp_file = target_file.with_suffix(".tmp")
@@ -108,9 +108,9 @@ class Utils:
 
         if temp_file.exists():
             temp_file.rename(target_file)
-            self.logger.info(f"Downloaded {url} to {target_file}")
+            self.logger.info("Downloaded %s to %s", url, target_file)
         else:
-            self.logger.error(f"Failed to download {url}")
+            self.logger.error("Failed to download %s", url)
             raise FileNotFoundError(f"Failed to download {url}")
 
     def extract_file(
@@ -122,9 +122,7 @@ class Utils:
     ) -> None:
         """Extract a tar.gz file."""
         if not target_file.exists():
-            raise FileNotFoundError(
-                f"File to extract does not exist: {target_file}"
-            )
+            raise FileNotFoundError(f"File to extract does not exist: {target_file}")
 
         package_dir = extract_dir / "package"
         if package_dir.exists():
@@ -145,7 +143,7 @@ class Utils:
             with open(version_file, "w") as vf:
                 vf.write(version)
 
-        self.logger.info(f"Extracted {target_file} to {extract_dir}")
+        self.logger.info("Extracted %s to %s", target_file, extract_dir)
 
 
 class BuildConfig:
@@ -320,7 +318,7 @@ class BuildSystem(Utils):
 
         if not panda_include_dir.exists():
             self.logger.warning(
-                f"ANI include directory not found: {panda_include_dir}"
+                "ANI include directory not found: %s", panda_include_dir
             )
             # Create a fallback include directory
             self.create_directory(panda_include_dir)
@@ -351,7 +349,7 @@ class BuildSystem(Utils):
         output_files = []
 
         if not input_dir.exists():
-            self.logger.warning(f"Input directory does not exist: {input_dir}")
+            self.logger.warning("Input directory does not exist: %s", input_dir)
             return output_files
 
         for input_file in input_dir.glob("*.[cC]*"):  # Find .c, .cpp, .cc, .C files
@@ -417,7 +415,7 @@ class BuildSystem(Utils):
                     local_version = vf.read().strip()
                     return local_version == version
             except OSError as e:
-                self.logger.warning(f"Failed to read version file: {e}")
+                self.logger.warning("Failed to read version file: %s", e)
         return False
 
     def download_panda_vm(self, extract_dir: Path) -> Path:
@@ -429,7 +427,7 @@ class BuildSystem(Utils):
         version = Path(filename).stem  # Use the filename without extension as version
 
         if not self.check_local_version(version_file, version):
-            self.logger.info(f"Downloading panda VM {version=}")
+            self.logger.info("Downloading panda VM version: %s", version)
             self.download_file(target_file, url, self.config.panda_userinfo)
             self.extract_file(target_file, extract_dir, version_file, version)
             self.logger.info("Completed download and extraction.")
@@ -454,7 +452,7 @@ class BuildSystem(Utils):
         with open(config_file_path, "w") as json_file:
             json.dump(config_content, json_file, indent=2)
 
-        self.logger.debug(f"Created configuration file at: {config_file_path}")
+        self.logger.debug("Created configuration file at: %s", config_file_path)
 
     def compile_abc(
         self,
@@ -468,7 +466,7 @@ class BuildSystem(Utils):
 
         if not input_dir.exists() or not input_dir.is_dir():
             self.logger.warning(
-                f"Input directory does not exist or is not a directory: {input_dir}"
+                "Input directory does not exist or is not a directory: %s", input_dir
             )
             return output_files
 
@@ -497,7 +495,7 @@ class BuildSystem(Utils):
             ark_disasm_path = panda_home / "bin/ark_disasm"
             if not ark_disasm_path.exists():
                 self.logger.warning(
-                    f"ark_disasm not found at {ark_disasm_path}, skipping disassembly"
+                    "ark_disasm not found at %s, skipping disassembly", ark_disasm_path
                 )
                 continue
 
@@ -578,7 +576,7 @@ class BuildSystem(Utils):
                 shared=True,
                 link_options=["-Wl,--no-undefined"],
             )
-            self.logger.info(f"Shared library compiled: {so_target}")
+            self.logger.info("Shared library compiled: %s", so_target)
         else:
             self.logger.warning(
                 "No object files to link, skipping shared library compilation"
@@ -619,7 +617,7 @@ class BuildSystem(Utils):
                 *all_abc_files,
                 panda_home=panda_home,
             )
-            self.logger.info(f"ABC files linked: {abc_target}")
+            self.logger.info("ABC files linked: %s", abc_target)
         else:
             self.logger.warning("No ABC files to link, skipping ABC compilation")
 
@@ -628,7 +626,7 @@ class BuildSystem(Utils):
     def run_ark(self, panda_home: Path, abc_target: Path) -> None:
         """Run the compiled ABC file with the Ark runtime."""
         if not abc_target.exists():
-            self.logger.error(f"ABC file not found: {abc_target}")
+            self.logger.error("ABC file not found: %s", abc_target)
             raise FileNotFoundError(f"ABC file not found: {abc_target}")
 
         ark_path = panda_home / "bin/ark"
@@ -637,9 +635,9 @@ class BuildSystem(Utils):
 
         etsstdlib_path = panda_home / "../ets/etsstdlib.abc"
         if not etsstdlib_path.exists():
-            self.logger.warning(f"etsstdlib.abc not found at {etsstdlib_path}")
+            self.logger.warning("etsstdlib.abc not found at %s", etsstdlib_path)
 
-        self.logger.info(f"Running with Ark runtime: {abc_target}")
+        self.logger.info("Running with Ark runtime: %s", abc_target)
         self.run_command(
             [
                 ark_path,
@@ -676,7 +674,7 @@ class UpgradeCode(Utils):
             version_str = vf.read()
             local_version = version_str.splitlines()[0].split(":")[-1].strip()
         if local_version == version:
-            self.logger.info(f"Already at version {version}")
+            self.logger.info("Already at version %s", version)
             return
 
         self.download_file(target_file, repo_url)
@@ -695,7 +693,7 @@ class UpgradeCode(Utils):
         if target_file.exists():
             target_file.unlink()
 
-        self.logger.info(f"Successfully upgraded code to version {version}")
+        self.logger.info("Successfully upgraded code to version %s", version)
 
 
 def main(config: Optional[BuildConfig] = None):
