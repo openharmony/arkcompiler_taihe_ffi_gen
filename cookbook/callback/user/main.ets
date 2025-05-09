@@ -1,4 +1,5 @@
 import * as callback_lib from "@generated/callback";
+import {BusinessError} from "@ohos.base";
 
 loadLibrary("callback");
 

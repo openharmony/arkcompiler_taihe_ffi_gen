@@ -1,9 +1,10 @@
 set(IDL_FILES
-    "${CMAKE_CURRENT_LIST_DIR}/idl/huks.taihe"
+    "${CMAKE_CURRENT_LIST_DIR}/idl/ohos.security.huks.huks.taihe"
 )
 
 set(GEN_ETS_FILES
-    "huks.ets"
+    "@ohos.base.ets"
+    "@ohos.security.huks.ets"
 )
 
 set(USER_ETS_FILES

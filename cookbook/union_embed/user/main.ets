@@ -1,7 +1,7 @@
 import {createResource, Resource} from "@generated/@hms.core.map.map_inner";
-
-import * as map from "./@hms.core.map.map";
-import {Image, Image_inner} from "./@ohos.multimedia.image";
+import {BusinessError} from "@ohos.base";
+import * as map from "@system/@hms.core.map.map";
+import {Image, Image_inner} from "@system/@ohos.multimedia.image";
 
 loadLibrary("union_embed");
 
@@ -29,8 +29,9 @@ function main() {
         ["aaa", Resource_cls, image_cls];
     let promise_res = await Bubble_cls.setIcons(array_union_input);
 
-
     let array_array_input: ((Resource[])[]) =
         [[Resource_cls, Resource_cls], [Resource_cls]]
     Bubble_cls.setPositions(array_array_input)
+
+    CoroutineExtras.stopTaskpool();
 }

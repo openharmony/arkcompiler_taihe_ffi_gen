@@ -95,3 +95,23 @@ Output：
 theme: dark
 autosave: undefined
 ```
+
+## Optional 补充
+```C++
+// 创建Optional
+
+// 创建空Optional
+optional<T>(std::nullopt);
+// 创建非空Optional
+optional<T>(std::in_place_t{}, val);
+
+optional<int32_t> opt_var = optional<int32_t>(std::in_place_t{}, 1);
+// 判断Optional是否为空
+bool tag = bool(opt_var);
+
+bool tag = opt_var.has_value();
+
+// 获取Optional值
+int32_t var0 = *opt_var;
+int32_t var1 = opt_var.value();
+```

@@ -1,5 +1,5 @@
 import * as on_off_test from "@generated/on_off";
-import * as System from "std/core/System";
+import {BusinessError} from "@ohos.base";
 
 loadLibrary("ani_on_off");
 
@@ -194,5 +194,5 @@ function main() {
     suite.addTest("toplevelFuncBOn", toplevelFuncBOn)
     suite.addTest("toplevelFuncIOff", toplevelFuncIOff)
     suite.addTest("toplevelFuncBOff", toplevelFuncBOff)
-    System.exit(suite.run())
+    exit(suite.run())
 }

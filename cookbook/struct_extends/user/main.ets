@@ -1,4 +1,5 @@
 import * as structext from "@generated/structext";
+import {BusinessError} from "@ohos.base";
 
 loadLibrary("struct_extends");
 

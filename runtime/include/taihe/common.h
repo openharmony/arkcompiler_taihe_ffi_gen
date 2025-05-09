@@ -7,16 +7,15 @@
 
 #define TH_NONNULL __attribute__((nonnull))
 
-#define TH_ASSERT(condition, message)                                 \
-  do {                                                                \
-    if (!(condition)) {                                               \
-      fprintf(stderr,                                                 \
-              "Assertion failed: (%s), function %s, "                 \
-              "file %s, line %d.\n"                                   \
-              "Message: %s\n",                                        \
-              #condition, __FUNCTION__, __FILE__, __LINE__, message); \
-      abort();                                                        \
-    }                                                                 \
+#define TH_ASSERT(condition, message)                                    \
+  do {                                                                   \
+    if (!(condition)) {                                                  \
+      fprintf(stderr,                                                    \
+              "Assertion failed: (%s), function %s, file %s, line %d.\n" \
+              "Message: %s\n",                                           \
+              #condition, __FUNCTION__, __FILE__, __LINE__, message);    \
+      abort();                                                           \
+    }                                                                    \
   } while (0)
 
 #ifdef __cplusplus

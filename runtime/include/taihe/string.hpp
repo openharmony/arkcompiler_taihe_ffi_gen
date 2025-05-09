@@ -28,13 +28,13 @@ struct string_view {
   explicit string_view(struct TString handle) : m_handle(handle) {}
 
   string_view(char const *value TH_NONNULL)
-      : string_view(tstr_new_ref(value, strlen(value))) {}
+      : string_view(tstr_new_ref(value, std::strlen(value))) {}
 
   string_view(char const *value TH_NONNULL, size_type size)
       : string_view(tstr_new_ref(value, size)) {}
 
   string_view(std::initializer_list<char> value)
-      : string_view(value.begin(), static_cast<uint32_t>(value.size())) {}
+      : string_view(value.begin(), value.size()) {}
 
   string_view(std::string_view value)
       : string_view(value.data(), value.size()) {}
@@ -137,7 +137,7 @@ struct string : public string_view {
       : string(tstr_new(value, size)) {}
 
   string(std::initializer_list<char> value)
-      : string(value.begin(), static_cast<uint32_t>(value.size())) {}
+      : string(value.begin(), value.size()) {}
 
   string(std::string_view value) : string(value.data(), value.size()) {}
 
@@ -219,8 +219,8 @@ inline std::ostream &operator<<(std::ostream &os, string_view sv) {
 template<typename T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
 inline string to_string(T value) {
   char buffer[32];
-  std::to_chars_result result;
-  result = std::to_chars(std::begin(buffer), std::end(buffer), value);
+  std::to_chars_result result =
+      std::to_chars(std::begin(buffer), std::end(buffer), value);
   if (result.ec != std::errc{}) {
     TH_THROW(std::runtime_error, "Conversion to char failed");
   }
@@ -231,9 +231,8 @@ inline string to_string(T value) {
 template<typename T, std::enable_if_t<std::is_floating_point_v<T>, int> = 0>
 inline string to_string(T value) {
   char buffer[32];
-  std::to_chars_result result;
-  result = std::to_chars(std::begin(buffer), std::end(buffer), value,
-                         std::chars_format::general);
+  std::to_chars_result result = std::to_chars(
+      std::begin(buffer), std::end(buffer), value, std::chars_format::general);
   if (result.ec != std::errc{}) {
     TH_THROW(std::runtime_error, "Conversion to char failed");
   }

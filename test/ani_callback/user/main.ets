@@ -1,5 +1,5 @@
 import * as lib from "@generated/callbackTest";
-import * as System from "std/core/System";
+import {BusinessError} from "@ohos.base";
 
 loadLibrary("ani_callback");
 
@@ -51,5 +51,5 @@ function main() {
     suite.addTest("test string return value", test_string_return_value);
     suite.addTest("test struct input", test_struct_input);
 
-    System.exit(suite.run());
+    exit(suite.run());
 }

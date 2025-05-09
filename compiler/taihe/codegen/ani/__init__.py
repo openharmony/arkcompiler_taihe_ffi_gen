@@ -1,0 +1,44 @@
+from dataclasses import dataclass
+from typing import ClassVar
+
+from taihe.driver.backend import Backend, BackendConfig
+from taihe.driver.contexts import CompilerInstance
+
+
+@dataclass
+class AniBridgeBackendConfig(BackendConfig):
+    NAME = "ani-bridge"
+    DEPS: ClassVar = ["cpp-user"]
+
+    keep_name: bool = False
+    """Use the original function name (instead of "camelCase") in exported ArkTS sources."""
+
+    def construct(self, instance: CompilerInstance) -> Backend:
+        from taihe.codegen.ani.gen_ani import ANICodeGenerator
+        from taihe.codegen.ani.gen_sts import STSCodeGenerator
+        from taihe.semantics.declarations import AttrItemDecl
+
+        # TODO: unify {ANI,STS}CodeGenerator
+        class AniBridgeBackendImpl(Backend):
+            def __init__(self, ci: CompilerInstance, config: BackendConfig):
+                super().__init__(ci)
+                assert isinstance(config, AniBridgeBackendConfig)
+                self._ci = ci
+                self.keep_name = config.keep_name
+
+            def post_process(self):
+                if not self.keep_name:
+                    return
+                for pkg in self._ci.package_group.packages:
+                    if not pkg.get_last_attr("sts_keep_name"):
+                        d = AttrItemDecl(None, "sts_keep_name", ())
+                        pkg.add_attr(d)
+
+            def generate(self):
+                oc = self._ci.output_config
+                am = self._ci.analysis_manager
+                pg = self._ci.package_group
+                ANICodeGenerator(oc, am).generate(pg)
+                STSCodeGenerator(oc, am).generate(pg)
+
+        return AniBridgeBackendImpl(instance, self)

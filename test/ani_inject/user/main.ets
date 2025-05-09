@@ -1,5 +1,5 @@
 import * as test from "@generated/inject_test";
-import * as System from "std/core/System";
+import {BusinessError} from "@ohos.base";
 
 loadLibrary("ani_inject");
 

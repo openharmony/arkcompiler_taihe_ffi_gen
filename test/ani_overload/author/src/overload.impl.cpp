@@ -156,6 +156,8 @@ public:
     return p0;
   }
 
+  // These functions are testcases for overload, which use many input parameters
+  // NOLINTBEGIN(readability-function-size)
   void OverloadFunc10param(int8_t p0, int16_t p1, int32_t p2, float p3,
                            double p4, bool p5, string_view p6,
                            array_view<int8_t> p7, array_view<int16_t> p8,
@@ -330,20 +332,10 @@ public:
     std::cout << "], p9 = " << p9 << std::endl;
   }
 
+  // NOLINTEND(readability-function-size)
+
   int32_t OverloadFuncPoint(array_view<int32_t> a) {
     std::cout << "OverloadFuncPoint: a = [";
-    for (size_t i = 0; i < a.size(); ++i) {
-      std::cout << a.data()[i];
-      if (i < a.size() - 1) {
-        std::cout << ", ";
-      }
-    }
-    std::cout << "]" << std::endl;
-    return a.data()[0];
-  }
-
-  float OverloadFuncPoint1(array_view<float> a) {
-    std::cout << "OverloadFuncPoint1: a = [";
     for (size_t i = 0; i < a.size(); ++i) {
       std::cout << a.data()[i];
       if (i < a.size() - 1) {
@@ -385,5 +377,5 @@ public:
 
 // because these macros are auto-generate, lint will cause false positive.
 // NOLINTBEGIN
-TH_EXPORT_CPP_API_get_interface(get_interface)
+TH_EXPORT_CPP_API_get_interface(get_interface);
 // NOLINTEND

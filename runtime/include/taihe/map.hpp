@@ -168,9 +168,9 @@ struct map_view {
     }
 
     iterator operator++(int) {
-      iterator tmp = *this;
+      iterator ocp = *this;
       ++(*this);
-      return tmp;
+      return ocp;
     }
 
     bool operator==(iterator const &other) const {
@@ -217,9 +217,9 @@ struct map_view {
     }
 
     const_iterator operator++(int) {
-      const_iterator tmp = *this;
+      const_iterator ocp = *this;
       ++(*this);
-      return tmp;
+      return ocp;
     }
 
     bool operator==(const_iterator const &other) const {

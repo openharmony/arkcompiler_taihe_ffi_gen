@@ -1,12 +1,13 @@
 import re
 
-from taihe.codegen.abi_generator import (
+from taihe.codegen.abi.analyses import (
     GlobFuncABIInfo,
     IfaceABIInfo,
     PackageABIInfo,
     TypeABIInfo,
 )
-from taihe.codegen.cpp_generator import (
+from taihe.codegen.abi.writer import CHeaderWriter, CSourceWriter
+from taihe.codegen.cpp.analyses import (
     IfaceMethodCppInfo,
     PackageCppInfo,
     TypeCppInfo,
@@ -22,7 +23,7 @@ from taihe.semantics.types import (
     IfaceType,
 )
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
-from taihe.utils.outputs import COutputBuffer, OutputManager
+from taihe.utils.outputs import OutputConfig
 
 
 class PackageCppImplInfo(AbstractAnalysis[PackageDecl]):
@@ -39,8 +40,8 @@ class GlobFuncCppImplInfo(AbstractAnalysis[GlobFuncDecl]):
 
 
 class CppImplHeadersGenerator:
-    def __init__(self, tm: OutputManager, am: AnalysisManager):
-        self.tm = tm
+    def __init__(self, oc: OutputConfig, am: AnalysisManager):
+        self.oc = oc
         self.am = am
 
     def generate(self, pg: PackageGroup):
@@ -50,18 +51,18 @@ class CppImplHeadersGenerator:
     def gen_package_file(self, pkg: PackageDecl):
         pkg_abi_info = PackageABIInfo.get(self.am, pkg)
         pkg_cpp_impl_info = PackageCppImplInfo.get(self.am, pkg)
-        pkg_cpp_impl_target = COutputBuffer.create(
-            self.tm, f"include/{pkg_cpp_impl_info.header}", True
-        )
-        pkg_cpp_impl_target.include("taihe/common.hpp")
-        pkg_cpp_impl_target.include(pkg_abi_info.header)
-        for func in pkg.functions:
-            self.gen_func(func, pkg_cpp_impl_target)
+        with CHeaderWriter(
+            self.oc, f"include/{pkg_cpp_impl_info.header}"
+        ) as pkg_cpp_impl_target:
+            pkg_cpp_impl_target.add_include("taihe/common.hpp")
+            pkg_cpp_impl_target.add_include(pkg_abi_info.header)
+            for func in pkg.functions:
+                self.gen_func(func, pkg_cpp_impl_target)
 
     def gen_func(
         self,
         func: GlobFuncDecl,
-        pkg_cpp_impl_target: COutputBuffer,
+        pkg_cpp_impl_target: CHeaderWriter,
     ):
         func_abi_info = GlobFuncABIInfo.get(self.am, func)
         func_cpp_impl_info = GlobFuncCppImplInfo.get(self.am, func)
@@ -71,7 +72,7 @@ class CppImplHeadersGenerator:
         for param in func.params:
             type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
             type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.resolved_ty)
-            pkg_cpp_impl_target.include(*type_cpp_info.impl_headers)
+            pkg_cpp_impl_target.add_include(*type_cpp_info.impl_headers)
             args_from_abi.append(type_cpp_info.pass_from_abi(param.name))
             abi_params.append(f"{type_abi_info.as_param} {param.name}")
         args_from_abi_str = ", ".join(args_from_abi)
@@ -80,13 +81,13 @@ class CppImplHeadersGenerator:
         if return_ty_ref := func.return_ty_ref:
             type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
             type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
-            pkg_cpp_impl_target.include(*type_cpp_info.impl_headers)
+            pkg_cpp_impl_target.add_include(*type_cpp_info.impl_headers)
             abi_return_ty_name = type_abi_info.as_owner
             abi_result = type_cpp_info.return_into_abi(cpp_result)
         else:
             abi_return_ty_name = "void"
             abi_result = cpp_result
-        pkg_cpp_impl_target.writeln(
+        pkg_cpp_impl_target.writelns(
             f"#define {func_cpp_impl_info.macro}({func_impl}) \\",
             f"    {abi_return_ty_name} {func_abi_info.mangled_name}({abi_params_str}) {{ \\",
             f"        return {abi_result}; \\",
@@ -95,10 +96,18 @@ class CppImplHeadersGenerator:
 
 
 class CppImplSourcesGenerator:
-    def __init__(self, tm: OutputManager, am: AnalysisManager):
-        self.tm = tm
+    def __init__(self, oc: OutputConfig, am: AnalysisManager):
+        self.oc = oc
         self.am = am
-        self.using_namespaces = []
+        self.using_namespaces: list[str] = []
+
+    @property
+    def make_holder(self):
+        return self.mask("taihe::make_holder")
+
+    @property
+    def runtime_error(self):
+        return self.mask("std::runtime_error")
 
     def mask(self, cpp_type: str):
         pattern = r"(::)?([A-Za-z_][A-Za-z_0-9]*::)*[A-Za-z_][A-Za-z_0-9]*"
@@ -123,61 +132,66 @@ class CppImplSourcesGenerator:
     def gen_package_file(self, pkg: PackageDecl):
         pkg_cpp_info = PackageCppInfo.get(self.am, pkg)
         pkg_cpp_impl_info = PackageCppImplInfo.get(self.am, pkg)
-        pkg_cpp_impl_target = COutputBuffer.create(
-            self.tm, f"temp/{pkg_cpp_impl_info.source}", False
-        )
-        pkg_cpp_impl_target.include(pkg_cpp_info.header)
-        pkg_cpp_impl_target.include(pkg_cpp_impl_info.header)
-        pkg_cpp_impl_target.include("taihe/runtime.hpp")
-        pkg_cpp_impl_target.include("stdexcept")
-        pkg_cpp_impl_target.writeln("")
-        self.using_namespaces = []
-        self.gen_using_namespace(pkg_cpp_impl_target, "taihe")
-        self.gen_using_namespace(pkg_cpp_impl_target, "::".join(pkg.segments))
-        pkg_cpp_impl_target.writeln("")
-        self.gen_anonymous_namespace_block(pkg, pkg_cpp_impl_target)
-        pkg_cpp_impl_target.writeln("")
-        for func in pkg.functions:
-            self.gen_func_macro(func, pkg_cpp_impl_target)
-        self.using_namespaces = []
-
-    def gen_anonymous_namespace_block(
-        self,
-        pkg: PackageDecl,
-        pkg_cpp_impl_target: COutputBuffer,
-    ):
-        pkg_cpp_impl_target.writeln(
-            f"namespace {{",
-            f"// To be implemented.",
-        )
-        for iface in pkg.interfaces:
-            pkg_cpp_impl_target.writeln("")
-            self.gen_iface(iface, pkg_cpp_impl_target)
-        for func in pkg.functions:
-            pkg_cpp_impl_target.writeln("")
-            self.gen_func_impl(func, pkg_cpp_impl_target)
-        pkg_cpp_impl_target.writeln(
-            f"}}  // namespace",
-        )
+        with CSourceWriter(
+            self.oc, f"temp/{pkg_cpp_impl_info.source}"
+        ) as pkg_cpp_impl_target:
+            pkg_cpp_impl_target.add_include(pkg_cpp_info.header)
+            pkg_cpp_impl_target.add_include(pkg_cpp_impl_info.header)
+            pkg_cpp_impl_target.add_include("taihe/runtime.hpp")
+            pkg_cpp_impl_target.add_include("stdexcept")
+            pkg_cpp_impl_target.writelns("")
+            self.using_namespaces = []
+            pkg_cpp_impl_target.writelns("")
+            self.gen_anonymous_namespace_block(pkg, pkg_cpp_impl_target)
+            pkg_cpp_impl_target.writelns("")
+            pkg_cpp_impl_target.writelns(
+                "// Since these macros are auto-generate, lint will cause false positive.",
+                "// NOLINTBEGIN",
+            )
+            for func in pkg.functions:
+                self.gen_func_macro(func, pkg_cpp_impl_target)
+            pkg_cpp_impl_target.writelns(
+                "// NOLINTEND",
+            )
+            self.using_namespaces = []
 
     def gen_using_namespace(
         self,
-        pkg_cpp_impl_target: COutputBuffer,
+        pkg_cpp_impl_target: CSourceWriter,
         namespace: str,
     ):
-        pkg_cpp_impl_target.writeln(
+        pkg_cpp_impl_target.writelns(
             f"using namespace {namespace};",
         )
         self.using_namespaces.append(namespace)
 
+    def gen_anonymous_namespace_block(
+        self,
+        pkg: PackageDecl,
+        pkg_cpp_impl_target: CSourceWriter,
+    ):
+        pkg_cpp_impl_target.writelns(
+            f"namespace {{",
+            f"// To be implemented.",
+        )
+        for iface in pkg.interfaces:
+            pkg_cpp_impl_target.writelns("")
+            self.gen_iface(iface, pkg_cpp_impl_target)
+        for func in pkg.functions:
+            pkg_cpp_impl_target.writelns("")
+            self.gen_func_impl(func, pkg_cpp_impl_target)
+        pkg_cpp_impl_target.writelns(
+            f"}}  // namespace",
+        )
+
     def gen_iface(
         self,
         iface: IfaceDecl,
-        pkg_cpp_impl_target: COutputBuffer,
+        pkg_cpp_impl_target: CSourceWriter,
     ):
         iface_abi_info = IfaceABIInfo.get(self.am, iface)
         impl_name = f"{iface.name}Impl"
-        pkg_cpp_impl_target.writeln(
+        pkg_cpp_impl_target.writelns(
             f"class {impl_name} {{",
             f"public:",
             f"    {impl_name}() {{",
@@ -186,16 +200,16 @@ class CppImplSourcesGenerator:
         )
         for ancestor in iface_abi_info.ancestor_dict:
             for func in ancestor.methods:
-                pkg_cpp_impl_target.writeln("")
+                pkg_cpp_impl_target.writelns("")
                 self.gen_method_impl(func, pkg_cpp_impl_target)
-        pkg_cpp_impl_target.writeln(
+        pkg_cpp_impl_target.writelns(
             f"}};",
         )
 
     def gen_method_impl(
         self,
         func: IfaceMethodDecl,
-        pkg_cpp_impl_target: COutputBuffer,
+        pkg_cpp_impl_target: CSourceWriter,
     ):
         method_cpp_info = IfaceMethodCppInfo.get(self.am, func)
         func_cpp_impl_name = method_cpp_info.impl_name
@@ -209,28 +223,28 @@ class CppImplSourcesGenerator:
             cpp_return_ty_name = self.mask(type_cpp_info.as_owner)
         else:
             cpp_return_ty_name = "void"
-        pkg_cpp_impl_target.writeln(
+        pkg_cpp_impl_target.writelns(
             f"    {cpp_return_ty_name} {func_cpp_impl_name}({cpp_params_str}) {{",
         )
         if return_ty_ref and isinstance(return_ty_ref.resolved_ty, IfaceType):
             impl_name = f"{return_ty_ref.resolved_ty.ty_decl.name}Impl"
-            pkg_cpp_impl_target.writeln(
+            pkg_cpp_impl_target.writelns(
                 f"        // The parameters in the make_holder function should be of the same type",
                 f"        // as the parameters in the constructor of the actual implementation class.",
-                f"        return make_holder<{impl_name}, {cpp_return_ty_name}>();",
+                f"        return {self.make_holder}<{impl_name}, {cpp_return_ty_name}>();",
             )
         else:
-            pkg_cpp_impl_target.writeln(
-                f'        TH_THROW(std::runtime_error, "{func_cpp_impl_name} not implemented");',
+            pkg_cpp_impl_target.writelns(
+                f'        TH_THROW({self.runtime_error}, "{func_cpp_impl_name} not implemented");',
             )
-        pkg_cpp_impl_target.writeln(
+        pkg_cpp_impl_target.writelns(
             f"    }}",
         )
 
     def gen_func_impl(
         self,
         func: GlobFuncDecl,
-        pkg_cpp_impl_target: COutputBuffer,
+        pkg_cpp_impl_target: CSourceWriter,
     ):
         func_cpp_impl_name = func.name
         cpp_params = []
@@ -243,31 +257,31 @@ class CppImplSourcesGenerator:
             cpp_return_ty_name = self.mask(type_cpp_info.as_owner)
         else:
             cpp_return_ty_name = "void"
-        pkg_cpp_impl_target.writeln(
+        pkg_cpp_impl_target.writelns(
             f"{cpp_return_ty_name} {func_cpp_impl_name}({cpp_params_str}) {{",
         )
         if return_ty_ref and isinstance(return_ty_ref.resolved_ty, IfaceType):
             impl_name = f"{return_ty_ref.resolved_ty.ty_decl.name}Impl"
-            pkg_cpp_impl_target.writeln(
+            pkg_cpp_impl_target.writelns(
                 f"    // The parameters in the make_holder function should be of the same type",
                 f"    // as the parameters in the constructor of the actual implementation class.",
-                f"    return make_holder<{impl_name}, {cpp_return_ty_name}>();",
+                f"    return {self.make_holder}<{impl_name}, {cpp_return_ty_name}>();",
             )
         else:
-            pkg_cpp_impl_target.writeln(
-                f'    TH_THROW(std::runtime_error, "{func_cpp_impl_name} not implemented");',
+            pkg_cpp_impl_target.writelns(
+                f'    TH_THROW({self.runtime_error}, "{func_cpp_impl_name} not implemented");',
             )
-        pkg_cpp_impl_target.writeln(
+        pkg_cpp_impl_target.writelns(
             f"}}",
         )
 
     def gen_func_macro(
         self,
         func: GlobFuncDecl,
-        pkg_cpp_impl_target: COutputBuffer,
+        pkg_cpp_impl_target: CSourceWriter,
     ):
         func_cpp_impl_info = GlobFuncCppImplInfo.get(self.am, func)
         func_cpp_impl_name = f"{func.name}"
-        pkg_cpp_impl_target.writeln(
+        pkg_cpp_impl_target.writelns(
             f"{func_cpp_impl_info.macro}({func_cpp_impl_name});",
         )

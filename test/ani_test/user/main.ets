@@ -1,5 +1,5 @@
 import * as ani_test from "@generated/ani_test";
-import * as System from "std/core/System";
+import {BusinessError} from "@ohos.base";
 
 loadLibrary("ani_test");
 
@@ -86,7 +86,8 @@ function test_interface() {
         }
     }
 
-    const userFoos = [new UserFoo("X"), new UserFoo("Y"), new UserFoo("Z")];
+    const userFoos: Array<ani_test.Foo> =
+        [new UserFoo("X"), new UserFoo("Y"), new UserFoo("Z")];
     assertEQ(userFoos.length, 3);
     ani_test.callBar(userFoos);
 }
@@ -98,5 +99,5 @@ function main() {
     suite.addTest("Test Optional", test_optional);
     suite.addTest("Test Array", test_array);
     suite.addTest("Test Interface", test_interface);
-    System.exit(suite.run());
+    exit(suite.run());
 }

@@ -3,12 +3,14 @@
 
 #include "taihe/runtime.hpp"
 
+namespace {
 int32_t maythrow_impl(int32_t a) {
   if (a == 0) {
     taihe::set_error("some error happen");
     return -1;
   } else {
-    return a + 10;
+    int const tempnum = 10;
+    return a + tempnum;
   }
 }
 
@@ -26,8 +28,10 @@ void noReturnMaythrow() {
 }
 
 void noReturnBusinessError() {
-  taihe::set_business_error(5, "error in noReturnBusinessError");
+  int errorcode = 5;
+  taihe::set_business_error(errorcode, "error in noReturnBusinessError");
 }
+}  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
 // NOLINTBEGIN

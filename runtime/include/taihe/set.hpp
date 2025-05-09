@@ -162,9 +162,9 @@ struct set_view {
     }
 
     iterator operator++(int) {
-      iterator tmp = *this;
+      iterator ocp = *this;
       ++(*this);
-      return tmp;
+      return ocp;
     }
 
     bool operator==(iterator const &other) const {

@@ -77,10 +77,10 @@ struct optional : public optional_view<cpp_owner_t> {
   }
 
   optional(optional_view<cpp_owner_t> const &other)
-      : optional(new cpp_owner_t(*other)) {}
+      : optional(other ? new cpp_owner_t(*other) : nullptr) {}
 
   optional(optional<cpp_owner_t> const &other)
-      : optional(new cpp_owner_t(*other)) {}
+      : optional(other ? new cpp_owner_t(*other) : nullptr) {}
 
   optional(optional<cpp_owner_t> &&other)
       : optional(std::exchange(other.m_handle, nullptr)) {}
@@ -105,7 +105,7 @@ inline std::size_t hash_impl(adl_helper_t, optional_view<cpp_owner_t> val) {
 template<typename cpp_owner_t>
 inline bool same_impl(adl_helper_t, optional_view<cpp_owner_t> lhs,
                       optional_view<cpp_owner_t> rhs) {
-  return (!lhs && !rhs) || same(*lhs, *rhs);
+  return (!lhs && !rhs) || (lhs && rhs && same(*lhs, *rhs));
 }
 
 template<typename cpp_owner_t>

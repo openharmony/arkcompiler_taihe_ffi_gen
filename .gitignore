@@ -19,6 +19,7 @@ compiler/taihe/parse/antlr
 /.panda_vm
 /hw_exported
 /dist
+compiler/taihe.egg-info
 
 # Generated directories
 **/*generated

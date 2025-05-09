@@ -5,6 +5,8 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
+from typing_extensions import override
+
 
 @dataclass(frozen=True)
 class SourceBase(ABC):
@@ -29,13 +31,16 @@ class SourceFile(SourceBase):
     path: Path
 
     @property
+    @override
     def source_identifier(self) -> str:
         return str(self.path)
 
     @property
+    @override
     def pkg_name(self) -> str:
         return self.path.stem
 
+    @override
     def read(self) -> list[str]:
         with open(self.path) as f:
             return f.readlines()
@@ -49,13 +54,16 @@ class SourceBuffer(SourceBase):
     buf: str
 
     @property
+    @override
     def source_identifier(self) -> str:
         return f"<source-buffer-{self.pkg_name}>"
 
     @property
+    @override
     def pkg_name(self) -> str:
         return self.name
 
+    @override
     def read(self) -> list[str]:
         return self.buf.splitlines()
 
@@ -68,12 +76,12 @@ class SourceManager:
     def __init__(self):
         self.src_list = []
 
-    def add_source(self, sb: SourceBase):
-        self.src_list.append(sb)
-
     @property
     def sources(self) -> Iterable[SourceBase]:
         return self.src_list
+
+    def add_source(self, sb: SourceBase):
+        self.src_list.append(sb)
 
 
 @dataclass

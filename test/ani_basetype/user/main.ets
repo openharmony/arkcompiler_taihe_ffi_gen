@@ -1,5 +1,5 @@
 import * as base_test from "@generated/base_test";
-import * as System from "std/core/System";
+import {BusinessError} from "@ohos.base";
 
 loadLibrary("ani_basetype");
 
@@ -9,7 +9,7 @@ function main() {
     suite.addTest("float_test", float_test);
     suite.addTest("boolean_test", boolean_test);
     suite.addTest("string_test", string_test);
-    System.exit(suite.run());
+    exit(suite.run());
 }
 
 function integer_test() {

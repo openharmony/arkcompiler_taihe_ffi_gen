@@ -1,4 +1,5 @@
 @!namespace("@hms.core.map.map_inner")
+@!sts_inject("import {Image} from '@system/@ohos.multimedia.image';")
 
 interface Resource {
     foo(a: i32);
@@ -10,7 +11,7 @@ function createResource(): Resource;
 union icons_type {
     type_string: String;
     type_Resource: Resource;
-    type_Image: Opaque;
+    type_Image: @sts_type("Image") Opaque;
 }
 
 @class

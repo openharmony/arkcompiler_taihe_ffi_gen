@@ -6,6 +6,7 @@
 #include "taihe/string.hpp"
 using namespace taihe;
 
+namespace {
 void test_cb_v(callback_view<void()> f) {
   f();
 }
@@ -28,6 +29,7 @@ void test_cb_struct(
   ::callbackTest::Data result = f(::callbackTest::Data{"a", "b", 1});
   return;
 }
+}  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
 // NOLINTBEGIN

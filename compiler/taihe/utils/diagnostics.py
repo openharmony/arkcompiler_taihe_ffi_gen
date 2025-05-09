@@ -14,6 +14,8 @@ from typing import (
     TypeVar,
 )
 
+from typing_extensions import override
+
 if TYPE_CHECKING:
     from taihe.utils.sources import SourceLocation
 
@@ -68,6 +70,13 @@ class DiagBase(ABC):
     loc: Optional["SourceLocation"] = field(kw_only=True)
     """The source location where the diagnostic refers to."""
 
+    def __str__(self) -> str:
+        return self._format(_discard)
+
+    @property
+    @abstractmethod
+    def format_msg(self) -> str: ...
+
     def notes(self) -> Iterable["DiagNote"]:
         """Returns the associated notes."""
         return ()
@@ -78,13 +87,6 @@ class DiagBase(ABC):
             f"{f(self.STYLE)}{self.LEVEL_DESC}{f(AnsiStyle.RESET)}: "  # "error: "
             f"{self.format_msg}{f(AnsiStyle.RESET_ALL)}"  # "redefinition of ..."
         )
-
-    def __str__(self) -> str:
-        return self._format(_discard)
-
-    @property
-    @abstractmethod
-    def format_msg(self) -> str: ...
 
 
 ######################################
@@ -179,6 +181,24 @@ class DiagnosticsManager(AbstractDiagnosticsManager):
             self._color_filter_fn = _discard
         self.reset_max_level()
 
+    @override
+    def emit(self, diag: DiagBase) -> None:
+        """Emits a new diagnostic message."""
+        self._max_level_record = max(self._max_level_record, diag.LEVEL)
+        self._render(diag)
+        for n in diag.notes():
+            self._render(n)
+        stderr.flush()
+
+    def reset_max_level(self):
+        self._max_level_record = -1
+
+    def current_max_level(self):
+        return self._max_level_record
+
+    def has_errors(self):
+        return self.current_max_level() >= Level.ERROR
+
     def _write(self, s: str):
         self._out.write(s)
 
@@ -226,20 +246,3 @@ class DiagnosticsManager(AbstractDiagnosticsManager):
         self._write(f"{d._format(self._color_filter_fn)}\n")
         if d.loc:
             self._render_source_location(d.loc)
-
-    def emit(self, diag: DiagBase) -> None:
-        """Emits a new diagnostic message."""
-        self._max_level_record = max(self._max_level_record, diag.LEVEL)
-        self._render(diag)
-        for n in diag.notes():
-            self._render(n)
-        stderr.flush()
-
-    def reset_max_level(self):
-        self._max_level_record = -1
-
-    def current_max_level(self):
-        return self._max_level_record
-
-    def has_errors(self):
-        return self.current_max_level() >= Level.ERROR

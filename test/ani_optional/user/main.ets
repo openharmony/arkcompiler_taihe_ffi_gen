@@ -1,6 +1,6 @@
 import * as OptTest from "@generated/opt";
 import * as optionalTest from "@generated/optional";
-import * as System from "std/core/System";
+import {BusinessError} from "@ohos.base";
 
 loadLibrary("ani_optional");
 
@@ -213,5 +213,5 @@ function main() {
     suite.addTest(
         "func_PrintTestInterfaceArraybuffer test",
         func_PrintTestInterfaceArraybuffer);
-    System.exit(suite.run());
+    exit(suite.run());
 }

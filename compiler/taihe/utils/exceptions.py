@@ -44,14 +44,15 @@ class DeclRedefError(DiagError):
         self.prev = prev
         self.current = current
 
-    def notes(self):
-        if self.prev.loc:
-            yield DeclRedefNote(self.prev)
-
     @property
     @override
     def format_msg(self) -> str:
         return f"redefinition of {self.current.description}"
+
+    @override
+    def notes(self):
+        if self.prev.loc:
+            yield DeclRedefNote(self.prev)
 
 
 @dataclass
@@ -188,14 +189,15 @@ class DuplicateExtendsWarn(DiagWarn):
     parent_iface: "IfaceDecl"
     prev_loc: Optional["SourceLocation"] = field(kw_only=True)
 
-    def notes(self):
-        if self.prev_loc:
-            yield DuplicateExtendsNote(loc=self.prev_loc)
-
     @property
     @override
     def format_msg(self) -> str:
         return f"{self.parent_iface.description} is extended multiple times by {self.iface.description}"
+
+    @override
+    def notes(self):
+        if self.prev_loc:
+            yield DuplicateExtendsNote(loc=self.prev_loc)
 
 
 @dataclass
@@ -229,14 +231,15 @@ class RecursiveReferenceError(DiagError):
         self.decl = last[0]
         self.other = other
 
-    def notes(self):
-        for n in self.other:
-            yield RecursiveReferenceNote(n)
-
     @property
     @override
     def format_msg(self) -> str:
         return f"cycle detected in {self.decl.description}"
+
+    @override
+    def notes(self):
+        for n in self.other:
+            yield RecursiveReferenceNote(n)
 
 
 @dataclass
