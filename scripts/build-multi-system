@@ -6,6 +6,7 @@ import subprocess
 import tarfile
 from datetime import datetime
 from pathlib import Path
+import struct
 
 SYSTEM_TYPES = ["linux-x86_64", "windows-x86_64", "darwin-arm64", "darwin-x86_64"]
 PYTHON_REPO_URL = "https://gitee.com/ASeaSalt/python-multi-platform.git"
@@ -24,6 +25,9 @@ def build_compiler(compiler_dir: Path):
     print("Build the compiler ...")
     os.chdir(compiler_dir)
     subprocess.run(["./generate-grammar"], check=True)
+    compiler_dist_dir = compiler_dir / "dist"
+    if compiler_dist_dir.exists():
+        shutil.rmtree(compiler_dist_dir)
     subprocess.run(["uv", "build"], check=True)
     os.chdir("..")
 
@@ -123,7 +127,7 @@ def copy_documentation(doc_dir: Path):
     cookbook = Path("cookbook")
     for item in cookbook.rglob("*"):
         if item.is_dir() and (item.name == "build" or item.name.endswith("generated")):
-            continue
+            shutil.rmtree(item)
         if item.is_file():
             dest = doc_dir / item.relative_to(cookbook.parent)
             dest.parent.mkdir(parents=True, exist_ok=True)
@@ -147,14 +151,11 @@ def write_version(current_system: str, dist: Path, version: str):
         .strip()
     )
 
-    build_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
     with open(dist / "version.txt", "w") as f:
         f.write(f"System        : {current_system}\n")
         f.write(f"Version       : {version}\n")
         f.write(f"Last Commit   : {git_commit}\n")
         f.write(f"Commit Message: {git_message}\n")
-        f.write(f"Build Date    : {build_date}\n")
 
 
 def create_package(current_system, project_dir, dist, version):
@@ -168,10 +169,38 @@ def create_package(current_system, project_dir, dist, version):
         tarinfo.gid = 0
         tarinfo.uname = ""
         tarinfo.gname = ""
+        tarinfo.mtime = 1704067200
         return tarinfo
 
-    with tarfile.open(package_path, "w:gz") as tar:
-        tar.add(dist, arcname=dist.name, filter=reset_tarinfo)
+    temp_tar = package_path.with_suffix('.tar')
+    try:
+        with tarfile.open(temp_tar, "w:", format=tarfile.GNU_FORMAT) as tar:
+            for file_path in sorted(dist.rglob("*")):
+                if file_path.is_file():
+                    arcname = f"{dist.name}/{file_path.relative_to(dist)}"
+                    tar.add(file_path, arcname=arcname, filter=reset_tarinfo)
+        
+        # gzip compression using zlib
+        import zlib
+        gzip_header = b'\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\x03'
+        
+        with open(temp_tar, 'rb') as f_in, open(package_path, 'wb') as f_out:
+            f_out.write(gzip_header)
+            
+            compressor = zlib.compressobj(9, zlib.DEFLATED, -zlib.MAX_WBITS,
+                                        zlib.DEF_MEM_LEVEL, 0)
+            
+            data = f_in.read()
+            compressed = compressor.compress(data) + compressor.flush()
+            f_out.write(compressed)
+            
+            crc = zlib.crc32(data)
+            size = len(data)
+            f_out.write(struct.pack("<II", crc & 0xFFFFFFFF, size & 0xFFFFFFFF))
+            
+    finally:
+        if temp_tar.exists():
+            temp_tar.unlink()
 
     print(f"Created package for {current_system}: {package_name}")
 
@@ -242,7 +271,7 @@ def main():
         copy_documentation(doc_dir)
         write_version(system, dist, version)
         copy_compiler(system, lib_dir, bin_dir, cache_dir, project_dir)
-        create_package(system, project_dir, dist.parent, version)
+        create_package(system, project_dir, dist, version)
 
 
 if __name__ == "__main__":
