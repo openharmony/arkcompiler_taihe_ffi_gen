@@ -277,10 +277,10 @@ int main() {
       }
     };
 
-    auto tmp =
+    auto ocp =
         currying(callback<string(string_view, string_view)>::from<MyCallback>(
             "f"))("abc");
-    auto res = tmp("123");
+    auto res = ocp("123");
 
     std::cout << "res = " << res << std::endl;
   }

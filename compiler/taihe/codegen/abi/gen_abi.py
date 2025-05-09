@@ -22,7 +22,7 @@ from taihe.semantics.declarations import (
 class ABIHeadersGenerator(Backend):
     def __init__(self, ci: CompilerInstance):
         super().__init__(ci)
-        self.tm = ci.target_manager
+        self.oc = ci.output_config
         self.am = ci.analysis_manager
         self.pg = ci.package_group
 
@@ -32,7 +32,7 @@ class ABIHeadersGenerator(Backend):
 
     def gen_package_file(self, pkg: PackageDecl):
         pkg_abi_info = PackageABIInfo.get(self.am, pkg)
-        with CHeaderWriter(self.tm, f"include/{pkg_abi_info.header}") as pkg_abi_target:
+        with CHeaderWriter(self.oc, f"include/{pkg_abi_info.header}") as pkg_abi_target:
             for struct in pkg.structs:
                 struct_abi_info = StructABIInfo.get(self.am, struct)
                 self.gen_struct_decl_file(struct, struct_abi_info)
@@ -81,7 +81,7 @@ class ABIHeadersGenerator(Backend):
         struct_abi_info: StructABIInfo,
     ):
         with CHeaderWriter(
-            self.tm, f"include/{struct_abi_info.decl_header}"
+            self.oc, f"include/{struct_abi_info.decl_header}"
         ) as struct_abi_decl_target:
             struct_abi_decl_target.writeln(f"struct {struct_abi_info.mangled_name};")
 
@@ -91,7 +91,7 @@ class ABIHeadersGenerator(Backend):
         struct_abi_info: StructABIInfo,
     ):
         with CHeaderWriter(
-            self.tm, f"include/{struct_abi_info.impl_header}"
+            self.oc, f"include/{struct_abi_info.impl_header}"
         ) as struct_abi_defn_target:
             struct_abi_defn_target.add_include("taihe/common.h")
             struct_abi_defn_target.add_include(struct_abi_info.decl_header)
@@ -119,7 +119,7 @@ class ABIHeadersGenerator(Backend):
         union_abi_info: UnionABIInfo,
     ):
         with CHeaderWriter(
-            self.tm, f"include/{union_abi_info.decl_header}"
+            self.oc, f"include/{union_abi_info.decl_header}"
         ) as union_abi_decl_target:
             union_abi_decl_target.writeln(f"struct {union_abi_info.mangled_name};")
 
@@ -129,7 +129,7 @@ class ABIHeadersGenerator(Backend):
         union_abi_info: UnionABIInfo,
     ):
         with CHeaderWriter(
-            self.tm, f"include/{union_abi_info.impl_header}"
+            self.oc, f"include/{union_abi_info.impl_header}"
         ) as union_abi_defn_target:
             union_abi_defn_target.add_include("taihe/common.h")
             union_abi_defn_target.add_include(union_abi_info.decl_header)
@@ -166,7 +166,7 @@ class ABIHeadersGenerator(Backend):
         iface_abi_info: IfaceABIInfo,
     ):
         with CHeaderWriter(
-            self.tm, f"include/{iface_abi_info.decl_header}"
+            self.oc, f"include/{iface_abi_info.decl_header}"
         ) as iface_abi_decl_target:
             iface_abi_decl_target.writeln(f"struct {iface_abi_info.mangled_name};")
 
@@ -176,7 +176,7 @@ class ABIHeadersGenerator(Backend):
         iface_abi_info: IfaceABIInfo,
     ):
         with CHeaderWriter(
-            self.tm, f"include/{iface_abi_info.defn_header}"
+            self.oc, f"include/{iface_abi_info.defn_header}"
         ) as iface_abi_defn_target:
             iface_abi_defn_target.add_include("taihe/object.abi.h")
             iface_abi_defn_target.add_include(iface_abi_info.decl_header)
@@ -340,7 +340,7 @@ class ABIHeadersGenerator(Backend):
         iface_abi_info: IfaceABIInfo,
     ):
         with CHeaderWriter(
-            self.tm, f"include/{iface_abi_info.impl_header}"
+            self.oc, f"include/{iface_abi_info.impl_header}"
         ) as iface_abi_impl_target:
             iface_abi_impl_target.add_include(iface_abi_info.defn_header)
             self.gen_iface_methods(iface, iface_abi_info, iface_abi_impl_target)
@@ -381,7 +381,7 @@ class ABIHeadersGenerator(Backend):
 class ABISourcesGenerator(Backend):
     def __init__(self, ci: CompilerInstance):
         super().__init__(ci)
-        self.tm = ci.target_manager
+        self.oc = ci.output_config
         self.am = ci.analysis_manager
         self.pg = ci.package_group
 
@@ -391,7 +391,7 @@ class ABISourcesGenerator(Backend):
 
     def gen_package_file(self, pkg: PackageDecl):
         pkg_abi_info = PackageABIInfo.get(self.am, pkg)
-        with CSourceWriter(self.tm, f"src/{pkg_abi_info.src}") as pkg_abi_src_target:
+        with CSourceWriter(self.oc, f"src/{pkg_abi_info.src}") as pkg_abi_src_target:
             for iface in pkg.interfaces:
                 self.gen_iface_file(iface, pkg_abi_src_target)
 

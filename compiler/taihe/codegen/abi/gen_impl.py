@@ -10,7 +10,7 @@ from taihe.semantics.declarations import (
     PackageGroup,
 )
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
-from taihe.utils.outputs import OutputManager
+from taihe.utils.outputs import OutputConfig
 
 
 class PackageCImplInfo(AbstractAnalysis[PackageDecl]):
@@ -27,8 +27,8 @@ class GlobFuncCImplInfo(AbstractAnalysis[GlobFuncDecl]):
 
 
 class CImplHeadersGenerator:
-    def __init__(self, tm: OutputManager, am: AnalysisManager):
-        self.tm = tm
+    def __init__(self, oc: OutputConfig, am: AnalysisManager):
+        self.oc = oc
         self.am = am
 
     def generate(self, pg: PackageGroup):
@@ -40,7 +40,7 @@ class CImplHeadersGenerator:
         pkg_abi_info = PackageABIInfo.get(self.am, pkg)
 
         with CHeaderWriter(
-            self.tm, f"include/{pkg_c_impl_info.header}"
+            self.oc, f"include/{pkg_c_impl_info.header}"
         ) as pkg_c_impl_target:
             pkg_c_impl_target.add_include("taihe/common.h", pkg_abi_info.header)
 
@@ -83,8 +83,8 @@ class CImplHeadersGenerator:
 
 
 class CImplSourcesGenerator:
-    def __init__(self, tm: OutputManager, am: AnalysisManager):
-        self.tm = tm
+    def __init__(self, oc: OutputConfig, am: AnalysisManager):
+        self.oc = oc
         self.am = am
 
     def generate(self, pg: PackageGroup):
@@ -95,7 +95,7 @@ class CImplSourcesGenerator:
         pkg_c_impl_info = PackageCImplInfo.get(self.am, pkg)
 
         with CSourceWriter(
-            self.tm, f"temp/{pkg_c_impl_info.source}"
+            self.oc, f"temp/{pkg_c_impl_info.source}"
         ) as pkg_c_impl_target:
             pkg_c_impl_target.add_include(pkg_c_impl_info.header)
 

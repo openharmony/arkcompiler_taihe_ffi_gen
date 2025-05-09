@@ -8,6 +8,7 @@ from taihe.codegen.abi.analyses import (
     TypeABIInfo,
     UnionABIInfo,
 )
+from taihe.codegen.abi.writer import CHeaderWriter
 from taihe.codegen.cpp.analyses import (
     EnumCppInfo,
     IfaceCppInfo,
@@ -30,13 +31,12 @@ from taihe.semantics.types import (
     ScalarType,
     StringType,
 )
-from taihe.utils.outputs import COutputBuffer
 
 
 class CppHeadersGenerator(Backend):
     def __init__(self, ci: CompilerInstance):
         super().__init__(ci)
-        self.tm = ci.target_manager
+        self.oc = ci.output_config
         self.am = ci.analysis_manager
         self.pg = ci.package_group
 
@@ -46,33 +46,31 @@ class CppHeadersGenerator(Backend):
 
     def gen_package_files(self, pkg: PackageDecl):
         pkg_cpp_info = PackageCppInfo.get(self.am, pkg)
-        pkg_cpp_target = COutputBuffer.create(
-            self.tm, f"include/{pkg_cpp_info.header}", True
-        )
-        for enum in pkg.enums:
-            enum_abi_info = EnumABIInfo.get(self.am, enum)
-            enum_cpp_info = EnumCppInfo.get(self.am, enum)
-            self.gen_enum_file(enum, enum_abi_info, enum_cpp_info)
-            pkg_cpp_target.include(enum_cpp_info.header)
-        for struct in pkg.structs:
-            struct_abi_info = StructABIInfo.get(self.am, struct)
-            struct_cpp_info = StructCppInfo.get(self.am, struct)
-            self.gen_struct_decl_file(struct, struct_abi_info, struct_cpp_info)
-            self.gen_struct_impl_file(struct, struct_abi_info, struct_cpp_info)
-            pkg_cpp_target.include(struct_cpp_info.impl_header)
-        for union in pkg.unions:
-            union_abi_info = UnionABIInfo.get(self.am, union)
-            union_cpp_info = UnionCppInfo.get(self.am, union)
-            self.gen_union_decl_file(union, union_abi_info, union_cpp_info)
-            self.gen_union_impl_file(union, union_abi_info, union_cpp_info)
-            pkg_cpp_target.include(union_cpp_info.impl_header)
-        for iface in pkg.interfaces:
-            iface_abi_info = IfaceABIInfo.get(self.am, iface)
-            iface_cpp_info = IfaceCppInfo.get(self.am, iface)
-            self.gen_iface_decl_file(iface, iface_abi_info, iface_cpp_info)
-            self.gen_iface_defn_file(iface, iface_abi_info, iface_cpp_info)
-            self.gen_iface_impl_file(iface, iface_abi_info, iface_cpp_info)
-            pkg_cpp_target.include(iface_cpp_info.impl_header)
+        with CHeaderWriter(self.oc, f"include/{pkg_cpp_info.header}") as pkg_cpp_target:
+            for enum in pkg.enums:
+                enum_abi_info = EnumABIInfo.get(self.am, enum)
+                enum_cpp_info = EnumCppInfo.get(self.am, enum)
+                self.gen_enum_file(enum, enum_abi_info, enum_cpp_info)
+                pkg_cpp_target.add_include(enum_cpp_info.header)
+            for struct in pkg.structs:
+                struct_abi_info = StructABIInfo.get(self.am, struct)
+                struct_cpp_info = StructCppInfo.get(self.am, struct)
+                self.gen_struct_decl_file(struct, struct_abi_info, struct_cpp_info)
+                self.gen_struct_impl_file(struct, struct_abi_info, struct_cpp_info)
+                pkg_cpp_target.add_include(struct_cpp_info.impl_header)
+            for union in pkg.unions:
+                union_abi_info = UnionABIInfo.get(self.am, union)
+                union_cpp_info = UnionCppInfo.get(self.am, union)
+                self.gen_union_decl_file(union, union_abi_info, union_cpp_info)
+                self.gen_union_impl_file(union, union_abi_info, union_cpp_info)
+                pkg_cpp_target.add_include(union_cpp_info.impl_header)
+            for iface in pkg.interfaces:
+                iface_abi_info = IfaceABIInfo.get(self.am, iface)
+                iface_cpp_info = IfaceCppInfo.get(self.am, iface)
+                self.gen_iface_decl_file(iface, iface_abi_info, iface_cpp_info)
+                self.gen_iface_defn_file(iface, iface_abi_info, iface_cpp_info)
+                self.gen_iface_impl_file(iface, iface_abi_info, iface_cpp_info)
+                pkg_cpp_target.add_include(iface_cpp_info.impl_header)
 
     def gen_enum_file(
         self,
@@ -80,59 +78,59 @@ class CppHeadersGenerator(Backend):
         enum_abi_info: EnumABIInfo,
         enum_cpp_info: EnumCppInfo,
     ):
-        enum_cpp_target = COutputBuffer.create(
-            self.tm, f"include/{enum_cpp_info.header}", True
-        )
-        enum_cpp_target.include("taihe/common.hpp")
-        self.gen_enum_defn(
-            enum,
-            enum_abi_info,
-            enum_cpp_info,
-            enum_cpp_target,
-        )
-        self.gen_enum_same(
-            enum,
-            enum_abi_info,
-            enum_cpp_info,
-            enum_cpp_target,
-        )
-        self.gen_enum_hash(
-            enum,
-            enum_abi_info,
-            enum_cpp_info,
-            enum_cpp_target,
-        )
-        self.gen_enum_type_traits(
-            enum,
-            enum_abi_info,
-            enum_cpp_info,
-            enum_cpp_target,
-        )
+        with CHeaderWriter(
+            self.oc, f"include/{enum_cpp_info.header}"
+        ) as enum_cpp_target:
+            enum_cpp_target.add_include("taihe/common.hpp")
+            self.gen_enum_defn(
+                enum,
+                enum_abi_info,
+                enum_cpp_info,
+                enum_cpp_target,
+            )
+            self.gen_enum_same(
+                enum,
+                enum_abi_info,
+                enum_cpp_info,
+                enum_cpp_target,
+            )
+            self.gen_enum_hash(
+                enum,
+                enum_abi_info,
+                enum_cpp_info,
+                enum_cpp_target,
+            )
+            self.gen_enum_type_traits(
+                enum,
+                enum_abi_info,
+                enum_cpp_info,
+                enum_cpp_target,
+            )
 
     def gen_enum_defn(
         self,
         enum: EnumDecl,
         enum_abi_info: EnumABIInfo,
         enum_cpp_info: EnumCppInfo,
-        enum_cpp_target: COutputBuffer,
+        enum_cpp_target: CHeaderWriter,
     ):
-        enum_cpp_target.writeln(
+        enum_cpp_target.writelns(
             f"namespace {enum_cpp_info.namespace} {{",
             f"struct {enum_cpp_info.name} {{",
         )
         # key type
-        enum_cpp_target.writeln(
+        enum_cpp_target.writelns(
             f"    enum class key_t: {enum_abi_info.abi_type} {{",
         )
         for item in enum.items:
-            enum_cpp_target.writeln(
+            enum_cpp_target.writelns(
                 f"        {item.name},",
             )
-        enum_cpp_target.writeln(
+        enum_cpp_target.writelns(
             f"    }};",
         )
         # basic methods
-        enum_cpp_target.writeln(
+        enum_cpp_target.writelns(
             f"    {enum_cpp_info.name}(key_t key) : key(key) {{}}",
             f"    {enum_cpp_info.name}({enum_cpp_info.name} const& other) : key(other.key) {{}}",
             f"    {enum_cpp_info.name}& operator=({enum_cpp_info.name} other) {{",
@@ -153,7 +151,7 @@ class CppHeadersGenerator(Backend):
             enum_cpp_target,
         )
         # properties
-        enum_cpp_target.writeln(
+        enum_cpp_target.writelns(
             f"private:",
             f"    key_t key;",
             f"}};",
@@ -165,9 +163,9 @@ class CppHeadersGenerator(Backend):
         enum: EnumDecl,
         enum_abi_info: EnumABIInfo,
         enum_cpp_info: EnumCppInfo,
-        enum_cpp_target: COutputBuffer,
+        enum_cpp_target: CHeaderWriter,
     ):
-        enum_cpp_target.writeln(
+        enum_cpp_target.writelns(
             f"    key_t get_key() const {{",
             f"        return this->key;",
             f"    }}",
@@ -178,7 +176,7 @@ class CppHeadersGenerator(Backend):
         enum: EnumDecl,
         enum_abi_info: EnumABIInfo,
         enum_cpp_info: EnumCppInfo,
-        enum_cpp_target: COutputBuffer,
+        enum_cpp_target: CHeaderWriter,
     ):
         match enum.ty_ref.resolved_ty:
             case StringType():
@@ -188,22 +186,22 @@ class CppHeadersGenerator(Backend):
                 as_owner = ty_cpp_info.as_owner
             case _:
                 raise ValueError("invalid enum type")
-        enum_cpp_target.writeln(
+        enum_cpp_target.writelns(
             f"    static constexpr {as_owner} table[] = {{",
         )
         for item in enum.items:
-            enum_cpp_target.writeln(
+            enum_cpp_target.writelns(
                 f"        {dumps(item.value)},",
             )
-        enum_cpp_target.writeln(
+        enum_cpp_target.writelns(
             f"    }};",
         )
-        enum_cpp_target.writeln(
+        enum_cpp_target.writelns(
             f"    {as_owner} get_value() const {{",
             f"        return table[({enum_abi_info.abi_type})key];",
             f"    }}",
         )
-        enum_cpp_target.writeln(
+        enum_cpp_target.writelns(
             f"    operator {as_owner}() const {{",
             f"        return table[({enum_abi_info.abi_type})key];",
             f"    }}",
@@ -214,10 +212,10 @@ class CppHeadersGenerator(Backend):
         enum: EnumDecl,
         enum_abi_info: EnumABIInfo,
         enum_cpp_info: EnumCppInfo,
-        enum_cpp_target: COutputBuffer,
+        enum_cpp_target: CHeaderWriter,
     ):
         # others
-        enum_cpp_target.writeln(
+        enum_cpp_target.writelns(
             f"namespace taihe {{",
             f"inline bool same_impl(adl_helper_t, {enum_cpp_info.full_name} lhs, {enum_cpp_info.full_name} rhs) {{",
             f"    return lhs.get_key() == rhs.get_key();",
@@ -230,9 +228,9 @@ class CppHeadersGenerator(Backend):
         enum: EnumDecl,
         enum_abi_info: EnumABIInfo,
         enum_cpp_info: EnumCppInfo,
-        enum_cpp_target: COutputBuffer,
+        enum_cpp_target: CHeaderWriter,
     ):
-        enum_cpp_target.writeln(
+        enum_cpp_target.writelns(
             f"namespace taihe {{",
             f"inline auto hash_impl(adl_helper_t, {enum_cpp_info.as_param} val) -> ::std::size_t {{",
             f"    return ::std::hash<{enum_abi_info.abi_type}>{{}}(({enum_abi_info.abi_type})val.get_key());",
@@ -245,9 +243,9 @@ class CppHeadersGenerator(Backend):
         enum: EnumDecl,
         enum_abi_info: EnumABIInfo,
         enum_cpp_info: EnumCppInfo,
-        enum_cpp_target: COutputBuffer,
+        enum_cpp_target: CHeaderWriter,
     ):
-        enum_cpp_target.writeln(
+        enum_cpp_target.writelns(
             f"namespace taihe {{",
             f"template<>",
             f"struct as_abi<{enum_cpp_info.full_name}> {{",
@@ -266,14 +264,14 @@ class CppHeadersGenerator(Backend):
         union_abi_info: UnionABIInfo,
         union_cpp_info: UnionCppInfo,
     ):
-        union_cpp_decl_target = COutputBuffer.create(
-            self.tm, f"include/{union_cpp_info.decl_header}", True
-        )
-        union_cpp_decl_target.writeln(
-            f"namespace {union_cpp_info.namespace} {{",
-            f"struct {union_cpp_info.name};",
-            f"}}",
-        )
+        with CHeaderWriter(
+            self.oc, f"include/{union_cpp_info.decl_header}"
+        ) as union_cpp_decl_target:
+            union_cpp_decl_target.writelns(
+                f"namespace {union_cpp_info.namespace} {{",
+                f"struct {union_cpp_info.name};",
+                f"}}",
+            )
 
     def gen_union_impl_file(
         self,
@@ -281,61 +279,61 @@ class CppHeadersGenerator(Backend):
         union_abi_info: UnionABIInfo,
         union_cpp_info: UnionCppInfo,
     ):
-        union_cpp_defn_target = COutputBuffer.create(
-            self.tm, f"include/{union_cpp_info.impl_header}", True
-        )
-        union_cpp_defn_target.include("taihe/common.hpp")
-        union_cpp_defn_target.include(union_cpp_info.decl_header)
-        union_cpp_defn_target.include(union_abi_info.impl_header)
-        self.gen_union_defn(
-            union,
-            union_abi_info,
-            union_cpp_info,
-            union_cpp_defn_target,
-        )
-        self.gen_union_same(
-            union,
-            union_abi_info,
-            union_cpp_info,
-            union_cpp_defn_target,
-        )
-        self.gen_union_hash(
-            union,
-            union_abi_info,
-            union_cpp_info,
-            union_cpp_defn_target,
-        )
-        self.gen_union_type_traits(
-            union,
-            union_abi_info,
-            union_cpp_info,
-            union_cpp_defn_target,
-        )
+        with CHeaderWriter(
+            self.oc, f"include/{union_cpp_info.impl_header}"
+        ) as union_cpp_defn_target:
+            union_cpp_defn_target.add_include("taihe/common.hpp")
+            union_cpp_defn_target.add_include(union_cpp_info.decl_header)
+            union_cpp_defn_target.add_include(union_abi_info.impl_header)
+            self.gen_union_defn(
+                union,
+                union_abi_info,
+                union_cpp_info,
+                union_cpp_defn_target,
+            )
+            self.gen_union_same(
+                union,
+                union_abi_info,
+                union_cpp_info,
+                union_cpp_defn_target,
+            )
+            self.gen_union_hash(
+                union,
+                union_abi_info,
+                union_cpp_info,
+                union_cpp_defn_target,
+            )
+            self.gen_union_type_traits(
+                union,
+                union_abi_info,
+                union_cpp_info,
+                union_cpp_defn_target,
+            )
 
     def gen_union_defn(
         self,
         union: UnionDecl,
         union_abi_info: UnionABIInfo,
         union_cpp_info: UnionCppInfo,
-        union_cpp_defn_target: COutputBuffer,
+        union_cpp_defn_target: CHeaderWriter,
     ):
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"namespace {union_cpp_info.namespace} {{",
             f"struct {union_cpp_info.name} {{",
         )
         # tag type
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"    enum class tag_t : {union_abi_info.tag_type} {{",
         )
         for field in union.fields:
-            union_cpp_defn_target.writeln(
+            union_cpp_defn_target.writelns(
                 f"        {field.name},",
             )
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"    }};",
         )
         # storage type
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"    union storage_t {{",
             f"        storage_t() {{}}",
             f"        ~storage_t() {{}}",
@@ -344,53 +342,53 @@ class CppHeadersGenerator(Backend):
             if field.ty_ref is None:
                 continue
             type_cpp_info = TypeCppInfo.get(self.am, field.ty_ref.resolved_ty)
-            union_cpp_defn_target.include(*type_cpp_info.impl_headers)
-            union_cpp_defn_target.writeln(
+            union_cpp_defn_target.add_include(*type_cpp_info.impl_headers)
+            union_cpp_defn_target.writelns(
                 f"        {type_cpp_info.as_owner} {field.name};",
             )
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"    }};",
         )
         # copy constructor
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"    {union_cpp_info.name}({union_cpp_info.name} const& other) : m_tag(other.m_tag) {{",
             f"        switch (m_tag) {{",
         )
         for field in union.fields:
             if field.ty_ref is None:
                 continue
-            union_cpp_defn_target.writeln(
+            union_cpp_defn_target.writelns(
                 f"        case tag_t::{field.name}:",
                 f"            new (&m_data.{field.name}) decltype(m_data.{field.name})(other.m_data.{field.name});",
                 f"            break;",
             )
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"        default:",
             f"            break;",
             f"        }}",
             f"    }}",
         )
         # move constructor
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"    {union_cpp_info.name}({union_cpp_info.name}&& other) : m_tag(other.m_tag) {{",
             f"        switch (m_tag) {{",
         )
         for field in union.fields:
             if field.ty_ref is None:
                 continue
-            union_cpp_defn_target.writeln(
+            union_cpp_defn_target.writelns(
                 f"        case tag_t::{field.name}:",
                 f"            new (&m_data.{field.name}) decltype(m_data.{field.name})(::std::move(other.m_data.{field.name}));",
                 f"            break;",
             )
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"        default:",
             f"            break;",
             f"        }}",
             f"    }}",
         )
         # copy assignment
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"    {union_cpp_info.name}& operator=({union_cpp_info.name} const& other) {{",
             f"        if (this != &other) {{",
             f"            ::std::destroy_at(this);",
@@ -400,7 +398,7 @@ class CppHeadersGenerator(Backend):
             f"    }}",
         )
         # move assignment
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"    {union_cpp_info.name}& operator=({union_cpp_info.name}&& other) {{",
             f"        if (this != &other) {{",
             f"            ::std::destroy_at(this);",
@@ -410,19 +408,19 @@ class CppHeadersGenerator(Backend):
             f"    }}",
         )
         # destructor
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"    ~{union_cpp_info.name}() {{",
             f"        switch (m_tag) {{",
         )
         for field in union.fields:
             if field.ty_ref is None:
                 continue
-            union_cpp_defn_target.writeln(
+            union_cpp_defn_target.writelns(
                 f"        case tag_t::{field.name}:",
                 f"            ::std::destroy_at(&m_data.{field.name});",
                 f"            break;",
             )
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"        default:",
             f"            break;",
             f"        }}",
@@ -435,7 +433,7 @@ class CppHeadersGenerator(Backend):
             union_cpp_defn_target,
         )
         # properties
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"private:",
             f"    tag_t m_tag;",
             f"    storage_t m_data;",
@@ -448,30 +446,30 @@ class CppHeadersGenerator(Backend):
         union: UnionDecl,
         union_abi_info: UnionABIInfo,
         union_cpp_info: UnionCppInfo,
-        union_cpp_defn_target: COutputBuffer,
+        union_cpp_defn_target: CHeaderWriter,
     ):
         # in place constructor
         for field in union.fields:
             if field.ty_ref is None:
-                union_cpp_defn_target.writeln(
+                union_cpp_defn_target.writelns(
                     f"    {union_cpp_info.name}(::taihe::static_tag_t<tag_t::{field.name}>) : m_tag(tag_t::{field.name}) {{}}",
                 )
             else:
-                union_cpp_defn_target.writeln(
+                union_cpp_defn_target.writelns(
                     f"    template<typename... Args>",
                     f"    {union_cpp_info.name}(::taihe::static_tag_t<tag_t::{field.name}>, Args&&... args) : m_tag(tag_t::{field.name}) {{",
                     f"        new (&m_data.{field.name}) decltype(m_data.{field.name})(::std::forward<Args>(args)...);",
                     f"    }}",
                 )
         # creator
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"    template<tag_t tag, typename... Args>",
             f"    static {union_cpp_info.name} make(Args&&... args) {{",
             f"        return {union_cpp_info.name}(::taihe::static_tag<tag>, ::std::forward<Args>(args)...);",
             f"    }}",
         )
         # emplacement
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"    template<tag_t tag, typename... Args>",
             f"    {union_cpp_info.name} const& emplace(Args&&... args) {{",
             f"        ::std::destroy_at(this);",
@@ -480,51 +478,51 @@ class CppHeadersGenerator(Backend):
             f"    }}",
         )
         # non-const reference getter
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"    template<tag_t tag>",
             f"    auto& get_ref() {{",
         )
         for field in union.fields:
             if field.ty_ref:
-                union_cpp_defn_target.writeln(
+                union_cpp_defn_target.writelns(
                     f"        if constexpr (tag == tag_t::{field.name}) {{",
                     f"            return m_data.{field.name};",
                     f"        }}",
                 )
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"    }}",
         )
         # non-const pointer getter
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"    template<tag_t tag>",
             f"    auto* get_ptr() {{",
             f"        return m_tag == tag ? &get_ref<tag>() : nullptr;",
             f"    }}",
         )
         # const reference getter
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"    template<tag_t tag>",
             f"    auto const& get_ref() const {{",
         )
         for field in union.fields:
             if field.ty_ref:
-                union_cpp_defn_target.writeln(
+                union_cpp_defn_target.writelns(
                     f"        if constexpr (tag == tag_t::{field.name}) {{",
                     f"            return m_data.{field.name};",
                     f"        }}",
                 )
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"    }}",
         )
         # const pointer getter
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"    template<tag_t tag>",
             f"    auto const* get_ptr() const {{",
             f"        return m_tag == tag ? &get_ref<tag>() : nullptr;",
             f"    }}",
         )
         # checker
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"    template<tag_t tag>",
             f"    bool holds() const {{",
             f"        return m_tag == tag;",
@@ -534,7 +532,7 @@ class CppHeadersGenerator(Backend):
             f"    }}",
         )
         # non_const visitor
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"    template<typename Visitor>",
             f"    auto accept_template(Visitor&& visitor) {{",
             f"        switch (m_tag) {{",
@@ -543,16 +541,16 @@ class CppHeadersGenerator(Backend):
             result = f"::taihe::static_tag<tag_t::{field.name}>"
             if field.ty_ref:
                 result += f", m_data.{field.name}"
-            union_cpp_defn_target.writeln(
+            union_cpp_defn_target.writelns(
                 f"        case tag_t::{field.name}:",
                 f"            return visitor({result});",
             )
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"        }}",
             f"    }}",
         )
         # const visitor
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"    template<typename Visitor>",
             f"    auto accept_template(Visitor&& visitor) const {{",
             f"        switch (m_tag) {{",
@@ -561,17 +559,17 @@ class CppHeadersGenerator(Backend):
             result = f"::taihe::static_tag<tag_t::{field.name}>"
             if field.ty_ref:
                 result += f", m_data.{field.name}"
-            union_cpp_defn_target.writeln(
+            union_cpp_defn_target.writelns(
                 f"        case tag_t::{field.name}:",
                 f"            return visitor({result});",
             )
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"        }}",
             f"    }}",
         )
         # named methods
         for field in union.fields:
-            union_cpp_defn_target.writeln(
+            union_cpp_defn_target.writelns(
                 f"    template<typename... Args>",
                 f"    static {union_cpp_info.name} make_{field.name}(Args&&... args) {{",
                 f"        return make<tag_t::{field.name}>(::std::forward<Args>(args)...);",
@@ -585,7 +583,7 @@ class CppHeadersGenerator(Backend):
                 f"    }}",
             )
             if field.ty_ref:
-                union_cpp_defn_target.writeln(
+                union_cpp_defn_target.writelns(
                     f"    auto* get_{field.name}_ptr() {{",
                     f"        return get_ptr<tag_t::{field.name}>();",
                     f"    }}",
@@ -600,34 +598,34 @@ class CppHeadersGenerator(Backend):
                     f"    }}",
                 )
         # named visitor
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"    template<typename Visitor>",
             f"    auto accept(Visitor&& visitor) {{",
             f"        switch (m_tag) {{",
         )
         for field in union.fields:
             result = "" if field.ty_ref is None else f"m_data.{field.name}"
-            union_cpp_defn_target.writeln(
+            union_cpp_defn_target.writelns(
                 f"        case tag_t::{field.name}:",
                 f"            return visitor.{field.name}({result});",
             )
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"        }}",
             f"    }}",
         )
         # named const visitor
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"    template<typename Visitor>",
             f"    auto accept(Visitor&& visitor) const {{",
             f"        switch (m_tag) {{",
         )
         for field in union.fields:
             result = "" if field.ty_ref is None else f"m_data.{field.name}"
-            union_cpp_defn_target.writeln(
+            union_cpp_defn_target.writelns(
                 f"        case tag_t::{field.name}:",
                 f"            return visitor.{field.name}({result});",
             )
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"        }}",
             f"    }}",
         )
@@ -637,7 +635,7 @@ class CppHeadersGenerator(Backend):
         union: UnionDecl,
         union_abi_info: UnionABIInfo,
         union_cpp_info: UnionCppInfo,
-        union_cpp_defn_target: COutputBuffer,
+        union_cpp_defn_target: CHeaderWriter,
     ):
         result = "false"
         for field in union.fields:
@@ -645,7 +643,7 @@ class CppHeadersGenerator(Backend):
             if field.ty_ref:
                 cond = f"{cond} && same(lhs.get_{field.name}_ref(), rhs.get_{field.name}_ref())"
             result = f"{result} || ({cond})"
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"namespace taihe {{",
             f"inline bool same_impl(adl_helper_t, {union_cpp_info.as_param} lhs, {union_cpp_info.as_param} rhs) {{",
             f"    return {result};",
@@ -658,9 +656,9 @@ class CppHeadersGenerator(Backend):
         union: UnionDecl,
         union_abi_info: UnionABIInfo,
         union_cpp_info: UnionCppInfo,
-        union_cpp_defn_target: COutputBuffer,
+        union_cpp_defn_target: CHeaderWriter,
     ):
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"namespace taihe {{",
             f"inline auto hash_impl(adl_helper_t, {union_cpp_info.as_param} val) -> ::std::size_t {{",
             f"    switch (val.get_tag()) {{",
@@ -670,12 +668,12 @@ class CppHeadersGenerator(Backend):
             val = "0x9e3779b9 + (seed << 6) + (seed >> 2)"
             if field.ty_ref:
                 val = f"{val} + hash(val.get_{field.name}_ref())"
-            union_cpp_defn_target.writeln(
+            union_cpp_defn_target.writelns(
                 f"    case {union_cpp_info.full_name}::tag_t::{field.name}:",
                 f"        seed = (::std::size_t){union_cpp_info.full_name}::tag_t::{field.name};",
                 f"        return seed ^ ({val});",
             )
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"    }}",
             f"}}",
             f"}}",
@@ -686,9 +684,9 @@ class CppHeadersGenerator(Backend):
         union: UnionDecl,
         union_abi_info: UnionABIInfo,
         union_cpp_info: UnionCppInfo,
-        union_cpp_defn_target: COutputBuffer,
+        union_cpp_defn_target: CHeaderWriter,
     ):
-        union_cpp_defn_target.writeln(
+        union_cpp_defn_target.writelns(
             f"namespace taihe {{",
             f"template<>",
             f"struct as_abi<{union_cpp_info.as_owner}> {{",
@@ -711,14 +709,15 @@ class CppHeadersGenerator(Backend):
         struct_abi_info: StructABIInfo,
         struct_cpp_info: StructCppInfo,
     ):
-        struct_cpp_decl_target = COutputBuffer.create(
-            self.tm, f"include/{struct_cpp_info.decl_header}", True
-        )
-        struct_cpp_decl_target.writeln(
-            f"namespace {struct_cpp_info.namespace} {{",
-            f"struct {struct_cpp_info.name};",
-            f"}}",
-        )
+        with CHeaderWriter(
+            self.oc, f"include/{struct_cpp_info.decl_header}"
+        ) as struct_cpp_decl_target:
+            struct_cpp_decl_target.add_include("taihe/common.hpp")
+            struct_cpp_decl_target.writelns(
+                f"namespace {struct_cpp_info.namespace} {{",
+                f"struct {struct_cpp_info.name};",
+                f"}}",
+            )
 
     def gen_struct_impl_file(
         self,
@@ -726,56 +725,56 @@ class CppHeadersGenerator(Backend):
         struct_abi_info: StructABIInfo,
         struct_cpp_info: StructCppInfo,
     ):
-        struct_cpp_defn_target = COutputBuffer.create(
-            self.tm, f"include/{struct_cpp_info.impl_header}", True
-        )
-        struct_cpp_defn_target.include("taihe/common.hpp")
-        struct_cpp_defn_target.include(struct_cpp_info.decl_header)
-        struct_cpp_defn_target.include(struct_abi_info.impl_header)
-        self.gen_struct_defn(
-            struct,
-            struct_abi_info,
-            struct_cpp_info,
-            struct_cpp_defn_target,
-        )
-        self.gen_struct_hash(
-            struct,
-            struct_abi_info,
-            struct_cpp_info,
-            struct_cpp_defn_target,
-        )
-        self.gen_struct_same(
-            struct,
-            struct_abi_info,
-            struct_cpp_info,
-            struct_cpp_defn_target,
-        )
-        self.gen_struct_type_traits(
-            struct,
-            struct_abi_info,
-            struct_cpp_info,
-            struct_cpp_defn_target,
-        )
+        with CHeaderWriter(
+            self.oc, f"include/{struct_cpp_info.impl_header}"
+        ) as struct_cpp_defn_target:
+            struct_cpp_defn_target.add_include("taihe/common.hpp")
+            struct_cpp_defn_target.add_include(struct_cpp_info.decl_header)
+            struct_cpp_defn_target.add_include(struct_abi_info.impl_header)
+            self.gen_struct_defn(
+                struct,
+                struct_abi_info,
+                struct_cpp_info,
+                struct_cpp_defn_target,
+            )
+            self.gen_struct_hash(
+                struct,
+                struct_abi_info,
+                struct_cpp_info,
+                struct_cpp_defn_target,
+            )
+            self.gen_struct_same(
+                struct,
+                struct_abi_info,
+                struct_cpp_info,
+                struct_cpp_defn_target,
+            )
+            self.gen_struct_type_traits(
+                struct,
+                struct_abi_info,
+                struct_cpp_info,
+                struct_cpp_defn_target,
+            )
 
     def gen_struct_defn(
         self,
         struct: StructDecl,
         struct_abi_info: StructABIInfo,
         struct_cpp_info: StructCppInfo,
-        struct_cpp_defn_target: COutputBuffer,
+        struct_cpp_defn_target: CHeaderWriter,
     ):
-        struct_cpp_defn_target.writeln(
+        struct_cpp_defn_target.writelns(
             f"namespace {struct_cpp_info.namespace} {{",
             f"struct {struct_cpp_info.name} {{",
         )
         for field in struct.fields:
             type_cpp_info = TypeCppInfo.get(self.am, field.ty_ref.resolved_ty)
-            struct_cpp_defn_target.include(*type_cpp_info.impl_headers)
-            struct_cpp_defn_target.writeln(
+            struct_cpp_defn_target.add_include(*type_cpp_info.impl_headers)
+            struct_cpp_defn_target.writelns(
                 f"    {type_cpp_info.as_owner} {field.name};",
             )
         # finally
-        struct_cpp_defn_target.writeln(
+        struct_cpp_defn_target.writelns(
             f"}};",
             f"}}",
         )
@@ -785,12 +784,12 @@ class CppHeadersGenerator(Backend):
         struct: StructDecl,
         struct_abi_info: StructABIInfo,
         struct_cpp_info: StructCppInfo,
-        struct_cpp_defn_target: COutputBuffer,
+        struct_cpp_defn_target: CHeaderWriter,
     ):
         result = "true"
         for field in struct.fields:
             result = f"{result} && same(lhs.{field.name}, rhs.{field.name})"
-        struct_cpp_defn_target.writeln(
+        struct_cpp_defn_target.writelns(
             f"namespace taihe {{",
             f"inline bool same_impl(adl_helper_t, {struct_cpp_info.as_param} lhs, {struct_cpp_info.as_param} rhs) {{",
             f"    return {result};",
@@ -803,18 +802,18 @@ class CppHeadersGenerator(Backend):
         struct: StructDecl,
         struct_abi_info: StructABIInfo,
         struct_cpp_info: StructCppInfo,
-        struct_cpp_defn_target: COutputBuffer,
+        struct_cpp_defn_target: CHeaderWriter,
     ):
-        struct_cpp_defn_target.writeln(
+        struct_cpp_defn_target.writelns(
             f"namespace taihe {{",
             f"inline auto hash_impl(adl_helper_t, {struct_cpp_info.as_param} val) -> ::std::size_t {{",
             f"    ::std::size_t seed = 0;",
         )
         for field in struct.fields:
-            struct_cpp_defn_target.writeln(
+            struct_cpp_defn_target.writelns(
                 f"    seed ^= hash(val.{field.name}) + 0x9e3779b9 + (seed << 6) + (seed >> 2);",
             )
-        struct_cpp_defn_target.writeln(
+        struct_cpp_defn_target.writelns(
             f"    return seed;",
             f"}}",
             f"}}",
@@ -825,9 +824,9 @@ class CppHeadersGenerator(Backend):
         struct: StructDecl,
         struct_abi_info: StructABIInfo,
         struct_cpp_info: StructCppInfo,
-        struct_cpp_defn_target: COutputBuffer,
+        struct_cpp_defn_target: CHeaderWriter,
     ):
-        struct_cpp_defn_target.writeln(
+        struct_cpp_defn_target.writelns(
             f"namespace taihe {{",
             f"template<>",
             f"struct as_abi<{struct_cpp_info.as_owner}> {{",
@@ -850,17 +849,17 @@ class CppHeadersGenerator(Backend):
         iface_abi_info: IfaceABIInfo,
         iface_cpp_info: IfaceCppInfo,
     ):
-        iface_cpp_decl_target = COutputBuffer.create(
-            self.tm, f"include/{iface_cpp_info.decl_header}", True
-        )
-        iface_cpp_decl_target.writeln(
-            f"namespace {iface_cpp_info.weakspace} {{",
-            f"struct {iface_cpp_info.weak_name};",
-            f"}}",
-            f"namespace {iface_cpp_info.namespace} {{",
-            f"struct {iface_cpp_info.norm_name};",
-            f"}}",
-        )
+        with CHeaderWriter(
+            self.oc, f"include/{iface_cpp_info.decl_header}"
+        ) as iface_cpp_decl_target:
+            iface_cpp_decl_target.writelns(
+                f"namespace {iface_cpp_info.weakspace} {{",
+                f"struct {iface_cpp_info.weak_name};",
+                f"}}",
+                f"namespace {iface_cpp_info.namespace} {{",
+                f"struct {iface_cpp_info.norm_name};",
+                f"}}",
+            )
 
     def gen_iface_defn_file(
         self,
@@ -868,39 +867,39 @@ class CppHeadersGenerator(Backend):
         iface_abi_info: IfaceABIInfo,
         iface_cpp_info: IfaceCppInfo,
     ):
-        iface_cpp_defn_target = COutputBuffer.create(
-            self.tm, f"include/{iface_cpp_info.defn_header}", True
-        )
-        iface_cpp_defn_target.include("taihe/object.hpp")
-        iface_cpp_defn_target.include(iface_cpp_info.decl_header)
-        iface_cpp_defn_target.include(iface_abi_info.defn_header)
-        self.gen_iface_view_defn(
-            iface,
-            iface_abi_info,
-            iface_cpp_info,
-            iface_cpp_defn_target,
-        )
-        self.gen_iface_holder_defn(
-            iface,
-            iface_abi_info,
-            iface_cpp_info,
-            iface_cpp_defn_target,
-        )
-        self.gen_iface_type_traits(
-            iface,
-            iface_abi_info,
-            iface_cpp_info,
-            iface_cpp_defn_target,
-        )
+        with CHeaderWriter(
+            self.oc, f"include/{iface_cpp_info.defn_header}"
+        ) as iface_cpp_defn_target:
+            iface_cpp_defn_target.add_include("taihe/object.hpp")
+            iface_cpp_defn_target.add_include(iface_cpp_info.decl_header)
+            iface_cpp_defn_target.add_include(iface_abi_info.defn_header)
+            self.gen_iface_view_defn(
+                iface,
+                iface_abi_info,
+                iface_cpp_info,
+                iface_cpp_defn_target,
+            )
+            self.gen_iface_holder_defn(
+                iface,
+                iface_abi_info,
+                iface_cpp_info,
+                iface_cpp_defn_target,
+            )
+            self.gen_iface_type_traits(
+                iface,
+                iface_abi_info,
+                iface_cpp_info,
+                iface_cpp_defn_target,
+            )
 
     def gen_iface_view_defn(
         self,
         iface: IfaceDecl,
         iface_abi_info: IfaceABIInfo,
         iface_cpp_info: IfaceCppInfo,
-        iface_cpp_defn_target: COutputBuffer,
+        iface_cpp_defn_target: CHeaderWriter,
     ):
-        iface_cpp_defn_target.writeln(
+        iface_cpp_defn_target.writelns(
             f"namespace {iface_cpp_info.weakspace} {{",
             f"struct {iface_cpp_info.weak_name} {{",
             f"    static constexpr bool is_holder = false;",
@@ -961,7 +960,7 @@ class CppHeadersGenerator(Backend):
             iface_cpp_info,
             iface_cpp_defn_target,
         )
-        iface_cpp_defn_target.writeln(
+        iface_cpp_defn_target.writelns(
             f"}};",
             f"}}",
         )
@@ -971,9 +970,9 @@ class CppHeadersGenerator(Backend):
         iface: IfaceDecl,
         iface_abi_info: IfaceABIInfo,
         iface_cpp_info: IfaceCppInfo,
-        iface_cpp_defn_target: COutputBuffer,
+        iface_cpp_defn_target: CHeaderWriter,
     ):
-        iface_cpp_defn_target.writeln(
+        iface_cpp_defn_target.writelns(
             f"    explicit {iface_cpp_info.weak_name}(::taihe::data_view other)",
             f"        : {iface_cpp_info.weak_name}({iface_abi_info.dynamic_cast}(other.data_ptr)) {{}}",
             f"    operator ::taihe::data_view() const& {{",
@@ -991,14 +990,14 @@ class CppHeadersGenerator(Backend):
         iface: IfaceDecl,
         iface_abi_info: IfaceABIInfo,
         iface_cpp_info: IfaceCppInfo,
-        iface_cpp_defn_target: COutputBuffer,
+        iface_cpp_defn_target: CHeaderWriter,
     ):
         for ancestor, info in iface_abi_info.ancestor_dict.items():
             if info.offset == 0:
                 continue
             ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
-            iface_cpp_defn_target.include(ancestor_cpp_info.defn_header)
-            iface_cpp_defn_target.writeln(
+            iface_cpp_defn_target.add_include(ancestor_cpp_info.defn_header)
+            iface_cpp_defn_target.writelns(
                 f"    operator {ancestor_cpp_info.full_weak_name}() const& {{",
                 f"        {iface_abi_info.as_owner} ret_handle = m_handle;",
                 f"        return {ancestor_cpp_info.full_weak_name}({info.static_cast}(ret_handle));",
@@ -1014,9 +1013,9 @@ class CppHeadersGenerator(Backend):
         iface: IfaceDecl,
         iface_abi_info: IfaceABIInfo,
         iface_cpp_info: IfaceCppInfo,
-        iface_cpp_defn_target: COutputBuffer,
+        iface_cpp_defn_target: CHeaderWriter,
     ):
-        iface_cpp_defn_target.writeln(
+        iface_cpp_defn_target.writelns(
             f"    struct virtual_type {{",
         )
         for method in iface.methods:
@@ -1024,19 +1023,19 @@ class CppHeadersGenerator(Backend):
             params_cpp = []
             for param in method.params:
                 type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
-                iface_cpp_defn_target.include(*type_cpp_info.decl_headers)
+                iface_cpp_defn_target.add_include(*type_cpp_info.decl_headers)
                 params_cpp.append(f"{type_cpp_info.as_param} {param.name}")
             params_cpp_str = ", ".join(params_cpp)
             if return_ty_ref := method.return_ty_ref:
                 type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
-                iface_cpp_defn_target.include(*type_cpp_info.decl_headers)
+                iface_cpp_defn_target.add_include(*type_cpp_info.decl_headers)
                 cpp_return_ty_name = type_cpp_info.as_owner
             else:
                 cpp_return_ty_name = "void"
-            iface_cpp_defn_target.writeln(
+            iface_cpp_defn_target.writelns(
                 f"        {cpp_return_ty_name} {method_cpp_info.call_name}({params_cpp_str}) const&;",
             )
-        iface_cpp_defn_target.writeln(
+        iface_cpp_defn_target.writelns(
             f"    }};",
         )
 
@@ -1045,9 +1044,9 @@ class CppHeadersGenerator(Backend):
         iface: IfaceDecl,
         iface_abi_info: IfaceABIInfo,
         iface_cpp_info: IfaceCppInfo,
-        iface_cpp_defn_target: COutputBuffer,
+        iface_cpp_defn_target: CHeaderWriter,
     ):
-        iface_cpp_defn_target.writeln(
+        iface_cpp_defn_target.writelns(
             f"    template<typename Impl>",
             f"    struct methods_impl {{",
         )
@@ -1062,10 +1061,10 @@ class CppHeadersGenerator(Backend):
                 abi_return_ty_name = type_abi_info.as_owner
             else:
                 abi_return_ty_name = "void"
-            iface_cpp_defn_target.writeln(
+            iface_cpp_defn_target.writelns(
                 f"        static {abi_return_ty_name} {method.name}({params_abi_str});",
             )
-        iface_cpp_defn_target.writeln(
+        iface_cpp_defn_target.writelns(
             f"    }};",
         )
 
@@ -1074,17 +1073,17 @@ class CppHeadersGenerator(Backend):
         iface: IfaceDecl,
         iface_abi_info: IfaceABIInfo,
         iface_cpp_info: IfaceCppInfo,
-        iface_cpp_defn_target: COutputBuffer,
+        iface_cpp_defn_target: CHeaderWriter,
     ):
-        iface_cpp_defn_target.writeln(
+        iface_cpp_defn_target.writelns(
             f"    template<typename Impl>",
             f"    static constexpr {iface_abi_info.ftable} ftbl_impl = {{",
         )
         for method in iface.methods:
-            iface_cpp_defn_target.writeln(
+            iface_cpp_defn_target.writelns(
                 f"        .{method.name} = &methods_impl<Impl>::{method.name},",
             )
-        iface_cpp_defn_target.writeln(
+        iface_cpp_defn_target.writelns(
             f"    }};",
         )
 
@@ -1093,18 +1092,18 @@ class CppHeadersGenerator(Backend):
         iface: IfaceDecl,
         iface_abi_info: IfaceABIInfo,
         iface_cpp_info: IfaceCppInfo,
-        iface_cpp_defn_target: COutputBuffer,
+        iface_cpp_defn_target: CHeaderWriter,
     ):
-        iface_cpp_defn_target.writeln(
+        iface_cpp_defn_target.writelns(
             f"    template<typename Impl>",
             f"    static constexpr {iface_abi_info.vtable} vtbl_impl = {{",
         )
         for ancestor_info in iface_abi_info.ancestor_list:
             ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor_info.iface)
-            iface_cpp_defn_target.writeln(
+            iface_cpp_defn_target.writelns(
                 f"        .{ancestor_info.ftbl_ptr} = &{ancestor_cpp_info.full_weak_name}::template ftbl_impl<Impl>,",
             )
-        iface_cpp_defn_target.writeln(
+        iface_cpp_defn_target.writelns(
             f"    }};",
         )
 
@@ -1113,18 +1112,18 @@ class CppHeadersGenerator(Backend):
         iface: IfaceDecl,
         iface_abi_info: IfaceABIInfo,
         iface_cpp_info: IfaceCppInfo,
-        iface_cpp_defn_target: COutputBuffer,
+        iface_cpp_defn_target: CHeaderWriter,
     ):
-        iface_cpp_defn_target.writeln(
+        iface_cpp_defn_target.writelns(
             f"    template<typename Impl>",
             f"    static constexpr IdMapItem idmap_impl[{len(iface_abi_info.ancestor_dict)}] = {{",
         )
         for ancestor, info in iface_abi_info.ancestor_dict.items():
             ancestor_abi_info = IfaceABIInfo.get(self.am, ancestor)
-            iface_cpp_defn_target.writeln(
+            iface_cpp_defn_target.writelns(
                 f"        {{&{ancestor_abi_info.iid}, &vtbl_impl<Impl>.{info.ftbl_ptr}}},",
             )
-        iface_cpp_defn_target.writeln(
+        iface_cpp_defn_target.writelns(
             f"    }};",
         )
 
@@ -1133,9 +1132,9 @@ class CppHeadersGenerator(Backend):
         iface: IfaceDecl,
         iface_abi_info: IfaceABIInfo,
         iface_cpp_info: IfaceCppInfo,
-        iface_cpp_defn_target: COutputBuffer,
+        iface_cpp_defn_target: CHeaderWriter,
     ):
-        iface_cpp_defn_target.writeln(
+        iface_cpp_defn_target.writelns(
             f"    static constexpr void const* iid = &{iface_abi_info.iid};",
             f"    using vtable_t = {iface_abi_info.vtable};",
         )
@@ -1145,9 +1144,9 @@ class CppHeadersGenerator(Backend):
         iface: IfaceDecl,
         iface_abi_info: IfaceABIInfo,
         iface_cpp_info: IfaceCppInfo,
-        iface_cpp_defn_target: COutputBuffer,
+        iface_cpp_defn_target: CHeaderWriter,
     ):
-        iface_cpp_defn_target.writeln(
+        iface_cpp_defn_target.writelns(
             f"    explicit operator bool() const& {{ return m_handle.vtbl_ptr; }}",
             f"    virtual_type const& operator*() const& {{",
             f"        return *reinterpret_cast<virtual_type const*>(&m_handle);",
@@ -1162,9 +1161,9 @@ class CppHeadersGenerator(Backend):
         iface: IfaceDecl,
         iface_abi_info: IfaceABIInfo,
         iface_cpp_info: IfaceCppInfo,
-        iface_cpp_defn_target: COutputBuffer,
+        iface_cpp_defn_target: CHeaderWriter,
     ):
-        iface_cpp_defn_target.writeln(
+        iface_cpp_defn_target.writelns(
             f"namespace {iface_cpp_info.namespace} {{",
             f"struct {iface_cpp_info.norm_name} : public {iface_cpp_info.full_weak_name} {{",
             f"    static constexpr bool is_holder = true;",
@@ -1189,7 +1188,7 @@ class CppHeadersGenerator(Backend):
             iface_cpp_info,
             iface_cpp_defn_target,
         )
-        iface_cpp_defn_target.writeln(
+        iface_cpp_defn_target.writelns(
             f"}};",
             f"}}",
         )
@@ -1199,9 +1198,9 @@ class CppHeadersGenerator(Backend):
         iface: IfaceDecl,
         iface_abi_info: IfaceABIInfo,
         iface_cpp_info: IfaceCppInfo,
-        iface_cpp_defn_target: COutputBuffer,
+        iface_cpp_defn_target: CHeaderWriter,
     ):
-        iface_cpp_defn_target.writeln(
+        iface_cpp_defn_target.writelns(
             f"    explicit {iface_cpp_info.norm_name}(::taihe::data_holder other)",
             f"        : {iface_cpp_info.norm_name}({iface_abi_info.dynamic_cast}(other.data_ptr)) {{",
             f"        other.data_ptr = nullptr;",
@@ -1226,9 +1225,9 @@ class CppHeadersGenerator(Backend):
         iface: IfaceDecl,
         iface_abi_info: IfaceABIInfo,
         iface_cpp_info: IfaceCppInfo,
-        iface_cpp_defn_target: COutputBuffer,
+        iface_cpp_defn_target: CHeaderWriter,
     ):
-        iface_cpp_defn_target.writeln(
+        iface_cpp_defn_target.writelns(
             f"    {iface_cpp_info.norm_name}({iface_cpp_info.full_weak_name} const& other)",
             f"        : {iface_cpp_info.norm_name}({iface_abi_info.copy_func}(other.m_handle)) {{}}",
             f"    {iface_cpp_info.norm_name}({iface_cpp_info.full_norm_name} const& other)",
@@ -1242,7 +1241,7 @@ class CppHeadersGenerator(Backend):
             if info.offset == 0:
                 continue
             ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
-            iface_cpp_defn_target.writeln(
+            iface_cpp_defn_target.writelns(
                 f"    operator {ancestor_cpp_info.full_weak_name}() const& {{",
                 f"        {iface_abi_info.as_owner} ret_handle = m_handle;",
                 f"        return {ancestor_cpp_info.full_weak_name}({info.static_cast}(ret_handle));",
@@ -1263,9 +1262,9 @@ class CppHeadersGenerator(Backend):
         iface: IfaceDecl,
         iface_abi_info: IfaceABIInfo,
         iface_cpp_info: IfaceCppInfo,
-        iface_cpp_defn_target: COutputBuffer,
+        iface_cpp_defn_target: CHeaderWriter,
     ):
-        iface_cpp_defn_target.writeln(
+        iface_cpp_defn_target.writelns(
             f"namespace taihe {{",
             f"template<>",
             f"struct as_abi<{iface_cpp_info.as_owner}> {{",
@@ -1288,35 +1287,35 @@ class CppHeadersGenerator(Backend):
         iface_abi_info: IfaceABIInfo,
         iface_cpp_info: IfaceCppInfo,
     ):
-        iface_cpp_impl_target = COutputBuffer.create(
-            self.tm, f"include/{iface_cpp_info.impl_header}", True
-        )
-        iface_cpp_impl_target.include(iface_cpp_info.defn_header)
-        iface_cpp_impl_target.include(iface_abi_info.impl_header)
-        for ancestor, info in iface_abi_info.ancestor_dict.items():
-            if info.offset == 0:
-                continue
-            ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
-            iface_cpp_impl_target.include(ancestor_cpp_info.impl_header)
-        self.gen_iface_user_methods(
-            iface,
-            iface_abi_info,
-            iface_cpp_info,
-            iface_cpp_impl_target,
-        )
-        self.gen_iface_author_methods(
-            iface,
-            iface_abi_info,
-            iface_cpp_info,
-            iface_cpp_impl_target,
-        )
+        with CHeaderWriter(
+            self.oc, f"include/{iface_cpp_info.impl_header}"
+        ) as iface_cpp_impl_target:
+            iface_cpp_impl_target.add_include(iface_cpp_info.defn_header)
+            iface_cpp_impl_target.add_include(iface_abi_info.impl_header)
+            for ancestor, info in iface_abi_info.ancestor_dict.items():
+                if info.offset == 0:
+                    continue
+                ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
+                iface_cpp_impl_target.add_include(ancestor_cpp_info.impl_header)
+            self.gen_iface_user_methods(
+                iface,
+                iface_abi_info,
+                iface_cpp_info,
+                iface_cpp_impl_target,
+            )
+            self.gen_iface_author_methods(
+                iface,
+                iface_abi_info,
+                iface_cpp_info,
+                iface_cpp_impl_target,
+            )
 
     def gen_iface_user_methods(
         self,
         iface: IfaceDecl,
         iface_abi_info: IfaceABIInfo,
         iface_cpp_info: IfaceCppInfo,
-        iface_cpp_impl_target: COutputBuffer,
+        iface_cpp_impl_target: CHeaderWriter,
     ):
         for method in iface.methods:
             method_abi_info = IfaceMethodABIInfo.get(self.am, method)
@@ -1327,7 +1326,7 @@ class CppHeadersGenerator(Backend):
             ]
             for param in method.params:
                 type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
-                iface_cpp_impl_target.include(*type_cpp_info.impl_headers)
+                iface_cpp_impl_target.add_include(*type_cpp_info.impl_headers)
                 params_cpp.append(f"{type_cpp_info.as_param} {param.name}")
                 args_into_abi.append(type_cpp_info.pass_into_abi(param.name))
             params_cpp_str = ", ".join(params_cpp)
@@ -1335,13 +1334,13 @@ class CppHeadersGenerator(Backend):
             abi_result = f"{method_abi_info.mangled_name}({args_into_abi_str})"
             if return_ty_ref := method.return_ty_ref:
                 type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
-                iface_cpp_impl_target.include(*type_cpp_info.impl_headers)
+                iface_cpp_impl_target.add_include(*type_cpp_info.impl_headers)
                 cpp_return_ty_name = type_cpp_info.as_owner
                 cpp_result = type_cpp_info.return_from_abi(abi_result)
             else:
                 cpp_return_ty_name = "void"
                 cpp_result = abi_result
-            iface_cpp_impl_target.writeln(
+            iface_cpp_impl_target.writelns(
                 f"namespace {iface_cpp_info.weakspace} {{",
                 f"inline {cpp_return_ty_name} {iface_cpp_info.weak_name}::virtual_type::{method_cpp_info.call_name}({params_cpp_str}) const& {{",
                 f"    return {cpp_result};",
@@ -1354,7 +1353,7 @@ class CppHeadersGenerator(Backend):
         iface: IfaceDecl,
         iface_abi_info: IfaceABIInfo,
         iface_cpp_info: IfaceCppInfo,
-        iface_cpp_impl_target: COutputBuffer,
+        iface_cpp_impl_target: CHeaderWriter,
     ):
         for method in iface.methods:
             method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
@@ -1376,7 +1375,7 @@ class CppHeadersGenerator(Backend):
             else:
                 abi_return_ty_name = "void"
                 abi_result = cpp_result
-            iface_cpp_impl_target.writeln(
+            iface_cpp_impl_target.writelns(
                 f"namespace {iface_cpp_info.weakspace} {{",
                 f"template<typename Impl>",
                 f"{abi_return_ty_name} {iface_cpp_info.weak_name}::methods_impl<Impl>::{method.name}({params_abi_str}) {{",

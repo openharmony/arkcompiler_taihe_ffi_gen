@@ -240,7 +240,7 @@ class BuildSystem:
             self.logger.info(f"Already found {target_file}, skipping download")
             return
 
-        temp_file = target_file.with_suffix(".tmp")
+        temp_file = target_file.with_suffix(".ocp")
 
         command = [
             "curl",

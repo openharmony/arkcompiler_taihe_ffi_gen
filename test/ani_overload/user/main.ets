@@ -288,8 +288,8 @@ function test_Array() {
         test_overload.get_interface()
 
     let numbers: int[] = [1, 2, 3, 4, 5];
-    let tmp = instance.overloadFunc(numbers)
-    assertEQ(tmp, 1 as int);
+    let ocp = instance.overloadFunc(numbers)
+    assertEQ(ocp, 1 as int);
 }
 
 function test_buffer() {

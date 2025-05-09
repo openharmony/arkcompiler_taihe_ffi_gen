@@ -28,7 +28,7 @@ from taihe.semantics.declarations import (
 )
 from taihe.semantics.types import Type
 from taihe.utils.analyses import AnalysisManager
-from taihe.utils.outputs import OutputManager
+from taihe.utils.outputs import OutputConfig
 
 
 class Namespace:
@@ -46,8 +46,8 @@ class Namespace:
 
 
 class STSCodeGenerator:
-    def __init__(self, tm: OutputManager, am: AnalysisManager):
-        self.tm = tm
+    def __init__(self, oc: OutputConfig, am: AnalysisManager):
+        self.oc = oc
         self.am = am
 
     def generate(self, pg: PackageGroup):
@@ -62,7 +62,7 @@ class STSCodeGenerator:
             self.gen_module_file(module, ns)
 
     def gen_ohos_base(self):
-        with StsWriter(self.tm, "@ohos.base.ets") as target:
+        with StsWriter(self.oc, "@ohos.base.ets") as target:
             target.writelns(
                 f"export class BusinessError<T = void> extends Error {{",
                 f"    code: number;",
@@ -85,7 +85,7 @@ class STSCodeGenerator:
             )
 
     def gen_module_file(self, module: str, ns: Namespace):
-        with StsWriter(self.tm, f"{module}.ets") as target:
+        with StsWriter(self.oc, f"{module}.ets") as target:
             target.writeln(
                 f"import {{ AsyncCallback, BusinessError }} from '@ohos.base';",
             )
@@ -1071,16 +1071,16 @@ class STSCodeGenerator:
             "function __fromBigIntToArrayBuffer(val: BigInt, blk: int): ArrayBuffer {",
             "    let n_7 = BigInt(blk * 8 - 1);",
             "    let n_8 = BigInt(blk * 8);",
-            "    let tmp: BigInt = val;",
+            "    let ocp: BigInt = val;",
             "    let n: int = 0;",
             "    while (true) {",
             "        n += blk;",
-            "        let t_7 = tmp >> n_7;",
-            "        let t_8 = tmp >> n_8;",
+            "        let t_7 = ocp >> n_7;",
+            "        let t_8 = ocp >> n_8;",
             "        if (t_7 == t_8) {",
             "            break;",
             "        }",
-            "        tmp = t_8;",
+            "        ocp = t_8;",
             "    }",
             "    let buf = new ArrayBuffer(n);",
             "    for (let i: int = 0; i < n; i++) {",

@@ -1,50 +1,16 @@
 """Manage output files."""
 
-from abc import ABC, abstractmethod
 from collections.abc import Generator
 from contextlib import contextmanager
+from dataclasses import dataclass
 from io import StringIO
-from os import makedirs
 from pathlib import Path
 from types import TracebackType
-from typing import Any, Generic, Optional, ParamSpec, TextIO, TypeVar
+from typing import Optional, TextIO
 
-from typing_extensions import Self, override
-
-P = ParamSpec("P")
-T = TypeVar("T", bound="OutputBase")
+from typing_extensions import Self
 
 DEFAULT_INDENT = "    "  # Four spaces
-
-
-class OutputBase(ABC, Generic[P]):
-    """Abstract base class for all types of generated output.
-
-    Created, managed and saved to file via an `OutputManager`.
-    """
-
-    @abstractmethod  # pyre-ignore
-    def __init__(
-        self,
-        *args: P.args,
-        **kwargs: P.kwargs,
-    ):
-        """Initialize the output instance."""
-
-    @classmethod
-    def create(
-        cls: type[T],  # pyre-ignore
-        tm: "OutputManager",
-        filename: str,
-        *args: P.args,
-        **kwargs: P.kwargs,
-    ) -> T:
-        """Create or retrieve an output instance via the manager."""
-        return tm.get_or_create(cls, filename, *args, **kwargs)
-
-    @abstractmethod
-    def save_as(self, file_path: Path):
-        """Save the output to the specified file path."""
 
 
 class IndentManager:
@@ -64,133 +30,28 @@ class IndentManager:
             self.count -= n
 
 
-class STSOutputBuffer(OutputBase[[]]):
-    """Represents a general target file."""
-
-    @override
-    def __init__(self):
-        super().__init__()
-        self.indent_manager = IndentManager()
-        self.code = StringIO()
-        self.import_dict: dict[str, str] = {}
-
-    @override
-    def save_as(self, file_path: Path):
-        makedirs(file_path.parent, exist_ok=True)
-        with open(file_path, "w", encoding="utf-8") as dst:
-            for import_name, module_name in self.import_dict.items():
-                dst.write(f'import * as {import_name} from "./{module_name}";\n')
-            dst.write(self.code.getvalue())
-
-    @contextmanager
-    def code_block(self, start: str, end: str, n=4):
-        self.writeln(start)
-        with self.indent_manager.offset(n):
-            yield
-        self.writeln(end)
-
-    def write(self, codes: str):
-        for code in codes.splitlines():
-            self.code.write(self.indent_manager.current + code + "\n")
-
-    def writeln(self, *codes: str):
-        for code in codes:
-            self.code.write(self.indent_manager.current + code + "\n")
-
-    def import_module(self, import_name: str, module_name: str):
-        self.import_dict.setdefault(import_name, module_name)
-
-
-class COutputBuffer(OutputBase[[bool]]):
-    """Represents a C or C++ target file."""
-
-    @override
-    def __init__(self, is_header: bool):
-        super().__init__(is_header)
-        self.is_header = is_header
-        self.headers: dict[str, None] = {}
-        self.indent_manager = IndentManager()
-        self.code = StringIO()
-
-    @override
-    def save_as(self, file_path: Path):
-        makedirs(file_path.parent, exist_ok=True)
-        with open(file_path, "w", encoding="utf-8") as dst:
-            if self.is_header:
-                dst.write(f"#pragma once\n")
-            for header in self.headers:
-                dst.write(f'#include "{header}"\n')
-            dst.write(self.code.getvalue())
-
-    @contextmanager
-    def code_block(self, start: str, end: str, n=4):
-        self.writeln(start)
-        with self.indent_manager.offset(n):
-            yield
-        self.writeln(end)
-
-    def write(self, codes: str):
-        for code in codes.splitlines():
-            self.code.write(self.indent_manager.current + code + "\n")
-
-    def writeln(self, *codes: str):
-        for code in codes:
-            self.code.write(self.indent_manager.current + code + "\n")
-
-    def include(self, *headers: str):
-        for header in headers:
-            self.headers.setdefault(header, None)
-
-
-class OutputManager:
+@dataclass
+class OutputConfig:
     """Manages the creation and saving of output files."""
 
-    def __init__(self, dst_dir: Optional[Path]):
-        """Initialize with an empty cache."""
-        self.targets: dict[str, OutputBase] = {}
-        self.dst_dir = dst_dir
-
-    def output_to(self, dst_dir: Path):
-        """Save all managed outputs to a target directory."""
-        for filename, target in self.targets.items():
-            target.save_as(dst_dir / filename)
-
-    def get_or_create(
-        self,
-        cls: type[T],
-        filename: str,
-        *args,
-        **kwargs,
-    ) -> T:
-        """Get or create an output instance by filename."""
-        if target := self.targets.get(filename):
-            assert isinstance(target, cls)
-            return target
-
-        target = cls(*args, **kwargs)
-        self.targets[filename] = target
-        return target
+    dst_dir: Optional[Path] = None
 
 
 class BaseWriter:
-    def __init__(self, out: TextIO, indent_unit: str):
+    def __init__(self, out: TextIO, default_indent: str = DEFAULT_INDENT):
         """Initialize a code writer with a writable output stream.
 
         Args:
             out: A writable stream object
             indent_unit: The string used for each level of indentation
+            default_indent: The default indentation string
         """
         if not hasattr(out, "write"):
             raise ValueError("output_stream must be writable")
 
         self._out = out
-        self._indent_level = 0
-        self._indent_unit = indent_unit
-
-    @property
-    def current_indent_string(self):
-        """Return the current indentation string."""
-        return self._indent_unit * self._indent_level
+        self._default_indent = default_indent
+        self._current_indent = ""
 
     def writeln(self, line: str = ""):
         """Writes a single-line string.
@@ -205,7 +66,7 @@ class BaseWriter:
             self._out.write("\n")
             return
 
-        self._out.write(self.current_indent_string)
+        self._out.write(self._current_indent)
         self._out.write(line)
         self._out.write("\n")
 
@@ -226,51 +87,43 @@ class BaseWriter:
         """
         self.writelns(*text_block.splitlines())
 
-    def indent(self):
-        """Increments the indent level."""
-        self._indent_level += 1
-
-    def dedent(self):
-        """Decrements the indent level."""
-        if self._indent_level <= 0:
-            raise ValueError("Cannot dedent below level 0")
-        self._indent_level -= 1
-
     @contextmanager
     def indented(
-        self, prologue: str = "", epilogue: str = ""
+        self, prologue: str = "", epilogue: str = "", indent: str | None = None
     ) -> Generator[Self, None, None]:
         """Context manager that indents code within its scope.
 
         Args:
             prologue: Optional text to write before indentation
             epilogue: Optional text to write after indentation
+            indent: Optional string to use for indentation (overrides default)
 
         Returns:
             A context manager that yields this BaseWriter
         """
         if prologue:
             self.writeln(prologue)
-        self.indent()
+        previous_indent = self._current_indent
+        self._current_indent += self._default_indent if indent is None else indent
         try:
             yield self
         finally:
-            self.dedent()
+            self._current_indent = previous_indent
             if epilogue:
                 self.writeln(epilogue)
 
 
-class FileWriter(BaseWriter, OutputBase):
+class FileWriter(BaseWriter):
     def __init__(
         self,
-        om: OutputManager,
+        oc: OutputConfig,
         path: str,
         *,
-        indent_unit: str = DEFAULT_INDENT,
+        default_indent: str = DEFAULT_INDENT,
     ):
-        super().__init__(out=StringIO(), indent_unit=indent_unit)
-        assert om.dst_dir
-        self._path = om.dst_dir / path
+        super().__init__(out=StringIO(), default_indent=default_indent)
+        assert oc.dst_dir
+        self._path = oc.dst_dir / path
 
     def __enter__(self):
         return self
@@ -289,10 +142,6 @@ class FileWriter(BaseWriter, OutputBase):
 
         # Propagate the exception if exists
         return False
-
-    @classmethod
-    def create(cls, tm: OutputManager, path: str, **kwargs: Any) -> Self:
-        return tm.get_or_create(cls, path, **kwargs)
 
     def write_prologue(self, f: TextIO):
         del f
