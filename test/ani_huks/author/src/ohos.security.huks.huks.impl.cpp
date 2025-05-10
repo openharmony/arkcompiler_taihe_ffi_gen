@@ -204,7 +204,7 @@ void SetErrorExcept(errno_t ret) {
 }
 
 taihe::array<uint8_t> GetArrayBuffer(HksBlob blob) {
-  return taihe::array<uint8_t>{taihe::copy_data_t{}, blob.data, blob.size};
+  return taihe::array<uint8_t>{taihe::copy_data, blob.data, blob.size};
 }
 
 taihe::array<taihe::string> GetArrayString(HksCertChain certChain) {
