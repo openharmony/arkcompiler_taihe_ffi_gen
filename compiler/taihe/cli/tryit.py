@@ -4,8 +4,8 @@ import logging
 import os
 import shutil
 import subprocess
-import tarfile
 import sys
+import tarfile
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -237,6 +237,7 @@ class BuildSystem(Utils):
             f.write(
                 '#include "hello.proj.hpp"\n'
                 '#include "hello.impl.hpp"\n'
+                "\n"
                 "#include <iostream>\n"
                 "\n"
                 "void sayHello() {\n"
@@ -651,7 +652,7 @@ class BuildSystem(Utils):
         )
 
 
-class UpgradeCode(Utils):
+class RepositoryUpdater(Utils):
     """Upgrade the code from a specified URL."""
 
     def __init__(
@@ -664,7 +665,7 @@ class UpgradeCode(Utils):
         self.repo_url = repo_url
         self.config = config
 
-    def upgrade_code(self, repo_url: str):
+    def fetch_and_update(self, repo_url: str):
         filename = repo_url.split("/")[-1]
         version = repo_url.split("/")[-2]
         extract_dir = self.config.base_dir.parent
@@ -769,14 +770,14 @@ def main(config: Optional[BuildConfig] = None):
     add_argument_target_directory(parser_build)
     add_argument_optimization(parser_build)
 
-    parser_run = subparsers.add_parser(
-        "run",
+    parser_test = subparsers.add_parser(
+        "test",
         help="Generate and build the project from the target directory",
     )
-    add_argument_verbosity(parser_run)
-    add_argument_target_directory(parser_run)
-    add_argument_optimization(parser_run)
-    add_argument_sts_keep_name(parser_run)
+    add_argument_verbosity(parser_test)
+    add_argument_target_directory(parser_test)
+    add_argument_optimization(parser_test)
+    add_argument_sts_keep_name(parser_test)
 
     parser_upgrade = subparsers.add_parser(
         "upgrade",
@@ -819,7 +820,7 @@ def main(config: Optional[BuildConfig] = None):
                     verbosity=verbosity,
                     opt_level=args.optimization,
                 ).build()
-            case "run":
+            case "test":
                 BuildSystem(
                     args.target_directory,
                     config=config,
@@ -828,11 +829,11 @@ def main(config: Optional[BuildConfig] = None):
                     sts_keep_name=args.sts_keep_name,
                 ).generate_and_build()
             case "upgrade":
-                UpgradeCode(
+                RepositoryUpdater(
                     args.URL,
                     config=config,
                     verbosity=verbosity,
-                ).upgrade_code(args.URL)
+                ).fetch_and_update(args.URL)
             case _:
                 parser.print_help()
                 return
