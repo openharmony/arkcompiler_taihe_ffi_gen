@@ -7,78 +7,24 @@ import subprocess
 import sys
 import tarfile
 from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Union
 
 
-class BuildConfig:
-    """Configuration for the build process."""
+@dataclass
+class UserInfo:
+    """User information for authentication."""
 
-    def __init__(self, for_distribution=False):
-        self.cxx = os.getenv("CXX", "clang++")
-        self.cc = os.getenv("CC", "clang")
-        self.panda_username = "koala-pub"
-        self.panda_password = "y3t!n0therP"
-        self.panda_url = "https://nexus.bz-openlab.ru:10443/repository/koala-npm/%40panda/sdk/-/sdk-1.5.0-dev.31052.tgz"
-
-        current_file = Path(__file__).resolve()
-        if for_distribution:
-            base_dir = current_file.parents[5]
-            # Inside the distributed repository: dist/lib/taihe/ compiler/taihe/cli/compiler.py
-            self.runtime_include_dir = base_dir / "include"
-            self.runtime_src_dir = base_dir / "src" / "taihe" / "runtime"
-            self.panda_home = base_dir / "var" / "taihe" / "panda_vm"
-        else:
-            # Inside the git repository: repo/ compiler/taihe/cli/run_test.py
-            base_dir = current_file.parents[3]
-            self.runtime_include_dir = base_dir / "runtime" / "include"
-            self.runtime_src_dir = base_dir / "runtime" / "src"
-            self.panda_home = base_dir / ".panda_vm"
+    username: str
+    password: str
 
 
-class BuildSystem:
-    """Main build system class."""
+class Utils:
+    """Utility class for common operations."""
 
-    def __init__(
-        self,
-        target_dir: str,
-        generate_and_compile_ani: bool,
-        opt_level: str,
-        config: Optional[BuildConfig] = None,
-        verbosity: int = logging.INFO,
-        sts_keep_name: bool = False,
-    ):
-        self.config = config if config is not None else BuildConfig()
+    def __init__(self, verbosity: int):
         self.logger = self._setup_logger(verbosity)
-        self.sts_keep_name = sts_keep_name
-
-        # Build paths
-        self.target_path = Path(target_dir).resolve()
-        self.idl_dir = self.target_path / "idl"
-        self.system_dir = self.target_path / "system"
-        self.user_dir = self.target_path / "user"
-        self.build_dir = self.target_path / "build"
-
-        self.author_dir = self.target_path / "author"
-        self.author_include_dir = self.author_dir / "include"
-        self.author_src_dir = self.author_dir / "src"
-
-        self.generated_dir = self.target_path / "author_generated"
-        self.generated_include_dir = self.generated_dir / "include"
-        self.generated_src_dir = self.generated_dir / "src"
-
-        # Build options
-        self.generate_and_compile_ani = generate_and_compile_ani
-        self.opt_level = opt_level.strip()  # Ensure no whitespace
-        self.lib_name = self.target_path.absolute().name
-
-        # Build sub-directories
-        self.build_generated_src_dir = self.build_dir / "author_generated" / "src"
-        self.build_author_src_dir = self.build_dir / "author" / "src"
-        self.build_runtime_src_dir = self.build_dir / "runtime" / "src"
-        self.build_generated_dir = self.build_dir / "author_generated"
-        self.build_system_dir = self.build_dir / "system"
-        self.build_user_dir = self.build_dir / "user"
 
     def _setup_logger(self, verbosity: int) -> logging.Logger:
         """Set up logging configuration."""
@@ -126,37 +72,276 @@ class BuildSystem:
                 capture_output=capture_output,
             )
         except subprocess.CalledProcessError as e:
-            self.logger.error(f"Command failed with exit code {e.returncode}")
+            self.logger.error("Command failed with exit code %s", e.returncode)
             if e.stdout:
-                self.logger.error(f"Standard output: {e.stdout}")
+                self.logger.error("Standard output: %s", e.stdout)
             if e.stderr:
-                self.logger.error(f"Standard error: {e.stderr}")
+                self.logger.error("Standard error: %s", e.stderr)
             raise
 
-    def manage_directory(
-        self, directory: Path, action: str = "create", src_dir: Optional[Path] = None
+    def create_directory(self, directory: Path) -> None:
+        directory.mkdir(parents=True, exist_ok=True)
+        self.logger.debug("Created directory: %s", directory)
+
+    def clean_directory(self, directory: Path) -> None:
+        if not directory.exists():
+            return
+        shutil.rmtree(directory)
+        self.logger.debug("Cleaned directory: %s", directory)
+
+    def download_file(
+        self, target_file: Path, url: str, user_info: Optional[UserInfo] = None
     ) -> None:
-        """Manage directories (create, clean, or copy)."""
-        try:
-            if action == "clean" and directory.exists():
-                shutil.rmtree(directory)
-                self.logger.debug(f"Cleaned directory: {directory}")
-            elif action == "create":
-                directory.mkdir(parents=True, exist_ok=True)
-                self.logger.debug(f"Created directory: {directory}")
-            elif action == "copy" and src_dir:
-                if not src_dir.exists():
-                    self.logger.warning(f"Source directory does not exist: {src_dir}")
-                    return
+        """Download a file from a URL."""
+        if target_file.exists():
+            self.logger.info("Already found %s, skipping download", target_file)
+            return
 
-                if not directory.exists():
-                    directory.mkdir(parents=True)
+        temp_file = target_file.with_suffix(".tmp")
 
-                shutil.copytree(src_dir, directory, dirs_exist_ok=True)
-                self.logger.debug(f"Copied {src_dir} to {directory}")
-        except Exception as e:
-            self.logger.error(f"Error managing directory {directory}: {e}")
-            raise
+        command = ["curl", "-L", "--progress-bar", url, "-o", str(temp_file)]
+
+        if user_info:
+            command.extend(["-u", f"{user_info.username}:{user_info.password}"])
+
+        self.run_command(command, capture_output=False)
+
+        if temp_file.exists():
+            temp_file.rename(target_file)
+            self.logger.info("Downloaded %s to %s", url, target_file)
+        else:
+            self.logger.error("Failed to download %s", url)
+            raise FileNotFoundError(f"Failed to download {url}")
+
+    def extract_file(
+        self,
+        target_file: Path,
+        extract_dir: Path,
+        version_file: Optional[Path] = None,
+        version: Optional[str] = None,
+    ) -> None:
+        """Extract a tar.gz file."""
+        if not target_file.exists():
+            raise FileNotFoundError(f"File to extract does not exist: {target_file}")
+
+        package_dir = extract_dir / "package"
+        if package_dir.exists():
+            shutil.rmtree(package_dir)
+
+        os.makedirs(extract_dir, exist_ok=True)
+
+        with tarfile.open(target_file, "r:gz") as tar:
+            # Check for any unsafe paths before extraction
+            for member in tar.getmembers():
+                member_path = Path(member.name)
+                if member_path.is_absolute() or ".." in member_path.parts:
+                    raise ValueError(f"Unsafe path in archive: {member.name}")
+            # Extract safely
+            tar.extractall(path=extract_dir)
+
+        if version_file and version:
+            with open(version_file, "w") as vf:
+                vf.write(version)
+
+        self.logger.info("Extracted %s to %s", target_file, extract_dir)
+
+
+class BuildConfig:
+    """Configuration for the build process."""
+
+    def __init__(self, for_distribution=False):
+        self.cxx = os.getenv("CXX", "clang++")
+        self.cc = os.getenv("CC", "clang")
+        self.panda_userinfo = UserInfo(
+            username=os.getenv("PANDA_USERNAME", "koala-pub"),
+            password=os.getenv("PANDA_PASSWORD", "y3t!n0therP"),
+        )
+        self.panda_url = "https://nexus.bz-openlab.ru:10443/repository/koala-npm/%40panda/sdk/-/sdk-1.5.0-dev.31052.tgz"
+
+        current_file = Path(__file__).resolve()
+        if for_distribution:
+            self.base_dir = current_file.parents[5]
+            # Inside the distributed repository: dist/lib/taihe/compiler/taihe/cli/compiler.py
+            self.runtime_include_dir = self.base_dir / "include"
+            self.runtime_src_dir = self.base_dir / "src" / "taihe" / "runtime"
+            self.panda_home = self.base_dir / "var" / "taihe" / "panda_vm"
+        else:
+            # Inside the git repository: repo/compiler/taihe/cli/run_test.py
+            self.base_dir = current_file.parents[3]
+            self.runtime_include_dir = self.base_dir / "runtime" / "include"
+            self.runtime_src_dir = self.base_dir / "runtime" / "src"
+            self.panda_home = self.base_dir / ".panda_vm"
+        self.panda_include_home = (
+            self.panda_home / "package/ohos_arm64/include/plugins/ets/runtime/ani"
+        )
+
+
+class BuildSystem(Utils):
+    """Main build system class."""
+
+    def __init__(
+        self,
+        target_dir: str,
+        config: BuildConfig,
+        verbosity: int,
+        sts_keep_name: bool = False,
+        opt_level: str = "0",
+    ):
+        super().__init__(verbosity)
+        self.config = config
+        self.sts_keep_name = sts_keep_name
+
+        # Build paths
+        self.target_path = Path(target_dir).resolve()
+        self.idl_dir = self.target_path / "idl"
+        self.system_dir = self.target_path / "system"
+        self.user_dir = self.target_path / "user"
+        self.build_dir = self.target_path / "build"
+
+        self.author_dir = self.target_path / "author"
+        self.author_include_dir = self.author_dir / "include"
+        self.author_src_dir = self.author_dir / "src"
+
+        self.generated_dir = self.target_path / "author_generated"
+        self.generated_include_dir = self.generated_dir / "include"
+        self.generated_src_dir = self.generated_dir / "src"
+
+        # Build sub-directories
+        self.build_generated_src_dir = self.build_dir / "author_generated" / "src"
+        self.build_author_src_dir = self.build_dir / "author" / "src"
+        self.build_runtime_src_dir = self.build_dir / "runtime" / "src"
+        self.build_generated_dir = self.build_dir / "author_generated"
+        self.build_system_dir = self.build_dir / "system"
+        self.build_user_dir = self.build_dir / "user"
+
+        # Build options
+        self.opt_level = opt_level.strip()  # Ensure no whitespace
+        self.lib_name = self.target_path.absolute().name
+
+    def create(self) -> None:
+        self.create_directory(self.idl_dir)
+        self.create_directory(self.author_dir)
+        self.create_directory(self.author_src_dir)
+        self.create_directory(self.user_dir)
+
+        include_dirs = []
+        include_dirs.append(self.config.panda_include_home)
+        include_dirs.append(self.config.runtime_include_dir)
+        include_dirs.append(self.generated_include_dir)
+        include_dirs.append(self.author_include_dir)
+
+        with open(os.path.join(self.idl_dir, "hello.taihe"), "w") as f:
+            f.write("function sayHello(): void;\n")
+
+        with open(os.path.join(self.author_src_dir, "hello.impl.cpp"), "w") as f:
+            f.write(
+                '#include "hello.proj.hpp"\n'
+                '#include "hello.impl.hpp"\n'
+                "\n"
+                "#include <iostream>\n"
+                "\n"
+                "void sayHello() {\n"
+                '    std::cout << "Hello, World!" << std::endl;\n'
+                "    return;\n"
+                "}\n"
+                "\n"
+                "TH_EXPORT_CPP_API_sayHello(sayHello);\n"
+            )
+
+        with open(os.path.join(self.user_dir, "main.ets"), "w") as f:
+            f.write(
+                'import * as hello from "@generated/hello";\n'
+                f'loadLibrary("{self.lib_name}");\n'
+                "\n"
+                "function main() {\n"
+                "    hello.sayHello();\n"
+                "}\n"
+            )
+
+        with open(os.path.join(self.target_path, "compile_flags.txt"), "w") as f:
+            for include_dir in include_dirs:
+                f.write(f"-I{include_dir}\n")
+
+    def generate(self) -> None:
+        """Generate code from IDL files."""
+        if not self.idl_dir.is_dir():
+            raise FileNotFoundError(f"IDL directory not found: '{self.idl_dir}'")
+
+        self.clean_directory(self.generated_dir)
+
+        # Import here to avoid module dependency issues
+        from taihe.driver.backend import BackendRegistry
+        from taihe.driver.contexts import CompilerInstance, CompilerInvocation
+
+        self.logger.info("Generating author and ani codes...")
+
+        registry = BackendRegistry()
+        registry.register_all()
+        backends = registry.collect_required_backends(["ani-bridge", "cpp-author"])
+
+        resolved_backends = []
+        for b in backends:
+            if b.NAME == "ani-bridge":
+                resolved_backends.append(b(keep_name=self.sts_keep_name))  # type: ignore
+            else:
+                resolved_backends.append(b())  # pyre-ignore
+
+        instance = CompilerInstance(
+            CompilerInvocation(
+                src_dirs=[self.idl_dir],
+                out_dir=self.generated_dir,
+                backends=resolved_backends,
+            )
+        )
+
+        if not instance.run():
+            raise RuntimeError(f"Code generation failed")
+
+    def build(self) -> None:
+        """Run the complete build process."""
+        self.logger.info("Starting ANI compilation...")
+
+        self.setup_build_directories()
+
+        # Set up paths for Panda VM
+        extract_dir = self.config.panda_home.resolve()
+        self.create_directory(extract_dir)
+
+        # Download and extract Panda VM
+        package_dir = self.download_panda_vm(extract_dir)
+        panda_home = package_dir / "linux_host_tools"
+
+        if not panda_home.exists():
+            raise FileNotFoundError(f"Panda home directory not found: {panda_home}")
+
+        # Path to include directory for ANI
+        panda_include_dir = self.config.panda_include_home
+
+        if not panda_include_dir.exists():
+            self.logger.warning(
+                "ANI include directory not found: %s", panda_include_dir
+            )
+            # Create a fallback include directory
+            self.create_directory(panda_include_dir)
+
+        # Compile the shared library
+        self.compile_shared_library(panda_include_dir)
+
+        # Create config file for ABC compilation
+        config_file_path = self.build_dir / "arktsconfig.json"
+        self.create_arktsconfig(panda_home, config_file_path)
+
+        # Compile and link ABC files
+        abc_target = self.compile_and_link_abc(panda_home, config_file_path)
+
+        # Run with Ark runtime
+        self.run_ark(panda_home, abc_target)
+
+        self.logger.info("Build and execution completed successfully")
+
+    def generate_and_build(self) -> None:
+        self.generate()
+        self.build()
 
     def compile(
         self, output_dir: Path, input_dir: Path, *include_dirs: Path
@@ -165,7 +350,7 @@ class BuildSystem:
         output_files = []
 
         if not input_dir.exists():
-            self.logger.warning(f"Input directory does not exist: {input_dir}")
+            self.logger.warning("Input directory does not exist: %s", input_dir)
             return output_files
 
         for input_file in input_dir.glob("*.[cC]*"):  # Find .c, .cpp, .cc, .C files
@@ -231,69 +416,8 @@ class BuildSystem:
                     local_version = vf.read().strip()
                     return local_version == version
             except OSError as e:
-                self.logger.warning(f"Failed to read version file: {e}")
+                self.logger.warning("Failed to read version file: %s", e)
         return False
-
-    def download_file(self, target_file: Path, url: str) -> None:
-        """Download a file from a URL."""
-        if target_file.exists():
-            self.logger.info(f"Already found {target_file}, skipping download")
-            return
-
-        temp_file = target_file.with_suffix(".ocp")
-
-        command = [
-            "curl",
-            "-L",
-            "-u",
-            f"{self.config.panda_username}:{self.config.panda_password}",
-            "--progress-bar",
-            url,
-            "-o",
-            str(temp_file),
-        ]
-
-        self.run_command(command, capture_output=False)
-
-        if temp_file.exists():
-            temp_file.rename(target_file)
-            self.logger.info(f"Downloaded {url} to {target_file}")
-        else:
-            self.logger.error(f"Failed to download {url}")
-            raise FileNotFoundError(f"Failed to download {url}")
-
-    def extract_file(
-        self, target_file: Path, extract_dir: Path, version_file: Path, version: str
-    ) -> None:
-        """Extract a tar.gz file."""
-        try:
-            if not target_file.exists():
-                raise FileNotFoundError(
-                    f"File to extract does not exist: {target_file}"
-                )
-
-            package_dir = extract_dir / "package"
-            if package_dir.exists():
-                shutil.rmtree(package_dir)
-
-            os.makedirs(extract_dir, exist_ok=True)
-
-            with tarfile.open(target_file, "r:gz") as tar:
-                # Check for any unsafe paths before extraction
-                for member in tar.getmembers():
-                    member_path = Path(member.name)
-                    if member_path.is_absolute() or ".." in member_path.parts:
-                        raise ValueError(f"Unsafe path in archive: {member.name}")
-                # Extract safely
-                tar.extractall(path=extract_dir)
-
-            with open(version_file, "w") as vf:
-                vf.write(version)
-
-            self.logger.info(f"Extracted {target_file} to {extract_dir}")
-        except Exception as e:
-            self.logger.error(f"Extract error: {e}")
-            raise
 
     def download_panda_vm(self, extract_dir: Path) -> Path:
         """Download and extract Panda VM."""
@@ -304,8 +428,8 @@ class BuildSystem:
         version = Path(filename).stem  # Use the filename without extension as version
 
         if not self.check_local_version(version_file, version):
-            self.logger.info(f"Downloading panda VM {version=}")
-            self.download_file(target_file, url)
+            self.logger.info("Downloading panda VM version: %s", version)
+            self.download_file(target_file, url, self.config.panda_userinfo)
             self.extract_file(target_file, extract_dir, version_file, version)
             self.logger.info("Completed download and extraction.")
 
@@ -329,7 +453,7 @@ class BuildSystem:
         with open(config_file_path, "w") as json_file:
             json.dump(config_content, json_file, indent=2)
 
-        self.logger.debug(f"Created configuration file at: {config_file_path}")
+        self.logger.debug("Created configuration file at: %s", config_file_path)
 
     def compile_abc(
         self,
@@ -343,7 +467,7 @@ class BuildSystem:
 
         if not input_dir.exists() or not input_dir.is_dir():
             self.logger.warning(
-                f"Input directory does not exist or is not a directory: {input_dir}"
+                "Input directory does not exist or is not a directory: %s", input_dir
             )
             return output_files
 
@@ -372,7 +496,7 @@ class BuildSystem:
             ark_disasm_path = panda_home / "bin/ark_disasm"
             if not ark_disasm_path.exists():
                 self.logger.warning(
-                    f"ark_disasm not found at {ark_disasm_path}, skipping disassembly"
+                    "ark_disasm not found at %s, skipping disassembly", ark_disasm_path
                 )
                 continue
 
@@ -406,59 +530,15 @@ class BuildSystem:
     def setup_build_directories(self) -> None:
         """Set up necessary build directories."""
         # Clean and create directories
-        self.manage_directory(self.generated_dir, "clean")
-        self.manage_directory(self.build_dir, "clean")
+        self.clean_directory(self.build_dir)
 
-        # Create all necessary directories
-        for directory in [
-            self.build_dir,
-            self.build_runtime_src_dir,
-            self.build_generated_src_dir,
-            self.build_author_src_dir,
-            self.build_generated_dir,
-            self.build_system_dir,
-            self.build_user_dir,
-        ]:
-            self.manage_directory(directory, "create")
-
-    def generate_code(self) -> None:
-        """Generate code from IDL files."""
-        if not self.idl_dir.is_dir():
-            raise FileNotFoundError(f"IDL directory not found: '{self.idl_dir}'")
-
-        try:
-            # Import here to avoid module dependency issues
-            from taihe.driver.backend import BackendRegistry
-            from taihe.driver.contexts import CompilerInstance, CompilerInvocation
-
-        except ImportError as e:
-            self.logger.error(f"Failed to import taihe module: {e}")
-            raise
-
-        self.logger.info("Generating author and ani codes...")
-
-        registry = BackendRegistry()
-        registry.register_all()
-        backends = registry.collect_required_backends(["ani-bridge", "cpp-author"])
-
-        # TODO: cmdline
-        resolved_backends = []
-        for b in backends:
-            if b.NAME == "ani-bridge":
-                resolved_backends.append(b(keep_name=self.sts_keep_name))  # type: ignore
-            else:
-                resolved_backends.append(b())  # pyre-ignore
-
-        instance = CompilerInstance(
-            CompilerInvocation(
-                src_dirs=[self.idl_dir],
-                out_dir=self.generated_dir,
-                backends=resolved_backends,
-            )
-        )
-
-        if not instance.run():
-            raise RuntimeError(f"Code generation failed")
+        self.create_directory(self.build_dir)
+        self.create_directory(self.build_runtime_src_dir)
+        self.create_directory(self.build_generated_src_dir)
+        self.create_directory(self.build_author_src_dir)
+        self.create_directory(self.build_generated_dir)
+        self.create_directory(self.build_system_dir)
+        self.create_directory(self.build_user_dir)
 
     def compile_shared_library(self, panda_include_dir: Path) -> Path:
         """Compile the shared library."""
@@ -473,7 +553,6 @@ class BuildSystem:
             panda_include_dir,
             self.config.runtime_include_dir,
         )
-
         generated_objects = self.compile(
             self.build_generated_src_dir,
             self.generated_src_dir,
@@ -481,7 +560,6 @@ class BuildSystem:
             self.config.runtime_include_dir,
             self.generated_include_dir,
         )
-
         author_objects = self.compile(
             self.build_author_src_dir,
             self.author_src_dir,
@@ -492,15 +570,14 @@ class BuildSystem:
         )
 
         # Link all objects
-        all_objects = runtime_objects + generated_objects + author_objects
-        if all_objects:
+        if all_objects := runtime_objects + generated_objects + author_objects:
             self.link(
                 so_target,
                 *all_objects,
                 shared=True,
                 link_options=["-Wl,--no-undefined"],
             )
-            self.logger.info(f"Shared library compiled: {so_target}")
+            self.logger.info("Shared library compiled: %s", so_target)
         else:
             self.logger.warning(
                 "No object files to link, skipping shared library compilation"
@@ -516,31 +593,41 @@ class BuildSystem:
 
         # Compile ETS files in each directory
         generated_abc = self.compile_abc(
-            self.build_generated_dir, self.generated_dir, panda_home, config_file_path
+            self.build_generated_dir,
+            self.generated_dir,
+            panda_home,
+            config_file_path,
         )
-
         user_abc = self.compile_abc(
-            self.build_user_dir, self.user_dir, panda_home, config_file_path
+            self.build_user_dir,
+            self.user_dir,
+            panda_home,
+            config_file_path,
         )
-
         system_abc = self.compile_abc(
-            self.build_system_dir, self.system_dir, panda_home, config_file_path
+            self.build_system_dir,
+            self.system_dir,
+            panda_home,
+            config_file_path,
         )
 
         # Link all ABC files
-        all_abc_files = generated_abc + user_abc + system_abc
-        if all_abc_files:
-            self.link_abc(abc_target, *all_abc_files, panda_home=panda_home)
-            self.logger.info(f"ABC files linked: {abc_target}")
+        if all_abc_files := generated_abc + user_abc + system_abc:
+            self.link_abc(
+                abc_target,
+                *all_abc_files,
+                panda_home=panda_home,
+            )
+            self.logger.info("ABC files linked: %s", abc_target)
         else:
-            self.logger.warning("No ABC files to link")
+            self.logger.warning("No ABC files to link, skipping ABC compilation")
 
         return abc_target
 
     def run_ark(self, panda_home: Path, abc_target: Path) -> None:
         """Run the compiled ABC file with the Ark runtime."""
         if not abc_target.exists():
-            self.logger.error(f"ABC file not found: {abc_target}")
+            self.logger.error("ABC file not found: %s", abc_target)
             raise FileNotFoundError(f"ABC file not found: {abc_target}")
 
         ark_path = panda_home / "bin/ark"
@@ -549,9 +636,9 @@ class BuildSystem:
 
         etsstdlib_path = panda_home / "../ets/etsstdlib.abc"
         if not etsstdlib_path.exists():
-            self.logger.warning(f"etsstdlib.abc not found at {etsstdlib_path}")
+            self.logger.warning("etsstdlib.abc not found at %s", etsstdlib_path)
 
-        self.logger.info(f"Running with Ark runtime: {abc_target}")
+        self.logger.info("Running with Ark runtime: %s", abc_target)
         self.run_command(
             [
                 ark_path,
@@ -564,142 +651,194 @@ class BuildSystem:
             capture_output=False,
         )
 
-    def run(self) -> None:
-        """Run the complete build process."""
-        try:
-            self.setup_build_directories()
-            self.generate_code()
 
-            self.logger.info("Starting ANI compilation...")
+class RepositoryUpgrader(Utils):
+    """Upgrade the code from a specified URL."""
 
-            # Set up paths for Panda VM
-            extract_dir = self.config.panda_home.resolve()
-            self.manage_directory(extract_dir, "create")
+    def __init__(
+        self,
+        repo_url: str,
+        config: BuildConfig,
+        verbosity: int = logging.INFO,
+    ):
+        super().__init__(verbosity)
+        self.repo_url = repo_url
+        self.config = config
 
-            # Download and extract Panda VM
-            package_dir = self.download_panda_vm(extract_dir)
-            panda_home = package_dir / "linux_host_tools"
+    def fetch_and_upgrade(self, repo_url: str):
+        filename = repo_url.split("/")[-1]
+        version = repo_url.split("/")[-2]
+        extract_dir = self.config.base_dir.parent
+        target_file = extract_dir / filename
+        version_file = self.config.base_dir / "version.txt"
+        with open(version_file) as vf:
+            version_str = vf.read()
+            local_version = version_str.splitlines()[0].split(":")[-1].strip()
+        if local_version == version:
+            self.logger.info("Already at version %s", version)
+            return
 
-            if not panda_home.exists():
-                raise FileNotFoundError(f"Panda home directory not found: {panda_home}")
+        self.download_file(target_file, repo_url)
+        temp_dir = extract_dir / "temp_upgrade"
+        if temp_dir.exists():
+            shutil.rmtree(temp_dir)
+        temp_dir.mkdir(parents=True)
+        self.extract_file(target_file, temp_dir)
 
-            # Path to include directory for ANI
-            panda_include_dir = (
-                package_dir / "ohos_arm64/include/plugins/ets/runtime/ani"
-            )
+        extracted_subdir = temp_dir / "taihe"
+        current_subdir = self.config.base_dir
+        shutil.rmtree(current_subdir)
+        shutil.copytree(extracted_subdir, current_subdir)
 
-            if not panda_include_dir.exists():
-                self.logger.warning(
-                    f"ANI include directory not found: {panda_include_dir}"
-                )
-                # Create a fallback include directory
-                self.manage_directory(panda_include_dir, "create")
+        shutil.rmtree(temp_dir)
+        if target_file.exists():
+            target_file.unlink()
 
-            # Compile the shared library
-            self.compile_shared_library(panda_include_dir)
-
-            # Create config file for ABC compilation
-            config_file_path = self.build_dir / "arktsconfig.json"
-            self.create_arktsconfig(panda_home, config_file_path)
-
-            # Compile and link ABC files
-            abc_target = self.compile_and_link_abc(panda_home, config_file_path)
-
-            # Run with Ark runtime
-            self.run_ark(panda_home, abc_target)
-
-            self.logger.info("Build and execution completed successfully")
-
-        except FileNotFoundError as e:
-            self.logger.error(f"File not found: {e}")
-            raise
-        except ValueError as e:
-            self.logger.error(f"Value error: {e}")
-            raise
-        except Exception as e:
-            self.logger.error(f"Build failed: {e}")
-            import traceback
-
-            self.logger.error(traceback.format_exc())
-            raise
+        self.logger.info("Successfully upgraded code to version %s", version)
 
 
 def main(config: Optional[BuildConfig] = None):
     """Main entry point for the script."""
+
+    def add_argument_target_directory(parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "target_directory",
+            type=str,
+            help="The target directory containing source files for the project",
+        )
+
+    def add_argument_optimization(parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "-O",
+            "--optimization",
+            type=str,
+            nargs="?",
+            default="0",
+            const="0",
+            help="Optimization level for compilation (0-3)",
+        )
+
+    def add_argument_sts_keep_name(parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--sts-keep-name",
+            action="store_true",
+            help="Keep original function and interface method names",
+        )
+
+    def add_argument_verbosity(parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "-v",
+            "--verbose",
+            action="count",
+            default=0,
+            help="Increase verbosity (can be used multiple times)",
+        )
+
+    def add_argument_url(parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "URL",
+            type=str,
+            help="The URL to fetch the code from",
+        )
+
     parser = argparse.ArgumentParser(
         prog="taihe-tryit",
         description="Build and run project from a target directory",
     )
-    parser.add_argument(
-        "target_directory",
-        type=str,
-        help="The target directory containing source files for the project",
-    )
-    parser.add_argument(
-        "--ani",
-        "--generate-and-compile-ani",
-        action="store_true",
-        help="Generate and compile ANI files and ETS files",
-    )
-    parser.add_argument(
-        "--sts-keep-name",
-        action="store_true",
-        help="Keep original function and interface method names",
-    )
-    parser.add_argument(
-        "-ani",
-        "--generate-and-compile-ani-deprecated",
-        action="store_true",
-        help="[DEPRECATED] Generate and compile ANI files and ETS files",
-    )
 
-    parser.add_argument(
-        "-O",
-        "--optimization",
-        type=str,
-        nargs="?",
-        default="0",
-        const="0",
-        help="Optimization level for compilation (0-3)",
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    parser_create = subparsers.add_parser(
+        "create",
+        help="Create a simple example",
     )
-    parser.add_argument(
-        "-v",
-        "--verbose",
-        action="count",
-        default=0,
-        help="Increase verbosity (can be used multiple times)",
+    add_argument_verbosity(parser_create)
+    add_argument_target_directory(parser_create)
+
+    parser_generate = subparsers.add_parser(
+        "generate",
+        help="Generate code from the target directory",
     )
+    add_argument_verbosity(parser_generate)
+    add_argument_target_directory(parser_generate)
+    add_argument_sts_keep_name(parser_generate)
+
+    parser_build = subparsers.add_parser(
+        "build",
+        help="Build the project from the target directory",
+    )
+    add_argument_verbosity(parser_build)
+    add_argument_target_directory(parser_build)
+    add_argument_optimization(parser_build)
+
+    parser_test = subparsers.add_parser(
+        "test",
+        help="Generate and build the project from the target directory",
+    )
+    add_argument_verbosity(parser_test)
+    add_argument_target_directory(parser_test)
+    add_argument_optimization(parser_test)
+    add_argument_sts_keep_name(parser_test)
+
+    parser_upgrade = subparsers.add_parser(
+        "upgrade",
+        help="Upgrade using the specified URL",
+    )
+    add_argument_verbosity(parser_upgrade)
+    add_argument_url(parser_upgrade)
 
     args = parser.parse_args()
 
-    # Set verbosity level based on args
-    verbosity_levels = {
-        0: logging.INFO,  # Default
-        1: logging.DEBUG,  # -v
-        2: logging.DEBUG,  # -vv (same as -v for now, could be more verbose in future)
-    }
-    verbosity = verbosity_levels.get(min(args.verbose, 2), logging.DEBUG)
+    match args.verbose:
+        case 0:
+            verbosity = logging.INFO
+        case 1:
+            verbosity = logging.DEBUG
+        case _:
+            verbosity = logging.DEBUG
 
-    if args.generate_and_compile_ani_deprecated:
-        print(
-            "Warning: -ani (with single dash) is deprecated. Use --ani (with double dash) instead.",
-            file=sys.stderr,
-        )
-        sys.exit(1)
+    if config is None:
+        config = BuildConfig()
 
     try:
-        # Create BuildConfig with verbosity
-
-        # Initialize BuildSystem with the config
-        builder = BuildSystem(
-            args.target_directory,
-            args.ani,
-            args.optimization,
-            config=config or BuildConfig(),
-            verbosity=verbosity,
-            sts_keep_name=args.sts_keep_name,
-        )
-        builder.run()
+        match args.command:
+            case "create":
+                BuildSystem(
+                    args.target_directory,
+                    config=config,
+                    verbosity=verbosity,
+                ).create()
+            case "generate":
+                BuildSystem(
+                    args.target_directory,
+                    config=config,
+                    verbosity=verbosity,
+                    sts_keep_name=args.sts_keep_name,
+                ).generate()
+            case "build":
+                BuildSystem(
+                    args.target_directory,
+                    config=config,
+                    verbosity=verbosity,
+                    opt_level=args.optimization,
+                ).build()
+            case "test":
+                BuildSystem(
+                    args.target_directory,
+                    config=config,
+                    verbosity=verbosity,
+                    opt_level=args.optimization,
+                    sts_keep_name=args.sts_keep_name,
+                ).generate_and_build()
+            case "upgrade":
+                RepositoryUpgrader(
+                    args.URL,
+                    config=config,
+                    verbosity=verbosity,
+                ).fetch_and_upgrade(args.URL)
+            case _:
+                parser.print_help()
+                return
     except KeyboardInterrupt:
         print("\nInterrupted. Exiting build process.", file=sys.stderr)
         sys.exit(1)
