@@ -1,9 +1,13 @@
 import argparse
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from taihe.driver.backend import BackendRegistry
 from taihe.driver.contexts import CompilerInstance, CompilerInvocation
+
+if TYPE_CHECKING:
+    from taihe.driver.backend import BackendConfig
 
 
 def main():
@@ -59,13 +63,13 @@ def main():
 
     registry = BackendRegistry()
     registry.register_all()
-    enabled_backend_names = []
+    enabled_backend_names: list[str] = []
     if args.author:
         enabled_backend_names.append("cpp-author")
     if args.ani:
         enabled_backend_names.append("ani-bridge")
 
-    resolved_backends = []
+    resolved_backends: list[BackendConfig] = []
     for b in registry.collect_required_backends(enabled_backend_names):
         if b.NAME == "ani-bridge":
             resolved_backends.append(b(keep_name=args.sts_keep_name))  # type: ignore

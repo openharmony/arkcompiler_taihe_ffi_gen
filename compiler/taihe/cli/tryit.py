@@ -9,7 +9,10 @@ import tarfile
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
+
+if TYPE_CHECKING:
+    from taihe.driver.backend import BackendConfig
 
 
 @dataclass
@@ -44,9 +47,9 @@ class Utils:
     def run_command(
         self,
         command: Sequence[Union[Path, str]],
-        capture_output=True,
+        capture_output: bool = True,
         env: Optional[dict[str, str]] = None,
-    ) -> subprocess.CompletedProcess:
+    ) -> None:
         """Run a command with environment variables."""
         # Convert all command elements to strings
         command_str = [str(c) for c in command]
@@ -64,7 +67,7 @@ class Utils:
         self.logger.debug(log_cmd)
 
         try:
-            return subprocess.run(
+            subprocess.run(
                 command_str,
                 check=True,
                 text=True,
@@ -149,7 +152,7 @@ class Utils:
 class BuildConfig:
     """Configuration for the build process."""
 
-    def __init__(self, for_distribution=False):
+    def __init__(self, for_distribution: bool = False):
         self.cxx = os.getenv("CXX", "clang++")
         self.cc = os.getenv("CC", "clang")
         self.panda_userinfo = UserInfo(
@@ -224,7 +227,7 @@ class BuildSystem(Utils):
         self.create_directory(self.author_src_dir)
         self.create_directory(self.user_dir)
 
-        include_dirs = []
+        include_dirs: list[Path] = []
         include_dirs.append(self.config.panda_include_home)
         include_dirs.append(self.config.runtime_include_dir)
         include_dirs.append(self.generated_include_dir)
@@ -279,12 +282,12 @@ class BuildSystem(Utils):
         registry.register_all()
         backends = registry.collect_required_backends(["ani-bridge", "cpp-author"])
 
-        resolved_backends = []
+        resolved_backends: list[BackendConfig] = []
         for b in backends:
             if b.NAME == "ani-bridge":
                 resolved_backends.append(b(keep_name=self.sts_keep_name))  # type: ignore
             else:
-                resolved_backends.append(b())  # pyre-ignore
+                resolved_backends.append(b())
 
         instance = CompilerInstance(
             CompilerInvocation(
@@ -347,7 +350,7 @@ class BuildSystem(Utils):
         self, output_dir: Path, input_dir: Path, *include_dirs: Path
     ) -> list[Path]:
         """Compile source files."""
-        output_files = []
+        output_files: list[Path] = []
 
         if not input_dir.exists():
             self.logger.warning("Input directory does not exist: %s", input_dir)
@@ -463,7 +466,7 @@ class BuildSystem(Utils):
         config_file_path: Path,
     ) -> list[Path]:
         """Compile ETS files to ABC format."""
-        output_files = []
+        output_files: list[Path] = []
 
         if not input_dir.exists() or not input_dir.is_dir():
             self.logger.warning(
@@ -512,7 +515,7 @@ class BuildSystem(Utils):
 
         return output_files
 
-    def link_abc(self, target: Path, *input_files, panda_home: Path) -> None:
+    def link_abc(self, target: Path, *input_files: Path, panda_home: Path) -> None:
         """Link ABC files."""
         if not input_files:
             self.logger.warning("No input files to link")

@@ -22,7 +22,7 @@ class IndentManager:
         return self.count * " "
 
     @contextmanager
-    def offset(self, n=4):
+    def offset(self, n: int = 4):
         try:
             self.count += n
             yield
@@ -151,4 +151,4 @@ class FileWriter(BaseWriter):
         with open(file_path, "w", encoding="utf-8") as dst:
             assert isinstance(self._out, StringIO)
             self.write_prologue(dst)
-            dst.write(self._out.getvalue())  # pyre-ignore
+            dst.write(self._out.getvalue())

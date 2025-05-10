@@ -36,11 +36,12 @@ class AnsiStyle:
     RESET_ALL = "\033[0m"
 
 
-def _passthrough(x):
+def _passthrough(x: str) -> str:
     return x
 
 
-def _discard(x):
+def _discard(x: str) -> str:
+    del x
     return ""
 
 
@@ -71,7 +72,7 @@ class DiagBase(ABC):
     """The source location where the diagnostic refers to."""
 
     def __str__(self) -> str:
-        return self._format(_discard)
+        return self.format(_discard)
 
     @property
     @abstractmethod
@@ -81,7 +82,7 @@ class DiagBase(ABC):
         """Returns the associated notes."""
         return ()
 
-    def _format(self, f: FilterT) -> str:
+    def format(self, f: FilterT) -> str:
         return (
             f"{f(AnsiStyle.BRIGHT)}{self.loc or '???'}: "  # "example.taihe:7:20: "
             f"{f(self.STYLE)}{self.LEVEL_DESC}{f(AnsiStyle.RESET)}: "  # "error: "
@@ -243,6 +244,6 @@ class DiagnosticsManager(AbstractDiagnosticsManager):
             )
 
     def _render(self, d: DiagBase):
-        self._write(f"{d._format(self._color_filter_fn)}\n")
+        self._write(f"{d.format(self._color_filter_fn)}\n")
         if d.loc:
             self._render_source_location(d.loc)

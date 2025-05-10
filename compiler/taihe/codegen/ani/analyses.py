@@ -415,7 +415,7 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
                     self.f.loc,
                 )
                 return True
-        self.sts_func_name = func_name  # pyre-ignore
+        self.sts_func_name = func_name
         self.on_off_type = type_name
         return True
 
@@ -592,8 +592,8 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
                     self.f.loc,
                 )
                 return True
-        self.ani_method_name = method_name  # pyre-ignore
-        self.sts_method_name = method_name  # pyre-ignore
+        self.ani_method_name = method_name
+        self.sts_method_name = method_name
         self.on_off_type = type_name
         return True
 

@@ -84,10 +84,7 @@ def normalize_pkg_name(name: str):
 
 
 def pkg2str(pkg_name: ast.PkgName) -> str:
-    if pkg_name:
-        return ".".join(t.text for t in pkg_name.parts)
-    else:
-        return ""
+    return ".".join(t.text for t in pkg_name.parts)
 
 
 class ExprEvaluator(Visitor):
@@ -289,7 +286,7 @@ class AstConverter(ExprEvaluator):
 
     def loc(self, t: ast.any):
         # Remember, token.column is 0-based.
-        return SourceLocation(self.source, *t._beg, *t._end)
+        return SourceLocation(self.source, *t.beg, *t.end)
 
     # Attributes
 

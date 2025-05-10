@@ -43,7 +43,7 @@ class AttrItemDecl:
 
 
 class DeclProtocol(Protocol):
-    def _accept(self, v: "DeclVisitor") -> Any: ...
+    def _accept(self, v: "DeclVisitor[Any]") -> Any: ...
 
 
 class Decl(metaclass=ABCMeta):
@@ -83,7 +83,7 @@ class Decl(metaclass=ABCMeta):
         return self.attrs.get(name, [None])[-1]
 
     @abstractmethod
-    def _accept(self, v: "DeclVisitor") -> Any:
+    def _accept(self, v: "DeclVisitor[Any]") -> Any:
         """Accept a visitor."""
 
 
@@ -194,7 +194,7 @@ class ParamDecl(NamedDeclWithParent[Decl]):
         return f"parameter {self.name}"
 
     @override
-    def _accept(self, v: "DeclVisitor") -> Any:
+    def _accept(self, v: "DeclVisitor[T]") -> Any:
         return v.visit_param_decl(self)
 
 
@@ -210,7 +210,7 @@ class ShortTypeRefDecl(TypeRefDecl):
         self.symbol = symbol
 
     @override
-    def _accept(self, v: "DeclVisitor") -> Any:
+    def _accept(self, v: "DeclVisitor[T]") -> Any:
         return v.visit_short_type_ref_decl(self)
 
 
@@ -229,7 +229,7 @@ class LongTypeRefDecl(TypeRefDecl):
         self.symbol = symbol
 
     @override
-    def _accept(self, v: "DeclVisitor") -> Any:
+    def _accept(self, v: "DeclVisitor[T]") -> Any:
         return v.visit_long_type_ref_decl(self)
 
 
@@ -251,7 +251,7 @@ class GenericTypeRefDecl(TypeRefDecl):
         self.args_ty_ref.append(p)
 
     @override
-    def _accept(self, v: "DeclVisitor") -> Any:
+    def _accept(self, v: "DeclVisitor[T]") -> Any:
         return v.visit_generic_type_ref_decl(self)
 
 
@@ -272,7 +272,7 @@ class CallbackTypeRefDecl(TypeRefDecl):
             return_ty_ref.set_parent(self)
 
     @override
-    def _accept(self, v: "DeclVisitor") -> Any:
+    def _accept(self, v: "DeclVisitor[T]") -> Any:
         return v.visit_callback_type_ref_decl(self)
 
     def add_param(self, p: ParamDecl):
@@ -288,7 +288,7 @@ class AdhocTypeRefDecl(TypeRefDecl):
         super().__init__(loc)
 
     @override
-    def _accept(self, v: "DeclVisitor") -> Any:
+    def _accept(self, v: "DeclVisitor[T]") -> Any:
         return v.visit_adhoc_type_ref_decl(self)
 
 
@@ -322,7 +322,7 @@ class PackageRefDecl(DeclWithParent[Decl]):
         return self.maybe_resolved_pkg
 
     @override
-    def _accept(self, v: "DeclVisitor") -> Any:
+    def _accept(self, v: "DeclVisitor[T]") -> Any:
         return v.visit_package_ref_decl(self)
 
 
@@ -356,7 +356,7 @@ class DeclarationRefDecl(DeclWithParent[Decl]):
         return self.maybe_resolved_decl
 
     @override
-    def _accept(self, v: "DeclVisitor") -> Any:
+    def _accept(self, v: "DeclVisitor[T]") -> Any:
         return v.visit_decl_ref_decl(self)
 
 
@@ -420,7 +420,7 @@ class PackageImportDecl(ImportDecl):
         return self.name != self.pkg_ref.symbol
 
     @override
-    def _accept(self, v: "DeclVisitor") -> Any:
+    def _accept(self, v: "DeclVisitor[T]") -> Any:
         return v.visit_package_import_decl(self)
 
 
@@ -450,7 +450,7 @@ class DeclarationImportDecl(ImportDecl):
         return self.name != self.decl_ref.symbol
 
     @override
-    def _accept(self, v: "DeclVisitor") -> Any:
+    def _accept(self, v: "DeclVisitor[T]") -> Any:
         return v.visit_decl_import_decl(self)
 
 
@@ -482,7 +482,7 @@ class EnumItemDecl(NamedDeclWithParent["EnumDecl"]):
         return self.node_parent
 
     @override
-    def _accept(self, v: "DeclVisitor") -> Any:
+    def _accept(self, v: "DeclVisitor[T]") -> Any:
         return v.visit_enum_item_decl(self)
 
 
@@ -512,7 +512,7 @@ class UnionFieldDecl(NamedDeclWithParent["UnionDecl"]):
         return self.node_parent
 
     @override
-    def _accept(self, v: "DeclVisitor") -> Any:
+    def _accept(self, v: "DeclVisitor[T]") -> Any:
         return v.visit_union_field_decl(self)
 
 
@@ -540,7 +540,7 @@ class StructFieldDecl(NamedDeclWithParent["StructDecl"]):
         return self.node_parent
 
     @override
-    def _accept(self, v: "DeclVisitor") -> Any:
+    def _accept(self, v: "DeclVisitor[T]") -> Any:
         return v.visit_struct_field_decl(self)
 
 
@@ -567,7 +567,7 @@ class IfaceParentDecl(DeclWithParent["IfaceDecl"]):
         return self.node_parent
 
     @override
-    def _accept(self, v: "DeclVisitor") -> Any:
+    def _accept(self, v: "DeclVisitor[T]") -> Any:
         return v.visit_iface_parent_decl(self)
 
 
@@ -603,7 +603,7 @@ class IfaceMethodDecl(NamedDeclWithParent["IfaceDecl"]):
         self.params.append(p)
 
     @override
-    def _accept(self, v: "DeclVisitor") -> Any:
+    def _accept(self, v: "DeclVisitor[T]") -> Any:
         return v.visit_iface_func_decl(self)
 
 
@@ -645,7 +645,7 @@ class GlobFuncDecl(PackageLevelDecl):
         self.params.append(p)
 
     @override
-    def _accept(self, v: "DeclVisitor") -> Any:
+    def _accept(self, v: "DeclVisitor[T]") -> Any:
         return v.visit_glob_func_decl(self)
 
 
@@ -690,7 +690,7 @@ class EnumDecl(TypeDecl):
         return EnumType(ty_ref, self)
 
     @override
-    def _accept(self, v: "DeclVisitor") -> Any:
+    def _accept(self, v: "DeclVisitor[T]") -> Any:
         return v.visit_enum_decl(self)
 
 
@@ -715,7 +715,7 @@ class UnionDecl(TypeDecl):
         return UnionType(ty_ref, self)
 
     @override
-    def _accept(self, v: "DeclVisitor") -> Any:
+    def _accept(self, v: "DeclVisitor[T]") -> Any:
         return v.visit_union_decl(self)
 
 
@@ -740,7 +740,7 @@ class StructDecl(TypeDecl):
         return StructType(ty_ref, self)
 
     @override
-    def _accept(self, v: "DeclVisitor") -> Any:
+    def _accept(self, v: "DeclVisitor[T]") -> Any:
         return v.visit_struct_decl(self)
 
 
@@ -771,7 +771,7 @@ class IfaceDecl(TypeDecl):
         return IfaceType(ty_ref, self)
 
     @override
-    def _accept(self, v: "DeclVisitor") -> Any:
+    def _accept(self, v: "DeclVisitor[T]") -> Any:
         return v.visit_iface_decl(self)
 
 
@@ -889,7 +889,7 @@ class PackageDecl(NamedDecl):
         self.decls[d.name] = d
 
     @override
-    def _accept(self, v: "DeclVisitor") -> Any:
+    def _accept(self, v: "DeclVisitor[T]") -> Any:
         return v.visit_package_decl(self)
 
 
@@ -918,5 +918,5 @@ class PackageGroup:
             raise DeclRedefError(prev, d)
         self.package_dict[d.name] = d
 
-    def _accept(self, v: "DeclVisitor"):
+    def _accept(self, v: "DeclVisitor[T]"):
         return v.visit_package_group(self)

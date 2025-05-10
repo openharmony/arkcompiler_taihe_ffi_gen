@@ -1,5 +1,5 @@
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, Any, TypeGuard, TypeVar
 
 from typing_extensions import override
 
@@ -48,6 +48,8 @@ from taihe.utils.exceptions import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from taihe.semantics.declarations import IfaceParentDecl, TypeRefDecl
     from taihe.semantics.types import Type
 
@@ -66,7 +68,7 @@ def _check_decl_confilct_with_namespace(
     diag: AbstractDiagnosticsManager,
 ):
     """Checks for declarations conflicts with namespaces."""
-    namespaces = set()
+    namespaces: set[str] = set()
     for pkg_name in pg.package_dict:
         # package "a.b.c" -> namespaces ["a.b.c", "a.b", "a"]
         while True:
@@ -327,7 +329,7 @@ class _CheckFieldNameCollisionErrorPass(RecursiveDeclVisitor):
         return super().visit_package_decl(p)
 
     def check_collision_helper(self, children: Iterable[NamedDecl]):
-        names = {}
+        names: dict[str, NamedDecl] = {}
         for f in children:
             if (prev := names.setdefault(f.name, f)) != f:
                 self.diag.emit(DeclRedefError(prev, f))
@@ -342,8 +344,12 @@ class _CheckEnumTypePass(RecursiveDeclVisitor):
         self.diag = diag
 
     def visit_enum_decl(self, d: EnumDecl) -> None:
-        def is_int(val):
+        def is_int(val: Any) -> TypeGuard[int]:
             return not isinstance(val, bool) and isinstance(val, int)
+
+        valid: Callable[[Any], bool]
+        increment: Callable[[Any, Any], Any]
+        default: Callable[[Any], Any]
 
         match d.ty_ref.maybe_resolved_ty:
             case ScalarType(_, ScalarKind.I8):

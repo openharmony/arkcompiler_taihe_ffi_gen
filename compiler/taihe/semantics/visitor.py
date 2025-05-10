@@ -89,7 +89,7 @@ class TypeVisitor(Generic[T]):
         r = self.visiting
         self.visiting = t
         try:
-            return t._accept(self)
+            return t._accept(self)  # type: ignore
         except:
             print(
                 f"Internal error from {self.__class__.__name__} while handling {self.visiting}"
@@ -179,7 +179,7 @@ class DeclVisitor(Generic[T]):
         r = self.visiting
         self.visiting = d
         try:
-            return d._accept(self)
+            return d._accept(self)  # type: ignore
         except:
             print(
                 f"Internal error from {self.__class__.__name__} while handling {self.visiting}"
