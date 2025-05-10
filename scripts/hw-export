@@ -161,9 +161,6 @@ def check_should_ignore(file: str) -> bool:
     if file == ".clang-format":
         return True
 
-    if file == "compiler/.pyre_configuration" or file == "compiler/.watchmanconfig":
-        return True
-
     if file.startswith(".githooks") or file.startswith(".github"):
         return True
 
@@ -350,7 +347,7 @@ def process_file(
     if file.endswith((".h", ".hpp", ".c", ".cpp")):
         text = convert_to_include_guard(text, file)
 
-    if file.endswith((".md", ".json", ".pyre_configuration", ".watchmanconfig")):
+    if file.endswith((".md", ".json")):
         pass
     elif file.endswith((".taihe", ".cpp", ".c", ".hpp", ".h", ".ets", ".ts", ".g4")):
         text = add_c_style_copyright(text)
