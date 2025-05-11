@@ -13,23 +13,6 @@ from typing_extensions import Self
 DEFAULT_INDENT = "    "  # Four spaces
 
 
-class IndentManager:
-    def __init__(self):
-        self.count = 0
-
-    @property
-    def current(self):
-        return self.count * " "
-
-    @contextmanager
-    def offset(self, n: int = 4):
-        try:
-            self.count += n
-            yield
-        finally:
-            self.count -= n
-
-
 @dataclass
 class OutputConfig:
     """Manages the creation and saving of output files."""
