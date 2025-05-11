@@ -11,8 +11,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Union
 
+from taihe.utils.outputs import DebugLevel
+
 if TYPE_CHECKING:
     from taihe.driver.backend import BackendConfig
+
+
+# A lower value means more verbosity
+TRACE_CONCISE = logging.DEBUG - 1
+TRACE_VERBOSE = TRACE_CONCISE - 1
 
 
 @dataclass
@@ -179,6 +186,14 @@ class BuildConfig:
         )
 
 
+def _map_output_debug_level(verbosity: int) -> DebugLevel:
+    if verbosity <= TRACE_VERBOSE:
+        return DebugLevel.VERBOSE
+    if verbosity <= TRACE_CONCISE:
+        return DebugLevel.CONCISE
+    return DebugLevel.NONE
+
+
 class BuildSystem(Utils):
     """Main build system class."""
 
@@ -193,6 +208,8 @@ class BuildSystem(Utils):
         super().__init__(verbosity)
         self.config = config
         self.sts_keep_name = sts_keep_name
+        self.should_run_pretty_print = verbosity <= logging.DEBUG
+        self.codegen_debug_level = _map_output_debug_level(verbosity)
 
         # Build paths
         self.target_path = Path(target_dir).resolve()
@@ -280,7 +297,10 @@ class BuildSystem(Utils):
 
         registry = BackendRegistry()
         registry.register_all()
-        backends = registry.collect_required_backends(["ani-bridge", "cpp-author"])
+        backend_names = ["ani-bridge", "cpp-author"]
+        if self.should_run_pretty_print:
+            backend_names.append("pretty-print")
+        backends = registry.collect_required_backends(backend_names)
 
         resolved_backends: list[BackendConfig] = []
         for b in backends:
@@ -293,6 +313,7 @@ class BuildSystem(Utils):
             CompilerInvocation(
                 src_dirs=[self.idl_dir],
                 out_dir=self.generated_dir,
+                out_debug_level=self.codegen_debug_level,
                 backends=resolved_backends,
             )
         )
@@ -797,8 +818,10 @@ def main(config: Optional[BuildConfig] = None):
             verbosity = logging.INFO
         case 1:
             verbosity = logging.DEBUG
+        case 2:
+            verbosity = TRACE_CONCISE
         case _:
-            verbosity = logging.DEBUG
+            verbosity = TRACE_VERBOSE
 
     if config is None:
         config = BuildConfig()
