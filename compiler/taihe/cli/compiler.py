@@ -68,6 +68,8 @@ def main():
         enabled_backend_names.append("cpp-author")
     if args.ani:
         enabled_backend_names.append("ani-bridge")
+    if args.debug:
+        enabled_backend_names.append("pretty-print")
 
     resolved_backends: list[BackendConfig] = []
     for b in registry.collect_required_backends(enabled_backend_names):
