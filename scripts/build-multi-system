@@ -7,6 +7,7 @@ import tarfile
 from datetime import datetime
 from pathlib import Path
 import struct
+import argparse
 
 SYSTEM_TYPES = ["linux-x86_64", "windows-x86_64", "darwin-arm64", "darwin-x86_64"]
 PYTHON_REPO_URL = "https://gitee.com/ASeaSalt/python-multi-platform.git"
@@ -217,6 +218,11 @@ def setup_system_paths(current_system: str, base_dist: Path):
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Build the Taihe project.")
+    parser.add_argument(
+        "--linux", action="store_true", help="Build only the Linux version."
+    )
+    args = parser.parse_args()
     project_dir = Path(__file__).parent.parent
     os.chdir(project_dir)
 
@@ -254,7 +260,8 @@ def main():
     compiler_dir = project_dir / "compiler"
     build_compiler(compiler_dir)
 
-    for system in SYSTEM_TYPES:
+    systems_to_build = ["linux-x86_64"] if args.linux else SYSTEM_TYPES
+    for system in systems_to_build:
         print(f"Building for {system}...")
         dist, lib_dir, bin_dir, include_dir, src_dir, doc_dir = setup_system_paths(
             system, base_dist
