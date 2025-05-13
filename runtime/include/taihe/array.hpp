@@ -164,6 +164,10 @@ struct copy_data_t {};
 
 constexpr inline copy_data_t copy_data;
 
+struct move_data_t {};
+
+constexpr inline move_data_t move_data;
+
 template<typename cpp_owner_t>
 struct array : public array_view<cpp_owner_t> {
   using typename array_view<cpp_owner_t>::pointer;
@@ -178,6 +182,14 @@ struct array : public array_view<cpp_owner_t> {
             reinterpret_cast<cpp_owner_t *>(malloc(size * sizeof(cpp_owner_t))),
             size) {
     std::uninitialized_copy_n(begin, size, this->m_data);
+  }
+
+  template<typename Iterator>
+  array(move_data_t, Iterator begin, size_type size) noexcept
+      : array_view<cpp_owner_t>(
+            reinterpret_cast<cpp_owner_t *>(malloc(size * sizeof(cpp_owner_t))),
+            size) {
+    std::uninitialized_move_n(begin, size, this->m_data);
   }
 
   explicit array(size_type size)
