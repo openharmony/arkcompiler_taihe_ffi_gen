@@ -30,7 +30,7 @@ class UserInfo:
     password: str
 
 
-class Utils:
+class BuildUtils:
     """Utility class for common operations."""
 
     def __init__(self, verbosity: int):
@@ -99,8 +99,23 @@ class Utils:
         shutil.rmtree(directory)
         self.logger.debug("Cleaned directory: %s", directory)
 
+    def move_directory(self, src: Path, dst: Path) -> None:
+        if not src.exists():
+            raise FileNotFoundError(f"Source directory does not exist: {src}")
+        shutil.move(str(src), str(dst))
+        self.logger.debug("Moved directory from %s to %s", src, dst)
+
+    def copy_directory(self, src: Path, dst: Path) -> None:
+        if not src.exists():
+            raise FileNotFoundError(f"Source directory does not exist: {src}")
+        shutil.copytree(src, dst, dirs_exist_ok=True)
+        self.logger.debug("Copied directory from %s to %s", src, dst)
+
     def download_file(
-        self, target_file: Path, url: str, user_info: Optional[UserInfo] = None
+        self,
+        target_file: Path,
+        url: str,
+        user_info: Optional[UserInfo] = None,
     ) -> None:
         """Download a file from a URL."""
         if target_file.exists():
@@ -127,18 +142,12 @@ class Utils:
         self,
         target_file: Path,
         extract_dir: Path,
-        version_file: Optional[Path] = None,
-        version: Optional[str] = None,
     ) -> None:
         """Extract a tar.gz file."""
         if not target_file.exists():
             raise FileNotFoundError(f"File to extract does not exist: {target_file}")
 
-        package_dir = extract_dir / "package"
-        if package_dir.exists():
-            shutil.rmtree(package_dir)
-
-        os.makedirs(extract_dir, exist_ok=True)
+        self.create_directory(extract_dir)
 
         with tarfile.open(target_file, "r:gz") as tar:
             # Check for any unsafe paths before extraction
@@ -148,10 +157,6 @@ class Utils:
                     raise ValueError(f"Unsafe path in archive: {member.name}")
             # Extract safely
             tar.extractall(path=extract_dir)
-
-        if version_file and version:
-            with open(version_file, "w") as vf:
-                vf.write(version)
 
         self.logger.info("Extracted %s to %s", target_file, extract_dir)
 
@@ -170,19 +175,23 @@ class BuildConfig:
 
         current_file = Path(__file__).resolve()
         if for_distribution:
-            self.base_dir = current_file.parents[5]
             # Inside the distributed repository: dist/lib/taihe/compiler/taihe/cli/compiler.py
-            self.runtime_include_dir = self.base_dir / "include"
-            self.runtime_src_dir = self.base_dir / "src" / "taihe" / "runtime"
-            self.panda_home = self.base_dir / "var" / "taihe" / "panda_vm"
+            self.taihe_base_dir = current_file.parents[5]
+            self.runtime_include_dir = self.taihe_base_dir / "include"
+            self.runtime_src_dir = self.taihe_base_dir / "src" / "taihe" / "runtime"
+            self.panda_extract_dir = self.taihe_base_dir / "var" / "taihe" / "panda_vm"
         else:
             # Inside the git repository: repo/compiler/taihe/cli/run_test.py
-            self.base_dir = current_file.parents[3]
-            self.runtime_include_dir = self.base_dir / "runtime" / "include"
-            self.runtime_src_dir = self.base_dir / "runtime" / "src"
-            self.panda_home = self.base_dir / ".panda_vm"
-        self.panda_include_home = (
-            self.panda_home / "package/ohos_arm64/include/plugins/ets/runtime/ani"
+            self.taihe_base_dir = current_file.parents[3]
+            self.runtime_include_dir = self.taihe_base_dir / "runtime" / "include"
+            self.runtime_src_dir = self.taihe_base_dir / "runtime" / "src"
+            self.panda_extract_dir = self.taihe_base_dir / ".panda_vm"
+        self.taihe_version_file = self.taihe_base_dir / "version.txt"
+        self.panda_version_file = self.panda_extract_dir / "version.txt"
+        self.panda_base_dir = self.panda_extract_dir / "package"
+        self.panda_home_dir = self.panda_base_dir / "linux_host_tools"
+        self.panda_include_dir = (
+            self.panda_base_dir / "ohos_arm64/include/plugins/ets/runtime/ani"
         )
 
 
@@ -194,7 +203,7 @@ def _map_output_debug_level(verbosity: int) -> DebugLevel:
     return DebugLevel.NONE
 
 
-class BuildSystem(Utils):
+class BuildSystem(BuildUtils):
     """Main build system class."""
 
     def __init__(
@@ -234,6 +243,11 @@ class BuildSystem(Utils):
         self.build_system_dir = self.build_dir / "system"
         self.build_user_dir = self.build_dir / "user"
 
+        # Output files
+        self.so_target = self.build_dir / f"lib{self.target_path.name}.so"
+        self.abc_target = self.build_dir / "main.abc"
+        self.arktsconfig_target = self.build_dir / "arktsconfig.json"
+
         # Build options
         self.opt_level = opt_level.strip()  # Ensure no whitespace
         self.lib_name = self.target_path.absolute().name
@@ -245,15 +259,15 @@ class BuildSystem(Utils):
         self.create_directory(self.user_dir)
 
         include_dirs: list[Path] = []
-        include_dirs.append(self.config.panda_include_home)
+        include_dirs.append(self.config.panda_include_dir)
         include_dirs.append(self.config.runtime_include_dir)
         include_dirs.append(self.generated_include_dir)
         include_dirs.append(self.author_include_dir)
 
-        with open(os.path.join(self.idl_dir, "hello.taihe"), "w") as f:
+        with open(self.idl_dir / "hello.taihe", "w") as f:
             f.write("function sayHello(): void;\n")
 
-        with open(os.path.join(self.author_src_dir, "hello.impl.cpp"), "w") as f:
+        with open(self.author_src_dir / "hello.impl.cpp", "w") as f:
             f.write(
                 '#include "hello.proj.hpp"\n'
                 '#include "hello.impl.hpp"\n'
@@ -268,7 +282,7 @@ class BuildSystem(Utils):
                 "TH_EXPORT_CPP_API_sayHello(sayHello);\n"
             )
 
-        with open(os.path.join(self.user_dir, "main.ets"), "w") as f:
+        with open(self.user_dir / "main.ets", "w") as f:
             f.write(
                 'import * as hello from "@generated/hello";\n'
                 f'loadLibrary("{self.lib_name}");\n'
@@ -278,9 +292,13 @@ class BuildSystem(Utils):
                 "}\n"
             )
 
-        with open(os.path.join(self.target_path, "compile_flags.txt"), "w") as f:
+        with open(self.target_path / "compile_flags.txt", "w") as f:
             for include_dir in include_dirs:
                 f.write(f"-I{include_dir}\n")
+
+    def generate_and_build(self) -> None:
+        self.generate()
+        self.build()
 
     def generate(self) -> None:
         """Generate code from IDL files."""
@@ -328,18 +346,15 @@ class BuildSystem(Utils):
         self.setup_build_directories()
 
         # Set up paths for Panda VM
-        extract_dir = self.config.panda_home.resolve()
-        self.create_directory(extract_dir)
+        self.download_panda_vm()
 
-        # Download and extract Panda VM
-        package_dir = self.download_panda_vm(extract_dir)
-        panda_home = package_dir / "linux_host_tools"
-
-        if not panda_home.exists():
-            raise FileNotFoundError(f"Panda home directory not found: {panda_home}")
+        if not self.config.panda_home_dir.exists():
+            raise FileNotFoundError(
+                f"Panda home directory not found: {self.config.panda_home_dir}"
+            )
 
         # Path to include directory for ANI
-        panda_include_dir = self.config.panda_include_home
+        panda_include_dir = self.config.panda_include_dir
 
         if not panda_include_dir.exists():
             self.logger.warning(
@@ -349,26 +364,179 @@ class BuildSystem(Utils):
             self.create_directory(panda_include_dir)
 
         # Compile the shared library
-        self.compile_shared_library(panda_include_dir)
-
-        # Create config file for ABC compilation
-        config_file_path = self.build_dir / "arktsconfig.json"
-        self.create_arktsconfig(panda_home, config_file_path)
+        self.compile_shared_library()
 
         # Compile and link ABC files
-        abc_target = self.compile_and_link_abc(panda_home, config_file_path)
+        self.compile_and_link_abc()
 
         # Run with Ark runtime
-        self.run_ark(panda_home, abc_target)
+        self.run_ark()
 
         self.logger.info("Build and execution completed successfully")
 
-    def generate_and_build(self) -> None:
-        self.generate()
-        self.build()
+    def compile_shared_library(self):
+        """Compile the shared library."""
+        self.logger.info("Compiling shared library...")
+
+        # Compile each component
+        runtime_objects = self.compile(
+            self.build_runtime_src_dir,
+            self.config.runtime_src_dir,
+            self.config.panda_include_dir,
+            self.config.runtime_include_dir,
+        )
+        generated_objects = self.compile(
+            self.build_generated_src_dir,
+            self.generated_src_dir,
+            self.config.panda_include_dir,
+            self.config.runtime_include_dir,
+            self.generated_include_dir,
+        )
+        author_objects = self.compile(
+            self.build_author_src_dir,
+            self.author_src_dir,
+            self.config.panda_include_dir,
+            self.config.runtime_include_dir,
+            self.generated_include_dir,
+            self.author_include_dir,
+        )
+
+        # Link all objects
+        if all_objects := runtime_objects + generated_objects + author_objects:
+            self.link(
+                self.so_target,
+                *all_objects,
+                shared=True,
+                link_options=["-Wl,--no-undefined"],
+            )
+            self.logger.info("Shared library compiled: %s", self.so_target)
+        else:
+            self.logger.warning(
+                "No object files to link, skipping shared library compilation"
+            )
+
+    def compile_and_link_abc(self):
+        """Compile and link ABC files."""
+        self.logger.info("Compiling and linking ABC files...")
+
+        self.create_arktsconfig()
+
+        # Compile ETS files in each directory
+        generated_abc = self.compile_abc(
+            self.build_generated_dir,
+            self.generated_dir,
+            self.arktsconfig_target,
+            panda_home=self.config.panda_home_dir,
+        )
+        user_abc = self.compile_abc(
+            self.build_user_dir,
+            self.user_dir,
+            self.arktsconfig_target,
+            panda_home=self.config.panda_home_dir,
+        )
+        system_abc = self.compile_abc(
+            self.build_system_dir,
+            self.system_dir,
+            self.arktsconfig_target,
+            panda_home=self.config.panda_home_dir,
+        )
+
+        # Link all ABC files
+        if all_abc_files := generated_abc + user_abc + system_abc:
+            self.link_abc(
+                self.abc_target,
+                *all_abc_files,
+                panda_home=self.config.panda_home_dir,
+            )
+            self.logger.info("ABC files linked: %s", self.abc_target)
+        else:
+            self.logger.warning("No ABC files to link, skipping ABC compilation")
+
+    def run_ark(self) -> None:
+        self.run_abc(
+            self.abc_target,
+            self.so_target.parent,
+            entry="main.ETSGLOBAL::main",
+            panda_home=self.config.panda_home_dir,
+        )
+
+    def setup_build_directories(self) -> None:
+        """Set up necessary build directories."""
+        # Clean and create directories
+        self.clean_directory(self.build_dir)
+
+        self.create_directory(self.build_dir)
+        self.create_directory(self.build_runtime_src_dir)
+        self.create_directory(self.build_generated_src_dir)
+        self.create_directory(self.build_author_src_dir)
+        self.create_directory(self.build_generated_dir)
+        self.create_directory(self.build_system_dir)
+        self.create_directory(self.build_user_dir)
+
+    def download_panda_vm(self):
+        """Download and extract Panda VM."""
+        self.create_directory(self.config.panda_extract_dir)
+
+        url = self.config.panda_url
+        filename = url.split("/")[-1]
+        target_file = self.config.panda_extract_dir / filename
+        version = Path(filename).stem  # Use the filename without extension as version
+
+        if not self.check_local_version(version):
+            self.clean_directory(self.config.panda_base_dir)
+            self.logger.info("Downloading panda VM version: %s", version)
+            self.download_file(target_file, url, self.config.panda_userinfo)
+            self.extract_file(target_file, self.config.panda_extract_dir)
+            self.write_local_version(version)
+            self.logger.info("Completed download and extraction.")
+
+    def check_local_version(self, version: str) -> bool:
+        """Check if the local version matches the desired version."""
+        if not self.config.panda_version_file.exists():
+            return False
+        try:
+            with open(self.config.panda_version_file) as vf:
+                local_version = vf.read().strip()
+                return local_version == version
+        except OSError as e:
+            self.logger.warning("Failed to read version file: %s", e)
+            return False
+
+    def write_local_version(self, version: str) -> None:
+        """Write the local version to the version file."""
+        try:
+            with open(self.config.panda_version_file, "w") as vf:
+                vf.write(version)
+        except OSError as e:
+            self.logger.warning("Failed to write version file: %s", e)
+
+    def create_arktsconfig(self) -> None:
+        """Create ArkTS configuration file."""
+        config_content = {
+            "compilerOptions": {
+                "baseUrl": str(self.config.panda_home_dir),
+                "paths": {
+                    "std": [str(self.config.panda_home_dir / "../ets/stdlib/std")],
+                    "escompat": [
+                        str(self.config.panda_home_dir / "../ets/stdlib/escompat")
+                    ],
+                    "@ohos.base": [str(self.generated_dir / "@ohos.base.ets")],
+                    "@generated": [str(self.generated_dir)],
+                    "@system": [str(self.system_dir)],
+                },
+            }
+        }
+
+        with open(self.arktsconfig_target, "w") as json_file:
+            json.dump(config_content, json_file, indent=2)
+
+        self.logger.debug("Created configuration file at: %s", self.arktsconfig_target)
 
     def compile(
-        self, output_dir: Path, input_dir: Path, *include_dirs: Path
+        self,
+        output_dir: Path,
+        input_dir: Path,
+        *include_dirs: Path,
     ) -> list[Path]:
         """Compile source files."""
         output_files: list[Path] = []
@@ -432,59 +600,12 @@ class BuildSystem(Utils):
 
         self.run_command(command)
 
-    def check_local_version(self, version_file: Path, version: str) -> bool:
-        """Check if the local version matches the desired version."""
-        if version_file.exists():
-            try:
-                with open(version_file) as vf:
-                    local_version = vf.read().strip()
-                    return local_version == version
-            except OSError as e:
-                self.logger.warning("Failed to read version file: %s", e)
-        return False
-
-    def download_panda_vm(self, extract_dir: Path) -> Path:
-        """Download and extract Panda VM."""
-        url = self.config.panda_url
-        filename = url.split("/")[-1]
-        target_file = extract_dir / filename
-        version_file = extract_dir / "version.txt"
-        version = Path(filename).stem  # Use the filename without extension as version
-
-        if not self.check_local_version(version_file, version):
-            self.logger.info("Downloading panda VM version: %s", version)
-            self.download_file(target_file, url, self.config.panda_userinfo)
-            self.extract_file(target_file, extract_dir, version_file, version)
-            self.logger.info("Completed download and extraction.")
-
-        return extract_dir / "package"
-
-    def create_arktsconfig(self, panda_home: Path, config_file_path: Path) -> None:
-        """Create ArkTS configuration file."""
-        config_content = {
-            "compilerOptions": {
-                "baseUrl": str(panda_home),
-                "paths": {
-                    "std": [str(panda_home / "../ets/stdlib/std")],
-                    "escompat": [str(panda_home / "../ets/stdlib/escompat")],
-                    "@ohos.base": [str(self.generated_dir / "@ohos.base.ets")],
-                    "@generated": [str(self.generated_dir)],
-                    "@system": [str(self.system_dir)],
-                },
-            }
-        }
-
-        with open(config_file_path, "w") as json_file:
-            json.dump(config_content, json_file, indent=2)
-
-        self.logger.debug("Created configuration file at: %s", config_file_path)
-
     def compile_abc(
         self,
         output_dir: Path,
         input_dir: Path,
-        panda_home: Path,
         config_file_path: Path,
+        panda_home: Path,
     ) -> list[Path]:
         """Compile ETS files to ABC format."""
         output_files: list[Path] = []
@@ -536,7 +657,12 @@ class BuildSystem(Utils):
 
         return output_files
 
-    def link_abc(self, target: Path, *input_files: Path, panda_home: Path) -> None:
+    def link_abc(
+        self,
+        target: Path,
+        *input_files: Path,
+        panda_home: Path,
+    ) -> None:
         """Link ABC files."""
         if not input_files:
             self.logger.warning("No input files to link")
@@ -551,104 +677,13 @@ class BuildSystem(Utils):
 
         self.run_command(command)
 
-    def setup_build_directories(self) -> None:
-        """Set up necessary build directories."""
-        # Clean and create directories
-        self.clean_directory(self.build_dir)
-
-        self.create_directory(self.build_dir)
-        self.create_directory(self.build_runtime_src_dir)
-        self.create_directory(self.build_generated_src_dir)
-        self.create_directory(self.build_author_src_dir)
-        self.create_directory(self.build_generated_dir)
-        self.create_directory(self.build_system_dir)
-        self.create_directory(self.build_user_dir)
-
-    def compile_shared_library(self, panda_include_dir: Path) -> Path:
-        """Compile the shared library."""
-        self.logger.info("Compiling shared library...")
-
-        so_target = self.build_dir / f"lib{self.lib_name}.so"
-
-        # Compile each component
-        runtime_objects = self.compile(
-            self.build_runtime_src_dir,
-            self.config.runtime_src_dir,
-            panda_include_dir,
-            self.config.runtime_include_dir,
-        )
-        generated_objects = self.compile(
-            self.build_generated_src_dir,
-            self.generated_src_dir,
-            panda_include_dir,
-            self.config.runtime_include_dir,
-            self.generated_include_dir,
-        )
-        author_objects = self.compile(
-            self.build_author_src_dir,
-            self.author_src_dir,
-            panda_include_dir,
-            self.config.runtime_include_dir,
-            self.generated_include_dir,
-            self.author_include_dir,
-        )
-
-        # Link all objects
-        if all_objects := runtime_objects + generated_objects + author_objects:
-            self.link(
-                so_target,
-                *all_objects,
-                shared=True,
-                link_options=["-Wl,--no-undefined"],
-            )
-            self.logger.info("Shared library compiled: %s", so_target)
-        else:
-            self.logger.warning(
-                "No object files to link, skipping shared library compilation"
-            )
-
-        return so_target
-
-    def compile_and_link_abc(self, panda_home: Path, config_file_path: Path) -> Path:
-        """Compile and link ABC files."""
-        self.logger.info("Compiling and linking ABC files...")
-
-        abc_target = self.build_dir / "main.abc"
-
-        # Compile ETS files in each directory
-        generated_abc = self.compile_abc(
-            self.build_generated_dir,
-            self.generated_dir,
-            panda_home,
-            config_file_path,
-        )
-        user_abc = self.compile_abc(
-            self.build_user_dir,
-            self.user_dir,
-            panda_home,
-            config_file_path,
-        )
-        system_abc = self.compile_abc(
-            self.build_system_dir,
-            self.system_dir,
-            panda_home,
-            config_file_path,
-        )
-
-        # Link all ABC files
-        if all_abc_files := generated_abc + user_abc + system_abc:
-            self.link_abc(
-                abc_target,
-                *all_abc_files,
-                panda_home=panda_home,
-            )
-            self.logger.info("ABC files linked: %s", abc_target)
-        else:
-            self.logger.warning("No ABC files to link, skipping ABC compilation")
-
-        return abc_target
-
-    def run_ark(self, panda_home: Path, abc_target: Path) -> None:
+    def run_abc(
+        self,
+        abc_target: Path,
+        ld_lib_path: Path,
+        entry: str,
+        panda_home: Path,
+    ):
         """Run the compiled ABC file with the Ark runtime."""
         if not abc_target.exists():
             self.logger.error("ABC file not found: %s", abc_target)
@@ -669,14 +704,14 @@ class BuildSystem(Utils):
                 f"--boot-panda-files={etsstdlib_path}",
                 f"--load-runtimes=ets",
                 abc_target,
-                "main.ETSGLOBAL::main",
+                entry,
             ],
-            env={"LD_LIBRARY_PATH": str(self.build_dir)},
+            env={"LD_LIBRARY_PATH": str(ld_lib_path)},
             capture_output=False,
         )
 
 
-class RepositoryUpgrader(Utils):
+class RepositoryUpgrader(BuildUtils):
     """Upgrade the code from a specified URL."""
 
     def __init__(
@@ -689,34 +724,26 @@ class RepositoryUpgrader(Utils):
         self.repo_url = repo_url
         self.config = config
 
-    def fetch_and_upgrade(self, repo_url: str):
-        filename = repo_url.split("/")[-1]
-        version = repo_url.split("/")[-2]
-        extract_dir = self.config.base_dir.parent
-        target_file = extract_dir / filename
-        version_file = self.config.base_dir / "version.txt"
-        with open(version_file) as vf:
+    def fetch_and_upgrade(self):
+        filename = self.repo_url.split("/")[-1]
+        version = self.repo_url.split("/")[-2]
+        with open(self.config.taihe_version_file) as vf:
             version_str = vf.read()
             local_version = version_str.splitlines()[0].split(":")[-1].strip()
         if local_version == version:
             self.logger.info("Already at version %s", version)
             return
 
-        self.download_file(target_file, repo_url)
-        temp_dir = extract_dir / "temp_upgrade"
-        if temp_dir.exists():
-            shutil.rmtree(temp_dir)
-        temp_dir.mkdir(parents=True)
-        self.extract_file(target_file, temp_dir)
+        extract_dir = self.config.taihe_base_dir / "../tmp"
+        target_file = extract_dir / filename
+        self.create_directory(extract_dir)
+        self.download_file(target_file, self.repo_url)
+        self.extract_file(target_file, extract_dir)
 
-        extracted_subdir = temp_dir / "taihe"
-        current_subdir = self.config.base_dir
-        shutil.rmtree(current_subdir)
-        shutil.copytree(extracted_subdir, current_subdir)
-
-        shutil.rmtree(temp_dir)
-        if target_file.exists():
-            target_file.unlink()
+        tmp_taihe_base_dir = extract_dir / "taihe"
+        self.clean_directory(self.config.taihe_base_dir)
+        self.move_directory(tmp_taihe_base_dir, self.config.taihe_base_dir)
+        self.clean_directory(extract_dir)
 
         self.logger.info("Successfully upgraded code to version %s", version)
 
@@ -861,7 +888,7 @@ def main(config: Optional[BuildConfig] = None):
                     args.URL,
                     config=config,
                     verbosity=verbosity,
-                ).fetch_and_upgrade(args.URL)
+                ).fetch_and_upgrade()
             case _:
                 parser.print_help()
                 return
