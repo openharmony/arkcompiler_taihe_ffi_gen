@@ -842,9 +842,8 @@ map<string, int32_t> BaseFunctionTest29(map_view<string, int32_t> param1) {
 
 ::ns_alltest::functiontest::Color BaseFunctionTest30(
     ::ns_alltest::functiontest::Color param1) {
-  return (
-      ::ns_alltest::functiontest::Color::key_t)(((int)param1.get_key() + 1) %
-                                                g_testEnum);
+  return (::ns_alltest::functiontest::Color::key_t)(
+      ((int)param1.get_key() + 1) % g_testEnum);
 }
 
 void BaseFunctionTest31(::ns_alltest::functiontest::Color param1) {
