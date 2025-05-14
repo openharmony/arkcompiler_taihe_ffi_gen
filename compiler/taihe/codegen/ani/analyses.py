@@ -1015,7 +1015,9 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
         if self.ani_type.base == ANI_REF:
             self.into_ani(target, 4, env, f"{cpp_array_value}[{cpp_i}]", ani_result)
         else:
-            self.into_ani_boxed(target, 4, env, f"{cpp_array_value}[{cpp_i}]", ani_result)
+            self.into_ani_boxed(
+                target, 4, env, f"{cpp_array_value}[{cpp_i}]", ani_result
+            )
         target.writelns(
             f"    {env}->Array_Set({ani_array_result}, {cpp_i}, {ani_result});",
             f"}}",
