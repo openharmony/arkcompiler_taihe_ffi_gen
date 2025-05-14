@@ -208,15 +208,15 @@ class PrettyPrinter(DeclVisitor[None]):
         enum_kw = self.fmt.as_keyword("enum")
 
         full_decl = f"{d.name}: {self.fmt.get_type_ref_decl(d.ty_ref)}"
+        prologue = f"{enum_kw} {full_decl} {{"
+        epilogue = f"}}"
 
         if d.items:
-            self.out.writeln(f"{enum_kw} {full_decl} {{")
-            with self.out.indented():
+            with self.out.indented(prologue, epilogue):
                 for i in d.items:
                     self.handle_decl(i)
-            self.out.writeln(f"}}")
         else:
-            self.out.writeln(f"{enum_kw} {full_decl} {{}}")
+            self.out.writeln(prologue + epilogue)
 
     @override
     def visit_union_field_decl(self, d: "UnionFieldDecl"):
@@ -232,15 +232,15 @@ class PrettyPrinter(DeclVisitor[None]):
         self.write_attr(d)
 
         union_kw = self.fmt.as_keyword("union")
+        prologue = f"{union_kw} {d.name} {{"
+        epilogue = f"}}"
 
         if d.fields:
-            self.out.writeln(f"{union_kw} {d.name} {{")
-            with self.out.indented():
+            with self.out.indented(prologue, epilogue):
                 for f in d.fields:
                     self.handle_decl(f)
-            self.out.writeln(f"}}")
         else:
-            self.out.writeln(f"{union_kw} {d.name} {{}}")
+            self.out.writeln(prologue + epilogue)
 
     @override
     def visit_struct_field_decl(self, d: "StructFieldDecl"):
@@ -253,15 +253,15 @@ class PrettyPrinter(DeclVisitor[None]):
         self.write_attr(d)
 
         struct_kw = self.fmt.as_keyword("struct")
+        prologue = f"{struct_kw} {d.name} {{"
+        epilogue = f"}}"
 
         if d.fields:
-            self.out.writeln(f"{struct_kw} {d.name} {{")
-            with self.out.indented():
+            with self.out.indented(prologue, epilogue):
                 for f in d.fields:
                     self.handle_decl(f)
-            self.out.writeln(f"}}")
         else:
-            self.out.writeln(f"{struct_kw} {d.name} {{}}")
+            self.out.writeln(prologue + epilogue)
 
     @override
     def visit_iface_func_decl(self, d: "IfaceMethodDecl"):
@@ -283,15 +283,15 @@ class PrettyPrinter(DeclVisitor[None]):
             if d.parents
             else d.name
         )
+        prologue = f"{iface_kw} {full_decl} {{"
+        epilogue = f"}}"
 
         if d.methods:
-            self.out.writeln(f"{iface_kw} {full_decl} {{")
-            with self.out.indented():
+            with self.out.indented(prologue, epilogue):
                 for f in d.methods:
                     self.handle_decl(f)
-            self.out.writeln(f"}}")
         else:
-            self.out.writeln(f"{iface_kw} {full_decl} {{}}")
+            self.out.writeln(prologue + epilogue)
 
     @override
     def visit_package_decl(self, p: "PackageDecl"):
