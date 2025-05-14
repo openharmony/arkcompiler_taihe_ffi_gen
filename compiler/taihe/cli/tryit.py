@@ -727,12 +727,6 @@ class RepositoryUpgrader(BuildUtils):
     def fetch_and_upgrade(self):
         filename = self.repo_url.split("/")[-1]
         version = self.repo_url.split("/")[-2]
-        with open(self.config.taihe_version_file) as vf:
-            version_str = vf.read()
-            local_version = version_str.splitlines()[0].split(":")[-1].strip()
-        if local_version == version:
-            self.logger.info("Already at version %s", version)
-            return
 
         extract_dir = self.config.taihe_base_dir / "../tmp"
         target_file = extract_dir / filename
