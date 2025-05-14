@@ -13,58 +13,16 @@ struct callback;
 
 template<typename Return, typename... Params>
 struct callback_view<Return(Params...)> {
-  struct callback_data_t {
+  struct callback_data_base {
     TRefCount m_count;
-    void (*m_free)(struct callback_data_t *);
-    as_abi_t<Return> (*m_func)(callback_data_t *data_ptr,
+    void (*m_free)(struct callback_data_base *);
+    as_abi_t<Return> (*m_func)(callback_data_base *data_ptr,
                                as_abi_t<Params>... params);
   };
 
-  template<typename Impl>
-  struct callback_data_impl : callback_data_t {
-    Impl impl;
+  callback_data_base *data_ptr;
 
-    static void c_free(callback_data_t *data_ptr) {
-      delete static_cast<callback_data_impl<Impl> *>(data_ptr);
-    };
-
-    static as_abi_t<Return> c_call(callback_data_t *data_ptr,
-                                   as_abi_t<Params>... params) {
-      if constexpr (std::is_void_v<Return>) {
-        return static_cast<callback_data_impl<Impl> *>(data_ptr)->impl(
-            from_abi<Params>(params)...);
-      } else {
-        return into_abi<Return>(
-            static_cast<callback_data_impl<Impl> *>(data_ptr)->impl(
-                from_abi<Params>(params)...));
-      }
-    };
-
-    template<typename... Args>
-    callback_data_impl(Args &&...args) : impl(std::forward<Args>(args)...) {
-      this->m_free = &c_free;
-      this->m_func = &c_call;
-      tref_set(&this->m_count, 1);
-    }
-  };
-
-  callback_data_t *data_ptr;
-
-  explicit callback_view(callback_data_t *data_ptr) : data_ptr(data_ptr) {}
-
-  template<typename Impl, typename... Args>
-  static callback<Return(Params...)> from(Args &&...args) {
-    return callback<Return(Params...)>{
-        new callback_data_impl<Impl>(std::forward<Args>(args)...),
-    };
-  }
-
-  template<typename Impl>
-  static callback<Return(Params...)> from(Impl &&impl) {
-    return callback<Return(Params...)>{
-        new callback_data_impl<Impl>(std::forward<Impl>(impl)),
-    };
-  }
+  explicit callback_view(callback_data_base *data_ptr) : data_ptr(data_ptr) {}
 
   Return operator()(Params... params) const {
     if constexpr (std::is_void_v<Return>) {
@@ -78,10 +36,10 @@ struct callback_view<Return(Params...)> {
 
 template<typename Return, typename... Params>
 struct callback<Return(Params...)> : callback_view<Return(Params...)> {
-  using typename callback_view<Return(Params...)>::callback_data_t;
+  using typename callback_view<Return(Params...)>::callback_data_base;
   using callback_view<Return(Params...)>::data_ptr;
 
-  explicit callback(callback_data_t *data_ptr)
+  explicit callback(callback_data_base *data_ptr)
       : callback_view<Return(Params...)>(data_ptr) {}
 
   callback(callback<Return(Params...)> &&other) : callback{other.data_ptr} {
@@ -111,6 +69,41 @@ struct callback<Return(Params...)> : callback_view<Return(Params...)> {
   callback &operator=(callback other) {
     std::swap(data_ptr, other.data_ptr);
     return *this;
+  }
+
+  template<typename Impl>
+  struct callback_data_real : callback_data_base {
+    Impl impl;
+
+    static as_abi_t<Return> c_call(callback_data_base *data_ptr,
+                                   as_abi_t<Params>... params) {
+      if constexpr (std::is_void_v<Return>) {
+        return static_cast<callback_data_real<Impl> *>(data_ptr)->impl(
+            from_abi<Params>(params)...);
+      } else {
+        return into_abi<Return>(
+            static_cast<callback_data_real<Impl> *>(data_ptr)->impl(
+                from_abi<Params>(params)...));
+      }
+    };
+
+    static void c_free(callback_data_base *data_ptr) {
+      delete static_cast<callback_data_real<Impl> *>(data_ptr);
+    };
+
+    template<typename... Args>
+    callback_data_real(Args &&...args) : impl(std::forward<Args>(args)...) {
+      this->m_free = &c_free;
+      this->m_func = &c_call;
+      tref_set(&this->m_count, 1);
+    }
+  };
+
+  template<typename Impl, typename... Args>
+  static callback<Return(Params...)> from(Args &&...args) {
+    return callback<Return(Params...)>{
+        new callback_data_real<Impl>(std::forward<Args>(args)...),
+    };
   }
 };
 
