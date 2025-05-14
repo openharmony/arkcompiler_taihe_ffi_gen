@@ -54,29 +54,29 @@ inline std::size_t hash_impl(adl_helper_t, data_view val) {
 
 namespace taihe {
 template<typename Impl>
-struct data_block_real : DataBlockHead {
+struct data_block_full : DataBlockHead {
   Impl impl;
 
   template<typename... Args>
-  data_block_real(TypeInfo const *rtti_ptr, Args &&...args)
+  data_block_full(TypeInfo const *rtti_ptr, Args &&...args)
       : impl(std::forward<Args>(args)...) {
     tobj_init(this, rtti_ptr);
   }
 };
 
+template<typename Impl>
+inline Impl *cast_data_ptr(struct DataBlockHead *data_ptr) {
+  return &static_cast<data_block_full<Impl> *>(data_ptr)->impl;
+}
+
 template<typename Impl, typename... Args>
 inline DataBlockHead *new_data_ptr(TypeInfo const *rtti_ptr, Args &&...args) {
-  return new data_block_real<Impl>(rtti_ptr, std::forward<Args>(args)...);
+  return new data_block_full<Impl>(rtti_ptr, std::forward<Args>(args)...);
 }
 
 template<typename Impl>
 inline void del_data_ptr(struct DataBlockHead *data_ptr) {
-  delete static_cast<data_block_real<Impl> *>(data_ptr);
-}
-
-template<typename Impl>
-inline Impl *cast_data_ptr(struct DataBlockHead *data_ptr) {
-  return &static_cast<data_block_real<Impl> *>(data_ptr)->impl;
+  delete static_cast<data_block_full<Impl> *>(data_ptr);
 }
 
 template<typename Impl, typename InterfaceHolder, typename... Args>
