@@ -173,6 +173,9 @@ def check_should_ignore(file: str) -> bool:
         and not file == "test/CMakeLists.txt"
     ):
         return True
+    
+    if file.endswith(__file__.rsplit("/", 1)[-1]):
+        return True
 
     return False
 
@@ -276,15 +279,6 @@ def add_shebang(text: str) -> str:
         return "\n".join(header + lines) + "\n"
 
 
-def is_text_file(file: Path):
-    try:
-        with open(file, "r", encoding="utf-8") as f:
-            f.read(1024)
-        return True  # 可以作为 UTF-8 解码，可能是文本文件
-    except UnicodeDecodeError:
-        return False  # 不能作为 UTF-8 解码，可能是二进制文件
-
-
 def convert_to_include_guard(text: str, filename: str) -> str:
     should_nolint = filename.endswith(".hpp") or filename.endswith("common.h")
 
@@ -321,19 +315,30 @@ def remove_single_line_comments(text: str) -> str:
     return "\n".join(line for line in text.splitlines() if set(line.strip()) != {"/"})
 
 
+def is_text_file(file: Path):
+    try:
+        with open(file, "r", encoding="utf-8") as f:
+            f.read(1024)
+        return True  # 可以作为 UTF-8 解码，可能是文本文件
+    except UnicodeDecodeError:
+        return False  # 不能作为 UTF-8 解码，可能是二进制文件
+
+
 def process_file(
-    input_dir: Path, output_dir: Path, file: str, clang_format_path: Path
+    input_dir: Path,
+    output_dir: Path,
+    file: str,
+    clang_format_path: Path,
 ) -> None:
     input_path = input_dir / file
     output_path = output_dir / file
 
-    print(f"processing '{input_path}' -> '{output_path}'")
+    print(f"Processing {input_path} -> {output_path}")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    shutil.copy2(input_path, output_path)
-
     if not is_text_file(input_path):
+        shutil.copy2(input_path, output_path)
         return
 
     with open(input_path, "r") as input:
