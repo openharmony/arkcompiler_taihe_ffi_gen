@@ -170,6 +170,11 @@ class CppHeadersGenerator(Backend):
             f"        return this->key;",
             f"    }}",
         )
+        enum_cpp_target.writelns(
+            f"    bool is_valid() const {{",
+            f"        return ({enum_abi_info.abi_type})key >= 0 && ({enum_abi_info.abi_type})key < {len(enum.items)};",
+            f"    }}",
+        )
 
     def gen_enum_value_getter(
         self,
@@ -178,14 +183,17 @@ class CppHeadersGenerator(Backend):
         enum_cpp_info: EnumCppInfo,
         enum_cpp_target: CHeaderWriter,
     ):
+        ty_cpp_info = TypeCppInfo.get(self.am, enum.ty_ref.resolved_ty)
         match enum.ty_ref.resolved_ty:
             case StringType():
                 as_owner = "char const*"
+                as_param = ty_cpp_info.as_param
             case ScalarType():
-                ty_cpp_info = TypeCppInfo.get(self.am, enum.ty_ref.resolved_ty)
                 as_owner = ty_cpp_info.as_owner
+                as_param = ty_cpp_info.as_param
             case _:
                 raise ValueError("invalid enum type")
+        enum_cpp_target.add_include(*ty_cpp_info.impl_headers)
         enum_cpp_target.writelns(
             f"    static constexpr {as_owner} table[] = {{",
         )
@@ -204,6 +212,16 @@ class CppHeadersGenerator(Backend):
         enum_cpp_target.writelns(
             f"    operator {as_owner}() const {{",
             f"        return table[({enum_abi_info.abi_type})key];",
+            f"    }}",
+        )
+        enum_cpp_target.writelns(
+            f"    static {enum_cpp_info.as_owner} from_value({as_param} value) {{",
+            f"        for (size_t i = 0; i < {len(enum.items)}; ++i) {{",
+            f"            if (::taihe::same(table[i], value)) {{",
+            f"                return {enum_cpp_info.as_owner}((key_t)i);",
+            f"            }}",
+            f"        }}",
+            f"        return {enum_cpp_info.as_owner}((key_t)-1);",
             f"    }}",
         )
 
