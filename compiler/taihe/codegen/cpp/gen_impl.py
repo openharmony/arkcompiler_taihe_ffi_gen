@@ -52,7 +52,8 @@ class CppImplHeadersGenerator:
         pkg_abi_info = PackageABIInfo.get(self.am, pkg)
         pkg_cpp_impl_info = PackageCppImplInfo.get(self.am, pkg)
         with CHeaderWriter(
-            self.oc, f"include/{pkg_cpp_impl_info.header}"
+            self.oc,
+            f"include/{pkg_cpp_impl_info.header}",
         ) as pkg_cpp_impl_target:
             pkg_cpp_impl_target.add_include("taihe/common.hpp")
             pkg_cpp_impl_target.add_include(pkg_abi_info.header)
@@ -133,17 +134,18 @@ class CppImplSourcesGenerator:
         pkg_cpp_info = PackageCppInfo.get(self.am, pkg)
         pkg_cpp_impl_info = PackageCppImplInfo.get(self.am, pkg)
         with CSourceWriter(
-            self.oc, f"temp/{pkg_cpp_impl_info.source}"
+            self.oc,
+            f"temp/{pkg_cpp_impl_info.source}",
         ) as pkg_cpp_impl_target:
             pkg_cpp_impl_target.add_include(pkg_cpp_info.header)
             pkg_cpp_impl_target.add_include(pkg_cpp_impl_info.header)
             pkg_cpp_impl_target.add_include("taihe/runtime.hpp")
             pkg_cpp_impl_target.add_include("stdexcept")
-            pkg_cpp_impl_target.writelns("")
+            pkg_cpp_impl_target.writeln("")
             self.using_namespaces = []
-            pkg_cpp_impl_target.writelns("")
+            pkg_cpp_impl_target.writeln("")
             self.gen_anonymous_namespace_block(pkg, pkg_cpp_impl_target)
-            pkg_cpp_impl_target.writelns("")
+            pkg_cpp_impl_target.writeln("")
             pkg_cpp_impl_target.writelns(
                 "// Since these macros are auto-generate, lint will cause false positive.",
                 "// NOLINTBEGIN",
@@ -170,19 +172,20 @@ class CppImplSourcesGenerator:
         pkg: PackageDecl,
         pkg_cpp_impl_target: CSourceWriter,
     ):
-        pkg_cpp_impl_target.writelns(
+        with pkg_cpp_impl_target.indented(
             f"namespace {{",
-            f"// To be implemented.",
-        )
-        for iface in pkg.interfaces:
-            pkg_cpp_impl_target.writelns("")
-            self.gen_iface(iface, pkg_cpp_impl_target)
-        for func in pkg.functions:
-            pkg_cpp_impl_target.writelns("")
-            self.gen_func_impl(func, pkg_cpp_impl_target)
-        pkg_cpp_impl_target.writelns(
             f"}}  // namespace",
-        )
+            indent="",
+        ):
+            pkg_cpp_impl_target.writelns(
+                f"// To be implemented.",
+            )
+            for iface in pkg.interfaces:
+                pkg_cpp_impl_target.writeln("")
+                self.gen_iface(iface, pkg_cpp_impl_target)
+            for func in pkg.functions:
+                pkg_cpp_impl_target.writeln("")
+                self.gen_func_impl(func, pkg_cpp_impl_target)
 
     def gen_iface(
         self,
@@ -191,20 +194,24 @@ class CppImplSourcesGenerator:
     ):
         iface_abi_info = IfaceABIInfo.get(self.am, iface)
         impl_name = f"{iface.name}Impl"
-        pkg_cpp_impl_target.writelns(
+        with pkg_cpp_impl_target.indented(
             f"class {impl_name} {{",
-            f"public:",
-            f"    {impl_name}() {{",
-            f"        // Don't forget to implement the constructor.",
-            f"    }}",
-        )
-        for ancestor in iface_abi_info.ancestor_dict:
-            for func in ancestor.methods:
-                pkg_cpp_impl_target.writelns("")
-                self.gen_method_impl(func, pkg_cpp_impl_target)
-        pkg_cpp_impl_target.writelns(
             f"}};",
-        )
+        ):
+            pkg_cpp_impl_target.writelns(
+                f"public:",
+            )
+            with pkg_cpp_impl_target.indented(
+                f"{impl_name}() {{",
+                f"}}",
+            ):
+                pkg_cpp_impl_target.writelns(
+                    f"// Don't forget to implement the constructor.",
+                )
+            for ancestor in iface_abi_info.ancestor_dict:
+                for func in ancestor.methods:
+                    pkg_cpp_impl_target.writeln("")
+                    self.gen_method_impl(func, pkg_cpp_impl_target)
 
     def gen_method_impl(
         self,
@@ -223,23 +230,21 @@ class CppImplSourcesGenerator:
             cpp_return_ty_name = self.mask(type_cpp_info.as_owner)
         else:
             cpp_return_ty_name = "void"
-        pkg_cpp_impl_target.writelns(
-            f"    {cpp_return_ty_name} {func_cpp_impl_name}({cpp_params_str}) {{",
-        )
-        if return_ty_ref and isinstance(return_ty_ref.resolved_ty, IfaceType):
-            impl_name = f"{return_ty_ref.resolved_ty.ty_decl.name}Impl"
-            pkg_cpp_impl_target.writelns(
-                f"        // The parameters in the make_holder function should be of the same type",
-                f"        // as the parameters in the constructor of the actual implementation class.",
-                f"        return {self.make_holder}<{impl_name}, {cpp_return_ty_name}>();",
-            )
-        else:
-            pkg_cpp_impl_target.writelns(
-                f'        TH_THROW({self.runtime_error}, "{func_cpp_impl_name} not implemented");',
-            )
-        pkg_cpp_impl_target.writelns(
-            f"    }}",
-        )
+        with pkg_cpp_impl_target.indented(
+            f"{cpp_return_ty_name} {func_cpp_impl_name}({cpp_params_str}) {{",
+            f"}}",
+        ):
+            if return_ty_ref and isinstance(return_ty_ref.resolved_ty, IfaceType):
+                impl_name = f"{return_ty_ref.resolved_ty.ty_decl.name}Impl"
+                pkg_cpp_impl_target.writelns(
+                    f"// The parameters in the make_holder function should be of the same type",
+                    f"// as the parameters in the constructor of the actual implementation class.",
+                    f"return {self.make_holder}<{impl_name}, {cpp_return_ty_name}>();",
+                )
+            else:
+                pkg_cpp_impl_target.writelns(
+                    f'TH_THROW({self.runtime_error}, "{func_cpp_impl_name} not implemented");',
+                )
 
     def gen_func_impl(
         self,
@@ -257,23 +262,21 @@ class CppImplSourcesGenerator:
             cpp_return_ty_name = self.mask(type_cpp_info.as_owner)
         else:
             cpp_return_ty_name = "void"
-        pkg_cpp_impl_target.writelns(
+        with pkg_cpp_impl_target.indented(
             f"{cpp_return_ty_name} {func_cpp_impl_name}({cpp_params_str}) {{",
-        )
-        if return_ty_ref and isinstance(return_ty_ref.resolved_ty, IfaceType):
-            impl_name = f"{return_ty_ref.resolved_ty.ty_decl.name}Impl"
-            pkg_cpp_impl_target.writelns(
-                f"    // The parameters in the make_holder function should be of the same type",
-                f"    // as the parameters in the constructor of the actual implementation class.",
-                f"    return {self.make_holder}<{impl_name}, {cpp_return_ty_name}>();",
-            )
-        else:
-            pkg_cpp_impl_target.writelns(
-                f'    TH_THROW({self.runtime_error}, "{func_cpp_impl_name} not implemented");',
-            )
-        pkg_cpp_impl_target.writelns(
             f"}}",
-        )
+        ):
+            if return_ty_ref and isinstance(return_ty_ref.resolved_ty, IfaceType):
+                impl_name = f"{return_ty_ref.resolved_ty.ty_decl.name}Impl"
+                pkg_cpp_impl_target.writelns(
+                    f"// The parameters in the make_holder function should be of the same type",
+                    f"// as the parameters in the constructor of the actual implementation class.",
+                    f"return {self.make_holder}<{impl_name}, {cpp_return_ty_name}>();",
+                )
+            else:
+                pkg_cpp_impl_target.writelns(
+                    f'TH_THROW({self.runtime_error}, "{func_cpp_impl_name} not implemented");',
+                )
 
     def gen_func_macro(
         self,

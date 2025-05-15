@@ -52,30 +52,41 @@ class ANICodeGenerator:
 
     def gen_constructor(self, pg: PackageGroup):
         constructor_file = "ani_constructor.cpp"
-        with CSourceWriter(self.oc, f"src/{constructor_file}") as constructor_target:
+        with CSourceWriter(
+            self.oc,
+            f"src/{constructor_file}",
+        ) as constructor_target:
             constructor_target.add_include("taihe/runtime.hpp")
-            constructor_target.writelns(
+            with constructor_target.indented(
                 f"ANI_EXPORT ani_status ANI_Constructor(ani_vm *vm, uint32_t *result) {{",
-                # f"    ::taihe::set_vm(vm);",
-                f"    ani_env *env;",
-                f"    if (ANI_OK != vm->GetEnv(ANI_VERSION_1, &env)) {{",
-                f"        return ANI_ERROR;",
-                f"    }}",
-            )
-            for pkg in pg.packages:
-                pkg_ani_info = PackageANIInfo.get(self.am, pkg)
-                constructor_target.add_include(pkg_ani_info.header)
-                constructor_target.writelns(
-                    f"    if (ANI_OK != {pkg_ani_info.cpp_ns}::ANIRegister(env)) {{",
-                    f'        std::cerr << "Error from {pkg_ani_info.cpp_ns}::ANIRegister" << std::endl;',
-                    f"        return ANI_ERROR;",
-                    f"    }}",
-                )
-            constructor_target.writelns(
-                f"    *result = ANI_VERSION_1;",
-                f"    return ANI_OK;",
                 f"}}",
-            )
+            ):
+                constructor_target.writelns(
+                    # f"::taihe::set_vm(vm);",
+                    f"ani_env *env;",
+                )
+                with constructor_target.indented(
+                    f"if (ANI_OK != vm->GetEnv(ANI_VERSION_1, &env)) {{",
+                    f"}}",
+                ):
+                    constructor_target.writelns(
+                        f"return ANI_ERROR;",
+                    )
+                for pkg in pg.packages:
+                    pkg_ani_info = PackageANIInfo.get(self.am, pkg)
+                    constructor_target.add_include(pkg_ani_info.header)
+                    with constructor_target.indented(
+                        f"if (ANI_OK != {pkg_ani_info.cpp_ns}::ANIRegister(env)) {{",
+                        f"}}",
+                    ):
+                        constructor_target.writelns(
+                            f'std::cerr << "Error from {pkg_ani_info.cpp_ns}::ANIRegister" << std::endl;',
+                            f"return ANI_ERROR;",
+                        )
+                constructor_target.writelns(
+                    f"*result = ANI_VERSION_1;",
+                    f"return ANI_OK;",
+                )
 
     def gen_package(self, pkg: PackageDecl):
         for iface in pkg.interfaces:
@@ -96,14 +107,18 @@ class ANICodeGenerator:
         pkg_cpp_user_info: PackageCppUserInfo,
     ):
         with CHeaderWriter(
-            self.oc, f"include/{pkg_ani_info.header}"
+            self.oc,
+            f"include/{pkg_ani_info.header}",
         ) as pkg_ani_header_target:
             pkg_ani_header_target.add_include("taihe/runtime.hpp")
-            pkg_ani_header_target.writelns(
+            with pkg_ani_header_target.indented(
                 f"namespace {pkg_ani_info.cpp_ns} {{",
-                f"ani_status ANIRegister(ani_env *env);",
                 f"}}",
-            )
+                indent="",
+            ):
+                pkg_ani_header_target.writelns(
+                    f"ani_status ANIRegister(ani_env *env);",
+                )
 
     def gen_package_source(
         self,
@@ -112,7 +127,8 @@ class ANICodeGenerator:
         pkg_cpp_user_info: PackageCppUserInfo,
     ):
         with CSourceWriter(
-            self.oc, f"src/{pkg_ani_info.source}"
+            self.oc,
+            f"src/{pkg_ani_info.source}",
         ) as pkg_ani_source_target:
             pkg_ani_source_target.add_include(pkg_ani_info.header)
             pkg_ani_source_target.add_include(pkg_cpp_user_info.header)
@@ -184,57 +200,80 @@ class ANICodeGenerator:
                 )
                 iface_register_info.member_infos.append(finalizer_info)
 
-            pkg_ani_source_target.writelns(
+            with pkg_ani_source_target.indented(
                 f"namespace {pkg_ani_info.cpp_ns} {{",
-                f"ani_status ANIRegister(ani_env *env) {{",
-            )
-            # TODO: set_vm in constructor
-            pkg_ani_source_target.writelns(
-                f"    if (::taihe::get_vm() == nullptr) {{",
-                f"        ani_vm *vm;",
-                f"        if (ANI_OK != env->GetVM(&vm)) {{",
-                f"            return ANI_ERROR;",
-                f"        }}",
-                f"        ::taihe::set_vm(vm);",
-                f"    }}",
-            )
-            for register_info in register_infos:
-                parent_scope = register_info.parent_scope
-                pkg_ani_source_target.writelns(
-                    f"    {{",
-                    f"        {parent_scope} ani_env;",
-                    f'        if (ANI_OK != env->Find{parent_scope.suffix}("{register_info.impl_desc}", &ani_env)) {{',
-                    f"            return ANI_ERROR;",
-                    f"        }}",
-                    f"        ani_native_function methods[] = {{",
-                )
-                for member_info in register_info.member_infos:
+                f"}}",
+                indent="",
+            ):
+                with pkg_ani_source_target.indented(
+                    f"ani_status ANIRegister(ani_env *env) {{",
+                    f"}}",
+                ):
+                    # TODO: set_vm in constructor
+                    with pkg_ani_source_target.indented(
+                        f"if (::taihe::get_vm() == nullptr) {{",
+                        f"}}",
+                    ):
+                        pkg_ani_source_target.writelns(
+                            f"ani_vm *vm;",
+                        )
+                        with pkg_ani_source_target.indented(
+                            f"if (ANI_OK != env->GetVM(&vm)) {{",
+                            f"}}",
+                        ):
+                            pkg_ani_source_target.writelns(
+                                f"return ANI_ERROR;",
+                            )
+                        pkg_ani_source_target.writelns(
+                            f"::taihe::set_vm(vm);",
+                        )
+                    for register_info in register_infos:
+                        parent_scope = register_info.parent_scope
+                        with pkg_ani_source_target.indented(
+                            f"{{",
+                            f"}}",
+                        ):
+                            pkg_ani_source_target.writelns(
+                                f"{parent_scope} ani_env;",
+                            )
+                            with pkg_ani_source_target.indented(
+                                f'if (ANI_OK != env->Find{parent_scope.suffix}("{register_info.impl_desc}", &ani_env)) {{',
+                                f"}}",
+                            ):
+                                pkg_ani_source_target.writelns(
+                                    f"return ANI_ERROR;",
+                                )
+                            with pkg_ani_source_target.indented(
+                                f"ani_native_function methods[] = {{",
+                                f"}};",
+                            ):
+                                for member_info in register_info.member_infos:
+                                    pkg_ani_source_target.writelns(
+                                        f'{{"{member_info.sts_native_name}", nullptr, reinterpret_cast<void*>({member_info.mangled_name})}},',
+                                    )
+                            with pkg_ani_source_target.indented(
+                                f"if (ANI_OK != env->{parent_scope.suffix}_BindNative{parent_scope.member.suffix}s(ani_env, methods, sizeof(methods) / sizeof(ani_native_function))) {{",
+                                f"}}",
+                            ):
+                                pkg_ani_source_target.writelns(
+                                    f"return ANI_ERROR;",
+                                )
                     pkg_ani_source_target.writelns(
-                        f'            {{"{member_info.sts_native_name}", nullptr, reinterpret_cast<void*>({member_info.mangled_name})}},',
+                        f"return ANI_OK;",
                     )
-                pkg_ani_source_target.writelns(
-                    f"        }};",
-                    f"        if (ANI_OK != env->{parent_scope.suffix}_BindNative{parent_scope.member.suffix}s(ani_env, methods, sizeof(methods) / sizeof(ani_native_function))) {{",
-                    f"            return ANI_ERROR;",
-                    f"        }}",
-                    f"    }}",
-                )
-            pkg_ani_source_target.writelns(
-                f"    return ANI_OK;",
-                f"}}",
-                f"}}",
-            )
 
     def gen_finalizer(
         self,
         pkg_ani_source_target: CSourceWriter,
         mangled_name: str,
     ):
-        pkg_ani_source_target.writelns(
+        with pkg_ani_source_target.indented(
             f"static void {mangled_name}([[maybe_unused]] ani_env *env, [[maybe_unused]] ani_class clazz, ani_long data_ptr) {{",
-            f"    ::taihe::data_holder(reinterpret_cast<DataBlockHead*>(data_ptr));",
             f"}}",
-        )
+        ):
+            pkg_ani_source_target.writelns(
+                f"::taihe::data_holder(reinterpret_cast<DataBlockHead*>(data_ptr));",
+            )
 
     def gen_func(
         self,
@@ -260,36 +299,34 @@ class ANICodeGenerator:
             ani_return_ty_name = type_ani_info.ani_type
         else:
             ani_return_ty_name = "void"
-        pkg_ani_source_target.writelns(
+        with pkg_ani_source_target.indented(
             f"static {ani_return_ty_name} {mangled_name}({ani_params_str}) {{",
-        )
-        for param, ani_arg, cpp_arg in zip(
-            func.params, ani_args, cpp_args, strict=True
-        ):
-            type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
-            type_ani_info.from_ani(pkg_ani_source_target, 4, "env", ani_arg, cpp_arg)
-        cpp_args_str = ", ".join(cpp_args)
-        if return_ty_ref := func.return_ty_ref:
-            type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
-            type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
-            cpp_return_ty_name = type_cpp_info.as_owner
-            cpp_res = "cpp_result"
-            ani_res = "ani_result"
-            pkg_ani_source_target.writelns(
-                f"    {cpp_return_ty_name} {cpp_res} = {func_cpp_user_info.full_name}({cpp_args_str});",
-                f"    if (::taihe::has_error()) {{ return {type_ani_info.ani_type}{{}}; }}",
-            )
-            type_ani_info.into_ani(pkg_ani_source_target, 4, "env", cpp_res, ani_res)
-            pkg_ani_source_target.writelns(
-                f"    return {ani_res};",
-            )
-        else:
-            pkg_ani_source_target.writelns(
-                f"    {func_cpp_user_info.full_name}({cpp_args_str});",
-            )
-        pkg_ani_source_target.writelns(
             f"}}",
-        )
+        ):
+            for param, ani_arg, cpp_arg in zip(
+                func.params, ani_args, cpp_args, strict=True
+            ):
+                type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
+                type_ani_info.from_ani(pkg_ani_source_target, "env", ani_arg, cpp_arg)
+            cpp_args_str = ", ".join(cpp_args)
+            if return_ty_ref := func.return_ty_ref:
+                type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
+                type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
+                cpp_return_ty_name = type_cpp_info.as_owner
+                cpp_res = "cpp_result"
+                ani_res = "ani_result"
+                pkg_ani_source_target.writelns(
+                    f"{cpp_return_ty_name} {cpp_res} = {func_cpp_user_info.full_name}({cpp_args_str});",
+                    f"if (::taihe::has_error()) {{ return {type_ani_info.ani_type}{{}}; }}",
+                )
+                type_ani_info.into_ani(pkg_ani_source_target, "env", cpp_res, ani_res)
+                pkg_ani_source_target.writelns(
+                    f"return {ani_res};",
+                )
+            else:
+                pkg_ani_source_target.writelns(
+                    f"{func_cpp_user_info.full_name}({cpp_args_str});",
+                )
 
     def gen_method(
         self,
@@ -321,43 +358,43 @@ class ANICodeGenerator:
             ani_return_ty_name = type_ani_info.ani_type
         else:
             ani_return_ty_name = "void"
-        pkg_ani_source_target.writelns(
+        with pkg_ani_source_target.indented(
             f"static {ani_return_ty_name} {mangled_name}({ani_params_str}) {{",
-            f"    ani_long ani_data_ptr;",
-            f'    env->Object_GetPropertyByName_Long(object, "_data_ptr", reinterpret_cast<ani_long*>(&ani_data_ptr));',
-            f"    ani_long ani_vtbl_ptr;",
-            f'    env->Object_GetPropertyByName_Long(object, "_vtbl_ptr", reinterpret_cast<ani_long*>(&ani_vtbl_ptr));',
-            f"    DataBlockHead* cpp_data_ptr = reinterpret_cast<DataBlockHead*>(ani_data_ptr);",
-            f"    {iface_abi_info.vtable}* cpp_vtbl_ptr = reinterpret_cast<{iface_abi_info.vtable}*>(ani_vtbl_ptr);",
-            f"    {iface_cpp_info.full_weak_name} cpp_iface = {iface_cpp_info.full_weak_name}({{cpp_vtbl_ptr, cpp_data_ptr}});",
-        )
-        for param, ani_arg, cpp_arg in zip(
-            method.params, ani_args, cpp_args, strict=True
-        ):
-            type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
-            type_ani_info.from_ani(pkg_ani_source_target, 4, "env", ani_arg, cpp_arg)
-        cpp_args_str = ", ".join(cpp_args)
-        if return_ty_ref := method.return_ty_ref:
-            type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
-            type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
-            cpp_return_ty_name = type_cpp_info.as_owner
-            cpp_res = "cpp_result"
-            ani_res = "ani_result"
-            pkg_ani_source_target.writelns(
-                f"    {cpp_return_ty_name} {cpp_res} = {ancestor_cpp_info.as_param}(cpp_iface)->{method_cpp_info.call_name}({cpp_args_str});",
-                f"    if (::taihe::has_error()) {{ return {type_ani_info.ani_type}{{}}; }}",
-            )
-            type_ani_info.into_ani(pkg_ani_source_target, 4, "env", cpp_res, ani_res)
-            pkg_ani_source_target.writelns(
-                f"    return {ani_res};",
-            )
-        else:
-            pkg_ani_source_target.writelns(
-                f"    {ancestor_cpp_info.as_param}(cpp_iface)->{method_cpp_info.call_name}({cpp_args_str});",
-            )
-        pkg_ani_source_target.writelns(
             f"}}",
-        )
+        ):
+            pkg_ani_source_target.writelns(
+                f"ani_long ani_data_ptr;",
+                f'env->Object_GetPropertyByName_Long(object, "_data_ptr", reinterpret_cast<ani_long*>(&ani_data_ptr));',
+                f"ani_long ani_vtbl_ptr;",
+                f'env->Object_GetPropertyByName_Long(object, "_vtbl_ptr", reinterpret_cast<ani_long*>(&ani_vtbl_ptr));',
+                f"DataBlockHead* cpp_data_ptr = reinterpret_cast<DataBlockHead*>(ani_data_ptr);",
+                f"{iface_abi_info.vtable}* cpp_vtbl_ptr = reinterpret_cast<{iface_abi_info.vtable}*>(ani_vtbl_ptr);",
+                f"{iface_cpp_info.full_weak_name} cpp_iface = {iface_cpp_info.full_weak_name}({{cpp_vtbl_ptr, cpp_data_ptr}});",
+            )
+            for param, ani_arg, cpp_arg in zip(
+                method.params, ani_args, cpp_args, strict=True
+            ):
+                type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
+                type_ani_info.from_ani(pkg_ani_source_target, "env", ani_arg, cpp_arg)
+            cpp_args_str = ", ".join(cpp_args)
+            if return_ty_ref := method.return_ty_ref:
+                type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
+                type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
+                cpp_return_ty_name = type_cpp_info.as_owner
+                cpp_res = "cpp_result"
+                ani_res = "ani_result"
+                pkg_ani_source_target.writelns(
+                    f"{cpp_return_ty_name} {cpp_res} = {ancestor_cpp_info.as_param}(cpp_iface)->{method_cpp_info.call_name}({cpp_args_str});",
+                    f"if (::taihe::has_error()) {{ return {type_ani_info.ani_type}{{}}; }}",
+                )
+                type_ani_info.into_ani(pkg_ani_source_target, "env", cpp_res, ani_res)
+                pkg_ani_source_target.writelns(
+                    f"return {ani_res};",
+                )
+            else:
+                pkg_ani_source_target.writelns(
+                    f"{ancestor_cpp_info.as_param}(cpp_iface)->{method_cpp_info.call_name}({cpp_args_str});",
+                )
 
     def gen_iface_files(
         self,
@@ -387,7 +424,8 @@ class ANICodeGenerator:
         iface_ani_info: IfaceANIInfo,
     ):
         with CHeaderWriter(
-            self.oc, f"include/{iface_ani_info.decl_header}"
+            self.oc,
+            f"include/{iface_ani_info.decl_header}",
         ) as iface_ani_decl_target:
             iface_ani_decl_target.add_include("ani.h")
             iface_ani_decl_target.add_include(iface_cpp_info.decl_header)
@@ -404,7 +442,8 @@ class ANICodeGenerator:
         iface_ani_info: IfaceANIInfo,
     ):
         with CHeaderWriter(
-            self.oc, f"include/{iface_ani_info.impl_header}"
+            self.oc,
+            f"include/{iface_ani_info.impl_header}",
         ) as iface_ani_impl_target:
             iface_ani_impl_target.add_include(iface_ani_info.decl_header)
             iface_ani_impl_target.add_include(iface_cpp_info.impl_header)
@@ -431,88 +470,111 @@ class ANICodeGenerator:
         iface_ani_info: IfaceANIInfo,
         iface_ani_impl_target: CHeaderWriter,
     ):
-        iface_ani_impl_target.writelns(
+        with iface_ani_impl_target.indented(
             f"inline {iface_cpp_info.as_owner} {iface_ani_info.from_ani_func_name}(ani_env* env, ani_object ani_obj) {{",
-            f"    struct cpp_impl_t {{",
-            f"        ani_ref ref;",
-            f"        cpp_impl_t(ani_env* env, ani_object obj) {{",
-            f"            env->GlobalReference_Create(obj, &this->ref);",
-            f"        }}",
-            f"        ~cpp_impl_t() {{",
-            f"            ::taihe::env_guard guard;",
-            f"            ani_env *env = guard.get_env();",
-            f"            env->GlobalReference_Delete(this->ref);",
-            f"        }}",
-        )
-        for ancestor in iface_abi_info.ancestor_dict:
-            for method in ancestor.methods:
-                method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
-                method_ani_info = IfaceMethodANIInfo.get(self.am, method)
-                inner_cpp_params = []
-                inner_cpp_args = []
-                inner_ani_args = []
-                for param in method.params:
-                    inner_cpp_arg = f"cpp_arg_{param.name}"
-                    inner_ani_arg = f"ani_arg_{param.name}"
-                    type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
-                    inner_cpp_params.append(f"{type_cpp_info.as_param} {inner_cpp_arg}")
-                    inner_cpp_args.append(inner_cpp_arg)
-                    inner_ani_args.append(inner_ani_arg)
-                inner_cpp_params_str = ", ".join(inner_cpp_params)
-                if return_ty_ref := method.return_ty_ref:
-                    type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
-                    cpp_return_ty_name = type_cpp_info.as_owner
-                else:
-                    cpp_return_ty_name = "void"
-                iface_ani_impl_target.writelns(
-                    f"        {cpp_return_ty_name} {method_cpp_info.impl_name}({inner_cpp_params_str}) {{",
-                    f"            ::taihe::env_guard guard;",
-                    f"            ani_env *env = guard.get_env();",
-                )
-                for param, inner_cpp_arg, inner_ani_arg in zip(
-                    method.params, inner_cpp_args, inner_ani_args, strict=True
-                ):
-                    type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
-                    type_ani_info.into_ani(
-                        iface_ani_impl_target,
-                        12,
-                        "env",
-                        inner_cpp_arg,
-                        inner_ani_arg,
-                    )
-                inner_ani_args_trailing = "".join(
-                    ", " + inner_ani_arg for inner_ani_arg in inner_ani_args
-                )
-                if return_ty_ref := method.return_ty_ref:
-                    inner_ani_res = "ani_result"
-                    inner_cpp_res = "cpp_result"
-                    type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
-                    iface_ani_impl_target.writelns(
-                        f"            {type_ani_info.ani_type} {inner_ani_res};",
-                        f'            env->Object_CallMethodByName_{type_ani_info.ani_type.suffix}(static_cast<ani_object>(this->ref), "{method_ani_info.ani_method_name}", nullptr, reinterpret_cast<{type_ani_info.ani_type.base}*>(&{inner_ani_res}){inner_ani_args_trailing});',
-                    )
-                    type_ani_info.from_ani(
-                        iface_ani_impl_target,
-                        12,
-                        "env",
-                        inner_ani_res,
-                        inner_cpp_res,
-                    )
-                    iface_ani_impl_target.writelns(
-                        f"            return {inner_cpp_res};",
-                    )
-                else:
-                    iface_ani_impl_target.writelns(
-                        f'            env->Object_CallMethodByName_Void(static_cast<ani_object>(this->ref), "{method_ani_info.ani_method_name}", nullptr{inner_ani_args_trailing});',
-                    )
-                iface_ani_impl_target.writelns(
-                    f"        }}",
-                )
-        iface_ani_impl_target.writelns(
-            f"    }};",
-            f"    return ::taihe::make_holder<cpp_impl_t, {iface_cpp_info.as_owner}>(env, ani_obj);",
             f"}}",
-        )
+        ):
+            with iface_ani_impl_target.indented(
+                f"struct cpp_impl_t {{",
+                f"}};",
+            ):
+                iface_ani_impl_target.writelns(
+                    f"ani_ref ref;",
+                )
+                with iface_ani_impl_target.indented(
+                    f"cpp_impl_t(ani_env* env, ani_object obj) {{",
+                    f"}}",
+                ):
+                    iface_ani_impl_target.writelns(
+                        f"env->GlobalReference_Create(obj, &this->ref);",
+                    )
+                with iface_ani_impl_target.indented(
+                    f"~cpp_impl_t() {{",
+                    f"}}",
+                ):
+                    iface_ani_impl_target.writelns(
+                        f"::taihe::env_guard guard;",
+                        f"ani_env *env = guard.get_env();",
+                        f"env->GlobalReference_Delete(this->ref);",
+                    )
+                for ancestor in iface_abi_info.ancestor_dict:
+                    for method in ancestor.methods:
+                        method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
+                        method_ani_info = IfaceMethodANIInfo.get(self.am, method)
+                        inner_cpp_params = []
+                        inner_cpp_args = []
+                        inner_ani_args = []
+                        for param in method.params:
+                            inner_cpp_arg = f"cpp_arg_{param.name}"
+                            inner_ani_arg = f"ani_arg_{param.name}"
+                            type_cpp_info = TypeCppInfo.get(
+                                self.am, param.ty_ref.resolved_ty
+                            )
+                            inner_cpp_params.append(
+                                f"{type_cpp_info.as_param} {inner_cpp_arg}"
+                            )
+                            inner_cpp_args.append(inner_cpp_arg)
+                            inner_ani_args.append(inner_ani_arg)
+                        inner_cpp_params_str = ", ".join(inner_cpp_params)
+                        if return_ty_ref := method.return_ty_ref:
+                            type_cpp_info = TypeCppInfo.get(
+                                self.am, return_ty_ref.resolved_ty
+                            )
+                            cpp_return_ty_name = type_cpp_info.as_owner
+                        else:
+                            cpp_return_ty_name = "void"
+                        with iface_ani_impl_target.indented(
+                            f"{cpp_return_ty_name} {method_cpp_info.impl_name}({inner_cpp_params_str}) {{",
+                            f"}}",
+                        ):
+                            iface_ani_impl_target.writelns(
+                                f"::taihe::env_guard guard;",
+                                f"ani_env *env = guard.get_env();",
+                            )
+                            for param, inner_cpp_arg, inner_ani_arg in zip(
+                                method.params,
+                                inner_cpp_args,
+                                inner_ani_args,
+                                strict=True,
+                            ):
+                                type_ani_info = TypeANIInfo.get(
+                                    self.am, param.ty_ref.resolved_ty
+                                )
+                                type_ani_info.into_ani(
+                                    iface_ani_impl_target,
+                                    "env",
+                                    inner_cpp_arg,
+                                    inner_ani_arg,
+                                )
+                            inner_ani_args_trailing = "".join(
+                                ", " + inner_ani_arg for inner_ani_arg in inner_ani_args
+                            )
+                            if return_ty_ref := method.return_ty_ref:
+                                inner_ani_res = "ani_result"
+                                inner_cpp_res = "cpp_result"
+                                type_ani_info = TypeANIInfo.get(
+                                    self.am, return_ty_ref.resolved_ty
+                                )
+                                iface_ani_impl_target.writelns(
+                                    f"{type_ani_info.ani_type} {inner_ani_res};",
+                                    f'env->Object_CallMethodByName_{type_ani_info.ani_type.suffix}(static_cast<ani_object>(this->ref), "{method_ani_info.ani_method_name}", nullptr, reinterpret_cast<{type_ani_info.ani_type.base}*>(&{inner_ani_res}){inner_ani_args_trailing});',
+                                )
+                                type_ani_info.from_ani(
+                                    iface_ani_impl_target,
+                                    "env",
+                                    inner_ani_res,
+                                    inner_cpp_res,
+                                )
+                                iface_ani_impl_target.writelns(
+                                    f"return {inner_cpp_res};",
+                                )
+                            else:
+                                iface_ani_impl_target.writelns(
+                                    f'env->Object_CallMethodByName_Void(static_cast<ani_object>(this->ref), "{method_ani_info.ani_method_name}", nullptr{inner_ani_args_trailing});',
+                                )
+            iface_ani_impl_target.writelns(
+                f"return ::taihe::make_holder<cpp_impl_t, {iface_cpp_info.as_owner}>(env, ani_obj);",
+            )
 
     def gen_iface_into_ani_func(
         self,
@@ -522,20 +584,22 @@ class ANICodeGenerator:
         iface_ani_info: IfaceANIInfo,
         iface_ani_impl_target: CHeaderWriter,
     ):
-        iface_ani_impl_target.writelns(
+        with iface_ani_impl_target.indented(
             f"inline ani_object {iface_ani_info.into_ani_func_name}(ani_env* env, {iface_cpp_info.as_owner} cpp_obj) {{",
-            f"    ani_long ani_vtbl_ptr = reinterpret_cast<ani_long>(cpp_obj.m_handle.vtbl_ptr);",
-            f"    ani_long ani_data_ptr = reinterpret_cast<ani_long>(cpp_obj.m_handle.data_ptr);",
-            f"    cpp_obj.m_handle.data_ptr = nullptr;",
-            f"    ani_class ani_obj_cls;",
-            f'    env->FindClass("{iface_ani_info.impl_desc}", &ani_obj_cls);',
-            f"    ani_method ani_obj_ctor;",
-            f'    env->Class_FindMethod(ani_obj_cls, "<ctor>", "JJ:V", &ani_obj_ctor);',
-            f"    ani_object ani_obj;",
-            f"    env->Object_New(ani_obj_cls, ani_obj_ctor, &ani_obj, ani_vtbl_ptr, ani_data_ptr);",
-            f"    return ani_obj;",
             f"}}",
-        )
+        ):
+            iface_ani_impl_target.writelns(
+                f"ani_long ani_vtbl_ptr = reinterpret_cast<ani_long>(cpp_obj.m_handle.vtbl_ptr);",
+                f"ani_long ani_data_ptr = reinterpret_cast<ani_long>(cpp_obj.m_handle.data_ptr);",
+                f"cpp_obj.m_handle.data_ptr = nullptr;",
+                f"ani_class ani_obj_cls;",
+                f'env->FindClass("{iface_ani_info.impl_desc}", &ani_obj_cls);',
+                f"ani_method ani_obj_ctor;",
+                f'env->Class_FindMethod(ani_obj_cls, "<ctor>", "JJ:V", &ani_obj_ctor);',
+                f"ani_object ani_obj;",
+                f"env->Object_New(ani_obj_cls, ani_obj_ctor, &ani_obj, ani_vtbl_ptr, ani_data_ptr);",
+                f"return ani_obj;",
+            )
 
     def gen_struct_files(
         self,
@@ -561,7 +625,8 @@ class ANICodeGenerator:
         struct_ani_info: StructANIInfo,
     ):
         with CHeaderWriter(
-            self.oc, f"include/{struct_ani_info.decl_header}"
+            self.oc,
+            f"include/{struct_ani_info.decl_header}",
         ) as struct_ani_decl_target:
             struct_ani_decl_target.add_include("ani.h")
             struct_ani_decl_target.add_include(struct_cpp_info.decl_header)
@@ -577,7 +642,8 @@ class ANICodeGenerator:
         struct_ani_info: StructANIInfo,
     ):
         with CHeaderWriter(
-            self.oc, f"include/{struct_ani_info.impl_header}"
+            self.oc,
+            f"include/{struct_ani_info.impl_header}",
         ) as struct_ani_impl_target:
             struct_ani_impl_target.add_include(struct_ani_info.decl_header)
             struct_ani_impl_target.add_include(struct_cpp_info.impl_header)
@@ -605,30 +671,31 @@ class ANICodeGenerator:
         struct_ani_info: StructANIInfo,
         struct_ani_impl_target: CHeaderWriter,
     ):
-        struct_ani_impl_target.writelns(
+        with struct_ani_impl_target.indented(
             f"inline {struct_cpp_info.as_owner} {struct_ani_info.from_ani_func_name}(ani_env* env, ani_object ani_obj) {{",
-        )
-        cpp_field_results = []
-        for parts in struct_ani_info.sts_final_fields:
-            final = parts[-1]
-            type_ani_info = TypeANIInfo.get(self.am, final.ty_ref.resolved_ty)
-            ani_field_value = f"ani_field_{final.name}"
-            cpp_field_result = f"cpp_field_{final.name}"
-            struct_ani_impl_target.writelns(
-                f"    {type_ani_info.ani_type} {ani_field_value};",
-                f'    env->Object_GetPropertyByName_{type_ani_info.ani_type.suffix}(ani_obj, "{final.name}", reinterpret_cast<{type_ani_info.ani_type.base}*>(&{ani_field_value}));',
-            )
-            type_ani_info.from_ani(
-                struct_ani_impl_target, 4, "env", ani_field_value, cpp_field_result
-            )
-            cpp_field_results.append(cpp_field_result)
-        cpp_moved_fields_str = ", ".join(
-            f"std::move({cpp_field_result})" for cpp_field_result in cpp_field_results
-        )
-        struct_ani_impl_target.writelns(
-            f"    return {struct_cpp_info.as_owner}{{{cpp_moved_fields_str}}};",
             f"}}",
-        )
+        ):
+            cpp_field_results = []
+            for parts in struct_ani_info.sts_final_fields:
+                final = parts[-1]
+                type_ani_info = TypeANIInfo.get(self.am, final.ty_ref.resolved_ty)
+                ani_field_value = f"ani_field_{final.name}"
+                cpp_field_result = f"cpp_field_{final.name}"
+                struct_ani_impl_target.writelns(
+                    f"{type_ani_info.ani_type} {ani_field_value};",
+                    f'env->Object_GetPropertyByName_{type_ani_info.ani_type.suffix}(ani_obj, "{final.name}", reinterpret_cast<{type_ani_info.ani_type.base}*>(&{ani_field_value}));',
+                )
+                type_ani_info.from_ani(
+                    struct_ani_impl_target, "env", ani_field_value, cpp_field_result
+                )
+                cpp_field_results.append(cpp_field_result)
+            cpp_moved_fields_str = ", ".join(
+                f"std::move({cpp_field_result})"
+                for cpp_field_result in cpp_field_results
+            )
+            struct_ani_impl_target.writelns(
+                f"return {struct_cpp_info.as_owner}{{{cpp_moved_fields_str}}};",
+            )
 
     def gen_struct_into_ani_func(
         self,
@@ -638,34 +705,33 @@ class ANICodeGenerator:
         struct_ani_impl_target: CHeaderWriter,
     ):
         ani_field_results = []
-        struct_ani_impl_target.writelns(
+        with struct_ani_impl_target.indented(
             f"inline ani_object {struct_ani_info.into_ani_func_name}(ani_env* env, {struct_cpp_info.as_param} cpp_obj) {{",
-        )
-        for parts in struct_ani_info.sts_final_fields:
-            final = parts[-1]
-            ani_field_result = f"ani_field_{final.name}"
-            type_ani_info = TypeANIInfo.get(self.am, final.ty_ref.resolved_ty)
-            type_ani_info.into_ani(
-                struct_ani_impl_target,
-                4,
-                "env",
-                ".".join(("cpp_obj", *(part.name for part in parts))),
-                ani_field_result,
-            )
-            ani_field_results.append(ani_field_result)
-        ani_field_results_trailing = "".join(
-            ", " + ani_field_result for ani_field_result in ani_field_results
-        )
-        struct_ani_impl_target.writelns(
-            f"    ani_class ani_obj_cls;",
-            f'    env->FindClass("{struct_ani_info.impl_desc}", &ani_obj_cls);',
-            f"    ani_method ani_obj_ctor;",
-            f'    env->Class_FindMethod(ani_obj_cls, "<ctor>", nullptr, &ani_obj_ctor);',
-            f"    ani_object ani_obj;",
-            f"    env->Object_New(ani_obj_cls, ani_obj_ctor, &ani_obj{ani_field_results_trailing});",
-            f"    return ani_obj;",
             f"}}",
-        )
+        ):
+            for parts in struct_ani_info.sts_final_fields:
+                final = parts[-1]
+                ani_field_result = f"ani_field_{final.name}"
+                type_ani_info = TypeANIInfo.get(self.am, final.ty_ref.resolved_ty)
+                type_ani_info.into_ani(
+                    struct_ani_impl_target,
+                    "env",
+                    ".".join(("cpp_obj", *(part.name for part in parts))),
+                    ani_field_result,
+                )
+                ani_field_results.append(ani_field_result)
+            ani_field_results_trailing = "".join(
+                ", " + ani_field_result for ani_field_result in ani_field_results
+            )
+            struct_ani_impl_target.writelns(
+                f"ani_class ani_obj_cls;",
+                f'env->FindClass("{struct_ani_info.impl_desc}", &ani_obj_cls);',
+                f"ani_method ani_obj_ctor;",
+                f'env->Class_FindMethod(ani_obj_cls, "<ctor>", nullptr, &ani_obj_ctor);',
+                f"ani_object ani_obj;",
+                f"env->Object_New(ani_obj_cls, ani_obj_ctor, &ani_obj{ani_field_results_trailing});",
+                f"return ani_obj;",
+            )
 
     def gen_union_files(
         self,
@@ -691,7 +757,8 @@ class ANICodeGenerator:
         union_ani_info: UnionANIInfo,
     ):
         with CHeaderWriter(
-            self.oc, f"include/{union_ani_info.decl_header}"
+            self.oc,
+            f"include/{union_ani_info.decl_header}",
         ) as union_ani_decl_target:
             union_ani_decl_target.add_include("ani.h")
             union_ani_decl_target.add_include(union_cpp_info.decl_header)
@@ -707,7 +774,8 @@ class ANICodeGenerator:
         union_ani_info: UnionANIInfo,
     ):
         with CHeaderWriter(
-            self.oc, f"include/{union_ani_info.impl_header}"
+            self.oc,
+            f"include/{union_ani_info.impl_header}",
         ) as union_ani_impl_target:
             union_ani_impl_target.add_include(union_ani_info.decl_header)
             union_ani_impl_target.add_include(union_cpp_info.impl_header)
@@ -731,75 +799,84 @@ class ANICodeGenerator:
         union_ani_info: UnionANIInfo,
         union_ani_impl_target: CHeaderWriter,
     ):
-        union_ani_impl_target.writelns(
+        with union_ani_impl_target.indented(
             f"inline {union_cpp_info.as_owner} {union_ani_info.from_ani_func_name}(ani_env* env, ani_ref ani_value) {{",
-        )
-        for parts in union_ani_info.sts_final_fields:
-            final = parts[-1]
-            static_tags = []
-            for part in parts:
-                path_cpp_info = UnionCppInfo.get(self.am, part.parent_union)
-                static_tags.append(
-                    f"::taihe::static_tag<{path_cpp_info.full_name}::tag_t::{part.name}>"
-                )
-            static_tags_str = ", ".join(static_tags)
-            full_name = "_".join(part.name for part in parts)
-            is_field = f"ani_is_{full_name}"
-            final_ani_info = UnionFieldANIInfo.get(self.am, final)
-            if final_ani_info.field_ty == "null":
-                union_ani_impl_target.writelns(
-                    f"    ani_boolean {is_field};",
-                    f"    env->Reference_IsNull(ani_value, &{is_field});",
-                    f"    if ({is_field}) {{",
-                    f"        return {union_cpp_info.full_name}({static_tags_str});",
-                    f"    }}",
-                )
-            if final_ani_info.field_ty == "undefined":
-                union_ani_impl_target.writelns(
-                    f"    ani_boolean {is_field};",
-                    f"    env->Reference_IsUndefined(ani_value, &{is_field});",
-                    f"    if ({is_field}) {{",
-                    f"        return {union_cpp_info.full_name}({static_tags_str});",
-                    f"    }}",
-                )
-        for parts in union_ani_info.sts_final_fields:
-            final = parts[-1]
-            static_tags = []
-            for part in parts:
-                path_cpp_info = UnionCppInfo.get(self.am, part.parent_union)
-                static_tags.append(
-                    f"::taihe::static_tag<{path_cpp_info.full_name}::tag_t::{part.name}>"
-                )
-            static_tags_str = ", ".join(static_tags)
-            full_name = "_".join(part.name for part in parts)
-            is_field = f"ani_is_{full_name}"
-            field_class = f"ani_cls_{full_name}"
-            final_ani_info = UnionFieldANIInfo.get(self.am, final)
-            if isinstance(final_ty := final_ani_info.field_ty, Type):
-                type_ani_info = TypeANIInfo.get(self.am, final_ty)
-                union_ani_impl_target.writelns(
-                    f"    ani_class {field_class};",
-                    f'    env->FindClass("{type_ani_info.type_desc_boxed}", &{field_class});',
-                    f"    ani_boolean {is_field};",
-                    f"    env->Object_InstanceOf(static_cast<ani_object>(ani_value), {field_class}, &{is_field});",
-                    f"    if ({is_field}) {{",
-                )
-                cpp_result_spec = f"cpp_field_{full_name}"
-                type_ani_info.from_ani_boxed(
-                    union_ani_impl_target,
-                    8,
-                    "env",
-                    "ani_value",
-                    cpp_result_spec,
-                )
-                union_ani_impl_target.writelns(
-                    f"        return {union_cpp_info.full_name}({static_tags_str}, std::move({cpp_result_spec}));",
-                    f"    }}",
-                )
-        union_ani_impl_target.writelns(
-            f"    __builtin_unreachable();",
             f"}}",
-        )
+        ):
+            for parts in union_ani_info.sts_final_fields:
+                final = parts[-1]
+                static_tags = []
+                for part in parts:
+                    path_cpp_info = UnionCppInfo.get(self.am, part.parent_union)
+                    static_tags.append(
+                        f"::taihe::static_tag<{path_cpp_info.full_name}::tag_t::{part.name}>"
+                    )
+                static_tags_str = ", ".join(static_tags)
+                full_name = "_".join(part.name for part in parts)
+                is_field = f"ani_is_{full_name}"
+                final_ani_info = UnionFieldANIInfo.get(self.am, final)
+                if final_ani_info.field_ty == "null":
+                    union_ani_impl_target.writelns(
+                        f"ani_boolean {is_field};",
+                        f"env->Reference_IsNull(ani_value, &{is_field});",
+                    )
+                    with union_ani_impl_target.indented(
+                        f"if ({is_field}) {{",
+                        f"}}",
+                    ):
+                        union_ani_impl_target.writelns(
+                            f"return {union_cpp_info.full_name}({static_tags_str});",
+                        )
+                if final_ani_info.field_ty == "undefined":
+                    union_ani_impl_target.writelns(
+                        f"ani_boolean {is_field};",
+                        f"env->Reference_IsUndefined(ani_value, &{is_field});",
+                    )
+                    with union_ani_impl_target.indented(
+                        f"if ({is_field}) {{",
+                        f"}}",
+                    ):
+                        union_ani_impl_target.writelns(
+                            f"return {union_cpp_info.full_name}({static_tags_str});",
+                        )
+            for parts in union_ani_info.sts_final_fields:
+                final = parts[-1]
+                static_tags = []
+                for part in parts:
+                    path_cpp_info = UnionCppInfo.get(self.am, part.parent_union)
+                    static_tags.append(
+                        f"::taihe::static_tag<{path_cpp_info.full_name}::tag_t::{part.name}>"
+                    )
+                static_tags_str = ", ".join(static_tags)
+                full_name = "_".join(part.name for part in parts)
+                is_field = f"ani_is_{full_name}"
+                field_class = f"ani_cls_{full_name}"
+                final_ani_info = UnionFieldANIInfo.get(self.am, final)
+                if isinstance(final_ty := final_ani_info.field_ty, Type):
+                    type_ani_info = TypeANIInfo.get(self.am, final_ty)
+                    union_ani_impl_target.writelns(
+                        f"ani_class {field_class};",
+                        f'env->FindClass("{type_ani_info.type_desc_boxed}", &{field_class});',
+                        f"ani_boolean {is_field};",
+                        f"env->Object_InstanceOf(static_cast<ani_object>(ani_value), {field_class}, &{is_field});",
+                    )
+                    with union_ani_impl_target.indented(
+                        f"if ({is_field}) {{",
+                        f"}}",
+                    ):
+                        cpp_result_spec = f"cpp_field_{full_name}"
+                        type_ani_info.from_ani_boxed(
+                            union_ani_impl_target,
+                            "env",
+                            "ani_value",
+                            cpp_result_spec,
+                        )
+                        union_ani_impl_target.writelns(
+                            f"return {union_cpp_info.full_name}({static_tags_str}, std::move({cpp_result_spec}));",
+                        )
+            union_ani_impl_target.writelns(
+                f"__builtin_unreachable();",
+            )
 
     def gen_union_into_ani_func(
         self,
@@ -808,44 +885,48 @@ class ANICodeGenerator:
         union_ani_info: UnionANIInfo,
         union_ani_impl_target: CHeaderWriter,
     ):
-        union_ani_impl_target.writelns(
+        with union_ani_impl_target.indented(
             f"inline ani_ref {union_ani_info.into_ani_func_name}(ani_env* env, {union_cpp_info.as_param} cpp_value) {{",
-            f"    ani_ref ani_value;",
-            f"    switch (cpp_value.get_tag()) {{",
-        )
-        for field in union.fields:
-            field_ani_info = UnionFieldANIInfo.get(self.am, field)
-            union_ani_impl_target.writelns(
-                f"    case {union_cpp_info.full_name}::tag_t::{field.name}: {{",
-            )
-            match field_ani_info.field_ty:
-                case "null":
-                    union_ani_impl_target.writelns(
-                        f"        env->GetNull(&ani_value);",
-                    )
-                case "undefined":
-                    union_ani_impl_target.writelns(
-                        f"        env->GetUndefined(&ani_value);",
-                    )
-                case field_ty if isinstance(field_ty, Type):
-                    ani_result_spec = f"ani_field_{field.name}"
-                    type_ani_info = TypeANIInfo.get(self.am, field_ty)
-                    type_ani_info.into_ani_boxed(
-                        union_ani_impl_target,
-                        8,
-                        "env",
-                        f"cpp_value.get_{field.name}_ref()",
-                        ani_result_spec,
-                    )
-                    union_ani_impl_target.writelns(
-                        f"        ani_value = {ani_result_spec};",
-                    )
-            union_ani_impl_target.writelns(
-                f"        break;",
-                f"    }}",
-            )
-        union_ani_impl_target.writelns(
-            f"    }}",
-            f"    return ani_value;",
             f"}}",
-        )
+        ):
+            union_ani_impl_target.writelns(
+                f"ani_ref ani_value;",
+            )
+            with union_ani_impl_target.indented(
+                f"switch (cpp_value.get_tag()) {{",
+                f"}}",
+                indent="",
+            ):
+                for field in union.fields:
+                    field_ani_info = UnionFieldANIInfo.get(self.am, field)
+                    with union_ani_impl_target.indented(
+                        f"case {union_cpp_info.full_name}::tag_t::{field.name}: {{",
+                        f"}}",
+                    ):
+                        match field_ani_info.field_ty:
+                            case "null":
+                                union_ani_impl_target.writelns(
+                                    f"env->GetNull(&ani_value);",
+                                )
+                            case "undefined":
+                                union_ani_impl_target.writelns(
+                                    f"env->GetUndefined(&ani_value);",
+                                )
+                            case field_ty if isinstance(field_ty, Type):
+                                ani_result_spec = f"ani_field_{field.name}"
+                                type_ani_info = TypeANIInfo.get(self.am, field_ty)
+                                type_ani_info.into_ani_boxed(
+                                    union_ani_impl_target,
+                                    "env",
+                                    f"cpp_value.get_{field.name}_ref()",
+                                    ani_result_spec,
+                                )
+                                union_ani_impl_target.writelns(
+                                    f"ani_value = {ani_result_spec};",
+                                )
+                        union_ani_impl_target.writelns(
+                            f"break;",
+                        )
+            union_ani_impl_target.writelns(
+                f"return ani_value;",
+            )

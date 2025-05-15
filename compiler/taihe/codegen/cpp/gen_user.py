@@ -30,7 +30,8 @@ class CppUserHeadersGenerator(Backend):
         pkg_cpp_info = PackageCppInfo.get(self.am, pkg)
         pkg_cpp_user_info = PackageCppUserInfo.get(self.am, pkg)
         with CHeaderWriter(
-            self.oc, f"include/{pkg_cpp_user_info.header}"
+            self.oc,
+            f"include/{pkg_cpp_user_info.header}",
         ) as pkg_cpp_user_target:
             # types
             pkg_cpp_user_target.add_include(pkg_cpp_info.header)
@@ -65,10 +66,15 @@ class CppUserHeadersGenerator(Backend):
         else:
             cpp_return_ty_name = "void"
             cpp_result = abi_result
-        pkg_cpp_target.writelns(
+        with pkg_cpp_target.indented(
             f"namespace {func_cpp_user_info.namespace} {{",
-            f"inline {cpp_return_ty_name} {func_cpp_user_info.call_name}({params_cpp_str}) {{",
-            f"    return {cpp_result};",
             f"}}",
-            f"}}",
-        )
+            indent="",
+        ):
+            with pkg_cpp_target.indented(
+                f"inline {cpp_return_ty_name} {func_cpp_user_info.call_name}({params_cpp_str}) {{",
+                f"}}",
+            ):
+                pkg_cpp_target.writelns(
+                    f"return {cpp_result};",
+                )

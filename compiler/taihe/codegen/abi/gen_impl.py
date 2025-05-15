@@ -40,7 +40,8 @@ class CImplHeadersGenerator:
         pkg_abi_info = PackageABIInfo.get(self.am, pkg)
 
         with CHeaderWriter(
-            self.oc, f"include/{pkg_c_impl_info.header}"
+            self.oc,
+            f"include/{pkg_c_impl_info.header}",
         ) as pkg_c_impl_target:
             pkg_c_impl_target.add_include("taihe/common.h", pkg_abi_info.header)
 
@@ -73,7 +74,6 @@ class CImplHeadersGenerator:
             return_ty_name = type_abi_info.as_owner
         else:
             return_ty_name = "void"
-
         pkg_c_impl_target.writelns(
             f"#define {func_c_impl_info.macro}({func_impl}) \\",
             f"    {return_ty_name} {func_abi_info.mangled_name}({params_str}) {{ \\",
@@ -95,7 +95,8 @@ class CImplSourcesGenerator:
         pkg_c_impl_info = PackageCImplInfo.get(self.am, pkg)
 
         with CSourceWriter(
-            self.oc, f"temp/{pkg_c_impl_info.source}"
+            self.oc,
+            f"temp/{pkg_c_impl_info.source}",
         ) as pkg_c_impl_target:
             pkg_c_impl_target.add_include(pkg_c_impl_info.header)
 
@@ -124,8 +125,13 @@ class CImplSourcesGenerator:
             return_ty_name = "void"
 
         with pkg_c_impl_target.indented(
-            f"{return_ty_name} {func_c_impl_name}({params_str}) {{", "}"
+            f"{return_ty_name} {func_c_impl_name}({params_str}) {{",
+            f"}}",
         ):
-            pkg_c_impl_target.writeln("// TODO")
+            pkg_c_impl_target.writelns(
+                f"// TODO",
+            )
 
-        pkg_c_impl_target.writeln(f"{func_c_impl_info.macro}({func_c_impl_name});")
+        pkg_c_impl_target.writelns(
+            f"{func_c_impl_info.macro}({func_c_impl_name});",
+        )

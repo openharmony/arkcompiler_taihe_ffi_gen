@@ -129,7 +129,12 @@ class BaseWriter:
 
     @contextmanager
     def indented(
-        self, prologue: str = "", epilogue: str = "", indent: str | None = None
+        self,
+        prologue: str | None,
+        epilogue: str | None,
+        /,
+        *,
+        indent: str | None = None,
     ) -> Generator[Self, None, None]:
         """Context manager that indents code within its scope.
 
@@ -142,7 +147,7 @@ class BaseWriter:
             A context manager that yields this BaseWriter
         """
         self._write_debug(skip=3)
-        if prologue:
+        if prologue is not None:
             self.writeln(prologue)
         previous_indent = self._current_indent
         self._current_indent += self._default_indent if indent is None else indent
@@ -150,7 +155,7 @@ class BaseWriter:
             yield self
         finally:
             self._current_indent = previous_indent
-            if epilogue:
+            if epilogue is not None:
                 self.writeln(epilogue)
 
 

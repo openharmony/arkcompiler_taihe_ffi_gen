@@ -877,99 +877,27 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
     def sts_type_in(self, pkg: PackageDecl, target: StsWriter) -> str:
         pass
 
+    @abstractmethod
     def from_ani(
         self,
         target: CSourceWriter,
-        offset: int,
         env: str,
         ani_value: str,
         cpp_result: str,
     ):
-        with target.indented(indent=offset * " "):
-            self._from_ani_impl(target, env, ani_value, cpp_result)
+        pass
 
+    @abstractmethod
     def into_ani(
         self,
         target: CSourceWriter,
-        offset: int,
         env: str,
         cpp_value: str,
         ani_result: str,
     ):
-        with target.indented(indent=offset * " "):
-            self._into_ani_impl(target, env, cpp_value, ani_result)
+        pass
 
     def from_ani_array(
-        self,
-        target: CSourceWriter,
-        offset: int,
-        env: str,
-        ani_size: str,
-        ani_array_value: str,
-        cpp_array_buffer: str,
-    ):
-        with target.indented(indent=offset * " "):
-            self._from_ani_array_impl(
-                target, env, ani_size, ani_array_value, cpp_array_buffer
-            )
-
-    def into_ani_array(
-        self,
-        target: CSourceWriter,
-        offset: int,
-        env: str,
-        cpp_size: str,
-        cpp_array_value: str,
-        ani_array_result: str,
-    ):
-        with target.indented(indent=offset * " "):
-            self._into_ani_array_impl(
-                target, env, cpp_size, cpp_array_value, ani_array_result
-            )
-
-    def into_ani_boxed(
-        self,
-        target: CSourceWriter,
-        offset: int,
-        env: str,
-        cpp_value: str,
-        ani_result: str,
-    ):
-        with target.indented(indent=offset * " "):
-            self._into_ani_boxed_impl(target, env, cpp_value, ani_result)
-
-    def from_ani_boxed(
-        self,
-        target: CSourceWriter,
-        offset: int,
-        env: str,
-        ani_value: str,
-        cpp_result: str,
-    ):
-        with target.indented(indent=offset * " "):
-            self._from_ani_boxed_impl(target, env, ani_value, cpp_result)
-
-    @abstractmethod
-    def _from_ani_impl(
-        self,
-        target: CSourceWriter,
-        env: str,
-        ani_value: str,
-        cpp_result: str,
-    ):
-        pass
-
-    @abstractmethod
-    def _into_ani_impl(
-        self,
-        target: CSourceWriter,
-        env: str,
-        cpp_value: str,
-        ani_result: str,
-    ):
-        pass
-
-    def _from_ani_array_impl(
         self,
         target: CSourceWriter,
         env: str,
@@ -980,21 +908,23 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
         ani_value = f"{cpp_array_buffer}_ani_item"
         cpp_result = f"{cpp_array_buffer}_cpp_item"
         cpp_i = f"{cpp_array_buffer}_i"
-        target.writelns(
+        with target.indented(
             f"for (size_t {cpp_i} = 0; {cpp_i} < {ani_size}; {cpp_i}++) {{",
-            f"    ani_object {ani_value};",
-            f"    {env}->Array_Get(reinterpret_cast<ani_array>({ani_array_value}), {cpp_i}, reinterpret_cast<ani_ref*>(&{ani_value}));",
-        )
-        if self.ani_type.base == ANI_REF:
-            self.from_ani(target, 4, env, ani_value, cpp_result)
-        else:
-            self.from_ani_boxed(target, 4, env, ani_value, cpp_result)
-        target.writelns(
-            f"    new (&{cpp_array_buffer}[{cpp_i}]) {self.cpp_info.as_owner}(std::move({cpp_result}));",
             f"}}",
-        )
+        ):
+            target.writelns(
+                f"ani_object {ani_value};",
+                f"{env}->Array_Get(reinterpret_cast<ani_array>({ani_array_value}), {cpp_i}, reinterpret_cast<ani_ref*>(&{ani_value}));",
+            )
+            if self.ani_type.base == ANI_REF:
+                self.from_ani(target, env, ani_value, cpp_result)
+            else:
+                self.from_ani_boxed(target, env, ani_value, cpp_result)
+            target.writelns(
+                f"new (&{cpp_array_buffer}[{cpp_i}]) {self.cpp_info.as_owner}(std::move({cpp_result}));",
+            )
 
-    def _into_ani_array_impl(
+    def into_ani_array(
         self,
         target: CSourceWriter,
         env: str,
@@ -1010,20 +940,22 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
             f"ani_ref {ani_undefined};",
             f"{env}->GetUndefined(&{ani_undefined});",
             f"{env}->Array_New({cpp_size}, {ani_undefined}, &{ani_array_result});",
+        )
+        with target.indented(
             f"for (size_t {cpp_i} = 0; {cpp_i} < {cpp_size}; {cpp_i}++) {{",
-        )
-        if self.ani_type.base == ANI_REF:
-            self.into_ani(target, 4, env, f"{cpp_array_value}[{cpp_i}]", ani_result)
-        else:
-            self.into_ani_boxed(
-                target, 4, env, f"{cpp_array_value}[{cpp_i}]", ani_result
-            )
-        target.writelns(
-            f"    {env}->Array_Set({ani_array_result}, {cpp_i}, {ani_result});",
             f"}}",
-        )
+        ):
+            if self.ani_type.base == ANI_REF:
+                self.into_ani(target, env, f"{cpp_array_value}[{cpp_i}]", ani_result)
+            else:
+                self.into_ani_boxed(
+                    target, env, f"{cpp_array_value}[{cpp_i}]", ani_result
+                )
+            target.writelns(
+                f"{env}->Array_Set({ani_array_result}, {cpp_i}, {ani_result});",
+            )
 
-    def _into_ani_boxed_impl(
+    def into_ani_boxed(
         self,
         target: CSourceWriter,
         env: str,
@@ -1031,7 +963,7 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
         ani_result: str,
     ):
         if self.ani_type.base == ANI_REF:
-            self.into_ani(target, 0, env, cpp_value, ani_result)
+            self.into_ani(target, env, cpp_value, ani_result)
         else:
             ani_class = f"{ani_result}_cls"
             ani_ctor = f"{ani_result}_ctor"
@@ -1043,12 +975,12 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
                 f'{env}->Class_FindMethod({ani_class}, "<ctor>", "{self.type_desc}:V", &{ani_ctor});',
                 f"ani_object {ani_result};",
             )
-            self.into_ani(target, 0, env, cpp_value, ani_value)
+            self.into_ani(target, env, cpp_value, ani_value)
             target.writelns(
                 f"{env}->Object_New({ani_class}, {ani_ctor}, &{ani_result}, {ani_value});",
             )
 
-    def _from_ani_boxed_impl(
+    def from_ani_boxed(
         self,
         target: CSourceWriter,
         env: str,
@@ -1058,7 +990,6 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
         if self.ani_type.base == ANI_REF:
             self.from_ani(
                 target,
-                0,
                 env,
                 f"static_cast<{self.ani_type}>({ani_value})",
                 cpp_result,
@@ -1075,7 +1006,7 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
                 f"{self.ani_type} {ani_result};",
                 f"{env}->Object_CallMethod_{self.ani_type.suffix}((ani_object){ani_value}, {ani_getter}, &{ani_result});",
             )
-            self.from_ani(target, 0, env, ani_result, cpp_result)
+            self.from_ani(target, env, ani_result, cpp_result)
 
 
 class EnumTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[EnumType]):
@@ -1099,7 +1030,7 @@ class EnumTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[EnumType]):
         return enum_ani_info.sts_type_in(pkg, target)
 
     @override
-    def _from_ani_impl(
+    def from_ani(
         self,
         target: CSourceWriter,
         env: str,
@@ -1115,7 +1046,7 @@ class EnumTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[EnumType]):
         )
 
     @override
-    def _into_ani_impl(
+    def into_ani(
         self,
         target: CSourceWriter,
         env: str,
@@ -1146,7 +1077,7 @@ class StructTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[StructType]):
         return struct_ani_info.sts_type_in(pkg, target)
 
     @override
-    def _from_ani_impl(
+    def from_ani(
         self,
         target: CSourceWriter,
         env: str,
@@ -1160,7 +1091,7 @@ class StructTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[StructType]):
         )
 
     @override
-    def _into_ani_impl(
+    def into_ani(
         self,
         target: CSourceWriter,
         env: str,
@@ -1189,7 +1120,7 @@ class UnionTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[UnionType]):
         return union_ani_info.sts_type_in(pkg, target)
 
     @override
-    def _from_ani_impl(
+    def from_ani(
         self,
         target: CSourceWriter,
         env: str,
@@ -1203,7 +1134,7 @@ class UnionTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[UnionType]):
         )
 
     @override
-    def _into_ani_impl(
+    def into_ani(
         self,
         target: CSourceWriter,
         env: str,
@@ -1232,7 +1163,7 @@ class IfaceTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[IfaceType]):
         return iface_ani_info.sts_type_in(pkg, target)
 
     @override
-    def _from_ani_impl(
+    def from_ani(
         self,
         target: CSourceWriter,
         env: str,
@@ -1246,7 +1177,7 @@ class IfaceTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[IfaceType]):
         )
 
     @override
-    def _into_ani_impl(
+    def into_ani(
         self,
         target: CSourceWriter,
         env: str,
@@ -1288,7 +1219,7 @@ class ScalarTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ScalarType]):
         return self.sts_type
 
     @override
-    def _from_ani_impl(
+    def from_ani(
         self,
         target: CSourceWriter,
         env: str,
@@ -1300,7 +1231,7 @@ class ScalarTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ScalarType]):
         )
 
     @override
-    def _into_ani_impl(
+    def into_ani(
         self,
         target: CSourceWriter,
         env: str,
@@ -1332,7 +1263,7 @@ class OpaqueTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[OpaqueType]):
         return self.sts_type
 
     @override
-    def _from_ani_impl(
+    def from_ani(
         self,
         target: CSourceWriter,
         env: str,
@@ -1344,7 +1275,7 @@ class OpaqueTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[OpaqueType]):
         )
 
     @override
-    def _into_ani_impl(
+    def into_ani(
         self,
         target: CSourceWriter,
         env: str,
@@ -1367,7 +1298,7 @@ class StringTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[StringType]):
         return "string"
 
     @override
-    def _from_ani_impl(
+    def from_ani(
         self,
         target: CSourceWriter,
         env: str,
@@ -1389,7 +1320,7 @@ class StringTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[StringType]):
         )
 
     @override
-    def _into_ani_impl(
+    def into_ani(
         self,
         target: CSourceWriter,
         env: str,
@@ -1432,7 +1363,7 @@ class ArrayTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
         return f"Array<{sts_type}>"
 
     @override
-    def _from_ani_impl(
+    def from_ani(
         self,
         target: CSourceWriter,
         env: str,
@@ -1448,13 +1379,13 @@ class ArrayTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
             f"{item_ty_cpp_info.as_owner}* {cpp_buffer} = reinterpret_cast<{item_ty_cpp_info.as_owner}*>(malloc({ani_size} * sizeof({item_ty_cpp_info.as_owner})));",
         )
         item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
-        item_ty_ani_info.from_ani_array(target, 0, env, ani_size, ani_value, cpp_buffer)
+        item_ty_ani_info.from_ani_array(target, env, ani_size, ani_value, cpp_buffer)
         target.writelns(
             f"{self.cpp_info.as_owner} {cpp_result}({cpp_buffer}, {ani_size});",
         )
 
     @override
-    def _into_ani_impl(
+    def into_ani(
         self,
         target: CSourceWriter,
         env: str,
@@ -1467,7 +1398,7 @@ class ArrayTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
             f"size_t {cpp_size} = {cpp_value}.size();",
         )
         item_ty_ani_info.into_ani_array(
-            target, 0, env, cpp_size, f"{cpp_value}.data()", ani_result
+            target, env, cpp_size, f"{cpp_value}.data()", ani_result
         )
 
 
@@ -1493,7 +1424,7 @@ class ArrayBufferTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
         return "ArrayBuffer"
 
     @override
-    def _from_ani_impl(
+    def from_ani(
         self,
         target: CSourceWriter,
         env: str,
@@ -1511,7 +1442,7 @@ class ArrayBufferTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
         )
 
     @override
-    def _into_ani_impl(
+    def into_ani(
         self,
         target: CSourceWriter,
         env: str,
@@ -1566,7 +1497,7 @@ class TypedArrayTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
         return self.sts_type
 
     @override
-    def _from_ani_impl(
+    def from_ani(
         self,
         target: CSourceWriter,
         env: str,
@@ -1593,7 +1524,7 @@ class TypedArrayTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
         )
 
     @override
-    def _into_ani_impl(
+    def into_ani(
         self,
         target: CSourceWriter,
         env: str,
@@ -1653,7 +1584,7 @@ class BigIntTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
         return "BigInt"
 
     @override
-    def _from_ani_impl(
+    def from_ani(
         self,
         target: CSourceWriter,
         env: str,
@@ -1682,7 +1613,7 @@ class BigIntTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
         )
 
     @override
-    def _into_ani_impl(
+    def into_ani(
         self,
         target: CSourceWriter,
         env: str,
@@ -1726,7 +1657,7 @@ class OptionalTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[OptionalType]):
         return f"({sts_type} | undefined)"
 
     @override
-    def _from_ani_impl(
+    def from_ani(
         self,
         target: CSourceWriter,
         env: str,
@@ -1741,18 +1672,22 @@ class OptionalTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[OptionalType]):
             f"ani_boolean {ani_is_undefined};",
             f"{item_ty_cpp_info.as_owner}* {cpp_pointer} = nullptr;",
             f"{env}->Reference_IsUndefined({ani_value}, &{ani_is_undefined});",
-            f"if (!{ani_is_undefined}) {{",
         )
-        item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
-        item_ty_ani_info.from_ani_boxed(target, 4, env, ani_value, cpp_spec)
-        target.writelns(
-            f"    {cpp_pointer} = new {item_ty_cpp_info.as_owner}(std::move({cpp_spec}));",
+        with target.indented(
+            f"if (!{ani_is_undefined}) {{",
             f"}};",
+        ):
+            item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
+            item_ty_ani_info.from_ani_boxed(target, env, ani_value, cpp_spec)
+            target.writelns(
+                f"{cpp_pointer} = new {item_ty_cpp_info.as_owner}(std::move({cpp_spec}));",
+            )
+        target.writelns(
             f"{self.cpp_info.as_owner} {cpp_result}({cpp_pointer});",
         )
 
     @override
-    def _into_ani_impl(
+    def into_ani(
         self,
         target: CSourceWriter,
         env: str,
@@ -1762,16 +1697,23 @@ class OptionalTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[OptionalType]):
         ani_spec = f"{ani_result}_spec"
         target.writelns(
             f"ani_ref {ani_result};",
+        )
+        with target.indented(
             f"if (!{cpp_value}) {{",
-            f"    {env}->GetUndefined(&{ani_result});",
-            f"}} else {{",
-        )
-        item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
-        item_ty_ani_info.into_ani_boxed(target, 4, env, f"(*{cpp_value})", ani_spec)
-        target.writelns(
-            f"    {ani_result} = {ani_spec};",
             f"}}",
-        )
+        ):
+            target.writelns(
+                f"{env}->GetUndefined(&{ani_result});",
+            )
+        with target.indented(
+            f"else {{",
+            f"}}",
+        ):
+            item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
+            item_ty_ani_info.into_ani_boxed(target, env, f"(*{cpp_value})", ani_spec)
+            target.writelns(
+                f"{ani_result} = {ani_spec};",
+            )
 
 
 class RecordTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[MapType]):
@@ -1791,7 +1733,7 @@ class RecordTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[MapType]):
         return f"Record<{key_sts_type}, {val_sts_type}>"
 
     @override
-    def _from_ani_impl(
+    def from_ani(
         self,
         target: CSourceWriter,
         env: str,
@@ -1812,30 +1754,40 @@ class RecordTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[MapType]):
             f"ani_ref {ani_iter};",
             f'{env}->Object_CallMethodByName_Ref({ani_value}, "$_iterator", nullptr, &{ani_iter});',
             f"{self.cpp_info.as_owner} {cpp_result};",
+        )
+        with target.indented(
             f"while (true) {{",
-            f"    ani_ref {ani_next};",
-            f"    ani_boolean {ani_done};",
-            f'    {env}->Object_CallMethodByName_Ref(static_cast<ani_object>({ani_iter}), "next", nullptr, &{ani_next});',
-            f'    {env}->Object_GetFieldByName_Boolean(static_cast<ani_object>({ani_next}), "done", &{ani_done});',
-            f"    if ({ani_done}) {{;",
-            f"        break;",
-            f"    }};",
-            f"    ani_ref {ani_item};",
-            f'    {env}->Object_GetFieldByName_Ref(static_cast<ani_object>({ani_next}), "value", &{ani_item});',
-            f"    ani_ref {ani_key};",
-            f"    {env}->TupleValue_GetItem_Ref(static_cast<ani_tuple_value>({ani_item}), 0, &{ani_key});",
-            f"    ani_ref {ani_val};",
-            f"    {env}->TupleValue_GetItem_Ref(static_cast<ani_tuple_value>({ani_item}), 1, &{ani_val});",
-        )
-        key_ty_ani_info.from_ani_boxed(target, 4, env, ani_key, cpp_key)
-        val_ty_ani_info.from_ani_boxed(target, 4, env, ani_val, cpp_val)
-        target.writelns(
-            f"    {cpp_result}.emplace({cpp_key}, {cpp_val});",
             f"}}",
-        )
+        ):
+            target.writelns(
+                f"ani_ref {ani_next};",
+                f"ani_boolean {ani_done};",
+                f'{env}->Object_CallMethodByName_Ref(static_cast<ani_object>({ani_iter}), "next", nullptr, &{ani_next});',
+                f'{env}->Object_GetFieldByName_Boolean(static_cast<ani_object>({ani_next}), "done", &{ani_done});',
+            )
+            with target.indented(
+                f"if ({ani_done}) {{;",
+                f"}};",
+            ):
+                target.writelns(
+                    f"break;",
+                )
+            target.writelns(
+                f"ani_ref {ani_item};",
+                f'{env}->Object_GetFieldByName_Ref(static_cast<ani_object>({ani_next}), "value", &{ani_item});',
+                f"ani_ref {ani_key};",
+                f"{env}->TupleValue_GetItem_Ref(static_cast<ani_tuple_value>({ani_item}), 0, &{ani_key});",
+                f"ani_ref {ani_val};",
+                f"{env}->TupleValue_GetItem_Ref(static_cast<ani_tuple_value>({ani_item}), 1, &{ani_val});",
+            )
+            key_ty_ani_info.from_ani_boxed(target, env, ani_key, cpp_key)
+            val_ty_ani_info.from_ani_boxed(target, env, ani_val, cpp_val)
+            target.writelns(
+                f"{cpp_result}.emplace({cpp_key}, {cpp_val});",
+            )
 
     @override
-    def _into_ani_impl(
+    def into_ani(
         self,
         target: CSourceWriter,
         env: str,
@@ -1857,14 +1809,16 @@ class RecordTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[MapType]):
             f'{env}->Class_FindMethod({ani_class}, "<ctor>", nullptr, &{ani_method});',
             f"ani_object {ani_result};",
             f"{env}->Object_New({ani_class}, {ani_method}, &{ani_result});",
+        )
+        with target.indented(
             f"for (const auto& [{cpp_key}, {cpp_val}] : {cpp_value}) {{",
-        )
-        key_ty_ani_info.into_ani_boxed(target, 4, env, cpp_key, ani_key)
-        val_ty_ani_info.into_ani_boxed(target, 4, env, cpp_val, ani_val)
-        target.writelns(
-            f'    {env}->Object_CallMethodByName_Void({ani_result}, "$_set", nullptr, {ani_key}, {ani_val});',
             f"}}",
-        )
+        ):
+            key_ty_ani_info.into_ani_boxed(target, env, cpp_key, ani_key)
+            val_ty_ani_info.into_ani_boxed(target, env, cpp_val, ani_val)
+            target.writelns(
+                f'{env}->Object_CallMethodByName_Void({ani_result}, "$_set", nullptr, {ani_key}, {ani_val});',
+            )
 
 
 class MapTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[MapType]):
@@ -1891,7 +1845,7 @@ class MapTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[MapType]):
         return f"Map<{key_sts_type}, {val_sts_type}>"
 
     @override
-    def _from_ani_impl(
+    def from_ani(
         self,
         target: CSourceWriter,
         env: str,
@@ -1903,7 +1857,7 @@ class MapTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[MapType]):
         )
 
     @override
-    def _into_ani_impl(
+    def into_ani(
         self,
         target: CSourceWriter,
         env: str,
@@ -1940,7 +1894,7 @@ class CallbackTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[CallbackType]):
         return f"(({params_ty_sts_str}) => {return_ty_sts})"
 
     @override
-    def _from_ani_impl(
+    def from_ani(
         self,
         target: CSourceWriter,
         env: str,
@@ -1948,80 +1902,90 @@ class CallbackTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[CallbackType]):
         cpp_result: str,
     ):
         cpp_impl_class = f"{cpp_result}_cpp_impl_t"
-        target.writelns(
+        with target.indented(
             f"struct {cpp_impl_class} {{",
-            f"    ani_ref ref;",
-            f"    {cpp_impl_class}(ani_env* env, ani_fn_object obj) {{",
-            f"        env->GlobalReference_Create(obj, &this->ref);",
-            f"    }}",
-            f"    ~{cpp_impl_class}() {{",
-            f"        ::taihe::env_guard guard;",
-            f"        ani_env *env = guard.get_env();",
-            f"        env->GlobalReference_Delete(this->ref);",
-            f"    }}",
-        )
-        inner_cpp_params = []
-        inner_ani_args = []
-        inner_cpp_args = []
-        for index, param_ty in enumerate(self.t.params_ty):
-            inner_cpp_arg = f"cpp_arg_{index}"
-            inner_ani_arg = f"ani_arg_{index}"
-            param_ty_cpp_info = TypeCppInfo.get(self.am, param_ty)
-            inner_cpp_params.append(f"{param_ty_cpp_info.as_param} {inner_cpp_arg}")
-            inner_ani_args.append(inner_ani_arg)
-            inner_cpp_args.append(inner_cpp_arg)
-        cpp_params_str = ", ".join(inner_cpp_params)
-        if return_ty := self.t.return_ty:
-            return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-            return_ty_as_owner = return_ty_cpp_info.as_owner
-        else:
-            return_ty_as_owner = "void"
-        target.writelns(
-            f"    {return_ty_as_owner} operator()({cpp_params_str}) {{",
-            f"        ::taihe::env_guard guard;",
-            f"        ani_env *env = guard.get_env();",
-        )
-        for inner_ani_arg, inner_cpp_arg, param_ty in zip(
-            inner_ani_args, inner_cpp_args, self.t.params_ty, strict=True
-        ):
-            param_ty_ani_info = TypeANIInfo.get(self.am, param_ty)
-            param_ty_ani_info.into_ani_boxed(
-                target, 8, "env", inner_cpp_arg, inner_ani_arg
-            )
-        inner_ani_args_str = ", ".join(inner_ani_args)
-        if return_ty := self.t.return_ty:
-            inner_ani_res = "ani_result"
-            inner_cpp_res = "cpp_result"
-            target.writelns(
-                f"        ani_ref ani_argv[] = {{{inner_ani_args_str}}};",
-                f"        ani_ref {inner_ani_res};",
-                f"        env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.params_ty)}, ani_argv, &{inner_ani_res});",
-            )
-            return_ty_ani_info = TypeANIInfo.get(self.am, return_ty)
-            return_ty_ani_info.from_ani_boxed(
-                target, 8, "env", inner_ani_res, inner_cpp_res
-            )
-            target.writelns(
-                f"        return {inner_cpp_res};",
-            )
-        else:
-            inner_ani_res = "ani_result"
-            target.writelns(
-                f"        ani_ref ani_argv[] = {{{inner_ani_args_str}}};",
-                f"        ani_ref {inner_ani_res};",
-                f"        env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.params_ty)}, ani_argv, &{inner_ani_res});",
-                f"        return;",
-            )
-        target.writelns(
-            f"    }}",
-        )
-        target.writelns(
             f"}};",
+        ):
+            target.writelns(
+                f"ani_ref ref;",
+            )
+            with target.indented(
+                f"{cpp_impl_class}(ani_env* env, ani_fn_object obj) {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"env->GlobalReference_Create(obj, &this->ref);",
+                )
+            with target.indented(
+                f"~{cpp_impl_class}() {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"::taihe::env_guard guard;",
+                    f"ani_env *env = guard.get_env();",
+                    f"env->GlobalReference_Delete(this->ref);",
+                )
+            inner_cpp_params = []
+            inner_ani_args = []
+            inner_cpp_args = []
+            for index, param_ty in enumerate(self.t.params_ty):
+                inner_cpp_arg = f"cpp_arg_{index}"
+                inner_ani_arg = f"ani_arg_{index}"
+                param_ty_cpp_info = TypeCppInfo.get(self.am, param_ty)
+                inner_cpp_params.append(f"{param_ty_cpp_info.as_param} {inner_cpp_arg}")
+                inner_ani_args.append(inner_ani_arg)
+                inner_cpp_args.append(inner_cpp_arg)
+            cpp_params_str = ", ".join(inner_cpp_params)
+            if return_ty := self.t.return_ty:
+                return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
+                return_ty_as_owner = return_ty_cpp_info.as_owner
+            else:
+                return_ty_as_owner = "void"
+            with target.indented(
+                f"{return_ty_as_owner} operator()({cpp_params_str}) {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"::taihe::env_guard guard;",
+                    f"ani_env *env = guard.get_env();",
+                )
+                for inner_ani_arg, inner_cpp_arg, param_ty in zip(
+                    inner_ani_args, inner_cpp_args, self.t.params_ty, strict=True
+                ):
+                    param_ty_ani_info = TypeANIInfo.get(self.am, param_ty)
+                    param_ty_ani_info.into_ani_boxed(
+                        target, "env", inner_cpp_arg, inner_ani_arg
+                    )
+                inner_ani_args_str = ", ".join(inner_ani_args)
+                if return_ty := self.t.return_ty:
+                    inner_ani_res = "ani_result"
+                    inner_cpp_res = "cpp_result"
+                    target.writelns(
+                        f"ani_ref ani_argv[] = {{{inner_ani_args_str}}};",
+                        f"ani_ref {inner_ani_res};",
+                        f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.params_ty)}, ani_argv, &{inner_ani_res});",
+                    )
+                    return_ty_ani_info = TypeANIInfo.get(self.am, return_ty)
+                    return_ty_ani_info.from_ani_boxed(
+                        target, "env", inner_ani_res, inner_cpp_res
+                    )
+                    target.writelns(
+                        f"return {inner_cpp_res};",
+                    )
+                else:
+                    inner_ani_res = "ani_result"
+                    target.writelns(
+                        f"ani_ref ani_argv[] = {{{inner_ani_args_str}}};",
+                        f"ani_ref {inner_ani_res};",
+                        f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.params_ty)}, ani_argv, &{inner_ani_res});",
+                        f"return;",
+                    )
+        target.writelns(
             f"{self.cpp_info.as_owner} {cpp_result} = {self.cpp_info.as_owner}::from<{cpp_impl_class}>({env}, {ani_value});",
         )
 
     @override
-    def _into_ani_impl(
+    def into_ani(
         self,
         target: CSourceWriter,
         env: str,
