@@ -254,9 +254,11 @@ class TaiheBuilder:
 def main():
     parser = argparse.ArgumentParser(description="Build the Taihe project.")
     parser.add_argument(
-        "--linux",
-        action="store_true",
-        help="Build only for Linux x86_64. Default is to build for all systems.",
+        "--system",
+        choices=SYSTEM_TYPES,
+        nargs="*",
+        default=None,
+        help="Specify the system type to build for. Can be used multiple times.",
     )
     args = parser.parse_args()
 
@@ -280,11 +282,13 @@ def main():
         ).stdout.strip()
         version = f"TRUNK-{short_hash}"
 
-    print(f"Version {version}")
+    if args.system is None:
+        systems = SYSTEM_TYPES
+    else:
+        systems = args.system
 
-    systems_to_build = ["linux-x86_64"] if args.linux else SYSTEM_TYPES
-
-    for system in systems_to_build:
+    print(f"Version is {version}")
+    for system in systems:
         print(f"Building for {system}")
         builder = TaiheBuilder(project_dir, system, version)
         builder.build()
