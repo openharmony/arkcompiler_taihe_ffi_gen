@@ -120,12 +120,6 @@ int main() {
     colored_rect->show();
     copyColor(colored_rect, colored_circ);
     colored_rect->show();
-
-    impl_holder<UserType, IBase> obj = make_holder<UserType, IBase>("obj");
-
-    // `impl_holder<Impl, Iface...>` can call methods of Impl itself that are
-    // not defined in the interface.
-    obj->userMethod();
   }
 
   {
@@ -222,8 +216,8 @@ int main() {
     fillMap(map_0);
 
     std::cout << "Map = ";
-    map_1.accept([](string_view key, weak::IBase value) {
-      std::cout << key << ": " << value->getId() << ", ";
+    map_1.accept([](std::pair<string, IBase> const &item) {
+      std::cout << item.first << ": " << item.second->getId() << ", ";
     });
     std::cout << std::endl;
 
@@ -245,8 +239,8 @@ int main() {
     fillSet(set_0);
 
     std::cout << "Set = ";
-    set_1.accept([](string_view key) {
-      std::cout << key << ", ";
+    set_1.accept([](string_view item) {
+      std::cout << item << ", ";
     });
     std::cout << std::endl;
 

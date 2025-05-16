@@ -211,25 +211,32 @@ class BuildSystem(BuildUtils):
         target_dir: str,
         config: BuildConfig,
         verbosity: int,
+        gen_ani: bool,
         sts_keep_name: bool = False,
         opt_level: str = "0",
     ):
         super().__init__(verbosity)
-        self.config = config
-        self.sts_keep_name = sts_keep_name
         self.should_run_pretty_print = verbosity <= logging.DEBUG
         self.codegen_debug_level = _map_output_debug_level(verbosity)
+
+        self.gen_ani = gen_ani
+        self.sts_keep_name = sts_keep_name
+
+        self.config = config
 
         # Build paths
         self.target_path = Path(target_dir).resolve()
         self.idl_dir = self.target_path / "idl"
         self.system_dir = self.target_path / "system"
-        self.user_dir = self.target_path / "user"
         self.build_dir = self.target_path / "build"
 
         self.author_dir = self.target_path / "author"
         self.author_include_dir = self.author_dir / "include"
         self.author_src_dir = self.author_dir / "src"
+
+        self.user_dir = self.target_path / "user"
+        self.user_include_dir = self.user_dir / "include"
+        self.user_src_dir = self.user_dir / "src"
 
         self.generated_dir = self.target_path / "author_generated"
         self.generated_include_dir = self.generated_dir / "include"
@@ -246,6 +253,7 @@ class BuildSystem(BuildUtils):
         # Output files
         self.so_target = self.build_dir / f"lib{self.target_path.name}.so"
         self.abc_target = self.build_dir / "main.abc"
+        self.exe_target = self.build_dir / "main"
         self.arktsconfig_target = self.build_dir / "arktsconfig.json"
 
         # Build options
@@ -253,20 +261,18 @@ class BuildSystem(BuildUtils):
         self.lib_name = self.target_path.absolute().name
 
     def create(self) -> None:
-        self.create_directory(self.idl_dir)
-        self.create_directory(self.author_dir)
-        self.create_directory(self.author_src_dir)
-        self.create_directory(self.user_dir)
-
+        """Create a simple example project."""
         include_dirs: list[Path] = []
         include_dirs.append(self.config.panda_include_dir)
         include_dirs.append(self.config.runtime_include_dir)
         include_dirs.append(self.generated_include_dir)
         include_dirs.append(self.author_include_dir)
 
+        self.create_directory(self.idl_dir)
         with open(self.idl_dir / "hello.taihe", "w") as f:
             f.write("function sayHello(): void;\n")
 
+        self.create_directory(self.author_src_dir)
         with open(self.author_src_dir / "hello.impl.cpp", "w") as f:
             f.write(
                 '#include "hello.proj.hpp"\n'
@@ -282,21 +288,35 @@ class BuildSystem(BuildUtils):
                 "TH_EXPORT_CPP_API_sayHello(sayHello);\n"
             )
 
-        with open(self.user_dir / "main.ets", "w") as f:
-            f.write(
-                'import * as hello from "@generated/hello";\n'
-                f'loadLibrary("{self.lib_name}");\n'
-                "\n"
-                "function main() {\n"
-                "    hello.sayHello();\n"
-                "}\n"
-            )
+        if self.gen_ani:
+            self.create_directory(self.user_dir)
+            with open(self.user_dir / "main.ets", "w") as f:
+                f.write(
+                    'import * as hello from "@generated/hello";\n'
+                    f'loadLibrary("{self.lib_name}");\n'
+                    "\n"
+                    "function main() {\n"
+                    "    hello.sayHello();\n"
+                    "}\n"
+                )
+        else:
+            self.create_directory(self.user_src_dir)
+            with open(self.user_src_dir / "main.cpp", "w") as f:
+                f.write(
+                    '#include "hello.user.hpp"\n'
+                    "\n"
+                    "int main() {\n"
+                    "    hello::sayHello();\n"
+                    "    return 0;\n"
+                    "}\n"
+                )
 
         with open(self.target_path / "compile_flags.txt", "w") as f:
             for include_dir in include_dirs:
                 f.write(f"-I{include_dir}\n")
 
     def generate_and_build(self) -> None:
+        """Generate code and build the project."""
         self.generate()
         self.build()
 
@@ -315,7 +335,11 @@ class BuildSystem(BuildUtils):
 
         registry = BackendRegistry()
         registry.register_all()
-        backend_names = ["ani-bridge", "cpp-author"]
+        backend_names = ["cpp-author"]
+        if self.gen_ani:
+            backend_names.append("ani-bridge")
+        else:
+            backend_names.append("cpp-user")
         if self.should_run_pretty_print:
             backend_names.append("pretty-print")
         backends = registry.collect_required_backends(backend_names)
@@ -366,11 +390,18 @@ class BuildSystem(BuildUtils):
         # Compile the shared library
         self.compile_shared_library()
 
-        # Compile and link ABC files
-        self.compile_and_link_abc()
+        if self.gen_ani:
+            # Compile and link ABC files
+            self.compile_and_link_ani()
 
-        # Run with Ark runtime
-        self.run_ark()
+            # Run with Ark runtime
+            self.run_ani()
+        else:
+            # Compile the executable
+            self.compile_and_link_exe()
+
+            # Run the executable
+            self.run_exe()
 
         self.logger.info("Build and execution completed successfully")
 
@@ -415,7 +446,7 @@ class BuildSystem(BuildUtils):
                 "No object files to link, skipping shared library compilation"
             )
 
-    def compile_and_link_abc(self):
+    def compile_and_link_ani(self):
         """Compile and link ABC files."""
         self.logger.info("Compiling and linking ABC files...")
 
@@ -452,12 +483,47 @@ class BuildSystem(BuildUtils):
         else:
             self.logger.warning("No ABC files to link, skipping ABC compilation")
 
-    def run_ark(self) -> None:
+    def run_ani(self) -> None:
+        """Run the compiled ABC file with the Ark runtime."""
         self.run_abc(
             self.abc_target,
             self.so_target.parent,
             entry="main.ETSGLOBAL::main",
             panda_home=self.config.panda_home_dir,
+        )
+
+    def compile_and_link_exe(self):
+        """Compile and link the executable."""
+        self.logger.info("Compiling and linking executable...")
+
+        # Compile the user source files
+        user_objects = self.compile(
+            self.build_user_dir,
+            self.user_src_dir,
+            self.config.panda_include_dir,
+            self.config.runtime_include_dir,
+            self.generated_include_dir,
+            self.user_include_dir,
+        )
+
+        # Link the executable
+        if user_objects:
+            self.link(
+                self.exe_target,
+                self.so_target,
+                *user_objects,
+            )
+            self.logger.info("Executable compiled: %s", self.so_target)
+        else:
+            self.logger.warning(
+                "No object files to link, skipping executable compilation"
+            )
+
+    def run_exe(self) -> None:
+        """Run the compiled executable."""
+        self.run(
+            self.exe_target,
+            self.so_target.parent,
         )
 
     def setup_build_directories(self) -> None:
@@ -599,6 +665,25 @@ class BuildSystem(BuildUtils):
             command.append("-shared")
 
         self.run_command(command)
+
+    def run(
+        self,
+        target: Path,
+        ld_lib_path: Path,
+    ) -> None:
+        """Run the compiled target."""
+        if not target.exists():
+            self.logger.error("Target file not found: %s", target)
+            raise FileNotFoundError(f"Target file not found: {target}")
+
+        self.logger.info("Running target: %s", target)
+        self.run_command(
+            [
+                target,
+            ],
+            env={"LD_LIBRARY_PATH": str(ld_lib_path)},
+            capture_output=False,
+        )
 
     def compile_abc(
         self,
@@ -752,6 +837,13 @@ def main(config: Optional[BuildConfig] = None):
             help="The target directory containing source files for the project",
         )
 
+    def add_argument_ani(parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--ani",
+            action="store_true",
+            help="Use ani-bridge backend for code generation",
+        )
+
     def add_argument_optimization(parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "-O",
@@ -799,6 +891,7 @@ def main(config: Optional[BuildConfig] = None):
     )
     add_argument_verbosity(parser_create)
     add_argument_target_directory(parser_create)
+    add_argument_ani(parser_create)
 
     parser_generate = subparsers.add_parser(
         "generate",
@@ -806,6 +899,7 @@ def main(config: Optional[BuildConfig] = None):
     )
     add_argument_verbosity(parser_generate)
     add_argument_target_directory(parser_generate)
+    add_argument_ani(parser_generate)
     add_argument_sts_keep_name(parser_generate)
 
     parser_build = subparsers.add_parser(
@@ -814,6 +908,7 @@ def main(config: Optional[BuildConfig] = None):
     )
     add_argument_verbosity(parser_build)
     add_argument_target_directory(parser_build)
+    add_argument_ani(parser_build)
     add_argument_optimization(parser_build)
 
     parser_test = subparsers.add_parser(
@@ -822,6 +917,7 @@ def main(config: Optional[BuildConfig] = None):
     )
     add_argument_verbosity(parser_test)
     add_argument_target_directory(parser_test)
+    add_argument_ani(parser_test)
     add_argument_optimization(parser_test)
     add_argument_sts_keep_name(parser_test)
 
@@ -852,12 +948,14 @@ def main(config: Optional[BuildConfig] = None):
             case "create":
                 BuildSystem(
                     args.target_directory,
+                    gen_ani=args.ani,
                     config=config,
                     verbosity=verbosity,
                 ).create()
             case "generate":
                 BuildSystem(
                     args.target_directory,
+                    gen_ani=args.ani,
                     config=config,
                     verbosity=verbosity,
                     sts_keep_name=args.sts_keep_name,
@@ -865,6 +963,7 @@ def main(config: Optional[BuildConfig] = None):
             case "build":
                 BuildSystem(
                     args.target_directory,
+                    gen_ani=args.ani,
                     config=config,
                     verbosity=verbosity,
                     opt_level=args.optimization,
@@ -872,6 +971,7 @@ def main(config: Optional[BuildConfig] = None):
             case "test":
                 BuildSystem(
                     args.target_directory,
+                    gen_ani=args.ani,
                     config=config,
                     verbosity=verbosity,
                     opt_level=args.optimization,

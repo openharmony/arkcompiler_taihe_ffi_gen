@@ -1310,6 +1310,15 @@ class CppHeadersGenerator(Backend):
             f"        }}}};",
             f"    }}",
         )
+        iface_cpp_defn_target.writelns(
+            f"    template<typename Impl>",
+            f"    static {iface_cpp_info.as_owner} from(Impl&& impl) {{",
+            f"        return {iface_cpp_info.as_owner}{{{{",
+            f"            .vtbl_ptr = &vtbl_impl<Impl>,",
+            f"            .data_ptr = ::taihe::new_data_ptr<Impl>(reinterpret_cast<TypeInfo const*>(&rtti_impl<Impl>), std::forward<Impl>(impl)),",
+            f"        }}}};",
+            f"    }}",
+        )
 
     def gen_iface_type_traits(
         self,
