@@ -28,7 +28,7 @@ optional<string> getUserSetting(map_view<string, string> settings, string_view k
     if (iter == nullptr) {
         return optional<string>(std::nullopt);
     }
-    return optional<string>(std::in_place_t{}, *iter);
+    return optional<string>(std::in_place_t{}, iter->second);
 }
 ```
 

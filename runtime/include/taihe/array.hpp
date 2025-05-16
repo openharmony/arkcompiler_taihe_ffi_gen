@@ -217,10 +217,6 @@ struct array : public array_view<cpp_owner_t> {
   array(std::initializer_list<cpp_owner_t> value) noexcept
       : array(copy_data, value.begin(), value.size()) {}
 
-  template<typename Iterator>
-  array(Iterator begin, Iterator end) noexcept
-      : array(copy_data, begin, std::distance(begin, end)) {}
-
   array(array_view<cpp_owner_t> const &other)
       : array(copy_data, other.data(), other.size()) {}
 

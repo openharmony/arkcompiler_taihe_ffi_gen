@@ -1293,7 +1293,7 @@ class CppHeadersGenerator(Backend):
                 f"        return {ancestor_cpp_info.full_norm_name}({info.static_cast}(ret_handle));",
                 f"    }}",
             )
-    
+
     def gen_iface_from_impl(
         self,
         iface: IfaceDecl,

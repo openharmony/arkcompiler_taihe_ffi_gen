@@ -87,7 +87,7 @@ map<string, int32_t> GetMapfromArray(array_view<::record_test::Data> d) {
   if (iter == nullptr) {
     return {"su", 7};
   }
-  return {iter->a, iter->b};
+  return {iter->second.a, iter->second.b};
 }
 
 void ForeachMap(map_view<string, string> my_map) {
