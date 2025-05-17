@@ -93,10 +93,28 @@ class PrettyFormatter(DeclVisitor[str]):
         return self.with_attr(d, f"({fmt_args}) => {ret}")
 
     def get_package_ref_decl(self, d: "PackageRefDecl") -> str:
-        return d.symbol
+        package_ref_repr = d.symbol
+        if not d.is_resolved or not self.show_resolved:
+            return package_ref_repr
+        real_package = (
+            d.maybe_resolved_pkg.description
+            if d.maybe_resolved_pkg
+            else "<error package>"
+        )
+        comment = self.as_comment(f"/* {real_package} */")
+        return f"{package_ref_repr} {comment}"
 
     def get_decl_ref_decl(self, d: "DeclarationRefDecl") -> str:
-        return d.symbol
+        decl_ref_repr = d.symbol
+        if not d.is_resolved or not self.show_resolved:
+            return decl_ref_repr
+        real_decl = (
+            d.maybe_resolved_decl.description
+            if d.maybe_resolved_decl
+            else "<error declaration>"
+        )
+        comment = self.as_comment(f"/* {real_decl} */")
+        return f"{decl_ref_repr} {comment}"
 
     def get_parent_decl(self, d: "IfaceParentDecl") -> str:
         res = self.get_type_ref_decl(d.ty_ref)
@@ -108,13 +126,14 @@ class PrettyFormatter(DeclVisitor[str]):
 
     def get_value(self, obj: bool | str | float | int) -> str:
         if isinstance(obj, str):
-            return obj.encode("unicode_escape").decode("utf-8")
+            return '"' + obj.encode("unicode_escape").decode("utf-8") + '"'
         if isinstance(obj, bool):
             return "true" if obj else "false"
         if isinstance(obj, int):
             return f"{obj:d}"
-        # if isinstance(obj, float):
-        return f"{obj:f}"
+        if isinstance(obj, float):
+            return f"{obj:f}"
+        raise TypeError(f"Unsupported type: {type(obj)}")
 
     def get_format_attr(self, d: "Decl") -> list[str]:
         formatted_attributes: list[str] = []

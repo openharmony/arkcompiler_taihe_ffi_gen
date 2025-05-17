@@ -6,7 +6,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Union
@@ -226,9 +226,14 @@ class BuildSystem(BuildUtils):
 
         # Build paths
         self.target_path = Path(target_dir).resolve()
+
         self.idl_dir = self.target_path / "idl"
-        self.system_dir = self.target_path / "system"
         self.build_dir = self.target_path / "build"
+        self.system_dir = self.target_path / "system"
+
+        self.generated_dir = self.target_path / "author_generated"
+        self.generated_include_dir = self.generated_dir / "include"
+        self.generated_src_dir = self.generated_dir / "src"
 
         self.author_dir = self.target_path / "author"
         self.author_include_dir = self.author_dir / "include"
@@ -238,9 +243,12 @@ class BuildSystem(BuildUtils):
         self.user_include_dir = self.user_dir / "include"
         self.user_src_dir = self.user_dir / "src"
 
-        self.generated_dir = self.target_path / "author_generated"
-        self.generated_include_dir = self.generated_dir / "include"
-        self.generated_src_dir = self.generated_dir / "src"
+        self.runtime_includes = [self.config.runtime_include_dir]
+        if self.gen_ani:
+            self.runtime_includes.append(self.config.panda_include_dir)
+        self.generated_includes = [*self.runtime_includes, self.generated_include_dir]
+        self.author_includes = [*self.generated_includes, self.author_include_dir]
+        self.user_includes = [*self.generated_includes, self.user_include_dir]
 
         # Build sub-directories
         self.build_generated_src_dir = self.build_dir / "author_generated" / "src"
@@ -262,16 +270,21 @@ class BuildSystem(BuildUtils):
 
     def create(self) -> None:
         """Create a simple example project."""
-        include_dirs: list[Path] = []
-        include_dirs.append(self.config.panda_include_dir)
-        include_dirs.append(self.config.runtime_include_dir)
-        include_dirs.append(self.generated_include_dir)
-        include_dirs.append(self.author_include_dir)
+        self.create_idl()
+        self.create_author_cpp()
+        if self.gen_ani:
+            self.create_user_ets()
+        else:
+            self.create_user_cpp()
 
+    def create_idl(self) -> None:
+        """Create a simple example IDL file."""
         self.create_directory(self.idl_dir)
         with open(self.idl_dir / "hello.taihe", "w") as f:
             f.write("function sayHello(): void;\n")
 
+    def create_author_cpp(self) -> None:
+        """Create a simple example author source file."""
         self.create_directory(self.author_src_dir)
         with open(self.author_src_dir / "hello.impl.cpp", "w") as f:
             f.write(
@@ -287,33 +300,38 @@ class BuildSystem(BuildUtils):
                 "\n"
                 "TH_EXPORT_CPP_API_sayHello(sayHello);\n"
             )
+        with open(self.author_dir / "compile_flags.txt", "w") as f:
+            for author_include_dir in self.author_includes:
+                f.write(f"-I{author_include_dir}\n")
 
-        if self.gen_ani:
-            self.create_directory(self.user_dir)
-            with open(self.user_dir / "main.ets", "w") as f:
-                f.write(
-                    'import * as hello from "@generated/hello";\n'
-                    f'loadLibrary("{self.lib_name}");\n'
-                    "\n"
-                    "function main() {\n"
-                    "    hello.sayHello();\n"
-                    "}\n"
-                )
-        else:
-            self.create_directory(self.user_src_dir)
-            with open(self.user_src_dir / "main.cpp", "w") as f:
-                f.write(
-                    '#include "hello.user.hpp"\n'
-                    "\n"
-                    "int main() {\n"
-                    "    hello::sayHello();\n"
-                    "    return 0;\n"
-                    "}\n"
-                )
+    def create_user_ets(self) -> None:
+        """Create a simple example user ETS file."""
+        self.create_directory(self.user_dir)
+        with open(self.user_dir / "main.ets", "w") as f:
+            f.write(
+                'import * as hello from "@generated/hello";\n'
+                f'loadLibrary("{self.lib_name}");\n'
+                "\n"
+                "function main() {\n"
+                "    hello.sayHello();\n"
+                "}\n"
+            )
 
-        with open(self.target_path / "compile_flags.txt", "w") as f:
-            for include_dir in include_dirs:
-                f.write(f"-I{include_dir}\n")
+    def create_user_cpp(self) -> None:
+        """Create a simple example user source file."""
+        self.create_directory(self.user_src_dir)
+        with open(self.user_src_dir / "main.cpp", "w") as f:
+            f.write(
+                '#include "hello.user.hpp"\n'
+                "\n"
+                "int main() {\n"
+                "    hello::sayHello();\n"
+                "    return 0;\n"
+                "}\n"
+            )
+        with open(self.user_dir / "compile_flags.txt", "w") as f:
+            for user_include_dir in self.user_includes:
+                f.write(f"-I{user_include_dir}\n")
 
     def generate_and_build(self) -> None:
         """Generate code and build the project."""
@@ -369,34 +387,22 @@ class BuildSystem(BuildUtils):
 
         self.setup_build_directories()
 
-        # Set up paths for Panda VM
-        self.download_panda_vm()
-
-        if not self.config.panda_home_dir.exists():
-            raise FileNotFoundError(
-                f"Panda home directory not found: {self.config.panda_home_dir}"
-            )
-
-        # Path to include directory for ANI
-        panda_include_dir = self.config.panda_include_dir
-
-        if not panda_include_dir.exists():
-            self.logger.warning(
-                "ANI include directory not found: %s", panda_include_dir
-            )
-            # Create a fallback include directory
-            self.create_directory(panda_include_dir)
-
-        # Compile the shared library
-        self.compile_shared_library()
-
         if self.gen_ani:
+            # Set up paths for Panda VM
+            self.prepare_panda_vm()
+
+            # Compile the shared library
+            self.compile_shared_library()
+
             # Compile and link ABC files
             self.compile_and_link_ani()
 
             # Run with Ark runtime
             self.run_ani()
         else:
+            # Compile the shared library
+            self.compile_shared_library()
+
             # Compile the executable
             self.compile_and_link_exe()
 
@@ -409,34 +415,34 @@ class BuildSystem(BuildUtils):
         """Compile the shared library."""
         self.logger.info("Compiling shared library...")
 
+        runtime_sources = [
+            self.config.runtime_src_dir / "string.c",
+            self.config.runtime_src_dir / "object.c",
+        ]
+        if self.gen_ani:
+            runtime_sources.append(self.config.runtime_src_dir / "runtime.cpp")
         # Compile each component
         runtime_objects = self.compile(
             self.build_runtime_src_dir,
-            self.config.runtime_src_dir,
-            self.config.panda_include_dir,
-            self.config.runtime_include_dir,
+            runtime_sources,
+            self.runtime_includes,
         )
         generated_objects = self.compile(
             self.build_generated_src_dir,
-            self.generated_src_dir,
-            self.config.panda_include_dir,
-            self.config.runtime_include_dir,
-            self.generated_include_dir,
+            self.generated_src_dir.glob("*.[cC]*"),
+            self.generated_includes,
         )
         author_objects = self.compile(
             self.build_author_src_dir,
-            self.author_src_dir,
-            self.config.panda_include_dir,
-            self.config.runtime_include_dir,
-            self.generated_include_dir,
-            self.author_include_dir,
+            self.author_src_dir.glob("*.[cC]*"),
+            self.author_includes,
         )
 
         # Link all objects
         if all_objects := runtime_objects + generated_objects + author_objects:
             self.link(
                 self.so_target,
-                *all_objects,
+                all_objects,
                 shared=True,
                 link_options=["-Wl,--no-undefined"],
             )
@@ -476,7 +482,7 @@ class BuildSystem(BuildUtils):
         if all_abc_files := generated_abc + user_abc + system_abc:
             self.link_abc(
                 self.abc_target,
-                *all_abc_files,
+                all_abc_files,
                 panda_home=self.config.panda_home_dir,
             )
             self.logger.info("ABC files linked: %s", self.abc_target)
@@ -499,19 +505,15 @@ class BuildSystem(BuildUtils):
         # Compile the user source files
         user_objects = self.compile(
             self.build_user_dir,
-            self.user_src_dir,
-            self.config.panda_include_dir,
-            self.config.runtime_include_dir,
-            self.generated_include_dir,
-            self.user_include_dir,
+            self.user_src_dir.glob("*.[cC]*"),
+            self.user_includes,
         )
 
         # Link the executable
         if user_objects:
             self.link(
                 self.exe_target,
-                self.so_target,
-                *user_objects,
+                [self.so_target, *user_objects],
             )
             self.logger.info("Executable compiled: %s", self.so_target)
         else:
@@ -539,7 +541,7 @@ class BuildSystem(BuildUtils):
         self.create_directory(self.build_system_dir)
         self.create_directory(self.build_user_dir)
 
-    def download_panda_vm(self):
+    def prepare_panda_vm(self):
         """Download and extract Panda VM."""
         self.create_directory(self.config.panda_extract_dir)
 
@@ -601,17 +603,13 @@ class BuildSystem(BuildUtils):
     def compile(
         self,
         output_dir: Path,
-        input_dir: Path,
-        *include_dirs: Path,
+        input_files: Iterable[Path],
+        include_dirs: Sequence[Path],
     ) -> list[Path]:
         """Compile source files."""
         output_files: list[Path] = []
 
-        if not input_dir.exists():
-            self.logger.warning("Input directory does not exist: %s", input_dir)
-            return output_files
-
-        for input_file in input_dir.glob("*.[cC]*"):  # Find .c, .cpp, .cc, .C files
+        for input_file in input_files:
             name = input_file.name
             output_file = output_dir / f"{name}.o"
 
@@ -636,7 +634,7 @@ class BuildSystem(BuildUtils):
 
             for include_dir in include_dirs:
                 if include_dir.exists():  # Only include directories that exist
-                    command.extend(["-I", include_dir])
+                    command.append(f"-I{include_dir}")
 
             self.run_command(command)
             output_files.append(output_file)
@@ -646,19 +644,19 @@ class BuildSystem(BuildUtils):
     def link(
         self,
         output_file: Path,
-        *input_files: Path,
+        input_files: Sequence[Path],
         shared: bool = False,
         link_options: Optional[list[str]] = None,
     ) -> None:
         """Link object files."""
-        if not input_files:
+        if len(input_files) == 0:
             self.logger.warning("No input files to link")
             return
 
         link_options = link_options or []
 
         command = [self.config.cxx, "-fPIC", "-o", output_file]
-        command.extend(str(input_file) for input_file in input_files)
+        command.extend(input_files)
         command.extend(link_options)
 
         if shared:
@@ -745,11 +743,11 @@ class BuildSystem(BuildUtils):
     def link_abc(
         self,
         target: Path,
-        *input_files: Path,
+        input_files: Sequence[Path],
         panda_home: Path,
     ) -> None:
         """Link ABC files."""
-        if not input_files:
+        if len(input_files) == 0:
             self.logger.warning("No input files to link")
             return
 

@@ -30,7 +30,9 @@ class PrettyPrintBackendConfig(BackendConfig):
             def generate(self):
                 PrettyPrinter(
                     BaseWriter(
-                        sys.stdout, default_indent=DEFAULT_INDENT, comment_prefix="// "
+                        sys.stdout,
+                        default_indent=DEFAULT_INDENT,
+                        comment_prefix="// ",
                     ),
                     self._config.show_resolved,
                     self._config.colorize,
