@@ -1071,7 +1071,7 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
                 f"ani_class {ani_class};",
                 f'{env}->FindClass("Lstd/core/{self.ani_type.suffix};", &{ani_class});',
                 f"ani_method {ani_getter};",
-                f'{env}->Class_FindMethod({ani_class}, "unboxed", nullptr, &{ani_getter});',
+                f'{env}->Class_FindMethod({ani_class}, "unboxed", ":{self.type_desc}", &{ani_getter});',
                 f"{self.ani_type} {ani_result};",
                 f"{env}->Object_CallMethod_{self.ani_type.suffix}((ani_object){ani_value}, {ani_getter}, &{ani_result});",
             )
