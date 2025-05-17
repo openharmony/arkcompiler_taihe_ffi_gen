@@ -11,7 +11,10 @@ class StsWriter(FileWriter):
     @override
     def __init__(self, oc: OutputConfig, path: str, indent_unit: str = DEFAULT_INDENT):
         super().__init__(
-            oc, path=path, default_indent=indent_unit, comment_prefix="// "
+            oc,
+            path=path,
+            default_indent=indent_unit,
+            comment_prefix="// ",
         )
         self.import_dict: dict[str, str] = {}
 

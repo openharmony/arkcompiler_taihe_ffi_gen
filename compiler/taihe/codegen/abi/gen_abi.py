@@ -168,7 +168,6 @@ class ABIHeadersGenerator(Backend):
                 union_abi_defn_target.writelns(
                     f"{type_abi_info.as_owner} {field.name};",
                 )
-
         with union_abi_defn_target.indented(
             f"struct {union_abi_info.mangled_name} {{",
             f"}};",
@@ -208,12 +207,8 @@ class ABIHeadersGenerator(Backend):
             self.gen_iface_ftable(iface, iface_abi_info, iface_abi_defn_target)
             self.gen_iface_vtable(iface, iface_abi_info, iface_abi_defn_target)
             self.gen_iface_defn(iface, iface_abi_info, iface_abi_defn_target)
-            self.gen_iface_static_cast_funcs(
-                iface, iface_abi_info, iface_abi_defn_target
-            )
-            self.gen_iface_dynamic_cast_func(
-                iface, iface_abi_info, iface_abi_defn_target
-            )
+            self.gen_iface_static_casts(iface, iface_abi_info, iface_abi_defn_target)
+            self.gen_iface_dynamic_cast(iface, iface_abi_info, iface_abi_defn_target)
             self.gen_iface_copy_func(iface, iface_abi_info, iface_abi_defn_target)
             self.gen_iface_drop_func(iface, iface_abi_info, iface_abi_defn_target)
 
@@ -275,7 +270,7 @@ class ABIHeadersGenerator(Backend):
                 f"struct DataBlockHead* data_ptr;",
             )
 
-    def gen_iface_static_cast_funcs(
+    def gen_iface_static_casts(
         self,
         iface: IfaceDecl,
         iface_abi_info: IfaceABIInfo,
@@ -286,7 +281,6 @@ class ABIHeadersGenerator(Backend):
                 continue
             ancestor_abi_info = IfaceABIInfo.get(self.am, ancestor)
             iface_abi_defn_target.add_include(ancestor_abi_info.defn_header)
-
             with iface_abi_defn_target.indented(
                 f"TH_INLINE struct {ancestor_abi_info.mangled_name} {info.static_cast}(struct {iface_abi_info.mangled_name} tobj) {{",
                 f"}}",
@@ -298,7 +292,7 @@ class ABIHeadersGenerator(Backend):
                     f"return result;",
                 )
 
-    def gen_iface_dynamic_cast_func(
+    def gen_iface_dynamic_cast(
         self,
         iface: IfaceDecl,
         iface_abi_info: IfaceABIInfo,
@@ -410,7 +404,6 @@ class ABIHeadersGenerator(Backend):
                 return_ty_name = type_abi_info.as_owner
             else:
                 return_ty_name = "void"
-
             with iface_abi_impl_target.indented(
                 f"TH_INLINE {return_ty_name} {method_abi_info.mangled_name}({params_str}) {{",
                 f"}}",

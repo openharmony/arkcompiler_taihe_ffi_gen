@@ -12,7 +12,8 @@ if TYPE_CHECKING:
 
 def main():
     parser = argparse.ArgumentParser(
-        prog="taihec", description="generates source code from taihe files"
+        prog="taihec",
+        description="generates source code from taihe files",
     )
     parser.add_argument(
         "-I",

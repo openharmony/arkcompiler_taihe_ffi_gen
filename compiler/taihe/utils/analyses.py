@@ -30,9 +30,7 @@ class AbstractAnalysis(ABC, Generic[P]):
     Enforcing the use of hashable argument for unique identification and caching.
     """
 
-    def __new__(
-        cls: type["AbstractAnalysis[P]"], *args: Any, **kwargs: Any
-    ) -> NoReturn:
+    def __new__(cls: type[A], *args: Any, **kwargs: Any) -> NoReturn:
         """Avoid accidentally instantiating without using the `get` method."""
         raise TypeError(
             f"Cannot instantiate {cls.__name__}. Use `{cls.__name__}.get` instead."

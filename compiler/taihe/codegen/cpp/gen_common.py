@@ -127,47 +127,44 @@ class CppHeadersGenerator(Backend):
                 f"struct {enum_cpp_info.name} {{",
                 f"}};",
             ):
-                # key type
-                with enum_cpp_target.indented(
-                    f"enum class key_t: {enum_abi_info.abi_type} {{",
-                    f"}};",
-                ):
-                    for item in enum.items:
-                        enum_cpp_target.writelns(
-                            f"{item.name},",
-                        )
-                # basic methods
                 enum_cpp_target.writelns(
-                    f"{enum_cpp_info.name}(key_t key) : key(key) {{}}",
-                    f"{enum_cpp_info.name}({enum_cpp_info.name} const& other) : key(other.key) {{}}",
+                    f"public:",
                 )
-                with enum_cpp_target.indented(
-                    f"{enum_cpp_info.name}& operator=({enum_cpp_info.name} other) {{",
-                    f"}}",
-                ):
-                    enum_cpp_target.writelns(
-                        f"key = other.key;",
-                        f"return *this;",
-                    )
-                self.gen_enum_key_getter(
+                self.gen_enum_key_type(
                     enum,
                     enum_abi_info,
                     enum_cpp_info,
                     enum_cpp_target,
                 )
-                self.gen_enum_value_getter(
+                self.gen_enum_basic_methods(
                     enum,
                     enum_abi_info,
                     enum_cpp_info,
                     enum_cpp_target,
                 )
-                # properties
+                self.gen_enum_key_utils(
+                    enum,
+                    enum_abi_info,
+                    enum_cpp_info,
+                    enum_cpp_target,
+                )
+                self.gen_enum_value_utils(
+                    enum,
+                    enum_abi_info,
+                    enum_cpp_info,
+                    enum_cpp_target,
+                )
                 enum_cpp_target.writelns(
                     f"private:",
-                    f"key_t key;",
+                )
+                self.gen_enum_properties(
+                    enum,
+                    enum_abi_info,
+                    enum_cpp_info,
+                    enum_cpp_target,
                 )
 
-    def gen_enum_key_getter(
+    def gen_enum_key_type(
         self,
         enum: EnumDecl,
         enum_abi_info: EnumABIInfo,
@@ -175,12 +172,66 @@ class CppHeadersGenerator(Backend):
         enum_cpp_target: CHeaderWriter,
     ):
         with enum_cpp_target.indented(
+            f"enum class key_t: {enum_abi_info.abi_type} {{",
+            f"}};",
+        ):
+            for item in enum.items:
+                enum_cpp_target.writelns(
+                    f"{item.name},",
+                )
+
+    def gen_enum_properties(
+        self,
+        enum: EnumDecl,
+        enum_abi_info: EnumABIInfo,
+        enum_cpp_info: EnumCppInfo,
+        enum_cpp_target: CHeaderWriter,
+    ):
+        enum_cpp_target.writelns(
+            f"key_t key;",
+        )
+
+    def gen_enum_basic_methods(
+        self,
+        enum: EnumDecl,
+        enum_abi_info: EnumABIInfo,
+        enum_cpp_info: EnumCppInfo,
+        enum_cpp_target: CHeaderWriter,
+    ):
+        # copy constructor
+        enum_cpp_target.writelns(
+            f"{enum_cpp_info.name}({enum_cpp_info.name} const& other) : key(other.key) {{}}",
+        )
+        # copy assignment
+        with enum_cpp_target.indented(
+            f"{enum_cpp_info.name}& operator=({enum_cpp_info.name} other) {{",
+            f"}}",
+        ):
+            enum_cpp_target.writelns(
+                f"key = other.key;",
+                f"return *this;",
+            )
+
+    def gen_enum_key_utils(
+        self,
+        enum: EnumDecl,
+        enum_abi_info: EnumABIInfo,
+        enum_cpp_info: EnumCppInfo,
+        enum_cpp_target: CHeaderWriter,
+    ):
+        # constructor
+        enum_cpp_target.writelns(
+            f"{enum_cpp_info.name}(key_t key) : key(key) {{}}",
+        )
+        # key getter
+        with enum_cpp_target.indented(
             f"key_t get_key() const {{",
             f"}}",
         ):
             enum_cpp_target.writelns(
                 f"return this->key;",
             )
+        # validity checker
         with enum_cpp_target.indented(
             f"bool is_valid() const {{",
             f"}}",
@@ -189,7 +240,7 @@ class CppHeadersGenerator(Backend):
                 f"return ({enum_abi_info.abi_type})key >= 0 && ({enum_abi_info.abi_type})key < {len(enum.items)};",
             )
 
-    def gen_enum_value_getter(
+    def gen_enum_value_utils(
         self,
         enum: EnumDecl,
         enum_abi_info: EnumABIInfo,
@@ -207,6 +258,7 @@ class CppHeadersGenerator(Backend):
             case _:
                 raise ValueError("invalid enum type")
         enum_cpp_target.add_include(*ty_cpp_info.impl_headers)
+        # table
         with enum_cpp_target.indented(
             f"static constexpr {as_owner} table[] = {{",
             f"}};",
@@ -215,6 +267,7 @@ class CppHeadersGenerator(Backend):
                 enum_cpp_target.writelns(
                     f"{dumps(item.value)},",
                 )
+        # value getter
         with enum_cpp_target.indented(
             f"{as_owner} get_value() const {{",
             f"}}",
@@ -222,6 +275,7 @@ class CppHeadersGenerator(Backend):
             enum_cpp_target.writelns(
                 f"return table[({enum_abi_info.abi_type})key];",
             )
+        # value converter
         with enum_cpp_target.indented(
             f"operator {as_owner}() const {{",
             f"}}",
@@ -229,6 +283,7 @@ class CppHeadersGenerator(Backend):
             enum_cpp_target.writelns(
                 f"return table[({enum_abi_info.abi_type})key];",
             )
+        # creator from value
         with enum_cpp_target.indented(
             f"static {enum_cpp_info.as_owner} from_value({as_param} value) {{",
             f"}}",
@@ -395,164 +450,226 @@ class CppHeadersGenerator(Backend):
                 f"struct {union_cpp_info.name} {{",
                 f"}};",
             ):
-                # tag type
-                with union_cpp_defn_target.indented(
-                    f"enum class tag_t : {union_abi_info.tag_type} {{",
-                    f"}};",
-                ):
-                    for field in union.fields:
-                        union_cpp_defn_target.writelns(
-                            f"{field.name},",
-                        )
-                # storage type
-                with union_cpp_defn_target.indented(
-                    f"union storage_t {{",
-                    f"}};",
-                ):
-                    union_cpp_defn_target.writelns(
-                        f"storage_t() {{}}",
-                        f"~storage_t() {{}}",
-                    )
-                    for field in union.fields:
-                        if field.ty_ref is None:
-                            continue
-                        type_cpp_info = TypeCppInfo.get(
-                            self.am, field.ty_ref.resolved_ty
-                        )
-                        union_cpp_defn_target.add_include(*type_cpp_info.impl_headers)
-                        union_cpp_defn_target.writelns(
-                            f"{type_cpp_info.as_owner} {field.name};",
-                        )
-                # copy constructor
-                with union_cpp_defn_target.indented(
-                    f"{union_cpp_info.name}({union_cpp_info.name} const& other) : m_tag(other.m_tag) {{",
-                    f"}}",
-                ):
-                    with union_cpp_defn_target.indented(
-                        f"switch (m_tag) {{",
-                        f"}}",
-                        indent="",
-                    ):
-                        for field in union.fields:
-                            if field.ty_ref is None:
-                                continue
-                            with union_cpp_defn_target.indented(
-                                f"case tag_t::{field.name}: {{",
-                                f"}}",
-                            ):
-                                union_cpp_defn_target.writelns(
-                                    f"new (&m_data.{field.name}) decltype(m_data.{field.name})(other.m_data.{field.name});",
-                                    f"break;",
-                                )
-                        with union_cpp_defn_target.indented(
-                            f"default: {{",
-                            f"}}",
-                        ):
-                            union_cpp_defn_target.writelns(
-                                f"break;",
-                            )
-                # move constructor
-                with union_cpp_defn_target.indented(
-                    f"{union_cpp_info.name}({union_cpp_info.name}&& other) : m_tag(other.m_tag) {{",
-                    f"}}",
-                ):
-                    with union_cpp_defn_target.indented(
-                        f"switch (m_tag) {{",
-                        f"}}",
-                        indent="",
-                    ):
-                        for field in union.fields:
-                            if field.ty_ref is None:
-                                continue
-                            with union_cpp_defn_target.indented(
-                                f"case tag_t::{field.name}: {{",
-                                f"}}",
-                            ):
-                                union_cpp_defn_target.writelns(
-                                    f"new (&m_data.{field.name}) decltype(m_data.{field.name})(::std::move(other.m_data.{field.name}));",
-                                    f"break;",
-                                )
-                        with union_cpp_defn_target.indented(
-                            f"default: {{",
-                            f"}}",
-                        ):
-                            union_cpp_defn_target.writelns(
-                                f"break;",
-                            )
-                # copy assignment
-                with union_cpp_defn_target.indented(
-                    f"{union_cpp_info.name}& operator=({union_cpp_info.name} const& other) {{",
-                    f"}}",
-                ):
-                    with union_cpp_defn_target.indented(
-                        f"if (this != &other) {{",
-                        f"}}",
-                    ):
-                        union_cpp_defn_target.writelns(
-                            f"::std::destroy_at(this);",
-                            f"new (this) {union_cpp_info.name}(other);",
-                        )
-                    union_cpp_defn_target.writelns(
-                        f"return *this;",
-                    )
-                # move assignment
-                with union_cpp_defn_target.indented(
-                    f"{union_cpp_info.name}& operator=({union_cpp_info.name}&& other) {{",
-                    f"}}",
-                ):
-                    with union_cpp_defn_target.indented(
-                        f"if (this != &other) {{",
-                        f"}}",
-                    ):
-                        union_cpp_defn_target.writelns(
-                            f"::std::destroy_at(this);",
-                            f"new (this) {union_cpp_info.name}(::std::move(other));",
-                        )
-                    union_cpp_defn_target.writelns(
-                        f"return *this;",
-                    )
-                # destructor
-                with union_cpp_defn_target.indented(
-                    f"~{union_cpp_info.name}() {{",
-                    f"}}",
-                ):
-                    with union_cpp_defn_target.indented(
-                        f"switch (m_tag) {{",
-                        f"}}",
-                        indent="",
-                    ):
-                        for field in union.fields:
-                            if field.ty_ref is None:
-                                continue
-                            with union_cpp_defn_target.indented(
-                                f"case tag_t::{field.name}: {{",
-                                f"}}",
-                            ):
-                                union_cpp_defn_target.writelns(
-                                    f"::std::destroy_at(&m_data.{field.name});",
-                                    f"break;",
-                                )
-                        with union_cpp_defn_target.indented(
-                            f"default: {{",
-                            f"}}",
-                        ):
-                            union_cpp_defn_target.writelns(
-                                f"break;",
-                            )
-                self.gen_union_methods(
+                union_cpp_defn_target.writelns(
+                    f"public:",
+                )
+                self.gen_union_tag_type(
                     union,
                     union_abi_info,
                     union_cpp_info,
                     union_cpp_defn_target,
                 )
-                # properties
+                self.gen_union_storage_type(
+                    union,
+                    union_abi_info,
+                    union_cpp_info,
+                    union_cpp_defn_target,
+                )
+                self.gen_union_basic_methods(
+                    union,
+                    union_abi_info,
+                    union_cpp_info,
+                    union_cpp_defn_target,
+                )
+                self.gen_union_utils(
+                    union,
+                    union_abi_info,
+                    union_cpp_info,
+                    union_cpp_defn_target,
+                )
+                self.gen_union_named_utils(
+                    union,
+                    union_abi_info,
+                    union_cpp_info,
+                    union_cpp_defn_target,
+                )
                 union_cpp_defn_target.writelns(
                     f"private:",
-                    f"tag_t m_tag;",
-                    f"storage_t m_data;",
+                )
+                self.gen_union_properties(
+                    union,
+                    union_abi_info,
+                    union_cpp_info,
+                    union_cpp_defn_target,
                 )
 
-    def gen_union_methods(
+    def gen_union_tag_type(
+        self,
+        union: UnionDecl,
+        union_abi_info: UnionABIInfo,
+        union_cpp_info: UnionCppInfo,
+        union_cpp_defn_target: CHeaderWriter,
+    ):
+        with union_cpp_defn_target.indented(
+            f"enum class tag_t : {union_abi_info.tag_type} {{",
+            f"}};",
+        ):
+            for field in union.fields:
+                union_cpp_defn_target.writelns(
+                    f"{field.name},",
+                )
+
+    def gen_union_storage_type(
+        self,
+        union: UnionDecl,
+        union_abi_info: UnionABIInfo,
+        union_cpp_info: UnionCppInfo,
+        union_cpp_defn_target: CHeaderWriter,
+    ):
+        with union_cpp_defn_target.indented(
+            f"union storage_t {{",
+            f"}};",
+        ):
+            union_cpp_defn_target.writelns(
+                f"storage_t() {{}}",
+                f"~storage_t() {{}}",
+            )
+            for field in union.fields:
+                if field.ty_ref is None:
+                    continue
+                type_cpp_info = TypeCppInfo.get(self.am, field.ty_ref.resolved_ty)
+                union_cpp_defn_target.add_include(*type_cpp_info.impl_headers)
+                union_cpp_defn_target.writelns(
+                    f"{type_cpp_info.as_owner} {field.name};",
+                )
+
+    def gen_union_properties(
+        self,
+        union: UnionDecl,
+        union_abi_info: UnionABIInfo,
+        union_cpp_info: UnionCppInfo,
+        union_cpp_defn_target: CHeaderWriter,
+    ):
+        union_cpp_defn_target.writelns(
+            f"tag_t m_tag;",
+            f"storage_t m_data;",
+        )
+
+    def gen_union_basic_methods(
+        self,
+        union: UnionDecl,
+        union_abi_info: UnionABIInfo,
+        union_cpp_info: UnionCppInfo,
+        union_cpp_defn_target: CHeaderWriter,
+    ):
+        # copy constructor
+        with union_cpp_defn_target.indented(
+            f"{union_cpp_info.name}({union_cpp_info.name} const& other) : m_tag(other.m_tag) {{",
+            f"}}",
+        ):
+            with union_cpp_defn_target.indented(
+                f"switch (m_tag) {{",
+                f"}}",
+                indent="",
+            ):
+                for field in union.fields:
+                    if field.ty_ref is None:
+                        continue
+                    with union_cpp_defn_target.indented(
+                        f"case tag_t::{field.name}: {{",
+                        f"}}",
+                    ):
+                        union_cpp_defn_target.writelns(
+                            f"new (&m_data.{field.name}) decltype(m_data.{field.name})(other.m_data.{field.name});",
+                            f"break;",
+                        )
+                with union_cpp_defn_target.indented(
+                    f"default: {{",
+                    f"}}",
+                ):
+                    union_cpp_defn_target.writelns(
+                        f"break;",
+                    )
+        # move constructor
+        with union_cpp_defn_target.indented(
+            f"{union_cpp_info.name}({union_cpp_info.name}&& other) : m_tag(other.m_tag) {{",
+            f"}}",
+        ):
+            with union_cpp_defn_target.indented(
+                f"switch (m_tag) {{",
+                f"}}",
+                indent="",
+            ):
+                for field in union.fields:
+                    if field.ty_ref is None:
+                        continue
+                    with union_cpp_defn_target.indented(
+                        f"case tag_t::{field.name}: {{",
+                        f"}}",
+                    ):
+                        union_cpp_defn_target.writelns(
+                            f"new (&m_data.{field.name}) decltype(m_data.{field.name})(::std::move(other.m_data.{field.name}));",
+                            f"break;",
+                        )
+                with union_cpp_defn_target.indented(
+                    f"default: {{",
+                    f"}}",
+                ):
+                    union_cpp_defn_target.writelns(
+                        f"break;",
+                    )
+        # copy assignment
+        with union_cpp_defn_target.indented(
+            f"{union_cpp_info.name}& operator=({union_cpp_info.name} const& other) {{",
+            f"}}",
+        ):
+            with union_cpp_defn_target.indented(
+                f"if (this != &other) {{",
+                f"}}",
+            ):
+                union_cpp_defn_target.writelns(
+                    f"::std::destroy_at(this);",
+                    f"new (this) {union_cpp_info.name}(other);",
+                )
+            union_cpp_defn_target.writelns(
+                f"return *this;",
+            )
+        # move assignment
+        with union_cpp_defn_target.indented(
+            f"{union_cpp_info.name}& operator=({union_cpp_info.name}&& other) {{",
+            f"}}",
+        ):
+            with union_cpp_defn_target.indented(
+                f"if (this != &other) {{",
+                f"}}",
+            ):
+                union_cpp_defn_target.writelns(
+                    f"::std::destroy_at(this);",
+                    f"new (this) {union_cpp_info.name}(::std::move(other));",
+                )
+            union_cpp_defn_target.writelns(
+                f"return *this;",
+            )
+        # destructor
+        with union_cpp_defn_target.indented(
+            f"~{union_cpp_info.name}() {{",
+            f"}}",
+        ):
+            with union_cpp_defn_target.indented(
+                f"switch (m_tag) {{",
+                f"}}",
+                indent="",
+            ):
+                for field in union.fields:
+                    if field.ty_ref is None:
+                        continue
+                    with union_cpp_defn_target.indented(
+                        f"case tag_t::{field.name}: {{",
+                        f"}}",
+                    ):
+                        union_cpp_defn_target.writelns(
+                            f"::std::destroy_at(&m_data.{field.name});",
+                            f"break;",
+                        )
+                with union_cpp_defn_target.indented(
+                    f"default: {{",
+                    f"}}",
+                ):
+                    union_cpp_defn_target.writelns(
+                        f"break;",
+                    )
+
+    def gen_union_utils(
         self,
         union: UnionDecl,
         union_abi_info: UnionABIInfo,
@@ -609,14 +726,15 @@ class CppHeadersGenerator(Backend):
             f"}}",
         ):
             for field in union.fields:
-                if field.ty_ref:
-                    with union_cpp_defn_target.indented(
-                        f"if constexpr (tag == tag_t::{field.name}) {{",
-                        f"}}",
-                    ):
-                        union_cpp_defn_target.writelns(
-                            f"return m_data.{field.name};",
-                        )
+                if field.ty_ref is None:
+                    continue
+                with union_cpp_defn_target.indented(
+                    f"if constexpr (tag == tag_t::{field.name}) {{",
+                    f"}}",
+                ):
+                    union_cpp_defn_target.writelns(
+                        f"return m_data.{field.name};",
+                    )
         # non-const pointer getter
         union_cpp_defn_target.writelns(
             f"template<tag_t tag>",
@@ -637,14 +755,15 @@ class CppHeadersGenerator(Backend):
             f"}}",
         ):
             for field in union.fields:
-                if field.ty_ref:
-                    with union_cpp_defn_target.indented(
-                        f"if constexpr (tag == tag_t::{field.name}) {{",
-                        f"}}",
-                    ):
-                        union_cpp_defn_target.writelns(
-                            f"return m_data.{field.name};",
-                        )
+                if field.ty_ref is None:
+                    continue
+                with union_cpp_defn_target.indented(
+                    f"if constexpr (tag == tag_t::{field.name}) {{",
+                    f"}}",
+                ):
+                    union_cpp_defn_target.writelns(
+                        f"return m_data.{field.name};",
+                    )
         # const pointer getter
         union_cpp_defn_target.writelns(
             f"template<tag_t tag>",
@@ -656,7 +775,7 @@ class CppHeadersGenerator(Backend):
             union_cpp_defn_target.writelns(
                 f"return m_tag == tag ? &get_ref<tag>() : nullptr;",
             )
-        # checker
+        # tag checker
         union_cpp_defn_target.writelns(
             f"template<tag_t tag>",
         )
@@ -667,6 +786,7 @@ class CppHeadersGenerator(Backend):
             union_cpp_defn_target.writelns(
                 f"return m_tag == tag;",
             )
+        # tag getter
         with union_cpp_defn_target.indented(
             f"tag_t get_tag() const {{",
             f"}}",
@@ -674,7 +794,7 @@ class CppHeadersGenerator(Backend):
             union_cpp_defn_target.writelns(
                 f"return m_tag;",
             )
-        # non_const visitor
+        # non-const visitor
         union_cpp_defn_target.writelns(
             f"template<typename Visitor>",
         )
@@ -688,13 +808,13 @@ class CppHeadersGenerator(Backend):
                 indent="",
             ):
                 for field in union.fields:
-                    result = f"::taihe::static_tag<tag_t::{field.name}>"
-                    if field.ty_ref:
-                        result += f", m_data.{field.name}"
                     with union_cpp_defn_target.indented(
                         f"case tag_t::{field.name}: {{",
                         f"}}",
                     ):
+                        result = f"::taihe::static_tag<tag_t::{field.name}>"
+                        if field.ty_ref:
+                            result += f", m_data.{field.name}"
                         union_cpp_defn_target.writelns(
                             f"return visitor({result});",
                         )
@@ -712,18 +832,26 @@ class CppHeadersGenerator(Backend):
                 indent="",
             ):
                 for field in union.fields:
-                    result = f"::taihe::static_tag<tag_t::{field.name}>"
-                    if field.ty_ref:
-                        result += f", m_data.{field.name}"
                     with union_cpp_defn_target.indented(
                         f"case tag_t::{field.name}: {{",
                         f"}}",
                     ):
+                        result = f"::taihe::static_tag<tag_t::{field.name}>"
+                        if field.ty_ref:
+                            result += f", m_data.{field.name}"
                         union_cpp_defn_target.writelns(
                             f"return visitor({result});",
                         )
-        # named methods
+
+    def gen_union_named_utils(
+        self,
+        union: UnionDecl,
+        union_abi_info: UnionABIInfo,
+        union_cpp_info: UnionCppInfo,
+        union_cpp_defn_target: CHeaderWriter,
+    ):
         for field in union.fields:
+            # creator
             union_cpp_defn_target.writelns(
                 f"template<typename... Args>",
             )
@@ -734,6 +862,7 @@ class CppHeadersGenerator(Backend):
                 union_cpp_defn_target.writelns(
                     f"return make<tag_t::{field.name}>(::std::forward<Args>(args)...);",
                 )
+            # emplacement
             union_cpp_defn_target.writelns(
                 f"template<typename... Args>",
             )
@@ -744,6 +873,7 @@ class CppHeadersGenerator(Backend):
                 union_cpp_defn_target.writelns(
                     f"return emplace<tag_t::{field.name}>(::std::forward<Args>(args)...);",
                 )
+            # tag checker
             with union_cpp_defn_target.indented(
                 f"bool holds_{field.name}() const {{",
                 f"}}",
@@ -751,36 +881,41 @@ class CppHeadersGenerator(Backend):
                 union_cpp_defn_target.writelns(
                     f"return holds<tag_t::{field.name}>();",
                 )
-            if field.ty_ref:
-                with union_cpp_defn_target.indented(
-                    f"auto* get_{field.name}_ptr() {{",
-                    f"}}",
-                ):
-                    union_cpp_defn_target.writelns(
-                        f"return get_ptr<tag_t::{field.name}>();",
-                    )
-                with union_cpp_defn_target.indented(
-                    f"auto const* get_{field.name}_ptr() const {{",
-                    f"}}",
-                ):
-                    union_cpp_defn_target.writelns(
-                        f"return get_ptr<tag_t::{field.name}>();",
-                    )
-                with union_cpp_defn_target.indented(
-                    f"auto& get_{field.name}_ref() {{",
-                    f"}}",
-                ):
-                    union_cpp_defn_target.writelns(
-                        f"return get_ref<tag_t::{field.name}>();",
-                    )
-                with union_cpp_defn_target.indented(
-                    f"auto const& get_{field.name}_ref() const {{",
-                    f"}}",
-                ):
-                    union_cpp_defn_target.writelns(
-                        f"return get_ref<tag_t::{field.name}>();",
-                    )
-        # named visitor
+            if field.ty_ref is None:
+                continue
+            # non-const pointer getter
+            with union_cpp_defn_target.indented(
+                f"auto* get_{field.name}_ptr() {{",
+                f"}}",
+            ):
+                union_cpp_defn_target.writelns(
+                    f"return get_ptr<tag_t::{field.name}>();",
+                )
+            # const pointer getter
+            with union_cpp_defn_target.indented(
+                f"auto const* get_{field.name}_ptr() const {{",
+                f"}}",
+            ):
+                union_cpp_defn_target.writelns(
+                    f"return get_ptr<tag_t::{field.name}>();",
+                )
+            # non-const reference getter
+            with union_cpp_defn_target.indented(
+                f"auto& get_{field.name}_ref() {{",
+                f"}}",
+            ):
+                union_cpp_defn_target.writelns(
+                    f"return get_ref<tag_t::{field.name}>();",
+                )
+            # const reference getter
+            with union_cpp_defn_target.indented(
+                f"auto const& get_{field.name}_ref() const {{",
+                f"}}",
+            ):
+                union_cpp_defn_target.writelns(
+                    f"return get_ref<tag_t::{field.name}>();",
+                )
+        # non-const visitor
         union_cpp_defn_target.writelns(
             f"template<typename Visitor>",
         )
@@ -794,15 +929,15 @@ class CppHeadersGenerator(Backend):
                 indent="",
             ):
                 for field in union.fields:
-                    result = "" if field.ty_ref is None else f"m_data.{field.name}"
                     with union_cpp_defn_target.indented(
                         f"case tag_t::{field.name}: {{",
                         f"}}",
                     ):
+                        result = "" if field.ty_ref is None else f"m_data.{field.name}"
                         union_cpp_defn_target.writelns(
                             f"return visitor.{field.name}({result});",
                         )
-        # named const visitor
+        # const visitor
         union_cpp_defn_target.writelns(
             f"template<typename Visitor>",
         )
@@ -816,11 +951,11 @@ class CppHeadersGenerator(Backend):
                 indent="",
             ):
                 for field in union.fields:
-                    result = "" if field.ty_ref is None else f"m_data.{field.name}"
                     with union_cpp_defn_target.indented(
                         f"case tag_t::{field.name}: {{",
                         f"}}",
                     ):
+                        result = "" if field.ty_ref is None else f"m_data.{field.name}"
                         union_cpp_defn_target.writelns(
                             f"return visitor.{field.name}({result});",
                         )
@@ -832,12 +967,6 @@ class CppHeadersGenerator(Backend):
         union_cpp_info: UnionCppInfo,
         union_cpp_defn_target: CHeaderWriter,
     ):
-        result = "false"
-        for field in union.fields:
-            cond = f"lhs.holds_{field.name}() && rhs.holds_{field.name}()"
-            if field.ty_ref:
-                cond = f"{cond} && same(lhs.get_{field.name}_ref(), rhs.get_{field.name}_ref())"
-            result = f"{result} || ({cond})"
         with union_cpp_defn_target.indented(
             f"namespace taihe {{",
             f"}}",
@@ -847,6 +976,12 @@ class CppHeadersGenerator(Backend):
                 f"inline bool same_impl(adl_helper_t, {union_cpp_info.as_param} lhs, {union_cpp_info.as_param} rhs) {{",
                 f"}}",
             ):
+                result = "false"
+                for field in union.fields:
+                    cond = f"lhs.holds_{field.name}() && rhs.holds_{field.name}()"
+                    if field.ty_ref:
+                        cond = f"{cond} && same(lhs.get_{field.name}_ref(), rhs.get_{field.name}_ref())"
+                    result = f"{result} || ({cond})"
                 union_cpp_defn_target.writelns(
                     f"return {result};",
                 )
@@ -873,17 +1008,17 @@ class CppHeadersGenerator(Backend):
                     indent="",
                 ):
                     for field in union.fields:
-                        val = "0x9e3779b9 + (seed << 6) + (seed >> 2)"
-                        if field.ty_ref:
-                            val = f"{val} + hash(val.get_{field.name}_ref())"
                         with union_cpp_defn_target.indented(
                             f"case {union_cpp_info.full_name}::tag_t::{field.name}: {{",
                             f"}}",
                         ):
+                            val = "0x9e3779b9 + (seed << 6) + (seed >> 2)"
+                            if field.ty_ref:
+                                val = f"{val} + hash(val.get_{field.name}_ref())"
+                            val = f"seed ^ ({val})"
                             union_cpp_defn_target.writelns(
-                                f"::std::size_t seed;",
-                                f"seed = (::std::size_t){union_cpp_info.full_name}::tag_t::{field.name};",
-                                f"return seed ^ ({val});",
+                                f"::std::size_t seed = (::std::size_t){union_cpp_info.full_name}::tag_t::{field.name};",
+                                f"return {val};",
                             )
 
     def gen_union_type_traits(
@@ -1017,9 +1152,6 @@ class CppHeadersGenerator(Backend):
         struct_cpp_info: StructCppInfo,
         struct_cpp_defn_target: CHeaderWriter,
     ):
-        result = "true"
-        for field in struct.fields:
-            result = f"{result} && same(lhs.{field.name}, rhs.{field.name})"
         with struct_cpp_defn_target.indented(
             f"namespace taihe {{",
             f"}}",
@@ -1029,6 +1161,9 @@ class CppHeadersGenerator(Backend):
                 f"inline bool same_impl(adl_helper_t, {struct_cpp_info.as_param} lhs, {struct_cpp_info.as_param} rhs) {{",
                 f"}}",
             ):
+                result = "true"
+                for field in struct.fields:
+                    result = f"{result} && same(lhs.{field.name}, rhs.{field.name})"
                 struct_cpp_defn_target.writelns(
                     f"return {result};",
                 )
@@ -1180,7 +1315,11 @@ class CppHeadersGenerator(Backend):
             ):
                 iface_cpp_defn_target.writelns(
                     f"static constexpr bool is_holder = false;",
+                )
+                iface_cpp_defn_target.writelns(
                     f"{iface_abi_info.as_owner} m_handle;",
+                )
+                iface_cpp_defn_target.writelns(
                     f"explicit {iface_cpp_info.weak_name}({iface_abi_info.as_param} handle) : m_handle(handle) {{}}",
                 )
                 self.gen_iface_view_dynamic_cast(
@@ -1485,6 +1624,8 @@ class CppHeadersGenerator(Backend):
             ):
                 iface_cpp_defn_target.writelns(
                     f"static constexpr bool is_holder = true;",
+                )
+                iface_cpp_defn_target.writelns(
                     f"explicit {iface_cpp_info.norm_name}({iface_abi_info.as_owner} handle) : {iface_cpp_info.full_weak_name}(handle) {{}}",
                 )
                 with iface_cpp_defn_target.indented(
@@ -1529,7 +1670,7 @@ class CppHeadersGenerator(Backend):
         iface_cpp_defn_target: CHeaderWriter,
     ):
         with iface_cpp_defn_target.indented(
-            f"explicit {iface_cpp_info.norm_name}(::taihe::data_holder other): {iface_cpp_info.norm_name}({iface_abi_info.dynamic_cast}(other.data_ptr)) {{",
+            f"explicit {iface_cpp_info.norm_name}(::taihe::data_holder other) : {iface_cpp_info.norm_name}({iface_abi_info.dynamic_cast}(other.data_ptr)) {{",
             f"}}",
         ):
             iface_cpp_defn_target.writelns(
@@ -1573,7 +1714,7 @@ class CppHeadersGenerator(Backend):
             f"{iface_cpp_info.norm_name}({iface_cpp_info.full_norm_name} const& other) : {iface_cpp_info.norm_name}({iface_abi_info.copy_func}(other.m_handle)) {{}}",
         )
         with iface_cpp_defn_target.indented(
-            f"{iface_cpp_info.norm_name}({iface_cpp_info.full_norm_name}&& other): {iface_cpp_info.norm_name}(other.m_handle) {{",
+            f"{iface_cpp_info.norm_name}({iface_cpp_info.full_norm_name}&& other) : {iface_cpp_info.norm_name}(other.m_handle) {{",
             f"}}",
         ):
             iface_cpp_defn_target.writelns(

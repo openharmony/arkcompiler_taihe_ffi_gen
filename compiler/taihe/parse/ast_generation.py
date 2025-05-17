@@ -91,7 +91,11 @@ class TaiheErrorListener(ErrorListener):
             IDLSyntaxError(
                 cast("str", offendingSymbol.text),  # type: ignore
                 loc=SourceLocation(
-                    self.source, start_row, start_col, stop_row, stop_col
+                    self.source,
+                    start_row,
+                    start_col,
+                    stop_row,
+                    stop_col,
                 ),
             )
         )

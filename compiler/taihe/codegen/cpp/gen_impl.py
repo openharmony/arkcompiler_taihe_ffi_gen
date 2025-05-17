@@ -141,11 +141,11 @@ class CppImplSourcesGenerator:
             pkg_cpp_impl_target.add_include(pkg_cpp_impl_info.header)
             pkg_cpp_impl_target.add_include("taihe/runtime.hpp")
             pkg_cpp_impl_target.add_include("stdexcept")
-            pkg_cpp_impl_target.writeln("")
+            pkg_cpp_impl_target.newline()
             self.using_namespaces = []
-            pkg_cpp_impl_target.writeln("")
+            pkg_cpp_impl_target.newline()
             self.gen_anonymous_namespace_block(pkg, pkg_cpp_impl_target)
-            pkg_cpp_impl_target.writeln("")
+            pkg_cpp_impl_target.newline()
             pkg_cpp_impl_target.writelns(
                 "// Since these macros are auto-generate, lint will cause false positive.",
                 "// NOLINTBEGIN",
@@ -181,10 +181,10 @@ class CppImplSourcesGenerator:
                 f"// To be implemented.",
             )
             for iface in pkg.interfaces:
-                pkg_cpp_impl_target.writeln("")
+                pkg_cpp_impl_target.newline()
                 self.gen_iface(iface, pkg_cpp_impl_target)
             for func in pkg.functions:
-                pkg_cpp_impl_target.writeln("")
+                pkg_cpp_impl_target.newline()
                 self.gen_func_impl(func, pkg_cpp_impl_target)
 
     def gen_iface(
@@ -210,7 +210,7 @@ class CppImplSourcesGenerator:
                 )
             for ancestor in iface_abi_info.ancestor_dict:
                 for func in ancestor.methods:
-                    pkg_cpp_impl_target.writeln("")
+                    pkg_cpp_impl_target.newline()
                     self.gen_method_impl(func, pkg_cpp_impl_target)
 
     def gen_method_impl(

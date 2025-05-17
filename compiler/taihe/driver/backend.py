@@ -60,9 +60,7 @@ class BackendRegistry:
     def register(self, factory: BackendConfigT):
         name = factory.NAME
         if prev := self._factories.get(name):
-            raise KeyError(
-                f"duplicated backend {name!r}: prev = {prev}, new = {factory}"
-            )
+            raise KeyError(f"duplicated backend {name!r}: {prev} and {factory}")
         self._factories[name] = factory
 
     def collect_required_backends(self, names: Iterable[str]) -> list[BackendConfigT]:
@@ -93,13 +91,17 @@ class BackendRegistry:
             AbiSourcesBackendConfig,
             CAuthorBackendConfig,
         )
-        from taihe.codegen.ani import AniBridgeBackendConfig
+        from taihe.codegen.ani import (
+            AniBridgeBackendConfig,
+        )
         from taihe.codegen.cpp import (
             CppAuthorBackendConfig,
             CppCommonHeadersBackendConfig,
             CppUserHeadersBackendConfig,
         )
-        from taihe.semantics import PrettyPrintBackendConfig
+        from taihe.semantics import (
+            PrettyPrintBackendConfig,
+        )
 
         backends = [
             # abi

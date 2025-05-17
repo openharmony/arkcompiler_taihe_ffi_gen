@@ -1,6 +1,5 @@
 """Manage output files."""
 
-import inspect
 import os
 import os.path
 import sys
@@ -67,6 +66,10 @@ class BaseWriter:
         self._debug_level = debug_level
         self._comment_prefix = comment_prefix
 
+    def newline(self):
+        """Writes a newline character."""
+        self._out.write("\n")
+
     def writeln(self, line: str = ""):
         """Writes a single-line string.
 
@@ -120,12 +123,7 @@ class BaseWriter:
     def _write_debug(self, *, skip: int):
         if self._debug_level == DebugLevel.NONE:
             return
-        self.write_comment(
-            _format_frame(
-                sys._getframe(skip),  # type: ignore
-                show_source=self._debug_level == DebugLevel.VERBOSE,
-            )
-        )
+        self.write_comment(_format_frame(sys._getframe(skip)))  # type: ignore
 
     @contextmanager
     def indented(
@@ -206,7 +204,7 @@ class FileWriter(BaseWriter):
             dst.write(self._out.getvalue())
 
 
-def _format_frame(f: FrameType, show_source: bool = False) -> str:
+def _format_frame(f: FrameType) -> str:
     # For /a/b/c/d/e.py, only keep FILENAME_KEEP directories, resulting "c/d/e.py"
     FILENAME_KEEP = 3
 
@@ -216,17 +214,5 @@ def _format_frame(f: FrameType, show_source: bool = False) -> str:
         file_name = os.path.join(*parts[-FILENAME_KEEP:])
 
     base_format = f"CODEGEN-DEBUG: {f.f_code.co_name} in {file_name}:{f.f_lineno}"
-
-    if show_source:
-        try:
-            lines, start_lineno = inspect.getsourcelines(f.f_code)
-            # Adjust for the actual line number within the retrieved block
-            line_index = f.f_lineno - start_lineno
-            if 0 <= line_index < len(lines):
-                source_line = lines[line_index].strip()
-                return f"{base_format} -> {source_line}"
-        except (TypeError, OSError):
-            # Handle cases where source code is not available (e.g., compiled code)
-            pass
 
     return base_format
