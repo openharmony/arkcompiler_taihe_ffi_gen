@@ -1,4 +1,4 @@
-import * as IfaceTest from "@generated/keep_name_test";
+import * as IfaceTest from "keep_name_test";
 import {BusinessError} from "@ohos.base";
 
 loadLibrary("ani_keep_name");

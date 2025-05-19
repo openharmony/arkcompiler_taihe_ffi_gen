@@ -1,4 +1,4 @@
-import * as arraybuffer from "@generated/arraybuffer";
+import * as arraybuffer from "arraybuffer";
 import {BusinessError} from "@ohos.base";
 
 loadLibrary("ani_arraybuffer");

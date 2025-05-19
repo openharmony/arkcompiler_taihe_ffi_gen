@@ -1,5 +1,5 @@
-import * as lib from "@generated/class_extends";
-import * as extends_inject from "@generated/extends_inject";
+import * as lib from "class_extends";
+import * as extends_inject from "extends_inject";
 import {BusinessError} from "@ohos.base";
 
 loadLibrary("inheritance");

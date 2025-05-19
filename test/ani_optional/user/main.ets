@@ -1,5 +1,5 @@
-import * as OptTest from "@generated/opt";
-import * as optionalTest from "@generated/optional";
+import * as OptTest from "opt";
+import * as optionalTest from "optional";
 import {BusinessError} from "@ohos.base";
 
 loadLibrary("ani_optional");

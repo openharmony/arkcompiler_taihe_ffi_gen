@@ -1,4 +1,4 @@
-import * as ArrayTest from "@generated/array_test";
+import * as ArrayTest from "array_test";
 import {BusinessError} from "@ohos.base";
 
 loadLibrary("ani_array");

@@ -1,5 +1,5 @@
-import * as StringIo from "@generated/string_io";
-import * as StringOp from "@generated/string_op";
+import * as StringIo from "string_io";
+import * as StringOp from "string_op";
 import {BusinessError} from "@ohos.base";
 
 loadLibrary("ani_string");

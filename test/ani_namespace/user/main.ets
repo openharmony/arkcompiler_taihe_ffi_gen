@@ -1,5 +1,5 @@
-import * as namespace2Test from "@generated/my_ns";
-import * as namespaceTest from "@generated/ns_alltest";
+import * as namespace2Test from "my_ns";
+import * as namespaceTest from "ns_alltest";
 import {BusinessError} from "@ohos.base";
 
 loadLibrary("ani_namespace");

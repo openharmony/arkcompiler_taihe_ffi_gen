@@ -1,4 +1,4 @@
-import * as lib from "@generated/staticTest";
+import * as lib from "staticTest";
 import {BusinessError} from "@ohos.base";
 loadLibrary("ani_static");
 

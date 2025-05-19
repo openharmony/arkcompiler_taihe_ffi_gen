@@ -1,4 +1,4 @@
-import * as async_test from "@generated/async_test";
+import * as async_test from "async_test";
 import {BusinessError} from "@ohos.base";
 
 loadLibrary("ani_async");

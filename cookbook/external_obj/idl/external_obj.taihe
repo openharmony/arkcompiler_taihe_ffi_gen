@@ -1,4 +1,4 @@
-@!sts_inject("import {Person} from '@system/other.subsystem';")
+@!sts_inject("import {Person} from 'other.subsystem';")
 
 function is_string(s: Opaque): bool;
 function get_objects(): Array<Opaque>;

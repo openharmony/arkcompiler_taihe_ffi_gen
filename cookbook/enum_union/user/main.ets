@@ -1,4 +1,4 @@
-import * as message from "@generated/message";
+import * as message from "message";
 import {BusinessError} from "@ohos.base";
 loadLibrary("enum_union");
 function main() {

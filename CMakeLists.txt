@@ -161,7 +161,22 @@ endfunction()
 
 
 # 生成 arktsconfig.json
-function(write_arkts_config config_path gen_dir sys_dir)
+function(write_arkts_config config_path gen_dir sys_dir gen_ets_files user_ets_files)
+  foreach(file IN LISTS gen_ets_files)
+    string(REGEX REPLACE "\\.ets$" "" stripped_file "${file}")
+    set(entry "      \"${stripped_file}\": [\"${gen_dir}/${file}\"]")
+    list(APPEND ETS_PATH_ENTRIES "${entry}")
+  endforeach()
+
+  foreach(file IN LISTS user_ets_files)
+    get_filename_component(file_name ${file} NAME)
+    string(REGEX REPLACE "\\.ets$" "" stripped_file "${file_name}")
+    set(entry "      \"${stripped_file}\": [\"${file}\"]")
+    list(APPEND ETS_PATH_ENTRIES "${entry}")
+  endforeach()
+
+  string(REPLACE ";" ",\n" ETS_PATH_ENTRIES_JOINED "${ETS_PATH_ENTRIES}")
+
   file(WRITE "${config_path}"
     "{\n"
     "  \"compilerOptions\": {\n"
@@ -169,9 +184,7 @@ function(write_arkts_config config_path gen_dir sys_dir)
     "    \"paths\": {\n"
     "      \"std\": [\"${PANDA_HOME}/../ets/stdlib/std\"],\n"
     "      \"escompat\": [\"${PANDA_HOME}/../ets/stdlib/escompat\"],\n"
-    "      \"@ohos.base\": [\"${gen_dir}/@ohos.base.ets\"],\n"
-    "      \"@generated\": [\"${gen_dir}\"],\n"
-    "      \"@system\": [\"${sys_dir}\"]\n"
+    "${ETS_PATH_ENTRIES_JOINED}\n"
     "    }\n"
     "  }\n"
     "}\n"
@@ -344,8 +357,6 @@ endfunction()
 function(ets_to_abc this_target_name ets_list output_abc_list_var demo_dir build_demo_dir dep_ets)
   set(ABC_FILES "")
 
-  # write_arkts_config("${build_demo_dir}/arktsconfig.json" "${build_demo_dir}/author_generated" "${demo_dir}/system")
-
   add_custom_target(${this_target_name}_${output_abc_list_var}_compile_ets ALL DEPENDS ${ets_list})
 
   # 为每个 ETS 文件创建编译目标
@@ -433,7 +444,7 @@ endfunction()
 update_grammar()
 
 
-function(add_ani_demo this_target_name idl_files gen_ets_files sys_ets_files user_ets_files user_cpp_files run_dir)
+function(add_ani_demo this_target_name idl_files gen_ets_files user_ets_files user_cpp_files run_dir)
   set(DEMO_DIR "${CMAKE_SOURCE_DIR}/${run_dir}/${this_target_name}")
   set(BUILD_DEMO_DIR "${CMAKE_BINARY_DIR}/${run_dir}/${this_target_name}")
   set(GEN_DIR "${BUILD_DEMO_DIR}/author_generated")
@@ -441,11 +452,6 @@ function(add_ani_demo this_target_name idl_files gen_ets_files sys_ets_files use
   foreach(ETS_FILE ${gen_ets_files})
     set(FULL_PATH "${GEN_DIR}/${ETS_FILE}")
     list(APPEND GEN_ETS_PATHS "${FULL_PATH}")
-  endforeach()
-  set(GEN_SYS_ETS_PATHS "")
-  foreach(SYS_ETS_FILE ${sys_ets_files})
-    set(SYS_FULL_PATH "${DEMO_DIR}/system/${SYS_ETS_FILE}")
-    list(APPEND GEN_SYS_ETS_PATHS "${SYS_FULL_PATH}")
   endforeach()
 
   # 复制 ets
@@ -455,7 +461,7 @@ function(add_ani_demo this_target_name idl_files gen_ets_files sys_ets_files use
   # 动态库编译
   compile_dylib(${this_target_name} ${DEMO_DIR} "${user_cpp_files}" ${BUILD_DEMO_DIR})
   # gen arktsconfig.json
-  write_arkts_config("${BUILD_DEMO_DIR}/arktsconfig.json" "${BUILD_DEMO_DIR}/author_generated" "${DEMO_DIR}/system")
+  write_arkts_config("${BUILD_DEMO_DIR}/arktsconfig.json" "${BUILD_DEMO_DIR}/author_generated" "${DEMO_DIR}/system" "${gen_ets_files}" "${user_ets_files}")
   # ets -> ets.abc
   ets_to_abc(${this_target_name} "${GEN_SYS_ETS_PATHS}" SYS_ABC ${DEMO_DIR} ${BUILD_DEMO_DIR} "")
   ets_to_abc(${this_target_name} "${GEN_ETS_PATHS}" GENERATED_ABC ${DEMO_DIR} ${BUILD_DEMO_DIR} "${GEN_SYS_ETS_PATHS}")

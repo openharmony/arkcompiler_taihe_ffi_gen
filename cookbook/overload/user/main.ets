@@ -1,4 +1,4 @@
-import * as overload from "@generated/overload";
+import * as overload from "overload";
 import {BusinessError} from "@ohos.base";
 
 loadLibrary("overload");

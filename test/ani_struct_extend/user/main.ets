@@ -1,4 +1,4 @@
-import * as StructExtendTest from "@generated/struct_extend";
+import * as StructExtendTest from "struct_extend";
 import {BusinessError} from "@ohos.base";
 
 loadLibrary("ani_struct_extend");

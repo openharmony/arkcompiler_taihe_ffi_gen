@@ -1,4 +1,4 @@
-import * as callback_lib from "@generated/callback";
+import * as callback_lib from "callback";
 import {BusinessError} from "@ohos.base";
 
 loadLibrary("callback");

@@ -1,4 +1,4 @@
-import * as inherit from "@generated/inherit";
+import * as inherit from "inherit";
 import {BusinessError} from "@ohos.base";
 loadLibrary("inherit");
 

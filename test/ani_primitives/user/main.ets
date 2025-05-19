@@ -1,5 +1,5 @@
-import * as test_primitives from "@generated/primitives_test";
-import * as test_void_ns from "@generated/void_func";
+import * as test_primitives from "primitives_test";
+import * as test_void_ns from "void_func";
 import {BusinessError} from "@ohos.base";
 
 loadLibrary("ani_primitives");

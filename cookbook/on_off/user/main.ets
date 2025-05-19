@@ -1,4 +1,4 @@
-import * as OnOff from "@generated/on_off";
+import * as OnOff from "on_off";
 import {BusinessError} from "@ohos.base";
 
 loadLibrary("on_off");

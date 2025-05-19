@@ -1,5 +1,5 @@
-import * as bigint_new from "@generated/bigint_new";
-import * as bigint_test from "@generated/bigint_test";
+import * as bigint_new from "bigint_new";
+import * as bigint_test from "bigint_test";
 import {BusinessError} from "@ohos.base";
 
 loadLibrary("ani_bigint");

@@ -9,14 +9,11 @@ set(GEN_ETS_FILES
     "extends_inject.ets"
 )
 
-set(SYS_ETS_FILES 
-    "Person.ets"
-)
-
 set(USER_ETS_FILES
     "${CMAKE_CURRENT_LIST_DIR}/user/main.ets"
+    "${CMAKE_CURRENT_LIST_DIR}/user/Person.ets"
 )
 
 file(GLOB AUTHOR_CPP_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_LIST_DIR}/author/src/*.cpp")
 
-add_ani_demo(inheritance "${IDL_FILES}" "${GEN_ETS_FILES}" "${SYS_ETS_FILES}" "${USER_ETS_FILES}" "${AUTHOR_CPP_FILES}" "cookbook")
+add_ani_demo(inheritance "${IDL_FILES}" "${GEN_ETS_FILES}" "${USER_ETS_FILES}" "${AUTHOR_CPP_FILES}" "cookbook")

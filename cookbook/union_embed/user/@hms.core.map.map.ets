@@ -1,4 +1,4 @@
-import {make_map_inner, Resource} from "@generated/@hms.core.map.map_inner";
+import {make_map_inner, Resource} from "@hms.core.map.map_inner";
 import {BusinessError} from "@ohos.base";
 
 import {Image} from "./@ohos.multimedia.image";

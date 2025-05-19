@@ -7,7 +7,7 @@ interface InnerPerson {
 function makePerson(): InnerPerson;
 
 @!sts_inject("""
-import Person from '@system/Person';
+import Person from 'Person';
 export class Man extends Person {
     getPerson(): Person {
         return this.innerPerson.getPseron() as Person;

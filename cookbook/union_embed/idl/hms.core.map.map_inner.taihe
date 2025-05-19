@@ -1,5 +1,5 @@
 @!namespace("@hms.core.map.map_inner")
-@!sts_inject("import {Image} from '@system/@ohos.multimedia.image';")
+@!sts_inject("import {Image} from '@ohos.multimedia.image';")
 
 interface Resource {
     foo(a: i32);

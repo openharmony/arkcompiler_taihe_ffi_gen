@@ -1,4 +1,4 @@
-import * as StructTest from "@generated/struct_test";
+import * as StructTest from "struct_test";
 import {BusinessError} from "@ohos.base";
 
 function main() {

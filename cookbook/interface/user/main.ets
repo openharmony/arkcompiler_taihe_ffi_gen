@@ -1,4 +1,4 @@
-import {ICalculator, makeCalculator, restartCalculator} from "@generated/interface";
+import {ICalculator, makeCalculator, restartCalculator} from "interface";
 import {BusinessError} from "@ohos.base";
 
 loadLibrary("interface");

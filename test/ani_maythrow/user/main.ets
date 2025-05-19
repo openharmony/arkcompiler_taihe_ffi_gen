@@ -1,4 +1,4 @@
-import {getDataMaythrow, maythrow, noReturnBusinessError, noReturnMaythrow} from "@generated/maythrow";
+import {getDataMaythrow, maythrow, noReturnBusinessError, noReturnMaythrow} from "maythrow";
 import {BusinessError} from "@ohos.base";
 
 loadLibrary("ani_maythrow");

@@ -1,4 +1,4 @@
-import * as userSettings from "@generated/userSettings";
+import * as userSettings from "userSettings";
 import {BusinessError} from "@ohos.base";
 loadLibrary("optional");
 

@@ -1,4 +1,4 @@
-import * as bar from "@generated/bar";
+import * as bar from "bar";
 import {BusinessError} from "@ohos.base";
 
 loadLibrary("ani_typedarray");

@@ -1,4 +1,4 @@
-import * as FuncTest from "@generated/function_test";
+import * as FuncTest from "function_test";
 import {BusinessError} from "@ohos.base";
 
 loadLibrary("ani_function");

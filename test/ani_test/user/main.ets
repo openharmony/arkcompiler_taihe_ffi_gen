@@ -1,4 +1,4 @@
-import * as ani_test from "@generated/ani_test";
+import * as ani_test from "ani_test";
 import {BusinessError} from "@ohos.base";
 
 loadLibrary("ani_test");

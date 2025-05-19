@@ -1,6 +1,6 @@
-import * as mate from "@generated/mate";
-import * as nova from "@generated/nova";
-import * as pura from "@generated/pura";
+import * as mate from "mate";
+import * as nova from "nova";
+import * as pura from "pura";
 import {BusinessError} from "@ohos.base";
 
 loadLibrary("ani_import");

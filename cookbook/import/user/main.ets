@@ -1,5 +1,5 @@
-import * as notification from "@generated/notification";
-import * as user from "@generated/user";
+import * as notification from "notification";
+import * as user from "user";
 import {BusinessError} from "@ohos.base";
 
 loadLibrary("import");

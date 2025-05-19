@@ -1,5 +1,5 @@
-import * as Module1 from "@generated/module1";
-import * as Module2 from "@generated/module2";
+import * as Module1 from "module1";
+import * as Module2 from "module2";
 import {BusinessError} from "@ohos.base";
 
 loadLibrary("namespace");

@@ -49,7 +49,7 @@ class Book_inner implements Book { ... }
 
 **File: user/main.ets**
 ```typescript
-import {ConstructBook, PrintBook, Book, Category} from "@generated/ohos.book.store";
+import {ConstructBook, PrintBook, Book, Category} from "ohos.book.store";
 loadLibrary("essential");
 
 function main() {

@@ -1,4 +1,4 @@
-import * as lib from "@generated/session_test";
+import * as lib from "session_test";
 import {BusinessError} from "@ohos.base";
 loadLibrary("ani_session");
 

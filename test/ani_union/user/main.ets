@@ -1,5 +1,5 @@
-import * as UnionTest1 from "@generated/test_union";
-import * as UnionTest from "@generated/union_ani";
+import * as UnionTest1 from "test_union";
+import * as UnionTest from "union_ani";
 import {BusinessError} from "@ohos.base";
 
 loadLibrary("ani_union");

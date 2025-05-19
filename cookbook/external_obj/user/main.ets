@@ -1,6 +1,6 @@
-import * as extobj from "@generated/external_obj";
+import * as extobj from "external_obj";
 import {BusinessError} from "@ohos.base";
-import {Person} from "@system/other.subsystem";
+import {Person} from "other.subsystem";
 
 loadLibrary("external_obj");
 

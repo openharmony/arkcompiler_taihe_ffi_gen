@@ -1,5 +1,5 @@
-import * as IfaceReadonlyTest from "@generated/iface_readonly_test";
-import * as IfaceTest from "@generated/iface_test";
+import * as IfaceReadonlyTest from "iface_readonly_test";
+import * as IfaceTest from "iface_test";
 import {BusinessError} from "@ohos.base";
 
 loadLibrary("ani_iface");

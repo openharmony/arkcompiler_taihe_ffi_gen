@@ -1,4 +1,4 @@
-import * as on_off_test from "@generated/on_off";
+import * as on_off_test from "on_off";
 import {BusinessError} from "@ohos.base";
 
 loadLibrary("ani_on_off");

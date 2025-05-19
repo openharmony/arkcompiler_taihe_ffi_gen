@@ -1,4 +1,4 @@
-import * as basic_abilities from "@generated/basic_abilities";
+import * as basic_abilities from "basic_abilities";
 import {BusinessError} from "@ohos.base";
 loadLibrary("basic_abilities");
 function main() {

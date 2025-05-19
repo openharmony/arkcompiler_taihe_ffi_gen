@@ -1,4 +1,4 @@
-import * as binding from "@generated/binding";
+import * as binding from "binding";
 import {BusinessError} from "@ohos.base";
 loadLibrary("binding");
 function main() {
