@@ -8,6 +8,7 @@ import sys
 import tarfile
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 
 from taihe.driver.backend import BackendConfig
@@ -16,6 +17,13 @@ from taihe.utils.outputs import DebugLevel
 # A lower value means more verbosity
 TRACE_CONCISE = logging.DEBUG - 1
 TRACE_VERBOSE = TRACE_CONCISE - 1
+
+
+class UserType(Enum):
+    """User type for the build system."""
+
+    STS = "sts"
+    CPP = "cpp"
 
 
 @dataclass
@@ -165,23 +173,24 @@ class BuildConfig:
         current_file = Path(__file__).resolve()
         if for_distribution:
             # Inside the distributed repository: dist/lib/taihe/compiler/taihe/cli/compiler.py
-            self.taihe_base_dir = current_file.parents[5]
-            self.runtime_include_dir = self.taihe_base_dir / "include"
-            self.runtime_src_dir = self.taihe_base_dir / "src" / "taihe" / "runtime"
-            self.panda_extract_dir = self.taihe_base_dir / "var" / "taihe" / "panda_vm"
+            self.taihe_root_dir = current_file.parents[5]
+            self.runtime_include_dir = self.taihe_root_dir / "include"
+            self.runtime_src_dir = self.taihe_root_dir / "src" / "taihe" / "runtime"
+            self.panda_extract_dir = self.taihe_root_dir / "var" / "taihe" / "panda_vm"
         else:
             # Inside the git repository: repo/compiler/taihe/cli/run_test.py
-            self.taihe_base_dir = current_file.parents[3]
-            self.runtime_include_dir = self.taihe_base_dir / "runtime" / "include"
-            self.runtime_src_dir = self.taihe_base_dir / "runtime" / "src"
-            self.panda_extract_dir = self.taihe_base_dir / ".panda_vm"
-        self.taihe_version_file = self.taihe_base_dir / "version.txt"
-        self.panda_version_file = self.panda_extract_dir / "version.txt"
-        self.panda_base_dir = self.panda_extract_dir / "package"
-        self.panda_home_dir = self.panda_base_dir / "linux_host_tools"
+            self.taihe_root_dir = current_file.parents[3]
+            self.runtime_include_dir = self.taihe_root_dir / "runtime" / "include"
+            self.runtime_src_dir = self.taihe_root_dir / "runtime" / "src"
+            self.panda_extract_dir = self.taihe_root_dir / ".panda_vm"
+        self.panda_package_dir = self.panda_extract_dir / "package"
+        self.panda_ets_dir = self.panda_package_dir / "ets"
+        self.panda_tool_dir = self.panda_package_dir / "linux_host_tools"
         self.panda_include_dir = (
-            self.panda_base_dir / "ohos_arm64/include/plugins/ets/runtime/ani"
+            self.panda_package_dir / "ohos_arm64/include/plugins/ets/runtime/ani"
         )
+        self.taihe_version_file = self.taihe_root_dir / "version.txt"
+        self.panda_version_file = self.panda_package_dir / "version.txt"
 
 
 def _map_output_debug_level(verbosity: int) -> DebugLevel:
@@ -200,7 +209,7 @@ class BuildSystem(BuildUtils):
         target_dir: str,
         config: BuildConfig,
         verbosity: int,
-        gen_ani: bool = False,
+        user: UserType,
         sts_keep_name: bool = False,
         opt_level: str = "0",
     ):
@@ -209,7 +218,7 @@ class BuildSystem(BuildUtils):
         self.should_run_pretty_print = verbosity <= logging.DEBUG
         self.codegen_debug_level = _map_output_debug_level(verbosity)
 
-        self.gen_ani = gen_ani
+        self.user = user
         self.sts_keep_name = sts_keep_name
 
         # Build paths
@@ -231,7 +240,7 @@ class BuildSystem(BuildUtils):
         self.user_src_dir = self.user_dir / "src"
 
         self.runtime_includes = [self.config.runtime_include_dir]
-        if self.gen_ani:
+        if self.user == UserType.STS:
             self.runtime_includes.append(self.config.panda_include_dir)
         self.generated_includes = [*self.runtime_includes, self.generated_include_dir]
         self.author_includes = [*self.generated_includes, self.author_include_dir]
@@ -258,9 +267,9 @@ class BuildSystem(BuildUtils):
         """Create a simple example project."""
         self.create_idl()
         self.create_author_cpp()
-        if self.gen_ani:
+        if self.user == UserType.STS:
             self.create_user_ets()
-        else:
+        if self.user == UserType.CPP:
             self.create_user_cpp()
 
     def create_idl(self) -> None:
@@ -340,9 +349,9 @@ class BuildSystem(BuildUtils):
         registry = BackendRegistry()
         registry.register_all()
         backend_names = ["cpp-author"]
-        if self.gen_ani:
+        if self.user == UserType.STS:
             backend_names.append("ani-bridge")
-        else:
+        if self.user == UserType.CPP:
             backend_names.append("cpp-user")
         if self.should_run_pretty_print:
             backend_names.append("pretty-print")
@@ -373,7 +382,7 @@ class BuildSystem(BuildUtils):
 
         self.setup_build_directories()
 
-        if self.gen_ani:
+        if self.user == UserType.STS:
             # Set up paths for Panda VM
             self.prepare_panda_vm()
 
@@ -385,7 +394,7 @@ class BuildSystem(BuildUtils):
 
             # Run with Ark runtime
             self.run_ani()
-        else:
+        elif self.user == UserType.CPP:
             # Compile the shared library
             self.compile_shared_library()
 
@@ -405,7 +414,7 @@ class BuildSystem(BuildUtils):
             self.config.runtime_src_dir / "string.c",
             self.config.runtime_src_dir / "object.c",
         ]
-        if self.gen_ani:
+        if self.user == UserType.STS:
             runtime_sources.append(self.config.runtime_src_dir / "runtime.cpp")
         # Compile each component
         runtime_objects = self.compile(
@@ -442,20 +451,24 @@ class BuildSystem(BuildUtils):
         """Compile and link ABC files."""
         self.logger.info("Compiling and linking ABC files...")
 
-        self.create_arktsconfig()
+        paths = {}
+        for path in self.generated_dir.glob("*.ets"):
+            paths[path.stem] = path
+        for path in self.user_dir.glob("*.ets"):
+            paths[path.stem] = path
+
+        self.create_arktsconfig(paths, self.arktsconfig_file)
 
         # Compile ETS files in each directory
         generated_abc = self.compile_abc(
             self.build_generated_dir,
             self.generated_dir.glob("*.ets"),
             self.arktsconfig_file,
-            panda_home=self.config.panda_home_dir,
         )
         user_abc = self.compile_abc(
             self.build_user_dir,
             self.user_dir.glob("*.ets"),
             self.arktsconfig_file,
-            panda_home=self.config.panda_home_dir,
         )
 
         # Link all ABC files
@@ -463,7 +476,6 @@ class BuildSystem(BuildUtils):
             self.link_abc(
                 self.abc_target,
                 all_abc_files,
-                panda_home=self.config.panda_home_dir,
             )
             self.logger.info("ABC files linked: %s", self.abc_target)
         else:
@@ -475,7 +487,6 @@ class BuildSystem(BuildUtils):
             self.abc_target,
             self.so_target.parent,
             entry="main.ETSGLOBAL::main",
-            panda_home=self.config.panda_home_dir,
         )
 
     def compile_and_link_exe(self):
@@ -530,7 +541,7 @@ class BuildSystem(BuildUtils):
         version = Path(filename).stem  # Use the filename without extension as version
 
         if not self.check_local_version(version):
-            self.clean_directory(self.config.panda_base_dir)
+            self.clean_directory(self.config.panda_package_dir)
             self.logger.info("Downloading panda VM version: %s", version)
             self.download_file(target_file, url, self.config.panda_userinfo)
             self.extract_file(target_file, self.config.panda_extract_dir)
@@ -557,28 +568,29 @@ class BuildSystem(BuildUtils):
         except OSError as e:
             self.logger.warning("Failed to write version file: %s", e)
 
-    def create_arktsconfig(self) -> None:
+    def create_arktsconfig(
+        self,
+        app_paths: Mapping[str, Path],
+        arktsconfig_file: Path,
+    ) -> None:
         """Create ArkTS configuration file."""
         paths = {
-            "std": self.config.panda_home_dir / "../ets/stdlib/std",
-            "escompat": self.config.panda_home_dir / "../ets/stdlib/escompat",
+            "std": self.config.panda_ets_dir / "stdlib/std",
+            "escompat": self.config.panda_ets_dir / "stdlib/escompat",
         }
-        for path in self.generated_dir.glob("*.ets"):
-            paths[path.stem] = path
-        for path in self.user_dir.glob("*.ets"):
-            paths[path.stem] = path
+        paths.update(app_paths)
 
         config_content = {
             "compilerOptions": {
-                "baseUrl": str(self.config.panda_home_dir),
+                "baseUrl": str(self.config.panda_tool_dir),
                 "paths": {key: [str(value)] for key, value in paths.items()},
             }
         }
 
-        with open(self.arktsconfig_file, "w") as json_file:
+        with open(arktsconfig_file, "w") as json_file:
             json.dump(config_content, json_file, indent=2)
 
-        self.logger.debug("Created configuration file at: %s", self.arktsconfig_file)
+        self.logger.debug("Created configuration file at: %s", arktsconfig_file)
 
     def compile(
         self,
@@ -668,7 +680,6 @@ class BuildSystem(BuildUtils):
         output_dir: Path,
         input_files: Iterable[Path],
         arktsconfig_file: Path,
-        panda_home: Path,
     ) -> list[Path]:
         """Compile ETS files to ABC format."""
         output_files: list[Path] = []
@@ -678,7 +689,7 @@ class BuildSystem(BuildUtils):
             output_file = output_dir / f"{name}.abc"
             output_dump = output_dir / f"{name}.abc.dump"
 
-            es2panda_path = panda_home / "bin/es2panda"
+            es2panda_path = self.config.panda_tool_dir / "bin/es2panda"
             if not es2panda_path.exists():
                 raise FileNotFoundError(f"es2panda not found at {es2panda_path}")
 
@@ -695,7 +706,7 @@ class BuildSystem(BuildUtils):
                 ]
             )
 
-            ark_disasm_path = panda_home / "bin/ark_disasm"
+            ark_disasm_path = self.config.panda_tool_dir / "bin/ark_disasm"
             if not ark_disasm_path.exists():
                 self.logger.warning(
                     "ark_disasm not found at %s, skipping disassembly", ark_disasm_path
@@ -718,14 +729,13 @@ class BuildSystem(BuildUtils):
         self,
         target: Path,
         input_files: Sequence[Path],
-        panda_home: Path,
     ) -> None:
         """Link ABC files."""
         if len(input_files) == 0:
             self.logger.warning("No input files to link")
             return
 
-        ark_link_path = panda_home / "bin/ark_link"
+        ark_link_path = self.config.panda_tool_dir / "bin/ark_link"
         if not ark_link_path.exists():
             raise FileNotFoundError(f"ark_link not found at {ark_link_path}")
 
@@ -739,18 +749,17 @@ class BuildSystem(BuildUtils):
         abc_target: Path,
         ld_lib_path: Path,
         entry: str,
-        panda_home: Path,
     ):
         """Run the compiled ABC file with the Ark runtime."""
         if not abc_target.exists():
             self.logger.error("ABC file not found: %s", abc_target)
             raise FileNotFoundError(f"ABC file not found: {abc_target}")
 
-        ark_path = panda_home / "bin/ark"
+        ark_path = self.config.panda_tool_dir / "bin/ark"
         if not ark_path.exists():
             raise FileNotFoundError(f"ark executable not found at {ark_path}")
 
-        etsstdlib_path = panda_home / "../ets/etsstdlib.abc"
+        etsstdlib_path = self.config.panda_ets_dir / "etsstdlib.abc"
         if not etsstdlib_path.exists():
             self.logger.warning("etsstdlib.abc not found at %s", etsstdlib_path)
 
@@ -786,15 +795,15 @@ class RepositoryUpgrader(BuildUtils):
         filename = self.repo_url.split("/")[-1]
         version = self.repo_url.split("/")[-2]
 
-        extract_dir = self.config.taihe_base_dir / "../tmp"
+        extract_dir = self.config.taihe_root_dir / "../tmp"
         target_file = extract_dir / filename
         self.create_directory(extract_dir)
         self.download_file(target_file, self.repo_url)
         self.extract_file(target_file, extract_dir)
 
-        tmp_taihe_base_dir = extract_dir / "taihe"
-        self.clean_directory(self.config.taihe_base_dir)
-        self.move_directory(tmp_taihe_base_dir, self.config.taihe_base_dir)
+        tmp_taihe_pkg_dir = extract_dir / "taihe"
+        self.clean_directory(self.config.taihe_root_dir)
+        self.move_directory(tmp_taihe_pkg_dir, self.config.taihe_root_dir)
         self.clean_directory(extract_dir)
 
         self.logger.info("Successfully upgraded code to version %s", version)
@@ -810,11 +819,14 @@ def main(config: BuildConfig | None = None):
             help="The target directory containing source files for the project",
         )
 
-    def add_argument_ani(parser: argparse.ArgumentParser) -> None:
+    def add_argument_user(parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            "--ani",
-            action="store_true",
-            help="Use ani-bridge backend for code generation",
+            "-u",
+            "--user",
+            type=str,
+            choices=[user.value for user in UserType],
+            required=True,
+            help="User type for the build system (ani/cpp)",
         )
 
     def add_argument_optimization(parser: argparse.ArgumentParser) -> None:
@@ -864,7 +876,7 @@ def main(config: BuildConfig | None = None):
     )
     add_argument_verbosity(parser_create)
     add_argument_target_directory(parser_create)
-    add_argument_ani(parser_create)
+    add_argument_user(parser_create)
 
     parser_generate = subparsers.add_parser(
         "generate",
@@ -872,7 +884,7 @@ def main(config: BuildConfig | None = None):
     )
     add_argument_verbosity(parser_generate)
     add_argument_target_directory(parser_generate)
-    add_argument_ani(parser_generate)
+    add_argument_user(parser_generate)
     add_argument_sts_keep_name(parser_generate)
 
     parser_build = subparsers.add_parser(
@@ -881,7 +893,7 @@ def main(config: BuildConfig | None = None):
     )
     add_argument_verbosity(parser_build)
     add_argument_target_directory(parser_build)
-    add_argument_ani(parser_build)
+    add_argument_user(parser_build)
     add_argument_optimization(parser_build)
 
     parser_test = subparsers.add_parser(
@@ -890,7 +902,7 @@ def main(config: BuildConfig | None = None):
     )
     add_argument_verbosity(parser_test)
     add_argument_target_directory(parser_test)
-    add_argument_ani(parser_test)
+    add_argument_user(parser_test)
     add_argument_optimization(parser_test)
     add_argument_sts_keep_name(parser_test)
 
@@ -921,14 +933,14 @@ def main(config: BuildConfig | None = None):
             case "create":
                 BuildSystem(
                     args.target_directory,
-                    gen_ani=args.ani,
+                    user=UserType(args.user),
                     config=config,
                     verbosity=verbosity,
                 ).create()
             case "generate":
                 BuildSystem(
                     args.target_directory,
-                    gen_ani=args.ani,
+                    user=UserType(args.user),
                     config=config,
                     verbosity=verbosity,
                     sts_keep_name=args.sts_keep_name,
@@ -936,7 +948,7 @@ def main(config: BuildConfig | None = None):
             case "build":
                 BuildSystem(
                     args.target_directory,
-                    gen_ani=args.ani,
+                    user=UserType(args.user),
                     config=config,
                     verbosity=verbosity,
                     opt_level=args.optimization,
@@ -944,7 +956,7 @@ def main(config: BuildConfig | None = None):
             case "test":
                 BuildSystem(
                     args.target_directory,
-                    gen_ani=args.ani,
+                    user=UserType(args.user),
                     config=config,
                     verbosity=verbosity,
                     opt_level=args.optimization,
