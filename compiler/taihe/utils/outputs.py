@@ -10,7 +10,7 @@ from enum import Enum, auto
 from io import StringIO
 from pathlib import Path
 from types import FrameType, TracebackType
-from typing import Optional, TextIO
+from typing import TextIO
 
 from typing_extensions import Self
 
@@ -36,7 +36,7 @@ class DebugLevel(Enum):
 class OutputConfig:
     """Manages the creation and saving of output files."""
 
-    dst_dir: Optional[Path] = None
+    dst_dir: Path | None = None
     debug_level: DebugLevel = DebugLevel.NONE
 
 

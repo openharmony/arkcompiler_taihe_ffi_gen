@@ -7,18 +7,14 @@ from dataclasses import dataclass, field
 from enum import IntEnum
 from sys import stderr
 from typing import (
-    TYPE_CHECKING,
     ClassVar,
-    Optional,
     TextIO,
     TypeVar,
 )
 
 from typing_extensions import override
 
-if TYPE_CHECKING:
-    from taihe.utils.sources import SourceLocation
-
+from taihe.utils.sources import SourceLocation
 
 T = TypeVar("T")
 
@@ -68,7 +64,7 @@ class DiagBase(ABC):
     LEVEL_DESC: ClassVar[str]
     STYLE: ClassVar[str]
 
-    loc: Optional["SourceLocation"] = field(kw_only=True)
+    loc: SourceLocation | None = field(kw_only=True)
     """The source location where the diagnostic refers to."""
 
     def __str__(self) -> str:
@@ -207,7 +203,7 @@ class DiagnosticsManager(AbstractDiagnosticsManager):
         self._out.flush()
 
     # TODO: could be slow.
-    def _render_source_location(self, loc: "SourceLocation"):
+    def _render_source_location(self, loc: SourceLocation):
         MAX_LINE_NO_SPACE = 5
         if not loc.has_pos:
             return

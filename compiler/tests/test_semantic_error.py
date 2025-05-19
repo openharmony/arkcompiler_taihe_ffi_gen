@@ -1,6 +1,4 @@
-from taihe.parse.convert import (
-    AstConverter,
-)
+from taihe.parse.convert import AstConverter
 from taihe.semantics.analysis import analyze_semantics
 from taihe.semantics.declarations import PackageGroup
 from taihe.utils.diagnostics import AbstractDiagnosticsManager, DiagBase

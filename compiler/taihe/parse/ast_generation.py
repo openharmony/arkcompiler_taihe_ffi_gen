@@ -1,5 +1,5 @@
 from contextlib import suppress
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 from antlr4.CommonTokenStream import CommonTokenStream
 from antlr4.error.ErrorListener import ErrorListener
@@ -116,7 +116,7 @@ def issubkind(real_kind: str, node_kind: str):
 
 def visit(node_kind: str, ctx: Any, pos_dict: ItemRangeMapT) -> Any:
     if node_kind.endswith("Lst"):
-        node: Optional[list[Any]] = []
+        node: list[Any] | None = []
         for sub in ctx:
             with suppress(Exception):
                 node.append(visit(node_kind[:-3], sub, pos_dict))

@@ -1,5 +1,5 @@
-from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any, TypeGuard, TypeVar
+from collections.abc import Callable, Iterable
+from typing import Any, TypeGuard, TypeVar
 
 from typing_extensions import override
 
@@ -11,6 +11,7 @@ from taihe.semantics.declarations import (
     GlobFuncDecl,
     IfaceDecl,
     IfaceMethodDecl,
+    IfaceParentDecl,
     LongTypeRefDecl,
     NamedDecl,
     PackageDecl,
@@ -19,6 +20,7 @@ from taihe.semantics.declarations import (
     ShortTypeRefDecl,
     StructDecl,
     TypeDecl,
+    TypeRefDecl,
     UnionDecl,
 )
 from taihe.semantics.types import (
@@ -28,6 +30,7 @@ from taihe.semantics.types import (
     ScalarKind,
     ScalarType,
     StringType,
+    Type,
     UserType,
 )
 from taihe.semantics.visitor import RecursiveDeclVisitor
@@ -46,12 +49,6 @@ from taihe.utils.exceptions import (
     SymbolConflictWithNamespaceError,
     TypeUsageError,
 )
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-
-    from taihe.semantics.declarations import IfaceParentDecl, TypeRefDecl
-    from taihe.semantics.types import Type
 
 
 def analyze_semantics(pg: PackageGroup, diag: AbstractDiagnosticsManager):

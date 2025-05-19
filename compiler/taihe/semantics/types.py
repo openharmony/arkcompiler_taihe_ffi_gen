@@ -3,7 +3,7 @@
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Optional, Protocol, TypeVar
+from typing import TYPE_CHECKING, Protocol, TypeVar
 
 from typing_extensions import override
 
@@ -150,7 +150,7 @@ BUILTIN_TYPES: dict[str, BuiltinBuilder] = {
 
 @dataclass(frozen=True, repr=False)
 class CallbackType(Type):
-    return_ty: Optional[Type]
+    return_ty: Type | None
     params_ty: tuple[Type, ...]
 
     @property

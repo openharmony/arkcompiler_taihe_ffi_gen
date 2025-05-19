@@ -15,7 +15,6 @@
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 from taihe.driver.backend import Backend, BackendConfig
 from taihe.parse.convert import (
@@ -47,7 +46,7 @@ class CompilerInvocation:
     """
 
     src_dirs: list[Path] = field(default_factory=lambda: [])
-    out_dir: Optional[Path] = None
+    out_dir: Path | None = None
     out_debug_level: DebugLevel = DebugLevel.NONE
     backends: list[BackendConfig] = field(default_factory=lambda: [])
 

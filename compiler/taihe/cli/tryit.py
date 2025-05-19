@@ -9,13 +9,9 @@ import tarfile
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, Union
 
+from taihe.driver.backend import BackendConfig
 from taihe.utils.outputs import DebugLevel
-
-if TYPE_CHECKING:
-    from taihe.driver.backend import BackendConfig
-
 
 # A lower value means more verbosity
 TRACE_CONCISE = logging.DEBUG - 1
@@ -53,9 +49,9 @@ class BuildUtils:
 
     def run_command(
         self,
-        command: Sequence[Union[Path, str]],
+        command: Sequence[Path | str],
         capture_output: bool = True,
-        env: Optional[Mapping[str, Union[Path, str]]] = None,
+        env: Mapping[str, Path | str] | None = None,
     ) -> None:
         """Run a command with environment variables."""
         command_str = " ".join(map(str, command))
@@ -108,7 +104,7 @@ class BuildUtils:
         self,
         target_file: Path,
         url: str,
-        user_info: Optional[UserInfo] = None,
+        user_info: UserInfo | None = None,
     ) -> None:
         """Download a file from a URL."""
         if target_file.exists():
@@ -630,7 +626,7 @@ class BuildSystem(BuildUtils):
         output_file: Path,
         input_files: Sequence[Path],
         shared: bool = False,
-        link_options: Optional[list[str]] = None,
+        link_options: list[str] | None = None,
     ) -> None:
         """Link object files."""
         if len(input_files) == 0:
@@ -804,7 +800,7 @@ class RepositoryUpgrader(BuildUtils):
         self.logger.info("Successfully upgraded code to version %s", version)
 
 
-def main(config: Optional[BuildConfig] = None):
+def main(config: BuildConfig | None = None):
     """Main entry point for the script."""
 
     def add_argument_target_directory(parser: argparse.ArgumentParser) -> None:

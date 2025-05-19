@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
 from typing_extensions import override
 
@@ -18,6 +18,7 @@ from taihe.semantics.declarations import (
     IfaceDecl,
     IfaceMethodDecl,
     PackageDecl,
+    ParamDecl,
     StructDecl,
     StructFieldDecl,
     UnionDecl,
@@ -42,11 +43,6 @@ from taihe.semantics.visitor import TypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
 from taihe.utils.exceptions import AdhocError
 from taihe.utils.sources import SourceLocation
-
-if TYPE_CHECKING:
-    from taihe.semantics.declarations import (
-        ParamDecl,
-    )
 
 
 def raise_adhoc_error(

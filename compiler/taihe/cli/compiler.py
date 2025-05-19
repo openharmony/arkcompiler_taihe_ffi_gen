@@ -1,13 +1,9 @@
 import argparse
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
 
-from taihe.driver.backend import BackendRegistry
+from taihe.driver.backend import BackendConfig, BackendRegistry
 from taihe.driver.contexts import CompilerInstance, CompilerInvocation
-
-if TYPE_CHECKING:
-    from taihe.driver.backend import BackendConfig
 
 
 def main():

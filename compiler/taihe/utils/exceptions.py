@@ -1,9 +1,10 @@
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from typing_extensions import override
 
 from taihe.utils.diagnostics import DiagError, DiagFatalError, DiagNote, DiagWarn
+from taihe.utils.sources import SourceLocation
 
 if TYPE_CHECKING:
     from taihe.semantics.declarations import (
@@ -17,7 +18,6 @@ if TYPE_CHECKING:
         TypeDecl,
         TypeRefDecl,
     )
-    from taihe.utils.sources import SourceLocation
 
 
 @dataclass
@@ -187,7 +187,7 @@ class DuplicateExtendsNote(DiagNote):
 class DuplicateExtendsWarn(DiagWarn):
     iface: "IfaceDecl"
     parent_iface: "IfaceDecl"
-    prev_loc: Optional["SourceLocation"] = field(kw_only=True)
+    prev_loc: SourceLocation | None = field(kw_only=True)
 
     @property
     @override

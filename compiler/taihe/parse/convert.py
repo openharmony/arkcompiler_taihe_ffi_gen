@@ -3,7 +3,7 @@
 from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from typing_extensions import override
 
@@ -49,7 +49,7 @@ class IgnoredFileReason(Enum):
 @dataclass
 class IgnoredFileWarn(DiagWarn):
     reason: IgnoredFileReason
-    note: Optional[DiagNote] = None
+    note: DiagNote | None = None
 
     @property
     @override

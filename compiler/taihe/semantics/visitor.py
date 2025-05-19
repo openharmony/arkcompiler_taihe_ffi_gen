@@ -12,7 +12,7 @@ Design:
 - The `VisitorBase.visit_{type,decl}` is the "root" of the type hierarchy.
 """
 
-from typing import TYPE_CHECKING, Generic, Optional, TypeVar
+from typing import TYPE_CHECKING, Generic, TypeVar
 
 from typing_extensions import override
 
@@ -81,7 +81,7 @@ class TypeVisitor(Generic[T]):
     - Call `handle_type(t)` to start visiting a type.
     """
 
-    visiting: Optional["TypeProtocol"] = None
+    visiting: "TypeProtocol | None" = None
     """The current node being visited. Only for debug use."""
 
     def handle_type(self, t: "TypeProtocol") -> T:
@@ -171,7 +171,7 @@ class DeclVisitor(Generic[T]):
     - Call `handle_decl(d)` to start visiting a declaration.
     """
 
-    visiting: Optional["DeclProtocol"] = None
+    visiting: "DeclProtocol | None" = None
     """The current node being visited. Only for debug use."""
 
     def handle_decl(self, d: "DeclProtocol") -> T:

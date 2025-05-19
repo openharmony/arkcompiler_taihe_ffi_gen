@@ -3,7 +3,7 @@
 from abc import ABCMeta, abstractmethod
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Generic, Optional, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar
 
 from typing_extensions import override
 
@@ -12,6 +12,7 @@ from taihe.semantics.types import (
     EnumType,
     IfaceType,
     StructType,
+    Type,
     UnionType,
     UserType,
 )
@@ -19,7 +20,6 @@ from taihe.utils.exceptions import DeclRedefError
 from taihe.utils.sources import SourceLocation
 
 if TYPE_CHECKING:
-    from taihe.semantics.types import Type
     from taihe.semantics.visitor import DeclVisitor
 
 
@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 class AttrItemDecl:
     """Represents an attribute item."""
 
-    loc: Optional[SourceLocation]
+    loc: SourceLocation | None
     name: str
     args: tuple[Any, ...] = ()
 
@@ -49,13 +49,13 @@ class DeclProtocol(Protocol):
 class Decl(metaclass=ABCMeta):
     """Represents any declaration."""
 
-    loc: Optional[SourceLocation]
+    loc: SourceLocation | None
 
     attrs: dict[str, list[AttrItemDecl]]
 
     def __init__(
         self,
-        loc: Optional[SourceLocation],
+        loc: SourceLocation | None,
     ):
         self.loc = loc
         self.attrs = {}
@@ -79,7 +79,7 @@ class Decl(metaclass=ABCMeta):
     def get_all_attrs(self, name: str) -> Iterable[AttrItemDecl]:
         return self.attrs.get(name, [])
 
-    def get_last_attr(self, name: str) -> Optional[AttrItemDecl]:
+    def get_last_attr(self, name: str) -> AttrItemDecl | None:
         return self.attrs.get(name, [None])[-1]
 
     @abstractmethod
@@ -94,7 +94,7 @@ class NamedDecl(Decl, metaclass=ABCMeta):
 
     def __init__(
         self,
-        loc: Optional[SourceLocation],
+        loc: SourceLocation | None,
         name: str,
     ):
         super().__init__(loc)
@@ -105,7 +105,7 @@ T = TypeVar("T", bound=Decl)
 
 
 class DeclWithParent(Decl, Generic[T], metaclass=ABCMeta):
-    node_parent: Optional[T] = None
+    node_parent: T | None = None
 
     @property
     @override
@@ -118,7 +118,7 @@ class DeclWithParent(Decl, Generic[T], metaclass=ABCMeta):
 
 
 class NamedDeclWithParent(NamedDecl, Generic[T], metaclass=ABCMeta):
-    node_parent: Optional[T] = None
+    node_parent: T | None = None
 
     @property
     @override
@@ -152,11 +152,11 @@ class TypeRefDecl(DeclWithParent[Decl], metaclass=ABCMeta):
     """
 
     is_resolved: bool = False
-    maybe_resolved_ty: Optional["Type"] = None
+    maybe_resolved_ty: Type | None = None
 
     def __init__(
         self,
-        loc: Optional[SourceLocation],
+        loc: SourceLocation | None,
     ):
         super().__init__(loc)
 
@@ -180,7 +180,7 @@ class ParamDecl(NamedDeclWithParent[Decl]):
 
     def __init__(
         self,
-        loc: Optional[SourceLocation],
+        loc: SourceLocation | None,
         name: str,
         ty_ref: TypeRefDecl,
     ):
@@ -203,7 +203,7 @@ class ShortTypeRefDecl(TypeRefDecl):
 
     def __init__(
         self,
-        loc: Optional[SourceLocation],
+        loc: SourceLocation | None,
         symbol: str,
     ):
         super().__init__(loc)
@@ -220,7 +220,7 @@ class LongTypeRefDecl(TypeRefDecl):
 
     def __init__(
         self,
-        loc: Optional[SourceLocation],
+        loc: SourceLocation | None,
         pkname: str,
         symbol: str,
     ):
@@ -239,7 +239,7 @@ class GenericTypeRefDecl(TypeRefDecl):
 
     def __init__(
         self,
-        loc: Optional[SourceLocation],
+        loc: SourceLocation | None,
         symbol: str,
     ):
         super().__init__(loc)
@@ -257,12 +257,12 @@ class GenericTypeRefDecl(TypeRefDecl):
 
 class CallbackTypeRefDecl(TypeRefDecl):
     params: list[ParamDecl]
-    return_ty_ref: Optional[TypeRefDecl]
+    return_ty_ref: TypeRefDecl | None
 
     def __init__(
         self,
-        loc: Optional[SourceLocation],
-        return_ty_ref: Optional[TypeRefDecl] = None,
+        loc: SourceLocation | None,
+        return_ty_ref: TypeRefDecl | None = None,
     ):
         super().__init__(loc)
         self.params = []
@@ -283,7 +283,7 @@ class CallbackTypeRefDecl(TypeRefDecl):
 class AdhocTypeRefDecl(TypeRefDecl):
     def __init__(
         self,
-        loc: Optional[SourceLocation],
+        loc: SourceLocation | None,
     ):
         super().__init__(loc)
 
@@ -301,11 +301,11 @@ class PackageRefDecl(DeclWithParent[Decl]):
     symbol: str
 
     is_resolved: bool = False
-    maybe_resolved_pkg: Optional["PackageDecl"] = None
+    maybe_resolved_pkg: "PackageDecl | None" = None
 
     def __init__(
         self,
-        loc: Optional[SourceLocation],
+        loc: SourceLocation | None,
         symbol: str,
     ):
         super().__init__(loc)
@@ -332,11 +332,11 @@ class DeclarationRefDecl(DeclWithParent[Decl]):
     pkg_ref: PackageRefDecl
 
     is_resolved: bool = False
-    maybe_resolved_decl: Optional["PackageLevelDecl"] = None
+    maybe_resolved_decl: "PackageLevelDecl | None" = None
 
     def __init__(
         self,
-        loc: Optional[SourceLocation],
+        loc: SourceLocation | None,
         symbol: str,
         pkg_ref: PackageRefDecl,
     ):
@@ -401,7 +401,7 @@ class PackageImportDecl(ImportDecl):
         self,
         pkg_ref: PackageRefDecl,
         *,
-        loc: Optional[SourceLocation] = None,
+        loc: SourceLocation | None = None,
         name: str = "",
     ):
         super().__init__(
@@ -431,7 +431,7 @@ class DeclarationImportDecl(ImportDecl):
         self,
         decl_ref: DeclarationRefDecl,
         *,
-        loc: Optional[SourceLocation] = None,
+        loc: SourceLocation | None = None,
         name: str = "",
     ):
         super().__init__(
@@ -464,7 +464,7 @@ class EnumItemDecl(NamedDeclWithParent["EnumDecl"]):
 
     def __init__(
         self,
-        loc: Optional[SourceLocation],
+        loc: SourceLocation | None,
         name: str,
         value: int | float | str | bool | None = None,
     ):
@@ -487,13 +487,13 @@ class EnumItemDecl(NamedDeclWithParent["EnumDecl"]):
 
 
 class UnionFieldDecl(NamedDeclWithParent["UnionDecl"]):
-    ty_ref: Optional[TypeRefDecl]
+    ty_ref: TypeRefDecl | None
 
     def __init__(
         self,
-        loc: Optional[SourceLocation],
+        loc: SourceLocation | None,
         name: str,
-        ty_ref: Optional[TypeRefDecl] = None,
+        ty_ref: TypeRefDecl | None = None,
     ):
         super().__init__(loc, name)
         self.ty_ref = ty_ref
@@ -521,7 +521,7 @@ class StructFieldDecl(NamedDeclWithParent["StructDecl"]):
 
     def __init__(
         self,
-        loc: Optional[SourceLocation],
+        loc: SourceLocation | None,
         name: str,
         ty_ref: TypeRefDecl,
     ):
@@ -549,7 +549,7 @@ class IfaceParentDecl(DeclWithParent["IfaceDecl"]):
 
     def __init__(
         self,
-        loc: Optional[SourceLocation],
+        loc: SourceLocation | None,
         ty_ref: TypeRefDecl,
     ):
         super().__init__(loc)
@@ -573,13 +573,13 @@ class IfaceParentDecl(DeclWithParent["IfaceDecl"]):
 
 class IfaceMethodDecl(NamedDeclWithParent["IfaceDecl"]):
     params: list[ParamDecl]
-    return_ty_ref: Optional[TypeRefDecl]
+    return_ty_ref: TypeRefDecl | None
 
     def __init__(
         self,
-        loc: Optional[SourceLocation],
+        loc: SourceLocation | None,
         name: str,
-        return_ty_ref: Optional[TypeRefDecl] = None,
+        return_ty_ref: TypeRefDecl | None = None,
     ):
         super().__init__(loc, name)
         self.params = []
@@ -620,13 +620,13 @@ class PackageLevelDecl(NamedDeclWithParent["PackageDecl"], metaclass=ABCMeta):
 
 class GlobFuncDecl(PackageLevelDecl):
     params: list[ParamDecl]
-    return_ty_ref: Optional[TypeRefDecl]
+    return_ty_ref: TypeRefDecl | None
 
     def __init__(
         self,
-        loc: Optional[SourceLocation],
+        loc: SourceLocation | None,
         name: str,
-        return_ty_ref: Optional[TypeRefDecl] = None,
+        return_ty_ref: TypeRefDecl | None = None,
     ):
         super().__init__(loc, name)
         self.params = []
@@ -666,7 +666,7 @@ class EnumDecl(TypeDecl):
 
     def __init__(
         self,
-        loc: Optional[SourceLocation],
+        loc: SourceLocation | None,
         name: str,
         ty_ref: TypeRefDecl,
     ):
@@ -697,7 +697,7 @@ class EnumDecl(TypeDecl):
 class UnionDecl(TypeDecl):
     fields: list[UnionFieldDecl]
 
-    def __init__(self, loc: Optional[SourceLocation], name: str):
+    def __init__(self, loc: SourceLocation | None, name: str):
         super().__init__(loc, name)
         self.fields = []
 
@@ -722,7 +722,7 @@ class UnionDecl(TypeDecl):
 class StructDecl(TypeDecl):
     fields: list[StructFieldDecl]
 
-    def __init__(self, loc: Optional[SourceLocation], name: str):
+    def __init__(self, loc: SourceLocation | None, name: str):
         super().__init__(loc, name)
         self.fields = []
 
@@ -748,7 +748,7 @@ class IfaceDecl(TypeDecl):
     methods: list[IfaceMethodDecl]
     parents: list[IfaceParentDecl]
 
-    def __init__(self, loc: Optional[SourceLocation], name: str):
+    def __init__(self, loc: SourceLocation | None, name: str):
         super().__init__(loc, name)
         self.methods = []
         self.parents = []
@@ -797,7 +797,7 @@ class PackageDecl(NamedDecl):
     interfaces: list[IfaceDecl]
     enums: list[EnumDecl]
 
-    def __init__(self, name: str, loc: Optional[SourceLocation]):
+    def __init__(self, name: str, loc: SourceLocation | None):
         super().__init__(loc, name)
 
         self.decls = {}
@@ -910,7 +910,7 @@ class PackageGroup:
     def packages(self) -> Iterable[PackageDecl]:
         return self.package_dict.values()
 
-    def lookup(self, name: str) -> Optional[PackageDecl]:
+    def lookup(self, name: str) -> PackageDecl | None:
         return self.package_dict.get(name, None)
 
     def add(self, d: PackageDecl):
