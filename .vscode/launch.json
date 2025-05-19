@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Run ani test",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/compiler/run-test",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}/test/ani_test",
+            "args": [".", "-ani"],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/compiler"
+            }
+        }
+    ]
+}

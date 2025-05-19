@@ -7,16 +7,14 @@ from dataclasses import dataclass, field
 from enum import IntEnum
 from sys import stderr
 from typing import (
-    TYPE_CHECKING,
     ClassVar,
-    Optional,
     TextIO,
     TypeVar,
 )
 
-if TYPE_CHECKING:
-    from taihe.utils.sources import SourceLocation
+from typing_extensions import override
 
+from taihe.utils.sources import SourceLocation
 
 T = TypeVar("T")
 
@@ -24,6 +22,8 @@ T = TypeVar("T")
 class AnsiStyle:
     RED = "\033[31m"
     GREEN = "\033[32m"
+    BLUE = "\033[33m"
+    YELLOW = "\033[34m"
     MAGENTA = "\033[35m"
     CYAN = "\033[36m"
 
@@ -32,11 +32,12 @@ class AnsiStyle:
     RESET_ALL = "\033[0m"
 
 
-def _passthrough(x):
+def _passthrough(x: str) -> str:
     return x
 
 
-def _discard(x):
+def _discard(x: str) -> str:
+    del x
     return ""
 
 
@@ -63,26 +64,26 @@ class DiagBase(ABC):
     LEVEL_DESC: ClassVar[str]
     STYLE: ClassVar[str]
 
-    loc: Optional["SourceLocation"] = field(kw_only=True)
+    loc: SourceLocation | None = field(kw_only=True)
     """The source location where the diagnostic refers to."""
+
+    def __str__(self) -> str:
+        return self.format(_discard)
+
+    @property
+    @abstractmethod
+    def format_msg(self) -> str: ...
 
     def notes(self) -> Iterable["DiagNote"]:
         """Returns the associated notes."""
         return ()
 
-    def _format(self, f: FilterT) -> str:
+    def format(self, f: FilterT) -> str:
         return (
             f"{f(AnsiStyle.BRIGHT)}{self.loc or '???'}: "  # "example.taihe:7:20: "
             f"{f(self.STYLE)}{self.LEVEL_DESC}{f(AnsiStyle.RESET)}: "  # "error: "
             f"{self.format_msg}{f(AnsiStyle.RESET_ALL)}"  # "redefinition of ..."
         )
-
-    def __str__(self) -> str:
-        return self._format(_discard)
-
-    @property
-    @abstractmethod
-    def format_msg(self) -> str: ...
 
 
 ######################################
@@ -170,12 +171,30 @@ class DiagnosticsManager(AbstractDiagnosticsManager):
     """Manages diagnostic messages."""
 
     def __init__(self, out: TextIO = stderr):
-        self._max_level_record = Level.NOTE
         self._out = out
         if self._out.isatty():
             self._color_filter_fn = _passthrough
         else:
             self._color_filter_fn = _discard
+        self.reset_max_level()
+
+    @override
+    def emit(self, diag: DiagBase) -> None:
+        """Emits a new diagnostic message."""
+        self._max_level_record = max(self._max_level_record, diag.LEVEL)
+        self._render(diag)
+        for n in diag.notes():
+            self._render(n)
+        stderr.flush()
+
+    def reset_max_level(self):
+        self._max_level_record = -1
+
+    def current_max_level(self):
+        return self._max_level_record
+
+    def has_errors(self):
+        return self.current_max_level() >= Level.ERROR
 
     def _write(self, s: str):
         self._out.write(s)
@@ -184,7 +203,7 @@ class DiagnosticsManager(AbstractDiagnosticsManager):
         self._out.flush()
 
     # TODO: could be slow.
-    def _render_source_location(self, loc: "SourceLocation"):
+    def _render_source_location(self, loc: SourceLocation):
         MAX_LINE_NO_SPACE = 5
         if not loc.has_pos:
             return
@@ -221,17 +240,6 @@ class DiagnosticsManager(AbstractDiagnosticsManager):
             )
 
     def _render(self, d: DiagBase):
-        self._write(f"{d._format(self._color_filter_fn)}\n")
+        self._write(f"{d.format(self._color_filter_fn)}\n")
         if d.loc:
             self._render_source_location(d.loc)
-
-    def emit(self, diag: DiagBase) -> None:
-        """Emits a new diagnostic message."""
-        self._max_level_record = max(self._max_level_record, diag.LEVEL)
-        self._render(diag)
-        for n in diag.notes():
-            self._render(n)
-        stderr.flush()
-
-    def current_max_level(self):
-        return self._max_level_record

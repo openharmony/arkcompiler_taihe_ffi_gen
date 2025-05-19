@@ -3,19 +3,22 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from dataclasses import dataclass
-from os import PathLike
 from pathlib import Path
+
+from typing_extensions import override
 
 
 @dataclass(frozen=True)
 class SourceBase(ABC):
     """Base class reprensenting all kinds of source code."""
 
-    source_identifier: str
-    pkg_name: str
+    @property
+    @abstractmethod
+    def source_identifier(self) -> str: ...
 
-    def __str__(self) -> str:
-        return f"Package {self.pkg_name} (in {self.source_identifier})"
+    @property
+    @abstractmethod
+    def pkg_name(self) -> str: ...
 
     @abstractmethod
     def read(self) -> list[str]: ...
@@ -25,8 +28,21 @@ class SourceBase(ABC):
 class SourceFile(SourceBase):
     """Represents a file-based source code."""
 
+    path: Path
+
+    @property
+    @override
+    def source_identifier(self) -> str:
+        return str(self.path)
+
+    @property
+    @override
+    def pkg_name(self) -> str:
+        return self.path.stem
+
+    @override
     def read(self) -> list[str]:
-        with open(self.source_identifier) as f:
+        with open(self.path) as f:
             return f.readlines()
 
 
@@ -34,8 +50,20 @@ class SourceFile(SourceBase):
 class SourceBuffer(SourceBase):
     """Represents a string-based source code."""
 
+    name: str
     buf: str
 
+    @property
+    @override
+    def source_identifier(self) -> str:
+        return f"<source-buffer-{self.pkg_name}>"
+
+    @property
+    @override
+    def pkg_name(self) -> str:
+        return self.name
+
+    @override
     def read(self) -> list[str]:
         return self.buf.splitlines()
 
@@ -48,27 +76,12 @@ class SourceManager:
     def __init__(self):
         self.src_list = []
 
-    def _add(self, sb: SourceBase):
-        self.src_list.append(sb)
-
-    def add_buffer(self, pkg_name: str, buf: str, source_identifier: str = ""):
-        sid = source_identifier or f"<source-buffer-{pkg_name}>"
-        self._add(SourceBuffer(sid, pkg_name, buf))
-
-    def add_file(self, path: PathLike):
-        p = Path(path)
-        pkg_name = p.stem
-        self._add(SourceFile(str(p), pkg_name))
-
-    def add_directory(self, path: PathLike):
-        """Adds all `.taihe` files inside a directory. Subdirectories are ignored."""
-        d = Path(path)
-        for file in d.glob("*.taihe"):
-            self.add_file(file)
-
     @property
     def sources(self) -> Iterable[SourceBase]:
         return self.src_list
+
+    def add_source(self, sb: SourceBase):
+        self.src_list.append(sb)
 
 
 @dataclass
@@ -110,3 +123,8 @@ class SourceLocation:
             r = f"{r}:{self.start_row}:{self.start_col}"
 
         return r
+
+    @classmethod
+    def with_path(cls, path: Path) -> "SourceLocation":
+        """Returns a file-only source location, without any position information."""
+        return cls(SourceFile(path))

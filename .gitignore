@@ -14,11 +14,15 @@ compiler/taihe/parse/antlr
 .coverage
 .coverage.*
 
-# Temporary directories
-test/*/author_test
-test/*/user_test
-test/*/napi_test
-test/*/kn_test
+
+# Internal caches
+/.panda_vm
+/hw_exported
+/dist
+compiler/taihe.egg-info
+
+# Generated directories
+**/*generated
 
 # files
 *.log
@@ -29,6 +33,8 @@ test/*/kn_test
 *.vcxproj.user
 *.vcxproj.filters
 *.sln
+
+.panda_vm/
 
 # Visual Studio Code files and folder
 .vscode/
@@ -42,3 +48,12 @@ test/napi/package-lock.json
 test/napi/package.json
 test/napi/*.js
 test/napi/*.node
+
+# ts test
+test/napi/node_modules/
+test/napi/package-lock.json
+test/napi/package.json
+test/napi/*.js
+test/napi/*.node
+
+anigen

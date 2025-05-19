@@ -1,5 +1,5 @@
-from collections.abc import Iterable
-from typing import TYPE_CHECKING, TypeVar
+from collections.abc import Callable, Iterable
+from typing import Any, TypeGuard, TypeVar
 
 from typing_extensions import override
 
@@ -11,6 +11,7 @@ from taihe.semantics.declarations import (
     GlobFuncDecl,
     IfaceDecl,
     IfaceMethodDecl,
+    IfaceParentDecl,
     LongTypeRefDecl,
     NamedDecl,
     PackageDecl,
@@ -19,11 +20,17 @@ from taihe.semantics.declarations import (
     ShortTypeRefDecl,
     StructDecl,
     TypeDecl,
+    TypeRefDecl,
+    UnionDecl,
 )
 from taihe.semantics.types import (
     BUILTIN_GENERICS,
     BUILTIN_TYPES,
     CallbackType,
+    ScalarKind,
+    ScalarType,
+    StringType,
+    Type,
     UserType,
 )
 from taihe.semantics.visitor import RecursiveDeclVisitor
@@ -33,19 +40,15 @@ from taihe.utils.exceptions import (
     DeclNotExistError,
     DeclRedefError,
     DuplicateExtendsWarn,
-    EnumValueConflictError,
-    ExtendsTypeError,
+    EnumValueError,
     GenericArgumentsError,
     NotATypeError,
     PackageNotExistError,
     PackageNotInScopeError,
     RecursiveReferenceError,
     SymbolConflictWithNamespaceError,
+    TypeUsageError,
 )
-
-if TYPE_CHECKING:
-    from taihe.semantics.declarations import IfaceParentDecl, TypeRefDecl
-    from taihe.semantics.types import Type
 
 
 def analyze_semantics(pg: PackageGroup, diag: AbstractDiagnosticsManager):
@@ -53,7 +56,7 @@ def analyze_semantics(pg: PackageGroup, diag: AbstractDiagnosticsManager):
     _check_decl_confilct_with_namespace(pg, diag)
     _ResolveImportsPass(diag).handle_decl(pg)
     _CheckFieldNameCollisionErrorPass(diag).handle_decl(pg)
-    _CalculateEnumItemValuePass(diag).handle_decl(pg)
+    _CheckEnumTypePass(diag).handle_decl(pg)
     _CheckRecursiveInclusionPass(diag).handle_decl(pg)
 
 
@@ -62,7 +65,7 @@ def _check_decl_confilct_with_namespace(
     diag: AbstractDiagnosticsManager,
 ):
     """Checks for declarations conflicts with namespaces."""
-    namespaces = set()
+    namespaces: set[str] = set()
     for pkg_name in pg.package_dict:
         # package "a.b.c" -> namespaces ["a.b.c", "a.b", "a"]
         while True:
@@ -124,7 +127,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
             self.diag.emit(PackageNotExistError(d.symbol, loc=d.loc))
             return
 
-        d.resolved_pkg = pkg
+        d.maybe_resolved_pkg = pkg
 
     @override
     def visit_decl_ref_decl(self, d: DeclarationRefDecl) -> None:
@@ -134,7 +137,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
 
         self.handle_decl(d.pkg_ref)
 
-        pkg = d.pkg_ref.resolved_pkg
+        pkg = d.pkg_ref.maybe_resolved_pkg
 
         if pkg is None:
             # No need to repeatedly throw exceptions
@@ -146,7 +149,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
             self.diag.emit(DeclNotExistError(d.symbol, loc=d.loc))
             return
 
-        d.resolved_decl = decl
+        d.maybe_resolved_decl = decl
 
     @override
     def visit_long_type_ref_decl(self, d: LongTypeRefDecl) -> None:
@@ -162,7 +165,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
             return
 
         # Then find the corresponding type declaration from the package
-        pkg = pkg_import.pkg_ref.resolved_pkg
+        pkg = pkg_import.pkg_ref.maybe_resolved_pkg
 
         if pkg is None:
             # No need to repeatedly throw exceptions
@@ -178,7 +181,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
             self.diag.emit(NotATypeError(d.symbol, loc=d.loc))
             return
 
-        d.resolved_ty = decl.as_type()
+        decl.as_type(d)
 
     @override
     def visit_short_type_ref_decl(self, d: ShortTypeRefDecl) -> None:
@@ -187,10 +190,10 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
         d.is_resolved = True
 
         # Find Builtin Types
-        decl = BUILTIN_TYPES.get(d.symbol)
+        builder = BUILTIN_TYPES.get(d.symbol)
 
-        if decl:
-            d.resolved_ty = decl
+        if builder:
+            builder(d)
             return
 
         # Find types declared in the current package
@@ -201,7 +204,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
                 self.diag.emit(NotATypeError(d.symbol, loc=d.loc))
                 return
 
-            d.resolved_ty = decl.as_type()
+            decl.as_type(d)
             return
 
         # Look for imported type declarations
@@ -211,7 +214,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
             self.diag.emit(DeclarationNotInScopeError(d.symbol, loc=d.loc))
             return
 
-        decl = decl_import.decl_ref.resolved_decl
+        decl = decl_import.decl_ref.maybe_resolved_decl
 
         if decl is None:
             # No need to repeatedly throw exceptions
@@ -221,7 +224,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
             self.diag.emit(NotATypeError(d.symbol, loc=d.loc))
             return
 
-        d.resolved_ty = decl.as_type()
+        decl.as_type(d)
 
     @override
     def visit_generic_type_ref_decl(self, d: GenericTypeRefDecl) -> None:
@@ -233,7 +236,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
 
         args_ty: list[Type] = []
         for arg_ty_ref in d.args_ty_ref:
-            arg_ty = arg_ty_ref.resolved_ty
+            arg_ty = arg_ty_ref.maybe_resolved_ty
             if arg_ty is None:
                 # No need to repeatedly throw exceptions
                 return
@@ -241,16 +244,16 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
 
         decl_name = d.symbol
 
-        generic = BUILTIN_GENERICS.get(decl_name)
+        builder = BUILTIN_GENERICS.get(decl_name)
 
-        if generic is None:
+        if builder is None:
             self.diag.emit(DeclarationNotInScopeError(decl_name, loc=d.loc))
             return
 
         try:
-            d.resolved_ty = generic(*args_ty)
+            builder(d, *args_ty)
         except TypeError:
-            self.diag.emit(GenericArgumentsError(d.unresolved_repr, loc=d.loc))
+            self.diag.emit(GenericArgumentsError(d.text, loc=d.loc))
 
     @override
     def visit_callback_type_ref_decl(self, d: CallbackTypeRefDecl) -> None:
@@ -261,7 +264,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
         super().visit_callback_type_ref_decl(d)
 
         if d.return_ty_ref:
-            return_ty = d.return_ty_ref.resolved_ty
+            return_ty = d.return_ty_ref.maybe_resolved_ty
             if return_ty is None:
                 # No need to repeatedly throw exceptions
                 return
@@ -270,34 +273,13 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
 
         params_ty: list[Type] = []
         for param in d.params:
-            arg_ty = param.ty_ref.resolved_ty
+            arg_ty = param.ty_ref.maybe_resolved_ty
             if arg_ty is None:
                 # No need to repeatedly throw exceptions
                 return
             params_ty.append(arg_ty)
 
-        d.resolved_ty = CallbackType(return_ty, tuple(params_ty))
-
-
-class _CalculateEnumItemValuePass(RecursiveDeclVisitor):
-    """Calculate Enum Values."""
-
-    diag: AbstractDiagnosticsManager
-
-    def __init__(self, diag: AbstractDiagnosticsManager):
-        self.diag = diag
-
-    def visit_enum_decl(self, d: EnumDecl) -> None:
-        values = {}
-        value = 0
-        for i in d.items:
-            if i.value is None:
-                i.value = value
-            else:
-                value = i.value
-            if (prev := values.setdefault(value, i)) != i:
-                self.diag.emit(EnumValueConflictError(prev, i))
-            value += 1
+        CallbackType(d, return_ty, tuple(params_ty))
 
 
 class _CheckFieldNameCollisionErrorPass(RecursiveDeclVisitor):
@@ -319,14 +301,19 @@ class _CheckFieldNameCollisionErrorPass(RecursiveDeclVisitor):
         return super().visit_iface_func_decl(d)
 
     @override
+    def visit_enum_decl(self, d: EnumDecl) -> None:
+        self.check_collision_helper(d.items)
+        return super().visit_enum_decl(d)
+
+    @override
     def visit_struct_decl(self, d: StructDecl) -> None:
         self.check_collision_helper(d.fields)
         return super().visit_struct_decl(d)
 
     @override
-    def visit_enum_decl(self, d: EnumDecl) -> None:
-        self.check_collision_helper(d.items)
-        return super().visit_enum_decl(d)
+    def visit_union_decl(self, d: UnionDecl) -> None:
+        self.check_collision_helper(d.fields)
+        return super().visit_union_decl(d)
 
     @override
     def visit_iface_decl(self, d: IfaceDecl) -> None:
@@ -339,11 +326,92 @@ class _CheckFieldNameCollisionErrorPass(RecursiveDeclVisitor):
         return super().visit_package_decl(p)
 
     def check_collision_helper(self, children: Iterable[NamedDecl]):
-        names = {}
+        names: dict[str, NamedDecl] = {}
         for f in children:
-            assert f.name
             if (prev := names.setdefault(f.name, f)) != f:
                 self.diag.emit(DeclRedefError(prev, f))
+
+
+class _CheckEnumTypePass(RecursiveDeclVisitor):
+    """Validated enum item types."""
+
+    diag: AbstractDiagnosticsManager
+
+    def __init__(self, diag: AbstractDiagnosticsManager):
+        self.diag = diag
+
+    def visit_enum_decl(self, d: EnumDecl) -> None:
+        def is_int(val: Any) -> TypeGuard[int]:
+            return not isinstance(val, bool) and isinstance(val, int)
+
+        valid: Callable[[Any], bool]
+        increment: Callable[[Any, Any], Any]
+        default: Callable[[Any], Any]
+
+        match d.ty_ref.maybe_resolved_ty:
+            case ScalarType(_, ScalarKind.I8):
+                valid = lambda val: is_int(val) and -(2**7) <= val < 2**7
+                increment = lambda prev, item: prev + 1
+                default = lambda item: 0
+            case ScalarType(_, ScalarKind.I16):
+                valid = lambda val: is_int(val) and -(2**15) <= val < 2**15
+                increment = lambda prev, item: prev + 1
+                default = lambda item: 0
+            case ScalarType(_, ScalarKind.I32):
+                valid = lambda val: is_int(val) and -(2**31) <= val < 2**31
+                increment = lambda prev, item: prev + 1
+                default = lambda item: 0
+            case ScalarType(_, ScalarKind.I64):
+                valid = lambda val: is_int(val) and -(2**63) <= val < 2**63
+                increment = lambda prev, item: prev + 1
+                default = lambda item: 0
+            case ScalarType(_, ScalarKind.U8):
+                valid = lambda val: is_int(val) and 0 <= val < 2**8
+                increment = lambda prev, item: prev + 1
+                default = lambda item: 0
+            case ScalarType(_, ScalarKind.U16):
+                valid = lambda val: is_int(val) and 0 <= val < 2**16
+                increment = lambda prev, item: prev + 1
+                default = lambda item: 0
+            case ScalarType(_, ScalarKind.U32):
+                valid = lambda val: is_int(val) and 0 <= val < 2**32
+                increment = lambda prev, item: prev + 1
+                default = lambda item: 0
+            case ScalarType(_, ScalarKind.U64):
+                valid = lambda val: is_int(val) and 0 <= val < 2**64
+                increment = lambda prev, item: prev + 1
+                default = lambda item: 0
+            case ScalarType(_, ScalarKind.BOOL):
+                valid = lambda val: isinstance(val, bool)
+                increment = lambda prev, item: False
+                default = lambda item: False
+            case ScalarType(_, ScalarKind.F32):
+                valid = lambda val: isinstance(val, float)
+                increment = lambda prev, item: 0.0
+                default = lambda item: 0.0
+            case ScalarType(_, ScalarKind.F64):
+                valid = lambda val: isinstance(val, float)
+                increment = lambda prev, item: 0.0
+                default = lambda item: 0.0
+            case StringType():
+                valid = lambda val: isinstance(val, str)
+                increment = lambda prev, item: item.name
+                default = lambda item: item.name
+            case None:
+                return
+            case _:
+                self.diag.emit(TypeUsageError(d.ty_ref))
+                return
+
+        prev = None
+        for item in d.items:
+            if item.value is None:
+                item.value = default(item) if prev is None else increment(prev, item)
+            if not valid(item.value):
+                self.diag.emit(EnumValueError(item, d))
+                prev = None
+            else:
+                prev = item.value
 
 
 class _CheckRecursiveInclusionPass(RecursiveDeclVisitor):
@@ -366,17 +434,20 @@ class _CheckRecursiveInclusionPass(RecursiveDeclVisitor):
             last, *other = cycle[::-1]
             self.diag.emit(RecursiveReferenceError(last, other))
 
+    def visit_enum_decl(self, d: EnumDecl) -> None:
+        self.type_table[d] = []
+
     def visit_iface_decl(self, d: IfaceDecl) -> None:
         parent_iface_list = self.type_table.setdefault(d, [])
         parent_iface_dict: dict[IfaceDecl, IfaceParentDecl] = {}
         for parent in d.parents:
-            if (parent_ty := parent.ty_ref.resolved_ty) is None:
+            if (parent_ty := parent.ty_ref.maybe_resolved_ty) is None:
                 continue
             if not isinstance(parent_ty, UserType):
-                self.diag.emit(ExtendsTypeError(parent, parent_ty))
+                self.diag.emit(TypeUsageError(parent.ty_ref))
                 continue
             if not isinstance(parent_iface := parent_ty.ty_decl, IfaceDecl):
-                self.diag.emit(ExtendsTypeError(parent, parent_ty))
+                self.diag.emit(TypeUsageError(parent.ty_ref))
                 continue
             parent_iface_list.append(((d, parent.ty_ref), parent_iface))
             prev = parent_iface_dict.setdefault(parent_iface, parent)
@@ -393,15 +464,15 @@ class _CheckRecursiveInclusionPass(RecursiveDeclVisitor):
     def visit_struct_decl(self, d: StructDecl) -> None:
         type_list = self.type_table.setdefault(d, [])
         for f in d.fields:
-            if isinstance(ty := f.ty_ref.resolved_ty, UserType):
+            if isinstance(ty := f.ty_ref.maybe_resolved_ty, UserType):
                 type_list.append(((d, f.ty_ref), ty.ty_decl))
 
-    def visit_enum_decl(self, d: EnumDecl) -> None:
+    def visit_union_decl(self, d: UnionDecl) -> None:
         type_list = self.type_table.setdefault(d, [])
-        for i in d.items:
+        for i in d.fields:
             if i.ty_ref is None:
                 continue
-            if isinstance(ty := i.ty_ref.resolved_ty, UserType):
+            if isinstance(ty := i.ty_ref.maybe_resolved_ty, UserType):
                 type_list.append(((d, i.ty_ref), ty.ty_decl))
 
 

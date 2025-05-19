@@ -1,0 +1,11 @@
+@!namespace("mate", "foo")
+
+from mate use MateType;
+from nova use NovaType;
+from pura use PuraType;
+
+struct FooType {}
+
+function testMate(mate: MateType): void;
+function testNova(nova: NovaType): void;
+function testPura(pura: PuraType): void;

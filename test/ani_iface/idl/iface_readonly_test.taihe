@@ -1,0 +1,7 @@
+interface Noo {
+    bar(): void;
+    @get getName(): String;
+}
+
+function getNooIface(): Noo;
+function printNooName(noo: Noo): String;

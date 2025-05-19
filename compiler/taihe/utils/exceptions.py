@@ -1,15 +1,16 @@
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from typing_extensions import override
 
-from taihe.utils.diagnostics import DiagError, DiagNote, DiagWarn
+from taihe.utils.diagnostics import DiagError, DiagFatalError, DiagNote, DiagWarn
+from taihe.utils.sources import SourceLocation
 
 if TYPE_CHECKING:
     from taihe.semantics.declarations import (
+        EnumDecl,
         EnumItemDecl,
         IfaceDecl,
-        IfaceParentDecl,
         NamedDecl,
         PackageDecl,
         PackageLevelDecl,
@@ -17,7 +18,6 @@ if TYPE_CHECKING:
         TypeDecl,
         TypeRefDecl,
     )
-    from taihe.utils.sources import SourceLocation
 
 
 @dataclass
@@ -25,8 +25,8 @@ class DeclRedefNote(DiagNote):
     prev: "NamedDecl"
 
     def __init__(self, prev: "NamedDecl"):
+        super().__init__(loc=prev.loc)
         self.prev = prev
-        self.loc = prev.loc
 
     @property
     @override
@@ -40,52 +40,19 @@ class DeclRedefError(DiagError):
     current: "NamedDecl"
 
     def __init__(self, prev: "NamedDecl", current: "NamedDecl"):
+        super().__init__(loc=current.loc)
         self.prev = prev
         self.current = current
-        self.loc = current.loc
-
-    def notes(self):
-        if self.prev.loc:
-            yield DeclRedefNote(self.prev)
 
     @property
     @override
     def format_msg(self) -> str:
         return f"redefinition of {self.current.description}"
 
-
-@dataclass
-class EnumValueConflictNote(DiagNote):
-    prev: "EnumItemDecl"
-
-    def __init__(self, prev: "EnumItemDecl"):
-        self.prev = prev
-        self.loc = prev.loc
-
-    @property
     @override
-    def format_msg(self) -> str:
-        return f"conflict with {self.prev.description}"
-
-
-@dataclass
-class EnumValueConflictError(DiagError):
-    prev: "EnumItemDecl"
-    current: "EnumItemDecl"
-
-    def __init__(self, prev: "EnumItemDecl", current: "EnumItemDecl"):
-        self.prev = prev
-        self.current = current
-        self.loc = current.loc
-
     def notes(self):
         if self.prev.loc:
             yield DeclRedefNote(self.prev)
-
-    @property
-    @override
-    def format_msg(self) -> str:
-        return f"value {self.current.value} of {self.current.description} is repeated"
 
 
 @dataclass
@@ -166,8 +133,8 @@ class SymbolConflictWithNamespaceError(DiagError):
     pkg: "PackageDecl"
 
     def __init__(self, decl: "PackageLevelDecl", pkg: "PackageDecl"):
+        super().__init__(loc=decl.loc)
         self.decl = decl
-        self.loc = decl.loc
         self.pkg = pkg
 
     @property
@@ -177,17 +144,35 @@ class SymbolConflictWithNamespaceError(DiagError):
 
 
 @dataclass
-class ExtendsTypeError(DiagError):
+class TypeUsageError(DiagError):
     ty: "Type"
 
-    def __init__(self, decl: "IfaceParentDecl", ty: "Type"):
-        self.loc = decl.ty_ref.loc
-        self.ty = ty
+    def __init__(self, ty_ref: "TypeRefDecl"):
+        super().__init__(loc=ty_ref.loc)
+        assert ty_ref.maybe_resolved_ty
+        self.ty = ty_ref.maybe_resolved_ty
 
     @property
     @override
     def format_msg(self) -> str:
-        return f"{self.ty.representation} cannot be parent of an interface"
+        return f"{self.ty.signature} cannot be used in this context"
+
+
+@dataclass
+class EnumValueError(DiagError):
+    item: "EnumItemDecl"
+    enum: "EnumDecl"
+
+    def __init__(self, item: "EnumItemDecl", enum: "EnumDecl"):
+        super().__init__(loc=item.loc)
+        self.item = item
+        self.enum = enum
+
+    @property
+    @override
+    def format_msg(self) -> str:
+        assert self.enum.ty_ref.maybe_resolved_ty
+        return f"value of {self.item.description} ({self.item.value}) is conflict with {self.enum.description} ({self.enum.ty_ref.maybe_resolved_ty.signature})"
 
 
 @dataclass
@@ -202,16 +187,17 @@ class DuplicateExtendsNote(DiagNote):
 class DuplicateExtendsWarn(DiagWarn):
     iface: "IfaceDecl"
     parent_iface: "IfaceDecl"
-    prev_loc: Optional["SourceLocation"] = field(kw_only=True)
-
-    def notes(self):
-        if self.prev_loc:
-            yield DuplicateExtendsNote(loc=self.prev_loc)
+    prev_loc: SourceLocation | None = field(kw_only=True)
 
     @property
     @override
     def format_msg(self) -> str:
         return f"{self.parent_iface.description} is extended multiple times by {self.iface.description}"
+
+    @override
+    def notes(self):
+        if self.prev_loc:
+            yield DuplicateExtendsNote(loc=self.prev_loc)
 
 
 @dataclass
@@ -222,7 +208,7 @@ class RecursiveReferenceNote(DiagNote):
         self,
         last: tuple["TypeDecl", "TypeRefDecl"],
     ):
-        self.loc = last[1].loc
+        super().__init__(loc=last[1].loc)
         self.decl = last[0]
 
     @property
@@ -241,15 +227,56 @@ class RecursiveReferenceError(DiagError):
         last: tuple["TypeDecl", "TypeRefDecl"],
         other: list[tuple["TypeDecl", "TypeRefDecl"]],
     ):
-        self.loc = last[1].loc
+        super().__init__(loc=last[1].loc)
         self.decl = last[0]
         self.other = other
-
-    def notes(self):
-        for n in self.other:
-            yield RecursiveReferenceNote(n)
 
     @property
     @override
     def format_msg(self) -> str:
         return f"cycle detected in {self.decl.description}"
+
+    @override
+    def notes(self):
+        for n in self.other:
+            yield RecursiveReferenceNote(n)
+
+
+@dataclass
+class AdhocNote(DiagNote):
+    msg: str
+
+    @property
+    @override
+    def format_msg(self) -> str:
+        return self.msg
+
+
+@dataclass
+class AdhocWarn(DiagWarn):
+    msg: str
+
+    @property
+    @override
+    def format_msg(self) -> str:
+        return self.msg
+
+
+@dataclass
+class AdhocError(DiagError):
+    msg: str
+
+    @property
+    @override
+    def format_msg(self) -> str:
+        return self.msg
+
+
+@dataclass
+class AdhocFatalError(DiagFatalError):
+    msg: str
+
+    @property
+    @override
+    def format_msg(self) -> str:
+        return self.msg

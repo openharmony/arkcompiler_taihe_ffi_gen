@@ -1,0 +1,6 @@
+interface IUser {
+    @get getEmail(): String;
+    @set setEmail(path: String): void;
+}
+
+function makeUser(path: String): IUser;

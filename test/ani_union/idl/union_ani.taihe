@@ -1,0 +1,18 @@
+struct Pair {
+  a: String;
+  b: String;
+}
+
+union InnerUnion {
+  stringValue: String;
+  pairValue: Pair;
+  @undefined undefinedValue;
+}
+
+union MyUnion {
+  innerValue: InnerUnion;
+  floatValue: f32;
+}
+
+function printMyUnion(data: MyUnion): String;
+function makeMyUnion(kind: String): MyUnion;

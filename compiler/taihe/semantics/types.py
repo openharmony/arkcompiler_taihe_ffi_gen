@@ -3,7 +3,7 @@
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Optional, Protocol
+from typing import TYPE_CHECKING, Protocol, TypeVar
 
 from typing_extensions import override
 
@@ -13,8 +13,12 @@ if TYPE_CHECKING:
         IfaceDecl,
         StructDecl,
         TypeDecl,
+        TypeRefDecl,
+        UnionDecl,
     )
     from taihe.semantics.visitor import TypeVisitor
+
+T = TypeVar("T")
 
 ############################
 # Infrastructure for Types #
@@ -22,21 +26,29 @@ if TYPE_CHECKING:
 
 
 class TypeProtocol(Protocol):
-    def _accept(self, v: "TypeVisitor") -> Any: ...
+    def _accept(self, v: "TypeVisitor[T]") -> T: ...
 
 
+@dataclass(frozen=True, repr=False)
 class Type(metaclass=ABCMeta):
-    """Represents a concrete type."""
+    """Base class for all types."""
+
+    ty_ref: "TypeRefDecl"
+
+    def __post_init__(self):
+        self.ty_ref.maybe_resolved_ty = self
+
+    def __repr__(self) -> str:
+        return f"<{self.__class__.__qualname__} {self.signature}>"
 
     @property
     @abstractmethod
-    def representation(self) -> str: ...
-
-    def __repr__(self) -> str:
-        return f"<{self.__class__.__qualname__} {self.representation}>"
+    def signature(self) -> str:
+        """Return the representation of the type."""
 
     @abstractmethod
-    def _accept(self, v: "TypeVisitor") -> Any: ...
+    def _accept(self, v: "TypeVisitor[T]") -> T:
+        """Accept a visitor."""
 
 
 ##################
@@ -44,72 +56,90 @@ class Type(metaclass=ABCMeta):
 ##################
 
 
-class BuiltinTypeKind(Enum):
-    VOID = 0
-
-    BOOL = 1
-    INTEGER = 2
-    FLOAT = 3
-
-    STRING = 0x10
-
-
 @dataclass(frozen=True, repr=False)
 class BuiltinType(Type, metaclass=ABCMeta):
-    """Represents built-in types, including scalars and strings.
+    """Represents a built-in type."""
 
-    Invariant: all primitive types must be directy obtained with `lookup` or
-    using the exported values such as `VOID`. Do not copy or construct it on
-    your own. This design allows tests such as `my_type is VOID`.
-    """
 
-    name: str
-    kind: BuiltinTypeKind
+class ScalarKind(Enum):
+    """Enumeration of scalar types."""
 
-    @property
-    @override
-    def representation(self):
-        return f"{self.name}"
+    BOOL = ("bool", 8, False, False)
+    F32 = ("f32", 32, True, True)
+    F64 = ("f64", 64, True, True)
+    I8 = ("i8", 8, True, False)
+    I16 = ("i16", 16, True, False)
+    I32 = ("i32", 32, True, False)
+    I64 = ("i64", 64, True, False)
+    U8 = ("u8", 8, False, False)
+    U16 = ("u16", 16, False, False)
+    U32 = ("u32", 32, False, False)
+    U64 = ("u64", 64, False, False)
+
+    def __init__(self, symbol: str, width: int, is_signed: bool, is_float: bool):
+        self.symbol = symbol
+        self.width = width
+        self.is_signed = is_signed
+        self.is_float = is_float
 
 
 @dataclass(frozen=True, repr=False)
 class ScalarType(BuiltinType):
-    width: int
-    is_signed: bool
-    is_float: bool = False
+    kind: ScalarKind
+
+    @property
+    @override
+    def signature(self):
+        return self.kind.symbol
 
     @override
-    def _accept(self, v: "TypeVisitor") -> Any:
+    def _accept(self, v: "TypeVisitor[T]") -> T:
         return v.visit_scalar_type(self)
 
 
 @dataclass(frozen=True, repr=False)
-class SpecialType(BuiltinType):
+class OpaqueType(BuiltinType):
+    @property
     @override
-    def _accept(self, v: "TypeVisitor") -> Any:
-        return v.visit_special_type(self)
+    def signature(self):
+        return "Opaque"
+
+    @override
+    def _accept(self, v: "TypeVisitor[T]") -> T:
+        return v.visit_opaque_type(self)
 
 
-BOOL = ScalarType("bool", BuiltinTypeKind.BOOL, 8, is_signed=False)
+@dataclass(frozen=True, repr=False)
+class StringType(BuiltinType):
+    @property
+    @override
+    def signature(self):
+        return "String"
 
-F32 = ScalarType("f32", BuiltinTypeKind.FLOAT, 32, is_signed=True, is_float=True)
-F64 = ScalarType("f64", BuiltinTypeKind.FLOAT, 64, is_signed=True, is_float=True)
+    @override
+    def _accept(self, v: "TypeVisitor[T]") -> T:
+        return v.visit_string_type(self)
 
-I8 = ScalarType("i8", BuiltinTypeKind.INTEGER, 8, is_signed=True)
-I16 = ScalarType("i16", BuiltinTypeKind.INTEGER, 16, is_signed=True)
-I32 = ScalarType("i32", BuiltinTypeKind.INTEGER, 32, is_signed=True)
-I64 = ScalarType("i64", BuiltinTypeKind.INTEGER, 64, is_signed=True)
 
-U8 = ScalarType("u8", BuiltinTypeKind.INTEGER, 8, is_signed=False)
-U16 = ScalarType("u16", BuiltinTypeKind.INTEGER, 16, is_signed=False)
-U32 = ScalarType("u32", BuiltinTypeKind.INTEGER, 32, is_signed=False)
-U64 = ScalarType("u64", BuiltinTypeKind.INTEGER, 64, is_signed=False)
+class BuiltinBuilder(Protocol):
+    def __call__(self, ty_ref: "TypeRefDecl") -> BuiltinType: ...
 
-STRING = SpecialType("String", BuiltinTypeKind.STRING)
 
-# Builtin Types map
-BUILTIN_TYPES: dict[str, Type] = {
-    ty.name: ty for ty in [BOOL, I8, I16, I32, I64, U8, U16, U32, U64, F32, F64, STRING]
+# Builtin Types Map
+BUILTIN_TYPES: dict[str, BuiltinBuilder] = {
+    "bool": lambda ty_ref: ScalarType(ty_ref, ScalarKind.BOOL),
+    "f32": lambda ty_ref: ScalarType(ty_ref, ScalarKind.F32),
+    "f64": lambda ty_ref: ScalarType(ty_ref, ScalarKind.F64),
+    "i8": lambda ty_ref: ScalarType(ty_ref, ScalarKind.I8),
+    "i16": lambda ty_ref: ScalarType(ty_ref, ScalarKind.I16),
+    "i32": lambda ty_ref: ScalarType(ty_ref, ScalarKind.I32),
+    "i64": lambda ty_ref: ScalarType(ty_ref, ScalarKind.I64),
+    "u8": lambda ty_ref: ScalarType(ty_ref, ScalarKind.U8),
+    "u16": lambda ty_ref: ScalarType(ty_ref, ScalarKind.U16),
+    "u32": lambda ty_ref: ScalarType(ty_ref, ScalarKind.U32),
+    "u64": lambda ty_ref: ScalarType(ty_ref, ScalarKind.U64),
+    "String": lambda ty_ref: StringType(ty_ref),
+    "Opaque": lambda ty_ref: OpaqueType(ty_ref),
 }
 
 
@@ -120,19 +150,19 @@ BUILTIN_TYPES: dict[str, Type] = {
 
 @dataclass(frozen=True, repr=False)
 class CallbackType(Type):
-    return_ty: Optional[Type]
+    return_ty: Type | None
     params_ty: tuple[Type, ...]
-
-    @override
-    def _accept(self, v: "TypeVisitor") -> Any:
-        return v.visit_callback_type(self)
 
     @property
     @override
-    def representation(self):
-        return_fmt = ty.representation if (ty := self.return_ty) else "void"
-        params_fmt = ", ".join(ty.representation for ty in self.params_ty)
-        return f"({params_fmt}) -> {return_fmt}"
+    def signature(self):
+        return_fmt = ty.signature if (ty := self.return_ty) else "void"
+        params_fmt = ", ".join(ty.signature for ty in self.params_ty)
+        return f"({params_fmt}) => {return_fmt}"
+
+    @override
+    def _accept(self, v: "TypeVisitor[T]") -> T:
+        return v.visit_callback_type(self)
 
 
 class GenericType(Type, metaclass=ABCMeta):
@@ -143,42 +173,42 @@ class GenericType(Type, metaclass=ABCMeta):
 class ArrayType(GenericType):
     item_ty: Type
 
-    @override
-    def _accept(self, v: "TypeVisitor") -> Any:
-        return v.visit_array_type(self)
-
     @property
     @override
-    def representation(self):
-        return f"Array<{self.item_ty.representation}>"
+    def signature(self):
+        return f"Array<{self.item_ty.signature}>"
+
+    @override
+    def _accept(self, v: "TypeVisitor[T]") -> T:
+        return v.visit_array_type(self)
 
 
 @dataclass(frozen=True, repr=False)
-class BoxType(GenericType):
+class OptionalType(GenericType):
     item_ty: Type
-
-    @override
-    def _accept(self, v: "TypeVisitor") -> Any:
-        return v.visit_box_type(self)
 
     @property
     @override
-    def representation(self):
-        return f"Box<{self.item_ty.representation}>"
+    def signature(self):
+        return f"Optional<{self.item_ty.signature}>"
+
+    @override
+    def _accept(self, v: "TypeVisitor[T]") -> T:
+        return v.visit_optional_type(self)
 
 
 @dataclass(frozen=True, repr=False)
 class VectorType(GenericType):
     val_ty: Type
 
-    @override
-    def _accept(self, v: "TypeVisitor") -> Any:
-        return v.visit_vector_type(self)
-
     @property
     @override
-    def representation(self):
-        return f"Vector<{self.val_ty.representation}>"
+    def signature(self):
+        return f"Vector<{self.val_ty.signature}>"
+
+    @override
+    def _accept(self, v: "TypeVisitor[T]") -> T:
+        return v.visit_vector_type(self)
 
 
 @dataclass(frozen=True, repr=False)
@@ -186,41 +216,41 @@ class MapType(GenericType):
     key_ty: Type
     val_ty: Type
 
-    @override
-    def _accept(self, v: "TypeVisitor") -> Any:
-        return v.visit_map_type(self)
-
     @property
     @override
-    def representation(self):
-        return f"Map<{self.key_ty.representation}, {self.val_ty.representation}>"
+    def signature(self):
+        return f"Map<{self.key_ty.signature}, {self.val_ty.signature}>"
+
+    @override
+    def _accept(self, v: "TypeVisitor[T]") -> T:
+        return v.visit_map_type(self)
 
 
 @dataclass(frozen=True, repr=False)
 class SetType(GenericType):
     key_ty: Type
 
-    @override
-    def _accept(self, v: "TypeVisitor") -> Any:
-        return v.visit_set_type(self)
-
     @property
     @override
-    def representation(self):
-        return f"Set<{self.key_ty.representation}>"
+    def signature(self):
+        return f"Set<{self.key_ty.signature}>"
+
+    @override
+    def _accept(self, v: "TypeVisitor[T]") -> T:
+        return v.visit_set_type(self)
 
 
 class GenericBuilder(Protocol):
-    def __call__(self, *args: Type) -> Type: ...
+    def __call__(self, ty_ref: "TypeRefDecl", *args: Type) -> GenericType: ...
 
 
 # Builtin Generics Map
 BUILTIN_GENERICS: dict[str, GenericBuilder] = {
-    "Array": lambda *args: ArrayType(*args),
-    "Box": lambda *args: BoxType(*args),
-    "Vector": lambda *args: VectorType(*args),
-    "Map": lambda *args: MapType(*args),
-    "Set": lambda *args: SetType(*args),
+    "Array": lambda ty_ref, *args: ArrayType(ty_ref, *args),
+    "Optional": lambda ty_ref, *args: OptionalType(ty_ref, *args),
+    "Vector": lambda ty_ref, *args: VectorType(ty_ref, *args),
+    "Map": lambda ty_ref, *args: MapType(ty_ref, *args),
+    "Set": lambda ty_ref, *args: SetType(ty_ref, *args),
 }
 
 
@@ -229,22 +259,14 @@ BUILTIN_GENERICS: dict[str, GenericBuilder] = {
 ##############
 
 
+@dataclass(frozen=True, repr=False)
 class UserType(Type, metaclass=ABCMeta):
     ty_decl: "TypeDecl"
 
     @property
     @override
-    def representation(self):
+    def signature(self):
         return f"{self.ty_decl.full_name}"
-
-
-@dataclass(frozen=True, repr=False)
-class StructType(UserType):
-    ty_decl: "StructDecl"
-
-    @override
-    def _accept(self, v: "TypeVisitor") -> Any:
-        return v.visit_struct_type(self)
 
 
 @dataclass(frozen=True, repr=False)
@@ -252,8 +274,26 @@ class EnumType(UserType):
     ty_decl: "EnumDecl"
 
     @override
-    def _accept(self, v: "TypeVisitor") -> Any:
+    def _accept(self, v: "TypeVisitor[T]") -> T:
         return v.visit_enum_type(self)
+
+
+@dataclass(frozen=True, repr=False)
+class StructType(UserType):
+    ty_decl: "StructDecl"
+
+    @override
+    def _accept(self, v: "TypeVisitor[T]") -> T:
+        return v.visit_struct_type(self)
+
+
+@dataclass(frozen=True, repr=False)
+class UnionType(UserType):
+    ty_decl: "UnionDecl"
+
+    @override
+    def _accept(self, v: "TypeVisitor[T]") -> T:
+        return v.visit_union_type(self)
 
 
 @dataclass(frozen=True, repr=False)
@@ -261,5 +301,5 @@ class IfaceType(UserType):
     ty_decl: "IfaceDecl"
 
     @override
-    def _accept(self, v: "TypeVisitor") -> Any:
+    def _accept(self, v: "TypeVisitor[T]") -> T:
         return v.visit_iface_type(self)

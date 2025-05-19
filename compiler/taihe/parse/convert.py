@@ -1,5 +1,9 @@
-from codecs import decode
+"""Convert AST to IR."""
+
 from collections.abc import Iterable
+from dataclasses import dataclass
+from enum import Enum
+from typing import Any
 
 from typing_extensions import override
 
@@ -25,28 +29,76 @@ from taihe.semantics.declarations import (
     ShortTypeRefDecl,
     StructDecl,
     StructFieldDecl,
+    UnionDecl,
+    UnionFieldDecl,
 )
-from taihe.utils.diagnostics import AbstractDiagnosticsManager
+from taihe.utils.diagnostics import (
+    AbstractDiagnosticsManager,
+    DiagNote,
+    DiagWarn,
+)
 from taihe.utils.sources import SourceBase, SourceLocation
 
 
+class IgnoredFileReason(Enum):
+    IS_DIRECTORY = "subdirectories are ignored"
+    EXTENSION_MISMATCH = "unexpected file extension"
+    INVALID_PKG_NAME = "invalid package name"
+
+
+@dataclass
+class IgnoredFileWarn(DiagWarn):
+    reason: IgnoredFileReason
+    note: DiagNote | None = None
+
+    @property
+    @override
+    def format_msg(self) -> str:
+        return f"unrecognized file: {self.reason.value}"
+
+    def notes(self):
+        if self.note:
+            yield self.note
+
+
+def normalize_pkg_name(name: str):
+    def is_allowed(char: str):
+        return char.isalnum() or char == "_"
+
+    def to_valid_identifier(s: str):
+        """Converts a string to valid, C-style identifier."""
+        # First, remove all non-alphanumeric characters, excluding "_".
+        s = "".join(char for char in s if is_allowed(char))
+        # Next, ensure that the segment doesn't begin with a digit.
+        if s and s[0].isnumeric():
+            # If so, we inject "_" in the beginning.
+            s = "_" + s
+        return s
+
+    # First, split the package name into segments.
+    segments = name.split(".")
+    # Next, make sure that each segment is valid.
+    translated_segments = (to_valid_identifier(s) for s in segments)
+    # Finally, reconstruct the package name.
+    return ".".join(s for s in translated_segments if s)
+
+
 def pkg2str(pkg_name: ast.PkgName) -> str:
-    if pkg_name:
-        return ".".join(t.text for t in pkg_name.parts)
-    else:
-        return ""
+    return ".".join(t.text for t in pkg_name.parts)
 
 
 class ExprEvaluator(Visitor):
+    # Bool Expr
+
     @override
-    def visit_LiteralBoolExpr(self, node: ast.LiteralBoolExpr) -> bool:
+    def visit_literal_bool_expr(self, node: ast.LiteralBoolExpr) -> bool:
         return {
-            "TRUE": True,
-            "FALSE": False,
+            "true": True,
+            "false": False,
         }[node.val.text]
 
     @override
-    def visit_ComparisonBoolExpr(self, node: ast.ComparisonBoolExpr) -> bool:
+    def visit_int_comparison_bool_expr(self, node: ast.IntComparisonBoolExpr) -> bool:
         return {
             ">": int.__gt__,
             "<": int.__lt__,
@@ -60,12 +112,28 @@ class ExprEvaluator(Visitor):
         )
 
     @override
-    def visit_UnaryBoolExpr(self, node: ast.UnaryBoolExpr) -> bool:
+    def visit_float_comparison_bool_expr(
+        self, node: ast.FloatComparisonBoolExpr
+    ) -> bool:
+        return {
+            ">": float.__gt__,
+            "<": float.__lt__,
+            ">=": float.__ge__,
+            "<=": float.__le__,
+            "==": float.__eq__,
+            "!=": float.__ne__,
+        }[node.op.text](
+            float(self.visit(node.left)),
+            float(self.visit(node.right)),
+        )
+
+    @override
+    def visit_unary_bool_expr(self, node: ast.UnaryBoolExpr) -> bool:
         assert node.op.text == "!"
         return not self.visit(node.expr)
 
     @override
-    def visit_BinaryBoolExpr(self, node: ast.BinaryBoolExpr) -> bool:
+    def visit_binary_bool_expr(self, node: ast.BinaryBoolExpr) -> bool:
         return {
             "&&": bool.__and__,
             "||": bool.__or__,
@@ -75,19 +143,21 @@ class ExprEvaluator(Visitor):
         )
 
     @override
-    def visit_ParenthesisBoolExpr(self, node: ast.ParenthesisBoolExpr) -> bool:
+    def visit_parenthesis_bool_expr(self, node: ast.ParenthesisBoolExpr) -> bool:
         return self.visit(node.expr)
 
     @override
-    def visit_ConditionalBoolExpr(self, node: ast.ConditionalBoolExpr) -> bool:
+    def visit_conditional_bool_expr(self, node: ast.ConditionalBoolExpr) -> bool:
         return (
             self.visit(node.then_expr)
             if self.visit(node.cond)
             else self.visit(node.else_expr)
         )
 
+    # Int Expr
+
     @override
-    def visit_LiteralIntExpr(self, node: ast.LiteralIntExpr) -> int:
+    def visit_literal_int_expr(self, node: ast.LiteralIntExpr) -> int:
         text = node.val.text
         if text.startswith("0b"):
             return int(text, 2)
@@ -98,11 +168,11 @@ class ExprEvaluator(Visitor):
         return int(text)
 
     @override
-    def visit_ParenthesisIntExpr(self, node: ast.ParenthesisIntExpr) -> int:
+    def visit_parenthesis_int_expr(self, node: ast.ParenthesisIntExpr) -> int:
         return self.visit(node.expr)
 
     @override
-    def visit_ConditionalIntExpr(self, node: ast.ConditionalIntExpr) -> int:
+    def visit_conditional_int_expr(self, node: ast.ConditionalIntExpr) -> int:
         return (
             self.visit(node.then_expr)
             if self.visit(node.cond)
@@ -110,7 +180,7 @@ class ExprEvaluator(Visitor):
         )
 
     @override
-    def visit_UnaryIntExpr(self, node: ast.UnaryIntExpr) -> int:
+    def visit_unary_int_expr(self, node: ast.UnaryIntExpr) -> int:
         return {
             "-": int.__neg__,
             "+": int.__pos__,
@@ -120,7 +190,7 @@ class ExprEvaluator(Visitor):
         )
 
     @override
-    def visit_BinaryIntExpr(self, node: ast.BinaryIntExpr) -> int:
+    def visit_binary_int_expr(self, node: ast.BinaryIntExpr) -> int:
         return {
             "+": int.__add__,
             "-": int.__sub__,
@@ -138,8 +208,67 @@ class ExprEvaluator(Visitor):
         )
 
     @override
-    def visit_LiteralStringExpr(self, node: ast.LiteralStringExpr) -> str:
-        return "".join(decode(val.text[1:-1], "unicode-escape") for val in node.vals)
+    def visit_binary_int_shift_expr(self, node: ast.BinaryIntShiftExpr) -> int:
+        return {
+            "<": int.__lshift__,
+            ">": int.__rshift__,
+        }[node.ch.text](
+            int(self.visit(node.left)),
+            int(self.visit(node.right)),
+        )
+
+    # Float Expr
+
+    @override
+    def visit_literal_float_expr(self, node: ast.LiteralFloatExpr) -> float:
+        return float(node.val.text)
+
+    @override
+    def visit_parenthesis_float_expr(self, node: ast.ParenthesisFloatExpr) -> float:
+        return self.visit(node.expr)
+
+    @override
+    def visit_conditional_float_expr(self, node: ast.ConditionalFloatExpr) -> Any:
+        return (
+            self.visit(node.then_expr)
+            if self.visit(node.cond)
+            else self.visit(node.else_expr)
+        )
+
+    @override
+    def visit_unary_float_expr(self, node: ast.UnaryFloatExpr) -> float:
+        return {
+            "-": float.__neg__,
+            "+": float.__pos__,
+        }[node.op.text](
+            float(self.visit(node.expr)),
+        )
+
+    @override
+    def visit_binary_float_expr(self, node: ast.BinaryFloatExpr) -> float:
+        return {
+            "+": float.__add__,
+            "-": float.__sub__,
+            "*": float.__mul__,
+            "/": float.__truediv__,
+        }[node.op.text](
+            float(self.visit(node.left)),
+            float(self.visit(node.right)),
+        )
+
+    # String Expr
+
+    @override
+    def visit_literal_string_expr(self, node: ast.LiteralStringExpr) -> str:
+        return node.val.text[1:-1].encode("utf-8").decode("unicode_escape")
+
+    @override
+    def visit_literal_doc_string_expr(self, node: ast.LiteralDocStringExpr) -> str:
+        return node.val.text[3:-3]
+
+    @override
+    def visit_binary_string_expr(self, node: ast.BinaryStringExpr) -> str:
+        return self.visit(node.left) + self.visit(node.right)
 
 
 class AstConverter(ExprEvaluator):
@@ -157,62 +286,49 @@ class AstConverter(ExprEvaluator):
 
     def loc(self, t: ast.any):
         # Remember, token.column is 0-based.
-        return SourceLocation(self.source, *t._beg, *t._end)
+        return SourceLocation(self.source, *t.beg, *t.end)
 
     # Attributes
 
     @override
-    def visit_EmptyAttrItem(self, node: ast.EmptyAttrItem) -> AttrItemDecl:
-        d = AttrItemDecl(self.loc(node.name), str(node.name))
-        return d
-
-    @override
-    def visit_SimpleAttrItem(self, node: ast.SimpleAttrItem) -> AttrItemDecl:
-        value = self.visit(node.val.expr)
-        d = AttrItemDecl(self.loc(node.name), str(node.name), value)
-        return d
-
-    @override
-    def visit_TupleAttrItem(self, node: ast.TupleAttrItem) -> AttrItemDecl:
-        value = tuple(self.visit(val.expr) for val in node.vals)
-        d = AttrItemDecl(self.loc(node.name), str(node.name), value)
-        return d
+    def visit_attr_val(self, node: ast.AttrVal) -> Any:
+        return self.visit(node.expr)
 
     # Type References
 
     @override
-    def visit_LongType(self, node: ast.LongType) -> LongTypeRefDecl:
-        loc = self.loc(node)
-        pkname = pkg2str(node.pkg_name)
-        symbol = str(node.decl_name)
-        return LongTypeRefDecl(loc, pkname, symbol)
+    def visit_long_type(self, node: ast.LongType) -> LongTypeRefDecl:
+        d = LongTypeRefDecl(self.loc(node), pkg2str(node.pkg_name), str(node.decl_name))
+        self.diag.for_each(node.forward_attrs, lambda a: d.add_attr(self.visit(a)))
+        return d
 
     @override
-    def visit_ShortType(self, node: ast.ShortType) -> ShortTypeRefDecl:
-        loc = self.loc(node)
-        symbol = str(node.decl_name)
-        return ShortTypeRefDecl(loc, symbol)
+    def visit_short_type(self, node: ast.ShortType) -> ShortTypeRefDecl:
+        d = ShortTypeRefDecl(self.loc(node), str(node.decl_name))
+        self.diag.for_each(node.forward_attrs, lambda a: d.add_attr(self.visit(a)))
+        return d
 
     @override
-    def visit_GenericType(self, node: ast.GenericType) -> GenericTypeRefDecl:
-        loc = self.loc(node)
-        symbol = str(node.decl_name)
-        args = [self.visit(arg) for arg in node.args]
-        return GenericTypeRefDecl(loc, symbol, args)
+    def visit_generic_type(self, node: ast.GenericType) -> GenericTypeRefDecl:
+        d = GenericTypeRefDecl(self.loc(node), str(node.decl_name))
+        self.diag.for_each(node.args, lambda a: d.add_arg_ty_ref(self.visit(a)))
+        self.diag.for_each(node.forward_attrs, lambda a: d.add_attr(self.visit(a)))
+        return d
 
     @override
-    def visit_CallbackType(self, node: ast.CallbackType) -> CallbackTypeRefDecl:
+    def visit_callback_type(self, node: ast.CallbackType) -> CallbackTypeRefDecl:
         if ty := node.return_ty:
             d = CallbackTypeRefDecl(self.loc(node), self.visit(ty))
         else:
             d = CallbackTypeRefDecl(self.loc(node))
         self.diag.for_each(node.parameters, lambda p: d.add_param(self.visit(p)))
+        self.diag.for_each(node.forward_attrs, lambda a: d.add_attr(self.visit(a)))
         return d
 
     # Uses
 
     @override
-    def visit_UsePackage(self, node: ast.UsePackage) -> Iterable[PackageImportDecl]:
+    def visit_use_package(self, node: ast.UsePackage) -> Iterable[PackageImportDecl]:
         p_ref = PackageRefDecl(self.loc(node.pkg_name), pkg2str(node.pkg_name))
         if node.pkg_alias:
             d = PackageImportDecl(
@@ -227,7 +343,7 @@ class AstConverter(ExprEvaluator):
         yield d
 
     @override
-    def visit_UseSymbol(self, node: ast.UseSymbol) -> Iterable[DeclarationImportDecl]:
+    def visit_use_symbol(self, node: ast.UseSymbol) -> Iterable[DeclarationImportDecl]:
         p_ref = PackageRefDecl(self.loc(node.pkg_name), pkg2str(node.pkg_name))
         for p in node.decl_alias_pairs:
             d_ref = DeclarationRefDecl(self.loc(p.decl_name), str(p.decl_name), p_ref)
@@ -246,87 +362,116 @@ class AstConverter(ExprEvaluator):
     # Declarations
 
     @override
-    def visit_StructProperty(self, node: ast.StructProperty) -> StructFieldDecl:
+    def visit_struct_property(self, node: ast.StructProperty) -> StructFieldDecl:
         d = StructFieldDecl(self.loc(node.name), str(node.name), self.visit(node.ty))
-        self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
+        self.diag.for_each(node.forward_attrs, lambda a: d.add_attr(self.visit(a)))
         return d
 
     @override
-    def visit_Struct(self, node: ast.Struct) -> StructDecl:
+    def visit_struct(self, node: ast.Struct) -> StructDecl:
         d = StructDecl(self.loc(node.name), str(node.name))
         self.diag.for_each(node.fields, lambda f: d.add_field(self.visit(f)))
-        self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
+        self.diag.for_each(node.forward_attrs, lambda a: d.add_attr(self.visit(a)))
+        self.diag.for_each(node.inner_attrs, lambda a: d.add_attr(self.visit(a)))
         return d
 
     @override
-    def visit_EnumProperty(self, node: ast.EnumProperty) -> EnumItemDecl:
-        d = EnumItemDecl(
-            self.loc(node.name),
-            str(node.name),
-            ty_ref=self.visit(node.ty) if node.ty else None,
-            value=self.visit(node.expr) if node.expr else None,
-        )
-        self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
+    def visit_enum_property(self, node: ast.EnumProperty) -> EnumItemDecl:
+        if node.val:
+            d = EnumItemDecl(self.loc(node.name), str(node.name), self.visit(node.val))
+        else:
+            d = EnumItemDecl(self.loc(node.name), str(node.name))
+        self.diag.for_each(node.forward_attrs, lambda a: d.add_attr(self.visit(a)))
         return d
 
     @override
-    def visit_Enum(self, node: ast.Enum) -> EnumDecl:
-        d = EnumDecl(self.loc(node.name), str(node.name))
-        self.diag.for_each(node.fields, lambda f: d.add_item(self.visit(f)))
-        self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
+    def visit_enum(self, node: ast.Enum) -> EnumDecl:
+        d = EnumDecl(self.loc(node.name), str(node.name), self.visit(node.enum_ty))
+        self.diag.for_each(node.fields, lambda a: d.add_item(self.visit(a)))
+        self.diag.for_each(node.forward_attrs, lambda a: d.add_attr(self.visit(a)))
         return d
 
     @override
-    def visit_Parameter(self, node: ast.Parameter) -> ParamDecl:
+    def visit_union_property(self, node: ast.UnionProperty) -> UnionFieldDecl:
+        if ty := node.ty:
+            d = UnionFieldDecl(self.loc(node.name), str(node.name), self.visit(ty))
+        else:
+            d = UnionFieldDecl(self.loc(node.name), str(node.name))
+        self.diag.for_each(node.forward_attrs, lambda a: d.add_attr(self.visit(a)))
+        return d
+
+    @override
+    def visit_union(self, node: ast.Union) -> UnionDecl:
+        d = UnionDecl(self.loc(node.name), str(node.name))
+        self.diag.for_each(node.fields, lambda f: d.add_field(self.visit(f)))
+        self.diag.for_each(node.forward_attrs, lambda a: d.add_attr(self.visit(a)))
+        self.diag.for_each(node.inner_attrs, lambda a: d.add_attr(self.visit(a)))
+        return d
+
+    @override
+    def visit_parameter(self, node: ast.Parameter) -> ParamDecl:
         d = ParamDecl(self.loc(node.name), str(node.name), self.visit(node.ty))
-        self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
+        self.diag.for_each(node.forward_attrs, lambda a: d.add_attr(self.visit(a)))
         return d
 
     @override
-    def visit_InterfaceFunction(self, node: ast.InterfaceFunction) -> IfaceMethodDecl:
+    def visit_interface_function(self, node: ast.InterfaceFunction) -> IfaceMethodDecl:
         if ty := node.return_ty:
             d = IfaceMethodDecl(self.loc(node.name), str(node.name), self.visit(ty))
         else:
             d = IfaceMethodDecl(self.loc(node.name), str(node.name))
         self.diag.for_each(node.parameters, lambda p: d.add_param(self.visit(p)))
-        self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
+        self.diag.for_each(node.forward_attrs, lambda a: d.add_attr(self.visit(a)))
         return d
 
     @override
-    def visit_InterfaceParent(self, node: ast.InterfaceParent) -> IfaceParentDecl:
+    def visit_interface_parent(self, node: ast.InterfaceParent) -> IfaceParentDecl:
         p = IfaceParentDecl(self.loc(node.ty), self.visit(node.ty))
         return p
 
     @override
-    def visit_Interface(self, node: ast.Interface) -> IfaceDecl:
+    def visit_interface(self, node: ast.Interface) -> IfaceDecl:
         d = IfaceDecl(self.loc(node.name), str(node.name))
         self.diag.for_each(node.fields, lambda f: d.add_method(self.visit(f)))
         self.diag.for_each(node.extends, lambda i: d.add_parent(self.visit(i)))
-        self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
+        self.diag.for_each(node.forward_attrs, lambda a: d.add_attr(self.visit(a)))
+        self.diag.for_each(node.inner_attrs, lambda a: d.add_attr(self.visit(a)))
         return d
 
     @override
-    def visit_GlobalFunction(self, node: ast.GlobalFunction) -> GlobFuncDecl:
+    def visit_global_function(self, node: ast.GlobalFunction) -> GlobFuncDecl:
         if ty := node.return_ty:
             d = GlobFuncDecl(self.loc(node.name), str(node.name), self.visit(ty))
         else:
             d = GlobFuncDecl(self.loc(node.name), str(node.name))
         self.diag.for_each(node.parameters, lambda p: d.add_param(self.visit(p)))
-        self.diag.for_each(node.attrs, lambda a: d.add_attr(self.visit(a)))
+        self.diag.for_each(node.forward_attrs, lambda a: d.add_attr(self.visit(a)))
+        return d
+
+    @override
+    def visit_decl_attr(self, node: ast.DeclAttr) -> AttrItemDecl:
+        value = tuple(self.visit(val) for val in node.vals)
+        d = AttrItemDecl(self.loc(node.name), str(node.name), value)
+        return d
+
+    @override
+    def visit_scope_attr(self, node: ast.ScopeAttr) -> AttrItemDecl:
+        value = tuple(self.visit(val) for val in node.vals)
+        d = AttrItemDecl(self.loc(node.name), str(node.name), value)
         return d
 
     # Package
 
     @override
-    def visit_Spec(self, node: ast.Spec) -> PackageDecl:
+    def visit_spec(self, node: ast.Spec) -> PackageDecl:
         pkg = PackageDecl(self.source.pkg_name, SourceLocation(self.source))
         for u in node.uses:
             self.diag.for_each(self.visit(u), pkg.add_import)
         self.diag.for_each(node.fields, lambda n: pkg.add_declaration(self.visit(n)))
-        self.diag.for_each(node.attrs, lambda a: pkg.add_attr(self.visit(a)))
+        self.diag.for_each(node.inner_attrs, lambda a: pkg.add_attr(self.visit(a)))
         return pkg
 
     def convert(self) -> PackageDecl:
         """Converts the whole source code buffer to a package."""
-        ast = generate_ast(self.source, self.diag)
-        return self.visit_Spec(ast)
+        ast_nodes = generate_ast(self.source, self.diag)
+        return self.visit_spec(ast_nodes)

@@ -1,13 +1,28 @@
 #pragma once
 
-#include <tuple>
-#include <type_traits>
-#include <utility>
-#include <variant>
-
 #include <taihe/common.h>
 
-namespace taihe::core {
+#include <type_traits>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+
+#ifdef __cplusplus
+#ifdef __EXCEPTIONS
+#define TH_THROW(error_type, message) throw error_type(message)
+#else
+#define TH_THROW(error_type, message)                                \
+  do {                                                               \
+    fprintf(stderr,                                                  \
+            "%s: %s, \nfunction: %s, "                               \
+            "file: %s, line %d.\n",                                  \
+            #error_type, message, __FUNCTION__, __FILE__, __LINE__); \
+    abort();                                                         \
+  } while (0)
+#endif
+#endif
+
+namespace taihe {
 template<typename cpp_t, typename = void>
 struct as_abi;
 
@@ -22,51 +37,52 @@ using as_param_t = typename as_param<cpp_owner_t>::type;
 
 template<typename cpp_t>
 struct as_abi<cpp_t, std::enable_if_t<std::is_arithmetic_v<cpp_t>>> {
-    using type = cpp_t;
+  using type = cpp_t;
 };
 
 template<typename cpp_owner_t>
-struct as_param<cpp_owner_t, std::enable_if_t<std::is_arithmetic_v<cpp_owner_t>>> {
-    using type = cpp_owner_t;
+struct as_param<cpp_owner_t,
+                std::enable_if_t<std::is_arithmetic_v<cpp_owner_t>>> {
+  using type = cpp_owner_t;
 };
 
 template<>
 struct as_abi<void> {
-    using type = void;
+  using type = void;
 };
 
 template<typename cpp_t, std::enable_if_t<!std::is_reference_v<cpp_t>, int> = 0>
-inline as_abi_t<cpp_t> into_abi(cpp_t&& cpp_val) {
-    as_abi_t<cpp_t> abi_val;
-    new (&abi_val) cpp_t(std::move(cpp_val));
-    return abi_val;
+inline as_abi_t<cpp_t> into_abi(cpp_t &&cpp_val) {
+  as_abi_t<cpp_t> abi_val;
+  new (&abi_val) cpp_t(std::move(cpp_val));
+  return abi_val;
 }
 
 template<typename cpp_t, std::enable_if_t<!std::is_reference_v<cpp_t>, int> = 0>
-inline as_abi_t<cpp_t> into_abi(cpp_t& cpp_val) {
-    as_abi_t<cpp_t> abi_val;
-    new (&abi_val) cpp_t(std::move(cpp_val));
-    return abi_val;
+inline as_abi_t<cpp_t> into_abi(cpp_t &cpp_val) {
+  as_abi_t<cpp_t> abi_val;
+  new (&abi_val) cpp_t(std::move(cpp_val));
+  return abi_val;
 }
 
 template<typename cpp_t, std::enable_if_t<!std::is_reference_v<cpp_t>, int> = 0>
-inline cpp_t&& from_abi(as_abi_t<cpp_t>& abi_val) {
-    return reinterpret_cast<cpp_t&&>(abi_val);
+inline cpp_t &&from_abi(as_abi_t<cpp_t> &abi_val) {
+  return reinterpret_cast<cpp_t &&>(abi_val);
 }
 
 template<typename cpp_t, std::enable_if_t<!std::is_reference_v<cpp_t>, int> = 0>
-inline cpp_t&& from_abi(as_abi_t<cpp_t>&& abi_val) {
-    return reinterpret_cast<cpp_t&&>(abi_val);
+inline cpp_t &&from_abi(as_abi_t<cpp_t> &&abi_val) {
+  return reinterpret_cast<cpp_t &&>(abi_val);
 }
 
 template<typename cpp_t, std::enable_if_t<std::is_reference_v<cpp_t>, int> = 0>
 inline as_abi_t<cpp_t> into_abi(cpp_t cpp_val) {
-    return reinterpret_cast<as_abi_t<cpp_t>>(&cpp_val);
+  return reinterpret_cast<as_abi_t<cpp_t>>(&cpp_val);
 }
 
 template<typename cpp_t, std::enable_if_t<std::is_reference_v<cpp_t>, int> = 0>
 inline cpp_t from_abi(as_abi_t<cpp_t> abi_val) {
-    return reinterpret_cast<cpp_t>(*abi_val);
+  return reinterpret_cast<cpp_t>(*abi_val);
 }
 
 ///////////////
@@ -83,27 +99,41 @@ constexpr static_tag_t<tag> static_tag = {};
 // hash and comparison //
 /////////////////////////
 
+// These functions are used for taihe::map and taihe::set
+
 struct adl_helper_t {};
 
 template<typename T>
-inline std::size_t hash(T&& val) {
-    adl_helper_t adl_helper;
-    return hash_impl(adl_helper, std::forward<T>(val));
+inline std::size_t hash(T &&val) {
+  adl_helper_t adl_helper;
+  return hash_impl(adl_helper, std::forward<T>(val));
 }
 
 template<typename L, typename R>
-inline bool same(L&& lhs, R&& rhs) {
-    adl_helper_t adl_helper;
-    return same_impl(adl_helper, std::forward<L>(lhs), std::forward<R>(rhs));
+inline bool same(L &&lhs, R &&rhs) {
+  adl_helper_t adl_helper;
+  return same_impl(adl_helper, std::forward<L>(lhs), std::forward<R>(rhs));
 }
 
-template<typename T, typename std::enable_if_t<std::is_arithmetic_v<T>, int> = 0>
-inline std::size_t hash_impl(adl_helper_t, T val) {
-    return std::hash<T>{}(val);
-}
-
-template<typename T, typename std::enable_if_t<std::is_arithmetic_v<T>, int> = 0>
+template<typename T, typename std::enable_if_t<std::is_integral_v<T>, int> = 0>
 inline bool same_impl(adl_helper_t, T lhs, T rhs) {
-    return lhs == rhs;
+  return lhs == rhs;
 }
+
+template<typename T, typename std::enable_if_t<std::is_integral_v<T>, int> = 0>
+inline std::size_t hash_impl(adl_helper_t, T val) {
+  return val;
 }
+
+template<typename T,
+         typename std::enable_if_t<std::is_floating_point_v<T>, int> = 0>
+inline bool same_impl(adl_helper_t, T lhs, T rhs) {
+  return std::hash<T>{}(lhs) == std::hash<T>{}(rhs);
+}
+
+template<typename T,
+         typename std::enable_if_t<std::is_floating_point_v<T>, int> = 0>
+inline std::size_t hash_impl(adl_helper_t, T val) {
+  return std::hash<T>{}(val);
+}
+}  // namespace taihe

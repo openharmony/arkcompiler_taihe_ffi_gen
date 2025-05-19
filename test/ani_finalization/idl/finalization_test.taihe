@@ -1,0 +1,5 @@
+interface Foo {
+    addCallback(callback: () => void): void;
+}
+
+function makeFoo(): Foo;

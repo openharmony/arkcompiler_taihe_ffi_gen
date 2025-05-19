@@ -1,0 +1,36 @@
+interface BaseContext {
+    @set setName(name: String): void;
+    @get getName(): String;
+    getType(ctxType: String): String;
+}
+
+function makeBaseContext(): BaseContext;
+
+interface Context: BaseContext {
+    @set setStageMode(stageMode: bool): void;
+    @get getStageMode(): bool;
+    @!sts_inject_into_interface("""getApplicationContext():ApplicationContext | undefined {};""")
+    @!sts_inject_into_class("""private applicationContext?: ApplicationContext;
+getApplicationContext():ApplicationContext | undefined {
+    return this.applicationContext as ApplicationContext | undefined;
+}""")
+}
+
+function makeContext(): Context;
+
+interface TestContext: BaseContext {
+    @!sts_inject_into_interface("""getTestContext():ApplicationContext | undefined {};""")
+    @!sts_inject_into_class("""private testContext?: ApplicationContext;
+getTestContext():ApplicationContext | undefined {
+    return this.testContext as ApplicationContext | undefined;
+}""")
+}
+
+function makeTestContext(): TestContext;
+
+interface ApplicationContext: Context {
+    @gen_async("setSupportedProcessCache")
+    setSupportedProcessCacheSync(isSupported : bool) :void;
+}
+
+function makeApplicationContext(): ApplicationContext;

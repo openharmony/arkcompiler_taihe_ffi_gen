@@ -1,0 +1,132 @@
+// Use Packages
+
+use example.bar as bar;  // OK
+
+use example.nonexist as nonexist;  // PackageNotExistError
+
+use example.foo as foobar;
+use example.bar as foobar;  // DeclConflictError
+
+// Use Symbols
+
+from example.nonexist use XXX, YYY;  // PackageNotExistError
+
+from example.bar use Bar;  // OK
+
+from example.foo use func as my_func;  // NotATypeError
+
+from example.foo use Nonexist as MyNonexist;  // DeclNotExistError
+
+from example.bar use Bar as Foobar;
+from example.foo use Foo as Foobar;  // DeclConflictError
+
+// Enums
+
+enum BadEnum: i32 {
+    A = 1,
+    B = "123",
+    C = 1.0,
+    D,
+}
+
+enum SEnum: String {
+    A,
+    B = "b",
+    C,
+}
+
+enum IEnum: i32 {
+    A,
+    B = 123,
+    C,
+}
+
+// Structs
+
+struct ResolveTypesTester {
+    a: unimported.Type;  // PackageNotInScopeError
+    b: Bar.Type;  // PackageNotInScopeError
+    c: nonexist.Baz;  // Nothing should be reported here
+    d: bar.Bar;  // OK
+    e: bar.func;  // NotATypeError
+    f: bar.Foo;  // DeclNotExistError
+
+    u: GoodStruct;  // OK
+    v: good_func;  // NotATypeError
+    w: Unimported;  // DeclNotInScopeError
+    x: bar;  // DeclNotInScopeError
+    y: MyNonexist;  // Nothing should be reported here
+    z: Bar;  // OK
+}
+
+struct Foobar {}  // DeclConflictError
+
+struct BadStruct {}
+
+struct BadStruct {  // DeclConflictError
+    a: i32;
+    a: i32;  // DeclConflictError
+    c: MyNonexist;  // Nothing should be reported here
+}
+
+struct GoodStruct {
+    n: i32;
+}
+
+// Unions
+
+union BadUnion {
+    A: i32;
+    A: u32;  // DeclConflictError
+}
+
+union GoodUnion {
+    A: i32;
+    C: f32;
+    B: u32;
+    D;
+}
+
+// Functions
+
+function foobar(): void;  // DeclConflictError
+
+function inner(): void;  // SymbolConflictWithNamespaceError
+
+function bad_func(a: i32, a: i32): void;  // DeclConflictError
+
+function good_func(a: i32, b: @record Map<TestIface, TestIface>): String;  // OK
+
+// Interfaces
+
+interface TestIface {}
+
+interface BadIface
+    : i32  // ExtensTypeError
+    , TestIface
+    , TestIface  // DuplicateExtendsWarn
+    , MyNonexist  // Nothing should be reported here
+{
+    a(x: String): void;
+    a(x: i32): void;  // DeclConflictError
+    b(x: i32, x: Array<i32>): void;  // DeclConflictError
+}
+
+// Cycle Detection
+
+interface RecursiveIfaceA: RecursiveIfaceB {}
+
+interface RecursiveIfaceB: RecursiveIfaceA {}  // RecursiveExtension
+
+struct RecursiveStruct {
+    e: RecursiveUnion;
+}
+
+union RecursiveUnion {
+    s: RecursiveStruct;
+}
+
+@test
+@test("abc", 123, 1.0, true)
+@code("""code = "my_code";""")
+function f(): @arg_attr(123) @no_arg_attr (@param_attr x: @inner_attr i32) => void;

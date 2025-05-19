@@ -1,0 +1,107 @@
+import {BusinessError} from "@ohos.base";
+import * as bigint_new from "bigint_new";
+import * as bigint_test from "bigint_test";
+
+loadLibrary("ani_bigint");
+
+function main() {
+    console.info("bigint_test run start...");
+    const suite = new ArkTestsuite("bigint_test ut")
+    suite.addTest("testBigint01", testBigint01);
+    suite.addTest("testBigint02", testBigint02);
+    suite.addTest("testBigint03", testBigint03);
+    suite.addTest("testBigint04", testBigint04);
+    suite.addTest("testBigint05", testBigint05);
+    suite.addTest("testBigint06", testBigint06);
+
+    suite.addTest("testProcessBigInt_1", testProcessBigInt_1);
+    suite.addTest("testProcessBigInt_2", testProcessBigInt_2);
+    suite.addTest("testProcessBigInt_3", testProcessBigInt_3);
+    suite.addTest("testProcessBigInt_4", testProcessBigInt_4);
+    suite.addTest("testProcessBigInt_5", testProcessBigInt_5);
+    suite.addTest("testProcessBigInt_6", testProcessBigInt_6);
+
+
+    exit(suite.run());
+    console.info("bigint_test run end...");
+}
+
+function testProcessBigInt_1() {
+    let arg: bigint = (1n << 63n) - 1n;
+    let res: bigint = bigint_new.processBigInt(arg);
+    assertEQ(res, arg << 64n);
+}
+
+function testProcessBigInt_2() {
+    let arg: bigint = 1n << 63n;
+    let res: bigint = bigint_new.processBigInt(arg);
+    assertEQ(res, arg << 64n);
+}
+
+function testProcessBigInt_3() {
+    let arg: bigint = (1n << 64n) - 1n;
+    let res: bigint = bigint_new.processBigInt(arg);
+    assertEQ(res, arg << 64n);
+}
+
+function testProcessBigInt_4() {
+    let arg: bigint = 1n << 64n;
+    let res: bigint = bigint_new.processBigInt(arg);
+    assertEQ(res, arg << 64n);
+}
+
+function testProcessBigInt_5() {
+    let arg: bigint = -1n << 63n;
+    let res: bigint = bigint_new.processBigInt(arg);
+    assertEQ(res, arg << 64n);
+}
+
+function testProcessBigInt_6() {
+    let arg: bigint = -1n << 64n;
+    let res: bigint = bigint_new.processBigInt(arg);
+    assertEQ(res, arg << 64n);
+}
+
+// test function Bigint01(a : number, b : BigInt) : boolean
+function testBigint01() {
+    let a: number = 666666;
+    let b: bigint = 77777777777777777777777777n;
+    let result: boolean = bigint_test.Bigint01(a, b);
+    assertEQ(result, true);
+}
+
+// test function Bigint02(a: number) : number
+function testBigint02() {
+    let a: number = 77777777777;
+    let result: number = bigint_test.Bigint02(a);
+    assertEQ(result, a);
+}
+
+// test function Bigint03(a : BigInt) : BigInt
+function testBigint03() {
+    let a: bigint = 8888888888888888888888888888n;
+    let result: bigint = bigint_test.Bigint03(a);
+    assertEQ(result, a);
+}
+
+// test function Bigint04(a : BigInt) : void
+function testBigint04() {
+    let a: bigint = 8888888888888888888888888888n;
+    bigint_test.Bigint04(a);
+}
+
+// test function Bigint05(a : number, b : BigInt) : BigInt
+function testBigint05() {
+    let a: number = 1;
+    let b: bigint = 8888888888888888888888888888n;
+    let result: bigint = bigint_test.Bigint05(a, b);
+    assertEQ(result, b);
+}
+
+// test function Bigint06(a : number, b : BigInt) : number
+function testBigint06() {
+    let a: number = 1;
+    let b: bigint = 8888888888888888888888888888n;
+    let result: number = bigint_test.Bigint06(a, b);
+    assertEQ(result, a);
+}

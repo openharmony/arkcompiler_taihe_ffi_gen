@@ -1,0 +1,8 @@
+interface Foo {
+    bar(): void;
+    @set("name") setName(name: String): void;
+    @get("name") getName(): String;
+}
+
+function getFooIface(): Foo;
+function printFooName(foo: Foo): String;
