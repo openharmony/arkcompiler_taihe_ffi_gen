@@ -1,5 +1,5 @@
-import * as test from "opaque_test";
 import {BusinessError} from "@ohos.base";
+import * as test from "opaque_test";
 
 loadLibrary("ani_opaque");
 

@@ -275,7 +275,7 @@ class PackageANIInfo(AbstractAnalysis[PackageDecl]):
                 return relative_name
         # name mangling
         import_name = "_" + "".join(c if c.isalnum() else "_" for c in self.module_name)
-        target.add_import(import_name, self.module_name)
+        target.add_import_module(self.module_name, import_name)
         relative_name = ".".join([import_name, *self.sts_ns_parts, sts_name])
         return relative_name
 

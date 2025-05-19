@@ -1,7 +1,7 @@
 """Format the IDL files."""
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from typing_extensions import override
 
@@ -124,7 +124,7 @@ class PrettyFormatter(DeclVisitor[str]):
         res = f"{d.name}: {self.get_type_ref_decl(d.ty_ref)}"
         return self.with_attr(d, res)
 
-    def get_value(self, obj: bool | str | float | int) -> str:
+    def get_value(self, obj: Any) -> str:
         if isinstance(obj, str):
             return '"' + obj.encode("unicode_escape").decode("utf-8") + '"'
         if isinstance(obj, bool):

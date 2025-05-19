@@ -1,5 +1,5 @@
-import * as lib from "callbackTest";
 import {BusinessError} from "@ohos.base";
+import * as lib from "callbackTest";
 
 loadLibrary("ani_callback");
 

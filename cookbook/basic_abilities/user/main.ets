@@ -1,5 +1,6 @@
-import * as basic_abilities from "basic_abilities";
 import {BusinessError} from "@ohos.base";
+import * as basic_abilities from "basic_abilities";
+
 loadLibrary("basic_abilities");
 function main() {
     let input_arr: int[] = [1, 2, 3, 4, 5];

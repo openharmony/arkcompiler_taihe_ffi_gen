@@ -1,5 +1,6 @@
-import * as binding from "binding";
 import {BusinessError} from "@ohos.base";
+import * as binding from "binding";
+
 loadLibrary("binding");
 function main() {
     let Color1: binding.Color = {R: 0, G: 255, B: 255};

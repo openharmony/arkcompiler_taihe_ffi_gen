@@ -1,5 +1,6 @@
-import * as lib from "session_test";
 import {BusinessError} from "@ohos.base";
+import * as lib from "session_test";
+
 loadLibrary("ani_session");
 
 function test_func_a(my_iface: lib.IfaceD) {

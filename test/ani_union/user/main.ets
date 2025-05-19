@@ -1,6 +1,6 @@
+import {BusinessError} from "@ohos.base";
 import * as UnionTest1 from "test_union";
 import * as UnionTest from "union_ani";
-import {BusinessError} from "@ohos.base";
 
 loadLibrary("ani_union");
 

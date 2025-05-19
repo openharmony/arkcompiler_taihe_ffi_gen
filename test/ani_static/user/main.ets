@@ -1,5 +1,6 @@
-import * as lib from "staticTest";
 import {BusinessError} from "@ohos.base";
+import * as lib from "staticTest";
+
 loadLibrary("ani_static");
 
 function test_sumSync() {

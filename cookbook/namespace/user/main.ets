@@ -1,6 +1,6 @@
+import {BusinessError} from "@ohos.base";
 import * as Module1 from "module1";
 import * as Module2 from "module2";
-import {BusinessError} from "@ohos.base";
 
 loadLibrary("namespace");
 

@@ -1,7 +1,7 @@
-import { AsyncCallback } from './@ohos.base';
-import type colorSpaceManager from './@ohos.graphics.colorSpaceManager';
-import type resourceManager from './@ohos.resourceManager';
-import type rpc from './@ohos.rpc';
+import { AsyncCallback } from '@ohos.base';
+import type colorSpaceManager from '@ohos.graphics.colorSpaceManager';
+import type resourceManager from '@ohos.resourceManager';
+import type rpc from '@ohos.rpc';
 declare namespace image {
     enum PixelMapFormat {
         UNKNOWN = 0,

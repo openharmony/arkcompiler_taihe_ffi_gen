@@ -1,5 +1,5 @@
-import * as async_test from "async";
 import {BusinessError} from "@ohos.base";
+import * as async_test from "async";
 
 loadLibrary("async");
 function main() {

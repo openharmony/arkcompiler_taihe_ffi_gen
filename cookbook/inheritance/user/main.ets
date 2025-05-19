@@ -1,6 +1,6 @@
+import {BusinessError} from "@ohos.base";
 import * as lib from "class_extends";
 import * as extends_inject from "extends_inject";
-import {BusinessError} from "@ohos.base";
 
 loadLibrary("inheritance");
 

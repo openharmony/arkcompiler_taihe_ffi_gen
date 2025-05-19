@@ -1,5 +1,6 @@
-import * as inherit from "inherit";
 import {BusinessError} from "@ohos.base";
+import * as inherit from "inherit";
+
 loadLibrary("inherit");
 
 function main() {

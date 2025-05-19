@@ -1,5 +1,6 @@
-import * as message from "message";
 import {BusinessError} from "@ohos.base";
+import * as message from "message";
+
 loadLibrary("enum_union");
 function main() {
     // 创建文本信息

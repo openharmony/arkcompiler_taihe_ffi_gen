@@ -1,6 +1,6 @@
+import {BusinessError} from "@ohos.base";
 import * as test_overload from "overload";
 import * as OverloadTest from "overload_test";
-import {BusinessError} from "@ohos.base";
 
 loadLibrary("ani_overload");
 

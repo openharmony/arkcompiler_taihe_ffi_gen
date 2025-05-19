@@ -66,9 +66,8 @@ class STSCodeGenerator:
             self.oc,
             f"{module}.ets",
         ) as target:
-            target.writelns(
-                f"import {{ AsyncCallback, BusinessError }} from '@ohos.base';",
-            )
+            target.add_import_type("@ohos.base", "AsyncCallback")
+            target.add_import_type("@ohos.base", "BusinessError")
             self.gen_module_injected_codes(ns, target)
             self.gen_namespace(ns, target)
 

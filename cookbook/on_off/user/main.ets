@@ -1,5 +1,5 @@
-import * as OnOff from "on_off";
 import {BusinessError} from "@ohos.base";
+import * as OnOff from "on_off";
 
 loadLibrary("on_off");
 

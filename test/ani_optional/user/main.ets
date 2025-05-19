@@ -1,6 +1,6 @@
+import {BusinessError} from "@ohos.base";
 import * as OptTest from "opt";
 import * as optionalTest from "optional";
-import {BusinessError} from "@ohos.base";
 
 loadLibrary("ani_optional");
 

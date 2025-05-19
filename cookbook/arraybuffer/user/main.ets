@@ -1,5 +1,5 @@
-import * as arraybuffer from "arraybuffer";
 import {BusinessError} from "@ohos.base";
+import * as arraybuffer from "arraybuffer";
 
 loadLibrary("arraybuffer");
 function main() {

@@ -1,5 +1,5 @@
-import * as wrap_interface from "wrap_interface";
 import {BusinessError} from "@ohos.base";
+import * as wrap_interface from "wrap_interface";
 
 loadLibrary("unwrap_obj");
 

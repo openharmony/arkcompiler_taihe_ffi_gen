@@ -1,5 +1,5 @@
-import {ICalculator, makeCalculator, restartCalculator} from "interface";
 import {BusinessError} from "@ohos.base";
+import {ICalculator, makeCalculator, restartCalculator} from "interface";
 
 loadLibrary("interface");
 function main() {

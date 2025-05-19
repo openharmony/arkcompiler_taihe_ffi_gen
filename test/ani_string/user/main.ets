@@ -1,6 +1,6 @@
+import {BusinessError} from "@ohos.base";
 import * as StringIo from "string_io";
 import * as StringOp from "string_op";
-import {BusinessError} from "@ohos.base";
 
 loadLibrary("ani_string");
 

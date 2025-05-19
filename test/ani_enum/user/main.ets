@@ -1,5 +1,5 @@
-import * as EnumTest from "enum_test";
 import {BusinessError} from "@ohos.base";
+import * as EnumTest from "enum_test";
 
 loadLibrary("ani_enum");
 

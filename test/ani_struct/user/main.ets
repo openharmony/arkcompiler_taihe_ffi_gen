@@ -1,5 +1,5 @@
-import * as StructTest from "struct_test";
 import {BusinessError} from "@ohos.base";
+import * as StructTest from "struct_test";
 
 function main() {
     let a: StructTest.A = {

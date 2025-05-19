@@ -1,5 +1,5 @@
-import * as threadTest from "thread_test";
 import {BusinessError} from "@ohos.base";
+import * as threadTest from "thread_test";
 
 loadLibrary("ani_thread");
 

@@ -1,5 +1,5 @@
-import * as async_test from "async_test";
 import {BusinessError} from "@ohos.base";
+import * as async_test from "async_test";
 
 loadLibrary("ani_async");
 

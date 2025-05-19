@@ -1,5 +1,5 @@
-import * as on_off_test from "on_off";
 import {BusinessError} from "@ohos.base";
+import * as on_off_test from "on_off";
 
 loadLibrary("ani_on_off");
 

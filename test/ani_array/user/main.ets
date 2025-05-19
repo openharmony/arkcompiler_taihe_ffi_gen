@@ -1,5 +1,5 @@
-import * as ArrayTest from "array_test";
 import {BusinessError} from "@ohos.base";
+import * as ArrayTest from "array_test";
 
 loadLibrary("ani_array");
 

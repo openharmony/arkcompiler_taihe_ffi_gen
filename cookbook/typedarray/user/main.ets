@@ -1,5 +1,5 @@
-import * as typearr from "typedarray";
 import {BusinessError} from "@ohos.base";
+import * as typearr from "typedarray";
 
 loadLibrary("typedarray");
 

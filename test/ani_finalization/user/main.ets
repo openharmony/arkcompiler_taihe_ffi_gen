@@ -1,5 +1,5 @@
-import * as Test from "finalization_test";
 import {BusinessError} from "@ohos.base";
+import * as Test from "finalization_test";
 
 loadLibrary("ani_finalization");
 

@@ -6,7 +6,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Union
@@ -55,27 +55,20 @@ class BuildUtils:
         self,
         command: Sequence[Union[Path, str]],
         capture_output: bool = True,
-        env: Optional[dict[str, str]] = None,
+        env: Optional[Mapping[str, Union[Path, str]]] = None,
     ) -> None:
         """Run a command with environment variables."""
-        # Convert all command elements to strings
-        command_str = [str(c) for c in command]
+        command_str = " ".join(map(str, command))
 
-        # Format command for logging
-        if env:
-            env_str = " ".join(f"{key}={val}" for key, val in env.items()) + " "
-        else:
-            env_str = ""
-        log_cmd = (
-            f"+ {env_str}{' '.join(command_str)}"
-            if env_str
-            else f"+ {' '.join(command_str)}"
-        )
-        self.logger.debug(log_cmd)
+        env_str = ""
+        for key, val in (env or {}).items():
+            env_str += f"{key}={val} "
+
+        self.logger.debug("+ %s%s", env_str, command_str)
 
         try:
             subprocess.run(
-                command_str,
+                command,
                 check=True,
                 text=True,
                 env=env,
@@ -102,7 +95,7 @@ class BuildUtils:
     def move_directory(self, src: Path, dst: Path) -> None:
         if not src.exists():
             raise FileNotFoundError(f"Source directory does not exist: {src}")
-        shutil.move(str(src), str(dst))
+        shutil.move(src, dst)
         self.logger.debug("Moved directory from %s to %s", src, dst)
 
     def copy_directory(self, src: Path, dst: Path) -> None:
@@ -124,7 +117,7 @@ class BuildUtils:
 
         temp_file = target_file.with_suffix(".tmp")
 
-        command = ["curl", "-L", "--progress-bar", url, "-o", str(temp_file)]
+        command = ["curl", "-L", "--progress-bar", url, "-o", temp_file]
 
         if user_info:
             command.extend(["-u", f"{user_info.username}:{user_info.password}"])
@@ -211,25 +204,23 @@ class BuildSystem(BuildUtils):
         target_dir: str,
         config: BuildConfig,
         verbosity: int,
-        gen_ani: bool,
+        gen_ani: bool = False,
         sts_keep_name: bool = False,
         opt_level: str = "0",
     ):
         super().__init__(verbosity)
+        self.config = config
         self.should_run_pretty_print = verbosity <= logging.DEBUG
         self.codegen_debug_level = _map_output_debug_level(verbosity)
 
         self.gen_ani = gen_ani
         self.sts_keep_name = sts_keep_name
 
-        self.config = config
-
         # Build paths
         self.target_path = Path(target_dir).resolve()
 
         self.idl_dir = self.target_path / "idl"
         self.build_dir = self.target_path / "build"
-        self.system_dir = self.target_path / "system"
 
         self.generated_dir = self.target_path / "author_generated"
         self.generated_include_dir = self.generated_dir / "include"
@@ -255,14 +246,13 @@ class BuildSystem(BuildUtils):
         self.build_author_src_dir = self.build_dir / "author" / "src"
         self.build_runtime_src_dir = self.build_dir / "runtime" / "src"
         self.build_generated_dir = self.build_dir / "author_generated"
-        self.build_system_dir = self.build_dir / "system"
         self.build_user_dir = self.build_dir / "user"
 
         # Output files
         self.so_target = self.build_dir / f"lib{self.target_path.name}.so"
         self.abc_target = self.build_dir / "main.abc"
         self.exe_target = self.build_dir / "main"
-        self.arktsconfig_target = self.build_dir / "arktsconfig.json"
+        self.arktsconfig_file = self.build_dir / "arktsconfig.json"
 
         # Build options
         self.opt_level = opt_level.strip()  # Ensure no whitespace
@@ -309,7 +299,7 @@ class BuildSystem(BuildUtils):
         self.create_directory(self.user_dir)
         with open(self.user_dir / "main.ets", "w") as f:
             f.write(
-                'import * as hello from "@generated/hello";\n'
+                'import * as hello from "hello";\n'
                 f'loadLibrary("{self.lib_name}");\n'
                 "\n"
                 "function main() {\n"
@@ -461,25 +451,19 @@ class BuildSystem(BuildUtils):
         # Compile ETS files in each directory
         generated_abc = self.compile_abc(
             self.build_generated_dir,
-            self.generated_dir,
-            self.arktsconfig_target,
+            self.generated_dir.glob("*.ets"),
+            self.arktsconfig_file,
             panda_home=self.config.panda_home_dir,
         )
         user_abc = self.compile_abc(
             self.build_user_dir,
-            self.user_dir,
-            self.arktsconfig_target,
-            panda_home=self.config.panda_home_dir,
-        )
-        system_abc = self.compile_abc(
-            self.build_system_dir,
-            self.system_dir,
-            self.arktsconfig_target,
+            self.user_dir.glob("*.ets"),
+            self.arktsconfig_file,
             panda_home=self.config.panda_home_dir,
         )
 
         # Link all ABC files
-        if all_abc_files := generated_abc + user_abc + system_abc:
+        if all_abc_files := generated_abc + user_abc:
             self.link_abc(
                 self.abc_target,
                 all_abc_files,
@@ -538,7 +522,6 @@ class BuildSystem(BuildUtils):
         self.create_directory(self.build_generated_src_dir)
         self.create_directory(self.build_author_src_dir)
         self.create_directory(self.build_generated_dir)
-        self.create_directory(self.build_system_dir)
         self.create_directory(self.build_user_dir)
 
     def prepare_panda_vm(self):
@@ -580,25 +563,26 @@ class BuildSystem(BuildUtils):
 
     def create_arktsconfig(self) -> None:
         """Create ArkTS configuration file."""
+        paths = {
+            "std": self.config.panda_home_dir / "../ets/stdlib/std",
+            "escompat": self.config.panda_home_dir / "../ets/stdlib/escompat",
+        }
+        for path in self.generated_dir.glob("*.ets"):
+            paths[path.stem] = path
+        for path in self.user_dir.glob("*.ets"):
+            paths[path.stem] = path
+
         config_content = {
             "compilerOptions": {
                 "baseUrl": str(self.config.panda_home_dir),
-                "paths": {
-                    "std": [str(self.config.panda_home_dir / "../ets/stdlib/std")],
-                    "escompat": [
-                        str(self.config.panda_home_dir / "../ets/stdlib/escompat")
-                    ],
-                    "@ohos.base": [str(self.generated_dir / "@ohos.base.ets")],
-                    "@generated": [str(self.generated_dir)],
-                    "@system": [str(self.system_dir)],
-                },
+                "paths": {key: [str(value)] for key, value in paths.items()},
             }
         }
 
-        with open(self.arktsconfig_target, "w") as json_file:
+        with open(self.arktsconfig_file, "w") as json_file:
             json.dump(config_content, json_file, indent=2)
 
-        self.logger.debug("Created configuration file at: %s", self.arktsconfig_target)
+        self.logger.debug("Created configuration file at: %s", self.arktsconfig_file)
 
     def compile(
         self,
@@ -679,27 +663,21 @@ class BuildSystem(BuildUtils):
             [
                 target,
             ],
-            env={"LD_LIBRARY_PATH": str(ld_lib_path)},
+            env={"LD_LIBRARY_PATH": ld_lib_path},
             capture_output=False,
         )
 
     def compile_abc(
         self,
         output_dir: Path,
-        input_dir: Path,
-        config_file_path: Path,
+        input_files: Iterable[Path],
+        arktsconfig_file: Path,
         panda_home: Path,
     ) -> list[Path]:
         """Compile ETS files to ABC format."""
         output_files: list[Path] = []
 
-        if not input_dir.exists() or not input_dir.is_dir():
-            self.logger.warning(
-                "Input directory does not exist or is not a directory: %s", input_dir
-            )
-            return output_files
-
-        for input_file in input_dir.glob("*.ets"):
+        for input_file in input_files:
             name = input_file.name
             output_file = output_dir / f"{name}.abc"
             output_dump = output_dir / f"{name}.abc.dump"
@@ -717,7 +695,7 @@ class BuildSystem(BuildUtils):
                     "--extension",
                     "ets",
                     "--arktsconfig",
-                    config_file_path,
+                    arktsconfig_file,
                 ]
             )
 
@@ -789,7 +767,7 @@ class BuildSystem(BuildUtils):
                 abc_target,
                 entry,
             ],
-            env={"LD_LIBRARY_PATH": str(ld_lib_path)},
+            env={"LD_LIBRARY_PATH": ld_lib_path},
             capture_output=False,
         )
 
@@ -804,8 +782,9 @@ class RepositoryUpgrader(BuildUtils):
         verbosity: int = logging.INFO,
     ):
         super().__init__(verbosity)
-        self.repo_url = repo_url
         self.config = config
+
+        self.repo_url = repo_url
 
     def fetch_and_upgrade(self):
         filename = self.repo_url.split("/")[-1]

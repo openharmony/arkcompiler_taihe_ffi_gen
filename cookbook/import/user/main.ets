@@ -1,6 +1,6 @@
+import {BusinessError} from "@ohos.base";
 import * as notification from "notification";
 import * as user from "user";
-import {BusinessError} from "@ohos.base";
 
 loadLibrary("import");
 

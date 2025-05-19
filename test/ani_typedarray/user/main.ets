@@ -1,5 +1,5 @@
-import * as bar from "bar";
 import {BusinessError} from "@ohos.base";
+import * as bar from "bar";
 
 loadLibrary("ani_typedarray");
 
