@@ -16,7 +16,7 @@ function PrintBook(b: Book);
 - `taihec` 生成文件，供 API 作者填写 C++ 逻辑。
 - API 作者可以使用类 STL 写法，舒适地访问 Taihe 定义的数据类型。
 
-**File: author_generated/temp/ohos.book.store.impl.cpp**
+**File: generated/temp/ohos.book.store.impl.cpp**
 ```C++
 Book ConstructBook(string_view title, int32_t year, Category kind) {
   // 使用 Modern C++ 初始化结构体。
@@ -34,9 +34,9 @@ void PrintBook(Book const& b) {
 
 - `taihec` 生成对应的 ArkTS 文件，自动将 C++ 代码投影到 ArkTS。
 
-**Command: taihec idl/ohos.book.store.taihe -O author_generated --author --user --ani**
+**Command: taihec idl/ohos.book.store.taihe -O generated --author --user --ani**
 
-**File (Generated): author_generated/ohos.book.store.ets**
+**File (Generated): generated/ohos.book.store.ets**
 ```typescript
 export function ConstructBook(title: string, year: int, kind: Category): Book { ... }
 export function PrintBook(b: Book): void { ... }
@@ -132,7 +132,7 @@ function PrintBooksWithFilter(all_books: Array<Book>, filter: Optional<(b: Book)
 ```
 
 - 对应的 ArkTS 投影如下：
-**File (Generated): author_generated/ohos.book.store.ets**
+**File (Generated): generated/ohos.book.store.ets**
 ```typescript
 // Taihe 使用联合体，支持传入多种类型
 export type MapOption = Book | (Book[]);
@@ -445,7 +445,7 @@ function PrintBookAdvanced(book: CppOrRustBook);
 ```
 
 - 对应的 ArkTS 投影如下：
-**File (Generated): author_generated/ohos.book.store.ets**
+**File (Generated): generated/ohos.book.store.ets**
 ```typescript
 export class RustBook implements Book {
     title: string;
@@ -570,7 +570,7 @@ interface HasPublisher { @get getPublisher(): String; }
 
 - 对应的 ArkTS 投影如下：
 
-**File (Generated): author_generated/ohos.book.store.ets**
+**File (Generated): generated/ohos.book.store.ets**
 ```typescript
 export interface HasPrice {
     get price(): double;
@@ -646,7 +646,7 @@ function SaveBookToFile(p: Path);
 
 对应的 ArkTS 投影如下：
 
-**File (Generated): author_generated/example.ets**
+**File (Generated): generated/example.ets**
 ```typescript
 export function SaveBook(url: string): void {
     return SaveBookToInternet_inner(url);
@@ -666,7 +666,7 @@ export function SaveBook(p: Path): void {
 function uploadBook(b: Book): String;
 ```
 
-**File (Generated): author_generated/example.ets**
+**File (Generated): generated/example.ets**
 ```typescript
 export function uploadBook(b: Book): string {
     return uploadBook_inner(b);
@@ -703,7 +703,7 @@ export function uploadBook(b: Book, callback: (err: Error, data?: string) => voi
 
 对应的 ArkTS 投影如下：
 
-**File (Generated): author_generated/example.ets**
+**File (Generated): generated/example.ets**
 ```typescript
 native function onBookSold_inner(): void;
 native function onNewBook_inner(): void;
@@ -734,7 +734,7 @@ interface Foo {
 }
 ```
 
-**File (Generated): author_generated/example.ets**
+**File (Generated): generated/example.ets**
 ```typescript
 // Inside the main source file
 export interface Foo {
@@ -761,7 +761,7 @@ function get_objects(): Array<Opaque>;
 
 - 对应的 ArkTS 投影如下：
 
-**File (Generated): author_generated/ohos.book.store.ets**
+**File (Generated): generated/ohos.book.store.ets**
 ```typescript
 export function is_string(s: NullishType): boolean { ... }
 export function get_objects(): (NullishType[]) { ... }

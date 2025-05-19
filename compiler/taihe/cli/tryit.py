@@ -227,7 +227,7 @@ class BuildSystem(BuildUtils):
         self.idl_dir = self.target_path / "idl"
         self.build_dir = self.target_path / "build"
 
-        self.generated_dir = self.target_path / "author_generated"
+        self.generated_dir = self.target_path / "generated"
         self.generated_include_dir = self.generated_dir / "include"
         self.generated_src_dir = self.generated_dir / "src"
 
@@ -247,10 +247,10 @@ class BuildSystem(BuildUtils):
         self.user_includes = [*self.generated_includes, self.user_include_dir]
 
         # Build sub-directories
-        self.build_generated_src_dir = self.build_dir / "author_generated" / "src"
+        self.build_generated_src_dir = self.build_dir / "generated" / "src"
         self.build_author_src_dir = self.build_dir / "author" / "src"
         self.build_runtime_src_dir = self.build_dir / "runtime" / "src"
-        self.build_generated_dir = self.build_dir / "author_generated"
+        self.build_generated_dir = self.build_dir / "generated"
         self.build_user_dir = self.build_dir / "user"
 
         # Output files

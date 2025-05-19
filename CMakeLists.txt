@@ -316,7 +316,7 @@ function(compile_dylib target_name target_path user_cpp_files build_demo_dir)
   set_target_properties(${target_name} PROPERTIES LINKER_LANGUAGE CXX)
   target_link_libraries(${target_name} PRIVATE th_runtime)
   target_link_options(${target_name} PRIVATE "-Wl,--no-undefined")
-  target_include_directories(${target_name} PUBLIC "${build_demo_dir}/author_generated/include/" TH_RUNTIME_INCLUDE_DIR)
+  target_include_directories(${target_name} PUBLIC "${build_demo_dir}/generated/include/" TH_RUNTIME_INCLUDE_DIR)
 endfunction()
 
 
@@ -447,7 +447,7 @@ update_grammar()
 function(add_ani_demo this_target_name idl_files gen_ets_files user_ets_files user_cpp_files run_dir)
   set(DEMO_DIR "${CMAKE_SOURCE_DIR}/${run_dir}/${this_target_name}")
   set(BUILD_DEMO_DIR "${CMAKE_BINARY_DIR}/${run_dir}/${this_target_name}")
-  set(GEN_DIR "${BUILD_DEMO_DIR}/author_generated")
+  set(GEN_DIR "${BUILD_DEMO_DIR}/generated")
   set(GEN_ETS_PATHS "")
   foreach(ETS_FILE ${gen_ets_files})
     set(FULL_PATH "${GEN_DIR}/${ETS_FILE}")
@@ -461,7 +461,7 @@ function(add_ani_demo this_target_name idl_files gen_ets_files user_ets_files us
   # 动态库编译
   compile_dylib(${this_target_name} ${DEMO_DIR} "${user_cpp_files}" ${BUILD_DEMO_DIR})
   # gen arktsconfig.json
-  write_arkts_config("${BUILD_DEMO_DIR}/arktsconfig.json" "${BUILD_DEMO_DIR}/author_generated" "${DEMO_DIR}/system" "${gen_ets_files}" "${user_ets_files}")
+  write_arkts_config("${BUILD_DEMO_DIR}/arktsconfig.json" "${BUILD_DEMO_DIR}/generated" "${DEMO_DIR}/system" "${gen_ets_files}" "${user_ets_files}")
   # ets -> ets.abc
   ets_to_abc(${this_target_name} "${GEN_SYS_ETS_PATHS}" SYS_ABC ${DEMO_DIR} ${BUILD_DEMO_DIR} "")
   ets_to_abc(${this_target_name} "${GEN_ETS_PATHS}" GENERATED_ABC ${DEMO_DIR} ${BUILD_DEMO_DIR} "${GEN_SYS_ETS_PATHS}")
