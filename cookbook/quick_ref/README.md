@@ -40,6 +40,8 @@
 
 - [如何在 Taihe 声明静态函数 `@static`](../override/readme.md)
 
+- [如何在 Taihe 声明 const 常量 `@const`](../enum_union/README.md)
+
 - [如何在 Taihe 声明与实现 sts 中的 get、set 的属性 `@get` & `@set`](../inherit/README.md)
 
 - [如何在 Taihe 更好地声明与实现纯数据类的继承 `@extends`](../struct_extends/README.md)

@@ -29,3 +29,4 @@
 
 - [Essential Sheet](./essential/README.md)
 - [特性样例速查表](./quick_ref/README.md)
+- [Taihe C++ 使用指南](./taihe_cpp/README.md)

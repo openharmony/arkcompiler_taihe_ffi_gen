@@ -106,3 +106,25 @@ Output:
 text: hello
 num: 12345
 ```
+
+## `const`常量
+
+如果用户希望在 Taihe 里定义`const`常量
+
+可以在 enum 上使用 `@const`
+
+```taihe
+@const
+enum Flags: i32 {
+    FLAG_I32_A = 1,
+    FLAG_I32_B = 2,
+}
+```
+
+在 ets 文件中，可以直接使用 `{pkg_name}.FLAG_I32_A` 或 `{pkg_name}.FLAG_I32_B`
+
+```typescript
+import * as ConstPkg from "xxx";
+
+const val = ConstPkg.FLAG_I32_A;
+```
