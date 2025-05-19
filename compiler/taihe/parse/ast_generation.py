@@ -14,67 +14,70 @@ from taihe.parse.antlr.TaiheLexer import TaiheLexer
 from taihe.parse.antlr.TaiheParser import TaiheParser
 from taihe.utils.diagnostics import AbstractDiagnosticsManager
 from taihe.utils.exceptions import IDLSyntaxError
-from taihe.utils.sources import SourceBase, SourceBuffer, SourceFile, SourceLocation
-
-ItemT = Tree | Token
-LocT = tuple[int, int]
-RangeT = tuple[LocT, LocT]
-ItemRangeMapT = dict[ItemT, tuple[LocT, LocT]]
-
-
-def get_pos(ctx: Token) -> RangeT:
-    text = cast("str", ctx.text).splitlines()  # type: ignore
-    row = cast("int", ctx.line)
-    col = cast("int", ctx.column)
-    row_offset = len(text) - 1
-    col_offset = len(text[-1])
-    beg = (
-        row,
-        col + 1,
-    )
-    end = (
-        row + row_offset,
-        col + col_offset if row_offset == 0 else col_offset,
-    )
-    return beg, end
+from taihe.utils.sources import (
+    SourceBase,
+    SourceBuffer,
+    SourceFile,
+    SourceLocation,
+    TextPosition,
+    TextRange,
+)
 
 
-def add_pos(ctx: ItemT, pos_dict: ItemRangeMapT):
-    if isinstance(ctx, Token):
-        beg, end = get_pos(ctx)
-        pos_dict[ctx] = beg, end
-        return
-    if isinstance(ctx, TerminalNodeImpl | ErrorNodeImpl):
-        add_pos(ctx.symbol, pos_dict)
-        pos_dict[ctx] = pos_dict[ctx.symbol]
-        return
-    if isinstance(ctx, ParserRuleContext):
-        pairs: list[RangeT] = []
-        children = cast("list[ItemT]", ctx.children) or []
-        for child in children:
-            add_pos(child, pos_dict)
-            if (pair := pos_dict.get(child)) is not None:
-                pairs.append(pair)
-        if not pairs:
-            return
-        (beg, _), *_ = pairs
-        *_, (_, end) = pairs
-        pos_dict[ctx] = beg, end
-        return
+class SourceCodeLocator:
+    def __init__(self, source: SourceBase) -> None:
+        self.source = source
+        self._cache: dict[Tree | Token, TextRange | None] = {}
+
+    def get_range(self, ctx: Tree | Token) -> TextRange | None:
+        pos = self._cache.get(ctx, KeyError())
+        if not isinstance(pos, KeyError):
+            return pos
+        elif isinstance(ctx, Token):
+            text = cast(str, ctx.text).splitlines()  # type: ignore
+            row = cast(int, ctx.line)
+            col = cast(int, ctx.column)
+            row_offset = len(text) - 1
+            col_offset = len(text[-1])
+            beg = TextPosition(
+                row,
+                col + 1,
+            )
+            end = TextPosition(
+                row + row_offset,
+                col + col_offset if row_offset == 0 else col_offset,
+            )
+            pos = TextRange(beg, end)
+        elif isinstance(ctx, TerminalNodeImpl | ErrorNodeImpl):
+            pos = self.get_range(ctx.symbol)
+        elif isinstance(ctx, ParserRuleContext):
+            text_ranges: list[TextRange] = []
+            children = cast(list[Tree | Token], ctx.children) or []
+            for child in children:
+                self.get_range(child)
+                if (pair := self._cache.get(child)) is not None:
+                    text_ranges.append(pair)
+            if not text_ranges:
+                pos = None
+            else:
+                pos = TextRange(text_ranges[0].start, text_ranges[-1].stop)
+        else:
+            raise TypeError(f"Unsupported type {type(ctx)} for ASTRecorder.get_pos()")
+        return self._cache.setdefault(ctx, pos)
+
+    def get_loc(self, ctx: Tree | Token) -> SourceLocation:
+        return SourceLocation(self.source, self.get_range(ctx))
 
 
 class TaiheErrorListener(ErrorListener):
     def __init__(
         self,
-        source: SourceBase,
+        recorder: SourceCodeLocator,
         diag: AbstractDiagnosticsManager,
-        pos_dict: ItemRangeMapT,
     ) -> None:
         super().__init__()
+        self.recorder = recorder
         self.diag = diag
-        self.source = source
-        self.has_error = False
-        self.pos_dict = pos_dict
 
     def syntaxError(
         self,
@@ -85,24 +88,15 @@ class TaiheErrorListener(ErrorListener):
         msg: str,
         e: Any,
     ):
-        add_pos(offendingSymbol, self.pos_dict)
-        (start_row, start_col), (stop_row, stop_col) = get_pos(offendingSymbol)
         self.diag.emit(
             IDLSyntaxError(
-                cast("str", offendingSymbol.text),  # type: ignore
-                loc=SourceLocation(
-                    self.source,
-                    start_row,
-                    start_col,
-                    stop_row,
-                    stop_col,
-                ),
+                cast(str, offendingSymbol.text),  # type: ignore
+                loc=self.recorder.get_loc(offendingSymbol),
             )
         )
-        self.has_error = True
 
 
-def issubkind(real_kind: str, node_kind: str):
+def is_qualified(real_kind: str, node_kind: str):
     ctx_kind = node_kind + "Context"
     ctx_type = getattr(TaiheParser, ctx_kind)
     sub_kind = real_kind + "Context"
@@ -114,30 +108,34 @@ def issubkind(real_kind: str, node_kind: str):
         return real_kind == node_kind
 
 
-def visit(node_kind: str, ctx: Any, pos_dict: ItemRangeMapT) -> Any:
-    if node_kind.endswith("Lst"):
-        node: list[Any] | None = []
-        for sub in ctx:
-            with suppress(Exception):
-                node.append(visit(node_kind[:-3], sub, pos_dict))
-        return node
-    if node_kind.endswith("Opt"):
-        node = None
-        if ctx is not None:
-            with suppress(Exception):
-                node = visit(node_kind[:-3], ctx, pos_dict)
-        return node
-    beg, end = pos_dict[ctx]
-    if node_kind == "TOKEN":
-        return TaiheAST.TOKEN(beg=beg, end=end, text=ctx.text)
-    kwargs = {"beg": beg, "end": end}
-    for attr_full_name, attr_ctx in ctx.__dict__.items():
-        if attr_full_name[0].isupper():
-            attr_kind_name, attr_name = attr_full_name.split("_", 1)
-            kwargs[attr_name] = visit(attr_kind_name, attr_ctx, pos_dict)
-    real_kind = ctx.__class__.__name__[:-7]  # Remove the trailing "Context"
-    assert issubkind(real_kind, node_kind)
-    return getattr(TaiheAST, real_kind)(**kwargs)
+class TaiheASTConverter:
+    def __init__(self, recorder: SourceCodeLocator):
+        self.recorder = recorder
+
+    def visit(self, node_kind: str, ctx: Any) -> Any:
+        if node_kind.endswith("Lst"):
+            lst: list[Any] = []
+            for sub in ctx:
+                with suppress(Exception):
+                    lst.append(self.visit(node_kind[:-3], sub))
+            return lst
+        if node_kind.endswith("Opt"):
+            opt_node: Any | None = None
+            if ctx is not None:
+                with suppress(Exception):
+                    opt_node = self.visit(node_kind[:-3], ctx)
+            return opt_node
+        loc = self.recorder.get_loc(ctx)
+        if node_kind == "TOKEN":
+            return TaiheAST.TOKEN(loc=loc, text=ctx.text)
+        kwargs = {"loc": loc}
+        for attr_full_name, attr_ctx in ctx.__dict__.items():
+            if attr_full_name[0].isupper():
+                attr_kind_name, attr_name = attr_full_name.split("_", 1)
+                kwargs[attr_name] = self.visit(attr_kind_name, attr_ctx)
+        real_kind = ctx.__class__.__name__[:-7]  # Remove the trailing "Context"
+        assert is_qualified(real_kind, node_kind)
+        return getattr(TaiheAST, real_kind)(**kwargs)
 
 
 def generate_ast(source: SourceBase, diag: AbstractDiagnosticsManager) -> TaiheAST.Spec:
@@ -151,15 +149,12 @@ def generate_ast(source: SourceBase, diag: AbstractDiagnosticsManager) -> TaiheA
     lexer = TaiheLexer(input_stream)
     token_stream = CommonTokenStream(lexer)
 
-    pos_dict: ItemRangeMapT = {}
-
-    error_listener = TaiheErrorListener(source, diag, pos_dict)
+    recorder = SourceCodeLocator(source)
+    error_listener = TaiheErrorListener(recorder, diag)
+    converter = TaiheASTConverter(recorder)
 
     parser = TaiheParser(token_stream)
     parser.removeErrorListeners()
     parser.addErrorListener(error_listener)  # type: ignore
     tree = parser.spec()
-
-    add_pos(tree, pos_dict)
-
-    return visit("Spec", tree, pos_dict)
+    return converter.visit("Spec", tree)

@@ -205,16 +205,17 @@ class DiagnosticsManager(AbstractDiagnosticsManager):
     # TODO: could be slow.
     def _render_source_location(self, loc: SourceLocation):
         MAX_LINE_NO_SPACE = 5
-        if not loc.has_pos:
+        if not loc.text_range:
             return
 
         line_contents = loc.file.read()
+        text_range = loc.text_range
 
-        if loc.start_row < 1 or loc.stop_row > len(line_contents):
+        if text_range.start.row < 1 or text_range.stop.row > len(line_contents):
             return
 
         for line, line_content in enumerate(line_contents, 1):
-            if line < loc.start_row or line > loc.stop_row:
+            if line < text_range.start.row or line > text_range.stop.row:
                 continue
 
             line_content = line_content.rstrip("\n")
@@ -226,8 +227,8 @@ class DiagnosticsManager(AbstractDiagnosticsManager):
             markers = "".join(
                 (
                     " "
-                    if (line == loc.start_row and col < loc.start_col)
-                    or (line == loc.stop_row and col > loc.stop_col)
+                    if (line == text_range.start.row and col < text_range.start.col)
+                    or (line == text_range.stop.row and col > text_range.stop.col)
                     else "^"
                 )
                 for col in range(1, len(line_content) + 1)
