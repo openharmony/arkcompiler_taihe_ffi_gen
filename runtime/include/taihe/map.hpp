@@ -94,7 +94,7 @@ public:
     return {&node->item, true};
   }
 
-  item_t *find(as_param_t<K> key) const {
+  item_t *find_item(as_param_t<K> key) const {
     std::size_t index = taihe::hash(key) % m_handle->cap;
     node_t *current = m_handle->bucket[index];
     while (current) {
@@ -102,6 +102,14 @@ public:
         return &current->item;
       }
       current = current->next;
+    }
+    return nullptr;
+  }
+
+  V *find(as_param_t<K> key) const {
+    item_t *item = find_item(key);
+    if (item) {
+      return &item->second;
     }
     return nullptr;
   }

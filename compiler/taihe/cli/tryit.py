@@ -451,7 +451,7 @@ class BuildSystem(BuildUtils):
         """Compile and link ABC files."""
         self.logger.info("Compiling and linking ABC files...")
 
-        paths = {}
+        paths: dict[str, Path] = {}
         for path in self.generated_dir.glob("*.ets"):
             paths[path.stem] = path
         for path in self.user_dir.glob("*.ets"):

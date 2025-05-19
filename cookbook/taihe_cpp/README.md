@@ -115,8 +115,8 @@ my_set.emplace("apple");
 my_set.emplace("banana");
 my_set.emplace("cherry");
 
-// 查找元素 find()
-if (my_set.find("banana")) {
+// 查找元素 find_item()
+if (my_set.find_item("banana")) {
     std::cout << "banana found" << std::endl;
 }
 
@@ -151,8 +151,8 @@ my_map.emplace("apple", 5);
 my_map.emplace("banana", 3);
 my_map.emplace("orange", 10);
 
-// 查找元素 find()
-if (auto* result = my_map.find("apple")) {
+// 查找元素 find_item()
+if (auto* result = my_map.find_item("apple")) {
     std::cout << "Found: key = " << result->first << ", value = " << result->second << "\n";
 } else {
     std::cout << "Key 'apple' not found.\n";

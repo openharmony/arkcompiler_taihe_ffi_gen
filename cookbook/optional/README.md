@@ -24,7 +24,7 @@ function getUserSetting(settings: @record Map<String, String>, key: String): Opt
 **File: `author/src/userSettings.impl.cpp`**
 ```C++
 optional<string> getUserSetting(map_view<string, string> settings, string_view key) {
-    auto iter = settings.find(key);
+    auto iter = settings.find_item(key);
     if (iter == nullptr) {
         return optional<string>(std::nullopt);
     }
@@ -34,7 +34,7 @@ optional<string> getUserSetting(map_view<string, string> settings, string_view k
 
 这里对 C++ 实现中的 optional 与 map 进行介绍
 
-1. `taihe::optional`
+1. `taihe::optional<T>`
 
 - 创建空 optional
 
@@ -50,11 +50,11 @@ optional<string> getUserSetting(map_view<string, string> settings, string_view k
     optional<T>(std::in_place_t{}, val);
     ```
 
-2. `taihe::map`
+2. `taihe::map<K, V>`
 
-- `find()`
+- `find_item()`
 
-    使用 `find()` 函数可以查找 key 对应的 value，查找成功时，返回 value 的指针，查找失败时，返回 `nullptr`
+    使用 `find_item()` 函数可以查找 key 对应的 value，查找成功时，返回 `std::pair<K, V>` 类型的指针，查找失败时，返回 `nullptr`
 
 - 遍历
 

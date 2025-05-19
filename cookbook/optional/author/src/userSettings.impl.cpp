@@ -8,7 +8,7 @@ using namespace taihe;
 namespace {
 optional<string> getUserSetting(map_view<string, string> settings,
                                 string_view key) {
-  auto iter = settings.find(key);
+  auto iter = settings.find_item(key);
   if (iter == nullptr) {
     return optional<string>(std::nullopt);
   }
