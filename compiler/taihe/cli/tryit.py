@@ -220,6 +220,7 @@ class BuildSystem(BuildUtils):
 
         self.user = user
         self.sts_keep_name = sts_keep_name
+        self.opt_level = opt_level.strip()  # Ensure no whitespace
 
         # Build paths
         self.target_path = Path(target_dir).resolve()
@@ -254,14 +255,11 @@ class BuildSystem(BuildUtils):
         self.build_user_dir = self.build_dir / "user"
 
         # Output files
-        self.so_target = self.build_dir / f"lib{self.target_path.name}.so"
+        self.lib_name = self.target_path.absolute().name
+        self.so_target = self.build_dir / f"lib{self.lib_name}.so"
         self.abc_target = self.build_dir / "main.abc"
         self.exe_target = self.build_dir / "main"
         self.arktsconfig_file = self.build_dir / "arktsconfig.json"
-
-        # Build options
-        self.opt_level = opt_level.strip()  # Ensure no whitespace
-        self.lib_name = self.target_path.absolute().name
 
     def create(self) -> None:
         """Create a simple example project."""
@@ -281,6 +279,9 @@ class BuildSystem(BuildUtils):
     def create_author_cpp(self) -> None:
         """Create a simple example author source file."""
         self.create_directory(self.author_src_dir)
+        with open(self.author_dir / "compile_flags.txt", "w") as f:
+            for author_include_dir in self.author_includes:
+                f.write(f"-I{author_include_dir}\n")
         with open(self.author_src_dir / "hello.impl.cpp", "w") as f:
             f.write(
                 '#include "hello.proj.hpp"\n'
@@ -295,9 +296,6 @@ class BuildSystem(BuildUtils):
                 "\n"
                 "TH_EXPORT_CPP_API_sayHello(sayHello);\n"
             )
-        with open(self.author_dir / "compile_flags.txt", "w") as f:
-            for author_include_dir in self.author_includes:
-                f.write(f"-I{author_include_dir}\n")
 
     def create_user_ets(self) -> None:
         """Create a simple example user ETS file."""
@@ -315,6 +313,9 @@ class BuildSystem(BuildUtils):
     def create_user_cpp(self) -> None:
         """Create a simple example user source file."""
         self.create_directory(self.user_src_dir)
+        with open(self.user_dir / "compile_flags.txt", "w") as f:
+            for user_include_dir in self.user_includes:
+                f.write(f"-I{user_include_dir}\n")
         with open(self.user_src_dir / "main.cpp", "w") as f:
             f.write(
                 '#include "hello.user.hpp"\n'
@@ -324,9 +325,6 @@ class BuildSystem(BuildUtils):
                 "    return 0;\n"
                 "}\n"
             )
-        with open(self.user_dir / "compile_flags.txt", "w") as f:
-            for user_include_dir in self.user_includes:
-                f.write(f"-I{user_include_dir}\n")
 
     def generate_and_build(self) -> None:
         """Generate code and build the project."""
