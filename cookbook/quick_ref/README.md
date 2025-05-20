@@ -34,6 +34,8 @@
 
 - [BigInt 在 Taihe 中如何写 `@bigint`](../bigint/README.md)
 
+- [Record 在 Taihe 中如何写 `@record`](../optional/README.md)
+
 - [如何让 Taihe 的 interface 在 sts 中对应 class `@class`](../override/readme.md)
 
 - [如何在 Taihe 声明与实现 class 构造函数 `@ctor`](../override/readme.md)

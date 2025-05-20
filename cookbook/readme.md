@@ -24,6 +24,7 @@
 - [on 与 off](./on_off/README.md)
 - [纯数据类型继承](./struct_extends/README.md)
 - [外部对象获取](./unwrap_obj/README.md)
+- [class继承](./class_extend/README.md)
 
 ## 附录
 

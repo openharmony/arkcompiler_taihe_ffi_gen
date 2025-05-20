@@ -1,0 +1,4 @@
+-I/home/lyujiayi/project/TaiheCompiler/.panda_vm/package/ohos_arm64/include/plugins/ets/runtime/ani
+-I/home/lyujiayi/project/TaiheCompiler/runtime/include
+-I/home/lyujiayi/project/TaiheCompiler/test/ani_iface_extend/author_generated/include
+-I/home/lyujiayi/project/TaiheCompiler/test/ani_iface_extend/author/include

@@ -152,6 +152,7 @@ my_map.emplace("banana", 3);
 my_map.emplace("orange", 10);
 
 // 查找元素 find_item()
+// 之前的 find() 方法已弃用，用户请不要使用 find() 方法, 而是使用目前的 find_item() 方法
 if (auto* result = my_map.find_item("apple")) {
     std::cout << "Found: key = " << result->first << ", value = " << result->second << "\n";
 } else {

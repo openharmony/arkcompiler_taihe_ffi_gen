@@ -23,6 +23,7 @@ compiler/taihe.egg-info
 
 # Generated directories
 **/generated
+compile_flags.txt
 
 # files
 *.log
