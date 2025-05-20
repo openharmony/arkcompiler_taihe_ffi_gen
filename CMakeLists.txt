@@ -14,17 +14,12 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # 启用 ASan
 # if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-#     # 添加编译和链接时的ASan选项
+#     # 添加编译和链接时的 ASan 选项
 #     add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
 #     add_link_options(-fsanitize=address)
-
-#     add_link_options(
-#         -fsanitize=address
-#     )
 #     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address ")
 #     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address ")
 # endif()
-
 
 # 启用调试信息
 set(CMAKE_BUILD_TYPE Debug)
@@ -40,7 +35,6 @@ set(TH_RUNTIME_DIR "${CMAKE_SOURCE_DIR}/runtime")
 set(TH_RUNTIME_INCLUDE_DIR "${TH_RUNTIME_DIR}/include")
 set(TH_RUNTIME_SOURCE_DIR "${TH_RUNTIME_DIR}/src")
 
-
 # 设置 PANDA 路径
 set(PANDA_SDK_FILENAME "sdk-1.5.0.tgz")
 set(PANDA_SDK_URL "https://nexus.bz-openlab.ru:10443/repository/koala-npm/%40panda/sdk/-/${PANDA_SDK_FILENAME}")
@@ -52,7 +46,7 @@ set(PANDA_SDK_PATH "${PANDA_EXTRACT_DIR}/${PANDA_SDK_FILENAME}")
 set(Python3_EXECUTABLE "/usr/bin/python3")
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
-# 启用或禁用coverage
+# 启用或禁用 coverage
 option(ENABLE_COVERAGE "Enable coverage run for the Python command" OFF)
 
 # 编译 taihe runtime 静态库
@@ -75,7 +69,7 @@ target_include_directories(th_runtime PUBLIC
 function(setup_panda_sdk)
   file(MAKE_DIRECTORY "${PANDA_EXTRACT_DIR}")
 
-  set(PANDA_SDK_VERSION_FILE "${PANDA_EXTRACT_DIR}/version.txt")
+  set(PANDA_SDK_VERSION_FILE "${PANDA_EXTRACT_DIR}/package/version.txt")
   string(REPLACE ".tgz" "" PANDA_SDK_VERSION "${PANDA_SDK_FILENAME}")
 
   # 读取本地保存的版本信息
@@ -95,9 +89,9 @@ function(setup_panda_sdk)
     set(NEED_DOWNLOAD FALSE)
   endif()
 
-  # 如果需要重新准备SDK
+  # 如果需要重新准备 SDK
   if(NEED_DOWNLOAD)
-    # 先检查本地是否已有对应的SDK包
+    # 先检查本地是否已有对应的 SDK 包
     set(LOCAL_SDK_PATH "${PANDA_EXTRACT_DIR}/${PANDA_SDK_VERSION}.tgz")
     if(EXISTS "${LOCAL_SDK_PATH}")
       message(STATUS "Found local Panda SDK package: ${LOCAL_SDK_PATH}")
@@ -159,7 +153,6 @@ function(setup_panda_sdk)
   endif()
 endfunction()
 
-
 # 生成 arktsconfig.json
 function(write_arkts_config config_path gen_dir sys_dir gen_ets_files user_ets_files)
   foreach(file IN LISTS gen_ets_files)
@@ -191,7 +184,6 @@ function(write_arkts_config config_path gen_dir sys_dir gen_ets_files user_ets_f
   )
 endfunction()
 
-
 setup_panda_sdk()
 
 # INCLUDE_ANI_HEADER
@@ -202,7 +194,6 @@ if(EXISTS "${ANI_HEADER}")
 else()
   message(FATAL_ERROR "Cannot find the path: ${ANI_HEADER}")
 endif()
-
 
 function(generate_code_from_idl this_target_name idl_files gen_ets_files idl_dir generated_dir)
   set(IDL_FILES ${idl_files})
@@ -244,7 +235,7 @@ function(generate_code_from_idl this_target_name idl_files gen_ets_files idl_dir
   endif()
 
   add_custom_command(
-    OUTPUT  ${PROJ_HPP_FILES} ${IMPL_HPP_FILES} ${ABI_H_FILES} ${ABI_C_FILES} ${ANI_HPP_FILES} ${ANI_CPP_FILES} ${GEN_ETS_FILES} ${ANI_CTOR_FILE}
+    OUTPUT ${PROJ_HPP_FILES} ${IMPL_HPP_FILES} ${ABI_H_FILES} ${ABI_C_FILES} ${ANI_HPP_FILES} ${ANI_CPP_FILES} ${GEN_ETS_FILES} ${ANI_CTOR_FILE}
     COMMAND ${COMMAND_TO_RUN}
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/compiler
     DEPENDS ${IDL_FILES} ${CMAKE_SOURCE_DIR}/compiler/taihe/parse/antlr/TaiheAST.py
@@ -272,7 +263,6 @@ function(generate_code_from_idl this_target_name idl_files gen_ets_files idl_dir
   set(${this_target_name}_ANI_CTOR_FILE ${ANI_CTOR_FILE} PARENT_SCOPE)
 endfunction()
 
-
 function(copy_dir this_target_name user_ets_files build_demo_dir)
   set(USER_ETS_FILES ${user_ets_files})
   file(MAKE_DIRECTORY "${build_demo_dir}/user/")
@@ -293,7 +283,6 @@ function(copy_dir this_target_name user_ets_files build_demo_dir)
   )
   set(${this_target_name}_copy_user_files ${copy_user_files} PARENT_SCOPE)
 endfunction()
-
 
 # 编译动态库
 function(compile_dylib target_name target_path user_cpp_files build_demo_dir)
@@ -319,7 +308,6 @@ function(compile_dylib target_name target_path user_cpp_files build_demo_dir)
   target_include_directories(${target_name} PUBLIC "${build_demo_dir}/generated/include/" TH_RUNTIME_INCLUDE_DIR)
 endfunction()
 
-
 # 自定义 ETS 构建规则
 function(build_ets_target this_target_name ets_files output_name dep_ets build_demo_dir)
   get_filename_component(prefix_name ${this_target_name} NAME)
@@ -336,22 +324,21 @@ function(build_ets_target this_target_name ets_files output_name dep_ets build_d
     --output ${OUTPUT_DIR}/${output_name}.abc
     --extension ets
     --arktsconfig ${build_demo_dir}/arktsconfig.json  # 生成命令
-    && ${ETS_DISASM} ${OUTPUT_DIR}/${output_name}.abc  ${OUTPUT_DIR}/${output_name}.abc.dump
-    DEPENDS ${ets_files} ${dep_ets} ${build_demo_dir}/arktsconfig.json # 输入文件依赖
+    && ${ETS_DISASM} ${OUTPUT_DIR}/${output_name}.abc ${OUTPUT_DIR}/${output_name}.abc.dump
+    DEPENDS ${ets_files} ${dep_ets} ${build_demo_dir}/arktsconfig.json  # 输入文件依赖
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}  # 工作目录
     COMMENT "Building ${this_target_name} ETS target"  # 注释
   )
 
   # add_custom_command(
-  #     OUTPUT  ${OUTPUT_DIR}/${output_name}.abc.dump   # 输出文件
-  #     COMMAND ${ETS_DISASM} ${OUTPUT_DIR}/${output_name}.abc  ${OUTPUT_DIR}/${output_name}.abc.dump
-  #     DEPENDS ${OUTPUT_DIR}/${output_name}.abc   # 输入文件依赖
+  #     OUTPUT ${OUTPUT_DIR}/${output_name}.abc.dump  # 输出文件
+  #     COMMAND ${ETS_DISASM} ${OUTPUT_DIR}/${output_name}.abc ${OUTPUT_DIR}/${output_name}.abc.dump
+  #     DEPENDS ${OUTPUT_DIR}/${output_name}.abc  # 输入文件依赖
   #     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}  # 工作目录
   #     COMMENT "Building ${this_target_name} ETS target DISASM"  # 注释
   # )
 
 endfunction()
-
 
 # ets 生成 abc
 function(ets_to_abc this_target_name ets_list output_abc_list_var demo_dir build_demo_dir dep_ets)
@@ -375,7 +362,6 @@ function(ets_to_abc this_target_name ets_list output_abc_list_var demo_dir build
   # 设置输出变量
   set(${output_abc_list_var} ${ABC_FILES} PARENT_SCOPE)
 endfunction()
-
 
 function(abc_link this_target_name all_abc build_demo_dir)
   set(OUTPUT_DIR "${build_demo_dir}")
@@ -425,7 +411,6 @@ function(run_abc this_target_name build_demo_dir)
   add_dependencies(${this_target_name}_run ${this_target_name}_link_abc)
 endfunction()
 
-
 function(update_grammar)
   add_custom_command(
     OUTPUT ${CMAKE_SOURCE_DIR}/compiler/taihe/parse/antlr/TaiheAST.py
@@ -440,9 +425,7 @@ function(update_grammar)
   )
 endfunction()
 
-
 update_grammar()
-
 
 function(add_ani_demo this_target_name idl_files gen_ets_files user_ets_files user_cpp_files run_dir)
   set(DEMO_DIR "${CMAKE_SOURCE_DIR}/${run_dir}/${this_target_name}")
