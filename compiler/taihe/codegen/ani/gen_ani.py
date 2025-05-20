@@ -339,6 +339,7 @@ class ANICodeGenerator:
         method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
         iface_cpp_info = IfaceCppInfo.get(self.am, iface)
         iface_abi_info = IfaceABIInfo.get(self.am, iface)
+        iface_ani_info = IfaceANIInfo.get(self.am, iface)
         ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
         ani_params = []
         ani_params.append("[[maybe_unused]] ani_env *env")
@@ -364,9 +365,9 @@ class ANICodeGenerator:
         ):
             pkg_ani_source_target.writelns(
                 f"ani_long ani_data_ptr;",
-                f'env->Object_GetPropertyByName_Long(object, "_data_ptr", reinterpret_cast<ani_long*>(&ani_data_ptr));',
+                f'env->Object_GetField_Long(object, TH_ANI_FIND_CLASS_FIELD(env, "{iface_ani_info.impl_desc}", "_data_ptr"), reinterpret_cast<ani_long*>(&ani_data_ptr));',
                 f"ani_long ani_vtbl_ptr;",
-                f'env->Object_GetPropertyByName_Long(object, "_vtbl_ptr", reinterpret_cast<ani_long*>(&ani_vtbl_ptr));',
+                f'env->Object_GetField_Long(object, TH_ANI_FIND_CLASS_FIELD(env, "{iface_ani_info.impl_desc}", "_vtbl_ptr"), reinterpret_cast<ani_long*>(&ani_vtbl_ptr));',
                 f"DataBlockHead* cpp_data_ptr = reinterpret_cast<DataBlockHead*>(ani_data_ptr);",
                 f"{iface_abi_info.vtable}* cpp_vtbl_ptr = reinterpret_cast<{iface_abi_info.vtable}*>(ani_vtbl_ptr);",
                 f"{iface_cpp_info.full_weak_name} cpp_iface = {iface_cpp_info.full_weak_name}({{cpp_vtbl_ptr, cpp_data_ptr}});",
@@ -557,7 +558,7 @@ class ANICodeGenerator:
                                 )
                                 iface_ani_impl_target.writelns(
                                     f"{type_ani_info.ani_type} {inner_ani_res};",
-                                    f'env->Object_CallMethodByName_{type_ani_info.ani_type.suffix}(static_cast<ani_object>(this->ref), "{method_ani_info.ani_method_name}", nullptr, reinterpret_cast<{type_ani_info.ani_type.base}*>(&{inner_ani_res}){inner_ani_args_trailing});',
+                                    f'env->Object_CallMethod_{type_ani_info.ani_type.suffix}(static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "{iface_ani_info.type_desc}", "{method_ani_info.ani_method_name}", nullptr), reinterpret_cast<{type_ani_info.ani_type.base}*>(&{inner_ani_res}){inner_ani_args_trailing});',
                                 )
                                 type_ani_info.from_ani(
                                     iface_ani_impl_target,
@@ -570,7 +571,7 @@ class ANICodeGenerator:
                                 )
                             else:
                                 iface_ani_impl_target.writelns(
-                                    f'env->Object_CallMethodByName_Void(static_cast<ani_object>(this->ref), "{method_ani_info.ani_method_name}", nullptr{inner_ani_args_trailing});',
+                                    f'env->Object_CallMethod_Void(static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "{iface_ani_info.type_desc}", "{method_ani_info.ani_method_name}", nullptr){inner_ani_args_trailing});',
                                 )
             iface_ani_impl_target.writelns(
                 f"return ::taihe::make_holder<cpp_impl_t, {iface_cpp_info.as_owner}>(env, ani_obj);",
@@ -592,12 +593,8 @@ class ANICodeGenerator:
                 f"ani_long ani_vtbl_ptr = reinterpret_cast<ani_long>(cpp_obj.m_handle.vtbl_ptr);",
                 f"ani_long ani_data_ptr = reinterpret_cast<ani_long>(cpp_obj.m_handle.data_ptr);",
                 f"cpp_obj.m_handle.data_ptr = nullptr;",
-                f"ani_class ani_obj_cls;",
-                f'env->FindClass("{iface_ani_info.impl_desc}", &ani_obj_cls);',
-                f"ani_method ani_obj_ctor;",
-                f'env->Class_FindMethod(ani_obj_cls, "<ctor>", "JJ:V", &ani_obj_ctor);',
                 f"ani_object ani_obj;",
-                f"env->Object_New(ani_obj_cls, ani_obj_ctor, &ani_obj, ani_vtbl_ptr, ani_data_ptr);",
+                f'env->Object_New(TH_ANI_FIND_CLASS(env, "{iface_ani_info.impl_desc}"), TH_ANI_FIND_CLASS_METHOD(env, "{iface_ani_info.impl_desc}", "<ctor>", "JJ:V"), &ani_obj, ani_vtbl_ptr, ani_data_ptr);',
                 f"return ani_obj;",
             )
 
@@ -683,8 +680,15 @@ class ANICodeGenerator:
                 cpp_field_result = f"cpp_field_{final.name}"
                 struct_ani_impl_target.writelns(
                     f"{type_ani_info.ani_type} {ani_field_value};",
-                    f'env->Object_GetPropertyByName_{type_ani_info.ani_type.suffix}(ani_obj, "{final.name}", reinterpret_cast<{type_ani_info.ani_type.base}*>(&{ani_field_value}));',
                 )
+                if struct_ani_info.is_class():
+                    struct_ani_impl_target.writelns(
+                        f'env->Object_GetField_{type_ani_info.ani_type.suffix}(ani_obj, TH_ANI_FIND_CLASS_FIELD(env, "{struct_ani_info.impl_desc}", "{final.name}"), reinterpret_cast<{type_ani_info.ani_type.base}*>(&{ani_field_value}));',
+                    )
+                else:
+                    struct_ani_impl_target.writelns(
+                        f'env->Object_CallMethod_{type_ani_info.ani_type.suffix}(ani_obj, TH_ANI_FIND_CLASS_METHOD(env, "{struct_ani_info.impl_desc}", "<get>{final.name}", nullptr), reinterpret_cast<{type_ani_info.ani_type.base}*>(&{ani_field_value}));',
+                    )
                 type_ani_info.from_ani(
                     struct_ani_impl_target, "env", ani_field_value, cpp_field_result
                 )
@@ -724,12 +728,8 @@ class ANICodeGenerator:
                 ", " + ani_field_result for ani_field_result in ani_field_results
             )
             struct_ani_impl_target.writelns(
-                f"ani_class ani_obj_cls;",
-                f'env->FindClass("{struct_ani_info.impl_desc}", &ani_obj_cls);',
-                f"ani_method ani_obj_ctor;",
-                f'env->Class_FindMethod(ani_obj_cls, "<ctor>", nullptr, &ani_obj_ctor);',
                 f"ani_object ani_obj;",
-                f"env->Object_New(ani_obj_cls, ani_obj_ctor, &ani_obj{ani_field_results_trailing});",
+                f'env->Object_New(TH_ANI_FIND_CLASS(env, "{struct_ani_info.impl_desc}"), TH_ANI_FIND_CLASS_METHOD(env, "{struct_ani_info.impl_desc}", "<ctor>", nullptr), &ani_obj{ani_field_results_trailing});',
                 f"return ani_obj;",
             )
 
@@ -850,15 +850,12 @@ class ANICodeGenerator:
                 static_tags_str = ", ".join(static_tags)
                 full_name = "_".join(part.name for part in parts)
                 is_field = f"ani_is_{full_name}"
-                field_class = f"ani_cls_{full_name}"
                 final_ani_info = UnionFieldANIInfo.get(self.am, final)
                 if isinstance(final_ty := final_ani_info.field_ty, Type):
                     type_ani_info = TypeANIInfo.get(self.am, final_ty)
                     union_ani_impl_target.writelns(
-                        f"ani_class {field_class};",
-                        f'env->FindClass("{type_ani_info.type_desc_boxed}", &{field_class});',
                         f"ani_boolean {is_field};",
-                        f"env->Object_InstanceOf(static_cast<ani_object>(ani_value), {field_class}, &{is_field});",
+                        f'env->Object_InstanceOf(static_cast<ani_object>(ani_value), TH_ANI_FIND_CLASS(env, "{type_ani_info.type_desc_boxed}"), &{is_field});',
                     )
                     with union_ani_impl_target.indented(
                         f"if ({is_field}) {{",
