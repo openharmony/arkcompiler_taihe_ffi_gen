@@ -120,11 +120,6 @@ class BaseWriter:
             self._out.write(line)
             self._out.write("\n")
 
-    def _write_debug(self, *, skip: int):
-        if self._debug_level == DebugLevel.NONE:
-            return
-        self.write_comment(_format_frame(sys._getframe(skip)))  # type: ignore
-
     @contextmanager
     def indented(
         self,
@@ -155,6 +150,11 @@ class BaseWriter:
             self._current_indent = previous_indent
             if epilogue is not None:
                 self.writeln(epilogue)
+
+    def _write_debug(self, *, skip: int):
+        if self._debug_level == DebugLevel.NONE:
+            return
+        self.write_comment(_format_frame(sys._getframe(skip)))  # type: ignore
 
 
 class FileWriter(BaseWriter):

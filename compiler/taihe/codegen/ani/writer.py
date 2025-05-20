@@ -30,16 +30,6 @@ class StsWriter(FileWriter):
                 import_str = f"{{{type_name} as {import_name}}}"
             f.write(f"import {import_str} from '{module_name}';\n")
 
-    def _add_import(
-        self,
-        module_name: str,
-        new_pair: tuple[str, str | None],
-    ):
-        if (old_pair := self.import_dict.setdefault(module_name, new_pair)) != new_pair:
-            raise ValueError(
-                f"Duplicate import for {module_name!r}: {old_pair} vs {new_pair}"
-            )
-
     def add_import_module(
         self,
         module_name: str,
@@ -56,3 +46,13 @@ class StsWriter(FileWriter):
         if import_name is None:
             import_name = type_name
         self._add_import(import_name, (module_name, type_name))
+
+    def _add_import(
+        self,
+        module_name: str,
+        new_pair: tuple[str, str | None],
+    ):
+        if (old_pair := self.import_dict.setdefault(module_name, new_pair)) != new_pair:
+            raise ValueError(
+                f"Duplicate import for {module_name!r}: {old_pair} vs {new_pair}"
+            )
