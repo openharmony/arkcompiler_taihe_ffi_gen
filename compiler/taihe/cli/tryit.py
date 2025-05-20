@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import time
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
@@ -60,7 +61,7 @@ class BuildUtils:
         command: Sequence[Path | str],
         capture_output: bool = True,
         env: Mapping[str, Path | str] | None = None,
-    ) -> None:
+    ) -> float:
         """Run a command with environment variables."""
         command_str = " ".join(map(str, command))
 
@@ -71,6 +72,7 @@ class BuildUtils:
         self.logger.debug("+ %s%s", env_str, command_str)
 
         try:
+            start_time = time.time()
             subprocess.run(
                 command,
                 check=True,
@@ -78,6 +80,9 @@ class BuildUtils:
                 env=env,
                 capture_output=capture_output,
             )
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            return elapsed_time
         except subprocess.CalledProcessError as e:
             self.logger.error("Command failed with exit code %s", e.returncode)
             if e.stdout:
@@ -481,11 +486,15 @@ class BuildSystem(BuildUtils):
 
     def run_ani(self) -> None:
         """Run the compiled ABC file with the Ark runtime."""
-        self.run_abc(
+        self.logger.info("Running ABC file with Ark runtime...")
+
+        elapsed_time = self.run_abc(
             self.abc_target,
             self.so_target.parent,
             entry="main.ETSGLOBAL::main",
         )
+
+        self.logger.info("Done, time = %f s", elapsed_time)
 
     def compile_and_link_exe(self):
         """Compile and link the executable."""
@@ -512,10 +521,14 @@ class BuildSystem(BuildUtils):
 
     def run_exe(self) -> None:
         """Run the compiled executable."""
-        self.run(
+        self.logger.info("Running executable...")
+
+        elapsed_time = self.run(
             self.exe_target,
             self.so_target.parent,
         )
+
+        self.logger.info("Done, time = %f s", elapsed_time)
 
     def setup_build_directories(self) -> None:
         """Set up necessary build directories."""
@@ -627,6 +640,7 @@ class BuildSystem(BuildUtils):
                     command.append(f"-I{include_dir}")
 
             self.run_command(command)
+
             output_files.append(output_file)
 
         return output_files
@@ -658,14 +672,9 @@ class BuildSystem(BuildUtils):
         self,
         target: Path,
         ld_lib_path: Path,
-    ) -> None:
+    ) -> float:
         """Run the compiled target."""
-        if not target.exists():
-            self.logger.error("Target file not found: %s", target)
-            raise FileNotFoundError(f"Target file not found: {target}")
-
-        self.logger.info("Running target: %s", target)
-        self.run_command(
+        return self.run_command(
             [
                 target,
             ],
@@ -688,8 +697,6 @@ class BuildSystem(BuildUtils):
             output_dump = output_dir / f"{name}.abc.dump"
 
             es2panda_path = self.config.panda_tool_dir / "bin/es2panda"
-            if not es2panda_path.exists():
-                raise FileNotFoundError(f"es2panda not found at {es2panda_path}")
 
             self.run_command(
                 [
@@ -734,8 +741,6 @@ class BuildSystem(BuildUtils):
             return
 
         ark_link_path = self.config.panda_tool_dir / "bin/ark_link"
-        if not ark_link_path.exists():
-            raise FileNotFoundError(f"ark_link not found at {ark_link_path}")
 
         command = [ark_link_path, "--output", target, "--"]
         command.extend(input_files)
@@ -747,22 +752,13 @@ class BuildSystem(BuildUtils):
         abc_target: Path,
         ld_lib_path: Path,
         entry: str,
-    ):
+    ) -> float:
         """Run the compiled ABC file with the Ark runtime."""
-        if not abc_target.exists():
-            self.logger.error("ABC file not found: %s", abc_target)
-            raise FileNotFoundError(f"ABC file not found: {abc_target}")
-
         ark_path = self.config.panda_tool_dir / "bin/ark"
-        if not ark_path.exists():
-            raise FileNotFoundError(f"ark executable not found at {ark_path}")
 
         etsstdlib_path = self.config.panda_ets_dir / "etsstdlib.abc"
-        if not etsstdlib_path.exists():
-            self.logger.warning("etsstdlib.abc not found at %s", etsstdlib_path)
 
-        self.logger.info("Running with Ark runtime: %s", abc_target)
-        self.run_command(
+        return self.run_command(
             [
                 ark_path,
                 f"--boot-panda-files={etsstdlib_path}",
