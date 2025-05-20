@@ -24,10 +24,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # 启用调试信息
 set(CMAKE_BUILD_TYPE Debug)
 
-# 为 C 编译器设置 -fPIC
+# 为编译器设置 -fPIC
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
-
-# 为 C++ 编译器设置 -fPIC
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 
 # taihe runtime .c/.cpp path
@@ -62,8 +60,92 @@ set_target_properties(th_runtime PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
 )
 
-target_include_directories(th_runtime PUBLIC
-  ${TH_RUNTIME_INCLUDE_DIR})
+target_include_directories(th_runtime PUBLIC ${TH_RUNTIME_INCLUDE_DIR})
+
+
+function(update_grammar)
+  add_custom_command(
+    OUTPUT ${CMAKE_SOURCE_DIR}/compiler/taihe/parse/antlr/TaiheAST.py
+    COMMAND ./generate-grammar
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/compiler # 设置工作目录
+    COMMENT "Update grammar"
+    DEPENDS ${CMAKE_SOURCE_DIR}/compiler/Taihe.g4
+  )
+
+  add_custom_target(UPDATE_GRAMMAR ALL
+    DEPENDS ${CMAKE_SOURCE_DIR}/compiler/taihe/parse/antlr/TaiheAST.py
+  )
+endfunction()
+
+
+function(generate_code_from_idl this_target_name idl_files gen_ets_files idl_dir generated_dir)
+  set(IDL_FILES ${idl_files})
+  set(GEN_ETS_FILES ${gen_ets_files})
+
+  set(PROJ_HPP_FILES)
+  set(IMPL_HPP_FILES)
+  set(ABI_H_FILES)
+  set(ABI_C_FILES)
+  set(ANI_HPP_FILES)
+  set(ANI_CPP_FILES)
+  set(ANI_CTOR_FILE "${generated_dir}/src/ani_constructor.cpp")
+
+  foreach(TAIHE_FILE ${IDL_FILES})
+    # 替换扩展名
+    get_filename_component(TAIHE_FILE_NAME ${TAIHE_FILE} NAME)
+
+    string(REGEX REPLACE "\\.taihe$" ".proj.hpp" PROJ_HPP_FILE ${TAIHE_FILE_NAME})
+    string(REGEX REPLACE "\\.taihe$" ".impl.hpp" IMPL_HPP_FILE ${TAIHE_FILE_NAME})
+    string(REGEX REPLACE "\\.taihe$" ".abi.h" ABI_H_FILE ${TAIHE_FILE_NAME})
+    string(REGEX REPLACE "\\.taihe$" ".abi.c" ABI_C_FILE ${TAIHE_FILE_NAME})
+    string(REGEX REPLACE "\\.taihe$" ".ani.hpp" ANI_HPP_FILE ${TAIHE_FILE_NAME})
+    string(REGEX REPLACE "\\.taihe$" ".ani.cpp" ANI_CPP_FILE ${TAIHE_FILE_NAME})
+
+    # 将修改后的文件名添加到新的列表中
+    list(APPEND PROJ_HPP_FILES "${generated_dir}/include/${PROJ_HPP_FILE}")
+    list(APPEND IMPL_HPP_FILES "${generated_dir}/include/${IMPL_HPP_FILE}")
+    list(APPEND ABI_H_FILES "${generated_dir}/include/${ABI_H_FILE}")
+    list(APPEND ABI_C_FILES "${generated_dir}/src/${ABI_C_FILE}")
+    list(APPEND ANI_HPP_FILES "${generated_dir}/include/${ANI_HPP_FILE}")
+    list(APPEND ANI_CPP_FILES "${generated_dir}/src/${ANI_CPP_FILE}")
+  endforeach()
+
+  # 如果启用覆盖率，使用 coverage run
+  if(ENABLE_COVERAGE)
+    list(APPEND COMMAND_TO_RUN "coverage" "run" "--parallel-mode" "-m" "taihe.cli.compiler" "-I" "${idl_dir}/idl" "-O" "${generated_dir}" "--ani" "--author" "--sts-keep-name" "--debug")
+  else()
+    list(APPEND COMMAND_TO_RUN "python" "-m" "taihe.cli.compiler" "-I" "${idl_dir}/idl" "-O" "${generated_dir}" "--ani" "--author" "--sts-keep-name")
+  endif()
+
+  add_custom_command(
+    OUTPUT ${PROJ_HPP_FILES} ${IMPL_HPP_FILES} ${ABI_H_FILES} ${ABI_C_FILES} ${ANI_HPP_FILES} ${ANI_CPP_FILES} ${GEN_ETS_FILES} ${ANI_CTOR_FILE}
+    COMMAND ${COMMAND_TO_RUN}
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/compiler
+    DEPENDS ${IDL_FILES} ${CMAKE_SOURCE_DIR}/compiler/taihe/parse/antlr/TaiheAST.py
+    COMMENT "Generating Taihe C++ header and source files..."
+    VERBATIM
+  )
+
+  add_custom_target(${this_target_name}_gen
+    DEPENDS ${PROJ_HPP_FILES}
+    ${IMPL_HPP_FILES}
+    ${ABI_H_FILES}
+    ${ABI_C_FILES}
+    ${ANI_HPP_FILES}
+    ${ANI_CPP_FILES}
+    ${GEN_ETS_FILES}
+    ${ANI_CTOR_FILE}
+  )
+
+  set(${this_target_name}_PROJ_HPP_FILES ${PROJ_HPP_FILES} PARENT_SCOPE)
+  set(${this_target_name}_IMPL_HPP_FILES ${IMPL_HPP_FILES} PARENT_SCOPE)
+  set(${this_target_name}_ABI_H_FILES ${ABI_H_FILES} PARENT_SCOPE)
+  set(${this_target_name}_ABI_C_FILES ${ABI_C_FILES} PARENT_SCOPE)
+  set(${this_target_name}_ANI_HPP_FILES ${ANI_HPP_FILES} PARENT_SCOPE)
+  set(${this_target_name}_ANI_CPP_FILES ${ANI_CPP_FILES} PARENT_SCOPE)
+  set(${this_target_name}_ANI_CTOR_FILE ${ANI_CTOR_FILE} PARENT_SCOPE)
+endfunction()
+
 
 # 准备 panda sdk
 function(setup_panda_sdk)
@@ -153,6 +235,7 @@ function(setup_panda_sdk)
   endif()
 endfunction()
 
+
 # 生成 arktsconfig.json
 function(write_arkts_config config_path gen_dir sys_dir gen_ets_files user_ets_files)
   foreach(file IN LISTS gen_ets_files)
@@ -184,84 +267,6 @@ function(write_arkts_config config_path gen_dir sys_dir gen_ets_files user_ets_f
   )
 endfunction()
 
-setup_panda_sdk()
-
-# INCLUDE_ANI_HEADER
-set(ANI_HEADER $ENV{PANDA_HOME}/../ohos_arm64/include/plugins/ets/runtime/ani)
-if(EXISTS "${ANI_HEADER}")
-  message(STATUS "Adding Panda include directory: ${ANI_HEADER}")
-  include_directories("${ANI_HEADER}")
-else()
-  message(FATAL_ERROR "Cannot find the path: ${ANI_HEADER}")
-endif()
-
-function(generate_code_from_idl this_target_name idl_files gen_ets_files idl_dir generated_dir)
-  set(IDL_FILES ${idl_files})
-  set(GEN_ETS_FILES ${gen_ets_files})
-
-  set(PROJ_HPP_FILES)
-  set(IMPL_HPP_FILES)
-  set(ABI_H_FILES)
-  set(ABI_C_FILES)
-  set(ANI_HPP_FILES)
-  set(ANI_CPP_FILES)
-  set(ANI_CTOR_FILE "${generated_dir}/src/ani_constructor.cpp")
-
-  foreach(TAIHE_FILE ${IDL_FILES})
-    # 替换扩展名
-    get_filename_component(TAIHE_FILE_NAME ${TAIHE_FILE} NAME)
-
-    string(REGEX REPLACE "\\.taihe$" ".proj.hpp" PROJ_HPP_FILE ${TAIHE_FILE_NAME})
-    string(REGEX REPLACE "\\.taihe$" ".impl.hpp" IMPL_HPP_FILE ${TAIHE_FILE_NAME})
-    string(REGEX REPLACE "\\.taihe$" ".abi.h" ABI_H_FILE ${TAIHE_FILE_NAME})
-    string(REGEX REPLACE "\\.taihe$" ".abi.c" ABI_C_FILE ${TAIHE_FILE_NAME})
-    string(REGEX REPLACE "\\.taihe$" ".ani.hpp" ANI_HPP_FILE ${TAIHE_FILE_NAME})
-    string(REGEX REPLACE "\\.taihe$" ".ani.cpp" ANI_CPP_FILE ${TAIHE_FILE_NAME})
-
-    # 将修改后的文件名添加到新的列表中
-    list(APPEND PROJ_HPP_FILES "${generated_dir}/include/${PROJ_HPP_FILE}")
-    list(APPEND IMPL_HPP_FILES "${generated_dir}/include/${IMPL_HPP_FILE}")
-    list(APPEND ABI_H_FILES "${generated_dir}/include/${ABI_H_FILE}")
-    list(APPEND ABI_C_FILES "${generated_dir}/src/${ABI_C_FILE}")
-    list(APPEND ANI_HPP_FILES "${generated_dir}/include/${ANI_HPP_FILE}")
-    list(APPEND ANI_CPP_FILES "${generated_dir}/src/${ANI_CPP_FILE}")
-  endforeach()
-
-  # 如果启用覆盖率，使用 coverage run
-  if(ENABLE_COVERAGE)
-    list(APPEND COMMAND_TO_RUN "coverage" "run" "--parallel-mode" "-m" "taihe.cli.compiler" "-I" "${idl_dir}/idl" "-O" "${generated_dir}" "--ani" "--author" "--sts-keep-name" "--debug")
-  else()
-    list(APPEND COMMAND_TO_RUN "python" "-m" "taihe.cli.compiler" "-I" "${idl_dir}/idl" "-O" "${generated_dir}" "--ani" "--author" "--sts-keep-name")
-  endif()
-
-  add_custom_command(
-    OUTPUT ${PROJ_HPP_FILES} ${IMPL_HPP_FILES} ${ABI_H_FILES} ${ABI_C_FILES} ${ANI_HPP_FILES} ${ANI_CPP_FILES} ${GEN_ETS_FILES} ${ANI_CTOR_FILE}
-    COMMAND ${COMMAND_TO_RUN}
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/compiler
-    DEPENDS ${IDL_FILES} ${CMAKE_SOURCE_DIR}/compiler/taihe/parse/antlr/TaiheAST.py
-    COMMENT "Generating Taihe C++ header and source files..."
-    VERBATIM
-  )
-
-  add_custom_target(${this_target_name}_gen
-    DEPENDS ${PROJ_HPP_FILES}
-    ${IMPL_HPP_FILES}
-    ${ABI_H_FILES}
-    ${ABI_C_FILES}
-    ${ANI_HPP_FILES}
-    ${ANI_CPP_FILES}
-    ${GEN_ETS_FILES}
-    ${ANI_CTOR_FILE}
-  )
-
-  set(${this_target_name}_PROJ_HPP_FILES ${PROJ_HPP_FILES} PARENT_SCOPE)
-  set(${this_target_name}_IMPL_HPP_FILES ${IMPL_HPP_FILES} PARENT_SCOPE)
-  set(${this_target_name}_ABI_H_FILES ${ABI_H_FILES} PARENT_SCOPE)
-  set(${this_target_name}_ABI_C_FILES ${ABI_C_FILES} PARENT_SCOPE)
-  set(${this_target_name}_ANI_HPP_FILES ${ANI_HPP_FILES} PARENT_SCOPE)
-  set(${this_target_name}_ANI_CPP_FILES ${ANI_CPP_FILES} PARENT_SCOPE)
-  set(${this_target_name}_ANI_CTOR_FILE ${ANI_CTOR_FILE} PARENT_SCOPE)
-endfunction()
 
 function(copy_dir this_target_name user_ets_files build_demo_dir)
   set(USER_ETS_FILES ${user_ets_files})
@@ -283,6 +288,7 @@ function(copy_dir this_target_name user_ets_files build_demo_dir)
   )
   set(${this_target_name}_copy_user_files ${copy_user_files} PARENT_SCOPE)
 endfunction()
+
 
 # 编译动态库
 function(compile_dylib target_name target_path user_cpp_files build_demo_dir)
@@ -308,6 +314,7 @@ function(compile_dylib target_name target_path user_cpp_files build_demo_dir)
   target_include_directories(${target_name} PUBLIC "${build_demo_dir}/generated/include/" TH_RUNTIME_INCLUDE_DIR)
 endfunction()
 
+
 # 自定义 ETS 构建规则
 function(build_ets_target this_target_name ets_files output_name dep_ets build_demo_dir)
   get_filename_component(prefix_name ${this_target_name} NAME)
@@ -319,26 +326,26 @@ function(build_ets_target this_target_name ets_files output_name dep_ets build_d
   file(MAKE_DIRECTORY ${OUTPUT_DIR})
 
   add_custom_command(
-    OUTPUT ${OUTPUT_DIR}/${output_name}.abc  # 输出文件
+    OUTPUT ${OUTPUT_DIR}/${output_name}.abc # 输出文件
     COMMAND ${ETS_COMPILER} ${ets_files}
     --output ${OUTPUT_DIR}/${output_name}.abc
     --extension ets
-    --arktsconfig ${build_demo_dir}/arktsconfig.json  # 生成命令
+    --arktsconfig ${build_demo_dir}/arktsconfig.json # 生成命令
     && ${ETS_DISASM} ${OUTPUT_DIR}/${output_name}.abc ${OUTPUT_DIR}/${output_name}.abc.dump
-    DEPENDS ${ets_files} ${dep_ets} ${build_demo_dir}/arktsconfig.json  # 输入文件依赖
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}  # 工作目录
-    COMMENT "Building ${this_target_name} ETS target"  # 注释
+    DEPENDS ${ets_files} ${dep_ets} ${build_demo_dir}/arktsconfig.json # 输入文件依赖
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} # 工作目录
+    COMMENT "Building ${this_target_name} ETS target" # 注释
   )
 
   # add_custom_command(
-  #     OUTPUT ${OUTPUT_DIR}/${output_name}.abc.dump  # 输出文件
+  #     OUTPUT ${OUTPUT_DIR}/${output_name}.abc.dump # 输出文件
   #     COMMAND ${ETS_DISASM} ${OUTPUT_DIR}/${output_name}.abc ${OUTPUT_DIR}/${output_name}.abc.dump
-  #     DEPENDS ${OUTPUT_DIR}/${output_name}.abc  # 输入文件依赖
-  #     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}  # 工作目录
-  #     COMMENT "Building ${this_target_name} ETS target DISASM"  # 注释
+  #     DEPENDS ${OUTPUT_DIR}/${output_name}.abc # 输入文件依赖
+  #     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} # 工作目录
+  #     COMMENT "Building ${this_target_name} ETS target DISASM" # 注释
   # )
-
 endfunction()
+
 
 # ets 生成 abc
 function(ets_to_abc this_target_name ets_list output_abc_list_var demo_dir build_demo_dir dep_ets)
@@ -362,6 +369,7 @@ function(ets_to_abc this_target_name ets_list output_abc_list_var demo_dir build
   # 设置输出变量
   set(${output_abc_list_var} ${ABC_FILES} PARENT_SCOPE)
 endfunction()
+
 
 function(abc_link this_target_name all_abc build_demo_dir)
   set(OUTPUT_DIR "${build_demo_dir}")
@@ -390,6 +398,7 @@ function(abc_link this_target_name all_abc build_demo_dir)
   set(${this_target_name}_MAIN_ABC ${MAIN_ABC} PARENT_SCOPE)
 endfunction()
 
+
 function(run_abc this_target_name build_demo_dir)
   # 设置
   set(OUTPUT_DIR "${build_demo_dir}")
@@ -411,21 +420,6 @@ function(run_abc this_target_name build_demo_dir)
   add_dependencies(${this_target_name}_run ${this_target_name}_link_abc)
 endfunction()
 
-function(update_grammar)
-  add_custom_command(
-    OUTPUT ${CMAKE_SOURCE_DIR}/compiler/taihe/parse/antlr/TaiheAST.py
-    COMMAND ./generate-grammar
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/compiler  # 设置工作目录
-    COMMENT "Update grammar"
-    DEPENDS ${CMAKE_SOURCE_DIR}/compiler/Taihe.g4
-  )
-
-  add_custom_target(UPDATE_GRAMMAR ALL
-    DEPENDS ${CMAKE_SOURCE_DIR}/compiler/taihe/parse/antlr/TaiheAST.py
-  )
-endfunction()
-
-update_grammar()
 
 function(add_ani_demo this_target_name idl_files gen_ets_files user_ets_files user_cpp_files run_dir)
   set(DEMO_DIR "${CMAKE_SOURCE_DIR}/${run_dir}/${this_target_name}")
@@ -437,8 +431,6 @@ function(add_ani_demo this_target_name idl_files gen_ets_files user_ets_files us
     list(APPEND GEN_ETS_PATHS "${FULL_PATH}")
   endforeach()
 
-  # 复制 ets
-  # copy_dir(${this_target_name} "${user_ets_files}" ${BUILD_DEMO_DIR})
   # 生成代码
   generate_code_from_idl(${this_target_name} "${idl_files}" "${GEN_ETS_PATHS}" ${DEMO_DIR} ${GEN_DIR})
   # 动态库编译
@@ -456,6 +448,20 @@ function(add_ani_demo this_target_name idl_files gen_ets_files user_ets_files us
   # 运行
   run_abc(${this_target_name} ${BUILD_DEMO_DIR})
 endfunction()
+
+
+setup_panda_sdk()
+
+# INCLUDE_ANI_HEADER
+set(ANI_HEADER $ENV{PANDA_HOME}/../ohos_arm64/include/plugins/ets/runtime/ani)
+if(EXISTS "${ANI_HEADER}")
+  message(STATUS "Adding Panda include directory: ${ANI_HEADER}")
+  include_directories("${ANI_HEADER}")
+else()
+  message(FATAL_ERROR "Cannot find the path: ${ANI_HEADER}")
+endif()
+
+update_grammar()
 
 add_subdirectory(test)
 add_subdirectory(cookbook)
