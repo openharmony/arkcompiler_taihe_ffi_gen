@@ -12,7 +12,7 @@ optional<string> getUserSetting(map_view<string, string> settings,
   if (iter == nullptr) {
     return optional<string>(std::nullopt);
   }
-  return optional<string>(std::in_place_t{}, iter->second);
+  return optional<string>(std::in_place, iter->second);
 }
 }  // namespace
 

@@ -28,7 +28,7 @@ optional<string> getUserSetting(map_view<string, string> settings, string_view k
     if (iter == nullptr) {
         return optional<string>(std::nullopt);
     }
-    return optional<string>(std::in_place_t{}, iter->second);
+    return optional<string>(std::in_place, iter->second);
 }
 ```
 
@@ -47,7 +47,7 @@ optional<string> getUserSetting(map_view<string, string> settings, string_view k
 
     创建非空 optional 的方法如下，其中 T 改为对应类型，val 使用对应类型的变量
     ```C++
-    optional<T>(std::in_place_t{}, val);
+    optional<T>(std::in_place, val);
     ```
 
 2. `taihe::map<K, V>`
@@ -103,9 +103,9 @@ autosave: undefined
 // 创建空Optional
 optional<T>(std::nullopt);
 // 创建非空Optional
-optional<T>(std::in_place_t{}, val);
+optional<T>(std::in_place, val);
 
-optional<int32_t> opt_var = optional<int32_t>(std::in_place_t{}, 1);
+optional<int32_t> opt_var = optional<int32_t>(std::in_place, 1);
 // 判断Optional是否为空
 bool tag = bool(opt_var);
 

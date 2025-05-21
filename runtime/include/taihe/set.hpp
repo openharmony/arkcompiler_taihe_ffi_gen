@@ -106,6 +106,7 @@ public:
     return nullptr;
   }
 
+  // TODO: Change the return type to item_t *
   bool find(as_param_t<K> key) const {
     item_t *item = find_item(key);
     if (item) {

@@ -193,9 +193,9 @@ std::cout << "Map is empty: " << std::boolalpha << my_map.empty() << std::endl;
 // 创建空Optional
 optional<T>(std::nullopt);
 // 创建非空Optional
-optional<T>(std::in_place_t{}, val);
+optional<T>(std::in_place, val);
 
-optional<int32_t> opt_var = optional<int32_t>(std::in_place_t{}, 1);
+optional<int32_t> opt_var = optional<int32_t>(std::in_place, 1);
 // 判断Optional是否为空
 bool tag = bool(opt_var);
 
