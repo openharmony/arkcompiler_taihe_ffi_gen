@@ -279,7 +279,7 @@ class BuildSystem(BuildUtils):
         """Create a simple example IDL file."""
         self.create_directory(self.idl_dir)
         with open(self.idl_dir / "hello.taihe", "w") as f:
-            f.write("function sayHello(): void;\n")
+            f.write(f"function sayHello(): void;\n")
 
     def create_author_cpp(self) -> None:
         """Create a simple example author source file."""
@@ -289,17 +289,17 @@ class BuildSystem(BuildUtils):
                 f.write(f"-I{author_include_dir}\n")
         with open(self.author_src_dir / "hello.impl.cpp", "w") as f:
             f.write(
-                '#include "hello.proj.hpp"\n'
-                '#include "hello.impl.hpp"\n'
-                "\n"
-                "#include <iostream>\n"
-                "\n"
-                "void sayHello() {\n"
-                '    std::cout << "Hello, World!" << std::endl;\n'
-                "    return;\n"
-                "}\n"
-                "\n"
-                "TH_EXPORT_CPP_API_sayHello(sayHello);\n"
+                f'#include "hello.proj.hpp"\n'
+                f'#include "hello.impl.hpp"\n'
+                f"\n"
+                f"#include <iostream>\n"
+                f"\n"
+                f"void sayHello() {{\n"
+                f'    std::cout << "Hello, World!" << std::endl;\n'
+                f"    return;\n"
+                f"}}\n"
+                f"\n"
+                f"TH_EXPORT_CPP_API_sayHello(sayHello);\n"
             )
 
     def create_user_ets(self) -> None:
@@ -307,12 +307,13 @@ class BuildSystem(BuildUtils):
         self.create_directory(self.user_dir)
         with open(self.user_dir / "main.ets", "w") as f:
             f.write(
-                'import * as hello from "hello";\n'
+                f'import * as hello from "hello";\n'
+                f"\n"
                 f'loadLibrary("{self.lib_name}");\n'
-                "\n"
-                "function main() {\n"
-                "    hello.sayHello();\n"
-                "}\n"
+                f"\n"
+                f"function main() {{\n"
+                f"    hello.sayHello();\n"
+                f"}}\n"
             )
 
     def create_user_cpp(self) -> None:
@@ -323,12 +324,12 @@ class BuildSystem(BuildUtils):
                 f.write(f"-I{user_include_dir}\n")
         with open(self.user_src_dir / "main.cpp", "w") as f:
             f.write(
-                '#include "hello.user.hpp"\n'
-                "\n"
-                "int main() {\n"
-                "    hello::sayHello();\n"
-                "    return 0;\n"
-                "}\n"
+                f'#include "hello.user.hpp"\n'
+                f"\n"
+                f"int main() {{\n"
+                f"    hello::sayHello();\n"
+                f"    return 0;\n"
+                f"}}\n"
             )
 
     def generate_and_build(self) -> None:

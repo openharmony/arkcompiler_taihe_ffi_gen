@@ -107,62 +107,63 @@ class ANIType:
         return self.base.hint[0].upper() + self.base.hint[1:]
 
     @property
-    def array(self) -> "ANIArrayType":
-        assert self.base.inner_array
-        return self.base.inner_array
+    def fixedarray(self) -> "ANIFixedArrayType":
+        assert self.base.fixedarray_hint
+        return self.base.fixedarray_hint
 
 
 @dataclass(repr=False)
-class ANIArrayType(ANIType):
+class ANIFixedArrayType(ANIType):
     def __hash__(self) -> int:
         return hash(self.hint)
 
 
 @dataclass(repr=False)
 class ANIBaseType(ANIType):
-    inner_array: "ANIArrayType | None"
+    fixedarray_hint: "ANIFixedArrayType | None"
 
     def __init__(self, hint: str):
         super().__init__(hint, self)
-        self.inner_array = None
+        self.fixedarray_hint = None
 
     def __hash__(self) -> int:
         return hash(self.hint)
 
 
 ANI_REF = ANIBaseType(hint="ref")
-ANI_ARRAY_REF = ANIArrayType(hint="array", base=ANI_REF)
-ANI_REF.inner_array = ANI_ARRAY_REF
+ANI_FIXEDARRAY_REF = ANIFixedArrayType(hint="fixedarray_ref", base=ANI_REF)
+ANI_REF.fixedarray_hint = ANI_FIXEDARRAY_REF
 
 ANI_BOOLEAN = ANIBaseType(hint="boolean")
-ANI_ARRAY_BOOLEAN = ANIArrayType(hint="array", base=ANI_REF)
-ANI_BOOLEAN.inner_array = ANI_ARRAY_BOOLEAN
+ANI_FIXEDARRAY_BOOLEAN = ANIFixedArrayType(hint="fixedarray_boolean", base=ANI_REF)
+ANI_BOOLEAN.fixedarray_hint = ANI_FIXEDARRAY_BOOLEAN
 
 ANI_FLOAT = ANIBaseType(hint="float")
-ANI_ARRAY_FLOAT = ANIArrayType(hint="array", base=ANI_REF)
-ANI_FLOAT.inner_array = ANI_ARRAY_FLOAT
+ANI_FIXEDARRAY_FLOAT = ANIFixedArrayType(hint="fixedarray_float", base=ANI_REF)
+ANI_FLOAT.fixedarray_hint = ANI_FIXEDARRAY_FLOAT
 
 ANI_DOUBLE = ANIBaseType(hint="double")
-ANI_ARRAY_DOUBLE = ANIArrayType(hint="array", base=ANI_REF)
-ANI_DOUBLE.inner_array = ANI_ARRAY_DOUBLE
+ANI_FIXEDARRAY_DOUBLE = ANIFixedArrayType(hint="fixedarray_double", base=ANI_REF)
+ANI_DOUBLE.fixedarray_hint = ANI_FIXEDARRAY_DOUBLE
 
 ANI_BYTE = ANIBaseType(hint="byte")
-ANI_ARRAY_BYTE = ANIArrayType(hint="array", base=ANI_REF)
-ANI_BYTE.inner_array = ANI_ARRAY_BYTE
+ANI_FIXEDARRAY_BYTE = ANIFixedArrayType(hint="fixedarray_byte", base=ANI_REF)
+ANI_BYTE.fixedarray_hint = ANI_FIXEDARRAY_BYTE
 
 ANI_SHORT = ANIBaseType(hint="short")
-ANI_ARRAY_SHORT = ANIArrayType(hint="array", base=ANI_REF)
-ANI_SHORT.inner_array = ANI_ARRAY_SHORT
+ANI_FIXEDARRAY_SHORT = ANIFixedArrayType(hint="fixedarray_short", base=ANI_REF)
+ANI_SHORT.fixedarray_hint = ANI_FIXEDARRAY_SHORT
 
 ANI_INT = ANIBaseType(hint="int")
-ANI_ARRAY_INT = ANIArrayType(hint="array", base=ANI_REF)
-ANI_INT.inner_array = ANI_ARRAY_INT
+ANI_FIXEDARRAY_INT = ANIFixedArrayType(hint="fixedarray_int", base=ANI_REF)
+ANI_INT.fixedarray_hint = ANI_FIXEDARRAY_INT
 
 ANI_LONG = ANIBaseType(hint="long")
-ANI_ARRAY_LONG = ANIArrayType(hint="array", base=ANI_REF)
-ANI_LONG.inner_array = ANI_ARRAY_LONG
+ANI_FIXEDARRAY_LONG = ANIFixedArrayType(hint="fixedarray_long", base=ANI_REF)
+ANI_LONG.fixedarray_hint = ANI_FIXEDARRAY_LONG
 
 ANI_OBJECT = ANIType(hint="object", base=ANI_REF)
+ANI_ARRAY = ANIType(hint="array", base=ANI_REF)
 ANI_FN_OBJECT = ANIType(hint="fn_object", base=ANI_REF)
 ANI_ENUM_ITEM = ANIType(hint="enum_item", base=ANI_REF)
 ANI_STRING = ANIType(hint="string", base=ANI_REF)
@@ -901,61 +902,6 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
     ):
         pass
 
-    def from_ani_array(
-        self,
-        target: CSourceWriter,
-        env: str,
-        ani_size: str,
-        ani_array_value: str,
-        cpp_array_buffer: str,
-    ):
-        ani_value = f"{cpp_array_buffer}_ani_item"
-        cpp_result = f"{cpp_array_buffer}_cpp_item"
-        cpp_i = f"{cpp_array_buffer}_i"
-        with target.indented(
-            f"for (size_t {cpp_i} = 0; {cpp_i} < {ani_size}; {cpp_i}++) {{",
-            f"}}",
-        ):
-            target.writelns(
-                f"ani_object {ani_value};",
-                f"{env}->Array_Get({ani_array_value}, {cpp_i}, reinterpret_cast<ani_ref*>(&{ani_value}));",
-            )
-            self.from_ani_boxed(target, env, ani_value, cpp_result)
-            target.writelns(
-                f"new (&{cpp_array_buffer}[{cpp_i}]) {self.cpp_info.as_owner}(std::move({cpp_result}));",
-            )
-
-    def into_ani_array(
-        self,
-        target: CSourceWriter,
-        env: str,
-        cpp_size: str,
-        cpp_array_value: str,
-        ani_array_result: str,
-    ):
-        ani_result = f"{ani_array_result}_item"
-        ani_undefined = f"{ani_array_result}_undef"
-        cpp_i = f"{ani_array_result}_i"
-        target.writelns(
-            f"ani_array {ani_array_result};",
-            f"ani_ref {ani_undefined};",
-            f"{env}->GetUndefined(&{ani_undefined});",
-            f"{env}->Array_New({cpp_size}, {ani_undefined}, &{ani_array_result});",
-        )
-        with target.indented(
-            f"for (size_t {cpp_i} = 0; {cpp_i} < {cpp_size}; {cpp_i}++) {{",
-            f"}}",
-        ):
-            if self.ani_type.base == ANI_REF:
-                self.into_ani(target, env, f"{cpp_array_value}[{cpp_i}]", ani_result)
-            else:
-                self.into_ani_boxed(
-                    target, env, f"{cpp_array_value}[{cpp_i}]", ani_result
-                )
-            target.writelns(
-                f"{env}->Array_Set({ani_array_result}, {cpp_i}, {ani_result});",
-            )
-
     def into_ani_boxed(
         self,
         target: CSourceWriter,
@@ -996,6 +942,73 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
                 f'{env}->Object_CallMethod_{self.ani_type.suffix}((ani_object){ani_value}, TH_ANI_FIND_CLASS_METHOD({env}, "Lstd/core/{self.ani_type.suffix};", "unboxed", ":{self.type_desc}"), &{ani_result});',
             )
             self.from_ani(target, env, ani_result, cpp_result)
+
+    def from_ani_fixedarray(
+        self,
+        target: CSourceWriter,
+        env: str,
+        ani_size: str,
+        ani_fixedarray_value: str,
+        cpp_fixedarray_buffer: str,
+    ):
+        if self.ani_type.base == ANI_REF:
+            ani_value = f"{cpp_fixedarray_buffer}_ani_item"
+            cpp_result = f"{cpp_fixedarray_buffer}_cpp_item"
+            cpp_i = f"{cpp_fixedarray_buffer}_i"
+            with target.indented(
+                f"for (size_t {cpp_i} = 0; {cpp_i} < {ani_size}; {cpp_i}++) {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"{self.ani_type} {ani_value};",
+                    f"{env}->FixedArray_Get_Ref({ani_fixedarray_value}, {cpp_i}, reinterpret_cast<ani_ref*>(&{ani_value}));",
+                )
+                self.from_ani(target, env, ani_value, cpp_result)
+                target.writelns(
+                    f"new (&{cpp_fixedarray_buffer}[{cpp_i}]) {self.cpp_info.as_owner}(std::move({cpp_result}));",
+                )
+        else:
+            target.writelns(
+                f"{env}->FixedArray_GetRegion_{self.ani_type.suffix}({ani_fixedarray_value}, 0, {ani_size}, reinterpret_cast<{self.ani_type}*>({cpp_fixedarray_buffer}));",
+            )
+
+    def into_ani_fixedarray(
+        self,
+        target: CSourceWriter,
+        env: str,
+        cpp_size: str,
+        cpp_fixedarray_value: str,
+        ani_fixedarray_result: str,
+    ):
+        if self.ani_type.base == ANI_REF:
+            ani_class = f"{ani_fixedarray_result}_cls"
+            ani_result = f"{ani_fixedarray_result}_item"
+            ani_undefined = f"{ani_fixedarray_result}_undef"
+            cpp_i = f"{ani_fixedarray_result}_i"
+            target.writelns(
+                f"ani_fixedarray_ref {ani_fixedarray_result};",
+                f"ani_class {ani_class};",
+                f'{env}->FindClass("{self.type_desc}", &{ani_class});',
+                f"ani_ref {ani_undefined};",
+                f"{env}->GetUndefined(&{ani_undefined});",
+                f"{env}->FixedArray_New_Ref({ani_class}, {cpp_size}, {ani_undefined}, &{ani_fixedarray_result});",
+            )
+            with target.indented(
+                f"for (size_t {cpp_i} = 0; {cpp_i} < {cpp_size}; {cpp_i}++) {{",
+                f"}}",
+            ):
+                self.into_ani(
+                    target, env, f"{cpp_fixedarray_value}[{cpp_i}]", ani_result
+                )
+                target.writelns(
+                    f"{env}->FixedArray_Set_Ref({ani_fixedarray_result}, {cpp_i}, {ani_result});",
+                )
+        else:
+            target.writelns(
+                f"{self.ani_type.fixedarray} {ani_fixedarray_result};",
+                f"{env}->FixedArray_New_{self.ani_type.suffix}({cpp_size}, &{ani_fixedarray_result});",
+                f"{env}->FixedArray_SetRegion_{self.ani_type.suffix}({ani_fixedarray_result}, 0, {cpp_size}, reinterpret_cast<{self.ani_type} const*>({cpp_fixedarray_value}));",
+            )
 
 
 class EnumTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[EnumType]):
@@ -1322,34 +1335,95 @@ class StringTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[StringType]):
         )
 
 
-class ArrayTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
-    def __init__(self, am: AnalysisManager, t: ArrayType) -> None:
+class OptionalTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[OptionalType]):
+    def __init__(self, am: AnalysisManager, t: OptionalType) -> None:
         super().__init__(am, t)
         self.am = am
         self.t = t
         item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
-        self.ani_type = item_ty_ani_info.ani_type.array
-        self.type_desc = f"Lescompat/Array;"
-        # TODO: remove this check
-        if isinstance(self.t.item_ty, ScalarType) and self.t.item_ty.kind in (
-            ScalarKind.U8,
-            ScalarKind.U16,
-            ScalarKind.U32,
-            ScalarKind.U64,
-        ):
-            raise_adhoc_error(
-                am,
-                f"Array of unsigned integer types is not supported, "
-                f"if you want to use ArrayBuffer, please use `@arraybuffer Array<{self.t.item_ty.ty_ref.text}>`, "
-                f"if you want to use TypedArray, please use `@typedarray Array<{self.t.item_ty.ty_ref.text}>`",
-                self.t.ty_ref.loc,
-            )
+        self.ani_type = ANI_REF
+        self.type_desc = item_ty_ani_info.type_desc_boxed
 
     @override
     def sts_type_in(self, pkg: PackageDecl, target: StsWriter) -> str:
         item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
         sts_type = item_ty_ani_info.sts_type_in(pkg, target)
-        return f"Array<{sts_type}>"
+        return f"({sts_type} | undefined)"
+
+    @override
+    def from_ani(
+        self,
+        target: CSourceWriter,
+        env: str,
+        ani_value: str,
+        cpp_result: str,
+    ):
+        ani_is_undefined = f"{cpp_result}_flag"
+        cpp_pointer = f"{cpp_result}_ptr"
+        cpp_spec = f"{cpp_result}_spec"
+        item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
+        target.writelns(
+            f"ani_boolean {ani_is_undefined};",
+            f"{item_ty_cpp_info.as_owner}* {cpp_pointer} = nullptr;",
+            f"{env}->Reference_IsUndefined({ani_value}, &{ani_is_undefined});",
+        )
+        with target.indented(
+            f"if (!{ani_is_undefined}) {{",
+            f"}};",
+        ):
+            item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
+            item_ty_ani_info.from_ani_boxed(target, env, ani_value, cpp_spec)
+            target.writelns(
+                f"{cpp_pointer} = new {item_ty_cpp_info.as_owner}(std::move({cpp_spec}));",
+            )
+        target.writelns(
+            f"{self.cpp_info.as_owner} {cpp_result}({cpp_pointer});",
+        )
+
+    @override
+    def into_ani(
+        self,
+        target: CSourceWriter,
+        env: str,
+        cpp_value: str,
+        ani_result: str,
+    ):
+        ani_spec = f"{ani_result}_spec"
+        target.writelns(
+            f"ani_ref {ani_result};",
+        )
+        with target.indented(
+            f"if (!{cpp_value}) {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"{env}->GetUndefined(&{ani_result});",
+            )
+        with target.indented(
+            f"else {{",
+            f"}}",
+        ):
+            item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
+            item_ty_ani_info.into_ani_boxed(target, env, f"(*{cpp_value})", ani_spec)
+            target.writelns(
+                f"{ani_result} = {ani_spec};",
+            )
+
+
+class FixedArrayTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
+    def __init__(self, am: AnalysisManager, t: ArrayType) -> None:
+        super().__init__(am, t)
+        self.am = am
+        self.t = t
+        item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
+        self.ani_type = item_ty_ani_info.ani_type.fixedarray
+        self.type_desc = f"Lescompat/FixedArray;"
+
+    @override
+    def sts_type_in(self, pkg: PackageDecl, target: StsWriter) -> str:
+        item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
+        sts_type = item_ty_ani_info.sts_type_in(pkg, target)
+        return f"FixedArray<{sts_type}>"
 
     @override
     def from_ani(
@@ -1364,11 +1438,13 @@ class ArrayTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
         cpp_buffer = f"{cpp_result}_buffer"
         target.writelns(
             f"size_t {ani_size};",
-            f"{env}->Array_GetLength({ani_value}, &{ani_size});",
+            f"{env}->FixedArray_GetLength({ani_value}, &{ani_size});",
             f"{item_ty_cpp_info.as_owner}* {cpp_buffer} = reinterpret_cast<{item_ty_cpp_info.as_owner}*>(malloc({ani_size} * sizeof({item_ty_cpp_info.as_owner})));",
         )
         item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
-        item_ty_ani_info.from_ani_array(target, env, ani_size, ani_value, cpp_buffer)
+        item_ty_ani_info.from_ani_fixedarray(
+            target, env, ani_size, ani_value, cpp_buffer
+        )
         target.writelns(
             f"{self.cpp_info.as_owner} {cpp_result}({cpp_buffer}, {ani_size});",
         )
@@ -1386,9 +1462,91 @@ class ArrayTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
         target.writelns(
             f"size_t {cpp_size} = {cpp_value}.size();",
         )
-        item_ty_ani_info.into_ani_array(
+        item_ty_ani_info.into_ani_fixedarray(
             target, env, cpp_size, f"{cpp_value}.data()", ani_result
         )
+
+
+class ArrayTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
+    def __init__(self, am: AnalysisManager, t: ArrayType) -> None:
+        super().__init__(am, t)
+        self.am = am
+        self.t = t
+        self.ani_type = ANI_ARRAY
+        self.type_desc = f"Lescompat/Array;"
+
+    @override
+    def sts_type_in(self, pkg: PackageDecl, target: StsWriter) -> str:
+        item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
+        sts_type = item_ty_ani_info.sts_type_in(pkg, target)
+        return f"Array<{sts_type}>"
+
+    @override
+    def from_ani(
+        self,
+        target: CSourceWriter,
+        env: str,
+        ani_value: str,
+        cpp_result: str,
+    ):
+        item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
+        item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
+        ani_size = f"{cpp_result}_size"
+        cpp_buffer = f"{cpp_result}_buffer"
+        ani_item = f"{cpp_buffer}_ani_item"
+        cpp_item = f"{cpp_buffer}_cpp_item"
+        cpp_ctr = f"{cpp_buffer}_i"
+        target.writelns(
+            f"size_t {ani_size};",
+            f"{env}->Array_GetLength({ani_value}, &{ani_size});",
+            f"{item_ty_cpp_info.as_owner}* {cpp_buffer} = reinterpret_cast<{item_ty_cpp_info.as_owner}*>(malloc({ani_size} * sizeof({item_ty_cpp_info.as_owner})));",
+        )
+        with target.indented(
+            f"for (size_t {cpp_ctr} = 0; {cpp_ctr} < {ani_size}; {cpp_ctr}++) {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"ani_object {ani_item};",
+                f"{env}->Array_Get({ani_value}, {cpp_ctr}, reinterpret_cast<ani_ref*>(&{ani_item}));",
+            )
+            item_ty_ani_info.from_ani_boxed(target, env, ani_item, cpp_item)
+            target.writelns(
+                f"new (&{cpp_buffer}[{cpp_ctr}]) {item_ty_ani_info.cpp_info.as_owner}(std::move({cpp_item}));",
+            )
+        target.writelns(
+            f"{self.cpp_info.as_owner} {cpp_result}({cpp_buffer}, {ani_size});",
+        )
+
+    @override
+    def into_ani(
+        self,
+        target: CSourceWriter,
+        env: str,
+        cpp_value: str,
+        ani_result: str,
+    ):
+        item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
+        cpp_size = f"{ani_result}_size"
+        ani_item = f"{ani_result}_item"
+        ani_undefined = f"{ani_result}_undef"
+        cpp_ctr = f"{ani_result}_i"
+        target.writelns(
+            f"size_t {cpp_size} = {cpp_value}.size();",
+            f"ani_array {ani_result};",
+            f"ani_ref {ani_undefined};",
+            f"{env}->GetUndefined(&{ani_undefined});",
+            f"{env}->Array_New({cpp_size}, {ani_undefined}, &{ani_result});",
+        )
+        with target.indented(
+            f"for (size_t {cpp_ctr} = 0; {cpp_ctr} < {cpp_size}; {cpp_ctr}++) {{",
+            f"}}",
+        ):
+            item_ty_ani_info.into_ani_boxed(
+                target, env, f"{cpp_value}[{cpp_ctr}]", ani_item
+            )
+            target.writelns(
+                f"{env}->Array_Set({ani_result}, {cpp_ctr}, {ani_item});",
+            )
 
 
 class ArrayBufferTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
@@ -1608,81 +1766,6 @@ class BigIntTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
             f"ani_object {ani_result};",
             f'{env}->Function_Call_Ref(TH_ANI_FIND_{pkg_ani_info.scope.upper}_FUNCTION({env}, "{pkg_ani_info.impl_desc}", "__fromArrayBufferToBigInt", nullptr), reinterpret_cast<ani_ref*>(&{ani_result}), {ani_arrbuf});',
         )
-
-
-class OptionalTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[OptionalType]):
-    def __init__(self, am: AnalysisManager, t: OptionalType) -> None:
-        super().__init__(am, t)
-        self.am = am
-        self.t = t
-        item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
-        self.ani_type = ANI_REF
-        self.type_desc = item_ty_ani_info.type_desc_boxed
-
-    @override
-    def sts_type_in(self, pkg: PackageDecl, target: StsWriter) -> str:
-        item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
-        sts_type = item_ty_ani_info.sts_type_in(pkg, target)
-        return f"({sts_type} | undefined)"
-
-    @override
-    def from_ani(
-        self,
-        target: CSourceWriter,
-        env: str,
-        ani_value: str,
-        cpp_result: str,
-    ):
-        ani_is_undefined = f"{cpp_result}_flag"
-        cpp_pointer = f"{cpp_result}_ptr"
-        cpp_spec = f"{cpp_result}_spec"
-        item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
-        target.writelns(
-            f"ani_boolean {ani_is_undefined};",
-            f"{item_ty_cpp_info.as_owner}* {cpp_pointer} = nullptr;",
-            f"{env}->Reference_IsUndefined({ani_value}, &{ani_is_undefined});",
-        )
-        with target.indented(
-            f"if (!{ani_is_undefined}) {{",
-            f"}};",
-        ):
-            item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
-            item_ty_ani_info.from_ani_boxed(target, env, ani_value, cpp_spec)
-            target.writelns(
-                f"{cpp_pointer} = new {item_ty_cpp_info.as_owner}(std::move({cpp_spec}));",
-            )
-        target.writelns(
-            f"{self.cpp_info.as_owner} {cpp_result}({cpp_pointer});",
-        )
-
-    @override
-    def into_ani(
-        self,
-        target: CSourceWriter,
-        env: str,
-        cpp_value: str,
-        ani_result: str,
-    ):
-        ani_spec = f"{ani_result}_spec"
-        target.writelns(
-            f"ani_ref {ani_result};",
-        )
-        with target.indented(
-            f"if (!{cpp_value}) {{",
-            f"}}",
-        ):
-            target.writelns(
-                f"{env}->GetUndefined(&{ani_result});",
-            )
-        with target.indented(
-            f"else {{",
-            f"}}",
-        ):
-            item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
-            item_ty_ani_info.into_ani_boxed(target, env, f"(*{cpp_value})", ani_spec)
-            target.writelns(
-                f"{ani_result} = {ani_spec};",
-            )
 
 
 class RecordTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[MapType]):
@@ -2001,6 +2084,8 @@ class TypeANIInfo(TypeVisitor[AbstractTypeANIInfo]):
             return TypedArrayTypeANIInfo.get(self.am, t)
         if t.ty_ref.attrs.get("arraybuffer"):
             return ArrayBufferTypeANIInfo.get(self.am, t)
+        if t.ty_ref.attrs.get("fixedarray"):
+            return FixedArrayTypeANIInfo.get(self.am, t)
         return ArrayTypeANIInfo.get(self.am, t)
 
     @override
