@@ -918,7 +918,7 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
             )
             self.into_ani(target, env, cpp_value, ani_value)
             target.writelns(
-                f'{env}->Object_New(TH_ANI_FIND_CLASS({env}, "Lstd/core/{self.ani_type.suffix};"), TH_ANI_FIND_CLASS_METHOD({env}, "Lstd/core/{self.ani_type.suffix};", "<ctor>", "{self.type_desc}:V"), &{ani_result}, {ani_value});',
+                f'{env}->Object_New(TH_ANI_FIND_CLASS({env}, "{self.type_desc_boxed}"), TH_ANI_FIND_CLASS_METHOD({env}, "{self.type_desc_boxed}", "<ctor>", "{self.type_desc}:V"), &{ani_result}, {ani_value});',
             )
 
     def from_ani_boxed(
@@ -939,7 +939,7 @@ class AbstractTypeANIInfo(metaclass=ABCMeta):
             ani_result = f"{cpp_result}_ani"
             target.writelns(
                 f"{self.ani_type} {ani_result};",
-                f'{env}->Object_CallMethod_{self.ani_type.suffix}((ani_object){ani_value}, TH_ANI_FIND_CLASS_METHOD({env}, "Lstd/core/{self.ani_type.suffix};", "unboxed", ":{self.type_desc}"), &{ani_result});',
+                f'{env}->Object_CallMethod_{self.ani_type.suffix}((ani_object){ani_value}, TH_ANI_FIND_CLASS_METHOD({env}, "{self.type_desc_boxed}", "unboxed", ":{self.type_desc}"), &{ani_result});',
             )
             self.from_ani(target, env, ani_result, cpp_result)
 

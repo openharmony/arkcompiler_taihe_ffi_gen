@@ -683,11 +683,11 @@ class ANICodeGenerator:
                 )
                 if struct_ani_info.is_class():
                     struct_ani_impl_target.writelns(
-                        f'env->Object_GetField_{type_ani_info.ani_type.suffix}(ani_obj, TH_ANI_FIND_CLASS_FIELD(env, "{struct_ani_info.impl_desc}", "{final.name}"), reinterpret_cast<{type_ani_info.ani_type.base}*>(&{ani_field_value}));',
+                        f'env->Object_GetField_{type_ani_info.ani_type.suffix}(ani_obj, TH_ANI_FIND_CLASS_FIELD(env, "{struct_ani_info.type_desc}", "{final.name}"), reinterpret_cast<{type_ani_info.ani_type.base}*>(&{ani_field_value}));',
                     )
                 else:
                     struct_ani_impl_target.writelns(
-                        f'env->Object_CallMethod_{type_ani_info.ani_type.suffix}(ani_obj, TH_ANI_FIND_CLASS_METHOD(env, "{struct_ani_info.impl_desc}", "<get>{final.name}", nullptr), reinterpret_cast<{type_ani_info.ani_type.base}*>(&{ani_field_value}));',
+                        f'env->Object_CallMethod_{type_ani_info.ani_type.suffix}(ani_obj, TH_ANI_FIND_CLASS_METHOD(env, "{struct_ani_info.type_desc}", "<get>{final.name}", nullptr), reinterpret_cast<{type_ani_info.ani_type.base}*>(&{ani_field_value}));',
                     )
                 type_ani_info.from_ani(
                     struct_ani_impl_target, "env", ani_field_value, cpp_field_result
