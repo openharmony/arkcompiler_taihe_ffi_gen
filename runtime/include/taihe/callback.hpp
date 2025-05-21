@@ -103,15 +103,6 @@ struct callback<Return(Params...)> : callback_view<Return(Params...)> {
             std::forward<Args>(args)...),
         &invoke_impl<Impl>::invoke);
   }
-
-  template<typename Impl>
-  static callback<Return(Params...)> from(Impl &&impl) {
-    return callback<Return(Params...)>(
-        ::taihe::new_data_ptr<Impl>(
-            reinterpret_cast<TypeInfo const *>(&rtti_impl<Impl>),
-            std::forward<Impl>(impl)),
-        &invoke_impl<Impl>::invoke);
-  }
 };
 
 template<typename Return, typename... Params>

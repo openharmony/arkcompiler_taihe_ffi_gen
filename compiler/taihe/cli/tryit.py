@@ -420,21 +420,25 @@ class BuildSystem(BuildUtils):
         ]
         if self.user == UserType.STS:
             runtime_sources.append(self.config.runtime_src_dir / "runtime.cpp")
+
         # Compile each component
         runtime_objects = self.compile(
             self.build_runtime_src_dir,
             runtime_sources,
             self.runtime_includes,
+            compile_flags=[f"-O{self.opt_level}"],
         )
         generated_objects = self.compile(
             self.build_generated_src_dir,
             self.generated_src_dir.glob("*.[cC]*"),
             self.generated_includes,
+            compile_flags=[f"-O{self.opt_level}"],
         )
         author_objects = self.compile(
             self.build_author_src_dir,
             self.author_src_dir.glob("*.[cC]*"),
             self.author_includes,
+            compile_flags=[f"-O{self.opt_level}"],
         )
 
         # Link all objects
@@ -461,7 +465,7 @@ class BuildSystem(BuildUtils):
         for path in self.user_dir.glob("*.ets"):
             paths[path.stem] = path
 
-        self.create_arktsconfig(paths, self.arktsconfig_file)
+        self.create_arktsconfig(self.arktsconfig_file, paths)
 
         # Compile ETS files in each directory
         generated_abc = self.compile_abc(
@@ -506,6 +510,7 @@ class BuildSystem(BuildUtils):
             self.build_user_dir,
             self.user_src_dir.glob("*.[cC]*"),
             self.user_includes,
+            compile_flags=[f"-O{self.opt_level}"],
         )
 
         # Link the executable
@@ -582,15 +587,17 @@ class BuildSystem(BuildUtils):
 
     def create_arktsconfig(
         self,
-        app_paths: Mapping[str, Path],
         arktsconfig_file: Path,
+        app_paths: Mapping[str, Path] | None = None,
     ) -> None:
         """Create ArkTS configuration file."""
         paths = {
             "std": self.config.panda_ets_dir / "stdlib/std",
             "escompat": self.config.panda_ets_dir / "stdlib/escompat",
         }
-        paths.update(app_paths)
+
+        if app_paths is not None:
+            paths.update(app_paths)
 
         config_content = {
             "compilerOptions": {
@@ -608,7 +615,8 @@ class BuildSystem(BuildUtils):
         self,
         output_dir: Path,
         input_files: Iterable[Path],
-        include_dirs: Sequence[Path],
+        include_dirs: Sequence[Path] = (),
+        compile_flags: Sequence[str] = (),
     ) -> list[Path]:
         """Compile source files."""
         output_files: list[Path] = []
@@ -629,11 +637,11 @@ class BuildSystem(BuildUtils):
                 "-c",
                 "-fvisibility=hidden",
                 "-fPIC",
-                f"-O{self.opt_level}",
                 f"-std={std}",
                 "-o",
                 output_file,
                 input_file,
+                *compile_flags,
             ]
 
             for include_dir in include_dirs:
@@ -651,18 +659,21 @@ class BuildSystem(BuildUtils):
         output_file: Path,
         input_files: Sequence[Path],
         shared: bool = False,
-        link_options: list[str] | None = None,
+        link_options: Sequence[str] = (),
     ) -> None:
         """Link object files."""
         if len(input_files) == 0:
             self.logger.warning("No input files to link")
             return
 
-        link_options = link_options or []
-
-        command = [self.config.cxx, "-fPIC", "-o", output_file]
-        command.extend(input_files)
-        command.extend(link_options)
+        command = [
+            self.config.cxx,
+            "-fPIC",
+            "-o",
+            output_file,
+            *input_files,
+            *link_options,
+        ]
 
         if shared:
             command.append("-shared")
@@ -673,12 +684,16 @@ class BuildSystem(BuildUtils):
         self,
         target: Path,
         ld_lib_path: Path,
+        args: Sequence[str] = (),
     ) -> float:
         """Run the compiled target."""
+        command = [
+            target,
+            *args,
+        ]
+
         return self.run_command(
-            [
-                target,
-            ],
+            command,
             env={"LD_LIBRARY_PATH": ld_lib_path},
             capture_output=False,
         )
@@ -699,18 +714,18 @@ class BuildSystem(BuildUtils):
 
             es2panda_path = self.config.panda_tool_dir / "bin/es2panda"
 
-            self.run_command(
-                [
-                    es2panda_path,
-                    input_file,
-                    "--output",
-                    output_file,
-                    "--extension",
-                    "ets",
-                    "--arktsconfig",
-                    arktsconfig_file,
-                ]
-            )
+            gen_abc_command = [
+                es2panda_path,
+                input_file,
+                "--output",
+                output_file,
+                "--extension",
+                "ets",
+                "--arktsconfig",
+                arktsconfig_file,
+            ]
+
+            self.run_command(gen_abc_command)
 
             ark_disasm_path = self.config.panda_tool_dir / "bin/ark_disasm"
             if not ark_disasm_path.exists():
@@ -719,13 +734,13 @@ class BuildSystem(BuildUtils):
                 )
                 continue
 
-            self.run_command(
-                [
-                    ark_disasm_path,
-                    output_file,
-                    output_dump,
-                ]
-            )
+            gen_abc_dump_command = [
+                ark_disasm_path,
+                output_file,
+                output_dump,
+            ]
+
+            self.run_command(gen_abc_dump_command)
 
             output_files.append(output_file)
 
@@ -743,8 +758,13 @@ class BuildSystem(BuildUtils):
 
         ark_link_path = self.config.panda_tool_dir / "bin/ark_link"
 
-        command = [ark_link_path, "--output", target, "--"]
-        command.extend(input_files)
+        command = [
+            ark_link_path,
+            "--output",
+            target,
+            "--",
+            *input_files,
+        ]
 
         self.run_command(command)
 
@@ -759,14 +779,16 @@ class BuildSystem(BuildUtils):
 
         etsstdlib_path = self.config.panda_ets_dir / "etsstdlib.abc"
 
+        command = [
+            ark_path,
+            f"--boot-panda-files={etsstdlib_path}",
+            f"--load-runtimes=ets",
+            abc_target,
+            entry,
+        ]
+
         return self.run_command(
-            [
-                ark_path,
-                f"--boot-panda-files={etsstdlib_path}",
-                f"--load-runtimes=ets",
-                abc_target,
-                entry,
-            ],
+            command,
             env={"LD_LIBRARY_PATH": ld_lib_path},
             capture_output=False,
         )

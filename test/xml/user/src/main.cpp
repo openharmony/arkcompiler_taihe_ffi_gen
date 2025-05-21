@@ -8,6 +8,20 @@
 using namespace taihe;
 using namespace ohos::xml;
 
+struct CallbackTag {
+  bool operator()(string_view name, string_view value) {
+    std::cout << "(tag) " << name << ": " << value << std::endl;
+    return true;
+  }
+};
+
+struct CallbackAttribute {
+  bool operator()(string_view name, string_view value) {
+    std::cout << "(attribute) " << name << ": " << value << std::endl;
+    return true;
+  }
+};
+
 int main(int argc, char **argv) {
   if (argc != 2) {
     std::cerr << "Should have 1 argument!" << std::endl;
@@ -27,19 +41,10 @@ int main(int argc, char **argv) {
 
   parser->parseXml({
       .tagValueCallbackFunction =
-          optional<callback<bool(string_view, string_view)>>::make(
-              callback<bool(string_view, string_view)>::from(
-                  [](string_view name, string_view value) -> bool {
-                    std::cout << "(tag) " << name << ": " << value << std::endl;
-                    return true;
-                  })),
+          {std::in_place,
+           callback<bool(string_view, string_view)>::from<CallbackTag>()},
       .attributeValueCallbackFunction =
-          optional<callback<bool(string_view, string_view)>>::make(
-              callback<bool(string_view, string_view)>::from(
-                  [](string_view name, string_view value) -> bool {
-                    std::cout << "(attribute) " << name << ": " << value
-                              << std::endl;
-                    return true;
-                  })),
+          {std::in_place,
+           callback<bool(string_view, string_view)>::from<CallbackAttribute>()},
   });
 }

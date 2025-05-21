@@ -172,16 +172,33 @@ void fillSetImpl(set_view<string> target) {
   target.emplace("b");
 }
 
+struct CallbackImplInner {
+  callback<string(string_view, string_view)> f;
+  string s;
+
+  CallbackImplInner(callback_view<string(string_view, string_view)> f,
+                    string_view s)
+      : f(f), s(s) {}
+
+  string operator()(string_view x) {
+    return f(s, x);
+  }
+};
+
+struct CallbackImplOuter {
+  callback<string(string_view, string_view)> f;
+
+  CallbackImplOuter(callback_view<string(string_view, string_view)> f) : f(f) {}
+
+  callback<string(string_view)> operator()(string_view s) {
+    return callback<string(string_view)>::from<CallbackImplInner>(f, s);
+  }
+};
+
 callback<callback<string(string_view)>(string_view)> curryingImpl(
     callback_view<string(string_view, string_view)> f) {
-  return callback<callback<string(string_view)>(string_view)>::from(
-      [f = callback<string(string_view, string_view)>(f)](
-          string_view x) -> callback<string(string_view)> {
-        return callback<string(string_view)>::from(
-            [f = f, x = string(x)](string_view y) -> string {
-              return f(x, y);
-            });
-      });
+  return callback<callback<string(string_view)>(
+      string_view)>::from<CallbackImplOuter>(f);
 }
 
 TH_EXPORT_CPP_API_makeRectangle(makeRectangleImpl);

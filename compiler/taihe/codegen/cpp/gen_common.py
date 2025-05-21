@@ -1772,21 +1772,6 @@ class CppHeadersGenerator(Backend):
                     f".vtbl_ptr = &vtbl_impl<Impl>,",
                     f".data_ptr = ::taihe::new_data_ptr<Impl>(reinterpret_cast<TypeInfo const*>(&rtti_impl<Impl>), std::forward<Args>(args)...),",
                 )
-        iface_cpp_defn_target.writelns(
-            "template<typename Impl>",
-        )
-        with iface_cpp_defn_target.indented(
-            f"static {iface_cpp_info.as_owner} from(Impl&& impl) {{",
-            f"}}",
-        ):
-            with iface_cpp_defn_target.indented(
-                f"return {iface_cpp_info.as_owner}{{{{",
-                f"}}}};",
-            ):
-                iface_cpp_defn_target.writelns(
-                    f".vtbl_ptr = &vtbl_impl<Impl>,",
-                    f".data_ptr = ::taihe::new_data_ptr<Impl>(reinterpret_cast<TypeInfo const*>(&rtti_impl<Impl>), std::forward<Impl>(impl)),",
-                )
 
     def gen_iface_type_traits(
         self,
