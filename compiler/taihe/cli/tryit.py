@@ -727,6 +727,8 @@ class BuildSystem(BuildUtils):
 
             self.run_command(gen_abc_command)
 
+            output_files.append(output_file)
+
             ark_disasm_path = self.config.panda_tool_dir / "bin/ark_disasm"
             if not ark_disasm_path.exists():
                 self.logger.warning(
@@ -741,8 +743,6 @@ class BuildSystem(BuildUtils):
             ]
 
             self.run_command(gen_abc_dump_command)
-
-            output_files.append(output_file)
 
         return output_files
 
