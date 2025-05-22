@@ -1358,7 +1358,7 @@ class CppHeadersGenerator(Backend):
                     iface_cpp_info,
                     iface_cpp_defn_target,
                 )
-                self.gen_iface_rtti(
+                self.gen_iface_idmap(
                     iface,
                     iface_abi_info,
                     iface_cpp_info,
@@ -1530,44 +1530,25 @@ class CppHeadersGenerator(Backend):
                     f".{ancestor_info.ftbl_ptr} = &{ancestor_cpp_info.full_weak_name}::template ftbl_impl<Impl>,",
                 )
 
-    def gen_iface_rtti(
+    def gen_iface_idmap(
         self,
         iface: IfaceDecl,
         iface_abi_info: IfaceABIInfo,
         iface_cpp_info: IfaceCppInfo,
         iface_cpp_defn_target: CHeaderWriter,
     ):
-        with iface_cpp_defn_target.indented(
-            f"struct rtti_type {{",
-            f"}};",
-        ):
-            iface_cpp_defn_target.writelns(
-                f"uint64_t version;",
-                f"void (*free)(struct DataBlockHead *);",
-                f"uint64_t len;",
-                f"struct IdMapItem idmap[{len(iface_abi_info.ancestor_dict)}];",
-            )
         iface_cpp_defn_target.writelns(
             f"template<typename Impl>",
         )
         with iface_cpp_defn_target.indented(
-            f"static constexpr rtti_type rtti_impl = {{",
+            f"static constexpr struct IdMapItem idmap_impl[{len(iface_abi_info.ancestor_dict)}] = {{",
             f"}};",
         ):
-            iface_cpp_defn_target.writelns(
-                f".version = 0,",
-                f".free = &::taihe::del_data_ptr<Impl>,",
-                f".len = {len(iface_abi_info.ancestor_dict)},",
-            )
-            with iface_cpp_defn_target.indented(
-                f".idmap = {{",
-                f"}},",
-            ):
-                for ancestor, info in iface_abi_info.ancestor_dict.items():
-                    ancestor_abi_info = IfaceABIInfo.get(self.am, ancestor)
-                    iface_cpp_defn_target.writelns(
-                        f"{{&{ancestor_abi_info.iid}, &vtbl_impl<Impl>.{info.ftbl_ptr}}},",
-                    )
+            for ancestor, info in iface_abi_info.ancestor_dict.items():
+                ancestor_abi_info = IfaceABIInfo.get(self.am, ancestor)
+                iface_cpp_defn_target.writelns(
+                    f"{{&{ancestor_abi_info.iid}, &vtbl_impl<Impl>.{info.ftbl_ptr}}},",
+                )
 
     def gen_iface_infos(
         self,
@@ -1577,8 +1558,10 @@ class CppHeadersGenerator(Backend):
         iface_cpp_defn_target: CHeaderWriter,
     ):
         iface_cpp_defn_target.writelns(
-            f"static constexpr void const* iid = &{iface_abi_info.iid};",
-            f"using vtable_t = {iface_abi_info.vtable};",
+            f"using vtable_type = {iface_abi_info.vtable};",
+            f"using view_type = {iface_cpp_info.full_weak_name};",
+            f"using holder_type = {iface_cpp_info.full_norm_name};",
+            f"using abi_type = {iface_abi_info.mangled_name};",
         )
 
     def gen_iface_utils(
@@ -1650,12 +1633,6 @@ class CppHeadersGenerator(Backend):
                     iface_cpp_defn_target,
                 )
                 self.gen_iface_holder_static_cast(
-                    iface,
-                    iface_abi_info,
-                    iface_cpp_info,
-                    iface_cpp_defn_target,
-                )
-                self.gen_iface_from_impl(
                     iface,
                     iface_abi_info,
                     iface_cpp_info,
@@ -1748,29 +1725,6 @@ class CppHeadersGenerator(Backend):
                     f"{iface_abi_info.as_owner} ret_handle = m_handle;",
                     f"m_handle.data_ptr = nullptr;",
                     f"return {ancestor_cpp_info.full_norm_name}({info.static_cast}(ret_handle));",
-                )
-
-    def gen_iface_from_impl(
-        self,
-        iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
-        iface_cpp_info: IfaceCppInfo,
-        iface_cpp_defn_target: CHeaderWriter,
-    ):
-        iface_cpp_defn_target.writelns(
-            f"template<typename Impl, typename... Args>",
-        )
-        with iface_cpp_defn_target.indented(
-            f"static {iface_cpp_info.as_owner} from(Args&&... args) {{",
-            f"}}",
-        ):
-            with iface_cpp_defn_target.indented(
-                f"return {iface_cpp_info.as_owner}{{{{",
-                f"}}}};",
-            ):
-                iface_cpp_defn_target.writelns(
-                    f".vtbl_ptr = &vtbl_impl<Impl>,",
-                    f".data_ptr = ::taihe::new_data_ptr<Impl>(reinterpret_cast<TypeInfo const*>(&rtti_impl<Impl>), std::forward<Args>(args)...),",
                 )
 
     def gen_iface_type_traits(

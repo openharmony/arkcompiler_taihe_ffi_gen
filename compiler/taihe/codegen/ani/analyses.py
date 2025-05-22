@@ -2027,7 +2027,7 @@ class CallbackTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[CallbackType]):
                         f"return;",
                     )
         target.writelns(
-            f"{self.cpp_info.as_owner} {cpp_result} = {self.cpp_info.as_owner}::from<{cpp_impl_class}>({env}, {ani_value});",
+            f"{self.cpp_info.as_owner} {cpp_result} = ::taihe::make_holder<{cpp_impl_class}, {self.cpp_info.as_owner}>({env}, {ani_value});",
         )
 
     @override

@@ -9,6 +9,14 @@ using namespace taihe;
 using namespace ohos::xml;
 
 struct CallbackTag {
+  CallbackTag() {
+    std::cout << "CallbackTag constructor" << std::endl;
+  }
+
+  ~CallbackTag() {
+    std::cout << "CallbackTag destructor" << std::endl;
+  }
+
   bool operator()(string_view name, string_view value) {
     std::cout << "(tag) " << name << ": " << value << std::endl;
     return true;
@@ -16,6 +24,14 @@ struct CallbackTag {
 };
 
 struct CallbackAttribute {
+  CallbackAttribute() {
+    std::cout << "CallbackAttribute constructor" << std::endl;
+  }
+
+  ~CallbackAttribute() {
+    std::cout << "CallbackAttribute destructor" << std::endl;
+  }
+
   bool operator()(string_view name, string_view value) {
     std::cout << "(attribute) " << name << ": " << value << std::endl;
     return true;
