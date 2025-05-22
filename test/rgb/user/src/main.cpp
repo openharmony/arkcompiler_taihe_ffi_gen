@@ -271,10 +271,12 @@ int main() {
       }
     };
 
-    auto ocp =
-        currying(callback<string(string_view, string_view)>::from<MyCallback>(
+    auto ocp = currying(
+        make_holder<MyCallback, callback<string(string_view, string_view)>>(
             "f"))("abc");
     auto res = ocp("123");
+
+    typename callback<string(string_view, string_view)>::vtable_type x;
 
     std::cout << "res = " << res << std::endl;
   }

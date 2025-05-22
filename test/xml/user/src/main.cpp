@@ -42,9 +42,11 @@ int main(int argc, char **argv) {
   parser->parseXml({
       .tagValueCallbackFunction =
           {std::in_place,
-           callback<bool(string_view, string_view)>::from<CallbackTag>()},
+           make_holder<CallbackTag,
+                       callback<bool(string_view, string_view)>>()},
       .attributeValueCallbackFunction =
           {std::in_place,
-           callback<bool(string_view, string_view)>::from<CallbackAttribute>()},
+           make_holder<CallbackAttribute,
+                       callback<bool(string_view, string_view)>>()},
   });
 }

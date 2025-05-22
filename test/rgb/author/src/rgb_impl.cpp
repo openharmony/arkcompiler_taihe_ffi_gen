@@ -191,14 +191,14 @@ struct CallbackImplOuter {
   CallbackImplOuter(callback_view<string(string_view, string_view)> f) : f(f) {}
 
   callback<string(string_view)> operator()(string_view s) {
-    return callback<string(string_view)>::from<CallbackImplInner>(f, s);
+    return make_holder<CallbackImplInner, callback<string(string_view)>>(f, s);
   }
 };
 
 callback<callback<string(string_view)>(string_view)> curryingImpl(
     callback_view<string(string_view, string_view)> f) {
-  return callback<callback<string(string_view)>(
-      string_view)>::from<CallbackImplOuter>(f);
+  return make_holder<CallbackImplOuter,
+                     callback<callback<string(string_view)>(string_view)>>(f);
 }
 
 TH_EXPORT_CPP_API_makeRectangle(makeRectangleImpl);
