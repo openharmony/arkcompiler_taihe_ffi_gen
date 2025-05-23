@@ -1,4 +1,5 @@
 #include <iostream>
+#include <unordered_set>
 #include "object.Bottom.proj.1.hpp"
 #include "object.Left.proj.1.hpp"
 #include "object.user.hpp"
@@ -6,9 +7,26 @@
 #include "taihe/map.hpp"
 #include "taihe/object.hpp"
 
-class TopImpl {
+class Named {
 public:
-  TopImpl() {
+  static inline std::unordered_set<Named *> registry;
+
+  std::string const name;
+
+  Named(std::string_view sv) : name(sv) {
+    std::cout << name << " made" << std::endl;
+    registry.insert(this);
+  }
+
+  ~Named() {
+    std::cout << name << " deleted" << std::endl;
+    registry.erase(this);
+  }
+};
+
+class TopImpl : Named {
+public:
+  TopImpl(std::string_view sv) : Named(sv) {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
   }
 
@@ -21,9 +39,9 @@ public:
   }
 };
 
-class LeftImpl {
+class LeftImpl : Named {
 public:
-  LeftImpl() {
+  LeftImpl(std::string_view sv) : Named(sv) {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
   }
 
@@ -40,9 +58,9 @@ public:
   }
 };
 
-class RightImpl {
+class RightImpl : Named {
 public:
-  RightImpl() {
+  RightImpl(std::string_view sv) : Named(sv) {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
   }
 
@@ -59,9 +77,9 @@ public:
   }
 };
 
-class BottomImpl {
+class BottomImpl : Named {
 public:
-  BottomImpl() {
+  BottomImpl(std::string_view sv) : Named(sv) {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
   }
 
@@ -86,9 +104,9 @@ public:
   }
 };
 
-class TopAndCallbackImpl {
+class TopAndCallbackImpl : Named {
 public:
-  TopAndCallbackImpl() {
+  TopAndCallbackImpl(std::string_view sv) : Named(sv) {
     std::cout << __PRETTY_FUNCTION__ << std::endl;
   }
 
@@ -109,13 +127,13 @@ public:
 using namespace object;
 using namespace taihe;
 
-int main() {
-  using callback_type_a = callback<void()>;
-  using callback_type_b = callback<int(int)>;
-  using weak_callback_type_a = callback_view<void()>;
-  using weak_callback_type_b = callback_view<int(int)>;
+using callback_type_a = callback<void()>;
+using callback_type_b = callback<int(int)>;
+using weak_callback_type_a = callback_view<void()>;
+using weak_callback_type_b = callback_view<int(int)>;
 
-  auto top = make_holder<TopImpl, Top>();
+void testTop() {
+  auto top = make_holder<TopImpl, Top>("top");
   Top top_as_top = top;
   weak::Top top_as_weak_top = top;
 
@@ -134,8 +152,10 @@ int main() {
 
   impl_view<TopImpl, Top> top_as_impl_view = top;
   impl_holder<TopImpl, Top> top_as_impl_holder = top_as_impl_view;
+}
 
-  auto lr = make_holder<BottomImpl, Left, Right>();
+void testLR() {
+  auto lr = make_holder<BottomImpl, Left, Right>("lr");
   Left lr_as_left = lr;
   Right lr_as_right = lr;
   Top lr_as_top = lr;
@@ -147,8 +167,11 @@ int main() {
 
   std::cout << bool(lr_as_weak_top_as_left) << std::endl;   // true
   std::cout << bool(lr_as_top_as_weak_right) << std::endl;  // true
+}
 
-  auto callback_b = make_holder<TopAndCallbackImpl, Top, callback_type_b>();
+void testCallbackB() {
+  auto callback_b =
+      make_holder<TopAndCallbackImpl, Top, callback_type_b>("callback_b");
 
   callback_type_b callback_b_as_callback_b = callback_b;
   weak_callback_type_b callback_b_as_weak_callback_b = callback_b;
@@ -162,9 +185,6 @@ int main() {
   data_holder callback_b_as_weak_callback_b_as_data_holder =
       callback_b_as_weak_callback_b;
   data_view callback_b_as_callback_b_as_data_view = callback_b_as_callback_b;
-  // callback_type_b callback_b_as_weak_top_as_callback_b =
-  // callback_type_b(callback_b_as_weak_top); Error: callback type cannot be
-  // recovered from non-callback type
 
   map<callback_type_b, int> callback_b_map;
 
@@ -174,5 +194,24 @@ int main() {
 
   for (auto const &[key, value] : callback_b_map) {
     std::cout << bool(key) << ": " << value << std::endl;
+  }
+}
+
+int main() {
+  testTop();
+  testLR();
+  testCallbackB();
+
+  bool all_deleted = true;
+  for (auto *named : Named::registry) {
+    std::cout << named->name << " is still alive" << std::endl;
+    all_deleted = false;
+  }
+  std::cout << all_deleted << std::endl;
+  if (all_deleted) {
+    std::cout << "All named objects are deleted" << std::endl;
+    return 0;
+  } else {
+    return 1;
   }
 }

@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <iomanip>
 #include <iostream>
 #include <string>
@@ -69,59 +70,22 @@ public:
   }
 };
 
-IShape makeRectangleImpl(string_view id, float h, float w) {
-  return make_holder<Rectangle, IShape>(id, h, w);
-}
-
-IShowable makeColoredRectangleImpl(string_view id,
-                                   ColorOrRGBOrName const &color, float h,
-                                   float w) {
-  return make_holder<ColoredRectangle, IShowable>(id, h, w, color);
-}
-
-void copyColorImpl(weak::IColorable dst, weak::IColorable src) {
-  std::cout << "copying color form " << weak::IBase(src)->getId() << " to "
+void copyColor(weak::IColorable dst, weak::IColorable src) {
+  std::cout << "copying color from " << weak::IBase(src)->getId() << " to "
             << weak::IBase(dst)->getId() << "." << std::endl;
   dst->setColor(src->getColor());
 }
 
-string colorToStringImpl(ColorOrRGBOrName const &color) {
-  static struct Visitor {
-    string operator()(static_tag_t<ColorOrRGBOrName::tag_t::rgb>,
-                      const RGB &val) {
-      std::ostringstream oss;
-      oss << "#" << std::hex << std::setfill('0') << std::setw(2)
-          << static_cast<int>(val.r) << std::setw(2) << static_cast<int>(val.g)
-          << std::setw(2) << static_cast<int>(val.b);
-      return oss.str();
-    }
-
-    string operator()(static_tag_t<ColorOrRGBOrName::tag_t::name>,
-                      string const &val) {
-      std::ostringstream oss;
-      oss << "Name: " << val.c_str();
-      return oss.str();
-    }
-
-    string operator()(static_tag_t<ColorOrRGBOrName::tag_t::color>,
-                      Color const &val) {
-      return std::to_string(val.get_value());
-    }
-
-    string operator()(static_tag_t<ColorOrRGBOrName::tag_t::name>,
-                      Name const &val) {
-      return string(val);
-    }
-
-    string operator()(static_tag_t<ColorOrRGBOrName::tag_t::undefined>) {
-      return "Undefined";
-    }
-  } visitor;
-
-  return color.accept_template(visitor);
+IShape makeRectangle(string_view id, float h, float w) {
+  return taihe::make_holder<Rectangle, IShape>(id, h, w);
 }
 
-array<IBase> exchangeArrImpl(array_view<IBase> dst, array_view<IBase> src) {
+IShowable makeColoredRectangle(string_view id, ColorOrRGBOrName const &c,
+                               float h, float w) {
+  return taihe::make_holder<ColoredRectangle, IShowable>(id, h, w, c);
+}
+
+array<IBase> exchangeArr(array_view<IBase> dst, array_view<IBase> src) {
   auto n = std::min(dst.size(), src.size());
   auto res = array<IBase>(copy_data, dst.data(), n);
   for (std::size_t i = 0; i < n; i++) {
@@ -130,46 +94,61 @@ array<IBase> exchangeArrImpl(array_view<IBase> dst, array_view<IBase> src) {
   return res;
 }
 
-void testOptionalImpl(optional_view<IBase> optional) {
-  if (optional) {
-    std::cout << "optional is not empty, " << (*optional)->getId()
-              << " is in the optional" << std::endl;
+optional<string> getIdFromOptional(optional_view<IBase> box) {
+  if (box) {
+    return optional<string>(std::in_place, (*box)->getId());
   } else {
-    std::cout << "optional is empty" << std::endl;
+    return optional<string>(std::nullopt);
   }
 }
 
-struct AuthorType {
-  string id;
-
-  auto getId() {
-    return "AuthorType(" + std::string(id) + ")";
+vector<IBase> makeVec(array_view<IBase> src) {
+  size_t n = src.size();
+  vector<IBase> res;
+  for (std::size_t i = 0; i < n; i++) {
+    res.emplace_back(src[i]);
   }
-
-  AuthorType(string_view id) : id(id) {
-    std::cout << getId() << " made" << std::endl;
-  }
-
-  ~AuthorType() {
-    std::cout << getId() << " deleted" << std::endl;
-  }
-};
-
-void fillVecImpl(vector_view<IBase> target) {
-  target.push_back(make_holder<AuthorType, IBase>("0"));
-  target.push_back(make_holder<AuthorType, IBase>("1"));
-  target.push_back(make_holder<AuthorType, IBase>("2"));
+  return res;
 }
 
-void fillMapImpl(map_view<string, IBase> target) {
-  target.emplace<1>("a", make_holder<AuthorType, IBase>("a"));
-  target.emplace<0>("b", make_holder<AuthorType, IBase>("b"));
-  target.emplace<0>("c", make_holder<AuthorType, IBase>("c"));
+void fillVec(array_view<IBase> src, vector_view<IBase> dst) {
+  size_t n = src.size();
+  for (std::size_t i = 0; i < n; i++) {
+    dst.emplace_back(src[i]);
+  }
 }
 
-void fillSetImpl(set_view<string> target) {
-  target.emplace("a");
-  target.emplace("b");
+map<string, IBase> makeMap(array_view<string> keys, array_view<IBase> src) {
+  size_t n = std::min(keys.size(), src.size());
+  map<string, IBase> res;
+  for (std::size_t i = 0; i < n; i++) {
+    res.emplace(keys[i], src[i]);
+  }
+  return res;
+}
+
+void fillMap(array_view<string> keys, array_view<IBase> src,
+             map_view<string, IBase> dst) {
+  size_t n = std::min(keys.size(), src.size());
+  for (std::size_t i = 0; i < n; i++) {
+    dst.emplace(keys[i], src[i]);
+  }
+}
+
+set<string> makeSet(array_view<string> src) {
+  size_t n = src.size();
+  set<string> res;
+  for (std::size_t i = 0; i < n; i++) {
+    res.emplace(src[i]);
+  }
+  return res;
+}
+
+void fillSet(array_view<string> src, set_view<string> dst) {
+  size_t n = src.size();
+  for (std::size_t i = 0; i < n; i++) {
+    dst.emplace(src[i]);
+  }
 }
 
 struct CallbackImplInner {
@@ -195,19 +174,24 @@ struct CallbackImplOuter {
   }
 };
 
-callback<callback<string(string_view)>(string_view)> curryingImpl(
+callback<callback<string(string_view)>(string_view)> currying(
     callback_view<string(string_view, string_view)> f) {
   return make_holder<CallbackImplOuter,
                      callback<callback<string(string_view)>(string_view)>>(f);
 }
 
-TH_EXPORT_CPP_API_makeRectangle(makeRectangleImpl);
-TH_EXPORT_CPP_API_makeColoredRectangle(makeColoredRectangleImpl);
-TH_EXPORT_CPP_API_copyColor(copyColorImpl);
-TH_EXPORT_CPP_API_toString(colorToStringImpl);
-TH_EXPORT_CPP_API_exchangeArr(exchangeArrImpl);
-TH_EXPORT_CPP_API_testOptional(testOptionalImpl);
-TH_EXPORT_CPP_API_fillVec(fillVecImpl);
-TH_EXPORT_CPP_API_fillMap(fillMapImpl);
-TH_EXPORT_CPP_API_fillSet(fillSetImpl);
-TH_EXPORT_CPP_API_currying(curryingImpl);
+// Since these macros are auto-generate, lint will cause false positive.
+// NOLINTBEGIN
+TH_EXPORT_CPP_API_copyColor(copyColor);
+TH_EXPORT_CPP_API_makeRectangle(makeRectangle);
+TH_EXPORT_CPP_API_makeColoredRectangle(makeColoredRectangle);
+TH_EXPORT_CPP_API_exchangeArr(exchangeArr);
+TH_EXPORT_CPP_API_getIdFromOptional(getIdFromOptional);
+TH_EXPORT_CPP_API_makeVec(makeVec);
+TH_EXPORT_CPP_API_fillVec(fillVec);
+TH_EXPORT_CPP_API_makeMap(makeMap);
+TH_EXPORT_CPP_API_fillMap(fillMap);
+TH_EXPORT_CPP_API_makeSet(makeSet);
+TH_EXPORT_CPP_API_fillSet(fillSet);
+TH_EXPORT_CPP_API_currying(currying);
+// NOLINTEND
