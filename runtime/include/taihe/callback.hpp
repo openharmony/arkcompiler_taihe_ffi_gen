@@ -86,16 +86,22 @@ struct callback<Return(Params...)> : callback_view<Return(Params...)> {
   }
 
   callback(callback<Return(Params...)> &&other)
-      : callback({other.m_handle.vtbl_ptr,
-                  std::exchange(other.m_handle.data_ptr, nullptr)}) {}
+      : callback({
+            other.m_handle.vtbl_ptr,
+            std::exchange(other.m_handle.data_ptr, nullptr),
+        }) {}
 
   callback(callback<Return(Params...)> const &other)
-      : callback({other.m_handle.vtbl_ptr, tobj_dup(other.m_handle.data_ptr)}) {
-  }
+      : callback({
+            other.m_handle.vtbl_ptr,
+            tobj_dup(other.m_handle.data_ptr),
+        }) {}
 
   callback(callback_view<Return(Params...)> const &other)
-      : callback({other.m_handle.vtbl_ptr, tobj_dup(other.m_handle.data_ptr)}) {
-  }
+      : callback({
+            other.m_handle.vtbl_ptr,
+            tobj_dup(other.m_handle.data_ptr),
+        }) {}
 
   operator data_view() const & {
     return data_view(this->m_handle.data_ptr);

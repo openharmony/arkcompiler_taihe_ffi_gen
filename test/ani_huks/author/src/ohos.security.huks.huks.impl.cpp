@@ -208,7 +208,7 @@ taihe::array<uint8_t> GetArrayBuffer(HksBlob blob) {
 }
 
 taihe::array<taihe::string> GetArrayString(HksCertChain certChain) {
-  taihe::array<taihe::string> certs{certChain.certsCount};
+  taihe::array<taihe::string> certs(certChain.certsCount, "");
   for (size_t i = 0; i < certChain.certsCount; ++i) {
     certs[i] = taihe::string(reinterpret_cast<char *>(certChain.certs[i].data),
                              certChain.certs[i].size);
@@ -409,14 +409,14 @@ huks::HuksReturnResult updateSessionSync(
 
 huks::HuksReturnResult updateSessionSyncWithoutToken(
     int64_t handle, huks::HuksOptions const &options) {
-  taihe::optional<taihe::array<uint8_t>> opt_token{std::nullopt};
+  taihe::optional<taihe::array<uint8_t>> opt_token(std::nullopt);
   return updateSessionSync(handle, options, opt_token);
 }
 
 huks::HuksReturnResult updateSessionSyncWithToken(
     int64_t handle, huks::HuksOptions const &options,
     taihe::array_view<uint8_t> token) {
-  taihe::optional<taihe::array<uint8_t>> opt_token{std::in_place, options};
+  taihe::optional<taihe::array<uint8_t>> opt_token(std::in_place, token);
   return updateSessionSync(handle, options, opt_token);
 }
 
@@ -446,14 +446,14 @@ huks::HuksReturnResult finishSessionSync(
 
 huks::HuksReturnResult finishSessionSyncWithoutToken(
     int64_t handle, huks::HuksOptions const &options) {
-  taihe::optional<taihe::array<uint8_t>> opt_token{std::nullopt};
+  taihe::optional<taihe::array<uint8_t>> opt_token(std::nullopt);
   return finishSessionSync(handle, options, opt_token);
 }
 
 huks::HuksReturnResult finishSessionSyncWithToken(
     int64_t handle, huks::HuksOptions const &options,
     taihe::array_view<uint8_t> token) {
-  taihe::optional<taihe::array<uint8_t>> opt_token{std::in_place, options};
+  taihe::optional<taihe::array<uint8_t>> opt_token(std::in_place, token);
   return finishSessionSync(handle, options, opt_token);
 }
 
