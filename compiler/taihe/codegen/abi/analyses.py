@@ -109,8 +109,6 @@ class IfaceABIInfo(AbstractAnalysis[IfaceDecl]):
         self.mangled_name = encode(segments, DeclKind.TYPE)
         self.as_owner = f"struct {self.mangled_name}"
         self.as_param = f"struct {self.mangled_name}"
-        self.copy_func = encode(segments, DeclKind.COPY)
-        self.drop_func = encode(segments, DeclKind.DROP)
         self.ftable = encode(segments, DeclKind.FTABLE)
         self.vtable = encode(segments, DeclKind.VTABLE)
         self.iid = encode(segments, DeclKind.IID)

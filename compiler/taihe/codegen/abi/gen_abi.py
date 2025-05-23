@@ -209,8 +209,6 @@ class ABIHeadersGenerator(Backend):
             self.gen_iface_defn(iface, iface_abi_info, iface_abi_defn_target)
             self.gen_iface_static_casts(iface, iface_abi_info, iface_abi_defn_target)
             self.gen_iface_dynamic_cast(iface, iface_abi_info, iface_abi_defn_target)
-            self.gen_iface_copy_func(iface, iface_abi_info, iface_abi_defn_target)
-            self.gen_iface_drop_func(iface, iface_abi_info, iface_abi_defn_target)
 
     def gen_iface_ftable(
         self,
@@ -282,14 +280,11 @@ class ABIHeadersGenerator(Backend):
             ancestor_abi_info = IfaceABIInfo.get(self.am, ancestor)
             iface_abi_defn_target.add_include(ancestor_abi_info.defn_header)
             with iface_abi_defn_target.indented(
-                f"TH_INLINE struct {ancestor_abi_info.mangled_name} {info.static_cast}(struct {iface_abi_info.mangled_name} tobj) {{",
+                f"TH_INLINE struct {ancestor_abi_info.vtable} const* {info.static_cast}(struct {iface_abi_info.vtable} const* vtbl_ptr) {{",
                 f"}}",
             ):
                 iface_abi_defn_target.writelns(
-                    f"struct {ancestor_abi_info.mangled_name} result;",
-                    f"result.vtbl_ptr = (struct {ancestor_abi_info.vtable} const*)((void* const*)tobj.vtbl_ptr + {info.offset});",
-                    f"result.data_ptr = tobj.data_ptr;",
-                    f"return result;",
+                    f"return (struct {ancestor_abi_info.vtable} const*)((void* const*)vtbl_ptr + {info.offset});",
                 )
 
     def gen_iface_dynamic_cast(
@@ -323,51 +318,6 @@ class ABIHeadersGenerator(Backend):
                 f"result.vtbl_ptr = NULL;",
                 f"return result;",
             )
-
-    def gen_iface_copy_func(
-        self,
-        iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
-        iface_abi_defn_target: CHeaderWriter,
-    ):
-        with iface_abi_defn_target.indented(
-            f"TH_INLINE struct {iface_abi_info.mangled_name} {iface_abi_info.copy_func}(struct {iface_abi_info.mangled_name} tobj) {{",
-            f"}}",
-        ):
-            iface_abi_defn_target.writelns(
-                f"struct DataBlockHead* data_ptr = tobj.data_ptr;",
-            )
-            with iface_abi_defn_target.indented(
-                f"if (data_ptr) {{",
-                f"}}",
-            ):
-                iface_abi_defn_target.writelns(
-                    f"tref_inc(&data_ptr->m_count);",
-                )
-            iface_abi_defn_target.writelns(
-                f"return tobj;",
-            )
-
-    def gen_iface_drop_func(
-        self,
-        iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
-        iface_abi_defn_target: CHeaderWriter,
-    ):
-        with iface_abi_defn_target.indented(
-            f"TH_INLINE void {iface_abi_info.drop_func}(struct {iface_abi_info.mangled_name} tobj) {{",
-            f"}}",
-        ):
-            iface_abi_defn_target.writelns(
-                f"struct DataBlockHead* data_ptr = tobj.data_ptr;",
-            )
-            with iface_abi_defn_target.indented(
-                f"if (data_ptr && tref_dec(&data_ptr->m_count)) {{",
-                f"}}",
-            ):
-                iface_abi_defn_target.writelns(
-                    f"data_ptr->rtti_ptr->free(data_ptr);",
-                )
 
     def gen_iface_impl_file(
         self,

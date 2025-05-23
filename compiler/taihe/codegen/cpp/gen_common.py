@@ -1392,16 +1392,14 @@ class CppHeadersGenerator(Backend):
             f"}}",
         ):
             iface_cpp_defn_target.writelns(
-                f"{iface_abi_info.as_owner} ret_handle = m_handle;",
-                f"return ::taihe::data_view(ret_handle.data_ptr);",
+                f"return ::taihe::data_view(this->m_handle.data_ptr);",
             )
         with iface_cpp_defn_target.indented(
             f"operator ::taihe::data_holder() const& {{",
             f"}}",
         ):
             iface_cpp_defn_target.writelns(
-                f"{iface_abi_info.as_owner} ret_handle = {iface_abi_info.copy_func}(m_handle);",
-                f"return ::taihe::data_holder(ret_handle.data_ptr);",
+                f"return ::taihe::data_holder(tobj_dup(this->m_handle.data_ptr));",
             )
 
     def gen_iface_view_static_cast(
@@ -1420,18 +1418,26 @@ class CppHeadersGenerator(Backend):
                 f"operator {ancestor_cpp_info.full_weak_name}() const& {{",
                 f"}}",
             ):
-                iface_cpp_defn_target.writelns(
-                    f"{iface_abi_info.as_owner} ret_handle = m_handle;",
-                    f"return {ancestor_cpp_info.full_weak_name}({info.static_cast}(ret_handle));",
-                )
+                with iface_cpp_defn_target.indented(
+                    f"return {ancestor_cpp_info.full_weak_name}({{",
+                    f"}});",
+                ):
+                    iface_cpp_defn_target.writelns(
+                        f"{info.static_cast}(this->m_handle.vtbl_ptr),",
+                        f"this->m_handle.data_ptr,",
+                    )
             with iface_cpp_defn_target.indented(
                 f"operator {ancestor_cpp_info.full_norm_name}() const& {{",
                 f"}}",
             ):
-                iface_cpp_defn_target.writelns(
-                    f"{iface_abi_info.as_owner} ret_handle = {iface_abi_info.copy_func}(m_handle);",
-                    f"return {ancestor_cpp_info.full_norm_name}({info.static_cast}(ret_handle));",
-                )
+                with iface_cpp_defn_target.indented(
+                    f"return {ancestor_cpp_info.full_norm_name}({{",
+                    f"}});",
+                ):
+                    iface_cpp_defn_target.writelns(
+                        f"{info.static_cast}(this->m_handle.vtbl_ptr),",
+                        f"tobj_dup(this->m_handle.data_ptr),",
+                    )
 
     def gen_iface_user_methods_defn(
         self,
@@ -1571,9 +1577,13 @@ class CppHeadersGenerator(Backend):
         iface_cpp_info: IfaceCppInfo,
         iface_cpp_defn_target: CHeaderWriter,
     ):
-        iface_cpp_defn_target.writelns(
-            f"explicit operator bool() const& {{ return m_handle.vtbl_ptr; }}",
-        )
+        with iface_cpp_defn_target.indented(
+            f"explicit operator bool() const& {{",
+            f"}}",
+        ):
+            iface_cpp_defn_target.writelns(
+                f"return m_handle.vtbl_ptr;",
+            )
         with iface_cpp_defn_target.indented(
             f"virtual_type const& operator*() const& {{",
             f"}}",
@@ -1616,7 +1626,7 @@ class CppHeadersGenerator(Backend):
                     f"}}",
                 ):
                     iface_cpp_defn_target.writelns(
-                        f"::std::swap(m_handle, other.m_handle);",
+                        f"::std::swap(this->m_handle, other.m_handle);",
                         f"return *this;",
                     )
                 with iface_cpp_defn_target.indented(
@@ -1624,7 +1634,7 @@ class CppHeadersGenerator(Backend):
                     f"}}",
                 ):
                     iface_cpp_defn_target.writelns(
-                        f"{iface_abi_info.drop_func}(m_handle);",
+                        f"tobj_dup(this->m_handle.data_ptr);",
                     )
                 self.gen_iface_holder_dynamic_cast(
                     iface,
@@ -1646,37 +1656,29 @@ class CppHeadersGenerator(Backend):
         iface_cpp_info: IfaceCppInfo,
         iface_cpp_defn_target: CHeaderWriter,
     ):
-        with iface_cpp_defn_target.indented(
-            f"explicit {iface_cpp_info.norm_name}(::taihe::data_holder other) : {iface_cpp_info.norm_name}({iface_abi_info.dynamic_cast}(other.data_ptr)) {{",
-            f"}}",
-        ):
-            iface_cpp_defn_target.writelns(
-                f"other.data_ptr = nullptr;",
-            )
+        iface_cpp_defn_target.writelns(
+            f"explicit {iface_cpp_info.norm_name}(::taihe::data_holder other) : {iface_cpp_info.norm_name}({iface_abi_info.dynamic_cast}(std::exchange(other.data_ptr, nullptr))) {{}}",
+        )
         with iface_cpp_defn_target.indented(
             f"operator ::taihe::data_view() const& {{",
             f"}}",
         ):
             iface_cpp_defn_target.writelns(
-                f"{iface_abi_info.as_owner} ret_handle = m_handle;",
-                f"return ::taihe::data_view(ret_handle.data_ptr);",
+                f"return ::taihe::data_view(this->m_handle.data_ptr);",
             )
         with iface_cpp_defn_target.indented(
             f"operator ::taihe::data_holder() const& {{",
             f"}}",
         ):
             iface_cpp_defn_target.writelns(
-                f"{iface_abi_info.as_owner} ret_handle = {iface_abi_info.copy_func}(m_handle);",
-                f"return ::taihe::data_holder(ret_handle.data_ptr);",
+                f"return ::taihe::data_holder(tobj_dup(this->m_handle.data_ptr));",
             )
         with iface_cpp_defn_target.indented(
             f"operator ::taihe::data_holder() && {{",
             f"}}",
         ):
             iface_cpp_defn_target.writelns(
-                f"{iface_abi_info.as_owner} ret_handle = m_handle;",
-                f"m_handle.data_ptr = nullptr;",
-                f"return ::taihe::data_holder(ret_handle.data_ptr);",
+                f"return ::taihe::data_holder(std::exchange(this->m_handle.data_ptr, nullptr));",
             )
 
     def gen_iface_holder_static_cast(
@@ -1686,16 +1688,29 @@ class CppHeadersGenerator(Backend):
         iface_cpp_info: IfaceCppInfo,
         iface_cpp_defn_target: CHeaderWriter,
     ):
-        iface_cpp_defn_target.writelns(
-            f"{iface_cpp_info.norm_name}({iface_cpp_info.full_weak_name} const& other) : {iface_cpp_info.norm_name}({iface_abi_info.copy_func}(other.m_handle)) {{}}",
-            f"{iface_cpp_info.norm_name}({iface_cpp_info.full_norm_name} const& other) : {iface_cpp_info.norm_name}({iface_abi_info.copy_func}(other.m_handle)) {{}}",
-        )
         with iface_cpp_defn_target.indented(
-            f"{iface_cpp_info.norm_name}({iface_cpp_info.full_norm_name}&& other) : {iface_cpp_info.norm_name}(other.m_handle) {{",
-            f"}}",
+            f"{iface_cpp_info.norm_name}({iface_cpp_info.full_weak_name} const& other) : {iface_cpp_info.norm_name}({{",
+            f"}}) {{}}",
         ):
             iface_cpp_defn_target.writelns(
-                f"other.m_handle.data_ptr = nullptr;",
+                f"other.m_handle.vtbl_ptr,",
+                f"tobj_dup(other.m_handle.data_ptr),",
+            )
+        with iface_cpp_defn_target.indented(
+            f"{iface_cpp_info.norm_name}({iface_cpp_info.full_norm_name} const& other) : {iface_cpp_info.norm_name}({{",
+            f"}}) {{}}",
+        ):
+            iface_cpp_defn_target.writelns(
+                f"other.m_handle.vtbl_ptr,",
+                f"tobj_dup(other.m_handle.data_ptr),",
+            )
+        with iface_cpp_defn_target.indented(
+            f"{iface_cpp_info.norm_name}({iface_cpp_info.full_norm_name}&& other) : {iface_cpp_info.norm_name}({{",
+            f"}}) {{}}",
+        ):
+            iface_cpp_defn_target.writelns(
+                f"other.m_handle.vtbl_ptr,",
+                f"std::exchange(other.m_handle.data_ptr, nullptr),",
             )
         for ancestor, info in iface_abi_info.ancestor_dict.items():
             if info.offset == 0:
@@ -1705,27 +1720,38 @@ class CppHeadersGenerator(Backend):
                 f"operator {ancestor_cpp_info.full_weak_name}() const& {{",
                 f"}}",
             ):
-                iface_cpp_defn_target.writelns(
-                    f"{iface_abi_info.as_owner} ret_handle = m_handle;",
-                    f"return {ancestor_cpp_info.full_weak_name}({info.static_cast}(ret_handle));",
-                )
+                with iface_cpp_defn_target.indented(
+                    f"return {ancestor_cpp_info.full_weak_name}({{",
+                    f"}});",
+                ):
+                    iface_cpp_defn_target.writelns(
+                        f"{info.static_cast}(this->m_handle.vtbl_ptr),",
+                        f"this->m_handle.data_ptr,",
+                    )
             with iface_cpp_defn_target.indented(
                 f"operator {ancestor_cpp_info.full_norm_name}() const& {{",
                 f"}}",
             ):
-                iface_cpp_defn_target.writelns(
-                    f"{iface_abi_info.as_owner} ret_handle = {iface_abi_info.copy_func}(m_handle);",
-                    f"return {ancestor_cpp_info.full_norm_name}({info.static_cast}(ret_handle));",
-                )
+                with iface_cpp_defn_target.indented(
+                    f"return {ancestor_cpp_info.full_norm_name}({{",
+                    f"}});",
+                ):
+                    iface_cpp_defn_target.writelns(
+                        f"{info.static_cast}(this->m_handle.vtbl_ptr),",
+                        f"tobj_dup(this->m_handle.data_ptr),",
+                    )
             with iface_cpp_defn_target.indented(
                 f"operator {ancestor_cpp_info.full_norm_name}() && {{",
                 f"}}",
             ):
-                iface_cpp_defn_target.writelns(
-                    f"{iface_abi_info.as_owner} ret_handle = m_handle;",
-                    f"m_handle.data_ptr = nullptr;",
-                    f"return {ancestor_cpp_info.full_norm_name}({info.static_cast}(ret_handle));",
-                )
+                with iface_cpp_defn_target.indented(
+                    f"return {ancestor_cpp_info.full_norm_name}({{",
+                    f"}});",
+                ):
+                    iface_cpp_defn_target.writelns(
+                        f"{info.static_cast}(this->m_handle.vtbl_ptr),",
+                        f"std::exchange(this->m_handle.data_ptr, nullptr),",
+                    )
 
     def gen_iface_type_traits(
         self,

@@ -29,13 +29,11 @@ struct callback_view<Return(Params...)> {
   explicit callback_view(abi_type handle) : m_handle(handle) {}
 
   operator data_view() const & {
-    DataBlockHead *ret_data_ptr = m_handle.data_ptr;
-    return data_view(ret_data_ptr);
+    return data_view(this->m_handle.data_ptr);
   }
 
   operator data_holder() const & {
-    DataBlockHead *ret_data_ptr = tobj_dup(m_handle.data_ptr);
-    return data_holder(ret_data_ptr);
+    return data_holder(tobj_dup(this->m_handle.data_ptr));
   }
 
 public:
@@ -75,54 +73,40 @@ struct callback<Return(Params...)> : callback_view<Return(Params...)> {
 
   using typename callback_view<Return(Params...)>::abi_type;
 
-  using callback_view<Return(Params...)>::m_handle;
-
   explicit callback(abi_type handle)
       : callback_view<Return(Params...)>(handle) {}
 
   ~callback() {
-    if (m_handle.data_ptr && tref_dec(&m_handle.data_ptr->m_count)) {
-      m_handle.data_ptr->rtti_ptr->free(m_handle.data_ptr);
-    }
+    tobj_drop(this->m_handle.data_ptr);
   }
 
   callback &operator=(callback other) {
-    std::swap(m_handle, other.m_handle);
+    std::swap(this->m_handle, other.m_handle);
     return *this;
   }
 
-  callback(callback<Return(Params...)> &&other) : callback{other.m_handle} {
-    other.m_handle.data_ptr = nullptr;
-  }
+  callback(callback<Return(Params...)> &&other)
+      : callback({other.m_handle.vtbl_ptr,
+                  std::exchange(other.m_handle.data_ptr, nullptr)}) {}
 
   callback(callback<Return(Params...)> const &other)
-      : callback{other.m_handle} {
-    if (m_handle.data_ptr) {
-      tref_inc(&m_handle.data_ptr->m_count);
-    }
+      : callback({other.m_handle.vtbl_ptr, tobj_dup(other.m_handle.data_ptr)}) {
   }
 
   callback(callback_view<Return(Params...)> const &other)
-      : callback{other.m_handle} {
-    if (m_handle.data_ptr) {
-      tref_inc(&m_handle.data_ptr->m_count);
-    }
+      : callback({other.m_handle.vtbl_ptr, tobj_dup(other.m_handle.data_ptr)}) {
   }
 
   operator data_view() const & {
-    DataBlockHead *ret_data_ptr = m_handle.data_ptr;
-    return data_view(ret_data_ptr);
+    return data_view(this->m_handle.data_ptr);
   }
 
   operator data_holder() const & {
-    DataBlockHead *ret_data_ptr = tobj_dup(m_handle.data_ptr);
-    return data_holder(ret_data_ptr);
+    return data_holder(tobj_dup(this->m_handle.data_ptr));
   }
 
   operator data_holder() && {
-    DataBlockHead *ret_data_ptr = m_handle.data_ptr;
-    m_handle.data_ptr = nullptr;
-    return data_holder(ret_data_ptr);
+    return data_holder(std::exchange(this->m_handle.data_ptr, nullptr));
   }
 };
 

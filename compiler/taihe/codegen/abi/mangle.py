@@ -57,8 +57,6 @@ class DeclKind(Enum):
     UNION = "union"
     FTABLE = "ftable"
     VTABLE = "vtable"
-    COPY = "copy"
-    DROP = "drop"
     DYNAMIC_CAST = "dynamic"
     STATIC_CAST = "static"
 
