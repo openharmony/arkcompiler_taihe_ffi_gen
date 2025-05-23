@@ -1634,7 +1634,7 @@ class CppHeadersGenerator(Backend):
                     f"}}",
                 ):
                     iface_cpp_defn_target.writelns(
-                        f"tobj_dup(this->m_handle.data_ptr);",
+                        f"tobj_drop(this->m_handle.data_ptr);",
                     )
                 self.gen_iface_holder_dynamic_cast(
                     iface,
