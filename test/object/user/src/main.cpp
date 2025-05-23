@@ -3,6 +3,7 @@
 #include "object.Left.proj.1.hpp"
 #include "object.user.hpp"
 #include "taihe/callback.hpp"
+#include "taihe/map.hpp"
 #include "taihe/object.hpp"
 
 class TopImpl {
@@ -156,7 +157,22 @@ int main() {
   // weak_callback_type_a callback_b_as_weak_callback_a = callback_b;  // Error
 
   weak::Top callback_b_as_weak_top = weak::Top(callback_b);
+  data_holder callback_b_as_data_holder = callback_b;
+  data_view callback_b_as_data_view = callback_b;
+  data_holder callback_b_as_weak_callback_b_as_data_holder =
+      callback_b_as_weak_callback_b;
+  data_view callback_b_as_callback_b_as_data_view = callback_b_as_callback_b;
   // callback_type_b callback_b_as_weak_top_as_callback_b =
   // callback_type_b(callback_b_as_weak_top); Error: callback type cannot be
   // recovered from non-callback type
+
+  map<callback_type_b, int> callback_b_map;
+
+  callback_b_map.emplace<1>(callback_b, 1);
+  callback_b_map.emplace<1>(callback_b_as_callback_b, 2);
+  callback_b_map.emplace<0>(callback_b_as_weak_callback_b, 3);
+
+  for (auto const &[key, value] : callback_b_map) {
+    std::cout << bool(key) << ": " << value << std::endl;
+  }
 }

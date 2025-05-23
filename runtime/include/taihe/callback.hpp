@@ -28,7 +28,22 @@ struct callback_view<Return(Params...)> {
 
   explicit callback_view(abi_type handle) : m_handle(handle) {}
 
-  Return operator()(Params... params) const {
+  operator data_view() const & {
+    DataBlockHead *ret_data_ptr = m_handle.data_ptr;
+    return data_view(ret_data_ptr);
+  }
+
+  operator data_holder() const & {
+    DataBlockHead *ret_data_ptr = tobj_dup(m_handle.data_ptr);
+    return data_holder(ret_data_ptr);
+  }
+
+public:
+  operator bool() const & {
+    return m_handle.vtbl_ptr;
+  }
+
+  Return operator()(Params... params) const & {
     if constexpr (std::is_void_v<Return>) {
       return m_handle.vtbl_ptr(m_handle.data_ptr, into_abi<Params>(params)...);
     } else {
@@ -37,6 +52,7 @@ struct callback_view<Return(Params...)> {
     }
   }
 
+public:
   template<typename Impl>
   static as_abi_t<Return> vtbl_impl(DataBlockHead *data_ptr,
                                     as_abi_t<Params>... params) {
@@ -57,15 +73,9 @@ template<typename Return, typename... Params>
 struct callback<Return(Params...)> : callback_view<Return(Params...)> {
   static constexpr bool is_holder = true;
 
-  using typename callback_view<Return(Params...)>::vtable_type;
-  using typename callback_view<Return(Params...)>::view_type;
-  using typename callback_view<Return(Params...)>::holder_type;
   using typename callback_view<Return(Params...)>::abi_type;
 
   using callback_view<Return(Params...)>::m_handle;
-
-  using callback_view<Return(Params...)>::vtbl_impl;
-  using callback_view<Return(Params...)>::idmap_impl;
 
   explicit callback(abi_type handle)
       : callback_view<Return(Params...)>(handle) {}
@@ -98,19 +108,23 @@ struct callback<Return(Params...)> : callback_view<Return(Params...)> {
       tref_inc(&m_handle.data_ptr->m_count);
     }
   }
+
+  operator data_view() const & {
+    DataBlockHead *ret_data_ptr = m_handle.data_ptr;
+    return data_view(ret_data_ptr);
+  }
+
+  operator data_holder() const & {
+    DataBlockHead *ret_data_ptr = tobj_dup(m_handle.data_ptr);
+    return data_holder(ret_data_ptr);
+  }
+
+  operator data_holder() && {
+    DataBlockHead *ret_data_ptr = m_handle.data_ptr;
+    m_handle.data_ptr = nullptr;
+    return data_holder(ret_data_ptr);
+  }
 };
-
-template<typename Return, typename... Params>
-inline bool same_impl(adl_helper_t, callback_view<Return(Params...)> lhs,
-                      callback_view<Return(Params...)> rhs) {
-  return lhs.m_handle.data_ptr == lhs.m_handle.data_ptr;
-}
-
-template<typename Return, typename... Params>
-inline std::size_t hash_impl(adl_helper_t,
-                             callback_view<Return(Params...)> val) {
-  return reinterpret_cast<std::size_t>(val.m_handle.data_ptr);
-}
 
 template<typename Return, typename... Params>
 struct as_abi<callback_view<Return(Params...)>> {

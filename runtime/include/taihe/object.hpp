@@ -16,11 +16,13 @@ struct data_holder;
 struct data_view {
   DataBlockHead *data_ptr;
 
-  explicit data_view(DataBlockHead *other_handle) : data_ptr(other_handle) {}
+  explicit data_view(DataBlockHead *other_data_ptr)
+      : data_ptr(other_data_ptr) {}
 };
 
 struct data_holder : public data_view {
-  explicit data_holder(DataBlockHead *other_handle) : data_view(other_handle) {}
+  explicit data_holder(DataBlockHead *other_data_ptr)
+      : data_view(other_data_ptr) {}
 
   data_holder &operator=(data_holder other) {
     std::swap(this->data_ptr, other.data_ptr);
@@ -60,10 +62,7 @@ struct data_block_full : DataBlockHead {
   Impl impl;
 
   template<typename... Args>
-  data_block_full(TypeInfo const *rtti_ptr, Args &&...args)
-      : impl(std::forward<Args>(args)...) {
-    tobj_init(this, rtti_ptr);
-  }
+  data_block_full(Args &&...args) : impl(std::forward<Args>(args)...) {}
 };
 
 template<typename Impl>
@@ -72,8 +71,8 @@ inline Impl *cast_data_ptr(struct DataBlockHead *data_ptr) {
 }
 
 template<typename Impl, typename... Args>
-inline DataBlockHead *new_data_ptr(TypeInfo const *rtti_ptr, Args &&...args) {
-  return new data_block_full<Impl>(rtti_ptr, std::forward<Args>(args)...);
+inline DataBlockHead *new_data_ptr(Args &&...args) {
+  return new data_block_full<Impl>(std::forward<Args>(args)...);
 }
 
 template<typename Impl>
@@ -91,32 +90,33 @@ template<typename Impl, typename... InterfaceTypes>
 struct impl_view {
   DataBlockHead *data_ptr;
 
-  explicit impl_view(DataBlockHead *other_handle) : data_ptr(other_handle) {}
+  explicit impl_view(DataBlockHead *other_data_ptr)
+      : data_ptr(other_data_ptr) {}
 
   template<typename InterfaceView,
            std::enable_if_t<!InterfaceView::is_holder, int> = 0>
   operator InterfaceView() const & {
-    DataBlockHead *ret_handle = this->data_ptr;
+    DataBlockHead *ret_data_ptr = this->data_ptr;
     return InterfaceView(
-        {this->template get_vtbl_ptr<InterfaceView>(), ret_handle});
+        {this->template get_vtbl_ptr<InterfaceView>(), ret_data_ptr});
   }
 
   template<typename InterfaceHolder,
            std::enable_if_t<InterfaceHolder::is_holder, int> = 0>
   operator InterfaceHolder() const & {
-    DataBlockHead *ret_handle = tobj_dup(this->data_ptr);
+    DataBlockHead *ret_data_ptr = tobj_dup(this->data_ptr);
     return InterfaceHolder(
-        {this->template get_vtbl_ptr<InterfaceHolder>(), ret_handle});
+        {this->template get_vtbl_ptr<InterfaceHolder>(), ret_data_ptr});
   }
 
   operator data_view() const & {
-    DataBlockHead *ret_handle = this->data_ptr;
-    return data_view{ret_handle};
+    DataBlockHead *ret_data_ptr = this->data_ptr;
+    return data_view{ret_data_ptr};
   }
 
   operator data_holder() const & {
-    DataBlockHead *ret_handle = tobj_dup(this->data_ptr);
-    return data_holder{ret_handle};
+    DataBlockHead *ret_data_ptr = tobj_dup(this->data_ptr);
+    return data_holder{ret_data_ptr};
   }
 
 public:
@@ -135,7 +135,7 @@ public:
     uint64_t len = 0;
     struct IdMapItem idmap[((sizeof(InterfaceTypes::template idmap_impl<Impl>) /
                              sizeof(IdMapItem)) +
-                            ... + 1)] = {};
+                            ...)] = {};
   } rtti = [] {
     struct typeinfo_t info = {0, &del_data_ptr<Impl>};
     (
@@ -166,12 +166,11 @@ public:
           if constexpr (std::is_convertible_v<
                             typename InterfaceType::view_type,
                             typename InterfaceDest::view_type>) {
-            vtbl_ptr = typename InterfaceDest::view_type(
-                           typename InterfaceType::view_type{{
-                               &InterfaceType::template vtbl_impl<Impl>,
-                               nullptr,
-                           }})
-                           .m_handle.vtbl_ptr;
+            vtbl_ptr =
+                typename InterfaceDest::view_type(
+                    typename InterfaceType::view_type(
+                        {&InterfaceType::template vtbl_impl<Impl>, nullptr}))
+                    .m_handle.vtbl_ptr;
           }
         }(),
         ...);
@@ -182,16 +181,15 @@ public:
 template<typename Impl, typename... InterfaceTypes>
 struct impl_holder : public impl_view<Impl, InterfaceTypes...> {
   using impl_view<Impl, InterfaceTypes...>::rtti;
-  using impl_view<Impl, InterfaceTypes...>::get_vtbl_ptr;
 
-  explicit impl_holder(DataBlockHead *other_handle)
-      : impl_view<Impl, InterfaceTypes...>(other_handle) {}
+  explicit impl_holder(DataBlockHead *other_data_ptr)
+      : impl_view<Impl, InterfaceTypes...>(other_data_ptr) {}
 
   template<typename... Args>
   static impl_holder make(Args &&...args) {
-    return impl_holder(
-        new_data_ptr<Impl>(reinterpret_cast<TypeInfo const *>(&rtti),
-                           std::forward<Args>(args)...));
+    DataBlockHead *data_ptr = new_data_ptr<Impl>(std::forward<Args>(args)...);
+    tobj_init(data_ptr, reinterpret_cast<TypeInfo const *>(&rtti));
+    return impl_holder(data_ptr);
   }
 
   impl_holder &operator=(impl_holder other) {
@@ -217,42 +215,42 @@ struct impl_holder : public impl_view<Impl, InterfaceTypes...> {
   template<typename InterfaceView,
            std::enable_if_t<!InterfaceView::is_holder, int> = 0>
   operator InterfaceView() const & {
-    DataBlockHead *ret_handle = this->data_ptr;
+    DataBlockHead *ret_data_ptr = this->data_ptr;
     return InterfaceView(
-        {this->template get_vtbl_ptr<InterfaceView>(), ret_handle});
+        {this->template get_vtbl_ptr<InterfaceView>(), ret_data_ptr});
   }
 
   template<typename InterfaceHolder,
            std::enable_if_t<InterfaceHolder::is_holder, int> = 0>
   operator InterfaceHolder() const & {
-    DataBlockHead *ret_handle = tobj_dup(this->data_ptr);
+    DataBlockHead *ret_data_ptr = tobj_dup(this->data_ptr);
     return InterfaceHolder(
-        {this->template get_vtbl_ptr<InterfaceHolder>(), ret_handle});
+        {this->template get_vtbl_ptr<InterfaceHolder>(), ret_data_ptr});
   }
 
   template<typename InterfaceHolder,
            std::enable_if_t<InterfaceHolder::is_holder, int> = 0>
   operator InterfaceHolder() && {
-    DataBlockHead *ret_handle = this->data_ptr;
+    DataBlockHead *ret_data_ptr = this->data_ptr;
     this->data_ptr = nullptr;
     return InterfaceHolder(
-        {this->template get_vtbl_ptr<InterfaceHolder>(), ret_handle});
+        {this->template get_vtbl_ptr<InterfaceHolder>(), ret_data_ptr});
   }
 
   operator data_view() const & {
-    DataBlockHead *ret_handle = this->data_ptr;
-    return data_view{ret_handle};
+    DataBlockHead *ret_data_ptr = this->data_ptr;
+    return data_view{ret_data_ptr};
   }
 
   operator data_holder() const & {
-    DataBlockHead *ret_handle = tobj_dup(this->data_ptr);
-    return data_holder{ret_handle};
+    DataBlockHead *ret_data_ptr = tobj_dup(this->data_ptr);
+    return data_holder{ret_data_ptr};
   }
 
   operator data_holder() && {
-    DataBlockHead *ret_handle = this->data_ptr;
+    DataBlockHead *ret_data_ptr = this->data_ptr;
     this->data_ptr = nullptr;
-    return data_holder{ret_handle};
+    return data_holder{ret_data_ptr};
   }
 };
 
