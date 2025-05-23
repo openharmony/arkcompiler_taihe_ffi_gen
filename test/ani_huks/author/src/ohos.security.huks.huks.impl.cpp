@@ -22,6 +22,8 @@
 #include "hks_type.h"
 #include "hks_type_enum.h"
 
+#define OUTPUT_DATA_SIZE 0x10000
+
 using namespace ohos::security::huks;
 
 namespace {
@@ -50,17 +52,24 @@ errno_t BlobMallocBuffer(HksBlob *blobPtr, size_t size) {
   return HKS_SUCCESS;
 }
 
-errno_t BlobFromArray(HksBlob *blobPtr, taihe::array_view<uint8_t> av) {
-  errno_t ret = BlobMallocBuffer(blobPtr, blobPtr->size);
+errno_t BlobFromLong(HksBlob *blobPtr, int64_t value) {
+  errno_t ret = BlobMallocBuffer(blobPtr, sizeof(value));
   HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  std::memcpy(blobPtr->data, av.data(), blobPtr->size);
+  std::memcpy(blobPtr->data, &value, sizeof(value));
+  return HKS_SUCCESS;
+}
+
+errno_t BlobFromArray(HksBlob *blobPtr, taihe::array_view<uint8_t> av) {
+  errno_t ret = BlobMallocBuffer(blobPtr, av.size());
+  HKS_IF_NOT_SUCC_RETURN(ret, ret);
+  std::memcpy(blobPtr->data, av.data(), av.size());
   return HKS_SUCCESS;
 }
 
 errno_t BlobFromString(HksBlob *blobPtr, taihe::string_view sv) {
-  errno_t ret = BlobMallocBuffer(blobPtr, blobPtr->size);
+  errno_t ret = BlobMallocBuffer(blobPtr, sv.size());
   HKS_IF_NOT_SUCC_RETURN(ret, ret);
-  std::memcpy(blobPtr->data, sv.data(), blobPtr->size);
+  std::memcpy(blobPtr->data, sv.data(), sv.size());
   return HKS_SUCCESS;
 }
 
@@ -75,7 +84,7 @@ void BlobFree(HksBlob *blobPtr, bool const isNeedFresh = false) {
   blobPtr->size = 0;
 }
 
-errno_t ParamParse(HksParam *hksParamPtr, huks::HuksParam taiheParam) {
+errno_t ParamParse(HksParam *hksParamPtr, huks::HuksParam const &taiheParam) {
   hksParamPtr->tag = taiheParam.tag.get_value();
   switch (GetTagType(static_cast<enum HksTag>(hksParamPtr->tag))) {
   case HKS_TAG_TYPE_INT:
@@ -101,8 +110,6 @@ errno_t ParamParse(HksParam *hksParamPtr, huks::HuksParam taiheParam) {
     HKS_IF_NOT_TRUE_RETURN(taiheParam.value.holds_arrayValue(), HKS_FAILURE);
     return BlobFromArray(&hksParamPtr->blob,
                          taiheParam.value.get_arrayValue_ref());
-  case HKS_TAG_TYPE_INVALID:
-    return HKS_SUCCESS;
   default:
     return HKS_FAILURE;
   }
@@ -139,12 +146,12 @@ errno_t PropertiesParse(
       ret = ParamParse(&hksParams[n], properties->at(n));
       HKS_IF_NOT_SUCC_BREAK(ret);
     }
+    HKS_IF_NOT_SUCC_BREAK(ret);
     ret = HksInitParamSet(hksParamSetPtr);
     HKS_IF_NOT_SUCC_BREAK(ret);
     ret = HksAddParams(*hksParamSetPtr, hksParams.data(), hksParams.size());
     HKS_IF_NOT_SUCC_BREAK(ret);
     ret = HksBuildParamSet(hksParamSetPtr);
-    HKS_IF_NOT_SUCC_BREAK(ret);
   } while (0);
   for (size_t i = 0; i < n; ++i) {
     ParamFree(&hksParams[i]);
@@ -155,9 +162,9 @@ errno_t PropertiesParse(
   return ret;
 }
 
-void PropertiesFree(HksParamSet *hksParamSetPtr) {
+void PropertiesFree(HksParamSet **hksParamSetPtr) {
   if (hksParamSetPtr != nullptr) {
-    HksFreeParamSet(&hksParamSetPtr);
+    HksFreeParamSet(hksParamSetPtr);
   }
 }
 
@@ -167,7 +174,7 @@ struct ParamSetGuard {
   ParamSetGuard() = default;
 
   ~ParamSetGuard() {
-    PropertiesFree(this->data);
+    PropertiesFree(&this->data);
   }
 };
 
@@ -397,9 +404,10 @@ huks::HuksReturnResult updateSessionSync(
     ret = options.inData ? BlobFromArray(&ctxInData.data, *options.inData)
                          : BlobSetNull(&ctxInData.data);
     HKS_IF_NOT_SUCC_BREAK(ret, ret);
-    ret = BlobMallocBuffer(&ctxHandle.data, HKS_MAX_KEY_LEN);
+    ret = BlobFromLong(&ctxHandle.data, handle);
     HKS_IF_NOT_SUCC_BREAK(ret, ret);
-    ret = BlobMallocBuffer(&ctxOutData.data, HKS_MAX_KEY_LEN);
+    ret = BlobMallocBuffer(&ctxOutData.data,
+                           ctxInData.data.size + OUTPUT_DATA_SIZE);
     HKS_IF_NOT_SUCC_BREAK(ret, ret);
     ret = HksUpdate(&ctxHandle.data, ctxParamSetIn.data, &ctxInData.data,
                     &ctxOutData.data);
@@ -434,9 +442,10 @@ huks::HuksReturnResult finishSessionSync(
     ret = options.inData ? BlobFromArray(&ctxInData.data, *options.inData)
                          : BlobSetNull(&ctxInData.data);
     HKS_IF_NOT_SUCC_BREAK(ret, ret);
-    ret = BlobMallocBuffer(&ctxHandle.data, HKS_MAX_KEY_LEN);
+    ret = BlobFromLong(&ctxHandle.data, handle);
     HKS_IF_NOT_SUCC_BREAK(ret, ret);
-    ret = BlobMallocBuffer(&ctxOutData.data, HKS_MAX_KEY_LEN);
+    ret = BlobMallocBuffer(&ctxOutData.data,
+                           ctxInData.data.size + OUTPUT_DATA_SIZE);
     HKS_IF_NOT_SUCC_BREAK(ret, ret);
     ret = HksFinish(&ctxHandle.data, ctxParamSetIn.data, &ctxInData.data,
                     &ctxOutData.data);
@@ -464,7 +473,7 @@ void abortSessionSync(int64_t handle, huks::HuksOptions const &options) {
   do {
     ret = PropertiesParse(&ctxParamSetIn.data, options.properties);
     HKS_IF_NOT_SUCC_BREAK(ret, ret);
-    ret = BlobMallocBuffer(&ctxHandle.data, HKS_MAX_KEY_LEN);
+    ret = BlobFromLong(&ctxHandle.data, handle);
     HKS_IF_NOT_SUCC_BREAK(ret, ret);
     ret = HksAbort(&ctxHandle.data, ctxParamSetIn.data);
   } while (0);

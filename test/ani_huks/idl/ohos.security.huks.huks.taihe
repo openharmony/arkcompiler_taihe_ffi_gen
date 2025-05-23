@@ -56,7 +56,7 @@ function anonAttestKeyItemSync(keyAlias: String, options: HuksOptions): HuksRetu
 
 union HuksParamValue {
     booleanValue: bool;
-    numberValue: i64;
+    numberValue: i32;
     bigintValue: @bigint Array<u64>;
     arrayValue: @typedarray Array<u8>;
 }
