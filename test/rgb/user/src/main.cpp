@@ -2,7 +2,7 @@
 #include <cstddef>
 #include <iomanip>
 #include <iostream>
-#include <optional>
+#include <string>
 #include <taihe/callback.hpp>
 #include <taihe/object.hpp>
 #include <unordered_map>
@@ -10,6 +10,8 @@
 
 #include "rgb.base.user.hpp"
 #include "rgb.show.user.hpp"
+
+#include "tester.hpp"
 
 using namespace rgb::base;
 using namespace rgb::show;
@@ -60,7 +62,7 @@ private:
 
 public:
   auto getId() {
-    return "UserType(" + std::string(id) + ")";
+    return concat({"UserType", "(", id, ")"});
   }
 
   void userMethod() {
@@ -97,7 +99,7 @@ static ColorOrRGBOrName color_miku =
     ColorOrRGBOrName::make_name(Name::key_t::BLUE);
 static ColorOrRGBOrName color_unknown = ColorOrRGBOrName::make_undefined();
 
-bool testUnion() {
+void testUnion() {
   std::cout << toString(color_114514) << std::endl;
   std::cout << toString(color_yellow) << std::endl;
   std::cout << toString(color_miku) << std::endl;
@@ -108,6 +110,7 @@ bool testUnion() {
               << std::endl;
   } else {
     std::cout << "Error" << std::endl;
+    Tester::assert(false, "color_miku should hold a name");
   }
 
   if (color_miku.holds_name()) {
@@ -116,9 +119,11 @@ bool testUnion() {
               << std::endl;
   } else {
     std::cout << "Error" << std::endl;
+    Tester::assert(false, "color_miku should hold a name");
   }
 
   color_miku.emplace_rgb(RGB{0x39, 0xC5, 0xBB});
+
   std::cout << toString(color_miku) << std::endl;
 
   switch (color_miku.get_tag()) {
@@ -136,53 +141,43 @@ bool testUnion() {
     break;
   }
 
-  return true;
+  Tester::assert(color_miku.get_tag() == ColorOrRGBOrName::tag_t::rgb,
+                 "color_miku should hold rgb, got %s",
+                 toString(color_miku).c_str());
 }
 
-bool testInterfaceCall() {
-  IColorable colored_circ =
-      make_holder<UserType, IColorable>("Circ", color_114514);
+void testInterfaceCall() {
   IShowable colored_rect = makeColoredRectangle("Rect", color_yellow, 5, 5);
 
-  if (!same(weak::IColorable(colored_rect)->getColor(), color_yellow)) {
-    return false;
-  }
+  Tester::assert(same(weak::IColorable(colored_rect)->getColor(), color_yellow),
+                 "Colored Rectangle should have color %s, got %s",
+                 toString(color_yellow).c_str(),
+                 toString(weak::IColorable(colored_rect)->getColor()).c_str());
 
-  copyColor(colored_rect, colored_circ);
+  copyColor(colored_rect,
+            make_holder<UserType, IColorable>("Circ", color_114514));
 
-  if (!same(weak::IColorable(colored_rect)->getColor(), color_114514)) {
-    return false;
-  }
-
-  return true;
+  Tester::assert(same(weak::IColorable(colored_rect)->getColor(), color_114514),
+                 "Colored Rectangle should have color %s, got %s",
+                 toString(color_114514).c_str(),
+                 toString(weak::IColorable(colored_rect)->getColor()).c_str());
 }
 
-bool testInterfaceCast() {
+void testInterfaceCast() {
   IBase ibase_a = makeColoredRectangle("A", color_yellow, 1, 2);
+
+  Tester::assert(bool(weak::IColorable(ibase_a)) == true,
+                 "Dynamic cast from %s to IColorable should succeed",
+                 ibase_a->getId().c_str());
+
   IBase ibase_b = makeRectangle("B", 3, 4);
 
-  bool good_cast;
-  if (weak::IColorable icolorable_a = weak::IColorable(ibase_a)) {
-    std::cout << "A Dynamic Cast success" << std::endl;
-    good_cast = true;
-  } else {
-    std::cout << "A Dynamic Cast failed" << std::endl;
-    good_cast = false;
-  }
-
-  bool bad_cast;
-  if (weak::IColorable icolorable_b = weak::IColorable(ibase_b)) {
-    std::cout << "B Dynamic Cast success" << std::endl;
-    bad_cast = true;
-  } else {
-    std::cout << "B Dynamic Cast failed" << std::endl;
-    bad_cast = false;
-  }
-
-  return good_cast && !bad_cast;
+  Tester::assert(bool(weak::IColorable(ibase_b)) == false,
+                 "Dynamic cast from %s to IColorable should fail",
+                 ibase_b->getId().c_str());
 }
 
-bool testArray() {
+void testArray() {
   std::size_t m = 5;
   std::size_t n = 2;
 
@@ -194,41 +189,42 @@ bool testArray() {
 
   auto res = exchangeArr(dst, src);
 
-  if (dst.size() != m || src.size() != n || res.size() != n) {
-    return false;
-  }
-  for (int i = 0; i < n; i++) {
-    if (!same(src[i], y) || !same(dst[i], y) || !same(res[i], x)) {
-      return false;
-    }
-  }
-  for (int i = n; i < m; i++) {
-    if (!same(dst[i], x)) {
-      return false;
-    }
-  }
+  Tester::assert(dst.size() == m, "dst size should be %zu, got %zu", m,
+                 dst.size());
+  Tester::assert(src.size() == n, "src size should be %zu, got %zu", n,
+                 src.size());
+  Tester::assert(res.size() == n, "res size should be %zu, got %zu", n,
+                 res.size());
 
-  return true;
+  for (size_t i = 0; i < n; i++) {
+    Tester::assert(same(src[i], y), "src[%zu] should be %s, got %s", i,
+                   y->getId().c_str(), src[i]->getId().c_str());
+    Tester::assert(same(dst[i], y), "dst[%zu] should be %s, got %s", i,
+                   y->getId().c_str(), dst[i]->getId().c_str());
+    Tester::assert(same(res[i], x), "res[%zu] should be %s, got %s", i,
+                   x->getId().c_str(), res[i]->getId().c_str());
+  }
+  for (size_t i = n; i < m; i++) {
+    Tester::assert(same(dst[i], x), "dst[%zu] should be %s, got %s", i,
+                   x->getId().c_str(), dst[i]->getId().c_str());
+  }
 }
 
-bool testOptional() {
+void testOptional() {
   auto some =
       optional<IBase>(std::in_place, make_holder<UserType, IBase>("some"));
   auto some_str = getIdFromOptional(some);
-  if (!some_str.has_value() || some_str.value() != some.value()->getId()) {
-    return false;
-  }
+  Tester::assert(some_str.has_value(), "some_str should have value");
+  Tester::assert(some_str.value() == some.value()->getId(),
+                 "some_str should be %s, got %s", some.value()->getId().c_str(),
+                 some_str.value().c_str());
 
   auto none = optional<IBase>(std::nullopt);
   auto none_str = getIdFromOptional(none);
-  if (none_str.has_value()) {
-    return false;
-  }
-
-  return true;
+  Tester::assert(!none_str.has_value(), "none_str should not have value");
 }
 
-bool testVector() {
+void testVector() {
   array<IBase> src = {
       make_holder<UserType, IBase>("a"),
       make_holder<UserType, IBase>("b"),
@@ -236,30 +232,28 @@ bool testVector() {
   };
 
   vector<IBase> res = makeVec(src);
-  if (res.size() != src.size()) {
-    return false;
-  }
+  Tester::assert(res.size() == src.size(),
+                 "Vector result size should be %zu, got %zu", src.size(),
+                 res.size());
   for (size_t i = 0; i < src.size(); i++) {
-    if (res[i]->getId() != src[i]->getId()) {
-      return false;
-    }
+    Tester::assert(res[i]->getId() == src[i]->getId(),
+                   "res[%zu] should be %s, got %s", i, src[i]->getId().c_str(),
+                   res[i]->getId().c_str());
   }
 
   vector<IBase> buf;
   fillVec(src, buf);
-  if (buf.size() != src.size()) {
-    return false;
-  }
+  Tester::assert(buf.size() == src.size(),
+                 "Vector buffer size should be %zu, got %zu", src.size(),
+                 buf.size());
   for (size_t i = 0; i < src.size(); i++) {
-    if (buf[i]->getId() != src[i]->getId()) {
-      return false;
-    }
+    Tester::assert(buf[i]->getId() == src[i]->getId(),
+                   "buf[%zu] should be %s, got %s", i, src[i]->getId().c_str(),
+                   buf[i]->getId().c_str());
   }
-
-  return true;
 }
 
-bool testMap() {
+void testMap() {
   array<string> keys = {"a", "b", "c", "a"};
   array<IBase> src = {
       make_holder<UserType, IBase>("a"),
@@ -275,32 +269,32 @@ bool testMap() {
   }
 
   map<string, IBase> res = makeMap(keys, src);
-  if (res.size() != expected.size()) {
-    return false;
-  }
+  Tester::assert(res.size() == expected.size(),
+                 "Map result size should be %zu, got %zu", expected.size(),
+                 res.size());
   for (auto const &[key, value] : expected) {
     auto it = res.find_item(key);
-    if (!it || it->second->getId() != value->getId()) {
-      return false;
-    }
+    Tester::assert(it, "Map should contain key %s", key.c_str());
+    Tester::assert(it->second->getId() == value->getId(),
+                   "Map[%s] should be %s, got %s", key.c_str(),
+                   value->getId().c_str(), it->second->getId().c_str());
   }
 
   map<string, IBase> buf;
   fillMap(keys, src, buf);
-  if (buf.size() != expected.size()) {
-    return false;
-  }
+  Tester::assert(buf.size() == expected.size(),
+                 "Map buffer size should be %zu, got %zu", expected.size(),
+                 buf.size());
   for (auto const &[key, value] : expected) {
     auto it = buf.find_item(key);
-    if (!it || it->second->getId() != value->getId()) {
-      return false;
-    }
+    Tester::assert(it, "buffer should contain key %s", key.c_str());
+    Tester::assert(it->second->getId() == value->getId(),
+                   "buffer[%s] should be %s, got %s", key.c_str(),
+                   value->getId().c_str(), it->second->getId().c_str());
   }
-
-  return true;
 }
 
-bool testSet() {
+void testSet() {
   array<string> src = {"a", "b", "c", "a"};
 
   std::unordered_set<std::string> expected;
@@ -309,32 +303,26 @@ bool testSet() {
   }
 
   set<string> res = makeSet(src);
-  if (res.size() != expected.size()) {
-    return false;
-  }
+  Tester::assert(res.size() == expected.size(),
+                 "Set result size should be %zu, got %zu", expected.size(),
+                 res.size());
   for (auto const &key : expected) {
     auto it = res.find_item(key);
-    if (!it) {
-      return false;
-    }
+    Tester::assert(it, "Set should contain key %s", key.c_str());
   }
 
   set<string> buf;
   fillSet(src, buf);
-  if (buf.size() != expected.size()) {
-    return false;
-  }
+  Tester::assert(buf.size() == expected.size(),
+                 "Set buffer size should be %zu, got %zu", expected.size(),
+                 buf.size());
   for (auto const &key : expected) {
     auto it = buf.find_item(key);
-    if (!it) {
-      return false;
-    }
+    Tester::assert(it, "buffer should contain key %s", key.c_str());
   }
-
-  return true;
 }
 
-bool testCallback() {
+void testCallback() {
   struct MyCallback {
     string f;
 
@@ -352,76 +340,48 @@ bool testCallback() {
     }
   };
 
-  auto ocp = currying(
-      make_holder<MyCallback, callback<string(string_view, string_view)>>("f"))(
-      "abc");
-  auto res = ocp("123");
+  auto curried = currying(
+      make_holder<MyCallback, callback<string(string_view, string_view)>>("f"));
+  auto f = curried("abc");
+  auto x = f("123");
+  auto y = f("456");
 
-  typename callback<string(string_view, string_view)>::vtable_type x;
+  auto expected_x = MyCallback("f")("abc", "123");
+  Tester::assert(x == expected_x, "x should be %s, got %s", expected_x.c_str(),
+                 x.c_str());
 
-  std::cout << "res = " << res << std::endl;
-
-  return res == MyCallback("f")("abc", "123");
+  auto expected_y = MyCallback("f")("abc", "456");
+  Tester::assert(y == expected_y, "y should be %s, got %s", expected_y.c_str(),
+                 y.c_str());
 }
 
-bool TestMemoryLeak() {
-  bool leak = false;
+void TestMemoryLeak() {
+  size_t remaining = 0;
 
   for (auto *user : UserType::registry) {
     std::cout << user->getId() << " is still alive" << std::endl;
-    leak = true;
+    remaining++;
   }
 
-  return !leak;
+  Tester::assert(remaining == 0,
+                 "Memory leak detected: %zu UserType objects are still alive",
+                 remaining);
 }
-
-class Tester {
-  std::vector<std::pair<std::string, bool>> results;
-
-public:
-  Tester() {}
-
-  template<typename Func, typename... Args>
-  void test(std::string name, Func &&func, Args &&...args) {
-    std::cout << ">> Running test: " << name << std::endl;
-    bool result = func(std::forward<Args>(args)...);
-    std::cout << (result ? "\033[32m" : "\033[31m") << ">> Test " << name << " "
-              << (result ? "passed" : "failed") << "!" << "\033[0m"
-              << std::endl;
-    results.emplace_back(name, result);
-  }
-
-  size_t failures() const {
-    size_t count = 0;
-    for (auto const &[name, result] : results) {
-      if (!result) {
-        count++;
-      }
-    }
-    return count;
-  }
-};
 
 int main() {
   Tester tester;
 
-  tester.test("Union", testUnion);
-  tester.test("Interface Call", testInterfaceCall);
-  tester.test("Interface Cast", testInterfaceCast);
-  tester.test("Array", testArray);
-  tester.test("Optional", testOptional);
-  tester.test("Vector", testVector);
-  tester.test("Map", testMap);
-  tester.test("Set", testSet);
-  tester.test("Callback", testCallback);
-  tester.test("Memory Leak", TestMemoryLeak);
+  tester.run("testUnion", testUnion);
+  tester.run("testInterfaceCall", testInterfaceCall);
+  tester.run("testInterfaceCast", testInterfaceCast);
+  tester.run("testArray", testArray);
+  tester.run("testOptional", testOptional);
+  tester.run("testVector", testVector);
+  tester.run("testMap", testMap);
+  tester.run("testSet", testSet);
+  tester.run("testCallback", testCallback);
 
-  size_t failed_count = tester.failures();
-  if (failed_count > 0) {
-    std::cout << "\033[31m" << failed_count
-              << " test(s) failed. Please check the output above.\033[0m"
-              << std::endl;
-  } else {
-    std::cout << "\033[32mAll tests passed!\033[0m" << std::endl;
-  }
+  TestMemoryLeak();
+
+  return tester.report();
 }

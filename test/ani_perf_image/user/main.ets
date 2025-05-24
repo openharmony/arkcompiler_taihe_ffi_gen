@@ -17,7 +17,7 @@ function runTestFunction(prompt: string, n: int, fn: () => void): void {
     }
     const t = Chrono.nanoNow();
     let durationNs: double = (t - s) / n;
-    console.log(`>> Done ${prompt}: ${durationNs / 1000} ms.`);
+    console.log(`>> Done ${prompt}: ${durationNs / 1000} μs.`);
 }
 
 function testImage() {
