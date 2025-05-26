@@ -1384,9 +1384,6 @@ class CppHeadersGenerator(Backend):
         iface_cpp_info: IfaceCppInfo,
         iface_cpp_defn_target: CHeaderWriter,
     ):
-        iface_cpp_defn_target.writelns(
-            f"explicit {iface_cpp_info.weak_name}(::taihe::data_view other) : {iface_cpp_info.weak_name}({iface_abi_info.dynamic_cast}(other.data_ptr)) {{}}",
-        )
         with iface_cpp_defn_target.indented(
             f"operator ::taihe::data_view() const& {{",
             f"}}",
@@ -1400,6 +1397,14 @@ class CppHeadersGenerator(Backend):
         ):
             iface_cpp_defn_target.writelns(
                 f"return ::taihe::data_holder(tobj_dup(this->m_handle.data_ptr));",
+            )
+        with iface_cpp_defn_target.indented(
+            f"explicit {iface_cpp_info.weak_name}(::taihe::data_view other) : {iface_cpp_info.weak_name}({{",
+            f"}}) {{}}",
+        ):
+            iface_cpp_defn_target.writelns(
+                f"{iface_abi_info.dynamic_cast}(other.data_ptr->rtti_ptr),",
+                f"other.data_ptr,",
             )
 
     def gen_iface_view_static_cast(
@@ -1656,9 +1661,6 @@ class CppHeadersGenerator(Backend):
         iface_cpp_info: IfaceCppInfo,
         iface_cpp_defn_target: CHeaderWriter,
     ):
-        iface_cpp_defn_target.writelns(
-            f"explicit {iface_cpp_info.norm_name}(::taihe::data_holder other) : {iface_cpp_info.norm_name}({iface_abi_info.dynamic_cast}(std::exchange(other.data_ptr, nullptr))) {{}}",
-        )
         with iface_cpp_defn_target.indented(
             f"operator ::taihe::data_view() const& {{",
             f"}}",
@@ -1679,6 +1681,14 @@ class CppHeadersGenerator(Backend):
         ):
             iface_cpp_defn_target.writelns(
                 f"return ::taihe::data_holder(std::exchange(this->m_handle.data_ptr, nullptr));",
+            )
+        with iface_cpp_defn_target.indented(
+            f"explicit {iface_cpp_info.norm_name}(::taihe::data_holder other) : {iface_cpp_info.norm_name}({{",
+            f"}}) {{}}",
+        ):
+            iface_cpp_defn_target.writelns(
+                f"{iface_abi_info.dynamic_cast}(other.data_ptr->rtti_ptr),",
+                f"std::exchange(other.data_ptr, nullptr),",
             )
 
     def gen_iface_holder_static_cast(

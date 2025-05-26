@@ -207,7 +207,6 @@ int main() {
     std::cout << named->name << " is still alive" << std::endl;
     all_deleted = false;
   }
-  std::cout << all_deleted << std::endl;
   if (all_deleted) {
     std::cout << "All named objects are deleted" << std::endl;
     return 0;

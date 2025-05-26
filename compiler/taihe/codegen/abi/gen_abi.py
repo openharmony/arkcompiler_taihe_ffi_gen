@@ -207,7 +207,7 @@ class ABIHeadersGenerator(Backend):
             self.gen_iface_ftable(iface, iface_abi_info, iface_abi_defn_target)
             self.gen_iface_vtable(iface, iface_abi_info, iface_abi_defn_target)
             self.gen_iface_defn(iface, iface_abi_info, iface_abi_defn_target)
-            self.gen_iface_static_casts(iface, iface_abi_info, iface_abi_defn_target)
+            self.gen_iface_static_cast(iface, iface_abi_info, iface_abi_defn_target)
             self.gen_iface_dynamic_cast(iface, iface_abi_info, iface_abi_defn_target)
 
     def gen_iface_ftable(
@@ -268,7 +268,7 @@ class ABIHeadersGenerator(Backend):
                 f"struct DataBlockHead* data_ptr;",
             )
 
-    def gen_iface_static_casts(
+    def gen_iface_static_cast(
         self,
         iface: IfaceDecl,
         iface_abi_info: IfaceABIInfo,
@@ -294,14 +294,9 @@ class ABIHeadersGenerator(Backend):
         iface_abi_defn_target: CHeaderWriter,
     ):
         with iface_abi_defn_target.indented(
-            f"TH_INLINE struct {iface_abi_info.mangled_name} {iface_abi_info.dynamic_cast}(struct DataBlockHead* data_ptr) {{",
+            f"TH_INLINE struct {iface_abi_info.vtable} const* {iface_abi_info.dynamic_cast}(struct TypeInfo const* rtti_ptr) {{",
             f"}}",
         ):
-            iface_abi_defn_target.writelns(
-                f"struct TypeInfo const* rtti_ptr = data_ptr->rtti_ptr;",
-                f"struct {iface_abi_info.mangled_name} result;",
-                f"result.data_ptr = data_ptr;",
-            )
             with iface_abi_defn_target.indented(
                 f"for (size_t i = 0; i < rtti_ptr->len; i++) {{",
                 f"}}",
@@ -311,12 +306,10 @@ class ABIHeadersGenerator(Backend):
                     f"}}",
                 ):
                     iface_abi_defn_target.writelns(
-                        f"result.vtbl_ptr = (struct {iface_abi_info.vtable}*)rtti_ptr->idmap[i].vtbl_ptr;",
-                        f"return result;",
+                        f"return (struct {iface_abi_info.vtable}*)rtti_ptr->idmap[i].vtbl_ptr;",
                     )
             iface_abi_defn_target.writelns(
-                f"result.vtbl_ptr = NULL;",
-                f"return result;",
+                f"return NULL;",
             )
 
     def gen_iface_impl_file(
