@@ -1583,11 +1583,11 @@ class CppHeadersGenerator(Backend):
         iface_cpp_defn_target: CHeaderWriter,
     ):
         with iface_cpp_defn_target.indented(
-            f"explicit operator bool() const& {{",
+            f"bool is_error() const& {{",
             f"}}",
         ):
             iface_cpp_defn_target.writelns(
-                f"return m_handle.vtbl_ptr;",
+                f"return m_handle.vtbl_ptr == nullptr;",
             )
         with iface_cpp_defn_target.indented(
             f"virtual_type const& operator*() const& {{",

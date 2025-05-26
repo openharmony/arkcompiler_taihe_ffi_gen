@@ -166,13 +166,13 @@ void testInterfaceCall() {
 void testInterfaceCast() {
   IBase ibase_a = makeColoredRectangle("A", color_yellow, 1, 2);
 
-  Tester::assert(bool(weak::IColorable(ibase_a)) == true,
+  Tester::assert(!weak::IColorable(ibase_a).is_error(),
                  "Dynamic cast from %s to IColorable should succeed",
                  ibase_a->getId().c_str());
 
   IBase ibase_b = makeRectangle("B", 3, 4);
 
-  Tester::assert(bool(weak::IColorable(ibase_b)) == false,
+  Tester::assert(weak::IColorable(ibase_b).is_error(),
                  "Dynamic cast from %s to IColorable should fail",
                  ibase_b->getId().c_str());
 }

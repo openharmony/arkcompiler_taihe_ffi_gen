@@ -147,8 +147,8 @@ void testTop() {
   Bottom top_as_weak_top_as_bottom = Bottom(top_as_weak_top);
   weak::Bottom top_as_top_as_weak_bottom = weak::Bottom(top_as_top);
 
-  std::cout << bool(top_as_weak_top_as_bottom) << std::endl;  // false
-  std::cout << bool(top_as_top_as_weak_bottom) << std::endl;  // false
+  std::cout << top_as_weak_top_as_bottom.is_error() << std::endl;  // true
+  std::cout << top_as_top_as_weak_bottom.is_error() << std::endl;  // true
 
   impl_view<TopImpl, Top> top_as_impl_view = top;
   impl_holder<TopImpl, Top> top_as_impl_holder = top_as_impl_view;
@@ -165,8 +165,8 @@ void testLR() {
   Left lr_as_weak_top_as_left = Left(lr_as_weak_top);
   weak::Right lr_as_top_as_weak_right = weak::Right(lr_as_top);
 
-  std::cout << bool(lr_as_weak_top_as_left) << std::endl;   // true
-  std::cout << bool(lr_as_top_as_weak_right) << std::endl;  // true
+  std::cout << lr_as_weak_top_as_left.is_error() << std::endl;   // false
+  std::cout << lr_as_top_as_weak_right.is_error() << std::endl;  // false
 }
 
 void testCallbackB() {
@@ -192,9 +192,7 @@ void testCallbackB() {
   callback_b_map.emplace<1>(callback_b_as_callback_b, 2);
   callback_b_map.emplace<0>(callback_b_as_weak_callback_b, 3);
 
-  for (auto const &[key, value] : callback_b_map) {
-    std::cout << bool(key) << ": " << value << std::endl;
-  }
+  std::cout << "callback_b_map size: " << callback_b_map.size() << std::endl;
 }
 
 int main() {

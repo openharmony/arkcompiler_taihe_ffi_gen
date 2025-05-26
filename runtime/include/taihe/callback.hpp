@@ -37,8 +37,8 @@ struct callback_view<Return(Params...)> {
   }
 
 public:
-  operator bool() const & {
-    return m_handle.vtbl_ptr;
+  bool is_error() const & {
+    return m_handle.vtbl_ptr == nullptr;
   }
 
   Return operator()(Params... params) const & {

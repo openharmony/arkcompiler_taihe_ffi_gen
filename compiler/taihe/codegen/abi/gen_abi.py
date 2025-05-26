@@ -284,7 +284,7 @@ class ABIHeadersGenerator(Backend):
                 f"}}",
             ):
                 iface_abi_defn_target.writelns(
-                    f"return (struct {ancestor_abi_info.vtable} const*)((void* const*)vtbl_ptr + {info.offset});",
+                    f"return vtbl_ptr ? (struct {ancestor_abi_info.vtable} const*)((void* const*)vtbl_ptr + {info.offset}) : NULL;",
                 )
 
     def gen_iface_dynamic_cast(
@@ -306,7 +306,7 @@ class ABIHeadersGenerator(Backend):
                     f"}}",
                 ):
                     iface_abi_defn_target.writelns(
-                        f"return (struct {iface_abi_info.vtable}*)rtti_ptr->idmap[i].vtbl_ptr;",
+                        f"return (struct {iface_abi_info.vtable} const*)rtti_ptr->idmap[i].vtbl_ptr;",
                     )
             iface_abi_defn_target.writelns(
                 f"return NULL;",
