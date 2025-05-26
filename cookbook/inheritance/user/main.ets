@@ -27,18 +27,18 @@ function application_context_extends_test() {
     let applicationContext = lib.makeApplicationContext();
     applicationContext.setSupportedProcessCacheSync(true);
     applicationContext.setSupportedProcessCacheSync(false);
-    applicationContext.setSupportedProcessCache(true, (error: Error) => {
-        if (!error.message) {
-            console.log("call setSupportedProcessCache 333");
-        } else {
+    applicationContext.setSupportedProcessCache(true, (error: Error|null) => {
+        if (error) {
             console.log("call setSupportedProcessCache ERROR ", error);
+        } else {
+            console.log("call setSupportedProcessCache 333");
         }
     })
-    applicationContext.setSupportedProcessCache(false, (error: Error) => {
-        if (!error.message) {
-            console.log("call setSupportedProcessCache 333");
-        } else {
+    applicationContext.setSupportedProcessCache(false, (error: Error|null) => {
+        if (error) {
             console.log("call setSupportedProcessCache ERROR ", error);
+        } else {
+            console.log("call setSupportedProcessCache 333");
         }
     })
     applicationContext.name = "ApplicationContext";

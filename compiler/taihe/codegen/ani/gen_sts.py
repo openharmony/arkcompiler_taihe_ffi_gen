@@ -421,15 +421,14 @@ class STSCodeGenerator:
                             f"}})",
                         ):
                             target.writelns(
-                                f"callback(new BusinessError(), ret as {sts_resolved_ty_name});",
+                                f"callback(null, ret as {sts_resolved_ty_name});",
                             )
                         with target.indented(
                             f".catch((ret: NullishType): void => {{",
                             f"}});",
                         ):
                             target.writelns(
-                                f"let data: {sts_resolved_ty_name};",
-                                f"callback(ret as BusinessError, data);",
+                                f"callback(ret as BusinessError);",
                             )
 
     def gen_enum(
@@ -890,15 +889,14 @@ class STSCodeGenerator:
                             f"}})",
                         ):
                             target.writelns(
-                                f"callback(new BusinessError(), ret as {sts_resolved_ty_name});",
+                                f"callback(null, ret as {sts_resolved_ty_name});",
                             )
                         with target.indented(
                             f".catch((ret: NullishType): void => {{",
                             f"}});",
                         ):
                             target.writelns(
-                                f"let data: {sts_resolved_ty_name};",
-                                f"callback(ret as BusinessError, data);",
+                                f"callback(ret as BusinessError);",
                             )
             # getter
             if (get_name := func_ani_info.get_name) is not None:
@@ -1091,15 +1089,14 @@ class STSCodeGenerator:
                             f"}})",
                         ):
                             target.writelns(
-                                f"callback(new BusinessError(), ret as {sts_resolved_ty_name});",
+                                f"callback(null, ret as {sts_resolved_ty_name});",
                             )
                         with target.indented(
                             f".catch((ret: NullishType): void => {{",
                             f"}});",
                         ):
                             target.writelns(
-                                f"let data: {sts_resolved_ty_name};",
-                                f"callback(ret as BusinessError, data);",
+                                f"callback(ret as BusinessError);",
                             )
             # getter
             if (get_name := method_ani_info.get_name) is not None:
@@ -1143,7 +1140,7 @@ class STSCodeGenerator:
                 "        this.data = data;",
                 "    }",
                 "}",
-                "export type AsyncCallback<T, E = void> = (error: BusinessError<E>, data: T) => void;",
+                "export type AsyncCallback<T, E = void> = (error: BusinessError<E> | null, data?: T) => void;",
             )
 
     def gen_utils(

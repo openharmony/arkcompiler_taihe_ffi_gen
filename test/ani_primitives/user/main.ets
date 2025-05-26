@@ -1023,11 +1023,11 @@ function testCasetestBaseBoolFunc4_2() {
 function testCasetestBaseBoolFunc5() {
     let p = new Promise<boolean>((resolve, reject) => {
         primitivesBoolTest.TestBaseBoolFunc5Async(
-            true, (err: BusinessError, data: boolean) => {
-                if (err.code !== 0) {
+            true, (err: BusinessError|null, data?: boolean) => {
+                if (err) {
                     reject(err);
                 } else {
-                    resolve(data);
+                    resolve(data!);
                 }
             });
     });
@@ -1044,11 +1044,11 @@ function testCasetestBaseBoolFunc5() {
 function testCasetestBaseBoolFunc5_1() {
     let p = new Promise<boolean>((resolve, reject) => {
         primitivesBoolTest.TestBaseBoolFunc5Async(
-            false, (err: BusinessError, data: boolean) => {
-                if (err.code !== 0) {
+            false, (err: BusinessError|null, data?: boolean) => {
+                if (err) {
                     reject(err);
                 } else {
-                    resolve(data);
+                    resolve(data!);
                 }
             });
     });

@@ -682,10 +682,10 @@ export function uploadBook(b: Book): Promise<string> {
         });
     });
 }
-export function uploadBook(b: Book, callback: (err: Error, data?: string) => void): void {
+export function uploadBook(b: Book, callback: (err: Error | null, data?: string) => void): void {
     taskpool.execute((): string => { return uploadBook_inner(b); })
     .then((ret: NullishType): void => {
-        callback(new Error(), ret as string);
+        callback(null, ret as string);
     })
     .catch((ret: NullishType): void => {
         callback(ret as Error);
