@@ -377,7 +377,7 @@ class BuildSystem(BuildUtils):
             for file in d.iterdir():
                 if not file.is_file() or file.suffix != ".taihe":
                     continue
-                node_target = self.user_dir / f"{file.stem}.node"
+                node_target = self.generated_dir / f"{file.stem}.node"
                 runtime_sources = [
                     self.config.runtime_src_dir / "string.c",
                     self.config.runtime_src_dir / "object.c",
@@ -412,16 +412,6 @@ class BuildSystem(BuildUtils):
                     )
 
     def compile_and_run_ts(self) -> None:
-        for file in self.generated_dir.iterdir():
-            if not file.is_file():
-                continue
-            if file.suffix == ".ts":
-                command_copy = [
-                    "cp",
-                    f"{self.generated_dir}/{file.name}",
-                    f"{self.user_dir}",
-                ]
-                self.run_command(command_copy)
 
         command_compiler = [
             "tsc",
@@ -429,10 +419,12 @@ class BuildSystem(BuildUtils):
             "ES2020",
             "--module",
             "commonjs",
+            "--outDir",
+            f"{self.generated_dir}",
             f"{self.user_dir}/main.ts",
         ]
         self.run_command(command_compiler)
-        command_run = ["node", f"{self.user_dir}/main.js"]
+        command_run = ["node", f"{self.generated_dir}/main.js"]
         self.run_command(command_run, capture_output=False)
 
     def build(self) -> None:

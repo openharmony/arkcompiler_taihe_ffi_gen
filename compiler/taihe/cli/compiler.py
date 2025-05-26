@@ -42,6 +42,11 @@ def main():
         help="generate sources for ANI binding",
     )
     parser.add_argument(
+        "--napi",
+        action="store_true",
+        help="generate sources for NAPI binding",
+    )
+    parser.add_argument(
         "--c-impl",
         action="store_true",
         help="generate skeleton for C implementation",
@@ -67,6 +72,8 @@ def main():
         enabled_backend_names.append("ani-bridge")
     if args.debug:
         enabled_backend_names.append("pretty-print")
+    if args.napi:
+        enabled_backend_names.append("napi-bridge")
 
     resolved_backends: list[BackendConfig] = []
     for b in registry.collect_required_backends(enabled_backend_names):
