@@ -201,6 +201,7 @@ class BuildSystem(BuildUtils):
         config: BuildConfig,
         verbosity: int,
         gen_ani: bool = False,
+        gen_napi: bool = False,
         sts_keep_name: bool = False,
         opt_level: str = "0",
     ):
@@ -210,6 +211,7 @@ class BuildSystem(BuildUtils):
         self.codegen_debug_level = _map_output_debug_level(verbosity)
 
         self.gen_ani = gen_ani
+        self.gen_napi = gen_napi
         self.sts_keep_name = sts_keep_name
 
         # Build paths
@@ -335,13 +337,15 @@ class BuildSystem(BuildUtils):
         from taihe.driver.backend import BackendRegistry
         from taihe.driver.contexts import CompilerInstance, CompilerInvocation
 
-        self.logger.info("Generating author and ani codes...")
+        self.logger.info("Generating code from IDL files...")
 
         registry = BackendRegistry()
         registry.register_all()
         backend_names = ["cpp-author"]
         if self.gen_ani:
             backend_names.append("ani-bridge")
+        elif self.gen_napi:
+            backend_names.append("napi-bridge")
         else:
             backend_names.append("cpp-user")
         if self.should_run_pretty_print:
@@ -367,6 +371,70 @@ class BuildSystem(BuildUtils):
         if not instance.run():
             raise RuntimeError(f"Code generation failed")
 
+    def compile_and_link_node(self) -> None:
+        for idl_path in [self.idl_dir]:
+            d = Path(idl_path)
+            for file in d.iterdir():
+                if not file.is_file() or file.suffix != ".taihe":
+                    continue
+                node_target = self.user_dir / f"{file.stem}.node"
+                runtime_sources = [
+                    self.config.runtime_src_dir / "string.c",
+                    self.config.runtime_src_dir / "object.c",
+                ]
+                runtime_objects = self.compile(
+                    self.build_runtime_src_dir,
+                    runtime_sources,
+                    self.runtime_includes,
+                )
+                generated_objects = self.compile(
+                    self.build_generated_src_dir,
+                    self.generated_src_dir.glob("*.[cC]*"),
+                    self.generated_includes,
+                )
+                author_objects = self.compile(
+                    self.build_author_src_dir,
+                    self.author_src_dir.glob("*.[cC]*"),
+                    self.author_includes,
+                )
+
+                # Link all objects
+                if all_objects := runtime_objects + generated_objects + author_objects:
+                    self.link(
+                        node_target,
+                        all_objects,
+                        shared=True,
+                    )
+                    self.logger.info("Shared library compiled: %s", node_target)
+                else:
+                    self.logger.warning(
+                        "No object files to link, skipping shared library compilation"
+                    )
+
+    def compile_and_run_ts(self) -> None:
+        for file in self.generated_dir.iterdir():
+            if not file.is_file():
+                continue
+            if file.suffix == ".ts":
+                command_copy = [
+                    "cp",
+                    f"{self.generated_dir}/{file.name}",
+                    f"{self.user_dir}",
+                ]
+                self.run_command(command_copy)
+
+        command_compiler = [
+            "tsc",
+            "--target",
+            "ES2020",
+            "--module",
+            "commonjs",
+            f"{self.user_dir}/main.ts",
+        ]
+        self.run_command(command_compiler)
+        command_run = ["node", f"{self.user_dir}/main.js"]
+        self.run_command(command_run, capture_output=False)
+
     def build(self) -> None:
         """Run the complete build process."""
         self.logger.info("Starting ANI compilation...")
@@ -385,6 +453,13 @@ class BuildSystem(BuildUtils):
 
             # Run with Ark runtime
             self.run_ani()
+        elif self.gen_napi:
+            # Compile the shared library
+            self.compile_and_link_node()
+
+            # Compiler and run ts file
+            self.compile_and_run_ts()
+
         else:
             # Compile the shared library
             self.compile_shared_library()
@@ -817,6 +892,13 @@ def main(config: BuildConfig | None = None):
             help="Use ani-bridge backend for code generation",
         )
 
+    def add_argument_napi(parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--napi",
+            action="store_true",
+            help="Use napi-bridge backend for code generation",
+        )
+
     def add_argument_optimization(parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "-O",
@@ -874,6 +956,7 @@ def main(config: BuildConfig | None = None):
     add_argument_target_directory(parser_generate)
     add_argument_ani(parser_generate)
     add_argument_sts_keep_name(parser_generate)
+    add_argument_napi(parser_generate)
 
     parser_build = subparsers.add_parser(
         "build",
@@ -883,6 +966,7 @@ def main(config: BuildConfig | None = None):
     add_argument_target_directory(parser_build)
     add_argument_ani(parser_build)
     add_argument_optimization(parser_build)
+    add_argument_napi(parser_build)
 
     parser_test = subparsers.add_parser(
         "test",
@@ -893,6 +977,7 @@ def main(config: BuildConfig | None = None):
     add_argument_ani(parser_test)
     add_argument_optimization(parser_test)
     add_argument_sts_keep_name(parser_test)
+    add_argument_napi(parser_test)
 
     parser_upgrade = subparsers.add_parser(
         "upgrade",
@@ -929,6 +1014,7 @@ def main(config: BuildConfig | None = None):
                 BuildSystem(
                     args.target_directory,
                     gen_ani=args.ani,
+                    gen_napi=args.napi,
                     config=config,
                     verbosity=verbosity,
                     sts_keep_name=args.sts_keep_name,
@@ -937,6 +1023,7 @@ def main(config: BuildConfig | None = None):
                 BuildSystem(
                     args.target_directory,
                     gen_ani=args.ani,
+                    gen_napi=args.napi,
                     config=config,
                     verbosity=verbosity,
                     opt_level=args.optimization,
@@ -945,6 +1032,7 @@ def main(config: BuildConfig | None = None):
                 BuildSystem(
                     args.target_directory,
                     gen_ani=args.ani,
+                    gen_napi=args.napi,
                     config=config,
                     verbosity=verbosity,
                     opt_level=args.optimization,

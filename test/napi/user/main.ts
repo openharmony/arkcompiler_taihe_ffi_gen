@@ -1,7 +1,7 @@
 // import { add, mul, sub, from_rgb, to_rgb, to_color, from_color, from_theme, to_theme, show, makeIBase, copyIBase, makeIShape, as_IShape, impl_IBase, process_color_rgb_name, reverse_vector, reverse_map, add_set } from "./integer"
-// import { concat, to_i32, from_i32 } from "./string";
+import { concat, to_i32, from_i32 } from "./string";
 // import { RGB, Color, Theme, ColorOrRGBOrName } from "./rgb"
-import { concat } from "./string";
+// import { concat } from "./string";
 
 
 // class BaseImpl {
@@ -21,10 +21,10 @@ function main() {
   // console.log(result2);
   let result3 = concat("test", "concat");
   console.log(result3);
-  // let result4 = to_i32("test");
-  // console.log(result4);
-  // let result5 = from_i32(20);
-  // console.log(result5);
+  let result4 = to_i32("test");
+  console.log(result4);
+  let result5 = from_i32(20);
+  console.log(result5);
   // let result6 = sub(3.2, 2.3, true);
   // console.log(result6);
 
