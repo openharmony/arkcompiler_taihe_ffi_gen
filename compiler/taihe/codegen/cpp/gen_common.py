@@ -288,16 +288,13 @@ class CppHeadersGenerator(Backend):
             f"static {enum_cpp_info.as_owner} from_value({as_param} value) {{",
             f"}}",
         ):
-            with enum_cpp_target.indented(
-                f"for (size_t i = 0; i < {len(enum.items)}; ++i) {{",
-                f"}}",
-            ):
+            for i, item in enumerate(enum.items):
                 with enum_cpp_target.indented(
-                    f"if (::taihe::same(table[i], value)) {{",
+                    f"if (value == {dumps(item.value)}) {{",
                     f"}}",
                 ):
                     enum_cpp_target.writelns(
-                        f"return {enum_cpp_info.as_owner}((key_t)i);",
+                        f"return {enum_cpp_info.as_owner}((key_t){i});",
                     )
             enum_cpp_target.writelns(
                 f"return {enum_cpp_info.as_owner}((key_t)-1);",
