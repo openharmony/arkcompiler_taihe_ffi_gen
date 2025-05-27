@@ -1,1 +1,1 @@
-function processBigInt(a: @bigint Array<u64>): @bigint Array<u64>;
+function processBigInt(a: @bigint Array<u8>): @bigint Array<u8>;
