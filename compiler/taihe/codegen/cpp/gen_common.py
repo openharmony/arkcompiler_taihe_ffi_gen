@@ -18,12 +18,11 @@ from taihe.codegen.cpp.analyses import (
     TypeCppInfo,
     UnionCppInfo,
 )
-from taihe.driver.backend import Backend
-from taihe.driver.contexts import CompilerInstance
 from taihe.semantics.declarations import (
     EnumDecl,
     IfaceDecl,
     PackageDecl,
+    PackageGroup,
     StructDecl,
     UnionDecl,
 )
@@ -31,17 +30,17 @@ from taihe.semantics.types import (
     ScalarType,
     StringType,
 )
+from taihe.utils.analyses import AnalysisManager
+from taihe.utils.outputs import OutputConfig
 
 
-class CppHeadersGenerator(Backend):
-    def __init__(self, ci: CompilerInstance):
-        super().__init__(ci)
-        self.oc = ci.output_config
-        self.am = ci.analysis_manager
-        self.pg = ci.package_group
+class CppHeadersGenerator:
+    def __init__(self, oc: OutputConfig, am: AnalysisManager):
+        self.oc = oc
+        self.am = am
 
-    def generate(self):
-        for pkg in self.pg.packages:
+    def generate(self, pg: PackageGroup):
+        for pkg in pg.packages:
             self.gen_package_files(pkg)
 
     def gen_package_files(self, pkg: PackageDecl):

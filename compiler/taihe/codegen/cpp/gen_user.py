@@ -9,20 +9,22 @@ from taihe.codegen.cpp.analyses import (
     PackageCppUserInfo,
     TypeCppInfo,
 )
-from taihe.driver.backend import Backend
-from taihe.driver.contexts import CompilerInstance
-from taihe.semantics.declarations import GlobFuncDecl, PackageDecl
+from taihe.semantics.declarations import (
+    GlobFuncDecl,
+    PackageDecl,
+    PackageGroup,
+)
+from taihe.utils.analyses import AnalysisManager
+from taihe.utils.outputs import OutputConfig
 
 
-class CppUserHeadersGenerator(Backend):
-    def __init__(self, ci: CompilerInstance):
-        super().__init__(ci)
-        self.oc = ci.output_config
-        self.am = ci.analysis_manager
-        self.pg = ci.package_group
+class CppUserHeadersGenerator:
+    def __init__(self, oc: OutputConfig, am: AnalysisManager):
+        self.oc = oc
+        self.am = am
 
-    def generate(self):
-        for pkg in self.pg.packages:
+    def generate(self, pg: PackageGroup):
+        for pkg in pg.packages:
             self.gen_package_file(pkg)
 
     def gen_package_file(self, pkg: PackageDecl):

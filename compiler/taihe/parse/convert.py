@@ -33,7 +33,7 @@ from taihe.semantics.declarations import (
     UnionFieldDecl,
 )
 from taihe.utils.diagnostics import (
-    AbstractDiagnosticsManager,
+    DiagnosticsManager,
     DiagNote,
     DiagWarn,
 )
@@ -278,9 +278,9 @@ class AstConverter(ExprEvaluator):
     """
 
     source: SourceBase
-    diag: AbstractDiagnosticsManager
+    diag: DiagnosticsManager
 
-    def __init__(self, source: SourceBase, diag: AbstractDiagnosticsManager):
+    def __init__(self, source: SourceBase, diag: DiagnosticsManager):
         self.source = source
         self.diag = diag
 

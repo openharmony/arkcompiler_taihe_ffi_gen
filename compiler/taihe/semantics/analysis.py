@@ -34,7 +34,7 @@ from taihe.semantics.types import (
     UserType,
 )
 from taihe.semantics.visitor import RecursiveDeclVisitor
-from taihe.utils.diagnostics import AbstractDiagnosticsManager
+from taihe.utils.diagnostics import DiagnosticsManager
 from taihe.utils.exceptions import (
     DeclarationNotInScopeError,
     DeclNotExistError,
@@ -51,7 +51,7 @@ from taihe.utils.exceptions import (
 )
 
 
-def analyze_semantics(pg: PackageGroup, diag: AbstractDiagnosticsManager):
+def analyze_semantics(pg: PackageGroup, diag: DiagnosticsManager):
     """Runs semantic analysis passes on the given package group."""
     _check_decl_confilct_with_namespace(pg, diag)
     _ResolveImportsPass(diag).handle_decl(pg)
@@ -62,7 +62,7 @@ def analyze_semantics(pg: PackageGroup, diag: AbstractDiagnosticsManager):
 
 def _check_decl_confilct_with_namespace(
     pg: PackageGroup,
-    diag: AbstractDiagnosticsManager,
+    diag: DiagnosticsManager,
 ):
     """Checks for declarations conflicts with namespaces."""
     namespaces: set[str] = set()
@@ -86,9 +86,9 @@ def _check_decl_confilct_with_namespace(
 class _ResolveImportsPass(RecursiveDeclVisitor):
     """Resolves imports and type references within a package group."""
 
-    diag: AbstractDiagnosticsManager
+    diag: DiagnosticsManager
 
-    def __init__(self, diag: AbstractDiagnosticsManager):
+    def __init__(self, diag: DiagnosticsManager):
         self._current_pkg_group = None
         self._current_pkg = None  # Always points to the current package.
         self.diag = diag
@@ -285,9 +285,9 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
 class _CheckFieldNameCollisionErrorPass(RecursiveDeclVisitor):
     """Check for duplicate field names in declarations and name anonymous declarations."""
 
-    diag: AbstractDiagnosticsManager
+    diag: DiagnosticsManager
 
-    def __init__(self, diag: AbstractDiagnosticsManager):
+    def __init__(self, diag: DiagnosticsManager):
         self.diag = diag
 
     @override
@@ -335,9 +335,9 @@ class _CheckFieldNameCollisionErrorPass(RecursiveDeclVisitor):
 class _CheckEnumTypePass(RecursiveDeclVisitor):
     """Validated enum item types."""
 
-    diag: AbstractDiagnosticsManager
+    diag: DiagnosticsManager
 
-    def __init__(self, diag: AbstractDiagnosticsManager):
+    def __init__(self, diag: DiagnosticsManager):
         self.diag = diag
 
     def visit_enum_decl(self, d: EnumDecl) -> None:
@@ -417,9 +417,9 @@ class _CheckEnumTypePass(RecursiveDeclVisitor):
 class _CheckRecursiveInclusionPass(RecursiveDeclVisitor):
     """Validates struct fields for type correctness and cycles."""
 
-    diag: AbstractDiagnosticsManager
+    diag: DiagnosticsManager
 
-    def __init__(self, diag: AbstractDiagnosticsManager):
+    def __init__(self, diag: DiagnosticsManager):
         self.diag = diag
         self.type_table: dict[
             TypeDecl,
