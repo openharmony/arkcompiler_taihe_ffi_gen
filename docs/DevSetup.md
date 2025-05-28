@@ -2,18 +2,18 @@
 
 ## 项目配置
 
-- **操作系统**  
-  推荐 Linux (或 WSL)，Windows 不保证完整支持  
-- **软件最低版本**  
-  - **运行时**  
-    - Clang 15，GCC 不保证完整支持  
-    - CMake 3.14  
-  - **编译器**  
-    - Python 3.10  
-    - uv，可参考[官方文档](https://github.com/astral-sh/uv)  
-    - ANTLR 4  
-    - antlr4-python3-runtime  
-    - antlr4-tools  
+- **操作系统**
+  推荐 Linux (或 WSL)，Windows 不保证完整支持
+- **软件最低版本**
+  - **运行时**
+    - Clang 15，GCC 不保证完整支持
+    - CMake 3.14
+  - **编译器**
+    - Python 3.10
+    - uv，可参考[官方文档](https://github.com/astral-sh/uv)
+    - ANTLR 4
+    - antlr4-python3-runtime
+    - antlr4-tools
 
 初次克隆项目时，可安装 Git Hook，在提交时自动触发代码检查：
 
