@@ -2,7 +2,8 @@ NAPI 代码生成及验证：
 1. 修改 tryit 支持运行 Done （遗留问题一）
 2. 参照现有代码生成架构实现生成 .napi.cpp 和 .d.ts 支持以下语言特性
     - 基础类型  Done （遗留问题二）
-    - struct
+    - struct Done
+    - struct 继承
     - interface
     - interface 继承
     - class, static, constructor, readonly? (interface 投影成 interface 的话那可以使用 @class 注解支持生成 class)

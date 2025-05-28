@@ -1,0 +1,19 @@
+struct RGB {
+    r: i32;
+    g: i32;
+    b: i32;
+}
+
+function from_rgb(rgb: RGB): i32;
+function to_rgb(a: i32): RGB;
+
+@class
+struct Color {
+    name: String;
+    flag: bool;
+    price: f64;
+    rgb: RGB;
+}
+
+function from_color(color: Color): f64;
+function to_color(a: String, b: bool, c: f64, d: RGB): Color;

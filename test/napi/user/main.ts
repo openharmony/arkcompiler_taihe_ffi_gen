@@ -1,5 +1,5 @@
 // import { add, mul, sub, from_rgb, to_rgb, to_color, from_color, from_theme, to_theme, show, makeIBase, copyIBase, makeIShape, as_IShape, impl_IBase, process_color_rgb_name, reverse_vector, reverse_map, add_set } from "./integer"
-import { concat, to_i32, from_i32 } from "../author_generated/string";
+import { concat, to_i32, from_i32, show } from "../author_generated/string";
 // import { RGB, Color, Theme, ColorOrRGBOrName } from "./rgb"
 // import { concat } from "./string";
 
@@ -19,12 +19,12 @@ function main() {
   // console.log(result1);
   // let result2 = add(20, 2);
   // console.log(result2);
-  let result3 = concat("test", "concat");
-  console.log(result3);
-  let result4 = to_i32("test");
-  console.log(result4);
-  let result5 = from_i32(20);
-  console.log(result5);
+  let concat_str = concat("test", "concat");
+  console.log("function concat: ", concat_str);
+  let i32_from_str = to_i32("test");
+  console.log("function to_i32: ", i32_from_str);
+  let str_from_i32 = from_i32(20);
+  console.log("function from_i32: ", str_from_i32);
   // let result6 = sub(3.2, 2.3, true);
   // console.log(result6);
 
@@ -43,8 +43,8 @@ function main() {
   // let result12 = to_color("white", true, 3.12, rgb);
   // console.log("to color: ", result12);
 
-  // let result16 = show();
-  // console.log("show: ", result16);
+  let str_show = show();
+  console.log("function show: ", str_show);
 
   // let result17 = makeIBase("abc");
   // console.log("makeIBase: ", result17.getId())

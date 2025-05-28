@@ -63,6 +63,8 @@ class DeclKind(Enum):
     STATIC_CAST = "static"
 
     NAPI_FUNC = "NAPI"
+    FROM_NAPI = "fromNAPI"
+    INTO_NAPI = "intoNAPI"
 
     ANI_FUNC = "ANIFunc"
     FROM_ANI = "fromANI"
