@@ -428,7 +428,7 @@ class STSCodeGenerator:
                             f"}});",
                         ):
                             target.writelns(
-                                f"callback(ret as BusinessError);",
+                                f"callback(ret as BusinessError, undefined);",
                             )
 
     def gen_enum(
@@ -896,7 +896,7 @@ class STSCodeGenerator:
                             f"}});",
                         ):
                             target.writelns(
-                                f"callback(ret as BusinessError);",
+                                f"callback(ret as BusinessError, undefined);",
                             )
             # getter
             if (get_name := func_ani_info.get_name) is not None:
@@ -1096,7 +1096,7 @@ class STSCodeGenerator:
                             f"}});",
                         ):
                             target.writelns(
-                                f"callback(ret as BusinessError);",
+                                f"callback(ret as BusinessError, undefined);",
                             )
             # getter
             if (get_name := method_ani_info.get_name) is not None:
@@ -1140,7 +1140,7 @@ class STSCodeGenerator:
                 "        this.data = data;",
                 "    }",
                 "}",
-                "export type AsyncCallback<T, E = void> = (error: BusinessError<E> | null, data?: T) => void;",
+                "export type AsyncCallback<T, E = void> = (error: BusinessError<E> | null, data: T | undefined) => void;",
             )
 
     def gen_utils(
