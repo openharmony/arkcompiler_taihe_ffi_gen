@@ -2,7 +2,7 @@
 
 from abc import ABCMeta, abstractmethod
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar
 
 from typing_extensions import override
@@ -34,7 +34,9 @@ class AttrItemDecl:
 
     loc: SourceLocation | None
     name: str
-    args: tuple[Any, ...] = ()
+
+    args: list[Any] = field(default_factory=list[Any])
+    kwargs: dict[str, Any] = field(default_factory=dict[str, Any])
 
 
 ################

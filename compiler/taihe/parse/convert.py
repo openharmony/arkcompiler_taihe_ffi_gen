@@ -270,6 +270,10 @@ class ExprEvaluator(Visitor):
     def visit_binary_string_expr(self, node: ast.BinaryStringExpr) -> str:
         return self.visit(node.left) + self.visit(node.right)
 
+    @override
+    def visit_any_expr(self, node: ast.AnyExpr) -> Any:
+        return self.visit(node.expr)
+
 
 class AstConverter(ExprEvaluator):
     """Converts a node on AST to the intermetiade representation.
@@ -283,12 +287,6 @@ class AstConverter(ExprEvaluator):
     def __init__(self, source: SourceBase, diag: DiagnosticsManager):
         self.source = source
         self.diag = diag
-
-    # Attributes
-
-    @override
-    def visit_attr_val(self, node: ast.AttrVal) -> Any:
-        return self.visit(node.expr)
 
     # Type References
 
@@ -444,17 +442,26 @@ class AstConverter(ExprEvaluator):
         self.diag.for_each(node.forward_attrs, lambda a: d.add_attr(self.visit(a)))
         return d
 
-    @override
-    def visit_decl_attr(self, node: ast.DeclAttr) -> AttrItemDecl:
-        value = tuple(self.visit(val) for val in node.vals)
-        d = AttrItemDecl(node.name.loc, str(node.name), value)
+    # Attributes
+
+    def visit_attr(self, node: ast.DeclAttr | ast.ScopeAttr) -> AttrItemDecl:
+        args: list[Any] = []
+        kwargs: dict[str, Any] = {}
+        for arg in node.args:
+            if isinstance(arg, ast.NamedAttrArg):
+                kwargs[str(arg.name)] = self.visit(arg.val)
+            else:
+                args.append(self.visit(arg.val))
+        d = AttrItemDecl(node.name.loc, str(node.name), args, kwargs)
         return d
 
     @override
+    def visit_decl_attr(self, node: ast.DeclAttr) -> AttrItemDecl:
+        return self.visit_attr(node)
+
+    @override
     def visit_scope_attr(self, node: ast.ScopeAttr) -> AttrItemDecl:
-        value = tuple(self.visit(val) for val in node.vals)
-        d = AttrItemDecl(node.name.loc, str(node.name), value)
-        return d
+        return self.visit_attr(node)
 
     # Package
 
