@@ -140,7 +140,7 @@ class ABIHeadersGenerator:
                 if field.ty_ref is None:
                     continue
                 type_abi_info = TypeABIInfo.get(self.am, field.ty_ref.resolved_ty)
-                union_abi_defn_target.add_include(*type_abi_info.impl_headers)
+                union_abi_defn_target.add_include(*type_abi_info.defn_headers)
 
     def gen_union_defn(
         self,
@@ -179,13 +179,13 @@ class ABIHeadersGenerator:
         with CHeaderWriter(
             self.oc,
             f"include/{union_abi_info.impl_header}",
-        ) as union_abi_decl_target:
-            union_abi_decl_target.add_include(union_abi_info.defn_header)
+        ) as union_abi_impl_target:
+            union_abi_impl_target.add_include(union_abi_info.defn_header)
             for field in union.fields:
                 if field.ty_ref is None:
                     continue
                 type_abi_info = TypeABIInfo.get(self.am, field.ty_ref.resolved_ty)
-                union_abi_decl_target.add_include(*type_abi_info.impl_headers)
+                union_abi_impl_target.add_include(*type_abi_info.impl_headers)
 
     def gen_iface_defn_file(
         self,
