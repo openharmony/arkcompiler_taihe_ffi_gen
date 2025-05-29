@@ -429,7 +429,7 @@ class ANICodeGenerator:
             f"include/{iface_ani_info.decl_header}",
         ) as iface_ani_decl_target:
             iface_ani_decl_target.add_include("taihe/runtime.hpp")
-            iface_ani_decl_target.add_include(iface_cpp_info.decl_header)
+            iface_ani_decl_target.add_include(iface_cpp_info.defn_header)
             iface_ani_decl_target.writelns(
                 f"{iface_cpp_info.as_owner} {iface_ani_info.from_ani_func_name}(ani_env* env, ani_object ani_obj);",
                 f"ani_object {iface_ani_info.into_ani_func_name}(ani_env* env, {iface_cpp_info.as_owner} cpp_obj);",
@@ -626,7 +626,7 @@ class ANICodeGenerator:
             f"include/{struct_ani_info.decl_header}",
         ) as struct_ani_decl_target:
             struct_ani_decl_target.add_include("taihe/runtime.hpp")
-            struct_ani_decl_target.add_include(struct_cpp_info.decl_header)
+            struct_ani_decl_target.add_include(struct_cpp_info.defn_header)
             struct_ani_decl_target.writelns(
                 f"{struct_cpp_info.as_owner} {struct_ani_info.from_ani_func_name}(ani_env* env, ani_object ani_obj);",
                 f"ani_object {struct_ani_info.into_ani_func_name}(ani_env* env, {struct_cpp_info.as_param} cpp_obj);",
@@ -761,7 +761,7 @@ class ANICodeGenerator:
             f"include/{union_ani_info.decl_header}",
         ) as union_ani_decl_target:
             union_ani_decl_target.add_include("taihe/runtime.hpp")
-            union_ani_decl_target.add_include(union_cpp_info.decl_header)
+            union_ani_decl_target.add_include(union_cpp_info.defn_header)
             union_ani_decl_target.writelns(
                 f"{union_cpp_info.as_owner} {union_ani_info.from_ani_func_name}(ani_env* env, ani_ref ani_obj);",
                 f"ani_ref {union_ani_info.into_ani_func_name}(ani_env* env, {union_cpp_info.as_param} cpp_obj);",

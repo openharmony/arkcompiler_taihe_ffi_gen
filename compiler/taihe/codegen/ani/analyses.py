@@ -720,8 +720,8 @@ class UnionANIInfo(AbstractAnalysis[UnionDecl]):
         segments = [*d.parent_pkg.segments, d.name]
         self.from_ani_func_name = encode(segments, DeclKind.FROM_ANI)
         self.into_ani_func_name = encode(segments, DeclKind.INTO_ANI)
-        self.decl_header = f"{d.parent_pkg.name}.{d.name}.ani.0.h"
-        self.impl_header = f"{d.parent_pkg.name}.{d.name}.ani.1.h"
+        self.decl_header = f"{d.parent_pkg.name}.{d.name}.ani.1.h"
+        self.impl_header = f"{d.parent_pkg.name}.{d.name}.ani.2.h"
 
         self.pkg_ani_info = PackageANIInfo.get(am, d.parent_pkg)
         self.sts_type_name = d.name
@@ -753,8 +753,8 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
         segments = [*d.parent_pkg.segments, d.name]
         self.from_ani_func_name = encode(segments, DeclKind.FROM_ANI)
         self.into_ani_func_name = encode(segments, DeclKind.INTO_ANI)
-        self.decl_header = f"{d.parent_pkg.name}.{d.name}.ani.0.h"
-        self.impl_header = f"{d.parent_pkg.name}.{d.name}.ani.1.h"
+        self.decl_header = f"{d.parent_pkg.name}.{d.name}.ani.1.h"
+        self.impl_header = f"{d.parent_pkg.name}.{d.name}.ani.2.h"
 
         self.pkg_ani_info = PackageANIInfo.get(am, d.parent_pkg)
         self.sts_type_name = d.name
@@ -820,8 +820,8 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
         segments = [*d.parent_pkg.segments, d.name]
         self.from_ani_func_name = encode(segments, DeclKind.FROM_ANI)
         self.into_ani_func_name = encode(segments, DeclKind.INTO_ANI)
-        self.decl_header = f"{d.parent_pkg.name}.{d.name}.ani.0.h"
-        self.impl_header = f"{d.parent_pkg.name}.{d.name}.ani.1.h"
+        self.decl_header = f"{d.parent_pkg.name}.{d.name}.ani.1.h"
+        self.impl_header = f"{d.parent_pkg.name}.{d.name}.ani.2.h"
 
         self.pkg_ani_info = PackageANIInfo.get(am, d.parent_pkg)
         self.sts_type_name = d.name

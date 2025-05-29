@@ -80,6 +80,7 @@ lint.ignore = [
     "TC002",
     "TC003", # "unnecessary to move to a TYPE_CHECKING block"
     "TC006",
+    "B007",
 ]
 
 [tool.ruff.lint.pydocstyle]
