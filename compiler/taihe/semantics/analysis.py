@@ -66,7 +66,8 @@ def _check_decl_confilct_with_namespace(
 ):
     """Checks for declarations conflicts with namespaces."""
     namespaces: set[str] = set()
-    for pkg_name in pg.package_dict:
+    for pkg in pg.packages:
+        pkg_name = pkg.name
         # package "a.b.c" -> namespaces ["a.b.c", "a.b", "a"]
         while True:
             namespaces.add(pkg_name)
@@ -77,7 +78,7 @@ def _check_decl_confilct_with_namespace(
                 break
 
     for p in pg.packages:
-        for d in p.decls.values():
+        for d in p.declarations:
             name = p.name + "." + d.name
             if name in namespaces:
                 diag.emit(SymbolConflictWithNamespaceError(d, p))
@@ -143,7 +144,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
             # No need to repeatedly throw exceptions
             return
 
-        decl = pkg.decls.get(d.symbol)
+        decl = pkg.lookup(d.symbol)
 
         if decl is None:
             self.diag.emit(DeclNotExistError(d.symbol, loc=d.loc))
@@ -158,7 +159,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
         d.is_resolved = True
 
         # Find the corresponding imported package according to the package name
-        pkg_import = self.pkg.pkg_imports.get(d.pkname)
+        pkg_import = self.pkg.lookup_pkg_import(d.pkname)
 
         if pkg_import is None:
             self.diag.emit(PackageNotInScopeError(d.pkname, loc=d.loc))
@@ -171,7 +172,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
             # No need to repeatedly throw exceptions
             return
 
-        decl = pkg.decls.get(d.symbol)
+        decl = pkg.lookup(d.symbol)
 
         if decl is None:
             self.diag.emit(DeclNotExistError(d.symbol, loc=d.loc))
@@ -197,7 +198,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
             return
 
         # Find types declared in the current package
-        decl = self.pkg.decls.get(d.symbol)
+        decl = self.pkg.lookup(d.symbol)
 
         if decl:
             if not isinstance(decl, TypeDecl):
@@ -208,7 +209,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
             return
 
         # Look for imported type declarations
-        decl_import = self.pkg.decl_imports.get(d.symbol)
+        decl_import = self.pkg.lookup_decl_import(d.symbol)
 
         if decl_import is None:
             self.diag.emit(DeclarationNotInScopeError(d.symbol, loc=d.loc))
@@ -322,7 +323,7 @@ class _CheckFieldNameCollisionErrorPass(RecursiveDeclVisitor):
 
     @override
     def visit_package_decl(self, p: PackageDecl) -> None:
-        self.check_collision_helper(p.decls.values())
+        self.check_collision_helper(p.declarations)
         return super().visit_package_decl(p)
 
     def check_collision_helper(self, children: Iterable[NamedDecl]):

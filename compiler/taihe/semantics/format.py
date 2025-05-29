@@ -316,11 +316,11 @@ class PrettyPrinter(DeclVisitor[None]):
     def visit_package_decl(self, p: "PackageDecl"):
         self.out.writeln(f"// {p.name}")
         self.write_pkg_attr(p)
-        for d in p.pkg_imports.values():
+        for d in p.pkg_imports:
             self.handle_decl(d)
-        for d in p.decl_imports.values():
+        for d in p.decl_imports:
             self.handle_decl(d)
-        for d in p.decls.values():
+        for d in p.declarations:
             self.handle_decl(d)
 
     @override
