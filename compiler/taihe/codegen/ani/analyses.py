@@ -225,32 +225,47 @@ class Namespace:
         self.parent = parent
         self.children: dict[str, Namespace] = {}
         self.packages: list[PackageDecl] = []
+        self.is_default = False
 
-    @property
-    def module(self) -> "Namespace":
+    def is_module(self) -> bool:
+        return self.parent is None
+
+    def get_path(self) -> tuple[str, list[str]]:
         if self.parent is None:
-            return self
-        return self.parent.module
+            return self.name, []
+        module_name, parent_path = self.parent.get_path()
+        return module_name, [*parent_path, self.name]
 
-    @property
-    def path(self) -> list[str]:
-        if self.parent is None:
-            return []
-        return [self.name, *self.parent.path]
-
-    def add_path(self, path: list[str], pkg: PackageDecl) -> "Namespace":
+    def add_path(
+        self,
+        path: list[str],
+        pkg: PackageDecl,
+        is_default: bool,
+    ) -> "Namespace":
         if not path:
             self.packages.append(pkg)
+            self.is_default |= is_default
             return self
         head, *tail = path
         child = self.children.setdefault(head, Namespace(head, self))
-        return child.add_path(tail, pkg)
+        return child.add_path(tail, pkg, is_default)
 
-    def sts_type_in(self, target: StsWriter, sts_name: str) -> str:
-        import_name = "_" + "".join(c if c.isalnum() else "_" for c in self.module.name)
-        target.add_import_module(self.module.name, import_name)
-        relative_path = [import_name, *self.path, sts_name]
-        return ".".join(relative_path)
+    def get_member(
+        self,
+        target: StsWriter,
+        sts_name: str,
+        member_is_default: bool,
+    ) -> str:
+        if self.parent is None:
+            scope_name = "__" + "".join(c if c.isalnum() else "_" for c in self.name)
+            if member_is_default:
+                decl_name = f"{scope_name}_default"
+                target.add_import_default(self.name, decl_name)
+                return decl_name
+            target.add_import_module(self.name, scope_name)
+        else:
+            scope_name = self.parent.get_member(target, self.name, self.is_default)
+        return f"{scope_name}.{sts_name}"
 
 
 class PackageGroupANIInfo(AbstractAnalysis[PackageGroup]):
@@ -266,15 +281,14 @@ class PackageGroupANIInfo(AbstractAnalysis[PackageGroup]):
             if (namespace_attr := pkg.get_last_attr("namespace")) and check_attr_args(
                 am, namespace_attr, "ss*"
             ):
-                module_name, *sts_ns_parts = namespace_attr.args
-                path = []
-                for paths in sts_ns_parts:
-                    path.extend(paths.split("."))
+                module_name, *segments = namespace_attr.args
+                path = [part for segment in segments for part in segment.split(".")]
             else:
                 module_name = pkg.name
                 path = []
+            is_default = pkg.get_last_attr("sts_export_default") is not None
             mod = self.module_dict.setdefault(module_name, Namespace(module_name))
-            self.package_map[pkg] = mod.add_path(path, pkg)
+            self.package_map[pkg] = mod.add_path(path, pkg, is_default)
 
     def get_namespace(self, pkg: PackageDecl) -> Namespace:
         return self.package_map[pkg]
@@ -306,9 +320,8 @@ class PackageANIInfo(AbstractAnalysis[PackageDecl]):
 
         self.namespace = PackageGroupANIInfo.get(am, p.parent_group).get_namespace(p)
 
-        self.ani_path = "/".join(
-            self.namespace.module.name.split(".") + self.namespace.path
-        )
+        module_name, path = self.namespace.get_path()
+        self.ani_path = "/".join(module_name.split(".") + path)
         self.impl_desc = f"L{self.ani_path};"
 
         self.injected_codes: list[str] = []
@@ -325,10 +338,7 @@ class PackageANIInfo(AbstractAnalysis[PackageDecl]):
 
     @property
     def scope(self):
-        return ANI_NAMESPACE if len(self.namespace.path) > 0 else ANI_MODULE
-
-    def sts_type_in(self, target: StsWriter, sts_name: str) -> str:
-        return self.namespace.sts_type_in(target, sts_name)
+        return ANI_MODULE if self.namespace.is_module() else ANI_NAMESPACE
 
 
 class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
@@ -734,8 +744,14 @@ class EnumANIInfo(AbstractAnalysis[EnumDecl]):
                 d.loc,
             )
 
+        self.is_default = d.get_last_attr("sts_export_default") is not None
+
     def sts_type_in(self, target: StsWriter):
-        return self.pkg_ani_info.sts_type_in(target, self.sts_type_name)
+        return self.pkg_ani_info.namespace.get_member(
+            target,
+            self.sts_type_name,
+            self.is_default,
+        )
 
 
 class UnionFieldANIInfo(AbstractAnalysis[UnionFieldDecl]):
@@ -783,8 +799,14 @@ class UnionANIInfo(AbstractAnalysis[UnionDecl]):
             else:
                 self.sts_final_fields.append([field])
 
+        self.is_default = d.get_last_attr("sts_export_default") is not None
+
     def sts_type_in(self, target: StsWriter):
-        return self.pkg_ani_info.sts_type_in(target, self.sts_type_name)
+        return self.pkg_ani_info.namespace.get_member(
+            target,
+            self.sts_type_name,
+            self.is_default,
+        )
 
 
 class StructFieldANIInfo(AbstractAnalysis[StructFieldDecl]):
@@ -853,11 +875,17 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
                 self.sts_fields.append(field)
                 self.sts_final_fields.append([field])
 
+        self.is_default = d.get_last_attr("sts_export_default") is not None
+
     def is_class(self):
         return self.sts_type_name == self.sts_impl_name
 
     def sts_type_in(self, target: StsWriter):
-        return self.pkg_ani_info.sts_type_in(target, self.sts_type_name)
+        return self.pkg_ani_info.namespace.get_member(
+            target,
+            self.sts_type_name,
+            self.is_default,
+        )
 
 
 class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
@@ -900,6 +928,8 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
                     parent.loc,
                 )
 
+        self.is_default = d.get_last_attr("sts_export_default") is not None
+
     @property
     def scope(self):
         return ANI_CLASS
@@ -908,7 +938,11 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
         return self.sts_type_name == self.sts_impl_name
 
     def sts_type_in(self, target: StsWriter):
-        return self.pkg_ani_info.sts_type_in(target, self.sts_type_name)
+        return self.pkg_ani_info.namespace.get_member(
+            target,
+            self.sts_type_name,
+            self.is_default,
+        )
 
 
 class AbstractTypeANIInfo(metaclass=ABCMeta):

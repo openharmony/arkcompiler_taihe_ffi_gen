@@ -1,2 +1,6 @@
-@!namespace("my_ns", "test1")
-function Funtest1(a: i32, b: f64): void;
+@!namespace("my_ns", "ns1.ns2.ns3.ns4.ns5")
+function Funtest(s: MyStruct): void;
+struct MyStruct {
+    a: i32;
+    b: f64;
+}

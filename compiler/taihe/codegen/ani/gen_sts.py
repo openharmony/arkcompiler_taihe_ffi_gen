@@ -66,12 +66,16 @@ class STSCodeGenerator:
         for pkg in ns.packages:
             self.gen_package(pkg, target)
         for child_ns_name, child_ns in ns.children.items():
+            sts_decl = f"namespace {child_ns_name}"
+            if child_ns.is_default:
+                sts_decl = f"export default {sts_decl}"
+            else:
+                sts_decl = f"export {sts_decl}"
             with target.indented(
-                f"export namespace {child_ns_name} {{",
+                f"{sts_decl} {{",
                 f"}}",
             ):
                 self.gen_namespace(child_ns, target)
-        # TODO: BigInt
         self.gen_utils(target)
 
     def stat_on_off_funcs(
@@ -182,7 +186,7 @@ class STSCodeGenerator:
         for injected in pkg_ani_info.injected_codes:
             target.write_block(injected)
 
-        self.gen_native_funcs(pkg, pkg.functions, target)
+        self.gen_native_funcs(pkg.functions, target)
         ctors_map: dict[str, list[GlobFuncDecl]] = {}
         statics_map: dict[str, list[GlobFuncDecl]] = {}
         funcs: list[GlobFuncDecl] = []
@@ -194,23 +198,22 @@ class STSCodeGenerator:
                 ctors_map.setdefault(class_name, []).append(func)
             else:
                 funcs.append(func)
-        self.gen_global_funcs(pkg, funcs, target)
+        self.gen_global_funcs(funcs, target)
         for enum in pkg.enums:
-            self.gen_enum(pkg, enum, target)
+            self.gen_enum(enum, target)
         for union in pkg.unions:
-            self.gen_union(pkg, union, target)
+            self.gen_union(union, target)
         for struct in pkg.structs:
-            self.gen_struct_interface(pkg, struct, target)
+            self.gen_struct_interface(struct, target)
         for struct in pkg.structs:
-            self.gen_struct_class(pkg, struct, target)
+            self.gen_struct_class(struct, target)
         for iface in pkg.interfaces:
-            self.gen_iface_interface(pkg, iface, target)
+            self.gen_iface_interface(iface, target)
         for iface in pkg.interfaces:
-            self.gen_iface_class(pkg, iface, target, statics_map, ctors_map)
+            self.gen_iface_class(iface, target, statics_map, ctors_map)
 
     def gen_native_funcs(
         self,
-        pkg: PackageDecl,
         funcs: list[GlobFuncDecl],
         target: StsWriter,
     ):
@@ -235,7 +238,6 @@ class STSCodeGenerator:
 
     def gen_global_funcs(
         self,
-        pkg: PackageDecl,
         funcs: list[GlobFuncDecl],
         target: StsWriter,
     ):
@@ -416,7 +418,6 @@ class STSCodeGenerator:
 
     def gen_enum(
         self,
-        pkg: PackageDecl,
         enum: EnumDecl,
         target: StsWriter,
     ):
@@ -428,8 +429,13 @@ class STSCodeGenerator:
                     f"export const {item.name}: {type_ani_info.sts_type_in(target)} = {dumps(item.value)};",
                 )
             return
+        sts_decl = f"enum {enum_ani_info.sts_type_name}"
+        if enum_ani_info.is_default:
+            sts_decl = f"export default {sts_decl}"
+        else:
+            sts_decl = f"export {sts_decl}"
         with target.indented(
-            f"export enum {enum_ani_info.sts_type_name} {{",
+            f"{sts_decl} {{",
             f"}}",
         ):
             for item in enum.items:
@@ -444,7 +450,6 @@ class STSCodeGenerator:
 
     def gen_union(
         self,
-        pkg: PackageDecl,
         union: UnionDecl,
         target: StsWriter,
     ):
@@ -461,13 +466,17 @@ class STSCodeGenerator:
                     ty_ani_info = TypeANIInfo.get(self.am, field_ty)
                     sts_types.append(ty_ani_info.sts_type_in(target))
         sts_types_str = " | ".join(sts_types)
+        sts_decl = f"type {union_ani_info.sts_type_name}"
+        if union_ani_info.is_default:
+            sts_decl = f"export default {sts_decl}"
+        else:
+            sts_decl = f"export {sts_decl}"
         target.writelns(
-            f"export type {union_ani_info.sts_type_name} = {sts_types_str};",
+            f"{sts_decl} = {sts_types_str};",
         )
 
     def gen_struct_interface(
         self,
-        pkg: PackageDecl,
         struct: StructDecl,
         target: StsWriter,
     ):
@@ -481,8 +490,13 @@ class STSCodeGenerator:
             parent_ani_info = TypeANIInfo.get(self.am, parent_ty)
             parents.append(parent_ani_info.sts_type_in(target))
         extends_str = " extends " + ", ".join(parents) if parents else ""
+        sts_decl = f"interface {struct_ani_info.sts_type_name}{extends_str}"
+        if struct_ani_info.is_default:
+            sts_decl = f"export default {sts_decl}"
+        else:
+            sts_decl = f"export {sts_decl}"
         with target.indented(
-            f"export interface {struct_ani_info.sts_type_name}{extends_str} {{",
+            f"{sts_decl} {{",
             f"}}",
         ):
             # TODO: hack inject
@@ -498,12 +512,10 @@ class STSCodeGenerator:
 
     def gen_struct_class(
         self,
-        pkg: PackageDecl,
         struct: StructDecl,
         target: StsWriter,
     ):
         struct_ani_info = StructANIInfo.get(self.am, struct)
-        sts_decl = ""
         if struct_ani_info.is_class():
             parents = []
             for parent in struct_ani_info.sts_parents:
@@ -511,14 +523,16 @@ class STSCodeGenerator:
                 parent_ani_info = TypeANIInfo.get(self.am, parent_ty)
                 parents.append(parent_ani_info.sts_type_in(target))
             implements_str = " implements " + ", ".join(parents) if parents else ""
-            sts_decl = (
-                f"export class {struct_ani_info.sts_impl_name}{implements_str} {{"
-            )
+            sts_decl = f"class {struct_ani_info.sts_impl_name}{implements_str}"
+            if struct_ani_info.is_default:
+                sts_decl = f"export default {sts_decl}"
+            else:
+                sts_decl = f"export {sts_decl}"
         else:
-            sts_decl = f"class {struct_ani_info.sts_impl_name} implements {struct_ani_info.sts_type_name} {{"
+            sts_decl = f"class {struct_ani_info.sts_impl_name} implements {struct_ani_info.sts_type_name}"
 
         with target.indented(
-            sts_decl,
+            f"{sts_decl} {{",
             f"}}",
         ):
             # TODO: hack inject
@@ -551,7 +565,6 @@ class STSCodeGenerator:
 
     def gen_iface_interface(
         self,
-        pkg: PackageDecl,
         iface: IfaceDecl,
         target: StsWriter,
     ):
@@ -565,18 +578,22 @@ class STSCodeGenerator:
             parent_ani_info = TypeANIInfo.get(self.am, parent_ty)
             parents.append(parent_ani_info.sts_type_in(target))
         extends_str = " extends " + ", ".join(parents) if parents else ""
+        sts_decl = f"interface {iface_ani_info.sts_type_name}{extends_str}"
+        if iface_ani_info.is_default:
+            sts_decl = f"export default {sts_decl}"
+        else:
+            sts_decl = f"export {sts_decl}"
         with target.indented(
-            f"export interface {iface_ani_info.sts_type_name}{extends_str} {{",
+            f"{sts_decl} {{",
             f"}}",
         ):
             # TODO: hack inject
             for injected in iface_ani_info.interface_injected_codes:
                 target.write_block(injected)
-            self.gen_iface_methods_decl(pkg, iface.methods, target)
+            self.gen_iface_methods_decl(iface.methods, target)
 
     def gen_iface_methods_decl(
         self,
-        pkg: PackageDecl,
         methods: list[IfaceMethodDecl],
         target: StsWriter,
     ):
@@ -657,14 +674,12 @@ class STSCodeGenerator:
 
     def gen_iface_class(
         self,
-        pkg: PackageDecl,
         iface: IfaceDecl,
         target: StsWriter,
         statics_map: dict[str, list[GlobFuncDecl]],
         ctors_map: dict[str, list[GlobFuncDecl]],
     ):
         iface_ani_info = IfaceANIInfo.get(self.am, iface)
-        sts_decl = ""
         if iface_ani_info.is_class():
             parents = []
             for parent in iface.parents:
@@ -672,12 +687,16 @@ class STSCodeGenerator:
                 parent_ani_info = TypeANIInfo.get(self.am, parent_ty)
                 parents.append(parent_ani_info.sts_type_in(target))
             implements_str = " implements " + ", ".join(parents) if parents else ""
-            sts_decl = f"export class {iface_ani_info.sts_impl_name}{implements_str} {{"
+            sts_decl = f"class {iface_ani_info.sts_impl_name}{implements_str}"
+            if iface_ani_info.is_default:
+                sts_decl = f"export default {sts_decl}"
+            else:
+                sts_decl = f"export {sts_decl}"
         else:
-            sts_decl = f"class {iface_ani_info.sts_impl_name} implements {iface_ani_info.sts_type_name} {{"
+            sts_decl = f"class {iface_ani_info.sts_impl_name} implements {iface_ani_info.sts_type_name}"
 
         with target.indented(
-            sts_decl,
+            f"{sts_decl} {{",
             f"}}",
         ):
             for injected in iface_ani_info.class_injected_codes:
@@ -721,15 +740,14 @@ class STSCodeGenerator:
                         f"this._data_ptr = temp._data_ptr;",
                         f"this._vtbl_ptr = temp._vtbl_ptr;",
                     )
-            self.gen_static_funcs(pkg, statics_map.get(iface.name, []), target)
+            self.gen_static_funcs(statics_map.get(iface.name, []), target)
             iface_abi_info = IfaceABIInfo.get(self.am, iface)
             for ancestor in iface_abi_info.ancestor_dict:
-                self.gen_native_methods(pkg, ancestor.methods, target)
-                self.gen_iface_methods(pkg, ancestor.methods, target)
+                self.gen_native_methods(ancestor.methods, target)
+                self.gen_iface_methods(ancestor.methods, target)
 
     def gen_static_funcs(
         self,
-        pkg: PackageDecl,
         funcs: list[GlobFuncDecl],
         target: StsWriter,
     ):
@@ -902,7 +920,6 @@ class STSCodeGenerator:
 
     def gen_native_methods(
         self,
-        pkg: PackageDecl,
         methods: list[IfaceMethodDecl],
         target: StsWriter,
     ):
@@ -927,7 +944,6 @@ class STSCodeGenerator:
 
     def gen_iface_methods(
         self,
-        pkg: PackageDecl,
         methods: list[IfaceMethodDecl],
         target: StsWriter,
     ):

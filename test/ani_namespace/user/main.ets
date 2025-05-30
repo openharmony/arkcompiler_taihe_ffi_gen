@@ -1204,8 +1204,8 @@ function overload4() {
     instance.OverloadFunc(mystruct)
 }
 
-function ns_5() {
-    namespace2Test.test1.Funtest1(123 as int, 1.234 as double)
+function testFuntest() {
+    namespace2Test.ns1.ns2.ns3.ns4.ns5.Funtest({a: 0, b: 0.0});
 }
 
 function test20interface() {
@@ -1335,7 +1335,7 @@ function main() {
         "interface_primitives_noreturn7", interface_primitives_noreturn7)
 
     suite.addTest("test20interface", test20interface);
-    suite.addTest("ns_5", ns_5);
+    suite.addTest("testFuntest", testFuntest);
 
     suite.addTest("testattributeString", testattributeString);
     suite.addTest("testattributei8", testattributei8);
