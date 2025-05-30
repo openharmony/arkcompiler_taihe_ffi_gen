@@ -1246,7 +1246,7 @@ class CppHeadersGenerator:
             iface_cpp_defn_target.add_include("taihe/object.hpp")
             iface_cpp_defn_target.add_include(iface_abi_info.defn_header)
             for ancestor, info in iface_abi_info.ancestor_dict.items():
-                if info.offset == 0:
+                if ancestor is iface:
                     continue
                 ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
                 iface_cpp_defn_target.add_include(ancestor_cpp_info.defn_header)
@@ -1417,7 +1417,7 @@ class CppHeadersGenerator:
         iface_cpp_defn_target: CHeaderWriter,
     ):
         for ancestor, info in iface_abi_info.ancestor_dict.items():
-            if info.offset == 0:
+            if ancestor is iface:
                 continue
             ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
             with iface_cpp_defn_target.indented(
@@ -1682,7 +1682,7 @@ class CppHeadersGenerator:
                 f"std::exchange(other.m_handle.data_ptr, nullptr),",
             )
         for ancestor, info in iface_abi_info.ancestor_dict.items():
-            if info.offset == 0:
+            if ancestor is iface:
                 continue
             ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
             with iface_cpp_defn_target.indented(
@@ -1803,7 +1803,7 @@ class CppHeadersGenerator:
                 iface_cpp_impl_target,
             )
             for ancestor, info in iface_abi_info.ancestor_dict.items():
-                if info.offset == 0:
+                if ancestor is iface:
                     continue
                 ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
                 iface_cpp_impl_target.add_include(ancestor_cpp_info.impl_header)

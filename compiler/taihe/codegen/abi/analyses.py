@@ -87,13 +87,13 @@ class StructABIInfo(AbstractAnalysis[StructDecl]):
 
 
 @dataclass
-class AncestorItemInfo:
+class AncestorListItemInfo:
     iface: IfaceDecl
     ftbl_ptr: str
 
 
 @dataclass
-class UniqueAncestorInfo:
+class AncestorDictItemInfo:
     offset: int
     static_cast: str
     ftbl_ptr: str
@@ -112,8 +112,8 @@ class IfaceABIInfo(AbstractAnalysis[IfaceDecl]):
         self.vtable = encode(segments, DeclKind.VTABLE)
         self.iid = encode(segments, DeclKind.IID)
         self.dynamic_cast = encode(segments, DeclKind.DYNAMIC_CAST)
-        self.ancestor_list: list[AncestorItemInfo] = []
-        self.ancestor_dict: dict[IfaceDecl, UniqueAncestorInfo] = {}
+        self.ancestor_list: list[AncestorListItemInfo] = []
+        self.ancestor_dict: dict[IfaceDecl, AncestorDictItemInfo] = {}
         self.ancestors = [d]
         for extend in d.parents:
             ty = extend.ty_ref.resolved_ty
@@ -123,14 +123,14 @@ class IfaceABIInfo(AbstractAnalysis[IfaceDecl]):
         for i, ancestor in enumerate(self.ancestors):
             ftbl_ptr = f"ftbl_ptr_{i}"
             self.ancestor_list.append(
-                AncestorItemInfo(
+                AncestorListItemInfo(
                     iface=ancestor,
                     ftbl_ptr=ftbl_ptr,
                 )
             )
             self.ancestor_dict.setdefault(
                 ancestor,
-                UniqueAncestorInfo(
+                AncestorDictItemInfo(
                     offset=i,
                     static_cast=encode([*segments, str(i)], DeclKind.STATIC_CAST),
                     ftbl_ptr=ftbl_ptr,
