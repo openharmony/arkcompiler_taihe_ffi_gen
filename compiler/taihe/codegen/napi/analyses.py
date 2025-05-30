@@ -16,6 +16,7 @@ from taihe.semantics.declarations import (
 )
 from taihe.semantics.types import (
     IfaceType,
+    OptionalType,
     ScalarKind,
     ScalarType,
     StringType,
@@ -89,6 +90,8 @@ class IfaceMethodNAPIInfo(AbstractAnalysis[IfaceMethodDecl]):
 
 class AbstractTypeNAPIInfo(metaclass=ABCMeta):
     dts_type_name: str
+    return_dts_type_name: str
+    is_optional: bool = False
 
     def __init__(self, am: AnalysisManager, t: Type):
         self.cpp_info = TypeCppInfo.get(am, t)
@@ -128,6 +131,7 @@ class ScalarTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[ScalarType]):
         if dts_type is None:
             raise ValueError(f"Unsupported ScalarKind: {self.type.kind}")
         self.dts_type_name = dts_type
+        self.return_dts_type_name = self.dts_type_name
 
     def from_napi(
         self,
@@ -184,6 +188,7 @@ class StringTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[StringType]):
         self.type = t
         self.cpp_info = TypeCppInfo.get(am, t)
         self.dts_type_name = "string"
+        self.return_dts_type_name = self.dts_type_name
 
     def from_napi(
         self,
@@ -221,6 +226,7 @@ class StructTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[StructType]):
         self.type = t
         struct_napi_info = StructNAPIInfo.get(self.am, t.ty_decl)
         self.dts_type_name = struct_napi_info.dts_type_name
+        self.return_dts_type_name = self.dts_type_name
 
     def from_napi(
         self,
@@ -254,6 +260,7 @@ class IfaceTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[IfaceType]):
         self.type = t
         iface_napi_info = IfaceNAPIInfo.get(self.am, t.ty_decl)
         self.dts_type_name = iface_napi_info.dts_type_name
+        self.return_dts_type_name = self.dts_type_name
 
     def from_napi(
         self,
@@ -293,6 +300,75 @@ class IfaceTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[IfaceType]):
         )
 
 
+class OptionalTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[OptionalType]):
+    def __init__(self, am: AnalysisManager, t: OptionalType) -> None:
+        super().__init__(am, t)
+        self.am = am
+        self.type = t
+        item_ty_napi_info = TypeNAPIInfo.get(self.am, self.type.item_ty)
+        self.dts_type_name = item_ty_napi_info.dts_type_name
+        self.return_dts_type_name = f"{self.dts_type_name} | undefined"
+        self.is_optional = True
+
+    @override
+    def from_napi(
+        self,
+        target: CSourceWriter,
+        napi_value: str,
+        cpp_result: str,
+    ):
+        napi_ty = f"{cpp_result}_v_ty"
+        napi_status = f"{cpp_result}_v_ty_status"
+        cpp_pointer = f"{cpp_result}_ptr"
+        cpp_spec = f"{cpp_result}_spec"
+        item_ty_cpp_info = TypeCppInfo.get(self.am, self.type.item_ty)
+        target.writelns(
+            f"{item_ty_cpp_info.as_owner}* {cpp_pointer} = nullptr;",
+            f"napi_valuetype {napi_ty};",
+            f"napi_status {napi_status} = napi_typeof(env, {napi_value}, &{napi_ty});",
+        )
+        with target.indented(
+            f"if ({napi_status} == napi_ok && {napi_ty} != napi_undefined) {{",
+            f"}}",
+        ):
+            item_ty_napi_info = TypeNAPIInfo.get(self.am, self.type.item_ty)
+            item_ty_napi_info.from_napi(target, napi_value, cpp_spec)
+            target.writelns(
+                f"{cpp_pointer} = new {item_ty_cpp_info.as_owner}(std::move({cpp_spec}));",
+            )
+        target.writelns(
+            f"{self.cpp_info.as_owner} {cpp_result}({cpp_pointer});",
+        )
+
+    @override
+    def into_napi(
+        self,
+        target: CSourceWriter,
+        cpp_value: str,
+        napi_result: str,
+    ):
+        napi_spec = f"{napi_result}_spec"
+        target.writelns(
+            f"napi_value {napi_result};",
+        )
+        with target.indented(
+            f"if (!{cpp_value}) {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"{napi_result} = nullptr;",
+            )
+        with target.indented(
+            f"else {{",
+            f"}}",
+        ):
+            item_ty_ani_info = TypeNAPIInfo.get(self.am, self.type.item_ty)
+            item_ty_ani_info.into_napi(target, f"(*{cpp_value})", napi_spec)
+            target.writelns(
+                f"{napi_result} = {napi_spec};",
+            )
+
+
 class TypeNAPIInfo(TypeVisitor[AbstractTypeNAPIInfo]):
     def __init__(self, am: AnalysisManager):
         self.am = am
@@ -316,3 +392,7 @@ class TypeNAPIInfo(TypeVisitor[AbstractTypeNAPIInfo]):
     @override
     def visit_iface_type(self, t: IfaceType) -> AbstractTypeNAPIInfo:
         return IfaceTypeNAPIInfo.get(self.am, t)
+
+    @override
+    def visit_optional_type(self, t: OptionalType) -> AbstractTypeNAPIInfo:
+        return OptionalTypeNAPIInfo.get(self.am, t)
