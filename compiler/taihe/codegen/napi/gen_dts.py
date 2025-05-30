@@ -1,7 +1,14 @@
 from taihe.codegen.ani.writer import StsWriter
-from taihe.codegen.napi.analyses import PackageNAPIInfo, StructNAPIInfo, TypeNAPIInfo
+from taihe.codegen.napi.analyses import (
+    IfaceNAPIInfo,
+    PackageNAPIInfo,
+    StructNAPIInfo,
+    TypeNAPIInfo,
+)
 from taihe.semantics.declarations import (
     GlobFuncDecl,
+    IfaceDecl,
+    IfaceMethodDecl,
     PackageDecl,
     PackageGroup,
     StructDecl,
@@ -34,6 +41,8 @@ class DTSCodeGenerator:
                 self.gen_struct_interface(struct, pkg_napi_target)
             for struct in pkg.structs:
                 self.gen_struct_class(struct, pkg_napi_target)
+            for iface in pkg.interfaces:
+                self.gen_iface_interface(iface, pkg_napi_target)
 
     def gen_func(self, func: GlobFuncDecl, pkg_dts_target: StsWriter):
         args = []
@@ -97,3 +106,38 @@ class DTSCodeGenerator:
                 params.append(f"{final.name}: {ty_ani_info.dts_type_name}")
             params_str = ", ".join(params)
             target.writelns(f"constructor({params_str});")
+
+    def gen_iface_interface(
+        self,
+        iface: IfaceDecl,
+        target: StsWriter,
+    ):
+        iface_napi_info = IfaceNAPIInfo.get(self.am, iface)
+        if iface_napi_info.is_class():
+            # no interface
+            return
+        with target.indented(
+            f"export interface {iface_napi_info.dts_type_name} {{",
+            f"}}",
+        ):
+            self.gen_iface_methods_decl(iface.methods, target)
+
+    def gen_iface_methods_decl(
+        self,
+        methods: list[IfaceMethodDecl],
+        target: StsWriter,
+    ):
+        sts_params = []
+        for method in methods:
+            for param in method.params:
+                type_ani_info = TypeNAPIInfo.get(self.am, param.ty_ref.resolved_ty)
+                sts_params.append(f"{param.name}: {type_ani_info.dts_type_name}")
+            sts_params_str = ", ".join(sts_params)
+            if return_ty_ref := method.return_ty_ref:
+                type_ani_info = TypeNAPIInfo.get(self.am, return_ty_ref.resolved_ty)
+                sts_return_ty_name = type_ani_info.dts_type_name
+            else:
+                sts_return_ty_name = "void"
+            target.writelns(
+                f"{method.name}({sts_params_str}): {sts_return_ty_name};",
+            )

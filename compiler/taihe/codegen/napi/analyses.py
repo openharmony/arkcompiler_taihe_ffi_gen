@@ -8,11 +8,14 @@ from taihe.codegen.cpp.analyses import (
     TypeCppInfo,
 )
 from taihe.semantics.declarations import (
+    IfaceDecl,
+    IfaceMethodDecl,
     PackageDecl,
     StructDecl,
     StructFieldDecl,
 )
 from taihe.semantics.types import (
+    IfaceType,
     ScalarKind,
     ScalarType,
     StringType,
@@ -54,6 +57,34 @@ class StructNAPIInfo(AbstractAnalysis[StructDecl]):
 
     def is_class(self):
         return self.dts_type_name == self.dts_impl_name
+
+
+class IfaceNAPIInfo(AbstractAnalysis[IfaceDecl]):
+    def __init__(self, am: AnalysisManager, d: IfaceDecl) -> None:
+        super().__init__(am, d)
+        segments = [*d.parent_pkg.segments, d.name]
+        self.from_napi_func_name = encode(segments, DeclKind.FROM_NAPI)
+        self.into_napi_func_name = encode(segments, DeclKind.INTO_NAPI)
+        self.decl_header = f"{d.parent_pkg.name}.{d.name}.napi.decl.h"
+        self.impl_header = f"{d.parent_pkg.name}.{d.name}.napi.impl.h"
+        self.dts_type_name = d.name
+        if d.get_last_attr("class"):
+            self.dts_impl_name = f"{d.name}"
+        else:
+            self.dts_impl_name = f"{d.name}_inner"
+
+    def is_class(self):
+        return self.dts_type_name == self.dts_impl_name
+
+
+class IfaceMethodNAPIInfo(AbstractAnalysis[IfaceMethodDecl]):
+    def __init__(self, am: AnalysisManager, d: IfaceMethodDecl) -> None:
+        super().__init__(am, d)
+        if d.node_parent is not None:
+            segments = [*d.parent_pkg.segments, d.node_parent.name, d.name]
+        else:
+            raise ValueError
+        self.mangled_func_name = encode(segments, DeclKind.NAPI_FUNC)
 
 
 class AbstractTypeNAPIInfo(metaclass=ABCMeta):
@@ -216,6 +247,52 @@ class StructTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[StructType]):
         )
 
 
+class IfaceTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[IfaceType]):
+    def __init__(self, am: AnalysisManager, t: IfaceType):
+        super().__init__(am, t)
+        self.am = am
+        self.type = t
+        iface_napi_info = IfaceNAPIInfo.get(self.am, t.ty_decl)
+        self.dts_type_name = iface_napi_info.dts_type_name
+
+    def from_napi(
+        self,
+        target: CSourceWriter,
+        napi_value: str,
+        cpp_result: str,
+    ):
+        iface_napi_info = IfaceNAPIInfo.get(self.am, self.type.ty_decl)
+        target.add_include(iface_napi_info.impl_header)
+        target.writelns(
+            f"{self.cpp_info.as_owner} {cpp_result} = {iface_napi_info.from_napi_func_name}(env, {napi_value});",
+        )
+
+    def into_napi(
+        self,
+        target: CSourceWriter,
+        cpp_value: str,
+        napi_result: str,
+    ):
+        iface_ani_info = IfaceNAPIInfo.get(self.am, self.type.ty_decl)
+        target.add_include(iface_ani_info.impl_header)
+        descs_name = f"{iface_ani_info.into_napi_func_name}_desc"
+        target.writelns(
+            f"napi_value {napi_result} = {iface_ani_info.into_napi_func_name}(env, {cpp_value});",
+        )
+        with target.indented(
+            f"napi_property_descriptor {descs_name}[] = {{",
+            f"}};",
+        ):
+            for method in self.type.ty_decl.methods:
+                iface_method_napi_info = IfaceMethodNAPIInfo.get(self.am, method)
+                target.writelns(
+                    f'{{"{method.name}", nullptr, {iface_method_napi_info.mangled_func_name}, nullptr, nullptr, nullptr, napi_default, nullptr}}, ',
+                )
+        target.writelns(
+            f"napi_define_properties(env, {napi_result}, sizeof({descs_name}) / sizeof({descs_name}[0]), {descs_name});"
+        )
+
+
 class TypeNAPIInfo(TypeVisitor[AbstractTypeNAPIInfo]):
     def __init__(self, am: AnalysisManager):
         self.am = am
@@ -235,3 +312,7 @@ class TypeNAPIInfo(TypeVisitor[AbstractTypeNAPIInfo]):
     @override
     def visit_struct_type(self, t: StructType) -> AbstractTypeNAPIInfo:
         return StructTypeNAPIInfo.get(self.am, t)
+
+    @override
+    def visit_iface_type(self, t: IfaceType) -> AbstractTypeNAPIInfo:
+        return IfaceTypeNAPIInfo.get(self.am, t)

@@ -4,8 +4,9 @@ NAPI 代码生成及验证：
     - 基础类型  Done （遗留问题二）
     - struct Done
     - struct 继承
-    - interface
+    - interface Done
     - interface 继承
+    - ts 侧创建新的 class(interface / struct)
     - class, static, constructor, readonly? (interface 投影成 interface 的话那可以使用 @class 注解支持生成 class)
     - enum
     - union
