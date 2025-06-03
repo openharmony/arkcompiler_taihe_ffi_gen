@@ -3,18 +3,18 @@ NAPI 代码生成及验证：
 2. 参照现有代码生成架构实现生成 .napi.cpp 和 .d.ts 支持以下语言特性
     - 基础类型  Done （遗留问题二）
     - struct Done
-    - struct 继承
+    - struct 继承                                          (本周)
     - interface Done
-    - interface 继承
-    - ts 侧创建新的 class(interface / struct)
-    - class, static, constructor, readonly? (interface 投影成 interface 的话那可以使用 @class 注解支持生成 class)
-    - enum
-    - union
+    - interface 继承                                       (本周)
+    - ts 侧绑定构造函数 class(interface / struct)           (本周)
+    - class, static, constructor, readonly
+    - enum                                                 (下一步)
+    - union                                                (下一步)
     - undefined, null
     - array
     - map set vector
     - namespace
-    - callback
+    - callback Done
     - optional Done
     - override
     - promise, async

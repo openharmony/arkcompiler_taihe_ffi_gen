@@ -15,6 +15,7 @@ from taihe.semantics.declarations import (
     StructFieldDecl,
 )
 from taihe.semantics.types import (
+    CallbackType,
     IfaceType,
     OptionalType,
     ScalarKind,
@@ -349,15 +350,13 @@ class OptionalTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[OptionalType])
     ):
         napi_spec = f"{napi_result}_spec"
         target.writelns(
-            f"napi_value {napi_result};",
+            f"napi_value {napi_result} = nullptr;",
         )
         with target.indented(
             f"if (!{cpp_value}) {{",
             f"}}",
         ):
-            target.writelns(
-                f"{napi_result} = nullptr;",
-            )
+            target.writelns(f"napi_get_undefined(env, &{napi_result});")
         with target.indented(
             f"else {{",
             f"}}",
@@ -367,6 +366,127 @@ class OptionalTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[OptionalType])
             target.writelns(
                 f"{napi_result} = {napi_spec};",
             )
+
+
+class CallbackTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[CallbackType]):
+    def __init__(self, am: AnalysisManager, t: CallbackType) -> None:
+        super().__init__(am, t)
+        self.am = am
+        self.type = t
+        params_ty_sts = []
+        for index, param_ty in enumerate(self.type.params_ty):
+            param_ty_napi_info = TypeNAPIInfo.get(self.am, param_ty)
+            params_ty_sts.append(
+                f"arg_{index}{'?' if param_ty_napi_info.is_optional else ''}: {param_ty_napi_info.dts_type_name}"
+            )
+        params_ty_sts_str = ", ".join(params_ty_sts)
+        if return_ty := self.type.return_ty:
+            return_ty_napi_info = TypeNAPIInfo.get(self.am, return_ty)
+            return_ty_sts = return_ty_napi_info.dts_type_name
+        else:
+            return_ty_sts = "void"
+        self.dts_type_name = f"(({params_ty_sts_str}) => {return_ty_sts})"
+        self.return_dts_type_name = self.dts_type_name
+
+    @override
+    def from_napi(
+        self,
+        target: CSourceWriter,
+        napi_value: str,
+        cpp_result: str,
+    ):
+        cpp_impl_class = f"{cpp_result}_cpp_impl_t"
+        with target.indented(
+            f"struct {cpp_impl_class} {{",
+            f"}};",
+        ):
+            target.writelns(f"napi_env env;", f"napi_ref ref;")
+            with target.indented(
+                f"{cpp_impl_class}(napi_env env, napi_value callback): env(env), ref(nullptr) {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"napi_create_reference(env, callback, 1, &ref);",
+                )
+            with target.indented(
+                f"~{cpp_impl_class}() {{",
+                f"}}",
+            ):
+                with target.indented(
+                    f"if (ref) {{",
+                    f"}}",
+                ):
+                    target.writelns(
+                        f"napi_delete_reference(env, ref);",
+                    )
+            inner_cpp_params = []
+            inner_napi_args = []
+            inner_cpp_args = []
+            for index, param_ty in enumerate(self.type.params_ty):
+                inner_cpp_arg = f"cpp_arg_{index}"
+                inner_napi_arg = f"napi_arg_{index}"
+                param_ty_cpp_info = TypeCppInfo.get(self.am, param_ty)
+                inner_cpp_params.append(f"{param_ty_cpp_info.as_param} {inner_cpp_arg}")
+                inner_napi_args.append(inner_napi_arg)
+                inner_cpp_args.append(inner_cpp_arg)
+            cpp_params_str = ", ".join(inner_cpp_params)
+            if return_ty := self.type.return_ty:
+                return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
+                return_ty_as_owner = return_ty_cpp_info.as_owner
+            else:
+                return_ty_as_owner = "void"
+            with target.indented(
+                f"{return_ty_as_owner} operator()({cpp_params_str}) {{",
+                f"}}",
+            ):
+                target.writelns()
+                for inner_napi_arg, inner_cpp_arg, param_ty in zip(
+                    inner_napi_args, inner_cpp_args, self.type.params_ty, strict=True
+                ):
+                    param_ty_napi_info = TypeNAPIInfo.get(self.am, param_ty)
+                    param_ty_napi_info.into_napi(target, inner_cpp_arg, inner_napi_arg)
+                inner_napi_args_str = ", ".join(inner_napi_args)
+                if return_ty := self.type.return_ty:
+                    inner_napi_res = "napi_result"
+                    inner_cpp_res = "cpp_result"
+                    target.writelns(
+                        f"napi_value napi_argv[] = {{{inner_napi_args_str}}};",
+                        f"napi_value {inner_napi_res} = nullptr;",
+                        f"napi_value cb_ref = nullptr, global = nullptr;",
+                        f"napi_get_reference_value(env, ref, &cb_ref);",
+                        f"napi_get_global(env, &global);",
+                        f"napi_call_function(env, global, cb_ref, 1, napi_argv, &{inner_napi_res});",
+                    )
+                    return_ty_napi_info = TypeNAPIInfo.get(self.am, return_ty)
+                    return_ty_napi_info.from_napi(target, inner_napi_res, inner_cpp_res)
+                    target.writelns(
+                        f"return {inner_cpp_res};",
+                    )
+                else:
+                    inner_napi_res = "napi_result"
+                    target.writelns(
+                        f"napi_value napi_argv[] = {{{inner_napi_args_str}}};",
+                        f"napi_value {inner_napi_res} = nullptr;",
+                        f"napi_value cb_ref = nullptr, global = nullptr;",
+                        f"napi_get_reference_value(env, ref, &cb_ref);",
+                        f"napi_get_global(env, &global);",
+                        f"napi_call_function(env, global, cb_ref, 1, napi_argv, &{inner_napi_res});",
+                        f"return;",
+                    )
+        target.writelns(
+            f"{self.cpp_info.as_owner} {cpp_result} = {self.cpp_info.as_owner}::from<{cpp_impl_class}>(env, {napi_value});",
+        )
+
+    def into_napi(
+        self,
+        target: CSourceWriter,
+        cpp_value: str,
+        napi_result: str,
+    ):
+        # TODO: Callback into ani
+        target.writelns(
+            f"napi_value {napi_result} = {{}};",
+        )
 
 
 class TypeNAPIInfo(TypeVisitor[AbstractTypeNAPIInfo]):
@@ -396,3 +516,7 @@ class TypeNAPIInfo(TypeVisitor[AbstractTypeNAPIInfo]):
     @override
     def visit_optional_type(self, t: OptionalType) -> AbstractTypeNAPIInfo:
         return OptionalTypeNAPIInfo.get(self.am, t)
+
+    @override
+    def visit_callback_type(self, t: CallbackType) -> AbstractTypeNAPIInfo:
+        return CallbackTypeNAPIInfo.get(self.am, t)
