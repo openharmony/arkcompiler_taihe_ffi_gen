@@ -132,7 +132,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
         d.maybe_resolved_pkg = pkg
 
     @override
-    def visit_decl_ref_decl(self, d: DeclarationRefDecl) -> None:
+    def visit_declaration_ref_decl(self, d: DeclarationRefDecl) -> None:
         if d.is_resolved:
             return
         d.is_resolved = True
@@ -183,7 +183,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
             self.diag.emit(NotATypeError(d.symbol, loc=d.loc))
             return
 
-        decl.as_type(d)
+        d.maybe_resolved_ty = decl.as_type(d)
 
     @override
     def visit_short_type_ref_decl(self, d: ShortTypeRefDecl) -> None:
@@ -195,7 +195,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
         builder = BUILTIN_TYPES.get(d.symbol)
 
         if builder:
-            builder(d)
+            d.maybe_resolved_ty = builder(d)
             return
 
         # Find types declared in the current package
@@ -206,7 +206,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
                 self.diag.emit(NotATypeError(d.symbol, loc=d.loc))
                 return
 
-            decl.as_type(d)
+            d.maybe_resolved_ty = decl.as_type(d)
             return
 
         # Look for imported type declarations
@@ -226,7 +226,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
             self.diag.emit(NotATypeError(d.symbol, loc=d.loc))
             return
 
-        decl.as_type(d)
+        d.maybe_resolved_ty = decl.as_type(d)
 
     @override
     def visit_generic_type_ref_decl(self, d: GenericTypeRefDecl) -> None:
@@ -253,7 +253,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
             return
 
         try:
-            builder(d, *args_ty)
+            d.maybe_resolved_ty = builder(d, *args_ty)
         except TypeError:
             self.diag.emit(GenericArgumentsError(d.text, loc=d.loc))
 
@@ -281,7 +281,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
                 return
             params_ty.append(arg_ty)
 
-        CallbackType(d, return_ty, tuple(params_ty))
+        d.maybe_resolved_ty = CallbackType(d, return_ty, tuple(params_ty))
 
 
 class _CheckFieldNameCollisionErrorPass(RecursiveDeclVisitor):

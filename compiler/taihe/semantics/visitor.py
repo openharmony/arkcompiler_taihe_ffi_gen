@@ -216,7 +216,7 @@ class DeclVisitor(Generic[T]):
     def visit_package_ref_decl(self, d: "PackageRefDecl") -> T:
         return self.visit_decl(d)
 
-    def visit_decl_ref_decl(self, d: "DeclarationRefDecl") -> T:
+    def visit_declaration_ref_decl(self, d: "DeclarationRefDecl") -> T:
         return self.visit_decl(d)
 
     ### Imports ###
@@ -338,7 +338,7 @@ class RecursiveDeclVisitor(DeclVisitor[None]):
         return self.visit_decl(d)
 
     @override
-    def visit_decl_ref_decl(self, d: "DeclarationRefDecl") -> None:
+    def visit_declaration_ref_decl(self, d: "DeclarationRefDecl") -> None:
         self.handle_decl(d.pkg_ref)
 
         return self.visit_decl(d)

@@ -104,7 +104,7 @@ class PrettyFormatter(DeclVisitor[str]):
         comment = self.as_comment(f"/* {real_package} */")
         return f"{package_ref_repr} {comment}"
 
-    def get_decl_ref_decl(self, d: "DeclarationRefDecl") -> str:
+    def get_declaration_ref_decl(self, d: "DeclarationRefDecl") -> str:
         decl_ref_repr = d.symbol
         if not d.is_resolved or not self.show_resolved:
             return decl_ref_repr
@@ -191,9 +191,9 @@ class PrettyPrinter(DeclVisitor[None]):
         as_kw = self.fmt.as_keyword("as")
 
         alias_pair = (
-            f"{self.fmt.get_decl_ref_decl(d.decl_ref)} {as_kw} {d.name}"
+            f"{self.fmt.get_declaration_ref_decl(d.decl_ref)} {as_kw} {d.name}"
             if d.is_alias()
-            else self.fmt.get_decl_ref_decl(d.decl_ref)
+            else self.fmt.get_declaration_ref_decl(d.decl_ref)
         )
 
         self.out.writeln(

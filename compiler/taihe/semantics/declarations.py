@@ -367,7 +367,7 @@ class DeclarationRefDecl(DeclWithParent[Decl]):
 
     @override
     def _accept(self, v: "DeclVisitor[T]") -> Any:
-        return v.visit_decl_ref_decl(self)
+        return v.visit_declaration_ref_decl(self)
 
 
 #######################
