@@ -7,6 +7,7 @@ from taihe.semantics.declarations import (
     CallbackTypeRefDecl,
     DeclarationRefDecl,
     EnumDecl,
+    EnumItemDecl,
     GenericTypeRefDecl,
     GlobFuncDecl,
     IfaceDecl,
@@ -346,8 +347,8 @@ class _CheckEnumTypePass(RecursiveDeclVisitor):
             return not isinstance(val, bool) and isinstance(val, int)
 
         valid: Callable[[Any], bool]
-        increment: Callable[[Any, Any], Any]
-        default: Callable[[Any], Any]
+        increment: Callable[[Any, EnumItemDecl], Any]
+        default: Callable[[EnumItemDecl], Any]
 
         match d.ty_ref.maybe_resolved_ty:
             case ScalarType(_, ScalarKind.I8):

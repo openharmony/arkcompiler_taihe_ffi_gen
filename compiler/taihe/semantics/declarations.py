@@ -12,7 +12,6 @@ from taihe.semantics.types import (
     EnumType,
     IfaceType,
     StructType,
-    Type,
     UnionType,
     UserType,
 )
@@ -20,6 +19,7 @@ from taihe.utils.exceptions import DeclRedefError
 from taihe.utils.sources import SourceLocation
 
 if TYPE_CHECKING:
+    from taihe.semantics.types import Type
     from taihe.semantics.visitor import DeclVisitor
 
 
@@ -156,7 +156,7 @@ class TypeRefDecl(DeclWithParent[Decl], metaclass=ABCMeta):
     is_resolved: bool = False
     """Whether this type reference is resolved."""
 
-    maybe_resolved_ty: Type | None = None
+    maybe_resolved_ty: "Type | None" = None
     """The resolved type, if any.
 
     This field is `None` either if the type reference is not resolved yet,
@@ -175,7 +175,7 @@ class TypeRefDecl(DeclWithParent[Decl], metaclass=ABCMeta):
         return f"type reference {self.text}"
 
     @property
-    def resolved_ty(self):
+    def resolved_ty(self) -> "Type":
         assert self.maybe_resolved_ty
         return self.maybe_resolved_ty
 
@@ -320,7 +320,7 @@ class PackageRefDecl(DeclWithParent[Decl]):
         return f"package reference {self.symbol}"
 
     @property
-    def resolved_pkg(self):
+    def resolved_pkg(self) -> "PackageDecl":
         assert self.maybe_resolved_pkg
         return self.maybe_resolved_pkg
 
@@ -361,7 +361,7 @@ class DeclarationRefDecl(DeclWithParent[Decl]):
         return f"type reference {self.symbol}"
 
     @property
-    def resolved_decl(self):
+    def resolved_decl(self) -> "PackageLevelDecl":
         assert self.maybe_resolved_decl
         return self.maybe_resolved_decl
 
