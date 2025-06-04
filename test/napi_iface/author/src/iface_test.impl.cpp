@@ -1,4 +1,5 @@
 #include "iface_test.impl.hpp"
+#include <iostream>
 #include "iface_test.proj.hpp"
 
 namespace {
@@ -9,11 +10,11 @@ protected:
 
 public:
   Base(::taihe::string_view id) : id(id) {
-    std::cout << "new " << this << std::endl;
+    std::cout << "new base " << this << std::endl;
   }
 
   ~Base() {
-    std::cout << "del " << this << std::endl;
+    std::cout << "del shape " << this << std::endl;
   }
 
   ::taihe::string getId() {
@@ -34,11 +35,11 @@ protected:
 
 public:
   Shape(::taihe::string_view id, float a, float b) : id(id), a(a), b(b) {
-    std::cout << "new " << this << std::endl;
+    std::cout << "new shape " << this << std::endl;
   }
 
   ~Shape() {
-    std::cout << "del " << this << std::endl;
+    std::cout << "del shape " << this << std::endl;
   }
 
   ::taihe::string getId() {
@@ -63,9 +64,14 @@ void copyIBase(::iface_test::weak::IBase a, ::iface_test::weak::IBase b) {
   a->setId(b->getId());
   return;
 }
+
+::iface_test::IShape makeIShape(::taihe::string_view id, double a, double b) {
+  return ::taihe::make_holder<Shape, ::iface_test::IShape>(id, a, b);
+}
 }  // namespace
 
 // NOLINTBEGIN
 TH_EXPORT_CPP_API_makeIBase(makeIBase);
 TH_EXPORT_CPP_API_copyIBase(copyIBase);
+TH_EXPORT_CPP_API_makeIShape(makeIShape);
 // NOLINTEND

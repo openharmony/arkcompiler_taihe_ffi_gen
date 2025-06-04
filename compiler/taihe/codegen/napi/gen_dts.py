@@ -119,8 +119,14 @@ class DTSCodeGenerator:
         if iface_napi_info.is_class():
             # no interface
             return
+        parents = []
+        for parent in iface.parents:
+            parent_ty = parent.ty_ref.resolved_ty
+            parent_napi_info = TypeNAPIInfo.get(self.am, parent_ty)
+            parents.append(parent_napi_info.dts_type_name)
+        extends_str = " extends " + ", ".join(parents) if parents else ""
         with target.indented(
-            f"export interface {iface_napi_info.dts_type_name} {{",
+            f"export interface {iface_napi_info.dts_type_name}{extends_str} {{",
             f"}}",
         ):
             self.gen_iface_methods_decl(iface.methods, target)

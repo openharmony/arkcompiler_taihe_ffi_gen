@@ -8,7 +8,6 @@ from taihe.codegen.cpp.analyses import (
     TypeCppInfo,
 )
 from taihe.codegen.napi.analyses import (
-    IfaceMethodNAPIInfo,
     IfaceNAPIInfo,
     PackageNAPIInfo,
     StructNAPIInfo,
@@ -49,32 +48,36 @@ class NAPICodeGenerator:
             pkg_napi_target.add_include(pkg_cpp_user_info.header)
 
             for iface in pkg.interfaces:
+                iface_abi_info = IfaceABIInfo.get(self.am, iface)
                 iface_cpp_info = IfaceCppInfo.get(self.am, iface)
-                for method in iface.methods:
-                    iface_method_napi_info = IfaceMethodNAPIInfo.get(self.am, method)
-                    self.gen_iface_method(
-                        method,
-                        iface_method_napi_info.mangled_func_name,
-                        iface_cpp_info.as_owner,
-                        pkg_napi_target,
-                    )
+                for ancestor in iface_abi_info.ancestor_dict:
+                    iface_cpp_info_ancestor = IfaceCppInfo.get(self.am, ancestor)
+                    for method in ancestor.methods:
+                        segments = [*iface.parent_pkg.segments, iface.name, method.name]
+                        mangled_name = encode(segments, DeclKind.ANI_FUNC)
+                        self.gen_iface_method(
+                            method,
+                            mangled_name,
+                            iface_cpp_info.as_owner,
+                            iface_cpp_info_ancestor.as_owner,
+                            pkg_napi_target,
+                        )
 
-            desc = []
+            register_infos = []
             for func in pkg.functions:
                 segments = [*pkg.segments, func.name]
                 mangled_name = encode(segments, DeclKind.NAPI_FUNC)
                 self.gen_func(func, pkg_napi_info, pkg_napi_target, mangled_name)
-                func_desc = f'{{"{func.name}", nullptr, {mangled_name}, nullptr, nullptr, nullptr, napi_default, nullptr}}, '
-                desc.append(func_desc)
+                register_infos.append((func.name, mangled_name))
             for struct in pkg.structs:
                 self.gen_struct_files(struct)
             for iface in pkg.interfaces:
                 self.gen_iface_files(iface)
-            self.gen_module_init(desc, pkg_napi_target)
+            self.gen_module_init(register_infos, pkg_napi_target)
 
     def gen_module_init(
         self,
-        desc: list[str],
+        register_infos: list[tuple[str, str]],
         pkg_napi_target: CSourceWriter,
     ):
         pkg_napi_target.writelns(
@@ -88,8 +91,10 @@ class NAPICodeGenerator:
                 f"napi_property_descriptor desc[] = {{",
                 f"}};",
             ):
-                for desc_str in desc:
-                    pkg_napi_target.writelns(desc_str)
+                for meth_name, mng_name in register_infos:
+                    pkg_napi_target.writelns(
+                        f'{{"{meth_name}", nullptr, {mng_name}, nullptr, nullptr, nullptr, napi_default, nullptr}}, ',
+                    )
             pkg_napi_target.writelns(
                 f"napi_define_properties(env, exports, sizeof(desc) / sizeof(desc[0]), desc);",
                 f"return exports;",
@@ -410,7 +415,8 @@ class NAPICodeGenerator:
         self,
         method: IfaceMethodDecl,
         mangled_name: str,
-        iface_cpp_type: str,
+        iface_cpp_type_now: str,
+        iface_cpp_type_real: str,
         pkg_napi_target: CSourceWriter,
     ):
         with pkg_napi_target.indented(
@@ -420,9 +426,11 @@ class NAPICodeGenerator:
             pkg_napi_target.writelns(
                 f"napi_value thisobj;",
                 f"napi_get_cb_info(env, info, nullptr, nullptr, &thisobj, nullptr);",
-                f"{iface_cpp_type}* value_ptr;",
+                f"{iface_cpp_type_now}* value_ptr;",
                 f"napi_unwrap(env, thisobj, reinterpret_cast<void**>(&value_ptr));",
             )
             self.gen_func_content(
-                method, pkg_napi_target, f"(*value_ptr)->{method.name}"
+                method,
+                pkg_napi_target,
+                f"(({iface_cpp_type_real})(*value_ptr))->{method.name}",
             )

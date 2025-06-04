@@ -2,6 +2,7 @@ from abc import ABCMeta, abstractmethod
 
 from typing_extensions import override
 
+from taihe.codegen.abi.analyses import IfaceABIInfo
 from taihe.codegen.abi.mangle import DeclKind, encode
 from taihe.codegen.abi.writer import CSourceWriter
 from taihe.codegen.cpp.analyses import (
@@ -281,6 +282,18 @@ class IfaceTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[IfaceType]):
         cpp_value: str,
         napi_result: str,
     ):
+        iface_decl = self.type.ty_decl
+        iface_abi_info = IfaceABIInfo.get(self.am, iface_decl)
+        iface_register_infos = []
+        for ancestor in iface_abi_info.ancestor_dict:
+            for method in ancestor.methods:
+                segments = [
+                    *iface_decl.parent_pkg.segments,
+                    iface_decl.name,
+                    method.name,
+                ]
+                mangled_name = encode(segments, DeclKind.ANI_FUNC)
+                iface_register_infos.append((method.name, mangled_name))
         iface_ani_info = IfaceNAPIInfo.get(self.am, self.type.ty_decl)
         target.add_include(iface_ani_info.impl_header)
         descs_name = f"{iface_ani_info.into_napi_func_name}_desc"
@@ -291,10 +304,9 @@ class IfaceTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[IfaceType]):
             f"napi_property_descriptor {descs_name}[] = {{",
             f"}};",
         ):
-            for method in self.type.ty_decl.methods:
-                iface_method_napi_info = IfaceMethodNAPIInfo.get(self.am, method)
+            for meth_name, mng_name in iface_register_infos:
                 target.writelns(
-                    f'{{"{method.name}", nullptr, {iface_method_napi_info.mangled_func_name}, nullptr, nullptr, nullptr, napi_default, nullptr}}, ',
+                    f'{{"{meth_name}", nullptr, {mng_name}, nullptr, nullptr, nullptr, napi_default, nullptr}}, ',
                 )
         target.writelns(
             f"napi_define_properties(env, {napi_result}, sizeof({descs_name}) / sizeof({descs_name}[0]), {descs_name});"
