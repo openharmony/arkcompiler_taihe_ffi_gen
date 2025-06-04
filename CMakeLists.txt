@@ -71,7 +71,7 @@ function(update_grammar)
 endfunction()
 
 
-function(generate_code_from_idl this_target_name idl_files gen_ets_files idl_dir generated_dir)
+function(generate_code_from_idl this_target_name idl_files gen_ets_files idl_dir generated_dir taihe_conf)
   set(IDL_FILES ${idl_files})
   set(GEN_ETS_FILES ${gen_ets_files})
 
@@ -105,7 +105,7 @@ function(generate_code_from_idl this_target_name idl_files gen_ets_files idl_dir
 
   # 如果启用覆盖率，使用 coverage run
   if(ENABLE_COVERAGE)
-    list(APPEND COMMAND_TO_RUN "coverage" "run" "--parallel-mode" "-m" "taihe.cli.compiler" "-I" "${idl_dir}/idl" "-O" "${generated_dir}" "--ani" "--author" "--sts-keep-name" "--debug")
+    list(APPEND COMMAND_TO_RUN "coverage" "run" "--parallel-mode" "-m" "taihe.cli.compiler" "-I" "${idl_dir}/idl" "-O" "${generated_dir}" "--ani" "--author" "${taihe_conf}" "--debug")
   else()
     list(APPEND COMMAND_TO_RUN "python" "-m" "taihe.cli.compiler" "-I" "${idl_dir}/idl" "-O" "${generated_dir}" "--ani" "--author" "--sts-keep-name")
   endif()
@@ -299,7 +299,7 @@ endfunction()
 
 
 # 编译动态库
-function(compile_dylib target_name target_path user_cpp_files build_demo_dir)
+function(compile_dylib target_name target_path user_include user_cpp_files build_demo_dir)
   # 创建输出目录（如果不存在）
   file(MAKE_DIRECTORY ${target_path}/build)
   set(LIBRARY_OUTPUT_PATH ${target_path}/build)
@@ -319,7 +319,7 @@ function(compile_dylib target_name target_path user_cpp_files build_demo_dir)
   set_target_properties(${target_name} PROPERTIES LINKER_LANGUAGE CXX)
   target_link_libraries(${target_name} PRIVATE th_runtime)
   target_link_options(${target_name} PRIVATE "-Wl,--no-undefined")
-  target_include_directories(${target_name} PUBLIC "${build_demo_dir}/generated/include/" TH_RUNTIME_INCLUDE_DIR)
+  target_include_directories(${target_name} PUBLIC "${build_demo_dir}/generated/include/" "${user_include}" TH_RUNTIME_INCLUDE_DIR)
 endfunction()
 
 
@@ -429,7 +429,7 @@ function(run_abc this_target_name build_demo_dir)
 endfunction()
 
 
-function(add_ani_demo this_target_name idl_files gen_ets_files user_ets_files user_cpp_files run_dir)
+function(add_ani_demo this_target_name idl_files taihe_conf gen_ets_files user_ets_files user_include user_cpp_files run_dir)
   set(DEMO_DIR "${CMAKE_SOURCE_DIR}/${run_dir}/${this_target_name}")
   set(BUILD_DEMO_DIR "${CMAKE_BINARY_DIR}/${run_dir}/${this_target_name}")
   set(GEN_DIR "${BUILD_DEMO_DIR}/generated")
@@ -440,9 +440,9 @@ function(add_ani_demo this_target_name idl_files gen_ets_files user_ets_files us
   endforeach()
 
   # 生成代码
-  generate_code_from_idl(${this_target_name} "${idl_files}" "${GEN_ETS_PATHS}" ${DEMO_DIR} ${GEN_DIR})
+  generate_code_from_idl(${this_target_name} "${idl_files}" "${GEN_ETS_PATHS}" ${DEMO_DIR} ${GEN_DIR} "${taihe_conf}")
   # 动态库编译
-  compile_dylib(${this_target_name} ${DEMO_DIR} "${user_cpp_files}" ${BUILD_DEMO_DIR})
+  compile_dylib(${this_target_name} ${DEMO_DIR} "${user_include}" "${user_cpp_files}" ${BUILD_DEMO_DIR})
   # gen arktsconfig.json
   write_arkts_config("${BUILD_DEMO_DIR}/arktsconfig.json" "${BUILD_DEMO_DIR}/generated" "${gen_ets_files}" "${user_ets_files}")
   # ets -> ets.abc
