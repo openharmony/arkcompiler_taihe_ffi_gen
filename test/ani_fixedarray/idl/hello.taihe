@@ -1,0 +1,19 @@
+struct Data {}
+
+@class
+interface TestInterface {
+    setFixedArrayBoolean(value: @fixedarray Array<bool>);
+    setFixedArrayNumber(value: @fixedarray Array<f64>);
+    setFixedArrayString(value: @fixedarray Array<String>);
+    setFixedArrayData(value: @fixedarray Array<Data>);
+    setOptionalFixedArrayData(value: Optional<@fixedarray Array<Data>>);
+
+    getFixedArrayBoolean(): @fixedarray Array<bool>;
+    getFixedArrayNumber(): @fixedarray Array<f64>;
+    getFixedArrayString(): @fixedarray Array<String>;
+    getFixedArrayData(): @fixedarray Array<Data>;
+    getOptionalFixedArrayData(): Optional<@fixedarray Array<Data>>;
+}
+
+@ctor("TestInterface")
+function newTestInterface(): TestInterface;

@@ -65,7 +65,7 @@ class TaiheBuilder:
             self.doc_dir,
             self.dist_doc_dir,
             dirs_exist_ok=True,
-            ignore=shutil.ignore_patterns("build", "*generated"),
+            ignore=shutil.ignore_patterns("build", "generated"),
         )
 
     def copy_compiler(self):

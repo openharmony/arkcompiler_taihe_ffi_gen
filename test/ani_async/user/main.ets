@@ -33,11 +33,11 @@ function testSyncAdd() {
 function testAsyncAdd() {
     {
         let promise = new Promise<int>((resolve, reject) => {
-            async_test.add(10, 20, (err: BusinessError, data: int) => {
-                if (err.code !== 0) {
+            async_test.add(10, 20, (err: BusinessError|null, data?: int) => {
+                if (err !== null) {
                     reject(err);
                 } else {
-                    resolve(data);
+                    resolve(data!);
                 }
             });
         });
@@ -52,11 +52,11 @@ function testAsyncAdd() {
     }
     {
         let promise = new Promise<int>((resolve, reject) => {
-            async_test.add(0, 2, (err: BusinessError, data: int) => {
-                if (err.code !== 0) {
+            async_test.add(0, 2, (err: BusinessError|null, data?: int) => {
+                if (err !== null) {
                     reject(err);
                 } else {
-                    resolve(data);
+                    resolve(data!);
                 }
             });
         });

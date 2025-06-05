@@ -71,9 +71,26 @@ struct optional : public optional_view<cpp_owner_t> {
   optional(std::in_place_t, Args &&...args)
       : optional(new cpp_owner_t(std::forward<Args>(args)...)) {}
 
+  // TODO: Deprecate this
   template<typename... Args>
   static optional make(Args &&...args) {
-    return optional(std::in_place_t{}, std::forward<Args>(args)...);
+    return optional(std::in_place, std::forward<Args>(args)...);
+  }
+
+  template<typename... Args>
+  cpp_owner_t &emplace(Args &&...args) {
+    if (this->m_handle) {
+      delete this->m_handle;
+    }
+    this->m_handle = new cpp_owner_t(std::forward<Args>(args)...);
+    return *this->m_handle;
+  }
+
+  void reset() {
+    if (this->m_handle) {
+      delete this->m_handle;
+      this->m_handle = nullptr;
+    }
   }
 
   optional(optional_view<cpp_owner_t> const &other)

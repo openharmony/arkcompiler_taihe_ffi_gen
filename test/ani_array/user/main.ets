@@ -106,11 +106,11 @@ function changeStructArray() {
 function fetchBinaryData() {
     let promise = new Promise<Array<float>>(
         (resolve, reject) => {ArrayTest.fetchBinaryData(
-            5, (error: BusinessError, data: Array<float>) => {
-                if (error.code !== 0) {
+            5, (error: BusinessError|null, data?: Array<float>) => {
+                if (error) {
                     reject(error);
                 } else {
-                    resolve(data);
+                    resolve(data as Array<float>);
                 }
             })});
     let data: Array<float>;

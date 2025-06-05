@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <numeric>
 
-#include "array_test.Color.proj.0.hpp"
+#include "array_test.Color.proj.1.hpp"
 #include "array_test.Data.proj.1.hpp"
 #include "array_test.impl.hpp"
 #include "stdexcept"

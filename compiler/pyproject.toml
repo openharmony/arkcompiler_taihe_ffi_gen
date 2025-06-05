@@ -10,7 +10,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "antlr4-tools>=0.2.1",
+    "antlr4-tools>=0.2.2",
     "black>=25.1.0",
     "coverage>=7.8.0",
     "pyright>=1.1.400",
@@ -79,6 +79,8 @@ lint.ignore = [
     "TC001",
     "TC002",
     "TC003", # "unnecessary to move to a TYPE_CHECKING block"
+    "TC006",
+    "B007",
 ]
 
 [tool.ruff.lint.pydocstyle]

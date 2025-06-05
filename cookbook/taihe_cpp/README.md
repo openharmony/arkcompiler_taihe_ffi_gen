@@ -115,8 +115,8 @@ my_set.emplace("apple");
 my_set.emplace("banana");
 my_set.emplace("cherry");
 
-// 查找元素 find()
-if (my_set.find("banana")) {
+// 查找元素 find_item()
+if (my_set.find_item("banana")) {
     std::cout << "banana found" << std::endl;
 }
 
@@ -151,8 +151,9 @@ my_map.emplace("apple", 5);
 my_map.emplace("banana", 3);
 my_map.emplace("orange", 10);
 
-// 查找元素 find()
-if (auto* result = my_map.find("apple")) {
+// 查找元素 find_item()
+// 之前的 find() 方法已弃用，用户请不要使用 find() 方法, 而是使用目前的 find_item() 方法
+if (auto* result = my_map.find_item("apple")) {
     std::cout << "Found: key = " << result->first << ", value = " << result->second << "\n";
 } else {
     std::cout << "Key 'apple' not found.\n";
@@ -192,9 +193,9 @@ std::cout << "Map is empty: " << std::boolalpha << my_map.empty() << std::endl;
 // 创建空Optional
 optional<T>(std::nullopt);
 // 创建非空Optional
-optional<T>(std::in_place_t{}, val);
+optional<T>(std::in_place, val);
 
-optional<int32_t> opt_var = optional<int32_t>(std::in_place_t{}, 1);
+optional<int32_t> opt_var = optional<int32_t>(std::in_place, 1);
 // 判断Optional是否为空
 bool tag = bool(opt_var);
 

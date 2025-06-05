@@ -1,7 +1,7 @@
 from taihe.parse.convert import AstConverter
 from taihe.semantics.analysis import analyze_semantics
 from taihe.semantics.declarations import PackageGroup
-from taihe.utils.diagnostics import AbstractDiagnosticsManager, DiagBase
+from taihe.utils.diagnostics import DiagBase, DiagnosticsManager
 from taihe.utils.exceptions import (
     DeclarationNotInScopeError,
     DeclNotExistError,
@@ -18,7 +18,7 @@ from taihe.utils.exceptions import (
 from taihe.utils.sources import SourceBuffer, SourceManager
 
 
-class SemanticTestDiagnosticsManager(AbstractDiagnosticsManager):
+class SemanticTestDiagnosticsManager(DiagnosticsManager):
     errors: list[DiagBase]
 
     def __init__(self):

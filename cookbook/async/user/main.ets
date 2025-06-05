@@ -5,11 +5,11 @@ loadLibrary("async");
 function main() {
     console.log("addSync: ", async_test.addSync(1, 2))
 
-    async_test.add(10, 20, (error: Error, data?: int) => {
-        if (!error.message) {
-            console.log("async success ", data);
-        } else {
+    async_test.add(10, 20, (error: Error|null, data?: int) => {
+        if (error) {
             console.log("async ERROR ", error);
+        } else {
+            console.log("async success ", data);
         }
     })
 
@@ -25,11 +25,11 @@ function main() {
     let istringholder = async_test.makeIStringHolder();
     console.log(istringholder.get());
 
-    istringholder.setAsync("interface async set", (error: Error) => {
-        if (!error.message) {
-            console.log("interface async success ");
-        } else {
+    istringholder.setAsync("interface async set", (error: Error|null) => {
+        if (error) {
             console.log("interface async ERROR ", error);
+        } else {
+            console.log("interface async success ");
         }
     })
 

@@ -1,7 +1,7 @@
 #include "ohos.book.store.impl.hpp"
 #include <cstdint>
 #include "ohos.book.store.Book.proj.1.hpp"
-#include "ohos.book.store.Category.proj.0.hpp"
+#include "ohos.book.store.Category.proj.1.hpp"
 #include "ohos.book.store.CppOrRustBook.proj.1.hpp"
 #include "ohos.book.store.MapOption.proj.1.hpp"
 #include "taihe/array.hpp"

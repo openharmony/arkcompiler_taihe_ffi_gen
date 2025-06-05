@@ -7,9 +7,9 @@
 // and a function pointer.
 //
 // # Members
+// - `vtbl_ptr`: A pointer to the function associated with the callback.
 // - `data_ptr`: A pointer to the data block.
-// - `func_ptr`: A pointer to the function associated with the callback.
 struct TCallback {
+  void *vtbl_ptr;
   struct DataBlockHead *data_ptr;
-  void *func_ptr;
 };

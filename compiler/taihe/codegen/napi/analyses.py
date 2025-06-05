@@ -10,7 +10,6 @@ from taihe.codegen.cpp.analyses import (
 )
 from taihe.semantics.declarations import (
     IfaceDecl,
-    IfaceMethodDecl,
     PackageDecl,
     StructDecl,
     StructFieldDecl,
@@ -78,16 +77,6 @@ class IfaceNAPIInfo(AbstractAnalysis[IfaceDecl]):
 
     def is_class(self):
         return self.dts_type_name == self.dts_impl_name
-
-
-class IfaceMethodNAPIInfo(AbstractAnalysis[IfaceMethodDecl]):
-    def __init__(self, am: AnalysisManager, d: IfaceMethodDecl) -> None:
-        super().__init__(am, d)
-        if d.node_parent is not None:
-            segments = [*d.parent_pkg.segments, d.node_parent.name, d.name]
-        else:
-            raise ValueError
-        self.mangled_func_name = encode(segments, DeclKind.NAPI_FUNC)
 
 
 class AbstractTypeNAPIInfo(metaclass=ABCMeta):

@@ -1,6 +1,6 @@
 #include "record_test.impl.hpp"
 
-#include "record_test.Color.proj.0.hpp"
+#include "record_test.Color.proj.1.hpp"
 #include "record_test.Data.proj.1.hpp"
 #include "record_test.ICpu.proj.2.hpp"
 #include "record_test.ICpuInfo.proj.2.hpp"
@@ -83,7 +83,7 @@ map<string, int32_t> GetMapfromArray(array_view<::record_test::Data> d) {
 
 ::record_test::Data GetDatafromMap(map_view<string, ::record_test::Data> m,
                                    string_view k) {
-  auto iter = m.find(k);
+  auto iter = m.find_item(k);
   if (iter == nullptr) {
     return {"su", 7};
   }

@@ -2,323 +2,386 @@
 #include <cstddef>
 #include <iomanip>
 #include <iostream>
+#include <string>
 #include <taihe/callback.hpp>
 #include <taihe/object.hpp>
+#include <unordered_map>
+#include <unordered_set>
 
 #include "rgb.base.user.hpp"
 #include "rgb.show.user.hpp"
+
+#include "tester.hpp"
 
 using namespace rgb::base;
 using namespace rgb::show;
 using namespace taihe;
 
-struct UserType {
-  string id;
+string toString(ColorOrRGBOrName const &color) {
+  static struct Visitor {
+    string operator()(static_tag_t<ColorOrRGBOrName::tag_t::rgb>,
+                      const RGB &val) {
+      std::ostringstream oss;
+      oss << "#" << std::hex << std::setfill('0') << std::setw(2)
+          << static_cast<int>(val.r) << std::setw(2) << static_cast<int>(val.g)
+          << std::setw(2) << static_cast<int>(val.b);
+      return oss.str();
+    }
 
+    string operator()(static_tag_t<ColorOrRGBOrName::tag_t::name>,
+                      string const &val) {
+      std::ostringstream oss;
+      oss << "Name: " << val.c_str();
+      return oss.str();
+    }
+
+    string operator()(static_tag_t<ColorOrRGBOrName::tag_t::color>,
+                      Color const &val) {
+      return std::to_string(val.get_value());
+    }
+
+    string operator()(static_tag_t<ColorOrRGBOrName::tag_t::name>,
+                      Name const &val) {
+      return string(val);
+    }
+
+    string operator()(static_tag_t<ColorOrRGBOrName::tag_t::undefined>) {
+      return "Undefined";
+    }
+  } visitor;
+
+  return color.accept_template(visitor);
+}
+
+struct UserType {
+  static inline std::unordered_set<UserType *> registry;
+
+private:
+  string id;
+  ColorOrRGBOrName myColor;
+
+public:
   auto getId() {
-    return "UserType(" + std::string(id) + ")";
+    return concat({"UserType", "(", id, ")"});
   }
 
   void userMethod() {
     std::cout << "User Method Called;" << std::endl;
   }
 
-  UserType(string_view id) : id(id) {
+  void setColor(ColorOrRGBOrName const &color) {
+    myColor = color;
+  }
+
+  ColorOrRGBOrName getColor() {
+    return myColor;
+  }
+
+  UserType(string_view id, ColorOrRGBOrName const &color)
+      : id(id), myColor(color) {
     std::cout << getId() << " made" << std::endl;
+    registry.insert(this);
   }
 
   ~UserType() {
     std::cout << getId() << " deleted" << std::endl;
+    registry.erase(this);
   }
+
+  UserType(string_view id) : UserType(id, ColorOrRGBOrName::make_undefined()) {}
 };
 
-struct UserType {
-    string id;
+static ColorOrRGBOrName color_114514 =
+    ColorOrRGBOrName::make_rgb(RGB{0x11, 0x45, 0x14});
+static ColorOrRGBOrName color_yellow =
+    ColorOrRGBOrName::make_color(Color::key_t::yellow);
+static ColorOrRGBOrName color_miku =
+    ColorOrRGBOrName::make_name(Name::key_t::BLUE);
+static ColorOrRGBOrName color_unknown = ColorOrRGBOrName::make_undefined();
 
-    auto getId() { return "UserType(" + std::string(id) + ")"; }
+void testUnion() {
+  std::cout << toString(color_114514) << std::endl;
+  std::cout << toString(color_yellow) << std::endl;
+  std::cout << toString(color_miku) << std::endl;
+  std::cout << toString(color_unknown) << std::endl;
 
-    void userMethod() {
-        std::cout << "User Method Called;" << std::endl;
-    }
+  if (Name *name_ptr = color_miku.get_name_ptr()) {
+    std::cout << "color_miku is holding name, name is " << *name_ptr
+              << std::endl;
+  } else {
+    std::cout << "Error" << std::endl;
+    Tester::assert(false, "color_miku should hold a name");
+  }
 
-    UserType(string_view id) : id(id) {
-        std::cout << getId() << " made" << std::endl;
-    }
+  if (color_miku.holds_name()) {
+    Name name_ref = color_miku.get_name_ref();
+    std::cout << "color_miku is holding name, name is " << name_ref
+              << std::endl;
+  } else {
+    std::cout << "Error" << std::endl;
+    Tester::assert(false, "color_miku should hold a name");
+  }
 
-    ~UserType() {
-        std::cout << getId() << " deleted" << std::endl;
-    }
-};
+  color_miku.emplace_rgb(RGB{0x39, 0xC5, 0xBB});
 
-struct MyCallback {
+  std::cout << toString(color_miku) << std::endl;
+
+  switch (color_miku.get_tag()) {
+  case ColorOrRGBOrName::tag_t::color:
+    std::cout << "color_miku is holding color" << std::endl;
+    break;
+  case ColorOrRGBOrName::tag_t::rgb:
+    std::cout << "color_miku is holding rgb" << std::endl;
+    break;
+  case ColorOrRGBOrName::tag_t::name:
+    std::cout << "color_miku is holding name" << std::endl;
+    break;
+  default:
+    std::cout << "color_miku is holding other stuff" << std::endl;
+    break;
+  }
+
+  Tester::assert(color_miku.get_tag() == ColorOrRGBOrName::tag_t::rgb,
+                 "color_miku should hold rgb, got %s",
+                 toString(color_miku).c_str());
+}
+
+void testInterfaceCall() {
+  IShowable colored_rect = makeColoredRectangle("Rect", color_yellow, 5, 5);
+
+  Tester::assert(same(weak::IColorable(colored_rect)->getColor(), color_yellow),
+                 "Colored Rectangle should have color %s, got %s",
+                 toString(color_yellow).c_str(),
+                 toString(weak::IColorable(colored_rect)->getColor()).c_str());
+
+  copyColor(colored_rect,
+            make_holder<UserType, IColorable>("Circ", color_114514));
+
+  Tester::assert(same(weak::IColorable(colored_rect)->getColor(), color_114514),
+                 "Colored Rectangle should have color %s, got %s",
+                 toString(color_114514).c_str(),
+                 toString(weak::IColorable(colored_rect)->getColor()).c_str());
+}
+
+void testInterfaceCast() {
+  IBase ibase_a = makeColoredRectangle("A", color_yellow, 1, 2);
+
+  Tester::assert(!weak::IColorable(ibase_a).is_error(),
+                 "Dynamic cast from %s to IColorable should succeed",
+                 ibase_a->getId().c_str());
+
+  IBase ibase_b = makeRectangle("B", 3, 4);
+
+  Tester::assert(weak::IColorable(ibase_b).is_error(),
+                 "Dynamic cast from %s to IColorable should fail",
+                 ibase_b->getId().c_str());
+}
+
+void testArray() {
+  std::size_t m = 5;
+  std::size_t n = 2;
+
+  auto x = make_holder<UserType, IBase>("x");
+  auto y = make_holder<UserType, IBase>("y");
+
+  auto dst = array<IBase>::make(m, x);
+  auto src = array<IBase>::make(n, y);
+
+  auto res = exchangeArr(dst, src);
+
+  Tester::assert(dst.size() == m, "dst size should be %zu, got %zu", m,
+                 dst.size());
+  Tester::assert(src.size() == n, "src size should be %zu, got %zu", n,
+                 src.size());
+  Tester::assert(res.size() == n, "res size should be %zu, got %zu", n,
+                 res.size());
+
+  for (size_t i = 0; i < n; i++) {
+    Tester::assert(same(src[i], y), "src[%zu] should be %s, got %s", i,
+                   y->getId().c_str(), src[i]->getId().c_str());
+    Tester::assert(same(dst[i], y), "dst[%zu] should be %s, got %s", i,
+                   y->getId().c_str(), dst[i]->getId().c_str());
+    Tester::assert(same(res[i], x), "res[%zu] should be %s, got %s", i,
+                   x->getId().c_str(), res[i]->getId().c_str());
+  }
+  for (size_t i = n; i < m; i++) {
+    Tester::assert(same(dst[i], x), "dst[%zu] should be %s, got %s", i,
+                   x->getId().c_str(), dst[i]->getId().c_str());
+  }
+}
+
+void testOptional() {
+  auto some =
+      optional<IBase>(std::in_place, make_holder<UserType, IBase>("some"));
+  auto some_str = getIdFromOptional(some);
+  Tester::assert(some_str.has_value(), "some_str should have value");
+  Tester::assert(some_str.value() == some.value()->getId(),
+                 "some_str should be %s, got %s", some.value()->getId().c_str(),
+                 some_str.value().c_str());
+
+  auto none = optional<IBase>(std::nullopt);
+  auto none_str = getIdFromOptional(none);
+  Tester::assert(!none_str.has_value(), "none_str should not have value");
+}
+
+void testVector() {
+  array<IBase> src = {
+      make_holder<UserType, IBase>("a"),
+      make_holder<UserType, IBase>("b"),
+      make_holder<UserType, IBase>("c"),
+  };
+
+  vector<IBase> res = makeVec(src);
+  Tester::assert(res.size() == src.size(),
+                 "Vector result size should be %zu, got %zu", src.size(),
+                 res.size());
+  for (size_t i = 0; i < src.size(); i++) {
+    Tester::assert(res[i]->getId() == src[i]->getId(),
+                   "res[%zu] should be %s, got %s", i, src[i]->getId().c_str(),
+                   res[i]->getId().c_str());
+  }
+
+  vector<IBase> buf;
+  fillVec(src, buf);
+  Tester::assert(buf.size() == src.size(),
+                 "Vector buffer size should be %zu, got %zu", src.size(),
+                 buf.size());
+  for (size_t i = 0; i < src.size(); i++) {
+    Tester::assert(buf[i]->getId() == src[i]->getId(),
+                   "buf[%zu] should be %s, got %s", i, src[i]->getId().c_str(),
+                   buf[i]->getId().c_str());
+  }
+}
+
+void testMap() {
+  array<string> keys = {"a", "b", "c", "a"};
+  array<IBase> src = {
+      make_holder<UserType, IBase>("a"),
+      make_holder<UserType, IBase>("b"),
+      make_holder<UserType, IBase>("c"),
+      make_holder<UserType, IBase>("d"),
+  };
+
+  std::unordered_map<std::string, IBase> expected;
+  size_t n = std::min(keys.size(), src.size());
+  for (size_t i = 0; i < n; i++) {
+    expected.emplace(std::string(keys[i]), src[i]);
+  }
+
+  map<string, IBase> res = makeMap(keys, src);
+  Tester::assert(res.size() == expected.size(),
+                 "Map result size should be %zu, got %zu", expected.size(),
+                 res.size());
+  for (auto const &[key, value] : expected) {
+    auto it = res.find_item(key);
+    Tester::assert(it, "Map should contain key %s", key.c_str());
+    Tester::assert(it->second->getId() == value->getId(),
+                   "Map[%s] should be %s, got %s", key.c_str(),
+                   value->getId().c_str(), it->second->getId().c_str());
+  }
+
+  map<string, IBase> buf;
+  fillMap(keys, src, buf);
+  Tester::assert(buf.size() == expected.size(),
+                 "Map buffer size should be %zu, got %zu", expected.size(),
+                 buf.size());
+  for (auto const &[key, value] : expected) {
+    auto it = buf.find_item(key);
+    Tester::assert(it, "buffer should contain key %s", key.c_str());
+    Tester::assert(it->second->getId() == value->getId(),
+                   "buffer[%s] should be %s, got %s", key.c_str(),
+                   value->getId().c_str(), it->second->getId().c_str());
+  }
+}
+
+void testSet() {
+  array<string> src = {"a", "b", "c", "a"};
+
+  std::unordered_set<std::string> expected;
+  for (size_t i = 0; i < src.size(); i++) {
+    expected.emplace(std::string(src[i]));
+  }
+
+  set<string> res = makeSet(src);
+  Tester::assert(res.size() == expected.size(),
+                 "Set result size should be %zu, got %zu", expected.size(),
+                 res.size());
+  for (auto const &key : expected) {
+    auto it = res.find_item(key);
+    Tester::assert(it, "Set should contain key %s", key.c_str());
+  }
+
+  set<string> buf;
+  fillSet(src, buf);
+  Tester::assert(buf.size() == expected.size(),
+                 "Set buffer size should be %zu, got %zu", expected.size(),
+                 buf.size());
+  for (auto const &key : expected) {
+    auto it = buf.find_item(key);
+    Tester::assert(it, "buffer should contain key %s", key.c_str());
+  }
+}
+
+void testCallback() {
+  struct MyCallback {
     string f;
 
-    MyCallback(string_view f): f(f) {
-        std::cout << "Callback " << f << " made" << std::endl;
+    MyCallback(string_view f) : f(f) {
+      std::cout << "Callback " << f << " made" << std::endl;
     }
 
     ~MyCallback() {
-        std::cout << "Callback " << f << " deleted" << std::endl;
+      std::cout << "Callback " << f << " deleted" << std::endl;
     }
 
     string operator()(string_view a, string_view b) {
-        std::cout << "Callback " << f << " called" << std::endl;
-        return std::string(f) + "(" + a.c_str() + ", " + b.c_str() + ")";
+      std::cout << "Callback " << f << " called" << std::endl;
+      return std::string(f) + "(" + a.c_str() + ", " + b.c_str() + ")";
     }
-};
+  };
 
-void show_array(array_view<IBase> arr, string_view sv) {
-    std::cout << sv << ": ";
-    for (auto item : arr) {
-        std::cout << item->getId() << ", ";
-    }
-    std::cout << std::endl;
+  auto curried = currying(
+      make_holder<MyCallback, callback<string(string_view, string_view)>>("f"));
+  auto f = curried("abc");
+  auto x = f("123");
+  auto y = f("456");
+
+  auto expected_x = MyCallback("f")("abc", "123");
+  Tester::assert(x == expected_x, "x should be %s, got %s", expected_x.c_str(),
+                 x.c_str());
+
+  auto expected_y = MyCallback("f")("abc", "456");
+  Tester::assert(y == expected_y, "y should be %s, got %s", expected_y.c_str(),
+                 y.c_str());
+}
+
+void TestMemoryLeak() {
+  size_t remaining = 0;
+
+  for (auto *user : UserType::registry) {
+    std::cout << user->getId() << " is still alive" << std::endl;
+    remaining++;
+  }
+
+  Tester::assert(remaining == 0,
+                 "Memory leak detected: %zu UserType objects are still alive",
+                 remaining);
 }
 
 int main() {
-  ColorOrRGBOrName color_114514 =
-      ColorOrRGBOrName::make_rgb(RGB{0x11, 0x45, 0x14});
-  ColorOrRGBOrName color_yellow =
-      ColorOrRGBOrName::make_color(Color::key_t::yellow);
-  ColorOrRGBOrName color_miku = ColorOrRGBOrName::make_name(Name::key_t::BLUE);
-  ColorOrRGBOrName color_unknown = ColorOrRGBOrName::make_undefined();
+  Tester tester;
 
-  {
-    std::cout << "-------- Testing Union --------" << std::endl;
+  tester.run("testUnion", testUnion);
+  tester.run("testInterfaceCall", testInterfaceCall);
+  tester.run("testInterfaceCast", testInterfaceCast);
+  tester.run("testArray", testArray);
+  tester.run("testOptional", testOptional);
+  tester.run("testVector", testVector);
+  tester.run("testMap", testMap);
+  tester.run("testSet", testSet);
+  tester.run("testCallback", testCallback);
 
-    std::cout << toString(color_114514) << std::endl;
-    std::cout << toString(color_yellow) << std::endl;
-    std::cout << toString(color_miku) << std::endl;
-    std::cout << toString(color_unknown) << std::endl;
+  TestMemoryLeak();
 
-    if (Name *name_ptr = color_miku.get_name_ptr()) {
-      std::cout << "color_miku is holding name, name is " << *name_ptr
-                << std::endl;
-    } else {
-      std::cout << "Error" << std::endl;
-    }
-
-    if (color_miku.holds_name()) {
-      Name name_ref = color_miku.get_name_ref();
-      std::cout << "color_miku is holding name, name is " << name_ref
-                << std::endl;
-    } else {
-      std::cout << "Error" << std::endl;
-    }
-
-    color_miku.emplace_rgb(RGB{0x39, 0xC5, 0xBB});
-    std::cout << toString(color_miku) << std::endl;
-
-    switch (color_miku.get_tag()) {
-    case ColorOrRGBOrName::tag_t::color:
-      std::cout << "color_miku is holding color" << std::endl;
-      break;
-    case ColorOrRGBOrName::tag_t::rgb:
-      std::cout << "color_miku is holding rgb" << std::endl;
-      break;
-    case ColorOrRGBOrName::tag_t::name:
-      std::cout << "color_miku is holding name" << std::endl;
-      break;
-    default:
-      std::cout << "color_miku is holding other stuff" << std::endl;
-      break;
-    }
-  }
-
-  {
-    std::cout << "-------- Testing Interface Call --------" << std::endl;
-
-    class MyColoredObject {
-      std::string name;
-
-      ColorOrRGBOrName myColor;
-
-    public:
-      string getId() {
-        return name;
-      }
-
-      MyColoredObject(string_view id, ColorOrRGBOrName const &color)
-          : name(id), myColor(color) {
-        std::cout << getId() << " made" << std::endl;
-      }
-
-      ~MyColoredObject() {
-        std::cout << getId() << " deleted" << std::endl;
-      }
-
-      ColorOrRGBOrName getColor() {
-        return myColor;
-      }
-
-      void setColor(ColorOrRGBOrName const &color) {
-        myColor = color;
-      }
-    };
-
-    IColorable colored_circ =
-        make_holder<MyColoredObject, IColorable>("Circ", color_114514);
-    IShowable colored_rect = makeColoredRectangle("Rect", color_yellow, 5, 5);
-
-    colored_rect->show();
-    copyColor(colored_rect, colored_circ);
-    colored_rect->show();
-  }
-
-  {
-    std::cout << "-------- Testing Interface Cast --------" << std::endl;
-
-    IBase ibase_a = makeColoredRectangle("A", color_yellow, 1, 2);
-    IBase ibase_b = makeRectangle("B", 3, 4);
-
-    if (weak::IColorable icolorable_a = weak::IColorable(ibase_a)) {
-      std::cout << "A Dynamic Cast success" << std::endl;
-    } else {
-      std::cout << "A Dynamic Cast failed" << std::endl;
-    }
-
-    if (weak::IColorable icolorable_b = weak::IColorable(ibase_b)) {
-      std::cout << "B Dynamic Cast success" << std::endl;
-    } else {
-      std::cout << "B Dynamic Cast failed" << std::endl;
-    }
-
-    // You can also dynamic cast a `data_holder`.
-    data_holder obj = make_holder<UserType, IBase>("obj");
-
-    if (weak::IBase obj_as_ibase = weak::IBase(obj)) {
-      std::cout << "obj Dynamic Cast success" << std::endl;
-    } else {
-      std::cout << "obj Dynamic Cast failed" << std::endl;
-    }
-  }
-
-  {
-    std::cout << "-------- Testing Array --------" << std::endl;
-
-    auto show_array = [](array_view<IBase> arr, string_view sv) {
-      std::cout << sv << ": ";
-      for (auto item : arr) {
-        std::cout << item->getId() << ", ";
-      }
-      std::cout << std::endl;
-    };
-
-    auto dst = array<IBase>::make(5, make_holder<UserType, IBase>("x"));
-    auto src = array<IBase>::make(2, make_holder<UserType, IBase>("y"));
-
-    show_array(dst, "dst");
-    show_array(src, "src");
-
-    auto res = exchangeArr(dst, src);
-
-    show_array(dst, "dst");
-    show_array(src, "src");
-    show_array(res, "res");
-  }
-
-  {
-    std::cout << "-------- Testing Optional --------" << std::endl;
-
-    IBase obj = make_holder<UserType, IBase>("some");
-
-    testOptional(&obj);
-    testOptional(NULL);
-  }
-
-  {
-    std::cout << "-------- Testing Vector --------" << std::endl;
-
-    vector<IBase> vec_0;
-    vector<IBase> const vec_1 = vec_0;
-
-    fillVec(vec_0);
-
-    std::cout << "Vector = ";
-    for (size_t i = 0; i < vec_1.size(); i++) {
-      std::cout << vec_1[i]->getId() << ", ";
-    }
-    std::cout << std::endl;
-
-    std::cout << "Vector = ";
-    for (auto const &item : vec_1) {
-      std::cout << item->getId() << ", ";
-    }
-    std::cout << std::endl;
-  }
-
-  {
-    std::cout << "-------- Testing Map --------" << std::endl;
-
-    map<string, IBase> map_0;
-    map<string, IBase> const map_1 = map_0;
-
-    map_0.emplace<0>("a", make_holder<UserType, IBase>("a"));
-    map_0.emplace<0>("b", make_holder<UserType, IBase>("b"));
-
-    fillMap(map_0);
-
-    std::cout << "Map = ";
-    map_1.accept([](std::pair<string, IBase> const &item) {
-      std::cout << item.first << ": " << item.second->getId() << ", ";
-    });
-    std::cout << std::endl;
-
-    std::cout << "Map = ";
-    for (auto const &[key, value] : map_1) {
-      std::cout << key << ": " << value->getId() << ", ";
-    }
-    std::cout << std::endl;
-  }
-
-  {
-    std::cout << "-------- Testing Set --------" << std::endl;
-
-    set<string> set_0;
-    set<string> const set_1 = set_0;
-
-    set_0.emplace("a");
-
-    fillSet(set_0);
-
-    std::cout << "Set = ";
-    set_1.accept([](string_view item) {
-      std::cout << item << ", ";
-    });
-    std::cout << std::endl;
-
-    std::cout << "Set = ";
-    for (auto const &key : set_1) {
-      std::cout << key << ", ";
-    }
-    std::cout << std::endl;
-  }
-
-  {
-    std::cout << "-------- Testing Callback --------" << std::endl;
-
-    struct MyCallback {
-      string f;
-
-      MyCallback(string_view f) : f(f) {
-        std::cout << "Callback " << f << " made" << std::endl;
-      }
-
-      ~MyCallback() {
-        std::cout << "Callback " << f << " deleted" << std::endl;
-      }
-
-      string operator()(string_view a, string_view b) {
-        std::cout << "Callback " << f << " called" << std::endl;
-        return std::string(f) + "(" + a.c_str() + ", " + b.c_str() + ")";
-      }
-    };
-
-    auto ocp =
-        currying(callback<string(string_view, string_view)>::from<MyCallback>(
-            "f"))("abc");
-    auto res = ocp("123");
-
-    std::cout << "res = " << res << std::endl;
-  }
+  return tester.report();
 }

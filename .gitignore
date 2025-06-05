@@ -22,7 +22,8 @@ compiler/taihe/parse/antlr
 compiler/taihe.egg-info
 
 # Generated directories
-**/*generated
+**/generated
+compile_flags.txt
 
 # files
 *.log

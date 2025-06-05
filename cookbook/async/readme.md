@@ -111,11 +111,11 @@ export function add(a: int, b: int): Promise<int> {
 console.log("addSync: ", async_test.addSync(1, 2))
 
 // 使用 async 版本
-async_test.add(10, 20, (error: Error, data?: int) => {
-    if (!error.message) {
-        console.log("main finsih test async success ", data);
-    } else {
+async_test.add(10, 20, (error: Error | null, data?: int) => {
+    if (error) {
         console.log("main finsih test async ERROR ", error);
+    } else {
+        console.log("main finsih test async success ", data);
     }
 })
 

@@ -72,7 +72,7 @@ class AnalysisManager:
         key = CacheKey(analysis_type, hashable_args, hashable_kwargs)
 
         if cached := self._cache.get(key):
-            return cast("A", cached)
+            return cast(A, cached)
 
         new_instance = object.__new__(analysis_type)
         new_instance.__init__(self, *args, **kwargs)

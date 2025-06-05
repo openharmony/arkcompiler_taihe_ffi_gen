@@ -33,6 +33,20 @@ env_guard::~env_guard() {
   }
 }
 
+ref_guard::ref_guard(ani_env *env, ani_ref val) {
+  env->GlobalReference_Create(val, &ref);
+}
+
+ref_guard::~ref_guard() {
+  // These code are commented since ANI VM is already destroyed when global
+  // `ref_guard` is going to be destructed. It should be uncommented once ANI
+  // fix this.
+  //
+  // env_guard guard;
+  // ani_env *env = guard.get_env();
+  // env->GlobalReference_Delete(ref);
+}
+
 static ani_error create_ani_error(ani_env *env, taihe::string_view msg) {
   ani_class errCls;
   char const *className = "Lescompat/Error;";

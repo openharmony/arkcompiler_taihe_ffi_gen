@@ -201,7 +201,7 @@ class NAPICodeGenerator:
             f"include/{struct_napi_info.decl_header}",
         ) as struct_napi_decl_target:
             struct_napi_decl_target.add_include("node/node_api.h")
-            struct_napi_decl_target.add_include(struct_cpp_info.decl_header)
+            struct_napi_decl_target.add_include(struct_cpp_info.defn_header)
             struct_napi_decl_target.writelns(
                 f"{struct_cpp_info.as_owner} {struct_napi_info.from_napi_func_name}(napi_env env, napi_value napi_obj);",
                 f"napi_value {struct_napi_info.into_napi_func_name}(napi_env env, {struct_cpp_info.as_param} cpp_obj);",
@@ -332,7 +332,7 @@ class NAPICodeGenerator:
             f"include/{iface_napi_info.decl_header}",
         ) as iface_napi_decl_target:
             iface_napi_decl_target.add_include("node/node_api.h")
-            iface_napi_decl_target.add_include(iface_cpp_info.decl_header)
+            iface_napi_decl_target.add_include(iface_cpp_info.defn_header)
             iface_napi_decl_target.writelns(
                 f"{iface_cpp_info.as_owner} {iface_napi_info.from_napi_func_name}(napi_env env, napi_value napi_obj);",
                 f"napi_value {iface_napi_info.into_napi_func_name}(napi_env env, {iface_cpp_info.as_owner} cpp_obj);",

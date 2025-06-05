@@ -18,7 +18,6 @@ from typing_extensions import override
 
 if TYPE_CHECKING:
     from taihe.semantics.declarations import (
-        AdhocTypeRefDecl,
         CallbackTypeRefDecl,
         Decl,
         DeclarationImportDecl,
@@ -200,9 +199,6 @@ class DeclVisitor(Generic[T]):
     def visit_type_ref_decl(self, d: "TypeRefDecl") -> T:
         return self.visit_decl(d)
 
-    def visit_adhoc_type_ref_decl(self, d: "AdhocTypeRefDecl") -> T:
-        return self.visit_type_ref_decl(d)
-
     def visit_short_type_ref_decl(self, d: "ShortTypeRefDecl") -> T:
         return self.visit_type_ref_decl(d)
 
@@ -220,7 +216,7 @@ class DeclVisitor(Generic[T]):
     def visit_package_ref_decl(self, d: "PackageRefDecl") -> T:
         return self.visit_decl(d)
 
-    def visit_decl_ref_decl(self, d: "DeclarationRefDecl") -> T:
+    def visit_declaration_ref_decl(self, d: "DeclarationRefDecl") -> T:
         return self.visit_decl(d)
 
     ### Imports ###
@@ -311,10 +307,6 @@ class RecursiveDeclVisitor(DeclVisitor[None]):
         return self.visit_decl(d)
 
     @override
-    def visit_adhoc_type_ref_decl(self, d: "AdhocTypeRefDecl") -> None:
-        return self.visit_type_ref_decl(d)
-
-    @override
     def visit_short_type_ref_decl(self, d: "ShortTypeRefDecl") -> None:
         return self.visit_type_ref_decl(d)
 
@@ -346,7 +338,7 @@ class RecursiveDeclVisitor(DeclVisitor[None]):
         return self.visit_decl(d)
 
     @override
-    def visit_decl_ref_decl(self, d: "DeclarationRefDecl") -> None:
+    def visit_declaration_ref_decl(self, d: "DeclarationRefDecl") -> None:
         self.handle_decl(d.pkg_ref)
 
         return self.visit_decl(d)
@@ -465,20 +457,13 @@ class RecursiveDeclVisitor(DeclVisitor[None]):
 
     @override
     def visit_package_decl(self, p: "PackageDecl") -> None:
-        for i in p.pkg_imports.values():
-            self.handle_decl(i)
-        for i in p.decl_imports.values():
+        for i in p.pkg_imports:
             self.handle_decl(i)
 
-        for i in p.functions:
+        for i in p.decl_imports:
             self.handle_decl(i)
-        for i in p.enums:
-            self.handle_decl(i)
-        for i in p.structs:
-            self.handle_decl(i)
-        for i in p.unions:
-            self.handle_decl(i)
-        for i in p.interfaces:
+
+        for i in p.declarations:
             self.handle_decl(i)
 
         return self.visit_decl(p)
