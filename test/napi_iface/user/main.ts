@@ -1,4 +1,4 @@
-import { makeIBase, copyIBase, makeIShape, IBase } from "../author_generated/iface_test";
+import { makeIBase, copyIBase, makeIShape, IBase } from "../generated/iface_test";
 
 class BaseImpl implements IBase {
   getId(): string {

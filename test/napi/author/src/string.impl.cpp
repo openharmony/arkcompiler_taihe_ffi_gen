@@ -1,7 +1,7 @@
 #include "string.impl.hpp"
 
 taihe::string ohos_concat_str(taihe::string_view a, taihe::string_view b) {
-  return concat(a, b);
+  return a + b;
 }
 
 taihe::string ohos_int_to_str(int32_t n) {

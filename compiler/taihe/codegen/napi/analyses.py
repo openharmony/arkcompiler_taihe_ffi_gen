@@ -475,7 +475,7 @@ class CallbackTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[CallbackType])
                         f"return;",
                     )
         target.writelns(
-            f"{self.cpp_info.as_owner} {cpp_result} = {self.cpp_info.as_owner}::from<{cpp_impl_class}>(env, {napi_value});",
+            f"{self.cpp_info.as_owner} {cpp_result} = ::taihe::make_holder<{cpp_impl_class}, {self.cpp_info.as_owner}>(env, {napi_value});",
         )
 
     def into_napi(

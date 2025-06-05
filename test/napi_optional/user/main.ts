@@ -1,4 +1,4 @@
-import { showOptionalInt, makeOptionalInt } from "../author_generated/opt_test";
+import { showOptionalInt, makeOptionalInt } from "../generated/opt_test";
 
 function main() {
   showOptionalInt(1);

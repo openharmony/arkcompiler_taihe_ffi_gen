@@ -1,4 +1,4 @@
-import { from_rgb, to_rgb, to_color, from_color, RGB, Color } from "../author_generated/struct_test";
+import { from_rgb, to_rgb, to_color, from_color, RGB, Color } from "../generated/struct_test";
 
 function main() {
   let rgb: RGB = {r: 1, g: 2, b: 3};

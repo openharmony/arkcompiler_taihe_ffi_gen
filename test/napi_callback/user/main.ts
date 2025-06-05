@@ -1,4 +1,4 @@
-import { test_cb_v, test_cb_i, test_cb_s, test_cb_rs, test_cb_struct, Data } from "../author_generated/cb_test";
+import { test_cb_v, test_cb_i, test_cb_s, test_cb_rs, test_cb_struct, Data } from "../generated/cb_test";
 
 function main() {
   test_cb_v((): void => {

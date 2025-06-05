@@ -25,6 +25,7 @@ class UserType(Enum):
 
     STS = "sts"
     CPP = "cpp"
+    NAPI = "napi"
 
 
 @dataclass
@@ -274,6 +275,8 @@ class BuildSystem(BuildUtils):
             self.create_user_ets()
         if self.user == UserType.CPP:
             self.create_user_cpp()
+        if self.user == UserType.NAPI:
+            self.create_user_ts()
 
     def create_idl(self) -> None:
         """Create a simple example IDL file."""
@@ -332,6 +335,19 @@ class BuildSystem(BuildUtils):
                 f"}}\n"
             )
 
+    def create_user_ts(self) -> None:
+        """Create a simple example user TS file."""
+        self.create_directory(self.user_dir)
+        with open(self.user_dir / "main.ts", "w") as f:
+            f.write(
+                f'import * as hello from "../generated/hello";\n'
+                f"\n"
+                f"function main() {{\n"
+                f"    hello.sayHello();\n"
+                f"}}\n"
+                f"main()\n"
+            )
+
     def generate_and_build(self) -> None:
         """Generate code and build the project."""
         self.generate()
@@ -357,6 +373,8 @@ class BuildSystem(BuildUtils):
             backend_names.append("ani-bridge")
         if self.user == UserType.CPP:
             backend_names.append("cpp-user")
+        if self.user == UserType.NAPI:
+            backend_names.append("napi-bridge")
         if self.should_run_pretty_print:
             backend_names.append("pretty-print")
         backends = registry.collect_required_backends(backend_names)
@@ -463,6 +481,12 @@ class BuildSystem(BuildUtils):
 
             # Run the executable
             self.run_exe()
+        elif self.user == UserType.NAPI:
+            # Compile the shared library
+            self.compile_and_link_node()
+
+            # Compiler and run ts file
+            self.compile_and_run_ts()
 
         self.logger.info("Build and execution completed successfully")
 

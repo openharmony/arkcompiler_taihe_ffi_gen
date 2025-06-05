@@ -44,6 +44,16 @@ run-core-tests() {
     done
 }
 
+run-napi-tests() {
+    echo "Running NAPI tests..."
+    set -euo pipefail
+    # Sort tests by modification time, newest first
+    for item in $(find ../test/napi_* -maxdepth 0 -type d -printf "%T@ %p\n" | sort -nr | cut -d' ' -f2-); do
+        echo "Testing: $item"
+        coverage run --parallel-mode ./run-test test "$item" --user napi
+    done
+}
+
 # run-ani-tests ${1:-}
 if [ $# -eq 0 ]; then
   echo "No PANDA_HOME provided, running without -DPANDA_HOME"
