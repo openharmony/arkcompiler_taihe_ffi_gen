@@ -1,3 +1,4 @@
+from enum import Enum
 from json import dumps
 
 from taihe.codegen.abi.analyses import (
@@ -31,6 +32,12 @@ from taihe.semantics.declarations import (
 from taihe.semantics.types import Type
 from taihe.utils.analyses import AnalysisManager
 from taihe.utils.outputs import OutputConfig
+
+
+class FuncKind(Enum):
+    GLOBAL = "export function "
+    STATIC = "static "
+    INTERFACE = ""
 
 
 class STSCodeGenerator:
@@ -241,7 +248,15 @@ class STSCodeGenerator:
         funcs: list[GlobFuncDecl],
         target: StsWriter,
     ):
-        # good on_off
+        self.gen_global_good_on_off_funcs(funcs, target)
+        self.gen_global_bad_on_off_funcs(funcs, target)
+        self.gen_global_regular_funcs(funcs, target)
+
+    def gen_global_good_on_off_funcs(
+        self,
+        funcs: list[GlobFuncDecl],
+        target: StsWriter,
+    ):
         good_on_off_funcs = self.stat_good_on_off_funcs(funcs)
         for func_name, type_name, func in good_on_off_funcs:
             func_ani_info = GlobFuncANIInfo.get(self.am, func)
@@ -274,7 +289,12 @@ class STSCodeGenerator:
                 target.writelns(
                     f"return {sts_native_call};",
                 )
-        # bad on_off
+
+    def gen_global_bad_on_off_funcs(
+        self,
+        funcs: list[GlobFuncDecl],
+        target: StsWriter,
+    ):
         bad_on_off_funcs = self.stat_bad_on_off_funcs(funcs)
         for func_name, func_list in bad_on_off_funcs.items():
             max_sts_params = max(
@@ -324,7 +344,12 @@ class STSCodeGenerator:
                     target.writelns(
                         f"default: throw new Error(`Unknown type: ${{type}}`);",
                     )
-        # other
+
+    def gen_global_regular_funcs(
+        self,
+        funcs: list[GlobFuncDecl],
+        target: StsWriter,
+    ):
         for func in funcs:
             func_ani_info = GlobFuncANIInfo.get(self.am, func)
             sts_params = []
@@ -335,7 +360,6 @@ class STSCodeGenerator:
                     f"{sts_param.name}: {type_ani_info.sts_type_in(target)}"
                 )
                 sts_args.append(sts_param.name)
-            sts_params_str = ", ".join(sts_params)
             sts_native_call = func_ani_info.call_native_with(sts_args)
             if return_ty_ref := func.return_ty_ref:
                 type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
@@ -344,77 +368,37 @@ class STSCodeGenerator:
             else:
                 sts_return_ty_name = "void"
                 sts_resolved_ty_name = "undefined"
-            # normal
             if (
                 sts_func_name := func_ani_info.sts_func_name
             ) is not None and func_ani_info.on_off_type is None:
-                with target.indented(
-                    f"export function {sts_func_name}({sts_params_str}): {sts_return_ty_name} {{",
-                    f"}}",
-                ):
-                    target.writelns(
-                        f"return {sts_native_call};",
-                    )
-                # promise
+                self.gen_normal_func(
+                    sts_func_name,
+                    sts_params,
+                    sts_return_ty_name,
+                    sts_native_call,
+                    target,
+                    FuncKind.GLOBAL,
+                )
                 if (sts_promise_name := func_ani_info.sts_promise_name) is not None:
-                    with target.indented(
-                        f"export function {sts_promise_name}({sts_params_str}): Promise<{sts_return_ty_name}> {{",
-                        f"}}",
-                    ):
-                        with target.indented(
-                            f"return new Promise<{sts_return_ty_name}>((resolve, reject): void => {{",
-                            f"}});",
-                        ):
-                            with target.indented(
-                                f"taskpool.execute((): {sts_return_ty_name} => {{",
-                                f"}})",
-                            ):
-                                target.writelns(
-                                    f"return {sts_native_call};",
-                                )
-                            with target.indented(
-                                f".then((ret: NullishType): void => {{",
-                                f"}})",
-                            ):
-                                target.writelns(
-                                    f"resolve(ret as {sts_resolved_ty_name});",
-                                )
-                            with target.indented(
-                                f".catch((ret: NullishType): void => {{",
-                                f"}});",
-                            ):
-                                target.writelns(
-                                    f"reject(ret as Error);",
-                                )
-                # async
+                    self.gen_promise_function(
+                        sts_promise_name,
+                        sts_params,
+                        sts_return_ty_name,
+                        sts_native_call,
+                        sts_resolved_ty_name,
+                        target,
+                        FuncKind.GLOBAL,
+                    )
                 if (sts_async_name := func_ani_info.sts_async_name) is not None:
-                    callback_param = f"callback: AsyncCallback<{sts_return_ty_name}>"
-                    sts_params_with_cb_str = ", ".join([*sts_params, callback_param])
-                    with target.indented(
-                        f"export function {sts_async_name}({sts_params_with_cb_str}): void {{",
-                        f"}}",
-                    ):
-                        with target.indented(
-                            f"taskpool.execute((): {sts_return_ty_name} => {{",
-                            f"}})",
-                        ):
-                            target.writelns(
-                                f"return {sts_native_call};",
-                            )
-                        with target.indented(
-                            f".then((ret: NullishType): void => {{",
-                            f"}})",
-                        ):
-                            target.writelns(
-                                f"callback(null, ret as {sts_resolved_ty_name});",
-                            )
-                        with target.indented(
-                            f".catch((ret: NullishType): void => {{",
-                            f"}});",
-                        ):
-                            target.writelns(
-                                f"callback(ret as BusinessError, undefined);",
-                            )
+                    self.gen_async_function(
+                        sts_async_name,
+                        sts_params,
+                        sts_return_ty_name,
+                        sts_native_call,
+                        sts_resolved_ty_name,
+                        target,
+                        FuncKind.GLOBAL,
+                    )
 
     def gen_enum(
         self,
@@ -597,7 +581,14 @@ class STSCodeGenerator:
         methods: list[IfaceMethodDecl],
         target: StsWriter,
     ):
-        # on_off
+        self.gen_iface_on_off_methods_decl(methods, target)
+        self.gen_iface_regular_methods_decl(methods, target)
+
+    def gen_iface_on_off_methods_decl(
+        self,
+        methods: list[IfaceMethodDecl],
+        target: StsWriter,
+    ):
         method_on_off_map = self.stat_on_off_methods(methods)
         for (
             sts_method_name,
@@ -627,7 +618,12 @@ class STSCodeGenerator:
             target.writelns(
                 f"{sts_method_name}({sts_params_str}): {sts_return_ty_name};",
             )
-        # other
+
+    def gen_iface_regular_methods_decl(
+        self,
+        methods: list[IfaceMethodDecl],
+        target: StsWriter,
+    ):
         for method in methods:
             method_ani_info = IfaceMethodANIInfo.get(self.am, method)
             sts_params = []
@@ -636,41 +632,109 @@ class STSCodeGenerator:
                 sts_params.append(
                     f"{sts_param.name}: {type_ani_info.sts_type_in(target)}"
                 )
-            sts_params_str = ", ".join(sts_params)
             if return_ty_ref := method.return_ty_ref:
                 type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
                 sts_return_ty_name = type_ani_info.sts_type_in(target)
             else:
                 sts_return_ty_name = "void"
-            # normal
             if (
                 sts_method_name := method_ani_info.sts_method_name
             ) is not None and method_ani_info.on_off_type is None:
-                target.writelns(
-                    f"{sts_method_name}({sts_params_str}): {sts_return_ty_name};",
+                self.gen_iface_normal_meth_decl(
+                    sts_method_name,
+                    sts_params,
+                    sts_return_ty_name,
+                    target,
                 )
-                # promise
                 if (sts_promise_name := method_ani_info.sts_promise_name) is not None:
-                    target.writelns(
-                        f"{sts_promise_name}({sts_params_str}): Promise<{sts_return_ty_name}>;",
+                    self.gen_iface_promise_meth_decl(
+                        sts_promise_name,
+                        sts_params,
+                        sts_return_ty_name,
+                        target,
                     )
-                # async
                 if (sts_async_name := method_ani_info.sts_async_name) is not None:
-                    callback_param = f"callback: AsyncCallback<{sts_return_ty_name}>"
-                    sts_params_with_cb_str = ", ".join([*sts_params, callback_param])
-                    target.writelns(
-                        f"{sts_async_name}({sts_params_with_cb_str}): void;",
+                    self.gen_iface_async_meth_decl(
+                        sts_async_name,
+                        sts_params,
+                        sts_return_ty_name,
+                        target,
                     )
-            # getter
             if (get_name := method_ani_info.get_name) is not None:
-                target.writelns(
-                    f"get {get_name}({sts_params_str}): {sts_return_ty_name};",
+                self.gen_iface_get_meth_decl(
+                    get_name,
+                    sts_params,
+                    sts_return_ty_name,
+                    target,
                 )
-            # setter
             if (set_name := method_ani_info.set_name) is not None:
-                target.writelns(
-                    f"set {set_name}({sts_params_str});",
+                self.gen_iface_set_meth_decl(
+                    set_name,
+                    sts_params,
+                    sts_return_ty_name,
+                    target,
                 )
+
+    def gen_iface_normal_meth_decl(
+        self,
+        sts_method_name: str,
+        sts_params: list[str],
+        sts_return_ty_name: str,
+        target: StsWriter,
+    ):
+        sts_params_str = ", ".join(sts_params)
+        target.writelns(
+            f"{sts_method_name}({sts_params_str}): {sts_return_ty_name};",
+        )
+
+    def gen_iface_promise_meth_decl(
+        self,
+        sts_promise_name: str,
+        sts_params: list[str],
+        sts_return_ty_name: str,
+        target: StsWriter,
+    ):
+        sts_params_str = ", ".join(sts_params)
+        target.writelns(
+            f"{sts_promise_name}({sts_params_str}): Promise<{sts_return_ty_name}>;",
+        )
+
+    def gen_iface_async_meth_decl(
+        self,
+        sts_async_name: str,
+        sts_params: list[str],
+        sts_return_ty_name: str,
+        target: StsWriter,
+    ):
+        callback_param = f"callback: AsyncCallback<{sts_return_ty_name}>"
+        sts_params_with_cb_str = ", ".join([*sts_params, callback_param])
+        target.writelns(
+            f"{sts_async_name}({sts_params_with_cb_str}): void;",
+        )
+
+    def gen_iface_get_meth_decl(
+        self,
+        get_name: str,
+        sts_params: list[str],
+        sts_return_ty_name: str,
+        target: StsWriter,
+    ):
+        sts_params_str = ", ".join(sts_params)
+        target.writelns(
+            f"get {get_name}({sts_params_str}): {sts_return_ty_name};",
+        )
+
+    def gen_iface_set_meth_decl(
+        self,
+        set_name: str,
+        sts_params: list[str],
+        sts_return_ty_name: str,
+        target: StsWriter,
+    ):
+        sts_params_str = ", ".join(sts_params)
+        target.writelns(
+            f"set {set_name}({sts_params_str});",
+        )
 
     def gen_iface_class(
         self,
@@ -718,40 +782,51 @@ class STSCodeGenerator:
                 )
             ctors = ctors_map.get(iface.name, [])
             for ctor in ctors:
-                ctor_ani_info = GlobFuncANIInfo.get(self.am, ctor)
-                sts_params = []
-                sts_args = []
-                for sts_param in ctor_ani_info.sts_params:
-                    type_ani_info = TypeANIInfo.get(
-                        self.am, sts_param.ty_ref.resolved_ty
-                    )
-                    sts_params.append(
-                        f"{sts_param.name}: {type_ani_info.sts_type_in(target)}"
-                    )
-                    sts_args.append(sts_param.name)
-                sts_params_str = ", ".join(sts_params)
-                sts_native_call = ctor_ani_info.call_native_with(sts_args)
-                with target.indented(
-                    f"constructor({sts_params_str}) {{",
-                    f"}}",
-                ):
-                    target.writelns(
-                        f"let temp = {sts_native_call} as {iface_ani_info.sts_impl_name};",
-                        f"this._data_ptr = temp._data_ptr;",
-                        f"this._vtbl_ptr = temp._vtbl_ptr;",
-                    )
+                self.gen_iface_ctor(ctor, iface_ani_info, target)
             self.gen_static_funcs(statics_map.get(iface.name, []), target)
             iface_abi_info = IfaceABIInfo.get(self.am, iface)
             for ancestor in iface_abi_info.ancestor_dict:
                 self.gen_native_methods(ancestor.methods, target)
                 self.gen_iface_methods(ancestor.methods, target)
 
+    def gen_iface_ctor(
+        self,
+        ctor: GlobFuncDecl,
+        iface_ani_info: IfaceANIInfo,
+        target: StsWriter,
+    ):
+        ctor_ani_info = GlobFuncANIInfo.get(self.am, ctor)
+        sts_params = []
+        sts_args = []
+        for sts_param in ctor_ani_info.sts_params:
+            type_ani_info = TypeANIInfo.get(self.am, sts_param.ty_ref.resolved_ty)
+            sts_params.append(f"{sts_param.name}: {type_ani_info.sts_type_in(target)}")
+            sts_args.append(sts_param.name)
+        sts_params_str = ", ".join(sts_params)
+        sts_native_call = ctor_ani_info.call_native_with(sts_args)
+        with target.indented(
+            f"constructor({sts_params_str}) {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"let temp = {sts_native_call} as {iface_ani_info.sts_impl_name};",
+                f"this._data_ptr = temp._data_ptr;",
+                f"this._vtbl_ptr = temp._vtbl_ptr;",
+            )
+
     def gen_static_funcs(
         self,
         funcs: list[GlobFuncDecl],
         target: StsWriter,
     ):
-        # on_off
+        self.gen_static_on_off_funcs(funcs, target)
+        self.gen_static_regular_funcs(funcs, target)
+
+    def gen_static_on_off_funcs(
+        self,
+        funcs: list[GlobFuncDecl],
+        target: StsWriter,
+    ):
         func_on_off_map = self.stat_on_off_funcs(funcs)
         for (
             sts_func_name,
@@ -808,7 +883,12 @@ class STSCodeGenerator:
                     target.writelns(
                         f"default: throw new Error(`Unknown type: ${{type}}`);",
                     )
-        # other
+
+    def gen_static_regular_funcs(
+        self,
+        funcs: list[GlobFuncDecl],
+        target: StsWriter,
+    ):
         for func in funcs:
             func_ani_info = GlobFuncANIInfo.get(self.am, func)
             sts_params = []
@@ -819,7 +899,6 @@ class STSCodeGenerator:
                     f"{sts_param.name}: {type_ani_info.sts_type_in(target)}"
                 )
                 sts_args.append(sts_param.name)
-            sts_params_str = ", ".join(sts_params)
             sts_native_call = func_ani_info.call_native_with(sts_args)
             if return_ty_ref := func.return_ty_ref:
                 type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
@@ -828,95 +907,55 @@ class STSCodeGenerator:
             else:
                 sts_return_ty_name = "void"
                 sts_resolved_ty_name = "undefined"
-            # normal
             if (
                 sts_func_name := func_ani_info.sts_func_name
             ) is not None and func_ani_info.on_off_type is None:
-                with target.indented(
-                    f"static {sts_func_name}({sts_params_str}): {sts_return_ty_name} {{",
-                    f"}}",
-                ):
-                    target.writelns(
-                        f"return {sts_native_call};",
-                    )
-                # promise
+                self.gen_normal_func(
+                    sts_func_name,
+                    sts_params,
+                    sts_return_ty_name,
+                    sts_native_call,
+                    target,
+                    FuncKind.STATIC,
+                )
                 if (sts_promise_name := func_ani_info.sts_promise_name) is not None:
-                    with target.indented(
-                        f"static {sts_promise_name}({sts_params_str}): Promise<{sts_return_ty_name}> {{",
-                        f"}}",
-                    ):
-                        with target.indented(
-                            f"return new Promise<{sts_return_ty_name}>((resolve, reject): void => {{",
-                            f"}});",
-                        ):
-                            with target.indented(
-                                f"taskpool.execute((): {sts_return_ty_name} => {{",
-                                f"}})",
-                            ):
-                                target.writelns(
-                                    f"return {sts_native_call};",
-                                )
-                            with target.indented(
-                                f".then((ret: NullishType): void => {{",
-                                f"}})",
-                            ):
-                                target.writelns(
-                                    f"resolve(ret as {sts_resolved_ty_name});",
-                                )
-                            with target.indented(
-                                f".catch((ret: NullishType): void => {{",
-                                f"}});",
-                            ):
-                                target.writelns(
-                                    f"reject(ret as Error);",
-                                )
-                # async
+                    self.gen_promise_function(
+                        sts_promise_name,
+                        sts_params,
+                        sts_return_ty_name,
+                        sts_native_call,
+                        sts_resolved_ty_name,
+                        target,
+                        FuncKind.STATIC,
+                    )
                 if (sts_async_name := func_ani_info.sts_async_name) is not None:
-                    callback_param = f"callback: AsyncCallback<{sts_return_ty_name}>"
-                    sts_params_with_cb_str = ", ".join([*sts_params, callback_param])
-                    with target.indented(
-                        f"static {sts_async_name}({sts_params_with_cb_str}): void {{",
-                        f"}}",
-                    ):
-                        with target.indented(
-                            f"taskpool.execute((): {sts_return_ty_name} => {{",
-                            f"}})",
-                        ):
-                            target.writelns(
-                                f"return {sts_native_call};",
-                            )
-                        with target.indented(
-                            f".then((ret: NullishType): void => {{",
-                            f"}})",
-                        ):
-                            target.writelns(
-                                f"callback(null, ret as {sts_resolved_ty_name});",
-                            )
-                        with target.indented(
-                            f".catch((ret: NullishType): void => {{",
-                            f"}});",
-                        ):
-                            target.writelns(
-                                f"callback(ret as BusinessError, undefined);",
-                            )
-            # getter
+                    self.gen_async_function(
+                        sts_async_name,
+                        sts_params,
+                        sts_return_ty_name,
+                        sts_native_call,
+                        sts_resolved_ty_name,
+                        target,
+                        FuncKind.STATIC,
+                    )
             if (get_name := func_ani_info.get_name) is not None:
-                with target.indented(
-                    f"static get {get_name}({sts_params_str}): {sts_return_ty_name} {{",
-                    f"}}",
-                ):
-                    target.writelns(
-                        f"return {sts_native_call};",
-                    )
-            # setter
+                self.gen_get_func(
+                    get_name,
+                    sts_params,
+                    sts_return_ty_name,
+                    sts_native_call,
+                    target,
+                    FuncKind.STATIC,
+                )
             if (set_name := func_ani_info.set_name) is not None:
-                with target.indented(
-                    f"static set {set_name}({sts_params_str}) {{",
-                    f"}}",
-                ):
-                    target.writelns(
-                        f"return {sts_native_call};",
-                    )
+                self.gen_set_func(
+                    set_name,
+                    sts_params,
+                    sts_return_ty_name,
+                    sts_native_call,
+                    target,
+                    FuncKind.STATIC,
+                )
 
     def gen_native_methods(
         self,
@@ -947,7 +986,14 @@ class STSCodeGenerator:
         methods: list[IfaceMethodDecl],
         target: StsWriter,
     ):
-        # on_off
+        self.gen_iface_on_off_meths(methods, target)
+        self.gen_iface_regular_meths(methods, target)
+
+    def gen_iface_on_off_meths(
+        self,
+        methods: list[IfaceMethodDecl],
+        target: StsWriter,
+    ):
         method_on_off_map = self.stat_on_off_methods(methods)
         for (
             sts_method_name,
@@ -1006,7 +1052,12 @@ class STSCodeGenerator:
                     target.writelns(
                         f"default: throw new Error(`Unknown type: ${{type}}`);",
                     )
-        # other
+
+    def gen_iface_regular_meths(
+        self,
+        methods: list[IfaceMethodDecl],
+        target: StsWriter,
+    ):
         for method in methods:
             method_ani_info = IfaceMethodANIInfo.get(self.am, method)
             sts_params = []
@@ -1017,7 +1068,6 @@ class STSCodeGenerator:
                     f"{sts_param.name}: {type_ani_info.sts_type_in(target)}"
                 )
                 sts_args.append(sts_param.name)
-            sts_params_str = ", ".join(sts_params)
             sts_native_call = method_ani_info.call_native_with("this", sts_args)
             if return_ty_ref := method.return_ty_ref:
                 type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
@@ -1026,95 +1076,205 @@ class STSCodeGenerator:
             else:
                 sts_return_ty_name = "void"
                 sts_resolved_ty_name = "undefined"
-            # normal
             if (
                 sts_method_name := method_ani_info.sts_method_name
             ) is not None and method_ani_info.on_off_type is None:
-                with target.indented(
-                    f"{sts_method_name}({sts_params_str}): {sts_return_ty_name} {{",
-                    f"}}",
-                ):
-                    target.writelns(
-                        f"return {sts_native_call};",
-                    )
-                # promise
+                self.gen_normal_func(
+                    sts_method_name,
+                    sts_params,
+                    sts_return_ty_name,
+                    sts_native_call,
+                    target,
+                    FuncKind.INTERFACE,
+                )
                 if (sts_promise_name := method_ani_info.sts_promise_name) is not None:
-                    with target.indented(
-                        f"{sts_promise_name}({sts_params_str}): Promise<{sts_return_ty_name}> {{",
-                        f"}}",
-                    ):
-                        with target.indented(
-                            f"return new Promise<{sts_return_ty_name}>((resolve, reject): void => {{",
-                            f"}});",
-                        ):
-                            with target.indented(
-                                f"taskpool.execute((): {sts_return_ty_name} => {{",
-                                f"}})",
-                            ):
-                                target.writelns(
-                                    f"return {sts_native_call};",
-                                )
-                            with target.indented(
-                                f".then((ret: NullishType): void => {{",
-                                f"}})",
-                            ):
-                                target.writelns(
-                                    f"resolve(ret as {sts_resolved_ty_name});",
-                                )
-                            with target.indented(
-                                f".catch((ret: NullishType): void => {{",
-                                f"}});",
-                            ):
-                                target.writelns(
-                                    f"reject(ret as Error);",
-                                )
-                # async
+                    self.gen_promise_function(
+                        sts_promise_name,
+                        sts_params,
+                        sts_return_ty_name,
+                        sts_native_call,
+                        sts_resolved_ty_name,
+                        target,
+                        FuncKind.INTERFACE,
+                    )
                 if (sts_async_name := method_ani_info.sts_async_name) is not None:
-                    callback_param = f"callback: AsyncCallback<{sts_return_ty_name}>"
-                    sts_params_with_cb_str = ", ".join([*sts_params, callback_param])
-                    with target.indented(
-                        f"{sts_async_name}({sts_params_with_cb_str}): void {{",
-                        f"}}",
-                    ):
-                        with target.indented(
-                            f"taskpool.execute((): {sts_return_ty_name} => {{",
-                            f"}})",
-                        ):
-                            target.writelns(
-                                f"return {sts_native_call};",
-                            )
-                        with target.indented(
-                            f".then((ret: NullishType): void => {{",
-                            f"}})",
-                        ):
-                            target.writelns(
-                                f"callback(null, ret as {sts_resolved_ty_name});",
-                            )
-                        with target.indented(
-                            f".catch((ret: NullishType): void => {{",
-                            f"}});",
-                        ):
-                            target.writelns(
-                                f"callback(ret as BusinessError, undefined);",
-                            )
-            # getter
+                    self.gen_async_function(
+                        sts_async_name,
+                        sts_params,
+                        sts_return_ty_name,
+                        sts_native_call,
+                        sts_resolved_ty_name,
+                        target,
+                        FuncKind.INTERFACE,
+                    )
             if (get_name := method_ani_info.get_name) is not None:
-                with target.indented(
-                    f"get {get_name}({sts_params_str}): {sts_return_ty_name} {{",
-                    f"}}",
-                ):
-                    target.writelns(
-                        f"return {sts_native_call};",
-                    )
-            # setter
+                self.gen_get_func(
+                    get_name,
+                    sts_params,
+                    sts_return_ty_name,
+                    sts_native_call,
+                    target,
+                    FuncKind.INTERFACE,
+                )
             if (set_name := method_ani_info.set_name) is not None:
+                self.gen_set_func(
+                    set_name,
+                    sts_params,
+                    sts_return_ty_name,
+                    sts_native_call,
+                    target,
+                    FuncKind.INTERFACE,
+                )
+
+    def gen_iface_normal_meth(
+        self,
+        sts_method_name: str,
+        sts_params: list[str],
+        sts_return_ty_name: str,
+        sts_native_call: str,
+        target: StsWriter,
+    ):
+        sts_params_str = ", ".join(sts_params)
+        with target.indented(
+            f"{sts_method_name}({sts_params_str}): {sts_return_ty_name} {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"return {sts_native_call};",
+            )
+
+    def gen_get_func(
+        self,
+        get_name: str,
+        sts_params: list[str],
+        sts_return_ty_name: str,
+        sts_native_call: str,
+        target: StsWriter,
+        func_kind: FuncKind,
+    ):
+        sts_params_str = ", ".join(sts_params)
+        with target.indented(
+            f"{func_kind.value}get {get_name}({sts_params_str}): {sts_return_ty_name} {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"return {sts_native_call};",
+            )
+
+    def gen_set_func(
+        self,
+        set_name: str,
+        sts_params: list[str],
+        sts_return_ty_name: str,
+        sts_native_call: str,
+        target: StsWriter,
+        func_kind: FuncKind,
+    ):
+        sts_params_str = ", ".join(sts_params)
+        with target.indented(
+            f"{func_kind.value}set {set_name}({sts_params_str}) {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"return {sts_native_call};",
+            )
+
+    def gen_normal_func(
+        self,
+        sts_func_name: str,
+        sts_params: list[str],
+        sts_return_ty_name: str,
+        sts_native_call: str,
+        target: StsWriter,
+        func_kind: FuncKind,
+    ):
+        sts_params_str = ", ".join(sts_params)
+        with target.indented(
+            f"{func_kind.value}{sts_func_name}({sts_params_str}): {sts_return_ty_name} {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"return {sts_native_call};",
+            )
+
+    def gen_promise_function(
+        self,
+        sts_promise_name: str,
+        sts_params: list[str],
+        sts_return_ty_name: str,
+        sts_native_call: str,
+        sts_resolved_ty_name: str,
+        target: StsWriter,
+        func_kind: FuncKind,
+    ):
+        sts_params_str = ", ".join(sts_params)
+        with target.indented(
+            f"{func_kind.value}{sts_promise_name}({sts_params_str}): Promise<{sts_return_ty_name}> {{",
+            f"}}",
+        ):
+            with target.indented(
+                f"return new Promise<{sts_return_ty_name}>((resolve, reject): void => {{",
+                f"}});",
+            ):
                 with target.indented(
-                    f"set {set_name}({sts_params_str}) {{",
-                    f"}}",
+                    f"taskpool.execute((): {sts_return_ty_name} => {{",
+                    f"}})",
                 ):
                     target.writelns(
                         f"return {sts_native_call};",
                     )
+                with target.indented(
+                    f".then((ret: NullishType): void => {{",
+                    f"}})",
+                ):
+                    target.writelns(
+                        f"resolve(ret as {sts_resolved_ty_name});",
+                    )
+                with target.indented(
+                    f".catch((ret: NullishType): void => {{",
+                    f"}});",
+                ):
+                    target.writelns(
+                        f"reject(ret as Error);",
+                    )
+
+    def gen_async_function(
+        self,
+        sts_async_name: str,
+        sts_params: list[str],
+        sts_return_ty_name: str,
+        sts_native_call: str,
+        sts_resolved_ty_name: str,
+        target: StsWriter,
+        func_kind: FuncKind,
+    ):
+        callback_param = f"callback: AsyncCallback<{sts_return_ty_name}>"
+        sts_params_with_cb_str = ", ".join([*sts_params, callback_param])
+        with target.indented(
+            f"{func_kind.value}{sts_async_name}({sts_params_with_cb_str}): void {{",
+            f"}}",
+        ):
+            with target.indented(
+                f"taskpool.execute((): {sts_return_ty_name} => {{",
+                f"}})",
+            ):
+                target.writelns(
+                    f"return {sts_native_call};",
+                )
+            with target.indented(
+                f".then((ret: NullishType): void => {{",
+                f"}})",
+            ):
+                target.writelns(
+                    f"callback(null, ret as {sts_resolved_ty_name});",
+                )
+            with target.indented(
+                f".catch((ret: NullishType): void => {{",
+                f"}});",
+            ):
+                target.writelns(
+                    f"callback(ret as BusinessError, undefined);",
+                )
 
     def gen_ohos_base(self):
         with StsWriter(
