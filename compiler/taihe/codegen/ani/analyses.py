@@ -4,12 +4,14 @@ from typing import Literal
 
 from typing_extensions import override
 
-from taihe.codegen.abi.mangle import DeclKind, encode
 from taihe.codegen.abi.writer import CSourceWriter
 from taihe.codegen.ani.writer import StsWriter
 from taihe.codegen.cpp.analyses import (
     EnumCppInfo,
+    IfaceCppInfo,
+    StructCppInfo,
     TypeCppInfo,
+    UnionCppInfo,
 )
 from taihe.semantics.declarations import (
     AttrItemDecl,
@@ -779,9 +781,6 @@ class UnionFieldANIInfo(AbstractAnalysis[UnionFieldDecl]):
 class UnionANIInfo(AbstractAnalysis[UnionDecl]):
     def __init__(self, am: AnalysisManager, d: UnionDecl) -> None:
         super().__init__(am, d)
-        segments = [*d.parent_pkg.segments, d.name]
-        self.from_ani_func_name = encode(segments, DeclKind.FROM_ANI)
-        self.into_ani_func_name = encode(segments, DeclKind.INTO_ANI)
         self.decl_header = f"{d.parent_pkg.name}.{d.name}.ani.1.h"
         self.impl_header = f"{d.parent_pkg.name}.{d.name}.ani.2.h"
 
@@ -818,9 +817,6 @@ class StructFieldANIInfo(AbstractAnalysis[StructFieldDecl]):
 class StructANIInfo(AbstractAnalysis[StructDecl]):
     def __init__(self, am: AnalysisManager, d: StructDecl) -> None:
         super().__init__(am, d)
-        segments = [*d.parent_pkg.segments, d.name]
-        self.from_ani_func_name = encode(segments, DeclKind.FROM_ANI)
-        self.into_ani_func_name = encode(segments, DeclKind.INTO_ANI)
         self.decl_header = f"{d.parent_pkg.name}.{d.name}.ani.1.h"
         self.impl_header = f"{d.parent_pkg.name}.{d.name}.ani.2.h"
 
@@ -891,9 +887,6 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
 class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
     def __init__(self, am: AnalysisManager, d: IfaceDecl) -> None:
         super().__init__(am, d)
-        segments = [*d.parent_pkg.segments, d.name]
-        self.from_ani_func_name = encode(segments, DeclKind.FROM_ANI)
-        self.into_ani_func_name = encode(segments, DeclKind.INTO_ANI)
         self.decl_header = f"{d.parent_pkg.name}.{d.name}.ani.1.h"
         self.impl_header = f"{d.parent_pkg.name}.{d.name}.ani.2.h"
 
@@ -1167,9 +1160,10 @@ class StructTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[StructType]):
         cpp_result: str,
     ):
         struct_ani_info = StructANIInfo.get(self.am, self.t.ty_decl)
+        struct_cpp_info = StructCppInfo.get(self.am, self.t.ty_decl)
         target.add_include(struct_ani_info.impl_header)
         target.writelns(
-            f"{self.cpp_info.as_owner} {cpp_result} = {struct_ani_info.from_ani_func_name}({env}, {ani_value});",
+            f"{self.cpp_info.as_owner} {cpp_result} = ::taihe::from_ani<{struct_cpp_info.as_owner}>({env}, {ani_value});",
         )
 
     @override
@@ -1181,9 +1175,10 @@ class StructTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[StructType]):
         ani_result: str,
     ):
         struct_ani_info = StructANIInfo.get(self.am, self.t.ty_decl)
+        struct_cpp_info = StructCppInfo.get(self.am, self.t.ty_decl)
         target.add_include(struct_ani_info.impl_header)
         target.writelns(
-            f"ani_object {ani_result} = {struct_ani_info.into_ani_func_name}({env}, {cpp_value});",
+            f"ani_object {ani_result} = ::taihe::into_ani<{struct_cpp_info.as_owner}>({env}, {cpp_value});",
         )
 
 
@@ -1210,9 +1205,10 @@ class UnionTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[UnionType]):
         cpp_result: str,
     ):
         union_ani_info = UnionANIInfo.get(self.am, self.t.ty_decl)
+        union_cpp_info = UnionCppInfo.get(self.am, self.t.ty_decl)
         target.add_include(union_ani_info.impl_header)
         target.writelns(
-            f"{self.cpp_info.as_owner} {cpp_result} = {union_ani_info.from_ani_func_name}({env}, {ani_value});",
+            f"{self.cpp_info.as_owner} {cpp_result} = ::taihe::from_ani<{union_cpp_info.as_owner}>({env}, {ani_value});",
         )
 
     @override
@@ -1224,9 +1220,10 @@ class UnionTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[UnionType]):
         ani_result: str,
     ):
         union_ani_info = UnionANIInfo.get(self.am, self.t.ty_decl)
+        union_cpp_info = UnionCppInfo.get(self.am, self.t.ty_decl)
         target.add_include(union_ani_info.impl_header)
         target.writelns(
-            f"ani_ref {ani_result} = {union_ani_info.into_ani_func_name}({env}, {cpp_value});",
+            f"ani_ref {ani_result} = ::taihe::into_ani<{union_cpp_info.as_owner}>({env}, {cpp_value});",
         )
 
 
@@ -1253,9 +1250,10 @@ class IfaceTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[IfaceType]):
         cpp_result: str,
     ):
         iface_ani_info = IfaceANIInfo.get(self.am, self.t.ty_decl)
+        iface_cpp_info = IfaceCppInfo.get(self.am, self.t.ty_decl)
         target.add_include(iface_ani_info.impl_header)
         target.writelns(
-            f"{self.cpp_info.as_owner} {cpp_result} = {iface_ani_info.from_ani_func_name}({env}, {ani_value});",
+            f"{self.cpp_info.as_owner} {cpp_result} = ::taihe::from_ani<{iface_cpp_info.as_owner}>({env}, {ani_value});",
         )
 
     @override
@@ -1267,9 +1265,10 @@ class IfaceTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[IfaceType]):
         ani_result: str,
     ):
         iface_ani_info = IfaceANIInfo.get(self.am, self.t.ty_decl)
+        iface_cpp_info = IfaceCppInfo.get(self.am, self.t.ty_decl)
         target.add_include(iface_ani_info.impl_header)
         target.writelns(
-            f"ani_object {ani_result} = {iface_ani_info.into_ani_func_name}({env}, {cpp_value});",
+            f"ani_object {ani_result} = ::taihe::into_ani<{iface_cpp_info.as_owner}>({env}, {cpp_value});",
         )
 
 

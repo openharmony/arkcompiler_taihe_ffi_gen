@@ -432,10 +432,20 @@ class ANICodeGenerator:
         ) as iface_ani_decl_target:
             iface_ani_decl_target.add_include("taihe/runtime.hpp")
             iface_ani_decl_target.add_include(iface_cpp_info.defn_header)
-            iface_ani_decl_target.writelns(
-                f"{iface_cpp_info.as_owner} {iface_ani_info.from_ani_func_name}(ani_env* env, ani_object ani_obj);",
-                f"ani_object {iface_ani_info.into_ani_func_name}(ani_env* env, {iface_cpp_info.as_owner} cpp_obj);",
-            )
+            with iface_ani_decl_target.indented(
+                f"template<> struct ::taihe::from_ani_t<{iface_cpp_info.as_owner}> {{",
+                f"}};",
+            ):
+                iface_ani_decl_target.writelns(
+                    f"inline {iface_cpp_info.as_owner} operator()(ani_env* env, ani_object ani_obj) const;",
+                )
+            with iface_ani_decl_target.indented(
+                f"template<> struct ::taihe::into_ani_t<{iface_cpp_info.as_owner}> {{",
+                f"}};",
+            ):
+                iface_ani_decl_target.writelns(
+                    f"inline ani_object operator()(ani_env* env, {iface_cpp_info.as_owner} cpp_obj) const;",
+                )
 
     def gen_iface_conv_impl_file(
         self,
@@ -474,7 +484,7 @@ class ANICodeGenerator:
         iface_ani_impl_target: CHeaderWriter,
     ):
         with iface_ani_impl_target.indented(
-            f"inline {iface_cpp_info.as_owner} {iface_ani_info.from_ani_func_name}(ani_env* env, ani_object ani_obj) {{",
+            f"inline {iface_cpp_info.as_owner} taihe::from_ani_t<{iface_cpp_info.as_owner}>::operator()(ani_env* env, ani_object ani_obj) const {{",
             f"}}",
         ):
             with iface_ani_impl_target.indented(
@@ -588,7 +598,7 @@ class ANICodeGenerator:
         iface_ani_impl_target: CHeaderWriter,
     ):
         with iface_ani_impl_target.indented(
-            f"inline ani_object {iface_ani_info.into_ani_func_name}(ani_env* env, {iface_cpp_info.as_owner} cpp_obj) {{",
+            f"inline ani_object taihe::into_ani_t<{iface_cpp_info.as_owner}>::operator()(ani_env* env, {iface_cpp_info.as_owner} cpp_obj) const {{",
             f"}}",
         ):
             iface_ani_impl_target.writelns(
@@ -629,10 +639,20 @@ class ANICodeGenerator:
         ) as struct_ani_decl_target:
             struct_ani_decl_target.add_include("taihe/runtime.hpp")
             struct_ani_decl_target.add_include(struct_cpp_info.defn_header)
-            struct_ani_decl_target.writelns(
-                f"{struct_cpp_info.as_owner} {struct_ani_info.from_ani_func_name}(ani_env* env, ani_object ani_obj);",
-                f"ani_object {struct_ani_info.into_ani_func_name}(ani_env* env, {struct_cpp_info.as_param} cpp_obj);",
-            )
+            with struct_ani_decl_target.indented(
+                f"template<> struct ::taihe::from_ani_t<{struct_cpp_info.as_owner}> {{",
+                f"}};",
+            ):
+                struct_ani_decl_target.writelns(
+                    f"inline {struct_cpp_info.as_owner} operator()(ani_env* env, ani_object ani_obj) const;",
+                )
+            with struct_ani_decl_target.indented(
+                f"template<> struct ::taihe::into_ani_t<{struct_cpp_info.as_owner}> {{",
+                f"}};",
+            ):
+                struct_ani_decl_target.writelns(
+                    f"inline ani_object operator()(ani_env* env, {struct_cpp_info.as_owner} cpp_obj) const;",
+                )
 
     def gen_struct_conv_impl_file(
         self,
@@ -671,7 +691,7 @@ class ANICodeGenerator:
         struct_ani_impl_target: CHeaderWriter,
     ):
         with struct_ani_impl_target.indented(
-            f"inline {struct_cpp_info.as_owner} {struct_ani_info.from_ani_func_name}(ani_env* env, ani_object ani_obj) {{",
+            f"inline {struct_cpp_info.as_owner} taihe::from_ani_t<{struct_cpp_info.as_owner}>::operator()(ani_env* env, ani_object ani_obj) const {{",
             f"}}",
         ):
             cpp_field_results = []
@@ -712,7 +732,7 @@ class ANICodeGenerator:
     ):
         ani_field_results = []
         with struct_ani_impl_target.indented(
-            f"inline ani_object {struct_ani_info.into_ani_func_name}(ani_env* env, {struct_cpp_info.as_param} cpp_obj) {{",
+            f"inline ani_object taihe::into_ani_t<{struct_cpp_info.as_owner}>::operator()(ani_env* env, {struct_cpp_info.as_owner} cpp_obj) const {{",
             f"}}",
         ):
             for parts in struct_ani_info.sts_final_fields:
@@ -764,10 +784,20 @@ class ANICodeGenerator:
         ) as union_ani_decl_target:
             union_ani_decl_target.add_include("taihe/runtime.hpp")
             union_ani_decl_target.add_include(union_cpp_info.defn_header)
-            union_ani_decl_target.writelns(
-                f"{union_cpp_info.as_owner} {union_ani_info.from_ani_func_name}(ani_env* env, ani_ref ani_obj);",
-                f"ani_ref {union_ani_info.into_ani_func_name}(ani_env* env, {union_cpp_info.as_param} cpp_obj);",
-            )
+            with union_ani_decl_target.indented(
+                f"template<> struct ::taihe::from_ani_t<{union_cpp_info.as_owner}> {{",
+                f"}};",
+            ):
+                union_ani_decl_target.writelns(
+                    f"inline {union_cpp_info.as_owner} operator()(ani_env* env, ani_ref ani_value) const;",
+                )
+            with union_ani_decl_target.indented(
+                f"template<> struct ::taihe::into_ani_t<{union_cpp_info.as_owner}> {{",
+                f"}};",
+            ):
+                union_ani_decl_target.writelns(
+                    f"inline ani_ref operator()(ani_env* env, {union_cpp_info.as_owner} cpp_value) const;",
+                )
 
     def gen_union_conv_impl_file(
         self,
@@ -802,7 +832,7 @@ class ANICodeGenerator:
         union_ani_impl_target: CHeaderWriter,
     ):
         with union_ani_impl_target.indented(
-            f"inline {union_cpp_info.as_owner} {union_ani_info.from_ani_func_name}(ani_env* env, ani_ref ani_value) {{",
+            f"inline {union_cpp_info.as_owner} taihe::from_ani_t<{union_cpp_info.as_owner}>::operator()(ani_env* env, ani_ref ani_value) const {{",
             f"}}",
         ):
             for parts in union_ani_info.sts_final_fields:
@@ -885,7 +915,7 @@ class ANICodeGenerator:
         union_ani_impl_target: CHeaderWriter,
     ):
         with union_ani_impl_target.indented(
-            f"inline ani_ref {union_ani_info.into_ani_func_name}(ani_env* env, {union_cpp_info.as_param} cpp_value) {{",
+            f"inline ani_ref taihe::into_ani_t<{union_cpp_info.as_owner}>::operator()(ani_env* env, {union_cpp_info.as_owner} cpp_value) const {{",
             f"}}",
         ):
             union_ani_impl_target.writelns(
