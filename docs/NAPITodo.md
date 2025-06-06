@@ -6,9 +6,9 @@ NAPI 代码生成及验证：
     - [ ] struct 继承                                          (需要用 attr，是否和 ani 使用同样方案待确认)
     - [x] interface
     - [x] interface 继承
-    - [ ] ts 侧绑定构造函数 class(interface / struct)           (本周)
+    - [ ] ts 侧绑定构造函数 class(interface / struct)           (下一步)
     - [ ] class, static, constructor, readonly
-    - [ ] enum                                                 (下一步)
+    - [x] enum
     - [ ] union                                                (下一步)
     - [ ] undefined, null
     - [ ] array
@@ -21,7 +21,8 @@ NAPI 代码生成及验证：
     - [ ] bigint
     - [ ] arraybuffer
 
-**注意：现在的验证方式是基于 ts 和 napi 非鸿蒙 napi，应配置鸿蒙环境下验证的方法，测试编译验证方法待设计。**
+**注意：现在的验证方式是基于 ts 和 napi 非鸿蒙 napi，应配置鸿蒙环境下编译验证方法待设计。**
+xml 例子编译运行成功
 
 遗留问题：
 1. .d.ts 和 .node 的存放位置，暂时存放在 author_generated 目录下，（main.js 也存放在此），main.ts 调用需注意

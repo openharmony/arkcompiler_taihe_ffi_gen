@@ -722,6 +722,7 @@ class BuildSystem(BuildUtils):
                 output_file,
                 input_file,
                 *compile_flags,
+                "-lexpat",  # add for xml test case
             ]
 
             for include_dir in include_dirs:
@@ -753,6 +754,7 @@ class BuildSystem(BuildUtils):
             output_file,
             *input_files,
             *link_options,
+            "-lexpat",  # add for xml test case
         ]
 
         if shared:

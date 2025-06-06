@@ -1,3 +1,5 @@
+from json import dumps
+
 from taihe.codegen.abi.analyses import IfaceABIInfo
 from taihe.codegen.abi.mangle import DeclKind, encode
 from taihe.codegen.abi.writer import CHeaderWriter, CSourceWriter
@@ -14,6 +16,7 @@ from taihe.codegen.napi.analyses import (
     TypeNAPIInfo,
 )
 from taihe.semantics.declarations import (
+    EnumDecl,
     GlobFuncDecl,
     IfaceDecl,
     IfaceMethodDecl,
@@ -53,6 +56,8 @@ class NAPICodeGenerator:
                 mangled_name = encode(segments, DeclKind.NAPI_FUNC)
                 self.gen_func(func, pkg_napi_info, pkg_napi_target, mangled_name)
                 register_infos.append((func.name, mangled_name))
+            for enum in pkg.enums:
+                self.gen_enum(enum, pkg_napi_target)
             for struct in pkg.structs:
                 self.gen_struct_files(struct)
             for iface in pkg.interfaces:
@@ -73,6 +78,8 @@ class NAPICodeGenerator:
             f"napi_value Init(napi_env env, napi_value exports) {{",
             f"}}",
         ):
+            for enum in pkg.enums:
+                self.gen_enum_register(enum, pkg_napi_target)
             with pkg_napi_target.indented(
                 f"napi_property_descriptor desc[] = {{",
                 f"}};",
@@ -463,17 +470,37 @@ class NAPICodeGenerator:
         pkg_napi_target: CSourceWriter,
     ):
         with pkg_napi_target.indented(
-            f"static napi_value {mangled_name}(napi_env env, napi_callback_info info) {{",
+            f"static napi_value Create{enum.name}(napi_env env) {{",
             f"}}",
         ):
             pkg_napi_target.writelns(
-                f"napi_value thisobj;",
-                f"napi_get_cb_info(env, info, nullptr, nullptr, &thisobj, nullptr);",
-                f"{iface_cpp_type_now}* value_ptr;",
-                f"napi_unwrap(env, thisobj, reinterpret_cast<void**>(&value_ptr));",
+                f"napi_value enum_obj;",
+                f"napi_create_object(env, &enum_obj);",
+                f"napi_value key;",
             )
-            self.gen_func_content(
-                method,
-                pkg_napi_target,
-                f"(({iface_cpp_type_real})(*value_ptr))->{method.name}",
+            for item in enum.items:
+                item_ty_napi_info = TypeNAPIInfo.get(self.am, enum.ty_ref.resolved_ty)
+                item_ty_cpp_info = TypeCppInfo.get(self.am, enum.ty_ref.resolved_ty)
+                item_ty_napi_info.into_napi(
+                    pkg_napi_target,
+                    f"(({item_ty_cpp_info.as_owner}){dumps(item.value)})",
+                    f"value_{item.name}",
+                )
+                pkg_napi_target.writelns(
+                    f'napi_create_string_utf8(env, "{item.name}", NAPI_AUTO_LENGTH, &key);',
+                    f'napi_set_named_property(env, enum_obj, "{item.name}", value_{item.name});',
+                    f"napi_set_property(env, enum_obj, value_{item.name}, key);",
+                )
+            pkg_napi_target.writelns(
+                f"return enum_obj;",
             )
+
+    def gen_enum_register(
+        self,
+        enum: EnumDecl,
+        pkg_napi_target: CSourceWriter,
+    ):
+        pkg_napi_target.writelns(
+            f"napi_value enum_obj_{enum.name} = Create{enum.name}(env);",
+            f'napi_set_named_property(env, exports, "{enum.name}", enum_obj_{enum.name});',
+        )

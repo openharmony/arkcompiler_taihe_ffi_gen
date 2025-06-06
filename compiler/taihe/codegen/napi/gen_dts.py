@@ -1,11 +1,15 @@
+from json import dumps
+
 from taihe.codegen.ani.writer import StsWriter
 from taihe.codegen.napi.analyses import (
+    EnumNAPIInfo,
     IfaceNAPIInfo,
     PackageNAPIInfo,
     StructNAPIInfo,
     TypeNAPIInfo,
 )
 from taihe.semantics.declarations import (
+    EnumDecl,
     GlobFuncDecl,
     IfaceDecl,
     IfaceMethodDecl,
@@ -43,6 +47,8 @@ class DTSCodeGenerator:
                 self.gen_struct_class(struct, pkg_napi_target)
             for iface in pkg.interfaces:
                 self.gen_iface_interface(iface, pkg_napi_target)
+            for enum in pkg.enums:
+                self.gen_enum(enum, pkg_napi_target)
 
     def gen_func(self, func: GlobFuncDecl, pkg_dts_target: StsWriter):
         args = []
@@ -152,3 +158,23 @@ class DTSCodeGenerator:
             target.writelns(
                 f"{method.name}({sts_params_str}): {sts_return_ty_name};",
             )
+
+    def gen_enum(
+        self,
+        enum: EnumDecl,
+        target: StsWriter,
+    ):
+        enum_dts_info = EnumNAPIInfo.get(self.am, enum)
+        with target.indented(
+            f"export enum {enum_dts_info.dts_type_name} {{",
+            f"}}",
+        ):
+            for item in enum.items:
+                if item.value is None:
+                    target.writelns(
+                        f"{item.name},",
+                    )
+                else:
+                    target.writelns(
+                        f"{item.name} = {dumps(item.value)},",
+                    )

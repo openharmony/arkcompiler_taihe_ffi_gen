@@ -6,9 +6,11 @@ from taihe.codegen.abi.analyses import IfaceABIInfo
 from taihe.codegen.abi.mangle import DeclKind, encode
 from taihe.codegen.abi.writer import CSourceWriter
 from taihe.codegen.cpp.analyses import (
+    EnumCppInfo,
     TypeCppInfo,
 )
 from taihe.semantics.declarations import (
+    EnumDecl,
     IfaceDecl,
     IfaceMethodDecl,
     PackageDecl,
@@ -17,6 +19,7 @@ from taihe.semantics.declarations import (
 )
 from taihe.semantics.types import (
     CallbackType,
+    EnumType,
     IfaceType,
     OptionalType,
     ScalarKind,
@@ -93,6 +96,12 @@ class IfaceNAPIInfo(AbstractAnalysis[IfaceDecl]):
 
     def is_class(self):
         return self.dts_type_name == self.dts_impl_name
+
+
+class EnumNAPIInfo(AbstractAnalysis[EnumDecl]):
+    def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
+        super().__init__(am, d)
+        self.dts_type_name = d.name
 
 
 class AbstractTypeNAPIInfo(metaclass=ABCMeta):
@@ -496,6 +505,55 @@ class CallbackTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[CallbackType])
         )
 
 
+class EnumTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[EnumType]):
+    def __init__(self, am: AnalysisManager, t: EnumType):
+        super().__init__(am, t)
+        self.am = am
+        self.type = t
+        self.dts_type_name = t.ty_decl.name
+        self.return_dts_type_name = self.dts_type_name
+
+    def from_napi(
+        self,
+        target: CSourceWriter,
+        napi_value: str,
+        cpp_result: str,
+    ):
+        enum_cpp_info = EnumCppInfo.get(self.am, self.type.ty_decl)
+        if isinstance(self.type.ty_decl.ty_ref.resolved_ty, ScalarType | StringType):
+            item_ty_napi_info = TypeNAPIInfo.get(
+                self.am, self.type.ty_decl.ty_ref.resolved_ty
+            )
+            item_ty_napi_info.from_napi(target, napi_value, f"{cpp_result}_item")
+        else:
+            raise ValueError
+
+        target.writelns(
+            f"{enum_cpp_info.as_owner} {cpp_result} = {enum_cpp_info.as_owner}::from_value({cpp_result}_item);",
+        )
+
+    def into_napi(
+        self,
+        target: CSourceWriter,
+        cpp_value: str,
+        napi_result: str,
+    ):
+        if isinstance(self.type.ty_decl.ty_ref.resolved_ty, ScalarType | StringType):
+            item_ty_napi_info = TypeNAPIInfo.get(
+                self.am, self.type.ty_decl.ty_ref.resolved_ty
+            )
+            item_ty_cpp_info = TypeCppInfo.get(
+                self.am, self.type.ty_decl.ty_ref.resolved_ty
+            )
+            item_ty_napi_info.into_napi(
+                target,
+                f"(({item_ty_cpp_info.as_owner})({cpp_value}.get_value()))",
+                napi_result,
+            )
+        else:
+            raise ValueError
+
+
 class TypeNAPIInfo(TypeVisitor[AbstractTypeNAPIInfo]):
     def __init__(self, am: AnalysisManager):
         self.am = am
@@ -527,3 +585,7 @@ class TypeNAPIInfo(TypeVisitor[AbstractTypeNAPIInfo]):
     @override
     def visit_callback_type(self, t: CallbackType) -> AbstractTypeNAPIInfo:
         return CallbackTypeNAPIInfo.get(self.am, t)
+
+    @override
+    def visit_enum_type(self, t: EnumType) -> AbstractTypeNAPIInfo:
+        return EnumTypeNAPIInfo.get(self.am, t)
