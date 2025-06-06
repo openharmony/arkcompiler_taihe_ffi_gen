@@ -47,22 +47,6 @@ class NAPICodeGenerator:
             pkg_napi_target.add_include("node/node_api.h")
             pkg_napi_target.add_include(pkg_cpp_user_info.header)
 
-            for iface in pkg.interfaces:
-                iface_abi_info = IfaceABIInfo.get(self.am, iface)
-                iface_cpp_info = IfaceCppInfo.get(self.am, iface)
-                for ancestor in iface_abi_info.ancestor_dict:
-                    iface_cpp_info_ancestor = IfaceCppInfo.get(self.am, ancestor)
-                    for method in ancestor.methods:
-                        segments = [*iface.parent_pkg.segments, iface.name, method.name]
-                        mangled_name = encode(segments, DeclKind.ANI_FUNC)
-                        self.gen_iface_method(
-                            method,
-                            mangled_name,
-                            iface_cpp_info.as_owner,
-                            iface_cpp_info_ancestor.as_owner,
-                            pkg_napi_target,
-                        )
-
             register_infos = []
             for func in pkg.functions:
                 segments = [*pkg.segments, func.name]
@@ -73,10 +57,12 @@ class NAPICodeGenerator:
                 self.gen_struct_files(struct)
             for iface in pkg.interfaces:
                 self.gen_iface_files(iface)
-            self.gen_module_init(register_infos, pkg_napi_target)
+                self.gen_iface_method_files(iface)
+            self.gen_module_init(pkg, register_infos, pkg_napi_target)
 
     def gen_module_init(
         self,
+        pkg: PackageDecl,
         register_infos: list[tuple[str, str]],
         pkg_napi_target: CSourceWriter,
     ):
@@ -411,12 +397,69 @@ class NAPICodeGenerator:
                 )
             iface_napi_impl_target.writelns(f"return napi_obj;")
 
-    def gen_iface_method(
+    def gen_iface_method_files(
         self,
-        method: IfaceMethodDecl,
-        mangled_name: str,
-        iface_cpp_type_now: str,
-        iface_cpp_type_real: str,
+        iface: IfaceDecl,
+    ):
+        iface_cpp_info = IfaceCppInfo.get(self.am, iface)
+        iface_napi_info = IfaceNAPIInfo.get(self.am, iface)
+        self.gen_iface_method_decl_file(
+            iface_cpp_info,
+            iface_napi_info,
+        )
+        self.gen_iface_method_impl_file(
+            iface_cpp_info,
+            iface_napi_info,
+        )
+
+    def gen_iface_method_decl_file(
+        self,
+        iface_cpp_info: IfaceCppInfo,
+        iface_napi_info: IfaceNAPIInfo,
+    ):
+        with CHeaderWriter(
+            self.oc,
+            f"include/{iface_napi_info.meth_decl_header}",
+        ) as iface_meth_napi_decl_target:
+            iface_meth_napi_decl_target.add_include("node/node_api.h")
+            iface_meth_napi_decl_target.add_include(iface_cpp_info.defn_header)
+            for mng_name, value in iface_napi_info.iface_register_infos.items():
+                iface_meth_napi_decl_target.writelns(
+                    f"static napi_value {mng_name}(napi_env env, napi_callback_info info);",
+                )
+
+    def gen_iface_method_impl_file(
+        self,
+        iface_cpp_info: IfaceCppInfo,
+        iface_napi_info: IfaceNAPIInfo,
+    ):
+        with CHeaderWriter(
+            self.oc,
+            f"include/{iface_napi_info.meth_impl_header}",
+        ) as iface_meth_napi_impl_target:
+            iface_meth_napi_impl_target.add_include(iface_napi_info.meth_decl_header)
+            iface_meth_napi_impl_target.add_include(iface_cpp_info.impl_header)
+            for mng_name, value in iface_napi_info.iface_register_infos.items():
+                iface_cpp_info_ancestor = IfaceCppInfo.get(self.am, value[1])
+                with iface_meth_napi_impl_target.indented(
+                    f"static napi_value {mng_name}(napi_env env, napi_callback_info info) {{",
+                    f"}}",
+                ):
+                    iface_meth_napi_impl_target.writelns(
+                        f"napi_value thisobj;",
+                        f"napi_get_cb_info(env, info, nullptr, nullptr, &thisobj, nullptr);",
+                        f"{iface_cpp_info.as_owner}* value_ptr;",
+                        f"napi_unwrap(env, thisobj, reinterpret_cast<void**>(&value_ptr));",
+                    )
+                    self.gen_func_content(
+                        value[0],
+                        iface_meth_napi_impl_target,
+                        f"(({iface_cpp_info_ancestor.as_owner})(*value_ptr))->{value[0].name}",
+                    )
+
+    def gen_enum(
+        self,
+        enum: EnumDecl,
         pkg_napi_target: CSourceWriter,
     ):
         with pkg_napi_target.indented(

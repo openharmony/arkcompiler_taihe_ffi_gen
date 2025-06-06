@@ -44,17 +44,6 @@ compile_flags.txt
 .cache
 
 # ts test
-test/napi/node_modules/
-test/napi/package-lock.json
-test/napi/package.json
-test/napi/*.js
-test/napi/*.node
-
-# ts test
-test/napi/node_modules/
-test/napi/package-lock.json
-test/napi/package.json
-test/napi/*.js
-test/napi/*.node
+node_modules/*
 
 anigen

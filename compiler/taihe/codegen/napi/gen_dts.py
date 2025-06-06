@@ -136,8 +136,8 @@ class DTSCodeGenerator:
         methods: list[IfaceMethodDecl],
         target: StsWriter,
     ):
-        sts_params = []
         for method in methods:
+            sts_params = []
             for param in method.params:
                 type_napi_info = TypeNAPIInfo.get(self.am, param.ty_ref.resolved_ty)
                 sts_params.append(

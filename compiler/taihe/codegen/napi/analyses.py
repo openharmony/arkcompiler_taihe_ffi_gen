@@ -10,6 +10,7 @@ from taihe.codegen.cpp.analyses import (
 )
 from taihe.semantics.declarations import (
     IfaceDecl,
+    IfaceMethodDecl,
     PackageDecl,
     StructDecl,
     StructFieldDecl,
@@ -69,11 +70,26 @@ class IfaceNAPIInfo(AbstractAnalysis[IfaceDecl]):
         self.into_napi_func_name = encode(segments, DeclKind.INTO_NAPI)
         self.decl_header = f"{d.parent_pkg.name}.{d.name}.napi.decl.h"
         self.impl_header = f"{d.parent_pkg.name}.{d.name}.napi.impl.h"
+        self.meth_decl_header = f"{d.parent_pkg.name}.{d.name}.meth.napi.decl.h"
+        self.meth_impl_header = f"{d.parent_pkg.name}.{d.name}.meth.napi.impl.h"
         self.dts_type_name = d.name
         if d.get_last_attr("class"):
             self.dts_impl_name = f"{d.name}"
         else:
             self.dts_impl_name = f"{d.name}_inner"
+
+        iface_abi_info = IfaceABIInfo.get(am, d)
+        iface_register_infos: dict[str, tuple[IfaceMethodDecl, IfaceDecl]] = {}
+        for ancestor in iface_abi_info.ancestor_dict:
+            for method in ancestor.methods:
+                segments = [
+                    *d.parent_pkg.segments,
+                    d.name,
+                    method.name,
+                ]
+                mangled_name = encode(segments, DeclKind.NAPI_FUNC)
+                iface_register_infos[mangled_name] = (method, ancestor)
+        self.iface_register_infos = iface_register_infos
 
     def is_class(self):
         return self.dts_type_name == self.dts_impl_name
@@ -252,6 +268,7 @@ class IfaceTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[IfaceType]):
         iface_napi_info = IfaceNAPIInfo.get(self.am, t.ty_decl)
         self.dts_type_name = iface_napi_info.dts_type_name
         self.return_dts_type_name = self.dts_type_name
+        self.iface_register_infos = iface_napi_info.iface_register_infos
 
     def from_napi(
         self,
@@ -271,31 +288,20 @@ class IfaceTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[IfaceType]):
         cpp_value: str,
         napi_result: str,
     ):
-        iface_decl = self.type.ty_decl
-        iface_abi_info = IfaceABIInfo.get(self.am, iface_decl)
-        iface_register_infos = []
-        for ancestor in iface_abi_info.ancestor_dict:
-            for method in ancestor.methods:
-                segments = [
-                    *iface_decl.parent_pkg.segments,
-                    iface_decl.name,
-                    method.name,
-                ]
-                mangled_name = encode(segments, DeclKind.ANI_FUNC)
-                iface_register_infos.append((method.name, mangled_name))
-        iface_ani_info = IfaceNAPIInfo.get(self.am, self.type.ty_decl)
-        target.add_include(iface_ani_info.impl_header)
-        descs_name = f"{iface_ani_info.into_napi_func_name}_desc"
+        iface_napi_info = IfaceNAPIInfo.get(self.am, self.type.ty_decl)
+        target.add_include(iface_napi_info.impl_header)
+        target.add_include(iface_napi_info.meth_impl_header)
+        descs_name = f"{iface_napi_info.into_napi_func_name}_desc"
         target.writelns(
-            f"napi_value {napi_result} = {iface_ani_info.into_napi_func_name}(env, {cpp_value});",
+            f"napi_value {napi_result} = {iface_napi_info.into_napi_func_name}(env, {cpp_value});",
         )
         with target.indented(
             f"napi_property_descriptor {descs_name}[] = {{",
             f"}};",
         ):
-            for meth_name, mng_name in iface_register_infos:
+            for mng_name, value in self.iface_register_infos.items():
                 target.writelns(
-                    f'{{"{meth_name}", nullptr, {mng_name}, nullptr, nullptr, nullptr, napi_default, nullptr}}, ',
+                    f'{{"{value[0].name}", nullptr, {mng_name}, nullptr, nullptr, nullptr, napi_default, nullptr}}, ',
                 )
         target.writelns(
             f"napi_define_properties(env, {napi_result}, sizeof({descs_name}) / sizeof({descs_name}[0]), {descs_name});"
