@@ -297,7 +297,7 @@ class PackageGroupANIInfo(AbstractAnalysis[PackageGroup]):
 @dataclass
 class ANINativeFuncInfo:
     sts_native_name: str
-    mangled_name: str
+    full_name: str
 
 
 @dataclass

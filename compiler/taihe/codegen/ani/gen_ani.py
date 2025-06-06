@@ -1,7 +1,6 @@
 from taihe.codegen.abi.analyses import (
     IfaceABIInfo,
 )
-from taihe.codegen.abi.mangle import DeclKind, encode
 from taihe.codegen.abi.writer import CHeaderWriter, CSourceWriter
 from taihe.codegen.ani.analyses import (
     ANINativeFuncInfo,
@@ -134,24 +133,30 @@ class ANICodeGenerator:
             pkg_ani_source_target.add_include(pkg_cpp_user_info.header)
 
             # generate functions
-            for func in pkg.functions:
-                segments = [*pkg.segments, func.name]
-                mangled_name = encode(segments, DeclKind.ANI_FUNC)
-                self.gen_func(func, pkg_ani_source_target, mangled_name)
-            for iface in pkg.interfaces:
-                iface_abi_info = IfaceABIInfo.get(self.am, iface)
-                for ancestor in iface_abi_info.ancestor_dict:
-                    for method in ancestor.methods:
-                        segments = [*iface.parent_pkg.segments, iface.name, method.name]
-                        mangled_name = encode(segments, DeclKind.ANI_FUNC)
-                        self.gen_method(
-                            iface, method, pkg_ani_source_target, ancestor, mangled_name
-                        )
-                # TODO: finalizer
-                pkg_ani_source_target.add_include("taihe/object.hpp")
-                segments = [*iface.parent_pkg.segments, iface.name, "static_finalize"]
-                mangled_name = encode(segments, DeclKind.ANI_FUNC)
-                self.gen_finalizer(pkg_ani_source_target, mangled_name)
+            with pkg_ani_source_target.indented(
+                f"namespace local {{",
+                f"}}",
+                indent="",
+            ):
+                for iface in pkg.interfaces:
+                    with pkg_ani_source_target.indented(
+                        f"namespace {iface.name} {{",
+                        f"}}",
+                        indent="",
+                    ):
+                        iface_abi_info = IfaceABIInfo.get(self.am, iface)
+                        for ancestor in iface_abi_info.ancestor_dict:
+                            for method in ancestor.methods:
+                                self.gen_method(
+                                    iface,
+                                    method,
+                                    pkg_ani_source_target,
+                                    ancestor,
+                                    method.name,
+                                )
+                        self.gen_finalizer(pkg_ani_source_target, "static_finalize")
+                for func in pkg.functions:
+                    self.gen_func(func, pkg_ani_source_target, func.name)
 
             # register infos
             register_infos: list[ANIRegisterInfo] = []
@@ -163,12 +168,11 @@ class ANICodeGenerator:
             )
             register_infos.append(pkg_register_info)
             for func in pkg.functions:
-                segments = [*pkg.segments, func.name]
-                mangled_name = encode(segments, DeclKind.ANI_FUNC)
+                full_name = f"local::{func.name}"
                 func_ani_info = GlobFuncANIInfo.get(self.am, func)
                 func_info = ANINativeFuncInfo(
                     sts_native_name=func_ani_info.sts_native_name,
-                    mangled_name=mangled_name,
+                    full_name=full_name,
                 )
                 pkg_register_info.member_infos.append(func_info)
             for iface in pkg.interfaces:
@@ -182,21 +186,19 @@ class ANICodeGenerator:
                 register_infos.append(iface_register_info)
                 for ancestor in iface_abi_info.ancestor_dict:
                     for method in ancestor.methods:
-                        segments = [*iface.parent_pkg.segments, iface.name, method.name]
-                        mangled_name = encode(segments, DeclKind.ANI_FUNC)
+                        full_name = f"local::{iface.name}::{method.name}"
                         method_ani_info = IfaceMethodANIInfo.get(self.am, method)
                         method_info = ANINativeFuncInfo(
                             sts_native_name=method_ani_info.sts_native_name,
-                            mangled_name=mangled_name,
+                            full_name=full_name,
                         )
                         iface_register_info.member_infos.append(method_info)
                 # TODO: finalizer
                 pkg_ani_source_target.add_include("taihe/object.hpp")
-                segments = [*iface.parent_pkg.segments, iface.name, "static_finalize"]
-                mangled_name = encode(segments, DeclKind.ANI_FUNC)
+                full_name = f"local::{iface.name}::static_finalize"
                 finalizer_info = ANINativeFuncInfo(
                     sts_native_name="_finalize",
-                    mangled_name=mangled_name,
+                    full_name=full_name,
                 )
                 iface_register_info.member_infos.append(finalizer_info)
 
@@ -249,7 +251,7 @@ class ANICodeGenerator:
                             ):
                                 for member_info in register_info.member_infos:
                                     pkg_ani_source_target.writelns(
-                                        f'{{"{member_info.sts_native_name}", nullptr, reinterpret_cast<void*>({member_info.mangled_name})}},',
+                                        f'{{"{member_info.sts_native_name}", nullptr, reinterpret_cast<void*>({member_info.full_name})}},',
                                     )
                             with pkg_ani_source_target.indented(
                                 f"if (ANI_OK != env->{parent_scope.suffix}_BindNative{parent_scope.member.suffix}s(ani_env, methods, sizeof(methods) / sizeof(ani_native_function))) {{",
@@ -262,24 +264,11 @@ class ANICodeGenerator:
                         f"return ANI_OK;",
                     )
 
-    def gen_finalizer(
-        self,
-        pkg_ani_source_target: CSourceWriter,
-        mangled_name: str,
-    ):
-        with pkg_ani_source_target.indented(
-            f"static void {mangled_name}([[maybe_unused]] ani_env *env, [[maybe_unused]] ani_class clazz, ani_long data_ptr) {{",
-            f"}}",
-        ):
-            pkg_ani_source_target.writelns(
-                f"::taihe::data_holder(reinterpret_cast<DataBlockHead*>(data_ptr));",
-            )
-
     def gen_func(
         self,
         func: GlobFuncDecl,
         pkg_ani_source_target: CSourceWriter,
-        mangled_name: str,
+        name: str,
     ):
         func_cpp_user_info = GlobFuncCppUserInfo.get(self.am, func)
         ani_params = []
@@ -300,7 +289,7 @@ class ANICodeGenerator:
         else:
             ani_return_ty_name = "void"
         with pkg_ani_source_target.indented(
-            f"static {ani_return_ty_name} {mangled_name}({ani_params_str}) {{",
+            f"static {ani_return_ty_name} {name}({ani_params_str}) {{",
             f"}}",
         ):
             for param, ani_arg, cpp_arg in zip(
@@ -334,7 +323,7 @@ class ANICodeGenerator:
         method: IfaceMethodDecl,
         pkg_ani_source_target: CSourceWriter,
         ancestor: IfaceDecl,
-        mangled_name: str,
+        name: str,
     ):
         method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
         iface_cpp_info = IfaceCppInfo.get(self.am, iface)
@@ -360,7 +349,7 @@ class ANICodeGenerator:
         else:
             ani_return_ty_name = "void"
         with pkg_ani_source_target.indented(
-            f"static {ani_return_ty_name} {mangled_name}({ani_params_str}) {{",
+            f"static {ani_return_ty_name} {name}({ani_params_str}) {{",
             f"}}",
         ):
             pkg_ani_source_target.writelns(
@@ -396,6 +385,19 @@ class ANICodeGenerator:
                 pkg_ani_source_target.writelns(
                     f"{ancestor_cpp_info.as_param}(cpp_iface)->{method_cpp_info.call_name}({cpp_args_str});",
                 )
+
+    def gen_finalizer(
+        self,
+        pkg_ani_source_target: CSourceWriter,
+        name: str,
+    ):
+        with pkg_ani_source_target.indented(
+            f"static void {name}([[maybe_unused]] ani_env *env, [[maybe_unused]] ani_class clazz, ani_long data_ptr) {{",
+            f"}}",
+        ):
+            pkg_ani_source_target.writelns(
+                f"::taihe::data_holder(reinterpret_cast<DataBlockHead*>(data_ptr));",
+            )
 
     def gen_iface_files(
         self,
