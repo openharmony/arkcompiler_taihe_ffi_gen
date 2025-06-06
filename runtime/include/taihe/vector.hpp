@@ -113,8 +113,8 @@ protected:
 
   friend struct vector<T>;
 
-  friend bool taihe::same_impl(adl_helper_t, vector_view lhs, vector_view rhs);
-  friend std::size_t taihe::hash_impl(adl_helper_t, vector_view val);
+  friend bool taihe::same(vector_view lhs, vector_view rhs);
+  friend std::size_t taihe::hash(vector_view val);
 };
 
 template<typename T>
@@ -164,12 +164,12 @@ private:
 };
 
 template<typename T>
-inline bool same_impl(adl_helper_t, vector_view<T> lhs, vector_view<T> rhs) {
+inline bool same(vector_view<T> lhs, vector_view<T> rhs) {
   return lhs.m_handle == rhs.m_handle;
 }
 
 template<typename T>
-inline std::size_t hash_impl(adl_helper_t, vector_view<T> val) {
+inline std::size_t hash(vector_view<T> val) {
   return reinterpret_cast<std::size_t>(val.m_handle);
 }
 

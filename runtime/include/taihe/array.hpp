@@ -244,7 +244,7 @@ struct array : public array_view<cpp_owner_t> {
 };
 
 template<typename cpp_owner_t>
-inline std::size_t hash_impl(adl_helper_t, array_view<cpp_owner_t> val) {
+inline std::size_t hash(array_view<cpp_owner_t> val) {
   std::size_t seed = 0;
   static constexpr std::size_t GOLDEN_RATIO_CONSTANT = 0x9e3779b9;
   static constexpr std::size_t LEFT_SHIFT_BITS = 6;
@@ -257,8 +257,7 @@ inline std::size_t hash_impl(adl_helper_t, array_view<cpp_owner_t> val) {
 }
 
 template<typename cpp_owner_t>
-inline bool same_impl(adl_helper_t, array_view<cpp_owner_t> lhs,
-                      array_view<cpp_owner_t> rhs) {
+inline bool same(array_view<cpp_owner_t> lhs, array_view<cpp_owner_t> rhs) {
   if (lhs.size() != rhs.size()) {
     return false;
   }
