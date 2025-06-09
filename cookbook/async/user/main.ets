@@ -25,13 +25,14 @@ function main() {
     let istringholder = async_test.makeIStringHolder();
     console.log(istringholder.get());
 
-    istringholder.setAsync("interface async set", (error: BusinessError|null) => {
-        if (error !== null && error.code !== 0) {
-            console.log("interface async ERROR ", error);
-        } else {
-            console.log("interface async success ");
-        }
-    })
+    istringholder.setAsync(
+        "interface async set", (error: BusinessError|null) => {
+            if (error !== null && error.code !== 0) {
+                console.log("interface async ERROR ", error);
+            } else {
+                console.log("interface async success ");
+            }
+        })
 
     let p_istringholder = istringholder.getPromise();
     p_istringholder

@@ -27,20 +27,22 @@ function application_context_extends_test() {
     let applicationContext = lib.makeApplicationContext();
     applicationContext.setSupportedProcessCacheSync(true);
     applicationContext.setSupportedProcessCacheSync(false);
-    applicationContext.setSupportedProcessCache(true, (error: BusinessError|null) => {
-        if (error !== null && error.code !== 0) {
-            console.log("call setSupportedProcessCache ERROR ", error);
-        } else {
-            console.log("call setSupportedProcessCache 333");
-        }
-    })
-    applicationContext.setSupportedProcessCache(false, (error: BusinessError|null) => {
-        if (error !== null && error.code !== 0) {
-            console.log("call setSupportedProcessCache ERROR ", error);
-        } else {
-            console.log("call setSupportedProcessCache 333");
-        }
-    })
+    applicationContext.setSupportedProcessCache(
+        true, (error: BusinessError|null) => {
+            if (error !== null && error.code !== 0) {
+                console.log("call setSupportedProcessCache ERROR ", error);
+            } else {
+                console.log("call setSupportedProcessCache 333");
+            }
+        })
+    applicationContext.setSupportedProcessCache(
+        false, (error: BusinessError|null) => {
+            if (error !== null && error.code !== 0) {
+                console.log("call setSupportedProcessCache ERROR ", error);
+            } else {
+                console.log("call setSupportedProcessCache 333");
+            }
+        })
     applicationContext.name = "ApplicationContext";
     assertEQ(applicationContext.name, "ApplicationContext");
     assertEQ(applicationContext.stageMode, false)

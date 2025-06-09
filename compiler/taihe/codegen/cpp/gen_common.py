@@ -102,15 +102,6 @@ class CppHeadersGenerator:
                 indent="",
             ):
                 enum_cpp_decl_target.writelns(
-                    f"inline bool same_adl(adl_tag_t, {enum_cpp_info.as_param} lhs, {enum_cpp_info.as_param} rhs);",
-                    f"inline ::std::size_t hash_adl(adl_tag_t, {enum_cpp_info.as_param} val);",
-                )
-            with enum_cpp_decl_target.indented(
-                f"namespace taihe {{",
-                f"}}",
-                indent="",
-            ):
-                enum_cpp_decl_target.writelns(
                     f"template<>",
                 )
                 with enum_cpp_decl_target.indented(
@@ -411,15 +402,6 @@ class CppHeadersGenerator:
             ):
                 union_cpp_decl_target.writelns(
                     f"struct {union_cpp_info.name};",
-                )
-            with union_cpp_decl_target.indented(
-                f"namespace taihe {{",
-                f"}}",
-                indent="",
-            ):
-                union_cpp_decl_target.writelns(
-                    f"inline bool same_adl(adl_tag_t, {union_cpp_info.as_param} lhs, {union_cpp_info.as_param} rhs);",
-                    f"inline ::std::size_t hash_adl(adl_tag_t, {union_cpp_info.as_param} val);",
                 )
             with union_cpp_decl_target.indented(
                 f"namespace taihe {{",
@@ -1116,15 +1098,6 @@ class CppHeadersGenerator:
             ):
                 struct_cpp_decl_target.writelns(
                     f"struct {struct_cpp_info.name};",
-                )
-            with struct_cpp_decl_target.indented(
-                f"namespace taihe {{",
-                f"}}",
-                indent="",
-            ):
-                struct_cpp_decl_target.writelns(
-                    f"inline bool same_adl(adl_tag_t, {struct_cpp_info.as_param} lhs, {struct_cpp_info.as_param} rhs);",
-                    f"inline ::std::size_t hash_adl(adl_tag_t, {struct_cpp_info.as_param} val);",
                 )
             with struct_cpp_decl_target.indented(
                 f"namespace taihe {{",

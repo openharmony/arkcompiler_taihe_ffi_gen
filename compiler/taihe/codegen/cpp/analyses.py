@@ -256,19 +256,19 @@ class MapTypeCppInfo(AbstractAnalysis[MapType], AbstractTypeCppInfo):
         key_ty_cpp_info = TypeCppInfo.get(am, t.key_ty)
         val_ty_cpp_info = TypeCppInfo.get(am, t.val_ty)
         self.decl_headers = [
+            "taihe/map.hpp",
             *key_ty_cpp_info.decl_headers,
             *val_ty_cpp_info.decl_headers,
-            "taihe/map.hpp",
         ]
         self.defn_headers = [
+            "taihe/map.hpp",
             *key_ty_cpp_info.decl_headers,
             *val_ty_cpp_info.decl_headers,
-            "taihe/map.hpp",
         ]
         self.impl_headers = [
+            "taihe/map.hpp",
             *key_ty_cpp_info.impl_headers,
             *val_ty_cpp_info.impl_headers,
-            "taihe/map.hpp",
         ]
         self.as_owner = (
             f"::taihe::map<{key_ty_cpp_info.as_owner}, {val_ty_cpp_info.as_owner}>"
