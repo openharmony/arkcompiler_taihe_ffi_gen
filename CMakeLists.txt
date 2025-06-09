@@ -148,7 +148,7 @@ function(setup_panda_sdk)
   # 自动下载模式
   else()
     # 设置 PANDA 路径
-    set(PANDA_SDK_FILENAME "sdk-1.5.0.tgz")
+    set(PANDA_SDK_FILENAME "sdk-1.5.0-dev.36087.tgz")
     set(PANDA_SDK_URL "https://nexus.bz-openlab.ru:10443/repository/koala-npm/%40panda/sdk/-/${PANDA_SDK_FILENAME}")
     set(PANDA_EXTRACT_DIR "${CMAKE_SOURCE_DIR}/.panda_vm")
     set(PANDA_SDK_PATH "${PANDA_EXTRACT_DIR}/${PANDA_SDK_FILENAME}")
