@@ -243,14 +243,14 @@ class NAPICodeGenerator:
             cpp_field_results = []
             for parts in struct_napi_info.sts_final_fields:
                 final = parts[-1]
-                type_ani_info = TypeNAPIInfo.get(self.am, final.ty_ref.resolved_ty)
+                type_napi_info = TypeNAPIInfo.get(self.am, final.ty_ref.resolved_ty)
                 napi_field_value = f"napi_field_{final.name}"
                 cpp_field_result = f"cpp_field_{final.name}"
                 struct_napi_impl_target.writelns(
                     f"napi_value {napi_field_value} = nullptr;",
                     f'napi_get_named_property(env, napi_obj, "{final.name}", &{napi_field_value});',
                 )
-                type_ani_info.from_napi(
+                type_napi_info.from_napi(
                     struct_napi_impl_target, napi_field_value, cpp_field_result
                 )
                 cpp_field_results.append(cpp_field_result)

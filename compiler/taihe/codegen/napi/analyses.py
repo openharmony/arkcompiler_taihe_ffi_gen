@@ -377,8 +377,8 @@ class OptionalTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[OptionalType])
             f"else {{",
             f"}}",
         ):
-            item_ty_ani_info = TypeNAPIInfo.get(self.am, self.type.item_ty)
-            item_ty_ani_info.into_napi(target, f"(*{cpp_value})", napi_spec)
+            item_ty_napi_info = TypeNAPIInfo.get(self.am, self.type.item_ty)
+            item_ty_napi_info.into_napi(target, f"(*{cpp_value})", napi_spec)
             target.writelns(
                 f"{napi_result} = {napi_spec};",
             )
@@ -471,7 +471,7 @@ class CallbackTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[CallbackType])
                         f"napi_value cb_ref = nullptr, global = nullptr;",
                         f"napi_get_reference_value(env, ref, &cb_ref);",
                         f"napi_get_global(env, &global);",
-                        f"napi_call_function(env, global, cb_ref, 1, napi_argv, &{inner_napi_res});",
+                        f"napi_call_function(env, global, cb_ref, {len(self.type.params_ty)}, napi_argv, &{inner_napi_res});",
                     )
                     return_ty_napi_info = TypeNAPIInfo.get(self.am, return_ty)
                     return_ty_napi_info.from_napi(target, inner_napi_res, inner_cpp_res)
@@ -499,7 +499,7 @@ class CallbackTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[CallbackType])
         cpp_value: str,
         napi_result: str,
     ):
-        # TODO: Callback into ani
+        # TODO: Callback into napi
         target.writelns(
             f"napi_value {napi_result} = {{}};",
         )
