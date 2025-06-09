@@ -30,7 +30,7 @@ from taihe.semantics.declarations import (
 )
 from taihe.semantics.types import Type
 from taihe.utils.analyses import AnalysisManager
-from taihe.utils.outputs import OutputConfig
+from taihe.utils.outputs import FileKind, OutputManager
 
 
 class FuncKind(Enum):
@@ -40,8 +40,8 @@ class FuncKind(Enum):
 
 
 class STSCodeGenerator:
-    def __init__(self, oc: OutputConfig, am: AnalysisManager):
-        self.oc = oc
+    def __init__(self, om: OutputManager, am: AnalysisManager):
+        self.om = om
         self.am = am
 
     def generate(self, pg: PackageGroup):
@@ -52,8 +52,9 @@ class STSCodeGenerator:
 
     def gen_module_file(self, module: str, ns: Namespace):
         with StsWriter(
-            self.oc,
+            self.om,
             f"{module}.ets",
+            FileKind.ETS,
         ) as target:
             target.add_import_decl("@ohos.base", "AsyncCallback")
             target.add_import_decl("@ohos.base", "BusinessError")
@@ -1306,8 +1307,9 @@ class STSCodeGenerator:
 
     def gen_ohos_base(self):
         with StsWriter(
-            self.oc,
+            self.om,
             "@ohos.base.ets",
+            FileKind.ETS,
         ) as target:
             target.writelns(
                 "export class BusinessError<T = void> extends Error {",

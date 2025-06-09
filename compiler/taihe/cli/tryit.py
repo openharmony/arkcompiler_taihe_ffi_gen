@@ -13,7 +13,7 @@ from enum import Enum
 from pathlib import Path
 
 from taihe.driver.backend import BackendConfig
-from taihe.utils.outputs import DebugLevel
+from taihe.utils.outputs import CMakeOutputManager, DebugLevel, OutputManager
 
 # A lower value means more verbosity
 TRACE_CONCISE = logging.DEBUG - 1
@@ -367,6 +367,15 @@ class BuildSystem(BuildUtils):
         for b in backends:
             resolved_backends.append(b())
 
+        cmake_tag = True
+
+        output_manager_factory = CMakeOutputManager if cmake_tag else OutputManager
+        om = output_manager_factory(
+            dst_dir=self.generated_dir,
+            runtime_include_dir=self.config.runtime_include_dir,
+            runtime_src_dir=self.config.runtime_src_dir,
+        )
+
         instance = CompilerInstance(
             CompilerInvocation(
                 src_dirs=[self.idl_dir, self.config.stdlib_dir],
@@ -374,7 +383,8 @@ class BuildSystem(BuildUtils):
                 out_debug_level=self.codegen_debug_level,
                 backends=resolved_backends,
                 sts_keep_name=self.sts_keep_name,
-            )
+            ),
+            om,
         )
 
         if not instance.run():

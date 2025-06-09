@@ -37,12 +37,12 @@ from taihe.semantics.types import (
     Type,
 )
 from taihe.utils.analyses import AnalysisManager
-from taihe.utils.outputs import OutputConfig
+from taihe.utils.outputs import FileKind, OutputManager
 
 
 class ANICodeGenerator:
-    def __init__(self, oc: OutputConfig, am: AnalysisManager):
-        self.oc = oc
+    def __init__(self, om: OutputManager, am: AnalysisManager):
+        self.om = om
         self.am = am
 
     def generate(self, pg: PackageGroup):
@@ -53,8 +53,9 @@ class ANICodeGenerator:
     def gen_constructor(self, pg: PackageGroup):
         constructor_file = "ani_constructor.cpp"
         with CSourceWriter(
-            self.oc,
+            self.om,
             f"src/{constructor_file}",
+            FileKind.TEMPLATE,
         ) as constructor_target:
             constructor_target.add_include("taihe/platform/ani.hpp")
             with constructor_target.indented(
@@ -107,8 +108,9 @@ class ANICodeGenerator:
         pkg_cpp_user_info: PackageCppUserInfo,
     ):
         with CHeaderWriter(
-            self.oc,
+            self.om,
             f"include/{pkg_ani_info.header}",
+            FileKind.CPP_HEADER,
         ) as pkg_ani_header_target:
             pkg_ani_header_target.add_include("taihe/platform/ani.hpp")
             with pkg_ani_header_target.indented(
@@ -127,8 +129,9 @@ class ANICodeGenerator:
         pkg_cpp_user_info: PackageCppUserInfo,
     ):
         with CSourceWriter(
-            self.oc,
+            self.om,
             f"src/{pkg_ani_info.source}",
+            FileKind.CPP_SOURCE,
         ) as pkg_ani_source_target:
             pkg_ani_source_target.add_include(pkg_ani_info.header)
             pkg_ani_source_target.add_include(pkg_cpp_user_info.header)
@@ -443,8 +446,9 @@ class ANICodeGenerator:
         iface_ani_info: IfaceANIInfo,
     ):
         with CHeaderWriter(
-            self.oc,
+            self.om,
             f"include/{iface_ani_info.decl_header}",
+            FileKind.C_HEADER,
         ) as iface_ani_decl_target:
             iface_ani_decl_target.add_include("taihe/platform/ani.hpp")
             iface_ani_decl_target.add_include(iface_cpp_info.defn_header)
@@ -471,8 +475,9 @@ class ANICodeGenerator:
         iface_ani_info: IfaceANIInfo,
     ):
         with CHeaderWriter(
-            self.oc,
+            self.om,
             f"include/{iface_ani_info.impl_header}",
+            FileKind.C_HEADER,
         ) as iface_ani_impl_target:
             iface_ani_impl_target.add_include(iface_ani_info.decl_header)
             iface_ani_impl_target.add_include(iface_cpp_info.impl_header)
@@ -641,8 +646,9 @@ class ANICodeGenerator:
         struct_ani_info: StructANIInfo,
     ):
         with CHeaderWriter(
-            self.oc,
+            self.om,
             f"include/{struct_ani_info.decl_header}",
+            FileKind.C_HEADER,
         ) as struct_ani_decl_target:
             struct_ani_decl_target.add_include("taihe/platform/ani.hpp")
             struct_ani_decl_target.add_include(struct_cpp_info.defn_header)
@@ -668,8 +674,9 @@ class ANICodeGenerator:
         struct_ani_info: StructANIInfo,
     ):
         with CHeaderWriter(
-            self.oc,
+            self.om,
             f"include/{struct_ani_info.impl_header}",
+            FileKind.C_HEADER,
         ) as struct_ani_impl_target:
             struct_ani_impl_target.add_include(struct_ani_info.decl_header)
             struct_ani_impl_target.add_include(struct_cpp_info.impl_header)
@@ -786,8 +793,9 @@ class ANICodeGenerator:
         union_ani_info: UnionANIInfo,
     ):
         with CHeaderWriter(
-            self.oc,
+            self.om,
             f"include/{union_ani_info.decl_header}",
+            FileKind.C_HEADER,
         ) as union_ani_decl_target:
             union_ani_decl_target.add_include("taihe/platform/ani.hpp")
             union_ani_decl_target.add_include(union_cpp_info.defn_header)
@@ -813,8 +821,9 @@ class ANICodeGenerator:
         union_ani_info: UnionANIInfo,
     ):
         with CHeaderWriter(
-            self.oc,
+            self.om,
             f"include/{union_ani_info.impl_header}",
+            FileKind.C_HEADER,
         ) as union_ani_impl_target:
             union_ani_impl_target.add_include(union_ani_info.decl_header)
             union_ani_impl_target.add_include(union_cpp_info.impl_header)

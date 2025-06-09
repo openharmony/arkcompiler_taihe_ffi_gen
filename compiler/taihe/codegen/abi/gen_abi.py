@@ -17,12 +17,12 @@ from taihe.semantics.declarations import (
     UnionDecl,
 )
 from taihe.utils.analyses import AnalysisManager
-from taihe.utils.outputs import OutputConfig
+from taihe.utils.outputs import FileKind, OutputManager
 
 
 class ABIHeadersGenerator:
-    def __init__(self, oc: OutputConfig, am: AnalysisManager):
-        self.oc = oc
+    def __init__(self, om: OutputManager, am: AnalysisManager):
+        self.om = om
         self.am = am
 
     def generate(self, pg: PackageGroup):
@@ -32,8 +32,9 @@ class ABIHeadersGenerator:
     def gen_package_files(self, pkg: PackageDecl):
         pkg_abi_info = PackageABIInfo.get(self.am, pkg)
         with CHeaderWriter(
-            self.oc,
+            self.om,
             f"include/{pkg_abi_info.header}",
+            FileKind.C_HEADER,
         ) as pkg_abi_target:
             for struct in pkg.structs:
                 struct_abi_info = StructABIInfo.get(self.am, struct)
@@ -89,8 +90,9 @@ class ABIHeadersGenerator:
         struct_abi_info: StructABIInfo,
     ):
         with CHeaderWriter(
-            self.oc,
+            self.om,
             f"include/{struct_abi_info.decl_header}",
+            FileKind.C_HEADER,
         ) as struct_abi_decl_target:
             struct_abi_decl_target.add_include("taihe/common.h")
             struct_abi_decl_target.writelns(
@@ -103,8 +105,9 @@ class ABIHeadersGenerator:
         struct_abi_info: StructABIInfo,
     ):
         with CHeaderWriter(
-            self.oc,
+            self.om,
             f"include/{struct_abi_info.defn_header}",
+            FileKind.C_HEADER,
         ) as struct_abi_defn_target:
             struct_abi_defn_target.add_include(struct_abi_info.decl_header)
             for field in struct.fields:
@@ -134,8 +137,9 @@ class ABIHeadersGenerator:
         struct_abi_info: StructABIInfo,
     ):
         with CHeaderWriter(
-            self.oc,
+            self.om,
             f"include/{struct_abi_info.impl_header}",
+            FileKind.C_HEADER,
         ) as struct_abi_impl_target:
             struct_abi_impl_target.add_include(struct_abi_info.defn_header)
             for field in struct.fields:
@@ -148,8 +152,9 @@ class ABIHeadersGenerator:
         union_abi_info: UnionABIInfo,
     ):
         with CHeaderWriter(
-            self.oc,
+            self.om,
             f"include/{union_abi_info.decl_header}",
+            FileKind.C_HEADER,
         ) as union_abi_decl_target:
             union_abi_decl_target.add_include("taihe/common.h")
             union_abi_decl_target.writelns(
@@ -163,8 +168,9 @@ class ABIHeadersGenerator:
         union_abi_info: UnionABIInfo,
     ):
         with CHeaderWriter(
-            self.oc,
+            self.om,
             f"include/{union_abi_info.defn_header}",
+            FileKind.C_HEADER,
         ) as union_abi_defn_target:
             union_abi_defn_target.add_include(union_abi_info.decl_header)
             self.gen_union_defn(union, union_abi_info, union_abi_defn_target)
@@ -209,8 +215,9 @@ class ABIHeadersGenerator:
         union_abi_info: UnionABIInfo,
     ):
         with CHeaderWriter(
-            self.oc,
+            self.om,
             f"include/{union_abi_info.impl_header}",
+            FileKind.C_HEADER,
         ) as union_abi_impl_target:
             union_abi_impl_target.add_include(union_abi_info.defn_header)
             for field in union.fields:
@@ -225,8 +232,9 @@ class ABIHeadersGenerator:
         iface_abi_info: IfaceABIInfo,
     ):
         with CHeaderWriter(
-            self.oc,
+            self.om,
             f"include/{iface_abi_info.decl_header}",
+            FileKind.C_HEADER,
         ) as iface_abi_decl_target:
             iface_abi_decl_target.add_include("taihe/object.abi.h")
             iface_abi_decl_target.writelns(
@@ -239,8 +247,9 @@ class ABIHeadersGenerator:
         iface_abi_info: IfaceABIInfo,
     ):
         with CHeaderWriter(
-            self.oc,
+            self.om,
             f"include/{iface_abi_info.defn_header}",
+            FileKind.C_HEADER,
         ) as iface_abi_defn_target:
             iface_abi_defn_target.add_include(iface_abi_info.decl_header)
             for ancestor, info in iface_abi_info.ancestor_dict.items():
@@ -339,8 +348,9 @@ class ABIHeadersGenerator:
         iface_abi_info: IfaceABIInfo,
     ):
         with CHeaderWriter(
-            self.oc,
+            self.om,
             f"include/{iface_abi_info.impl_header}",
+            FileKind.C_HEADER,
         ) as iface_abi_impl_target:
             iface_abi_impl_target.add_include(iface_abi_info.defn_header)
             for method in iface.methods:
@@ -421,8 +431,8 @@ class ABIHeadersGenerator:
 
 
 class ABISourcesGenerator:
-    def __init__(self, oc: OutputConfig, am: AnalysisManager):
-        self.oc = oc
+    def __init__(self, om: OutputManager, am: AnalysisManager):
+        self.om = om
         self.am = am
 
     def generate(self, pg: PackageGroup):
@@ -432,8 +442,9 @@ class ABISourcesGenerator:
     def gen_package_file(self, pkg: PackageDecl):
         pkg_abi_info = PackageABIInfo.get(self.am, pkg)
         with CSourceWriter(
-            self.oc,
+            self.om,
             f"src/{pkg_abi_info.src}",
+            FileKind.C_SOURCE,
         ) as pkg_abi_src_target:
             for iface in pkg.interfaces:
                 iface_abi_info = IfaceABIInfo.get(self.am, iface)

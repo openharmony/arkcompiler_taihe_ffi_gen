@@ -31,12 +31,12 @@ from taihe.semantics.types import (
     StringType,
 )
 from taihe.utils.analyses import AnalysisManager
-from taihe.utils.outputs import OutputConfig
+from taihe.utils.outputs import FileKind, OutputManager
 
 
 class CppHeadersGenerator:
-    def __init__(self, oc: OutputConfig, am: AnalysisManager):
-        self.oc = oc
+    def __init__(self, om: OutputManager, am: AnalysisManager):
+        self.om = om
         self.am = am
 
     def generate(self, pg: PackageGroup):
@@ -46,8 +46,9 @@ class CppHeadersGenerator:
     def gen_package_files(self, pkg: PackageDecl):
         pkg_cpp_info = PackageCppInfo.get(self.am, pkg)
         with CHeaderWriter(
-            self.oc,
+            self.om,
             f"include/{pkg_cpp_info.header}",
+            FileKind.CPP_HEADER,
         ) as pkg_cpp_target:
             for enum in pkg.enums:
                 enum_abi_info = EnumABIInfo.get(self.am, enum)
@@ -84,8 +85,9 @@ class CppHeadersGenerator:
         enum_cpp_info: EnumCppInfo,
     ):
         with CHeaderWriter(
-            self.oc,
+            self.om,
             f"include/{enum_cpp_info.decl_header}",
+            FileKind.C_HEADER,
         ) as enum_cpp_decl_target:
             enum_cpp_decl_target.add_include("taihe/common.hpp")
             with enum_cpp_decl_target.indented(
@@ -129,8 +131,9 @@ class CppHeadersGenerator:
         enum_cpp_info: EnumCppInfo,
     ):
         with CHeaderWriter(
-            self.oc,
+            self.om,
             f"include/{enum_cpp_info.defn_header}",
+            FileKind.C_HEADER,
         ) as enum_cpp_defn_target:
             enum_cpp_defn_target.add_include(enum_cpp_info.decl_header)
             self.gen_enum_defn(
@@ -389,8 +392,9 @@ class CppHeadersGenerator:
         union_cpp_info: UnionCppInfo,
     ):
         with CHeaderWriter(
-            self.oc,
+            self.om,
             f"include/{union_cpp_info.decl_header}",
+            FileKind.C_HEADER,
         ) as union_cpp_decl_target:
             union_cpp_decl_target.add_include("taihe/common.hpp")
             union_cpp_decl_target.add_include(union_abi_info.decl_header)
@@ -445,8 +449,9 @@ class CppHeadersGenerator:
         union_cpp_info: UnionCppInfo,
     ):
         with CHeaderWriter(
-            self.oc,
+            self.om,
             f"include/{union_cpp_info.defn_header}",
+            FileKind.CPP_HEADER,
         ) as union_cpp_defn_target:
             union_cpp_defn_target.add_include(union_cpp_info.decl_header)
             union_cpp_defn_target.add_include(union_abi_info.defn_header)
@@ -1066,8 +1071,9 @@ class CppHeadersGenerator:
         union_cpp_info: UnionCppInfo,
     ):
         with CHeaderWriter(
-            self.oc,
+            self.om,
             f"include/{union_cpp_info.impl_header}",
+            FileKind.C_HEADER,
         ) as union_cpp_impl_target:
             union_cpp_impl_target.add_include(union_cpp_info.defn_header)
             union_cpp_impl_target.add_include(union_abi_info.impl_header)
@@ -1084,8 +1090,9 @@ class CppHeadersGenerator:
         struct_cpp_info: StructCppInfo,
     ):
         with CHeaderWriter(
-            self.oc,
+            self.om,
             f"include/{struct_cpp_info.decl_header}",
+            FileKind.C_HEADER,
         ) as struct_cpp_decl_target:
             struct_cpp_decl_target.add_include("taihe/common.hpp")
             struct_cpp_decl_target.add_include(struct_abi_info.decl_header)
@@ -1140,8 +1147,9 @@ class CppHeadersGenerator:
         struct_cpp_info: StructCppInfo,
     ):
         with CHeaderWriter(
-            self.oc,
+            self.om,
             f"include/{struct_cpp_info.defn_header}",
+            FileKind.CPP_HEADER,
         ) as struct_cpp_defn_target:
             struct_cpp_defn_target.add_include(struct_cpp_info.decl_header)
             struct_cpp_defn_target.add_include(struct_abi_info.defn_header)
@@ -1245,8 +1253,9 @@ class CppHeadersGenerator:
         struct_cpp_info: StructCppInfo,
     ):
         with CHeaderWriter(
-            self.oc,
+            self.om,
             f"include/{struct_cpp_info.impl_header}",
+            FileKind.C_HEADER,
         ) as struct_cpp_impl_target:
             struct_cpp_impl_target.add_include(struct_cpp_info.defn_header)
             struct_cpp_impl_target.add_include(struct_abi_info.impl_header)
@@ -1261,8 +1270,9 @@ class CppHeadersGenerator:
         iface_cpp_info: IfaceCppInfo,
     ):
         with CHeaderWriter(
-            self.oc,
+            self.om,
             f"include/{iface_cpp_info.decl_header}",
+            FileKind.C_HEADER,
         ) as iface_cpp_decl_target:
             iface_cpp_decl_target.add_include("taihe/object.hpp")
             iface_cpp_decl_target.add_include(iface_abi_info.decl_header)
@@ -1325,8 +1335,9 @@ class CppHeadersGenerator:
         iface_cpp_info: IfaceCppInfo,
     ):
         with CHeaderWriter(
-            self.oc,
+            self.om,
             f"include/{iface_cpp_info.defn_header}",
+            FileKind.CPP_HEADER,
         ) as iface_cpp_defn_target:
             iface_cpp_defn_target.add_include(iface_cpp_info.decl_header)
             iface_cpp_defn_target.add_include(iface_abi_info.defn_header)
@@ -1829,8 +1840,9 @@ class CppHeadersGenerator:
         iface_cpp_info: IfaceCppInfo,
     ):
         with CHeaderWriter(
-            self.oc,
+            self.om,
             f"include/{iface_cpp_info.impl_header}",
+            FileKind.CPP_HEADER,
         ) as iface_cpp_impl_target:
             iface_cpp_impl_target.add_include(iface_cpp_info.defn_header)
             iface_cpp_impl_target.add_include(iface_abi_info.impl_header)

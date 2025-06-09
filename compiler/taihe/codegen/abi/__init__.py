@@ -18,10 +18,10 @@ class AbiHeaderBackendConfig(BackendConfig):
                 self._ci = ci
 
             def generate(self):
-                oc = self._ci.output_config
+                om = self._ci.output_manager
                 am = self._ci.analysis_manager
                 pg = self._ci.package_group
-                ABIHeadersGenerator(oc, am).generate(pg)
+                ABIHeadersGenerator(om, am).generate(pg)
 
         return ABIHeaderBackendImpl(instance)
 
@@ -40,10 +40,10 @@ class AbiSourcesBackendConfig(BackendConfig):
                 self._ci = ci
 
             def generate(self):
-                oc = self._ci.output_config
+                om = self._ci.output_manager
                 am = self._ci.analysis_manager
                 pg = self._ci.package_group
-                ABISourcesGenerator(oc, am).generate(pg)
+                ABISourcesGenerator(om, am).generate(pg)
 
         return ABISourcesBackendImpl(instance)
 
@@ -66,10 +66,10 @@ class CAuthorBackendConfig(BackendConfig):
                 self._ci = ci
 
             def generate(self):
-                oc = self._ci.output_config
+                om = self._ci.output_manager
                 am = self._ci.analysis_manager
                 pg = self._ci.package_group
-                CImplSourcesGenerator(oc, am).generate(pg)
-                CImplHeadersGenerator(oc, am).generate(pg)
+                CImplSourcesGenerator(om, am).generate(pg)
+                CImplHeadersGenerator(om, am).generate(pg)
 
         return CImplBackendImpl(instance)
