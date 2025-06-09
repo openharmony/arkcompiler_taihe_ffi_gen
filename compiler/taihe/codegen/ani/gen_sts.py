@@ -62,6 +62,7 @@ class STSCodeGenerator:
             self.gen_namespace(ns, target)
 
     def gen_module_injected_codes(self, ns: Namespace, target: StsWriter):
+        # TODO: hack inject
         for pkg in ns.packages:
             pkg_ani_info = PackageANIInfo.get(self.am, pkg)
             for injected in pkg_ani_info.module_injected_codes:
@@ -763,6 +764,7 @@ class STSCodeGenerator:
             f"{sts_decl} {{",
             f"}}",
         ):
+            # TODO: hack inject
             for injected in iface_ani_info.class_injected_codes:
                 target.write_block(injected)
             target.writelns(

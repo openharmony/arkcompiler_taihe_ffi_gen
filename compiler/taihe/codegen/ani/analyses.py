@@ -262,9 +262,9 @@ class Namespace:
             scope_name = "__" + "".join(c if c.isalnum() else "_" for c in self.name)
             if member_is_default:
                 decl_name = f"{scope_name}_default"
-                target.add_import_default(self.name, decl_name)
+                target.add_import_default(f"./{self.name}", decl_name)  # TODO: Import
                 return decl_name
-            target.add_import_module(self.name, scope_name)
+            target.add_import_module(f"./{self.name}", scope_name)  # TODO: Import
         else:
             scope_name = self.parent.get_member(target, self.name, self.is_default)
         return f"{scope_name}.{sts_name}"
