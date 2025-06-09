@@ -236,8 +236,8 @@ private:
 
   friend struct set<K>;
 
-  friend bool taihe::same(set_view lhs, set_view rhs);
-  friend std::size_t taihe::hash(set_view val);
+  friend bool taihe::same_adl(adl_tag_t, set_view lhs, set_view rhs);
+  friend std::size_t taihe::hash_adl(adl_tag_t, set_view val);
 };
 
 template<typename K>
@@ -290,12 +290,12 @@ private:
 };
 
 template<typename K>
-inline bool same(set_view<K> lhs, set_view<K> rhs) {
+inline bool same_adl(adl_tag_t, set_view<K> lhs, set_view<K> rhs) {
   return lhs.m_handle == rhs.m_handle;
 }
 
 template<typename K>
-inline std::size_t hash(set_view<K> val) {
+inline std::size_t hash_adl(adl_tag_t, set_view<K> val) {
   return reinterpret_cast<std::size_t>(val.m_handle);
 }
 

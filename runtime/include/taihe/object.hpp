@@ -43,11 +43,11 @@ struct data_holder : public data_view {
   }
 };
 
-inline bool same(data_view lhs, data_view rhs) {
+inline bool same_adl(adl_tag_t, data_view lhs, data_view rhs) {
   return lhs.data_ptr == rhs.data_ptr;
 }
 
-inline std::size_t hash(data_view val) {
+inline std::size_t hash_adl(adl_tag_t, data_view val) {
   return reinterpret_cast<std::size_t>(val.data_ptr);
 }
 }  // namespace taihe

@@ -115,13 +115,13 @@ struct optional : public optional_view<cpp_owner_t> {
 };
 
 template<typename cpp_owner_t>
-inline std::size_t hash(optional_view<cpp_owner_t> val) {
+inline std::size_t hash_adl(adl_tag_t, optional_view<cpp_owner_t> val) {
   return val ? hash(*val) + 0x9e3779b9 : 0;
 }
 
 template<typename cpp_owner_t>
-inline bool same(optional_view<cpp_owner_t> lhs,
-                 optional_view<cpp_owner_t> rhs) {
+inline bool same_adl(adl_tag_t, optional_view<cpp_owner_t> lhs,
+                     optional_view<cpp_owner_t> rhs) {
   return (!lhs && !rhs) || (lhs && rhs && same(*lhs, *rhs));
 }
 

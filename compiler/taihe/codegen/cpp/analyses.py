@@ -221,9 +221,9 @@ class ArrayTypeCppInfo(AbstractAnalysis[ArrayType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: ArrayType) -> None:
         super().__init__(am, t)
         arg_ty_cpp_info = TypeCppInfo.get(am, t.item_ty)
-        self.decl_headers = [*arg_ty_cpp_info.decl_headers, "taihe/array.hpp"]
-        self.defn_headers = [*arg_ty_cpp_info.decl_headers, "taihe/array.hpp"]
-        self.impl_headers = [*arg_ty_cpp_info.impl_headers, "taihe/array.hpp"]
+        self.decl_headers = ["taihe/array.hpp", *arg_ty_cpp_info.decl_headers]
+        self.defn_headers = ["taihe/array.hpp", *arg_ty_cpp_info.decl_headers]
+        self.impl_headers = ["taihe/array.hpp", *arg_ty_cpp_info.impl_headers]
         self.as_owner = f"::taihe::array<{arg_ty_cpp_info.as_owner}>"
         self.as_param = f"::taihe::array_view<{arg_ty_cpp_info.as_owner}>"
 
@@ -232,9 +232,9 @@ class OptionalTypeCppInfo(AbstractAnalysis[OptionalType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: OptionalType) -> None:
         super().__init__(am, t)
         arg_ty_cpp_info = TypeCppInfo.get(am, t.item_ty)
-        self.decl_headers = [*arg_ty_cpp_info.decl_headers, "taihe/optional.hpp"]
-        self.defn_headers = [*arg_ty_cpp_info.decl_headers, "taihe/optional.hpp"]
-        self.impl_headers = [*arg_ty_cpp_info.impl_headers, "taihe/optional.hpp"]
+        self.decl_headers = ["taihe/optional.hpp", *arg_ty_cpp_info.decl_headers]
+        self.defn_headers = ["taihe/optional.hpp", *arg_ty_cpp_info.decl_headers]
+        self.impl_headers = ["taihe/optional.hpp", *arg_ty_cpp_info.impl_headers]
         self.as_owner = f"::taihe::optional<{arg_ty_cpp_info.as_owner}>"
         self.as_param = f"::taihe::optional_view<{arg_ty_cpp_info.as_owner}>"
 
@@ -243,9 +243,9 @@ class VectorTypeCppInfo(AbstractAnalysis[VectorType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: VectorType) -> None:
         super().__init__(am, t)
         val_ty_cpp_info = TypeCppInfo.get(am, t.val_ty)
-        self.decl_headers = [*val_ty_cpp_info.decl_headers, "taihe/vector.hpp"]
-        self.defn_headers = [*val_ty_cpp_info.decl_headers, "taihe/vector.hpp"]
-        self.impl_headers = [*val_ty_cpp_info.impl_headers, "taihe/vector.hpp"]
+        self.decl_headers = ["taihe/vector.hpp", *val_ty_cpp_info.decl_headers]
+        self.defn_headers = ["taihe/vector.hpp", *val_ty_cpp_info.decl_headers]
+        self.impl_headers = ["taihe/vector.hpp", *val_ty_cpp_info.impl_headers]
         self.as_owner = f"::taihe::vector<{val_ty_cpp_info.as_owner}>"
         self.as_param = f"::taihe::vector_view<{val_ty_cpp_info.as_owner}>"
 
@@ -282,9 +282,9 @@ class SetTypeCppInfo(AbstractAnalysis[SetType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: SetType) -> None:
         super().__init__(am, t)
         key_ty_cpp_info = TypeCppInfo.get(am, t.key_ty)
-        self.decl_headers = [*key_ty_cpp_info.decl_headers, "taihe/set.hpp"]
-        self.defn_headers = [*key_ty_cpp_info.decl_headers, "taihe/set.hpp"]
-        self.impl_headers = [*key_ty_cpp_info.impl_headers, "taihe/set.hpp"]
+        self.decl_headers = ["taihe/set.hpp", *key_ty_cpp_info.decl_headers]
+        self.defn_headers = ["taihe/set.hpp", *key_ty_cpp_info.decl_headers]
+        self.impl_headers = ["taihe/set.hpp", *key_ty_cpp_info.impl_headers]
         self.as_owner = f"::taihe::set<{key_ty_cpp_info.as_owner}>"
         self.as_param = f"::taihe::set_view<{key_ty_cpp_info.as_owner}>"
 

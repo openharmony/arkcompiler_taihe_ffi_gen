@@ -101,25 +101,39 @@ constexpr static_tag_t<tag> static_tag;
 
 // These functions are used for taihe::map and taihe::set
 
+struct adl_tag_t {};
+
+constexpr adl_tag_t adl_tag;
+
+template<typename T>
+inline std::size_t hash(T const &val) {
+  return hash_adl(adl_tag, val);
+}
+
+template<typename L, typename R>
+inline bool same(L const &lhs, R const &rhs) {
+  return same_adl(adl_tag, lhs, rhs);
+}
+
 template<typename T, typename std::enable_if_t<std::is_integral_v<T>, int> = 0>
-inline bool same(T lhs, T rhs) {
+inline bool same_adl(adl_tag_t, T lhs, T rhs) {
   return lhs == rhs;
 }
 
 template<typename T, typename std::enable_if_t<std::is_integral_v<T>, int> = 0>
-inline std::size_t hash(T val) {
+inline std::size_t hash_adl(adl_tag_t, T val) {
   return val;
 }
 
 template<typename T,
          typename std::enable_if_t<std::is_floating_point_v<T>, int> = 0>
-inline bool same(T lhs, T rhs) {
+inline bool same_adl(adl_tag_t, T lhs, T rhs) {
   return std::hash<T>{}(lhs) == std::hash<T>{}(rhs);
 }
 
 template<typename T,
          typename std::enable_if_t<std::is_floating_point_v<T>, int> = 0>
-inline std::size_t hash(T val) {
+inline std::size_t hash_adl(adl_tag_t, T val) {
   return std::hash<T>{}(val);
 }
 }  // namespace taihe

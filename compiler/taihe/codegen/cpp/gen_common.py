@@ -102,8 +102,8 @@ class CppHeadersGenerator:
                 indent="",
             ):
                 enum_cpp_decl_target.writelns(
-                    f"inline bool same({enum_cpp_info.as_param} lhs, {enum_cpp_info.as_param} rhs);",
-                    f"inline ::std::size_t hash({enum_cpp_info.as_param} val);",
+                    f"inline bool same_adl(adl_tag_t, {enum_cpp_info.as_param} lhs, {enum_cpp_info.as_param} rhs);",
+                    f"inline ::std::size_t hash_adl(adl_tag_t, {enum_cpp_info.as_param} val);",
                 )
             with enum_cpp_decl_target.indented(
                 f"namespace taihe {{",
@@ -365,7 +365,7 @@ class CppHeadersGenerator:
             indent="",
         ):
             with enum_cpp_defn_target.indented(
-                f"inline bool same({enum_cpp_info.full_name} lhs, {enum_cpp_info.full_name} rhs) {{",
+                f"inline bool same_adl(adl_tag_t, {enum_cpp_info.full_name} lhs, {enum_cpp_info.full_name} rhs) {{",
                 f"}}",
             ):
                 enum_cpp_defn_target.writelns(
@@ -385,7 +385,7 @@ class CppHeadersGenerator:
             indent="",
         ):
             with enum_cpp_defn_target.indented(
-                f"inline ::std::size_t hash({enum_cpp_info.as_param} val) {{",
+                f"inline ::std::size_t hash_adl(adl_tag_t, {enum_cpp_info.as_param} val) {{",
                 f"}}",
             ):
                 enum_cpp_defn_target.writelns(
@@ -418,8 +418,8 @@ class CppHeadersGenerator:
                 indent="",
             ):
                 union_cpp_decl_target.writelns(
-                    f"inline bool same({union_cpp_info.as_param} lhs, {union_cpp_info.as_param} rhs);",
-                    f"inline ::std::size_t hash({union_cpp_info.as_param} val);",
+                    f"inline bool same_adl(adl_tag_t, {union_cpp_info.as_param} lhs, {union_cpp_info.as_param} rhs);",
+                    f"inline ::std::size_t hash_adl(adl_tag_t, {union_cpp_info.as_param} val);",
                 )
             with union_cpp_decl_target.indented(
                 f"namespace taihe {{",
@@ -1031,7 +1031,7 @@ class CppHeadersGenerator:
             indent="",
         ):
             with union_cpp_defn_target.indented(
-                f"inline bool same({union_cpp_info.as_param} lhs, {union_cpp_info.as_param} rhs) {{",
+                f"inline bool same_adl(adl_tag_t, {union_cpp_info.as_param} lhs, {union_cpp_info.as_param} rhs) {{",
                 f"}}",
             ):
                 result = "false"
@@ -1057,7 +1057,7 @@ class CppHeadersGenerator:
             indent="",
         ):
             with union_cpp_defn_target.indented(
-                f"inline auto hash({union_cpp_info.as_param} val) -> ::std::size_t {{",
+                f"inline ::std::size_t hash_adl(adl_tag_t, {union_cpp_info.as_param} val) {{",
                 f"}}",
             ):
                 with union_cpp_defn_target.indented(
@@ -1123,8 +1123,8 @@ class CppHeadersGenerator:
                 indent="",
             ):
                 struct_cpp_decl_target.writelns(
-                    f"inline bool same({struct_cpp_info.as_param} lhs, {struct_cpp_info.as_param} rhs);",
-                    f"inline ::std::size_t hash({struct_cpp_info.as_param} val);",
+                    f"inline bool same_adl(adl_tag_t, {struct_cpp_info.as_param} lhs, {struct_cpp_info.as_param} rhs);",
+                    f"inline ::std::size_t hash_adl(adl_tag_t, {struct_cpp_info.as_param} val);",
                 )
             with struct_cpp_decl_target.indented(
                 f"namespace taihe {{",
@@ -1231,7 +1231,7 @@ class CppHeadersGenerator:
             indent="",
         ):
             with struct_cpp_defn_target.indented(
-                f"inline bool same({struct_cpp_info.as_param} lhs, {struct_cpp_info.as_param} rhs) {{",
+                f"inline bool same_adl(adl_tag_t, {struct_cpp_info.as_param} lhs, {struct_cpp_info.as_param} rhs) {{",
                 f"}}",
             ):
                 result = "true"
@@ -1254,7 +1254,7 @@ class CppHeadersGenerator:
             indent="",
         ):
             with struct_cpp_defn_target.indented(
-                f"inline ::std::size_t hash({struct_cpp_info.as_param} val) {{",
+                f"inline ::std::size_t hash_adl(adl_tag_t, {struct_cpp_info.as_param} val) {{",
                 f"}}",
             ):
                 struct_cpp_defn_target.writelns(
