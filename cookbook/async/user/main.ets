@@ -5,8 +5,8 @@ loadLibrary("async");
 function main() {
     console.log("addSync: ", async_test.addSync(1, 2))
 
-    async_test.add(10, 20, (error: Error|null, data?: int) => {
-        if (error) {
+    async_test.add(10, 20, (error: BusinessError|null, data?: int) => {
+        if (error !== null && error.code !== 0) {
             console.log("async ERROR ", error);
         } else {
             console.log("async success ", data);
@@ -25,8 +25,8 @@ function main() {
     let istringholder = async_test.makeIStringHolder();
     console.log(istringholder.get());
 
-    istringholder.setAsync("interface async set", (error: Error|null) => {
-        if (error) {
+    istringholder.setAsync("interface async set", (error: BusinessError|null) => {
+        if (error !== null && error.code !== 0) {
             console.log("interface async ERROR ", error);
         } else {
             console.log("interface async success ");

@@ -107,7 +107,7 @@ function fetchBinaryData() {
     let promise = new Promise<Array<float>>(
         (resolve, reject) => {ArrayTest.fetchBinaryData(
             5, (error: BusinessError|null, data?: Array<float>) => {
-                if (error) {
+                if (error !== null && error.code !== 0) {
                     reject(error);
                 } else {
                     resolve(data as Array<float>);

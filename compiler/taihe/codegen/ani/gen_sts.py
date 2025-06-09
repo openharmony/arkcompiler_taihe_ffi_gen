@@ -1266,14 +1266,16 @@ class STSCodeGenerator:
                 f"}})",
             ):
                 target.writelns(
-                    f"callback(null, ret as {sts_resolved_ty_name});",
+                    f"let err: BusinessError = new BusinessError();",
+                    f"callback(err, ret as {sts_resolved_ty_name});",
                 )
             with target.indented(
                 f".catch((ret: NullishType): void => {{",
                 f"}});",
             ):
                 target.writelns(
-                    f"callback(ret as BusinessError, undefined);",
+                    f"let res: {sts_resolved_ty_name};",
+                    f"callback(ret as BusinessError, res);",
                 )
 
     def gen_ohos_base(self):
@@ -1299,7 +1301,7 @@ class STSCodeGenerator:
                 "        this.data = data;",
                 "    }",
                 "}",
-                "export type AsyncCallback<T, E = void> = (error: BusinessError<E> | null, data: T | undefined) => void;",
+                "export type AsyncCallback<T, E = void> = (error: BusinessError<E>, data: T) => void;",
             )
 
     def gen_utils(

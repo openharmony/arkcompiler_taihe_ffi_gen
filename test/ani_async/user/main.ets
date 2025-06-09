@@ -34,7 +34,7 @@ function testAsyncAdd() {
     {
         let promise = new Promise<int>((resolve, reject) => {
             async_test.add(10, 20, (err: BusinessError|null, data?: int) => {
-                if (err !== null) {
+                if (err !== null && err.code !== 0) {
                     reject(err);
                 } else {
                     resolve(data!);
@@ -53,7 +53,7 @@ function testAsyncAdd() {
     {
         let promise = new Promise<int>((resolve, reject) => {
             async_test.add(0, 2, (err: BusinessError|null, data?: int) => {
-                if (err !== null) {
+                if (err !== null && err.code !== 0) {
                     reject(err);
                 } else {
                     resolve(data!);
