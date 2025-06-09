@@ -52,28 +52,32 @@ class CppHeadersGenerator:
             for enum in pkg.enums:
                 enum_abi_info = EnumABIInfo.get(self.am, enum)
                 enum_cpp_info = EnumCppInfo.get(self.am, enum)
-                self.gen_enum_file(enum, enum_abi_info, enum_cpp_info)
-                pkg_cpp_target.add_include(enum_cpp_info.header)
+                self.gen_enum_decl_file(enum, enum_abi_info, enum_cpp_info)
+                self.gen_enum_defn_file(enum, enum_abi_info, enum_cpp_info)
+                pkg_cpp_target.add_include(enum_cpp_info.defn_header)
             for struct in pkg.structs:
                 struct_abi_info = StructABIInfo.get(self.am, struct)
                 struct_cpp_info = StructCppInfo.get(self.am, struct)
+                self.gen_struct_decl_file(struct, struct_abi_info, struct_cpp_info)
                 self.gen_struct_defn_file(struct, struct_abi_info, struct_cpp_info)
                 self.gen_struct_impl_file(struct, struct_abi_info, struct_cpp_info)
                 pkg_cpp_target.add_include(struct_cpp_info.impl_header)
             for union in pkg.unions:
                 union_abi_info = UnionABIInfo.get(self.am, union)
                 union_cpp_info = UnionCppInfo.get(self.am, union)
+                self.gen_union_decl_file(union, union_abi_info, union_cpp_info)
                 self.gen_union_defn_file(union, union_abi_info, union_cpp_info)
                 self.gen_union_impl_file(union, union_abi_info, union_cpp_info)
                 pkg_cpp_target.add_include(union_cpp_info.impl_header)
             for iface in pkg.interfaces:
                 iface_abi_info = IfaceABIInfo.get(self.am, iface)
                 iface_cpp_info = IfaceCppInfo.get(self.am, iface)
+                self.gen_iface_decl_file(iface, iface_abi_info, iface_cpp_info)
                 self.gen_iface_defn_file(iface, iface_abi_info, iface_cpp_info)
                 self.gen_iface_impl_file(iface, iface_abi_info, iface_cpp_info)
                 pkg_cpp_target.add_include(iface_cpp_info.impl_header)
 
-    def gen_enum_file(
+    def gen_enum_decl_file(
         self,
         enum: EnumDecl,
         enum_abi_info: EnumABIInfo,
@@ -81,32 +85,80 @@ class CppHeadersGenerator:
     ):
         with CHeaderWriter(
             self.oc,
-            f"include/{enum_cpp_info.header}",
-        ) as enum_cpp_target:
-            enum_cpp_target.add_include("taihe/common.hpp")
+            f"include/{enum_cpp_info.decl_header}",
+        ) as enum_cpp_decl_target:
+            enum_cpp_decl_target.add_include("taihe/common.hpp")
+            with enum_cpp_decl_target.indented(
+                f"namespace {enum_cpp_info.namespace} {{",
+                f"}}",
+                indent="",
+            ):
+                enum_cpp_decl_target.writelns(
+                    f"struct {enum_cpp_info.name};",
+                )
+            with enum_cpp_decl_target.indented(
+                f"namespace taihe {{",
+                f"}}",
+                indent="",
+            ):
+                enum_cpp_decl_target.writelns(
+                    f"inline bool same({enum_cpp_info.as_param} lhs, {enum_cpp_info.as_param} rhs);",
+                    f"inline ::std::size_t hash({enum_cpp_info.as_param} val);",
+                )
+            with enum_cpp_decl_target.indented(
+                f"namespace taihe {{",
+                f"}}",
+                indent="",
+            ):
+                enum_cpp_decl_target.writelns(
+                    f"template<>",
+                )
+                with enum_cpp_decl_target.indented(
+                    f"struct as_abi<{enum_cpp_info.full_name}> {{",
+                    f"}};",
+                ):
+                    enum_cpp_decl_target.writelns(
+                        f"using type = {enum_abi_info.abi_type};",
+                    )
+                enum_cpp_decl_target.writelns(
+                    f"template<>",
+                )
+                with enum_cpp_decl_target.indented(
+                    f"struct as_param<{enum_cpp_info.full_name}> {{",
+                    f"}};",
+                ):
+                    enum_cpp_decl_target.writelns(
+                        f"using type = {enum_cpp_info.full_name};",
+                    )
+
+    def gen_enum_defn_file(
+        self,
+        enum: EnumDecl,
+        enum_abi_info: EnumABIInfo,
+        enum_cpp_info: EnumCppInfo,
+    ):
+        with CHeaderWriter(
+            self.oc,
+            f"include/{enum_cpp_info.defn_header}",
+        ) as enum_cpp_defn_target:
+            enum_cpp_defn_target.add_include(enum_cpp_info.decl_header)
             self.gen_enum_defn(
                 enum,
                 enum_abi_info,
                 enum_cpp_info,
-                enum_cpp_target,
+                enum_cpp_defn_target,
             )
             self.gen_enum_same(
                 enum,
                 enum_abi_info,
                 enum_cpp_info,
-                enum_cpp_target,
+                enum_cpp_defn_target,
             )
             self.gen_enum_hash(
                 enum,
                 enum_abi_info,
                 enum_cpp_info,
-                enum_cpp_target,
-            )
-            self.gen_enum_type_traits(
-                enum,
-                enum_abi_info,
-                enum_cpp_info,
-                enum_cpp_target,
+                enum_cpp_defn_target,
             )
 
     def gen_enum_defn(
@@ -114,54 +166,54 @@ class CppHeadersGenerator:
         enum: EnumDecl,
         enum_abi_info: EnumABIInfo,
         enum_cpp_info: EnumCppInfo,
-        enum_cpp_target: CHeaderWriter,
+        enum_cpp_defn_target: CHeaderWriter,
     ):
-        with enum_cpp_target.indented(
+        with enum_cpp_defn_target.indented(
             f"namespace {enum_cpp_info.namespace} {{",
             f"}}",
             indent="",
         ):
             ty_cpp_info = TypeCppInfo.get(self.am, enum.ty_ref.resolved_ty)
-            enum_cpp_target.add_include(*ty_cpp_info.impl_headers)
-            with enum_cpp_target.indented(
+            enum_cpp_defn_target.add_include(*ty_cpp_info.impl_headers)
+            with enum_cpp_defn_target.indented(
                 f"struct {enum_cpp_info.name} {{",
                 f"}};",
             ):
-                enum_cpp_target.writelns(
+                enum_cpp_defn_target.writelns(
                     f"public:",
                 )
                 self.gen_enum_key_type(
                     enum,
                     enum_abi_info,
                     enum_cpp_info,
-                    enum_cpp_target,
+                    enum_cpp_defn_target,
                 )
                 self.gen_enum_basic_methods(
                     enum,
                     enum_abi_info,
                     enum_cpp_info,
-                    enum_cpp_target,
+                    enum_cpp_defn_target,
                 )
                 self.gen_enum_key_utils(
                     enum,
                     enum_abi_info,
                     enum_cpp_info,
-                    enum_cpp_target,
+                    enum_cpp_defn_target,
                 )
                 self.gen_enum_value_utils(
                     enum,
                     enum_abi_info,
                     enum_cpp_info,
-                    enum_cpp_target,
+                    enum_cpp_defn_target,
                 )
-                enum_cpp_target.writelns(
+                enum_cpp_defn_target.writelns(
                     f"private:",
                 )
                 self.gen_enum_properties(
                     enum,
                     enum_abi_info,
                     enum_cpp_info,
-                    enum_cpp_target,
+                    enum_cpp_defn_target,
                 )
 
     def gen_enum_key_type(
@@ -169,14 +221,14 @@ class CppHeadersGenerator:
         enum: EnumDecl,
         enum_abi_info: EnumABIInfo,
         enum_cpp_info: EnumCppInfo,
-        enum_cpp_target: CHeaderWriter,
+        enum_cpp_defn_target: CHeaderWriter,
     ):
-        with enum_cpp_target.indented(
+        with enum_cpp_defn_target.indented(
             f"enum class key_t: {enum_abi_info.abi_type} {{",
             f"}};",
         ):
             for item in enum.items:
-                enum_cpp_target.writelns(
+                enum_cpp_defn_target.writelns(
                     f"{item.name},",
                 )
 
@@ -185,9 +237,9 @@ class CppHeadersGenerator:
         enum: EnumDecl,
         enum_abi_info: EnumABIInfo,
         enum_cpp_info: EnumCppInfo,
-        enum_cpp_target: CHeaderWriter,
+        enum_cpp_defn_target: CHeaderWriter,
     ):
-        enum_cpp_target.writelns(
+        enum_cpp_defn_target.writelns(
             f"key_t key;",
         )
 
@@ -196,18 +248,18 @@ class CppHeadersGenerator:
         enum: EnumDecl,
         enum_abi_info: EnumABIInfo,
         enum_cpp_info: EnumCppInfo,
-        enum_cpp_target: CHeaderWriter,
+        enum_cpp_defn_target: CHeaderWriter,
     ):
         # copy constructor
-        enum_cpp_target.writelns(
+        enum_cpp_defn_target.writelns(
             f"{enum_cpp_info.name}({enum_cpp_info.name} const& other) : key(other.key) {{}}",
         )
         # copy assignment
-        with enum_cpp_target.indented(
+        with enum_cpp_defn_target.indented(
             f"{enum_cpp_info.name}& operator=({enum_cpp_info.name} other) {{",
             f"}}",
         ):
-            enum_cpp_target.writelns(
+            enum_cpp_defn_target.writelns(
                 f"key = other.key;",
                 f"return *this;",
             )
@@ -217,26 +269,26 @@ class CppHeadersGenerator:
         enum: EnumDecl,
         enum_abi_info: EnumABIInfo,
         enum_cpp_info: EnumCppInfo,
-        enum_cpp_target: CHeaderWriter,
+        enum_cpp_defn_target: CHeaderWriter,
     ):
         # constructor
-        enum_cpp_target.writelns(
+        enum_cpp_defn_target.writelns(
             f"{enum_cpp_info.name}(key_t key) : key(key) {{}}",
         )
         # key getter
-        with enum_cpp_target.indented(
+        with enum_cpp_defn_target.indented(
             f"key_t get_key() const {{",
             f"}}",
         ):
-            enum_cpp_target.writelns(
+            enum_cpp_defn_target.writelns(
                 f"return this->key;",
             )
         # validity checker
-        with enum_cpp_target.indented(
+        with enum_cpp_defn_target.indented(
             f"bool is_valid() const {{",
             f"}}",
         ):
-            enum_cpp_target.writelns(
+            enum_cpp_defn_target.writelns(
                 f"return ({enum_abi_info.abi_type})key >= 0 && ({enum_abi_info.abi_type})key < {len(enum.items)};",
             )
 
@@ -245,7 +297,7 @@ class CppHeadersGenerator:
         enum: EnumDecl,
         enum_abi_info: EnumABIInfo,
         enum_cpp_info: EnumCppInfo,
-        enum_cpp_target: CHeaderWriter,
+        enum_cpp_defn_target: CHeaderWriter,
     ):
         ty_cpp_info = TypeCppInfo.get(self.am, enum.ty_ref.resolved_ty)
         match enum.ty_ref.resolved_ty:
@@ -258,44 +310,44 @@ class CppHeadersGenerator:
             case _:
                 raise ValueError("invalid enum type")
         # table
-        with enum_cpp_target.indented(
+        with enum_cpp_defn_target.indented(
             f"static constexpr {as_owner} table[] = {{",
             f"}};",
         ):
             for item in enum.items:
-                enum_cpp_target.writelns(
+                enum_cpp_defn_target.writelns(
                     f"{dumps(item.value)},",
                 )
         # value getter
-        with enum_cpp_target.indented(
+        with enum_cpp_defn_target.indented(
             f"{as_owner} get_value() const {{",
             f"}}",
         ):
-            enum_cpp_target.writelns(
+            enum_cpp_defn_target.writelns(
                 f"return table[({enum_abi_info.abi_type})key];",
             )
         # value converter
-        with enum_cpp_target.indented(
+        with enum_cpp_defn_target.indented(
             f"operator {as_owner}() const {{",
             f"}}",
         ):
-            enum_cpp_target.writelns(
+            enum_cpp_defn_target.writelns(
                 f"return table[({enum_abi_info.abi_type})key];",
             )
         # creator from value
-        with enum_cpp_target.indented(
+        with enum_cpp_defn_target.indented(
             f"static {enum_cpp_info.as_owner} from_value({as_param} value) {{",
             f"}}",
         ):
             for i, item in enumerate(enum.items):
-                with enum_cpp_target.indented(
+                with enum_cpp_defn_target.indented(
                     f"if (value == {dumps(item.value)}) {{",
                     f"}}",
                 ):
-                    enum_cpp_target.writelns(
+                    enum_cpp_defn_target.writelns(
                         f"return {enum_cpp_info.as_owner}((key_t){i});",
                     )
-            enum_cpp_target.writelns(
+            enum_cpp_defn_target.writelns(
                 f"return {enum_cpp_info.as_owner}((key_t)-1);",
             )
 
@@ -304,19 +356,19 @@ class CppHeadersGenerator:
         enum: EnumDecl,
         enum_abi_info: EnumABIInfo,
         enum_cpp_info: EnumCppInfo,
-        enum_cpp_target: CHeaderWriter,
+        enum_cpp_defn_target: CHeaderWriter,
     ):
         # others
-        with enum_cpp_target.indented(
+        with enum_cpp_defn_target.indented(
             f"namespace taihe {{",
             f"}}",
             indent="",
         ):
-            with enum_cpp_target.indented(
+            with enum_cpp_defn_target.indented(
                 f"inline bool same({enum_cpp_info.full_name} lhs, {enum_cpp_info.full_name} rhs) {{",
                 f"}}",
             ):
-                enum_cpp_target.writelns(
+                enum_cpp_defn_target.writelns(
                     f"return lhs.get_key() == rhs.get_key();",
                 )
 
@@ -325,53 +377,85 @@ class CppHeadersGenerator:
         enum: EnumDecl,
         enum_abi_info: EnumABIInfo,
         enum_cpp_info: EnumCppInfo,
-        enum_cpp_target: CHeaderWriter,
+        enum_cpp_defn_target: CHeaderWriter,
     ):
-        with enum_cpp_target.indented(
+        with enum_cpp_defn_target.indented(
             f"namespace taihe {{",
             f"}}",
             indent="",
         ):
-            with enum_cpp_target.indented(
-                f"inline auto hash({enum_cpp_info.as_param} val) -> ::std::size_t {{",
+            with enum_cpp_defn_target.indented(
+                f"inline ::std::size_t hash({enum_cpp_info.as_param} val) {{",
                 f"}}",
             ):
-                enum_cpp_target.writelns(
+                enum_cpp_defn_target.writelns(
                     f"return ::std::hash<{enum_abi_info.abi_type}>{{}}(({enum_abi_info.abi_type})val.get_key());",
                 )
 
-    def gen_enum_type_traits(
+    def gen_union_decl_file(
         self,
-        enum: EnumDecl,
-        enum_abi_info: EnumABIInfo,
-        enum_cpp_info: EnumCppInfo,
-        enum_cpp_target: CHeaderWriter,
+        union: UnionDecl,
+        union_abi_info: UnionABIInfo,
+        union_cpp_info: UnionCppInfo,
     ):
-        with enum_cpp_target.indented(
-            f"namespace taihe {{",
-            f"}}",
-            indent="",
-        ):
-            enum_cpp_target.writelns(
-                f"template<>",
-            )
-            with enum_cpp_target.indented(
-                f"struct as_abi<{enum_cpp_info.full_name}> {{",
-                f"}};",
+        with CHeaderWriter(
+            self.oc,
+            f"include/{union_cpp_info.decl_header}",
+        ) as union_cpp_decl_target:
+            union_cpp_decl_target.add_include("taihe/common.hpp")
+            union_cpp_decl_target.add_include(union_abi_info.decl_header)
+            with union_cpp_decl_target.indented(
+                f"namespace {union_cpp_info.namespace} {{",
+                f"}}",
+                indent="",
             ):
-                enum_cpp_target.writelns(
-                    f"using type = {enum_abi_info.abi_type};",
+                union_cpp_decl_target.writelns(
+                    f"struct {union_cpp_info.name};",
                 )
-            enum_cpp_target.writelns(
-                f"template<>",
-            )
-            with enum_cpp_target.indented(
-                f"struct as_param<{enum_cpp_info.full_name}> {{",
-                f"}};",
+            with union_cpp_decl_target.indented(
+                f"namespace taihe {{",
+                f"}}",
+                indent="",
             ):
-                enum_cpp_target.writelns(
-                    f"using type = {enum_cpp_info.full_name};",
+                union_cpp_decl_target.writelns(
+                    f"inline bool same({union_cpp_info.as_param} lhs, {union_cpp_info.as_param} rhs);",
+                    f"inline ::std::size_t hash({union_cpp_info.as_param} val);",
                 )
+            with union_cpp_decl_target.indented(
+                f"namespace taihe {{",
+                f"}}",
+                indent="",
+            ):
+                union_cpp_decl_target.writelns(
+                    f"template<>",
+                )
+                with union_cpp_decl_target.indented(
+                    f"struct as_abi<{union_cpp_info.as_owner}> {{",
+                    f"}};",
+                ):
+                    union_cpp_decl_target.writelns(
+                        f"using type = {union_abi_info.as_owner};",
+                    )
+                union_cpp_decl_target.writelns(
+                    f"template<>",
+                )
+                with union_cpp_decl_target.indented(
+                    f"struct as_abi<{union_cpp_info.as_param}> {{",
+                    f"}};",
+                ):
+                    union_cpp_decl_target.writelns(
+                        f"using type = {union_abi_info.as_param};",
+                    )
+                union_cpp_decl_target.writelns(
+                    f"template<>",
+                )
+                with union_cpp_decl_target.indented(
+                    f"struct as_param<{union_cpp_info.as_owner}> {{",
+                    f"}};",
+                ):
+                    union_cpp_decl_target.writelns(
+                        f"using type = {union_cpp_info.as_param};",
+                    )
 
     def gen_union_defn_file(
         self,
@@ -383,7 +467,7 @@ class CppHeadersGenerator:
             self.oc,
             f"include/{union_cpp_info.defn_header}",
         ) as union_cpp_defn_target:
-            union_cpp_defn_target.add_include("taihe/common.hpp")
+            union_cpp_defn_target.add_include(union_cpp_info.decl_header)
             union_cpp_defn_target.add_include(union_abi_info.defn_header)
             for field in union.fields:
                 if field.ty_ref is None:
@@ -403,12 +487,6 @@ class CppHeadersGenerator:
                 union_cpp_defn_target,
             )
             self.gen_union_hash(
-                union,
-                union_abi_info,
-                union_cpp_info,
-                union_cpp_defn_target,
-            )
-            self.gen_union_type_traits(
                 union,
                 union_abi_info,
                 union_cpp_info,
@@ -1001,49 +1079,6 @@ class CppHeadersGenerator:
                                 f"return {val};",
                             )
 
-    def gen_union_type_traits(
-        self,
-        union: UnionDecl,
-        union_abi_info: UnionABIInfo,
-        union_cpp_info: UnionCppInfo,
-        union_cpp_defn_target: CHeaderWriter,
-    ):
-        with union_cpp_defn_target.indented(
-            f"namespace taihe {{",
-            f"}}",
-            indent="",
-        ):
-            union_cpp_defn_target.writelns(
-                f"template<>",
-            )
-            with union_cpp_defn_target.indented(
-                f"struct as_abi<{union_cpp_info.as_owner}> {{",
-                f"}};",
-            ):
-                union_cpp_defn_target.writelns(
-                    f"using type = {union_abi_info.as_owner};",
-                )
-            union_cpp_defn_target.writelns(
-                f"template<>",
-            )
-            with union_cpp_defn_target.indented(
-                f"struct as_abi<{union_cpp_info.as_param}> {{",
-                f"}};",
-            ):
-                union_cpp_defn_target.writelns(
-                    f"using type = {union_abi_info.as_param};",
-                )
-            union_cpp_defn_target.writelns(
-                f"template<>",
-            )
-            with union_cpp_defn_target.indented(
-                f"struct as_param<{union_cpp_info.as_owner}> {{",
-                f"}};",
-            ):
-                union_cpp_defn_target.writelns(
-                    f"using type = {union_cpp_info.as_param};",
-                )
-
     def gen_union_impl_file(
         self,
         union: UnionDecl,
@@ -1062,6 +1097,71 @@ class CppHeadersGenerator:
                 type_cpp_info = TypeCppInfo.get(self.am, field.ty_ref.resolved_ty)
                 union_cpp_impl_target.add_include(*type_cpp_info.impl_headers)
 
+    def gen_struct_decl_file(
+        self,
+        struct: StructDecl,
+        struct_abi_info: StructABIInfo,
+        struct_cpp_info: StructCppInfo,
+    ):
+        with CHeaderWriter(
+            self.oc,
+            f"include/{struct_cpp_info.decl_header}",
+        ) as struct_cpp_decl_target:
+            struct_cpp_decl_target.add_include("taihe/common.hpp")
+            struct_cpp_decl_target.add_include(struct_abi_info.decl_header)
+            with struct_cpp_decl_target.indented(
+                f"namespace {struct_cpp_info.namespace} {{",
+                f"}}",
+                indent="",
+            ):
+                struct_cpp_decl_target.writelns(
+                    f"struct {struct_cpp_info.name};",
+                )
+            with struct_cpp_decl_target.indented(
+                f"namespace taihe {{",
+                f"}}",
+                indent="",
+            ):
+                struct_cpp_decl_target.writelns(
+                    f"inline bool same({struct_cpp_info.as_param} lhs, {struct_cpp_info.as_param} rhs);",
+                    f"inline ::std::size_t hash({struct_cpp_info.as_param} val);",
+                )
+            with struct_cpp_decl_target.indented(
+                f"namespace taihe {{",
+                f"}}",
+                indent="",
+            ):
+                struct_cpp_decl_target.writelns(
+                    f"template<>",
+                )
+                with struct_cpp_decl_target.indented(
+                    f"struct as_abi<{struct_cpp_info.as_owner}> {{",
+                    f"}};",
+                ):
+                    struct_cpp_decl_target.writelns(
+                        f"using type = {struct_abi_info.as_owner};",
+                    )
+                struct_cpp_decl_target.writelns(
+                    f"template<>",
+                )
+                with struct_cpp_decl_target.indented(
+                    f"struct as_abi<{struct_cpp_info.as_param}> {{",
+                    f"}};",
+                ):
+                    struct_cpp_decl_target.writelns(
+                        f"using type = {struct_abi_info.as_param};",
+                    )
+                struct_cpp_decl_target.writelns(
+                    f"template<>",
+                )
+                with struct_cpp_decl_target.indented(
+                    f"struct as_param<{struct_cpp_info.as_owner}> {{",
+                    f"}};",
+                ):
+                    struct_cpp_decl_target.writelns(
+                        f"using type = {struct_cpp_info.as_param};",
+                    )
+
     def gen_struct_defn_file(
         self,
         struct: StructDecl,
@@ -1072,18 +1172,12 @@ class CppHeadersGenerator:
             self.oc,
             f"include/{struct_cpp_info.defn_header}",
         ) as struct_cpp_defn_target:
-            struct_cpp_defn_target.add_include("taihe/common.hpp")
+            struct_cpp_defn_target.add_include(struct_cpp_info.decl_header)
             struct_cpp_defn_target.add_include(struct_abi_info.defn_header)
             for field in struct.fields:
                 type_cpp_info = TypeCppInfo.get(self.am, field.ty_ref.resolved_ty)
                 struct_cpp_defn_target.add_include(*type_cpp_info.defn_headers)
             self.gen_struct_defn(
-                struct,
-                struct_abi_info,
-                struct_cpp_info,
-                struct_cpp_defn_target,
-            )
-            self.gen_struct_hash(
                 struct,
                 struct_abi_info,
                 struct_cpp_info,
@@ -1095,7 +1189,7 @@ class CppHeadersGenerator:
                 struct_cpp_info,
                 struct_cpp_defn_target,
             )
-            self.gen_struct_type_traits(
+            self.gen_struct_hash(
                 struct,
                 struct_abi_info,
                 struct_cpp_info,
@@ -1160,7 +1254,7 @@ class CppHeadersGenerator:
             indent="",
         ):
             with struct_cpp_defn_target.indented(
-                f"inline auto hash({struct_cpp_info.as_param} val) -> ::std::size_t {{",
+                f"inline ::std::size_t hash({struct_cpp_info.as_param} val) {{",
                 f"}}",
             ):
                 struct_cpp_defn_target.writelns(
@@ -1172,49 +1266,6 @@ class CppHeadersGenerator:
                     )
                 struct_cpp_defn_target.writelns(
                     f"return seed;",
-                )
-
-    def gen_struct_type_traits(
-        self,
-        struct: StructDecl,
-        struct_abi_info: StructABIInfo,
-        struct_cpp_info: StructCppInfo,
-        struct_cpp_defn_target: CHeaderWriter,
-    ):
-        with struct_cpp_defn_target.indented(
-            f"namespace taihe {{",
-            f"}}",
-            indent="",
-        ):
-            struct_cpp_defn_target.writelns(
-                f"template<>",
-            )
-            with struct_cpp_defn_target.indented(
-                f"struct as_abi<{struct_cpp_info.as_owner}> {{",
-                f"}};",
-            ):
-                struct_cpp_defn_target.writelns(
-                    f"using type = {struct_abi_info.as_owner};",
-                )
-            struct_cpp_defn_target.writelns(
-                f"template<>",
-            )
-            with struct_cpp_defn_target.indented(
-                f"struct as_abi<{struct_cpp_info.as_param}> {{",
-                f"}};",
-            ):
-                struct_cpp_defn_target.writelns(
-                    f"using type = {struct_abi_info.as_param};",
-                )
-            struct_cpp_defn_target.writelns(
-                f"template<>",
-            )
-            with struct_cpp_defn_target.indented(
-                f"struct as_param<{struct_cpp_info.as_owner}> {{",
-                f"}};",
-            ):
-                struct_cpp_defn_target.writelns(
-                    f"using type = {struct_cpp_info.as_param};",
                 )
 
     def gen_struct_impl_file(
@@ -1233,6 +1284,70 @@ class CppHeadersGenerator:
                 type_cpp_info = TypeCppInfo.get(self.am, field.ty_ref.resolved_ty)
                 struct_cpp_impl_target.add_include(*type_cpp_info.impl_headers)
 
+    def gen_iface_decl_file(
+        self,
+        iface: IfaceDecl,
+        iface_abi_info: IfaceABIInfo,
+        iface_cpp_info: IfaceCppInfo,
+    ):
+        with CHeaderWriter(
+            self.oc,
+            f"include/{iface_cpp_info.decl_header}",
+        ) as iface_cpp_decl_target:
+            iface_cpp_decl_target.add_include("taihe/object.hpp")
+            iface_cpp_decl_target.add_include(iface_abi_info.decl_header)
+            with iface_cpp_decl_target.indented(
+                f"namespace {iface_cpp_info.weakspace} {{",
+                f"}}",
+                indent="",
+            ):
+                iface_cpp_decl_target.writelns(
+                    f"struct {iface_cpp_info.weak_name};",
+                )
+            with iface_cpp_decl_target.indented(
+                f"namespace {iface_cpp_info.namespace} {{",
+                f"}}",
+                indent="",
+            ):
+                iface_cpp_decl_target.writelns(
+                    f"struct {iface_cpp_info.norm_name};",
+                )
+            with iface_cpp_decl_target.indented(
+                f"namespace taihe {{",
+                f"}}",
+                indent="",
+            ):
+                iface_cpp_decl_target.writelns(
+                    f"template<>",
+                )
+                with iface_cpp_decl_target.indented(
+                    f"struct as_abi<{iface_cpp_info.as_owner}> {{",
+                    f"}};",
+                ):
+                    iface_cpp_decl_target.writelns(
+                        f"using type = {iface_abi_info.as_owner};",
+                    )
+                iface_cpp_decl_target.writelns(
+                    f"template<>",
+                )
+                with iface_cpp_decl_target.indented(
+                    f"struct as_abi<{iface_cpp_info.as_param}> {{",
+                    f"}};",
+                ):
+                    iface_cpp_decl_target.writelns(
+                        f"using type = {iface_abi_info.as_param};",
+                    )
+                iface_cpp_decl_target.writelns(
+                    f"template<>",
+                )
+                with iface_cpp_decl_target.indented(
+                    f"struct as_param<{iface_cpp_info.as_owner}> {{",
+                    f"}};",
+                ):
+                    iface_cpp_decl_target.writelns(
+                        f"using type = {iface_cpp_info.as_param};",
+                    )
+
     def gen_iface_defn_file(
         self,
         iface: IfaceDecl,
@@ -1243,19 +1358,13 @@ class CppHeadersGenerator:
             self.oc,
             f"include/{iface_cpp_info.defn_header}",
         ) as iface_cpp_defn_target:
-            iface_cpp_defn_target.add_include("taihe/object.hpp")
+            iface_cpp_defn_target.add_include(iface_cpp_info.decl_header)
             iface_cpp_defn_target.add_include(iface_abi_info.defn_header)
             for ancestor, info in iface_abi_info.ancestor_dict.items():
                 if ancestor is iface:
                     continue
                 ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
                 iface_cpp_defn_target.add_include(ancestor_cpp_info.defn_header)
-            self.gen_iface_decl(
-                iface,
-                iface_abi_info,
-                iface_cpp_info,
-                iface_cpp_defn_target,
-            )
             self.gen_iface_view_defn(
                 iface,
                 iface_abi_info,
@@ -1267,36 +1376,6 @@ class CppHeadersGenerator:
                 iface_abi_info,
                 iface_cpp_info,
                 iface_cpp_defn_target,
-            )
-            self.gen_iface_type_traits(
-                iface,
-                iface_abi_info,
-                iface_cpp_info,
-                iface_cpp_defn_target,
-            )
-
-    def gen_iface_decl(
-        self,
-        iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
-        iface_cpp_info: IfaceCppInfo,
-        iface_cpp_defn_target: CHeaderWriter,
-    ):
-        with iface_cpp_defn_target.indented(
-            f"namespace {iface_cpp_info.weakspace} {{",
-            f"}}",
-            indent="",
-        ):
-            iface_cpp_defn_target.writelns(
-                f"struct {iface_cpp_info.weak_name};",
-            )
-        with iface_cpp_defn_target.indented(
-            f"namespace {iface_cpp_info.namespace} {{",
-            f"}}",
-            indent="",
-        ):
-            iface_cpp_defn_target.writelns(
-                f"struct {iface_cpp_info.norm_name};",
             )
 
     def gen_iface_view_defn(
@@ -1721,49 +1800,6 @@ class CppHeadersGenerator:
                         f"{info.static_cast}(this->m_handle.vtbl_ptr),",
                         f"std::exchange(this->m_handle.data_ptr, nullptr),",
                     )
-
-    def gen_iface_type_traits(
-        self,
-        iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
-        iface_cpp_info: IfaceCppInfo,
-        iface_cpp_defn_target: CHeaderWriter,
-    ):
-        with iface_cpp_defn_target.indented(
-            f"namespace taihe {{",
-            f"}}",
-            indent="",
-        ):
-            iface_cpp_defn_target.writelns(
-                f"template<>",
-            )
-            with iface_cpp_defn_target.indented(
-                f"struct as_abi<{iface_cpp_info.as_owner}> {{",
-                f"}};",
-            ):
-                iface_cpp_defn_target.writelns(
-                    f"using type = {iface_abi_info.as_owner};",
-                )
-            iface_cpp_defn_target.writelns(
-                f"template<>",
-            )
-            with iface_cpp_defn_target.indented(
-                f"struct as_abi<{iface_cpp_info.as_param}> {{",
-                f"}};",
-            ):
-                iface_cpp_defn_target.writelns(
-                    f"using type = {iface_abi_info.as_param};",
-                )
-            iface_cpp_defn_target.writelns(
-                f"template<>",
-            )
-            with iface_cpp_defn_target.indented(
-                f"struct as_param<{iface_cpp_info.as_owner}> {{",
-                f"}};",
-            ):
-                iface_cpp_defn_target.writelns(
-                    f"using type = {iface_cpp_info.as_param};",
-                )
 
     def gen_iface_impl_file(
         self,

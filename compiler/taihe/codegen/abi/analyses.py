@@ -65,6 +65,7 @@ class UnionABIInfo(AbstractAnalysis[UnionDecl]):
     def __init__(self, am: AnalysisManager, d: UnionDecl) -> None:
         super().__init__(am, d)
         segments = [*d.parent_pkg.segments, d.name]
+        self.decl_header = f"{d.parent_pkg.name}.{d.name}.abi.0.h"
         self.defn_header = f"{d.parent_pkg.name}.{d.name}.abi.1.h"
         self.impl_header = f"{d.parent_pkg.name}.{d.name}.abi.2.h"
         self.tag_type = "int"
@@ -79,6 +80,7 @@ class StructABIInfo(AbstractAnalysis[StructDecl]):
     def __init__(self, am: AnalysisManager, d: StructDecl) -> None:
         super().__init__(am, d)
         segments = [*d.parent_pkg.segments, d.name]
+        self.decl_header = f"{d.parent_pkg.name}.{d.name}.abi.0.h"
         self.defn_header = f"{d.parent_pkg.name}.{d.name}.abi.1.h"
         self.impl_header = f"{d.parent_pkg.name}.{d.name}.abi.2.h"
         self.mangled_name = encode(segments, DeclKind.TYPE)
@@ -103,6 +105,7 @@ class IfaceABIInfo(AbstractAnalysis[IfaceDecl]):
     def __init__(self, am: AnalysisManager, d: IfaceDecl) -> None:
         super().__init__(am, d)
         segments = [*d.parent_pkg.segments, d.name]
+        self.decl_header = f"{d.parent_pkg.name}.{d.name}.abi.0.h"
         self.defn_header = f"{d.parent_pkg.name}.{d.name}.abi.1.h"
         self.impl_header = f"{d.parent_pkg.name}.{d.name}.abi.2.h"
         self.mangled_name = encode(segments, DeclKind.TYPE)
