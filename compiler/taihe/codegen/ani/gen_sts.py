@@ -762,7 +762,7 @@ class STSCodeGenerator:
                 f"private static _registry = new FinalizationRegistry<long>((data_ptr: long) => {{ {iface_ani_info.sts_impl_name}._finalize(data_ptr); }});",
             )
             with target.indented(
-                f"private constructor(_vtbl_ptr: long, _data_ptr: long) {{",
+                f"private _initialize(_vtbl_ptr: long, _data_ptr: long): void {{",
                 f"}}",
             ):
                 target.writelns(
