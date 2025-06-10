@@ -10,7 +10,6 @@ from taihe.codegen.ani.analyses import (
     IfaceANIInfo,
     IfaceMethodANIInfo,
     Namespace,
-    PackageANIInfo,
     PackageGroupANIInfo,
     StructANIInfo,
     StructFieldANIInfo,
@@ -58,19 +57,13 @@ class STSCodeGenerator:
         ) as target:
             target.add_import_decl("@ohos.base", "AsyncCallback")
             target.add_import_decl("@ohos.base", "BusinessError")
-            self.gen_module_injected_codes(ns, target)
             self.gen_namespace(ns, target)
 
-    def gen_module_injected_codes(self, ns: Namespace, target: StsWriter):
-        # TODO: hack inject
-        for pkg in ns.packages:
-            pkg_ani_info = PackageANIInfo.get(self.am, pkg)
-            for injected in pkg_ani_info.module_injected_codes:
-                target.write_block(injected)
-        for _, child_ns in ns.children.items():
-            self.gen_module_injected_codes(child_ns, target)
-
     def gen_namespace(self, ns: Namespace, target: StsWriter):
+        for head in ns.injected_heads:
+            target.write_block(head)
+        for code in ns.injected_codes:
+            target.write_block(code)
         for pkg in ns.packages:
             self.gen_package(pkg, target)
         for child_ns_name, child_ns in ns.children.items():
@@ -189,11 +182,6 @@ class STSCodeGenerator:
         return bad_on_off_methods
 
     def gen_package(self, pkg: PackageDecl, target: StsWriter):
-        # TODO: hack inject
-        pkg_ani_info = PackageANIInfo.get(self.am, pkg)
-        for injected in pkg_ani_info.injected_codes:
-            target.write_block(injected)
-
         self.gen_native_funcs(pkg.functions, target)
         ctors_map: dict[str, list[GlobFuncDecl]] = {}
         statics_map: dict[str, list[GlobFuncDecl]] = {}

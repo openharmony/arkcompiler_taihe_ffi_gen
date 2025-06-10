@@ -228,6 +228,8 @@ class Namespace:
         self.children: dict[str, Namespace] = {}
         self.packages: list[PackageDecl] = []
         self.is_default = False
+        self.injected_heads: list[str] = []
+        self.injected_codes: list[str] = []
 
     def is_module(self) -> bool:
         return self.parent is None
@@ -288,9 +290,21 @@ class PackageGroupANIInfo(AbstractAnalysis[PackageGroup]):
             else:
                 module_name = pkg.name
                 path = []
+
             is_default = pkg.get_last_attr("sts_export_default") is not None
+
             mod = self.module_dict.setdefault(module_name, Namespace(module_name))
-            self.package_map[pkg] = mod.add_path(path, pkg, is_default)
+            ns = self.package_map[pkg] = mod.add_path(path, pkg, is_default)
+
+            for sts_inject in pkg.get_all_attrs("sts_inject_into_module"):
+                if check_attr_args(am, sts_inject, "s"):
+                    (head,) = sts_inject.args
+                    mod.injected_heads.append(head)
+
+            for sts_inject in pkg.get_all_attrs("sts_inject"):
+                if check_attr_args(am, sts_inject, "s"):
+                    (code,) = sts_inject.args
+                    ns.injected_codes.append(code)
 
     def get_namespace(self, pkg: PackageDecl) -> Namespace:
         return self.package_map[pkg]
@@ -320,23 +334,14 @@ class PackageANIInfo(AbstractAnalysis[PackageDecl]):
 
         self.cpp_ns = "::".join(p.segments)
 
-        self.namespace = PackageGroupANIInfo.get(am, p.parent_group).get_namespace(p)
+        pg_ani_info = PackageGroupANIInfo.get(am, p.parent_group)
+        self.namespace = pg_ani_info.get_namespace(p)
 
         module_name, path = self.namespace.get_path()
         self.ani_path = "/".join(module_name.split(".") + path)
         self.impl_desc = f"L{self.ani_path};"
 
-        self.injected_codes: list[str] = []
-        for injected in p.get_all_attrs("sts_inject"):
-            if check_attr_args(am, injected, "s"):
-                (code,) = injected.args
-                self.injected_codes.append(code)
-
-        self.module_injected_codes: list[str] = []
-        for module_injected in p.get_all_attrs("sts_inject_into_module"):
-            if check_attr_args(am, module_injected, "s"):
-                (code,) = module_injected.args
-                self.module_injected_codes.append(code)
+        self.function_keep_name = p.get_last_attr("sts_keep_name") is not None
 
     @property
     def scope(self):
@@ -488,7 +493,8 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
                 return True
             (func_name,) = overload_attr.args
         else:
-            if self.f.parent_pkg.get_last_attr("sts_keep_name"):
+            pkg_ani_info = PackageANIInfo.get(self.am, self.f.parent_pkg)
+            if pkg_ani_info.function_keep_name:
                 func_name = self.f.name
             else:
                 func_name = self.f.name[0].lower() + self.f.name[1:]
@@ -666,7 +672,8 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
                 return True
             (method_name,) = overload_attr.args
         else:
-            if self.f.parent_pkg.get_last_attr("sts_keep_name"):
+            pkg_ani_info = PackageANIInfo.get(self.am, self.f.parent_pkg)
+            if pkg_ani_info.function_keep_name:
                 method_name = self.f.name
             else:
                 method_name = self.f.name[0].lower() + self.f.name[1:]
