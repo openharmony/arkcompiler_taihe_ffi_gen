@@ -2028,28 +2028,12 @@ class CallbackTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[CallbackType]):
     ):
         cpp_impl_class = f"{cpp_result}_cpp_impl_t"
         with target.indented(
-            f"struct {cpp_impl_class} {{",
+            f"struct {cpp_impl_class} : ::taihe::dref_guard {{",
             f"}};",
         ):
             target.writelns(
-                f"ani_ref ref;",
+                f"{cpp_impl_class}(ani_env* env, ani_ref val) : ::taihe::dref_guard(env, val) {{}}",
             )
-            with target.indented(
-                f"{cpp_impl_class}(ani_env* env, ani_fn_object obj) {{",
-                f"}}",
-            ):
-                target.writelns(
-                    f"env->GlobalReference_Create(obj, &this->ref);",
-                )
-            with target.indented(
-                f"~{cpp_impl_class}() {{",
-                f"}}",
-            ):
-                target.writelns(
-                    f"::taihe::env_guard guard;",
-                    f"ani_env *env = guard.get_env();",
-                    f"env->GlobalReference_Delete(this->ref);",
-                )
             inner_cpp_params = []
             inner_ani_args = []
             inner_cpp_args = []

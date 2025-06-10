@@ -488,28 +488,12 @@ class ANICodeGenerator:
             f"}}",
         ):
             with iface_ani_impl_target.indented(
-                f"struct cpp_impl_t {{",
+                f"struct cpp_impl_t : ::taihe::dref_guard {{",
                 f"}};",
             ):
                 iface_ani_impl_target.writelns(
-                    f"ani_ref ref;",
+                    f"cpp_impl_t(ani_env* env, ani_ref val) : ::taihe::dref_guard(env, val) {{}}",
                 )
-                with iface_ani_impl_target.indented(
-                    f"cpp_impl_t(ani_env* env, ani_object obj) {{",
-                    f"}}",
-                ):
-                    iface_ani_impl_target.writelns(
-                        f"env->GlobalReference_Create(obj, &this->ref);",
-                    )
-                with iface_ani_impl_target.indented(
-                    f"~cpp_impl_t() {{",
-                    f"}}",
-                ):
-                    iface_ani_impl_target.writelns(
-                        f"::taihe::env_guard guard;",
-                        f"ani_env *env = guard.get_env();",
-                        f"env->GlobalReference_Delete(this->ref);",
-                    )
                 for ancestor in iface_abi_info.ancestor_dict:
                     for method in ancestor.methods:
                         method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
