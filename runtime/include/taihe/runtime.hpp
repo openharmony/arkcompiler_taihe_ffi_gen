@@ -6,6 +6,15 @@
 #include <taihe/string.hpp>
 
 namespace taihe {
+// Error handling functions
+
+void set_error(taihe::string_view msg);
+void set_business_error(int32_t err_code, taihe::string_view msg);
+void reset_error();
+bool has_error();
+}  // namespace taihe
+
+namespace taihe {
 // VM and Environment related functions
 
 void set_vm(ani_vm *vm);
@@ -45,7 +54,25 @@ public:
     return env;
   }
 };
+}  // namespace taihe
 
+namespace taihe {
+// convert between ani types and taihe types
+
+template<typename cpp_owner_t>
+struct from_ani_t;
+
+template<typename cpp_owner_t>
+struct into_ani_t;
+
+template<typename cpp_owner_t>
+constexpr inline from_ani_t<cpp_owner_t> from_ani;
+
+template<typename cpp_owner_t>
+constexpr inline into_ani_t<cpp_owner_t> into_ani;
+}  // namespace taihe
+
+namespace taihe {
 // Reference management
 
 class sref_guard {
@@ -79,27 +106,10 @@ public:
     env->GlobalReference_Delete(ref);
   }
 };
+}  // namespace taihe
 
-// Error handling functions
-
-void set_error(taihe::string_view msg);
-void set_business_error(int32_t err_code, taihe::string_view msg);
-void reset_error();
-bool has_error();
-
-// convert between ani types and taihe types
-template<typename cpp_owner_t>
-struct from_ani_t;
-
-template<typename cpp_owner_t>
-struct into_ani_t;
-
-template<typename cpp_owner_t>
-constexpr inline from_ani_t<cpp_owner_t> from_ani;
-
-template<typename cpp_owner_t>
-constexpr inline into_ani_t<cpp_owner_t> into_ani;
-
+#if __cplusplus >= 202002L
+namespace taihe {
 template<std::size_t N = 0>
 struct nullable_fixed_string {
   bool is_null;
@@ -117,10 +127,7 @@ struct nullable_fixed_string {
     return is_null ? nullptr : value;
   }
 };
-}  // namespace taihe
 
-#if __cplusplus >= 202002L
-namespace taihe {
 template<nullable_fixed_string descriptor_t>
 inline ani_module ani_find_module(ani_env *env) {
   static sref_guard guard(env, [env]() -> ani_module {
