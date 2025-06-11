@@ -14,7 +14,13 @@ function doFullGC() {
 function test_finalization() {
     let flag: int = 0;
 
-    let foo: Test.Foo|null = Test.makeFoo();
+    let foo: Test.Foo|null = new Test.Foo();
+
+    console.log("...")
+
+    doFullGC()
+    Coroutine.Schedule()
+
     foo.addCallback(() => {
         flag = 42;
     })

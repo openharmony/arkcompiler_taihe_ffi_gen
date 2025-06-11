@@ -154,7 +154,8 @@ class ANICodeGenerator:
                                     ancestor,
                                     method.name,
                                 )
-                        self.gen_finalizer(pkg_ani_source_target, "static_finalize")
+                        self.gen_obj_drop(pkg_ani_source_target, "_obj_drop")
+                        self.gen_obj_dup(pkg_ani_source_target, "_obj_dup")
                 for func in pkg.functions:
                     self.gen_func(func, pkg_ani_source_target, func.name)
 
@@ -168,11 +169,10 @@ class ANICodeGenerator:
             )
             register_infos.append(pkg_register_info)
             for func in pkg.functions:
-                full_name = f"local::{func.name}"
                 func_ani_info = GlobFuncANIInfo.get(self.am, func)
                 func_info = ANINativeFuncInfo(
                     sts_native_name=func_ani_info.sts_native_name,
-                    full_name=full_name,
+                    full_name=f"local::{func.name}",
                 )
                 pkg_register_info.member_infos.append(func_info)
             for iface in pkg.interfaces:
@@ -186,21 +186,23 @@ class ANICodeGenerator:
                 register_infos.append(iface_register_info)
                 for ancestor in iface_abi_info.ancestor_dict:
                     for method in ancestor.methods:
-                        full_name = f"local::{iface.name}::{method.name}"
                         method_ani_info = IfaceMethodANIInfo.get(self.am, method)
                         method_info = ANINativeFuncInfo(
                             sts_native_name=method_ani_info.sts_native_name,
-                            full_name=full_name,
+                            full_name=f"local::{iface.name}::{method.name}",
                         )
                         iface_register_info.member_infos.append(method_info)
-                # TODO: finalizer
                 pkg_ani_source_target.add_include("taihe/object.hpp")
-                full_name = f"local::{iface.name}::static_finalize"
-                finalizer_info = ANINativeFuncInfo(
-                    sts_native_name="_finalize",
-                    full_name=full_name,
+                obj_drop_info = ANINativeFuncInfo(
+                    sts_native_name="_obj_drop",
+                    full_name=f"local::{iface.name}::_obj_drop",
                 )
-                iface_register_info.member_infos.append(finalizer_info)
+                iface_register_info.member_infos.append(obj_drop_info)
+                obj_dup_info = ANINativeFuncInfo(
+                    sts_native_name="_obj_dup",
+                    full_name=f"local::{iface.name}::_obj_dup",
+                )
+                iface_register_info.member_infos.append(obj_dup_info)
 
             with pkg_ani_source_target.indented(
                 f"namespace {pkg_ani_info.cpp_ns} {{",
@@ -386,7 +388,7 @@ class ANICodeGenerator:
                     f"{ancestor_cpp_info.as_param}(cpp_iface)->{method_cpp_info.call_name}({cpp_args_str});",
                 )
 
-    def gen_finalizer(
+    def gen_obj_drop(
         self,
         pkg_ani_source_target: CSourceWriter,
         name: str,
@@ -396,7 +398,20 @@ class ANICodeGenerator:
             f"}}",
         ):
             pkg_ani_source_target.writelns(
-                f"::taihe::data_holder(reinterpret_cast<DataBlockHead*>(data_ptr));",
+                f"tobj_drop(reinterpret_cast<DataBlockHead*>(data_ptr));",
+            )
+
+    def gen_obj_dup(
+        self,
+        pkg_ani_source_target: CSourceWriter,
+        name: str,
+    ):
+        with pkg_ani_source_target.indented(
+            f"static ani_long {name}([[maybe_unused]] ani_env *env, [[maybe_unused]] ani_class clazz, ani_long data_ptr) {{",
+            f"}}",
+        ):
+            pkg_ani_source_target.writelns(
+                f"return reinterpret_cast<ani_long>(tobj_dup(reinterpret_cast<DataBlockHead*>(data_ptr)));",
             )
 
     def gen_iface_files(

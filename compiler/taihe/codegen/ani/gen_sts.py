@@ -766,8 +766,9 @@ class STSCodeGenerator:
             target.writelns(
                 f"private _vtbl_ptr: long;",
                 f"private _data_ptr: long;",
-                f"private static native _finalize(data_ptr: long): void;",
-                f"private static _registry = new FinalizationRegistry<long>((data_ptr: long) => {{ {iface_ani_info.sts_impl_name}._finalize(data_ptr); }});",
+                f"private static native _obj_drop(data_ptr: long): void;",
+                f"private static native _obj_dup(data_ptr: long): long;",
+                f"private static _registry = new FinalizationRegistry<long>((data_ptr: long) => {{ {iface_ani_info.sts_impl_name}._obj_drop(data_ptr); }});",
             )
             with target.indented(
                 f"private _initialize(_vtbl_ptr: long, _data_ptr: long): void {{",
@@ -808,8 +809,7 @@ class STSCodeGenerator:
         ):
             target.writelns(
                 f"let temp = {sts_native_call} as {iface_ani_info.sts_impl_name};",
-                f"this._data_ptr = temp._data_ptr;",
-                f"this._vtbl_ptr = temp._vtbl_ptr;",
+                f"this._initialize(temp._vtbl_ptr, {iface_ani_info.sts_impl_name}._obj_dup(temp._data_ptr));",
             )
 
     def gen_static_funcs(
