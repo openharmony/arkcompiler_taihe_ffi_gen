@@ -19,6 +19,7 @@ from taihe.semantics.declarations import (
     GlobFuncDecl,
     IfaceDecl,
     IfaceMethodDecl,
+    IfaceParentDecl,
     PackageDecl,
     PackageGroup,
     ParamDecl,
@@ -848,12 +849,11 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
                 self.class_injected_codes.append(code)
 
         self.sts_fields: list[StructFieldDecl] = []
-        self.sts_parents: list[StructFieldDecl] = []
+        self.sts_iface_parents: list[StructFieldDecl] = []
+        self.sts_class_parents: list[StructFieldDecl] = []
         self.sts_final_fields: list[list[StructFieldDecl]] = []
         for field in d.fields:
-            try:
-                if not field.get_last_attr("extends"):
-                    raise RuntimeError
+            if field.get_last_attr("extends"):
                 ty = field.ty_ref.resolved_ty
                 if not isinstance(ty, StructType):
                     raise_adhoc_error(
@@ -861,20 +861,16 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
                         "struct cannot extend non-struct type",
                         field.loc,
                     )
-                    raise RuntimeError
+                    continue
                 parent_ani_info = StructANIInfo.get(am, ty.ty_decl)
                 if parent_ani_info.is_class():
-                    raise_adhoc_error(
-                        am,
-                        "struct cannot extend an @class struct",
-                        field.loc,
-                    )
-                    raise RuntimeError
-                self.sts_parents.append(field)
+                    self.sts_class_parents.append(field)
+                else:
+                    self.sts_iface_parents.append(field)
                 self.sts_final_fields.extend(
                     [field, *parts] for parts in parent_ani_info.sts_final_fields
                 )
-            except RuntimeError:
+            else:
                 self.sts_fields.append(field)
                 self.sts_final_fields.append([field])
 
@@ -917,16 +913,16 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
                 (code,) = class_injected.args
                 self.class_injected_codes.append(code)
 
+        self.sts_class_parents: list[IfaceParentDecl] = []
+        self.sts_iface_parents: list[IfaceParentDecl] = []
         for parent in d.parents:
             ty = parent.ty_ref.resolved_ty
             assert isinstance(ty, IfaceType)
             parent_ani_info = IfaceANIInfo.get(am, ty.ty_decl)
             if parent_ani_info.is_class():
-                raise_adhoc_error(
-                    am,
-                    "interface cannot extend an @class interface",
-                    parent.loc,
-                )
+                self.sts_class_parents.append(parent)
+            else:
+                self.sts_iface_parents.append(parent)
 
         self.is_default = d.get_last_attr("sts_export_default") is not None
 

@@ -457,13 +457,15 @@ class STSCodeGenerator:
         if struct_ani_info.is_class():
             # no interface
             return
-        parents = []
-        for parent in struct_ani_info.sts_parents:
-            parent_ty = parent.ty_ref.resolved_ty
-            parent_ani_info = TypeANIInfo.get(self.am, parent_ty)
-            parents.append(parent_ani_info.sts_type_in(target))
-        extends_str = " extends " + ", ".join(parents) if parents else ""
-        sts_decl = f"interface {struct_ani_info.sts_type_name}{extends_str}"
+        sts_decl = f"interface {struct_ani_info.sts_type_name}"
+        if struct_ani_info.sts_iface_parents:
+            parents = []
+            for parent in struct_ani_info.sts_iface_parents:
+                parent_ty = parent.ty_ref.resolved_ty
+                parent_ani_info = TypeANIInfo.get(self.am, parent_ty)
+                parents.append(parent_ani_info.sts_type_in(target))
+            extends_str = ", ".join(parents) if parents else ""
+            sts_decl = f"{sts_decl} extends {extends_str}"
         if struct_ani_info.is_default:
             sts_decl = f"export default {sts_decl}"
         else:
@@ -489,20 +491,22 @@ class STSCodeGenerator:
         target: StsWriter,
     ):
         struct_ani_info = StructANIInfo.get(self.am, struct)
+        sts_decl = f"class {struct_ani_info.sts_impl_name}"
         if struct_ani_info.is_class():
-            parents = []
-            for parent in struct_ani_info.sts_parents:
-                parent_ty = parent.ty_ref.resolved_ty
-                parent_ani_info = TypeANIInfo.get(self.am, parent_ty)
-                parents.append(parent_ani_info.sts_type_in(target))
-            implements_str = " implements " + ", ".join(parents) if parents else ""
-            sts_decl = f"class {struct_ani_info.sts_impl_name}{implements_str}"
+            if struct_ani_info.sts_iface_parents:
+                parents = []
+                for parent in struct_ani_info.sts_iface_parents:
+                    parent_ty = parent.ty_ref.resolved_ty
+                    parent_ani_info = TypeANIInfo.get(self.am, parent_ty)
+                    parents.append(parent_ani_info.sts_type_in(target))
+                implements_str = ", ".join(parents) if parents else ""
+                sts_decl = f"{sts_decl} implements {implements_str}"
             if struct_ani_info.is_default:
                 sts_decl = f"export default {sts_decl}"
             else:
                 sts_decl = f"export {sts_decl}"
         else:
-            sts_decl = f"class {struct_ani_info.sts_impl_name} implements {struct_ani_info.sts_type_name}"
+            sts_decl = f"{sts_decl} implements {struct_ani_info.sts_type_name}"
 
         with target.indented(
             f"{sts_decl} {{",
@@ -545,13 +549,15 @@ class STSCodeGenerator:
         if iface_ani_info.is_class():
             # no interface
             return
-        parents = []
-        for parent in iface.parents:
-            parent_ty = parent.ty_ref.resolved_ty
-            parent_ani_info = TypeANIInfo.get(self.am, parent_ty)
-            parents.append(parent_ani_info.sts_type_in(target))
-        extends_str = " extends " + ", ".join(parents) if parents else ""
-        sts_decl = f"interface {iface_ani_info.sts_type_name}{extends_str}"
+        sts_decl = f"interface {iface_ani_info.sts_type_name}"
+        if iface_ani_info.sts_iface_parents:
+            parents = []
+            for parent in iface_ani_info.sts_iface_parents:
+                parent_ty = parent.ty_ref.resolved_ty
+                parent_ani_info = TypeANIInfo.get(self.am, parent_ty)
+                parents.append(parent_ani_info.sts_type_in(target))
+            extends_str = ", ".join(parents) if parents else ""
+            sts_decl = f"{sts_decl} extends {extends_str}"
         if iface_ani_info.is_default:
             sts_decl = f"export default {sts_decl}"
         else:
@@ -733,20 +739,22 @@ class STSCodeGenerator:
         ctors_map: dict[str, list[GlobFuncDecl]],
     ):
         iface_ani_info = IfaceANIInfo.get(self.am, iface)
+        sts_decl = f"class {iface_ani_info.sts_impl_name}"
         if iface_ani_info.is_class():
-            parents = []
-            for parent in iface.parents:
-                parent_ty = parent.ty_ref.resolved_ty
-                parent_ani_info = TypeANIInfo.get(self.am, parent_ty)
-                parents.append(parent_ani_info.sts_type_in(target))
-            implements_str = " implements " + ", ".join(parents) if parents else ""
-            sts_decl = f"class {iface_ani_info.sts_impl_name}{implements_str}"
+            if iface_ani_info.sts_iface_parents:
+                parents = []
+                for parent in iface_ani_info.sts_iface_parents:
+                    parent_ty = parent.ty_ref.resolved_ty
+                    parent_ani_info = TypeANIInfo.get(self.am, parent_ty)
+                    parents.append(parent_ani_info.sts_type_in(target))
+                implements_str = ", ".join(parents) if parents else ""
+                sts_decl = f"{sts_decl} implements {implements_str}"
             if iface_ani_info.is_default:
                 sts_decl = f"export default {sts_decl}"
             else:
                 sts_decl = f"export {sts_decl}"
         else:
-            sts_decl = f"class {iface_ani_info.sts_impl_name} implements {iface_ani_info.sts_type_name}"
+            sts_decl = f"{sts_decl} implements {iface_ani_info.sts_type_name}"
 
         with target.indented(
             f"{sts_decl} {{",

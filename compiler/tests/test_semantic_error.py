@@ -817,42 +817,7 @@ def test_sts_type(ani_backends):
     test_instance.assert_has_error(AdhocError)
 
 
-def test_iface_extend(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "@class\n"
-        "interface IFoo {\n"
-        "    getname(): String;\n"
-        "}\n"
-        "interface IBar: IFoo {\n"
-        "    setname(): String;\n"
-        "}\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_struct_extend_1(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "@class\n"
-        "struct A {\n"
-        "    a: i32;\n"
-        "}\n"
-        "@class\n"
-        "struct B {\n"
-        "    @extends base: A;\n"
-        "}\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_struct_extend_2(ani_backends):
+def test_struct_extend(ani_backends):
     # fmt: off
     test_instance = SemanticTestCompilerInstance(ani_backends)
     test_instance.add_source(
