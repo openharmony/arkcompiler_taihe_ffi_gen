@@ -58,6 +58,7 @@ class STSCodeGenerator:
             target.add_import_decl("@ohos.base", "AsyncCallback")
             target.add_import_decl("@ohos.base", "BusinessError")
             self.gen_namespace(ns, target)
+            self.gen_utils(target)
 
     def gen_namespace(self, ns: Namespace, target: StsWriter):
         for head in ns.injected_heads:
@@ -77,7 +78,6 @@ class STSCodeGenerator:
                 f"}}",
             ):
                 self.gen_namespace(child_ns, target)
-        self.gen_utils(target)
 
     def stat_on_off_funcs(
         self,
@@ -771,13 +771,42 @@ class STSCodeGenerator:
                 f"private static _registry = new FinalizationRegistry<long>((data_ptr: long) => {{ {iface_ani_info.sts_impl_name}._obj_drop(data_ptr); }});",
             )
             with target.indented(
+                f"private _register(): void {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"{iface_ani_info.sts_impl_name}._registry.register(this, this._data_ptr, this);",
+                )
+            with target.indented(
+                f"private _unregister(): void {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"{iface_ani_info.sts_impl_name}._registry.unregister(this);",
+                )
+            with target.indented(
                 f"private _initialize(_vtbl_ptr: long, _data_ptr: long): void {{",
                 f"}}",
             ):
                 target.writelns(
                     f"this._vtbl_ptr = _vtbl_ptr;",
                     f"this._data_ptr = _data_ptr;",
-                    f"{iface_ani_info.sts_impl_name}._registry.register(this, this._data_ptr)",
+                    f"this._register();",
+                )
+            with target.indented(
+                f"public _copy_from(other: {iface_ani_info.sts_impl_name}): void {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"this._initialize(other._vtbl_ptr, {iface_ani_info.sts_impl_name}._obj_dup(other._data_ptr));",
+                )
+            with target.indented(
+                f"public _move_from(other: {iface_ani_info.sts_impl_name}): void {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"this._initialize(other._vtbl_ptr, other._data_ptr);",
+                    f"other._unregister();",
                 )
             ctors = ctors_map.get(iface.name, [])
             for ctor in ctors:
@@ -808,8 +837,7 @@ class STSCodeGenerator:
             f"}}",
         ):
             target.writelns(
-                f"let temp = {sts_native_call} as {iface_ani_info.sts_impl_name};",
-                f"this._initialize(temp._vtbl_ptr, {iface_ani_info.sts_impl_name}._obj_dup(temp._data_ptr));",
+                f"this._move_from({sts_native_call} as {iface_ani_info.sts_impl_name});",
             )
 
     def gen_static_funcs(

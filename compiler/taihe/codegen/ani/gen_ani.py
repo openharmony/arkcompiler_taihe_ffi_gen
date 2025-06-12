@@ -3,6 +3,7 @@ from taihe.codegen.abi.analyses import (
 )
 from taihe.codegen.abi.writer import CHeaderWriter, CSourceWriter
 from taihe.codegen.ani.analyses import (
+    ANI_CLASS,
     ANINativeFuncInfo,
     ANIRegisterInfo,
     GlobFuncANIInfo,
@@ -163,9 +164,9 @@ class ANICodeGenerator:
             register_infos: list[ANIRegisterInfo] = []
 
             pkg_register_info = ANIRegisterInfo(
-                impl_desc=pkg_ani_info.impl_desc,
+                parent_scope=pkg_ani_info.ns.scope,
+                impl_desc=pkg_ani_info.ns.impl_desc,
                 member_infos=[],
-                parent_scope=pkg_ani_info.scope,
             )
             register_infos.append(pkg_register_info)
             for func in pkg.functions:
@@ -179,9 +180,9 @@ class ANICodeGenerator:
                 iface_abi_info = IfaceABIInfo.get(self.am, iface)
                 iface_ani_info = IfaceANIInfo.get(self.am, iface)
                 iface_register_info = ANIRegisterInfo(
+                    parent_scope=ANI_CLASS,
                     impl_desc=iface_ani_info.impl_desc,
                     member_infos=[],
-                    parent_scope=iface_ani_info.scope,
                 )
                 register_infos.append(iface_register_info)
                 for ancestor in iface_abi_info.ancestor_dict:

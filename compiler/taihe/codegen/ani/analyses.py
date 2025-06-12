@@ -226,20 +226,24 @@ class Namespace:
     def __init__(self, name: str, parent: "Namespace | None" = None) -> None:
         self.name = name
         self.parent = parent
+
         self.children: dict[str, Namespace] = {}
         self.packages: list[PackageDecl] = []
         self.is_default = False
         self.injected_heads: list[str] = []
         self.injected_codes: list[str] = []
 
-    def is_module(self) -> bool:
-        return self.parent is None
+        if parent is None:
+            self.module = self
+            self.path: list[str] = []
+            self.scope = ANI_MODULE
+        else:
+            self.module = parent.module
+            self.path: list[str] = [*parent.path, name]
+            self.scope = ANI_NAMESPACE
 
-    def get_path(self) -> tuple[str, list[str]]:
-        if self.parent is None:
-            return self.name, []
-        module_name, parent_path = self.parent.get_path()
-        return module_name, [*parent_path, self.name]
+        self.ani_path = "/".join(self.module.name.split(".") + self.path)
+        self.impl_desc = f"L{self.ani_path};"
 
     def add_path(
         self,
@@ -319,9 +323,9 @@ class ANINativeFuncInfo:
 
 @dataclass
 class ANIRegisterInfo:
+    parent_scope: ANIScope
     impl_desc: str
     member_infos: list[ANINativeFuncInfo]
-    parent_scope: ANIScope
 
 
 class PackageANIInfo(AbstractAnalysis[PackageDecl]):
@@ -336,17 +340,9 @@ class PackageANIInfo(AbstractAnalysis[PackageDecl]):
         self.cpp_ns = "::".join(p.segments)
 
         pg_ani_info = PackageGroupANIInfo.get(am, p.parent_group)
-        self.namespace = pg_ani_info.get_namespace(p)
-
-        module_name, path = self.namespace.get_path()
-        self.ani_path = "/".join(module_name.split(".") + path)
-        self.impl_desc = f"L{self.ani_path};"
+        self.ns = pg_ani_info.get_namespace(p)
 
         self.function_keep_name = p.get_last_attr("sts_keep_name") is not None
-
-    @property
-    def scope(self):
-        return ANI_MODULE if self.namespace.is_module() else ANI_NAMESPACE
 
 
 class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
@@ -734,7 +730,7 @@ class EnumANIInfo(AbstractAnalysis[EnumDecl]):
 
         self.pkg_ani_info = PackageANIInfo.get(am, d.parent_pkg)
         self.sts_type_name = d.name
-        self.type_desc = f"L{self.pkg_ani_info.ani_path}/{self.sts_type_name};"
+        self.type_desc = f"L{self.pkg_ani_info.ns.ani_path}/{self.sts_type_name};"
 
         self.const = d.get_last_attr("const") is not None
 
@@ -757,7 +753,7 @@ class EnumANIInfo(AbstractAnalysis[EnumDecl]):
         self.is_default = d.get_last_attr("sts_export_default") is not None
 
     def sts_type_in(self, target: StsWriter):
-        return self.pkg_ani_info.namespace.get_member(
+        return self.pkg_ani_info.ns.get_member(
             target,
             self.sts_type_name,
             self.is_default,
@@ -809,7 +805,7 @@ class UnionANIInfo(AbstractAnalysis[UnionDecl]):
         self.is_default = d.get_last_attr("sts_export_default") is not None
 
     def sts_type_in(self, target: StsWriter):
-        return self.pkg_ani_info.namespace.get_member(
+        return self.pkg_ani_info.ns.get_member(
             target,
             self.sts_type_name,
             self.is_default,
@@ -834,8 +830,8 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
             self.sts_impl_name = f"{d.name}"
         else:
             self.sts_impl_name = f"{d.name}_inner"
-        self.type_desc = f"L{self.pkg_ani_info.ani_path}/{self.sts_type_name};"
-        self.impl_desc = f"L{self.pkg_ani_info.ani_path}/{self.sts_impl_name};"
+        self.type_desc = f"L{self.pkg_ani_info.ns.ani_path}/{self.sts_type_name};"
+        self.impl_desc = f"L{self.pkg_ani_info.ns.ani_path}/{self.sts_impl_name};"
 
         self.interface_injected_codes: list[str] = []
         for iface_injected in d.get_all_attrs("sts_inject_into_interface"):
@@ -880,7 +876,7 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
         return self.sts_type_name == self.sts_impl_name
 
     def sts_type_in(self, target: StsWriter):
-        return self.pkg_ani_info.namespace.get_member(
+        return self.pkg_ani_info.ns.get_member(
             target,
             self.sts_type_name,
             self.is_default,
@@ -899,8 +895,8 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
             self.sts_impl_name = f"{d.name}"
         else:
             self.sts_impl_name = f"{d.name}_inner"
-        self.type_desc = f"L{self.pkg_ani_info.ani_path}/{self.sts_type_name};"
-        self.impl_desc = f"L{self.pkg_ani_info.ani_path}/{self.sts_impl_name};"
+        self.type_desc = f"L{self.pkg_ani_info.ns.ani_path}/{self.sts_type_name};"
+        self.impl_desc = f"L{self.pkg_ani_info.ns.ani_path}/{self.sts_impl_name};"
 
         self.interface_injected_codes: list[str] = []
         for iface_injected in d.get_all_attrs("sts_inject_into_interface"):
@@ -926,15 +922,11 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
 
         self.is_default = d.get_last_attr("sts_export_default") is not None
 
-    @property
-    def scope(self):
-        return ANI_CLASS
-
     def is_class(self):
         return self.sts_type_name == self.sts_impl_name
 
     def sts_type_in(self, target: StsWriter):
-        return self.pkg_ani_info.namespace.get_member(
+        return self.pkg_ani_info.ns.get_member(
             target,
             self.sts_type_name,
             self.is_default,
@@ -1821,7 +1813,7 @@ class BigIntTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
         ani_length = f"{cpp_result}_length"
         target.writelns(
             f"ani_arraybuffer {ani_arrbuf};",
-            f'{env}->Function_Call_Ref(TH_ANI_FIND_{pkg_ani_info.scope.upper}_FUNCTION({env}, "{pkg_ani_info.impl_desc}", "__fromBigIntToArrayBuffer", nullptr), reinterpret_cast<ani_ref*>(&{ani_arrbuf}), {ani_value}, sizeof({item_ty_cpp_info.as_owner}) / sizeof(char));'
+            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.module.impl_desc}", "__fromBigIntToArrayBuffer", nullptr), reinterpret_cast<ani_ref*>(&{ani_arrbuf}), {ani_value}, sizeof({item_ty_cpp_info.as_owner}) / sizeof(char));'
             f"char* {ani_data} = nullptr;",
             f"size_t {ani_length} = 0;",
             f"{env}->ArrayBuffer_GetInfo({ani_arrbuf}, reinterpret_cast<void**>(&{ani_data}), &{ani_length});",
@@ -1846,7 +1838,7 @@ class BigIntTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[ArrayType]):
             f"{env}->CreateArrayBuffer({cpp_value}.size() * (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)), reinterpret_cast<void**>(&{ani_data}), &{ani_arrbuf});",
             f"memcpy({ani_data}, {cpp_value}.data(), {cpp_value}.size() * (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)));",
             f"ani_object {ani_result};",
-            f'{env}->Function_Call_Ref(TH_ANI_FIND_{pkg_ani_info.scope.upper}_FUNCTION({env}, "{pkg_ani_info.impl_desc}", "__fromArrayBufferToBigInt", nullptr), reinterpret_cast<ani_ref*>(&{ani_result}), {ani_arrbuf});',
+            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.module.impl_desc}", "__fromArrayBufferToBigInt", nullptr), reinterpret_cast<ani_ref*>(&{ani_result}), {ani_arrbuf});',
         )
 
 

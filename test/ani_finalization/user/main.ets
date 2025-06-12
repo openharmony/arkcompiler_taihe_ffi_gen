@@ -16,21 +16,21 @@ function test_finalization() {
 
     let foo: Test.Foo|null = new Test.Foo();
 
-    console.log("...")
+    foo.addCallback(() => {
+        console.log("Bye!");
+    })
 
+    console.log("Doing full GC before setting foo to null...");
     doFullGC()
     Coroutine.Schedule()
 
     foo.addCallback(() => {
         flag = 42;
     })
-    foo.addCallback(() => {
-        console.log("Bye!");
-    })
+
     foo = null;
 
-    console.log("...")
-
+    console.log("Doing full GC after setting foo to null...");
     doFullGC()
     Coroutine.Schedule()
 
