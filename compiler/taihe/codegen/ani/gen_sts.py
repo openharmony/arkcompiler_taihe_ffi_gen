@@ -1338,7 +1338,7 @@ class STSCodeGenerator:
             "function __fromArrayBufferToBigInt(arr: ArrayBuffer): BigInt {",
             "    let res: BigInt = 0n;",
             "    for (let i: int = 0; i < arr.getByteLength(); i++) {",
-            "        res |= BigInt(arr.at(i) as long & 0xff) << BigInt(i * 8);",
+            "        res |= BigInt(arr.at(i).toLong() & 0xff) << BigInt(i * 8);",
             "    }",
             "    let m: int = arr.getByteLength();",
             "    if (arr.at(m - 1) < 0) {",
