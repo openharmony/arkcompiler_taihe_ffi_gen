@@ -63,6 +63,8 @@ class DeclKind(Enum):
     NAPI_FUNC = "NAPI"
     FROM_NAPI = "fromNAPI"
     INTO_NAPI = "intoNAPI"
+    CONSTRUCTOR = "constructor"
+    CREATE = "create"
 
     ANI_FUNC = "ANIFunc"
     FROM_ANI = "fromANI"

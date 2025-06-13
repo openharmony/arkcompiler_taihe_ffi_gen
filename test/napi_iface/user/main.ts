@@ -1,11 +1,15 @@
 import { makeIBase, copyIBase, makeIShape, IBase } from "../generated/iface_test";
 
 class BaseImpl implements IBase {
+  id: string;
+  constructor(id: string) {
+    this.id = id;
+  }
   getId(): string {
-    return "js_object";
+    return this.id;
   }
   setId(id: string): void {
-    console.log("setting js object id");
+    this.id = id;
     return;
   }
 }
@@ -23,9 +27,10 @@ function main() {
   console.log("interface extends: ", ishape_1.getId());
   ishape_1.setId("aaaaa")
   console.log("interface extends set: ", ishape_1.getId());
-  let baseimpl = new BaseImpl();
-  baseimpl.setId("test");
-  console.log("impl interface", baseimpl.getId());
+  let a: BaseImpl = new BaseImpl("A");
+  let b: BaseImpl = new BaseImpl("B");
+  copyIBase(b, a);
+  console.log("impl interface", a.getId(), b.getId());
 }
 
 main();

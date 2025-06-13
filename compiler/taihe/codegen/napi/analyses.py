@@ -71,11 +71,15 @@ class IfaceNAPIInfo(AbstractAnalysis[IfaceDecl]):
         segments = [*d.parent_pkg.segments, d.name]
         self.from_napi_func_name = encode(segments, DeclKind.FROM_NAPI)
         self.into_napi_func_name = encode(segments, DeclKind.INTO_NAPI)
+        self.constructor_func_name = encode(segments, DeclKind.CONSTRUCTOR)
+        self.create_func_name = encode(segments, DeclKind.CREATE)
         self.decl_header = f"{d.parent_pkg.name}.{d.name}.napi.decl.h"
         self.impl_header = f"{d.parent_pkg.name}.{d.name}.napi.impl.h"
         self.meth_decl_header = f"{d.parent_pkg.name}.{d.name}.meth.napi.decl.h"
         self.meth_impl_header = f"{d.parent_pkg.name}.{d.name}.meth.napi.impl.h"
         self.dts_type_name = d.name
+        iface_abi_info = IfaceABIInfo.get(am, d)
+        self.ctor_ref_name = f"ctor_ref_{iface_abi_info.mangled_name}"
         if d.get_last_attr("class"):
             self.dts_impl_name = f"{d.name}"
         else:
@@ -299,21 +303,8 @@ class IfaceTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[IfaceType]):
     ):
         iface_napi_info = IfaceNAPIInfo.get(self.am, self.type.ty_decl)
         target.add_include(iface_napi_info.impl_header)
-        target.add_include(iface_napi_info.meth_impl_header)
-        descs_name = f"{iface_napi_info.into_napi_func_name}_desc"
         target.writelns(
             f"napi_value {napi_result} = {iface_napi_info.into_napi_func_name}(env, {cpp_value});",
-        )
-        with target.indented(
-            f"napi_property_descriptor {descs_name}[] = {{",
-            f"}};",
-        ):
-            for mng_name, value in self.iface_register_infos.items():
-                target.writelns(
-                    f'{{"{value[0].name}", nullptr, {mng_name}, nullptr, nullptr, nullptr, napi_default, nullptr}}, ',
-                )
-        target.writelns(
-            f"napi_define_properties(env, {napi_result}, sizeof({descs_name}) / sizeof({descs_name}[0]), {descs_name});"
         )
 
 
