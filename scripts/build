@@ -21,6 +21,7 @@ class TaiheBuilder:
         self.cache_dir = self.project_dir / ".cache" / "python-packages"
         self.base_dist = self.project_dir / "dist"
         self.compiler_dir = self.project_dir / "compiler"
+        self.stdlib_dir = self.project_dir / "stdlib"
         self.include_dir = self.project_dir / "runtime" / "include"
         self.src_dir = self.project_dir / "runtime" / "src"
         self.doc_dir = self.project_dir / "cookbook"
@@ -29,6 +30,7 @@ class TaiheBuilder:
         self.dist = self.base_dist / f"taihe-{system}" / "taihe"
         self.dist_lib_dir = self.dist / "lib" / "taihe"
         self.dist_bin_dir = self.dist / "bin"
+        self.dist_stdlib_dir = self.dist / "lib" / "taihe" / "stdlib"
         self.dist_include_dir = self.dist / "include"
         self.dist_src_dir = self.dist / "src" / "taihe" / "runtime"
         self.dist_doc_dir = self.dist / "share" / "doc" / "taihe"
@@ -42,6 +44,7 @@ class TaiheBuilder:
         self.dist.mkdir(parents=True, exist_ok=True)
         self.dist_lib_dir.mkdir(parents=True, exist_ok=True)
         self.dist_bin_dir.mkdir(parents=True, exist_ok=True)
+        self.dist_stdlib_dir.mkdir(parents=True, exist_ok=True)
         self.dist_include_dir.mkdir(parents=True, exist_ok=True)
         self.dist_src_dir.mkdir(parents=True, exist_ok=True)
         self.dist_doc_dir.mkdir(parents=True, exist_ok=True)
@@ -56,6 +59,11 @@ class TaiheBuilder:
         shutil.copytree(
             self.src_dir,
             self.dist_src_dir,
+            dirs_exist_ok=True,
+        )
+        shutil.copytree(
+            self.stdlib_dir,
+            self.dist_stdlib_dir,
             dirs_exist_ok=True,
         )
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <taihe/object.abi.h>
+#include <cstddef>
 #include <taihe/common.hpp>
 
 #include <type_traits>
@@ -43,14 +44,17 @@ struct data_holder : public data_view {
   }
 };
 
-inline bool same_adl(adl_tag_t, data_view lhs, data_view rhs) {
-  return lhs.data_ptr == rhs.data_ptr;
-}
-
-inline std::size_t hash_adl(adl_tag_t, data_view val) {
-  return reinterpret_cast<std::size_t>(val.data_ptr);
+inline bool operator==(data_view lhs, data_view rhs) {
+  return lhs.data_ptr->rtti_ptr->same(lhs.data_ptr, rhs.data_ptr);
 }
 }  // namespace taihe
+
+template<>
+struct std::hash<taihe::data_holder> {
+  std::size_t operator()(taihe::data_view val) const {
+    return val.data_ptr->rtti_ptr->hash(val.data_ptr);
+  }
+};
 
 ///////////////////////////////////////
 // Specific Impl Type Object Handler //
@@ -65,19 +69,50 @@ struct data_block_full : DataBlockHead {
   data_block_full(Args &&...args) : impl(std::forward<Args>(args)...) {}
 };
 
+template<typename Impl, typename Enabled = void>
+struct hash_impl_t {
+  std::size_t operator()(data_view val) const {
+    return reinterpret_cast<std::size_t>(val.data_ptr);
+  }
+};
+
+template<typename Impl, typename Enabled = void>
+struct same_impl_t {
+  bool operator()(data_view lhs, data_view rhs) const {
+    return lhs.data_ptr == rhs.data_ptr;
+  }
+};
+
+template<typename Impl>
+constexpr inline hash_impl_t<Impl> hash_impl;
+
+template<typename Impl>
+constexpr inline same_impl_t<Impl> same_impl;
+
 template<typename Impl>
 inline Impl *cast_data_ptr(struct DataBlockHead *data_ptr) {
   return &static_cast<data_block_full<Impl> *>(data_ptr)->impl;
 }
 
 template<typename Impl, typename... Args>
-inline DataBlockHead *new_data_ptr(Args &&...args) {
+inline DataBlockHead *make_data_ptr(Args &&...args) {
   return new data_block_full<Impl>(std::forward<Args>(args)...);
 }
 
 template<typename Impl>
-inline void del_data_ptr(struct DataBlockHead *data_ptr) {
+inline void free_data_ptr(struct DataBlockHead *data_ptr) {
   delete static_cast<data_block_full<Impl> *>(data_ptr);
+}
+
+template<typename Impl>
+inline std::size_t hash_data_ptr(struct DataBlockHead *val_data_ptr) {
+  return hash_impl<Impl>(data_view(val_data_ptr));
+}
+
+template<typename Impl>
+inline bool same_data_ptr(struct DataBlockHead *lhs_data_ptr,
+                          struct DataBlockHead *rhs_data_ptr) {
+  return same_impl<Impl>(data_view(lhs_data_ptr), data_view(rhs_data_ptr));
 }
 
 template<typename Impl, typename... InterfaceTypes>
@@ -131,13 +166,20 @@ public:
 public:
   static constexpr struct typeinfo_t {
     uint64_t version;
-    void (*free_ptr)(struct DataBlockHead *);
+    void (*free)(struct DataBlockHead *);
+    std::size_t (*hash)(struct DataBlockHead *);
+    bool (*same)(struct DataBlockHead *, struct DataBlockHead *);
     uint64_t len = 0;
     struct IdMapItem idmap[((sizeof(InterfaceTypes::template idmap_impl<Impl>) /
                              sizeof(IdMapItem)) +
                             ...)] = {};
   } rtti = [] {
-    struct typeinfo_t info = {0, &del_data_ptr<Impl>};
+    struct typeinfo_t info = {
+        .version = 0,
+        .free = &free_data_ptr<Impl>,
+        .hash = &hash_data_ptr<Impl>,
+        .same = &same_data_ptr<Impl>,
+    };
     (
         [&] {
           using InterfaceType = InterfaceTypes;
@@ -188,7 +230,7 @@ struct impl_holder : public impl_view<Impl, InterfaceTypes...> {
 
   template<typename... Args>
   static impl_holder make(Args &&...args) {
-    DataBlockHead *data_ptr = new_data_ptr<Impl>(std::forward<Args>(args)...);
+    DataBlockHead *data_ptr = make_data_ptr<Impl>(std::forward<Args>(args)...);
     tobj_init(data_ptr, reinterpret_cast<TypeInfo const *>(&rtti));
     return impl_holder(data_ptr);
   }
@@ -256,4 +298,17 @@ inline auto make_holder(Args &&...args) {
   return impl_holder<Impl, InterfaceTypes...>::make(
       std::forward<Args>(args)...);
 }
+
+template<typename Impl, typename... InterfaceTypes>
+inline bool operator==(impl_view<Impl, InterfaceTypes...> lhs,
+                       impl_view<Impl, InterfaceTypes...> rhs) {
+  return data_view(lhs) == data_view(rhs);
+}
 }  // namespace taihe
+
+template<typename Impl, typename... InterfaceTypes>
+struct std::hash<taihe::impl_holder<Impl, InterfaceTypes...>> {
+  std::size_t operator()(taihe::data_view val) const noexcept {
+    return std::hash<taihe::data_holder>()(val);
+  }
+};

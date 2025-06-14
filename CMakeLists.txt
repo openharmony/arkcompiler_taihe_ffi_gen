@@ -28,6 +28,8 @@ set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 
+set(TH_STDLIB_DIR "${CMAKE_SOURCE_DIR}/stdlib")
+
 # taihe runtime .c/.cpp path
 set(TH_RUNTIME_DIR "${CMAKE_SOURCE_DIR}/runtime")
 set(TH_RUNTIME_INCLUDE_DIR "${TH_RUNTIME_DIR}/include")
@@ -105,9 +107,9 @@ function(generate_code_from_idl this_target_name idl_files gen_ets_files idl_dir
 
   # 如果启用覆盖率，使用 coverage run
   if(ENABLE_COVERAGE)
-    list(APPEND COMMAND_TO_RUN "coverage" "run" "--parallel-mode" "-m" "taihe.cli.compiler" "-I" "${idl_dir}/idl" "-O" "${generated_dir}" "--ani" "--author" "${taihe_conf}" "--debug")
+    list(APPEND COMMAND_TO_RUN "coverage" "run" "--parallel-mode" "-m" "taihe.cli.compiler" "-I" "${TH_STDLIB_DIR}" "${idl_dir}/idl" "-O" "${generated_dir}" "--ani" "--author" "${taihe_conf}" "--debug")
   else()
-    list(APPEND COMMAND_TO_RUN "python" "-m" "taihe.cli.compiler" "-I" "${idl_dir}/idl" "-O" "${generated_dir}" "--ani" "--author" "--sts-keep-name")
+    list(APPEND COMMAND_TO_RUN "python" "-m" "taihe.cli.compiler" "-I" "${TH_STDLIB_DIR}" "${idl_dir}/idl" "-O" "${generated_dir}" "--ani" "--author" "--sts-keep-name")
   endif()
 
   add_custom_command(
@@ -142,7 +144,7 @@ endfunction()
 # 准备 panda sdk
 function(setup_panda_sdk)
   # 用户显式提供了 PANDA_HOME，不执行下载逻辑
-  if (DEFINED PANDA_HOME AND IS_DIRECTORY "${PANDA_HOME}")
+  if(DEFINED PANDA_HOME AND IS_DIRECTORY "${PANDA_HOME}")
     message(STATUS "Using user-provided PANDA_HOME: ${PANDA_HOME}")
     set(ENV{PANDA_HOME} "${PANDA_HOME}")
   # 自动下载模式
@@ -405,15 +407,17 @@ function(add_ani_demo this_target_name idl_files taihe_conf gen_ets_names user_e
   set(DEMO_DIR "${CMAKE_SOURCE_DIR}/${run_dir}/${this_target_name}")
   set(BUILD_DEMO_DIR "${CMAKE_BINARY_DIR}/${run_dir}/${this_target_name}")
   set(GEN_DIR "${BUILD_DEMO_DIR}/generated")
+  set(IDL_FILES ${idl_files} "${TH_STDLIB_DIR}/taihe.platform.ani.taihe")
+  set(GEN_ETS_NAMES ${gen_ets_names} "taihe.platform.ani.ets")
   set(GEN_ETS_FILES "")
-  foreach(ETS_NAME ${gen_ets_names})
+  foreach(ETS_NAME ${GEN_ETS_NAMES})
     set(ETS_FILE "${GEN_DIR}/${ETS_NAME}")
     list(APPEND GEN_ETS_FILES "${ETS_FILE}")
   endforeach()
   set(ALL_ETS_FILES ${user_ets_files} ${GEN_ETS_FILES})
 
   # 生成代码
-  generate_code_from_idl(${this_target_name} "${idl_files}" "${GEN_ETS_FILES}" ${DEMO_DIR} ${GEN_DIR} "${taihe_conf}")
+  generate_code_from_idl(${this_target_name} "${IDL_FILES}" "${GEN_ETS_FILES}" ${DEMO_DIR} ${GEN_DIR} "${taihe_conf}")
   # 动态库编译
   compile_dylib(${this_target_name} ${DEMO_DIR} "${user_include}" "${user_cpp_files}" ${BUILD_DEMO_DIR})
   # gen arktsconfig.json

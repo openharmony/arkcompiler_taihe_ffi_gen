@@ -255,14 +255,6 @@ string to_string(T value) {
   }
 }
 
-inline std::size_t hash_adl(adl_tag_t, string_view val) {
-  return std::hash<std::string_view>{}(val);
-}
-
-inline bool same_adl(adl_tag_t, string_view lhs, string_view rhs) {
-  return lhs == rhs;
-}
-
 template<>
 struct as_abi<string_view> {
   using type = TString;
@@ -278,3 +270,10 @@ struct as_param<string> {
   using type = string_view;
 };
 }  // namespace taihe
+
+template<>
+struct std::hash<taihe::string> {
+  std::size_t operator()(taihe::string_view sv) const noexcept {
+    return std::hash<std::string_view>()(std::string_view(sv));
+  }
+};

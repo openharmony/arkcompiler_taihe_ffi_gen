@@ -54,6 +54,14 @@ struct optional_view {
     }
   }
 
+  friend bool operator==(optional_view const &lhs, optional_view const &rhs) {
+    return (!lhs && !rhs) || (lhs && rhs && *lhs == *rhs);
+  }
+
+  friend bool operator!=(optional_view const &lhs, optional_view const &rhs) {
+    return !(lhs == rhs);
+  }
+
 protected:
   cpp_owner_t *m_handle;
 };
@@ -115,17 +123,6 @@ struct optional : public optional_view<cpp_owner_t> {
 };
 
 template<typename cpp_owner_t>
-inline std::size_t hash_adl(adl_tag_t, optional_view<cpp_owner_t> val) {
-  return val ? hash(*val) + 0x9e3779b9 : 0;
-}
-
-template<typename cpp_owner_t>
-inline bool same_adl(adl_tag_t, optional_view<cpp_owner_t> lhs,
-                     optional_view<cpp_owner_t> rhs) {
-  return (!lhs && !rhs) || (lhs && rhs && same(*lhs, *rhs));
-}
-
-template<typename cpp_owner_t>
 struct as_abi<optional_view<cpp_owner_t>> {
   using type = struct TOptional;
 };
@@ -140,3 +137,10 @@ struct as_param<optional<cpp_owner_t>> {
   using type = optional_view<cpp_owner_t>;
 };
 }  // namespace taihe
+
+template<typename cpp_owner_t>
+struct std::hash<taihe::optional<cpp_owner_t>> {
+  std::size_t operator()(taihe::optional_view<cpp_owner_t> val) const {
+    return val ? std::hash<cpp_owner_t>()(*val) + 0x9e3779b9 : 0;
+  }
+};

@@ -32,6 +32,8 @@ struct IdMapItem {
 struct TypeInfo {
   uint64_t version;
   void (*free)(struct DataBlockHead *);
+  size_t (*hash)(struct DataBlockHead *);
+  bool (*same)(struct DataBlockHead *, struct DataBlockHead *);
   uint64_t len;
   struct IdMapItem idmap[];
 };

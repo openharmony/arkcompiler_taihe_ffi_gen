@@ -181,12 +181,14 @@ class BuildConfig:
             self.taihe_root_dir = current_file.parents[5]
             self.runtime_include_dir = self.taihe_root_dir / "include"
             self.runtime_src_dir = self.taihe_root_dir / "src" / "taihe" / "runtime"
+            self.stdlib_dir = self.taihe_root_dir / "lib" / "taihe"
             self.panda_extract_dir = self.taihe_root_dir / "var" / "taihe" / "panda_vm"
         else:
             # Inside the git repository: repo/compiler/taihe/cli/run_test.py
             self.taihe_root_dir = current_file.parents[3]
             self.runtime_include_dir = self.taihe_root_dir / "runtime" / "include"
             self.runtime_src_dir = self.taihe_root_dir / "runtime" / "src"
+            self.stdlib_dir = self.taihe_root_dir / "stdlib"
             self.panda_extract_dir = self.taihe_root_dir / ".panda_vm"
         self.panda_package_dir = self.panda_extract_dir / "package"
         self.panda_ets_dir = self.panda_package_dir / "ets"
@@ -370,7 +372,7 @@ class BuildSystem(BuildUtils):
 
         instance = CompilerInstance(
             CompilerInvocation(
-                src_dirs=[self.idl_dir],
+                src_dirs=[self.idl_dir, self.config.stdlib_dir],
                 out_dir=self.generated_dir,
                 out_debug_level=self.codegen_debug_level,
                 backends=resolved_backends,

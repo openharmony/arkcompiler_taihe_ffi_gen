@@ -130,4 +130,18 @@ template<typename Return, typename... Params>
 struct as_param<callback<Return(Params...)>> {
   using type = callback_view<Return(Params...)>;
 };
+
+template<typename Return, typename... Params>
+inline bool operator==(callback_view<Return(Params...)> lhs,
+                       callback_view<Return(Params...)> rhs) {
+  return data_view(lhs) == data_view(rhs);
+}
 }  // namespace taihe
+
+template<typename Return, typename... Params>
+struct std::hash<taihe::callback<Return(Params...)>> {
+  std::size_t operator()(
+      taihe::callback_view<Return(Params...)> val) const noexcept {
+    return std::hash<taihe::data_holder>()(val);
+  }
+};
