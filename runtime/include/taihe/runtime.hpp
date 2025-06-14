@@ -1,6 +1,12 @@
 #pragma once
 
+#if __has_include(<ani.h>)
 #include <ani.h>
+#elif __has_include(<ani/ani.h>)
+#include <ani/ani.h>
+#else
+#error "ani.h not found. Please ensure the Ani SDK is correctly installed."
+#endif
 
 #include <taihe/object.hpp>
 #include <taihe/string.hpp>

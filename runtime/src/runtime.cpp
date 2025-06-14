@@ -1,6 +1,5 @@
 #include <iostream>
 #include <taihe/runtime.hpp>
-#include "ani.h"
 
 namespace taihe {
 ani_vm *global_vm = nullptr;
