@@ -30,7 +30,9 @@ function main() {
   let a: BaseImpl = new BaseImpl("A");
   let b: BaseImpl = new BaseImpl("B");
   copyIBase(b, a);
-  console.log("impl interface", a.getId(), b.getId());
+  console.log("impl interface: ", a.getId(), b.getId());
+  copyIBase(ibase_1, ishape_1)
+  console.log("interface extends: ", ibase_1.getId(), ishape_1.getId())
 }
 
 main();

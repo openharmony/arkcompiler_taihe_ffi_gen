@@ -376,54 +376,38 @@ class NAPICodeGenerator:
             f"inline {iface_cpp_info.as_owner} {iface_napi_info.from_napi_func_name}(napi_env env, napi_value napi_obj) {{",
             f"}}",
         ):
-            iface_napi_impl_target.writelns(
-                f"{iface_cpp_info.as_owner}* cpp_ptr;",
-                f"napi_status wrap_status = napi_unwrap(env, napi_obj, reinterpret_cast<void **>(&cpp_ptr));",
-            )
             with iface_napi_impl_target.indented(
-                f"if (wrap_status == napi_ok) {{",
-                f"}}",
+                f"struct cpp_impl_t {{",
+                f"}};",
             ):
                 iface_napi_impl_target.writelns(
-                    f"{iface_cpp_info.as_owner} cpp_obj = *cpp_ptr;",
-                    f"return cpp_obj;",
+                    f"napi_env env;",
+                    f"napi_ref ref;",
                 )
-            with iface_napi_impl_target.indented(
-                f"else {{",
-                f"}}",
-            ):
                 with iface_napi_impl_target.indented(
-                    f"struct cpp_impl_t {{",
-                    f"}};",
+                    f"cpp_impl_t(napi_env env, napi_value callback): env(env), ref(nullptr) {{",
+                    f"}}",
                 ):
                     iface_napi_impl_target.writelns(
-                        f"napi_env env;",
-                        f"napi_ref ref;",
+                        f"napi_create_reference(env, callback, 1, &ref);",
                     )
+                with iface_napi_impl_target.indented(
+                    f"~cpp_impl_t() {{",
+                    f"}}",
+                ):
                     with iface_napi_impl_target.indented(
-                        f"cpp_impl_t(napi_env env, napi_value callback): env(env), ref(nullptr) {{",
+                        f"if (ref) {{",
                         f"}}",
                     ):
                         iface_napi_impl_target.writelns(
-                            f"napi_create_reference(env, callback, 1, &ref);",
+                            f"napi_delete_reference(env, ref);",
                         )
-                    with iface_napi_impl_target.indented(
-                        f"~cpp_impl_t() {{",
-                        f"}}",
-                    ):
-                        with iface_napi_impl_target.indented(
-                            f"if (ref) {{",
-                            f"}}",
-                        ):
-                            iface_napi_impl_target.writelns(
-                                f"napi_delete_reference(env, ref);",
-                            )
-                    for ancestor in iface_abi_info.ancestor_dict:
-                        for method in ancestor.methods:
-                            self.gen_iface_napi_method(method, iface_napi_impl_target)
-                iface_napi_impl_target.writelns(
-                    f"return taihe::make_holder<cpp_impl_t, {iface_cpp_info.as_owner}>(env, napi_obj);",
-                )
+                for ancestor in iface_abi_info.ancestor_dict:
+                    for method in ancestor.methods:
+                        self.gen_iface_napi_method(method, iface_napi_impl_target)
+            iface_napi_impl_target.writelns(
+                f"return taihe::make_holder<cpp_impl_t, {iface_cpp_info.as_owner}>(env, napi_obj);",
+            )
 
     def gen_iface_napi_method(
         self,
