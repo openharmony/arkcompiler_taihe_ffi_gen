@@ -1024,7 +1024,7 @@ function testCasetestBaseBoolFunc5() {
     let p = new Promise<boolean>((resolve, reject) => {
         primitivesBoolTest.TestBaseBoolFunc5Async(
             true, (err: BusinessError|null, data?: boolean) => {
-                if (err) {
+                if (err !== null && err.code !== 0) {
                     reject(err);
                 } else {
                     resolve(data!);
@@ -1045,7 +1045,7 @@ function testCasetestBaseBoolFunc5_1() {
     let p = new Promise<boolean>((resolve, reject) => {
         primitivesBoolTest.TestBaseBoolFunc5Async(
             false, (err: BusinessError|null, data?: boolean) => {
-                if (err) {
+                if (err !== null && err.code !== 0) {
                     reject(err);
                 } else {
                     resolve(data!);

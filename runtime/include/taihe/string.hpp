@@ -255,11 +255,11 @@ string to_string(T value) {
   }
 }
 
-inline std::size_t hash_impl(adl_helper_t, string_view val) {
+inline std::size_t hash_adl(adl_tag_t, string_view val) {
   return std::hash<std::string_view>{}(val);
 }
 
-inline bool same_impl(adl_helper_t, string_view lhs, string_view rhs) {
+inline bool same_adl(adl_tag_t, string_view lhs, string_view rhs) {
   return lhs == rhs;
 }
 

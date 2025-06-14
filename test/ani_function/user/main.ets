@@ -70,7 +70,7 @@ function test_from_callback() {
     let foo = FuncTest.makeFoo();
     let p = new Promise<int>((resolve, reject) => {
         foo.add(10, NUMBER_TWENTY, (error: BusinessError|null, data?: int) => {
-            if (error) {
+            if (error !== null && error.code !== 0) {
                 reject(error);
             } else {
                 resolve(data!);

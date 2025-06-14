@@ -1,23 +1,49 @@
 #pragma once
 
+#include <ani.h>
+
+#include <taihe/object.hpp>
 #include <taihe/string.hpp>
 
-#include <ani.h>
+namespace taihe {
+// Error handling functions
+
+void set_error(taihe::string_view msg);
+void set_business_error(int32_t err_code, taihe::string_view msg);
+void reset_error();
+bool has_error();
+}  // namespace taihe
 
 namespace taihe {
 // VM and Environment related functions
 
 void set_vm(ani_vm *vm);
 ani_vm *get_vm();
-ani_env *get_env();
+
+inline ani_env *get_env() {
+  ani_env *env = nullptr;
+  get_vm()->GetEnv(ANI_VERSION_1, &env);
+  return env;
+}
 
 class env_guard {
   ani_env *env;
   bool is_attached;
 
 public:
-  env_guard();
-  ~env_guard();
+  env_guard() {
+    is_attached =
+        get_vm()->AttachCurrentThread(nullptr, ANI_VERSION_1, &env) == ANI_OK;
+    if (!is_attached) {
+      get_vm()->GetEnv(ANI_VERSION_1, &env);
+    }
+  }
+
+  ~env_guard() {
+    if (is_attached) {
+      get_vm()->DetachCurrentThread();
+    }
+  }
 
   env_guard(env_guard const &) = delete;
   env_guard &operator=(env_guard const &) = delete;
@@ -28,33 +54,62 @@ public:
     return env;
   }
 };
+}  // namespace taihe
 
+namespace taihe {
+// convert between ani types and taihe types
+
+template<typename cpp_owner_t>
+struct from_ani_t;
+
+template<typename cpp_owner_t>
+struct into_ani_t;
+
+template<typename cpp_owner_t>
+constexpr inline from_ani_t<cpp_owner_t> from_ani;
+
+template<typename cpp_owner_t>
+constexpr inline into_ani_t<cpp_owner_t> into_ani;
+}  // namespace taihe
+
+namespace taihe {
 // Reference management
 
-class ref_guard {
+class sref_guard {
+protected:
   ani_ref ref;
 
 public:
-  ref_guard(ani_env *env, ani_ref val);
-  ~ref_guard();
+  sref_guard(ani_env *env, ani_ref val) {
+    env->GlobalReference_Create(val, &ref);
+  }
 
-  ref_guard(ref_guard const &) = delete;
-  ref_guard &operator=(ref_guard const &) = delete;
-  ref_guard(ref_guard &&) = delete;
-  ref_guard &operator=(ref_guard &&) = delete;
+  ~sref_guard() {}
+
+  sref_guard(sref_guard const &) = delete;
+  sref_guard &operator=(sref_guard const &) = delete;
+  sref_guard(sref_guard &&) = delete;
+  sref_guard &operator=(sref_guard &&) = delete;
 
   ani_ref get_ref() {
     return ref;
   }
 };
 
-// Error handling functions
+class dref_guard : public sref_guard {
+public:
+  dref_guard(ani_env *env, ani_ref val) : sref_guard(env, val) {}
 
-void set_error(taihe::string_view msg);
-void set_business_error(int32_t err_code, taihe::string_view msg);
-void reset_error();
-bool has_error();
+  ~dref_guard() {
+    env_guard guard;
+    ani_env *env = guard.get_env();
+    env->GlobalReference_Delete(ref);
+  }
+};
+}  // namespace taihe
 
+#if __cplusplus >= 202002L
+namespace taihe {
 template<std::size_t N = 0>
 struct nullable_fixed_string {
   bool is_null;
@@ -72,13 +127,10 @@ struct nullable_fixed_string {
     return is_null ? nullptr : value;
   }
 };
-}  // namespace taihe
 
-#if __cplusplus >= 202002L
-namespace taihe {
 template<nullable_fixed_string descriptor_t>
 inline ani_module ani_find_module(ani_env *env) {
-  static ref_guard guard(env, [env]() -> ani_module {
+  static sref_guard guard(env, [env]() -> ani_module {
     char const *descriptor = descriptor_t.c_str();
     ani_module mod;
     if (ANI_OK != env->FindModule(descriptor, &mod)) {
@@ -92,7 +144,7 @@ inline ani_module ani_find_module(ani_env *env) {
 
 template<nullable_fixed_string descriptor_t>
 inline ani_namespace ani_find_namespace(ani_env *env) {
-  static ref_guard guard(env, [env]() -> ani_namespace {
+  static sref_guard guard(env, [env]() -> ani_namespace {
     char const *descriptor = descriptor_t.c_str();
     ani_namespace ns;
     if (ANI_OK != env->FindNamespace(descriptor, &ns)) {
@@ -106,7 +158,7 @@ inline ani_namespace ani_find_namespace(ani_env *env) {
 
 template<nullable_fixed_string descriptor_t>
 inline ani_class ani_find_class(ani_env *env) {
-  static ref_guard guard(env, [env]() -> ani_class {
+  static sref_guard guard(env, [env]() -> ani_class {
     char const *descriptor = descriptor_t.c_str();
     ani_class cls;
     if (ANI_OK != env->FindClass(descriptor, &cls)) {
@@ -314,7 +366,7 @@ inline ani_static_field ani_find_class_static_field(ani_env *env) {
 #else  // __cplusplus >= 202002L
 #define TH_ANI_FIND_MODULE(env, descriptor)                           \
   ([env] {                                                            \
-    static ::taihe::ref_guard __guard(env, [env]() -> ani_module {    \
+    static ::taihe::sref_guard __guard(env, [env]() -> ani_module {   \
       ani_module __mod;                                               \
       if (ANI_OK != env->FindModule(descriptor, &__mod)) {            \
         std::cerr << "Module not found: " << descriptor << std::endl; \
@@ -327,7 +379,7 @@ inline ani_static_field ani_find_class_static_field(ani_env *env) {
 
 #define TH_ANI_FIND_NAMESPACE(env, descriptor)                           \
   ([env] {                                                               \
-    static ::taihe::ref_guard __guard(env, [env]() -> ani_namespace {    \
+    static ::taihe::sref_guard __guard(env, [env]() -> ani_namespace {   \
       ani_namespace __ns;                                                \
       if (ANI_OK != env->FindNamespace(descriptor, &__ns)) {             \
         std::cerr << "Namespace not found: " << descriptor << std::endl; \
@@ -340,7 +392,7 @@ inline ani_static_field ani_find_class_static_field(ani_env *env) {
 
 #define TH_ANI_FIND_CLASS(env, descriptor)                           \
   ([env] {                                                           \
-    static ::taihe::ref_guard __guard(env, [env]() -> ani_class {    \
+    static ::taihe::sref_guard __guard(env, [env]() -> ani_class {   \
       ani_class __cls;                                               \
       if (ANI_OK != env->FindClass(descriptor, &__cls)) {            \
         std::cerr << "Class not found: " << descriptor << std::endl; \

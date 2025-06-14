@@ -27,3 +27,11 @@ union ColorOrRGBOrName {
     rgb: RGB;
     name: Name;
 }
+
+struct A {
+    arrB: Array<B>;
+}
+
+struct B {
+    optA: Optional<A>;
+}

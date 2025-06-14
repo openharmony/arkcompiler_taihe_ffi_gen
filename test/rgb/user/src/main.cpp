@@ -355,7 +355,7 @@ void testCallback() {
                  y.c_str());
 }
 
-void TestMemoryLeak() {
+void testMemoryLeak() {
   size_t remaining = 0;
 
   for (auto *user : UserType::registry) {
@@ -380,8 +380,7 @@ int main() {
   tester.run("testMap", testMap);
   tester.run("testSet", testSet);
   tester.run("testCallback", testCallback);
-
-  TestMemoryLeak();
+  tester.run("testMemoryLeak", testMemoryLeak);
 
   return tester.report();
 }

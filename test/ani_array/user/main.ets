@@ -107,20 +107,20 @@ function fetchBinaryData() {
     let promise = new Promise<Array<float>>(
         (resolve, reject) => {ArrayTest.fetchBinaryData(
             5, (error: BusinessError|null, data?: Array<float>) => {
-                if (error) {
+                if (error !== null && error.code !== 0) {
                     reject(error);
                 } else {
                     resolve(data as Array<float>);
                 }
             })});
-    let data: Array<float>;
-    let error: BusinessError;
+    let data: Array<float>|undefined;
+    let error: BusinessError|undefined;
     try {
         data = await promise;
     } catch (e) {
         error = e as BusinessError;
     }
-    assertEQ(data.length, 5);
+    assertEQ(data?.length, 5);
 }
 
 function makeStructArrayArray() {
