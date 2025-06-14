@@ -222,8 +222,19 @@ ANI_MODULE = ANIScope("module", ANI_FUNCTION)
 ANI_NAMESPACE = ANIScope("namespace", ANI_FUNCTION)
 
 
+class Path:
+    def __init__(self, package: str | None = None, path: str | None = None) -> None:
+        self.package = package
+        self.path = path
+        self.ani_path = []
+        if self.package is not None:
+            self.ani_path.append(self.package)
+        if self.path is not None:
+            self.ani_path.extend(self.path.split("/"))
+
+
 class Namespace:
-    def __init__(self, name: str, parent: "Namespace | None" = None) -> None:
+    def __init__(self, name: str, parent: "Namespace | Path") -> None:
         self.name = name
         self.parent = parent
 
@@ -233,17 +244,18 @@ class Namespace:
         self.injected_heads: list[str] = []
         self.injected_codes: list[str] = []
 
-        if parent is None:
+        if not isinstance(parent, Namespace):
             self.module = self
             self.path: list[str] = []
             self.scope = ANI_MODULE
+            self.ani_path = [*parent.ani_path, *name.split(".")]
         else:
             self.module = parent.module
             self.path: list[str] = [*parent.path, name]
             self.scope = ANI_NAMESPACE
+            self.ani_path = [*parent.ani_path, name]
 
-        self.ani_path = "/".join(self.module.name.split(".") + self.path)
-        self.impl_desc = f"L{self.ani_path};"
+        self.impl_desc = "L" + "/".join(self.ani_path) + ";"
 
     def add_path(
         self,
@@ -265,7 +277,7 @@ class Namespace:
         sts_name: str,
         member_is_default: bool,
     ) -> str:
-        if self.parent is None:
+        if not isinstance(self.parent, Namespace):
             scope_name = "__" + "".join(c if c.isalnum() else "_" for c in self.name)
             if member_is_default:
                 decl_name = f"{scope_name}_default"
@@ -286,6 +298,8 @@ class PackageGroupANIInfo(AbstractAnalysis[PackageGroup]):
         self.module_dict: dict[str, Namespace] = {}
         self.package_map: dict[PackageDecl, Namespace] = {}
 
+        self.path = Path(None, None)
+
         for pkg in pg.packages:
             if (namespace_attr := pkg.get_last_attr("namespace")) and check_attr_args(
                 am, namespace_attr, "ss*"
@@ -298,7 +312,10 @@ class PackageGroupANIInfo(AbstractAnalysis[PackageGroup]):
 
             is_default = pkg.get_last_attr("sts_export_default") is not None
 
-            mod = self.module_dict.setdefault(module_name, Namespace(module_name))
+            mod = self.module_dict.setdefault(
+                module_name,
+                Namespace(module_name, self.path),
+            )
             ns = self.package_map[pkg] = mod.add_path(path, pkg, is_default)
 
             for sts_inject in pkg.get_all_attrs("sts_inject_into_module"):
@@ -728,9 +745,11 @@ class EnumANIInfo(AbstractAnalysis[EnumDecl]):
     def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
         super().__init__(am, d)
 
-        self.pkg_ani_info = PackageANIInfo.get(am, d.parent_pkg)
+        self.parent_ns = PackageANIInfo.get(am, d.parent_pkg).ns
         self.sts_type_name = d.name
-        self.type_desc = f"L{self.pkg_ani_info.ns.ani_path}/{self.sts_type_name};"
+        self.type_desc = (
+            "L" + "/".join([*self.parent_ns.ani_path, self.sts_type_name]) + ";"
+        )
 
         self.const = d.get_last_attr("const") is not None
 
@@ -753,7 +772,7 @@ class EnumANIInfo(AbstractAnalysis[EnumDecl]):
         self.is_default = d.get_last_attr("sts_export_default") is not None
 
     def sts_type_in(self, target: StsWriter):
-        return self.pkg_ani_info.ns.get_member(
+        return self.parent_ns.get_member(
             target,
             self.sts_type_name,
             self.is_default,
@@ -788,7 +807,7 @@ class UnionANIInfo(AbstractAnalysis[UnionDecl]):
         self.decl_header = f"{d.parent_pkg.name}.{d.name}.ani.1.h"
         self.impl_header = f"{d.parent_pkg.name}.{d.name}.ani.2.h"
 
-        self.pkg_ani_info = PackageANIInfo.get(am, d.parent_pkg)
+        self.parent_ns = PackageANIInfo.get(am, d.parent_pkg).ns
         self.sts_type_name = d.name
         self.type_desc = "Lstd/core/Object;"
 
@@ -805,7 +824,7 @@ class UnionANIInfo(AbstractAnalysis[UnionDecl]):
         self.is_default = d.get_last_attr("sts_export_default") is not None
 
     def sts_type_in(self, target: StsWriter):
-        return self.pkg_ani_info.ns.get_member(
+        return self.parent_ns.get_member(
             target,
             self.sts_type_name,
             self.is_default,
@@ -824,14 +843,18 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
         self.decl_header = f"{d.parent_pkg.name}.{d.name}.ani.1.h"
         self.impl_header = f"{d.parent_pkg.name}.{d.name}.ani.2.h"
 
-        self.pkg_ani_info = PackageANIInfo.get(am, d.parent_pkg)
+        self.parent_ns = PackageANIInfo.get(am, d.parent_pkg).ns
         self.sts_type_name = d.name
         if d.get_last_attr("class"):
             self.sts_impl_name = f"{d.name}"
         else:
             self.sts_impl_name = f"{d.name}_inner"
-        self.type_desc = f"L{self.pkg_ani_info.ns.ani_path}/{self.sts_type_name};"
-        self.impl_desc = f"L{self.pkg_ani_info.ns.ani_path}/{self.sts_impl_name};"
+        self.type_desc = (
+            "L" + "/".join([*self.parent_ns.ani_path, self.sts_type_name]) + ";"
+        )
+        self.impl_desc = (
+            "L" + "/".join([*self.parent_ns.ani_path, self.sts_impl_name]) + ";"
+        )
 
         self.interface_injected_codes: list[str] = []
         for iface_injected in d.get_all_attrs("sts_inject_into_interface"):
@@ -876,7 +899,7 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
         return self.sts_type_name == self.sts_impl_name
 
     def sts_type_in(self, target: StsWriter):
-        return self.pkg_ani_info.ns.get_member(
+        return self.parent_ns.get_member(
             target,
             self.sts_type_name,
             self.is_default,
@@ -889,14 +912,18 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
         self.decl_header = f"{d.parent_pkg.name}.{d.name}.ani.1.h"
         self.impl_header = f"{d.parent_pkg.name}.{d.name}.ani.2.h"
 
-        self.pkg_ani_info = PackageANIInfo.get(am, d.parent_pkg)
+        self.parent_ns = PackageANIInfo.get(am, d.parent_pkg).ns
         self.sts_type_name = d.name
         if d.get_last_attr("class"):
             self.sts_impl_name = f"{d.name}"
         else:
             self.sts_impl_name = f"{d.name}_inner"
-        self.type_desc = f"L{self.pkg_ani_info.ns.ani_path}/{self.sts_type_name};"
-        self.impl_desc = f"L{self.pkg_ani_info.ns.ani_path}/{self.sts_impl_name};"
+        self.type_desc = (
+            "L" + "/".join([*self.parent_ns.ani_path, self.sts_type_name]) + ";"
+        )
+        self.impl_desc = (
+            "L" + "/".join([*self.parent_ns.ani_path, self.sts_impl_name]) + ";"
+        )
 
         self.interface_injected_codes: list[str] = []
         for iface_injected in d.get_all_attrs("sts_inject_into_interface"):
@@ -926,7 +953,7 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
         return self.sts_type_name == self.sts_impl_name
 
     def sts_type_in(self, target: StsWriter):
-        return self.pkg_ani_info.ns.get_member(
+        return self.parent_ns.get_member(
             target,
             self.sts_type_name,
             self.is_default,
