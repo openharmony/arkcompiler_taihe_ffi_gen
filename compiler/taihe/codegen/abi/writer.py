@@ -20,8 +20,16 @@ class CSourceWriter(FileWriter):
 
     @override
     def write_prologue(self, f: TextIO):
+        f.write("#pragma clang diagnostic push\n")
+        f.write('#pragma clang diagnostic ignored "-Weverything"\n')
+        f.write('#pragma clang diagnostic warning "-Wextra"\n')
+        f.write('#pragma clang diagnostic warning "-Wall"\n')
         for header in self.headers:
             f.write(f'#include "{header}"\n')
+
+    @override
+    def write_epilogue(self, f: TextIO):
+        f.write("#pragma clang diagnostic pop\n")
 
     def add_include(self, *headers: str):
         for header in headers:
@@ -33,5 +41,5 @@ class CHeaderWriter(CSourceWriter):
 
     @override
     def write_prologue(self, f: TextIO):
-        f.write(f"#pragma once\n")
+        f.write("#pragma once\n")
         super().write_prologue(f)

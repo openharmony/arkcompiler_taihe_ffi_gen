@@ -59,7 +59,7 @@ class BuildUtils:
     def run_command(
         self,
         command: Sequence[Path | str],
-        capture_output: bool = True,
+        capture_output: bool = False,
         env: Mapping[str, Path | str] | None = None,
     ) -> float:
         """Run a command with environment variables."""
@@ -131,7 +131,7 @@ class BuildUtils:
         if user_info:
             command.extend(["-u", f"{user_info.username}:{user_info.password}"])
 
-        self.run_command(command, capture_output=False)
+        self.run_command(command)
 
         if temp_file.exists():
             temp_file.rename(target_file)
@@ -587,32 +587,6 @@ class BuildSystem(BuildUtils):
         except OSError as e:
             self.logger.warning("Failed to write version file: %s", e)
 
-    def create_arktsconfig(
-        self,
-        arktsconfig_file: Path,
-        app_paths: Mapping[str, Path] | None = None,
-    ) -> None:
-        """Create ArkTS configuration file."""
-        paths = {
-            "std": self.config.panda_ets_dir / "stdlib/std",
-            "escompat": self.config.panda_ets_dir / "stdlib/escompat",
-        }
-
-        if app_paths is not None:
-            paths.update(app_paths)
-
-        config_content = {
-            "compilerOptions": {
-                "baseUrl": str(self.config.panda_tool_dir),
-                "paths": {key: [str(value)] for key, value in paths.items()},
-            }
-        }
-
-        with open(arktsconfig_file, "w") as json_file:
-            json.dump(config_content, json_file, indent=2)
-
-        self.logger.debug("Created configuration file at: %s", arktsconfig_file)
-
     def compile(
         self,
         output_dir: Path,
@@ -639,6 +613,8 @@ class BuildSystem(BuildUtils):
                 "-c",
                 "-fvisibility=hidden",
                 "-fPIC",
+                "-Wall",
+                "-Wextra",
                 f"-std={std}",
                 "-o",
                 output_file,
@@ -697,8 +673,33 @@ class BuildSystem(BuildUtils):
         return self.run_command(
             command,
             env={"LD_LIBRARY_PATH": ld_lib_path},
-            capture_output=False,
         )
+
+    def create_arktsconfig(
+        self,
+        arktsconfig_file: Path,
+        app_paths: Mapping[str, Path] | None = None,
+    ) -> None:
+        """Create ArkTS configuration file."""
+        paths = {
+            "std": self.config.panda_ets_dir / "stdlib/std",
+            "escompat": self.config.panda_ets_dir / "stdlib/escompat",
+        }
+
+        if app_paths is not None:
+            paths.update(app_paths)
+
+        config_content = {
+            "compilerOptions": {
+                "baseUrl": str(self.config.panda_tool_dir),
+                "paths": {key: [str(value)] for key, value in paths.items()},
+            }
+        }
+
+        with open(arktsconfig_file, "w") as json_file:
+            json.dump(config_content, json_file, indent=2)
+
+        self.logger.debug("Created configuration file at: %s", arktsconfig_file)
 
     def compile_abc(
         self,
@@ -792,7 +793,6 @@ class BuildSystem(BuildUtils):
         return self.run_command(
             command,
             env={"LD_LIBRARY_PATH": ld_lib_path},
-            capture_output=False,
         )
 
 

@@ -57,9 +57,6 @@ class BaseWriter:
             default_indent: The default indentation string for each level of indentation
             debug_level: see `DebugLevel` for details
         """
-        if not hasattr(out, "write"):
-            raise ValueError("output_stream must be writable")
-
         self._out = out
         self._default_indent = default_indent
         self._current_indent = ""
@@ -195,12 +192,16 @@ class FileWriter(BaseWriter):
     def write_prologue(self, f: TextIO):
         del f
 
+    def write_epilogue(self, f: TextIO):
+        del f
+
     def save_as(self, file_path: Path):
         file_path.parent.mkdir(exist_ok=True, parents=True)
         with open(file_path, "w", encoding="utf-8") as dst:
             assert isinstance(self._out, StringIO)
             self.write_prologue(dst)
             dst.write(self._out.getvalue())
+            self.write_epilogue(dst)
 
 
 def _format_frame(f: FrameType) -> str:

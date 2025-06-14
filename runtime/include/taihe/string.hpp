@@ -170,12 +170,10 @@ struct string : public string_view {
 };
 
 inline string concat(std::initializer_list<string_view> sv_list) {
-  struct TString tstr_list[sv_list.size()];
-  std::size_t i = 0;
-  for (auto it : sv_list) {
-    tstr_list[i++] = it.m_handle;
-  }
-  return string(tstr_concat(sv_list.size(), tstr_list));
+  static_assert(alignof(string_view) == alignof(struct TString));
+  return string(
+      tstr_concat(sv_list.size(),
+                  reinterpret_cast<struct TString const *>(sv_list.begin())));
 }
 
 inline string operator+(string_view left, string_view right) {
