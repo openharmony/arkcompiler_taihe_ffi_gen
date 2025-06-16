@@ -16,12 +16,14 @@ def main():
     )
     parser.add_argument(
         "src_files",
+        type=Path,
         nargs="*",
         default=[],
         help="input .taihe files, if not provided, will read from stdin",
     )
     parser.add_argument(
         "-I",
+        type=Path,
         dest="src_dirs",
         nargs="*",
         default=[],
@@ -30,6 +32,7 @@ def main():
     parser.add_argument(
         "--output",
         "-O",
+        type=Path,
         dest="dst_dir",
         required=True,
         help="directory for generated files",
@@ -58,8 +61,9 @@ def main():
         resolved_backends.append(b())
 
     invocation = CompilerInvocation(
-        src_dirs=[Path(d) for d in args.src_dirs],
-        out_dir=Path(args.dst_dir),
+        src_files=args.src_files,
+        src_dirs=args.src_dirs,
+        out_dir=args.dst_dir,
         backends=resolved_backends,
     )
 

@@ -45,6 +45,7 @@ class CompilerInvocation:
     `CompilerInstance` instead.
     """
 
+    src_files: list[Path] = field(default_factory=lambda: [])
     src_dirs: list[Path] = field(default_factory=lambda: [])
     out_dir: Path | None = None
     out_debug_level: DebugLevel = DebugLevel.NONE
@@ -95,47 +96,54 @@ class CompilerInstance:
 
     def scan(self):
         """Adds all `.taihe` files inside a directory. Subdirectories are ignored."""
+        files: list[Path] = []
+
         for src_dir in self.invocation.src_dirs:
-            d = Path(src_dir)
-            for file in d.iterdir():
-                loc = SourceLocation.with_path(file)
-                # subdirectories are ignored
-                if not file.is_file():
-                    w = IgnoredFileWarn(IgnoredFileReason.IS_DIRECTORY, loc=loc)
-                    self.diagnostics_manager.emit(w)
+            for src_file in src_dir.iterdir():
+                files.append(src_file)
 
-                # unexpected file extension
-                elif file.suffix != ".taihe":
-                    target = d.with_suffix(".taihe").name
-                    w = IgnoredFileWarn(
-                        IgnoredFileReason.EXTENSION_MISMATCH,
-                        loc=loc,
-                        note=AdhocNote(f"consider renaming to `{target}`", loc=loc),
-                    )
-                    self.diagnostics_manager.emit(w)
+        for src_file in self.invocation.src_files:
+            files.append(src_file)
 
-                else:
-                    source = SourceFile(file)
-                    orig_name = source.pkg_name
-                    norm_name = normalize_pkg_name(orig_name)
+        for file in files:
+            loc = SourceLocation.with_path(file)
+            # subdirectories are ignored
+            if not file.is_file():
+                w = IgnoredFileWarn(IgnoredFileReason.IS_DIRECTORY, loc=loc)
+                self.diagnostics_manager.emit(w)
 
-                    # invalid package name
-                    if norm_name != orig_name:
-                        loc = SourceLocation(source)
-                        self.diagnostics_manager.emit(
-                            IgnoredFileWarn(
-                                IgnoredFileReason.INVALID_PKG_NAME,
-                                note=AdhocNote(
-                                    f"consider using `{norm_name}` instead of `{orig_name}`",
-                                    loc=loc,
-                                ),
+            # unexpected file extension
+            elif file.suffix != ".taihe":
+                target = file.with_suffix(".taihe").name
+                w = IgnoredFileWarn(
+                    IgnoredFileReason.EXTENSION_MISMATCH,
+                    loc=loc,
+                    note=AdhocNote(f"consider renaming to `{target}`", loc=loc),
+                )
+                self.diagnostics_manager.emit(w)
+
+            else:
+                source = SourceFile(file)
+                orig_name = source.pkg_name
+                norm_name = normalize_pkg_name(orig_name)
+
+                # invalid package name
+                if norm_name != orig_name:
+                    loc = SourceLocation(source)
+                    self.diagnostics_manager.emit(
+                        IgnoredFileWarn(
+                            IgnoredFileReason.INVALID_PKG_NAME,
+                            note=AdhocNote(
+                                f"consider using `{norm_name}` instead of `{orig_name}`",
                                 loc=loc,
-                            )
+                            ),
+                            loc=loc,
                         )
+                    )
 
-                    # Okay...
-                    else:
-                        self.source_manager.add_source(source)
+                # Okay...
+                else:
+                    self.source_manager.add_source(source)
 
     def parse(self):
         for src in self.source_manager.sources:
@@ -168,4 +176,4 @@ class CompilerInstance:
         self.parse()
         self.validate()
         self.generate()
-        return not self.diagnostics_manager.current_max_level >= Level.ERROR
+        return self.diagnostics_manager.current_max_level < Level.ERROR
