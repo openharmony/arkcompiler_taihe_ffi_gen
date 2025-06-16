@@ -65,6 +65,9 @@ class BackendRegistry:
                 f"because it is already registered as {setted.__name__}"
             )
 
+    def get_backend_names(self) -> list[str]:
+        return list(self._factories.keys())
+
     def clear(self):
         self._factories.clear()
 

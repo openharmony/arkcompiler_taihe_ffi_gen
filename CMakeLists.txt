@@ -107,9 +107,9 @@ function(generate_code_from_idl this_target_name idl_files gen_ets_files idl_dir
 
   # 如果启用覆盖率，使用 coverage run
   if(ENABLE_COVERAGE)
-    list(APPEND COMMAND_TO_RUN "coverage" "run" "--parallel-mode" "-m" "taihe.cli.compiler" "-I" "${TH_STDLIB_DIR}" "${idl_dir}/idl" "-O" "${generated_dir}" "--ani" "--author" "${taihe_conf}" "--debug")
+    list(APPEND COMMAND_TO_RUN "coverage" "run" "--parallel-mode" "-m" "taihe.cli.compiler" "-I" "${TH_STDLIB_DIR}" "${idl_dir}/idl" "-O" "${generated_dir}" "--generate" "ani-bridge" "cpp-author" "pretty-print" "${taihe_conf}")
   else()
-    list(APPEND COMMAND_TO_RUN "python" "-m" "taihe.cli.compiler" "-I" "${TH_STDLIB_DIR}" "${idl_dir}/idl" "-O" "${generated_dir}" "--ani" "--author" "--sts-keep-name")
+    list(APPEND COMMAND_TO_RUN "python" "-m" "taihe.cli.compiler" "-I" "${TH_STDLIB_DIR}" "${idl_dir}/idl" "-O" "${generated_dir}" "--generate" "ani-bridge" "cpp-author" "pretty-print" "${taihe_conf}")
   endif()
 
   add_custom_command(

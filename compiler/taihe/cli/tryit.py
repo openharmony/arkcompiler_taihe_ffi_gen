@@ -859,7 +859,7 @@ def main(config: BuildConfig | None = None):
 
     def add_argument_sts_keep_name(parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            "--sts-keep-name",
+            "-Csts:keep-name",
             action="store_true",
             help="Keep original function and interface method names",
         )

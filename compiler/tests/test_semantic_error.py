@@ -1,4 +1,3 @@
-
 from taihe.driver.backend import BackendRegistry
 from taihe.driver.contexts import CompilerInstance, CompilerInvocation
 from taihe.utils.diagnostics import DiagBase, DiagnosticsManager
@@ -60,6 +59,7 @@ class SemanticTestCompilerInstance(CompilerInstance):
             assert any(
                 isinstance(err, error_type) for err in self.diagnostics_manager.errors
             )
+
 
 backend_registry = BackendRegistry()
 backend_registry.register_all()
