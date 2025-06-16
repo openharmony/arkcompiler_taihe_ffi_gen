@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 
 from typing_extensions import override
 
-from taihe.codegen.abi.analyses import IfaceABIInfo
+from taihe.codegen.abi.analyses import IfaceABIInfo, StructABIInfo
 from taihe.codegen.abi.mangle import DeclKind, encode
 from taihe.codegen.abi.writer import CSourceWriter
 from taihe.codegen.cpp.analyses import (
@@ -47,9 +47,13 @@ class StructNAPIInfo(AbstractAnalysis[StructDecl]):
         segments = [*d.parent_pkg.segments, d.name]
         self.from_napi_func_name = encode(segments, DeclKind.FROM_NAPI)
         self.into_napi_func_name = encode(segments, DeclKind.INTO_NAPI)
+        self.constructor_func_name = encode(segments, DeclKind.CONSTRUCTOR)
+        self.create_func_name = encode(segments, DeclKind.CREATE)
         self.decl_header = f"{d.parent_pkg.name}.{d.name}.napi.decl.h"
         self.impl_header = f"{d.parent_pkg.name}.{d.name}.napi.impl.h"
         self.dts_type_name = d.name
+        struct_abi_info = StructABIInfo.get(am, d)
+        self.ctor_ref_name = f"ctor_ref_{struct_abi_info.mangled_name}"
         if d.get_last_attr("class"):
             self.dts_impl_name = f"{d.name}"
         else:
@@ -63,6 +67,14 @@ class StructNAPIInfo(AbstractAnalysis[StructDecl]):
 
     def is_class(self):
         return self.dts_type_name == self.dts_impl_name
+
+
+class StructFieldNAPIInfo(AbstractAnalysis[StructFieldDecl]):
+    def __init__(self, am: AnalysisManager, d: StructFieldDecl) -> None:
+        super().__init__(am, d)
+        segments = [*d.parent_pkg.segments, d.name]
+        self.getter_name = encode(segments, DeclKind.GETTER)
+        self.setter_name = encode(segments, DeclKind.SETTER)
 
 
 class IfaceNAPIInfo(AbstractAnalysis[IfaceDecl]):

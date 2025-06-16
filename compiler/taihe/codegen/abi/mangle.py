@@ -66,6 +66,9 @@ class DeclKind(Enum):
     CONSTRUCTOR = "constructor"
     CREATE = "create"
 
+    GETTER = "getter"
+    SETTER = "setter"
+
     ANI_FUNC = "ANIFunc"
     FROM_ANI = "fromANI"
     INTO_ANI = "intoANI"

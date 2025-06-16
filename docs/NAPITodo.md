@@ -6,10 +6,11 @@ NAPI 代码生成及验证：
     - [ ] struct 继承                                          (需要用 attr，是否和 ani 使用同样方案待确认)
     - [x] interface
     - [x] interface 继承
-    - [ ] ts 侧绑定构造函数 class(interface / struct)           (下一步)
+    - [x] ts 侧绑定构造函数 class(struct)
+    - [ ] ts 侧绑定构造函数 class(interface)              (下一步)
     - [ ] class, static, constructor, readonly
     - [x] enum
-    - [ ] union                                                (下一步)
+    - [ ] union                                          (在 NAPI 中无法判断是哪个自定义对象)
     - [ ] undefined, null
     - [ ] array
     - [ ] map set vector
