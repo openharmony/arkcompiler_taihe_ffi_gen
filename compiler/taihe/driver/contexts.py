@@ -50,6 +50,11 @@ class CompilerInvocation:
     out_debug_level: DebugLevel = DebugLevel.NONE
     backends: list[BackendConfig] = field(default_factory=lambda: [])
 
+    # TODO: refactor this to a more structured way
+    sts_keep_name: bool = False
+    arkts_module_prefix: str | None = None
+    arkts_path_prefix: str | None = None
+
 
 class CompilerInstance:
     """Helper class for storing key objects.

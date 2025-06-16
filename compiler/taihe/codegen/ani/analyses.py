@@ -298,7 +298,10 @@ class PackageGroupANIInfo(AbstractAnalysis[PackageGroup]):
         self.module_dict: dict[str, Namespace] = {}
         self.package_map: dict[PackageDecl, Namespace] = {}
 
-        self.path = Path(None, None)
+        self.path = Path(
+            self.am.compiler_invocation.arkts_module_prefix,
+            self.am.compiler_invocation.arkts_path_prefix,
+        )
 
         for pkg in pg.packages:
             if (namespace_attr := pkg.get_last_attr("namespace")) and check_attr_args(
@@ -358,8 +361,6 @@ class PackageANIInfo(AbstractAnalysis[PackageDecl]):
 
         pg_ani_info = PackageGroupANIInfo.get(am, p.parent_group)
         self.ns = pg_ani_info.get_namespace(p)
-
-        self.function_keep_name = p.get_last_attr("sts_keep_name") is not None
 
 
 class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
@@ -507,8 +508,7 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
                 return True
             (func_name,) = overload_attr.args
         else:
-            pkg_ani_info = PackageANIInfo.get(self.am, self.f.parent_pkg)
-            if pkg_ani_info.function_keep_name:
+            if self.am.compiler_invocation.sts_keep_name:
                 func_name = self.f.name
             else:
                 func_name = self.f.name[0].lower() + self.f.name[1:]
@@ -686,8 +686,7 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
                 return True
             (method_name,) = overload_attr.args
         else:
-            pkg_ani_info = PackageANIInfo.get(self.am, self.f.parent_pkg)
-            if pkg_ani_info.function_keep_name:
+            if self.am.compiler_invocation.sts_keep_name:
                 method_name = self.f.name
             else:
                 method_name = self.f.name[0].lower() + self.f.name[1:]

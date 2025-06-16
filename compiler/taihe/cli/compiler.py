@@ -56,10 +56,23 @@ def main():
         action="store_true",
         help="keep original function and interface method names",
     )
+    parser.add_argument(
+        "--arkts-module-prefix",
+        type=str,
+        default=None,
+        help="prefix for the generated ArkTS module name",
+    )
+    parser.add_argument(
+        "--arkts-path-prefix",
+        type=str,
+        default=None,
+        help="path to the generated ArkTS module",
+    )
     args = parser.parse_args()
 
     registry = BackendRegistry()
     registry.register_all()
+
     enabled_backend_names: list[str] = []
     if args.author:
         enabled_backend_names.append("cpp-author")
@@ -70,15 +83,15 @@ def main():
 
     resolved_backends: list[BackendConfig] = []
     for b in registry.collect_required_backends(enabled_backend_names):
-        if b.NAME == "ani-bridge":
-            resolved_backends.append(b(keep_name=args.sts_keep_name))  # type: ignore
-        else:
-            resolved_backends.append(b())
+        resolved_backends.append(b())
 
     invocation = CompilerInvocation(
         src_dirs=[Path(d) for d in args.src_dirs],
         out_dir=Path(args.dst_dir),
         backends=resolved_backends,
+        sts_keep_name=args.sts_keep_name,
+        arkts_module_prefix=args.arkts_module_prefix,
+        arkts_path_prefix=args.arkts_path_prefix,
     )
     instance = CompilerInstance(invocation)
     if not instance.run():

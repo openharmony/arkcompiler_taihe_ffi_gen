@@ -365,10 +365,7 @@ class BuildSystem(BuildUtils):
 
         resolved_backends: list[BackendConfig] = []
         for b in backends:
-            if b.NAME == "ani-bridge":
-                resolved_backends.append(b(keep_name=self.sts_keep_name))  # type: ignore
-            else:
-                resolved_backends.append(b())
+            resolved_backends.append(b())
 
         instance = CompilerInstance(
             CompilerInvocation(
@@ -376,6 +373,7 @@ class BuildSystem(BuildUtils):
                 out_dir=self.generated_dir,
                 out_debug_level=self.codegen_debug_level,
                 backends=resolved_backends,
+                sts_keep_name=self.sts_keep_name,
             )
         )
 
