@@ -1,0 +1,2 @@
+function SumArrayU8(nums: @arraybuffer Array<u8>): u8;
+function GetArrayBuffer(nums: u8): @arraybuffer Array<u8>;

@@ -18,6 +18,7 @@ from taihe.semantics.declarations import (
     StructFieldDecl,
 )
 from taihe.semantics.types import (
+    ArrayType,
     CallbackType,
     EnumType,
     IfaceType,
@@ -159,6 +160,7 @@ class ScalarTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[ScalarType]):
             ScalarKind.I32: "number",
             ScalarKind.I64: "number",
             ScalarKind.U32: "number",
+            ScalarKind.U8: "number",
         }.get(self.type.kind)
         if dts_type is None:
             raise ValueError(f"Unsupported ScalarKind: {self.type.kind}")
@@ -178,6 +180,7 @@ class ScalarTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[ScalarType]):
             ScalarKind.I32: "int32_t",
             ScalarKind.I64: "int64_t",
             ScalarKind.U32: "uint32_t",
+            ScalarKind.U8: "uint32_t",
         }.get(self.type.kind)
         from_js_to_c_func = {
             ScalarKind.BOOL: "napi_get_value_bool",
@@ -186,6 +189,7 @@ class ScalarTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[ScalarType]):
             ScalarKind.I32: "napi_get_value_int32",
             ScalarKind.I64: "napi_get_value_int64",
             ScalarKind.U32: "napi_get_value_uint32",
+            ScalarKind.U8: "napi_get_value_uint32",
         }.get(self.type.kind)
         target.writelns(
             f"{as_napi_c} {cpp_result}_tmp;",
@@ -206,6 +210,7 @@ class ScalarTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[ScalarType]):
             ScalarKind.I32: "napi_create_int32",
             ScalarKind.I64: "napi_create_int64",
             ScalarKind.U32: "napi_create_uint32",
+            ScalarKind.U8: "napi_create_uint32",
         }.get(self.type.kind)
         target.writelns(
             f"napi_value {napi_result} = nullptr;",
@@ -557,6 +562,54 @@ class EnumTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[EnumType]):
             raise ValueError
 
 
+class ArrayBufferTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[ArrayType]):
+    def __init__(self, am: AnalysisManager, t: ArrayType) -> None:
+        super().__init__(am, t)
+        self.am = am
+        self.type = t
+        self.dts_type_name = "ArrayBuffer"
+        self.return_dts_type_name = self.dts_type_name
+
+        if not isinstance(t.item_ty, ScalarType) or t.item_ty.kind not in (
+            ScalarKind.I8,
+            ScalarKind.U8,
+        ):
+            raise ValueError(
+                "@arraybuffer only supports Array<i8> or Array<i8>",
+            )
+
+    def from_napi(
+        self,
+        target: CSourceWriter,
+        napi_value: str,
+        cpp_result: str,
+    ):
+        item_ty_cpp_info = TypeCppInfo.get(self.am, self.type.item_ty)
+        napi_data = f"{cpp_result}_data"
+        napi_length = f"{cpp_result}_length"
+        target.writelns(
+            f"void* {napi_data};",
+            f"size_t {napi_length};",
+            f"napi_get_arraybuffer_info(env, {napi_value}, &{napi_data}, &{napi_length});",
+            f"{self.cpp_info.as_param} {cpp_result}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>({napi_data}), {napi_length});",
+        )
+
+    def into_napi(
+        self,
+        target: CSourceWriter,
+        cpp_value: str,
+        napi_result: str,
+    ):
+        target.add_include("string.h")
+        napi_data = f"{napi_result}_data"
+        target.writelns(
+            f"napi_value {napi_result} = nullptr;",
+            f"void* {napi_data} = nullptr;",
+            f"napi_create_arraybuffer(env, {cpp_value}.size(), &{napi_data}, &{napi_result});",
+            f"memcpy({napi_data}, {cpp_value}.data(), {cpp_value}.size());",
+        )
+
+
 class TypeNAPIInfo(TypeVisitor[AbstractTypeNAPIInfo]):
     def __init__(self, am: AnalysisManager):
         self.am = am
@@ -592,3 +645,10 @@ class TypeNAPIInfo(TypeVisitor[AbstractTypeNAPIInfo]):
     @override
     def visit_enum_type(self, t: EnumType) -> AbstractTypeNAPIInfo:
         return EnumTypeNAPIInfo.get(self.am, t)
+
+    @override
+    def visit_array_type(self, t: ArrayType) -> AbstractTypeNAPIInfo:
+        if t.ty_ref.attrs.get("arraybuffer"):
+            return ArrayBufferTypeNAPIInfo.get(self.am, t)
+        else:
+            raise ValueError("no support the type", t)

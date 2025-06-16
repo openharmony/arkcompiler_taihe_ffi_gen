@@ -20,7 +20,7 @@ NAPI 代码生成及验证：
     - [ ] override
     - [ ] promise, async
     - [ ] bigint
-    - [ ] arraybuffer
+    - [x] arraybuffer
 
 **注意：现在的验证方式是基于 ts 和 napi 非鸿蒙 napi，应配置鸿蒙环境下编译验证方法待设计。**
 xml 例子编译运行成功
