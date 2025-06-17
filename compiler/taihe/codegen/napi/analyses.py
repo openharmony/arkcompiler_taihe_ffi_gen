@@ -22,6 +22,7 @@ from taihe.semantics.types import (
     CallbackType,
     EnumType,
     IfaceType,
+    MapType,
     OptionalType,
     ScalarKind,
     ScalarType,
@@ -679,6 +680,84 @@ class ArrayTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[ArrayType]):
             )
 
 
+class RecordTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[MapType]):
+    def __init__(self, am: AnalysisManager, t: MapType) -> None:
+        super().__init__(am, t)
+        self.am = am
+        self.type = t
+        key_ty_napi_info = TypeNAPIInfo.get(self.am, self.type.key_ty)
+        val_ty_napi_info = TypeNAPIInfo.get(self.am, self.type.val_ty)
+        key_sts_type = key_ty_napi_info.dts_type_name
+        val_sts_type = val_ty_napi_info.dts_type_name
+        self.dts_type_name = f"Record<{key_sts_type}, {val_sts_type}>"
+        self.return_dts_type_name = self.dts_type_name
+
+    def from_napi(
+        self,
+        target: CSourceWriter,
+        napi_value: str,
+        cpp_result: str,
+    ):
+        prop_names = f"{cpp_result}_prop_names"
+        prop_count = f"{cpp_result}_prop_count"
+        key_ty_napi_info = TypeNAPIInfo.get(self.am, self.type.key_ty)
+        val_ty_napi_info = TypeNAPIInfo.get(self.am, self.type.val_ty)
+        napi_key = f"{cpp_result}_napi_key"
+        napi_val = f"{cpp_result}_napi_val"
+
+        cpp_key = f"{cpp_result}_cpp_key"
+        cpp_val = f"{cpp_result}_cpp_val"
+        target.writelns(
+            f"napi_value {prop_names} = nullptr;",
+            f"uint32_t {prop_count};",
+            f"napi_get_property_names(env, {napi_value}, &{prop_names});",
+            f"napi_get_array_length(env, {prop_names}, &{prop_count});",
+            f"{self.cpp_info.as_owner} {cpp_result};",
+        )
+        with target.indented(
+            f"for (uint32_t i = 0; i < {prop_count}; i++) {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"napi_value {napi_key} = nullptr, {napi_val} = nullptr;",
+                f"napi_get_element(env, {prop_names}, i, &{napi_key});",
+                f"napi_get_property(env, {napi_value}, {napi_key}, &{napi_val});",
+            )
+            key_ty_napi_info.from_napi(target, napi_key, cpp_key)
+            val_ty_napi_info.from_napi(target, napi_val, cpp_val)
+            target.writelns(
+                f"{cpp_result}.emplace({cpp_key}, {cpp_val});",
+            )
+
+    def into_napi(
+        self,
+        target: CSourceWriter,
+        cpp_value: str,
+        napi_result: str,
+    ):
+        key_ty_napi_info = TypeNAPIInfo.get(self.am, self.type.key_ty)
+        val_ty_napi_info = TypeNAPIInfo.get(self.am, self.type.val_ty)
+
+        napi_key = f"{napi_result}_napi_key"
+        napi_val = f"{napi_result}_napi_val"
+        cpp_key = f"{napi_result}_cpp_key"
+        cpp_val = f"{napi_result}_cpp_val"
+
+        target.writelns(
+            f"napi_value {napi_result};",
+            f"napi_create_object(env, &{napi_result});",
+        )
+        with target.indented(
+            f"for (const auto& [{cpp_key}, {cpp_val}] : {cpp_value}) {{",
+            f"}}",
+        ):
+            key_ty_napi_info.into_napi(target, cpp_key, napi_key)
+            val_ty_napi_info.into_napi(target, cpp_val, napi_val)
+            target.writelns(
+                f"napi_set_property(env, {napi_result}, {napi_key}, {napi_val});",
+            )
+
+
 class TypeNAPIInfo(TypeVisitor[AbstractTypeNAPIInfo]):
     def __init__(self, am: AnalysisManager):
         self.am = am
@@ -720,3 +799,9 @@ class TypeNAPIInfo(TypeVisitor[AbstractTypeNAPIInfo]):
         if t.ty_ref.attrs.get("arraybuffer"):
             return ArrayBufferTypeNAPIInfo.get(self.am, t)
         return ArrayTypeNAPIInfo.get(self.am, t)
+
+    @override
+    def visit_map_type(self, t: MapType) -> AbstractTypeNAPIInfo:
+        if t.ty_ref.attrs.get("record"):
+            return RecordTypeNAPIInfo.get(self.am, t)
+        raise ValueError

@@ -13,7 +13,9 @@ NAPI 代码生成及验证：
     - [ ] union                                          (在 NAPI 中无法判断是哪个自定义对象)
     - [ ] undefined, null
     - [x] array
-    - [ ] map set vector
+    - [x] record
+    - [ ] map
+    - [ ] set vector
     - [ ] namespace
     - [x] callback
     - [x] optional
