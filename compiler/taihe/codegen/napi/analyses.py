@@ -610,6 +610,75 @@ class ArrayBufferTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[ArrayType])
         )
 
 
+class ArrayTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[ArrayType]):
+    def __init__(self, am: AnalysisManager, t: ArrayType) -> None:
+        super().__init__(am, t)
+        self.am = am
+        self.type = t
+        item_ty_napi_info = TypeNAPIInfo.get(self.am, self.type.item_ty)
+        sts_type = item_ty_napi_info.dts_type_name
+        self.dts_type_name = f"Array<{sts_type}>"
+        self.return_dts_type_name = self.dts_type_name
+
+    def from_napi(
+        self,
+        target: CSourceWriter,
+        napi_value: str,
+        cpp_result: str,
+    ):
+        item_ty_cpp_info = TypeCppInfo.get(self.am, self.type.item_ty)
+        item_ty_napi_info = TypeNAPIInfo.get(self.am, self.type.item_ty)
+        array_size = f"{cpp_result}_size"
+        cpp_buffer = f"{cpp_result}_buffer"
+        napi_item = f"{cpp_buffer}_napi_item"
+        cpp_item = f"{cpp_buffer}_cpp_item"
+        cpp_ctr = f"{cpp_buffer}_i"
+        target.writelns(
+            f"uint32_t {array_size};",
+            f"napi_get_array_length(env, {napi_value}, &{array_size});",
+            f"{item_ty_cpp_info.as_owner}* {cpp_buffer} = reinterpret_cast<{item_ty_cpp_info.as_owner}*>(malloc({array_size} * sizeof({item_ty_cpp_info.as_owner})));",
+        )
+        with target.indented(
+            f"for (uint32_t {cpp_ctr} = 0; {cpp_ctr} < {array_size}; {cpp_ctr}++) {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"napi_value {napi_item};",
+                f"napi_get_element(env, {napi_value}, {cpp_ctr}, &{napi_item});",
+            )
+            item_ty_napi_info.from_napi(target, napi_item, cpp_item)
+            target.writelns(
+                f"new (&{cpp_buffer}[{cpp_ctr}]) {item_ty_napi_info.cpp_info.as_owner}(std::move({cpp_item}));",
+            )
+        target.writelns(
+            f"{self.cpp_info.as_owner} {cpp_result}({cpp_buffer}, {array_size});",
+        )
+
+    def into_napi(
+        self,
+        target: CSourceWriter,
+        cpp_value: str,
+        napi_result: str,
+    ):
+        item_ty_napi_info = TypeNAPIInfo.get(self.am, self.type.item_ty)
+        cpp_size = f"{napi_result}_size"
+        napi_item = f"{napi_result}_item"
+        cpp_ctr = f"{napi_result}_i"
+        target.writelns(
+            f"uint32_t {cpp_size} = {cpp_value}.size();",
+            f"napi_value {napi_result} = nullptr;",
+            f"napi_create_array_with_length(env, {cpp_size}, &{napi_result});",
+        )
+        with target.indented(
+            f"for (uint32_t {cpp_ctr} = 0; {cpp_ctr} < {cpp_size}; {cpp_ctr}++) {{",
+            f"}}",
+        ):
+            item_ty_napi_info.into_napi(target, f"{cpp_value}[{cpp_ctr}]", napi_item)
+            target.writelns(
+                f"napi_set_element(env, {napi_result}, {cpp_ctr}, {napi_item});",
+            )
+
+
 class TypeNAPIInfo(TypeVisitor[AbstractTypeNAPIInfo]):
     def __init__(self, am: AnalysisManager):
         self.am = am
@@ -650,5 +719,4 @@ class TypeNAPIInfo(TypeVisitor[AbstractTypeNAPIInfo]):
     def visit_array_type(self, t: ArrayType) -> AbstractTypeNAPIInfo:
         if t.ty_ref.attrs.get("arraybuffer"):
             return ArrayBufferTypeNAPIInfo.get(self.am, t)
-        else:
-            raise ValueError("no support the type", t)
+        return ArrayTypeNAPIInfo.get(self.am, t)

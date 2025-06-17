@@ -12,7 +12,7 @@ NAPI 代码生成及验证：
     - [x] enum
     - [ ] union                                          (在 NAPI 中无法判断是哪个自定义对象)
     - [ ] undefined, null
-    - [ ] array
+    - [x] array
     - [ ] map set vector
     - [ ] namespace
     - [x] callback
