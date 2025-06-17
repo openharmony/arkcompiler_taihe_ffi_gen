@@ -1,9 +1,13 @@
 #!/bin/bash
 
+_tryit() {
+    coverage run --parallel-mode --module taihe.cli.tryit "$@"
+}
+
 run-core-tests() {
     for test_dir in ../test/rgb ../test/object; do
         echo "Testing: $test_dir"
-        coverage run --parallel-mode ./run-test test -u cpp $test_dir
+        _tryit test -u cpp $test_dir
     done
 }
 
@@ -30,7 +34,7 @@ run-ani-tests() {
 run-cmake-test() {
     test_dir=../test/cmake_test
     echo "Testing: $test_dir"
-    coverage run --parallel-mode ./run-test generate -u sts $test_dir --cmake
+    _tryit generate -u sts $test_dir --cmake
     cd ../test/cmake_test/
     cmake -B build/generated \
         -D EXTERNAL_INCLUDE=$(realpath ../../.panda_vm/package/ohos_arm64/include/plugins/ets/runtime/ani)
