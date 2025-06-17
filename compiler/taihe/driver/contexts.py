@@ -81,7 +81,7 @@ class CompilerInstance:
         self.analysis_manager = AnalysisManager(invocation, self.diagnostics_manager)
         self.source_manager = SourceManager()
         self.package_group = PackageGroup()
-        self.output_manager = invocation.output_config.construct()
+        self.output_manager = invocation.output_config.construct(self)
         self.backends = [conf.construct(self) for conf in invocation.backends]
 
     ##########################

@@ -1,19 +1,21 @@
 from dataclasses import dataclass
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from taihe.driver.backend import Backend, BackendConfig
-from taihe.driver.contexts import CompilerInstance
+
+if TYPE_CHECKING:
+    from taihe.driver.contexts import CompilerInstance
 
 
 @dataclass
 class AbiHeaderBackendConfig(BackendConfig):
     NAME = "abi-header"
 
-    def construct(self, instance: CompilerInstance) -> Backend:
+    def construct(self, instance: "CompilerInstance") -> Backend:
         from taihe.codegen.abi.gen_abi import ABIHeadersGenerator
 
         class ABIHeaderBackendImpl(Backend):
-            def __init__(self, ci: CompilerInstance):
+            def __init__(self, ci: "CompilerInstance"):
                 super().__init__(ci)
                 self._ci = ci
 
@@ -31,11 +33,11 @@ class AbiSourcesBackendConfig(BackendConfig):
     NAME = "abi-source"
     DEPS: ClassVar = ["abi-header"]
 
-    def construct(self, instance: CompilerInstance) -> Backend:
+    def construct(self, instance: "CompilerInstance") -> Backend:
         from taihe.codegen.abi.gen_abi import ABISourcesGenerator
 
         class ABISourcesBackendImpl(Backend):
-            def __init__(self, ci: CompilerInstance):
+            def __init__(self, ci: "CompilerInstance"):
                 super().__init__(ci)
                 self._ci = ci
 
@@ -53,7 +55,7 @@ class CAuthorBackendConfig(BackendConfig):
     NAME = "c-author"
     DEPS: ClassVar = ["abi-source"]
 
-    def construct(self, instance: CompilerInstance) -> Backend:
+    def construct(self, instance: "CompilerInstance") -> Backend:
         from taihe.codegen.abi.gen_impl import (
             CImplHeadersGenerator,
             CImplSourcesGenerator,
@@ -61,7 +63,7 @@ class CAuthorBackendConfig(BackendConfig):
 
         # TODO: unify CImpl{Headers,Sources}Generator
         class CImplBackendImpl(Backend):
-            def __init__(self, ci: CompilerInstance):
+            def __init__(self, ci: "CompilerInstance"):
                 super().__init__(ci)
                 self._ci = ci
 

@@ -56,9 +56,11 @@ def main(for_distribution: bool = False):
         help="additional code generation configuration",
     )
     parser.add_argument(
-        "--cmake",
-        action="store_true",
-        help="generate cmake for generated files",
+        "--build",
+        "-B",
+        dest="build_system",
+        choices=["cmake"],
+        help="build system to use for generated sources",
     )
     args = parser.parse_args()
 
@@ -76,7 +78,7 @@ def main(for_distribution: bool = False):
         runtime_include_dir = taihe_root_dir / "runtime" / "include"
         runtime_src_dir = taihe_root_dir / "runtime" / "src"
 
-    if args.cmake:
+    if args.build_system == "cmake":
         output_config = CMakeOutputConfig(
             dst_dir=Path(args.dst_dir),
             runtime_include_dir=runtime_include_dir,

@@ -10,9 +10,12 @@ from io import StringIO
 from os import path, sep
 from pathlib import Path
 from types import FrameType, TracebackType
-from typing import TextIO
+from typing import TYPE_CHECKING, TextIO
 
 from typing_extensions import Self, override
+
+if TYPE_CHECKING:
+    from taihe.driver.contexts import CompilerInstance
 
 DEFAULT_INDENT = "    "  # Four spaces
 
@@ -53,7 +56,7 @@ class OutputConfig:
     dst_dir: Path | None = None
     debug_level: DebugLevel = DebugLevel.NONE
 
-    def construct(self) -> "OutputManager":
+    def construct(self, ci: "CompilerInstance") -> "OutputManager":
         """Construct an OutputManager based on this configuration."""
         return OutputManager(
             dst_dir=self.dst_dir,
@@ -81,16 +84,11 @@ class OutputManager:
         self.files_by_kind: dict[FileKind, list[FileDescriptor]] = defaultdict(list)
 
     def register(self, desc: FileDescriptor):
-        if desc.relative_path in self.files:
-            prev = self.files[desc.relative_path]
-            if prev.kind != desc.kind:
-                raise ValueError(
-                    f"File {desc.relative_path} is already registered as {prev.kind}, "
-                    f"cannot re-register with {desc.kind}."
-                )
-            return
-
-        self.files[desc.relative_path] = desc
+        if (prev := self.files.setdefault(desc.relative_path, desc)) != desc:
+            raise ValueError(
+                f"File {desc.relative_path} is already registered as {prev.kind}, "
+                f"cannot re-register with {desc.kind}."
+            )
         self.files_by_kind[desc.kind].append(desc)
 
     def get_all_files(self) -> list[FileDescriptor]:
@@ -340,7 +338,7 @@ class CMakeOutputConfig(OutputConfig):
         self.runtime_include_dir = runtime_include_dir
         self.runtime_src_dir = runtime_src_dir
 
-    def construct(self) -> "CMakeOutputManager":
+    def construct(self, ci: "CompilerInstance") -> "CMakeOutputManager":
         return CMakeOutputManager(
             dst_dir=self.dst_dir,
             debug_level=self.debug_level,
