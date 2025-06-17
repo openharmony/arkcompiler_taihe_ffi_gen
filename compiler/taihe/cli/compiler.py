@@ -7,7 +7,7 @@ from taihe.driver.contexts import CompilerInstance, CompilerInvocation
 from taihe.utils.outputs import CMakeOutputConfig, OutputConfig
 
 
-def main():
+def main(for_distribution: bool = False):
     registry = BackendRegistry()
     registry.register_all()
 
@@ -66,11 +66,17 @@ def main():
     for b in registry.collect_required_backends(args.backends):
         resolved_backends.append(b())
 
-    if args.cmake:
-        current_file = Path(__file__).resolve()
+    current_file = Path(__file__).resolve()
+    if for_distribution:
         taihe_root_dir = current_file.parents[5]
         runtime_include_dir = taihe_root_dir / "include"
         runtime_src_dir = taihe_root_dir / "src" / "taihe" / "runtime"
+    else:
+        taihe_root_dir = current_file.parents[3]
+        runtime_include_dir = taihe_root_dir / "runtime" / "include"
+        runtime_src_dir = taihe_root_dir / "runtime" / "src"
+
+    if args.cmake:
         output_config = CMakeOutputConfig(
             dst_dir=Path(args.dst_dir),
             runtime_include_dir=runtime_include_dir,

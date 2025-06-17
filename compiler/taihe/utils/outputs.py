@@ -368,7 +368,7 @@ class CMakeOutputManager(OutputManager):
         self.runtime_c_src_files = [
             p for p in runtime_src_dir.rglob("*.c") if p.is_file()
         ]
-        self.runtime_cpp_src_files = [
+        self.runtime_cxx_src_files = [
             p for p in runtime_src_dir.rglob("*.cpp") if p.is_file()
         ]
 
@@ -406,7 +406,7 @@ class CMakeOutputManager(OutputManager):
             f"endif()",
         ):
             with gen_cmake_target.indented(
-                f"set(TAIHE_RUNTIME_SRC_INNER",
+                f"set(TAIHE_RUNTIME_C_SRC_INNER",
                 f")",
             ):
                 for runtime_src_file in self.runtime_c_src_files:
@@ -418,10 +418,10 @@ class CMakeOutputManager(OutputManager):
             f"endif()",
         ):
             with gen_cmake_target.indented(
-                f"set(TAIHE_RUNTIME_SRC_INNER",
+                f"set(TAIHE_RUNTIME_CXX_SRC_INNER",
                 f")",
             ):
-                for runtime_src_file in self.runtime_cpp_src_files:
+                for runtime_src_file in self.runtime_cxx_src_files:
                     gen_cmake_target.writelns(
                         f"{runtime_src_file}",
                     )
@@ -516,12 +516,9 @@ class CMakeOutputManager(OutputManager):
             f"set_source_files_properties(",
             f")",
         ):
-            for runtime_src_file in self.runtime_cpp_src_files:
-                gen_cmake_target.writelns(
-                    f"{runtime_src_file}",
-                )
             gen_cmake_target.writelns(
                 f"${{TAIHE_GEN_CXX_SRC}}",
+                f"${{TAIHE_RUNTIME_CXX_SRC_INNER}}",
                 # setting
                 f"PROPERTIES",
                 f"LANGUAGE CXX",

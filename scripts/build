@@ -161,7 +161,7 @@ class TaiheBuilder:
                     "@echo off\n"
                     "set TAIHE_ROOT=%~dp0..\n"
                     "set PYTHONPATH=%TAIHE_ROOT%\\lib\\taihe\\compiler;%TAIHE_ROOT%\\lib\\taihe\\compiler\\lib;%PYTHONPATH%\n"
-                    "%TAIHE_ROOT%\\lib\\taihe\\python\\bin\\python3.11.exe -m taihe.cli.compiler %*\n"
+                    "%TAIHE_ROOT%\\lib\\taihe\\python\\bin\\python3.11.exe -c \"from taihe.cli.compiler import *; main(for_distribution=True);\" %*\n"
                 )
             prog.chmod(0o755)
         else:
@@ -171,7 +171,7 @@ class TaiheBuilder:
                     "#!/bin/bash -eu\n"
                     'export TAIHE_ROOT="$(realpath $(dirname "$0")/..)"\n'
                     'export PYTHONPATH="${TAIHE_ROOT}/lib/taihe/compiler:${TAIHE_ROOT}/lib/taihe/compiler/lib:${PYTHONPATH:-}"\n'
-                    'exec "${TAIHE_ROOT}/lib/taihe/python/bin/python3" -m taihe.cli.compiler "$@"\n'
+                    'exec "${TAIHE_ROOT}/lib/taihe/python/bin/python3" -c \'from taihe.cli.compiler import *; main(for_distribution=True);\' "$@"\n'
                 )
             prog.chmod(0o755)
 
