@@ -13,7 +13,7 @@ from enum import Enum
 from pathlib import Path
 
 from taihe.driver.backend import BackendConfig
-from taihe.utils.outputs import CMakeOutputManager, DebugLevel, OutputManager
+from taihe.utils.outputs import CMakeOutputConfig, DebugLevel, OutputConfig
 
 # A lower value means more verbosity
 TRACE_CONCISE = logging.DEBUG - 1
@@ -219,6 +219,7 @@ class BuildSystem(BuildUtils):
         user: UserType,
         sts_keep_name: bool = False,
         opt_level: str = "0",
+        cmake: bool = False,
     ):
         super().__init__(verbosity)
         self.config = config
@@ -267,6 +268,8 @@ class BuildSystem(BuildUtils):
         self.abc_target = self.build_dir / "main.abc"
         self.exe_target = self.build_dir / "main"
         self.arktsconfig_file = self.build_dir / "arktsconfig.json"
+
+        self.cmake = cmake
 
     def create(self) -> None:
         """Create a simple example project."""
@@ -367,24 +370,24 @@ class BuildSystem(BuildUtils):
         for b in backends:
             resolved_backends.append(b())
 
-        cmake_tag = True
-
-        output_manager_factory = CMakeOutputManager if cmake_tag else OutputManager
-        om = output_manager_factory(
-            dst_dir=self.generated_dir,
-            runtime_include_dir=self.config.runtime_include_dir,
-            runtime_src_dir=self.config.runtime_src_dir,
-        )
+        if self.cmake:
+            output_config = CMakeOutputConfig(
+                dst_dir=Path(self.generated_dir),
+                runtime_include_dir=self.config.runtime_include_dir,
+                runtime_src_dir=self.config.runtime_src_dir,
+            )
+        else:
+            output_config = OutputConfig(
+                dst_dir=Path(self.generated_dir),
+            )
 
         instance = CompilerInstance(
             CompilerInvocation(
                 src_dirs=[self.idl_dir, self.config.stdlib_dir],
-                out_dir=self.generated_dir,
-                out_debug_level=self.codegen_debug_level,
+                output_config=output_config,
                 backends=resolved_backends,
                 sts_keep_name=self.sts_keep_name,
-            ),
-            om,
+            )
         )
 
         if not instance.run():
@@ -869,9 +872,16 @@ def main(config: BuildConfig | None = None):
 
     def add_argument_sts_keep_name(parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            "-Csts:keep-name",
+            "--sts-keep-name",
             action="store_true",
             help="Keep original function and interface method names",
+        )
+
+    def add_argument_cmake(parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--cmake",
+            action="store_true",
+            help="Generate CMake files for the project",
         )
 
     def add_argument_verbosity(parser: argparse.ArgumentParser) -> None:
@@ -913,6 +923,7 @@ def main(config: BuildConfig | None = None):
     add_argument_target_directory(parser_generate)
     add_argument_user(parser_generate)
     add_argument_sts_keep_name(parser_generate)
+    add_argument_cmake(parser_generate)
 
     parser_build = subparsers.add_parser(
         "build",
@@ -932,6 +943,7 @@ def main(config: BuildConfig | None = None):
     add_argument_user(parser_test)
     add_argument_optimization(parser_test)
     add_argument_sts_keep_name(parser_test)
+    add_argument_cmake(parser_test)
 
     parser_upgrade = subparsers.add_parser(
         "upgrade",
@@ -971,6 +983,7 @@ def main(config: BuildConfig | None = None):
                     config=config,
                     verbosity=verbosity,
                     sts_keep_name=args.sts_keep_name,
+                    cmake=args.cmake,
                 ).generate()
             case "build":
                 BuildSystem(
@@ -988,6 +1001,7 @@ def main(config: BuildConfig | None = None):
                     verbosity=verbosity,
                     opt_level=args.optimization,
                     sts_keep_name=args.sts_keep_name,
+                    cmake=args.cmake,
                 ).generate_and_build()
             case "upgrade":
                 RepositoryUpgrader(

@@ -12,13 +12,13 @@ class CSourceWriter(FileWriter):
     def __init__(
         self,
         om: OutputManager,
-        path: str,
+        relative_path: str,
         file_kind: FileKind,
         indent_unit: str = DEFAULT_INDENT,
     ):
         super().__init__(
             om,
-            path=path,
+            relative_path=relative_path,
             file_kind=file_kind,
             default_indent=indent_unit,
             comment_prefix="// ",

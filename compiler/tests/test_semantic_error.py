@@ -15,7 +15,6 @@ from taihe.utils.exceptions import (
     SymbolConflictWithNamespaceError,
     TypeUsageError,
 )
-from taihe.utils.outputs import OutputManager
 from taihe.utils.sources import SourceBuffer
 
 
@@ -32,8 +31,8 @@ class SemanticTestDiagnosticsManager(DiagnosticsManager):
 class SemanticTestCompilerInstance(CompilerInstance):
     test_buffers: list[tuple[str, str]]
 
-    def __init__(self, invocation: CompilerInvocation, output_manager: OutputManager):
-        super().__init__(invocation, output_manager)
+    def __init__(self, invocation: CompilerInvocation):
+        super().__init__(invocation)
         self.test_buffers = []
 
     def add_source(self, pkg_name, source):
@@ -67,8 +66,6 @@ backend_registry.register_all()
 
 pre_backend_names = ["pretty-print"]
 pre_invocation = CompilerInvocation(
-    src_dirs=[],
-    out_dir=None,
     backends=[
         b() for b in backend_registry.collect_required_backends(pre_backend_names)
     ],
@@ -76,19 +73,15 @@ pre_invocation = CompilerInvocation(
 
 ani_backend_names = ["cpp-author", "ani-bridge", "pretty-print"]
 ani_invocation = CompilerInvocation(
-    src_dirs=[],
-    out_dir=None,
     backends=[
         b() for b in backend_registry.collect_required_backends(ani_backend_names)
     ],
 )
 
-glob_output_manager = OutputManager()
-
 
 def test_package_not_exist():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "use a;\n"
@@ -99,7 +92,7 @@ def test_package_not_exist():
 
 def test_package_not_in_scope_1():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "struct BadStruct {\n"
@@ -112,7 +105,7 @@ def test_package_not_in_scope_1():
 
 def test_package_not_in_scope_2():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "struct A {\n"
@@ -128,7 +121,7 @@ def test_package_not_in_scope_2():
 
 def test_package_not_in_scope_3():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "from package.example use B;\n"
@@ -148,7 +141,7 @@ def test_package_not_in_scope_3():
 
 def test_decl_redef_1():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "function bad_func(a: i32, a: i32);\n"
@@ -159,7 +152,7 @@ def test_decl_redef_1():
 
 def test_decl_redef_2():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "from package.example1 use A;\n"
@@ -183,7 +176,7 @@ def test_decl_redef_2():
 
 def test_decl_redef_3():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "use package.example1 as example;\n"
@@ -197,7 +190,7 @@ def test_decl_redef_3():
 
 def test_decl_redef_4():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "struct BadStruct {\n"
@@ -211,7 +204,7 @@ def test_decl_redef_4():
 
 def test_package_redef():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source("package", "")
     test_instance.add_source("package", "")
     test_instance.run()
@@ -220,7 +213,7 @@ def test_package_redef():
 
 def test_symbol_conflict_namespace():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "use package.example1.a;\n"
@@ -238,7 +231,7 @@ def test_symbol_conflict_namespace():
 
 def test_decl_not_exist_1():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "from package.example1 use A;\n"
@@ -250,7 +243,7 @@ def test_decl_not_exist_1():
 
 def test_decl_not_exist_2():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "use package.example1;\n"
@@ -270,7 +263,7 @@ def test_decl_not_exist_2():
 
 def test_declaration_not_in_scope_1():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "struct BadStruct {\n"
@@ -283,7 +276,7 @@ def test_declaration_not_in_scope_1():
 
 def test_declaration_not_in_scope_2():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "use package.example1 as example\n"
@@ -298,7 +291,7 @@ def test_declaration_not_in_scope_2():
 
 def test_recursive_inclusion():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "struct A {\n"
@@ -317,7 +310,7 @@ def test_recursive_inclusion():
 
 def test_extends_type():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "interface BadIface: i32 {}\n"
@@ -328,7 +321,7 @@ def test_extends_type():
 
 def test_duplicate_extends():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "interface TestIface {}\n"
@@ -340,7 +333,7 @@ def test_duplicate_extends():
 
 def test_idl_syntax():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "struct A {\n"
@@ -353,7 +346,7 @@ def test_idl_syntax():
 
 def test_not_a_type():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "function good_func(a: i32): void;\n"
@@ -367,7 +360,7 @@ def test_not_a_type():
 
 def test_namespace():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "@!namespace(0)\n"
@@ -378,7 +371,7 @@ def test_namespace():
 
 def test_iface_set_1():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "interface IFoo {\n"
@@ -391,7 +384,7 @@ def test_iface_set_1():
 
 def test_iface_set_2():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "interface IFoo {\n"
@@ -404,7 +397,7 @@ def test_iface_set_2():
 
 def test_set_1():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "interface IFoo {\n"
@@ -420,7 +413,7 @@ def test_set_1():
 
 def test_set_2():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "interface IFoo {\n"
@@ -436,7 +429,7 @@ def test_set_2():
 
 def test_iface_get_1():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "interface IFoo {\n"
@@ -449,7 +442,7 @@ def test_iface_get_1():
 
 def test_iface_get_2():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "interface IFoo {\n"
@@ -462,7 +455,7 @@ def test_iface_get_2():
 
 def test_get_1():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "interface IFoo {\n"
@@ -478,7 +471,7 @@ def test_get_1():
 
 def test_get_2():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "interface IFoo {\n"
@@ -494,7 +487,7 @@ def test_get_2():
 
 def test_onoff_1():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "@on_off\n"
@@ -506,7 +499,7 @@ def test_onoff_1():
 
 def test_onoff_2():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "@on_off(0)\n"
@@ -518,7 +511,7 @@ def test_onoff_2():
 
 def test_onoff_overload_1():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "@on_off\n"
@@ -531,7 +524,7 @@ def test_onoff_overload_1():
 
 def test_onoff_overload_2():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "@on_off\n"
@@ -544,7 +537,7 @@ def test_onoff_overload_2():
 
 def test_iface_onoff_1():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "interface IFoo {\n"
@@ -558,7 +551,7 @@ def test_iface_onoff_1():
 
 def test_iface_onoff_2():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "interface IFoo {\n"
@@ -572,7 +565,7 @@ def test_iface_onoff_2():
 
 def test_iface_onoff_overload_1():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "interface IFoo {\n"
@@ -587,7 +580,7 @@ def test_iface_onoff_overload_1():
 
 def test_iface_onoff_overload_2():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "interface IFoo {\n"
@@ -602,7 +595,7 @@ def test_iface_onoff_overload_2():
 
 def test_iface_overload():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "interface IFoo {\n"
@@ -616,7 +609,7 @@ def test_iface_overload():
 
 def test_iface_async_overload():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "interface IFoo {\n"
@@ -631,7 +624,7 @@ def test_iface_async_overload():
 
 def test_iface_async():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "interface IFoo {\n"
@@ -645,7 +638,7 @@ def test_iface_async():
 
 def test_iface_promise_overload():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "interface IFoo {\n"
@@ -660,7 +653,7 @@ def test_iface_promise_overload():
 
 def test_iface_promise():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "interface IFoo {\n"
@@ -674,7 +667,7 @@ def test_iface_promise():
 
 def test_async_overload():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "@gen_async\n"
@@ -687,7 +680,7 @@ def test_async_overload():
 
 def test_async():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "@gen_async\n"
@@ -699,7 +692,7 @@ def test_async():
 
 def test_promise_overload():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "@gen_promise\n"
@@ -712,7 +705,7 @@ def test_promise_overload():
 
 def test_promise():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "@gen_promise\n"
@@ -724,7 +717,7 @@ def test_promise():
 
 def test_overload():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "@overload\n"
@@ -736,7 +729,7 @@ def test_overload():
 
 def test_ctor():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "@ctor\n"
@@ -748,7 +741,7 @@ def test_ctor():
 
 def test_static():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "@static\n"
@@ -760,7 +753,7 @@ def test_static():
 
 def test_bigint():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "struct A {\n"
@@ -773,7 +766,7 @@ def test_bigint():
 
 def test_typedarray():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "struct A {\n"
@@ -786,7 +779,7 @@ def test_typedarray():
 
 def test_arraybuffer():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "struct A {\n"
@@ -799,7 +792,7 @@ def test_arraybuffer():
 
 def test_sts_type():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "struct A {\n"
@@ -812,7 +805,7 @@ def test_sts_type():
 
 def test_struct_extend():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "@class\n"
@@ -826,7 +819,7 @@ def test_struct_extend():
 
 def test_const_enum():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "@const\n"
@@ -842,7 +835,7 @@ def test_const_enum():
 
 def test_const():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "enum A: f32 {}\n"
@@ -853,7 +846,7 @@ def test_const():
 
 def test_union():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "union U {\n"
@@ -866,7 +859,7 @@ def test_union():
 
 def test_map():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_invocation, glob_output_manager)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "function a(x: Map<String, i32>): Map<String, i32>;\n"

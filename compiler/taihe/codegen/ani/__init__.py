@@ -16,7 +16,7 @@ class AniBridgeBackendConfig(BackendConfig):
 
         # TODO: unify {ANI,STS}CodeGenerator
         class AniBridgeBackendImpl(Backend):
-            def __init__(self, ci: CompilerInstance, config: AniBridgeBackendConfig):
+            def __init__(self, ci: CompilerInstance):
                 super().__init__(ci)
                 self._ci = ci
 
@@ -27,4 +27,4 @@ class AniBridgeBackendConfig(BackendConfig):
                 ANICodeGenerator(om, am).generate(pg)
                 STSCodeGenerator(om, am).generate(pg)
 
-        return AniBridgeBackendImpl(instance, self)
+        return AniBridgeBackendImpl(instance)

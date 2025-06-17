@@ -4,7 +4,7 @@ from pathlib import Path
 
 from taihe.driver.backend import BackendConfig, BackendRegistry
 from taihe.driver.contexts import CompilerInstance, CompilerInvocation
-from taihe.utils.outputs import CMakeOutputManager, OutputManager
+from taihe.utils.outputs import CMakeOutputConfig, OutputConfig
 
 
 def main():
@@ -66,24 +66,25 @@ def main():
     for b in registry.collect_required_backends(args.backends):
         resolved_backends.append(b())
 
-    current_file = Path(__file__).resolve()
-    # for_distribution
-    # TODO: unified runtime path.
-    taihe_root_dir = current_file.parents[5]
-    runtime_include_dir = taihe_root_dir / "include"
-    runtime_src_dir = taihe_root_dir / "src" / "taihe" / "runtime"
-
-    output_manager_factory = CMakeOutputManager if args.cmake else OutputManager
-    om = output_manager_factory(
-        dst_dir=Path(args.dst_dir),
-        runtime_include_dir=runtime_include_dir,
-        runtime_src_dir=runtime_src_dir,
-    )
+    if args.cmake:
+        current_file = Path(__file__).resolve()
+        taihe_root_dir = current_file.parents[5]
+        runtime_include_dir = taihe_root_dir / "include"
+        runtime_src_dir = taihe_root_dir / "src" / "taihe" / "runtime"
+        output_config = CMakeOutputConfig(
+            dst_dir=Path(args.dst_dir),
+            runtime_include_dir=runtime_include_dir,
+            runtime_src_dir=runtime_src_dir,
+        )
+    else:
+        output_config = OutputConfig(
+            dst_dir=Path(args.dst_dir),
+        )
 
     invocation = CompilerInvocation(
         src_files=args.src_files,
         src_dirs=args.src_dirs,
-        out_dir=args.dst_dir,
+        output_config=output_config,
         backends=resolved_backends,
     )
 
@@ -98,7 +99,7 @@ def main():
         else:
             raise ValueError(f"unknown codegen config {k!r}")
 
-    instance = CompilerInstance(invocation, om)
+    instance = CompilerInstance(invocation)
     if not instance.run():
         return -1
     return 0
