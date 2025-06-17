@@ -75,7 +75,7 @@ class CompilerInstance:
     def __init__(self, invocation: CompilerInvocation):
         self.invocation = invocation
         self.diagnostics_manager = ConsoleDiagnosticsManager()
-        self.analysis_manager = AnalysisManager(self.diagnostics_manager)
+        self.analysis_manager = AnalysisManager(invocation, self.diagnostics_manager)
         self.source_manager = SourceManager()
         self.package_group = PackageGroup()
         self.output_config = OutputConfig(
