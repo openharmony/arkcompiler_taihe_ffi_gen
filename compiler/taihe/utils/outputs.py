@@ -51,56 +51,6 @@ class FileDescriptor:
     kind: FileKind
 
 
-@dataclass
-class OutputConfig:
-    dst_dir: Path | None = None
-    debug_level: DebugLevel = DebugLevel.NONE
-
-    def construct(self, ci: "CompilerInstance") -> "OutputManager":
-        """Construct an OutputManager based on this configuration."""
-        return OutputManager(
-            dst_dir=self.dst_dir,
-            debug_level=self.debug_level,
-        )
-
-
-class OutputManager:
-    """Manages the creation and saving of output files."""
-
-    files: dict[str, FileDescriptor]
-    files_by_kind: dict[FileKind, list[FileDescriptor]]
-
-    dst_dir: Path | None
-    debug_level: DebugLevel
-
-    def __init__(
-        self,
-        dst_dir: Path | None = None,
-        debug_level: DebugLevel = DebugLevel.NONE,
-    ):
-        self.dst_dir = dst_dir
-        self.debug_level = debug_level
-        self.files: dict[str, FileDescriptor] = {}
-        self.files_by_kind: dict[FileKind, list[FileDescriptor]] = defaultdict(list)
-
-    def register(self, desc: FileDescriptor):
-        if (prev := self.files.setdefault(desc.relative_path, desc)) != desc:
-            raise ValueError(
-                f"File {desc.relative_path} is already registered as {prev.kind}, "
-                f"cannot re-register with {desc.kind}."
-            )
-        self.files_by_kind[desc.kind].append(desc)
-
-    def get_all_files(self) -> list[FileDescriptor]:
-        return list(self.files.values())
-
-    def get_files_by_kind(self, kind: FileKind) -> list[FileDescriptor]:
-        return self.files_by_kind.get(kind, [])
-
-    def post_generate(self) -> None:
-        pass
-
-
 class BaseWriter:
     def __init__(
         self,
@@ -227,7 +177,7 @@ class BaseWriter:
 class FileWriter(BaseWriter):
     def __init__(
         self,
-        om: OutputManager,
+        om: "OutputManager",
         relative_path: str,
         file_kind: FileKind,
         *,
@@ -240,10 +190,11 @@ class FileWriter(BaseWriter):
             comment_prefix=comment_prefix,
             debug_level=om.debug_level,
         )
-        self.om = om
-        self._path = None if om.dst_dir is None else om.dst_dir / relative_path
-        self._relative_path = relative_path
-        self.file_kind = file_kind
+        self._om = om
+        self.desc = FileDescriptor(
+            relative_path=relative_path,
+            kind=file_kind,
+        )
 
     def __enter__(self):
         return self
@@ -254,33 +205,19 @@ class FileWriter(BaseWriter):
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> bool:
-        del exc_val, exc_tb
-
-        # Discard on exception
-        if not exc_type and self._path is not None:
-            self.save_as(self._path)
-
-        # Propagate the exception if exists
+        del exc_val, exc_tb, exc_type
+        self._om.save(self)
         return False
+
+    def write_body(self, f: TextIO):
+        assert isinstance(self._out, StringIO)
+        f.write(self._out.getvalue())
 
     def write_prologue(self, f: TextIO):
         del f
 
     def write_epilogue(self, f: TextIO):
         del f
-
-    def save_as(self, file_path: Path):
-        file_path.parent.mkdir(exist_ok=True, parents=True)
-        with open(file_path, "w", encoding="utf-8") as dst:
-            assert isinstance(self._out, StringIO)
-            self.write_prologue(dst)
-            dst.write(self._out.getvalue())
-            self.write_epilogue(dst)
-        desc = FileDescriptor(
-            relative_path=self._relative_path,
-            kind=self.file_kind,
-        )
-        self.om.register(desc)
 
 
 def _format_frame(f: FrameType) -> str:
@@ -295,6 +232,71 @@ def _format_frame(f: FrameType) -> str:
     base_format = f"CODEGEN-DEBUG: {f.f_code.co_name} in {file_name}:{f.f_lineno}"
 
     return base_format
+
+
+@dataclass
+class OutputConfig:
+    dst_dir: Path | None = None
+    debug_level: DebugLevel = DebugLevel.NONE
+
+    def construct(self, ci: "CompilerInstance") -> "OutputManager":
+        """Construct an OutputManager based on this configuration."""
+        return OutputManager(
+            dst_dir=self.dst_dir,
+            debug_level=self.debug_level,
+        )
+
+
+class OutputManager:
+    """Manages the creation and saving of output files."""
+
+    files: dict[str, FileDescriptor]
+    files_by_kind: dict[FileKind, list[FileDescriptor]]
+
+    dst_dir: Path | None
+
+    debug_level: DebugLevel
+
+    def __init__(
+        self,
+        dst_dir: Path | None = None,
+        debug_level: DebugLevel = DebugLevel.NONE,
+    ):
+        self.files: dict[str, FileDescriptor] = {}
+        self.files_by_kind: dict[FileKind, list[FileDescriptor]] = defaultdict(list)
+        self.dst_dir = dst_dir
+        self.debug_level = debug_level
+
+    def register(self, desc: FileDescriptor):
+        if (prev := self.files.setdefault(desc.relative_path, desc)) != desc:
+            raise ValueError(
+                f"File {desc.relative_path} is already registered as {prev.kind}, "
+                f"cannot re-register with {desc.kind}."
+            )
+        self.files_by_kind[desc.kind].append(desc)
+
+    def save(self, writer: FileWriter):
+        """Saves the content of a FileWriter to the output directory."""
+        self.register(writer.desc)
+
+        if self.dst_dir is None:
+            return
+
+        file_path = self.dst_dir / writer.desc.relative_path
+        file_path.parent.mkdir(exist_ok=True, parents=True)
+        with open(file_path, "w", encoding="utf-8") as dst:
+            writer.write_prologue(dst)
+            writer.write_body(dst)
+            writer.write_epilogue(dst)
+
+    def get_all_files(self) -> list[FileDescriptor]:
+        return list(self.files.values())
+
+    def get_files_by_kind(self, kind: FileKind) -> list[FileDescriptor]:
+        return self.files_by_kind.get(kind, [])
+
+    def post_generate(self) -> None:
+        pass
 
 
 #################################
