@@ -51,10 +51,9 @@ class ANICodeGenerator:
         self.gen_constructor(pg)
 
     def gen_constructor(self, pg: PackageGroup):
-        constructor_file = "ani_constructor.cpp"
         with CSourceWriter(
             self.om,
-            f"src/{constructor_file}",
+            f"temp/ani_constructor.cpp",
             FileKind.TEMPLATE,
         ) as constructor_target:
             constructor_target.writelns(

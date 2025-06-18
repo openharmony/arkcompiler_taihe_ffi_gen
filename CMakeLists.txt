@@ -83,7 +83,6 @@ function(generate_code_from_idl target_name idl_files gen_ets_files generated_di
   set(ABI_C_FILES)
   set(ANI_HPP_FILES)
   set(ANI_CPP_FILES)
-  set(ANI_CTOR_FILE "${generated_dir}/src/ani_constructor.cpp")
 
   foreach(TAIHE_FILE ${IDL_FILES})
     # 替换扩展名
@@ -120,7 +119,7 @@ function(generate_code_from_idl target_name idl_files gen_ets_files generated_di
   )
 
   add_custom_command(
-    OUTPUT ${PROJ_HPP_FILES} ${IMPL_HPP_FILES} ${ABI_H_FILES} ${ABI_C_FILES} ${ANI_HPP_FILES} ${ANI_CPP_FILES} ${GEN_ETS_FILES} ${ANI_CTOR_FILE}
+    OUTPUT ${PROJ_HPP_FILES} ${IMPL_HPP_FILES} ${ABI_H_FILES} ${ABI_C_FILES} ${ANI_HPP_FILES} ${ANI_CPP_FILES} ${GEN_ETS_FILES}
     COMMAND ${COMMAND_TO_RUN}
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/compiler
     DEPENDS ${IDL_FILES} ${CMAKE_SOURCE_DIR}/compiler/taihe/parse/antlr/TaiheAST.py
@@ -136,7 +135,6 @@ function(generate_code_from_idl target_name idl_files gen_ets_files generated_di
     ${ANI_HPP_FILES}
     ${ANI_CPP_FILES}
     ${GEN_ETS_FILES}
-    ${ANI_CTOR_FILE}
   )
 
   set(${target_name}_PROJ_HPP_FILES ${PROJ_HPP_FILES} PARENT_SCOPE)
@@ -145,7 +143,6 @@ function(generate_code_from_idl target_name idl_files gen_ets_files generated_di
   set(${target_name}_ABI_C_FILES ${ABI_C_FILES} PARENT_SCOPE)
   set(${target_name}_ANI_HPP_FILES ${ANI_HPP_FILES} PARENT_SCOPE)
   set(${target_name}_ANI_CPP_FILES ${ANI_CPP_FILES} PARENT_SCOPE)
-  set(${target_name}_ANI_CTOR_FILE ${ANI_CTOR_FILE} PARENT_SCOPE)
 endfunction()
 
 # 准备 panda sdk
@@ -255,7 +252,7 @@ endfunction()
 
 # 编译动态库
 function(compile_dylib target_name include_dirs user_cpp_files)
-  set(ALL_SRC_FILES ${${target_name}_ABI_C_FILES} ${${target_name}_ANI_CPP_FILES} ${${target_name}_ANI_CTOR_FILE} ${user_cpp_files})
+  set(ALL_SRC_FILES ${${target_name}_ABI_C_FILES} ${${target_name}_ANI_CPP_FILES} ${user_cpp_files})
 
   foreach(author_source_file ${user_cpp_files})
     foreach(impl_hpp_file ${${target_name}_IMPL_HPP_FILES})
