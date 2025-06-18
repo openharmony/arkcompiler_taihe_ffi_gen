@@ -26,7 +26,7 @@ from taihe.parse.convert import (
 from taihe.semantics.analysis import analyze_semantics
 from taihe.semantics.declarations import PackageGroup
 from taihe.utils.analyses import AnalysisManager
-from taihe.utils.diagnostics import ConsoleDiagnosticsManager, DiagnosticsManager, Level
+from taihe.utils.diagnostics import ConsoleDiagnosticsManager, DiagnosticsManager
 from taihe.utils.exceptions import AdhocNote
 from taihe.utils.outputs import OutputConfig
 from taihe.utils.sources import SourceFile, SourceLocation, SourceManager
@@ -156,7 +156,7 @@ class CompilerInstance:
             b.validate()
 
     def generate(self):
-        if self.diagnostics_manager.current_max_level >= Level.ERROR:
+        if self.diagnostics_manager.has_error:
             return
 
         for b in self.backends:
@@ -169,4 +169,4 @@ class CompilerInstance:
         self.parse()
         self.validate()
         self.generate()
-        return self.diagnostics_manager.current_max_level < Level.ERROR
+        return not self.diagnostics_manager.has_error

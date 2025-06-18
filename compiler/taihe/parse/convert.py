@@ -51,9 +51,8 @@ class IgnoredFileWarn(DiagWarn):
     reason: IgnoredFileReason
     note: DiagNote | None = None
 
-    @property
     @override
-    def format_msg(self) -> str:
+    def describe(self) -> str:
         return f"unrecognized file: {self.reason.value}"
 
     def notes(self):

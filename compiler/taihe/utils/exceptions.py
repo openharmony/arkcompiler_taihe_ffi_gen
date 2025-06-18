@@ -28,9 +28,8 @@ class DeclRedefNote(DiagNote):
         super().__init__(loc=prev.loc)
         self.prev = prev
 
-    @property
     @override
-    def format_msg(self) -> str:
+    def describe(self) -> str:
         return f"conflict with {self.prev.description}"
 
 
@@ -44,9 +43,8 @@ class DeclRedefError(DiagError):
         self.prev = prev
         self.current = current
 
-    @property
     @override
-    def format_msg(self) -> str:
+    def describe(self) -> str:
         return f"redefinition of {self.current.description}"
 
     @override
@@ -59,9 +57,8 @@ class DeclRedefError(DiagError):
 class IDLSyntaxError(DiagError):
     token: str
 
-    @property
     @override
-    def format_msg(self) -> str:
+    def describe(self) -> str:
         return f"unexpected {self.token!r}"
 
 
@@ -69,9 +66,8 @@ class IDLSyntaxError(DiagError):
 class PackageNotExistError(DiagError):
     name: str
 
-    @property
     @override
-    def format_msg(self) -> str:
+    def describe(self) -> str:
         return f"package {self.name!r} not exist"
 
 
@@ -79,9 +75,8 @@ class PackageNotExistError(DiagError):
 class DeclNotExistError(DiagError):
     name: str
 
-    @property
     @override
-    def format_msg(self) -> str:
+    def describe(self) -> str:
         return f"declaration {self.name!r} not exist"
 
 
@@ -89,9 +84,8 @@ class DeclNotExistError(DiagError):
 class NotATypeError(DiagError):
     name: str
 
-    @property
     @override
-    def format_msg(self) -> str:
+    def describe(self) -> str:
         return f"{self.name!r} is not a type name"
 
 
@@ -99,9 +93,8 @@ class NotATypeError(DiagError):
 class DeclarationNotInScopeError(DiagError):
     name: str
 
-    @property
     @override
-    def format_msg(self) -> str:
+    def describe(self) -> str:
         return (
             f"declaration name {self.name!r} is not declared or imported in this scope"
         )
@@ -111,9 +104,8 @@ class DeclarationNotInScopeError(DiagError):
 class PackageNotInScopeError(DiagError):
     name: str
 
-    @property
     @override
-    def format_msg(self) -> str:
+    def describe(self) -> str:
         return f"package name {self.name!r} is not imported in this scope"
 
 
@@ -121,9 +113,8 @@ class PackageNotInScopeError(DiagError):
 class GenericArgumentsError(DiagError):
     name: str
 
-    @property
     @override
-    def format_msg(self) -> str:
+    def describe(self) -> str:
         return f"Invalid generic arguments in {self.name!r}"
 
 
@@ -137,9 +128,8 @@ class SymbolConflictWithNamespaceError(DiagError):
         self.decl = decl
         self.pkg = pkg
 
-    @property
     @override
-    def format_msg(self) -> str:
+    def describe(self) -> str:
         return f"declaration of {self.decl.description} in {self.pkg.description} shadows a file-level declaration"
 
 
@@ -152,9 +142,8 @@ class TypeUsageError(DiagError):
         assert ty_ref.maybe_resolved_ty
         self.ty = ty_ref.maybe_resolved_ty
 
-    @property
     @override
-    def format_msg(self) -> str:
+    def describe(self) -> str:
         return f"{self.ty.signature} cannot be used in this context"
 
 
@@ -168,18 +157,16 @@ class EnumValueError(DiagError):
         self.item = item
         self.enum = enum
 
-    @property
     @override
-    def format_msg(self) -> str:
+    def describe(self) -> str:
         assert self.enum.ty_ref.maybe_resolved_ty
         return f"value of {self.item.description} ({self.item.value}) is conflict with {self.enum.description} ({self.enum.ty_ref.maybe_resolved_ty.signature})"
 
 
 @dataclass
 class DuplicateExtendsNote(DiagNote):
-    @property
     @override
-    def format_msg(self) -> str:
+    def describe(self) -> str:
         return "previously extended here"
 
 
@@ -189,9 +176,8 @@ class DuplicateExtendsWarn(DiagWarn):
     parent_iface: "IfaceDecl"
     prev_loc: SourceLocation | None = field(kw_only=True)
 
-    @property
     @override
-    def format_msg(self) -> str:
+    def describe(self) -> str:
         return f"{self.parent_iface.description} is extended multiple times by {self.iface.description}"
 
     @override
@@ -211,9 +197,8 @@ class RecursiveReferenceNote(DiagNote):
         super().__init__(loc=last[1].loc)
         self.decl = last[0]
 
-    @property
     @override
-    def format_msg(self) -> str:
+    def describe(self) -> str:
         return f"referenced by {self.decl.description}"
 
 
@@ -231,9 +216,8 @@ class RecursiveReferenceError(DiagError):
         self.decl = last[0]
         self.other = other
 
-    @property
     @override
-    def format_msg(self) -> str:
+    def describe(self) -> str:
         return f"cycle detected in {self.decl.description}"
 
     @override
@@ -246,9 +230,8 @@ class RecursiveReferenceError(DiagError):
 class AdhocNote(DiagNote):
     msg: str
 
-    @property
     @override
-    def format_msg(self) -> str:
+    def describe(self) -> str:
         return self.msg
 
 
@@ -256,9 +239,8 @@ class AdhocNote(DiagNote):
 class AdhocWarn(DiagWarn):
     msg: str
 
-    @property
     @override
-    def format_msg(self) -> str:
+    def describe(self) -> str:
         return self.msg
 
 
@@ -266,9 +248,8 @@ class AdhocWarn(DiagWarn):
 class AdhocError(DiagError):
     msg: str
 
-    @property
     @override
-    def format_msg(self) -> str:
+    def describe(self) -> str:
         return self.msg
 
 
@@ -276,7 +257,6 @@ class AdhocError(DiagError):
 class AdhocFatalError(DiagFatalError):
     msg: str
 
-    @property
     @override
-    def format_msg(self) -> str:
+    def describe(self) -> str:
         return self.msg

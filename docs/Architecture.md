@@ -309,7 +309,7 @@ func_abi_info = GlobFuncABIInfo.get(am, func)
 - `DiagBase`: 描述了抽象的、结构化的诊断信息：
   - 可使用 `@dataclass` 存储上下文。
   - 建议填写 `loc`：用于描述诊断信息所对应的源码位置。
-  - 需要重写 `format_msg()`：用一行简短的话描述诊断信息。
+  - 需要重写 `describe()`：用一行简短的话描述诊断信息。
   - 可选重写 `notes()`：对这条诊断信息添加笔记（见下文）。
 
 语义检查和语言后端一般不直接使用 `DiagBase`，而是使用派生出的类：

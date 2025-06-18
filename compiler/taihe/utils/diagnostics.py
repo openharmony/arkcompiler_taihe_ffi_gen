@@ -49,7 +49,7 @@ FilterT = Callable[[str], str]
 ###################
 
 
-class Level(IntEnum):
+class Severity(IntEnum):
     NOTE = 0
     WARN = 1
     ERROR = 2
@@ -60,83 +60,110 @@ class Level(IntEnum):
 class DiagBase(ABC):
     """The base class for diagnostic messages."""
 
-    LEVEL: ClassVar[Level]
-    LEVEL_DESC: ClassVar[str]
+    SEVERITY: ClassVar[Severity]
+    SEVERITY_DESC: ClassVar[str]
     STYLE: ClassVar[str]
 
     loc: SourceLocation | None = field(kw_only=True)
     """The source location where the diagnostic refers to."""
 
     def __str__(self) -> str:
-        return self.format(_discard)
+        return self.format_message(_discard)
 
-    @property
     @abstractmethod
-    def format_msg(self) -> str: ...
+    def describe(self) -> str:
+        """Concise, human-readable description of the diagnostic message.
+
+        Subclasses must implement this method to explain the specific issue.
+
+        Example: "redefinition of ..."
+        """
 
     def notes(self) -> Iterable["DiagNote"]:
-        """Returns the associated notes."""
+        """Returns an iterable of associated diagnostic notes.
+
+        Notes provide additional context or suggestions related to the main diagnostic.
+        By default, a diagnostic has no associated notes.
+        """
         return ()
 
-    def format(self, f: FilterT) -> str:
+    def format_message(self, f: FilterT) -> str:
+        """Formats the diagnostic message, optionally applying ANSI styling.
+
+        Args:
+            f: A filter for ANSI codes applied to parts of the string for styling.
+
+        Returns:
+            A string representing the formatted diagnostic message,
+            including location, severity, and description.
+
+        Example:
+            "example.taihe:7:20: error: redefinition of ..."
+        """
         return (
             f"{f(AnsiStyle.BRIGHT)}{self.loc or '???'}: "  # "example.taihe:7:20: "
-            f"{f(self.STYLE)}{self.LEVEL_DESC}{f(AnsiStyle.RESET)}: "  # "error: "
-            f"{self.format_msg}{f(AnsiStyle.RESET_ALL)}"  # "redefinition of ..."
+            f"{f(self.STYLE)}{self.SEVERITY_DESC}{f(AnsiStyle.RESET)}: "  # "error: "
+            f"{self.describe()}{f(AnsiStyle.RESET_ALL)}"  # "redefinition of ..."
         )
 
 
-######################################
-# Base classes with different levels #
-######################################
+##########################################
+# Base classes with different severities #
+##########################################
 
 
 @dataclass
 class DiagNote(DiagBase):
-    LEVEL = Level.NOTE
-    LEVEL_DESC = "note"
+    SEVERITY = Severity.NOTE
+    SEVERITY_DESC = "note"
     STYLE = AnsiStyle.CYAN
 
 
 @dataclass
 class DiagWarn(DiagBase):
-    LEVEL = Level.WARN
-    LEVEL_DESC = "warning"
+    SEVERITY = Severity.WARN
+    SEVERITY_DESC = "warning"
     STYLE = AnsiStyle.MAGENTA
 
 
 @dataclass
 class DiagError(DiagBase, Exception):
-    LEVEL = Level.ERROR
-    LEVEL_DESC = "error"
+    SEVERITY = Severity.ERROR
+    SEVERITY_DESC = "error"
     STYLE = AnsiStyle.RED
 
 
 @dataclass
 class DiagFatalError(DiagError):
-    LEVEL = Level.FATAL
-    LEVEL_DESC = "fatal"
+    SEVERITY = Severity.FATAL
+    SEVERITY_DESC = "fatal"
 
 
 ########################
 
 
 class DiagnosticsManager(ABC):
-    _max_level_record: Level = Level.NOTE
+    _max_severity_seen: Severity = Severity.NOTE
+
+    def has_reached_severity(self, severity: Severity):
+        return self._max_severity_seen >= severity
 
     @property
-    def current_max_level(self):
-        """Returns the current maximum diagnostic level."""
-        return self._max_level_record
+    def has_error(self):
+        return self.has_reached_severity(Severity.ERROR)
 
-    def reset(self):
-        """Resets the current maximum diagnostic level."""
-        self._max_level_record = Level.NOTE
+    @property
+    def has_fatal_error(self):
+        return self.has_reached_severity(Severity.FATAL)
+
+    def reset_severity(self):
+        """Resets the current maximum diagnostic severity."""
+        self._max_severity_seen = Severity.NOTE
 
     @abstractmethod
     def emit(self, diag: DiagBase) -> None:
         """Emits a new diagnostic message, don't forget to call it in subclasses."""
-        self._max_level_record = max(self._max_level_record, diag.LEVEL)
+        self._max_severity_seen = max(self._max_severity_seen, diag.SEVERITY)
 
     @contextmanager
     def capture_error(self):
@@ -243,6 +270,6 @@ class ConsoleDiagnosticsManager(DiagnosticsManager):
             )
 
     def _render(self, d: DiagBase):
-        self._write(f"{d.format(self._color_filter_fn)}\n")
+        self._write(f"{d.format_message(self._color_filter_fn)}\n")
         if d.loc:
             self._render_source_location(d.loc)
