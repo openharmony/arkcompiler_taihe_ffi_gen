@@ -34,19 +34,18 @@ inline ani_env *get_env() {
 
 class env_guard {
   ani_env *env;
-  bool is_attached;
+  bool is_temporary;
 
 public:
   env_guard() {
-    is_attached =
-        get_vm()->AttachCurrentThread(nullptr, ANI_VERSION_1, &env) == ANI_OK;
-    if (!is_attached) {
-      get_vm()->GetEnv(ANI_VERSION_1, &env);
+    is_temporary = get_vm()->GetEnv(ANI_VERSION_1, &env) != ANI_OK;
+    if (is_temporary) {
+      get_vm()->AttachCurrentThread(nullptr, ANI_VERSION_1, &env);
     }
   }
 
   ~env_guard() {
-    if (is_attached) {
+    if (is_temporary) {
       get_vm()->DetachCurrentThread();
     }
   }
