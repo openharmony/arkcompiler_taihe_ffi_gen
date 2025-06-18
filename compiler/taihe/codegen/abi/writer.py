@@ -27,16 +27,18 @@ class CSourceWriter(FileWriter):
 
     @override
     def write_prologue(self, f: TextIO):
-        f.write("#pragma clang diagnostic push\n")
-        f.write('#pragma clang diagnostic ignored "-Weverything"\n')
-        f.write('#pragma clang diagnostic warning "-Wextra"\n')
-        f.write('#pragma clang diagnostic warning "-Wall"\n')
+        if self.desc.kind != FileKind.TEMPLATE:
+            f.write("#pragma clang diagnostic push\n")
+            f.write('#pragma clang diagnostic ignored "-Weverything"\n')
+            f.write('#pragma clang diagnostic warning "-Wextra"\n')
+            f.write('#pragma clang diagnostic warning "-Wall"\n')
         for header in self.headers:
             f.write(f'#include "{header}"\n')
 
     @override
     def write_epilogue(self, f: TextIO):
-        f.write("#pragma clang diagnostic pop\n")
+        if self.desc.kind != FileKind.TEMPLATE:
+            f.write("#pragma clang diagnostic pop\n")
 
     def add_include(self, *headers: str):
         for header in headers:

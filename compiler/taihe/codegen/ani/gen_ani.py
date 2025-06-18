@@ -57,7 +57,15 @@ class ANICodeGenerator:
             f"src/{constructor_file}",
             FileKind.TEMPLATE,
         ) as constructor_target:
-            constructor_target.add_include("taihe/platform/ani.hpp")
+            constructor_target.writelns(
+                f"#if __has_include(<ani.h>)",
+                f"#include <ani.h>",
+                f"#elif __has_include(<ani/ani.h>)",
+                f"#include <ani/ani.h>",
+                f"#else",
+                f'#error "ani.h not found. Please ensure the Ani SDK is correctly installed."',
+                f"#endif",
+            )
             with constructor_target.indented(
                 f"ANI_EXPORT ani_status ANI_Constructor(ani_vm *vm, uint32_t *result) {{",
                 f"}}",
@@ -680,10 +688,6 @@ class ANICodeGenerator:
         ) as struct_ani_impl_target:
             struct_ani_impl_target.add_include(struct_ani_info.decl_header)
             struct_ani_impl_target.add_include(struct_cpp_info.impl_header)
-            # TODO: ignore compiler warning
-            struct_ani_impl_target.writelns(
-                '#pragma clang diagnostic ignored "-Wmissing-braces"',
-            )
             self.gen_struct_from_ani_func(
                 struct,
                 struct_cpp_info,
