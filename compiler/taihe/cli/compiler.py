@@ -2,7 +2,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from taihe.driver.backend import BackendConfig, BackendRegistry
+from taihe.driver.backend import BackendRegistry
 from taihe.driver.contexts import CompilerInstance, CompilerInvocation
 from taihe.utils.outputs import CMakeOutputConfig, OutputConfig
 
@@ -64,9 +64,8 @@ def main(for_distribution: bool = False):
     )
     args = parser.parse_args()
 
-    resolved_backends: list[BackendConfig] = []
-    for b in registry.collect_required_backends(args.backends):
-        resolved_backends.append(b())
+    backends = registry.collect_required_backends(args.backends)
+    resolved_backends = [b() for b in backends]
 
     current_file = Path(__file__).resolve()
     if for_distribution:
@@ -108,6 +107,7 @@ def main(for_distribution: bool = False):
             raise ValueError(f"unknown codegen config {k!r}")
 
     instance = CompilerInstance(invocation)
+
     if not instance.run():
         return -1
     return 0
