@@ -1,3 +1,6 @@
+import pytest
+from typing_extensions import override
+
 from taihe.driver.backend import BackendRegistry
 from taihe.driver.contexts import CompilerInstance, CompilerInvocation
 from taihe.utils.diagnostics import DiagBase, DiagnosticsManager
@@ -24,41 +27,27 @@ class SemanticTestDiagnosticsManager(DiagnosticsManager):
     def __init__(self):
         self.errors = []
 
+    @override
     def emit(self, diag: DiagBase) -> None:
         self.errors.append(diag)
 
 
 class SemanticTestCompilerInstance(CompilerInstance):
-    test_buffers: list[tuple[str, str]]
-
     def __init__(self, invocation: CompilerInvocation):
-        super().__init__(invocation)
-        self.test_buffers = []
+        super().__init__(invocation, dm=SemanticTestDiagnosticsManager)
 
     def add_source(self, pkg_name, source):
-        self.test_buffers.append((pkg_name, source))
+        self.source_manager.add_source(SourceBuffer(pkg_name, source))
 
+    @override
     def collect(self):
-        for pkg_name, source in self.test_buffers:
-            self.source_manager.add_source(SourceBuffer(pkg_name, source))
+        pass
 
-    def generate(self):
-        for b in self.backends:
-            b.generate()
-
-    def run(self):
-        self.collect()
-        self.parse()
-        self.validate()
-        self.generate()
-        return True
-
-    def assert_has_error(self, error_type: type[DiagBase]):
-        if isinstance(self.diagnostics_manager, SemanticTestDiagnosticsManager):
-            print(self.diagnostics_manager.errors)
-            assert any(
-                isinstance(err, error_type) for err in self.diagnostics_manager.errors
-            )
+    def assert_has_error(self, ty: type[DiagBase]):
+        assert isinstance(self.diagnostics_manager, SemanticTestDiagnosticsManager)
+        if all(not isinstance(err, ty) for err in self.diagnostics_manager.errors):
+            print(f"Known: {self.diagnostics_manager.errors}")
+            pytest.fail(f"Assertion mismatch: expect {ty}")
 
 
 backend_registry = BackendRegistry()

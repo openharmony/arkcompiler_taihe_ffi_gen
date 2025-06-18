@@ -80,7 +80,7 @@ Taihe 遵从经典的“三阶段”编译器设计，具体地：
 3. 构造 `taihe.driver.contexts.CompilerInvocation` 实例，描述编译意图。例如，使用 `ani-bridge` 语言后端去编译 `foo.taihe` 文件到 `out/` 目录下。
 4. 创建 `taihe.driver.contexts.CompilerInstance` 实例，存储编译所依赖的主要对象，例如语言后端实例、报错信息收集器。
 5. 调用 `CompilerInstance.run()` 完成编译。该函数串接了前端、语义分析、代码生成等编译流水线。
-  - `CompilerInstance.scan()`: 扫描目录，收集待处理的 `.taihe` 源文件
+  - `CompilerInstance.collect()`: 扫描目录，收集待处理的 `.taihe` 源文件
   - `CompilerInstance.parse()`: 执行语言前端，解析 `.taihe` 源文件，并转换到 IR。
   - `CompilerInstance.validate()`: 分析语义，验证 `.taihe` 源文件的正确性。
   - `CompilerInstance.generate()`: 执行语言后端，生成目标代码。

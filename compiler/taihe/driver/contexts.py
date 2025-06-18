@@ -14,6 +14,7 @@
 """
 
 from dataclasses import dataclass, field
+from itertools import chain
 from pathlib import Path
 
 from taihe.driver.backend import Backend, BackendConfig
@@ -72,9 +73,14 @@ class CompilerInstance:
 
     analysis_manager: AnalysisManager
 
-    def __init__(self, invocation: CompilerInvocation):
+    def __init__(
+        self,
+        invocation: CompilerInvocation,
+        *,
+        dm: type[DiagnosticsManager] = ConsoleDiagnosticsManager,
+    ):
         self.invocation = invocation
-        self.diagnostics_manager = ConsoleDiagnosticsManager()
+        self.diagnostics_manager = dm()
         self.analysis_manager = AnalysisManager(invocation, self.diagnostics_manager)
         self.source_manager = SourceManager()
         self.package_group = PackageGroup()
@@ -85,18 +91,12 @@ class CompilerInstance:
     # The compilation phases #
     ##########################
 
-    def scan(self):
+    def collect(self):
         """Adds all `.taihe` files inside a directory. Subdirectories are ignored."""
-        files: list[Path] = []
+        scanned = chain.from_iterable(p.iterdir() for p in self.invocation.src_dirs)
+        direct = self.invocation.src_files
 
-        for src_dir in self.invocation.src_dirs:
-            for src_file in src_dir.iterdir():
-                files.append(src_file)
-
-        for src_file in self.invocation.src_files:
-            files.append(src_file)
-
-        for file in files:
+        for file in chain(direct, scanned):
             source = SourceFile(file)
             if warning := validate_source_file(source):
                 self.diagnostics_manager.emit(warning)
@@ -129,7 +129,7 @@ class CompilerInstance:
         self.output_manager.post_generate()
 
     def run(self):
-        self.scan()
+        self.collect()
         self.parse()
         self.validate()
         self.generate()
