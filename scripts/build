@@ -12,7 +12,7 @@ import zlib
 
 SYSTEM_TYPES = ["linux-x86_64", "windows-x86_64", "darwin-arm64", "darwin-x86_64"]
 PYTHON_REPO_URL = "https://gitee.com/ASeaSalt/python-multi-platform.git"
-PYTHON_REPO_BRANCH = "main"
+PYTHON_REPO_BRANCH = "master"
 
 
 class TaiheBuilder:
