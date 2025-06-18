@@ -37,12 +37,15 @@ from taihe.semantics.types import (
 from taihe.semantics.visitor import RecursiveDeclVisitor
 from taihe.utils.diagnostics import DiagnosticsManager
 from taihe.utils.exceptions import (
+    AdhocNote,
     DeclarationNotInScopeError,
     DeclNotExistError,
     DeclRedefError,
     DuplicateExtendsWarn,
     EnumValueError,
     GenericArgumentsError,
+    IgnoredFileReason,
+    IgnoredFileWarn,
     NotATypeError,
     PackageNotExistError,
     PackageNotInScopeError,
@@ -50,6 +53,7 @@ from taihe.utils.exceptions import (
     SymbolConflictWithNamespaceError,
     TypeUsageError,
 )
+from taihe.utils.sources import SourceBase, SourceFile, SourceLocation
 
 
 def analyze_semantics(pg: PackageGroup, diag: DiagnosticsManager):
@@ -59,6 +63,58 @@ def analyze_semantics(pg: PackageGroup, diag: DiagnosticsManager):
     _CheckFieldNameCollisionErrorPass(diag).handle_decl(pg)
     _CheckEnumTypePass(diag).handle_decl(pg)
     _CheckRecursiveInclusionPass(diag).handle_decl(pg)
+
+
+def _normalize_pkg_name(name: str):
+    def is_allowed(char: str):
+        return char.isalnum() or char == "_"
+
+    def to_valid_identifier(s: str):
+        """Converts a string to valid, C-style identifier."""
+        # First, remove all non-alphanumeric characters, excluding "_".
+        s = "".join(char for char in s if is_allowed(char))
+        # Next, ensure that the segment doesn't begin with a digit.
+        if s and s[0].isnumeric():
+            # If so, we inject "_" in the beginning.
+            s = "_" + s
+        return s
+
+    # First, split the package name into segments.
+    segments = name.split(".")
+    # Next, make sure that each segment is valid.
+    translated_segments = (to_valid_identifier(s) for s in segments)
+    # Finally, reconstruct the package name.
+    return ".".join(s for s in translated_segments if s)
+
+
+def is_valid_pkg_name(orig_name: str) -> bool:
+    norm_name = _normalize_pkg_name(orig_name)
+    return norm_name == orig_name
+
+
+def validate_source_file(source: SourceBase) -> IgnoredFileWarn | None:
+    loc = SourceLocation(source)
+    if isinstance(source, SourceFile):
+        path = source.path
+        # subdirectories are ignored
+        if not path.is_file():
+            return IgnoredFileWarn(IgnoredFileReason.IS_DIRECTORY, loc=loc)
+
+        # unexpected file extension
+        if path.suffix != ".taihe":
+            target = path.with_suffix(".taihe").name
+            return IgnoredFileWarn(
+                IgnoredFileReason.EXTENSION_MISMATCH,
+                loc=loc,
+                note=AdhocNote(f"consider renaming to `{target}`", loc=loc),
+            )
+
+    # invalid file name
+    if not is_valid_pkg_name(source.pkg_name):
+        return IgnoredFileWarn(
+            IgnoredFileReason.INVALID_PKG_NAME,
+            loc=loc,
+        )
 
 
 def _check_decl_confilct_with_namespace(

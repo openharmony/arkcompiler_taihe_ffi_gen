@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import TYPE_CHECKING
 
 from typing_extensions import override
@@ -224,6 +225,26 @@ class RecursiveReferenceError(DiagError):
     def notes(self):
         for n in self.other:
             yield RecursiveReferenceNote(n)
+
+
+class IgnoredFileReason(Enum):
+    IS_DIRECTORY = "subdirectories are ignored"
+    EXTENSION_MISMATCH = "unexpected file extension"
+    INVALID_PKG_NAME = "invalid package name"
+
+
+@dataclass
+class IgnoredFileWarn(DiagWarn):
+    reason: IgnoredFileReason
+    note: DiagNote | None = None
+
+    @override
+    def describe(self) -> str:
+        return f"unrecognized file: {self.reason.value}"
+
+    def notes(self):
+        if self.note:
+            yield self.note
 
 
 @dataclass

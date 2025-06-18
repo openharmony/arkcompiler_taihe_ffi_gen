@@ -17,19 +17,16 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from taihe.driver.backend import Backend, BackendConfig
-from taihe.parse.convert import (
-    AstConverter,
-    IgnoredFileReason,
-    IgnoredFileWarn,
-    normalize_pkg_name,
+from taihe.parse.convert import AstConverter
+from taihe.semantics.analysis import (
+    analyze_semantics,
+    validate_source_file,
 )
-from taihe.semantics.analysis import analyze_semantics
 from taihe.semantics.declarations import PackageGroup
 from taihe.utils.analyses import AnalysisManager
 from taihe.utils.diagnostics import ConsoleDiagnosticsManager, DiagnosticsManager
-from taihe.utils.exceptions import AdhocNote
 from taihe.utils.outputs import OutputConfig
-from taihe.utils.sources import SourceFile, SourceLocation, SourceManager
+from taihe.utils.sources import SourceFile, SourceManager
 
 
 @dataclass
@@ -100,44 +97,11 @@ class CompilerInstance:
             files.append(src_file)
 
         for file in files:
-            loc = SourceLocation.with_path(file)
-            # subdirectories are ignored
-            if not file.is_file():
-                w = IgnoredFileWarn(IgnoredFileReason.IS_DIRECTORY, loc=loc)
-                self.diagnostics_manager.emit(w)
-
-            # unexpected file extension
-            elif file.suffix != ".taihe":
-                target = file.with_suffix(".taihe").name
-                w = IgnoredFileWarn(
-                    IgnoredFileReason.EXTENSION_MISMATCH,
-                    loc=loc,
-                    note=AdhocNote(f"consider renaming to `{target}`", loc=loc),
-                )
-                self.diagnostics_manager.emit(w)
-
+            source = SourceFile(file)
+            if warning := validate_source_file(source):
+                self.diagnostics_manager.emit(warning)
             else:
-                source = SourceFile(file)
-                orig_name = source.pkg_name
-                norm_name = normalize_pkg_name(orig_name)
-
-                # invalid package name
-                if norm_name != orig_name:
-                    loc = SourceLocation(source)
-                    self.diagnostics_manager.emit(
-                        IgnoredFileWarn(
-                            IgnoredFileReason.INVALID_PKG_NAME,
-                            note=AdhocNote(
-                                f"consider using `{norm_name}` instead of `{orig_name}`",
-                                loc=loc,
-                            ),
-                            loc=loc,
-                        )
-                    )
-
-                # Okay...
-                else:
-                    self.source_manager.add_source(source)
+                self.source_manager.add_source(source)
 
     def parse(self):
         for src in self.source_manager.sources:
