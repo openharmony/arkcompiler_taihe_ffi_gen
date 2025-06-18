@@ -1,9 +1,9 @@
 #pragma once
 
 #include <taihe/object.abi.h>
-#include <cstddef>
 #include <taihe/common.hpp>
 
+#include <cstddef>
 #include <type_traits>
 
 //////////////////////

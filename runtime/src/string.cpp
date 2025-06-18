@@ -1,9 +1,6 @@
-#include <taihe/common.h>
 #include <taihe/string.abi.h>
 
-#include <assert.h>
-#include <stdlib.h>
-#include <string.h>
+#include <algorithm>
 
 // Converts a TString into its corresponding heap-allocated TStringData
 // structure.
@@ -13,18 +10,19 @@
 //
 // # Returns
 // - A pointer to the TStringData structure if the TString is heap-allocated.
-// - `NULL` if the TString is a reference (TSTRING_REF is set).
+// - `nullptr` if the TString is a reference (TSTRING_REF is set).
 TH_INLINE struct TStringData *to_heap(struct TString tstr) {
   if (tstr.flags & TSTRING_REF) {
-    return NULL;
+    return nullptr;
   }
-  return (struct TStringData *)((char *)tstr.ptr -
-                                offsetof(struct TStringData, buffer));
+  return reinterpret_cast<struct TStringData *>(
+      const_cast<char *>(tstr.ptr) - offsetof(struct TStringData, buffer));
 }
 
 char *tstr_initialize(struct TString *tstr_ptr, uint32_t capacity) {
   size_t bytes_required = sizeof(struct TStringData) + sizeof(char) * capacity;
-  struct TStringData *sh = (struct TStringData *)malloc(bytes_required);
+  struct TStringData *sh =
+      reinterpret_cast<struct TStringData *>(malloc(bytes_required));
   tref_set(&sh->count, 1);
   tstr_ptr->flags = 0;
   tstr_ptr->ptr = sh->buffer;
@@ -34,8 +32,8 @@ char *tstr_initialize(struct TString *tstr_ptr, uint32_t capacity) {
 struct TString tstr_new(char const *value TH_NONNULL, size_t len) {
   struct TString tstr;
   char *buf = tstr_initialize(&tstr, len + 1);
-  memcpy(buf, value, sizeof(char) * len);
-  buf[len] = '\0';
+  buf = std::copy(value, value + len, buf);
+  *buf = '\0';
   tstr.length = len;
   return tstr;
 }
@@ -75,8 +73,8 @@ struct TString tstr_concat(size_t count, struct TString const *tstr_list) {
   struct TString tstr;
   char *buf = tstr_initialize(&tstr, len + 1);
   for (size_t i = 0; i < count; ++i) {
-    memcpy(buf, tstr_list[i].ptr, sizeof(char) * tstr_list[i].length);
-    buf += tstr_list[i].length;
+    buf = std::copy(tstr_list[i].ptr, tstr_list[i].ptr + tstr_list[i].length,
+                    buf);
   }
   *buf = '\0';
   tstr.length = len;

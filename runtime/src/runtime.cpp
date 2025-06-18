@@ -1,5 +1,6 @@
-#include <iostream>
 #include <taihe/runtime.hpp>
+
+#include <iostream>
 
 namespace taihe {
 ani_vm *global_vm = nullptr;
@@ -65,7 +66,7 @@ static ani_error create_ani_business_error(ani_env *env, int32_t err_code,
   ani_error businessErrObj;
   if (ANI_OK != env->Object_New(errCls, errCtor,
                                 reinterpret_cast<ani_object *>(&businessErrObj),
-                                (ani_double)err_code, errObj)) {
+                                static_cast<ani_double>(err_code), errObj)) {
     std::cerr << "Create Object Failed'" << className << "'" << std::endl;
     return nullptr;
   }

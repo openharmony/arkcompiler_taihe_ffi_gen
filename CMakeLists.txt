@@ -44,8 +44,8 @@ option(ENABLE_COVERAGE "Enable coverage run for the Python command" OFF)
 
 # 编译 taihe runtime 静态库
 set(TH_SOURCE
-  "${TH_RUNTIME_SOURCE_DIR}/string.c"
-  "${TH_RUNTIME_SOURCE_DIR}/object.c"
+  "${TH_RUNTIME_SOURCE_DIR}/string.cpp"
+  "${TH_RUNTIME_SOURCE_DIR}/object.cpp"
   "${TH_RUNTIME_SOURCE_DIR}/runtime.cpp"
 )
 

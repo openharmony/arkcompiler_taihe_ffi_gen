@@ -1,4 +1,3 @@
-#include <taihe/common.h>
 #include <taihe/object.abi.h>
 
 void tobj_init(struct DataBlockHead *data_ptr,
@@ -9,7 +8,7 @@ void tobj_init(struct DataBlockHead *data_ptr,
 
 struct DataBlockHead *tobj_dup(struct DataBlockHead *data_ptr) {
   if (!data_ptr) {
-    return NULL;
+    return nullptr;
   }
   tref_inc(&data_ptr->m_count);
   return data_ptr;

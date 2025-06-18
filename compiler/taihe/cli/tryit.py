@@ -428,8 +428,8 @@ class BuildSystem(BuildUtils):
         self.logger.info("Compiling shared library...")
 
         runtime_sources = [
-            self.config.runtime_src_dir / "string.c",
-            self.config.runtime_src_dir / "object.c",
+            self.config.runtime_src_dir / "string.cpp",
+            self.config.runtime_src_dir / "object.cpp",
         ]
         if self.user == UserType.STS:
             runtime_sources.append(self.config.runtime_src_dir / "runtime.cpp")
