@@ -383,7 +383,11 @@ class BuildSystem(BuildUtils):
 
         instance = CompilerInstance(
             CompilerInvocation(
-                src_dirs=[self.idl_dir, self.config.stdlib_dir],
+                src_files=[
+                    src_file
+                    for src_dir in [self.idl_dir, self.config.stdlib_dir]
+                    for src_file in src_dir.glob("*.taihe")
+                ],
                 output_config=output_config,
                 backends=resolved_backends,
                 sts_keep_name=self.sts_keep_name,
