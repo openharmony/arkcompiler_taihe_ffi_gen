@@ -156,12 +156,16 @@ class ScalarTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[ScalarType]):
         self.type = t
         dts_type = {
             ScalarKind.BOOL: "boolean",
-            # ScalarKind.F32: "number",
+            ScalarKind.F32: "number",
             ScalarKind.F64: "number",
+            ScalarKind.I8: "number",
+            ScalarKind.I16: "number",
             ScalarKind.I32: "number",
             ScalarKind.I64: "number",
-            ScalarKind.U32: "number",
             ScalarKind.U8: "number",
+            ScalarKind.U16: "number",
+            ScalarKind.U32: "number",
+            ScalarKind.U64: "number",
         }.get(self.type.kind)
         if dts_type is None:
             raise ValueError(f"Unsupported ScalarKind: {self.type.kind}")
@@ -176,21 +180,29 @@ class ScalarTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[ScalarType]):
     ):
         as_napi_c = {
             ScalarKind.BOOL: "bool",
-            # ScalarKind.F32: "double",
+            ScalarKind.F32: "double",
             ScalarKind.F64: "double",
+            ScalarKind.I8: "int32_t",
+            ScalarKind.I16: "int32_t",
             ScalarKind.I32: "int32_t",
             ScalarKind.I64: "int64_t",
-            ScalarKind.U32: "uint32_t",
             ScalarKind.U8: "uint32_t",
+            ScalarKind.U16: "uint32_t",
+            ScalarKind.U32: "uint32_t",
+            ScalarKind.U64: "uint64_t",
         }.get(self.type.kind)
         from_js_to_c_func = {
             ScalarKind.BOOL: "napi_get_value_bool",
-            # ScalarKind.F32: "napi_get_value_double",
+            ScalarKind.F32: "napi_get_value_double",
             ScalarKind.F64: "napi_get_value_double",
+            ScalarKind.I8: "napi_get_value_int32",
+            ScalarKind.I16: "napi_get_value_int32",
             ScalarKind.I32: "napi_get_value_int32",
             ScalarKind.I64: "napi_get_value_int64",
-            ScalarKind.U32: "napi_get_value_uint32",
             ScalarKind.U8: "napi_get_value_uint32",
+            ScalarKind.U16: "napi_get_value_uint32",
+            ScalarKind.U32: "napi_get_value_uint32",
+            ScalarKind.U64: "napi_get_value_bigint_uint64",
         }.get(self.type.kind)
         target.writelns(
             f"{as_napi_c} {cpp_result}_tmp;",
@@ -206,12 +218,14 @@ class ScalarTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[ScalarType]):
     ):
         from_c_to_js_func = {
             ScalarKind.BOOL: "napi_get_boolean",
-            # ScalarKind.F32: "napi_create_double",
+            ScalarKind.F32: "napi_create_double",
             ScalarKind.F64: "napi_create_double",
+            ScalarKind.I8: "napi_create_int32",
+            ScalarKind.I16: "napi_create_int32",
             ScalarKind.I32: "napi_create_int32",
             ScalarKind.I64: "napi_create_int64",
-            ScalarKind.U32: "napi_create_uint32",
             ScalarKind.U8: "napi_create_uint32",
+            ScalarKind.U32: "napi_create_uint32",
         }.get(self.type.kind)
         target.writelns(
             f"napi_value {napi_result} = nullptr;",

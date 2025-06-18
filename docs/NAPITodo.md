@@ -1,7 +1,7 @@
 NAPI 代码生成及验证：
 1. 修改 tryit 支持运行 Done （遗留问题一）
 2. 参照现有代码生成架构实现生成 .napi.cpp 和 .d.ts 支持以下语言特性
-    - [x] 基础类型                                            (遗留问题二)
+    - [x] 基础类型
     - [x] struct 
     - [ ] struct 继承                                    (需要用 attr，是否和 ani 使用同样方案待确认)
     - [x] interface
@@ -10,11 +10,11 @@ NAPI 代码生成及验证：
     - [ ] ts 侧绑定构造函数 class(interface)              (下一步)
     - [ ] class, static, constructor, readonly
     - [x] enum
-    - [ ] union                                          (在 NAPI 中无法判断是哪个自定义对象)
+    - [ ] union                                          (只支持基础类型)
     - [ ] undefined, null
     - [x] array
     - [x] record
-    - [x] map                                           (Taihe Map 不保序，TS Map 规定保序)
+    - [x] map                                           (规格为不保序)
     - [ ] set vector
     - [ ] namespace
     - [x] callback
@@ -34,7 +34,7 @@ xml 例子编译运行成功
 
 遗留问题：
 1. .d.ts 和 .node 的存放位置，暂时存放在 author_generated 目录下，（main.js 也存放在此），main.ts 调用需注意
-2. 已知 NAPI 的接口里只有对 bool, double, int32, int64, unint32 的接口，其他类型应该映射为？
+2. 报错待完善，例如定义 Record<Enum, String> 现在不会报错
 
 暂时未考虑但影响代码生成的点：
 1. a.taihe use b.taihe
