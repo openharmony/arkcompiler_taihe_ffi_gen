@@ -1,0 +1,28 @@
+function getStringIntSize(r: Map<String, i32>): i32;
+function createStringString(a: i32): Map<String, String>;
+
+function changeIntString(a: Map<i32, String>): Map<i32, String>;
+
+enum Color: String {
+    RED = "Red",
+    GREEN = "Green",
+    BLUE = "Blue",
+}
+function setStringColor(m: Map<String, Color>): void;
+function getStringColor(): Map<String, Color>;
+function changeColorString(a: Map<Color, String>): Map<Color, String>;
+
+struct Data {
+    a: String;
+    b: String;
+    c: i32;
+}
+function setStringData(m: Map<String, Data>): void;
+function getStringData(): Map<String, Data>;
+
+interface IBase {
+    getId(): String;
+    setId(s: String): void;
+}
+function setStringIBase(m: Map<String, IBase>): void;
+function getStringIBase(): Map<String, IBase>;

@@ -691,6 +691,7 @@ class RecordTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[MapType]):
         val_sts_type = val_ty_napi_info.dts_type_name
         self.dts_type_name = f"Record<{key_sts_type}, {val_sts_type}>"
         self.return_dts_type_name = self.dts_type_name
+        # TODO: 错误 key 类型提示
 
     def from_napi(
         self,
@@ -758,6 +759,92 @@ class RecordTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[MapType]):
             )
 
 
+class MapTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[MapType]):
+    def __init__(self, am: AnalysisManager, t: MapType) -> None:
+        super().__init__(am, t)
+        self.am = am
+        self.type = t
+        key_ty_napi_info = TypeNAPIInfo.get(self.am, self.type.key_ty)
+        val_ty_napi_info = TypeNAPIInfo.get(self.am, self.type.val_ty)
+        key_sts_type = key_ty_napi_info.dts_type_name
+        val_sts_type = val_ty_napi_info.dts_type_name
+        self.dts_type_name = f"Map<{key_sts_type}, {val_sts_type}>"
+        self.return_dts_type_name = self.dts_type_name
+
+    def from_napi(
+        self,
+        target: CSourceWriter,
+        napi_value: str,
+        cpp_result: str,
+    ):
+        key_ty_napi_info = TypeNAPIInfo.get(self.am, self.type.key_ty)
+        val_ty_napi_info = TypeNAPIInfo.get(self.am, self.type.val_ty)
+        cpp_key = f"{cpp_result}_cpp_key"
+        cpp_val = f"{cpp_result}_cpp_val"
+        target.writelns(
+            f"{self.cpp_info.as_owner} {cpp_result};",
+            f"napi_value {cpp_result}_entries_fn = nullptr, {cpp_result}_entries_iter = nullptr;",
+            f'napi_get_named_property(env, {napi_value}, "entries", &{cpp_result}_entries_fn);',
+            f"napi_call_function(env, {napi_value}, {cpp_result}_entries_fn, 0, nullptr, &{cpp_result}_entries_iter);",
+            f"napi_value {cpp_result}_next_meth = nullptr;",
+            f'napi_get_named_property(env, {cpp_result}_entries_iter, "next", &{cpp_result}_next_meth);',
+        )
+        with target.indented(
+            f"while (true) {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"napi_value {cpp_result}_next_result;",
+                f"napi_call_function(env, {cpp_result}_entries_iter, {cpp_result}_next_meth, 0, nullptr, &{cpp_result}_next_result);",
+                f"bool {cpp_result}_done;",
+                f"napi_value {cpp_result}_done_prop;",
+                f'napi_get_named_property(env, {cpp_result}_next_result, "done", &{cpp_result}_done_prop);',
+                f"napi_get_value_bool(env, {cpp_result}_done_prop, &{cpp_result}_done);",
+                f"if ({cpp_result}_done) break;",
+                f"napi_value {cpp_result}_value_prop, {cpp_result}_key, {cpp_result}_value;",
+                f'napi_get_named_property(env, {cpp_result}_next_result, "value", &{cpp_result}_value_prop);',
+                f"napi_get_element(env, {cpp_result}_value_prop, 0, &{cpp_result}_key);",
+                f"napi_get_element(env, {cpp_result}_value_prop, 1, &{cpp_result}_value);",
+            )
+            key_ty_napi_info.from_napi(target, f"{cpp_result}_key", cpp_key)
+            val_ty_napi_info.from_napi(target, f"{cpp_result}_value", cpp_val)
+            target.writelns(
+                f"{cpp_result}.emplace({cpp_key}, {cpp_val});",
+            )
+
+    def into_napi(
+        self,
+        target: CSourceWriter,
+        cpp_value: str,
+        napi_result: str,
+    ):
+        napi_key = f"{napi_result}_napi_key"
+        napi_val = f"{napi_result}_napi_val"
+        cpp_key = f"{napi_result}_cpp_key"
+        cpp_val = f"{napi_result}_cpp_val"
+        key_ty_napi_info = TypeNAPIInfo.get(self.am, self.type.key_ty)
+        val_ty_napi_info = TypeNAPIInfo.get(self.am, self.type.val_ty)
+
+        target.writelns(
+            f"napi_value {napi_result}_global = nullptr, {napi_result}_map_ctor = nullptr, {napi_result} = nullptr;",
+            f"napi_get_global(env, &{napi_result}_global);",
+            f'napi_get_named_property(env, {napi_result}_global, "Map", &{napi_result}_map_ctor);',
+            f"napi_new_instance(env, {napi_result}_map_ctor, 0, nullptr, &{napi_result});",
+            f"napi_value {napi_result}_set_fn = nullptr;",
+            f'napi_get_named_property(env, {napi_result}, "set", &{napi_result}_set_fn);',
+        )
+        with target.indented(
+            f"for (const auto& [{cpp_key}, {cpp_val}] : {cpp_value}) {{",
+            f"}}",
+        ):
+            key_ty_napi_info.into_napi(target, cpp_key, napi_key)
+            val_ty_napi_info.into_napi(target, cpp_val, napi_val)
+            target.writelns(
+                f"napi_value {napi_result}_args[2] = {{{napi_key}, {napi_val}}};",
+                f"napi_call_function(env, {napi_result}, {napi_result}_set_fn, 2, {napi_result}_args, nullptr);",
+            )
+
+
 class TypeNAPIInfo(TypeVisitor[AbstractTypeNAPIInfo]):
     def __init__(self, am: AnalysisManager):
         self.am = am
@@ -804,4 +891,4 @@ class TypeNAPIInfo(TypeVisitor[AbstractTypeNAPIInfo]):
     def visit_map_type(self, t: MapType) -> AbstractTypeNAPIInfo:
         if t.ty_ref.attrs.get("record"):
             return RecordTypeNAPIInfo.get(self.am, t)
-        raise ValueError
+        return MapTypeNAPIInfo.get(self.am, t)

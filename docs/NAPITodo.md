@@ -3,7 +3,7 @@ NAPI 代码生成及验证：
 2. 参照现有代码生成架构实现生成 .napi.cpp 和 .d.ts 支持以下语言特性
     - [x] 基础类型                                            (遗留问题二)
     - [x] struct 
-    - [ ] struct 继承                                          (需要用 attr，是否和 ani 使用同样方案待确认)
+    - [ ] struct 继承                                    (需要用 attr，是否和 ani 使用同样方案待确认)
     - [x] interface
     - [x] interface 继承
     - [x] ts 侧绑定构造函数 class(struct)
@@ -14,7 +14,7 @@ NAPI 代码生成及验证：
     - [ ] undefined, null
     - [x] array
     - [x] record
-    - [ ] map
+    - [x] map                                           (Taihe Map 不保序，TS Map 规定保序)
     - [ ] set vector
     - [ ] namespace
     - [x] callback
@@ -23,6 +23,11 @@ NAPI 代码生成及验证：
     - [ ] promise, async
     - [ ] bigint
     - [x] arraybuffer
+    - [ ] typedarray
+    - [ ] import
+    - [ ] Opaque
+    - [ ] inject
+    - [ ] on_off
 
 **注意：现在的验证方式是基于 ts 和 napi 非鸿蒙 napi，应配置鸿蒙环境下编译验证方法待设计。**
 xml 例子编译运行成功
