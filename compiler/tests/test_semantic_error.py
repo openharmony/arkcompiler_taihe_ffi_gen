@@ -12,7 +12,9 @@ from taihe.utils.exceptions import (
     DeclNotExistError,
     DeclRedefError,
     DuplicateExtendsWarn,
+    GenericArgumentsError,
     IDLSyntaxError,
+    InvalidPackageNameError,
     NotATypeError,
     PackageNotExistError,
     PackageNotInScopeError,
@@ -55,6 +57,12 @@ class SemanticTestCompilerInstance(CompilerInstance):
 backend_registry = BackendRegistry()
 backend_registry.register_all()
 
+
+#############################
+# Tests for semantic errors #
+#############################
+
+
 pre_backend_names = ["pretty-print"]
 pre_invocation = CompilerInvocation(
     backends=[
@@ -62,12 +70,26 @@ pre_invocation = CompilerInvocation(
     ],
 )
 
-ani_backend_names = ["cpp-author", "ani-bridge", "pretty-print"]
-ani_invocation = CompilerInvocation(
-    backends=[
-        b() for b in backend_registry.collect_required_backends(ani_backend_names)
-    ],
-)
+
+def test_invalid_package_name():
+    # fmt: off
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
+    test_instance.add_source("package.1", "")
+    test_instance.run()
+    test_instance.assert_has_error(InvalidPackageNameError)
+
+
+def test_generic_arguments():
+    # fmt: off
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
+    test_instance.add_source(
+        "package",
+        "struct A {\n"
+        "    a: Array<>;\n"
+        "}\n"
+    )
+    test_instance.run()
+    test_instance.assert_has_error(GenericArgumentsError)
 
 
 def test_package_not_exist():
@@ -347,6 +369,19 @@ def test_not_a_type():
     )
     test_instance.run()
     test_instance.assert_has_error(NotATypeError)
+
+
+#################################
+# Tests for ANI-specific errors #
+#################################
+
+
+ani_backend_names = ["cpp-author", "ani-bridge", "pretty-print"]
+ani_invocation = CompilerInvocation(
+    backends=[
+        b() for b in backend_registry.collect_required_backends(ani_backend_names)
+    ],
+)
 
 
 def test_namespace():

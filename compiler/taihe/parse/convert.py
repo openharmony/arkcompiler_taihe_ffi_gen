@@ -31,11 +31,24 @@ from taihe.semantics.declarations import (
     UnionFieldDecl,
 )
 from taihe.utils.diagnostics import DiagnosticsManager
+from taihe.utils.exceptions import InvalidPackageNameError
 from taihe.utils.sources import SourceBase, SourceLocation
 
 
 def pkg2str(pkg_name: ast.PkgName) -> str:
     return ".".join(t.text for t in pkg_name.parts)
+
+
+def is_valid_pkg_name(name: str) -> bool:
+    """Checks if the package name is valid."""
+    for part in name.split("."):
+        if not part:
+            return False
+        if not all(c.isalpha() or c == "_" for c in part[:1]):
+            return False
+        if not all(c.isalnum() or c == "_" for c in part[1:]):
+            return False
+    return True
 
 
 class ExprEvaluator(Visitor):
@@ -418,6 +431,11 @@ class AstConverter(ExprEvaluator):
 
     @override
     def visit_spec(self, node: ast.Spec) -> PackageDecl:
+        if not is_valid_pkg_name(self.source.pkg_name):
+            raise InvalidPackageNameError(
+                self.source.pkg_name,
+                loc=SourceLocation(self.source),
+            )
         pkg = PackageDecl(self.source.pkg_name, SourceLocation(self.source))
         for u in node.uses:
             self.diag.for_each(self.visit(u), pkg.add_import)
@@ -426,6 +444,14 @@ class AstConverter(ExprEvaluator):
         return pkg
 
     def convert(self) -> PackageDecl:
-        """Converts the whole source code buffer to a package."""
+        """Converts the whole source code buffer to a package.
+
+        Returns:
+            PackageDecl: The package declaration containing all declarations
+            and imports from the source code.
+
+        Raises:
+            InvalidPackageNameError: If the package name is invalid.
+        """
         ast_nodes = generate_ast(self.source, self.diag)
         return self.visit_spec(ast_nodes)

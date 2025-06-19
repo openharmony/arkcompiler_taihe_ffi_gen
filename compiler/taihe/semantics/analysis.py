@@ -37,15 +37,12 @@ from taihe.semantics.types import (
 from taihe.semantics.visitor import RecursiveDeclVisitor
 from taihe.utils.diagnostics import DiagnosticsManager
 from taihe.utils.exceptions import (
-    AdhocNote,
     DeclarationNotInScopeError,
     DeclNotExistError,
     DeclRedefError,
     DuplicateExtendsWarn,
     EnumValueError,
     GenericArgumentsError,
-    IgnoredFileReason,
-    IgnoredFileWarn,
     NotATypeError,
     PackageNotExistError,
     PackageNotInScopeError,
@@ -53,7 +50,6 @@ from taihe.utils.exceptions import (
     SymbolConflictWithNamespaceError,
     TypeUsageError,
 )
-from taihe.utils.sources import SourceBase, SourceFile, SourceLocation
 
 
 def analyze_semantics(pg: PackageGroup, diag: DiagnosticsManager):
@@ -63,41 +59,6 @@ def analyze_semantics(pg: PackageGroup, diag: DiagnosticsManager):
     _CheckFieldNameCollisionErrorPass(diag).handle_decl(pg)
     _CheckEnumTypePass(diag).handle_decl(pg)
     _CheckRecursiveInclusionPass(diag).handle_decl(pg)
-
-
-def is_valid_pkg_name(name: str) -> bool:
-    """Checks if the package name is valid."""
-    for part in name.split("."):
-        if not part:
-            return False
-        if not all(c.isalpha() or c == "_" for c in part[:1]):
-            return False
-        if not all(c.isalnum() or c == "_" for c in part[1:]):
-            return False
-    return True
-
-
-def validate_source_file(source: SourceBase) -> IgnoredFileWarn | None:
-    loc = SourceLocation(source)
-
-    if isinstance(source, SourceFile):
-        path = source.path
-        # subdirectories are ignored
-        if not path.is_file():
-            return IgnoredFileWarn(IgnoredFileReason.IS_DIRECTORY, loc=loc)
-
-        # unexpected file extension
-        if path.suffix != ".taihe":
-            target = path.with_suffix(".taihe").name
-            return IgnoredFileWarn(
-                IgnoredFileReason.EXTENSION_MISMATCH,
-                loc=loc,
-                note=AdhocNote(f"consider renaming to `{target}`", loc=loc),
-            )
-
-    # invalid file name
-    if not is_valid_pkg_name(source.pkg_name):
-        return IgnoredFileWarn(IgnoredFileReason.INVALID_PKG_NAME, loc=loc)
 
 
 def _check_decl_confilct_with_namespace(

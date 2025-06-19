@@ -33,7 +33,6 @@ class Backend(ABC):
         - The transformation should be completed in the `post_process` stage.
         - The error reporting should be completed in the `validate` stage.
         """
-        pass
 
 
 class BackendConfig(ABC):

@@ -19,15 +19,29 @@ from pathlib import Path
 
 from taihe.driver.backend import Backend, BackendConfig
 from taihe.parse.convert import AstConverter
-from taihe.semantics.analysis import (
-    analyze_semantics,
-    validate_source_file,
-)
+from taihe.semantics.analysis import analyze_semantics
 from taihe.semantics.declarations import PackageGroup
 from taihe.utils.analyses import AnalysisManager
 from taihe.utils.diagnostics import ConsoleDiagnosticsManager, DiagnosticsManager
+from taihe.utils.exceptions import IgnoredFileReason, IgnoredFileWarn
 from taihe.utils.outputs import OutputConfig
-from taihe.utils.sources import SourceFile, SourceManager
+from taihe.utils.sources import SourceFile, SourceLocation, SourceManager
+
+
+def validate_source_file(source: SourceFile) -> IgnoredFileWarn | None:
+    # subdirectories are ignored
+    if not source.path.is_file():
+        return IgnoredFileWarn(
+            IgnoredFileReason.IS_DIRECTORY,
+            loc=SourceLocation(source),
+        )
+    # unexpected file extension
+    if source.path.suffix != ".taihe":
+        return IgnoredFileWarn(
+            IgnoredFileReason.EXTENSION_MISMATCH,
+            loc=SourceLocation(source),
+        )
+    return None
 
 
 @dataclass
@@ -105,9 +119,9 @@ class CompilerInstance:
 
     def parse(self):
         for src in self.source_manager.sources:
-            conv = AstConverter(src, self.diagnostics_manager)
-            pkg = conv.convert()
             with self.diagnostics_manager.capture_error():
+                conv = AstConverter(src, self.diagnostics_manager)
+                pkg = conv.convert()
                 self.package_group.add(pkg)
 
         for b in self.backends:

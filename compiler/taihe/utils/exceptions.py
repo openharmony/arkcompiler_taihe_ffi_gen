@@ -259,21 +259,24 @@ class RecursiveReferenceError(DiagError):
 class IgnoredFileReason(Enum):
     IS_DIRECTORY = "subdirectories are ignored"
     EXTENSION_MISMATCH = "unexpected file extension"
-    INVALID_PKG_NAME = "invalid package name"
 
 
 @dataclass
 class IgnoredFileWarn(DiagWarn):
     reason: IgnoredFileReason
-    note: DiagNote | None = None
 
     @override
     def describe(self) -> str:
         return f"unrecognized file: {self.reason.value}"
 
-    def notes(self):
-        if self.note:
-            yield self.note
+
+@dataclass
+class InvalidPackageNameError(DiagError):
+    name: str
+
+    @override
+    def describe(self) -> str:
+        return f"invalid package name {self.name!r}"
 
 
 @dataclass
