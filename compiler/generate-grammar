@@ -156,6 +156,8 @@ def generate_visitor():
 def run_antlr():
     args = [
         "antlr4",
+        "-v",
+        "4.13.2",  # Specify the version of ANTLR to avoid online version check
         "-Dlanguage=Python3",
         "-no-listener",
         G4_FILE,
