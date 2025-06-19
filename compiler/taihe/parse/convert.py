@@ -5,7 +5,8 @@ from typing import Any
 
 from typing_extensions import override
 
-from taihe.parse import Visitor, ast
+from taihe.parse.antlr.TaiheAST import TaiheAST as ast
+from taihe.parse.antlr.TaiheVisitor import TaiheVisitor as Visitor
 from taihe.parse.ast_generation import generate_ast
 from taihe.semantics.declarations import (
     AttrItemDecl,

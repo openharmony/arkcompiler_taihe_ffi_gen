@@ -18,7 +18,6 @@ from itertools import chain
 from pathlib import Path
 
 from taihe.driver.backend import Backend, BackendConfig
-from taihe.parse.convert import AstConverter
 from taihe.semantics.analysis import analyze_semantics
 from taihe.semantics.declarations import PackageGroup
 from taihe.utils.analyses import AnalysisManager
@@ -118,6 +117,8 @@ class CompilerInstance:
                 self.source_manager.add_source(source)
 
     def parse(self):
+        from taihe.parse.convert import AstConverter
+
         for src in self.source_manager.sources:
             with self.diagnostics_manager.capture_error():
                 conv = AstConverter(src, self.diagnostics_manager)
