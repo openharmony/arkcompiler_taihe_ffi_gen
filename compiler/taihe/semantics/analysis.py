@@ -65,35 +65,21 @@ def analyze_semantics(pg: PackageGroup, diag: DiagnosticsManager):
     _CheckRecursiveInclusionPass(diag).handle_decl(pg)
 
 
-def _normalize_pkg_name(name: str):
-    def is_allowed(char: str):
-        return char.isalnum() or char == "_"
-
-    def to_valid_identifier(s: str):
-        """Converts a string to valid, C-style identifier."""
-        # First, remove all non-alphanumeric characters, excluding "_".
-        s = "".join(char for char in s if is_allowed(char))
-        # Next, ensure that the segment doesn't begin with a digit.
-        if s and s[0].isnumeric():
-            # If so, we inject "_" in the beginning.
-            s = "_" + s
-        return s
-
-    # First, split the package name into segments.
-    segments = name.split(".")
-    # Next, make sure that each segment is valid.
-    translated_segments = (to_valid_identifier(s) for s in segments)
-    # Finally, reconstruct the package name.
-    return ".".join(s for s in translated_segments if s)
-
-
-def is_valid_pkg_name(orig_name: str) -> bool:
-    norm_name = _normalize_pkg_name(orig_name)
-    return norm_name == orig_name
+def is_valid_pkg_name(name: str) -> bool:
+    """Checks if the package name is valid."""
+    for part in name.split("."):
+        if not part:
+            return False
+        if not all(c.isalpha() or c == "_" for c in part[:1]):
+            return False
+        if not all(c.isalnum() or c == "_" for c in part[1:]):
+            return False
+    return True
 
 
 def validate_source_file(source: SourceBase) -> IgnoredFileWarn | None:
     loc = SourceLocation(source)
+
     if isinstance(source, SourceFile):
         path = source.path
         # subdirectories are ignored
@@ -111,10 +97,7 @@ def validate_source_file(source: SourceBase) -> IgnoredFileWarn | None:
 
     # invalid file name
     if not is_valid_pkg_name(source.pkg_name):
-        return IgnoredFileWarn(
-            IgnoredFileReason.INVALID_PKG_NAME,
-            loc=loc,
-        )
+        return IgnoredFileWarn(IgnoredFileReason.INVALID_PKG_NAME, loc=loc)
 
 
 def _check_decl_confilct_with_namespace(

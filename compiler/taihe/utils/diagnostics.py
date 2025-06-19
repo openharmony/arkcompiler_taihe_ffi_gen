@@ -234,39 +234,33 @@ class ConsoleDiagnosticsManager(DiagnosticsManager):
 
     def _render_source_location(self, loc: SourceLocation):
         MAX_LINE_NO_SPACE = 5
-        if not loc.text_range:
+        if not loc.span:
             return
 
-        line_contents = loc.file.read()
-        text_range = loc.text_range
+        line_contents = loc.file.read().splitlines()
 
-        if text_range.start.row < 1 or text_range.stop.row > len(line_contents):
+        if loc.span.start.row < 1 or loc.span.stop.row > len(line_contents):
             return
 
         for line, line_content in enumerate(line_contents, 1):
-            if line < text_range.start.row or line > text_range.stop.row:
+            if line < loc.span.start.row or line > loc.span.stop.row:
                 continue
 
-            line_content = line_content.rstrip("\n")
-
-            # The first line: content.
-            self._write(f"{line:{MAX_LINE_NO_SPACE}} | " f"{line_content}\n")
-
-            # The second line: marker.
             markers = "".join(
                 (
                     " "
-                    if (line == text_range.start.row and col < text_range.start.col)
-                    or (line == text_range.stop.row and col > text_range.stop.col)
+                    if (line == loc.span.start.row and col < loc.span.start.col)
+                    or (line == loc.span.stop.row and col > loc.span.stop.col)
                     else "^"
                 )
                 for col in range(1, len(line_content) + 1)
             )
 
             f = self._color_filter_fn
+
             self._write(
-                f"{'':{MAX_LINE_NO_SPACE}} | "
-                f"{f(AnsiStyle.GREEN + AnsiStyle.BRIGHT)}{markers}{f(AnsiStyle.RESET_ALL)}\n"
+                f"{line:{MAX_LINE_NO_SPACE}} | {line_content}\n"
+                f"{'':{MAX_LINE_NO_SPACE}} | {f(AnsiStyle.GREEN + AnsiStyle.BRIGHT)}{markers}{f(AnsiStyle.RESET_ALL)}\n"
             )
 
     def _render(self, d: DiagBase):

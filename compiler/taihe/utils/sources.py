@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import NamedTuple
 
 from typing_extensions import override
 
@@ -21,7 +22,7 @@ class SourceBase(ABC):
     def pkg_name(self) -> str: ...
 
     @abstractmethod
-    def read(self) -> list[str]: ...
+    def read(self) -> str: ...
 
 
 @dataclass(frozen=True)
@@ -41,9 +42,9 @@ class SourceFile(SourceBase):
         return self.path.stem
 
     @override
-    def read(self) -> list[str]:
+    def read(self) -> str:
         with open(self.path) as f:
-            return f.readlines()
+            return f.read()
 
 
 @dataclass(frozen=True)
@@ -64,28 +65,27 @@ class SourceBuffer(SourceBase):
         return self.name
 
     @override
-    def read(self) -> list[str]:
-        return self.buf.splitlines()
+    def read(self) -> str:
+        return self.buf
 
 
 class SourceManager:
     """Manages all input files throughout the compilation."""
 
-    src_list: list[SourceBase]
+    _source_collection: list[SourceBase]
 
     def __init__(self):
-        self.src_list = []
+        self._source_collection = []
 
     @property
     def sources(self) -> Iterable[SourceBase]:
-        return self.src_list
+        return self._source_collection
 
     def add_source(self, sb: SourceBase):
-        self.src_list.append(sb)
+        self._source_collection.append(sb)
 
 
-@dataclass
-class TextPosition:
+class TextPosition(NamedTuple):
     """Represents a position within a file (1-based)."""
 
     row: int
@@ -95,12 +95,17 @@ class TextPosition:
         return f"{self.row}:{self.col}"
 
 
-@dataclass
-class TextRange:
-    """Represents a range of text within a file."""
+class TextSpan(NamedTuple):
+    """Represents a region within a file (1-based)."""
 
     start: TextPosition
     stop: TextPosition
+
+    def __or__(self, other: "TextSpan") -> "TextSpan":
+        return TextSpan(
+            start=min(self.start, other.start),
+            stop=max(self.stop, other.stop),
+        )
 
 
 @dataclass
@@ -110,17 +115,13 @@ class SourceLocation:
     file: SourceBase
     """Required: The source file associated with the location."""
 
-    text_range: TextRange | None
-    """Optional: The text range associated with the location."""
-
-    def __init__(self, file: SourceBase, span: TextRange | None = None):
-        self.file = file
-        self.text_range = span
+    span: TextSpan | None = None
+    """Optional: The span of the location within the file."""
 
     def __str__(self) -> str:
         res = self.file.source_identifier
-        if self.text_range:
-            res = f"{res}:{self.text_range.start}"
+        if self.span:
+            res = f"{res}:{self.span.start}"
         return res
 
     @classmethod
