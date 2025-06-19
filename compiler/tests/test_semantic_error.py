@@ -1,3 +1,5 @@
+from io import StringIO
+
 import pytest
 from typing_extensions import override
 
@@ -36,8 +38,8 @@ class SemanticTestCompilerInstance(CompilerInstance):
     def __init__(self, invocation: CompilerInvocation):
         super().__init__(invocation, dm=SemanticTestDiagnosticsManager)
 
-    def add_source(self, pkg_name, source):
-        self.source_manager.add_source(SourceBuffer(pkg_name, source))
+    def add_source(self, pkg_name: str, source: str):
+        self.source_manager.add_source(SourceBuffer(pkg_name, StringIO(source)))
 
     @override
     def collect(self):

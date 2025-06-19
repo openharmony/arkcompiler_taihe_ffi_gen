@@ -3,6 +3,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from dataclasses import dataclass
+from io import StringIO
 from pathlib import Path
 from typing import NamedTuple
 
@@ -52,7 +53,7 @@ class SourceBuffer(SourceBase):
     """Represents a string-based source code."""
 
     name: str
-    buf: str
+    buf: StringIO
 
     @property
     @override
@@ -66,23 +67,23 @@ class SourceBuffer(SourceBase):
 
     @override
     def read(self) -> str:
-        return self.buf
+        return self.buf.getvalue()
 
 
 class SourceManager:
     """Manages all input files throughout the compilation."""
 
-    _source_collection: list[SourceBase]
+    _source_collection: set[SourceBase]
 
     def __init__(self):
-        self._source_collection = []
+        self._source_collection = set()
 
     @property
     def sources(self) -> Iterable[SourceBase]:
         return self._source_collection
 
     def add_source(self, sb: SourceBase):
-        self._source_collection.append(sb)
+        self._source_collection.add(sb)
 
 
 class TextPosition(NamedTuple):

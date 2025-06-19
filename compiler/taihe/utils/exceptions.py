@@ -31,7 +31,7 @@ class DeclRedefNote(DiagNote):
 
     @override
     def describe(self) -> str:
-        return f"conflict with {self.prev.description}"
+        return "previously defined here"
 
 
 @dataclass
@@ -120,18 +120,47 @@ class GenericArgumentsError(DiagError):
 
 
 @dataclass
+class SymbolConflictWithNamespaceNote(DiagNote):
+    name: str
+    package: "PackageDecl"
+
+    def __init__(
+        self,
+        name: str,
+        package: "PackageDecl",
+    ):
+        super().__init__(loc=package.loc)
+        self.name = name
+        self.package = package
+
+    def describe(self) -> str:
+        return f"namespace {self.name!r} is implied by {self.package.description}"
+
+
+@dataclass
 class SymbolConflictWithNamespaceError(DiagError):
     decl: "PackageLevelDecl"
-    pkg: "PackageDecl"
+    name: str
+    packages: list["PackageDecl"]
 
-    def __init__(self, decl: "PackageLevelDecl", pkg: "PackageDecl"):
+    def __init__(
+        self,
+        decl: "PackageLevelDecl",
+        name: str,
+        packages: list["PackageDecl"],
+    ):
         super().__init__(loc=decl.loc)
         self.decl = decl
-        self.pkg = pkg
+        self.name = name
+        self.packages = packages
 
     @override
     def describe(self) -> str:
-        return f"declaration of {self.decl.description} in {self.pkg.description} shadows a file-level declaration"
+        return f"declaration of {self.decl.description} conflicts with namespace {self.name!r}"
+
+    def notes(self):
+        for pkg in self.packages:
+            yield SymbolConflictWithNamespaceNote(self.name, pkg)
 
 
 @dataclass
