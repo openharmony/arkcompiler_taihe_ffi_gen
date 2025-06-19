@@ -341,7 +341,7 @@ def process_file(
         shutil.copy2(input_path, output_path)
         return
 
-    with open(input_path, "r") as input:
+    with open(input_path, "r", encoding="utf-8") as input:
         text = input.read()
 
     # 对于 C/C++ 源文件和头文件，删除单行注释
@@ -377,7 +377,7 @@ def process_file(
         text = py_move_ellipsis(text)
         text = py_remove_asserts(text)
 
-    with open(output_path, "w") as output:
+    with open(output_path, "w", encoding="utf-8") as output:
         output.write(text)
 
 
