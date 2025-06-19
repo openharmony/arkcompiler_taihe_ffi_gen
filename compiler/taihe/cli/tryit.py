@@ -14,6 +14,7 @@ from pathlib import Path
 
 from taihe.driver.backend import BackendRegistry
 from taihe.driver.contexts import CompilerInstance, CompilerInvocation
+from taihe.utils.logging import setup_logger
 from taihe.utils.outputs import CMakeOutputConfig, DebugLevel, OutputConfig
 
 # A lower value means more verbosity
@@ -40,22 +41,8 @@ class BuildUtils:
     """Utility class for common operations."""
 
     def __init__(self, verbosity: int):
-        self.logger = self._setup_logger(verbosity)
-
-    def _setup_logger(self, verbosity: int) -> logging.Logger:
-        """Set up logging configuration."""
-        logger = logging.getLogger("build_system")
-        logger.setLevel(verbosity)
-
-        # Clear any existing handlers to avoid duplicate logging
-        if logger.handlers:
-            logger.handlers.clear()
-
-        handler = logging.StreamHandler()
-        formatter = logging.Formatter("%(message)s")
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-        return logger
+        setup_logger(verbosity)
+        self.logger = logging.getLogger("build_system")
 
     def run_command(
         self,

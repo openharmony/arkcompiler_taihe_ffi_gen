@@ -1,0 +1,97 @@
+import logging
+import os
+from sys import stderr
+from typing import ClassVar, TextIO
+
+from typing_extensions import override
+
+
+class AnsiStyle:
+    RED = "\033[31m"
+    GREEN = "\033[32m"
+    BLUE = "\033[34m"
+    YELLOW = "\033[33m"
+    MAGENTA = "\033[35m"
+    CYAN = "\033[36m"
+    GRAY = "\033[90m"
+    WHITE = "\033[97m"
+
+    # Background colors
+    BG_RED = "\033[41m"
+    BG_GREEN = "\033[42m"
+    BG_BLUE = "\033[44m"
+    BG_GRAY = "\033[100m"
+
+    # Styles
+    RESET = "\033[39m"
+    BRIGHT = "\033[1m"
+    REVERSE = "\033[7m"
+    RESET_ALL = "\033[0m"
+
+
+def should_use_color(f: TextIO) -> bool:
+    """Determine if we should use colored output."""
+    # Check for explicit color disable
+    if os.getenv("TAIHE_NO_COLOR") or os.getenv("TERM") == "dumb":
+        return False
+
+    # Check for force color
+    if os.getenv("TAIHE_FORCE_COLOR"):
+        return True
+
+    # Check if we're writing to a terminal
+    return f.isatty()
+
+
+def setup_logger(verbosity: int = 0):
+    """Sets up a console-based log handler for the system logger.
+
+    Verbosity levels: 0 = WARNING, 1 = INFO, 2 = DEBUG
+    """
+    handler = logging.StreamHandler()
+    handler.setFormatter(ColoredFormatter("%(message)s"))
+
+    logger = logging.getLogger()
+    logger.addHandler(handler)
+
+    if verbosity >= 2:
+        logger.setLevel(logging.DEBUG)
+    elif verbosity == 1:
+        logger.setLevel(logging.INFO)
+    else:
+        logger.setLevel(logging.WARNING)
+
+
+class ColoredFormatter(logging.Formatter):
+    """A pretty, colored, console-based log handler."""
+
+    COLORS: ClassVar = {
+        logging.ERROR: f"{AnsiStyle.REVERSE}{AnsiStyle.RED}",
+        logging.WARNING: f"{AnsiStyle.REVERSE}{AnsiStyle.YELLOW}",
+        logging.INFO: f"{AnsiStyle.REVERSE}{AnsiStyle.GREEN}",
+        logging.DEBUG: f"{AnsiStyle.REVERSE}{AnsiStyle.BLUE}",
+    }
+
+    PREFIXES: ClassVar = {
+        logging.ERROR: "[!]",
+        logging.WARNING: "[*]",
+        logging.INFO: "[-]",
+        logging.DEBUG: "[.]",
+    }
+
+    def __init__(self, fmt: str | None = None, use_color: bool | None = None):
+        super().__init__(fmt)
+        if use_color is None:
+            use_color = should_use_color(stderr)
+        self.use_color = use_color
+
+    @override
+    def format(self, record: logging.LogRecord):
+        prefix = self.PREFIXES.get(record.levelno, "")
+        message = super().format(record)
+
+        if not self.use_color:
+            return f"{prefix} {message}"
+
+        color = self.COLORS.get(record.levelno, "")
+        return f"{color}{prefix}{AnsiStyle.RESET_ALL} {message}"

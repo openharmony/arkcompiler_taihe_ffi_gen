@@ -14,22 +14,10 @@ from typing import (
 
 from typing_extensions import override
 
+from taihe.utils.logging import AnsiStyle, should_use_color
 from taihe.utils.sources import SourceLocation
 
 T = TypeVar("T")
-
-
-class AnsiStyle:
-    RED = "\033[31m"
-    GREEN = "\033[32m"
-    BLUE = "\033[33m"
-    YELLOW = "\033[34m"
-    MAGENTA = "\033[35m"
-    CYAN = "\033[36m"
-
-    RESET = "\033[39m"
-    BRIGHT = "\033[1m"
-    RESET_ALL = "\033[0m"
 
 
 def _passthrough(x: str) -> str:
@@ -212,7 +200,7 @@ class ConsoleDiagnosticsManager(DiagnosticsManager):
 
     def __init__(self, out: TextIO = stderr):
         self._out = out
-        if self._out.isatty():
+        if should_use_color(self._out):
             self._color_filter_fn = _passthrough
         else:
             self._color_filter_fn = _discard
