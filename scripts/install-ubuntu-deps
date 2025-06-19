@@ -9,10 +9,12 @@ MIRROR_PYPI="http://$MIRROR_BASE/pypi/web/simple"
 command_not_found_handle() {
     log_action "Command \"$1\" not found, installing..."
     case "$1" in
-        java)            install_apt_pkgs default-jre-headless;;
-        pip|cmake|clang) install_apt_pkgs "$1";;
         ninja|uv)        install_pip_pkgs "$1";;
-        *)               log_error "Unknown command $1" && exit 2;;
+        java)            install_apt_pkgs default-jre-headless;;
+        python|python3)  install_apt_pkgs python-is-python3;;
+
+        pip|cmake|clang|curl) install_apt_pkgs "$1";;
+        *) log_error "Unknown command $1" && exit 2;;
     esac
 }
 
@@ -46,7 +48,7 @@ install_pip_pkgs() {
 main() {
     log_stage "Syncing compiler deps" && _uv sync
     log_stage "Generating grammar" && ensure_command java && _uv run ./generate-grammar
-    log_stage "Checking build deps" && ensure_command cmake clang ninja
+    log_stage "Checking build deps" && ensure_command python curl cmake clang ninja
     log_stage "Done!"
 }
 
