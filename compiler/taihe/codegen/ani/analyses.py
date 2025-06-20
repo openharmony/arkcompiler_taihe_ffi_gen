@@ -392,6 +392,8 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
 
         self.sts_params: list[ParamDecl] = []
         for param in f.params:
+            if param.get_last_attr("sts_this"):
+                continue
             self.sts_params.append(param)
 
     def resolve_ctor(self) -> bool:
@@ -549,8 +551,14 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
             )
         return True
 
-    def call_native_with(self, sts_args: list[str]) -> str:
-        sts_native_args = sts_args
+    def call_native_with(self, sts_args: list[str], this: str = "this") -> str:
+        arg = iter(sts_args)
+        sts_native_args: list[str] = []
+        for param in self.f.params:
+            if param.get_last_attr("sts_this"):
+                sts_native_args.append(this)
+                continue
+            sts_native_args.append(next(arg))
         sts_native_args_str = ", ".join(sts_native_args)
         return f"{self.sts_native_name}({sts_native_args_str})"
 
@@ -728,7 +736,7 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
             )
         return True
 
-    def call_native_with(self, this: str, sts_args: list[str]) -> str:
+    def call_native_with(self, sts_args: list[str], this: str = "this") -> str:
         arg = iter(sts_args)
         sts_native_args: list[str] = []
         for param in self.f.params:

@@ -570,17 +570,17 @@ class STSCodeGenerator:
             # TODO: hack inject
             for injected in iface_ani_info.interface_injected_codes:
                 target.write_block(injected)
-            self.gen_iface_methods_decl(iface.methods, target)
+            self.gen_iface_methods(iface.methods, target)
 
-    def gen_iface_methods_decl(
+    def gen_iface_methods(
         self,
         methods: list[IfaceMethodDecl],
         target: StsWriter,
     ):
-        self.gen_iface_on_off_methods_decl(methods, target)
-        self.gen_iface_regular_methods_decl(methods, target)
+        self.gen_iface_on_off_methods(methods, target)
+        self.gen_iface_regular_methods(methods, target)
 
-    def gen_iface_on_off_methods_decl(
+    def gen_iface_on_off_methods(
         self,
         methods: list[IfaceMethodDecl],
         target: StsWriter,
@@ -615,7 +615,7 @@ class STSCodeGenerator:
                 f"{sts_method_name}({sts_params_str}): {sts_return_ty_name};",
             )
 
-    def gen_iface_regular_methods_decl(
+    def gen_iface_regular_methods(
         self,
         methods: list[IfaceMethodDecl],
         target: StsWriter,
@@ -636,42 +636,42 @@ class STSCodeGenerator:
             if (
                 sts_method_name := method_ani_info.sts_method_name
             ) is not None and method_ani_info.on_off_type is None:
-                self.gen_iface_normal_meth_decl(
+                self.gen_iface_normal_method(
                     sts_method_name,
                     sts_params,
                     sts_return_ty_name,
                     target,
                 )
                 if (sts_promise_name := method_ani_info.sts_promise_name) is not None:
-                    self.gen_iface_promise_meth_decl(
+                    self.gen_iface_promise_method(
                         sts_promise_name,
                         sts_params,
                         sts_return_ty_name,
                         target,
                     )
                 if (sts_async_name := method_ani_info.sts_async_name) is not None:
-                    self.gen_iface_async_meth_decl(
+                    self.gen_iface_async_method(
                         sts_async_name,
                         sts_params,
                         sts_return_ty_name,
                         target,
                     )
             if (get_name := method_ani_info.get_name) is not None:
-                self.gen_iface_get_meth_decl(
+                self.gen_iface_get_method(
                     get_name,
                     sts_params,
                     sts_return_ty_name,
                     target,
                 )
             if (set_name := method_ani_info.set_name) is not None:
-                self.gen_iface_set_meth_decl(
+                self.gen_iface_set_method(
                     set_name,
                     sts_params,
                     sts_return_ty_name,
                     target,
                 )
 
-    def gen_iface_normal_meth_decl(
+    def gen_iface_normal_method(
         self,
         sts_method_name: str,
         sts_params: list[str],
@@ -683,7 +683,7 @@ class STSCodeGenerator:
             f"{sts_method_name}({sts_params_str}): {sts_return_ty_name};",
         )
 
-    def gen_iface_promise_meth_decl(
+    def gen_iface_promise_method(
         self,
         sts_promise_name: str,
         sts_params: list[str],
@@ -695,7 +695,7 @@ class STSCodeGenerator:
             f"{sts_promise_name}({sts_params_str}): Promise<{sts_return_ty_name}>;",
         )
 
-    def gen_iface_async_meth_decl(
+    def gen_iface_async_method(
         self,
         sts_async_name: str,
         sts_params: list[str],
@@ -708,7 +708,7 @@ class STSCodeGenerator:
             f"{sts_async_name}({sts_params_with_cb_str}): void;",
         )
 
-    def gen_iface_get_meth_decl(
+    def gen_iface_get_method(
         self,
         get_name: str,
         sts_params: list[str],
@@ -720,7 +720,7 @@ class STSCodeGenerator:
             f"get {get_name}({sts_params_str}): {sts_return_ty_name};",
         )
 
-    def gen_iface_set_meth_decl(
+    def gen_iface_set_method(
         self,
         set_name: str,
         sts_params: list[str],
@@ -811,14 +811,14 @@ class STSCodeGenerator:
                 )
             ctors = ctors_map.get(iface.name, [])
             for ctor in ctors:
-                self.gen_iface_ctor(ctor, iface_ani_info, target)
+                self.gen_class_ctor(ctor, iface_ani_info, target)
             self.gen_static_funcs(statics_map.get(iface.name, []), target)
             iface_abi_info = IfaceABIInfo.get(self.am, iface)
             for ancestor in iface_abi_info.ancestor_dict:
                 self.gen_native_methods(ancestor.methods, target)
-                self.gen_iface_methods(ancestor.methods, target)
+                self.gen_class_methods(ancestor.methods, target)
 
-    def gen_iface_ctor(
+    def gen_class_ctor(
         self,
         ctor: GlobFuncDecl,
         iface_ani_info: IfaceANIInfo,
@@ -1008,7 +1008,7 @@ class STSCodeGenerator:
                 f"native {method_ani_info.sts_native_name}({sts_native_params_str}): {sts_return_ty_name};",
             )
 
-    def gen_iface_methods(
+    def gen_class_methods(
         self,
         methods: list[IfaceMethodDecl],
         target: StsWriter,
@@ -1070,9 +1070,7 @@ class STSCodeGenerator:
                             sts_args_fix.append(
                                 f"{sts_arg_any} as {type_ani_info.sts_type_in(target)}"
                             )
-                        sts_native_call = method_ani_info.call_native_with(
-                            "this", sts_args_fix
-                        )
+                        sts_native_call = method_ani_info.call_native_with(sts_args_fix)
                         target.writelns(
                             f'case "{type_name}": return {sts_native_call};',
                         )
@@ -1095,7 +1093,7 @@ class STSCodeGenerator:
                     f"{sts_param.name}: {type_ani_info.sts_type_in(target)}"
                 )
                 sts_args.append(sts_param.name)
-            sts_native_call = method_ani_info.call_native_with("this", sts_args)
+            sts_native_call = method_ani_info.call_native_with(sts_args)
             if return_ty_ref := method.return_ty_ref:
                 type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
                 sts_return_ty_name = type_ani_info.sts_type_in(target)
