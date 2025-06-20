@@ -27,6 +27,7 @@ class StsWriter(FileWriter):
 
     @override
     def write_prologue(self, f: TextIO):
+        f.write("'use static'\n")
         for import_name, decl_pair in self.import_dict.items():
             module_name, decl_name = decl_pair
             if decl_name is None:
