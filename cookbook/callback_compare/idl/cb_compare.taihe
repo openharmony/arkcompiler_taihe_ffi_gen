@@ -1,0 +1,1 @@
+function cbCompare(cb1: () => String, cb2: () => String): bool;

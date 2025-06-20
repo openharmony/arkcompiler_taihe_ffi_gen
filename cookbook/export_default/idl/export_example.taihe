@@ -1,0 +1,7 @@
+@!namespace("export_pkg", "export_ns")
+@!sts_export_default
+
+struct Inner {
+    i: i32;
+    s: String;
+}
