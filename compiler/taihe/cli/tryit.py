@@ -169,7 +169,7 @@ class BuildConfig:
             self.taihe_root_dir = current_file.parents[5]
             self.runtime_include_dir = self.taihe_root_dir / "include"
             self.runtime_src_dir = self.taihe_root_dir / "src" / "taihe" / "runtime"
-            self.stdlib_dir = self.taihe_root_dir / "lib" / "taihe"
+            self.stdlib_dir = self.taihe_root_dir / "lib" / "taihe" / "stdlib"
             self.panda_extract_dir = self.taihe_root_dir / "var" / "taihe" / "panda_vm"
         else:
             # Inside the git repository: repo/compiler/taihe/cli/run_test.py
