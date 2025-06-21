@@ -7,6 +7,8 @@ from taihe.codegen.napi.analyses import (
     PackageNAPIInfo,
     StructNAPIInfo,
     TypeNAPIInfo,
+    UnionFieldNAPIInfo,
+    UnionNAPIInfo,
 )
 from taihe.semantics.declarations import (
     EnumDecl,
@@ -16,7 +18,9 @@ from taihe.semantics.declarations import (
     PackageDecl,
     PackageGroup,
     StructDecl,
+    UnionDecl,
 )
+from taihe.semantics.types import Type
 from taihe.utils.analyses import AnalysisManager
 from taihe.utils.outputs import OutputConfig
 
@@ -38,17 +42,19 @@ class DTSCodeGenerator:
         with StsWriter(
             self.oc,
             f"{pkg_napi_info.ts_decl}",
-        ) as pkg_napi_target:
+        ) as pkg_dts_target:
             for func in pkg.functions:
-                self.gen_func(func, pkg_napi_target)
+                self.gen_func(func, pkg_dts_target)
             for struct in pkg.structs:
-                self.gen_struct_interface(struct, pkg_napi_target)
+                self.gen_struct_interface(struct, pkg_dts_target)
             for struct in pkg.structs:
-                self.gen_struct_class(struct, pkg_napi_target)
+                self.gen_struct_class(struct, pkg_dts_target)
             for iface in pkg.interfaces:
-                self.gen_iface_interface(iface, pkg_napi_target)
+                self.gen_iface_interface(iface, pkg_dts_target)
             for enum in pkg.enums:
-                self.gen_enum(enum, pkg_napi_target)
+                self.gen_enum(enum, pkg_dts_target)
+            for union in pkg.unions:
+                self.gen_union(union, pkg_dts_target)
 
     def gen_func(self, func: GlobFuncDecl, pkg_dts_target: StsWriter):
         args = []
@@ -198,3 +204,25 @@ class DTSCodeGenerator:
                     target.writelns(
                         f"{item.name} = {dumps(item.value)},",
                     )
+
+    def gen_union(
+        self,
+        union: UnionDecl,
+        target: StsWriter,
+    ):
+        union_napi_info = UnionNAPIInfo.get(self.am, union)
+        sts_types = []
+        for field in union.fields:
+            field_napi_info = UnionFieldNAPIInfo.get(self.am, field)
+            match field_napi_info.field_ty:
+                #     case "null":
+                #         sts_types.append("null")
+                #     case "undefined":
+                #         sts_types.append("undefined")
+                case field_ty if isinstance(field_ty, Type):
+                    ty_napi_info = TypeNAPIInfo.get(self.am, field_ty)
+                    sts_types.append(ty_napi_info.dts_type_name)
+        sts_types_str = " | ".join(sts_types)
+        target.writelns(
+            f"export type {union_napi_info.dts_type_name} = {sts_types_str};",
+        )

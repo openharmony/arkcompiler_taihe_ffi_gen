@@ -17,6 +17,8 @@ from taihe.semantics.declarations import (
     PackageDecl,
     StructDecl,
     StructFieldDecl,
+    UnionDecl,
+    UnionFieldDecl,
 )
 from taihe.semantics.types import (
     ArrayType,
@@ -30,6 +32,7 @@ from taihe.semantics.types import (
     StringType,
     StructType,
     Type,
+    UnionType,
 )
 from taihe.semantics.visitor import TypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
@@ -133,10 +136,43 @@ class GlobFuncNAPIInfo(AbstractAnalysis[GlobFuncDecl]):
         # TODO: how to process the attr
 
 
+class UnionNAPIInfo(AbstractAnalysis[UnionDecl]):
+    def __init__(self, am: AnalysisManager, d: UnionDecl) -> None:
+        super().__init__(am, d)
+        segments = [*d.parent_pkg.segments, d.name]
+        self.from_napi_func_name = encode(segments, DeclKind.FROM_NAPI)
+        self.into_napi_func_name = encode(segments, DeclKind.INTO_NAPI)
+        self.decl_header = f"{d.parent_pkg.name}.{d.name}.napi.decl.h"
+        self.impl_header = f"{d.parent_pkg.name}.{d.name}.napi.impl.h"
+        self.dts_type_name = d.name
+
+        self.dts_final_fields: list[list[UnionFieldDecl]] = []
+        for field in d.fields:
+            if field.ty_ref and isinstance(ty := field.ty_ref.resolved_ty, UnionType):
+                inner_ani_info = UnionNAPIInfo.get(am, ty.ty_decl)
+                self.dts_final_fields.extend(
+                    [field, *parts] for parts in inner_ani_info.dts_final_fields
+                )
+            else:
+                self.dts_final_fields.append([field])
+
+
+class UnionFieldNAPIInfo(AbstractAnalysis[UnionFieldDecl]):
+    field_ty: Type | None
+
+    def __init__(self, am: AnalysisManager, d: UnionFieldDecl) -> None:
+        super().__init__(am, d)
+        if d.ty_ref is None:
+            self.field_ty = None
+        else:
+            self.field_ty = d.ty_ref.resolved_ty
+
+
 class AbstractTypeNAPIInfo(metaclass=ABCMeta):
     dts_type_name: str
     return_dts_type_name: str
     is_optional: bool = False
+    napi_type_name: str
 
     def __init__(self, am: AnalysisManager, t: Type):
         self.cpp_info = TypeCppInfo.get(am, t)
@@ -182,6 +218,22 @@ class ScalarTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[ScalarType]):
             raise ValueError(f"Unsupported ScalarKind: {self.type.kind}")
         self.dts_type_name = dts_type
         self.return_dts_type_name = self.dts_type_name
+        napi_type = {
+            ScalarKind.BOOL: "napi_boolean",
+            ScalarKind.F32: "napi_number",
+            ScalarKind.F64: "napi_number",
+            ScalarKind.I8: "napi_number",
+            ScalarKind.I16: "napi_number",
+            ScalarKind.I32: "napi_number",
+            ScalarKind.I64: "napi_number",
+            ScalarKind.U8: "napi_number",
+            ScalarKind.U16: "napi_number",
+            ScalarKind.U32: "napi_number",
+            ScalarKind.U64: "napi_number",
+        }.get(self.type.kind)
+        if napi_type is None:
+            raise ValueError(f"Unsupported ScalarKind: {self.type.kind}")
+        self.napi_type_name = napi_type
 
     def from_napi(
         self,
@@ -252,6 +304,7 @@ class StringTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[StringType]):
         self.cpp_info = TypeCppInfo.get(am, t)
         self.dts_type_name = "string"
         self.return_dts_type_name = self.dts_type_name
+        self.napi_type_name = "napi_string"
 
     def from_napi(
         self,
@@ -290,6 +343,7 @@ class StructTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[StructType]):
         struct_napi_info = StructNAPIInfo.get(self.am, t.ty_decl)
         self.dts_type_name = struct_napi_info.dts_type_name
         self.return_dts_type_name = self.dts_type_name
+        self.napi_type_name = "napi_object"
 
     def from_napi(
         self,
@@ -325,6 +379,7 @@ class IfaceTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[IfaceType]):
         self.dts_type_name = iface_napi_info.dts_type_name
         self.return_dts_type_name = self.dts_type_name
         self.iface_register_infos = iface_napi_info.iface_register_infos
+        self.napi_type_name = "napi_object"
 
     def from_napi(
         self,
@@ -360,6 +415,7 @@ class OptionalTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[OptionalType])
         self.dts_type_name = item_ty_napi_info.dts_type_name
         self.return_dts_type_name = f"{self.dts_type_name} | undefined"
         self.is_optional = True
+        self.napi_type_name = "napi_object"
 
     @override
     def from_napi(
@@ -437,6 +493,7 @@ class CallbackTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[CallbackType])
             return_ty_sts = "void"
         self.dts_type_name = f"(({params_ty_sts_str}) => {return_ty_sts})"
         self.return_dts_type_name = self.dts_type_name
+        self.napi_type_name = "napi_function"
 
     @override
     def from_napi(
@@ -546,6 +603,13 @@ class EnumTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[EnumType]):
         self.type = t
         self.dts_type_name = t.ty_decl.name
         self.return_dts_type_name = self.dts_type_name
+        if isinstance(self.type.ty_decl.ty_ref.resolved_ty, ScalarType | StringType):
+            item_ty_napi_info = TypeNAPIInfo.get(
+                self.am, self.type.ty_decl.ty_ref.resolved_ty
+            )
+            self.napi_type_name = item_ty_napi_info.napi_type_name
+        else:
+            raise ValueError
 
     def from_napi(
         self,
@@ -595,6 +659,7 @@ class ArrayBufferTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[ArrayType])
         self.type = t
         self.dts_type_name = "ArrayBuffer"
         self.return_dts_type_name = self.dts_type_name
+        self.napi_type_name = "napi_object"
 
         if not isinstance(t.item_ty, ScalarType) or t.item_ty.kind not in (
             ScalarKind.I8,
@@ -645,6 +710,7 @@ class ArrayTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[ArrayType]):
         sts_type = item_ty_napi_info.dts_type_name
         self.dts_type_name = f"Array<{sts_type}>"
         self.return_dts_type_name = self.dts_type_name
+        self.napi_type_name = "napi_object"
 
     def from_napi(
         self,
@@ -716,6 +782,7 @@ class RecordTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[MapType]):
         val_sts_type = val_ty_napi_info.dts_type_name
         self.dts_type_name = f"Record<{key_sts_type}, {val_sts_type}>"
         self.return_dts_type_name = self.dts_type_name
+        self.napi_type_name = "napi_object"
         # TODO: 错误 key 类型提示
 
     def from_napi(
@@ -795,6 +862,7 @@ class MapTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[MapType]):
         val_sts_type = val_ty_napi_info.dts_type_name
         self.dts_type_name = f"Map<{key_sts_type}, {val_sts_type}>"
         self.return_dts_type_name = self.dts_type_name
+        self.napi_type_name = "napi_object"
 
     def from_napi(
         self,
@@ -870,6 +938,41 @@ class MapTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[MapType]):
             )
 
 
+class UnionTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[UnionType]):
+    def __init__(self, am: AnalysisManager, t: UnionType):
+        super().__init__(am, t)
+        self.am = am
+        self.type = t
+        union_napi_info = UnionNAPIInfo.get(self.am, t.ty_decl)
+        self.dts_type_name = union_napi_info.dts_type_name
+        self.return_dts_type_name = self.dts_type_name
+        self.napi_type_name = "napi_value"  # TODO not sure
+
+    def from_napi(
+        self,
+        target: CSourceWriter,
+        napi_value: str,
+        cpp_result: str,
+    ):
+        union_napi_info = UnionNAPIInfo.get(self.am, self.type.ty_decl)
+        target.add_include(union_napi_info.impl_header)
+        target.writelns(
+            f"{self.cpp_info.as_owner} {cpp_result} = {union_napi_info.from_napi_func_name}(env, {napi_value});",
+        )
+
+    def into_napi(
+        self,
+        target: CSourceWriter,
+        cpp_value: str,
+        napi_result: str,
+    ):
+        union_napi_info = UnionNAPIInfo.get(self.am, self.type.ty_decl)
+        target.add_include(union_napi_info.impl_header)
+        target.writelns(
+            f"napi_value {napi_result} = {union_napi_info.into_napi_func_name}(env, {cpp_value});",
+        )
+
+
 class TypeNAPIInfo(TypeVisitor[AbstractTypeNAPIInfo]):
     def __init__(self, am: AnalysisManager):
         self.am = am
@@ -917,3 +1020,7 @@ class TypeNAPIInfo(TypeVisitor[AbstractTypeNAPIInfo]):
         if t.ty_ref.attrs.get("record"):
             return RecordTypeNAPIInfo.get(self.am, t)
         return MapTypeNAPIInfo.get(self.am, t)
+
+    @override
+    def visit_union_type(self, t: UnionType) -> AbstractTypeNAPIInfo:
+        return UnionTypeNAPIInfo.get(self.am, t)

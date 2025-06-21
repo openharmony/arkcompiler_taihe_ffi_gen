@@ -9,6 +9,7 @@ from taihe.codegen.cpp.analyses import (
     PackageCppUserInfo,
     StructCppInfo,
     TypeCppInfo,
+    UnionCppInfo,
 )
 from taihe.codegen.napi.analyses import (
     GlobFuncNAPIInfo,
@@ -17,6 +18,8 @@ from taihe.codegen.napi.analyses import (
     StructFieldNAPIInfo,
     StructNAPIInfo,
     TypeNAPIInfo,
+    UnionFieldNAPIInfo,
+    UnionNAPIInfo,
 )
 from taihe.semantics.declarations import (
     EnumDecl,
@@ -26,7 +29,9 @@ from taihe.semantics.declarations import (
     PackageDecl,
     PackageGroup,
     StructDecl,
+    UnionDecl,
 )
+from taihe.semantics.types import ArrayType, MapType, ScalarType, StringType, Type
 from taihe.utils.analyses import AnalysisManager
 from taihe.utils.outputs import OutputConfig
 
@@ -82,6 +87,8 @@ class NAPICodeGenerator:
             for iface in pkg.interfaces:
                 self.gen_iface_files(iface)
                 self.gen_iface_method_files(iface)
+            for union in pkg.unions:
+                self.gen_union_files(union)
             self.gen_module_init(pkg, register_infos, pkg_napi_target)
 
     def gen_module_init(
@@ -864,3 +871,185 @@ class NAPICodeGenerator:
             f"napi_value enum_obj_{enum.name} = Create{enum.name}(env);",
             f'napi_set_named_property(env, exports, "{enum.name}", enum_obj_{enum.name});',
         )
+
+    def gen_union_files(
+        self,
+        union: UnionDecl,
+    ):
+        union_cpp_info = UnionCppInfo.get(self.am, union)
+        union_napi_info = UnionNAPIInfo.get(self.am, union)
+        self.gen_union_conv_decl_file(
+            union,
+            union_cpp_info,
+            union_napi_info,
+        )
+        self.gen_union_conv_impl_file(
+            union,
+            union_cpp_info,
+            union_napi_info,
+        )
+
+    def gen_union_conv_decl_file(
+        self,
+        union: UnionDecl,
+        union_cpp_info: UnionCppInfo,
+        union_napi_info: UnionNAPIInfo,
+    ):
+        with CHeaderWriter(
+            self.oc,
+            f"include/{union_napi_info.decl_header}",
+        ) as union_napi_decl_target:
+            union_napi_decl_target.add_include(union_cpp_info.defn_header)
+            union_napi_decl_target.writelns(
+                f"{union_cpp_info.as_owner} {union_napi_info.from_napi_func_name}(napi_env env, napi_value napi_obj);",
+                f"napi_value {union_napi_info.into_napi_func_name}(napi_env env, {union_cpp_info.as_param} cpp_obj);",
+            )
+
+    def gen_union_conv_impl_file(
+        self,
+        union: UnionDecl,
+        union_cpp_info: UnionCppInfo,
+        union_napi_info: UnionNAPIInfo,
+    ):
+        with CHeaderWriter(
+            self.oc,
+            f"include/{union_napi_info.impl_header}",
+        ) as union_napi_impl_target:
+            union_napi_impl_target.add_include(union_napi_info.decl_header)
+            union_napi_impl_target.add_include(union_cpp_info.impl_header)
+            self.gen_union_from_napi_func(
+                union,
+                union_cpp_info,
+                union_napi_info,
+                union_napi_impl_target,
+            )
+            self.gen_union_into_napi_func(
+                union,
+                union_cpp_info,
+                union_napi_info,
+                union_napi_impl_target,
+            )
+
+    def gen_union_from_napi_func(
+        self,
+        union: UnionDecl,
+        union_cpp_info: UnionCppInfo,
+        union_napi_info: UnionNAPIInfo,
+        union_napi_impl_target: CHeaderWriter,
+    ):
+        with union_napi_impl_target.indented(
+            f"inline {union_cpp_info.as_owner} {union_napi_info.from_napi_func_name}(napi_env env, napi_value napi_obj) {{",
+            f"}}",
+        ):
+            union_napi_impl_target.writelns(
+                f"napi_valuetype value_ty;",
+                f"napi_typeof(env, napi_obj, &value_ty);",
+                f"bool flag;",
+            )
+            for parts in union_napi_info.dts_final_fields:
+                final = parts[-1]
+                static_tags = []
+                for part in parts:
+                    path_cpp_info = UnionCppInfo.get(self.am, part.parent_union)
+                    static_tags.append(
+                        f"::taihe::static_tag<{path_cpp_info.full_name}::tag_t::{part.name}>"
+                    )
+                static_tags_str = ", ".join(static_tags)
+                full_name = "_".join(part.name for part in parts)
+                final_napi_info = UnionFieldNAPIInfo.get(self.am, final)
+                if isinstance(final_ty := final_napi_info.field_ty, Type):
+                    type_napi_info = TypeNAPIInfo.get(self.am, final_ty)
+                    if isinstance(final_ty, ScalarType | StringType):
+                        with union_napi_impl_target.indented(
+                            f"if (value_ty == {type_napi_info.napi_type_name}) {{",
+                            f"}}",
+                        ):
+                            cpp_result_spec = f"cpp_field_{full_name}"
+                            type_napi_info.from_napi(
+                                union_napi_impl_target,
+                                "napi_obj",
+                                cpp_result_spec,
+                            )
+                            union_napi_impl_target.writelns(
+                                f"return {union_cpp_info.full_name}({static_tags_str}, std::move({cpp_result_spec}));",
+                            )
+                    elif isinstance(final_ty, ArrayType):
+                        union_napi_impl_target.writelns(
+                            f"napi_is_array(env, napi_obj, &flag);",
+                        )
+                        with union_napi_impl_target.indented(
+                            f"if (flag) {{",
+                            f"}}",
+                        ):
+                            cpp_result_spec = f"cpp_field_{full_name}"
+                            type_napi_info.from_napi(
+                                union_napi_impl_target,
+                                "napi_obj",
+                                cpp_result_spec,
+                            )
+                            union_napi_impl_target.writelns(
+                                f"return {union_cpp_info.full_name}({static_tags_str}, std::move({cpp_result_spec}));",
+                            )
+                    elif isinstance(final_ty, MapType):
+                        union_napi_impl_target.writelns(
+                            f"napi_value global = nullptr, map_ctor = nullptr;",
+                            f"napi_get_global(env, &global);",
+                            f'napi_get_named_property(env, global, "Map", &map_ctor);',
+                            f"napi_instanceof(env, napi_obj, map_ctor, &flag);",
+                        )
+                        with union_napi_impl_target.indented(
+                            f"if (flag) {{",
+                            f"}}",
+                        ):
+                            cpp_result_spec = f"cpp_field_{full_name}"
+                            type_napi_info.from_napi(
+                                union_napi_impl_target,
+                                "napi_obj",
+                                cpp_result_spec,
+                            )
+                            union_napi_impl_target.writelns(
+                                f"return {union_cpp_info.full_name}({static_tags_str}, std::move({cpp_result_spec}));",
+                            )
+                    else:
+                        pass
+
+    def gen_union_into_napi_func(
+        self,
+        union: UnionDecl,
+        union_cpp_info: UnionCppInfo,
+        union_napi_info: UnionNAPIInfo,
+        union_napi_impl_target: CHeaderWriter,
+    ):
+        with union_napi_impl_target.indented(
+            f"inline napi_value {union_napi_info.into_napi_func_name}(napi_env env, {union_cpp_info.as_param} cpp_value) {{",
+            f"}}",
+        ):
+            union_napi_impl_target.writelns(
+                f"napi_value napi_obj = nullptr;",
+            )
+            with union_napi_impl_target.indented(
+                f"switch (cpp_value.get_tag()) {{",
+                f"}}",
+                indent="",
+            ):
+                for field in union.fields:
+                    field_napi_info = UnionFieldNAPIInfo.get(self.am, field)
+                    with union_napi_impl_target.indented(
+                        f"case {union_cpp_info.full_name}::tag_t::{field.name}: {{",
+                        f"}}",
+                    ):
+                        match field_napi_info.field_ty:
+                            case field_ty if isinstance(field_ty, Type):
+                                type_napi_info = TypeNAPIInfo.get(self.am, field_ty)
+                                type_napi_info.into_napi(
+                                    union_napi_impl_target,
+                                    f"cpp_value.get_{field.name}_ref()",
+                                    "napi_obj_field",
+                                )
+                        union_napi_impl_target.writelns(
+                            f"napi_obj = napi_obj_field;",
+                            f"break;",
+                        )
+            union_napi_impl_target.writelns(
+                f"return napi_obj;",
+            )
