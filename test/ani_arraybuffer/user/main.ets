@@ -212,7 +212,7 @@ function arrayi64_inout() {
 }
 
 function arrayf32_input() {
-    let f32Array: float[] = [10, 20, 30, 40, 50];
+    let f32Array: float[] = [10f, 20f, 30f, 40f, 50f];
     let sumArrayf32 = arraybuffer.SumArrayF32(f32Array)
     console.log("sumArrayf32 is " + sumArrayf32)
     assertEQ(sumArrayf32, 150)
@@ -229,7 +229,7 @@ function arrayf32_return() {
 }
 
 function arrayf32_inout() {
-    let numbers2: float[] = [30, 40, 50, 60, 70];
+    let numbers2: float[] = [30f, 40f, 50f, 60f, 70f];
     let doubleArrayBuffer = arraybuffer.DoubleF32(numbers2)
     console.log("arrayi16_inout length: " + doubleArrayBuffer.length);
     assertEQ(doubleArrayBuffer.length, 5)

@@ -1069,7 +1069,7 @@ function containers_noreturn() {
     let arri8: byte[] = [1, 2, 3];
     let arri16: short[] = [1, 2, 3, 4];
     let arri32: int[] = [1, 2, 3, 4, 5];
-    let arrf32: float[] = [1.1, 1.2, 1.3];
+    let arrf32: float[] = [1.1f, 1.2f, 1.3f];
     let arrf64: double[] = [1.123, 2.123, 3.123];
 
     namespace2Test.inner.Containers_noreturn(
@@ -1081,7 +1081,7 @@ function containers_return() {
     let arri8: byte[] = [1, 2, 3];
     let arri16: short[] = [1, 2, 3, 4];
     let arri32: int[] = [1, 2, 3, 4, 5];
-    let arrf32: float[] = [1.1, 1.2, 1.3];
+    let arrf32: float[] = [1.1f, 1.2f, 1.3f];
     let arrf64: double[] = [1.123, 2.123, 3.123];
 
     let res1 = namespace2Test.inner.Containers_return(
