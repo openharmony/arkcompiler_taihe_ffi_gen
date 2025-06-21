@@ -5,9 +5,10 @@ from pathlib import Path
 from taihe.driver.backend import BackendRegistry
 from taihe.driver.contexts import CompilerInstance, CompilerInvocation
 from taihe.utils.outputs import CMakeOutputConfig, OutputConfig
+from taihe.utils.resources import ResourceLocator, ResourceType
 
 
-def main(for_distribution: bool = False):
+def main():
     registry = BackendRegistry()
     registry.register_all()
 
@@ -67,21 +68,12 @@ def main(for_distribution: bool = False):
     backends = registry.collect_required_backends(args.backends)
     resolved_backends = [b() for b in backends]
 
-    current_file = Path(__file__).resolve()
-    if for_distribution:
-        taihe_root_dir = current_file.parents[5]
-        runtime_include_dir = taihe_root_dir / "include"
-        runtime_src_dir = taihe_root_dir / "src" / "taihe" / "runtime"
-    else:
-        taihe_root_dir = current_file.parents[3]
-        runtime_include_dir = taihe_root_dir / "runtime" / "include"
-        runtime_src_dir = taihe_root_dir / "runtime" / "src"
-
+    locator = ResourceLocator.detect()
     if args.build_system == "cmake":
         output_config = CMakeOutputConfig(
             dst_dir=Path(args.dst_dir),
-            runtime_include_dir=runtime_include_dir,
-            runtime_src_dir=runtime_src_dir,
+            runtime_include_dir=locator.get(ResourceType.RUNTIME_HEADER),
+            runtime_src_dir=locator.get(ResourceType.RUNTIME_SOURCE),
         )
     else:
         output_config = OutputConfig(

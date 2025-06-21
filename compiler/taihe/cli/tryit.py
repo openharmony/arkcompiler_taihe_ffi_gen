@@ -16,6 +16,7 @@ from taihe.driver.backend import BackendRegistry
 from taihe.driver.contexts import CompilerInstance, CompilerInvocation
 from taihe.utils.logging import setup_logger
 from taihe.utils.outputs import CMakeOutputConfig, DebugLevel, OutputConfig
+from taihe.utils.resources import ResourceLocator, ResourceType
 
 # A lower value means more verbosity
 TRACE_CONCISE = logging.DEBUG - 1
@@ -154,7 +155,7 @@ class BuildUtils:
 class BuildConfig:
     """Configuration for the build process."""
 
-    def __init__(self, for_distribution: bool = False):
+    def __init__(self):
         self.cxx = os.getenv("CXX", "clang++")
         self.cc = os.getenv("CC", "clang")
         self.panda_userinfo = UserInfo(
@@ -163,28 +164,16 @@ class BuildConfig:
         )
         self.panda_url = "https://nexus.bz-openlab.ru:10443/repository/koala-npm/%40panda/sdk/-/sdk-1.5.0-dev.36922.tgz"
 
-        current_file = Path(__file__).resolve()
-        if for_distribution:
-            # Inside the distributed repository: dist/lib/taihe/compiler/taihe/cli/compiler.py
-            self.taihe_root_dir = current_file.parents[5]
-            self.runtime_include_dir = self.taihe_root_dir / "include"
-            self.runtime_src_dir = self.taihe_root_dir / "src" / "taihe" / "runtime"
-            self.stdlib_dir = self.taihe_root_dir / "lib" / "taihe" / "stdlib"
-            self.panda_extract_dir = self.taihe_root_dir / "var" / "taihe" / "panda_vm"
-        else:
-            # Inside the git repository: repo/compiler/taihe/cli/run_test.py
-            self.taihe_root_dir = current_file.parents[3]
-            self.runtime_include_dir = self.taihe_root_dir / "runtime" / "include"
-            self.runtime_src_dir = self.taihe_root_dir / "runtime" / "src"
-            self.stdlib_dir = self.taihe_root_dir / "stdlib"
-            self.panda_extract_dir = self.taihe_root_dir / ".panda_vm"
+        self.locator = ResourceLocator.detect()
+        self.panda_extract_dir = self.locator.get(ResourceType.PANDA_VM)
         self.panda_package_dir = self.panda_extract_dir / "package"
         self.panda_ets_dir = self.panda_package_dir / "ets"
         self.panda_tool_dir = self.panda_package_dir / "linux_host_tools"
         self.panda_include_dir = (
             self.panda_package_dir / "ohos_arm64/include/plugins/ets/runtime/ani"
         )
-        self.taihe_version_file = self.taihe_root_dir / "version.txt"
+        # TODO this should be removed
+        self.taihe_version_file = self.locator.root_dir / "version.txt"
         self.panda_version_file = self.panda_package_dir / "version.txt"
 
 
@@ -231,7 +220,7 @@ class BuildSystem(BuildUtils):
         self.user_include_dir = self.user_dir / "include"
         self.user_src_dir = self.user_dir / "src"
 
-        self.runtime_includes = [self.config.runtime_include_dir]
+        self.runtime_includes = [self.config.locator.get(ResourceType.RUNTIME_HEADER)]
         if self.user == UserType.STS:
             self.runtime_includes.append(self.config.panda_include_dir)
         self.generated_includes = [*self.runtime_includes, self.generated_include_dir]
@@ -342,8 +331,10 @@ class BuildSystem(BuildUtils):
         if cmake:
             output_config = CMakeOutputConfig(
                 dst_dir=Path(self.generated_dir),
-                runtime_include_dir=self.config.runtime_include_dir,
-                runtime_src_dir=self.config.runtime_src_dir,
+                runtime_include_dir=self.config.locator.get(
+                    ResourceType.RUNTIME_HEADER
+                ),
+                runtime_src_dir=self.config.locator.get(ResourceType.RUNTIME_SOURCE),
             )
         else:
             output_config = OutputConfig(
@@ -353,7 +344,10 @@ class BuildSystem(BuildUtils):
         invocation = CompilerInvocation(
             src_files=[
                 src_file
-                for src_dir in [self.idl_dir, self.config.stdlib_dir]
+                for src_dir in [
+                    self.idl_dir,
+                    self.config.locator.get(ResourceType.STDLIB),
+                ]
                 for src_file in src_dir.glob("*.taihe")
             ],
             output_config=output_config,
@@ -399,12 +393,13 @@ class BuildSystem(BuildUtils):
         """Compile the shared library."""
         self.logger.info("Compiling shared library...")
 
+        runtime_src_dir = self.config.locator.get(ResourceType.RUNTIME_SOURCE)
         runtime_sources = [
-            self.config.runtime_src_dir / "string.cpp",
-            self.config.runtime_src_dir / "object.cpp",
+            runtime_src_dir / "string.cpp",
+            runtime_src_dir / "object.cpp",
         ]
         if self.user == UserType.STS:
-            runtime_sources.append(self.config.runtime_src_dir / "runtime.cpp")
+            runtime_sources.append(runtime_src_dir / "runtime.cpp")
 
         # Compile each component
         runtime_objects = self.compile(
@@ -797,15 +792,15 @@ class RepositoryUpgrader(BuildUtils):
         filename = self.repo_url.split("/")[-1]
         version = self.repo_url.split("/")[-2]
 
-        extract_dir = self.config.taihe_root_dir / "../tmp"
+        extract_dir = self.config.locator.root_dir / "../tmp"
         target_file = extract_dir / filename
         self.create_directory(extract_dir)
         self.download_file(target_file, self.repo_url)
         self.extract_file(target_file, extract_dir)
 
         tmp_taihe_pkg_dir = extract_dir / "taihe"
-        self.clean_directory(self.config.taihe_root_dir)
-        self.move_directory(tmp_taihe_pkg_dir, self.config.taihe_root_dir)
+        self.clean_directory(self.config.locator.root_dir)
+        self.move_directory(tmp_taihe_pkg_dir, self.config.locator.root_dir)
         self.clean_directory(extract_dir)
 
         self.logger.info("Successfully upgraded code to version %s", version)
