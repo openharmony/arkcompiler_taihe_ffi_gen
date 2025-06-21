@@ -11,3 +11,13 @@ interface IShape: IBase {
 }
 
 function makeIShape(id: String, a: f64, b: f64): IShape;
+
+@class
+interface CTest{
+    add(a: i32, b: i32): f32;
+}
+
+@ctor("CTest")
+function createCTest(id: i32): CTest;
+
+function changeCTest(a: CTest): CTest;

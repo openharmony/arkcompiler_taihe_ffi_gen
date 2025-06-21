@@ -4,12 +4,14 @@ from taihe.codegen.abi.analyses import IfaceABIInfo
 from taihe.codegen.abi.mangle import DeclKind, encode
 from taihe.codegen.abi.writer import CHeaderWriter, CSourceWriter
 from taihe.codegen.cpp.analyses import (
+    GlobFuncCppUserInfo,
     IfaceCppInfo,
     PackageCppUserInfo,
     StructCppInfo,
     TypeCppInfo,
 )
 from taihe.codegen.napi.analyses import (
+    GlobFuncNAPIInfo,
     IfaceNAPIInfo,
     PackageNAPIInfo,
     StructFieldNAPIInfo,
@@ -50,6 +52,22 @@ class NAPICodeGenerator:
         ) as pkg_napi_target:
             pkg_napi_target.add_include("node/node_api.h")
             pkg_napi_target.add_include(pkg_cpp_user_info.header)
+
+            # ctor func
+            ctors_map: dict[str, GlobFuncDecl] = {}
+            for func in pkg.functions:
+                func_napi_info = GlobFuncNAPIInfo.get(self.am, func)
+                if class_name := func_napi_info.ctor_class_name:
+                    # TODO: raise special error
+                    if class_name in ctors_map:
+                        raise ValueError(
+                            f"Error: class_name '{class_name}' already have a constructor."
+                        )
+                    ctors_map[class_name] = func
+            for iface in pkg.interfaces:
+                if ctor := ctors_map.get(iface.name):
+                    iface_napi_info = IfaceNAPIInfo.get(self.am, iface)
+                    iface_napi_info.ctor = ctor
 
             register_infos = []
             for func in pkg.functions:
@@ -457,6 +475,7 @@ class NAPICodeGenerator:
             iface_napi_impl_target.add_include(iface_cpp_info.impl_header)
             self.gen_iface_ctor_func(
                 iface,
+                iface_abi_info,
                 iface_cpp_info,
                 iface_napi_info,
                 iface_napi_impl_target,
@@ -599,43 +618,108 @@ class NAPICodeGenerator:
             f"}}",
         ):
             iface_napi_impl_target.writelns(
-                f"{iface_cpp_info.as_owner}* cpp_ptr = new {iface_cpp_info.as_owner}(std::move(cpp_obj));",
+                f"int64_t cpp_vtbl_ptr = reinterpret_cast<int64_t>(cpp_obj.m_handle.vtbl_ptr);",
+                f"int64_t cpp_data_ptr = reinterpret_cast<int64_t>(cpp_obj.m_handle.data_ptr);",
+                f"cpp_obj.m_handle.data_ptr = nullptr;",
+                f"napi_value napi_vtbl_ptr = nullptr, napi_data_ptr = nullptr;",
+                f"napi_create_int64(env, cpp_vtbl_ptr, &napi_vtbl_ptr);",
+                f"napi_create_int64(env, cpp_data_ptr, &napi_data_ptr);",
+                f"napi_value argv[2] = {{napi_vtbl_ptr, napi_data_ptr}};",
                 f"napi_value napi_obj = nullptr;",
                 f"napi_value constructor;",
-                f"napi_get_reference_value(env, {iface_napi_info.ctor_ref_name}, &constructor);",
-                f"napi_new_instance(env, constructor, 0, nullptr, &napi_obj);",
+                f"napi_get_reference_value(env, {iface_napi_info.ctor_ref_name}_inner, &constructor);",
+                f"napi_new_instance(env, constructor, 2, argv, &napi_obj);",
             )
-
-            with iface_napi_impl_target.indented(
-                f"napi_wrap(env, napi_obj, cpp_ptr, [](napi_env env, void* finalize_data, void* finalize_hint) {{",
-                f"}}, nullptr, nullptr);",
-            ):
-                iface_napi_impl_target.writelns(
-                    f"delete static_cast<{iface_cpp_info.as_owner}*>(finalize_data);",
-                )
             iface_napi_impl_target.writelns(f"return napi_obj;")
 
     def gen_iface_ctor_func(
         self,
         iface: IfaceDecl,
+        iface_abi_info: IfaceABIInfo,
         iface_cpp_info: IfaceCppInfo,
         iface_napi_info: IfaceNAPIInfo,
         iface_napi_impl_target: CHeaderWriter,
     ):
         with iface_napi_impl_target.indented(
-            f"inline napi_value {iface_napi_info.constructor_func_name}(napi_env env, napi_callback_info info) {{",
+            f"inline napi_value {iface_napi_info.constructor_func_name}_inner(napi_env env, napi_callback_info info) {{",
             f"}}",
         ):
             iface_napi_impl_target.writelns(
                 f"napi_value thisobj;",
-                f"napi_get_cb_info(env, info, nullptr, nullptr, &thisobj, nullptr);",
+                f"size_t argc = 2;",
+                f"napi_value args[2];",
+                f"napi_get_cb_info(env, info, &argc, args, &thisobj, nullptr);",
+                f"int64_t vtbl_ptr;",
+                f"napi_get_value_int64(env, args[0], &vtbl_ptr);",
+                f"int64_t data_ptr;",
+                f"napi_get_value_int64(env, args[1], &data_ptr);",
+                f"DataBlockHead* cpp_data_ptr = reinterpret_cast<DataBlockHead*>(data_ptr);",
+                f"{iface_abi_info.vtable}* cpp_vtbl_ptr = reinterpret_cast<{iface_abi_info.vtable}*>(vtbl_ptr);",
+                f"{iface_cpp_info.as_owner}* cpp_ptr = new {iface_cpp_info.as_owner}({{cpp_vtbl_ptr, cpp_data_ptr}});",
+            )
+            with iface_napi_impl_target.indented(
+                f"napi_wrap(env, thisobj, cpp_ptr, [](napi_env env, void* finalize_data, void* finalize_hint) {{",
+                f"}}, nullptr, nullptr);",
+            ):
+                iface_napi_impl_target.writelns(
+                    f"delete static_cast<{iface_cpp_info.as_owner}*>(finalize_data);",
+                )
+            iface_napi_impl_target.writelns(
                 f"return thisobj;",
             )
+
         iface_napi_impl_target.writelns(
-            f"static napi_ref {iface_napi_info.ctor_ref_name};"
+            f"static napi_ref {iface_napi_info.ctor_ref_name}_inner;"
         )
+
+        # process ctor
+        if ctor := iface_napi_info.ctor:
+            with iface_napi_impl_target.indented(
+                f"inline napi_value {iface_napi_info.constructor_func_name}(napi_env env, napi_callback_info info) {{",
+                f"}}",
+            ):
+                ctor_cpp_user_info = GlobFuncCppUserInfo.get(self.am, ctor)
+                iface_napi_impl_target.writelns(
+                    f"napi_value thisobj;",
+                    f"size_t argc = {len(ctor.params)};",
+                    f"napi_value args[{len(ctor.params)}];",
+                    f"napi_get_cb_info(env, info, &argc, args, &thisobj, nullptr);",
+                )
+                args = []
+                for i, param in enumerate(ctor.params):
+                    value_ty = param.ty_ref.resolved_ty
+                    type_info = TypeNAPIInfo.get(self.am, value_ty)
+                    type_info.from_napi(
+                        iface_napi_impl_target, f"args[{i}]", f"value{i}"
+                    )
+                    args.append(f"value{i}")
+                args_str = ", ".join(args)
+
+                if return_ty_ref := ctor.return_ty_ref:
+                    # TODO: assert the return type is the iface type
+                    value_ty = return_ty_ref.resolved_ty
+                    iface_napi_impl_target.writelns(
+                        f"{iface_cpp_info.as_owner} value = {ctor_cpp_user_info.full_name}({args_str});",
+                        f"{iface_cpp_info.as_owner}* cpp_ptr = new {iface_cpp_info.as_owner}(std::move(value));",
+                    )
+                    with iface_napi_impl_target.indented(
+                        f"napi_wrap(env, thisobj, cpp_ptr, [](napi_env env, void* finalize_data, void* finalize_hint) {{",
+                        f"}}, nullptr, nullptr);",
+                    ):
+                        iface_napi_impl_target.writelns(
+                            f"delete static_cast<{iface_cpp_info.as_owner}*>(finalize_data);",
+                        )
+                    iface_napi_impl_target.writelns(
+                        f"return thisobj;",
+                    )
+                else:
+                    # TODO: special error
+                    raise ValueError("constructor must have return value")
+            iface_napi_impl_target.writelns(
+                f"static napi_ref {iface_napi_info.ctor_ref_name};"
+            )
         with iface_napi_impl_target.indented(
-            f"inline napi_value {iface_napi_info.create_func_name}(napi_env env) {{",
+            f"inline napi_value {iface_napi_info.create_func_name}(napi_env env, napi_value exports) {{",
             f"}}",
         ):
             iface_napi_impl_target.writelns(f"napi_value result;")
@@ -648,10 +732,16 @@ class NAPICodeGenerator:
                     iface_napi_impl_target.writelns(
                         f'{{"{value[0].name}", nullptr, {mng_name}, nullptr, nullptr, nullptr, napi_default, nullptr}}, ',
                     )
+            if ctor := iface_napi_info.ctor:
+                iface_napi_impl_target.writelns(
+                    f'napi_define_class(env, "{iface.name}", NAPI_AUTO_LENGTH, {iface_napi_info.constructor_func_name}, nullptr, {len(iface_napi_info.iface_register_infos)}, desc, &result);',
+                    f"napi_create_reference(env, result, 1, &{iface_napi_info.ctor_ref_name});",
+                    f'napi_set_named_property(env, exports, "{iface.name}", result);',
+                )
             iface_napi_impl_target.writelns(
-                f'napi_define_class(env, "{iface.name}", NAPI_AUTO_LENGTH, {iface_napi_info.constructor_func_name}, nullptr, {len(iface_napi_info.iface_register_infos)}, desc, &result);',
-                f"napi_create_reference(env, result, 1, &{iface_napi_info.ctor_ref_name});",
-                f"return result;",
+                f'napi_define_class(env, "{iface.name}_inner", NAPI_AUTO_LENGTH, {iface_napi_info.constructor_func_name}_inner, nullptr, {len(iface_napi_info.iface_register_infos)}, desc, &result);',
+                f"napi_create_reference(env, result, 1, &{iface_napi_info.ctor_ref_name}_inner);",
+                f"return exports;",
             )
 
     def gen_iface_method_files(
@@ -752,7 +842,7 @@ class NAPICodeGenerator:
     ):
         iface_napi_info = IfaceNAPIInfo.get(self.am, iface)
         pkg_napi_target.writelns(
-            f'napi_set_named_property(env, exports, "{iface.name}", {iface_napi_info.create_func_name}(env));',
+            f"{iface_napi_info.create_func_name}(env, exports);",
         )
 
     def gen_struct_register(

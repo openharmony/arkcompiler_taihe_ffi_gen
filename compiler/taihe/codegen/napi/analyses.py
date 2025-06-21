@@ -11,6 +11,7 @@ from taihe.codegen.cpp.analyses import (
 )
 from taihe.semantics.declarations import (
     EnumDecl,
+    GlobFuncDecl,
     IfaceDecl,
     IfaceMethodDecl,
     PackageDecl,
@@ -111,6 +112,7 @@ class IfaceNAPIInfo(AbstractAnalysis[IfaceDecl]):
                 mangled_name = encode(segments, DeclKind.NAPI_FUNC)
                 iface_register_infos[mangled_name] = (method, ancestor)
         self.iface_register_infos = iface_register_infos
+        self.ctor: GlobFuncDecl | None = None
 
     def is_class(self):
         return self.dts_type_name == self.dts_impl_name
@@ -120,6 +122,15 @@ class EnumNAPIInfo(AbstractAnalysis[EnumDecl]):
     def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
         super().__init__(am, d)
         self.dts_type_name = d.name
+
+
+class GlobFuncNAPIInfo(AbstractAnalysis[GlobFuncDecl]):
+    def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
+        super().__init__(am, f)
+        self.ctor_class_name = None
+        if (ctor_attr := f.get_last_attr("ctor")) is not None:
+            (self.ctor_class_name,) = ctor_attr.args
+        # TODO: how to process the attr
 
 
 class AbstractTypeNAPIInfo(metaclass=ABCMeta):

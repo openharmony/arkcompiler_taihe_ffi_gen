@@ -123,7 +123,7 @@ class DTSCodeGenerator:
     ):
         iface_napi_info = IfaceNAPIInfo.get(self.am, iface)
         if iface_napi_info.is_class():
-            # no interface
+            self.gen_iface_class(iface, target)
             return
         parents = []
         for parent in iface.parents:
@@ -135,6 +135,26 @@ class DTSCodeGenerator:
             f"export interface {iface_napi_info.dts_type_name}{extends_str} {{",
             f"}}",
         ):
+            self.gen_iface_methods_decl(iface.methods, target)
+
+    def gen_iface_class(
+        self,
+        iface: IfaceDecl,
+        target: StsWriter,
+    ):
+        iface_napi_info = IfaceNAPIInfo.get(self.am, iface)
+        with target.indented(
+            f"export declare class {iface_napi_info.dts_type_name} {{",
+            f"}}",
+        ):
+            if ctor := iface_napi_info.ctor:
+                params = []
+                for param in ctor.params:
+                    type_napi_info = TypeNAPIInfo.get(self.am, param.ty_ref.resolved_ty)
+                    params.append(f"{param.name}: {type_napi_info.dts_type_name}")
+                params_str = ", ".join(params)
+                target.writelns(f"constructor({params_str});")
+
             self.gen_iface_methods_decl(iface.methods, target)
 
     def gen_iface_methods_decl(
