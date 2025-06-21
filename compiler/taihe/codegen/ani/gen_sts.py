@@ -399,9 +399,14 @@ class STSCodeGenerator:
         if enum_ani_info.const:
             type_ani_info = TypeANIInfo.get(self.am, enum.ty_ref.resolved_ty)
             for item in enum.items:
-                target.writelns(
-                    f"export const {item.name}: {type_ani_info.sts_type_in(target)} = {dumps(item.value)};",
-                )
+                if isinstance(item.value, float):
+                    target.writelns(
+                        f"export const {item.name}: {type_ani_info.sts_type_in(target)} = {dumps(item.value)}f;",
+                    )
+                else:
+                    target.writelns(
+                        f"export const {item.name}: {type_ani_info.sts_type_in(target)} = {dumps(item.value)};",
+                    )
             return
         sts_decl = f"enum {enum_ani_info.sts_type_name}"
         if enum_ani_info.is_default:
