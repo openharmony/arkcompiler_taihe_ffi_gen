@@ -19,8 +19,6 @@ from taihe.utils.resources import (
 
 
 SYSTEM_TYPES = ["linux-x86_64", "windows-x86_64", "darwin-arm64", "darwin-x86_64"]
-PYTHON_REPO_URL = "https://gitee.com/ASeaSalt/python-multi-platform.git"
-PYTHON_REPO_BRANCH = "master"
 
 
 class TaiheBuilder:
@@ -29,9 +27,6 @@ class TaiheBuilder:
         self.version = version
 
         self.project_dir = project_dir
-        self.cache_dir = self.project_dir / ".cache" / "python-packages"
-        self.python_tar = self.cache_dir / f"{system}-python.tar.gz"
-
         self.compiler_dir = self.project_dir / "compiler"
         self.resources = ResourceLocator.detect()
 
@@ -44,15 +39,13 @@ class TaiheBuilder:
 
     def copy_resources(self):
         for ty in ResourceType:
-            if ty == ResourceType.PANDA_VM:
-                continue
-
-            shutil.copytree(
-                self.resources.get(ty),
-                self.dist_resources.get(ty),
-                dirs_exist_ok=True,
-                ignore=shutil.ignore_patterns("build", "generated"),
-            )
+            if ty.is_packagable():
+                shutil.copytree(
+                    self.resources.get(ty),
+                    self.dist_resources.get(ty),
+                    dirs_exist_ok=True,
+                    ignore=shutil.ignore_patterns("build", "generated"),
+                )
 
     def install_compiler(self):
         print(f"Copying the compiler for {self.system}")
@@ -70,28 +63,15 @@ class TaiheBuilder:
         subprocess.run(uv_args, check=True, cwd=self.compiler_dir)
 
     def extract_python(self):
-        if not self.python_tar.exists():
-            print(f"Downloading Python for {self.system}...")
-            self.cache_dir.mkdir(parents=True, exist_ok=True)
-            subprocess.run(
-                [
-                    "git",
-                    "clone",
-                    "-q",
-                    "--branch",
-                    PYTHON_REPO_BRANCH,
-                    PYTHON_REPO_URL,
-                    self.cache_dir,
-                ],
-                check=True,
-            )
-        print(f"Extracting Python for {self.system}")
-
+        python_tar = (
+            self.resources.get(ResourceType.DEV_PYTHON_BUILD)
+            / f"{self.system}-python.tar.gz"
+        )
         # First, extract to "dist/lib".
         # It creates a sole directory named "python"
         parent_dir = self.dist_pyrt_dir.parent
-        with tarfile.open(self.python_tar, "r:gz") as tar:
-            tar.extractall(parent_dir)
+        with tarfile.open(python_tar, "r:gz") as tar:
+            tar.extractall(parent_dir, filter="tar")
         # Next, rename "dist/lib/python" to "dist/lib/pyrt"
         old_dir = parent_dir / "python"
         if self.dist_pyrt_dir.exists():
