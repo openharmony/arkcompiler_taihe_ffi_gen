@@ -165,7 +165,7 @@ class BuildConfig:
         self.panda_url = "https://nexus.bz-openlab.ru:10443/repository/koala-npm/%40panda/sdk/-/sdk-1.5.0-dev.36922.tgz"
 
         self.locator = ResourceLocator.detect()
-        self.panda_extract_dir = self.locator.get(ResourceType.PANDA_VM)
+        self.panda_extract_dir = self.locator.get(ResourceType.DEV_PANDA_VM)
         self.panda_package_dir = self.panda_extract_dir / "package"
         self.panda_ets_dir = self.panda_package_dir / "ets"
         self.panda_tool_dir = self.panda_package_dir / "linux_host_tools"
