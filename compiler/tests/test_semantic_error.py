@@ -1,8 +1,6 @@
 from io import StringIO
 
 import pytest
-from typing_extensions import override
-
 from taihe.driver.backend import BackendRegistry
 from taihe.driver.contexts import CompilerInstance, CompilerInvocation
 from taihe.utils.diagnostics import DiagBase, DiagnosticsManager
@@ -30,6 +28,7 @@ from taihe.utils.exceptions import (
     TypeUsageError,
 )
 from taihe.utils.sources import SourceBuffer
+from typing_extensions import override
 
 
 class SemanticTestDiagnosticsManager(DiagnosticsManager):

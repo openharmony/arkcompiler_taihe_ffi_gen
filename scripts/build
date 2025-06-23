@@ -1,51 +1,50 @@
 #!/usr/bin/env python3
+import argparse
 import shutil
+import struct
 import subprocess
+import sys
 import tarfile
+import zlib
 from datetime import datetime
 from pathlib import Path
-import struct
-import argparse
-import zlib
-import sys
 
-sys.path.insert(0, str(Path(__file__).parent / "../compiler"))
+g_project_dir = Path(__file__).parent.parent
+sys.path.insert(0, str(g_project_dir / "compiler"))
+
 from taihe.utils.resources import (
-    BUNDLE_PYTHON_RUNTIME_DIR_NAME,
+    BUILTIN_RESOURCES,
     DeploymentMode,
-    ResourceLocator,
-    ResourceType,
+    PythonBuild,
+    ResourceContext,
 )
-
 
 SYSTEM_TYPES = ["linux-x86_64", "windows-x86_64", "darwin-arm64", "darwin-x86_64"]
 
 
 class TaiheBuilder:
-    def __init__(self, project_dir: Path, system: str, version: str):
+    def __init__(self, system: str, version: str):
         self.system = system
         self.version = version
 
-        self.project_dir = project_dir
-        self.compiler_dir = self.project_dir / "compiler"
-        self.resources = ResourceLocator.detect()
+        self.project_dir = g_project_dir
+        self.pyproject_dir = self.project_dir
 
         self.dist = self.project_dir / "dist" / f"taihe-{system}" / "taihe"
         if self.dist.exists():
             shutil.rmtree(self.dist)
-        self.dist_pyrt_dir = self.dist / "lib" / BUNDLE_PYTHON_RUNTIME_DIR_NAME
+        self.dist_pyrt_dir = self.dist / "lib" / PythonBuild.BUNDLE_DIR_NAME
         self.dist_bin_dir = self.dist / "bin"
-        self.dist_resources = ResourceLocator(DeploymentMode.BUNDLE, self.dist)
+        self.dist_resources = ResourceContext(DeploymentMode.BUNDLE, self.dist)
 
     def copy_resources(self):
-        for ty in ResourceType:
-            if ty.is_packagable():
-                shutil.copytree(
-                    self.resources.get(ty),
-                    self.dist_resources.get(ty),
-                    dirs_exist_ok=True,
-                    ignore=shutil.ignore_patterns("build", "generated"),
-                )
+        for ty in BUILTIN_RESOURCES:
+            shutil.copytree(
+                ty.resolve_path(),
+                ty.resolve_path(self.dist_resources),
+                dirs_exist_ok=True,
+                ignore=shutil.ignore_patterns("build", "generated"),
+            )
 
     def install_compiler(self):
         print(f"Copying the compiler for {self.system}")
@@ -58,25 +57,9 @@ class TaiheBuilder:
             "install",
             f"--target={site_packages_dir}",
             "--",
-            str(self.compiler_dir),
+            str(self.pyproject_dir),
         ]
-        subprocess.run(uv_args, check=True, cwd=self.compiler_dir)
-
-    def extract_python(self):
-        python_tar = (
-            self.resources.get(ResourceType.DEV_PYTHON_BUILD)
-            / f"{self.system}-python.tar.gz"
-        )
-        # First, extract to "dist/lib".
-        # It creates a sole directory named "python"
-        parent_dir = self.dist_pyrt_dir.parent
-        with tarfile.open(python_tar, "r:gz") as tar:
-            tar.extractall(parent_dir, filter="tar")
-        # Next, rename "dist/lib/python" to "dist/lib/pyrt"
-        old_dir = parent_dir / "python"
-        if self.dist_pyrt_dir.exists():
-            self.dist_pyrt_dir.rmdir()
-        old_dir.rename(self.dist_pyrt_dir)
+        subprocess.run(uv_args, check=True, cwd=self.pyproject_dir)
 
     def create_script(self, binary: str, pymod: str):
         # TODO use absolute script path
@@ -178,7 +161,7 @@ class TaiheBuilder:
         print(f"Created package for {self.system}: {zip_path}")
 
     def build(self):
-        self.extract_python()
+        PythonBuild.resolve().extract_to(self.dist_pyrt_dir, system=self.system)
         self.install_compiler()
         self.copy_resources()
         self.create_taihec_script()
@@ -196,6 +179,7 @@ def main():
         help="Specify the system type to build for. Can be used multiple times.",
     )
     args = parser.parse_args()
+    ResourceContext.initialize()
 
     project_dir = Path(__file__).parent.parent
 
@@ -226,7 +210,7 @@ def main():
     print(f"Version is {version}")
     for system in systems:
         print(f"Building for {system}")
-        builder = TaiheBuilder(project_dir, system, version)
+        builder = TaiheBuilder(system, version)
         builder.build()
 
 
