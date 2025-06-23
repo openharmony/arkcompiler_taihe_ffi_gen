@@ -79,7 +79,7 @@ template<typename AniRefGuard>
 struct hash_impl_t<
     AniRefGuard, std::enable_if_t<std::is_base_of_v<sref_guard, AniRefGuard>>> {
   std::size_t operator()(data_view) const {
-    throw std::runtime_error("Hashing of ani_ref is not implemented yet.");
+    TH_THROW(std::runtime_error, "Hashing of ani_ref is not implemented yet.");
   }
 };
 }  // namespace taihe
