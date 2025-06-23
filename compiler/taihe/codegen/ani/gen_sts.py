@@ -1369,7 +1369,7 @@ class STSCodeGenerator:
             "    }",
             "    let buf = new ArrayBuffer(n);",
             "    for (let i: int = 0; i < n; i++) {",
-            "        buf.set(i, (val & 255n).getLong() as byte)",
+            "        buf.set(i, (val & 255n).getLong().toByte())",
             "        val >>= 8n;",
             "    }",
             "    return buf;",
