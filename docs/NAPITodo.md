@@ -11,7 +11,7 @@ NAPI 代码生成及验证：
     - [ ] static, readonly, get set
     - [x] enum
     - [x] union                                          (number|string|bool|array|map)
-    - [ ] undefined, null
+    - [x] undefined, null
     - [x] array
     - [x] record
     - [x] map                                           (规格为不保序)
@@ -32,6 +32,7 @@ NAPI 代码生成及验证：
 3. 需要报错但未实现，设计如何报错并区分如何：
     - [ ] Record 的 key 类型限制，TS 语法规定是 string/number，SDK 现有场景是 string
     - [ ] ctor 检查返回值为 指定的 interface 且检查这个 interface 为 class 
+    - [ ] 检查 Union 要么有指定类型，要么有 undefined/null 的注解
 
 **注意：现在的验证方式是基于 ts 和 napi 非鸿蒙 napi，应配置鸿蒙环境下编译验证方法待设计。**
 xml 例子编译运行成功

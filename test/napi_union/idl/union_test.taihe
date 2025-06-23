@@ -4,6 +4,8 @@ union union_primitive {
   bValue: bool;
   aValue: Array<i32>;
   mValue: Map<i32, String>;
+  @undefined uValue;
+  @null nValue;
 }
 
 function printUnion(data: union_primitive): String;

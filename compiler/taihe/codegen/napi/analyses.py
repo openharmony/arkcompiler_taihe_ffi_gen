@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from typing import Literal
 
 from typing_extensions import override
 
@@ -158,14 +159,21 @@ class UnionNAPIInfo(AbstractAnalysis[UnionDecl]):
 
 
 class UnionFieldNAPIInfo(AbstractAnalysis[UnionFieldDecl]):
-    field_ty: Type | None
+    field_ty: Type | None | Literal["null", "undefined"]
 
     def __init__(self, am: AnalysisManager, d: UnionFieldDecl) -> None:
         super().__init__(am, d)
         if d.ty_ref is None:
+            if d.get_last_attr("null"):
+                self.field_ty = "null"
+                return
+            if d.get_last_attr("undefined"):
+                self.field_ty = "undefined"
+                return
             self.field_ty = None
         else:
             self.field_ty = d.ty_ref.resolved_ty
+        # TODO: check union field must have a type or have @null/@undefined attribute
 
 
 class AbstractTypeNAPIInfo(metaclass=ABCMeta):

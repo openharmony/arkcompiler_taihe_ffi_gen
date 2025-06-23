@@ -1010,8 +1010,22 @@ class NAPICodeGenerator:
                             union_napi_impl_target.writelns(
                                 f"return {union_cpp_info.full_name}({static_tags_str}, std::move({cpp_result_spec}));",
                             )
-                    else:
-                        pass
+                elif final_napi_info.field_ty == "null":
+                    with union_napi_impl_target.indented(
+                        f"if (value_ty == napi_null) {{",
+                        f"}}",
+                    ):
+                        union_napi_impl_target.writelns(
+                            f"return {union_cpp_info.full_name}({static_tags_str});",
+                        )
+                elif final_napi_info.field_ty == "undefined":
+                    with union_napi_impl_target.indented(
+                        f"if (value_ty == napi_undefined) {{",
+                        f"}}",
+                    ):
+                        union_napi_impl_target.writelns(
+                            f"return {union_cpp_info.full_name}({static_tags_str});",
+                        )
 
     def gen_union_into_napi_func(
         self,
@@ -1039,6 +1053,16 @@ class NAPICodeGenerator:
                         f"}}",
                     ):
                         match field_napi_info.field_ty:
+                            case "null":
+                                union_napi_impl_target.writelns(
+                                    f"napi_value napi_obj_field = nullptr;",
+                                    f"napi_get_null(env, &napi_obj_field);",
+                                )
+                            case "undefined":
+                                union_napi_impl_target.writelns(
+                                    f"napi_value napi_obj_field = nullptr;",
+                                    f"napi_get_undefined(env, &napi_obj_field);",
+                                )
                             case field_ty if isinstance(field_ty, Type):
                                 type_napi_info = TypeNAPIInfo.get(self.am, field_ty)
                                 type_napi_info.into_napi(

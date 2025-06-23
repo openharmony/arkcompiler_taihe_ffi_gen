@@ -215,10 +215,10 @@ class DTSCodeGenerator:
         for field in union.fields:
             field_napi_info = UnionFieldNAPIInfo.get(self.am, field)
             match field_napi_info.field_ty:
-                #     case "null":
-                #         sts_types.append("null")
-                #     case "undefined":
-                #         sts_types.append("undefined")
+                case "null":
+                    sts_types.append("null")
+                case "undefined":
+                    sts_types.append("undefined")
                 case field_ty if isinstance(field_ty, Type):
                     ty_napi_info = TypeNAPIInfo.get(self.am, field_ty)
                     sts_types.append(ty_napi_info.dts_type_name)

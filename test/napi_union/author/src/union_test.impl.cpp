@@ -22,6 +22,10 @@ namespace {
       std::cout << "C++ Map: key: " << key << " value: " << val << std::endl;
     }
     return "map";
+  case ::union_test::union_primitive::tag_t::uValue:
+    return "undefined";
+  case ::union_test::union_primitive::tag_t::nValue:
+    return "null";
   }
 }
 
@@ -48,6 +52,12 @@ namespace {
   }
   if (kind == "map") {
     return ::union_test::union_primitive::make_mValue(map_value);
+  }
+  if (kind == "undefined") {
+    return ::union_test::union_primitive::make_uValue();
+  }
+  if (kind == "null") {
+    return ::union_test::union_primitive::make_nValue();
   }
 }
 }  // namespace

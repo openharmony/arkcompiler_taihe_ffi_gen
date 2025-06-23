@@ -11,12 +11,16 @@ function main() {
   map.set(1, "1");
   map.set(2, "2");
   console.log(lib.printUnion(map));
+  console.log(lib.printUnion(undefined));
+  console.log(lib.printUnion(null));
   
   console.log(lib.makeUnion("s"));
   console.log(lib.makeUnion("number"));
   console.log(lib.makeUnion("bool"));
   console.log(lib.makeUnion("array"));
   console.log(lib.makeUnion("map"));
+  console.log(lib.makeUnion("undefined"));
+  console.log(lib.makeUnion("null"));
 }
 
 main();
