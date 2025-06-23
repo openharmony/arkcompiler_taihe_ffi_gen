@@ -64,6 +64,8 @@ def analyze_semantics(
     _CheckFieldNameCollisionErrorPass(diag).handle_decl(pg)
     _CheckEnumTypePass(diag).handle_decl(pg)
     _CheckRecursiveInclusionPass(diag).handle_decl(pg)
+
+    # This pass must be run after all other passes
     _ConvertAndCheckAttrPass(diag, attr_manager).handle_decl(pg)
 
 
@@ -487,9 +489,8 @@ class _ConvertAndCheckAttrPass(RecursiveDeclVisitor):
         self.attr_manager = attr_manager
 
     def visit_decl(self, d: Decl) -> None:
-        for unchecked in d.attributes.pop(UncheckedAttribute, []):
-            if isinstance(unchecked, UncheckedAttribute):
-                self.attr_manager.attach(unchecked, d, self.diag)
+        for unchecked_attr in UncheckedAttribute.consume(d):
+            self.attr_manager.attach(unchecked_attr, d, self.diag)
 
 
 V = TypeVar("V")

@@ -25,44 +25,35 @@ AnyAttribute = UncheckedAttribute | AbstractCheckedAttribute
    `AbstractCheckedAttribute.register_to(registry)`
 2. **IR Construction**: The IR converter processes unchecked attributes:
    - `CheckedAttributeManager.attach()` dispatches to appropriate handlers
-   - `AbstractCheckedAttribute.can_attach_on()` validates parent declarations
    - `AbstractCheckedAttribute.try_construct()` validates arguments and constructs instances
 """
 
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
+from dataclasses import MISSING, dataclass, fields
 from difflib import get_close_matches
-from types import NoneType, UnionType
-from typing import (
-    TYPE_CHECKING,
-    ClassVar,
-    TypeVar,
-    Union,
-    cast,
-    get_args,
-    get_origin,
-)
+from itertools import chain
+from types import UnionType
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from typing_extensions import Self, override
 
+from taihe.semantics.format import PrettyFormatter
 from taihe.utils.diagnostics import DiagnosticsManager
 from taihe.utils.exceptions import (
-    AttrArgCountError,
+    AttrArgMissingError,
     AttrArgOrderError,
-    AttrArgReAssignError,
+    AttrArgRedefError,
     AttrArgTypeError,
-    AttrArgUndefError,
-    AttrMutuallyExclusiveError,
-    AttrRepeatError,
-    AttrUndefError,
+    AttrArgUnrequiredError,
+    AttrConflictError,
+    AttrNotExistError,
+    AttrTargetError,
 )
 from taihe.utils.sources import SourceLocation
 
 if TYPE_CHECKING:
     from taihe.semantics.declarations import Decl
-
-T = TypeVar("T", bound="AbstractCheckedAttribute")
 
 
 @dataclass
@@ -91,13 +82,45 @@ class Argument:
     ```
     """
 
-    key: str
+    key: str | None
+    """The name of the argument if it is a keyword argument, or None for positional arguments."""
+
     value: float | bool | int | str
     """The evaluated constant value of the argument."""
 
 
 @dataclass
-class UncheckedAttribute:
+class AnyAttribute(metaclass=ABCMeta):
+    """Base class for all attributes, both checked and unchecked.
+
+    This serves as a common interface for both raw attributes (UncheckedAttribute)
+    and validated attributes (AbstractCheckedAttribute). It provides a unified
+    way to retrieve the name and arguments of an attribute for diagnostics.
+    """
+
+    loc: SourceLocation | None
+    """Source location of the attribute name for error reporting."""
+
+    @abstractmethod
+    def get_name_and_args(self) -> tuple[str, Iterable[Argument]]:
+        """Formats the attribute for diagnostics display.
+
+        Returns:
+            A tuple containing the attribute name and a sequence of its arguments.
+            The arguments do not need to have a location.
+        """
+
+    @property
+    def description(self) -> str:
+        """Provides a human-readable description of the attribute.
+
+        This can be overridden by subclasses to provide more context.
+        """
+        return f"attribute {PrettyFormatter().get_format_attr(self)}"
+
+
+@dataclass
+class UncheckedAttribute(AnyAttribute):
     """Raw attribute data before type checking and validation.
 
     This represents the syntactic form of an attribute as parsed from source code,
@@ -107,27 +130,25 @@ class UncheckedAttribute:
     name: str
     """The attribute name as it appears in source code (without @ prefix)."""
 
-    loc: SourceLocation | None
-    """Source location of the attribute name for error reporting."""
-
     args: Sequence[Argument]
     """Positional arguments passed to the attribute."""
 
-    @staticmethod
-    def get(decl: "Decl", name: str | None = None) -> Iterable["UncheckedAttribute"]:
-        attrs = decl.attributes.get(UncheckedAttribute, [])
-        attrs = cast("list[UncheckedAttribute]", attrs)
-        if name:
-            return filter(lambda a: a.name == name, attrs)
-        else:
-            return attrs
+    def get_name_and_args(self) -> tuple[str, Iterable[Argument]]:
+        return self.name, self.args
 
-    @staticmethod
-    def contains(decl: "Decl", name: str) -> bool:
-        return any(True for _ in UncheckedAttribute.get(decl, name))
+    @classmethod
+    def consume(cls, decl: "Decl") -> Iterable[Self]:
+        """Yields all unchecked attributes from a declaration.
+
+        This method iterates through the declaration's attributes and yields
+        each unchecked attribute of the specified class, removing it from the
+        declaration's attribute list.
+        """
+        while others := decl.attributes.get(cls, []):
+            yield cast(Self, others.pop(0))
 
 
-class AbstractCheckedAttribute(ABC):
+class AbstractCheckedAttribute(AnyAttribute, metaclass=ABCMeta):
     """Base class for validated attributes with pluggable checking logic.
 
     This provides the low-level framework for implementing custom attributes.
@@ -152,19 +173,6 @@ class AbstractCheckedAttribute(ABC):
     ```
     """
 
-    TARGETS: ClassVar[frozenset[type["Decl"]]] = frozenset()
-    """Set of declaration types this attribute can be attached to.
-
-    The system uses isinstance() checking, so inheritance hierarchies
-    are properly supported.
-    """
-
-    loc: SourceLocation | None
-    """Source location of the attribute name for error reporting."""
-
-    NAME: ClassVar[str]
-    """Explicit attribute name."""
-
     @classmethod
     @abstractmethod
     def register_to(cls, registry: "CheckedAttributeManager") -> None:
@@ -181,7 +189,7 @@ class AbstractCheckedAttribute(ABC):
     @abstractmethod
     def try_construct(
         cls,
-        perant: "Decl",
+        parent: "Decl",
         raw: UncheckedAttribute,
         dm: DiagnosticsManager,
     ) -> Self | None:
@@ -192,7 +200,7 @@ class AbstractCheckedAttribute(ABC):
         diagnostic messages and returns None.
 
         Args:
-            perant: attribute node perant node
+            parent: attribute node parent node
             raw: The unchecked attribute data from parsing
             dm: Diagnostics manager for error reporting
 
@@ -203,6 +211,10 @@ class AbstractCheckedAttribute(ABC):
             This method must not raise exceptions. All errors should be reported
             through the diagnostics manager.
         """
+
+
+class AttributeGroupTag:
+    pass
 
 
 class AutoCheckedAttribute(AbstractCheckedAttribute):
@@ -212,118 +224,118 @@ class AutoCheckedAttribute(AbstractCheckedAttribute):
     target validation, reducing boilerplate in concrete attribute implementations.
     """
 
-    MUTUALLY_EXCLUSIVE: ClassVar[frozenset[type["AutoCheckedAttribute"]]] = frozenset()
-    """Set of attribute types that are mutually exclusive with this one.
+    NAME: ClassVar[str]
+    """Explicit attribute name."""
 
-    If a declaration already has any attribute in this set, attaching this
-    attribute will result in a conflict.
+    TARGETS: ClassVar[frozenset[type["Decl"]]]
+    """Set of declaration types this attribute can be attached to.
 
-    This mechanism allows attribute authors to prevent logically conflicting
-    annotations from being used together on the same declaration.
+    The system uses isinstance() checking, so inheritance hierarchies
+    are properly supported.
+
+    Use `frozenset({Decl})` to indicate the attribute can be attached
+    to any declaration.
+    """
+
+    MUTUALLY_EXCLUSIVE_GROUP_TAGS: ClassVar[frozenset[AttributeGroupTag]] = frozenset()
+    """Set of tags indicating mutually exclusive attribute groups.
+
+    If this is non-empty, the attribute cannot coexist with any other
+    attribute that has any of these tags.
     """
 
     @override
     @classmethod
     def register_to(cls, registry: "CheckedAttributeManager") -> None:
-        """Registers using the inferred or explicit attribute name."""
         registry.register_one(cls.NAME, cls)
 
     @override
     @classmethod
     def try_construct(
         cls,
-        perant: "Decl",
+        parent: "Decl",
         raw: UncheckedAttribute,
         dm: DiagnosticsManager,
     ) -> Self | None:
-        """Attempts to construct a validated attribute from raw data.
+        res = cls.try_create(raw, dm)
+        if res is None:
+            return None
+        if not res.can_attach_on(parent, dm):
+            return None
+        return res
 
-        This method performs argument validation and type checking. On success,
-        it returns a fully constructed attribute instance. On failure, it emits
-        diagnostic messages and returns None.
+    @classmethod
+    def try_create(
+        cls,
+        raw: UncheckedAttribute,
+        dm: DiagnosticsManager,
+    ) -> Self | None:
+        """Process the validated arguments and construct the attribute instance.
+
+        This method should be implemented by subclasses to handle specific
+        argument processing logic.
 
         Args:
-            perant: attribute node perant node
             raw: The unchecked attribute data from parsing
             dm: Diagnostics manager for error reporting
 
         Returns:
-            Validated attribute instance on success, None on failure
-
-        Note:
-            This method must not raise exceptions. All errors should be reported
-            through the diagnostics manager.
+            An instance of the attribute on success, None on failure
         """
-        if not cls._check_mutual_exclusivity(perant, raw, dm):
+        args, kwargs, ok = cls.split_and_validate_args(raw, dm)
+        if not ok:
             return None
 
-        pos_args, kw_args, arg_error = cls._split_and_validate_args(raw, dm)
-        if arg_error:
+        dataclass_arguments: dict[str, Any] = {}
+
+        for field in fields(cls):
+            if field.name == "loc":
+                # Special handling for the 'loc' field
+                dataclass_arguments["loc"] = raw.loc
+                continue
+            if field.init is False:
+                # Skip fields that are not intended for initialization
+                continue
+            elif field.name in kwargs:
+                # If the field is in keyword arguments, use that value
+                arg = kwargs.pop(field.name)
+            elif field.kw_only:
+                # If the field is keyword-only and no value is provided, emit an error
+                dm.emit(AttrArgMissingError(cls.NAME, field.name, True, loc=raw.loc))
+                return None
+            elif args:
+                # If the field is positional, pop the first positional argument
+                arg = args.pop(0)
+            elif field.default is MISSING and field.default_factory is MISSING:
+                # If no value is provided and no default, emit an error
+                dm.emit(AttrArgMissingError(cls.NAME, field.name, False, loc=raw.loc))
+                return None
+            else:
+                # Use the default value if no argument is provided
+                continue
+
+            # Validate the type of the provided value
+            field_type = cast(type | UnionType, field.type)
+            if not isinstance(arg.value, field_type):
+                dm.emit(AttrArgTypeError(cls.NAME, field.name, field_type, arg))
+                return None
+
+            # Store the validated value in the dataclass kwargs
+            dataclass_arguments[field.name] = arg.value
+
+        # If there are any remaining keyword arguments, emit an error
+        for attr_arg in chain(args, kwargs.values()):
+            dm.emit(AttrArgUnrequiredError(cls.NAME, attr_arg))
             return None
 
-        # Split arguments into required and optional
-        type_hints = cls._get_own_instance_fields()
-        required_args, optional_args = cls._categorize_args(type_hints)
-
-        if not cls._validate_argument_count(
-            raw, len(required_args), len(optional_args), dm
-        ):
-            return None
-
-        inst = cls.__new__(cls)
-        inst.loc = raw.loc
-
-        # Check parameter order, type, and parameter assignment
-        if not cls._process_args(
-            inst,
-            pos_args,
-            kw_args,
-            required_args,
-            optional_args,
-            type_hints,
-            raw.name,
-            dm,
-        ):
-            return None
-
-        return inst
+        return cls(**dataclass_arguments)
 
     @classmethod
-    def _check_mutual_exclusivity(
-        cls,
-        perant: "Decl",
-        raw: UncheckedAttribute,
-        dm: DiagnosticsManager,
-    ) -> bool:
-        """Check for mutually exclusive attribute conflicts on the same declaration.
-
-        This method verifies that the current attribute does not conflict with
-        any attributes already attached to the target declaration, based on the
-        `MUTUALLY_EXCLUSIVE` set.
-
-        Args:
-            perant: The declaration the attribute is being applied to.
-            raw: The raw attribute instance from parsing.
-            dm: Diagnostics manager for error reporting.
-
-        Returns:
-            True if no mutually exclusive attributes are found; False otherwise.
-        """
-        if cls.MUTUALLY_EXCLUSIVE:
-            for attr_type, _ in perant.attributes.items():
-                if attr_type in cls.MUTUALLY_EXCLUSIVE and issubclass(
-                    attr_type, AutoCheckedAttribute
-                ):
-                    dm.emit(AttrMutuallyExclusiveError(raw, attr_type))
-                    return False
-        return True
-
-    @classmethod
-    def _split_and_validate_args(
+    def split_and_validate_args(
         cls,
         raw: UncheckedAttribute,
         dm: DiagnosticsManager,
-    ) -> tuple[list[Argument], list[Argument], bool]:
+    ) -> tuple[list[Argument], dict[str, Argument], bool]:
         """Split raw arguments into positional and keyword, and validate ordering.
 
         Positional arguments must appear before any keyword arguments.
@@ -339,234 +351,66 @@ class AutoCheckedAttribute(AbstractCheckedAttribute):
             - List of keyword arguments
             - A boolean indicating if any ordering errors were found
         """
-        pos_args: list[Argument] = []
-        kw_args: list[Argument] = []
-        seen_keyword = False
-        error = False
+        args: list[Argument] = []
+        kwargs: dict[str, Argument] = {}
 
         for arg in raw.args:
-            if arg.key == "":
-                if seen_keyword:
+            if arg.key is None:
+                if kwargs:
                     dm.emit(AttrArgOrderError(arg))
-                    error = True
-                pos_args.append(arg)
+                    return [], {}, False
+                args.append(arg)
             else:
-                seen_keyword = True
-                kw_args.append(arg)
+                if (prev := kwargs.get(arg.key)) is not None:
+                    dm.emit(AttrArgRedefError(prev, arg))
+                    return [], {}, False
+                kwargs[arg.key] = arg
 
-        return pos_args, kw_args, error
+        return args, kwargs, True
 
-    @classmethod
-    def _categorize_args(
-        cls, type_hints: dict[str, type]
-    ) -> tuple[list[str], list[str]]:
-        """Categorize attribute fields into required and optional.
-
-        Based on the type hints declared on the attribute class,
-        arguments are split into:
-        - Required: no default, not Optional
-        - Optional: declared as Optional[T] or T | None or Union[T, None]
-
-        Returns:
-            A tuple of:
-            - List of required field names
-            - List of optional field names
-        """
-        required_args: list[str] = []
-        optional_args: list[str] = []
-
-        for name, hint in type_hints.items():
-            origin = get_origin(hint)
-            args = get_args(hint)
-            if origin in (Union, UnionType) and type(None) in args:
-                # this arg's type is Optional[T] or T | None or Union[T, None]
-                optional_args.append(name)
-            else:
-                required_args.append(name)
-
-        return required_args, optional_args
-
-    @classmethod
-    def _validate_argument_count(
-        cls,
-        raw: UncheckedAttribute,
-        required_count: int,
-        optional_count: int,
+    def can_attach_on(
+        self,
+        parent: "Decl",
         dm: DiagnosticsManager,
     ) -> bool:
-        """Validate that the number of arguments matches the expected count.
-
-        Rules:
-        - The number of arguments must be at least the number of required fields.
-        - The number of arguments must not exceed the total of required + optional fields.
-
-        Violating these rules triggers a diagnostic error indicating
-        the expected and actual argument counts.
-
-        Returns:
-            True if the argument count is valid; False otherwise.
-        """
-        if (
-            len(raw.args) > (required_count + optional_count)
-            or len(raw.args) < required_count
-        ):
-            dm.emit(
-                AttrArgCountError(
-                    raw.loc,
-                    raw.name,
-                    required_count,
-                    optional_count,
-                    len(raw.args),
-                )
-            )
-            return False
-        return True
-
-    @classmethod
-    def _process_args(
-        cls,
-        inst: Self,
-        pos_args: list[Argument],
-        kw_args: list[Argument],
-        required_args: list[str],
-        optional_args: list[str],
-        type_hints: dict[str, type],
-        attr_name: str,
-        dm: DiagnosticsManager,
-    ) -> bool:
-        """Process and validate arguments.
-
-        Rules:
-        - Positional arguments are matched in order to required and optional fields.
-        - Keyword arguments must refer to a known field and cannot duplicate positional ones.
-        - All argument types must match the declared type hints.
-        - Duplicate or undefined argument names result in diagnostics.
-
-        Returns:
-            True if all arguments are valid and successfully assigned;
-            False if any validation fails (with diagnostics emitted).
-        """
-        seen_names: set[str] = set()
-
-        for i, arg in enumerate(pos_args):
-            field = (
-                required_args[i]
-                if i < len(required_args)
-                else optional_args[i - len(required_args)]
-            )
-            seen_names.add(field)
-            if not cls._validate_and_set_argument(
-                inst, arg, field, type_hints[field], attr_name, dm
-            ):
-                return False
-
-        for arg in kw_args:
-            key = arg.key
-            if key not in required_args and key not in optional_args:
-                dm.emit(AttrArgUndefError(arg))
-                return False
-            if key in seen_names:
-                dm.emit(AttrArgReAssignError(arg))
-                return False
-            if not cls._validate_and_set_argument(
-                inst, arg, key, type_hints[key], attr_name, dm
-            ):
-                return False
-            seen_names.add(key)
-
-        return True
-
-    @classmethod
-    def _validate_and_set_argument(
-        cls,
-        inst: Self,
-        arg: Argument,
-        field: str,
-        expected_type: type,
-        attr_name: str,
-        dm: DiagnosticsManager,
-    ) -> bool:
-        if not isinstance(arg.value, expected_type):
-            dm.emit(
-                AttrArgTypeError(
-                    arg.loc,
-                    attr_name,
-                    cls._format_type(expected_type),
-                    type(arg.value).__name__,
-                )
-            )
+        if not any(isinstance(parent, t) for t in self.TARGETS):
+            dm.emit(AttrTargetError(parent, self))
             return False
 
-        setattr(inst, field, arg.value)
+        for other, attrs in parent.attributes.items():
+            if not attrs:
+                continue
+            if isinstance(self, other):
+                continue
+            if not issubclass(other, AutoCheckedAttribute):
+                continue
+            if self.MUTUALLY_EXCLUSIVE_GROUP_TAGS & other.MUTUALLY_EXCLUSIVE_GROUP_TAGS:
+                dm.emit(AttrConflictError(self, attrs[0]))
+                return False
+
         return True
 
-    @classmethod
-    def _is_positional_then_keyword(cls, args: Sequence[Argument]) -> Argument | None:
-        """Determine the order of args.
-
-        Support mixed use of args and kwargs, but args must come before kwargs
-        args.keys: ["", "", ""]  # OK
-        args.keys: ["key1", "key2"] # OK
-        args.keys: ["", "key1", ""] # ERROR
-
-        Returns:
-            The `loc` of the first positional argument that appears after
-        a keyword argument. If all good, return None.
-        """
-        seen_keyword = False
-        for arg in args:
-            if arg.key == "":
-                if seen_keyword:
-                    return arg
-            else:
-                seen_keyword = True
-        return None
-
-    @classmethod
-    def _get_own_instance_fields(cls) -> dict[str, type]:
-        """Retrieve instance-level annotated fields defined in the current class.
-
-        This method returns a dictionary mapping field names to their type annotations
-        for all attributes defined in the current class (i.e., not inherited from a base class).
-        It excludes fields annotated as `ClassVar`, as those are considered class-level variables
-        and not instance-specific.
-
-        Returns:
-            dict[str, type]: A dictionary where keys are attribute names and values are their
-            corresponding type annotations, excluding `ClassVar` types.
-
-        Note:
-            This method assumes that `cls.__annotations__` only includes fields declared in the
-            current class and not inherited ones. If inheritance filtering is needed, additional
-            logic is required.
-        """
-        result: dict[str, type] = {}
-        for name, hint in cls.__annotations__.items():
-            if get_origin(hint) is not ClassVar:
-                result[name] = hint
-        return result
-
-    @classmethod
-    def _format_type(cls, tp: type) -> str:
-        """Format type for error messages."""
-        origin = get_origin(tp)
-        args = get_args(tp)
-        if origin is UnionType or origin is Union:
-            return " | ".join(cls._format_type(a) for a in args if a is not NoneType)
-        return tp.__name__
+    @override
+    def get_name_and_args(self) -> tuple[str, Iterable[Argument]]:
+        args: list[Argument] = []
+        for field in fields(self):
+            if field.name == "loc":
+                # Skip the 'loc' field in the argument list
+                continue
+            if field.init is False:
+                # Skip fields that are not intended for initialization
+                continue
+            value = getattr(self, field.name, None)
+            if value is not None:
+                args.append(Argument(key=field.name, value=value, loc=None))
+        return self.NAME, args
 
 
 class TypedAttribute(AutoCheckedAttribute):
     """Type-checked attribute that can be attached at most once per declaration."""
 
     @classmethod
-    def _is_unique_attachment(cls, parent: "Decl") -> bool:
-        """Checks if this would be the first attachment of this attribute type."""
-        existing_attrs = parent.attributes.get(cls, [])
-        return len(existing_attrs) == 0
-
-    @classmethod
-    def get(cls: type[T], decl: "Decl") -> T | None:
+    def get(cls, decl: "Decl") -> Self | None:
         """Retrieves the single instance of this attribute from a declaration.
 
         Args:
@@ -576,25 +420,28 @@ class TypedAttribute(AutoCheckedAttribute):
             The attribute instance if present, None otherwise
         """
         if attrs := decl.attributes.get(cls):
-            return cast("T", attrs[0])
+            return cast(Self, attrs[0])
         return None
 
     @override
-    @classmethod
-    def try_construct(
-        cls, perant: "Decl", raw: UncheckedAttribute, dm: DiagnosticsManager
-    ) -> Self | None:
-        if not cls._is_unique_attachment(perant):
-            dm.emit(AttrRepeatError(raw))
-            return None
-        return super().try_construct(perant, raw, dm)
+    def can_attach_on(
+        self,
+        parent: "Decl",
+        dm: DiagnosticsManager,
+    ) -> bool:
+        prevs = parent.attributes.get(type(self), [])
+        if prevs:
+            dm.emit(AttrConflictError(self, prevs[0]))
+            return False
+
+        return super().can_attach_on(parent, dm)
 
 
 class RepeatableAttribute(AutoCheckedAttribute):
     """Type-checked attribute that can be attached multiple times per declaration."""
 
     @classmethod
-    def get(cls: type[T], decl: "Decl") -> list[T]:
+    def get(cls, decl: "Decl") -> list[Self]:
         """Retrieves all instances of this attribute from a declaration.
 
         Args:
@@ -604,12 +451,11 @@ class RepeatableAttribute(AutoCheckedAttribute):
             List of attribute instances (empty if none present)
         """
         attrs = decl.attributes.get(cls, [])
-        return cast("list[T]", attrs)
+        return cast(list[Self], attrs)
 
 
 # Type aliases for clarity
 CheckedAttrT = type[AbstractCheckedAttribute]
-AnyAttribute = AbstractCheckedAttribute | UncheckedAttribute
 
 
 class CheckedAttributeManager:
@@ -652,57 +498,28 @@ class CheckedAttributeManager:
             attr_type.register_to(self)
 
     def attach(
-        self, raw: UncheckedAttribute, decl: "Decl", dm: DiagnosticsManager
-    ) -> AbstractCheckedAttribute | None:
-        """Validates and attaches an unchecked attribute to a declaration.
+        self,
+        raw: UncheckedAttribute,
+        decl: "Decl",
+        dm: DiagnosticsManager,
+    ) -> None:
+        """Validates and constructs a typed attribute from unchecked attribute data.
 
         This method orchestrates the entire attachment process:
         1. Looks up the attribute type by name
-        2. Validates attachment eligibility
-        3. Constructs the typed attribute instance
-        4. Adds it to the declaration's attribute collection
+        2. Constructs the typed attribute instance
 
         Args:
             raw: Unchecked attribute data from parsing
             decl: Target declaration for attachment
             dm: Diagnostics manager for error reporting
-
-        Returns:
-            The constructed attribute instance on success, None on failure
-
-        Raises:
-            AdhocError: If the attribute name is not registered
         """
-        # Look up the attribute type - this is the only case where we raise
-        # an exception, as unknown attributes indicate a configuration error
         attr_type = self._name_to_attr.get(raw.name)
         if attr_type is None:
             suggestions = get_close_matches(raw.name, self._name_to_attr.keys())
-            new_suggestons: list[str] = []
-            for suggestion in suggestions:
-                sugg_attr_type = self._name_to_attr.get(suggestion)
-                if (
-                    sugg_attr_type
-                    and sugg_attr_type.TARGETS
-                    and not any(isinstance(decl, t) for t in sugg_attr_type.TARGETS)
-                ):
-                    continue
-                else:
-                    new_suggestons.append(suggestion)
-            dm.emit(AttrUndefError(raw.loc, raw.name, new_suggestons))
+            dm.emit(AttrNotExistError(raw.name, suggestions, loc=raw.loc))
             return None
 
-        # check attrbute conflict
-        elif attr_type.TARGETS and not any(
-            isinstance(decl, t) for t in attr_type.TARGETS
-        ):
-            dm.emit(AttrUndefError(raw.loc, raw.name, []))
-
         # Attempt to construct the typed attribute
-        if checked_attr := attr_type.try_construct(decl, raw, dm):
-            # Add to the declaration's attribute collection
-            checked_attr.loc = raw.loc
-            decl.add_attribute(checked_attr)
-            return checked_attr
-
-        return None
+        if check_attribute := attr_type.try_construct(decl, raw, dm):
+            decl.add_attribute(check_attribute)

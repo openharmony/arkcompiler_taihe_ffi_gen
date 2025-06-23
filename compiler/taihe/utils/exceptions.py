@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Optional
+from types import UnionType
+from typing import TYPE_CHECKING
 
 from typing_extensions import override
 
@@ -9,11 +10,11 @@ from taihe.utils.sources import SourceLocation
 
 if TYPE_CHECKING:
     from taihe.semantics.attributes import (
+        AnyAttribute,
         Argument,
-        AutoCheckedAttribute,
-        UncheckedAttribute,
     )
     from taihe.semantics.declarations import (
+        Decl,
         EnumDecl,
         EnumItemDecl,
         IfaceDecl,
@@ -27,10 +28,22 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class DeclRedefNote(DiagNote):
-    prev: "NamedDecl"
+class AttrArgOrderError(DiagError):
+    def __init__(self, arg: "Argument"):
+        super().__init__(loc=arg.loc)
 
-    def __init__(self, prev: "NamedDecl"):
+    @override
+    def describe(self) -> str:
+        return (
+            "Positioned arguments cannot follow keyword arguments in attribute calls."
+        )
+
+
+@dataclass
+class AttrArgRedefNote(DiagNote):
+    prev: "Argument"
+
+    def __init__(self, prev: "Argument"):
         super().__init__(loc=prev.loc)
         self.prev = prev
 
@@ -40,58 +53,90 @@ class DeclRedefNote(DiagNote):
 
 
 @dataclass
-class AttrArgCountError(DiagError):
-    loc: Optional["SourceLocation"]
-    name: str
-    required: int
-    optional: int
-    provided: int
+class AttrArgRedefError(DiagError):
+    prev: "Argument"
+    current: "Argument"
+
+    def __init__(self, prev: "Argument", current: "Argument"):
+        super().__init__(loc=current.loc)
+        self.prev = prev
+        self.current = current
 
     @override
     def describe(self) -> str:
-        if self.required and self.optional:
-            expect_str = f"{self.required} required + {self.optional} optional"
-        elif self.required:
-            expect_str = f"{self.required} required"
-        elif self.optional:
-            expect_str = f"{self.optional} optional"
+        return f"redefinition of key {self.current.key!r}"
+
+    @override
+    def notes(self):
+        if self.prev.loc:
+            yield AttrArgRedefNote(self.prev)
+
+
+@dataclass
+class AttrArgMissingError(DiagError):
+    attr_name: str
+    arg_name: str
+    kw_only: bool = False
+
+    @override
+    def describe(self) -> str:
+        if self.kw_only:
+            kind = "keyword-only"
         else:
-            expect_str = "no arguments"
-        return (
-            f"Attribute {self.name!r} argument error: "
-            f"Expected {expect_str}, "
-            f"but got {self.provided}."
-        )
+            kind = "positional or keyword"
+        return f"Missing {kind} argument {self.arg_name!r} in attribute {self.attr_name!r}."
+
+
+@dataclass
+class AttrArgUnrequiredError(DiagError):
+    attr_name: str
+    attr_arg: "Argument"
+
+    def __init__(self, attr_name: str, arg: "Argument"):
+        super().__init__(loc=arg.loc)
+        self.attr_name = attr_name
+        self.attr_arg = arg
+
+    @override
+    def describe(self) -> str:
+        if self.attr_arg.key is None:
+            argument = "positional argument"
+        else:
+            argument = f"keyword argument {self.attr_arg.key!r}"
+        return f"Unexpected {argument} in attribute {self.attr_name!r}."
 
 
 @dataclass
 class AttrArgTypeError(DiagError):
-    """Represents a type mismatch error in a specific argument of an attribute.
+    attr_name: str
+    arg_name: str
+    arg_type: type | UnionType
+    attr_arg: "Argument"
 
-    Attributes:
-        loc (Optional[SourceLocation]): The source location where the error occurred.
-        name (str): The name of the attribute.
-        index (int): The index of the argument that caused the type mismatch.
-        expected (str): The expected type of the argument.
-        actual (str): The actual type of the argument as received.
-    """
-
-    loc: Optional["SourceLocation"]
-    name: str
-    expected: str
-    actual: str
+    def __init__(
+        self,
+        attr_name: str,
+        arg_name: str,
+        arg_type: type | UnionType,
+        arg: "Argument",
+    ):
+        super().__init__(loc=arg.loc)
+        self.attr_name = attr_name
+        self.arg_name = arg_name
+        self.arg_type = arg_type
+        self.attr_arg = arg
 
     @override
     def describe(self) -> str:
-        return (
-            f"Attribute {self.name!r} argument type error: "
-            f"expected {self.expected}, got {self.actual}"
-        )
+        if isinstance(self.arg_type, UnionType):
+            readable_type = " or ".join(t.__name__ for t in self.arg_type.__args__)
+        else:
+            readable_type = self.arg_type.__name__
+        return f"Argument {self.arg_name!r} in attribute {self.attr_name} must be of type {readable_type}, but got {self.attr_arg.value!r}"
 
 
 @dataclass
-class AttrUndefError(DiagError):
-    loc: Optional["SourceLocation"]
+class AttrNotExistError(DiagError):
     name: str
     suggestion: list[str]
 
@@ -105,83 +150,67 @@ class AttrUndefError(DiagError):
 
 
 @dataclass
-class AttrArgOrderError(DiagError):
-    arg: "Argument"
+class AttrConflictNote(DiagNote):
+    prev: "AnyAttribute"
 
-    def __init__(self, kwarg: "Argument"):
-        super().__init__(loc=kwarg.loc)
-        self.arg = kwarg
+    def __init__(self, prev: "AnyAttribute"):
+        super().__init__(loc=prev.loc)
+        self.prev = prev
 
     @override
     def describe(self) -> str:
-        return "Keyword arguments must come after the arguements."
+        return f"conflicting with {self.prev.description}"
 
 
 @dataclass
-class AttrArgUndefError(DiagError):
-    arg: "Argument"
+class AttrConflictError(DiagError):
+    current: "AnyAttribute"
+    prev: "AnyAttribute"
 
     def __init__(
         self,
-        arg: "Argument",
+        current: "AnyAttribute",
+        prev: "AnyAttribute",
     ):
-        super().__init__(loc=arg.loc)
-        self.arg = arg
+        super().__init__(loc=current.loc)
+        self.current = current
+        self.prev = prev
 
     @override
     def describe(self) -> str:
-        return f"Unknown keyword argument: {self.arg.key!r}"
-
-
-@dataclass
-class AttrArgReAssignError(DiagError):
-    arg: "Argument"
-
-    def __init__(
-        self,
-        arg: "Argument",
-    ):
-        super().__init__(loc=arg.loc)
-        self.arg = arg
+        return f"cannot attach {self.current.description} due to conflict"
 
     @override
-    def describe(self) -> str:
-        return f"Repeated assignment argument: {self.arg.key!r}"
+    def notes(self):
+        yield AttrConflictNote(self.prev)
 
 
 @dataclass
-class AttrMutuallyExclusiveError(DiagError):
-    conflicting_attr: "UncheckedAttribute"
-    with_attr: type["AutoCheckedAttribute"]
+class AttrTargetError(DiagError):
+    decl: "Decl"
+    attr: "AnyAttribute"
 
-    def __init__(
-        self,
-        conflicting_attr: "UncheckedAttribute",
-        with_attr: type["AutoCheckedAttribute"],
-    ):
-        super().__init__(loc=conflicting_attr.loc)
-        self.conflicting_attr = conflicting_attr
-        self.with_attr = with_attr
-
-    @override
-    def describe(self) -> str:
-        if self.conflicting_attr.name == self.with_attr.NAME:
-            return f"Attribute @{self.conflicting_attr.name} cannot be attached to the same declaration repeatedly"
-        return f"Attribute @{self.conflicting_attr.name} cannot be attached to the same declaration as @{self.with_attr.NAME}"
-
-
-@dataclass
-class AttrRepeatError(DiagError):
-    # TODO: AutoCheckedAttribute or TypedAttribute
-    attr: "UncheckedAttribute"
-
-    def __init__(self, attr: "UncheckedAttribute"):
-        super().__init__(loc=attr.loc)
+    def __init__(self, decl: "Decl", attr: "AnyAttribute"):
+        super().__init__(loc=decl.loc)
+        self.decl = decl
         self.attr = attr
 
     @override
     def describe(self) -> str:
-        return f"Attribute @{self.attr.name} cannot be appended to the same Decl repeatedly"
+        return f"{self.attr.description} cannot be attached to {self.decl.description}"
+
+
+@dataclass
+class DeclRedefNote(DiagNote):
+    prev: "NamedDecl"
+
+    def __init__(self, prev: "NamedDecl"):
+        super().__init__(loc=prev.loc)
+        self.prev = prev
+
+    @override
+    def describe(self) -> str:
+        return "previously defined here"
 
 
 @dataclass

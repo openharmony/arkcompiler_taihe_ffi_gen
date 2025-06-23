@@ -1,16 +1,17 @@
 """Format the IDL files."""
 
 from collections.abc import Callable
+from itertools import chain
 from typing import TYPE_CHECKING, Any
 
 from typing_extensions import override
 
-from taihe.semantics.attributes import AutoCheckedAttribute, UncheckedAttribute
 from taihe.semantics.visitor import DeclVisitor
 from taihe.utils.diagnostics import AnsiStyle
 from taihe.utils.outputs import BaseWriter
 
 if TYPE_CHECKING:
+    from taihe.semantics.attributes import AnyAttribute
     from taihe.semantics.declarations import (
         CallbackTypeRefDecl,
         Decl,
@@ -57,12 +58,10 @@ class PrettyFormatter(DeclVisitor[str]):
             self.as_comment = lambda s: s
 
     def with_attr(self, d: "Decl", s: str) -> str:
-        if not d.attributes:
-            return s
-        fmt_attrs = " ".join(
-            self.as_attr(f"@{item}") for item in self.get_format_attr(d)
-        )
-        return f"{fmt_attrs} {s}"
+        for item in chain(*d.attributes.values()):
+            fmt_attrs = self.as_attr(f"@{self.get_format_attr(item)}")
+            s = f"{fmt_attrs} {s}"
+        return s
 
     def get_type_ref_decl(self, d: "TypeRefDecl"):
         type_ref_repr = self.handle_decl(d)
@@ -136,40 +135,22 @@ class PrettyFormatter(DeclVisitor[str]):
             return f"{obj:f}"
         raise TypeError(f"Unsupported type: {type(obj)}")
 
-    def get_format_attr(self, d: "Decl") -> list[str]:
-        # XXX
-        formatted_attributes: list[str] = []
-        for _, items in d.attributes.items():
-            for item in items:
-                if isinstance(item, UncheckedAttribute):
-                    parts: list[str] = []
-                    for arg in item.args:
-                        val_str = self.get_value(arg.value)
-                        if arg.key == "":
-                            parts.append(val_str)
-                        else:
-                            parts.append(f"{arg.key}={val_str}")
-                    if parts:
-                        formatted_attributes.append(f"{item.name}({', '.join(parts)})")
-                    else:
-                        formatted_attributes.append(item.name)
-
-                elif isinstance(item, AutoCheckedAttribute):
-                    name = item.NAME
-                    parts: list[str] = []
-                    annotations = getattr(type(item), "__annotations__", {})
-                    for field, _ in annotations.items():
-                        val = getattr(item, field, None)
-                        if val is not None:
-                            parts.append(f"{field}={self.get_value(val)}")
-                    if parts:
-                        formatted_attributes.append(f"{name}({', '.join(parts)})")
-                    else:
-                        formatted_attributes.append(name)
+    def get_format_attr(self, item: "AnyAttribute") -> str:
+        name, args = item.get_name_and_args()
+        if not args:
+            attr_fmt = name
+        else:
+            args_str: list[str] = []
+            for arg in args:
+                value = self.get_value(arg.value)
+                if arg.key:
+                    arg_str = f"{arg.key}={value}"
                 else:
-                    formatted_attributes.append("UnknownAttribute")
-
-        return formatted_attributes
+                    arg_str = value
+                args_str.append(arg_str)
+            args_fmt = ", ".join(args_str)
+            attr_fmt = f"{name}({args_fmt})"
+        return attr_fmt
 
 
 class PrettyPrinter(DeclVisitor[None]):
@@ -183,13 +164,13 @@ class PrettyPrinter(DeclVisitor[None]):
         self.fmt = PrettyFormatter(show_resolved, colorize)
 
     def write_pkg_attr(self, d: "PackageDecl"):
-        for item in self.fmt.get_format_attr(d):
-            attr = self.fmt.as_attr(f"@!{item}")
+        for item in chain(*d.attributes.values()):
+            attr = self.fmt.as_attr(f"@!{self.fmt.get_format_attr(item)}")
             self.out.writeln(f"{attr}")
 
     def write_attr(self, d: "Decl"):
-        for item in self.fmt.get_format_attr(d):
-            attr = self.fmt.as_attr(f"@{item}")
+        for item in chain(*d.attributes.values()):
+            attr = self.fmt.as_attr(f"@{self.fmt.get_format_attr(item)}")
             self.out.writeln(f"{attr}")
 
     @override

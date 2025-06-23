@@ -23,15 +23,14 @@
 ```python
 @dataclass
 class Argument:
-
     loc: Optional[SourceLocation]
-    key: str
+    key: str | None
     value: float | bool | int | str
 ```
 
 `Argument` 的位置信息可以提供更加细粒度更加友好的报错信息
 
-`Argument` 可以表示普通的 argument 也可以表示 keyword argument，当表示普通 argument 时，key 为空字符串
+`Argument` 可以表示普通的 argument 也可以表示 keyword argument，当表示普通 argument 时，key 为 None
 
 ### `UncheckedAttribute`
 

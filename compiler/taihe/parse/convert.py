@@ -262,12 +262,12 @@ class AstConverter(ExprEvaluator):
 
     @override
     def visit_unnamed_attr_arg(self, node: ast.UnnamedAttrArg) -> Argument:
-        return Argument(loc=node.loc, key="", value=self.visit(node.val))
+        return Argument(loc=node.loc, key=None, value=self.visit(node.val))
 
     def add_attr(self, decl: Decl, attr: ast.DeclAttr | ast.ScopeAttr):
         uncheck_attr = UncheckedAttribute(
-            name=attr.name.text,
             loc=attr.name.loc,
+            name=attr.name.text,
             args=[self.visit(arg) for arg in attr.args],
         )
         decl.attributes.setdefault(UncheckedAttribute, []).append(uncheck_attr)

@@ -296,8 +296,8 @@ class PackageGroupANIInfo(AbstractAnalysis[PackageGroup]):
         for pkg in pg.packages:
             path = []
             if attr := NamespaceAttr.get(pkg):
-                module_name = attr.pkg_name
-                if ns := attr.namespace_name:
+                module_name = attr.module
+                if ns := attr.namespace:
                     path = ns.split(".")
             else:
                 module_name = pkg.name
