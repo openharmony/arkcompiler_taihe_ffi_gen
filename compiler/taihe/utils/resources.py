@@ -402,11 +402,9 @@ class PandaVm(CachedResource):
     @classmethod
     def locate(cls, ctx: ResourceContext) -> Path:
         # Migrate from legacy location if needed
-        MIGRATION_ENABLED = False  # TODO enable when CMake is ready
-
         base_dir = super().locate(ctx)
         old = _LegacyPandaVm.construct(ctx).base_path
-        if MIGRATION_ENABLED and old.exists():
+        if old.exists():
             new = base_dir
             logging.info("Migrating %s -> %s", old, new)
             try:
