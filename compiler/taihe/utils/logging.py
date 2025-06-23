@@ -46,7 +46,11 @@ def should_use_color(f: TextIO) -> bool:
 def setup_logger(verbosity: int = 0):
     """Sets up a console-based log handler for the system logger.
 
-    Verbosity levels: 0 = WARNING, 1 = INFO, 2 = DEBUG
+    Verbosity levels:
+    - 40: ERROR
+    - 30: WARNING
+    - 20: INFO
+    - 10: DEBUG
     """
     handler = logging.StreamHandler()
     handler.setFormatter(ColoredFormatter("%(message)s"))
@@ -54,12 +58,7 @@ def setup_logger(verbosity: int = 0):
     logger = logging.getLogger()
     logger.addHandler(handler)
 
-    if verbosity >= 2:
-        logger.setLevel(logging.DEBUG)
-    elif verbosity == 1:
-        logger.setLevel(logging.INFO)
-    else:
-        logger.setLevel(logging.WARNING)
+    logger.setLevel(verbosity)
 
 
 class ColoredFormatter(logging.Formatter):
