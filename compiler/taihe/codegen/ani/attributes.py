@@ -8,7 +8,6 @@ from taihe.semantics.attributes import (
 )
 from taihe.semantics.declarations import (
     EnumDecl,
-    GenericTypeRefDecl,
     GlobFuncDecl,
     IfaceDecl,
     IfaceMethodDecl,
@@ -23,171 +22,171 @@ from taihe.semantics.declarations import (
 
 
 @dataclass
-class ClazzAttr(TypedAttribute):
+class ClazzAttr(TypedAttribute[IfaceDecl | StructDecl]):
     NAME = "class"
-    TARGETS = frozenset({IfaceDecl, StructDecl})
+    TARGETS = (IfaceDecl, StructDecl)
 
 
 ARRAY_ATTRIBUTE_GROUP = AttributeGroupTag()
 
 
 @dataclass
-class BigIntAttr(TypedAttribute):
+class BigIntAttr(TypedAttribute[TypeRefDecl]):
     NAME = "bigint"
-    TARGETS = frozenset({GenericTypeRefDecl})
+    TARGETS = (TypeRefDecl,)
     MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({ARRAY_ATTRIBUTE_GROUP})
 
 
 @dataclass
-class ArrayBufferAttr(TypedAttribute):
+class ArrayBufferAttr(TypedAttribute[TypeRefDecl]):
     NAME = "arraybuffer"
-    TARGETS = frozenset({GenericTypeRefDecl})
+    TARGETS = (TypeRefDecl,)
     MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({ARRAY_ATTRIBUTE_GROUP})
 
 
 @dataclass
-class TypedArrayAttr(TypedAttribute):
+class TypedArrayAttr(TypedAttribute[TypeRefDecl]):
     NAME = "typedarray"
-    TARGETS = frozenset({GenericTypeRefDecl})
+    TARGETS = (TypeRefDecl,)
     MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({ARRAY_ATTRIBUTE_GROUP})
 
 
 @dataclass
-class FixedArrayAttr(TypedAttribute):
+class FixedArrayAttr(TypedAttribute[TypeRefDecl]):
     NAME = "fixedarray"
-    TARGETS = frozenset({GenericTypeRefDecl})
+    TARGETS = (TypeRefDecl,)
     MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({ARRAY_ATTRIBUTE_GROUP})
 
 
 @dataclass
-class ExtendsAttr(TypedAttribute):
+class ExtendsAttr(TypedAttribute[StructFieldDecl]):
     NAME = "extends"
-    TARGETS = frozenset({StructFieldDecl})
+    TARGETS = (StructFieldDecl,)
 
 
 @dataclass
-class ConstAttr(TypedAttribute):
+class ConstAttr(TypedAttribute[EnumDecl]):
     NAME = "const"
-    TARGETS = frozenset({EnumDecl})
+    TARGETS = (EnumDecl,)
 
 
 @dataclass
-class StsThizAttr(TypedAttribute):
+class StsThizAttr(TypedAttribute[ParamDecl]):
     NAME = "sts_this"
-    TARGETS = frozenset({ParamDecl})
+    TARGETS = (ParamDecl,)
 
 
 @dataclass
-class ExportDefaultAttr(TypedAttribute):
+class ExportDefaultAttr(TypedAttribute[TypeDecl | PackageDecl]):
     NAME = "sts_export_default"
-    TARGETS = frozenset({TypeDecl, PackageDecl})
+    TARGETS = (TypeDecl, PackageDecl)
 
 
 NULL_UNDEFINED_GROUP = AttributeGroupTag()
 
 
 @dataclass
-class NullAttr(TypedAttribute):
+class NullAttr(TypedAttribute[UnionFieldDecl]):
     NAME = "null"
-    TARGETS = frozenset({UnionFieldDecl})
+    TARGETS = (UnionFieldDecl,)
     MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({NULL_UNDEFINED_GROUP})
 
 
 @dataclass
-class UndefinedAttr(TypedAttribute):
+class UndefinedAttr(TypedAttribute[UnionFieldDecl]):
     NAME = "undefined"
-    TARGETS = frozenset({UnionFieldDecl})
+    TARGETS = (UnionFieldDecl,)
     MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({NULL_UNDEFINED_GROUP})
 
 
 @dataclass
-class ReadOnlyAttr(TypedAttribute):
+class ReadOnlyAttr(TypedAttribute[StructFieldDecl]):
     NAME = "readonly"
-    TARGETS = frozenset({StructFieldDecl})
+    TARGETS = (StructFieldDecl,)
 
 
 @dataclass
-class RecordAttr(TypedAttribute):
+class RecordAttr(TypedAttribute[TypeRefDecl]):
     NAME = "record"
-    TARGETS = frozenset({GenericTypeRefDecl})
+    TARGETS = (TypeRefDecl,)
 
 
 @dataclass
-class StaticAttr(TypedAttribute):
+class StaticAttr(TypedAttribute[GlobFuncDecl]):
     NAME = "static"
-    TARGETS = frozenset({GlobFuncDecl})
+    TARGETS = (GlobFuncDecl,)
 
     cls_name: str
 
 
 @dataclass
-class CtorAttr(TypedAttribute):
+class CtorAttr(TypedAttribute[GlobFuncDecl]):
     NAME = "ctor"
-    TARGETS = frozenset({GlobFuncDecl})
+    TARGETS = (GlobFuncDecl,)
 
     cls_name: str
 
 
 @dataclass
-class OverloadAttr(TypedAttribute):
+class OverloadAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     NAME = "overload"
-    TARGETS = frozenset({GlobFuncDecl, IfaceMethodDecl})
+    TARGETS = (GlobFuncDecl, IfaceMethodDecl)
 
     func_name: str
 
 
 @dataclass
-class StsInjectAttr(RepeatableAttribute):
+class StsInjectAttr(RepeatableAttribute[PackageDecl]):
     NAME = "sts_inject"
-    TARGETS = frozenset({PackageDecl})
+    TARGETS = (PackageDecl,)
 
     sts_code: str
 
 
 @dataclass
-class StsInjectIntoModuleAttr(RepeatableAttribute):
+class StsInjectIntoModuleAttr(RepeatableAttribute[PackageDecl]):
     NAME = "sts_inject_into_module"
-    TARGETS = frozenset({PackageDecl})
+    TARGETS = (PackageDecl,)
 
     sts_code: str
 
 
 @dataclass
-class StsInjectIntoClazzAttr(RepeatableAttribute):
+class StsInjectIntoClazzAttr(RepeatableAttribute[IfaceDecl | StructDecl]):
     NAME = "sts_inject_into_class"
-    TARGETS = frozenset({IfaceDecl, StructDecl})
+    TARGETS = (IfaceDecl, StructDecl)
 
     sts_code: str
 
 
 @dataclass
-class StsInjectIntoIfaceAttr(RepeatableAttribute):
+class StsInjectIntoIfaceAttr(RepeatableAttribute[IfaceDecl | StructDecl]):
     NAME = "sts_inject_into_interface"
-    TARGETS = frozenset({IfaceDecl, StructDecl})
+    TARGETS = (IfaceDecl, StructDecl)
 
     sts_code: str
 
 
 @dataclass
-class StsTypeAttr(TypedAttribute):
+class StsTypeAttr(TypedAttribute[TypeRefDecl]):
     NAME = "sts_type"
-    TARGETS = frozenset({TypeRefDecl})
+    TARGETS = (TypeRefDecl,)
 
     type_name: str
 
 
 @dataclass
-class GenAsyncAttr(TypedAttribute):
+class GenAsyncAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     NAME = "gen_async"
-    TARGETS = frozenset({GlobFuncDecl, IfaceMethodDecl})
+    TARGETS = (GlobFuncDecl, IfaceMethodDecl)
 
     func_name: str | None = None
 
 
 @dataclass
-class GenPromiseAttr(TypedAttribute):
+class GenPromiseAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     NAME = "gen_promise"
-    TARGETS = frozenset({GlobFuncDecl, IfaceMethodDecl})
+    TARGETS = (GlobFuncDecl, IfaceMethodDecl)
 
     func_name: str | None = None
 
@@ -196,36 +195,36 @@ FUNCTION_LIKE_ATTRIBUTE_GROUP = AttributeGroupTag()
 
 
 @dataclass
-class GetAttr(TypedAttribute):
+class GetAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     NAME = "get"
-    TARGETS = frozenset({GlobFuncDecl, IfaceMethodDecl})
+    TARGETS = (GlobFuncDecl, IfaceMethodDecl)
     MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({FUNCTION_LIKE_ATTRIBUTE_GROUP})
 
     member_name: str | None = None
 
 
 @dataclass
-class SetAttr(TypedAttribute):
+class SetAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     NAME = "set"
-    TARGETS = frozenset({GlobFuncDecl, IfaceMethodDecl})
+    TARGETS = (GlobFuncDecl, IfaceMethodDecl)
     MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({FUNCTION_LIKE_ATTRIBUTE_GROUP})
 
     member_name: str | None = None
 
 
 @dataclass
-class OnOffAttr(TypedAttribute):
+class OnOffAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     NAME = "on_off"
-    TARGETS = frozenset({GlobFuncDecl, IfaceMethodDecl})
+    TARGETS = (GlobFuncDecl, IfaceMethodDecl)
     MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({FUNCTION_LIKE_ATTRIBUTE_GROUP})
 
     func_name: str | None = None
 
 
 @dataclass
-class NamespaceAttr(TypedAttribute):
+class NamespaceAttr(TypedAttribute[PackageDecl]):
     NAME = "namespace"
-    TARGETS = frozenset({PackageDecl})
+    TARGETS = (PackageDecl,)
 
     module: str
     namespace: str | None = None

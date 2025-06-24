@@ -34,10 +34,11 @@ from dataclasses import MISSING, dataclass, fields
 from difflib import get_close_matches
 from itertools import chain
 from types import UnionType
-from typing import TYPE_CHECKING, Any, ClassVar, cast
+from typing import Any, ClassVar, Generic, TypeVar, cast
 
 from typing_extensions import Self, override
 
+from taihe.semantics.declarations import Decl
 from taihe.semantics.format import PrettyFormatter
 from taihe.utils.diagnostics import DiagnosticsManager
 from taihe.utils.exceptions import (
@@ -51,9 +52,6 @@ from taihe.utils.exceptions import (
     AttrTargetError,
 )
 from taihe.utils.sources import SourceLocation
-
-if TYPE_CHECKING:
-    from taihe.semantics.declarations import Decl
 
 
 @dataclass
@@ -137,7 +135,7 @@ class UncheckedAttribute(AnyAttribute):
         return self.name, self.args
 
     @classmethod
-    def consume(cls, decl: "Decl") -> Iterable[Self]:
+    def consume(cls, decl: Decl) -> Iterable[Self]:
         """Yields all unchecked attributes from a declaration.
 
         This method iterates through the declaration's attributes and yields
@@ -189,7 +187,7 @@ class AbstractCheckedAttribute(AnyAttribute, metaclass=ABCMeta):
     @abstractmethod
     def try_construct(
         cls,
-        parent: "Decl",
+        parent: Decl,
         raw: UncheckedAttribute,
         dm: DiagnosticsManager,
     ) -> Self | None:
@@ -217,7 +215,10 @@ class AttributeGroupTag:
     pass
 
 
-class AutoCheckedAttribute(AbstractCheckedAttribute):
+T = TypeVar("T", bound=Decl)
+
+
+class AutoCheckedAttribute(AbstractCheckedAttribute, Generic[T]):
     """Base class providing automatic name inference and target checking.
 
     This class implements common patterns for attribute registration and
@@ -227,14 +228,13 @@ class AutoCheckedAttribute(AbstractCheckedAttribute):
     NAME: ClassVar[str]
     """Explicit attribute name."""
 
-    TARGETS: ClassVar[frozenset[type["Decl"]]]
-    """Set of declaration types this attribute can be attached to.
+    TARGETS: ClassVar[tuple[type[T], ...]]  # type: ignore
+    """Declaration types this attribute can be attached to.
 
-    The system uses isinstance() checking, so inheritance hierarchies
-    are properly supported.
+    The system uses isinstance() checking, so inheritance hierarchies are properly
+    supported.
 
-    Use `frozenset({Decl})` to indicate the attribute can be attached
-    to any declaration.
+    Use `(Decl,)` to indicate the attribute can be attached to any declaration.
     """
 
     MUTUALLY_EXCLUSIVE_GROUP_TAGS: ClassVar[frozenset[AttributeGroupTag]] = frozenset()
@@ -253,15 +253,21 @@ class AutoCheckedAttribute(AbstractCheckedAttribute):
     @classmethod
     def try_construct(
         cls,
-        parent: "Decl",
+        parent: Decl,
         raw: UncheckedAttribute,
         dm: DiagnosticsManager,
     ) -> Self | None:
         res = cls.try_create(raw, dm)
         if res is None:
             return None
+
+        if not isinstance(parent, cls.TARGETS):
+            dm.emit(AttrTargetError(parent, res))
+            return None
+
         if not res.can_attach_on(parent, dm):
             return None
+
         return res
 
     @classmethod
@@ -348,7 +354,7 @@ class AutoCheckedAttribute(AbstractCheckedAttribute):
         Returns:
             A tuple of:
             - List of positional arguments
-            - List of keyword arguments
+            - Dictionary of keyword arguments
             - A boolean indicating if any ordering errors were found
         """
         args: list[Argument] = []
@@ -370,13 +376,20 @@ class AutoCheckedAttribute(AbstractCheckedAttribute):
 
     def can_attach_on(
         self,
-        parent: "Decl",
+        parent: T,
         dm: DiagnosticsManager,
     ) -> bool:
-        if not any(isinstance(parent, t) for t in self.TARGETS):
-            dm.emit(AttrTargetError(parent, self))
-            return False
+        """Checks if this attribute can be attached to the given declaration.
 
+        Notice that parent type is already checked outside.
+
+        Args:
+            parent: The declaration to check against
+            dm: Diagnostics manager for error reporting
+
+        Returns:
+            True if the attribute can be attached, False otherwise
+        """
         for other, attrs in parent.attributes.items():
             if not attrs:
                 continue
@@ -406,11 +419,11 @@ class AutoCheckedAttribute(AbstractCheckedAttribute):
         return self.NAME, args
 
 
-class TypedAttribute(AutoCheckedAttribute):
+class TypedAttribute(AutoCheckedAttribute[T]):
     """Type-checked attribute that can be attached at most once per declaration."""
 
     @classmethod
-    def get(cls, decl: "Decl") -> Self | None:
+    def get(cls, decl: T) -> Self | None:
         """Retrieves the single instance of this attribute from a declaration.
 
         Args:
@@ -426,7 +439,7 @@ class TypedAttribute(AutoCheckedAttribute):
     @override
     def can_attach_on(
         self,
-        parent: "Decl",
+        parent: T,
         dm: DiagnosticsManager,
     ) -> bool:
         prevs = parent.attributes.get(type(self), [])
@@ -437,11 +450,11 @@ class TypedAttribute(AutoCheckedAttribute):
         return super().can_attach_on(parent, dm)
 
 
-class RepeatableAttribute(AutoCheckedAttribute):
+class RepeatableAttribute(AutoCheckedAttribute[T]):
     """Type-checked attribute that can be attached multiple times per declaration."""
 
     @classmethod
-    def get(cls, decl: "Decl") -> list[Self]:
+    def get(cls, decl: T) -> list[Self]:
         """Retrieves all instances of this attribute from a declaration.
 
         Args:
@@ -500,7 +513,7 @@ class CheckedAttributeManager:
     def attach(
         self,
         raw: UncheckedAttribute,
-        decl: "Decl",
+        decl: Decl,
         dm: DiagnosticsManager,
     ) -> None:
         """Validates and constructs a typed attribute from unchecked attribute data.
