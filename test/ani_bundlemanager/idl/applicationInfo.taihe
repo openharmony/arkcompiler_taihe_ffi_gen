@@ -1,0 +1,37 @@
+interface ApplicationInfo {
+    @get GetName(): String;
+    @get GetDescription(): String;
+    @get GetDescriptionId(): i32;
+    @get GetEnabled(): bool;
+    @get GetLabel(): String;
+    @get GetLabelId(): i32;
+    @get GetIcon(): String;
+    @get GetIconId(): i32;
+    @get GetProcess(): String;
+    @get GetPermissions(): Array<String>;
+    @get GetCodePath(): String;
+    @get GetRemovable(): bool;
+    @get GetAccessTokenId(): i32;
+    @get GetUid(): i32;
+    @get GetAppDistributionType(): String;
+    @get GetAppProvisionType(): String;
+    @get GetSystemApp(): bool;
+    @get GetDebug(): bool;
+    @get GetDataUnclearable(): bool;
+    @get GetNativeLibraryPath(): String;
+    @get GetAppIndex(): i32;
+    @get GetInstallSource(): String;
+    @get GetReleaseType(): String;
+    @get GetCloudFileSyncEnabled(): bool;
+}
+function GetApplicationInfo(): ApplicationInfo;
+
+interface ModuleMetadata {
+    @get GetModuleName(): String;
+}
+function GetModuleMetadata(): ModuleMetadata;
+
+interface MultiAppMode {
+    @get GetMaxCount(): i32;
+}
+function GetMultiAppMode(): MultiAppMode;

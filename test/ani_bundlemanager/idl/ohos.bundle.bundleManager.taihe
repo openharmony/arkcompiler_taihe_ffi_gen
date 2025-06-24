@@ -1,0 +1,40 @@
+@!namespace("ohos", "bundle", "bundleManager")
+enum AbilityType: i8 {
+    PAGE = 1,
+    SERVICE = 2,
+    DATA = 3
+}
+
+enum DisplayOrientation: String {
+    UNSPECIFIED = "UNSPECIFIED",
+    LANDSCAPE = "LANDSCAPE",
+    PORTRAIT = "PORTRAIT"
+}
+
+enum LaunchType: i8 {
+    SINGLETON = 0,
+    MULTITON = 1,
+    SPECIFIED = 2
+}
+
+enum SupportWindowMode: i8 {
+    FULL_SCREEN = 0,
+    SPLIT = 1,
+    FLOATING = 2
+}
+
+enum PermissionGrantState: i8 {
+    PERMISSION_DENIED = -1,
+    PERMISSION_GRANTED = 0
+}
+
+enum BundleType: i8 {
+    APP = 0,
+    ATOMIC_SERVICE = 1
+}
+
+enum MultiAppModeType: i8 {
+    UNSPECIFIED = 0,
+    MULTI_INSTANCE = 1,
+    APP_CLONE = 2
+}

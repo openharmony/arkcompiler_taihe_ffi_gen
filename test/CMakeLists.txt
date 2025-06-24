@@ -28,6 +28,8 @@ add_subdirectory(ani_test)
 add_subdirectory(ani_typedarray)
 add_subdirectory(ani_union)
 add_subdirectory(ani_thread)
+add_subdirectory(ani_bundle)
+add_subdirectory(ani_bundlemanager)
 # add_subdirectory(ani_fixedarray)
 
 # add_subdirectory(ani_huks)

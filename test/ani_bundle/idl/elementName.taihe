@@ -1,0 +1,13 @@
+interface ElementName {
+    @set("deviceId") SetDevicedId(deviceId: Optional<String>): void;
+    @get("deviceId") GetDevicedId(): Optional<String>;
+    @set("bundleName") SetBundleName(bundleName: String): void;
+    @get("bundleName") GetBundleName(): String;
+    @set("abilityName") SetAbilityName(abilityName: String): void;
+    @get("abilityName") GetAbilityName(): String;
+    @set("uri") SetUri(uri: Optional<String>): void;
+    @get("uri") GetUri(): Optional<String>;
+    @set("shortName") SetShortName(shortName: Optional<String>): void;
+    @get("shortName") GetShortName(): Optional<String>;
+}
+function GetElementName():ElementName;
