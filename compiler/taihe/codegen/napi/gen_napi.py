@@ -848,6 +848,7 @@ class NAPICodeGenerator:
         pkg_napi_target: CSourceWriter,
     ):
         iface_napi_info = IfaceNAPIInfo.get(self.am, iface)
+        pkg_napi_target.add_include(iface_napi_info.impl_header)
         pkg_napi_target.writelns(
             f"{iface_napi_info.create_func_name}(env, exports);",
         )
@@ -858,6 +859,7 @@ class NAPICodeGenerator:
         pkg_napi_target: CSourceWriter,
     ):
         struct_napi_info = StructNAPIInfo.get(self.am, struct)
+        pkg_napi_target.add_include(struct_napi_info.impl_header)
         pkg_napi_target.writelns(
             f"{struct_napi_info.create_func_name}(env, exports);",
         )
