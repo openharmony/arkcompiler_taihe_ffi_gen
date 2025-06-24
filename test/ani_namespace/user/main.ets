@@ -81,11 +81,11 @@ function testCasebaseFunctionTest1() {
 }
 
 function testCasebaseFunctionTest2() {
-    namespaceTest.functiontest.BaseFunctionTest2(127 as byte)
+    namespaceTest.functiontest.BaseFunctionTest2((127).toByte())
 }
 
 function testCasebaseFunctionTest3() {
-    namespaceTest.functiontest.BaseFunctionTest3(255 as short)
+    namespaceTest.functiontest.BaseFunctionTest3((255).toShort())
 }
 
 function testCasebaseFunctionTest4() {
@@ -97,7 +97,7 @@ function testCasebaseFunctionTest5() {
 }
 
 function testCasebaseFunctionTest6() {
-    namespaceTest.functiontest.BaseFunctionTest6(3.1415 as float)
+    namespaceTest.functiontest.BaseFunctionTest6((3.1415).toFloat())
 }
 
 function testCasebaseFunctionTest7() {
@@ -123,7 +123,7 @@ function testCasebaseFunctionTest11() {
 }
 
 function testCasebaseFunctionTest12() {
-    namespaceTest.functiontest.BaseFunctionTest12(255 as short)
+    namespaceTest.functiontest.BaseFunctionTest12((255).toShort())
 }
 
 function testCasebaseFunctionTest12_1() {
@@ -158,30 +158,31 @@ function testCasebaseFunctionTest15() {
 }
 
 function testCasebaseFunctionTest16() {
-    let res = namespaceTest.functiontest.BaseFunctionTest16(110 as byte);
-    assertEQ(res, 120)
+    let res = namespaceTest.functiontest.BaseFunctionTest16((110).toByte());
+    arktest.assertEQ(res, 120)
 }
 
 function testCasebaseFunctionTest16_1() {
     try {
-        let res = namespaceTest.functiontest.BaseFunctionTest16(127 as byte);
+        let res = namespaceTest.functiontest.BaseFunctionTest16((127).toByte());
     } catch (e) {
-        assertEQ(
+        arktest.assertEQ(
             e.toString(),
             "Error: BaseFunctionTest16: result exceeds int8_t range")
     }
 }
 
 function testCasebaseFunctionTest17() {
-    let res = namespaceTest.functiontest.BaseFunctionTest17(3270 as short);
-    assertEQ(res, 32700)
+    let res = namespaceTest.functiontest.BaseFunctionTest17((3270).toShort());
+    arktest.assertEQ(res, 32700)
 }
 
 function testCasebaseFunctionTest17_1() {
     try {
-        let res = namespaceTest.functiontest.BaseFunctionTest17(32767 as short);
+        let res =
+            namespaceTest.functiontest.BaseFunctionTest17((32767).toShort());
     } catch (e) {
-        assertEQ(
+        arktest.assertEQ(
             e.toString(),
             "Error: BaseFunctionTest17: result exceeds int16_t range")
     }
@@ -189,7 +190,7 @@ function testCasebaseFunctionTest17_1() {
 
 function testCasebaseFunctionTest18() {
     let res = namespaceTest.functiontest.BaseFunctionTest18(21474836);
-    assertEQ(res, 2147483600)
+    arktest.assertEQ(res, 2147483600)
 }
 
 function testCasebaseFunctionTest18_1() {
@@ -197,7 +198,7 @@ function testCasebaseFunctionTest18_1() {
         let res = namespaceTest.functiontest.BaseFunctionTest18(21474837);
     } catch (e) {
         console.log("testCasebaseFunctionTest18_1 error ", e.toString())
-        assertEQ(
+        arktest.assertEQ(
             e.toString(),
             "Error: BaseFunctionTest18: result exceeds int32_t range")
     }
@@ -205,39 +206,39 @@ function testCasebaseFunctionTest18_1() {
 
 function testCasebaseFunctionTest19() {
     let res = namespaceTest.functiontest.BaseFunctionTest19(92233720368547758);
-    assertEQ(res, 922337203685477580)
+    arktest.assertEQ(res, 922337203685477580)
 }
 
 function testCasebaseFunctionTest20() {
-    let res = namespaceTest.functiontest.BaseFunctionTest20(3.14 as float);
-    assertEQ(res, 103.14 as float)
+    let res = namespaceTest.functiontest.BaseFunctionTest20((3.14).toFloat());
+    arktest.assertEQ(res, (103.14).toFloat())
 }
 
 function testCasebaseFunctionTest21() {
     let res = namespaceTest.functiontest.BaseFunctionTest21(1);
-    assertEQ(res, 2.01)
+    arktest.assertEQ(res, 2.01)
 }
 
 function testCasebaseFunctionTest22() {
     let res =
         namespaceTest.functiontest.BaseFunctionTest22("BaseFunctionTest22");
-    assertEQ(res, "BaseFunctionTest22hello ani")
+    arktest.assertEQ(res, "BaseFunctionTest22hello ani")
 }
 
 function testCasebaseFunctionTest22_1() {
     let res =
         namespaceTest.functiontest.BaseFunctionTest22("baseFunctionTest22——1");
-    assertEQ(res, "baseFunctionTest22——1")
+    arktest.assertEQ(res, "baseFunctionTest22——1")
 }
 
 function testCasebaseFunctionTest23() {
     let res = namespaceTest.functiontest.BaseFunctionTest23(true);
-    assertEQ(res, false)
+    arktest.assertEQ(res, false)
 }
 
 function testCasebaseFunctionTest23_1() {
     let res = namespaceTest.functiontest.BaseFunctionTest23(false);
-    assertEQ(res, true)
+    arktest.assertEQ(res, true)
 }
 
 function testCasebaseFunctionTest24() {
@@ -245,7 +246,7 @@ function testCasebaseFunctionTest24() {
     let res: byte[] = namespaceTest.functiontest.BaseFunctionTest24(byteArray);
     let temp: byte[] = [2, 4, 6, 8, 10];
     for (let i = 0; i < res.length; i++) {
-        assertEQ(res[i], temp[i])
+        arktest.assertEQ(res[i], temp[i])
     }
 }
 
@@ -254,28 +255,28 @@ function testCasebaseFunctionTest25() {
     let res = namespaceTest.functiontest.BaseFunctionTest25(shortArray);
     let temp: byte[] = [3, 4, 5, 6, 7];
     for (let i = 0; i < res.length; i++) {
-        assertEQ(res[i], temp[i])
+        arktest.assertEQ(res[i], temp[i])
     }
 }
 
 function testCasebaseFunctionTest26() {
-    let res = namespaceTest.functiontest.BaseFunctionTest26(3276 as short);
-    assertEQ(res, 3286)
+    let res = namespaceTest.functiontest.BaseFunctionTest26((3276).toShort());
+    arktest.assertEQ(res, 3286)
 }
 
 function testCasebaseFunctionTest26_1() {
     let res = namespaceTest.functiontest.BaseFunctionTest26(undefined);
-    assertEQ(res, undefined)
+    arktest.assertEQ(res, undefined)
 }
 
 function testCasebaseFunctionTest27() {
     let res = namespaceTest.functiontest.BaseFunctionTest27(922337203685477580);
-    assertEQ(res, 922337203685477590)
+    arktest.assertEQ(res, 922337203685477590)
 }
 
 function testCasebaseFunctionTest27_1() {
     let res = namespaceTest.functiontest.BaseFunctionTest27(undefined);
-    assertEQ(res, undefined)
+    arktest.assertEQ(res, undefined)
 }
 
 function testCasebaseFunctionTest28() {
@@ -287,11 +288,11 @@ function testCasebaseFunctionTest28() {
     let res = namespaceTest.functiontest.BaseFunctionTest28(arrbuf1);
     console.log("testCasebaseFunctionTest28 length: " + res.getByteLength());
     console.log("testCasebaseFunctionTest28 : " + res);
-    assertEQ(res.getByteLength(), 5)
+    arktest.assertEQ(res.getByteLength(), 5)
     for (let i = 0; i < res.getByteLength(); i++) {
         console.log(
             `testCasebaseFunctionTest28 Byte at index ${i}: ${res.at(i)}`);
-        assertEQ(res.at(i), numbersU8[i] * 10)
+        arktest.assertEQ(res.at(i), numbersU8[i] * 10)
     }
 }
 
@@ -310,16 +311,16 @@ function testCasebaseFunctionTest29() {
     let res = namespaceTest.functiontest.BaseFunctionTest29(myRecord);
     console.log("testCasebaseFunctionTest29 ", res);
     console.log("testCasebaseFunctionTest29 test0 ", res["test0"]);
-    assertEQ(res["test0"], resultRecord["test0"]);
-    assertEQ(res["test1"], resultRecord["test1"]);
-    assertEQ(res["test2"], resultRecord["test2"]);
+    arktest.assertEQ(res["test0"], resultRecord["test0"]);
+    arktest.assertEQ(res["test1"], resultRecord["test1"]);
+    arktest.assertEQ(res["test2"], resultRecord["test2"]);
 }
 
 function testCasebaseFunctionTest30() {
     let color = namespaceTest.functiontest.Color.BLUE;
     let res = namespaceTest.functiontest.BaseFunctionTest30(color);
     console.log("testCasebaseFunctionTest30 ", res)
-    assertEQ(res, namespaceTest.functiontest.Color.RED)
+    arktest.assertEQ(res, namespaceTest.functiontest.Color.RED)
 }
 
 function testCasebaseFunctionTest31() {
@@ -329,50 +330,50 @@ function testCasebaseFunctionTest31() {
 
 function testCasebaseFunctionTest32() {
     let res = namespaceTest.functiontest.BaseFunctionTest32(
-        127 as byte, 100 as short, 256, 10000, true);
-    assertEQ(res, 100)
+        (127).toByte(), (100).toShort(), 256, 10000, true);
+    arktest.assertEQ(res, 100)
 }
 
 function testCasebaseFunctionTest32_1() {
     let res = namespaceTest.functiontest.BaseFunctionTest32(
-        127 as byte, 100 as short, 256, 10000, false);
-    assertEQ(res, 127)
+        (127).toByte(), (100).toShort(), 256, 10000, false);
+    arktest.assertEQ(res, 127)
 }
 
 function testCasebaseFunctionTest33() {
     let res = namespaceTest.functiontest.BaseFunctionTest33(
-        127 as byte, 100 as short, 256, 10000, true);
-    assertEQ(res, 256)
+        (127).toByte(), (100).toShort(), 256, 10000, true);
+    arktest.assertEQ(res, 256)
 }
 
 function testCasebaseFunctionTest33_1() {
     let res = namespaceTest.functiontest.BaseFunctionTest33(
-        127 as byte, 100 as short, 256, 10000, false);
-    assertEQ(res, 100)
+        (127).toByte(), (100).toShort(), 256, 10000, false);
+    arktest.assertEQ(res, 100)
 }
 
 function testCasebaseFunctionTest34() {
     let res = namespaceTest.functiontest.BaseFunctionTest34(
-        127 as byte, 100 as short, 256, 10000, true);
-    assertEQ(res, 10000)
+        (127).toByte(), (100).toShort(), 256, 10000, true);
+    arktest.assertEQ(res, 10000)
 }
 
 function testCasebaseFunctionTest34_1() {
     let res = namespaceTest.functiontest.BaseFunctionTest34(
-        127 as byte, 100 as short, 256, 10000, false);
-    assertEQ(res, 100)
+        (127).toByte(), (100).toShort(), 256, 10000, false);
+    arktest.assertEQ(res, 100)
 }
 
 function testCasebaseFunctionTest35() {
     let res = namespaceTest.functiontest.BaseFunctionTest35(
-        127 as byte, 100 as short, 256, 10000, true);
-    assertEQ(res, 127)
+        (127).toByte(), (100).toShort(), 256, 10000, true);
+    arktest.assertEQ(res, 127)
 }
 
 function testCasebaseFunctionTest35_1() {
     let res = namespaceTest.functiontest.BaseFunctionTest35(
-        127 as byte, 100 as short, 256, 10000, false);
-    assertEQ(res, 100)
+        (127).toByte(), (100).toShort(), 256, 10000, false);
+    arktest.assertEQ(res, 100)
 }
 
 function testCasebaseFunctionTest36() {
@@ -380,11 +381,11 @@ function testCasebaseFunctionTest36() {
     let int64Array: long[] =
         [9223372036854775807, -100, 121, -2147483648, -9223372036854775808];
     let res = namespaceTest.functiontest.BaseFunctionTest36(
-        10 as byte, 11 as short, true, int8Array, int64Array);
-    assertEQ(res.length, int8Array.length)
+        (10).toByte(), (11).toShort(), true, int8Array, int64Array);
+    arktest.assertEQ(res.length, int8Array.length)
     let tempResult: int[] = [22, 23, 24, 25, 26];
     for (let i: int = 0; i < res.length; i++) {
-        assertEQ(res[i], tempResult[i])
+        arktest.assertEQ(res[i], tempResult[i])
     }
 }
 
@@ -392,10 +393,10 @@ function testCasebaseFunctionTest36_1() {
     let int8Array: byte[] = [1, 2, 3, 4, 5];
     let int64Array: long[] = [100, -100, 200, -300, -400];
     let res = namespaceTest.functiontest.BaseFunctionTest36(
-        127 as byte, 100 as short, false, int8Array, int64Array);
-    assertEQ(res.length, int64Array.length)
+        (127).toByte(), (100).toShort(), false, int8Array, int64Array);
+    arktest.assertEQ(res.length, int64Array.length)
     for (let i: int = 0; i < res.length; i++) {
-        assertEQ(res[i], int64Array[i])
+        arktest.assertEQ(res[i], int64Array[i])
     }
 }
 
@@ -403,11 +404,11 @@ function testCasebaseFunctionTest37() {
     let intArray: int[] = [922337, -100, 121, -2147483648, -92233720];
     let int64Array: long[] = [100, -100, 121, -200, 0];
     let res = namespaceTest.functiontest.BaseFunctionTest37(
-        10 as byte, 11 as short, 12, true, int64Array);
-    assertEQ(res.length, int64Array.length)
+        (10).toByte(), (11).toShort(), 12, true, int64Array);
+    arktest.assertEQ(res.length, int64Array.length)
     let tempResult: int[] = [133, -67, 154, -167, 33];
     for (let i: int = 0; i < res.length; i++) {
-        assertEQ(res[i], tempResult[i])
+        arktest.assertEQ(res[i], tempResult[i])
     }
 }
 
@@ -415,10 +416,10 @@ function testCasebaseFunctionTest37_1() {
     let intArray: int[] = [922337, -100, 121, -2147483648, -92233720];
     let int64Array: long[] = [100, -100, 200, -300, -400];
     let res = namespaceTest.functiontest.BaseFunctionTest37(
-        127 as byte, 100 as short, 256, false, int64Array);
-    assertEQ(res.length, int64Array.length)
+        (127).toByte(), (100).toShort(), 256, false, int64Array);
+    arktest.assertEQ(res.length, int64Array.length)
     for (let i: int = 0; i < res.length; i++) {
-        assertEQ(res[i], int64Array[i] * 10)
+        arktest.assertEQ(res[i], int64Array[i] * 10)
     }
 }
 
@@ -426,32 +427,32 @@ function testCasebaseFunctionTest38() {
     let byteArray: byte[] = [1, 2, 3, 4, 5];
     let int16Array: short[] = [100, -100, 121, -200, -500];
     let res = namespaceTest.functiontest.BaseFunctionTest38(
-        10 as byte, "test1", true, byteArray, int16Array);
-    assertEQ(res, "test110")
+        (10).toByte(), "test1", true, byteArray, int16Array);
+    arktest.assertEQ(res, "test110")
 }
 
 function testCasebaseFunctionTest38_1() {
     let byteArray: byte[] = [1, 2, 3, 4, 5];
     let int16Array: short[] = [100, -100, 121, -200, -500];
     let res = namespaceTest.functiontest.BaseFunctionTest38(
-        127 as byte, "test1", false, byteArray, int16Array);
-    assertEQ(res, "test11100")
+        (127).toByte(), "test1", false, byteArray, int16Array);
+    arktest.assertEQ(res, "test11100")
 }
 
 function testCasebaseFunctionTest39() {
     let boolArray: boolean[] = [true, false, true, false, true];
     let intArray: int[] = [922337, -100, 121, -2147483648, -92233720];
     let res = namespaceTest.functiontest.BaseFunctionTest39(
-        11 as short, "test1", true, boolArray, intArray);
-    assertEQ(res, false)
+        (11).toShort(), "test1", true, boolArray, intArray);
+    arktest.assertEQ(res, false)
 }
 
 function testCasebaseFunctionTest39_1() {
     let boolArray: boolean[] = [true, false, true, false, true];
     let intArray: int[] = [922337, -100, 121, -2147483648, -92233720];
     let res = namespaceTest.functiontest.BaseFunctionTest39(
-        100 as short, "test1", false, boolArray, intArray);
-    assertEQ(res, false)
+        (100).toShort(), "test1", false, boolArray, intArray);
+    arktest.assertEQ(res, false)
 }
 
 function testCasebaseFunctionTest40() {
@@ -463,9 +464,9 @@ function testCasebaseFunctionTest40() {
     }
     let res = namespaceTest.functiontest.BaseFunctionTest40(
         -2.0002, "test1", true, byteArray, arrbuf1);
-    assertEQ(res.length, byteArray.length)
+    arktest.assertEQ(res.length, byteArray.length)
     for (let i: int = 0; i < res.length; i++) {
-        assertEQ(res[i], byteArray[i] * 2)
+        arktest.assertEQ(res[i], byteArray[i] * 2)
     }
 }
 
@@ -478,29 +479,29 @@ function testCasebaseFunctionTest40_1() {
     }
     let res = namespaceTest.functiontest.BaseFunctionTest40(
         -2.0002, "test1", false, byteArray, arrbuf1);
-    assertEQ(res.length, byteArray.length)
+    arktest.assertEQ(res.length, byteArray.length)
     for (let i: int = 0; i < res.length; i++) {
-        assertEQ(res[i], byteArray[i] + 10)
+        arktest.assertEQ(res[i], byteArray[i] + 10)
     }
 }
 
 function testCasebaseFunctionTest41() {
     namespaceTest.functiontest.BaseFunctionTest41(
-        10 as byte, 11 as short, 12, 10000, 3.14 as float);
+        (10).toByte(), (11).toShort(), 12, 10000, (3.14).toFloat());
 }
 function testCasebaseFunctionTest42() {
     let res =
-        namespaceTest.functiontest.BaseFunctionTest42(10000, 256 as short);
-    assertEQ(res, 10256)
+        namespaceTest.functiontest.BaseFunctionTest42(10000, (256).toShort());
+    arktest.assertEQ(res, 10256)
 }
 
 function testCasebaseFunctionTest42_1() {
     try {
         let res = namespaceTest.functiontest.BaseFunctionTest42(
-            2147483647, 256 as short);
+            2147483647, (256).toShort());
     } catch (e) {
         console.log("testCasebaseFunctionTest42_1 e ", e.toString())
-        assertEQ(
+        arktest.assertEQ(
             e.toString(),
             "Error: BaseFunctionTest42_int: result exceeds int32_t range")
     }
@@ -513,7 +514,7 @@ function testCasebaseFunctionTest43() {
         "test3": 2,
     };
     let res = namespaceTest.functiontest.BaseFunctionTest42(10000, record);
-    assertEQ(res, 10010)
+    arktest.assertEQ(res, 10010)
 }
 
 function testCasebaseFunctionTest43_1() {
@@ -523,12 +524,12 @@ function testCasebaseFunctionTest43_1() {
         "test3": 2,
     };
     let res = namespaceTest.functiontest.BaseFunctionTest42(undefined, record);
-    assertEQ(res, -2147483648)
+    arktest.assertEQ(res, -2147483648)
 }
 
 function testCasebaseFunctionTest44() {
     let res = namespaceTest.functiontest.BaseFunctionTest42();
-    assertEQ(res, 2147483647)
+    arktest.assertEQ(res, 2147483647)
 }
 
 function testCasebaseFunctionTest45() {
@@ -543,49 +544,49 @@ function testCasebaseFunctionTest46() {
 }
 
 function testCasebaseFunctionTest47() {
-    let res = nameInterfaceTest.BaseFunctionTest44(-10 as byte);
-    assertEQ(res, 90)
+    let res = nameInterfaceTest.BaseFunctionTest44((-10).toByte());
+    arktest.assertEQ(res, 90)
 }
 
 function testCasebaseFunctionTest48() {
-    let res = nameInterfaceTest.BaseFunctionTest45(320 as short);
-    assertEQ(res, 32000)
+    let res = nameInterfaceTest.BaseFunctionTest45((320).toShort());
+    arktest.assertEQ(res, 32000)
 }
 
 function testCasebaseFunctionTest49() {
     let res = nameInterfaceTest.BaseFunctionTest46(2147483);
-    assertEQ(res, 214748300)
+    arktest.assertEQ(res, 214748300)
 }
 
 function testCasebaseFunctionTest50() {
     let res = nameInterfaceTest.BaseFunctionTest47(9223372036854775);
-    assertEQ(res, 922337203685477500)
+    arktest.assertEQ(res, 922337203685477500)
 }
 
 function testCasebaseFunctionTest51() {
-    let res = nameInterfaceTest.BaseFunctionTest48(100.123 as float);
-    assertEQ(res, 90.123 as float)
+    let res = nameInterfaceTest.BaseFunctionTest48((100.123).toFloat());
+    arktest.assertEQ(res, (90.123).toFloat())
 }
 
 function testCasebaseFunctionTest52() {
     let res = nameInterfaceTest.BaseFunctionTest49(200.66);
-    assertEQ(res, 100.66)
+    arktest.assertEQ(res, 100.66)
 }
 
 function testCasebaseFunctionTest53() {
     let res =
         nameInterfaceTest.BaseFunctionTest50("testCasebaseFunctionTest53");
-    assertEQ(res, "testCasebaseFunctionTest53BaseFunctionTest50")
+    arktest.assertEQ(res, "testCasebaseFunctionTest53BaseFunctionTest50")
 }
 
 function testCasebaseFunctionTest54() {
     let res = nameInterfaceTest.BaseFunctionTest51(true);
-    assertEQ(res, false)
+    arktest.assertEQ(res, false)
 }
 
 function testCasebaseFunctionTest54_1() {
     let res = nameInterfaceTest.BaseFunctionTest51(false);
-    assertEQ(res, true)
+    arktest.assertEQ(res, true)
 }
 
 function testCasebaseFunctionTest55() {
@@ -595,32 +596,32 @@ function testCasebaseFunctionTest55() {
         arrbuf1.set(i, numbersU8[i]);
     }
     let res = nameInterfaceTest.BaseFunctionTest52(arrbuf1);
-    assertEQ(res.getByteLength(), 5)
+    arktest.assertEQ(res.getByteLength(), 5)
     for (let i = 0; i < res.getByteLength(); i++) {
         console.log(
             `testCasebaseFunctionTest55 Byte at index ${i}: ${res.at(i)}`);
-        assertEQ(res.at(i), numbersU8[i] + 10)
+        arktest.assertEQ(res.at(i), numbersU8[i] + 10)
     }
 }
 
 function testCasebaseFunctionTest56() {
-    let res = nameInterfaceTest.BaseFunctionTest53(101 as byte);
-    assertEQ(res, 1)
+    let res = nameInterfaceTest.BaseFunctionTest53((101).toByte());
+    arktest.assertEQ(res, 1)
 }
 
 function testCasebaseFunctionTest56_1() {
     let res = nameInterfaceTest.BaseFunctionTest53(undefined);
-    assertEQ(res, undefined)
+    arktest.assertEQ(res, undefined)
 }
 
 function testCasebaseFunctionTest57() {
     let res = nameInterfaceTest.BaseFunctionTest54(2147483647);
-    assertEQ(res, 2147483547)
+    arktest.assertEQ(res, 2147483547)
 }
 
 function testCasebaseFunctionTest57_1() {
     let res = nameInterfaceTest.BaseFunctionTest54(undefined);
-    assertEQ(res, undefined)
+    arktest.assertEQ(res, undefined)
 }
 
 // function testCasebaseFunctionTest58(){
@@ -646,36 +647,36 @@ function testCasebaseFunctionTest57_1() {
 //     };
 //     let res = nameInterfaceTest.BaseFunctionTest55(myRecord);
 //     console.log("testCasebaseFunctionTest58 ",res)
-//     assertEQ(res,2147483547)
+//     arktest.assertEQ(res,2147483547)
 // }
 
 function testCasebaseFunctionTest59() {
     let res = nameInterfaceTest.BaseFunctionTest56(100);
-    assertEQ(res, 10000)
+    arktest.assertEQ(res, 10000)
 }
 
 function testCasebaseFunctionTest60() {
-    let res = nameInterfaceTest.BaseFunctionTest57(127 as byte);
-    assertEQ(res, 12700)
+    let res = nameInterfaceTest.BaseFunctionTest57((127).toByte());
+    arktest.assertEQ(res, 12700)
 }
 
 function testCasebaseFunctionTest61() {
     let res = nameInterfaceTest.testStr;
-    assertEQ(res, "testNameSpace")
+    arktest.assertEQ(res, "testNameSpace")
 }
 
 function testCasebaseFunctionTest62() {
     let res = nameInterfaceTest.BaseFunctionTest58(true);
-    assertEQ(res.success, true)
-    assertEQ(res.errorCode, 10000)
-    assertEQ(res.errorMessage, "test58")
+    arktest.assertEQ(res.success, true)
+    arktest.assertEQ(res.errorCode, 10000)
+    arktest.assertEQ(res.errorMessage, "test58")
 }
 
 function testCasebaseFunctionTest62_1() {
     let res = nameInterfaceTest.BaseFunctionTest58(false);
-    assertEQ(res.success, false)
-    assertEQ(res.errorCode, 100)
-    assertEQ(res.errorMessage, "test581")
+    arktest.assertEQ(res.success, false)
+    arktest.assertEQ(res.errorCode, 100)
+    arktest.assertEQ(res.errorMessage, "test581")
 }
 
 function testCasebaseFunctionTest63() {
@@ -697,7 +698,7 @@ function testCasebaseFunctionTest64() {
         30: true,
     };
     let res = namespaceTest.functiontest.BaseFunctionTest60(record);
-    assertEQ(res, true)
+    arktest.assertEQ(res, true)
 }
 
 function testCasebaseFunctionTest64_1() {
@@ -708,7 +709,7 @@ function testCasebaseFunctionTest64_1() {
         30: true,
     };
     let res = namespaceTest.functiontest.BaseFunctionTest60(record);
-    assertEQ(res, false)
+    arktest.assertEQ(res, false)
 }
 
 
@@ -720,7 +721,7 @@ function testCasebaseFunctionTest64_2() {
         0: true,
     };
     let res = namespaceTest.functiontest.BaseFunctionTest60(record);
-    assertEQ(res, false)
+    arktest.assertEQ(res, false)
 }
 
 
@@ -730,8 +731,8 @@ function testInter1BasePerformanceFunctionTest1() {
 
 function testInter1BasePerformanceFunctionTest2() {
     let res =
-        testInterfacePerformance1.BasePerformanceFunctionTest2(95 as byte);
-    assertEQ(res, 10)
+        testInterfacePerformance1.BasePerformanceFunctionTest2((95).toByte());
+    arktest.assertEQ(res, 10)
 }
 
 function testInter2BasePerformanceFunctionTest1() {
@@ -740,8 +741,8 @@ function testInter2BasePerformanceFunctionTest1() {
 
 function testInter2BasePerformanceFunctionTest2() {
     let res =
-        testInterfacePerformance2.BasePerformanceFunctionTest2(95 as byte);
-    assertEQ(res, 10)
+        testInterfacePerformance2.BasePerformanceFunctionTest2((95).toByte());
+    arktest.assertEQ(res, 10)
 }
 
 function testInter3BasePerformanceFunctionTest1() {
@@ -750,8 +751,8 @@ function testInter3BasePerformanceFunctionTest1() {
 
 function testInter3BasePerformanceFunctionTest2() {
     let res =
-        testInterfacePerformance3.BasePerformanceFunctionTest2(95 as byte);
-    assertEQ(res, 10)
+        testInterfacePerformance3.BasePerformanceFunctionTest2((95).toByte());
+    arktest.assertEQ(res, 10)
 }
 
 function testInter4BasePerformanceFunctionTest1() {
@@ -760,8 +761,8 @@ function testInter4BasePerformanceFunctionTest1() {
 
 function testInter4BasePerformanceFunctionTest2() {
     let res =
-        testInterfacePerformance4.BasePerformanceFunctionTest2(95 as byte);
-    assertEQ(res, 10)
+        testInterfacePerformance4.BasePerformanceFunctionTest2((95).toByte());
+    arktest.assertEQ(res, 10)
 }
 function testInter5BasePerformanceFunctionTest1() {
     testInterfacePerformance5.BasePerformanceFunctionTest1();
@@ -769,8 +770,8 @@ function testInter5BasePerformanceFunctionTest1() {
 
 function testInter5BasePerformanceFunctionTest2() {
     let res =
-        testInterfacePerformance5.BasePerformanceFunctionTest2(95 as byte);
-    assertEQ(res, 10)
+        testInterfacePerformance5.BasePerformanceFunctionTest2((95).toByte());
+    arktest.assertEQ(res, 10)
 }
 
 function testInter6BasePerformanceFunctionTest1() {
@@ -779,8 +780,8 @@ function testInter6BasePerformanceFunctionTest1() {
 
 function testInter6BasePerformanceFunctionTest2() {
     let res =
-        testInterfacePerformance6.BasePerformanceFunctionTest2(95 as byte);
-    assertEQ(res, 10)
+        testInterfacePerformance6.BasePerformanceFunctionTest2((95).toByte());
+    arktest.assertEQ(res, 10)
 }
 function testInter7BasePerformanceFunctionTest1() {
     testInterfacePerformance7.BasePerformanceFunctionTest1();
@@ -788,8 +789,8 @@ function testInter7BasePerformanceFunctionTest1() {
 
 function testInter7BasePerformanceFunctionTest2() {
     let res =
-        testInterfacePerformance7.BasePerformanceFunctionTest2(95 as byte);
-    assertEQ(res, 10)
+        testInterfacePerformance7.BasePerformanceFunctionTest2((95).toByte());
+    arktest.assertEQ(res, 10)
 }
 
 function testInter8BasePerformanceFunctionTest1() {
@@ -798,8 +799,8 @@ function testInter8BasePerformanceFunctionTest1() {
 
 function testInter8BasePerformanceFunctionTest2() {
     let res =
-        testInterfacePerformance8.BasePerformanceFunctionTest2(95 as byte);
-    assertEQ(res, 10)
+        testInterfacePerformance8.BasePerformanceFunctionTest2((95).toByte());
+    arktest.assertEQ(res, 10)
 }
 function testInter9BasePerformanceFunctionTest1() {
     testInterfacePerformance9.BasePerformanceFunctionTest1();
@@ -807,8 +808,8 @@ function testInter9BasePerformanceFunctionTest1() {
 
 function testInter9BasePerformanceFunctionTest2() {
     let res =
-        testInterfacePerformance9.BasePerformanceFunctionTest2(95 as byte);
-    assertEQ(res, 10)
+        testInterfacePerformance9.BasePerformanceFunctionTest2((95).toByte());
+    arktest.assertEQ(res, 10)
 }
 function testInter10BasePerformanceFunctionTest1() {
     testInterfacePerformance10.BasePerformanceFunctionTest1();
@@ -816,8 +817,8 @@ function testInter10BasePerformanceFunctionTest1() {
 
 function testInter10BasePerformanceFunctionTest2() {
     let res =
-        testInterfacePerformance10.BasePerformanceFunctionTest2(95 as byte);
-    assertEQ(res, 10)
+        testInterfacePerformance10.BasePerformanceFunctionTest2((95).toByte());
+    arktest.assertEQ(res, 10)
 }
 function testInter11BasePerformanceFunctionTest1() {
     testInterfacePerformance11.BasePerformanceFunctionTest1();
@@ -825,8 +826,8 @@ function testInter11BasePerformanceFunctionTest1() {
 
 function testInter11BasePerformanceFunctionTest2() {
     let res =
-        testInterfacePerformance11.BasePerformanceFunctionTest2(95 as byte);
-    assertEQ(res, 10)
+        testInterfacePerformance11.BasePerformanceFunctionTest2((95).toByte());
+    arktest.assertEQ(res, 10)
 }
 function testInter12BasePerformanceFunctionTest1() {
     testInterfacePerformance12.BasePerformanceFunctionTest1();
@@ -834,8 +835,8 @@ function testInter12BasePerformanceFunctionTest1() {
 
 function testInter12BasePerformanceFunctionTest2() {
     let res =
-        testInterfacePerformance12.BasePerformanceFunctionTest2(95 as byte);
-    assertEQ(res, 10)
+        testInterfacePerformance12.BasePerformanceFunctionTest2((95).toByte());
+    arktest.assertEQ(res, 10)
 }
 function testInter13BasePerformanceFunctionTest1() {
     testInterfacePerformance13.BasePerformanceFunctionTest1();
@@ -843,8 +844,8 @@ function testInter13BasePerformanceFunctionTest1() {
 
 function testInter13BasePerformanceFunctionTest2() {
     let res =
-        testInterfacePerformance13.BasePerformanceFunctionTest2(95 as byte);
-    assertEQ(res, 10)
+        testInterfacePerformance13.BasePerformanceFunctionTest2((95).toByte());
+    arktest.assertEQ(res, 10)
 }
 
 function testInter14BasePerformanceFunctionTest1() {
@@ -853,8 +854,8 @@ function testInter14BasePerformanceFunctionTest1() {
 
 function testInter14BasePerformanceFunctionTest2() {
     let res =
-        testInterfacePerformance14.BasePerformanceFunctionTest2(95 as byte);
-    assertEQ(res, 10)
+        testInterfacePerformance14.BasePerformanceFunctionTest2((95).toByte());
+    arktest.assertEQ(res, 10)
 }
 
 function testInter15BasePerformanceFunctionTest1() {
@@ -863,8 +864,8 @@ function testInter15BasePerformanceFunctionTest1() {
 
 function testInter15BasePerformanceFunctionTest2() {
     let res =
-        testInterfacePerformance15.BasePerformanceFunctionTest2(95 as byte);
-    assertEQ(res, 10)
+        testInterfacePerformance15.BasePerformanceFunctionTest2((95).toByte());
+    arktest.assertEQ(res, 10)
 }
 
 function testInter16BasePerformanceFunctionTest1() {
@@ -873,8 +874,8 @@ function testInter16BasePerformanceFunctionTest1() {
 
 function testInter16BasePerformanceFunctionTest2() {
     let res =
-        testInterfacePerformance16.BasePerformanceFunctionTest2(95 as byte);
-    assertEQ(res, 10)
+        testInterfacePerformance16.BasePerformanceFunctionTest2((95).toByte());
+    arktest.assertEQ(res, 10)
 }
 function testInter17BasePerformanceFunctionTest1() {
     testInterfacePerformance17.BasePerformanceFunctionTest1();
@@ -882,8 +883,8 @@ function testInter17BasePerformanceFunctionTest1() {
 
 function testInter17BasePerformanceFunctionTest2() {
     let res =
-        testInterfacePerformance17.BasePerformanceFunctionTest2(95 as byte);
-    assertEQ(res, 10)
+        testInterfacePerformance17.BasePerformanceFunctionTest2((95).toByte());
+    arktest.assertEQ(res, 10)
 }
 function testInter18BasePerformanceFunctionTest1() {
     testInterfacePerformance18.BasePerformanceFunctionTest1();
@@ -891,8 +892,8 @@ function testInter18BasePerformanceFunctionTest1() {
 
 function testInter18BasePerformanceFunctionTest2() {
     let res =
-        testInterfacePerformance18.BasePerformanceFunctionTest2(95 as byte);
-    assertEQ(res, 10)
+        testInterfacePerformance18.BasePerformanceFunctionTest2((95).toByte());
+    arktest.assertEQ(res, 10)
 }
 
 function testInter19BasePerformanceFunctionTest1() {
@@ -901,8 +902,8 @@ function testInter19BasePerformanceFunctionTest1() {
 
 function testInter19BasePerformanceFunctionTest2() {
     let res =
-        testInterfacePerformance19.BasePerformanceFunctionTest2(95 as byte);
-    assertEQ(res, 10)
+        testInterfacePerformance19.BasePerformanceFunctionTest2((95).toByte());
+    arktest.assertEQ(res, 10)
 }
 
 function testInter20BasePerformanceFunctionTest1() {
@@ -911,75 +912,75 @@ function testInter20BasePerformanceFunctionTest1() {
 
 function testInter20BasePerformanceFunctionTest2() {
     let res =
-        testInterfacePerformance20.BasePerformanceFunctionTest2(95 as byte);
-    assertEQ(res, 10)
+        testInterfacePerformance20.BasePerformanceFunctionTest2((95).toByte());
+    arktest.assertEQ(res, 10)
 }
 function testInter21BasePerformanceFunctionTest1() {
     let res = testInterfacePerformance21.i32_test;
-    assertEQ(res, 2147483647)
+    arktest.assertEQ(res, 2147483647)
 }
 function testInter21BasePerformanceFunctionTest2() {
     let res = testInterfacePerformance21.struct_test;
-    assertEQ(res.data1, "testStruct")
-    assertEQ(res.data2, false)
-    assertEQ(res.data3, -2147483648)
+    arktest.assertEQ(res.data1, "testStruct")
+    arktest.assertEQ(res.data2, false)
+    arktest.assertEQ(res.data3, -2147483648)
 }
 function testInter21BasePerformanceFunctionTest3() {
     let res =
-        testInterfacePerformance21.BasePerformanceFunctionTest2(10 as byte);
-    assertEQ(res, 110 as byte)
+        testInterfacePerformance21.BasePerformanceFunctionTest2((10).toByte());
+    arktest.assertEQ(res, (110).toByte())
 }
 
 function testInter21BasePerformanceFunctionTest4() {
     let res: byte = testInterfacePerformance21.i8_test_attribute;
-    assertEQ(res, 127)
+    arktest.assertEQ(res, 127)
 }
 
 function testInter21BasePerformanceFunctionTest5() {
     let res: short = testInterfacePerformance21.i16_test_attribute;
-    assertEQ(res, 32767)
+    arktest.assertEQ(res, 32767)
 }
 
 function testInter21BasePerformanceFunctionTest6() {
     let res: int = testInterfacePerformance21.i32_test_attribute;
-    assertEQ(res, 2147483647)
+    arktest.assertEQ(res, 2147483647)
 }
 
 function testInter21BasePerformanceFunctionTest7() {
     let res: long = testInterfacePerformance21.i64_test_attribute;
-    assertEQ(res, 9223372036854775807)
+    arktest.assertEQ(res, 9223372036854775807)
 }
 
 function testInter21BasePerformanceFunctionTest8() {
     let res: float = testInterfacePerformance21.f32_test_attribute;
-    assertEQ(res, 3.14 as float)
+    arktest.assertEQ(res, (3.14).toFloat())
 }
 function testInter21BasePerformanceFunctionTest9() {
     let res: double = testInterfacePerformance21.f64_test_attribute;
-    assertEQ(res, -1.23)
+    arktest.assertEQ(res, -1.23)
 }
 
 function testInter21BasePerformanceFunctionTest10() {
     let res: string = testInterfacePerformance21.str_test_attribute;
-    assertEQ(res, "TESTSTR")
+    arktest.assertEQ(res, "TESTSTR")
 }
 
 function testInter21BasePerformanceFunctionTest11() {
     let res: boolean = testInterfacePerformance21.bool_test_attribute;
-    assertEQ(res, false)
+    arktest.assertEQ(res, false)
 }
 
 function testInter21BasePerformanceFunctionTest12() {
     let res: ArrayBuffer =
         testInterfacePerformance21._ArrayBuffer_test_attribute;
-    assertEQ(res.getByteLength(), 10)
+    arktest.assertEQ(res.getByteLength(), 10)
     for (let i = 0; i < res.getByteLength(); i++) {
-        assertEQ(res.at(i), 10)
+        arktest.assertEQ(res.at(i), 10)
     }
 }
 function testInter21BasePerformanceFunctionTest13() {
     let res: int|undefined = testInterfacePerformance21.optional_test_attribute;
-    assertEQ(res, 1010)
+    arktest.assertEQ(res, 1010)
 }
 
 function testInter21BasePerformanceFunctionTest14() {
@@ -988,80 +989,80 @@ function testInter21BasePerformanceFunctionTest14() {
     console.log("testInter21BasePerformanceFunctionTest14 ", res)
     const item = res[100];
     assertNE(item, undefined);
-    assertEQ(item?.data1, "one");
-    assertEQ(item?.data2, true);
-    assertEQ(item?.data3, 100);
+    arktest.assertEQ(item?.data1, "one");
+    arktest.assertEQ(item?.data2, true);
+    arktest.assertEQ(item?.data3, 100);
     const item1 = res[101];
     assertNE(item1, undefined);
-    assertEQ(item1?.data1, "two");
-    assertEQ(item1?.data2, false);
-    assertEQ(item1?.data3, 101);
+    arktest.assertEQ(item1?.data1, "two");
+    arktest.assertEQ(item1?.data2, false);
+    arktest.assertEQ(item1?.data3, 101);
 }
 
 function testInter21BasePerformanceFunctionTest15() {
     let res: namespaceTest.functiontest.TestUnionName =
         testInterfacePerformance21.union_test_attribute;
     console.log("testInter21BasePerformanceFunctionTest15 ", res)
-    assertEQ(res, 100)
+    arktest.assertEQ(res, 100)
 }
 
 function testInter21BasePerformanceFunctionTest16() {
     let res: boolean[] = testInterfacePerformance21.array_test_attribute;
     console.log("testInter21BasePerformanceFunctionTest16 ", res)
-    assertEQ(res.length, 1)
-    assertEQ(res[0], true)
+    arktest.assertEQ(res.length, 1)
+    arktest.assertEQ(res[0], true)
 }
 
 function testInter21BasePerformanceFunctionTest17() {
     let color = namespaceTest.functiontest.Color.GREEN;
     let res: namespaceTest.functiontest.Color =
         testInterfacePerformance21.enum_test_attribute;
-    assertEQ(res, color)
+    arktest.assertEQ(res, color)
 }
 
 function testCaseIbaseInterface1() {
     let res = testIbaseInterface2.BaseTest();
-    assertEQ(res, -2147483648)
+    arktest.assertEQ(res, -2147483648)
 }
 
 
 function testCaseIbaseInterface2() {
     let res = testIbaseInterface2.BaseTest1();
-    assertEQ(res, "TestInterface")
+    arktest.assertEQ(res, "TestInterface")
 }
 function testCaseIbaseInterface3() {
     let res = testIbaseInterface3.BaseTest();
-    assertEQ(res, 2147483647)
+    arktest.assertEQ(res, 2147483647)
 }
 
 
 function testCaseIbaseInterface4() {
     let res = testIbaseInterface3.BaseTest2();
-    assertEQ(res, true)
+    arktest.assertEQ(res, true)
 }
 
 function testCaseConstant1() {
     const res = namespaceTest.functiontest.CONSTANT_I8_001;
-    assertEQ(res, 127)
+    arktest.assertEQ(res, 127)
 }
 
 function testCaseConstant2() {
     const res = namespaceTest.functiontest.CONSTANT_I8_002;
-    assertEQ(res, -128)
+    arktest.assertEQ(res, -128)
 }
 
 function testCaseConstant3() {
     const res = namespaceTest.functiontest.CONSTANT_I32_001;
-    assertEQ(res, 2147483647)
+    arktest.assertEQ(res, 2147483647)
 }
 // namespace2
 function primitives_noreturn() {
     namespace2Test.inner.Primitives_noreturn(
-        1 as int, 2 as double, true, "hello", 3 as byte)
+        (1).toInt(), (2).toDouble(), true, "hello", (3).toByte())
 }
 function primitives_return() {
     let res = namespace2Test.inner.Primitives_return(
-        1 as int, 2 as double, true, "hello", 3 as byte)
+        (1).toInt(), (2).toDouble(), true, "hello", (3).toByte())
     console.log(res);
 }
 
@@ -1075,7 +1076,7 @@ function containers_noreturn() {
     namespace2Test.inner.Containers_noreturn(
         arri8, arri16, arrf32, arrf64, "union_string")
     namespace2Test.inner.Containers_noreturn(
-        arri8, arri16, arrf32, arrf64, 1 as byte)
+        arri8, arri16, arrf32, arrf64, (1).toByte())
 }
 function containers_return() {
     let arri8: byte[] = [1, 2, 3];
@@ -1087,7 +1088,7 @@ function containers_return() {
     let res1 = namespace2Test.inner.Containers_return(
         arri8, arri16, arrf32, arrf64, "union_string")
     let res2 = namespace2Test.inner.Containers_return(
-        arri8, arri16, arrf32, arrf64, 1 as byte)
+        arri8, arri16, arrf32, arrf64, (1).toByte())
     console.log(res1 + " " + res2)
 }
 function enum_noreturn() {
@@ -1119,19 +1120,19 @@ function interface_noparam_noreturn() {
 }
 
 function interface_primitives_noreturn() {
-    instance.Primitives_noreturn(1 as byte)
+    instance.Primitives_noreturn((1).toByte())
 }
 function interface_primitives_noreturn1() {
-    instance.Primitives_noreturn1(12 as short)
+    instance.Primitives_noreturn1((12).toShort())
 }
 function interface_primitives_noreturn2() {
-    instance.Primitives_noreturn2(123 as int)
+    instance.Primitives_noreturn2((123).toInt())
 }
 function interface_primitives_noreturn3() {
-    instance.Primitives_noreturn3(1.1 as float)
+    instance.Primitives_noreturn3((1.1).toFloat())
 }
 function interface_primitives_noreturn4() {
-    instance.Primitives_noreturn4(1.1234 as double)
+    instance.Primitives_noreturn4((1.1234).toDouble())
 }
 function interface_primitives_noreturn5() {
     instance.Primitives_noreturn5(true)
@@ -1144,7 +1145,7 @@ function interface_primitives_noreturn7() {
 }
 
 function interface_primitives_return() {
-    instance.Primitives_return(123 as int)
+    instance.Primitives_return((123).toInt())
 }
 function interface_containers_noreturn1() {
     let arri8: byte[] = [1, 2, 3, 4, 5];
@@ -1152,7 +1153,7 @@ function interface_containers_noreturn1() {
 }
 function interface_containers_noreturn2() {
     instance.Containers_noreturn2("union string")
-    instance.Containers_noreturn2(1 as byte)
+    instance.Containers_noreturn2((1).toByte())
 }
 function interface_containers_noreturn3() {
     let numbersU8: byte[] = [1, 2, 3, 4, 5];
@@ -1176,7 +1177,7 @@ function interface_containers_noreturn5() {
 
 
 function interface_containers_return() {
-    let res = instance.Containers_return(123 as byte)
+    let res = instance.Containers_return((123).toByte())
     console.log(res)
 }
 
@@ -1186,7 +1187,7 @@ function interface_ErrorResponse() {
 }
 
 function overload1() {
-    instance.OverloadFunc(1 as byte, 2 as byte)
+    instance.OverloadFunc((1).toByte(), (2).toByte())
 }
 function overload2() {
     let arri8: byte[] = [1, 2, 3, 4, 5];
@@ -1200,7 +1201,7 @@ function overload3() {
 }
 function overload4() {
     let mystruct:
-        namespace2Test.inner.Mystruct = {_string: "hello", _i8: 1 as byte};
+        namespace2Test.inner.Mystruct = {_string: "hello", _i8: (1).toByte()};
     instance.OverloadFunc(mystruct)
 }
 
@@ -1221,41 +1222,41 @@ function test20interface() {
 function testattributeString() {
     let name = namespace2Test.inner.PrintTestInterfaceName(instance)
     console.log("instance.name is " + name)
-    assertEQ(name, "String")
+    arktest.assertEQ(name, "String")
 }
 function testattributei8() {
     let i8 = namespace2Test.inner.PrintTestInterfaceNumberi8(instance)
     console.log("instance.i8 is " + i8)
-    assertEQ(i8, -128)
+    arktest.assertEQ(i8, -128)
 }
 function testattributei16() {
     let i16 = namespace2Test.inner.PrintTestInterfaceNumberi16(instance)
     console.log("instance.i16 is " + i16)
-    assertEQ(i16, -32768)
+    arktest.assertEQ(i16, -32768)
 }
 function testattributei32() {
     let i32 = namespace2Test.inner.PrintTestInterfaceNumberi32(instance)
     console.log("instance.i32 is " + i32)
-    assertEQ(i32, -2147483648)
+    arktest.assertEQ(i32, -2147483648)
 }
 function testattributei64() {
     let i64 = namespace2Test.inner.PrintTestInterfaceNumberi64(instance)
     console.log("instance.i64 is " + i64)
-    assertEQ(i64, 1000 as long)
+    arktest.assertEQ(i64, (1000).toLong())
 }
 function testattributef32() {
     let f32 = namespace2Test.inner.PrintTestInterfaceNumberf32(instance)
     console.log("instance.f32 is " + f32)
-    assertEQ(f32, 3.1415927 as float)
+    arktest.assertEQ(f32, (3.1415927).toFloat())
 }
 function testattributef64() {
     let f64 = namespace2Test.inner.PrintTestInterfaceNumberf64(instance)
     console.log("instance.f64 is " + f64)
-    assertEQ(f64, 3.141592653589793)
+    arktest.assertEQ(f64, 3.141592653589793)
 }
 function testattributebool() {
     let b = namespace2Test.inner.PrintTestInterfacebool(instance)
-    assertEQ(b, true)
+    arktest.assertEQ(b, true)
 }
 function testattributeArrayBuffer() {
     namespace2Test.inner.PrintTestInterfaceArraybuffer(instance)
@@ -1287,7 +1288,7 @@ function testinheritance() {
 
 function main() {
     console.log("run main ... ani_namespace_test begin ...")
-    const suite = new ArkTestsuite("test function namespace_test")
+    const suite = new arktest.ArkTestsuite("test function namespace_test")
     // namespace2
     suite.addTest("primitives_noreturn", primitives_noreturn)
     suite.addTest("primitives_return", primitives_return)

@@ -22,14 +22,14 @@ function getIfaceName() {
     let foo = IfaceTest.getFooIface();
     let name = foo.name;
     console.log("foo.name is " + name)
-    assertEQ(name, "foo")
+    arktest.assertEQ(name, "foo")
 }
 
 function getIfaceReadonlyName() {
     let noo = IfaceReadonlyTest.getNooIface();
     let nooName = noo.name;
     console.log("noo.name is " + nooName)
-    assertEQ(nooName, "noo")
+    arktest.assertEQ(nooName, "noo")
 }
 
 function setIfaceName() {
@@ -37,7 +37,7 @@ function setIfaceName() {
     foo.name = "alice"
     let name = foo.name;
     console.log("foo.name is " + name)
-    assertEQ(name, "alice")
+    arktest.assertEQ(name, "alice")
 }
 
 function printFooName() {
@@ -45,14 +45,14 @@ function printFooName() {
     foo.name = "bob"
     let name = IfaceTest.printFooName(foo)
     console.log("foo.name is " + name)
-    assertEQ(name, "bob")
+    arktest.assertEQ(name, "bob")
 }
 
 function printNooName() {
     let noo = IfaceReadonlyTest.getNooIface();
     let name = IfaceReadonlyTest.printNooName(noo)
     console.log("noo.name is " + name)
-    assertEQ(name, "noo")
+    arktest.assertEQ(name, "noo")
 }
 
 function setSubFooName() {
@@ -60,18 +60,39 @@ function setSubFooName() {
     subFoo.name = "aaa"
     let name = subFoo.name
     console.log("subFoo.name is " + name)
-    assertEQ(name, "aaa")
+    arktest.assertEQ(name, "aaa")
+}
+
+function test_iface_subBaseFun_base() {
+    let sub = IfaceTest.getSubBaseFun();
+    let info = sub.base();
+
+    console.log("sub.base is " + info)
+    arktest.assertEQ(info, "SubBaseFun.base")
+}
+
+function test_iface_subBaseElem_base() {
+    let sub = IfaceTest.getSubBaseElem();
+    sub.base = "SubBaseElem.base";
+    let info = sub.base;
+
+    console.log("SubBaseElem.base is " + info)
+    arktest.assertEQ(info, "SubBaseElem.base")
 }
 
 function main() {
     console.log("run main ... IfacePropTest ...")
+    const suite = new arktest.ArkTestsuite("IfacePropTest")
 
-    const suite = new ArkTestsuite("IfacePropTest")
     suite.addTest("getIfaceName", getIfaceName)
     suite.addTest("getIfaceReadonlyName", getIfaceReadonlyName)
     suite.addTest("setIfaceName", setIfaceName)
     suite.addTest("printFooName", printFooName)
     suite.addTest("printNooName", printNooName)
     suite.addTest("setSubFooName", setSubFooName)
+
+    suite.addTest("test_iface_subBaseFun_base", test_iface_subBaseFun_base)
+    suite.addTest("test_iface_subBaseElem_base", test_iface_subBaseElem_base)
+
     exit(suite.run())
 }

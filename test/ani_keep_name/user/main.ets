@@ -21,7 +21,7 @@ function getIfaceName() {
     let foo = IfaceTest.GetFooIface();
     let name = foo.name;
     console.log("foo.name is " + name)
-    assertEQ(name, "foo")
+    arktest.assertEQ(name, "foo")
 }
 
 function setIfaceName() {
@@ -29,7 +29,7 @@ function setIfaceName() {
     foo.name = "alice"
     let name = foo.name;
     console.log("foo.name is " + name)
-    assertEQ(name, "alice")
+    arktest.assertEQ(name, "alice")
 }
 
 function printFooName() {
@@ -38,7 +38,7 @@ function printFooName() {
     let name = IfaceTest.PrintFooName(foo)
     foo.Bar();
     console.log("foo.name is " + name)
-    assertEQ(name, "bob")
+    arktest.assertEQ(name, "bob")
 }
 
 function setSubFooName() {
@@ -47,7 +47,7 @@ function setSubFooName() {
     let name = subFoo.name
     subFoo.Bar()
     console.log("subFoo.name is " + name)
-    assertEQ(name, "aaa")
+    arktest.assertEQ(name, "aaa")
 }
 
 function ibase_on() {
@@ -75,7 +75,7 @@ function ibase_off() {
 function main() {
     console.log("run main ... IfacePropTest ...")
 
-    const suite = new ArkTestsuite("IfacePropTest")
+    const suite = new arktest.ArkTestsuite("IfacePropTest")
     suite.addTest("ibase_on", ibase_on)
     suite.addTest("ibase_off", ibase_off)
     suite.addTest("getIfaceName", getIfaceName)
