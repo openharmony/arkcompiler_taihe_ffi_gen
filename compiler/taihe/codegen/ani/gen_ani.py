@@ -5,7 +5,7 @@ from taihe.codegen.abi.writer import CHeaderWriter, CSourceWriter
 from taihe.codegen.ani.analyses import (
     ANI_CLASS,
     ANINativeFuncInfo,
-    ANIRegisterInfo,
+    ANIScope,
     GlobFuncANIInfo,
     IfaceANIInfo,
     IfaceMethodANIInfo,
@@ -80,6 +80,9 @@ class ANICodeGenerator:
                     constructor_target.writelns(
                         f"return ANI_ERROR;",
                     )
+                constructor_target.writelns(
+                    f"ani_status status = ANI_OK;",
+                )
                 for pkg in pg.packages:
                     pkg_ani_info = PackageANIInfo.get(self.am, pkg)
                     constructor_target.add_include(pkg_ani_info.header)
@@ -89,11 +92,11 @@ class ANICodeGenerator:
                     ):
                         constructor_target.writelns(
                             f'std::cerr << "Error from {pkg_ani_info.cpp_ns}::ANIRegister" << std::endl;',
-                            f"return ANI_ERROR;",
+                            f"status = ANI_ERROR;",
                         )
                 constructor_target.writelns(
                     f"*result = ANI_VERSION_1;",
-                    f"return ANI_OK;",
+                    f"return status;",
                 )
 
     def gen_package(self, pkg: PackageDecl):
@@ -141,47 +144,24 @@ class ANICodeGenerator:
             pkg_ani_source_target.add_include("taihe/object.hpp")
             pkg_ani_source_target.add_include(pkg_ani_info.header)
             pkg_ani_source_target.add_include(pkg_cpp_user_info.header)
-            self.gen_package_natives(pkg, pkg_ani_info, pkg_ani_source_target)
-            self.gen_package_register(pkg, pkg_ani_info, pkg_ani_source_target)
-
-    def gen_package_natives(
-        self,
-        pkg: PackageDecl,
-        pkg_ani_info: PackageANIInfo,
-        pkg_ani_source_target: CSourceWriter,
-    ):
-        # generate functions
-        with pkg_ani_source_target.indented(
-            f"namespace local {{",
-            f"}}",
-            indent="",
-        ):
-            for iface in pkg.interfaces:
-                with pkg_ani_source_target.indented(
-                    f"namespace {iface.name} {{",
-                    f"}}",
-                    indent="",
-                ):
-                    iface_abi_info = IfaceABIInfo.get(self.am, iface)
-                    for ancestor in iface_abi_info.ancestor_dict:
-                        for method in ancestor.methods:
-                            self.gen_method(
-                                iface,
-                                method,
-                                pkg_ani_source_target,
-                                ancestor,
-                                method.name,
-                            )
-                    self.gen_obj_drop(pkg_ani_source_target, "_obj_drop")
-                    self.gen_obj_dup(pkg_ani_source_target, "_obj_dup")
-            for func in pkg.functions:
-                self.gen_func(func, pkg_ani_source_target, func.name)
+            subregisters = self.gen_bindings(
+                pkg,
+                pkg_ani_info,
+                pkg_ani_source_target,
+            )
+            self.gen_package_register(
+                pkg,
+                pkg_ani_info,
+                pkg_ani_source_target,
+                subregisters,
+            )
 
     def gen_package_register(
         self,
         pkg: PackageDecl,
         pkg_ani_info: PackageANIInfo,
         pkg_ani_source_target: CSourceWriter,
+        subregisters: list[str],
     ):
         with pkg_ani_source_target.indented(
             f"namespace {pkg_ani_info.cpp_ns} {{",
@@ -210,71 +190,122 @@ class ANICodeGenerator:
                     pkg_ani_source_target.writelns(
                         f"::taihe::set_vm(vm);",
                     )
-                for register_info in self.stat_bindings(pkg, pkg_ani_info):
-                    self.gen_binding(register_info, pkg_ani_source_target)
                 pkg_ani_source_target.writelns(
-                    f"return ANI_OK;",
+                    f"ani_status status = ANI_OK;",
+                )
+                for subregister in subregisters:
+                    with pkg_ani_source_target.indented(
+                        f"if (ani_status ret = {subregister}(env); ret != ANI_OK && ret != ANI_ALREADY_BINDED) {{",
+                        f"}}",
+                    ):
+                        pkg_ani_source_target.writelns(
+                            f'std::cerr << "Error from {subregister}, code: " << ret << std::endl;',
+                            f"status = ANI_ERROR;",
+                        )
+                pkg_ani_source_target.writelns(
+                    f"return status;",
                 )
 
-    def stat_bindings(
+    def gen_bindings(
         self,
         pkg: PackageDecl,
         pkg_ani_info: PackageANIInfo,
-    ):
-        pkg_register_info = ANIRegisterInfo(
-            parent_scope=pkg_ani_info.ns.scope,
-            impl_desc=pkg_ani_info.ns.impl_desc,
-            member_infos=[],
-        )
-        for func in pkg.functions:
-            func_ani_info = GlobFuncANIInfo.get(self.am, func)
-            func_info = ANINativeFuncInfo(
-                sts_native_name=func_ani_info.sts_native_name,
-                full_name=f"local::{func.name}",
-            )
-            pkg_register_info.member_infos.append(func_info)
-        yield pkg_register_info
-
-        for iface in pkg.interfaces:
-            iface_abi_info = IfaceABIInfo.get(self.am, iface)
-            iface_ani_info = IfaceANIInfo.get(self.am, iface)
-            iface_register_info = ANIRegisterInfo(
-                parent_scope=ANI_CLASS,
-                impl_desc=iface_ani_info.impl_desc,
-                member_infos=[],
-            )
-            for ancestor in iface_abi_info.ancestor_dict:
-                for method in ancestor.methods:
-                    method_ani_info = IfaceMethodANIInfo.get(self.am, method)
-                    method_info = ANINativeFuncInfo(
-                        sts_native_name=method_ani_info.sts_native_name,
-                        full_name=f"local::{iface.name}::{method.name}",
-                    )
-                    iface_register_info.member_infos.append(method_info)
-            obj_drop_info = ANINativeFuncInfo(
-                sts_native_name="_obj_drop",
-                full_name=f"local::{iface.name}::_obj_drop",
-            )
-            iface_register_info.member_infos.append(obj_drop_info)
-            obj_dup_info = ANINativeFuncInfo(
-                sts_native_name="_obj_dup",
-                full_name=f"local::{iface.name}::_obj_dup",
-            )
-            iface_register_info.member_infos.append(obj_dup_info)
-            yield iface_register_info
-
-    def gen_binding(
-        self,
-        register_info: ANIRegisterInfo,
         pkg_ani_source_target: CSourceWriter,
     ):
+        subregisters: list[str] = []
+
         with pkg_ani_source_target.indented(
-            f"{{",
+            f"namespace local {{",
+            f"}}",
+            indent="",
+        ):
+            mod_member_infos = []
+            self.gen_obj_drop(pkg_ani_source_target, "_obj_drop")
+            obj_drop_info = ANINativeFuncInfo(
+                sts_native_name="_obj_drop",
+                full_name=f"local::_obj_drop",
+            )
+            mod_member_infos.append(obj_drop_info)
+            self.gen_obj_dup(pkg_ani_source_target, "_obj_dup")
+            obj_dup_info = ANINativeFuncInfo(
+                sts_native_name="_obj_dup",
+                full_name=f"local::_obj_dup",
+            )
+            mod_member_infos.append(obj_dup_info)
+            self.gen_subregister(
+                "ANIUtilsRegister",
+                pkg_ani_source_target,
+                parent_scope=pkg_ani_info.ns.module.scope,
+                impl_desc=pkg_ani_info.ns.module.impl_desc,
+                member_infos=mod_member_infos,
+            )
+            subregisters.append("local::ANIUtilsRegister")
+
+            pkg_member_infos = []
+            for func in pkg.functions:
+                self.gen_func(func, pkg_ani_source_target, func.name)
+                func_ani_info = GlobFuncANIInfo.get(self.am, func)
+                func_info = ANINativeFuncInfo(
+                    sts_native_name=func_ani_info.sts_native_name,
+                    full_name=f"local::{func.name}",
+                )
+                pkg_member_infos.append(func_info)
+            self.gen_subregister(
+                "ANIFuncsRegister",
+                pkg_ani_source_target,
+                parent_scope=pkg_ani_info.ns.scope,
+                impl_desc=pkg_ani_info.ns.impl_desc,
+                member_infos=pkg_member_infos,
+            )
+            subregisters.append("local::ANIFuncsRegister")
+
+            for iface in pkg.interfaces:
+                with pkg_ani_source_target.indented(
+                    f"namespace {iface.name} {{",
+                    f"}}",
+                    indent="",
+                ):
+                    iface_abi_info = IfaceABIInfo.get(self.am, iface)
+                    iface_ani_info = IfaceANIInfo.get(self.am, iface)
+                    iface_member_infos = []
+                    for ancestor in iface_abi_info.ancestor_dict:
+                        for method in ancestor.methods:
+                            self.gen_method(
+                                iface,
+                                method,
+                                pkg_ani_source_target,
+                                ancestor,
+                                method.name,
+                            )
+                            method_ani_info = IfaceMethodANIInfo.get(self.am, method)
+                            method_info = ANINativeFuncInfo(
+                                sts_native_name=method_ani_info.sts_native_name,
+                                full_name=f"local::{iface.name}::{method.name}",
+                            )
+                            iface_member_infos.append(method_info)
+                    self.gen_subregister(
+                        "ANIMethodsRegister",
+                        pkg_ani_source_target,
+                        parent_scope=ANI_CLASS,
+                        impl_desc=iface_ani_info.impl_desc,
+                        member_infos=iface_member_infos,
+                    )
+                    subregisters.append(f"local::{iface.name}::ANIMethodsRegister")
+
+        return subregisters
+
+    def gen_subregister(
+        self,
+        register_name: str,
+        pkg_ani_source_target: CSourceWriter,
+        parent_scope: ANIScope,
+        impl_desc: str,
+        member_infos: list[ANINativeFuncInfo],
+    ):
+        with pkg_ani_source_target.indented(
+            f"static ani_status {register_name}(ani_env *env) {{",
             f"}}",
         ):
-            parent_scope = register_info.parent_scope
-            impl_desc = register_info.impl_desc
-            member_infos = register_info.member_infos
             pkg_ani_source_target.writelns(
                 f"{parent_scope} ani_env;",
             )
@@ -293,13 +324,9 @@ class ANICodeGenerator:
                     pkg_ani_source_target.writelns(
                         f'{{"{member_info.sts_native_name}", nullptr, reinterpret_cast<void*>({member_info.full_name})}},',
                     )
-            with pkg_ani_source_target.indented(
-                f"if (ANI_OK != env->{parent_scope.suffix}_BindNative{parent_scope.member.suffix}s(ani_env, methods, sizeof(methods) / sizeof(ani_native_function))) {{",
-                f"}}",
-            ):
-                pkg_ani_source_target.writelns(
-                    f"return ANI_ERROR;",
-                )
+            pkg_ani_source_target.writelns(
+                f"return env->{parent_scope.suffix}_BindNative{parent_scope.member.suffix}s(ani_env, methods, sizeof(methods) / sizeof(ani_native_function));",
+            )
 
     def gen_func(
         self,
@@ -429,7 +456,7 @@ class ANICodeGenerator:
         name: str,
     ):
         with pkg_ani_source_target.indented(
-            f"static void {name}([[maybe_unused]] ani_env *env, [[maybe_unused]] ani_class clazz, ani_long data_ptr) {{",
+            f"static void {name}([[maybe_unused]] ani_env *env, ani_long data_ptr) {{",
             f"}}",
         ):
             pkg_ani_source_target.writelns(
@@ -442,7 +469,7 @@ class ANICodeGenerator:
         name: str,
     ):
         with pkg_ani_source_target.indented(
-            f"static ani_long {name}([[maybe_unused]] ani_env *env, [[maybe_unused]] ani_class clazz, ani_long data_ptr) {{",
+            f"static ani_long {name}([[maybe_unused]] ani_env *env, ani_long data_ptr) {{",
             f"}}",
         ):
             pkg_ani_source_target.writelns(

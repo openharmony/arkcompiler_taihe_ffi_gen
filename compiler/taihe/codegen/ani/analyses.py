@@ -341,13 +341,6 @@ class ANINativeFuncInfo:
     full_name: str
 
 
-@dataclass
-class ANIRegisterInfo:
-    parent_scope: ANIScope
-    impl_desc: str
-    member_infos: list[ANINativeFuncInfo]
-
-
 class PackageANIInfo(AbstractAnalysis[PackageDecl]):
     def __init__(self, am: AnalysisManager, p: PackageDecl) -> None:
         super().__init__(am, p)
