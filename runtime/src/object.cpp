@@ -19,6 +19,6 @@ void tobj_drop(struct DataBlockHead *data_ptr) {
     return;
   }
   if (tref_dec(&data_ptr->m_count)) {
-    data_ptr->rtti_ptr->free(data_ptr);
+    data_ptr->rtti_ptr->free_fptr(data_ptr);
   }
 }

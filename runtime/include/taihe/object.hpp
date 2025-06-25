@@ -45,14 +45,14 @@ struct data_holder : public data_view {
 };
 
 inline bool operator==(data_view lhs, data_view rhs) {
-  return lhs.data_ptr->rtti_ptr->same(lhs.data_ptr, rhs.data_ptr);
+  return lhs.data_ptr->rtti_ptr->same_fptr(lhs.data_ptr, rhs.data_ptr);
 }
 }  // namespace taihe
 
 template<>
 struct std::hash<taihe::data_holder> {
   std::size_t operator()(taihe::data_view val) const {
-    return val.data_ptr->rtti_ptr->hash(val.data_ptr);
+    return val.data_ptr->rtti_ptr->hash_fptr(val.data_ptr);
   }
 };
 
@@ -166,9 +166,9 @@ public:
 public:
   static constexpr struct typeinfo_t {
     uint64_t version;
-    void (*free)(struct DataBlockHead *);
-    std::size_t (*hash)(struct DataBlockHead *);
-    bool (*same)(struct DataBlockHead *, struct DataBlockHead *);
+    void (*free_fptr)(struct DataBlockHead *);
+    std::size_t (*hash_fptr)(struct DataBlockHead *);
+    bool (*same_fptr)(struct DataBlockHead *, struct DataBlockHead *);
     uint64_t len = 0;
     struct IdMapItem idmap[((sizeof(InterfaceTypes::template idmap_impl<Impl>) /
                              sizeof(IdMapItem)) +
@@ -176,9 +176,9 @@ public:
   } rtti = [] {
     struct typeinfo_t info = {
         .version = 0,
-        .free = &free_data_ptr<Impl>,
-        .hash = &hash_data_ptr<Impl>,
-        .same = &same_data_ptr<Impl>,
+        .free_fptr = &free_data_ptr<Impl>,
+        .hash_fptr = &hash_data_ptr<Impl>,
+        .same_fptr = &same_data_ptr<Impl>,
     };
     (
         [&] {
