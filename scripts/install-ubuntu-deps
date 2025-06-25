@@ -46,8 +46,10 @@ install_pip_pkgs() {
 }
 
 main() {
-    log_stage "Syncing compiler deps" && _uv sync
-    log_stage "Generating grammar" && ensure_command java && _uv run ./generate-grammar
+    # "uv bulid" runs ANTLR using java. Ensure java exists here.
+    # Since we cannot intercept a missing command in Python.
+    log_stage "Checking uv deps" && ensure_command java uv
+    log_stage "Syncing compiler deps" && _uv sync && _uv run ./generate-grammar
     log_stage "Checking build deps" && ensure_command python curl cmake clang ninja
     log_stage "Done!"
 }
