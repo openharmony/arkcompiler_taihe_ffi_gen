@@ -2063,61 +2063,7 @@ class CallbackTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[CallbackType]):
             target.writelns(
                 f"{cpp_impl_class}(ani_env* env, ani_ref val) : ::taihe::dref_guard(env, val) {{}}",
             )
-            inner_cpp_params = []
-            inner_ani_args = []
-            inner_cpp_args = []
-            for index, param_ty in enumerate(self.t.params_ty):
-                inner_cpp_arg = f"cpp_arg_{index}"
-                inner_ani_arg = f"ani_arg_{index}"
-                param_ty_cpp_info = TypeCppInfo.get(self.am, param_ty)
-                inner_cpp_params.append(f"{param_ty_cpp_info.as_param} {inner_cpp_arg}")
-                inner_ani_args.append(inner_ani_arg)
-                inner_cpp_args.append(inner_cpp_arg)
-            cpp_params_str = ", ".join(inner_cpp_params)
-            if return_ty := self.t.return_ty:
-                return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-                return_ty_as_owner = return_ty_cpp_info.as_owner
-            else:
-                return_ty_as_owner = "void"
-            with target.indented(
-                f"{return_ty_as_owner} operator()({cpp_params_str}) {{",
-                f"}}",
-            ):
-                target.writelns(
-                    f"::taihe::env_guard guard;",
-                    f"ani_env *env = guard.get_env();",
-                )
-                for inner_ani_arg, inner_cpp_arg, param_ty in zip(
-                    inner_ani_args, inner_cpp_args, self.t.params_ty, strict=True
-                ):
-                    param_ty_ani_info = TypeANIInfo.get(self.am, param_ty)
-                    param_ty_ani_info.into_ani_boxed(
-                        target, "env", inner_cpp_arg, inner_ani_arg
-                    )
-                inner_ani_args_str = ", ".join(inner_ani_args)
-                if return_ty := self.t.return_ty:
-                    inner_ani_res = "ani_result"
-                    inner_cpp_res = "cpp_result"
-                    target.writelns(
-                        f"ani_ref ani_argv[] = {{{inner_ani_args_str}}};",
-                        f"ani_ref {inner_ani_res};",
-                        f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.params_ty)}, ani_argv, &{inner_ani_res});",
-                    )
-                    return_ty_ani_info = TypeANIInfo.get(self.am, return_ty)
-                    return_ty_ani_info.from_ani_boxed(
-                        target, "env", inner_ani_res, inner_cpp_res
-                    )
-                    target.writelns(
-                        f"return {inner_cpp_res};",
-                    )
-                else:
-                    inner_ani_res = "ani_result"
-                    target.writelns(
-                        f"ani_ref ani_argv[] = {{{inner_ani_args_str}}};",
-                        f"ani_ref {inner_ani_res};",
-                        f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.params_ty)}, ani_argv, &{inner_ani_res});",
-                        f"return;",
-                    )
+            self.gen_operator_call(target)
             with target.indented(
                 f"uintptr_t getGlobalReference() const {{",
                 f"}}",
@@ -2128,6 +2074,66 @@ class CallbackTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[CallbackType]):
         target.writelns(
             f"{self.cpp_info.as_owner} {cpp_result} = ::taihe::make_holder<{cpp_impl_class}, {self.cpp_info.as_owner}, ::taihe::platform::ani::AniObject>({env}, {ani_value});",
         )
+
+    def gen_operator_call(
+        self,
+        target: CSourceWriter,
+    ):
+        inner_cpp_params = []
+        inner_ani_args = []
+        inner_cpp_args = []
+        for index, param_ty in enumerate(self.t.params_ty):
+            inner_cpp_arg = f"cpp_arg_{index}"
+            inner_ani_arg = f"ani_arg_{index}"
+            param_ty_cpp_info = TypeCppInfo.get(self.am, param_ty)
+            inner_cpp_params.append(f"{param_ty_cpp_info.as_param} {inner_cpp_arg}")
+            inner_ani_args.append(inner_ani_arg)
+            inner_cpp_args.append(inner_cpp_arg)
+        cpp_params_str = ", ".join(inner_cpp_params)
+        if return_ty := self.t.return_ty:
+            return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
+            return_ty_as_owner = return_ty_cpp_info.as_owner
+        else:
+            return_ty_as_owner = "void"
+        with target.indented(
+            f"{return_ty_as_owner} operator()({cpp_params_str}) {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env *env = guard.get_env();",
+            )
+            for inner_ani_arg, inner_cpp_arg, param_ty in zip(
+                inner_ani_args, inner_cpp_args, self.t.params_ty, strict=True
+            ):
+                param_ty_ani_info = TypeANIInfo.get(self.am, param_ty)
+                param_ty_ani_info.into_ani_boxed(
+                    target, "env", inner_cpp_arg, inner_ani_arg
+                )
+            inner_ani_args_str = ", ".join(inner_ani_args)
+            if return_ty := self.t.return_ty:
+                inner_ani_res = "ani_result"
+                inner_cpp_res = "cpp_result"
+                target.writelns(
+                    f"ani_ref ani_argv[] = {{{inner_ani_args_str}}};",
+                    f"ani_ref {inner_ani_res};",
+                    f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.params_ty)}, ani_argv, &{inner_ani_res});",
+                )
+                return_ty_ani_info = TypeANIInfo.get(self.am, return_ty)
+                return_ty_ani_info.from_ani_boxed(
+                    target, "env", inner_ani_res, inner_cpp_res
+                )
+                target.writelns(
+                    f"return {inner_cpp_res};",
+                )
+            else:
+                inner_ani_res = "ani_result"
+                target.writelns(
+                    f"ani_ref ani_argv[] = {{{inner_ani_args_str}}};",
+                    f"ani_ref {inner_ani_res};",
+                    f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.params_ty)}, ani_argv, &{inner_ani_res});",
+                    f"return;",
+                )
 
     @override
     def into_ani(

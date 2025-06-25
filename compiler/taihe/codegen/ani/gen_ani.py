@@ -104,15 +104,13 @@ class ANICodeGenerator:
         for union in pkg.unions:
             self.gen_union_files(union)
         pkg_ani_info = PackageANIInfo.get(self.am, pkg)
-        pkg_cpp_user_info = PackageCppUserInfo.get(self.am, pkg)
-        self.gen_package_header(pkg, pkg_ani_info, pkg_cpp_user_info)
-        self.gen_package_source(pkg, pkg_ani_info, pkg_cpp_user_info)
+        self.gen_package_header(pkg, pkg_ani_info)
+        self.gen_package_source(pkg, pkg_ani_info)
 
     def gen_package_header(
         self,
         pkg: PackageDecl,
         pkg_ani_info: PackageANIInfo,
-        pkg_cpp_user_info: PackageCppUserInfo,
     ):
         with CHeaderWriter(
             self.om,
@@ -133,149 +131,175 @@ class ANICodeGenerator:
         self,
         pkg: PackageDecl,
         pkg_ani_info: PackageANIInfo,
-        pkg_cpp_user_info: PackageCppUserInfo,
     ):
         with CSourceWriter(
             self.om,
             f"src/{pkg_ani_info.source}",
             FileKind.CPP_SOURCE,
         ) as pkg_ani_source_target:
+            pkg_cpp_user_info = PackageCppUserInfo.get(self.am, pkg)
+            pkg_ani_source_target.add_include("taihe/object.hpp")
             pkg_ani_source_target.add_include(pkg_ani_info.header)
             pkg_ani_source_target.add_include(pkg_cpp_user_info.header)
+            self.gen_package_natives(pkg, pkg_ani_info, pkg_ani_source_target)
+            self.gen_package_register(pkg, pkg_ani_info, pkg_ani_source_target)
 
-            # generate functions
-            with pkg_ani_source_target.indented(
-                f"namespace local {{",
-                f"}}",
-                indent="",
-            ):
-                for iface in pkg.interfaces:
-                    with pkg_ani_source_target.indented(
-                        f"namespace {iface.name} {{",
-                        f"}}",
-                        indent="",
-                    ):
-                        iface_abi_info = IfaceABIInfo.get(self.am, iface)
-                        for ancestor in iface_abi_info.ancestor_dict:
-                            for method in ancestor.methods:
-                                self.gen_method(
-                                    iface,
-                                    method,
-                                    pkg_ani_source_target,
-                                    ancestor,
-                                    method.name,
-                                )
-                        self.gen_obj_drop(pkg_ani_source_target, "_obj_drop")
-                        self.gen_obj_dup(pkg_ani_source_target, "_obj_dup")
-                for func in pkg.functions:
-                    self.gen_func(func, pkg_ani_source_target, func.name)
-
-            # register infos
-            register_infos: list[ANIRegisterInfo] = []
-
-            pkg_register_info = ANIRegisterInfo(
-                parent_scope=pkg_ani_info.ns.scope,
-                impl_desc=pkg_ani_info.ns.impl_desc,
-                member_infos=[],
-            )
-            register_infos.append(pkg_register_info)
-            for func in pkg.functions:
-                func_ani_info = GlobFuncANIInfo.get(self.am, func)
-                func_info = ANINativeFuncInfo(
-                    sts_native_name=func_ani_info.sts_native_name,
-                    full_name=f"local::{func.name}",
-                )
-                pkg_register_info.member_infos.append(func_info)
+    def gen_package_natives(
+        self,
+        pkg: PackageDecl,
+        pkg_ani_info: PackageANIInfo,
+        pkg_ani_source_target: CSourceWriter,
+    ):
+        # generate functions
+        with pkg_ani_source_target.indented(
+            f"namespace local {{",
+            f"}}",
+            indent="",
+        ):
             for iface in pkg.interfaces:
-                iface_abi_info = IfaceABIInfo.get(self.am, iface)
-                iface_ani_info = IfaceANIInfo.get(self.am, iface)
-                iface_register_info = ANIRegisterInfo(
-                    parent_scope=ANI_CLASS,
-                    impl_desc=iface_ani_info.impl_desc,
-                    member_infos=[],
-                )
-                register_infos.append(iface_register_info)
-                for ancestor in iface_abi_info.ancestor_dict:
-                    for method in ancestor.methods:
-                        method_ani_info = IfaceMethodANIInfo.get(self.am, method)
-                        method_info = ANINativeFuncInfo(
-                            sts_native_name=method_ani_info.sts_native_name,
-                            full_name=f"local::{iface.name}::{method.name}",
-                        )
-                        iface_register_info.member_infos.append(method_info)
-                pkg_ani_source_target.add_include("taihe/object.hpp")
-                obj_drop_info = ANINativeFuncInfo(
-                    sts_native_name="_obj_drop",
-                    full_name=f"local::{iface.name}::_obj_drop",
-                )
-                iface_register_info.member_infos.append(obj_drop_info)
-                obj_dup_info = ANINativeFuncInfo(
-                    sts_native_name="_obj_dup",
-                    full_name=f"local::{iface.name}::_obj_dup",
-                )
-                iface_register_info.member_infos.append(obj_dup_info)
-
-            with pkg_ani_source_target.indented(
-                f"namespace {pkg_ani_info.cpp_ns} {{",
-                f"}}",
-                indent="",
-            ):
                 with pkg_ani_source_target.indented(
-                    f"ani_status ANIRegister(ani_env *env) {{",
+                    f"namespace {iface.name} {{",
+                    f"}}",
+                    indent="",
+                ):
+                    iface_abi_info = IfaceABIInfo.get(self.am, iface)
+                    for ancestor in iface_abi_info.ancestor_dict:
+                        for method in ancestor.methods:
+                            self.gen_method(
+                                iface,
+                                method,
+                                pkg_ani_source_target,
+                                ancestor,
+                                method.name,
+                            )
+                    self.gen_obj_drop(pkg_ani_source_target, "_obj_drop")
+                    self.gen_obj_dup(pkg_ani_source_target, "_obj_dup")
+            for func in pkg.functions:
+                self.gen_func(func, pkg_ani_source_target, func.name)
+
+    def gen_package_register(
+        self,
+        pkg: PackageDecl,
+        pkg_ani_info: PackageANIInfo,
+        pkg_ani_source_target: CSourceWriter,
+    ):
+        with pkg_ani_source_target.indented(
+            f"namespace {pkg_ani_info.cpp_ns} {{",
+            f"}}",
+            indent="",
+        ):
+            with pkg_ani_source_target.indented(
+                f"ani_status ANIRegister(ani_env *env) {{",
+                f"}}",
+            ):
+                # TODO: set_vm in constructor
+                with pkg_ani_source_target.indented(
+                    f"if (::taihe::get_vm() == nullptr) {{",
                     f"}}",
                 ):
-                    # TODO: set_vm in constructor
+                    pkg_ani_source_target.writelns(
+                        f"ani_vm *vm;",
+                    )
                     with pkg_ani_source_target.indented(
-                        f"if (::taihe::get_vm() == nullptr) {{",
+                        f"if (ANI_OK != env->GetVM(&vm)) {{",
                         f"}}",
                     ):
                         pkg_ani_source_target.writelns(
-                            f"ani_vm *vm;",
+                            f"return ANI_ERROR;",
                         )
-                        with pkg_ani_source_target.indented(
-                            f"if (ANI_OK != env->GetVM(&vm)) {{",
-                            f"}}",
-                        ):
-                            pkg_ani_source_target.writelns(
-                                f"return ANI_ERROR;",
-                            )
-                        pkg_ani_source_target.writelns(
-                            f"::taihe::set_vm(vm);",
-                        )
-                    for register_info in register_infos:
-                        parent_scope = register_info.parent_scope
-                        with pkg_ani_source_target.indented(
-                            f"{{",
-                            f"}}",
-                        ):
-                            pkg_ani_source_target.writelns(
-                                f"{parent_scope} ani_env;",
-                            )
-                            with pkg_ani_source_target.indented(
-                                f'if (ANI_OK != env->Find{parent_scope.suffix}("{register_info.impl_desc}", &ani_env)) {{',
-                                f"}}",
-                            ):
-                                pkg_ani_source_target.writelns(
-                                    f"return ANI_ERROR;",
-                                )
-                            with pkg_ani_source_target.indented(
-                                f"ani_native_function methods[] = {{",
-                                f"}};",
-                            ):
-                                for member_info in register_info.member_infos:
-                                    pkg_ani_source_target.writelns(
-                                        f'{{"{member_info.sts_native_name}", nullptr, reinterpret_cast<void*>({member_info.full_name})}},',
-                                    )
-                            with pkg_ani_source_target.indented(
-                                f"if (ANI_OK != env->{parent_scope.suffix}_BindNative{parent_scope.member.suffix}s(ani_env, methods, sizeof(methods) / sizeof(ani_native_function))) {{",
-                                f"}}",
-                            ):
-                                pkg_ani_source_target.writelns(
-                                    f"return ANI_ERROR;",
-                                )
                     pkg_ani_source_target.writelns(
-                        f"return ANI_OK;",
+                        f"::taihe::set_vm(vm);",
                     )
+                for register_info in self.stat_bindings(pkg, pkg_ani_info):
+                    self.gen_binding(register_info, pkg_ani_source_target)
+                pkg_ani_source_target.writelns(
+                    f"return ANI_OK;",
+                )
+
+    def stat_bindings(
+        self,
+        pkg: PackageDecl,
+        pkg_ani_info: PackageANIInfo,
+    ):
+        pkg_register_info = ANIRegisterInfo(
+            parent_scope=pkg_ani_info.ns.scope,
+            impl_desc=pkg_ani_info.ns.impl_desc,
+            member_infos=[],
+        )
+        for func in pkg.functions:
+            func_ani_info = GlobFuncANIInfo.get(self.am, func)
+            func_info = ANINativeFuncInfo(
+                sts_native_name=func_ani_info.sts_native_name,
+                full_name=f"local::{func.name}",
+            )
+            pkg_register_info.member_infos.append(func_info)
+        yield pkg_register_info
+
+        for iface in pkg.interfaces:
+            iface_abi_info = IfaceABIInfo.get(self.am, iface)
+            iface_ani_info = IfaceANIInfo.get(self.am, iface)
+            iface_register_info = ANIRegisterInfo(
+                parent_scope=ANI_CLASS,
+                impl_desc=iface_ani_info.impl_desc,
+                member_infos=[],
+            )
+            for ancestor in iface_abi_info.ancestor_dict:
+                for method in ancestor.methods:
+                    method_ani_info = IfaceMethodANIInfo.get(self.am, method)
+                    method_info = ANINativeFuncInfo(
+                        sts_native_name=method_ani_info.sts_native_name,
+                        full_name=f"local::{iface.name}::{method.name}",
+                    )
+                    iface_register_info.member_infos.append(method_info)
+            obj_drop_info = ANINativeFuncInfo(
+                sts_native_name="_obj_drop",
+                full_name=f"local::{iface.name}::_obj_drop",
+            )
+            iface_register_info.member_infos.append(obj_drop_info)
+            obj_dup_info = ANINativeFuncInfo(
+                sts_native_name="_obj_dup",
+                full_name=f"local::{iface.name}::_obj_dup",
+            )
+            iface_register_info.member_infos.append(obj_dup_info)
+            yield iface_register_info
+
+    def gen_binding(
+        self,
+        register_info: ANIRegisterInfo,
+        pkg_ani_source_target: CSourceWriter,
+    ):
+        with pkg_ani_source_target.indented(
+            f"{{",
+            f"}}",
+        ):
+            parent_scope = register_info.parent_scope
+            impl_desc = register_info.impl_desc
+            member_infos = register_info.member_infos
+            pkg_ani_source_target.writelns(
+                f"{parent_scope} ani_env;",
+            )
+            with pkg_ani_source_target.indented(
+                f'if (ANI_OK != env->Find{parent_scope.suffix}("{impl_desc}", &ani_env)) {{',
+                f"}}",
+            ):
+                pkg_ani_source_target.writelns(
+                    f"return ANI_ERROR;",
+                )
+            with pkg_ani_source_target.indented(
+                f"ani_native_function methods[] = {{",
+                f"}};",
+            ):
+                for member_info in member_infos:
+                    pkg_ani_source_target.writelns(
+                        f'{{"{member_info.sts_native_name}", nullptr, reinterpret_cast<void*>({member_info.full_name})}},',
+                    )
+            with pkg_ani_source_target.indented(
+                f"if (ANI_OK != env->{parent_scope.suffix}_BindNative{parent_scope.member.suffix}s(ani_env, methods, sizeof(methods) / sizeof(ani_native_function))) {{",
+                f"}}",
+            ):
+                pkg_ani_source_target.writelns(
+                    f"return ANI_ERROR;",
+                )
 
     def gen_func(
         self,
@@ -524,79 +548,12 @@ class ANICodeGenerator:
                 )
                 for ancestor in iface_abi_info.ancestor_dict:
                     for method in ancestor.methods:
-                        method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
-                        method_ani_info = IfaceMethodANIInfo.get(self.am, method)
-                        inner_cpp_params = []
-                        inner_cpp_args = []
-                        inner_ani_args = []
-                        for param in method.params:
-                            inner_cpp_arg = f"cpp_arg_{param.name}"
-                            inner_ani_arg = f"ani_arg_{param.name}"
-                            type_cpp_info = TypeCppInfo.get(
-                                self.am, param.ty_ref.resolved_ty
-                            )
-                            inner_cpp_params.append(
-                                f"{type_cpp_info.as_param} {inner_cpp_arg}"
-                            )
-                            inner_cpp_args.append(inner_cpp_arg)
-                            inner_ani_args.append(inner_ani_arg)
-                        inner_cpp_params_str = ", ".join(inner_cpp_params)
-                        if return_ty_ref := method.return_ty_ref:
-                            type_cpp_info = TypeCppInfo.get(
-                                self.am, return_ty_ref.resolved_ty
-                            )
-                            cpp_return_ty_name = type_cpp_info.as_owner
-                        else:
-                            cpp_return_ty_name = "void"
-                        with iface_ani_impl_target.indented(
-                            f"{cpp_return_ty_name} {method_cpp_info.impl_name}({inner_cpp_params_str}) {{",
-                            f"}}",
-                        ):
-                            iface_ani_impl_target.writelns(
-                                f"::taihe::env_guard guard;",
-                                f"ani_env *env = guard.get_env();",
-                            )
-                            for param, inner_cpp_arg, inner_ani_arg in zip(
-                                method.params,
-                                inner_cpp_args,
-                                inner_ani_args,
-                                strict=True,
-                            ):
-                                type_ani_info = TypeANIInfo.get(
-                                    self.am, param.ty_ref.resolved_ty
-                                )
-                                type_ani_info.into_ani(
-                                    iface_ani_impl_target,
-                                    "env",
-                                    inner_cpp_arg,
-                                    inner_ani_arg,
-                                )
-                            inner_ani_args_trailing = "".join(
-                                ", " + inner_ani_arg for inner_ani_arg in inner_ani_args
-                            )
-                            if return_ty_ref := method.return_ty_ref:
-                                inner_ani_res = "ani_result"
-                                inner_cpp_res = "cpp_result"
-                                type_ani_info = TypeANIInfo.get(
-                                    self.am, return_ty_ref.resolved_ty
-                                )
-                                iface_ani_impl_target.writelns(
-                                    f"{type_ani_info.ani_type} {inner_ani_res};",
-                                    f'env->Object_CallMethod_{type_ani_info.ani_type.suffix}(static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "{iface_ani_info.type_desc}", "{method_ani_info.ani_method_name}", nullptr), reinterpret_cast<{type_ani_info.ani_type.base}*>(&{inner_ani_res}){inner_ani_args_trailing});',
-                                )
-                                type_ani_info.from_ani(
-                                    iface_ani_impl_target,
-                                    "env",
-                                    inner_ani_res,
-                                    inner_cpp_res,
-                                )
-                                iface_ani_impl_target.writelns(
-                                    f"return {inner_cpp_res};",
-                                )
-                            else:
-                                iface_ani_impl_target.writelns(
-                                    f'env->Object_CallMethod_Void(static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "{iface_ani_info.type_desc}", "{method_ani_info.ani_method_name}", nullptr){inner_ani_args_trailing});',
-                                )
+                        self.gen_iface_method_call(
+                            iface,
+                            method,
+                            iface_ani_info,
+                            iface_ani_impl_target,
+                        )
                 with iface_ani_impl_target.indented(
                     f"uintptr_t getGlobalReference() const {{",
                     f"}}",
@@ -607,6 +564,77 @@ class ANICodeGenerator:
             iface_ani_impl_target.writelns(
                 f"return ::taihe::make_holder<cpp_impl_t, {iface_cpp_info.as_owner}, ::taihe::platform::ani::AniObject>(env, ani_obj);",
             )
+
+    def gen_iface_method_call(
+        self,
+        iface: IfaceDecl,
+        method: IfaceMethodDecl,
+        iface_ani_info: IfaceANIInfo,
+        iface_ani_impl_target: CHeaderWriter,
+    ):
+        method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
+        method_ani_info = IfaceMethodANIInfo.get(self.am, method)
+        inner_cpp_params = []
+        inner_cpp_args = []
+        inner_ani_args = []
+        for param in method.params:
+            inner_cpp_arg = f"cpp_arg_{param.name}"
+            inner_ani_arg = f"ani_arg_{param.name}"
+            type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
+            inner_cpp_params.append(f"{type_cpp_info.as_param} {inner_cpp_arg}")
+            inner_cpp_args.append(inner_cpp_arg)
+            inner_ani_args.append(inner_ani_arg)
+        inner_cpp_params_str = ", ".join(inner_cpp_params)
+        if return_ty_ref := method.return_ty_ref:
+            type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
+            cpp_return_ty_name = type_cpp_info.as_owner
+        else:
+            cpp_return_ty_name = "void"
+        with iface_ani_impl_target.indented(
+            f"{cpp_return_ty_name} {method_cpp_info.impl_name}({inner_cpp_params_str}) {{",
+            f"}}",
+        ):
+            iface_ani_impl_target.writelns(
+                f"::taihe::env_guard guard;",
+                f"ani_env *env = guard.get_env();",
+            )
+            for param, inner_cpp_arg, inner_ani_arg in zip(
+                method.params,
+                inner_cpp_args,
+                inner_ani_args,
+                strict=True,
+            ):
+                type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
+                type_ani_info.into_ani(
+                    iface_ani_impl_target,
+                    "env",
+                    inner_cpp_arg,
+                    inner_ani_arg,
+                )
+            inner_ani_args_trailing = "".join(
+                ", " + inner_ani_arg for inner_ani_arg in inner_ani_args
+            )
+            if return_ty_ref := method.return_ty_ref:
+                inner_ani_res = "ani_result"
+                inner_cpp_res = "cpp_result"
+                type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
+                iface_ani_impl_target.writelns(
+                    f"{type_ani_info.ani_type} {inner_ani_res};",
+                    f'env->Object_CallMethod_{type_ani_info.ani_type.suffix}(static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "{iface_ani_info.type_desc}", "{method_ani_info.ani_method_name}", nullptr), reinterpret_cast<{type_ani_info.ani_type.base}*>(&{inner_ani_res}){inner_ani_args_trailing});',
+                )
+                type_ani_info.from_ani(
+                    iface_ani_impl_target,
+                    "env",
+                    inner_ani_res,
+                    inner_cpp_res,
+                )
+                iface_ani_impl_target.writelns(
+                    f"return {inner_cpp_res};",
+                )
+            else:
+                iface_ani_impl_target.writelns(
+                    f'env->Object_CallMethod_Void(static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "{iface_ani_info.type_desc}", "{method_ani_info.ani_method_name}", nullptr){inner_ani_args_trailing});',
+                )
 
     def gen_iface_into_ani_func(
         self,
