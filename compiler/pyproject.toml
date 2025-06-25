@@ -34,6 +34,7 @@ taihe-tryit = "taihe.cli.tryit:main"
 
 [tool.hatch.version]
 source = "vcs"
+fallback-version = "0.0.0+thunk"
 
 [tool.hatch.version.raw-options]
 search_parent_directories = true
