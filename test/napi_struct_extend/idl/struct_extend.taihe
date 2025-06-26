@@ -1,0 +1,68 @@
+struct A {
+    param1: i32;
+}
+
+struct B {
+    @extends a: A;
+    param2: i32;
+}
+
+struct C {
+    @extends b: B;
+    param3: i32;
+}
+
+function check_A(i: A);
+function create_A(): A;
+
+function check_B(i: B);
+function create_B(): B;
+
+function check_C(i: C);
+function create_C(): C;
+
+struct D {
+    param4: i32;
+}
+
+struct E {
+    @extends d: D;
+    param5: i32;
+}
+
+function check_D(i: D);
+function create_D(): D;
+
+function check_E(i: E);
+function create_E(): E;
+
+@class
+interface Bar {
+    getE(): E;
+    setE(e: E);
+}
+
+@ctor("Bar")
+function getBar(e: E): Bar;
+
+struct F {
+    barF: Bar;
+}
+
+struct G {
+    @extends f: F;
+    barG: Bar;
+}
+
+@class
+struct H {
+    @extends g: G;
+    barh: Bar;
+}
+
+function check_Bar(bar: Bar): bool;
+function check_F(f: F): bool;
+function check_G(g: G): bool;
+function create_Bar(e: E): Bar;
+function create_F(e: E): F;
+function create_G(e: E): G;

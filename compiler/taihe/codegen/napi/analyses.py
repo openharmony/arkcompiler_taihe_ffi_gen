@@ -67,21 +67,29 @@ class StructNAPIInfo(AbstractAnalysis[StructDecl]):
             self.dts_impl_name = f"{d.name}_inner"
 
         self.sts_fields: list[StructFieldDecl] = []
+        self.sts_iface_parents: list[StructFieldDecl] = []
+        self.sts_class_parents: list[StructFieldDecl] = []
         self.sts_final_fields: list[list[StructFieldDecl]] = []
         for field in d.fields:
-            self.sts_fields.append(field)
-            self.sts_final_fields.append([field])
+            if field.get_last_attr("extends"):
+                ty = field.ty_ref.resolved_ty
+                if not isinstance(ty, StructType):
+                    raise ValueError("struct cannot extend non-struct type")
+                    # TODO: check struct parent type
+                parent_napi_info = StructNAPIInfo.get(am, ty.ty_decl)
+                if parent_napi_info.is_class():
+                    self.sts_class_parents.append(field)
+                else:
+                    self.sts_iface_parents.append(field)
+                self.sts_final_fields.extend(
+                    [field, *parts] for parts in parent_napi_info.sts_final_fields
+                )
+            else:
+                self.sts_fields.append(field)
+                self.sts_final_fields.append([field])
 
     def is_class(self):
         return self.dts_type_name == self.dts_impl_name
-
-
-class StructFieldNAPIInfo(AbstractAnalysis[StructFieldDecl]):
-    def __init__(self, am: AnalysisManager, d: StructFieldDecl) -> None:
-        super().__init__(am, d)
-        segments = [*d.parent_pkg.segments, d.name]
-        self.getter_name = encode(segments, DeclKind.GETTER)
-        self.setter_name = encode(segments, DeclKind.SETTER)
 
 
 class IfaceNAPIInfo(AbstractAnalysis[IfaceDecl]):

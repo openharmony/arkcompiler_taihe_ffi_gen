@@ -47,7 +47,6 @@ class DTSCodeGenerator:
                 self.gen_func(func, pkg_dts_target)
             for struct in pkg.structs:
                 self.gen_struct_interface(struct, pkg_dts_target)
-            for struct in pkg.structs:
                 self.gen_struct_class(struct, pkg_dts_target)
             for iface in pkg.interfaces:
                 self.gen_iface_interface(iface, pkg_dts_target)
@@ -85,8 +84,20 @@ class DTSCodeGenerator:
         if struct_napi_info.is_class():
             # no interface
             return
+
+        struct_decl = f"interface {struct_napi_info.dts_type_name}"
+        if struct_napi_info.sts_iface_parents:
+            parents = []
+            for parent in struct_napi_info.sts_iface_parents:
+                parent_ty = parent.ty_ref.resolved_ty
+                parent_napi_info = TypeNAPIInfo.get(self.am, parent_ty)
+                parents.append(parent_napi_info.dts_type_name)
+            extends_str = ", ".join(parents) if parents else ""
+            struct_decl = f"{struct_decl} extends {extends_str}"
+        struct_decl = f"export {struct_decl}"
+
         with target.indented(
-            f"export interface {struct_napi_info.dts_type_name} {{",
+            f"{struct_decl} {{",
             f"}}",
         ):
             for field in struct_napi_info.sts_fields:
@@ -104,8 +115,19 @@ class DTSCodeGenerator:
         if not struct_napi_info.is_class():
             return
 
+        struct_decl = f"declare class {struct_napi_info.dts_type_name}"
+        if struct_napi_info.sts_iface_parents:
+            parents = []
+            for parent in struct_napi_info.sts_iface_parents:
+                parent_ty = parent.ty_ref.resolved_ty
+                parent_napi_info = TypeNAPIInfo.get(self.am, parent_ty)
+                parents.append(parent_napi_info.dts_type_name)
+            extends_str = ", ".join(parents) if parents else ""
+            struct_decl = f"{struct_decl} implements {extends_str}"
+        struct_decl = f"export {struct_decl}"
+
         with target.indented(
-            f"export class {struct_napi_info.dts_impl_name} {{",
+            f"{struct_decl} {{",
             f"}}",
         ):
             params = []

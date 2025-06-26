@@ -15,7 +15,6 @@ from taihe.codegen.napi.analyses import (
     GlobFuncNAPIInfo,
     IfaceNAPIInfo,
     PackageNAPIInfo,
-    StructFieldNAPIInfo,
     StructNAPIInfo,
     TypeNAPIInfo,
     UnionFieldNAPIInfo,
@@ -336,11 +335,17 @@ class NAPICodeGenerator:
         struct_napi_info: StructNAPIInfo,
         struct_napi_impl_target: CHeaderWriter,
     ):
-        for field in struct_napi_info.sts_fields:
-            field_napi_info = StructFieldNAPIInfo.get(self.am, field)
-            field_ty_napi_info = TypeNAPIInfo.get(self.am, field.ty_ref.resolved_ty)
+        register_infos = []
+        for parts in struct_napi_info.sts_final_fields:
+            final = parts[-1]
+            filed_segments = [*final.parent_pkg.segments, struct.name, final.name]
+            field_getter_name = encode(filed_segments, DeclKind.GETTER)
+            field_setter_name = encode(filed_segments, DeclKind.SETTER)
+            register_infos.append((final.name, field_getter_name, field_setter_name))
+
+            field_ty_napi_info = TypeNAPIInfo.get(self.am, final.ty_ref.resolved_ty)
             with struct_napi_impl_target.indented(
-                f"static napi_value {field_napi_info.getter_name}(napi_env env, napi_callback_info info) {{",
+                f"static napi_value {field_getter_name}(napi_env env, napi_callback_info info) {{",
                 f"}}",
             ):
                 struct_napi_impl_target.writelns(
@@ -351,14 +356,14 @@ class NAPICodeGenerator:
                 )
                 field_ty_napi_info.into_napi(
                     struct_napi_impl_target,
-                    f"cpp_ptr->{field.name}",
+                    "cpp_ptr->" + ".".join(part.name for part in parts),
                     "napi_field_result",
                 )
                 struct_napi_impl_target.writelns(
                     f"return napi_field_result;",
                 )
             with struct_napi_impl_target.indented(
-                f"static napi_value {field_napi_info.setter_name}(napi_env env, napi_callback_info info) {{",
+                f"static napi_value {field_setter_name}(napi_env env, napi_callback_info info) {{",
                 f"}}",
             ):
                 struct_napi_impl_target.writelns(
@@ -373,7 +378,8 @@ class NAPICodeGenerator:
                     struct_napi_impl_target, "args[0]", "cpp_field_result"
                 )
                 struct_napi_impl_target.writelns(
-                    f"cpp_ptr->{field.name} = cpp_field_result;", f"return nullptr;"
+                    f'cpp_ptr->{".".join(part.name for part in parts)} = cpp_field_result;',
+                    f"return nullptr;",
                 )
 
         with struct_napi_impl_target.indented(
@@ -382,20 +388,25 @@ class NAPICodeGenerator:
         ):
             struct_napi_impl_target.writelns(
                 f"napi_value thisobj;",
-                f"size_t argc = {len(struct_napi_info.sts_fields)};",
-                f"napi_value args[{len(struct_napi_info.sts_fields)}];",
+                f"size_t argc = {len(struct_napi_info.sts_final_fields)};",
+                f"napi_value args[{len(struct_napi_info.sts_final_fields)}];",
                 f"napi_get_cb_info(env, info, &argc, args, &thisobj, nullptr);",
             )
-            params = []
-            for i, field in enumerate(struct_napi_info.sts_fields):
-                field_ty_napi_info = TypeNAPIInfo.get(self.am, field.ty_ref.resolved_ty)
-                field_ty_napi_info.from_napi(
-                    struct_napi_impl_target, f"args[{i}]", f"cpp_value_{field.name}"
+            cpp_field_results = []
+            for i, parts in enumerate(struct_napi_info.sts_final_fields):
+                final = parts[-1]
+                type_napi_info = TypeNAPIInfo.get(self.am, final.ty_ref.resolved_ty)
+                cpp_field_result = f"cpp_field_{final.name}"
+                type_napi_info.from_napi(
+                    struct_napi_impl_target, f"args[{i}]", f"cpp_field_{final.name}"
                 )
-                params.append(f"cpp_value_{field.name}")
-            params_str = ", ".join(params)
+                cpp_field_results.append(cpp_field_result)
+            cpp_moved_fields_str = ", ".join(
+                f"std::move({cpp_field_result})"
+                for cpp_field_result in cpp_field_results
+            )
             struct_napi_impl_target.writelns(
-                f"{struct_cpp_info.as_owner}* cpp_ptr = new {struct_cpp_info.as_owner}{{{params_str}}};",
+                f"{struct_cpp_info.as_owner}* cpp_ptr = new {struct_cpp_info.as_owner}{{{cpp_moved_fields_str}}};",
             )
             with struct_napi_impl_target.indented(
                 f"napi_wrap(env, thisobj, cpp_ptr, [](napi_env env, void* finalize_data, void* finalize_hint) {{",
@@ -419,13 +430,12 @@ class NAPICodeGenerator:
                 f"napi_property_descriptor desc[] = {{",
                 f"}};",
             ):
-                for field in struct_napi_info.sts_fields:
-                    field_napi_info = StructFieldNAPIInfo.get(self.am, field)
+                for field_name, field_getter, field_setter in register_infos:
                     struct_napi_impl_target.writelns(
-                        f'{{"{field.name}", nullptr, nullptr, {field_napi_info.getter_name}, {field_napi_info.setter_name}, nullptr, napi_default, nullptr}}, ',
+                        f'{{"{field_name}", nullptr, nullptr, {field_getter}, {field_setter}, nullptr, napi_default, nullptr}}, ',
                     )
             struct_napi_impl_target.writelns(
-                f'napi_define_class(env, "{struct.name}", NAPI_AUTO_LENGTH, {struct_napi_info.constructor_func_name}, nullptr, {len(struct_napi_info.sts_fields)}, desc, &result);',
+                f'napi_define_class(env, "{struct.name}", NAPI_AUTO_LENGTH, {struct_napi_info.constructor_func_name}, nullptr, {len(struct_napi_info.sts_final_fields)}, desc, &result);',
                 f"napi_create_reference(env, result, 1, &{struct_napi_info.ctor_ref_name});",
                 f'napi_set_named_property(env, exports, "{struct.name}", result);',
                 f"return exports;",
