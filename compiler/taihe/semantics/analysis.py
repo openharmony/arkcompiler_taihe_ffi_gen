@@ -3,8 +3,10 @@ from typing import Any, TypeGuard, TypeVar
 
 from typing_extensions import override
 
+from taihe.semantics.attributes import CheckedAttributeManager, UncheckedAttribute
 from taihe.semantics.declarations import (
     CallbackTypeRefDecl,
+    Decl,
     DeclarationRefDecl,
     EnumDecl,
     EnumItemDecl,
@@ -51,13 +53,18 @@ from taihe.utils.exceptions import (
 )
 
 
-def analyze_semantics(pg: PackageGroup, diag: DiagnosticsManager):
+def analyze_semantics(
+    pg: PackageGroup,
+    diag: DiagnosticsManager,
+    attr_manager: CheckedAttributeManager,
+):
     """Runs semantic analysis passes on the given package group."""
     _check_decl_confilct_with_namespace(pg, diag)
     _ResolveImportsPass(diag).handle_decl(pg)
     _CheckFieldNameCollisionErrorPass(diag).handle_decl(pg)
     _CheckEnumTypePass(diag).handle_decl(pg)
     _CheckRecursiveInclusionPass(diag).handle_decl(pg)
+    _ConvertAndCheckAttrPass(diag, attr_manager).handle_decl(pg)
 
 
 def _check_decl_confilct_with_namespace(
@@ -469,6 +476,20 @@ class _CheckRecursiveInclusionPass(RecursiveDeclVisitor):
                 continue
             if isinstance(ty := i.ty_ref.maybe_resolved_ty, UserType):
                 type_list.append(((d, i.ty_ref), ty.ty_decl))
+
+
+class _ConvertAndCheckAttrPass(RecursiveDeclVisitor):
+    diag: DiagnosticsManager
+    attr_manager: CheckedAttributeManager
+
+    def __init__(self, diag: DiagnosticsManager, attr_manager: CheckedAttributeManager):
+        self.diag = diag
+        self.attr_manager = attr_manager
+
+    def visit_decl(self, d: Decl) -> None:
+        for unchecked in d.attributes.pop(UncheckedAttribute, []):
+            if isinstance(unchecked, UncheckedAttribute):
+                self.attr_manager.attach(unchecked, d, self.diag)
 
 
 V = TypeVar("V")

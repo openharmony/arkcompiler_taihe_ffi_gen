@@ -1,10 +1,8 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar
+from typing import ClassVar
 
 from taihe.driver.backend import Backend, BackendConfig
-
-if TYPE_CHECKING:
-    from taihe.driver.contexts import CompilerInstance
+from taihe.driver.contexts import CompilerInstance
 
 
 @dataclass
@@ -12,9 +10,15 @@ class AniBridgeBackendConfig(BackendConfig):
     NAME = "ani-bridge"
     DEPS: ClassVar = ["cpp-user"]
 
-    def construct(self, instance: "CompilerInstance") -> Backend:
+    keep_name: bool = False
+    """Use the original function name (instead of "camelCase") in exported ArkTS sources."""
+
+    def construct(self, instance: CompilerInstance) -> Backend:
+        from taihe.codegen.ani.attributes import all_attr_types
         from taihe.codegen.ani.gen_ani import ANICodeGenerator
         from taihe.codegen.ani.gen_sts import STSCodeGenerator
+
+        instance.attribute_manager.register(*all_attr_types)
 
         # TODO: unify {ANI,STS}CodeGenerator
         class AniBridgeBackendImpl(Backend):

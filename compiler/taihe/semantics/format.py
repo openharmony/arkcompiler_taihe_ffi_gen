@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 from typing_extensions import override
 
+from taihe.semantics.attributes import AutoCheckedAttribute, UncheckedAttribute
 from taihe.semantics.visitor import DeclVisitor
 from taihe.utils.diagnostics import AnsiStyle
 from taihe.utils.outputs import BaseWriter
@@ -56,7 +57,7 @@ class PrettyFormatter(DeclVisitor[str]):
             self.as_comment = lambda s: s
 
     def with_attr(self, d: "Decl", s: str) -> str:
-        if not d.attrs:
+        if not d.attributes:
             return s
         fmt_attrs = " ".join(
             self.as_attr(f"@{item}") for item in self.get_format_attr(d)
@@ -136,14 +137,38 @@ class PrettyFormatter(DeclVisitor[str]):
         raise TypeError(f"Unsupported type: {type(obj)}")
 
     def get_format_attr(self, d: "Decl") -> list[str]:
+        # XXX
         formatted_attributes: list[str] = []
-        for key, items in d.attrs.items():
+        for _, items in d.attributes.items():
             for item in items:
-                if item.args:
-                    values_fmt = ", ".join(map(self.get_value, item.args))
-                    formatted_attributes.append(f"{key}({values_fmt})")
+                if isinstance(item, UncheckedAttribute):
+                    parts: list[str] = []
+                    for arg in item.args:
+                        val_str = self.get_value(arg.value)
+                        if arg.key == "":
+                            parts.append(val_str)
+                        else:
+                            parts.append(f"{arg.key}={val_str}")
+                    if parts:
+                        formatted_attributes.append(f"{item.name}({', '.join(parts)})")
+                    else:
+                        formatted_attributes.append(item.name)
+
+                elif isinstance(item, AutoCheckedAttribute):
+                    name = item.NAME
+                    parts: list[str] = []
+                    annotations = getattr(type(item), "__annotations__", {})
+                    for field, _ in annotations.items():
+                        val = getattr(item, field, None)
+                        if val is not None:
+                            parts.append(f"{field}={self.get_value(val)}")
+                    if parts:
+                        formatted_attributes.append(f"{name}({', '.join(parts)})")
+                    else:
+                        formatted_attributes.append(name)
                 else:
-                    formatted_attributes.append(key)
+                    formatted_attributes.append("UnknownAttribute")
+
         return formatted_attributes
 
 

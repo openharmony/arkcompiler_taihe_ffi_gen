@@ -8,6 +8,8 @@ from taihe.driver.contexts import CompilerInstance, CompilerInvocation
 from taihe.utils.diagnostics import DiagBase, DiagnosticsManager
 from taihe.utils.exceptions import (
     AdhocError,
+    AttrArgCountError,
+    AttrArgTypeError,
     DeclarationNotInScopeError,
     DeclNotExistError,
     DeclRedefError,
@@ -392,7 +394,7 @@ def test_namespace():
         "@!namespace(0)\n"
     )
     test_instance.run()
-    test_instance.assert_has_error(AdhocError)
+    test_instance.assert_has_error(AttrArgTypeError)
 
 
 def test_iface_set_1():
@@ -532,7 +534,7 @@ def test_onoff_2():
         "function a(): void;\n"
     )
     test_instance.run()
-    test_instance.assert_has_error(AdhocError)
+    test_instance.assert_has_error(AttrArgTypeError)
 
 
 def test_onoff_overload_1():
@@ -545,7 +547,7 @@ def test_onoff_overload_1():
         "function ona(): void;\n"
     )
     test_instance.run()
-    test_instance.assert_has_error(AdhocError)
+    test_instance.assert_has_error(AttrArgCountError)
 
 
 def test_onoff_overload_2():
@@ -572,7 +574,7 @@ def test_iface_onoff_1():
         "}\n"
     )
     test_instance.run()
-    test_instance.assert_has_error(AdhocError)
+    test_instance.assert_has_error(AttrArgTypeError)
 
 
 def test_iface_onoff_2():
@@ -601,7 +603,7 @@ def test_iface_onoff_overload_1():
         "}\n"
     )
     test_instance.run()
-    test_instance.assert_has_error(AdhocError)
+    test_instance.assert_has_error(AttrArgCountError)
 
 
 def test_iface_onoff_overload_2():
@@ -630,7 +632,7 @@ def test_iface_overload():
         "}\n"
     )
     test_instance.run()
-    test_instance.assert_has_error(AdhocError)
+    test_instance.assert_has_error(AttrArgCountError)
 
 
 def test_iface_async_overload():
@@ -645,7 +647,7 @@ def test_iface_async_overload():
         "}\n"
     )
     test_instance.run()
-    test_instance.assert_has_error(AdhocError)
+    test_instance.assert_has_error(AttrArgCountError)
 
 
 def test_iface_async():
@@ -674,7 +676,7 @@ def test_iface_promise_overload():
         "}\n"
     )
     test_instance.run()
-    test_instance.assert_has_error(AdhocError)
+    test_instance.assert_has_error(AttrArgCountError)
 
 
 def test_iface_promise():
@@ -726,7 +728,7 @@ def test_promise_overload():
         "function a(): void;\n"
     )
     test_instance.run()
-    test_instance.assert_has_error(AdhocError)
+    test_instance.assert_has_error(AttrArgCountError)
 
 
 def test_promise():
@@ -750,7 +752,7 @@ def test_overload():
         "function a(): void;\n"
     )
     test_instance.run()
-    test_instance.assert_has_error(AdhocError)
+    test_instance.assert_has_error(AttrArgCountError)
 
 
 def test_ctor():
@@ -762,7 +764,7 @@ def test_ctor():
         "function f(): String;\n"
     )
     test_instance.run()
-    test_instance.assert_has_error(AdhocError)
+    test_instance.assert_has_error(AttrArgCountError)
 
 
 def test_static():
@@ -774,7 +776,7 @@ def test_static():
         "function f(): String;\n"
     )
     test_instance.run()
-    test_instance.assert_has_error(AdhocError)
+    test_instance.assert_has_error(AttrArgCountError)
 
 
 def test_bigint():
@@ -826,7 +828,7 @@ def test_sts_type():
         "}\n"
     )
     test_instance.run()
-    test_instance.assert_has_error(AdhocError)
+    test_instance.assert_has_error(AttrArgCountError)
 
 
 def test_struct_extend():

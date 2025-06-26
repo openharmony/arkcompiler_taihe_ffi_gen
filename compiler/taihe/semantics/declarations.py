@@ -2,19 +2,12 @@
 
 from abc import ABCMeta, abstractmethod
 from collections.abc import Iterable
-from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar
 
 from typing_extensions import override
 
 from taihe.semantics.format import PrettyFormatter
-from taihe.semantics.types import (
-    EnumType,
-    IfaceType,
-    StructType,
-    UnionType,
-    UserType,
-)
+from taihe.semantics.types import EnumType, IfaceType, StructType, UnionType, UserType
 from taihe.utils.exceptions import DeclRedefError
 from taihe.utils.sources import SourceLocation
 
@@ -28,17 +21,7 @@ if TYPE_CHECKING:
 # Attribute #
 #############
 
-
-@dataclass
-class AttrItemDecl:
-    """Represents an attribute item."""
-
-    loc: SourceLocation | None
-    name: str
-
-    args: list[Any] = field(default_factory=list[Any])
-    kwargs: dict[str, Any] = field(default_factory=dict[str, Any])
-
+A = TypeVar("A", bound="AnyAttribute")
 
 ################
 # Declarations #
@@ -54,7 +37,6 @@ class Decl(metaclass=ABCMeta):
 
     loc: SourceLocation | None
 
-    attrs: dict[str, list[AttrItemDecl]]
     attributes: dict[type["AnyAttribute"], list["AnyAttribute"]]
 
     def __init__(
@@ -62,7 +44,7 @@ class Decl(metaclass=ABCMeta):
         loc: SourceLocation | None,
     ):
         self.loc = loc
-        self.attrs = {}
+        self.attributes = {}
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__qualname__} {self.description}>"
@@ -77,17 +59,8 @@ class Decl(metaclass=ABCMeta):
     def parent_pkg(self) -> "PackageDecl":
         """Return the parent package of this declaration."""
 
-    def add_attr(self, i: AttrItemDecl):
-        self.attrs.setdefault(i.name, []).append(i)
-
     def add_attribute(self, a: "AnyAttribute"):
         self.attributes.setdefault(type(a), []).append(a)
-
-    def get_all_attrs(self, name: str) -> Iterable[AttrItemDecl]:
-        return self.attrs.get(name, [])
-
-    def get_last_attr(self, name: str) -> AttrItemDecl | None:
-        return self.attrs.get(name, [None])[-1]
 
     @abstractmethod
     def _accept(self, v: "DeclVisitor[Any]") -> Any:

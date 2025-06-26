@@ -19,6 +19,7 @@ from pathlib import Path
 
 from taihe.driver.backend import Backend, BackendConfig
 from taihe.semantics.analysis import analyze_semantics
+from taihe.semantics.attributes import CheckedAttributeManager
 from taihe.semantics.declarations import PackageGroup
 from taihe.utils.analyses import AnalysisManager
 from taihe.utils.diagnostics import ConsoleDiagnosticsManager, DiagnosticsManager
@@ -79,6 +80,8 @@ class CompilerInstance:
     invocation: CompilerInvocation
     backends: list[Backend]
 
+    attribute_manager: CheckedAttributeManager
+
     diagnostics_manager: DiagnosticsManager
 
     source_manager: SourceManager
@@ -98,6 +101,8 @@ class CompilerInstance:
         self.source_manager = SourceManager()
         self.package_group = PackageGroup()
         self.output_manager = invocation.output_config.construct(self)
+        self.attribute_manager = CheckedAttributeManager()
+
         self.backends = [conf.construct(self) for conf in invocation.backends]
 
     ##########################
@@ -129,7 +134,9 @@ class CompilerInstance:
             b.post_process()
 
     def validate(self):
-        analyze_semantics(self.package_group, self.diagnostics_manager)
+        analyze_semantics(
+            self.package_group, self.diagnostics_manager, self.attribute_manager
+        )
 
         for b in self.backends:
             b.validate()
