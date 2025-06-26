@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from typing_extensions import override
 
@@ -8,6 +8,11 @@ from taihe.utils.diagnostics import DiagError, DiagFatalError, DiagNote, DiagWar
 from taihe.utils.sources import SourceLocation
 
 if TYPE_CHECKING:
+    from taihe.semantics.attributes import (
+        Argument,
+        AutoCheckedAttribute,
+        UncheckedAttribute,
+    )
     from taihe.semantics.declarations import (
         EnumDecl,
         EnumItemDecl,
@@ -32,6 +37,151 @@ class DeclRedefNote(DiagNote):
     @override
     def describe(self) -> str:
         return "previously defined here"
+
+
+@dataclass
+class AttrArgCountError(DiagError):
+    loc: Optional["SourceLocation"]
+    name: str
+    required: int
+    optional: int
+    provided: int
+
+    @override
+    def describe(self) -> str:
+        if self.required and self.optional:
+            expect_str = f"{self.required} required + {self.optional} optional"
+        elif self.required:
+            expect_str = f"{self.required} required"
+        elif self.optional:
+            expect_str = f"{self.optional} optional"
+        else:
+            expect_str = "no arguments"
+        return (
+            f"Attribute {self.name!r} argument error: "
+            f"Expected {expect_str}, "
+            f"but got {self.provided}."
+        )
+
+
+@dataclass
+class AttrArgTypeError(DiagError):
+    """Represents a type mismatch error in a specific argument of an attribute.
+
+    Attributes:
+        loc (Optional[SourceLocation]): The source location where the error occurred.
+        name (str): The name of the attribute.
+        index (int): The index of the argument that caused the type mismatch.
+        expected (str): The expected type of the argument.
+        actual (str): The actual type of the argument as received.
+    """
+
+    loc: Optional["SourceLocation"]
+    name: str
+    expected: str
+    actual: str
+
+    @override
+    def describe(self) -> str:
+        return (
+            f"Attribute {self.name!r} argument type error: "
+            f"expected {self.expected}, got {self.actual}"
+        )
+
+
+@dataclass
+class AttrUndefError(DiagError):
+    loc: Optional["SourceLocation"]
+    name: str
+    suggestion: list[str]
+
+    @override
+    def describe(self) -> str:
+        msg = f"Unknown attribute: {self.name!r}"
+        if self.suggestion:
+            msg += ", possible candidates: "
+            msg += ", ".join(f"{s!r}" for s in self.suggestion)
+        return msg
+
+
+@dataclass
+class AttrArgOrderError(DiagError):
+    arg: "Argument"
+
+    def __init__(self, kwarg: "Argument"):
+        super().__init__(loc=kwarg.loc)
+        self.arg = kwarg
+
+    @override
+    def describe(self) -> str:
+        return "Keyword arguments must come after the arguements."
+
+
+@dataclass
+class AttrArgUndefError(DiagError):
+    arg: "Argument"
+
+    def __init__(
+        self,
+        arg: "Argument",
+    ):
+        super().__init__(loc=arg.loc)
+        self.arg = arg
+
+    @override
+    def describe(self) -> str:
+        return f"Unknown keyword argument: {self.arg.key!r}"
+
+
+@dataclass
+class AttrArgReAssignError(DiagError):
+    arg: "Argument"
+
+    def __init__(
+        self,
+        arg: "Argument",
+    ):
+        super().__init__(loc=arg.loc)
+        self.arg = arg
+
+    @override
+    def describe(self) -> str:
+        return f"Repeated assignment argument: {self.arg.key!r}"
+
+
+@dataclass
+class AttrMutuallyExclusiveError(DiagError):
+    conflicting_attr: "UncheckedAttribute"
+    with_attr: type["AutoCheckedAttribute"]
+
+    def __init__(
+        self,
+        conflicting_attr: "UncheckedAttribute",
+        with_attr: type["AutoCheckedAttribute"],
+    ):
+        super().__init__(loc=conflicting_attr.loc)
+        self.conflicting_attr = conflicting_attr
+        self.with_attr = with_attr
+
+    @override
+    def describe(self) -> str:
+        if self.conflicting_attr.name == self.with_attr.NAME:
+            return f"Attribute @{self.conflicting_attr.name} cannot be attached to the same declaration repeatedly"
+        return f"Attribute @{self.conflicting_attr.name} cannot be attached to the same declaration as @{self.with_attr.NAME}"
+
+
+@dataclass
+class AttrRepeatError(DiagError):
+    # TODO: AutoCheckedAttribute or TypedAttribute
+    attr: "UncheckedAttribute"
+
+    def __init__(self, attr: "UncheckedAttribute"):
+        super().__init__(loc=attr.loc)
+        self.attr = attr
+
+    @override
+    def describe(self) -> str:
+        return f"Attribute @{self.attr.name} cannot be appended to the same Decl repeatedly"
 
 
 @dataclass

@@ -19,6 +19,7 @@ from taihe.utils.exceptions import DeclRedefError
 from taihe.utils.sources import SourceLocation
 
 if TYPE_CHECKING:
+    from taihe.semantics.attributes import AnyAttribute
     from taihe.semantics.types import Type
     from taihe.semantics.visitor import DeclVisitor
 
@@ -54,6 +55,7 @@ class Decl(metaclass=ABCMeta):
     loc: SourceLocation | None
 
     attrs: dict[str, list[AttrItemDecl]]
+    attributes: dict[type["AnyAttribute"], list["AnyAttribute"]]
 
     def __init__(
         self,
@@ -77,6 +79,9 @@ class Decl(metaclass=ABCMeta):
 
     def add_attr(self, i: AttrItemDecl):
         self.attrs.setdefault(i.name, []).append(i)
+
+    def add_attribute(self, a: "AnyAttribute"):
+        self.attributes.setdefault(type(a), []).append(a)
 
     def get_all_attrs(self, name: str) -> Iterable[AttrItemDecl]:
         return self.attrs.get(name, [])
