@@ -352,3 +352,17 @@ baseObj->foo();
 derivedOBj->foo(); // X 不允许子类直接调用父类函数，需要先转换为父类
 derivedOBj->bar();
 ```
+
+## callback
+
+```C++
+// callback 作为参数传入时，类型为 callback_view 类型
+// view类型不具备所有权
+// 如果用户希望保存这个 callback，需要将其从 callback_view 转换为 callback 类型
+// 转换方法示例
+
+void Foo(taihe::callback_view<taihe::string(int32_t)> arg0) { // 入参为返回值为 string，入参为一个 int32_t 的函数
+    taihe::callback<taihe::string(int32_t)> var(arg0); // 转换方法
+}
+
+```
