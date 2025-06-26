@@ -126,6 +126,11 @@ union RecursiveUnion {
     s: RecursiveStruct;
 }
 
+struct X {
+    a: TestIface<i32>;  // TypeNotFoundError
+    b: Array<i32, i32>;  // GenericArgError
+}
+
 @test
 @test("abc", 123, 1.0, true)
 @code("""code = "my_code";""")

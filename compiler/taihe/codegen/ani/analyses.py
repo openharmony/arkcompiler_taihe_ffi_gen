@@ -2022,7 +2022,7 @@ class CallbackTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[CallbackType]):
         self.am = am
         self.t = t
         self.ani_type = ANI_FN_OBJECT
-        self.type_desc = f"Lstd/core/Function{len(t.params_ty)};"
+        self.type_desc = f"Lstd/core/Function{len(t.ty_ref.params)};"
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:

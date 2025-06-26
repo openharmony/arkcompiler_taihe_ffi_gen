@@ -112,11 +112,17 @@ class PackageNotInScopeError(DiagError):
 
 @dataclass
 class GenericArgumentsError(DiagError):
-    name: str
+    ty_ref: "TypeRefDecl"
+
+    def __init__(self, ty_ref: "TypeRefDecl", expected: int, got: int):
+        super().__init__(loc=ty_ref.loc)
+        self.ty_ref = ty_ref
+        self.expected = expected
+        self.got = got
 
     @override
     def describe(self) -> str:
-        return f"Invalid generic arguments in {self.name!r}"
+        return f"Invalid generic arguments in {self.ty_ref.description!r}, expected {self.expected}, got {self.got}"
 
 
 @dataclass

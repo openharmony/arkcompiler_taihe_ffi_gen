@@ -292,8 +292,8 @@ class SetTypeCppInfo(AbstractAnalysis[SetType], AbstractTypeCppInfo):
 class CallbackTypeCppInfo(AbstractAnalysis[CallbackType], AbstractTypeCppInfo):
     def __init__(self, am: AnalysisManager, t: CallbackType) -> None:
         super().__init__(am, t)
-        if return_ty := t.return_ty:
-            return_ty_cpp_info = TypeCppInfo.get(am, return_ty)
+        if return_ty_ref := t.ty_ref.return_ty_ref:
+            return_ty_cpp_info = TypeCppInfo.get(am, return_ty_ref.resolved_ty)
             return_ty_decl_headers = return_ty_cpp_info.decl_headers
             return_ty_impl_headers = return_ty_cpp_info.impl_headers
             return_ty_as_owner = return_ty_cpp_info.as_owner
@@ -304,11 +304,11 @@ class CallbackTypeCppInfo(AbstractAnalysis[CallbackType], AbstractTypeCppInfo):
         params_ty_decl_headers = []
         params_ty_impl_headers = []
         params_ty_as_param = []
-        for param_ty in t.params_ty:
-            param_ty_cpp_info = TypeCppInfo.get(am, param_ty)
+        for param in t.ty_ref.params:
+            param_ty_cpp_info = TypeCppInfo.get(am, param.ty_ref.resolved_ty)
             params_ty_decl_headers.extend(param_ty_cpp_info.decl_headers)
             params_ty_impl_headers.extend(param_ty_cpp_info.impl_headers)
-            params_ty_as_param.append(param_ty_cpp_info.as_param)
+            params_ty_as_param.append(f"{param_ty_cpp_info.as_param} {param.name}")
         params_fmt = ", ".join(params_ty_as_param)
         self.decl_headers = [
             "taihe/callback.hpp",
