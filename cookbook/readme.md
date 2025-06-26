@@ -27,6 +27,7 @@
 - [class继承](./class_extend/README.md)
 - [null 与 undefined](./null_undefined/README.md)
 - [callback 对象比较](./callback_compare/README.md)
+- [多态作为入参出参](./polymorphism/README.md)
 
 ## 附录
 

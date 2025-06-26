@@ -242,6 +242,16 @@ union MessageData {
 // 创建 union 使用 {union_type}::make_{item}({value});
 MessageData msg_data = MessageData::make_textVal("hello");
 
+// 获取 tag 来判断 union 实际存储类型使用 get_tag()
+switch(a.get_tag()) {
+case :MessageData::tag_t::textVal:
+    std::cout << "textVal" << std::endl;
+    break;
+case MessageData::tag_t::numVal:
+    std::cout << "numVal" << std::endl;
+    break;
+}
+
 // 获取 union 值使用 get_{item}_ref()
 std::cout << "text: " << msg_data.get_textVal_ref() << std::endl;
 ```

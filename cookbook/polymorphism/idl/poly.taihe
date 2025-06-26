@@ -1,0 +1,63 @@
+interface Animal {
+    speak(): void;
+    move(): void;
+}
+
+@class
+interface Dog: Animal {
+    fetch(): void;
+}
+
+@class
+interface Cat: Animal {
+    fetch(): void;
+}
+
+function makeAnimal(): Animal;
+function makeDog(): Dog;
+function makeCat(): Cat;
+
+enum AnimalTag: i32 {
+    ANIMAL = 0,
+    DOG = 1,
+    CAT = 2,
+}
+
+union AnimalType {
+    dog: Dog;
+    cat: Cat;
+    animal: Animal;
+}
+
+function getAnimal(tag: AnimalTag): AnimalType;
+function interactAnimal(a: AnimalType): void;
+
+struct Person {
+    name: String;
+    age: i32;
+}
+
+struct Worker {
+    @extends person: Person;
+    service_len: i32;
+}
+
+struct Student {
+    @extends person: Person;
+    rank: i32;
+}
+
+enum PersonTag: i32 {
+    PERSON = 0,
+    WORKER = 1,
+    STUDENT = 2,
+}
+
+union PersonType {
+    worker: Worker;
+    student: Student;
+    person: Person;
+}
+
+function getPerson(tag: PersonTag, name: String, age: i32): PersonType;
+function introduceYourself(p: PersonType): void;
