@@ -9,11 +9,11 @@ class AnimalImpl {
 public:
   AnimalImpl() {}
 
-  void speak() {
+  void Speak() {
     std::cout << "Animal Speak" << std::endl;
   }
 
-  void move() {
+  void Move() {
     std::cout << "Animal Move" << std::endl;
   }
 };
@@ -22,15 +22,15 @@ class DogImpl {
 public:
   DogImpl() {}
 
-  void fetch() {
+  void Fetch() {
     std::cout << "Dog Fetch" << std::endl;
   }
 
-  void speak() {
+  void Speak() {
     std::cout << "Dog Speak" << std::endl;
   }
 
-  void move() {
+  void Move() {
     std::cout << "Dog Move" << std::endl;
   }
 };
@@ -39,32 +39,32 @@ class CatImpl {
 public:
   CatImpl() {}
 
-  void fetch() {
+  void Fetch() {
     std::cout << "Cat Fetch" << std::endl;
   }
 
-  void speak() {
+  void Speak() {
     std::cout << "Cat Speak" << std::endl;
   }
 
-  void move() {
+  void Move() {
     std::cout << "Cat Move" << std::endl;
   }
 };
 
-::poly::Animal makeAnimal() {
+::poly::Animal MakeAnimal() {
   return taihe::make_holder<AnimalImpl, ::poly::Animal>();
 }
 
-::poly::Dog makeDog() {
+::poly::Dog MakeDog() {
   return taihe::make_holder<DogImpl, ::poly::Dog>();
 }
 
-::poly::Cat makeCat() {
+::poly::Cat MakeCat() {
   return taihe::make_holder<CatImpl, ::poly::Cat>();
 }
 
-::poly::AnimalType getAnimal(::poly::AnimalTag tag) {
+::poly::AnimalType GetAnimal(::poly::AnimalTag tag) {
   switch (tag.get_key()) {
   case ::poly::AnimalTag::key_t::ANIMAL:
     return ::poly::AnimalType::make_animal(
@@ -78,26 +78,26 @@ public:
   }
 }
 
-::taihe::string interactAnimal(::poly::AnimalType const &a) {
+::taihe::string InteractAnimal(::poly::AnimalType const &a) {
   switch (a.get_tag()) {
   case ::poly::AnimalType::tag_t::animal:
-    a.get_animal_ref()->speak();
-    a.get_animal_ref()->move();
+    a.get_animal_ref()->Speak();
+    a.get_animal_ref()->Move();
     return "Unknown Animal";
   case ::poly::AnimalType::tag_t::dog:
-    ::poly::Animal(a.get_dog_ref())->speak();
-    ::poly::Animal(a.get_dog_ref())->move();
-    a.get_dog_ref()->fetch();
+    ::poly::Animal(a.get_dog_ref())->Speak();
+    ::poly::Animal(a.get_dog_ref())->Move();
+    a.get_dog_ref()->Fetch();
     return "Dog";
   case ::poly::AnimalType::tag_t::cat:
-    ::poly::Animal(a.get_cat_ref())->speak();
-    ::poly::Animal(a.get_cat_ref())->move();
-    a.get_cat_ref()->fetch();
+    ::poly::Animal(a.get_cat_ref())->Speak();
+    ::poly::Animal(a.get_cat_ref())->Move();
+    a.get_cat_ref()->Fetch();
     return "Cat";
   }
 }
 
-::poly::PersonType getPerson(::poly::PersonTag tag, ::taihe::string_view name,
+::poly::PersonType GetPerson(::poly::PersonTag tag, ::taihe::string_view name,
                              int32_t age) {
   switch (tag.get_key()) {
   case ::poly::PersonTag::key_t::PERSON: {
@@ -115,7 +115,7 @@ public:
   }
 }
 
-::taihe::string introduceYourself(::poly::PersonType const &p) {
+::taihe::string IntroduceYourself(::poly::PersonType const &p) {
   switch (p.get_tag()) {
   case ::poly::PersonType::tag_t::person:
     std::cout << "My name is " << p.get_person_ref().name << " and my age is "
@@ -126,7 +126,7 @@ public:
               << " and my age is " << p.get_worker_ref().person.age
               << std::endl;
     std::cout << "I'm a worker, and have worked for "
-              << p.get_worker_ref().service_len << " years" << std::endl;
+              << p.get_worker_ref().serviceLen << " years" << std::endl;
     return "Worker";
   case ::poly::PersonType::tag_t::student:
     std::cout << "My name is " << p.get_student_ref().person.name
@@ -141,11 +141,11 @@ public:
 
 // Since these macros are auto-generate, lint will cause false positive.
 // NOLINTBEGIN
-TH_EXPORT_CPP_API_makeAnimal(makeAnimal);
-TH_EXPORT_CPP_API_makeDog(makeDog);
-TH_EXPORT_CPP_API_makeCat(makeCat);
-TH_EXPORT_CPP_API_getAnimal(getAnimal);
-TH_EXPORT_CPP_API_interactAnimal(interactAnimal);
-TH_EXPORT_CPP_API_getPerson(getPerson);
-TH_EXPORT_CPP_API_introduceYourself(introduceYourself);
+TH_EXPORT_CPP_API_MakeAnimal(MakeAnimal);
+TH_EXPORT_CPP_API_MakeDog(MakeDog);
+TH_EXPORT_CPP_API_MakeCat(MakeCat);
+TH_EXPORT_CPP_API_GetAnimal(GetAnimal);
+TH_EXPORT_CPP_API_InteractAnimal(InteractAnimal);
+TH_EXPORT_CPP_API_GetPerson(GetPerson);
+TH_EXPORT_CPP_API_IntroduceYourself(IntroduceYourself);
 // NOLINTEND

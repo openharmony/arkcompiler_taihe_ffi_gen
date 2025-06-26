@@ -1,21 +1,21 @@
 interface Animal {
-    speak(): void;
-    move(): void;
+    Speak(): void;
+    Move(): void;
 }
 
 @class
 interface Dog: Animal {
-    fetch(): void;
+    Fetch(): void;
 }
 
 @class
 interface Cat: Animal {
-    fetch(): void;
+    Fetch(): void;
 }
 
-function makeAnimal(): Animal;
-function makeDog(): Dog;
-function makeCat(): Cat;
+function MakeAnimal(): Animal;
+function MakeDog(): Dog;
+function MakeCat(): Cat;
 
 enum AnimalTag: i32 {
     ANIMAL = 0,
@@ -29,8 +29,8 @@ union AnimalType {
     animal: Animal;
 }
 
-function getAnimal(tag: AnimalTag): AnimalType;
-function interactAnimal(a: AnimalType): String;
+function GetAnimal(tag: AnimalTag): AnimalType;
+function InteractAnimal(a: AnimalType): String;
 
 struct Person {
     name: String;
@@ -39,7 +39,7 @@ struct Person {
 
 struct Worker {
     @extends person: Person;
-    service_len: i32;
+    serviceLen: i32;
 }
 
 struct Student {
@@ -59,5 +59,5 @@ union PersonType {
     person: Person;
 }
 
-function getPerson(tag: PersonTag, name: String, age: i32): PersonType;
-function introduceYourself(p: PersonType): String;
+function GetPerson(tag: PersonTag, name: String, age: i32): PersonType;
+function IntroduceYourself(p: PersonType): String;
