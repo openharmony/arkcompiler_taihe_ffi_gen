@@ -44,8 +44,11 @@ class PackageNAPIInfo(AbstractAnalysis[PackageDecl]):
         super().__init__(am, p)
         self.am = am
         self.source = f"{p.name}.napi.cpp"
+        self.header = f"{p.name}.napi.h"
         self.ts_decl = f"{p.name}.d.ts"
         self.cpp_ns = "::".join(p.segments)
+        self.init_func = f"Init_{p.name}"
+        self.macro_name = f"{p.name}_NAPI_H"
 
 
 class StructNAPIInfo(AbstractAnalysis[StructDecl]):

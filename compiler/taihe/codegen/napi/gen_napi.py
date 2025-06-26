@@ -43,6 +43,45 @@ class NAPICodeGenerator:
     def generate(self, pg: PackageGroup):
         for pkg in pg.packages:
             self.gen_package(pkg)
+        self.gen_register(pg)
+
+    def gen_register(self, pg: PackageGroup):
+        with CSourceWriter(
+            self.oc,
+            f"temp/napi_register.cpp",
+        ) as constructor_target:
+            constructor_target.writelns(
+                f"EXTERN_C_START",
+            )
+            with constructor_target.indented(
+                f"napi_value Init(napi_env env, napi_value exports) {{",
+                f"}}",
+            ):
+                for pkg in pg.packages:
+                    pkg_napi_info = PackageNAPIInfo.get(self.am, pkg)
+                    constructor_target.add_include(pkg_napi_info.header)
+                    constructor_target.writelns(
+                        f"{pkg_napi_info.init_func}(env, exports);",
+                    )
+                constructor_target.writelns(
+                    f"return exports;",
+                )
+            constructor_target.writelns(
+                f"EXTERN_C_END",
+                f"static napi_module demoModule = {{",
+                f"    .nm_version = 1,",
+                f"    .nm_flags = 0,",
+                f"    .nm_filename = nullptr,",
+                f"    .nm_register_func = Init,",
+                f'    .nm_modname = "entry",',
+                f"    .nm_priv = ((void*)0),",
+                f"    .reserved = {{ 0 }},",
+                f"}};",
+                f'extern "C" __attribute__((constructor)) void RegisterEntryModule(void)',
+                f"{{",
+                f"    napi_module_register(&demoModule);",
+                f"}}",
+            )
 
     def gen_package(
         self,
@@ -54,7 +93,7 @@ class NAPICodeGenerator:
             self.oc,
             f"src/{pkg_napi_info.source}",
         ) as pkg_napi_target:
-            pkg_napi_target.add_include("node/node_api.h")
+            pkg_napi_target.add_include(pkg_napi_info.header)
             pkg_napi_target.add_include(pkg_cpp_user_info.header)
 
             # ctor func
@@ -89,6 +128,22 @@ class NAPICodeGenerator:
             for union in pkg.unions:
                 self.gen_union_files(union)
             self.gen_module_init(pkg, register_infos, pkg_napi_target)
+        self.gen_napi_header_file(pkg_napi_info)
+
+    def gen_napi_header_file(self, pkg_napi_info: PackageNAPIInfo):
+        with CHeaderWriter(
+            self.oc,
+            f"include/{pkg_napi_info.header}",
+        ) as target:
+            target.add_include("node/node_api.h")
+            target.writelns(
+                f"#ifndef {pkg_napi_info.macro_name}",
+                f"#define {pkg_napi_info.macro_name}",
+                f"EXTERN_C_START",
+                f"napi_value {pkg_napi_info.init_func}(napi_env env, napi_value exports);",
+                f"EXTERN_C_END",
+                f"#endif",
+            )
 
     def gen_module_init(
         self,
@@ -96,11 +151,12 @@ class NAPICodeGenerator:
         register_infos: list[tuple[str, str]],
         pkg_napi_target: CSourceWriter,
     ):
+        pkg_napi_info = PackageNAPIInfo.get(self.am, pkg)
         pkg_napi_target.writelns(
             f"EXTERN_C_START",
         )
         with pkg_napi_target.indented(
-            f"napi_value Init(napi_env env, napi_value exports) {{",
+            f"napi_value {pkg_napi_info.init_func}(napi_env env, napi_value exports) {{",
             f"}}",
         ):
             for iface in pkg.interfaces:
@@ -123,19 +179,6 @@ class NAPICodeGenerator:
             )
         pkg_napi_target.writelns(
             f"EXTERN_C_END",
-            f"static napi_module demoModule = {{",
-            f"    .nm_version = 1,",
-            f"    .nm_flags = 0,",
-            f"    .nm_filename = nullptr,",
-            f"    .nm_register_func = Init,",
-            f'    .nm_modname = "entry",',
-            f"    .nm_priv = ((void*)0),",
-            f"    .reserved = {{ 0 }},",
-            f"}};",
-            f'extern "C" __attribute__((constructor)) void RegisterEntryModule(void)',
-            f"{{",
-            f"    napi_module_register(&demoModule);",
-            f"}}",
         )
 
     def gen_func(
