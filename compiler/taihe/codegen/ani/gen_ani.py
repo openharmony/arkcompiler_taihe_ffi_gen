@@ -223,15 +223,21 @@ class ANICodeGenerator:
             self.gen_obj_drop(pkg_ani_source_target, "_obj_drop")
             obj_drop_info = ANINativeFuncInfo(
                 sts_native_name="_obj_drop",
-                full_name=f"local::_obj_drop",
+                full_name="local::_obj_drop",
             )
             mod_member_infos.append(obj_drop_info)
             self.gen_obj_dup(pkg_ani_source_target, "_obj_dup")
             obj_dup_info = ANINativeFuncInfo(
                 sts_native_name="_obj_dup",
-                full_name=f"local::_obj_dup",
+                full_name="local::_obj_dup",
             )
             mod_member_infos.append(obj_dup_info)
+            self.gen_native_invoke(pkg_ani_source_target, "_native_invoke")
+            native_invoke_info = ANINativeFuncInfo(
+                sts_native_name="_native_invoke",
+                full_name="local::_native_invoke",
+            )
+            mod_member_infos.append(native_invoke_info)
             self.gen_subregister(
                 "ANIUtilsRegister",
                 pkg_ani_source_target,
@@ -243,7 +249,7 @@ class ANICodeGenerator:
 
             pkg_member_infos = []
             for func in pkg.functions:
-                self.gen_func(func, pkg_ani_source_target, func.name)
+                self.gen_native_func(func, pkg_ani_source_target, func.name)
                 func_ani_info = GlobFuncANIInfo.get(self.am, func)
                 func_info = ANINativeFuncInfo(
                     sts_native_name=func_ani_info.sts_native_name,
@@ -270,7 +276,7 @@ class ANICodeGenerator:
                     iface_member_infos = []
                     for ancestor in iface_abi_info.ancestor_dict:
                         for method in ancestor.methods:
-                            self.gen_method(
+                            self.gen_native_method(
                                 iface,
                                 method,
                                 pkg_ani_source_target,
@@ -307,10 +313,10 @@ class ANICodeGenerator:
             f"}}",
         ):
             pkg_ani_source_target.writelns(
-                f"{parent_scope} ani_env;",
+                f"{parent_scope} scope;",
             )
             with pkg_ani_source_target.indented(
-                f'if (ANI_OK != env->Find{parent_scope.suffix}("{impl_desc}", &ani_env)) {{',
+                f'if (ANI_OK != env->Find{parent_scope.suffix}("{impl_desc}", &scope)) {{',
                 f"}}",
             ):
                 pkg_ani_source_target.writelns(
@@ -325,10 +331,10 @@ class ANICodeGenerator:
                         f'{{"{member_info.sts_native_name}", nullptr, reinterpret_cast<void*>({member_info.full_name})}},',
                     )
             pkg_ani_source_target.writelns(
-                f"return env->{parent_scope.suffix}_BindNative{parent_scope.member.suffix}s(ani_env, methods, sizeof(methods) / sizeof(ani_native_function));",
+                f"return env->{parent_scope.suffix}_BindNative{parent_scope.member.suffix}s(scope, methods, sizeof(methods) / sizeof(ani_native_function));",
             )
 
-    def gen_func(
+    def gen_native_func(
         self,
         func: GlobFuncDecl,
         pkg_ani_source_target: CSourceWriter,
@@ -381,7 +387,7 @@ class ANICodeGenerator:
                     f"{func_cpp_user_info.full_name}({cpp_args_str});",
                 )
 
-    def gen_method(
+    def gen_native_method(
         self,
         iface: IfaceDecl,
         method: IfaceMethodDecl,
@@ -474,6 +480,28 @@ class ANICodeGenerator:
         ):
             pkg_ani_source_target.writelns(
                 f"return reinterpret_cast<ani_long>(tobj_dup(reinterpret_cast<DataBlockHead*>(data_ptr)));",
+            )
+
+    def gen_native_invoke(
+        self,
+        pkg_ani_source_target: CSourceWriter,
+        name: str,
+    ):
+        ani_params = []
+        ani_args = []
+        for i in range(16):
+            ani_param_name = f"arg_{i}"
+            ani_params.append(f"ani_ref {ani_param_name}")
+            ani_args.append(ani_param_name)
+        ani_params_str = ", ".join(ani_params)
+        ani_args_str = ", ".join(ani_args)
+        ani_return_type = "ani_ref"
+        with pkg_ani_source_target.indented(
+            f"static {ani_return_type} {name}([[maybe_unused]] ani_env *env, ani_long ani_cast_ptr, ani_long ani_func_ptr, ani_long ani_data_ptr, {ani_params_str}) {{",
+            f"}}",
+        ):
+            pkg_ani_source_target.writelns(
+                f"return reinterpret_cast<{ani_return_type} (*)(ani_env *env, ani_long ani_func_ptr, ani_long ani_data_ptr, {ani_params_str})>(ani_cast_ptr)(env, ani_func_ptr, ani_data_ptr, {ani_args_str});",
             )
 
     def gen_iface_files(
@@ -575,7 +603,7 @@ class ANICodeGenerator:
                 )
                 for ancestor in iface_abi_info.ancestor_dict:
                     for method in ancestor.methods:
-                        self.gen_iface_method_call(
+                        self.gen_iface_method(
                             iface,
                             method,
                             iface_ani_info,
@@ -592,7 +620,7 @@ class ANICodeGenerator:
                 f"return ::taihe::make_holder<cpp_impl_t, {iface_cpp_info.as_owner}, ::taihe::platform::ani::AniObject>(env, ani_obj);",
             )
 
-    def gen_iface_method_call(
+    def gen_iface_method(
         self,
         iface: IfaceDecl,
         method: IfaceMethodDecl,

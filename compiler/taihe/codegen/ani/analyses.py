@@ -2056,7 +2056,7 @@ class CallbackTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[CallbackType]):
             target.writelns(
                 f"{cpp_impl_class}(ani_env* env, ani_ref val) : ::taihe::dref_guard(env, val) {{}}",
             )
-            self.gen_operator_call(target)
+            self.gen_invoke_operator(target)
             with target.indented(
                 f"uintptr_t getGlobalReference() const {{",
                 f"}}",
@@ -2068,7 +2068,7 @@ class CallbackTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[CallbackType]):
             f"{self.cpp_info.as_owner} {cpp_result} = ::taihe::make_holder<{cpp_impl_class}, {self.cpp_info.as_owner}, ::taihe::platform::ani::AniObject>({env}, {ani_value});",
         )
 
-    def gen_operator_call(
+    def gen_invoke_operator(
         self,
         target: CSourceWriter,
     ):
@@ -2136,10 +2136,80 @@ class CallbackTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[CallbackType]):
         cpp_value: str,
         ani_result: str,
     ):
-        # TODO: Callback into ani
+        cpp_value_copy = f"{ani_result}_cpp_copy"
+        cpp_struct = f"{ani_result}_cpp_struct"
+        invoke_name = "invoke"
+        ani_cast_ptr = f"{ani_result}_ani_cast_ptr"
+        ani_func_ptr = f"{ani_result}_ani_func_ptr"
+        ani_data_ptr = f"{ani_result}_ani_data_ptr"
+        pkg_ani_info = PackageANIInfo.get(self.am, self.t.ty_ref.parent_pkg)
+        with target.indented(
+            f"struct {cpp_struct} {{",
+            f"}};",
+        ):
+            self.gen_native_invoke(target, invoke_name)
         target.writelns(
-            f"ani_fn_object {ani_result} = {{}};",
+            f"{self.cpp_info.as_owner} {cpp_value_copy} = {cpp_value};",
+            f"ani_long {ani_cast_ptr} = reinterpret_cast<ani_long>(&{cpp_struct}::{invoke_name});",
+            f"ani_long {ani_func_ptr} = reinterpret_cast<ani_long>({cpp_value_copy}.m_handle.vtbl_ptr);",
+            f"ani_long {ani_data_ptr} = reinterpret_cast<ani_long>({cpp_value_copy}.m_handle.data_ptr);",
+            f"{cpp_value_copy}.m_handle.data_ptr = nullptr;",
+            f"ani_fn_object {ani_result};",
+            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.module.impl_desc}", "__makeCallback", nullptr), reinterpret_cast<ani_ref*>(&{ani_result}), {ani_cast_ptr}, {ani_func_ptr}, {ani_data_ptr});',
         )
+
+    def gen_native_invoke(
+        self,
+        target: CSourceWriter,
+        cpp_cast_ptr: str,
+    ):
+        ani_params = []
+        ani_args = []
+        for i in range(16):
+            ani_param_name = f"ani_arg_{i}"
+            ani_params.append(f"[[maybe_unused]] ani_ref {ani_param_name}")
+            ani_args.append(ani_param_name)
+        ani_params_str = ", ".join(ani_params)
+        cpp_args = []
+        for i in range(len(self.t.params_ty)):
+            cpp_param_name = f"cpp_arg_{i}"
+            cpp_args.append(cpp_param_name)
+        ani_return_type = "ani_ref"
+        with target.indented(
+            f"static {ani_return_type} {cpp_cast_ptr}(ani_env* env, ani_long ani_func_ptr, ani_long ani_data_ptr, {ani_params_str}) {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"{self.cpp_info.as_param}::vtable_type* cpp_vtbl_ptr = reinterpret_cast<{self.cpp_info.as_param}::vtable_type*>(ani_func_ptr);",
+                f"DataBlockHead* cpp_data_ptr = reinterpret_cast<DataBlockHead*>(ani_data_ptr);",
+                f"{self.cpp_info.as_param} cpp_func = {self.cpp_info.as_param}({{cpp_vtbl_ptr, cpp_data_ptr}});",
+            )
+            for param_ty, ani_arg, cpp_arg in zip(
+                self.t.params_ty, ani_args, cpp_args, strict=False
+            ):
+                param_ty_ani_info = TypeANIInfo.get(self.am, param_ty)
+                param_ty_ani_info.from_ani_boxed(target, "env", ani_arg, cpp_arg)
+            cpp_args_str = ", ".join(cpp_args)
+            if return_ty := self.t.return_ty:
+                return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
+                return_ty_ani_info = TypeANIInfo.get(self.am, return_ty)
+                inner_cpp_result = "cpp_result"
+                inner_ani_result = "ani_result"
+                target.writelns(
+                    f"{return_ty_cpp_info.as_owner} {inner_cpp_result} = cpp_func({cpp_args_str});",
+                    f"if (::taihe::has_error()) {{ return ani_ref{{}}; }}",
+                )
+                return_ty_ani_info.into_ani_boxed(
+                    target, "env", inner_cpp_result, inner_ani_result
+                )
+                target.writelns(
+                    f"return {inner_ani_result};",
+                )
+            else:
+                target.writelns(
+                    f"cpp_func({cpp_args_str});",
+                    f"return ani_ref{{}};",
+                )
 
 
 class TypeANIInfo(TypeVisitor[AbstractTypeANIInfo]):
