@@ -31,6 +31,7 @@ add_subdirectory(ani_thread)
 add_subdirectory(ani_bundle)
 add_subdirectory(ani_bundlemanager)
 add_subdirectory(ani_graphics3d)
+add_subdirectory(ani_polymorphism)
 # add_subdirectory(ani_fixedarray)
 
 # add_subdirectory(ani_huks)
