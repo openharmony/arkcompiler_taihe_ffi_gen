@@ -1,4 +1,4 @@
-@!namespace("ohos", "bundle", "bundleManager")
+@!namespace("ohos", "bundle.bundleManager")
 enum AbilityType: i8 {
     PAGE = 1,
     SERVICE = 2,
