@@ -9,6 +9,7 @@ from typing_extensions import override
 
 if TYPE_CHECKING:
     from taihe.semantics.declarations import (
+        CallbackTypeRefDecl,
         EnumDecl,
         IfaceDecl,
         StructDecl,
@@ -147,6 +148,8 @@ BUILTIN_TYPES: dict[str, BuiltinBuilder] = {
 
 @dataclass(frozen=True, repr=False)
 class CallbackType(Type):
+    ty_ref: "CallbackTypeRefDecl"
+
     return_ty: Type | None
     params_ty: tuple[Type, ...]
 

@@ -2026,19 +2026,17 @@ class CallbackTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[CallbackType]):
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
-        params_ty_sts = []
-        for index, param_ty in enumerate(self.t.params_ty):
-            param_ty_sts_info = TypeANIInfo.get(self.am, param_ty)
-            prm_sts_type = param_ty_sts_info.sts_type_in(target)
-            params_ty_sts.append(f"arg_{index}: {prm_sts_type}")
-        params_ty_sts_str = ", ".join(params_ty_sts)
-        if return_ty := self.t.return_ty:
-            return_ty_sts_info = TypeANIInfo.get(self.am, return_ty)
-            ret_sts_type = return_ty_sts_info.sts_type_in(target)
-            return_ty_sts = ret_sts_type
+        sts_params = []
+        for param in self.t.ty_ref.params:
+            type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
+            sts_params.append(f"{param.name}: {type_ani_info.sts_type_in(target)}")
+        sts_params_str = ", ".join(sts_params)
+        if return_ty_ref := self.t.ty_ref.return_ty_ref:
+            type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
+            sts_return_ty_name = type_ani_info.sts_type_in(target)
         else:
-            return_ty_sts = "void"
-        return f"(({params_ty_sts_str}) => {return_ty_sts})"
+            sts_return_ty_name = "void"
+        return f"(({sts_params_str}) => {sts_return_ty_name})"
 
     @override
     def from_ani(
@@ -2075,17 +2073,17 @@ class CallbackTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[CallbackType]):
         inner_cpp_params = []
         inner_ani_args = []
         inner_cpp_args = []
-        for index, param_ty in enumerate(self.t.params_ty):
-            inner_cpp_arg = f"cpp_arg_{index}"
-            inner_ani_arg = f"ani_arg_{index}"
-            param_ty_cpp_info = TypeCppInfo.get(self.am, param_ty)
-            inner_cpp_params.append(f"{param_ty_cpp_info.as_param} {inner_cpp_arg}")
-            inner_ani_args.append(inner_ani_arg)
+        for param in self.t.ty_ref.params:
+            inner_cpp_arg = f"cpp_arg_{param.name}"
+            inner_ani_arg = f"ani_arg_{param.name}"
+            type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
+            inner_cpp_params.append(f"{type_cpp_info.as_param} {inner_cpp_arg}")
             inner_cpp_args.append(inner_cpp_arg)
+            inner_ani_args.append(inner_ani_arg)
         cpp_params_str = ", ".join(inner_cpp_params)
-        if return_ty := self.t.return_ty:
-            return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-            return_ty_as_owner = return_ty_cpp_info.as_owner
+        if return_ty_ref := self.t.ty_ref.return_ty_ref:
+            type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
+            return_ty_as_owner = type_cpp_info.as_owner
         else:
             return_ty_as_owner = "void"
         with target.indented(
@@ -2096,24 +2094,30 @@ class CallbackTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[CallbackType]):
                 f"::taihe::env_guard guard;",
                 f"ani_env *env = guard.get_env();",
             )
-            for inner_ani_arg, inner_cpp_arg, param_ty in zip(
-                inner_ani_args, inner_cpp_args, self.t.params_ty, strict=True
+            for param, inner_cpp_arg, inner_ani_arg in zip(
+                self.t.ty_ref.params,
+                inner_cpp_args,
+                inner_ani_args,
+                strict=True,
             ):
-                param_ty_ani_info = TypeANIInfo.get(self.am, param_ty)
+                param_ty_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
                 param_ty_ani_info.into_ani_boxed(
-                    target, "env", inner_cpp_arg, inner_ani_arg
+                    target,
+                    "env",
+                    inner_cpp_arg,
+                    inner_ani_arg,
                 )
             inner_ani_args_str = ", ".join(inner_ani_args)
-            if return_ty := self.t.return_ty:
+            if return_ty_ref := self.t.ty_ref.return_ty_ref:
                 inner_ani_res = "ani_result"
                 inner_cpp_res = "cpp_result"
+                type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
                 target.writelns(
                     f"ani_ref ani_argv[] = {{{inner_ani_args_str}}};",
                     f"ani_ref {inner_ani_res};",
-                    f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.params_ty)}, ani_argv, &{inner_ani_res});",
+                    f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.ty_ref.params)}, ani_argv, &{inner_ani_res});",
                 )
-                return_ty_ani_info = TypeANIInfo.get(self.am, return_ty)
-                return_ty_ani_info.from_ani_boxed(
+                type_ani_info.from_ani_boxed(
                     target, "env", inner_ani_res, inner_cpp_res
                 )
                 target.writelns(
@@ -2124,7 +2128,7 @@ class CallbackTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[CallbackType]):
                 target.writelns(
                     f"ani_ref ani_argv[] = {{{inner_ani_args_str}}};",
                     f"ani_ref {inner_ani_res};",
-                    f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.params_ty)}, ani_argv, &{inner_ani_res});",
+                    f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.ty_ref.params)}, ani_argv, &{inner_ani_res});",
                     f"return;",
                 )
 
@@ -2165,18 +2169,21 @@ class CallbackTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[CallbackType]):
     ):
         ani_params = []
         ani_args = []
+        ani_params.append("[[maybe_unused]] ani_env* env")
+        ani_params.append("[[maybe_unused]] ani_long ani_func_ptr")
+        ani_params.append("[[maybe_unused]] ani_long ani_data_ptr")
         for i in range(16):
             ani_param_name = f"ani_arg_{i}"
             ani_params.append(f"[[maybe_unused]] ani_ref {ani_param_name}")
             ani_args.append(ani_param_name)
         ani_params_str = ", ".join(ani_params)
         cpp_args = []
-        for i in range(len(self.t.params_ty)):
-            cpp_param_name = f"cpp_arg_{i}"
-            cpp_args.append(cpp_param_name)
+        for i in self.t.ty_ref.params:
+            cpp_arg = f"cpp_arg_{i.name}"
+            cpp_args.append(cpp_arg)
         ani_return_type = "ani_ref"
         with target.indented(
-            f"static {ani_return_type} {cpp_cast_ptr}(ani_env* env, ani_long ani_func_ptr, ani_long ani_data_ptr, {ani_params_str}) {{",
+            f"static {ani_return_type} {cpp_cast_ptr}({ani_params_str}) {{",
             f"}};",
         ):
             target.writelns(
@@ -2184,26 +2191,24 @@ class CallbackTypeANIInfo(AbstractTypeANIInfo, AbstractAnalysis[CallbackType]):
                 f"DataBlockHead* cpp_data_ptr = reinterpret_cast<DataBlockHead*>(ani_data_ptr);",
                 f"{self.cpp_info.as_param} cpp_func = {self.cpp_info.as_param}({{cpp_vtbl_ptr, cpp_data_ptr}});",
             )
-            for param_ty, ani_arg, cpp_arg in zip(
-                self.t.params_ty, ani_args, cpp_args, strict=False
+            for param, ani_arg, cpp_arg in zip(
+                self.t.ty_ref.params, ani_args, cpp_args, strict=False
             ):
-                param_ty_ani_info = TypeANIInfo.get(self.am, param_ty)
-                param_ty_ani_info.from_ani_boxed(target, "env", ani_arg, cpp_arg)
+                type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
+                type_ani_info.from_ani_boxed(target, "env", ani_arg, cpp_arg)
             cpp_args_str = ", ".join(cpp_args)
-            if return_ty := self.t.return_ty:
-                return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-                return_ty_ani_info = TypeANIInfo.get(self.am, return_ty)
-                inner_cpp_result = "cpp_result"
-                inner_ani_result = "ani_result"
+            if return_ty_ref := self.t.ty_ref.return_ty_ref:
+                type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
+                type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
+                cpp_res = "cpp_result"
+                ani_res = "ani_result"
                 target.writelns(
-                    f"{return_ty_cpp_info.as_owner} {inner_cpp_result} = cpp_func({cpp_args_str});",
+                    f"{type_cpp_info.as_owner} {cpp_res} = cpp_func({cpp_args_str});",
                     f"if (::taihe::has_error()) {{ return ani_ref{{}}; }}",
                 )
-                return_ty_ani_info.into_ani_boxed(
-                    target, "env", inner_cpp_result, inner_ani_result
-                )
+                type_ani_info.into_ani_boxed(target, "env", cpp_res, ani_res)
                 target.writelns(
-                    f"return {inner_ani_result};",
+                    f"return {ani_res};",
                 )
             else:
                 target.writelns(
