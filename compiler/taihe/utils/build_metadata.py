@@ -1,0 +1,59 @@
+import sys
+from dataclasses import dataclass
+from functools import cache
+from typing import TextIO
+
+
+@dataclass(frozen=True)
+class BuildMetadata:
+    version: str
+    git_commit: str
+    git_message: str
+    build_date: str
+    build_time_utc: float
+    is_unknown: bool
+
+    @classmethod
+    @cache
+    def get(cls) -> "BuildMetadata":
+        try:
+            import taihe._version as ver
+
+            return cls(
+                version=ver.version,
+                git_commit=ver.git_commit,
+                git_message=ver.git_message,
+                build_date=ver.build_date,
+                build_time_utc=ver.build_time_utc,
+                is_unknown=False,
+            )
+        except ModuleNotFoundError:
+            return cls._unknown_metadata()
+
+    @staticmethod
+    def _unknown_metadata() -> "BuildMetadata":
+        return BuildMetadata(
+            version="0.0.0+unknown",
+            git_commit="<unknown commit>",
+            git_message="<unknown message>",
+            build_date="<unknown date>",
+            build_time_utc=-1.0,
+            is_unknown=True,
+        )
+
+    def print_info(
+        self,
+        tool: str = "Taihe compiler (taihec)",
+        auto_exit: bool = True,
+        output: TextIO = sys.stderr,
+    ) -> None:
+        print(f"{tool} {self.version} {self.build_date}", file=output)
+        print(f"Commit: {self.git_commit}", file=output)
+        print(f"Message: {self.git_message}", file=output)
+
+        if auto_exit:
+            sys.exit(0)
+
+
+if __name__ == "__main__":
+    BuildMetadata.get().print_info()

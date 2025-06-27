@@ -4,6 +4,7 @@ from pathlib import Path
 
 from taihe.driver.backend import BackendRegistry
 from taihe.driver.contexts import CompilerInstance, CompilerInvocation
+from taihe.utils.build_metadata import BuildMetadata
 from taihe.utils.outputs import CMakeOutputConfig, OutputConfig
 from taihe.utils.resources import (
     ResourceContext,
@@ -67,9 +68,16 @@ def main():
         choices=["cmake"],
         help="build system to use for generated sources",
     )
+
+    # Special options {{
     ResourceContext.register_cli_options(parser)
+    parser.add_argument("--version", action="store_true")
+
     args = parser.parse_args()
+    if args.version:
+        BuildMetadata.get().print_info(tool="Taihe compiler (taihec)", auto_exit=True)
     ResourceContext.initialize(args)
+    # }} Special options
 
     backends = registry.collect_required_backends(args.backends)
     resolved_backends = [b() for b in backends]

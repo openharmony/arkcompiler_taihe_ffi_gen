@@ -57,22 +57,6 @@ set_target_properties(th_runtime PROPERTIES
 
 target_include_directories(th_runtime PUBLIC ${TH_RUNTIME_INCLUDE_DIR})
 
-
-function(update_grammar)
-  add_custom_command(
-    OUTPUT ${CMAKE_SOURCE_DIR}/compiler/taihe/parse/antlr/TaiheAST.py
-    COMMAND ./generate-grammar
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/compiler # 设置工作目录
-    COMMENT "Update grammar"
-    DEPENDS ${CMAKE_SOURCE_DIR}/compiler/Taihe.g4
-  )
-
-  add_custom_target(UPDATE_GRAMMAR ALL
-    DEPENDS ${CMAKE_SOURCE_DIR}/compiler/taihe/parse/antlr/TaiheAST.py
-  )
-endfunction()
-
-
 function(generate_code_from_idl target_name idl_files gen_ets_files generated_dir taihe_configs)
   set(IDL_FILES ${idl_files})
   set(GEN_ETS_FILES ${gen_ets_files})
@@ -403,8 +387,6 @@ if(EXISTS "${ANI_HEADER}")
 else()
   message(FATAL_ERROR "Cannot find the path: ${ANI_HEADER}")
 endif()
-
-update_grammar()
 
 add_subdirectory(test)
 add_subdirectory(cookbook)
