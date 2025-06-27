@@ -7,7 +7,14 @@ avoiding redundant computation or memory usage.
 from abc import ABC, abstractmethod
 from collections.abc import Hashable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Generic, NoReturn, ParamSpec, TypeVar, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Generic,
+    ParamSpec,
+    TypeVar,
+    cast,
+)
 
 if TYPE_CHECKING:
     from taihe.driver.contexts import CompilerInvocation
@@ -17,35 +24,22 @@ P = ParamSpec("P")
 A = TypeVar("A", bound="AbstractAnalysis[Any]")
 
 
-@dataclass(frozen=True)
-class CacheKey:
-    """Represents a unique key for identifying cached analysis instances."""
-
-    analysis_type: type["AbstractAnalysis[Any]"]
-    args: tuple[Hashable, ...]
-    kwargs: tuple[tuple[str, Hashable], ...]
-
-
-class AbstractAnalysis(ABC, Generic[P]):
+class AbstractAnalysis(Generic[P], ABC):
     """Abstract Base class for all analyses.
 
     Enforcing the use of hashable argument for unique identification and caching.
     """
 
-    def __new__(cls: type[A], *args: Any, **kwargs: Any) -> NoReturn:
-        """Avoid accidentally instantiating without using the `get` method."""
-        raise TypeError(
-            f"Cannot instantiate {cls.__name__}. Use `{cls.__name__}.get` instead."
-        )
-
+    @classmethod
     @abstractmethod
-    def __init__(
-        self,
+    def create(
+        cls: type[A],
         am: "AnalysisManager",
         *args: P.args,
         **kwargs: P.kwargs,
-    ) -> None:
-        """Initialize analysis with hashable argument."""
+    ) -> A:
+        """Create an instance of an analysis with the given arguments."""
+        raise NotImplementedError(f"{cls.__name__}.create() must be implemented.")
 
     @classmethod
     def get(
@@ -54,8 +48,17 @@ class AbstractAnalysis(ABC, Generic[P]):
         *args: P.args,
         **kwargs: P.kwargs,
     ) -> A:
-        """Get or create a cached analysis instance."""
+        """Get or create an analysis instance using the factory."""
         return am.get_or_create(cls, *args, **kwargs)
+
+
+@dataclass(frozen=True)
+class CacheKey:
+    """Represents a unique key for identifying cached analysis instances."""
+
+    analysis_type: type[AbstractAnalysis[Any]]
+    args: tuple[Hashable, ...]
+    kwargs: tuple[tuple[str, Hashable], ...]
 
 
 class AnalysisManager:
@@ -83,8 +86,7 @@ class AnalysisManager:
         if cached := self._cache.get(key):
             return cast(A, cached)
 
-        new_instance = object.__new__(analysis_type)
-        new_instance.__init__(self, *args, **kwargs)
+        new_instance = analysis_type.create(self, *args, **kwargs)
         self._cache[key] = new_instance
         return new_instance
 
