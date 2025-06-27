@@ -45,9 +45,10 @@ fi
 # Python
 if "$run_python"; then
     log_stage "Formatting Python code"
-    removestar -i taihe tests || true
-    black taihe tests
-    ruff check taihe tests --fix
+    removestar -i compiler || true
+    # ruff check performs isort. Reformat later
+    ruff check --fix
+    ruff format
 fi
 
 # Cpp, runtime and tests

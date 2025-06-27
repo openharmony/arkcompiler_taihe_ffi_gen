@@ -10,7 +10,6 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "black>=25.1.0",
     "coverage>=7.8.0",
     "pyright>=1.1.400",
     "pytest>=8.3.5",
@@ -42,32 +41,39 @@ local_scheme = "dirty-tag"
 version_scheme = "python-simplified-semver"
 
 [tool.hatch.build.hooks.vcs]
-version-file = "taihe/_version.py"
+version-file = "compiler/taihe/_version.py"
 
 ### Linting ###
 
-[tool.black]
-exclude = "(taihe/parse/antlr|taihe/_version.py)"
-target-version = ['py310']
-
 [tool.pyright]
-include = ["taihe"]
-exclude = ["taihe/parse/antlr"]
+include = ["compiler"]
+exclude = ["compiler/taihe/parse/antlr"]
 pythonVersion = '3.10'
 
-# strict = ["taihe"]  # Maybe later: codegen
-strict = ["taihe/cli", "taihe/driver", "taihe/parse", "taihe/semantics", "taihe/utils"]
+# strict = ["compiler/taihe"]  # Maybe later: codegen
+strict = [
+  "compiler/taihe/cli",
+  "compiler/taihe/driver",
+  "compiler/taihe/parse",
+  "compiler/taihe/semantics",
+  "compiler/taihe/utils"
+]
+
+[[tool.pyright.executionEnvironments]]
+root = "compiler"
 
 ### Linting (Ruff Only) ###
 
 [tool.ruff]
 target-version = 'py310'
 
-# Don't check generated code.
-exclude = ["taihe/parse/antlr/*.py", "taihe/_version.py"]
+[tool.ruff.lint]
+pydocstyle.convention = "google"
+flake8-tidy-imports.ban-relative-imports = "all"
+flake8-type-checking.strict = true
 
 # See all rules at https://beta.ruff.rs/docs/rules/
-lint.select = [
+select = [
     "E", # pycodestyle
     "W", # pycodestyle
     "F", # Pyflakes
@@ -84,9 +90,7 @@ lint.select = [
     "RUF", # Ruff-specific rules
 ]
 
-lint.ignore = [
-    "E501", # "Line too long"
-    # -> "line length already regulated by black"
+ignore = [
     "PT011", # "pytest.raises() should specify expected exception"
     # -> "would imply to update tests every time you update exception message"
     "SIM108",
@@ -106,21 +110,5 @@ lint.ignore = [
     "TC003", # "unnecessary to move to a TYPE_CHECKING block"
     "TC006",
     "B007",
+    "E501", # TODO fix long lines
 ]
-
-[tool.ruff.lint.pydocstyle]
-# Automatically disable rules that are incompatible with Google docstring convention
-convention = "google"
-
-[tool.ruff.lint.pycodestyle]
-max-doc-length = 100
-
-[tool.ruff.lint.flake8-tidy-imports]
-ban-relative-imports = "all"
-
-[tool.ruff.lint.flake8-type-checking]
-strict = true
-runtime-evaluated-base-classes = ["pydantic.BaseModel"]
-# Pydantic needs to be able to evaluate types at runtime
-# see https://pypi.org/project/flake8-type-checking/ for flake8-type-checking documentation
-# see https://beta.ruff.rs/docs/settings/#flake8-type-checking-runtime-evaluated-base-classes for ruff documentation
