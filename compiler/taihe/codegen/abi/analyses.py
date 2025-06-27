@@ -345,3 +345,16 @@ class TypeABIInfo(TypeVisitor[AbstractTypeABIInfo]):
     @override
     def visit_callback_type(self, t: CallbackType) -> AbstractTypeABIInfo:
         return CallbackTypeABIInfo.get(self.am, t)
+
+
+class PackageCImplInfo(AbstractAnalysis[PackageDecl]):
+    def __init__(self, am: AnalysisManager, p: PackageDecl) -> None:
+        super().__init__(am, p)
+        self.header = f"{p.name}.impl.h"
+        self.source = f"{p.name}.impl.c"
+
+
+class GlobFuncCImplInfo(AbstractAnalysis[GlobFuncDecl]):
+    def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
+        super().__init__(am, f)
+        self.macro = f"TH_EXPORT_C_API_{f.name}"
