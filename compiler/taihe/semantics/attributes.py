@@ -302,23 +302,24 @@ class AutoCheckedAttribute(AbstractCheckedAttribute, Generic[T]):
             if field.init is False:
                 # Skip fields that are not intended for initialization
                 continue
-            elif field.name in kwargs:
+            if field.name in kwargs:
                 # If the field is in keyword arguments, use that value
                 arg = kwargs.pop(field.name)
             elif field.kw_only:
-                # If the field is keyword-only and no value is provided, emit an error
-                dm.emit(AttrArgMissingError(cls.NAME, field.name, True, loc=raw.loc))
+                # If no value is provided and no default, emit an error
+                if field.default is not MISSING or field.default_factory is not MISSING:
+                    continue
+                dm.emit(AttrArgMissingError(cls.NAME, field.name, False, loc=raw.loc))
                 return None
             elif args:
                 # If the field is positional, pop the first positional argument
                 arg = args.pop(0)
-            elif field.default is MISSING and field.default_factory is MISSING:
+            else:
                 # If no value is provided and no default, emit an error
+                if field.default is not MISSING or field.default_factory is not MISSING:
+                    continue
                 dm.emit(AttrArgMissingError(cls.NAME, field.name, False, loc=raw.loc))
                 return None
-            else:
-                # Use the default value if no argument is provided
-                continue
 
             # Validate the type of the provided value
             field_type = cast(type | UnionType, field.type)
