@@ -988,12 +988,12 @@ function testInter21BasePerformanceFunctionTest14() {
         testInterfacePerformance21.record_test_attribute;
     console.log("testInter21BasePerformanceFunctionTest14 ", res)
     const item = res[100];
-    assertNE(item, undefined);
+    arktest.assertNE(item, undefined);
     arktest.assertEQ(item?.data1, "one");
     arktest.assertEQ(item?.data2, true);
     arktest.assertEQ(item?.data3, 100);
     const item1 = res[101];
-    assertNE(item1, undefined);
+    arktest.assertNE(item1, undefined);
     arktest.assertEQ(item1?.data1, "two");
     arktest.assertEQ(item1?.data2, false);
     arktest.assertEQ(item1?.data3, 101);

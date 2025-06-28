@@ -8,19 +8,19 @@ loadLibrary("inheritance");
 function base_context_test() {
     let baseContext = lib.makeBaseContext();
     baseContext.name = "BaseContext";
-    assertEQ(baseContext.name, "BaseContext");
-    assertEQ(baseContext.getType("BCTX"), "BaseContextTypeBCTX");
+    arktest.assertEQ(baseContext.name, "BaseContext");
+    arktest.assertEQ(baseContext.getType("BCTX"), "BaseContextTypeBCTX");
 }
 
 function context_extends_test() {
     let context = lib.makeContext();
     context.stageMode = true;
-    assertEQ(context.stageMode, true)
-    assertEQ(context.name, "");
+    arktest.assertEQ(context.stageMode, true)
+    arktest.assertEQ(context.name, "");
     context.name = "Context";
-    assertEQ(context.name, "Context");
+    arktest.assertEQ(context.name, "Context");
     context.getApplicationContext();
-    assertEQ(context.getType("CTX"), "ContextTypeCTX");
+    arktest.assertEQ(context.getType("CTX"), "ContextTypeCTX");
 }
 
 function application_context_extends_test() {
@@ -44,15 +44,15 @@ function application_context_extends_test() {
             }
         })
     applicationContext.name = "ApplicationContext";
-    assertEQ(applicationContext.name, "ApplicationContext");
-    assertEQ(applicationContext.stageMode, false)
-    assertEQ(applicationContext.getType("ACTX"), "AppContextACTX");
+    arktest.assertEQ(applicationContext.name, "ApplicationContext");
+    arktest.assertEQ(applicationContext.stageMode, false)
+    arktest.assertEQ(applicationContext.getType("ACTX"), "AppContextACTX");
 }
 
 function test_context_extends() {
     let testContext = lib.makeTestContext();
     testContext.getTestContext();
-    assertEQ(testContext.getType("TCTX"), "TestContextTCTX");
+    arktest.assertEQ(testContext.getType("TCTX"), "TestContextTCTX");
     // error, getApplicationContext does not exist on type TestContext
     // testContext.getApplicationContext();
 }
@@ -60,7 +60,7 @@ function test_context_extends() {
 function extends_inject_test() {
     let man = new extends_inject.Man();
     let person = man.getPerson();
-    assertEQ(person.name, "zhangsan");
+    arktest.assertEQ(person.name, "zhangsan");
     console.log(`person.name: ${person.name}`);
     let innerPerson = extends_inject.makePerson();
     console.log(`innerPerson: ${innerPerson}`);
@@ -68,7 +68,7 @@ function extends_inject_test() {
 
 function main() {
     console.log("##############start#############")
-    const suite = new ArkTestsuite("class extends ut")
+    const suite = new arktest.ArkTestsuite("class extends ut")
 
     suite.addTest("base context test", base_context_test)
     suite.addTest("context extends test", context_extends_test)
