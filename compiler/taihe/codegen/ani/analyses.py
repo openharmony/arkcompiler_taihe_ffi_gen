@@ -157,7 +157,7 @@ ANI_FIXEDARRAY_LONG = ANIFixedArrayType(hint="fixedarray_long", base=ANI_REF)
 ANI_LONG.fixedarray_hint = ANI_FIXEDARRAY_LONG
 
 ANI_OBJECT = ANIType(hint="object", base=ANI_REF)
-ANI_ARRAY = ANIType(hint="array_ref", base=ANI_REF)  # TODO: Array
+ANI_ARRAY = ANIType(hint="array", base=ANI_REF)
 ANI_FN_OBJECT = ANIType(hint="fn_object", base=ANI_REF)
 ANI_ENUM_ITEM = ANIType(hint="enum_item", base=ANI_REF)
 ANI_STRING = ANIType(hint="string", base=ANI_REF)
@@ -1616,7 +1616,7 @@ class ArrayTypeANIInfo(TypeANIInfo):
         ):
             target.writelns(
                 f"ani_object {ani_item};",
-                f"{env}->Array_Get_Ref({ani_value}, {cpp_ctr}, reinterpret_cast<ani_ref*>(&{ani_item}));",  # TODO: Array
+                f"{env}->Array_Get({ani_value}, {cpp_ctr}, reinterpret_cast<ani_ref*>(&{ani_item}));",
             )
             item_ty_ani_info.from_ani_boxed(target, env, ani_item, cpp_item)
             target.writelns(
@@ -1641,10 +1641,10 @@ class ArrayTypeANIInfo(TypeANIInfo):
         cpp_ctr = f"{ani_result}_i"
         target.writelns(
             f"size_t {cpp_size} = {cpp_value}.size();",
-            f"ani_array_ref {ani_result};",  # TODO: Array
+            f"ani_array {ani_result};",
             f"ani_ref {ani_undefined};",
             f"{env}->GetUndefined(&{ani_undefined});",
-            f'{env}->Array_New_Ref(TH_ANI_FIND_CLASS({env}, "Lstd/core/Object;"), {cpp_size}, {ani_undefined}, &{ani_result});',  # TODO: Array
+            f"{env}->Array_New({cpp_size}, {ani_undefined}, &{ani_result});",
         )
         with target.indented(
             f"for (size_t {cpp_ctr} = 0; {cpp_ctr} < {cpp_size}; {cpp_ctr}++) {{",
@@ -1654,7 +1654,7 @@ class ArrayTypeANIInfo(TypeANIInfo):
                 target, env, f"{cpp_value}[{cpp_ctr}]", ani_item
             )
             target.writelns(
-                f"{env}->Array_Set_Ref({ani_result}, {cpp_ctr}, {ani_item});",  # TODO: Array
+                f"{env}->Array_Set({ani_result}, {cpp_ctr}, {ani_item});",
             )
 
 

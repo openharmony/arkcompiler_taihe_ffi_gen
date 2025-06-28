@@ -162,7 +162,7 @@ class BuildConfig:
             username=os.getenv("PANDA_USERNAME", "koala-pub"),
             password=os.getenv("PANDA_PASSWORD", "y3t!n0therP"),
         )
-        self.panda_url = "https://nexus.bz-openlab.ru:10443/repository/koala-npm/%40panda/sdk/-/sdk-1.5.0-dev.36922.tgz"
+        self.panda_url = "https://nexus.bz-openlab.ru:10443/repository/koala-npm/%40panda/sdk/-/sdk-1.5.0-dev.38856.tgz"
 
         self.locator = ResourceLocator.detect()
         self.panda_extract_dir = self.locator.get(ResourceType.DEV_PANDA_VM)
