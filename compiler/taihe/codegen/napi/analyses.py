@@ -6,6 +6,7 @@ from typing_extensions import override
 from taihe.codegen.abi.analyses import IfaceABIInfo, StructABIInfo
 from taihe.codegen.abi.mangle import DeclKind, encode
 from taihe.codegen.abi.writer import CSourceWriter
+from taihe.codegen.ani.writer import StsWriter
 from taihe.codegen.cpp.analyses import (
     EnumCppInfo,
     TypeCppInfo,
@@ -43,18 +44,25 @@ class PackageNAPIInfo(AbstractAnalysis[PackageDecl]):
     def __init__(self, am: AnalysisManager, p: PackageDecl) -> None:
         super().__init__(am, p)
         self.am = am
+        self.name = p.name
+        self.scope_name = "__" + "".join(c if c.isalnum() else "_" for c in self.name)
         self.source = f"{p.name}.napi.cpp"
         self.header = f"{p.name}.napi.h"
         self.ts_decl = f"{p.name}.d.ts"
         self.cpp_ns = "::".join(p.segments)
-        self.init_func = f"Init_{p.name}"
-        self.macro_name = f"{p.name}_NAPI_H"
+        self.init_func = f"Init{self.scope_name}"
+        self.macro_name = f"{self.scope_name}_NAPI_H"
+
+    def get_dts_type_name(self, target: StsWriter, dts_type_name: str):
+        target.add_import_module(f"./{self.name}", self.scope_name)
+        return f"{self.scope_name}.{dts_type_name}"
 
 
 class StructNAPIInfo(AbstractAnalysis[StructDecl]):
     def __init__(self, am: AnalysisManager, d: StructDecl) -> None:
         super().__init__(am, d)
         segments = [*d.parent_pkg.segments, d.name]
+        self.pkg_napi_info = PackageNAPIInfo.get(am, d.parent_pkg)
         self.from_napi_func_name = encode(segments, DeclKind.FROM_NAPI)
         self.into_napi_func_name = encode(segments, DeclKind.INTO_NAPI)
         self.constructor_func_name = encode(segments, DeclKind.CONSTRUCTOR)
@@ -94,11 +102,18 @@ class StructNAPIInfo(AbstractAnalysis[StructDecl]):
     def is_class(self):
         return self.dts_type_name == self.dts_impl_name
 
+    def dts_type_in(self, target: StsWriter):
+        return self.pkg_napi_info.get_dts_type_name(
+            target,
+            self.dts_type_name,
+        )
+
 
 class IfaceNAPIInfo(AbstractAnalysis[IfaceDecl]):
     def __init__(self, am: AnalysisManager, d: IfaceDecl) -> None:
         super().__init__(am, d)
         segments = [*d.parent_pkg.segments, d.name]
+        self.pkg_napi_info = PackageNAPIInfo.get(am, d.parent_pkg)
         self.from_napi_func_name = encode(segments, DeclKind.FROM_NAPI)
         self.into_napi_func_name = encode(segments, DeclKind.INTO_NAPI)
         self.constructor_func_name = encode(segments, DeclKind.CONSTRUCTOR)
@@ -132,11 +147,24 @@ class IfaceNAPIInfo(AbstractAnalysis[IfaceDecl]):
     def is_class(self):
         return self.dts_type_name == self.dts_impl_name
 
+    def dts_type_in(self, target: StsWriter):
+        return self.pkg_napi_info.get_dts_type_name(
+            target,
+            self.dts_type_name,
+        )
+
 
 class EnumNAPIInfo(AbstractAnalysis[EnumDecl]):
     def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
         super().__init__(am, d)
         self.dts_type_name = d.name
+        self.pkg_napi_info = PackageNAPIInfo.get(am, d.parent_pkg)
+
+    def dts_type_in(self, target: StsWriter):
+        return self.pkg_napi_info.get_dts_type_name(
+            target,
+            self.dts_type_name,
+        )
 
 
 class GlobFuncNAPIInfo(AbstractAnalysis[GlobFuncDecl]):
@@ -152,6 +180,7 @@ class UnionNAPIInfo(AbstractAnalysis[UnionDecl]):
     def __init__(self, am: AnalysisManager, d: UnionDecl) -> None:
         super().__init__(am, d)
         segments = [*d.parent_pkg.segments, d.name]
+        self.pkg_napi_info = PackageNAPIInfo.get(am, d.parent_pkg)
         self.from_napi_func_name = encode(segments, DeclKind.FROM_NAPI)
         self.into_napi_func_name = encode(segments, DeclKind.INTO_NAPI)
         self.decl_header = f"{d.parent_pkg.name}.{d.name}.napi.decl.h"
@@ -167,6 +196,12 @@ class UnionNAPIInfo(AbstractAnalysis[UnionDecl]):
                 )
             else:
                 self.dts_final_fields.append([field])
+
+    def dts_type_in(self, target: StsWriter):
+        return self.pkg_napi_info.get_dts_type_name(
+            target,
+            self.dts_type_name,
+        )
 
 
 class UnionFieldNAPIInfo(AbstractAnalysis[UnionFieldDecl]):
@@ -188,13 +223,19 @@ class UnionFieldNAPIInfo(AbstractAnalysis[UnionFieldDecl]):
 
 
 class AbstractTypeNAPIInfo(metaclass=ABCMeta):
-    dts_type_name: str
-    return_dts_type_name: str
     is_optional: bool = False
     napi_type_name: str
 
     def __init__(self, am: AnalysisManager, t: Type):
         self.cpp_info = TypeCppInfo.get(am, t)
+
+    @abstractmethod
+    def dts_type_in(self, target: StsWriter) -> str:
+        pass
+
+    @abstractmethod
+    def dts_return_type_in(self, target: StsWriter) -> str:
+        pass
 
     @abstractmethod
     def from_napi(
@@ -220,23 +261,6 @@ class ScalarTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[ScalarType]):
         super().__init__(am, t)
         self.am = am
         self.type = t
-        dts_type = {
-            ScalarKind.BOOL: "boolean",
-            ScalarKind.F32: "number",
-            ScalarKind.F64: "number",
-            ScalarKind.I8: "number",
-            ScalarKind.I16: "number",
-            ScalarKind.I32: "number",
-            ScalarKind.I64: "number",
-            ScalarKind.U8: "number",
-            ScalarKind.U16: "number",
-            ScalarKind.U32: "number",
-            ScalarKind.U64: "number",
-        }.get(self.type.kind)
-        if dts_type is None:
-            raise ValueError(f"Unsupported ScalarKind: {self.type.kind}")
-        self.dts_type_name = dts_type
-        self.return_dts_type_name = self.dts_type_name
         napi_type = {
             ScalarKind.BOOL: "napi_boolean",
             ScalarKind.F32: "napi_number",
@@ -253,6 +277,29 @@ class ScalarTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[ScalarType]):
         if napi_type is None:
             raise ValueError(f"Unsupported ScalarKind: {self.type.kind}")
         self.napi_type_name = napi_type
+
+    @override
+    def dts_type_in(self, target: StsWriter) -> str:
+        dts_type = {
+            ScalarKind.BOOL: "boolean",
+            ScalarKind.F32: "number",
+            ScalarKind.F64: "number",
+            ScalarKind.I8: "number",
+            ScalarKind.I16: "number",
+            ScalarKind.I32: "number",
+            ScalarKind.I64: "number",
+            ScalarKind.U8: "number",
+            ScalarKind.U16: "number",
+            ScalarKind.U32: "number",
+            ScalarKind.U64: "number",
+        }.get(self.type.kind)
+        if dts_type is None:
+            raise ValueError(f"Unsupported ScalarKind: {self.type.kind}")
+        return dts_type
+
+    @override
+    def dts_return_type_in(self, target: StsWriter) -> str:
+        return self.dts_type_in(target)
 
     def from_napi(
         self,
@@ -321,9 +368,15 @@ class StringTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[StringType]):
         self.am = am
         self.type = t
         self.cpp_info = TypeCppInfo.get(am, t)
-        self.dts_type_name = "string"
-        self.return_dts_type_name = self.dts_type_name
         self.napi_type_name = "napi_string"
+
+    @override
+    def dts_type_in(self, target: StsWriter) -> str:
+        return "string"
+
+    @override
+    def dts_return_type_in(self, target: StsWriter) -> str:
+        return self.dts_type_in(target)
 
     def from_napi(
         self,
@@ -359,10 +412,16 @@ class StructTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[StructType]):
         super().__init__(am, t)
         self.am = am
         self.type = t
-        struct_napi_info = StructNAPIInfo.get(self.am, t.ty_decl)
-        self.dts_type_name = struct_napi_info.dts_type_name
-        self.return_dts_type_name = self.dts_type_name
         self.napi_type_name = "napi_object"
+
+    @override
+    def dts_type_in(self, target: StsWriter) -> str:
+        struct_napi_info = StructNAPIInfo.get(self.am, self.type.ty_decl)
+        return struct_napi_info.dts_type_in(target)
+
+    @override
+    def dts_return_type_in(self, target: StsWriter) -> str:
+        return self.dts_type_in(target)
 
     def from_napi(
         self,
@@ -395,10 +454,17 @@ class IfaceTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[IfaceType]):
         self.am = am
         self.type = t
         iface_napi_info = IfaceNAPIInfo.get(self.am, t.ty_decl)
-        self.dts_type_name = iface_napi_info.dts_type_name
-        self.return_dts_type_name = self.dts_type_name
         self.iface_register_infos = iface_napi_info.iface_register_infos
         self.napi_type_name = "napi_object"
+
+    @override
+    def dts_type_in(self, target: StsWriter) -> str:
+        iface_napi_info = IfaceNAPIInfo.get(self.am, self.type.ty_decl)
+        return iface_napi_info.dts_type_in(target)
+
+    @override
+    def dts_return_type_in(self, target: StsWriter) -> str:
+        return self.dts_type_in(target)
 
     def from_napi(
         self,
@@ -430,11 +496,17 @@ class OptionalTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[OptionalType])
         super().__init__(am, t)
         self.am = am
         self.type = t
-        item_ty_napi_info = TypeNAPIInfo.get(self.am, self.type.item_ty)
-        self.dts_type_name = item_ty_napi_info.dts_type_name
-        self.return_dts_type_name = f"{self.dts_type_name} | undefined"
         self.is_optional = True
         self.napi_type_name = "napi_object"
+
+    @override
+    def dts_type_in(self, target: StsWriter) -> str:
+        item_ty_napi_info = TypeNAPIInfo.get(self.am, self.type.item_ty)
+        return item_ty_napi_info.dts_type_in(target)
+
+    @override
+    def dts_return_type_in(self, target: StsWriter) -> str:
+        return f"{self.dts_type_in(target)} | undefined"
 
     @override
     def from_napi(
@@ -498,21 +570,27 @@ class CallbackTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[CallbackType])
         super().__init__(am, t)
         self.am = am
         self.type = t
-        params_ty_sts = []
+        self.napi_type_name = "napi_function"
+
+    @override
+    def dts_type_in(self, target: StsWriter) -> str:
+        params_ty_dts = []
         for index, param_ty in enumerate(self.type.params_ty):
             param_ty_napi_info = TypeNAPIInfo.get(self.am, param_ty)
-            params_ty_sts.append(
-                f"arg_{index}{'?' if param_ty_napi_info.is_optional else ''}: {param_ty_napi_info.dts_type_name}"
+            params_ty_dts.append(
+                f"arg_{index}{'?' if param_ty_napi_info.is_optional else ''}: {param_ty_napi_info.dts_type_in(target)}"
             )
-        params_ty_sts_str = ", ".join(params_ty_sts)
+        params_ty_dts_str = ", ".join(params_ty_dts)
         if return_ty := self.type.return_ty:
             return_ty_napi_info = TypeNAPIInfo.get(self.am, return_ty)
-            return_ty_sts = return_ty_napi_info.dts_type_name
+            return_ty_dts = return_ty_napi_info.dts_type_in(target)
         else:
-            return_ty_sts = "void"
-        self.dts_type_name = f"(({params_ty_sts_str}) => {return_ty_sts})"
-        self.return_dts_type_name = self.dts_type_name
-        self.napi_type_name = "napi_function"
+            return_ty_dts = "void"
+        return f"(({params_ty_dts_str}) => {return_ty_dts})"
+
+    @override
+    def dts_return_type_in(self, target: StsWriter) -> str:
+        return self.dts_type_in(target)
 
     @override
     def from_napi(
@@ -620,8 +698,6 @@ class EnumTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[EnumType]):
         super().__init__(am, t)
         self.am = am
         self.type = t
-        self.dts_type_name = t.ty_decl.name
-        self.return_dts_type_name = self.dts_type_name
         if isinstance(self.type.ty_decl.ty_ref.resolved_ty, ScalarType | StringType):
             item_ty_napi_info = TypeNAPIInfo.get(
                 self.am, self.type.ty_decl.ty_ref.resolved_ty
@@ -629,6 +705,15 @@ class EnumTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[EnumType]):
             self.napi_type_name = item_ty_napi_info.napi_type_name
         else:
             raise ValueError
+
+    @override
+    def dts_type_in(self, target: StsWriter) -> str:
+        enum_napi_info = EnumNAPIInfo.get(self.am, self.type.ty_decl)
+        return enum_napi_info.dts_type_in(target)
+
+    @override
+    def dts_return_type_in(self, target: StsWriter) -> str:
+        return self.dts_type_in(target)
 
     def from_napi(
         self,
@@ -676,8 +761,6 @@ class ArrayBufferTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[ArrayType])
         super().__init__(am, t)
         self.am = am
         self.type = t
-        self.dts_type_name = "ArrayBuffer"
-        self.return_dts_type_name = self.dts_type_name
         self.napi_type_name = "napi_object"
 
         if not isinstance(t.item_ty, ScalarType) or t.item_ty.kind not in (
@@ -687,6 +770,14 @@ class ArrayBufferTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[ArrayType])
             raise ValueError(
                 "@arraybuffer only supports Array<i8> or Array<i8>",
             )
+
+    @override
+    def dts_type_in(self, target: StsWriter) -> str:
+        return "ArrayBuffer"
+
+    @override
+    def dts_return_type_in(self, target: StsWriter) -> str:
+        return self.dts_type_in(target)
 
     def from_napi(
         self,
@@ -725,11 +816,16 @@ class ArrayTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[ArrayType]):
         super().__init__(am, t)
         self.am = am
         self.type = t
-        item_ty_napi_info = TypeNAPIInfo.get(self.am, self.type.item_ty)
-        sts_type = item_ty_napi_info.dts_type_name
-        self.dts_type_name = f"Array<{sts_type}>"
-        self.return_dts_type_name = self.dts_type_name
         self.napi_type_name = "napi_object"
+
+    @override
+    def dts_type_in(self, target: StsWriter) -> str:
+        item_ty_napi_info = TypeNAPIInfo.get(self.am, self.type.item_ty)
+        return f"Array<{item_ty_napi_info.dts_type_in(target)}>"
+
+    @override
+    def dts_return_type_in(self, target: StsWriter) -> str:
+        return self.dts_type_in(target)
 
     def from_napi(
         self,
@@ -795,14 +891,20 @@ class RecordTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[MapType]):
         super().__init__(am, t)
         self.am = am
         self.type = t
-        key_ty_napi_info = TypeNAPIInfo.get(self.am, self.type.key_ty)
-        val_ty_napi_info = TypeNAPIInfo.get(self.am, self.type.val_ty)
-        key_sts_type = key_ty_napi_info.dts_type_name
-        val_sts_type = val_ty_napi_info.dts_type_name
-        self.dts_type_name = f"Record<{key_sts_type}, {val_sts_type}>"
-        self.return_dts_type_name = self.dts_type_name
         self.napi_type_name = "napi_object"
         # TODO: 错误 key 类型提示
+
+    @override
+    def dts_type_in(self, target: StsWriter) -> str:
+        key_ty_napi_info = TypeNAPIInfo.get(self.am, self.type.key_ty)
+        val_ty_napi_info = TypeNAPIInfo.get(self.am, self.type.val_ty)
+        key_dts_type = key_ty_napi_info.dts_type_in(target)
+        val_dts_type = val_ty_napi_info.dts_type_in(target)
+        return f"Record<{key_dts_type}, {val_dts_type}>"
+
+    @override
+    def dts_return_type_in(self, target: StsWriter) -> str:
+        return self.dts_type_in(target)
 
     def from_napi(
         self,
@@ -875,13 +977,19 @@ class MapTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[MapType]):
         super().__init__(am, t)
         self.am = am
         self.type = t
+        self.napi_type_name = "napi_object"
+
+    @override
+    def dts_type_in(self, target: StsWriter) -> str:
         key_ty_napi_info = TypeNAPIInfo.get(self.am, self.type.key_ty)
         val_ty_napi_info = TypeNAPIInfo.get(self.am, self.type.val_ty)
-        key_sts_type = key_ty_napi_info.dts_type_name
-        val_sts_type = val_ty_napi_info.dts_type_name
-        self.dts_type_name = f"Map<{key_sts_type}, {val_sts_type}>"
-        self.return_dts_type_name = self.dts_type_name
-        self.napi_type_name = "napi_object"
+        key_dts_type = key_ty_napi_info.dts_type_in(target)
+        val_dts_type = val_ty_napi_info.dts_type_in(target)
+        return f"Map<{key_dts_type}, {val_dts_type}>"
+
+    @override
+    def dts_return_type_in(self, target: StsWriter) -> str:
+        return self.dts_type_in(target)
 
     def from_napi(
         self,
@@ -962,10 +1070,16 @@ class UnionTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[UnionType]):
         super().__init__(am, t)
         self.am = am
         self.type = t
-        union_napi_info = UnionNAPIInfo.get(self.am, t.ty_decl)
-        self.dts_type_name = union_napi_info.dts_type_name
-        self.return_dts_type_name = self.dts_type_name
         self.napi_type_name = "napi_value"  # TODO not sure
+
+    @override
+    def dts_type_in(self, target: StsWriter) -> str:
+        union_napi_info = UnionNAPIInfo.get(self.am, self.type.ty_decl)
+        return union_napi_info.dts_type_in(target)
+
+    @override
+    def dts_return_type_in(self, target: StsWriter) -> str:
+        return self.dts_type_in(target)
 
     def from_napi(
         self,

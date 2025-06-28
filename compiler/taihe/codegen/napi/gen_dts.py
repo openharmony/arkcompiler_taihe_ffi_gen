@@ -61,14 +61,14 @@ class DTSCodeGenerator:
             value_ty = param.ty_ref.resolved_ty
             param_dts_info = TypeNAPIInfo.get(self.am, value_ty)
             args.append(
-                f"value{i}{'?' if param_dts_info.is_optional else ''}: {param_dts_info.dts_type_name}"
+                f"value{i}{'?' if param_dts_info.is_optional else ''}: {param_dts_info.dts_type_in(pkg_dts_target)}"
             )
         args_str = ", ".join(args)
         if func.return_ty_ref:
             return_ty_dts_info = TypeNAPIInfo.get(
                 self.am, func.return_ty_ref.resolved_ty
             )
-            return_ty = return_ty_dts_info.return_dts_type_name
+            return_ty = return_ty_dts_info.dts_return_type_in(pkg_dts_target)
         else:
             return_ty = "void"
         pkg_dts_target.writelns(
@@ -91,7 +91,7 @@ class DTSCodeGenerator:
             for parent in struct_napi_info.sts_iface_parents:
                 parent_ty = parent.ty_ref.resolved_ty
                 parent_napi_info = TypeNAPIInfo.get(self.am, parent_ty)
-                parents.append(parent_napi_info.dts_type_name)
+                parents.append(parent_napi_info.dts_type_in(target))
             extends_str = ", ".join(parents) if parents else ""
             struct_decl = f"{struct_decl} extends {extends_str}"
         struct_decl = f"export {struct_decl}"
@@ -103,7 +103,7 @@ class DTSCodeGenerator:
             for field in struct_napi_info.sts_fields:
                 ty_napi_info = TypeNAPIInfo.get(self.am, field.ty_ref.resolved_ty)
                 target.writelns(
-                    f"{field.name}{'?' if ty_napi_info.is_optional else ''}: {ty_napi_info.dts_type_name};"
+                    f"{field.name}{'?' if ty_napi_info.is_optional else ''}: {ty_napi_info.dts_type_in(target)};"
                 )
 
     def gen_struct_class(
@@ -121,7 +121,7 @@ class DTSCodeGenerator:
             for parent in struct_napi_info.sts_iface_parents:
                 parent_ty = parent.ty_ref.resolved_ty
                 parent_napi_info = TypeNAPIInfo.get(self.am, parent_ty)
-                parents.append(parent_napi_info.dts_type_name)
+                parents.append(parent_napi_info.dts_type_in(target))
             extends_str = ", ".join(parents) if parents else ""
             struct_decl = f"{struct_decl} implements {extends_str}"
         struct_decl = f"export {struct_decl}"
@@ -135,10 +135,10 @@ class DTSCodeGenerator:
                 final = parts[-1]
                 ty_napi_info = TypeNAPIInfo.get(self.am, final.ty_ref.resolved_ty)
                 target.writelns(
-                    f"{final.name}{'?' if ty_napi_info.is_optional else ''}: {ty_napi_info.dts_type_name};"
+                    f"{final.name}{'?' if ty_napi_info.is_optional else ''}: {ty_napi_info.dts_type_in(target)};"
                 )
                 params.append(
-                    f"{final.name}{'?' if ty_napi_info.is_optional else ''}: {ty_napi_info.dts_type_name}"
+                    f"{final.name}{'?' if ty_napi_info.is_optional else ''}: {ty_napi_info.dts_type_in(target)}"
                 )
 
             params_str = ", ".join(params)
@@ -157,7 +157,7 @@ class DTSCodeGenerator:
         for parent in iface.parents:
             parent_ty = parent.ty_ref.resolved_ty
             parent_napi_info = TypeNAPIInfo.get(self.am, parent_ty)
-            parents.append(parent_napi_info.dts_type_name)
+            parents.append(parent_napi_info.dts_type_in(target))
         extends_str = " extends " + ", ".join(parents) if parents else ""
         with target.indented(
             f"export interface {iface_napi_info.dts_type_name}{extends_str} {{",
@@ -179,7 +179,7 @@ class DTSCodeGenerator:
                 params = []
                 for param in ctor.params:
                     type_napi_info = TypeNAPIInfo.get(self.am, param.ty_ref.resolved_ty)
-                    params.append(f"{param.name}: {type_napi_info.dts_type_name}")
+                    params.append(f"{param.name}: {type_napi_info.dts_type_in(target)}")
                 params_str = ", ".join(params)
                 target.writelns(f"constructor({params_str});")
 
@@ -195,12 +195,12 @@ class DTSCodeGenerator:
             for param in method.params:
                 type_napi_info = TypeNAPIInfo.get(self.am, param.ty_ref.resolved_ty)
                 sts_params.append(
-                    f"{param.name}{'?' if type_napi_info.is_optional else ''}: {type_napi_info.dts_type_name}"
+                    f"{param.name}{'?' if type_napi_info.is_optional else ''}: {type_napi_info.dts_type_in(target)}"
                 )
             sts_params_str = ", ".join(sts_params)
             if return_ty_ref := method.return_ty_ref:
                 type_napi_info = TypeNAPIInfo.get(self.am, return_ty_ref.resolved_ty)
-                sts_return_ty_name = type_napi_info.return_dts_type_name
+                sts_return_ty_name = type_napi_info.dts_return_type_in(target)
             else:
                 sts_return_ty_name = "void"
             target.writelns(
@@ -243,7 +243,7 @@ class DTSCodeGenerator:
                     sts_types.append("undefined")
                 case field_ty if isinstance(field_ty, Type):
                     ty_napi_info = TypeNAPIInfo.get(self.am, field_ty)
-                    sts_types.append(ty_napi_info.dts_type_name)
+                    sts_types.append(ty_napi_info.dts_type_in(target))
         sts_types_str = " | ".join(sts_types)
         target.writelns(
             f"export type {union_napi_info.dts_type_name} = {sts_types_str};",
