@@ -1,4 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+from typing_extensions import override
 
 from taihe.semantics.attributes import (
     AttributeGroupTag,
@@ -19,6 +21,8 @@ from taihe.semantics.declarations import (
     TypeRefDecl,
     UnionFieldDecl,
 )
+from taihe.utils.diagnostics import DiagnosticsManager
+from taihe.utils.exceptions import AdhocError
 
 
 @dataclass
@@ -91,12 +95,44 @@ class NullAttr(TypedAttribute[UnionFieldDecl]):
     TARGETS = (UnionFieldDecl,)
     MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({NULL_UNDEFINED_GROUP})
 
+    @override
+    def can_attach_on(self, parent: UnionFieldDecl, dm: DiagnosticsManager) -> bool:
+        if not super().can_attach_on(parent, dm):
+            return False
+
+        if parent.ty_ref is not None:
+            dm.emit(
+                AdhocError(
+                    f"Attribute '{self.NAME}' can only be attached to union fields without a type.",
+                    loc=self.loc,
+                )
+            )
+            return False
+
+        return True
+
 
 @dataclass
 class UndefinedAttr(TypedAttribute[UnionFieldDecl]):
     NAME = "undefined"
     TARGETS = (UnionFieldDecl,)
     MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({NULL_UNDEFINED_GROUP})
+
+    @override
+    def can_attach_on(self, parent: UnionFieldDecl, dm: DiagnosticsManager) -> bool:
+        if not super().can_attach_on(parent, dm):
+            return False
+
+        if parent.ty_ref is not None:
+            dm.emit(
+                AdhocError(
+                    f"Attribute '{self.NAME}' can only be attached to union fields without a type.",
+                    loc=self.loc,
+                )
+            )
+            return False
+
+        return True
 
 
 @dataclass
@@ -109,30 +145,6 @@ class ReadOnlyAttr(TypedAttribute[StructFieldDecl]):
 class RecordAttr(TypedAttribute[TypeRefDecl]):
     NAME = "record"
     TARGETS = (TypeRefDecl,)
-
-
-@dataclass
-class StaticAttr(TypedAttribute[GlobFuncDecl]):
-    NAME = "static"
-    TARGETS = (GlobFuncDecl,)
-
-    cls_name: str
-
-
-@dataclass
-class CtorAttr(TypedAttribute[GlobFuncDecl]):
-    NAME = "ctor"
-    TARGETS = (GlobFuncDecl,)
-
-    cls_name: str
-
-
-@dataclass
-class OverloadAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
-    NAME = "overload"
-    TARGETS = (GlobFuncDecl, IfaceMethodDecl)
-
-    func_name: str
 
 
 @dataclass
@@ -176,11 +188,59 @@ class StsTypeAttr(TypedAttribute[TypeRefDecl]):
 
 
 @dataclass
+class StaticAttr(TypedAttribute[GlobFuncDecl]):
+    NAME = "static"
+    TARGETS = (GlobFuncDecl,)
+
+    cls_name: str
+
+
+@dataclass
+class CtorAttr(TypedAttribute[GlobFuncDecl]):
+    NAME = "ctor"
+    TARGETS = (GlobFuncDecl,)
+
+    cls_name: str
+
+
+@dataclass
+class OverloadAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
+    NAME = "overload"
+    TARGETS = (GlobFuncDecl, IfaceMethodDecl)
+
+    func_name: str
+
+
+@dataclass
 class GenAsyncAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     NAME = "gen_async"
     TARGETS = (GlobFuncDecl, IfaceMethodDecl)
 
     func_name: str | None = None
+    func_prefix: str = field(default="", init=False)
+
+    @override
+    def can_attach_on(
+        self,
+        parent: GlobFuncDecl | IfaceMethodDecl,
+        dm: DiagnosticsManager,
+    ) -> bool:
+        if not super().can_attach_on(parent, dm):
+            return False
+
+        if self.func_name is None:
+            if len(parent.name) > 4 and parent.name[-4:].lower() == "sync":
+                self.func_prefix = parent.name[-4:]
+            else:
+                dm.emit(
+                    AdhocError(
+                        f"Attribute '{self.NAME}' requires the function name to be specified when the function name does not end with 'sync'.",
+                        loc=self.loc,
+                    )
+                )
+                return False
+
+        return True
 
 
 @dataclass
@@ -189,36 +249,172 @@ class GenPromiseAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     TARGETS = (GlobFuncDecl, IfaceMethodDecl)
 
     func_name: str | None = None
+    func_prefix: str = field(default="", init=False)
+
+    @override
+    def can_attach_on(
+        self,
+        parent: GlobFuncDecl | IfaceMethodDecl,
+        dm: DiagnosticsManager,
+    ) -> bool:
+        if not super().can_attach_on(parent, dm):
+            return False
+
+        if self.func_name is None:
+            if len(parent.name) > 4 and parent.name[-4:].lower() == "sync":
+                self.func_prefix = parent.name[:-4]
+            else:
+                dm.emit(
+                    AdhocError(
+                        f"Attribute '{self.NAME}' requires the function name to be specified when the function name does not end with 'sync'.",
+                        loc=self.loc,
+                    )
+                )
+                return False
+
+        return True
 
 
-FUNCTION_LIKE_ATTRIBUTE_GROUP = AttributeGroupTag()
+FUNCTION_TYPE_ATTRIBUTE_GROUP = AttributeGroupTag()
 
 
 @dataclass
 class GetAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     NAME = "get"
     TARGETS = (GlobFuncDecl, IfaceMethodDecl)
-    MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({FUNCTION_LIKE_ATTRIBUTE_GROUP})
+    MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({FUNCTION_TYPE_ATTRIBUTE_GROUP})
 
     member_name: str | None = None
+    func_suffix: str = field(default="", init=False)
+
+    @override
+    def can_attach_on(
+        self,
+        parent: GlobFuncDecl | IfaceMethodDecl,
+        dm: DiagnosticsManager,
+    ) -> bool:
+        if not super().can_attach_on(parent, dm):
+            return False
+
+        if len(parent.params) != 0 or parent.return_ty_ref is None:
+            dm.emit(
+                AdhocError(
+                    f"Attribute '{self.NAME}' can only be attached to functions with no parameters and a return type.",
+                    loc=self.loc,
+                )
+            )
+            return False
+
+        if self.member_name is None:
+            if len(parent.name) > 3 and parent.name[:3].lower() == "get":
+                self.func_suffix = parent.name[3:]
+            else:
+                dm.emit(
+                    AdhocError(
+                        f"Attribute '{self.NAME}' requires the property name to be specified when the function name does not start with 'get'.",
+                        loc=self.loc,
+                    )
+                )
+                return False
+
+        return True
 
 
 @dataclass
 class SetAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     NAME = "set"
     TARGETS = (GlobFuncDecl, IfaceMethodDecl)
-    MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({FUNCTION_LIKE_ATTRIBUTE_GROUP})
+    MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({FUNCTION_TYPE_ATTRIBUTE_GROUP})
 
     member_name: str | None = None
+    func_suffix: str = field(default="", init=False)
+
+    @override
+    def can_attach_on(
+        self,
+        parent: GlobFuncDecl | IfaceMethodDecl,
+        dm: DiagnosticsManager,
+    ) -> bool:
+        if not super().can_attach_on(parent, dm):
+            return False
+
+        if len(parent.params) != 1 or parent.return_ty_ref is not None:
+            dm.emit(
+                AdhocError(
+                    f"Attribute '{self.NAME}' can only be attached to functions with one parameter and no return type.",
+                    loc=self.loc,
+                )
+            )
+            return False
+
+        if self.member_name is None:
+            if len(parent.name) > 3 and parent.name[:3].lower() == "set":
+                self.func_suffix = parent.name[3:]
+            else:
+                dm.emit(
+                    AdhocError(
+                        f"Attribute '{self.NAME}' requires the property name to be specified when the function name does not start with 'set'.",
+                        loc=self.loc,
+                    )
+                )
+                return False
+
+        return True
 
 
 @dataclass
 class OnOffAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     NAME = "on_off"
     TARGETS = (GlobFuncDecl, IfaceMethodDecl)
-    MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({FUNCTION_LIKE_ATTRIBUTE_GROUP})
+    MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({FUNCTION_TYPE_ATTRIBUTE_GROUP})
 
-    func_name: str | None = None
+    type: str | None = None
+    overload: str | None = field(kw_only=True, default=None)
+    func_suffix: str = field(default="", init=False)
+
+    @override
+    def can_attach_on(
+        self,
+        parent: GlobFuncDecl | IfaceMethodDecl,
+        dm: DiagnosticsManager,
+    ) -> bool:
+        if not super().can_attach_on(parent, dm):
+            return False
+
+        if self.overload is not None:
+            if self.type is None:
+                if (
+                    len(parent.name) > len(self.overload)
+                    and parent.name[: len(self.overload)].lower()
+                    == self.overload.lower()
+                ):
+                    self.func_suffix = parent.name[len(self.overload) :]
+                else:
+                    dm.emit(
+                        AdhocError(
+                            f"Attribute '{self.NAME}' requires the type to be specified when the function name does not start with '{self.overload}'.",
+                            loc=self.loc,
+                        )
+                    )
+                    return False
+        elif len(parent.name) > 2 and parent.name[:2].lower() == "on":
+            self.overload = "on"
+            if self.type is None:
+                self.func_suffix = parent.name[2:]
+        elif len(parent.name) > 3 and parent.name[:3].lower() == "off":
+            self.overload = "off"
+            if self.type is None:
+                self.func_suffix = parent.name[3:]
+        else:
+            dm.emit(
+                AdhocError(
+                    f"Attribute '{self.NAME}' requires the function name to be specified when the function name does not start with 'on' or 'off'.",
+                    loc=self.loc,
+                )
+            )
+            return False
+
+        return True
 
 
 @dataclass

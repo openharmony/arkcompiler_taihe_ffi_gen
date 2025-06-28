@@ -482,10 +482,10 @@ def test_attr_conflict_error_1():
     test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
-        "interface IFoo {\n"
-        '    @get("a")\n'
-        '    @set("a")\n'
-        "    a(): void;\n"
+        "union MyUnion {\n"
+        "    @null\n"
+        "    @undefined\n"
+        "    a;\n"
         "}\n"
     )
     test_instance.run()
@@ -499,8 +499,8 @@ def test_attr_conflict_error_2():
         "package",
         "interface IFoo {\n"
         '    @get("a")\n'
-        '    @get("a")\n'
-        "    a(): void;\n"
+        '    @get("b")\n'
+        "    getX(): String;\n"
         "}\n"
     )
     test_instance.run()

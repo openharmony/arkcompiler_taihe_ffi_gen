@@ -34,7 +34,7 @@ from taihe.codegen.ani.attributes import (
     TypedArrayAttr,
     UndefinedAttr,
 )
-from taihe.codegen.ani.writer import StsWriter
+from taihe.codegen.ani.writer import DefaultNaming, KeepNaming, StsWriter
 from taihe.codegen.cpp.analyses import (
     EnumCppInfo,
     IfaceCppInfo,
@@ -343,6 +343,11 @@ class PackageANIInfo(AbstractAnalysis[PackageDecl]):
         pg_ani_info = PackageGroupANIInfo.get(am, p.parent_group)
         self.ns = pg_ani_info.get_namespace(p)
 
+        if self.am.compiler_invocation.sts_keep_name:
+            self.naming = KeepNaming()
+        else:
+            self.naming = DefaultNaming()
+
     @classmethod
     @override
     def create(cls, am: AnalysisManager, p: PackageDecl) -> "PackageANIInfo":
@@ -359,7 +364,14 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
         self.sts_static_scope = None
         self.sts_ctor_scope = None
 
+        if (ctor_attr := CtorAttr.get(f)) is not None:
+            self.sts_ctor_scope = ctor_attr.cls_name
+        elif (static_attr := StaticAttr.get(f)) is not None:
+            self.sts_static_scope = static_attr.cls_name
+
+        self.ani_func_name = None
         self.sts_func_name = None
+
         self.on_off_type = None
         self.get_name = None
         self.set_name = None
@@ -367,13 +379,44 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
         self.sts_async_name = None
         self.sts_promise_name = None
 
-        if self.resolve_ctor() or (
-            self.resolve_static() and (self.resolve_getter() or self.resolve_setter())
-        ):
-            pass
-        elif self.resolve_on_off() or self.resolve_normal():
-            self.resolve_async()
-            self.resolve_promise()
+        naming = PackageANIInfo.get(am, f.parent_pkg).naming
+
+        if (on_off_attr := OnOffAttr.get(f)) is not None:
+            if on_off_attr.type is not None:
+                self.on_off_type = on_off_attr.type
+            else:
+                self.on_off_type = naming.as_field(on_off_attr.func_suffix)
+            self.sts_func_name = on_off_attr.overload
+            self.ani_func_name = self.sts_func_name
+        elif (get_attr := GetAttr.get(f)) is not None:
+            if get_attr.member_name is not None:
+                self.get_name = get_attr.member_name
+            else:
+                self.get_name = naming.as_field(get_attr.func_suffix)
+            self.ani_func_name = f"<get>{self.get_name}"
+        elif (set_attr := SetAttr.get(f)) is not None:
+            if set_attr.member_name is not None:
+                self.set_name = set_attr.member_name
+            else:
+                self.set_name = naming.as_field(set_attr.func_suffix)
+            self.ani_func_name = f"<set>{self.set_name}"
+        else:
+            if (overload_attr := OverloadAttr.get(f)) is not None:
+                self.sts_func_name = overload_attr.func_name
+            else:
+                self.sts_func_name = naming.as_func(f.name)
+            self.ani_func_name = self.sts_func_name
+
+        if (gen_async_attr := GenAsyncAttr.get(f)) is not None:
+            if gen_async_attr.func_name is not None:
+                self.sts_async_name = gen_async_attr.func_name
+            else:
+                self.sts_async_name = naming.as_func(gen_async_attr.func_prefix)
+        if (gen_promise_attr := GenPromiseAttr.get(f)) is not None:
+            if gen_promise_attr.func_name is not None:
+                self.sts_promise_name = gen_promise_attr.func_name
+            else:
+                self.sts_promise_name = naming.as_func(gen_promise_attr.func_prefix)
 
         self.sts_params: list[ParamDecl] = []
         for param in f.params:
@@ -385,151 +428,6 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
     @override
     def create(cls, am: AnalysisManager, f: GlobFuncDecl) -> "GlobFuncANIInfo":
         return GlobFuncANIInfo(am, f)
-
-    def resolve_ctor(self) -> bool:
-        if (ctor_attr := CtorAttr.get(self.f)) is None:
-            return False
-        self.sts_ctor_scope = ctor_attr.cls_name
-        return True
-
-    def resolve_static(self) -> bool:
-        if (static_attr := StaticAttr.get(self.f)) is None:
-            return False
-        self.sts_static_scope = static_attr.cls_name
-        return True
-
-    def resolve_getter(self) -> bool:
-        if (get_attr := GetAttr.get(self.f)) is None:
-            return False
-        if len(self.f.params) != 0 or self.f.return_ty_ref is None:
-            raise_adhoc_error(
-                self.am,
-                "@get method should take no parameters and return non-void",
-                self.f.loc,
-            )
-            return True
-        if get_attr.member_name:
-            get_name = get_attr.member_name
-        elif self.f.name[:3].lower() == "get":
-            get_name = self.f.name[3:]
-            get_name = get_name[0].lower() + get_name[1:]
-        else:
-            raise_adhoc_error(
-                self.am,
-                '@get method name must start with "Get/get" or have @get argument',
-                self.f.loc,
-            )
-            return True
-        self.get_name = get_name
-        return True
-
-    def resolve_setter(self) -> bool:
-        if (set_attr := SetAttr.get(self.f)) is None:
-            return False
-        if len(self.f.params) != 1 or self.f.return_ty_ref is not None:
-            raise_adhoc_error(
-                self.am,
-                "@set method should have one parameter and return void",
-                self.f.loc,
-            )
-            return True
-        if set_attr.member_name:
-            set_name = set_attr.member_name
-        elif self.f.name[:3].lower() == "set":
-            set_name = self.f.name[3:]
-            set_name = set_name[0].lower() + set_name[1:]
-        else:
-            raise_adhoc_error(
-                self.am,
-                '@set method name must start with "Set/set" or have @set argument',
-                self.f.loc,
-            )
-            return True
-        self.set_name = set_name
-        return True
-
-    def resolve_on_off(self) -> bool:
-        if (on_off_attr := OnOffAttr.get(self.f)) is None:
-            return False
-        if on_off_attr.func_name:
-            type_name = on_off_attr.func_name
-        else:
-            type_name = None
-        if overload_attr := OverloadAttr.get(self.f):
-            func_name = overload_attr.func_name
-            if type_name is None:
-                if self.f.name[: len(func_name)].lower() == func_name.lower():
-                    type_name = self.f.name[len(func_name) :]
-                    type_name = type_name[0].lower() + type_name[1:]
-                else:
-                    raise_adhoc_error(
-                        self.am,
-                        f"@on_off method name must start with {func_name}",
-                        self.f.loc,
-                    )
-                    return True
-        else:
-            for func_name in ("on", "off"):
-                if self.f.name[: len(func_name)].lower() == func_name.lower():
-                    if type_name is None:
-                        type_name = self.f.name[len(func_name) :]
-                        type_name = type_name[0].lower() + type_name[1:]
-                    break
-            else:
-                raise_adhoc_error(
-                    self.am,
-                    '@on_off method name must start with "On/on/Off/off" or use together with @overload',
-                    self.f.loc,
-                )
-                return True
-        self.sts_func_name = func_name
-        self.on_off_type = type_name
-        return True
-
-    def resolve_normal(self) -> bool:
-        if overload_attr := OverloadAttr.get(self.f):
-            func_name = overload_attr.func_name
-        else:
-            if self.am.compiler_invocation.sts_keep_name:
-                func_name = self.f.name
-            else:
-                func_name = self.f.name[0].lower() + self.f.name[1:]
-        self.sts_func_name = func_name
-        return True
-
-    def resolve_async(self) -> bool:
-        if (async_attr := GenAsyncAttr.get(self.f)) is None:
-            return False
-        if self.sts_func_name is None:
-            return True
-        if async_attr.func_name:
-            self.sts_async_name = async_attr.func_name
-        elif self.sts_func_name[-4:].lower() == "sync":
-            self.sts_async_name = self.sts_func_name[:-4]
-        else:
-            raise_adhoc_error(
-                self.am,
-                '@gen_async method name must end with "Sync" or have @gen_async argument',
-                self.f.loc,
-            )
-        return True
-
-    def resolve_promise(self) -> bool:
-        if (promise_attr := GenPromiseAttr.get(self.f)) is None:
-            return False
-        if self.sts_func_name is None:
-            return True
-        if promise_attr.func_name:
-            self.sts_promise_name = promise_attr.func_name
-        elif self.sts_func_name[-4:].lower() == "sync":
-            self.sts_promise_name = self.sts_func_name[:-4]
-        else:
-            raise_adhoc_error(
-                self.am,
-                '@gen_promise method name must end with "Sync" or have @gen_promise argument',
-                self.f.loc,
-            )
-        return True
 
     def call_native_with(self, sts_args: list[str], this: str = "this") -> str:
         arg = iter(sts_args)
@@ -551,20 +449,53 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
         self.sts_native_name = f"{f.name}_inner"
 
         self.ani_method_name = None
-
         self.sts_method_name = None
+
+        self.on_off_type = None
         self.get_name = None
         self.set_name = None
-        self.on_off_type = None
 
         self.sts_async_name = None
         self.sts_promise_name = None
 
-        if self.resolve_getter() or self.resolve_setter():
-            pass
-        elif self.resolve_on_off() or self.resolve_normal():
-            self.resolve_async()
-            self.resolve_promise()
+        naming = PackageANIInfo.get(am, f.parent_pkg).naming
+
+        if (on_off_attr := OnOffAttr.get(f)) is not None:
+            if on_off_attr.type is not None:
+                self.on_off_type = on_off_attr.type
+            else:
+                self.on_off_type = naming.as_field(on_off_attr.func_suffix)
+            self.sts_method_name = on_off_attr.overload
+            self.ani_method_name = self.sts_method_name
+        elif (get_attr := GetAttr.get(f)) is not None:
+            if get_attr.member_name is not None:
+                self.get_name = get_attr.member_name
+            else:
+                self.get_name = naming.as_field(get_attr.func_suffix)
+            self.ani_method_name = f"<get>{self.get_name}"
+        elif (set_attr := SetAttr.get(f)) is not None:
+            if set_attr.member_name is not None:
+                self.set_name = set_attr.member_name
+            else:
+                self.set_name = naming.as_field(set_attr.func_suffix)
+            self.ani_method_name = f"<set>{self.set_name}"
+        else:
+            if (overload_attr := OverloadAttr.get(f)) is not None:
+                self.sts_method_name = overload_attr.func_name
+            else:
+                self.sts_method_name = naming.as_func(f.name)
+            self.ani_method_name = self.sts_method_name
+
+        if (gen_async_attr := GenAsyncAttr.get(f)) is not None:
+            if gen_async_attr.func_name is not None:
+                self.sts_async_name = gen_async_attr.func_name
+            else:
+                self.sts_async_name = naming.as_func(gen_async_attr.func_prefix)
+        if (gen_promise_attr := GenPromiseAttr.get(f)) is not None:
+            if gen_promise_attr.func_name is not None:
+                self.sts_promise_name = gen_promise_attr.func_name
+            else:
+                self.sts_promise_name = naming.as_func(gen_promise_attr.func_prefix)
 
         self.sts_params: list[ParamDecl] = []
         for param in f.params:
@@ -576,143 +507,6 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
     @override
     def create(cls, am: AnalysisManager, f: IfaceMethodDecl) -> "IfaceMethodANIInfo":
         return IfaceMethodANIInfo(am, f)
-
-    def resolve_getter(self) -> bool:
-        if (get_attr := GetAttr.get(self.f)) is None:
-            return False
-        if len(self.f.params) != 0 or self.f.return_ty_ref is None:
-            raise_adhoc_error(
-                self.am,
-                "@get method should take no parameters and return non-void",
-                self.f.loc,
-            )
-            return True
-        if get_attr.member_name:
-            get_name = get_attr.member_name
-        elif self.f.name[:3].lower() == "get":
-            get_name = self.f.name[3:]
-            get_name = get_name[0].lower() + get_name[1:]
-        else:
-            raise_adhoc_error(
-                self.am,
-                '@get method name must start with "Get/get" or have @get argument',
-                self.f.loc,
-            )
-            return True
-        self.ani_method_name = f"<get>{get_name}"
-        self.get_name = get_name
-        return True
-
-    def resolve_setter(self) -> bool:
-        if (set_attr := SetAttr.get(self.f)) is None:
-            return False
-        if len(self.f.params) != 1 or self.f.return_ty_ref is not None:
-            raise_adhoc_error(
-                self.am,
-                "@set method should have one parameter and return void",
-                self.f.loc,
-            )
-            return True
-        if set_attr.member_name:
-            set_name = set_attr.member_name
-        elif self.f.name[:3].lower() == "set":
-            set_name = self.f.name[3:]
-            set_name = set_name[0].lower() + set_name[1:]
-        else:
-            raise_adhoc_error(
-                self.am,
-                '@set method name must start with "Set/set" or have @set argument',
-                self.f.loc,
-            )
-            return True
-        self.ani_method_name = f"<set>{set_name}"
-        self.set_name = set_name
-        return True
-
-    def resolve_on_off(self) -> bool:
-        if (on_off_attr := OnOffAttr.get(self.f)) is None:
-            return False
-        if on_off_attr.func_name:
-            type_name = on_off_attr.func_name
-        else:
-            type_name = None
-        if overload_attr := OverloadAttr.get(self.f):
-            method_name = overload_attr.func_name
-            if type_name is None:
-                if self.f.name[: len(method_name)].lower() == method_name.lower():
-                    type_name = self.f.name[len(method_name) :]
-                    type_name = type_name[0].lower() + type_name[1:]
-                else:
-                    raise_adhoc_error(
-                        self.am,
-                        f"@on_off method name must start with {method_name}",
-                        self.f.loc,
-                    )
-                    return True
-        else:
-            for method_name in ("on", "off"):
-                if self.f.name[: len(method_name)].lower() == method_name.lower():
-                    if type_name is None:
-                        type_name = self.f.name[len(method_name) :]
-                        type_name = type_name[0].lower() + type_name[1:]
-                    break
-            else:
-                raise_adhoc_error(
-                    self.am,
-                    '@on_off method name must start with "On/on/Off/off" or use together with @overload',
-                    self.f.loc,
-                )
-                return True
-        self.ani_method_name = method_name
-        self.sts_method_name = method_name
-        self.on_off_type = type_name
-        return True
-
-    def resolve_normal(self) -> bool:
-        if overload_attr := OverloadAttr.get(self.f):
-            method_name = overload_attr.func_name
-        else:
-            if self.am.compiler_invocation.sts_keep_name:
-                method_name = self.f.name
-            else:
-                method_name = self.f.name[0].lower() + self.f.name[1:]
-        self.ani_method_name = method_name
-        self.sts_method_name = method_name
-        return True
-
-    def resolve_async(self) -> bool:
-        if (async_attr := GenAsyncAttr.get(self.f)) is None:
-            return False
-        if self.sts_method_name is None:
-            return True
-        if async_attr.func_name:
-            self.sts_async_name = async_attr.func_name
-        elif self.sts_method_name[-4:].lower() == "sync":
-            self.sts_async_name = self.sts_method_name[:-4]
-        else:
-            raise_adhoc_error(
-                self.am,
-                '@gen_async method name must end with "Sync" or have @gen_async argument',
-                self.f.loc,
-            )
-        return True
-
-    def resolve_promise(self) -> bool:
-        if (promise_attr := GenPromiseAttr.get(self.f)) is None:
-            return False
-        if self.sts_method_name is None:
-            return True
-        if promise_attr.func_name:
-            self.sts_promise_name = promise_attr.func_name
-        elif self.sts_method_name[-4:].lower() == "sync":
-            self.sts_promise_name = self.sts_method_name[:-4]
-        else:
-            raise_adhoc_error(
-                self.am,
-                '@gen_promise method name must end with "Sync" or have @gen_promise argument',
-                self.f.loc,
-            )
-        return True
 
     def call_native_with(self, sts_args: list[str], this: str = "this") -> str:
         arg = iter(sts_args)
@@ -728,7 +522,6 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
 
 class EnumANIInfo(AbstractAnalysis[EnumDecl]):
     def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
-
         self.parent_ns = PackageANIInfo.get(am, d.parent_pkg).ns
         self.sts_type_name = d.name
         self.type_desc = (
