@@ -24,7 +24,7 @@ NAPI 代码生成及验证：
     - [ ] bigint
     - [x] arraybuffer
     - [ ] typedarray
-    - [ ] import
+    - [x] import
     - [ ] Opaque
     - [ ] inject
     - [ ] on_off

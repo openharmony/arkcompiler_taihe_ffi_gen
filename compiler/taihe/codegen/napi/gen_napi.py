@@ -319,7 +319,7 @@ class NAPICodeGenerator:
             f"}}",
         ):
             cpp_field_results = []
-            for parts in struct_napi_info.sts_final_fields:
+            for parts in struct_napi_info.dts_final_fields:
                 final = parts[-1]
                 type_napi_info = TypeNAPIInfo.get(self.am, final.ty_ref.resolved_ty)
                 napi_field_value = f"napi_field_{final.name}"
@@ -352,7 +352,7 @@ class NAPICodeGenerator:
             f"}}",
         ):
             args = []
-            for parts in struct_napi_info.sts_final_fields:
+            for parts in struct_napi_info.dts_final_fields:
                 final = parts[-1]
                 napi_field_result = f"napi_field_{final.name}"
                 type_napi_info = TypeNAPIInfo.get(self.am, final.ty_ref.resolved_ty)
@@ -364,10 +364,10 @@ class NAPICodeGenerator:
                 args.append(napi_field_result)
             args_str = ", ".join(args)
             struct_napi_impl_target.writelns(
-                f"napi_value args[{len(struct_napi_info.sts_final_fields)}] = {{{args_str}}};",
+                f"napi_value args[{len(struct_napi_info.dts_final_fields)}] = {{{args_str}}};",
                 f"napi_value napi_obj = nullptr, constructor = nullptr;",
                 f"napi_get_reference_value(env, {struct_napi_info.ctor_ref_name}, &constructor);",
-                f"napi_new_instance(env, constructor, {len(struct_napi_info.sts_final_fields)}, args, &napi_obj);",
+                f"napi_new_instance(env, constructor, {len(struct_napi_info.dts_final_fields)}, args, &napi_obj);",
                 f"return napi_obj;",
             )
 
@@ -379,7 +379,7 @@ class NAPICodeGenerator:
         struct_napi_impl_target: CHeaderWriter,
     ):
         register_infos = []
-        for parts in struct_napi_info.sts_final_fields:
+        for parts in struct_napi_info.dts_final_fields:
             final = parts[-1]
             filed_segments = [*final.parent_pkg.segments, struct.name, final.name]
             field_getter_name = encode(filed_segments, DeclKind.GETTER)
@@ -431,12 +431,12 @@ class NAPICodeGenerator:
         ):
             struct_napi_impl_target.writelns(
                 f"napi_value thisobj;",
-                f"size_t argc = {len(struct_napi_info.sts_final_fields)};",
-                f"napi_value args[{len(struct_napi_info.sts_final_fields)}];",
+                f"size_t argc = {len(struct_napi_info.dts_final_fields)};",
+                f"napi_value args[{len(struct_napi_info.dts_final_fields)}];",
                 f"napi_get_cb_info(env, info, &argc, args, &thisobj, nullptr);",
             )
             cpp_field_results = []
-            for i, parts in enumerate(struct_napi_info.sts_final_fields):
+            for i, parts in enumerate(struct_napi_info.dts_final_fields):
                 final = parts[-1]
                 type_napi_info = TypeNAPIInfo.get(self.am, final.ty_ref.resolved_ty)
                 cpp_field_result = f"cpp_field_{final.name}"
@@ -478,7 +478,7 @@ class NAPICodeGenerator:
                         f'{{"{field_name}", nullptr, nullptr, {field_getter}, {field_setter}, nullptr, napi_default, nullptr}}, ',
                     )
             struct_napi_impl_target.writelns(
-                f'napi_define_class(env, "{struct.name}", NAPI_AUTO_LENGTH, {struct_napi_info.constructor_func_name}, nullptr, {len(struct_napi_info.sts_final_fields)}, desc, &result);',
+                f'napi_define_class(env, "{struct.name}", NAPI_AUTO_LENGTH, {struct_napi_info.constructor_func_name}, nullptr, {len(struct_napi_info.dts_final_fields)}, desc, &result);',
                 f"napi_create_reference(env, result, 1, &{struct_napi_info.ctor_ref_name});",
                 f'napi_set_named_property(env, exports, "{struct.name}", result);',
                 f"return exports;",

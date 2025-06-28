@@ -77,10 +77,10 @@ class StructNAPIInfo(AbstractAnalysis[StructDecl]):
         else:
             self.dts_impl_name = f"{d.name}_inner"
 
-        self.sts_fields: list[StructFieldDecl] = []
-        self.sts_iface_parents: list[StructFieldDecl] = []
-        self.sts_class_parents: list[StructFieldDecl] = []
-        self.sts_final_fields: list[list[StructFieldDecl]] = []
+        self.dts_fields: list[StructFieldDecl] = []
+        self.dts_iface_parents: list[StructFieldDecl] = []
+        self.dts_class_parents: list[StructFieldDecl] = []
+        self.dts_final_fields: list[list[StructFieldDecl]] = []
         for field in d.fields:
             if field.get_last_attr("extends"):
                 ty = field.ty_ref.resolved_ty
@@ -89,15 +89,15 @@ class StructNAPIInfo(AbstractAnalysis[StructDecl]):
                     # TODO: check struct parent type
                 parent_napi_info = StructNAPIInfo.get(am, ty.ty_decl)
                 if parent_napi_info.is_class():
-                    self.sts_class_parents.append(field)
+                    self.dts_class_parents.append(field)
                 else:
-                    self.sts_iface_parents.append(field)
-                self.sts_final_fields.extend(
-                    [field, *parts] for parts in parent_napi_info.sts_final_fields
+                    self.dts_iface_parents.append(field)
+                self.dts_final_fields.extend(
+                    [field, *parts] for parts in parent_napi_info.dts_final_fields
                 )
             else:
-                self.sts_fields.append(field)
-                self.sts_final_fields.append([field])
+                self.dts_fields.append(field)
+                self.dts_final_fields.append([field])
 
     def is_class(self):
         return self.dts_type_name == self.dts_impl_name
@@ -190,9 +190,9 @@ class UnionNAPIInfo(AbstractAnalysis[UnionDecl]):
         self.dts_final_fields: list[list[UnionFieldDecl]] = []
         for field in d.fields:
             if field.ty_ref and isinstance(ty := field.ty_ref.resolved_ty, UnionType):
-                inner_ani_info = UnionNAPIInfo.get(am, ty.ty_decl)
+                inner_napi_info = UnionNAPIInfo.get(am, ty.ty_decl)
                 self.dts_final_fields.extend(
-                    [field, *parts] for parts in inner_ani_info.dts_final_fields
+                    [field, *parts] for parts in inner_napi_info.dts_final_fields
                 )
             else:
                 self.dts_final_fields.append([field])
