@@ -137,8 +137,7 @@ class TypeRefDecl(DeclWithParent[Decl], metaclass=ABCMeta):
     maybe_resolved_ty: "Type | None" = None
     """The resolved type, if any.
 
-    This field is `None` either if the type reference is not resolved yet,
-    or if the type reference is invalid.
+    This field is `None` either if the type is not resolved yet or invalid.
     """
 
     def __init__(
@@ -154,6 +153,14 @@ class TypeRefDecl(DeclWithParent[Decl], metaclass=ABCMeta):
 
     @property
     def resolved_ty(self) -> "Type":
+        """Return the resolved type of this type reference.
+
+        This method should only be called when the type is resolved and guaranteed
+        to be valid, so you should not call this method until semantic analysis is done.
+
+        Raises:
+            AssertionError: If the type is not resolved yet or invalid.
+        """
         assert self.maybe_resolved_ty
         return self.maybe_resolved_ty
 
@@ -280,8 +287,7 @@ class PackageRefDecl(DeclWithParent[Decl]):
     maybe_resolved_pkg: "PackageDecl | None" = None
     """The resolved package, if any.
 
-    This field is `None` either if the package reference is not resolved yet,
-    or if the package reference is invalid.
+    This field is `None` either if the package is not resolved yet or invalid.
     """
 
     def __init__(
@@ -299,6 +305,14 @@ class PackageRefDecl(DeclWithParent[Decl]):
 
     @property
     def resolved_pkg(self) -> "PackageDecl":
+        """Return the resolved package of this package reference.
+
+        This method should only be called when the package is resolved and guaranteed
+        to be valid, so you should not call this method until semantic analysis is done.
+
+        Raises:
+            AssertionError: If the package is not resolved yet or invalid.
+        """
         assert self.maybe_resolved_pkg
         return self.maybe_resolved_pkg
 
@@ -318,8 +332,7 @@ class DeclarationRefDecl(DeclWithParent[Decl]):
     maybe_resolved_decl: "PackageLevelDecl | None" = None
     """The resolved declaration, if any.
 
-    This field is `None` either if the declaration reference is not resolved yet,
-    or if the declaration reference is invalid.
+    This field is `None` either if the declaration is not resolved yet or invalid.
     """
 
     def __init__(
@@ -340,6 +353,14 @@ class DeclarationRefDecl(DeclWithParent[Decl]):
 
     @property
     def resolved_decl(self) -> "PackageLevelDecl":
+        """Return the resolved declaration of this declaration reference.
+
+        This method should only be called when the declaration is resolved and guaranteed
+        to be valid, so you should not call this method until semantic analysis is done.
+
+        Raises:
+            AssertionError: If the declaration is not resolved yet or invalid.
+        """
         assert self.maybe_resolved_decl
         return self.maybe_resolved_decl
 
