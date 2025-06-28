@@ -135,7 +135,9 @@ class CompilerInstance:
 
     def validate(self):
         analyze_semantics(
-            self.package_group, self.diagnostics_manager, self.attribute_manager
+            self.package_group,
+            self.diagnostics_manager,
+            self.attribute_manager,
         )
 
         for b in self.backends:

@@ -55,23 +55,23 @@ from taihe.utils.exceptions import (
 
 def analyze_semantics(
     pg: PackageGroup,
-    diag: DiagnosticsManager,
-    attr_manager: CheckedAttributeManager,
+    dm: DiagnosticsManager,
+    am: CheckedAttributeManager,
 ):
     """Runs semantic analysis passes on the given package group."""
-    _check_decl_confilct_with_namespace(pg, diag)
-    _ResolveImportsPass(diag).handle_decl(pg)
-    _CheckFieldNameCollisionErrorPass(diag).handle_decl(pg)
-    _CheckEnumTypePass(diag).handle_decl(pg)
-    _CheckRecursiveInclusionPass(diag).handle_decl(pg)
+    _check_decl_confilct_with_namespace(pg, dm)
+    _ResolveImportsPass(dm).handle_decl(pg)
+    _CheckFieldNameCollisionErrorPass(dm).handle_decl(pg)
+    _CheckEnumTypePass(dm).handle_decl(pg)
+    _CheckRecursiveInclusionPass(dm).handle_decl(pg)
 
     # This pass must be run after all other passes
-    _ConvertAndCheckAttrPass(diag, attr_manager).handle_decl(pg)
+    _ConvertAndCheckAttrPass(dm, am).handle_decl(pg)
 
 
 def _check_decl_confilct_with_namespace(
     pg: PackageGroup,
-    diag: DiagnosticsManager,
+    dm: DiagnosticsManager,
 ):
     """Checks for declarations conflicts with namespaces."""
     namespaces: dict[str, list[PackageDecl]] = {}
@@ -90,28 +90,28 @@ def _check_decl_confilct_with_namespace(
         for d in p.declarations:
             name = p.name + "." + d.name
             if packages := namespaces.get(name, []):
-                diag.emit(SymbolConflictWithNamespaceError(d, name, packages))
+                dm.emit(SymbolConflictWithNamespaceError(d, name, packages))
 
 
 class _ResolveImportsPass(RecursiveDeclVisitor):
     """Resolves imports and type references within a package group."""
 
-    diag: DiagnosticsManager
+    dm: DiagnosticsManager
 
-    def __init__(self, diag: DiagnosticsManager):
-        self._current_pkg_group = None
+    def __init__(self, dm: DiagnosticsManager):
+        self._current_pg = None
         self._current_pkg = None  # Always points to the current package.
-        self.diag = diag
+        self.dm = dm
 
     @property
-    def pkg(self) -> PackageDecl:
+    def current_pkg(self) -> PackageDecl:
         assert self._current_pkg
         return self._current_pkg
 
     @property
-    def pkg_group(self) -> PackageGroup:
-        assert self._current_pkg_group
-        return self._current_pkg_group
+    def current_pg(self) -> PackageGroup:
+        assert self._current_pg
+        return self._current_pg
 
     @override
     def visit_package_decl(self, p: PackageDecl) -> None:
@@ -121,9 +121,9 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
 
     @override
     def visit_package_group(self, g: PackageGroup) -> None:
-        self._current_pkg_group = g
+        self._current_pg = g
         super().visit_package_group(g)
-        self._current_pkg_group = None
+        self._current_pg = None
 
     @override
     def visit_package_ref_decl(self, d: PackageRefDecl) -> None:
@@ -131,10 +131,10 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
             return
         d.is_resolved = True
 
-        pkg = self.pkg_group.lookup(d.symbol)
+        pkg = self.current_pg.lookup(d.symbol)
 
         if pkg is None:
-            self.diag.emit(PackageNotExistError(d.symbol, loc=d.loc))
+            self.dm.emit(PackageNotExistError(d.symbol, loc=d.loc))
             return
 
         d.maybe_resolved_pkg = pkg
@@ -156,7 +156,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
         decl = pkg.lookup(d.symbol)
 
         if decl is None:
-            self.diag.emit(DeclNotExistError(d.symbol, loc=d.loc))
+            self.dm.emit(DeclNotExistError(d.symbol, loc=d.loc))
             return
 
         d.maybe_resolved_decl = decl
@@ -168,10 +168,10 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
         d.is_resolved = True
 
         # Find the corresponding imported package according to the package name
-        pkg_import = self.pkg.lookup_pkg_import(d.pkname)
+        pkg_import = self.current_pkg.lookup_pkg_import(d.pkname)
 
         if pkg_import is None:
-            self.diag.emit(PackageNotInScopeError(d.pkname, loc=d.loc))
+            self.dm.emit(PackageNotInScopeError(d.pkname, loc=d.loc))
             return
 
         # Then find the corresponding type declaration from the package
@@ -184,11 +184,11 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
         decl = pkg.lookup(d.symbol)
 
         if decl is None:
-            self.diag.emit(DeclNotExistError(d.symbol, loc=d.loc))
+            self.dm.emit(DeclNotExistError(d.symbol, loc=d.loc))
             return
 
         if not isinstance(decl, TypeDecl):
-            self.diag.emit(NotATypeError(d.symbol, loc=d.loc))
+            self.dm.emit(NotATypeError(d.symbol, loc=d.loc))
             return
 
         d.maybe_resolved_ty = decl.as_type(d)
@@ -207,21 +207,21 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
             return
 
         # Find types declared in the current package
-        decl = self.pkg.lookup(d.symbol)
+        decl = self.current_pkg.lookup(d.symbol)
 
         if decl:
             if not isinstance(decl, TypeDecl):
-                self.diag.emit(NotATypeError(d.symbol, loc=d.loc))
+                self.dm.emit(NotATypeError(d.symbol, loc=d.loc))
                 return
 
             d.maybe_resolved_ty = decl.as_type(d)
             return
 
         # Look for imported type declarations
-        decl_import = self.pkg.lookup_decl_import(d.symbol)
+        decl_import = self.current_pkg.lookup_decl_import(d.symbol)
 
         if decl_import is None:
-            self.diag.emit(DeclarationNotInScopeError(d.symbol, loc=d.loc))
+            self.dm.emit(DeclarationNotInScopeError(d.symbol, loc=d.loc))
             return
 
         decl = decl_import.decl_ref.maybe_resolved_decl
@@ -231,7 +231,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
             return
 
         if not isinstance(decl, TypeDecl):
-            self.diag.emit(NotATypeError(d.symbol, loc=d.loc))
+            self.dm.emit(NotATypeError(d.symbol, loc=d.loc))
             return
 
         d.maybe_resolved_ty = decl.as_type(d)
@@ -257,10 +257,10 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
         builtin_generic = BUILTIN_GENERICS.get(decl_name)
 
         if builtin_generic is None:
-            self.diag.emit(DeclarationNotInScopeError(decl_name, loc=d.loc))
+            self.dm.emit(DeclarationNotInScopeError(decl_name, loc=d.loc))
             return
 
-        with self.diag.capture_error():
+        with self.dm.capture_error():
             d.maybe_resolved_ty = builtin_generic.try_construct(d, *args_ty)
 
     @override
@@ -289,10 +289,10 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
 class _CheckFieldNameCollisionErrorPass(RecursiveDeclVisitor):
     """Check for duplicate field names in declarations and name anonymous declarations."""
 
-    diag: DiagnosticsManager
+    dm: DiagnosticsManager
 
-    def __init__(self, diag: DiagnosticsManager):
-        self.diag = diag
+    def __init__(self, dm: DiagnosticsManager):
+        self.dm = dm
 
     @override
     def visit_glob_func_decl(self, d: GlobFuncDecl) -> None:
@@ -333,16 +333,16 @@ class _CheckFieldNameCollisionErrorPass(RecursiveDeclVisitor):
         names: dict[str, NamedDecl] = {}
         for f in children:
             if (prev := names.setdefault(f.name, f)) != f:
-                self.diag.emit(DeclRedefError(prev, f))
+                self.dm.emit(DeclRedefError(prev, f))
 
 
 class _CheckEnumTypePass(RecursiveDeclVisitor):
     """Validated enum item types."""
 
-    diag: DiagnosticsManager
+    dm: DiagnosticsManager
 
-    def __init__(self, diag: DiagnosticsManager):
-        self.diag = diag
+    def __init__(self, dm: DiagnosticsManager):
+        self.dm = dm
 
     def visit_enum_decl(self, d: EnumDecl) -> None:
         def is_int(val: Any) -> TypeGuard[int]:
@@ -404,7 +404,7 @@ class _CheckEnumTypePass(RecursiveDeclVisitor):
             case None:
                 return
             case _:
-                self.diag.emit(TypeUsageError(d.ty_ref))
+                self.dm.emit(TypeUsageError(d.ty_ref))
                 return
 
         prev = None
@@ -412,7 +412,7 @@ class _CheckEnumTypePass(RecursiveDeclVisitor):
             if item.value is None:
                 item.value = default(item) if prev is None else increment(prev, item)
             if not valid(item.value):
-                self.diag.emit(EnumValueError(item, d))
+                self.dm.emit(EnumValueError(item, d))
                 prev = None
             else:
                 prev = item.value
@@ -421,10 +421,10 @@ class _CheckEnumTypePass(RecursiveDeclVisitor):
 class _CheckRecursiveInclusionPass(RecursiveDeclVisitor):
     """Validates struct fields for type correctness and cycles."""
 
-    diag: DiagnosticsManager
+    dm: DiagnosticsManager
 
-    def __init__(self, diag: DiagnosticsManager):
-        self.diag = diag
+    def __init__(self, dm: DiagnosticsManager):
+        self.dm = dm
         self.type_table: dict[
             TypeDecl,
             list[tuple[tuple[TypeDecl, TypeRefDecl], TypeDecl]],
@@ -436,7 +436,7 @@ class _CheckRecursiveInclusionPass(RecursiveDeclVisitor):
         cycles = detect_cycles(self.type_table)
         for cycle in cycles:
             last, *other = cycle[::-1]
-            self.diag.emit(RecursiveReferenceError(last, other))
+            self.dm.emit(RecursiveReferenceError(last, other))
 
     def visit_enum_decl(self, d: EnumDecl) -> None:
         self.type_table[d] = []
@@ -448,15 +448,15 @@ class _CheckRecursiveInclusionPass(RecursiveDeclVisitor):
             if (parent_ty := parent.ty_ref.maybe_resolved_ty) is None:
                 continue
             if not isinstance(parent_ty, UserType):
-                self.diag.emit(TypeUsageError(parent.ty_ref))
+                self.dm.emit(TypeUsageError(parent.ty_ref))
                 continue
             if not isinstance(parent_iface := parent_ty.ty_decl, IfaceDecl):
-                self.diag.emit(TypeUsageError(parent.ty_ref))
+                self.dm.emit(TypeUsageError(parent.ty_ref))
                 continue
             parent_iface_list.append(((d, parent.ty_ref), parent_iface))
             prev = parent_iface_dict.setdefault(parent_iface, parent)
             if prev != parent:
-                self.diag.emit(
+                self.dm.emit(
                     DuplicateExtendsWarn(
                         d,
                         parent_iface,
@@ -481,16 +481,16 @@ class _CheckRecursiveInclusionPass(RecursiveDeclVisitor):
 
 
 class _ConvertAndCheckAttrPass(RecursiveDeclVisitor):
-    diag: DiagnosticsManager
-    attr_manager: CheckedAttributeManager
+    dm: DiagnosticsManager
+    am: CheckedAttributeManager
 
-    def __init__(self, diag: DiagnosticsManager, attr_manager: CheckedAttributeManager):
-        self.diag = diag
-        self.attr_manager = attr_manager
+    def __init__(self, dm: DiagnosticsManager, am: CheckedAttributeManager):
+        self.dm = dm
+        self.am = am
 
     def visit_decl(self, d: Decl) -> None:
         for unchecked_attr in UncheckedAttribute.consume(d):
-            self.attr_manager.attach(unchecked_attr, d, self.diag)
+            self.am.attach(unchecked_attr, d, self.dm)
 
 
 V = TypeVar("V")
