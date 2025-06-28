@@ -131,13 +131,10 @@ class TypeRefDecl(DeclWithParent[Decl], metaclass=ABCMeta):
     ```
     """
 
-    is_resolved: bool = False
-    """Whether this type reference is resolved."""
-
     maybe_resolved_ty: "Type | None" = None
     """The resolved type, if any.
 
-    This field is `None` either if the type is not resolved yet or invalid.
+    This field is `None` only if the type is not resolved yet.
     """
 
     def __init__(
@@ -155,11 +152,10 @@ class TypeRefDecl(DeclWithParent[Decl], metaclass=ABCMeta):
     def resolved_ty(self) -> "Type":
         """Return the resolved type of this type reference.
 
-        This method should only be called when the type is resolved and guaranteed
-        to be valid, so you should not call this method until semantic analysis is done.
+        This method should only be called when the type is resolved.
 
         Raises:
-            AssertionError: If the type is not resolved yet or invalid.
+            AssertionError: If the type is not resolved.
         """
         assert self.maybe_resolved_ty
         return self.maybe_resolved_ty
@@ -303,19 +299,6 @@ class PackageRefDecl(DeclWithParent[Decl]):
     def description(self) -> str:
         return f"package reference {self.symbol}"
 
-    @property
-    def resolved_pkg(self) -> "PackageDecl":
-        """Return the resolved package of this package reference.
-
-        This method should only be called when the package is resolved and guaranteed
-        to be valid, so you should not call this method until semantic analysis is done.
-
-        Raises:
-            AssertionError: If the package is not resolved yet or invalid.
-        """
-        assert self.maybe_resolved_pkg
-        return self.maybe_resolved_pkg
-
     @override
     def _accept(self, v: "DeclVisitor[T]") -> Any:
         return v.visit_package_ref_decl(self)
@@ -350,19 +333,6 @@ class DeclarationRefDecl(DeclWithParent[Decl]):
     @override
     def description(self) -> str:
         return f"type reference {self.symbol}"
-
-    @property
-    def resolved_decl(self) -> "PackageLevelDecl":
-        """Return the resolved declaration of this declaration reference.
-
-        This method should only be called when the declaration is resolved and guaranteed
-        to be valid, so you should not call this method until semantic analysis is done.
-
-        Raises:
-            AssertionError: If the declaration is not resolved yet or invalid.
-        """
-        assert self.maybe_resolved_decl
-        return self.maybe_resolved_decl
 
     @override
     def _accept(self, v: "DeclVisitor[T]") -> Any:

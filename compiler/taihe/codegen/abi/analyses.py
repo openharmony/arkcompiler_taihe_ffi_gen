@@ -37,7 +37,7 @@ from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
 class PackageABIInfo(AbstractAnalysis[PackageDecl]):
     def __init__(self, am: AnalysisManager, p: PackageDecl) -> None:
         self.header = f"{p.name}.abi.h"
-        self.src = f"{p.name}.abi.c"
+        self.source = f"{p.name}.abi.c"
 
     @classmethod
     @override

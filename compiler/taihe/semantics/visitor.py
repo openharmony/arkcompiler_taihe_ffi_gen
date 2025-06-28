@@ -52,6 +52,7 @@ if TYPE_CHECKING:
         EnumType,
         GenericType,
         IfaceType,
+        InvalidType,
         MapType,
         OpaqueType,
         OptionalType,
@@ -63,6 +64,7 @@ if TYPE_CHECKING:
         TypeProtocol,
         UnionType,
         UserType,
+        ValidType,
         VectorType,
     )
 
@@ -104,10 +106,16 @@ class TypeVisitor(Generic[T]):
         """
         raise NotImplementedError
 
-    ### Built-in types ###
+    def visit_invalid_type(self, t: "InvalidType") -> T:
+        return self.visit_type(t)
+
+    def visit_valid_type(self, t: "ValidType") -> T:
+        return self.visit_type(t)
+
+    ### Builtin Types ###
 
     def visit_builtin_type(self, t: "BuiltinType") -> T:
-        return self.visit_type(t)
+        return self.visit_valid_type(t)
 
     def visit_scalar_type(self, t: "ScalarType") -> T:
         return self.visit_builtin_type(t)
@@ -118,10 +126,10 @@ class TypeVisitor(Generic[T]):
     def visit_opaque_type(self, t: "OpaqueType") -> T:
         return self.visit_builtin_type(t)
 
-    ### UserTypes ###
+    ### User Types ###
 
     def visit_user_type(self, t: "UserType") -> T:
-        return self.visit_type(t)
+        return self.visit_valid_type(t)
 
     def visit_enum_type(self, t: "EnumType") -> T:
         return self.visit_user_type(t)
@@ -135,13 +143,15 @@ class TypeVisitor(Generic[T]):
     def visit_iface_type(self, t: "IfaceType") -> T:
         return self.visit_user_type(t)
 
-    ### Generic Types ###
+    ### Callback Type ###
 
     def visit_callback_type(self, t: "CallbackType") -> T:
-        return self.visit_type(t)
+        return self.visit_valid_type(t)
+
+    ### Generic Types ###
 
     def visit_generic_type(self, t: "GenericType") -> T:
-        return self.visit_type(t)
+        return self.visit_valid_type(t)
 
     def visit_array_type(self, t: "ArrayType") -> T:
         return self.visit_generic_type(t)

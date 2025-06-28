@@ -52,13 +52,32 @@ class Type(metaclass=ABCMeta):
         """Accept a visitor."""
 
 
-##################
-# Built-in Types #
-##################
+@dataclass(frozen=True, repr=False)
+class ValidType(Type, metaclass=ABCMeta):
+    """Represents a valid type that can be used in the type system."""
 
 
 @dataclass(frozen=True, repr=False)
-class BuiltinType(Type, metaclass=ABCMeta):
+class InvalidType(Type):
+    """Represents an invalid type, usually due to unresolved references or errors."""
+
+    @property
+    @override
+    def signature(self):
+        return "<ERROR>"
+
+    @override
+    def _accept(self, v: "TypeVisitor[T]") -> T:
+        return v.visit_invalid_type(self)
+
+
+#################
+# Builtin Types #
+#################
+
+
+@dataclass(frozen=True, repr=False)
+class BuiltinType(ValidType, metaclass=ABCMeta):
     """Represents a built-in type."""
 
 
@@ -140,13 +159,13 @@ BUILTIN_TYPES: dict[str, Callable[["TypeRefDecl"], BuiltinType]] = {
 }
 
 
-####################
-# Builtin Generics #
-####################
+#################
+# Callback Type #
+#################
 
 
 @dataclass(frozen=True, repr=False)
-class CallbackType(Type):
+class CallbackType(ValidType):
     ty_ref: "CallbackTypeRefDecl"
 
     @property
@@ -168,7 +187,12 @@ class CallbackType(Type):
         return v.visit_callback_type(self)
 
 
-class GenericType(Type, metaclass=ABCMeta):
+####################
+# Builtin Generics #
+####################
+
+
+class GenericType(ValidType, metaclass=ABCMeta):
     @classmethod
     @abstractmethod
     def try_construct(cls, ty_ref: "TypeRefDecl", *args_ty: Type) -> "GenericType": ...
@@ -291,7 +315,7 @@ BUILTIN_GENERICS: dict[str, type[GenericType]] = {
 
 
 @dataclass(frozen=True, repr=False)
-class UserType(Type, metaclass=ABCMeta):
+class UserType(ValidType, metaclass=ABCMeta):
     ty_decl: "TypeDecl"
 
     @property

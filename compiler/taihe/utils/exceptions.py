@@ -354,8 +354,7 @@ class TypeUsageError(DiagError):
 
     def __init__(self, ty_ref: "TypeRefDecl"):
         super().__init__(loc=ty_ref.loc)
-        assert ty_ref.maybe_resolved_ty
-        self.ty = ty_ref.maybe_resolved_ty
+        self.ty = ty_ref.resolved_ty
 
     @override
     def describe(self) -> str:
@@ -374,8 +373,7 @@ class EnumValueError(DiagError):
 
     @override
     def describe(self) -> str:
-        assert self.enum.ty_ref.maybe_resolved_ty
-        return f"value of {self.item.description} ({self.item.value}) is conflict with {self.enum.description} ({self.enum.ty_ref.maybe_resolved_ty.signature})"
+        return f"value of {self.item.description} ({self.item.value}) is conflict with {self.enum.description} ({self.enum.ty_ref.resolved_ty.signature})"
 
 
 @dataclass

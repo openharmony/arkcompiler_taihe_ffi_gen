@@ -65,11 +65,9 @@ class PrettyFormatter(DeclVisitor[str]):
 
     def get_type_ref_decl(self, d: "TypeRefDecl"):
         type_ref_repr = self.handle_decl(d)
-        if not d.is_resolved or not self.show_resolved:
+        if not self.show_resolved:
             return type_ref_repr
-        real_type = (
-            d.maybe_resolved_ty.signature if d.maybe_resolved_ty else "<error type>"
-        )
+        real_type = d.resolved_ty.signature
         comment = self.as_comment(f"/* {real_type} */")
         return f"{type_ref_repr} {comment}"
 
@@ -97,9 +95,7 @@ class PrettyFormatter(DeclVisitor[str]):
         if not d.is_resolved or not self.show_resolved:
             return package_ref_repr
         real_package = (
-            d.maybe_resolved_pkg.description
-            if d.maybe_resolved_pkg
-            else "<error package>"
+            d.maybe_resolved_pkg.description if d.maybe_resolved_pkg else "<ERROR>"
         )
         comment = self.as_comment(f"/* {real_package} */")
         return f"{package_ref_repr} {comment}"
@@ -109,9 +105,7 @@ class PrettyFormatter(DeclVisitor[str]):
         if not d.is_resolved or not self.show_resolved:
             return decl_ref_repr
         real_decl = (
-            d.maybe_resolved_decl.description
-            if d.maybe_resolved_decl
-            else "<error declaration>"
+            d.maybe_resolved_decl.description if d.maybe_resolved_decl else "<ERROR>"
         )
         comment = self.as_comment(f"/* {real_decl} */")
         return f"{decl_ref_repr} {comment}"
