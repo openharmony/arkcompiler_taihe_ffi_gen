@@ -21,7 +21,7 @@ function test_ani_graphics3d_scene_createCamera() {
     }
 
     console.log("createCamera is: " + info.fov);
-    arktest.assertEQ(info.fov, 5.24 as float);
+    arktest.assertEQ(info.fov, 5.24f);
 }
 
 function test_ani_graphics3d_scene_createCamera_promise() {
@@ -35,18 +35,19 @@ function test_ani_graphics3d_scene_createCamera_promise() {
     }
 
     console.log("createCamera is: " + info.fov);
-    arktest.assertEQ(info.fov, 5.24 as float);
+    arktest.assertEQ(info.fov, 5.24f);
 }
 
 function test_ani_graphics3d_scene_createCamera_sync() {
     let param = sNodePara
-    let promise = new Promise<SceneTest.Camera>((resolve, reject) => {
+    let promise = new Promise<SceneTest.Camera>((resolve, reject): void => {
         sResFactory.createCamera(
-            param, (err: BusinessError, data: SceneTest.Camera) => {
-                if (err.code !== 0) {
+            param,
+            (err: BusinessError|null, data: SceneTest.Camera|undefined) => {
+                if (err != null && err.code !== 0) {
                     reject(err);
                 } else {
-                    resolve(data);
+                    resolve(data!);
                 }
             });
     });
@@ -60,7 +61,7 @@ function test_ani_graphics3d_scene_createCamera_sync() {
     }
 
     console.log("createCamera is: " + info.fov);
-    arktest.assertEQ(info.fov, 5.24 as float);
+    arktest.assertEQ(info.fov, 5.24f);
 }
 
 function test_ani_graphics3d_scene_createLight() {
@@ -75,7 +76,7 @@ function test_ani_graphics3d_scene_createLight() {
     }
 
     console.log("createLightPro is: " + info.intensity);
-    arktest.assertEQ(info.intensity, 5.24 as float);
+    arktest.assertEQ(info.intensity, 5.24f);
 }
 
 function test_ani_graphics3d_scene_createLight_promise() {
@@ -90,7 +91,7 @@ function test_ani_graphics3d_scene_createLight_promise() {
     }
 
     console.log("createLightPro is: " + info.intensity);
-    arktest.assertEQ(info.intensity, 5.24 as float);
+    arktest.assertEQ(info.intensity, 5.24f);
 }
 
 function test_ani_graphics3d_scene_createLight_sync() {
@@ -98,11 +99,12 @@ function test_ani_graphics3d_scene_createLight_sync() {
     let lightType = SceneTest.LightType.SPOT;
     let promise = new Promise<SceneTest.Light>((resolve, reject) => {
         sResFactory.createLight(
-            param, lightType, (err: BusinessError, data: SceneTest.Light) => {
-                if (err.code !== 0) {
+            param, lightType,
+            (err: BusinessError|null, data: SceneTest.Light|undefined) => {
+                if (err != null && err.code !== 0) {
                     reject(err);
                 } else {
-                    resolve(data);
+                    resolve(data!);
                 }
             });
     });
@@ -116,7 +118,7 @@ function test_ani_graphics3d_scene_createLight_sync() {
     }
 
     console.log("createLightPro is: " + info.intensity);
-    arktest.assertEQ(info.intensity, 5.24 as float);
+    arktest.assertEQ(info.intensity, 5.24f);
 }
 
 function test_ani_graphics3d_scene_createNode() {
@@ -151,11 +153,12 @@ function test_ani_graphics3d_scene_createNode_sync() {
     let param = sNodePara;
     let promise = new Promise<SceneTest.Node>((resolve, reject) => {
         sResFactory.createNode(
-            param, (err: BusinessError, data: SceneTest.Node) => {
-                if (err.code !== 0) {
+            param,
+            (err: BusinessError|null, data: SceneTest.Node|undefined) => {
+                if (err != null && err.code !== 0) {
                     reject(err);
                 } else {
-                    resolve(data);
+                    resolve(data!);
                 }
             });
     });
@@ -208,11 +211,11 @@ function test_ani_graphics3d_scene_createMaterial_sync() {
     let promise = new Promise<SceneTest.Material>((resolve, reject) => {
         sResFactory.createMaterial(
             param, materialType,
-            (err: BusinessError, data: SceneTest.Material) => {
-                if (err.code !== 0) {
+            (err: BusinessError|null, data: SceneTest.Material|undefined) => {
+                if (err != null && err.code !== 0) {
                     reject(err);
                 } else {
-                    resolve(data);
+                    resolve(data!);
                 }
             });
     });
@@ -261,11 +264,12 @@ function test_ani_graphics3d_scene_createShader_sync() {
     let param = sResPara;
     let promise = new Promise<SceneTest.Shader>((resolve, reject) => {
         sResFactory.createShader(
-            param, (err: BusinessError, data: SceneTest.Shader) => {
-                if (err.code !== 0) {
+            param,
+            (err: BusinessError|null, data: SceneTest.Shader|undefined) => {
+                if (err != null && err.code !== 0) {
                     reject(err);
                 } else {
-                    resolve(data);
+                    resolve(data!);
                 }
             });
     });
@@ -314,11 +318,12 @@ function test_ani_graphics3d_scene_createImage_sync() {
     let param = sResPara;
     let promise = new Promise<SceneTest.Image>((resolve, reject) => {
         sResFactory.createImage(
-            param, (err: BusinessError, data: SceneTest.Image) => {
-                if (err.code !== 0) {
+            param,
+            (err: BusinessError|null, data: SceneTest.Image|undefined) => {
+                if (err != null && err.code !== 0) {
                     reject(err);
                 } else {
-                    resolve(data);
+                    resolve(data!);
                 }
             });
     });
@@ -367,11 +372,13 @@ function test_ani_graphics3d_scene_createEnvironment_sync() {
     let param = sResPara;
     let promise = new Promise<SceneTest.Environment>((resolve, reject) => {
         sResFactory.createEnvironment(
-            param, (err: BusinessError, data: SceneTest.Environment) => {
-                if (err.code !== 0) {
+            param,
+            (err: BusinessError|null,
+             data: SceneTest.Environment|undefined) => {
+                if (err != null && err.code !== 0) {
                     reject(err);
                 } else {
-                    resolve(data);
+                    resolve(data!);
                 }
             });
     });
