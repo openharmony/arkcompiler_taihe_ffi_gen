@@ -1398,7 +1398,7 @@ class STSCodeGenerator:
         target.writelns(
             f"native function _obj_drop(data_ptr: long): void;",
             f"native function _obj_dup(data_ptr: long): long;",
-            f"const _registry = new FinalizationRegistry<long>((data_ptr: long) => {{ _obj_drop(data_ptr); }});",
+            f"const _registry = new FinalizationRegistry<long>(_obj_drop);",
         )
         target.writelns(
             f"native function _native_invoke(",
