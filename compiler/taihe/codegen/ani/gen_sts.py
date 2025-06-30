@@ -1,3 +1,4 @@
+from collections.abc import Collection
 from enum import Enum
 from json import dumps
 
@@ -82,7 +83,7 @@ class STSCodeGenerator:
 
     def stat_on_off_funcs(
         self,
-        funcs: list[GlobFuncDecl],
+        funcs: Collection[GlobFuncDecl],
     ):
         glob_func_on_off_map: dict[
             tuple[str, tuple[str, ...]],
@@ -107,7 +108,7 @@ class STSCodeGenerator:
 
     def stat_good_on_off_funcs(
         self,
-        funcs: list[GlobFuncDecl],
+        funcs: Collection[GlobFuncDecl],
     ):
         on_off_funcs = self.stat_on_off_funcs(funcs)
         return [
@@ -119,7 +120,7 @@ class STSCodeGenerator:
 
     def stat_bad_on_off_funcs(
         self,
-        funcs: list[GlobFuncDecl],
+        funcs: Collection[GlobFuncDecl],
     ):
         on_off_funcs = self.stat_on_off_funcs(funcs)
         bad_on_off_funcs: dict[str, list[tuple[str, GlobFuncDecl]]] = {}
@@ -132,7 +133,7 @@ class STSCodeGenerator:
 
     def stat_on_off_methods(
         self,
-        methods: list[IfaceMethodDecl],
+        methods: Collection[IfaceMethodDecl],
     ):
         method_on_off_map: dict[
             tuple[str, tuple[str, ...]],
@@ -157,7 +158,7 @@ class STSCodeGenerator:
 
     def stat_good_on_off_methods(
         self,
-        methods: list[IfaceMethodDecl],
+        methods: Collection[IfaceMethodDecl],
     ):
         on_off_methods = self.stat_on_off_methods(methods)
         return [
@@ -169,7 +170,7 @@ class STSCodeGenerator:
 
     def stat_bad_on_off_methods(
         self,
-        methods: list[IfaceMethodDecl],
+        methods: Collection[IfaceMethodDecl],
     ):
         on_off_methods = self.stat_on_off_methods(methods)
         bad_on_off_methods: dict[str, list[tuple[str, IfaceMethodDecl]]] = {}
@@ -211,7 +212,7 @@ class STSCodeGenerator:
 
     def gen_native_funcs(
         self,
-        funcs: list[GlobFuncDecl],
+        funcs: Collection[GlobFuncDecl],
         target: StsWriter,
     ):
         # native funcs
@@ -235,7 +236,7 @@ class STSCodeGenerator:
 
     def gen_global_funcs(
         self,
-        funcs: list[GlobFuncDecl],
+        funcs: Collection[GlobFuncDecl],
         target: StsWriter,
     ):
         self.gen_global_good_on_off_funcs(funcs, target)
@@ -244,7 +245,7 @@ class STSCodeGenerator:
 
     def gen_global_good_on_off_funcs(
         self,
-        funcs: list[GlobFuncDecl],
+        funcs: Collection[GlobFuncDecl],
         target: StsWriter,
     ):
         good_on_off_funcs = self.stat_good_on_off_funcs(funcs)
@@ -282,7 +283,7 @@ class STSCodeGenerator:
 
     def gen_global_bad_on_off_funcs(
         self,
-        funcs: list[GlobFuncDecl],
+        funcs: Collection[GlobFuncDecl],
         target: StsWriter,
     ):
         bad_on_off_funcs = self.stat_bad_on_off_funcs(funcs)
@@ -337,7 +338,7 @@ class STSCodeGenerator:
 
     def gen_global_regular_funcs(
         self,
-        funcs: list[GlobFuncDecl],
+        funcs: Collection[GlobFuncDecl],
         target: StsWriter,
     ):
         for func in funcs:
@@ -579,7 +580,7 @@ class STSCodeGenerator:
 
     def gen_iface_methods(
         self,
-        methods: list[IfaceMethodDecl],
+        methods: Collection[IfaceMethodDecl],
         target: StsWriter,
     ):
         self.gen_iface_on_off_methods(methods, target)
@@ -587,7 +588,7 @@ class STSCodeGenerator:
 
     def gen_iface_on_off_methods(
         self,
-        methods: list[IfaceMethodDecl],
+        methods: Collection[IfaceMethodDecl],
         target: StsWriter,
     ):
         method_on_off_map = self.stat_on_off_methods(methods)
@@ -622,7 +623,7 @@ class STSCodeGenerator:
 
     def gen_iface_regular_methods(
         self,
-        methods: list[IfaceMethodDecl],
+        methods: Collection[IfaceMethodDecl],
         target: StsWriter,
     ):
         for method in methods:
@@ -679,7 +680,7 @@ class STSCodeGenerator:
     def gen_iface_normal_method(
         self,
         sts_method_name: str,
-        sts_params: list[str],
+        sts_params: Collection[str],
         sts_return_ty_name: str,
         target: StsWriter,
     ):
@@ -691,7 +692,7 @@ class STSCodeGenerator:
     def gen_iface_promise_method(
         self,
         sts_promise_name: str,
-        sts_params: list[str],
+        sts_params: Collection[str],
         sts_return_ty_name: str,
         target: StsWriter,
     ):
@@ -703,7 +704,7 @@ class STSCodeGenerator:
     def gen_iface_async_method(
         self,
         sts_async_name: str,
-        sts_params: list[str],
+        sts_params: Collection[str],
         sts_return_ty_name: str,
         target: StsWriter,
     ):
@@ -716,7 +717,7 @@ class STSCodeGenerator:
     def gen_iface_get_method(
         self,
         get_name: str,
-        sts_params: list[str],
+        sts_params: Collection[str],
         sts_return_ty_name: str,
         target: StsWriter,
     ):
@@ -728,7 +729,7 @@ class STSCodeGenerator:
     def gen_iface_set_method(
         self,
         set_name: str,
-        sts_params: list[str],
+        sts_params: Collection[str],
         sts_return_ty_name: str,
         target: StsWriter,
     ):
@@ -845,7 +846,7 @@ class STSCodeGenerator:
 
     def gen_static_funcs(
         self,
-        funcs: list[GlobFuncDecl],
+        funcs: Collection[GlobFuncDecl],
         target: StsWriter,
     ):
         self.gen_static_on_off_funcs(funcs, target)
@@ -853,7 +854,7 @@ class STSCodeGenerator:
 
     def gen_static_on_off_funcs(
         self,
-        funcs: list[GlobFuncDecl],
+        funcs: Collection[GlobFuncDecl],
         target: StsWriter,
     ):
         func_on_off_map = self.stat_on_off_funcs(funcs)
@@ -915,7 +916,7 @@ class STSCodeGenerator:
 
     def gen_static_regular_funcs(
         self,
-        funcs: list[GlobFuncDecl],
+        funcs: Collection[GlobFuncDecl],
         target: StsWriter,
     ):
         for func in funcs:
@@ -988,7 +989,7 @@ class STSCodeGenerator:
 
     def gen_native_methods(
         self,
-        methods: list[IfaceMethodDecl],
+        methods: Collection[IfaceMethodDecl],
         target: StsWriter,
     ):
         # native
@@ -1012,7 +1013,7 @@ class STSCodeGenerator:
 
     def gen_class_methods(
         self,
-        methods: list[IfaceMethodDecl],
+        methods: Collection[IfaceMethodDecl],
         target: StsWriter,
     ):
         self.gen_iface_on_off_meths(methods, target)
@@ -1020,7 +1021,7 @@ class STSCodeGenerator:
 
     def gen_iface_on_off_meths(
         self,
-        methods: list[IfaceMethodDecl],
+        methods: Collection[IfaceMethodDecl],
         target: StsWriter,
     ):
         method_on_off_map = self.stat_on_off_methods(methods)
@@ -1082,7 +1083,7 @@ class STSCodeGenerator:
 
     def gen_iface_regular_meths(
         self,
-        methods: list[IfaceMethodDecl],
+        methods: Collection[IfaceMethodDecl],
         target: StsWriter,
     ):
         for method in methods:
@@ -1156,7 +1157,7 @@ class STSCodeGenerator:
     def gen_iface_normal_meth(
         self,
         sts_method_name: str,
-        sts_params: list[str],
+        sts_params: Collection[str],
         sts_return_ty_name: str,
         sts_native_call: str,
         target: StsWriter,
@@ -1173,7 +1174,7 @@ class STSCodeGenerator:
     def gen_get_func(
         self,
         get_name: str,
-        sts_params: list[str],
+        sts_params: Collection[str],
         sts_return_ty_name: str,
         sts_native_call: str,
         target: StsWriter,
@@ -1191,7 +1192,7 @@ class STSCodeGenerator:
     def gen_set_func(
         self,
         set_name: str,
-        sts_params: list[str],
+        sts_params: Collection[str],
         sts_return_ty_name: str,
         sts_native_call: str,
         target: StsWriter,
@@ -1209,7 +1210,7 @@ class STSCodeGenerator:
     def gen_normal_func(
         self,
         sts_func_name: str,
-        sts_params: list[str],
+        sts_params: Collection[str],
         sts_return_ty_name: str,
         sts_native_call: str,
         target: StsWriter,
@@ -1227,7 +1228,7 @@ class STSCodeGenerator:
     def gen_promise_function(
         self,
         sts_promise_name: str,
-        sts_params: list[str],
+        sts_params: Collection[str],
         sts_return_ty_name: str,
         sts_native_call: str,
         sts_resolved_ty_name: str,
@@ -1268,7 +1269,7 @@ class STSCodeGenerator:
     def gen_async_function(
         self,
         sts_async_name: str,
-        sts_params: list[str],
+        sts_params: Collection[str],
         sts_return_ty_name: str,
         sts_native_call: str,
         sts_resolved_ty_name: str,

@@ -1,4 +1,4 @@
-from collections.abc import Callable, Iterable
+from collections.abc import Callable
 from typing import Any, TypeGuard, TypeVar
 
 from typing_extensions import override
@@ -11,12 +11,9 @@ from taihe.semantics.declarations import (
     EnumDecl,
     EnumItemDecl,
     GenericTypeRefDecl,
-    GlobFuncDecl,
     IfaceDecl,
-    IfaceMethodDecl,
     IfaceParentDecl,
     LongTypeRefDecl,
-    NamedDecl,
     PackageDecl,
     PackageGroup,
     PackageRefDecl,
@@ -41,7 +38,6 @@ from taihe.utils.diagnostics import DiagnosticsManager
 from taihe.utils.exceptions import (
     DeclarationNotInScopeError,
     DeclNotExistError,
-    DeclRedefError,
     DuplicateExtendsWarn,
     EnumValueError,
     GenericArgumentsError,
@@ -62,7 +58,6 @@ def analyze_semantics(
     """Runs semantic analysis passes on the given package group."""
     # Namespace and declaration checks
     _check_decl_confilct_with_namespace(pg, dm)
-    _CheckFieldNameCollisionErrorPass(dm).handle_decl(pg)
 
     # Type related checks
     _ResolveImportsPass(dm).handle_decl(pg)
@@ -295,56 +290,6 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
 
         d.maybe_resolved_ty = CallbackType(d)
         return
-
-
-class _CheckFieldNameCollisionErrorPass(RecursiveDeclVisitor):
-    """Check for duplicate field names in declarations and name anonymous declarations."""
-
-    dm: DiagnosticsManager
-
-    def __init__(self, dm: DiagnosticsManager):
-        self.dm = dm
-
-    @override
-    def visit_glob_func_decl(self, d: GlobFuncDecl) -> None:
-        self.check_collision_helper(d.params)
-        return super().visit_glob_func_decl(d)
-
-    @override
-    def visit_iface_func_decl(self, d: IfaceMethodDecl) -> None:
-        self.check_collision_helper(d.params)
-        return super().visit_iface_func_decl(d)
-
-    @override
-    def visit_enum_decl(self, d: EnumDecl) -> None:
-        self.check_collision_helper(d.items)
-        return super().visit_enum_decl(d)
-
-    @override
-    def visit_struct_decl(self, d: StructDecl) -> None:
-        self.check_collision_helper(d.fields)
-        return super().visit_struct_decl(d)
-
-    @override
-    def visit_union_decl(self, d: UnionDecl) -> None:
-        self.check_collision_helper(d.fields)
-        return super().visit_union_decl(d)
-
-    @override
-    def visit_iface_decl(self, d: IfaceDecl) -> None:
-        self.check_collision_helper(d.methods)
-        return super().visit_iface_decl(d)
-
-    @override
-    def visit_package_decl(self, p: PackageDecl) -> None:
-        self.check_collision_helper(p.declarations)
-        return super().visit_package_decl(p)
-
-    def check_collision_helper(self, children: Iterable[NamedDecl]):
-        names: dict[str, NamedDecl] = {}
-        for f in children:
-            if (prev := names.setdefault(f.name, f)) != f:
-                self.dm.emit(DeclRedefError(prev, f))
 
 
 class _CheckEnumTypePass(RecursiveDeclVisitor):

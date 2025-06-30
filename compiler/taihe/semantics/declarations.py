@@ -1,7 +1,7 @@
 """Defines the types for declarations."""
 
 from abc import ABCMeta, abstractmethod
-from collections.abc import Iterable
+from collections.abc import Collection
 from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar
 
 from typing_extensions import override
@@ -246,7 +246,7 @@ class GenericTypeRefDecl(TypeRefDecl):
 
 
 class CallbackTypeRefDecl(TypeRefDecl):
-    params: list[ParamDecl]
+    _param_dict: dict[str, ParamDecl]
     return_ty_ref: TypeRefDecl | None
 
     def __init__(
@@ -255,18 +255,23 @@ class CallbackTypeRefDecl(TypeRefDecl):
         return_ty_ref: TypeRefDecl | None = None,
     ):
         super().__init__(loc)
-        self.params = []
+        self._param_dict = {}
         self.return_ty_ref = return_ty_ref
         if return_ty_ref:
             return_ty_ref.set_parent(self)
 
+    @property
+    def params(self) -> Collection[ParamDecl]:
+        return self._param_dict.values()
+
+    def add_param(self, p: ParamDecl):
+        if (prev := self._param_dict.setdefault(p.name, p)) != p:
+            raise DeclRedefError(prev, p)
+        p.set_parent(self)
+
     @override
     def _accept(self, v: "DeclVisitor[T]") -> Any:
         return v.visit_callback_type_ref_decl(self)
-
-    def add_param(self, p: ParamDecl):
-        self.params.append(p)
-        p.set_parent(self)
 
 
 #####################
@@ -550,7 +555,7 @@ class IfaceParentDecl(DeclWithParent["IfaceDecl"]):
 
 
 class IfaceMethodDecl(NamedDeclWithParent["IfaceDecl"]):
-    params: list[ParamDecl]
+    _param_dict: dict[str, ParamDecl]
     return_ty_ref: TypeRefDecl | None
 
     def __init__(
@@ -560,7 +565,7 @@ class IfaceMethodDecl(NamedDeclWithParent["IfaceDecl"]):
         return_ty_ref: TypeRefDecl | None = None,
     ):
         super().__init__(loc, name)
-        self.params = []
+        self._param_dict = {}
         self.return_ty_ref = return_ty_ref
         if return_ty_ref:
             return_ty_ref.set_parent(self)
@@ -575,8 +580,13 @@ class IfaceMethodDecl(NamedDeclWithParent["IfaceDecl"]):
         assert self._node_parent
         return self._node_parent
 
+    @property
+    def params(self) -> Collection[ParamDecl]:
+        return self._param_dict.values()
+
     def add_param(self, p: ParamDecl):
-        self.params.append(p)
+        if (prev := self._param_dict.setdefault(p.name, p)) != p:
+            raise DeclRedefError(prev, p)
         p.set_parent(self)
 
     @override
@@ -596,7 +606,7 @@ class PackageLevelDecl(NamedDeclWithParent["PackageDecl"], metaclass=ABCMeta):
 
 
 class GlobFuncDecl(PackageLevelDecl):
-    params: list[ParamDecl]
+    _param_dict: dict[str, ParamDecl]
     return_ty_ref: TypeRefDecl | None
 
     def __init__(
@@ -606,7 +616,7 @@ class GlobFuncDecl(PackageLevelDecl):
         return_ty_ref: TypeRefDecl | None = None,
     ):
         super().__init__(loc, name)
-        self.params = []
+        self._param_dict = {}
         self.return_ty_ref = return_ty_ref
         if return_ty_ref:
             return_ty_ref.set_parent(self)
@@ -616,8 +626,13 @@ class GlobFuncDecl(PackageLevelDecl):
     def description(self) -> str:
         return f"function {self.name}"
 
+    @property
+    def params(self) -> Collection[ParamDecl]:
+        return self._param_dict.values()
+
     def add_param(self, p: ParamDecl):
-        self.params.append(p)
+        if (prev := self._param_dict.setdefault(p.name, p)) != p:
+            raise DeclRedefError(prev, p)
         p.set_parent(self)
 
     @override
@@ -637,7 +652,7 @@ class TypeDecl(PackageLevelDecl, metaclass=ABCMeta):
 
 
 class EnumDecl(TypeDecl):
-    items: list[EnumItemDecl]
+    _item_dict: dict[str, EnumItemDecl]
     ty_ref: TypeRefDecl
 
     def __init__(
@@ -647,7 +662,7 @@ class EnumDecl(TypeDecl):
         ty_ref: TypeRefDecl,
     ):
         super().__init__(loc, name)
-        self.items = []
+        self._item_dict = {}
         self.ty_ref = ty_ref
         ty_ref.set_parent(self)
 
@@ -656,8 +671,13 @@ class EnumDecl(TypeDecl):
     def description(self) -> str:
         return f"enum {self.name}"
 
+    @property
+    def items(self) -> Collection[EnumItemDecl]:
+        return self._item_dict.values()
+
     def add_item(self, i: EnumItemDecl):
-        self.items.append(i)
+        if (prev := self._item_dict.setdefault(i.name, i)) != i:
+            raise DeclRedefError(prev, i)
         i.set_parent(self)
 
     @override
@@ -670,19 +690,24 @@ class EnumDecl(TypeDecl):
 
 
 class UnionDecl(TypeDecl):
-    fields: list[UnionFieldDecl]
+    _field_dict: dict[str, UnionFieldDecl]
 
     def __init__(self, loc: SourceLocation | None, name: str):
         super().__init__(loc, name)
-        self.fields = []
+        self._field_dict = {}
 
     @property
     @override
     def description(self) -> str:
         return f"union {self.name}"
 
+    @property
+    def fields(self) -> Collection[UnionFieldDecl]:
+        return self._field_dict.values()
+
     def add_field(self, f: UnionFieldDecl):
-        self.fields.append(f)
+        if (prev := self._field_dict.setdefault(f.name, f)) != f:
+            raise DeclRedefError(prev, f)
         f.set_parent(self)
 
     @override
@@ -695,19 +720,24 @@ class UnionDecl(TypeDecl):
 
 
 class StructDecl(TypeDecl):
-    fields: list[StructFieldDecl]
+    _field_dict: dict[str, StructFieldDecl]
 
     def __init__(self, loc: SourceLocation | None, name: str):
         super().__init__(loc, name)
-        self.fields = []
+        self._field_dict = {}
 
     @property
     @override
     def description(self) -> str:
         return f"struct {self.name}"
 
+    @property
+    def fields(self) -> Collection[StructFieldDecl]:
+        return self._field_dict.values()
+
     def add_field(self, f: StructFieldDecl):
-        self.fields.append(f)
+        if (prev := self._field_dict.setdefault(f.name, f)) != f:
+            raise DeclRedefError(prev, f)
         f.set_parent(self)
 
     @override
@@ -720,26 +750,35 @@ class StructDecl(TypeDecl):
 
 
 class IfaceDecl(TypeDecl):
-    methods: list[IfaceMethodDecl]
-    parents: list[IfaceParentDecl]
+    _parent_list: list[IfaceParentDecl]
+    _method_dict: dict[str, IfaceMethodDecl]
 
     def __init__(self, loc: SourceLocation | None, name: str):
         super().__init__(loc, name)
-        self.methods = []
-        self.parents = []
+        self._parent_list = []
+        self._method_dict = {}
 
     @property
     @override
     def description(self) -> str:
         return f"interface {self.name}"
 
-    def add_method(self, f: IfaceMethodDecl):
-        self.methods.append(f)
-        f.set_parent(self)
+    @property
+    def parents(self) -> Collection[IfaceParentDecl]:
+        return self._parent_list
+
+    @property
+    def methods(self) -> Collection[IfaceMethodDecl]:
+        return self._method_dict.values()
 
     def add_parent(self, p: IfaceParentDecl):
-        self.parents.append(p)
+        self._parent_list.append(p)
         p.set_parent(self)
+
+    def add_method(self, f: IfaceMethodDecl):
+        if (prev := self._method_dict.setdefault(f.name, f)) != f:
+            raise DeclRedefError(prev, f)
+        f.set_parent(self)
 
     @override
     def as_type(self, ty_ref: TypeRefDecl) -> IfaceType:
@@ -808,15 +847,15 @@ class PackageDecl(NamedDecl):
         return self.name.split(".")
 
     @property
-    def pkg_imports(self) -> Iterable[PackageImportDecl]:
+    def pkg_imports(self) -> Collection[PackageImportDecl]:
         return self._pkg_import_dict.values()
 
     @property
-    def decl_imports(self) -> Iterable[DeclarationImportDecl]:
+    def decl_imports(self) -> Collection[DeclarationImportDecl]:
         return self._decl_import_dict.values()
 
     @property
-    def declarations(self) -> Iterable[PackageLevelDecl]:
+    def declarations(self) -> Collection[PackageLevelDecl]:
         return self._declaration_dict.values()
 
     def set_group(self, group: "PackageGroup"):
@@ -911,7 +950,7 @@ class PackageGroup:
         return f"{self.__class__.__qualname__}({packages_str})"
 
     @property
-    def packages(self) -> Iterable[PackageDecl]:
+    def packages(self) -> Collection[PackageDecl]:
         return self._package_dict.values()
 
     def lookup(self, name: str) -> PackageDecl | None:
