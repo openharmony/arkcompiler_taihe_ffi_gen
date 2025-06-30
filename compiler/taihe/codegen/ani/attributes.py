@@ -21,6 +21,14 @@ from taihe.semantics.declarations import (
     TypeRefDecl,
     UnionFieldDecl,
 )
+from taihe.semantics.types import (
+    ArrayType,
+    MapType,
+    ScalarKind,
+    ScalarType,
+    StringType,
+    StructType,
+)
 from taihe.utils.diagnostics import DiagnosticsManager
 from taihe.utils.exceptions import AdhocError
 
@@ -40,12 +48,62 @@ class BigIntAttr(TypedAttribute[TypeRefDecl]):
     TARGETS = (TypeRefDecl,)
     MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({ARRAY_ATTRIBUTE_GROUP})
 
+    @override
+    def can_attach_on(self, parent: TypeRefDecl, dm: DiagnosticsManager) -> bool:
+        if not super().can_attach_on(parent, dm):
+            return False
+
+        if not (
+            isinstance(array_ty := parent.resolved_ty, ArrayType)
+            and isinstance(item_ty := array_ty.item_ty, ScalarType)
+            and item_ty.kind
+            in (
+                ScalarKind.I8,
+                ScalarKind.I16,
+                ScalarKind.I32,
+                ScalarKind.I64,
+                ScalarKind.U8,
+                ScalarKind.U16,
+                ScalarKind.U32,
+                ScalarKind.U64,
+            )
+        ):
+            dm.emit(
+                AdhocError(
+                    f"Attribute '{self.NAME}' can only be attached to array types with integer items.",
+                    loc=self.loc,
+                )
+            )
+            return False
+
+        return True
+
 
 @dataclass
 class ArrayBufferAttr(TypedAttribute[TypeRefDecl]):
     NAME = "arraybuffer"
     TARGETS = (TypeRefDecl,)
     MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({ARRAY_ATTRIBUTE_GROUP})
+
+    @override
+    def can_attach_on(self, parent: TypeRefDecl, dm: DiagnosticsManager) -> bool:
+        if not super().can_attach_on(parent, dm):
+            return False
+
+        if not (
+            isinstance(array_ty := parent.resolved_ty, ArrayType)
+            and isinstance(item_ty := array_ty.item_ty, ScalarType)
+            and item_ty.kind in (ScalarKind.I8, ScalarKind.U8)
+        ):
+            dm.emit(
+                AdhocError(
+                    f"Attribute '{self.NAME}' can only be attached to array types with byte items.",
+                    loc=self.loc,
+                )
+            )
+            return False
+
+        return True
 
 
 @dataclass
@@ -54,6 +112,44 @@ class TypedArrayAttr(TypedAttribute[TypeRefDecl]):
     TARGETS = (TypeRefDecl,)
     MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({ARRAY_ATTRIBUTE_GROUP})
 
+    sts_type: str = field(init=False)
+
+    @override
+    def can_attach_on(self, parent: TypeRefDecl, dm: DiagnosticsManager) -> bool:
+        if not super().can_attach_on(parent, dm):
+            return False
+
+        if (
+            isinstance(array_ty := parent.resolved_ty, ArrayType)
+            and isinstance(item_ty := array_ty.item_ty, ScalarType)
+            and (
+                sts_type := {
+                    ScalarKind.F32: "Float32Array",
+                    ScalarKind.F64: "Float64Array",
+                    ScalarKind.I8: "Int8Array",
+                    ScalarKind.I16: "Int16Array",
+                    ScalarKind.I32: "Int32Array",
+                    ScalarKind.I64: "BigInt64Array",
+                    ScalarKind.U8: "Uint8Array",
+                    ScalarKind.U16: "Uint16Array",
+                    ScalarKind.U32: "Uint32Array",
+                    ScalarKind.U64: "BigUint64Array",
+                }.get(item_ty.kind, None)
+            )
+            is not None
+        ):
+            self.sts_type = sts_type
+        else:
+            dm.emit(
+                AdhocError(
+                    f"Attribute '{self.NAME}' can only be attached to integer or float array types.",
+                    loc=self.loc,
+                )
+            )
+            return False
+
+        return True
+
 
 @dataclass
 class FixedArrayAttr(TypedAttribute[TypeRefDecl]):
@@ -61,11 +157,43 @@ class FixedArrayAttr(TypedAttribute[TypeRefDecl]):
     TARGETS = (TypeRefDecl,)
     MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({ARRAY_ATTRIBUTE_GROUP})
 
+    @override
+    def can_attach_on(self, parent: TypeRefDecl, dm: DiagnosticsManager) -> bool:
+        if not super().can_attach_on(parent, dm):
+            return False
+
+        if not isinstance(parent.resolved_ty, ArrayType):
+            dm.emit(
+                AdhocError(
+                    f"Attribute '{self.NAME}' can only be attached to array types.",
+                    loc=self.loc,
+                )
+            )
+            return False
+
+        return True
+
 
 @dataclass
 class ExtendsAttr(TypedAttribute[StructFieldDecl]):
     NAME = "extends"
     TARGETS = (StructFieldDecl,)
+
+    @override
+    def can_attach_on(self, parent: StructFieldDecl, dm: DiagnosticsManager) -> bool:
+        if not super().can_attach_on(parent, dm):
+            return False
+
+        if not isinstance(parent.ty_ref.resolved_ty, StructType):
+            dm.emit(
+                AdhocError(
+                    f"Attribute '{self.NAME}' can only be attached to struct fields with struct types.",
+                    loc=self.loc,
+                )
+            )
+            return False
+
+        return True
 
 
 @dataclass
@@ -145,6 +273,43 @@ class ReadOnlyAttr(TypedAttribute[StructFieldDecl]):
 class RecordAttr(TypedAttribute[TypeRefDecl]):
     NAME = "record"
     TARGETS = (TypeRefDecl,)
+
+    @override
+    def can_attach_on(self, parent: TypeRefDecl, dm: DiagnosticsManager) -> bool:
+        if not super().can_attach_on(parent, dm):
+            return False
+
+        if not (
+            isinstance(parent.resolved_ty, MapType)
+            and (
+                isinstance(parent.resolved_ty.key_ty, StringType)
+                or (
+                    isinstance(parent.resolved_ty.key_ty, ScalarType)
+                    and parent.resolved_ty.key_ty.kind
+                    in (
+                        ScalarKind.F32,
+                        ScalarKind.F64,
+                        ScalarKind.I8,
+                        ScalarKind.I16,
+                        ScalarKind.I32,
+                        ScalarKind.I64,
+                        ScalarKind.U8,
+                        ScalarKind.U16,
+                        ScalarKind.U32,
+                        ScalarKind.U64,
+                    )
+                )
+            )
+        ):
+            dm.emit(
+                AdhocError(
+                    f"Attribute '{self.NAME}' can only be attached to map types.",
+                    loc=self.loc,
+                )
+            )
+            return False
+
+        return True
 
 
 @dataclass

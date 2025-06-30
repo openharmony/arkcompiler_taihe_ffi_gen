@@ -663,13 +663,7 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
         for field in d.fields:
             if ExtendsAttr.get(field):
                 ty = field.ty_ref.resolved_ty
-                if not isinstance(ty, StructType):
-                    raise_adhoc_error(
-                        am,
-                        "struct cannot extend non-struct type",
-                        field.loc,
-                    )
-                    continue
+                assert isinstance(ty, StructType)
                 parent_ani_info = StructANIInfo.get(am, ty.ty_decl)
                 if parent_ani_info.is_class():
                     self.sts_class_parents.append(field)
@@ -1461,15 +1455,7 @@ class ArrayBufferTypeANIInfo(TypeANIInfo):
         super().__init__(am, t)
         self.am = am
         self.t = t
-        if not isinstance(t.item_ty, ScalarType) or t.item_ty.kind not in (
-            ScalarKind.I8,
-            ScalarKind.U8,
-        ):
-            raise_adhoc_error(
-                am,
-                "@arraybuffer only supports Array<i8> or Array<i8>",
-                t.ty_ref.loc,
-            )
+        self.arraybuffer_attr = arraybuffer_attr
         self.ani_type = ANI_ARRAYBUFFER
         self.type_desc = "Lescompat/ArrayBuffer;"
 
@@ -1522,38 +1508,13 @@ class TypedArrayTypeANIInfo(TypeANIInfo):
         super().__init__(am, t)
         self.am = am
         self.t = t
-        if (
-            not isinstance(t.item_ty, ScalarType)
-            or (
-                sts_type := {
-                    ScalarKind.F32: "Float32Array",
-                    ScalarKind.F64: "Float64Array",
-                    ScalarKind.I8: "Int8Array",
-                    ScalarKind.I16: "Int16Array",
-                    ScalarKind.I32: "Int32Array",
-                    ScalarKind.I64: "BigInt64Array",
-                    ScalarKind.U8: "Uint8Array",
-                    ScalarKind.U16: "Uint16Array",
-                    ScalarKind.U32: "Uint32Array",
-                    ScalarKind.U64: "BigUint64Array",
-                }.get(t.item_ty.kind)
-            )
-            is None
-        ):
-            raise_adhoc_error(
-                am,
-                f"@typedarray does not supports Array<{t.item_ty.ty_ref.text}>",
-                t.ty_ref.loc,
-            )
-            self.sts_type = "TypedArray"
-        else:
-            self.sts_type = sts_type
+        self.typedarray_attr = typedarray_attr
         self.ani_type = ANI_OBJECT
-        self.type_desc = f"Lescompat/{self.sts_type};"
+        self.type_desc = f"Lescompat/{self.typedarray_attr.sts_type};"
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
-        return self.sts_type
+        return self.typedarray_attr.sts_type
 
     @override
     def from_ani(
@@ -1619,21 +1580,7 @@ class BigIntTypeANIInfo(TypeANIInfo):
         super().__init__(am, t)
         self.am = am
         self.t = t
-        if not isinstance(t.item_ty, ScalarType) or t.item_ty.kind not in (
-            ScalarKind.I8,
-            ScalarKind.I16,
-            ScalarKind.I32,
-            ScalarKind.I64,
-            ScalarKind.U8,
-            ScalarKind.U16,
-            ScalarKind.U32,
-            ScalarKind.U64,
-        ):
-            raise_adhoc_error(
-                am,
-                f"@bigint does not supports Array<{t.item_ty.ty_ref.text}>",
-                t.ty_ref.loc,
-            )
+        self.bigint_attr = bigint_attr
         self.ani_type = ANI_OBJECT
         self.type_desc = "Lescompat/BigInt;"
 
@@ -1695,6 +1642,7 @@ class RecordTypeANIInfo(TypeANIInfo):
         super().__init__(am, t)
         self.am = am
         self.t = t
+        self.record_attr = record_attr
         self.ani_type = ANI_OBJECT
         self.type_desc = "Lescompat/Record;"
 
