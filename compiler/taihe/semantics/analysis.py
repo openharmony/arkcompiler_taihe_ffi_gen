@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from itertools import chain
 from typing import Any, TypeGuard, TypeVar
 
 from typing_extensions import override
@@ -65,7 +66,8 @@ def analyze_semantics(
     _CheckRecursiveInclusionPass(dm).handle_decl(pg)
 
     # Resolve types and attributes, this pass must be run after all other passes
-    _ConvertAndCheckAttrPass(dm, am).handle_decl(pg)
+    _ConvertAttrPass(dm, am).handle_decl(pg)
+    _CheckAttrPass(dm).handle_decl(pg)
 
 
 def _check_decl_confilct_with_namespace(
@@ -432,7 +434,7 @@ class _CheckRecursiveInclusionPass(RecursiveDeclVisitor):
                 type_list.append(((d, i.ty_ref), ty.ty_decl))
 
 
-class _ConvertAndCheckAttrPass(RecursiveDeclVisitor):
+class _ConvertAttrPass(RecursiveDeclVisitor):
     dm: DiagnosticsManager
     am: CheckedAttributeManager
 
@@ -442,7 +444,19 @@ class _ConvertAndCheckAttrPass(RecursiveDeclVisitor):
 
     def visit_decl(self, d: Decl) -> None:
         for unchecked_attr in UncheckedAttribute.consume(d):
-            self.am.attach(unchecked_attr, d, self.dm)
+            if (checked_attr := self.am.attach(unchecked_attr, self.dm)) is not None:
+                d.add_attribute(checked_attr)
+
+
+class _CheckAttrPass(RecursiveDeclVisitor):
+    dm: DiagnosticsManager
+
+    def __init__(self, dm: DiagnosticsManager):
+        self.dm = dm
+
+    def visit_decl(self, d: Decl) -> None:
+        for attr in chain(*d.attributes.values()):
+            attr.check_context(d, self.dm)
 
 
 V = TypeVar("V")

@@ -29,7 +29,7 @@ AnyAttribute = UncheckedAttribute | AbstractCheckedAttribute
 """
 
 from abc import ABCMeta, abstractmethod
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable
 from dataclasses import MISSING, dataclass, fields
 from difflib import get_close_matches
 from itertools import chain
@@ -99,15 +99,6 @@ class AnyAttribute(metaclass=ABCMeta):
     loc: SourceLocation | None
     """Source location of the attribute name for error reporting."""
 
-    @abstractmethod
-    def get_name_and_args(self) -> tuple[str, Iterable[Argument]]:
-        """Formats the attribute for diagnostics display.
-
-        Returns:
-            A tuple containing the attribute name and a sequence of its arguments.
-            The arguments do not need to have a location.
-        """
-
     @property
     def description(self) -> str:
         """Provides a human-readable description of the attribute.
@@ -115,6 +106,33 @@ class AnyAttribute(metaclass=ABCMeta):
         This can be overridden by subclasses to provide more context.
         """
         return f"attribute {PrettyFormatter().get_format_attr(self)}"
+
+    @abstractmethod
+    def get_name(self) -> str:
+        """Returns the name of the attribute without the '@' prefix.
+
+        This is used for diagnostics and debugging purposes.
+        """
+
+    @abstractmethod
+    def get_args(self) -> Iterable[Argument]:
+        """Returns the list of arguments passed to this attribute.
+
+        This is used for diagnostics and debugging purposes.
+        """
+
+    @abstractmethod
+    def check_context(self, parent: Decl, dm: DiagnosticsManager) -> None:
+        """Checks if this attribute can be attached to the given declaration.
+
+        This method should be implemented by subclasses to enforce specific
+        attachment rules. It should not raise exceptions, but instead use
+        the diagnostics manager to report any issues.
+
+        Args:
+            parent: The declaration to check against
+            dm: Diagnostics manager for error reporting
+        """
 
 
 @dataclass
@@ -128,11 +146,8 @@ class UncheckedAttribute(AnyAttribute):
     name: str
     """The attribute name as it appears in source code (without @ prefix)."""
 
-    args: Sequence[Argument]
+    args: list[Argument]
     """Positional arguments passed to the attribute."""
-
-    def get_name_and_args(self) -> tuple[str, Iterable[Argument]]:
-        return self.name, self.args
 
     @classmethod
     def consume(cls, decl: Decl) -> Iterable[Self]:
@@ -142,8 +157,21 @@ class UncheckedAttribute(AnyAttribute):
         each unchecked attribute of the specified class, removing it from the
         declaration's attribute list.
         """
-        while others := decl.attributes.get(cls, []):
-            yield cast(Self, others.pop(0))
+        unchecked_attrs = decl.find_attributes(cls)
+        while unchecked_attrs:
+            yield unchecked_attrs.pop(0)
+
+    @override
+    def get_name(self) -> str:
+        return self.name
+
+    @override
+    def get_args(self) -> Iterable[Argument]:
+        return self.args
+
+    @override
+    def check_context(self, parent: Decl, dm: DiagnosticsManager) -> None:
+        pass
 
 
 class AbstractCheckedAttribute(AnyAttribute, metaclass=ABCMeta):
@@ -187,27 +215,20 @@ class AbstractCheckedAttribute(AnyAttribute, metaclass=ABCMeta):
     @abstractmethod
     def try_construct(
         cls,
-        parent: Decl,
         raw: UncheckedAttribute,
         dm: DiagnosticsManager,
     ) -> Self | None:
-        """Attempts to construct a validated attribute from raw data.
+        """Process the validated arguments and construct the attribute instance.
 
-        This method performs argument validation and type checking. On success,
-        it returns a fully constructed attribute instance. On failure, it emits
-        diagnostic messages and returns None.
+        This method should be implemented by subclasses to handle specific
+        argument processing logic.
 
         Args:
-            parent: attribute node parent node
             raw: The unchecked attribute data from parsing
             dm: Diagnostics manager for error reporting
 
         Returns:
-            Validated attribute instance on success, None on failure
-
-        Note:
-            This method must not raise exceptions. All errors should be reported
-            through the diagnostics manager.
+            An instance of the attribute on success, None on failure
         """
 
 
@@ -253,41 +274,9 @@ class AutoCheckedAttribute(AbstractCheckedAttribute, Generic[T]):
     @classmethod
     def try_construct(
         cls,
-        parent: Decl,
         raw: UncheckedAttribute,
         dm: DiagnosticsManager,
     ) -> Self | None:
-        res = cls.try_create(raw, dm)
-        if res is None:
-            return None
-
-        if not isinstance(parent, cls.TARGETS):
-            dm.emit(AttrTargetError(parent, res))
-            return None
-
-        if not res.can_attach_on(parent, dm):
-            return None
-
-        return res
-
-    @classmethod
-    def try_create(
-        cls,
-        raw: UncheckedAttribute,
-        dm: DiagnosticsManager,
-    ) -> Self | None:
-        """Process the validated arguments and construct the attribute instance.
-
-        This method should be implemented by subclasses to handle specific
-        argument processing logic.
-
-        Args:
-            raw: The unchecked attribute data from parsing
-            dm: Diagnostics manager for error reporting
-
-        Returns:
-            An instance of the attribute on success, None on failure
-        """
         args, kwargs, ok = cls.split_and_validate_args(raw, dm)
         if not ok:
             return None
@@ -375,11 +364,15 @@ class AutoCheckedAttribute(AbstractCheckedAttribute, Generic[T]):
 
         return args, kwargs, True
 
-    def can_attach_on(
-        self,
-        parent: T,
-        dm: DiagnosticsManager,
-    ) -> bool:
+    @override
+    def check_context(self, parent: Decl, dm: DiagnosticsManager) -> None:
+        if not isinstance(parent, self.TARGETS):
+            dm.emit(AttrTargetError(parent, self))
+            return
+
+        self.check_typed_context(parent, dm)
+
+    def check_typed_context(self, parent: T, dm: DiagnosticsManager) -> None:
         """Checks if this attribute can be attached to the given declaration.
 
         Notice that parent type is already checked outside.
@@ -391,22 +384,20 @@ class AutoCheckedAttribute(AbstractCheckedAttribute, Generic[T]):
         Returns:
             True if the attribute can be attached, False otherwise
         """
-        for other, attrs in parent.attributes.items():
-            if not attrs:
+        for attr in chain(*parent.attributes.values()):
+            if type(attr) is type(self):
                 continue
-            if isinstance(self, other):
+            if not isinstance(attr, AutoCheckedAttribute):
                 continue
-            if not issubclass(other, AutoCheckedAttribute):
-                continue
-            if self.MUTUALLY_EXCLUSIVE_GROUP_TAGS & other.MUTUALLY_EXCLUSIVE_GROUP_TAGS:
-                dm.emit(AttrConflictError(self, attrs[0]))
-                return False
-
-        return True
+            if self.MUTUALLY_EXCLUSIVE_GROUP_TAGS & attr.MUTUALLY_EXCLUSIVE_GROUP_TAGS:
+                dm.emit(AttrConflictError(self, attr))  # type: ignore
 
     @override
-    def get_name_and_args(self) -> tuple[str, Iterable[Argument]]:
-        args: list[Argument] = []
+    def get_name(self) -> str:
+        return self.NAME
+
+    @override
+    def get_args(self) -> Iterable[Argument]:
         for field in fields(self):
             if field.name == "loc":
                 # Skip the 'loc' field in the argument list
@@ -416,8 +407,7 @@ class AutoCheckedAttribute(AbstractCheckedAttribute, Generic[T]):
                 continue
             value = getattr(self, field.name, None)
             if value is not None:
-                args.append(Argument(key=field.name, value=value, loc=None))
-        return self.NAME, args
+                yield Argument(key=field.name, value=value, loc=None)
 
 
 class TypedAttribute(AutoCheckedAttribute[T]):
@@ -433,22 +423,17 @@ class TypedAttribute(AutoCheckedAttribute[T]):
         Returns:
             The attribute instance if present, None otherwise
         """
-        if attrs := decl.attributes.get(cls):
-            return cast(Self, attrs[0])
+        if attrs := decl.find_attributes(cls):
+            return attrs[0]
         return None
 
     @override
-    def can_attach_on(
-        self,
-        parent: T,
-        dm: DiagnosticsManager,
-    ) -> bool:
-        prevs = parent.attributes.get(type(self), [])
-        if prevs:
-            dm.emit(AttrConflictError(self, prevs[0]))
-            return False
+    def check_typed_context(self, parent: T, dm: DiagnosticsManager) -> None:
+        prev = self.get(parent)
+        if prev is not None and prev is not self:
+            dm.emit(AttrConflictError(self, prev))
 
-        return super().can_attach_on(parent, dm)
+        super().check_typed_context(parent, dm)
 
 
 class RepeatableAttribute(AutoCheckedAttribute[T]):
@@ -464,8 +449,7 @@ class RepeatableAttribute(AutoCheckedAttribute[T]):
         Returns:
             List of attribute instances (empty if none present)
         """
-        attrs = decl.attributes.get(cls, [])
-        return cast(list[Self], attrs)
+        return decl.find_attributes(cls)
 
 
 # Type aliases for clarity
@@ -514,9 +498,8 @@ class CheckedAttributeManager:
     def attach(
         self,
         raw: UncheckedAttribute,
-        decl: Decl,
         dm: DiagnosticsManager,
-    ) -> None:
+    ) -> AbstractCheckedAttribute | None:
         """Validates and constructs a typed attribute from unchecked attribute data.
 
         This method orchestrates the entire attachment process:
@@ -525,7 +508,6 @@ class CheckedAttributeManager:
 
         Args:
             raw: Unchecked attribute data from parsing
-            decl: Target declaration for attachment
             dm: Diagnostics manager for error reporting
         """
         attr_type = self._name_to_attr.get(raw.name)
@@ -534,6 +516,4 @@ class CheckedAttributeManager:
             dm.emit(AttrNotExistError(raw.name, suggestions, loc=raw.loc))
             return None
 
-        # Attempt to construct the typed attribute
-        if check_attribute := attr_type.try_construct(decl, raw, dm):
-            decl.add_attribute(check_attribute)
+        return attr_type.try_construct(raw, dm)

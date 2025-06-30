@@ -130,21 +130,20 @@ class PrettyFormatter(DeclVisitor[str]):
         raise TypeError(f"Unsupported type: {type(obj)}")
 
     def get_format_attr(self, item: "AnyAttribute") -> str:
-        name, args = item.get_name_and_args()
-        if not args:
-            attr_fmt = name
-        else:
-            args_str: list[str] = []
-            for arg in args:
-                value = self.get_value(arg.value)
-                if arg.key:
-                    arg_str = f"{arg.key}={value}"
-                else:
-                    arg_str = value
-                args_str.append(arg_str)
-            args_fmt = ", ".join(args_str)
-            attr_fmt = f"{name}({args_fmt})"
-        return attr_fmt
+        name = item.get_name()
+        args = item.get_args()
+        args_str: list[str] = []
+        for arg in args:
+            value = self.get_value(arg.value)
+            if arg.key:
+                arg_str = f"{arg.key}={value}"
+            else:
+                arg_str = value
+            args_str.append(arg_str)
+        if not args_str:
+            return name
+        args_fmt = ", ".join(args_str)
+        return f"{name}({args_fmt})"
 
 
 class PrettyPrinter(DeclVisitor[None]):

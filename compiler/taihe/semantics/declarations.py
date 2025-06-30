@@ -2,7 +2,7 @@
 
 from abc import ABCMeta, abstractmethod
 from collections.abc import Collection
-from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar, cast
 
 from typing_extensions import override
 
@@ -61,6 +61,9 @@ class Decl(metaclass=ABCMeta):
 
     def add_attribute(self, a: "AnyAttribute"):
         self.attributes.setdefault(type(a), []).append(a)
+
+    def find_attributes(self, t: type[A]) -> list[A]:
+        return cast(list[A], self.attributes.get(t, []))
 
     @abstractmethod
     def _accept(self, v: "DeclVisitor[Any]") -> Any:

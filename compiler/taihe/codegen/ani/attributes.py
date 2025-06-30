@@ -49,10 +49,7 @@ class BigIntAttr(TypedAttribute[TypeRefDecl]):
     MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({ARRAY_ATTRIBUTE_GROUP})
 
     @override
-    def can_attach_on(self, parent: TypeRefDecl, dm: DiagnosticsManager) -> bool:
-        if not super().can_attach_on(parent, dm):
-            return False
-
+    def check_typed_context(self, parent: TypeRefDecl, dm: DiagnosticsManager) -> None:
         if not (
             isinstance(array_ty := parent.resolved_ty, ArrayType)
             and isinstance(item_ty := array_ty.item_ty, ScalarType)
@@ -74,9 +71,8 @@ class BigIntAttr(TypedAttribute[TypeRefDecl]):
                     loc=self.loc,
                 )
             )
-            return False
 
-        return True
+        super().check_typed_context(parent, dm)
 
 
 @dataclass
@@ -86,10 +82,7 @@ class ArrayBufferAttr(TypedAttribute[TypeRefDecl]):
     MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({ARRAY_ATTRIBUTE_GROUP})
 
     @override
-    def can_attach_on(self, parent: TypeRefDecl, dm: DiagnosticsManager) -> bool:
-        if not super().can_attach_on(parent, dm):
-            return False
-
+    def check_typed_context(self, parent: TypeRefDecl, dm: DiagnosticsManager) -> None:
         if not (
             isinstance(array_ty := parent.resolved_ty, ArrayType)
             and isinstance(item_ty := array_ty.item_ty, ScalarType)
@@ -101,9 +94,8 @@ class ArrayBufferAttr(TypedAttribute[TypeRefDecl]):
                     loc=self.loc,
                 )
             )
-            return False
 
-        return True
+        super().check_typed_context(parent, dm)
 
 
 @dataclass
@@ -115,10 +107,7 @@ class TypedArrayAttr(TypedAttribute[TypeRefDecl]):
     sts_type: str = field(init=False)
 
     @override
-    def can_attach_on(self, parent: TypeRefDecl, dm: DiagnosticsManager) -> bool:
-        if not super().can_attach_on(parent, dm):
-            return False
-
+    def check_typed_context(self, parent: TypeRefDecl, dm: DiagnosticsManager) -> None:
         if (
             isinstance(array_ty := parent.resolved_ty, ArrayType)
             and isinstance(item_ty := array_ty.item_ty, ScalarType)
@@ -146,9 +135,8 @@ class TypedArrayAttr(TypedAttribute[TypeRefDecl]):
                     loc=self.loc,
                 )
             )
-            return False
 
-        return True
+        super().check_typed_context(parent, dm)
 
 
 @dataclass
@@ -158,10 +146,7 @@ class FixedArrayAttr(TypedAttribute[TypeRefDecl]):
     MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({ARRAY_ATTRIBUTE_GROUP})
 
     @override
-    def can_attach_on(self, parent: TypeRefDecl, dm: DiagnosticsManager) -> bool:
-        if not super().can_attach_on(parent, dm):
-            return False
-
+    def check_typed_context(self, parent: TypeRefDecl, dm: DiagnosticsManager) -> None:
         if not isinstance(parent.resolved_ty, ArrayType):
             dm.emit(
                 AdhocError(
@@ -169,9 +154,47 @@ class FixedArrayAttr(TypedAttribute[TypeRefDecl]):
                     loc=self.loc,
                 )
             )
-            return False
 
-        return True
+        super().check_typed_context(parent, dm)
+
+
+@dataclass
+class RecordAttr(TypedAttribute[TypeRefDecl]):
+    NAME = "record"
+    TARGETS = (TypeRefDecl,)
+
+    @override
+    def check_typed_context(self, parent: TypeRefDecl, dm: DiagnosticsManager) -> None:
+        if not (
+            isinstance(parent.resolved_ty, MapType)
+            and (
+                isinstance(parent.resolved_ty.key_ty, StringType)
+                or (
+                    isinstance(parent.resolved_ty.key_ty, ScalarType)
+                    and parent.resolved_ty.key_ty.kind
+                    in (
+                        ScalarKind.F32,
+                        ScalarKind.F64,
+                        ScalarKind.I8,
+                        ScalarKind.I16,
+                        ScalarKind.I32,
+                        ScalarKind.I64,
+                        ScalarKind.U8,
+                        ScalarKind.U16,
+                        ScalarKind.U32,
+                        ScalarKind.U64,
+                    )
+                )
+            )
+        ):
+            dm.emit(
+                AdhocError(
+                    f"Attribute '{self.NAME}' can only be attached to map types.",
+                    loc=self.loc,
+                )
+            )
+
+        super().check_typed_context(parent, dm)
 
 
 @dataclass
@@ -180,10 +203,11 @@ class ExtendsAttr(TypedAttribute[StructFieldDecl]):
     TARGETS = (StructFieldDecl,)
 
     @override
-    def can_attach_on(self, parent: StructFieldDecl, dm: DiagnosticsManager) -> bool:
-        if not super().can_attach_on(parent, dm):
-            return False
-
+    def check_typed_context(
+        self,
+        parent: StructFieldDecl,
+        dm: DiagnosticsManager,
+    ) -> None:
         if not isinstance(parent.ty_ref.resolved_ty, StructType):
             dm.emit(
                 AdhocError(
@@ -191,9 +215,8 @@ class ExtendsAttr(TypedAttribute[StructFieldDecl]):
                     loc=self.loc,
                 )
             )
-            return False
 
-        return True
+        super().check_typed_context(parent, dm)
 
 
 @dataclass
@@ -224,10 +247,9 @@ class NullAttr(TypedAttribute[UnionFieldDecl]):
     MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({NULL_UNDEFINED_GROUP})
 
     @override
-    def can_attach_on(self, parent: UnionFieldDecl, dm: DiagnosticsManager) -> bool:
-        if not super().can_attach_on(parent, dm):
-            return False
-
+    def check_typed_context(
+        self, parent: UnionFieldDecl, dm: DiagnosticsManager
+    ) -> None:
         if parent.ty_ref is not None:
             dm.emit(
                 AdhocError(
@@ -235,9 +257,8 @@ class NullAttr(TypedAttribute[UnionFieldDecl]):
                     loc=self.loc,
                 )
             )
-            return False
 
-        return True
+        super().check_typed_context(parent, dm)
 
 
 @dataclass
@@ -247,10 +268,9 @@ class UndefinedAttr(TypedAttribute[UnionFieldDecl]):
     MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({NULL_UNDEFINED_GROUP})
 
     @override
-    def can_attach_on(self, parent: UnionFieldDecl, dm: DiagnosticsManager) -> bool:
-        if not super().can_attach_on(parent, dm):
-            return False
-
+    def check_typed_context(
+        self, parent: UnionFieldDecl, dm: DiagnosticsManager
+    ) -> None:
         if parent.ty_ref is not None:
             dm.emit(
                 AdhocError(
@@ -258,58 +278,14 @@ class UndefinedAttr(TypedAttribute[UnionFieldDecl]):
                     loc=self.loc,
                 )
             )
-            return False
 
-        return True
+        super().check_typed_context(parent, dm)
 
 
 @dataclass
 class ReadOnlyAttr(TypedAttribute[StructFieldDecl]):
     NAME = "readonly"
     TARGETS = (StructFieldDecl,)
-
-
-@dataclass
-class RecordAttr(TypedAttribute[TypeRefDecl]):
-    NAME = "record"
-    TARGETS = (TypeRefDecl,)
-
-    @override
-    def can_attach_on(self, parent: TypeRefDecl, dm: DiagnosticsManager) -> bool:
-        if not super().can_attach_on(parent, dm):
-            return False
-
-        if not (
-            isinstance(parent.resolved_ty, MapType)
-            and (
-                isinstance(parent.resolved_ty.key_ty, StringType)
-                or (
-                    isinstance(parent.resolved_ty.key_ty, ScalarType)
-                    and parent.resolved_ty.key_ty.kind
-                    in (
-                        ScalarKind.F32,
-                        ScalarKind.F64,
-                        ScalarKind.I8,
-                        ScalarKind.I16,
-                        ScalarKind.I32,
-                        ScalarKind.I64,
-                        ScalarKind.U8,
-                        ScalarKind.U16,
-                        ScalarKind.U32,
-                        ScalarKind.U64,
-                    )
-                )
-            )
-        ):
-            dm.emit(
-                AdhocError(
-                    f"Attribute '{self.NAME}' can only be attached to map types.",
-                    loc=self.loc,
-                )
-            )
-            return False
-
-        return True
 
 
 @dataclass
@@ -385,14 +361,11 @@ class GenAsyncAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     func_prefix: str = field(default="", init=False)
 
     @override
-    def can_attach_on(
+    def check_typed_context(
         self,
         parent: GlobFuncDecl | IfaceMethodDecl,
         dm: DiagnosticsManager,
-    ) -> bool:
-        if not super().can_attach_on(parent, dm):
-            return False
-
+    ) -> None:
         if self.func_name is None:
             if len(parent.name) > 4 and parent.name[-4:].lower() == "sync":
                 self.func_prefix = parent.name[-4:]
@@ -403,9 +376,8 @@ class GenAsyncAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
                         loc=self.loc,
                     )
                 )
-                return False
 
-        return True
+        super().check_typed_context(parent, dm)
 
 
 @dataclass
@@ -417,14 +389,11 @@ class GenPromiseAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     func_prefix: str = field(default="", init=False)
 
     @override
-    def can_attach_on(
+    def check_typed_context(
         self,
         parent: GlobFuncDecl | IfaceMethodDecl,
         dm: DiagnosticsManager,
-    ) -> bool:
-        if not super().can_attach_on(parent, dm):
-            return False
-
+    ) -> None:
         if self.func_name is None:
             if len(parent.name) > 4 and parent.name[-4:].lower() == "sync":
                 self.func_prefix = parent.name[:-4]
@@ -435,9 +404,8 @@ class GenPromiseAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
                         loc=self.loc,
                     )
                 )
-                return False
 
-        return True
+        super().check_typed_context(parent, dm)
 
 
 FUNCTION_TYPE_ATTRIBUTE_GROUP = AttributeGroupTag()
@@ -453,14 +421,11 @@ class GetAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     func_suffix: str = field(default="", init=False)
 
     @override
-    def can_attach_on(
+    def check_typed_context(
         self,
         parent: GlobFuncDecl | IfaceMethodDecl,
         dm: DiagnosticsManager,
-    ) -> bool:
-        if not super().can_attach_on(parent, dm):
-            return False
-
+    ) -> None:
         if len(parent.params) != 0 or parent.return_ty_ref is None:
             dm.emit(
                 AdhocError(
@@ -468,7 +433,6 @@ class GetAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
                     loc=self.loc,
                 )
             )
-            return False
 
         if self.member_name is None:
             if len(parent.name) > 3 and parent.name[:3].lower() == "get":
@@ -480,9 +444,8 @@ class GetAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
                         loc=self.loc,
                     )
                 )
-                return False
 
-        return True
+        super().check_typed_context(parent, dm)
 
 
 @dataclass
@@ -495,14 +458,11 @@ class SetAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     func_suffix: str = field(default="", init=False)
 
     @override
-    def can_attach_on(
+    def check_typed_context(
         self,
         parent: GlobFuncDecl | IfaceMethodDecl,
         dm: DiagnosticsManager,
-    ) -> bool:
-        if not super().can_attach_on(parent, dm):
-            return False
-
+    ) -> None:
         if len(parent.params) != 1 or parent.return_ty_ref is not None:
             dm.emit(
                 AdhocError(
@@ -510,7 +470,6 @@ class SetAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
                     loc=self.loc,
                 )
             )
-            return False
 
         if self.member_name is None:
             if len(parent.name) > 3 and parent.name[:3].lower() == "set":
@@ -522,9 +481,8 @@ class SetAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
                         loc=self.loc,
                     )
                 )
-                return False
 
-        return True
+        super().check_typed_context(parent, dm)
 
 
 @dataclass
@@ -538,14 +496,11 @@ class OnOffAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     func_suffix: str = field(default="", init=False)
 
     @override
-    def can_attach_on(
+    def check_typed_context(
         self,
         parent: GlobFuncDecl | IfaceMethodDecl,
         dm: DiagnosticsManager,
-    ) -> bool:
-        if not super().can_attach_on(parent, dm):
-            return False
-
+    ) -> None:
         if self.overload is not None:
             if self.type is None:
                 if (
@@ -561,7 +516,6 @@ class OnOffAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
                             loc=self.loc,
                         )
                     )
-                    return False
         elif len(parent.name) > 2 and parent.name[:2].lower() == "on":
             self.overload = "on"
             if self.type is None:
@@ -577,9 +531,8 @@ class OnOffAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
                     loc=self.loc,
                 )
             )
-            return False
 
-        return True
+        super().check_typed_context(parent, dm)
 
 
 @dataclass

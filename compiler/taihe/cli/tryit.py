@@ -836,7 +836,7 @@ def main():
         case _:
             verbosity = TRACE_VERBOSE
 
-    user = cast("UserType", args.user)
+    user = cast(UserType, args.user)
     vm = PandaVm.resolve() if user == UserType.STS else None
     config = BuildConfig(vm)
 

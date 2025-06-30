@@ -250,7 +250,7 @@ class Resource(ABC):
         if (res := ctx.resolved.get(cls, None)) is None:
             res = cls.construct(ctx)
             ctx.resolved[cls] = res
-        return cast("Self", res)
+        return cast(Self, res)
 
     @classmethod
     def resolve_path(cls, ctx: ResourceContext | None = None) -> Path:
