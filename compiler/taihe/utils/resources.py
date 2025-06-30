@@ -379,7 +379,7 @@ class PandaVm(CachedResource):
             self.base_path / "ohos_arm64/include/plugins/ets/runtime/ani"
         )
         self.stdlib_sources = {
-            dir: self.base_path / "ets/stdlib" / dir for dir in ["std", "compat"]
+            dir: self.base_path / "ets/stdlib" / dir for dir in ["std", "escompat"]
         }
         self.stdlib_lib = self.base_path / "ets" / "etsstdlib.abc"
         self.host_tools_dir = self.base_path / "linux_host_tools"

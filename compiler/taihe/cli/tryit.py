@@ -575,13 +575,11 @@ class BuildSystem(BuildUtils):
     def create_arktsconfig(
         self,
         arktsconfig_file: Path,
-        app_paths: Mapping[str, Path] | None = None,
+        app_paths: dict[str, Path] | None = None,
     ) -> None:
         """Create ArkTS configuration file."""
         vm = PandaVm.resolve()
-        paths = vm.stdlib_sources
-        if app_paths:
-            paths.update(app_paths)
+        paths = vm.stdlib_sources | (app_paths or {})
 
         config_content = {
             "compilerOptions": {
