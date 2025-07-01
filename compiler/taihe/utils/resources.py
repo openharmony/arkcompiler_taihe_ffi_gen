@@ -350,7 +350,7 @@ class StandardLibrary(PathResource):
 
 class Documentation(PathResource):
     CLI_NAME = "doc"
-    PATH_PKG = PATH_DEV = "cookbook"
+    PATH_PKG = PATH_DEV = "doc"
     PATH_BUNDLE = "share/doc/taihe"
 
 
@@ -485,5 +485,10 @@ class Antlr(CachedResource):
         )
 
 
-BUILTIN_RESOURCES = [RuntimeSource, RuntimeHeader, StandardLibrary, Documentation]
-ALL_RESOURCES = [*BUILTIN_RESOURCES, PandaVm, PythonBuild, Antlr]
+BUILTIN_RESOURCES: Sequence[ResourceT] = [
+    RuntimeSource,
+    RuntimeHeader,
+    StandardLibrary,
+    Documentation,
+]
+ALL_RESOURCES: Sequence[ResourceT] = [*BUILTIN_RESOURCES, PandaVm, PythonBuild, Antlr]

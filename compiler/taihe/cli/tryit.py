@@ -40,8 +40,7 @@ class UserType(Enum):
 class BuildUtils:
     """Utility class for common operations."""
 
-    def __init__(self, verbosity: int):
-        setup_logger(verbosity)
+    def __init__(self):
         self.logger = logging.getLogger("build_system")
 
     def run_command(
@@ -156,7 +155,7 @@ class BuildSystem(BuildUtils):
         config: BuildConfig,
         verbosity: int = logging.INFO,
     ):
-        super().__init__(verbosity)
+        super().__init__()
         self.config = config
         self.should_run_pretty_print = verbosity <= logging.DEBUG
         self.codegen_debug_level = _map_output_debug_level(verbosity)
@@ -682,15 +681,9 @@ class BuildSystem(BuildUtils):
 class RepositoryUpgrader(BuildUtils):
     """Upgrade the code from a specified URL."""
 
-    def __init__(
-        self,
-        repo_url: str,
-        config: BuildConfig,
-        verbosity: int = logging.INFO,
-    ):
-        super().__init__(verbosity)
+    def __init__(self, repo_url: str, config: BuildConfig):
+        super().__init__()
         self.config = config
-
         self.repo_url = repo_url
 
     def fetch_and_upgrade(self):
@@ -831,6 +824,7 @@ def main():
             verbosity = TRACE_CONCISE
         case _:
             verbosity = TRACE_VERBOSE
+    setup_logger(verbosity)
 
     user = cast(UserType, args.user)
     vm = PandaVm.resolve() if user == UserType.STS else None
@@ -838,11 +832,7 @@ def main():
 
     try:
         if args.command == "upgrade":
-            upgrader = RepositoryUpgrader(
-                args.URL,
-                config=config,
-                verbosity=verbosity,
-            )
+            upgrader = RepositoryUpgrader(args.URL, config=config)
             upgrader.fetch_and_upgrade()
         else:
             build_system = BuildSystem(
