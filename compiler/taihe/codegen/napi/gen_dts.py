@@ -1,3 +1,4 @@
+from collections.abc import Collection
 from json import dumps
 
 from taihe.codegen.ani.writer import StsWriter
@@ -22,11 +23,11 @@ from taihe.semantics.declarations import (
 )
 from taihe.semantics.types import Type
 from taihe.utils.analyses import AnalysisManager
-from taihe.utils.outputs import OutputConfig
+from taihe.utils.outputs import FileKind, OutputManager
 
 
 class DTSCodeGenerator:
-    def __init__(self, oc: OutputConfig, am: AnalysisManager):
+    def __init__(self, oc: OutputManager, am: AnalysisManager):
         self.oc = oc
         self.am = am
 
@@ -42,6 +43,7 @@ class DTSCodeGenerator:
         with StsWriter(
             self.oc,
             f"{pkg_napi_info.ts_decl}",
+            FileKind.ETS,
         ) as pkg_dts_target:
             for func in pkg.functions:
                 self.gen_func(func, pkg_dts_target)
@@ -187,7 +189,7 @@ class DTSCodeGenerator:
 
     def gen_iface_methods_decl(
         self,
-        methods: list[IfaceMethodDecl],
+        methods: Collection[IfaceMethodDecl],
         target: StsWriter,
     ):
         for method in methods:

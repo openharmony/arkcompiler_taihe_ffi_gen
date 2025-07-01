@@ -1,7 +1,5 @@
 #include "external_obj.impl.hpp"
 
-#include "ani.h"
-#include "stdexcept"
 #include "taihe/array.hpp"
 #include "taihe/runtime.hpp"
 

@@ -1,18 +1,63 @@
+from abc import ABC, abstractmethod
 from typing import TextIO
 
 from typing_extensions import override
 
-from taihe.utils.outputs import DEFAULT_INDENT, FileWriter, OutputConfig
+from taihe.utils.outputs import DEFAULT_INDENT, FileKind, FileWriter, OutputManager
+
+
+class Naming(ABC):
+    """Base class for naming conventions."""
+
+    @abstractmethod
+    def as_func(self, name: str) -> str:
+        """Convert a name to a function name."""
+
+    @abstractmethod
+    def as_field(self, name: str) -> str:
+        """Convert a name to a field name."""
+
+
+class DefaultNaming(Naming):
+    """Default naming convention that converts names to camelCase."""
+
+    @override
+    def as_func(self, name: str) -> str:
+        return name[0].lower() + name[1:]
+
+    @override
+    def as_field(self, name: str) -> str:
+        return name[0].lower() + name[1:]
+
+
+class KeepNaming(Naming):
+    """Naming convention that keeps the name unchanged."""
+
+    @override
+    def as_func(self, name: str) -> str:
+        return name
+
+    @override
+    def as_field(self, name: str) -> str:
+        # TODO: remove all `keep-name` options in tests and fix this
+        return name[0].lower() + name[1:]
 
 
 class StsWriter(FileWriter):
     """Represents a static type script (sts) file."""
 
     @override
-    def __init__(self, oc: OutputConfig, path: str, indent_unit: str = DEFAULT_INDENT):
+    def __init__(
+        self,
+        om: OutputManager,
+        relative_path: str,
+        file_kind: FileKind,
+        indent_unit: str = DEFAULT_INDENT,
+    ):
         super().__init__(
-            oc,
-            path=path,
+            om,
+            relative_path=relative_path,
+            file_kind=file_kind,
             default_indent=indent_unit,
             comment_prefix="// ",
         )
@@ -20,6 +65,7 @@ class StsWriter(FileWriter):
 
     @override
     def write_prologue(self, f: TextIO):
+        f.write("'use static'\n")
         for import_name, decl_pair in self.import_dict.items():
             module_name, decl_name = decl_pair
             if decl_name is None:

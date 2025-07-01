@@ -1,0 +1,22 @@
+interface ApplicationInfo {
+    @get GetName(): String;
+    @get GetDescription(): String;
+    @get GetDescriptionId(): i32;
+    @get GetSystemApp(): bool;
+    @get GetEnabled(): bool;
+    @get GetLabel(): String;
+    @get GetLabelId(): String;
+    @get GetIcon(): String;
+    @get GetIconId(): i32;
+    @get GetProcess(): String; 
+    @get GetSupportedModes(): i32;
+    @get GetModuleSourceDirs(): Array<String>;
+    @get GetPermissions(): Array<String>;
+    @get GetEntryDir(): String;
+    @get GetCodePath(): String;
+    @get GetRemovable(): bool;  
+    @get GetAccessTokenId(): i32;
+    @get GetUid(): i32;
+    @get GetEntityType(): String; 
+}
+function GetApplicationInfo(): ApplicationInfo;

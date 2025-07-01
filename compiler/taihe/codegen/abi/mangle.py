@@ -69,10 +69,6 @@ class DeclKind(Enum):
     GETTER = "getter"
     SETTER = "setter"
 
-    ANI_FUNC = "ANIFunc"
-    FROM_ANI = "fromANI"
-    INTO_ANI = "intoANI"
-
 
 def _encode_uleb8(value: int) -> list[int]:
     """Encodes a single integer in ULEB8 format.

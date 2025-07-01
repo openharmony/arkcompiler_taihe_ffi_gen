@@ -80,7 +80,7 @@ Taihe 遵从经典的“三阶段”编译器设计，具体地：
 3. 构造 `taihe.driver.contexts.CompilerInvocation` 实例，描述编译意图。例如，使用 `ani-bridge` 语言后端去编译 `foo.taihe` 文件到 `out/` 目录下。
 4. 创建 `taihe.driver.contexts.CompilerInstance` 实例，存储编译所依赖的主要对象，例如语言后端实例、报错信息收集器。
 5. 调用 `CompilerInstance.run()` 完成编译。该函数串接了前端、语义分析、代码生成等编译流水线。
-  - `CompilerInstance.scan()`: 扫描目录，收集待处理的 `.taihe` 源文件
+  - `CompilerInstance.collect()`: 扫描目录，收集待处理的 `.taihe` 源文件
   - `CompilerInstance.parse()`: 执行语言前端，解析 `.taihe` 源文件，并转换到 IR。
   - `CompilerInstance.validate()`: 分析语义，验证 `.taihe` 源文件的正确性。
   - `CompilerInstance.generate()`: 执行语言后端，生成目标代码。
@@ -309,7 +309,7 @@ func_abi_info = GlobFuncABIInfo.get(am, func)
 - `DiagBase`: 描述了抽象的、结构化的诊断信息：
   - 可使用 `@dataclass` 存储上下文。
   - 建议填写 `loc`：用于描述诊断信息所对应的源码位置。
-  - 需要重写 `format_msg()`：用一行简短的话描述诊断信息。
+  - 需要重写 `describe()`：用一行简短的话描述诊断信息。
   - 可选重写 `notes()`：对这条诊断信息添加笔记（见下文）。
 
 语义检查和语言后端一般不直接使用 `DiagBase`，而是使用派生出的类：

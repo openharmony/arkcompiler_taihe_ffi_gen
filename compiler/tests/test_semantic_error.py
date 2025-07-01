@@ -1,17 +1,25 @@
-import pytest
+from io import StringIO
 
-from taihe.driver.backend import BackendConfig, BackendRegistry
-from taihe.driver.contexts import CompilerInstance
-from taihe.semantics.declarations import PackageGroup
-from taihe.utils.analyses import AnalysisManager
+import pytest
+from taihe.driver.backend import BackendRegistry
+from taihe.driver.contexts import CompilerInstance, CompilerInvocation
 from taihe.utils.diagnostics import DiagBase, DiagnosticsManager
 from taihe.utils.exceptions import (
-    AdhocError,
+    AttrArgMissingError,
+    AttrArgOrderError,
+    AttrArgRedefError,
+    AttrArgTypeError,
+    AttrArgUnrequiredError,
+    AttrConflictError,
+    AttrNotExistError,
+    AttrTargetError,
     DeclarationNotInScopeError,
     DeclNotExistError,
     DeclRedefError,
     DuplicateExtendsWarn,
+    GenericArgumentsError,
     IDLSyntaxError,
+    InvalidPackageNameError,
     NotATypeError,
     PackageNotExistError,
     PackageNotInScopeError,
@@ -19,8 +27,8 @@ from taihe.utils.exceptions import (
     SymbolConflictWithNamespaceError,
     TypeUsageError,
 )
-from taihe.utils.outputs import OutputConfig
-from taihe.utils.sources import SourceBuffer, SourceManager
+from taihe.utils.sources import SourceBuffer
+from typing_extensions import override
 
 
 class SemanticTestDiagnosticsManager(DiagnosticsManager):
@@ -29,73 +37,70 @@ class SemanticTestDiagnosticsManager(DiagnosticsManager):
     def __init__(self):
         self.errors = []
 
+    @override
     def emit(self, diag: DiagBase) -> None:
         self.errors.append(diag)
 
 
 class SemanticTestCompilerInstance(CompilerInstance):
-    test_buffers: list[tuple[str, str]]
+    def __init__(self, invocation: CompilerInvocation):
+        super().__init__(invocation, dm=SemanticTestDiagnosticsManager)
 
-    def __init__(self, backends: list[BackendConfig]):
-        self.source_manager = SourceManager()
-        self.diagnostics_manager = SemanticTestDiagnosticsManager()
-        self.analysis_manager = AnalysisManager(self.diagnostics_manager)
-        self.package_group = PackageGroup()
-        self.test_buffers = []
-        self.backends = [conf.construct(self) for conf in backends]
-        self.output_config = OutputConfig()
+    def add_source(self, pkg_name: str, source: str):
+        self.source_manager.add_source(SourceBuffer(pkg_name, StringIO(source)))
 
-    def add_source(self, pkg_name, source):
-        self.test_buffers.append((pkg_name, source))
-
+    @override
     def collect(self):
-        for pkg_name, source in self.test_buffers:
-            self.source_manager.add_source(SourceBuffer(pkg_name, source))
+        pass
 
-    def generate(self):
-        for b in self.backends:
-            b.generate()
-
-    def run(self):
-        self.collect()
-        self.parse()
-        self.validate()
-        self.generate()
-        return True
-
-    def assert_has_error(self, error_type: type[DiagBase]):
-        if isinstance(self.diagnostics_manager, SemanticTestDiagnosticsManager):
-            print(self.diagnostics_manager.errors)
-            assert any(
-                isinstance(err, error_type) for err in self.diagnostics_manager.errors
-            )
+    def assert_has_error(self, ty: type[DiagBase]):
+        assert isinstance(self.diagnostics_manager, SemanticTestDiagnosticsManager)
+        if all(not isinstance(err, ty) for err in self.diagnostics_manager.errors):
+            print(f"Known: {self.diagnostics_manager.errors}")
+            pytest.fail(f"Assertion mismatch: expect {ty}")
 
 
-@pytest.fixture(scope="session")
-def backend_registry():
-    registry = BackendRegistry()
-    registry.register_all()
-    return registry
+backend_registry = BackendRegistry()
+backend_registry.register_all()
 
 
-@pytest.fixture(scope="session")
-def ani_backends(backend_registry):
-    return [
-        b()
-        for b in backend_registry.collect_required_backends(
-            ["cpp-author", "ani-bridge"]
-        )
-    ]
+#############################
+# Tests for semantic errors #
+#############################
 
 
-@pytest.fixture(scope="session")
-def pre_backends(backend_registry):
-    return [b() for b in backend_registry.collect_required_backends(["pretty-print"])]
+pre_backend_names = ["pretty-print"]
+pre_invocation = CompilerInvocation(
+    backends=[
+        b() for b in backend_registry.collect_required_backends(pre_backend_names)
+    ],
+)
 
 
-def test_package_not_exist(pre_backends):
+def test_invalid_package_name():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_backends)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
+    test_instance.add_source("package.1", "")
+    test_instance.run()
+    test_instance.assert_has_error(InvalidPackageNameError)
+
+
+def test_generic_arguments():
+    # fmt: off
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
+    test_instance.add_source(
+        "package",
+        "struct A {\n"
+        "    a: Array<>;\n"
+        "}\n"
+    )
+    test_instance.run()
+    test_instance.assert_has_error(GenericArgumentsError)
+
+
+def test_package_not_exist():
+    # fmt: off
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "use a;\n"
@@ -104,9 +109,9 @@ def test_package_not_exist(pre_backends):
     test_instance.assert_has_error(PackageNotExistError)
 
 
-def test_package_not_in_scope_1(pre_backends):
+def test_package_not_in_scope_1():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_backends)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "struct BadStruct {\n"
@@ -117,9 +122,9 @@ def test_package_not_in_scope_1(pre_backends):
     test_instance.assert_has_error(PackageNotInScopeError)
 
 
-def test_package_not_in_scope_2(pre_backends):
+def test_package_not_in_scope_2():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_backends)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "struct A {\n"
@@ -133,9 +138,9 @@ def test_package_not_in_scope_2(pre_backends):
     test_instance.assert_has_error(PackageNotInScopeError)
 
 
-def test_package_not_in_scope_3(pre_backends):
+def test_package_not_in_scope_3():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_backends)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "from package.example use B;\n"
@@ -153,9 +158,9 @@ def test_package_not_in_scope_3(pre_backends):
     test_instance.assert_has_error(PackageNotInScopeError)
 
 
-def test_decl_redef_1(pre_backends):
+def test_decl_redef_1():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_backends)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "function bad_func(a: i32, a: i32);\n"
@@ -164,9 +169,9 @@ def test_decl_redef_1(pre_backends):
     test_instance.assert_has_error(DeclRedefError)
 
 
-def test_decl_redef_2(pre_backends):
+def test_decl_redef_2():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_backends)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "from package.example1 use A;\n"
@@ -188,9 +193,9 @@ def test_decl_redef_2(pre_backends):
     test_instance.assert_has_error(DeclRedefError)
 
 
-def test_decl_redef_3(pre_backends):
+def test_decl_redef_3():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_backends)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "use package.example1 as example;\n"
@@ -202,9 +207,9 @@ def test_decl_redef_3(pre_backends):
     test_instance.assert_has_error(DeclRedefError)
 
 
-def test_decl_redef_4(pre_backends):
+def test_decl_redef_4():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_backends)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "struct BadStruct {\n"
@@ -216,18 +221,18 @@ def test_decl_redef_4(pre_backends):
     test_instance.assert_has_error(DeclRedefError)
 
 
-def test_package_redef(pre_backends):
+def test_package_redef():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_backends)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source("package", "")
     test_instance.add_source("package", "")
     test_instance.run()
     test_instance.assert_has_error(DeclRedefError)
 
 
-def test_symbol_conflict_namespace(pre_backends):
+def test_symbol_conflict_namespace():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_backends)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "use package.example1.a;\n"
@@ -243,9 +248,9 @@ def test_symbol_conflict_namespace(pre_backends):
     test_instance.assert_has_error(SymbolConflictWithNamespaceError)
 
 
-def test_decl_not_exist_1(pre_backends):
+def test_decl_not_exist_1():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_backends)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "from package.example1 use A;\n"
@@ -255,9 +260,9 @@ def test_decl_not_exist_1(pre_backends):
     test_instance.assert_has_error(DeclNotExistError)
 
 
-def test_decl_not_exist_2(pre_backends):
+def test_decl_not_exist_2():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_backends)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "use package.example1;\n"
@@ -275,9 +280,9 @@ def test_decl_not_exist_2(pre_backends):
     test_instance.assert_has_error(DeclNotExistError)
 
 
-def test_declaration_not_in_scope_1(pre_backends):
+def test_declaration_not_in_scope_1():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_backends)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "struct BadStruct {\n"
@@ -288,9 +293,9 @@ def test_declaration_not_in_scope_1(pre_backends):
     test_instance.assert_has_error(DeclarationNotInScopeError)
 
 
-def test_declaration_not_in_scope_2(pre_backends):
+def test_declaration_not_in_scope_2():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_backends)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "use package.example1 as example\n"
@@ -303,9 +308,9 @@ def test_declaration_not_in_scope_2(pre_backends):
     test_instance.assert_has_error(DeclarationNotInScopeError)
 
 
-def test_recursive_inclusion(pre_backends):
+def test_recursive_inclusion():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_backends)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "struct A {\n"
@@ -322,9 +327,9 @@ def test_recursive_inclusion(pre_backends):
     test_instance.assert_has_error(RecursiveReferenceError)
 
 
-def test_extends_type(pre_backends):
+def test_extends_type():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_backends)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "interface BadIface: i32 {}\n"
@@ -333,9 +338,9 @@ def test_extends_type(pre_backends):
     test_instance.assert_has_error(TypeUsageError)
 
 
-def test_duplicate_extends(pre_backends):
+def test_duplicate_extends():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_backends)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "interface TestIface {}\n"
@@ -345,9 +350,9 @@ def test_duplicate_extends(pre_backends):
     test_instance.assert_has_error(DuplicateExtendsWarn)
 
 
-def test_idl_syntax(pre_backends):
+def test_idl_syntax():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_backends)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "struct A {\n"
@@ -358,9 +363,9 @@ def test_idl_syntax(pre_backends):
     test_instance.assert_has_error(IDLSyntaxError)
 
 
-def test_not_a_type(pre_backends):
+def test_not_a_type():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_backends)
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
     test_instance.add_source(
         "package",
         "function good_func(a: i32): void;\n"
@@ -372,511 +377,143 @@ def test_not_a_type(pre_backends):
     test_instance.assert_has_error(NotATypeError)
 
 
-def test_namespace(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "@!namespace(0)\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
+#################################
+# Tests for ANI-specific errors #
+#################################
 
 
-def test_iface_set_1(ani_backends):
+ani_backend_names = ["cpp-author", "ani-bridge", "pretty-print"]
+ani_invocation = CompilerInvocation(
+    backends=[
+        b() for b in backend_registry.collect_required_backends(ani_backend_names)
+    ],
+)
+
+
+def test_attr_arg_order_error():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
+        '@!namespace(module="abc", "a.b")\n'
         "interface IFoo {\n"
-        "    @set SetName(): String;\n"
-        "}"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_iface_set_2(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "interface IFoo {\n"
-        "    @set Name(name: String): void;\n"
-        "}"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_set_1(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "interface IFoo {\n"
-        "    f(): String;\n"
-        "}\n"
-        "@set\n"
-        '@static("IFoo")\n'
-        "function setName(): String;\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_set_2(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "interface IFoo {\n"
-        "    f(): String;\n"
-        "}\n"
-        "@set\n"
-        '@static("IFoo")\n'
-        "function name(name: String): void;\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_iface_get_1(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "interface IFoo {\n"
-        "    @get GetName(name: String): void;\n"
-        "}"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_iface_get_2(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "interface IFoo {\n"
-        "    @get Name(): String;\n"
-        "}"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_get_1(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "interface IFoo {\n"
-        "    f(): String;\n"
-        "}\n"
-        "@get\n"
-        '@static("IFoo")\n'
-        "function getName(name: String): void;\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_get_2(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "interface IFoo {\n"
-        "    f(): String;\n"
-        "}\n"
-        "@get\n"
-        '@static("IFoo")\n'
-        "function name(): String;\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_onoff_1(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "@on_off\n"
-        "function a(): void;\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_onoff_2(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "@on_off(0)\n"
-        "function a(): void;\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_onoff_overload_1(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "@on_off\n"
-        "@overload\n"
-        "function ona(): void;\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_onoff_overload_2(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "@on_off\n"
-        '@overload("reon")\n'
-        "function ona(): void;\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_iface_onoff_1(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "interface IFoo {\n"
-        "    @on_off(0)\n"
         "    a(): void;\n"
         "}\n"
     )
     test_instance.run()
-    test_instance.assert_has_error(AdhocError)
+    test_instance.assert_has_error(AttrArgOrderError)
 
 
-def test_iface_onoff_2(ani_backends):
+def test_attr_arg_redef_error():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
+        '@!namespace(module="abc", module="def")\n'
         "interface IFoo {\n"
-        "    @on_off\n"
         "    a(): void;\n"
         "}\n"
     )
     test_instance.run()
-    test_instance.assert_has_error(AdhocError)
+    test_instance.assert_has_error(AttrArgRedefError)
 
 
-def test_iface_onoff_overload_1(ani_backends):
+def test_attr_arg_missing_error():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "interface IFoo {\n"
-        "    @on_off\n"
-        "    @overload\n"
         "    a(): void;\n"
         "}\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_iface_onoff_overload_2(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "interface IFoo {\n"
-        "    @on_off\n"
-        '    @overload("reon")\n'
-        "    a(): void;\n"
-        "}\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_iface_overload(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "interface IFoo {\n"
-        "    @overload\n"
-        "    a(): void;\n"
-        "}\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_iface_async_overload(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "interface IFoo {\n"
-        "    @gen_async\n"
-        "    @overload\n"
-        "    a(): void;\n"
-        "}\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_iface_async(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "interface IFoo {\n"
-        "    @gen_async\n"
-        "    a(): void;\n"
-        "}\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_iface_promise_overload(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "interface IFoo {\n"
-        "    @gen_promise\n"
-        "    @overload\n"
-        "    a(): void;\n"
-        "}\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_iface_promise(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "interface IFoo {\n"
-        "    @gen_promise\n"
-        "    a(): void;\n"
-        "}\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_async_overload(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "@gen_async\n"
-        "@overload\n"
-        "function a(): void;\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_async(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "@gen_async\n"
-        "function a(): void;\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_promise_overload(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "@gen_promise\n"
-        "@overload\n"
-        "function a(): void;\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_promise(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "@gen_promise\n"
-        "function a(): void;\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_overload(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "@overload\n"
-        "function a(): void;\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_ctor(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "@ctor\n"
-        "function f(): String;\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_static(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
         "@static\n"
-        "function f(): String;\n"
+        "function f(): void;\n"
     )
     test_instance.run()
-    test_instance.assert_has_error(AdhocError)
+    test_instance.assert_has_error(AttrArgMissingError)
 
 
-def test_bigint(ani_backends):
+def test_attr_arg_unrequired_error():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
-        "struct A {\n"
-        "    a: @bigint Array<f32>;\n"
+        "interface IFoo {\n"
+        "    a(): void;\n"
+        "}\n"
+        '@static("IFoo", xxx="b")\n'
+        "function f(): void;\n"
+    )
+    test_instance.run()
+    test_instance.assert_has_error(AttrArgUnrequiredError)
+
+
+def test_attr_arg_type_error():
+    # fmt: off
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
+    test_instance.add_source(
+        "package",
+        "interface IFoo {\n"
+        "    a(): void;\n"
+        "}\n"
+        "@static(123)\n"
+        "function f(): void;\n"
+    )
+    test_instance.run()
+    test_instance.assert_has_error(AttrArgTypeError)
+
+
+def test_attr_not_exist_error():
+    # fmt: off
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
+    test_instance.add_source(
+        "package",
+        "@clasz\n"
+        "interface IFoo {\n"
+        "    a(): void;\n"
         "}\n"
     )
     test_instance.run()
-    test_instance.assert_has_error(AdhocError)
+    test_instance.assert_has_error(AttrNotExistError)
 
 
-def test_typedarray(ani_backends):
+def test_attr_conflict_error_1():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
-        "struct A {\n"
-        "    a: @typedarray Array<String>;\n"
+        "interface IFoo {\n"
+        '    @get("a")\n'
+        '    @set("a")\n'
+        "    a(): void;\n"
         "}\n"
     )
     test_instance.run()
-    test_instance.assert_has_error(AdhocError)
+    test_instance.assert_has_error(AttrConflictError)
 
 
-def test_arraybuffer(ani_backends):
+def test_attr_conflict_error_2():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
-        "struct A {\n"
-        "    a: @arraybuffer Array<u64>;\n"
+        "interface IFoo {\n"
+        '    @get("a")\n'
+        '    @get("a")\n'
+        "    a(): void;\n"
         "}\n"
     )
     test_instance.run()
-    test_instance.assert_has_error(AdhocError)
+    test_instance.assert_has_error(AttrConflictError)
 
 
-def test_sts_type(ani_backends):
+def test_attr_target_error():
     # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "struct A {\n"
-        '    a: @sts_type("xxx", "yyy") Opaque;\n'
-        "}\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_struct_extend(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
+    test_instance = SemanticTestCompilerInstance(ani_invocation)
     test_instance.add_source(
         "package",
         "@class\n"
-        "struct A {\n"
-        "    @extends base: i32;\n"
-        "}\n"
+        "function a(): void;\n"
     )
     test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_const_enum(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "@const\n"
-        "enum E: i32 {\n"
-        "    A = 1,\n"
-        "    B = 2,\n"
-        "}\n"
-        "function f(a: E): void;\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_const(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "enum A: f32 {}\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_union(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "union U {\n"
-        "    a;\n"
-        "}\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
-
-
-def test_map(ani_backends):
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(ani_backends)
-    test_instance.add_source(
-        "package",
-        "function a(x: Map<String, i32>): Map<String, i32>;\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(AdhocError)
+    test_instance.assert_has_error(AttrTargetError)

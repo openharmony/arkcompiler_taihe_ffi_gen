@@ -9,8 +9,10 @@
 #include <unordered_set>
 
 #include "rgb.base.user.hpp"
+#include "rgb.show.IShape.proj.1.hpp"
 #include "rgb.show.user.hpp"
 
+#include "taihe/string.hpp"
 #include "tester.hpp"
 
 using namespace rgb::base;
@@ -149,7 +151,7 @@ void testUnion() {
 void testInterfaceCall() {
   IShowable colored_rect = makeColoredRectangle("Rect", color_yellow, 5, 5);
 
-  Tester::assert(same(weak::IColorable(colored_rect)->getColor(), color_yellow),
+  Tester::assert(weak::IColorable(colored_rect)->getColor() == color_yellow,
                  "Colored Rectangle should have color %s, got %s",
                  toString(color_yellow).c_str(),
                  toString(weak::IColorable(colored_rect)->getColor()).c_str());
@@ -157,7 +159,7 @@ void testInterfaceCall() {
   copyColor(colored_rect,
             make_holder<UserType, IColorable>("Circ", color_114514));
 
-  Tester::assert(same(weak::IColorable(colored_rect)->getColor(), color_114514),
+  Tester::assert(weak::IColorable(colored_rect)->getColor() == color_114514,
                  "Colored Rectangle should have color %s, got %s",
                  toString(color_114514).c_str(),
                  toString(weak::IColorable(colored_rect)->getColor()).c_str());
@@ -197,15 +199,15 @@ void testArray() {
                  res.size());
 
   for (size_t i = 0; i < n; i++) {
-    Tester::assert(same(src[i], y), "src[%zu] should be %s, got %s", i,
+    Tester::assert(src[i] == y, "src[%zu] should be %s, got %s", i,
                    y->getId().c_str(), src[i]->getId().c_str());
-    Tester::assert(same(dst[i], y), "dst[%zu] should be %s, got %s", i,
+    Tester::assert(dst[i] == y, "dst[%zu] should be %s, got %s", i,
                    y->getId().c_str(), dst[i]->getId().c_str());
-    Tester::assert(same(res[i], x), "res[%zu] should be %s, got %s", i,
+    Tester::assert(res[i] == x, "res[%zu] should be %s, got %s", i,
                    x->getId().c_str(), res[i]->getId().c_str());
   }
   for (size_t i = n; i < m; i++) {
-    Tester::assert(same(dst[i], x), "dst[%zu] should be %s, got %s", i,
+    Tester::assert(dst[i] == x, "dst[%zu] should be %s, got %s", i,
                    x->getId().c_str(), dst[i]->getId().c_str());
   }
 }
@@ -322,24 +324,24 @@ void testSet() {
   }
 }
 
+struct MyCallback {
+  string f;
+
+  MyCallback(string_view f) : f(f) {
+    std::cout << "Callback " << f << " made" << std::endl;
+  }
+
+  ~MyCallback() {
+    std::cout << "Callback " << f << " deleted" << std::endl;
+  }
+
+  string operator()(string_view a, string_view b) {
+    std::cout << "Callback " << f << " called" << std::endl;
+    return std::string(f) + "(" + a.c_str() + ", " + b.c_str() + ")";
+  }
+};
+
 void testCallback() {
-  struct MyCallback {
-    string f;
-
-    MyCallback(string_view f) : f(f) {
-      std::cout << "Callback " << f << " made" << std::endl;
-    }
-
-    ~MyCallback() {
-      std::cout << "Callback " << f << " deleted" << std::endl;
-    }
-
-    string operator()(string_view a, string_view b) {
-      std::cout << "Callback " << f << " called" << std::endl;
-      return std::string(f) + "(" + a.c_str() + ", " + b.c_str() + ")";
-    }
-  };
-
   auto curried = currying(
       make_holder<MyCallback, callback<string(string_view, string_view)>>("f"));
   auto f = curried("abc");
@@ -353,6 +355,124 @@ void testCallback() {
   auto expected_y = MyCallback("f")("abc", "456");
   Tester::assert(y == expected_y, "y should be %s, got %s", expected_y.c_str(),
                  y.c_str());
+}
+
+struct AutoCompareType {
+  string id;
+
+  AutoCompareType(string_view id) : id(id) {
+    std::cout << "AutoCompareType " << id << " made" << std::endl;
+  }
+
+  string getId() const {
+    return id;
+  }
+};
+
+struct UserCompareType {
+  string id;
+
+  UserCompareType(string_view id) : id(id) {
+    std::cout << "UserCompareType " << id << " made" << std::endl;
+  }
+
+  string getId() const {
+    return id;
+  }
+};
+
+template<>
+struct taihe::same_impl_t<UserCompareType> {
+  bool operator()(data_view lhs, data_view rhs) const {
+    return weak::IBase(lhs)->getId() == weak::IBase(rhs)->getId();
+  }
+};
+
+template<>
+struct taihe::hash_impl_t<UserCompareType> {
+  std::size_t operator()(data_view val) const {
+    return std::hash<std::string_view>{}(weak::IBase(val)->getId());
+  }
+};
+
+void testCompare() {
+  // AutoCompareType uses default comparison
+  map<IBase, string> auto_compare_map;
+  auto_compare_map.emplace(make_holder<AutoCompareType, IBase>("a"), "a");
+  auto_compare_map.emplace(make_holder<AutoCompareType, IBase>("b"), "b");
+  auto_compare_map.emplace(make_holder<AutoCompareType, IBase>("a"), "c");
+  std::cout << "AutoCompareMap size: " << auto_compare_map.size() << std::endl;
+  for (auto const &[key, value] : auto_compare_map) {
+    std::cout << "AutoCompareMap: " << key->getId() << " -> " << value
+              << std::endl;
+  }
+
+  // UserCompareType uses custom comparison
+  map<IBase, string> user_compare_map;
+  user_compare_map.emplace(make_holder<UserCompareType, IBase>("a"), "a");
+  user_compare_map.emplace(make_holder<UserCompareType, IBase>("b"), "b");
+  user_compare_map.emplace(make_holder<UserCompareType, IBase>("a"), "c");
+  std::cout << "UserCompareMap size: " << user_compare_map.size() << std::endl;
+  for (auto const &[key, value] : user_compare_map) {
+    std::cout << "UserCompareMap: " << key->getId() << " -> " << value
+              << std::endl;
+  }
+
+  Tester::assert(auto_compare_map.size() == 3,
+                 "AutoCompareMap should have 3 items, got %zu",
+                 auto_compare_map.size());
+  Tester::assert(user_compare_map.size() == 2,
+                 "UserCompareMap should have 2 items, got %zu",
+                 user_compare_map.size());
+}
+
+void testHashAndSame() {
+  auto a = make_holder<UserType, IBase>("a");
+  std::cout << "Hash of a: " << std::hash<IBase>()(a) << std::endl;
+  std::cout << "Comparing a with itself: " << std::boolalpha << (a == a)
+            << std::endl;
+
+  taihe::array<IBase> arr = {a, a, a};
+  std::cout << "Hash of array with three a's: "
+            << std::hash<array<IBase>>()(arr) << std::endl;
+  std::cout << "Comparing array with three a's with itself: " << std::boolalpha
+            << (arr == arr) << std::endl;
+
+  taihe::optional<IBase> opt(std::in_place, a);
+  std::cout << "Hash of optional with a: " << std::hash<optional<IBase>>()(opt)
+            << std::endl;
+  std::cout << "Comparing optional with a with itself: " << std::boolalpha
+            << (opt == opt) << std::endl;
+
+  taihe::vector<IBase> vec;
+  vec.push_back(a);
+  std::cout << "Hash of vector with a: " << std::hash<vector<IBase>>()(vec)
+            << std::endl;
+  std::cout << "Comparing vector with a with itself: " << std::boolalpha
+            << (vec == vec) << std::endl;
+
+  taihe::set<IBase> s;
+  s.emplace(a);
+  std::cout << "Hash of set with a: " << std::hash<set<IBase>>()(s)
+            << std::endl;
+  std::cout << "Comparing set with a with itself: " << std::boolalpha
+            << (s == s) << std::endl;
+
+  taihe::map<IBase, IBase> m;
+  m.emplace(a, a);
+  std::cout << "Hash of map with a: " << std::hash<map<IBase, IBase>>()(m)
+            << std::endl;
+  std::cout << "Comparing map with a with itself: " << std::boolalpha
+            << (m == m) << std::endl;
+
+  taihe::callback<string(string_view, string_view)> cb(
+      make_holder<MyCallback, callback<string(string_view, string_view)>>(
+          "cb"));
+  std::cout << "Hash of callback: "
+            << std::hash<callback<string(string_view, string_view)>>()(cb)
+            << std::endl;
+  std::cout << "Comparing callback with itself: " << std::boolalpha
+            << (cb == cb) << std::endl;
 }
 
 void testMemoryLeak() {
@@ -380,6 +500,8 @@ int main() {
   tester.run("testMap", testMap);
   tester.run("testSet", testSet);
   tester.run("testCallback", testCallback);
+  tester.run("testCompare", testCompare);
+  tester.run("testHashAndSame", testHashAndSame);
   tester.run("testMemoryLeak", testMemoryLeak);
 
   return tester.report();

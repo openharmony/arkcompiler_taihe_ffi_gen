@@ -8,12 +8,22 @@ import sys
 import tarfile
 import time
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
+from typing import cast
 
-from taihe.driver.backend import BackendConfig
-from taihe.utils.outputs import DebugLevel
+from taihe.driver.backend import BackendRegistry
+from taihe.driver.contexts import CompilerInstance, CompilerInvocation
+from taihe.utils.logging import setup_logger
+from taihe.utils.outputs import CMakeOutputConfig, DebugLevel, OutputConfig
+from taihe.utils.resources import (
+    PandaVm,
+    ResourceContext,
+    RuntimeHeader,
+    RuntimeSource,
+    StandardLibrary,
+    fetch_url,
+)
 
 # A lower value means more verbosity
 TRACE_CONCISE = logging.DEBUG - 1
@@ -25,42 +35,19 @@ class UserType(Enum):
 
     STS = "sts"
     CPP = "cpp"
-    NAPI = "napi"
-
-
-@dataclass
-class UserInfo:
-    """User information for authentication."""
-
-    username: str
-    password: str
 
 
 class BuildUtils:
     """Utility class for common operations."""
 
     def __init__(self, verbosity: int):
-        self.logger = self._setup_logger(verbosity)
-
-    def _setup_logger(self, verbosity: int) -> logging.Logger:
-        """Set up logging configuration."""
-        logger = logging.getLogger("build_system")
-        logger.setLevel(verbosity)
-
-        # Clear any existing handlers to avoid duplicate logging
-        if logger.handlers:
-            logger.handlers.clear()
-
-        handler = logging.StreamHandler()
-        formatter = logging.Formatter("%(message)s")
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-        return logger
+        setup_logger(verbosity)
+        self.logger = logging.getLogger("build_system")
 
     def run_command(
         self,
         command: Sequence[Path | str],
-        capture_output: bool = True,
+        capture_output: bool = False,
         env: Mapping[str, Path | str] | None = None,
     ) -> float:
         """Run a command with environment variables."""
@@ -114,33 +101,6 @@ class BuildUtils:
         shutil.copytree(src, dst, dirs_exist_ok=True)
         self.logger.debug("Copied directory from %s to %s", src, dst)
 
-    def download_file(
-        self,
-        target_file: Path,
-        url: str,
-        user_info: UserInfo | None = None,
-    ) -> None:
-        """Download a file from a URL."""
-        if target_file.exists():
-            self.logger.info("Already found %s, skipping download", target_file)
-            return
-
-        temp_file = target_file.with_suffix(".tmp")
-
-        command = ["curl", "-L", "--progress-bar", url, "-o", temp_file]
-
-        if user_info:
-            command.extend(["-u", f"{user_info.username}:{user_info.password}"])
-
-        self.run_command(command, capture_output=False)
-
-        if temp_file.exists():
-            temp_file.rename(target_file)
-            self.logger.info("Downloaded %s to %s", url, target_file)
-        else:
-            self.logger.error("Failed to download %s", url)
-            raise FileNotFoundError(f"Failed to download {url}")
-
     def extract_file(
         self,
         target_file: Path,
@@ -167,36 +127,15 @@ class BuildUtils:
 class BuildConfig:
     """Configuration for the build process."""
 
-    def __init__(self, for_distribution: bool = False):
+    def __init__(self, vm: PandaVm | None):
         self.cxx = os.getenv("CXX", "clang++")
         self.cc = os.getenv("CC", "clang")
-        self.panda_userinfo = UserInfo(
-            username=os.getenv("PANDA_USERNAME", "koala-pub"),
-            password=os.getenv("PANDA_PASSWORD", "y3t!n0therP"),
-        )
-        self.panda_url = "https://nexus.bz-openlab.ru:10443/repository/koala-npm/%40panda/sdk/-/sdk-1.5.0-dev.36087.tgz"
+        self._vm = vm
 
-        current_file = Path(__file__).resolve()
-        if for_distribution:
-            # Inside the distributed repository: dist/lib/taihe/compiler/taihe/cli/compiler.py
-            self.taihe_root_dir = current_file.parents[5]
-            self.runtime_include_dir = self.taihe_root_dir / "include"
-            self.runtime_src_dir = self.taihe_root_dir / "src" / "taihe" / "runtime"
-            self.panda_extract_dir = self.taihe_root_dir / "var" / "taihe" / "panda_vm"
-        else:
-            # Inside the git repository: repo/compiler/taihe/cli/run_test.py
-            self.taihe_root_dir = current_file.parents[3]
-            self.runtime_include_dir = self.taihe_root_dir / "runtime" / "include"
-            self.runtime_src_dir = self.taihe_root_dir / "runtime" / "src"
-            self.panda_extract_dir = self.taihe_root_dir / ".panda_vm"
-        self.panda_package_dir = self.panda_extract_dir / "package"
-        self.panda_ets_dir = self.panda_package_dir / "ets"
-        self.panda_tool_dir = self.panda_package_dir / "linux_host_tools"
-        self.panda_include_dir = (
-            self.panda_package_dir / "ohos_arm64/include/plugins/ets/runtime/ani"
-        )
-        self.taihe_version_file = self.taihe_root_dir / "version.txt"
-        self.panda_version_file = self.panda_package_dir / "version.txt"
+    @property
+    def vm(self) -> PandaVm:
+        assert self._vm, "not a sts build?"
+        return self._vm
 
 
 def _map_output_debug_level(verbosity: int) -> DebugLevel:
@@ -213,11 +152,9 @@ class BuildSystem(BuildUtils):
     def __init__(
         self,
         target_dir: str,
-        config: BuildConfig,
-        verbosity: int,
         user: UserType,
-        sts_keep_name: bool = False,
-        opt_level: str = "0",
+        config: BuildConfig,
+        verbosity: int = logging.INFO,
     ):
         super().__init__(verbosity)
         self.config = config
@@ -225,8 +162,6 @@ class BuildSystem(BuildUtils):
         self.codegen_debug_level = _map_output_debug_level(verbosity)
 
         self.user = user
-        self.sts_keep_name = sts_keep_name
-        self.opt_level = opt_level.strip()  # Ensure no whitespace
 
         # Build paths
         self.target_path = Path(target_dir).resolve()
@@ -246,9 +181,9 @@ class BuildSystem(BuildUtils):
         self.user_include_dir = self.user_dir / "include"
         self.user_src_dir = self.user_dir / "src"
 
-        self.runtime_includes = [self.config.runtime_include_dir]
+        self.runtime_includes = [RuntimeHeader.resolve_path()]
         if self.user == UserType.STS:
-            self.runtime_includes.append(self.config.panda_include_dir)
+            self.runtime_includes.append(config.vm.ani_header_dir)
         self.generated_includes = [*self.runtime_includes, self.generated_include_dir]
         self.author_includes = [*self.generated_includes, self.author_include_dir]
         self.user_includes = [*self.generated_includes, self.user_include_dir]
@@ -275,8 +210,6 @@ class BuildSystem(BuildUtils):
             self.create_user_ets()
         if self.user == UserType.CPP:
             self.create_user_cpp()
-        if self.user == UserType.NAPI:
-            self.create_user_ts()
 
     def create_idl(self) -> None:
         """Create a simple example IDL file."""
@@ -335,36 +268,14 @@ class BuildSystem(BuildUtils):
                 f"}}\n"
             )
 
-    def create_user_ts(self) -> None:
-        """Create a simple example user TS file."""
-        self.create_directory(self.user_dir)
-        with open(self.user_dir / "main.ts", "w") as f:
-            f.write(
-                f'import * as hello from "../generated/hello";\n'
-                f"\n"
-                f"function main() {{\n"
-                f"    hello.sayHello();\n"
-                f"}}\n"
-                f"main()\n"
-            )
-
-    def generate_and_build(self) -> None:
-        """Generate code and build the project."""
-        self.generate()
-        self.build()
-
-    def generate(self) -> None:
+    def generate(self, sts_keep_name: bool, cmake: bool) -> None:
         """Generate code from IDL files."""
         if not self.idl_dir.is_dir():
             raise FileNotFoundError(f"IDL directory not found: '{self.idl_dir}'")
 
         self.clean_directory(self.generated_dir)
 
-        # Import here to avoid module dependency issues
-        from taihe.driver.backend import BackendRegistry
-        from taihe.driver.contexts import CompilerInstance, CompilerInvocation
-
-        self.logger.info("Generating code from IDL files...")
+        self.logger.info("Generating author and ani codes...")
 
         registry = BackendRegistry()
         registry.register_all()
@@ -373,99 +284,49 @@ class BuildSystem(BuildUtils):
             backend_names.append("ani-bridge")
         if self.user == UserType.CPP:
             backend_names.append("cpp-user")
-        if self.user == UserType.NAPI:
-            backend_names.append("napi-bridge")
         if self.should_run_pretty_print:
             backend_names.append("pretty-print")
         backends = registry.collect_required_backends(backend_names)
+        resolved_backends = [b() for b in backends]
 
-        resolved_backends: list[BackendConfig] = []
-        for b in backends:
-            if b.NAME == "ani-bridge":
-                resolved_backends.append(b(keep_name=self.sts_keep_name))  # type: ignore
-            else:
-                resolved_backends.append(b())
-
-        instance = CompilerInstance(
-            CompilerInvocation(
-                src_dirs=[self.idl_dir],
-                out_dir=self.generated_dir,
-                out_debug_level=self.codegen_debug_level,
-                backends=resolved_backends,
+        if cmake:
+            output_config = CMakeOutputConfig(
+                dst_dir=Path(self.generated_dir),
+                runtime_include_dir=RuntimeHeader.resolve_path(),
+                runtime_src_dir=RuntimeSource.resolve_path(),
             )
+        else:
+            output_config = OutputConfig(
+                dst_dir=Path(self.generated_dir),
+            )
+
+        invocation = CompilerInvocation(
+            src_files=[
+                src_file
+                for src_dir in [
+                    self.idl_dir,
+                    StandardLibrary.resolve_path(),
+                ]
+                for src_file in src_dir.glob("*.taihe")
+            ],
+            output_config=output_config,
+            backends=resolved_backends,
+            sts_keep_name=sts_keep_name,
         )
 
+        instance = CompilerInstance(invocation)
         if not instance.run():
             raise RuntimeError(f"Code generation failed")
 
-    def compile_and_link_node(self) -> None:
-        for idl_path in [self.idl_dir]:
-            d = Path(idl_path)
-            for file in d.iterdir():
-                if not file.is_file() or file.suffix != ".taihe":
-                    continue
-                node_target = self.generated_dir / f"{file.stem}.node"
-                runtime_sources = [
-                    self.config.runtime_src_dir / "string.c",
-                    self.config.runtime_src_dir / "object.c",
-                ]
-                runtime_objects = self.compile(
-                    self.build_runtime_src_dir,
-                    runtime_sources,
-                    self.runtime_includes,
-                )
-                generated_objects = self.compile(
-                    self.build_generated_src_dir,
-                    self.generated_src_dir.glob("*.[cC]*"),
-                    self.generated_includes,
-                )
-                author_objects = self.compile(
-                    self.build_author_src_dir,
-                    self.author_src_dir.glob("*.[cC]*"),
-                    self.author_includes,
-                )
-
-                # Link all objects
-                if all_objects := runtime_objects + generated_objects + author_objects:
-                    self.link(
-                        node_target,
-                        all_objects,
-                        shared=True,
-                    )
-                    self.logger.info("Shared library compiled: %s", node_target)
-                else:
-                    self.logger.warning(
-                        "No object files to link, skipping shared library compilation"
-                    )
-
-    def compile_and_run_ts(self) -> None:
-
-        command_compiler = [
-            "tsc",
-            "--target",
-            "ES2020",
-            "--module",
-            "commonjs",
-            "--outDir",
-            f"{self.generated_dir}",
-            f"{self.user_dir}/main.ts",
-        ]
-        self.run_command(command_compiler)
-        command_run = ["node", f"{self.generated_dir}/main.js"]
-        self.run_command(command_run, capture_output=False)
-
-    def build(self) -> None:
+    def build(self, opt_level: str) -> None:
         """Run the complete build process."""
         self.logger.info("Starting ANI compilation...")
 
         self.setup_build_directories()
 
         if self.user == UserType.STS:
-            # Set up paths for Panda VM
-            self.prepare_panda_vm()
-
             # Compile the shared library
-            self.compile_shared_library()
+            self.compile_shared_library(opt_level=opt_level)
 
             # Compile and link ABC files
             self.compile_and_link_ani()
@@ -474,51 +335,46 @@ class BuildSystem(BuildUtils):
             self.run_ani()
         elif self.user == UserType.CPP:
             # Compile the shared library
-            self.compile_shared_library()
+            self.compile_shared_library(opt_level=opt_level)
 
             # Compile the executable
-            self.compile_and_link_exe()
+            self.compile_and_link_exe(opt_level=opt_level)
 
             # Run the executable
             self.run_exe()
-        elif self.user == UserType.NAPI:
-            # Compile the shared library
-            self.compile_and_link_node()
-
-            # Compiler and run ts file
-            self.compile_and_run_ts()
 
         self.logger.info("Build and execution completed successfully")
 
-    def compile_shared_library(self):
+    def compile_shared_library(self, opt_level: str):
         """Compile the shared library."""
         self.logger.info("Compiling shared library...")
 
+        runtime_src_dir = RuntimeSource.resolve_path()
         runtime_sources = [
-            self.config.runtime_src_dir / "string.c",
-            self.config.runtime_src_dir / "object.c",
+            runtime_src_dir / "string.cpp",
+            runtime_src_dir / "object.cpp",
         ]
         if self.user == UserType.STS:
-            runtime_sources.append(self.config.runtime_src_dir / "runtime.cpp")
+            runtime_sources.append(runtime_src_dir / "runtime.cpp")
 
         # Compile each component
         runtime_objects = self.compile(
             self.build_runtime_src_dir,
             runtime_sources,
             self.runtime_includes,
-            compile_flags=[f"-O{self.opt_level}"],
+            compile_flags=[f"-O{opt_level}"],
         )
         generated_objects = self.compile(
             self.build_generated_src_dir,
             self.generated_src_dir.glob("*.[cC]*"),
             self.generated_includes,
-            compile_flags=[f"-O{self.opt_level}"],
+            compile_flags=[f"-O{opt_level}"],
         )
         author_objects = self.compile(
             self.build_author_src_dir,
             self.author_src_dir.glob("*.[cC]*"),
             self.author_includes,
-            compile_flags=[f"-O{self.opt_level}"],
+            compile_flags=[f"-O{opt_level}"],
         )
 
         # Link all objects
@@ -534,6 +390,41 @@ class BuildSystem(BuildUtils):
             self.logger.warning(
                 "No object files to link, skipping shared library compilation"
             )
+
+    def compile_and_link_exe(self, opt_level: str) -> None:
+        """Compile and link the executable."""
+        self.logger.info("Compiling and linking executable...")
+
+        # Compile the user source files
+        user_objects = self.compile(
+            self.build_user_dir,
+            self.user_src_dir.glob("*.[cC]*"),
+            self.user_includes,
+            compile_flags=[f"-O{opt_level}"],
+        )
+
+        # Link the executable
+        if user_objects:
+            self.link(
+                self.exe_target,
+                [self.so_target, *user_objects],
+            )
+            self.logger.info("Executable compiled: %s", self.so_target)
+        else:
+            self.logger.warning(
+                "No object files to link, skipping executable compilation"
+            )
+
+    def run_exe(self) -> None:
+        """Run the compiled executable."""
+        self.logger.info("Running executable...")
+
+        elapsed_time = self.run(
+            self.exe_target,
+            self.so_target.parent,
+        )
+
+        self.logger.info("Done, time = %f s", elapsed_time)
 
     def compile_and_link_ani(self):
         """Compile and link ABC files."""
@@ -581,41 +472,6 @@ class BuildSystem(BuildUtils):
 
         self.logger.info("Done, time = %f s", elapsed_time)
 
-    def compile_and_link_exe(self):
-        """Compile and link the executable."""
-        self.logger.info("Compiling and linking executable...")
-
-        # Compile the user source files
-        user_objects = self.compile(
-            self.build_user_dir,
-            self.user_src_dir.glob("*.[cC]*"),
-            self.user_includes,
-            compile_flags=[f"-O{self.opt_level}"],
-        )
-
-        # Link the executable
-        if user_objects:
-            self.link(
-                self.exe_target,
-                [self.so_target, *user_objects],
-            )
-            self.logger.info("Executable compiled: %s", self.so_target)
-        else:
-            self.logger.warning(
-                "No object files to link, skipping executable compilation"
-            )
-
-    def run_exe(self) -> None:
-        """Run the compiled executable."""
-        self.logger.info("Running executable...")
-
-        elapsed_time = self.run(
-            self.exe_target,
-            self.so_target.parent,
-        )
-
-        self.logger.info("Done, time = %f s", elapsed_time)
-
     def setup_build_directories(self) -> None:
         """Set up necessary build directories."""
         # Clean and create directories
@@ -627,69 +483,6 @@ class BuildSystem(BuildUtils):
         self.create_directory(self.build_author_src_dir)
         self.create_directory(self.build_generated_dir)
         self.create_directory(self.build_user_dir)
-
-    def prepare_panda_vm(self):
-        """Download and extract Panda VM."""
-        self.create_directory(self.config.panda_extract_dir)
-
-        url = self.config.panda_url
-        filename = url.split("/")[-1]
-        target_file = self.config.panda_extract_dir / filename
-        version = Path(filename).stem  # Use the filename without extension as version
-
-        if not self.check_local_version(version):
-            self.clean_directory(self.config.panda_package_dir)
-            self.logger.info("Downloading panda VM version: %s", version)
-            self.download_file(target_file, url, self.config.panda_userinfo)
-            self.extract_file(target_file, self.config.panda_extract_dir)
-            self.write_local_version(version)
-            self.logger.info("Completed download and extraction.")
-
-    def check_local_version(self, version: str) -> bool:
-        """Check if the local version matches the desired version."""
-        if not self.config.panda_version_file.exists():
-            return False
-        try:
-            with open(self.config.panda_version_file) as vf:
-                local_version = vf.read().strip()
-                return local_version == version
-        except OSError as e:
-            self.logger.warning("Failed to read version file: %s", e)
-            return False
-
-    def write_local_version(self, version: str) -> None:
-        """Write the local version to the version file."""
-        try:
-            with open(self.config.panda_version_file, "w") as vf:
-                vf.write(version)
-        except OSError as e:
-            self.logger.warning("Failed to write version file: %s", e)
-
-    def create_arktsconfig(
-        self,
-        arktsconfig_file: Path,
-        app_paths: Mapping[str, Path] | None = None,
-    ) -> None:
-        """Create ArkTS configuration file."""
-        paths = {
-            "std": self.config.panda_ets_dir / "stdlib/std",
-            "escompat": self.config.panda_ets_dir / "stdlib/escompat",
-        }
-
-        if app_paths is not None:
-            paths.update(app_paths)
-
-        config_content = {
-            "compilerOptions": {
-                "baseUrl": str(self.config.panda_tool_dir),
-                "paths": {key: [str(value)] for key, value in paths.items()},
-            }
-        }
-
-        with open(arktsconfig_file, "w") as json_file:
-            json.dump(config_content, json_file, indent=2)
-
-        self.logger.debug("Created configuration file at: %s", arktsconfig_file)
 
     def compile(
         self,
@@ -717,12 +510,13 @@ class BuildSystem(BuildUtils):
                 "-c",
                 "-fvisibility=hidden",
                 "-fPIC",
+                # "-Wall",
+                # "-Wextra",
                 f"-std={std}",
                 "-o",
                 output_file,
                 input_file,
                 *compile_flags,
-                "-lexpat",  # add for xml test case
             ]
 
             for include_dir in include_dirs:
@@ -754,7 +548,6 @@ class BuildSystem(BuildUtils):
             output_file,
             *input_files,
             *link_options,
-            "-lexpat",  # add for xml test case
         ]
 
         if shared:
@@ -777,8 +570,28 @@ class BuildSystem(BuildUtils):
         return self.run_command(
             command,
             env={"LD_LIBRARY_PATH": ld_lib_path},
-            capture_output=False,
         )
+
+    def create_arktsconfig(
+        self,
+        arktsconfig_file: Path,
+        app_paths: dict[str, Path] | None = None,
+    ) -> None:
+        """Create ArkTS configuration file."""
+        vm = PandaVm.resolve()
+        paths = vm.stdlib_sources | (app_paths or {})
+
+        config_content = {
+            "compilerOptions": {
+                "baseUrl": str(vm.host_tools_dir),
+                "paths": {key: [str(value)] for key, value in paths.items()},
+            }
+        }
+
+        with open(arktsconfig_file, "w") as json_file:
+            json.dump(config_content, json_file, indent=2)
+
+        self.logger.debug("Created configuration file at: %s", arktsconfig_file)
 
     def compile_abc(
         self,
@@ -794,10 +607,8 @@ class BuildSystem(BuildUtils):
             output_file = output_dir / f"{name}.abc"
             output_dump = output_dir / f"{name}.abc.dump"
 
-            es2panda_path = self.config.panda_tool_dir / "bin/es2panda"
-
             gen_abc_command = [
-                es2panda_path,
+                self.config.vm.tool("es2panda"),
                 input_file,
                 "--output",
                 output_file,
@@ -811,7 +622,7 @@ class BuildSystem(BuildUtils):
 
             output_files.append(output_file)
 
-            ark_disasm_path = self.config.panda_tool_dir / "bin/ark_disasm"
+            ark_disasm_path = self.config.vm.tool("ark_disasm")
             if not ark_disasm_path.exists():
                 self.logger.warning(
                     "ark_disasm not found at %s, skipping disassembly", ark_disasm_path
@@ -838,10 +649,8 @@ class BuildSystem(BuildUtils):
             self.logger.warning("No input files to link")
             return
 
-        ark_link_path = self.config.panda_tool_dir / "bin/ark_link"
-
         command = [
-            ark_link_path,
+            self.config.vm.tool("ark_link"),
             "--output",
             target,
             "--",
@@ -857,9 +666,8 @@ class BuildSystem(BuildUtils):
         entry: str,
     ) -> float:
         """Run the compiled ABC file with the Ark runtime."""
-        ark_path = self.config.panda_tool_dir / "bin/ark"
-
-        etsstdlib_path = self.config.panda_ets_dir / "etsstdlib.abc"
+        ark_path = self.config.vm.tool("ark")
+        etsstdlib_path = self.config.vm.stdlib_lib
 
         command = [
             ark_path,
@@ -872,7 +680,6 @@ class BuildSystem(BuildUtils):
         return self.run_command(
             command,
             env={"LD_LIBRARY_PATH": ld_lib_path},
-            capture_output=False,
         )
 
 
@@ -894,42 +701,50 @@ class RepositoryUpgrader(BuildUtils):
         filename = self.repo_url.split("/")[-1]
         version = self.repo_url.split("/")[-2]
 
-        extract_dir = self.config.taihe_root_dir / "../tmp"
+        base_dir = ResourceContext.instance().base_dir
+        extract_dir = base_dir / "../tmp"
         target_file = extract_dir / filename
         self.create_directory(extract_dir)
-        self.download_file(target_file, self.repo_url)
+        fetch_url(self.repo_url, target_file)
         self.extract_file(target_file, extract_dir)
 
         tmp_taihe_pkg_dir = extract_dir / "taihe"
-        self.clean_directory(self.config.taihe_root_dir)
-        self.move_directory(tmp_taihe_pkg_dir, self.config.taihe_root_dir)
+        self.clean_directory(base_dir)
+        self.move_directory(tmp_taihe_pkg_dir, base_dir)
         self.clean_directory(extract_dir)
 
         self.logger.info("Successfully upgraded code to version %s", version)
 
 
-def main(config: BuildConfig | None = None):
-    """Main entry point for the script."""
+class TaiheTryitParser(argparse.ArgumentParser):
+    """Parser for the Taihe Tryit CLI."""
 
-    def add_argument_target_directory(parser: argparse.ArgumentParser) -> None:
-        parser.add_argument(
+    def register_common_configs(self) -> None:
+        self.add_argument(
+            "-v",
+            "--verbose",
+            action="count",
+            default=0,
+            help="Increase verbosity (can be used multiple times)",
+        )
+
+    def register_project_configs(self) -> None:
+        self.add_argument(
             "target_directory",
             type=str,
             help="The target directory containing source files for the project",
         )
-
-    def add_argument_user(parser: argparse.ArgumentParser) -> None:
-        parser.add_argument(
+        self.add_argument(
             "-u",
             "--user",
-            type=str,
-            choices=[user.value for user in UserType],
+            type=UserType,
+            choices=list(UserType),
             required=True,
             help="User type for the build system (ani/cpp)",
         )
 
-    def add_argument_optimization(parser: argparse.ArgumentParser) -> None:
-        parser.add_argument(
+    def register_build_configs(self) -> None:
+        self.add_argument(
             "-O",
             "--optimization",
             type=str,
@@ -939,33 +754,32 @@ def main(config: BuildConfig | None = None):
             help="Optimization level for compilation (0-3)",
         )
 
-    def add_argument_sts_keep_name(parser: argparse.ArgumentParser) -> None:
-        parser.add_argument(
+    def register_generate_configs(self) -> None:
+        self.add_argument(
             "--sts-keep-name",
             action="store_true",
             help="Keep original function and interface method names",
         )
-
-    def add_argument_verbosity(parser: argparse.ArgumentParser) -> None:
-        parser.add_argument(
-            "-v",
-            "--verbose",
-            action="count",
-            default=0,
-            help="Increase verbosity (can be used multiple times)",
+        self.add_argument(
+            "--cmake",
+            action="store_true",
+            help="Generate CMake files for the project",
         )
 
-    def add_argument_url(parser: argparse.ArgumentParser) -> None:
-        parser.add_argument(
+    def register_update_configs(self) -> None:
+        self.add_argument(
             "URL",
             type=str,
             help="The URL to fetch the code from",
         )
 
-    parser = argparse.ArgumentParser(
+
+def main():
+    parser = TaiheTryitParser(
         prog="taihe-tryit",
         description="Build and run project from a target directory",
     )
+    parser.register_common_configs()
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -973,46 +787,44 @@ def main(config: BuildConfig | None = None):
         "create",
         help="Create a simple example",
     )
-    add_argument_verbosity(parser_create)
-    add_argument_target_directory(parser_create)
-    add_argument_user(parser_create)
+    parser_create.register_common_configs()
+    parser_create.register_project_configs()
 
     parser_generate = subparsers.add_parser(
         "generate",
         help="Generate code from the target directory",
     )
-    add_argument_verbosity(parser_generate)
-    add_argument_target_directory(parser_generate)
-    add_argument_user(parser_generate)
-    add_argument_sts_keep_name(parser_generate)
+    parser_generate.register_common_configs()
+    parser_generate.register_project_configs()
+    parser_generate.register_generate_configs()
 
     parser_build = subparsers.add_parser(
         "build",
         help="Build the project from the target directory",
     )
-    add_argument_verbosity(parser_build)
-    add_argument_target_directory(parser_build)
-    add_argument_user(parser_build)
-    add_argument_optimization(parser_build)
+    parser_build.register_common_configs()
+    parser_build.register_project_configs()
+    parser_build.register_build_configs()
 
     parser_test = subparsers.add_parser(
         "test",
         help="Generate and build the project from the target directory",
     )
-    add_argument_verbosity(parser_test)
-    add_argument_target_directory(parser_test)
-    add_argument_user(parser_test)
-    add_argument_optimization(parser_test)
-    add_argument_sts_keep_name(parser_test)
+    parser_test.register_common_configs()
+    parser_test.register_project_configs()
+    parser_test.register_build_configs()
+    parser_test.register_generate_configs()
 
     parser_upgrade = subparsers.add_parser(
         "upgrade",
         help="Upgrade using the specified URL",
     )
-    add_argument_verbosity(parser_upgrade)
-    add_argument_url(parser_upgrade)
+    parser_upgrade.register_common_configs()
+    parser_upgrade.register_update_configs()
 
+    ResourceContext.register_cli_options(parser)
     args = parser.parse_args()
+    ResourceContext.initialize(args)
 
     match args.verbose:
         case 0:
@@ -1024,52 +836,36 @@ def main(config: BuildConfig | None = None):
         case _:
             verbosity = TRACE_VERBOSE
 
-    if config is None:
-        config = BuildConfig()
+    user = cast(UserType, args.user)
+    vm = PandaVm.resolve() if user == UserType.STS else None
+    config = BuildConfig(vm)
 
     try:
-        match args.command:
-            case "create":
-                BuildSystem(
-                    args.target_directory,
-                    user=UserType(args.user),
-                    config=config,
-                    verbosity=verbosity,
-                ).create()
-            case "generate":
-                BuildSystem(
-                    args.target_directory,
-                    user=UserType(args.user),
-                    config=config,
-                    verbosity=verbosity,
+        if args.command == "upgrade":
+            upgrader = RepositoryUpgrader(
+                args.URL,
+                config=config,
+                verbosity=verbosity,
+            )
+            upgrader.fetch_and_upgrade()
+        else:
+            build_system = BuildSystem(
+                args.target_directory,
+                args.user,
+                config=config,
+                verbosity=verbosity,
+            )
+            if args.command == "create":
+                build_system.create()
+            if args.command in ("generate", "test"):
+                build_system.generate(
                     sts_keep_name=args.sts_keep_name,
-                ).generate()
-            case "build":
-                BuildSystem(
-                    args.target_directory,
-                    user=UserType(args.user),
-                    config=config,
-                    verbosity=verbosity,
+                    cmake=args.cmake,
+                )
+            if args.command in ("build", "test"):
+                build_system.build(
                     opt_level=args.optimization,
-                ).build()
-            case "test":
-                BuildSystem(
-                    args.target_directory,
-                    user=UserType(args.user),
-                    config=config,
-                    verbosity=verbosity,
-                    opt_level=args.optimization,
-                    sts_keep_name=args.sts_keep_name,
-                ).generate_and_build()
-            case "upgrade":
-                RepositoryUpgrader(
-                    args.URL,
-                    config=config,
-                    verbosity=verbosity,
-                ).fetch_and_upgrade()
-            case _:
-                parser.print_help()
-                return
+                )
     except KeyboardInterrupt:
         print("\nInterrupted. Exiting build process.", file=sys.stderr)
         sys.exit(1)

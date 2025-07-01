@@ -20,10 +20,10 @@ class NapiBridgeBackendConfig(BackendConfig):
                 self._ci = ci
 
             def generate(self):
-                oc = self._ci.output_config
+                om = self._ci.output_manager
                 am = self._ci.analysis_manager
                 pg = self._ci.package_group
-                NAPICodeGenerator(oc, am).generate(pg)
-                DTSCodeGenerator(oc, am).generate(pg)
+                NAPICodeGenerator(om, am).generate(pg)
+                DTSCodeGenerator(om, am).generate(pg)
 
         return NapiBridgeBackendImpl(instance)

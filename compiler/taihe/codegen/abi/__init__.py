@@ -1,27 +1,29 @@
 from dataclasses import dataclass
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from taihe.driver.backend import Backend, BackendConfig
-from taihe.driver.contexts import CompilerInstance
+
+if TYPE_CHECKING:
+    from taihe.driver.contexts import CompilerInstance
 
 
 @dataclass
 class AbiHeaderBackendConfig(BackendConfig):
     NAME = "abi-header"
 
-    def construct(self, instance: CompilerInstance) -> Backend:
+    def construct(self, instance: "CompilerInstance") -> Backend:
         from taihe.codegen.abi.gen_abi import ABIHeadersGenerator
 
         class ABIHeaderBackendImpl(Backend):
-            def __init__(self, ci: CompilerInstance):
+            def __init__(self, ci: "CompilerInstance"):
                 super().__init__(ci)
                 self._ci = ci
 
             def generate(self):
-                oc = self._ci.output_config
+                om = self._ci.output_manager
                 am = self._ci.analysis_manager
                 pg = self._ci.package_group
-                ABIHeadersGenerator(oc, am).generate(pg)
+                ABIHeadersGenerator(om, am).generate(pg)
 
         return ABIHeaderBackendImpl(instance)
 
@@ -31,19 +33,19 @@ class AbiSourcesBackendConfig(BackendConfig):
     NAME = "abi-source"
     DEPS: ClassVar = ["abi-header"]
 
-    def construct(self, instance: CompilerInstance) -> Backend:
+    def construct(self, instance: "CompilerInstance") -> Backend:
         from taihe.codegen.abi.gen_abi import ABISourcesGenerator
 
         class ABISourcesBackendImpl(Backend):
-            def __init__(self, ci: CompilerInstance):
+            def __init__(self, ci: "CompilerInstance"):
                 super().__init__(ci)
                 self._ci = ci
 
             def generate(self):
-                oc = self._ci.output_config
+                om = self._ci.output_manager
                 am = self._ci.analysis_manager
                 pg = self._ci.package_group
-                ABISourcesGenerator(oc, am).generate(pg)
+                ABISourcesGenerator(om, am).generate(pg)
 
         return ABISourcesBackendImpl(instance)
 
@@ -53,7 +55,7 @@ class CAuthorBackendConfig(BackendConfig):
     NAME = "c-author"
     DEPS: ClassVar = ["abi-source"]
 
-    def construct(self, instance: CompilerInstance) -> Backend:
+    def construct(self, instance: "CompilerInstance") -> Backend:
         from taihe.codegen.abi.gen_impl import (
             CImplHeadersGenerator,
             CImplSourcesGenerator,
@@ -61,15 +63,15 @@ class CAuthorBackendConfig(BackendConfig):
 
         # TODO: unify CImpl{Headers,Sources}Generator
         class CImplBackendImpl(Backend):
-            def __init__(self, ci: CompilerInstance):
+            def __init__(self, ci: "CompilerInstance"):
                 super().__init__(ci)
                 self._ci = ci
 
             def generate(self):
-                oc = self._ci.output_config
+                om = self._ci.output_manager
                 am = self._ci.analysis_manager
                 pg = self._ci.package_group
-                CImplSourcesGenerator(oc, am).generate(pg)
-                CImplHeadersGenerator(oc, am).generate(pg)
+                CImplSourcesGenerator(om, am).generate(pg)
+                CImplHeadersGenerator(om, am).generate(pg)
 
         return CImplBackendImpl(instance)

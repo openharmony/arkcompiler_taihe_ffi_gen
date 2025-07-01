@@ -6,6 +6,15 @@ from typing_extensions import override
 from taihe.codegen.abi.analyses import IfaceABIInfo, StructABIInfo
 from taihe.codegen.abi.mangle import DeclKind, encode
 from taihe.codegen.abi.writer import CSourceWriter
+from taihe.codegen.ani.attributes import (
+    ArrayBufferAttr,
+    ClazzAttr,
+    CtorAttr,
+    ExtendsAttr,
+    NullAttr,
+    RecordAttr,
+    UndefinedAttr,
+)
 from taihe.codegen.ani.writer import StsWriter
 from taihe.codegen.cpp.analyses import (
     EnumCppInfo,
@@ -42,7 +51,6 @@ from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
 
 class PackageNAPIInfo(AbstractAnalysis[PackageDecl]):
     def __init__(self, am: AnalysisManager, p: PackageDecl) -> None:
-        super().__init__(am, p)
         self.am = am
         self.name = p.name
         self.scope_name = "__" + "".join(c if c.isalnum() else "_" for c in self.name)
@@ -60,7 +68,6 @@ class PackageNAPIInfo(AbstractAnalysis[PackageDecl]):
 
 class StructNAPIInfo(AbstractAnalysis[StructDecl]):
     def __init__(self, am: AnalysisManager, d: StructDecl) -> None:
-        super().__init__(am, d)
         segments = [*d.parent_pkg.segments, d.name]
         self.pkg_napi_info = PackageNAPIInfo.get(am, d.parent_pkg)
         self.from_napi_func_name = encode(segments, DeclKind.FROM_NAPI)
@@ -72,7 +79,7 @@ class StructNAPIInfo(AbstractAnalysis[StructDecl]):
         self.dts_type_name = d.name
         struct_abi_info = StructABIInfo.get(am, d)
         self.ctor_ref_name = f"ctor_ref_{struct_abi_info.mangled_name}"
-        if d.get_last_attr("class"):
+        if ClazzAttr.get(d):
             self.dts_impl_name = f"{d.name}"
         else:
             self.dts_impl_name = f"{d.name}_inner"
@@ -82,7 +89,7 @@ class StructNAPIInfo(AbstractAnalysis[StructDecl]):
         self.dts_class_parents: list[StructFieldDecl] = []
         self.dts_final_fields: list[list[StructFieldDecl]] = []
         for field in d.fields:
-            if field.get_last_attr("extends"):
+            if ExtendsAttr.get(field):
                 ty = field.ty_ref.resolved_ty
                 if not isinstance(ty, StructType):
                     raise ValueError("struct cannot extend non-struct type")
@@ -111,7 +118,6 @@ class StructNAPIInfo(AbstractAnalysis[StructDecl]):
 
 class IfaceNAPIInfo(AbstractAnalysis[IfaceDecl]):
     def __init__(self, am: AnalysisManager, d: IfaceDecl) -> None:
-        super().__init__(am, d)
         segments = [*d.parent_pkg.segments, d.name]
         self.pkg_napi_info = PackageNAPIInfo.get(am, d.parent_pkg)
         self.from_napi_func_name = encode(segments, DeclKind.FROM_NAPI)
@@ -125,7 +131,7 @@ class IfaceNAPIInfo(AbstractAnalysis[IfaceDecl]):
         self.dts_type_name = d.name
         iface_abi_info = IfaceABIInfo.get(am, d)
         self.ctor_ref_name = f"ctor_ref_{iface_abi_info.mangled_name}"
-        if d.get_last_attr("class"):
+        if ClazzAttr.get(d):
             self.dts_impl_name = f"{d.name}"
         else:
             self.dts_impl_name = f"{d.name}_inner"
@@ -156,7 +162,6 @@ class IfaceNAPIInfo(AbstractAnalysis[IfaceDecl]):
 
 class EnumNAPIInfo(AbstractAnalysis[EnumDecl]):
     def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
-        super().__init__(am, d)
         self.dts_type_name = d.name
         self.pkg_napi_info = PackageNAPIInfo.get(am, d.parent_pkg)
 
@@ -169,16 +174,14 @@ class EnumNAPIInfo(AbstractAnalysis[EnumDecl]):
 
 class GlobFuncNAPIInfo(AbstractAnalysis[GlobFuncDecl]):
     def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
-        super().__init__(am, f)
         self.ctor_class_name = None
-        if (ctor_attr := f.get_last_attr("ctor")) is not None:
-            (self.ctor_class_name,) = ctor_attr.args
+        if (ctor_attr := CtorAttr.get(f)) is not None:
+            self.ctor_class_name = ctor_attr.cls_name
         # TODO: how to process the attr
 
 
 class UnionNAPIInfo(AbstractAnalysis[UnionDecl]):
     def __init__(self, am: AnalysisManager, d: UnionDecl) -> None:
-        super().__init__(am, d)
         segments = [*d.parent_pkg.segments, d.name]
         self.pkg_napi_info = PackageNAPIInfo.get(am, d.parent_pkg)
         self.from_napi_func_name = encode(segments, DeclKind.FROM_NAPI)
@@ -208,12 +211,11 @@ class UnionFieldNAPIInfo(AbstractAnalysis[UnionFieldDecl]):
     field_ty: Type | None | Literal["null", "undefined"]
 
     def __init__(self, am: AnalysisManager, d: UnionFieldDecl) -> None:
-        super().__init__(am, d)
         if d.ty_ref is None:
-            if d.get_last_attr("null"):
+            if NullAttr.get(d):
                 self.field_ty = "null"
                 return
-            if d.get_last_attr("undefined"):
+            if UndefinedAttr.get(d):
                 self.field_ty = "undefined"
                 return
             self.field_ty = None
@@ -575,14 +577,14 @@ class CallbackTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[CallbackType])
     @override
     def dts_type_in(self, target: StsWriter) -> str:
         params_ty_dts = []
-        for index, param_ty in enumerate(self.type.params_ty):
-            param_ty_napi_info = TypeNAPIInfo.get(self.am, param_ty)
+        for index, param in enumerate(self.type.ty_ref.params):
+            param_ty_napi_info = TypeNAPIInfo.get(self.am, param.ty_ref.resolved_ty)
             params_ty_dts.append(
                 f"arg_{index}{'?' if param_ty_napi_info.is_optional else ''}: {param_ty_napi_info.dts_type_in(target)}"
             )
         params_ty_dts_str = ", ".join(params_ty_dts)
-        if return_ty := self.type.return_ty:
-            return_ty_napi_info = TypeNAPIInfo.get(self.am, return_ty)
+        if return_ty := self.type.ty_ref.return_ty_ref:
+            return_ty_napi_info = TypeNAPIInfo.get(self.am, return_ty.resolved_ty)
             return_ty_dts = return_ty_napi_info.dts_type_in(target)
         else:
             return_ty_dts = "void"
@@ -626,16 +628,16 @@ class CallbackTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[CallbackType])
             inner_cpp_params = []
             inner_napi_args = []
             inner_cpp_args = []
-            for index, param_ty in enumerate(self.type.params_ty):
+            for index, param in enumerate(self.type.ty_ref.params):
                 inner_cpp_arg = f"cpp_arg_{index}"
                 inner_napi_arg = f"napi_arg_{index}"
-                param_ty_cpp_info = TypeCppInfo.get(self.am, param_ty)
+                param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
                 inner_cpp_params.append(f"{param_ty_cpp_info.as_param} {inner_cpp_arg}")
                 inner_napi_args.append(inner_napi_arg)
                 inner_cpp_args.append(inner_cpp_arg)
             cpp_params_str = ", ".join(inner_cpp_params)
-            if return_ty := self.type.return_ty:
-                return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
+            if return_ty := self.type.ty_ref.return_ty_ref:
+                return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty.resolved_ty)
                 return_ty_as_owner = return_ty_cpp_info.as_owner
             else:
                 return_ty_as_owner = "void"
@@ -644,13 +646,18 @@ class CallbackTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[CallbackType])
                 f"}}",
             ):
                 target.writelns()
-                for inner_napi_arg, inner_cpp_arg, param_ty in zip(
-                    inner_napi_args, inner_cpp_args, self.type.params_ty, strict=True
+                for inner_napi_arg, inner_cpp_arg, param in zip(
+                    inner_napi_args,
+                    inner_cpp_args,
+                    self.type.ty_ref.params,
+                    strict=True,
                 ):
-                    param_ty_napi_info = TypeNAPIInfo.get(self.am, param_ty)
+                    param_ty_napi_info = TypeNAPIInfo.get(
+                        self.am, param.ty_ref.resolved_ty
+                    )
                     param_ty_napi_info.into_napi(target, inner_cpp_arg, inner_napi_arg)
                 inner_napi_args_str = ", ".join(inner_napi_args)
-                if return_ty := self.type.return_ty:
+                if return_ty := self.type.ty_ref.return_ty_ref:
                     inner_napi_res = "napi_result"
                     inner_cpp_res = "cpp_result"
                     target.writelns(
@@ -659,9 +666,11 @@ class CallbackTypeNAPIInfo(AbstractTypeNAPIInfo, AbstractAnalysis[CallbackType])
                         f"napi_value cb_ref = nullptr, global = nullptr;",
                         f"napi_get_reference_value(env, ref, &cb_ref);",
                         f"napi_get_global(env, &global);",
-                        f"napi_call_function(env, global, cb_ref, {len(self.type.params_ty)}, napi_argv, &{inner_napi_res});",
+                        f"napi_call_function(env, global, cb_ref, {len(self.type.ty_ref.params)}, napi_argv, &{inner_napi_res});",
                     )
-                    return_ty_napi_info = TypeNAPIInfo.get(self.am, return_ty)
+                    return_ty_napi_info = TypeNAPIInfo.get(
+                        self.am, return_ty.resolved_ty
+                    )
                     return_ty_napi_info.from_napi(target, inner_napi_res, inner_cpp_res)
                     target.writelns(
                         f"return {inner_cpp_res};",
@@ -1144,13 +1153,13 @@ class TypeNAPIInfo(TypeVisitor[AbstractTypeNAPIInfo]):
 
     @override
     def visit_array_type(self, t: ArrayType) -> AbstractTypeNAPIInfo:
-        if t.ty_ref.attrs.get("arraybuffer"):
+        if ArrayBufferAttr.get(t.ty_ref):
             return ArrayBufferTypeNAPIInfo.get(self.am, t)
         return ArrayTypeNAPIInfo.get(self.am, t)
 
     @override
     def visit_map_type(self, t: MapType) -> AbstractTypeNAPIInfo:
-        if t.ty_ref.attrs.get("record"):
+        if RecordAttr.get(t.ty_ref):
             return RecordTypeNAPIInfo.get(self.am, t)
         return MapTypeNAPIInfo.get(self.am, t)
 

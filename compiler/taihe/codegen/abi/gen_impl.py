@@ -1,6 +1,8 @@
 from taihe.codegen.abi.analyses import (
     GlobFuncABIInfo,
+    GlobFuncCImplInfo,
     PackageABIInfo,
+    PackageCImplInfo,
     TypeABIInfo,
 )
 from taihe.codegen.abi.writer import CHeaderWriter, CSourceWriter
@@ -9,26 +11,13 @@ from taihe.semantics.declarations import (
     PackageDecl,
     PackageGroup,
 )
-from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
-from taihe.utils.outputs import OutputConfig
-
-
-class PackageCImplInfo(AbstractAnalysis[PackageDecl]):
-    def __init__(self, am: AnalysisManager, p: PackageDecl) -> None:
-        super().__init__(am, p)
-        self.header = f"{p.name}.impl.h"
-        self.source = f"{p.name}.impl.c"
-
-
-class GlobFuncCImplInfo(AbstractAnalysis[GlobFuncDecl]):
-    def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
-        super().__init__(am, f)
-        self.macro = f"TH_EXPORT_C_API_{f.name}"
+from taihe.utils.analyses import AnalysisManager
+from taihe.utils.outputs import FileKind, OutputManager
 
 
 class CImplHeadersGenerator:
-    def __init__(self, oc: OutputConfig, am: AnalysisManager):
-        self.oc = oc
+    def __init__(self, om: OutputManager, am: AnalysisManager):
+        self.om = om
         self.am = am
 
     def generate(self, pg: PackageGroup):
@@ -39,8 +28,9 @@ class CImplHeadersGenerator:
         pkg_c_impl_info = PackageCImplInfo.get(self.am, pkg)
         pkg_abi_info = PackageABIInfo.get(self.am, pkg)
         with CHeaderWriter(
-            self.oc,
+            self.om,
             f"include/{pkg_c_impl_info.header}",
+            FileKind.C_HEADER,
         ) as pkg_c_impl_target:
             pkg_c_impl_target.add_include("taihe/common.h", pkg_abi_info.header)
             for func in pkg.functions:
@@ -82,8 +72,8 @@ class CImplHeadersGenerator:
 
 
 class CImplSourcesGenerator:
-    def __init__(self, oc: OutputConfig, am: AnalysisManager):
-        self.oc = oc
+    def __init__(self, om: OutputManager, am: AnalysisManager):
+        self.om = om
         self.am = am
 
     def generate(self, pg: PackageGroup):
@@ -93,8 +83,9 @@ class CImplSourcesGenerator:
     def gen_package_file(self, pkg: PackageDecl):
         pkg_c_impl_info = PackageCImplInfo.get(self.am, pkg)
         with CSourceWriter(
-            self.oc,
+            self.om,
             f"temp/{pkg_c_impl_info.source}",
+            FileKind.TEMPLATE,
         ) as pkg_c_impl_target:
             pkg_c_impl_target.add_include(pkg_c_impl_info.header)
             for func in pkg.functions:

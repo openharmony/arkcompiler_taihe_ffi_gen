@@ -32,7 +32,7 @@
 uv sync
 
 # 基于 ANTLR 文法，生成部分项目代码
-./generate-grammar
+uv run ./generate-grammar
 ```
 
 ### 后续运行时
@@ -42,5 +42,5 @@ uv sync
 ### 运行编译器主程序
 
 ```bash
-python -m taihe.cli.compiler --help
+taihec --help
 ```

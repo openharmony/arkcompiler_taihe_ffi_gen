@@ -1,0 +1,10 @@
+interface Metadata {
+    @get("name") GetName(): String;
+    @set("name") SetName(name:String);
+    @get("value") GetValue(): String;
+    @set("value") SetValue(value:String);
+    @get("resource") GetResource(): String;
+    @set("resource") SetResource(resource:String);
+    @get GetValueId(): i32;
+}
+function GetMetadata(): Metadata;
