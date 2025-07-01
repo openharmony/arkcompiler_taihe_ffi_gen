@@ -18,7 +18,6 @@ from typing import (
 
 if TYPE_CHECKING:
     from taihe.driver.contexts import CompilerInvocation
-    from taihe.utils.diagnostics import DiagnosticsManager
 
 P = ParamSpec("P")
 A = TypeVar("A", bound="AbstractAnalysis[Any]")
@@ -64,18 +63,15 @@ class CacheKey:
 class AnalysisManager:
     """Manages caching and retrieval of analysis instances."""
 
-    # TODO: maybe remove these
+    # TODO: maybe remove this
     compiler_invocation: "CompilerInvocation"
-    diagnostics_manager: "DiagnosticsManager"
 
     def __init__(
         self,
         compiler_invocation: "CompilerInvocation",
-        diagnostics_manager: "DiagnosticsManager",
     ) -> None:
         self._cache: dict[CacheKey, AbstractAnalysis[Any]] = {}
         self.compiler_invocation = compiler_invocation
-        self.diagnostics_manager = diagnostics_manager
 
     def get_or_create(self, analysis_type: type[A], *args: Any, **kwargs: Any) -> A:
         """Get existing analysis or create new one if not cached."""

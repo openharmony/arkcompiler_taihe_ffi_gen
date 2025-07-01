@@ -66,6 +66,7 @@ from taihe.semantics.types import (
     OptionalType,
     ScalarKind,
     ScalarType,
+    SetType,
     StringType,
     StructType,
     Type,
@@ -73,16 +74,6 @@ from taihe.semantics.types import (
 )
 from taihe.semantics.visitor import TypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
-from taihe.utils.exceptions import AdhocError
-from taihe.utils.sources import SourceLocation
-
-
-def raise_adhoc_error(
-    am: AnalysisManager,
-    msg: str,
-    loc: SourceLocation | None,
-):
-    am.diagnostics_manager.emit(AdhocError(msg, loc=loc))
 
 
 @dataclass(repr=False)
@@ -372,7 +363,7 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
         self.ani_func_name = None
         self.sts_func_name = None
 
-        self.on_off_type = None
+        self.on_off = None
         self.get_name = None
         self.set_name = None
 
@@ -383,10 +374,10 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
 
         if (on_off_attr := OnOffAttr.get(f)) is not None:
             if on_off_attr.type is not None:
-                self.on_off_type = on_off_attr.type
+                on_off_type = on_off_attr.type
             else:
-                self.on_off_type = naming.as_field(on_off_attr.func_suffix)
-            self.sts_func_name = on_off_attr.overload
+                on_off_type = naming.as_field(on_off_attr.func_suffix)
+            self.on_off = (on_off_attr.overload, on_off_type)
             self.ani_func_name = self.sts_func_name
         elif (get_attr := GetAttr.get(f)) is not None:
             if get_attr.member_name is not None:
@@ -451,7 +442,7 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
         self.ani_method_name = None
         self.sts_method_name = None
 
-        self.on_off_type = None
+        self.on_off = None
         self.get_name = None
         self.set_name = None
 
@@ -462,10 +453,10 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
 
         if (on_off_attr := OnOffAttr.get(f)) is not None:
             if on_off_attr.type is not None:
-                self.on_off_type = on_off_attr.type
+                on_off_type = on_off_attr.type
             else:
-                self.on_off_type = naming.as_field(on_off_attr.func_suffix)
-            self.sts_method_name = on_off_attr.overload
+                on_off_type = naming.as_field(on_off_attr.func_suffix)
+            self.on_off = (on_off_attr.overload, on_off_type)
             self.ani_method_name = self.sts_method_name
         elif (get_attr := GetAttr.get(f)) is not None:
             if get_attr.member_name is not None:
@@ -528,23 +519,7 @@ class EnumANIInfo(AbstractAnalysis[EnumDecl]):
             "L" + "/".join([*self.parent_ns.ani_path, self.sts_type_name]) + ";"
         )
 
-        self.const = ConstAttr.get(d) is not None
-
-        if (
-            not self.const
-            and isinstance(d.ty_ref.resolved_ty, ScalarType)
-            and d.ty_ref.resolved_ty.kind
-            in (
-                ScalarKind.BOOL,
-                ScalarKind.F32,
-                ScalarKind.F64,
-            )
-        ):
-            raise_adhoc_error(
-                am,
-                f"{d.description} without @const cannot have type {d.ty_ref.resolved_ty.signature}",
-                d.loc,
-            )
+        self.is_literal = ConstAttr.get(d) is not None
 
         self.is_default = ExportDefaultAttr.get(d) is not None
 
@@ -565,21 +540,14 @@ class UnionFieldANIInfo(AbstractAnalysis[UnionFieldDecl]):
     field_ty: Type | None | Literal["null", "undefined"]
 
     def __init__(self, am: AnalysisManager, d: UnionFieldDecl) -> None:
-        if d.ty_ref is None:
-            if NullAttr.get(d):
-                self.field_ty = "null"
-                return
-            if UndefinedAttr.get(d):
-                self.field_ty = "undefined"
-                return
-            raise_adhoc_error(
-                am,
-                f"union field {d.name} must have a type or have @null/@undefined attribute",
-                d.loc,
-            )
-            self.field_ty = None
-        else:
+        if d.ty_ref is not None:
             self.field_ty = d.ty_ref.resolved_ty
+        elif NullAttr.get(d):
+            self.field_ty = "null"
+        elif UndefinedAttr.get(d):
+            self.field_ty = "undefined"
+        else:
+            self.field_ty = None
 
     @classmethod
     @override
@@ -907,12 +875,6 @@ class EnumTypeANIInfo(TypeANIInfo):
         enum_ani_info = EnumANIInfo.get(self.am, self.t.ty_decl)
         self.ani_type = ANI_ENUM_ITEM
         self.type_desc = enum_ani_info.type_desc
-        if enum_ani_info.const:
-            raise_adhoc_error(
-                am,
-                f"@const {t.ty_decl.description} cannot be used as type",
-                t.ty_ref.loc,
-            )
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -950,6 +912,54 @@ class EnumTypeANIInfo(TypeANIInfo):
             f"ani_enum_item {ani_result};",
             f"{env}->Enum_GetEnumItemByIndex({ani_class}, (ani_size){cpp_value}.get_key(), &{ani_result});",
         )
+
+
+class ConstEnumTypeANIInfo(TypeANIInfo):
+    def __init__(self, am: AnalysisManager, t: EnumType, const_attr: ConstAttr):
+        super().__init__(am, t)
+        self.am = am
+        self.t = t
+        self.const_attr = const_attr
+        ty_ani_info = TypeANIInfo.get(self.am, self.t.ty_decl.ty_ref.resolved_ty)
+        self.ani_type = ty_ani_info.ani_type
+        self.type_desc = ty_ani_info.type_desc
+
+    @override
+    def sts_type_in(self, target: StsWriter) -> str:
+        ty_ani_info = TypeANIInfo.get(self.am, self.t.ty_decl.ty_ref.resolved_ty)
+        return ty_ani_info.sts_type_in(target)
+
+    @override
+    def from_ani(
+        self,
+        target: CSourceWriter,
+        env: str,
+        ani_value: str,
+        cpp_result: str,
+    ):
+        cpp_temp = f"{cpp_result}_cpp_temp"
+        ty_ani_info = TypeANIInfo.get(self.am, self.t.ty_decl.ty_ref.resolved_ty)
+        enum_cpp_info = EnumCppInfo.get(self.am, self.t.ty_decl)
+        ty_ani_info.from_ani(target, env, ani_value, cpp_temp)
+        target.writelns(
+            f"{enum_cpp_info.full_name} {cpp_result} = {enum_cpp_info.full_name}::from_value({cpp_temp});",
+        )
+
+    @override
+    def into_ani(
+        self,
+        target: CSourceWriter,
+        env: str,
+        cpp_value: str,
+        ani_result: str,
+    ):
+        cpp_temp = f"{ani_result}_cpp_temp"
+        ty_ani_info = TypeANIInfo.get(self.am, self.t.ty_decl.ty_ref.resolved_ty)
+        value_cpp_info = TypeCppInfo.get(self.am, self.t.ty_decl.ty_ref.resolved_ty)
+        target.writelns(
+            f"{value_cpp_info.as_owner} {cpp_temp} = {cpp_value}.get_value();",
+        )
+        ty_ani_info.into_ani(target, env, cpp_temp, ani_result)
 
 
 class StructTypeANIInfo(TypeANIInfo):
@@ -1737,54 +1747,6 @@ class RecordTypeANIInfo(TypeANIInfo):
             )
 
 
-class MapTypeANIInfo(TypeANIInfo):
-    def __init__(self, am: AnalysisManager, t: MapType) -> None:
-        super().__init__(am, t)
-        self.am = am
-        self.t = t
-        self.ani_type = ANI_OBJECT
-        self.type_desc = "Lescompat/Map;"
-        raise_adhoc_error(
-            am,
-            f"Map is not supported yet, "
-            f"if you want to use TS Record type, "
-            f"please use `@record Map<{self.t.key_ty.ty_ref.text}, {self.t.val_ty.ty_ref.text}>`",
-            self.t.ty_ref.loc,
-        )
-
-    @override
-    def sts_type_in(self, target: StsWriter) -> str:
-        key_ty_ani_info = TypeANIInfo.get(self.am, self.t.key_ty)
-        val_ty_ani_info = TypeANIInfo.get(self.am, self.t.val_ty)
-        key_sts_type = key_ty_ani_info.sts_type_in(target)
-        val_sts_type = val_ty_ani_info.sts_type_in(target)
-        return f"Map<{key_sts_type}, {val_sts_type}>"
-
-    @override
-    def from_ani(
-        self,
-        target: CSourceWriter,
-        env: str,
-        ani_value: str,
-        cpp_result: str,
-    ):
-        target.writelns(
-            f"{self.cpp_info.as_owner} {cpp_result};",
-        )
-
-    @override
-    def into_ani(
-        self,
-        target: CSourceWriter,
-        env: str,
-        cpp_value: str,
-        ani_result: str,
-    ):
-        target.writelns(
-            f"ani_object {ani_result} = {{}};",
-        )
-
-
 class CallbackTypeANIInfo(TypeANIInfo):
     def __init__(self, am: AnalysisManager, t: CallbackType) -> None:
         super().__init__(am, t)
@@ -1992,6 +1954,8 @@ class TypeANIInfoDispatcher(TypeVisitor[TypeANIInfo]):
 
     @override
     def visit_enum_type(self, t: EnumType) -> TypeANIInfo:
+        if const_attr := ConstAttr.get(t.ty_decl):
+            return ConstEnumTypeANIInfo(self.am, t, const_attr)
         return EnumTypeANIInfo(self.am, t)
 
     @override
@@ -2038,7 +2002,11 @@ class TypeANIInfoDispatcher(TypeVisitor[TypeANIInfo]):
     def visit_map_type(self, t: MapType) -> TypeANIInfo:
         if record_attr := RecordAttr.get(t.ty_ref):
             return RecordTypeANIInfo(self.am, t, record_attr)
-        return MapTypeANIInfo(self.am, t)
+        raise NotImplementedError("MapType is not supported in ANI yet.")
+
+    @override
+    def visit_set_type(self, t: SetType) -> TypeANIInfo:
+        raise NotImplementedError("SetType is not supported in ANI yet.")
 
     @override
     def visit_callback_type(self, t: CallbackType) -> TypeANIInfo:

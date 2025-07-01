@@ -492,7 +492,7 @@ class OnOffAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({FUNCTION_TYPE_ATTRIBUTE_GROUP})
 
     type: str | None = None
-    overload: str | None = field(kw_only=True, default=None)
+    overload: str = field(kw_only=True, default="")
     func_suffix: str = field(default="", init=False)
 
     @override

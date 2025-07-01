@@ -1,5 +1,5 @@
 from collections.abc import Collection
-from enum import Enum
+from dataclasses import dataclass
 from json import dumps
 
 from taihe.codegen.abi.analyses import (
@@ -34,10 +34,28 @@ from taihe.utils.analyses import AnalysisManager
 from taihe.utils.outputs import FileKind, OutputManager
 
 
-class FuncKind(Enum):
-    GLOBAL = "export function "
-    STATIC = "static "
-    INTERFACE = ""
+@dataclass(frozen=True)
+class FuncKind:
+    func_prefix: str
+    get_prefix: str
+    set_prefix: str
+
+
+GLOBAL_FUNC = FuncKind(
+    func_prefix="export function ",
+    get_prefix="export get ",
+    set_prefix="export set ",
+)
+STATIC_FUNC = FuncKind(
+    func_prefix="static ",
+    get_prefix="static get ",
+    set_prefix="static set ",
+)
+INTERFACE_FUNC = FuncKind(
+    func_prefix="",
+    get_prefix="get ",
+    set_prefix="set ",
+)
 
 
 class STSCodeGenerator:
@@ -93,10 +111,9 @@ class STSCodeGenerator:
             func_ani_info = GlobFuncANIInfo.get(self.am, func)
             if func_ani_info.sts_func_name is None:
                 continue
-            if func_ani_info.on_off_type is None:
+            if func_ani_info.on_off is None:
                 continue
-            func_name = func_ani_info.sts_func_name
-            type_name = func_ani_info.on_off_type
+            func_name, type_name = func_ani_info.on_off
             sts_params_ty: list[str] = []
             for sts_param in func_ani_info.sts_params:
                 ty_ani_info = TypeANIInfo.get(self.am, sts_param.ty_ref.resolved_ty)
@@ -143,10 +160,9 @@ class STSCodeGenerator:
             method_ani_info = IfaceMethodANIInfo.get(self.am, method)
             if method_ani_info.sts_method_name is None:
                 continue
-            if method_ani_info.on_off_type is None:
+            if method_ani_info.on_off is None:
                 continue
-            method_name = method_ani_info.sts_method_name
-            type_name = method_ani_info.on_off_type
+            method_name, type_name = method_ani_info.on_off
             sts_params_ty: list[str] = []
             for sts_param in method_ani_info.sts_params:
                 ty_ani_info = TypeANIInfo.get(self.am, sts_param.ty_ref.resolved_ty)
@@ -359,16 +375,14 @@ class STSCodeGenerator:
             else:
                 sts_return_ty_name = "void"
                 sts_resolved_ty_name = "undefined"
-            if (
-                sts_func_name := func_ani_info.sts_func_name
-            ) is not None and func_ani_info.on_off_type is None:
+            if (sts_func_name := func_ani_info.sts_func_name) is not None:
                 self.gen_normal_func(
                     sts_func_name,
                     sts_params,
                     sts_return_ty_name,
                     sts_native_call,
                     target,
-                    FuncKind.GLOBAL,
+                    GLOBAL_FUNC,
                 )
                 if (sts_promise_name := func_ani_info.sts_promise_name) is not None:
                     self.gen_promise_function(
@@ -378,7 +392,7 @@ class STSCodeGenerator:
                         sts_native_call,
                         sts_resolved_ty_name,
                         target,
-                        FuncKind.GLOBAL,
+                        GLOBAL_FUNC,
                     )
                 if (sts_async_name := func_ani_info.sts_async_name) is not None:
                     self.gen_async_function(
@@ -388,8 +402,26 @@ class STSCodeGenerator:
                         sts_native_call,
                         sts_resolved_ty_name,
                         target,
-                        FuncKind.GLOBAL,
+                        GLOBAL_FUNC,
                     )
+            if (get_name := func_ani_info.get_name) is not None:
+                self.gen_get_function(
+                    get_name,
+                    sts_params,
+                    sts_return_ty_name,
+                    sts_native_call,
+                    target,
+                    GLOBAL_FUNC,
+                )
+            if (set_name := func_ani_info.set_name) is not None:
+                self.gen_set_function(
+                    set_name,
+                    sts_params,
+                    sts_return_ty_name,
+                    sts_native_call,
+                    target,
+                    GLOBAL_FUNC,
+                )
 
     def gen_enum(
         self,
@@ -397,33 +429,23 @@ class STSCodeGenerator:
         target: StsWriter,
     ):
         enum_ani_info = EnumANIInfo.get(self.am, enum)
-        if enum_ani_info.const:
+        if enum_ani_info.is_literal:
             type_ani_info = TypeANIInfo.get(self.am, enum.ty_ref.resolved_ty)
             for item in enum.items:
-                if isinstance(item.value, float):
-                    target.writelns(
-                        f"export const {item.name}: {type_ani_info.sts_type_in(target)} = {dumps(item.value)}f;",
-                    )
-                else:
-                    target.writelns(
-                        f"export const {item.name}: {type_ani_info.sts_type_in(target)} = {dumps(item.value)};",
-                    )
-            return
-        sts_decl = f"enum {enum_ani_info.sts_type_name}"
-        if enum_ani_info.is_default:
-            sts_decl = f"export default {sts_decl}"
+                target.writelns(
+                    f"export const {item.name}: {type_ani_info.sts_type_in(target)} = {dumps(item.value)};",
+                )
         else:
-            sts_decl = f"export {sts_decl}"
-        with target.indented(
-            f"{sts_decl} {{",
-            f"}}",
-        ):
-            for item in enum.items:
-                if item.value is None:
-                    target.writelns(
-                        f"{item.name},",
-                    )
-                else:
+            sts_decl = f"enum {enum_ani_info.sts_type_name}"
+            if enum_ani_info.is_default:
+                sts_decl = f"export default {sts_decl}"
+            else:
+                sts_decl = f"export {sts_decl}"
+            with target.indented(
+                f"{sts_decl} {{",
+                f"}}",
+            ):
+                for item in enum.items:
                     target.writelns(
                         f"{item.name} = {dumps(item.value)},",
                     )
@@ -639,9 +661,7 @@ class STSCodeGenerator:
                 sts_return_ty_name = type_ani_info.sts_type_in(target)
             else:
                 sts_return_ty_name = "void"
-            if (
-                sts_method_name := method_ani_info.sts_method_name
-            ) is not None and method_ani_info.on_off_type is None:
+            if (sts_method_name := method_ani_info.sts_method_name) is not None:
                 self.gen_iface_normal_method(
                     sts_method_name,
                     sts_params,
@@ -937,16 +957,14 @@ class STSCodeGenerator:
             else:
                 sts_return_ty_name = "void"
                 sts_resolved_ty_name = "undefined"
-            if (
-                sts_func_name := func_ani_info.sts_func_name
-            ) is not None and func_ani_info.on_off_type is None:
+            if (sts_func_name := func_ani_info.sts_func_name) is not None:
                 self.gen_normal_func(
                     sts_func_name,
                     sts_params,
                     sts_return_ty_name,
                     sts_native_call,
                     target,
-                    FuncKind.STATIC,
+                    STATIC_FUNC,
                 )
                 if (sts_promise_name := func_ani_info.sts_promise_name) is not None:
                     self.gen_promise_function(
@@ -956,7 +974,7 @@ class STSCodeGenerator:
                         sts_native_call,
                         sts_resolved_ty_name,
                         target,
-                        FuncKind.STATIC,
+                        STATIC_FUNC,
                     )
                 if (sts_async_name := func_ani_info.sts_async_name) is not None:
                     self.gen_async_function(
@@ -966,25 +984,25 @@ class STSCodeGenerator:
                         sts_native_call,
                         sts_resolved_ty_name,
                         target,
-                        FuncKind.STATIC,
+                        STATIC_FUNC,
                     )
             if (get_name := func_ani_info.get_name) is not None:
-                self.gen_get_func(
+                self.gen_get_function(
                     get_name,
                     sts_params,
                     sts_return_ty_name,
                     sts_native_call,
                     target,
-                    FuncKind.STATIC,
+                    STATIC_FUNC,
                 )
             if (set_name := func_ani_info.set_name) is not None:
-                self.gen_set_func(
+                self.gen_set_function(
                     set_name,
                     sts_params,
                     sts_return_ty_name,
                     sts_native_call,
                     target,
-                    FuncKind.STATIC,
+                    STATIC_FUNC,
                 )
 
     def gen_native_methods(
@@ -1104,16 +1122,14 @@ class STSCodeGenerator:
             else:
                 sts_return_ty_name = "void"
                 sts_resolved_ty_name = "undefined"
-            if (
-                sts_method_name := method_ani_info.sts_method_name
-            ) is not None and method_ani_info.on_off_type is None:
+            if (sts_method_name := method_ani_info.sts_method_name) is not None:
                 self.gen_normal_func(
                     sts_method_name,
                     sts_params,
                     sts_return_ty_name,
                     sts_native_call,
                     target,
-                    FuncKind.INTERFACE,
+                    INTERFACE_FUNC,
                 )
                 if (sts_promise_name := method_ani_info.sts_promise_name) is not None:
                     self.gen_promise_function(
@@ -1123,7 +1139,7 @@ class STSCodeGenerator:
                         sts_native_call,
                         sts_resolved_ty_name,
                         target,
-                        FuncKind.INTERFACE,
+                        INTERFACE_FUNC,
                     )
                 if (sts_async_name := method_ani_info.sts_async_name) is not None:
                     self.gen_async_function(
@@ -1133,25 +1149,25 @@ class STSCodeGenerator:
                         sts_native_call,
                         sts_resolved_ty_name,
                         target,
-                        FuncKind.INTERFACE,
+                        INTERFACE_FUNC,
                     )
             if (get_name := method_ani_info.get_name) is not None:
-                self.gen_get_func(
+                self.gen_get_function(
                     get_name,
                     sts_params,
                     sts_return_ty_name,
                     sts_native_call,
                     target,
-                    FuncKind.INTERFACE,
+                    INTERFACE_FUNC,
                 )
             if (set_name := method_ani_info.set_name) is not None:
-                self.gen_set_func(
+                self.gen_set_function(
                     set_name,
                     sts_params,
                     sts_return_ty_name,
                     sts_native_call,
                     target,
-                    FuncKind.INTERFACE,
+                    INTERFACE_FUNC,
                 )
 
     def gen_iface_normal_meth(
@@ -1171,7 +1187,7 @@ class STSCodeGenerator:
                 f"return {sts_native_call};",
             )
 
-    def gen_get_func(
+    def gen_get_function(
         self,
         get_name: str,
         sts_params: Collection[str],
@@ -1182,14 +1198,14 @@ class STSCodeGenerator:
     ):
         sts_params_str = ", ".join(sts_params)
         with target.indented(
-            f"{func_kind.value}get {get_name}({sts_params_str}): {sts_return_ty_name} {{",
+            f"{func_kind.get_prefix}{get_name}({sts_params_str}): {sts_return_ty_name} {{",
             f"}}",
         ):
             target.writelns(
                 f"return {sts_native_call};",
             )
 
-    def gen_set_func(
+    def gen_set_function(
         self,
         set_name: str,
         sts_params: Collection[str],
@@ -1200,7 +1216,7 @@ class STSCodeGenerator:
     ):
         sts_params_str = ", ".join(sts_params)
         with target.indented(
-            f"{func_kind.value}set {set_name}({sts_params_str}) {{",
+            f"{func_kind.set_prefix}{set_name}({sts_params_str}) {{",
             f"}}",
         ):
             target.writelns(
@@ -1218,7 +1234,7 @@ class STSCodeGenerator:
     ):
         sts_params_str = ", ".join(sts_params)
         with target.indented(
-            f"{func_kind.value}{sts_func_name}({sts_params_str}): {sts_return_ty_name} {{",
+            f"{func_kind.func_prefix}{sts_func_name}({sts_params_str}): {sts_return_ty_name} {{",
             f"}}",
         ):
             target.writelns(
@@ -1237,7 +1253,7 @@ class STSCodeGenerator:
     ):
         sts_params_str = ", ".join(sts_params)
         with target.indented(
-            f"{func_kind.value}{sts_promise_name}({sts_params_str}): Promise<{sts_return_ty_name}> {{",
+            f"{func_kind.func_prefix}{sts_promise_name}({sts_params_str}): Promise<{sts_return_ty_name}> {{",
             f"}}",
         ):
             with target.indented(
@@ -1279,7 +1295,7 @@ class STSCodeGenerator:
         callback_param = f"callback: AsyncCallback<{sts_return_ty_name}>"
         sts_params_with_cb_str = ", ".join([*sts_params, callback_param])
         with target.indented(
-            f"{func_kind.value}{sts_async_name}({sts_params_with_cb_str}): void {{",
+            f"{func_kind.func_prefix}{sts_async_name}({sts_params_with_cb_str}): void {{",
             f"}}",
         ):
             with target.indented(

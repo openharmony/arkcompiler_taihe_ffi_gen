@@ -97,7 +97,7 @@ class CompilerInstance:
     ):
         self.invocation = invocation
         self.diagnostics_manager = dm()
-        self.analysis_manager = AnalysisManager(invocation, self.diagnostics_manager)
+        self.analysis_manager = AnalysisManager(invocation)
         self.source_manager = SourceManager()
         self.package_group = PackageGroup()
         self.output_manager = invocation.output_config.construct(self)
