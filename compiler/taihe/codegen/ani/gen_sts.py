@@ -109,8 +109,6 @@ class STSCodeGenerator:
         ] = {}
         for func in funcs:
             func_ani_info = GlobFuncANIInfo.get(self.am, func)
-            if func_ani_info.sts_func_name is None:
-                continue
             if func_ani_info.on_off is None:
                 continue
             func_name, type_name = func_ani_info.on_off
@@ -158,8 +156,6 @@ class STSCodeGenerator:
         ] = {}
         for method in methods:
             method_ani_info = IfaceMethodANIInfo.get(self.am, method)
-            if method_ani_info.sts_method_name is None:
-                continue
             if method_ani_info.on_off is None:
                 continue
             method_name, type_name = method_ani_info.on_off
