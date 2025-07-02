@@ -26,7 +26,6 @@ from taihe.semantics.types import (
     MapType,
     ScalarKind,
     ScalarType,
-    StringType,
     StructType,
 )
 from taihe.utils.diagnostics import DiagnosticsManager
@@ -165,28 +164,7 @@ class RecordAttr(TypedAttribute[TypeRefDecl]):
 
     @override
     def check_typed_context(self, parent: TypeRefDecl, dm: DiagnosticsManager) -> None:
-        if not (
-            isinstance(parent.resolved_ty, MapType)
-            and (
-                isinstance(parent.resolved_ty.key_ty, StringType)
-                or (
-                    isinstance(parent.resolved_ty.key_ty, ScalarType)
-                    and parent.resolved_ty.key_ty.kind
-                    in (
-                        ScalarKind.F32,
-                        ScalarKind.F64,
-                        ScalarKind.I8,
-                        ScalarKind.I16,
-                        ScalarKind.I32,
-                        ScalarKind.I64,
-                        ScalarKind.U8,
-                        ScalarKind.U16,
-                        ScalarKind.U32,
-                        ScalarKind.U64,
-                    )
-                )
-            )
-        ):
+        if not isinstance(parent.resolved_ty, MapType):
             dm.emit(
                 AdhocError(
                     f"Attribute '{self.NAME}' can only be attached to map types.",
