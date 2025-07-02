@@ -11,8 +11,11 @@ class NapiBridgeBackendConfig(BackendConfig):
     DEPS: ClassVar = ["cpp-user"]
 
     def construct(self, instance: CompilerInstance) -> Backend:
+        from taihe.codegen.ani.attributes import all_attr_types
         from taihe.codegen.napi.gen_dts import DTSCodeGenerator
         from taihe.codegen.napi.gen_napi import NAPICodeGenerator
+
+        instance.attribute_manager.register(*all_attr_types)
 
         class NapiBridgeBackendImpl(Backend):
             def __init__(self, ci: CompilerInstance):

@@ -1,7 +1,6 @@
 from collections.abc import Collection
 from json import dumps
 
-from taihe.codegen.ani.writer import StsWriter
 from taihe.codegen.napi.analyses import (
     EnumNAPIInfo,
     IfaceNAPIInfo,
@@ -11,6 +10,7 @@ from taihe.codegen.napi.analyses import (
     UnionFieldNAPIInfo,
     UnionNAPIInfo,
 )
+from taihe.codegen.napi.writer import DtsWriter
 from taihe.semantics.declarations import (
     EnumDecl,
     GlobFuncDecl,
@@ -40,7 +40,7 @@ class DTSCodeGenerator:
         pkg: PackageDecl,
     ):
         pkg_napi_info = PackageNAPIInfo.get(self.am, pkg)
-        with StsWriter(
+        with DtsWriter(
             self.oc,
             f"{pkg_napi_info.ts_decl}",
             FileKind.ETS,
@@ -57,7 +57,7 @@ class DTSCodeGenerator:
             for union in pkg.unions:
                 self.gen_union(union, pkg_dts_target)
 
-    def gen_func(self, func: GlobFuncDecl, pkg_dts_target: StsWriter):
+    def gen_func(self, func: GlobFuncDecl, pkg_dts_target: DtsWriter):
         args = []
         for i, param in enumerate(func.params):
             value_ty = param.ty_ref.resolved_ty
@@ -80,7 +80,7 @@ class DTSCodeGenerator:
     def gen_struct_interface(
         self,
         struct: StructDecl,
-        target: StsWriter,
+        target: DtsWriter,
     ):
         struct_napi_info = StructNAPIInfo.get(self.am, struct)
         if struct_napi_info.is_class():
@@ -111,7 +111,7 @@ class DTSCodeGenerator:
     def gen_struct_class(
         self,
         struct: StructDecl,
-        target: StsWriter,
+        target: DtsWriter,
     ):
         struct_napi_info = StructNAPIInfo.get(self.am, struct)
         if not struct_napi_info.is_class():
@@ -149,7 +149,7 @@ class DTSCodeGenerator:
     def gen_iface_interface(
         self,
         iface: IfaceDecl,
-        target: StsWriter,
+        target: DtsWriter,
     ):
         iface_napi_info = IfaceNAPIInfo.get(self.am, iface)
         if iface_napi_info.is_class():
@@ -170,7 +170,7 @@ class DTSCodeGenerator:
     def gen_iface_class(
         self,
         iface: IfaceDecl,
-        target: StsWriter,
+        target: DtsWriter,
     ):
         iface_napi_info = IfaceNAPIInfo.get(self.am, iface)
         with target.indented(
@@ -190,7 +190,7 @@ class DTSCodeGenerator:
     def gen_iface_methods_decl(
         self,
         methods: Collection[IfaceMethodDecl],
-        target: StsWriter,
+        target: DtsWriter,
     ):
         for method in methods:
             dts_params = []
@@ -212,7 +212,7 @@ class DTSCodeGenerator:
     def gen_enum(
         self,
         enum: EnumDecl,
-        target: StsWriter,
+        target: DtsWriter,
     ):
         enum_dts_info = EnumNAPIInfo.get(self.am, enum)
         with target.indented(
@@ -232,7 +232,7 @@ class DTSCodeGenerator:
     def gen_union(
         self,
         union: UnionDecl,
-        target: StsWriter,
+        target: DtsWriter,
     ):
         union_napi_info = UnionNAPIInfo.get(self.am, union)
         dts_types = []

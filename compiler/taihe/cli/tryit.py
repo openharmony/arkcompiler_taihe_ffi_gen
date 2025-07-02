@@ -35,6 +35,7 @@ class UserType(Enum):
 
     STS = "sts"
     CPP = "cpp"
+    TS = "ts"
 
 
 class BuildUtils:
@@ -210,6 +211,8 @@ class BuildSystem(BuildUtils):
             self.create_user_ets()
         if self.user == UserType.CPP:
             self.create_user_cpp()
+        if self.user == UserType.TS:
+            self.create_user_ts()
 
     def create_idl(self) -> None:
         """Create a simple example IDL file."""
@@ -268,6 +271,19 @@ class BuildSystem(BuildUtils):
                 f"}}\n"
             )
 
+    def create_user_ts(self) -> None:
+        """Create a simple example user TS file."""
+        self.create_directory(self.user_dir)
+        with open(self.user_dir / "main.ts", "w") as f:
+            f.write(
+                f'import * as hello from "../generated/hello";\n'
+                f"\n"
+                f"function main() {{\n"
+                f"    hello.sayHello();\n"
+                f"}}\n"
+                f"main()\n"
+            )
+
     def generate(self, sts_keep_name: bool, cmake: bool) -> None:
         """Generate code from IDL files."""
         if not self.idl_dir.is_dir():
@@ -284,6 +300,8 @@ class BuildSystem(BuildUtils):
             backend_names.append("ani-bridge")
         if self.user == UserType.CPP:
             backend_names.append("cpp-user")
+        if self.user == UserType.TS:
+            backend_names.append("napi-bridge")
         if self.should_run_pretty_print:
             backend_names.append("pretty-print")
         backends = registry.collect_required_backends(backend_names)
@@ -318,6 +336,62 @@ class BuildSystem(BuildUtils):
         if not instance.run():
             raise RuntimeError(f"Code generation failed")
 
+    def compile_and_link_node(self) -> None:
+        for idl_path in [self.idl_dir]:
+            d = Path(idl_path)
+            for file in d.iterdir():
+                if not file.is_file() or file.suffix != ".taihe":
+                    continue
+                node_target = self.generated_dir / f"{file.stem}.node"
+                runtime_src_dir = RuntimeSource.resolve_path()
+                runtime_sources = [
+                    runtime_src_dir / "string.cpp",
+                    runtime_src_dir / "object.cpp",
+                ]
+                runtime_objects = self.compile(
+                    self.build_runtime_src_dir,
+                    runtime_sources,
+                    self.runtime_includes,
+                )
+                generated_objects = self.compile(
+                    self.build_generated_src_dir,
+                    self.generated_src_dir.glob("*.[cC]*"),
+                    self.generated_includes,
+                )
+                author_objects = self.compile(
+                    self.build_author_src_dir,
+                    self.author_src_dir.glob("*.[cC]*"),
+                    self.author_includes,
+                )
+
+                # Link all objects
+                if all_objects := runtime_objects + generated_objects + author_objects:
+                    self.link(
+                        node_target,
+                        all_objects,
+                        shared=True,
+                    )
+                    self.logger.info("Shared library compiled: %s", node_target)
+                else:
+                    self.logger.warning(
+                        "No object files to link, skipping shared library compilation"
+                    )
+
+    def compile_and_run_ts(self) -> None:
+        command_compiler = [
+            "tsc",
+            "--target",
+            "ES2020",
+            "--module",
+            "commonjs",
+            "--outDir",
+            f"{self.generated_dir}",
+            f"{self.user_dir}/main.ts",
+        ]
+        self.run_command(command_compiler)
+        command_run = ["node", f"{self.generated_dir}/main.js"]
+        self.run_command(command_run, capture_output=False)
+
     def build(self, opt_level: str) -> None:
         """Run the complete build process."""
         self.logger.info("Starting ANI compilation...")
@@ -342,6 +416,12 @@ class BuildSystem(BuildUtils):
 
             # Run the executable
             self.run_exe()
+        elif self.user == UserType.TS:
+            # Compile the shared library
+            self.compile_and_link_node()
+
+            # Compiler and run ts file
+            self.compile_and_run_ts()
 
         self.logger.info("Build and execution completed successfully")
 

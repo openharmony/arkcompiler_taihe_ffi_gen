@@ -120,6 +120,7 @@ class BackendRegistry:
             AniBridgeBackendConfig,
             # pretty print
             PrettyPrintBackendConfig,
+            # napi
             NapiBridgeBackendConfig,
         ]
 
