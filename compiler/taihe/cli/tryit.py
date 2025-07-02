@@ -284,7 +284,7 @@ class BuildSystem(BuildUtils):
                 f"main()\n"
             )
 
-    def generate(self, sts_keep_name: bool, cmake: bool) -> None:
+    def generate(self, sts_keep_name: bool, cmake: bool, napi_header: bool) -> None:
         """Generate code from IDL files."""
         if not self.idl_dir.is_dir():
             raise FileNotFoundError(f"IDL directory not found: '{self.idl_dir}'")
@@ -326,6 +326,7 @@ class BuildSystem(BuildUtils):
             output_config=output_config,
             backends=resolved_backends,
             sts_keep_name=sts_keep_name,
+            napi_header=napi_header,
         )
 
         instance = CompilerInstance(invocation)
@@ -842,6 +843,11 @@ class TaiheTryitParser(argparse.ArgumentParser):
             action="store_true",
             help="Generate CMake files for the project",
         )
+        self.add_argument(
+            "--napi-header",
+            action="store_true",
+            help="Use ts napi header file",
+        )
 
     def register_update_configs(self) -> None:
         self.add_argument(
@@ -938,6 +944,7 @@ def main():
                 build_system.generate(
                     sts_keep_name=args.sts_keep_name,
                     cmake=args.cmake,
+                    napi_header=args.napi_header,
                 )
             if args.command in ("build", "test"):
                 build_system.build(

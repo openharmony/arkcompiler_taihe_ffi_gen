@@ -112,6 +112,8 @@ def main():
             invocation.arkts_module_prefix = v[0] if v else None
         elif k == "arkts:path-prefix":
             invocation.arkts_path_prefix = v[0] if v else None
+        elif k == "ts:napi-header":
+            invocation.napi_header = True
         else:
             raise ValueError(f"unknown codegen config {k!r}")
 

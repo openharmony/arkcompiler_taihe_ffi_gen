@@ -39,6 +39,10 @@ class NAPICodeGenerator:
     def __init__(self, oc: OutputManager, am: AnalysisManager):
         self.oc = oc
         self.am = am
+        if self.am.compiler_invocation.napi_header:
+            self.napi_header_file = "node/node_api.h"
+        else:
+            self.napi_header_file = "napi/native_api.h"
 
     def generate(self, pg: PackageGroup):
         for pkg in pg.packages:
@@ -138,7 +142,7 @@ class NAPICodeGenerator:
             f"include/{pkg_napi_info.header}",
             FileKind.CPP_HEADER,
         ) as target:
-            target.add_include("node/node_api.h")
+            target.add_include(self.napi_header_file)
             target.writelns(
                 f"#ifndef {pkg_napi_info.macro_name}",
                 f"#define {pkg_napi_info.macro_name}",
@@ -269,7 +273,7 @@ class NAPICodeGenerator:
             f"include/{struct_napi_info.decl_header}",
             FileKind.CPP_HEADER,
         ) as struct_napi_decl_target:
-            struct_napi_decl_target.add_include("node/node_api.h")
+            struct_napi_decl_target.add_include(self.napi_header_file)
             struct_napi_decl_target.add_include(struct_cpp_info.defn_header)
             struct_napi_decl_target.writelns(
                 f"{struct_cpp_info.as_owner} {struct_napi_info.from_napi_func_name}(napi_env env, napi_value napi_obj);",
@@ -517,7 +521,7 @@ class NAPICodeGenerator:
             f"include/{iface_napi_info.decl_header}",
             FileKind.CPP_HEADER,
         ) as iface_napi_decl_target:
-            iface_napi_decl_target.add_include("node/node_api.h")
+            iface_napi_decl_target.add_include(self.napi_header_file)
             iface_napi_decl_target.add_include(iface_cpp_info.defn_header)
             iface_napi_decl_target.writelns(
                 f"napi_value {iface_napi_info.constructor_func_name}(napi_env env, napi_callback_info info);",
@@ -836,7 +840,7 @@ class NAPICodeGenerator:
             f"include/{iface_napi_info.meth_decl_header}",
             FileKind.CPP_HEADER,
         ) as iface_meth_napi_decl_target:
-            iface_meth_napi_decl_target.add_include("node/node_api.h")
+            iface_meth_napi_decl_target.add_include(self.napi_header_file)
             iface_meth_napi_decl_target.add_include(iface_cpp_info.defn_header)
             for mng_name, value in iface_napi_info.iface_register_infos.items():
                 iface_meth_napi_decl_target.writelns(

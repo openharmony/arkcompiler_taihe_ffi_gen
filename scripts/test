@@ -71,7 +71,7 @@ run-napi-tests() {
     # Sort tests by modification time, newest first
     for item in $(find test/napi_* -maxdepth 0 -type d -printf "%T@ %p\n" | sort -nr | cut -d' ' -f2-); do
         echo "Testing: $item"
-        _tryit test -u ts $item
+        _tryit test -u ts $item --napi-header
     done
 }
 

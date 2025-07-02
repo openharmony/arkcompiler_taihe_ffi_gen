@@ -67,6 +67,9 @@ class CompilerInvocation:
     arkts_module_prefix: str | None = None
     arkts_path_prefix: str | None = None
 
+    # TODO: two header file
+    napi_header: bool = False
+
 
 class CompilerInstance:
     """Helper class for storing key objects.
