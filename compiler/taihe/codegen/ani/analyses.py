@@ -262,9 +262,9 @@ class Namespace:
             scope_name = "__" + "".join(c if c.isalnum() else "_" for c in self.name)
             if member_is_default:
                 decl_name = f"{scope_name}_default"
-                target.add_import_default(f"{self.name}", decl_name)
+                target.add_import_default(f"./{self.name}", decl_name)
                 return decl_name
-            target.add_import_module(f"./{self.name}", scope_name)  # TODO: Remove `./`
+            target.add_import_module(f"./{self.name}", scope_name)
         else:
             scope_name = self.parent.get_member(target, self.name, self.is_default)
         return f"{scope_name}.{sts_name}"
@@ -378,7 +378,7 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
             else:
                 on_off_type = naming.as_field(on_off_attr.func_suffix)
             self.on_off = (on_off_attr.overload, on_off_type)
-            self.ani_func_name = self.sts_func_name
+            self.ani_func_name = on_off_attr.overload
         elif (get_attr := GetAttr.get(f)) is not None:
             if get_attr.member_name is not None:
                 self.get_name = get_attr.member_name

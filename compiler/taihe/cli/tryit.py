@@ -293,11 +293,14 @@ class BuildSystem(BuildUtils):
 
         self.logger.info("Generating author and ani codes...")
 
+        idls = list(self.idl_dir.glob("*.taihe"))
+
         registry = BackendRegistry()
         registry.register_all()
         backend_names = ["cpp-author"]
         if self.user == UserType.STS:
             backend_names.append("ani-bridge")
+            idls.append(StandardLibrary.resolve_path() / "taihe.platform.ani.taihe")
         if self.user == UserType.CPP:
             backend_names.append("cpp-user")
         if self.user == UserType.TS:
@@ -319,19 +322,13 @@ class BuildSystem(BuildUtils):
             )
 
         invocation = CompilerInvocation(
-            src_files=[
-                src_file
-                for src_dir in [
-                    self.idl_dir,
-                    StandardLibrary.resolve_path(),
-                ]
-                for src_file in src_dir.glob("*.taihe")
-            ],
+            src_files=idls,
             output_config=output_config,
             backends=resolved_backends,
             sts_keep_name=sts_keep_name,
         )
 
+        instance = CompilerInstance(invocation)
         instance = CompilerInstance(invocation)
         if not instance.run():
             raise RuntimeError(f"Code generation failed")

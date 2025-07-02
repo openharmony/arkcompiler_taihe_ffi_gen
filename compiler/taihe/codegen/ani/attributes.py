@@ -501,7 +501,7 @@ class OnOffAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
         parent: GlobFuncDecl | IfaceMethodDecl,
         dm: DiagnosticsManager,
     ) -> None:
-        if self.overload is not None:
+        if self.overload:
             if self.type is None:
                 if (
                     len(parent.name) > len(self.overload)

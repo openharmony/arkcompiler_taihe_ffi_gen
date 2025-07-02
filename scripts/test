@@ -63,7 +63,7 @@ if [ $# -eq 0 ]; then
 else
     run-ani-tests $1
 fi
-# run-cmake-test
+run-cmake-test
 
 run-napi-tests() {
     echo "Running NAPI tests..."
