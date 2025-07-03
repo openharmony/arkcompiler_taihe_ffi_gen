@@ -252,7 +252,7 @@ class ANICodeGenerator:
                 self.gen_native_func(func, pkg_ani_source_target, func.name)
                 func_ani_info = GlobFuncANIInfo.get(self.am, func)
                 func_info = ANINativeFuncInfo(
-                    sts_native_name=func_ani_info.sts_native_name,
+                    sts_native_name=func_ani_info.native_name,
                     full_name=f"local::{func.name}",
                 )
                 pkg_member_infos.append(func_info)
@@ -285,7 +285,7 @@ class ANICodeGenerator:
                             )
                             method_ani_info = IfaceMethodANIInfo.get(self.am, method)
                             method_info = ANINativeFuncInfo(
-                                sts_native_name=method_ani_info.sts_native_name,
+                                sts_native_name=method_ani_info.native_name,
                                 full_name=f"local::{iface.name}::{method.name}",
                             )
                             iface_member_infos.append(method_info)
@@ -675,7 +675,7 @@ class ANICodeGenerator:
                 type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
                 iface_ani_impl_target.writelns(
                     f"{type_ani_info.ani_type} {inner_ani_res};",
-                    f'env->Object_CallMethod_{type_ani_info.ani_type.suffix}(static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "{iface_ani_info.type_desc}", "{method_ani_info.ani_method_name}", nullptr), reinterpret_cast<{type_ani_info.ani_type.base}*>(&{inner_ani_res}){inner_ani_args_trailing});',
+                    f'env->Object_CallMethod_{type_ani_info.ani_type.suffix}(static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "{iface_ani_info.type_desc}", "{method_ani_info.ani_name}", nullptr), reinterpret_cast<{type_ani_info.ani_type.base}*>(&{inner_ani_res}){inner_ani_args_trailing});',
                 )
                 type_ani_info.from_ani(
                     iface_ani_impl_target,
@@ -688,7 +688,7 @@ class ANICodeGenerator:
                 )
             else:
                 iface_ani_impl_target.writelns(
-                    f'env->Object_CallMethod_Void(static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "{iface_ani_info.type_desc}", "{method_ani_info.ani_method_name}", nullptr){inner_ani_args_trailing});',
+                    f'env->Object_CallMethod_Void(static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "{iface_ani_info.type_desc}", "{method_ani_info.ani_name}", nullptr){inner_ani_args_trailing});',
                 )
 
     def gen_iface_into_ani_func(

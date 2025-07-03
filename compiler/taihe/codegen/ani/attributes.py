@@ -33,9 +33,141 @@ from taihe.utils.exceptions import AdhocError
 
 
 @dataclass
+class NamespaceAttr(TypedAttribute[PackageDecl]):
+    NAME = "namespace"
+    TARGETS = (PackageDecl,)
+
+    module: str
+    namespace: str | None = None
+
+
+@dataclass
+class ExportDefaultAttr(TypedAttribute[TypeDecl | PackageDecl]):
+    NAME = "sts_export_default"
+    TARGETS = (TypeDecl, PackageDecl)
+
+
+@dataclass
+class StsInjectAttr(RepeatableAttribute[PackageDecl]):
+    NAME = "sts_inject"
+    TARGETS = (PackageDecl,)
+
+    sts_code: str
+
+
+@dataclass
+class StsInjectIntoModuleAttr(RepeatableAttribute[PackageDecl]):
+    NAME = "sts_inject_into_module"
+    TARGETS = (PackageDecl,)
+
+    sts_code: str
+
+
+@dataclass
+class StsInjectIntoClazzAttr(RepeatableAttribute[IfaceDecl | StructDecl]):
+    NAME = "sts_inject_into_class"
+    TARGETS = (IfaceDecl, StructDecl)
+
+    sts_code: str
+
+
+@dataclass
+class StsInjectIntoIfaceAttr(RepeatableAttribute[IfaceDecl | StructDecl]):
+    NAME = "sts_inject_into_interface"
+    TARGETS = (IfaceDecl, StructDecl)
+
+    sts_code: str
+
+
+@dataclass
 class ClazzAttr(TypedAttribute[IfaceDecl | StructDecl]):
     NAME = "class"
     TARGETS = (IfaceDecl, StructDecl)
+
+
+@dataclass
+class ConstAttr(TypedAttribute[EnumDecl]):
+    NAME = "const"
+    TARGETS = (EnumDecl,)
+
+
+@dataclass
+class ExtendsAttr(TypedAttribute[StructFieldDecl]):
+    NAME = "extends"
+    TARGETS = (StructFieldDecl,)
+
+    @override
+    def check_typed_context(
+        self,
+        parent: StructFieldDecl,
+        dm: DiagnosticsManager,
+    ) -> None:
+        if not isinstance(parent.ty_ref.resolved_ty, StructType):
+            dm.emit(
+                AdhocError(
+                    f"Attribute '{self.NAME}' can only be attached to struct fields with struct types.",
+                    loc=self.loc,
+                )
+            )
+
+        super().check_typed_context(parent, dm)
+
+
+@dataclass
+class ReadOnlyAttr(TypedAttribute[StructFieldDecl]):
+    NAME = "readonly"
+    TARGETS = (StructFieldDecl,)
+
+
+NULL_UNDEFINED_GROUP = AttributeGroupTag()
+
+
+@dataclass
+class NullAttr(TypedAttribute[UnionFieldDecl]):
+    NAME = "null"
+    TARGETS = (UnionFieldDecl,)
+    MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({NULL_UNDEFINED_GROUP})
+
+    @override
+    def check_typed_context(
+        self, parent: UnionFieldDecl, dm: DiagnosticsManager
+    ) -> None:
+        if parent.ty_ref is not None:
+            dm.emit(
+                AdhocError(
+                    f"Attribute '{self.NAME}' can only be attached to union fields without a type.",
+                    loc=self.loc,
+                )
+            )
+
+        super().check_typed_context(parent, dm)
+
+
+@dataclass
+class UndefinedAttr(TypedAttribute[UnionFieldDecl]):
+    NAME = "undefined"
+    TARGETS = (UnionFieldDecl,)
+    MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({NULL_UNDEFINED_GROUP})
+
+    @override
+    def check_typed_context(
+        self, parent: UnionFieldDecl, dm: DiagnosticsManager
+    ) -> None:
+        if parent.ty_ref is not None:
+            dm.emit(
+                AdhocError(
+                    f"Attribute '{self.NAME}' can only be attached to union fields without a type.",
+                    loc=self.loc,
+                )
+            )
+
+        super().check_typed_context(parent, dm)
+
+
+@dataclass
+class StsThizAttr(TypedAttribute[ParamDecl]):
+    NAME = "sts_this"
+    TARGETS = (ParamDecl,)
 
 
 ARRAY_ATTRIBUTE_GROUP = AttributeGroupTag()
@@ -176,129 +308,6 @@ class RecordAttr(TypedAttribute[TypeRefDecl]):
 
 
 @dataclass
-class ExtendsAttr(TypedAttribute[StructFieldDecl]):
-    NAME = "extends"
-    TARGETS = (StructFieldDecl,)
-
-    @override
-    def check_typed_context(
-        self,
-        parent: StructFieldDecl,
-        dm: DiagnosticsManager,
-    ) -> None:
-        if not isinstance(parent.ty_ref.resolved_ty, StructType):
-            dm.emit(
-                AdhocError(
-                    f"Attribute '{self.NAME}' can only be attached to struct fields with struct types.",
-                    loc=self.loc,
-                )
-            )
-
-        super().check_typed_context(parent, dm)
-
-
-@dataclass
-class ConstAttr(TypedAttribute[EnumDecl]):
-    NAME = "const"
-    TARGETS = (EnumDecl,)
-
-
-@dataclass
-class StsThizAttr(TypedAttribute[ParamDecl]):
-    NAME = "sts_this"
-    TARGETS = (ParamDecl,)
-
-
-@dataclass
-class ExportDefaultAttr(TypedAttribute[TypeDecl | PackageDecl]):
-    NAME = "sts_export_default"
-    TARGETS = (TypeDecl, PackageDecl)
-
-
-NULL_UNDEFINED_GROUP = AttributeGroupTag()
-
-
-@dataclass
-class NullAttr(TypedAttribute[UnionFieldDecl]):
-    NAME = "null"
-    TARGETS = (UnionFieldDecl,)
-    MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({NULL_UNDEFINED_GROUP})
-
-    @override
-    def check_typed_context(
-        self, parent: UnionFieldDecl, dm: DiagnosticsManager
-    ) -> None:
-        if parent.ty_ref is not None:
-            dm.emit(
-                AdhocError(
-                    f"Attribute '{self.NAME}' can only be attached to union fields without a type.",
-                    loc=self.loc,
-                )
-            )
-
-        super().check_typed_context(parent, dm)
-
-
-@dataclass
-class UndefinedAttr(TypedAttribute[UnionFieldDecl]):
-    NAME = "undefined"
-    TARGETS = (UnionFieldDecl,)
-    MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({NULL_UNDEFINED_GROUP})
-
-    @override
-    def check_typed_context(
-        self, parent: UnionFieldDecl, dm: DiagnosticsManager
-    ) -> None:
-        if parent.ty_ref is not None:
-            dm.emit(
-                AdhocError(
-                    f"Attribute '{self.NAME}' can only be attached to union fields without a type.",
-                    loc=self.loc,
-                )
-            )
-
-        super().check_typed_context(parent, dm)
-
-
-@dataclass
-class ReadOnlyAttr(TypedAttribute[StructFieldDecl]):
-    NAME = "readonly"
-    TARGETS = (StructFieldDecl,)
-
-
-@dataclass
-class StsInjectAttr(RepeatableAttribute[PackageDecl]):
-    NAME = "sts_inject"
-    TARGETS = (PackageDecl,)
-
-    sts_code: str
-
-
-@dataclass
-class StsInjectIntoModuleAttr(RepeatableAttribute[PackageDecl]):
-    NAME = "sts_inject_into_module"
-    TARGETS = (PackageDecl,)
-
-    sts_code: str
-
-
-@dataclass
-class StsInjectIntoClazzAttr(RepeatableAttribute[IfaceDecl | StructDecl]):
-    NAME = "sts_inject_into_class"
-    TARGETS = (IfaceDecl, StructDecl)
-
-    sts_code: str
-
-
-@dataclass
-class StsInjectIntoIfaceAttr(RepeatableAttribute[IfaceDecl | StructDecl]):
-    NAME = "sts_inject_into_interface"
-    TARGETS = (IfaceDecl, StructDecl)
-
-    sts_code: str
-
-
-@dataclass
 class StsTypeAttr(TypedAttribute[TypeRefDecl]):
     NAME = "sts_type"
     TARGETS = (TypeRefDecl,)
@@ -307,31 +316,9 @@ class StsTypeAttr(TypedAttribute[TypeRefDecl]):
 
 
 @dataclass
-class StaticAttr(TypedAttribute[GlobFuncDecl]):
-    NAME = "static"
-    TARGETS = (GlobFuncDecl,)
-
-    cls_name: str
-
-
-@dataclass
-class CtorAttr(TypedAttribute[GlobFuncDecl]):
-    NAME = "ctor"
-    TARGETS = (GlobFuncDecl,)
-
-    cls_name: str
-
-
-@dataclass
-class OverloadAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
-    NAME = "overload"
-    TARGETS = (GlobFuncDecl, IfaceMethodDecl)
-
-    func_name: str
-
-
-@dataclass
 class GenAsyncAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
+    """Deprecated!"""
+
     NAME = "gen_async"
     TARGETS = (GlobFuncDecl, IfaceMethodDecl)
 
@@ -360,6 +347,8 @@ class GenAsyncAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
 
 @dataclass
 class GenPromiseAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
+    """Deprecated!"""
+
     NAME = "gen_promise"
     TARGETS = (GlobFuncDecl, IfaceMethodDecl)
 
@@ -467,7 +456,6 @@ class SetAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
 class OnOffAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     NAME = "on_off"
     TARGETS = (GlobFuncDecl, IfaceMethodDecl)
-    MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({FUNCTION_TYPE_ATTRIBUTE_GROUP})
 
     type: str | None = None
     overload: str = field(kw_only=True, default="")
@@ -514,40 +502,98 @@ class OnOffAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
 
 
 @dataclass
-class NamespaceAttr(TypedAttribute[PackageDecl]):
-    NAME = "namespace"
-    TARGETS = (PackageDecl,)
+class OldOverloadAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
+    """Deprecated!"""
 
-    module: str
-    namespace: str | None = None
+    NAME = "overload"
+    TARGETS = (GlobFuncDecl, IfaceMethodDecl)
+
+    func_name: str
+
+
+@dataclass
+class StaticAttr(TypedAttribute[GlobFuncDecl]):
+    NAME = "static"
+    TARGETS = (GlobFuncDecl,)
+
+    cls_name: str
+
+
+@dataclass
+class OldCtorAttr(TypedAttribute[GlobFuncDecl]):
+    """Deprecated!"""
+
+    NAME = "ctor"
+    TARGETS = (GlobFuncDecl,)
+
+    cls_name: str
+
+
+class NewOverloadAttribute(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
+    NAME = "static_overload"
+    TARGETS = (GlobFuncDecl, IfaceMethodDecl)
+
+    name: str = ""
+
+
+class RenameAttribute(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
+    NAME = "rename"
+    TARGETS = (GlobFuncDecl, IfaceMethodDecl)
+
+    name: str = ""
+
+
+class AsyncAttribute(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
+    NAME = "async"
+    TARGETS = (GlobFuncDecl, IfaceMethodDecl)
+    MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({FUNCTION_TYPE_ATTRIBUTE_GROUP})
+
+
+class PromiseAttribute(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
+    NAME = "promise"
+    TARGETS = (GlobFuncDecl, IfaceMethodDecl)
+    MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({FUNCTION_TYPE_ATTRIBUTE_GROUP})
+
+
+class NewCtorAttribute(TypedAttribute[GlobFuncDecl]):
+    NAME = "constructor"
+    TARGETS = (GlobFuncDecl,)
+
+    cls_name: str
 
 
 all_attr_types: list[CheckedAttrT] = [
+    NamespaceAttr,
+    ExportDefaultAttr,
+    StsInjectAttr,
+    StsInjectIntoModuleAttr,
+    StsInjectIntoClazzAttr,
+    StsInjectIntoIfaceAttr,
     ClazzAttr,
+    ConstAttr,
+    ExtendsAttr,
+    ReadOnlyAttr,
+    NullAttr,
+    UndefinedAttr,
+    StsThizAttr,
     BigIntAttr,
     ArrayBufferAttr,
     TypedArrayAttr,
     FixedArrayAttr,
-    ExtendsAttr,
     RecordAttr,
-    StaticAttr,
-    ConstAttr,
-    StsThizAttr,
-    NullAttr,
-    UndefinedAttr,
-    ReadOnlyAttr,
-    CtorAttr,
+    StsTypeAttr,
     GenAsyncAttr,
     GenPromiseAttr,
-    OverloadAttr,
-    ExportDefaultAttr,
-    StsInjectAttr,
-    StsInjectIntoClazzAttr,
-    StsInjectIntoIfaceAttr,
-    StsInjectIntoModuleAttr,
-    StsTypeAttr,
     GetAttr,
     SetAttr,
     OnOffAttr,
-    NamespaceAttr,
+    OldOverloadAttr,
+    StaticAttr,
+    OldCtorAttr,
+    # New overload related attributes
+    NewOverloadAttribute,
+    RenameAttribute,
+    AsyncAttribute,
+    PromiseAttribute,
+    NewCtorAttribute,
 ]

@@ -7,10 +7,10 @@ from typing_extensions import override
 from taihe.codegen.abi.writer import CSourceWriter
 from taihe.codegen.ani.attributes import (
     ArrayBufferAttr,
+    AsyncAttribute,
     BigIntAttr,
     ClazzAttr,
     ConstAttr,
-    CtorAttr,
     ExportDefaultAttr,
     ExtendsAttr,
     FixedArrayAttr,
@@ -18,11 +18,16 @@ from taihe.codegen.ani.attributes import (
     GenPromiseAttr,
     GetAttr,
     NamespaceAttr,
+    NewCtorAttribute,
+    NewOverloadAttribute,
     NullAttr,
+    OldCtorAttr,
+    OldOverloadAttr,
     OnOffAttr,
-    OverloadAttr,
+    PromiseAttribute,
     ReadOnlyAttr,
     RecordAttr,
+    RenameAttribute,
     SetAttr,
     StaticAttr,
     StsInjectAttr,
@@ -350,27 +355,78 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
         self.am = am
         self.f = f
 
-        self.sts_native_name = f"{f.name}_inner"
-
-        self.sts_static_scope = None
-        self.sts_ctor_scope = None
-
-        if (ctor_attr := CtorAttr.get(f)) is not None:
-            self.sts_ctor_scope = ctor_attr.cls_name
-        elif (static_attr := StaticAttr.get(f)) is not None:
-            self.sts_static_scope = static_attr.cls_name
-
-        self.ani_func_name = None
-        self.sts_func_name = None
-
-        self.on_off = None
-        self.get_name = None
-        self.set_name = None
-
-        self.sts_async_name = None
-        self.sts_promise_name = None
+        self.native_name = f"{f.name}_inner"
 
         naming = PackageANIInfo.get(am, f.parent_pkg).naming
+
+        if (rename_attr := RenameAttribute.get(f)) is not None:
+            func_name = rename_attr.name
+        elif (rename_attr := OldOverloadAttr.get(f)) is not None:
+            func_name = rename_attr.func_name
+        else:
+            func_name = naming.as_func(f.name)
+
+        self.static_scope = None
+        self.ctor_scope = None
+
+        if (old_ctor_attr := OldCtorAttr.get(f)) is not None:
+            self.ctor_scope = old_ctor_attr.cls_name
+            func_name = ""
+        elif (ctor_attr := NewCtorAttribute.get(f)) is not None:
+            self.ctor_scope = ctor_attr.cls_name
+        elif (static_attr := StaticAttr.get(f)) is not None:
+            self.static_scope = static_attr.cls_name
+
+        self.ani_name = None
+
+        self.get_name = None
+        self.set_name = None
+        self.promise_name = None
+        self.async_name = None
+        self.norm_name = None
+
+        self.gen_async_name = None
+        self.gen_promise_name = None
+
+        self.overload = None
+        self.on_off = None
+
+        if (get_attr := GetAttr.get(f)) is not None:
+            if get_attr.member_name is not None:
+                get_name = get_attr.member_name
+            else:
+                get_name = naming.as_field(get_attr.func_suffix)
+            self.get_name = get_name
+            self.ani_name = f"<get>{get_name}"
+        elif (set_attr := SetAttr.get(f)) is not None:
+            if set_attr.member_name is not None:
+                set_name = set_attr.member_name
+            else:
+                set_name = naming.as_field(set_attr.func_suffix)
+            self.set_name = set_name
+            self.ani_name = f"<set>{set_name}"
+        elif PromiseAttribute.get(f) is not None:
+            self.promise_name = func_name
+            self.ani_name = func_name
+        elif AsyncAttribute.get(f) is not None:
+            self.async_name = func_name
+            self.ani_name = func_name
+        else:
+            self.norm_name = func_name
+            self.ani_name = func_name
+            if (gen_async_attr := GenAsyncAttr.get(f)) is not None:
+                if gen_async_attr.func_name is not None:
+                    self.gen_async_name = gen_async_attr.func_name
+                else:
+                    self.gen_async_name = naming.as_func(gen_async_attr.func_prefix)
+            if (gen_promise_attr := GenPromiseAttr.get(f)) is not None:
+                if gen_promise_attr.func_name is not None:
+                    self.gen_promise_name = gen_promise_attr.func_name
+                else:
+                    self.gen_promise_name = naming.as_func(gen_promise_attr.func_prefix)
+
+        if (overload_attr := NewOverloadAttribute.get(f)) is not None:
+            self.overload = overload_attr.name
 
         if (on_off_attr := OnOffAttr.get(f)) is not None:
             if on_off_attr.type is not None:
@@ -378,36 +434,6 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
             else:
                 on_off_type = naming.as_field(on_off_attr.func_suffix)
             self.on_off = (on_off_attr.overload, on_off_type)
-            self.ani_func_name = on_off_attr.overload
-        elif (get_attr := GetAttr.get(f)) is not None:
-            if get_attr.member_name is not None:
-                self.get_name = get_attr.member_name
-            else:
-                self.get_name = naming.as_field(get_attr.func_suffix)
-            self.ani_func_name = f"<get>{self.get_name}"
-        elif (set_attr := SetAttr.get(f)) is not None:
-            if set_attr.member_name is not None:
-                self.set_name = set_attr.member_name
-            else:
-                self.set_name = naming.as_field(set_attr.func_suffix)
-            self.ani_func_name = f"<set>{self.set_name}"
-        else:
-            if (overload_attr := OverloadAttr.get(f)) is not None:
-                self.sts_func_name = overload_attr.func_name
-            else:
-                self.sts_func_name = naming.as_func(f.name)
-            self.ani_func_name = self.sts_func_name
-
-        if (gen_async_attr := GenAsyncAttr.get(f)) is not None:
-            if gen_async_attr.func_name is not None:
-                self.sts_async_name = gen_async_attr.func_name
-            else:
-                self.sts_async_name = naming.as_func(gen_async_attr.func_prefix)
-        if (gen_promise_attr := GenPromiseAttr.get(f)) is not None:
-            if gen_promise_attr.func_name is not None:
-                self.sts_promise_name = gen_promise_attr.func_name
-            else:
-                self.sts_promise_name = naming.as_func(gen_promise_attr.func_prefix)
 
         self.sts_params: list[ParamDecl] = []
         for param in f.params:
@@ -429,7 +455,7 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
                 continue
             sts_native_args.append(next(arg))
         sts_native_args_str = ", ".join(sts_native_args)
-        return f"{self.sts_native_name}({sts_native_args_str})"
+        return f"{self.native_name}({sts_native_args_str})"
 
 
 class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
@@ -437,19 +463,67 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
         self.am = am
         self.f = f
 
-        self.sts_native_name = f"{f.name}_inner"
-
-        self.ani_method_name = None
-        self.sts_method_name = None
-
-        self.on_off = None
-        self.get_name = None
-        self.set_name = None
-
-        self.sts_async_name = None
-        self.sts_promise_name = None
+        self.native_name = f"{f.name}_inner"
 
         naming = PackageANIInfo.get(am, f.parent_pkg).naming
+
+        if (rename_attr := RenameAttribute.get(f)) is not None:
+            func_name = rename_attr.name
+        elif (rename_attr := OldOverloadAttr.get(f)) is not None:
+            func_name = rename_attr.func_name
+        else:
+            func_name = naming.as_func(f.name)
+
+        self.ani_name = None
+
+        self.get_name = None
+        self.set_name = None
+        self.promise_name = None
+        self.async_name = None
+        self.norm_name = None
+
+        self.gen_async_name = None
+        self.gen_promise_name = None
+
+        self.overload = None
+        self.on_off = None
+
+        if (get_attr := GetAttr.get(f)) is not None:
+            if get_attr.member_name is not None:
+                get_name = get_attr.member_name
+            else:
+                get_name = naming.as_field(get_attr.func_suffix)
+            self.get_name = get_name
+            self.ani_name = f"<get>{get_name}"
+        elif (set_attr := SetAttr.get(f)) is not None:
+            if set_attr.member_name is not None:
+                set_name = set_attr.member_name
+            else:
+                set_name = naming.as_field(set_attr.func_suffix)
+            self.set_name = set_name
+            self.ani_name = f"<set>{set_name}"
+        elif PromiseAttribute.get(f) is not None:
+            self.promise_name = func_name
+            self.ani_name = func_name
+        elif AsyncAttribute.get(f) is not None:
+            self.async_name = func_name
+            self.ani_name = func_name
+        else:
+            self.norm_name = func_name
+            self.ani_name = func_name
+            if (gen_async_attr := GenAsyncAttr.get(f)) is not None:
+                if gen_async_attr.func_name is not None:
+                    self.gen_async_name = gen_async_attr.func_name
+                else:
+                    self.gen_async_name = naming.as_func(gen_async_attr.func_prefix)
+            if (gen_promise_attr := GenPromiseAttr.get(f)) is not None:
+                if gen_promise_attr.func_name is not None:
+                    self.gen_promise_name = gen_promise_attr.func_name
+                else:
+                    self.gen_promise_name = naming.as_func(gen_promise_attr.func_prefix)
+
+        if (overload_attr := NewOverloadAttribute.get(f)) is not None:
+            self.overload = overload_attr.name
 
         if (on_off_attr := OnOffAttr.get(f)) is not None:
             if on_off_attr.type is not None:
@@ -457,36 +531,6 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
             else:
                 on_off_type = naming.as_field(on_off_attr.func_suffix)
             self.on_off = (on_off_attr.overload, on_off_type)
-            self.ani_method_name = self.sts_method_name
-        elif (get_attr := GetAttr.get(f)) is not None:
-            if get_attr.member_name is not None:
-                self.get_name = get_attr.member_name
-            else:
-                self.get_name = naming.as_field(get_attr.func_suffix)
-            self.ani_method_name = f"<get>{self.get_name}"
-        elif (set_attr := SetAttr.get(f)) is not None:
-            if set_attr.member_name is not None:
-                self.set_name = set_attr.member_name
-            else:
-                self.set_name = naming.as_field(set_attr.func_suffix)
-            self.ani_method_name = f"<set>{self.set_name}"
-        else:
-            if (overload_attr := OverloadAttr.get(f)) is not None:
-                self.sts_method_name = overload_attr.func_name
-            else:
-                self.sts_method_name = naming.as_func(f.name)
-            self.ani_method_name = self.sts_method_name
-
-        if (gen_async_attr := GenAsyncAttr.get(f)) is not None:
-            if gen_async_attr.func_name is not None:
-                self.sts_async_name = gen_async_attr.func_name
-            else:
-                self.sts_async_name = naming.as_func(gen_async_attr.func_prefix)
-        if (gen_promise_attr := GenPromiseAttr.get(f)) is not None:
-            if gen_promise_attr.func_name is not None:
-                self.sts_promise_name = gen_promise_attr.func_name
-            else:
-                self.sts_promise_name = naming.as_func(gen_promise_attr.func_prefix)
 
         self.sts_params: list[ParamDecl] = []
         for param in f.params:
@@ -508,7 +552,7 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
                 continue
             sts_native_args.append(next(arg))
         sts_native_args_str = ", ".join(sts_native_args)
-        return f"{this}.{self.sts_native_name}({sts_native_args_str})"
+        return f"{this}.{self.native_name}({sts_native_args_str})"
 
 
 class EnumANIInfo(AbstractAnalysis[EnumDecl]):
