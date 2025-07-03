@@ -383,7 +383,6 @@ class CMakeOutputManager(OutputManager):
             self.emit_generated_dir("${CMAKE_CURRENT_LIST_DIR}", cmake_target)
             self.emit_generated_includes(cmake_target)
             self.emit_generated_sources(cmake_target)
-            self.emit_generated_ets_files(cmake_target)
             self.emit_set_cpp_standard(cmake_target)
 
     def emit_runtime_files_list(
@@ -495,19 +494,6 @@ class CMakeOutputManager(OutputManager):
                 f"${{TAIHE_GEN_C_SRC}}",
                 f"${{TAIHE_GEN_CXX_SRC}}",
             )
-
-    def emit_generated_ets_files(
-        self,
-        cmake_target: CMakeWriter,
-    ):
-        with cmake_target.indented(
-            f"set(TAIHE_GEN_ETS_FILES",
-            f")",
-        ):
-            for file in self.get_files_by_kind(FileKind.ETS):
-                cmake_target.writelns(
-                    f"${{TAIHE_GEN_DIR}}/{file.relative_path}",
-                )
 
     def emit_set_cpp_standard(
         self,
