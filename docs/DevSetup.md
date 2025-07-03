@@ -15,24 +15,18 @@
     - antlr4-python3-runtime
     - antlr4-tools
 
-初次克隆项目时，可安装 Git Hook，在提交时自动触发代码检查：
-
-```bash
-./scripts/install-git-hooks
-```
-
 ## 编译器
 
-首先配置 Python 及依赖环境。后续操作均假设位于 `compiler/` 目录下。
+首先配置 Python 及依赖环境。
 
 ### 初次克隆项目时
 
 ```bash
-# 读取 pyproject.toml 文件，解析依赖项并安装至 `compiler/.venv` 目录下
+# 读取 pyproject.toml 文件，解析依赖项并安装至 `.venv` 目录下
 uv sync
 
 # 基于 ANTLR 文法，生成部分项目代码
-uv run ./generate-grammar
+uv build
 ```
 
 ### 后续运行时

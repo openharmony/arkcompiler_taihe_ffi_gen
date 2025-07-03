@@ -89,8 +89,8 @@ Taihe 遵从经典的“三阶段”编译器设计，具体地：
 
 Taihe 对源码的解析基于 ANTLR 框架。`compiler/Taihe.g4` 根据 ANTLR 描述了 IDL 的文法规则，并对 ANTLR 做了扩展。
 
-每次更新 ANTLR 文法后，需要使用 `compiler/generate-grammar` 生成解析相关的扩展源码，位于 `taihe.parse.antlr`。
-`generate-grammar` 调用 `antlr4` 工具，生成 `TaiheLexer` 以及 `TaiheParser`，负责词法和语法分析。由于 ANTLR 缺少类型信息，Taihe 并没有直接沿用 ANTLR 的源码解析，而是又生成了更强类型的中间结构。
+每次更新 ANTLR 文法后，需要使用 `uv build` 生成解析相关的扩展源码，位于 `taihe.parse.antlr`。
+`uv build` 调用 `antlr4` 工具，生成 `TaiheLexer` 以及 `TaiheParser`，负责词法和语法分析。由于 ANTLR 缺少类型信息，Taihe 并没有直接沿用 ANTLR 的源码解析，而是又生成了更强类型的中间结构。
 
 以 `"function foo(bar: i32)"` 为例：
 
