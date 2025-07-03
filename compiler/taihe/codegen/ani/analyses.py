@@ -355,7 +355,11 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
         self.am = am
         self.f = f
 
-        self.native_name = f"{f.name}_inner"
+        self.native_name = f"{f.name}_native"
+        self.revert_name = f"{f.name}_revert"
+        self.func_call_prefix = ""
+        self.func_prefix = "export function "
+        self.native_prefix = "export native function "
 
         naming = PackageANIInfo.get(am, f.parent_pkg).naming
 
@@ -377,8 +381,6 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
         elif (static_attr := StaticAttr.get(f)) is not None:
             self.static_scope = static_attr.cls_name
 
-        self.ani_name = None
-
         self.get_name = None
         self.set_name = None
         self.promise_name = None
@@ -397,23 +399,18 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
             else:
                 get_name = naming.as_field(get_attr.func_suffix)
             self.get_name = get_name
-            self.ani_name = f"<get>{get_name}"
         elif (set_attr := SetAttr.get(f)) is not None:
             if set_attr.member_name is not None:
                 set_name = set_attr.member_name
             else:
                 set_name = naming.as_field(set_attr.func_suffix)
             self.set_name = set_name
-            self.ani_name = f"<set>{set_name}"
         elif PromiseAttribute.get(f) is not None:
             self.promise_name = func_name
-            self.ani_name = func_name
         elif AsyncAttribute.get(f) is not None:
             self.async_name = func_name
-            self.ani_name = func_name
         else:
             self.norm_name = func_name
-            self.ani_name = func_name
             if (gen_async_attr := GenAsyncAttr.get(f)) is not None:
                 if gen_async_attr.func_name is not None:
                     self.gen_async_name = gen_async_attr.func_name
@@ -446,7 +443,7 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
     def create(cls, am: AnalysisManager, f: GlobFuncDecl) -> "GlobFuncANIInfo":
         return GlobFuncANIInfo(am, f)
 
-    def call_native_with(self, sts_args: list[str], this: str = "this") -> str:
+    def call_native_with(self, sts_args: list[str], this: str = "this") -> list[str]:
         arg = iter(sts_args)
         sts_native_args: list[str] = []
         for param in self.f.params:
@@ -454,8 +451,15 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
                 sts_native_args.append(this)
                 continue
             sts_native_args.append(next(arg))
-        sts_native_args_str = ", ".join(sts_native_args)
-        return f"{self.native_name}({sts_native_args_str})"
+        return sts_native_args
+
+    def call_revert_with(self, sts_revert_args: list[str]) -> list[str]:
+        sts_args: list[str] = []
+        for param, arg in zip(self.f.params, sts_revert_args, strict=True):
+            if StsThizAttr.get(param):
+                continue
+            sts_args.append(arg)
+        return sts_args
 
 
 class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
@@ -463,7 +467,11 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
         self.am = am
         self.f = f
 
-        self.native_name = f"{f.name}_inner"
+        self.native_name = f"{f.name}_native"
+        self.revert_name = f"{f.name}_revert"
+        self.func_call_prefix = "this."
+        self.func_prefix = ""
+        self.native_prefix = "native "
 
         naming = PackageANIInfo.get(am, f.parent_pkg).naming
 
@@ -473,8 +481,6 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
             func_name = rename_attr.func_name
         else:
             func_name = naming.as_func(f.name)
-
-        self.ani_name = None
 
         self.get_name = None
         self.set_name = None
@@ -494,23 +500,18 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
             else:
                 get_name = naming.as_field(get_attr.func_suffix)
             self.get_name = get_name
-            self.ani_name = f"<get>{get_name}"
         elif (set_attr := SetAttr.get(f)) is not None:
             if set_attr.member_name is not None:
                 set_name = set_attr.member_name
             else:
                 set_name = naming.as_field(set_attr.func_suffix)
             self.set_name = set_name
-            self.ani_name = f"<set>{set_name}"
         elif PromiseAttribute.get(f) is not None:
             self.promise_name = func_name
-            self.ani_name = func_name
         elif AsyncAttribute.get(f) is not None:
             self.async_name = func_name
-            self.ani_name = func_name
         else:
             self.norm_name = func_name
-            self.ani_name = func_name
             if (gen_async_attr := GenAsyncAttr.get(f)) is not None:
                 if gen_async_attr.func_name is not None:
                     self.gen_async_name = gen_async_attr.func_name
@@ -543,7 +544,7 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
     def create(cls, am: AnalysisManager, f: IfaceMethodDecl) -> "IfaceMethodANIInfo":
         return IfaceMethodANIInfo(am, f)
 
-    def call_native_with(self, sts_args: list[str], this: str = "this") -> str:
+    def call_native_with(self, sts_args: list[str], this: str = "this") -> list[str]:
         arg = iter(sts_args)
         sts_native_args: list[str] = []
         for param in self.f.params:
@@ -551,8 +552,15 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
                 sts_native_args.append(this)
                 continue
             sts_native_args.append(next(arg))
-        sts_native_args_str = ", ".join(sts_native_args)
-        return f"{this}.{self.native_name}({sts_native_args_str})"
+        return sts_native_args
+
+    def call_revert_with(self, sts_revert_args: list[str]) -> list[str]:
+        sts_args: list[str] = []
+        for param, arg in zip(self.f.params, sts_revert_args, strict=True):
+            if StsThizAttr.get(param):
+                continue
+            sts_args.append(arg)
+        return sts_args
 
 
 class EnumANIInfo(AbstractAnalysis[EnumDecl]):

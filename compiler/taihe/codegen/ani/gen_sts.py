@@ -42,11 +42,10 @@ class FuncKind(ABC):
     get_prefix: ClassVar[str]
     set_prefix: ClassVar[str]
     overload_prefix: ClassVar[str]
-    native_prefix: ClassVar[str]
 
     @property
     @abstractmethod
-    def how(self) -> str: ...
+    def func_call_prefix(self) -> str: ...
 
 
 @dataclass(frozen=True)
@@ -55,10 +54,9 @@ class InterfaceKind(FuncKind):
     get_prefix = "get "
     set_prefix = "set "
     overload_prefix = "overload "
-    native_prefix = "native "
 
     @property
-    def how(self) -> str:
+    def func_call_prefix(self) -> str:
         return "this."
 
 
@@ -68,10 +66,9 @@ class GlobalKind(FuncKind):
     get_prefix = "export get "
     set_prefix = "export set "
     overload_prefix = "overload "
-    native_prefix = "export native function "
 
     @property
-    def how(self) -> str:
+    def func_call_prefix(self) -> str:
         return ""
 
 
@@ -81,11 +78,10 @@ class StaticKind(FuncKind):
     get_prefix = "static get "
     set_prefix = "static set "
     overload_prefix = "static overload "
-    native_prefix = "native static "
     where: str
 
     @property
-    def how(self) -> str:
+    def func_call_prefix(self) -> str:
         return f"{self.where}."
 
 
@@ -163,10 +159,9 @@ class STSCodeGenerator:
                 self.gen_namespace(child_ns, target)
 
     def gen_package(self, pkg: PackageDecl, target: StsWriter):
-        native_kind = GlobalKind()
         for func in pkg.functions:
             func_ani_info = GlobFuncANIInfo.get(self.am, func)
-            self.gen_native_func(func, func_ani_info, target, native_kind)
+            self.gen_native_func(func, func_ani_info, target)
         ctors_map: dict[str, list[GlobFuncDecl]] = {}
         statics_map: dict[str, list[GlobFuncDecl]] = {}
         glob_funcs: list[GlobFuncDecl] = []
@@ -195,6 +190,9 @@ class STSCodeGenerator:
             self.gen_overload_func(name, info, target, func_kind)
         for name, info in func_on_off_register.on_off.items():
             self.gen_full_on_off_func(name, info, target, func_kind)
+        for func in glob_funcs:
+            func_ani_info = GlobFuncANIInfo.get(self.am, func)
+            self.gen_revert_func(func, func_ani_info, target, func_kind)
         for enum in pkg.enums:
             self.gen_enum(enum, target)
         for union in pkg.unions:
@@ -401,6 +399,9 @@ class STSCodeGenerator:
                 self.gen_overload_func(name, info, target, meth_kind)
             for name, info in meth_on_off_register.on_off.items():
                 self.gen_full_on_off_func(name, info, target, meth_kind)
+            for method in iface.methods:
+                method_ani_info = IfaceMethodANIInfo.get(self.am, method)
+                self.gen_revert_func(method, method_ani_info, target, meth_kind)
 
     def gen_iface_class(
         self,
@@ -477,11 +478,10 @@ class STSCodeGenerator:
                     f"other._unregister();",
                 )
             iface_abi_info = IfaceABIInfo.get(self.am, iface)
-            native_kind = InterfaceKind()
             for ancestor in iface_abi_info.ancestor_dict:
                 for method in ancestor.methods:
                     method_ani_info = IfaceMethodANIInfo.get(self.am, method)
-                    self.gen_native_func(method, method_ani_info, target, native_kind)
+                    self.gen_native_func(method, method_ani_info, target)
             # ctors
             ctor_overload_register = OverloadRegister()
             ctor_on_off_register = OnOffRegister()
@@ -536,13 +536,15 @@ class STSCodeGenerator:
                 self.gen_overload_func(name, info, target, meth_kind)
             for name, info in meth_on_off_register.on_off.items():
                 self.gen_full_on_off_func(name, info, target, meth_kind)
+            for method in iface.methods:
+                method_ani_info = IfaceMethodANIInfo.get(self.am, method)
+                self.gen_revert_func(method, method_ani_info, target, meth_kind)
 
     def gen_native_func(
         self,
         func: GlobFuncDecl | IfaceMethodDecl,
         func_ani_info: GlobFuncANIInfo | IfaceMethodANIInfo,
         target: StsWriter,
-        native_kind: FuncKind,
     ):
         sts_native_params = []
         for param in func.params:
@@ -557,7 +559,7 @@ class STSCodeGenerator:
         else:
             sts_return_ty_name = "void"
         target.writelns(
-            f"{native_kind.native_prefix}{func_ani_info.native_name}({sts_native_params_str}): {sts_return_ty_name};",
+            f"{func_ani_info.native_prefix}{func_ani_info.native_name}({sts_native_params_str}): {sts_return_ty_name};",
         )
 
     def gen_any_func_decl(
@@ -582,9 +584,9 @@ class STSCodeGenerator:
             sts_return_ty_name = type_ani_info.sts_type_in(target)
         else:
             sts_return_ty_name = "void"
-        if (sts_method_name := func_ani_info.norm_name) is not None:
+        if (norm_name := func_ani_info.norm_name) is not None:
             self.gen_normal_func_decl(
-                sts_method_name,
+                norm_name,
                 func_ani_info.gen_async_name,
                 func_ani_info.gen_promise_name,
                 sts_params,
@@ -657,7 +659,9 @@ class STSCodeGenerator:
             sts_params_ty.append(type_ani_info.sts_type_in(target))
             sts_params.append(f"{sts_param.name}: {type_ani_info.sts_type_in(target)}")
             sts_args.append(sts_param.name)
-        sts_native_call = func_ani_info.call_native_with(sts_args)
+        sts_native_args = func_ani_info.call_native_with(sts_args)
+        sts_native_args_str = ", ".join(sts_native_args)
+        sts_native_call = f"{func_ani_info.func_call_prefix}{func_ani_info.native_name}({sts_native_args_str})"
         if return_ty_ref := func.return_ty_ref:
             type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
             sts_return_ty_name = type_ani_info.sts_type_in(target)
@@ -665,9 +669,9 @@ class STSCodeGenerator:
         else:
             sts_return_ty_name = "void"
             sts_resolved_ty_name = "undefined"
-        if (sts_func_name := func_ani_info.norm_name) is not None:
+        if (norm_name := func_ani_info.norm_name) is not None:
             self.gen_normal_func(
-                sts_func_name,
+                norm_name,
                 func_ani_info.gen_async_name,
                 func_ani_info.gen_promise_name,
                 sts_params,
@@ -748,10 +752,12 @@ class STSCodeGenerator:
             sts_params_ty.append(type_ani_info.sts_type_in(target))
             sts_params.append(f"{sts_param.name}: {type_ani_info.sts_type_in(target)}")
             sts_args.append(sts_param.name)
-        sts_native_call = ctor_ani_info.call_native_with(sts_args)
-        if (sts_func_name := ctor_ani_info.norm_name) is not None:
+        sts_native_args = ctor_ani_info.call_native_with(sts_args)
+        sts_native_args_str = ", ".join(sts_native_args)
+        sts_native_call = f"{ctor_ani_info.func_call_prefix}{ctor_ani_info.native_name}({sts_native_args_str})"
+        if (ctor_name := ctor_ani_info.norm_name) is not None:
             self.gen_ctor(
-                sts_func_name,
+                ctor_name,
                 sts_params,
                 sts_params_ty,
                 sts_native_call,
@@ -790,7 +796,7 @@ class STSCodeGenerator:
 
     def gen_normal_func_decl(
         self,
-        sts_method_name: str,
+        norm_name: str,
         gen_async_name: str | None,
         gen_promise_name: str | None,
         sts_params: Collection[str],
@@ -805,7 +811,7 @@ class STSCodeGenerator:
     ):
         sts_params_str = ", ".join(sts_params)
         target.writelns(
-            f"{func_kind.func_prefix}{sts_method_name}({sts_params_str}): {sts_return_ty_name};",
+            f"{func_kind.func_prefix}{norm_name}({sts_params_str}): {sts_return_ty_name};",
         )
         if gen_async_name is not None:
             self.gen_async_func_decl(
@@ -834,11 +840,11 @@ class STSCodeGenerator:
                 on_off_register,
             )
         if overload is not None:
-            overload_register.register(sts_method_name, overload)
+            overload_register.register(norm_name, overload)
         if on_off is not None:
             on_off_register.register(
                 on_off,
-                sts_method_name,
+                norm_name,
                 sts_params_ty,
                 sts_return_ty_name,
             )
@@ -939,7 +945,7 @@ class STSCodeGenerator:
 
     def gen_normal_func(
         self,
-        sts_func_name: str,
+        norm_name: str,
         gen_async_name: str | None,
         gen_promise_name: str | None,
         sts_params: Collection[str],
@@ -956,18 +962,18 @@ class STSCodeGenerator:
     ):
         sts_params_str = ", ".join(sts_params)
         with target.indented(
-            f"{func_kind.func_prefix}{sts_func_name}({sts_params_str}): {sts_return_ty_name} {{",
+            f"{func_kind.func_prefix}{norm_name}({sts_params_str}): {sts_return_ty_name} {{",
             f"}}",
         ):
             target.writelns(
                 f"return {sts_native_call};",
             )
         if overload is not None:
-            overload_register.register(sts_func_name, overload)
+            overload_register.register(norm_name, overload)
         if on_off is not None:
             on_off_register.register(
                 on_off,
-                sts_func_name,
+                norm_name,
                 sts_params_ty,
                 sts_return_ty_name,
             )
@@ -1114,7 +1120,7 @@ class STSCodeGenerator:
 
     def gen_ctor(
         self,
-        sts_func_name: str,
+        ctor_name: str,
         sts_params: Collection[str],
         sts_params_ty: Collection[str],
         sts_native_call: str,
@@ -1126,18 +1132,18 @@ class STSCodeGenerator:
     ):
         sts_params_str = ", ".join(sts_params)
         with target.indented(
-            f"constructor {sts_func_name}({sts_params_str}) {{",
+            f"constructor {ctor_name}({sts_params_str}) {{",
             f"}}",
         ):
             target.writelns(
                 f"    this._move_from({sts_native_call});",
             )
         if overload is not None:
-            overload_register.register(sts_func_name, overload)
+            overload_register.register(ctor_name, overload)
         if on_off is not None:
             on_off_register.register(
                 on_off,
-                sts_func_name,
+                ctor_name,
                 sts_params_ty,
                 "void",
             )
@@ -1189,7 +1195,7 @@ class STSCodeGenerator:
                     )
                     for tag, orig in funcs:
                         target.writelns(
-                            f'case "{tag}": return {func_kind.how}{orig}({sts_args_str});',
+                            f'case "{tag}": return {func_kind.func_call_prefix}{orig}({sts_args_str});',
                         )
                 target.writelns(
                     f"default: throw new Error(`Unknown tag: ${{type}}`);",
@@ -1223,7 +1229,7 @@ class STSCodeGenerator:
                 ):
                     for tag, orig in funcs:
                         target.writelns(
-                            f'case "{tag}": return {func_kind.how}{orig}({sts_args_str});',
+                            f'case "{tag}": return {func_kind.func_call_prefix}{orig}({sts_args_str});',
                         )
                     target.writelns(
                         f"default: throw new Error(`Unknown tag: ${{type}}`);",
@@ -1312,6 +1318,84 @@ class STSCodeGenerator:
                     target.writelns(
                         f"default: throw new Error(`Unknown tag: ${{type}}`);",
                     )
+
+    def gen_revert_func(
+        self,
+        func: GlobFuncDecl | IfaceMethodDecl,
+        func_ani_info: GlobFuncANIInfo | IfaceMethodANIInfo,
+        target: StsWriter,
+        func_kind: FuncKind,
+    ):
+        sts_revert_args = []
+        sts_revert_params = []
+        for param in func.params:
+            type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
+            sts_revert_args.append(param.name)
+            sts_revert_params.append(
+                f"{param.name}: {type_ani_info.sts_type_in(target)}"
+            )
+        sts_revert_params_str = ", ".join(sts_revert_params)
+        if return_ty_ref := func.return_ty_ref:
+            type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
+            sts_return_ty_name = type_ani_info.sts_type_in(target)
+            sts_resolved_ty_name = type_ani_info.sts_type_in(target)
+        else:
+            sts_return_ty_name = "void"
+            sts_resolved_ty_name = "undefined"
+        sts_args = func_ani_info.call_revert_with(sts_revert_args)
+        with target.indented(
+            f"{func_ani_info.func_prefix}{func_ani_info.revert_name}({sts_revert_params_str}): {sts_return_ty_name} {{",
+            f"}}",
+        ):
+            if (norm_name := func_ani_info.norm_name) is not None:
+                sts_args_str = ", ".join(sts_args)
+                target.writelns(
+                    f"return {func_kind.func_call_prefix}{norm_name}({sts_args_str});",
+                )
+            elif (get_name := func_ani_info.get_name) is not None:
+                target.writelns(
+                    f"return {func_kind.func_call_prefix}{get_name};",
+                )
+            elif (set_name := func_ani_info.set_name) is not None:
+                target.writelns(
+                    f"{func_kind.func_call_prefix}{set_name} = {sts_args[0]};",
+                )
+            elif (promise_name := func_ani_info.promise_name) is not None:
+                sts_args_str = ", ".join(sts_args)
+                target.writelns(
+                    f"return await {func_kind.func_call_prefix}{promise_name}({sts_args_str});",
+                )
+            elif (async_name := func_ani_info.async_name) is not None:
+                with target.indented(
+                    f"return await new Promise<{sts_return_ty_name}>((resolve, reject) => {{",
+                    f"}});",
+                ):
+                    with target.indented(
+                        f"let callback: AsyncCallback<{sts_return_ty_name}> = (err: BusinessError | null, res?: {sts_resolved_ty_name}): void => {{",
+                        f"}}",
+                    ):
+                        with target.indented(
+                            f"if (err !== null) {{",
+                            f"}}",
+                        ):
+                            target.writelns(
+                                f"reject(err);",
+                            )
+                        with target.indented(
+                            f"else {{",
+                            f"}}",
+                        ):
+                            target.writelns(
+                                f"resolve(res as {sts_resolved_ty_name});",
+                            )
+                    sts_args_with_cb_str = ", ".join([*sts_args, "callback"])
+                    target.writelns(
+                        f"{func_kind.func_call_prefix}{async_name}({sts_args_with_cb_str});",
+                    )
+            else:
+                target.writelns(
+                    f"throw new Error(`No valid revert function found`);",
+                )
 
     def gen_ohos_base(self):
         with StsWriter(
