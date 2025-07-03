@@ -87,12 +87,12 @@ export function addSync(a: int, b: int): int {
 // 导出函数的 async 版本
 export function add(a: int, b: int, callback: AsyncCallback<int>): void {
     (launch addSync_inner(a, b))
-    .then((ret: NullishType) => {
+    .then((ret: Any) => {
             let retInner = ret as int;
             let error = new Error();
             callback(error, retInner);
     })
-    .catch((ret: NullishType) => {
+    .catch((ret: Any) => {
         let retError = ret as Error;
         callback(retError);
     });
@@ -192,12 +192,12 @@ class IStringHolder_inner implements IStringHolder {
     // get函数async版本
     getAsync(callback: AsyncCallback<string>): void {
         (launch this.get_inner())
-        .then((ret: NullishType) => {
+        .then((ret: Any) => {
             let retInner = ret as string;
             let error = new Error();
             callback(error, retInner);
         })
-        .catch((ret: NullishType) => {
+        .catch((ret: Any) => {
             let retError = ret as Error;
             callback(retError);
         });
@@ -219,7 +219,7 @@ class IStringHolder_inner implements IStringHolder {
             let error = new Error();
             callback(error);
         })
-        .catch((ret: NullishType) => {
+        .catch((ret: Any) => {
             let retError = ret as Error;
             callback(retError);
         });

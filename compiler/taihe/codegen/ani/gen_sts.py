@@ -1041,14 +1041,14 @@ class STSCodeGenerator:
                         f"return {sts_native_call};",
                     )
                 with target.indented(
-                    f".then((ret: NullishType): void => {{",
+                    f".then((ret: Any): void => {{",
                     f"}})",
                 ):
                     target.writelns(
                         f"resolve(ret as {sts_resolved_ty_name});",
                     )
                 with target.indented(
-                    f".catch((ret: NullishType): void => {{",
+                    f".catch((ret: Any): void => {{",
                     f"}});",
                 ):
                     target.writelns(
@@ -1095,14 +1095,14 @@ class STSCodeGenerator:
                     f"return {sts_native_call};",
                 )
             with target.indented(
-                f".then((ret: NullishType): void => {{",
+                f".then((ret: Any): void => {{",
                 f"}})",
             ):
                 target.writelns(
                     f"callback(null, ret as {sts_resolved_ty_name});",
                 )
             with target.indented(
-                f".catch((ret: NullishType): void => {{",
+                f".catch((ret: Any): void => {{",
                 f"}});",
             ):
                 target.writelns(

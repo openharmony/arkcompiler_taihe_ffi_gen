@@ -674,20 +674,20 @@ export function uploadBook(b: Book): string {
 export function uploadBook(b: Book): Promise<string> {
     return new Promise<string>((resolve: (data: string) => void, reject: (err: Error) => void): void => {
         taskpool.execute((): string => { return uploadBook_inner(b); })
-        .then((ret: NullishType): void => {
+        .then((ret: Any): void => {
             resolve(ret as string);
         })
-        .catch((ret: NullishType): void => {
+        .catch((ret: Any): void => {
             reject(ret as Error);
         });
     });
 }
 export function uploadBook(b: Book, callback: (err: Error | null, data?: string) => void): void {
     taskpool.execute((): string => { return uploadBook_inner(b); })
-    .then((ret: NullishType): void => {
+    .then((ret: Any): void => {
         callback(null, ret as string);
     })
-    .catch((ret: NullishType): void => {
+    .catch((ret: Any): void => {
         callback(ret as Error);
     });
 }
@@ -749,7 +749,7 @@ class Foo_inner implements Foo {
 ## 逃逸通道：ANI 代码注入
 
 - 类似于 ArkTS 代码注入，Taihe 支持引入 ANI 代码，从而在 C++ 侧访问 ArkTS 对象：
-  - `Opaque` 类型：对应 ArkTS 的 `NullishType` 类型、ANI 的 `ani_object`，可以存放任意可空引用类型。允许 `Opaque` 类型和其他类型相组合。
+  - `Opaque` 类型：对应 ArkTS 的 `Any` 类型、ANI 的 `ani_object`，可以存放任意可空引用类型。允许 `Opaque` 类型和其他类型相组合。
   - `@sts_this` 注解：在类中适用，获得与 Taihe 对象相绑定的 ArkTS 类的 `ani_object`
   - `ani_env taihe::get_env()`：返回 `ani_env` 指针
 
@@ -763,8 +763,8 @@ function get_objects(): Array<Opaque>;
 
 **File (Generated): generated/ohos.book.store.ets**
 ```typescript
-export function is_string(s: NullishType): boolean { ... }
-export function get_objects(): (NullishType[]) { ... }
+export function is_string(s: Any): boolean { ... }
+export function get_objects(): (Any[]) { ... }
 ```
 
 - 使用 C++ 完成后续逻辑的开发

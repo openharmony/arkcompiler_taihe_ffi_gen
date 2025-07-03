@@ -529,6 +529,7 @@ class OldCtorAttr(TypedAttribute[GlobFuncDecl]):
     cls_name: str
 
 
+@dataclass
 class NewOverloadAttribute(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     NAME = "static_overload"
     TARGETS = (GlobFuncDecl, IfaceMethodDecl)
@@ -536,6 +537,7 @@ class NewOverloadAttribute(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     name: str = ""
 
 
+@dataclass
 class RenameAttribute(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     NAME = "rename"
     TARGETS = (GlobFuncDecl, IfaceMethodDecl)
@@ -543,18 +545,21 @@ class RenameAttribute(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     name: str = ""
 
 
+@dataclass
 class AsyncAttribute(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     NAME = "async"
     TARGETS = (GlobFuncDecl, IfaceMethodDecl)
     MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({FUNCTION_TYPE_ATTRIBUTE_GROUP})
 
 
+@dataclass
 class PromiseAttribute(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     NAME = "promise"
     TARGETS = (GlobFuncDecl, IfaceMethodDecl)
     MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({FUNCTION_TYPE_ATTRIBUTE_GROUP})
 
 
+@dataclass
 class NewCtorAttribute(TypedAttribute[GlobFuncDecl]):
     NAME = "constructor"
     TARGETS = (GlobFuncDecl,)

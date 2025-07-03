@@ -49,11 +49,11 @@ export class Bubble_inner extends BasePriorityOverlay_inner implements Bubble {
                             return this.map_inner_cls.setIcons_sync(icons);
                         })
                 .then(
-                    (ret: NullishType):
+                    (ret: Any):
                         void => {
                             resolve(ret as int);
                         })
-                .catch((ret: NullishType): void => {
+                .catch((ret: Any): void => {
                     reject(ret as Error);
                 });
         });
