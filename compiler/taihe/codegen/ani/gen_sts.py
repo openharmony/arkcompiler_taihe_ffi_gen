@@ -398,7 +398,7 @@ class STSCodeGenerator:
             for name, info in meth_overload_register.overloads.items():
                 self.gen_overload_func(name, info, target, meth_kind)
             for name, info in meth_on_off_register.on_off.items():
-                self.gen_full_on_off_func(name, info, target, meth_kind)
+                self.gen_half_on_off_func(name, info, target, meth_kind)
             for method in iface.methods:
                 method_ani_info = IfaceMethodANIInfo.get(self.am, method)
                 self.gen_revert_func(method, method_ani_info, target, meth_kind)
@@ -535,7 +535,7 @@ class STSCodeGenerator:
             for name, info in meth_overload_register.overloads.items():
                 self.gen_overload_func(name, info, target, meth_kind)
             for name, info in meth_on_off_register.on_off.items():
-                self.gen_full_on_off_func(name, info, target, meth_kind)
+                self.gen_half_on_off_func(name, info, target, meth_kind)
             for method in iface.methods:
                 method_ani_info = IfaceMethodANIInfo.get(self.am, method)
                 self.gen_revert_func(method, method_ani_info, target, meth_kind)
@@ -1176,14 +1176,14 @@ class STSCodeGenerator:
             return
         params_len = max(len(params_ty) for params_ty, return_ty in on_off_info)
         sts_args = [f"p_{i}" for i in range(params_len)]
-        sts_params = ["type: string", *(f"{arg}?: Object" for arg in sts_args)]
+        sts_params = ["type: Object", *(f"{arg}?: Object" for arg in sts_args)]
         sts_params_str = ", ".join(sts_params)
         with target.indented(
             f"{func_kind.func_prefix}{on_off_name}({sts_params_str}): Object | null | undefined {{",
             f"}}",
         ):
             with target.indented(
-                f"switch (type) {{",
+                f"switch (type as string) {{",
                 f"}}",
                 indent="",
             ):
@@ -1261,14 +1261,14 @@ class STSCodeGenerator:
             return
         params_len = max(len(params_ty) for params_ty, return_ty in on_off_info)
         sts_args = [f"p_{i}" for i in range(params_len)]
-        sts_params = ["type: string", *(f"{arg}?: Object" for arg in sts_args)]
+        sts_params = ["type: Object", *(f"{arg}?: Object" for arg in sts_args)]
         sts_params_str = ", ".join(sts_params)
         with target.indented(
             f"constructor {on_off_name}({sts_params_str}): void {{",
             f"}}",
         ):
             with target.indented(
-                f"switch (type) {{",
+                f"switch (type as object) {{",
                 f"}}",
                 indent="",
             ):
