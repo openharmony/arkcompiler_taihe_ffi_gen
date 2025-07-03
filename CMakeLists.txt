@@ -118,7 +118,7 @@ function(generate_code_from_idl target_name idl_files gen_ets_files generated_di
   add_custom_command(
     OUTPUT ${PROJ_HPP_FILES} ${IMPL_HPP_FILES} ${ABI_H_FILES} ${ABI_C_FILES} ${ANI_HPP_FILES} ${ANI_CPP_FILES} ${GEN_ETS_FILES}
     COMMAND ${COMMAND_TO_RUN}
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/compiler
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     DEPENDS ${IDL_FILES} ${CMAKE_SOURCE_DIR}/compiler/taihe/parse/antlr/TaiheAST.py
     COMMENT "Generating Taihe C++ header and source files..."
     VERBATIM
