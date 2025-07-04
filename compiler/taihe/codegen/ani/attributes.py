@@ -49,6 +49,8 @@ class ExportDefaultAttr(TypedAttribute[TypeDecl | PackageDecl]):
 
 @dataclass
 class StsInjectAttr(RepeatableAttribute[PackageDecl]):
+    # TODO: Hack
+
     NAME = "sts_inject"
     TARGETS = (PackageDecl,)
 
@@ -57,6 +59,8 @@ class StsInjectAttr(RepeatableAttribute[PackageDecl]):
 
 @dataclass
 class StsInjectIntoModuleAttr(RepeatableAttribute[PackageDecl]):
+    # TODO: Hack
+
     NAME = "sts_inject_into_module"
     TARGETS = (PackageDecl,)
 
@@ -65,6 +69,8 @@ class StsInjectIntoModuleAttr(RepeatableAttribute[PackageDecl]):
 
 @dataclass
 class StsInjectIntoClazzAttr(RepeatableAttribute[IfaceDecl | StructDecl]):
+    # TODO: Hack
+
     NAME = "sts_inject_into_class"
     TARGETS = (IfaceDecl, StructDecl)
 
@@ -73,6 +79,8 @@ class StsInjectIntoClazzAttr(RepeatableAttribute[IfaceDecl | StructDecl]):
 
 @dataclass
 class StsInjectIntoIfaceAttr(RepeatableAttribute[IfaceDecl | StructDecl]):
+    # TODO: Hack
+
     NAME = "sts_inject_into_interface"
     TARGETS = (IfaceDecl, StructDecl)
 
@@ -80,7 +88,7 @@ class StsInjectIntoIfaceAttr(RepeatableAttribute[IfaceDecl | StructDecl]):
 
 
 @dataclass
-class ClazzAttr(TypedAttribute[IfaceDecl | StructDecl]):
+class ClassAttr(TypedAttribute[IfaceDecl | StructDecl]):
     NAME = "class"
     TARGETS = (IfaceDecl, StructDecl)
 
@@ -164,10 +172,36 @@ class UndefinedAttr(TypedAttribute[UnionFieldDecl]):
         super().check_typed_context(parent, dm)
 
 
+PARAM_ATTRIBUTE_GROUP = AttributeGroupTag()
+
+
 @dataclass
-class StsThizAttr(TypedAttribute[ParamDecl]):
+class StsThisAttr(TypedAttribute[ParamDecl]):
+    # TODO: Hack
+
     NAME = "sts_this"
     TARGETS = (ParamDecl,)
+    MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({PARAM_ATTRIBUTE_GROUP})
+
+
+@dataclass
+class StsLastAttr(TypedAttribute[ParamDecl]):
+    # TODO: Hack
+
+    NAME = "sts_last"
+    TARGETS = (ParamDecl,)
+    MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({PARAM_ATTRIBUTE_GROUP})
+
+
+@dataclass
+class StsFillAttr(TypedAttribute[ParamDecl]):
+    # TODO: Hack
+
+    NAME = "sts_fill"
+    TARGETS = (ParamDecl,)
+    MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({PARAM_ATTRIBUTE_GROUP})
+
+    content: str
 
 
 ARRAY_ATTRIBUTE_GROUP = AttributeGroupTag()
@@ -309,6 +343,8 @@ class RecordAttr(TypedAttribute[TypeRefDecl]):
 
 @dataclass
 class StsTypeAttr(TypedAttribute[TypeRefDecl]):
+    # TODO: Hack
+
     NAME = "sts_type"
     TARGETS = (TypeRefDecl,)
 
@@ -317,7 +353,7 @@ class StsTypeAttr(TypedAttribute[TypeRefDecl]):
 
 @dataclass
 class GenAsyncAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
-    """Deprecated!"""
+    # TODO: Deprecated
 
     NAME = "gen_async"
     TARGETS = (GlobFuncDecl, IfaceMethodDecl)
@@ -347,7 +383,7 @@ class GenAsyncAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
 
 @dataclass
 class GenPromiseAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
-    """Deprecated!"""
+    # TODO: Deprecated
 
     NAME = "gen_promise"
     TARGETS = (GlobFuncDecl, IfaceMethodDecl)
@@ -502,8 +538,8 @@ class OnOffAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
 
 
 @dataclass
-class OldOverloadAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
-    """Deprecated!"""
+class OverloadAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
+    # TODO: Deprecated
 
     NAME = "overload"
     TARGETS = (GlobFuncDecl, IfaceMethodDecl)
@@ -520,8 +556,8 @@ class StaticAttr(TypedAttribute[GlobFuncDecl]):
 
 
 @dataclass
-class OldCtorAttr(TypedAttribute[GlobFuncDecl]):
-    """Deprecated!"""
+class CtorAttr(TypedAttribute[GlobFuncDecl]):
+    # TODO: Deprecated
 
     NAME = "ctor"
     TARGETS = (GlobFuncDecl,)
@@ -530,7 +566,7 @@ class OldCtorAttr(TypedAttribute[GlobFuncDecl]):
 
 
 @dataclass
-class NewOverloadAttribute(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
+class StaticOverloadAttribute(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     NAME = "static_overload"
     TARGETS = (GlobFuncDecl, IfaceMethodDecl)
 
@@ -560,7 +596,7 @@ class PromiseAttribute(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
 
 
 @dataclass
-class NewCtorAttribute(TypedAttribute[GlobFuncDecl]):
+class ConstructorAttribute(TypedAttribute[GlobFuncDecl]):
     NAME = "constructor"
     TARGETS = (GlobFuncDecl,)
 
@@ -574,13 +610,13 @@ all_attr_types: list[CheckedAttrT] = [
     StsInjectIntoModuleAttr,
     StsInjectIntoClazzAttr,
     StsInjectIntoIfaceAttr,
-    ClazzAttr,
+    ClassAttr,
     ConstAttr,
     ExtendsAttr,
     ReadOnlyAttr,
     NullAttr,
     UndefinedAttr,
-    StsThizAttr,
+    StsThisAttr,
     BigIntAttr,
     ArrayBufferAttr,
     TypedArrayAttr,
@@ -592,13 +628,13 @@ all_attr_types: list[CheckedAttrT] = [
     GetAttr,
     SetAttr,
     OnOffAttr,
-    OldOverloadAttr,
+    OverloadAttr,
     StaticAttr,
-    OldCtorAttr,
+    CtorAttr,
     # New overload related attributes
-    NewOverloadAttribute,
+    StaticOverloadAttribute,
     RenameAttribute,
     AsyncAttribute,
     PromiseAttribute,
-    NewCtorAttribute,
+    ConstructorAttribute,
 ]

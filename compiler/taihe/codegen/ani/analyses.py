@@ -9,8 +9,10 @@ from taihe.codegen.ani.attributes import (
     ArrayBufferAttr,
     AsyncAttribute,
     BigIntAttr,
-    ClazzAttr,
+    ClassAttr,
     ConstAttr,
+    ConstructorAttribute,
+    CtorAttr,
     ExportDefaultAttr,
     ExtendsAttr,
     FixedArrayAttr,
@@ -18,23 +20,23 @@ from taihe.codegen.ani.attributes import (
     GenPromiseAttr,
     GetAttr,
     NamespaceAttr,
-    NewCtorAttribute,
-    NewOverloadAttribute,
     NullAttr,
-    OldCtorAttr,
-    OldOverloadAttr,
     OnOffAttr,
+    OverloadAttr,
     PromiseAttribute,
     ReadOnlyAttr,
     RecordAttr,
     RenameAttribute,
     SetAttr,
     StaticAttr,
+    StaticOverloadAttribute,
+    StsFillAttr,
     StsInjectAttr,
     StsInjectIntoClazzAttr,
     StsInjectIntoIfaceAttr,
     StsInjectIntoModuleAttr,
-    StsThizAttr,
+    StsLastAttr,
+    StsThisAttr,
     StsTypeAttr,
     TypedArrayAttr,
     UndefinedAttr,
@@ -363,9 +365,9 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
 
         naming = PackageANIInfo.get(am, f.parent_pkg).naming
 
-        if (rename_attr := RenameAttribute.get(f)) is not None:
+        if rename_attr := RenameAttribute.get(f):
             func_name = rename_attr.name
-        elif (rename_attr := OldOverloadAttr.get(f)) is not None:
+        elif rename_attr := OverloadAttr.get(f):
             func_name = rename_attr.func_name
         else:
             func_name = naming.as_func(f.name)
@@ -373,12 +375,12 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
         self.static_scope = None
         self.ctor_scope = None
 
-        if (old_ctor_attr := OldCtorAttr.get(f)) is not None:
+        if old_ctor_attr := CtorAttr.get(f):
             self.ctor_scope = old_ctor_attr.cls_name
             func_name = ""
-        elif (ctor_attr := NewCtorAttribute.get(f)) is not None:
+        elif ctor_attr := ConstructorAttribute.get(f):
             self.ctor_scope = ctor_attr.cls_name
-        elif (static_attr := StaticAttr.get(f)) is not None:
+        elif static_attr := StaticAttr.get(f):
             self.static_scope = static_attr.cls_name
 
         self.get_name = None
@@ -393,39 +395,39 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
         self.overload = None
         self.on_off = None
 
-        if (get_attr := GetAttr.get(f)) is not None:
+        if get_attr := GetAttr.get(f):
             if get_attr.member_name is not None:
                 get_name = get_attr.member_name
             else:
                 get_name = naming.as_field(get_attr.func_suffix)
             self.get_name = get_name
-        elif (set_attr := SetAttr.get(f)) is not None:
+        elif set_attr := SetAttr.get(f):
             if set_attr.member_name is not None:
                 set_name = set_attr.member_name
             else:
                 set_name = naming.as_field(set_attr.func_suffix)
             self.set_name = set_name
-        elif PromiseAttribute.get(f) is not None:
+        elif PromiseAttribute.get(f):
             self.promise_name = func_name
-        elif AsyncAttribute.get(f) is not None:
+        elif AsyncAttribute.get(f):
             self.async_name = func_name
         else:
             self.norm_name = func_name
-            if (gen_async_attr := GenAsyncAttr.get(f)) is not None:
+            if gen_async_attr := GenAsyncAttr.get(f):
                 if gen_async_attr.func_name is not None:
                     self.gen_async_name = gen_async_attr.func_name
                 else:
                     self.gen_async_name = naming.as_func(gen_async_attr.func_prefix)
-            if (gen_promise_attr := GenPromiseAttr.get(f)) is not None:
+            if gen_promise_attr := GenPromiseAttr.get(f):
                 if gen_promise_attr.func_name is not None:
                     self.gen_promise_name = gen_promise_attr.func_name
                 else:
                     self.gen_promise_name = naming.as_func(gen_promise_attr.func_prefix)
 
-        if (overload_attr := NewOverloadAttribute.get(f)) is not None:
+        if overload_attr := StaticOverloadAttribute.get(f):
             self.overload = overload_attr.name
 
-        if (on_off_attr := OnOffAttr.get(f)) is not None:
+        if on_off_attr := OnOffAttr.get(f):
             if on_off_attr.type is not None:
                 on_off_type = on_off_attr.type
             else:
@@ -434,7 +436,11 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
 
         self.sts_params: list[ParamDecl] = []
         for param in f.params:
-            if StsThizAttr.get(param):
+            if (
+                StsThisAttr.get(param)
+                or StsLastAttr.get(param)
+                or StsFillAttr.get(param)
+            ):
                 continue
             self.sts_params.append(param)
 
@@ -444,19 +450,28 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
         return GlobFuncANIInfo(am, f)
 
     def call_native_with(self, sts_args: list[str], this: str = "this") -> list[str]:
+        last = this
         arg = iter(sts_args)
         sts_native_args: list[str] = []
         for param in self.f.params:
-            if StsThizAttr.get(param):
+            if StsThisAttr.get(param):
                 sts_native_args.append(this)
-                continue
-            sts_native_args.append(next(arg))
+            elif StsLastAttr.get(param):
+                sts_native_args.append(last)
+            elif fill_attr := StsFillAttr.get(param):
+                sts_native_args.append(fill_attr.content)
+            else:
+                sts_native_args.append(last := next(arg))
         return sts_native_args
 
     def call_revert_with(self, sts_revert_args: list[str]) -> list[str]:
         sts_args: list[str] = []
         for param, arg in zip(self.f.params, sts_revert_args, strict=True):
-            if StsThizAttr.get(param):
+            if (
+                StsThisAttr.get(param)
+                or StsLastAttr.get(param)
+                or StsFillAttr.get(param)
+            ):
                 continue
             sts_args.append(arg)
         return sts_args
@@ -475,9 +490,9 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
 
         naming = PackageANIInfo.get(am, f.parent_pkg).naming
 
-        if (rename_attr := RenameAttribute.get(f)) is not None:
+        if rename_attr := RenameAttribute.get(f):
             func_name = rename_attr.name
-        elif (rename_attr := OldOverloadAttr.get(f)) is not None:
+        elif rename_attr := OverloadAttr.get(f):
             func_name = rename_attr.func_name
         else:
             func_name = naming.as_func(f.name)
@@ -494,39 +509,39 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
         self.overload = None
         self.on_off = None
 
-        if (get_attr := GetAttr.get(f)) is not None:
+        if get_attr := GetAttr.get(f):
             if get_attr.member_name is not None:
                 get_name = get_attr.member_name
             else:
                 get_name = naming.as_field(get_attr.func_suffix)
             self.get_name = get_name
-        elif (set_attr := SetAttr.get(f)) is not None:
+        elif set_attr := SetAttr.get(f):
             if set_attr.member_name is not None:
                 set_name = set_attr.member_name
             else:
                 set_name = naming.as_field(set_attr.func_suffix)
             self.set_name = set_name
-        elif PromiseAttribute.get(f) is not None:
+        elif PromiseAttribute.get(f):
             self.promise_name = func_name
-        elif AsyncAttribute.get(f) is not None:
+        elif AsyncAttribute.get(f):
             self.async_name = func_name
         else:
             self.norm_name = func_name
-            if (gen_async_attr := GenAsyncAttr.get(f)) is not None:
+            if gen_async_attr := GenAsyncAttr.get(f):
                 if gen_async_attr.func_name is not None:
                     self.gen_async_name = gen_async_attr.func_name
                 else:
                     self.gen_async_name = naming.as_func(gen_async_attr.func_prefix)
-            if (gen_promise_attr := GenPromiseAttr.get(f)) is not None:
+            if gen_promise_attr := GenPromiseAttr.get(f):
                 if gen_promise_attr.func_name is not None:
                     self.gen_promise_name = gen_promise_attr.func_name
                 else:
                     self.gen_promise_name = naming.as_func(gen_promise_attr.func_prefix)
 
-        if (overload_attr := NewOverloadAttribute.get(f)) is not None:
+        if overload_attr := StaticOverloadAttribute.get(f):
             self.overload = overload_attr.name
 
-        if (on_off_attr := OnOffAttr.get(f)) is not None:
+        if on_off_attr := OnOffAttr.get(f):
             if on_off_attr.type is not None:
                 on_off_type = on_off_attr.type
             else:
@@ -535,7 +550,11 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
 
         self.sts_params: list[ParamDecl] = []
         for param in f.params:
-            if StsThizAttr.get(param):
+            if (
+                StsThisAttr.get(param)
+                or StsLastAttr.get(param)
+                or StsFillAttr.get(param)
+            ):
                 continue
             self.sts_params.append(param)
 
@@ -545,19 +564,28 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
         return IfaceMethodANIInfo(am, f)
 
     def call_native_with(self, sts_args: list[str], this: str = "this") -> list[str]:
+        last = this
         arg = iter(sts_args)
         sts_native_args: list[str] = []
         for param in self.f.params:
-            if StsThizAttr.get(param):
+            if StsThisAttr.get(param):
                 sts_native_args.append(this)
-                continue
-            sts_native_args.append(next(arg))
+            elif StsLastAttr.get(param):
+                sts_native_args.append(last)
+            elif fill_attr := StsFillAttr.get(param):
+                sts_native_args.append(fill_attr.content)
+            else:
+                sts_native_args.append(last := next(arg))
         return sts_native_args
 
     def call_revert_with(self, sts_revert_args: list[str]) -> list[str]:
         sts_args: list[str] = []
         for param, arg in zip(self.f.params, sts_revert_args, strict=True):
-            if StsThizAttr.get(param):
+            if (
+                StsThisAttr.get(param)
+                or StsLastAttr.get(param)
+                or StsFillAttr.get(param)
+            ):
                 continue
             sts_args.append(arg)
         return sts_args
@@ -581,11 +609,7 @@ class EnumANIInfo(AbstractAnalysis[EnumDecl]):
         return EnumANIInfo(am, d)
 
     def sts_type_in(self, target: StsWriter):
-        return self.parent_ns.get_member(
-            target,
-            self.sts_type_name,
-            self.is_default,
-        )
+        return self.parent_ns.get_member(target, self.sts_type_name, self.is_default)
 
 
 class UnionFieldANIInfo(AbstractAnalysis[UnionFieldDecl]):
@@ -634,11 +658,7 @@ class UnionANIInfo(AbstractAnalysis[UnionDecl]):
         return UnionANIInfo(am, d)
 
     def sts_type_in(self, target: StsWriter):
-        return self.parent_ns.get_member(
-            target,
-            self.sts_type_name,
-            self.is_default,
-        )
+        return self.parent_ns.get_member(target, self.sts_type_name, self.is_default)
 
 
 class StructFieldANIInfo(AbstractAnalysis[StructFieldDecl]):
@@ -658,7 +678,7 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
 
         self.parent_ns = PackageANIInfo.get(am, d.parent_pkg).ns
         self.sts_type_name = d.name
-        if ClazzAttr.get(d):
+        if ClassAttr.get(d):
             self.sts_impl_name = f"{d.name}"
         else:
             self.sts_impl_name = f"{d.name}_inner"
@@ -707,11 +727,7 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
         return self.sts_type_name == self.sts_impl_name
 
     def sts_type_in(self, target: StsWriter):
-        return self.parent_ns.get_member(
-            target,
-            self.sts_type_name,
-            self.is_default,
-        )
+        return self.parent_ns.get_member(target, self.sts_type_name, self.is_default)
 
 
 class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
@@ -721,7 +737,7 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
 
         self.parent_ns = PackageANIInfo.get(am, d.parent_pkg).ns
         self.sts_type_name = d.name
-        if ClazzAttr.get(d):
+        if ClassAttr.get(d):
             self.sts_impl_name = f"{d.name}"
         else:
             self.sts_impl_name = f"{d.name}_inner"
@@ -761,11 +777,7 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
         return self.sts_type_name == self.sts_impl_name
 
     def sts_type_in(self, target: StsWriter):
-        return self.parent_ns.get_member(
-            target,
-            self.sts_type_name,
-            self.is_default,
-        )
+        return self.parent_ns.get_member(target, self.sts_type_name, self.is_default)
 
 
 class TypeANIInfo(AbstractAnalysis[Type], metaclass=ABCMeta):

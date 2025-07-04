@@ -91,18 +91,20 @@ class PythonBundle:
             suffix_script = ".bat"
             suffix_executable = ".11.exe"
             path_separator = "\\"
-            template = """@echo off
-set TAIHE_ROOT=%~dp0..
-"%TAIHE_ROOT%/_PYTHON_REL_" "%TAIHE_ROOT%/_PYMOD_REL_" %*
-"""
+            template = (
+                "@echo off\n"
+                "set TAIHE_ROOT=%~dp0..\n"
+                '"%TAIHE_ROOT%\\_PYTHON_REL_" "%TAIHE_ROOT%\\_PYMOD_REL_" %*\n'
+            )
         else:
             suffix_script = ""
             suffix_executable = ""
             path_separator = "/"
-            template = """#!/bin/bash -eu
-export TAIHE_ROOT="$(realpath $(dirname "$0")/..)"
-exec "$TAIHE_ROOT/_PYTHON_REL_" "$TAIHE_ROOT/_PYMOD_REL_" "$@"
-"""
+            template = (
+                "#!/bin/bash -eu\n"
+                'export TAIHE_ROOT="$(realpath $(dirname "$0")/..)"\n'
+                'exec "$TAIHE_ROOT/_PYTHON_REL_" "$TAIHE_ROOT/_PYMOD_REL_" "$@"\n'
+            )
 
         python_path = self.pyrt_dir / f"bin/python3{suffix_executable}"
         python_rel = python_path.relative_to(self.root_dir)
@@ -160,7 +162,10 @@ class Builder:
         dist_prefix = f"{self.brand}-{platform.value}"  # taihe-linux-x86_64
         bundle_root = self.dist_dir / dist_prefix  # repo/dist/taihe-linux-x86_64
         # bundle_out = repo/dist/taihe-linux-x86_64-0.35.0-20250701.tgz
-        bundle_out = self.dist_dir / f"{dist_prefix}-{self.metadata.version}-{self.metadata.build_date}.tgz"
+        bundle_out = (
+            self.dist_dir
+            / f"{dist_prefix}-{self.metadata.version}-{self.metadata.build_date}.tgz"
+        )
 
         ### Create the bundle ###
         bundle = PythonBundle(bundle_root, platform)
