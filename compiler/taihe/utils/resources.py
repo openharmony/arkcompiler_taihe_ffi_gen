@@ -364,9 +364,11 @@ class _LegacyPandaVm(PathResource):
 class PandaVm(CachedResource):
     CLI_NAME = "panda-vm"
     PATH_CACHE = "panda-vm"
-    VERSION: Final = "sdk-1.5.0-dev.38856"
+    VERSION: Final = "sdk-1.5.0-dev.35451"
     CREDENTIAL = "koala-pub:y3t!n0therP"
-    URL: Final = "https://nexus.bz-openlab.ru:10443/repository/koala-npm/@panda/sdk/-"
+    URL: Final = (
+        "https://nexus.cn.bz-openlab.ru:10443/repository/koala-npm/@panda/sdk/-"
+    )
 
     # Computed attributes
     ani_header_dir: Path = field(init=False)

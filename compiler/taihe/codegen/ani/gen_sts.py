@@ -1338,10 +1338,10 @@ class STSCodeGenerator:
         if return_ty_ref := func.return_ty_ref:
             type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
             sts_return_ty_name = type_ani_info.sts_type_in(target)
-            sts_resolved_ty_name = type_ani_info.sts_type_in(target)
+            # sts_resolved_ty_name = type_ani_info.sts_type_in(target)
         else:
             sts_return_ty_name = "void"
-            sts_resolved_ty_name = "undefined"
+            # sts_resolved_ty_name = "undefined"
         sts_args = func_ani_info.call_revert_with(sts_revert_args)
         with target.indented(
             f"{func_ani_info.func_prefix}{func_ani_info.revert_name}({sts_revert_params_str}): {sts_return_ty_name} {{",
@@ -1360,38 +1360,38 @@ class STSCodeGenerator:
                 target.writelns(
                     f"{func_kind.func_call_prefix}{set_name} = {sts_args[0]};",
                 )
-            elif (promise_name := func_ani_info.promise_name) is not None:
-                sts_args_str = ", ".join(sts_args)
-                target.writelns(
-                    f"return await {func_kind.func_call_prefix}{promise_name}({sts_args_str});",
-                )
-            elif (async_name := func_ani_info.async_name) is not None:
-                with target.indented(
-                    f"return await new Promise<{sts_return_ty_name}>((resolve, reject) => {{",
-                    f"}});",
-                ):
-                    with target.indented(
-                        f"let callback: AsyncCallback<{sts_return_ty_name}> = (err: BusinessError | null, res?: {sts_resolved_ty_name}): void => {{",
-                        f"}}",
-                    ):
-                        with target.indented(
-                            f"if (err !== null) {{",
-                            f"}}",
-                        ):
-                            target.writelns(
-                                f"reject(err);",
-                            )
-                        with target.indented(
-                            f"else {{",
-                            f"}}",
-                        ):
-                            target.writelns(
-                                f"resolve(res as {sts_resolved_ty_name});",
-                            )
-                    sts_args_with_cb_str = ", ".join([*sts_args, "callback"])
-                    target.writelns(
-                        f"{func_kind.func_call_prefix}{async_name}({sts_args_with_cb_str});",
-                    )
+            # elif (promise_name := func_ani_info.promise_name) is not None:
+            #     sts_args_str = ", ".join(sts_args)
+            #     target.writelns(
+            #         f"return await {func_kind.func_call_prefix}{promise_name}({sts_args_str});",
+            #     )
+            # elif (async_name := func_ani_info.async_name) is not None:
+            #     with target.indented(
+            #         f"return await new Promise<{sts_return_ty_name}>((resolve, reject) => {{",
+            #         f"}});",
+            #     ):
+            #         with target.indented(
+            #             f"let callback: AsyncCallback<{sts_return_ty_name}> = (err: BusinessError | null, res?: {sts_resolved_ty_name}): void => {{",
+            #             f"}}",
+            #         ):
+            #             with target.indented(
+            #                 f"if (err !== null) {{",
+            #                 f"}}",
+            #             ):
+            #                 target.writelns(
+            #                     f"reject(err);",
+            #                 )
+            #             with target.indented(
+            #                 f"else {{",
+            #                 f"}}",
+            #             ):
+            #                 target.writelns(
+            #                     f"resolve(res as {sts_resolved_ty_name});",
+            #                 )
+            #         sts_args_with_cb_str = ", ".join([*sts_args, "callback"])
+            #         target.writelns(
+            #             f"{func_kind.func_call_prefix}{async_name}({sts_args_with_cb_str});",
+            #         )
             else:
                 target.writelns(
                     f"throw new Error(`No valid revert function found`);",
