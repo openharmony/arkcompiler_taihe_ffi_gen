@@ -89,11 +89,11 @@ class PythonBundle:
     def create_script(self, binary: str, pymod: str):
         if self.platform.is_windows():
             suffix_script = ".bat"
-            suffix_executable = ".exe"
+            suffix_executable = ".11.exe"
             path_separator = "\\"
             template = """@echo off
 set TAIHE_ROOT=%~dp0..
-%TAIHE_ROOT%/_PYTHON_REL_" "%TAIHE_ROOT%/_PYMOD_REL_" %*
+"%TAIHE_ROOT%/_PYTHON_REL_" "%TAIHE_ROOT%/_PYMOD_REL_" %*
 """
         else:
             suffix_script = ""
