@@ -1136,7 +1136,7 @@ class STSCodeGenerator:
             f"}}",
         ):
             target.writelns(
-                f"    this._move_from({sts_native_call});",
+                f"this._move_from({sts_native_call});",
             )
         if overload is not None:
             overload_register.register(ctor_name, overload)
