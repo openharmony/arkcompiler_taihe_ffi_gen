@@ -4,7 +4,6 @@ from taihe.codegen.abi.analyses import (
 from taihe.codegen.abi.writer import CHeaderWriter, CSourceWriter
 from taihe.codegen.ani.analyses import (
     ANI_CLASS,
-    ANINativeFuncInfo,
     ANIScope,
     GlobFuncANIInfo,
     IfaceANIInfo,
@@ -214,56 +213,58 @@ class ANICodeGenerator:
     ):
         subregisters: list[str] = []
 
+        local = "local"
         with pkg_ani_source_target.indented(
-            f"namespace local {{",
+            f"namespace {local} {{",
             f"}}",
             indent="",
         ):
-            mod_member_infos = []
-            self.gen_obj_drop(pkg_ani_source_target, "_obj_drop")
-            obj_drop_info = ANINativeFuncInfo(
-                sts_native_name="_obj_drop",
-                full_name="local::_obj_drop",
+            mod_member_infos: dict[str, str] = {}
+            cpp_obj_drop = "_obj_drop"
+            self.gen_obj_drop(pkg_ani_source_target, cpp_obj_drop)
+            mod_member_infos.setdefault(
+                "_taihe_objDrop",
+                f"{local}::{cpp_obj_drop}",
             )
-            mod_member_infos.append(obj_drop_info)
-            self.gen_obj_dup(pkg_ani_source_target, "_obj_dup")
-            obj_dup_info = ANINativeFuncInfo(
-                sts_native_name="_obj_dup",
-                full_name="local::_obj_dup",
+            cpp_obj_dup = "_obj_dup"
+            self.gen_obj_dup(pkg_ani_source_target, cpp_obj_dup)
+            mod_member_infos.setdefault(
+                "_taihe_objDup",
+                f"{local}::{cpp_obj_dup}",
             )
-            mod_member_infos.append(obj_dup_info)
-            self.gen_native_invoke(pkg_ani_source_target, "_native_invoke")
-            native_invoke_info = ANINativeFuncInfo(
-                sts_native_name="_native_invoke",
-                full_name="local::_native_invoke",
+            cpp_native_invoke = "_native_invoke"
+            self.gen_native_invoke(pkg_ani_source_target, cpp_native_invoke)
+            mod_member_infos.setdefault(
+                "_taihe_nativeInvoke",
+                f"{local}::{cpp_native_invoke}",
             )
-            mod_member_infos.append(native_invoke_info)
+            cpp_register_name = "ANIUtilsRegister"
             self.gen_subregister(
-                "ANIUtilsRegister",
+                cpp_register_name,
                 pkg_ani_source_target,
                 parent_scope=pkg_ani_info.ns.module.scope,
                 impl_desc=pkg_ani_info.ns.module.impl_desc,
                 member_infos=mod_member_infos,
             )
-            subregisters.append("local::ANIUtilsRegister")
+            subregisters.append(f"{local}::{cpp_register_name}")
 
-            pkg_member_infos = []
+            pkg_member_infos: dict[str, str] = {}
             for func in pkg.functions:
                 self.gen_native_func(func, pkg_ani_source_target, func.name)
                 func_ani_info = GlobFuncANIInfo.get(self.am, func)
-                func_info = ANINativeFuncInfo(
-                    sts_native_name=func_ani_info.native_name,
-                    full_name=f"local::{func.name}",
+                pkg_member_infos.setdefault(
+                    func_ani_info.native_name,
+                    f"{local}::{func.name}",
                 )
-                pkg_member_infos.append(func_info)
+            cpp_register_name = "ANIFuncsRegister"
             self.gen_subregister(
-                "ANIFuncsRegister",
+                cpp_register_name,
                 pkg_ani_source_target,
                 parent_scope=pkg_ani_info.ns.scope,
                 impl_desc=pkg_ani_info.ns.impl_desc,
                 member_infos=pkg_member_infos,
             )
-            subregisters.append("local::ANIFuncsRegister")
+            subregisters.append(f"{local}::{cpp_register_name}")
 
             for iface in pkg.interfaces:
                 with pkg_ani_source_target.indented(
@@ -273,7 +274,7 @@ class ANICodeGenerator:
                 ):
                     iface_abi_info = IfaceABIInfo.get(self.am, iface)
                     iface_ani_info = IfaceANIInfo.get(self.am, iface)
-                    iface_member_infos = []
+                    iface_member_infos: dict[str, str] = {}
                     for ancestor in iface_abi_info.ancestor_dict:
                         for method in ancestor.methods:
                             self.gen_native_method(
@@ -284,19 +285,19 @@ class ANICodeGenerator:
                                 method.name,
                             )
                             method_ani_info = IfaceMethodANIInfo.get(self.am, method)
-                            method_info = ANINativeFuncInfo(
-                                sts_native_name=method_ani_info.native_name,
-                                full_name=f"local::{iface.name}::{method.name}",
+                            iface_member_infos.setdefault(
+                                method_ani_info.native_name,
+                                f"{local}::{iface.name}::{method.name}",
                             )
-                            iface_member_infos.append(method_info)
+                    cpp_register_name = "ANIMethodsRegister"
                     self.gen_subregister(
-                        "ANIMethodsRegister",
+                        cpp_register_name,
                         pkg_ani_source_target,
                         parent_scope=ANI_CLASS,
                         impl_desc=iface_ani_info.impl_desc,
                         member_infos=iface_member_infos,
                     )
-                    subregisters.append(f"local::{iface.name}::ANIMethodsRegister")
+                    subregisters.append(f"{local}::{iface.name}::{cpp_register_name}")
 
         return subregisters
 
@@ -306,7 +307,7 @@ class ANICodeGenerator:
         pkg_ani_source_target: CSourceWriter,
         parent_scope: ANIScope,
         impl_desc: str,
-        member_infos: list[ANINativeFuncInfo],
+        member_infos: dict[str, str],
     ):
         with pkg_ani_source_target.indented(
             f"static ani_status {register_name}(ani_env *env) {{",
@@ -326,9 +327,9 @@ class ANICodeGenerator:
                 f"ani_native_function methods[] = {{",
                 f"}};",
             ):
-                for member_info in member_infos:
+                for sts_name, cpp_name in member_infos.items():
                     pkg_ani_source_target.writelns(
-                        f'{{"{member_info.sts_native_name}", nullptr, reinterpret_cast<void*>({member_info.full_name})}},',
+                        f'{{"{sts_name}", nullptr, reinterpret_cast<void*>({cpp_name})}},',
                     )
             pkg_ani_source_target.writelns(
                 f"return env->{parent_scope.suffix}_BindNative{parent_scope.member.suffix}s(scope, methods, sizeof(methods) / sizeof(ani_native_function));",
@@ -424,9 +425,9 @@ class ANICodeGenerator:
         ):
             pkg_ani_source_target.writelns(
                 f"ani_long ani_data_ptr;",
-                f'env->Object_GetField_Long(object, TH_ANI_FIND_CLASS_FIELD(env, "{iface_ani_info.impl_desc}", "_data_ptr"), reinterpret_cast<ani_long*>(&ani_data_ptr));',
+                f'env->Object_GetField_Long(object, TH_ANI_FIND_CLASS_FIELD(env, "{iface_ani_info.impl_desc}", "_taihe_dataPtr"), reinterpret_cast<ani_long*>(&ani_data_ptr));',
                 f"ani_long ani_vtbl_ptr;",
-                f'env->Object_GetField_Long(object, TH_ANI_FIND_CLASS_FIELD(env, "{iface_ani_info.impl_desc}", "_vtbl_ptr"), reinterpret_cast<ani_long*>(&ani_vtbl_ptr));',
+                f'env->Object_GetField_Long(object, TH_ANI_FIND_CLASS_FIELD(env, "{iface_ani_info.impl_desc}", "_taihe_vtblPtr"), reinterpret_cast<ani_long*>(&ani_vtbl_ptr));',
                 f"DataBlockHead* cpp_data_ptr = reinterpret_cast<DataBlockHead*>(ani_data_ptr);",
                 f"{iface_abi_info.vtable}* cpp_vtbl_ptr = reinterpret_cast<{iface_abi_info.vtable}*>(ani_vtbl_ptr);",
                 f"{iface_cpp_info.full_weak_name} cpp_iface = {iface_cpp_info.full_weak_name}({{cpp_vtbl_ptr, cpp_data_ptr}});",
@@ -708,7 +709,7 @@ class ANICodeGenerator:
                 f"ani_long ani_data_ptr = reinterpret_cast<ani_long>(cpp_obj.m_handle.data_ptr);",
                 f"cpp_obj.m_handle.data_ptr = nullptr;",
                 f"ani_object ani_obj;",
-                f'env->Object_New(TH_ANI_FIND_CLASS(env, "{iface_ani_info.impl_desc}"), TH_ANI_FIND_CLASS_METHOD(env, "{iface_ani_info.impl_desc}", "_initialize", "JJ:V"), &ani_obj, ani_vtbl_ptr, ani_data_ptr);',
+                f'env->Object_New(TH_ANI_FIND_CLASS(env, "{iface_ani_info.impl_desc}"), TH_ANI_FIND_CLASS_METHOD(env, "{iface_ani_info.impl_desc}", "_taihe_initialize", "JJ:V"), &ani_obj, ani_vtbl_ptr, ani_data_ptr);',
                 f"return ani_obj;",
             )
 

@@ -436,46 +436,46 @@ class STSCodeGenerator:
             for injected in iface_ani_info.class_injected_codes:
                 target.write_block(injected)
             target.writelns(
-                f"private _vtbl_ptr: long;",
-                f"private _data_ptr: long;",
+                f"private _taihe_vtblPtr: long;",
+                f"private _taihe_dataPtr: long;",
             )
             with target.indented(
-                f"private _register(): void {{",
+                f"private _taihe_register(): void {{",
                 f"}}",
             ):
                 target.writelns(
-                    f"_registry.register(this, this._data_ptr, this);",
+                    f"_taihe_registry.register(this, this._taihe_dataPtr, this);",
                 )
             with target.indented(
-                f"private _unregister(): void {{",
+                f"private _taihe_unregister(): void {{",
                 f"}}",
             ):
                 target.writelns(
-                    f"_registry.unregister(this);",
+                    f"_taihe_registry.unregister(this);",
                 )
             with target.indented(
-                f"private _initialize(_vtbl_ptr: long, _data_ptr: long): void {{",
+                f"private _taihe_initialize(vtblPtr: long, dataPtr: long): void {{",
                 f"}}",
             ):
                 target.writelns(
-                    f"this._vtbl_ptr = _vtbl_ptr;",
-                    f"this._data_ptr = _data_ptr;",
-                    f"this._register();",
+                    f"this._taihe_vtblPtr = vtblPtr;",
+                    f"this._taihe_dataPtr = dataPtr;",
+                    f"this._taihe_register();",
                 )
             with target.indented(
-                f"public _copy_from(other: {iface_ani_info.sts_impl_name}): void {{",
+                f"public _taihe_copyFrom(other: {iface_ani_info.sts_impl_name}): void {{",
                 f"}}",
             ):
                 target.writelns(
-                    f"this._initialize(other._vtbl_ptr, _obj_dup(other._data_ptr));",
+                    f"this._taihe_initialize(other._taihe_vtblPtr, _taihe_objDup(other._taihe_dataPtr));",
                 )
             with target.indented(
-                f"public _move_from(other: {iface_ani_info.sts_impl_name}): void {{",
+                f"public _taihe_moveFrom(other: {iface_ani_info.sts_impl_name}): void {{",
                 f"}}",
             ):
                 target.writelns(
-                    f"this._initialize(other._vtbl_ptr, other._data_ptr);",
-                    f"other._unregister();",
+                    f"this._taihe_initialize(other._taihe_vtblPtr, other._taihe_dataPtr);",
+                    f"other._taihe_unregister();",
                 )
             iface_abi_info = IfaceABIInfo.get(self.am, iface)
             for ancestor in iface_abi_info.ancestor_dict:
@@ -1136,7 +1136,7 @@ class STSCodeGenerator:
             f"}}",
         ):
             target.writelns(
-                f"this._move_from({sts_native_call});",
+                f"this._taihe_moveFrom({sts_native_call});",
             )
         if overload is not None:
             overload_register.register(ctor_name, overload)
@@ -1429,7 +1429,7 @@ class STSCodeGenerator:
         target: StsWriter,
     ):
         target.writelns(
-            "function __fromArrayBufferToBigInt(arr: ArrayBuffer): BigInt {",
+            "function _taihe_fromArrayBufferToBigInt(arr: ArrayBuffer): BigInt {",
             "    let res: BigInt = 0n;",
             "    for (let i: int = 0; i < arr.getByteLength(); i++) {",
             "        res |= BigInt(arr.at(i).toLong() & 0xff) << BigInt(i * 8);",
@@ -1442,7 +1442,7 @@ class STSCodeGenerator:
             "}",
         )
         target.writelns(
-            "function __fromBigIntToArrayBuffer(val: BigInt, blk: int): ArrayBuffer {",
+            "function _taihe_fromBigIntToArrayBuffer(val: BigInt, blk: int): ArrayBuffer {",
             "    let n_7 = BigInt(blk * 8 - 1);",
             "    let n_8 = BigInt(blk * 8);",
             "    let ocp: BigInt = val;",
@@ -1465,44 +1465,36 @@ class STSCodeGenerator:
             "}",
         )
         target.writelns(
-            "function __makeCallback(cast_ptr: long, func_ptr: long, data_ptr: long) {",
+            "function _taihe_makeCallback(castPtr: long, funcPtr: long, dataPtr: long) {",
             "    let callback = (",
-            "        arg_0?: Object, arg_1?: Object,",
-            "        arg_2?: Object, arg_3?: Object,",
-            "        arg_4?: Object, arg_5?: Object,",
-            "        arg_6?: Object, arg_7?: Object,",
-            "        arg_8?: Object, arg_9?: Object,",
-            "        arg_a?: Object, arg_b?: Object,",
-            "        arg_c?: Object, arg_d?: Object,",
-            "        arg_e?: Object, arg_f?: Object,",
+            "        arg_0?: Object, arg_1?: Object, arg_2?: Object, arg_3?: Object,",
+            "        arg_4?: Object, arg_5?: Object, arg_6?: Object, arg_7?: Object,",
+            "        arg_8?: Object, arg_9?: Object, arg_a?: Object, arg_b?: Object,",
+            "        arg_c?: Object, arg_d?: Object, arg_e?: Object, arg_f?: Object,",
             "    ): Object | null | undefined => {",
-            "        return _native_invoke(",
-            "            cast_ptr, func_ptr, data_ptr,",
+            "        return _taihe_nativeInvoke(",
+            "            castPtr, funcPtr, dataPtr,",
             "            arg_0, arg_1, arg_2, arg_3,",
             "            arg_4, arg_5, arg_6, arg_7,",
             "            arg_8, arg_9, arg_a, arg_b,",
             "            arg_c, arg_d, arg_e, arg_f,",
             "        );",
             "    };",
-            "    _registry.register(callback, data_ptr, callback);",
+            "    _taihe_registry.register(callback, dataPtr, callback);",
             "    return callback;",
             "}",
         )
         target.writelns(
-            f"native function _obj_drop(data_ptr: long): void;",
-            f"native function _obj_dup(data_ptr: long): long;",
-            f"const _registry = new FinalizationRegistry<long>(_obj_drop);",
+            f"native function _taihe_objDrop(dataPtr: long): void;",
+            f"native function _taihe_objDup(dataPtr: long): long;",
+            f"const _taihe_registry = new FinalizationRegistry<long>(_taihe_objDrop);",
         )
         target.writelns(
-            f"native function _native_invoke(",
-            f"    cast_ptr: long, func_ptr: long, data_ptr: long,",
-            f"    arg_0?: Object, arg_1?: Object,",
-            f"    arg_2?: Object, arg_3?: Object,",
-            f"    arg_4?: Object, arg_5?: Object,",
-            f"    arg_6?: Object, arg_7?: Object,",
-            f"    arg_8?: Object, arg_9?: Object,",
-            f"    arg_a?: Object, arg_b?: Object,",
-            f"    arg_c?: Object, arg_d?: Object,",
-            f"    arg_e?: Object, arg_f?: Object,",
+            f"native function _taihe_nativeInvoke(",
+            f"    castPtr: long, funcPtr: long, dataPtr: long,",
+            f"    arg_0?: Object, arg_1?: Object, arg_2?: Object, arg_3?: Object,",
+            f"    arg_4?: Object, arg_5?: Object, arg_6?: Object, arg_7?: Object,",
+            f"    arg_8?: Object, arg_9?: Object, arg_a?: Object, arg_b?: Object,",
+            f"    arg_c?: Object, arg_d?: Object, arg_e?: Object, arg_f?: Object,",
             f"): Object | null | undefined;",
         )

@@ -266,11 +266,12 @@ class Namespace:
         member_is_default: bool,
     ) -> str:
         if not isinstance(self.parent, Namespace):
-            scope_name = "__" + "".join(c if c.isalnum() else "_" for c in self.name)
+            filtered_name = "".join(c if c.isalnum() else "_" for c in self.name)
             if member_is_default:
-                decl_name = f"{scope_name}_default"
+                decl_name = f"_taihe_{filtered_name}_default"
                 target.add_import_default(f"./{self.name}", decl_name)
                 return decl_name
+            scope_name = f"_taihe_{filtered_name}"
             target.add_import_module(f"./{self.name}", scope_name)
         else:
             scope_name = self.parent.get_member(target, self.name, self.is_default)
@@ -322,12 +323,6 @@ class PackageGroupANIInfo(AbstractAnalysis[PackageGroup]):
         return self.package_map[pkg]
 
 
-@dataclass
-class ANINativeFuncInfo:
-    sts_native_name: str
-    full_name: str
-
-
 class PackageANIInfo(AbstractAnalysis[PackageDecl]):
     def __init__(self, am: AnalysisManager, p: PackageDecl) -> None:
         self.am = am
@@ -357,8 +352,8 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
         self.am = am
         self.f = f
 
-        self.native_name = f"{f.name}_native"
-        self.revert_name = f"{f.name}_revert"
+        self.native_name = f"_taihe_{f.name}_native"
+        self.revert_name = f"_taihe_{f.name}_revert"
         self.func_call_prefix = ""
         self.func_prefix = "export function "
         self.native_prefix = "export native function "
@@ -482,8 +477,8 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
         self.am = am
         self.f = f
 
-        self.native_name = f"{f.name}_native"
-        self.revert_name = f"{f.name}_revert"
+        self.native_name = f"_taihe_{f.name}_native"
+        self.revert_name = f"_taihe_{f.name}_revert"
         self.func_call_prefix = "this."
         self.func_prefix = ""
         self.native_prefix = "native "
@@ -681,7 +676,7 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
         if ClassAttr.get(d):
             self.sts_impl_name = f"{d.name}"
         else:
-            self.sts_impl_name = f"{d.name}_inner"
+            self.sts_impl_name = f"_taihe_{d.name}_inner"
         self.type_desc = (
             "L" + "/".join([*self.parent_ns.ani_path, self.sts_type_name]) + ";"
         )
@@ -740,7 +735,7 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
         if ClassAttr.get(d):
             self.sts_impl_name = f"{d.name}"
         else:
-            self.sts_impl_name = f"{d.name}_inner"
+            self.sts_impl_name = f"_taihe_{d.name}_inner"
         self.type_desc = (
             "L" + "/".join([*self.parent_ns.ani_path, self.sts_type_name]) + ";"
         )
@@ -1677,7 +1672,7 @@ class BigIntTypeANIInfo(TypeANIInfo):
         ani_length = f"{cpp_result}_length"
         target.writelns(
             f"ani_arraybuffer {ani_arrbuf};",
-            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.module.impl_desc}", "__fromBigIntToArrayBuffer", nullptr), reinterpret_cast<ani_ref*>(&{ani_arrbuf}), {ani_value}, sizeof({item_ty_cpp_info.as_owner}) / sizeof(char));'
+            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.module.impl_desc}", "_taihe_fromBigIntToArrayBuffer", nullptr), reinterpret_cast<ani_ref*>(&{ani_arrbuf}), {ani_value}, sizeof({item_ty_cpp_info.as_owner}) / sizeof(char));'
             f"char* {ani_data} = nullptr;",
             f"size_t {ani_length} = 0;",
             f"{env}->ArrayBuffer_GetInfo({ani_arrbuf}, reinterpret_cast<void**>(&{ani_data}), &{ani_length});",
@@ -1702,7 +1697,7 @@ class BigIntTypeANIInfo(TypeANIInfo):
             f"{env}->CreateArrayBuffer({cpp_value}.size() * (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)), reinterpret_cast<void**>(&{ani_data}), &{ani_arrbuf});",
             f"memcpy({ani_data}, {cpp_value}.data(), {cpp_value}.size() * (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)));",
             f"ani_object {ani_result};",
-            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.module.impl_desc}", "__fromArrayBufferToBigInt", nullptr), reinterpret_cast<ani_ref*>(&{ani_result}), {ani_arrbuf});',
+            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.module.impl_desc}", "_taihe_fromArrayBufferToBigInt", nullptr), reinterpret_cast<ani_ref*>(&{ani_result}), {ani_arrbuf});',
         )
 
 
@@ -1954,7 +1949,7 @@ class CallbackTypeANIInfo(TypeANIInfo):
             f"ani_long {ani_data_ptr} = reinterpret_cast<ani_long>({cpp_value_copy}.m_handle.data_ptr);",
             f"{cpp_value_copy}.m_handle.data_ptr = nullptr;",
             f"ani_fn_object {ani_result};",
-            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.module.impl_desc}", "__makeCallback", nullptr), reinterpret_cast<ani_ref*>(&{ani_result}), {ani_cast_ptr}, {ani_func_ptr}, {ani_data_ptr});',
+            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.module.impl_desc}", "_taihe_makeCallback", nullptr), reinterpret_cast<ani_ref*>(&{ani_result}), {ani_cast_ptr}, {ani_func_ptr}, {ani_data_ptr});',
         )
 
     def gen_native_invoke(
