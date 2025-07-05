@@ -161,10 +161,10 @@ class Builder:
         self.rebuild_compiler()
         dist_prefix = f"{self.brand}-{platform.value}"  # taihe-linux-x86_64
         bundle_root = self.dist_dir / dist_prefix  # repo/dist/taihe-linux-x86_64
-        # bundle_out = repo/dist/taihe-linux-x86_64-0.35.0-20250701.tgz
+        # bundle_out = repo/dist/taihe-linux-x86_64-0.35.0-20250701.tar.gz # adapt to pre built download scripts
         bundle_out = (
             self.dist_dir
-            / f"{dist_prefix}-{self.metadata.version}-{self.metadata.build_date}.tgz"
+            / f"{dist_prefix}-{self.metadata.version}-{self.metadata.build_date}.tar.gz"
         )
 
         ### Create the bundle ###
