@@ -617,6 +617,8 @@ all_attr_types: list[CheckedAttrT] = [
     NullAttr,
     UndefinedAttr,
     StsThisAttr,
+    StsLastAttr,
+    StsFillAttr,
     BigIntAttr,
     ArrayBufferAttr,
     TypedArrayAttr,
