@@ -35,7 +35,7 @@ int32_t sum_arr(array_view<int32_t> a) {
 
 `compiler/`
 ```sh
-./run-test /path/to/overload -ani
+./run-test /path/to/deprecated_overload -ani
 ```
 
 生成的sts代码如下：
