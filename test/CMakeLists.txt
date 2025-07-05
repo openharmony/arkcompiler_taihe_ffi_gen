@@ -33,6 +33,8 @@ add_subdirectory(ani_bundlemanager)
 add_subdirectory(ani_graphics3d)
 add_subdirectory(ani_polymorphism)
 add_subdirectory(ani_fixedarray)
+add_subdirectory(ani_tp_cookies)
+add_subdirectory(ani_tp_ui)
 
 # add_subdirectory(ani_huks)
 # add_subdirectory(ani_image)

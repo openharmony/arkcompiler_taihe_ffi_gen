@@ -1,0 +1,5 @@
+use ui;
+
+function RunNativeBusiness(
+    ui: ui.AntUserUIProvider,
+    body: ui.AntUserDialogBody): void;
