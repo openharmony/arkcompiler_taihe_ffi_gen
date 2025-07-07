@@ -4,7 +4,8 @@ from json import dumps
 from taihe.codegen.napi.analyses import (
     EnumNAPIInfo,
     IfaceNAPIInfo,
-    PackageNAPIInfo,
+    Namespace,
+    PackageGroupNAPIInfo,
     StructNAPIInfo,
     TypeNAPIInfo,
     UnionFieldNAPIInfo,
@@ -32,30 +33,42 @@ class DTSCodeGenerator:
         self.am = am
 
     def generate(self, pg: PackageGroup):
-        for pkg in pg.packages:
-            self.gen_package(pkg)
+        pg_napi_info = PackageGroupNAPIInfo.get(self.am, pg)
+        for module, ns in pg_napi_info.module_dict.items():
+            self.gen_module_file(module, ns)
 
-    def gen_package(
-        self,
-        pkg: PackageDecl,
-    ):
-        pkg_napi_info = PackageNAPIInfo.get(self.am, pkg)
+    def gen_module_file(self, module: str, ns: Namespace):
         with DtsWriter(
             self.oc,
-            f"{pkg_napi_info.ts_decl}",
-            FileKind.ETS,
-        ) as pkg_dts_target:
-            for func in pkg.functions:
-                self.gen_func(func, pkg_dts_target)
-            for struct in pkg.structs:
-                self.gen_struct_interface(struct, pkg_dts_target)
-                self.gen_struct_class(struct, pkg_dts_target)
-            for iface in pkg.interfaces:
-                self.gen_iface_interface(iface, pkg_dts_target)
-            for enum in pkg.enums:
-                self.gen_enum(enum, pkg_dts_target)
-            for union in pkg.unions:
-                self.gen_union(union, pkg_dts_target)
+            f"{module}.d.ts",
+            FileKind.DTS,
+        ) as target:
+            self.gen_namespace(ns, target)
+
+    def gen_namespace(self, ns: Namespace, target: DtsWriter):
+        for pkg in ns.packages:
+            self.gen_package(pkg, target)
+        for child_ns_name, child_ns in ns.children.items():
+            dts_decl = f"namespace {child_ns_name}"
+            dts_decl = f"export {dts_decl}"
+            with target.indented(
+                f"{dts_decl} {{",
+                f"}}",
+            ):
+                self.gen_namespace(child_ns, target)
+
+    def gen_package(self, pkg: PackageDecl, pkg_dts_target: DtsWriter):
+        for func in pkg.functions:
+            self.gen_func(func, pkg_dts_target)
+        for struct in pkg.structs:
+            self.gen_struct_interface(struct, pkg_dts_target)
+            self.gen_struct_class(struct, pkg_dts_target)
+        for iface in pkg.interfaces:
+            self.gen_iface_interface(iface, pkg_dts_target)
+        for enum in pkg.enums:
+            self.gen_enum(enum, pkg_dts_target)
+        for union in pkg.unions:
+            self.gen_union(union, pkg_dts_target)
 
     def gen_func(self, func: GlobFuncDecl, pkg_dts_target: DtsWriter):
         args = []

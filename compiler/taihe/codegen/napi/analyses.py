@@ -11,6 +11,7 @@ from taihe.codegen.ani.attributes import (
     ClazzAttr,
     CtorAttr,
     ExtendsAttr,
+    NamespaceAttr,
     NullAttr,
     RecordAttr,
     UndefinedAttr,
@@ -26,6 +27,7 @@ from taihe.semantics.declarations import (
     IfaceDecl,
     IfaceMethodDecl,
     PackageDecl,
+    PackageGroup,
     StructDecl,
     StructFieldDecl,
     UnionDecl,
@@ -49,6 +51,77 @@ from taihe.semantics.visitor import TypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
 
 
+class Namespace:
+    def __init__(self, name: str, parent: "Namespace | None" = None) -> None:
+        self.name = name
+        self.parent = parent
+
+        self.children: dict[str, Namespace] = {}
+        self.packages: list[PackageDecl] = []
+
+        if parent is None:
+            self.module = self
+            self.path: list[str] = []
+        else:
+            self.module = parent.module
+            self.path: list[str] = [*parent.path, name]
+
+        self.napi_path = "/".join(self.module.name.split(".") + self.path)
+
+    def add_path(
+        self,
+        path: list[str],
+        pkg: PackageDecl,
+    ) -> "Namespace":
+        if not path:
+            self.packages.append(pkg)
+            return self
+        head, *tail = path
+        child = self.children.setdefault(head, Namespace(head, self))
+        return child.add_path(tail, pkg)
+
+    def get_member(
+        self,
+        target: DtsWriter,
+        dts_type_name: str,
+    ) -> str:
+        if self.parent is None:
+            scope_name = "__" + "".join(c if c.isalnum() else "_" for c in self.name)
+            target.add_import_module(f"./{self.name}", scope_name)
+        else:
+            scope_name = self.parent.get_member(target, self.name)
+        return f"{scope_name}.{dts_type_name}"
+
+
+class PackageGroupNAPIInfo(AbstractAnalysis[PackageGroup]):
+    def __init__(self, am: AnalysisManager, pg: PackageGroup) -> None:
+        self.am = am
+        self.pg = pg
+
+        self.module_dict: dict[str, Namespace] = {}
+        self.package_map: dict[PackageDecl, Namespace] = {}
+
+        for pkg in pg.packages:
+            path = []
+            if attr := NamespaceAttr.get(pkg):
+                module_name = attr.module
+                if ns := attr.namespace:
+                    path = ns.split(".")
+            else:
+                module_name = pkg.name
+
+            mod = self.module_dict.setdefault(module_name, Namespace(module_name))
+            self.package_map[pkg] = mod.add_path(path, pkg)
+
+    @classmethod
+    @override
+    def create(cls, am: AnalysisManager, pg: PackageGroup) -> "PackageGroupNAPIInfo":
+        return PackageGroupNAPIInfo(am, pg)
+
+    def get_namespace(self, pkg: PackageDecl) -> Namespace:
+        return self.package_map[pkg]
+
+
 class PackageNAPIInfo(AbstractAnalysis[PackageDecl]):
     def __init__(self, am: AnalysisManager, p: PackageDecl) -> None:
         self.am = am
@@ -60,6 +133,8 @@ class PackageNAPIInfo(AbstractAnalysis[PackageDecl]):
         self.cpp_ns = "::".join(p.segments)
         self.init_func = f"Init{self.scope_name}"
         self.macro_name = f"{self.scope_name}_NAPI_H"
+        pg_napi_info = PackageGroupNAPIInfo.get(am, p.parent_group)
+        self.ns = pg_napi_info.get_namespace(p)
 
     @classmethod
     @override
@@ -120,7 +195,7 @@ class StructNAPIInfo(AbstractAnalysis[StructDecl]):
         return self.dts_type_name == self.dts_impl_name
 
     def dts_type_in(self, target: DtsWriter):
-        return self.pkg_napi_info.get_dts_type_name(
+        return self.pkg_napi_info.ns.get_member(
             target,
             self.dts_type_name,
         )
@@ -169,7 +244,7 @@ class IfaceNAPIInfo(AbstractAnalysis[IfaceDecl]):
         return self.dts_type_name == self.dts_impl_name
 
     def dts_type_in(self, target: DtsWriter):
-        return self.pkg_napi_info.get_dts_type_name(
+        return self.pkg_napi_info.ns.get_member(
             target,
             self.dts_type_name,
         )
@@ -186,7 +261,7 @@ class EnumNAPIInfo(AbstractAnalysis[EnumDecl]):
         return EnumNAPIInfo(am, f)
 
     def dts_type_in(self, target: DtsWriter):
-        return self.pkg_napi_info.get_dts_type_name(
+        return self.pkg_napi_info.ns.get_member(
             target,
             self.dts_type_name,
         )
@@ -231,7 +306,7 @@ class UnionNAPIInfo(AbstractAnalysis[UnionDecl]):
         return UnionNAPIInfo(am, f)
 
     def dts_type_in(self, target: DtsWriter):
-        return self.pkg_napi_info.get_dts_type_name(
+        return self.pkg_napi_info.ns.get_member(
             target,
             self.dts_type_name,
         )

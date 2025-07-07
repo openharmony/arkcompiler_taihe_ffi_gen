@@ -14,6 +14,8 @@ from taihe.codegen.cpp.analyses import (
 from taihe.codegen.napi.analyses import (
     GlobFuncNAPIInfo,
     IfaceNAPIInfo,
+    Namespace,
+    PackageGroupNAPIInfo,
     PackageNAPIInfo,
     StructNAPIInfo,
     TypeNAPIInfo,
@@ -49,29 +51,46 @@ class NAPICodeGenerator:
             self.gen_package(pkg)
         self.gen_register(pg)
 
+    def gen_ns_register(
+        self, ns: Namespace, reg_obj: str, ns_name: str, target: CSourceWriter
+    ):
+        for child_ns_name, child_ns in ns.children.items():
+            ns_obj = f"{ns_name}_{child_ns_name}"
+            target.writelns(
+                f"napi_value {ns_obj};",
+                f"napi_create_object(env, &{ns_obj});",
+            )
+            for pkg in child_ns.packages:
+                pkg_napi_info = PackageNAPIInfo.get(self.am, pkg)
+                target.add_include(pkg_napi_info.header)
+                target.writelns(
+                    f"{pkg_napi_info.init_func}(env, {ns_obj});",
+                )
+            self.gen_ns_register(child_ns, ns_obj, ns_obj, target)
+            target.writelns(
+                f'napi_set_named_property(env, {reg_obj}, "{child_ns_name}", {ns_obj});',
+            )
+
     def gen_register(self, pg: PackageGroup):
         with CSourceWriter(
             self.oc,
             f"temp/napi_register.cpp",
             FileKind.CPP_SOURCE,
-        ) as constructor_target:
-            constructor_target.writelns(
+        ) as target:
+            target.writelns(
                 f"EXTERN_C_START",
             )
-            with constructor_target.indented(
+            pg_napi_info = PackageGroupNAPIInfo.get(self.am, pg)
+            with target.indented(
                 f"napi_value Init(napi_env env, napi_value exports) {{",
                 f"}}",
             ):
-                for pkg in pg.packages:
-                    pkg_napi_info = PackageNAPIInfo.get(self.am, pkg)
-                    constructor_target.add_include(pkg_napi_info.header)
-                    constructor_target.writelns(
-                        f"{pkg_napi_info.init_func}(env, exports);",
-                    )
-                constructor_target.writelns(
+                for ns in pg_napi_info.module_dict.values():
+                    self.gen_ns_register(ns, "exports", "ns", target)
+                target.writelns(
                     f"return exports;",
                 )
-            constructor_target.writelns(
+            target.writelns(
                 f"EXTERN_C_END",
                 f"static napi_module demoModule = {{",
                 f"    .nm_version = 1,",

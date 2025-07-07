@@ -335,12 +335,12 @@ class BuildSystem(BuildUtils):
             raise RuntimeError(f"Code generation failed")
 
     def compile_and_link_node(self) -> None:
-        for idl_path in [self.idl_dir]:
-            d = Path(idl_path)
+        for dts_path in [self.generated_dir]:
+            d = Path(dts_path)
             for file in d.iterdir():
-                if not file.is_file() or file.suffix != ".taihe":
+                if not file.is_file() or file.suffix != ".ts":
                     continue
-                node_target = self.generated_dir / f"{file.stem}.node"
+                node_target = self.generated_dir / f"{file.with_suffix('').stem}.node"
                 runtime_src_dir = RuntimeSource.resolve_path()
                 runtime_sources = [
                     runtime_src_dir / "string.cpp",

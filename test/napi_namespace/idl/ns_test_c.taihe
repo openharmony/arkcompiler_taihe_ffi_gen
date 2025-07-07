@@ -1,0 +1,8 @@
+@!namespace("my_ns_b", "functiontest")
+
+interface IBase {
+    getId(): String;
+    setId(s: String): void;
+}
+
+function makeIBase(id: String): IBase;
