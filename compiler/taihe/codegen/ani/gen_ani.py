@@ -796,7 +796,7 @@ class ANICodeGenerator:
             f"}}",
         ):
             cpp_field_results = []
-            for parts in struct_ani_info.sts_final_fields:
+            for parts in struct_ani_info.sts_all_fields:
                 final = parts[-1]
                 type_ani_info = TypeANIInfo.get(self.am, final.ty_ref.resolved_ty)
                 ani_field_value = f"ani_field_{final.name}"
@@ -813,7 +813,10 @@ class ANICodeGenerator:
                         f'env->Object_CallMethod_{type_ani_info.ani_type.suffix}(ani_obj, TH_ANI_FIND_CLASS_METHOD(env, "{struct_ani_info.type_desc}", "<get>{final.name}", nullptr), reinterpret_cast<{type_ani_info.ani_type.base}*>(&{ani_field_value}));',
                     )
                 type_ani_info.from_ani(
-                    struct_ani_impl_target, "env", ani_field_value, cpp_field_result
+                    struct_ani_impl_target,
+                    "env",
+                    ani_field_value,
+                    cpp_field_result,
                 )
                 cpp_field_results.append(cpp_field_result)
             cpp_moved_fields_str = ", ".join(
@@ -836,7 +839,7 @@ class ANICodeGenerator:
             f"inline ani_object taihe::into_ani_t<{struct_cpp_info.as_owner}>::operator()(ani_env* env, {struct_cpp_info.as_owner} cpp_obj) const {{",
             f"}}",
         ):
-            for parts in struct_ani_info.sts_final_fields:
+            for parts in struct_ani_info.sts_all_fields:
                 final = parts[-1]
                 ani_field_result = f"ani_field_{final.name}"
                 type_ani_info = TypeANIInfo.get(self.am, final.ty_ref.resolved_ty)
@@ -938,7 +941,7 @@ class ANICodeGenerator:
             f"inline {union_cpp_info.as_owner} taihe::from_ani_t<{union_cpp_info.as_owner}>::operator()(ani_env* env, ani_ref ani_value) const {{",
             f"}}",
         ):
-            for parts in union_ani_info.sts_final_fields:
+            for parts in union_ani_info.sts_all_nones + union_ani_info.sts_all_somes:
                 final = parts[-1]
                 static_tags = []
                 for part in parts:
@@ -974,18 +977,6 @@ class ANICodeGenerator:
                         union_ani_impl_target.writelns(
                             f"return {union_cpp_info.full_name}({static_tags_str});",
                         )
-            for parts in union_ani_info.sts_final_fields:
-                final = parts[-1]
-                static_tags = []
-                for part in parts:
-                    path_cpp_info = UnionCppInfo.get(self.am, part.parent_union)
-                    static_tags.append(
-                        f"::taihe::static_tag<{path_cpp_info.full_name}::tag_t::{part.name}>"
-                    )
-                static_tags_str = ", ".join(static_tags)
-                full_name = "_".join(part.name for part in parts)
-                is_field = f"ani_is_{full_name}"
-                final_ani_info = UnionFieldANIInfo.get(self.am, final)
                 if isinstance(final_ty := final_ani_info.field_ty, Type):
                     type_ani_info = TypeANIInfo.get(self.am, final_ty)
                     union_ani_impl_target.writelns(

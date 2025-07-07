@@ -635,15 +635,21 @@ class UnionANIInfo(AbstractAnalysis[UnionDecl]):
         self.sts_type_name = d.name
         self.type_desc = "Lstd/core/Object;"
 
-        self.sts_final_fields: list[list[UnionFieldDecl]] = []
+        self.sts_all_somes: list[list[UnionFieldDecl]] = []
+        self.sts_all_nones: list[list[UnionFieldDecl]] = []
         for field in d.fields:
             if field.ty_ref and isinstance(ty := field.ty_ref.resolved_ty, UnionType):
                 inner_ani_info = UnionANIInfo.get(am, ty.ty_decl)
-                self.sts_final_fields.extend(
-                    [field, *parts] for parts in inner_ani_info.sts_final_fields
+                self.sts_all_somes.extend(
+                    [field, *parts] for parts in inner_ani_info.sts_all_somes
                 )
+                self.sts_all_nones.extend(
+                    [field, *parts] for parts in inner_ani_info.sts_all_nones
+                )
+            elif field.ty_ref is not None:
+                self.sts_all_somes.append([field])
             else:
-                self.sts_final_fields.append([field])
+                self.sts_all_nones.append([field])
 
         self.is_default = ExportDefaultAttr.get(d) is not None
 
@@ -694,7 +700,7 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
         self.sts_fields: list[StructFieldDecl] = []
         self.sts_iface_parents: list[StructFieldDecl] = []
         self.sts_class_parents: list[StructFieldDecl] = []
-        self.sts_final_fields: list[list[StructFieldDecl]] = []
+        self.sts_all_fields: list[list[StructFieldDecl]] = []
         for field in d.fields:
             if ExtendsAttr.get(field):
                 ty = field.ty_ref.resolved_ty
@@ -704,12 +710,12 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
                     self.sts_class_parents.append(field)
                 else:
                     self.sts_iface_parents.append(field)
-                self.sts_final_fields.extend(
-                    [field, *parts] for parts in parent_ani_info.sts_final_fields
+                self.sts_all_fields.extend(
+                    [field, *parts] for parts in parent_ani_info.sts_all_fields
                 )
             else:
                 self.sts_fields.append(field)
-                self.sts_final_fields.append([field])
+                self.sts_all_fields.append([field])
 
         self.is_default = ExportDefaultAttr.get(d) is not None
 
@@ -913,7 +919,10 @@ class TypeANIInfo(AbstractAnalysis[Type], metaclass=ABCMeta):
                 f"}}",
             ):
                 self.into_ani(
-                    target, env, f"{cpp_fixedarray_value}[{cpp_i}]", ani_result
+                    target,
+                    env,
+                    f"{cpp_fixedarray_value}[{cpp_i}]",
+                    ani_result,
                 )
                 target.writelns(
                     f"{env}->FixedArray_Set_Ref({ani_fixedarray_result}, {cpp_i}, {ani_result});",
@@ -1408,7 +1417,11 @@ class FixedArrayTypeANIInfo(TypeANIInfo):
         )
         item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
         item_ty_ani_info.from_ani_fixedarray(
-            target, env, ani_size, ani_value, cpp_buffer
+            target,
+            env,
+            ani_size,
+            ani_value,
+            cpp_buffer,
         )
         target.writelns(
             f"{self.cpp_info.as_owner} {cpp_result}({cpp_buffer}, {ani_size});",
@@ -1428,7 +1441,11 @@ class FixedArrayTypeANIInfo(TypeANIInfo):
             f"size_t {cpp_size} = {cpp_value}.size();",
         )
         item_ty_ani_info.into_ani_fixedarray(
-            target, env, cpp_size, f"{cpp_value}.data()", ani_result
+            target,
+            env,
+            cpp_size,
+            f"{cpp_value}.data()",
+            ani_result,
         )
 
 
@@ -1507,7 +1524,10 @@ class ArrayTypeANIInfo(TypeANIInfo):
             f"}}",
         ):
             item_ty_ani_info.into_ani_boxed(
-                target, env, f"{cpp_value}[{cpp_ctr}]", ani_item
+                target,
+                env,
+                f"{cpp_value}[{cpp_ctr}]",
+                ani_item,
             )
             target.writelns(
                 f"{env}->Array_Set({ani_result}, {cpp_ctr}, {ani_item});",
@@ -1908,7 +1928,10 @@ class CallbackTypeANIInfo(TypeANIInfo):
                     f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.ty_ref.params)}, ani_argv, &{inner_ani_res});",
                 )
                 type_ani_info.from_ani_boxed(
-                    target, "env", inner_ani_res, inner_cpp_res
+                    target,
+                    "env",
+                    inner_ani_res,
+                    inner_cpp_res,
                 )
                 target.writelns(
                     f"return {inner_cpp_res};",

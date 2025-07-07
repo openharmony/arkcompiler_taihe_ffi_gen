@@ -327,26 +327,30 @@ class STSCodeGenerator:
             # TODO: hack inject
             for injected in struct_ani_info.class_injected_codes:
                 target.write_block(injected)
-            for parts in struct_ani_info.sts_final_fields:
+            for parts in struct_ani_info.sts_all_fields:
                 final = parts[-1]
                 final_ani_info = StructFieldANIInfo.get(self.am, final)
                 readonly_str = "readonly " if final_ani_info.readonly else ""
                 ty_ani_info = TypeANIInfo.get(self.am, final.ty_ref.resolved_ty)
                 target.writelns(
-                    f"{readonly_str}{final.name}: {ty_ani_info.sts_type_in(target)};"
+                    f"{readonly_str}{final.name}: {ty_ani_info.sts_type_in(target)};",
                 )
 
-            params = []
-            for parts in struct_ani_info.sts_final_fields:
-                final = parts[-1]
-                ty_ani_info = TypeANIInfo.get(self.am, final.ty_ref.resolved_ty)
-                params.append(f"{final.name}: {ty_ani_info.sts_type_in(target)}")
-            params_str = ", ".join(params)
             with target.indented(
-                f"constructor({params_str}) {{",
+                f"constructor(",
+                f")",
+            ):
+                for parts in struct_ani_info.sts_all_fields:
+                    final = parts[-1]
+                    ty_ani_info = TypeANIInfo.get(self.am, final.ty_ref.resolved_ty)
+                    target.writelns(
+                        f"{final.name}: {ty_ani_info.sts_type_in(target)},",
+                    )
+            with target.indented(
+                f"{{",
                 f"}}",
             ):
-                for parts in struct_ani_info.sts_final_fields:
+                for parts in struct_ani_info.sts_all_fields:
                     final = parts[-1]
                     target.writelns(
                         f"this.{final.name} = {final.name};",
