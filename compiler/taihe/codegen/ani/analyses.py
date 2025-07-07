@@ -782,16 +782,16 @@ class TypeANIInfo(AbstractAnalysis[Type], metaclass=ABCMeta):
     def __init__(self, am: AnalysisManager, t: Type):
         self.cpp_info = TypeCppInfo.get(am, t)
 
-    @classmethod
-    @override
-    def create(cls, am: AnalysisManager, t: Type) -> "TypeANIInfo":
-        return TypeANIInfoDispatcher(am).handle_type(t)
-
     @property
     def type_desc_boxed(self) -> str:
         if self.ani_type.base == ANI_REF:
             return self.type_desc
         return f"Lstd/core/{self.ani_type.suffix};"
+
+    @classmethod
+    @override
+    def create(cls, am: AnalysisManager, t: Type) -> "TypeANIInfo":
+        return TypeANIInfoDispatcher(am).handle_type(t)
 
     @abstractmethod
     def sts_type_in(self, target: StsWriter) -> str:

@@ -149,14 +149,50 @@ def generate_visitor(file: TextIO, parser: Any):
         )
 
 
-def has_generated(input: Path, output: Path) -> bool:
-    return output.exists() and input.stat().st_mtime < output.stat().st_mtime
+def has_generated(grammar_input: Path, parser_output: Path) -> bool:
+    return (
+        parser_output.exists()
+        and grammar_input.stat().st_mtime < parser_output.stat().st_mtime
+    )
 
 
 class TaiheBuildHook(BuildHookInterface):
     """Hatch build hook for generating ANTLR-based AST and visitor classes."""
 
     PLUGIN_NAME = "taihe-build"
+
+    def initialize(self, version: str, build_data: dict[str, Any]) -> None:
+        # Build modes
+        #
+        # | Input | Target | Has Git? | Artifacts |
+        # |-------+--------+----------+-----------|
+        # | Git   | sdist  | Y        | Generate  |
+        # | Git   | wheel  | Y        | Generate  |
+        # | sdist | wheel  | N        | Reuse     |
+        del version
+
+        # Setup paths first.
+        self.repo_root = g_repo_dir
+        self.version_path = g_compiler_dir / "taihe/_version.py"
+
+        self.antlr_in = g_compiler_dir / "Taihe.g4"
+        self.antlr_dir = g_compiler_dir / ANTLR_PKG.replace(".", "/")
+        self.antlr_out_example = self.antlr_dir / "TaiheParser.py"
+
+        # Always bundle artifacts.
+        self._setup_artifacts(build_data)
+
+        # Only generate artifacts for in-tree build.
+        if not self._is_inside_git_repo():
+            return
+
+        # Now generate version.py and antlr.
+        self._generate_version()
+        if has_generated(self.antlr_in, self.antlr_out_example):
+            print("ANTLR: skipping generation, already generated")
+        else:
+            print("ANTLR: generating...")
+            self._generate_grammar()
 
     def _setup_artifacts(self, build_data: dict[str, Any]):
         build_data["artifacts"] += [
@@ -212,36 +248,3 @@ build_time_utc = {build_timestamp!r}
             generate_ast(f, p)
         with open(self.antlr_dir / "TaiheVisitor.py", "w") as f:
             generate_visitor(f, p)
-
-    def initialize(self, version: str, build_data: dict[str, Any]) -> None:
-        # Build modes
-        #
-        # | Input | Target | Has Git? | Artifacts |
-        # |-------+--------+----------+-----------|
-        # | Git   | sdist  | Y        | Generate  |
-        # | Git   | wheel  | Y        | Generate  |
-        # | sdist | wheel  | N        | Reuse     |
-        del version
-
-        # Setup paths first.
-        self.repo_root = g_repo_dir
-        self.version_path = g_compiler_dir / "taihe/_version.py"
-
-        self.antlr_in = g_compiler_dir / "Taihe.g4"
-        self.antlr_dir = g_compiler_dir / ANTLR_PKG.replace(".", "/")
-        self.antlr_out_example = self.antlr_dir / "TaiheParser.py"
-
-        # Always bundle artifacts.
-        self._setup_artifacts(build_data)
-
-        # Only generate artifacts for in-tree build.
-        if not self._is_inside_git_repo():
-            return
-
-        # Now generate version.py and antlr.
-        self._generate_version()
-        if has_generated(self.antlr_in, self.antlr_out_example):
-            print("ANTLR: skipping generation, already generated")
-        else:
-            print("ANTLR: generating...")
-            self._generate_grammar()

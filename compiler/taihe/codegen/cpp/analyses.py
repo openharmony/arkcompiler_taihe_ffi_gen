@@ -139,6 +139,11 @@ class TypeCppInfo(AbstractAnalysis[Type], metaclass=ABCMeta):
     as_owner: str
     as_param: str
 
+    @classmethod
+    @override
+    def create(cls, am: AnalysisManager, t: Type) -> "TypeCppInfo":
+        return TypeCppInfoDispatcher(am).handle_type(t)
+
     def return_from_abi(self, val):
         return f"::taihe::from_abi<{self.as_owner}>({val})"
 
@@ -150,11 +155,6 @@ class TypeCppInfo(AbstractAnalysis[Type], metaclass=ABCMeta):
 
     def pass_into_abi(self, val):
         return f"::taihe::into_abi<{self.as_param}>({val})"
-
-    @classmethod
-    @override
-    def create(cls, am: AnalysisManager, t: Type) -> "TypeCppInfo":
-        return TypeCppInfoDispatcher(am).handle_type(t)
 
 
 class EnumTypeCppInfo(TypeCppInfo):
