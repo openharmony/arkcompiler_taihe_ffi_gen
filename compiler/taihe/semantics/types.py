@@ -1,6 +1,6 @@
 """Defines the type system."""
 
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
@@ -34,7 +34,7 @@ class TypeProtocol(Protocol):
 
 
 @dataclass(frozen=True, repr=False)
-class Type(metaclass=ABCMeta):
+class Type(ABC):
     """Base class for all types."""
 
     ty_ref: "TypeRefDecl"
@@ -53,7 +53,7 @@ class Type(metaclass=ABCMeta):
 
 
 @dataclass(frozen=True, repr=False)
-class ValidType(Type, metaclass=ABCMeta):
+class ValidType(Type, ABC):
     """Represents a valid type that can be used in the type system."""
 
 
@@ -77,7 +77,7 @@ class InvalidType(Type):
 
 
 @dataclass(frozen=True, repr=False)
-class BuiltinType(ValidType, metaclass=ABCMeta):
+class BuiltinType(ValidType, ABC):
     """Represents a built-in type."""
 
 
@@ -192,7 +192,7 @@ class CallbackType(ValidType):
 ####################
 
 
-class GenericType(ValidType, metaclass=ABCMeta):
+class GenericType(ValidType, ABC):
     @classmethod
     @abstractmethod
     def try_construct(cls, ty_ref: "TypeRefDecl", *args_ty: Type) -> "GenericType": ...
@@ -315,7 +315,7 @@ BUILTIN_GENERICS: dict[str, type[GenericType]] = {
 
 
 @dataclass(frozen=True, repr=False)
-class UserType(ValidType, metaclass=ABCMeta):
+class UserType(ValidType, ABC):
     ty_decl: "TypeDecl"
 
     @property

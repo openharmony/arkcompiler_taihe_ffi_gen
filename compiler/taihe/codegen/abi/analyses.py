@@ -1,4 +1,4 @@
-from abc import ABCMeta
+from abc import ABC
 from dataclasses import dataclass
 
 from typing_extensions import override
@@ -169,7 +169,7 @@ class IfaceABIInfo(AbstractAnalysis[IfaceDecl]):
         return IfaceABIInfo(am, d)
 
 
-class TypeABIInfo(AbstractAnalysis[Type], metaclass=ABCMeta):
+class TypeABIInfo(AbstractAnalysis[Type], ABC):
     defn_headers: list[str]
     impl_headers: list[str]
     # type as struct field / union field / return value

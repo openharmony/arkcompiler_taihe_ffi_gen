@@ -1,4 +1,4 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Literal
 
@@ -770,7 +770,7 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
         return self.parent_ns.get_member(target, self.sts_type_name, self.is_default)
 
 
-class TypeANIInfo(AbstractAnalysis[Type], metaclass=ABCMeta):
+class TypeANIInfo(AbstractAnalysis[Type], ABC):
     ani_type: ANIType
     type_sig: str
     type_desc: str | None

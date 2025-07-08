@@ -1,4 +1,4 @@
-from abc import ABCMeta
+from abc import ABC
 
 from typing_extensions import override
 
@@ -132,7 +132,7 @@ class IfaceCppInfo(AbstractAnalysis[IfaceDecl]):
         return IfaceCppInfo(am, d)
 
 
-class TypeCppInfo(AbstractAnalysis[Type], metaclass=ABCMeta):
+class TypeCppInfo(AbstractAnalysis[Type], ABC):
     decl_headers: list[str]
     defn_headers: list[str]
     impl_headers: list[str]
