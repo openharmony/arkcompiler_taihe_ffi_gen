@@ -113,7 +113,7 @@ ANI_EXPORT ani_status ANI_Constructor(ani_vm *vm, uint32_t *result) {
 namespace hello_world {
 ani_status ANIRegister(ani_env *env) {
     ani_class ani_env;
-    if (ANI_OK != env->FindClass("Lhello_world/ETSGLOBAL;", &ani_env)) {
+    if (ANI_OK != env->FindClass("hello_world.ETSGLOBAL", &ani_env)) {
         return ANI_ERROR;
     }
     ani_native_function methods[] = {

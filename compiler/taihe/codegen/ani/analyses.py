@@ -243,7 +243,7 @@ class Namespace:
             self.scope = ANI_NAMESPACE
             self.ani_path = [*parent.ani_path, name]
 
-        self.impl_desc = "L" + "/".join(self.ani_path) + ";"
+        self.impl_desc = ".".join(self.ani_path)
 
     def add_path(
         self,
@@ -590,9 +590,7 @@ class EnumANIInfo(AbstractAnalysis[EnumDecl]):
     def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
         self.parent_ns = PackageANIInfo.get(am, d.parent_pkg).ns
         self.sts_type_name = d.name
-        self.type_desc = (
-            "L" + "/".join([*self.parent_ns.ani_path, self.sts_type_name]) + ";"
-        )
+        self.type_desc = ".".join([*self.parent_ns.ani_path, self.sts_type_name])
 
         self.is_literal = ConstAttr.get(d) is not None
 
@@ -633,7 +631,6 @@ class UnionANIInfo(AbstractAnalysis[UnionDecl]):
 
         self.parent_ns = PackageANIInfo.get(am, d.parent_pkg).ns
         self.sts_type_name = d.name
-        self.type_desc = "Lstd/core/Object;"
 
         self.sts_all_somes: list[list[UnionFieldDecl]] = []
         self.sts_all_nones: list[list[UnionFieldDecl]] = []
@@ -683,12 +680,8 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
             self.sts_impl_name = f"{d.name}"
         else:
             self.sts_impl_name = f"_taihe_{d.name}_inner"
-        self.type_desc = (
-            "L" + "/".join([*self.parent_ns.ani_path, self.sts_type_name]) + ";"
-        )
-        self.impl_desc = (
-            "L" + "/".join([*self.parent_ns.ani_path, self.sts_impl_name]) + ";"
-        )
+        self.type_desc = ".".join([*self.parent_ns.ani_path, self.sts_type_name])
+        self.impl_desc = ".".join([*self.parent_ns.ani_path, self.sts_impl_name])
 
         self.interface_injected_codes: list[str] = []
         for iface_injected in StsInjectIntoIfaceAttr.get(d):
@@ -742,12 +735,8 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
             self.sts_impl_name = f"{d.name}"
         else:
             self.sts_impl_name = f"_taihe_{d.name}_inner"
-        self.type_desc = (
-            "L" + "/".join([*self.parent_ns.ani_path, self.sts_type_name]) + ";"
-        )
-        self.impl_desc = (
-            "L" + "/".join([*self.parent_ns.ani_path, self.sts_impl_name]) + ";"
-        )
+        self.type_desc = ".".join([*self.parent_ns.ani_path, self.sts_type_name])
+        self.impl_desc = ".".join([*self.parent_ns.ani_path, self.sts_impl_name])
 
         self.interface_injected_codes: list[str] = []
         for iface_injected in StsInjectIntoIfaceAttr.get(d):
@@ -783,16 +772,17 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
 
 class TypeANIInfo(AbstractAnalysis[Type], metaclass=ABCMeta):
     ani_type: ANIType
-    type_desc: str
+    type_sig: str
+    type_desc: str | None
 
     def __init__(self, am: AnalysisManager, t: Type):
         self.cpp_info = TypeCppInfo.get(am, t)
 
     @property
-    def type_desc_boxed(self) -> str:
+    def type_sig_boxed(self) -> str:
         if self.ani_type.base == ANI_REF:
-            return self.type_desc
-        return f"Lstd/core/{self.ani_type.suffix};"
+            return self.type_sig
+        return f"C{{{self.type_desc}}}"
 
     @classmethod
     @override
@@ -839,7 +829,7 @@ class TypeANIInfo(AbstractAnalysis[Type], metaclass=ABCMeta):
             )
             self.into_ani(target, env, cpp_value, ani_value)
             target.writelns(
-                f'{env}->Object_New(TH_ANI_FIND_CLASS({env}, "{self.type_desc_boxed}"), TH_ANI_FIND_CLASS_METHOD({env}, "{self.type_desc_boxed}", "<ctor>", "{self.type_desc}:V"), &{ani_result}, {ani_value});',
+                f'{env}->Object_New(TH_ANI_FIND_CLASS({env}, "{self.type_desc}"), TH_ANI_FIND_CLASS_METHOD({env}, "{self.type_desc}", "<ctor>", "{self.type_sig}:"), &{ani_result}, {ani_value});',
             )
 
     def from_ani_boxed(
@@ -860,7 +850,7 @@ class TypeANIInfo(AbstractAnalysis[Type], metaclass=ABCMeta):
             ani_result = f"{cpp_result}_ani"
             target.writelns(
                 f"{self.ani_type} {ani_result};",
-                f'{env}->Object_CallMethod_{self.ani_type.suffix}((ani_object){ani_value}, TH_ANI_FIND_CLASS_METHOD({env}, "{self.type_desc_boxed}", "unboxed", ":{self.type_desc}"), &{ani_result});',
+                f'{env}->Object_CallMethod_{self.ani_type.suffix}((ani_object){ani_value}, TH_ANI_FIND_CLASS_METHOD({env}, "{self.type_desc}", "unboxed", ":{self.type_sig}"), &{ani_result});',
             )
             self.from_ani(target, env, ani_result, cpp_result)
 
@@ -902,17 +892,14 @@ class TypeANIInfo(AbstractAnalysis[Type], metaclass=ABCMeta):
         ani_fixedarray_result: str,
     ):
         if self.ani_type.base == ANI_REF:
-            ani_class = f"{ani_fixedarray_result}_cls"
             ani_result = f"{ani_fixedarray_result}_item"
             ani_undefined = f"{ani_fixedarray_result}_undef"
             cpp_i = f"{ani_fixedarray_result}_i"
             target.writelns(
                 f"ani_fixedarray_ref {ani_fixedarray_result};",
-                f"ani_class {ani_class};",
-                f'{env}->FindClass("{self.type_desc}", &{ani_class});',
                 f"ani_ref {ani_undefined};",
                 f"{env}->GetUndefined(&{ani_undefined});",
-                f"{env}->FixedArray_New_Ref({ani_class}, {cpp_size}, {ani_undefined}, &{ani_fixedarray_result});",
+                f'{env}->FixedArray_New_Ref(TH_ANI_FIND_CLASS({env}, "{self.type_desc}"), {cpp_size}, {ani_undefined}, &{ani_fixedarray_result});',
             )
             with target.indented(
                 f"for (size_t {cpp_i} = 0; {cpp_i} < {cpp_size}; {cpp_i}++) {{",
@@ -943,6 +930,7 @@ class EnumTypeANIInfo(TypeANIInfo):
         enum_ani_info = EnumANIInfo.get(self.am, self.t.ty_decl)
         self.ani_type = ANI_ENUM_ITEM
         self.type_desc = enum_ani_info.type_desc
+        self.type_sig = f"E{{{self.type_desc}}}"
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -973,12 +961,9 @@ class EnumTypeANIInfo(TypeANIInfo):
         cpp_value: str,
         ani_result: str,
     ):
-        ani_class = f"{ani_result}_cls"
         target.writelns(
-            f"ani_enum {ani_class};",
-            f'{env}->FindEnum("{self.type_desc}", &{ani_class});',
             f"ani_enum_item {ani_result};",
-            f"{env}->Enum_GetEnumItemByIndex({ani_class}, (ani_size){cpp_value}.get_key(), &{ani_result});",
+            f'{env}->Enum_GetEnumItemByIndex(TH_ANI_FIND_ENUM({env}, "{self.type_desc}"), (ani_size){cpp_value}.get_key(), &{ani_result});',
         )
 
 
@@ -991,6 +976,7 @@ class ConstEnumTypeANIInfo(TypeANIInfo):
         ty_ani_info = TypeANIInfo.get(self.am, self.t.ty_decl.ty_ref.resolved_ty)
         self.ani_type = ty_ani_info.ani_type
         self.type_desc = ty_ani_info.type_desc
+        self.type_sig = ty_ani_info.type_sig
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -1038,6 +1024,7 @@ class StructTypeANIInfo(TypeANIInfo):
         struct_ani_info = StructANIInfo.get(self.am, self.t.ty_decl)
         self.ani_type = ANI_OBJECT
         self.type_desc = struct_ani_info.type_desc
+        self.type_sig = f"C{{{self.type_desc}}}"
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -1080,9 +1067,9 @@ class UnionTypeANIInfo(TypeANIInfo):
         super().__init__(am, t)
         self.am = am
         self.t = t
-        union_ani_info = UnionANIInfo.get(self.am, self.t.ty_decl)
         self.ani_type = ANI_REF
-        self.type_desc = union_ani_info.type_desc
+        self.type_desc = None
+        self.type_sig = "C{std.core.Object}"
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -1128,6 +1115,7 @@ class IfaceTypeANIInfo(TypeANIInfo):
         iface_ani_info = IfaceANIInfo.get(self.am, self.t.ty_decl)
         self.ani_type = ANI_OBJECT
         self.type_desc = iface_ani_info.type_desc
+        self.type_sig = f"C{{{self.type_desc}}}"
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -1169,24 +1157,25 @@ class ScalarTypeANIInfo(TypeANIInfo):
     def __init__(self, am: AnalysisManager, t: ScalarType):
         super().__init__(am, t)
         sts_info = {
-            ScalarKind.BOOL: ("boolean", ANI_BOOLEAN, "Z"),
-            ScalarKind.F32: ("float", ANI_FLOAT, "F"),
-            ScalarKind.F64: ("double", ANI_DOUBLE, "D"),
-            ScalarKind.I8: ("byte", ANI_BYTE, "B"),
-            ScalarKind.I16: ("short", ANI_SHORT, "S"),
-            ScalarKind.I32: ("int", ANI_INT, "I"),
-            ScalarKind.I64: ("long", ANI_LONG, "J"),
-            ScalarKind.U8: ("byte", ANI_BYTE, "B"),
-            ScalarKind.U16: ("short", ANI_SHORT, "S"),
-            ScalarKind.U32: ("int", ANI_INT, "I"),
-            ScalarKind.U64: ("long", ANI_LONG, "J"),
+            ScalarKind.BOOL: ("boolean", ANI_BOOLEAN, "z"),
+            ScalarKind.F32: ("float", ANI_FLOAT, "f"),
+            ScalarKind.F64: ("double", ANI_DOUBLE, "d"),
+            ScalarKind.I8: ("byte", ANI_BYTE, "b"),
+            ScalarKind.I16: ("short", ANI_SHORT, "s"),
+            ScalarKind.I32: ("int", ANI_INT, "i"),
+            ScalarKind.I64: ("long", ANI_LONG, "l"),
+            ScalarKind.U8: ("byte", ANI_BYTE, "b"),
+            ScalarKind.U16: ("short", ANI_SHORT, "s"),
+            ScalarKind.U32: ("int", ANI_INT, "i"),
+            ScalarKind.U64: ("long", ANI_LONG, "l"),
         }.get(t.kind)
         if sts_info is None:
             raise ValueError
-        sts_type, ani_type, type_desc = sts_info
+        sts_type, ani_type, type_sig = sts_info
         self.sts_type = sts_type
         self.ani_type = ani_type
-        self.type_desc = type_desc
+        self.type_desc = f"std.core.{ani_type.suffix}"
+        self.type_sig = type_sig
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -1227,7 +1216,8 @@ class OpaqueTypeANIInfo(TypeANIInfo):
             self.sts_type = sts_type_attr.type_name
         else:
             self.sts_type = "Object"
-        self.type_desc = "Lstd/core/Object;"
+        self.type_desc = "std.core.Object"
+        self.type_sig = f"C{{{self.type_desc}}}"
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -1262,7 +1252,8 @@ class StringTypeANIInfo(TypeANIInfo):
     def __init__(self, am: AnalysisManager, t: StringType):
         super().__init__(am, t)
         self.ani_type = ANI_STRING
-        self.type_desc = "Lstd/core/String;"
+        self.type_desc = "std.core.String"
+        self.type_sig = f"C{{{self.type_desc}}}"
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -1311,7 +1302,8 @@ class OptionalTypeANIInfo(TypeANIInfo):
         self.t = t
         item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
         self.ani_type = ANI_REF
-        self.type_desc = item_ty_ani_info.type_desc_boxed
+        self.type_desc = item_ty_ani_info.type_desc
+        self.type_sig = item_ty_ani_info.type_sig_boxed
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -1391,7 +1383,8 @@ class FixedArrayTypeANIInfo(TypeANIInfo):
         self.t = t
         item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
         self.ani_type = item_ty_ani_info.ani_type.fixedarray
-        self.type_desc = f"Lescompat/FixedArray;"
+        self.type_desc = None
+        self.type_sig = f"A{{{item_ty_ani_info.type_sig}}}"
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -1455,7 +1448,8 @@ class ArrayTypeANIInfo(TypeANIInfo):
         self.am = am
         self.t = t
         self.ani_type = ANI_ARRAY
-        self.type_desc = f"Lescompat/Array;"
+        self.type_desc = "escompat.Array"
+        self.type_sig = f"C{{{self.type_desc}}}"
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -1546,7 +1540,8 @@ class ArrayBufferTypeANIInfo(TypeANIInfo):
         self.t = t
         self.arraybuffer_attr = arraybuffer_attr
         self.ani_type = ANI_ARRAYBUFFER
-        self.type_desc = "Lescompat/ArrayBuffer;"
+        self.type_desc = "escompat.ArrayBuffer"
+        self.type_sig = f"C{{{self.type_desc}}}"
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -1599,7 +1594,8 @@ class TypedArrayTypeANIInfo(TypeANIInfo):
         self.t = t
         self.typedarray_attr = typedarray_attr
         self.ani_type = ANI_OBJECT
-        self.type_desc = f"Lescompat/{self.typedarray_attr.sts_type};"
+        self.type_desc = f"escompat.{self.typedarray_attr.sts_type}"
+        self.type_sig = f"C{{{self.type_desc}}}"
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -1655,7 +1651,7 @@ class TypedArrayTypeANIInfo(TypeANIInfo):
             f"ani_ref {ani_byte_offset};",
             f"{env}->GetUndefined(&{ani_byte_offset});",
             f"ani_object {ani_result};",
-            f'{env}->Object_New(TH_ANI_FIND_CLASS({env}, "{self.type_desc}"), TH_ANI_FIND_CLASS_METHOD({env}, "{self.type_desc}", "<ctor>", "Lescompat/ArrayBuffer;Lstd/core/Double;Lstd/core/Double;:V"), &{ani_result}, {ani_arrbuf}, {ani_byte_length}, {ani_byte_offset});',
+            f'{env}->Object_New(TH_ANI_FIND_CLASS({env}, "{self.type_desc}"), TH_ANI_FIND_CLASS_METHOD({env}, "{self.type_desc}", "<ctor>", "C{{escompat.ArrayBuffer}}C{{std.core.Double}}C{{std.core.Double}}:"), &{ani_result}, {ani_arrbuf}, {ani_byte_length}, {ani_byte_offset});',
         )
 
 
@@ -1671,7 +1667,8 @@ class BigIntTypeANIInfo(TypeANIInfo):
         self.t = t
         self.bigint_attr = bigint_attr
         self.ani_type = ANI_OBJECT
-        self.type_desc = "Lescompat/BigInt;"
+        self.type_desc = "escompat.BigInt"
+        self.type_sig = f"C{{{self.type_desc}}}"
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -1733,7 +1730,8 @@ class RecordTypeANIInfo(TypeANIInfo):
         self.t = t
         self.record_attr = record_attr
         self.ani_type = ANI_OBJECT
-        self.type_desc = "Lescompat/Record;"
+        self.type_desc = "escompat.Record"
+        self.type_sig = f"C{{{self.type_desc}}}"
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -1763,7 +1761,7 @@ class RecordTypeANIInfo(TypeANIInfo):
         val_ty_ani_info = TypeANIInfo.get(self.am, self.t.val_ty)
         target.writelns(
             f"ani_ref {ani_iter};",
-            f'{env}->Object_CallMethod_Ref({ani_value}, TH_ANI_FIND_CLASS_METHOD({env}, "Lescompat/Record;", "$_iterator", nullptr), &{ani_iter});',
+            f'{env}->Object_CallMethod_Ref({ani_value}, TH_ANI_FIND_CLASS_METHOD({env}, "escompat.Record", "$_iterator", nullptr), &{ani_iter});',
             f"{self.cpp_info.as_owner} {cpp_result};",
         )
         with target.indented(
@@ -1773,8 +1771,8 @@ class RecordTypeANIInfo(TypeANIInfo):
             target.writelns(
                 f"ani_ref {ani_next};",
                 f"ani_boolean {ani_done};",
-                f'{env}->Object_CallMethod_Ref(static_cast<ani_object>({ani_iter}), TH_ANI_FIND_CLASS_METHOD({env}, "Lescompat/MapIterator;", "next", nullptr), &{ani_next});',
-                f'{env}->Object_GetField_Boolean(static_cast<ani_object>({ani_next}), TH_ANI_FIND_CLASS_FIELD({env}, "Lescompat/IteratorResult;", "done"), &{ani_done});',
+                f'{env}->Object_CallMethod_Ref(static_cast<ani_object>({ani_iter}), TH_ANI_FIND_CLASS_METHOD({env}, "escompat.MapIterator", "next", nullptr), &{ani_next});',
+                f'{env}->Object_GetField_Boolean(static_cast<ani_object>({ani_next}), TH_ANI_FIND_CLASS_FIELD({env}, "escompat.IteratorResult", "done"), &{ani_done});',
             )
             with target.indented(
                 f"if ({ani_done}) {{;",
@@ -1785,7 +1783,7 @@ class RecordTypeANIInfo(TypeANIInfo):
                 )
             target.writelns(
                 f"ani_ref {ani_item};",
-                f'{env}->Object_GetField_Ref(static_cast<ani_object>({ani_next}),  TH_ANI_FIND_CLASS_FIELD({env}, "Lescompat/IteratorResult;", "value"), &{ani_item});',
+                f'{env}->Object_GetField_Ref(static_cast<ani_object>({ani_next}),  TH_ANI_FIND_CLASS_FIELD({env}, "escompat.IteratorResult", "value"), &{ani_item});',
                 f"ani_ref {ani_key};",
                 f"{env}->TupleValue_GetItem_Ref(static_cast<ani_tuple_value>({ani_item}), 0, &{ani_key});",
                 f"ani_ref {ani_val};",
@@ -1813,7 +1811,7 @@ class RecordTypeANIInfo(TypeANIInfo):
         ani_val = f"{ani_result}_ani_val"
         target.writelns(
             f"ani_object {ani_result};",
-            f'{env}->Object_New(TH_ANI_FIND_CLASS({env}, "{self.type_desc}"), TH_ANI_FIND_CLASS_METHOD({env}, "{self.type_desc}", "<ctor>", nullptr), &{ani_result});',
+            f'{env}->Object_New(TH_ANI_FIND_CLASS({env}, "escompat.Record"), TH_ANI_FIND_CLASS_METHOD({env}, "escompat.Record", "<ctor>", nullptr), &{ani_result});',
         )
         with target.indented(
             f"for (const auto& [{cpp_key}, {cpp_val}] : {cpp_value}) {{",
@@ -1822,7 +1820,7 @@ class RecordTypeANIInfo(TypeANIInfo):
             key_ty_ani_info.into_ani_boxed(target, env, cpp_key, ani_key)
             val_ty_ani_info.into_ani_boxed(target, env, cpp_val, ani_val)
             target.writelns(
-                f'{env}->Object_CallMethod_Void({ani_result}, TH_ANI_FIND_CLASS_METHOD({env}, "Lescompat/Record;", "$_set", nullptr), {ani_key}, {ani_val});',
+                f'{env}->Object_CallMethod_Void({ani_result}, TH_ANI_FIND_CLASS_METHOD({env}, "escompat.Record", "$_set", nullptr), {ani_key}, {ani_val});',
             )
 
 
@@ -1832,7 +1830,8 @@ class CallbackTypeANIInfo(TypeANIInfo):
         self.am = am
         self.t = t
         self.ani_type = ANI_FN_OBJECT
-        self.type_desc = f"Lstd/core/Function{len(t.ty_ref.params)};"
+        self.type_desc = f"std.core.Function{len(t.ty_ref.params)}"
+        self.type_sig = f"C{{{self.type_desc}}}"
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:

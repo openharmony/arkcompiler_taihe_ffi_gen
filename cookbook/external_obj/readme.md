@@ -46,7 +46,7 @@ bool is_string(uintptr_t a) {
     ani_env* env = get_env();
     ani_boolean res;
     ani_class cls;
-    env->FindClass("Lstd/core/String;", &cls);
+    env->FindClass("std.core.String", &cls);
     env->Object_InstanceOf((ani_object)a, cls, &res);
     return res;
 }
