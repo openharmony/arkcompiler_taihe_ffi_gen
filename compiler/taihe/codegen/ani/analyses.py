@@ -773,7 +773,7 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
 class TypeANIInfo(AbstractAnalysis[Type], ABC):
     ani_type: ANIType
     type_sig: str
-    type_desc: str | None
+    type_desc: str
 
     def __init__(self, am: AnalysisManager, t: Type):
         self.cpp_info = TypeCppInfo.get(am, t)
@@ -1068,8 +1068,8 @@ class UnionTypeANIInfo(TypeANIInfo):
         self.am = am
         self.t = t
         self.ani_type = ANI_REF
-        self.type_desc = None
-        self.type_sig = "C{std.core.Object}"
+        self.type_desc = "std.core.Object"
+        self.type_sig = f"C{{{self.type_desc}}}"
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -1383,8 +1383,7 @@ class FixedArrayTypeANIInfo(TypeANIInfo):
         self.t = t
         item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
         self.ani_type = item_ty_ani_info.ani_type.fixedarray
-        self.type_desc = None
-        self.type_sig = f"A{{{item_ty_ani_info.type_sig}}}"
+        self.type_desc = self.type_sig = f"A{{{item_ty_ani_info.type_sig}}}"
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:

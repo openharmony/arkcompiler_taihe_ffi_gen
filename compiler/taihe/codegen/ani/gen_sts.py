@@ -64,7 +64,7 @@ class GlobalKind(FuncKind):
     func_prefix = "export function "
     get_prefix = "export get "
     set_prefix = "export set "
-    overload_prefix = "overload "
+    overload_prefix = "export overload "
 
     @property
     def func_call_prefix(self) -> str:
