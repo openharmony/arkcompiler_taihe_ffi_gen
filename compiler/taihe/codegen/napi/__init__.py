@@ -13,7 +13,7 @@ class NapiBridgeBackendConfig(BackendConfig):
     def construct(self, instance: CompilerInstance) -> Backend:
         from taihe.codegen.ani.attributes import all_attr_types
         from taihe.codegen.napi.gen_dts import DTSCodeGenerator
-        from taihe.codegen.napi.gen_napi import NAPICodeGenerator
+        from taihe.codegen.napi.gen_napi import NapiCodeGenerator
 
         instance.attribute_manager.register(*all_attr_types)
 
@@ -26,7 +26,7 @@ class NapiBridgeBackendConfig(BackendConfig):
                 om = self._ci.output_manager
                 am = self._ci.analysis_manager
                 pg = self._ci.package_group
-                NAPICodeGenerator(om, am).generate(pg)
+                NapiCodeGenerator(om, am).generate(pg)
                 DTSCodeGenerator(om, am).generate(pg)
 
         return NapiBridgeBackendImpl(instance)

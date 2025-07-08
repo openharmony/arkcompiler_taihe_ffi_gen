@@ -12,15 +12,15 @@ from taihe.codegen.cpp.analyses import (
     UnionCppInfo,
 )
 from taihe.codegen.napi.analyses import (
-    GlobFuncNAPIInfo,
-    IfaceNAPIInfo,
+    GlobFuncNapiInfo,
+    IfaceNapiInfo,
     Namespace,
-    PackageGroupNAPIInfo,
-    PackageNAPIInfo,
-    StructNAPIInfo,
-    TypeNAPIInfo,
-    UnionFieldNAPIInfo,
-    UnionNAPIInfo,
+    PackageGroupNapiInfo,
+    PackageNapiInfo,
+    StructNapiInfo,
+    TypeNapiInfo,
+    UnionFieldNapiInfo,
+    UnionNapiInfo,
 )
 from taihe.semantics.declarations import (
     EnumDecl,
@@ -37,7 +37,7 @@ from taihe.utils.analyses import AnalysisManager
 from taihe.utils.outputs import FileKind, OutputManager
 
 
-class NAPICodeGenerator:
+class NapiCodeGenerator:
     def __init__(self, oc: OutputManager, am: AnalysisManager):
         self.oc = oc
         self.am = am
@@ -61,7 +61,7 @@ class NAPICodeGenerator:
                 f"napi_create_object(env, &{ns_obj});",
             )
             for pkg in child_ns.packages:
-                pkg_napi_info = PackageNAPIInfo.get(self.am, pkg)
+                pkg_napi_info = PackageNapiInfo.get(self.am, pkg)
                 target.add_include(pkg_napi_info.header)
                 target.writelns(
                     f"{pkg_napi_info.init_func}(env, {ns_obj});",
@@ -80,7 +80,7 @@ class NAPICodeGenerator:
             target.writelns(
                 f"EXTERN_C_START",
             )
-            pg_napi_info = PackageGroupNAPIInfo.get(self.am, pg)
+            pg_napi_info = PackageGroupNapiInfo.get(self.am, pg)
             with target.indented(
                 f"napi_value Init(napi_env env, napi_value exports) {{",
                 f"}}",
@@ -111,7 +111,7 @@ class NAPICodeGenerator:
         self,
         pkg: PackageDecl,
     ):
-        pkg_napi_info = PackageNAPIInfo.get(self.am, pkg)
+        pkg_napi_info = PackageNapiInfo.get(self.am, pkg)
         pkg_cpp_user_info = PackageCppUserInfo.get(self.am, pkg)
         with CSourceWriter(
             self.oc,
@@ -124,7 +124,7 @@ class NAPICodeGenerator:
             # ctor func
             ctors_map: dict[str, GlobFuncDecl] = {}
             for func in pkg.functions:
-                func_napi_info = GlobFuncNAPIInfo.get(self.am, func)
+                func_napi_info = GlobFuncNapiInfo.get(self.am, func)
                 if class_name := func_napi_info.ctor_class_name:
                     # TODO: raise special error
                     if class_name in ctors_map:
@@ -134,7 +134,7 @@ class NAPICodeGenerator:
                     ctors_map[class_name] = func
             for iface in pkg.interfaces:
                 if ctor := ctors_map.get(iface.name):
-                    iface_napi_info = IfaceNAPIInfo.get(self.am, iface)
+                    iface_napi_info = IfaceNapiInfo.get(self.am, iface)
                     iface_napi_info.ctor = ctor
 
             register_infos = []
@@ -155,7 +155,7 @@ class NAPICodeGenerator:
             self.gen_module_init(pkg, register_infos, pkg_napi_target)
         self.gen_napi_header_file(pkg_napi_info)
 
-    def gen_napi_header_file(self, pkg_napi_info: PackageNAPIInfo):
+    def gen_napi_header_file(self, pkg_napi_info: PackageNapiInfo):
         with CHeaderWriter(
             self.oc,
             f"include/{pkg_napi_info.header}",
@@ -177,7 +177,7 @@ class NAPICodeGenerator:
         register_infos: list[tuple[str, str]],
         pkg_napi_target: CSourceWriter,
     ):
-        pkg_napi_info = PackageNAPIInfo.get(self.am, pkg)
+        pkg_napi_info = PackageNapiInfo.get(self.am, pkg)
         pkg_napi_target.writelns(
             f"EXTERN_C_START",
         )
@@ -210,7 +210,7 @@ class NAPICodeGenerator:
     def gen_func(
         self,
         func: GlobFuncDecl,
-        pkg_napi_info: PackageNAPIInfo,
+        pkg_napi_info: PackageNapiInfo,
         pkg_napi_target: CSourceWriter,
         mangled_name: str,
     ):
@@ -231,7 +231,7 @@ class NAPICodeGenerator:
         args = []
         for i, param in enumerate(func.params):
             value_ty = param.ty_ref.resolved_ty
-            type_info = TypeNAPIInfo.get(self.am, value_ty)
+            type_info = TypeNapiInfo.get(self.am, value_ty)
             type_info.from_napi(pkg_napi_target, f"args[{i}]", f"value{i}")
             args.append(f"value{i}")
         args_str = ", ".join(args)
@@ -242,7 +242,7 @@ class NAPICodeGenerator:
             pkg_napi_target.writelns(
                 f"{cpp_return_info.as_owner} value = {func_cpp_name}({args_str});",
             )
-            type_info = TypeNAPIInfo.get(self.am, value_ty)
+            type_info = TypeNapiInfo.get(self.am, value_ty)
             type_info.into_napi(pkg_napi_target, "value", "result")
         else:
             pkg_napi_target.writelns(
@@ -273,7 +273,7 @@ class NAPICodeGenerator:
         struct: StructDecl,
     ):
         struct_cpp_info = StructCppInfo.get(self.am, struct)
-        struct_napi_info = StructNAPIInfo.get(self.am, struct)
+        struct_napi_info = StructNapiInfo.get(self.am, struct)
         self.gen_struct_conv_decl_file(
             struct,
             struct_cpp_info,
@@ -289,7 +289,7 @@ class NAPICodeGenerator:
         self,
         struct: StructDecl,
         struct_cpp_info: StructCppInfo,
-        struct_napi_info: StructNAPIInfo,
+        struct_napi_info: StructNapiInfo,
     ):
         with CHeaderWriter(
             self.oc,
@@ -307,7 +307,7 @@ class NAPICodeGenerator:
         self,
         struct: StructDecl,
         struct_cpp_info: StructCppInfo,
-        struct_napi_info: StructNAPIInfo,
+        struct_napi_info: StructNapiInfo,
     ):
         with CHeaderWriter(
             self.oc,
@@ -343,7 +343,7 @@ class NAPICodeGenerator:
         self,
         struct: StructDecl,
         struct_cpp_info: StructCppInfo,
-        struct_napi_info: StructNAPIInfo,
+        struct_napi_info: StructNapiInfo,
         struct_napi_impl_target: CHeaderWriter,
     ):
         with struct_napi_impl_target.indented(
@@ -353,7 +353,7 @@ class NAPICodeGenerator:
             cpp_field_results = []
             for parts in struct_napi_info.dts_final_fields:
                 final = parts[-1]
-                type_napi_info = TypeNAPIInfo.get(self.am, final.ty_ref.resolved_ty)
+                type_napi_info = TypeNapiInfo.get(self.am, final.ty_ref.resolved_ty)
                 napi_field_value = f"napi_field_{final.name}"
                 cpp_field_result = f"cpp_field_{final.name}"
                 struct_napi_impl_target.writelns(
@@ -376,7 +376,7 @@ class NAPICodeGenerator:
         self,
         struct: StructDecl,
         struct_cpp_info: StructCppInfo,
-        struct_napi_info: StructNAPIInfo,
+        struct_napi_info: StructNapiInfo,
         struct_napi_impl_target: CHeaderWriter,
     ):
         with struct_napi_impl_target.indented(
@@ -387,7 +387,7 @@ class NAPICodeGenerator:
             for parts in struct_napi_info.dts_final_fields:
                 final = parts[-1]
                 napi_field_result = f"napi_field_{final.name}"
-                type_napi_info = TypeNAPIInfo.get(self.am, final.ty_ref.resolved_ty)
+                type_napi_info = TypeNapiInfo.get(self.am, final.ty_ref.resolved_ty)
                 type_napi_info.into_napi(
                     struct_napi_impl_target,
                     ".".join(("cpp_obj", *(part.name for part in parts))),
@@ -407,7 +407,7 @@ class NAPICodeGenerator:
         self,
         struct: StructDecl,
         struct_cpp_info: StructCppInfo,
-        struct_napi_info: StructNAPIInfo,
+        struct_napi_info: StructNapiInfo,
         struct_napi_impl_target: CHeaderWriter,
     ):
         register_infos = []
@@ -418,7 +418,7 @@ class NAPICodeGenerator:
             field_setter_name = encode(filed_segments, DeclKind.SETTER)
             register_infos.append((final.name, field_getter_name, field_setter_name))
 
-            field_ty_napi_info = TypeNAPIInfo.get(self.am, final.ty_ref.resolved_ty)
+            field_ty_napi_info = TypeNapiInfo.get(self.am, final.ty_ref.resolved_ty)
             with struct_napi_impl_target.indented(
                 f"static napi_value {field_getter_name}(napi_env env, napi_callback_info info) {{",
                 f"}}",
@@ -470,7 +470,7 @@ class NAPICodeGenerator:
             cpp_field_results = []
             for i, parts in enumerate(struct_napi_info.dts_final_fields):
                 final = parts[-1]
-                type_napi_info = TypeNAPIInfo.get(self.am, final.ty_ref.resolved_ty)
+                type_napi_info = TypeNapiInfo.get(self.am, final.ty_ref.resolved_ty)
                 cpp_field_result = f"cpp_field_{final.name}"
                 type_napi_info.from_napi(
                     struct_napi_impl_target, f"args[{i}]", f"cpp_field_{final.name}"
@@ -523,7 +523,7 @@ class NAPICodeGenerator:
         iface: IfaceDecl,
     ):
         iface_cpp_info = IfaceCppInfo.get(self.am, iface)
-        iface_napi_info = IfaceNAPIInfo.get(self.am, iface)
+        iface_napi_info = IfaceNapiInfo.get(self.am, iface)
         self.gen_iface_conv_decl_file(
             iface,
             iface_cpp_info,
@@ -539,7 +539,7 @@ class NAPICodeGenerator:
         self,
         iface: IfaceDecl,
         iface_cpp_info: IfaceCppInfo,
-        iface_napi_info: IfaceNAPIInfo,
+        iface_napi_info: IfaceNapiInfo,
     ):
         with CHeaderWriter(
             self.oc,
@@ -559,7 +559,7 @@ class NAPICodeGenerator:
         self,
         iface: IfaceDecl,
         iface_cpp_info: IfaceCppInfo,
-        iface_napi_info: IfaceNAPIInfo,
+        iface_napi_info: IfaceNapiInfo,
     ):
         iface_abi_info = IfaceABIInfo.get(self.am, iface)
         with CHeaderWriter(
@@ -595,7 +595,7 @@ class NAPICodeGenerator:
         iface: IfaceDecl,
         iface_abi_info: IfaceABIInfo,
         iface_cpp_info: IfaceCppInfo,
-        iface_napi_info: IfaceNAPIInfo,
+        iface_napi_info: IfaceNapiInfo,
         iface_napi_impl_target: CHeaderWriter,
     ):
         with iface_napi_impl_target.indented(
@@ -665,7 +665,7 @@ class NAPICodeGenerator:
                 args_inner = "nullptr"
 
             for i, param in enumerate(method.params):
-                param_napi_type_info = TypeNAPIInfo.get(
+                param_napi_type_info = TypeNapiInfo.get(
                     self.am, param.ty_ref.resolved_ty
                 )
                 param_napi_type_info.into_napi(
@@ -686,7 +686,7 @@ class NAPICodeGenerator:
                 f"napi_call_function(env, org_napi_obj, {method.name}_ts_method, {len(method.params)}, {args_inner}, &method_result_napi);"
             )
             if method.return_ty_ref:
-                return_napi_type_info = TypeNAPIInfo.get(
+                return_napi_type_info = TypeNapiInfo.get(
                     self.am, method.return_ty_ref.resolved_ty
                 )
                 return_napi_type_info.from_napi(
@@ -706,7 +706,7 @@ class NAPICodeGenerator:
         self,
         iface: IfaceDecl,
         iface_cpp_info: IfaceCppInfo,
-        iface_napi_info: IfaceNAPIInfo,
+        iface_napi_info: IfaceNapiInfo,
         iface_napi_impl_target: CHeaderWriter,
     ):
         with iface_napi_impl_target.indented(
@@ -733,7 +733,7 @@ class NAPICodeGenerator:
         iface: IfaceDecl,
         iface_abi_info: IfaceABIInfo,
         iface_cpp_info: IfaceCppInfo,
-        iface_napi_info: IfaceNAPIInfo,
+        iface_napi_info: IfaceNapiInfo,
         iface_napi_impl_target: CHeaderWriter,
     ):
         with iface_napi_impl_target.indented(
@@ -786,7 +786,7 @@ class NAPICodeGenerator:
                 args = []
                 for i, param in enumerate(ctor.params):
                     value_ty = param.ty_ref.resolved_ty
-                    type_info = TypeNAPIInfo.get(self.am, value_ty)
+                    type_info = TypeNapiInfo.get(self.am, value_ty)
                     type_info.from_napi(
                         iface_napi_impl_target, f"args[{i}]", f"value{i}"
                     )
@@ -849,7 +849,7 @@ class NAPICodeGenerator:
         iface: IfaceDecl,
     ):
         iface_cpp_info = IfaceCppInfo.get(self.am, iface)
-        iface_napi_info = IfaceNAPIInfo.get(self.am, iface)
+        iface_napi_info = IfaceNapiInfo.get(self.am, iface)
         self.gen_iface_method_decl_file(
             iface_cpp_info,
             iface_napi_info,
@@ -862,7 +862,7 @@ class NAPICodeGenerator:
     def gen_iface_method_decl_file(
         self,
         iface_cpp_info: IfaceCppInfo,
-        iface_napi_info: IfaceNAPIInfo,
+        iface_napi_info: IfaceNapiInfo,
     ):
         with CHeaderWriter(
             self.oc,
@@ -879,7 +879,7 @@ class NAPICodeGenerator:
     def gen_iface_method_impl_file(
         self,
         iface_cpp_info: IfaceCppInfo,
-        iface_napi_info: IfaceNAPIInfo,
+        iface_napi_info: IfaceNapiInfo,
     ):
         with CHeaderWriter(
             self.oc,
@@ -921,7 +921,7 @@ class NAPICodeGenerator:
                 f"napi_value key;",
             )
             for item in enum.items:
-                item_ty_napi_info = TypeNAPIInfo.get(self.am, enum.ty_ref.resolved_ty)
+                item_ty_napi_info = TypeNapiInfo.get(self.am, enum.ty_ref.resolved_ty)
                 item_ty_cpp_info = TypeCppInfo.get(self.am, enum.ty_ref.resolved_ty)
                 item_ty_napi_info.into_napi(
                     pkg_napi_target,
@@ -942,7 +942,7 @@ class NAPICodeGenerator:
         iface: IfaceDecl,
         pkg_napi_target: CSourceWriter,
     ):
-        iface_napi_info = IfaceNAPIInfo.get(self.am, iface)
+        iface_napi_info = IfaceNapiInfo.get(self.am, iface)
         pkg_napi_target.add_include(iface_napi_info.impl_header)
         pkg_napi_target.writelns(
             f"{iface_napi_info.create_func_name}(env, exports);",
@@ -953,7 +953,7 @@ class NAPICodeGenerator:
         struct: StructDecl,
         pkg_napi_target: CSourceWriter,
     ):
-        struct_napi_info = StructNAPIInfo.get(self.am, struct)
+        struct_napi_info = StructNapiInfo.get(self.am, struct)
         pkg_napi_target.add_include(struct_napi_info.impl_header)
         pkg_napi_target.writelns(
             f"{struct_napi_info.create_func_name}(env, exports);",
@@ -974,7 +974,7 @@ class NAPICodeGenerator:
         union: UnionDecl,
     ):
         union_cpp_info = UnionCppInfo.get(self.am, union)
-        union_napi_info = UnionNAPIInfo.get(self.am, union)
+        union_napi_info = UnionNapiInfo.get(self.am, union)
         self.gen_union_conv_decl_file(
             union,
             union_cpp_info,
@@ -990,7 +990,7 @@ class NAPICodeGenerator:
         self,
         union: UnionDecl,
         union_cpp_info: UnionCppInfo,
-        union_napi_info: UnionNAPIInfo,
+        union_napi_info: UnionNapiInfo,
     ):
         with CHeaderWriter(
             self.oc,
@@ -1007,7 +1007,7 @@ class NAPICodeGenerator:
         self,
         union: UnionDecl,
         union_cpp_info: UnionCppInfo,
-        union_napi_info: UnionNAPIInfo,
+        union_napi_info: UnionNapiInfo,
     ):
         with CHeaderWriter(
             self.oc,
@@ -1033,7 +1033,7 @@ class NAPICodeGenerator:
         self,
         union: UnionDecl,
         union_cpp_info: UnionCppInfo,
-        union_napi_info: UnionNAPIInfo,
+        union_napi_info: UnionNapiInfo,
         union_napi_impl_target: CHeaderWriter,
     ):
         with union_napi_impl_target.indented(
@@ -1055,9 +1055,9 @@ class NAPICodeGenerator:
                     )
                 static_tags_str = ", ".join(static_tags)
                 full_name = "_".join(part.name for part in parts)
-                final_napi_info = UnionFieldNAPIInfo.get(self.am, final)
+                final_napi_info = UnionFieldNapiInfo.get(self.am, final)
                 if isinstance(final_ty := final_napi_info.field_ty, Type):
-                    type_napi_info = TypeNAPIInfo.get(self.am, final_ty)
+                    type_napi_info = TypeNapiInfo.get(self.am, final_ty)
                     if isinstance(final_ty, ScalarType | StringType):
                         with union_napi_impl_target.indented(
                             f"if (value_ty == {type_napi_info.napi_type_name}) {{",
@@ -1130,7 +1130,7 @@ class NAPICodeGenerator:
         self,
         union: UnionDecl,
         union_cpp_info: UnionCppInfo,
-        union_napi_info: UnionNAPIInfo,
+        union_napi_info: UnionNapiInfo,
         union_napi_impl_target: CHeaderWriter,
     ):
         with union_napi_impl_target.indented(
@@ -1146,7 +1146,7 @@ class NAPICodeGenerator:
                 indent="",
             ):
                 for field in union.fields:
-                    field_napi_info = UnionFieldNAPIInfo.get(self.am, field)
+                    field_napi_info = UnionFieldNapiInfo.get(self.am, field)
                     with union_napi_impl_target.indented(
                         f"case {union_cpp_info.full_name}::tag_t::{field.name}: {{",
                         f"}}",
@@ -1163,7 +1163,7 @@ class NAPICodeGenerator:
                                     f"napi_get_undefined(env, &napi_obj_field);",
                                 )
                             case field_ty if isinstance(field_ty, Type):
-                                type_napi_info = TypeNAPIInfo.get(self.am, field_ty)
+                                type_napi_info = TypeNapiInfo.get(self.am, field_ty)
                                 type_napi_info.into_napi(
                                     union_napi_impl_target,
                                     f"cpp_value.get_{field.name}_ref()",
