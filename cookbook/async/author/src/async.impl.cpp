@@ -17,7 +17,23 @@ public:
     return str;
   }
 
-  void set(string_view a) {
+  ::taihe::string getAsync() {
+    return str;
+  }
+
+  ::taihe::string getPromise() {
+    return str;
+  }
+
+  void setSync(string_view a) {
+    this->str = a;
+  }
+
+  void setAsync(::taihe::string_view a) {
+    this->str = a;
+  }
+
+  void setPromise(::taihe::string_view a) {
     this->str = a;
   }
 
@@ -34,5 +50,7 @@ int32_t addSync(int32_t a, int32_t b) {
 }
 }  // namespace
 
+TH_EXPORT_CPP_API_addAsync(addSync);
+TH_EXPORT_CPP_API_addPromise(addSync);
 TH_EXPORT_CPP_API_addSync(addSync);
 TH_EXPORT_CPP_API_makeIStringHolder(makeIStringHolder);

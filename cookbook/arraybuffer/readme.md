@@ -31,7 +31,13 @@ int32_t convert2Int(array_view<uint8_t> a) {
 
 `compiler/`
 ```sh
-./run-test /path/to/other_type -ani
+## 注：taihe文件里的函数与C++规范一致，所以函数会在生成的 ets 侧自动转变为小写字母开头函数
+## .taihe
+## function FooBar(): void;
+## 生成的 ets 侧
+## function fooBar(): void;
+## 如果希望生成的 ets 侧函数与 taihe 文件一致，可以使用 --sts-keep-name
+python -m taihe.cli.tryit test -u sts /path/to/arraybuffer --sts-keep-name
 ```
 
 ## 用户侧使用

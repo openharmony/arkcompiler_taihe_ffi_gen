@@ -38,7 +38,7 @@
 
 - [如何让 Taihe 的 interface 在 sts 中对应 class `@class`](../override/readme.md)
 
-- [如何在 Taihe 声明与实现 class 构造函数 `@ctor`](../override/readme.md)
+- [如何在 Taihe 声明与实现 class 构造函数 `@constructor`](../override/readme.md)
 
 - [如何在 Taihe 声明静态函数 `@static`](../override/readme.md)
 
@@ -48,11 +48,13 @@
 
 - [如何在 Taihe 更好地声明与实现纯数据类的继承 `@extends`](../struct_extends/README.md)
 
-- [如何在 Taihe 声明与实现函数重载 `@overload`](../overload/readme.md)
+- [如何在 Taihe 声明与实现函数重载 `@static_overload`](../overload/readme.md)
 
-- [如何在 Taihe 声明 Async 函数 `@gen_async`](../async/readme.md)
+- [如何在 Taihe 声明 Async 函数 `@async`](../async/readme.md)
 
-- [如何在 Taihe 声明 Promise 函数`@gen_promice`](../async/readme.md)
+- [如何在 Taihe 声明 Promise 函数`@promice`](../async/readme.md)
+
+- [如何在 Taihe 声明 重命名函数名称 `@rename`](../async/readme.md)
 
 - [如何在 Taihe 通过注入方式将 sts 代码加入生成文件中 `@sts_inject`](../external_obj/readme.md)
 
