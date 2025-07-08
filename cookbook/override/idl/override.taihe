@@ -4,7 +4,7 @@ interface UIAbility {
     onBackground(): void;
 }
 
-@ctor("UIAbility")
+@rename @constructor("UIAbility")
 function getUIAbility(): UIAbility;
 
 function useUIAbility(a: UIAbility): void;

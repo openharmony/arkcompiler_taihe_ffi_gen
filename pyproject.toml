@@ -46,11 +46,11 @@ path = "compiler/hatch_build.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["compiler/taihe"]
-artifacts = ["compiler/taihe/parse/antlr/*.py"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "./runtime" = "taihe/data/runtime"
 "./stdlib" = "taihe/data/stdlib"
+"./cookbook" = "taihe/data/doc"
 
 ### Linting ###
 

@@ -54,7 +54,7 @@ public:
         ani_class cls;
         ani_boolean res;
         ani_env *env = get_env();
-        env->FindClass("L@ohos/multimedia/image/Image_inner;", &cls);
+        env->FindClass("@ohos.multimedia.image.Image_inner", &cls);
         env->Object_InstanceOf((ani_object)obj, cls, &res);
         std::cout << "type_Image: " << (int)res << std::endl;
         if (!res) {

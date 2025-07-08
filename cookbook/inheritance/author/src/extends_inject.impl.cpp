@@ -14,7 +14,7 @@ public:
     ani_long ani_data_ptr;
     ani_class ani_obj_cls;
     ani_env *env = get_env();
-    env->FindClass("LPerson/Person;", &ani_obj_cls);
+    env->FindClass("Person.Person", &ani_obj_cls);
     ani_method ani_obj_ctor;
     env->Class_FindMethod(ani_obj_cls, "<ctor>", nullptr, &ani_obj_ctor);
     ani_object ani_obj;

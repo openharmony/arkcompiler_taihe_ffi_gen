@@ -350,7 +350,7 @@ class StandardLibrary(PathResource):
 
 class Documentation(PathResource):
     CLI_NAME = "doc"
-    PATH_PKG = PATH_DEV = "cookbook"
+    PATH_PKG = PATH_DEV = "doc"
     PATH_BUNDLE = "share/doc/taihe"
 
 
@@ -364,9 +364,11 @@ class _LegacyPandaVm(PathResource):
 class PandaVm(CachedResource):
     CLI_NAME = "panda-vm"
     PATH_CACHE = "panda-vm"
-    VERSION: Final = "sdk-1.5.0-dev.38856"
+    VERSION: Final = "sdk-1.5.0-dev.35667"
     CREDENTIAL = "koala-pub:y3t!n0therP"
-    URL: Final = "https://nexus.bz-openlab.ru:10443/repository/koala-npm/@panda/sdk/-"
+    URL: Final = (
+        "https://nexus.cn.bz-openlab.ru:10443/repository/koala-npm/@panda/sdk/-"
+    )
 
     # Computed attributes
     ani_header_dir: Path = field(init=False)
@@ -485,5 +487,10 @@ class Antlr(CachedResource):
         )
 
 
-BUILTIN_RESOURCES = [RuntimeSource, RuntimeHeader, StandardLibrary, Documentation]
-ALL_RESOURCES = [*BUILTIN_RESOURCES, PandaVm, PythonBuild, Antlr]
+BUILTIN_RESOURCES: Sequence[ResourceT] = [
+    RuntimeSource,
+    RuntimeHeader,
+    StandardLibrary,
+    Documentation,
+]
+ALL_RESOURCES: Sequence[ResourceT] = [*BUILTIN_RESOURCES, PandaVm, PythonBuild, Antlr]

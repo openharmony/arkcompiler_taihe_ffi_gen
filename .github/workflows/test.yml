@@ -7,20 +7,22 @@ jobs:
   check_and_test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/workflows/actions/install_independencies/
-      - name: Install Dependencies
-        working-directory: compiler
-        run: uv sync
-      - name: Set up Clang
-        uses: egor-tensin/setup-clang@v1
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
         with:
-          version: 15
-          platform: x64
-      - name: Generate Code
-        working-directory: compiler
-        run: source .venv/bin/activate && ./generate-grammar
+          enable-cache: true
+      - name: Sync Project
+        run: uv sync --locked --all-extras --dev
       - name: Check Format
         run: scripts/check
-      - name: Test and Report Coverage
-        run: scripts/test
+      # TODO: enable this when panda npm recovers.
+      # TODO: perhaps we should use "dry-run" as a poor man's test?
+      # - name: Setup Clang
+      #   uses: egor-tensin/setup-clang@v1
+      #   with:
+      #     version: 15
+      #     platform: x64
+      # - name: Test and Report Coverage
+      #   run: scripts/test

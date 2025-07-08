@@ -8,7 +8,7 @@ from taihe.codegen.abi.mangle import DeclKind, encode
 from taihe.codegen.abi.writer import CSourceWriter
 from taihe.codegen.ani.attributes import (
     ArrayBufferAttr,
-    ClazzAttr,
+    ClassAttr,
     CtorAttr,
     ExtendsAttr,
     NamespaceAttr,
@@ -159,7 +159,7 @@ class StructNapiInfo(AbstractAnalysis[StructDecl]):
         self.dts_type_name = d.name
         struct_abi_info = StructABIInfo.get(am, d)
         self.ctor_ref_name = f"ctor_ref_{struct_abi_info.mangled_name}"
-        if ClazzAttr.get(d):
+        if ClassAttr.get(d):
             self.dts_impl_name = f"{d.name}"
         else:
             self.dts_impl_name = f"{d.name}_inner"
@@ -216,7 +216,7 @@ class IfaceNapiInfo(AbstractAnalysis[IfaceDecl]):
         self.dts_type_name = d.name
         iface_abi_info = IfaceABIInfo.get(am, d)
         self.ctor_ref_name = f"ctor_ref_{iface_abi_info.mangled_name}"
-        if ClazzAttr.get(d):
+        if ClassAttr.get(d):
             self.dts_impl_name = f"{d.name}"
         else:
             self.dts_impl_name = f"{d.name}_inner"

@@ -1,14 +1,22 @@
-@gen_async("add")
-@gen_promise("add")
+@static_overload("add")
+@async function addAsync(a: i32, b: i32): i32;
+
+@static_overload("add")
+@promise function addPromise(a: i32, b: i32): i32;
+
 function addSync(a: i32, b: i32): i32;
 
 interface IStringHolder {
-    @gen_async("getAsync")
-    @gen_promise("getPromise")
+    @async getAsync(): String;
+    @promise getPromise(): String;
+    @rename("newGet")
     get(): String;
-    @gen_async("setAsync")
-    @gen_promise("setPromise")
-    set(a: String): void;
+
+    @static_overload("set")
+    @async setAsync(a: String): void;
+    @static_overload("set")
+    @promise setPromise(a: String): void;
+    setSync(a: String): void;
 }
 
 function makeIStringHolder(): IStringHolder;

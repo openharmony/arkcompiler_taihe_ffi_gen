@@ -67,7 +67,7 @@ class CompilerInvocation:
     arkts_module_prefix: str | None = None
     arkts_path_prefix: str | None = None
 
-    # TODO: two header file
+    # TODO: two kind of napi header file
     napi_header: bool = False
 
 

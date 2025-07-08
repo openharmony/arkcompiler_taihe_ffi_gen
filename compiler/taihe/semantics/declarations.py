@@ -1,6 +1,6 @@
 """Defines the types for declarations."""
 
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from collections.abc import Collection
 from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar, cast
 
@@ -32,7 +32,7 @@ class DeclProtocol(Protocol):
     def _accept(self, v: "DeclVisitor[Any]") -> Any: ...
 
 
-class Decl(metaclass=ABCMeta):
+class Decl(ABC):
     """Represents any declaration."""
 
     loc: SourceLocation | None
@@ -70,7 +70,7 @@ class Decl(metaclass=ABCMeta):
         """Accept a visitor."""
 
 
-class NamedDecl(Decl, metaclass=ABCMeta):
+class NamedDecl(Decl, ABC):
     """Represents a declaration with a name."""
 
     name: str
@@ -87,7 +87,7 @@ class NamedDecl(Decl, metaclass=ABCMeta):
 T = TypeVar("T", bound=Decl)
 
 
-class DeclWithParent(Decl, Generic[T], metaclass=ABCMeta):
+class DeclWithParent(Decl, Generic[T], ABC):
     _node_parent: T | None = None
 
     @property
@@ -100,7 +100,7 @@ class DeclWithParent(Decl, Generic[T], metaclass=ABCMeta):
         self._node_parent = parent
 
 
-class NamedDeclWithParent(NamedDecl, Generic[T], metaclass=ABCMeta):
+class NamedDeclWithParent(NamedDecl, Generic[T], ABC):
     _node_parent: T | None = None
 
     @property
@@ -118,7 +118,7 @@ class NamedDeclWithParent(NamedDecl, Generic[T], metaclass=ABCMeta):
 ###################
 
 
-class TypeRefDecl(DeclWithParent[Decl], metaclass=ABCMeta):
+class TypeRefDecl(DeclWithParent[Decl], ABC):
     """Repersents a reference to a `Type`.
 
     Each user of a `Type` must be encapsulated in a `TypeRefDecl`.
@@ -352,7 +352,7 @@ class DeclarationRefDecl(DeclWithParent[Decl]):
 #######################
 
 
-class ImportDecl(NamedDeclWithParent["PackageDecl"], metaclass=ABCMeta):
+class ImportDecl(NamedDeclWithParent["PackageDecl"], ABC):
     """Represents a package or declaration import.
 
     Invariant: the `name` field in base class `Decl` always represents actual name of imports.
@@ -602,7 +602,7 @@ class IfaceMethodDecl(NamedDeclWithParent["IfaceDecl"]):
 ##############################
 
 
-class PackageLevelDecl(NamedDeclWithParent["PackageDecl"], metaclass=ABCMeta):
+class PackageLevelDecl(NamedDeclWithParent["PackageDecl"], ABC):
     @property
     def full_name(self):
         return f"{self.parent_pkg.name}.{self.name}"
@@ -648,7 +648,7 @@ class GlobFuncDecl(PackageLevelDecl):
 #####################
 
 
-class TypeDecl(PackageLevelDecl, metaclass=ABCMeta):
+class TypeDecl(PackageLevelDecl, ABC):
     @abstractmethod
     def as_type(self, ty_ref: TypeRefDecl) -> UserType:
         """Return the type decalaration as type."""

@@ -1,9 +1,0 @@
-[run]
-omit =
-    tests/test_*
-    taihe/parse/antlr/*.py
-    run-test
-    taihe/code_generation.py
-    taihe/compilation.py
-    taihe/exceptions.py
-    taihe/semantic_analysis.py

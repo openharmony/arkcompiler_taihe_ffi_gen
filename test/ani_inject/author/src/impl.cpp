@@ -10,12 +10,12 @@ namespace {
 
 class Foo {
 public:
-  void callWithThis(uintptr_t thiz) {
+  void CallWithThis(uintptr_t thiz) {
     std::cout << thiz << std::endl;
   }
 };
 
-::inject_test::Foo makeFooWithThis(uintptr_t thiz) {
+::inject_test::Foo MakeFooWithThis(uintptr_t thiz) {
   std::cout << thiz << std::endl;
   return make_holder<Foo, ::inject_test::Foo>();
 }
@@ -24,5 +24,5 @@ public:
 
 // because these macros are auto-generate, lint will cause false positive.
 // NOLINTBEGIN
-TH_EXPORT_CPP_API_makeFooWithThis(makeFooWithThis);
+TH_EXPORT_CPP_API_MakeFooWithThis(MakeFooWithThis);
 // NOLINTEND

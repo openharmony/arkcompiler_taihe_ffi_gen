@@ -1,5 +1,5 @@
-#include "overload.ani.hpp"
-
+#include "ui.ani.hpp"
+#include "ui_user.ani.hpp"
 #if __has_include(<ani.h>)
 #include <ani.h>
 #elif __has_include(<ani/ani.h>)
@@ -7,16 +7,20 @@
 #else
 #error "ani.h not found. Please ensure the Ani SDK is correctly installed."
 #endif
-
 ANI_EXPORT ani_status ANI_Constructor(ani_vm *vm, uint32_t *result) {
   ani_env *env;
   if (ANI_OK != vm->GetEnv(ANI_VERSION_1, &env)) {
     return ANI_ERROR;
   }
-  if (ANI_OK != overload::ANIRegister(env)) {
-    std::cerr << "Error from overload::ANIRegister" << std::endl;
-    return ANI_ERROR;
+  ani_status status = ANI_OK;
+  if (ANI_OK != ui_user::ANIRegister(env)) {
+    std::cerr << "Error from ui_user::ANIRegister" << std::endl;
+    status = ANI_ERROR;
+  }
+  if (ANI_OK != ui::ANIRegister(env)) {
+    std::cerr << "Error from ui_user::ANIRegister" << std::endl;
+    status = ANI_ERROR;
   }
   *result = ANI_VERSION_1;
-  return ANI_OK;
+  return status;
 }

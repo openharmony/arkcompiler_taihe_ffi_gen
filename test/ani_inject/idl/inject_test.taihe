@@ -3,11 +3,11 @@ interface Foo {
     @!sts_inject_into_interface("""name: string;""")
     @!sts_inject_into_class("""name: string = "default";""")
 
-    callWithThis(@sts_this thiz: Opaque): void;
+    CallWithThis(@sts_this thiz: Opaque): void;
 }
 
 @ctor("Foo")
-function makeFooWithThis(@sts_this thiz: Opaque): Foo;
+function MakeFooWithThis(@sts_this thiz: Opaque): Foo;
 
 struct RGB {
     @!sts_inject_into_interface("""color: string;""")
