@@ -27,7 +27,7 @@ from taihe.utils.analyses import AnalysisManager
 from taihe.utils.outputs import FileKind, OutputManager
 
 
-class DTSCodeGenerator:
+class DtsCodeGenerator:
     def __init__(self, oc: OutputManager, am: AnalysisManager):
         self.oc = oc
         self.am = am
