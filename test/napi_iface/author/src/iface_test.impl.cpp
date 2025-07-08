@@ -74,7 +74,7 @@ public:
 };
 
 ::iface_test::IBase makeIBase(::taihe::string_view id) {
-  return make_holder<Base, ::iface_test::IBase>(id);
+  return ::taihe::make_holder<Base, ::iface_test::IBase>(id);
 }
 
 void copyIBase(::iface_test::weak::IBase a, ::iface_test::weak::IBase b) {

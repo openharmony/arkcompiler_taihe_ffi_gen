@@ -59,6 +59,7 @@ namespace {
   if (kind == "null") {
     return ::union_test::union_primitive::make_nValue();
   }
+  return ::union_test::union_primitive::make_uValue();
 }
 }  // namespace
 

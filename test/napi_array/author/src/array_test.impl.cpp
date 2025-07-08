@@ -12,6 +12,7 @@ int64_t getArrayValue(::taihe::array_view<int64_t> nums, int32_t idx) {
   if (idx >= 0 && idx < nums.size()) {
     return nums[idx];
   }
+  return 0;
 }
 
 ::taihe::array<::taihe::string> toStingArray(

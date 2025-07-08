@@ -263,6 +263,10 @@ class NAPICodeGenerator:
                 f"napi_value args[{params_num}] = {{nullptr}};",
                 f"napi_get_cb_info(env, info, &argc, args , nullptr, nullptr);",
             )
+        else:
+            pkg_napi_target.writelns(
+                f"(void) info;",
+            )
 
     def gen_struct_files(
         self,
@@ -484,6 +488,8 @@ class NAPICodeGenerator:
                 f"}}, nullptr, nullptr);",
             ):
                 struct_napi_impl_target.writelns(
+                    f"(void) env;",
+                    f"(void) finalize_hint;",
                     f"delete static_cast<{struct_cpp_info.as_owner}*>(finalize_data);",
                 )
             struct_napi_impl_target.writelns(
@@ -752,6 +758,8 @@ class NAPICodeGenerator:
                 f"}}, nullptr, nullptr);",
             ):
                 iface_napi_impl_target.writelns(
+                    f"(void) env;",
+                    f"(void) finalize_hint;",
                     f"delete static_cast<{iface_cpp_info.as_owner}*>(finalize_data);",
                 )
             iface_napi_impl_target.writelns(
@@ -797,6 +805,8 @@ class NAPICodeGenerator:
                         f"}}, nullptr, nullptr);",
                     ):
                         iface_napi_impl_target.writelns(
+                            f"(void) env;",
+                            f"(void) finalize_hint;",
                             f"delete static_cast<{iface_cpp_info.as_owner}*>(finalize_data);",
                         )
                     iface_napi_impl_target.writelns(
