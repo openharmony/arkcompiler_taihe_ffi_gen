@@ -168,7 +168,7 @@ class TypeRefDecl(DeclWithParent[Decl], ABC):
         return PrettyFormatter().get_type_ref_decl(self)
 
 
-class ParamDecl(NamedDeclWithParent[Decl]):
+class ParamDecl(NamedDeclWithParent["FunctionLikeDecl"]):
     ty_ref: TypeRefDecl
 
     def __init__(
@@ -185,6 +185,11 @@ class ParamDecl(NamedDeclWithParent[Decl]):
     @override
     def description(self) -> str:
         return f"parameter {self.name}"
+
+    @property
+    def parent_func(self) -> "FunctionLikeDecl":
+        assert self._node_parent
+        return self._node_parent
 
     @override
     def _accept(self, v: "DeclVisitor[T]") -> Any:
@@ -641,6 +646,10 @@ class GlobFuncDecl(PackageLevelDecl):
     @override
     def _accept(self, v: "DeclVisitor[T]") -> Any:
         return v.visit_glob_func_decl(self)
+
+
+NamedFunctionLikeDecl = GlobFuncDecl | IfaceMethodDecl
+FunctionLikeDecl = NamedFunctionLikeDecl | CallbackTypeRefDecl
 
 
 #####################
