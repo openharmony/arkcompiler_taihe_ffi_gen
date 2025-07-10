@@ -227,20 +227,26 @@ class DtsCodeGenerator:
         enum: EnumDecl,
         target: DtsWriter,
     ):
-        enum_dts_info = EnumNapiInfo.get(self.am, enum)
-        with target.indented(
-            f"export enum {enum_dts_info.dts_type_name} {{",
-            f"}}",
-        ):
+        enum_napi_info = EnumNapiInfo.get(self.am, enum)
+        if enum_napi_info.is_literal:
             for item in enum.items:
-                if item.value is None:
-                    target.writelns(
-                        f"{item.name},",
-                    )
-                else:
-                    target.writelns(
-                        f"{item.name} = {dumps(item.value)},",
-                    )
+                target.writelns(
+                    f"export declare const {item.name} = {dumps(item.value)};",
+                )
+        else:
+            with target.indented(
+                f"export enum {enum_napi_info.dts_type_name} {{",
+                f"}}",
+            ):
+                for item in enum.items:
+                    if item.value is None:
+                        target.writelns(
+                            f"{item.name},",
+                        )
+                    else:
+                        target.writelns(
+                            f"{item.name} = {dumps(item.value)},",
+                        )
 
     def gen_union(
         self,

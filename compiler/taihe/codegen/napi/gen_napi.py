@@ -12,6 +12,7 @@ from taihe.codegen.cpp.analyses import (
     UnionCppInfo,
 )
 from taihe.codegen.napi.analyses import (
+    EnumNapiInfo,
     GlobFuncNapiInfo,
     IfaceNapiInfo,
     Namespace,
@@ -911,30 +912,52 @@ class NapiCodeGenerator:
         enum: EnumDecl,
         pkg_napi_target: CSourceWriter,
     ):
+        enum_napi_info = EnumNapiInfo.get(self.am, enum)
         with pkg_napi_target.indented(
-            f"static napi_value Create{enum.name}(napi_env env) {{",
+            f"inline void {enum_napi_info.create_func_name}(napi_env env, napi_value exports) {{",
             f"}}",
         ):
-            pkg_napi_target.writelns(
-                f"napi_value enum_obj;",
-                f"napi_create_object(env, &enum_obj);",
-                f"napi_value key;",
-            )
-            for item in enum.items:
-                item_ty_napi_info = TypeNapiInfo.get(self.am, enum.ty_ref.resolved_ty)
-                item_ty_cpp_info = TypeCppInfo.get(self.am, enum.ty_ref.resolved_ty)
-                item_ty_napi_info.into_napi(
-                    pkg_napi_target,
-                    f"(({item_ty_cpp_info.as_owner}){dumps(item.value)})",
-                    f"value_{item.name}",
-                )
+            if enum_napi_info.is_literal:
+                for item in enum.items:
+                    item_ty_napi_info = TypeNapiInfo.get(
+                        self.am, enum.ty_ref.resolved_ty
+                    )
+                    item_ty_cpp_info = TypeCppInfo.get(self.am, enum.ty_ref.resolved_ty)
+                    item_ty_napi_info.into_napi(
+                        pkg_napi_target,
+                        f"(({item_ty_cpp_info.as_owner}){dumps(item.value)})",
+                        f"value_{item.name}",
+                    )
+                    pkg_napi_target.writelns(
+                        f'napi_set_named_property(env, exports, "{item.name}", value_{item.name});',
+                    )
+
+            else:
                 pkg_napi_target.writelns(
-                    f'napi_create_string_utf8(env, "{item.name}", NAPI_AUTO_LENGTH, &key);',
-                    f'napi_set_named_property(env, enum_obj, "{item.name}", value_{item.name});',
-                    f"napi_set_property(env, enum_obj, value_{item.name}, key);",
+                    f"napi_value enum_obj;",
+                    f"napi_create_object(env, &enum_obj);",
+                    f"napi_value key;",
+                )
+                for item in enum.items:
+                    item_ty_napi_info = TypeNapiInfo.get(
+                        self.am, enum.ty_ref.resolved_ty
+                    )
+                    item_ty_cpp_info = TypeCppInfo.get(self.am, enum.ty_ref.resolved_ty)
+                    item_ty_napi_info.into_napi(
+                        pkg_napi_target,
+                        f"(({item_ty_cpp_info.as_owner}){dumps(item.value)})",
+                        f"value_{item.name}",
+                    )
+                    pkg_napi_target.writelns(
+                        f'napi_create_string_utf8(env, "{item.name}", NAPI_AUTO_LENGTH, &key);',
+                        f'napi_set_named_property(env, enum_obj, "{item.name}", value_{item.name});',
+                        f"napi_set_property(env, enum_obj, value_{item.name}, key);",
+                    )
+                pkg_napi_target.writelns(
+                    f'napi_set_named_property(env, exports, "{enum.name}", enum_obj);',
                 )
             pkg_napi_target.writelns(
-                f"return enum_obj;",
+                f"return;",
             )
 
     def gen_iface_register(
@@ -964,9 +987,9 @@ class NapiCodeGenerator:
         enum: EnumDecl,
         pkg_napi_target: CSourceWriter,
     ):
+        enum_napi_info = EnumNapiInfo.get(self.am, enum)
         pkg_napi_target.writelns(
-            f"napi_value enum_obj_{enum.name} = Create{enum.name}(env);",
-            f'napi_set_named_property(env, exports, "{enum.name}", enum_obj_{enum.name});',
+            f"{enum_napi_info.create_func_name}(env, exports);",
         )
 
     def gen_union_files(

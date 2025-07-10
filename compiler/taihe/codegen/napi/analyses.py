@@ -9,6 +9,7 @@ from taihe.codegen.abi.writer import CSourceWriter
 from taihe.codegen.ani.attributes import (
     ArrayBufferAttr,
     ClassAttr,
+    ConstAttr,
     CtorAttr,
     ExtendsAttr,
     NamespaceAttr,
@@ -252,8 +253,11 @@ class IfaceNapiInfo(AbstractAnalysis[IfaceDecl]):
 
 class EnumNapiInfo(AbstractAnalysis[EnumDecl]):
     def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
+        segments = [*d.parent_pkg.segments, d.name]
         self.dts_type_name = d.name
         self.pkg_napi_info = PackageNapiInfo.get(am, d.parent_pkg)
+        self.is_literal = ConstAttr.get(d) is not None
+        self.create_func_name = encode(segments, DeclKind.CREATE)
 
     @classmethod
     @override
@@ -1231,6 +1235,55 @@ class UnionTypeNapiInfo(TypeNapiInfo):
         )
 
 
+class ConstEnumTypeNapiInfo(TypeNapiInfo):
+    def __init__(self, am: AnalysisManager, t: EnumType, const_attr: ConstAttr):
+        super().__init__(am, t)
+        self.am = am
+        self.type = t
+        self.const_attr = const_attr
+        item_ty_napi_info = TypeNapiInfo.get(
+            self.am, self.type.ty_decl.ty_ref.resolved_ty
+        )
+        self.napi_type_name = item_ty_napi_info.napi_type_name
+
+    @override
+    def dts_type_in(self, target: DtsWriter) -> str:
+        ty_napi_info = TypeNapiInfo.get(self.am, self.type.ty_decl.ty_ref.resolved_ty)
+        return ty_napi_info.dts_type_in(target)
+
+    @override
+    def dts_return_type_in(self, target: DtsWriter) -> str:
+        return self.dts_type_in(target)
+
+    def from_napi(
+        self,
+        target: CSourceWriter,
+        napi_value: str,
+        cpp_result: str,
+    ):
+        cpp_temp = f"{cpp_result}_cpp_temp"
+        ty_napi_info = TypeNapiInfo.get(self.am, self.type.ty_decl.ty_ref.resolved_ty)
+        enum_cpp_info = EnumCppInfo.get(self.am, self.type.ty_decl)
+        ty_napi_info.from_napi(target, napi_value, cpp_temp)
+        target.writelns(
+            f"{enum_cpp_info.full_name} {cpp_result} = {enum_cpp_info.full_name}::from_value({cpp_temp});",
+        )
+
+    def into_napi(
+        self,
+        target: CSourceWriter,
+        cpp_value: str,
+        napi_result: str,
+    ):
+        cpp_temp = f"{napi_result}_cpp_temp"
+        ty_napi_info = TypeNapiInfo.get(self.am, self.type.ty_decl.ty_ref.resolved_ty)
+        value_cpp_info = TypeCppInfo.get(self.am, self.type.ty_decl.ty_ref.resolved_ty)
+        target.writelns(
+            f"{value_cpp_info.as_owner} {cpp_temp} = {cpp_value}.get_value();",
+        )
+        ty_napi_info.into_napi(target, cpp_temp, napi_result)
+
+
 class TypeNapiInfoDispatcher(TypeVisitor[TypeNapiInfo]):
     def __init__(self, am: AnalysisManager):
         self.am = am
@@ -1261,6 +1314,8 @@ class TypeNapiInfoDispatcher(TypeVisitor[TypeNapiInfo]):
 
     @override
     def visit_enum_type(self, t: EnumType) -> TypeNapiInfo:
+        if const_attr := ConstAttr.get(t.ty_decl):
+            return ConstEnumTypeNapiInfo(self.am, t, const_attr)
         return EnumTypeNapiInfo(self.am, t)
 
     @override

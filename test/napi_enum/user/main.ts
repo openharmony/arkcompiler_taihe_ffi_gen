@@ -16,6 +16,9 @@ function main() {
   console.log(weekday_v);
   let value_w = lib.fromValueToEnumWeekday(1);
   console.log(value_w, value_w === lib.Weekday.MONDAY);
+
+  console.log("const value: ", lib.FLAG_F32_A, lib.FLAG_STRING_ONE);
+  console.log(lib.FLAG_F32_A === 1, lib.FLAG_STRING_ONE === "hello");
 }
 
 main();

@@ -21,3 +21,16 @@ enum Weekday: i32 {
 function nextEnumWeekday(day: Weekday): Weekday;
 function getValueOfEnumWeekday(day: Weekday): i32;
 function fromValueToEnumWeekday(str: i32): Weekday;
+
+@const
+enum FlagsF32: i32 {
+    FLAG_F32_A = 1,
+    FLAG_F32_B = 1 + 2,
+}
+
+@const
+enum FlagsString: String {
+    FLAG_STRING_ONE = "hello",
+    FLAG_STRING_TWO = "i am boy",
+    FLAG_STRING_THREE = "good morning"
+}
