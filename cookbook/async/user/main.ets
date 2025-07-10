@@ -46,4 +46,6 @@ function main() {
         });
 
     CoroutineExtras.stopTaskpool();
+    // temporary workaround for the problem that multiple processes cannot exit
+    exit(0)
 }
