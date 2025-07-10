@@ -22,6 +22,7 @@ from taihe.codegen.ani.attributes import (
     NamespaceAttr,
     NullAttr,
     OnOffAttr,
+    OptionalAttr,
     OverloadAttr,
     PromiseAttribute,
     RecordAttr,
@@ -1945,8 +1946,9 @@ class CallbackTypeANIInfo(TypeANIInfo):
     def sts_type_in(self, target: StsWriter) -> str:
         sts_params = []
         for param in self.t.ty_ref.params:
+            opt = "?" if OptionalAttr.get(param) else ""
             type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
-            sts_params.append(f"{param.name}: {type_ani_info.sts_type_in(target)}")
+            sts_params.append(f"{param.name}{opt}: {type_ani_info.sts_type_in(target)}")
         sts_params_str = ", ".join(sts_params)
         if return_ty_ref := self.t.ty_ref.return_ty_ref:
             type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)

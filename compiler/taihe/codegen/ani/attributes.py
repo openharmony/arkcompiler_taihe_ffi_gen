@@ -172,6 +172,12 @@ class UndefinedAttr(TypedAttribute[UnionFieldDecl]):
         super().check_typed_context(parent, dm)
 
 
+@dataclass
+class OptionalAttr(TypedAttribute[ParamDecl | StructFieldDecl]):
+    NAME = "optional"
+    TARGETS = (ParamDecl, StructFieldDecl)
+
+
 PARAM_ATTRIBUTE_GROUP = AttributeGroupTag()
 
 
@@ -616,6 +622,7 @@ all_attr_types: list[CheckedAttrT] = [
     ReadOnlyAttr,
     NullAttr,
     UndefinedAttr,
+    OptionalAttr,
     StsThisAttr,
     StsLastAttr,
     StsFillAttr,

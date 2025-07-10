@@ -9,7 +9,7 @@ function showOptionalInt() {
 }
 
 function showOptionalInt_1() {
-    OptTest.showOptionalInt(undefined)
+    OptTest.showOptionalInt()
 }
 
 function makeOptionalInt() {
@@ -44,7 +44,7 @@ function sendReturnResult() {
 }
 
 function sendReturnResult_1() {
-    let result: OptTest.ReturnResult = {results: undefined};
+    let result: OptTest.ReturnResult = {};
     let res = OptTest.sendReturnResult(result);
     console.log(res)
     arktest.assertTrue(res == undefined);
@@ -254,6 +254,21 @@ function func_showOptionalStruct_1() {
     arktest.assertEQ(res, undefined);
 }
 
+function test_callCallback() {
+    OptTest.callCallback(true, (a: string, b?: string) => {
+        console.log(`a should be "Hello": ${a}`);
+        console.log(`b should be "World": ${b}`);
+        arktest.assertEQ(a, "Hello");
+        arktest.assertEQ(b, "World");
+    });
+    OptTest.callCallback(false, (a: string, b?: string) => {
+        console.log(`a should be "Hello": ${a}`);
+        console.log(`b should be undefined: ${b}`);
+        arktest.assertEQ(a, "Hello");
+        arktest.assertTrue(b === undefined);
+    });
+}
+
 function main() {
     console.log("run main ... OptTest ...")
 
@@ -310,5 +325,8 @@ function main() {
     suite.addTest("func_showOptionalRecord_1", func_showOptionalRecord_1)
     suite.addTest("func_showOptionalStruct", func_showOptionalStruct)
     suite.addTest("func_showOptionalStruct_1", func_showOptionalStruct_1)
+
+    suite.addTest("test_callCallback", test_callCallback)
+
     exit(suite.run());
 }

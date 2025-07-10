@@ -20,6 +20,7 @@ from taihe.codegen.ani.analyses import (
 from taihe.codegen.ani.attributes import (
     ConstAttr,
     NullAttr,
+    OptionalAttr,
     ReadOnlyAttr,
     UndefinedAttr,
 )
@@ -292,9 +293,10 @@ class STSCodeGenerator:
                 target.write_block(injected)
             for field in struct_ani_info.sts_fields:
                 readonly = "readonly " if ReadOnlyAttr.get(field) is not None else ""
+                opt = "?" if OptionalAttr.get(field) else ""
                 ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
                 target.writelns(
-                    f"{readonly}{field.name}: {ty_ani_info.sts_type_in(target)};",
+                    f"{readonly}{field.name}{opt}: {ty_ani_info.sts_type_in(target)};",
                 )
 
     def gen_struct_class(
@@ -330,9 +332,10 @@ class STSCodeGenerator:
             for parts in struct_ani_info.sts_all_fields:
                 final = parts[-1]
                 readonly = "readonly " if ReadOnlyAttr.get(final) is not None else ""
+                opt = "?" if OptionalAttr.get(final) else ""
                 ty_ani_info = TypeANIInfo.get(self.am, final.ty_ref.resolved_ty)
                 target.writelns(
-                    f"{readonly}{final.name}: {ty_ani_info.sts_type_in(target)};",
+                    f"{readonly}{final.name}{opt}: {ty_ani_info.sts_type_in(target)};",
                 )
 
             with target.indented(
@@ -341,9 +344,10 @@ class STSCodeGenerator:
             ):
                 for parts in struct_ani_info.sts_all_fields:
                     final = parts[-1]
+                    opt = "?" if OptionalAttr.get(final) else ""
                     ty_ani_info = TypeANIInfo.get(self.am, final.ty_ref.resolved_ty)
                     target.writelns(
-                        f"{final.name}: {ty_ani_info.sts_type_in(target)},",
+                        f"{final.name}{opt}: {ty_ani_info.sts_type_in(target)},",
                     )
             with target.indented(
                 f"{{",
@@ -579,10 +583,13 @@ class STSCodeGenerator:
         sts_params = []
         sts_args = []
         for sts_param in func_ani_info.sts_params:
+            opt = "?" if OptionalAttr.get(sts_param) else ""
             type_ani_info = TypeANIInfo.get(self.am, sts_param.ty_ref.resolved_ty)
             sts_params_sig.append(type_ani_info.type_sig)
             sts_params_ty.append(type_ani_info.sts_type_in(target))
-            sts_params.append(f"{sts_param.name}: {type_ani_info.sts_type_in(target)}")
+            sts_params.append(
+                f"{sts_param.name}{opt}: {type_ani_info.sts_type_in(target)}"
+            )
             sts_args.append(sts_param.name)
         if return_ty_ref := func.return_ty_ref:
             type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
@@ -664,10 +671,13 @@ class STSCodeGenerator:
         sts_params = []
         sts_args = []
         for sts_param in func_ani_info.sts_params:
+            opt = "?" if OptionalAttr.get(sts_param) else ""
             type_ani_info = TypeANIInfo.get(self.am, sts_param.ty_ref.resolved_ty)
             sts_params_sig.append(type_ani_info.type_sig)
             sts_params_ty.append(type_ani_info.sts_type_in(target))
-            sts_params.append(f"{sts_param.name}: {type_ani_info.sts_type_in(target)}")
+            sts_params.append(
+                f"{sts_param.name}{opt}: {type_ani_info.sts_type_in(target)}"
+            )
             sts_args.append(sts_param.name)
         sts_native_args = func_ani_info.call_native_with(sts_args)
         sts_native_args_str = ", ".join(sts_native_args)
@@ -762,10 +772,13 @@ class STSCodeGenerator:
         sts_params = []
         sts_args = []
         for sts_param in ctor_ani_info.sts_params:
+            opt = "?" if OptionalAttr.get(sts_param) else ""
             type_ani_info = TypeANIInfo.get(self.am, sts_param.ty_ref.resolved_ty)
             sts_params_sig.append(type_ani_info.type_sig)
             sts_params_ty.append(type_ani_info.sts_type_in(target))
-            sts_params.append(f"{sts_param.name}: {type_ani_info.sts_type_in(target)}")
+            sts_params.append(
+                f"{sts_param.name}{opt}: {type_ani_info.sts_type_in(target)}"
+            )
             sts_args.append(sts_param.name)
         sts_native_args = ctor_ani_info.call_native_with(sts_args)
         sts_native_args_str = ", ".join(sts_native_args)
@@ -1255,7 +1268,7 @@ class STSCodeGenerator:
             for index, param_types in enumerate(params_types):
                 sts_param_name = f"p_{index}"
                 param_ty = " | ".join(param_types)
-                sts_params.append(f"{sts_param_name}: {param_ty}")
+                sts_params.append(f"{sts_param_name}?: {param_ty}")
                 sts_args.append(sts_param_name)
             sts_params_str = ", ".join(sts_params)
             sts_args_str = ", ".join(sts_args)
@@ -1344,7 +1357,7 @@ class STSCodeGenerator:
             sts_args = []
             for index, param_ty in enumerate(params_ty):
                 sts_param_name = f"p_{index}"
-                sts_params.append(f"{sts_param_name}: {param_ty}")
+                sts_params.append(f"{sts_param_name}?: {param_ty}")
                 sts_args.append(sts_param_name)
             sts_params_str = ", ".join(sts_params)
             sts_args_str = ", ".join(sts_args)
