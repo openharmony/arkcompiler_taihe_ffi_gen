@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Literal
 
 from typing_extensions import override
 
@@ -24,7 +24,6 @@ from taihe.codegen.ani.attributes import (
     OnOffAttr,
     OverloadAttr,
     PromiseAttribute,
-    ReadOnlyAttr,
     RecordAttr,
     RenameAttribute,
     SetAttr,
@@ -82,6 +81,152 @@ from taihe.semantics.types import (
 from taihe.semantics.visitor import TypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
 
+# ANI runtime types
+
+
+@dataclass
+class AniRuntimeType(ABC):
+    @property
+    @abstractmethod
+    def sig(self) -> str: ...
+
+    @property
+    @abstractmethod
+    def boxed(self) -> "AniRuntimeNonPrimitiveType": ...
+
+
+@dataclass
+class AniRuntimePrimitiveType(AniRuntimeType):
+    sts_type: str
+    type_sig: str
+
+    @property
+    def sig(self) -> str:
+        return self.type_sig
+
+    @property
+    def boxed(self) -> "AniRuntimeNonPrimitiveType":
+        return AniRuntimeClassType(name=f"std.core.{self.sts_type.capitalize()}")
+
+
+@dataclass
+class AniRuntimeNonPrimitiveType(AniRuntimeType, ABC):
+    @property
+    @abstractmethod
+    def desc(self) -> str: ...
+
+    @property
+    def boxed(self) -> "AniRuntimeNonPrimitiveType":
+        return self
+
+    @abstractmethod
+    def as_union_members(self) -> Iterable["AniRuntimeUnionMemberType"]: ...
+
+
+@dataclass
+class AniRuntimeUnionMemberType(AniRuntimeNonPrimitiveType, ABC):
+    def as_union_members(self) -> Iterable["AniRuntimeUnionMemberType"]:
+        yield self
+
+
+@dataclass
+class AniRuntimeUnionType(AniRuntimeNonPrimitiveType):
+    members: list[AniRuntimeUnionMemberType]
+
+    @staticmethod
+    def union(*sig_types: AniRuntimeType) -> AniRuntimeNonPrimitiveType:
+        members = [
+            member
+            for sig_type in sig_types
+            for member in sig_type.boxed.as_union_members()
+        ]
+        if len(members) == 0:
+            return AniRuntimeUndefinedType()
+        if len(members) == 1:
+            return members[0]
+        return AniRuntimeUnionType(members=members)
+
+    @property
+    def sig(self) -> str:
+        signatures = [union_member.sig for union_member in self.members]
+        signatures = sorted(set(signatures))
+        signatures_str = "".join(signatures)
+        return f"X{{{signatures_str}}}"
+
+    @property
+    def desc(self) -> str:
+        return self.sig
+
+    def as_union_members(self) -> Iterable[AniRuntimeUnionMemberType]:
+        yield from self.members
+
+
+@dataclass
+class AniRuntimeUndefinedType(AniRuntimeNonPrimitiveType):
+    @property
+    def sig(self) -> str:
+        return "U"
+
+    @property
+    def desc(self) -> str:
+        return self.sig
+
+    def as_union_members(self) -> Iterable[AniRuntimeUnionMemberType]:
+        yield from ()
+
+
+@dataclass
+class AniRuntimeNullType(AniRuntimeUnionMemberType):
+    @property
+    def desc(self) -> str:
+        return self.sig
+
+    @property
+    def sig(self) -> str:
+        return "N"
+
+
+@dataclass
+class AniRuntimeFixedArrayType(AniRuntimeUnionMemberType):
+    element: AniRuntimeType
+
+    @property
+    def desc(self) -> str:
+        return self.sig
+
+    @property
+    def sig(self) -> str:
+        return f"A{{{self.element.sig}}}"
+
+
+@dataclass
+class AniRuntimeClassType(AniRuntimeUnionMemberType):
+    name: str
+
+    @property
+    def desc(self) -> str:
+        return self.name
+
+    @property
+    def sig(self) -> str:
+        return f"C{{{self.name}}}"
+
+
+@dataclass
+class AniRuntimeEnumType(AniRuntimeUnionMemberType):
+    name: str
+
+    @property
+    def desc(self) -> str:
+        return self.name
+
+    @property
+    def sig(self) -> str:
+        return f"E{{{self.name}}}"
+
+
+# ANI Types
+
 
 @dataclass(repr=False)
 class ANIType:
@@ -91,12 +236,9 @@ class ANIType:
     def __repr__(self) -> str:
         return f"ani_{self.hint}"
 
-    def __hash__(self) -> int:
-        return hash(self.hint)
-
     @property
     def suffix(self) -> str:
-        return self.base.hint[0].upper() + self.base.hint[1:]
+        return self.base.hint.capitalize()
 
     @property
     def fixedarray(self) -> "ANIFixedArrayType":
@@ -106,52 +248,51 @@ class ANIType:
 
 @dataclass(repr=False)
 class ANIFixedArrayType(ANIType):
-    def __hash__(self) -> int:
-        return hash(self.hint)
+    item: "ANIBaseType"
+
+    def __init__(self, hint: str, item: "ANIBaseType"):
+        super().__init__(hint, ANI_REF)
+        self.item = item
 
 
 @dataclass(repr=False)
 class ANIBaseType(ANIType):
-    fixedarray_hint: "ANIFixedArrayType | None"
+    fixedarray_hint: "ANIFixedArrayType"
 
     def __init__(self, hint: str):
         super().__init__(hint, self)
-        self.fixedarray_hint = None
-
-    def __hash__(self) -> int:
-        return hash(self.hint)
 
 
 ANI_REF = ANIBaseType(hint="ref")
-ANI_FIXEDARRAY_REF = ANIFixedArrayType(hint="fixedarray_ref", base=ANI_REF)
+ANI_FIXEDARRAY_REF = ANIFixedArrayType(hint="fixedarray_ref", item=ANI_REF)
 ANI_REF.fixedarray_hint = ANI_FIXEDARRAY_REF
 
 ANI_BOOLEAN = ANIBaseType(hint="boolean")
-ANI_FIXEDARRAY_BOOLEAN = ANIFixedArrayType(hint="fixedarray_boolean", base=ANI_REF)
+ANI_FIXEDARRAY_BOOLEAN = ANIFixedArrayType(hint="fixedarray_boolean", item=ANI_BOOLEAN)
 ANI_BOOLEAN.fixedarray_hint = ANI_FIXEDARRAY_BOOLEAN
 
 ANI_FLOAT = ANIBaseType(hint="float")
-ANI_FIXEDARRAY_FLOAT = ANIFixedArrayType(hint="fixedarray_float", base=ANI_REF)
+ANI_FIXEDARRAY_FLOAT = ANIFixedArrayType(hint="fixedarray_float", item=ANI_FLOAT)
 ANI_FLOAT.fixedarray_hint = ANI_FIXEDARRAY_FLOAT
 
 ANI_DOUBLE = ANIBaseType(hint="double")
-ANI_FIXEDARRAY_DOUBLE = ANIFixedArrayType(hint="fixedarray_double", base=ANI_REF)
+ANI_FIXEDARRAY_DOUBLE = ANIFixedArrayType(hint="fixedarray_double", item=ANI_DOUBLE)
 ANI_DOUBLE.fixedarray_hint = ANI_FIXEDARRAY_DOUBLE
 
 ANI_BYTE = ANIBaseType(hint="byte")
-ANI_FIXEDARRAY_BYTE = ANIFixedArrayType(hint="fixedarray_byte", base=ANI_REF)
+ANI_FIXEDARRAY_BYTE = ANIFixedArrayType(hint="fixedarray_byte", item=ANI_BYTE)
 ANI_BYTE.fixedarray_hint = ANI_FIXEDARRAY_BYTE
 
 ANI_SHORT = ANIBaseType(hint="short")
-ANI_FIXEDARRAY_SHORT = ANIFixedArrayType(hint="fixedarray_short", base=ANI_REF)
+ANI_FIXEDARRAY_SHORT = ANIFixedArrayType(hint="fixedarray_short", item=ANI_SHORT)
 ANI_SHORT.fixedarray_hint = ANI_FIXEDARRAY_SHORT
 
 ANI_INT = ANIBaseType(hint="int")
-ANI_FIXEDARRAY_INT = ANIFixedArrayType(hint="fixedarray_int", base=ANI_REF)
+ANI_FIXEDARRAY_INT = ANIFixedArrayType(hint="fixedarray_int", item=ANI_INT)
 ANI_INT.fixedarray_hint = ANI_FIXEDARRAY_INT
 
 ANI_LONG = ANIBaseType(hint="long")
-ANI_FIXEDARRAY_LONG = ANIFixedArrayType(hint="fixedarray_long", base=ANI_REF)
+ANI_FIXEDARRAY_LONG = ANIFixedArrayType(hint="fixedarray_long", item=ANI_LONG)
 ANI_LONG.fixedarray_hint = ANI_FIXEDARRAY_LONG
 
 ANI_OBJECT = ANIType(hint="object", base=ANI_REF)
@@ -162,6 +303,9 @@ ANI_STRING = ANIType(hint="string", base=ANI_REF)
 ANI_ARRAYBUFFER = ANIType(hint="arraybuffer", base=ANI_REF)
 
 
+# ANI Function and Method
+
+
 @dataclass(repr=False)
 class ANIFuncLike:
     hint: str
@@ -169,12 +313,9 @@ class ANIFuncLike:
     def __repr__(self) -> str:
         return f"ani_{self.hint}"
 
-    def __hash__(self) -> int:
-        return hash(self.hint)
-
     @property
     def suffix(self) -> str:
-        return self.hint[0].upper() + self.hint[1:]
+        return self.hint.capitalize()
 
     @property
     def upper(self) -> str:
@@ -185,6 +326,9 @@ ANI_FUNCTION = ANIFuncLike("function")
 ANI_METHOD = ANIFuncLike("method")
 
 
+# ANI Scopes
+
+
 @dataclass(repr=False)
 class ANIScope:
     hint: str
@@ -193,12 +337,9 @@ class ANIScope:
     def __repr__(self) -> str:
         return f"ani_{self.hint}"
 
-    def __hash__(self) -> int:
-        return hash(self.hint)
-
     @property
     def suffix(self) -> str:
-        return self.hint[0].upper() + self.hint[1:]
+        return self.hint.capitalize()
 
     @property
     def upper(self) -> str:
@@ -592,8 +733,6 @@ class EnumANIInfo(AbstractAnalysis[EnumDecl]):
         self.sts_type_name = d.name
         self.type_desc = ".".join([*self.parent_ns.ani_path, self.sts_type_name])
 
-        self.is_literal = ConstAttr.get(d) is not None
-
         self.is_default = ExportDefaultAttr.get(d) is not None
 
     @classmethod
@@ -603,25 +742,6 @@ class EnumANIInfo(AbstractAnalysis[EnumDecl]):
 
     def sts_type_in(self, target: StsWriter):
         return self.parent_ns.get_member(target, self.sts_type_name, self.is_default)
-
-
-class UnionFieldANIInfo(AbstractAnalysis[UnionFieldDecl]):
-    field_ty: Type | None | Literal["null", "undefined"]
-
-    def __init__(self, am: AnalysisManager, d: UnionFieldDecl) -> None:
-        if d.ty_ref is not None:
-            self.field_ty = d.ty_ref.resolved_ty
-        elif NullAttr.get(d):
-            self.field_ty = "null"
-        elif UndefinedAttr.get(d):
-            self.field_ty = "undefined"
-        else:
-            self.field_ty = None
-
-    @classmethod
-    @override
-    def create(cls, am: AnalysisManager, d: UnionFieldDecl) -> "UnionFieldANIInfo":
-        return UnionFieldANIInfo(am, d)
 
 
 class UnionANIInfo(AbstractAnalysis[UnionDecl]):
@@ -657,16 +777,6 @@ class UnionANIInfo(AbstractAnalysis[UnionDecl]):
 
     def sts_type_in(self, target: StsWriter):
         return self.parent_ns.get_member(target, self.sts_type_name, self.is_default)
-
-
-class StructFieldANIInfo(AbstractAnalysis[StructFieldDecl]):
-    def __init__(self, am: AnalysisManager, d: StructFieldDecl) -> None:
-        self.readonly = ReadOnlyAttr.get(d) is not None
-
-    @classmethod
-    @override
-    def create(cls, am: AnalysisManager, d: StructFieldDecl) -> "StructFieldANIInfo":
-        return StructFieldANIInfo(am, d)
 
 
 class StructANIInfo(AbstractAnalysis[StructDecl]):
@@ -772,17 +882,22 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
 
 class TypeANIInfo(AbstractAnalysis[Type], ABC):
     ani_type: ANIType
-    type_sig: str
-    type_desc: str
+    sig_type: AniRuntimeType
 
     def __init__(self, am: AnalysisManager, t: Type):
         self.cpp_info = TypeCppInfo.get(am, t)
 
     @property
+    def type_sig(self) -> str:
+        return self.sig_type.sig
+
+    @property
     def type_sig_boxed(self) -> str:
-        if self.ani_type.base == ANI_REF:
-            return self.type_sig
-        return f"C{{{self.type_desc}}}"
+        return self.sig_type.boxed.sig
+
+    @property
+    def type_desc(self) -> str:
+        return self.sig_type.boxed.desc
 
     @classmethod
     @override
@@ -929,8 +1044,7 @@ class EnumTypeANIInfo(TypeANIInfo):
         self.t = t
         enum_ani_info = EnumANIInfo.get(self.am, self.t.ty_decl)
         self.ani_type = ANI_ENUM_ITEM
-        self.type_desc = enum_ani_info.type_desc
-        self.type_sig = f"E{{{self.type_desc}}}"
+        self.sig_type = AniRuntimeEnumType(enum_ani_info.type_desc)
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -975,8 +1089,7 @@ class ConstEnumTypeANIInfo(TypeANIInfo):
         self.const_attr = const_attr
         ty_ani_info = TypeANIInfo.get(self.am, self.t.ty_decl.ty_ref.resolved_ty)
         self.ani_type = ty_ani_info.ani_type
-        self.type_desc = ty_ani_info.type_desc
-        self.type_sig = ty_ani_info.type_sig
+        self.sig_type = ty_ani_info.sig_type
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -993,8 +1106,8 @@ class ConstEnumTypeANIInfo(TypeANIInfo):
     ):
         cpp_temp = f"{cpp_result}_cpp_temp"
         ty_ani_info = TypeANIInfo.get(self.am, self.t.ty_decl.ty_ref.resolved_ty)
-        enum_cpp_info = EnumCppInfo.get(self.am, self.t.ty_decl)
         ty_ani_info.from_ani(target, env, ani_value, cpp_temp)
+        enum_cpp_info = EnumCppInfo.get(self.am, self.t.ty_decl)
         target.writelns(
             f"{enum_cpp_info.full_name} {cpp_result} = {enum_cpp_info.full_name}::from_value({cpp_temp});",
         )
@@ -1008,10 +1121,10 @@ class ConstEnumTypeANIInfo(TypeANIInfo):
         ani_result: str,
     ):
         cpp_temp = f"{ani_result}_cpp_temp"
+        ty_cpp_info = TypeCppInfo.get(self.am, self.t.ty_decl.ty_ref.resolved_ty)
         ty_ani_info = TypeANIInfo.get(self.am, self.t.ty_decl.ty_ref.resolved_ty)
-        value_cpp_info = TypeCppInfo.get(self.am, self.t.ty_decl.ty_ref.resolved_ty)
         target.writelns(
-            f"{value_cpp_info.as_owner} {cpp_temp} = {cpp_value}.get_value();",
+            f"{ty_cpp_info.as_owner} {cpp_temp} = {cpp_value}.get_value();",
         )
         ty_ani_info.into_ani(target, env, cpp_temp, ani_result)
 
@@ -1023,8 +1136,7 @@ class StructTypeANIInfo(TypeANIInfo):
         self.t = t
         struct_ani_info = StructANIInfo.get(self.am, self.t.ty_decl)
         self.ani_type = ANI_OBJECT
-        self.type_desc = struct_ani_info.type_desc
-        self.type_sig = f"C{{{self.type_desc}}}"
+        self.sig_type = AniRuntimeClassType(struct_ani_info.type_desc)
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -1068,8 +1180,16 @@ class UnionTypeANIInfo(TypeANIInfo):
         self.am = am
         self.t = t
         self.ani_type = ANI_REF
-        self.type_desc = "std.core.Object"
-        self.type_sig = f"C{{{self.type_desc}}}"
+        sig_types: list[AniRuntimeType] = []
+        for field in t.ty_decl.fields:
+            if (field_ty_ref := field.ty_ref) is not None:
+                field_ani_info = TypeANIInfo.get(self.am, field_ty_ref.resolved_ty)
+                sig_types.append(field_ani_info.sig_type)
+            elif NullAttr.get(field):
+                sig_types.append(AniRuntimeNullType())
+            elif UndefinedAttr.get(field):
+                sig_types.append(AniRuntimeUndefinedType())
+        self.sig_type = AniRuntimeUnionType.union(*sig_types)
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -1114,8 +1234,7 @@ class IfaceTypeANIInfo(TypeANIInfo):
         self.t = t
         iface_ani_info = IfaceANIInfo.get(self.am, self.t.ty_decl)
         self.ani_type = ANI_OBJECT
-        self.type_desc = iface_ani_info.type_desc
-        self.type_sig = f"C{{{self.type_desc}}}"
+        self.sig_type = AniRuntimeClassType(iface_ani_info.type_desc)
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -1174,8 +1293,7 @@ class ScalarTypeANIInfo(TypeANIInfo):
         sts_type, ani_type, type_sig = sts_info
         self.sts_type = sts_type
         self.ani_type = ani_type
-        self.type_desc = f"std.core.{ani_type.suffix}"
-        self.type_sig = type_sig
+        self.sig_type = AniRuntimePrimitiveType(sts_type, type_sig)
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -1216,8 +1334,7 @@ class OpaqueTypeANIInfo(TypeANIInfo):
             self.sts_type = sts_type_attr.type_name
         else:
             self.sts_type = "Object"
-        self.type_desc = "std.core.Object"
-        self.type_sig = f"C{{{self.type_desc}}}"
+        self.sig_type = AniRuntimeClassType("std.core.Object")
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -1252,8 +1369,7 @@ class StringTypeANIInfo(TypeANIInfo):
     def __init__(self, am: AnalysisManager, t: StringType):
         super().__init__(am, t)
         self.ani_type = ANI_STRING
-        self.type_desc = "std.core.String"
-        self.type_sig = f"C{{{self.type_desc}}}"
+        self.sig_type = AniRuntimeClassType("std.core.String")
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -1302,8 +1418,7 @@ class OptionalTypeANIInfo(TypeANIInfo):
         self.t = t
         item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
         self.ani_type = ANI_REF
-        self.type_desc = item_ty_ani_info.type_desc
-        self.type_sig = item_ty_ani_info.type_sig_boxed
+        self.sig_type = item_ty_ani_info.sig_type.boxed
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -1383,7 +1498,7 @@ class FixedArrayTypeANIInfo(TypeANIInfo):
         self.t = t
         item_ty_ani_info = TypeANIInfo.get(self.am, self.t.item_ty)
         self.ani_type = item_ty_ani_info.ani_type.fixedarray
-        self.type_desc = self.type_sig = f"A{{{item_ty_ani_info.type_sig}}}"
+        self.sig_type = AniRuntimeFixedArrayType(item_ty_ani_info.sig_type)
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -1447,8 +1562,7 @@ class ArrayTypeANIInfo(TypeANIInfo):
         self.am = am
         self.t = t
         self.ani_type = ANI_ARRAY
-        self.type_desc = "escompat.Array"
-        self.type_sig = f"C{{{self.type_desc}}}"
+        self.sig_type = AniRuntimeClassType("escompat.Array")
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -1539,8 +1653,7 @@ class ArrayBufferTypeANIInfo(TypeANIInfo):
         self.t = t
         self.arraybuffer_attr = arraybuffer_attr
         self.ani_type = ANI_ARRAYBUFFER
-        self.type_desc = "escompat.ArrayBuffer"
-        self.type_sig = f"C{{{self.type_desc}}}"
+        self.sig_type = AniRuntimeClassType("escompat.ArrayBuffer")
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -1593,8 +1706,7 @@ class TypedArrayTypeANIInfo(TypeANIInfo):
         self.t = t
         self.typedarray_attr = typedarray_attr
         self.ani_type = ANI_OBJECT
-        self.type_desc = f"escompat.{self.typedarray_attr.sts_type}"
-        self.type_sig = f"C{{{self.type_desc}}}"
+        self.sig_type = AniRuntimeClassType(f"escompat.{self.typedarray_attr.sts_type}")
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -1666,8 +1778,7 @@ class BigIntTypeANIInfo(TypeANIInfo):
         self.t = t
         self.bigint_attr = bigint_attr
         self.ani_type = ANI_OBJECT
-        self.type_desc = "escompat.BigInt"
-        self.type_sig = f"C{{{self.type_desc}}}"
+        self.sig_type = AniRuntimeClassType("escompat.BigInt")
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -1729,8 +1840,7 @@ class RecordTypeANIInfo(TypeANIInfo):
         self.t = t
         self.record_attr = record_attr
         self.ani_type = ANI_OBJECT
-        self.type_desc = "escompat.Record"
-        self.type_sig = f"C{{{self.type_desc}}}"
+        self.sig_type = AniRuntimeClassType("escompat.Record")
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -1829,8 +1939,7 @@ class CallbackTypeANIInfo(TypeANIInfo):
         self.am = am
         self.t = t
         self.ani_type = ANI_FN_OBJECT
-        self.type_desc = f"std.core.Function{len(t.ty_ref.params)}"
-        self.type_sig = f"C{{{self.type_desc}}}"
+        self.sig_type = AniRuntimeClassType(f"std.core.Function{len(t.ty_ref.params)}")
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
