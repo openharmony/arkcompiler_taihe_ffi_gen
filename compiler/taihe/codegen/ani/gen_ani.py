@@ -12,7 +12,10 @@ from taihe.codegen.ani.analyses import (
     StructANIInfo,
     TypeANIInfo,
     UnionANIInfo,
-    UnionFieldANIInfo,
+)
+from taihe.codegen.ani.attributes import (
+    NullAttr,
+    UndefinedAttr,
 )
 from taihe.codegen.cpp.analyses import (
     GlobFuncCppUserInfo,
@@ -31,9 +34,6 @@ from taihe.semantics.declarations import (
     PackageGroup,
     StructDecl,
     UnionDecl,
-)
-from taihe.semantics.types import (
-    Type,
 )
 from taihe.utils.analyses import AnalysisManager
 from taihe.utils.outputs import FileKind, OutputManager
@@ -952,33 +952,8 @@ class ANICodeGenerator:
                 static_tags_str = ", ".join(static_tags)
                 full_name = "_".join(part.name for part in parts)
                 is_field = f"ani_is_{full_name}"
-                final_ani_info = UnionFieldANIInfo.get(self.am, final)
-                if final_ani_info.field_ty == "null":
-                    union_ani_impl_target.writelns(
-                        f"ani_boolean {is_field};",
-                        f"env->Reference_IsNull(ani_value, &{is_field});",
-                    )
-                    with union_ani_impl_target.indented(
-                        f"if ({is_field}) {{",
-                        f"}}",
-                    ):
-                        union_ani_impl_target.writelns(
-                            f"return {union_cpp_info.full_name}({static_tags_str});",
-                        )
-                if final_ani_info.field_ty == "undefined":
-                    union_ani_impl_target.writelns(
-                        f"ani_boolean {is_field};",
-                        f"env->Reference_IsUndefined(ani_value, &{is_field});",
-                    )
-                    with union_ani_impl_target.indented(
-                        f"if ({is_field}) {{",
-                        f"}}",
-                    ):
-                        union_ani_impl_target.writelns(
-                            f"return {union_cpp_info.full_name}({static_tags_str});",
-                        )
-                if isinstance(final_ty := final_ani_info.field_ty, Type):
-                    type_ani_info = TypeANIInfo.get(self.am, final_ty)
+                if (final_ty_ref := final.ty_ref) is not None:
+                    type_ani_info = TypeANIInfo.get(self.am, final_ty_ref.resolved_ty)
                     if type_ani_info.type_desc is None:
                         continue
                     union_ani_impl_target.writelns(
@@ -998,6 +973,30 @@ class ANICodeGenerator:
                         )
                         union_ani_impl_target.writelns(
                             f"return {union_cpp_info.full_name}({static_tags_str}, std::move({cpp_result_spec}));",
+                        )
+                elif NullAttr.get(final):
+                    union_ani_impl_target.writelns(
+                        f"ani_boolean {is_field};",
+                        f"env->Reference_IsNull(ani_value, &{is_field});",
+                    )
+                    with union_ani_impl_target.indented(
+                        f"if ({is_field}) {{",
+                        f"}}",
+                    ):
+                        union_ani_impl_target.writelns(
+                            f"return {union_cpp_info.full_name}({static_tags_str});",
+                        )
+                elif UndefinedAttr.get(final):
+                    union_ani_impl_target.writelns(
+                        f"ani_boolean {is_field};",
+                        f"env->Reference_IsUndefined(ani_value, &{is_field});",
+                    )
+                    with union_ani_impl_target.indented(
+                        f"if ({is_field}) {{",
+                        f"}}",
+                    ):
+                        union_ani_impl_target.writelns(
+                            f"return {union_cpp_info.full_name}({static_tags_str});",
                         )
             union_ani_impl_target.writelns(
                 f"__builtin_unreachable();",
@@ -1023,32 +1022,31 @@ class ANICodeGenerator:
                 indent="",
             ):
                 for field in union.fields:
-                    field_ani_info = UnionFieldANIInfo.get(self.am, field)
                     with union_ani_impl_target.indented(
                         f"case {union_cpp_info.full_name}::tag_t::{field.name}: {{",
                         f"}}",
                     ):
-                        match field_ani_info.field_ty:
-                            case "null":
-                                union_ani_impl_target.writelns(
-                                    f"env->GetNull(&ani_value);",
-                                )
-                            case "undefined":
-                                union_ani_impl_target.writelns(
-                                    f"env->GetUndefined(&ani_value);",
-                                )
-                            case field_ty if isinstance(field_ty, Type):
-                                ani_result_spec = f"ani_field_{field.name}"
-                                type_ani_info = TypeANIInfo.get(self.am, field_ty)
-                                type_ani_info.into_ani_boxed(
-                                    union_ani_impl_target,
-                                    "env",
-                                    f"cpp_value.get_{field.name}_ref()",
-                                    ani_result_spec,
-                                )
-                                union_ani_impl_target.writelns(
-                                    f"ani_value = {ani_result_spec};",
-                                )
+                        if (field_ty_ref := field.ty_ref) is not None:
+                            ani_result_spec = f"ani_field_{field.name}"
+                            field_ty = field_ty_ref.resolved_ty
+                            type_ani_info = TypeANIInfo.get(self.am, field_ty)
+                            type_ani_info.into_ani_boxed(
+                                union_ani_impl_target,
+                                "env",
+                                f"cpp_value.get_{field.name}_ref()",
+                                ani_result_spec,
+                            )
+                            union_ani_impl_target.writelns(
+                                f"ani_value = {ani_result_spec};",
+                            )
+                        elif NullAttr.get(field):
+                            union_ani_impl_target.writelns(
+                                f"env->GetNull(&ani_value);",
+                            )
+                        elif UndefinedAttr.get(field):
+                            union_ani_impl_target.writelns(
+                                f"env->GetUndefined(&ani_value);",
+                            )
                         union_ani_impl_target.writelns(
                             f"break;",
                         )

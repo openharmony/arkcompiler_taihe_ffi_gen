@@ -14,10 +14,14 @@ from taihe.codegen.ani.analyses import (
     Namespace,
     PackageGroupANIInfo,
     StructANIInfo,
-    StructFieldANIInfo,
     TypeANIInfo,
     UnionANIInfo,
-    UnionFieldANIInfo,
+)
+from taihe.codegen.ani.attributes import (
+    ConstAttr,
+    NullAttr,
+    ReadOnlyAttr,
+    UndefinedAttr,
 )
 from taihe.codegen.ani.writer import StsWriter
 from taihe.semantics.declarations import (
@@ -30,7 +34,6 @@ from taihe.semantics.declarations import (
     StructDecl,
     UnionDecl,
 )
-from taihe.semantics.types import Type
 from taihe.utils.analyses import AnalysisManager
 from taihe.utils.outputs import FileKind, OutputManager
 
@@ -211,14 +214,14 @@ class STSCodeGenerator:
         enum: EnumDecl,
         target: StsWriter,
     ):
-        enum_ani_info = EnumANIInfo.get(self.am, enum)
-        if enum_ani_info.is_literal:
+        if ConstAttr.get(enum) is not None:
             type_ani_info = TypeANIInfo.get(self.am, enum.ty_ref.resolved_ty)
             for item in enum.items:
                 target.writelns(
                     f"export const {item.name}: {type_ani_info.sts_type_in(target)} = {dumps(item.value)};",
                 )
         else:
+            enum_ani_info = EnumANIInfo.get(self.am, enum)
             sts_decl = f"enum {enum_ani_info.sts_type_name}"
             if enum_ani_info.is_default:
                 sts_decl = f"export default {sts_decl}"
@@ -241,15 +244,13 @@ class STSCodeGenerator:
         union_ani_info = UnionANIInfo.get(self.am, union)
         sts_types = []
         for field in union.fields:
-            field_ani_info = UnionFieldANIInfo.get(self.am, field)
-            match field_ani_info.field_ty:
-                case "null":
-                    sts_types.append("null")
-                case "undefined":
-                    sts_types.append("undefined")
-                case field_ty if isinstance(field_ty, Type):
-                    ty_ani_info = TypeANIInfo.get(self.am, field_ty)
-                    sts_types.append(ty_ani_info.sts_type_in(target))
+            if (field_ty_ref := field.ty_ref) is not None:
+                ty_ani_info = TypeANIInfo.get(self.am, field_ty_ref.resolved_ty)
+                sts_types.append(ty_ani_info.sts_type_in(target))
+            elif NullAttr.get(field) is not None:
+                sts_types.append("null")
+            elif UndefinedAttr.get(field) is not None:
+                sts_types.append("undefined")
         sts_types_str = " | ".join(sts_types)
         sts_decl = f"type {union_ani_info.sts_type_name}"
         if union_ani_info.is_default:
@@ -290,11 +291,10 @@ class STSCodeGenerator:
             for injected in struct_ani_info.interface_injected_codes:
                 target.write_block(injected)
             for field in struct_ani_info.sts_fields:
-                field_ani_info = StructFieldANIInfo.get(self.am, field)
-                readonly_str = "readonly " if field_ani_info.readonly else ""
+                readonly = "readonly " if ReadOnlyAttr.get(field) is not None else ""
                 ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
                 target.writelns(
-                    f"{readonly_str}{field.name}: {ty_ani_info.sts_type_in(target)};",
+                    f"{readonly}{field.name}: {ty_ani_info.sts_type_in(target)};",
                 )
 
     def gen_struct_class(
@@ -329,11 +329,10 @@ class STSCodeGenerator:
                 target.write_block(injected)
             for parts in struct_ani_info.sts_all_fields:
                 final = parts[-1]
-                final_ani_info = StructFieldANIInfo.get(self.am, final)
-                readonly_str = "readonly " if final_ani_info.readonly else ""
+                readonly = "readonly " if ReadOnlyAttr.get(final) is not None else ""
                 ty_ani_info = TypeANIInfo.get(self.am, final.ty_ref.resolved_ty)
                 target.writelns(
-                    f"{readonly_str}{final.name}: {ty_ani_info.sts_type_in(target)};",
+                    f"{readonly}{final.name}: {ty_ani_info.sts_type_in(target)};",
                 )
 
             with target.indented(
