@@ -747,8 +747,8 @@ class EnumANIInfo(AbstractAnalysis[EnumDecl]):
 
 class UnionANIInfo(AbstractAnalysis[UnionDecl]):
     def __init__(self, am: AnalysisManager, d: UnionDecl) -> None:
-        self.decl_header = f"{d.parent_pkg.name}.{d.name}.ani.1.h"
-        self.impl_header = f"{d.parent_pkg.name}.{d.name}.ani.2.h"
+        self.decl_header = f"{d.parent_pkg.name}.{d.name}.ani.0.hpp"
+        self.impl_header = f"{d.parent_pkg.name}.{d.name}.ani.1.hpp"
 
         self.parent_ns = PackageANIInfo.get(am, d.parent_pkg).ns
         self.sts_type_name = d.name
@@ -782,8 +782,8 @@ class UnionANIInfo(AbstractAnalysis[UnionDecl]):
 
 class StructANIInfo(AbstractAnalysis[StructDecl]):
     def __init__(self, am: AnalysisManager, d: StructDecl) -> None:
-        self.decl_header = f"{d.parent_pkg.name}.{d.name}.ani.1.h"
-        self.impl_header = f"{d.parent_pkg.name}.{d.name}.ani.2.h"
+        self.decl_header = f"{d.parent_pkg.name}.{d.name}.ani.0.hpp"
+        self.impl_header = f"{d.parent_pkg.name}.{d.name}.ani.1.hpp"
 
         self.parent_ns = PackageANIInfo.get(am, d.parent_pkg).ns
         self.sts_type_name = d.name
@@ -837,8 +837,8 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
 
 class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
     def __init__(self, am: AnalysisManager, d: IfaceDecl) -> None:
-        self.decl_header = f"{d.parent_pkg.name}.{d.name}.ani.1.h"
-        self.impl_header = f"{d.parent_pkg.name}.{d.name}.ani.2.h"
+        self.decl_header = f"{d.parent_pkg.name}.{d.name}.ani.0.hpp"
+        self.impl_header = f"{d.parent_pkg.name}.{d.name}.ani.1.hpp"
 
         self.parent_ns = PackageANIInfo.get(am, d.parent_pkg).ns
         self.sts_type_name = d.name
