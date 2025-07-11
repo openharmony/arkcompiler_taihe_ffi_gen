@@ -71,6 +71,12 @@ class NapiCodeGenerator:
             target.writelns(
                 f'napi_set_named_property(env, {reg_obj}, "{child_ns_name}", {ns_obj});',
             )
+        for pkg in ns.packages:
+            pkg_napi_info = PackageNapiInfo.get(self.am, pkg)
+            target.add_include(pkg_napi_info.header)
+            target.writelns(
+                f"{pkg_napi_info.init_func}(env, exports);",
+            )
 
     def gen_register(self, pg: PackageGroup):
         with CSourceWriter(
@@ -78,6 +84,9 @@ class NapiCodeGenerator:
             f"temp/napi_register.cpp",
             FileKind.CPP_SOURCE,
         ) as target:
+            for pkg in pg.packages:
+                pkg_napi_info = PackageNapiInfo.get(self.am, pkg)
+                target.add_include(pkg_napi_info.header)
             target.writelns(
                 f"EXTERN_C_START",
             )
