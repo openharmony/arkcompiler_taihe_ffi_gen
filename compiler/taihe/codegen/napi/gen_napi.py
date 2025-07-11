@@ -130,6 +130,8 @@ class NapiCodeGenerator:
         ) as pkg_napi_target:
             pkg_napi_target.add_include(pkg_napi_info.header)
             pkg_napi_target.add_include(pkg_cpp_user_info.header)
+            pkg_napi_target.add_include("taihe/array.hpp")
+            self.gen_util_funcs(pkg_napi_target)
 
             # ctor func
             ctors_map: dict[str, GlobFuncDecl] = {}
@@ -164,6 +166,59 @@ class NapiCodeGenerator:
                 self.gen_union_files(union)
             self.gen_module_init(pkg, register_infos, pkg_napi_target)
         self.gen_napi_header_file(pkg_napi_info)
+
+    def gen_util_funcs(self, pkg_napi_target: CSourceWriter):
+        """Generate util functions for process bigint."""
+        pkg_napi_target.writelns(
+            f"inline bool _taihe_get_msb(uint64_t dig) {{",
+            f"    return dig >> (sizeof(uint64_t) * 8 - 1) != 0;",
+            f"}}",
+            f"inline bool _taihe_get_sign(taihe::array_view<uint64_t> num) {{",
+            f"    return _taihe_get_msb(num[num.size() - 1]);",
+            f"}}",
+            f"inline std::pair<bool, taihe::array<uint64_t>> _taihe_get_sign_and_abs(taihe::array_view<uint64_t> num) {{",
+            f"    uint64_t *buf = reinterpret_cast<uint64_t *>(malloc(num.size() * sizeof(uint64_t)));",
+            f"    bool sign = _taihe_get_msb(num[num.size() - 1]);",
+            f"    if (sign) {{",
+            f"        bool carry = true;",
+            f"        for (std::size_t i = 0; i < num.size(); i++) {{",
+            f"            buf[i] = ~num[i] + carry;",
+            f"            carry = carry && (buf[i] == 0);",
+            f"        }}",
+            f"    }} else {{",
+            f"        for (std::size_t i = 0; i < num.size(); i++) {{",
+            f"            buf[i] = num[i];",
+            f"        }}",
+            f"    }}",
+            f"    std::size_t size = num.size();",
+            f"    while (size > 0 && buf[size - 1] == 0) {{",
+            f"        size--;",
+            f"    }}",
+            f"    return {{sign, taihe::array<uint64_t>(buf, size)}};",
+            f"}}",
+            f"inline taihe::array<uint64_t> _taihe_build_num(bool sign, taihe::array_view<uint64_t> abs) {{",
+            f"    uint64_t *buf = reinterpret_cast<uint64_t *>(malloc((abs.size() + 1) * sizeof(uint64_t)));",
+            f"    if (sign) {{",
+            f"        bool carry = true;",
+            f"        for (std::size_t i = 0; i < abs.size(); i++) {{",
+            f"            buf[i] = ~abs[i] + carry;",
+            f"            carry = carry && (buf[i] == 0);",
+            f"        }}",
+            f"        buf[abs.size()] = carry - 1;",
+            f"    }} else {{",
+            f"        for (std::size_t i = 0; i < abs.size(); i++) {{",
+            f"            buf[i] = abs[i];",
+            f"        }}",
+            f"        buf[abs.size()] = 0;",
+            f"    }}",
+            f"    std::size_t size = abs.size() + 1;",
+            f"    while (size >= 2 && ((buf[size - 1] == 0 && _taihe_get_msb(buf[size - 2]) == 0) ||",
+            f"                        (buf[size - 1] == static_cast<uint64_t>(-1) && _taihe_get_msb(buf[size - 2]) == 1))) {{",
+            f"        size--;",
+            f"    }}",
+            f"    return taihe::array<uint64_t>(buf, size);",
+            f"}}",
+        )
 
     def gen_napi_header_file(self, pkg_napi_info: PackageNapiInfo):
         with CHeaderWriter(

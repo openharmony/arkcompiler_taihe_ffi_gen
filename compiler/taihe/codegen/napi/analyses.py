@@ -8,6 +8,7 @@ from taihe.codegen.abi.mangle import DeclKind, encode
 from taihe.codegen.abi.writer import CSourceWriter
 from taihe.codegen.ani.attributes import (
     ArrayBufferAttr,
+    BigIntAttr,
     ClassAttr,
     ConstAttr,
     CtorAttr,
@@ -1284,6 +1285,54 @@ class ConstEnumTypeNapiInfo(TypeNapiInfo):
         ty_napi_info.into_napi(target, cpp_temp, napi_result)
 
 
+class BigIntTypeNapiInfo(TypeNapiInfo):
+    def __init__(
+        self,
+        am: AnalysisManager,
+        t: ArrayType,
+    ) -> None:
+        super().__init__(am, t)
+        self.am = am
+        self.type = t
+        # TODO: check the attribute should be used in Array<u64>
+
+    @override
+    def dts_type_in(self, target: DtsWriter) -> str:
+        return "bigint"
+
+    @override
+    def dts_return_type_in(self, target: DtsWriter) -> str:
+        return self.dts_type_in(target)
+
+    def from_napi(
+        self,
+        target: CSourceWriter,
+        napi_value: str,
+        cpp_result: str,
+    ):
+        target.writelns(
+            f"size_t {cpp_result}_len = 0;",
+            f"int {cpp_result}_sign = 0;",
+            f"napi_get_value_bigint_words(env, {napi_value}, nullptr, &{cpp_result}_len, nullptr);",
+            f"uint64_t* {cpp_result}_words = new uint64_t[{cpp_result}_len];",
+            f"napi_get_value_bigint_words(env, {napi_value}, &{cpp_result}_sign, &{cpp_result}_len, {cpp_result}_words);",
+            f"{self.cpp_info.as_owner} {cpp_result}(_taihe_build_num({cpp_result}_sign, {self.cpp_info.as_owner}{{{cpp_result}_words, {cpp_result}_len}}));",
+        )
+
+    def into_napi(
+        self,
+        target: CSourceWriter,
+        cpp_value: str,
+        napi_result: str,
+    ):
+        target.writelns(
+            f"napi_value {napi_result} = nullptr;",
+            f"auto [{napi_result}_sign, {napi_result}_abs] = _taihe_get_sign_and_abs({cpp_value});",
+            f"napi_create_bigint_words(env, {napi_result}_sign, {napi_result}_abs.size(), {napi_result}_abs.data(), &{napi_result});",
+        )
+        # TODO: signBit
+
+
 class TypeNapiInfoDispatcher(TypeVisitor[TypeNapiInfo]):
     def __init__(self, am: AnalysisManager):
         self.am = am
@@ -1320,6 +1369,8 @@ class TypeNapiInfoDispatcher(TypeVisitor[TypeNapiInfo]):
 
     @override
     def visit_array_type(self, t: ArrayType) -> TypeNapiInfo:
+        if BigIntAttr.get(t.ty_ref):
+            return BigIntTypeNapiInfo(self.am, t)
         if ArrayBufferAttr.get(t.ty_ref):
             return ArrayBufferTypeNapiInfo(self.am, t)
         return ArrayTypeNapiInfo(self.am, t)
