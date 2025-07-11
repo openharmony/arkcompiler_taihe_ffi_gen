@@ -18,7 +18,7 @@
 ### 使用包管理命名空间
 
 1. **默认可直接引用当前包下的名称**
-   ```rust
+   ```ts
    // example.types.taihe
    struct Foo {}
    struct Bar {}
@@ -29,7 +29,7 @@
 
 2. **导入其他包并生成别名**
    使用 `use ... as` 或 `from ... use` 为其他包的名称生成别名。
-   ```rust
+   ```ts
    // example.test1.taihe
    use example.types as myfoo;
    function func3(foo: myfoo.Foo): void;    // OK
@@ -41,7 +41,7 @@
    ```
 
 3. **包间互相隔离，无从属关系**
-   ```rust
+   ```ts
    // example.taihe
    from types use Foo;            // Error: package `types` does not exist
    use types as mytypes;          // Error: package `types` does not exist
@@ -51,7 +51,7 @@
    function func7(foo: example.types.Foo): void; // OK
    ```
 
-## 基础类型
+## 内置类型
 
 提供以下基础类型：
 
@@ -64,115 +64,124 @@
   - `bool`
 - **字符串类型**
   - `String`
+- **容器类型**
+  - `Optional<T>`：可选类型，表示值可能存在或不存在，支持任意类型 `T`。
+  - `Array<T>`：定长数组类型，支持任意类型 `T`。
+  - `Map<K, V>`：映射类型，支持键值对，其中键类型为 `K`，值类型为 `V`。
+  - `Set<T>`：集合类型，支持任意类型 `T`。
+  - `Vector<T>`：可动态变长的数组类型，支持任意类型 `T`。
+- **函数闭包类型**
+  - `(arg1: Type1, arg2: Type2, ...) => ReturnType`：表示函数类型，支持任意数量的参数和一个返回值。
 
 ## 函数
 
-支持在 `class` 或 `interface` 外定义函数。
+支持定义全局函数。
 
 ### 函数参数
 
-函数可拥有任意数量的参数，每个参数由参数名、参数类型和类型修饰符组成。
+函数可拥有任意数量的参数，每个参数由参数名和参数类型组成。
 
 ### 返回值
 
 函数最多只能有一个返回值。若需返回多个值，可以用结构体表示。
 
 合法与非法声明示例：
-```rust
+```ts
+function func(foo: i32): void;                    // OK
+function func(foo: String);                       // OK
 function func(m: i32, n: i32): (String, String);  // Error: cannot have multiple return values
 struct StringPair {
   a: String;
   b: String;
 }
 function func(m: i32, n: i32): StringPair;        // OK
-function func(foo: String);                       // Error: return type is required
-function func(foo: i32): void;                    // OK
+```
+
+## 枚举
+
+枚举用于定义一组命名的常量，支持整数、浮点数、布尔值和字符串类型。
+```ts
+enum Foo: i32 {
+  A = 0,
+  B = 1,
+  C = 2,
+}
+
+enum Bar: String {
+  X = "x",
+  Y = "y",
+  Z = "z",
+}
+```
+
+### 省略枚举值
+
+- 对于整数类型的枚举，若未指定值，则从上一个元素的值递增，第一个元素默认为 0。
+  ```ts
+  enum Foo: i32 {
+    A;          // 0
+    B;          // 1
+    C = -10;
+    D;          // -9
+  }
+  ```
+- 对于字符串类型的枚举，若未指定值，默认使用元素名称作为值。
+  ```ts
+  enum Bar: String {
+    X;          // "X"
+    Y;          // "Y"
+    Z = "z_value";
+  }
+  ```
+- 对于布尔类型和浮点类型的枚举，默认值为 `false` 或 `0.0`。
+
+### 枚举值重复
+
+枚举值可以在不同的枚举元素中重复，但必须确保类型一致。
+```ts
+enum Foo: i32 {
+  A = 0,
+  B = 1,
+  C = 1,  // 重复值，合法
+}
 ```
 
 ## 结构体
 
 结构体是数据成员的组合，其成员类型包括基础类型、枚举类型、接口类型和其他结构体类型：
-```rust
+```ts
 interface Base {}
 struct Foo {
   a: i32;
   s: String;
   i: Base;
+  x: Array<i32>;
 }
 ```
 
-## 枚举（带标签的联合体）
+## 标签联合
 
-枚举既可表示一组常量，也可作为联合体使用，支持包含不同类型的值。
+标签联合用于表示多种可能的数据类型，每个标签对应一种数据类型。多个标签可以对应同一个数据类型。标签联合的定义方式如下：
+```ts
+union Foo {
+  A: i32,
+  B: String,
+  C: bool,
+  D: Bar,
+  E: Bar,
+}
 
-### 基本定义
-```rust
-enum Bar {
-  RED = 0;
-  GREEN = 1;
-  BLUE = 2;
+struct Bar {
+  x: i32;
+  y: String;
 }
 ```
 
-1. **省略值**
-   - 第一个枚举成员默认为 0，其后成员值依次递增。
-   ```rust
-   enum Foo {
-     A;          // 0
-     B;          // 1
-     C = -10;
-     D;          // -9
-   }
-   ```
-
-2. **值不可重复**
-   - 不同枚举成员的值不能相同。
-   ```rust
-   enum Foo {
-     A = 42;
-     B = 42;     // Error: duplicate value
-   }
-
-   enum Bar {
-     A;          // 0
-     B = -1;
-     C;          // Error: A and C have the same value 0
-   }
-   ```
-
-3. **联合体功能（Tagged Union）**
-   - 枚举元素可包含不同类型。
-   - 使用时，枚举类型充当联合体，实际数据类型由标签值决定：
-   ```rust
-   enum Color {
-     RED = 0xff << 0o20;
-     GREEN = 0xff << 0o10;
-     BLUE = 0xff << 0o00;
-   }
-
-   struct RGB {
-     r: u8;
-     g: u8;
-     b: u8;
-   }
-
-   enum ColorName {
-     undefined;              // 0
-     color: Color = 0x1;     // 1
-     rgb: RGB = 0x2;         // 2
-     name: String = 0x3;     // 3
-   }
-   // 用法示例：
-   // ColorName.tag == 0 => 表示 undefined
-   // ColorName.tag == 1 => 数据类型为 Color
-   // ColorName.tag == 2 => 数据类型为 RGB
-   // ColorName.tag == 3 => 数据类型为 String
-   ```
 
 ## 接口
 
 接口定义中只支持包含方法声明。接口支持单继承和多继承：
-```rust
+```ts
 interface BaseA {
   baseAFunc(): u32;
 }
@@ -186,70 +195,98 @@ interface Derived: BaseA, BaseB {
 }
 ```
 
-## 属性
+## 注解
 
-属性定义为键值对，支持附加在多种元素上。
+注解用于为代码中的语法元素添加附加属性。
+```ts
+// 前缀注解（@name）
+@attribute_name(value1, value2, ..., key1 = value1, key2 = value2, ...)
+function myFunc(color: RGB): void;
 
-### 基本语法
-```rust
-[pkgname = "package_func_1", index = 1, has_return_val = FALSE]
-function func_1(color: RGB): void;
+// 内联注解（@!name）
+interface MyInterface {
+  @!attribute_name(value1, value2, ..., key1 = value1, key2 = value2, ...)
+  myMethod(param: Type): ReturnType;
+}
 ```
 
-1. **属性可省略值**
-   默认值为 `None`：
-   ```rust
-   [tuple]
-   struct IntPair {
-     n: i32;
-     m: i32;
-   }
-   ```
+### 无参数时括号可以省略
+```ts
+@attribute_name()
+function myFunc(): void; // OK
 
-2. **文件级属性**
-   每个文件仅能有一个文件级属性，位于文件末尾：
-   ```rust
-   [file_info = "测试"]
-   ```
+@attribute_name
+function myFunc(): void; // OK, same as above
+```
 
-3. **属性定义位置**
-   属性需紧邻目标元素上方：
-   ```rust
-   [tuple]
-   struct IntPair {
-     [pkgname = "package", baseinfo]
-     n: i32;
-     m: i32;
-   }
-   ```
+### 前缀注解和内联注解
+- 前缀注解（语法为 `@name`）用于指定给其后面紧跟的语法元素添加属性。
+  ```ts
+  @class
+  interface MyInterface {
+    @get("name")
+    getName(): String;
+    @set("name")
+    setName(name: String): void;
+  }
+
+  @promise
+  function fetchData(url: String): Response;
+
+  @async
+  function processData(data: String): void;
+
+  function test(@optional param: Optional<String>);
+
+  union MyUnion {
+    @undefined
+    undefinedValue;
+
+    @null
+    nullValue;
+
+    stringValue: @arraybuffer Array<i8>;
+  }
+  ```
+- 内联注解（语法为 `@!name`）用于指定给其前面的语法元素添加属性。
+  ```ts
+  @!namespace("example", namespace = "a.b")  // 全局注解的唯一写法
+
+  interface MyInterface {
+    @!class  // 等价于在 interface 前添加 @class
+  }
+  ```
+
 
 ## 其他规则
 
-1. **声明顺序**
-   - 函数和类型的声明无先后顺序。
-   - 禁止结构体与联合体的递归包含：
-     ```rust
-     struct Foo {
-       bar: Bar;
-     }
-     struct Bar {
-       val: i32;
-     }
-     // OK
+### 递归包含与继承
 
-     struct RecursiveStruct {
-       e: RecursiveEnum;
-     }
-     enum RecursiveEnum {
-       s: RecursiveStruct;
-     }
-     // Error: recursive inclusion
-     ```
+- 函数和类型的声明无先后顺序。
+  ```ts
+  struct Foo {
+    bar: Bar;
+  }
+  struct Bar {
+    val: i32;
+  }
+  // OK
+  ```
 
-2. **接口递归扩展**
-   接口间不能递归继承：
-   ```rust
-   interface RecursiveIfaceA: RecursiveIfaceB {}
-   interface RecursiveIfaceB: RecursiveIfaceA {}
-   // Error
-   ```
+- 禁止结构体与结构体、联合体与联合体、结构体与联合体之间的递归包含：
+  ```ts
+  struct RecursiveStruct {
+    e: RecursiveUnion;
+  }
+  union RecursiveUnion {
+    s: RecursiveStruct;
+  }
+  // Error: recursive inclusion
+  ```
+
+- 接口间不能递归扩展：
+  ```ts
+  interface RecursiveIfaceA: RecursiveIfaceB {}
+  interface RecursiveIfaceB: RecursiveIfaceA {}
+  // Error
+  ```

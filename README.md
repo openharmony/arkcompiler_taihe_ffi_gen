@@ -37,10 +37,17 @@ int main() {
 }
 ```
 
-## 加入 Taihe 的开发
+## 快速上手
 
-Ubuntu 环境(>= 22.04)：运行 `./scripts/install-ubuntu-deps` 来一键安装环境
+- [太和工具的基本使用](docs/CliDoc.md)
+- [书写 IDL 文件](docs/DSL.md)
+- [数据类型](docs/Types.md)
+- [太和 C++ 用户文档](docs/CppUserDoc.md)
+- [太和 ANI 用户文档](docs/AniUserDoc.md)
 
-运行 `python -m taihe.cli.tryit test -u sts /test/ani_array` 运行测试样例，检测环境是否可用
+## 开发指南
 
-开发和使用：参见 [文档索引](./docs/README.md)
+- [搭建开发环境](docs/DevSetup.md)
+- [整体设计](docs/Architecture.md)
+- [Interface 的二进制标准](docs/InterfaceABI.md)
+- [太和注解系统](docs/AttributeDesign.md)
