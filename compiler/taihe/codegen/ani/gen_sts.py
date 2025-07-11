@@ -497,7 +497,6 @@ class STSCodeGenerator:
                 self.gen_any_ctor(
                     ctor,
                     ctor_ani_info,
-                    iface,
                     target,
                     ctor_overload_register,
                     ctor_on_off_register,
@@ -762,7 +761,6 @@ class STSCodeGenerator:
         self,
         ctor: GlobFuncDecl,
         ctor_ani_info: GlobFuncANIInfo,
-        iface: IfaceDecl,
         target: StsWriter,
         overload_register: OverloadRegister,
         on_off_register: OnOffRegister,

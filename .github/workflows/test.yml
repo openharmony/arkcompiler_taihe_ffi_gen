@@ -17,12 +17,11 @@ jobs:
         run: uv sync --locked --all-extras --dev
       - name: Check Format
         run: scripts/check
-      # TODO: enable this when panda npm recovers.
       # TODO: perhaps we should use "dry-run" as a poor man's test?
-      # - name: Setup Clang
-      #   uses: egor-tensin/setup-clang@v1
-      #   with:
-      #     version: 15
-      #     platform: x64
-      # - name: Test and Report Coverage
-      #   run: scripts/test
+      - name: Setup Clang
+        uses: egor-tensin/setup-clang@v1
+        with:
+          version: 15
+          platform: x64
+      - name: Test and Report Coverage
+        run: scripts/test
