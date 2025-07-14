@@ -11,9 +11,6 @@
   - **编译器**
     - Python 3.10
     - uv，可参考[官方文档](https://github.com/astral-sh/uv)
-    - ANTLR 4
-    - antlr4-python3-runtime
-    - antlr4-tools
 
 ## 编译器
 
@@ -21,7 +18,7 @@
 
 ### 初次克隆项目时
 
-*注：安装 uv 后，若找不到 uv 命令，请尝试重启系统*
+*注：安装 `uv` 后，若找不到 `uv` 命令，请尝试重启系统*
 
 ```bash
 # 读取 pyproject.toml 文件，解析依赖项并安装至 `.venv` 目录下

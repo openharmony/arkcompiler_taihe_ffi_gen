@@ -164,7 +164,7 @@ FUNCTION_TYPE_ATTRIBUTE_GROUP = AttributeGroupTag()
 class GetAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     NAME = "get"
     TARGETS = (GlobFuncDecl, IfaceMethodDecl)
-    MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({FUNCTION_TYPE_ATTRIBUTE_GROUP})
+    ATTRIBUTE_GROUP_TAGS = frozenset({FUNCTION_TYPE_ATTRIBUTE_GROUP})
 
     member_name: str | None = None
     func_suffix: str = field(default="", init=False)  # 不需要在初始化时传入的参数
@@ -202,7 +202,7 @@ class GetAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
 class SetAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     NAME = "set"
     TARGETS = (GlobFuncDecl, IfaceMethodDecl)
-    MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({FUNCTION_TYPE_ATTRIBUTE_GROUP})
+    ATTRIBUTE_GROUP_TAGS = frozenset({FUNCTION_TYPE_ATTRIBUTE_GROUP})
 
     member_name: str | None = None
     func_suffix: str = field(default="", init=False)  # 不需要在初始化时传入的参数
