@@ -1,14 +1,13 @@
 #include "iface_readonly_test.impl.hpp"
 
 #include "iface_readonly_test.Noo.proj.2.hpp"
-#include "stdexcept"
 #include "taihe/string.hpp"
-// Please delete <stdexcept> include when you implement
 using namespace taihe;
 
 namespace {
 class Noo {
   string name_{"noo"};
+  ::taihe::optional<int32_t> age_{::taihe::optional<int32_t>(std::in_place, 1)};
 
 public:
   void bar() {
@@ -18,6 +17,15 @@ public:
   string getName() {
     std::cout << "Nooimpl: " << __func__ << " " << name_ << std::endl;
     return name_;
+  }
+
+  ::taihe::optional<int32_t> getAge() {
+    return age_;
+  }
+
+  void setAge(::taihe::optional_view<int32_t> a) {
+    this->age_ = a;
+    return;
   }
 };
 
