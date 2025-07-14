@@ -37,15 +37,19 @@ int main() {
 }
 ```
 
-## 快速上手
+## 用户指南
 
-- [太和工具的基本使用](docs/CliDoc.md)
+如果想要快速上手并有效使用 Taihe，可以阅读以下文档，涵盖了从环境配置到具体使用的详细内容。
+
+- [太和工具的环境配置及使用](docs/UserSetup.md)
 - [书写 IDL 文件](docs/DSL.md)
 - [数据类型](docs/Types.md)
 - [太和 C++ 用户文档](docs/CppUserDoc.md)
 - [太和 ANI 用户文档](docs/AniUserDoc.md)
 
 ## 开发指南
+
+我们欢迎并鼓励社区开发者参与到 Taihe 的开发中来。如果你有兴趣参与 Taihe 的开发，以下文档可以帮助您深入了解项目的设计与实现，并顺利地开始您的贡献。
 
 - [搭建开发环境](docs/DevSetup.md)
 - [整体设计](docs/Architecture.md)

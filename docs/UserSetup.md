@@ -2,15 +2,15 @@
 
 ## 环境配置
 
-- 源码用户环境配置
+- 源码用户
 
-  Ubuntu 用户可运行 `scripts/install-ubuntu-deps` 一键配置环境
+  Ubuntu 用户可运行 `scripts/install-ubuntu-deps` 一键配置环境。
 
-  用户也可以手动配置环境，参考[Link](DevSetup.md)
+  对于非 Ununtu 用户，目前可参考太和开发者文档 [Link](DevSetup.md).
 
-- prebuilts 用户环境配置
+- 太和二进制包用户
 
-  prebuilts 用户无需配置环境
+  二进制包内已经包含了所有的依赖，用户无需手动配置环境。
 
 ## Taihe 命令行使用方法
 
@@ -33,7 +33,7 @@ taihec [taihe_files ...] [options]
 | ------------ | ---- | ------------------------------------------------------------------------ |
 | `--output`   | `-O` | 指定生成的目标文件存放目录（默认：`taihe-generated`）                       |
 | `--generate` | `-G` | 指定要启用的后端生成器，如 `abi-header`、`abi-source`、`c-author` 等        |
-| `--build`    | `-B` | 指定构建系统类型，目前支持 `cmake`（生成 CMakeLists.txt）                   |
+| `--build`    | `-B` | 指定构建系统类型，目前支持 `cmake`（生成 `CMakeLists.txt`）                 |
 | `--codegen`  | `-C` | 额外的代码生成配置项，例如 `sts:keep-name`、`arkts:module-prefix=prefix` 等 |
 | `--version`  |      | 打印版本信息                                                              |
 | `--help`     | `-h` | 帮助信息                                                                  |
