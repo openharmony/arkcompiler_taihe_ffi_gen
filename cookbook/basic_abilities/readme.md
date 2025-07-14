@@ -1,4 +1,4 @@
-# taihe基础能力
+# taihe 基础能力
 
 类型对应参照表
 
@@ -21,7 +21,7 @@
     
 容器类型对应参照表
 
-| Taihe 类型          |     C++ 侧投影             |     C++ 侧投影(作为参数时)      |
+| Taihe 类型          |     C++ 侧投影             |     C++ 侧投影（作为参数时）     |
 |---------------------|---------------------------|--------------------------------|
 | `Array<T>`          | `taihe::array<T>`   | `taihe::array_view<T>`   |
 | `Optional<T>`       | `taihe::optional<T>`| `taihe::optional_view<T>`|
@@ -48,9 +48,9 @@ function convert_arr(a: Array<i32>, str: String): Array<String>;
 
 ```C++
 array<string> convert_arr(array_view<int32_t> a, string_view str) {
-    // size() 可获取array长度
+    // 可通过 size() 获取 array 长度
     int32_t input_size = a.size();
-    // [] 可以通过下标访问数组
+    // 可以通过下标访问数组
     int32_t input_begin_val = a[0];
     int32_t input_end_val = a[input_size - 1];
     // 可以通过初始化列表创建数组
@@ -65,7 +65,7 @@ array<string> convert_arr(array_view<int32_t> a, string_view str) {
 
 `compiler/`
 ```sh
-## 注：taihe文件里的函数与C++规范一致，所以函数会在生成的 ets 侧自动转变为小写字母开头函数
+## 注：taihe 文件里的函数与 C++ 规范一致，所以函数会在生成的 ets 侧自动转变为小写字母开头函数
 ## .taihe
 ## function FooBar(): void;
 ## 生成的 ets 侧
@@ -99,7 +99,7 @@ for (let i = 0; i < output_arr.length; i++) {
 
 ### taihe string
 
-1. string 使用引用计数进行自动的生命周期管理, 用户只需要正常使用 string
+1. string 使用引用计数进行自动的生命周期管理，用户只需要正常使用 string
 
 2. 为方便用户使用，提供了许多相关的操作函数便于用户开发
 
@@ -118,7 +118,7 @@ for (let i = 0; i < output_arr.length; i++) {
     // 使用已有字符串为 string_view 进行 0 拷贝的初始化
     string_view sv1 = s1;
 
-    // string_view可以使用 << 输出
+    // string_view 可以使用 << 输出
     std::cout << "sv1: " << sv1 << "\n";
 
     // 访问字符串首字符和尾字符
@@ -170,13 +170,13 @@ for (let i = 0; i < output_arr.length; i++) {
     ```C++
     // example
 
-    // 通过std::vector创建array_view
+    // 通过 std::vector 创建 array_view
     std::vector<double> vec = {3.14, 2.71, 1.62};
     array_view<double> view(vec);
 
-    // 通过索引访问array内的元素
+    // 通过索引访问 array 内的元素
     std::cout << "Using operator[]: " << view[2] << "\n";
-    // 通过at()访问array内的元素
+    // 通过 at() 访问 array 内的元素
     std::cout << "Using at(): " << view.at(1) << "\n";
     // 访问首元素
     std::cout << "Front: " << view.front() << "\n";
@@ -185,10 +185,10 @@ for (let i = 0; i < output_arr.length; i++) {
     // 获取数组大小
     std::cout << "Size: " << view.size() << "\n";
 
-    // 使用初始化列表方式创建array
+    // 使用初始化列表方式创建 array
     array<int> arr = {10, 20, 30, 40, 50}
 
-    // 注意使用begin()、end()、rbegin()、rend()获取的是指针
+    // 注意使用 begin(), end(), rbegin(), rend() 获取的是指针
     // 遍历
     std::cout << "Iterating using begin() and end(): ";
     for (auto it = arr.begin(); it != arr.end(); ++it) {
@@ -203,7 +203,7 @@ for (let i = 0; i < output_arr.length; i++) {
     }
     ```
 
-2. 与 `string`和`string_view`类似，`array`拥有所有权，`array_view`不拥有所有权
+2. 与 `string` 和 `string_view` 类似，`array` 拥有所有权，`array_view` 不拥有所有权
     ```C++
     // example
 
@@ -211,5 +211,5 @@ for (let i = 0; i < output_arr.length; i++) {
     array fun(array_view input) {
         return input; // 拷贝！
     }
-    // 如果用户希望获得更好的性能，在不需要拷贝的场景则不使用array类型
+    // 如果用户希望获得更好的性能，在不需要拷贝的场景则不使用 array 类型
     ```

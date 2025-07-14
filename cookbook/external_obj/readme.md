@@ -1,14 +1,14 @@
 # External object
 
-前面的章节中，我们讲述了taihe的类型，以及在实现侧如何使用这些类型
+前面的章节中，我们讲述了 taihe 的类型，以及在实现侧如何使用这些类型
 
-但是有一些情况下，我们希望在实现侧处理外部语言的对象，如：实现侧希望在impl.cpp里使用ani的对象
+但是有一些情况下，我们希望在实现侧处理外部语言的对象，如：实现侧希望在 impl.cpp 里使用 ani 的对象
 
-taihe提供了 `ani runtime` 以及 `opaque` 类型用于在实现侧处理ani的对象
+taihe 提供了 `ani runtime` 以及 `opaque` 类型用于在实现侧处理 ani 的对象
 
 我们写一个简单的例子
 
-## 第一步 在taihe文件中声明
+## 第一步 在 taihe 文件中声明
 
 ```taihe
 @!sts_inject("import {Person} from 'other.subsystem';")
@@ -28,20 +28,20 @@ export interface Person {
 }
 ```
 
-`Opaque`类型可以理解为一个指针，可以用于指向一个外部语言的对象
+`Opaque` 类型可以理解为一个指针，可以用于指向一个外部语言的对象
 
-| taihe 类型 |   C++ 侧投影   | C++ 侧投影(作为参数时) |
-|-----------|---------------|-----------------------|
-| `Opaque`  | `uintptr_t`   |     `uintptr_t`       |
+| taihe 类型 |  C++ 侧投影   |  C++ 侧投影（作为参数时） |
+|------------|--------------|-------------------------|
+|  `Opaque`  | `uintptr_t`  |       `uintptr_t`       |
 
-`@sts_inject` 注解用于将注解内的字符串写入生成的sts文件, `@!sts_inject` 添加注解到 当下的词法空间下，而 `@sts_inject`（注意，没有感叹号）将注解添加到下一个元素中。
+`@sts_inject` 注解用于将注解内的字符串写入生成的 sts 文件，`@!sts_inject` 添加注解到 当下的词法空间下，而 `@sts_inject`（注意，没有感叹号）将注解添加到下一个元素中。
 
 `@sts_type` 注解用于指定 `Opaque` 在 sts 侧的类型，使用方法是在类型 `Opaque` 前面增加 `@sts_type("\<type_name\>")`, \<type_name\> 为 sts 类型名
 
 ## 第二步 实现声明的接口
 
 ```C++
-// 判断输入的外部ani对象是否是string类型
+// 判断输入的外部 ani 对象是否是 string 类型
 bool is_string(uintptr_t a) {
     ani_env* env = get_env();
     ani_boolean res;
@@ -51,7 +51,7 @@ bool is_string(uintptr_t a) {
     return res;
 }
 
-// 返回一个array，索引0位置为一个ani的字符串，索引1位置为undefined
+// 返回一个 array，索引0位置为一个 ani 的字符串，索引1位置为 undefined
 array<uintptr_t> get_objects() {
     ani_env* env = get_env();
     ani_string ani_arr_0;
@@ -61,7 +61,7 @@ array<uintptr_t> get_objects() {
     return array<uintptr_t>({(uintptr_t)ani_arr_0, (uintptr_t)ani_arr_1});
 }
 
-// 使用ANI语法处理person类型对象
+// 使用 ANI 语法处理 person 类型对象
 void processPerson(uintptr_t person) {
   ani_env* env = get_env();
   ani_object ani_obj = reinterpret_cast<ani_object>(person);
@@ -79,9 +79,9 @@ void processPerson(uintptr_t person) {
 }
 ```
 
-我们可以看到有ani_env类型、ani_string类型等等，这些类型都是ani的类型，用户只需`#include "taihe/runtime.hpp"`即可使用
+我们可以看到有 ani_env 类型、ani_string 类型等等，这些类型都是 ani 的类型，用户只需 `#include "taihe/runtime.hpp"` 即可使用
 
-不同于ani侧的函数，我们可以发现函数参数并没有`env`，所以，当用户希望在impl.cpp文件实现ani的部分逻辑时，需要使用 `ani_env* env = get_env();` 获取当前`env`，其余按ani侧逻辑实现即可
+不同于 ani 侧的函数，我们可以发现函数参数并没有 `env`，所以，当用户希望在 impl.cpp 文件实现 ani 的部分逻辑时，需要使用 `ani_env* env = get_env();` 获取当前 `env`，其余按 ani 侧逻辑实现即可
 
 ## 第三步 生成并编译
 

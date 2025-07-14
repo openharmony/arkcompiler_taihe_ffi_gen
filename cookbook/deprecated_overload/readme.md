@@ -1,10 +1,10 @@
 ### 重载
 
-重载(overload)指的是在同一个作用域中定义多个同名函数，但参数列表不同（参数类型或数量不同）。编译器会根据调用时传入的参数自动选择合适的函数。
+重载（overload）指的是在同一个作用域中定义多个同名函数，但参数列表不同（参数类型或数量不同）。编译器会根据调用时传入的参数自动选择合适的函数。
 
-taihe为了保证与C语言兼容性，并不允许函数重载，但是sts侧允许重载，太和通过使用注解的方式支持sts侧重载
+taihe 为了保证与 C 语言兼容性，并不允许函数重载，但是 sts 侧允许重载，太和通过使用注解的方式支持 sts 侧重载
 
-第一步 在taihe文件中声明
+第一步 在 taihe 文件中声明
 ```taihe
 @static_overload("add")
 function sum_two(a: i32, b: i32): i32;
@@ -12,7 +12,7 @@ function sum_two(a: i32, b: i32): i32;
 function sum_arr(a: Array<i32>): i32;
 ```
 
-sts重载的注解如上述样例所示，使用`@static_overload("{sts_name}")` 
+sts 重载的注解如上述样例所示，使用 `@static_overload("{sts_name}")` 
 
 使用该注解后，实现侧的函数名仍为 taihe 文件声明的函数名，但在 ets 侧会使用 `overload add {sum_two, sum_arr}` 实现 java-like 重载
 
@@ -35,7 +35,7 @@ int32_t sum_arr(array_view<int32_t> a) {
 
 `compiler/`
 ```sh
-## 注：taihe文件里的函数与C++规范一致，所以函数会在生成的 ets 侧自动转变为小写字母开头函数
+## 注：taihe 文件里的函数与 C++ 规范一致，所以函数会在生成的 ets 侧自动转变为小写字母开头函数
 ## .taihe
 ## function FooBar(): void;
 ## 生成的 ets 侧
@@ -44,7 +44,7 @@ int32_t sum_arr(array_view<int32_t> a) {
 python -m taihe.cli.tryit test -u sts /path/to/deprecated_overload --sts-keep-name
 ```
 
-生成的sts代码如下：
+生成的 sts 代码如下：
 
 ```typescript
 export native function _taihe_sum_two_native(a: int, b: int): int;
@@ -61,7 +61,7 @@ export overload add {
 }
 ```
 
-可以发现实现侧的`sum_two`函数和`sum_arr`函数绑定到sts的add函数的不同重载
+可以发现实现侧的 `sum_two` 函数和 `sum_arr` 函数绑定到 sts 的 add 函数的不同重载
 
 用户侧使用
 

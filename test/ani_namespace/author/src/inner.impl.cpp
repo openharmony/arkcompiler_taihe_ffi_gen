@@ -453,7 +453,7 @@ map<string, int8_t> PrintTestInterfaceRecord(
   for (auto const &[key, value] : m) {
     std::cout << "Key: " << key << ", Value: " << static_cast<int>(value)
               << std::endl;
-    // 注意：int8_t需要转为int打印，否则会输出ASCII字符
+    // 注意：int8_t 需要转为 int 打印，否则会输出 ASCII 字符
   }
   return m;
 }

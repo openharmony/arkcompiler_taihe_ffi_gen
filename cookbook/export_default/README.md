@@ -22,7 +22,7 @@ from export_example use Inner;
 function testImport(obj: Inner): void;
 ```
 
-@sts_export_default注解使用方法如下：
+@sts_export_default 注解使用方法如下：
 
 - 1 给 namespace 添加 export_default
 
@@ -65,7 +65,7 @@ export default namespace export_ns { // export default
 ## 在 ets 侧使用
 ```typescript
 import {BusinessError} from "@ohos.base";
-// 注：ets 里导入一个 export default 只能使用import x from y，不可以使用 import * as X from y
+// 注：ets 里导入一个 export default 只能使用 import x from y，不可以使用 import * as X from y
 import export_ns from "export_pkg";
 import {testImport} from "import_example";
 

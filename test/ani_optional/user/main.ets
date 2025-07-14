@@ -53,33 +53,33 @@ function sendReturnResult_1() {
 // 数值类型测试函数
 function func_primitive_i8() {
     let instance: optionalTest.ExampleInterface = optionalTest.getInterface();
-    instance.funcPrimitiveI8((5).toByte())  // byte对应i8
+    instance.funcPrimitiveI8((5).toByte())  // byte 对应 i8
 }
 
 function func_primitive_i16() {
     let instance: optionalTest.ExampleInterface = optionalTest.getInterface();
-    instance.funcPrimitiveI16((42).toShort())  // short对应i16
+    instance.funcPrimitiveI16((42).toShort())  // short 对应 i16
 }
 
 function func_primitive_i32() {
     let instance: optionalTest.ExampleInterface = optionalTest.getInterface();
-    instance.funcPrimitiveI32((1000).toInt())  // int对应i32
+    instance.funcPrimitiveI32((1000).toInt())  // int 对应 i32
 }
 
 function func_primitive_i64() {
     let instance: optionalTest.ExampleInterface = optionalTest.getInterface();
-    instance.funcPrimitiveI64((1000000).toLong())  // long对应i64
+    instance.funcPrimitiveI64((1000000).toLong())  // long 对应 i64
 }
 
 // 浮点类型测试函数
 function func_primitive_f32() {
     let instance: optionalTest.ExampleInterface = optionalTest.getInterface();
-    instance.funcPrimitiveF32(3.14f)  // float对应f32
+    instance.funcPrimitiveF32(3.14f)  // float 对应 f32
 }
 
 function func_primitive_f64() {
     let instance: optionalTest.ExampleInterface = optionalTest.getInterface();
-    instance.funcPrimitiveF64((2.71828).toDouble())  // double对应f64
+    instance.funcPrimitiveF64((2.71828).toDouble())  // double 对应 f64
 }
 
 // 布尔类型测试函数

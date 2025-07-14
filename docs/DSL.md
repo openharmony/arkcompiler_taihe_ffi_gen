@@ -211,6 +211,7 @@ interface MyInterface {
 ```
 
 ### 无参数时括号可以省略
+
 ```ts
 @attribute_name()
 function myFunc(): void; // OK
@@ -220,6 +221,7 @@ function myFunc(): void; // OK, same as above
 ```
 
 ### 前缀注解和内联注解
+
 - 前缀注解（语法为 `@name`）用于指定给其后面紧跟的语法元素添加属性。
   ```ts
   @class
@@ -248,7 +250,8 @@ function myFunc(): void; // OK, same as above
     stringValue: @arraybuffer Array<i8>;
   }
   ```
-- 内联注解（语法为 `@!name`）用于指定给其前面的语法元素添加属性。
+
+- 内联注解（语法为 `@!name`）写在某个域内部（如接口、结构体等或包的顶层），用于为其所在的域对应的语法元素添加属性。
   ```ts
   @!namespace("example", namespace = "a.b")  // 全局注解的唯一写法
 

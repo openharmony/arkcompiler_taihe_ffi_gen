@@ -1,6 +1,6 @@
 # 导入
 
-我们经常会需要将一个模块导入到另一个模块，本章节已**用户注册通知**为例，介绍taihe的import
+我们经常会需要将一个模块导入到另一个模块，本章节已**用户注册通知**为例，介绍 taihe 的 import
 
 ## 第一步：编写接口原型
 
@@ -40,7 +40,7 @@ taihe 有两种导入方式：
 use user;
 
 interface INotificationService{
-    sendMessage(a: user.IUser): void; // 此处使用pkg.module的形式
+    sendMessage(a: user.IUser): void; // 此处使用 pkg.module 的形式
 }
 
 function makeNotificationService(): INotificationService;
@@ -74,7 +74,7 @@ interface INotificationService{
 function makeNotificationService(): INotificationService;
 ```
 
-## 第二步: 完成 C++ 实现
+## 第二步：完成 C++ 实现
 
 **File: `author/src/user.impl.cpp`**
 ```C++

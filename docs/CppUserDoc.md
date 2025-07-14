@@ -16,7 +16,9 @@ generated/include/rgb.base.impl.hpp
 - 对于接口的作者（发布方），需要关注的是 `proj.hpp` 和 `impl.hpp`，其中 `proj.hpp` 包含了当前包下定义的所有类型（包括枚举类、结构体、联合体、接口等，使用方式见后文）的 C++ 声明和定义，而 `impl.hpp` 则提供了用于导出全局函数的宏定义。
 - 对于接口的用户（消费方），只需要关注 `user.hpp`，该文件包含了 `proj.hpp` 中的所有内容，此外还允许用户直接调用全局函数（见第 6 节）。
 
-> 除这些文件之外，`generated/include` 目录下还可能包含其他头文件，这些文件通常对应于 IDL 文件中定义的特定类型，例如 `rgb.base.IShowable.{0,1,2}.hpp` 等，这些文件是太和的内部实现文件，用户通常 ***不应该*** 直接使用它们，并且我们也 ***不保证*** 这些文件的稳定性，它们可能会在未来的版本中发生变化。
+> **⚠️ 特别注意**
+>
+> 除这些文件之外，`generated/include` 目录下还可能包含其他头文件，这些文件通常对应于 IDL 文件中定义的特定类型，例如 `rgb.base.IShowable.{0,1,2}.hpp` 等，这些文件是太和的内部实现文件，用户通常***不应该***直接使用它们，并且我们也***不保证***这些文件的稳定性，它们可能会在未来的版本中发生变化。
 
 ## 2. 枚举类
 
@@ -76,10 +78,32 @@ switch (key) {
     case rgb::base::Color::key_t::WHITE: break;
     default: break;
 }
-
-// 可以将 Key 强转为整数类型，其值会等于该枚举项的 index
-uint8_t index = static_cast<uint8_t>(key);  // 3
 ```
+
+> **💡 提示：Key 与 Value 的区别**
+>
+> - **Key**
+>   枚举项的名称，例如 `Color::key_t::YELLOW`。它是一个强类型，可以安全地用于 `switch` 语句。
+> - **Value**
+>   枚举项关联的值，例如 `"yellow"`。
+>
+> 特别注意，对于整数类型的枚举，将 Key 强制转换为整数得到的是**索引（index）**，而非其**值（value）**。
+>
+> #### IDL 示例：
+> ```ts
+> enum IntEnum: i32 {
+>     FOO = 12, // index 0
+>     BAR = 34, // index 1
+> }
+> ```
+>
+> #### C++ 中：
+> ```cpp
+> auto key = IntEnum::key_t::FOO;
+> int index = static_cast<int>(key); // 结果是 0, 而不是 12
+> int value = IntEnum(key).get_value(); // 结果是 12
+> ```
+
 
 #### 2.2.3 判断枚举值是否有效
 可以使用 `is_valid()` 方法判断一个枚举对象是否有效的：
@@ -105,7 +129,7 @@ char const* color_8_value = color_8.get_value();  // will cause undefined behavi
 
 ## 3. 结构体
 
-使用 IDL 文件中定义的结构体时，应调用对应命名空间下的结构体名称 `package::name::StructName`。初始化结构体成员时使用花括号（`{}`）语法。
+使用 IDL 文件中定义的结构体时，应使用对应命名空间下的结构体名称 `package::name::StructName`。你可以像使用 C++ 原生结构体那样使用它们。初始化结构体成员时使用花括号（`{}`）语法。
 
 以下是一个示例，假设结构体在 IDL 中的定义如下：
 ```ts
@@ -279,7 +303,7 @@ circle->show();
 
 ### 5.1 接口的生命周期管理
 
-接口对象的生命周期通过引用计数进行管理：
+接口对象的生命周期通过引用计数进行管理，对于每个在 IDL 文件中定义的接口，太和会生成两种对应的类型：
 
 - **强引用**：`package::name::interfaceName`，类似于 `std::shared_ptr`。
 - **弱引用**：`package::name::weak::interfaceName`，类似于 `std::weak_ptr`。
@@ -326,21 +350,104 @@ rgb::show::IShowable circle =
 circle->show();
 ```
 
-不支持直接在接口上调用其父类方法。如果需要调用父类方法，要先将接口静态转换为其父类，然后再调用。例如：
-```cpp
-rgb::show::weak::IShape shape = circle;
-shape->calculateArea();  // 调用 IShape 接口的方法
+> **💡 调用父接口的方法**
+>
+> 您不能直接在子接口上调用父接口的方法。必须先将接口转换为父接口类型，然后再调用。
+> ```cpp
+> // 错误
+> circle->calculateArea();
+>
+> // 正确
+> rgb::show::weak::IShape shape = circle; // 静态转换为父接口
+> float area = shape->calculateArea();
+> ```
+
+### 5.4 同时实现多个接口
+
+如果在 `file.taihe` 中定义了 `IReadable` 和 `IWritable` 两个接口：
+```ts
+interface IReadable {
+    read(): String;
+}
+interface IWritable {
+    write(data: String);
+}
 ```
 
-## 6. 函数调用
-
-根据 IDL 文件中定义的函数名称和其所在命名空间调用函数。例如 `package::name::funcName()`。以下是一个示例：
+在 C++ 中可以实现一个类同时实现这两个接口的方法：
 ```cpp
-auto a = integer::io::input_i32();
-auto b = integer::io::input_i32();
-auto sum = integer::arithmetic::add_i32(a, b);
-auto [quo, rem] = integer::arithmetic::divmod_i32(a, b);
-integer::io::output_i32(sum);
+class FileHandler {
+public:
+    FileHandler(taihe::string_view filename);
+    taihe::string read();
+    void write(taihe::string_view data);
+};
+```
+
+然后使用 `taihe::make_holder` 创建一个同时实现这两个接口的对象：
+```cpp
+auto fileHandler = taihe::make_holder<FileHandler, rgb::show::IReadable, rgb::show::IWritable>("file.txt");
+
+rgb::show::IReadable readable = fileHandler;  // OK
+rgb::show::IWritable writable = fileHandler;  // OK
+
+// 调用接口方法
+writable->write("Hello, Taihe!");
+taihe::string content = readable->read();
+
+// 它们本质上指向同一个对象，可以动态转换
+auto readableAsWritable = rgb::show::weak::IWritable(readable);
+bool isWritable = not readableAsWritable.is_error();  // true
+auto writableAsReadable = rgb::show::weak::IReadable(writable);
+bool isReadable = not writableAsReadable.is_error();  // true
+```
+
+## 6. 使用全局函数
+
+### 6.1 导出函数（接口发布方）
+
+如果你是接口的作者（发布方），需要将函数导出以供用户调用。可以使用 `package.name.user.hpp` 中定义的宏 `TH_EXPORT_CPP_API_funcName(func)` 来导出函数，其中 `func` 是你实现的函数名。
+
+例如，假设你在 IDL 文件中定义了一个函数 `divmod_i32`：
+```ts
+struct DivModResult {
+    quo: i32;
+    rem: i32;
+}
+function divmod_i32(a: i32, b: i32): DivModResult;
+```
+
+你可以在 C++ 实现文件中这样导出该函数：
+```cpp
+#include "integer.arithmetic.proj.hpp"
+#include "integer.arithmetic.impl.hpp"
+
+integer::arithmetic::DivModResult ohos_int_divmod(int32_t a, int32_t b) {
+    return { a / b, a % b };
+}
+
+TH_EXPORT_CPP_API_divmod_i32(ohos_int_divmod)
+```
+
+### 6.2 调用函数（接口消费方）
+
+接口的使用方可以导入头文件 `package.name.user.hpp`，并根据 IDL 文件中定义的函数名称和其所在的命名空间来调用函数。如 `package::name::funcName()`。例如，假设你要调用第 5 节中定义的 `divmod_i32` 函数，可以这样写：
+```cpp
+#include <iostream>
+
+#include "integer.arithmetic.user.hpp"
+
+int main() {
+    int32_t a = 10;
+    int32_t b = 3;
+
+    integer::arithmetic::DivModResult result = integer::arithmetic::divmod_i32(a, b);
+
+    std::cout << "Quotient = " << result.quo << std::endl;
+    std::cout << "Remainder = " << result.rem << std::endl;
+
+    return 0;
+}
 ```
 
 ---

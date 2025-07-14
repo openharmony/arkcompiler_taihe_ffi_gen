@@ -94,7 +94,7 @@ function testByte_Float() {
     let res = instance.overloadFunc((5).toByte(), 3.14f);
     arktest.assertEQ(res, 5);
 }
-// 测试i8 与String
+// 测试 i8 与 String
 function testByte_String() {
     let instance: test_overload.OverloadInterface =
         test_overload.get_interface();
@@ -102,7 +102,7 @@ function testByte_String() {
     arktest.assertEQ(res, 5);
 }
 
-// 测试传入enum类型
+// 测试传入 enum 类型
 function test_enum() {
     let color = test_overload.Color.red;
     let instance: test_overload.OverloadInterface =
@@ -111,7 +111,7 @@ function test_enum() {
     arktest.assertEQ(res, (1).toInt());
 }
 
-// 测试自定义的struct类型
+// 测试自定义的 struct 类型
 function test_struct() {
     let mystruct: test_overload.Mystruct = {
         testNum: 2147483647,

@@ -1,12 +1,12 @@
 ### Interface
 
-在[binding](./binding/readme.md)例子中已经有struct的例子了，这里介绍taihe的interface类型
+在 [binding](./binding/readme.md) 例子中已经有 struct 的例子了，这里介绍 taihe 的 interface 类型
 
 依然是开发流程3步走
 
-第一步 在taihe文件中声明
+第一步 在 taihe 文件中声明
 
-interface需要写一个函数创建interface的实现，所以`.taihe`文件中需要有一个函数用于创建一个被实现的接口,如下方的`makeIface`函数
+interface 需要写一个函数创建 interface 的实现，所以 `.taihe` 文件中需要有一个函数用于创建一个被实现的接口，如下方的 `makeIface` 函数
 
 `interface/idl/interface.taihe`
 ```taihe
@@ -23,7 +23,7 @@ function restartCalculator(a: ICalculator): void;
 
 第二步 实现声明的接口
 
-需要写一个class实现接口，再使用make_holder<class, interface>将实现和接口绑定
+需要写一个 class 实现接口，再使用 make_holder<class, interface>将实现和接口绑定
 
 `interface/author/src/interface.impl.cpp`
 
@@ -57,9 +57,9 @@ void restartCalculator(::interface::weak::ICalculator a) {
 }
 ```
 
-- 1 `make_holder<class, interface>`是taihe提供的函数，用于将接口和实现绑定
+- 1 `make_holder<class, interface>` 是 taihe 提供的函数，用于将接口和实现绑定
 
-- 2 实现侧的interface调用方法需要使用`->`调用，如a->reset()，而不使用`.`调用
+- 2 实现侧的 interface 调用方法需要使用 `->` 调用，如 a->reset()，而不使用 `.` 调用
 
 <!-- - 3 继承的子类使用父类方法时，需要先转换成父类才能使用父类方法 -->
 
@@ -67,7 +67,7 @@ void restartCalculator(::interface::weak::ICalculator a) {
 
 `compiler/`
 ```sh
-## 注：taihe文件里的函数与C++规范一致，所以函数会在生成的 ets 侧自动转变为小写字母开头函数
+## 注：taihe 文件里的函数与 C++ 规范一致，所以函数会在生成的 ets 侧自动转变为小写字母开头函数
 ## .taihe
 ## function FooBar(): void;
 ## 生成的 ets 侧

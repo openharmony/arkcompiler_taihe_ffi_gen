@@ -2,7 +2,7 @@
 
 把子类对象当初父类对象使用是多态的常见场景，在 Taihe 里面使用 Union 来实现多态
 
-## 第一步 在taihe文件中声明
+## 第一步 在 taihe 文件中声明
 
 `polymorphism/idl/poly.taihe`
 
@@ -42,7 +42,7 @@ union AnimalType {
 function getAnimal(tag: AnimalTag): AnimalType;
 function interactAnimal(a: AnimalType): void;
 
-// struct extends继承
+// struct extends 继承
 struct Person {
     name: String;
     age: i32;

@@ -2,13 +2,13 @@
 
 ## 设计目标
 
-该 Attribute 系统用于为抽象语法树( AST )中的声明对象(Decl 及其子类)附加可验证的 Attribute，提供：
+该 Attribute 系统用于为抽象语法树（AST）中的声明对象（Decl 及其子类）附加可验证的 Attribute，提供：
 
 - 结构化、可扩展的 Attribute 定义体系;
 
-- 类型安全的参数校验, 包括参数个数和参数类型;
+- 类型安全的参数校验，包括参数个数和参数类型;
 
-- 声明类型限定的注册机制, 某些 Attribute 只能作用于特定类型的声明;
+- 声明类型限定的注册机制，某些 Attribute 只能作用于特定类型的声明;
 
 - 清晰的错误提示与建议。
 
@@ -64,7 +64,7 @@ class UncheckedAttribute:
 
 经过相关检查的 Attribute
 
-在 analyze_semantics 阶段将 IR上 Decl的 `UncheckedAttribute` 转换为 `CheckedAttribute`，转换过程进行相关检查
+在 analyze_semantics 阶段将 IR 上 Decl 的 `UncheckedAttribute` 转换为 `CheckedAttribute`，转换过程进行相关检查
 
 相关检查包括：参数数量检查，参数重复赋值检查，参数类型检查，Attribute 注册检查，Attribute 互斥检查，Decl 检查
 
@@ -86,7 +86,7 @@ class UncheckedAttribute:
 
 - `register()`, 注册 Attribute
 
-- `attach()`, 输入 `UnCheckedAttribute` 以及 `Decl`，构造`CheckedAttribute`
+- `attach()`, 输入 `UnCheckedAttribute` 以及 `Decl`，构造 `CheckedAttribute`
 
 ## 相关概念交互
 
@@ -100,13 +100,13 @@ class UncheckedAttribute:
 
 - path: taihe/codegen/xxx/\_\_init\_\_.py
 
-具体语言后端的 Config 给 `CompilerInstance`实例 register 对应语言后端的 attribute
+具体语言后端的 Config 给 `CompilerInstance` 实例 register 对应语言后端的 attribute
 
 ### `Decl`
 
 - path: taihe/semantics/declarations.py
 
-`Decl` 类是语义层的核心抽象, 代表所有声明类实体, 在不同阶段承载 `UnCheckedAttribute` 以及 `CheckedAttribute`
+`Decl` 类是语义层的核心抽象，代表所有声明类实体，在不同阶段承载 `UnCheckedAttribute` 以及 `CheckedAttribute`
 
 ### `AstConverter`
 
@@ -114,7 +114,7 @@ class UncheckedAttribute:
 
 `AstConverter` 有一个成员变量为 `AttributeManager`
 
-`create_uncheck_attr` 方法把 AST (抽象语法树)中 attribute 转换为 `UnCheckedAttribute`
+`create_uncheck_attr` 方法把 AST（抽象语法树）中 attribute 转换为 `UnCheckedAttribute`
 
 ### `analyze_semantics`
 
@@ -126,7 +126,7 @@ class UncheckedAttribute:
 
 - path: taihe/utils/exceptions.py
 
-Attribute系统中用于报告错误的诊断类继承自 `DiagError`, 具体诊断类有 `AttrArgCountError`,`AttrArgOrderError`,`AttrArgReAssignError`,`AttrArgTypeError`,`AttrArgUndefError`,`AttrMutuallyExclusiveError`,`AttrRepeatError`,`AttrUndefError`, 用于输出相关错误信息
+Attribute 系统中用于报告错误的诊断类继承自 `DiagError`, 具体诊断类有 `AttrArgCountError`,`AttrArgOrderError`,`AttrArgReAssignError`,`AttrArgTypeError`,`AttrArgUndefError`,`AttrMutuallyExclusiveError`,`AttrRepeatError`,`AttrUndefError`, 用于输出相关错误信息
 
 ## 总体流程
 
@@ -134,7 +134,7 @@ Attribute系统中用于报告错误的诊断类继承自 `DiagError`, 具体诊
 
 2. 在语言后端的 `BackendConfig` 创建对应语言后端的 Backend 阶段，使用 `AttributeManager` 的 `register()` 方法将对应语言后端的 Attribute 注册到 `AttributeManager`;
 
-3. 在 `AstConverter` 阶段, 将 AST 上的 Attribute 节点转换为 `UncheckedAttribute`, 并存储到父节点的 `Decl` 上;
+3. 在 `AstConverter` 阶段，将 AST 上的 Attribute 节点转换为 `UncheckedAttribute`, 并存储到父节点的 `Decl` 上;
 
 4. 在 semantics 的 analysis 阶段，使用 `AttributeManager` 的 `attach()` 方法，将 `Decl` 节点的 `UncheckedAttribute` 转换为 `AbstractCheckedAttribute`;
 
@@ -236,7 +236,7 @@ class SetAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
         super().check_typed_context(parent, dm)
 
 
-# 保存所有该语言后端的attribute列表用于注册
+# 保存所有该语言后端的 attribute 列表用于注册
 all_attr_types: list[CheckedAttrT] = [
     NamespaceAttr,
     GetAttr,

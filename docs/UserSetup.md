@@ -47,11 +47,11 @@ taihec [taihe_files ...] -O [genertaed_dir] -G ani-bridge cpp-author
 
 其中，`ani-bridge` 表示要生成 ANI 相关桥接代码，`cpp-author` 表示要生成 C++ 实现模板代码。
 
-*注：用户可以使用 `path/to/idl/*` 来输出一个idl目录内的所有文件作为 `taihec` 的输入*
+*注：用户可以使用 `path/to/idl/*` 来输出一个 idl 目录内的所有文件作为 `taihec` 的输入*
 
 *注：目前需要将 `stdlib/taihe.platform.ani.taihe` 也加入输入文件*
 
-*注：IDE 用户需要额外指定 `arkts:module-prefix` 与 `arkts:path-prefix` 用于 ANI 签名, 指定 cmake 用于生成 生成文件的 cmake 变量信息*
+*注：IDE 用户需要额外指定 `arkts:module-prefix` 与 `arkts:path-prefix` 用于 ANI 签名，指定 cmake 用于生成 生成文件的 cmake 变量信息*
 
 ```sh
 taihec [taihe_files ...] -O [genertaed_dir] -G ani-bridge cpp-author -Carkts:module-prefix=<module_name> -Carkts:path-prefix=<pkg_name> -B cmake
@@ -144,7 +144,7 @@ generated
 │   ├── taihe.platform.ani.abi.c
 │   └── taihe.platform.ani.ani.cpp
 ├── taihe.platform.ani.ets           # 无需关注，无需使用
-└── temp                             # 用于方便用户使用的模板文件，用户可以复制这些文件到author目录下进行修改
+└── temp                             # 用于方便用户使用的模板文件，用户可以复制这些文件到 author 目录下进行修改
     ├── ani_constructor.cpp
     ├── hello_world.impl.cpp
     └── taihe.platform.ani.impl.cpp  # 无需关注，无需使用

@@ -20,7 +20,7 @@ Taihe 的目标包括：
 
 ## 系统上下文
 
-Taihe 通过一套二进制接口标准 (ABI)，连接了 API 的作者和消费者。
+Taihe 通过一套二进制接口标准（ABI），连接了 API 的作者和消费者。
 
 ### 运行态
 
@@ -195,7 +195,7 @@ bar_decl = StructDecl(name="Bar", fields=[k_field])
 
 #### 中间表示的性质和约束
 
-需要注意，Taihe IR 是输入的典型 (Canonical) 表示，换言之，一切的 API 表示均以 IR 为准。因此，Taihe IR 具有下列性质和约束：
+需要注意，Taihe IR 是输入的典型（Canonical）表示，换言之，一切的 API 表示均以 IR 为准。因此，Taihe IR 具有下列性质和约束：
 
 - 不可变：Taihe IR 在完成语义分析后不再可变。不可变的 IR 简化了各组件的设计。
 - 充分：Taihe IR 充分表示了程序的输入，无需添加任何信息即可完成编译。

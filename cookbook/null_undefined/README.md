@@ -15,9 +15,9 @@ union NullableValue {
 
 function makeNullableValue(tag: i32): NullableValue;
 ```
-如上所示，taihe文件中为一个union 内的变量名前增加 注解 @null、@undefined 来声明 null 类型与 undefined 类型
+如上所示，taihe 文件中为一个 union 内的变量名前增加 注解 @null、@undefined 来声明 null 类型与 undefined 类型
 
-## 第二步: 完成 C++ 实现
+## 第二步：完成 C++ 实现
 
 **File: `author/src/nullabletype.impl.cpp`**
 ```C++
@@ -41,7 +41,7 @@ constexpr int32_t TAG_INT = 2;
 
 使用 union 的 make 方法创建 null 或 undefined
 
-对于 taihe union 的 c++ 侧方法参考
+对于 taihe union 的 C++ 侧方法参考
 
 [Taihe C++ 教程](../taihe_cpp/README.md)
 

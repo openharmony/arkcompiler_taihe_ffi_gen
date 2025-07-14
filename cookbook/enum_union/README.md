@@ -79,7 +79,7 @@ void processMessage(Message const& msg) {
 
 2. `get_key()` 与 `get_val()`
 
-    使用 `get_key()` 与 `get_val()` 可以获取enum的键与值
+    使用 `get_key()` 与 `get_val()` 可以获取 enum 的键与值
 
 3. make
 
@@ -87,7 +87,7 @@ void processMessage(Message const& msg) {
 
 4. `get_xxx_ref()`
 
-    以本例 union 为例，用户可以使用 `get_textVal_ref()` 与 `get_numVal_ref()` 来获取 union 的值，即：使用`get_{union_item}_ref` 来获取 union 的值
+    以本例 union 为例，用户可以使用 `get_textVal_ref()` 与 `get_numVal_ref()` 来获取 union 的值，即：使用 `get_{union_item}_ref` 来获取 union 的值
 
 ## 第三步：在 ets 侧使用
 
@@ -107,9 +107,9 @@ text: hello
 num: 12345
 ```
 
-## `const`常量
+## `const` 常量
 
-如果用户希望在 Taihe 里定义`const`常量
+如果用户希望在 Taihe 里定义 `const` 常量
 
 可以在 enum 上使用 `@const`
 

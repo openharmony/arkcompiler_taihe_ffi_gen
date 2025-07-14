@@ -4,7 +4,7 @@ import * as userSettings from "userSettings";
 loadLibrary("optional");
 
 function main() {
-    // 初始化Record
+    // 初始化 Record
     let Settings: Record<string, string> = {
         "theme": "dark",
         "fontSize": "14px",

@@ -13,7 +13,7 @@ export interface BasePriorityOverlay extends BaseOverlay {
 }
 
 export interface Bubble extends BasePriorityOverlay {
-    // 当前需要把Aarray<T>替换成T[]
+    // 当前需要把 Aarray<T>替换成 T[]
     setIcons(icons: ((string | Resource | Image)[])): Promise<int>;
     setPositions(positions: ((Resource[])[])): void;
 }

@@ -2,7 +2,7 @@
 
 本文档旨在介绍太和 ANI 后端生成的代码和函数调用链，帮助用户理解如何在自己的代码中使用并调试这些自动生成的接口。
 
-## ⚠ 特别注意 ⚠
+## ⚠️ 特别注意 ⚠️
 ***自动生成的 ets 文件中，所有以 `_taihe_` 为前缀的函数和变量，均为太和的内部接口，我们不会保证这些接口的稳定性，因此，请不要勿在用户代码或注入代码中直接调用这些接口！！！***
 
 ## 基本函数的正向调用链
@@ -42,7 +42,7 @@ function processWithCallback(param: MyParam, myCallback: MyCallback): void;
 ```
 
 在这种情况下，回调的过程如下：
-1. 首先，当 `myCallback` 对象从上层传入时，它会从 JS 对象被封装成一个太和代理对象。你可以在 `generated/include/my.package.MyCallback.ani.1.hpp` 文件中找到对应的封装过程（如果是 `() => void` 这样的匿名函数，则应在 `generated/src/my.package.ani.cpp` 文件中找到对应的封装过程）。这一封装过程会将太和代理对象上的 `onResult` 方法与 ets 代码中 `interface MyCallback` 内由太和自动生成的 `_taihe_onResult_revert` 方法相绑定。
+1. 首先，当 `myCallback` 对象从上层传入时，它会从 JS 对象被封装成一个太和代理对象。你可以在 `generated/include/my.package.MyCallback.ani.1.hpp` 文件中的函数 `taihe::from_ani<test::MyCallback>` 里找到对应的封装/转换逻辑（如果是 `() => void` 这样的匿名函数，则应在 `generated/src/my.package.ani.cpp` 文件中找到对应的转换逻辑）。这一封装过程会将太和代理对象上的 `onResult` 方法与 ets 代码中 `interface MyCallback` 内由太和自动生成的 `_taihe_onResult_revert` 方法相绑定。
 2. 当 `myCallback->onResult` 被调用时，会进入代理对象的 `onResult` 方法，该方法中会先将回调所需的参数 `MyResult` 结构体对象转换为 ani_object 对象，这一转换过程同正向调用链中的第 5 步。
 3. 接下来，代理对象上的 `onResult` 方法会通过 ANI FunctionCall 调用进上层的 `_taihe_onResult_revert` 方法。
 4. `_taihe_onResult_revert` 方法会进一步调用上层 JS 对象上的 `onResult` 方法，执行完毕后拿到返回值（如果有），然后回到下层。

@@ -52,7 +52,7 @@
 
 - [如何在 Taihe 声明 Async 函数 `@async`](../async/readme.md)
 
-- [如何在 Taihe 声明 Promise 函数`@promice`](../async/readme.md)
+- [如何在 Taihe 声明 Promise 函数 `@promice`](../async/readme.md)
 
 - [如何在 Taihe 声明 重命名函数名称 `@rename`](../async/readme.md)
 
