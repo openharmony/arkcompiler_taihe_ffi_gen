@@ -384,13 +384,13 @@ class AutoCheckedAttribute(AbstractCheckedAttribute, Generic[T]):
         Returns:
             True if the attribute can be attached, False otherwise
         """
-        for attr in chain(*parent.attributes.values()):
-            if type(attr) is type(self):
+        for prev in chain(*parent.attributes.values()):
+            if type(prev) is type(self):
                 continue
-            if not isinstance(attr, AutoCheckedAttribute):
+            if not isinstance(prev, AutoCheckedAttribute):
                 continue
-            if self.MUTUALLY_EXCLUSIVE_GROUP_TAGS & attr.MUTUALLY_EXCLUSIVE_GROUP_TAGS:
-                dm.emit(AttrConflictError(self, attr))  # type: ignore
+            if self.MUTUALLY_EXCLUSIVE_GROUP_TAGS & prev.MUTUALLY_EXCLUSIVE_GROUP_TAGS:
+                dm.emit(AttrConflictError(prev, self))  # type: ignore
 
     @override
     def get_name(self) -> str:
@@ -431,7 +431,7 @@ class TypedAttribute(AutoCheckedAttribute[T]):
     def check_typed_context(self, parent: T, dm: DiagnosticsManager) -> None:
         prev = self.get(parent)
         if prev is not None and prev is not self:
-            dm.emit(AttrConflictError(self, prev))
+            dm.emit(AttrConflictError(prev, self))
 
         super().check_typed_context(parent, dm)
 

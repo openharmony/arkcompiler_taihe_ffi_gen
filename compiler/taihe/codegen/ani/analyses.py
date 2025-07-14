@@ -788,7 +788,7 @@ class StructANIInfo(AbstractAnalysis[StructDecl]):
         self.parent_ns = PackageANIInfo.get(am, d.parent_pkg).ns
         self.sts_type_name = d.name
         if ClassAttr.get(d):
-            self.sts_impl_name = f"{d.name}"
+            self.sts_impl_name = self.sts_type_name
         else:
             self.sts_impl_name = f"_taihe_{d.name}_inner"
         self.type_desc = ".".join([*self.parent_ns.ani_path, self.sts_type_name])
@@ -843,7 +843,7 @@ class IfaceANIInfo(AbstractAnalysis[IfaceDecl]):
         self.parent_ns = PackageANIInfo.get(am, d.parent_pkg).ns
         self.sts_type_name = d.name
         if ClassAttr.get(d):
-            self.sts_impl_name = f"{d.name}"
+            self.sts_impl_name = self.sts_type_name
         else:
             self.sts_impl_name = f"_taihe_{d.name}_inner"
         self.type_desc = ".".join([*self.parent_ns.ani_path, self.sts_type_name])
