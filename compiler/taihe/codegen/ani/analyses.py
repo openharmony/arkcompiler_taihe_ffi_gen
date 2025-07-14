@@ -26,7 +26,7 @@ from taihe.codegen.ani.attributes import (
     OverloadAttr,
     PromiseAttribute,
     RecordAttr,
-    RenameAttribute,
+    RenameAttr,
     SetAttr,
     StaticAttr,
     StaticOverloadAttribute,
@@ -502,7 +502,7 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
 
         naming = PackageANIInfo.get(am, f.parent_pkg).naming
 
-        if rename_attr := RenameAttribute.get(f):
+        if rename_attr := RenameAttr.get(f):
             func_name = rename_attr.name
         elif rename_attr := OverloadAttr.get(f):
             func_name = rename_attr.func_name
@@ -627,7 +627,7 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
 
         naming = PackageANIInfo.get(am, f.parent_pkg).naming
 
-        if rename_attr := RenameAttribute.get(f):
+        if rename_attr := RenameAttr.get(f):
             func_name = rename_attr.name
         elif rename_attr := OverloadAttr.get(f):
             func_name = rename_attr.func_name

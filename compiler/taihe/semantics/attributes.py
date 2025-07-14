@@ -258,7 +258,7 @@ class AutoCheckedAttribute(AbstractCheckedAttribute, Generic[T]):
     Use `(Decl,)` to indicate the attribute can be attached to any declaration.
     """
 
-    MUTUALLY_EXCLUSIVE_GROUP_TAGS: ClassVar[frozenset[AttributeGroupTag]] = frozenset()
+    ATTRIBUTE_GROUP_TAGS: ClassVar[frozenset[AttributeGroupTag]] = frozenset()
     """Set of tags indicating mutually exclusive attribute groups.
 
     If this is non-empty, the attribute cannot coexist with any other
@@ -389,7 +389,7 @@ class AutoCheckedAttribute(AbstractCheckedAttribute, Generic[T]):
                 continue
             if not isinstance(prev, AutoCheckedAttribute):
                 continue
-            if self.MUTUALLY_EXCLUSIVE_GROUP_TAGS & prev.MUTUALLY_EXCLUSIVE_GROUP_TAGS:
+            if self.ATTRIBUTE_GROUP_TAGS & prev.ATTRIBUTE_GROUP_TAGS:
                 dm.emit(AttrConflictError(prev, self))  # type: ignore
 
     @override

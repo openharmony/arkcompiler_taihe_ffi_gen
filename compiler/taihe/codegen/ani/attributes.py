@@ -134,7 +134,7 @@ NULL_UNDEFINED_GROUP = AttributeGroupTag()
 class NullAttr(TypedAttribute[UnionFieldDecl]):
     NAME = "null"
     TARGETS = (UnionFieldDecl,)
-    MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({NULL_UNDEFINED_GROUP})
+    ATTRIBUTE_GROUP_TAGS = frozenset({NULL_UNDEFINED_GROUP})
 
     @override
     def check_typed_context(
@@ -155,7 +155,7 @@ class NullAttr(TypedAttribute[UnionFieldDecl]):
 class UndefinedAttr(TypedAttribute[UnionFieldDecl]):
     NAME = "undefined"
     TARGETS = (UnionFieldDecl,)
-    MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({NULL_UNDEFINED_GROUP})
+    ATTRIBUTE_GROUP_TAGS = frozenset({NULL_UNDEFINED_GROUP})
 
     @override
     def check_typed_context(
@@ -172,13 +172,13 @@ class UndefinedAttr(TypedAttribute[UnionFieldDecl]):
         super().check_typed_context(parent, dm)
 
 
+PARAM_ATTRIBUTE_GROUP = AttributeGroupTag()
+
+
 @dataclass
 class OptionalAttr(TypedAttribute[ParamDecl | StructFieldDecl]):
     NAME = "optional"
     TARGETS = (ParamDecl, StructFieldDecl)
-
-
-PARAM_ATTRIBUTE_GROUP = AttributeGroupTag()
 
 
 @dataclass
@@ -187,7 +187,7 @@ class StsThisAttr(TypedAttribute[ParamDecl]):
 
     NAME = "sts_this"
     TARGETS = (ParamDecl,)
-    MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({PARAM_ATTRIBUTE_GROUP})
+    ATTRIBUTE_GROUP_TAGS = frozenset({PARAM_ATTRIBUTE_GROUP})
 
 
 @dataclass
@@ -196,7 +196,7 @@ class StsLastAttr(TypedAttribute[ParamDecl]):
 
     NAME = "sts_last"
     TARGETS = (ParamDecl,)
-    MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({PARAM_ATTRIBUTE_GROUP})
+    ATTRIBUTE_GROUP_TAGS = frozenset({PARAM_ATTRIBUTE_GROUP})
 
 
 @dataclass
@@ -205,7 +205,7 @@ class StsFillAttr(TypedAttribute[ParamDecl]):
 
     NAME = "sts_fill"
     TARGETS = (ParamDecl,)
-    MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({PARAM_ATTRIBUTE_GROUP})
+    ATTRIBUTE_GROUP_TAGS = frozenset({PARAM_ATTRIBUTE_GROUP})
 
     content: str
 
@@ -217,7 +217,7 @@ ARRAY_ATTRIBUTE_GROUP = AttributeGroupTag()
 class BigIntAttr(TypedAttribute[TypeRefDecl]):
     NAME = "bigint"
     TARGETS = (TypeRefDecl,)
-    MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({ARRAY_ATTRIBUTE_GROUP})
+    ATTRIBUTE_GROUP_TAGS = frozenset({ARRAY_ATTRIBUTE_GROUP})
 
     @override
     def check_typed_context(self, parent: TypeRefDecl, dm: DiagnosticsManager) -> None:
@@ -250,7 +250,7 @@ class BigIntAttr(TypedAttribute[TypeRefDecl]):
 class ArrayBufferAttr(TypedAttribute[TypeRefDecl]):
     NAME = "arraybuffer"
     TARGETS = (TypeRefDecl,)
-    MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({ARRAY_ATTRIBUTE_GROUP})
+    ATTRIBUTE_GROUP_TAGS = frozenset({ARRAY_ATTRIBUTE_GROUP})
 
     @override
     def check_typed_context(self, parent: TypeRefDecl, dm: DiagnosticsManager) -> None:
@@ -273,7 +273,7 @@ class ArrayBufferAttr(TypedAttribute[TypeRefDecl]):
 class TypedArrayAttr(TypedAttribute[TypeRefDecl]):
     NAME = "typedarray"
     TARGETS = (TypeRefDecl,)
-    MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({ARRAY_ATTRIBUTE_GROUP})
+    ATTRIBUTE_GROUP_TAGS = frozenset({ARRAY_ATTRIBUTE_GROUP})
 
     sts_type: str = field(init=False)
 
@@ -314,7 +314,7 @@ class TypedArrayAttr(TypedAttribute[TypeRefDecl]):
 class FixedArrayAttr(TypedAttribute[TypeRefDecl]):
     NAME = "fixedarray"
     TARGETS = (TypeRefDecl,)
-    MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({ARRAY_ATTRIBUTE_GROUP})
+    ATTRIBUTE_GROUP_TAGS = frozenset({ARRAY_ATTRIBUTE_GROUP})
 
     @override
     def check_typed_context(self, parent: TypeRefDecl, dm: DiagnosticsManager) -> None:
@@ -355,6 +355,24 @@ class StsTypeAttr(TypedAttribute[TypeRefDecl]):
     TARGETS = (TypeRefDecl,)
 
     type_name: str
+
+
+@dataclass
+class RenameAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
+    NAME = "rename"
+    TARGETS = (GlobFuncDecl, IfaceMethodDecl)
+
+    name: str = ""
+
+
+@dataclass
+class OverloadAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
+    # TODO: Deprecated
+
+    NAME = "overload"
+    TARGETS = (GlobFuncDecl, IfaceMethodDecl)
+
+    func_name: str
 
 
 @dataclass
@@ -417,14 +435,55 @@ class GenPromiseAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
         super().check_typed_context(parent, dm)
 
 
-FUNCTION_TYPE_ATTRIBUTE_GROUP = AttributeGroupTag()
+FUNCTION_KIND_ATTRIBUTE_GROUP = AttributeGroupTag()
+OVERLOAD_KIND_ATTRIBUTE_GROUP = AttributeGroupTag()
+FUNCTION_SCOPE_ATTRIBUTE_GROUP = AttributeGroupTag()
+
+
+@dataclass
+class StaticAttr(TypedAttribute[GlobFuncDecl]):
+    NAME = "static"
+    TARGETS = (GlobFuncDecl,)
+    ATTRIBUTE_GROUP_TAGS = frozenset({FUNCTION_SCOPE_ATTRIBUTE_GROUP})
+
+    cls_name: str
+
+
+@dataclass
+class CtorAttr(TypedAttribute[GlobFuncDecl]):
+    # TODO: Deprecated
+
+    NAME = "ctor"
+    TARGETS = (GlobFuncDecl,)
+    ATTRIBUTE_GROUP_TAGS = frozenset(
+        {
+            FUNCTION_SCOPE_ATTRIBUTE_GROUP,
+            FUNCTION_KIND_ATTRIBUTE_GROUP,
+        }
+    )
+
+    cls_name: str
+
+
+@dataclass
+class ConstructorAttribute(TypedAttribute[GlobFuncDecl]):
+    NAME = "constructor"
+    TARGETS = (GlobFuncDecl,)
+    ATTRIBUTE_GROUP_TAGS = frozenset(
+        {
+            FUNCTION_SCOPE_ATTRIBUTE_GROUP,
+            FUNCTION_KIND_ATTRIBUTE_GROUP,
+        }
+    )
+
+    cls_name: str
 
 
 @dataclass
 class GetAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     NAME = "get"
     TARGETS = (GlobFuncDecl, IfaceMethodDecl)
-    MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({FUNCTION_TYPE_ATTRIBUTE_GROUP})
+    ATTRIBUTE_GROUP_TAGS = frozenset({FUNCTION_KIND_ATTRIBUTE_GROUP})
 
     member_name: str | None = None
     func_suffix: str = field(default="", init=False)
@@ -461,7 +520,7 @@ class GetAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
 class SetAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     NAME = "set"
     TARGETS = (GlobFuncDecl, IfaceMethodDecl)
-    MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({FUNCTION_TYPE_ATTRIBUTE_GROUP})
+    ATTRIBUTE_GROUP_TAGS = frozenset({FUNCTION_KIND_ATTRIBUTE_GROUP})
 
     member_name: str | None = None
     func_suffix: str = field(default="", init=False)
@@ -495,9 +554,33 @@ class SetAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
 
 
 @dataclass
+class AsyncAttribute(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
+    NAME = "async"
+    TARGETS = (GlobFuncDecl, IfaceMethodDecl)
+    ATTRIBUTE_GROUP_TAGS = frozenset({FUNCTION_KIND_ATTRIBUTE_GROUP})
+
+
+@dataclass
+class PromiseAttribute(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
+    NAME = "promise"
+    TARGETS = (GlobFuncDecl, IfaceMethodDecl)
+    ATTRIBUTE_GROUP_TAGS = frozenset({FUNCTION_KIND_ATTRIBUTE_GROUP})
+
+
+@dataclass
+class StaticOverloadAttribute(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
+    NAME = "static_overload"
+    TARGETS = (GlobFuncDecl, IfaceMethodDecl)
+    ATTRIBUTE_GROUP_TAGS = frozenset({OVERLOAD_KIND_ATTRIBUTE_GROUP})
+
+    name: str = ""
+
+
+@dataclass
 class OnOffAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     NAME = "on_off"
     TARGETS = (GlobFuncDecl, IfaceMethodDecl)
+    ATTRIBUTE_GROUP_TAGS = frozenset({OVERLOAD_KIND_ATTRIBUTE_GROUP})
 
     type: str | None = None
     overload: str = field(kw_only=True, default="")
@@ -543,72 +626,6 @@ class OnOffAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
         super().check_typed_context(parent, dm)
 
 
-@dataclass
-class OverloadAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
-    # TODO: Deprecated
-
-    NAME = "overload"
-    TARGETS = (GlobFuncDecl, IfaceMethodDecl)
-
-    func_name: str
-
-
-@dataclass
-class StaticAttr(TypedAttribute[GlobFuncDecl]):
-    NAME = "static"
-    TARGETS = (GlobFuncDecl,)
-
-    cls_name: str
-
-
-@dataclass
-class CtorAttr(TypedAttribute[GlobFuncDecl]):
-    # TODO: Deprecated
-
-    NAME = "ctor"
-    TARGETS = (GlobFuncDecl,)
-
-    cls_name: str
-
-
-@dataclass
-class StaticOverloadAttribute(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
-    NAME = "static_overload"
-    TARGETS = (GlobFuncDecl, IfaceMethodDecl)
-
-    name: str = ""
-
-
-@dataclass
-class RenameAttribute(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
-    NAME = "rename"
-    TARGETS = (GlobFuncDecl, IfaceMethodDecl)
-
-    name: str = ""
-
-
-@dataclass
-class AsyncAttribute(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
-    NAME = "async"
-    TARGETS = (GlobFuncDecl, IfaceMethodDecl)
-    MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({FUNCTION_TYPE_ATTRIBUTE_GROUP})
-
-
-@dataclass
-class PromiseAttribute(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
-    NAME = "promise"
-    TARGETS = (GlobFuncDecl, IfaceMethodDecl)
-    MUTUALLY_EXCLUSIVE_GROUP_TAGS = frozenset({FUNCTION_TYPE_ATTRIBUTE_GROUP})
-
-
-@dataclass
-class ConstructorAttribute(TypedAttribute[GlobFuncDecl]):
-    NAME = "constructor"
-    TARGETS = (GlobFuncDecl,)
-
-    cls_name: str
-
-
 all_attr_types: list[CheckedAttrT] = [
     NamespaceAttr,
     ExportDefaultAttr,
@@ -632,18 +649,17 @@ all_attr_types: list[CheckedAttrT] = [
     FixedArrayAttr,
     RecordAttr,
     StsTypeAttr,
+    RenameAttr,
+    OverloadAttr,
     GenAsyncAttr,
     GenPromiseAttr,
+    StaticAttr,
+    ConstructorAttribute,
+    CtorAttr,
     GetAttr,
     SetAttr,
-    OnOffAttr,
-    OverloadAttr,
-    StaticAttr,
-    CtorAttr,
-    # New overload related attributes
-    StaticOverloadAttribute,
-    RenameAttribute,
     AsyncAttribute,
     PromiseAttribute,
-    ConstructorAttribute,
+    StaticOverloadAttribute,
+    OnOffAttr,
 ]
