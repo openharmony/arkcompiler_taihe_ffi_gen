@@ -1686,12 +1686,13 @@ class ArrayBufferTypeANIInfo(TypeANIInfo):
         cpp_value: str,
         ani_result: str,
     ):
+        item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
         ani_data = f"{ani_result}_data"
         target.writelns(
-            f"char* {ani_data} = nullptr;",
+            f"{item_ty_cpp_info.as_owner}* {ani_data} = nullptr;",
             f"ani_arraybuffer {ani_result};",
-            f"{env}->CreateArrayBuffer({cpp_value}.size(), reinterpret_cast<void**>(&{ani_data}), &{ani_result});",
-            f"memcpy({ani_data}, {cpp_value}.data(), {cpp_value}.size());",
+            f"{env}->CreateArrayBuffer({cpp_value}.size() * (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)), reinterpret_cast<void**>(&{ani_data}), &{ani_result});",
+            f"std::copy({cpp_value}.begin(), {cpp_value}.end(), {ani_data});",
         )
 
 
@@ -1754,10 +1755,10 @@ class TypedArrayTypeANIInfo(TypeANIInfo):
         ani_byte_length = f"{ani_result}_bylen"
         ani_byte_offset = f"{ani_result}_byoff"
         target.writelns(
-            f"char* {ani_data} = nullptr;",
+            f"{item_ty_cpp_info.as_owner}* {ani_data} = nullptr;",
             f"ani_arraybuffer {ani_arrbuf};",
             f"{env}->CreateArrayBuffer({cpp_value}.size() * (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)), reinterpret_cast<void**>(&{ani_data}), &{ani_arrbuf});",
-            f"memcpy({ani_data}, {cpp_value}.data(), {cpp_value}.size() * (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)));",
+            f"std::copy({cpp_value}.begin(), {cpp_value}.end(), {ani_data});",
             f"ani_ref {ani_byte_length};",
             f"{env}->GetUndefined(&{ani_byte_length});",
             f"ani_ref {ani_byte_offset};",
@@ -1820,10 +1821,10 @@ class BigIntTypeANIInfo(TypeANIInfo):
         ani_data = f"{ani_result}_data"
         ani_arrbuf = f"{ani_result}_arrbuf"
         target.writelns(
-            f"char* {ani_data} = nullptr;",
+            f"{item_ty_cpp_info.as_owner}* {ani_data} = nullptr;",
             f"ani_arraybuffer {ani_arrbuf};",
             f"{env}->CreateArrayBuffer({cpp_value}.size() * (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)), reinterpret_cast<void**>(&{ani_data}), &{ani_arrbuf});",
-            f"memcpy({ani_data}, {cpp_value}.data(), {cpp_value}.size() * (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)));",
+            f"std::copy({cpp_value}.begin(), {cpp_value}.end(), {ani_data});",
             f"ani_object {ani_result};",
             f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.module.impl_desc}", "_taihe_fromArrayBufferToBigInt", nullptr), reinterpret_cast<ani_ref*>(&{ani_result}), {ani_arrbuf});',
         )
