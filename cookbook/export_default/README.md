@@ -41,6 +41,8 @@ function testImport(obj: Inner): void;
     interface IfaceA {}
     ```
 
+注：arkts 只允许对一个实体使用 export default，请用户不要在一个 package 里面多次使用该注解
+
 ## 生成文件
 **File: `generated/export_pkg.ets`**
 ```typescript
