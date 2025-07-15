@@ -1,6 +1,6 @@
 # export default
 
-本章节介绍如何使用 @sts_export_default 注解来实现 ets 中的 export default
+本章节介绍如何使用 `@sts_export_default` 注解来实现 ets 中的 export default
 
 ## 第一步：编写接口原型
 
@@ -14,7 +14,8 @@ struct Inner {
     s: String;
 }
 ```
-然后让另一个 taihe 文件 import
+
+然后让另一个 taihe 文件 import：
 **File: `idl/import_example.taihe`**
 ```taihe
 from export_example use Inner;
@@ -24,26 +25,27 @@ function testImport(obj: Inner): void;
 
 @sts_export_default 注解使用方法如下：
 
-- 1 给 namespace 添加 export_default
+- 给 namespace 添加 export_default
 
-    ```taihe
-    @!namespace("xxx", "yyy")
-    @!sts_export_default
+  ```taihe
+  @!namespace("xxx", "yyy")
+  @!sts_export_default
 
-    // ...
-    ```
+  // ...
+  ```
 
-- 2 给 interface/enum/union 添加 export_default
+- 给 interface/enum/union 添加 export_default
 
-    ```taihe
-    // 只能加在头等声明
-    @sts_export_default
-    interface IfaceA {}
-    ```
+  ```taihe
+  // 只能加在头等声明
+  @sts_export_default
+  interface IfaceA {}
+  ```
 
 注：arkts 只允许对一个实体使用 export default，请用户不要在一个 package 里面多次使用该注解
 
 ## 生成文件
+
 **File: `generated/export_pkg.ets`**
 ```typescript
 export default namespace export_ns { // export default
@@ -65,6 +67,7 @@ export default namespace export_ns { // export default
 我们可以看到生成文件里面添加了 `export default`
 
 ## 在 ets 侧使用
+
 ```typescript
 import {BusinessError} from "@ohos.base";
 // 注：ets 里导入一个 export default 只能使用 import x from y，不可以使用 import * as X from y

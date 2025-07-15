@@ -51,7 +51,7 @@ bool is_string(uintptr_t a) {
     return res;
 }
 
-// 返回一个 array，索引0位置为一个 ani 的字符串，索引1位置为 undefined
+// 返回一个 array，索引 0 位置为一个 ani 的字符串，索引 1 位置为 undefined
 array<uintptr_t> get_objects() {
     ani_env* env = get_env();
     ani_string ani_arr_0;
@@ -87,7 +87,7 @@ void processPerson(uintptr_t person) {
 
 `compiler/`
 ```sh
-./run-test /path/to/external_obj -ani
+./run-test path/to/external_obj -ani
 ```
 
 用户侧使用

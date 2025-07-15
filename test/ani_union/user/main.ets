@@ -447,7 +447,7 @@ function test_union_mix_10param5() {
         "epsilon", arri8, "hello", color, (1).toByte(), true));
 }
 
-// 2个组合 primitive
+// 2 个组合 primitive
 function test_2_primitive1() {
     let instance: UnionTest1.MyInterface = UnionTest1.getInterface();
     instance.funcUnionPrimitiveReturn("s");
@@ -509,7 +509,7 @@ function test_2_primitive10() {
     instance.funcUnionPrimitiveReturn9("s1");
 }
 
-// 5组合所有类型 return
+// 5 组合所有类型 return
 
 function test_mix5_return1() {
     let instance: UnionTest1.MyInterface = UnionTest1.getInterface();
@@ -741,7 +741,7 @@ function main() {
     suite.addTest("test_union_mix_10param4", test_union_mix_10param4);
     suite.addTest("test_union_mix_10param5", test_union_mix_10param5);
 
-    // 2组合 primitive return
+    // 2 组合 primitive return
     suite.addTest("test_2_primitive1", test_2_primitive1);
     suite.addTest("test_2_primitive2", test_2_primitive2);
     suite.addTest("test_2_primitive3", test_2_primitive3);
@@ -753,14 +753,14 @@ function main() {
     suite.addTest("test_2_primitive9", test_2_primitive9);
     suite.addTest("test_2_primitive10", test_2_primitive10);
 
-    // 5组合所有类型 return
+    // 5 组合所有类型 return
     suite.addTest("test_mix5_return1", test_mix5_return1);
     suite.addTest("test_mix5_return2", test_mix5_return2);
     suite.addTest("test_mix5_return3", test_mix5_return3);
     suite.addTest("test_mix5_return4", test_mix5_return4);
     suite.addTest("test_mix5_return5", test_mix5_return5);
 
-    // 10组合所有类型 return
+    // 10 组合所有类型 return
 
     // enum map
     suite.addTest(

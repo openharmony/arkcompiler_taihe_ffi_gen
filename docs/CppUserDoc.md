@@ -99,9 +99,14 @@ switch (key) {
 >
 > #### C++ 中：
 > ```cpp
+> // 从 IntEnum::key_t 转换为枚举值
 > auto key = IntEnum::key_t::FOO;
 > int index = static_cast<int>(key); // 结果是 0, 而不是 12
 > int value = IntEnum(key).get_value(); // 结果是 12
+> 
+> // 从整型枚举值转换为太和枚举对象
+> IntEnum fooA = static_cast<IntEnum::key_t>(12); // 不正确！因为 12 不是 IntEnum 的有效 Key
+> IntEnum fooB = IntEnum::from_value(12); // 正确，fooB.get_key() 返回 IntEnum::key_t::FOO
 > ```
 
 
@@ -406,7 +411,7 @@ bool isReadable = not writableAsReadable.is_error();  // true
 
 ### 6.1 导出函数（接口发布方）
 
-如果你是接口的作者（发布方），需要将函数导出以供用户调用。可以使用 `package.name.user.hpp` 中定义的宏 `TH_EXPORT_CPP_API_funcName(func)` 来导出函数，其中 `func` 是你实现的函数名。
+如果你是接口的作者（发布方），需要将函数导出以供用户调用。可以使用 `package.name.impl.hpp` 中定义的宏 `TH_EXPORT_CPP_API_funcName(func)` 来导出函数，其中 `func` 是你实现的函数名。
 
 例如，假设你在 IDL 文件中定义了一个函数 `divmod_i32`：
 ```ts
@@ -431,7 +436,7 @@ TH_EXPORT_CPP_API_divmod_i32(ohos_int_divmod)
 
 ### 6.2 调用函数（接口消费方）
 
-接口的使用方可以导入头文件 `package.name.user.hpp`，并根据 IDL 文件中定义的函数名称和其所在的命名空间来调用函数。如 `package::name::funcName()`。例如，假设你要调用第 5 节中定义的 `divmod_i32` 函数，可以这样写：
+接口的使用方可以导入头文件 `package.name.user.hpp`，并根据 IDL 文件中定义的函数名称和其所在的命名空间来调用函数。如 `package::name::funcName()`。例如，假设你要调用上文中定义的 `divmod_i32` 函数，可以这样写：
 ```cpp
 #include <iostream>
 

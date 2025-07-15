@@ -19,7 +19,7 @@ function cb_struct(f: (data: Person) => Person): void;
 ```
 
 我们可以看到 `({param_type}) => {return_type}` 格式的语句就是一个函数，在上面把一个函数作为参数传递给了另外一个函数
-上述样例介绍无参数无返回值、有参数无返回值、有参数有返回值以及以 struct 作为参数和返回值4种情况
+上述样例介绍无参数无返回值、有参数无返回值、有参数有返回值以及以 struct 作为参数和返回值 4 种情况
 
 `callback.impl.cpp`
 ```C++

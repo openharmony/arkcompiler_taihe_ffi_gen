@@ -24,7 +24,7 @@ function useUIAbility(a: UIAbility): void;
 function logLifecycle(str: String): void;
 ```
 
-这里涉及3种注解：`@class` `@constructor` `@static` `@rename`
+这里涉及 3 种注解：`@class` `@constructor` `@static` `@rename`
 
 - `@class`
 
@@ -96,15 +96,14 @@ void logLifecycle(string_view str) {
 
 ## 第三步 生成并编译
 
-`compiler/`
 ```sh
-## 注：taihe 文件里的函数与 C++ 规范一致，所以函数会在生成的 ets 侧自动转变为小写字母开头函数
-## .taihe
-## function FooBar(): void;
-## 生成的 ets 侧
-## function fooBar(): void;
-## 如果希望生成的 ets 侧函数与 taihe 文件一致，可以使用 --sts-keep-name
-python -m taihe.cli.tryit test -u sts /path/to/override --sts-keep-name
+# 注：taihe 文件里的函数与 C++ 规范一致，所以函数会在生成的 ets 侧自动转变为小写字母开头函数
+# taihe 文件中的写法：
+#   function FooBar(): void;
+# 生成的 ets 侧代码
+#   function fooBar(): void;
+# 如果希望生成的 ets 侧函数与 taihe 文件一致，可以使用 --sts-keep-name
+taihe-tryit test -u sts path/to/override --sts-keep-name
 ```
 
 用户侧创建类 `MyAbility` 继承了 taihe 文件中声明的类 `UIAbility`，并重写了方法 `onForeground`，创建了一个 `MyAbility` 类的实例，并将其赋值给类型为 `UIAbility` 的变量，以此做为参数传入 `useUIAbility` 函数。

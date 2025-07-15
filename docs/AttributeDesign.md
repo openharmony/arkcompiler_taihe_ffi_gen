@@ -14,7 +14,7 @@
 
 ## 核心类与结构
 
-核心概念有4个，`Argument`、`UncheckedAttribute`、`CheckedAttribute`、`AttributeManager`
+核心概念有 4 个，`Argument`、`UncheckedAttribute`、`CheckedAttribute`、`AttributeManager`
 
 ```
 AnyAttribute

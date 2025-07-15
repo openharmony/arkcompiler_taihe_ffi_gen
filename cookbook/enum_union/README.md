@@ -30,7 +30,7 @@ function createNumberMessage(num: i64): Message;
 function processMessage(msg: Message): void;
 ```
 
-enum 有2种语法
+enum 有 2 种语法
 
 1. key -> int
     ```

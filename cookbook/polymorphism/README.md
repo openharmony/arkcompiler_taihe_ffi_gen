@@ -229,9 +229,8 @@ void introduceYourself(::poly::PersonType const &p) {
 
 ## 第三步 生成并编译
 
-`compiler/`
 ```sh
-python -m taihe.cli.tryit test -u sts ../cookbook/polymorphism --sts-keep-name
+taihe-tryit test -u sts cookbook/polymorphism --sts-keep-name
 ```
 
 `main.ets`

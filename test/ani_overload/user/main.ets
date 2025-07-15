@@ -123,9 +123,9 @@ function test_struct() {
     arktest.assertEQ(res, "path/to/source")
 }
 
-////多参数组合
+// 多参数组合
 
-// 测试5param
+// 测试 5 param
 function test_5param() {
     let instance: test_overload.OverloadInterface =
         test_overload.get_interface();
@@ -188,7 +188,7 @@ function test_5param10() {
 }
 
 
-// 测试10param
+// 测试 10 param
 function test_10param() {
     let instance: test_overload.OverloadInterface =
         test_overload.get_interface();
@@ -200,7 +200,7 @@ function test_10param() {
         true, "123", arri8, arri16, arri32);
 }
 
-// 测试10param1
+// 测试 10 param1
 function test_10param1() {
     let instance: test_overload.OverloadInterface =
         test_overload.get_interface();
@@ -215,7 +215,7 @@ function test_10param1() {
         true, "123", arri8, mystruct, color);
 }
 
-// 测试10param2
+// 测试 10 param2
 function test_10param2() {
     let instance: test_overload.OverloadInterface =
         test_overload.get_interface();
@@ -237,7 +237,7 @@ function test_10param2() {
         arri8, arri16, arri32);
 }
 
-// 测试10param3
+// 测试 10 param3
 function test_10param3() {
     let instance: test_overload.OverloadInterface =
         test_overload.get_interface();
@@ -258,7 +258,7 @@ function test_10param3() {
         (1).toByte(), (1).toShort(), (1).toInt(), 1.1f, (1.123).toDouble(),
         true, "123", arrbuf1, mystruct, color);
 }
-// 测试10param4
+// 测试 10 param4
 function test_10param4() {
     let instance: test_overload.OverloadInterface =
         test_overload.get_interface();
