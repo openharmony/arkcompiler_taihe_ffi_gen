@@ -12,10 +12,10 @@ int32_t ohos_int_mul(int32_t a, int32_t b) {
   return a * b;
 }
 
-integer::arithmetic::i32Pair ohos_int_divmod(int32_t a, int32_t b) {
+integer::arithmetic::DivModResult ohos_int_divmod(int32_t a, int32_t b) {
   return {
-      a / b,
-      a % b,
+      .quo = a / b,
+      .rem = a % b,
   };
 }
 

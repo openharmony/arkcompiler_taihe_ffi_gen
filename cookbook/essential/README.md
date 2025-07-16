@@ -34,7 +34,7 @@ void PrintBook(Book const& b) {
 
 - `taihec` 生成对应的 ArkTS 文件，自动将 C++ 代码投影到 ArkTS。
 
-**Command: taihec idl/ohos.book.store.taihe -O generated --author --user --ani**
+**Command: taihec idl/ohos.book.store.taihe -Ogenerated -Cani-bridge**
 
 **File (Generated): generated/ohos.book.store.ets**
 ```typescript
