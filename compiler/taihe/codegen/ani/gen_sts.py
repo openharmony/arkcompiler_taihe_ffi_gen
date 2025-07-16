@@ -1401,7 +1401,7 @@ class STSCodeGenerator:
             # sts_resolved_ty = "undefined"
         sts_args = func_ani_info.call_revert_with(sts_revert_args)
         with target.indented(
-            f"{func_ani_info.func_prefix}{func_ani_info.revert_name}({sts_revert_params_str}): {sts_return_ty} {{",
+            f"{func_ani_info.revert_prefix}{func_ani_info.revert_name}({sts_revert_params_str}): {sts_return_ty} {{",
             f"}}",
         ):
             if (norm_name := func_ani_info.norm_name) is not None:
