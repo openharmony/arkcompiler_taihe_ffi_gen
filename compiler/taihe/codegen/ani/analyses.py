@@ -134,6 +134,17 @@ class AniRuntimeUnionMemberType(AniRuntimeNonPrimitiveType, ABC):
 class AniRuntimeUnionType(AniRuntimeNonPrimitiveType):
     members: list[AniRuntimeUnionMemberType]
 
+    @property
+    def sig(self) -> str:
+        signatures = [union_member.sig for union_member in self.members]
+        signatures = sorted(set(signatures))
+        signatures_str = "".join(signatures)
+        return f"X{{{signatures_str}}}"
+
+    @property
+    def desc(self) -> str:
+        return self.sig
+
     @staticmethod
     def union(*sig_types: AniRuntimeType) -> AniRuntimeNonPrimitiveType:
         members = [
@@ -146,17 +157,6 @@ class AniRuntimeUnionType(AniRuntimeNonPrimitiveType):
         if len(members) == 1:
             return members[0]
         return AniRuntimeUnionType(members=members)
-
-    @property
-    def sig(self) -> str:
-        signatures = [union_member.sig for union_member in self.members]
-        signatures = sorted(set(signatures))
-        signatures_str = "".join(signatures)
-        return f"X{{{signatures_str}}}"
-
-    @property
-    def desc(self) -> str:
-        return self.sig
 
     def as_union_members(self) -> Iterable[AniRuntimeUnionMemberType]:
         yield from self.members

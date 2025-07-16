@@ -67,6 +67,17 @@ function test_array() {
     }
 }
 
+// Test UserFoo implementation
+class UserFoo implements ani_test.Foo {
+    name: string;
+    constructor(name: string) {
+        this.name = name;
+    }
+    bar(): void {
+        console.log("UserFoo(" + this.name + ") is calling bar()");
+    }
+}
+
 function test_interface() {
     // Test makeFoo implementation
     let impl_foo_list = ani_test.makeFoo(["A", "B", "C"]);
@@ -75,16 +86,6 @@ function test_interface() {
         impl_foo_list[i].bar();
     }
 
-    // Test UserFoo implementation
-    class UserFoo implements ani_test.Foo {
-        name: string;
-        constructor(name: string) {
-            this.name = name;
-        }
-        bar(): void {
-            console.log("UserFoo(" + this.name + ") is calling bar()");
-        }
-    }
     const X: ani_test.Foo = new UserFoo("X")
     const Y: ani_test.Foo = new UserFoo("Y")
     const Z: ani_test.Foo = new UserFoo("Z")

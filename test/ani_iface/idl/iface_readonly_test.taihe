@@ -1,9 +1,9 @@
 interface Noo {
-    bar(): void;
-    @get getName(): String;
-    @get getAge(): Optional<i32>;
-    @set setAge(a: Optional<i32>): void;
+    Bar(): void;
+    @get GetName(): String;
+    @get GetAge(): Optional<i32>;
+    @set SetAge(a: Optional<i32>): void;
 }
 
-function getNooIface(): Noo;
-function printNooName(noo: Noo): String;
+function GetNooIface(): Noo;
+function PrintNooName(noo: Noo): String;

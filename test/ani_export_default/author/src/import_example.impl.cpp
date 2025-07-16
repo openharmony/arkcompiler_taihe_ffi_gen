@@ -7,11 +7,11 @@
 namespace {
 // To be implemented.
 
-constexpr int kDefaultX = 1;
-constexpr int kDefaultY = 2;
+constexpr int K_DEFAULT_X = 1;
+constexpr int K_DEFAULT_Y = 2;
 
-constexpr int kId = 1;
-constexpr char const *kName = "1";
+constexpr int K_ID = 1;
+constexpr char const *K_NAME = "1";
 
 class IfaceAImpl {
 public:
@@ -37,15 +37,15 @@ public:
 }
 
 ::export_namespace::NsStructA ImportNsFunc() {
-  return {kDefaultX, kDefaultY};
+  return {K_DEFAULT_X, K_DEFAULT_Y};
 }
 
 ::export_struct::StructA ImportStructFunc() {
-  return {kId, kName};
+  return {K_ID, K_NAME};
 }
 
 ::export_union::ExportUnion ImportUnionFunc() {
-  return ::export_union::ExportUnion::make_Foo(kName);
+  return ::export_union::ExportUnion::make_Foo(K_NAME);
 }
 }  // namespace
 
