@@ -115,7 +115,7 @@ interface MyCallback {
     onResult(result: MyParam): MyResult;
 }
 
-function processWithCallback(param: MyParam, myCallback: MyCallback): void;
+function processWithCallback(myCallback: MyCallback): void;
 ```
 
 在这种情况下，回调的过程如下：
@@ -204,6 +204,16 @@ function processWithCallback(param: MyParam, myCallback: MyCallback): void;
 
 4. `_taihe_onResult_revert` 方法会进一步调用上层 JS 对象上的 `onResult` 方法，执行完毕后拿到返回值（如果有），然后回到下层。
 
+    **generated/my.package.ets**
+    ```ts
+    export interface MyCallback {
+        onResult(result: _taihe_my_package.MyParam): _taihe_my_package.MyResult;
+
+        _taihe_onResult_revert(result: _taihe_my_package.MyParam): _taihe_my_package.MyResult {
+            return this.onResult(result);
+        }
+    }
+    ```
 
 5. 在太和代理对象的 `onResult` 方法中再将返回值从 ani_object 转换为对应的 C++ 对象（同正向调用链第 3 步），并返回到 `myCallback->onResult` 的调用处。
 
