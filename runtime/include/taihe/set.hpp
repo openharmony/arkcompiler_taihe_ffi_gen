@@ -34,7 +34,7 @@ public:
         current = next;
       }
     }
-    delete [] m_handle->bucket;
+    delete[] m_handle->bucket;
     m_handle->cap = cap;
     m_handle->bucket = bucket;
   }
