@@ -4,6 +4,7 @@ set(IDL_FILES
     "${CMAKE_CURRENT_LIST_DIR}/idl/export_namespace.taihe"
     "${CMAKE_CURRENT_LIST_DIR}/idl/export_struct.taihe"
     "${CMAKE_CURRENT_LIST_DIR}/idl/export_union.taihe"
+    "${CMAKE_CURRENT_LIST_DIR}/idl/export_toplevel_func.taihe"
     "${CMAKE_CURRENT_LIST_DIR}/idl/import_example.taihe"
 )
 
@@ -14,6 +15,7 @@ set(GEN_ETS_FILES
     "export_ns.ets"
     "export_struct.ets"
     "export_union.ets"
+    "export_toplevel_func.ets"
     "import_example.ets"
 )
 
