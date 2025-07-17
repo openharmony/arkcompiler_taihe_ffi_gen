@@ -275,7 +275,7 @@ class CppHeadersGenerator:
             f"}}",
         ):
             enum_cpp_defn_target.writelns(
-                f"return this->key;",
+                f"return key;",
             )
         # validity checker
         with enum_cpp_defn_target.indented(
@@ -283,7 +283,7 @@ class CppHeadersGenerator:
             f"}}",
         ):
             enum_cpp_defn_target.writelns(
-                f"return ({enum_abi_info.abi_type})key >= 0 && ({enum_abi_info.abi_type})key < {len(enum.items)};",
+                f"return static_cast<{enum_abi_info.abi_type}>(key) >= 0 && static_cast<{enum_abi_info.abi_type}>(key) < {len(enum.items)};",
             )
 
     def gen_enum_value_utils(
@@ -318,7 +318,7 @@ class CppHeadersGenerator:
             f"}}",
         ):
             enum_cpp_defn_target.writelns(
-                f"return table[({enum_abi_info.abi_type})key];",
+                f"return table[static_cast<{enum_abi_info.abi_type}>(key)];",
             )
         # value converter
         with enum_cpp_defn_target.indented(
@@ -326,7 +326,7 @@ class CppHeadersGenerator:
             f"}}",
         ):
             enum_cpp_defn_target.writelns(
-                f"return table[({enum_abi_info.abi_type})key];",
+                f"return table[static_cast<{enum_abi_info.abi_type}>(key)];",
             )
         # creator from value
         with enum_cpp_defn_target.indented(
@@ -339,10 +339,10 @@ class CppHeadersGenerator:
                     f"}}",
                 ):
                     enum_cpp_defn_target.writelns(
-                        f"return {enum_cpp_info.as_owner}((key_t){i});",
+                        f"return {enum_cpp_info.as_owner}(static_cast<key_t>({i}));",
                     )
             enum_cpp_defn_target.writelns(
-                f"return {enum_cpp_info.as_owner}((key_t)-1);",
+                f"return {enum_cpp_info.as_owner}(static_cast<key_t>(-1));",
             )
 
     def gen_enum_same(
@@ -382,7 +382,7 @@ class CppHeadersGenerator:
                 f"}}",
             ):
                 enum_cpp_defn_target.writelns(
-                    f"return ::std::hash<{enum_abi_info.abi_type}>()(({enum_abi_info.abi_type})val.get_key());",
+                    f"return ::std::hash<{enum_abi_info.abi_type}>()(static_cast<{enum_abi_info.abi_type}>(val.get_key()));",
                 )
 
     def gen_union_decl_file(
@@ -1060,7 +1060,7 @@ class CppHeadersGenerator:
                                 val = f"{val} + ::std::hash<{TypeCppInfo.get(self.am, field.ty_ref.resolved_ty).as_owner}>()(val.get_{field.name}_ref())"
                             val = f"seed ^ ({val})"
                             union_cpp_defn_target.writelns(
-                                f"::std::size_t seed = (::std::size_t){union_cpp_info.full_name}::tag_t::{field.name};",
+                                f"::std::size_t seed = ::std::hash<{union_abi_info.tag_type}>()(static_cast<{union_abi_info.tag_type}>({union_cpp_info.full_name}::tag_t::{field.name}));",
                                 f"return {val};",
                             )
 
