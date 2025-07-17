@@ -5,6 +5,7 @@
 #include <utility>
 
 #define SET_GROWTH_FACTOR 2
+#define SET_DEFAULT_CAPACITY 16
 
 namespace taihe {
 template<typename K>
@@ -22,8 +23,7 @@ public:
     if (cap == 0) {
       return;
     }
-    node_t **bucket =
-        reinterpret_cast<node_t **>(calloc(cap, sizeof(node_t *)));
+    node_t **bucket = new node_t *[cap]();
     for (std::size_t i = 0; i < m_handle->cap; i++) {
       node_t *current = m_handle->bucket[i];
       while (current) {
@@ -34,7 +34,7 @@ public:
         current = next;
       }
     }
-    free(m_handle->bucket);
+    delete [] m_handle->bucket;
     m_handle->cap = cap;
     m_handle->bucket = bucket;
   }
@@ -249,13 +249,10 @@ struct set : set_view<K> {
   using typename set_view<K>::handle_t;
   using set_view<K>::m_handle;
 
-  explicit set(std::size_t cap = 16)
-      : set(reinterpret_cast<handle_t *>(calloc(1, sizeof(handle_t)))) {
-    node_t **bucket =
-        reinterpret_cast<node_t **>(calloc(cap, sizeof(node_t *)));
+  explicit set(std::size_t cap = SET_DEFAULT_CAPACITY) : set(new handle_t) {
     tref_set(&m_handle->count, 1);
     m_handle->cap = cap;
-    m_handle->bucket = bucket;
+    m_handle->bucket = new node_t *[cap]();
     m_handle->size = 0;
   }
 
@@ -283,8 +280,8 @@ struct set : set_view<K> {
   ~set() {
     if (m_handle && tref_dec(&m_handle->count)) {
       this->clear();
-      free(m_handle->bucket);
-      free(m_handle);
+      delete[] m_handle->bucket;
+      delete m_handle;
     }
   }
 
@@ -315,6 +312,5 @@ struct std::hash<taihe::set<K>> {
   }
 };
 
-#ifdef SET_GROWTH_FACTOR
 #undef SET_GROWTH_FACTOR
-#endif
+#undef SET_DEFAULT_CAPACITY

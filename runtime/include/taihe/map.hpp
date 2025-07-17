@@ -5,6 +5,7 @@
 #include <utility>
 
 #define MAP_GROWTH_FACTOR 2
+#define MAP_DEFAULT_CAPACITY 16
 
 namespace taihe {
 template<typename K, typename V>
@@ -22,8 +23,7 @@ public:
     if (cap == 0) {
       return;
     }
-    node_t **bucket =
-        reinterpret_cast<node_t **>(calloc(cap, sizeof(node_t *)));
+    node_t **bucket = new node_t *[cap]();
     for (std::size_t i = 0; i < m_handle->cap; i++) {
       node_t *current = m_handle->bucket[i];
       while (current) {
@@ -34,7 +34,7 @@ public:
         current = next;
       }
     }
-    free(m_handle->bucket);
+    delete[] m_handle->bucket;
     m_handle->cap = cap;
     m_handle->bucket = bucket;
   }
@@ -249,13 +249,10 @@ struct map : map_view<K, V> {
   using typename map_view<K, V>::handle_t;
   using map_view<K, V>::m_handle;
 
-  explicit map(std::size_t cap = 16)
-      : map(reinterpret_cast<handle_t *>(calloc(1, sizeof(handle_t)))) {
-    node_t **bucket =
-        reinterpret_cast<node_t **>(calloc(cap, sizeof(node_t *)));
+  explicit map(std::size_t cap = MAP_DEFAULT_CAPACITY) : map(new handle_t) {
     tref_set(&m_handle->count, 1);
     m_handle->cap = cap;
-    m_handle->bucket = bucket;
+    m_handle->bucket = new node_t *[cap]();
     m_handle->size = 0;
   }
 
@@ -283,8 +280,8 @@ struct map : map_view<K, V> {
   ~map() {
     if (m_handle && tref_dec(&m_handle->count)) {
       this->clear();
-      free(m_handle->bucket);
-      free(m_handle);
+      delete[] m_handle->bucket;
+      delete m_handle;
     }
   }
 
@@ -315,6 +312,5 @@ struct std::hash<taihe::map<K, V>> {
   }
 };
 
-#ifdef MAP_GROWTH_FACTOR
 #undef MAP_GROWTH_FACTOR
-#endif
+#undef MAP_DEFAULT_CAPACITY
