@@ -58,6 +58,9 @@ int main() {
 - [太和 C++ 用户文档](docs/CppUserDoc.md)
 - [太和 ANI 用户文档](docs/AniUserDoc.md)
 
+关于 ANI 开发的更多教程可以参考 太和 ANI CookBook
+- [太和 ANI CookBook](./cookbook/README.md)
+
 ## 开发指南
 
 我们欢迎并鼓励社区开发者参与到 Taihe 的开发中来。如果你有兴趣参与 Taihe 的开发，以下文档可以帮助您深入了解项目的设计与实现，并顺利地开始您的贡献。
