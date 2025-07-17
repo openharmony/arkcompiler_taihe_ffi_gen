@@ -46,9 +46,25 @@ class FuncKind(ABC):
     set_prefix: ClassVar[str]
     overload_prefix: ClassVar[str]
 
-    @property
     @abstractmethod
-    def func_call_prefix(self) -> str: ...
+    def call_from_local(self, name: str) -> str: ...
+
+    def call_from_revert(self, name: str) -> str:
+        return self.call_from_local(name)
+
+
+@dataclass(frozen=True)
+class CtorKind:
+    func_prefix = "constructor "
+    overload_prefix = "overload constructor "
+
+    class_name: str
+
+    def call_from_local(self, name: str) -> str:
+        return f"this.{name}" if name else "this"
+
+    def call_from_revert(self, name: str) -> str:
+        return f"new {self.class_name}.{name}" if name else f"new {self.class_name}"
 
 
 @dataclass(frozen=True)
@@ -58,21 +74,8 @@ class InterfaceKind(FuncKind):
     set_prefix = "set "
     overload_prefix = "overload "
 
-    @property
-    def func_call_prefix(self) -> str:
-        return "this."
-
-
-@dataclass(frozen=True)
-class GlobalKind(FuncKind):
-    func_prefix = "export function "
-    get_prefix = "export get "
-    set_prefix = "export set "
-    overload_prefix = "export overload "
-
-    @property
-    def func_call_prefix(self) -> str:
-        return ""
+    def call_from_local(self, name: str) -> str:
+        return f"this.{name}"
 
 
 @dataclass(frozen=True)
@@ -81,11 +84,22 @@ class StaticKind(FuncKind):
     get_prefix = "static get "
     set_prefix = "static set "
     overload_prefix = "static overload "
-    where: str
 
-    @property
-    def func_call_prefix(self) -> str:
-        return f"{self.where}."
+    class_name: str
+
+    def call_from_local(self, name) -> str:
+        return f"{self.class_name}.{name}"
+
+
+@dataclass(frozen=True)
+class GlobalKind(FuncKind):
+    func_prefix = "function "
+    get_prefix = "get "
+    set_prefix = "set "
+    overload_prefix = "overload "
+
+    def call_from_local(self, name: str) -> str:
+        return name
 
 
 OverloadInfo = list[str]
@@ -187,13 +201,14 @@ class STSCodeGenerator:
                 func_ani_info,
                 target,
                 func_kind,
+                "export default " if func_ani_info.is_default else "export ",
                 func_overload_register,
                 func_on_off_register,
             )
         for name, info in func_overload_register.overloads.items():
-            self.gen_overload_func(name, info, target, func_kind)
+            self.gen_overload_func(name, info, target, func_kind, "export ")
         for name, info in func_on_off_register.on_off.items():
-            self.gen_full_on_off_func(name, info, target, func_kind)
+            self.gen_full_on_off_func(name, info, target, func_kind, "export ")
         for func in glob_funcs:
             func_ani_info = GlobFuncANIInfo.get(self.am, func)
             self.gen_revert_func(func, func_ani_info, target, func_kind)
@@ -399,13 +414,14 @@ class STSCodeGenerator:
                     method_ani_info,
                     target,
                     meth_kind,
+                    "",
                     meth_overload_register,
                     meth_on_off_register,
                 )
             for name, info in meth_overload_register.overloads.items():
-                self.gen_overload_func(name, info, target, meth_kind)
+                self.gen_overload_func(name, info, target, meth_kind, "")
             for name, info in meth_on_off_register.on_off.items():
-                self.gen_half_on_off_func(name, info, target, meth_kind)
+                self.gen_half_on_off_func(name, info, target, meth_kind, "")
             for method in iface.methods:
                 method_ani_info = IfaceMethodANIInfo.get(self.am, method)
                 self.gen_revert_func(method, method_ani_info, target, meth_kind)
@@ -492,23 +508,26 @@ class STSCodeGenerator:
             # ctors
             ctor_overload_register = OverloadRegister()
             ctor_on_off_register = OnOffRegister()
+            ctor_kind = CtorKind(iface_ani_info.sts_impl_name)
             for ctor in ctors_map.get(iface.name, []):
                 ctor_ani_info = GlobFuncANIInfo.get(self.am, ctor)
                 self.gen_any_ctor(
                     ctor,
                     ctor_ani_info,
                     target,
+                    ctor_kind,
+                    "",
                     ctor_overload_register,
                     ctor_on_off_register,
                 )
             for name, info in ctor_overload_register.overloads.items():
-                self.gen_overload_ctor(name, info, target)
+                self.gen_overload_ctor(name, info, target, ctor_kind, "")
             for name, info in ctor_on_off_register.on_off.items():
-                self.gen_full_on_off_ctor(name, info, target)
+                self.gen_full_on_off_ctor(name, info, target, ctor_kind, "")
             # funcs
             func_overload_register = OverloadRegister()
             func_on_off_register = OnOffRegister()
-            func_kind = StaticKind(iface.name)
+            func_kind = StaticKind(iface_ani_info.sts_impl_name)
             for func in statics_map.get(iface.name, []):
                 func_ani_info = GlobFuncANIInfo.get(self.am, func)
                 self.gen_any_func(
@@ -516,13 +535,14 @@ class STSCodeGenerator:
                     func_ani_info,
                     target,
                     func_kind,
+                    "",
                     func_overload_register,
                     func_on_off_register,
                 )
             for name, info in func_overload_register.overloads.items():
-                self.gen_overload_func(name, info, target, func_kind)
+                self.gen_overload_func(name, info, target, func_kind, "")
             for name, info in func_on_off_register.on_off.items():
-                self.gen_full_on_off_func(name, info, target, func_kind)
+                self.gen_full_on_off_func(name, info, target, func_kind, "")
             # methods
             meth_overload_register = OverloadRegister()
             meth_on_off_register = OnOffRegister()
@@ -535,13 +555,14 @@ class STSCodeGenerator:
                         method_ani_info,
                         target,
                         meth_kind,
+                        "",
                         meth_overload_register,
                         meth_on_off_register,
                     )
             for name, info in meth_overload_register.overloads.items():
-                self.gen_overload_func(name, info, target, meth_kind)
+                self.gen_overload_func(name, info, target, meth_kind, "")
             for name, info in meth_on_off_register.on_off.items():
-                self.gen_half_on_off_func(name, info, target, meth_kind)
+                self.gen_half_on_off_func(name, info, target, meth_kind, "")
             for method in iface.methods:
                 method_ani_info = IfaceMethodANIInfo.get(self.am, method)
                 self.gen_revert_func(method, method_ani_info, target, meth_kind)
@@ -574,6 +595,7 @@ class STSCodeGenerator:
         func_ani_info: GlobFuncANIInfo | IfaceMethodANIInfo,
         target: StsWriter,
         func_kind: FuncKind,
+        decl_prefix: str,
         overload_register: OverloadRegister,
         on_off_register: OnOffRegister,
     ):
@@ -606,6 +628,7 @@ class STSCodeGenerator:
                 sts_return_ty,
                 target,
                 func_kind,
+                decl_prefix,
                 func_ani_info.overload,
                 func_ani_info.on_off,
                 overload_register,
@@ -620,6 +643,7 @@ class STSCodeGenerator:
                 sts_return_ty,
                 target,
                 func_kind,
+                decl_prefix,
                 func_ani_info.overload,
                 func_ani_info.on_off,
                 overload_register,
@@ -634,6 +658,7 @@ class STSCodeGenerator:
                 sts_return_ty,
                 target,
                 func_kind,
+                decl_prefix,
                 func_ani_info.overload,
                 func_ani_info.on_off,
                 overload_register,
@@ -646,6 +671,7 @@ class STSCodeGenerator:
                 sts_return_ty,
                 target,
                 func_kind,
+                decl_prefix,
             )
         if (set_name := func_ani_info.set_name) is not None:
             self.gen_setter_decl(
@@ -654,6 +680,7 @@ class STSCodeGenerator:
                 sts_return_ty,
                 target,
                 func_kind,
+                decl_prefix,
             )
 
     def gen_any_func(
@@ -662,6 +689,7 @@ class STSCodeGenerator:
         func_ani_info: GlobFuncANIInfo | IfaceMethodANIInfo,
         target: StsWriter,
         func_kind: FuncKind,
+        mode_prefix: str,
         overload_register: OverloadRegister,
         on_off_register: OnOffRegister,
     ):
@@ -680,7 +708,7 @@ class STSCodeGenerator:
             sts_args.append(sts_param.name)
         sts_native_args = func_ani_info.call_native_with(sts_args)
         sts_native_args_str = ", ".join(sts_native_args)
-        sts_native_call = f"{func_ani_info.func_call_prefix}{func_ani_info.native_name}({sts_native_args_str})"
+        sts_native_call = f"{func_ani_info.call_native(func_ani_info.native_name)}({sts_native_args_str})"
         if return_ty_ref := func.return_ty_ref:
             type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
             sts_return_ty = type_ani_info.sts_type_in(target)
@@ -701,6 +729,7 @@ class STSCodeGenerator:
                 sts_native_call,
                 target,
                 func_kind,
+                mode_prefix,
                 func_ani_info.overload,
                 func_ani_info.on_off,
                 overload_register,
@@ -717,6 +746,7 @@ class STSCodeGenerator:
                 sts_native_call,
                 target,
                 func_kind,
+                mode_prefix,
                 func_ani_info.overload,
                 func_ani_info.on_off,
                 overload_register,
@@ -733,6 +763,7 @@ class STSCodeGenerator:
                 sts_native_call,
                 target,
                 func_kind,
+                mode_prefix,
                 func_ani_info.overload,
                 func_ani_info.on_off,
                 overload_register,
@@ -746,6 +777,7 @@ class STSCodeGenerator:
                 sts_native_call,
                 target,
                 func_kind,
+                mode_prefix,
             )
         if (set_name := func_ani_info.set_name) is not None:
             self.gen_setter(
@@ -755,6 +787,7 @@ class STSCodeGenerator:
                 sts_native_call,
                 target,
                 func_kind,
+                mode_prefix,
             )
 
     def gen_any_ctor(
@@ -762,6 +795,8 @@ class STSCodeGenerator:
         ctor: GlobFuncDecl,
         ctor_ani_info: GlobFuncANIInfo,
         target: StsWriter,
+        ctor_func: CtorKind,
+        mode_prefix: str,
         overload_register: OverloadRegister,
         on_off_register: OnOffRegister,
     ):
@@ -780,7 +815,7 @@ class STSCodeGenerator:
             sts_args.append(sts_param.name)
         sts_native_args = ctor_ani_info.call_native_with(sts_args)
         sts_native_args_str = ", ".join(sts_native_args)
-        sts_native_call = f"{ctor_ani_info.func_call_prefix}{ctor_ani_info.native_name}({sts_native_args_str})"
+        sts_native_call = f"{ctor_ani_info.call_native(ctor_ani_info.native_name)}({sts_native_args_str})"
         if (ctor_name := ctor_ani_info.norm_name) is not None:
             self.gen_ctor(
                 ctor_name,
@@ -789,6 +824,8 @@ class STSCodeGenerator:
                 sts_params_ty,
                 sts_native_call,
                 target,
+                ctor_func,
+                mode_prefix,
                 ctor_ani_info.overload,
                 ctor_ani_info.on_off,
                 overload_register,
@@ -802,10 +839,11 @@ class STSCodeGenerator:
         sts_return_ty: str,
         target: StsWriter,
         func_kind: FuncKind,
+        decl_prefix: str,
     ):
         sts_params_str = ", ".join(sts_params)
         target.writelns(
-            f"{func_kind.get_prefix}{get_name}({sts_params_str}): {sts_return_ty};",
+            f"{decl_prefix}{func_kind.get_prefix}{get_name}({sts_params_str}): {sts_return_ty};",
         )
 
     def gen_setter_decl(
@@ -815,10 +853,11 @@ class STSCodeGenerator:
         sts_return_ty: str,
         target: StsWriter,
         func_kind: FuncKind,
+        decl_prefix: str,
     ):
         sts_params_str = ", ".join(sts_params)
         target.writelns(
-            f"{func_kind.set_prefix}{set_name}({sts_params_str});",
+            f"{decl_prefix}{func_kind.set_prefix}{set_name}({sts_params_str});",
         )
 
     def gen_normal_func_decl(
@@ -832,6 +871,7 @@ class STSCodeGenerator:
         sts_return_ty: str,
         target: StsWriter,
         func_kind: FuncKind,
+        decl_prefix: str,
         overload: str | None,
         on_off: tuple[str, str] | None,
         overload_register: OverloadRegister,
@@ -839,7 +879,7 @@ class STSCodeGenerator:
     ):
         sts_params_str = ", ".join(sts_params)
         target.writelns(
-            f"{func_kind.func_prefix}{norm_name}({sts_params_str}): {sts_return_ty};",
+            f"{decl_prefix}{func_kind.func_prefix}{norm_name}({sts_params_str}): {sts_return_ty};",
         )
         if overload is not None:
             overload_register.register(norm_name, overload)
@@ -860,6 +900,7 @@ class STSCodeGenerator:
                 sts_return_ty,
                 target,
                 func_kind,
+                decl_prefix,
                 None,
                 None,
                 overload_register,
@@ -874,6 +915,7 @@ class STSCodeGenerator:
                 sts_return_ty,
                 target,
                 func_kind,
+                decl_prefix,
                 None,
                 None,
                 overload_register,
@@ -889,6 +931,7 @@ class STSCodeGenerator:
         sts_return_ty: str,
         target: StsWriter,
         func_kind: FuncKind,
+        decl_prefix: str,
         overload: str | None,
         on_off: tuple[str, str] | None,
         overload_register: OverloadRegister,
@@ -897,7 +940,7 @@ class STSCodeGenerator:
         sts_params_str = ", ".join(sts_params)
         promise_ty = f"Promise<{sts_return_ty}>"
         target.writelns(
-            f"{func_kind.func_prefix}{promise_name}({sts_params_str}): {promise_ty};",
+            f"{decl_prefix}{func_kind.func_prefix}{promise_name}({sts_params_str}): {promise_ty};",
         )
         if overload is not None:
             overload_register.register(promise_name, overload)
@@ -919,6 +962,7 @@ class STSCodeGenerator:
         sts_return_ty: str,
         target: StsWriter,
         func_kind: FuncKind,
+        decl_prefix: str,
         overload: str | None,
         on_off: tuple[str, str] | None,
         overload_register: OverloadRegister,
@@ -930,7 +974,7 @@ class STSCodeGenerator:
         callback_param = f"{callback_arg}: {callback_param_ty}"
         sts_params_with_cb_str = ", ".join([*sts_params, callback_param])
         target.writelns(
-            f"{func_kind.func_prefix}{async_name}({sts_params_with_cb_str}): void;",
+            f"{decl_prefix}{func_kind.func_prefix}{async_name}({sts_params_with_cb_str}): void;",
         )
         if overload is not None:
             overload_register.register(async_name, overload)
@@ -951,10 +995,11 @@ class STSCodeGenerator:
         sts_native_call: str,
         target: StsWriter,
         func_kind: FuncKind,
+        mode_prefix: str,
     ):
         sts_params_str = ", ".join(sts_params)
         with target.indented(
-            f"{func_kind.get_prefix}{get_name}({sts_params_str}): {sts_return_ty} {{",
+            f"{mode_prefix}{func_kind.get_prefix}{get_name}({sts_params_str}): {sts_return_ty} {{",
             f"}}",
         ):
             target.writelns(
@@ -969,10 +1014,11 @@ class STSCodeGenerator:
         sts_native_call: str,
         target: StsWriter,
         func_kind: FuncKind,
+        mode_prefix: str,
     ):
         sts_params_str = ", ".join(sts_params)
         with target.indented(
-            f"{func_kind.set_prefix}{set_name}({sts_params_str}) {{",
+            f"{mode_prefix}{func_kind.set_prefix}{set_name}({sts_params_str}) {{",
             f"}}",
         ):
             target.writelns(
@@ -992,6 +1038,7 @@ class STSCodeGenerator:
         sts_native_call: str,
         target: StsWriter,
         func_kind: FuncKind,
+        mode_prefix: str,
         overload: str | None,
         on_off: tuple[str, str] | None,
         overload_register: OverloadRegister,
@@ -999,7 +1046,7 @@ class STSCodeGenerator:
     ):
         sts_params_str = ", ".join(sts_params)
         with target.indented(
-            f"{func_kind.func_prefix}{norm_name}({sts_params_str}): {sts_return_ty} {{",
+            f"{mode_prefix}{func_kind.func_prefix}{norm_name}({sts_params_str}): {sts_return_ty} {{",
             f"}}",
         ):
             target.writelns(
@@ -1026,6 +1073,7 @@ class STSCodeGenerator:
                 sts_native_call,
                 target,
                 func_kind,
+                mode_prefix,
                 None,
                 None,
                 overload_register,
@@ -1042,6 +1090,7 @@ class STSCodeGenerator:
                 sts_native_call,
                 target,
                 func_kind,
+                mode_prefix,
                 None,
                 None,
                 overload_register,
@@ -1059,6 +1108,7 @@ class STSCodeGenerator:
         sts_native_call: str,
         target: StsWriter,
         func_kind: FuncKind,
+        mode_prefix: str,
         overload: str | None,
         on_off: tuple[str, str] | None,
         overload_register: OverloadRegister,
@@ -1067,7 +1117,7 @@ class STSCodeGenerator:
         sts_params_str = ", ".join(sts_params)
         promise_ty = f"Promise<{sts_return_ty}>"
         with target.indented(
-            f"{func_kind.func_prefix}{promise_name}({sts_params_str}): {promise_ty} {{",
+            f"{mode_prefix}{func_kind.func_prefix}{promise_name}({sts_params_str}): {promise_ty} {{",
             f"}}",
         ):
             with target.indented(
@@ -1117,6 +1167,7 @@ class STSCodeGenerator:
         sts_native_call: str,
         target: StsWriter,
         func_kind: FuncKind,
+        mode_prefix: str,
         overload: str | None,
         on_off: tuple[str, str] | None,
         overload_register: OverloadRegister,
@@ -1128,7 +1179,7 @@ class STSCodeGenerator:
         callback_param = f"{callback_arg}: {callback_param_ty}"
         sts_params_with_cb_str = ", ".join([*sts_params, callback_param])
         with target.indented(
-            f"{func_kind.func_prefix}{async_name}({sts_params_with_cb_str}): void {{",
+            f"{mode_prefix}{func_kind.func_prefix}{async_name}({sts_params_with_cb_str}): void {{",
             f"}}",
         ):
             with target.indented(
@@ -1171,6 +1222,8 @@ class STSCodeGenerator:
         sts_params_ty: list[str],
         sts_native_call: str,
         target: StsWriter,
+        ctor_kind: CtorKind,
+        mode_prefix: str,
         overload: str | None,
         on_off: tuple[str, str] | None,
         overload_register: OverloadRegister,
@@ -1178,7 +1231,7 @@ class STSCodeGenerator:
     ):
         sts_params_str = ", ".join(sts_params)
         with target.indented(
-            f"constructor {ctor_name}({sts_params_str}) {{",
+            f"{mode_prefix}{ctor_kind.func_prefix}{ctor_name}({sts_params_str}) {{",
             f"}}",
         ):
             target.writelns(
@@ -1201,9 +1254,10 @@ class STSCodeGenerator:
         overload_info: OverloadInfo,
         target: StsWriter,
         func_kind: FuncKind,
+        mode_prefix: str,
     ):
         with target.indented(
-            f"{func_kind.overload_prefix}{overload_name} {{",
+            f"{mode_prefix}{func_kind.overload_prefix}{overload_name} {{",
             f"}}",
         ):
             for orig in overload_info:
@@ -1217,16 +1271,22 @@ class STSCodeGenerator:
         on_off_info: OnOffInfo,
         target: StsWriter,
         func_kind: FuncKind,
+        mode_prefix: str,
     ):
         if not any(len(funcs) > 1 for funcs in on_off_info.values()):
-            self.gen_half_on_off_func(on_off_name, on_off_info, target, func_kind)
-            return
+            return self.gen_half_on_off_func(
+                on_off_name,
+                on_off_info,
+                target,
+                func_kind,
+                mode_prefix,
+            )
         params_len = max(len(sigs) for sigs in on_off_info)
         sts_args = [f"p_{i}" for i in range(params_len)]
         sts_params = ["type: Object", *(f"{arg}?: Object" for arg in sts_args)]
         sts_params_str = ", ".join(sts_params)
         with target.indented(
-            f"{func_kind.func_prefix}{on_off_name}({sts_params_str}): Any {{",
+            f"{mode_prefix}{func_kind.func_prefix}{on_off_name}({sts_params_str}): Any {{",
             f"}}",
         ):
             with target.indented(
@@ -1235,13 +1295,13 @@ class STSCodeGenerator:
                 indent="",
             ):
                 for funcs in on_off_info.values():
-                    for tag, (orig, params_ty, return_ty) in funcs.items():
+                    for tag, (orig, params_ty, _) in funcs.items():
                         sts_args_str = ", ".join(
                             f"{arg} as {param_ty}"
                             for arg, param_ty in zip(sts_args, params_ty, strict=False)
                         )
                         target.writelns(
-                            f'case "{tag}": return {func_kind.func_call_prefix}{orig}({sts_args_str});',
+                            f'case "{tag}": return {func_kind.call_from_local(orig)}({sts_args_str});',
                         )
                 target.writelns(
                     f"default: throw new Error(`Unknown tag: ${{type}}`);",
@@ -1253,6 +1313,7 @@ class STSCodeGenerator:
         on_off_info: OnOffInfo,
         target: StsWriter,
         func_kind: FuncKind,
+        mode_prefix: str,
     ):
         for sigs, funcs in on_off_info.items():
             params_types: list[set[str]] = [set() for _ in range(len(sigs))]
@@ -1272,7 +1333,7 @@ class STSCodeGenerator:
             sts_args_str = ", ".join(sts_args)
             return_ty = " | ".join(return_types)
             with target.indented(
-                f"{func_kind.func_prefix}{on_off_name}({sts_params_str}): {return_ty} {{",
+                f"{mode_prefix}{func_kind.func_prefix}{on_off_name}({sts_params_str}): {return_ty} {{",
                 f"}}",
             ):
                 with target.indented(
@@ -1286,7 +1347,7 @@ class STSCodeGenerator:
                             for arg, param_ty in zip(sts_args, params_ty, strict=True)
                         )
                         target.writelns(
-                            f'case "{tag}": return {func_kind.func_call_prefix}{orig}({sts_args_str});',
+                            f'case "{tag}": return {func_kind.call_from_local(orig)}({sts_args_str});',
                         )
                     target.writelns(
                         f"default: throw new Error(`Unknown tag: ${{type}}`);",
@@ -1297,9 +1358,11 @@ class STSCodeGenerator:
         overload_name: str,
         overload_info: OverloadInfo,
         target: StsWriter,
+        ctor_kind: CtorKind,
+        mode_prefix: str,
     ):
         with target.indented(
-            f"overload constructor {overload_name} {{",
+            f"{mode_prefix}{ctor_kind.overload_prefix}{overload_name} {{",
             f"}}",
         ):
             for orig in overload_info:
@@ -1312,16 +1375,23 @@ class STSCodeGenerator:
         on_off_name: str,
         on_off_info: OnOffInfo,
         target: StsWriter,
+        ctor_kind: CtorKind,
+        mode_prefix: str,
     ):
-        if not any(len(funcs) > 1 for signature, funcs in on_off_info.items()):
-            self.gen_half_on_off_ctor(on_off_name, on_off_info, target)
-            return
-        params_len = max(len(params_ty) for params_ty, return_ty in on_off_info)
+        if not any(len(funcs) > 1 for funcs in on_off_info.values()):
+            return self.gen_half_on_off_ctor(
+                on_off_name,
+                on_off_info,
+                target,
+                ctor_kind,
+                mode_prefix,
+            )
+        params_len = max(len(sigs) for sigs in on_off_info)
         sts_args = [f"p_{i}" for i in range(params_len)]
         sts_params = ["type: Object", *(f"{arg}?: Object" for arg in sts_args)]
         sts_params_str = ", ".join(sts_params)
         with target.indented(
-            f"constructor {on_off_name}({sts_params_str}): void {{",
+            f"{mode_prefix}{ctor_kind.func_prefix}{on_off_name}({sts_params_str}) {{",
             f"}}",
         ):
             with target.indented(
@@ -1329,15 +1399,14 @@ class STSCodeGenerator:
                 f"}}",
                 indent="",
             ):
-                for signature, funcs in on_off_info.items():
-                    params_ty, return_ty = signature
-                    sts_args_str = ", ".join(
-                        f"{arg} as {param_ty}"
-                        for arg, param_ty in zip(sts_args, params_ty, strict=False)
-                    )
-                    for tag, orig in funcs:
+                for funcs in on_off_info.values():
+                    for tag, (orig, params_ty, _) in funcs.items():
+                        sts_args_str = ", ".join(
+                            f"{arg} as {param_ty}"
+                            for arg, param_ty in zip(sts_args, params_ty, strict=False)
+                        )
                         target.writelns(
-                            f'case "{tag}": this.{orig}({sts_args_str});',
+                            f'case "{tag}": {ctor_kind.call_from_local(orig)}({sts_args_str});',
                         )
                 target.writelns(
                     f"default: throw new Error(`Unknown tag: ${{type}}`);",
@@ -1348,19 +1417,27 @@ class STSCodeGenerator:
         on_off_name: str,
         on_off_func: OnOffInfo,
         target: StsWriter,
+        ctor_kind: CtorKind,
+        mode_prefix: str,
     ):
-        for signature, funcs in on_off_func.items():
-            params_ty, return_ty = signature
+        for sigs, funcs in on_off_func.items():
+            params_types: list[set[str]] = [set() for _ in range(len(sigs))]
+            return_types: set[str] = set()
+            for _, params_ty, return_ty in funcs.values():
+                for param_types, param_ty in zip(params_types, params_ty, strict=True):
+                    param_types.add(param_ty)
+                return_types.add(return_ty)
             sts_params = ["type: string"]
             sts_args = []
-            for index, param_ty in enumerate(params_ty):
+            for index, param_ty in enumerate(params_types):
                 sts_param_name = f"p_{index}"
                 sts_params.append(f"{sts_param_name}?: {param_ty}")
                 sts_args.append(sts_param_name)
             sts_params_str = ", ".join(sts_params)
             sts_args_str = ", ".join(sts_args)
+            return_ty = " | ".join(return_types)
             with target.indented(
-                f"constructor {on_off_name}({sts_params_str}): {return_ty} {{",
+                f"{mode_prefix}{ctor_kind.func_prefix}{on_off_name}({sts_params_str}) {{",
                 f"}}",
             ):
                 with target.indented(
@@ -1368,9 +1445,13 @@ class STSCodeGenerator:
                     f"}}",
                     indent="",
                 ):
-                    for tag, orig in funcs:
+                    for tag, (orig, params_ty, return_ty) in funcs.items():
+                        sts_args_str = ", ".join(
+                            f"{arg} as {param_ty}"
+                            for arg, param_ty in zip(sts_args, params_ty, strict=True)
+                        )
                         target.writelns(
-                            f'case "{tag}": this.{orig}({sts_args_str});',
+                            f'case "{tag}": {ctor_kind.call_from_local(orig)}({sts_args_str});',
                         )
                     target.writelns(
                         f"default: throw new Error(`Unknown tag: ${{type}}`);",
@@ -1407,20 +1488,20 @@ class STSCodeGenerator:
             if (norm_name := func_ani_info.norm_name) is not None:
                 sts_args_str = ", ".join(sts_args)
                 target.writelns(
-                    f"return {func_kind.func_call_prefix}{norm_name}({sts_args_str});",
+                    f"return {func_kind.call_from_revert(norm_name)}({sts_args_str});",
                 )
             elif (get_name := func_ani_info.get_name) is not None:
                 target.writelns(
-                    f"return {func_kind.func_call_prefix}{get_name};",
+                    f"return {func_kind.call_from_revert(get_name)};",
                 )
             elif (set_name := func_ani_info.set_name) is not None:
                 target.writelns(
-                    f"{func_kind.func_call_prefix}{set_name} = {sts_args[0]};",
+                    f"{func_kind.call_from_revert(set_name)} = {sts_args[0]};",
                 )
             # elif (promise_name := func_ani_info.promise_name) is not None:
             #     sts_args_str = ", ".join(sts_args)
             #     target.writelns(
-            #         f"return await {func_kind.func_call_prefix}{promise_name}({sts_args_str});",
+            #         f"return await {func_kind.call_from_revert(promise_name)}({sts_args_str});",
             #     )
             # elif (async_name := func_ani_info.async_name) is not None:
             #     with target.indented(
@@ -1447,7 +1528,7 @@ class STSCodeGenerator:
             #                 )
             #         sts_args_with_cb_str = ", ".join([*sts_args, "callback"])
             #         target.writelns(
-            #             f"{func_kind.func_call_prefix}{async_name}({sts_args_with_cb_str});",
+            #             f"{func_kind.call_from_revert(async_name)}({sts_args_with_cb_str});",
             #         )
             else:
                 target.writelns(
@@ -1542,16 +1623,16 @@ class STSCodeGenerator:
             "}",
         )
         target.writelns(
-            f"native function _taihe_objDrop(dataPtr: long): void;",
-            f"native function _taihe_objDup(dataPtr: long): long;",
-            f"const _taihe_registry = new FinalizationRegistry<long>(_taihe_objDrop);",
+            "native function _taihe_objDrop(dataPtr: long): void;",
+            "native function _taihe_objDup(dataPtr: long): long;",
+            "const _taihe_registry = new FinalizationRegistry<long>(_taihe_objDrop);",
         )
         target.writelns(
-            f"native function _taihe_nativeInvoke(",
-            f"    castPtr: long, funcPtr: long, dataPtr: long,",
-            f"    arg_0?: Object, arg_1?: Object, arg_2?: Object, arg_3?: Object,",
-            f"    arg_4?: Object, arg_5?: Object, arg_6?: Object, arg_7?: Object,",
-            f"    arg_8?: Object, arg_9?: Object, arg_a?: Object, arg_b?: Object,",
-            f"    arg_c?: Object, arg_d?: Object, arg_e?: Object, arg_f?: Object,",
-            f"): Object | null | undefined;",
+            "native function _taihe_nativeInvoke(",
+            "    castPtr: long, funcPtr: long, dataPtr: long,",
+            "    arg_0?: Object, arg_1?: Object, arg_2?: Object, arg_3?: Object,",
+            "    arg_4?: Object, arg_5?: Object, arg_6?: Object, arg_7?: Object,",
+            "    arg_8?: Object, arg_9?: Object, arg_a?: Object, arg_b?: Object,",
+            "    arg_c?: Object, arg_d?: Object, arg_e?: Object, arg_f?: Object,",
+            "): Object | null | undefined;",
         )

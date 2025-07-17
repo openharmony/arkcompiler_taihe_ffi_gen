@@ -14,10 +14,10 @@ from taihe.semantics.declarations import (
     IfaceDecl,
     IfaceMethodDecl,
     PackageDecl,
+    PackageLevelDecl,
     ParamDecl,
     StructDecl,
     StructFieldDecl,
-    TypeDecl,
     TypeRefDecl,
     UnionFieldDecl,
 )
@@ -42,9 +42,9 @@ class NamespaceAttr(TypedAttribute[PackageDecl]):
 
 
 @dataclass
-class ExportDefaultAttr(TypedAttribute[TypeDecl | PackageDecl]):
+class ExportDefaultAttr(TypedAttribute[PackageLevelDecl | PackageDecl]):
     NAME = "sts_export_default"
-    TARGETS = (TypeDecl, PackageDecl)
+    TARGETS = (PackageLevelDecl, PackageDecl)
 
 
 @dataclass

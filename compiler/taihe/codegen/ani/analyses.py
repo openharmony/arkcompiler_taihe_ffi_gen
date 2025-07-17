@@ -496,7 +496,6 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
 
         self.native_name = f"_taihe_{f.name}_native"
         self.revert_name = f"_taihe_{f.name}_revert"
-        self.func_call_prefix = ""
         self.revert_prefix = "function "
         self.native_prefix = "native function "
 
@@ -581,10 +580,15 @@ class GlobFuncANIInfo(AbstractAnalysis[GlobFuncDecl]):
                 continue
             self.sts_params.append(param)
 
+        self.is_default = ExportDefaultAttr.get(f) is not None
+
     @classmethod
     @override
     def create(cls, am: AnalysisManager, f: GlobFuncDecl) -> "GlobFuncANIInfo":
         return GlobFuncANIInfo(am, f)
+
+    def call_native(self, name: str) -> str:
+        return name
 
     def call_native_with(self, sts_args: list[str], this: str = "this") -> list[str]:
         last = this
@@ -621,7 +625,6 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
 
         self.native_name = f"_taihe_{f.name}_native"
         self.revert_name = f"_taihe_{f.name}_revert"
-        self.func_call_prefix = "this."
         self.revert_prefix = ""
         self.native_prefix = "native "
 
@@ -699,6 +702,9 @@ class IfaceMethodANIInfo(AbstractAnalysis[IfaceMethodDecl]):
     @override
     def create(cls, am: AnalysisManager, f: IfaceMethodDecl) -> "IfaceMethodANIInfo":
         return IfaceMethodANIInfo(am, f)
+
+    def call_native(self, name: str) -> str:
+        return f"this.{name}" if name else "this"
 
     def call_native_with(self, sts_args: list[str], this: str = "this") -> list[str]:
         last = this
