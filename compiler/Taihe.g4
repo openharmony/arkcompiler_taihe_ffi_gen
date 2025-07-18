@@ -125,7 +125,7 @@ anyExpr
 floatExpr
     : TOKEN_val = FLOAT_LITERAL # literalFloatExpr
     | LEFT_PARENTHESIS FloatExpr_expr = floatExpr RIGHT_PARENTHESIS # parenthesisFloatExpr
-    | TOKEN_op = (PLUS | MINUS | TILDE) FloatExpr_expr = floatExpr # unaryFloatExpr
+    | TOKEN_op = (PLUS | MINUS) FloatExpr_expr = floatExpr # unaryFloatExpr
     | FloatExpr_left = floatExpr TOKEN_op = (STAR | SLASH) FloatExpr_right = floatExpr # binaryFloatExpr
     | FloatExpr_left = floatExpr TOKEN_op = (PLUS | MINUS) FloatExpr_right = floatExpr # binaryFloatExpr
     | KW_IF BoolExpr_cond = boolExpr KW_THEN FloatExpr_then_expr = floatExpr KW_ELSE FloatExpr_else_expr = floatExpr # conditionalFloatExpr
@@ -157,7 +157,9 @@ boolExpr
 stringExpr
     : TOKEN_val = STRING_LITERAL # literalStringExpr
     | TOKEN_val = DOCSTRING_LITERAL # literalDocStringExpr
+    | LEFT_PARENTHESIS StringExpr_expr = stringExpr RIGHT_PARENTHESIS # parenthesisStringExpr
     | StringExpr_left = stringExpr StringExpr_right = stringExpr # binaryStringExpr
+    | KW_IF BoolExpr_cond = boolExpr KW_THEN StringExpr_then_expr = stringExpr KW_ELSE StringExpr_else_expr = stringExpr # conditionalStringExpr
     ;
 
 ////////////////
@@ -169,7 +171,7 @@ pkgName
     ;
 
 idName
-    : TOKEN_val = ID
+    : TOKEN_val = IDENTIFIER
     ;
 
 ///////////
@@ -246,14 +248,6 @@ PERCENT
 
 AT
     : '@'
-    ;
-
-DOLLAR
-    : '$'
-    ;
-
-QUESTION_MARK
-    : '?'
     ;
 
 TILDE
@@ -421,7 +415,7 @@ FLOAT_LITERAL
     : DIGIT* '.' DIGIT*
     ;
 
-ID
+IDENTIFIER
     : (UNDERLINE | LETTER) (UNDERLINE | LETTER | DIGIT)*
     ;
 
