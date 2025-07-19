@@ -38,7 +38,7 @@ from taihe.utils.sources import SourceBase, SourceLocation
 
 
 def id2str(id_name: ast.IdName) -> str:
-    return id_name.val.text
+    return id_name.val.text.lstrip("#")
 
 
 def pkg2str(pkg_name: ast.PkgName) -> str:

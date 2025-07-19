@@ -408,7 +408,7 @@ OCT_LITERAL
     ;
 
 BIN_LITERAL
-    : '0b' HEX_DIGIT+
+    : '0b' BIN_DIGIT+
     ;
 
 FLOAT_LITERAL
@@ -416,16 +416,17 @@ FLOAT_LITERAL
     ;
 
 IDENTIFIER
-    : (UNDERLINE | LETTER) (UNDERLINE | LETTER | DIGIT)*
+    : HASH? LETTER (LETTER | DIGIT)*
+    ;
+
+fragment HASH
+    : '#'
     ;
 
 fragment LETTER
     : 'A' .. 'Z'
     | 'a' .. 'z'
-    ;
-
-fragment UNDERLINE
-    : '_'
+    | '_'
     ;
 
 fragment DIGIT
