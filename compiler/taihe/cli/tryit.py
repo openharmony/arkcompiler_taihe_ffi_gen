@@ -604,7 +604,7 @@ class BuildSystem(BuildUtils):
     ) -> None:
         """Create ArkTS configuration file."""
         vm = PandaVm.resolve()
-        paths = vm.stdlib_sources | (app_paths or {})
+        paths = vm.stdlib_sources | vm.sdk_sources | (app_paths or {})
 
         config_content = {
             "compilerOptions": {
@@ -692,11 +692,11 @@ class BuildSystem(BuildUtils):
     ) -> float:
         """Run the compiled ABC file with the Ark runtime."""
         ark_path = self.config.vm.tool("ark")
-        etsstdlib_path = self.config.vm.stdlib_lib
 
         command = [
             ark_path,
-            f"--boot-panda-files={etsstdlib_path}",
+            f"--boot-panda-files={self.config.vm.sdk_lib}",
+            f"--boot-panda-files={self.config.vm.stdlib_lib}",
             f"--load-runtimes=ets",
             abc_target,
             entry,

@@ -1,8 +1,6 @@
-"use static"
-import{AsyncCallback} from "@ohos.base";
-import {BusinessError} from "@ohos.base";
+"use static";
 
-import * as impl_taihe from "impl"
+import * as impl_taihe from "impl";
 
 export interface IfaceA {
     foo(): string;

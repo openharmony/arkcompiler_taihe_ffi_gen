@@ -3,7 +3,6 @@ set(IDL_FILES
 )
 
 set(GEN_ETS_FILES
-    "@ohos.base.ets"
     "@hms.core.map.map_inner.ets"
 )
 

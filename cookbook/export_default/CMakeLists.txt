@@ -4,7 +4,6 @@ set(IDL_FILES
 )
 
 set(GEN_ETS_FILES
-    "@ohos.base.ets"
     "export_pkg.ets"
     "import_example.ets"
 )

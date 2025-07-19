@@ -5,7 +5,6 @@ set(IDL_FILES
 )
 
 set(GEN_ETS_FILES
-    "@ohos.base.ets"
     "module1.ets"
     "module2.ets"
 )

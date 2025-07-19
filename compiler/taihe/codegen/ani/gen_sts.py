@@ -142,7 +142,6 @@ class STSCodeGenerator:
 
     def generate(self, pg: PackageGroup):
         pg_ani_info = PackageGroupANIInfo.get(self.am, pg)
-        self.gen_ohos_base()
         for module, ns in pg_ani_info.module_dict.items():
             self.gen_module_file(module, ns)
 
@@ -152,8 +151,6 @@ class STSCodeGenerator:
             f"{module}.ets",
             FileKind.ETS,
         ) as target:
-            target.add_import_decl("@ohos.base", "AsyncCallback")
-            target.add_import_decl("@ohos.base", "BusinessError")
             self.gen_namespace(ns, target)
             self.gen_utils(target)
 
@@ -1535,37 +1532,14 @@ class STSCodeGenerator:
                     f"throw new Error(`No valid revert function found`);",
                 )
 
-    def gen_ohos_base(self):
-        with StsWriter(
-            self.om,
-            "@ohos.base.ets",
-            FileKind.ETS,
-        ) as target:
-            target.writelns(
-                "export class BusinessError<T = void> extends Error {",
-                "    code: number;",
-                "    data?: T;",
-                "    constructor() {",
-                "        super();",
-                "        this.code = 0;",
-                "    }",
-                "    constructor(code: number, error: Error) {",
-                "        super(error.name, error.message, new ErrorOptions(error.cause));",
-                "        this.code = code;",
-                "    }",
-                "    constructor(code: number, data: T, error: Error) {",
-                "        super(error.name, error.message, new ErrorOptions(error.cause));",
-                "        this.code = code;",
-                "        this.data = data;",
-                "    }",
-                "}",
-                "export type AsyncCallback<T, E = void> = (error: BusinessError<E> | null, data: T | undefined) => void;",
-            )
-
     def gen_utils(
         self,
         target: StsWriter,
     ):
+        target.add_import_decl("@ohos.base", "BusinessError")
+        target.writelns(
+            "type AsyncCallback<T, E = void> = (error: BusinessError<E> | null, data: T | undefined) => void;",
+        )
         target.writelns(
             "function _taihe_fromArrayBufferToBigInt(arr: ArrayBuffer): BigInt {",
             "    let res: BigInt = 0n;",
