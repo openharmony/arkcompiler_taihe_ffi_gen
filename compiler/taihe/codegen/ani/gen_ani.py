@@ -1,17 +1,17 @@
 from taihe.codegen.abi.analyses import (
-    IfaceABIInfo,
+    IfaceAbiInfo,
 )
 from taihe.codegen.abi.writer import CHeaderWriter, CSourceWriter
 from taihe.codegen.ani.analyses import (
     ANI_CLASS,
-    ANIScope,
-    GlobFuncANIInfo,
-    IfaceANIInfo,
-    IfaceMethodANIInfo,
-    PackageANIInfo,
-    StructANIInfo,
-    TypeANIInfo,
-    UnionANIInfo,
+    AniScope,
+    GlobFuncAniInfo,
+    IfaceAniInfo,
+    IfaceMethodAniInfo,
+    PackageAniInfo,
+    StructAniInfo,
+    TypeAniInfo,
+    UnionAniInfo,
 )
 from taihe.codegen.ani.attributes import (
     NullAttr,
@@ -39,7 +39,7 @@ from taihe.utils.analyses import AnalysisManager
 from taihe.utils.outputs import FileKind, OutputManager
 
 
-class ANICodeGenerator:
+class AniCodeGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager):
         self.om = om
         self.am = am
@@ -83,7 +83,7 @@ class ANICodeGenerator:
                     f"ani_status status = ANI_OK;",
                 )
                 for pkg in pg.packages:
-                    pkg_ani_info = PackageANIInfo.get(self.am, pkg)
+                    pkg_ani_info = PackageAniInfo.get(self.am, pkg)
                     constructor_target.add_include(pkg_ani_info.header)
                     with constructor_target.indented(
                         f"if (ANI_OK != {pkg_ani_info.cpp_ns}::ANIRegister(env)) {{",
@@ -105,14 +105,14 @@ class ANICodeGenerator:
             self.gen_struct_files(struct)
         for union in pkg.unions:
             self.gen_union_files(union)
-        pkg_ani_info = PackageANIInfo.get(self.am, pkg)
+        pkg_ani_info = PackageAniInfo.get(self.am, pkg)
         self.gen_package_header(pkg, pkg_ani_info)
         self.gen_package_source(pkg, pkg_ani_info)
 
     def gen_package_header(
         self,
         pkg: PackageDecl,
-        pkg_ani_info: PackageANIInfo,
+        pkg_ani_info: PackageAniInfo,
     ):
         with CHeaderWriter(
             self.om,
@@ -132,7 +132,7 @@ class ANICodeGenerator:
     def gen_package_source(
         self,
         pkg: PackageDecl,
-        pkg_ani_info: PackageANIInfo,
+        pkg_ani_info: PackageAniInfo,
     ):
         with CSourceWriter(
             self.om,
@@ -158,7 +158,7 @@ class ANICodeGenerator:
     def gen_package_register(
         self,
         pkg: PackageDecl,
-        pkg_ani_info: PackageANIInfo,
+        pkg_ani_info: PackageAniInfo,
         pkg_ani_source_target: CSourceWriter,
         subregisters: list[str],
     ):
@@ -208,7 +208,7 @@ class ANICodeGenerator:
     def gen_bindings(
         self,
         pkg: PackageDecl,
-        pkg_ani_info: PackageANIInfo,
+        pkg_ani_info: PackageAniInfo,
         pkg_ani_source_target: CSourceWriter,
     ):
         subregisters: list[str] = []
@@ -251,7 +251,7 @@ class ANICodeGenerator:
             pkg_member_infos: dict[str, str] = {}
             for func in pkg.functions:
                 self.gen_native_func(func, pkg_ani_source_target, func.name)
-                func_ani_info = GlobFuncANIInfo.get(self.am, func)
+                func_ani_info = GlobFuncAniInfo.get(self.am, func)
                 pkg_member_infos.setdefault(
                     func_ani_info.native_name,
                     f"{local}::{func.name}",
@@ -272,8 +272,8 @@ class ANICodeGenerator:
                     f"}}",
                     indent="",
                 ):
-                    iface_abi_info = IfaceABIInfo.get(self.am, iface)
-                    iface_ani_info = IfaceANIInfo.get(self.am, iface)
+                    iface_abi_info = IfaceAbiInfo.get(self.am, iface)
+                    iface_ani_info = IfaceAniInfo.get(self.am, iface)
                     iface_member_infos: dict[str, str] = {}
                     for ancestor in iface_abi_info.ancestor_dict:
                         for method in ancestor.methods:
@@ -284,7 +284,7 @@ class ANICodeGenerator:
                                 ancestor,
                                 method.name,
                             )
-                            method_ani_info = IfaceMethodANIInfo.get(self.am, method)
+                            method_ani_info = IfaceMethodAniInfo.get(self.am, method)
                             iface_member_infos.setdefault(
                                 method_ani_info.native_name,
                                 f"{local}::{iface.name}::{method.name}",
@@ -305,7 +305,7 @@ class ANICodeGenerator:
         self,
         register_name: str,
         pkg_ani_source_target: CSourceWriter,
-        parent_scope: ANIScope,
+        parent_scope: AniScope,
         impl_desc: str,
         member_infos: dict[str, str],
     ):
@@ -347,7 +347,7 @@ class ANICodeGenerator:
         ani_args = []
         cpp_args = []
         for param in func.params:
-            type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
+            type_ani_info = TypeAniInfo.get(self.am, param.ty_ref.resolved_ty)
             ani_arg = f"ani_arg_{param.name}"
             cpp_arg = f"cpp_arg_{param.name}"
             ani_params.append(f"{type_ani_info.ani_type} {ani_arg}")
@@ -355,7 +355,7 @@ class ANICodeGenerator:
             cpp_args.append(cpp_arg)
         ani_params_str = ", ".join(ani_params)
         if return_ty_ref := func.return_ty_ref:
-            type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
+            type_ani_info = TypeAniInfo.get(self.am, return_ty_ref.resolved_ty)
             ani_return_ty_name = type_ani_info.ani_type
         else:
             ani_return_ty_name = "void"
@@ -366,12 +366,12 @@ class ANICodeGenerator:
             for param, ani_arg, cpp_arg in zip(
                 func.params, ani_args, cpp_args, strict=True
             ):
-                type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
+                type_ani_info = TypeAniInfo.get(self.am, param.ty_ref.resolved_ty)
                 type_ani_info.from_ani(pkg_ani_source_target, "env", ani_arg, cpp_arg)
             cpp_args_str = ", ".join(cpp_args)
             if return_ty_ref := func.return_ty_ref:
                 type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
-                type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
+                type_ani_info = TypeAniInfo.get(self.am, return_ty_ref.resolved_ty)
                 cpp_return_ty_name = type_cpp_info.as_owner
                 cpp_res = "cpp_result"
                 ani_res = "ani_result"
@@ -398,8 +398,8 @@ class ANICodeGenerator:
     ):
         method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
         iface_cpp_info = IfaceCppInfo.get(self.am, iface)
-        iface_abi_info = IfaceABIInfo.get(self.am, iface)
-        iface_ani_info = IfaceANIInfo.get(self.am, iface)
+        iface_abi_info = IfaceAbiInfo.get(self.am, iface)
+        iface_ani_info = IfaceAniInfo.get(self.am, iface)
         ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
         ani_params = []
         ani_params.append("[[maybe_unused]] ani_env *env")
@@ -407,7 +407,7 @@ class ANICodeGenerator:
         ani_args = []
         cpp_args = []
         for param in method.params:
-            type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
+            type_ani_info = TypeAniInfo.get(self.am, param.ty_ref.resolved_ty)
             ani_arg = f"ani_arg_{param.name}"
             cpp_arg = f"cpp_arg_{param.name}"
             ani_params.append(f"{type_ani_info.ani_type} {ani_arg}")
@@ -415,7 +415,7 @@ class ANICodeGenerator:
             cpp_args.append(cpp_arg)
         ani_params_str = ", ".join(ani_params)
         if return_ty_ref := method.return_ty_ref:
-            type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
+            type_ani_info = TypeAniInfo.get(self.am, return_ty_ref.resolved_ty)
             ani_return_ty_name = type_ani_info.ani_type
         else:
             ani_return_ty_name = "void"
@@ -435,12 +435,12 @@ class ANICodeGenerator:
             for param, ani_arg, cpp_arg in zip(
                 method.params, ani_args, cpp_args, strict=True
             ):
-                type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
+                type_ani_info = TypeAniInfo.get(self.am, param.ty_ref.resolved_ty)
                 type_ani_info.from_ani(pkg_ani_source_target, "env", ani_arg, cpp_arg)
             cpp_args_str = ", ".join(cpp_args)
             if return_ty_ref := method.return_ty_ref:
                 type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
-                type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
+                type_ani_info = TypeAniInfo.get(self.am, return_ty_ref.resolved_ty)
                 cpp_return_ty_name = type_cpp_info.as_owner
                 cpp_res = "cpp_result"
                 ani_res = "ani_result"
@@ -509,9 +509,9 @@ class ANICodeGenerator:
         self,
         iface: IfaceDecl,
     ):
-        iface_abi_info = IfaceABIInfo.get(self.am, iface)
+        iface_abi_info = IfaceAbiInfo.get(self.am, iface)
         iface_cpp_info = IfaceCppInfo.get(self.am, iface)
-        iface_ani_info = IfaceANIInfo.get(self.am, iface)
+        iface_ani_info = IfaceAniInfo.get(self.am, iface)
         self.gen_iface_conv_decl_file(
             iface,
             iface_abi_info,
@@ -528,9 +528,9 @@ class ANICodeGenerator:
     def gen_iface_conv_decl_file(
         self,
         iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
+        iface_abi_info: IfaceAbiInfo,
         iface_cpp_info: IfaceCppInfo,
-        iface_ani_info: IfaceANIInfo,
+        iface_ani_info: IfaceAniInfo,
     ):
         with CHeaderWriter(
             self.om,
@@ -557,9 +557,9 @@ class ANICodeGenerator:
     def gen_iface_conv_impl_file(
         self,
         iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
+        iface_abi_info: IfaceAbiInfo,
         iface_cpp_info: IfaceCppInfo,
-        iface_ani_info: IfaceANIInfo,
+        iface_ani_info: IfaceAniInfo,
     ):
         with CHeaderWriter(
             self.om,
@@ -586,9 +586,9 @@ class ANICodeGenerator:
     def gen_iface_from_ani_func(
         self,
         iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
+        iface_abi_info: IfaceAbiInfo,
         iface_cpp_info: IfaceCppInfo,
-        iface_ani_info: IfaceANIInfo,
+        iface_ani_info: IfaceAniInfo,
         iface_ani_impl_target: CHeaderWriter,
     ):
         with iface_ani_impl_target.indented(
@@ -625,11 +625,11 @@ class ANICodeGenerator:
         self,
         iface: IfaceDecl,
         method: IfaceMethodDecl,
-        iface_ani_info: IfaceANIInfo,
+        iface_ani_info: IfaceAniInfo,
         iface_ani_impl_target: CHeaderWriter,
     ):
         method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
-        method_ani_info = IfaceMethodANIInfo.get(self.am, method)
+        method_ani_info = IfaceMethodAniInfo.get(self.am, method)
         inner_cpp_params = []
         inner_cpp_args = []
         inner_ani_args = []
@@ -660,7 +660,7 @@ class ANICodeGenerator:
                 inner_ani_args,
                 strict=True,
             ):
-                type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
+                type_ani_info = TypeAniInfo.get(self.am, param.ty_ref.resolved_ty)
                 type_ani_info.into_ani(
                     iface_ani_impl_target,
                     "env",
@@ -673,7 +673,7 @@ class ANICodeGenerator:
             if return_ty_ref := method.return_ty_ref:
                 inner_ani_res = "ani_result"
                 inner_cpp_res = "cpp_result"
-                type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
+                type_ani_info = TypeAniInfo.get(self.am, return_ty_ref.resolved_ty)
                 iface_ani_impl_target.writelns(
                     f"{type_ani_info.ani_type} {inner_ani_res} = {{}};",
                     f'env->Object_CallMethod_{type_ani_info.ani_type.suffix}(static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "{iface_ani_info.type_desc}", "{method_ani_info.revert_name}", nullptr), reinterpret_cast<{type_ani_info.ani_type.base}*>(&{inner_ani_res}){inner_ani_args_trailing});',
@@ -695,9 +695,9 @@ class ANICodeGenerator:
     def gen_iface_into_ani_func(
         self,
         iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
+        iface_abi_info: IfaceAbiInfo,
         iface_cpp_info: IfaceCppInfo,
-        iface_ani_info: IfaceANIInfo,
+        iface_ani_info: IfaceAniInfo,
         iface_ani_impl_target: CHeaderWriter,
     ):
         with iface_ani_impl_target.indented(
@@ -718,7 +718,7 @@ class ANICodeGenerator:
         struct: StructDecl,
     ):
         struct_cpp_info = StructCppInfo.get(self.am, struct)
-        struct_ani_info = StructANIInfo.get(self.am, struct)
+        struct_ani_info = StructAniInfo.get(self.am, struct)
         self.gen_struct_conv_decl_file(
             struct,
             struct_cpp_info,
@@ -734,7 +734,7 @@ class ANICodeGenerator:
         self,
         struct: StructDecl,
         struct_cpp_info: StructCppInfo,
-        struct_ani_info: StructANIInfo,
+        struct_ani_info: StructAniInfo,
     ):
         with CHeaderWriter(
             self.om,
@@ -762,7 +762,7 @@ class ANICodeGenerator:
         self,
         struct: StructDecl,
         struct_cpp_info: StructCppInfo,
-        struct_ani_info: StructANIInfo,
+        struct_ani_info: StructAniInfo,
     ):
         with CHeaderWriter(
             self.om,
@@ -788,7 +788,7 @@ class ANICodeGenerator:
         self,
         struct: StructDecl,
         struct_cpp_info: StructCppInfo,
-        struct_ani_info: StructANIInfo,
+        struct_ani_info: StructAniInfo,
         struct_ani_impl_target: CHeaderWriter,
     ):
         with struct_ani_impl_target.indented(
@@ -798,7 +798,7 @@ class ANICodeGenerator:
             cpp_field_results = []
             for parts in struct_ani_info.sts_all_fields:
                 final = parts[-1]
-                type_ani_info = TypeANIInfo.get(self.am, final.ty_ref.resolved_ty)
+                type_ani_info = TypeAniInfo.get(self.am, final.ty_ref.resolved_ty)
                 ani_field_value = f"ani_field_{final.name}"
                 cpp_field_result = f"cpp_field_{final.name}"
                 struct_ani_impl_target.writelns(
@@ -831,7 +831,7 @@ class ANICodeGenerator:
         self,
         struct: StructDecl,
         struct_cpp_info: StructCppInfo,
-        struct_ani_info: StructANIInfo,
+        struct_ani_info: StructAniInfo,
         struct_ani_impl_target: CHeaderWriter,
     ):
         ani_field_results = []
@@ -842,7 +842,7 @@ class ANICodeGenerator:
             for parts in struct_ani_info.sts_all_fields:
                 final = parts[-1]
                 ani_field_result = f"ani_field_{final.name}"
-                type_ani_info = TypeANIInfo.get(self.am, final.ty_ref.resolved_ty)
+                type_ani_info = TypeAniInfo.get(self.am, final.ty_ref.resolved_ty)
                 type_ani_info.into_ani(
                     struct_ani_impl_target,
                     "env",
@@ -864,7 +864,7 @@ class ANICodeGenerator:
         union: UnionDecl,
     ):
         union_cpp_info = UnionCppInfo.get(self.am, union)
-        union_ani_info = UnionANIInfo.get(self.am, union)
+        union_ani_info = UnionAniInfo.get(self.am, union)
         self.gen_union_conv_decl_file(
             union,
             union_cpp_info,
@@ -880,7 +880,7 @@ class ANICodeGenerator:
         self,
         union: UnionDecl,
         union_cpp_info: UnionCppInfo,
-        union_ani_info: UnionANIInfo,
+        union_ani_info: UnionAniInfo,
     ):
         with CHeaderWriter(
             self.om,
@@ -908,7 +908,7 @@ class ANICodeGenerator:
         self,
         union: UnionDecl,
         union_cpp_info: UnionCppInfo,
-        union_ani_info: UnionANIInfo,
+        union_ani_info: UnionAniInfo,
     ):
         with CHeaderWriter(
             self.om,
@@ -934,7 +934,7 @@ class ANICodeGenerator:
         self,
         union: UnionDecl,
         union_cpp_info: UnionCppInfo,
-        union_ani_info: UnionANIInfo,
+        union_ani_info: UnionAniInfo,
         union_ani_impl_target: CHeaderWriter,
     ):
         with union_ani_impl_target.indented(
@@ -953,7 +953,7 @@ class ANICodeGenerator:
                 full_name = "_".join(part.name for part in parts)
                 is_field = f"ani_is_{full_name}"
                 if (final_ty_ref := final.ty_ref) is not None:
-                    type_ani_info = TypeANIInfo.get(self.am, final_ty_ref.resolved_ty)
+                    type_ani_info = TypeAniInfo.get(self.am, final_ty_ref.resolved_ty)
                     if type_ani_info.type_desc is None:
                         continue
                     union_ani_impl_target.writelns(
@@ -1006,7 +1006,7 @@ class ANICodeGenerator:
         self,
         union: UnionDecl,
         union_cpp_info: UnionCppInfo,
-        union_ani_info: UnionANIInfo,
+        union_ani_info: UnionAniInfo,
         union_ani_impl_target: CHeaderWriter,
     ):
         with union_ani_impl_target.indented(
@@ -1029,7 +1029,7 @@ class ANICodeGenerator:
                         if (field_ty_ref := field.ty_ref) is not None:
                             ani_result_spec = f"ani_field_{field.name}"
                             field_ty = field_ty_ref.resolved_ty
-                            type_ani_info = TypeANIInfo.get(self.am, field_ty)
+                            type_ani_info = TypeAniInfo.get(self.am, field_ty)
                             type_ani_info.into_ani_boxed(
                                 union_ani_impl_target,
                                 "env",

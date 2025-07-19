@@ -4,18 +4,18 @@ from json import dumps
 from typing import ClassVar
 
 from taihe.codegen.abi.analyses import (
-    IfaceABIInfo,
+    IfaceAbiInfo,
 )
 from taihe.codegen.ani.analyses import (
-    EnumANIInfo,
-    GlobFuncANIInfo,
-    IfaceANIInfo,
-    IfaceMethodANIInfo,
-    Namespace,
-    PackageGroupANIInfo,
-    StructANIInfo,
-    TypeANIInfo,
-    UnionANIInfo,
+    EnumAniInfo,
+    GlobFuncAniInfo,
+    IfaceAniInfo,
+    IfaceMethodAniInfo,
+    PackageGroupAniInfo,
+    StructAniInfo,
+    StsNamespace,
+    TypeAniInfo,
+    UnionAniInfo,
 )
 from taihe.codegen.ani.attributes import (
     ConstAttr,
@@ -135,17 +135,17 @@ class OnOffRegister:
         funcs.setdefault(tag, (orig, params_ty, return_ty))
 
 
-class STSCodeGenerator:
+class StsCodeGenerator:
     def __init__(self, om: OutputManager, am: AnalysisManager):
         self.om = om
         self.am = am
 
     def generate(self, pg: PackageGroup):
-        pg_ani_info = PackageGroupANIInfo.get(self.am, pg)
+        pg_ani_info = PackageGroupAniInfo.get(self.am, pg)
         for module, ns in pg_ani_info.module_dict.items():
             self.gen_module_file(module, ns)
 
-    def gen_module_file(self, module: str, ns: Namespace):
+    def gen_module_file(self, module: str, ns: StsNamespace):
         with StsWriter(
             self.om,
             f"{module}.ets",
@@ -154,7 +154,7 @@ class STSCodeGenerator:
             self.gen_namespace(ns, target)
             self.gen_utils(target)
 
-    def gen_namespace(self, ns: Namespace, target: StsWriter):
+    def gen_namespace(self, ns: StsNamespace, target: StsWriter):
         for head in ns.injected_heads:
             target.write_block(head)
         for code in ns.injected_codes:
@@ -175,13 +175,13 @@ class STSCodeGenerator:
 
     def gen_package(self, pkg: PackageDecl, target: StsWriter):
         for func in pkg.functions:
-            func_ani_info = GlobFuncANIInfo.get(self.am, func)
+            func_ani_info = GlobFuncAniInfo.get(self.am, func)
             self.gen_native_func(func, func_ani_info, target)
         ctors_map: dict[str, list[GlobFuncDecl]] = {}
         statics_map: dict[str, list[GlobFuncDecl]] = {}
         glob_funcs: list[GlobFuncDecl] = []
         for func in pkg.functions:
-            func_ani_info = GlobFuncANIInfo.get(self.am, func)
+            func_ani_info = GlobFuncAniInfo.get(self.am, func)
             if class_name := func_ani_info.static_scope:
                 statics_map.setdefault(class_name, []).append(func)
             elif class_name := func_ani_info.ctor_scope:
@@ -192,7 +192,7 @@ class STSCodeGenerator:
         func_on_off_register = OnOffRegister()
         func_kind = GlobalKind()
         for func in glob_funcs:
-            func_ani_info = GlobFuncANIInfo.get(self.am, func)
+            func_ani_info = GlobFuncAniInfo.get(self.am, func)
             self.gen_any_func(
                 func,
                 func_ani_info,
@@ -207,7 +207,7 @@ class STSCodeGenerator:
         for name, info in func_on_off_register.on_off.items():
             self.gen_full_on_off_func(name, info, target, func_kind, "export ")
         for func in glob_funcs:
-            func_ani_info = GlobFuncANIInfo.get(self.am, func)
+            func_ani_info = GlobFuncAniInfo.get(self.am, func)
             self.gen_revert_func(func, func_ani_info, target, func_kind)
         for enum in pkg.enums:
             self.gen_enum(enum, target)
@@ -228,13 +228,13 @@ class STSCodeGenerator:
         target: StsWriter,
     ):
         if ConstAttr.get(enum) is not None:
-            type_ani_info = TypeANIInfo.get(self.am, enum.ty_ref.resolved_ty)
+            type_ani_info = TypeAniInfo.get(self.am, enum.ty_ref.resolved_ty)
             for item in enum.items:
                 target.writelns(
                     f"export const {item.name}: {type_ani_info.sts_type_in(target)} = {dumps(item.value)};",
                 )
         else:
-            enum_ani_info = EnumANIInfo.get(self.am, enum)
+            enum_ani_info = EnumAniInfo.get(self.am, enum)
             sts_decl = f"enum {enum_ani_info.sts_type_name}"
             if enum_ani_info.is_default:
                 sts_decl = f"export default {sts_decl}"
@@ -254,11 +254,11 @@ class STSCodeGenerator:
         union: UnionDecl,
         target: StsWriter,
     ):
-        union_ani_info = UnionANIInfo.get(self.am, union)
+        union_ani_info = UnionAniInfo.get(self.am, union)
         sts_types = []
         for field in union.fields:
             if (field_ty_ref := field.ty_ref) is not None:
-                ty_ani_info = TypeANIInfo.get(self.am, field_ty_ref.resolved_ty)
+                ty_ani_info = TypeAniInfo.get(self.am, field_ty_ref.resolved_ty)
                 sts_types.append(ty_ani_info.sts_type_in(target))
             elif NullAttr.get(field) is not None:
                 sts_types.append("null")
@@ -279,7 +279,7 @@ class STSCodeGenerator:
         struct: StructDecl,
         target: StsWriter,
     ):
-        struct_ani_info = StructANIInfo.get(self.am, struct)
+        struct_ani_info = StructAniInfo.get(self.am, struct)
         if struct_ani_info.is_class():
             # no interface
             return
@@ -288,7 +288,7 @@ class STSCodeGenerator:
             parents = []
             for parent in struct_ani_info.sts_iface_parents:
                 parent_ty = parent.ty_ref.resolved_ty
-                parent_ani_info = TypeANIInfo.get(self.am, parent_ty)
+                parent_ani_info = TypeAniInfo.get(self.am, parent_ty)
                 parents.append(parent_ani_info.sts_type_in(target))
             extends_str = ", ".join(parents) if parents else ""
             sts_decl = f"{sts_decl} extends {extends_str}"
@@ -306,7 +306,7 @@ class STSCodeGenerator:
             for field in struct_ani_info.sts_fields:
                 readonly = "readonly " if ReadOnlyAttr.get(field) is not None else ""
                 opt = "?" if OptionalAttr.get(field) else ""
-                ty_ani_info = TypeANIInfo.get(self.am, field.ty_ref.resolved_ty)
+                ty_ani_info = TypeAniInfo.get(self.am, field.ty_ref.resolved_ty)
                 target.writelns(
                     f"{readonly}{field.name}{opt}: {ty_ani_info.sts_type_in(target)};",
                 )
@@ -316,14 +316,14 @@ class STSCodeGenerator:
         struct: StructDecl,
         target: StsWriter,
     ):
-        struct_ani_info = StructANIInfo.get(self.am, struct)
+        struct_ani_info = StructAniInfo.get(self.am, struct)
         sts_decl = f"class {struct_ani_info.sts_impl_name}"
         if struct_ani_info.is_class():
             if struct_ani_info.sts_iface_parents:
                 parents = []
                 for parent in struct_ani_info.sts_iface_parents:
                     parent_ty = parent.ty_ref.resolved_ty
-                    parent_ani_info = TypeANIInfo.get(self.am, parent_ty)
+                    parent_ani_info = TypeAniInfo.get(self.am, parent_ty)
                     parents.append(parent_ani_info.sts_type_in(target))
                 implements_str = ", ".join(parents) if parents else ""
                 sts_decl = f"{sts_decl} implements {implements_str}"
@@ -345,7 +345,7 @@ class STSCodeGenerator:
                 final = parts[-1]
                 readonly = "readonly " if ReadOnlyAttr.get(final) is not None else ""
                 opt = "?" if OptionalAttr.get(final) else ""
-                ty_ani_info = TypeANIInfo.get(self.am, final.ty_ref.resolved_ty)
+                ty_ani_info = TypeAniInfo.get(self.am, final.ty_ref.resolved_ty)
                 target.writelns(
                     f"{readonly}{final.name}{opt}: {ty_ani_info.sts_type_in(target)};",
                 )
@@ -357,7 +357,7 @@ class STSCodeGenerator:
                 for parts in struct_ani_info.sts_all_fields:
                     final = parts[-1]
                     opt = "?" if OptionalAttr.get(final) else ""
-                    ty_ani_info = TypeANIInfo.get(self.am, final.ty_ref.resolved_ty)
+                    ty_ani_info = TypeAniInfo.get(self.am, final.ty_ref.resolved_ty)
                     target.writelns(
                         f"{final.name}{opt}: {ty_ani_info.sts_type_in(target)},",
                     )
@@ -376,7 +376,7 @@ class STSCodeGenerator:
         iface: IfaceDecl,
         target: StsWriter,
     ):
-        iface_ani_info = IfaceANIInfo.get(self.am, iface)
+        iface_ani_info = IfaceAniInfo.get(self.am, iface)
         if iface_ani_info.is_class():
             # no interface
             return
@@ -385,7 +385,7 @@ class STSCodeGenerator:
             parents = []
             for parent in iface_ani_info.sts_iface_parents:
                 parent_ty = parent.ty_ref.resolved_ty
-                parent_ani_info = TypeANIInfo.get(self.am, parent_ty)
+                parent_ani_info = TypeAniInfo.get(self.am, parent_ty)
                 parents.append(parent_ani_info.sts_type_in(target))
             extends_str = ", ".join(parents) if parents else ""
             sts_decl = f"{sts_decl} extends {extends_str}"
@@ -405,7 +405,7 @@ class STSCodeGenerator:
             meth_on_off_register = OnOffRegister()
             meth_kind = InterfaceKind()
             for method in iface.methods:
-                method_ani_info = IfaceMethodANIInfo.get(self.am, method)
+                method_ani_info = IfaceMethodAniInfo.get(self.am, method)
                 self.gen_any_func_decl(
                     method,
                     method_ani_info,
@@ -420,7 +420,7 @@ class STSCodeGenerator:
             for name, info in meth_on_off_register.on_off.items():
                 self.gen_half_on_off_func(name, info, target, meth_kind, "")
             for method in iface.methods:
-                method_ani_info = IfaceMethodANIInfo.get(self.am, method)
+                method_ani_info = IfaceMethodAniInfo.get(self.am, method)
                 self.gen_revert_func(method, method_ani_info, target, meth_kind)
 
     def gen_iface_class(
@@ -430,14 +430,14 @@ class STSCodeGenerator:
         statics_map: dict[str, list[GlobFuncDecl]],
         ctors_map: dict[str, list[GlobFuncDecl]],
     ):
-        iface_ani_info = IfaceANIInfo.get(self.am, iface)
+        iface_ani_info = IfaceAniInfo.get(self.am, iface)
         sts_decl = f"class {iface_ani_info.sts_impl_name}"
         if iface_ani_info.is_class():
             if iface_ani_info.sts_iface_parents:
                 parents = []
                 for parent in iface_ani_info.sts_iface_parents:
                     parent_ty = parent.ty_ref.resolved_ty
-                    parent_ani_info = TypeANIInfo.get(self.am, parent_ty)
+                    parent_ani_info = TypeAniInfo.get(self.am, parent_ty)
                     parents.append(parent_ani_info.sts_type_in(target))
                 implements_str = ", ".join(parents) if parents else ""
                 sts_decl = f"{sts_decl} implements {implements_str}"
@@ -497,17 +497,17 @@ class STSCodeGenerator:
                     f"this._taihe_initialize(other._taihe_vtblPtr, other._taihe_dataPtr);",
                     f"other._taihe_unregister();",
                 )
-            iface_abi_info = IfaceABIInfo.get(self.am, iface)
+            iface_abi_info = IfaceAbiInfo.get(self.am, iface)
             for ancestor in iface_abi_info.ancestor_dict:
                 for method in ancestor.methods:
-                    method_ani_info = IfaceMethodANIInfo.get(self.am, method)
+                    method_ani_info = IfaceMethodAniInfo.get(self.am, method)
                     self.gen_native_func(method, method_ani_info, target)
             # ctors
             ctor_overload_register = OverloadRegister()
             ctor_on_off_register = OnOffRegister()
             ctor_kind = CtorKind(iface_ani_info.sts_impl_name)
             for ctor in ctors_map.get(iface.name, []):
-                ctor_ani_info = GlobFuncANIInfo.get(self.am, ctor)
+                ctor_ani_info = GlobFuncAniInfo.get(self.am, ctor)
                 self.gen_any_ctor(
                     ctor,
                     ctor_ani_info,
@@ -526,7 +526,7 @@ class STSCodeGenerator:
             func_on_off_register = OnOffRegister()
             func_kind = StaticKind(iface_ani_info.sts_impl_name)
             for func in statics_map.get(iface.name, []):
-                func_ani_info = GlobFuncANIInfo.get(self.am, func)
+                func_ani_info = GlobFuncAniInfo.get(self.am, func)
                 self.gen_any_func(
                     func,
                     func_ani_info,
@@ -546,7 +546,7 @@ class STSCodeGenerator:
             meth_kind = InterfaceKind()
             for ancestor in iface_abi_info.ancestor_dict:
                 for method in ancestor.methods:
-                    method_ani_info = IfaceMethodANIInfo.get(self.am, method)
+                    method_ani_info = IfaceMethodAniInfo.get(self.am, method)
                     self.gen_any_func(
                         method,
                         method_ani_info,
@@ -561,24 +561,24 @@ class STSCodeGenerator:
             for name, info in meth_on_off_register.on_off.items():
                 self.gen_half_on_off_func(name, info, target, meth_kind, "")
             for method in iface.methods:
-                method_ani_info = IfaceMethodANIInfo.get(self.am, method)
+                method_ani_info = IfaceMethodAniInfo.get(self.am, method)
                 self.gen_revert_func(method, method_ani_info, target, meth_kind)
 
     def gen_native_func(
         self,
         func: GlobFuncDecl | IfaceMethodDecl,
-        func_ani_info: GlobFuncANIInfo | IfaceMethodANIInfo,
+        func_ani_info: GlobFuncAniInfo | IfaceMethodAniInfo,
         target: StsWriter,
     ):
         sts_native_params = []
         for param in func.params:
-            type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
+            type_ani_info = TypeAniInfo.get(self.am, param.ty_ref.resolved_ty)
             sts_native_params.append(
                 f"{param.name}: {type_ani_info.sts_type_in(target)}"
             )
         sts_native_params_str = ", ".join(sts_native_params)
         if return_ty_ref := func.return_ty_ref:
-            type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
+            type_ani_info = TypeAniInfo.get(self.am, return_ty_ref.resolved_ty)
             sts_return_ty = type_ani_info.sts_type_in(target)
         else:
             sts_return_ty = "void"
@@ -589,7 +589,7 @@ class STSCodeGenerator:
     def gen_any_func_decl(
         self,
         func: GlobFuncDecl | IfaceMethodDecl,
-        func_ani_info: GlobFuncANIInfo | IfaceMethodANIInfo,
+        func_ani_info: GlobFuncAniInfo | IfaceMethodAniInfo,
         target: StsWriter,
         func_kind: FuncKind,
         decl_prefix: str,
@@ -602,7 +602,7 @@ class STSCodeGenerator:
         sts_args = []
         for sts_param in func_ani_info.sts_params:
             opt = "?" if OptionalAttr.get(sts_param) else ""
-            type_ani_info = TypeANIInfo.get(self.am, sts_param.ty_ref.resolved_ty)
+            type_ani_info = TypeAniInfo.get(self.am, sts_param.ty_ref.resolved_ty)
             sts_params_sig.append(type_ani_info.type_sig)
             sts_params_ty.append(type_ani_info.sts_type_in(target))
             sts_params.append(
@@ -610,7 +610,7 @@ class STSCodeGenerator:
             )
             sts_args.append(sts_param.name)
         if return_ty_ref := func.return_ty_ref:
-            type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
+            type_ani_info = TypeAniInfo.get(self.am, return_ty_ref.resolved_ty)
             sts_return_ty = type_ani_info.sts_type_in(target)
         else:
             sts_return_ty = "void"
@@ -683,7 +683,7 @@ class STSCodeGenerator:
     def gen_any_func(
         self,
         func: GlobFuncDecl | IfaceMethodDecl,
-        func_ani_info: GlobFuncANIInfo | IfaceMethodANIInfo,
+        func_ani_info: GlobFuncAniInfo | IfaceMethodAniInfo,
         target: StsWriter,
         func_kind: FuncKind,
         mode_prefix: str,
@@ -696,7 +696,7 @@ class STSCodeGenerator:
         sts_args = []
         for sts_param in func_ani_info.sts_params:
             opt = "?" if OptionalAttr.get(sts_param) else ""
-            type_ani_info = TypeANIInfo.get(self.am, sts_param.ty_ref.resolved_ty)
+            type_ani_info = TypeAniInfo.get(self.am, sts_param.ty_ref.resolved_ty)
             sts_params_sig.append(type_ani_info.type_sig)
             sts_params_ty.append(type_ani_info.sts_type_in(target))
             sts_params.append(
@@ -707,7 +707,7 @@ class STSCodeGenerator:
         sts_native_args_str = ", ".join(sts_native_args)
         sts_native_call = f"{func_ani_info.call_native(func_ani_info.native_name)}({sts_native_args_str})"
         if return_ty_ref := func.return_ty_ref:
-            type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
+            type_ani_info = TypeAniInfo.get(self.am, return_ty_ref.resolved_ty)
             sts_return_ty = type_ani_info.sts_type_in(target)
             sts_resolved_ty = type_ani_info.sts_type_in(target)
         else:
@@ -790,7 +790,7 @@ class STSCodeGenerator:
     def gen_any_ctor(
         self,
         ctor: GlobFuncDecl,
-        ctor_ani_info: GlobFuncANIInfo,
+        ctor_ani_info: GlobFuncAniInfo,
         target: StsWriter,
         ctor_func: CtorKind,
         mode_prefix: str,
@@ -803,7 +803,7 @@ class STSCodeGenerator:
         sts_args = []
         for sts_param in ctor_ani_info.sts_params:
             opt = "?" if OptionalAttr.get(sts_param) else ""
-            type_ani_info = TypeANIInfo.get(self.am, sts_param.ty_ref.resolved_ty)
+            type_ani_info = TypeAniInfo.get(self.am, sts_param.ty_ref.resolved_ty)
             sts_params_sig.append(type_ani_info.type_sig)
             sts_params_ty.append(type_ani_info.sts_type_in(target))
             sts_params.append(
@@ -1457,21 +1457,21 @@ class STSCodeGenerator:
     def gen_revert_func(
         self,
         func: GlobFuncDecl | IfaceMethodDecl,
-        func_ani_info: GlobFuncANIInfo | IfaceMethodANIInfo,
+        func_ani_info: GlobFuncAniInfo | IfaceMethodAniInfo,
         target: StsWriter,
         func_kind: FuncKind,
     ):
         sts_revert_args = []
         sts_revert_params = []
         for param in func.params:
-            type_ani_info = TypeANIInfo.get(self.am, param.ty_ref.resolved_ty)
+            type_ani_info = TypeAniInfo.get(self.am, param.ty_ref.resolved_ty)
             sts_revert_args.append(param.name)
             sts_revert_params.append(
                 f"{param.name}: {type_ani_info.sts_type_in(target)}"
             )
         sts_revert_params_str = ", ".join(sts_revert_params)
         if return_ty_ref := func.return_ty_ref:
-            type_ani_info = TypeANIInfo.get(self.am, return_ty_ref.resolved_ty)
+            type_ani_info = TypeAniInfo.get(self.am, return_ty_ref.resolved_ty)
             sts_return_ty = type_ani_info.sts_type_in(target)
             # sts_resolved_ty = type_ani_info.sts_type_in(target)
         else:

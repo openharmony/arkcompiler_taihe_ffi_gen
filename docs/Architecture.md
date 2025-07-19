@@ -244,7 +244,7 @@ Taihe 声明具有“必要”的性质，不能引入冗余的信息。
 举个例子，假如我们要给 `function foo(bar: i32)` 生成 C 和 C++ 侧的投影，会发现需要使用符号名称（即 "mangled name"）等 Taihe ABI 信息。
 这些信息不光要在 C 中使用，也需要在 C++ 中使用；不光要在 API 作者侧使用，也需要在 API 消费者侧使用。
 
-如果我们将函数的 Taihe ABI 信息都存储在 `GlobFuncABIInfo` 的类里面，就可以写：
+如果我们将函数的 Taihe ABI 信息都存储在 `GlobFuncAbiInfo` 的类里面，就可以写：
 
 ```python
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
@@ -253,12 +253,12 @@ from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
 am = AnalysisManager()
 
 # 分析提供方：定义中间结果的数据结构
-class GlobFuncABIInfo(AbstractAnalysis[GlobFuncDecl]):
+class GlobFuncAbiInfo(AbstractAnalysis[GlobFuncDecl]):
     def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
         self.mangled_name = encode(...)  # 给出中间分析结果的计算方法
 
 # 分析消费方：从分析管理器中拉取数据
-func_abi_info = GlobFuncABIInfo.get(am, func)
+func_abi_info = GlobFuncAbiInfo.get(am, func)
 ```
 
 从上述例子可以看出，Taihe 引入了分析（“Analyses”）的概念，将中间分析结果和 IR 解耦。其具体实现位于 `taihe.utils.analyses`，包含下列概念：

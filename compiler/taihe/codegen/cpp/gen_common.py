@@ -1,12 +1,12 @@
 from json import dumps
 
 from taihe.codegen.abi.analyses import (
-    EnumABIInfo,
-    IfaceABIInfo,
-    IfaceMethodABIInfo,
-    StructABIInfo,
-    TypeABIInfo,
-    UnionABIInfo,
+    EnumAbiInfo,
+    IfaceAbiInfo,
+    IfaceMethodAbiInfo,
+    StructAbiInfo,
+    TypeAbiInfo,
+    UnionAbiInfo,
 )
 from taihe.codegen.abi.writer import CHeaderWriter
 from taihe.codegen.cpp.analyses import (
@@ -51,27 +51,27 @@ class CppHeadersGenerator:
             FileKind.CPP_HEADER,
         ) as pkg_cpp_target:
             for enum in pkg.enums:
-                enum_abi_info = EnumABIInfo.get(self.am, enum)
+                enum_abi_info = EnumAbiInfo.get(self.am, enum)
                 enum_cpp_info = EnumCppInfo.get(self.am, enum)
                 self.gen_enum_decl_file(enum, enum_abi_info, enum_cpp_info)
                 self.gen_enum_defn_file(enum, enum_abi_info, enum_cpp_info)
                 pkg_cpp_target.add_include(enum_cpp_info.defn_header)
             for struct in pkg.structs:
-                struct_abi_info = StructABIInfo.get(self.am, struct)
+                struct_abi_info = StructAbiInfo.get(self.am, struct)
                 struct_cpp_info = StructCppInfo.get(self.am, struct)
                 self.gen_struct_decl_file(struct, struct_abi_info, struct_cpp_info)
                 self.gen_struct_defn_file(struct, struct_abi_info, struct_cpp_info)
                 self.gen_struct_impl_file(struct, struct_abi_info, struct_cpp_info)
                 pkg_cpp_target.add_include(struct_cpp_info.impl_header)
             for union in pkg.unions:
-                union_abi_info = UnionABIInfo.get(self.am, union)
+                union_abi_info = UnionAbiInfo.get(self.am, union)
                 union_cpp_info = UnionCppInfo.get(self.am, union)
                 self.gen_union_decl_file(union, union_abi_info, union_cpp_info)
                 self.gen_union_defn_file(union, union_abi_info, union_cpp_info)
                 self.gen_union_impl_file(union, union_abi_info, union_cpp_info)
                 pkg_cpp_target.add_include(union_cpp_info.impl_header)
             for iface in pkg.interfaces:
-                iface_abi_info = IfaceABIInfo.get(self.am, iface)
+                iface_abi_info = IfaceAbiInfo.get(self.am, iface)
                 iface_cpp_info = IfaceCppInfo.get(self.am, iface)
                 self.gen_iface_decl_file(iface, iface_abi_info, iface_cpp_info)
                 self.gen_iface_defn_file(iface, iface_abi_info, iface_cpp_info)
@@ -81,7 +81,7 @@ class CppHeadersGenerator:
     def gen_enum_decl_file(
         self,
         enum: EnumDecl,
-        enum_abi_info: EnumABIInfo,
+        enum_abi_info: EnumAbiInfo,
         enum_cpp_info: EnumCppInfo,
     ):
         with CHeaderWriter(
@@ -127,7 +127,7 @@ class CppHeadersGenerator:
     def gen_enum_defn_file(
         self,
         enum: EnumDecl,
-        enum_abi_info: EnumABIInfo,
+        enum_abi_info: EnumAbiInfo,
         enum_cpp_info: EnumCppInfo,
     ):
         with CHeaderWriter(
@@ -158,7 +158,7 @@ class CppHeadersGenerator:
     def gen_enum_defn(
         self,
         enum: EnumDecl,
-        enum_abi_info: EnumABIInfo,
+        enum_abi_info: EnumAbiInfo,
         enum_cpp_info: EnumCppInfo,
         enum_cpp_defn_target: CHeaderWriter,
     ):
@@ -213,7 +213,7 @@ class CppHeadersGenerator:
     def gen_enum_key_type(
         self,
         enum: EnumDecl,
-        enum_abi_info: EnumABIInfo,
+        enum_abi_info: EnumAbiInfo,
         enum_cpp_info: EnumCppInfo,
         enum_cpp_defn_target: CHeaderWriter,
     ):
@@ -229,7 +229,7 @@ class CppHeadersGenerator:
     def gen_enum_properties(
         self,
         enum: EnumDecl,
-        enum_abi_info: EnumABIInfo,
+        enum_abi_info: EnumAbiInfo,
         enum_cpp_info: EnumCppInfo,
         enum_cpp_defn_target: CHeaderWriter,
     ):
@@ -240,7 +240,7 @@ class CppHeadersGenerator:
     def gen_enum_basic_methods(
         self,
         enum: EnumDecl,
-        enum_abi_info: EnumABIInfo,
+        enum_abi_info: EnumAbiInfo,
         enum_cpp_info: EnumCppInfo,
         enum_cpp_defn_target: CHeaderWriter,
     ):
@@ -261,7 +261,7 @@ class CppHeadersGenerator:
     def gen_enum_key_utils(
         self,
         enum: EnumDecl,
-        enum_abi_info: EnumABIInfo,
+        enum_abi_info: EnumAbiInfo,
         enum_cpp_info: EnumCppInfo,
         enum_cpp_defn_target: CHeaderWriter,
     ):
@@ -289,7 +289,7 @@ class CppHeadersGenerator:
     def gen_enum_value_utils(
         self,
         enum: EnumDecl,
-        enum_abi_info: EnumABIInfo,
+        enum_abi_info: EnumAbiInfo,
         enum_cpp_info: EnumCppInfo,
         enum_cpp_defn_target: CHeaderWriter,
     ):
@@ -348,7 +348,7 @@ class CppHeadersGenerator:
     def gen_enum_same(
         self,
         enum: EnumDecl,
-        enum_abi_info: EnumABIInfo,
+        enum_abi_info: EnumAbiInfo,
         enum_cpp_info: EnumCppInfo,
         enum_cpp_defn_target: CHeaderWriter,
     ):
@@ -369,7 +369,7 @@ class CppHeadersGenerator:
     def gen_enum_hash(
         self,
         enum: EnumDecl,
-        enum_abi_info: EnumABIInfo,
+        enum_abi_info: EnumAbiInfo,
         enum_cpp_info: EnumCppInfo,
         enum_cpp_defn_target: CHeaderWriter,
     ):
@@ -388,7 +388,7 @@ class CppHeadersGenerator:
     def gen_union_decl_file(
         self,
         union: UnionDecl,
-        union_abi_info: UnionABIInfo,
+        union_abi_info: UnionAbiInfo,
         union_cpp_info: UnionCppInfo,
     ):
         with CHeaderWriter(
@@ -445,7 +445,7 @@ class CppHeadersGenerator:
     def gen_union_defn_file(
         self,
         union: UnionDecl,
-        union_abi_info: UnionABIInfo,
+        union_abi_info: UnionAbiInfo,
         union_cpp_info: UnionCppInfo,
     ):
         with CHeaderWriter(
@@ -482,7 +482,7 @@ class CppHeadersGenerator:
     def gen_union_defn(
         self,
         union: UnionDecl,
-        union_abi_info: UnionABIInfo,
+        union_abi_info: UnionAbiInfo,
         union_cpp_info: UnionCppInfo,
         union_cpp_defn_target: CHeaderWriter,
     ):
@@ -541,7 +541,7 @@ class CppHeadersGenerator:
     def gen_union_tag_type(
         self,
         union: UnionDecl,
-        union_abi_info: UnionABIInfo,
+        union_abi_info: UnionAbiInfo,
         union_cpp_info: UnionCppInfo,
         union_cpp_defn_target: CHeaderWriter,
     ):
@@ -557,7 +557,7 @@ class CppHeadersGenerator:
     def gen_union_storage_type(
         self,
         union: UnionDecl,
-        union_abi_info: UnionABIInfo,
+        union_abi_info: UnionAbiInfo,
         union_cpp_info: UnionCppInfo,
         union_cpp_defn_target: CHeaderWriter,
     ):
@@ -580,7 +580,7 @@ class CppHeadersGenerator:
     def gen_union_properties(
         self,
         union: UnionDecl,
-        union_abi_info: UnionABIInfo,
+        union_abi_info: UnionAbiInfo,
         union_cpp_info: UnionCppInfo,
         union_cpp_defn_target: CHeaderWriter,
     ):
@@ -592,7 +592,7 @@ class CppHeadersGenerator:
     def gen_union_basic_methods(
         self,
         union: UnionDecl,
-        union_abi_info: UnionABIInfo,
+        union_abi_info: UnionAbiInfo,
         union_cpp_info: UnionCppInfo,
         union_cpp_defn_target: CHeaderWriter,
     ):
@@ -716,7 +716,7 @@ class CppHeadersGenerator:
     def gen_union_utils(
         self,
         union: UnionDecl,
-        union_abi_info: UnionABIInfo,
+        union_abi_info: UnionAbiInfo,
         union_cpp_info: UnionCppInfo,
         union_cpp_defn_target: CHeaderWriter,
     ):
@@ -890,7 +890,7 @@ class CppHeadersGenerator:
     def gen_union_named_utils(
         self,
         union: UnionDecl,
-        union_abi_info: UnionABIInfo,
+        union_abi_info: UnionAbiInfo,
         union_cpp_info: UnionCppInfo,
         union_cpp_defn_target: CHeaderWriter,
     ):
@@ -1007,7 +1007,7 @@ class CppHeadersGenerator:
     def gen_union_same(
         self,
         union: UnionDecl,
-        union_abi_info: UnionABIInfo,
+        union_abi_info: UnionAbiInfo,
         union_cpp_info: UnionCppInfo,
         union_cpp_defn_target: CHeaderWriter,
     ):
@@ -1033,7 +1033,7 @@ class CppHeadersGenerator:
     def gen_union_hash(
         self,
         union: UnionDecl,
-        union_abi_info: UnionABIInfo,
+        union_abi_info: UnionAbiInfo,
         union_cpp_info: UnionCppInfo,
         union_cpp_defn_target: CHeaderWriter,
     ):
@@ -1067,7 +1067,7 @@ class CppHeadersGenerator:
     def gen_union_impl_file(
         self,
         union: UnionDecl,
-        union_abi_info: UnionABIInfo,
+        union_abi_info: UnionAbiInfo,
         union_cpp_info: UnionCppInfo,
     ):
         with CHeaderWriter(
@@ -1086,7 +1086,7 @@ class CppHeadersGenerator:
     def gen_struct_decl_file(
         self,
         struct: StructDecl,
-        struct_abi_info: StructABIInfo,
+        struct_abi_info: StructAbiInfo,
         struct_cpp_info: StructCppInfo,
     ):
         with CHeaderWriter(
@@ -1143,7 +1143,7 @@ class CppHeadersGenerator:
     def gen_struct_defn_file(
         self,
         struct: StructDecl,
-        struct_abi_info: StructABIInfo,
+        struct_abi_info: StructAbiInfo,
         struct_cpp_info: StructCppInfo,
     ):
         with CHeaderWriter(
@@ -1178,7 +1178,7 @@ class CppHeadersGenerator:
     def gen_struct_defn(
         self,
         struct: StructDecl,
-        struct_abi_info: StructABIInfo,
+        struct_abi_info: StructAbiInfo,
         struct_cpp_info: StructCppInfo,
         struct_cpp_defn_target: CHeaderWriter,
     ):
@@ -1200,7 +1200,7 @@ class CppHeadersGenerator:
     def gen_struct_same(
         self,
         struct: StructDecl,
-        struct_abi_info: StructABIInfo,
+        struct_abi_info: StructAbiInfo,
         struct_cpp_info: StructCppInfo,
         struct_cpp_defn_target: CHeaderWriter,
     ):
@@ -1223,7 +1223,7 @@ class CppHeadersGenerator:
     def gen_struct_hash(
         self,
         struct: StructDecl,
-        struct_abi_info: StructABIInfo,
+        struct_abi_info: StructAbiInfo,
         struct_cpp_info: StructCppInfo,
         struct_cpp_defn_target: CHeaderWriter,
     ):
@@ -1249,7 +1249,7 @@ class CppHeadersGenerator:
     def gen_struct_impl_file(
         self,
         struct: StructDecl,
-        struct_abi_info: StructABIInfo,
+        struct_abi_info: StructAbiInfo,
         struct_cpp_info: StructCppInfo,
     ):
         with CHeaderWriter(
@@ -1266,7 +1266,7 @@ class CppHeadersGenerator:
     def gen_iface_decl_file(
         self,
         iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
+        iface_abi_info: IfaceAbiInfo,
         iface_cpp_info: IfaceCppInfo,
     ):
         with CHeaderWriter(
@@ -1331,7 +1331,7 @@ class CppHeadersGenerator:
     def gen_iface_defn_file(
         self,
         iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
+        iface_abi_info: IfaceAbiInfo,
         iface_cpp_info: IfaceCppInfo,
     ):
         with CHeaderWriter(
@@ -1374,7 +1374,7 @@ class CppHeadersGenerator:
     def gen_iface_view_defn(
         self,
         iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
+        iface_abi_info: IfaceAbiInfo,
         iface_cpp_info: IfaceCppInfo,
         iface_cpp_defn_target: CHeaderWriter,
     ):
@@ -1454,7 +1454,7 @@ class CppHeadersGenerator:
     def gen_iface_view_dynamic_cast(
         self,
         iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
+        iface_abi_info: IfaceAbiInfo,
         iface_cpp_info: IfaceCppInfo,
         iface_cpp_defn_target: CHeaderWriter,
     ):
@@ -1484,7 +1484,7 @@ class CppHeadersGenerator:
     def gen_iface_view_static_cast(
         self,
         iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
+        iface_abi_info: IfaceAbiInfo,
         iface_cpp_info: IfaceCppInfo,
         iface_cpp_defn_target: CHeaderWriter,
     ):
@@ -1520,7 +1520,7 @@ class CppHeadersGenerator:
     def gen_iface_user_methods_decl(
         self,
         iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
+        iface_abi_info: IfaceAbiInfo,
         iface_cpp_info: IfaceCppInfo,
         iface_cpp_defn_target: CHeaderWriter,
     ):
@@ -1531,7 +1531,7 @@ class CppHeadersGenerator:
     def gen_iface_impl_methods_decl(
         self,
         iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
+        iface_abi_info: IfaceAbiInfo,
         iface_cpp_info: IfaceCppInfo,
         iface_cpp_defn_target: CHeaderWriter,
     ):
@@ -1543,7 +1543,7 @@ class CppHeadersGenerator:
     def gen_iface_ftbl_decl(
         self,
         iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
+        iface_abi_info: IfaceAbiInfo,
         iface_cpp_info: IfaceCppInfo,
         iface_cpp_defn_target: CHeaderWriter,
     ):
@@ -1555,7 +1555,7 @@ class CppHeadersGenerator:
     def gen_iface_vtbl_impl(
         self,
         iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
+        iface_abi_info: IfaceAbiInfo,
         iface_cpp_info: IfaceCppInfo,
         iface_cpp_defn_target: CHeaderWriter,
     ):
@@ -1575,7 +1575,7 @@ class CppHeadersGenerator:
     def gen_iface_idmap_impl(
         self,
         iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
+        iface_abi_info: IfaceAbiInfo,
         iface_cpp_info: IfaceCppInfo,
         iface_cpp_defn_target: CHeaderWriter,
     ):
@@ -1587,7 +1587,7 @@ class CppHeadersGenerator:
             f"}};",
         ):
             for ancestor, info in iface_abi_info.ancestor_dict.items():
-                ancestor_abi_info = IfaceABIInfo.get(self.am, ancestor)
+                ancestor_abi_info = IfaceAbiInfo.get(self.am, ancestor)
                 iface_cpp_defn_target.writelns(
                     f"{{&{ancestor_abi_info.iid}, &vtbl_impl<Impl>.{info.ftbl_ptr}}},",
                 )
@@ -1595,7 +1595,7 @@ class CppHeadersGenerator:
     def gen_iface_infos(
         self,
         iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
+        iface_abi_info: IfaceAbiInfo,
         iface_cpp_info: IfaceCppInfo,
         iface_cpp_defn_target: CHeaderWriter,
     ):
@@ -1609,7 +1609,7 @@ class CppHeadersGenerator:
     def gen_iface_utils(
         self,
         iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
+        iface_abi_info: IfaceAbiInfo,
         iface_cpp_info: IfaceCppInfo,
         iface_cpp_defn_target: CHeaderWriter,
     ):
@@ -1638,7 +1638,7 @@ class CppHeadersGenerator:
     def gen_iface_holder_defn(
         self,
         iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
+        iface_abi_info: IfaceAbiInfo,
         iface_cpp_info: IfaceCppInfo,
         iface_cpp_defn_target: CHeaderWriter,
     ):
@@ -1688,7 +1688,7 @@ class CppHeadersGenerator:
     def gen_iface_holder_dynamic_cast(
         self,
         iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
+        iface_abi_info: IfaceAbiInfo,
         iface_cpp_info: IfaceCppInfo,
         iface_cpp_defn_target: CHeaderWriter,
     ):
@@ -1725,7 +1725,7 @@ class CppHeadersGenerator:
     def gen_iface_holder_static_cast(
         self,
         iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
+        iface_abi_info: IfaceAbiInfo,
         iface_cpp_info: IfaceCppInfo,
         iface_cpp_defn_target: CHeaderWriter,
     ):
@@ -1797,7 +1797,7 @@ class CppHeadersGenerator:
     def gen_iface_same(
         self,
         iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
+        iface_abi_info: IfaceAbiInfo,
         iface_cpp_info: IfaceCppInfo,
         iface_cpp_defn_target: CHeaderWriter,
     ):
@@ -1817,7 +1817,7 @@ class CppHeadersGenerator:
     def gen_iface_hash(
         self,
         iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
+        iface_abi_info: IfaceAbiInfo,
         iface_cpp_info: IfaceCppInfo,
         iface_cpp_defn_target: CHeaderWriter,
     ):
@@ -1836,7 +1836,7 @@ class CppHeadersGenerator:
     def gen_iface_impl_file(
         self,
         iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
+        iface_abi_info: IfaceAbiInfo,
         iface_cpp_info: IfaceCppInfo,
     ):
         with CHeaderWriter(
@@ -1887,7 +1887,7 @@ class CppHeadersGenerator:
     def gen_iface_user_methods_impl(
         self,
         iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
+        iface_abi_info: IfaceAbiInfo,
         iface_cpp_info: IfaceCppInfo,
         iface_cpp_impl_target: CHeaderWriter,
     ):
@@ -1896,7 +1896,7 @@ class CppHeadersGenerator:
             f"}};",
         ):
             for method in iface.methods:
-                method_abi_info = IfaceMethodABIInfo.get(self.am, method)
+                method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
                 method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
                 params_cpp = []
                 thiz = f"*reinterpret_cast<{iface_abi_info.mangled_name} const*>(this)"
@@ -1926,7 +1926,7 @@ class CppHeadersGenerator:
     def gen_iface_impl_methods_impl(
         self,
         iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
+        iface_abi_info: IfaceAbiInfo,
         iface_cpp_info: IfaceCppInfo,
         iface_cpp_impl_target: CHeaderWriter,
     ):
@@ -1942,7 +1942,7 @@ class CppHeadersGenerator:
                 params_abi = [f"{iface_abi_info.as_param} tobj"]
                 args_from_abi = []
                 for param in method.params:
-                    type_abi_info = TypeABIInfo.get(self.am, param.ty_ref.resolved_ty)
+                    type_abi_info = TypeAbiInfo.get(self.am, param.ty_ref.resolved_ty)
                     type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
                     params_abi.append(f"{type_abi_info.as_param} {param.name}")
                     args_from_abi.append(type_cpp_info.pass_from_abi(param.name))
@@ -1950,7 +1950,7 @@ class CppHeadersGenerator:
                 args_from_abi_str = ", ".join(args_from_abi)
                 cpp_result = f"::taihe::cast_data_ptr<Impl>(tobj.data_ptr)->{method_cpp_info.impl_name}({args_from_abi_str})"
                 if return_ty_ref := method.return_ty_ref:
-                    type_abi_info = TypeABIInfo.get(self.am, return_ty_ref.resolved_ty)
+                    type_abi_info = TypeAbiInfo.get(self.am, return_ty_ref.resolved_ty)
                     type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
                     abi_return_ty_name = type_abi_info.as_owner
                     abi_result = type_cpp_info.return_into_abi(cpp_result)
@@ -1968,7 +1968,7 @@ class CppHeadersGenerator:
     def gen_iface_ftbl_impl(
         self,
         iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
+        iface_abi_info: IfaceAbiInfo,
         iface_cpp_info: IfaceCppInfo,
         iface_cpp_impl_target: CHeaderWriter,
     ):
