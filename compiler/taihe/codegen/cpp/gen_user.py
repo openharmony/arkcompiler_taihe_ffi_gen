@@ -35,25 +35,25 @@ class CppUserHeadersGenerator:
             self.om,
             f"include/{pkg_cpp_user_info.header}",
             FileKind.CPP_HEADER,
-        ) as target:
+        ) as pkg_cpp_target:
             # types
-            target.add_include(pkg_cpp_info.header)
+            pkg_cpp_target.add_include(pkg_cpp_info.header)
             # functions
-            target.add_include("taihe/common.hpp")
-            target.add_include(pkg_abi_info.header)
+            pkg_cpp_target.add_include("taihe/common.hpp")
+            pkg_cpp_target.add_include(pkg_abi_info.header)
             for func in pkg.functions:
                 for param in func.params:
                     type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
-                    target.add_include(*type_cpp_info.impl_headers)
+                    pkg_cpp_target.add_include(*type_cpp_info.impl_headers)
                 if return_ty_ref := func.return_ty_ref:
                     type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
-                    target.add_include(*type_cpp_info.impl_headers)
-                self.gen_func(func, target)
+                    pkg_cpp_target.add_include(*type_cpp_info.impl_headers)
+                self.gen_func(func, pkg_cpp_target)
 
     def gen_func(
         self,
         func: GlobFuncDecl,
-        target: CHeaderWriter,
+        pkg_cpp_target: CHeaderWriter,
     ):
         func_abi_info = GlobFuncAbiInfo.get(self.am, func)
         func_cpp_user_info = GlobFuncCppUserInfo.get(self.am, func)
@@ -73,15 +73,15 @@ class CppUserHeadersGenerator:
         else:
             cpp_return_ty_name = "void"
             cpp_result = abi_result
-        with target.indented(
+        with pkg_cpp_target.indented(
             f"namespace {func_cpp_user_info.namespace} {{",
             f"}}",
             indent="",
         ):
-            with target.indented(
+            with pkg_cpp_target.indented(
                 f"inline {cpp_return_ty_name} {func_cpp_user_info.call_name}({params_cpp_str}) {{",
                 f"}}",
             ):
-                target.writelns(
+                pkg_cpp_target.writelns(
                     f"return {cpp_result};",
                 )
