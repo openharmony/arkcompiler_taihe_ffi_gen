@@ -31,21 +31,21 @@ class CImplHeadersGenerator:
             self.om,
             f"include/{pkg_c_impl_info.header}",
             FileKind.C_HEADER,
-        ) as pkg_c_impl_target:
-            pkg_c_impl_target.add_include("taihe/common.h", pkg_abi_info.header)
+        ) as target:
+            target.add_include("taihe/common.h", pkg_abi_info.header)
             for func in pkg.functions:
                 for param in func.params:
                     type_abi_info = TypeAbiInfo.get(self.am, param.ty_ref.resolved_ty)
-                    pkg_c_impl_target.add_include(*type_abi_info.impl_headers)
+                    target.add_include(*type_abi_info.impl_headers)
                 if return_ty_ref := func.return_ty_ref:
                     type_abi_info = TypeAbiInfo.get(self.am, return_ty_ref.resolved_ty)
-                    pkg_c_impl_target.add_include(*type_abi_info.impl_headers)
-                self.gen_func(func, pkg_c_impl_target)
+                    target.add_include(*type_abi_info.impl_headers)
+                self.gen_func(func, target)
 
     def gen_func(
         self,
         func: GlobFuncDecl,
-        pkg_c_impl_target: CHeaderWriter,
+        target: CHeaderWriter,
     ):
         func_abi_info = GlobFuncAbiInfo.get(self.am, func)
         func_c_impl_info = GlobFuncCImplInfo.get(self.am, func)
@@ -63,7 +63,7 @@ class CImplHeadersGenerator:
             return_ty_name = type_abi_info.as_owner
         else:
             return_ty_name = "void"
-        pkg_c_impl_target.writelns(
+        target.writelns(
             f"#define {func_c_impl_info.macro}({func_impl}) \\",
             f"    {return_ty_name} {func_abi_info.mangled_name}({params_str}) {{ \\",
             f"        return {func_impl}({args_str}); \\",
@@ -86,15 +86,15 @@ class CImplSourcesGenerator:
             self.om,
             f"temp/{pkg_c_impl_info.source}",
             FileKind.TEMPLATE,
-        ) as pkg_c_impl_target:
-            pkg_c_impl_target.add_include(pkg_c_impl_info.header)
+        ) as target:
+            target.add_include(pkg_c_impl_info.header)
             for func in pkg.functions:
-                self.gen_func(func, pkg_c_impl_target)
+                self.gen_func(func, target)
 
     def gen_func(
         self,
         func: GlobFuncDecl,
-        pkg_c_impl_target: CSourceWriter,
+        target: CSourceWriter,
     ):
         func_c_impl_info = GlobFuncCImplInfo.get(self.am, func)
         func_c_impl_name = f"{func.name}_impl"
@@ -108,13 +108,13 @@ class CImplSourcesGenerator:
             return_ty_name = type_abi_info.as_owner
         else:
             return_ty_name = "void"
-        with pkg_c_impl_target.indented(
+        with target.indented(
             f"{return_ty_name} {func_c_impl_name}({params_str}) {{",
             f"}}",
         ):
-            pkg_c_impl_target.writelns(
+            target.writelns(
                 f"// TODO",
             )
-        pkg_c_impl_target.writelns(
+        target.writelns(
             f"{func_c_impl_info.macro}({func_c_impl_name});",
         )
