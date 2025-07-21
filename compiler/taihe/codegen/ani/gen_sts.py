@@ -1035,7 +1035,7 @@ class StsCodeGenerator:
     ):
         callback_arg = "callback"
         callback_param_sig = "C{std.core.Function2}"
-        callback_param_ty = f"AsyncCallback<{sts_return_ty}>"
+        callback_param_ty = f"_taihe_AsyncCallback<{sts_return_ty}>"
         callback_param = f"{callback_arg}: {callback_param_ty}"
         sts_params_with_cb_str = ", ".join([*sts_params, callback_param])
 
@@ -1249,7 +1249,7 @@ class StsCodeGenerator:
     ):
         callback_arg = "callback"
         callback_param_sig = "C{std.core.Function2}"
-        callback_param_ty = f"AsyncCallback<{sts_return_ty}>"
+        callback_param_ty = f"_taihe_AsyncCallback<{sts_return_ty}>"
         callback_param = f"{callback_arg}: {callback_param_ty}"
         sts_params_with_cb_str = ", ".join([*sts_params, callback_param])
 
@@ -1276,7 +1276,7 @@ class StsCodeGenerator:
                 f"}});",
             ):
                 target.writelns(
-                    f"callback(ret as BusinessError, undefined);",
+                    f"callback(ret as _taihe_BusinessError, undefined);",
                 )
 
         if overload is not None:
@@ -1592,7 +1592,7 @@ class StsCodeGenerator:
                     f"}});",
                 ):
                     with target.indented(
-                        f"let callback: AsyncCallback<{sts_return_ty}> = (err: BusinessError | null, res?: {sts_resolved_ty}): void => {{",
+                        f"let callback: _taihe_AsyncCallback<{sts_return_ty}> = (err: _taihe_BusinessError | null, res?: {sts_resolved_ty}): void => {{",
                         f"}}",
                     ):
                         with target.indented(
@@ -1622,9 +1622,9 @@ class StsCodeGenerator:
         self,
         target: StsWriter,
     ):
-        target.add_import_decl("@ohos.base", "BusinessError")
+        target.add_import_decl("@ohos.base", "BusinessError", "_taihe_BusinessError")
         target.writelns(
-            "type AsyncCallback<T, E = void> = (error: BusinessError<E> | null, data: T | undefined) => void;",
+            "type _taihe_AsyncCallback<T, E = void> = (error: _taihe_BusinessError<E> | null, data: T | undefined) => void;",
         )
 
         target.writelns(
