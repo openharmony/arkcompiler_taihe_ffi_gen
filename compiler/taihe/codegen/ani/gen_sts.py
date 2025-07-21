@@ -49,8 +49,11 @@ class FuncKind(ABC):
     @abstractmethod
     def call_from_local(self, name: str) -> str: ...
 
-    def call_from_revert(self, name: str) -> str:
-        return self.call_from_local(name)
+    @abstractmethod
+    def revert_base_params(self) -> list[str]: ...
+
+    @abstractmethod
+    def call_from_revert(self, name: str) -> str: ...
 
 
 @dataclass(frozen=True)
@@ -63,6 +66,9 @@ class CtorKind:
     def call_from_local(self, name: str) -> str:
         return f"this.{name}" if name else "this"
 
+    def revert_base_params(self) -> list[str]:
+        return []
+
     def call_from_revert(self, name: str) -> str:
         return f"new {self.class_name}.{name}" if name else f"new {self.class_name}"
 
@@ -74,8 +80,16 @@ class InterfaceKind(FuncKind):
     set_prefix = "set "
     overload_prefix = "overload "
 
+    type_name: str
+
     def call_from_local(self, name: str) -> str:
         return f"this.{name}"
+
+    def revert_base_params(self) -> list[str]:
+        return [f"self: {self.type_name}"]
+
+    def call_from_revert(self, name: str) -> str:
+        return f"self.{name}"
 
 
 @dataclass(frozen=True)
@@ -90,6 +104,12 @@ class StaticKind(FuncKind):
     def call_from_local(self, name) -> str:
         return f"{self.class_name}.{name}"
 
+    def revert_base_params(self) -> list[str]:
+        return []
+
+    def call_from_revert(self, name: str) -> str:
+        return f"{self.class_name}.{name}"
+
 
 @dataclass(frozen=True)
 class GlobalKind(FuncKind):
@@ -99,6 +119,12 @@ class GlobalKind(FuncKind):
     overload_prefix = "overload "
 
     def call_from_local(self, name: str) -> str:
+        return name
+
+    def revert_base_params(self) -> list[str]:
+        return []
+
+    def call_from_revert(self, name: str) -> str:
         return name
 
 
@@ -177,6 +203,7 @@ class StsCodeGenerator:
         for func in pkg.functions:
             func_ani_info = GlobFuncAniInfo.get(self.am, func)
             self.gen_native_func(func, func_ani_info, target)
+
         ctors_map: dict[str, list[GlobFuncDecl]] = {}
         statics_map: dict[str, list[GlobFuncDecl]] = {}
         glob_funcs: list[GlobFuncDecl] = []
@@ -188,6 +215,7 @@ class StsCodeGenerator:
                 ctors_map.setdefault(class_name, []).append(func)
             else:
                 glob_funcs.append(func)
+
         func_overload_register = OverloadRegister()
         func_on_off_register = OnOffRegister()
         func_kind = GlobalKind()
@@ -206,9 +234,7 @@ class StsCodeGenerator:
             self.gen_overload_func(name, info, target, func_kind, "export ")
         for name, info in func_on_off_register.on_off.items():
             self.gen_full_on_off_func(name, info, target, func_kind, "export ")
-        for func in glob_funcs:
-            func_ani_info = GlobFuncAniInfo.get(self.am, func)
-            self.gen_revert_func(func, func_ani_info, target, func_kind)
+
         for enum in pkg.enums:
             self.gen_enum(enum, target)
         for union in pkg.unions:
@@ -221,6 +247,24 @@ class StsCodeGenerator:
             self.gen_iface_interface(iface, target)
         for iface in pkg.interfaces:
             self.gen_iface_class(iface, target, statics_map, ctors_map)
+
+        for func in glob_funcs:
+            func_ani_info = GlobFuncAniInfo.get(self.am, func)
+            self.gen_revert_func(func, func_ani_info, target, func_kind)
+        for iface in pkg.interfaces:
+            iface_ani_info = IfaceAniInfo.get(self.am, iface)
+            ctor_kind = CtorKind(iface_ani_info.sts_impl_name)
+            for ctor in ctors_map.get(iface.name, []):
+                ctor_ani_info = GlobFuncAniInfo.get(self.am, ctor)
+                self.gen_revert_func(ctor, ctor_ani_info, target, ctor_kind)
+            func_kind = StaticKind(iface_ani_info.sts_impl_name)
+            for func in statics_map.get(iface.name, []):
+                func_ani_info = GlobFuncAniInfo.get(self.am, func)
+                self.gen_revert_func(func, func_ani_info, target, func_kind)
+            meth_kind = InterfaceKind(iface_ani_info.sts_type_name)
+            for method in iface.methods:
+                method_ani_info = IfaceMethodAniInfo.get(self.am, method)
+                self.gen_revert_func(method, method_ani_info, target, meth_kind)
 
     def gen_enum(
         self,
@@ -403,7 +447,7 @@ class StsCodeGenerator:
             # methods
             meth_overload_register = OverloadRegister()
             meth_on_off_register = OnOffRegister()
-            meth_kind = InterfaceKind()
+            meth_kind = InterfaceKind(iface_ani_info.sts_type_name)
             for method in iface.methods:
                 method_ani_info = IfaceMethodAniInfo.get(self.am, method)
                 self.gen_any_func_decl(
@@ -419,9 +463,6 @@ class StsCodeGenerator:
                 self.gen_overload_func(name, info, target, meth_kind, "")
             for name, info in meth_on_off_register.on_off.items():
                 self.gen_half_on_off_func(name, info, target, meth_kind, "")
-            for method in iface.methods:
-                method_ani_info = IfaceMethodAniInfo.get(self.am, method)
-                self.gen_revert_func(method, method_ani_info, target, meth_kind)
 
     def gen_iface_class(
         self,
@@ -543,7 +584,7 @@ class StsCodeGenerator:
             # methods
             meth_overload_register = OverloadRegister()
             meth_on_off_register = OnOffRegister()
-            meth_kind = InterfaceKind()
+            meth_kind = InterfaceKind(iface_ani_info.sts_type_name)
             for ancestor in iface_abi_info.ancestor_dict:
                 for method in ancestor.methods:
                     method_ani_info = IfaceMethodAniInfo.get(self.am, method)
@@ -560,9 +601,6 @@ class StsCodeGenerator:
                 self.gen_overload_func(name, info, target, meth_kind, "")
             for name, info in meth_on_off_register.on_off.items():
                 self.gen_half_on_off_func(name, info, target, meth_kind, "")
-            for method in iface.methods:
-                method_ani_info = IfaceMethodAniInfo.get(self.am, method)
-                self.gen_revert_func(method, method_ani_info, target, meth_kind)
 
     def gen_native_func(
         self,
@@ -1459,10 +1497,10 @@ class StsCodeGenerator:
         func: GlobFuncDecl | IfaceMethodDecl,
         func_ani_info: GlobFuncAniInfo | IfaceMethodAniInfo,
         target: StsWriter,
-        func_kind: FuncKind,
+        func_kind: FuncKind | CtorKind,
     ):
         sts_revert_args = []
-        sts_revert_params = []
+        sts_revert_params = func_kind.revert_base_params()
         for param in func.params:
             type_ani_info = TypeAniInfo.get(self.am, param.ty_ref.resolved_ty)
             sts_revert_args.append(param.name)
@@ -1473,13 +1511,13 @@ class StsCodeGenerator:
         if return_ty_ref := func.return_ty_ref:
             type_ani_info = TypeAniInfo.get(self.am, return_ty_ref.resolved_ty)
             sts_return_ty = type_ani_info.sts_type_in(target)
-            # sts_resolved_ty = type_ani_info.sts_type_in(target)
+            sts_resolved_ty = type_ani_info.sts_type_in(target)
         else:
             sts_return_ty = "void"
-            # sts_resolved_ty = "undefined"
+            sts_resolved_ty = "undefined"
         sts_args = func_ani_info.call_revert_with(sts_revert_args)
         with target.indented(
-            f"{func_ani_info.revert_prefix}{func_ani_info.revert_name}({sts_revert_params_str}): {sts_return_ty} {{",
+            f"function {func_ani_info.revert_name}({sts_revert_params_str}): {sts_return_ty} {{",
             f"}}",
         ):
             if (norm_name := func_ani_info.norm_name) is not None:
@@ -1495,38 +1533,38 @@ class StsCodeGenerator:
                 target.writelns(
                     f"{func_kind.call_from_revert(set_name)} = {sts_args[0]};",
                 )
-            # elif (promise_name := func_ani_info.promise_name) is not None:
-            #     sts_args_str = ", ".join(sts_args)
-            #     target.writelns(
-            #         f"return await {func_kind.call_from_revert(promise_name)}({sts_args_str});",
-            #     )
-            # elif (async_name := func_ani_info.async_name) is not None:
-            #     with target.indented(
-            #         f"return await new Promise<{sts_return_ty}>((resolve, reject) => {{",
-            #         f"}});",
-            #     ):
-            #         with target.indented(
-            #             f"let callback: AsyncCallback<{sts_return_ty}> = (err: BusinessError | null, res?: {sts_resolved_ty}): void => {{",
-            #             f"}}",
-            #         ):
-            #             with target.indented(
-            #                 f"if (err !== null) {{",
-            #                 f"}}",
-            #             ):
-            #                 target.writelns(
-            #                     f"reject(err);",
-            #                 )
-            #             with target.indented(
-            #                 f"else {{",
-            #                 f"}}",
-            #             ):
-            #                 target.writelns(
-            #                     f"resolve(res as {sts_resolved_ty});",
-            #                 )
-            #         sts_args_with_cb_str = ", ".join([*sts_args, "callback"])
-            #         target.writelns(
-            #             f"{func_kind.call_from_revert(async_name)}({sts_args_with_cb_str});",
-            #         )
+            elif (promise_name := func_ani_info.promise_name) is not None:
+                sts_args_str = ", ".join(sts_args)
+                target.writelns(
+                    f"return await {func_kind.call_from_revert(promise_name)}({sts_args_str});",
+                )
+            elif (async_name := func_ani_info.async_name) is not None:
+                with target.indented(
+                    f"return await new Promise<{sts_return_ty}>((resolve, reject) => {{",
+                    f"}});",
+                ):
+                    with target.indented(
+                        f"let callback: AsyncCallback<{sts_return_ty}> = (err: BusinessError | null, res?: {sts_resolved_ty}): void => {{",
+                        f"}}",
+                    ):
+                        with target.indented(
+                            f"if (err !== null) {{",
+                            f"}}",
+                        ):
+                            target.writelns(
+                                f"reject(err);",
+                            )
+                        with target.indented(
+                            f"else {{",
+                            f"}}",
+                        ):
+                            target.writelns(
+                                f"resolve(res as {sts_resolved_ty});",
+                            )
+                    sts_args_with_cb_str = ", ".join([*sts_args, "callback"])
+                    target.writelns(
+                        f"{func_kind.call_from_revert(async_name)}({sts_args_with_cb_str});",
+                    )
             else:
                 target.writelns(
                     f"throw new Error(`No valid revert function found`);",

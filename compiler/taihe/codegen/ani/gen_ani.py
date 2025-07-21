@@ -670,13 +670,14 @@ class AniCodeGenerator:
             inner_ani_args_trailing = "".join(
                 ", " + inner_ani_arg for inner_ani_arg in inner_ani_args
             )
+            ns = iface_ani_info.parent_ns
             if return_ty_ref := method.return_ty_ref:
                 inner_ani_res = "ani_result"
                 inner_cpp_res = "cpp_result"
                 type_ani_info = TypeAniInfo.get(self.am, return_ty_ref.resolved_ty)
                 iface_ani_impl_target.writelns(
                     f"{type_ani_info.ani_type} {inner_ani_res} = {{}};",
-                    f'env->Object_CallMethod_{type_ani_info.ani_type.suffix}(static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "{iface_ani_info.type_desc}", "{method_ani_info.revert_name}", nullptr), reinterpret_cast<{type_ani_info.ani_type.base}*>(&{inner_ani_res}){inner_ani_args_trailing});',
+                    f'env->Function_Call_{type_ani_info.ani_type.suffix}(TH_ANI_FIND_{ns.scope.upper}_FUNCTION(env, "{ns.impl_desc}", "{method_ani_info.revert_name}", nullptr), reinterpret_cast<{type_ani_info.ani_type.base}*>(&{inner_ani_res}), static_cast<ani_object>(this->ref){inner_ani_args_trailing});',
                 )
                 type_ani_info.from_ani(
                     iface_ani_impl_target,
@@ -689,7 +690,7 @@ class AniCodeGenerator:
                 )
             else:
                 iface_ani_impl_target.writelns(
-                    f'env->Object_CallMethod_Void(static_cast<ani_object>(this->ref), TH_ANI_FIND_CLASS_METHOD(env, "{iface_ani_info.type_desc}", "{method_ani_info.revert_name}", nullptr){inner_ani_args_trailing});',
+                    f'env->Function_Call_Void(TH_ANI_FIND_{ns.scope.upper}_FUNCTION(env, "{ns.impl_desc}", "{method_ani_info.revert_name}", nullptr), static_cast<ani_object>(this->ref){inner_ani_args_trailing});',
                 )
 
     def gen_iface_into_ani_func(

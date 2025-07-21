@@ -494,10 +494,10 @@ class GlobFuncAniInfo(AbstractAnalysis[GlobFuncDecl]):
         self.am = am
         self.f = f
 
-        self.native_name = f"_taihe_{f.name}_native"
-        self.revert_name = f"_taihe_{f.name}_revert"
-        self.revert_prefix = "function "
         self.native_prefix = "native function "
+        self.native_name = f"_taihe_{f.name}_native"
+
+        self.revert_name = f"_taihe_{f.name}_revert"
 
         naming = PackageAniInfo.get(am, f.parent_pkg).naming
 
@@ -623,10 +623,10 @@ class IfaceMethodAniInfo(AbstractAnalysis[IfaceMethodDecl]):
         self.am = am
         self.f = f
 
-        self.native_name = f"_taihe_{f.name}_native"
-        self.revert_name = f"_taihe_{f.name}_revert"
-        self.revert_prefix = ""
         self.native_prefix = "native "
+        self.native_name = f"_taihe_{f.name}_native"
+
+        self.revert_name = f"_taihe_{f.parent_iface.name}_{f.name}_revert"
 
         naming = PackageAniInfo.get(am, f.parent_pkg).naming
 
