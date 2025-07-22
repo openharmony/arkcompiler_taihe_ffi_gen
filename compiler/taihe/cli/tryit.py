@@ -7,15 +7,14 @@ import subprocess
 import sys
 import tarfile
 import time
+from abc import ABC, abstractmethod
 from collections.abc import Iterable, Mapping, Sequence
-from enum import Enum
 from pathlib import Path
-from typing import cast
 
 from taihe.driver.backend import BackendRegistry
 from taihe.driver.contexts import CompilerInstance, CompilerInvocation
 from taihe.utils.logging import setup_logger
-from taihe.utils.outputs import CMakeOutputConfig, DebugLevel, OutputConfig
+from taihe.utils.outputs import CMakeOutputConfig, OutputConfig
 from taihe.utils.resources import (
     PandaVm,
     ResourceContext,
@@ -28,13 +27,6 @@ from taihe.utils.resources import (
 # A lower value means more verbosity
 TRACE_CONCISE = logging.DEBUG - 1
 TRACE_VERBOSE = TRACE_CONCISE - 1
-
-
-class UserType(Enum):
-    """User type for the build system."""
-
-    STS = "sts"
-    CPP = "cpp"
 
 
 class BuildUtils:
@@ -123,44 +115,30 @@ class BuildUtils:
         self.logger.info("Extracted %s to %s", target_file, extract_dir)
 
 
-class BuildConfig:
-    """Configuration for the build process."""
-
-    def __init__(self, vm: PandaVm | None):
-        self.cxx = os.getenv("CXX", "clang++")
-        self.cc = os.getenv("CC", "clang")
-        self._vm = vm
-
-    @property
-    def vm(self) -> PandaVm:
-        assert self._vm, "not a sts build?"
-        return self._vm
-
-
-def _map_output_debug_level(verbosity: int) -> DebugLevel:
-    if verbosity <= TRACE_VERBOSE:
-        return DebugLevel.VERBOSE
-    if verbosity <= TRACE_CONCISE:
-        return DebugLevel.CONCISE
-    return DebugLevel.NONE
-
-
-class BuildSystem(BuildUtils):
+class BuildSystem(ABC, BuildUtils):
     """Main build system class."""
+
+    lib_files: list[Path]
+
+    runtime_includes: list[Path]
+    generated_includes: list[Path]
+    author_includes: list[Path]
+
+    runtime_sources: list[Path]
+
+    author_backend_names: list[str]
+    user_backend_names: list[str]
 
     def __init__(
         self,
         target_dir: str,
-        user: UserType,
-        config: BuildConfig,
         verbosity: int = logging.INFO,
     ):
         super().__init__()
-        self.config = config
         self.should_run_pretty_print = verbosity <= logging.DEBUG
-        self.codegen_debug_level = _map_output_debug_level(verbosity)
 
-        self.user = user
+        self.config_cxx = os.getenv("CXX", "clang++")
+        self.config_cc = os.getenv("CC", "clang")
 
         # Build paths
         self.target_path = Path(target_dir).resolve()
@@ -176,47 +154,28 @@ class BuildSystem(BuildUtils):
         self.author_include_dir = self.author_dir / "include"
         self.author_src_dir = self.author_dir / "src"
 
-        self.user_dir = self.target_path / "user"
-        self.user_include_dir = self.user_dir / "include"
-        self.user_src_dir = self.user_dir / "src"
-
-        self.runtime_includes = [RuntimeHeader.resolve_path()]
-        if self.user == UserType.STS:
-            self.runtime_includes.append(config.vm.ani_header_dir)
-        self.generated_includes = [*self.runtime_includes, self.generated_include_dir]
-        self.author_includes = [*self.generated_includes, self.author_include_dir]
-        self.user_includes = [*self.generated_includes, self.user_include_dir]
-
-        # Build sub-directories
+        self.build_runtime_src_dir = self.build_dir / "runtime" / "src"
         self.build_generated_src_dir = self.build_dir / "generated" / "src"
         self.build_author_src_dir = self.build_dir / "author" / "src"
-        self.build_runtime_src_dir = self.build_dir / "runtime" / "src"
-        self.build_generated_dir = self.build_dir / "generated"
-        self.build_user_dir = self.build_dir / "user"
 
-        # Output files
         self.lib_name = self.target_path.absolute().name
         self.so_target = self.build_dir / f"lib{self.lib_name}.so"
-        self.abc_target = self.build_dir / "main.abc"
-        self.exe_target = self.build_dir / "main"
-        self.arktsconfig_file = self.build_dir / "arktsconfig.json"
+
+        self.author_backend_names = ["cpp-author"]
 
     def create(self) -> None:
         """Create a simple example project."""
-        self.create_idl()
-        self.create_author_cpp()
-        if self.user == UserType.STS:
-            self.create_user_ets()
-        if self.user == UserType.CPP:
-            self.create_user_cpp()
+        self._create_idl_files()
+        self._create_author_files()
+        self._create_user_files()
 
-    def create_idl(self) -> None:
+    def _create_idl_files(self) -> None:
         """Create a simple example IDL file."""
         self.create_directory(self.idl_dir)
         with open(self.idl_dir / "hello.taihe", "w") as f:
             f.write(f"function sayHello(): void;\n")
 
-    def create_author_cpp(self) -> None:
+    def _create_author_files(self) -> None:
         """Create a simple example author source file."""
         self.create_directory(self.author_src_dir)
         with open(self.author_dir / "compile_flags.txt", "w") as f:
@@ -237,35 +196,39 @@ class BuildSystem(BuildUtils):
                 f"TH_EXPORT_CPP_API_sayHello(sayHello);\n"
             )
 
-    def create_user_ets(self) -> None:
-        """Create a simple example user ETS file."""
-        self.create_directory(self.user_dir)
-        with open(self.user_dir / "main.ets", "w") as f:
-            f.write(
-                f'import * as hello from "hello";\n'
-                f"\n"
-                f'loadLibrary("{self.lib_name}");\n'
-                f"\n"
-                f"function main() {{\n"
-                f"    hello.sayHello();\n"
-                f"}}\n"
-            )
+    @abstractmethod
+    def _create_user_files(self) -> None:
+        """Create user files based on the user type."""
+        pass
 
-    def create_user_cpp(self) -> None:
-        """Create a simple example user source file."""
-        self.create_directory(self.user_src_dir)
-        with open(self.user_dir / "compile_flags.txt", "w") as f:
-            for user_include_dir in self.user_includes:
-                f.write(f"-I{user_include_dir}\n")
-        with open(self.user_src_dir / "main.cpp", "w") as f:
-            f.write(
-                f'#include "hello.user.hpp"\n'
-                f"\n"
-                f"int main() {{\n"
-                f"    hello::sayHello();\n"
-                f"    return 0;\n"
-                f"}}\n"
-            )
+    def generate(self, buildsys_name: str | None, extra: dict[str, str | None]) -> None:
+        """Generate code from IDL files."""
+        if not self.idl_dir.is_dir():
+            raise FileNotFoundError(f"IDL directory not found: '{self.idl_dir}'")
+
+        self.clean_directory(self.generated_dir)
+
+        self.logger.info("Generating author and ani codes...")
+
+        # Generate taihe stdlib codes
+        self.taihec(
+            dst_dir=self.generated_dir,
+            src_files=self.lib_files,
+            backend_names=["abi-source", "cpp-common"],
+        )
+        # Generate author codes
+        backend_names: list[str] = []
+        backend_names.extend(self.author_backend_names)
+        backend_names.extend(self.user_backend_names)
+        if self.should_run_pretty_print:
+            backend_names.append("pretty-print")
+        self.taihec(
+            dst_dir=self.generated_dir,
+            src_files=list(self.idl_dir.glob("*.taihe")),
+            backend_names=backend_names,
+            buildsys_name=buildsys_name,
+            extra=extra,
+        )
 
     def taihec(
         self,
@@ -302,96 +265,42 @@ class BuildSystem(BuildUtils):
         if not instance.run():
             raise RuntimeError("Taihe compiler (taihec) failed to run")
 
-    def generate(self, buildsys_name: str | None, extra: dict[str, str | None]) -> None:
-        """Generate code from IDL files."""
-        if not self.idl_dir.is_dir():
-            raise FileNotFoundError(f"IDL directory not found: '{self.idl_dir}'")
-
-        self.clean_directory(self.generated_dir)
-
-        self.logger.info("Generating author and ani codes...")
-
-        lib_files: list[Path] = []
-
-        backend_names = ["cpp-author"]
-        if self.user == UserType.STS:
-            backend_names.append("ani-bridge")
-            lib_files.append(
-                StandardLibrary.resolve_path() / "taihe.platform.ani.taihe"
-            )
-        if self.user == UserType.CPP:
-            backend_names.append("cpp-user")
-        if self.should_run_pretty_print:
-            backend_names.append("pretty-print")
-
-        # Generate taihe stdlib codes
-        self.taihec(
-            dst_dir=self.generated_dir,
-            src_files=lib_files,
-            backend_names=["abi-source", "cpp-common"],
-        )
-
-        # Generate author codes
-        self.taihec(
-            dst_dir=self.generated_dir,
-            src_files=list(self.idl_dir.glob("*.taihe")),
-            backend_names=backend_names,
-            buildsys_name=buildsys_name,
-            extra=extra,
-        )
-
     def build(self, opt_level: str) -> None:
         """Run the complete build process."""
         self.logger.info("Starting ANI compilation...")
 
-        self.setup_build_directories()
+        # Clean and prepare the build directory
+        self.clean_directory(self.build_dir)
+        self.create_directory(self.build_dir)
 
-        if self.user == UserType.STS:
-            # Compile the shared library
-            self.compile_shared_library(opt_level=opt_level)
-
-            # Compile and link ABC files
-            self.compile_and_link_ani()
-
-            # Run with Ark runtime
-            self.run_ani()
-        elif self.user == UserType.CPP:
-            # Compile the shared library
-            self.compile_shared_library(opt_level=opt_level)
-
-            # Compile the executable
-            self.compile_and_link_exe(opt_level=opt_level)
-
-            # Run the executable
-            self.run_exe()
+        # Compile the shared library
+        self._compile_shared_library(opt_level=opt_level)
+        self._compile_user_executable(opt_level=opt_level)
+        self._run_user_executable()
 
         self.logger.info("Build and execution completed successfully")
 
-    def compile_shared_library(self, opt_level: str):
+    def _compile_shared_library(self, opt_level: str):
         """Compile the shared library."""
         self.logger.info("Compiling shared library...")
 
-        runtime_src_dir = RuntimeSource.resolve_path()
-        runtime_sources = [
-            runtime_src_dir / "string.cpp",
-            runtime_src_dir / "object.cpp",
-        ]
-        if self.user == UserType.STS:
-            runtime_sources.append(runtime_src_dir / "runtime.cpp")
-
-        # Compile each component
+        self.create_directory(self.build_runtime_src_dir)
         runtime_objects = self.compile(
             self.build_runtime_src_dir,
-            runtime_sources,
+            self.runtime_sources,
             self.runtime_includes,
             compile_flags=[f"-O{opt_level}"],
         )
+
+        self.create_directory(self.build_generated_src_dir)
         generated_objects = self.compile(
             self.build_generated_src_dir,
             self.generated_src_dir.glob("*.[cC]*"),
             self.generated_includes,
             compile_flags=[f"-O{opt_level}"],
         )
+
+        self.create_directory(self.build_author_src_dir)
         author_objects = self.compile(
             self.build_author_src_dir,
             self.author_src_dir.glob("*.[cC]*"),
@@ -413,98 +322,15 @@ class BuildSystem(BuildUtils):
                 "No object files to link, skipping shared library compilation"
             )
 
-    def compile_and_link_exe(self, opt_level: str) -> None:
-        """Compile and link the executable."""
-        self.logger.info("Compiling and linking executable...")
+    @abstractmethod
+    def _compile_user_executable(self, opt_level: str) -> None:
+        """Compile and link the user executable."""
+        pass
 
-        # Compile the user source files
-        user_objects = self.compile(
-            self.build_user_dir,
-            self.user_src_dir.glob("*.[cC]*"),
-            self.user_includes,
-            compile_flags=[f"-O{opt_level}"],
-        )
-
-        # Link the executable
-        if user_objects:
-            self.link(
-                self.exe_target,
-                [self.so_target, *user_objects],
-            )
-            self.logger.info("Executable compiled: %s", self.so_target)
-        else:
-            self.logger.warning(
-                "No object files to link, skipping executable compilation"
-            )
-
-    def run_exe(self) -> None:
-        """Run the compiled executable."""
-        self.logger.info("Running executable...")
-
-        elapsed_time = self.run(
-            self.exe_target,
-            self.so_target.parent,
-        )
-
-        self.logger.info("Done, time = %f s", elapsed_time)
-
-    def compile_and_link_ani(self):
-        """Compile and link ABC files."""
-        self.logger.info("Compiling and linking ABC files...")
-
-        paths: dict[str, Path] = {}
-        for path in self.generated_dir.glob("*.ets"):
-            paths[path.stem] = path
-        for path in self.user_dir.glob("*.ets"):
-            paths[path.stem] = path
-
-        self.create_arktsconfig(self.arktsconfig_file, paths)
-
-        # Compile ETS files in each directory
-        generated_abc = self.compile_abc(
-            self.build_generated_dir,
-            self.generated_dir.glob("*.ets"),
-            self.arktsconfig_file,
-        )
-        user_abc = self.compile_abc(
-            self.build_user_dir,
-            self.user_dir.glob("*.ets"),
-            self.arktsconfig_file,
-        )
-
-        # Link all ABC files
-        if all_abc_files := generated_abc + user_abc:
-            self.link_abc(
-                self.abc_target,
-                all_abc_files,
-            )
-            self.logger.info("ABC files linked: %s", self.abc_target)
-        else:
-            self.logger.warning("No ABC files to link, skipping ABC compilation")
-
-    def run_ani(self) -> None:
-        """Run the compiled ABC file with the Ark runtime."""
-        self.logger.info("Running ABC file with Ark runtime...")
-
-        elapsed_time = self.run_abc(
-            self.abc_target,
-            self.so_target.parent,
-            entry="main.ETSGLOBAL::main",
-        )
-
-        self.logger.info("Done, time = %f s", elapsed_time)
-
-    def setup_build_directories(self) -> None:
-        """Set up necessary build directories."""
-        # Clean and create directories
-        self.clean_directory(self.build_dir)
-
-        self.create_directory(self.build_dir)
-        self.create_directory(self.build_runtime_src_dir)
-        self.create_directory(self.build_generated_src_dir)
-        self.create_directory(self.build_author_src_dir)
-        self.create_directory(self.build_generated_dir)
-        self.create_directory(self.build_user_dir)
+    @abstractmethod
+    def _run_user_executable(self) -> None:
+        """Run the user executable."""
+        pass
 
     def compile(
         self,
@@ -521,10 +347,10 @@ class BuildSystem(BuildUtils):
             output_file = output_dir / f"{name}.o"
 
             if name.endswith(".c"):
-                compiler = self.config.cc
+                compiler = self.config_cc
                 std = "gnu11"
             else:
-                compiler = self.config.cxx
+                compiler = self.config_cxx
                 std = "gnu++17"
 
             command = [
@@ -564,7 +390,7 @@ class BuildSystem(BuildUtils):
             return
 
         command = [
-            self.config.cxx,
+            self.config_cxx,
             "-fPIC",
             "-o",
             output_file,
@@ -593,6 +419,193 @@ class BuildSystem(BuildUtils):
             command,
             env={"LD_LIBRARY_PATH": ld_lib_path},
         )
+
+
+class CppBuildSystem(BuildSystem):
+    """Main build system class."""
+
+    def __init__(
+        self,
+        target_dir: str,
+        verbosity: int = logging.INFO,
+    ):
+        super().__init__(target_dir, verbosity)
+
+        self.user_dir = self.target_path / "user"
+        self.user_include_dir = self.user_dir / "include"
+        self.user_src_dir = self.user_dir / "src"
+
+        self.build_user_src_dir = self.build_dir / "user" / "src"
+
+        self.runtime_includes = [RuntimeHeader.resolve_path()]
+        self.generated_includes = [*self.runtime_includes, self.generated_include_dir]
+        self.author_includes = [*self.generated_includes, self.author_include_dir]
+        self.user_includes = [*self.generated_includes, self.user_include_dir]
+
+        runtime_src_dir = RuntimeSource.resolve_path()
+        self.runtime_sources = [
+            runtime_src_dir / "string.cpp",
+            runtime_src_dir / "object.cpp",
+        ]
+
+        self.exe_target = self.build_dir / "main"
+
+        self.lib_files = []
+
+        self.user_backend_names = ["cpp-user"]
+
+    def _create_user_files(self) -> None:
+        """Create a simple example user source file."""
+        self.create_directory(self.user_src_dir)
+        with open(self.user_dir / "compile_flags.txt", "w") as f:
+            for user_include_dir in self.user_includes:
+                f.write(f"-I{user_include_dir}\n")
+        with open(self.user_src_dir / "main.cpp", "w") as f:
+            f.write(
+                f'#include "hello.user.hpp"\n'
+                f"\n"
+                f"int main() {{\n"
+                f"    hello::sayHello();\n"
+                f"    return 0;\n"
+                f"}}\n"
+            )
+
+    def _compile_user_executable(self, opt_level: str) -> None:
+        """Compile and link the executable."""
+        self.logger.info("Compiling and linking executable...")
+
+        self.create_directory(self.build_user_src_dir)
+        user_objects = self.compile(
+            self.build_user_src_dir,
+            self.user_src_dir.glob("*.[cC]*"),
+            self.user_includes,
+            compile_flags=[f"-O{opt_level}"],
+        )
+
+        # Link the executable
+        if user_objects:
+            self.link(
+                self.exe_target,
+                [self.so_target, *user_objects],
+            )
+            self.logger.info("Executable compiled: %s", self.exe_target)
+        else:
+            self.logger.warning(
+                "No object files to link, skipping executable compilation"
+            )
+
+    def _run_user_executable(self) -> None:
+        """Run the compiled executable."""
+        self.logger.info("Running executable...")
+
+        elapsed_time = self.run(
+            self.exe_target,
+            self.so_target.parent,
+        )
+
+        self.logger.info("Done, time = %f s", elapsed_time)
+
+
+class StsBuildSystem(BuildSystem):
+    """Main build system class."""
+
+    def __init__(
+        self,
+        target_dir: str,
+        verbosity: int = logging.INFO,
+    ):
+        super().__init__(target_dir, verbosity)
+
+        self.config_vm = PandaVm.resolve()
+
+        self.user_dir = self.target_path / "user"
+
+        self.build_generated_dir = self.build_dir / "generated"
+        self.build_user_dir = self.build_dir / "user"
+
+        self.runtime_includes = [
+            RuntimeHeader.resolve_path(),
+            self.config_vm.ani_header_dir,
+        ]
+        self.generated_includes = [*self.runtime_includes, self.generated_include_dir]
+        self.author_includes = [*self.generated_includes, self.author_include_dir]
+
+        runtime_src_dir = RuntimeSource.resolve_path()
+        self.runtime_sources = [
+            runtime_src_dir / "string.cpp",
+            runtime_src_dir / "object.cpp",
+            runtime_src_dir / "runtime.cpp",
+        ]
+
+        self.abc_target = self.build_dir / "main.abc"
+        self.arktsconfig_file = self.build_dir / "arktsconfig.json"
+
+        self.lib_files = [StandardLibrary.resolve_path() / "taihe.platform.ani.taihe"]
+
+        self.user_backend_names = ["ani-bridge"]
+
+    def _create_user_files(self) -> None:
+        """Create a simple example user ETS file."""
+        self.create_directory(self.user_dir)
+        with open(self.user_dir / "main.ets", "w") as f:
+            f.write(
+                f'import * as hello from "hello";\n'
+                f"\n"
+                f'loadLibrary("{self.lib_name}");\n'
+                f"\n"
+                f"function main() {{\n"
+                f"    hello.sayHello();\n"
+                f"}}\n"
+            )
+
+
+    def _compile_user_executable(self, opt_level: str) -> None:
+        """Compile and link ABC files."""
+        self.logger.info("Compiling and linking ABC files...")
+
+        paths: dict[str, Path] = {}
+        for path in self.generated_dir.glob("*.ets"):
+            paths[path.stem] = path
+        for path in self.user_dir.glob("*.ets"):
+            paths[path.stem] = path
+
+        self.create_arktsconfig(self.arktsconfig_file, paths)
+
+        self.create_directory(self.build_generated_dir)
+        generated_abc = self.compile_abc(
+            self.build_generated_dir,
+            self.generated_dir.glob("*.ets"),
+            self.arktsconfig_file,
+        )
+
+        self.create_directory(self.build_user_dir)
+        user_abc = self.compile_abc(
+            self.build_user_dir,
+            self.user_dir.glob("*.ets"),
+            self.arktsconfig_file,
+        )
+
+        # Link all ABC files
+        if all_abc_files := generated_abc + user_abc:
+            self.link_abc(
+                self.abc_target,
+                all_abc_files,
+            )
+            self.logger.info("ABC files linked: %s", self.abc_target)
+        else:
+            self.logger.warning("No ABC files to link, skipping ABC compilation")
+
+    def _run_user_executable(self) -> None:
+        """Run the compiled ABC file with the Ark runtime."""
+        self.logger.info("Running ABC file with Ark runtime...")
+
+        elapsed_time = self.run_abc(
+            self.abc_target,
+            self.so_target.parent,
+            entry="main.ETSGLOBAL::main",
+        )
+
+        self.logger.info("Done, time = %f s", elapsed_time)
 
     def create_arktsconfig(
         self,
@@ -630,7 +643,7 @@ class BuildSystem(BuildUtils):
             output_dump = output_dir / f"{name}.abc.dump"
 
             gen_abc_command = [
-                self.config.vm.tool("es2panda"),
+                self.config_vm.tool("es2panda"),
                 input_file,
                 "--output",
                 output_file,
@@ -644,7 +657,7 @@ class BuildSystem(BuildUtils):
 
             output_files.append(output_file)
 
-            ark_disasm_path = self.config.vm.tool("ark_disasm")
+            ark_disasm_path = self.config_vm.tool("ark_disasm")
             if not ark_disasm_path.exists():
                 self.logger.warning(
                     "ark_disasm not found at %s, skipping disassembly", ark_disasm_path
@@ -672,7 +685,7 @@ class BuildSystem(BuildUtils):
             return
 
         command = [
-            self.config.vm.tool("ark_link"),
+            self.config_vm.tool("ark_link"),
             "--output",
             target,
             "--",
@@ -688,12 +701,12 @@ class BuildSystem(BuildUtils):
         entry: str,
     ) -> float:
         """Run the compiled ABC file with the Ark runtime."""
-        ark_path = self.config.vm.tool("ark")
+        ark_path = self.config_vm.tool("ark")
 
         command = [
             ark_path,
-            f"--boot-panda-files={self.config.vm.sdk_lib}",
-            f"--boot-panda-files={self.config.vm.stdlib_lib}",
+            f"--boot-panda-files={self.config_vm.sdk_lib}",
+            f"--boot-panda-files={self.config_vm.stdlib_lib}",
             f"--load-runtimes=ets",
             abc_target,
             entry,
@@ -705,12 +718,17 @@ class BuildSystem(BuildUtils):
         )
 
 
+BUILD_MODES = {
+    "cpp": CppBuildSystem,
+    "sts": StsBuildSystem,
+}
+
+
 class RepositoryUpgrader(BuildUtils):
     """Upgrade the code from a specified URL."""
 
-    def __init__(self, repo_url: str, config: BuildConfig):
+    def __init__(self, repo_url: str):
         super().__init__()
-        self.config = config
         self.repo_url = repo_url
 
     def fetch_and_upgrade(self):
@@ -755,8 +773,7 @@ class TaiheTryitParser(argparse.ArgumentParser):
         self.add_argument(
             "-u",
             "--user",
-            type=UserType,
-            choices=list(UserType),
+            choices=BUILD_MODES.keys(),
             required=True,
             help="User type for the build system (ani/cpp)",
         )
@@ -861,21 +878,14 @@ def main():
             verbosity = TRACE_VERBOSE
     setup_logger(verbosity)
 
-    user = cast(UserType, args.user)
-    vm = PandaVm.resolve() if user == UserType.STS else None
-    config = BuildConfig(vm)
+    user = BUILD_MODES[args.user]
 
     try:
         if args.command == "upgrade":
-            upgrader = RepositoryUpgrader(args.URL, config=config)
+            upgrader = RepositoryUpgrader(args.URL)
             upgrader.fetch_and_upgrade()
         else:
-            build_system = BuildSystem(
-                args.target_directory,
-                args.user,
-                config=config,
-                verbosity=verbosity,
-            )
+            build_system = user(args.target_directory, verbosity)
             if args.command == "create":
                 build_system.create()
             if args.command in ("generate", "test"):
