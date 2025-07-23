@@ -18,7 +18,7 @@ class AniBridgeBackendConfig(BackendConfig):
         from taihe.codegen.ani.gen_ani import AniCodeGenerator
         from taihe.codegen.ani.gen_sts import StsCodeGenerator
 
-        instance.attribute_manager.register(*all_attr_types)
+        instance.attribute_registry.register(*all_attr_types)
 
         # TODO: unify {Ani,Sts}CodeGenerator
         class AniBridgeBackendImpl(Backend):
