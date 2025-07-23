@@ -429,8 +429,8 @@ class PackageGroupAniInfo(AbstractAnalysis[PackageGroup]):
         self.package_map: dict[PackageDecl, StsNamespace] = {}
 
         self.path = Path(
-            self.am.compiler_invocation.arkts_module_prefix,
-            self.am.compiler_invocation.arkts_path_prefix,
+            self.am.config.arkts_module_prefix,
+            self.am.config.arkts_path_prefix,
         )
 
         for pkg in pg.packages:
@@ -478,7 +478,7 @@ class PackageAniInfo(AbstractAnalysis[PackageDecl]):
         pg_ani_info = PackageGroupAniInfo.get(am, p.parent_group)
         self.ns = pg_ani_info.get_namespace(p)
 
-        if self.am.compiler_invocation.sts_keep_name:
+        if self.am.config.sts_keep_name:
             self.naming = KeepNaming()
         else:
             self.naming = DefaultNaming()

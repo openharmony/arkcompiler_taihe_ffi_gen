@@ -59,10 +59,37 @@ class CompilerInvocation:
     output_config: OutputConfig = field(default_factory=OutputConfig)
     backends: list[BackendConfig] = field(default_factory=lambda: [])
 
-    # TODO: refactor this to a more structured way
-    sts_keep_name: bool = False
-    arkts_module_prefix: str | None = None
-    arkts_path_prefix: str | None = None
+    extra: dict[str, str | None] = field(default_factory=lambda: {})
+
+
+# TODO: refactor this
+@dataclass
+class CompilerConfig:
+    sts_keep_name: bool
+    arkts_module_prefix: str | None
+    arkts_path_prefix: str | None
+
+    @staticmethod
+    def construct(configure: dict[str, str | None]) -> "CompilerConfig":
+        sts_keep_name = False
+        arkts_module_prefix = None
+        arkts_path_prefix = None
+        # parse the configure options
+        for config in configure:
+            k, *v = config.split("=", 1)
+            if k == "sts:keep-name":
+                sts_keep_name = True
+            elif k == "arkts:module-prefix":
+                arkts_module_prefix = v[0] if v else None
+            elif k == "arkts:path-prefix":
+                arkts_path_prefix = v[0] if v else None
+            else:
+                raise ValueError(f"unknown codegen config {k!r}")
+        return CompilerConfig(
+            sts_keep_name=sts_keep_name,
+            arkts_module_prefix=arkts_module_prefix,
+            arkts_path_prefix=arkts_path_prefix,
+        )
 
 
 class CompilerInstance:
@@ -76,15 +103,12 @@ class CompilerInstance:
 
     invocation: CompilerInvocation
     backends: list[Backend]
-
-    attribute_registry: AttributeRegistry
-
     diagnostics_manager: DiagnosticsManager
-
     source_manager: SourceManager
     package_group: PackageGroup
-
     analysis_manager: AnalysisManager
+    attribute_registry: AttributeRegistry
+    config: CompilerConfig
 
     def __init__(
         self,
@@ -94,13 +118,13 @@ class CompilerInstance:
     ):
         self.invocation = invocation
         self.diagnostics_manager = dm()
-        self.analysis_manager = AnalysisManager(invocation)
         self.source_manager = SourceManager()
         self.package_group = PackageGroup()
         self.output_manager = invocation.output_config.construct(self)
         self.attribute_registry = AttributeRegistry()
-
-        self.backends = [conf.construct(self) for conf in invocation.backends]
+        self.backends = [backend.construct(self) for backend in invocation.backends]
+        self.config = CompilerConfig.construct(invocation.extra)
+        self.analysis_manager = AnalysisManager(self.config)
 
     ##########################
     # The compilation phases #
