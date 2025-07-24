@@ -102,8 +102,8 @@ void logLifecycle(string_view str) {
 #   function FooBar(): void;
 # 生成的 ets 侧代码
 #   function fooBar(): void;
-# 如果希望生成的 ets 侧函数与 taihe 文件一致，可以使用 --sts-keep-name
-taihe-tryit test -u sts path/to/override --sts-keep-name
+# 如果希望生成的 ets 侧函数与 taihe 文件一致，可以使用 -Csts:keep-name
+taihe-tryit test -u sts path/to/override -Csts:keep-name
 ```
 
 用户侧创建类 `MyAbility` 继承了 taihe 文件中声明的类 `UIAbility`，并重写了方法 `onForeground`，创建了一个 `MyAbility` 类的实例，并将其赋值给类型为 `UIAbility` 的变量，以此做为参数传入 `useUIAbility` 函数。

@@ -230,7 +230,7 @@ void introduceYourself(::poly::PersonType const &p) {
 ## 第三步 生成并编译
 
 ```sh
-taihe-tryit test -u sts cookbook/polymorphism --sts-keep-name
+taihe-tryit test -u sts cookbook/polymorphism -Csts:keep-name
 ```
 
 `main.ets`

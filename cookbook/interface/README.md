@@ -71,8 +71,8 @@ void restartCalculator(::interface::weak::ICalculator a) {
 #   function FooBar(): void;
 # 生成的 ets 侧代码
 #   function fooBar(): void;
-# 如果希望生成的 ets 侧函数与 taihe 文件一致，可以使用 --sts-keep-name
-taihe-tryit test -u sts path/to/interface --sts-keep-name
+# 如果希望生成的 ets 侧函数与 taihe 文件一致，可以使用 -Csts:keep-name
+taihe-tryit test -u sts path/to/interface -Csts:keep-name
 ```
 
 用户侧使用

@@ -120,7 +120,7 @@ taihe-tryit [mode] [test_dir] [options ...]
 | `--verbose` | `-v` | 输出详细的日志信息，便于调试 | 所有模式 |
 | `--user <user>` | `-u <user>` | 必要，选择消费者侧的语言类型，支持 `sts`（ArkTS 1.2）、`cpp`（C++） | 所有模式 |
 | `--optimization {0,1,2,3}` | `-O{0,1,2,3}` | 指定编译器的优化级别，默认为 `0` | `build`、`test` |
-| `--sts-keep-name` | | 保持生成的 ArkTS 代码中的函数和方法名称与 .taihe 文件中的名称一致，默认会将 .taihe 文件中的名称首字母小写 | `generate`、`test` |
+| `--codegen <namespace>:<config>[=<value>]` | `-C<namespace>:<config>[=<value>]` | 同 `taihec`，额外的代码生成配置项，例如 `sts:keep-name` 等 | `generate`、`test` |
 
 #### 使用流程
 

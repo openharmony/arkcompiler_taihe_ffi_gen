@@ -89,8 +89,8 @@ TH_EXPORT_CPP_API_addSync(addSync);
 #   function FooBar(): void;
 # 生成的 ets 侧代码
 #   function fooBar(): void;
-# 如果希望生成的 ets 侧函数与 taihe 文件一致，可以使用 --sts-keep-name
-taihe-tryit test -u sts path/to/async --sts-keep-name
+# 如果希望生成的 ets 侧函数与 taihe 文件一致，可以使用 -Csts:keep-name
+taihe-tryit test -u sts path/to/async -Csts:keep-name
 ```
 
 async 和 promise 版本的函数生成在 sts 侧

@@ -22,11 +22,11 @@ function add(a: i32, b: i32): String;
 #   function FooBar(): void;
 # 生成的 ets 侧代码
 #   function fooBar(): void;
-# 如果希望生成的 ets 侧函数与 taihe 文件一致，可以使用 --sts-keep-name
-taihe-tryit test -u sts path/to/hello_world --sts-keep-name
+# 如果希望生成的 ets 侧函数与 taihe 文件一致，可以使用 -Csts:keep-name
+taihe-tryit test -u sts path/to/hello_world -Csts:keep-name
 
 ## 如果希望只生成不测试，可以使用
-taihe-tryit generate -u sts path/to/hello_world --sts-keep-name
+taihe-tryit generate -u sts path/to/hello_world -Csts:keep-name
 ```
 
 工具自动生成了 C++ 代码的骨架，代码如下：
