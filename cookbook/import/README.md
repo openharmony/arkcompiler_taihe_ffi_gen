@@ -13,6 +13,7 @@ interface IUser {
 
 function makeUser(path: String): IUser;
 ```
+
 **File: `idl/notification.taihe`**
 ```taihe
 from user use IUser;
@@ -34,8 +35,7 @@ taihe 有两种导入方式：
 
 本章样例使用 `from user use IUser`，即从 `user` 包里导入 `IUser`
 
-当然也可以使用 `use user` 来导入整个 `user.taihe` 文件，但是这样做的话，在被导入的 taihe 文件 `notification.taihe` 里，使用导入的模块则需要前面跟上 pkg 名
-
+当然也可以使用 `use user` 来导入整个 `user.taihe` 文件，但是这样做的话，在被导入的 Taihe IDL 文件 `notification.taihe` 里，使用导入的模块则需要前面跟上 pkg 名
 ```taihe
 use user;
 
@@ -52,28 +52,6 @@ function makeNotificationService(): INotificationService;
 
 2. `from A use B as C;`
 
-这里的 C 为别名
-
-```taihe
-from user use IUser as MyIUser;
-
-interface INotificationService{
-    sendMessage(a: MyIUser): void; // 使用别名
-}
-
-function makeNotificationService(): INotificationService;
-```
-
-```taihe
-use user as MyUser;
-
-interface INotificationService{
-    sendMessage(a: MyUser.IUser): void; // 使用别名
-}
-
-function makeNotificationService(): INotificationService;
-```
-
 ## 第二步：完成 C++ 实现
 
 **File: `author/src/user.impl.cpp`**
@@ -89,6 +67,7 @@ public:
     void setEmail(string_view path) {
         this->m_email = path;
     }
+
 private:
     string m_email;
 };
@@ -116,7 +95,6 @@ INotificationService makeNotificationService() {
 ```
 
 此处有一个需要注意的地方在于在 C++ 侧调用 taihe interface 的方法，当需要调用 taihe interface 的方法时，在 c++ 侧调用方法时，需要使用 `->` 的方式调用函数，而非 `.` 的方式
-
 ```C++
 a.getEmail(); // false!
 a->getEmail(); // success!

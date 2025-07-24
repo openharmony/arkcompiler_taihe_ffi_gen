@@ -1,11 +1,10 @@
-# 太和 C++ 用户文档
+# Taihe C++ 用户文档
 
 本文档旨在帮助用户了解如何调用由 IDL 文件生成的代码。
 
 ## 1. 生成的文件结构
 
 在使用模块前，需要导入对应的头文件。头文件名与 IDL 文件的包名相关，例如，假设 IDL 文件名为 `rgb.base.taihe`，则 `generated/include` 目录下可能生成以下头文件：
-
 ```
 generated/include/rgb.base.proj.hpp
 generated/include/rgb.base.user.hpp
@@ -13,12 +12,12 @@ generated/include/rgb.base.impl.hpp
 ```
 
 这些文件对于使用者的意义如下：
-- 对于接口的作者（发布方），需要关注的是 `proj.hpp` 和 `impl.hpp`，其中 `proj.hpp` 包含了当前包下定义的所有类型（包括枚举类、结构体、联合体、接口等，使用方式见后文）的 C++ 声明和定义，而 `impl.hpp` 则提供了用于导出全局函数的宏定义。
-- 对于接口的用户（消费方），只需要关注 `user.hpp`，该文件包含了 `proj.hpp` 中的所有内容，此外还允许用户直接调用全局函数（见第 6 节）。
+- 对于接口的作者（发布方），需要关注的是 `proj.hpp` 和 `impl.hpp`，其中 `proj.hpp` 包含了当前包下定义的所有类型（包括枚举类、结构体、联合体、接口等，使用方式见后文）的 C++ 声明和定义，而 `impl.hpp` 则提供了用于导出全局函数的宏定义（见 6.1 节）。
+- 对于接口的用户（消费方），只需要关注 `user.hpp`，该文件包含了 `proj.hpp` 中的所有内容，此外还允许用户直接调用全局函数（见 6.2 节）。
 
 > **⚠️ 特别注意**
 >
-> 除这些文件之外，`generated/include` 目录下还可能包含其他头文件，这些文件通常对应于 IDL 文件中定义的特定类型，例如 `rgb.base.IShowable.{0,1,2}.hpp` 等，这些文件是太和的内部实现文件，用户通常***不应该***直接使用它们，并且我们也***不保证***这些文件的稳定性，它们可能会在未来的版本中发生变化。
+> 除这些文件之外，`generated/include` 目录下还可能包含其他头文件，这些文件通常对应于 IDL 文件中定义的特定类型，例如 `rgb.base.IShowable.{0,1,2}.hpp` 等，这些文件是 Taihe 的内部实现文件，用户通常***不应该***直接使用它们，并且我们也***不保证***这些文件的稳定性，它们可能会在未来的版本中发生变化。
 
 ## 2. 枚举类
 
@@ -104,15 +103,15 @@ switch (key) {
 > int index = static_cast<int>(key); // 结果是 0, 而不是 12
 > int value = IntEnum(key).get_value(); // 结果是 12
 > 
-> // 从整型枚举值转换为太和枚举对象
+> // 从整型枚举值转换为 Taihe 枚举对象
 > IntEnum fooA = static_cast<IntEnum::key_t>(12); // 不正确！因为 12 不是 IntEnum 的有效 Key
 > IntEnum fooB = IntEnum::from_value(12); // 正确，fooB.get_key() 返回 IntEnum::key_t::FOO
 > ```
 
 
 #### 2.2.3 判断枚举值是否有效
-可以使用 `is_valid()` 方法判断一个枚举对象是否有效的：
 
+可以使用 `is_valid()` 方法判断一个枚举对象是否有效的：
 ```cpp
 auto yellow = rgb::base::Color::from_value("yellow");
 auto purple = rgb::base::Color::from_value("purple");
@@ -308,7 +307,7 @@ circle->show();
 
 ### 5.1 接口的生命周期管理
 
-接口对象的生命周期通过引用计数进行管理，对于每个在 IDL 文件中定义的接口，太和会生成两种对应的类型：
+接口对象的生命周期通过引用计数进行管理，对于每个在 IDL 文件中定义的接口，Taihe 会生成两种对应的类型：
 
 - **强引用**：`package::name::interfaceName`，类似于 `std::shared_ptr`。
 - **弱引用**：`package::name::weak::interfaceName`，类似于 `std::weak_ptr`。

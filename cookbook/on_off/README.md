@@ -1,7 +1,6 @@
 # On 与 Off
 
 在 sts 中有些接口形如：
-
 ```typescript
 on(target: "foo", callback: (): void);
 on(target: "bar", callback: (): void);
@@ -47,22 +46,21 @@ function offBaz(a: i32, cb: (b: i32) => void): void;
 
 `@on_off` 注解有两种写法
 
-on / off 函数在太和中需要命名形如为 `OnFoo`、`OnBar` 的函数
+on/off 函数在 Taihe 中需要命名形如为 `OnFoo`、`OnBar` 的函数
 
-1. @on_off
+1. `@on_off`
 
-    使用第一种写法时，会将 taihe 函数名 on / off 后的字符串作为 sts 侧的 on / off 函数的 target (首字母会自动小写)，如 taihe 函数 OnFoo，在 sts 侧时 target 为 foo
+    使用第一种写法时，会将 taihe 函数名 on/off 后的字符串作为 sts 侧的 on/off 函数的 target (首字母会自动小写)，如 taihe 函数 OnFoo，在 sts 侧时 target 为 foo
 
-2. @on_off("\<target\>")
+2. `@on_off("<target>")`
 
-    使用第二种写法时，会将 `@on_off("<target>")` 注解中的 \<target\> 作为 sts 侧的 target，如 `@on_off("newBaz") function OnBaz()` 在 sts 侧时 target 为 newBaz
+    使用第二种写法时，会将 `@on_off("<target>")` 注解中的 `<target>` 作为 sts 侧的函数名，如 `@on_off("newBaz") function OnBaz()` 在 sts 侧会重载到函数 `newBaz` 上
 
 我们推荐使用第二种写法避免因某些函数写法的原因导致的问题
 
 ## 第二步：完成 C++ 实现
 
 **File: `author/src/on_off.impl.cpp`**
-
 ```C++
 class ISetterObserverImpl {
 public:
@@ -115,6 +113,7 @@ void offBaz(int32_t a, callback_view<void(int32_t)> cb) {
 ```
 
 ## 第三步：在 ets 侧使用
+
 ```typescript
 let num0: Int = 0;
 let num1: Int = 1;

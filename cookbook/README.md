@@ -9,7 +9,7 @@
 ## 第二章：接口与类型
 
 - [interface - 纯方法类](interface/README.md)
-- [import - 导入其他 taihe 文件](import/README.md)
+- [import - 导入其他 Taihe IDL 文件](import/README.md)
 - [enum 与 union](enum_union/README.md)
 - [继承](inherit/README.md)
 - [Optional - 可选参数](optional/README.md)

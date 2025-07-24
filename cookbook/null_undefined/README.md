@@ -15,7 +15,7 @@ union NullableValue {
 
 function makeNullableValue(tag: i32): NullableValue;
 ```
-如上所示，taihe 文件中为一个 union 内的变量名前增加 注解 @null、@undefined 来声明 null 类型与 undefined 类型
+如上所示，Taihe IDL 文件中为一个 union 内的变量名前增加 注解 @null、@undefined 来声明 null 类型与 undefined 类型
 
 ## 第二步：完成 C++ 实现
 
@@ -48,6 +48,7 @@ constexpr int32_t TAG_INT = 2;
 [Taihe Union 相关教程样例](../enum_union/README.md)
 
 ## 第三步：在 ets 侧使用
+
 ```typescript
 let nvalue = makeNullableValue(0);
 console.log("null: " + nvalue);

@@ -1,6 +1,6 @@
 # TypedArray
 
-太和支持 TS 语言中的 TypedArray 类型，如 Uint8Array, Int8Array 等，其对应的注解为在相应的 `Array<T>` 上添加注解 `@typedarray`，例如，`Uint8Array` 在太和中表示为 `@typedarray Array<u8>`，`Int8Array` 表示为 `@typedarray Array<i8>`。
+Taihe 支持 TS 语言中的 TypedArray 类型，如 Uint8Array, Int8Array 等，其对应的注解为在相应的 `Array<T>` 上添加注解 `@typedarray`，例如，`Uint8Array` 在 Taihe 中表示为 `@typedarray Array<u8>`，`Int8Array` 表示为 `@typedarray Array<i8>`。
 
 ## 第一步：编写接口原型
 

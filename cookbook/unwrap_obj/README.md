@@ -1,4 +1,5 @@
 # 外部对象导出
+
 在实践的过程中，会有使用已经实现的 class 的情况
 
 ## 第一步：编写接口原型
@@ -14,6 +15,7 @@ interface Foo{
 function makeFoo(): Foo;
 function useFoo(obj: Foo): void;
 ```
+
 该场景中，实际上在 `useFoo` 函数中需要使用到已经实现的类
 
 我们在这种情况下，需要给 `interface Foo` 增加一个 `GetInner()` 的方法，返回类型为 `i64`, 用于返回实现类

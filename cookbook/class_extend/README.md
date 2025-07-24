@@ -13,21 +13,19 @@ function CreateUnifiedRecord_noparam_th(): UnifiedRecord_th;
 interface Text_th {
     GetDetails(): i32;
     SetDetails(a: i32): void;
-    /*
-     如果需要覆盖父类方法，则需要额外声明被覆盖的方法：
-     GetType(): void;
-    */
+
+    // 如果需要覆盖父类方法，则需要额外声明被覆盖的方法：
+    // GetType(): void;
 }
 function CreateText_noparam_th(): Text_th;
 interface PlainText_th {
     GetTextContent(): String;
     SetTextContent(a: String): void;
-    /*
-     如果需要覆盖父类方法，则需要额外声明被覆盖的方法：
-     GetDetails(): i32;
-     SetDetails(a: i32): void;
-     GetType(): void;
-    */
+
+    // 如果需要覆盖父类方法，则需要额外声明被覆盖的方法：
+    // GetDetails(): i32;
+    // SetDetails(a: i32): void;
+    // GetType(): void;
 }
 function CreatePlainText_noparam_th(): PlainText_th;
 
@@ -66,12 +64,11 @@ export class Text extends UnifiedRecord {
     constructor(b: Text_th) {
         this.inner = b;
     }
-    /*
-     如果需要覆盖父类方法，则需要额外绑定被覆盖的方法：
-     getType(): void {
-         this.inner.getType();
-     }
-    */
+
+    // 如果需要覆盖父类方法，则需要额外绑定被覆盖的方法：
+    // getType(): void {
+    //     this.inner.getType();
+    // }
 }
 export class PlainText extends Text {
     inner: PlainText_th;
@@ -87,18 +84,17 @@ export class PlainText extends Text {
     constructor(c: PlainText_th) {
         this.inner = c;
     }
-    /*
-     如果需要覆盖父类方法，则需要额外绑定被覆盖的方法：
-     getDetails(): int {
-         return this.inner.getDetails();
-     }
-     setDetails(a: int): void {
-         this.inner.setDetails(a);
-     }
-     getType(): void {
-         this.inner.getType();
-     }
-    */
+
+    // 如果需要覆盖父类方法，则需要额外绑定被覆盖的方法：
+    // getDetails(): int {
+    //     return this.inner.getDetails();
+    // }
+    // setDetails(a: int): void {
+    //     this.inner.setDetails(a);
+    // }
+    // getType(): void {
+    //     this.inner.getType();
+    // }
 }
 export class UnifiedData {
     inner: UnifiedData_th;
@@ -141,7 +137,7 @@ export class UnifiedData {
   - **ETS 类 -> th_ 结构**： 通过 `.inner` 属性访问。
   - **th_ 结构 -> ETS 类**：通过构造函数注入（如 `new UnifiedRecord(UnifiedRecord_th)`）。
 
-## 第二步，完成 C++ 实现
+## 第二步：完成 C++ 实现
 
 ```C++
 class UnifiedRecord_thImpl {
@@ -165,12 +161,11 @@ class Text_thImpl {
     void SetDetails(int32_t a) {
         std::cout << "function SetDetails in Text_thImpl" << std::endl;
     }
-    /*
-     * 如果需要覆盖父类方法，则需要额外实现被覆盖的方法：
-     * void GetType() {
-     *     std::cout << "function GetType in Text_thImpl"  << std::endl;
-     * }
-     */
+
+    // 如果需要覆盖父类方法，则需要额外实现被覆盖的方法：
+    // void GetType() {
+    //     std::cout << "function GetType in Text_thImpl"  << std::endl;
+    // }
 };
 
 class PlainText_thImpl {
@@ -186,21 +181,19 @@ class PlainText_thImpl {
         std::cout << "function SetTextContent in PlainText_thImpl" << std::endl;
     }
 
-    /*
-     * 如果需要覆盖父类方法，则需要额外实现被覆盖的方法：
-     * int32_t GetDetails() {
-     *     std::cout << "function GetDetails in  PlainText_thImpl" << std::endl;
-     *     return 1;
-     * }
-     *
-     * void SetDetails(int32_t a) {
-     *     std::cout << "function SetDetails in  PlainText_thImpl" << std::endl;
-     * }
-     *
-     * void GetType() {
-     *     std::cout << "function GetType in  PlainText_thImpl" << std::endl;
-     * }
-     */
+    // 如果需要覆盖父类方法，则需要额外实现被覆盖的方法：
+    // int32_t GetDetails() {
+    //     std::cout << "function GetDetails in  PlainText_thImpl" << std::endl;
+    //     return 1;
+    // }
+    //
+    // void SetDetails(int32_t a) {
+    //     std::cout << "function SetDetails in  PlainText_thImpl" << std::endl;
+    // }
+    //
+    // void GetType() {
+    //     std::cout << "function GetType in  PlainText_thImpl" << std::endl;
+    // }
 };
 
 class UnifiedData_thImpl {
@@ -241,7 +234,7 @@ class UnifiedData_thImpl {
 }
 ```
 
-## 第三步，在 ets 侧使用
+## 第三步：在 ets 侧使用
 
 ```typescript
 let a = new hello.UnifiedRecord();

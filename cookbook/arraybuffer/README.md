@@ -4,13 +4,13 @@
 
 `ArrayBuffer` 在 Taihe 中使用 `@arraybuffer Array<u8>` 表示。
 
-## 第一步 在 taihe 文件中声明
+## 第一步：在 Taihe IDL 文件中声明
 
 ```taihe
 function convert2Int(a: @arraybuffer Array<u8>): i32;
 ```
 
-## 第二步 实现声明的接口
+## 第二步：实现声明的接口
 
 ```C++
 // 将一段连续的 byte 转换成 int 类型
@@ -27,15 +27,15 @@ int32_t convert2Int(array_view<uint8_t> a) {
 
 `ArrayBuffer` 在 taihe C++ 实现侧的使用与一般的 `Array<T>` 是一样的，区别主要在于 sts 侧对应的是 `ArrayBuffer`
 
-## 第三步 生成并编译
+## 第三步：生成并编译
 
 ```sh
-# 注：taihe 文件里的函数与 C++ 规范一致，所以函数会在生成的 ets 侧自动转变为小写字母开头函数
-# taihe 文件中的写法：
+# 注：Taihe IDL 文件里的函数与 C++ 规范一致，所以函数会在生成的 ets 侧自动转变为小写字母开头函数
+# Taihe IDL 文件中的写法：
 #   function FooBar(): void;
 # 生成的 ets 侧代码
 #   function fooBar(): void;
-# 如果希望生成的 ets 侧函数与 taihe 文件一致，可以使用 -Csts:keep-name
+# 如果希望生成的 ets 侧函数与 Taihe IDL 文件一致，可以使用 -Csts:keep-name
 taihe-tryit test -u sts path/to/arraybuffer -Csts:keep-name
 ```
 

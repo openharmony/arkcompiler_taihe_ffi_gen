@@ -33,7 +33,8 @@ function makeCreditCard(initAmount: f64): CreditCard;
 
   `@get` 和 `@set` 注解中可以有参数，表示该 getter 或 setter 所对应的数据成员名；也可以省略该参数，这种情况下，该方法名必须以 `get` 或 `set` 起始，对应的数据成员名会取方法名中 `get` 或 `set` 后的部分，然后将剩余部分的首字母小写（即按照小驼峰命名法）。
 
-## 第二步，完成 C++ 实现
+## 第二步：完成 C++ 实现
+
 ```C++
 class PayableImpl {
 public:
@@ -83,7 +84,8 @@ CreditCard makeCreditCard(double initAmount) {
 }
 ```
 
-## 第三步，在 ets 侧使用
+## 第三步：在 ets 侧使用
+
 ```typescript
 // 初始化银行卡
 let card = inherit.makeCreditCard(1000.0);

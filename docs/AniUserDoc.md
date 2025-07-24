@@ -1,9 +1,10 @@
-# 太和 ANI 用户文档
+# Taihe ANI 用户文档
 
-本文档旨在介绍太和 ANI 后端生成的代码和函数调用链，帮助用户理解如何在自己的代码中使用并调试这些自动生成的接口。
+本文档旨在介绍 Taihe ANI 后端生成的代码和函数调用链，帮助用户理解如何在自己的代码中使用并调试这些自动生成的接口。
 
 ## ⚠️ 特别注意 ⚠️
-***自动生成的 ets 文件中，所有以 `_taihe_` 为前缀的函数和变量，均为太和的内部接口，我们不会保证这些接口的稳定性，因此，请不要勿在用户代码或注入代码中直接调用这些接口！！！***
+
+***自动生成的 ets 文件中，所有以 `_taihe_` 为前缀的函数和变量，均为 Taihe 的内部接口，我们不会保证这些接口的稳定性，因此，请不要勿在用户代码或注入代码中直接调用这些接口！！！***
 
 ## 基本函数的正向调用链
 
@@ -119,7 +120,7 @@ function processWithCallback(myCallback: MyCallback): void;
 ```
 
 在这种情况下，回调的过程如下：
-1. 首先，当 `myCallback` 对象从上层传入时，它会从 JS 对象被封装成一个太和代理对象。你可以在 `generated/include/my.package.MyCallback.ani.1.hpp` 文件中的函数 `taihe::from_ani<test::MyCallback>` 里找到对应的封装/转换逻辑（如果是 `() => void` 这样的匿名函数，则应在 `generated/src/my.package.ani.cpp` 文件中找到对应的转换逻辑）。这一封装过程会将太和代理对象上的 `onResult` 方法与 ets 代码中 `interface MyCallback` 内由太和自动生成的 `_taihe_onResult_revert` 方法相绑定。
+1. 首先，当 `myCallback` 对象从上层传入时，它会从 JS 对象被封装成一个 Taihe 代理对象。你可以在 `generated/include/my.package.MyCallback.ani.1.hpp` 文件中的函数 `taihe::from_ani<test::MyCallback>` 里找到对应的封装/转换逻辑（如果是 `() => void` 这样的匿名函数，则应在 `generated/src/my.package.ani.cpp` 文件中找到对应的转换逻辑）。这一封装过程会将 Taihe 代理对象上的 `onResult` 方法与 ets 代码中 `interface MyCallback` 内由 Taihe 自动生成的 `_taihe_onResult_revert` 方法相绑定。
 
     **generated/src/my.package.MyCallback.ani.1.hpp**
     ```c++
@@ -215,7 +216,7 @@ function processWithCallback(myCallback: MyCallback): void;
     }
     ```
 
-5. 在太和代理对象的 `onResult` 方法中再将返回值从 ani_object 转换为对应的 C++ 对象（同正向调用链第 3 步），并返回到 `myCallback->onResult` 的调用处。
+5. 在 Taihe 代理对象的 `onResult` 方法中再将返回值从 ani_object 转换为对应的 C++ 对象（同正向调用链第 3 步），并返回到 `myCallback->onResult` 的调用处。
 
     **generated/src/my.package.MyCallback.ani.1.hpp**
     ```c++

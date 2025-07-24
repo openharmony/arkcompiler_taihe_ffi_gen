@@ -2,12 +2,11 @@
 
 重写（override）是指在子类中重新定义父类中已存在的方法，以改变其行为。在运行时，系统会根据对象的实际类型自动调用对应版本的方法。
 
-taihe 支持用户在 sts 侧创建子类，继承在 taihe 文件中声明的父类，并重写其方法。
+taihe 支持用户在 sts 侧创建子类，继承在 Taihe IDL 文件中声明的父类，并重写其方法。
 
-## 第一步 在 taihe 文件中声明
+## 第一步：在 Taihe IDL 文件中声明
 
 `override/idl/override.taihe`
-
 ```taihe
 @class
 interface UIAbility {
@@ -40,24 +39,18 @@ function logLifecycle(str: String): void;
   该注解会改变 ets 侧方法名，使用 `@rename("<new_name>")` 会使得 ets 侧方法名修改为 `new_name`, 不带参数时适用于匿名函数
 
 注：根据 ets 规范，当一个 class 只有一个构造函数时，该函数应该为匿名构造函数，所以应该使用 `@rename`
-
 ```taihe
 @class
-interface IfaceA {
-
-}
+interface IfaceA {}
 
 @rename @constructor("IfaceA")
 function createIfaceA(): IfaceA;
 ```
 
 注：根据 ets 新重载规则，当一个 class 有多个构造函数时，需要使用 `@static_overload`
-
 ```taihe
 @class
-interface IfaceB {
-
-}
+interface IfaceB {}
 
 @static_overload @constructor("IfaceB")
 function createIfaceBWithInt(arg: i32): IfaceB;
@@ -66,12 +59,11 @@ function createIfaceBWithInt(arg: i32): IfaceB;
 function createIfaceBWithString(arg: String): IfaceB;
 ```
 
-## 第二步 实现声明的接口
+## 第二步：实现声明的接口
 
 `useUIAbility` 函数接收 `UIAbility` 类型的参数，根据传入参数对象的实际类型调用 `onForeground` 方法和 `onBackground` 方法。
 
 `override/author/src/override.impl.cpp`
-
 ```C++
 class UIAbility {
 public:
@@ -94,19 +86,19 @@ void logLifecycle(string_view str) {
 }
 ```
 
-## 第三步 生成并编译
+## 第三步：生成并编译
 
 ```sh
-# 注：taihe 文件里的函数与 C++ 规范一致，所以函数会在生成的 ets 侧自动转变为小写字母开头函数
-# taihe 文件中的写法：
+# 注：Taihe IDL 文件里的函数与 C++ 规范一致，所以函数会在生成的 ets 侧自动转变为小写字母开头函数
+# Taihe IDL 文件中的写法：
 #   function FooBar(): void;
 # 生成的 ets 侧代码
 #   function fooBar(): void;
-# 如果希望生成的 ets 侧函数与 taihe 文件一致，可以使用 -Csts:keep-name
+# 如果希望生成的 ets 侧函数与 Taihe IDL 文件一致，可以使用 -Csts:keep-name
 taihe-tryit test -u sts path/to/override -Csts:keep-name
 ```
 
-用户侧创建类 `MyAbility` 继承了 taihe 文件中声明的类 `UIAbility`，并重写了方法 `onForeground`，创建了一个 `MyAbility` 类的实例，并将其赋值给类型为 `UIAbility` 的变量，以此做为参数传入 `useUIAbility` 函数。
+用户侧创建类 `MyAbility` 继承了 Taihe IDL 文件中声明的类 `UIAbility`，并重写了方法 `onForeground`，创建了一个 `MyAbility` 类的实例，并将其赋值给类型为 `UIAbility` 的变量，以此做为参数传入 `useUIAbility` 函数。
 
 可以看出实际上在 C++ 侧调用了 sts 侧重写的 `onForeground` 方法和 C++ 侧原本的 `onBackground` 方法。
 
@@ -126,7 +118,6 @@ MyAbility.logLifecycle("using uiability")
 ```
 
 上面的 ets 侧代码使用 MyAbility 继承 UIAbility
-
 ```sh
 in ets onForeground
 in cpp onBackground

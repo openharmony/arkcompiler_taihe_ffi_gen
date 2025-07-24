@@ -71,11 +71,12 @@ optional<string> getUserSetting(map_view<string, string> settings, string_view k
     }
     ```
 
-另外需要注意的时，生成 temp 文件夹下，使用了 `using namespace userSettings;`，如果直接编译会编译不通过，因为该样例没有任何对象，所以没有 include 这个命名空间，如果在 taihe 文件没有使用对象的场景下，需要手动将该语句删除
+另外需要注意的时，生成 temp 文件夹下，使用了 `using namespace userSettings;`，如果直接编译会编译不通过，因为该样例没有任何对象，所以没有 include 这个命名空间，如果在 Taihe IDL 文件没有使用对象的场景下，需要手动将该语句删除
 
 希望读者明白生成的 temp 文件夹下的文件是用于作为参考，而非让使用者直接作为模板套用
 
 ## 第三步：在 ets 侧使用
+
 ```typescript
 // 初始化 Record
 let Settings: Record<string, string> = {
@@ -97,6 +98,7 @@ autosave: undefined
 ```
 
 ## Optional 补充
+
 ```C++
 // 创建 Optional
 

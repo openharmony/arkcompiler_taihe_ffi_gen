@@ -8,7 +8,7 @@ taihe 提供了 `ani runtime` 以及 `opaque` 类型用于在实现侧处理 ani
 
 我们写一个简单的例子
 
-## 第一步 在 taihe 文件中声明
+## 第一步：在 Taihe IDL 文件中声明
 
 ```taihe
 @!sts_inject("import {Person} from 'other.subsystem';")
@@ -20,7 +20,6 @@ function processPerson(person: @sts_type("Person") Opaque): void;
 ```
 
 这里使用到的 Person 类型如下：
-
 ```typescript
 export interface Person {
     name: string;
@@ -38,7 +37,7 @@ export interface Person {
 
 `@sts_type` 注解用于指定 `Opaque` 在 sts 侧的类型，使用方法是在类型 `Opaque` 前面增加 `@sts_type("\<type_name\>")`, \<type_name\> 为 sts 类型名
 
-## 第二步 实现声明的接口
+## 第二步：实现声明的接口
 
 ```C++
 // 判断输入的外部 ani 对象是否是 string 类型
@@ -83,7 +82,7 @@ void processPerson(uintptr_t person) {
 
 不同于 ani 侧的函数，我们可以发现函数参数并没有 `env`，所以，当用户希望在 impl.cpp 文件实现 ani 的部分逻辑时，需要使用 `ani_env* env = get_env();` 获取当前 `env`，其余按 ani 侧逻辑实现即可
 
-## 第三步 生成并编译
+## 第三步：生成并编译
 
 `compiler/`
 ```sh

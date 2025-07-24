@@ -26,7 +26,6 @@ function addNewPlayer(name: String): Player;
 2. Taihe 的 `struct Player` 默认在 sts 侧 生成的是 `interface Player`（用于接受 ArkTS 用户的传入）和 `class Player_inner implements Player`（用于 C++ 返回值的传出）。可以使用 `@class` 规避 `interface Player`，直接生成 `class Player` 保证 ArkTS 的兼容性
 
 我们可以看到在 sts 侧对应生成的 Player 为：
-
 ```typescript
 export class Player implements Position {
     x: int;

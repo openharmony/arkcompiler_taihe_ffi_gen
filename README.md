@@ -52,14 +52,13 @@ int main() {
 
 如果想要快速上手并有效使用 Taihe，可以阅读以下文档，涵盖了从环境配置到具体使用的详细内容。
 
-- [太和工具的环境配置及使用](docs/UserSetup.md)
+- [Taihe 工具的环境配置及使用](docs/UserSetup.md)
 - [书写 IDL 文件](docs/DSL.md)
-- [数据类型](docs/Types.md)
-- [太和 C++ 用户文档](docs/CppUserDoc.md)
-- [太和 ANI 用户文档](docs/AniUserDoc.md)
+- [Taihe 数据类型](docs/Types.md)
+- [Taihe C++ 用户文档](docs/CppUserDoc.md)
+- [Taihe ANI 用户文档](docs/AniUserDoc.md)
 
-关于 ANI 开发的更多教程可以参考 太和 ANI CookBook
-- [太和 ANI CookBook](./cookbook/README.md)
+关于 ANI 开发的更多教程可以参考 [Taihe ANI CookBook](cookbook/README.md).
 
 ## 开发指南
 
@@ -68,4 +67,4 @@ int main() {
 - [搭建开发环境](docs/DevSetup.md)
 - [整体设计](docs/Architecture.md)
 - [Interface 的二进制标准](docs/InterfaceABI.md)
-- [太和注解系统](docs/AttributeDesign.md)
+- [注解系统设计文档](docs/AttributeDesign.md)

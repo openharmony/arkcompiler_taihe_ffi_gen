@@ -15,7 +15,8 @@ struct Inner {
 }
 ```
 
-然后让另一个 taihe 文件 import：
+然后让另一个 Taihe IDL 文件 import：
+
 **File: `idl/import_example.taihe`**
 ```taihe
 from export_example use Inner;
@@ -44,7 +45,7 @@ function testImport(obj: Inner): void;
 
 注：arkts 只允许对一个实体使用 export default，请用户不要在一个 package 里面多次使用该注解
 
-## 生成文件
+## 第二步：生成文件
 
 **File: `generated/export_pkg.ets`**
 ```typescript
@@ -66,7 +67,7 @@ export default namespace export_ns { // export default
 
 我们可以看到生成文件里面添加了 `export default`
 
-## 在 ets 侧使用
+## 第三步：在 ets 侧使用
 
 ```typescript
 import {BusinessError} from "@ohos.base";

@@ -1,6 +1,6 @@
 # Hello World：将 C++ 函数绑定到 ArkTS
 
-Taihe 帮你把 C++ 函数绑定到 ArkTS。如果你已经写好了大量的 C++ 代码，只须编写 Taihe 文件描述接口原型，就能将接口暴露给 ArkTS 使用。
+Taihe 帮你把 C++ 函数绑定到 ArkTS。如果你已经写好了大量的 C++ 代码，只须编写 Taihe IDL 文件描述接口原型，就能将接口暴露给 ArkTS 使用。
 
 让我们用 C++ 函数 `string add(int32_t a, int32_t b)` 举个例子：
 
@@ -15,14 +15,13 @@ function add(a: i32, b: i32): String;
 
 ## 第二步：生成 C++ 代码骨架
 
-执行 Python 模块 taihe，给出下列参数。会将 idl 目录里面的接口原型生成代码到 gen 目录下。同时开启 author, user, ani 代码生成模式。
 ```sh
-# 注：taihe 文件里的函数与 C++ 规范一致，所以函数会在生成的 ets 侧自动转变为小写字母开头函数
-# taihe 文件中的写法：
+# 注：Taihe IDL 文件里的函数与 C++ 规范一致，所以函数会在生成的 ets 侧自动转变为小写字母开头函数
+# Taihe IDL 文件中的写法：
 #   function FooBar(): void;
 # 生成的 ets 侧代码
 #   function fooBar(): void;
-# 如果希望生成的 ets 侧函数与 taihe 文件一致，可以使用 -Csts:keep-name
+# 如果希望生成的 ets 侧函数与 Taihe IDL 文件一致，可以使用 -Csts:keep-name
 taihe-tryit test -u sts path/to/hello_world -Csts:keep-name
 
 ## 如果希望只生成不测试，可以使用
@@ -41,6 +40,7 @@ TH_EXPORT_CPP_API_add(add);
 ```
 
 ## 第三步：填写业务逻辑
+
 将临时目录中的骨架代码复制到 `author/src` 目录下，我们就可以填写逻辑了。
 
 **File: `author/src/hello_world.impl.cpp`**
@@ -67,7 +67,6 @@ function main() {
 ```
 
 此时此刻，代码目录结构如下：
-
 ```
 .
 ├── author
@@ -80,8 +79,8 @@ function main() {
 ```
 
 ## 第四步：执行测试
-本文使用了仓库中的 `compiler/run-test` 脚本，该脚本会自动编译并执行测试：
 
+本文使用了仓库中的 `compiler/run-test` 脚本，该脚本会自动编译并执行测试：
 ```sh
 ../../compiler/run-test . -ani
 # ...

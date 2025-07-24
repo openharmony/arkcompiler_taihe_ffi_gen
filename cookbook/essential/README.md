@@ -2,7 +2,7 @@
 
 ## 入门：Taihe 的基本概念
 
-- Taihe 文件使用类 C 的写法，描述了接口。
+- Taihe IDL 文件使用类 C 的写法，描述了接口。
 
 **File: idl/ohos.book.store.taihe**
 ```typescript
@@ -34,7 +34,9 @@ void PrintBook(Book const& b) {
 
 - `taihec` 生成对应的 ArkTS 文件，自动将 C++ 代码投影到 ArkTS。
 
-**Command: taihec idl/ohos.book.store.taihe -Ogenerated -Cani-bridge**
+```sh
+taihec idl/ohos.book.store.taihe -Ogenerated -Cani-bridge
+```
 
 **File (Generated): generated/ohos.book.store.ets**
 ```typescript
@@ -77,7 +79,7 @@ PrintBook: Rust for Rustaceans, year 2021, kind = Rust
 ## 入门：包，命名空间，和注解
 
 - Taihe 的设计思想是简单明了、语言中立。因此，有很多 ArkTS 的特有能力不能在 Taihe 中原生表示出来。
-- 例如，Taihe 只有“包”的概念，且包名和 Taihe 文件名一一对应。
+- 例如，Taihe 只有“包”的概念，且包名和 Taihe IDL 文件名一一对应。
   - 举个例子，`foo.bar.baz.taihe` 对应 C++ 命名空间 `::foo::bar::baz`，对应 ArkTS 模块 `foo.bar.baz.ets`。
   - OHOS 中常见的 `@ohos.foo.bar.ets` 的写法，由于含有特殊字符 `@`，不能被 Taihe 支持。
 - Taihe 使用注解机制引入语言扩展，从而更好地支持 ArkTS。例如，通过 `@namespace` 可以指定 ArkTS 中的模块和命名空间（`declare namespace MyNamespace { ... }`）
@@ -116,7 +118,7 @@ PrintBook: Rust for Rustaceans, year 2021, kind = Rust
   - `@bigint Array<u64>`: 表示 ArkTS 的 `BigInt`
   - `(arg: ArgT) => RetT` 表示回调函数，对应 ArkTS 投影 `(arg: ArgT) => RetT`
 
-- 让我们用高级特性举个例子。在 Taihe 文件中引入这些代码
+- 让我们用高级特性举个例子。在 Taihe IDL 文件中引入这些代码
 
 **File: idl/ohos.book.store.taihe**
 ```typescript
@@ -131,7 +133,8 @@ function MapBookToYear(opt: MapOption): @record Map<String, i32>;
 function PrintBooksWithFilter(all_books: Array<Book>, filter: Optional<(b: Book) => bool>);
 ```
 
-- 对应的 ArkTS 投影如下：
+- 对应的 ArkTS 投影如下
+
 **File (Generated): generated/ohos.book.store.ets**
 ```typescript
 // Taihe 使用联合体，支持传入多种类型
@@ -219,6 +222,7 @@ PrintBook: Rust for Rustaceans, year 2021, kind = Rust
   - 类似地，将 C++ 容器返回给 ArkTS 后，若 ArkTS 侧修改了数据，则这部分修改也只对 ArkTS 可见。
 
 ## 接口：将 C++ 对象绑定到 ArkTS
+
 - Taihe 的函数是无状态的。传入参数，传出返回值，仅此而已。
 - Taihe 使用 `interface` 管理状态。复用 C++ 的“类”，来将数据和函数关联在一起。ArkTS 侧的投影会复用 C++ 对象的状态。
 - Taihe 的 `interface` 有明确的约束，只支持存放方法，不支持静态函数、构造器、属性。
@@ -372,6 +376,7 @@ error: Error: The Rust Programming Language has been sold out
 ```
 
 ## 漫谈：Taihe 的设计目标和语言能力
+
 Taihe 以语言中立为设计目标。尽管通过注解可以在 ArkTS 中实现高级特性，但核心语言只提供面向 API 的、受限的语言能力：
 
   - `function`: 静态函数
@@ -419,6 +424,7 @@ TH_EXPORT_CPP_API_println(print_str<true>);
 ```
 
 ## 进阶：结构体的高级特性
+
 - Taihe 的 `struct` 为值类型，不支持 C++ 的继承。为了简化 ArkTS 的编写，Taihe 提供了 `@extends` 写法，用组合的方式实现继承。
 - 此外，`struct Foo` 默认生成的是 `interface Foo`（用于接受 ArkTS 用户的传入）和 `class Foo_inner implements Foo`（用于 C++ 返回值的传出）。可以使用 `@class` 规避 `interface Foo`，直接生成 `class Foo` 保证 ArkTS 的兼容性。
 
@@ -444,7 +450,8 @@ union CppOrRustBook {
 function PrintBookAdvanced(book: CppOrRustBook);
 ```
 
-- 对应的 ArkTS 投影如下：
+- 对应的 ArkTS 投影如下
+
 **File (Generated): generated/ohos.book.store.ets**
 ```typescript
 export class RustBook implements Book {
@@ -504,6 +511,7 @@ Hint: use Borland C++ to compile.
 
 
 ## 进阶：接口和继承
+
 - Taihe 的 `interface` 默认生成 ArkTS 的 `interface`，在使用 `@class` 修饰时，生成 ArkTS 的 `class`。
 - Taihe 支持 ArkTS `class` 或 `interface` 继承一个或多个 ArkTS `interface`。
 - Taihe 支持 ArkTS 内的基类 / 子类互转，以及 C++ 内的基类 / 子类互转。
@@ -553,6 +561,7 @@ function Use(d: D123);           // 正确，明确说明传入的类型。
 ```
 
 ## 进阶：接口和多继承
+
 - Taihe 支持同时实现多个接口。例如，我们定义高级类型 `FancyBook`：
 
 **File: idl/ohos.book.store.taihe**
@@ -811,12 +820,13 @@ GetStringArray = AAA,undefined
 ```
 
 ## 常见问题
-### Unhandled exception: std.core.LinkerUnresolvedMethodError
-- 检查 `user/main.ets`，是否遗漏了 `loadLibrary("<your-lib-name-here>")`
-- 在使用 `run-test` 工具时，目录名就是 `loadLibrary` 需要填写的名字
 
-### `union` 类型判断错误
-- `union` 的类型判断基于 ArkTS 的类型系统，根据分支的先后顺序判断
-- 例如 `union { d: Derived; b: Base; }` 可以成功区分基类和子类，但交换顺序则无法判断成功，因为首次判断基类即成功返回。
-- 类似地，`union` 中存在 `Opaque` 必须放在最后，且不允许定义多个 `Opaque`
-- 此外，`union` 受到 ArkTS 类型擦除机制的约束，因此无法区分泛型。
+- Unhandled exception: std.core.LinkerUnresolvedMethodError
+  - 检查 `user/main.ets`，是否遗漏了 `loadLibrary("<your-lib-name-here>")`
+  - 在使用 `run-test` 工具时，目录名就是 `loadLibrary` 需要填写的名字
+
+- `union` 类型判断错误
+  - `union` 的类型判断基于 ArkTS 的类型系统，根据分支的先后顺序判断
+  - 例如 `union { d: Derived; b: Base; }` 可以成功区分基类和子类，但交换顺序则无法判断成功，因为首次判断基类即成功返回。
+  - 类似地，`union` 中存在 `Opaque` 必须放在最后，且不允许定义多个 `Opaque`
+  - 此外，`union` 受到 ArkTS 类型擦除机制的约束，因此无法区分泛型。

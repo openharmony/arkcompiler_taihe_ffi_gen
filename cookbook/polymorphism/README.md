@@ -2,10 +2,9 @@
 
 把子类对象当初父类对象使用是多态的常见场景，在 Taihe 里面使用 Union 来实现多态
 
-## 第一步 在 taihe 文件中声明
+## 第一步：在 Taihe IDL 文件中声明
 
 `polymorphism/idl/poly.taihe`
-
 ```taihe
 // interface 继承
 interface Animal {
@@ -85,10 +84,9 @@ function introduceYourself(p: PersonType): void;
 Worker Student
 ```
 
-## 第二步 实现声明的接口
+## 第二步：实现声明的接口
 
 `polymorphism/author/src/poly.impl.cpp`
-
 ```C++
 class AnimalImpl {
 public:
@@ -227,7 +225,7 @@ void introduceYourself(::poly::PersonType const &p) {
 }
 ```
 
-## 第三步 生成并编译
+## 第三步：生成并编译
 
 ```sh
 taihe-tryit test -u sts cookbook/polymorphism -Csts:keep-name
@@ -250,6 +248,7 @@ taihe-tryit test -u sts cookbook/polymorphism -Csts:keep-name
     poly.introduceYourself(studentPer);
 ```
 
+输出：
 ```sh
 Unknown Animal
 Animal Speak
