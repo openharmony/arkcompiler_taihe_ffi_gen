@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import ClassVar
 
 from typing_extensions import override
 
@@ -82,7 +83,7 @@ from taihe.semantics.types import (
 from taihe.semantics.visitor import TypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
 
-# ANI runtime types
+# Ani Runtime Types
 
 
 @dataclass
@@ -98,7 +99,7 @@ class AniRuntimeType(ABC):
 
 @dataclass
 class AniRuntimePrimitiveType(AniRuntimeType):
-    sts_type: str
+    boxed_ty: "AniRuntimeNonPrimitiveType"
     type_sig: str
 
     @property
@@ -107,7 +108,7 @@ class AniRuntimePrimitiveType(AniRuntimeType):
 
     @property
     def boxed(self) -> "AniRuntimeNonPrimitiveType":
-        return AniRuntimeClassType(name=f"std.core.{self.sts_type.capitalize()}")
+        return self.boxed_ty
 
 
 @dataclass
@@ -132,7 +133,7 @@ class AniRuntimeUnionMemberType(AniRuntimeNonPrimitiveType, ABC):
 
 @dataclass
 class AniRuntimeUnionType(AniRuntimeNonPrimitiveType):
-    members: list[AniRuntimeUnionMemberType]
+    members: list["AniRuntimeUnionMemberType"]
 
     @property
     def sig(self) -> str:
@@ -158,7 +159,7 @@ class AniRuntimeUnionType(AniRuntimeNonPrimitiveType):
             return members[0]
         return AniRuntimeUnionType(members=members)
 
-    def as_union_members(self) -> Iterable[AniRuntimeUnionMemberType]:
+    def as_union_members(self) -> Iterable["AniRuntimeUnionMemberType"]:
         yield from self.members
 
 
@@ -172,7 +173,7 @@ class AniRuntimeUndefinedType(AniRuntimeNonPrimitiveType):
     def desc(self) -> str:
         return self.sig
 
-    def as_union_members(self) -> Iterable[AniRuntimeUnionMemberType]:
+    def as_union_members(self) -> Iterable["AniRuntimeUnionMemberType"]:
         yield from ()
 
 
@@ -226,7 +227,7 @@ class AniRuntimeEnumType(AniRuntimeUnionMemberType):
         return f"E{{{self.name}}}"
 
 
-# ANI Types
+# Ani Types
 
 
 @dataclass(repr=False)
@@ -304,7 +305,7 @@ ANI_STRING = AniType(hint="string", base=ANI_REF)
 ANI_ARRAYBUFFER = AniType(hint="arraybuffer", base=ANI_REF)
 
 
-# ANI Function and Method
+# Ani Function and Method
 
 
 @dataclass(repr=False)
@@ -327,7 +328,7 @@ ANI_FUNCTION = AniFuncLike("function")
 ANI_METHOD = AniFuncLike("method")
 
 
-# ANI Scopes
+# Ani Scopes
 
 
 @dataclass(repr=False)
@@ -352,72 +353,116 @@ ANI_MODULE = AniScope("module", ANI_FUNCTION)
 ANI_NAMESPACE = AniScope("namespace", ANI_FUNCTION)
 
 
-class Path:
-    def __init__(self, package: str | None = None, path: str | None = None) -> None:
-        self.package = package
-        self.path = path
-        self.ani_path = []
-        if package is not None:
-            self.ani_path.append(package)
-        if path is not None:
-            self.ani_path.extend(path.split("/"))
+# ArkTs Module and Namespace
 
 
-class StsNamespace:
-    def __init__(self, name: str, parent: "StsNamespace | Path") -> None:
-        self.name = name
-        self.parent = parent
+@dataclass
+class ArkTsPath:
+    module_prefix: str | None = None
+    path_prefix: str | None = None
 
-        self.children: dict[str, StsNamespace] = {}
-        self.packages: list[PackageDecl] = []
-        self.is_default = False
-        self.injected_heads: list[str] = []
-        self.injected_codes: list[str] = []
+    @property
+    def module_prefix_parts(self) -> list[str]:
+        return [] if self.module_prefix is None else self.module_prefix.split("/")
 
-        if not isinstance(parent, StsNamespace):
-            self.module = self
-            self.path: list[str] = []
-            self.scope = ANI_MODULE
-            self.ani_path = [*parent.ani_path, *name.split(".")]
-        else:
-            self.module = parent.module
-            self.path: list[str] = [*parent.path, name]
-            self.scope = ANI_NAMESPACE
-            self.ani_path = [*parent.ani_path, name]
+    @property
+    def path_prefix_parts(self) -> list[str]:
+        return [] if self.path_prefix is None else self.path_prefix.split("/")
 
-        self.impl_desc = ".".join(self.ani_path)
+
+@dataclass
+class ArkTsModuleOrNamespace(ABC):
+    scope: ClassVar[AniScope]
+
+    is_default: bool = field(default=False, init=False)
+    injected_codes: list[str] = field(default_factory=list, init=False)
+    injected_heads: list[str] = field(default_factory=list, init=False)
+    packages: list[PackageDecl] = field(default_factory=list, init=False)
+    children: dict[str, "ArkTsNamespace"] = field(default_factory=dict, init=False)
+
+    @property
+    @abstractmethod
+    def name_parts(self) -> list[str]:
+        pass
+
+    @property
+    @abstractmethod
+    def mod(self) -> "ArkTsModule":
+        pass
+
+    @property
+    def impl_desc(self) -> str:
+        return ".".join(self.name_parts)
+
+    @abstractmethod
+    def get_member(self, target: StsWriter, name: str, is_default: bool) -> str:
+        pass
 
     def add_path(
         self,
-        path: list[str],
+        ns_parts: list[str],
         pkg: PackageDecl,
         is_default: bool,
-    ) -> "StsNamespace":
-        if not path:
+    ) -> "ArkTsModuleOrNamespace":
+        if not ns_parts:
             self.packages.append(pkg)
             self.is_default |= is_default
             return self
-        head, *tail = path
-        child = self.children.setdefault(head, StsNamespace(head, self))
+        head, *tail = ns_parts
+        child = self.children.setdefault(head, ArkTsNamespace(head, self))
         return child.add_path(tail, pkg, is_default)
 
-    def get_member(
-        self,
-        target: StsWriter,
-        sts_name: str,
-        member_is_default: bool,
-    ) -> str:
-        if not isinstance(self.parent, StsNamespace):
-            filtered_name = "".join(c if c.isalnum() else "_" for c in self.name)
-            if member_is_default:
-                decl_name = f"_taihe_{filtered_name}_default"
-                target.add_import_default(f"./{self.name}", decl_name)
-                return decl_name
-            scope_name = f"_taihe_{filtered_name}"
-            target.add_import_module(f"./{self.name}", scope_name)
-        else:
-            scope_name = self.parent.get_member(target, self.name, self.is_default)
-        return f"{scope_name}.{sts_name}"
+
+@dataclass
+class ArkTsModule(ArkTsModuleOrNamespace):
+    scope: ClassVar[AniScope] = ANI_MODULE
+
+    mod_name: str
+    parent: ArkTsPath
+
+    @property
+    def name_parts(self) -> list[str]:
+        return [
+            *self.parent.module_prefix_parts,
+            *self.parent.path_prefix_parts,
+            *self.mod_name.split("."),
+        ]
+
+    @property
+    def mod(self) -> "ArkTsModule":
+        return self
+
+    def get_member(self, target: StsWriter, name: str, is_default: bool) -> str:
+        filtered_name = "".join(c if c.isalnum() else "_" for c in self.mod_name)
+        if is_default:
+            decl_name = f"_taihe_{filtered_name}_default"
+            target.add_import_default(f"./{self.mod_name}", decl_name)
+            return decl_name
+        scope_name = f"_taihe_{filtered_name}"
+        target.add_import_module(f"./{self.mod_name}", scope_name)
+        return f"{scope_name}.{name}"
+
+
+@dataclass
+class ArkTsNamespace(ArkTsModuleOrNamespace):
+    scope: ClassVar[AniScope] = ANI_NAMESPACE
+
+    ns_name: str
+    parent: ArkTsModuleOrNamespace
+
+    @property
+    def name_parts(self) -> list[str]:
+        return [*self.parent.name_parts, self.ns_name]
+
+    @property
+    def mod(self) -> "ArkTsModule":
+        return self.parent.mod
+
+    def get_member(self, target: StsWriter, name: str, is_default: bool) -> str:
+        return f"{self.parent.get_member(target, self.ns_name, self.is_default)}.{name}"
+
+
+# ANI Analyses
 
 
 class PackageGroupAniInfo(AbstractAnalysis[PackageGroup]):
@@ -425,44 +470,41 @@ class PackageGroupAniInfo(AbstractAnalysis[PackageGroup]):
         self.am = am
         self.pg = pg
 
-        self.module_dict: dict[str, StsNamespace] = {}
-        self.package_map: dict[PackageDecl, StsNamespace] = {}
+        self.mods: dict[str, ArkTsModule] = {}
+        self.pkg_map: dict[PackageDecl, ArkTsModuleOrNamespace] = {}
 
-        self.path = Path(
+        self.path = ArkTsPath(
             self.am.config.arkts_module_prefix,
             self.am.config.arkts_path_prefix,
         )
 
         for pkg in pg.packages:
-            path = []
+            ns_parts = []
             if attr := NamespaceAttr.get(pkg):
-                module_name = attr.module
-                if ns := attr.namespace:
-                    path = ns.split(".")
+                mod_name = attr.module
+                if ns_name := attr.namespace:
+                    ns_parts = ns_name.split(".")
             else:
-                module_name = pkg.name
+                mod_name = pkg.name
 
             is_default = ExportDefaultAttr.get(pkg) is not None
 
-            mod = self.module_dict.setdefault(
-                module_name,
-                StsNamespace(module_name, self.path),
-            )
-            ns = self.package_map[pkg] = mod.add_path(path, pkg, is_default)
+            mod = self.mods.setdefault(mod_name, ArkTsModule(mod_name, self.path))
+            ns_name = self.pkg_map[pkg] = mod.add_path(ns_parts, pkg, is_default)
 
             for attr in StsInjectIntoModuleAttr.get(pkg):
                 mod.injected_heads.append(attr.sts_code)
 
             for attr in StsInjectAttr.get(pkg):
-                ns.injected_codes.append(attr.sts_code)
+                ns_name.injected_codes.append(attr.sts_code)
 
     @classmethod
     @override
     def create(cls, am: AnalysisManager, pg: PackageGroup) -> "PackageGroupAniInfo":
         return PackageGroupAniInfo(am, pg)
 
-    def get_namespace(self, pkg: PackageDecl) -> StsNamespace:
-        return self.package_map[pkg]
+    def get_namespace(self, pkg: PackageDecl) -> ArkTsModuleOrNamespace:
+        return self.pkg_map[pkg]
 
 
 class PackageAniInfo(AbstractAnalysis[PackageDecl]):
@@ -738,7 +780,7 @@ class EnumAniInfo(AbstractAnalysis[EnumDecl]):
     def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
         self.parent_ns = PackageAniInfo.get(am, d.parent_pkg).ns
         self.sts_type_name = d.name
-        self.type_desc = ".".join([*self.parent_ns.ani_path, self.sts_type_name])
+        self.type_desc = ".".join([*self.parent_ns.name_parts, self.sts_type_name])
 
         self.is_default = ExportDefaultAttr.get(d) is not None
 
@@ -761,7 +803,7 @@ class UnionAniInfo(AbstractAnalysis[UnionDecl]):
 
         self.sts_all_somes: list[list[UnionFieldDecl]] = []
         self.sts_all_nones: list[list[UnionFieldDecl]] = []
-        for field in d.fields:
+        for field in d.fields:  # noqa: F402
             if field.ty_ref and isinstance(ty := field.ty_ref.resolved_ty, UnionType):
                 inner_ani_info = UnionAniInfo.get(am, ty.ty_decl)
                 self.sts_all_somes.extend(
@@ -797,8 +839,8 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
             self.sts_impl_name = self.sts_type_name
         else:
             self.sts_impl_name = f"_taihe_{d.name}_inner"
-        self.type_desc = ".".join([*self.parent_ns.ani_path, self.sts_type_name])
-        self.impl_desc = ".".join([*self.parent_ns.ani_path, self.sts_impl_name])
+        self.type_desc = ".".join([*self.parent_ns.name_parts, self.sts_type_name])
+        self.impl_desc = ".".join([*self.parent_ns.name_parts, self.sts_impl_name])
 
         self.interface_injected_codes: list[str] = []
         for iface_injected in StsInjectIntoIfaceAttr.get(d):
@@ -811,7 +853,7 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
         self.sts_iface_parents: list[StructFieldDecl] = []
         self.sts_class_parents: list[StructFieldDecl] = []
         self.sts_all_fields: list[list[StructFieldDecl]] = []
-        for field in d.fields:
+        for field in d.fields:  # noqa: F402
             if ExtendsAttr.get(field):
                 ty = field.ty_ref.resolved_ty
                 assert isinstance(ty, StructType)
@@ -852,8 +894,8 @@ class IfaceAniInfo(AbstractAnalysis[IfaceDecl]):
             self.sts_impl_name = self.sts_type_name
         else:
             self.sts_impl_name = f"_taihe_{d.name}_inner"
-        self.type_desc = ".".join([*self.parent_ns.ani_path, self.sts_type_name])
-        self.impl_desc = ".".join([*self.parent_ns.ani_path, self.sts_impl_name])
+        self.type_desc = ".".join([*self.parent_ns.name_parts, self.sts_type_name])
+        self.impl_desc = ".".join([*self.parent_ns.name_parts, self.sts_impl_name])
 
         self.interface_injected_codes: list[str] = []
         for iface_injected in StsInjectIntoIfaceAttr.get(d):
@@ -1188,7 +1230,7 @@ class UnionTypeAniInfo(TypeAniInfo):
         self.t = t
         self.ani_type = ANI_REF
         sig_types: list[AniRuntimeType] = []
-        for field in t.ty_decl.fields:
+        for field in t.ty_decl.fields:  # noqa: F402
             if (field_ty_ref := field.ty_ref) is not None:
                 field_ani_info = TypeAniInfo.get(self.am, field_ty_ref.resolved_ty)
                 sig_types.append(field_ani_info.sig_type)
@@ -1300,7 +1342,8 @@ class ScalarTypeAniInfo(TypeAniInfo):
         sts_type, ani_type, type_sig = sts_info
         self.sts_type = sts_type
         self.ani_type = ani_type
-        self.sig_type = AniRuntimePrimitiveType(sts_type, type_sig)
+        boxed_ty = AniRuntimeClassType(f"std.core.{sts_type.capitalize()}")
+        self.sig_type = AniRuntimePrimitiveType(boxed_ty, type_sig)
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -1327,7 +1370,7 @@ class ScalarTypeAniInfo(TypeAniInfo):
         ani_result: str,
     ):
         target.writelns(
-            f"{self.ani_type} {ani_result} = static_cast<{self.cpp_info.as_owner}>({cpp_value});",
+            f"{self.ani_type} {ani_result} = static_cast<{self.ani_type}>({cpp_value});",
         )
 
 
@@ -1807,7 +1850,7 @@ class BigIntTypeAniInfo(TypeAniInfo):
         ani_length = f"{cpp_result}_length"
         target.writelns(
             f"ani_arraybuffer {ani_arrbuf} = {{}};",
-            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.module.impl_desc}", "_taihe_fromBigIntToArrayBuffer", nullptr), reinterpret_cast<ani_ref*>(&{ani_arrbuf}), {ani_value}, sizeof({item_ty_cpp_info.as_owner}) / sizeof(char));'
+            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.mod.impl_desc}", "_taihe_fromBigIntToArrayBuffer", nullptr), reinterpret_cast<ani_ref*>(&{ani_arrbuf}), {ani_value}, sizeof({item_ty_cpp_info.as_owner}) / sizeof(char));'
             f"void* {ani_data} = {{}};",
             f"ani_size {ani_length} = {{}};",
             f"{env}->ArrayBuffer_GetInfo({ani_arrbuf}, &{ani_data}, &{ani_length});",
@@ -1832,7 +1875,7 @@ class BigIntTypeAniInfo(TypeAniInfo):
             f"{env}->CreateArrayBuffer({cpp_value}.size() * (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)), &{ani_data}, &{ani_arrbuf});",
             f"std::copy({cpp_value}.begin(), {cpp_value}.end(), reinterpret_cast<{item_ty_cpp_info.as_owner}*>({ani_data}));",
             f"ani_object {ani_result} = {{}};",
-            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.module.impl_desc}", "_taihe_fromArrayBufferToBigInt", nullptr), reinterpret_cast<ani_ref*>(&{ani_result}), {ani_arrbuf});',
+            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.mod.impl_desc}", "_taihe_fromArrayBufferToBigInt", nullptr), reinterpret_cast<ani_ref*>(&{ani_result}), {ani_arrbuf});',
         )
 
 
@@ -2088,7 +2131,7 @@ class CallbackTypeAniInfo(TypeAniInfo):
             f"ani_long {ani_data_ptr} = reinterpret_cast<ani_long>({cpp_value_copy}.m_handle.data_ptr);",
             f"{cpp_value_copy}.m_handle.data_ptr = nullptr;",
             f"ani_fn_object {ani_result} = {{}};",
-            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.module.impl_desc}", "_taihe_makeCallback", nullptr), reinterpret_cast<ani_ref*>(&{ani_result}), {ani_cast_ptr}, {ani_func_ptr}, {ani_data_ptr});',
+            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.mod.impl_desc}", "_taihe_makeCallback", nullptr), reinterpret_cast<ani_ref*>(&{ani_result}), {ani_cast_ptr}, {ani_func_ptr}, {ani_data_ptr});',
         )
 
     def gen_native_invoke(

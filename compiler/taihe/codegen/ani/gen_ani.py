@@ -242,8 +242,8 @@ class AniCodeGenerator:
             self.gen_subregister(
                 cpp_register_name,
                 pkg_ani_source_target,
-                parent_scope=pkg_ani_info.ns.module.scope,
-                impl_desc=pkg_ani_info.ns.module.impl_desc,
+                parent_scope=pkg_ani_info.ns.mod.scope,
+                impl_desc=pkg_ani_info.ns.mod.impl_desc,
                 member_infos=mod_member_infos,
             )
             subregisters.append(f"{local}::{cpp_register_name}")

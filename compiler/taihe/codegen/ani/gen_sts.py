@@ -7,13 +7,14 @@ from taihe.codegen.abi.analyses import (
     IfaceAbiInfo,
 )
 from taihe.codegen.ani.analyses import (
+    ArkTsModule,
+    ArkTsModuleOrNamespace,
     EnumAniInfo,
     GlobFuncAniInfo,
     IfaceAniInfo,
     IfaceMethodAniInfo,
     PackageGroupAniInfo,
     StructAniInfo,
-    StsNamespace,
     TypeAniInfo,
     UnionAniInfo,
 )
@@ -168,19 +169,19 @@ class StsCodeGenerator:
 
     def generate(self, pg: PackageGroup):
         pg_ani_info = PackageGroupAniInfo.get(self.am, pg)
-        for module, ns in pg_ani_info.module_dict.items():
-            self.gen_module_file(module, ns)
+        for mod_name, mod in pg_ani_info.mods.items():
+            self.gen_module_file(mod_name, mod)
 
-    def gen_module_file(self, module: str, ns: StsNamespace):
+    def gen_module_file(self, mod_name: str, mod: ArkTsModule):
         with StsWriter(
             self.om,
-            f"{module}.ets",
+            f"{mod_name}.ets",
             FileKind.ETS,
         ) as target:
-            self.gen_namespace(ns, target)
+            self.gen_namespace(mod, target)
             self.gen_utils(target)
 
-    def gen_namespace(self, ns: StsNamespace, target: StsWriter):
+    def gen_namespace(self, ns: ArkTsModuleOrNamespace, target: StsWriter):
         for head in ns.injected_heads:
             target.write_block(head)
         for code in ns.injected_codes:
