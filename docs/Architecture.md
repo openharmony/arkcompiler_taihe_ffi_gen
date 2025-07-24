@@ -252,17 +252,26 @@ from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
 am = AnalysisManager()
 
 # 分析提供方：定义中间结果的数据结构
+@dataclass
 class GlobFuncAbiInfo(AbstractAnalysis[GlobFuncDecl]):
-    def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
-        self.mangled_name = encode(...)  # 给出中间分析结果的计算方法
+    mangled_name: str
+    # 其他 ABI 信息...
+
+    # 覆写工厂方法 AbstractAnalysis.create(am, decl)，创建分析结果
+    @classmethod
+    def _create(cls, am: AnalysisManager, f: GlobFuncDecl) -> "GlobFuncAbiInfo":
+        return GlobFuncAbiInfo(
+            mangled_name=encode(...),
+            # 其他 ABI 信息...
+        )
 
 # 分析消费方：从分析管理器中拉取数据
 func_abi_info = GlobFuncAbiInfo.get(am, func)
 ```
 
-从上述例子可以看出，Taihe 引入了分析（“Analyses”）的概念，将中间分析结果和 IR 解耦。其具体实现位于 `taihe.utils.analyses`，包含下列概念：
+从上述例子可以看出，Taihe 引入了分析（Analyses）的概念，将中间分析结果和 IR 解耦。其具体实现位于 `taihe.utils.analyses`，包含下列概念：
 
-- `AbstractAnalysis`：是一切分析中间结果的基类
+- `AbstractAnalysis`：是一切分析中间结果的基类。
 - `AnalysisManager`：分析结果的缓存。由于 Taihe IR 在代码生成阶段不可变，`AnalysisManager` 缓存了相同对象的相同分析结果查询。首次查询时需要计算，后续查询时直接拿到结果。
 
 相比于备选方案，中间分析有如下优点：

@@ -26,8 +26,6 @@ uv sync
 uv build
 ```
 
-*注：安装 `uv` 后，若找不到 `uv` 命令，请尝试重启系统*
-
 ### 后续运行时
 
 可以直接使用 `source .venv/bin/activate` 进入 venv 环境。
