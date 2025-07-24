@@ -17,6 +17,8 @@ from dataclasses import dataclass, field
 from itertools import chain
 from pathlib import Path
 
+from typing_extensions import Self
+
 from taihe.driver.backend import Backend, BackendConfig
 from taihe.semantics.analysis import analyze_semantics
 from taihe.semantics.attributes import AttributeRegistry
@@ -65,31 +67,24 @@ class CompilerInvocation:
 # TODO: refactor this
 @dataclass
 class CompilerConfig:
-    sts_keep_name: bool
-    arkts_module_prefix: str | None
-    arkts_path_prefix: str | None
+    sts_keep_name: bool = False
+    arkts_module_prefix: str | None = None
+    arkts_path_prefix: str | None = None
 
-    @staticmethod
-    def construct(configure: dict[str, str | None]) -> "CompilerConfig":
-        sts_keep_name = False
-        arkts_module_prefix = None
-        arkts_path_prefix = None
-        # parse the configure options
+    @classmethod
+    def construct(cls, configure: dict[str, str | None]) -> Self:
+        res = cls()
         for config in configure:
             k, *v = config.split("=", 1)
             if k == "sts:keep-name":
-                sts_keep_name = True
+                res.sts_keep_name = True
             elif k == "arkts:module-prefix":
-                arkts_module_prefix = v[0] if v else None
+                res.arkts_module_prefix = v[0] if v else None
             elif k == "arkts:path-prefix":
-                arkts_path_prefix = v[0] if v else None
+                res.arkts_path_prefix = v[0] if v else None
             else:
                 raise ValueError(f"unknown codegen config {k!r}")
-        return CompilerConfig(
-            sts_keep_name=sts_keep_name,
-            arkts_module_prefix=arkts_module_prefix,
-            arkts_path_prefix=arkts_path_prefix,
-        )
+        return res
 
 
 class CompilerInstance:
