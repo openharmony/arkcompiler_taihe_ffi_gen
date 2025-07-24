@@ -31,14 +31,14 @@ class AbstractAnalysis(Generic[P], ABC):
 
     @classmethod
     @abstractmethod
-    def create(
+    def _create(
         cls: type[A],
         am: "AnalysisManager",
         *args: P.args,
         **kwargs: P.kwargs,
     ) -> A:
         """Create an instance of an analysis with the given arguments."""
-        raise NotImplementedError(f"{cls.__name__}.create() must be implemented.")
+        raise NotImplementedError("Subclasses must implement this method.")
 
     @classmethod
     def get(
@@ -79,7 +79,7 @@ class AnalysisManager:
         if cached := self._cache.get(key):
             return cast(A, cached)
 
-        new_instance = analysis_type.create(self, *args, **kwargs)
+        new_instance = analysis_type._create(self, *args, **kwargs)  # type: ignore
         self._cache[key] = new_instance
         return new_instance
 

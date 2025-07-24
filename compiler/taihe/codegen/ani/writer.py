@@ -46,7 +46,6 @@ class KeepNaming(Naming):
 class StsWriter(FileWriter):
     """Represents a static type script (sts) file."""
 
-    @override
     def __init__(
         self,
         om: OutputManager,

@@ -307,7 +307,6 @@ class OutputManager:
 class CMakeWriter(FileWriter):
     """Represents a CMake file."""
 
-    @override
     def __init__(
         self,
         om: OutputManager,

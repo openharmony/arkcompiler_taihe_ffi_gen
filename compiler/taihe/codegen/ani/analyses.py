@@ -500,7 +500,7 @@ class PackageGroupAniInfo(AbstractAnalysis[PackageGroup]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, pg: PackageGroup) -> "PackageGroupAniInfo":
+    def _create(cls, am: AnalysisManager, pg: PackageGroup) -> "PackageGroupAniInfo":
         return PackageGroupAniInfo(am, pg)
 
     def get_namespace(self, pkg: PackageDecl) -> ArkTsModuleOrNamespace:
@@ -527,7 +527,7 @@ class PackageAniInfo(AbstractAnalysis[PackageDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, p: PackageDecl) -> "PackageAniInfo":
+    def _create(cls, am: AnalysisManager, p: PackageDecl) -> "PackageAniInfo":
         return PackageAniInfo(am, p)
 
 
@@ -626,7 +626,7 @@ class GlobFuncAniInfo(AbstractAnalysis[GlobFuncDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, f: GlobFuncDecl) -> "GlobFuncAniInfo":
+    def _create(cls, am: AnalysisManager, f: GlobFuncDecl) -> "GlobFuncAniInfo":
         return GlobFuncAniInfo(am, f)
 
     def call_native(self, name: str) -> str:
@@ -742,7 +742,7 @@ class IfaceMethodAniInfo(AbstractAnalysis[IfaceMethodDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, f: IfaceMethodDecl) -> "IfaceMethodAniInfo":
+    def _create(cls, am: AnalysisManager, f: IfaceMethodDecl) -> "IfaceMethodAniInfo":
         return IfaceMethodAniInfo(am, f)
 
     def call_native(self, name: str) -> str:
@@ -786,7 +786,7 @@ class EnumAniInfo(AbstractAnalysis[EnumDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, d: EnumDecl) -> "EnumAniInfo":
+    def _create(cls, am: AnalysisManager, d: EnumDecl) -> "EnumAniInfo":
         return EnumAniInfo(am, d)
 
     def sts_type_in(self, target: StsWriter):
@@ -821,7 +821,7 @@ class UnionAniInfo(AbstractAnalysis[UnionDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, d: UnionDecl) -> "UnionAniInfo":
+    def _create(cls, am: AnalysisManager, d: UnionDecl) -> "UnionAniInfo":
         return UnionAniInfo(am, d)
 
     def sts_type_in(self, target: StsWriter):
@@ -873,7 +873,7 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, d: StructDecl) -> "StructAniInfo":
+    def _create(cls, am: AnalysisManager, d: StructDecl) -> "StructAniInfo":
         return StructAniInfo(am, d)
 
     def is_class(self):
@@ -919,7 +919,7 @@ class IfaceAniInfo(AbstractAnalysis[IfaceDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, d: IfaceDecl) -> "IfaceAniInfo":
+    def _create(cls, am: AnalysisManager, d: IfaceDecl) -> "IfaceAniInfo":
         return IfaceAniInfo(am, d)
 
     def is_class(self):
@@ -950,7 +950,7 @@ class TypeAniInfo(AbstractAnalysis[Type], ABC):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, t: Type) -> "TypeAniInfo":
+    def _create(cls, am: AnalysisManager, t: Type) -> "TypeAniInfo":
         return TypeAniInfoDispatcher(am).handle_type(t)
 
     @abstractmethod

@@ -41,7 +41,7 @@ class PackageAbiInfo(AbstractAnalysis[PackageDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, p: PackageDecl) -> "PackageAbiInfo":
+    def _create(cls, am: AnalysisManager, p: PackageDecl) -> "PackageAbiInfo":
         return PackageAbiInfo(am, p)
 
 
@@ -52,7 +52,7 @@ class GlobFuncAbiInfo(AbstractAnalysis[GlobFuncDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, f: GlobFuncDecl) -> "GlobFuncAbiInfo":
+    def _create(cls, am: AnalysisManager, f: GlobFuncDecl) -> "GlobFuncAbiInfo":
         return GlobFuncAbiInfo(am, f)
 
 
@@ -63,7 +63,7 @@ class IfaceMethodAbiInfo(AbstractAnalysis[IfaceMethodDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, f: IfaceMethodDecl) -> "IfaceMethodAbiInfo":
+    def _create(cls, am: AnalysisManager, f: IfaceMethodDecl) -> "IfaceMethodAbiInfo":
         return IfaceMethodAbiInfo(am, f)
 
 
@@ -73,7 +73,7 @@ class EnumAbiInfo(AbstractAnalysis[EnumDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, d: EnumDecl) -> "EnumAbiInfo":
+    def _create(cls, am: AnalysisManager, d: EnumDecl) -> "EnumAbiInfo":
         return EnumAbiInfo(am, d)
 
 
@@ -92,7 +92,7 @@ class UnionAbiInfo(AbstractAnalysis[UnionDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, d: UnionDecl) -> "UnionAbiInfo":
+    def _create(cls, am: AnalysisManager, d: UnionDecl) -> "UnionAbiInfo":
         return UnionAbiInfo(am, d)
 
 
@@ -108,7 +108,7 @@ class StructAbiInfo(AbstractAnalysis[StructDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, d: StructDecl) -> "StructAbiInfo":
+    def _create(cls, am: AnalysisManager, d: StructDecl) -> "StructAbiInfo":
         return StructAbiInfo(am, d)
 
 
@@ -165,7 +165,7 @@ class IfaceAbiInfo(AbstractAnalysis[IfaceDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, d: IfaceDecl) -> "IfaceAbiInfo":
+    def _create(cls, am: AnalysisManager, d: IfaceDecl) -> "IfaceAbiInfo":
         return IfaceAbiInfo(am, d)
 
 
@@ -179,7 +179,7 @@ class TypeAbiInfo(AbstractAnalysis[Type], ABC):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, t: Type) -> "TypeAbiInfo":
+    def _create(cls, am: AnalysisManager, t: Type) -> "TypeAbiInfo":
         return TypeAbiInfoDispatcher(am).handle_type(t)
 
 
@@ -370,7 +370,7 @@ class PackageCImplInfo(AbstractAnalysis[PackageDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, p: PackageDecl) -> "PackageCImplInfo":
+    def _create(cls, am: AnalysisManager, p: PackageDecl) -> "PackageCImplInfo":
         return PackageCImplInfo(am, p)
 
 
@@ -380,5 +380,5 @@ class GlobFuncCImplInfo(AbstractAnalysis[GlobFuncDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, f: GlobFuncDecl) -> "GlobFuncCImplInfo":
+    def _create(cls, am: AnalysisManager, f: GlobFuncDecl) -> "GlobFuncCImplInfo":
         return GlobFuncCImplInfo(am, f)
