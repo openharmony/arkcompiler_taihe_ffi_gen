@@ -4,7 +4,6 @@
 #include "taihe/runtime.hpp"
 #include "taihe/string.hpp"
 
-#include "taihe.platform.ani.proj.hpp"
 #include "test.impl.hpp"
 #include "test.proj.hpp"
 

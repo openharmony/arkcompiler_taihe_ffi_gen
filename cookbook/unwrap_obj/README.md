@@ -43,11 +43,11 @@ private:
 };
 ```
 
-Taihe实现侧为：
+Taihe 实现侧为：
 
 **File: `idl/wrap_interface.impl.cpp`**
 ```C++
-// Taihe interface实现类
+// Taihe interface 实现类
 class FooImpl {
 public:
     FooImpl() {
@@ -78,7 +78,7 @@ Foo makeFoo() {
 void useFoo(weak::Foo obj) {
     std::cout << obj->func1() << std::endl;
     std::cout << obj->func2() << std::endl;
-    // 使用getInner()然后类型转换为taihe实现类指针
+    // 使用 getInner() 然后类型转换为 taihe 实现类指针
     reinterpret_cast<FooImpl*>(obj->getInner())->m_data->setName("Tom");
     return ;
 }

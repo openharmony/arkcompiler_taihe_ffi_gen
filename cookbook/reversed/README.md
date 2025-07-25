@@ -1,6 +1,6 @@
 # 外部 interface 实现在 C++ 侧调用
 
-在某些情况下，我们希望在 C++ 侧对一个传入的 ets对象调用其方法，下面是 Taihe 在该场景的示例
+在某些情况下，我们希望在 C++ 侧对一个传入的 ets 对象调用其方法，下面是 Taihe 在该场景的示例
 
 ## 背景：用户已有实现
 
@@ -75,7 +75,7 @@ impl.taihe 不需要手写 C++ 实现
 因为这个对象传递到 C++ 层时已经是一个 taihe C++ 对象了，所以可以使用 taihe C++ 的方式调用
 
 ```C++
-// 得到weak类型类对象
+// 得到 weak 类型类对象
 weak::Base weakBaseObj = baseObj;
 
 // weak 类型转换为非 weak 类型
@@ -97,7 +97,7 @@ derivedOBj->bar();
 
 ## 第三步：ets 侧
 
-修改原本的class实现
+修改原本的 class 实现
 
 **File: `user/user_impl.ets`**
 ```typescript

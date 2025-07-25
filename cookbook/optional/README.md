@@ -19,7 +19,7 @@ function getUserSetting(settings: @record Map<String, String>, key: String): Opt
 
 `@record` 注解的使用方法为增加在 Map 类型前面，这样在 sts 侧会对应 @record 类型
 
-## 第二步: 完成 C++ 实现
+## 第二步：完成 C++ 实现
 
 **File: `author/src/userSettings.impl.cpp`**
 ```C++
@@ -77,7 +77,7 @@ optional<string> getUserSetting(map_view<string, string> settings, string_view k
 
 ## 第三步：在 ets 侧使用
 ```typescript
-// 初始化Record
+// 初始化 Record
 let Settings: Record<string, string> = {
     "theme": "dark",
     "fontSize": "14px",
@@ -98,20 +98,20 @@ autosave: undefined
 
 ## Optional 补充
 ```C++
-// 创建Optional
+// 创建 Optional
 
-// 创建空Optional
+// 创建空 Optional
 optional<T>(std::nullopt);
-// 创建非空Optional
+// 创建非空 Optional
 optional<T>(std::in_place, val);
 
 optional<int32_t> opt_var = optional<int32_t>(std::in_place, 1);
-// 判断Optional是否为空
+// 判断 Optional 是否为空
 bool tag = bool(opt_var);
 
 bool tag = opt_var.has_value();
 
-// 获取Optional值
+// 获取 Optional 值
 int32_t var0 = *opt_var;
 int32_t var1 = opt_var.value();
 ```

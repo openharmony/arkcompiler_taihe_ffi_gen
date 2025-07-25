@@ -4,7 +4,7 @@ from typing import Any, TypeGuard, TypeVar
 
 from typing_extensions import override
 
-from taihe.semantics.attributes import CheckedAttributeManager, UncheckedAttribute
+from taihe.semantics.attributes import AttributeRegistry, UncheckedAttribute
 from taihe.semantics.declarations import (
     CallbackTypeRefDecl,
     Decl,
@@ -54,7 +54,7 @@ from taihe.utils.exceptions import (
 def analyze_semantics(
     pg: PackageGroup,
     dm: DiagnosticsManager,
-    am: CheckedAttributeManager,
+    am: AttributeRegistry,
 ):
     """Runs semantic analysis passes on the given package group."""
     # Namespace and declaration checks
@@ -410,14 +410,7 @@ class _CheckRecursiveInclusionPass(RecursiveDeclVisitor):
             parent_iface_list.append(((d, parent.ty_ref), parent_iface))
             prev = parent_iface_dict.setdefault(parent_iface, parent)
             if prev != parent:
-                self.dm.emit(
-                    DuplicateExtendsWarn(
-                        d,
-                        parent_iface,
-                        loc=parent.ty_ref.loc,
-                        prev_loc=prev.ty_ref.loc,
-                    )
-                )
+                self.dm.emit(DuplicateExtendsWarn(prev, parent, d, parent_iface))
 
     def visit_struct_decl(self, d: StructDecl) -> None:
         type_list = self.type_table.setdefault(d, [])
@@ -436,9 +429,9 @@ class _CheckRecursiveInclusionPass(RecursiveDeclVisitor):
 
 class _ConvertAttrPass(RecursiveDeclVisitor):
     dm: DiagnosticsManager
-    am: CheckedAttributeManager
+    am: AttributeRegistry
 
-    def __init__(self, dm: DiagnosticsManager, am: CheckedAttributeManager):
+    def __init__(self, dm: DiagnosticsManager, am: AttributeRegistry):
         self.dm = dm
         self.am = am
 

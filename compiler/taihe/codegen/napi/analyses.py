@@ -3,7 +3,7 @@ from typing import Literal
 
 from typing_extensions import override
 
-from taihe.codegen.abi.analyses import IfaceABIInfo, StructABIInfo
+from taihe.codegen.abi.analyses import IfaceAbiInfo, StructAbiInfo
 from taihe.codegen.abi.mangle import DeclKind, encode
 from taihe.codegen.abi.writer import CSourceWriter
 from taihe.codegen.ani.attributes import (
@@ -159,7 +159,7 @@ class StructNapiInfo(AbstractAnalysis[StructDecl]):
         self.decl_header = f"{d.parent_pkg.name}.{d.name}.napi.decl.h"
         self.impl_header = f"{d.parent_pkg.name}.{d.name}.napi.impl.h"
         self.dts_type_name = d.name
-        struct_abi_info = StructABIInfo.get(am, d)
+        struct_abi_info = StructAbiInfo.get(am, d)
         self.ctor_ref_name = f"ctor_ref_{struct_abi_info.mangled_name}"
         if ClassAttr.get(d):
             self.dts_impl_name = f"{d.name}"
@@ -216,14 +216,14 @@ class IfaceNapiInfo(AbstractAnalysis[IfaceDecl]):
         self.meth_decl_header = f"{d.parent_pkg.name}.{d.name}.meth.napi.decl.h"
         self.meth_impl_header = f"{d.parent_pkg.name}.{d.name}.meth.napi.impl.h"
         self.dts_type_name = d.name
-        iface_abi_info = IfaceABIInfo.get(am, d)
+        iface_abi_info = IfaceAbiInfo.get(am, d)
         self.ctor_ref_name = f"ctor_ref_{iface_abi_info.mangled_name}"
         if ClassAttr.get(d):
             self.dts_impl_name = f"{d.name}"
         else:
             self.dts_impl_name = f"{d.name}_inner"
 
-        iface_abi_info = IfaceABIInfo.get(am, d)
+        iface_abi_info = IfaceAbiInfo.get(am, d)
         iface_register_infos: dict[str, tuple[IfaceMethodDecl, IfaceDecl]] = {}
         for ancestor in iface_abi_info.ancestor_dict:
             for method in ancestor.methods:

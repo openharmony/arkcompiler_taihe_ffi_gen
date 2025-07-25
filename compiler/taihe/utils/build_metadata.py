@@ -13,6 +13,17 @@ class BuildMetadata:
     build_time_utc: float
     is_unknown: bool
 
+    @staticmethod
+    def _unknown_metadata() -> "BuildMetadata":
+        return BuildMetadata(
+            version="0.0.0+unknown",
+            git_commit="<unknown commit>",
+            git_message="<unknown message>",
+            build_date="<unknown date>",
+            build_time_utc=-1.0,
+            is_unknown=True,
+        )
+
     @classmethod
     @cache
     def get(cls) -> "BuildMetadata":
@@ -29,17 +40,6 @@ class BuildMetadata:
             )
         except ModuleNotFoundError:
             return cls._unknown_metadata()
-
-    @staticmethod
-    def _unknown_metadata() -> "BuildMetadata":
-        return BuildMetadata(
-            version="0.0.0+unknown",
-            git_commit="<unknown commit>",
-            git_message="<unknown message>",
-            build_date="<unknown date>",
-            build_time_utc=-1.0,
-            is_unknown=True,
-        )
 
     def print_info(
         self,

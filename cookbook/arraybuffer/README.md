@@ -13,7 +13,7 @@ function convert2Int(a: @arraybuffer Array<u8>): i32;
 ## 第二步 实现声明的接口
 
 ```C++
-// 将一段连续的byte转换成int类型
+// 将一段连续的 byte 转换成 int 类型
 int32_t convert2Int(array_view<uint8_t> a) {
     int32_t num = 0;
     if (a.size() >= 4) { 
@@ -25,19 +25,18 @@ int32_t convert2Int(array_view<uint8_t> a) {
 }
 ```
 
-`ArrayBuffer` 在 taihe C++ 实现侧的使用与一般的 `Array<T>` 是一样的, 区别主要在于 sts 侧对应的是 `ArrayBuffer`
+`ArrayBuffer` 在 taihe C++ 实现侧的使用与一般的 `Array<T>` 是一样的，区别主要在于 sts 侧对应的是 `ArrayBuffer`
 
 ## 第三步 生成并编译
 
-`compiler/`
 ```sh
-## 注：taihe文件里的函数与C++规范一致，所以函数会在生成的 ets 侧自动转变为小写字母开头函数
-## .taihe
-## function FooBar(): void;
-## 生成的 ets 侧
-## function fooBar(): void;
-## 如果希望生成的 ets 侧函数与 taihe 文件一致，可以使用 --sts-keep-name
-python -m taihe.cli.tryit test -u sts /path/to/arraybuffer --sts-keep-name
+# 注：taihe 文件里的函数与 C++ 规范一致，所以函数会在生成的 ets 侧自动转变为小写字母开头函数
+# taihe 文件中的写法：
+#   function FooBar(): void;
+# 生成的 ets 侧代码
+#   function fooBar(): void;
+# 如果希望生成的 ets 侧函数与 taihe 文件一致，可以使用 --sts-keep-name
+taihe-tryit test -u sts path/to/arraybuffer --sts-keep-name
 ```
 
 ## 用户侧使用

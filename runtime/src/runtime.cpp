@@ -95,22 +95,26 @@ bool ani_has_error(ani_env *env) {
 }
 
 void set_error(taihe::string_view msg) {
-  ani_env *env = get_env();
+  env_guard guard;
+  ani_env *env = guard.get_env();
   ani_set_error(env, msg);
 }
 
 void set_business_error(int32_t err_code, taihe::string_view msg) {
-  ani_env *env = get_env();
+  env_guard guard;
+  ani_env *env = guard.get_env();
   ani_set_business_error(env, err_code, msg);
 }
 
 void reset_error() {
-  ani_env *env = get_env();
+  env_guard guard;
+  ani_env *env = guard.get_env();
   ani_reset_error(env);
 }
 
 bool has_error() {
-  ani_env *env = get_env();
+  env_guard guard;
+  ani_env *env = guard.get_env();
   return ani_has_error(env);
 }
 }  // namespace taihe

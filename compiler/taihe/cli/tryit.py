@@ -270,6 +270,46 @@ class BuildSystem(BuildUtils):
                 f"}}\n"
             )
 
+    def taihec(
+        self,
+        dst_dir: Path,
+        src_files: list[Path],
+        backend_names: list[str],
+        cmake: bool = False,
+        sts_keep_name: bool = False,
+        ts_header: bool = False,
+        arkts_module_prefix: str | None = None,
+        arkts_path_prefix: str | None = None,
+    ) -> None:
+        registry = BackendRegistry()
+        registry.register_all()
+        backends = registry.collect_required_backends(backend_names)
+        resolved_backends = [b() for b in backends]
+
+        if cmake:
+            output_config = CMakeOutputConfig(
+                dst_dir=dst_dir,
+                runtime_include_dir=RuntimeHeader.resolve_path(),
+                runtime_src_dir=RuntimeSource.resolve_path(),
+            )
+        else:
+            output_config = OutputConfig(
+                dst_dir=dst_dir,
+            )
+
+        invocation = CompilerInvocation(
+            src_files=src_files,
+            output_config=output_config,
+            backends=resolved_backends,
+            sts_keep_name=sts_keep_name,
+            napi_header=ts_header,
+            arkts_module_prefix=arkts_module_prefix,
+            arkts_path_prefix=arkts_path_prefix,
+        )
+        instance = CompilerInstance(invocation)
+        if not instance.run():
+            raise RuntimeError("Taihe compiler (taihec) failed to run")
+
     def create_user_ts(self) -> None:
         """Create a simple example user TS file."""
         self.create_directory(self.user_dir)
@@ -283,7 +323,7 @@ class BuildSystem(BuildUtils):
                 f"main()\n"
             )
 
-    def generate(self, sts_keep_name: bool, cmake: bool, napi_header: bool) -> None:
+    def generate(self, sts_keep_name: bool, cmake: bool, ts_header: bool) -> None:
         """Generate code from IDL files."""
         if not self.idl_dir.is_dir():
             raise FileNotFoundError(f"IDL directory not found: '{self.idl_dir}'")
@@ -292,45 +332,37 @@ class BuildSystem(BuildUtils):
 
         self.logger.info("Generating author and ani codes...")
 
-        idls = list(self.idl_dir.glob("*.taihe"))
+        lib_files: list[Path] = []
 
-        registry = BackendRegistry()
-        registry.register_all()
         backend_names = ["cpp-author"]
         if self.user == UserType.STS:
             backend_names.append("ani-bridge")
-            idls.append(StandardLibrary.resolve_path() / "taihe.platform.ani.taihe")
+            lib_files.append(
+                StandardLibrary.resolve_path() / "taihe.platform.ani.taihe"
+            )
         if self.user == UserType.CPP:
             backend_names.append("cpp-user")
         if self.user == UserType.TS:
             backend_names.append("napi-bridge")
         if self.should_run_pretty_print:
             backend_names.append("pretty-print")
-        backends = registry.collect_required_backends(backend_names)
-        resolved_backends = [b() for b in backends]
 
-        if cmake:
-            output_config = CMakeOutputConfig(
-                dst_dir=Path(self.generated_dir),
-                runtime_include_dir=RuntimeHeader.resolve_path(),
-                runtime_src_dir=RuntimeSource.resolve_path(),
-            )
-        else:
-            output_config = OutputConfig(
-                dst_dir=Path(self.generated_dir),
-            )
-
-        invocation = CompilerInvocation(
-            src_files=idls,
-            output_config=output_config,
-            backends=resolved_backends,
-            sts_keep_name=sts_keep_name,
-            napi_header=napi_header,
+        # Generate taihe stdlib codes
+        self.taihec(
+            dst_dir=self.generated_dir,
+            src_files=lib_files,
+            backend_names=["abi-source", "cpp-common"],
         )
 
-        instance = CompilerInstance(invocation)
-        if not instance.run():
-            raise RuntimeError(f"Code generation failed")
+        # Generate author codes
+        self.taihec(
+            dst_dir=self.generated_dir,
+            src_files=list(self.idl_dir.glob("*.taihe")),
+            backend_names=backend_names,
+            cmake=cmake,
+            sts_keep_name=sts_keep_name,
+            ts_header=ts_header,
+        )
 
     def compile_and_link_node(self) -> None:
         for dts_path in [self.generated_dir]:
@@ -655,7 +687,7 @@ class BuildSystem(BuildUtils):
     ) -> None:
         """Create ArkTS configuration file."""
         vm = PandaVm.resolve()
-        paths = vm.stdlib_sources | (app_paths or {})
+        paths = vm.stdlib_sources | vm.sdk_sources | (app_paths or {})
 
         config_content = {
             "compilerOptions": {
@@ -743,11 +775,11 @@ class BuildSystem(BuildUtils):
     ) -> float:
         """Run the compiled ABC file with the Ark runtime."""
         ark_path = self.config.vm.tool("ark")
-        etsstdlib_path = self.config.vm.stdlib_lib
 
         command = [
             ark_path,
-            f"--boot-panda-files={etsstdlib_path}",
+            f"--boot-panda-files={self.config.vm.sdk_lib}",
+            f"--boot-panda-files={self.config.vm.stdlib_lib}",
             f"--load-runtimes=ets",
             abc_target,
             entry,
@@ -802,6 +834,8 @@ class TaiheTryitParser(argparse.ArgumentParser):
         self.add_argument(
             "target_directory",
             type=str,
+            nargs="?",
+            default=".",
             help="The target directory containing source files for the project",
         )
         self.add_argument(
@@ -836,7 +870,7 @@ class TaiheTryitParser(argparse.ArgumentParser):
             help="Generate CMake files for the project",
         )
         self.add_argument(
-            "--napi-header",
+            "--ts-header",
             action="store_true",
             help="Use ts napi header file",
         )
@@ -933,7 +967,7 @@ def main():
                 build_system.generate(
                     sts_keep_name=args.sts_keep_name,
                     cmake=args.cmake,
-                    napi_header=args.napi_header,
+                    ts_header=args.ts_header,
                 )
             if args.command in ("build", "test"):
                 build_system.build(

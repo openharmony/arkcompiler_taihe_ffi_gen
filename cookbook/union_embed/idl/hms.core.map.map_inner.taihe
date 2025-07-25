@@ -7,7 +7,7 @@ interface Resource {
 
 function createResource(): Resource;
 
-// union中存在Opaque必须放在最后，且不允许定义多个Opaque，规格无法支持
+// union 中存在 Opaque 必须放在最后，且不允许定义多个 Opaque，规格无法支持
 union icons_type {
     type_string: String;
     type_Resource: Resource;
@@ -16,13 +16,13 @@ union icons_type {
 
 @class
 interface map_inner {
-    // BaseOverlay中的方法
+    // BaseOverlay 中的方法
     getId(): String;
     getZIndex(): i32;
-    // BasePriorityOverlay中的方法
+    // BasePriorityOverlay 中的方法
     getMaxZoom(): i32;
     getMinZoom(): i32;
-    // Bubble中的方法
+    // Bubble 中的方法
     @gen_promise("setIcons")
     setIcons_sync(icons: Array<icons_type>): i32;
     setPositions(positions: Array<Array<Resource>>): void;

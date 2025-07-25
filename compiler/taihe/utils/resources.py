@@ -78,6 +78,8 @@ class ResourceContext:
       each resource is located and processed only once.
     """
 
+    _singleton: ClassVar[Self | None] = None
+
     deployment_mode: DeploymentMode
     base_dir: Path = field(default_factory=Path)
     cache_dir: Path = field(default_factory=Path)
@@ -132,26 +134,27 @@ class ResourceContext:
 
         raise RuntimeError(f"cannot determine deployment layout ({repo_dir=})")
 
-    @staticmethod
+    @classmethod
     def initialize(
-        cli_args: Namespace | None = None, resources: Sequence[ResourceT] | None = None
-    ) -> "ResourceContext":
-        global _singleton
-        if _singleton is not None:
+        cls,
+        cli_args: Namespace | None = None,
+        resources: Sequence[ResourceT] | None = None,
+    ) -> Self:
+        if cls._singleton is not None:
             raise ValueError("already constructed")
-        _singleton = ResourceContext.from_path(__file__)
+        cls._singleton = cls.from_path(__file__)
         if cli_args:
-            _singleton.apply_cli_args(
-                ALL_RESOURCES if resources is None else resources, cli_args
+            cls._singleton.apply_cli_args(
+                ALL_RESOURCES if resources is None else resources,
+                cli_args,
             )
-        return _singleton
+        return cls._singleton
 
-    @staticmethod
-    def instance() -> "ResourceContext":
-        global _singleton
-        if _singleton is None:
-            raise ValueError("must be constructed before")
-        return _singleton
+    @classmethod
+    def instance(cls) -> Self:
+        if cls._singleton is None:
+            raise ValueError("must be initialized before")
+        return cls._singleton
 
     @staticmethod
     def register_cli_options(
@@ -162,6 +165,7 @@ class ResourceContext:
     ) -> None:
         """Register --print and --override CLI arguments to the parser."""
         resources = ALL_RESOURCES if resources is None else resources
+
         if use_print:
             # Add --print-paths argument
             parser.add_argument(
@@ -189,7 +193,10 @@ class ResourceContext:
                 )
 
     def apply_cli_args(
-        self, resources: Sequence[ResourceT], args: Namespace, auto_exit: bool = True
+        self,
+        resources: Sequence[ResourceT],
+        args: Namespace,
+        auto_exit: bool = True,
     ) -> bool:
         """Process CLI arguments. Returns True if program should exit."""
 
@@ -226,9 +233,6 @@ class ResourceContext:
             exit(0)
 
         return should_exit
-
-
-_singleton: ResourceContext | None = None
 
 
 @dataclass
@@ -373,7 +377,9 @@ class PandaVm(CachedResource):
     # Computed attributes
     ani_header_dir: Path = field(init=False)
     stdlib_sources: dict[str, Path] = field(init=False)
+    sdk_sources: dict[str, Path] = field(init=False)
     stdlib_lib: Path = field(init=False)
+    sdk_lib: Path = field(init=False)
     host_tools_dir: Path = field(init=False)
 
     def __post_init__(self):
@@ -381,9 +387,14 @@ class PandaVm(CachedResource):
             self.base_path / "ohos_arm64/include/plugins/ets/runtime/ani"
         )
         self.stdlib_sources = {
-            dir: self.base_path / "ets/stdlib" / dir for dir in ["std", "escompat"]
+            "std": self.base_path / "ets/stdlib/std",
+            "escompat": self.base_path / "ets/stdlib/escompat",
+        }
+        self.sdk_sources = {
+            "@ohos": self.base_path / "ets/sdk/sdk/api/@ohos",
         }
         self.stdlib_lib = self.base_path / "ets" / "etsstdlib.abc"
+        self.sdk_lib = self.base_path / "ets" / "etssdk.abc"
         self.host_tools_dir = self.base_path / "linux_host_tools"
 
     def tool(self, binary: str) -> Path:
@@ -493,4 +504,9 @@ BUILTIN_RESOURCES: Sequence[ResourceT] = [
     StandardLibrary,
     Documentation,
 ]
-ALL_RESOURCES: Sequence[ResourceT] = [*BUILTIN_RESOURCES, PandaVm, PythonBuild, Antlr]
+ALL_RESOURCES: Sequence[ResourceT] = [
+    *BUILTIN_RESOURCES,
+    PandaVm,
+    PythonBuild,
+    Antlr,
+]

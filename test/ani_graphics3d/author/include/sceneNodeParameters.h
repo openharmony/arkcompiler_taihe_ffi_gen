@@ -25,7 +25,7 @@ public:
     return path;
   }
 
-  void SetPath(optional_view<string> name) {
+  void SetPath(optional_view<string> path) {
     this->path = path;
   }
 };

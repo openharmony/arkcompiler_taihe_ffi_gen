@@ -2,7 +2,7 @@
 
 ## string
 
-1. string 使用引用计数进行自动的生命周期管理, 用户只需要正常使用 string
+1. string 使用引用计数进行自动的生命周期管理，用户只需要正常使用 string
 
 2. 为方便用户使用，提供了许多相关的操作函数便于用户开发
 
@@ -64,14 +64,14 @@ std::cout << "to_string(false): " << boolFalseStr << "\n";
 ## array
 
 ```C++
-// 使用初始化列表方式创建taihe::array
+// 使用初始化列表方式创建 taihe::array
 taihe::array<int> arr = {10, 20, 30, 40, 50}
 
 // 通过 std::vector 创建 taihe::array_view
 std::vector<double> vec = {3.14, 2.71, 1.62};
 taihe::array_view<double> view(vec);
 
-// 使用std::vector 创建 taihe::array
+// 使用 std::vector 创建 taihe::array
 std::vector<int> vec = {1, 2, 3};
 taihe::array<int> arr1(taihe::array_view<T>(vec));
 
@@ -86,7 +86,7 @@ std::cout << "Back: " << view.back() << "\n";
 // 获取数组大小
 std::cout << "Size: " << view.size() << "\n";
 
-// 注意使用 begin()、end()、rbegin()、rend() 获取的是指针
+// 注意使用 begin(), end(), rbegin(), rend() 获取的是指针
 // 遍历
 std::cout << "Iterating using begin() and end(): ";
 for (auto it = arr.begin(); it != arr.end(); ++it) {
@@ -152,7 +152,7 @@ my_map.emplace("banana", 3);
 my_map.emplace("orange", 10);
 
 // 查找元素 find_item()
-// 之前的 find() 方法已弃用，用户请不要使用 find() 方法, 而是使用目前的 find_item() 方法
+// 之前的 find() 方法已弃用，用户请不要使用 find() 方法，而是使用目前的 find_item() 方法
 if (auto* result = my_map.find_item("apple")) {
     std::cout << "Found: key = " << result->first << ", value = " << result->second << "\n";
 } else {
@@ -183,25 +183,25 @@ std::cout << "Map size: " << my_map.size() << std::endl;
 // 获取 taihe::map 当前容量 capacity()
 std::cout << "Map capacity: " << my_map.capacity() << std::endl;
 
-// 当前taihe::map 是否为空
+// 当前 taihe::map 是否为空
 std::cout << "Map is empty: " << std::boolalpha << my_map.empty() << std::endl;
 ```
 
 ## optional
 
 ```C++
-// 创建空Optional
-optional<T>(std::nullopt);
-// 创建非空Optional
-optional<T>(std::in_place, val);
+// 创建空 Optional
+optional<T> empty = std::nullopt;
 
-optional<int32_t> opt_var = optional<int32_t>(std::in_place, 1);
-// 判断Optional是否为空
-bool tag = bool(opt_var);
+// 创建非空 Optional
+optional<T> value{std::in_place, val};
+auto opt_var = optional<int32_t>{std::in_place, 1};
 
-bool tag = opt_var.has_value();
+// 判断 Optional 是否为空
+bool tag0 = bool(opt_var);
+bool tag1 = opt_var.has_value();
 
-// 获取Optional值
+// 获取 Optional 值
 int32_t var0 = *opt_var;
 int32_t var1 = opt_var.value();
 ```
@@ -216,7 +216,7 @@ enum MessageType: i32 {
 ```
 
 ```C++
-// 创建enum
+// 创建 enum
 MessageType enum_var1 = MessageType::key_t::Text;
 MessageType enum_var2 = MessageType::key_t::Number;
 
@@ -335,7 +335,7 @@ C++ 侧使用类
 Base baseObj = taihe::make_holder<BaseImpl, Base>();
 Derived derivedOBj = taihe::make_holder<DerivedImpl, Derived>(1);
 
-// 得到weak类型类对象
+// 得到 weak 类型类对象
 weak::Base weakBaseObj = baseObj;
 
 // weak 类型转换为非 weak 类型
@@ -347,7 +347,7 @@ Base newDerivedOBj = Base(derivedOBj);
 // 父类转换为子类，动态转换
 Derived newDerivedOBj2 = Derived(newDerivedOBj);
 
-// 调用函数 ->
+// 调用函数
 baseObj->foo();
 derivedOBj->foo(); // X 不允许子类直接调用父类函数，需要先转换为父类
 derivedOBj->bar();
@@ -357,7 +357,7 @@ derivedOBj->bar();
 
 ```C++
 // callback 作为参数传入时，类型为 callback_view 类型
-// view类型不具备所有权
+// view 类型不具备所有权
 // 如果用户希望保存这个 callback，需要将其从 callback_view 转换为 callback 类型
 // 转换方法示例
 

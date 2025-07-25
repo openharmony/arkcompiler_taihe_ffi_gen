@@ -1,6 +1,6 @@
-# On 与Off
+# On 与 Off
 
-在 sts 中有些接口形如: 
+在 sts 中有些接口形如：
 
 ```typescript
 on(target: "foo", callback: (): void);
@@ -47,7 +47,7 @@ function offBaz(a: i32, cb: (b: i32) => void): void;
 
 `@on_off` 注解有两种写法
 
-on / off 函数在太和中需要命名形如为 `OnFoo`、`OnBar`的函数
+on / off 函数在太和中需要命名形如为 `OnFoo`、`OnBar` 的函数
 
 1. @on_off
 

@@ -5,12 +5,12 @@
 ## 第一步：编写接口原型
 
 **File: `idl/cb_compare.taihe`**
-我们写一个函数，输入是两个 callback, 输出结果是比较两个 callback 是否是相等，如果相等返回 true，否则 返回 false
+我们写一个函数，输入是两个 callback, 输出结果是比较两个 callback 是否是相等，如果相等返回 true，否则返回 false
 ```taihe
 function cbCompare(cb1: () => String, cb2: () => String): bool;
 ```
 
-## 第二步: 完成 C++ 实现
+## 第二步：完成 C++ 实现
 
 **File: `author/src/cb_compare.impl.cpp`**
 ```C++
@@ -19,7 +19,7 @@ bool cbCompare(::taihe::callback_view<::taihe::string()> cb1, ::taihe::callback_
 }
 ```
 
-c++ 侧支持使用 `==` 来比较两个 callback
+C++ 侧支持使用 `==` 来比较两个 callback
 
 ## 第三步：在 ets 侧使用
 ```typescript

@@ -1,6 +1,6 @@
 from json import dumps
 
-from taihe.codegen.abi.analyses import IfaceABIInfo
+from taihe.codegen.abi.analyses import IfaceAbiInfo
 from taihe.codegen.abi.mangle import DeclKind, encode
 from taihe.codegen.abi.writer import CHeaderWriter, CSourceWriter
 from taihe.codegen.cpp.analyses import (
@@ -626,7 +626,7 @@ class NapiCodeGenerator:
         iface_cpp_info: IfaceCppInfo,
         iface_napi_info: IfaceNapiInfo,
     ):
-        iface_abi_info = IfaceABIInfo.get(self.am, iface)
+        iface_abi_info = IfaceAbiInfo.get(self.am, iface)
         with CHeaderWriter(
             self.oc,
             f"include/{iface_napi_info.impl_header}",
@@ -658,7 +658,7 @@ class NapiCodeGenerator:
     def gen_iface_from_napi_func(
         self,
         iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
+        iface_abi_info: IfaceAbiInfo,
         iface_cpp_info: IfaceCppInfo,
         iface_napi_info: IfaceNapiInfo,
         iface_napi_impl_target: CHeaderWriter,
@@ -796,7 +796,7 @@ class NapiCodeGenerator:
     def gen_iface_ctor_func(
         self,
         iface: IfaceDecl,
-        iface_abi_info: IfaceABIInfo,
+        iface_abi_info: IfaceAbiInfo,
         iface_cpp_info: IfaceCppInfo,
         iface_napi_info: IfaceNapiInfo,
         iface_napi_impl_target: CHeaderWriter,

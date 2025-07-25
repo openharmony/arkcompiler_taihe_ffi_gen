@@ -1,7 +1,10 @@
-import { AsyncCallback } from '@ohos.base';
+import { BusinessError } from '@ohos.base';
 import type colorSpaceManager from '@ohos.graphics.colorSpaceManager';
 import type resourceManager from '@ohos.resourceManager';
 import type rpc from '@ohos.rpc';
+
+type AsyncCallback<T> = (error: BusinessError | null, result: T | undefined) => void;
+
 declare namespace image {
     enum PixelMapFormat {
         UNKNOWN = 0,

@@ -129,19 +129,20 @@ export class UnifiedData {
 """)
 ```
 
-**1. _th 结构与 ETS 类的关系**
-- **_th 结构**： C++ 侧的数据结构，仅在 `taihe` 文件和 C++ 代码中使用，不暴露给 ETS 侧。
-- **ETS 类**：通过 `@!sts_inject` 注入的类，供 ETS 侧使用，包含对 `_th` 结构的封装。
+- _th 结构与 ETS 类的关系
+  - **_th 结构**： C++ 侧的数据结构，仅在 `taihe` 文件和 C++ 代码中使用，不暴露给 ETS 侧。
+  - **ETS 类**：通过 `@!sts_inject` 注入的类，供 ETS 侧使用，包含对 `_th` 结构的封装。
 
-**2. 方法调用规则**
-- **覆盖父类方法**： 若子类接口包含父类方法，ETS 侧调用子类实现。
-- **继承父类方法**： 若子类接口省略父类方法，ETS 侧调用父类实现。
+- 方法调用规则
+  - **覆盖父类方法**： 若子类接口包含父类方法，ETS 侧调用子类实现。
+  - **继承父类方法**： 若子类接口省略父类方法，ETS 侧调用父类实现。
 
-**3. 参数与返回值转换**
-- **ETS 类 -> th_ 结构**： 通过 `.inner` 属性访问。
-- **th_ 结构 -> ETS 类**：通过构造函数注入（如 `new UnifiedRecord(UnifiedRecord_th)`）。
+- 参数与返回值转换
+  - **ETS 类 -> th_ 结构**： 通过 `.inner` 属性访问。
+  - **th_ 结构 -> ETS 类**：通过构造函数注入（如 `new UnifiedRecord(UnifiedRecord_th)`）。
 
 ## 第二步，完成 C++ 实现
+
 ```C++
 class UnifiedRecord_thImpl {
     public:
@@ -165,11 +166,11 @@ class Text_thImpl {
         std::cout << "function SetDetails in Text_thImpl" << std::endl;
     }
     /*
-     如果需要覆盖父类方法，则需要额外实现被覆盖的方法：
-     void GetType() {
-         std::cout << "function GetType in Text_thImpl"  << std::endl;
-     }
-    */
+     * 如果需要覆盖父类方法，则需要额外实现被覆盖的方法：
+     * void GetType() {
+     *     std::cout << "function GetType in Text_thImpl"  << std::endl;
+     * }
+     */
 };
 
 class PlainText_thImpl {
@@ -186,20 +187,20 @@ class PlainText_thImpl {
     }
 
     /*
-     如果需要覆盖父类方法，则需要额外实现被覆盖的方法：
-     int32_t GetDetails() {
-         std::cout << "function GetDetails in  PlainText_thImpl" << std::endl;
-         return 1;
-     }
- 
-     void SetDetails(int32_t a) {
-         std::cout << "function SetDetails in  PlainText_thImpl" << std::endl;
-     }
- 
-     void GetType() {
-         std::cout << "function GetType in  PlainText_thImpl" << std::endl;
-     }
-    */
+     * 如果需要覆盖父类方法，则需要额外实现被覆盖的方法：
+     * int32_t GetDetails() {
+     *     std::cout << "function GetDetails in  PlainText_thImpl" << std::endl;
+     *     return 1;
+     * }
+     *
+     * void SetDetails(int32_t a) {
+     *     std::cout << "function SetDetails in  PlainText_thImpl" << std::endl;
+     * }
+     *
+     * void GetType() {
+     *     std::cout << "function GetType in  PlainText_thImpl" << std::endl;
+     * }
+     */
 };
 
 class UnifiedData_thImpl {
@@ -241,6 +242,7 @@ class UnifiedData_thImpl {
 ```
 
 ## 第三步，在 ets 侧使用
+
 ```typescript
 let a = new hello.UnifiedRecord();
 let x1 = new hello.UnifiedData(a);
