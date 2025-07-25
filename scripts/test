@@ -183,7 +183,7 @@ TESTS = {
 MODE_TO_TESTS = {
     "github-push-ci": list(TESTS.keys()),
     "github-pr-ci": list(TESTS.keys()),
-    "ggw-ci": ["core", "ani"],
+    "ggw-ci": ["pytest", "ani"],
 }
 
 
