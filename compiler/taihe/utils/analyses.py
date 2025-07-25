@@ -30,6 +30,16 @@ class AbstractAnalysis(Generic[P], ABC):
     """
 
     @classmethod
+    def get(
+        cls: type[A],
+        am: "AnalysisManager",
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> A:
+        """Get or create an analysis instance using the factory."""
+        return am.get_or_create(cls, *args, **kwargs)
+
+    @classmethod
     @abstractmethod
     def _create(
         cls: type[A],
@@ -39,16 +49,6 @@ class AbstractAnalysis(Generic[P], ABC):
     ) -> A:
         """Create an instance of an analysis with the given arguments."""
         raise NotImplementedError("Subclasses must implement this method.")
-
-    @classmethod
-    def get(
-        cls: type[A],
-        am: "AnalysisManager",
-        *args: P.args,
-        **kwargs: P.kwargs,
-    ) -> A:
-        """Get or create an analysis instance using the factory."""
-        return am.get_or_create(cls, *args, **kwargs)
 
 
 @dataclass(frozen=True)

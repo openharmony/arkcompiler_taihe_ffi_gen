@@ -8,30 +8,7 @@
 namespace {
 // To be implemented.
 
-void setData(::hello::Data const &data) {
-  // std::cerr << "data:" << std::endl;
-  // if (data.a.has_value()) {
-  //   std::cerr << "a: " << data.a.value() << std::endl;
-  // }
-  // if (data.b.has_value()) {
-  //   std::cerr << "b: " << data.b.value() << std::endl;
-  // }
-  // if (data.c.has_value()) {
-  //   std::cerr << "c: " << data.c.value() << std::endl;
-  // }
-  // if (data.d.has_value()) {
-  //   std::cerr << "d: " << data.d.value() << std::endl;
-  // }
-  // if (data.e.has_value()) {
-  //   std::cerr << "e: " << data.e.value() << std::endl;
-  // }
-  // if (data.f.has_value()) {
-  //   std::cerr << "f: " << data.f.value() << std::endl;
-  // }
-  // if (data.g.has_value()) {
-  //   std::cerr << "g: " << data.g.value() << std::endl;
-  // }
-}
+void setData(::hello::Data const &data) {}
 
 ::hello::Data getData() {
   return {
@@ -45,12 +22,7 @@ void setData(::hello::Data const &data) {
   };
 }
 
-void setRecord(::taihe::map_view<::taihe::string, ::taihe::string> rec) {
-  // std::cerr << "record:" << std::endl;
-  // for (auto const &[key, value] : rec) {
-  //   std::cerr << key << ": " << value << std::endl;
-  // }
-}
+void setRecord(::taihe::map_view<::taihe::string, ::taihe::string> rec) {}
 
 static ::taihe::map<::taihe::string, ::taihe::string> global_rec = [] {
   ::taihe::map<::taihe::string, ::taihe::string> rec;
