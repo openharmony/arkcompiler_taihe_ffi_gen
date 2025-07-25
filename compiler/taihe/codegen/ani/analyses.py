@@ -540,7 +540,7 @@ class GlobFuncAniInfo(AbstractAnalysis[GlobFuncDecl]):
         self.native_prefix = "native function "
         self.native_name = f"_taihe_{f.name}_native"
 
-        self.revert_name = f"_taihe_{f.name}_revert"
+        self.reverse_name = f"_taihe_{f.name}_reverse"
 
         naming = PackageAniInfo.get(am, f.parent_pkg).naming
 
@@ -633,7 +633,7 @@ class GlobFuncAniInfo(AbstractAnalysis[GlobFuncDecl]):
     def call_native(self, name: str) -> str:
         return name
 
-    def call_native_with(self, sts_args: list[str], this: str = "this") -> list[str]:
+    def as_native_args(self, sts_args: list[str], this: str = "this") -> list[str]:
         last = this
         arg = iter(sts_args)
         sts_native_args: list[str] = []
@@ -648,9 +648,9 @@ class GlobFuncAniInfo(AbstractAnalysis[GlobFuncDecl]):
                 sts_native_args.append(last := next(arg))
         return sts_native_args
 
-    def call_revert_with(self, sts_revert_args: list[str]) -> list[str]:
+    def as_normal_args(self, sts_reverse_args: list[str]) -> list[str]:
         sts_args: list[str] = []
-        for param, arg in zip(self.f.params, sts_revert_args, strict=True):
+        for param, arg in zip(self.f.params, sts_reverse_args, strict=True):
             if (
                 StsThisAttr.get(param)
                 or StsLastAttr.get(param)
@@ -669,7 +669,7 @@ class IfaceMethodAniInfo(AbstractAnalysis[IfaceMethodDecl]):
         self.native_prefix = "native "
         self.native_name = f"_taihe_{f.name}_native"
 
-        self.revert_name = f"_taihe_{f.parent_iface.name}_{f.name}_revert"
+        self.reverse_name = f"_taihe_{f.parent_iface.name}_{f.name}_reverse"
 
         naming = PackageAniInfo.get(am, f.parent_pkg).naming
 
@@ -749,7 +749,7 @@ class IfaceMethodAniInfo(AbstractAnalysis[IfaceMethodDecl]):
     def call_native(self, name: str) -> str:
         return f"this.{name}" if name else "this"
 
-    def call_native_with(self, sts_args: list[str], this: str = "this") -> list[str]:
+    def as_native_args(self, sts_args: list[str], this: str = "this") -> list[str]:
         last = this
         arg = iter(sts_args)
         sts_native_args: list[str] = []
@@ -764,9 +764,9 @@ class IfaceMethodAniInfo(AbstractAnalysis[IfaceMethodDecl]):
                 sts_native_args.append(last := next(arg))
         return sts_native_args
 
-    def call_revert_with(self, sts_revert_args: list[str]) -> list[str]:
+    def as_normal_args(self, sts_reverse_args: list[str]) -> list[str]:
         sts_args: list[str] = []
-        for param, arg in zip(self.f.params, sts_revert_args, strict=True):
+        for param, arg in zip(self.f.params, sts_reverse_args, strict=True):
             if (
                 StsThisAttr.get(param)
                 or StsLastAttr.get(param)
