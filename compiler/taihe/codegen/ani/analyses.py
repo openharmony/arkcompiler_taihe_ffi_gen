@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from dataclasses import field as datafield
 from typing import ClassVar
 
 from typing_extensions import override
@@ -374,11 +375,11 @@ class ArkTsPath:
 class ArkTsModuleOrNamespace(ABC):
     scope: ClassVar[AniScope]
 
-    is_default: bool = field(default=False, init=False)
-    injected_codes: list[str] = field(default_factory=list, init=False)
-    injected_heads: list[str] = field(default_factory=list, init=False)
-    packages: list[PackageDecl] = field(default_factory=list, init=False)
-    children: dict[str, "ArkTsNamespace"] = field(default_factory=dict, init=False)
+    is_default: bool = datafield(default=False, init=False)
+    injected_codes: list[str] = datafield(default_factory=list, init=False)
+    injected_heads: list[str] = datafield(default_factory=list, init=False)
+    packages: list[PackageDecl] = datafield(default_factory=list, init=False)
+    children: dict[str, "ArkTsNamespace"] = datafield(default_factory=dict, init=False)
 
     @property
     @abstractmethod
@@ -803,7 +804,7 @@ class UnionAniInfo(AbstractAnalysis[UnionDecl]):
 
         self.sts_all_somes: list[list[UnionFieldDecl]] = []
         self.sts_all_nones: list[list[UnionFieldDecl]] = []
-        for field in d.fields:  # noqa: F402
+        for field in d.fields:
             if field.ty_ref and isinstance(ty := field.ty_ref.resolved_ty, UnionType):
                 inner_ani_info = UnionAniInfo.get(am, ty.ty_decl)
                 self.sts_all_somes.extend(
@@ -853,7 +854,7 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
         self.sts_iface_parents: list[StructFieldDecl] = []
         self.sts_class_parents: list[StructFieldDecl] = []
         self.sts_all_fields: list[list[StructFieldDecl]] = []
-        for field in d.fields:  # noqa: F402
+        for field in d.fields:
             if ExtendsAttr.get(field):
                 ty = field.ty_ref.resolved_ty
                 assert isinstance(ty, StructType)
@@ -1230,7 +1231,7 @@ class UnionTypeAniInfo(TypeAniInfo):
         self.t = t
         self.ani_type = ANI_REF
         sig_types: list[AniRuntimeType] = []
-        for field in t.ty_decl.fields:  # noqa: F402
+        for field in t.ty_decl.fields:
             if (field_ty_ref := field.ty_ref) is not None:
                 field_ani_info = TypeAniInfo.get(self.am, field_ty_ref.resolved_ty)
                 sig_types.append(field_ani_info.sig_type)
