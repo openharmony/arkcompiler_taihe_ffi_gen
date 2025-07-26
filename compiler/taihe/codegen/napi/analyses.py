@@ -16,6 +16,7 @@ from taihe.codegen.ani.attributes import (
     NamespaceAttr,
     NullAttr,
     RecordAttr,
+    TypedArrayAttr,
     UndefinedAttr,
 )
 from taihe.codegen.cpp.analyses import (
@@ -1016,6 +1017,100 @@ class ArrayTypeNapiInfo(TypeNapiInfo):
             )
 
 
+class TypedArrayTypeNapiInfo(TypeNapiInfo):
+    def __init__(
+        self,
+        am: AnalysisManager,
+        t: ArrayType,
+        typedarray_attr: TypedArrayAttr,
+    ) -> None:
+        super().__init__(am, t)
+        self.am = am
+        self.type = t
+        self.typedarray_attr = typedarray_attr
+        napi_type_name = None
+        if isinstance(self.type.item_ty, ScalarType):
+            napi_type_name = {
+                ScalarKind.F32: "napi_float32_array",
+                ScalarKind.F64: "napi_float64_array",
+                ScalarKind.I8: "napi_int8_array",
+                ScalarKind.I16: "napi_int16_array",
+                ScalarKind.I32: "napi_int32_array",
+                ScalarKind.I64: "napi_bigint64_array",
+                ScalarKind.U8: "napi_uint8_array",
+                ScalarKind.U16: "napi_uint16_array",
+                ScalarKind.U32: "napi_uint32_array",
+                ScalarKind.U64: "napi_biguint64_array",
+            }.get(self.type.item_ty.kind)
+        if napi_type_name is None:
+            raise ValueError(f"Unsupported TypedArrayKind: {self.type}")
+        self.napi_type_name = napi_type_name
+
+    @override
+    def dts_type_in(self, target: DtsWriter) -> str:
+        dts_type = None
+        if isinstance(self.type.item_ty, ScalarType):
+            dts_type = {
+                ScalarKind.F32: "Float32Array",
+                ScalarKind.F64: "Float64Array",
+                ScalarKind.I8: "Int8Array",
+                ScalarKind.I16: "Int16Array",
+                ScalarKind.I32: "Int32Array",
+                ScalarKind.I64: "BigInt64Array",
+                ScalarKind.U8: "Uint8Array",
+                ScalarKind.U16: "Uint16Array",
+                ScalarKind.U32: "Uint32Array",
+                ScalarKind.U64: "BigUint64Array",
+            }.get(self.type.item_ty.kind)
+        if dts_type is None:
+            raise ValueError(f"Unsupported TypedArrayKind: {self.type}")
+        return dts_type
+
+    @override
+    def dts_return_type_in(self, target: DtsWriter) -> str:
+        return self.dts_type_in(target)
+
+    def from_napi(
+        self,
+        target: CSourceWriter,
+        napi_value: str,
+        cpp_result: str,
+    ):
+        item_ty_cpp_info = TypeCppInfo.get(self.am, self.type.item_ty)
+        napi_ta_type = f"{cpp_result}_type"
+        napi_length = f"{cpp_result}_length"
+        napi_data = f"{cpp_result}_data"
+        napi_arrbuf = f"{cpp_result}_arrbuf"
+        napi_byte_offset = f"{cpp_result}_byoff"
+        target.writelns(
+            f"napi_typedarray_type {napi_ta_type};",
+            f"size_t {napi_length};",
+            f"void* {napi_data};",
+            f"napi_value {napi_arrbuf};",
+            f"size_t {napi_byte_offset};",
+            f"napi_get_typedarray_info(env, {napi_value}, &{napi_ta_type}, &{napi_length}, &{napi_data}, &{napi_arrbuf}, &{napi_byte_offset});",
+            f"{self.cpp_info.as_param} {cpp_result}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>({napi_data}), {napi_length});",
+        )
+
+    def into_napi(
+        self,
+        target: CSourceWriter,
+        cpp_value: str,
+        napi_result: str,
+    ):
+        item_ty_cpp_info = TypeCppInfo.get(self.am, self.type.item_ty)
+        napi_data = f"{napi_result}_data"
+        napi_arrbuf = f"{napi_result}_arrbuf"
+        target.writelns(
+            f"napi_value {napi_result} = nullptr;",
+            f"napi_value {napi_arrbuf} = nullptr;",
+            f"void* {napi_data} = nullptr;",
+            f"napi_create_arraybuffer(env, {cpp_value}.size() * sizeof({item_ty_cpp_info.as_owner}), &{napi_data}, &{napi_arrbuf});",
+            f"std::copy({cpp_value}.begin(), {cpp_value}.end(), reinterpret_cast<{item_ty_cpp_info.as_owner}*>({napi_data}));",
+            f"napi_create_typedarray(env, {self.napi_type_name}, {cpp_value}.size(), {napi_arrbuf}, 0, &{napi_result});",
+        )
+
+
 class RecordTypeNapiInfo(TypeNapiInfo):
     def __init__(self, am: AnalysisManager, t: MapType) -> None:
         super().__init__(am, t)
@@ -1373,6 +1468,8 @@ class TypeNapiInfoDispatcher(TypeVisitor[TypeNapiInfo]):
             return BigIntTypeNapiInfo(self.am, t)
         if ArrayBufferAttr.get(t.ty_ref):
             return ArrayBufferTypeNapiInfo(self.am, t)
+        if typedarray_attr := TypedArrayAttr.get(t.ty_ref):
+            return TypedArrayTypeNapiInfo(self.am, t, typedarray_attr)
         return ArrayTypeNapiInfo(self.am, t)
 
     @override
