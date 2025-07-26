@@ -843,7 +843,7 @@ class CppHeadersGenerator:
             f"template<typename Visitor>",
         )
         with union_cpp_defn_target.indented(
-            f"auto accept_template(Visitor&& visitor) {{",
+            f"auto match_function(Visitor&& visitor) {{",
             f"}}",
         ):
             with union_cpp_defn_target.indented(
@@ -867,7 +867,7 @@ class CppHeadersGenerator:
             f"template<typename Visitor>",
         )
         with union_cpp_defn_target.indented(
-            f"auto accept_template(Visitor&& visitor) const {{",
+            f"auto match_function(Visitor&& visitor) const {{",
             f"}}",
         ):
             with union_cpp_defn_target.indented(
@@ -964,7 +964,7 @@ class CppHeadersGenerator:
             f"template<typename Visitor>",
         )
         with union_cpp_defn_target.indented(
-            f"auto accept(Visitor&& visitor) {{",
+            f"auto match(Visitor&& visitor) {{",
             f"}}",
         ):
             with union_cpp_defn_target.indented(
@@ -979,14 +979,14 @@ class CppHeadersGenerator:
                     ):
                         result = "" if field.ty_ref is None else f"m_data.{field.name}"
                         union_cpp_defn_target.writelns(
-                            f"return visitor.{field.name}({result});",
+                            f"return visitor.case_{field.name}({result});",
                         )
         # const visitor
         union_cpp_defn_target.writelns(
             f"template<typename Visitor>",
         )
         with union_cpp_defn_target.indented(
-            f"auto accept(Visitor&& visitor) const {{",
+            f"auto match(Visitor&& visitor) const {{",
             f"}}",
         ):
             with union_cpp_defn_target.indented(
@@ -1001,7 +1001,7 @@ class CppHeadersGenerator:
                     ):
                         result = "" if field.ty_ref is None else f"m_data.{field.name}"
                         union_cpp_defn_target.writelns(
-                            f"return visitor.{field.name}({result});",
+                            f"return visitor.case_{field.name}({result});",
                         )
 
     def gen_union_same(
