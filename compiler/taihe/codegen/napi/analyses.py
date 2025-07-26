@@ -932,13 +932,14 @@ class ArrayBufferTypeNapiInfo(TypeNapiInfo):
         cpp_value: str,
         napi_result: str,
     ):
+        item_ty_cpp_info = TypeCppInfo.get(self.am, self.type.item_ty)
         target.add_include("string.h")
         napi_data = f"{napi_result}_data"
         target.writelns(
             f"napi_value {napi_result} = nullptr;",
             f"void* {napi_data} = nullptr;",
             f"napi_create_arraybuffer(env, {cpp_value}.size(), &{napi_data}, &{napi_result});",
-            f"memcpy({napi_data}, {cpp_value}.data(), {cpp_value}.size());",
+            f"std::copy({cpp_value}.begin(), {cpp_value}.end(), reinterpret_cast<{item_ty_cpp_info.as_owner}*>({napi_data}));",
         )
 
 
