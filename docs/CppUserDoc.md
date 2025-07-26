@@ -51,13 +51,15 @@ rgb::base::Color yellow = rgb::base::Color::key_t::YELLOW;
 auto yellow = rgb::base::Color::from_value("yellow");
 ```
 
+如果指定的值不在枚举类定义的范围内，则会创建一个无效的枚举对象。可以通过 `is_valid()` 方法检查对象是否有效（见 2.2.3 节）。假如有多个枚举项的值相同，会默认返回第一个匹配的枚举项。
+
 ### 2.2 枚举类的成员函数
 
 #### 2.2.1 获取枚举值
 
 可以使用 `get_value()` 方法获取枚举值：
 ```cpp
-uint8_t value = yellow.get_value();  // "yellow"
+char const* value = yellow.get_value();  // "yellow"
 ```
 
 #### 2.2.2 获取对象的 Key
@@ -88,7 +90,7 @@ switch (key) {
 >
 > 特别注意，对于整数类型的枚举，将 Key 强制转换为整数得到的是**索引（index）**，而非其**值（value）**。
 >
-> #### IDL 示例：
+> 例如，假设有以下枚举定义：
 > ```rust
 > enum IntEnum: i32 {
 >     FOO = 12, // index 0
@@ -96,7 +98,7 @@ switch (key) {
 > }
 > ```
 >
-> #### C++ 中：
+> 在 C++ 中使用时：
 > ```cpp
 > // 从 IntEnum::key_t 转换为枚举值
 > auto key = IntEnum::key_t::FOO;
@@ -108,27 +110,45 @@ switch (key) {
 > IntEnum fooB = IntEnum::from_value(12); // 正确，fooB.get_key() 返回 IntEnum::key_t::FOO
 > ```
 
+> **💡 枚举对象的相等性**
+>
+> 枚举类对象的相等性比较是基于其 Key 而非 Value 的。即使两个枚举对象的 Value 相同，但 Key 不同，它们也被视为不同的枚举对象。
+>
+> 例如，假设有以下枚举定义：
+> ```rust
+> enum DuplicateEnum: i32 {
+>     FOO = 1,
+>     BAR = 1,
+> }
+> ```
+>
+> 在上例中，`FOO` 和 `BAR` 是不同的枚举对象，即使它们的 Value 都是 1。
+> ```cpp
+> DuplicateEnum foo = DuplicateEnum::key_t::FOO;
+> DuplicateEnum bar = DuplicateEnum::key_t::BAR;
+> bool is_equal = (foo == bar);  // false
+> bool value_is_equal = (foo.get_value() == bar.get_value());  // true
+> ```
 
 #### 2.2.3 判断枚举值是否有效
 
-可以使用 `is_valid()` 方法判断一个枚举对象是否有效的：
+可以使用 `is_valid()` 方法判断一个枚举对象是否有效的，在返回 `false` 的情况下，调用 `get_value()` 等方法可能导致未定义行为（UB）。
 ```cpp
 auto yellow = rgb::base::Color::from_value("yellow");
-auto purple = rgb::base::Color::from_value("purple");
-rgb::base::Color color_7 = reinterpret_cast<rgb::base::Color::key_t>(7);
-rgb::base::Color color_8 = reinterpret_cast<rgb::base::Color::key_t>(8);
-
 bool yellow_is_valid = yellow.is_valid();  // true
 char const* yellow_value = yellow.get_value();  // "yellow"
 
+auto purple = rgb::base::Color::from_value("purple");
 bool purple_is_valid = purple.is_valid();  // false
-char const* purple_value = purple.get_value();  // will cause undefined behavior
+char const* purple_value = purple.get_value();  // UB
 
+rgb::base::Color color_7 = static_cast<rgb::base::Color::key_t>(7);
 bool color_7_is_valid = color_7.is_valid();  // true
 char const* color_7_value = color_7.get_value();  // "white"
 
+rgb::base::Color color_8 = static_cast<rgb::base::Color::key_t>(8);
 bool color_8_is_valid = color_8.is_valid();  // false
-char const* color_8_value = color_8.get_value();  // will cause undefined behavior
+char const* color_8_value = color_8.get_value();  // UB
 ```
 
 ## 3. 结构体
@@ -156,11 +176,13 @@ rgb::base::RGB color_rgb = rgb::base::RGB{
 };
 ```
 
+> **💡 结构体的默认构造函数**
+>
+> 一个结构体是否支持默认构造函数取决于其成员类型。如果所有成员类型都支持默认构造函数，则结构体也支持默认构造。
+
 ## 4. 联合体
 
-### 4.1 构造联合体对象
-
-联合体中的每个变体（variant）都有对应的构造方法。例如，对于在 IDL 中以如下方式定义的联合体：
+本节介绍如何在 C++ 中使用 Taihe 中定义的联合体（Union）。以以下 IDL 文件中的联合体定义为例：
 ```rust
 union RGBOrColorOrName {
     rgb: RGB;
@@ -169,6 +191,8 @@ union RGBOrColorOrName {
     unknown;
 }
 ```
+
+### 4.1 构造联合体对象
 
 #### 4.1.1 使用工厂方法创建对象
 
@@ -221,7 +245,7 @@ if (rgb_ptr != nullptr) {
 
 #### 4.4.2 不安全获取数据指针
 
-使用 `get_variantName_ref()` 方法可以直接获取成员数据的引用，但不会检查变体类型是否正确。用户需要自行保证调用的正确性。例如：
+使用 `get_variantName_ref()` 方法可以直接获取成员数据的引用，但不会检查变体类型是否正确。如果当前对象不是指定变体类型，可能会导致未定义行为（UB）。因此，使用时应该确保对象确实是该变体类型。例如：
 ```cpp
 if (color_114515.holds_rgb()) {
     rgb::base::RGB& rgb_ref = color_114515.get_rgb_ref();
@@ -259,11 +283,63 @@ auto* ptr = color.get_ptr<Tag::name>();
 auto& ref = color.get_ref<Tag::name>();
 ```
 
+### 4.7 进阶：使用访问者模式处理不同变体
+
+联合体还提供了 `match` 方法，允许用户通过访问者模式（Visitor Pattern）来处理不同的变体。以下是一个示例：
+```cpp
+class ColorVariantVisitor {
+public:
+    taihe::string case_rgb(rgb::base::RGB const& rgb) {
+        return std::format("#{:02X}{:02X}{:02X}", rgb.red, rgb.green, rgb.blue);
+    }
+
+    taihe::string case_name(taihe::string const& name) {
+        return std::format("Name: {}", name);
+    }
+
+    taihe::string case_color(rgb::base::Color const& color) {
+        return std::format("Color: {}", color.get_value());
+    }
+
+    taihe::string case_unknown() {
+        return "Unknown";
+    }
+};
+
+auto result =
+    rgb::base::RGBOrColorOrName::make_rgb(RGB{0x39, 0xC5, 0xBB})
+        .match(ColorVariantVisitor{});  // result 将包含 "#39C5BB"
+```
+
+此外还有 `match` 方法的模板版本 `match_function`，区别在于前者通过方法名（`case_variantName`）进行匹配，后者通过重载 `operator()` 以及标记类型 `static_tag_t<package::name::EnumName::tag_t::variantName>` 进行匹配：
+```cpp
+class ColorVariantFunctionVisitor {
+public:
+    taihe::string operator()(taihe::static_tag_t<Tag::rgb>, rgb::base::RGB const& rgb) {
+        return std::format("#{:02X}{:02X}{:02X}", rgb.red, rgb.green, rgb.blue);
+    }
+
+    taihe::string operator()(taihe::static_tag_t<Tag::name>, taihe::string const& name) {
+        return std::format("Name: {}", name);
+    }
+
+    taihe::string operator()(taihe::static_tag_t<Tag::color>, rgb::base::Color const& color) {
+        return std::format("Color: {}", color.get_value());
+    }
+
+    taihe::string operator()(taihe::static_tag_t<Tag::unknown>) {
+        return "Unknown";
+    }
+};
+
+auto result =
+    rgb::base::RGBOrColorOrName::make_rgb(RGB{0x39, 0xC5, 0xBB})
+        .match_function(ColorVariantFunctionVisitor{});
+```
+
 ## 5. 接口
 
-用户可以通过实现 IDL 文件中定义的接口来自定义类。接口的实例化可以通过 `taihe::make_holder<ImplClass, InterfaceA, InterfaceB, ...>(...)` 方法实现。其中 `InterfaceA`, `InterfaceB` 等为 IDL 中定义的接口，`ImplClass` 为用户自定义的类，该类需要实现所有接口中定义的方法。
-
-以下是一个示例，假定 IDL 文件中定义了一个接口 `IShowable`，其定义如下：
+本节介绍 Taihe 文件中定义的接口在 C++ 中的使用方法。以下是一个示例，假定 IDL 文件中定义了一个接口 `IShowable`，其定义如下：
 ```rust
 interface IHasColor {
     getColor(): RGBOrColorOrName;
@@ -280,44 +356,42 @@ interface IShowable: IHasColor, IShape {
 }
 ```
 
-在 C++ 中实现该接口的类 `ColoredCircle` 如下：
+### 5.1 接口的实现
+
+用户可以通过实现 IDL 文件中定义的接口来自定义类。接口的实例化可以通过 `taihe::make_holder<ImplClass, InterfaceA, InterfaceB, ...>(...)` 方法实现。其中 `InterfaceA`, `InterfaceB` 等为 IDL 中定义的接口，`ImplClass` 为用户自定义的类，该类需要实现所有接口中定义的方法。
+
+在 C++ 中定义一个实现了 `IShowable` 接口的 C++ 实现类 `ColoredCircle` 如下：
 ```cpp
 class ColoredCircle {
 public:
     // 任意的构造函数
     ColoredCircle(taihe:core::string_view id, float r, rgb::show::RGBOrColorOrName const& color);
 
-    // 在 IDL 中定义的接口方法
+    // 析构函数
+    ~ColoredCircle();
+
+    // 实现在 IDL 中定义的接口方法
     taihe::string getId();
     float calculateArea();
     rgb::show::RGBOrColorOrName getColor();
     void setColor(rgb::show::RGBOrColorOrName const& color);
     void show();
 
-    // 其他内部实现……
+private:
+    // 其他内部实现细节 ...
 };
+```
 
+一旦实现了接口，就可以通过 `taihe::make_holder` 创建一个持有该接口的类智能指针对象。以下是使用 `ColoredCircle` 类创建一个 `IShowable` 接口对象的示例：
+```cpp
 // 创建接口对象
 rgb::show::IShowable circle =
     taihe::make_holder<ColoredCircle, rgb::show::IShowable>("myCircle", 10, color_114514);
-
-// 调用接口方法
-circle->show();
 ```
 
-### 5.1 接口的生命周期管理
-
-接口对象的生命周期通过引用计数进行管理，对于每个在 IDL 文件中定义的接口，Taihe 会生成两种对应的类型：
-
-- **强引用**：`package::name::interfaceName`，类似于 `std::shared_ptr`。
-- **弱引用**：`package::name::weak::interfaceName`，类似于 `std::weak_ptr`。
-
-在参数传递时，为避免增加引用计数，可使用弱引用。例如：
-```cpp
-void copyColorImpl(rgb::base::weak::IColorable dst, rgb::base::weak::IColorable src) {
-    dst->setColor(src->getColor());
-}
-```
+> **💡 Taihe interface 和 C++ 实现类之间的关系**
+>
+> 事实上，`ColoredCircle` 类本身完全是独立的，与 IDL 文件中声明的 `IShowable` 接口并没有耦合。只要在该类中实现了 `IShowable` 接口定义的所有方法，就可以通过 Taihe 的接口机制将其与 IDL 文件中的接口关联起来。反过来，接口 `IShowable` 本身也并不会与 `ColoredCircle` 类绑定，你完全可以定义多个类都实现了同一个接口。
 
 ### 5.2 接口的转换
 
@@ -327,13 +401,13 @@ void copyColorImpl(rgb::base::weak::IColorable dst, rgb::base::weak::IColorable 
   ```cpp
   my::package::IDerived d0;
 
-  my::package::IBase b0 = d0; // OK
-  my::package::weak::IBase b0 = d0; // OK
+  my::package::IShape b0 = d0; // OK
+  my::package::weak::IShape b0 = d0; // OK
   ```
 
 - **动态转换**：除子接口向父接口的转换外，其他接口间的类型转换是动态的，需要显式写出，并需要在运行时检查转换后得到的对象是否有效。
   ```cpp
-  my::package::IBase b1;
+  my::package::IShape b1;
   my::package::weak::IDerived d1 = b1; // Error: 无法隐式从父接口转换为子接口
   auto d2 = my::package::weak::IDerived(b1); // OK
   if (!d2.is_error()) {  // 通过 is_error() 检查转换是否成功
@@ -366,7 +440,23 @@ circle->show();
 > float area = shape->calculateArea();
 > ```
 
-### 5.4 同时实现多个接口
+### 5.4 接口的生命周期管理
+
+接口对象的生命周期通过引用计数进行管理，对于每个在 IDL 文件中定义的接口，Taihe 会生成两种对应的类型：
+
+- **强引用**：`package::name::interfaceName`，类似于 `std::shared_ptr`。
+- **弱引用**：`package::name::weak::interfaceName`，类似于 `std::weak_ptr`。
+
+在参数传递时，为避免增加引用计数，可使用弱引用。例如：
+```cpp
+void copyColorImpl(rgb::base::weak::IColorable dst, rgb::base::weak::IColorable src) {
+    dst->setColor(src->getColor());
+}
+```
+
+当对象的引用计数为 0 时，对象会被自动销毁。销毁时，除释放内存外，具体实现类的析构函数也会被自动调用。
+
+### 5.5 进阶：同时实现多个接口
 
 如果在 `file.taihe` 中定义了 `IReadable` 和 `IWritable` 两个接口：
 ```rust
@@ -404,6 +494,91 @@ auto readableAsWritable = rgb::show::weak::IWritable(readable);
 bool isWritable = not readableAsWritable.is_error();  // true
 auto writableAsReadable = rgb::show::weak::IReadable(writable);
 bool isReadable = not writableAsReadable.is_error();  // true
+```
+
+### 5.6 进阶：自定义对象的比较和哈希
+
+对象的比较和哈希是对象的重要特性，特别是在使用容器（如 `set`、`map` 等）时。因此，它们被作为所有 Taihe 对象的内置属性，而非单独的接口。在 C++ 中，可以通过特化 `taihe::same_impl_t` 和 `taihe::hash_impl_t` 模板类来实现自定义的比较和哈希方法。
+
+例如，假设我们有一个类 `MyComparableObject`，它实现了上面的 `IShape` 接口，并且我们希望在使用 Taihe 时能够根据对象的 `id` 属性进行比较和哈希，就可以按照以下方式进行特化：
+```cpp
+struct MyComparableObject {
+  string id_;
+
+  MyComparableObject(string_view id) : id_(id) {}
+
+  string getId() const {
+    return id_;
+  }
+
+  // 其他方法 ...
+};
+
+// 针对 MyComparableObject 类特化模板类 taihe::same_impl_t 来实现其比较方法
+template<>
+struct taihe::same_impl_t<MyComparableObject> {
+  // data_view 和 data_holder 表示任意 Taihe interface 对象
+  // 其中 data_view 是弱引用，data_holder 是强引用
+  bool operator()(data_view lhs, data_view rhs) const {
+    // 尝试将 data_view 转换为 IShape 接口
+    auto lhs_with_id = weak::IShape(lhs);
+    auto rhs_with_id = weak::IShape(rhs);
+    if (lhs_with_id.is_error() || rhs_with_id.is_error()) {
+      // 如果对象不是 IShape 接口的实例，则回退到默认比较方法
+      return same_impl_t<void>{}(lhs, rhs);
+    }
+    return lhs_with_id->getId() == rhs_with_id->getId();
+  }
+};
+
+// 同上，针对 MyComparableObject 类特化模板类 taihe::hash_impl_t 来实现其哈希方法
+template<>
+struct taihe::hash_impl_t<MyComparableObject> {
+  std::size_t operator()(data_view val) const {
+    auto val_with_id = weak::IShape(val);
+    if (val_with_id.is_error()) {
+      return hash_impl_t<void>{}(val);
+    }
+    return std::hash<std::string_view>{}(val_with_id->getId());
+  }
+};
+```
+
+对于未特化 `taihe::same_impl_t` 和 `taihe::hash_impl_t` 的类型，Taihe 会采用默认实现，这些默认实现会使用对象的内存地址进行比较和哈希。这意味着如果两个对象的内存地址相同，则被认为是相同的对象；如果不同，则被认为是不同的对象。
+```cpp
+template<typename Impl, typename Enabled = void>
+struct hash_impl_t {
+  std::size_t operator()(data_view val) const {
+    return reinterpret_cast<std::size_t>(val.data_ptr);
+  }
+};
+
+template<typename Impl, typename Enabled = void>
+struct same_impl_t {
+  bool operator()(data_view lhs, data_view rhs) const {
+    return lhs.data_ptr == rhs.data_ptr;
+  }
+};
+```
+
+使用示例：
+```cpp
+// 使用自定义的比较和哈希函数
+IShape obj_0 = taihe::make_holder<MyComparableObject, weak::IShape>("foo");
+IShape obj_1 = taihe::make_holder<MyComparableObject, weak::IShape>("foo");
+IShape obj_2 = taihe::make_holder<MyComparableObject, weak::IShape>("bar");
+IColorable obj_3 = taihe::make_holder<MyComparableObject, weak::IColorable>("foo");
+
+assert(obj_0 == obj_1);
+// 调用对 obj_0 所对应类特化的比较方法，比较 obj_0 和 obj_1 的 id，结果相等
+assert(obj_0 != obj_2);
+// 调用对 obj_0 所对应类特化的比较方法，比较 obj_0 和 obj_2 的 id，结果不等
+assert(obj_0 != obj_3);
+// 在调用对 obj_0 所对应类特化的比较方法进行比较时，由于 obj_3 没有实现 IShape 接口，会回退到默认比较方法，
+// 进而比较 obj_0 和 obj_3 的内存地址，结果不等
+
+assert(std::hash<IShape>{}(obj_0) == std::hash<std::string_view>{}(obj_0->getId()));
+// 调用对 obj_0 所对应类特化的哈希方法
 ```
 
 ## 6. 使用全局函数

@@ -176,11 +176,6 @@ if (my_map.erase("apple")) {
     std::cout << "apple removed\n";
 }
 
-// 访问 taihe::map 所有元素的 lambda 回调遍历函数 accept()
-my_map.accept([](const std::string& k, int32_t v) {
-    std::cout << "- " << k << ": " << v << std::endl;
-});
-
 // 获取 taihe::map 当前大小 size()
 std::cout << "Map size: " << my_map.size() << std::endl;
 

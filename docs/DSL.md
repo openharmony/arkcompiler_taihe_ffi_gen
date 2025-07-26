@@ -4,20 +4,20 @@
 
 ### 定义包
 
-1. **源文件与包的一一对应**
+- **源文件与包的一一对应**
    - 一个源文件只能描述一个包。
    - 一个包不能分散到多个源文件中。
 
-2. **包名由源文件名唯一确定**
+- **包名由源文件名唯一确定**
    - 示例：在 `ohos.hardware.sensors.taihe` 文件中，描述了 `ohos.hardware.sensors` 包下的各个成员。
 
-3. **包的成员名称不得与包名相同**
+- **包的成员名称不得与包名相同**
    - 示例：在 `ohos.hardware.sensors` 包下定义 `class SensorManager` 时，不允许定义 `ohos.hardware.sensors.SensorManager.taihe`。
    - 原因：动态语言（如 JS、Python）不支持重名。
 
 ### 使用包管理命名空间
 
-1. **默认可直接引用当前包下的名称**
+- **默认可直接引用当前包下的名称**
    ```rust
    // example.types.taihe
    struct Foo {}
@@ -27,7 +27,7 @@
    function func2(foo: Foo): void;          // OK
    ```
 
-2. **导入其他包并生成别名**
+- **导入其他包并生成别名**
    使用 `use ... as` 或 `from ... use` 为其他包的名称生成别名。
    ```rust
    // example.test1.taihe
@@ -40,7 +40,7 @@
    function func5(foo: Bar): void;          // OK
    ```
 
-3. **包间互相隔离，无从属关系**
+- **包间互相隔离，无从属关系**
    ```rust
    // example.taihe
    from types use Foo;            // Error: package `types` does not exist
@@ -66,10 +66,10 @@
   - `String`
 - **容器类型**
   - `Optional<T>`：可选类型，表示值可能存在或不存在，支持任意类型 `T`。
-  - `Array<T>`：定长数组类型，支持任意类型 `T`。
+  - `Array<T>`：长度在创建后即不可变数组类型，支持任意成员类型 `T`。
   - `Map<K, V>`：映射类型，支持键值对，其中键类型为 `K`，值类型为 `V`。
-  - `Set<T>`：集合类型，支持任意类型 `T`。
-  - `Vector<T>`：可动态变长的数组类型，支持任意类型 `T`。
+  - `Set<T>`：集合类型，支持任意成员类型 `T`。
+  - `Vector<T>`：可动态变长的数组类型，支持任意成员类型 `T`。
 - **函数闭包类型**
   - `(arg1: Type1, arg2: Type2, ...) => ReturnType`：表示函数类型，支持任意数量的参数和一个返回值。
 
@@ -77,13 +77,13 @@
 
 支持定义全局函数。
 
-### 函数参数
+- **函数参数**
 
-函数可拥有任意数量的参数，每个参数由参数名和参数类型组成。
+  函数可拥有任意数量的参数，每个参数由参数名和参数类型组成。
 
-### 返回值
+- **返回值**
 
-函数最多只能有一个返回值。若需返回多个值，可以用结构体表示。
+  函数最多只能有一个返回值。若需返回多个值，可以用结构体表示。
 
 合法与非法声明示例：
 ```rust
@@ -137,7 +137,7 @@ enum Bar: String {
 
 ### 枚举值重复
 
-枚举值可以在不同的枚举元素中重复，但必须确保类型一致。
+枚举值可以在不同的枚举项中重复，但必须确保类型一致。
 ```rust
 enum Foo: i32 {
   A = 0,
@@ -145,6 +145,8 @@ enum Foo: i32 {
   C = 1,  // 重复值，合法
 }
 ```
+
+在上面的例子中，虽然 `B` 和 `C` 的值相同，但会被认为是不同的枚举项，且对应不同的 ABI，因此在运行时是可区分的。
 
 ## 结构体
 
@@ -285,11 +287,25 @@ function myFunc(): void; // OK, same as above
     s: RecursiveStruct;
   }
   // Error: recursive inclusion
+  //        RecursiveStruct -> RecursiveUnion -> RecursiveStruct
+  ```
+
+  但是使用容器类型则允许递归：
+  ```rust
+  struct Foo {
+    bar: Array<Foo>;
+  }
+  // OK
+  union Bar {
+    val: Optional<Bar>;
+  }
+  // OK
   ```
 
 - 接口间不能递归扩展：
   ```rust
   interface RecursiveIfaceA: RecursiveIfaceB {}
   interface RecursiveIfaceB: RecursiveIfaceA {}
-  // Error
+  // Error: recursive inheritance
+  //        RecursiveIfaceA -> RecursiveIfaceB -> RecursiveIfaceA
   ```
