@@ -10,7 +10,7 @@ taihe 提供了 `ani runtime` 以及 `opaque` 类型用于在实现侧处理 ani
 
 ## 第一步：在 Taihe IDL 文件中声明
 
-```taihe
+```rust
 @!sts_inject("import {Person} from 'other.subsystem';")
 
 function is_string(s: Opaque): bool;
@@ -39,7 +39,7 @@ export interface Person {
 
 ## 第二步：实现声明的接口
 
-```C++
+```cpp
 // 判断输入的外部 ani 对象是否是 string 类型
 bool is_string(uintptr_t a) {
     ani_env* env = get_env();
@@ -92,7 +92,7 @@ void processPerson(uintptr_t person) {
 用户侧使用
 
 `main.ets`
-```TypeScript
+```typescript
 console.log(extobj.is_string("hello"));
 console.log(extobj.is_string(123));
 

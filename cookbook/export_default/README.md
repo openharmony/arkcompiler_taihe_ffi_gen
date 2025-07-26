@@ -5,7 +5,7 @@
 ## 第一步：编写接口原型
 
 **File: `idl/export_example.taihe`**
-```taihe
+```rust
 @!namespace("export_pkg", "export_ns")
 @!sts_export_default
 
@@ -18,7 +18,7 @@ struct Inner {
 然后让另一个 Taihe IDL 文件 import：
 
 **File: `idl/import_example.taihe`**
-```taihe
+```rust
 from export_example use Inner;
 
 function testImport(obj: Inner): void;
@@ -28,7 +28,7 @@ function testImport(obj: Inner): void;
 
 - 给 namespace 添加 export_default
 
-  ```taihe
+  ```rust
   @!namespace("xxx", "yyy")
   @!sts_export_default
 
@@ -37,7 +37,7 @@ function testImport(obj: Inner): void;
 
 - 给 interface/enum/union 添加 export_default
 
-  ```taihe
+  ```rust
   // 只能加在头等声明
   @sts_export_default
   interface IfaceA {}

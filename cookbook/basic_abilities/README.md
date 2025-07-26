@@ -38,14 +38,14 @@
 ## 第一步：在 Taihe IDL 文件中声明
 
 `basic_abilities/idl/basic_abilities.taihe`
-```taihe
+```rust
 function convert_arr(a: Array<i32>, str: String): Array<String>;
 ```
 
 ## 第二步：实现声明的函数
 
 `basic_abilities/author/src/basic_abilities.impl.cpp`
-```C++
+```cpp
 array<string> convert_arr(array_view<int32_t> a, string_view str) {
     // 可通过 size() 获取 array 长度
     int32_t input_size = a.size();
@@ -75,7 +75,7 @@ taihe-tryit test -u sts path/to/basic_abilities -Csts:keep-name
 用户侧使用
 
 `main.ets`
-```TypeScript
+```typescript
 let input_arr: int[] = [1, 2, 3, 4, 5]
 let input_str: String = "hello"
 let output_arr: String[] = basic_abilities.convert_arr(input_arr, input_str)
@@ -101,7 +101,7 @@ for (let i = 0; i < output_arr.length; i++) {
 
 2. 为方便用户使用，提供了许多相关的操作函数便于用户开发
 
-    ```C++
+    ```cpp
     // example
     
     // 提供多种方式创建 string
@@ -152,7 +152,7 @@ for (let i = 0; i < output_arr.length; i++) {
 
 3. 字符串分为 string 和 string_view，string 拥有字符串的所有权，而 string_view 不拥有字符串的所有权
 
-    ```C++
+    ```cpp
     // example
     // string_view -> string 从不拥有所有权到拥有所有权会拷贝一次字符串，而反方向则不会进行拷贝
     string fun(string_view input) {
@@ -165,7 +165,7 @@ for (let i = 0; i < output_arr.length; i++) {
 
 1. 为方便用户使用，提供了许多相关的操作函数便于用户开发
 
-    ```C++
+    ```cpp
     // example
 
     // 通过 std::vector 创建 array_view
@@ -202,7 +202,7 @@ for (let i = 0; i < output_arr.length; i++) {
     ```
 
 2. 与 `string` 和 `string_view` 类似，`array` 拥有所有权，`array_view` 不拥有所有权
-    ```C++
+    ```cpp
     // example
 
     // array_view -> array 从不拥有所有权到拥有所有权会拷贝一次字符串，而反方向则不会进行拷贝

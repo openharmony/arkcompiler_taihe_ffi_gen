@@ -5,19 +5,19 @@ taihe 使用注解的方式实现 sts 的 namespace, 注解为 `@!namespace()`, 
 ## 第一步：编写接口原型
 
 **File: `idl/module1.taihe`**
-```taihe
+```rust
 function module1Run(): void;
 ```
 
 **File: `idl/module1.foo.taihe`**
-```taihe
+```rust
 @!namespace("module1", "foo")
 
 function fooFunc(): void;
 ```
 
 **File: `idl/module2.bar.taihe`**
-```taihe
+```rust
 @!namespace("module2", "bar")
 
 function barFunc(): void;
@@ -34,21 +34,21 @@ function barFunc(): void;
 ## 第二步：实现声明的接口
 
 **File: `author/src/module1.impl.cpp`**
-```C++
+```cpp
 void module1Run() {
     std::cout << "Module: module1" << std::endl;
 }
 ```
 
 **File: `author/src/module1.foo.impl.cpp`**
-```C++
+```cpp
 void fooFunc() {
     std::cout << "namespace: module1.foo, func: foo" << std::endl;
 }
 ```
 
 **File: `author/src/module2.bar.impl.cpp`**
-```C++
+```cpp
 void barFunc() {
     std::cout << "namespace: module2.bar, func: bar" << std::endl;
 }

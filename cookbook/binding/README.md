@@ -20,7 +20,7 @@
 对应文件生成在 `generated/` 中
 
 此外，为了方便实现侧开发，在 `temp/` 中有生成 `.impl.cpp` 的预实现，用户只需要将此文件里的函数实现改为自己的实现即可
-```C++
+```cpp
 // temp/binding.impl.cpp
 
 ::binding::Color convert_color(::binding::Color const& a) {

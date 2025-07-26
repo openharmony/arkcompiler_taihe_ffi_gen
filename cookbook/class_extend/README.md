@@ -5,7 +5,7 @@
 ## 第一步：编写接口原型
 
 **File: `idl/hello.taihe`**
-```taihe
+```rust
 interface UnifiedRecord_th {
     GetType(): void;
 }
@@ -139,7 +139,7 @@ export class UnifiedData {
 
 ## 第二步：完成 C++ 实现
 
-```C++
+```cpp
 class UnifiedRecord_thImpl {
     public:
     UnifiedRecord_thImpl() {}

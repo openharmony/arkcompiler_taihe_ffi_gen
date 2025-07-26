@@ -6,13 +6,13 @@
 
 ## 第一步：在 Taihe IDL 文件中声明
 
-```taihe
+```rust
 function convert2Int(a: @arraybuffer Array<u8>): i32;
 ```
 
 ## 第二步：实现声明的接口
 
-```C++
+```cpp
 // 将一段连续的 byte 转换成 int 类型
 int32_t convert2Int(array_view<uint8_t> a) {
     int32_t num = 0;
@@ -42,7 +42,7 @@ taihe-tryit test -u sts path/to/arraybuffer -Csts:keep-name
 ## 用户侧使用
 
 `main.ets`
-```TypeScript
+```typescript
 let numbersU8: byte[] = [1, 1, 0, 0, 0];
 let arrbuf1: ArrayBuffer = new ArrayBuffer(numbersU8.length);
 for (let i = 0; i < numbersU8.length; i++) {

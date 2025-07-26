@@ -5,7 +5,7 @@
 Taihe 的 callback 样例如下
 
 `callback.taihe`
-```taihe
+```rust
 function cb_void_void(f: () => void): void;
 function cb_i_void(f: (a: i32) => void): void;
 function cb_str_str(f: (a: String) => String): String;
@@ -22,7 +22,7 @@ function cb_struct(f: (data: Person) => Person): void;
 上述样例介绍无参数无返回值、有参数无返回值、有参数有返回值以及以 struct 作为参数和返回值 4 种情况
 
 `callback.impl.cpp`
-```C++
+```cpp
 void cb_void_void(callback_view<void()> f) {
     f();
 }

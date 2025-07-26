@@ -5,7 +5,7 @@
 ## 第一步：在 Taihe IDL 文件中声明
 
 `polymorphism/idl/poly.taihe`
-```taihe
+```rust
 // interface 继承
 interface Animal {
     speak(): void;
@@ -87,7 +87,7 @@ Worker Student
 ## 第二步：实现声明的接口
 
 `polymorphism/author/src/poly.impl.cpp`
-```C++
+```cpp
 class AnimalImpl {
 public:
   AnimalImpl() {}
@@ -232,7 +232,7 @@ taihe-tryit test -u sts cookbook/polymorphism -Csts:keep-name
 ```
 
 `main.ets`
-```TypeScript
+```typescript
     let unknownObj = poly.getAnimal(poly.AnimalTag.ANIMAL);
     let dogObj = poly.getAnimal(poly.AnimalTag.DOG);
     let catObj = poly.getAnimal(poly.AnimalTag.CAT);

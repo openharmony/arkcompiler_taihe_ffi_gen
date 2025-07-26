@@ -112,7 +112,7 @@ ti_ptr ----> +----------------------+
 对于在 IDL 中定义的每个接口，其虚表结构体中的第一项应是指向该接口的函数表结构体的指针，接下来则应按顺序排入该接口*直接*继承的所有父接口的虚表中的完整内存排布，如果多个父接口同时继承了同一祖先，则该祖先的函数表指针也应当在子接口的虚表中出现多次。这保证了一个接口的虚表可以被*静态*转换为其任一祖先的虚表。
 
 以下是从基于前文所给例子生成的 C ABI 中截取的部分片段：
-```C
+```c
 // IBase 的函数表结构体定义
 struct IBaseFT {
   bool (*getState)();
@@ -157,7 +157,7 @@ struct IBase_vt* IBase_vt_ptr = (void **)IFancyObj_vt_ptr + offsetof(IFancyObjVT
 每个对象的数据块头部都有指向其具体类型运行时信息（`typeinfo`）的指针。在 `typeinfo` 中存有版本信息 `version`，`free` 函数指针（用于销毁对象），动态转换表的长度 `len` 和动态转换表。动态转换表是从 Interface ID 到相应虚表的映射，用于在运行时查询对象实现的所有接口，从而实现运行时的向下转换。
 
 以下是一个样例：
-```C
+```c
 inline struct IFancyObj dynamic_cast_to_IFancyObj(struct DataBlockHead* data_ptr) {
   struct TypeInfo *rtti_ptr = data_ptr->rtti_ptr;
   struct IFancyObj result;
@@ -176,7 +176,7 @@ inline struct IFancyObj dynamic_cast_to_IFancyObj(struct DataBlockHead* data_ptr
 
 ### 调用函数
 
-```C
+```c
 obj.vt_ptr->IFancyObj_ft_ptr->sparkle(obj.data_ptr);
 obj.vt_ptr->IBase_ft_ptr_0->setState(obj.data_ptr, 1);
 ```

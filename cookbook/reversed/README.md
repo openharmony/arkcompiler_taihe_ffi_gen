@@ -40,7 +40,7 @@ export class ClassA implements IfaceA {
 1. 被调用接口的对应 Taihe IDL 文件
 
     **File: `idl/impl.taihe`**
-    ```taihe
+    ```rust
     interface IfaceA_taihe {
         Foo(): String;
         Bar(): i32;
@@ -50,7 +50,7 @@ export class ClassA implements IfaceA {
     注：此处的 interface 使用与原 interface 不同的名字
 
 在 native 侧调用的对应 Taihe IDL 文件
-```native_user.taihe
+```rust
 use impl;
 
 function UseIfaceA(obj: impl.IfaceA_taihe): String;
@@ -61,7 +61,7 @@ function UseIfaceA(obj: impl.IfaceA_taihe): String;
 impl.taihe 不需要手写 C++ 实现
 
 **File: `author/src/native_user.impl.cpp`**
-```C++
+```cpp
 ::taihe::string UseIfaceA(::impl::weak::IfaceA_taihe obj) {
   std::cout << "native call Foo(): " << obj->Foo() << std::endl;
   std::cout << "native call Bar(): " << obj->Bar() << std::endl;
@@ -70,7 +70,7 @@ impl.taihe 不需要手写 C++ 实现
 ```
 
 因为这个对象传递到 C++ 层时已经是一个 taihe C++ 对象了，所以可以使用 taihe C++ 的方式调用
-```C++
+```cpp
 // 得到 weak 类型类对象
 weak::Base weakBaseObj = baseObj;
 

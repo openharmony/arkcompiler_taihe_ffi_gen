@@ -3,7 +3,7 @@
 在看本章内容前，最好对同步和异步有一定的了解。
 
 以 javascript 为例，简要解释同步与异步
-```js
+```javascript
 // 同步
 console.log("1");
 console.log("2");
@@ -39,7 +39,7 @@ sts 提供了异步的支持，但是 native 并不支持异步
 
 ## 第一步：在 Taihe IDL 文件中声明
 
-```taihe
+```rust
 @static_overload("add")
 @async function addAsync(a: i32, b: i32): i32;
 
@@ -71,7 +71,7 @@ taihe 不允许同名函数，如果用户有同名的函数，需要使用 `@st
 
 ## 第二步：实现声明的接口
 
-```C++
+```cpp
 int32_t addSync(int32_t a, int32_t b) {
     return a + b;
 }
@@ -136,7 +136,7 @@ export overload add {
 用户侧使用
 
 `main.ets`
-```TypeScript
+```typescript
 // 使用同步版本的函数
 console.log("addSync: ", async_test.addSync(1, 2))
 
@@ -171,7 +171,7 @@ try {
 类内函数的异步版本也是类似
 
 Taihe IDL 文件
-```taihe
+```rust
 interface IStringHolder {
     @async getAsync(): String;
     @promise getPromise(): String;
@@ -189,7 +189,7 @@ function makeIStringHolder(): IStringHolder;
 ```
 
 C++ 实现
-```C++
+```cpp
 class IStringHolder {
 public:
   IStringHolder() : str("MyStr") {}

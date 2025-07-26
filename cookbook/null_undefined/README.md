@@ -5,7 +5,7 @@
 ## 第一步：编写接口原型
 
 **File: `idl/nullabletype.taihe`**
-```taihe
+```rust
 union NullableValue {
     sValue: String;
     iValue: i32;
@@ -20,7 +20,7 @@ function makeNullableValue(tag: i32): NullableValue;
 ## 第二步：完成 C++ 实现
 
 **File: `author/src/nullabletype.impl.cpp`**
-```C++
+```cpp
 constexpr int32_t TAG_NULL = 0;
 constexpr int32_t TAG_STRING = 1;
 constexpr int32_t TAG_INT = 2;

@@ -22,7 +22,7 @@ generated/include/rgb.base.impl.hpp
 ## 2. 枚举类
 
 假设在 IDL 文件中定义了一个枚举类 `Color`，其定义如下：
-```ts
+```rust
 enum Color: String {
     BLACK = "black",
     RED = "red",
@@ -89,7 +89,7 @@ switch (key) {
 > 特别注意，对于整数类型的枚举，将 Key 强制转换为整数得到的是**索引（index）**，而非其**值（value）**。
 >
 > #### IDL 示例：
-> ```ts
+> ```rust
 > enum IntEnum: i32 {
 >     FOO = 12, // index 0
 >     BAR = 34, // index 1
@@ -136,7 +136,7 @@ char const* color_8_value = color_8.get_value();  // will cause undefined behavi
 使用 IDL 文件中定义的结构体时，应使用对应命名空间下的结构体名称 `package::name::StructName`。你可以像使用 C++ 原生结构体那样使用它们。初始化结构体成员时使用花括号（`{}`）语法。
 
 以下是一个示例，假设结构体在 IDL 中的定义如下：
-```ts
+```rust
 struct RGB {
     red: u8;
     green: u8;
@@ -161,7 +161,7 @@ rgb::base::RGB color_rgb = rgb::base::RGB{
 ### 4.1 构造联合体对象
 
 联合体中的每个变体（variant）都有对应的构造方法。例如，对于在 IDL 中以如下方式定义的联合体：
-```ts
+```rust
 union RGBOrColorOrName {
     rgb: RGB;
     color: Color;
@@ -264,7 +264,7 @@ auto& ref = color.get_ref<Tag::name>();
 用户可以通过实现 IDL 文件中定义的接口来自定义类。接口的实例化可以通过 `taihe::make_holder<ImplClass, InterfaceA, InterfaceB, ...>(...)` 方法实现。其中 `InterfaceA`, `InterfaceB` 等为 IDL 中定义的接口，`ImplClass` 为用户自定义的类，该类需要实现所有接口中定义的方法。
 
 以下是一个示例，假定 IDL 文件中定义了一个接口 `IShowable`，其定义如下：
-```ts
+```rust
 interface IHasColor {
     getColor(): RGBOrColorOrName;
     setColor(color: RGBOrColorOrName);
@@ -369,7 +369,7 @@ circle->show();
 ### 5.4 同时实现多个接口
 
 如果在 `file.taihe` 中定义了 `IReadable` 和 `IWritable` 两个接口：
-```ts
+```rust
 interface IReadable {
     read(): String;
 }
@@ -413,7 +413,7 @@ bool isReadable = not writableAsReadable.is_error();  // true
 如果你是接口的作者（发布方），需要将函数导出以供用户调用。可以使用 `package.name.impl.hpp` 中定义的宏 `TH_EXPORT_CPP_API_funcName(func)` 来导出函数，其中 `func` 是你实现的函数名。
 
 例如，假设你在 IDL 文件中定义了一个函数 `divmod_i32`：
-```ts
+```rust
 struct DivModResult {
     quo: i32;
     rem: i32;

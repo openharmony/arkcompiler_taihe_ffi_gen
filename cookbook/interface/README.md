@@ -9,7 +9,7 @@
 interface 需要写一个函数创建 interface 的实现，所以 `.taihe` 文件中需要有一个函数用于创建一个被实现的接口，如下方的 `makeIface` 函数
 
 `interface/idl/interface.taihe`
-```taihe
+```rust
 interface ICalculator {
     add(a: i32, b: i32): i32;
     sub(a: i32, b: i32): i32;
@@ -26,7 +26,7 @@ function restartCalculator(a: ICalculator): void;
 需要写一个 class 实现接口，再使用 make_holder<class, interface>将实现和接口绑定
 
 `interface/author/src/interface.impl.cpp`
-```C++
+```cpp
 class ICalculator {
 public:
     ICalculator(int32_t init): lastResult(init){}
@@ -77,7 +77,7 @@ taihe-tryit test -u sts path/to/interface -Csts:keep-name
 用户侧使用
 
 `main.ets`
-```TypeScript
+```typescript
 let cal = makeCalculator();
 let num1 = 1;
 let num2 = 2;

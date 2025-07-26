@@ -5,7 +5,7 @@
 ## 第一步：编写接口原型
 
 **File: `idl/inherit.taihe`**
-```taihe
+```rust
 interface Payable{
     pay(amountDue: f64): void;
 }
@@ -35,7 +35,7 @@ function makeCreditCard(initAmount: f64): CreditCard;
 
 ## 第二步：完成 C++ 实现
 
-```C++
+```cpp
 class PayableImpl {
 public:
     PayableImpl(double num) {}

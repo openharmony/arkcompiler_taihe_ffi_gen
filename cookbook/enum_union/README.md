@@ -7,7 +7,7 @@
 ## 第一步：编写接口原型
 
 **File: `idl/message.taihe`**
-```taihe
+```rust
 enum MessageType: i32 {
     Text = 1;
     Number = 2;
@@ -50,7 +50,7 @@ enum 有 2 种语法
 ## 第二步：完成 C++ 实现
 
 **File: `author/src/message.impl.cpp`**
-```C++
+```cpp
 Message createTextMessage(string_view str) {
     return {MessageType::key_t::Text, MessageData::make_textVal(str)};
 }
@@ -112,7 +112,7 @@ num: 12345
 如果用户希望在 Taihe 里定义 `const` 常量
 
 可以在 enum 上使用 `@const`
-```taihe
+```rust
 @const
 enum Flags: i32 {
     FLAG_I32_A = 1,

@@ -5,7 +5,7 @@
 ## 第一步：编写接口原型
 
 **File: `idl/wrap_interface.taihe`**
-```taihe
+```rust
 interface Foo{
     getInner(): i64;
     func1(): String;
@@ -25,7 +25,7 @@ function useFoo(obj: Foo): void;
 假设已经实现好的类 `InnerFoo` 如下所示：
 
 **File: `idl/wrap_interface.impl.cpp`**
-```C++
+```cpp
 // 已经实现的类
 class InnerFoo {
 public:
@@ -48,7 +48,7 @@ private:
 Taihe 实现侧为：
 
 **File: `idl/wrap_interface.impl.cpp`**
-```C++
+```cpp
 // Taihe interface 实现类
 class FooImpl {
 public:

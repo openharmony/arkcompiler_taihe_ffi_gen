@@ -14,7 +14,7 @@ off(target: "bar", callback: (): void);
 ## 第一步：编写接口原型
 
 **File: `idl/on_off.taihe`**
-```taihe
+```rust
 interface ISetterObserver {
     @on_off
     onSet(a: () => void): void;
@@ -61,7 +61,7 @@ on/off 函数在 Taihe 中需要命名形如为 `OnFoo`、`OnBar` 的函数
 ## 第二步：完成 C++ 实现
 
 **File: `author/src/on_off.impl.cpp`**
-```C++
+```cpp
 class ISetterObserverImpl {
 public:
   ISetterObserverImpl() {}

@@ -7,14 +7,14 @@
 我们写一个函数，输入是两个 callback, 输出结果是比较两个 callback 是否是相等，如果相等返回 true，否则返回 false
 
 **File: `idl/cb_compare.taihe`**
-```taihe
+```rust
 function cbCompare(cb1: () => String, cb2: () => String): bool;
 ```
 
 ## 第二步：完成 C++ 实现
 
 **File: `author/src/cb_compare.impl.cpp`**
-```C++
+```cpp
 bool cbCompare(::taihe::callback_view<::taihe::string()> cb1, ::taihe::callback_view<::taihe::string()> cb2) {
     return cb1 == cb2 ? true : false;
 }

@@ -17,7 +17,7 @@ function PrintBook(b: Book);
 - API 作者可以使用类 STL 写法，舒适地访问 Taihe 定义的数据类型。
 
 **File: generated/temp/ohos.book.store.impl.cpp**
-```C++
+```cpp
 Book ConstructBook(string_view title, int32_t year, Category kind) {
   // 使用 Modern C++ 初始化结构体。
   return Book{title, year, kind};
@@ -148,7 +148,7 @@ function PrintBooksWithFilter(all_books: (Book[]), filter: (((arg_0: Book) => bo
 - 使用 C++ 完成后续逻辑的开发
 
 **File: author/src/ohos.book.store.impl.cpp**
-```C++
+```cpp
 map<string, int32_t> MapBookToYear(MapOption const& opt) {
   map<string, int32_t> ret;
   // 通过 get_tag() 判断类型，通过 get_xxx_ref() 获得对应的值。
@@ -285,7 +285,7 @@ export class Bookstore {
   - 全部的状态都保存在 C++ 中。
 
 **File: author/src/ohos.book.store.impl.cpp**
-```C++
+```cpp
 class BookstoreImpl {
   double m_discount_percent = 0.0f;
   double m_total_sales = 0.0f;
@@ -407,7 +407,7 @@ Taihe 以温和改良为设计目标。新增的 Taihe 绑定可以与现有 C++
     - 可以对 C++ 函数任意起名，甚至使用函数模板。
 
 **File: example.cpp**
-```C++
+```cpp
 // 定义 C++ 函数模板
 template<bool endl>
 void print_str(taihe::string_view pstr) {
@@ -478,7 +478,7 @@ export function PrintBookAdvanced(book: CppOrRustBook): void { ... }
 - 使用 C++ 完成后续逻辑的开发
 
 **File: author/src/ohos.book.store.impl.cpp**
-```C++
+```cpp
 void PrintBookAdvanced(CppOrRustBook const& book) {
   if (book.holds_rust()) {
     RustBook the_book = book.get_rust_ref();
@@ -601,7 +601,7 @@ export class FancyBook implements HasPublisher, HasDiscount {
 - 使用 C++ 完成后续逻辑的开发
 
 **File: author/src/ohos.book.store.impl.cpp**
-```C++
+```cpp
 FancyBook MakeFancyBook() {
   // 内部临时写一个类吧！只要函数都具备，就可以转换到 Taihe 对象。
   struct FancyRustBook {
@@ -779,7 +779,7 @@ export function get_objects(): (Any[]) { ... }
 - 使用 C++ 完成后续逻辑的开发
 
 **File: author/src/ohos.book.store.impl.cpp**
-```C++
+```cpp
 bool IsString(uintptr_t s) {
   ani_boolean res;
   ani_class cls;

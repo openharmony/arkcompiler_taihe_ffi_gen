@@ -6,7 +6,7 @@ taihe 为了保证与 C 语言兼容性，并不允许函数重载，但是 sts 
 
 ### 第一步：在 Taihe IDL 文件中声明
 
-```taihe
+```rust
 @static_overload("add")
 function sum_two(a: i32, b: i32): i32;
 @static_overload("add")
@@ -19,7 +19,7 @@ sts 重载的注解如上述样例所示，使用 `@static_overload("{sts_name}"
 
 ### 第二步：实现声明的接口
 
-```C++
+```cpp
 int32_t sum_two(int32_t a, int32_t b) {
     return a + b;
 }
@@ -64,7 +64,7 @@ export overload add {
 可以发现实现侧的 `sum_two` 函数和 `sum_arr` 函数绑定到 sts 的 `add` 函数的不同重载
 
 用户侧使用如下
-```TypeScript
+```typescript
 let a: int = 1
 let b: int = 2
 let numbers: int[] = [1, 2, 3, 4, 5];

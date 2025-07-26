@@ -9,7 +9,7 @@
 假设当前文件中定义了一个类 MyContext，需要继承其他文件中定义好的类 Context，类里有两个方法，start() 和 stop()
 
 假设希望覆盖父类的 stop() 方法，使用父类的 start() 方法，则在 Taihe IDL 文件中的定义如下：
-```taihe
+```rust
 @!sts_inject("import {Context} from 'other.subsystem';")
 
 // C++ 数据结构，在内部使用
@@ -53,7 +53,7 @@ export class Context {
 
 ## 第二步：实现声明的接口
 
-```C++
+```cpp
 class MyContext_innerImpl {
 public:
     MyContext_innerImpl() {}
@@ -78,7 +78,7 @@ public:
 用户侧使用
 
 `main.ets`
-```TypeScript
+```typescript
 let context = new Context();
 console.log("base class: ", context.start(), " ", context.stop());
 let mycontext = new lib.MyContext();

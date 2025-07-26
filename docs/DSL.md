@@ -18,7 +18,7 @@
 ### 使用包管理命名空间
 
 1. **默认可直接引用当前包下的名称**
-   ```ts
+   ```rust
    // example.types.taihe
    struct Foo {}
    struct Bar {}
@@ -29,7 +29,7 @@
 
 2. **导入其他包并生成别名**
    使用 `use ... as` 或 `from ... use` 为其他包的名称生成别名。
-   ```ts
+   ```rust
    // example.test1.taihe
    use example.types as myfoo;
    function func3(foo: myfoo.Foo): void;    // OK
@@ -41,7 +41,7 @@
    ```
 
 3. **包间互相隔离，无从属关系**
-   ```ts
+   ```rust
    // example.taihe
    from types use Foo;            // Error: package `types` does not exist
    use types as mytypes;          // Error: package `types` does not exist
@@ -86,7 +86,7 @@
 函数最多只能有一个返回值。若需返回多个值，可以用结构体表示。
 
 合法与非法声明示例：
-```ts
+```rust
 function func(foo: i32): void;                    // OK
 function func(foo: String);                       // OK
 function func(m: i32, n: i32): (String, String);  // Error: cannot have multiple return values
@@ -100,7 +100,7 @@ function func(m: i32, n: i32): StringPair;        // OK
 ## 枚举
 
 枚举用于定义一组命名的常量，支持整数、浮点数、布尔值和字符串类型。
-```ts
+```rust
 enum Foo: i32 {
   A = 0,
   B = 1,
@@ -117,7 +117,7 @@ enum Bar: String {
 ### 省略枚举值
 
 - 对于整数类型的枚举，若未指定值，则从上一个元素的值递增，第一个元素默认为 0。
-  ```ts
+  ```rust
   enum Foo: i32 {
     A;          // 0
     B;          // 1
@@ -126,7 +126,7 @@ enum Bar: String {
   }
   ```
 - 对于字符串类型的枚举，若未指定值，默认使用元素名称作为值。
-  ```ts
+  ```rust
   enum Bar: String {
     X;          // "X"
     Y;          // "Y"
@@ -138,7 +138,7 @@ enum Bar: String {
 ### 枚举值重复
 
 枚举值可以在不同的枚举元素中重复，但必须确保类型一致。
-```ts
+```rust
 enum Foo: i32 {
   A = 0,
   B = 1,
@@ -149,7 +149,7 @@ enum Foo: i32 {
 ## 结构体
 
 结构体是数据成员的组合，其成员类型包括基础类型、枚举类型、接口类型和其他结构体类型：
-```ts
+```rust
 interface Base {}
 struct Foo {
   a: i32;
@@ -162,7 +162,7 @@ struct Foo {
 ## 标签联合
 
 标签联合用于表示多种可能的数据类型，每个标签对应一种数据类型。多个标签可以对应同一个数据类型。标签联合的定义方式如下：
-```ts
+```rust
 union Foo {
   A: i32,
   B: String,
@@ -181,7 +181,7 @@ struct Bar {
 ## 接口
 
 接口定义中只支持包含方法声明。接口支持单继承和多继承：
-```ts
+```rust
 interface BaseA {
   baseAFunc(): u32;
 }
@@ -198,7 +198,7 @@ interface Derived: BaseA, BaseB {
 ## 注解
 
 注解用于为代码中的语法元素添加附加属性。
-```ts
+```rust
 // 前缀注解（@name）
 @attribute_name(value1, value2, ..., key1 = value1, key2 = value2, ...)
 function myFunc(color: RGB): void;
@@ -212,7 +212,7 @@ interface MyInterface {
 
 ### 无参数时括号可以省略
 
-```ts
+```rust
 @attribute_name()
 function myFunc(): void; // OK
 
@@ -223,7 +223,7 @@ function myFunc(): void; // OK, same as above
 ### 前缀注解和内联注解
 
 - 前缀注解（语法为 `@name`）用于指定给其后面紧跟的语法元素添加属性。
-  ```ts
+  ```rust
   @class
   interface MyInterface {
     @get("name")
@@ -252,7 +252,7 @@ function myFunc(): void; // OK, same as above
   ```
 
 - 内联注解（语法为 `@!name`）写在某个域内部（如接口、结构体等或包的顶层），用于为其所在的域对应的语法元素添加属性。
-  ```ts
+  ```rust
   @!namespace("example", namespace = "a.b")  // 全局注解的唯一写法
 
   interface MyInterface {
@@ -266,7 +266,7 @@ function myFunc(): void; // OK, same as above
 ### 递归包含与继承
 
 - 函数和类型的声明无先后顺序。
-  ```ts
+  ```rust
   struct Foo {
     bar: Bar;
   }
@@ -277,7 +277,7 @@ function myFunc(): void; // OK, same as above
   ```
 
 - 禁止结构体与结构体、联合体与联合体、结构体与联合体之间的递归包含：
-  ```ts
+  ```rust
   struct RecursiveStruct {
     e: RecursiveUnion;
   }
@@ -288,7 +288,7 @@ function myFunc(): void; // OK, same as above
   ```
 
 - 接口间不能递归扩展：
-  ```ts
+  ```rust
   interface RecursiveIfaceA: RecursiveIfaceB {}
   interface RecursiveIfaceB: RecursiveIfaceA {}
   // Error
