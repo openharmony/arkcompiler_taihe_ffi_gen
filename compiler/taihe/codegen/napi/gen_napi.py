@@ -224,7 +224,7 @@ class NapiCodeGenerator:
         with CHeaderWriter(
             self.oc,
             f"include/{pkg_napi_info.header}",
-            FileKind.CPP_HEADER,
+            FileKind.C_HEADER,
         ) as target:
             target.add_include(self.napi_header_file)
             target.writelns(
@@ -359,7 +359,7 @@ class NapiCodeGenerator:
         with CHeaderWriter(
             self.oc,
             f"include/{struct_napi_info.decl_header}",
-            FileKind.CPP_HEADER,
+            FileKind.C_HEADER,
         ) as struct_napi_decl_target:
             struct_napi_decl_target.add_include(self.napi_header_file)
             struct_napi_decl_target.add_include(struct_cpp_info.defn_header)
@@ -377,7 +377,7 @@ class NapiCodeGenerator:
         with CHeaderWriter(
             self.oc,
             f"include/{struct_napi_info.impl_header}",
-            FileKind.CPP_SOURCE,
+            FileKind.CPP_HEADER,
         ) as struct_napi_impl_target:
             struct_napi_impl_target.add_include(struct_napi_info.decl_header)
             struct_napi_impl_target.add_include(struct_cpp_info.impl_header)
@@ -609,7 +609,7 @@ class NapiCodeGenerator:
         with CHeaderWriter(
             self.oc,
             f"include/{iface_napi_info.decl_header}",
-            FileKind.CPP_HEADER,
+            FileKind.C_HEADER,
         ) as iface_napi_decl_target:
             iface_napi_decl_target.add_include(self.napi_header_file)
             iface_napi_decl_target.add_include(iface_cpp_info.defn_header)
@@ -630,7 +630,7 @@ class NapiCodeGenerator:
         with CHeaderWriter(
             self.oc,
             f"include/{iface_napi_info.impl_header}",
-            FileKind.CPP_SOURCE,
+            FileKind.CPP_HEADER,
         ) as iface_napi_impl_target:
             iface_napi_impl_target.add_include(iface_napi_info.decl_header)
             iface_napi_impl_target.add_include(iface_cpp_info.impl_header)
@@ -932,7 +932,7 @@ class NapiCodeGenerator:
         with CHeaderWriter(
             self.oc,
             f"include/{iface_napi_info.meth_decl_header}",
-            FileKind.CPP_HEADER,
+            FileKind.C_HEADER,
         ) as iface_meth_napi_decl_target:
             iface_meth_napi_decl_target.add_include(self.napi_header_file)
             iface_meth_napi_decl_target.add_include(iface_cpp_info.defn_header)
@@ -949,7 +949,7 @@ class NapiCodeGenerator:
         with CHeaderWriter(
             self.oc,
             f"include/{iface_napi_info.meth_impl_header}",
-            FileKind.CPP_SOURCE,
+            FileKind.CPP_HEADER,
         ) as iface_meth_napi_impl_target:
             iface_meth_napi_impl_target.add_include(iface_napi_info.meth_decl_header)
             iface_meth_napi_impl_target.add_include(iface_cpp_info.impl_header)
@@ -1082,7 +1082,7 @@ class NapiCodeGenerator:
         with CHeaderWriter(
             self.oc,
             f"include/{union_napi_info.decl_header}",
-            FileKind.CPP_HEADER,
+            FileKind.C_HEADER,
         ) as union_napi_decl_target:
             union_napi_decl_target.add_include(union_cpp_info.defn_header)
             union_napi_decl_target.writelns(
@@ -1099,7 +1099,7 @@ class NapiCodeGenerator:
         with CHeaderWriter(
             self.oc,
             f"include/{union_napi_info.impl_header}",
-            FileKind.CPP_SOURCE,
+            FileKind.CPP_HEADER,
         ) as union_napi_impl_target:
             union_napi_impl_target.add_include(union_napi_info.decl_header)
             union_napi_impl_target.add_include(union_cpp_info.impl_header)
