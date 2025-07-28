@@ -27,9 +27,11 @@ function restartCalculator(a: ICalculator): void;
 
 `interface/author/src/interface.impl.cpp`
 ```cpp
-class ICalculator {
+class MyCalculator {
 public:
-    ICalculator(int32_t init): lastResult(init){}
+    // 构造函数可以有任意参数
+    MyCalculator(int32_t init): lastResult(init){}
+
     int32_t add(int32_t a, int32_t b) {
         lastResult = a + b;
         return lastResult;
@@ -48,8 +50,9 @@ private:
     int32_t lastResult = 0;
 };
 
-::interface::ICalculator makeCalculator(int32_t init) {
-    return make_holder<ICalculator, ::interface::ICalculator>(init);
+::interface::ICalculator makeCalculator() {
+    // 使用 make_holder 将实现和接口绑定，调用参数为 MyCalculator 的构造函数参数
+    return make_holder<MyCalculator, ::interface::ICalculator>(0);
 }
 void restartCalculator(::interface::weak::ICalculator a) {
     a->reset();
