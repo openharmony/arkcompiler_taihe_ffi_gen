@@ -69,15 +69,14 @@ char const* value = yellow.get_value();  // "yellow"
 rgb::base::Color::key_t key = yellow.get_key();
 
 switch (key) {
-    case rgb::base::Color::key_t::BLACK: break;
-    case rgb::base::Color::key_t::RED: break;
-    case rgb::base::Color::key_t::GREEN: break;
-    case rgb::base::Color::key_t::YELLOW: break;
-    case rgb::base::Color::key_t::BLUE: break;
-    case rgb::base::Color::key_t::MAGENTA: break;
-    case rgb::base::Color::key_t::CYAN: break;
-    case rgb::base::Color::key_t::WHITE: break;
-    default: break;
+    case rgb::base::Color::key_t::BLACK:   /* Process */ break;
+    case rgb::base::Color::key_t::RED:     /* Process */ break;
+    case rgb::base::Color::key_t::GREEN:   /* Process */ break;
+    case rgb::base::Color::key_t::YELLOW:  /* Process */ break;
+    case rgb::base::Color::key_t::BLUE:    /* Process */ break;
+    case rgb::base::Color::key_t::MAGENTA: /* Process */ break;
+    case rgb::base::Color::key_t::CYAN:    /* Process */ break;
+    case rgb::base::Color::key_t::WHITE:   /* Process */ break;
 }
 ```
 
@@ -285,56 +284,88 @@ auto& ref = color.get_ref<Tag::name>();
 
 ### 4.7 进阶：使用访问者模式处理不同变体
 
-联合体还提供了 `match` 方法，允许用户通过访问者模式（Visitor Pattern）来处理不同的变体。以下是一个示例：
+联合体还提供了 `match` 方法，允许用户通过访问者模式（Visitor Pattern）来处理不同的变体。以下是一个示例，假设我们要将 `RGBOrColorOrName` 的不同变体转换为字符串表示，可以定义一个访问者类：
 ```cpp
 class ColorVariantVisitor {
 public:
-    taihe::string case_rgb(rgb::base::RGB const& rgb) {
+    std::string case_rgb(rgb::base::RGB const& rgb) {
         return std::format("#{:02X}{:02X}{:02X}", rgb.red, rgb.green, rgb.blue);
     }
 
-    taihe::string case_name(taihe::string const& name) {
-        return std::format("Name: {}", name);
+    std::string case_name(taihe::string const& name) {
+        return std::format("Name: {}", name.c_str());
     }
 
-    taihe::string case_color(rgb::base::Color const& color) {
+    std::string case_color(rgb::base::Color const& color) {
         return std::format("Color: {}", color.get_value());
     }
 
-    taihe::string case_unknown() {
+    std::string case_unknown() {
         return "Unknown";
     }
 };
-
-auto result =
-    rgb::base::RGBOrColorOrName::make_rgb(RGB{0x39, 0xC5, 0xBB})
-        .match(ColorVariantVisitor{});  // result 将包含 "#39C5BB"
 ```
 
-此外还有 `match` 方法的模板版本 `match_function`，区别在于前者通过方法名（`case_variantName`）进行匹配，后者通过重载 `operator()` 以及标记类型 `static_tag_t<package::name::EnumName::tag_t::variantName>` 进行匹配：
+然后可以使用 `match` 方法来应用访问者：
+```cpp
+auto result = rgb::base::RGBOrColorOrName::make_rgb(RGB{0x39, 0xC5, 0xBB})
+    .match(ColorVariantVisitor{});  // result 将包含 "#39C5BB"
+```
+
+`match` 方法的返回值类型可以被自动推断，也可以通过模板参数被显式指定。例如：
+```cpp
+auto result = rgb::base::RGBOrColorOrName::make_rgb(RGB{0x39, 0xC5, 0xBB})
+    .match<std::string>(ColorVariantVisitor{});
+```
+
+此外，`match` 方法也有模板版本 `match_function`，区别在于前者通过方法名（`case_variantName`）进行匹配，后者通过重载 `operator()` 以及标记类型 `static_tag_t<package::name::EnumName::tag_t::variantName>` 进行匹配：
 ```cpp
 class ColorVariantFunctionVisitor {
 public:
-    taihe::string operator()(taihe::static_tag_t<Tag::rgb>, rgb::base::RGB const& rgb) {
+    std::string operator()(taihe::static_tag_t<Tag::rgb>, rgb::base::RGB const& rgb) {
         return std::format("#{:02X}{:02X}{:02X}", rgb.red, rgb.green, rgb.blue);
     }
 
-    taihe::string operator()(taihe::static_tag_t<Tag::name>, taihe::string const& name) {
-        return std::format("Name: {}", name);
+    std::string operator()(taihe::static_tag_t<Tag::name>, taihe::string const& name) {
+        return std::format("Name: {}", name.c_str());
     }
 
-    taihe::string operator()(taihe::static_tag_t<Tag::color>, rgb::base::Color const& color) {
+    std::string operator()(taihe::static_tag_t<Tag::color>, rgb::base::Color const& color) {
         return std::format("Color: {}", color.get_value());
     }
 
-    taihe::string operator()(taihe::static_tag_t<Tag::unknown>) {
+    std::string operator()(taihe::static_tag_t<Tag::unknown>) {
         return "Unknown";
     }
 };
 
-auto result =
-    rgb::base::RGBOrColorOrName::make_rgb(RGB{0x39, 0xC5, 0xBB})
-        .match_function(ColorVariantFunctionVisitor{});
+auto result = rgb::base::RGBOrColorOrName::make_rgb(RGB{0x39, 0xC5, 0xBB})
+    .match_function(ColorVariantFunctionVisitor{});
+```
+
+你还可以利用 C++17 的折叠表达式和模板参数包来简化访问者模式的实现：
+```cpp
+template<typename... Ts>
+struct overloads : Ts... { using Ts::operator()...; };
+
+template<typename... Ts>
+overloads(Ts...) -> overloads<Ts...>;
+
+auto result = rgb::base::RGBOrColorOrName::make_rgb(RGB{0x39, 0xC5, 0xBB})
+    .match_function<std::string>(overloads{
+        [](taihe::static_tag_t<Tag::rgb>, rgb::base::RGB const& rgb) {
+            return std::format("#{:02X}{:02X}{:02X}", rgb.red, rgb.green, rgb.blue);
+        },
+        [](taihe::static_tag_t<Tag::name>, taihe::string const& name) {
+            return std::format("Name: {}", name.c_str());
+        },
+        [](taihe::static_tag_t<Tag::color>, rgb::base::Color const& color) {
+            return std::format("Color: {}", color.get_value());
+        },
+        [](taihe::static_tag_t<Tag::unknown>) {
+            return "Unknown";
+        },
+    });
 ```
 
 ## 5. 接口

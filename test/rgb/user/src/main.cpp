@@ -19,40 +19,32 @@ using namespace rgb::base;
 using namespace rgb::show;
 using namespace taihe;
 
+template<typename... Ts>
+struct overloads : Ts... { using Ts::operator()...; };
+
+template<typename... Ts>
+overloads(Ts...) -> overloads<Ts...>;
+
 string toString(ColorOrRGBOrName const &color) {
-  static struct Visitor {
-    string operator()(static_tag_t<ColorOrRGBOrName::tag_t::rgb>,
-                      const RGB &val) {
-      std::ostringstream oss;
-      oss << "#" << std::hex << std::setfill('0') << std::setw(2)
-          << static_cast<int>(val.r) << std::setw(2) << static_cast<int>(val.g)
-          << std::setw(2) << static_cast<int>(val.b);
-      return oss.str();
-    }
-
-    string operator()(static_tag_t<ColorOrRGBOrName::tag_t::name>,
-                      string const &val) {
-      std::ostringstream oss;
-      oss << "Name: " << val.c_str();
-      return oss.str();
-    }
-
-    string operator()(static_tag_t<ColorOrRGBOrName::tag_t::color>,
-                      Color const &val) {
-      return std::to_string(val.get_value());
-    }
-
-    string operator()(static_tag_t<ColorOrRGBOrName::tag_t::name>,
-                      Name const &val) {
-      return string(val);
-    }
-
-    string operator()(static_tag_t<ColorOrRGBOrName::tag_t::undefined>) {
-      return "Undefined";
-    }
-  } visitor;
-
-  return color.match_function(visitor);
+  return color.match_function<string>(overloads{
+      [](static_tag_t<ColorOrRGBOrName::tag_t::rgb>, const RGB &val) {
+        std::ostringstream oss;
+        oss << "#" << std::hex << std::setfill('0') << std::setw(2)
+            << static_cast<int>(val.r) << std::setw(2)
+            << static_cast<int>(val.g) << std::setw(2)
+            << static_cast<int>(val.b);
+        return oss.str();
+      },
+      [](static_tag_t<ColorOrRGBOrName::tag_t::name>, Name const &val) {
+        return string(val);
+      },
+      [](static_tag_t<ColorOrRGBOrName::tag_t::color>, Color const &val) {
+        return std::to_string(val.get_value());
+      },
+      [](static_tag_t<ColorOrRGBOrName::tag_t::undefined>) {
+        return "Undefined";
+      },
+  });
 }
 
 struct UserType {
