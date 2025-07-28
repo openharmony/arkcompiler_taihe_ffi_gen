@@ -564,7 +564,7 @@ class NapiCodeGenerator:
             f"static napi_ref {struct_napi_info.ctor_ref_name};"
         )
         with struct_napi_impl_target.indented(
-            f"inline napi_value {struct_napi_info.create_func_name}(napi_env env, napi_value exports) {{",
+            f"inline void {struct_napi_info.create_func_name}(napi_env env, napi_value exports) {{",
             f"}}",
         ):
             struct_napi_impl_target.writelns(f"napi_value result;")
@@ -580,7 +580,7 @@ class NapiCodeGenerator:
                 f'napi_define_class(env, "{struct.name}", NAPI_AUTO_LENGTH, {struct_napi_info.constructor_func_name}, nullptr, {len(struct_napi_info.dts_final_fields)}, desc, &result);',
                 f"napi_create_reference(env, result, 1, &{struct_napi_info.ctor_ref_name});",
                 f'napi_set_named_property(env, exports, "{struct.name}", result);',
-                f"return exports;",
+                f"return;",
             )
 
     def gen_iface_files(
@@ -884,7 +884,7 @@ class NapiCodeGenerator:
                 f"static napi_ref {iface_napi_info.ctor_ref_name};"
             )
         with iface_napi_impl_target.indented(
-            f"inline napi_value {iface_napi_info.create_func_name}(napi_env env, napi_value exports) {{",
+            f"inline void {iface_napi_info.create_func_name}(napi_env env, napi_value exports) {{",
             f"}}",
         ):
             iface_napi_impl_target.writelns(f"napi_value result;")
@@ -906,7 +906,7 @@ class NapiCodeGenerator:
             iface_napi_impl_target.writelns(
                 f'napi_define_class(env, "{iface.name}_inner", NAPI_AUTO_LENGTH, {iface_napi_info.constructor_func_name}_inner, nullptr, {len(iface_napi_info.iface_register_infos)}, desc, &result);',
                 f"napi_create_reference(env, result, 1, &{iface_napi_info.ctor_ref_name}_inner);",
-                f"return exports;",
+                f"return;",
             )
 
     def gen_iface_method_files(
