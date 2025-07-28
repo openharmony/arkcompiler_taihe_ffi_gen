@@ -505,7 +505,42 @@ void copyColorImpl(rgb::base::weak::IColorable dst, rgb::base::weak::IColorable 
 
 当对象的引用计数为 0 时，对象会被自动销毁。销毁时，除释放内存外，具体实现类的析构函数也会被自动调用。
 
-### 5.5 进阶：同时实现多个接口
+### 5.5 进阶：`taihe::impl_holder` 和 `taihe::impl_view`
+
+如 5.1 节所述，Taihe 接口和 C++ 实现类之间的关系是松耦合的。当一个 C++ 对象被转换为 Taihe 接口类型后，将只保留和 Taihe 接口对应的能力（如调用你在 Taihe 接口里声明的方法、进行接口间的静态/动态转换等），而其他与原 C++ 类相关的信息都会被“丢掉”。这意味着，假如你在 IDL 文件中定义了一个接口 `IFoo`：
+```rust
+// my.package.taihe
+interface IFoo {
+    doSomething();
+}
+```
+
+而在 C++ 中定义了一个类 `FooImpl` 来实现这个接口：
+```cpp
+class FooImpl {
+public:
+    void doSomething() { /* 实现 */ }
+    void doSomethingElse() { /* 实现 */ }
+};
+```
+
+那么当你将 `FooImpl` 类的实例创建为 `IFoo` 接口对象后，则无法再调用 `doSomethingElse()` 方法，因为 `IFoo` 接口并没有定义这个方法。
+```cpp
+my::package::IFoo foo = taihe::make_holder<FooImpl, my::package::IFoo>();
+foo->doSomething(); // OK
+foo->doSomethingElse(); // Error: IFoo 没有 doSomethingElse 方法
+```
+
+但是，下面的写法却是可以的：
+```cpp
+auto fooImpl = taihe::make_holder<FooImpl, my::package::IFoo>();
+fooImpl->doSomething(); // OK
+fooImpl->doSomethingElse(); // Also OK
+```
+
+事实上，这里的 `fooImpl` 的类型是 `taihe::impl_holder<FooImpl, my::package::IFoo>` 而非 `my::package::IFoo`，它相当于一个持有 `FooImpl` 类实例，并可以隐式静态转换为 `my::package::IFoo` 接口的智能指针。因此可以访问 `FooImpl` 类的所有方法。而在之前的例子中，`foo` 在创建后就被转换为 `my::package::IFoo` 接口类型，丢失了对 `FooImpl` 类的引用。
+
+### 5.6 进阶：同时实现多个接口
 
 如果在 `file.taihe` 中定义了 `IReadable` 和 `IWritable` 两个接口：
 ```rust
@@ -545,7 +580,7 @@ auto writableAsReadable = rgb::show::weak::IReadable(writable);
 bool isReadable = not writableAsReadable.is_error();  // true
 ```
 
-### 5.6 进阶：自定义对象的比较和哈希
+### 5.7 进阶：自定义对象的比较和哈希
 
 对象的比较和哈希是对象的重要特性，特别是在使用容器（如 `set`、`map` 等）时。因此，它们被作为所有 Taihe 对象的内置属性，而非单独的接口。在 C++ 中，可以通过特化 `taihe::same_impl_t` 和 `taihe::hash_impl_t` 模板类来实现自定义的比较和哈希方法。
 
@@ -821,9 +856,8 @@ auto opt4 = taihe::optional<std::string>{std::in_place, "Hello"};
 
 Taihe 的可选类型提供了和 C++ 标准库类似的接口来检查和访问值：
 ```cpp
-// 检查是否有值
+// 检查是否有值，也可以直接写成 if (opt3) { ... }
 if (opt3.has_value()) {
-    // 或者使用 if (opt3)
     int value = opt3.value();  // 获取值
 }
 
@@ -852,9 +886,6 @@ if (opt4) {
 // 创建空 vector
 taihe::vector<int> vec1;
 
-// 创建指定容量的 vector
-taihe::vector<int> vec2(16);  // 预分配16个元素的空间
-
 // 添加元素
 vec1.push_back(42);
 vec1.push_back(100);
@@ -864,13 +895,9 @@ vec1.emplace_back(200);
 
 // 访问元素
 int first = vec1[0];
-int size = vec1.size();
 
 // 删除最后一个元素
 vec1.pop_back();
-
-// 清空所有元素
-vec1.clear();
 ```
 
 #### 6.4.2 容量管理
@@ -881,14 +908,14 @@ vec1.reserve(100);  // 预分配空间，避免频繁重新分配
 
 // 获取当前容量
 size_t capacity = vec1.capacity();
-
-// 检查是否为空
-bool is_empty = vec1.empty();
 ```
 
-#### 6.4.3 遍历 Vector
+#### 6.4.3 获取大小、遍历和清空
 
 ```cpp
+// 获取大小
+size_t size = vec1.size();
+
 // 范围 for 循环
 for (const auto& value : vec1) {
     std::cout << value << " ";
@@ -898,6 +925,12 @@ for (const auto& value : vec1) {
 for (auto it = vec1.begin(); it != vec1.end(); ++it) {
     *it *= 2;  // 可以修改元素
 }
+
+// 清空所有元素
+vec1.clear();
+
+// 判断是否为空
+bool is_empty = vec1.empty();
 ```
 
 ### 6.5 映射（Map）
@@ -915,9 +948,14 @@ for (auto it = vec1.begin(); it != vec1.end(); ++it) {
 // 创建空 map
 taihe::map<taihe::string, int> map1;
 
-// 创建指定初始容量的 map
-taihe::map<taihe::string, int> map2(32);
+map1.reserve(10);  // 支持预分配空间，避免频繁重新分配
 
+size_t capacity = map1.capacity();  // 获取当前容量
+```
+
+#### 6.5.2 插入、查找和删除
+
+```cpp
 // 插入键值对
 auto [it1, success1] = map1.emplace("apple", 5);
 auto [it2, success2] = map1.emplace("banana", 3);
@@ -927,42 +965,35 @@ auto [it3, success3] = map1.emplace("apple", 10);  // success3 为 false
 
 // 使用 emplace<true> 强制覆盖
 auto [it4, success4] = map1.emplace<true>("apple", 10);  // 覆盖原值
-```
-
-#### 6.5.2 查找和访问
-
-```cpp
-// 查找值
-int* value_ptr = map1.find("apple");
-if (value_ptr != nullptr) {
-    std::cout << "Apple count: " << *value_ptr << std::endl;
-}
 
 // 查找键值对
-auto* item = map1.find_item("banana");
-if (item != nullptr) {
-    std::cout << item->first << ": " << item->second << std::endl;
+auto it = map1.find_item("banana");
+if (it != map1.end()) {
+    std::cout << it->first << ": " << it->second << std::endl;
 }
-```
 
-#### 6.5.3 删除和遍历
-
-```cpp
 // 删除键值对
 bool erased = map1.erase("apple");
+```
 
-// 清空所有元素
-map1.clear();
+***⚠️ 特别注意：当前请不要使用 `map` 对象的 `find` 方法，当前该方法的返回值类型为 `V*` 而不是迭代器。这将在未来的版本中被修正，届时将导致之前使用 `find` 处产生不兼容，请使用 `find_item` 方法代替。***
+
+#### 6.5.3 获取大小、遍历和清空
+
+```cpp
+// 获取大小
+size_t size = map1.size();
 
 // 遍历 map
 for (const auto& [key, value] : map1) {
     std::cout << key << " => " << value << std::endl;
 }
 
-// 使用访问者模式
-map1.accept([](const auto& item) {
-    std::cout << item.first << ": " << item.second << std::endl;
-});
+// 清空所有元素
+map1.clear();
+
+// 判断是否为空
+bool is_empty = map1.empty();
 ```
 
 ### 6.6 集合（Set）
@@ -980,43 +1011,47 @@ map1.accept([](const auto& item) {
 // 创建空 set
 taihe::set<int> set1;
 
+set1.reserve(10);  // 预分配空间，避免频繁重新分配
+
+size_t capacity = set1.capacity();  // 获取当前容量
+```
+
+#### 6.6.2 插入、查找和删除
+
+```cpp
 // 插入元素
 auto [it1, success1] = set1.emplace(42);
 auto [it2, success2] = set1.emplace(100);
 auto [it3, success3] = set1.emplace(42);  // 重复插入，success3 为 false
-```
 
-#### 6.6.2 查找和删除
-
-```cpp
 // 查找元素
-bool found = set1.find(42);  // 返回 bool
-
-// 查找并获取元素指针
-const int* item = set1.find_item(42);
-if (item != nullptr) {
-    std::cout << "Found: " << *item << std::endl;
+auto it = set1.find_item(42);
+if (it != set1.end()) {
+    std::cout << "Found: " << *it << std::endl;
 }
 
 // 删除元素
 bool erased = set1.erase(42);
-
-// 获取大小
-size_t size = set1.size();
 ```
 
-#### 6.6.3 遍历集合
+***⚠️ 特别注意：当前请不要使用 `set` 对象的 `find` 方法，当前该方法的返回值类型为 `bool` 而不是迭代器。这将在未来的版本中被修正，届时将导致之前使用 `find` 处产生不兼容，请使用 `find_item` 方法代替。***
+
+#### 6.6.3 获取大小、遍历和清空
 
 ```cpp
+// 获取大小
+size_t size = set1.size();
+
 // 范围 for 循环
 for (const auto& value : set1) {
     std::cout << value << " ";
 }
 
-// 使用访问者
-set1.accept([](const auto& value) {
-    std::cout << value << " ";
-});
+// 清空所有元素
+set1.clear();
+
+// 判断是否为空
+bool is_empty = set1.empty();
 ```
 
 ### 6.7 函数闭包（Callback）
@@ -1128,6 +1163,30 @@ int main() {
     return 0;
 }
 ```
+
+## 附录
+
+### A. 常见的编译/链接错误
+
+- 链接错误：```undefined reference to `package_name_InterfaceName_funcName_f'```
+
+  这类错误通常是因为在 IDL 文件中定义的函数没有被正确导出。请确保在实现文件中使用了 `TH_EXPORT_CPP_API_funcName(func)` 宏来导出函数。
+
+- 链接错误：```undefined reference to `package_name_InterfaceName_i'```
+
+  类似 `package_name_InterfaceName_i` 这样的是太和接口的 IID 符号，其定义通常在自动生成的 `package.name.abi.c` 中，请确保你在构建时将该文件包含在内。
+
+- 编译错误：
+  ```
+  error: no member named 'methodName' in 'ClassName'
+   xx |         return ::taihe::into_abi<...>(::taihe::cast_data_ptr<Impl>(tobj.data_ptr)->methodName(...));
+      |                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  ^
+  ```
+  这意味着你没有在你的 C++ 类 `ClassName` 中实现 IDL 文件中定义的 `methodName` 方法。请检查你的类实现，确保所有所需的接口方法都已正确实现。并且注意方法名的大小写和参数类型是否与 IDL 文件中的定义一致。
+
+- 编译错误：```error: no member named 'methodName' in 'package::name::weak::InterfaceName::virtual_type'```
+
+  这可能说明你没有在 IDL 的接口 `InterfaceName` 中定义 `methodName` 方法。可参考 5.1 和 5.5 节。
 
 ---
 
