@@ -12,8 +12,8 @@ generated/include/rgb.base.impl.hpp
 ```
 
 这些文件对于使用者的意义如下：
-- 对于接口的作者（发布方），需要关注的是 `proj.hpp` 和 `impl.hpp`，其中 `proj.hpp` 包含了当前包下定义的所有类型（包括枚举类、结构体、联合体、接口等，使用方式见后文）的 C++ 声明和定义，而 `impl.hpp` 则提供了用于导出全局函数的宏定义（见 6.1 节）。
-- 对于接口的用户（消费方），只需要关注 `user.hpp`，该文件包含了 `proj.hpp` 中的所有内容，此外还允许用户直接调用全局函数（见 6.2 节）。
+- 对于接口的作者（发布方），需要关注的是 `proj.hpp` 和 `impl.hpp`，其中 `proj.hpp` 包含了当前包下定义的所有类型（包括枚举类、结构体、联合体、接口等，使用方式见后文）的 C++ 声明和定义，而 `impl.hpp` 则提供了用于导出全局函数的宏定义（见 7.1 节）。
+- 对于接口的用户（消费方），只需要关注 `user.hpp`，该文件包含了 `proj.hpp` 中的所有内容，此外还允许用户直接调用全局函数（见 7.2 节）。
 
 > **⚠️ 特别注意**
 >
@@ -485,6 +485,24 @@ void copyColorImpl(rgb::base::weak::IColorable dst, rgb::base::weak::IColorable 
 }
 ```
 
+强引用类型和弱引用类型之间可以相互转换：
+- 强引用转换为弱引用
+  ```cpp
+  rgb::base::IColorable colorable = taihe::make_holder<ColoredCircle, rgb::base::IColorable>("myCircle", 10, color_114514);
+  rgb::base::weak::IColorable weakColorable = colorable;
+  ```
+- 弱引用转换为强引用
+  ```cpp
+  class MyClass {
+      rgb::base::IColorable colorable_;
+  
+  public:
+      MyClass(rgb::base::weak::IColorable weakColorable) {
+          colorable_ = weakColorable;
+      }
+  };
+  ```
+
 当对象的引用计数为 0 时，对象会被自动销毁。销毁时，除释放内存外，具体实现类的析构函数也会被自动调用。
 
 ### 5.5 进阶：同时实现多个接口
@@ -612,9 +630,460 @@ assert(std::hash<IShape>{}(obj_0) == std::hash<std::string_view>{}(obj_0->getId(
 // 调用对 obj_0 所对应类特化的哈希方法
 ```
 
-## 6. 使用全局函数
+## 6. 容器类型
 
-### 6.1 导出函数（接口发布方）
+Taihe 提供了丰富的容器类型来满足不同的数据存储需求。这些容器类型分为两类：
+- **值语义容器**：`Array<T>` 和 `Optional<T>`，拷贝时会复制内部数据
+- **引用语义容器**：`String`、`Vector<T>`、`Map<K,V>`、`Set<T>` 和函数闭包，通过引用计数管理生命周期
+
+每种容器都有两个对应的 C++ 类型：
+- **持有者类型**（如 `taihe::string`）：拥有数据的所有权，类似于 `std::shared_ptr`
+- **视图类型**（如 `taihe::string_view`）：不拥有数据，但同样支持访问数据的一般方法，可用于参数传递等场景，避免引用计数的开销
+
+### 6.1 字符串（String）
+
+字符串是 Taihe 中最常用的容器类型之一，通过引用计数进行管理。
+
+- **持有者类型**：`taihe::string`
+- **视图类型**：`taihe::string_view`
+
+#### 6.1.1 创建字符串
+
+`taihe::string` 可以从 C 字符串、`std::string` 或 `std::string_view` 创建，以下是一些示例：
+```cpp
+#include <taihe/string.hpp>
+
+// 从 C 字符串创建
+taihe::string str1 = "Hello, Taihe!";
+
+// 从 std::string 创建
+std::string std_str = "Hello";
+taihe::string str2 = std_str;
+
+// 从 std::string_view 创建
+std::string_view std_sv = "World";
+taihe::string str3 = std_sv;
+
+// 指定长度创建
+taihe::string str4("Hello", 5);
+```
+
+#### 6.1.2 字符串操作
+
+以下是一些常用的字符串操作示例：
+```cpp
+// 字符串连接
+taihe::string hello = "Hello";
+taihe::string world = "World";
+taihe::string greeting = hello + ", " + world + "!";
+
+// 使用 concat 函数连接多个字符串（更高效）
+taihe::string result = taihe::concat({hello, ", ", world, "!"});
+
+// 获取子串
+taihe::string sub = greeting.substr(0, 5);  // "Hello"
+
+// 访问字符
+char first = greeting[0];  // 'H'
+char last = greeting.back();  // '!'
+
+// 获取长度和判空
+size_t len = greeting.size();
+bool is_empty = greeting.empty();
+
+// 转换为 std::string_view
+std::string_view view = greeting;  // 隐式转换
+
+// 获取 C 字符串指针
+const char* c_str = greeting.c_str();
+```
+
+#### 6.1.3 字符串视图
+
+在函数参数中建议使用 `taihe::string_view` 以避免引用计数的开销：
+```cpp
+void process_string(taihe::string_view sv) {
+    std::cout << "Processing: " << sv << std::endl;
+}
+
+// 调用时可以传入 string 或 string_view
+taihe::string str = "Hello";
+process_string(str);  // 自动转换为 string_view
+process_string("World");  // 直接从 C 字符串创建 string_view
+
+// 也可以传入 std::string 或 std::string_view
+std::string std_str = "Taihe";
+process_string(std_str);
+std::string_view std_sv = "Taihe";
+process_string(std_sv);
+```
+
+### 6.2 数组（Array）
+
+定长数组，在创建后大小不可改变，且为值语义，没有引用计数，拷贝时会复制内部所有元素。
+
+- **持有者类型**：`taihe::array<T>`
+- **视图类型**：`taihe::array_view<T>`
+
+#### 6.2.1 创建数组
+
+`taihe::array<T>` 可以通过指定大小或使用初始化列表创建，以下是一些示例：
+```cpp
+#include <taihe/array.hpp>
+
+// 创建指定大小的数组（元素默认初始化）
+taihe::array<int> arr1(5);
+
+// 创建并用特定值填充
+taihe::array<int> arr2(5, 42);  // 5个元素，都是42
+
+// 从初始化列表创建
+taihe::array<int> arr3 = {1, 2, 3, 4, 5};
+```
+
+#### 6.2.2 访问和遍历
+
+Taihe 的数组提供了多种访问和遍历方式，以下是一些常用操作：
+```cpp
+// 下标访问
+int first = arr3[0];
+int last = arr3[arr3.size() - 1];
+
+// 安全访问（会检查边界）
+try {
+    int value = arr3.at(10);  // 抛出 std::out_of_range
+} catch (const std::out_of_range& e) {
+    // 处理越界
+}
+
+// 获取首尾元素
+int front = arr3.front();
+int back = arr3.back();
+
+// 遍历数组
+for (int value : arr3) {
+    std::cout << value << " ";
+}
+
+// 使用迭代器
+for (auto it = arr3.begin(); it != arr3.end(); ++it) {
+    std::cout << *it << " ";
+}
+
+// 获取原始指针和大小
+int* data = arr3.data();
+size_t size = arr3.size();
+```
+
+#### 6.2.3 数组视图
+
+`array_view` 用于函数参数传递：
+```cpp
+void process_array(taihe::array_view<int> view) {
+    for (int value : view) {
+        // 处理元素
+    }
+}
+
+// 可以传入 array、vector、C 数组等
+taihe::array<int> arr = {1, 2, 3};
+std::vector<int> vec = {4, 5, 6};
+int c_arr[] = {7, 8, 9};
+
+process_array(arr);
+process_array(vec);
+process_array(c_arr);
+```
+
+### 6.3 可选类型（Optional）
+
+表示可能不存在的值。和数组一样，可选类型也是值语义，没有引用计数，拷贝时会复制内部的数据。
+
+- **持有者类型**：`taihe::optional<T>`
+- **视图类型**：`taihe::optional_view<T>`
+
+#### 6.3.1 创建可选类型
+
+通过 `std::in_place` 或 `std::nullopt` 创建可选类型：
+```cpp
+#include <taihe/optional.hpp>
+
+// 创建空的 optional
+taihe::optional<int> opt1;
+taihe::optional<int> opt2 = std::nullopt;
+
+// 创建包含值的 optional
+taihe::optional<int> opt3{std::in_place, 42};
+auto opt4 = taihe::optional<std::string>{std::in_place, "Hello"};
+```
+
+#### 6.3.2 检查和访问值
+
+Taihe 的可选类型提供了和 C++ 标准库类似的接口来检查和访问值：
+```cpp
+// 检查是否有值
+if (opt3.has_value()) {
+    // 或者使用 if (opt3)
+    int value = opt3.value();  // 获取值
+}
+
+// 使用 value_or 提供默认值
+int value = opt1.value_or(0);  // 如果为空返回0
+
+// 使用指针语法访问
+if (opt4) {
+    std::cout << opt4->length() << std::endl;  // 调用 string 的方法
+    std::cout << *opt4 << std::endl;  // 解引用获取值
+}
+```
+
+### 6.4 动态数组（Vector）
+
+可动态增长的数组，通过引用计数进行管理。
+
+- **持有者类型**：`taihe::vector<T>`
+- **视图类型**：`taihe::vector_view<T>`
+
+#### 6.4.1 创建和基本操作
+
+```cpp
+#include <taihe/vector.hpp>
+
+// 创建空 vector
+taihe::vector<int> vec1;
+
+// 创建指定容量的 vector
+taihe::vector<int> vec2(16);  // 预分配16个元素的空间
+
+// 添加元素
+vec1.push_back(42);
+vec1.push_back(100);
+
+// 就地构造元素
+vec1.emplace_back(200);
+
+// 访问元素
+int first = vec1[0];
+int size = vec1.size();
+
+// 删除最后一个元素
+vec1.pop_back();
+
+// 清空所有元素
+vec1.clear();
+```
+
+#### 6.4.2 容量管理
+
+```cpp
+// 预留容量
+vec1.reserve(100);  // 预分配空间，避免频繁重新分配
+
+// 获取当前容量
+size_t capacity = vec1.capacity();
+
+// 检查是否为空
+bool is_empty = vec1.empty();
+```
+
+#### 6.4.3 遍历 Vector
+
+```cpp
+// 范围 for 循环
+for (const auto& value : vec1) {
+    std::cout << value << " ";
+}
+
+// 使用迭代器
+for (auto it = vec1.begin(); it != vec1.end(); ++it) {
+    *it *= 2;  // 可以修改元素
+}
+```
+
+### 6.5 映射（Map）
+
+用于表示键值对映射集合，通过引用计数管理。它基于哈希表实现，故键值对的顺序并不保证。
+
+- **持有者类型**：`taihe::map<K, V>`
+- **视图类型**：`taihe::map_view<K, V>`
+
+#### 6.5.1 创建和插入
+
+```cpp
+#include <taihe/map.hpp>
+
+// 创建空 map
+taihe::map<taihe::string, int> map1;
+
+// 创建指定初始容量的 map
+taihe::map<taihe::string, int> map2(32);
+
+// 插入键值对
+auto [it1, success1] = map1.emplace("apple", 5);
+auto [it2, success2] = map1.emplace("banana", 3);
+
+// 如果键已存在，emplace 不会覆盖
+auto [it3, success3] = map1.emplace("apple", 10);  // success3 为 false
+
+// 使用 emplace<true> 强制覆盖
+auto [it4, success4] = map1.emplace<true>("apple", 10);  // 覆盖原值
+```
+
+#### 6.5.2 查找和访问
+
+```cpp
+// 查找值
+int* value_ptr = map1.find("apple");
+if (value_ptr != nullptr) {
+    std::cout << "Apple count: " << *value_ptr << std::endl;
+}
+
+// 查找键值对
+auto* item = map1.find_item("banana");
+if (item != nullptr) {
+    std::cout << item->first << ": " << item->second << std::endl;
+}
+```
+
+#### 6.5.3 删除和遍历
+
+```cpp
+// 删除键值对
+bool erased = map1.erase("apple");
+
+// 清空所有元素
+map1.clear();
+
+// 遍历 map
+for (const auto& [key, value] : map1) {
+    std::cout << key << " => " << value << std::endl;
+}
+
+// 使用访问者模式
+map1.accept([](const auto& item) {
+    std::cout << item.first << ": " << item.second << std::endl;
+});
+```
+
+### 6.6 集合（Set）
+
+用于表示不重复元素的集合，通过引用计数管理。和映射类似，集合基于哈希表实现，元素的顺序并不保证。
+
+- **持有者类型**：`taihe::set<T>`
+- **视图类型**：`taihe::set_view<T>`
+
+#### 6.6.1 创建和插入
+
+```cpp
+#include <taihe/set.hpp>
+
+// 创建空 set
+taihe::set<int> set1;
+
+// 插入元素
+auto [it1, success1] = set1.emplace(42);
+auto [it2, success2] = set1.emplace(100);
+auto [it3, success3] = set1.emplace(42);  // 重复插入，success3 为 false
+```
+
+#### 6.6.2 查找和删除
+
+```cpp
+// 查找元素
+bool found = set1.find(42);  // 返回 bool
+
+// 查找并获取元素指针
+const int* item = set1.find_item(42);
+if (item != nullptr) {
+    std::cout << "Found: " << *item << std::endl;
+}
+
+// 删除元素
+bool erased = set1.erase(42);
+
+// 获取大小
+size_t size = set1.size();
+```
+
+#### 6.6.3 遍历集合
+
+```cpp
+// 范围 for 循环
+for (const auto& value : set1) {
+    std::cout << value << " ";
+}
+
+// 使用访问者
+set1.accept([](const auto& value) {
+    std::cout << value << " ";
+});
+```
+
+### 6.7 函数闭包（Callback）
+
+用于存储可调用对象。
+
+- **持有者类型**：`taihe::callback<R(Args...)>`
+- **视图类型**：`taihe::callback_view<R(Args...)>`
+
+#### 6.7.1 创建回调
+
+回调的创建方式和接口非常类似（见 5.1 节），使用 `taihe::make_holder` 创建一个持有回调的对象。以下是一个示例，假设我们需要创建一个回调来处理字符串输入并返回处理结果：
+```cpp
+#include <taihe/callback.hpp>
+
+struct MyProcessor {
+    taihe::string prefix;
+
+    MyProcessor(taihe::string_view p) : prefix(p) {}
+    
+    taihe::string operator()(taihe::string_view input) {
+        return prefix + ": " + input;
+    }
+};
+
+taihe::callback<taihe::string(taihe::string_view)> callback = \
+    taihe::make_holder<
+        MyProcessor,
+        taihe::callback<taihe::string(taihe::string_view)>
+    >("Result");
+```
+
+#### 6.7.3 调用回调
+
+回调可以像普通函数一样调用，使用 `operator()` 或直接调用：
+```cpp
+// 直接调用
+taihe::string result = callback("Hello");
+```
+
+### 6.8 内存管理最佳实践
+
+- **参数传递**：始终使用视图类型（如 `string_view`、`vector_view`）作为函数参数，避免不必要的引用计数操作。
+- **返回值**：返回持有者类型（如 `string`、`vector`）以确保正确的生命周期管理。
+- **存储**：在类成员中存储持有者类型以保持数据的所有权。
+
+以 `taihe::string` 和 `taihe::string_view` 为例，以下是一个类的示例，展示了如何使用持有者类型和视图类型：
+```cpp
+class MyClass {
+    taihe::string name_;  // 持有者类型作为成员
+
+public:
+    // 视图类型作为参数
+    void set_name(taihe::string_view name) {
+        name_ = name;
+    }
+    
+    // 返回持有者类型
+    taihe::string get_name() const {
+        return name_;
+    }
+};
+```
+
+## 7. 使用全局函数
+
+### 7.1 导出函数（接口发布方）
 
 如果你是接口的作者（发布方），需要将函数导出以供用户调用。可以使用 `package.name.impl.hpp` 中定义的宏 `TH_EXPORT_CPP_API_funcName(func)` 来导出函数，其中 `func` 是你实现的函数名。
 
@@ -639,7 +1108,7 @@ integer::arithmetic::DivModResult ohos_int_divmod(int32_t a, int32_t b) {
 TH_EXPORT_CPP_API_divmod_i32(ohos_int_divmod)
 ```
 
-### 6.2 调用函数（接口消费方）
+### 7.2 调用函数（接口消费方）
 
 接口的使用方可以导入头文件 `package.name.user.hpp`，并根据 IDL 文件中定义的函数名称和其所在的命名空间来调用函数。如 `package::name::funcName()`。例如，假设你要调用上文中定义的 `divmod_i32` 函数，可以这样写：
 ```cpp

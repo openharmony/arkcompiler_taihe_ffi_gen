@@ -54,7 +54,6 @@ int main() {
 
 - [Taihe 工具的环境配置及使用](docs/UserSetup.md)
 - [书写 IDL 文件](docs/DSL.md)
-- [Taihe 数据类型](docs/Types.md)
 - [Taihe C++ 用户文档](docs/CppUserDoc.md)
 - [Taihe ANI 用户文档](docs/AniUserDoc.md)
 
