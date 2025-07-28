@@ -74,14 +74,13 @@ class CompilerConfig:
     @classmethod
     def construct(cls, configure: dict[str, str | None]) -> Self:
         res = cls()
-        for config in configure:
-            k, *v = config.split("=", 1)
+        for k, v in configure.items():
             if k == "sts:keep-name":
                 res.sts_keep_name = True
             elif k == "arkts:module-prefix":
-                res.arkts_module_prefix = v[0] if v else None
+                res.arkts_module_prefix = v
             elif k == "arkts:path-prefix":
-                res.arkts_path_prefix = v[0] if v else None
+                res.arkts_path_prefix = v
             else:
                 raise ValueError(f"unknown codegen config {k!r}")
         return res
