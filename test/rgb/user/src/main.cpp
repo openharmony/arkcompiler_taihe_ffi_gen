@@ -20,7 +20,9 @@ using namespace rgb::show;
 using namespace taihe;
 
 template<typename... Ts>
-struct overloads : Ts... { using Ts::operator()...; };
+struct overloads : Ts... {
+  using Ts::operator()...;
+};
 
 template<typename... Ts>
 overloads(Ts...) -> overloads<Ts...>;
