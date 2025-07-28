@@ -463,7 +463,7 @@ class NapiCodeGenerator:
             struct_napi_impl_target.writelns(
                 f"napi_value args[{len(struct_napi_info.dts_final_fields)}] = {{{args_str}}};",
                 f"napi_value napi_obj = nullptr, constructor = nullptr;",
-                f"napi_get_reference_value(env, {struct_napi_info.ctor_ref_name}, &constructor);",
+                f"napi_get_reference_value(env, {struct_napi_info.ctor_ref_name}(), &constructor);",
                 f"napi_new_instance(env, constructor, {len(struct_napi_info.dts_final_fields)}, args, &napi_obj);",
                 f"return napi_obj;",
             )
@@ -561,7 +561,10 @@ class NapiCodeGenerator:
                 f"return thisobj;",
             )
         struct_napi_impl_target.writelns(
-            f"static napi_ref {struct_napi_info.ctor_ref_name};"
+            f"inline napi_ref& {struct_napi_info.ctor_ref_name}() {{",
+            f"    static napi_ref instance = nullptr;",
+            f"    return instance;",
+            f"}}",
         )
         with struct_napi_impl_target.indented(
             f"inline void {struct_napi_info.create_func_name}(napi_env env, napi_value exports) {{",
@@ -578,7 +581,7 @@ class NapiCodeGenerator:
                     )
             struct_napi_impl_target.writelns(
                 f'napi_define_class(env, "{struct.name}", NAPI_AUTO_LENGTH, {struct_napi_info.constructor_func_name}, nullptr, {len(struct_napi_info.dts_final_fields)}, desc, &result);',
-                f"napi_create_reference(env, result, 1, &{struct_napi_info.ctor_ref_name});",
+                f"napi_create_reference(env, result, 1, &{struct_napi_info.ctor_ref_name}());",
                 f'napi_set_named_property(env, exports, "{struct.name}", result);',
                 f"return;",
             )
