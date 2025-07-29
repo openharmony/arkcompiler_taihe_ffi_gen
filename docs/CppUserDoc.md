@@ -450,6 +450,12 @@ rgb::show::IShowable circle =
   }
   ```
 
+> **💡 扩展：Taihe 实现静态转换和动态转换的原理**
+>
+> Taihe 的接口动态转换基于胖指针（fat pointer）实现。每个接口对象都包含一个指向实际对象数据的指针和一个接口虚表（vtable）的指针。虚表则由若干函数表（function table）组成，每个函数表对应于一个接口，里面存储了该接口的所有方法的指针。且函数表之间按照继承关系按照特定顺序排布，因此，可以通过子接口的虚表指针静态计算出其父接口的虚表指针，从而实现静态转换。
+>
+> 动态转换则需要在运行时检查实际对象是否实现了目标接口。每个 Taihe 接口在二进制中都对应一个接口 ID（IID），当通过 `taihe::make_holder` 创建对象时，对象数据内存的前面会被插入一个指向运行时类型信息（RTTI）的指针，而在 RTTI 中，则包含从该对象实现的所有接口所对应 IID 到相应虚表的映射关系。进行动态转换时，会尝试查询此映射表找到对应虚表指针。
+
 ### 5.3 接口方法的调用
 
 通过 `->` 运算符调用接口自己的方法。例如：
@@ -538,7 +544,7 @@ fooImpl->doSomething(); // OK
 fooImpl->doSomethingElse(); // Also OK
 ```
 
-事实上，这里的 `fooImpl` 的类型是 `taihe::impl_holder<FooImpl, my::package::IFoo>` 而非 `my::package::IFoo`，它相当于一个持有 `FooImpl` 类实例，并可以隐式静态转换为 `my::package::IFoo` 接口的智能指针。因此可以访问 `FooImpl` 类的所有方法。而在之前的例子中，`foo` 在创建后就被转换为 `my::package::IFoo` 接口类型，丢失了对 `FooImpl` 类的引用。
+事实上，调用 `taihe::make_holder<FooImpl, my::package::IFoo>` 直接创建的 `fooImpl` 的实际类型为 `taihe::impl_holder<FooImpl, my::package::IFoo>` 而非 `my::package::IFoo`，它相当于一个持有 `FooImpl` 类实例，并可以隐式静态转换为 `my::package::IFoo` 接口的智能指针。因此可以访问 `FooImpl` 类的所有方法。而在之前的例子中，`foo` 在创建后就被转换为 `my::package::IFoo` 接口类型，丢失了对 `FooImpl` 类的引用。
 
 ### 5.6 进阶：同时实现多个接口
 
@@ -712,7 +718,7 @@ taihe::string hello = "Hello";
 taihe::string world = "World";
 taihe::string greeting = hello + ", " + world + "!";
 
-// 使用 concat 函数连接多个字符串（更高效）
+// 使用 concat 函数连接多个字符串
 taihe::string result = taihe::concat({hello, ", ", world, "!"});
 
 // 获取子串
@@ -1084,12 +1090,63 @@ taihe::callback<taihe::string(taihe::string_view)> callback = \
     >("Result");
 ```
 
-#### 6.7.3 调用回调
+#### 6.7.2 调用回调
 
-回调可以像普通函数一样调用，使用 `operator()` 或直接调用：
+回调可以像普通函数一样调用，可使用 `operator()` 或直接调用：
 ```cpp
 // 直接调用
 taihe::string result = callback("Hello");
+```
+
+#### 6.7.3 进阶：函数闭包和接口的关系
+
+事实上，Taihe 函数闭包和 Taihe 接口的底层结构和实现原理几乎是相同的，它们的 ABI 结构都是一个数据指针外加一个虚函数指针/虚表指针。你甚至可以认为函数闭包实际上只是一种特殊的接口类型。它具备大多数接口的特性，例如，你可以将一个 C++ 类同时实现为一个接口和一个函数闭包：
+```cpp
+class CallableImpl {
+public:
+    // 实现函数调用运算符
+    taihe::string operator()(taihe::string_view input);
+
+    // 实现接口方法
+    taihe::string getId() const;
+    double calculateArea() const;
+
+    // 其他方法
+    void myOtherMethod();
+};
+
+auto callableImpl =
+    taihe::make_holder<
+        CallableImpl,
+        taihe::callback<taihe::string(taihe::string_view)>,
+        taihe::weak::IShape
+    >("CallableImpl");
+
+callableImpl->getId();  // 调用接口方法
+callableImpl->calculateArea();  // 调用接口方法
+
+callableImpl->myOtherMethod();  // 调用其他方法，这也是合法的，因为 callableImpl 的实际类型为
+                            // taihe::impl_holder<
+                            //     CallableImpl,
+                            //     taihe::callback<taihe::string(taihe::string_view)>,
+                            //     taihe::weak::IShape
+                            // >
+
+callableImpl("Hello");  // 当作函数闭包调用，taihe::impl_holder 重载了 operator() 方法
+
+taihe::callback<taihe::string(taihe::string_view)> cb = callableImpl;  // 转换为函数闭包
+taihe::weak::IShape shape = callableImpl;  // 转换为接口
+```
+
+并且你可以尝试将函数闭包动态转换为接口：
+```cpp
+auto cb_as_shape = taihe::weak::IShape(cb);  // 尝试将函数闭包转换为接口
+assert(not cb_as_shape.is_error());
+```
+
+但是，由于函数闭包类型不具备 IID，因此你并不能反过来从其他接口转换为函数闭包。
+```cpp
+auto shape_as_cb = taihe::weak::callback<taihe::string(taihe::string_view)>(cb_as_shape);  // 错误：无法从接口转换为函数闭包
 ```
 
 ### 6.8 内存管理最佳实践
@@ -1186,7 +1243,7 @@ int main() {
 
 - 编译错误：```error: no member named 'methodName' in 'package::name::weak::InterfaceName::virtual_type'```
 
-  这可能说明你没有在 IDL 的接口 `InterfaceName` 中定义 `methodName` 方法。可参考 5.1 和 5.5 节。
+  这可能说明你没有在 IDL 的接口 `InterfaceName` 中声明 `methodName` 方法。可参考 5.1 和 5.5 节。
 
 ---
 

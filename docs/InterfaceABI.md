@@ -148,8 +148,10 @@ struct IFancyObjVT {
 };
 
 // 可以直接将 IFancyObj_vt_ptr 转换为相应的 IShapeObj_vt_ptr 或 IBase_vt_ptr
-struct IShape_vt* IShape_vt_ptr = (void **)IFancyObj_vt_ptr + offsetof(IFancyObjVT, IShape_ft_ptr);
-struct IBase_vt* IBase_vt_ptr = (void **)IFancyObj_vt_ptr + offsetof(IFancyObjVT, IBase_ft_ptr_0);
+struct IShape_vt* IShape_vt_ptr = \
+    (struct IShape_vt*)((void **)IFancyObj_vt_ptr + offsetof(IFancyObjVT, IShape_ft_ptr));
+struct IBase_vt* IBase_vt_ptr = \
+    (struct IBase_vt*)((void **)IFancyObj_vt_ptr + offsetof(IFancyObjVT, IBase_ft_ptr_0));
 ```
 
 ### 动态转换
@@ -158,19 +160,13 @@ struct IBase_vt* IBase_vt_ptr = (void **)IFancyObj_vt_ptr + offsetof(IFancyObjVT
 
 以下是一个样例：
 ```c
-inline struct IFancyObj dynamic_cast_to_IFancyObj(struct DataBlockHead* data_ptr) {
-  struct TypeInfo *rtti_ptr = data_ptr->rtti_ptr;
-  struct IFancyObj result;
-  for (size_t i = 0; i < rtti_ptr->len; i++) {
-    if (rtti_ptr->idmap[i].id == IFancyObj_iid) {
-      result.vtbl_ptr = (struct IFancyObjVT*)rtti_ptr->idmap[i].vtbl_ptr;
-      result.data_ptr = data_ptr;
-      return result;
+TH_INLINE struct IFancyObj_vtable const* dynamic_get_IFancyObj_vtable(struct TypeInfo const* rtti_ptr) {
+    for (size_t i = 0; i < rtti_ptr->len; i++) {
+        if (rtti_ptr->idmap[i].id == IFancyObj_iid) {
+            return (struct IFancyObj_vtable const*)rtti_ptr->idmap[i].vtbl_ptr;
+        }
     }
-  }
-  result.vtbl_ptr = NULL;
-  result.data_ptr = NULL;
-  return result;
+    return NULL;
 }
 ```
 

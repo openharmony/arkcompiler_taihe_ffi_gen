@@ -145,8 +145,8 @@ Taihe IR 由三部分组成：
 
 Taihe IR 的生命周期是：
 
-1. 产生：在 `CompilerInstance.parse()` 阶段，由 `taihe.parse.convert` 从源文件生成 IR，之后由语言后端的 `Backend.post_process()` 完成 IR 的后置处理。
-2. 内置的语义分析：在 `CompilerInstance.validate()` 阶段，由 `taihe.semantics.analysis` 进行语义分析和检查。 **自此，IR 不再可变。**
+1. 产生：在 `CompilerInstance.parse()` 阶段，由 `taihe.parse.convert` 从源文件生成 IR。
+2. 内置的语义分析：在 `CompilerInstance.validate()` 阶段，由 `taihe.semantics.analysis` 进行语义分析和检查。**自此，IR 不再可变。**
 3. 语言后端的语义分析：在 `CompilerInstance.validate()` 阶段，由 `Backend.validate()` 完成自定义的语义检查。
 4. 代码生成：在 `CompilerInstance.generate()` 阶段，由 `Backend.generate()` 完成自定义的代码生成。
 
@@ -232,7 +232,7 @@ Taihe 的目标语言生成部分位于 `taihe.driver.backend`，由一个个语
 2. `taihe.cli.compiler` 根据命令行参数，配置所需的 `BackendConfig`，存入 `CompilerInvocation`。
 3. `CompilerInstance` 根据 `BackendConfig` 初始化对应的 `Backend` 实例。
 4. `CompilerInstance.run()` 执行编译器流程，并按需回调 `Backend` 的方法：
-  - `post_process()`：完成 IR 解析（`parse`）被调用，此时可修改 IR。
+  - `post_process()`：完成 IR 解析（`parse`）被调用，此时可修改 IR。（Deprecated）
   - `validate()`：在完成语义分析（`validate`）后被调用，此时不可修改 IR，但可返回错误。
   - `generate()`：在通过全部语义检查、进入代码生成（`generate`）时调用，用于生成目标代码，此时不可修改 IR。
 
