@@ -138,7 +138,9 @@ class NullAttr(TypedAttribute[UnionFieldDecl]):
 
     @override
     def check_typed_context(
-        self, parent: UnionFieldDecl, dm: DiagnosticsManager
+        self,
+        parent: UnionFieldDecl,
+        dm: DiagnosticsManager,
     ) -> None:
         if parent.ty_ref is not None:
             dm.emit(
@@ -159,7 +161,9 @@ class UndefinedAttr(TypedAttribute[UnionFieldDecl]):
 
     @override
     def check_typed_context(
-        self, parent: UnionFieldDecl, dm: DiagnosticsManager
+        self,
+        parent: UnionFieldDecl,
+        dm: DiagnosticsManager,
     ) -> None:
         if parent.ty_ref is not None:
             dm.emit(

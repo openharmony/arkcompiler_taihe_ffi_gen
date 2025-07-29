@@ -2,7 +2,7 @@
 
 ## 入门：Taihe 的基本概念
 
-- Taihe 文件使用类 C 的写法，描述了接口。
+- Taihe IDL 文件使用类 C 的写法，描述了接口。
 
 **File: idl/ohos.book.store.taihe**
 ```typescript
@@ -17,7 +17,7 @@ function PrintBook(b: Book);
 - API 作者可以使用类 STL 写法，舒适地访问 Taihe 定义的数据类型。
 
 **File: generated/temp/ohos.book.store.impl.cpp**
-```C++
+```cpp
 Book ConstructBook(string_view title, int32_t year, Category kind) {
   // 使用 Modern C++ 初始化结构体。
   return Book{title, year, kind};
@@ -34,7 +34,9 @@ void PrintBook(Book const& b) {
 
 - `taihec` 生成对应的 ArkTS 文件，自动将 C++ 代码投影到 ArkTS。
 
-**Command: taihec idl/ohos.book.store.taihe -Ogenerated -Cani-bridge**
+```sh
+taihec idl/ohos.book.store.taihe -Ogenerated -Cani-bridge
+```
 
 **File (Generated): generated/ohos.book.store.ets**
 ```typescript
@@ -77,7 +79,7 @@ PrintBook: Rust for Rustaceans, year 2021, kind = Rust
 ## 入门：包，命名空间，和注解
 
 - Taihe 的设计思想是简单明了、语言中立。因此，有很多 ArkTS 的特有能力不能在 Taihe 中原生表示出来。
-- 例如，Taihe 只有“包”的概念，且包名和 Taihe 文件名一一对应。
+- 例如，Taihe 只有“包”的概念，且包名和 Taihe IDL 文件名一一对应。
   - 举个例子，`foo.bar.baz.taihe` 对应 C++ 命名空间 `::foo::bar::baz`，对应 ArkTS 模块 `foo.bar.baz.ets`。
   - OHOS 中常见的 `@ohos.foo.bar.ets` 的写法，由于含有特殊字符 `@`，不能被 Taihe 支持。
 - Taihe 使用注解机制引入语言扩展，从而更好地支持 ArkTS。例如，通过 `@namespace` 可以指定 ArkTS 中的模块和命名空间（`declare namespace MyNamespace { ... }`）
@@ -116,7 +118,7 @@ PrintBook: Rust for Rustaceans, year 2021, kind = Rust
   - `@bigint Array<u64>`: 表示 ArkTS 的 `BigInt`
   - `(arg: ArgT) => RetT` 表示回调函数，对应 ArkTS 投影 `(arg: ArgT) => RetT`
 
-- 让我们用高级特性举个例子。在 Taihe 文件中引入这些代码
+- 让我们用高级特性举个例子。在 Taihe IDL 文件中引入这些代码
 
 **File: idl/ohos.book.store.taihe**
 ```typescript
@@ -131,7 +133,8 @@ function MapBookToYear(opt: MapOption): @record Map<String, i32>;
 function PrintBooksWithFilter(all_books: Array<Book>, filter: Optional<(b: Book) => bool>);
 ```
 
-- 对应的 ArkTS 投影如下：
+- 对应的 ArkTS 投影如下
+
 **File (Generated): generated/ohos.book.store.ets**
 ```typescript
 // Taihe 使用联合体，支持传入多种类型
@@ -145,7 +148,7 @@ function PrintBooksWithFilter(all_books: (Book[]), filter: (((arg_0: Book) => bo
 - 使用 C++ 完成后续逻辑的开发
 
 **File: author/src/ohos.book.store.impl.cpp**
-```C++
+```cpp
 map<string, int32_t> MapBookToYear(MapOption const& opt) {
   map<string, int32_t> ret;
   // 通过 get_tag() 判断类型，通过 get_xxx_ref() 获得对应的值。
@@ -210,7 +213,7 @@ PrintBook: Rust for Rustaceans, year 2021, kind = Rust
   |------------|-------------|--------------------------|-------------------------|
   | 基础类型   | `i8`        | 从 ArkTS 复制到 C++      | 从 C++ 复制到 ArkTS     |
   | 复合类型   | `struct`    | 从 ArkTS 复制到 C++      | 从 C++ 复制到 ArkTS     |
-  | 容器类型   | `Array`     | 从 ArkTS *借用* 给 C++   | 从 C++ 复制到 ArkTS     |
+  | 容器类型   | `Array`     | 从 ArkTS *借用*给 C++   | 从 C++ 复制到 ArkTS     |
   | 接口类型   | `interface` | 从 ArkTS 找到 C++ 指针   | 将 C++ 指针包装给 ArkTS |
   | 不透明类型 | `Opaque`    | 按 `ani_object` 处理     | 按 `ani_object` 处理    |
 
@@ -219,14 +222,15 @@ PrintBook: Rust for Rustaceans, year 2021, kind = Rust
   - 类似地，将 C++ 容器返回给 ArkTS 后，若 ArkTS 侧修改了数据，则这部分修改也只对 ArkTS 可见。
 
 ## 接口：将 C++ 对象绑定到 ArkTS
+
 - Taihe 的函数是无状态的。传入参数，传出返回值，仅此而已。
 - Taihe 使用 `interface` 管理状态。复用 C++ 的“类”，来将数据和函数关联在一起。ArkTS 侧的投影会复用 C++ 对象的状态。
 - Taihe 的 `interface` 有明确的约束，只支持存放方法，不支持静态函数、构造器、属性。
   - 注：`interface` 不支持构造器，所以需要使用静态函数 + 返回对象的方式创建 `interface`
 - Taihe 基于注解机制，将约束严格的 `interface` 投影到具有丰富能力的 ArkTS `interface` 或 `class` 上。
   - `@class`: 在 ArkTS 中生成 `class`，而非 `interface`
-  - `@ctor`: 生成构造器（仅当 `@class` 时有效）
-  - `@static`: 生成静态方法（仅当 `@class` 时有效）
+  - `@constructor`: 生成构造方法（仅当对应接口添加了 `@class` 注解时有效）
+  - `@static`: 生成静态方法（仅当对应接口添加了 `@class` 注解时有效）
   - `@get` 和 `@set`: 生成属性，或只有 `@get` 无 `@set` 时生成 `readonly` 属性
 
 **File: idl/ohos.book.store.taihe**
@@ -245,9 +249,9 @@ interface Bookstore {
   @get getTotalSales(): f64;
 }
 
-// 使用 @ctor 给 Bookstore 添加构造器
-@ctor("Bookstore")
-function CreateBookstore(): Bookstore;
+// 使用 @constructor 给 Bookstore 添加构造器
+@constructor("Bookstore")
+@rename function CreateBookstore(): Bookstore;
 
 // 使用 @static 给 Bookstore 添加静态方法。
 @static("Bookstore")
@@ -281,7 +285,7 @@ export class Bookstore {
   - 全部的状态都保存在 C++ 中。
 
 **File: author/src/ohos.book.store.impl.cpp**
-```C++
+```cpp
 class BookstoreImpl {
   double m_discount_percent = 0.0f;
   double m_total_sales = 0.0f;
@@ -372,11 +376,12 @@ error: Error: The Rust Programming Language has been sold out
 ```
 
 ## 漫谈：Taihe 的设计目标和语言能力
+
 Taihe 以语言中立为设计目标。尽管通过注解可以在 ArkTS 中实现高级特性，但核心语言只提供面向 API 的、受限的语言能力：
 
   - `function`: 静态函数
     - 支持入参和返回。
-    - **不支持**重载，也就是无法将多个函数实现绑定到同一个名字下。但是，可以使用 `@overload` 在 ArkTS 下实现语言扩展能力。
+    - **不支持**重载，也就是无法将多个函数实现绑定到同一个名字下。但是，可以使用 `@static_overload` 在 ArkTS 下实现语言扩展能力。
   - `interface`: 接口，将 Native 状态绑定到外部
     - 支持方法。
     - 支持多接口，以及接口间的依赖。
@@ -402,7 +407,7 @@ Taihe 以温和改良为设计目标。新增的 Taihe 绑定可以与现有 C++
     - 可以对 C++ 函数任意起名，甚至使用函数模板。
 
 **File: example.cpp**
-```C++
+```cpp
 // 定义 C++ 函数模板
 template<bool endl>
 void print_str(taihe::string_view pstr) {
@@ -419,6 +424,7 @@ TH_EXPORT_CPP_API_println(print_str<true>);
 ```
 
 ## 进阶：结构体的高级特性
+
 - Taihe 的 `struct` 为值类型，不支持 C++ 的继承。为了简化 ArkTS 的编写，Taihe 提供了 `@extends` 写法，用组合的方式实现继承。
 - 此外，`struct Foo` 默认生成的是 `interface Foo`（用于接受 ArkTS 用户的传入）和 `class Foo_inner implements Foo`（用于 C++ 返回值的传出）。可以使用 `@class` 规避 `interface Foo`，直接生成 `class Foo` 保证 ArkTS 的兼容性。
 
@@ -444,7 +450,8 @@ union CppOrRustBook {
 function PrintBookAdvanced(book: CppOrRustBook);
 ```
 
-- 对应的 ArkTS 投影如下：
+- 对应的 ArkTS 投影如下
+
 **File (Generated): generated/ohos.book.store.ets**
 ```typescript
 export class RustBook implements Book {
@@ -471,7 +478,7 @@ export function PrintBookAdvanced(book: CppOrRustBook): void { ... }
 - 使用 C++ 完成后续逻辑的开发
 
 **File: author/src/ohos.book.store.impl.cpp**
-```C++
+```cpp
 void PrintBookAdvanced(CppOrRustBook const& book) {
   if (book.holds_rust()) {
     RustBook the_book = book.get_rust_ref();
@@ -504,6 +511,7 @@ Hint: use Borland C++ to compile.
 
 
 ## 进阶：接口和继承
+
 - Taihe 的 `interface` 默认生成 ArkTS 的 `interface`，在使用 `@class` 修饰时，生成 ArkTS 的 `class`。
 - Taihe 支持 ArkTS `class` 或 `interface` 继承一个或多个 ArkTS `interface`。
 - Taihe 支持 ArkTS 内的基类 / 子类互转，以及 C++ 内的基类 / 子类互转。
@@ -553,6 +561,7 @@ function Use(d: D123);           // 正确，明确说明传入的类型。
 ```
 
 ## 进阶：接口和多继承
+
 - Taihe 支持同时实现多个接口。例如，我们定义高级类型 `FancyBook`：
 
 **File: idl/ohos.book.store.taihe**
@@ -565,7 +574,8 @@ interface HasDiscount : HasPrice { @get getDiscount(): f64; }
 interface HasPublisher { @get getPublisher(): String; }
 // 衍生类：具有出版商和折扣
 @class interface FancyBook: HasPublisher, HasDiscount { @get getTitle(): String; }
-@ctor("FancyBook") function MakeFancyBook(): FancyBook;
+@constructor("FancyBook")
+@rename function MakeFancyBook(): FancyBook;
 ```
 
 - 对应的 ArkTS 投影如下：
@@ -592,7 +602,7 @@ export class FancyBook implements HasPublisher, HasDiscount {
 - 使用 C++ 完成后续逻辑的开发
 
 **File: author/src/ohos.book.store.impl.cpp**
-```C++
+```cpp
 FancyBook MakeFancyBook() {
   // 内部临时写一个类吧！只要函数都具备，就可以转换到 Taihe 对象。
   struct FancyRustBook {
@@ -634,13 +644,13 @@ Got a fancy book: The Rust Programming Language by No Starch Press, costs $50 wi
 
 ## 进阶：函数的重载和异步化
 
-- Taihe 使用 `@overload`，将不同参数的 Taihe `function` 绑定到相同的名字上。需要注意，绑定的名字和参数列表需符合 ArkTS 语言的约束。
+- Taihe 使用 `@static_overload` 来表示 ArkTS 1.2 重载。
 
 **File: example.taihe**
 ```typescript
-@overload("SaveBook")
+@static_overload("SaveBook")
 function SaveBookToInternet(url: String);
-@overload("SaveBook")
+@static_overload("SaveBook")
 function SaveBookToFile(p: Path);
 ```
 
@@ -648,30 +658,41 @@ function SaveBookToFile(p: Path);
 
 **File (Generated): generated/example.ets**
 ```typescript
-export function SaveBook(url: string): void {
-    return SaveBookToInternet_inner(url);
+export function SaveBookToInternet(url: string): void {
+    return _taihe_SaveBookToInternet_native(url);
 }
-export function SaveBook(p: Path): void {
-    return SaveBookToFile_inner(p);
+export function SaveBookToFile(p: Path): void {
+    return _taihe_SaveBookToFile_native(p);
+}
+export overload SavaBook {
+  SaveBookToInternet,
+  SaveBookToFile,
 }
 ```
 
-- Taihe 使用 `@gen_promise` 和 `@gen_async` 注解，将同步函数封装为异步版本。
-  类似于 `@overload`，可以将 `AsyncCallback` 和 `Promise` 版本的函数绑定到相同的名字。
+- Taihe 使用 `@promise` 或 `@async` 注解，将同步函数封装为异步版本。可以与 `@static_overload` 一起使用。
 
 **File: example.taihe**
 ```typescript
-@gen_async("uploadBook")
-@gen_promise("uploadBook")
-function uploadBook(b: Book): String;
+@async("uploadBook")
+function uploadBookWithCallback(b: Book): String;
+
+@promise("uploadBook")
+function uploadBookReturnsPromise(b: Book): String;
 ```
 
 **File (Generated): generated/example.ets**
 ```typescript
-export function uploadBook(b: Book): string {
-    return uploadBook_inner(b);
+export function uploadBookWithCallback(b: Book, callback: AsyncCallback<string>): void {
+    taskpool.execute((): string => { return uploadBook_inner(b); })
+    .then((ret: Any): void => {
+        callback(null, ret as string);
+    })
+    .catch((ret: Any): void => {
+        callback(ret as Error);
+    });
 }
-export function uploadBook(b: Book): Promise<string> {
+export function uploadBookReturnsPromise(b: Book): Promise<string> {
     return new Promise<string>((resolve: (data: string) => void, reject: (err: Error) => void): void => {
         taskpool.execute((): string => { return uploadBook_inner(b); })
         .then((ret: Any): void => {
@@ -682,14 +703,9 @@ export function uploadBook(b: Book): Promise<string> {
         });
     });
 }
-export function uploadBook(b: Book, callback: (err: Error | null, data?: string) => void): void {
-    taskpool.execute((): string => { return uploadBook_inner(b); })
-    .then((ret: Any): void => {
-        callback(null, ret as string);
-    })
-    .catch((ret: Any): void => {
-        callback(ret as Error);
-    });
+export overload uploadBook {
+    uploadBookWithCallback,
+    uploadBookReturnsPromise,
 }
 ```
 
@@ -705,12 +721,12 @@ export function uploadBook(b: Book, callback: (err: Error | null, data?: string)
 
 **File (Generated): generated/example.ets**
 ```typescript
-native function onBookSold_inner(): void;
-native function onNewBook_inner(): void;
+export function onBookSold(): void { ... }
+export function onNewBook(): void { ... }
 export function on(type: string): void {
     switch(type) {
-        case "bookSold": return onBookSold_inner();
-        case "newBook": return onNewBook_inner();
+        case "bookSold": return onBookSold();
+        case "newBook": return onNewBook();
         default: throw new Error(`Unknown type: ${type}`);
     }
 }
@@ -721,7 +737,8 @@ export function on(type: string): void {
 - Taihe 将生成代码不上库作为设计目标。但全盘兼容 ArkTS 的复杂语言特性并非 Taihe 的设计目标。
 - 在一些情况下，需要插入 ETS 代码，在高级语言侧完成复杂逻辑。
 - Taihe 提供 `@sts_inject` 等函数，用于在生成的代码中插入 ETS 文本片段。
-  - `@!sts_inject` 在 ArkTS 模块文件的开头注入代码，一般用于添加自己的函数。
+  - `@!sts_inject` 在当前 Taihe 文件对应的 ArkTS *模块或命名空间*的开头注入代码，一般用于添加自己的函数。
+  - `@!sts_inject_into_module` 在当前 Taihe 文件对应的 ArkTS *模块*开头注入代码，一般用于添加导入语句等。
   - `@!sts_inject_into_interface` 在 Taihe `interface` 内生效，可以在 ArkTS 投影中的 `interface` 内注入自己的属性或方法。
   - `@!sts_inject_into_class` 同样在 Taihe `interface` 内生效，可以在 ArkTS 投影中的 `class` 内注入自己的属性或方法。
 
@@ -770,7 +787,7 @@ export function get_objects(): (Any[]) { ... }
 - 使用 C++ 完成后续逻辑的开发
 
 **File: author/src/ohos.book.store.impl.cpp**
-```C++
+```cpp
 bool IsString(uintptr_t s) {
   ani_boolean res;
   ani_class cls;
@@ -811,12 +828,13 @@ GetStringArray = AAA,undefined
 ```
 
 ## 常见问题
-### Unhandled exception: std.core.LinkerUnresolvedMethodError
-- 检查 `user/main.ets`，是否遗漏了 `loadLibrary("<your-lib-name-here>")`
-- 在使用 `run-test` 工具时，目录名就是 `loadLibrary` 需要填写的名字
 
-### `union` 类型判断错误
-- `union` 的类型判断基于 ArkTS 的类型系统，根据分支的先后顺序判断
-- 例如 `union { d: Derived; b: Base; }` 可以成功区分基类和子类，但交换顺序则无法判断成功，因为首次判断基类即成功返回。
-- 类似地，`union` 中存在 `Opaque` 必须放在最后，且不允许定义多个 `Opaque`
-- 此外，`union` 受到 ArkTS 类型擦除机制的约束，因此无法区分泛型。
+- Unhandled exception: std.core.LinkerUnresolvedMethodError
+  - 检查 `user/main.ets`，是否遗漏了 `loadLibrary("<your-lib-name-here>")`
+  - 在使用 `run-test` 工具时，目录名就是 `loadLibrary` 需要填写的名字
+
+- `union` 类型判断错误
+  - `union` 的类型判断基于 ArkTS 的类型系统，根据分支的先后顺序判断
+  - 例如 `union { d: Derived; b: Base; }` 可以成功区分基类和子类，但交换顺序则无法判断成功，因为首次判断基类即成功返回。
+  - 类似地，`union` 中存在 `Opaque` 必须放在最后，且不允许定义多个 `Opaque`
+  - 此外，`union` 受到 ArkTS 类型擦除机制的约束，因此无法区分泛型。

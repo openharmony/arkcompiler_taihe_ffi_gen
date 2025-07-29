@@ -1,1 +1,1 @@
-@sts_export_default function toplevel_func(): void;
+@sts_export_default function ToplevelFunc(): void;

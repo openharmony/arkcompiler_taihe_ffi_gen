@@ -152,7 +152,7 @@ def run_cmake_test(project_root: Path, **config: Path | str):
     log_stage("Run CMake test...")
 
     test_dir = project_root / "test/cmake_test"
-    run_taihe_tryit(["generate", "-u", "sts", test_dir, "--cmake"], project_root)
+    run_taihe_tryit(["generate", "-u", "sts", test_dir, "-Bcmake"], project_root)
 
     try:
         taihec_cmd = ["taihec", "--print-panda-vm-path"]
@@ -193,7 +193,7 @@ TESTS = {
 MODE_TO_TESTS = {
     "github-push-ci": list(TESTS.keys()),
     "github-pr-ci": list(TESTS.keys()),
-    "ggw-ci": ["core", "ani"],
+    "ggw-ci": ["pytest", "ani"],
 }
 
 

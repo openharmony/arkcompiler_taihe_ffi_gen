@@ -118,7 +118,7 @@ class PackageGroupNapiInfo(AbstractAnalysis[PackageGroup]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, pg: PackageGroup) -> "PackageGroupNapiInfo":
+    def _create(cls, am: AnalysisManager, pg: PackageGroup) -> "PackageGroupNapiInfo":
         return PackageGroupNapiInfo(am, pg)
 
     def get_namespace(self, pkg: PackageDecl) -> Namespace:
@@ -141,7 +141,7 @@ class PackageNapiInfo(AbstractAnalysis[PackageDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, p: PackageDecl) -> "PackageNapiInfo":
+    def _create(cls, am: AnalysisManager, p: PackageDecl) -> "PackageNapiInfo":
         return PackageNapiInfo(am, p)
 
     def get_dts_type_name(self, target: DtsWriter, dts_type_name: str):
@@ -191,7 +191,7 @@ class StructNapiInfo(AbstractAnalysis[StructDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, p: StructDecl) -> "StructNapiInfo":
+    def _create(cls, am: AnalysisManager, p: StructDecl) -> "StructNapiInfo":
         return StructNapiInfo(am, p)
 
     def is_class(self):
@@ -240,7 +240,7 @@ class IfaceNapiInfo(AbstractAnalysis[IfaceDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, f: IfaceDecl) -> "IfaceNapiInfo":
+    def _create(cls, am: AnalysisManager, f: IfaceDecl) -> "IfaceNapiInfo":
         return IfaceNapiInfo(am, f)
 
     def is_class(self):
@@ -263,7 +263,7 @@ class EnumNapiInfo(AbstractAnalysis[EnumDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, f: EnumDecl) -> "EnumNapiInfo":
+    def _create(cls, am: AnalysisManager, f: EnumDecl) -> "EnumNapiInfo":
         return EnumNapiInfo(am, f)
 
     def dts_type_in(self, target: DtsWriter):
@@ -282,7 +282,7 @@ class GlobFuncNapiInfo(AbstractAnalysis[GlobFuncDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, f: GlobFuncDecl) -> "GlobFuncNapiInfo":
+    def _create(cls, am: AnalysisManager, f: GlobFuncDecl) -> "GlobFuncNapiInfo":
         return GlobFuncNapiInfo(am, f)
 
 
@@ -308,7 +308,7 @@ class UnionNapiInfo(AbstractAnalysis[UnionDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, f: UnionDecl) -> "UnionNapiInfo":
+    def _create(cls, am: AnalysisManager, f: UnionDecl) -> "UnionNapiInfo":
         return UnionNapiInfo(am, f)
 
     def dts_type_in(self, target: DtsWriter):
@@ -336,7 +336,7 @@ class UnionFieldNapiInfo(AbstractAnalysis[UnionFieldDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, f: UnionFieldDecl) -> "UnionFieldNapiInfo":
+    def _create(cls, am: AnalysisManager, f: UnionFieldDecl) -> "UnionFieldNapiInfo":
         return UnionFieldNapiInfo(am, f)
 
 
@@ -350,7 +350,7 @@ class TypeNapiInfo(AbstractAnalysis[Type], metaclass=ABCMeta):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, t: Type) -> "TypeNapiInfo":
+    def _create(cls, am: AnalysisManager, t: Type) -> "TypeNapiInfo":
         return TypeNapiInfoDispatcher(am).handle_type(t)
 
     @abstractmethod

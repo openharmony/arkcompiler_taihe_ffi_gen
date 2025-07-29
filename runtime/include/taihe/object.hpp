@@ -166,6 +166,12 @@ public:
     return *cast_data_ptr<Impl>(this->data_ptr);
   }
 
+  template<typename... Args>
+  decltype(auto) operator()(Args &&...args) const {
+    return cast_data_ptr<Impl>(this->data_ptr)
+        ->operator()(std::forward<Args>(args)...);
+  }
+
 public:
   static constexpr struct typeinfo_t {
     uint64_t version = 0;

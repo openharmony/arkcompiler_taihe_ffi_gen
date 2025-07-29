@@ -5,7 +5,7 @@ taihe 使用增加 `@bigint` 注解的方式支持 `BigInt`
 ## 第一步：编写接口原型
 
 **File: `idl/bigint.taihe`**
-```taihe
+```rust
 function processBigInt(a: @bigint Array<u64>): @bigint Array<u64>;
 ```
 

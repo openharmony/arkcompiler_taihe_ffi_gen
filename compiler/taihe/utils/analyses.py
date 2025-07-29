@@ -17,7 +17,7 @@ from typing import (
 )
 
 if TYPE_CHECKING:
-    from taihe.driver.contexts import CompilerInvocation
+    from taihe.driver.contexts import CompilerConfig
 
 P = ParamSpec("P")
 A = TypeVar("A", bound="AbstractAnalysis[Any]")
@@ -30,17 +30,6 @@ class AbstractAnalysis(Generic[P], ABC):
     """
 
     @classmethod
-    @abstractmethod
-    def create(
-        cls: type[A],
-        am: "AnalysisManager",
-        *args: P.args,
-        **kwargs: P.kwargs,
-    ) -> A:
-        """Create an instance of an analysis with the given arguments."""
-        raise NotImplementedError(f"{cls.__name__}.create() must be implemented.")
-
-    @classmethod
     def get(
         cls: type[A],
         am: "AnalysisManager",
@@ -49,6 +38,17 @@ class AbstractAnalysis(Generic[P], ABC):
     ) -> A:
         """Get or create an analysis instance using the factory."""
         return am.get_or_create(cls, *args, **kwargs)
+
+    @classmethod
+    @abstractmethod
+    def _create(
+        cls: type[A],
+        am: "AnalysisManager",
+        *args: P.args,
+        **kwargs: P.kwargs,
+    ) -> A:
+        """Create an instance of an analysis with the given arguments."""
+        raise NotImplementedError("Subclasses must implement this method.")
 
 
 @dataclass(frozen=True)
@@ -64,14 +64,11 @@ class AnalysisManager:
     """Manages caching and retrieval of analysis instances."""
 
     # TODO: maybe remove this
-    compiler_invocation: "CompilerInvocation"
+    config: "CompilerConfig"
 
-    def __init__(
-        self,
-        compiler_invocation: "CompilerInvocation",
-    ) -> None:
+    def __init__(self, config: "CompilerConfig") -> None:
         self._cache: dict[CacheKey, AbstractAnalysis[Any]] = {}
-        self.compiler_invocation = compiler_invocation
+        self.config = config
 
     def get_or_create(self, analysis_type: type[A], *args: Any, **kwargs: Any) -> A:
         """Get existing analysis or create new one if not cached."""
@@ -82,7 +79,7 @@ class AnalysisManager:
         if cached := self._cache.get(key):
             return cast(A, cached)
 
-        new_instance = analysis_type.create(self, *args, **kwargs)
+        new_instance = analysis_type._create(self, *args, **kwargs)  # type: ignore
         self._cache[key] = new_instance
         return new_instance
 

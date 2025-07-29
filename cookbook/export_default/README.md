@@ -5,7 +5,7 @@
 ## 第一步：编写接口原型
 
 **File: `idl/export_example.taihe`**
-```taihe
+```rust
 @!namespace("export_pkg", "export_ns")
 @!sts_export_default
 
@@ -15,9 +15,10 @@ struct Inner {
 }
 ```
 
-然后让另一个 taihe 文件 import：
+然后让另一个 Taihe IDL 文件 import：
+
 **File: `idl/import_example.taihe`**
-```taihe
+```rust
 from export_example use Inner;
 
 function testImport(obj: Inner): void;
@@ -27,7 +28,7 @@ function testImport(obj: Inner): void;
 
 - 给 namespace 添加 export_default
 
-  ```taihe
+  ```rust
   @!namespace("xxx", "yyy")
   @!sts_export_default
 
@@ -36,7 +37,7 @@ function testImport(obj: Inner): void;
 
 - 给 interface/enum/union 添加 export_default
 
-  ```taihe
+  ```rust
   // 只能加在头等声明
   @sts_export_default
   interface IfaceA {}
@@ -44,7 +45,7 @@ function testImport(obj: Inner): void;
 
 注：arkts 只允许对一个实体使用 export default，请用户不要在一个 package 里面多次使用该注解
 
-## 生成文件
+## 第二步：生成文件
 
 **File: `generated/export_pkg.ets`**
 ```typescript
@@ -66,7 +67,7 @@ export default namespace export_ns { // export default
 
 我们可以看到生成文件里面添加了 `export default`
 
-## 在 ets 侧使用
+## 第三步：在 ets 侧使用
 
 ```typescript
 import {BusinessError} from "@ohos.base";

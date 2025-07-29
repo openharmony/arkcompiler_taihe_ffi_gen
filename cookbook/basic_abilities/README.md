@@ -35,18 +35,17 @@
 
 依然是开发流程 3 步走
 
-## 第一步 在 Taihe 文件中声明
+## 第一步：在 Taihe IDL 文件中声明
 
 `basic_abilities/idl/basic_abilities.taihe`
-```taihe
+```rust
 function convert_arr(a: Array<i32>, str: String): Array<String>;
 ```
 
-## 第二步 实现声明的函数
+## 第二步：实现声明的函数
 
 `basic_abilities/author/src/basic_abilities.impl.cpp`
-
-```C++
+```cpp
 array<string> convert_arr(array_view<int32_t> a, string_view str) {
     // 可通过 size() 获取 array 长度
     int32_t input_size = a.size();
@@ -61,22 +60,22 @@ array<string> convert_arr(array_view<int32_t> a, string_view str) {
 }
 ```
 
-## 第三步 生成并编译
+## 第三步：生成并编译
 
 ```sh
-# 注：taihe 文件里的函数与 C++ 规范一致，所以函数会在生成的 ets 侧自动转变为小写字母开头函数
-# taihe 文件中的写法：
+# 注：Taihe IDL 文件里的函数与 C++ 规范一致，所以函数会在生成的 ets 侧自动转变为小写字母开头函数
+# Taihe IDL 文件中的写法：
 #   function FooBar(): void;
 # 生成的 ets 侧代码
 #   function fooBar(): void;
-# 如果希望生成的 ets 侧函数与 taihe 文件一致，可以使用 --sts-keep-name
-taihe-tryit test -u sts path/to/basic_abilities --sts-keep-name
+# 如果希望生成的 ets 侧函数与 Taihe IDL 文件一致，可以使用 -Csts:keep-name
+taihe-tryit test -u sts path/to/basic_abilities -Csts:keep-name
 ```
 
 用户侧使用
 
 `main.ets`
-```TypeScript
+```typescript
 let input_arr: int[] = [1, 2, 3, 4, 5]
 let input_str: String = "hello"
 let output_arr: String[] = basic_abilities.convert_arr(input_arr, input_str)
@@ -102,7 +101,7 @@ for (let i = 0; i < output_arr.length; i++) {
 
 2. 为方便用户使用，提供了许多相关的操作函数便于用户开发
 
-    ```C++
+    ```cpp
     // example
     
     // 提供多种方式创建 string
@@ -153,7 +152,7 @@ for (let i = 0; i < output_arr.length; i++) {
 
 3. 字符串分为 string 和 string_view，string 拥有字符串的所有权，而 string_view 不拥有字符串的所有权
 
-    ```C++
+    ```cpp
     // example
     // string_view -> string 从不拥有所有权到拥有所有权会拷贝一次字符串，而反方向则不会进行拷贝
     string fun(string_view input) {
@@ -166,7 +165,7 @@ for (let i = 0; i < output_arr.length; i++) {
 
 1. 为方便用户使用，提供了许多相关的操作函数便于用户开发
 
-    ```C++
+    ```cpp
     // example
 
     // 通过 std::vector 创建 array_view
@@ -203,7 +202,7 @@ for (let i = 0; i < output_arr.length; i++) {
     ```
 
 2. 与 `string` 和 `string_view` 类似，`array` 拥有所有权，`array_view` 不拥有所有权
-    ```C++
+    ```cpp
     // example
 
     // array_view -> array 从不拥有所有权到拥有所有权会拷贝一次字符串，而反方向则不会进行拷贝

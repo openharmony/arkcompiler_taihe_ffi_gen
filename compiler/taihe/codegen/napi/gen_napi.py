@@ -42,7 +42,7 @@ class NapiCodeGenerator:
     def __init__(self, oc: OutputManager, am: AnalysisManager):
         self.oc = oc
         self.am = am
-        if self.am.compiler_invocation.napi_header:
+        if self.am.config.napi_header:
             self.napi_header_file = "node/node_api.h"
         else:
             self.napi_header_file = "napi/native_api.h"

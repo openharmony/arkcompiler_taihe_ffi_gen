@@ -11,7 +11,7 @@ taihe 使用给 Map 增加注解的方式，支持 ets 中的 Record
 ## 第一步：编写接口原型
 
 **File: `idl/userSettings.taihe`**
-```taihe
+```rust
 function getUserSetting(settings: @record Map<String, String>, key: String): Optional<String>;
 ```
 
@@ -22,7 +22,7 @@ function getUserSetting(settings: @record Map<String, String>, key: String): Opt
 ## 第二步：完成 C++ 实现
 
 **File: `author/src/userSettings.impl.cpp`**
-```C++
+```cpp
 optional<string> getUserSetting(map_view<string, string> settings, string_view key) {
     auto iter = settings.find_item(key);
     if (iter == nullptr) {
@@ -39,14 +39,14 @@ optional<string> getUserSetting(map_view<string, string> settings, string_view k
 - 创建空 optional
 
     创建空 opional 的方法如下，其中 T 改为对应类型
-    ```C++
+    ```cpp
     optional<T>(std::nullopt);
     ```
 
 - 创建非空 optional
 
     创建非空 optional 的方法如下，其中 T 改为对应类型，val 使用对应类型的变量
-    ```C++
+    ```cpp
     optional<T>(std::in_place, val);
     ```
 
@@ -60,7 +60,7 @@ optional<string> getUserSetting(map_view<string, string> settings, string_view k
 
     可以使用如下方法对 map 进行遍历
 
-    ```C++
+    ```cpp
     for (auto it = settings.begin(); it != settings.end(); ++it) {
         auto const& [key, value] = *it;
         std::cout << "Key: " << key << ", Value: " << value << std::endl;
@@ -71,11 +71,12 @@ optional<string> getUserSetting(map_view<string, string> settings, string_view k
     }
     ```
 
-另外需要注意的时，生成 temp 文件夹下，使用了 `using namespace userSettings;`，如果直接编译会编译不通过，因为该样例没有任何对象，所以没有 include 这个命名空间，如果在 taihe 文件没有使用对象的场景下，需要手动将该语句删除
+另外需要注意的时，生成 temp 文件夹下，使用了 `using namespace userSettings;`，如果直接编译会编译不通过，因为该样例没有任何对象，所以没有 include 这个命名空间，如果在 Taihe IDL 文件没有使用对象的场景下，需要手动将该语句删除
 
 希望读者明白生成的 temp 文件夹下的文件是用于作为参考，而非让使用者直接作为模板套用
 
 ## 第三步：在 ets 侧使用
+
 ```typescript
 // 初始化 Record
 let Settings: Record<string, string> = {
@@ -97,7 +98,8 @@ autosave: undefined
 ```
 
 ## Optional 补充
-```C++
+
+```cpp
 // 创建 Optional
 
 // 创建空 Optional

@@ -38,7 +38,7 @@ class PackageCppInfo(AbstractAnalysis[PackageDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, p: PackageDecl) -> "PackageCppInfo":
+    def _create(cls, am: AnalysisManager, p: PackageDecl) -> "PackageCppInfo":
         return PackageCppInfo(am, p)
 
 
@@ -49,7 +49,7 @@ class IfaceMethodCppInfo(AbstractAnalysis[IfaceMethodDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, f: IfaceMethodDecl) -> "IfaceMethodCppInfo":
+    def _create(cls, am: AnalysisManager, f: IfaceMethodDecl) -> "IfaceMethodCppInfo":
         return IfaceMethodCppInfo(am, f)
 
 
@@ -67,7 +67,7 @@ class EnumCppInfo(AbstractAnalysis[EnumDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, d: EnumDecl) -> "EnumCppInfo":
+    def _create(cls, am: AnalysisManager, d: EnumDecl) -> "EnumCppInfo":
         return EnumCppInfo(am, d)
 
 
@@ -86,7 +86,7 @@ class StructCppInfo(AbstractAnalysis[StructDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, d: StructDecl) -> "StructCppInfo":
+    def _create(cls, am: AnalysisManager, d: StructDecl) -> "StructCppInfo":
         return StructCppInfo(am, d)
 
 
@@ -105,7 +105,7 @@ class UnionCppInfo(AbstractAnalysis[UnionDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, d: UnionDecl) -> "UnionCppInfo":
+    def _create(cls, am: AnalysisManager, d: UnionDecl) -> "UnionCppInfo":
         return UnionCppInfo(am, d)
 
 
@@ -128,7 +128,7 @@ class IfaceCppInfo(AbstractAnalysis[IfaceDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, d: IfaceDecl) -> "IfaceCppInfo":
+    def _create(cls, am: AnalysisManager, d: IfaceDecl) -> "IfaceCppInfo":
         return IfaceCppInfo(am, d)
 
 
@@ -138,6 +138,11 @@ class TypeCppInfo(AbstractAnalysis[Type], ABC):
     impl_headers: list[str]
     as_owner: str
     as_param: str
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, t: Type) -> "TypeCppInfo":
+        return TypeCppInfoDispatcher(am).handle_type(t)
 
     def return_from_abi(self, val):
         return f"::taihe::from_abi<{self.as_owner}>({val})"
@@ -150,11 +155,6 @@ class TypeCppInfo(AbstractAnalysis[Type], ABC):
 
     def pass_into_abi(self, val):
         return f"::taihe::into_abi<{self.as_param}>({val})"
-
-    @classmethod
-    @override
-    def create(cls, am: AnalysisManager, t: Type) -> "TypeCppInfo":
-        return TypeCppInfoDispatcher(am).handle_type(t)
 
 
 class EnumTypeCppInfo(TypeCppInfo):
@@ -408,7 +408,7 @@ class PackageCppUserInfo(AbstractAnalysis[PackageDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, p: PackageDecl) -> "PackageCppUserInfo":
+    def _create(cls, am: AnalysisManager, p: PackageDecl) -> "PackageCppUserInfo":
         return PackageCppUserInfo(am, p)
 
 
@@ -420,7 +420,7 @@ class GlobFuncCppUserInfo(AbstractAnalysis[GlobFuncDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, f: GlobFuncDecl) -> "GlobFuncCppUserInfo":
+    def _create(cls, am: AnalysisManager, f: GlobFuncDecl) -> "GlobFuncCppUserInfo":
         return GlobFuncCppUserInfo(am, f)
 
 
@@ -431,7 +431,7 @@ class PackageCppImplInfo(AbstractAnalysis[PackageDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, p: PackageDecl) -> "PackageCppImplInfo":
+    def _create(cls, am: AnalysisManager, p: PackageDecl) -> "PackageCppImplInfo":
         return PackageCppImplInfo(am, p)
 
 
@@ -441,5 +441,5 @@ class GlobFuncCppImplInfo(AbstractAnalysis[GlobFuncDecl]):
 
     @classmethod
     @override
-    def create(cls, am: AnalysisManager, f: GlobFuncDecl) -> "GlobFuncCppImplInfo":
+    def _create(cls, am: AnalysisManager, f: GlobFuncDecl) -> "GlobFuncCppImplInfo":
         return GlobFuncCppImplInfo(am, f)

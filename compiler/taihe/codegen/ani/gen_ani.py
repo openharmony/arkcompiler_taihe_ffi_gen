@@ -242,8 +242,8 @@ class AniCodeGenerator:
             self.gen_subregister(
                 cpp_register_name,
                 pkg_ani_source_target,
-                parent_scope=pkg_ani_info.ns.module.scope,
-                impl_desc=pkg_ani_info.ns.module.impl_desc,
+                parent_scope=pkg_ani_info.ns.mod.scope,
+                impl_desc=pkg_ani_info.ns.mod.impl_desc,
                 member_infos=mod_member_infos,
             )
             subregisters.append(f"{local}::{cpp_register_name}")
@@ -677,7 +677,7 @@ class AniCodeGenerator:
                 type_ani_info = TypeAniInfo.get(self.am, return_ty_ref.resolved_ty)
                 iface_ani_impl_target.writelns(
                     f"{type_ani_info.ani_type} {inner_ani_res} = {{}};",
-                    f'env->Function_Call_{type_ani_info.ani_type.suffix}(TH_ANI_FIND_{ns.scope.upper}_FUNCTION(env, "{ns.impl_desc}", "{method_ani_info.revert_name}", nullptr), reinterpret_cast<{type_ani_info.ani_type.base}*>(&{inner_ani_res}), static_cast<ani_object>(this->ref){inner_ani_args_trailing});',
+                    f'env->Function_Call_{type_ani_info.ani_type.suffix}(TH_ANI_FIND_{ns.scope.upper}_FUNCTION(env, "{ns.impl_desc}", "{method_ani_info.reverse_name}", nullptr), reinterpret_cast<{type_ani_info.ani_type.base}*>(&{inner_ani_res}), static_cast<ani_object>(this->ref){inner_ani_args_trailing});',
                 )
                 type_ani_info.from_ani(
                     iface_ani_impl_target,
@@ -690,7 +690,7 @@ class AniCodeGenerator:
                 )
             else:
                 iface_ani_impl_target.writelns(
-                    f'env->Function_Call_Void(TH_ANI_FIND_{ns.scope.upper}_FUNCTION(env, "{ns.impl_desc}", "{method_ani_info.revert_name}", nullptr), static_cast<ani_object>(this->ref){inner_ani_args_trailing});',
+                    f'env->Function_Call_Void(TH_ANI_FIND_{ns.scope.upper}_FUNCTION(env, "{ns.impl_desc}", "{method_ani_info.reverse_name}", nullptr), static_cast<ani_object>(this->ref){inner_ani_args_trailing});',
                 )
 
     def gen_iface_into_ani_func(

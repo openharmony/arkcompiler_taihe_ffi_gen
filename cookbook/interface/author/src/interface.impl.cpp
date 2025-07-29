@@ -7,9 +7,9 @@ using namespace taihe;
 
 namespace {
 
-class ICalculator {
+class MyCalculator {
 public:
-  ICalculator(int32_t init) : lastResult(init) {}
+  MyCalculator(int32_t init) : lastResult(init) {}
 
   int32_t add(int32_t a, int32_t b) {
     lastResult = a + b;
@@ -33,8 +33,8 @@ private:
   int32_t lastResult = 0;
 };
 
-::interface::ICalculator makeCalculator(int32_t init) {
-  return make_holder<ICalculator, ::interface::ICalculator>(init);
+::interface::ICalculator makeCalculator() {
+  return make_holder<MyCalculator, ::interface::ICalculator>(0);
 }
 
 void restartCalculator(::interface::weak::ICalculator a) {
