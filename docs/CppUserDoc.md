@@ -855,7 +855,7 @@ taihe::optional<int> opt2 = std::nullopt;
 
 // 创建包含值的 optional
 taihe::optional<int> opt3{std::in_place, 42};
-auto opt4 = taihe::optional<std::string>{std::in_place, "Hello"};
+auto opt4 = taihe::optional<taihe::string>{std::in_place, "Hello"};
 ```
 
 #### 6.3.2 检查和访问值
@@ -1090,6 +1090,10 @@ taihe::callback<taihe::string(taihe::string_view)> callback = \
     >("Result");
 ```
 
+> **💡 注意：**
+>
+> `taihe::callback` 的参数和返回值类型都必须是 Taihe 支持的 C++ 投影类型，例如参数类型可以是 `taihe::string_view`, `taihe::vector_view<T>`, `int32_t` 等，返回值类型可以是 `taihe::string`, `float` 等等，但不能是其他 C++ 的原生类型（如 `std::string`、`std::vector`）。这是因为 Taihe 的回调中需要储存 ABI 稳定的函数指针，而 C++ 的原生类型作为函数参数或返回值时，调用约定（Calling convention）不能被保证，因此无法在不同编译器或不同版本的编译器之间保持 ABI 兼容。
+
 #### 6.7.2 调用回调
 
 回调可以像普通函数一样调用，可使用 `operator()` 或直接调用：
@@ -1146,7 +1150,7 @@ assert(not cb_as_shape.is_error());
 
 但是，由于函数闭包类型不具备 IID，因此你并不能反过来从其他接口转换为函数闭包。
 ```cpp
-auto shape_as_cb = taihe::weak::callback<taihe::string(taihe::string_view)>(cb_as_shape);  // 错误：无法从接口转换为函数闭包
+auto shape_as_cb = taihe::callback_view<taihe::string(taihe::string_view)>(cb_as_shape);  // 错误：无法从接口转换为函数闭包
 ```
 
 ### 6.8 内存管理最佳实践
@@ -1244,6 +1248,10 @@ int main() {
 - 编译错误：```error: no member named 'methodName' in 'package::name::weak::InterfaceName::virtual_type'```
 
   这可能说明你没有在 IDL 的接口 `InterfaceName` 中声明 `methodName` 方法。可参考 5.1 和 5.5 节。
+
+- 编译错误：```error: implicit instantiation of undefined template 'taihe::as_abi<...>'```
+
+  见 6.7.1 节，这种错误通常是因为你在函数闭包的参数或返回值中使用了 Taihe 不支持的 C++ 类型。请确保你使用的类型都是 Taihe 支持的 C++ 投影类型。
 
 ---
 
