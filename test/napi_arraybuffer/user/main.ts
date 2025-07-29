@@ -1,4 +1,4 @@
-import * as lib from "../generated/arraybuffer_test";
+import * as lib from "arraybuffer_test";
 
 function main() {
   const arrbuf1 = new ArrayBuffer(16);

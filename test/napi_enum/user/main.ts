@@ -1,4 +1,4 @@
-import * as lib from "../generated/enum_test";
+import * as lib from "enum_test";
 
 function main() {
   let color = lib.Color.GREEN;

@@ -1,4 +1,4 @@
-import * as lib from "../generated/union_test";
+import * as lib from "union_test";
 
 function main() {
   console.log(lib.printUnion(1));

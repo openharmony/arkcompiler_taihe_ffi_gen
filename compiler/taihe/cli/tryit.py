@@ -194,6 +194,7 @@ class BuildSystem(BuildUtils):
         self.build_runtime_src_dir = self.build_dir / "runtime" / "src"
         self.build_generated_dir = self.build_dir / "generated"
         self.build_user_dir = self.build_dir / "user"
+        self.build_node_modules_dir = self.build_dir / "node_modules"
 
         # Output files
         self.lib_name = self.target_path.absolute().name
@@ -201,6 +202,7 @@ class BuildSystem(BuildUtils):
         self.abc_target = self.build_dir / "main.abc"
         self.exe_target = self.build_dir / "main"
         self.arktsconfig_file = self.build_dir / "arktsconfig.json"
+        self.tsconfig_file = self.build_dir / "tsconfig.json"
 
     def create(self) -> None:
         """Create a simple example project."""
@@ -364,13 +366,41 @@ class BuildSystem(BuildUtils):
             ts_header=ts_header,
         )
 
+    def create_tsconfig(
+        self,
+        tsconfig_file: Path,
+        paths: dict[str, Path],
+    ) -> None:
+        """Create TS configuration file."""
+        config_content = {
+            "compilerOptions": {
+                "target": "ES2020",
+                "module": "commonjs",
+                "outDir": str(self.build_dir),
+                "paths": {key: [str(value)] for key, value in paths.items()},
+            },
+            "include": [
+                str(self.user_dir / "main.ts"),
+            ],
+        }
+
+        with open(tsconfig_file, "w") as json_file:
+            json.dump(config_content, json_file, indent=2)
+
+        self.logger.debug("Created configuration file at: %s", tsconfig_file)
+
     def compile_and_link_node(self) -> None:
+        paths: dict[str, Path] = {}
+
         for dts_path in [self.generated_dir]:
             d = Path(dts_path)
             for file in d.iterdir():
                 if not file.is_file() or file.suffix != ".ts":
                     continue
-                node_target = self.generated_dir / f"{file.with_suffix('').stem}.node"
+                file_name = file.with_suffix("").stem
+                paths[file_name] = file
+
+                node_target = self.build_dir / "node_modules" / f"{file_name}.node"
                 runtime_src_dir = RuntimeSource.resolve_path()
                 runtime_sources = [
                     runtime_src_dir / "string.cpp",
@@ -404,20 +434,16 @@ class BuildSystem(BuildUtils):
                     self.logger.warning(
                         "No object files to link, skipping shared library compilation"
                     )
+        self.create_tsconfig(self.tsconfig_file, paths)
 
     def compile_and_run_ts(self) -> None:
         command_compiler = [
             "tsc",
-            "--target",
-            "ES2020",
-            "--module",
-            "commonjs",
-            "--outDir",
-            f"{self.generated_dir}",
-            f"{self.user_dir}/main.ts",
+            "--project",
+            f"{self.tsconfig_file}",
         ]
         self.run_command(command_compiler)
-        command_run = ["node", f"{self.generated_dir}/main.js"]
+        command_run = ["node", f"{self.build_dir}/main.js"]
         self.run_command(command_run, capture_output=False)
 
     def build(self, opt_level: str) -> None:
@@ -591,6 +617,7 @@ class BuildSystem(BuildUtils):
         self.create_directory(self.build_author_src_dir)
         self.create_directory(self.build_generated_dir)
         self.create_directory(self.build_user_dir)
+        self.create_directory(self.build_node_modules_dir)
 
     def compile(
         self,

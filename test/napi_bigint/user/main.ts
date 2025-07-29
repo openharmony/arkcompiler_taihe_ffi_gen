@@ -1,4 +1,4 @@
-import * as lib from "../generated/bigint_test";
+import * as lib from "bigint_test";
 
 function main() {
     let num1: bigint = lib.processBigInt(18446744073709556846815135465465564525825546451551616n);

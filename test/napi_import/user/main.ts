@@ -1,5 +1,5 @@
-import * as lib_people from "../generated/people";
-import * as lib_building from "../generated/building";
+import * as lib_people from "people";
+import * as lib_building from "building";
 
 function main() {
     let g = lib_building.make_group(); 

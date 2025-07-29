@@ -1,4 +1,4 @@
-import * as lib from "../generated/map_test";
+import * as lib from "map_test";
 
 class BaseImpl implements lib.IBase {
   id: string;

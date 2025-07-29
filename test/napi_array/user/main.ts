@@ -1,4 +1,4 @@
-import * as lib from "../generated/array_test";
+import * as lib from "array_test";
 
 function main() {
 let numbers: number[] = [1, 2, 3, 4, 5];

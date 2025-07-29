@@ -1,5 +1,5 @@
-import * as lib_a from "../generated/my_ns_a";
-import * as lib_b from "../generated/my_ns_b";
+import * as lib_a from "my_ns_a";
+import * as lib_b from "my_ns_b";
 
 function main() {
     let a = lib_a.ns1.Color.BLUE;

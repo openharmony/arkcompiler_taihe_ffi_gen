@@ -1,4 +1,4 @@
-#include "string.impl.hpp"
+#include "string_test.impl.hpp"
 
 taihe::string ohos_concat_str(taihe::string_view a, taihe::string_view b) {
   return a + b;

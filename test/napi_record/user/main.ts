@@ -1,4 +1,4 @@
-import * as lib from "../generated/record_test";
+import * as lib from "record_test";
 
 class BaseImpl implements lib.IBase {
   id: string;

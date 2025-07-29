@@ -1,4 +1,4 @@
-import * as lib from "../generated/struct_extend";
+import * as lib from "struct_extend";
 
 class C implements lib.C {
     param1: number = 100;

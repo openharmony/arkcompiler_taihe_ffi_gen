@@ -1,4 +1,4 @@
-import { concat, to_i32, from_i32, show } from "../generated/string";
+import { concat, to_i32, from_i32, show } from "string_test";
 
 function main() {
   let concat_str = concat("test", "concat");

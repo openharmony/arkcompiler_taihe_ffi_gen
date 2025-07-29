@@ -1,8 +1,8 @@
-#include "string.napi.h"
+#include "string_test.napi.h"
 
 EXTERN_C_START
 napi_value Init(napi_env env, napi_value exports) {
-  Init__string(env, exports);
+  Init__string_test(env, exports);
   return exports;
 }
 

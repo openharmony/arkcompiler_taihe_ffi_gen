@@ -1,4 +1,4 @@
-import * as lib from "../generated/iface_test";
+import * as lib from "iface_test";
 
 class BaseImpl implements lib.IBase {
   id: string;

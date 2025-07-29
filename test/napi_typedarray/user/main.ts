@@ -1,4 +1,4 @@
-import * as lib from "../generated/typedarray_test";
+import * as lib from "typedarray_test";
 
 function main() {
   let arr = lib.NewUint8Array(5, 10);
