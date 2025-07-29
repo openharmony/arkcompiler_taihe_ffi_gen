@@ -815,7 +815,7 @@ class CppHeadersGenerator:
                 f"template<typename Visitor>",
             )
             with union_cpp_defn_target.indented(
-                f"auto match_function(Visitor&& visitor){constness} {{",
+                f"decltype(auto) match_function(Visitor&& visitor){constness} {{",
                 f"}}",
             ):
                 with union_cpp_defn_target.indented(
@@ -929,7 +929,7 @@ class CppHeadersGenerator:
                 f"template<typename Visitor>",
             )
             with union_cpp_defn_target.indented(
-                f"auto match(Visitor&& visitor){constness} {{",
+                f"decltype(auto) match(Visitor&& visitor){constness} {{",
                 f"}}",
             ):
                 with union_cpp_defn_target.indented(
