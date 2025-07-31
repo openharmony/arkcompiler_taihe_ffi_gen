@@ -772,15 +772,25 @@ process_string(std_sv);
 ```cpp
 #include <taihe/array.hpp>
 
-// 创建指定大小的数组（元素默认初始化）
+// 1. 创建指定大小的数组（元素默认初始化）
 taihe::array<int> arr1(5);
 
-// 创建并用特定值填充
+// 2. 创建并用特定值填充
 taihe::array<int> arr2(5, 42);  // 5个元素，都是42
 
-// 从初始化列表创建
+// 3. 从初始化列表创建
 taihe::array<int> arr3 = {1, 2, 3, 4, 5};
+
+// 4. 从 std::vector 创建
+std::vector<int> vec = {6, 7, 8};
+taihe::array<int> arr4(taihe::copy_data, vec.begin(), vec.size());
+
+// 5. 从 C 数组创建
+int c_arr[] = {9, 10, 11};
+taihe::array<int> arr5(taihe::copy_data, c_arr, 3);
 ```
+
+对于 4 和 5 的创建方式，你也可以使用 `taihe::move_data` 代替 `taihe::copy_data` 作为第一个参数来表示从源容器中移动数据，而不是复制数据。
 
 #### 6.2.2 访问和遍历
 
@@ -854,8 +864,8 @@ taihe::optional<int> opt1;
 taihe::optional<int> opt2 = std::nullopt;
 
 // 创建包含值的 optional
-taihe::optional<int> opt3{std::in_place, 42};
-auto opt4 = taihe::optional<taihe::string>{std::in_place, "Hello"};
+taihe::optional<int> opt3(std::in_place, 42);
+auto opt4 = taihe::optional<taihe::string>(std::in_place, "Hello");
 ```
 
 #### 6.3.2 检查和访问值
@@ -1247,7 +1257,7 @@ int main() {
 
 - 编译错误：```error: no member named 'methodName' in 'package::name::weak::InterfaceName::virtual_type'```
 
-  这可能说明你没有在 IDL 的接口 `InterfaceName` 中声明 `methodName` 方法。可参考 5.1 和 5.5 节。
+  这可能说明你没有在 IDL 的接口 `InterfaceName` 中声明 `methodName` 方法，详见 5.5 节。另外，请注意，当要在子接口对象上调用父接口的方法时，必须先将子接口转换为父接口类型，详见 5.3 节。
 
 - 编译错误：```error: implicit instantiation of undefined template 'taihe::as_abi<...>'```
 

@@ -76,7 +76,7 @@ struct optional : public optional_view<cpp_owner_t> {
   optional(std::nullopt_t) : optional(nullptr) {}
 
   template<typename... Args>
-  optional(std::in_place_t, Args &&...args)
+  explicit optional(std::in_place_t, Args &&...args)
       : optional(new cpp_owner_t(std::forward<Args>(args)...)) {}
 
   // TODO: Deprecate this
