@@ -7,16 +7,16 @@
 function addSync(a: i32, b: i32): i32;
 
 interface IStringHolder {
-    @async getAsync(): String;
-    @promise getPromise(): String;
+    @async getStrWithAsync(): String;
+    @promise getStrRetPromise(): String;
     @rename("newGet")
-    get(): String;
+    getStrSync(): String;
 
-    @static_overload("set")
-    @async setAsync(a: String): void;
-    @static_overload("set")
-    @promise setPromise(a: String): void;
-    setSync(a: String): void;
+    @static_overload("setStr")
+    @async setStrWithAsync(a: String): void;
+    @static_overload("setStr")
+    @promise setStrRetPromise(a: String): void;
+    setStrSync(a: String): void;
 }
 
 function makeIStringHolder(): IStringHolder;

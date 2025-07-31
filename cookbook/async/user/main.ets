@@ -25,7 +25,7 @@ function main() {
     let istringholder = async_test.makeIStringHolder();
     console.log(istringholder.newGet());
 
-    istringholder.set("interface async set", (error: BusinessError|null) => {
+    istringholder.setStr("interface async set", (error: BusinessError|null) => {
         if (error !== null && error.code !== 0) {
             console.log("interface async ERROR ", error);
         } else {
@@ -33,7 +33,7 @@ function main() {
         }
     })
 
-    let p_istringholder = istringholder.getPromise();
+    let p_istringholder = istringholder.getStrRetPromise();
     p_istringholder
         .then((ret: Any) => {
             let retInner = ret as string;
