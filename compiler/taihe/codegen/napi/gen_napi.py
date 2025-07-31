@@ -160,8 +160,7 @@ class NapiCodeGenerator:
             for struct in pkg.structs:
                 self.gen_struct_files(struct)
             for iface in pkg.interfaces:
-                self.gen_iface_files(iface)
-                self.gen_iface_method_files(iface)
+                self.gen_iface(iface, pkg_napi_target)
             for union in pkg.unions:
                 self.gen_union_files(union)
             self.gen_module_init(pkg, register_infos, pkg_napi_target)
@@ -586,6 +585,15 @@ class NapiCodeGenerator:
                 f"return;",
             )
 
+    def gen_iface(
+        self,
+        iface: IfaceDecl,
+        pkg_napi_target: CSourceWriter,
+    ):
+        self.gen_iface_files(iface)
+        self.gen_iface_method_files(iface)
+        self.gen_iface_create_func(iface, pkg_napi_target)
+
     def gen_iface_files(
         self,
         iface: IfaceDecl,
@@ -618,7 +626,6 @@ class NapiCodeGenerator:
             iface_napi_decl_target.add_include(iface_cpp_info.defn_header)
             iface_napi_decl_target.writelns(
                 f"napi_value {iface_napi_info.constructor_func_name}(napi_env env, napi_callback_info info);",
-                f"napi_value {iface_napi_info.create_func_name}(napi_env env);",
                 f"{iface_cpp_info.as_owner} {iface_napi_info.from_napi_func_name}(napi_env env, napi_value napi_obj);",
                 f"napi_value {iface_napi_info.into_napi_func_name}(napi_env env, {iface_cpp_info.as_owner} cpp_obj);",
             )
@@ -892,27 +899,34 @@ class NapiCodeGenerator:
                 f"    return instance;",
                 f"}}",
             )
-        with iface_napi_impl_target.indented(
+
+    def gen_iface_create_func(
+        self,
+        iface: IfaceDecl,
+        target: CSourceWriter,
+    ):
+        iface_napi_info = IfaceNapiInfo.get(self.am, iface)
+        with target.indented(
             f"inline void {iface_napi_info.create_func_name}(napi_env env, napi_value exports) {{",
             f"}}",
         ):
-            iface_napi_impl_target.writelns(f"napi_value result;")
-            iface_napi_impl_target.add_include(iface_napi_info.meth_impl_header)
-            with iface_napi_impl_target.indented(
+            target.writelns(f"napi_value result;")
+            target.add_include(iface_napi_info.meth_impl_header)
+            with target.indented(
                 f"napi_property_descriptor desc[] = {{",
                 f"}};",
             ):
                 for mng_name, value in iface_napi_info.iface_register_infos.items():
-                    iface_napi_impl_target.writelns(
+                    target.writelns(
                         f'{{"{value[0].name}", nullptr, {mng_name}, nullptr, nullptr, nullptr, napi_default, nullptr}}, ',
                     )
-            if ctor := iface_napi_info.ctor:
-                iface_napi_impl_target.writelns(
+            if iface_napi_info.ctor:
+                target.writelns(
                     f'napi_define_class(env, "{iface.name}", NAPI_AUTO_LENGTH, {iface_napi_info.constructor_func_name}, nullptr, {len(iface_napi_info.iface_register_infos)}, desc, &result);',
                     f"napi_create_reference(env, result, 1, &{iface_napi_info.ctor_ref_name}());",
                     f'napi_set_named_property(env, exports, "{iface.name}", result);',
                 )
-            iface_napi_impl_target.writelns(
+            target.writelns(
                 f'napi_define_class(env, "{iface.name}_inner", NAPI_AUTO_LENGTH, {iface_napi_info.constructor_func_name}_inner, nullptr, {len(iface_napi_info.iface_register_infos)}, desc, &result);',
                 f"napi_create_reference(env, result, 1, &{iface_napi_info.ctor_ref_name}_inner());",
                 f"return;",
