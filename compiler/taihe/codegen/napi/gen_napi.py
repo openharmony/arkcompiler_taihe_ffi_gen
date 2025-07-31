@@ -791,7 +791,7 @@ class NapiCodeGenerator:
                 f"napi_value argv[2] = {{napi_vtbl_ptr, napi_data_ptr}};",
                 f"napi_value napi_obj = nullptr;",
                 f"napi_value constructor;",
-                f"napi_get_reference_value(env, {iface_napi_info.ctor_ref_name}_inner, &constructor);",
+                f"napi_get_reference_value(env, {iface_napi_info.ctor_ref_name}_inner(), &constructor);",
                 f"napi_new_instance(env, constructor, 2, argv, &napi_obj);",
             )
             iface_napi_impl_target.writelns(f"return napi_obj;")
@@ -835,7 +835,10 @@ class NapiCodeGenerator:
             )
 
         iface_napi_impl_target.writelns(
-            f"static napi_ref {iface_napi_info.ctor_ref_name}_inner;"
+            f"inline napi_ref& {iface_napi_info.ctor_ref_name}_inner() {{",
+            f"    static napi_ref instance = nullptr;",
+            f"    return instance;",
+            f"}}",
         )
 
         # process ctor
@@ -884,7 +887,10 @@ class NapiCodeGenerator:
                     # TODO: special error
                     raise ValueError("constructor must have return value")
             iface_napi_impl_target.writelns(
-                f"static napi_ref {iface_napi_info.ctor_ref_name};"
+                f"inline napi_ref& {iface_napi_info.ctor_ref_name}() {{",
+                f"    static napi_ref instance = nullptr;",
+                f"    return instance;",
+                f"}}",
             )
         with iface_napi_impl_target.indented(
             f"inline void {iface_napi_info.create_func_name}(napi_env env, napi_value exports) {{",
@@ -903,12 +909,12 @@ class NapiCodeGenerator:
             if ctor := iface_napi_info.ctor:
                 iface_napi_impl_target.writelns(
                     f'napi_define_class(env, "{iface.name}", NAPI_AUTO_LENGTH, {iface_napi_info.constructor_func_name}, nullptr, {len(iface_napi_info.iface_register_infos)}, desc, &result);',
-                    f"napi_create_reference(env, result, 1, &{iface_napi_info.ctor_ref_name});",
+                    f"napi_create_reference(env, result, 1, &{iface_napi_info.ctor_ref_name}());",
                     f'napi_set_named_property(env, exports, "{iface.name}", result);',
                 )
             iface_napi_impl_target.writelns(
                 f'napi_define_class(env, "{iface.name}_inner", NAPI_AUTO_LENGTH, {iface_napi_info.constructor_func_name}_inner, nullptr, {len(iface_napi_info.iface_register_infos)}, desc, &result);',
-                f"napi_create_reference(env, result, 1, &{iface_napi_info.ctor_ref_name}_inner);",
+                f"napi_create_reference(env, result, 1, &{iface_napi_info.ctor_ref_name}_inner());",
                 f"return;",
             )
 
