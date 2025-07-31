@@ -16,6 +16,7 @@ from taihe.codegen.ani.attributes import (
     NamespaceAttr,
     NullAttr,
     RecordAttr,
+    StaticAttr,
     TypedArrayAttr,
     UndefinedAttr,
 )
@@ -237,6 +238,7 @@ class IfaceNapiInfo(AbstractAnalysis[IfaceDecl]):
                 iface_register_infos[mangled_name] = (method, ancestor)
         self.iface_register_infos = iface_register_infos
         self.ctor: GlobFuncDecl | None = None
+        self.static_funcs: list[tuple[str, GlobFuncDecl]] = []
 
     @classmethod
     @override
@@ -276,9 +278,11 @@ class EnumNapiInfo(AbstractAnalysis[EnumDecl]):
 class GlobFuncNapiInfo(AbstractAnalysis[GlobFuncDecl]):
     def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
         self.ctor_class_name = None
-        if (ctor_attr := CtorAttr.get(f)) is not None:
+        self.static_class_name = None
+        if ctor_attr := CtorAttr.get(f):
             self.ctor_class_name = ctor_attr.cls_name
-        # TODO: how to process the attr
+        elif static_attr := StaticAttr.get(f):
+            self.static_class_name = static_attr.cls_name
 
     @classmethod
     @override

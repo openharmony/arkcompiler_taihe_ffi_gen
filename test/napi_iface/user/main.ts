@@ -45,6 +45,9 @@ function main() {
 
   let new_ctest = lib.changeCTest(ctest);
   console.log("change CTets: ", new_ctest.add(5, 6));
+
+  let value3 = lib.CTest.multiply(7, 8);
+  console.log("static function: ", value3);
 }
 
 main();

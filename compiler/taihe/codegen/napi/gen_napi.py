@@ -38,6 +38,14 @@ from taihe.utils.analyses import AnalysisManager
 from taihe.utils.outputs import FileKind, OutputManager
 
 
+def get_mangled_func_name(
+    pkg: PackageDecl,
+    func: GlobFuncDecl,
+) -> str:
+    segments = [*pkg.segments, func.name]
+    return encode(segments, DeclKind.NAPI_FUNC)
+
+
 class NapiCodeGenerator:
     def __init__(self, oc: OutputManager, am: AnalysisManager):
         self.oc = oc
@@ -132,9 +140,11 @@ class NapiCodeGenerator:
             pkg_napi_target.add_include(pkg_cpp_user_info.header)
             pkg_napi_target.add_include("taihe/array.hpp")
             self.gen_util_funcs(pkg_napi_target)
+            register_infos = []
 
-            # ctor func
             ctors_map: dict[str, GlobFuncDecl] = {}
+            static_map: dict[str, list[tuple[str, GlobFuncDecl]]] = {}
+
             for func in pkg.functions:
                 func_napi_info = GlobFuncNapiInfo.get(self.am, func)
                 if class_name := func_napi_info.ctor_class_name:
@@ -144,17 +154,24 @@ class NapiCodeGenerator:
                             f"Error: class_name '{class_name}' already have a constructor."
                         )
                     ctors_map[class_name] = func
+                elif class_name := func_napi_info.static_class_name:
+                    mangled_name = get_mangled_func_name(pkg, func)
+                    static_map.setdefault(class_name, []).append((mangled_name, func))
+                else:
+                    mangled_name = get_mangled_func_name(pkg, func)
+                    register_infos.append((func.name, mangled_name))
             for iface in pkg.interfaces:
+                iface_napi_info = IfaceNapiInfo.get(self.am, iface)
                 if ctor := ctors_map.get(iface.name):
-                    iface_napi_info = IfaceNapiInfo.get(self.am, iface)
                     iface_napi_info.ctor = ctor
+                if static_funcs := static_map.get(iface.name):
+                    iface_napi_info.static_funcs = static_funcs
 
-            register_infos = []
             for func in pkg.functions:
-                segments = [*pkg.segments, func.name]
-                mangled_name = encode(segments, DeclKind.NAPI_FUNC)
-                self.gen_func(func, pkg_napi_info, pkg_napi_target, mangled_name)
-                register_infos.append((func.name, mangled_name))
+                func_napi_info = GlobFuncNapiInfo.get(self.am, func)
+                if func_napi_info.ctor_class_name is None:
+                    mangled_name = get_mangled_func_name(pkg, func)
+                    self.gen_func(func, pkg_napi_info, pkg_napi_target, mangled_name)
             for enum in pkg.enums:
                 self.gen_enum(enum, pkg_napi_target)
             for struct in pkg.structs:
@@ -920,9 +937,23 @@ class NapiCodeGenerator:
                     target.writelns(
                         f'{{"{value[0].name}", nullptr, {mng_name}, nullptr, nullptr, nullptr, napi_default, nullptr}}, ',
                     )
-            if iface_napi_info.ctor:
+            if iface_napi_info.is_class():
                 target.writelns(
                     f'napi_define_class(env, "{iface.name}", NAPI_AUTO_LENGTH, {iface_napi_info.constructor_func_name}, nullptr, {len(iface_napi_info.iface_register_infos)}, desc, &result);',
+                )
+                if iface_napi_info.static_funcs:
+                    with target.indented(
+                        f"napi_property_descriptor static_properties[] = {{",
+                        f"}};",
+                    ):
+                        for mng_name, static_func in iface_napi_info.static_funcs:
+                            target.writelns(
+                                f'{{"{static_func.name}", nullptr, {mng_name}, nullptr, nullptr, nullptr, napi_static, nullptr}}, ',
+                            )
+                    target.writelns(
+                        f"napi_define_properties(env, result, {len(iface_napi_info.static_funcs)}, static_properties);",
+                    )
+                target.writelns(
                     f"napi_create_reference(env, result, 1, &{iface_napi_info.ctor_ref_name}());",
                     f'napi_set_named_property(env, exports, "{iface.name}", result);',
                 )

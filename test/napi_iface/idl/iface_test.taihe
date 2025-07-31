@@ -21,3 +21,6 @@ interface CTest{
 function createCTest(id: i32): CTest;
 
 function changeCTest(a: CTest): CTest;
+
+@static("CTest")
+function multiply(a: i32, b: i32): i32;

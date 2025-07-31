@@ -94,6 +94,10 @@ void copyIBase(::iface_test::weak::IBase a, ::iface_test::weak::IBase b) {
   int32_t x = a->add(3, 4);
   return taihe::make_holder<CTestImpl, ::iface_test::CTest>(x);
 }
+
+int32_t multiply(int32_t a, int32_t b) {
+  return a * b;
+}
 }  // namespace
 
 // NOLINTBEGIN
@@ -102,4 +106,5 @@ TH_EXPORT_CPP_API_copyIBase(copyIBase);
 TH_EXPORT_CPP_API_makeIShape(makeIShape);
 TH_EXPORT_CPP_API_createCTest(createCTest);
 TH_EXPORT_CPP_API_changeCTest(changeCTest);
+TH_EXPORT_CPP_API_multiply(multiply);
 // NOLINTEND

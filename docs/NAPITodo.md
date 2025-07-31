@@ -8,7 +8,8 @@ NAPI 代码生成及验证：
     - [x] interface 继承
     - [x] ts 侧绑定构造函数 class(struct)
     - [x] ts 侧绑定构造函数 class(interface)              (只支持绑定一个构造函数且无法继承 interface)
-    - [ ] static, readonly, get set
+    - [x] static
+    - [ ] readonly, get set
     - [x] const
     - [x] enum
     - [x] union                                          (number|string|bool|array|map)
@@ -22,9 +23,9 @@ NAPI 代码生成及验证：
     - [x] optional
     - [ ] override
     - [ ] promise, async
-    - [ ] bigint
+    - [x] bigint
     - [x] arraybuffer
-    - [ ] typedarray
+    - [x] typedarray
     - [x] import
     - [ ] Opaque
     - [ ] inject
@@ -35,6 +36,8 @@ NAPI 代码生成及验证：
     - [ ] ctor 检查返回值为 指定的 interface 且检查这个 interface 为 class 
     - [ ] 检查 Union 要么有指定类型，要么有 undefined/null 的注解
     - [ ] 检查 struct 的基类是否是 struct
+    - [ ] 检查 @static 是否加在 class 上
+    - [ ] 检查 class 必须有 ctor
 
 **注意：现在的验证方式是基于 ts 和 napi 非鸿蒙 napi，应配置鸿蒙环境下编译验证方法待设计。**
 xml 例子编译运行成功

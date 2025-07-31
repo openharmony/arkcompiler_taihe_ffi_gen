@@ -3,6 +3,7 @@ from json import dumps
 
 from taihe.codegen.napi.analyses import (
     EnumNapiInfo,
+    GlobFuncNapiInfo,
     IfaceNapiInfo,
     Namespace,
     PackageGroupNapiInfo,
@@ -59,7 +60,12 @@ class DtsCodeGenerator:
 
     def gen_package(self, pkg: PackageDecl, pkg_dts_target: DtsWriter):
         for func in pkg.functions:
-            self.gen_func(func, pkg_dts_target)
+            func_napi_info = GlobFuncNapiInfo.get(self.am, func)
+            if (
+                func_napi_info.ctor_class_name is None
+                and func_napi_info.static_class_name is None
+            ):
+                self.gen_func(func, pkg_dts_target)
         for struct in pkg.structs:
             self.gen_struct_interface(struct, pkg_dts_target)
             self.gen_struct_class(struct, pkg_dts_target)
@@ -197,7 +203,25 @@ class DtsCodeGenerator:
                     params.append(f"{param.name}: {type_napi_info.dts_type_in(target)}")
                 params_str = ", ".join(params)
                 target.writelns(f"constructor({params_str});")
-
+            for mng_name, static_func in iface_napi_info.static_funcs:
+                params = []
+                for i, param in enumerate(static_func.params):
+                    value_ty = param.ty_ref.resolved_ty
+                    param_dts_info = TypeNapiInfo.get(self.am, value_ty)
+                    params.append(
+                        f"value{i}{'?' if param_dts_info.is_optional else ''}: {param_dts_info.dts_type_in(target)}"
+                    )
+                params_str = ", ".join(params)
+                if static_func.return_ty_ref:
+                    return_ty_dts_info = TypeNapiInfo.get(
+                        self.am, static_func.return_ty_ref.resolved_ty
+                    )
+                    return_ty = return_ty_dts_info.dts_return_type_in(target)
+                else:
+                    return_ty = "void"
+                target.writelns(
+                    f"static {static_func.name}({params_str}): {return_ty};",
+                )
             self.gen_iface_methods_decl(iface.methods, target)
 
     def gen_iface_methods_decl(
