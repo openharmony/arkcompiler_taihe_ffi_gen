@@ -128,7 +128,7 @@ def run_napi_tests(project_root: Path, **config: Path | str):
     for test_dir in base_dir.glob("napi_*"):
         if test_dir.is_dir():
             log_stage(f"Testing: {test_dir}")
-            run_taihe_tryit(["test", "-u", "ts", "--ts-header", test_dir], project_root)
+            run_taihe_tryit(["test", "-u", "ts", "-Cts:napi-header", test_dir], project_root)
 
 
 def run_ani_tests(project_root: Path, **config: Path | str):
