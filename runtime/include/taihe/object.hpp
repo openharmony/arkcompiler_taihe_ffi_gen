@@ -62,11 +62,11 @@ struct std::hash<taihe::data_holder> {
 
 namespace taihe {
 template<typename Impl>
-struct data_block_full : DataBlockHead {
+struct data_block : DataBlockHead {
   Impl impl;
 
   template<typename... Args>
-  data_block_full(TypeInfo const *rtti, Args &&...args)
+  data_block(TypeInfo const *rtti, Args &&...args)
       : impl(std::forward<Args>(args)...) {
     tobj_init(this, rtti);
   }
@@ -94,17 +94,17 @@ constexpr inline same_impl_t<Impl> same_impl;
 
 template<typename Impl>
 inline Impl *cast_data_ptr(struct DataBlockHead *data_ptr) {
-  return &static_cast<data_block_full<Impl> *>(data_ptr)->impl;
+  return &static_cast<data_block<Impl> *>(data_ptr)->impl;
 }
 
 template<typename Impl, typename... Args>
 inline DataBlockHead *make_data_ptr(TypeInfo const *rtti, Args &&...args) {
-  return new data_block_full<Impl>(rtti, std::forward<Args>(args)...);
+  return new data_block<Impl>(rtti, std::forward<Args>(args)...);
 }
 
 template<typename Impl>
 inline void free_data_ptr(struct DataBlockHead *data_ptr) {
-  delete static_cast<data_block_full<Impl> *>(data_ptr);
+  delete static_cast<data_block<Impl> *>(data_ptr);
 }
 
 template<typename Impl>
