@@ -296,7 +296,7 @@ class NapiCodeGenerator:
         mangled_name: str,
     ):
         with pkg_napi_target.indented(
-            f"static napi_value {mangled_name}(napi_env env, napi_callback_info info) {{",
+            f"static napi_value {mangled_name}(napi_env env, [[maybe_unused]] napi_callback_info info) {{",
             f"}}",
         ):
             func_cpp_name = pkg_napi_info.cpp_ns + "::" + func.name
@@ -343,10 +343,6 @@ class NapiCodeGenerator:
                 f"size_t argc = {params_num};",
                 f"napi_value args[{params_num}] = {{nullptr}};",
                 f"napi_get_cb_info(env, info, &argc, args , nullptr, nullptr);",
-            )
-        else:
-            pkg_napi_target.writelns(
-                f"(void) info;",
             )
 
     def gen_struct_files(
@@ -565,12 +561,10 @@ class NapiCodeGenerator:
                 f"{struct_cpp_info.as_owner}* cpp_ptr = new {struct_cpp_info.as_owner}{{{cpp_moved_fields_str}}};",
             )
             with struct_napi_impl_target.indented(
-                f"napi_wrap(env, thisobj, cpp_ptr, [](napi_env env, void* finalize_data, void* finalize_hint) {{",
+                f"napi_wrap(env, thisobj, cpp_ptr, []([[maybe_unused]] napi_env env, void* finalize_data, [[maybe_unused]] void* finalize_hint) {{",
                 f"}}, nullptr, nullptr);",
             ):
                 struct_napi_impl_target.writelns(
-                    f"(void) env;",
-                    f"(void) finalize_hint;",
                     f"delete static_cast<{struct_cpp_info.as_owner}*>(finalize_data);",
                 )
             struct_napi_impl_target.writelns(
@@ -846,12 +840,10 @@ class NapiCodeGenerator:
                 f"{iface_cpp_info.as_owner}* cpp_ptr = new {iface_cpp_info.as_owner}({{cpp_vtbl_ptr, cpp_data_ptr}});",
             )
             with iface_napi_impl_target.indented(
-                f"napi_wrap(env, thisobj, cpp_ptr, [](napi_env env, void* finalize_data, void* finalize_hint) {{",
+                f"napi_wrap(env, thisobj, cpp_ptr, []([[maybe_unused]] napi_env env, void* finalize_data, [[maybe_unused]] void* finalize_hint) {{",
                 f"}}, nullptr, nullptr);",
             ):
                 iface_napi_impl_target.writelns(
-                    f"(void) env;",
-                    f"(void) finalize_hint;",
                     f"delete static_cast<{iface_cpp_info.as_owner}*>(finalize_data);",
                 )
             iface_napi_impl_target.writelns(
@@ -896,12 +888,10 @@ class NapiCodeGenerator:
                         f"{iface_cpp_info.as_owner}* cpp_ptr = new {iface_cpp_info.as_owner}(std::move(value));",
                     )
                     with iface_napi_impl_target.indented(
-                        f"napi_wrap(env, thisobj, cpp_ptr, [](napi_env env, void* finalize_data, void* finalize_hint) {{",
+                        f"napi_wrap(env, thisobj, cpp_ptr, []([[maybe_unused]] napi_env env, void* finalize_data, [[maybe_unused]] void* finalize_hint) {{",
                         f"}}, nullptr, nullptr);",
                     ):
                         iface_napi_impl_target.writelns(
-                            f"(void) env;",
-                            f"(void) finalize_hint;",
                             f"delete static_cast<{iface_cpp_info.as_owner}*>(finalize_data);",
                         )
                     iface_napi_impl_target.writelns(
@@ -924,7 +914,7 @@ class NapiCodeGenerator:
     ):
         iface_napi_info = IfaceNapiInfo.get(self.am, iface)
         with target.indented(
-            f"inline void {iface_napi_info.create_func_name}(napi_env env, napi_value exports) {{",
+            f"inline void {iface_napi_info.create_func_name}(napi_env env, [[maybe_unused]] napi_value exports) {{",
             f"}}",
         ):
             target.writelns(f"napi_value result;")
@@ -1032,7 +1022,7 @@ class NapiCodeGenerator:
     ):
         enum_napi_info = EnumNapiInfo.get(self.am, enum)
         with pkg_napi_target.indented(
-            f"inline void {enum_napi_info.create_func_name}(napi_env env, napi_value exports) {{",
+            f"inline void {enum_napi_info.create_func_name}(napi_env env, [[maybe_unused]] napi_value exports) {{",
             f"}}",
         ):
             if enum_napi_info.is_literal:
