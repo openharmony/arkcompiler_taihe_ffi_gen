@@ -17,3 +17,20 @@ struct Color {
 
 function from_color(color: Color): f64;
 function to_color(a: String, b: bool, c: f64, d: RGB): Color;
+
+struct Student {
+    @readonly name: String;
+    age: i32;
+}
+
+function create_student(): Student;
+function process_student(a: Student): Student;
+
+@class
+struct Teacher {
+    @readonly name: String;
+    age: i32;
+}
+
+function create_teacher(): Teacher;
+function process_teacher(a: Teacher): Teacher;

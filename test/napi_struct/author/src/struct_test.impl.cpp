@@ -24,6 +24,22 @@ double from_color(::struct_test::Color const &color) {
   ::struct_test::Color color{a, b, c, d};
   return color;
 }
+
+::struct_test::Student create_student() {
+  return ::struct_test::Student{"Mary", 15};
+}
+
+::struct_test::Student process_student(::struct_test::Student const &a) {
+  return a;
+}
+
+::struct_test::Teacher create_teacher() {
+  return ::struct_test::Teacher{"Rose", 25};
+}
+
+::struct_test::Teacher process_teacher(::struct_test::Teacher const &a) {
+  return a;
+}
 }  // namespace
 
 // NOLINTBEGIN
@@ -31,4 +47,8 @@ TH_EXPORT_CPP_API_from_rgb(from_rgb);
 TH_EXPORT_CPP_API_to_rgb(to_rgb);
 TH_EXPORT_CPP_API_from_color(from_color);
 TH_EXPORT_CPP_API_to_color(to_color);
+TH_EXPORT_CPP_API_create_student(create_student);
+TH_EXPORT_CPP_API_process_student(process_student);
+TH_EXPORT_CPP_API_create_teacher(create_teacher);
+TH_EXPORT_CPP_API_process_teacher(process_teacher);
 // NOLINTEND

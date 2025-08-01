@@ -3,6 +3,7 @@ from json import dumps
 from taihe.codegen.abi.analyses import IfaceAbiInfo
 from taihe.codegen.abi.mangle import DeclKind, encode
 from taihe.codegen.abi.writer import CHeaderWriter, CSourceWriter
+from taihe.codegen.ani.attributes import ReadOnlyAttr
 from taihe.codegen.cpp.analyses import (
     GlobFuncCppUserInfo,
     IfaceCppInfo,
@@ -493,7 +494,6 @@ class NapiCodeGenerator:
             filed_segments = [*final.parent_pkg.segments, struct.name, final.name]
             field_getter_name = encode(filed_segments, DeclKind.GETTER)
             field_setter_name = encode(filed_segments, DeclKind.SETTER)
-            register_infos.append((final.name, field_getter_name, field_setter_name))
 
             field_ty_napi_info = TypeNapiInfo.get(self.am, final.ty_ref.resolved_ty)
             with struct_napi_impl_target.indented(
@@ -514,25 +514,31 @@ class NapiCodeGenerator:
                 struct_napi_impl_target.writelns(
                     f"return napi_field_result;",
                 )
-            with struct_napi_impl_target.indented(
-                f"static napi_value {field_setter_name}(napi_env env, napi_callback_info info) {{",
-                f"}}",
-            ):
-                struct_napi_impl_target.writelns(
-                    f"size_t argc = 1;",
-                    f"napi_value args[1] = {{nullptr}};",
-                    f"napi_value thisobj;",
-                    f"napi_get_cb_info(env, info, &argc, args, &thisobj, nullptr);",
-                    f"{struct_cpp_info.as_owner}* cpp_ptr;",
-                    f"napi_unwrap(env, thisobj, reinterpret_cast<void **>(&cpp_ptr));",
+            if ReadOnlyAttr.get(final) is None:
+                register_infos.append(
+                    (final.name, field_getter_name, field_setter_name)
                 )
-                field_ty_napi_info.from_napi(
-                    struct_napi_impl_target, "args[0]", "cpp_field_result"
-                )
-                struct_napi_impl_target.writelns(
-                    f"cpp_ptr->{'.'.join(part.name for part in parts)} = cpp_field_result;",
-                    f"return nullptr;",
-                )
+                with struct_napi_impl_target.indented(
+                    f"static napi_value {field_setter_name}(napi_env env, napi_callback_info info) {{",
+                    f"}}",
+                ):
+                    struct_napi_impl_target.writelns(
+                        f"size_t argc = 1;",
+                        f"napi_value args[1] = {{nullptr}};",
+                        f"napi_value thisobj;",
+                        f"napi_get_cb_info(env, info, &argc, args, &thisobj, nullptr);",
+                        f"{struct_cpp_info.as_owner}* cpp_ptr;",
+                        f"napi_unwrap(env, thisobj, reinterpret_cast<void **>(&cpp_ptr));",
+                    )
+                    field_ty_napi_info.from_napi(
+                        struct_napi_impl_target, "args[0]", "cpp_field_result"
+                    )
+                    struct_napi_impl_target.writelns(
+                        f"cpp_ptr->{'.'.join(part.name for part in parts)} = cpp_field_result;",
+                        f"return nullptr;",
+                    )
+            else:
+                register_infos.append((final.name, field_getter_name, "nullptr"))
 
         with struct_napi_impl_target.indented(
             f"inline napi_value {struct_napi_info.constructor_func_name}(napi_env env, napi_callback_info info) {{",

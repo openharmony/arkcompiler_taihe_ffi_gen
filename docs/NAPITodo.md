@@ -9,7 +9,8 @@ NAPI 代码生成及验证：
     - [x] ts 侧绑定构造函数 class(struct)
     - [x] ts 侧绑定构造函数 class(interface)              (只支持绑定一个构造函数且无法继承 interface)
     - [x] static
-    - [ ] readonly, get set
+    - [x] readonly
+    - [ ] get set
     - [x] const
     - [x] enum
     - [x] union                                          (number|string|bool|array|map)

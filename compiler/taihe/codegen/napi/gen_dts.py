@@ -1,6 +1,7 @@
 from collections.abc import Collection
 from json import dumps
 
+from taihe.codegen.ani.attributes import ReadOnlyAttr
 from taihe.codegen.napi.analyses import (
     EnumNapiInfo,
     GlobFuncNapiInfo,
@@ -122,9 +123,10 @@ class DtsCodeGenerator:
             f"}}",
         ):
             for field in struct_napi_info.dts_fields:
+                readonly = "readonly " if ReadOnlyAttr.get(field) is not None else ""
                 ty_napi_info = TypeNapiInfo.get(self.am, field.ty_ref.resolved_ty)
                 target.writelns(
-                    f"{field.name}{'?' if ty_napi_info.is_optional else ''}: {ty_napi_info.dts_type_in(target)};"
+                    f"{readonly}{field.name}{'?' if ty_napi_info.is_optional else ''}: {ty_napi_info.dts_type_in(target)};"
                 )
 
     def gen_struct_class(
@@ -154,9 +156,10 @@ class DtsCodeGenerator:
             params = []
             for parts in struct_napi_info.dts_final_fields:
                 final = parts[-1]
+                readonly = "readonly " if ReadOnlyAttr.get(final) is not None else ""
                 ty_napi_info = TypeNapiInfo.get(self.am, final.ty_ref.resolved_ty)
                 target.writelns(
-                    f"{final.name}{'?' if ty_napi_info.is_optional else ''}: {ty_napi_info.dts_type_in(target)};"
+                    f"{readonly}{final.name}{'?' if ty_napi_info.is_optional else ''}: {ty_napi_info.dts_type_in(target)};"
                 )
                 params.append(
                     f"{final.name}{'?' if ty_napi_info.is_optional else ''}: {ty_napi_info.dts_type_in(target)}"
