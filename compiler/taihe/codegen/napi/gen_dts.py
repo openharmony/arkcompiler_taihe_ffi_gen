@@ -78,11 +78,11 @@ class DtsCodeGenerator:
 
     def gen_func(self, func: GlobFuncDecl, pkg_dts_target: DtsWriter):
         args = []
-        for i, param in enumerate(func.params):
+        for param in func.params:
             value_ty = param.ty_ref.resolved_ty
             param_dts_info = TypeNapiInfo.get(self.am, value_ty)
             args.append(
-                f"value{i}{'?' if param_dts_info.is_optional else ''}: {param_dts_info.dts_type_in(pkg_dts_target)}"
+                f"{param.name}{'?' if param_dts_info.is_optional else ''}: {param_dts_info.dts_type_in(pkg_dts_target)}"
             )
         args_str = ", ".join(args)
         if func.return_ty_ref:
@@ -200,16 +200,18 @@ class DtsCodeGenerator:
                 params = []
                 for param in ctor.params:
                     type_napi_info = TypeNapiInfo.get(self.am, param.ty_ref.resolved_ty)
-                    params.append(f"{param.name}: {type_napi_info.dts_type_in(target)}")
+                    params.append(
+                        f"{param.name}{'?' if type_napi_info.is_optional else ''}: {type_napi_info.dts_type_in(target)}"
+                    )
                 params_str = ", ".join(params)
                 target.writelns(f"constructor({params_str});")
             for mng_name, static_func in iface_napi_info.static_funcs:
                 params = []
-                for i, param in enumerate(static_func.params):
+                for param in static_func.params:
                     value_ty = param.ty_ref.resolved_ty
                     param_dts_info = TypeNapiInfo.get(self.am, value_ty)
                     params.append(
-                        f"value{i}{'?' if param_dts_info.is_optional else ''}: {param_dts_info.dts_type_in(target)}"
+                        f"{param.name}{'?' if param_dts_info.is_optional else ''}: {param_dts_info.dts_type_in(target)}"
                     )
                 params_str = ", ".join(params)
                 if static_func.return_ty_ref:
