@@ -59,7 +59,7 @@ class CompilerInvocation:
     src_files: list[Path] = field(default_factory=lambda: [])
     src_dirs: list[Path] = field(default_factory=lambda: [])
     output_config: OutputConfig = field(default_factory=OutputConfig)
-    backends: list[BackendConfig] = field(default_factory=lambda: [])
+    backend_configs: list[BackendConfig] = field(default_factory=lambda: [])
 
     extra: dict[str, str | None] = field(default_factory=lambda: {})
 
@@ -116,7 +116,10 @@ class CompilerInstance:
         self.package_group = PackageGroup()
         self.output_manager = invocation.output_config.construct(self)
         self.attribute_registry = AttributeRegistry()
-        self.backends = [backend.construct(self) for backend in invocation.backends]
+        self.backends = [
+            backend_config.construct(self)
+            for backend_config in invocation.backend_configs
+        ]
         self.config = CompilerConfig.construct(invocation.extra)
         self.analysis_manager = AnalysisManager(self.config)
 

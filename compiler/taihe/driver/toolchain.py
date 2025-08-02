@@ -112,8 +112,8 @@ def taihec(
 ) -> None:
     registry = BackendRegistry()
     registry.register_all()
-    backends = registry.collect_required_backends(backend_names)
-    resolved_backends = [b() for b in backends]
+    backend_factories = registry.collect_required_backends(backend_names)
+    backend_configs = [b() for b in backend_factories]
 
     if buildsys_name == "cmake":
         output_config = CMakeOutputConfig(
@@ -129,7 +129,7 @@ def taihec(
     invocation = CompilerInvocation(
         src_files=src_files,
         output_config=output_config,
-        backends=resolved_backends,
+        backend_configs=backend_configs,
         extra=extra or {},
     )
     instance = CompilerInstance(invocation)
