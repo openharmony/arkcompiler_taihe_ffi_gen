@@ -77,22 +77,22 @@ bar->process(data);
 
 **调用链**:
 1.  **对象创建 (`make_holder`)**：（需结合 `runtime/include/taihe/object.hpp`）
-    a. `taihe::make_holder<BarImpl, IBar>()` 会调用 `taihe::impl_holder<BarImpl, IBar>` 的静态工厂方法 `make()`。这会使得在编译期生成一个 `rtti` 编译期常量，其中包含了 `BarImpl` 的类型信息，如版本信息、析构函数、Interface ID Map（从所有实现的接口 ID 到相应虚表指针的映射关系）等。
-    b. 接下来，`make()` 方法会在堆上申请内存，创建一个 `taihe::data_block<BarImpl>` 对象，该对象内部同时包含 `DataBlockHead` 数据和 `BarImpl` 的实例。`BarImpl` 的构造函数会被调用。
-    c. 接下来会调用 `tobj_init` 函数来初始化 `DataBlockHead`，这会将对象的引用计数设置为 1，并将 `rtti` 的地址存入 `DataBlockHead` 的 `rtti_ptr` 中。
-    d. `taihe::impl_holder<BarImpl, IBar>` 会持有指向该 `taihe::data_block<BarImpl>` 对象的指针（`data_ptr`）。
-    e. 最后，`taihe::impl_holder<BarImpl, IBar>` 被隐式转换为 `IBar`，这会根据前者的编译期信息，找到 `BarImpl` 对应于 `IBar` 接口的虚表指针（`vtbl_ptr`），并和 `data_ptr` 一起构成一个 `IBar` 对象。转换后的对象只能调用 `IBar` 接口上定义的方法，而丢失了 `BarImpl` 类本身的具体实现细节。
+    1. `taihe::make_holder<BarImpl, IBar>()` 会调用 `taihe::impl_holder<BarImpl, IBar>` 的静态工厂方法 `make()`。这会使得在编译期生成一个 `rtti` 编译期常量，其中包含了 `BarImpl` 的类型信息，如版本信息、析构函数、Interface ID Map（从所有实现的接口 ID 到相应虚表指针的映射关系）等。
+    2. 接下来，`make()` 方法会在堆上申请内存，创建一个 `taihe::data_block<BarImpl>` 对象，该对象内部同时包含 `DataBlockHead` 数据和 `BarImpl` 的实例。`BarImpl` 的构造函数会被调用。
+    3. 接下来会调用 `tobj_init` 函数来初始化 `DataBlockHead`，这会将对象的引用计数设置为 1，并将 `rtti` 的地址存入 `DataBlockHead` 的 `rtti_ptr` 中。
+    4. `taihe::impl_holder<BarImpl, IBar>` 会持有指向该 `taihe::data_block<BarImpl>` 对象的指针（`data_ptr`）。
+    5. 最后，`taihe::impl_holder<BarImpl, IBar>` 被隐式转换为 `IBar`，这会根据前者的编译期信息，找到 `BarImpl` 对应于 `IBar` 接口的虚表指针（`vtbl_ptr`），并和 `data_ptr` 一起构成一个 `IBar` 对象。转换后的对象只能调用 `IBar` 接口上定义的方法，而丢失了 `BarImpl` 类本身的具体实现细节。
 
 2.  **方法调用 (`bar->process`)**：
-    a. C++ 代码 `bar->process(data)` 会调用 `weak::IBar::virtual_type` 中定义的 `process` 方法。
-    b. 这个 C++ 包装方法通过 `into_abi` 将 C++ 类型的 `data` 转换为 ABI 类型，然后调用 ABI 层的辅助函数 `my_package_IBar_process_f`。
-    c. `my_package_IBar_process_f` 通过 `bar` 的 `vtbl_ptr` 取得 `ftbl_ptr_0`（`IBar` 的函数表），并调用其中的 `process` 函数指针。
-    d. 这个函数指针指向 `weak::IBar::methods_impl<BarImpl>::process` 这个静态模板方法，该模板方法是之前在创建 `taihe::impl_holder<BarImpl, IBar>` 时自动实例化出来，并注册到虚函数表中的。
-    e. `methods_impl<BarImpl>::process` 是连接 ABI 和 C++ 实现的最后一环。它接收 ABI 类型的参数并通过 `taihe::from_abi` 转换回 C++ 类型，使用 `taihe::cast_data_ptr<BarImpl>` 将通用的 `data_ptr` 安全地转回 `BarImpl*` 类型，然后调用用户在 `BarImpl` 类中真正实现的 `process` 方法。
-    f. 返回值沿着相反的路径，从 `BarImpl::process` 返回的 C++ `Result` 对象，通过 `into_abi` 转换回 ABI `my_package_Result_t`，最终通过 `from_abi` 转换回调用方的 C++ `Result` 对象。
+    1. C++ 代码 `bar->process(data)` 会调用 `weak::IBar::virtual_type` 中定义的 `process` 方法。
+    2. 这个 C++ 包装方法通过 `into_abi` 将 C++ 类型的 `data` 转换为 ABI 类型，然后调用 ABI 层的辅助函数 `my_package_IBar_process_f`。
+    3. `my_package_IBar_process_f` 通过 `bar` 的 `vtbl_ptr` 取得 `ftbl_ptr_0`（`IBar` 的函数表），并调用其中的 `process` 函数指针。
+    4. 这个函数指针指向 `weak::IBar::methods_impl<BarImpl>::process` 这个静态模板方法，该模板方法是之前在创建 `taihe::impl_holder<BarImpl, IBar>` 时自动实例化出来，并注册到虚函数表中的。
+    5. `methods_impl<BarImpl>::process` 是连接 ABI 和 C++ 实现的最后一环。它接收 ABI 类型的参数并通过 `taihe::from_abi` 转换回 C++ 类型，使用 `taihe::cast_data_ptr<BarImpl>` 将通用的 `data_ptr` 安全地转回 `BarImpl*` 类型，然后调用用户在 `BarImpl` 类中真正实现的 `process` 方法。
+    6. 返回值沿着相反的路径，从 `BarImpl::process` 返回的 C++ `Result` 对象，通过 `into_abi` 转换回 ABI `my_package_Result_t`，最终通过 `from_abi` 转换回调用方的 C++ `Result` 对象。
 
 3. **析构对象**：
-    a. 当 `bar` 的所有引用都被销毁时，其引用计数会减少到 0，然后通过 `DataBlockHead` 类型的 `data_ptr` 拿到其 `rtti_ptr`，从中获取到 `BarImpl` 的析构函数并调用。
+    1. 当 `bar` 的所有引用都被销毁时，其引用计数会减少到 0，然后通过 `DataBlockHead` 类型的 `data_ptr` 拿到其 `rtti_ptr`，从中获取到 `BarImpl` 的析构函数并调用。
 
 ### 场景二：静态转换（子接口到父接口）
 
@@ -125,12 +125,12 @@ if (!bar.is_error()) {
 1.  该构造调用了 `weak::IBar` 的 `explicit IBar(::taihe::data_view other)` 构造函数。
 2.  此构造函数内部调用了 ABI 层的 `my_package_IBar_dynamic` 辅助函数。
 3.  `_dynamic` 函数执行以下运行时操作：
-    a. 通过 `foo` 对象的 `data_ptr` 找到 `DataBlockHead`。
-    b. 通过 `DataBlockHead` 上的 `rtti_ptr` 找到 `typeinfo` 结构。
-    c. 遍历 `typeinfo` 中的 `idmap` 数组。
-    d. 将 `idmap` 中每个条目的 `id` 与目标接口的 IID（`my_package_IBar_i`）进行比较。
-    e. 如果找到匹配项，则返回该条目对应的 `vtbl_ptr`。
-    f. 如果遍历完仍未找到，返回 `NULL`。
+    1. 通过 `foo` 对象的 `data_ptr` 找到 `DataBlockHead`。
+    2. 通过 `DataBlockHead` 上的 `rtti_ptr` 找到 `typeinfo` 结构。
+    3. 遍历 `typeinfo` 中的 `idmap` 数组。
+    4. 将 `idmap` 中每个条目的 `id` 与目标接口的 IID（`my_package_IBar_i`）进行比较。
+    5. 如果找到匹配项，则返回该条目对应的 `vtbl_ptr`。
+    6. 如果遍历完仍未找到，返回 `NULL`。
 4.  C++ 层的构造函数接收到返回的 `vtbl_ptr`。如果为 `NULL`，则 `bar.is_error()` 将返回 `true`，表示转换失败。
 
 ## 附录：生成文件的完整内容
