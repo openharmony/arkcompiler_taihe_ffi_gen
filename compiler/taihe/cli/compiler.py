@@ -1,5 +1,6 @@
 import argparse
 import sys
+from glob import glob
 from pathlib import Path
 
 from taihe.driver.backend import BackendRegistry
@@ -78,8 +79,16 @@ def main():
     ResourceContext.initialize(args)
     # }} Special options
 
-    src_files = [Path(src_file) for src_file in args.src_files]
-    src_dirs = [Path(src_dir) for src_dir in args.src_dirs]
+    src_files = [
+        Path(src_file)
+        for src_file_pattern in args.src_files
+        for src_file in glob(src_file_pattern, recursive=True)
+    ]
+    src_dirs = [
+        Path(src_dir)
+        for src_dir_pattern in args.src_dirs
+        for src_dir in glob(src_dir_pattern, recursive=True)
+    ]
     dst_dir = Path(args.dst_dir)
 
     if not src_files and not src_dirs:
