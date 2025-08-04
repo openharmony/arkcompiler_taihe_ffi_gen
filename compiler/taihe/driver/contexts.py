@@ -146,6 +146,9 @@ class CompilerInstance:
             else:
                 self.source_manager.add_source(source)
 
+        for b in self.backends:
+            b.inject()
+
     def parse(self):
         convert_ast(
             self.source_manager,
