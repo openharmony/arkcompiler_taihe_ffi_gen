@@ -56,6 +56,8 @@ if TYPE_CHECKING:
     )
     from taihe.semantics.types import (
         ArrayType,
+        AsyncCompleterType,
+        AsyncFutureType,
         BuiltinType,
         CallbackType,
         EnumType,
@@ -153,6 +155,16 @@ class SetTypeVisitor(Generic[_R]):
         raise NotImplementedError
 
 
+class AsyncCompleterTypeVisitor(Generic[_R]):
+    def visit_async_completer_type(self, t: "AsyncCompleterType") -> _R:
+        raise NotImplementedError
+
+
+class AsyncFutureTypeVisitor(Generic[_R]):
+    def visit_async_future_type(self, t: "AsyncFutureType") -> _R:
+        raise NotImplementedError
+
+
 class GenericTypeVisitor(
     Generic[_R],
     OptionalTypeVisitor[_R],
@@ -160,6 +172,8 @@ class GenericTypeVisitor(
     VectorTypeVisitor[_R],
     MapTypeVisitor[_R],
     SetTypeVisitor[_R],
+    AsyncCompleterTypeVisitor[_R],
+    AsyncFutureTypeVisitor[_R],
 ):
     def visit_generic_type(self, t: "GenericType") -> _R:
         raise NotImplementedError
@@ -182,6 +196,14 @@ class GenericTypeVisitor(
 
     @override
     def visit_set_type(self, t: "SetType") -> _R:
+        return self.visit_generic_type(t)
+
+    @override
+    def visit_async_completer_type(self, t: "AsyncCompleterType") -> _R:
+        return self.visit_generic_type(t)
+
+    @override
+    def visit_async_future_type(self, t: "AsyncFutureType") -> _R:
         return self.visit_generic_type(t)
 
 
