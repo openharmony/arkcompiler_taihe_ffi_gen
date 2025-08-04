@@ -1,3 +1,8 @@
+include(../../cmake/TaiheWorkflows.cmake)
+setup_taihe_cmake_test_env()
+cmake_minimum_required(VERSION 3.18)
+project(ani_fixedarray)
+
 set(IDL_FILES
     "${CMAKE_CURRENT_LIST_DIR}/idl/hello.taihe"
 )

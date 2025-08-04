@@ -1,3 +1,8 @@
+include(../../cmake/TaiheWorkflows.cmake)
+setup_taihe_cmake_test_env()
+cmake_minimum_required(VERSION 3.18)
+project(union_embed)
+
 set(IDL_FILES
     "${CMAKE_CURRENT_LIST_DIR}/idl/hms.core.map.map_inner.taihe"
 )
