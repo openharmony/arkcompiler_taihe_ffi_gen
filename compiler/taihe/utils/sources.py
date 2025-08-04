@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from io import StringIO
 from pathlib import Path
 from typing import NamedTuple
@@ -14,16 +14,22 @@ from typing_extensions import override
 class SourceBase(ABC):
     """Base class reprensenting all kinds of source code."""
 
-    @property
-    @abstractmethod
-    def source_identifier(self) -> str: ...
+    is_stdlib: bool = field(default=False, kw_only=True)
+    """Indicates whether the source code is part of the standard library."""
 
     @property
     @abstractmethod
-    def pkg_name(self) -> str: ...
+    def source_identifier(self) -> str:
+        """Returns a unique identifier for the source code."""
+
+    @property
+    @abstractmethod
+    def pkg_name(self) -> str:
+        """Returns the package name of the source code."""
 
     @abstractmethod
-    def read(self) -> str: ...
+    def read(self) -> str:
+        """Reads the source code and returns it as a string."""
 
 
 @dataclass(frozen=True)
