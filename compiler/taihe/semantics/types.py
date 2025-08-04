@@ -39,6 +39,8 @@ if TYPE_CHECKING:
     )
     from taihe.semantics.visitor import (
         ArrayTypeVisitor,
+        AsyncCompleterTypeVisitor,
+        AsyncFutureTypeVisitor,
         BuiltinTypeVisitor,
         CallbackTypeVisitor,
         EnumTypeVisitor,
@@ -414,6 +416,64 @@ class SetType(GenericType):
         return v.visit_set_type(self)
 
 
+@dataclass(frozen=True, repr=False)
+class AsyncCompleterType(GenericType):
+    item_ty: NonVoidType
+
+    @property
+    @override
+    def signature(self):
+        return f"AsyncCallback<{self.item_ty.signature}>"
+
+    @classmethod
+    def try_construct(
+        cls,
+        ref: "GenericTypeRefDecl",
+        dm: DiagnosticsManager,
+    ) -> "AsyncCompleterType | None":
+        if len(ref.args) != 1:
+            dm.emit(GenericArgumentsError(ref, 1, len(ref.args)))
+            return None
+        item_ty = ref.args[0].ty
+        if not isinstance(item_ty, NonVoidType):
+            dm.emit(TypeUsageError(ref.args[0].ty_ref, item_ty))
+            return None
+        return cls(ref, item_ty)
+
+    @override
+    def accept(self, v: "AsyncCompleterTypeVisitor[_R]") -> _R:
+        return v.visit_async_completer_type(self)
+
+
+@dataclass(frozen=True, repr=False)
+class AsyncFutureType(GenericType):
+    item_ty: NonVoidType
+
+    @property
+    @override
+    def signature(self):
+        return f"AsyncFuture<{self.item_ty.signature}>"
+
+    @classmethod
+    def try_construct(
+        cls,
+        ref: "GenericTypeRefDecl",
+        dm: DiagnosticsManager,
+    ) -> "AsyncFutureType | None":
+        if len(ref.args) != 1:
+            dm.emit(GenericArgumentsError(ref, 1, len(ref.args)))
+            return None
+        item_ty = ref.args[0].ty
+        if not isinstance(item_ty, NonVoidType):
+            dm.emit(TypeUsageError(ref.args[0].ty_ref, item_ty))
+            return None
+        return cls(ref, item_ty)
+
+    @override
+    def accept(self, v: "AsyncFutureTypeVisitor[_R]") -> _R:
+        return v.visit_async_future_type(self)
+
+
 # Builtin Generics Map
 BUILTIN_GENERICS: dict[str, type[GenericType]] = {
     "Array": ArrayType,
@@ -421,6 +481,8 @@ BUILTIN_GENERICS: dict[str, type[GenericType]] = {
     "Vector": VectorType,
     "Map": MapType,
     "Set": SetType,
+    "AsyncCompleter": AsyncCompleterType,
+    "AsyncFuture": AsyncFutureType,
 }
 
 
