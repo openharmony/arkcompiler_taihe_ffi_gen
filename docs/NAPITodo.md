@@ -10,7 +10,7 @@ NAPI 代码生成及验证：
     - [x] ts 侧绑定构造函数 class(interface)              (只支持绑定一个构造函数且无法继承 interface)
     - [x] static
     - [x] readonly
-    - [ ] get set
+    - [x] get set
     - [x] const
     - [x] enum
     - [x] union                                          (number|string|bool|array|map)
@@ -43,16 +43,6 @@ NAPI 代码生成及验证：
 **注意：现在的验证方式是基于 ts 和 napi 非鸿蒙 napi，应配置鸿蒙环境下编译验证方法待设计。**
 xml 例子编译运行成功
 
-遗留问题：
-1. .d.ts 和 .node 的存放位置，暂时存放在 author_generated 目录下，（main.js 也存放在此），main.ts 调用需注意
-2. 报错待完善，例如定义 Record<Enum, String> 现在不会报错
-
-暂时未考虑但影响代码生成的点：
-1. a.taihe use b.taihe
-2. namespace （为 DTS 设计自己的 writer 学习 STSWriter 也许可行）
-
 
 暂时有办法待优化的点：
-1. 应使用 Json 配置使 .d.ts 和 .node 放在其他目录下也能找到，需探索
-2. tryit 里为了实现对每个 taihe 文件生成一个 .node 对文件夹进行了遍历，这是否合适 
-3. test/napi 应拆解为多个 test case 例如 napi_primitives, napi_struct 等，另外里面现存在一些 interget.d.ts 等文件，等自动生成部分完成将统一删除
+1. tryit 里为了实现对每个 .d.ts 文件生成一个 .node 文件进行了遍历，这是否合适 

@@ -48,6 +48,12 @@ function main() {
 
   let value3 = lib.CTest.multiply(7, 8);
   console.log("static function: ", value3);
+
+  let color = lib.makeIColor("my color");
+  console.log("get attr: ", color.Id);
+  color.Id = "new my color";
+  console.log("set attr: ", color.Id);
+  console.log("color method: ", color.calculate(2, 3))
 }
 
 main();

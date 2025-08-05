@@ -5,6 +5,7 @@ from taihe.codegen.ani.attributes import ReadOnlyAttr
 from taihe.codegen.napi.analyses import (
     EnumNapiInfo,
     GlobFuncNapiInfo,
+    IfaceMethodNapiInfo,
     IfaceNapiInfo,
     Namespace,
     PackageGroupNapiInfo,
@@ -235,6 +236,7 @@ class DtsCodeGenerator:
         target: DtsWriter,
     ):
         for method in methods:
+            iface_method_napi_info = IfaceMethodNapiInfo.get(self.am, method)
             dts_params = []
             for param in method.params:
                 type_napi_info = TypeNapiInfo.get(self.am, param.ty_ref.resolved_ty)
@@ -244,12 +246,21 @@ class DtsCodeGenerator:
             dts_params_str = ", ".join(dts_params)
             if return_ty_ref := method.return_ty_ref:
                 type_napi_info = TypeNapiInfo.get(self.am, return_ty_ref.resolved_ty)
-                dts_return_ty_name = type_napi_info.dts_return_type_in(target)
+                dts_return_ty_name = ": " + type_napi_info.dts_return_type_in(target)
             else:
-                dts_return_ty_name = "void"
-            target.writelns(
-                f"{method.name}({dts_params_str}): {dts_return_ty_name};",
-            )
+                dts_return_ty_name = ""
+            if name := iface_method_napi_info.get_name:
+                target.writelns(
+                    f"get {name}({dts_params_str}){dts_return_ty_name};",
+                )
+            elif name := iface_method_napi_info.set_name:
+                target.writelns(
+                    f"set {name}({dts_params_str}){dts_return_ty_name};",
+                )
+            else:
+                target.writelns(
+                    f"{method.name}({dts_params_str}){dts_return_ty_name};",
+                )
 
     def gen_enum(
         self,

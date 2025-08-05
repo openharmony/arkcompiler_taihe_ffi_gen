@@ -23,6 +23,8 @@ from taihe.codegen.napi.analyses import (
     TypeNapiInfo,
     UnionFieldNapiInfo,
     UnionNapiInfo,
+    get_mangled_func_name,
+    get_mangled_method_name,
 )
 from taihe.semantics.declarations import (
     EnumDecl,
@@ -37,14 +39,6 @@ from taihe.semantics.declarations import (
 from taihe.semantics.types import ArrayType, MapType, ScalarType, StringType, Type
 from taihe.utils.analyses import AnalysisManager
 from taihe.utils.outputs import FileKind, OutputManager
-
-
-def get_mangled_func_name(
-    pkg: PackageDecl,
-    func: GlobFuncDecl,
-) -> str:
-    segments = [*pkg.segments, func.name]
-    return encode(segments, DeclKind.NAPI_FUNC)
 
 
 class NapiCodeGenerator:
@@ -929,13 +923,15 @@ class NapiCodeGenerator:
                 f"napi_property_descriptor desc[] = {{",
                 f"}};",
             ):
-                for mng_name, value in iface_napi_info.iface_register_infos.items():
-                    target.writelns(
-                        f'{{"{value[0].name}", nullptr, {mng_name}, nullptr, nullptr, nullptr, napi_default, nullptr}}, ',
-                    )
+                for (
+                    methods,
+                    ancestor,
+                    props_strs,
+                ) in iface_napi_info.iface_register_infos:
+                    target.writelns(f"{{{', '.join(props_strs)}}}, ")
             if iface_napi_info.is_class():
                 target.writelns(
-                    f'napi_define_class(env, "{iface.name}", NAPI_AUTO_LENGTH, {iface_napi_info.constructor_func_name}, nullptr, {len(iface_napi_info.iface_register_infos)}, desc, &result);',
+                    f'napi_define_class(env, "{iface.name}", NAPI_AUTO_LENGTH, {iface_napi_info.constructor_func_name}, nullptr, sizeof(desc) / sizeof(desc[0]), desc, &result);',
                 )
                 if iface_napi_info.static_funcs:
                     with target.indented(
@@ -954,7 +950,7 @@ class NapiCodeGenerator:
                     f'napi_set_named_property(env, exports, "{iface.name}", result);',
                 )
             target.writelns(
-                f'napi_define_class(env, "{iface.name}_inner", NAPI_AUTO_LENGTH, {iface_napi_info.constructor_func_name}_inner, nullptr, {len(iface_napi_info.iface_register_infos)}, desc, &result);',
+                f'napi_define_class(env, "{iface.name}_inner", NAPI_AUTO_LENGTH, {iface_napi_info.constructor_func_name}_inner, nullptr, sizeof(desc) / sizeof(desc[0]), desc, &result);',
                 f"napi_create_reference(env, result, 1, &{iface_napi_info.ctor_ref_name}_inner());",
                 f"return;",
             )
@@ -966,16 +962,19 @@ class NapiCodeGenerator:
         iface_cpp_info = IfaceCppInfo.get(self.am, iface)
         iface_napi_info = IfaceNapiInfo.get(self.am, iface)
         self.gen_iface_method_decl_file(
+            iface,
             iface_cpp_info,
             iface_napi_info,
         )
         self.gen_iface_method_impl_file(
+            iface,
             iface_cpp_info,
             iface_napi_info,
         )
 
     def gen_iface_method_decl_file(
         self,
+        iface: IfaceDecl,
         iface_cpp_info: IfaceCppInfo,
         iface_napi_info: IfaceNapiInfo,
     ):
@@ -986,13 +985,23 @@ class NapiCodeGenerator:
         ) as iface_meth_napi_decl_target:
             iface_meth_napi_decl_target.add_include(self.napi_header_file)
             iface_meth_napi_decl_target.add_include(iface_cpp_info.defn_header)
-            for mng_name, value in iface_napi_info.iface_register_infos.items():
-                iface_meth_napi_decl_target.writelns(
-                    f"static napi_value {mng_name}(napi_env env, napi_callback_info info);",
-                )
+            for methods, ancestor, props_strs in iface_napi_info.iface_register_infos:
+                if props_strs[2] != "nullptr":
+                    iface_meth_napi_decl_target.writelns(
+                        f"static napi_value {props_strs[2]}(napi_env env, napi_callback_info info);",
+                    )
+                if props_strs[3] != "nullptr":
+                    iface_meth_napi_decl_target.writelns(
+                        f"static napi_value {props_strs[3]}(napi_env env, napi_callback_info info);",
+                    )
+                if props_strs[4] != "nullptr":
+                    iface_meth_napi_decl_target.writelns(
+                        f"static napi_value {props_strs[4]}(napi_env env, napi_callback_info info);",
+                    )
 
     def gen_iface_method_impl_file(
         self,
+        iface: IfaceDecl,
         iface_cpp_info: IfaceCppInfo,
         iface_napi_info: IfaceNapiInfo,
     ):
@@ -1003,23 +1012,25 @@ class NapiCodeGenerator:
         ) as iface_meth_napi_impl_target:
             iface_meth_napi_impl_target.add_include(iface_napi_info.meth_decl_header)
             iface_meth_napi_impl_target.add_include(iface_cpp_info.impl_header)
-            for mng_name, value in iface_napi_info.iface_register_infos.items():
-                iface_cpp_info_ancestor = IfaceCppInfo.get(self.am, value[1])
-                with iface_meth_napi_impl_target.indented(
-                    f"static napi_value {mng_name}(napi_env env, napi_callback_info info) {{",
-                    f"}}",
-                ):
-                    iface_meth_napi_impl_target.writelns(
-                        f"napi_value thisobj;",
-                        f"napi_get_cb_info(env, info, nullptr, nullptr, &thisobj, nullptr);",
-                        f"{iface_cpp_info.as_owner}* value_ptr;",
-                        f"napi_unwrap(env, thisobj, reinterpret_cast<void**>(&value_ptr));",
-                    )
-                    self.gen_func_content(
-                        value[0],
-                        iface_meth_napi_impl_target,
-                        f"(({iface_cpp_info_ancestor.as_owner})(*value_ptr))->{value[0].name}",
-                    )
+            for methods, ancestor, props_strs in iface_napi_info.iface_register_infos:
+                iface_cpp_info_ancestor = IfaceCppInfo.get(self.am, ancestor)
+                for method in methods:
+                    mng_name = get_mangled_method_name(iface, method)
+                    with iface_meth_napi_impl_target.indented(
+                        f"static napi_value {mng_name}(napi_env env, napi_callback_info info) {{",
+                        f"}}",
+                    ):
+                        iface_meth_napi_impl_target.writelns(
+                            f"napi_value thisobj;",
+                            f"napi_get_cb_info(env, info, nullptr, nullptr, &thisobj, nullptr);",
+                            f"{iface_cpp_info.as_owner}* value_ptr;",
+                            f"napi_unwrap(env, thisobj, reinterpret_cast<void**>(&value_ptr));",
+                        )
+                        self.gen_func_content(
+                            method,
+                            iface_meth_napi_impl_target,
+                            f"(({iface_cpp_info_ancestor.as_owner})(*value_ptr))->{method.name}",
+                        )
 
     def gen_enum(
         self,

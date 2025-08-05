@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from collections import defaultdict
 from typing import Literal
 
 from typing_extensions import override
@@ -13,9 +14,11 @@ from taihe.codegen.ani.attributes import (
     ConstAttr,
     CtorAttr,
     ExtendsAttr,
+    GetAttr,
     NamespaceAttr,
     NullAttr,
     RecordAttr,
+    SetAttr,
     StaticAttr,
     TypedArrayAttr,
     UndefinedAttr,
@@ -53,6 +56,26 @@ from taihe.semantics.types import (
 )
 from taihe.semantics.visitor import TypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
+
+
+def get_mangled_func_name(
+    pkg: PackageDecl,
+    func: GlobFuncDecl,
+) -> str:
+    segments = [*pkg.segments, func.name]
+    return encode(segments, DeclKind.NAPI_FUNC)
+
+
+def get_mangled_method_name(
+    iface: IfaceDecl,
+    method: IfaceMethodDecl,
+) -> str:
+    segments = [
+        *iface.parent_pkg.segments,
+        iface.name,
+        method.name,
+    ]
+    return encode(segments, DeclKind.NAPI_FUNC)
 
 
 class Namespace:
@@ -207,6 +230,7 @@ class StructNapiInfo(AbstractAnalysis[StructDecl]):
 
 class IfaceNapiInfo(AbstractAnalysis[IfaceDecl]):
     def __init__(self, am: AnalysisManager, d: IfaceDecl) -> None:
+        self.am = am
         segments = [*d.parent_pkg.segments, d.name]
         self.pkg_napi_info = PackageNapiInfo.get(am, d.parent_pkg)
         self.from_napi_func_name = encode(segments, DeclKind.FROM_NAPI)
@@ -226,16 +250,58 @@ class IfaceNapiInfo(AbstractAnalysis[IfaceDecl]):
             self.dts_impl_name = f"{d.name}_inner"
 
         iface_abi_info = IfaceAbiInfo.get(am, d)
-        iface_register_infos: dict[str, tuple[IfaceMethodDecl, IfaceDecl]] = {}
+        iface_register_infos: list[
+            tuple[list[IfaceMethodDecl], IfaceDecl, list[str]]
+        ] = []
         for ancestor in iface_abi_info.ancestor_dict:
+            property_map: dict[
+                str, tuple[str | None, str | None, list[IfaceMethodDecl]]
+            ] = defaultdict(lambda: (None, None, []))
             for method in ancestor.methods:
-                segments = [
-                    *d.parent_pkg.segments,
-                    d.name,
-                    method.name,
-                ]
-                mangled_name = encode(segments, DeclKind.NAPI_FUNC)
-                iface_register_infos[mangled_name] = (method, ancestor)
+                iface_meth_napi_info = IfaceMethodNapiInfo.get(self.am, method)
+                mangled_name = get_mangled_method_name(d, method)
+                if get_name := iface_meth_napi_info.get_name:
+                    existing_get, existing_set, methods = property_map[get_name]
+                    methods.append(method)
+                    property_map[get_name] = (mangled_name, existing_set, methods)
+
+                if set_name := iface_meth_napi_info.set_name:
+                    existing_get, existing_set, methods = property_map[set_name]
+                    methods.append(method)
+                    property_map[set_name] = (existing_get, mangled_name, methods)
+            for prop_name, (get_name, set_name, methods) in property_map.items():
+                if methods:
+                    get_mangled = get_name or "nullptr"
+                    set_mangled = set_name or "nullptr"
+                    props_strs = [
+                        f'"{prop_name}"',
+                        "nullptr",
+                        "nullptr",
+                        get_mangled,
+                        set_mangled,
+                        "nullptr",
+                        "napi_default",
+                        "nullptr",
+                    ]
+                    iface_register_infos.append((methods, ancestor, props_strs))
+            for method in ancestor.methods:
+                mangled_name = get_mangled_method_name(d, method)
+                iface_meth_napi_info = IfaceMethodNapiInfo.get(self.am, method)
+                if (
+                    iface_meth_napi_info.get_name is None
+                    and iface_meth_napi_info.set_name is None
+                ):
+                    props_strs = [
+                        f'"{method.name}"',
+                        "nullptr",
+                        f"{mangled_name}",
+                        "nullptr",
+                        "nullptr",
+                        "nullptr",
+                        "napi_default",
+                        "nullptr",
+                    ]
+                    iface_register_infos.append(([method], ancestor, props_strs))
         self.iface_register_infos = iface_register_infos
         self.ctor: GlobFuncDecl | None = None
         self.static_funcs: list[tuple[str, GlobFuncDecl]] = []
@@ -253,6 +319,22 @@ class IfaceNapiInfo(AbstractAnalysis[IfaceDecl]):
             target,
             self.dts_type_name,
         )
+
+
+class IfaceMethodNapiInfo(AbstractAnalysis[IfaceMethodDecl]):
+    def __init__(self, am: AnalysisManager, f: IfaceMethodDecl) -> None:
+        self.get_name = None
+        self.set_name = None
+
+        if get_attr := GetAttr.get(f):
+            self.get_name = get_attr.member_name or get_attr.func_suffix
+        if set_attr := SetAttr.get(f):
+            self.set_name = set_attr.member_name or set_attr.func_suffix
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, f: IfaceMethodDecl) -> "IfaceMethodNapiInfo":
+        return IfaceMethodNapiInfo(am, f)
 
 
 class EnumNapiInfo(AbstractAnalysis[EnumDecl]):

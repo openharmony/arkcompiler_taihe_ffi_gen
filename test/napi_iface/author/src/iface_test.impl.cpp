@@ -73,6 +73,33 @@ public:
   }
 };
 
+class Color {
+protected:
+  ::taihe::string id;
+
+public:
+  Color(::taihe::string_view id) : id(id) {
+    std::cout << "new Color " << this << std::endl;
+  }
+
+  ~Color() {
+    std::cout << "del Color " << this << std::endl;
+  }
+
+  ::taihe::string getId() {
+    return id;
+  }
+
+  void setId(::taihe::string_view s) {
+    id = s;
+    return;
+  }
+
+  int32_t calculate(int32_t a, int32_t b) {
+    return a * b;
+  }
+};
+
 ::iface_test::IBase makeIBase(::taihe::string_view id) {
   return ::taihe::make_holder<Base, ::iface_test::IBase>(id);
 }
@@ -98,6 +125,17 @@ void copyIBase(::iface_test::weak::IBase a, ::iface_test::weak::IBase b) {
 int32_t multiply(int32_t a, int32_t b) {
   return a * b;
 }
+
+::iface_test::IColor makeIColor(::taihe::string_view id) {
+  // The parameters in the make_holder function should be of the same type
+  // as the parameters in the constructor of the actual implementation class.
+  return taihe::make_holder<Color, ::iface_test::IColor>(id);
+}
+
+void copyIColor(::iface_test::weak::IColor a, ::iface_test::weak::IColor b) {
+  a->setId(b->getId());
+  return;
+}
 }  // namespace
 
 // NOLINTBEGIN
@@ -107,4 +145,6 @@ TH_EXPORT_CPP_API_makeIShape(makeIShape);
 TH_EXPORT_CPP_API_createCTest(createCTest);
 TH_EXPORT_CPP_API_changeCTest(changeCTest);
 TH_EXPORT_CPP_API_multiply(multiply);
+TH_EXPORT_CPP_API_makeIColor(makeIColor);
+TH_EXPORT_CPP_API_copyIColor(copyIColor);
 // NOLINTEND
