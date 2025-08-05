@@ -1,5 +1,6 @@
 #pragma once
 
+#include <taihe/vector.abi.h>
 #include <taihe/common.hpp>
 
 #include <algorithm>
@@ -168,12 +169,12 @@ private:
 
 template<typename T>
 struct as_abi<vector<T>> {
-  using type = void *;
+  using type = TVector;
 };
 
 template<typename T>
 struct as_abi<vector_view<T>> {
-  using type = void *;
+  using type = TVector;
 };
 
 template<typename T>
