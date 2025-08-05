@@ -65,3 +65,5 @@
 - [如何在 Taihe 中声明带有 null 或 undefined 的 union `@null` `@undefined`](../null_undefined/README.md)
 
 - [如何进行 callback 比较判断](../callback_compare/README.md)
+
+- [如何在 Taihe 中实现多继承](../multiple_inherit/README.md)

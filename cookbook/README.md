@@ -31,6 +31,7 @@
 - [null 与 undefined](null_undefined/README.md)
 - [callback 对象比较](callback_compare/README.md)
 - [多态作为入参出参](polymorphism/README.md)
+- [多继承](multiple_inherit/README.md)
 
 ## 附录
 
