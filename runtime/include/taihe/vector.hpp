@@ -127,7 +127,7 @@ struct vector : vector_view<T> {
   using vector_view<T>::m_handle;
 
   explicit vector(std::size_t cap = VEC_DEFAULT_CAPACITY) : vector(new data_t) {
-    tref_set(&m_handle->count, 1);
+    tref_init(&m_handle->count, 1);
     m_handle->cap = cap;
     m_handle->buffer = reinterpret_cast<T *>(malloc(sizeof(T) * cap));
     m_handle->len = 0;

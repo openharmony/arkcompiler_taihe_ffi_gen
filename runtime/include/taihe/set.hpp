@@ -255,7 +255,7 @@ struct set : set_view<K> {
   using set_view<K>::m_handle;
 
   explicit set(std::size_t cap = SET_DEFAULT_CAPACITY) : set(new handle_t) {
-    tref_set(&m_handle->count, 1);
+    tref_init(&m_handle->count, 1);
     m_handle->cap = cap;
     m_handle->bucket = new node_t *[cap]();
     m_handle->size = 0;
