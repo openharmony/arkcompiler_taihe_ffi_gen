@@ -68,10 +68,10 @@ if TYPE_CHECKING:
         VectorType,
     )
 
-T = TypeVar("T")
+R = TypeVar("R")
 
 
-class TypeVisitor(Generic[T]):
+class TypeVisitor(Generic[R]):
     """A base visitor for traversing types in the type hierarchy.
 
     This visitor allows handling different types by defining specific visit methods.
@@ -85,7 +85,7 @@ class TypeVisitor(Generic[T]):
     visiting: "TypeProtocol | None" = None
     """The current node being visited. Only for debug use."""
 
-    def handle_type(self, t: "TypeProtocol") -> T:
+    def handle_type(self, t: "TypeProtocol") -> R:
         """The entrance for visiting."""
         r = self.visiting
         self.visiting = t
@@ -99,77 +99,77 @@ class TypeVisitor(Generic[T]):
         finally:
             self.visiting = r
 
-    def visit_type(self, t: "Type") -> T:
+    def visit_type(self, t: "Type") -> R:
         """The fallback method which handles the most general type.
 
         Note that `TypeRef` is NOT a `Type`.
         """
         raise NotImplementedError
 
-    def visit_invalid_type(self, t: "InvalidType") -> T:
+    def visit_invalid_type(self, t: "InvalidType") -> R:
         return self.visit_type(t)
 
-    def visit_valid_type(self, t: "ValidType") -> T:
+    def visit_valid_type(self, t: "ValidType") -> R:
         return self.visit_type(t)
 
     ### Builtin Types ###
 
-    def visit_builtin_type(self, t: "BuiltinType") -> T:
+    def visit_builtin_type(self, t: "BuiltinType") -> R:
         return self.visit_valid_type(t)
 
-    def visit_scalar_type(self, t: "ScalarType") -> T:
+    def visit_scalar_type(self, t: "ScalarType") -> R:
         return self.visit_builtin_type(t)
 
-    def visit_string_type(self, t: "StringType") -> T:
+    def visit_string_type(self, t: "StringType") -> R:
         return self.visit_builtin_type(t)
 
-    def visit_opaque_type(self, t: "OpaqueType") -> T:
+    def visit_opaque_type(self, t: "OpaqueType") -> R:
         return self.visit_builtin_type(t)
 
     ### User Types ###
 
-    def visit_user_type(self, t: "UserType") -> T:
+    def visit_user_type(self, t: "UserType") -> R:
         return self.visit_valid_type(t)
 
-    def visit_enum_type(self, t: "EnumType") -> T:
+    def visit_enum_type(self, t: "EnumType") -> R:
         return self.visit_user_type(t)
 
-    def visit_struct_type(self, t: "StructType") -> T:
+    def visit_struct_type(self, t: "StructType") -> R:
         return self.visit_user_type(t)
 
-    def visit_union_type(self, t: "UnionType") -> T:
+    def visit_union_type(self, t: "UnionType") -> R:
         return self.visit_user_type(t)
 
-    def visit_iface_type(self, t: "IfaceType") -> T:
+    def visit_iface_type(self, t: "IfaceType") -> R:
         return self.visit_user_type(t)
 
     ### Callback Type ###
 
-    def visit_callback_type(self, t: "CallbackType") -> T:
+    def visit_callback_type(self, t: "CallbackType") -> R:
         return self.visit_valid_type(t)
 
     ### Generic Types ###
 
-    def visit_generic_type(self, t: "GenericType") -> T:
+    def visit_generic_type(self, t: "GenericType") -> R:
         return self.visit_valid_type(t)
 
-    def visit_array_type(self, t: "ArrayType") -> T:
+    def visit_array_type(self, t: "ArrayType") -> R:
         return self.visit_generic_type(t)
 
-    def visit_optional_type(self, t: "OptionalType") -> T:
+    def visit_optional_type(self, t: "OptionalType") -> R:
         return self.visit_generic_type(t)
 
-    def visit_vector_type(self, t: "VectorType") -> T:
+    def visit_vector_type(self, t: "VectorType") -> R:
         return self.visit_generic_type(t)
 
-    def visit_map_type(self, t: "MapType") -> T:
+    def visit_map_type(self, t: "MapType") -> R:
         return self.visit_generic_type(t)
 
-    def visit_set_type(self, t: "SetType") -> T:
+    def visit_set_type(self, t: "SetType") -> R:
         return self.visit_generic_type(t)
 
 
-class DeclVisitor(Generic[T]):
+class DeclVisitor(Generic[R]):
     """A base visitor for traversing declarations, including nested structures.
 
     This visitor walks through the declaration hierarchy, visiting each declaration
@@ -183,7 +183,7 @@ class DeclVisitor(Generic[T]):
     visiting: "DeclProtocol | None" = None
     """The current node being visited. Only for debug use."""
 
-    def handle_decl(self, d: "DeclProtocol") -> T:
+    def handle_decl(self, d: "DeclProtocol") -> R:
         """The entrance for visiting anything "acceptable"."""
         r = self.visiting
         self.visiting = d
@@ -197,100 +197,100 @@ class DeclVisitor(Generic[T]):
         finally:
             self.visiting = r
 
-    def visit_decl(self, d: "Decl") -> T:
+    def visit_decl(self, d: "Decl") -> R:
         """The fallback method which handles the most general cases."""
         raise NotImplementedError
 
-    def visit_param_decl(self, d: "ParamDecl") -> T:
+    def visit_param_decl(self, d: "ParamDecl") -> R:
         return self.visit_decl(d)
 
     ### Type References ###
 
-    def visit_type_ref_decl(self, d: "TypeRefDecl") -> T:
+    def visit_type_ref_decl(self, d: "TypeRefDecl") -> R:
         return self.visit_decl(d)
 
-    def visit_short_type_ref_decl(self, d: "ShortTypeRefDecl") -> T:
+    def visit_short_type_ref_decl(self, d: "ShortTypeRefDecl") -> R:
         return self.visit_type_ref_decl(d)
 
-    def visit_long_type_ref_decl(self, d: "LongTypeRefDecl") -> T:
+    def visit_long_type_ref_decl(self, d: "LongTypeRefDecl") -> R:
         return self.visit_type_ref_decl(d)
 
-    def visit_generic_type_ref_decl(self, d: "GenericTypeRefDecl") -> T:
+    def visit_generic_type_ref_decl(self, d: "GenericTypeRefDecl") -> R:
         return self.visit_type_ref_decl(d)
 
-    def visit_callback_type_ref_decl(self, d: "CallbackTypeRefDecl") -> T:
+    def visit_callback_type_ref_decl(self, d: "CallbackTypeRefDecl") -> R:
         return self.visit_type_ref_decl(d)
 
     ### Other References ###
 
-    def visit_package_ref_decl(self, d: "PackageRefDecl") -> T:
+    def visit_package_ref_decl(self, d: "PackageRefDecl") -> R:
         return self.visit_decl(d)
 
-    def visit_declaration_ref_decl(self, d: "DeclarationRefDecl") -> T:
+    def visit_declaration_ref_decl(self, d: "DeclarationRefDecl") -> R:
         return self.visit_decl(d)
 
     ### Imports ###
 
-    def visit_import_decl(self, d: "ImportDecl") -> T:
+    def visit_import_decl(self, d: "ImportDecl") -> R:
         return self.visit_decl(d)
 
-    def visit_package_import_decl(self, d: "PackageImportDecl") -> T:
+    def visit_package_import_decl(self, d: "PackageImportDecl") -> R:
         return self.visit_import_decl(d)
 
-    def visit_decl_import_decl(self, d: "DeclarationImportDecl") -> T:
+    def visit_decl_import_decl(self, d: "DeclarationImportDecl") -> R:
         return self.visit_import_decl(d)
 
     ### Package Level Function ###
 
-    def visit_glob_func_decl(self, d: "GlobFuncDecl") -> T:
+    def visit_glob_func_decl(self, d: "GlobFuncDecl") -> R:
         return self.visit_decl(d)
 
     ### Package Level Type ###
 
-    def visit_type_decl(self, d: "TypeDecl") -> T:
+    def visit_type_decl(self, d: "TypeDecl") -> R:
         return self.visit_decl(d)
 
     ### Enum ###
 
-    def visit_enum_item_decl(self, d: "EnumItemDecl") -> T:
+    def visit_enum_item_decl(self, d: "EnumItemDecl") -> R:
         return self.visit_decl(d)
 
-    def visit_enum_decl(self, d: "EnumDecl") -> T:
+    def visit_enum_decl(self, d: "EnumDecl") -> R:
         return self.visit_type_decl(d)
 
     ### Struct ###
 
-    def visit_struct_field_decl(self, d: "StructFieldDecl") -> T:
+    def visit_struct_field_decl(self, d: "StructFieldDecl") -> R:
         return self.visit_decl(d)
 
-    def visit_struct_decl(self, d: "StructDecl") -> T:
+    def visit_struct_decl(self, d: "StructDecl") -> R:
         return self.visit_type_decl(d)
 
     ### Union ###
 
-    def visit_union_field_decl(self, d: "UnionFieldDecl") -> T:
+    def visit_union_field_decl(self, d: "UnionFieldDecl") -> R:
         return self.visit_decl(d)
 
-    def visit_union_decl(self, d: "UnionDecl") -> T:
+    def visit_union_decl(self, d: "UnionDecl") -> R:
         return self.visit_type_decl(d)
 
     ### Interface ###
 
-    def visit_iface_parent_decl(self, d: "IfaceParentDecl") -> T:
+    def visit_iface_parent_decl(self, d: "IfaceParentDecl") -> R:
         return self.visit_decl(d)
 
-    def visit_iface_func_decl(self, d: "IfaceMethodDecl") -> T:
+    def visit_iface_func_decl(self, d: "IfaceMethodDecl") -> R:
         return self.visit_decl(d)
 
-    def visit_iface_decl(self, d: "IfaceDecl") -> T:
+    def visit_iface_decl(self, d: "IfaceDecl") -> R:
         return self.visit_type_decl(d)
 
     ### Package ###
 
-    def visit_package_decl(self, p: "PackageDecl") -> T:
+    def visit_package_decl(self, p: "PackageDecl") -> R:
         return self.visit_decl(p)
 
-    def visit_package_group(self, g: "PackageGroup") -> T:
+    def visit_package_group(self, g: "PackageGroup") -> R:
         raise NotImplementedError
 
 
