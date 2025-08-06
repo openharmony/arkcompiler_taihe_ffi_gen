@@ -32,9 +32,10 @@ from taihe.semantics.types import (
     ScalarKind,
     ScalarType,
     StringType,
+    Type,
     UserType,
 )
-from taihe.semantics.visitor import RecursiveDeclVisitor
+from taihe.semantics.visitor import DeclVisitor, RecursiveDeclVisitor
 from taihe.utils.diagnostics import DiagnosticsManager
 from taihe.utils.exceptions import (
     DeclarationNotInScopeError,
@@ -62,6 +63,7 @@ def analyze_semantics(
 
     # Type related checks
     _ResolveImportsPass(dm).handle_decl(pg)
+    _ResolveTypePass(dm).handle_decl(pg)
     _CheckEnumTypePass(dm).handle_decl(pg)
     _CheckRecursiveInclusionPass(dm).handle_decl(pg)
 
@@ -101,26 +103,12 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
 
     def __init__(self, dm: DiagnosticsManager):
         self._current_pg = None
-        self._current_pkg = None  # Always points to the current package.
         self.dm = dm
-
-    @property
-    def current_pkg(self) -> PackageDecl:
-        assert self._current_pkg
-        return self._current_pkg
 
     @property
     def current_pg(self) -> PackageGroup:
         assert self._current_pg
         return self._current_pg
-
-    @override
-    def visit_package_decl(self, p: PackageDecl) -> None:
-        self._current_pkg = p
-        try:
-            super().visit_package_decl(p)
-        finally:
-            self._current_pkg = None
 
     @override
     def visit_package_group(self, g: PackageGroup) -> None:
@@ -173,13 +161,50 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
         d.maybe_resolved_decl = None
         return
 
+
+class _ResolveTypePass(RecursiveDeclVisitor):
+    """Resolves type references within a package group."""
+
+    dm: DiagnosticsManager
+
+    def __init__(self, dm: DiagnosticsManager):
+        self._current_pkg = None
+        self.dm = dm
+
+    @property
+    def current_pkg(self) -> PackageDecl:
+        assert self._current_pkg
+        return self._current_pkg
+
     @override
-    def visit_long_type_ref_decl(self, d: LongTypeRefDecl) -> None:
+    def visit_package_decl(self, p: PackageDecl) -> None:
+        self._current_pkg = p
+        try:
+            super().visit_package_decl(p)
+        finally:
+            self._current_pg = None
+
+    @override
+    def visit_type_ref_decl(self, d: TypeRefDecl) -> None:
         if d.maybe_resolved_ty is not None:
             return
 
-        super().visit_long_type_ref_decl(d)
+        super().visit_type_ref_decl(d)
+        d.maybe_resolved_ty = _TypeResolver(self.dm, self.current_pkg).handle_decl(d)
+        return
 
+
+class _TypeResolver(DeclVisitor[Type]):
+    """A visitor that resolves types in declarations."""
+
+    dm: DiagnosticsManager
+
+    def __init__(self, dm: DiagnosticsManager, current_pkg: PackageDecl):
+        self.current_pkg = current_pkg
+        self.dm = dm
+
+    @override
+    def visit_long_type_ref_decl(self, d: LongTypeRefDecl) -> Type:
         # Look for imported package declarations
         pkg_import = self.current_pkg.lookup_pkg_import(d.pkname)
 
@@ -191,50 +216,37 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
 
                 if decl is not None:
                     if isinstance(decl, TypeDecl):
-                        d.maybe_resolved_ty = decl.as_type(d)
-                        return
+                        return decl.as_type(d)
 
                     self.dm.emit(NotATypeError(d.symbol, loc=d.loc))
-                    d.maybe_resolved_ty = InvalidType(d)
-                    return
+                    return InvalidType(d)
 
                 self.dm.emit(DeclNotExistError(d.symbol, loc=d.loc))
-                d.maybe_resolved_ty = InvalidType(d)
-                return
+                return InvalidType(d)
 
             # No need to repeatedly throw exceptions
-            d.maybe_resolved_ty = InvalidType(d)
-            return
+            return InvalidType(d)
 
         self.dm.emit(PackageNotInScopeError(d.pkname, loc=d.loc))
-        d.maybe_resolved_ty = InvalidType(d)
-        return
+        return InvalidType(d)
 
     @override
-    def visit_short_type_ref_decl(self, d: ShortTypeRefDecl) -> None:
-        if d.maybe_resolved_ty is not None:
-            return
-
-        super().visit_short_type_ref_decl(d)
-
+    def visit_short_type_ref_decl(self, d: ShortTypeRefDecl) -> Type:
         # Find Builtin Types
         builtin_type = BUILTIN_TYPES.get(d.symbol)
 
         if builtin_type is not None:
-            d.maybe_resolved_ty = builtin_type(d)
-            return
+            return builtin_type(d)
 
         # Find types declared in the current package
         decl = self.current_pkg.lookup(d.symbol)
 
         if decl is not None:
             if isinstance(decl, TypeDecl):
-                d.maybe_resolved_ty = decl.as_type(d)
-                return
+                return decl.as_type(d)
 
             self.dm.emit(NotATypeError(d.symbol, loc=d.loc))
-            d.maybe_resolved_ty = InvalidType(d)
-            return
+            return InvalidType(d)
 
         # Look for imported type declarations
         decl_import = self.current_pkg.lookup_decl_import(d.symbol)
@@ -244,54 +256,36 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
 
             if decl is not None:
                 if isinstance(decl, TypeDecl):
-                    d.maybe_resolved_ty = decl.as_type(d)
-                    return
+                    return decl.as_type(d)
 
                 self.dm.emit(NotATypeError(d.symbol, loc=d.loc))
-                d.maybe_resolved_ty = InvalidType(d)
-                return
+                return InvalidType(d)
 
             # No need to repeatedly throw exceptions
-            d.maybe_resolved_ty = InvalidType(d)
-            return
+            return InvalidType(d)
 
         self.dm.emit(DeclarationNotInScopeError(d.symbol, loc=d.loc))
-        d.maybe_resolved_ty = InvalidType(d)
-        return
+        return InvalidType(d)
 
     @override
-    def visit_generic_type_ref_decl(self, d: GenericTypeRefDecl) -> None:
-        if d.maybe_resolved_ty is not None:
-            return
-
-        super().visit_generic_type_ref_decl(d)
-
+    def visit_generic_type_ref_decl(self, d: GenericTypeRefDecl) -> Type:
         # Find Builtin Generics
         builtin_generic = BUILTIN_GENERICS.get(d.symbol)
 
         if builtin_generic is not None:
             args_ty = [arg.ty_ref.resolved_ty for arg in d.args]
             try:
-                generic_type = builtin_generic.try_construct(d, *args_ty)
+                return builtin_generic.try_construct(d, *args_ty)
             except GenericArgumentsError as e:
                 self.dm.emit(e)
-                generic_type = InvalidType(d)
-            d.maybe_resolved_ty = generic_type
-            return
+                return InvalidType(d)
 
         self.dm.emit(DeclarationNotInScopeError(d.symbol, loc=d.loc))
-        d.maybe_resolved_ty = InvalidType(d)
-        return
+        return InvalidType(d)
 
     @override
-    def visit_callback_type_ref_decl(self, d: CallbackTypeRefDecl) -> None:
-        if d.maybe_resolved_ty is not None:
-            return
-
-        super().visit_callback_type_ref_decl(d)
-
-        d.maybe_resolved_ty = CallbackType(d)
-        return
+    def visit_callback_type_ref_decl(self, d: CallbackTypeRefDecl) -> Type:
+        return CallbackType(d)
 
 
 class _CheckEnumTypePass(RecursiveDeclVisitor):
