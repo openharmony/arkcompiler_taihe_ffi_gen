@@ -425,6 +425,7 @@ class TsBuildSystem(BuildSystem):
         self.runtime_sources = [
             runtime_src_dir / "string.cpp",
             runtime_src_dir / "object.cpp",
+            runtime_src_dir / "napi_runtime.cpp",
         ]
 
         self.js_target = self.build_dir / "main.js"
