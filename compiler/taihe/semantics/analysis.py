@@ -270,7 +270,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
         builtin_generic = BUILTIN_GENERICS.get(d.symbol)
 
         if builtin_generic is not None:
-            args_ty = [arg_ty_ref.resolved_ty for arg_ty_ref in d.args_ty_ref]
+            args_ty = [arg.ty_ref.resolved_ty for arg in d.args]
             try:
                 generic_type = builtin_generic.try_construct(d, *args_ty)
             except GenericArgumentsError as e:

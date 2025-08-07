@@ -171,6 +171,28 @@ class TypeRefDecl(DeclWithParent[Decl], ABC):
         return PrettyFormatter().get_type_ref_decl(self)
 
 
+class GenericArgDecl(DeclWithParent["GenericTypeRefDecl"]):
+    ty_ref: TypeRefDecl
+
+    def __init__(
+        self,
+        loc: SourceLocation | None,
+        ty_ref: TypeRefDecl,
+    ):
+        super().__init__(loc)
+        self.ty_ref = ty_ref
+        ty_ref.set_parent(self)
+
+    @property
+    @override
+    def description(self) -> str:
+        return f"generic argument ({self.ty_ref.description})"
+
+    @override
+    def _accept(self, v: "DeclVisitor[R]") -> R:
+        return v.visit_generic_arg_decl(self)
+
+
 class ParamDecl(NamedDeclWithParent["FunctionLikeDecl"]):
     ty_ref: TypeRefDecl
 
@@ -236,7 +258,7 @@ class LongTypeRefDecl(TypeRefDecl):
 
 class GenericTypeRefDecl(TypeRefDecl):
     symbol: str
-    args_ty_ref: list[TypeRefDecl]
+    args: list[GenericArgDecl]
 
     def __init__(
         self,
@@ -245,11 +267,11 @@ class GenericTypeRefDecl(TypeRefDecl):
     ):
         super().__init__(loc)
         self.symbol = symbol
-        self.args_ty_ref = []
+        self.args = []
 
-    def add_arg_ty_ref(self, p: TypeRefDecl):
-        self.args_ty_ref.append(p)
-        p.set_parent(self)
+    def add_arg(self, a: GenericArgDecl):
+        self.args.append(a)
+        a.set_parent(self)
 
     @override
     def _accept(self, v: "DeclVisitor[R]") -> R:

@@ -19,6 +19,7 @@ if TYPE_CHECKING:
         DeclarationRefDecl,
         EnumDecl,
         EnumItemDecl,
+        GenericArgDecl,
         GenericTypeRefDecl,
         GlobFuncDecl,
         IfaceDecl,
@@ -57,11 +58,17 @@ class PrettyFormatter(DeclVisitor[str]):
             self.as_attr = lambda s: s
             self.as_comment = lambda s: s
 
-    def with_attr(self, d: "Decl", s: str) -> str:
+    def with_attr(self, d: "Decl", s: str, bracket: bool = False) -> str:
+        attrs: list[str] = []
         for item in chain(*d.attributes.values()):
-            fmt_attrs = self.as_attr(f"@{self.get_format_attr(item)}")
-            s = f"{fmt_attrs} {s}"
-        return s
+            attr = self.as_attr(f"@{self.get_format_attr(item)}")
+            attrs.append(attr)
+        if not attrs:
+            return s
+        attrs_fmt = " ".join(attrs)
+        if bracket:
+            attrs_fmt = f"[{attrs_fmt}]"
+        return f"{attrs_fmt} {s}"
 
     def get_type_ref_decl(self, d: "TypeRefDecl"):
         type_ref_repr = self.handle_decl(d)
@@ -81,7 +88,7 @@ class PrettyFormatter(DeclVisitor[str]):
 
     @override
     def visit_generic_type_ref_decl(self, d: "GenericTypeRefDecl") -> str:
-        args_fmt = ", ".join(map(self.get_type_ref_decl, d.args_ty_ref))
+        args_fmt = ", ".join(map(self.get_generic_arg_decl, d.args))
         return self.with_attr(d, f"{d.symbol}<{args_fmt}>")
 
     @override
@@ -110,9 +117,13 @@ class PrettyFormatter(DeclVisitor[str]):
         comment = self.as_comment(f"/* {real_decl} */")
         return f"{decl_ref_repr} {comment}"
 
+    def get_generic_arg_decl(self, d: "GenericArgDecl") -> str:
+        res = self.get_type_ref_decl(d.ty_ref)
+        return self.with_attr(d, res, bracket=True)
+
     def get_parent_decl(self, d: "IfaceParentDecl") -> str:
         res = self.get_type_ref_decl(d.ty_ref)
-        return self.with_attr(d, res)
+        return self.with_attr(d, res, bracket=True)
 
     def get_param_decl(self, d: "ParamDecl") -> str:
         res = f"{d.name}: {self.get_type_ref_decl(d.ty_ref)}"

@@ -25,6 +25,7 @@ if TYPE_CHECKING:
         DeclProtocol,
         EnumDecl,
         EnumItemDecl,
+        GenericArgDecl,
         GenericTypeRefDecl,
         GlobFuncDecl,
         IfaceDecl,
@@ -201,6 +202,9 @@ class DeclVisitor(Generic[R]):
         """The fallback method which handles the most general cases."""
         raise NotImplementedError
 
+    def visit_generic_arg_decl(self, d: "GenericArgDecl") -> R:
+        return self.visit_decl(d)
+
     def visit_param_decl(self, d: "ParamDecl") -> R:
         return self.visit_decl(d)
 
@@ -305,6 +309,12 @@ class RecursiveDeclVisitor(DeclVisitor[None]):
         pass
 
     @override
+    def visit_generic_arg_decl(self, d: "GenericArgDecl") -> None:
+        self.handle_decl(d.ty_ref)
+
+        return self.visit_decl(d)
+
+    @override
     def visit_param_decl(self, d: "ParamDecl") -> None:
         self.handle_decl(d.ty_ref)
 
@@ -326,7 +336,7 @@ class RecursiveDeclVisitor(DeclVisitor[None]):
 
     @override
     def visit_generic_type_ref_decl(self, d: "GenericTypeRefDecl") -> None:
-        for i in d.args_ty_ref:
+        for i in d.args:
             self.handle_decl(i)
 
         return self.visit_type_ref_decl(d)
