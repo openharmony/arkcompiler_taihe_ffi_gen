@@ -36,6 +36,7 @@ if TYPE_CHECKING:
         PackageDecl,
         PackageGroup,
         PackageImportDecl,
+        PackageLevelDecl,
         PackageRefDecl,
         ParamDecl,
         ShortTypeRefDecl,
@@ -244,15 +245,16 @@ class DeclVisitor(Generic[R]):
     def visit_decl_import_decl(self, d: "DeclarationImportDecl") -> R:
         return self.visit_import_decl(d)
 
-    ### Package Level Function ###
+    ### Package Level Declaration ###
+
+    def visit_package_level_decl(self, d: "PackageLevelDecl") -> R:
+        return self.visit_decl(d)
 
     def visit_glob_func_decl(self, d: "GlobFuncDecl") -> R:
-        return self.visit_decl(d)
-
-    ### Package Level Type ###
+        return self.visit_package_level_decl(d)
 
     def visit_type_decl(self, d: "TypeDecl") -> R:
-        return self.visit_decl(d)
+        return self.visit_package_level_decl(d)
 
     ### Enum ###
 
@@ -381,7 +383,11 @@ class RecursiveDeclVisitor(DeclVisitor[None]):
 
         return self.visit_import_decl(d)
 
-    ### Functions ###
+    ### Package Level Declaration ###
+
+    @override
+    def visit_package_level_decl(self, d: "PackageLevelDecl") -> None:
+        return self.visit_decl(d)
 
     @override
     def visit_glob_func_decl(self, d: "GlobFuncDecl") -> None:
@@ -391,13 +397,11 @@ class RecursiveDeclVisitor(DeclVisitor[None]):
         if d.return_ty_ref:
             self.handle_decl(d.return_ty_ref)
 
-        return self.visit_decl(d)
-
-    ### Type "Decl" ###
+        return self.visit_package_level_decl(d)
 
     @override
     def visit_type_decl(self, d: "TypeDecl") -> None:
-        return self.visit_decl(d)
+        return self.visit_package_level_decl(d)
 
     ### Enum ###
 
