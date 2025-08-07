@@ -52,10 +52,6 @@ class NapiCodeGenerator:
     def __init__(self, oc: OutputManager, am: AnalysisManager):
         self.oc = oc
         self.am = am
-        if self.am.config.napi_header:
-            self.napi_header_file = "node/node_api.h"
-        else:
-            self.napi_header_file = "napi/native_api.h"
 
     def generate(self, pg: PackageGroup):
         for pkg in pg.packages:
@@ -244,8 +240,15 @@ class NapiCodeGenerator:
             f"include/{pkg_napi_info.header}",
             FileKind.C_HEADER,
         ) as target:
-            target.add_include(self.napi_header_file)
+            target.add_include("taihe/napi_runtime.hpp")
             target.writelns(
+                f"#if __has_include(<node/node_api.h>)",
+                f"#include <node/node_api.h>",
+                f"#elif __has_include(<napi/native_api.h>)",
+                f"#include <napi/native_api.h>",
+                f"#else",
+                f'#error "Please ensure the napi is correctly installed."',
+                f"#endif",
                 f"#ifndef {pkg_napi_info.macro_name}",
                 f"#define {pkg_napi_info.macro_name}",
                 f"EXTERN_C_START",
@@ -268,7 +271,6 @@ class NapiCodeGenerator:
             f"napi_value {pkg_napi_info.init_func}(napi_env env, napi_value exports) {{",
             f"}}",
         ):
-            pkg_napi_target.add_include("taihe/napi_runtime.hpp")
             pkg_napi_target.writelns(
                 f"if (::taihe::get_env() == nullptr) {{",
                 f"    ::taihe::set_env(env);",
@@ -381,7 +383,7 @@ class NapiCodeGenerator:
             f"include/{struct_napi_info.decl_header}",
             FileKind.C_HEADER,
         ) as struct_napi_decl_target:
-            struct_napi_decl_target.add_include(self.napi_header_file)
+            struct_napi_decl_target.add_include("taihe/napi_runtime.hpp")
             struct_napi_decl_target.add_include(struct_cpp_info.defn_header)
             struct_napi_decl_target.writelns(
                 f"{struct_cpp_info.as_owner} {struct_napi_info.from_napi_func_name}(napi_env env, napi_value napi_obj);",
@@ -646,7 +648,7 @@ class NapiCodeGenerator:
             f"include/{iface_napi_info.decl_header}",
             FileKind.C_HEADER,
         ) as iface_napi_decl_target:
-            iface_napi_decl_target.add_include(self.napi_header_file)
+            iface_napi_decl_target.add_include("taihe/napi_runtime.hpp")
             iface_napi_decl_target.add_include(iface_cpp_info.defn_header)
             iface_napi_decl_target.writelns(
                 f"napi_value {iface_napi_info.constructor_func_name}(napi_env env, napi_callback_info info);",
@@ -996,7 +998,7 @@ class NapiCodeGenerator:
             f"include/{iface_napi_info.meth_decl_header}",
             FileKind.C_HEADER,
         ) as iface_meth_napi_decl_target:
-            iface_meth_napi_decl_target.add_include(self.napi_header_file)
+            iface_meth_napi_decl_target.add_include("taihe/napi_runtime.hpp")
             iface_meth_napi_decl_target.add_include(iface_cpp_info.defn_header)
             for methods, ancestor, props_strs in iface_napi_info.iface_register_infos:
                 if props_strs[2] != "nullptr":

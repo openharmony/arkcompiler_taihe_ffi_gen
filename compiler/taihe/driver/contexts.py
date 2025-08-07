@@ -71,9 +71,6 @@ class CompilerConfig:
     arkts_module_prefix: str | None = None
     arkts_path_prefix: str | None = None
 
-    # TODO: two kind of napi header file
-    napi_header: bool = False
-
     @classmethod
     def construct(cls, configure: dict[str, str | None]) -> Self:
         res = cls()
@@ -84,8 +81,6 @@ class CompilerConfig:
                 res.arkts_module_prefix = v
             elif k == "arkts:path-prefix":
                 res.arkts_path_prefix = v
-            elif k == "ts:napi-header":
-                res.napi_header = True
             else:
                 raise ValueError(f"unknown codegen config {k!r}")
         return res
