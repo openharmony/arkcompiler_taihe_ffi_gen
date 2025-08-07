@@ -779,12 +779,12 @@ class NapiCodeGenerator:
                 )
 
             iface_napi_impl_target.writelns(
-                f"napi_value org_napi_obj;"
-                f"napi_get_reference_value(env, ref, &org_napi_obj);"
-                f"napi_value {method.name}_ts_method;"
-                f'napi_get_named_property(env, org_napi_obj, "{method.name}", &{method.name}_ts_method);'
-                f"napi_value method_result_napi;"
-                f"napi_call_function(env, org_napi_obj, {method.name}_ts_method, {len(method.params)}, {args_inner}, &method_result_napi);"
+                f"napi_value org_napi_obj;",
+                f"napi_get_reference_value(env, ref, &org_napi_obj);",
+                f"napi_value {method.name}_ts_method;",
+                f'napi_get_named_property(env, org_napi_obj, "{method.name}", &{method.name}_ts_method);',
+                f"napi_value method_result_napi;",
+                f"napi_call_function(env, org_napi_obj, {method.name}_ts_method, {len(method.params)}, {args_inner}, &method_result_napi);",
             )
             if method.return_ty_ref:
                 return_napi_type_info = TypeNapiInfo.get(
@@ -827,7 +827,9 @@ class NapiCodeGenerator:
                 f"napi_get_reference_value(env, {iface_napi_info.ctor_ref_name}_inner(), &constructor);",
                 f"napi_new_instance(env, constructor, 2, argv, &napi_obj);",
             )
-            iface_napi_impl_target.writelns(f"return napi_obj;")
+            iface_napi_impl_target.writelns(
+                f"return napi_obj;",
+            )
 
     def gen_iface_ctor_func(
         self,
