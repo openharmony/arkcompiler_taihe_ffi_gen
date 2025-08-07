@@ -28,7 +28,7 @@ NAPI 代码生成及验证：
     - [x] arraybuffer
     - [x] typedarray
     - [x] import
-    - [ ] Opaque
+    - [x] Opaque
     - [ ] inject
     - [ ] on_off
 
@@ -46,3 +46,4 @@ xml 例子编译运行成功
 
 暂时有办法待优化的点：
 1. tryit 里为了实现对每个 .d.ts 文件生成一个 .node 文件进行了遍历，这是否合适 
+2. napi_get_and_clear_last_exception 返回的 exception maybe is napi_undefined

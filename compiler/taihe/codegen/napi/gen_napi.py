@@ -36,7 +36,14 @@ from taihe.semantics.declarations import (
     StructDecl,
     UnionDecl,
 )
-from taihe.semantics.types import ArrayType, MapType, ScalarType, StringType, Type
+from taihe.semantics.types import (
+    ArrayType,
+    MapType,
+    OpaqueType,
+    ScalarType,
+    StringType,
+    Type,
+)
 from taihe.utils.analyses import AnalysisManager
 from taihe.utils.outputs import FileKind, OutputManager
 
@@ -261,6 +268,12 @@ class NapiCodeGenerator:
             f"napi_value {pkg_napi_info.init_func}(napi_env env, napi_value exports) {{",
             f"}}",
         ):
+            pkg_napi_target.add_include("taihe/napi_runtime.hpp")
+            pkg_napi_target.writelns(
+                f"if (::taihe::get_env() == nullptr) {{",
+                f"    ::taihe::set_env(env);",
+                f"}}",
+            )
             for iface in pkg.interfaces:
                 self.gen_iface_register(iface, pkg_napi_target)
             for struct in pkg.structs:
@@ -1206,7 +1219,7 @@ class NapiCodeGenerator:
                 final_napi_info = UnionFieldNapiInfo.get(self.am, final)
                 if isinstance(final_ty := final_napi_info.field_ty, Type):
                     type_napi_info = TypeNapiInfo.get(self.am, final_ty)
-                    if isinstance(final_ty, ScalarType | StringType):
+                    if isinstance(final_ty, ScalarType | StringType | OpaqueType):
                         with union_napi_impl_target.indented(
                             f"if (value_ty == {type_napi_info.napi_type_name}) {{",
                             f"}}",

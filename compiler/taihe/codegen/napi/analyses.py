@@ -46,6 +46,7 @@ from taihe.semantics.types import (
     EnumType,
     IfaceType,
     MapType,
+    OpaqueType,
     OptionalType,
     ScalarKind,
     ScalarType,
@@ -1418,6 +1419,42 @@ class UnionTypeNapiInfo(TypeNapiInfo):
         )
 
 
+class OpaqueTypeNapiInfo(TypeNapiInfo):
+    def __init__(self, am: AnalysisManager, t: OpaqueType) -> None:
+        super().__init__(am, t)
+        self.am = am
+        self.type = t
+        self.napi_type_name = "napi_object"
+
+    @override
+    def dts_type_in(self, target: DtsWriter) -> str:
+        return "Object"
+
+    @override
+    def dts_return_type_in(self, target: DtsWriter) -> str:
+        return self.dts_type_in(target)
+
+    def from_napi(
+        self,
+        target: CSourceWriter,
+        napi_value: str,
+        cpp_result: str,
+    ):
+        target.writelns(
+            f"{self.cpp_info.as_owner} {cpp_result} = ({self.cpp_info.as_owner}){napi_value};",
+        )
+
+    def into_napi(
+        self,
+        target: CSourceWriter,
+        cpp_value: str,
+        napi_result: str,
+    ):
+        target.writelns(
+            f"napi_value {napi_result} = (napi_value){cpp_value};",
+        )
+
+
 class ConstEnumTypeNapiInfo(TypeNapiInfo):
     def __init__(self, am: AnalysisManager, t: EnumType, const_attr: ConstAttr):
         super().__init__(am, t)
@@ -1568,3 +1605,7 @@ class TypeNapiInfoDispatcher(TypeVisitor[TypeNapiInfo]):
     @override
     def visit_union_type(self, t: UnionType) -> TypeNapiInfo:
         return UnionTypeNapiInfo(self.am, t)
+
+    @override
+    def visit_opaque_type(self, t: OpaqueType) -> TypeNapiInfo:
+        return OpaqueTypeNapiInfo(self.am, t)
