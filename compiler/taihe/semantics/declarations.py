@@ -678,7 +678,7 @@ class StructFieldDecl(NamedDeclWithParent["StructDecl"]):
         self.ty_ref.resolved_ty = ty
 
 
-class IfaceParentDecl(DeclWithParent["IfaceDecl"]):
+class IfaceExtendDecl(DeclWithParent["IfaceDecl"]):
     ty_ref: ExplicitTypeRefDecl
 
     def __init__(
@@ -702,7 +702,7 @@ class IfaceParentDecl(DeclWithParent["IfaceDecl"]):
 
     @override
     def _accept(self, v: "DeclVisitor[R]") -> R:
-        return v.visit_iface_parent_decl(self)
+        return v.visit_iface_extend_decl(self)
 
     @property
     def ty_resolved(self) -> IfaceType | None:
@@ -967,12 +967,12 @@ class StructDecl(TypeDecl):
 
 
 class IfaceDecl(TypeDecl):
-    _parent_list: list[IfaceParentDecl]
+    _extend_list: list[IfaceExtendDecl]
     _method_dict: dict[str, IfaceMethodDecl]
 
     def __init__(self, loc: SourceLocation | None, name: str):
         super().__init__(loc, name)
-        self._parent_list = []
+        self._extend_list = []
         self._method_dict = {}
 
     @property
@@ -981,15 +981,15 @@ class IfaceDecl(TypeDecl):
         return f"interface {self.name}"
 
     @property
-    def parents(self) -> Collection[IfaceParentDecl]:
-        return self._parent_list
+    def extends(self) -> Collection[IfaceExtendDecl]:
+        return self._extend_list
 
     @property
     def methods(self) -> Collection[IfaceMethodDecl]:
         return self._method_dict.values()
 
-    def add_parent(self, p: IfaceParentDecl):
-        self._parent_list.append(p)
+    def add_extend(self, p: IfaceExtendDecl):
+        self._extend_list.append(p)
         p.set_parent(self)
 
     def add_method(self, f: IfaceMethodDecl):

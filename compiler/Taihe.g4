@@ -38,7 +38,7 @@ specField
       LEFT_BRACE (UnionFieldLst_fields += unionField | ScopeAttrLst_inner_attrs += scopeAttr)* RIGHT_BRACE # union
     | (DeclAttrLst_forward_attrs += declAttr)*
       KW_INTERFACE IdName_name = idName
-      (COLON InterfaceParentLst_extends += interfaceParent (COMMA InterfaceParentLst_extends += interfaceParent)* COMMA?)?
+      (COLON InterfaceExtendLst_extends += interfaceExtend (COMMA InterfaceExtendLst_extends += interfaceExtend)* COMMA?)?
       LEFT_BRACE (InterfaceFieldLst_fields += interfaceField | ScopeAttrLst_inner_attrs += scopeAttr)* RIGHT_BRACE # interface
     | (DeclAttrLst_forward_attrs += declAttr)*
       KW_FUNCTION IdName_name = idName
@@ -68,7 +68,7 @@ interfaceField
       LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)* COMMA?)? RIGHT_PARENTHESIS (COLON TypeOpt_return_ty = type)? SEMICOLON # interfaceFunction
     ;
 
-interfaceParent
+interfaceExtend
     : (LEFT_BRACKET (DeclAttrLst_forward_attrs += declAttr)+ RIGHT_BRACKET)?
       Type_ty = type
     ;

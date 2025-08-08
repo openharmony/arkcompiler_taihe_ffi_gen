@@ -55,8 +55,8 @@ from taihe.semantics.declarations import (
     EnumDecl,
     GlobFuncDecl,
     IfaceDecl,
+    IfaceExtendDecl,
     IfaceMethodDecl,
-    IfaceParentDecl,
     PackageDecl,
     PackageGroup,
     ParamDecl,
@@ -851,18 +851,18 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
             self.class_injected_codes.append(class_injected.sts_code)
 
         self.sts_fields: list[StructFieldDecl] = []
-        self.sts_iface_parents: list[StructFieldDecl] = []
-        self.sts_class_parents: list[StructFieldDecl] = []
+        self.sts_iface_extends: list[StructFieldDecl] = []
+        self.sts_class_extends: list[StructFieldDecl] = []
         self.sts_all_fields: list[list[StructFieldDecl]] = []
         for field in d.fields:
-            if parent := ExtendsAttr.get(field):
-                parent_ani_info = StructAniInfo.get(am, parent.ty.ty_decl)
-                if parent_ani_info.is_class():
-                    self.sts_class_parents.append(field)
+            if extend := ExtendsAttr.get(field):
+                extend_ani_info = StructAniInfo.get(am, extend.ty.ty_decl)
+                if extend_ani_info.is_class():
+                    self.sts_class_extends.append(field)
                 else:
-                    self.sts_iface_parents.append(field)
+                    self.sts_iface_extends.append(field)
                 self.sts_all_fields.extend(
-                    [field, *parts] for parts in parent_ani_info.sts_all_fields
+                    [field, *parts] for parts in extend_ani_info.sts_all_fields
                 )
             else:
                 self.sts_fields.append(field)
@@ -903,14 +903,14 @@ class IfaceAniInfo(AbstractAnalysis[IfaceDecl]):
         for class_injected in StsInjectIntoClazzAttr.get(d):
             self.class_injected_codes.append(class_injected.sts_code)
 
-        self.sts_class_parents: list[IfaceParentDecl] = []
-        self.sts_iface_parents: list[IfaceParentDecl] = []
-        for parent in d.parents:
-            parent_ani_info = IfaceAniInfo.get(am, parent.ty.ty_decl)
-            if parent_ani_info.is_class():
-                self.sts_class_parents.append(parent)
+        self.sts_class_extends: list[IfaceExtendDecl] = []
+        self.sts_iface_extends: list[IfaceExtendDecl] = []
+        for extend in d.extends:
+            extend_ani_info = IfaceAniInfo.get(am, extend.ty.ty_decl)
+            if extend_ani_info.is_class():
+                self.sts_class_extends.append(extend)
             else:
-                self.sts_iface_parents.append(parent)
+                self.sts_iface_extends.append(extend)
 
         self.is_default = ExportDefaultAttr.get(d) is not None
 

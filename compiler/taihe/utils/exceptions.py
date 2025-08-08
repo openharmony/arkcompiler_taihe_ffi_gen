@@ -17,7 +17,7 @@ if TYPE_CHECKING:
         EnumDecl,
         EnumItemDecl,
         IfaceDecl,
-        IfaceParentDecl,
+        IfaceExtendDecl,
         NamedDecl,
         PackageDecl,
         PackageLevelDecl,
@@ -374,9 +374,9 @@ class EnumValueError(DiagError):
 
 @dataclass
 class DuplicateExtendsNote(DiagNote):
-    prev: "IfaceParentDecl"
+    prev: "IfaceExtendDecl"
 
-    def __init__(self, prev: "IfaceParentDecl"):
+    def __init__(self, prev: "IfaceExtendDecl"):
         super().__init__(loc=prev.loc)
         self.prev = prev
 
@@ -387,27 +387,27 @@ class DuplicateExtendsNote(DiagNote):
 
 @dataclass
 class DuplicateExtendsWarn(DiagWarn):
-    prev: "IfaceParentDecl"
-    current: "IfaceParentDecl"
+    prev: "IfaceExtendDecl"
+    current: "IfaceExtendDecl"
     iface: "IfaceDecl"
-    parent_iface: "IfaceDecl"
+    extend_iface: "IfaceDecl"
 
     def __init__(
         self,
-        prev: "IfaceParentDecl",
-        current: "IfaceParentDecl",
+        prev: "IfaceExtendDecl",
+        current: "IfaceExtendDecl",
         iface: "IfaceDecl",
-        parent_iface: "IfaceDecl",
+        extend_iface: "IfaceDecl",
     ):
         super().__init__(loc=current.loc)
         self.prev = prev
         self.current = current
         self.iface = iface
-        self.parent_iface = parent_iface
+        self.extend_iface = extend_iface
 
     @override
     def describe(self) -> str:
-        return f"{self.parent_iface.description} is extended multiple times by {self.iface.description}"
+        return f"{self.extend_iface.description} is extended multiple times by {self.iface.description}"
 
     @override
     def notes(self):

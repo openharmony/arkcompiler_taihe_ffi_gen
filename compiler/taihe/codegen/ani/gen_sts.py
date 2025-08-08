@@ -336,13 +336,13 @@ class StsCodeGenerator:
             return
 
         sts_decl = f"interface {struct_ani_info.sts_type_name}"
-        if struct_ani_info.sts_iface_parents:
-            parents = []
-            for parent in struct_ani_info.sts_iface_parents:
-                parent_ty = parent.ty
-                parent_ani_info = TypeAniInfo.get(self.am, parent_ty)
-                parents.append(parent_ani_info.sts_type_in(target))
-            extends_str = ", ".join(parents) if parents else ""
+        if struct_ani_info.sts_iface_extends:
+            extends = []
+            for extend in struct_ani_info.sts_iface_extends:
+                extend_ty = extend.ty
+                extend_ani_info = TypeAniInfo.get(self.am, extend_ty)
+                extends.append(extend_ani_info.sts_type_in(target))
+            extends_str = ", ".join(extends) if extends else ""
             sts_decl = f"{sts_decl} extends {extends_str}"
         if struct_ani_info.is_default:
             sts_decl = f"export default {sts_decl}"
@@ -374,13 +374,13 @@ class StsCodeGenerator:
 
         sts_decl = f"class {struct_ani_info.sts_impl_name}"
         if struct_ani_info.is_class():
-            if struct_ani_info.sts_iface_parents:
-                parents = []
-                for parent in struct_ani_info.sts_iface_parents:
-                    parent_ty = parent.ty
-                    parent_ani_info = TypeAniInfo.get(self.am, parent_ty)
-                    parents.append(parent_ani_info.sts_type_in(target))
-                implements_str = ", ".join(parents) if parents else ""
+            if struct_ani_info.sts_iface_extends:
+                extends = []
+                for extend in struct_ani_info.sts_iface_extends:
+                    extend_ty = extend.ty
+                    extend_ani_info = TypeAniInfo.get(self.am, extend_ty)
+                    extends.append(extend_ani_info.sts_type_in(target))
+                implements_str = ", ".join(extends) if extends else ""
                 sts_decl = f"{sts_decl} implements {implements_str}"
             if struct_ani_info.is_default:
                 sts_decl = f"export default {sts_decl}"
@@ -438,13 +438,13 @@ class StsCodeGenerator:
             return
 
         sts_decl = f"interface {iface_ani_info.sts_type_name}"
-        if iface_ani_info.sts_iface_parents:
-            parents = []
-            for parent in iface_ani_info.sts_iface_parents:
-                parent_ty = parent.ty
-                parent_ani_info = TypeAniInfo.get(self.am, parent_ty)
-                parents.append(parent_ani_info.sts_type_in(target))
-            extends_str = ", ".join(parents) if parents else ""
+        if iface_ani_info.sts_iface_extends:
+            extends = []
+            for extend in iface_ani_info.sts_iface_extends:
+                extend_ty = extend.ty
+                extend_ani_info = TypeAniInfo.get(self.am, extend_ty)
+                extends.append(extend_ani_info.sts_type_in(target))
+            extends_str = ", ".join(extends) if extends else ""
             sts_decl = f"{sts_decl} extends {extends_str}"
         if iface_ani_info.is_default:
             sts_decl = f"export default {sts_decl}"
@@ -490,13 +490,13 @@ class StsCodeGenerator:
 
         sts_decl = f"class {iface_ani_info.sts_impl_name}"
         if iface_ani_info.is_class():
-            if iface_ani_info.sts_iface_parents:
-                parents = []
-                for parent in iface_ani_info.sts_iface_parents:
-                    parent_ty = parent.ty
-                    parent_ani_info = TypeAniInfo.get(self.am, parent_ty)
-                    parents.append(parent_ani_info.sts_type_in(target))
-                implements_str = ", ".join(parents) if parents else ""
+            if iface_ani_info.sts_iface_extends:
+                extends = []
+                for extend in iface_ani_info.sts_iface_extends:
+                    extend_ty = extend.ty
+                    extend_ani_info = TypeAniInfo.get(self.am, extend_ty)
+                    extends.append(extend_ani_info.sts_type_in(target))
+                implements_str = ", ".join(extends) if extends else ""
                 sts_decl = f"{sts_decl} implements {implements_str}"
             if iface_ani_info.is_default:
                 sts_decl = f"export default {sts_decl}"

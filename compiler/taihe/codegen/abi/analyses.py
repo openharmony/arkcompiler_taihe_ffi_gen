@@ -140,7 +140,7 @@ class IfaceAbiInfo(AbstractAnalysis[IfaceDecl]):
         self.ancestor_list: list[AncestorListItemInfo] = []
         self.ancestor_dict: dict[IfaceDecl, AncestorDictItemInfo] = {}
         self.ancestors = [d]
-        for extend in d.parents:
+        for extend in d.extends:
             extend_abi_info = IfaceAbiInfo.get(am, extend.ty.ty_decl)
             self.ancestors.extend(extend_abi_info.ancestors)
         for i, ancestor in enumerate(self.ancestors):

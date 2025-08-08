@@ -15,8 +15,8 @@ from taihe.semantics.declarations import (
     GenericTypeRefDecl,
     GlobFuncDecl,
     IfaceDecl,
+    IfaceExtendDecl,
     IfaceMethodDecl,
-    IfaceParentDecl,
     LongTypeRefDecl,
     PackageDecl,
     PackageGroup,
@@ -238,8 +238,8 @@ class _ResolveTypePass(RecursiveDeclVisitor):
         d.resolve_ty(self.resolve_type(d.ty_ref, NonVoidType))
 
     @override
-    def visit_iface_parent_decl(self, d: IfaceParentDecl) -> None:
-        super().visit_iface_parent_decl(d)
+    def visit_iface_extend_decl(self, d: IfaceExtendDecl) -> None:
+        super().visit_iface_extend_decl(d)
         d.resolve_ty(self.resolve_type(d.ty_ref, IfaceType))
 
     @override
@@ -473,16 +473,16 @@ class _CheckRecursiveInclusionPass(RecursiveDeclVisitor):
         self.type_table[d] = []
 
     def visit_iface_decl(self, d: IfaceDecl) -> None:
-        parent_iface_list = self.type_table.setdefault(d, [])
-        parent_iface_dict: dict[IfaceDecl, IfaceParentDecl] = {}
-        for parent in d.parents:
-            if (parent_ty := parent.ty_resolved) is None:
+        extend_iface_list = self.type_table.setdefault(d, [])
+        extend_iface_dict: dict[IfaceDecl, IfaceExtendDecl] = {}
+        for extend in d.extends:
+            if (extend_ty := extend.ty_resolved) is None:
                 continue
-            parent_iface = parent_ty.ty_decl
-            parent_iface_list.append(((d, parent.ty_ref), parent_iface))
-            prev = parent_iface_dict.setdefault(parent_iface, parent)
-            if prev != parent:
-                self.dm.emit(DuplicateExtendsWarn(prev, parent, d, parent_iface))
+            extend_iface = extend_ty.ty_decl
+            extend_iface_list.append(((d, extend.ty_ref), extend_iface))
+            prev = extend_iface_dict.setdefault(extend_iface, extend)
+            if prev != extend:
+                self.dm.emit(DuplicateExtendsWarn(prev, extend, d, extend_iface))
 
     def visit_struct_decl(self, d: StructDecl) -> None:
         type_list = self.type_table.setdefault(d, [])

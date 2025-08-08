@@ -30,8 +30,8 @@ if TYPE_CHECKING:
         GenericTypeRefDecl,
         GlobFuncDecl,
         IfaceDecl,
+        IfaceExtendDecl,
         IfaceMethodDecl,
-        IfaceParentDecl,
         ImplicitTypeRefDecl,
         ImportDecl,
         LongTypeRefDecl,
@@ -291,7 +291,7 @@ class DeclVisitor(Generic[R]):
 
     ### Interface ###
 
-    def visit_iface_parent_decl(self, d: "IfaceParentDecl") -> R:
+    def visit_iface_extend_decl(self, d: "IfaceExtendDecl") -> R:
         return self.visit_decl(d)
 
     def visit_iface_func_decl(self, d: "IfaceMethodDecl") -> R:
@@ -469,7 +469,7 @@ class RecursiveDeclVisitor(DeclVisitor[None]):
     ### Interface ###
 
     @override
-    def visit_iface_parent_decl(self, d: "IfaceParentDecl") -> None:
+    def visit_iface_extend_decl(self, d: "IfaceExtendDecl") -> None:
         self.handle_decl(d.ty_ref)
 
         return self.visit_decl(d)
@@ -486,7 +486,7 @@ class RecursiveDeclVisitor(DeclVisitor[None]):
 
     @override
     def visit_iface_decl(self, d: "IfaceDecl") -> None:
-        for i in d.parents:
+        for i in d.extends:
             self.handle_decl(i)
 
         for i in d.methods:

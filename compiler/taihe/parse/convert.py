@@ -20,8 +20,8 @@ from taihe.semantics.declarations import (
     GenericTypeRefDecl,
     GlobFuncDecl,
     IfaceDecl,
+    IfaceExtendDecl,
     IfaceMethodDecl,
-    IfaceParentDecl,
     LongTypeRefDecl,
     PackageDecl,
     PackageImportDecl,
@@ -425,8 +425,8 @@ class AstConverter(ExprEvaluator):
         return d
 
     @override
-    def visit_interface_parent(self, node: ast.InterfaceParent) -> IfaceParentDecl:
-        d = IfaceParentDecl(node.ty.loc, self.visit(node.ty))
+    def visit_interface_extend(self, node: ast.InterfaceExtend) -> IfaceExtendDecl:
+        d = IfaceExtendDecl(node.ty.loc, self.visit(node.ty))
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
         return d
 
@@ -434,7 +434,7 @@ class AstConverter(ExprEvaluator):
     def visit_interface(self, node: ast.Interface) -> IfaceDecl:
         d = IfaceDecl(node.name.loc, id2str(node.name))
         self.dm.for_each(node.fields, lambda f: d.add_method(self.visit(f)))
-        self.dm.for_each(node.extends, lambda i: d.add_parent(self.visit(i)))
+        self.dm.for_each(node.extends, lambda i: d.add_extend(self.visit(i)))
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
         self.dm.for_each(node.inner_attrs, lambda a: self.add_attr(d, a))
         return d

@@ -24,8 +24,8 @@ if TYPE_CHECKING:
         GenericTypeRefDecl,
         GlobFuncDecl,
         IfaceDecl,
+        IfaceExtendDecl,
         IfaceMethodDecl,
-        IfaceParentDecl,
         LongTypeRefDecl,
         PackageDecl,
         PackageGroup,
@@ -126,7 +126,7 @@ class PrettyFormatter(DeclVisitor[str]):
         res = d.ty_ref.format(self)
         return self.with_attr(d, res, bracket=True)
 
-    def get_parent_decl(self, d: "IfaceParentDecl") -> str:
+    def get_extend_decl(self, d: "IfaceExtendDecl") -> str:
         res = d.ty_ref.format(self)
         return self.with_attr(d, res, bracket=True)
 
@@ -317,8 +317,8 @@ class PrettyPrinter(DeclVisitor[None]):
         iface_kw = self.fmt.as_keyword("interface")
 
         full_decl = (
-            f"{d.name}: " + ", ".join(map(self.fmt.get_parent_decl, d.parents))
-            if d.parents
+            f"{d.name}: " + ", ".join(map(self.fmt.get_extend_decl, d.extends))
+            if d.extends
             else d.name
         )
         prologue = f"{iface_kw} {full_decl} {{"
