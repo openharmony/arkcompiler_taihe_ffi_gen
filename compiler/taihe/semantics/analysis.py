@@ -306,59 +306,59 @@ class _CheckEnumTypePass(RecursiveDeclVisitor):
         def is_int(val: Any) -> TypeGuard[int]:
             return not isinstance(val, bool) and isinstance(val, int)
 
-        valid: Callable[[Any], bool]
-        increment: Callable[[Any, EnumItemDecl], Any]
         default: Callable[[EnumItemDecl], Any]
+        deduce: Callable[[Any, EnumItemDecl], Any]
+        is_valid: Callable[[Any], bool]
 
         match d.ty_ref.resolved_ty:
             case ScalarType(_, ScalarKind.I8):
-                valid = lambda val: is_int(val) and -(2**7) <= val < 2**7
-                increment = lambda prev, item: prev + 1
                 default = lambda item: 0
+                deduce = lambda prev, item: prev + 1 if prev + 1 < 2**7 else -(2**7)
+                is_valid = lambda val: is_int(val) and -(2**7) <= val < 2**7
             case ScalarType(_, ScalarKind.I16):
-                valid = lambda val: is_int(val) and -(2**15) <= val < 2**15
-                increment = lambda prev, item: prev + 1
                 default = lambda item: 0
+                deduce = lambda prev, item: prev + 1 if prev + 1 < 2**15 else -(2**15)
+                is_valid = lambda val: is_int(val) and -(2**15) <= val < 2**15
             case ScalarType(_, ScalarKind.I32):
-                valid = lambda val: is_int(val) and -(2**31) <= val < 2**31
-                increment = lambda prev, item: prev + 1
                 default = lambda item: 0
+                deduce = lambda prev, item: prev + 1 if prev + 1 < 2**31 else -(2**31)
+                is_valid = lambda val: is_int(val) and -(2**31) <= val < 2**31
             case ScalarType(_, ScalarKind.I64):
-                valid = lambda val: is_int(val) and -(2**63) <= val < 2**63
-                increment = lambda prev, item: prev + 1
                 default = lambda item: 0
+                deduce = lambda prev, item: prev + 1 if prev + 1 < 2**63 else -(2**63)
+                is_valid = lambda val: is_int(val) and -(2**63) <= val < 2**63
             case ScalarType(_, ScalarKind.U8):
-                valid = lambda val: is_int(val) and 0 <= val < 2**8
-                increment = lambda prev, item: prev + 1
                 default = lambda item: 0
+                deduce = lambda prev, item: prev + 1 if prev + 1 < 2**8 else 0
+                is_valid = lambda val: is_int(val) and 0 <= val < 2**8
             case ScalarType(_, ScalarKind.U16):
-                valid = lambda val: is_int(val) and 0 <= val < 2**16
-                increment = lambda prev, item: prev + 1
                 default = lambda item: 0
+                deduce = lambda prev, item: prev + 1 if prev + 1 < 2**16 else 0
+                is_valid = lambda val: is_int(val) and 0 <= val < 2**16
             case ScalarType(_, ScalarKind.U32):
-                valid = lambda val: is_int(val) and 0 <= val < 2**32
-                increment = lambda prev, item: prev + 1
                 default = lambda item: 0
+                deduce = lambda prev, item: prev + 1 if prev + 1 < 2**32 else 0
+                is_valid = lambda val: is_int(val) and 0 <= val < 2**32
             case ScalarType(_, ScalarKind.U64):
-                valid = lambda val: is_int(val) and 0 <= val < 2**64
-                increment = lambda prev, item: prev + 1
                 default = lambda item: 0
+                deduce = lambda prev, item: prev + 1 if prev + 1 < 2**64 else 0
+                is_valid = lambda val: is_int(val) and 0 <= val < 2**64
             case ScalarType(_, ScalarKind.BOOL):
-                valid = lambda val: isinstance(val, bool)
-                increment = lambda prev, item: False
                 default = lambda item: False
+                deduce = lambda prev, item: False
+                is_valid = lambda val: isinstance(val, bool)
             case ScalarType(_, ScalarKind.F32):
-                valid = lambda val: isinstance(val, float)
-                increment = lambda prev, item: 0.0
                 default = lambda item: 0.0
+                deduce = lambda prev, item: 0.0
+                is_valid = lambda val: isinstance(val, float)
             case ScalarType(_, ScalarKind.F64):
-                valid = lambda val: isinstance(val, float)
-                increment = lambda prev, item: 0.0
                 default = lambda item: 0.0
+                deduce = lambda prev, item: 0.0
+                is_valid = lambda val: isinstance(val, float)
             case StringType():
-                valid = lambda val: isinstance(val, str)
-                increment = lambda prev, item: item.name
                 default = lambda item: item.name
+                deduce = lambda prev, item: item.name
+                is_valid = lambda val: isinstance(val, str)
             case _:
                 self.dm.emit(TypeUsageError(d.ty_ref))
                 return
@@ -366,12 +366,11 @@ class _CheckEnumTypePass(RecursiveDeclVisitor):
         prev = None
         for item in d.items:
             if item.value is None:
-                item.value = default(item) if prev is None else increment(prev, item)
-            if not valid(item.value):
+                item.value = default(item) if prev is None else deduce(prev, item)
+            elif not is_valid(item.value):
                 self.dm.emit(EnumValueError(item, d))
-                prev = None
-            else:
-                prev = item.value
+                item.value = default(item)
+            prev = item.value
 
 
 class _CheckRecursiveInclusionPass(RecursiveDeclVisitor):
