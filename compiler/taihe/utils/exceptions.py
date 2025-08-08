@@ -348,9 +348,9 @@ class SymbolConflictWithNamespaceError(DiagError):
 class TypeUsageError(DiagError):
     ty: "Type"
 
-    def __init__(self, ty_ref: "TypeRefDecl"):
+    def __init__(self, ty_ref: "TypeRefDecl", ty: "Type"):
         super().__init__(loc=ty_ref.loc)
-        self.ty = ty_ref.resolved_ty
+        self.ty = ty
 
     @override
     def describe(self) -> str:
@@ -369,7 +369,7 @@ class EnumValueError(DiagError):
 
     @override
     def describe(self) -> str:
-        return f"value of {self.item.description} ({self.item.value}) is conflict with {self.enum.description} ({self.enum.ty_ref.resolved_ty.signature})"
+        return f"value of {self.item.description} ({self.item.value}) is conflict with {self.enum.description} ({self.enum.ty.signature})"
 
 
 @dataclass

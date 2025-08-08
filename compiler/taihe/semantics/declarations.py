@@ -7,16 +7,27 @@ from typing import TYPE_CHECKING, Generic, Protocol, TypeVar, cast
 from typing_extensions import override
 
 from taihe.semantics.format import PrettyFormatter
-from taihe.semantics.types import EnumType, IfaceType, StructType, UnionType, UserType
+from taihe.semantics.types import (
+    EnumType,
+    IfaceType,
+    NonVoidType,
+    ScalarType,
+    StringType,
+    StructType,
+    Type,
+    UnionType,
+    UserType,
+)
 from taihe.utils.exceptions import DeclRedefError
 from taihe.utils.sources import SourceLocation
 
 if TYPE_CHECKING:
     from taihe.semantics.attributes import AnyAttribute
-    from taihe.semantics.types import Type
     from taihe.semantics.visitor import DeclVisitor
 
+
 R = TypeVar("R")
+
 
 ################
 # Declarations #
@@ -137,7 +148,10 @@ class TypeRefDecl(DeclWithParent[Decl], ABC):
     ```
     """
 
-    maybe_resolved_ty: "Type | None" = None
+    is_resolved: bool = False
+    """Whether this type reference is resolved."""
+
+    resolved_ty: Type | None = None
     """The resolved type, if any.
 
     This field is `None` only if the type is not resolved yet.
@@ -152,36 +166,62 @@ class TypeRefDecl(DeclWithParent[Decl], ABC):
     @property
     @override
     def description(self) -> str:
-        return f"type reference {self.text}"
+        if (fmt := self.format(PrettyFormatter())) is not None:
+            return f"type reference ({fmt})"
+        return "implicit type reference"
 
-    @property
-    def resolved_ty(self) -> "Type":
-        """Return the resolved type of this type reference.
-
-        This method should only be called when the type is resolved.
-
-        Raises:
-            AssertionError: If the type is not resolved.
-        """
-        assert self.maybe_resolved_ty
-        return self.maybe_resolved_ty
-
-    @property
-    def text(self) -> str:
-        return PrettyFormatter().get_type_ref_decl(self)
+    @abstractmethod
+    def format(self, fmt: PrettyFormatter) -> str | None:
+        pass
 
 
-class GenericArgDecl(DeclWithParent["GenericTypeRefDecl"]):
-    ty_ref: TypeRefDecl
+class ImplicitTypeRefDecl(TypeRefDecl):
+    """A special type reference that represents an implicit type.
+
+    This type reference is used when the type is not explicitly specified.
+    """
 
     def __init__(
         self,
         loc: SourceLocation | None,
-        ty_ref: TypeRefDecl,
+    ):
+        super().__init__(loc)
+
+    def format(self, fmt: PrettyFormatter) -> None:
+        return None
+
+    @override
+    def _accept(self, v: "DeclVisitor[R]") -> R:
+        return v.visit_implicit_type_ref_decl(self)
+
+
+class ExplicitTypeRefDecl(TypeRefDecl):
+    """Represents an explicit type reference.
+
+    This type reference is used when the type is explicitly specified.
+    """
+
+    def __init__(
+        self,
+        loc: SourceLocation | None,
+    ):
+        super().__init__(loc)
+
+    def format(self, fmt: PrettyFormatter) -> str:
+        return fmt.get_type_ref_decl(self)
+
+
+class GenericArgDecl(DeclWithParent["GenericTypeRefDecl"]):
+    ty_ref: ExplicitTypeRefDecl
+
+    def __init__(
+        self,
+        loc: SourceLocation | None,
+        ty_ref: ExplicitTypeRefDecl,
     ):
         super().__init__(loc)
         self.ty_ref = ty_ref
-        ty_ref.set_parent(self)
+        self.ty_ref.set_parent(self)
 
     @property
     @override
@@ -192,19 +232,35 @@ class GenericArgDecl(DeclWithParent["GenericTypeRefDecl"]):
     def _accept(self, v: "DeclVisitor[R]") -> R:
         return v.visit_generic_arg_decl(self)
 
+    @property
+    def ty_resolved(self) -> Type | None:
+        assert self.ty_ref.is_resolved, "Type reference is not resolved yet"
+        return cast(Type | None, self.ty_ref.resolved_ty)  # type: ignore
+
+    @property
+    def ty(self) -> Type:
+        res = self.ty_resolved
+        assert res, "Type resolve failed"
+        return res
+
+    def resolve_ty(self, ty: Type | None):
+        assert not self.ty_ref.is_resolved, "Type reference is already resolved"
+        self.ty_ref.is_resolved = True
+        self.ty_ref.resolved_ty = ty
+
 
 class ParamDecl(NamedDeclWithParent["FunctionLikeDecl"]):
-    ty_ref: TypeRefDecl
+    ty_ref: ExplicitTypeRefDecl
 
     def __init__(
         self,
         loc: SourceLocation | None,
         name: str,
-        ty_ref: TypeRefDecl,
+        ty_ref: ExplicitTypeRefDecl,
     ):
         super().__init__(loc, name)
         self.ty_ref = ty_ref
-        ty_ref.set_parent(self)
+        self.ty_ref.set_parent(self)
 
     @property
     @override
@@ -220,8 +276,24 @@ class ParamDecl(NamedDeclWithParent["FunctionLikeDecl"]):
     def _accept(self, v: "DeclVisitor[R]") -> R:
         return v.visit_param_decl(self)
 
+    @property
+    def ty_resolved(self) -> NonVoidType | None:
+        assert self.ty_ref.is_resolved, "Type reference is not resolved yet"
+        return cast(NonVoidType | None, self.ty_ref.resolved_ty)
 
-class ShortTypeRefDecl(TypeRefDecl):
+    @property
+    def ty(self) -> NonVoidType:
+        res = self.ty_resolved
+        assert res, "Type resolve failed"
+        return res
+
+    def resolve_ty(self, ty: NonVoidType | None):
+        assert not self.ty_ref.is_resolved, "Type reference is already resolved"
+        self.ty_ref.is_resolved = True
+        self.ty_ref.resolved_ty = ty
+
+
+class ShortTypeRefDecl(ExplicitTypeRefDecl):
     symbol: str
 
     def __init__(
@@ -237,7 +309,7 @@ class ShortTypeRefDecl(TypeRefDecl):
         return v.visit_short_type_ref_decl(self)
 
 
-class LongTypeRefDecl(TypeRefDecl):
+class LongTypeRefDecl(ExplicitTypeRefDecl):
     pkname: str
     symbol: str
 
@@ -256,7 +328,7 @@ class LongTypeRefDecl(TypeRefDecl):
         return v.visit_long_type_ref_decl(self)
 
 
-class GenericTypeRefDecl(TypeRefDecl):
+class GenericTypeRefDecl(ExplicitTypeRefDecl):
     symbol: str
     args: list[GenericArgDecl]
 
@@ -278,20 +350,19 @@ class GenericTypeRefDecl(TypeRefDecl):
         return v.visit_generic_type_ref_decl(self)
 
 
-class CallbackTypeRefDecl(TypeRefDecl):
+class CallbackTypeRefDecl(ExplicitTypeRefDecl):
     _param_dict: dict[str, ParamDecl]
-    return_ty_ref: TypeRefDecl | None
+    return_ty_ref: ExplicitTypeRefDecl
 
     def __init__(
         self,
         loc: SourceLocation | None,
-        return_ty_ref: TypeRefDecl | None = None,
+        return_ty_ref: ExplicitTypeRefDecl,
     ):
         super().__init__(loc)
         self._param_dict = {}
         self.return_ty_ref = return_ty_ref
-        if return_ty_ref:
-            return_ty_ref.set_parent(self)
+        self.return_ty_ref.set_parent(self)
 
     @property
     def params(self) -> Collection[ParamDecl]:
@@ -306,6 +377,22 @@ class CallbackTypeRefDecl(TypeRefDecl):
     def _accept(self, v: "DeclVisitor[R]") -> R:
         return v.visit_callback_type_ref_decl(self)
 
+    @property
+    def return_ty_resolved(self) -> Type | None:
+        assert self.return_ty_ref.is_resolved, "Type is not resolved yet"
+        return cast(Type | None, self.return_ty_ref.resolved_ty)  # type: ignore
+
+    @property
+    def return_ty(self) -> Type:
+        res = self.return_ty_resolved
+        assert res, "Type resolve failed"
+        return res
+
+    def resolve_return_ty(self, return_ty: Type | None):
+        assert not self.return_ty_ref.is_resolved, "Type reference is already resolved"
+        self.return_ty_ref.is_resolved = True
+        self.return_ty_ref.resolved_ty = return_ty
+
 
 #####################
 # Import References #
@@ -318,7 +405,7 @@ class PackageRefDecl(DeclWithParent[Decl]):
     is_resolved: bool = False
     """Whether this package reference is resolved."""
 
-    maybe_resolved_pkg: "PackageDecl | None" = None
+    resolved_pkg: "PackageDecl | None" = None
     """The resolved package, if any.
 
     This field is `None` either if the package is not resolved yet or invalid.
@@ -350,7 +437,7 @@ class DeclarationRefDecl(DeclWithParent[Decl]):
     is_resolved: bool = False
     """Whether this declaration reference is resolved."""
 
-    maybe_resolved_decl: "PackageLevelDecl | None" = None
+    resolved_decl: "PackageLevelDecl | None" = None
     """The resolved declaration, if any.
 
     This field is `None` either if the declaration is not resolved yet or invalid.
@@ -365,7 +452,7 @@ class DeclarationRefDecl(DeclWithParent[Decl]):
         super().__init__(loc)
         self.symbol = symbol
         self.pkg_ref = pkg_ref
-        pkg_ref.set_parent(self)
+        self.pkg_ref.set_parent(self)
 
     @property
     @override
@@ -426,7 +513,7 @@ class PackageImportDecl(ImportDecl):
             loc=loc or pkg_ref.loc,
         )
         self.pkg_ref = pkg_ref
-        pkg_ref.set_parent(self)
+        self.pkg_ref.set_parent(self)
 
     @property
     @override
@@ -456,7 +543,7 @@ class DeclarationImportDecl(ImportDecl):
             loc=loc or decl_ref.loc,
         )
         self.decl_ref = decl_ref
-        decl_ref.set_parent(self)
+        self.decl_ref.set_parent(self)
 
     @property
     @override
@@ -504,18 +591,17 @@ class EnumItemDecl(NamedDeclWithParent["EnumDecl"]):
 
 
 class UnionFieldDecl(NamedDeclWithParent["UnionDecl"]):
-    ty_ref: TypeRefDecl | None
+    ty_ref: TypeRefDecl
 
     def __init__(
         self,
         loc: SourceLocation | None,
         name: str,
-        ty_ref: TypeRefDecl | None = None,
+        ty_ref: ExplicitTypeRefDecl | None = None,
     ):
         super().__init__(loc, name)
-        self.ty_ref = ty_ref
-        if ty_ref:
-            ty_ref.set_parent(self)
+        self.ty_ref = ty_ref or ImplicitTypeRefDecl(loc)
+        self.ty_ref.set_parent(self)
 
     @property
     @override
@@ -531,19 +617,35 @@ class UnionFieldDecl(NamedDeclWithParent["UnionDecl"]):
     def _accept(self, v: "DeclVisitor[R]") -> R:
         return v.visit_union_field_decl(self)
 
+    @property
+    def ty_resolved(self) -> Type | None:
+        assert self.ty_ref.is_resolved, "Type reference is not resolved yet"
+        return cast(Type | None, self.ty_ref.resolved_ty)  # type: ignore
+
+    @property
+    def ty(self) -> Type:
+        res = self.ty_resolved
+        assert res, "Type resolve failed"
+        return res
+
+    def resolve_ty(self, ty: Type | None):
+        assert not self.ty_ref.is_resolved, "Type reference is already resolved"
+        self.ty_ref.is_resolved = True
+        self.ty_ref.resolved_ty = ty
+
 
 class StructFieldDecl(NamedDeclWithParent["StructDecl"]):
-    ty_ref: TypeRefDecl
+    ty_ref: ExplicitTypeRefDecl
 
     def __init__(
         self,
         loc: SourceLocation | None,
         name: str,
-        ty_ref: TypeRefDecl,
+        ty_ref: ExplicitTypeRefDecl,
     ):
         super().__init__(loc, name)
         self.ty_ref = ty_ref
-        ty_ref.set_parent(self)
+        self.ty_ref.set_parent(self)
 
     @property
     @override
@@ -559,18 +661,34 @@ class StructFieldDecl(NamedDeclWithParent["StructDecl"]):
     def _accept(self, v: "DeclVisitor[R]") -> R:
         return v.visit_struct_field_decl(self)
 
+    @property
+    def ty_resolved(self) -> NonVoidType | None:
+        assert self.ty_ref.is_resolved, "Type reference is not resolved yet"
+        return cast(NonVoidType | None, self.ty_ref.resolved_ty)
+
+    @property
+    def ty(self) -> NonVoidType:
+        res = self.ty_resolved
+        assert res, "Type resolve failed"
+        return res
+
+    def resolve_ty(self, ty: NonVoidType | None):
+        assert not self.ty_ref.is_resolved, "Type reference is already resolved"
+        self.ty_ref.is_resolved = True
+        self.ty_ref.resolved_ty = ty
+
 
 class IfaceParentDecl(DeclWithParent["IfaceDecl"]):
-    ty_ref: TypeRefDecl
+    ty_ref: ExplicitTypeRefDecl
 
     def __init__(
         self,
         loc: SourceLocation | None,
-        ty_ref: TypeRefDecl,
+        ty_ref: ExplicitTypeRefDecl,
     ):
         super().__init__(loc)
         self.ty_ref = ty_ref
-        ty_ref.set_parent(self)
+        self.ty_ref.set_parent(self)
 
     @property
     @override
@@ -586,22 +704,37 @@ class IfaceParentDecl(DeclWithParent["IfaceDecl"]):
     def _accept(self, v: "DeclVisitor[R]") -> R:
         return v.visit_iface_parent_decl(self)
 
+    @property
+    def ty_resolved(self) -> IfaceType | None:
+        assert self.ty_ref.is_resolved, "Type reference is not resolved yet"
+        return cast(IfaceType | None, self.ty_ref.resolved_ty)
+
+    @property
+    def ty(self) -> IfaceType:
+        res = self.ty_resolved
+        assert res, "Type resolve failed"
+        return res
+
+    def resolve_ty(self, ty: IfaceType | None):
+        assert not self.ty_ref.is_resolved, "Type reference is already resolved"
+        self.ty_ref.is_resolved = True
+        self.ty_ref.resolved_ty = ty
+
 
 class IfaceMethodDecl(NamedDeclWithParent["IfaceDecl"]):
     _param_dict: dict[str, ParamDecl]
-    return_ty_ref: TypeRefDecl | None
+    return_ty_ref: TypeRefDecl
 
     def __init__(
         self,
         loc: SourceLocation | None,
         name: str,
-        return_ty_ref: TypeRefDecl | None = None,
+        return_ty_ref: ExplicitTypeRefDecl | None = None,
     ):
         super().__init__(loc, name)
         self._param_dict = {}
-        self.return_ty_ref = return_ty_ref
-        if return_ty_ref:
-            return_ty_ref.set_parent(self)
+        self.return_ty_ref = return_ty_ref or ImplicitTypeRefDecl(loc)
+        self.return_ty_ref.set_parent(self)
 
     @property
     @override
@@ -626,6 +759,22 @@ class IfaceMethodDecl(NamedDeclWithParent["IfaceDecl"]):
     def _accept(self, v: "DeclVisitor[R]") -> R:
         return v.visit_iface_func_decl(self)
 
+    @property
+    def return_ty_resolved(self) -> Type | None:
+        assert self.return_ty_ref.is_resolved, "Type reference is not resolved yet"
+        return cast(Type | None, self.return_ty_ref.resolved_ty)  # type: ignore
+
+    @property
+    def return_ty(self) -> Type:
+        res = self.return_ty_resolved
+        assert res, "Type resolve failed"
+        return res
+
+    def resolve_return_ty(self, return_ty: Type | None):
+        assert not self.return_ty_ref.is_resolved, "Type reference is already resolved"
+        self.return_ty_ref.is_resolved = True
+        self.return_ty_ref.resolved_ty = return_ty
+
 
 ##############################
 # Package Level Declarations #
@@ -640,19 +789,18 @@ class PackageLevelDecl(NamedDeclWithParent["PackageDecl"], ABC):
 
 class GlobFuncDecl(PackageLevelDecl):
     _param_dict: dict[str, ParamDecl]
-    return_ty_ref: TypeRefDecl | None
+    return_ty_ref: TypeRefDecl
 
     def __init__(
         self,
         loc: SourceLocation | None,
         name: str,
-        return_ty_ref: TypeRefDecl | None = None,
+        return_ty_ref: ExplicitTypeRefDecl | None = None,
     ):
         super().__init__(loc, name)
         self._param_dict = {}
-        self.return_ty_ref = return_ty_ref
-        if return_ty_ref:
-            return_ty_ref.set_parent(self)
+        self.return_ty_ref = return_ty_ref or ImplicitTypeRefDecl(loc)
+        self.return_ty_ref.set_parent(self)
 
     @property
     @override
@@ -672,6 +820,22 @@ class GlobFuncDecl(PackageLevelDecl):
     def _accept(self, v: "DeclVisitor[R]") -> R:
         return v.visit_glob_func_decl(self)
 
+    @property
+    def return_ty_resolved(self) -> Type | None:
+        assert self.return_ty_ref.is_resolved, "Type is not resolved yet"
+        return cast(Type | None, self.return_ty_ref.resolved_ty)  # type: ignore
+
+    @property
+    def return_ty(self) -> Type:
+        res = self.return_ty_resolved
+        assert res, "Type resolve failed"
+        return res
+
+    def resolve_return_ty(self, return_ty: Type | None):
+        assert not self.return_ty_ref.is_resolved, "Type reference is already resolved"
+        self.return_ty_ref.is_resolved = True
+        self.return_ty_ref.resolved_ty = return_ty
+
 
 NamedFunctionLikeDecl = GlobFuncDecl | IfaceMethodDecl
 FunctionLikeDecl = NamedFunctionLikeDecl | CallbackTypeRefDecl
@@ -684,24 +848,24 @@ FunctionLikeDecl = NamedFunctionLikeDecl | CallbackTypeRefDecl
 
 class TypeDecl(PackageLevelDecl, ABC):
     @abstractmethod
-    def as_type(self, ty_ref: TypeRefDecl) -> UserType:
+    def as_type(self, ty_ref: ExplicitTypeRefDecl) -> UserType:
         """Return the type decalaration as type."""
 
 
 class EnumDecl(TypeDecl):
     _item_dict: dict[str, EnumItemDecl]
-    ty_ref: TypeRefDecl
+    ty_ref: ExplicitTypeRefDecl
 
     def __init__(
         self,
         loc: SourceLocation | None,
         name: str,
-        ty_ref: TypeRefDecl,
+        ty_ref: ExplicitTypeRefDecl,
     ):
         super().__init__(loc, name)
         self._item_dict = {}
         self.ty_ref = ty_ref
-        ty_ref.set_parent(self)
+        self.ty_ref.set_parent(self)
 
     @property
     @override
@@ -718,12 +882,28 @@ class EnumDecl(TypeDecl):
         i.set_parent(self)
 
     @override
-    def as_type(self, ty_ref: TypeRefDecl) -> EnumType:
+    def as_type(self, ty_ref: ExplicitTypeRefDecl) -> EnumType:
         return EnumType(ty_ref, self)
 
     @override
     def _accept(self, v: "DeclVisitor[R]") -> R:
         return v.visit_enum_decl(self)
+
+    @property
+    def ty_resolved(self) -> ScalarType | StringType | None:
+        assert self.ty_ref.is_resolved, "Type reference is not resolved yet"
+        return cast(ScalarType | StringType | None, self.ty_ref.resolved_ty)
+
+    @property
+    def ty(self) -> ScalarType | StringType:
+        res = self.ty_resolved
+        assert res, "Type resolve failed"
+        return res
+
+    def resolve_ty(self, ty: ScalarType | StringType | None):
+        assert not self.ty_ref.is_resolved, "Type reference is already resolved"
+        self.ty_ref.is_resolved = True
+        self.ty_ref.resolved_ty = ty
 
 
 class UnionDecl(TypeDecl):
@@ -748,7 +928,7 @@ class UnionDecl(TypeDecl):
         f.set_parent(self)
 
     @override
-    def as_type(self, ty_ref: TypeRefDecl) -> UnionType:
+    def as_type(self, ty_ref: ExplicitTypeRefDecl) -> UnionType:
         return UnionType(ty_ref, self)
 
     @override
@@ -778,7 +958,7 @@ class StructDecl(TypeDecl):
         f.set_parent(self)
 
     @override
-    def as_type(self, ty_ref: TypeRefDecl) -> StructType:
+    def as_type(self, ty_ref: ExplicitTypeRefDecl) -> StructType:
         return StructType(ty_ref, self)
 
     @override
@@ -818,7 +998,7 @@ class IfaceDecl(TypeDecl):
         f.set_parent(self)
 
     @override
-    def as_type(self, ty_ref: TypeRefDecl) -> IfaceType:
+    def as_type(self, ty_ref: ExplicitTypeRefDecl) -> IfaceType:
         return IfaceType(ty_ref, self)
 
     @override

@@ -71,6 +71,7 @@ from taihe.semantics.types import (
     EnumType,
     IfaceType,
     MapType,
+    NonVoidType,
     OpaqueType,
     OptionalType,
     ScalarKind,
@@ -78,7 +79,6 @@ from taihe.semantics.types import (
     SetType,
     StringType,
     StructType,
-    Type,
     UnionType,
 )
 from taihe.semantics.visitor import TypeVisitor
@@ -805,15 +805,15 @@ class UnionAniInfo(AbstractAnalysis[UnionDecl]):
         self.sts_all_somes: list[list[UnionFieldDecl]] = []
         self.sts_all_nones: list[list[UnionFieldDecl]] = []
         for field in d.fields:
-            if field.ty_ref and isinstance(ty := field.ty_ref.resolved_ty, UnionType):
-                inner_ani_info = UnionAniInfo.get(am, ty.ty_decl)
+            if isinstance(field_ty := field.ty, UnionType):
+                inner_ani_info = UnionAniInfo.get(am, field_ty.ty_decl)
                 self.sts_all_somes.extend(
                     [field, *parts] for parts in inner_ani_info.sts_all_somes
                 )
                 self.sts_all_nones.extend(
                     [field, *parts] for parts in inner_ani_info.sts_all_nones
                 )
-            elif field.ty_ref is not None:
+            elif isinstance(field_ty := field.ty, NonVoidType):
                 self.sts_all_somes.append([field])
             else:
                 self.sts_all_nones.append([field])
@@ -855,10 +855,8 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
         self.sts_class_parents: list[StructFieldDecl] = []
         self.sts_all_fields: list[list[StructFieldDecl]] = []
         for field in d.fields:
-            if ExtendsAttr.get(field):
-                ty = field.ty_ref.resolved_ty
-                assert isinstance(ty, StructType)
-                parent_ani_info = StructAniInfo.get(am, ty.ty_decl)
+            if parent := ExtendsAttr.get(field):
+                parent_ani_info = StructAniInfo.get(am, parent.ty.ty_decl)
                 if parent_ani_info.is_class():
                     self.sts_class_parents.append(field)
                 else:
@@ -908,9 +906,7 @@ class IfaceAniInfo(AbstractAnalysis[IfaceDecl]):
         self.sts_class_parents: list[IfaceParentDecl] = []
         self.sts_iface_parents: list[IfaceParentDecl] = []
         for parent in d.parents:
-            ty = parent.ty_ref.resolved_ty
-            assert isinstance(ty, IfaceType)
-            parent_ani_info = IfaceAniInfo.get(am, ty.ty_decl)
+            parent_ani_info = IfaceAniInfo.get(am, parent.ty.ty_decl)
             if parent_ani_info.is_class():
                 self.sts_class_parents.append(parent)
             else:
@@ -930,11 +926,11 @@ class IfaceAniInfo(AbstractAnalysis[IfaceDecl]):
         return self.parent_ns.get_member(target, self.sts_type_name, self.is_default)
 
 
-class TypeAniInfo(AbstractAnalysis[Type], ABC):
+class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
     ani_type: AniType
     sig_type: AniRuntimeType
 
-    def __init__(self, am: AnalysisManager, t: Type):
+    def __init__(self, am: AnalysisManager, t: NonVoidType):
         self.cpp_info = TypeCppInfo.get(am, t)
 
     @property
@@ -951,7 +947,7 @@ class TypeAniInfo(AbstractAnalysis[Type], ABC):
 
     @classmethod
     @override
-    def _create(cls, am: AnalysisManager, t: Type) -> "TypeAniInfo":
+    def _create(cls, am: AnalysisManager, t: NonVoidType) -> "TypeAniInfo":
         return TypeAniInfoDispatcher(am).handle_type(t)
 
     @abstractmethod
@@ -1137,13 +1133,13 @@ class ConstEnumTypeAniInfo(TypeAniInfo):
         self.am = am
         self.t = t
         self.const_attr = const_attr
-        ty_ani_info = TypeAniInfo.get(self.am, self.t.ty_decl.ty_ref.resolved_ty)
+        ty_ani_info = TypeAniInfo.get(self.am, self.t.ty_decl.ty)
         self.ani_type = ty_ani_info.ani_type
         self.sig_type = ty_ani_info.sig_type
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
-        ty_ani_info = TypeAniInfo.get(self.am, self.t.ty_decl.ty_ref.resolved_ty)
+        ty_ani_info = TypeAniInfo.get(self.am, self.t.ty_decl.ty)
         return ty_ani_info.sts_type_in(target)
 
     @override
@@ -1155,7 +1151,7 @@ class ConstEnumTypeAniInfo(TypeAniInfo):
         cpp_result: str,
     ):
         cpp_temp = f"{cpp_result}_cpp_temp"
-        ty_ani_info = TypeAniInfo.get(self.am, self.t.ty_decl.ty_ref.resolved_ty)
+        ty_ani_info = TypeAniInfo.get(self.am, self.t.ty_decl.ty)
         ty_ani_info.from_ani(target, env, ani_value, cpp_temp)
         enum_cpp_info = EnumCppInfo.get(self.am, self.t.ty_decl)
         target.writelns(
@@ -1171,8 +1167,8 @@ class ConstEnumTypeAniInfo(TypeAniInfo):
         ani_result: str,
     ):
         cpp_temp = f"{ani_result}_cpp_temp"
-        ty_cpp_info = TypeCppInfo.get(self.am, self.t.ty_decl.ty_ref.resolved_ty)
-        ty_ani_info = TypeAniInfo.get(self.am, self.t.ty_decl.ty_ref.resolved_ty)
+        ty_cpp_info = TypeCppInfo.get(self.am, self.t.ty_decl.ty)
+        ty_ani_info = TypeAniInfo.get(self.am, self.t.ty_decl.ty)
         target.writelns(
             f"{ty_cpp_info.as_owner} {cpp_temp} = {cpp_value}.get_value();",
         )
@@ -1232,8 +1228,8 @@ class UnionTypeAniInfo(TypeAniInfo):
         self.ani_type = ANI_REF
         sig_types: list[AniRuntimeType] = []
         for field in t.ty_decl.fields:
-            if (field_ty_ref := field.ty_ref) is not None:
-                field_ani_info = TypeAniInfo.get(self.am, field_ty_ref.resolved_ty)
+            if isinstance(field_ty := field.ty, NonVoidType):
+                field_ani_info = TypeAniInfo.get(self.am, field_ty)
                 sig_types.append(field_ani_info.sig_type)
             elif NullAttr.get(field):
                 sig_types.append(AniRuntimeNullType())
@@ -1381,7 +1377,7 @@ class OpaqueTypeAniInfo(TypeAniInfo):
         self.am = am
         self.t = t
         self.ani_type = ANI_OBJECT
-        if sts_type_attr := StsTypeAttr.get(self.t.ty_ref):
+        if sts_type_attr := StsTypeAttr.get(self.t.weak_ref):
             self.sts_type = sts_type_attr.type_name
         else:
             self.sts_type = "Object"
@@ -1845,7 +1841,7 @@ class BigIntTypeAniInfo(TypeAniInfo):
         cpp_result: str,
     ):
         item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
-        pkg_ani_info = PackageAniInfo.get(self.am, self.t.ty_ref.parent_pkg)
+        pkg_ani_info = PackageAniInfo.get(self.am, self.t.weak_ref.parent_pkg)
         ani_arrbuf = f"{cpp_result}_arrbuf"
         ani_data = f"{cpp_result}_data"
         ani_length = f"{cpp_result}_length"
@@ -1867,7 +1863,7 @@ class BigIntTypeAniInfo(TypeAniInfo):
         ani_result: str,
     ):
         item_ty_cpp_info = TypeCppInfo.get(self.am, self.t.item_ty)
-        pkg_ani_info = PackageAniInfo.get(self.am, self.t.ty_ref.parent_pkg)
+        pkg_ani_info = PackageAniInfo.get(self.am, self.t.weak_ref.parent_pkg)
         ani_data = f"{ani_result}_data"
         ani_arrbuf = f"{ani_result}_arrbuf"
         target.writelns(
@@ -1991,18 +1987,20 @@ class CallbackTypeAniInfo(TypeAniInfo):
         self.am = am
         self.t = t
         self.ani_type = ANI_FN_OBJECT
-        self.sig_type = AniRuntimeClassType(f"std.core.Function{len(t.ty_ref.params)}")
+        self.sig_type = AniRuntimeClassType(
+            f"std.core.Function{len(t.weak_ref.params)}"
+        )
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
         sts_params = []
-        for param in self.t.ty_ref.params:
+        for param in self.t.weak_ref.params:
             opt = "?" if OptionalAttr.get(param) else ""
-            type_ani_info = TypeAniInfo.get(self.am, param.ty_ref.resolved_ty)
+            type_ani_info = TypeAniInfo.get(self.am, param.ty)
             sts_params.append(f"{param.name}{opt}: {type_ani_info.sts_type_in(target)}")
         sts_params_str = ", ".join(sts_params)
-        if return_ty_ref := self.t.ty_ref.return_ty_ref:
-            type_ani_info = TypeAniInfo.get(self.am, return_ty_ref.resolved_ty)
+        if isinstance(return_ty := self.t.weak_ref.return_ty, NonVoidType):
+            type_ani_info = TypeAniInfo.get(self.am, return_ty)
             sts_return_ty_name = type_ani_info.sts_type_in(target)
         else:
             sts_return_ty_name = "void"
@@ -2043,16 +2041,16 @@ class CallbackTypeAniInfo(TypeAniInfo):
         inner_cpp_params = []
         inner_ani_args = []
         inner_cpp_args = []
-        for param in self.t.ty_ref.params:
+        for param in self.t.weak_ref.params:
             inner_cpp_arg = f"cpp_arg_{param.name}"
             inner_ani_arg = f"ani_arg_{param.name}"
-            type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
+            type_cpp_info = TypeCppInfo.get(self.am, param.ty)
             inner_cpp_params.append(f"{type_cpp_info.as_param} {inner_cpp_arg}")
             inner_cpp_args.append(inner_cpp_arg)
             inner_ani_args.append(inner_ani_arg)
         cpp_params_str = ", ".join(inner_cpp_params)
-        if return_ty_ref := self.t.ty_ref.return_ty_ref:
-            type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
+        if isinstance(return_ty := self.t.weak_ref.return_ty, NonVoidType):
+            type_cpp_info = TypeCppInfo.get(self.am, return_ty)
             return_ty_as_owner = type_cpp_info.as_owner
         else:
             return_ty_as_owner = "void"
@@ -2065,12 +2063,12 @@ class CallbackTypeAniInfo(TypeAniInfo):
                 f"ani_env *env = guard.get_env();",
             )
             for param, inner_cpp_arg, inner_ani_arg in zip(
-                self.t.ty_ref.params,
+                self.t.weak_ref.params,
                 inner_cpp_args,
                 inner_ani_args,
                 strict=True,
             ):
-                param_ty_ani_info = TypeAniInfo.get(self.am, param.ty_ref.resolved_ty)
+                param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
                 param_ty_ani_info.into_ani_boxed(
                     target,
                     "env",
@@ -2078,14 +2076,14 @@ class CallbackTypeAniInfo(TypeAniInfo):
                     inner_ani_arg,
                 )
             inner_ani_args_str = ", ".join(inner_ani_args)
-            if return_ty_ref := self.t.ty_ref.return_ty_ref:
+            if isinstance(return_ty := self.t.weak_ref.return_ty, NonVoidType):
                 inner_ani_res = "ani_result"
                 inner_cpp_res = "cpp_result"
-                type_ani_info = TypeAniInfo.get(self.am, return_ty_ref.resolved_ty)
+                type_ani_info = TypeAniInfo.get(self.am, return_ty)
                 target.writelns(
                     f"ani_ref ani_argv[] = {{{inner_ani_args_str}}};",
                     f"ani_ref {inner_ani_res} = {{}};",
-                    f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.ty_ref.params)}, ani_argv, &{inner_ani_res});",
+                    f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.weak_ref.params)}, ani_argv, &{inner_ani_res});",
                 )
                 type_ani_info.from_ani_boxed(
                     target,
@@ -2101,7 +2099,7 @@ class CallbackTypeAniInfo(TypeAniInfo):
                 target.writelns(
                     f"ani_ref ani_argv[] = {{{inner_ani_args_str}}};",
                     f"ani_ref {inner_ani_res} = {{}};",
-                    f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.ty_ref.params)}, ani_argv, &{inner_ani_res});",
+                    f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.weak_ref.params)}, ani_argv, &{inner_ani_res});",
                     f"return;",
                 )
 
@@ -2119,7 +2117,7 @@ class CallbackTypeAniInfo(TypeAniInfo):
         ani_cast_ptr = f"{ani_result}_ani_cast_ptr"
         ani_func_ptr = f"{ani_result}_ani_func_ptr"
         ani_data_ptr = f"{ani_result}_ani_data_ptr"
-        pkg_ani_info = PackageAniInfo.get(self.am, self.t.ty_ref.parent_pkg)
+        pkg_ani_info = PackageAniInfo.get(self.am, self.t.weak_ref.parent_pkg)
         with target.indented(
             f"struct {cpp_struct} {{",
             f"}};",
@@ -2151,7 +2149,7 @@ class CallbackTypeAniInfo(TypeAniInfo):
             ani_args.append(ani_param_name)
         ani_params_str = ", ".join(ani_params)
         cpp_args = []
-        for i in self.t.ty_ref.params:
+        for i in self.t.weak_ref.params:
             cpp_arg = f"cpp_arg_{i.name}"
             cpp_args.append(cpp_arg)
         ani_return_type = "ani_ref"
@@ -2165,14 +2163,14 @@ class CallbackTypeAniInfo(TypeAniInfo):
                 f"{self.cpp_info.as_param} cpp_func = {self.cpp_info.as_param}({{cpp_vtbl_ptr, cpp_data_ptr}});",
             )
             for param, ani_arg, cpp_arg in zip(
-                self.t.ty_ref.params, ani_args, cpp_args, strict=False
+                self.t.weak_ref.params, ani_args, cpp_args, strict=False
             ):
-                type_ani_info = TypeAniInfo.get(self.am, param.ty_ref.resolved_ty)
+                type_ani_info = TypeAniInfo.get(self.am, param.ty)
                 type_ani_info.from_ani_boxed(target, "env", ani_arg, cpp_arg)
             cpp_args_str = ", ".join(cpp_args)
-            if return_ty_ref := self.t.ty_ref.return_ty_ref:
-                type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
-                type_ani_info = TypeAniInfo.get(self.am, return_ty_ref.resolved_ty)
+            if isinstance(return_ty := self.t.weak_ref.return_ty, NonVoidType):
+                type_cpp_info = TypeCppInfo.get(self.am, return_ty)
+                type_ani_info = TypeAniInfo.get(self.am, return_ty)
                 cpp_res = "cpp_result"
                 ani_res = "ani_result"
                 target.writelns(
@@ -2222,13 +2220,13 @@ class TypeAniInfoDispatcher(TypeVisitor[TypeAniInfo]):
 
     @override
     def visit_array_type(self, t: ArrayType) -> TypeAniInfo:
-        if bigint_attr := BigIntAttr.get(t.ty_ref):
+        if bigint_attr := BigIntAttr.get(t.weak_ref):
             return BigIntTypeAniInfo(self.am, t, bigint_attr)
-        if typedarray_attr := TypedArrayAttr.get(t.ty_ref):
+        if typedarray_attr := TypedArrayAttr.get(t.weak_ref):
             return TypedArrayTypeAniInfo(self.am, t, typedarray_attr)
-        if arraybuffer_attr := ArrayBufferAttr.get(t.ty_ref):
+        if arraybuffer_attr := ArrayBufferAttr.get(t.weak_ref):
             return ArrayBufferTypeAniInfo(self.am, t, arraybuffer_attr)
-        if fixedarray_attr := FixedArrayAttr.get(t.ty_ref):
+        if fixedarray_attr := FixedArrayAttr.get(t.weak_ref):
             return FixedArrayTypeAniInfo(self.am, t, fixedarray_attr)
         return ArrayTypeAniInfo(self.am, t)
 
@@ -2242,7 +2240,7 @@ class TypeAniInfoDispatcher(TypeVisitor[TypeAniInfo]):
 
     @override
     def visit_map_type(self, t: MapType) -> TypeAniInfo:
-        if record_attr := RecordAttr.get(t.ty_ref):
+        if record_attr := RecordAttr.get(t.weak_ref):
             return RecordTypeAniInfo(self.am, t, record_attr)
         raise NotImplementedError("MapType is not supported in ANI yet.")
 

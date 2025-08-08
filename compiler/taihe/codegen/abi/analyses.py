@@ -19,6 +19,7 @@ from taihe.semantics.types import (
     EnumType,
     IfaceType,
     MapType,
+    NonVoidType,
     OpaqueType,
     OptionalType,
     ScalarKind,
@@ -26,7 +27,6 @@ from taihe.semantics.types import (
     SetType,
     StringType,
     StructType,
-    Type,
     UnionType,
     VectorType,
 )
@@ -88,7 +88,6 @@ class UnionAbiInfo(AbstractAnalysis[UnionDecl]):
         self.mangled_name = encode(segments, DeclKind.TYPE)
         self.as_owner = f"struct {self.mangled_name}"
         self.as_param = f"struct {self.mangled_name} const*"
-        self.has_data = any(field.ty_ref for field in d.fields)
 
     @classmethod
     @override
@@ -142,9 +141,7 @@ class IfaceAbiInfo(AbstractAnalysis[IfaceDecl]):
         self.ancestor_dict: dict[IfaceDecl, AncestorDictItemInfo] = {}
         self.ancestors = [d]
         for extend in d.parents:
-            ty = extend.ty_ref.resolved_ty
-            assert isinstance(ty, IfaceType)
-            extend_abi_info = IfaceAbiInfo.get(am, ty.ty_decl)
+            extend_abi_info = IfaceAbiInfo.get(am, extend.ty.ty_decl)
             self.ancestors.extend(extend_abi_info.ancestors)
         for i, ancestor in enumerate(self.ancestors):
             ftbl_ptr = f"ftbl_ptr_{i}"
@@ -169,7 +166,7 @@ class IfaceAbiInfo(AbstractAnalysis[IfaceDecl]):
         return IfaceAbiInfo(am, d)
 
 
-class TypeAbiInfo(AbstractAnalysis[Type], ABC):
+class TypeAbiInfo(AbstractAnalysis[NonVoidType], ABC):
     defn_headers: list[str]
     impl_headers: list[str]
     # type as struct field / union field / return value
@@ -179,7 +176,7 @@ class TypeAbiInfo(AbstractAnalysis[Type], ABC):
 
     @classmethod
     @override
-    def _create(cls, am: AnalysisManager, t: Type) -> "TypeAbiInfo":
+    def _create(cls, am: AnalysisManager, t: NonVoidType) -> "TypeAbiInfo":
         return TypeAbiInfoDispatcher(am).handle_type(t)
 
 

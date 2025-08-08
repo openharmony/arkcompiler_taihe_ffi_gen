@@ -320,10 +320,7 @@ class AstConverter(ExprEvaluator):
 
     @override
     def visit_callback_type(self, node: ast.CallbackType) -> CallbackTypeRefDecl:
-        if ty := node.return_ty:
-            d = CallbackTypeRefDecl(node.loc, self.visit(ty))
-        else:
-            d = CallbackTypeRefDecl(node.loc)
+        d = CallbackTypeRefDecl(node.loc, self.visit(node.return_ty))
         self.dm.for_each(node.parameters, lambda p: d.add_param(self.visit(p)))
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
         return d

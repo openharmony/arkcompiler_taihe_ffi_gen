@@ -11,6 +11,7 @@ from taihe.semantics.declarations import (
     PackageDecl,
     PackageGroup,
 )
+from taihe.semantics.types import NonVoidType
 from taihe.utils.analyses import AnalysisManager
 from taihe.utils.outputs import FileKind, OutputManager
 
@@ -35,10 +36,10 @@ class CImplHeadersGenerator:
             pkg_c_impl_target.add_include("taihe/common.h", pkg_abi_info.header)
             for func in pkg.functions:
                 for param in func.params:
-                    type_abi_info = TypeAbiInfo.get(self.am, param.ty_ref.resolved_ty)
+                    type_abi_info = TypeAbiInfo.get(self.am, param.ty)
                     pkg_c_impl_target.add_include(*type_abi_info.impl_headers)
-                if return_ty_ref := func.return_ty_ref:
-                    type_abi_info = TypeAbiInfo.get(self.am, return_ty_ref.resolved_ty)
+                if isinstance(return_ty := func.return_ty, NonVoidType):
+                    type_abi_info = TypeAbiInfo.get(self.am, return_ty)
                     pkg_c_impl_target.add_include(*type_abi_info.impl_headers)
                 self.gen_func(func, pkg_c_impl_target)
 
@@ -53,13 +54,13 @@ class CImplHeadersGenerator:
         params = []
         args = []
         for param in func.params:
-            type_abi_info = TypeAbiInfo.get(self.am, param.ty_ref.resolved_ty)
+            type_abi_info = TypeAbiInfo.get(self.am, param.ty)
             params.append(f"{type_abi_info.as_param} {param.name}")
             args.append(param.name)
         params_str = ", ".join(params)
         args_str = ", ".join(args)
-        if return_ty_ref := func.return_ty_ref:
-            type_abi_info = TypeAbiInfo.get(self.am, return_ty_ref.resolved_ty)
+        if isinstance(return_ty := func.return_ty, NonVoidType):
+            type_abi_info = TypeAbiInfo.get(self.am, return_ty)
             return_ty_name = type_abi_info.as_owner
         else:
             return_ty_name = "void"
@@ -100,11 +101,11 @@ class CImplSourcesGenerator:
         func_c_impl_name = f"{func.name}_impl"
         params = []
         for param in func.params:
-            type_abi_info = TypeAbiInfo.get(self.am, param.ty_ref.resolved_ty)
+            type_abi_info = TypeAbiInfo.get(self.am, param.ty)
             params.append(f"{type_abi_info.as_param} {param.name}")
         params_str = ", ".join(params)
-        if return_ty_ref := func.return_ty_ref:
-            type_abi_info = TypeAbiInfo.get(self.am, return_ty_ref.resolved_ty)
+        if isinstance(return_ty := func.return_ty, NonVoidType):
+            type_abi_info = TypeAbiInfo.get(self.am, return_ty)
             return_ty_name = type_abi_info.as_owner
         else:
             return_ty_name = "void"

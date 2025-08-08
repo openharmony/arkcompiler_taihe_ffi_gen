@@ -8,12 +8,14 @@ from typing import TYPE_CHECKING, Protocol, TypeVar
 
 from typing_extensions import override
 
-from taihe.utils.exceptions import GenericArgumentsError
+from taihe.utils.diagnostics import DiagnosticsManager
+from taihe.utils.exceptions import GenericArgumentsError, TypeUsageError
 
 if TYPE_CHECKING:
     from taihe.semantics.declarations import (
         CallbackTypeRefDecl,
         EnumDecl,
+        GenericArgDecl,
         IfaceDecl,
         StructDecl,
         TypeDecl,
@@ -22,7 +24,9 @@ if TYPE_CHECKING:
     )
     from taihe.semantics.visitor import TypeVisitor
 
+
 R = TypeVar("R")
+
 
 ############################
 # Infrastructure for Types #
@@ -37,7 +41,7 @@ class TypeProtocol(Protocol):
 class Type(ABC):
     """Base class for all types."""
 
-    ty_ref: "TypeRefDecl"
+    weak_ref: "TypeRefDecl"
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__qualname__} {self.signature}>"
@@ -53,22 +57,22 @@ class Type(ABC):
 
 
 @dataclass(frozen=True, repr=False)
-class ValidType(Type, ABC):
-    """Represents a valid type that can be used in the type system."""
-
-
-@dataclass(frozen=True, repr=False)
-class InvalidType(Type):
-    """Represents an invalid type, usually due to unresolved references or errors."""
+class VoidType(Type):
+    """Represents the void type, which indicates no value."""
 
     @property
     @override
     def signature(self):
-        return "<ERROR>"
+        return "void"
 
     @override
     def _accept(self, v: "TypeVisitor[R]") -> R:
-        return v.visit_invalid_type(self)
+        return v.visit_void_type(self)
+
+
+@dataclass(frozen=True, repr=False)
+class NonVoidType(Type, ABC):
+    """Represents a valid type that can be used in the type system."""
 
 
 #################
@@ -77,7 +81,7 @@ class InvalidType(Type):
 
 
 @dataclass(frozen=True, repr=False)
-class BuiltinType(ValidType, ABC):
+class BuiltinType(NonVoidType, ABC):
     """Represents a built-in type."""
 
 
@@ -118,18 +122,6 @@ class ScalarType(BuiltinType):
 
 
 @dataclass(frozen=True, repr=False)
-class OpaqueType(BuiltinType):
-    @property
-    @override
-    def signature(self):
-        return "Opaque"
-
-    @override
-    def _accept(self, v: "TypeVisitor[R]") -> R:
-        return v.visit_opaque_type(self)
-
-
-@dataclass(frozen=True, repr=False)
 class StringType(BuiltinType):
     @property
     @override
@@ -141,8 +133,21 @@ class StringType(BuiltinType):
         return v.visit_string_type(self)
 
 
+@dataclass(frozen=True, repr=False)
+class OpaqueType(BuiltinType):
+    @property
+    @override
+    def signature(self):
+        return "Opaque"
+
+    @override
+    def _accept(self, v: "TypeVisitor[R]") -> R:
+        return v.visit_opaque_type(self)
+
+
 # Builtin Types Map
-BUILTIN_TYPES: dict[str, Callable[["TypeRefDecl"], BuiltinType]] = {
+BUILTIN_TYPES: dict[str, Callable[["TypeRefDecl"], Type]] = {
+    "void": VoidType,
     "bool": lambda ty_ref: ScalarType(ty_ref, ScalarKind.BOOL),
     "f32": lambda ty_ref: ScalarType(ty_ref, ScalarKind.F32),
     "f64": lambda ty_ref: ScalarType(ty_ref, ScalarKind.F64),
@@ -165,21 +170,16 @@ BUILTIN_TYPES: dict[str, Callable[["TypeRefDecl"], BuiltinType]] = {
 
 
 @dataclass(frozen=True, repr=False)
-class CallbackType(ValidType):
-    ty_ref: "CallbackTypeRefDecl"
+class CallbackType(NonVoidType):
+    weak_ref: "CallbackTypeRefDecl"
 
     @property
     @override
     def signature(self):
         params_fmt = ", ".join(
-            f"{param.name}: {param.ty_ref.resolved_ty.signature}"
-            for param in self.ty_ref.params
+            f"{param.name}: {param.ty.signature}" for param in self.weak_ref.params
         )
-        return_fmt = (
-            self.ty_ref.return_ty_ref.resolved_ty.signature
-            if self.ty_ref.return_ty_ref
-            else "void"
-        )
+        return_fmt = self.weak_ref.return_ty.signature
         return f"({params_fmt}) => {return_fmt}"
 
     @override
@@ -192,15 +192,20 @@ class CallbackType(ValidType):
 ####################
 
 
-class GenericType(ValidType, ABC):
+class GenericType(NonVoidType, ABC):
     @classmethod
     @abstractmethod
-    def try_construct(cls, ty_ref: "TypeRefDecl", *args_ty: Type) -> "GenericType": ...
+    def try_construct(
+        cls,
+        ty_ref: "TypeRefDecl",
+        *args: "GenericArgDecl",
+        dm: "DiagnosticsManager",
+    ) -> "GenericType | None": ...
 
 
 @dataclass(frozen=True, repr=False)
 class ArrayType(GenericType):
-    item_ty: Type
+    item_ty: NonVoidType
 
     @property
     @override
@@ -208,10 +213,20 @@ class ArrayType(GenericType):
         return f"Array<{self.item_ty.signature}>"
 
     @classmethod
-    def try_construct(cls, ty_ref: "TypeRefDecl", *args_ty: Type) -> "ArrayType":
-        if len(args_ty) != 1:
-            raise GenericArgumentsError(ty_ref, 1, len(args_ty))
-        return cls(ty_ref, args_ty[0])
+    def try_construct(
+        cls,
+        ty_ref: "TypeRefDecl",
+        *args: "GenericArgDecl",
+        dm: "DiagnosticsManager",
+    ) -> "ArrayType | None":
+        if len(args) != 1:
+            dm.emit(GenericArgumentsError(ty_ref, 1, len(args)))
+            return None
+        item_ty = args[0].ty
+        if not isinstance(item_ty, NonVoidType):
+            dm.emit(TypeUsageError(args[0].ty_ref, item_ty))
+            return None
+        return cls(ty_ref, item_ty)
 
     @override
     def _accept(self, v: "TypeVisitor[R]") -> R:
@@ -220,7 +235,7 @@ class ArrayType(GenericType):
 
 @dataclass(frozen=True, repr=False)
 class OptionalType(GenericType):
-    item_ty: Type
+    item_ty: NonVoidType
 
     @property
     @override
@@ -228,10 +243,20 @@ class OptionalType(GenericType):
         return f"Optional<{self.item_ty.signature}>"
 
     @classmethod
-    def try_construct(cls, ty_ref: "TypeRefDecl", *args_ty: Type) -> "OptionalType":
-        if len(args_ty) != 1:
-            raise GenericArgumentsError(ty_ref, 1, len(args_ty))
-        return cls(ty_ref, args_ty[0])
+    def try_construct(
+        cls,
+        ty_ref: "TypeRefDecl",
+        *args: "GenericArgDecl",
+        dm: "DiagnosticsManager",
+    ) -> "OptionalType | None":
+        if len(args) != 1:
+            dm.emit(GenericArgumentsError(ty_ref, 1, len(args)))
+            return None
+        item_ty = args[0].ty
+        if not isinstance(item_ty, NonVoidType):
+            dm.emit(TypeUsageError(args[0].ty_ref, item_ty))
+            return None
+        return cls(ty_ref, item_ty)
 
     @override
     def _accept(self, v: "TypeVisitor[R]") -> R:
@@ -240,7 +265,7 @@ class OptionalType(GenericType):
 
 @dataclass(frozen=True, repr=False)
 class VectorType(GenericType):
-    val_ty: Type
+    val_ty: NonVoidType
 
     @property
     @override
@@ -248,10 +273,20 @@ class VectorType(GenericType):
         return f"Vector<{self.val_ty.signature}>"
 
     @classmethod
-    def try_construct(cls, ty_ref: "TypeRefDecl", *args_ty: Type) -> "VectorType":
-        if len(args_ty) != 1:
-            raise GenericArgumentsError(ty_ref, 1, len(args_ty))
-        return cls(ty_ref, args_ty[0])
+    def try_construct(
+        cls,
+        ty_ref: "TypeRefDecl",
+        *args: "GenericArgDecl",
+        dm: "DiagnosticsManager",
+    ) -> "VectorType | None":
+        if len(args) != 1:
+            dm.emit(GenericArgumentsError(ty_ref, 1, len(args)))
+            return None
+        key_ty = args[0].ty
+        if not isinstance(key_ty, NonVoidType):
+            dm.emit(TypeUsageError(args[0].ty_ref, key_ty))
+            return None
+        return cls(ty_ref, key_ty)
 
     @override
     def _accept(self, v: "TypeVisitor[R]") -> R:
@@ -260,8 +295,8 @@ class VectorType(GenericType):
 
 @dataclass(frozen=True, repr=False)
 class MapType(GenericType):
-    key_ty: Type
-    val_ty: Type
+    key_ty: NonVoidType
+    val_ty: NonVoidType
 
     @property
     @override
@@ -269,10 +304,24 @@ class MapType(GenericType):
         return f"Map<{self.key_ty.signature}, {self.val_ty.signature}>"
 
     @classmethod
-    def try_construct(cls, ty_ref: "TypeRefDecl", *args_ty: Type) -> "MapType":
-        if len(args_ty) != 2:
-            raise GenericArgumentsError(ty_ref, 2, len(args_ty))
-        return cls(ty_ref, args_ty[0], args_ty[1])
+    def try_construct(
+        cls,
+        ty_ref: "TypeRefDecl",
+        *args: "GenericArgDecl",
+        dm: "DiagnosticsManager",
+    ) -> "MapType | None":
+        if len(args) != 2:
+            dm.emit(GenericArgumentsError(ty_ref, 2, len(args)))
+            return None
+        key_ty = args[0].ty
+        if not isinstance(key_ty, NonVoidType):
+            dm.emit(TypeUsageError(args[0].ty_ref, key_ty))
+            return None
+        val_ty = args[1].ty
+        if not isinstance(val_ty, NonVoidType):
+            dm.emit(TypeUsageError(args[1].ty_ref, val_ty))
+            return None
+        return cls(ty_ref, key_ty, val_ty)
 
     @override
     def _accept(self, v: "TypeVisitor[R]") -> R:
@@ -281,7 +330,7 @@ class MapType(GenericType):
 
 @dataclass(frozen=True, repr=False)
 class SetType(GenericType):
-    key_ty: Type
+    key_ty: NonVoidType
 
     @property
     @override
@@ -289,10 +338,20 @@ class SetType(GenericType):
         return f"Set<{self.key_ty.signature}>"
 
     @classmethod
-    def try_construct(cls, ty_ref: "TypeRefDecl", *args_ty: Type) -> "SetType":
-        if len(args_ty) != 1:
-            raise GenericArgumentsError(ty_ref, 1, len(args_ty))
-        return cls(ty_ref, args_ty[0])
+    def try_construct(
+        cls,
+        ty_ref: "TypeRefDecl",
+        *args: "GenericArgDecl",
+        dm: "DiagnosticsManager",
+    ) -> "SetType | None":
+        if len(args) != 1:
+            dm.emit(GenericArgumentsError(ty_ref, 1, len(args)))
+            return None
+        key_ty = args[0].ty
+        if not isinstance(key_ty, NonVoidType):
+            dm.emit(TypeUsageError(args[0].ty_ref, key_ty))
+            return None
+        return cls(ty_ref, key_ty)
 
     @override
     def _accept(self, v: "TypeVisitor[R]") -> R:
@@ -315,7 +374,7 @@ BUILTIN_GENERICS: dict[str, type[GenericType]] = {
 
 
 @dataclass(frozen=True, repr=False)
-class UserType(ValidType, ABC):
+class UserType(NonVoidType, ABC):
     ty_decl: "TypeDecl"
 
     @property

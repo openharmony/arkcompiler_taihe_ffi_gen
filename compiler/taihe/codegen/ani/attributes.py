@@ -24,6 +24,7 @@ from taihe.semantics.declarations import (
 from taihe.semantics.types import (
     ArrayType,
     MapType,
+    NonVoidType,
     ScalarKind,
     ScalarType,
     StructType,
@@ -104,19 +105,23 @@ class ExtendsAttr(TypedAttribute[StructFieldDecl]):
     NAME = "extends"
     TARGETS = (StructFieldDecl,)
 
+    ty: StructType = field(init=False)
+
     @override
     def check_typed_context(
         self,
         parent: StructFieldDecl,
         dm: DiagnosticsManager,
     ) -> None:
-        if not isinstance(parent.ty_ref.resolved_ty, StructType):
+        if not isinstance(parent.ty, StructType):
             dm.emit(
                 AdhocError(
                     f"Attribute '{self.NAME}' can only be attached to struct fields with struct types.",
                     loc=self.loc,
                 )
             )
+        else:
+            self.ty = parent.ty
 
         super().check_typed_context(parent, dm)
 
@@ -142,7 +147,7 @@ class NullAttr(TypedAttribute[UnionFieldDecl]):
         parent: UnionFieldDecl,
         dm: DiagnosticsManager,
     ) -> None:
-        if parent.ty_ref is not None:
+        if isinstance(parent.ty, NonVoidType):
             dm.emit(
                 AdhocError(
                     f"Attribute '{self.NAME}' can only be attached to union fields without a type.",
@@ -165,7 +170,7 @@ class UndefinedAttr(TypedAttribute[UnionFieldDecl]):
         parent: UnionFieldDecl,
         dm: DiagnosticsManager,
     ) -> None:
-        if parent.ty_ref is not None:
+        if isinstance(parent.ty, NonVoidType):
             dm.emit(
                 AdhocError(
                     f"Attribute '{self.NAME}' can only be attached to union fields without a type.",
@@ -498,10 +503,18 @@ class GetAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
         parent: GlobFuncDecl | IfaceMethodDecl,
         dm: DiagnosticsManager,
     ) -> None:
-        if len(parent.params) != 0 or parent.return_ty_ref is None:
+        if len(parent.params) != 0:
             dm.emit(
                 AdhocError(
                     f"Attribute '{self.NAME}' can only be attached to functions with no parameters and a return type.",
+                    loc=self.loc,
+                )
+            )
+
+        if not isinstance(parent.return_ty_resolved, NonVoidType):
+            dm.emit(
+                AdhocError(
+                    f"Attribute '{self.NAME}' can only be attached to functions with a non-void return type.",
                     loc=self.loc,
                 )
             )
@@ -535,10 +548,18 @@ class SetAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
         parent: GlobFuncDecl | IfaceMethodDecl,
         dm: DiagnosticsManager,
     ) -> None:
-        if len(parent.params) != 1 or parent.return_ty_ref is not None:
+        if len(parent.params) != 1:
             dm.emit(
                 AdhocError(
-                    f"Attribute '{self.NAME}' can only be attached to functions with one parameter and no return type.",
+                    f"Attribute '{self.NAME}' can only be attached to functions with one parameter.",
+                    loc=self.loc,
+                )
+            )
+
+        if isinstance(parent.return_ty_resolved, NonVoidType):
+            dm.emit(
+                AdhocError(
+                    f"Attribute '{self.NAME}' can only be attached to functions returning void.",
                     loc=self.loc,
                 )
             )

@@ -19,6 +19,7 @@ if TYPE_CHECKING:
         DeclarationRefDecl,
         EnumDecl,
         EnumItemDecl,
+        ExplicitTypeRefDecl,
         GenericArgDecl,
         GenericTypeRefDecl,
         GlobFuncDecl,
@@ -34,7 +35,6 @@ if TYPE_CHECKING:
         ShortTypeRefDecl,
         StructDecl,
         StructFieldDecl,
-        TypeRefDecl,
         UnionDecl,
         UnionFieldDecl,
     )
@@ -70,12 +70,15 @@ class PrettyFormatter(DeclVisitor[str]):
             attrs_fmt = f"[{attrs_fmt}]"
         return f"{attrs_fmt} {s}"
 
-    def get_type_ref_decl(self, d: "TypeRefDecl"):
+    def get_type_ref_decl(self, d: "ExplicitTypeRefDecl") -> str:
         type_ref_repr = self.handle_decl(d)
-        if not self.show_resolved:
+        if not d.is_resolved or not self.show_resolved:
             return type_ref_repr
-        real_type = d.resolved_ty.signature
-        comment = self.as_comment(f"/* {real_type} */")
+        if d.resolved_ty is None:
+            real_ty = "<ERROR>"
+        else:
+            real_ty = d.resolved_ty.signature
+        comment = self.as_comment(f"/* {real_ty} */")
         return f"{type_ref_repr} {comment}"
 
     @override
@@ -94,39 +97,41 @@ class PrettyFormatter(DeclVisitor[str]):
     @override
     def visit_callback_type_ref_decl(self, d: "CallbackTypeRefDecl") -> str:
         fmt_args = ", ".join(map(self.get_param_decl, d.params))
-        ret = self.get_type_ref_decl(d.return_ty_ref) if d.return_ty_ref else "void"
+        ret = d.return_ty_ref.format(self)
         return self.with_attr(d, f"({fmt_args}) => {ret}")
 
     def get_package_ref_decl(self, d: "PackageRefDecl") -> str:
         package_ref_repr = d.symbol
         if not d.is_resolved or not self.show_resolved:
             return package_ref_repr
-        real_package = (
-            d.maybe_resolved_pkg.description if d.maybe_resolved_pkg else "<ERROR>"
-        )
-        comment = self.as_comment(f"/* {real_package} */")
+        if d.resolved_pkg is None:
+            real_pkg = "<ERROR>"
+        else:
+            real_pkg = d.resolved_pkg.description
+        comment = self.as_comment(f"/* {real_pkg} */")
         return f"{package_ref_repr} {comment}"
 
     def get_declaration_ref_decl(self, d: "DeclarationRefDecl") -> str:
         decl_ref_repr = d.symbol
         if not d.is_resolved or not self.show_resolved:
             return decl_ref_repr
-        real_decl = (
-            d.maybe_resolved_decl.description if d.maybe_resolved_decl else "<ERROR>"
-        )
+        if d.resolved_decl is None:
+            real_decl = "<ERROR>"
+        else:
+            real_decl = d.resolved_decl.description
         comment = self.as_comment(f"/* {real_decl} */")
         return f"{decl_ref_repr} {comment}"
 
     def get_generic_arg_decl(self, d: "GenericArgDecl") -> str:
-        res = self.get_type_ref_decl(d.ty_ref)
+        res = d.ty_ref.format(self)
         return self.with_attr(d, res, bracket=True)
 
     def get_parent_decl(self, d: "IfaceParentDecl") -> str:
-        res = self.get_type_ref_decl(d.ty_ref)
+        res = d.ty_ref.format(self)
         return self.with_attr(d, res, bracket=True)
 
     def get_param_decl(self, d: "ParamDecl") -> str:
-        res = f"{d.name}: {self.get_type_ref_decl(d.ty_ref)}"
+        res = f"{d.name}: {d.ty_ref.format(self)}"
         return self.with_attr(d, res)
 
     def get_value(self, obj: Any) -> str:
@@ -217,9 +222,11 @@ class PrettyPrinter(DeclVisitor[None]):
         func_kw = self.fmt.as_keyword("function")
 
         fmt_args = ", ".join(map(self.fmt.get_param_decl, d.params))
-        ret = self.fmt.get_type_ref_decl(d.return_ty_ref) if d.return_ty_ref else "void"
 
-        self.out.writeln(f"{func_kw} {d.name}({fmt_args}): {ret};")
+        if (ret := d.return_ty_ref.format(self.fmt)) is None:
+            self.out.writeln(f"{func_kw} {d.name}({fmt_args});")
+        else:
+            self.out.writeln(f"{func_kw} {d.name}({fmt_args}): {ret};")
 
     @override
     def visit_enum_item_decl(self, d: "EnumItemDecl") -> None:
@@ -236,7 +243,7 @@ class PrettyPrinter(DeclVisitor[None]):
 
         enum_kw = self.fmt.as_keyword("enum")
 
-        full_decl = f"{d.name}: {self.fmt.get_type_ref_decl(d.ty_ref)}"
+        full_decl = f"{d.name}: {d.ty_ref.format(self.fmt)}"
         prologue = f"{enum_kw} {full_decl} {{"
         epilogue = f"}}"
 
@@ -251,10 +258,10 @@ class PrettyPrinter(DeclVisitor[None]):
     def visit_union_field_decl(self, d: "UnionFieldDecl"):
         self.write_attr(d)
 
-        if d.ty_ref:
-            self.out.writeln(f"{d.name}: {self.fmt.get_type_ref_decl(d.ty_ref)};")
-        else:
+        if (ret := d.ty_ref.format(self.fmt)) is None:
             self.out.writeln(f"{d.name};")
+        else:
+            self.out.writeln(f"{d.name}: {ret};")
 
     @override
     def visit_union_decl(self, d: "UnionDecl"):
@@ -275,7 +282,7 @@ class PrettyPrinter(DeclVisitor[None]):
     def visit_struct_field_decl(self, d: "StructFieldDecl"):
         self.write_attr(d)
 
-        self.out.writeln(f"{d.name}: {self.fmt.get_type_ref_decl(d.ty_ref)};")
+        self.out.writeln(f"{d.name}: {d.ty_ref.format(self.fmt)};")
 
     @override
     def visit_struct_decl(self, d: "StructDecl"):
@@ -297,9 +304,11 @@ class PrettyPrinter(DeclVisitor[None]):
         self.write_attr(d)
 
         fmt_args = ", ".join(map(self.fmt.get_param_decl, d.params))
-        ret = self.fmt.get_type_ref_decl(d.return_ty_ref) if d.return_ty_ref else "void"
 
-        self.out.writeln(f"{d.name}({fmt_args}): {ret};")
+        if (ret := d.return_ty_ref.format(self.fmt)) is None:
+            self.out.writeln(f"{d.name}({fmt_args});")
+        else:
+            self.out.writeln(f"{d.name}({fmt_args}): {ret};")
 
     @override
     def visit_iface_decl(self, d: "IfaceDecl"):

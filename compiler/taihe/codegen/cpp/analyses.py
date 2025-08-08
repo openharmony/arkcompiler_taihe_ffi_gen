@@ -17,6 +17,7 @@ from taihe.semantics.types import (
     EnumType,
     IfaceType,
     MapType,
+    NonVoidType,
     OpaqueType,
     OptionalType,
     ScalarKind,
@@ -24,7 +25,6 @@ from taihe.semantics.types import (
     SetType,
     StringType,
     StructType,
-    Type,
     UnionType,
     VectorType,
 )
@@ -132,7 +132,7 @@ class IfaceCppInfo(AbstractAnalysis[IfaceDecl]):
         return IfaceCppInfo(am, d)
 
 
-class TypeCppInfo(AbstractAnalysis[Type], ABC):
+class TypeCppInfo(AbstractAnalysis[NonVoidType], ABC):
     decl_headers: list[str]
     defn_headers: list[str]
     impl_headers: list[str]
@@ -141,7 +141,7 @@ class TypeCppInfo(AbstractAnalysis[Type], ABC):
 
     @classmethod
     @override
-    def _create(cls, am: AnalysisManager, t: Type) -> "TypeCppInfo":
+    def _create(cls, am: AnalysisManager, t: NonVoidType) -> "TypeCppInfo":
         return TypeCppInfoDispatcher(am).handle_type(t)
 
     def return_from_abi(self, val):
@@ -308,8 +308,8 @@ class SetTypeCppInfo(TypeCppInfo):
 
 class CallbackTypeCppInfo(TypeCppInfo):
     def __init__(self, am: AnalysisManager, t: CallbackType) -> None:
-        if return_ty_ref := t.ty_ref.return_ty_ref:
-            return_ty_cpp_info = TypeCppInfo.get(am, return_ty_ref.resolved_ty)
+        if isinstance(return_ty := t.weak_ref.return_ty, NonVoidType):
+            return_ty_cpp_info = TypeCppInfo.get(am, return_ty)
             return_ty_decl_headers = return_ty_cpp_info.decl_headers
             return_ty_impl_headers = return_ty_cpp_info.impl_headers
             return_ty_as_owner = return_ty_cpp_info.as_owner
@@ -320,8 +320,8 @@ class CallbackTypeCppInfo(TypeCppInfo):
         params_ty_decl_headers = []
         params_ty_impl_headers = []
         params_ty_as_param = []
-        for param in t.ty_ref.params:
-            param_ty_cpp_info = TypeCppInfo.get(am, param.ty_ref.resolved_ty)
+        for param in t.weak_ref.params:
+            param_ty_cpp_info = TypeCppInfo.get(am, param.ty)
             params_ty_decl_headers.extend(param_ty_cpp_info.decl_headers)
             params_ty_impl_headers.extend(param_ty_cpp_info.impl_headers)
             params_ty_as_param.append(f"{param_ty_cpp_info.as_param} {param.name}")

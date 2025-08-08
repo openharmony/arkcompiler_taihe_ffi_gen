@@ -35,6 +35,7 @@ from taihe.semantics.declarations import (
     StructDecl,
     UnionDecl,
 )
+from taihe.semantics.types import NonVoidType
 from taihe.utils.analyses import AnalysisManager
 from taihe.utils.outputs import FileKind, OutputManager
 
@@ -347,15 +348,15 @@ class AniCodeGenerator:
         ani_args = []
         cpp_args = []
         for param in func.params:
-            type_ani_info = TypeAniInfo.get(self.am, param.ty_ref.resolved_ty)
+            type_ani_info = TypeAniInfo.get(self.am, param.ty)
             ani_arg = f"ani_arg_{param.name}"
             cpp_arg = f"cpp_arg_{param.name}"
             ani_params.append(f"{type_ani_info.ani_type} {ani_arg}")
             ani_args.append(ani_arg)
             cpp_args.append(cpp_arg)
         ani_params_str = ", ".join(ani_params)
-        if return_ty_ref := func.return_ty_ref:
-            type_ani_info = TypeAniInfo.get(self.am, return_ty_ref.resolved_ty)
+        if isinstance(return_ty := func.return_ty, NonVoidType):
+            type_ani_info = TypeAniInfo.get(self.am, return_ty)
             ani_return_ty_name = type_ani_info.ani_type
         else:
             ani_return_ty_name = "void"
@@ -366,12 +367,12 @@ class AniCodeGenerator:
             for param, ani_arg, cpp_arg in zip(
                 func.params, ani_args, cpp_args, strict=True
             ):
-                type_ani_info = TypeAniInfo.get(self.am, param.ty_ref.resolved_ty)
+                type_ani_info = TypeAniInfo.get(self.am, param.ty)
                 type_ani_info.from_ani(pkg_ani_source_target, "env", ani_arg, cpp_arg)
             cpp_args_str = ", ".join(cpp_args)
-            if return_ty_ref := func.return_ty_ref:
-                type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
-                type_ani_info = TypeAniInfo.get(self.am, return_ty_ref.resolved_ty)
+            if isinstance(return_ty := func.return_ty, NonVoidType):
+                type_cpp_info = TypeCppInfo.get(self.am, return_ty)
+                type_ani_info = TypeAniInfo.get(self.am, return_ty)
                 cpp_return_ty_name = type_cpp_info.as_owner
                 cpp_res = "cpp_result"
                 ani_res = "ani_result"
@@ -407,15 +408,15 @@ class AniCodeGenerator:
         ani_args = []
         cpp_args = []
         for param in method.params:
-            type_ani_info = TypeAniInfo.get(self.am, param.ty_ref.resolved_ty)
+            type_ani_info = TypeAniInfo.get(self.am, param.ty)
             ani_arg = f"ani_arg_{param.name}"
             cpp_arg = f"cpp_arg_{param.name}"
             ani_params.append(f"{type_ani_info.ani_type} {ani_arg}")
             ani_args.append(ani_arg)
             cpp_args.append(cpp_arg)
         ani_params_str = ", ".join(ani_params)
-        if return_ty_ref := method.return_ty_ref:
-            type_ani_info = TypeAniInfo.get(self.am, return_ty_ref.resolved_ty)
+        if isinstance(return_ty := method.return_ty, NonVoidType):
+            type_ani_info = TypeAniInfo.get(self.am, return_ty)
             ani_return_ty_name = type_ani_info.ani_type
         else:
             ani_return_ty_name = "void"
@@ -435,12 +436,12 @@ class AniCodeGenerator:
             for param, ani_arg, cpp_arg in zip(
                 method.params, ani_args, cpp_args, strict=True
             ):
-                type_ani_info = TypeAniInfo.get(self.am, param.ty_ref.resolved_ty)
+                type_ani_info = TypeAniInfo.get(self.am, param.ty)
                 type_ani_info.from_ani(pkg_ani_source_target, "env", ani_arg, cpp_arg)
             cpp_args_str = ", ".join(cpp_args)
-            if return_ty_ref := method.return_ty_ref:
-                type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
-                type_ani_info = TypeAniInfo.get(self.am, return_ty_ref.resolved_ty)
+            if isinstance(return_ty := method.return_ty, NonVoidType):
+                type_cpp_info = TypeCppInfo.get(self.am, return_ty)
+                type_ani_info = TypeAniInfo.get(self.am, return_ty)
                 cpp_return_ty_name = type_cpp_info.as_owner
                 cpp_res = "cpp_result"
                 ani_res = "ani_result"
@@ -636,13 +637,13 @@ class AniCodeGenerator:
         for param in method.params:
             inner_cpp_arg = f"cpp_arg_{param.name}"
             inner_ani_arg = f"ani_arg_{param.name}"
-            type_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
+            type_cpp_info = TypeCppInfo.get(self.am, param.ty)
             inner_cpp_params.append(f"{type_cpp_info.as_param} {inner_cpp_arg}")
             inner_cpp_args.append(inner_cpp_arg)
             inner_ani_args.append(inner_ani_arg)
         inner_cpp_params_str = ", ".join(inner_cpp_params)
-        if return_ty_ref := method.return_ty_ref:
-            type_cpp_info = TypeCppInfo.get(self.am, return_ty_ref.resolved_ty)
+        if isinstance(return_ty := method.return_ty, NonVoidType):
+            type_cpp_info = TypeCppInfo.get(self.am, return_ty)
             cpp_return_ty_name = type_cpp_info.as_owner
         else:
             cpp_return_ty_name = "void"
@@ -660,7 +661,7 @@ class AniCodeGenerator:
                 inner_ani_args,
                 strict=True,
             ):
-                type_ani_info = TypeAniInfo.get(self.am, param.ty_ref.resolved_ty)
+                type_ani_info = TypeAniInfo.get(self.am, param.ty)
                 type_ani_info.into_ani(
                     iface_ani_impl_target,
                     "env",
@@ -671,10 +672,10 @@ class AniCodeGenerator:
                 ", " + inner_ani_arg for inner_ani_arg in inner_ani_args
             )
             ns = iface_ani_info.parent_ns
-            if return_ty_ref := method.return_ty_ref:
+            if isinstance(return_ty := method.return_ty, NonVoidType):
                 inner_ani_res = "ani_result"
                 inner_cpp_res = "cpp_result"
-                type_ani_info = TypeAniInfo.get(self.am, return_ty_ref.resolved_ty)
+                type_ani_info = TypeAniInfo.get(self.am, return_ty)
                 iface_ani_impl_target.writelns(
                     f"{type_ani_info.ani_type} {inner_ani_res} = {{}};",
                     f'env->Function_Call_{type_ani_info.ani_type.suffix}(TH_ANI_FIND_{ns.scope.upper}_FUNCTION(env, "{ns.impl_desc}", "{method_ani_info.reverse_name}", nullptr), reinterpret_cast<{type_ani_info.ani_type.base}*>(&{inner_ani_res}), static_cast<ani_object>(this->ref){inner_ani_args_trailing});',
@@ -799,7 +800,7 @@ class AniCodeGenerator:
             cpp_field_results = []
             for parts in struct_ani_info.sts_all_fields:
                 final = parts[-1]
-                type_ani_info = TypeAniInfo.get(self.am, final.ty_ref.resolved_ty)
+                type_ani_info = TypeAniInfo.get(self.am, final.ty)
                 ani_field_value = f"ani_field_{final.name}"
                 cpp_field_result = f"cpp_field_{final.name}"
                 struct_ani_impl_target.writelns(
@@ -843,7 +844,7 @@ class AniCodeGenerator:
             for parts in struct_ani_info.sts_all_fields:
                 final = parts[-1]
                 ani_field_result = f"ani_field_{final.name}"
-                type_ani_info = TypeAniInfo.get(self.am, final.ty_ref.resolved_ty)
+                type_ani_info = TypeAniInfo.get(self.am, final.ty)
                 type_ani_info.into_ani(
                     struct_ani_impl_target,
                     "env",
@@ -953,8 +954,8 @@ class AniCodeGenerator:
                 static_tags_str = ", ".join(static_tags)
                 full_name = "_".join(part.name for part in parts)
                 is_field = f"ani_is_{full_name}"
-                if (final_ty_ref := final.ty_ref) is not None:
-                    type_ani_info = TypeAniInfo.get(self.am, final_ty_ref.resolved_ty)
+                if isinstance(final_ty := final.ty, NonVoidType):
+                    type_ani_info = TypeAniInfo.get(self.am, final_ty)
                     if type_ani_info.type_desc is None:
                         continue
                     union_ani_impl_target.writelns(
@@ -1027,9 +1028,8 @@ class AniCodeGenerator:
                         f"case {union_cpp_info.full_name}::tag_t::{field.name}: {{",
                         f"}}",
                     ):
-                        if (field_ty_ref := field.ty_ref) is not None:
+                        if isinstance(field_ty := field.ty, NonVoidType):
                             ani_result_spec = f"ani_field_{field.name}"
-                            field_ty = field_ty_ref.resolved_ty
                             type_ani_info = TypeAniInfo.get(self.am, field_ty)
                             type_ani_info.into_ani_boxed(
                                 union_ani_impl_target,

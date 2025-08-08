@@ -25,12 +25,14 @@ if TYPE_CHECKING:
         DeclProtocol,
         EnumDecl,
         EnumItemDecl,
+        ExplicitTypeRefDecl,
         GenericArgDecl,
         GenericTypeRefDecl,
         GlobFuncDecl,
         IfaceDecl,
         IfaceMethodDecl,
         IfaceParentDecl,
+        ImplicitTypeRefDecl,
         ImportDecl,
         LongTypeRefDecl,
         PackageDecl,
@@ -54,8 +56,8 @@ if TYPE_CHECKING:
         EnumType,
         GenericType,
         IfaceType,
-        InvalidType,
         MapType,
+        NonVoidType,
         OpaqueType,
         OptionalType,
         ScalarType,
@@ -66,9 +68,10 @@ if TYPE_CHECKING:
         TypeProtocol,
         UnionType,
         UserType,
-        ValidType,
         VectorType,
+        VoidType,
     )
+
 
 R = TypeVar("R")
 
@@ -108,16 +111,16 @@ class TypeVisitor(Generic[R]):
         """
         raise NotImplementedError
 
-    def visit_invalid_type(self, t: "InvalidType") -> R:
+    def visit_non_void_type(self, t: "NonVoidType") -> R:
         return self.visit_type(t)
 
-    def visit_valid_type(self, t: "ValidType") -> R:
+    def visit_void_type(self, t: "VoidType") -> R:
         return self.visit_type(t)
 
     ### Builtin Types ###
 
     def visit_builtin_type(self, t: "BuiltinType") -> R:
-        return self.visit_valid_type(t)
+        return self.visit_non_void_type(t)
 
     def visit_scalar_type(self, t: "ScalarType") -> R:
         return self.visit_builtin_type(t)
@@ -131,7 +134,7 @@ class TypeVisitor(Generic[R]):
     ### User Types ###
 
     def visit_user_type(self, t: "UserType") -> R:
-        return self.visit_valid_type(t)
+        return self.visit_non_void_type(t)
 
     def visit_enum_type(self, t: "EnumType") -> R:
         return self.visit_user_type(t)
@@ -148,12 +151,12 @@ class TypeVisitor(Generic[R]):
     ### Callback Type ###
 
     def visit_callback_type(self, t: "CallbackType") -> R:
-        return self.visit_valid_type(t)
+        return self.visit_non_void_type(t)
 
     ### Generic Types ###
 
     def visit_generic_type(self, t: "GenericType") -> R:
-        return self.visit_valid_type(t)
+        return self.visit_non_void_type(t)
 
     def visit_array_type(self, t: "ArrayType") -> R:
         return self.visit_generic_type(t)
@@ -214,17 +217,23 @@ class DeclVisitor(Generic[R]):
     def visit_type_ref_decl(self, d: "TypeRefDecl") -> R:
         return self.visit_decl(d)
 
-    def visit_short_type_ref_decl(self, d: "ShortTypeRefDecl") -> R:
+    def visit_implicit_type_ref_decl(self, d: "ImplicitTypeRefDecl") -> R:
         return self.visit_type_ref_decl(d)
+
+    def visit_explicit_type_ref_decl(self, d: "ExplicitTypeRefDecl") -> R:
+        return self.visit_type_ref_decl(d)
+
+    def visit_short_type_ref_decl(self, d: "ShortTypeRefDecl") -> R:
+        return self.visit_explicit_type_ref_decl(d)
 
     def visit_long_type_ref_decl(self, d: "LongTypeRefDecl") -> R:
-        return self.visit_type_ref_decl(d)
+        return self.visit_explicit_type_ref_decl(d)
 
     def visit_generic_type_ref_decl(self, d: "GenericTypeRefDecl") -> R:
-        return self.visit_type_ref_decl(d)
+        return self.visit_explicit_type_ref_decl(d)
 
     def visit_callback_type_ref_decl(self, d: "CallbackTypeRefDecl") -> R:
-        return self.visit_type_ref_decl(d)
+        return self.visit_explicit_type_ref_decl(d)
 
     ### Other References ###
 
@@ -329,19 +338,27 @@ class RecursiveDeclVisitor(DeclVisitor[None]):
         return self.visit_decl(d)
 
     @override
-    def visit_short_type_ref_decl(self, d: "ShortTypeRefDecl") -> None:
+    def visit_implicit_type_ref_decl(self, d: "ImplicitTypeRefDecl") -> None:
         return self.visit_type_ref_decl(d)
 
     @override
-    def visit_long_type_ref_decl(self, d: "LongTypeRefDecl") -> None:
+    def visit_explicit_type_ref_decl(self, d: "ExplicitTypeRefDecl") -> None:
         return self.visit_type_ref_decl(d)
+
+    @override
+    def visit_short_type_ref_decl(self, d: "ShortTypeRefDecl") -> None:
+        return self.visit_explicit_type_ref_decl(d)
+
+    @override
+    def visit_long_type_ref_decl(self, d: "LongTypeRefDecl") -> None:
+        return self.visit_explicit_type_ref_decl(d)
 
     @override
     def visit_generic_type_ref_decl(self, d: "GenericTypeRefDecl") -> None:
         for i in d.args:
             self.handle_decl(i)
 
-        return self.visit_type_ref_decl(d)
+        return self.visit_explicit_type_ref_decl(d)
 
     @override
     def visit_callback_type_ref_decl(self, d: "CallbackTypeRefDecl") -> None:
@@ -351,7 +368,7 @@ class RecursiveDeclVisitor(DeclVisitor[None]):
         if d.return_ty_ref:
             self.handle_decl(d.return_ty_ref)
 
-        return self.visit_type_ref_decl(d)
+        return self.visit_explicit_type_ref_decl(d)
 
     ### Other References ###
 

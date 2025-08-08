@@ -36,6 +36,7 @@ from taihe.semantics.declarations import (
     StructDecl,
     UnionDecl,
 )
+from taihe.semantics.types import NonVoidType
 from taihe.utils.analyses import AnalysisManager
 from taihe.utils.outputs import FileKind, OutputManager
 
@@ -273,7 +274,7 @@ class StsCodeGenerator:
         target: StsWriter,
     ):
         if ConstAttr.get(enum) is not None:
-            type_ani_info = TypeAniInfo.get(self.am, enum.ty_ref.resolved_ty)
+            type_ani_info = TypeAniInfo.get(self.am, enum.ty)
             for item in enum.items:
                 target.writelns(
                     f"export const {item.name}: {type_ani_info.sts_type_in(target)} = {dumps(item.value)};",
@@ -312,8 +313,8 @@ class StsCodeGenerator:
 
         sts_types = []
         for field in union.fields:
-            if (field_ty_ref := field.ty_ref) is not None:
-                ty_ani_info = TypeAniInfo.get(self.am, field_ty_ref.resolved_ty)
+            if isinstance(field_ty := field.ty, NonVoidType):
+                ty_ani_info = TypeAniInfo.get(self.am, field_ty)
                 sts_types.append(ty_ani_info.sts_type_in(target))
             elif NullAttr.get(field) is not None:
                 sts_types.append("null")
@@ -338,7 +339,7 @@ class StsCodeGenerator:
         if struct_ani_info.sts_iface_parents:
             parents = []
             for parent in struct_ani_info.sts_iface_parents:
-                parent_ty = parent.ty_ref.resolved_ty
+                parent_ty = parent.ty
                 parent_ani_info = TypeAniInfo.get(self.am, parent_ty)
                 parents.append(parent_ani_info.sts_type_in(target))
             extends_str = ", ".join(parents) if parents else ""
@@ -359,7 +360,7 @@ class StsCodeGenerator:
             for field in struct_ani_info.sts_fields:
                 readonly = "readonly " if ReadOnlyAttr.get(field) is not None else ""
                 opt = "?" if OptionalAttr.get(field) else ""
-                ty_ani_info = TypeAniInfo.get(self.am, field.ty_ref.resolved_ty)
+                ty_ani_info = TypeAniInfo.get(self.am, field.ty)
                 target.writelns(
                     f"{readonly}{field.name}{opt}: {ty_ani_info.sts_type_in(target)};",
                 )
@@ -376,7 +377,7 @@ class StsCodeGenerator:
             if struct_ani_info.sts_iface_parents:
                 parents = []
                 for parent in struct_ani_info.sts_iface_parents:
-                    parent_ty = parent.ty_ref.resolved_ty
+                    parent_ty = parent.ty
                     parent_ani_info = TypeAniInfo.get(self.am, parent_ty)
                     parents.append(parent_ani_info.sts_type_in(target))
                 implements_str = ", ".join(parents) if parents else ""
@@ -400,7 +401,7 @@ class StsCodeGenerator:
                 final = parts[-1]
                 readonly = "readonly " if ReadOnlyAttr.get(final) is not None else ""
                 opt = "?" if OptionalAttr.get(final) else ""
-                ty_ani_info = TypeAniInfo.get(self.am, final.ty_ref.resolved_ty)
+                ty_ani_info = TypeAniInfo.get(self.am, final.ty)
                 target.writelns(
                     f"{readonly}{final.name}{opt}: {ty_ani_info.sts_type_in(target)};",
                 )
@@ -412,7 +413,7 @@ class StsCodeGenerator:
                 for parts in struct_ani_info.sts_all_fields:
                     final = parts[-1]
                     opt = "?" if OptionalAttr.get(final) else ""
-                    ty_ani_info = TypeAniInfo.get(self.am, final.ty_ref.resolved_ty)
+                    ty_ani_info = TypeAniInfo.get(self.am, final.ty)
                     target.writelns(
                         f"{final.name}{opt}: {ty_ani_info.sts_type_in(target)},",
                     )
@@ -440,7 +441,7 @@ class StsCodeGenerator:
         if iface_ani_info.sts_iface_parents:
             parents = []
             for parent in iface_ani_info.sts_iface_parents:
-                parent_ty = parent.ty_ref.resolved_ty
+                parent_ty = parent.ty
                 parent_ani_info = TypeAniInfo.get(self.am, parent_ty)
                 parents.append(parent_ani_info.sts_type_in(target))
             extends_str = ", ".join(parents) if parents else ""
@@ -492,7 +493,7 @@ class StsCodeGenerator:
             if iface_ani_info.sts_iface_parents:
                 parents = []
                 for parent in iface_ani_info.sts_iface_parents:
-                    parent_ty = parent.ty_ref.resolved_ty
+                    parent_ty = parent.ty
                     parent_ani_info = TypeAniInfo.get(self.am, parent_ty)
                     parents.append(parent_ani_info.sts_type_in(target))
                 implements_str = ", ".join(parents) if parents else ""
@@ -630,13 +631,13 @@ class StsCodeGenerator:
     ):
         sts_native_params = []
         for param in func.params:
-            type_ani_info = TypeAniInfo.get(self.am, param.ty_ref.resolved_ty)
+            type_ani_info = TypeAniInfo.get(self.am, param.ty)
             sts_native_params.append(
                 f"{param.name}: {type_ani_info.sts_type_in(target)}"
             )
         sts_native_params_str = ", ".join(sts_native_params)
-        if return_ty_ref := func.return_ty_ref:
-            type_ani_info = TypeAniInfo.get(self.am, return_ty_ref.resolved_ty)
+        if isinstance(return_ty := func.return_ty, NonVoidType):
+            type_ani_info = TypeAniInfo.get(self.am, return_ty)
             sts_return_ty = type_ani_info.sts_type_in(target)
         else:
             sts_return_ty = "void"
@@ -661,15 +662,15 @@ class StsCodeGenerator:
         sts_args = []
         for sts_param in func_ani_info.sts_params:
             opt = "?" if OptionalAttr.get(sts_param) else ""
-            type_ani_info = TypeAniInfo.get(self.am, sts_param.ty_ref.resolved_ty)
+            type_ani_info = TypeAniInfo.get(self.am, sts_param.ty)
             sts_params_sig.append(type_ani_info.type_sig)
             sts_params_ty.append(type_ani_info.sts_type_in(target))
             sts_params.append(
                 f"{sts_param.name}{opt}: {type_ani_info.sts_type_in(target)}"
             )
             sts_args.append(sts_param.name)
-        if return_ty_ref := func.return_ty_ref:
-            type_ani_info = TypeAniInfo.get(self.am, return_ty_ref.resolved_ty)
+        if isinstance(return_ty := func.return_ty, NonVoidType):
+            type_ani_info = TypeAniInfo.get(self.am, return_ty)
             sts_return_ty = type_ani_info.sts_type_in(target)
         else:
             sts_return_ty = "void"
@@ -756,7 +757,7 @@ class StsCodeGenerator:
         sts_args = []
         for sts_param in func_ani_info.sts_params:
             opt = "?" if OptionalAttr.get(sts_param) else ""
-            type_ani_info = TypeAniInfo.get(self.am, sts_param.ty_ref.resolved_ty)
+            type_ani_info = TypeAniInfo.get(self.am, sts_param.ty)
             sts_params_sig.append(type_ani_info.type_sig)
             sts_params_ty.append(type_ani_info.sts_type_in(target))
             sts_params.append(
@@ -766,8 +767,8 @@ class StsCodeGenerator:
         sts_native_args = func_ani_info.as_native_args(sts_args)
         sts_native_args_str = ", ".join(sts_native_args)
         sts_native_call = f"{func_ani_info.call_native(func_ani_info.native_name)}({sts_native_args_str})"
-        if return_ty_ref := func.return_ty_ref:
-            type_ani_info = TypeAniInfo.get(self.am, return_ty_ref.resolved_ty)
+        if isinstance(return_ty := func.return_ty, NonVoidType):
+            type_ani_info = TypeAniInfo.get(self.am, return_ty)
             sts_return_ty = type_ani_info.sts_type_in(target)
             sts_resolved_ty = type_ani_info.sts_type_in(target)
         else:
@@ -864,7 +865,7 @@ class StsCodeGenerator:
         sts_args = []
         for sts_param in ctor_ani_info.sts_params:
             opt = "?" if OptionalAttr.get(sts_param) else ""
-            type_ani_info = TypeAniInfo.get(self.am, sts_param.ty_ref.resolved_ty)
+            type_ani_info = TypeAniInfo.get(self.am, sts_param.ty)
             sts_params_sig.append(type_ani_info.type_sig)
             sts_params_ty.append(type_ani_info.sts_type_in(target))
             sts_params.append(
@@ -1550,15 +1551,15 @@ class StsCodeGenerator:
         sts_reverse_args = []
         sts_reverse_params = func_kind.reverse_base_params()
         for param in func.params:
-            type_ani_info = TypeAniInfo.get(self.am, param.ty_ref.resolved_ty)
+            type_ani_info = TypeAniInfo.get(self.am, param.ty)
             sts_reverse_args.append(param.name)
             sts_reverse_params.append(
                 f"{param.name}: {type_ani_info.sts_type_in(target)}"
             )
         sts_reverse_args = func_ani_info.as_normal_args(sts_reverse_args)
         sts_reverse_params_str = ", ".join(sts_reverse_params)
-        if return_ty_ref := func.return_ty_ref:
-            type_ani_info = TypeAniInfo.get(self.am, return_ty_ref.resolved_ty)
+        if isinstance(return_ty := func.return_ty, NonVoidType):
+            type_ani_info = TypeAniInfo.get(self.am, return_ty)
             sts_return_ty = type_ani_info.sts_type_in(target)
             sts_resolved_ty = type_ani_info.sts_type_in(target)
         else:
