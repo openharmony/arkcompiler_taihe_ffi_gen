@@ -1,14 +1,13 @@
-#include "rename_example.proj.hpp"
 #include "rename_example.impl.hpp"
-#include "taihe/runtime.hpp"
+#include "rename_example.proj.hpp"
 #include "stdexcept"
-
+#include "taihe/runtime.hpp"
 
 namespace {
 // To be implemented.
 
 int32_t oldFoo(int32_t a, int32_t b) {
-    return a + b;
+  return a + b;
 }
 }  // namespace
 

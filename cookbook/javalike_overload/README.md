@@ -42,7 +42,7 @@ int32_t sum_arr(array_view<int32_t> a) {
 # 生成的 ets 侧代码
 #   function fooBar(): void;
 # 如果希望生成的 ets 侧函数与 Taihe IDL 文件一致，可以使用 -Csts:keep-name
-taihe-tryit test -u sts path/to/deprecated_overload -Csts:keep-name
+taihe-tryit test -u sts path/to/javalike_overload -Csts:keep-name
 ```
 
 生成的 sts 代码如下：
