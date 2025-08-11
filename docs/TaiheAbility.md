@@ -3,7 +3,7 @@
 ## Taihe 类型能力
 
 - **整型**
-  - 无符号：`u8`, `u16`, `u32`, `u64`  注：ArkTS 1.2 不支持无符号类型
+  - 无符号：`u8`, `u16`, `u32`, `u64`（注：ArkTS 1.2 不支持无符号类型）
   - 有符号：`i8`, `i16`, `i32`, `i64`
 
 - **浮点型**
@@ -36,58 +36,66 @@
 
 ## ArkTS 1.2 注解能力
 
-`@namespace`；该注解作用于整个 Taihe 文件，作用一是让该文件生成 ets 代码都在 namespace 内；作用二是修改文件名，Taihe 文件不允许使用 @。
+### 全局注解
 
-`@sts_export_default`：ets 特有语法，将导出的某个目标指定为 default。
+- `@namespace("@ohos.abc.xyz", "ns1.ns2.ns3")`：该注解作用于整个 Taihe 文件，作用一是让该文件生成 ets 代码都在 namespace 内；作用二是修改文件名，Taihe 文件不允许使用 @。
 
-`@sts_inject`：注入功能，将一段ets代码注入到生成的 ets 文件中。
+- `@sts_inject("""...""")`：注入功能，将一段 ets 代码注入到当前 Taihe 文件所对应的 ets namespace 中。
 
-`@sts_inject_into_module`：注入功能，将一段 ets 代码注入到生成的 ets 的 module 中。
+- `@sts_inject_into_module("""...""")`：注入功能，将一段 ets 代码注入到当前 Taihe 文件所对应的 ets namespace 所在的 module 头部。
 
-`@sts_inject_into_class`：注入功能，将一段 ets 代码注入到生成的 ets 的 class 中。
+### 声明注解
 
-`@sts_inject_into_interface`：注入功能，将一段 ets 代码注入到生成的 ets 的 interface 中。
+- `@class`：使用此注解将在 Taihe 中声明的 interface 或 struct 在 TS 中投影为 class，如果不使用此注解则默认会被投影为 TS 中的 interface。
 
-`@class`：原本 taihe 代码会对一个 taihe 的 interface 生成一个 interface 和一个实现的 class，现在直接生成为 class。
+- `@sts_inject_into_class("""...""")`：将一段 ets 代码注入到生成的 ets 的 class 中。可加在 Taihe struct 和 interface 上。
 
-`@const`：在 ets 侧生成常量值。
+- `@sts_inject_into_interface("""...""")`：将一段 ets 代码注入到生成的 ets 的 interface 中。可加在 Taihe struct 和 interface 上。
 
-`@extends`：用于以组合的方式实现纯数据类的继承。
+- `@sts_export_default`：ets 特有语法，将导出的某个目标指定为 default。可加在 Taihe 文件上（表示其所对应的 namespace 为默认导出），也可加在 Taihe enum/union/struct/interface 等声明上（表示其所对应的 ets 目标为默认导出）。
 
-`@readonly`：设置某个属性为只读属性。
+- `@const`：加在 Taihe enum 上，表示该 enum 在 ets 侧被投影为若干个常量，而不是一个 enum 类型。
 
-`@null`：用于将union里的某个属性设置为 null 类型。
+- `@extends`：加在 struct field 上，用于以组合的方式实现纯数据类的继承。
 
-`@undefined`：用于将union里的某个属性设置为 undefined 类型。
+- `@readonly`：设置 struct 中某个属性为只读属性。
 
-`@optional`：将一个类型的 ets 绑定设置为 `?` 类型
+- `@null`：用于将 union 里的某个无类型属性设置为 null 类型。
 
-`@sts_this`：在类中适用，获得与 Taihe 对象相绑定的 ArkTS 类的 `ani_object`。
+- `@undefined`：用于将 union 里的某个无类型属性设置为 undefined 类型。
 
-`@bigint`：将一个 array 绑定到 ets 的 bigint。
+- `@optional`：可加在函数参数或 struct field 上，表示该参数/属性为可选（`a?: T`）。
 
-`@arraybuffer`：将一个 array 绑定到 ets 的 arraybuffer。
+- `@sts_this`：在类中适用，获得与 Taihe 对象相绑定的 ArkTS 类的 `ani_object`。
 
-`@typedarray`：将一个 array 绑定到 ets 的 typedarray。
+### 类型注解
 
-`@fixedarray`：将一个 array 绑定到 ets 的 fixedarray。
+- `@bigint`：将一个 array 绑定到 ets 的 bigint。
 
-`@record`：将一个 map 绑定到 ets 的 record。
+- `@arraybuffer`：将一个 array 绑定到 ets 的 arraybuffer。
 
-`@sts_type`：将一个 Opaque 的实际类型设置为一个具体的 ets 类型。
+- `@typedarray`：将一个 array 绑定到 ets 的 typedarray。
 
-`@rename`：修改 ets 侧绑定的函数名。
+- `@fixedarray`：将一个 array 绑定到 ets 的 fixedarray。
 
-`@static`：修改 ets 侧绑定的函数为静态函数。
+- `@record`：将一个 map 绑定到 ets 的 record。
 
-`@constructor`：将一个函数的 ets 绑定设置为某个类的构造器。
+- `@sts_type("MyType")`：将一个 Opaque 的实际类型设置为一个具体的 ets 类型。
 
-`@get`：将一个函数设置为某个属性/变量的 get 方法。
+### 函数/方法注解
 
-`@set`：将一个函数设置为某个属性/变量的 set 方法。
+- `@rename("newName")`：修改 ets 侧绑定的函数名。
 
-`@async`：生成一个 ets 侧异步函数绑定
+- `@static("ClassName")`：加在全局函数上，表示其在 ets 侧绑定的函数为静态函数。
 
-`@promise`：生成一个 ets 侧异步函数绑定
+- `@constructor("ClassName")`：将一个函数的 ets 绑定设置为某个类的构造器。
 
-`@static_overload`：将一个函数设置为 ets 侧的 java like 重载函数
+- `@get("propertyName")`：将一个函数设置为某个属性/变量的 get 方法。
+
+- `@set("propertyName")`：将一个函数设置为某个属性/变量的 set 方法。
+
+- `@async`：生成一个 ets 侧异步函数绑定。
+
+- `@promise`：生成一个 ets 侧异步函数绑定。
+
+- `@static_overload("overloadedName")`：将一个函数设置为 ets 侧的 java like 重载函数。
