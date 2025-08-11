@@ -20,7 +20,7 @@
 - [external object - 外部语言对象](external_obj/README.md)
 - [arraybuffer](arraybuffer/README.md)
 - [bigint](bigint/README.md)
-- [overload - 重载](overload/README.md)
+- [overload - 重载](javalike_overload/README.md)
 - [callback - 回调](callback/README.md)
 - [TypedArray](typedarray/README.md)
 - [override - 覆写](override/README.md)
@@ -32,6 +32,7 @@
 - [callback 对象比较](callback_compare/README.md)
 - [多态作为入参出参](polymorphism/README.md)
 - [多继承](multiple_inherit/README.md)
+- [函数重命名](rename_example/README.md)
 
 ## 附录
 
