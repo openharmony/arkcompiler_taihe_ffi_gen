@@ -228,7 +228,7 @@ class CppImplSourcesGenerator:
             f"}}",
         ):
             if isinstance(return_ty := func.return_ty, IfaceType):
-                impl_name = f"{return_ty.ty_decl.name}Impl"
+                impl_name = f"{return_ty.decl.name}Impl"
                 pkg_cpp_impl_target.writelns(
                     f"// The parameters in the make_holder function should be of the same type",
                     f"// as the parameters in the constructor of the actual implementation class.",
@@ -260,7 +260,7 @@ class CppImplSourcesGenerator:
             f"}}",
         ):
             if isinstance(return_ty := func.return_ty, IfaceType):
-                impl_name = f"{return_ty.ty_decl.name}Impl"
+                impl_name = f"{return_ty.decl.name}Impl"
                 pkg_cpp_impl_target.writelns(
                     f"// The parameters in the make_holder function should be of the same type",
                     f"// as the parameters in the constructor of the actual implementation class.",

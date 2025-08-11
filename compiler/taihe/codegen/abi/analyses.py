@@ -141,7 +141,7 @@ class IfaceAbiInfo(AbstractAnalysis[IfaceDecl]):
         self.ancestor_dict: dict[IfaceDecl, AncestorDictItemInfo] = {}
         self.ancestors = [d]
         for extend in d.extends:
-            extend_abi_info = IfaceAbiInfo.get(am, extend.ty.ty_decl)
+            extend_abi_info = IfaceAbiInfo.get(am, extend.ty.decl)
             self.ancestors.extend(extend_abi_info.ancestors)
         for i, ancestor in enumerate(self.ancestors):
             ftbl_ptr = f"ftbl_ptr_{i}"
@@ -182,7 +182,7 @@ class TypeAbiInfo(AbstractAnalysis[NonVoidType], ABC):
 
 class EnumTypeAbiInfo(TypeAbiInfo):
     def __init__(self, am: AnalysisManager, t: EnumType) -> None:
-        enum_abi_info = EnumAbiInfo.get(am, t.ty_decl)
+        enum_abi_info = EnumAbiInfo.get(am, t.decl)
         self.defn_headers = []
         self.impl_headers = []
         self.as_owner = enum_abi_info.abi_type
@@ -191,7 +191,7 @@ class EnumTypeAbiInfo(TypeAbiInfo):
 
 class UnionTypeAbiInfo(TypeAbiInfo):
     def __init__(self, am: AnalysisManager, t: UnionType):
-        union_abi_info = UnionAbiInfo.get(am, t.ty_decl)
+        union_abi_info = UnionAbiInfo.get(am, t.decl)
         self.defn_headers = [union_abi_info.defn_header]
         self.impl_headers = [union_abi_info.impl_header]
         self.as_owner = union_abi_info.as_owner
@@ -200,7 +200,7 @@ class UnionTypeAbiInfo(TypeAbiInfo):
 
 class StructTypeAbiInfo(TypeAbiInfo):
     def __init__(self, am: AnalysisManager, t: StructType) -> None:
-        struct_abi_info = StructAbiInfo.get(am, t.ty_decl)
+        struct_abi_info = StructAbiInfo.get(am, t.decl)
         self.defn_headers = [struct_abi_info.defn_header]
         self.impl_headers = [struct_abi_info.impl_header]
         self.as_owner = struct_abi_info.as_owner
@@ -209,7 +209,7 @@ class StructTypeAbiInfo(TypeAbiInfo):
 
 class IfaceTypeAbiInfo(TypeAbiInfo):
     def __init__(self, am: AnalysisManager, t: IfaceType) -> None:
-        iface_abi_info = IfaceAbiInfo.get(am, t.ty_decl)
+        iface_abi_info = IfaceAbiInfo.get(am, t.decl)
         self.defn_headers = [iface_abi_info.defn_header]
         self.impl_headers = [iface_abi_info.impl_header]
         self.as_owner = iface_abi_info.as_owner

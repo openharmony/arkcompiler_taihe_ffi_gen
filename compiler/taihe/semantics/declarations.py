@@ -168,7 +168,7 @@ class TypeRefDecl(DeclWithParent[Decl], ABC):
     ```
     struct Foo { ... }      // `Foo` is a `TypeDecl`.
 
-    fn func(foo: Foo);      // `Foo` is `TypeRefDecl(ty=UserType(ty_decl=TypeDecl('Foo')))`.
+    fn func(foo: Foo);      // `Foo` is `TypeRefDecl(ty=UserType(decl=TypeDecl('Foo')))`.
     fn func(foo: BadType);  // `BadType` is `TypeRefDecl(ty=None)`.
     ```
     """

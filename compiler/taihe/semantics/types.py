@@ -57,7 +57,7 @@ R = TypeVar("R")
 class Type(ABC):
     """Base class for all types."""
 
-    weak_ref: "TypeRefDecl"
+    ref: "TypeRefDecl"
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__qualname__} {self.signature}>"
@@ -192,15 +192,15 @@ BUILTIN_TYPES: dict[str, Callable[["TypeRefDecl"], Type]] = {
 
 @dataclass(frozen=True, repr=False)
 class CallbackType(NonVoidType):
-    weak_ref: "CallbackTypeRefDecl"
+    ref: "CallbackTypeRefDecl"
 
     @property
     @override
     def signature(self):
         params_fmt = ", ".join(
-            f"{param.name}: {param.ty.signature}" for param in self.weak_ref.params
+            f"{param.name}: {param.ty.signature}" for param in self.ref.params
         )
-        return_fmt = self.weak_ref.return_ty.signature
+        return_fmt = self.ref.return_ty.signature
         return f"({params_fmt}) => {return_fmt}"
 
     @override
@@ -399,12 +399,12 @@ BUILTIN_GENERICS: dict[str, type[GenericType]] = {
 
 @dataclass(frozen=True, repr=False)
 class UserType(NonVoidType, ABC):
-    ty_decl: "TypeDecl"
+    decl: "TypeDecl"
 
     @property
     @override
     def signature(self):
-        return self.ty_decl.full_name
+        return self.decl.full_name
 
     @abstractmethod
     def accept(self, v: "UserTypeVisitor[R]") -> R: ...
@@ -412,7 +412,7 @@ class UserType(NonVoidType, ABC):
 
 @dataclass(frozen=True, repr=False)
 class EnumType(UserType):
-    ty_decl: "EnumDecl"
+    decl: "EnumDecl"
 
     @override
     def accept(self, v: "EnumTypeVisitor[R]") -> R:
@@ -421,7 +421,7 @@ class EnumType(UserType):
 
 @dataclass(frozen=True, repr=False)
 class StructType(UserType):
-    ty_decl: "StructDecl"
+    decl: "StructDecl"
 
     @override
     def accept(self, v: "StructTypeVisitor[R]") -> R:
@@ -430,7 +430,7 @@ class StructType(UserType):
 
 @dataclass(frozen=True, repr=False)
 class UnionType(UserType):
-    ty_decl: "UnionDecl"
+    decl: "UnionDecl"
 
     @override
     def accept(self, v: "UnionTypeVisitor[R]") -> R:
@@ -439,7 +439,7 @@ class UnionType(UserType):
 
 @dataclass(frozen=True, repr=False)
 class IfaceType(UserType):
-    ty_decl: "IfaceDecl"
+    decl: "IfaceDecl"
 
     @override
     def accept(self, v: "IfaceTypeVisitor[R]") -> R:

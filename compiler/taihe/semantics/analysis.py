@@ -497,7 +497,7 @@ class _CheckRecursiveInclusionPass(RecursiveDeclVisitor):
         for extend in d.extends:
             if (extend_ty := extend.ty_resolved) is None:
                 continue
-            extend_iface = extend_ty.ty_decl
+            extend_iface = extend_ty.decl
             extend_iface_list.append(((d, extend.ty_ref), extend_iface))
             prev = extend_iface_dict.setdefault(extend_iface, extend)
             if prev != extend:
@@ -508,14 +508,14 @@ class _CheckRecursiveInclusionPass(RecursiveDeclVisitor):
         type_list = self.type_table.setdefault(d, [])
         for f in d.fields:
             if isinstance(ty := f.ty_resolved, UserType):
-                type_list.append(((d, f.ty_ref), ty.ty_decl))
+                type_list.append(((d, f.ty_ref), ty.decl))
 
     @override
     def visit_union_decl(self, d: UnionDecl) -> None:
         type_list = self.type_table.setdefault(d, [])
         for i in d.fields:
             if isinstance(ty := i.ty_resolved, UserType):
-                type_list.append(((d, i.ty_ref), ty.ty_decl))
+                type_list.append(((d, i.ty_ref), ty.decl))
 
 
 class _ConvertAttrPass(RecursiveDeclVisitor):

@@ -159,7 +159,7 @@ class TypeCppInfo(AbstractAnalysis[NonVoidType], ABC):
 
 class EnumTypeCppInfo(TypeCppInfo):
     def __init__(self, am: AnalysisManager, t: EnumType):
-        enum_cpp_info = EnumCppInfo.get(am, t.ty_decl)
+        enum_cpp_info = EnumCppInfo.get(am, t.decl)
         self.decl_headers = [enum_cpp_info.decl_header]
         self.defn_headers = [enum_cpp_info.defn_header]
         self.impl_headers = [enum_cpp_info.defn_header]
@@ -169,7 +169,7 @@ class EnumTypeCppInfo(TypeCppInfo):
 
 class UnionTypeCppInfo(TypeCppInfo):
     def __init__(self, am: AnalysisManager, t: UnionType):
-        union_cpp_info = UnionCppInfo.get(am, t.ty_decl)
+        union_cpp_info = UnionCppInfo.get(am, t.decl)
         self.decl_headers = [union_cpp_info.decl_header]
         self.defn_headers = [union_cpp_info.defn_header]
         self.impl_headers = [union_cpp_info.impl_header]
@@ -179,7 +179,7 @@ class UnionTypeCppInfo(TypeCppInfo):
 
 class StructTypeCppInfo(TypeCppInfo):
     def __init__(self, am: AnalysisManager, t: StructType):
-        struct_cpp_info = StructCppInfo.get(am, t.ty_decl)
+        struct_cpp_info = StructCppInfo.get(am, t.decl)
         self.decl_headers = [struct_cpp_info.decl_header]
         self.defn_headers = [struct_cpp_info.defn_header]
         self.impl_headers = [struct_cpp_info.impl_header]
@@ -189,7 +189,7 @@ class StructTypeCppInfo(TypeCppInfo):
 
 class IfaceTypeCppInfo(TypeCppInfo):
     def __init__(self, am: AnalysisManager, t: IfaceType):
-        iface_cpp_info = IfaceCppInfo.get(am, t.ty_decl)
+        iface_cpp_info = IfaceCppInfo.get(am, t.decl)
         self.decl_headers = [iface_cpp_info.decl_header]
         self.defn_headers = [iface_cpp_info.defn_header]
         self.impl_headers = [iface_cpp_info.impl_header]
@@ -308,7 +308,7 @@ class SetTypeCppInfo(TypeCppInfo):
 
 class CallbackTypeCppInfo(TypeCppInfo):
     def __init__(self, am: AnalysisManager, t: CallbackType) -> None:
-        if isinstance(return_ty := t.weak_ref.return_ty, NonVoidType):
+        if isinstance(return_ty := t.ref.return_ty, NonVoidType):
             return_ty_cpp_info = TypeCppInfo.get(am, return_ty)
             return_ty_decl_headers = return_ty_cpp_info.decl_headers
             return_ty_impl_headers = return_ty_cpp_info.impl_headers
@@ -320,7 +320,7 @@ class CallbackTypeCppInfo(TypeCppInfo):
         params_ty_decl_headers = []
         params_ty_impl_headers = []
         params_ty_as_param = []
-        for param in t.weak_ref.params:
+        for param in t.ref.params:
             param_ty_cpp_info = TypeCppInfo.get(am, param.ty)
             params_ty_decl_headers.extend(param_ty_cpp_info.decl_headers)
             params_ty_impl_headers.extend(param_ty_cpp_info.impl_headers)
