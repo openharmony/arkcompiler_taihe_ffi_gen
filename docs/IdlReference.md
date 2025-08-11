@@ -23,7 +23,7 @@
    struct Foo {}
    struct Bar {}
 
-   function func1(bar: example1.Foo): void; // OK
+   function func1(bar: Foo): void;          // OK
    function func2(foo: Foo): void;          // OK
    ```
 
@@ -150,7 +150,7 @@ enum Foo: i32 {
 
 ## 结构体
 
-结构体是数据成员的组合，其成员类型包括基础类型、枚举类型、接口类型和其他结构体类型：
+结构体是数据成员的组合，其成员类型包括[内置类型](#内置类型)、[枚举类型](#枚举)、[接口类型](#接口)和其他[结构体类型](#结构体)：
 ```rust
 interface Base {}
 struct Foo {
@@ -199,7 +199,7 @@ interface Derived: BaseA, BaseB {
 
 ## 注解
 
-注解用于为代码中的语法元素添加附加属性。
+注解用于为代码中的语法元素添加附加属性，本章节主要介绍 Taihe 的注解语法，关于 ArkTS 1.2 的相关注解使用教程可参考[ArkTS 1.2 注解能力](./TaiheAbility.md#arkts-12-注解能力)。
 ```rust
 // 前缀注解（@name）
 @attribute_name(value1, value2, ..., key1 = value1, key2 = value2, ...)
@@ -226,29 +226,33 @@ function myFunc(): void; // OK, same as above
 
 - 前缀注解（语法为 `@name`）用于指定给其后面紧跟的语法元素添加属性。
   ```rust
+  // 注解用于修饰 interface, struct 等自定义类型
   @class
   interface MyInterface {
+    // 注解用于修饰 interface 内声明的方法
     @get("name")
     getName(): String;
     @set("name")
     setName(name: String): void;
   }
 
+  @class
+  struct A {
+    param: i32;
+  }
+
+  // 注解用于修饰全局函数
   @promise
   function fetchData(url: String): Response;
 
   @async
   function processData(data: String): void;
 
+  // 注解用于修饰函数参数
   function test(@optional param: Optional<String>);
 
   union MyUnion {
-    @undefined
-    undefinedValue;
-
-    @null
-    nullValue;
-
+    // 注解用于修饰类型
     stringValue: @arraybuffer Array<i8>;
   }
   ```

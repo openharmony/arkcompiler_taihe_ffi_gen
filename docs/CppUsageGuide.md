@@ -12,8 +12,8 @@ generated/include/rgb.base.impl.hpp
 ```
 
 这些文件对于使用者的意义如下：
-- 对于接口的作者（发布方），需要关注的是 `proj.hpp` 和 `impl.hpp`，其中 `proj.hpp` 包含了当前包下定义的所有类型（包括枚举类、结构体、联合体、接口等，使用方式见后文）的 C++ 声明和定义，而 `impl.hpp` 则提供了用于导出全局函数的宏定义（见 7.1 节）。
-- 对于接口的用户（消费方），只需要关注 `user.hpp`，该文件包含了 `proj.hpp` 中的所有内容，此外还允许用户直接调用全局函数（见 7.2 节）。
+- 对于接口的作者（发布方），需要关注的是 `proj.hpp` 和 `impl.hpp`，其中 `proj.hpp` 包含了当前包下定义的所有类型（包括枚举类、结构体、联合体、接口等，使用方式见后文）的 C++ 声明和定义，而 `impl.hpp` 则提供了用于[导出全局函数](#71-导出函数接口发布方)的宏定义。
+- 对于接口的用户（消费方），只需要关注 `user.hpp`，该文件包含了 `proj.hpp` 中的所有内容，此外还允许用户直接[调用全局函数](#72-调用函数接口消费方)。
 
 > **⚠️ 特别注意**
 >
@@ -51,7 +51,7 @@ rgb::base::Color yellow = rgb::base::Color::key_t::YELLOW;
 auto yellow = rgb::base::Color::from_value("yellow");
 ```
 
-如果指定的值不在枚举类定义的范围内，则会创建一个无效的枚举对象。可以通过 `is_valid()` 方法检查对象是否有效（见 2.2.3 节）。假如有多个枚举项的值相同，会默认返回第一个匹配的枚举项。
+如果指定的值不在枚举类定义的范围内，则会创建一个无效的枚举对象。可以通过 `is_valid()` 方法[检查对象](#223-判断枚举值是否有效)是否有效。假如有多个枚举项的值相同，会默认返回第一个匹配的枚举项。
 
 ### 2.2 枚举类的成员函数
 
@@ -244,7 +244,7 @@ if (rgb_ptr != nullptr) {
 
 #### 4.4.2 不安全获取数据指针
 
-使用 `get_variantName_ref()` 方法可以直接获取成员数据的引用，但不会检查变体类型是否正确。如果当前对象不是指定变体类型，可能会导致未定义行为（UB）。因此，使用时应该确保对象确实是该变体类型。例如：
+使用 `get_variantName_ref()` 方法可以直接获取成员数据的引用，但不会检查变体类型是否正确。如果当前对象不是指定变体类型，可能会导致程序崩溃。因此，使用时应该确保对象确实是该变体类型。例如：
 ```cpp
 if (color_114515.holds_rgb()) {
     rgb::base::RGB& rgb_ref = color_114515.get_rgb_ref();
@@ -430,15 +430,18 @@ rgb::show::IShowable circle =
 
 - **静态转换**：子接口到父接口间的转换是隐式、静态的。例如：
   ```cpp
+  // 子接口
   my::package::IDerived d0;
-
-  my::package::IShape b0 = d0; // OK
-  my::package::weak::IShape b0 = d0; // OK
+  // 父接口
+  my::package::IBase b0 = d0; // OK
+  my::package::weak::IBase b0 = d0; // OK
   ```
 
 - **动态转换**：除子接口向父接口的转换外，其他接口间的类型转换是动态的，需要显式写出，并需要在运行时检查转换后得到的对象是否有效。
   ```cpp
-  my::package::IShape b1;
+  // 父接口
+  my::package::IBase b1;
+  // 子接口
   my::package::weak::IDerived d1 = b1; // Error: 无法隐式从父接口转换为子接口
   auto d2 = my::package::weak::IDerived(b1); // OK
   if (!d2.is_error()) {  // 通过 is_error() 检查转换是否成功
@@ -452,7 +455,7 @@ rgb::show::IShowable circle =
 
 > **💡 扩展：Taihe 实现静态转换和动态转换的原理**
 >
-> Taihe 的接口动态转换基于胖指针（fat pointer）实现。每个接口对象都包含一个指向实际对象数据的指针和一个接口虚表（vtable）的指针。虚表则由若干函数表（function table）组成，每个函数表对应于一个接口，里面存储了该接口的所有方法的指针。且函数表之间按照继承关系按照特定顺序排布，因此，可以通过子接口的虚表指针静态计算出其父接口的虚表指针，从而实现静态转换。
+> Taihe 的接口动态转换基于胖指针（fat pointer）实现。每个接口对象都包含一个指向实际对象数据的指针和一个接口虚表（vtable）的指针。虚表则由若干函数表（function table）组成，每个函数表对应于一个接口，里面存储了该接口的所有方法的指针。且函数表之间根据继承关系按照[特定顺序](./InterfaceAbi.md#虚表和函数表)排布，因此，可以通过子接口的虚表指针静态计算出其父接口的虚表指针，从而实现静态转换。
 >
 > 动态转换则需要在运行时检查实际对象是否实现了目标接口。每个 Taihe 接口在二进制中都对应一个接口 ID（IID），当通过 `taihe::make_holder` 创建对象时，对象数据内存的前面会被插入一个指向运行时类型信息（RTTI）的指针，而在 RTTI 中，则包含从该对象实现的所有接口所对应 IID 到相应虚表的映射关系。进行动态转换时，会尝试查询此映射表找到对应虚表指针。
 
@@ -513,7 +516,7 @@ void copyColorImpl(rgb::base::weak::IColorable dst, rgb::base::weak::IColorable 
 
 ### 5.5 进阶：`taihe::impl_holder` 和 `taihe::impl_view`
 
-如 5.1 节所述，Taihe 接口和 C++ 实现类之间的关系是松耦合的。当一个 C++ 对象被转换为 Taihe 接口类型后，将只保留和 Taihe 接口对应的能力（如调用你在 Taihe 接口里声明的方法、进行接口间的静态/动态转换等），而其他与原 C++ 类相关的信息都会被“丢掉”。这意味着，假如你在 IDL 文件中定义了一个接口 `IFoo`：
+如 [5.1](#51-接口的实现) 所述，Taihe 接口和 C++ 实现类之间的关系是松耦合的。当一个 C++ 对象被转换为 Taihe 接口类型后，将只保留和 Taihe 接口对应的能力（如调用你在 Taihe 接口里声明的方法、进行接口间的静态/动态转换等），而其他与原 C++ 类相关的信息都会被“丢掉”。这意味着，假如你在 IDL 文件中定义了一个接口 `IFoo`：
 ```rust
 // my.package.taihe
 interface IFoo {
@@ -1079,7 +1082,7 @@ bool is_empty = set1.empty();
 
 #### 6.7.1 创建回调
 
-回调的创建方式和接口非常类似（见 5.1 节），使用 `taihe::make_holder` 创建一个持有回调的对象。以下是一个示例，假设我们需要创建一个回调来处理字符串输入并返回处理结果：
+回调的创建方式和[接口](#51-接口的实现)非常类似，使用 `taihe::make_holder` 创建一个持有回调的对象。以下是一个示例，假设我们需要创建一个回调来处理字符串输入并返回处理结果：
 ```cpp
 #include <taihe/callback.hpp>
 
@@ -1257,11 +1260,11 @@ int main() {
 
 - 编译错误：```error: no member named 'methodName' in 'package::name::weak::InterfaceName::virtual_type'```
 
-  这可能说明你没有在 IDL 的接口 `InterfaceName` 中声明 `methodName` 方法，详见 5.5 节。另外，请注意，当要在子接口对象上调用父接口的方法时，必须先将子接口转换为父接口类型，详见 5.3 节。
+  这可能说明你没有在 IDL 的接口 `InterfaceName` 中声明 `methodName` 方法，详见 [5.5](#55-进阶taiheimpl_holder-和-taiheimpl_view)。另外，请注意，当要在子接口对象上调用父接口的方法时，必须先将子接口转换为父接口类型，详见 [5.3](#53-接口方法的调用)。
 
 - 编译错误：```error: implicit instantiation of undefined template 'taihe::as_abi<...>'```
 
-  见 6.7.1 节，这种错误通常是因为你在函数闭包的参数或返回值中使用了 Taihe 不支持的 C++ 类型。请确保你使用的类型都是 Taihe 支持的 C++ 投影类型。
+  见 [6.7.1](#671-创建回调)，这种错误通常是因为你在函数闭包的参数或返回值中使用了 Taihe 不支持的 C++ 类型。请确保你使用的类型都是 Taihe 支持的 C++ 投影类型。
 
 ---
 

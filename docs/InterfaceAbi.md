@@ -6,21 +6,21 @@
 ```rust
 interface IBase {
   getState(): bool;
-  setState(s: bool): ();
+  setState(s: bool): void;
 }
 
 interface IColor: IBase {
   getColor(): String;
-  setColor(c: String): ();
+  setColor(c: String): void;
 }
 
 interface IShape: IBase {
   getShape(): String;
-  setShape(s: String): ();
+  setShape(s: String): void;
 }
 
 interface IFancyObj: IColor, IShape {
-  sparkle(): ();
+  sparkle(): void;
 }
 ```
 
@@ -33,6 +33,8 @@ struct IFancyObj {
   struct DataBlockHead* data_ptr;           // 指向数据块头
 };
 ```
+
+### 虚表和函数表
 
 对于在 IDL 中定义的每个接口，其**虚表**结构体中的第一项应是指向该接口的**函数表**结构体的指针，接下来则应按顺序排入该接口*直接*继承的所有父接口的虚表中的*完整内存排布*。
 ```c
@@ -91,6 +93,8 @@ struct IFancyObj_ftable {
     void (*sparkle)(struct IFancyObj self);
 };
 ```
+
+### 数据块
 
 Taihe 接口对象的**数据块**则由**数据头**和**实际对象内存**两部分构成，其中**数据头**存储了对象的**运行时类型信息**（RTTI）和**引用计数**等元数据。
 ```c

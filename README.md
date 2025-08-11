@@ -16,37 +16,41 @@ struct DivModResult {
 function divmod_i32(a: i32, b: i32): DivModResult;
 ```
 
-对于 API 的发布和消费方，Taihe 生成各语言的绑定，提供原生的开发体验。
-```cpp
-// 发布 API 为 libinteger.so，源码位于 author/integer.arithmetic.impl.cpp
+Taihe 在发布方和消费方之间生成跨语言的绑定，提供各种语言的原生开发体验。
 
-#include "integer.arithmetic.impl.hpp"
+- 发布方
+  ```cpp
+  // 发布 API 为 libinteger.so，源码位于 author/integer.arithmetic.impl.cpp
 
-integer::arithmetic::DivModResult ohos_int_divmod(int32_t a, int32_t b) {
-  return {
-      .quo = a / b,
-      .rem = a % b,
-  };
-}
+  #include "integer.arithmetic.impl.hpp"
 
-TH_EXPORT_CPP_API_divmod_i32(ohos_int_divmod)
-```
+  integer::arithmetic::DivModResult ohos_int_divmod(int32_t a, int32_t b) {
+    return {
+        .quo = a / b,
+        .rem = a % b,
+    };
+  }
+
+  TH_EXPORT_CPP_API_divmod_i32(ohos_int_divmod)
+  ```
+
+- 消费方
+  ```cpp
+  // 使用 libinteger.so 编写用户应用
+
+  #include "integer.arithmetic.abi.hpp"
+  #include <cstdio>
+
+  using namespace integer;
+
+  int main() {
+    auto [quo, rem] = arithmetic::divmod_i32(a, b);
+    printf("q=%d r=%d\n", quo, rem);
+    return 0;
+  }
+  ```
 
 Taihe 将 API 的发布方和消费方在二进制级别隔离，允许二者在闭源的情况下独立升级。
-```cpp
-// 使用 libinteger.so 编写用户应用
-
-#include "integer.arithmetic.abi.hpp"
-#include <cstdio>
-
-using namespace integer;
-
-int main() {
-  auto [quo, rem] = arithmetic::divmod_i32(a, b);
-  printf("q=%d r=%d\n", quo, rem);
-  return 0;
-}
-```
 
 ## 用户指南
 
