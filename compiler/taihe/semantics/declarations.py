@@ -93,14 +93,15 @@ class Decl(ABC):
     def parent_pkg(self) -> "PackageDecl":
         """Return the parent package of this declaration."""
 
+    @abstractmethod
+    def accept(self, v: "DeclVisitor[R]") -> R:
+        """Accept a visitor to visit this declaration."""
+
     def add_attribute(self, a: "AnyAttribute"):
         self.attributes.setdefault(type(a), []).append(a)
 
     def find_attributes(self, t: type[A]) -> list[A]:
         return cast(list[A], self.attributes.get(t, []))
-
-    @abstractmethod
-    def accept(self, v: "DeclVisitor[R]") -> R: ...
 
 
 class NamedDecl(Decl, ABC):
@@ -195,7 +196,8 @@ class TypeRefDecl(DeclWithParent[Decl], ABC):
         return "implicit type reference"
 
     @abstractmethod
-    def format(self, fmt: PrettyFormatter) -> str | None: ...
+    def format(self, fmt: PrettyFormatter) -> str | None:
+        """Format this type reference into a string with a formatter."""
 
     @abstractmethod
     def accept(self, v: "TypeRefVisitor[R]") -> R: ...
@@ -257,10 +259,6 @@ class GenericArgDecl(DeclWithParent["GenericTypeRefDecl"]):
     def description(self) -> str:
         return f"generic argument ({self.ty_ref.description})"
 
-    @override
-    def accept(self, v: "GenericArgVisitor[R]") -> R:
-        return v.visit_generic_arg(self)
-
     @property
     def ty_resolved(self) -> Type | None:
         assert self.ty_ref.is_resolved, "Type reference is not resolved yet"
@@ -276,6 +274,10 @@ class GenericArgDecl(DeclWithParent["GenericTypeRefDecl"]):
         assert not self.ty_ref.is_resolved, "Type reference is already resolved"
         self.ty_ref.is_resolved = True
         self.ty_ref.resolved_ty = ty
+
+    @override
+    def accept(self, v: "GenericArgVisitor[R]") -> R:
+        return v.visit_generic_arg(self)
 
 
 class ParamDecl(NamedDeclWithParent["FunctionLikeDecl"]):
@@ -301,10 +303,6 @@ class ParamDecl(NamedDeclWithParent["FunctionLikeDecl"]):
         assert self._node_parent
         return self._node_parent
 
-    @override
-    def accept(self, v: "ParamVisitor[R]") -> R:
-        return v.visit_param(self)
-
     @property
     def ty_resolved(self) -> NonVoidType | None:
         assert self.ty_ref.is_resolved, "Type reference is not resolved yet"
@@ -320,6 +318,10 @@ class ParamDecl(NamedDeclWithParent["FunctionLikeDecl"]):
         assert not self.ty_ref.is_resolved, "Type reference is already resolved"
         self.ty_ref.is_resolved = True
         self.ty_ref.resolved_ty = ty
+
+    @override
+    def accept(self, v: "ParamVisitor[R]") -> R:
+        return v.visit_param(self)
 
 
 class ShortTypeRefDecl(ExplicitTypeRefDecl):
@@ -397,15 +399,6 @@ class CallbackTypeRefDecl(ExplicitTypeRefDecl):
     def params(self) -> Collection[ParamDecl]:
         return self._param_dict.values()
 
-    def add_param(self, p: ParamDecl):
-        if (prev := self._param_dict.setdefault(p.name, p)) != p:
-            raise DeclRedefError(prev, p)
-        p.set_parent(self)
-
-    @override
-    def accept(self, v: "CallbackTypeRefVisitor[R]") -> R:
-        return v.visit_callback_type_ref(self)
-
     @property
     def return_ty_resolved(self) -> Type | None:
         assert self.return_ty_ref.is_resolved, "Type is not resolved yet"
@@ -421,6 +414,15 @@ class CallbackTypeRefDecl(ExplicitTypeRefDecl):
         assert not self.return_ty_ref.is_resolved, "Type reference is already resolved"
         self.return_ty_ref.is_resolved = True
         self.return_ty_ref.resolved_ty = return_ty
+
+    def add_param(self, p: ParamDecl):
+        if (prev := self._param_dict.setdefault(p.name, p)) != p:
+            raise DeclRedefError(prev, p)
+        p.set_parent(self)
+
+    @override
+    def accept(self, v: "CallbackTypeRefVisitor[R]") -> R:
+        return v.visit_callback_type_ref(self)
 
 
 #####################
@@ -645,10 +647,6 @@ class UnionFieldDecl(NamedDeclWithParent["UnionDecl"]):
         assert self._node_parent
         return self._node_parent
 
-    @override
-    def accept(self, v: "UnionFieldVisitor[R]") -> R:
-        return v.visit_union_field(self)
-
     @property
     def ty_resolved(self) -> Type | None:
         assert self.ty_ref.is_resolved, "Type reference is not resolved yet"
@@ -664,6 +662,10 @@ class UnionFieldDecl(NamedDeclWithParent["UnionDecl"]):
         assert not self.ty_ref.is_resolved, "Type reference is already resolved"
         self.ty_ref.is_resolved = True
         self.ty_ref.resolved_ty = ty
+
+    @override
+    def accept(self, v: "UnionFieldVisitor[R]") -> R:
+        return v.visit_union_field(self)
 
 
 class StructFieldDecl(NamedDeclWithParent["StructDecl"]):
@@ -689,10 +691,6 @@ class StructFieldDecl(NamedDeclWithParent["StructDecl"]):
         assert self._node_parent
         return self._node_parent
 
-    @override
-    def accept(self, v: "StructFieldVisitor[R]") -> R:
-        return v.visit_struct_field(self)
-
     @property
     def ty_resolved(self) -> NonVoidType | None:
         assert self.ty_ref.is_resolved, "Type reference is not resolved yet"
@@ -708,6 +706,10 @@ class StructFieldDecl(NamedDeclWithParent["StructDecl"]):
         assert not self.ty_ref.is_resolved, "Type reference is already resolved"
         self.ty_ref.is_resolved = True
         self.ty_ref.resolved_ty = ty
+
+    @override
+    def accept(self, v: "StructFieldVisitor[R]") -> R:
+        return v.visit_struct_field(self)
 
 
 class IfaceExtendDecl(DeclWithParent["IfaceDecl"]):
@@ -732,10 +734,6 @@ class IfaceExtendDecl(DeclWithParent["IfaceDecl"]):
         assert self._node_parent
         return self._node_parent
 
-    @override
-    def accept(self, v: "IfaceExtendVisitor[R]") -> R:
-        return v.visit_iface_extend(self)
-
     @property
     def ty_resolved(self) -> IfaceType | None:
         assert self.ty_ref.is_resolved, "Type reference is not resolved yet"
@@ -751,6 +749,10 @@ class IfaceExtendDecl(DeclWithParent["IfaceDecl"]):
         assert not self.ty_ref.is_resolved, "Type reference is already resolved"
         self.ty_ref.is_resolved = True
         self.ty_ref.resolved_ty = ty
+
+    @override
+    def accept(self, v: "IfaceExtendVisitor[R]") -> R:
+        return v.visit_iface_extend(self)
 
 
 class IfaceMethodDecl(NamedDeclWithParent["IfaceDecl"]):
@@ -782,15 +784,6 @@ class IfaceMethodDecl(NamedDeclWithParent["IfaceDecl"]):
     def params(self) -> Collection[ParamDecl]:
         return self._param_dict.values()
 
-    def add_param(self, p: ParamDecl):
-        if (prev := self._param_dict.setdefault(p.name, p)) != p:
-            raise DeclRedefError(prev, p)
-        p.set_parent(self)
-
-    @override
-    def accept(self, v: "IfaceMethodVisitor[R]") -> R:
-        return v.visit_iface_method(self)
-
     @property
     def return_ty_resolved(self) -> Type | None:
         assert self.return_ty_ref.is_resolved, "Type reference is not resolved yet"
@@ -806,6 +799,15 @@ class IfaceMethodDecl(NamedDeclWithParent["IfaceDecl"]):
         assert not self.return_ty_ref.is_resolved, "Type reference is already resolved"
         self.return_ty_ref.is_resolved = True
         self.return_ty_ref.resolved_ty = return_ty
+
+    def add_param(self, p: ParamDecl):
+        if (prev := self._param_dict.setdefault(p.name, p)) != p:
+            raise DeclRedefError(prev, p)
+        p.set_parent(self)
+
+    @override
+    def accept(self, v: "IfaceMethodVisitor[R]") -> R:
+        return v.visit_iface_method(self)
 
 
 ##############################
@@ -846,15 +848,6 @@ class GlobFuncDecl(PackageLevelDecl):
     def params(self) -> Collection[ParamDecl]:
         return self._param_dict.values()
 
-    def add_param(self, p: ParamDecl):
-        if (prev := self._param_dict.setdefault(p.name, p)) != p:
-            raise DeclRedefError(prev, p)
-        p.set_parent(self)
-
-    @override
-    def accept(self, v: "GlobFuncVisitor[R]") -> R:
-        return v.visit_glob_func(self)
-
     @property
     def return_ty_resolved(self) -> Type | None:
         assert self.return_ty_ref.is_resolved, "Type is not resolved yet"
@@ -871,6 +864,15 @@ class GlobFuncDecl(PackageLevelDecl):
         self.return_ty_ref.is_resolved = True
         self.return_ty_ref.resolved_ty = return_ty
 
+    def add_param(self, p: ParamDecl):
+        if (prev := self._param_dict.setdefault(p.name, p)) != p:
+            raise DeclRedefError(prev, p)
+        p.set_parent(self)
+
+    @override
+    def accept(self, v: "GlobFuncVisitor[R]") -> R:
+        return v.visit_glob_func(self)
+
 
 NamedFunctionLikeDecl = GlobFuncDecl | IfaceMethodDecl
 FunctionLikeDecl = NamedFunctionLikeDecl | CallbackTypeRefDecl
@@ -883,11 +885,11 @@ FunctionLikeDecl = NamedFunctionLikeDecl | CallbackTypeRefDecl
 
 class TypeDecl(PackageLevelDecl, ABC):
     @abstractmethod
-    def accept(self, v: "TypeDeclVisitor[R]") -> R: ...
-
-    @abstractmethod
     def as_type(self, ty_ref: ExplicitTypeRefDecl) -> UserType:
         """Return the type decalaration as type."""
+
+    @abstractmethod
+    def accept(self, v: "TypeDeclVisitor[R]") -> R: ...
 
 
 class EnumDecl(TypeDecl):
@@ -914,19 +916,6 @@ class EnumDecl(TypeDecl):
     def items(self) -> Collection[EnumItemDecl]:
         return self._item_dict.values()
 
-    def add_item(self, i: EnumItemDecl):
-        if (prev := self._item_dict.setdefault(i.name, i)) != i:
-            raise DeclRedefError(prev, i)
-        i.set_parent(self)
-
-    @override
-    def as_type(self, ty_ref: ExplicitTypeRefDecl) -> EnumType:
-        return EnumType(ty_ref, self)
-
-    @override
-    def accept(self, v: "EnumDeclVisitor[R]") -> R:
-        return v.visit_enum_decl(self)
-
     @property
     def ty_resolved(self) -> LiteralType | None:
         assert self.ty_ref.is_resolved, "Type reference is not resolved yet"
@@ -942,6 +931,19 @@ class EnumDecl(TypeDecl):
         assert not self.ty_ref.is_resolved, "Type reference is already resolved"
         self.ty_ref.is_resolved = True
         self.ty_ref.resolved_ty = ty
+
+    def add_item(self, i: EnumItemDecl):
+        if (prev := self._item_dict.setdefault(i.name, i)) != i:
+            raise DeclRedefError(prev, i)
+        i.set_parent(self)
+
+    @override
+    def as_type(self, ty_ref: ExplicitTypeRefDecl) -> EnumType:
+        return EnumType(ty_ref, self)
+
+    @override
+    def accept(self, v: "EnumDeclVisitor[R]") -> R:
+        return v.visit_enum_decl(self)
 
 
 class UnionDecl(TypeDecl):
@@ -1157,34 +1159,35 @@ class PackageDecl(NamedDecl):
         else:
             raise NotImplementedError(f"unexpected declaration {d.description}")
 
-    def add_function(self, f: GlobFuncDecl):
-        self._register_to_decl(f)
-        self.functions.append(f)
-        f.set_parent(self)
-
-    def add_enum(self, e: EnumDecl):
-        self._register_to_decl(e)
-        self.enums.append(e)
-        e.set_parent(self)
-
-    def add_struct(self, s: StructDecl):
-        self._register_to_decl(s)
-        self.structs.append(s)
-        s.set_parent(self)
-
-    def add_union(self, u: UnionDecl):
-        self._register_to_decl(u)
-        self.unions.append(u)
-        u.set_parent(self)
-
-    def add_interface(self, i: IfaceDecl):
-        self._register_to_decl(i)
-        self.interfaces.append(i)
-        i.set_parent(self)
-
-    def _register_to_decl(self, d: PackageLevelDecl):
+    def add_function(self, d: GlobFuncDecl):
         if (prev := self._declaration_dict.setdefault(d.name, d)) != d:
             raise DeclRedefError(prev, d)
+        self.functions.append(d)
+        d.set_parent(self)
+
+    def add_enum(self, d: EnumDecl):
+        if (prev := self._declaration_dict.setdefault(d.name, d)) != d:
+            raise DeclRedefError(prev, d)
+        self.enums.append(d)
+        d.set_parent(self)
+
+    def add_struct(self, d: StructDecl):
+        if (prev := self._declaration_dict.setdefault(d.name, d)) != d:
+            raise DeclRedefError(prev, d)
+        self.structs.append(d)
+        d.set_parent(self)
+
+    def add_union(self, d: UnionDecl):
+        if (prev := self._declaration_dict.setdefault(d.name, d)) != d:
+            raise DeclRedefError(prev, d)
+        self.unions.append(d)
+        d.set_parent(self)
+
+    def add_interface(self, d: IfaceDecl):
+        if (prev := self._declaration_dict.setdefault(d.name, d)) != d:
+            raise DeclRedefError(prev, d)
+        self.interfaces.append(d)
+        d.set_parent(self)
 
     @override
     def accept(self, v: "PackageVisitor[R]") -> R:

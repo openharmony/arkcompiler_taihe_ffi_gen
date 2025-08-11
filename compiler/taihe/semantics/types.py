@@ -404,7 +404,7 @@ class UserType(NonVoidType, ABC):
     @property
     @override
     def signature(self):
-        return f"{self.ty_decl.full_name}"
+        return self.ty_decl.full_name
 
     @abstractmethod
     def accept(self, v: "UserTypeVisitor[R]") -> R: ...
