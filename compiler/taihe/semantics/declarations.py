@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from collections.abc import Collection
-from typing import TYPE_CHECKING, Generic, Protocol, TypeVar, cast
+from typing import TYPE_CHECKING, Generic, TypeVar, cast
 
 from typing_extensions import override
 
@@ -10,9 +10,8 @@ from taihe.semantics.format import PrettyFormatter
 from taihe.semantics.types import (
     EnumType,
     IfaceType,
+    LiteralType,
     NonVoidType,
-    ScalarType,
-    StringType,
     StructType,
     Type,
     UnionType,
@@ -23,7 +22,37 @@ from taihe.utils.sources import SourceLocation
 
 if TYPE_CHECKING:
     from taihe.semantics.attributes import AnyAttribute
-    from taihe.semantics.visitor import DeclVisitor
+    from taihe.semantics.visitor import (
+        CallbackTypeRefVisitor,
+        DeclarationImportVisitor,
+        DeclarationRefVisitor,
+        DeclVisitor,
+        EnumDeclVisitor,
+        EnumItemVisitor,
+        ExplicitTypeRefVisitor,
+        GenericArgVisitor,
+        GenericTypeRefVisitor,
+        GlobFuncVisitor,
+        IfaceDeclVisitor,
+        IfaceExtendVisitor,
+        IfaceMethodVisitor,
+        ImplicitTypeRefVisitor,
+        ImportVisitor,
+        LongTypeRefVisitor,
+        PackageGroupVisitor,
+        PackageImportVisitor,
+        PackageLevelVisitor,
+        PackageRefVisitor,
+        PackageVisitor,
+        ParamVisitor,
+        ShortTypeRefVisitor,
+        StructDeclVisitor,
+        StructFieldVisitor,
+        TypeDeclVisitor,
+        TypeRefVisitor,
+        UnionDeclVisitor,
+        UnionFieldVisitor,
+    )
 
 
 R = TypeVar("R")
@@ -32,10 +61,6 @@ R = TypeVar("R")
 ################
 # Declarations #
 ################
-
-
-class DeclProtocol(Protocol):
-    def _accept(self, v: "DeclVisitor[R]") -> R: ...
 
 
 A = TypeVar("A", bound="AnyAttribute")
@@ -75,8 +100,7 @@ class Decl(ABC):
         return cast(list[A], self.attributes.get(t, []))
 
     @abstractmethod
-    def _accept(self, v: "DeclVisitor[R]") -> R:
-        """Accept a visitor."""
+    def accept(self, v: "DeclVisitor[R]") -> R: ...
 
 
 class NamedDecl(Decl, ABC):
@@ -171,8 +195,10 @@ class TypeRefDecl(DeclWithParent[Decl], ABC):
         return "implicit type reference"
 
     @abstractmethod
-    def format(self, fmt: PrettyFormatter) -> str | None:
-        pass
+    def format(self, fmt: PrettyFormatter) -> str | None: ...
+
+    @abstractmethod
+    def accept(self, v: "TypeRefVisitor[R]") -> R: ...
 
 
 class ImplicitTypeRefDecl(TypeRefDecl):
@@ -191,8 +217,8 @@ class ImplicitTypeRefDecl(TypeRefDecl):
         return None
 
     @override
-    def _accept(self, v: "DeclVisitor[R]") -> R:
-        return v.visit_implicit_type_ref_decl(self)
+    def accept(self, v: "ImplicitTypeRefVisitor[R]") -> R:
+        return v.visit_implicit_type_ref(self)
 
 
 class ExplicitTypeRefDecl(TypeRefDecl):
@@ -208,7 +234,10 @@ class ExplicitTypeRefDecl(TypeRefDecl):
         super().__init__(loc)
 
     def format(self, fmt: PrettyFormatter) -> str:
-        return fmt.get_type_ref_decl(self)
+        return fmt.get_type_ref(self)
+
+    @abstractmethod
+    def accept(self, v: "ExplicitTypeRefVisitor[R]") -> R: ...
 
 
 class GenericArgDecl(DeclWithParent["GenericTypeRefDecl"]):
@@ -229,8 +258,8 @@ class GenericArgDecl(DeclWithParent["GenericTypeRefDecl"]):
         return f"generic argument ({self.ty_ref.description})"
 
     @override
-    def _accept(self, v: "DeclVisitor[R]") -> R:
-        return v.visit_generic_arg_decl(self)
+    def accept(self, v: "GenericArgVisitor[R]") -> R:
+        return v.visit_generic_arg(self)
 
     @property
     def ty_resolved(self) -> Type | None:
@@ -273,8 +302,8 @@ class ParamDecl(NamedDeclWithParent["FunctionLikeDecl"]):
         return self._node_parent
 
     @override
-    def _accept(self, v: "DeclVisitor[R]") -> R:
-        return v.visit_param_decl(self)
+    def accept(self, v: "ParamVisitor[R]") -> R:
+        return v.visit_param(self)
 
     @property
     def ty_resolved(self) -> NonVoidType | None:
@@ -305,8 +334,8 @@ class ShortTypeRefDecl(ExplicitTypeRefDecl):
         self.symbol = symbol
 
     @override
-    def _accept(self, v: "DeclVisitor[R]") -> R:
-        return v.visit_short_type_ref_decl(self)
+    def accept(self, v: "ShortTypeRefVisitor[R]") -> R:
+        return v.visit_short_type_ref(self)
 
 
 class LongTypeRefDecl(ExplicitTypeRefDecl):
@@ -324,8 +353,8 @@ class LongTypeRefDecl(ExplicitTypeRefDecl):
         self.symbol = symbol
 
     @override
-    def _accept(self, v: "DeclVisitor[R]") -> R:
-        return v.visit_long_type_ref_decl(self)
+    def accept(self, v: "LongTypeRefVisitor[R]") -> R:
+        return v.visit_long_type_ref(self)
 
 
 class GenericTypeRefDecl(ExplicitTypeRefDecl):
@@ -346,8 +375,8 @@ class GenericTypeRefDecl(ExplicitTypeRefDecl):
         a.set_parent(self)
 
     @override
-    def _accept(self, v: "DeclVisitor[R]") -> R:
-        return v.visit_generic_type_ref_decl(self)
+    def accept(self, v: "GenericTypeRefVisitor[R]") -> R:
+        return v.visit_generic_type_ref(self)
 
 
 class CallbackTypeRefDecl(ExplicitTypeRefDecl):
@@ -374,8 +403,8 @@ class CallbackTypeRefDecl(ExplicitTypeRefDecl):
         p.set_parent(self)
 
     @override
-    def _accept(self, v: "DeclVisitor[R]") -> R:
-        return v.visit_callback_type_ref_decl(self)
+    def accept(self, v: "CallbackTypeRefVisitor[R]") -> R:
+        return v.visit_callback_type_ref(self)
 
     @property
     def return_ty_resolved(self) -> Type | None:
@@ -425,8 +454,8 @@ class PackageRefDecl(DeclWithParent[Decl]):
         return f"package reference {self.symbol}"
 
     @override
-    def _accept(self, v: "DeclVisitor[R]") -> R:
-        return v.visit_package_ref_decl(self)
+    def accept(self, v: "PackageRefVisitor[R]") -> R:
+        return v.visit_package_ref(self)
 
 
 class DeclarationRefDecl(DeclWithParent[Decl]):
@@ -460,8 +489,8 @@ class DeclarationRefDecl(DeclWithParent[Decl]):
         return f"type reference {self.symbol}"
 
     @override
-    def _accept(self, v: "DeclVisitor[R]") -> R:
-        return v.visit_declaration_ref_decl(self)
+    def accept(self, v: "DeclarationRefVisitor[R]") -> R:
+        return v.visit_declaration_ref(self)
 
 
 #######################
@@ -497,6 +526,9 @@ class ImportDecl(NamedDeclWithParent["PackageDecl"], ABC):
     ```
     """
 
+    @abstractmethod
+    def accept(self, v: "ImportVisitor[R]") -> R: ...
+
 
 class PackageImportDecl(ImportDecl):
     pkg_ref: PackageRefDecl
@@ -524,8 +556,8 @@ class PackageImportDecl(ImportDecl):
         return self.name != self.pkg_ref.symbol
 
     @override
-    def _accept(self, v: "DeclVisitor[R]") -> R:
-        return v.visit_package_import_decl(self)
+    def accept(self, v: "PackageImportVisitor[R]") -> R:
+        return v.visit_package_import(self)
 
 
 class DeclarationImportDecl(ImportDecl):
@@ -554,8 +586,8 @@ class DeclarationImportDecl(ImportDecl):
         return self.name != self.decl_ref.symbol
 
     @override
-    def _accept(self, v: "DeclVisitor[R]") -> R:
-        return v.visit_decl_import_decl(self)
+    def accept(self, v: "DeclarationImportVisitor[R]") -> R:
+        return v.visit_declaration_import(self)
 
 
 ############################
@@ -586,8 +618,8 @@ class EnumItemDecl(NamedDeclWithParent["EnumDecl"]):
         return self._node_parent
 
     @override
-    def _accept(self, v: "DeclVisitor[R]") -> R:
-        return v.visit_enum_item_decl(self)
+    def accept(self, v: "EnumItemVisitor[R]") -> R:
+        return v.visit_enum_item(self)
 
 
 class UnionFieldDecl(NamedDeclWithParent["UnionDecl"]):
@@ -614,8 +646,8 @@ class UnionFieldDecl(NamedDeclWithParent["UnionDecl"]):
         return self._node_parent
 
     @override
-    def _accept(self, v: "DeclVisitor[R]") -> R:
-        return v.visit_union_field_decl(self)
+    def accept(self, v: "UnionFieldVisitor[R]") -> R:
+        return v.visit_union_field(self)
 
     @property
     def ty_resolved(self) -> Type | None:
@@ -658,8 +690,8 @@ class StructFieldDecl(NamedDeclWithParent["StructDecl"]):
         return self._node_parent
 
     @override
-    def _accept(self, v: "DeclVisitor[R]") -> R:
-        return v.visit_struct_field_decl(self)
+    def accept(self, v: "StructFieldVisitor[R]") -> R:
+        return v.visit_struct_field(self)
 
     @property
     def ty_resolved(self) -> NonVoidType | None:
@@ -701,8 +733,8 @@ class IfaceExtendDecl(DeclWithParent["IfaceDecl"]):
         return self._node_parent
 
     @override
-    def _accept(self, v: "DeclVisitor[R]") -> R:
-        return v.visit_iface_extend_decl(self)
+    def accept(self, v: "IfaceExtendVisitor[R]") -> R:
+        return v.visit_iface_extend(self)
 
     @property
     def ty_resolved(self) -> IfaceType | None:
@@ -756,8 +788,8 @@ class IfaceMethodDecl(NamedDeclWithParent["IfaceDecl"]):
         p.set_parent(self)
 
     @override
-    def _accept(self, v: "DeclVisitor[R]") -> R:
-        return v.visit_iface_func_decl(self)
+    def accept(self, v: "IfaceMethodVisitor[R]") -> R:
+        return v.visit_iface_method(self)
 
     @property
     def return_ty_resolved(self) -> Type | None:
@@ -782,6 +814,9 @@ class IfaceMethodDecl(NamedDeclWithParent["IfaceDecl"]):
 
 
 class PackageLevelDecl(NamedDeclWithParent["PackageDecl"], ABC):
+    @abstractmethod
+    def accept(self, v: "PackageLevelVisitor[R]") -> R: ...
+
     @property
     def full_name(self):
         return f"{self.parent_pkg.name}.{self.name}"
@@ -817,8 +852,8 @@ class GlobFuncDecl(PackageLevelDecl):
         p.set_parent(self)
 
     @override
-    def _accept(self, v: "DeclVisitor[R]") -> R:
-        return v.visit_glob_func_decl(self)
+    def accept(self, v: "GlobFuncVisitor[R]") -> R:
+        return v.visit_glob_func(self)
 
     @property
     def return_ty_resolved(self) -> Type | None:
@@ -847,6 +882,9 @@ FunctionLikeDecl = NamedFunctionLikeDecl | CallbackTypeRefDecl
 
 
 class TypeDecl(PackageLevelDecl, ABC):
+    @abstractmethod
+    def accept(self, v: "TypeDeclVisitor[R]") -> R: ...
+
     @abstractmethod
     def as_type(self, ty_ref: ExplicitTypeRefDecl) -> UserType:
         """Return the type decalaration as type."""
@@ -886,21 +924,21 @@ class EnumDecl(TypeDecl):
         return EnumType(ty_ref, self)
 
     @override
-    def _accept(self, v: "DeclVisitor[R]") -> R:
+    def accept(self, v: "EnumDeclVisitor[R]") -> R:
         return v.visit_enum_decl(self)
 
     @property
-    def ty_resolved(self) -> ScalarType | StringType | None:
+    def ty_resolved(self) -> LiteralType | None:
         assert self.ty_ref.is_resolved, "Type reference is not resolved yet"
-        return cast(ScalarType | StringType | None, self.ty_ref.resolved_ty)
+        return cast(LiteralType | None, self.ty_ref.resolved_ty)
 
     @property
-    def ty(self) -> ScalarType | StringType:
+    def ty(self) -> LiteralType:
         res = self.ty_resolved
         assert res, "Type resolve failed"
         return res
 
-    def resolve_ty(self, ty: ScalarType | StringType | None):
+    def resolve_ty(self, ty: LiteralType | None):
         assert not self.ty_ref.is_resolved, "Type reference is already resolved"
         self.ty_ref.is_resolved = True
         self.ty_ref.resolved_ty = ty
@@ -932,7 +970,7 @@ class UnionDecl(TypeDecl):
         return UnionType(ty_ref, self)
 
     @override
-    def _accept(self, v: "DeclVisitor[R]") -> R:
+    def accept(self, v: "UnionDeclVisitor[R]") -> R:
         return v.visit_union_decl(self)
 
 
@@ -962,7 +1000,7 @@ class StructDecl(TypeDecl):
         return StructType(ty_ref, self)
 
     @override
-    def _accept(self, v: "DeclVisitor[R]") -> R:
+    def accept(self, v: "StructDeclVisitor[R]") -> R:
         return v.visit_struct_decl(self)
 
 
@@ -1002,7 +1040,7 @@ class IfaceDecl(TypeDecl):
         return IfaceType(ty_ref, self)
 
     @override
-    def _accept(self, v: "DeclVisitor[R]") -> R:
+    def accept(self, v: "IfaceDeclVisitor[R]") -> R:
         return v.visit_iface_decl(self)
 
 
@@ -1149,8 +1187,8 @@ class PackageDecl(NamedDecl):
             raise DeclRedefError(prev, d)
 
     @override
-    def _accept(self, v: "DeclVisitor[R]") -> R:
-        return v.visit_package_decl(self)
+    def accept(self, v: "PackageVisitor[R]") -> R:
+        return v.visit_package(self)
 
 
 class PackageGroup:
@@ -1178,5 +1216,5 @@ class PackageGroup:
             raise DeclRedefError(prev, d)
         d.set_group(self)
 
-    def _accept(self, v: "DeclVisitor[R]"):
+    def accept(self, v: "PackageGroupVisitor[R]"):
         return v.visit_package_group(self)

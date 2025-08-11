@@ -80,8 +80,9 @@ from taihe.semantics.types import (
     StringType,
     StructType,
     UnionType,
+    VectorType,
 )
-from taihe.semantics.visitor import TypeVisitor
+from taihe.semantics.visitor import NonVoidTypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
 
 # Ani Runtime Types
@@ -948,7 +949,7 @@ class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
     @classmethod
     @override
     def _create(cls, am: AnalysisManager, t: NonVoidType) -> "TypeAniInfo":
-        return TypeAniInfoDispatcher(am).handle_type(t)
+        return t.accept(TypeAniInfoDispatcher(am))
 
     @abstractmethod
     def sts_type_in(self, target: StsWriter) -> str:
@@ -2188,7 +2189,7 @@ class CallbackTypeAniInfo(TypeAniInfo):
                 )
 
 
-class TypeAniInfoDispatcher(TypeVisitor[TypeAniInfo]):
+class TypeAniInfoDispatcher(NonVoidTypeVisitor[TypeAniInfo]):
     def __init__(self, am: AnalysisManager):
         self.am = am
 
@@ -2209,6 +2210,10 @@ class TypeAniInfoDispatcher(TypeVisitor[TypeAniInfo]):
     @override
     def visit_iface_type(self, t: IfaceType) -> TypeAniInfo:
         return IfaceTypeAniInfo(self.am, t)
+
+    @override
+    def visit_opaque_type(self, t: OpaqueType) -> TypeAniInfo:
+        return OpaqueTypeAniInfo(self.am, t)
 
     @override
     def visit_scalar_type(self, t: ScalarType) -> TypeAniInfo:
@@ -2235,10 +2240,6 @@ class TypeAniInfoDispatcher(TypeVisitor[TypeAniInfo]):
         return OptionalTypeAniInfo(self.am, t)
 
     @override
-    def visit_opaque_type(self, t: OpaqueType) -> TypeAniInfo:
-        return OpaqueTypeAniInfo(self.am, t)
-
-    @override
     def visit_map_type(self, t: MapType) -> TypeAniInfo:
         if record_attr := RecordAttr.get(t.weak_ref):
             return RecordTypeAniInfo(self.am, t, record_attr)
@@ -2247,6 +2248,10 @@ class TypeAniInfoDispatcher(TypeVisitor[TypeAniInfo]):
     @override
     def visit_set_type(self, t: SetType) -> TypeAniInfo:
         raise NotImplementedError("SetType is not supported in ANI yet.")
+
+    @override
+    def visit_vector_type(self, t: VectorType) -> TypeAniInfo:
+        raise NotImplementedError("VectorType is not supported in ANI yet.")
 
     @override
     def visit_callback_type(self, t: CallbackType) -> TypeAniInfo:

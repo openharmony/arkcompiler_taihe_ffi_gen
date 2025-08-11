@@ -30,7 +30,7 @@ from taihe.semantics.types import (
     UnionType,
     VectorType,
 )
-from taihe.semantics.visitor import TypeVisitor
+from taihe.semantics.visitor import NonVoidTypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
 
 
@@ -177,7 +177,7 @@ class TypeAbiInfo(AbstractAnalysis[NonVoidType], ABC):
     @classmethod
     @override
     def _create(cls, am: AnalysisManager, t: NonVoidType) -> "TypeAbiInfo":
-        return TypeAbiInfoDispatcher(am).handle_type(t)
+        return t.accept(TypeAbiInfoDispatcher(am))
 
 
 class EnumTypeAbiInfo(TypeAbiInfo):
@@ -303,7 +303,7 @@ class SetTypeAbiInfo(TypeAbiInfo):
         self.as_param = "struct TSet"
 
 
-class TypeAbiInfoDispatcher(TypeVisitor[TypeAbiInfo]):
+class TypeAbiInfoDispatcher(NonVoidTypeVisitor[TypeAbiInfo]):
     def __init__(self, am: AnalysisManager):
         self.am = am
 

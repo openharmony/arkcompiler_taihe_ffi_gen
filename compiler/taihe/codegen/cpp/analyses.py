@@ -28,7 +28,7 @@ from taihe.semantics.types import (
     UnionType,
     VectorType,
 )
-from taihe.semantics.visitor import TypeVisitor
+from taihe.semantics.visitor import NonVoidTypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
 
 
@@ -142,7 +142,7 @@ class TypeCppInfo(AbstractAnalysis[NonVoidType], ABC):
     @classmethod
     @override
     def _create(cls, am: AnalysisManager, t: NonVoidType) -> "TypeCppInfo":
-        return TypeCppInfoDispatcher(am).handle_type(t)
+        return t.accept(TypeCppInfoDispatcher(am))
 
     def return_from_abi(self, val):
         return f"::taihe::from_abi<{self.as_owner}>({val})"
@@ -345,7 +345,7 @@ class CallbackTypeCppInfo(TypeCppInfo):
         self.as_param = f"::taihe::callback_view<{return_ty_as_owner}({params_fmt})>"
 
 
-class TypeCppInfoDispatcher(TypeVisitor[TypeCppInfo]):
+class TypeCppInfoDispatcher(NonVoidTypeVisitor[TypeCppInfo]):
     def __init__(self, am: AnalysisManager):
         self.am = am
 
