@@ -38,3 +38,23 @@ private:
 };
 
 }  // namespace taihe
+
+#define NAPI_CALL(env, call)                                        \
+  do {                                                              \
+    napi_status status = (call);                                    \
+    if (status != napi_ok) {                                        \
+      const napi_extended_error_info *error_info;                   \
+      napi_get_last_error_info(env, &error_info);                   \
+      const char *message =                                         \
+          error_info ? error_info->error_message : "Unknown error"; \
+      char error_buf[256];                                          \
+      snprintf(error_buf, sizeof(error_buf),                        \
+               "N-API call failed at %s:%d\n"                       \
+               "Call: " #call                                       \
+               "\n"                                                 \
+               "Status: %d\n"                                       \
+               "Message: %s",                                       \
+               __FILE__, __LINE__, status, message);                \
+      napi_throw_error(env, nullptr, error_buf);                    \
+    }                                                               \
+  } while (0)

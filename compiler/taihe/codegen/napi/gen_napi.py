@@ -75,7 +75,7 @@ class NapiCodeGenerator:
                 )
             self.gen_ns_register(child_ns, ns_obj, ns_obj, target)
             target.writelns(
-                f'napi_set_named_property(env, {reg_obj}, "{child_ns_name}", {ns_obj});',
+                f'NAPI_CALL(env, napi_set_named_property(env, {reg_obj}, "{child_ns_name}", {ns_obj}));',
             )
         for pkg in ns.packages:
             pkg_napi_info = PackageNapiInfo.get(self.am, pkg)
@@ -352,7 +352,7 @@ class NapiCodeGenerator:
             pkg_napi_target.writelns(
                 f"size_t argc = {params_num};",
                 f"napi_value args[{params_num}] = {{nullptr}};",
-                f"napi_get_cb_info(env, info, &argc, args , nullptr, nullptr);",
+                f"NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args , nullptr, nullptr));",
             )
 
     def gen_struct_files(
@@ -445,7 +445,7 @@ class NapiCodeGenerator:
                 cpp_field_result = f"cpp_field_{final.name}"
                 struct_napi_impl_target.writelns(
                     f"napi_value {napi_field_value} = nullptr;",
-                    f'napi_get_named_property(env, napi_obj, "{final.name}", &{napi_field_value});',
+                    f'NAPI_CALL(env, napi_get_named_property(env, napi_obj, "{final.name}", &{napi_field_value}));',
                 )
                 type_napi_info.from_napi(
                     struct_napi_impl_target, napi_field_value, cpp_field_result
@@ -485,8 +485,8 @@ class NapiCodeGenerator:
             struct_napi_impl_target.writelns(
                 f"napi_value args[{len(struct_napi_info.dts_final_fields)}] = {{{args_str}}};",
                 f"napi_value napi_obj = nullptr, constructor = nullptr;",
-                f"napi_get_reference_value(env, {struct_napi_info.ctor_ref_name}(), &constructor);",
-                f"napi_new_instance(env, constructor, {len(struct_napi_info.dts_final_fields)}, args, &napi_obj);",
+                f"NAPI_CALL(env, napi_get_reference_value(env, {struct_napi_info.ctor_ref_name}(), &constructor));",
+                f"NAPI_CALL(env, napi_new_instance(env, constructor, {len(struct_napi_info.dts_final_fields)}, args, &napi_obj));",
                 f"return napi_obj;",
             )
 
@@ -511,9 +511,9 @@ class NapiCodeGenerator:
             ):
                 struct_napi_impl_target.writelns(
                     f"napi_value thisobj;",
-                    f"napi_get_cb_info(env, info, nullptr, nullptr, &thisobj, nullptr);",
+                    f"NAPI_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, &thisobj, nullptr));",
                     f"{struct_cpp_info.as_owner}* cpp_ptr;",
-                    f"napi_unwrap(env, thisobj, reinterpret_cast<void **>(&cpp_ptr));",
+                    f"NAPI_CALL(env, napi_unwrap(env, thisobj, reinterpret_cast<void **>(&cpp_ptr)));",
                 )
                 field_ty_napi_info.into_napi(
                     struct_napi_impl_target,
@@ -535,9 +535,9 @@ class NapiCodeGenerator:
                         f"size_t argc = 1;",
                         f"napi_value args[1] = {{nullptr}};",
                         f"napi_value thisobj;",
-                        f"napi_get_cb_info(env, info, &argc, args, &thisobj, nullptr);",
+                        f"NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, &thisobj, nullptr));",
                         f"{struct_cpp_info.as_owner}* cpp_ptr;",
-                        f"napi_unwrap(env, thisobj, reinterpret_cast<void **>(&cpp_ptr));",
+                        f"NAPI_CALL(env, napi_unwrap(env, thisobj, reinterpret_cast<void **>(&cpp_ptr)));",
                     )
                     field_ty_napi_info.from_napi(
                         struct_napi_impl_target, "args[0]", "cpp_field_result"
@@ -554,10 +554,11 @@ class NapiCodeGenerator:
             f"}}",
         ):
             struct_napi_impl_target.writelns(
+                f"napi_status _status;",
                 f"napi_value thisobj;",
                 f"size_t argc = {len(struct_napi_info.dts_final_fields)};",
                 f"napi_value args[{len(struct_napi_info.dts_final_fields)}];",
-                f"napi_get_cb_info(env, info, &argc, args, &thisobj, nullptr);",
+                f"NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, &thisobj, nullptr));",
             )
             cpp_field_results = []
             for i, parts in enumerate(struct_napi_info.dts_final_fields):
@@ -576,11 +577,23 @@ class NapiCodeGenerator:
                 f"{struct_cpp_info.as_owner}* cpp_ptr = new {struct_cpp_info.as_owner}{{{cpp_moved_fields_str}}};",
             )
             with struct_napi_impl_target.indented(
-                f"napi_wrap(env, thisobj, cpp_ptr, []([[maybe_unused]] napi_env env, void* finalize_data, [[maybe_unused]] void* finalize_hint) {{",
+                f"_status = napi_wrap(env, thisobj, cpp_ptr, []([[maybe_unused]] napi_env env, void* finalize_data, [[maybe_unused]] void* finalize_hint) {{",
                 f"}}, nullptr, nullptr);",
             ):
                 struct_napi_impl_target.writelns(
                     f"delete static_cast<{struct_cpp_info.as_owner}*>(finalize_data);",
+                )
+            with struct_napi_impl_target.indented(
+                f"if (_status != napi_ok) {{",
+                f"}}",
+            ):
+                struct_napi_impl_target.writelns(
+                    f"delete thisobj;",
+                    f"napi_throw_error(env,",
+                    f'    "ERR_WRAP_FAILED",',
+                    f'    ("Native object wrapping failed (status " + std::to_string(_status) + ")").c_str()',
+                    f");",
+                    f"return nullptr;",
                 )
             struct_napi_impl_target.writelns(
                 f"return thisobj;",
@@ -605,9 +618,9 @@ class NapiCodeGenerator:
                         f'{{"{field_name}", nullptr, nullptr, {field_getter}, {field_setter}, nullptr, napi_default, nullptr}}, ',
                     )
             struct_napi_impl_target.writelns(
-                f'napi_define_class(env, "{struct.name}", NAPI_AUTO_LENGTH, {struct_napi_info.constructor_func_name}, nullptr, {len(struct_napi_info.dts_final_fields)}, desc, &result);',
-                f"napi_create_reference(env, result, 1, &{struct_napi_info.ctor_ref_name}());",
-                f'napi_set_named_property(env, exports, "{struct.name}", result);',
+                f'NAPI_CALL(env, napi_define_class(env, "{struct.name}", NAPI_AUTO_LENGTH, {struct_napi_info.constructor_func_name}, nullptr, {len(struct_napi_info.dts_final_fields)}, desc, &result));',
+                f"NAPI_CALL(env, napi_create_reference(env, result, 1, &{struct_napi_info.ctor_ref_name}()));",
+                f'NAPI_CALL(env, napi_set_named_property(env, exports, "{struct.name}", result));',
                 f"return;",
             )
 
@@ -716,7 +729,7 @@ class NapiCodeGenerator:
                     f"}}",
                 ):
                     iface_napi_impl_target.writelns(
-                        f"napi_create_reference(env, callback, 1, &ref);",
+                        f"NAPI_CALL(env, napi_create_reference(env, callback, 1, &ref));",
                     )
                 with iface_napi_impl_target.indented(
                     f"~cpp_impl_t() {{",
@@ -727,7 +740,7 @@ class NapiCodeGenerator:
                         f"}}",
                     ):
                         iface_napi_impl_target.writelns(
-                            f"napi_delete_reference(env, ref);",
+                            f"NAPI_CALL(env, napi_delete_reference(env, ref));",
                         )
                 for ancestor in iface_abi_info.ancestor_dict:
                     for method in ancestor.methods:
@@ -780,11 +793,11 @@ class NapiCodeGenerator:
 
             iface_napi_impl_target.writelns(
                 f"napi_value org_napi_obj;",
-                f"napi_get_reference_value(env, ref, &org_napi_obj);",
+                f"NAPI_CALL(env, napi_get_reference_value(env, ref, &org_napi_obj));",
                 f"napi_value {method.name}_ts_method;",
-                f'napi_get_named_property(env, org_napi_obj, "{method.name}", &{method.name}_ts_method);',
+                f'NAPI_CALL(env, napi_get_named_property(env, org_napi_obj, "{method.name}", &{method.name}_ts_method));',
                 f"napi_value method_result_napi;",
-                f"napi_call_function(env, org_napi_obj, {method.name}_ts_method, {len(method.params)}, {args_inner}, &method_result_napi);",
+                f"NAPI_CALL(env, napi_call_function(env, org_napi_obj, {method.name}_ts_method, {len(method.params)}, {args_inner}, &method_result_napi));",
             )
             if method.return_ty_ref:
                 return_napi_type_info = TypeNapiInfo.get(
@@ -824,8 +837,8 @@ class NapiCodeGenerator:
                 f"napi_value argv[2] = {{napi_vtbl_ptr, napi_data_ptr}};",
                 f"napi_value napi_obj = nullptr;",
                 f"napi_value constructor;",
-                f"napi_get_reference_value(env, {iface_napi_info.ctor_ref_name}_inner(), &constructor);",
-                f"napi_new_instance(env, constructor, 2, argv, &napi_obj);",
+                f"NAPI_CALL(env, napi_get_reference_value(env, {iface_napi_info.ctor_ref_name}_inner(), &constructor));",
+                f"NAPI_CALL(env, napi_new_instance(env, constructor, 2, argv, &napi_obj));",
             )
             iface_napi_impl_target.writelns(
                 f"return napi_obj;",
@@ -844,6 +857,7 @@ class NapiCodeGenerator:
             f"}}",
         ):
             iface_napi_impl_target.writelns(
+                f"napi_status _status;",
                 f"napi_value thisobj;",
                 f"size_t argc = 2;",
                 f"napi_value args[2];",
@@ -857,11 +871,23 @@ class NapiCodeGenerator:
                 f"{iface_cpp_info.as_owner}* cpp_ptr = new {iface_cpp_info.as_owner}({{cpp_vtbl_ptr, cpp_data_ptr}});",
             )
             with iface_napi_impl_target.indented(
-                f"napi_wrap(env, thisobj, cpp_ptr, []([[maybe_unused]] napi_env env, void* finalize_data, [[maybe_unused]] void* finalize_hint) {{",
+                f"_status = napi_wrap(env, thisobj, cpp_ptr, []([[maybe_unused]] napi_env env, void* finalize_data, [[maybe_unused]] void* finalize_hint) {{",
                 f"}}, nullptr, nullptr);",
             ):
                 iface_napi_impl_target.writelns(
                     f"delete static_cast<{iface_cpp_info.as_owner}*>(finalize_data);",
+                )
+            with iface_napi_impl_target.indented(
+                f"if (_status != napi_ok) {{",
+                f"}}",
+            ):
+                iface_napi_impl_target.writelns(
+                    f"delete thisobj;",
+                    f"napi_throw_error(env,",
+                    f'    "ERR_WRAP_FAILED",',
+                    f'    ("Native object wrapping failed (status " + std::to_string(_status) + ")").c_str()',
+                    f");",
+                    f"return nullptr;",
                 )
             iface_napi_impl_target.writelns(
                 f"return thisobj;",
@@ -882,10 +908,11 @@ class NapiCodeGenerator:
             ):
                 ctor_cpp_user_info = GlobFuncCppUserInfo.get(self.am, ctor)
                 iface_napi_impl_target.writelns(
+                    f"napi_status _status;",
                     f"napi_value thisobj;",
                     f"size_t argc = {len(ctor.params)};",
                     f"napi_value args[{len(ctor.params)}];",
-                    f"napi_get_cb_info(env, info, &argc, args, &thisobj, nullptr);",
+                    f"NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, &thisobj, nullptr));",
                 )
                 args = []
                 for i, param in enumerate(ctor.params):
@@ -905,11 +932,23 @@ class NapiCodeGenerator:
                         f"{iface_cpp_info.as_owner}* cpp_ptr = new {iface_cpp_info.as_owner}(std::move(value));",
                     )
                     with iface_napi_impl_target.indented(
-                        f"napi_wrap(env, thisobj, cpp_ptr, []([[maybe_unused]] napi_env env, void* finalize_data, [[maybe_unused]] void* finalize_hint) {{",
+                        f"_status = napi_wrap(env, thisobj, cpp_ptr, []([[maybe_unused]] napi_env env, void* finalize_data, [[maybe_unused]] void* finalize_hint) {{",
                         f"}}, nullptr, nullptr);",
                     ):
                         iface_napi_impl_target.writelns(
                             f"delete static_cast<{iface_cpp_info.as_owner}*>(finalize_data);",
+                        )
+                    with iface_napi_impl_target.indented(
+                        f"if (_status != napi_ok) {{",
+                        f"}}",
+                    ):
+                        iface_napi_impl_target.writelns(
+                            f"delete thisobj;",
+                            f"napi_throw_error(env,",
+                            f'    "ERR_WRAP_FAILED",',
+                            f'    ("Native object wrapping failed (status " + std::to_string(_status) + ")").c_str()',
+                            f");",
+                            f"return nullptr;",
                         )
                     iface_napi_impl_target.writelns(
                         f"return thisobj;",
@@ -948,7 +987,7 @@ class NapiCodeGenerator:
                     target.writelns(f"{{{', '.join(props_strs)}}}, ")
             if iface_napi_info.is_class():
                 target.writelns(
-                    f'napi_define_class(env, "{iface.name}", NAPI_AUTO_LENGTH, {iface_napi_info.constructor_func_name}, nullptr, sizeof(desc) / sizeof(desc[0]), desc, &result);',
+                    f'NAPI_CALL(env, napi_define_class(env, "{iface.name}", NAPI_AUTO_LENGTH, {iface_napi_info.constructor_func_name}, nullptr, sizeof(desc) / sizeof(desc[0]), desc, &result));',
                 )
                 if iface_napi_info.static_funcs:
                     with target.indented(
@@ -960,15 +999,15 @@ class NapiCodeGenerator:
                                 f'{{"{static_func.name}", nullptr, {mng_name}, nullptr, nullptr, nullptr, napi_static, nullptr}}, ',
                             )
                     target.writelns(
-                        f"napi_define_properties(env, result, {len(iface_napi_info.static_funcs)}, static_properties);",
+                        f"NAPI_CALL(env, napi_define_properties(env, result, {len(iface_napi_info.static_funcs)}, static_properties));",
                     )
                 target.writelns(
-                    f"napi_create_reference(env, result, 1, &{iface_napi_info.ctor_ref_name}());",
-                    f'napi_set_named_property(env, exports, "{iface.name}", result);',
+                    f"NAPI_CALL(env, napi_create_reference(env, result, 1, &{iface_napi_info.ctor_ref_name}()));",
+                    f'NAPI_CALL(env, napi_set_named_property(env, exports, "{iface.name}", result));',
                 )
             target.writelns(
-                f'napi_define_class(env, "{iface.name}_inner", NAPI_AUTO_LENGTH, {iface_napi_info.constructor_func_name}_inner, nullptr, sizeof(desc) / sizeof(desc[0]), desc, &result);',
-                f"napi_create_reference(env, result, 1, &{iface_napi_info.ctor_ref_name}_inner());",
+                f'NAPI_CALL(env, napi_define_class(env, "{iface.name}_inner", NAPI_AUTO_LENGTH, {iface_napi_info.constructor_func_name}_inner, nullptr, sizeof(desc) / sizeof(desc[0]), desc, &result));',
+                f"NAPI_CALL(env, napi_create_reference(env, result, 1, &{iface_napi_info.ctor_ref_name}_inner()));",
                 f"return;",
             )
 
@@ -1039,9 +1078,9 @@ class NapiCodeGenerator:
                     ):
                         iface_meth_napi_impl_target.writelns(
                             f"napi_value thisobj;",
-                            f"napi_get_cb_info(env, info, nullptr, nullptr, &thisobj, nullptr);",
+                            f"NAPI_CALL(env, napi_get_cb_info(env, info, nullptr, nullptr, &thisobj, nullptr));",
                             f"{iface_cpp_info.as_owner}* value_ptr;",
-                            f"napi_unwrap(env, thisobj, reinterpret_cast<void**>(&value_ptr));",
+                            f"NAPI_CALL(env, napi_unwrap(env, thisobj, reinterpret_cast<void**>(&value_ptr)));",
                         )
                         self.gen_func_content(
                             method,
@@ -1071,7 +1110,7 @@ class NapiCodeGenerator:
                         f"value_{item.name}",
                     )
                     pkg_napi_target.writelns(
-                        f'napi_set_named_property(env, exports, "{item.name}", value_{item.name});',
+                        f'NAPI_CALL(env, napi_set_named_property(env, exports, "{item.name}", value_{item.name}));',
                     )
 
             else:
@@ -1091,12 +1130,12 @@ class NapiCodeGenerator:
                         f"value_{item.name}",
                     )
                     pkg_napi_target.writelns(
-                        f'napi_create_string_utf8(env, "{item.name}", NAPI_AUTO_LENGTH, &key);',
-                        f'napi_set_named_property(env, enum_obj, "{item.name}", value_{item.name});',
-                        f"napi_set_property(env, enum_obj, value_{item.name}, key);",
+                        f'NAPI_CALL(env, napi_create_string_utf8(env, "{item.name}", NAPI_AUTO_LENGTH, &key));',
+                        f'NAPI_CALL(env, napi_set_named_property(env, enum_obj, "{item.name}", value_{item.name}));',
+                        f"NAPI_CALL(env, napi_set_property(env, enum_obj, value_{item.name}, key));",
                     )
                 pkg_napi_target.writelns(
-                    f'napi_set_named_property(env, exports, "{enum.name}", enum_obj);',
+                    f'NAPI_CALL(env, napi_set_named_property(env, exports, "{enum.name}", enum_obj));',
                 )
             pkg_napi_target.writelns(
                 f"return;",
@@ -1207,7 +1246,7 @@ class NapiCodeGenerator:
         ):
             union_napi_impl_target.writelns(
                 f"napi_valuetype value_ty;",
-                f"napi_typeof(env, napi_obj, &value_ty);",
+                f"NAPI_CALL(env, napi_typeof(env, napi_obj, &value_ty));",
                 f"bool flag;",
             )
             for parts in union_napi_info.dts_final_fields:
@@ -1239,7 +1278,7 @@ class NapiCodeGenerator:
                             )
                     elif isinstance(final_ty, ArrayType):
                         union_napi_impl_target.writelns(
-                            f"napi_is_array(env, napi_obj, &flag);",
+                            f"NAPI_CALL(env, napi_is_array(env, napi_obj, &flag));",
                         )
                         with union_napi_impl_target.indented(
                             f"if (flag) {{",
@@ -1258,8 +1297,8 @@ class NapiCodeGenerator:
                         union_napi_impl_target.writelns(
                             f"napi_value global = nullptr, map_ctor = nullptr;",
                             f"napi_get_global(env, &global);",
-                            f'napi_get_named_property(env, global, "Map", &map_ctor);',
-                            f"napi_instanceof(env, napi_obj, map_ctor, &flag);",
+                            f'NAPI_CALL(env, napi_get_named_property(env, global, "Map", &map_ctor));',
+                            f"NAPI_CALL(env, napi_instanceof(env, napi_obj, map_ctor, &flag));",
                         )
                         with union_napi_impl_target.indented(
                             f"if (flag) {{",

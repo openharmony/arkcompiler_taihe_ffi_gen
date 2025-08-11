@@ -546,7 +546,7 @@ class ScalarTypeNapiInfo(TypeNapiInfo):
         }.get(self.type.kind)
         target.writelns(
             f"{as_napi_c} {cpp_result}_tmp;",
-            f"{from_js_to_c_func}(env, {napi_value}, &{cpp_result}_tmp);",
+            f"NAPI_CALL(env, {from_js_to_c_func}(env, {napi_value}, &{cpp_result}_tmp));",
             f"{self.cpp_info.as_owner} {cpp_result} = {cpp_result}_tmp;",
         )
 
@@ -569,7 +569,7 @@ class ScalarTypeNapiInfo(TypeNapiInfo):
         }.get(self.type.kind)
         target.writelns(
             f"napi_value {napi_result} = nullptr;",
-            f"{from_c_to_js_func}(env, {cpp_value}, &{napi_result});",
+            f"NAPI_CALL(env, {from_c_to_js_func}(env, {cpp_value}, &{napi_result}));",
         )
 
 
@@ -597,10 +597,10 @@ class StringTypeNapiInfo(TypeNapiInfo):
     ):
         target.writelns(
             f"size_t {cpp_result}_len = 0;",
-            f"napi_get_value_string_utf8(env, {napi_value}, nullptr, 0, &{cpp_result}_len);",
+            f"NAPI_CALL(env, napi_get_value_string_utf8(env, {napi_value}, nullptr, 0, &{cpp_result}_len));",
             f"TString {cpp_result}_abi;",
             f"char* {cpp_result}_buf = tstr_initialize(&{cpp_result}_abi, {cpp_result}_len + 1);",
-            f"napi_get_value_string_utf8(env, {napi_value}, {cpp_result}_buf, {cpp_result}_len + 1, &{cpp_result}_len);",
+            f"NAPI_CALL(env, napi_get_value_string_utf8(env, {napi_value}, {cpp_result}_buf, {cpp_result}_len + 1, &{cpp_result}_len));",
             f"{cpp_result}_buf[{cpp_result}_len] = '\\0';",
             f"{cpp_result}_abi.length = {cpp_result}_len;",
             f"taihe::string {cpp_result}({cpp_result}_abi);",
@@ -614,7 +614,7 @@ class StringTypeNapiInfo(TypeNapiInfo):
     ):
         target.writelns(
             f"napi_value {napi_result} = nullptr;",
-            f"napi_create_string_utf8(env, {cpp_value}.c_str(), {cpp_value}.size(), &{napi_result});",
+            f"NAPI_CALL(env, napi_create_string_utf8(env, {cpp_value}.c_str(), {cpp_value}.size(), &{napi_result}));",
         )
 
 
@@ -821,7 +821,7 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                 f"}}",
             ):
                 target.writelns(
-                    f"napi_create_reference(env, callback, 1, &ref);",
+                    f"NAPI_CALL(env, napi_create_reference(env, callback, 1, &ref));",
                 )
             with target.indented(
                 f"~{cpp_impl_class}() {{",
@@ -832,7 +832,7 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                     f"}}",
                 ):
                     target.writelns(
-                        f"napi_delete_reference(env, ref);",
+                        f"NAPI_CALL(env, napi_delete_reference(env, ref));",
                     )
             inner_cpp_params = []
             inner_napi_args = []
@@ -873,9 +873,9 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                         f"napi_value napi_argv[] = {{{inner_napi_args_str}}};",
                         f"napi_value {inner_napi_res} = nullptr;",
                         f"napi_value cb_ref = nullptr, global = nullptr;",
-                        f"napi_get_reference_value(env, ref, &cb_ref);",
+                        f"NAPI_CALL(env, napi_get_reference_value(env, ref, &cb_ref));",
                         f"napi_get_global(env, &global);",
-                        f"napi_call_function(env, global, cb_ref, {len(self.type.ty_ref.params)}, napi_argv, &{inner_napi_res});",
+                        f"NAPI_CALL(env, napi_call_function(env, global, cb_ref, {len(self.type.ty_ref.params)}, napi_argv, &{inner_napi_res}));",
                     )
                     return_ty_napi_info = TypeNapiInfo.get(
                         self.am, return_ty.resolved_ty
@@ -890,9 +890,9 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                         f"napi_value napi_argv[] = {{{inner_napi_args_str}}};",
                         f"napi_value {inner_napi_res} = nullptr;",
                         f"napi_value cb_ref = nullptr, global = nullptr;",
-                        f"napi_get_reference_value(env, ref, &cb_ref);",
+                        f"NAPI_CALL(env, napi_get_reference_value(env, ref, &cb_ref));",
                         f"napi_get_global(env, &global);",
-                        f"napi_call_function(env, global, cb_ref, 1, napi_argv, &{inner_napi_res});",
+                        f"NAPI_CALL(env, napi_call_function(env, global, cb_ref, 1, napi_argv, &{inner_napi_res}));",
                         f"return;",
                     )
         target.writelns(
@@ -1009,7 +1009,7 @@ class ArrayBufferTypeNapiInfo(TypeNapiInfo):
         target.writelns(
             f"void* {napi_data};",
             f"size_t {napi_length};",
-            f"napi_get_arraybuffer_info(env, {napi_value}, &{napi_data}, &{napi_length});",
+            f"NAPI_CALL(env, napi_get_arraybuffer_info(env, {napi_value}, &{napi_data}, &{napi_length}));",
             f"{self.cpp_info.as_param} {cpp_result}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>({napi_data}), {napi_length});",
         )
 
@@ -1025,7 +1025,7 @@ class ArrayBufferTypeNapiInfo(TypeNapiInfo):
         target.writelns(
             f"napi_value {napi_result} = nullptr;",
             f"void* {napi_data} = nullptr;",
-            f"napi_create_arraybuffer(env, {cpp_value}.size(), &{napi_data}, &{napi_result});",
+            f"NAPI_CALL(env, napi_create_arraybuffer(env, {cpp_value}.size(), &{napi_data}, &{napi_result}));",
             f"std::copy({cpp_value}.begin(), {cpp_value}.end(), reinterpret_cast<{item_ty_cpp_info.as_owner}*>({napi_data}));",
         )
 
@@ -1061,7 +1061,7 @@ class ArrayTypeNapiInfo(TypeNapiInfo):
         cpp_ctr = f"{cpp_buffer}_i"
         target.writelns(
             f"uint32_t {array_size};",
-            f"napi_get_array_length(env, {napi_value}, &{array_size});",
+            f"NAPI_CALL(env, napi_get_array_length(env, {napi_value}, &{array_size}));",
             f"{item_ty_cpp_info.as_owner}* {cpp_buffer} = reinterpret_cast<{item_ty_cpp_info.as_owner}*>(malloc({array_size} * sizeof({item_ty_cpp_info.as_owner})));",
         )
         with target.indented(
@@ -1070,7 +1070,7 @@ class ArrayTypeNapiInfo(TypeNapiInfo):
         ):
             target.writelns(
                 f"napi_value {napi_item};",
-                f"napi_get_element(env, {napi_value}, {cpp_ctr}, &{napi_item});",
+                f"NAPI_CALL(env, napi_get_element(env, {napi_value}, {cpp_ctr}, &{napi_item}));",
             )
             item_ty_napi_info.from_napi(target, napi_item, cpp_item)
             target.writelns(
@@ -1093,7 +1093,7 @@ class ArrayTypeNapiInfo(TypeNapiInfo):
         target.writelns(
             f"uint32_t {cpp_size} = {cpp_value}.size();",
             f"napi_value {napi_result} = nullptr;",
-            f"napi_create_array_with_length(env, {cpp_size}, &{napi_result});",
+            f"NAPI_CALL(env, napi_create_array_with_length(env, {cpp_size}, &{napi_result}));",
         )
         with target.indented(
             f"for (uint32_t {cpp_ctr} = 0; {cpp_ctr} < {cpp_size}; {cpp_ctr}++) {{",
@@ -1101,7 +1101,7 @@ class ArrayTypeNapiInfo(TypeNapiInfo):
         ):
             item_ty_napi_info.into_napi(target, f"{cpp_value}[{cpp_ctr}]", napi_item)
             target.writelns(
-                f"napi_set_element(env, {napi_result}, {cpp_ctr}, {napi_item});",
+                f"NAPI_CALL(env, napi_set_element(env, {napi_result}, {cpp_ctr}, {napi_item}));",
             )
 
 
@@ -1176,7 +1176,7 @@ class TypedArrayTypeNapiInfo(TypeNapiInfo):
             f"void* {napi_data};",
             f"napi_value {napi_arrbuf};",
             f"size_t {napi_byte_offset};",
-            f"napi_get_typedarray_info(env, {napi_value}, &{napi_ta_type}, &{napi_length}, &{napi_data}, &{napi_arrbuf}, &{napi_byte_offset});",
+            f"NAPI_CALL(env, napi_get_typedarray_info(env, {napi_value}, &{napi_ta_type}, &{napi_length}, &{napi_data}, &{napi_arrbuf}, &{napi_byte_offset}));",
             f"{self.cpp_info.as_param} {cpp_result}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>({napi_data}), {napi_length});",
         )
 
@@ -1193,9 +1193,9 @@ class TypedArrayTypeNapiInfo(TypeNapiInfo):
             f"napi_value {napi_result} = nullptr;",
             f"napi_value {napi_arrbuf} = nullptr;",
             f"void* {napi_data} = nullptr;",
-            f"napi_create_arraybuffer(env, {cpp_value}.size() * sizeof({item_ty_cpp_info.as_owner}), &{napi_data}, &{napi_arrbuf});",
+            f"NAPI_CALL(env, napi_create_arraybuffer(env, {cpp_value}.size() * sizeof({item_ty_cpp_info.as_owner}), &{napi_data}, &{napi_arrbuf}));",
             f"std::copy({cpp_value}.begin(), {cpp_value}.end(), reinterpret_cast<{item_ty_cpp_info.as_owner}*>({napi_data}));",
-            f"napi_create_typedarray(env, {self.napi_type_name}, {cpp_value}.size(), {napi_arrbuf}, 0, &{napi_result});",
+            f"NAPI_CALL(env, napi_create_typedarray(env, {self.napi_type_name}, {cpp_value}.size(), {napi_arrbuf}, 0, &{napi_result}));",
         )
 
 
@@ -1237,8 +1237,8 @@ class RecordTypeNapiInfo(TypeNapiInfo):
         target.writelns(
             f"napi_value {prop_names} = nullptr;",
             f"uint32_t {prop_count};",
-            f"napi_get_property_names(env, {napi_value}, &{prop_names});",
-            f"napi_get_array_length(env, {prop_names}, &{prop_count});",
+            f"NAPI_CALL(env, napi_get_property_names(env, {napi_value}, &{prop_names}));",
+            f"NAPI_CALL(env, napi_get_array_length(env, {prop_names}, &{prop_count}));",
             f"{self.cpp_info.as_owner} {cpp_result};",
         )
         with target.indented(
@@ -1247,8 +1247,8 @@ class RecordTypeNapiInfo(TypeNapiInfo):
         ):
             target.writelns(
                 f"napi_value {napi_key} = nullptr, {napi_val} = nullptr;",
-                f"napi_get_element(env, {prop_names}, i, &{napi_key});",
-                f"napi_get_property(env, {napi_value}, {napi_key}, &{napi_val});",
+                f"NAPI_CALL(env, napi_get_element(env, {prop_names}, i, &{napi_key}));",
+                f"NAPI_CALL(env, napi_get_property(env, {napi_value}, {napi_key}, &{napi_val}));",
             )
             key_ty_napi_info.from_napi(target, napi_key, cpp_key)
             val_ty_napi_info.from_napi(target, napi_val, cpp_val)
@@ -1281,7 +1281,7 @@ class RecordTypeNapiInfo(TypeNapiInfo):
             key_ty_napi_info.into_napi(target, cpp_key, napi_key)
             val_ty_napi_info.into_napi(target, cpp_val, napi_val)
             target.writelns(
-                f"napi_set_property(env, {napi_result}, {napi_key}, {napi_val});",
+                f"NAPI_CALL(env, napi_set_property(env, {napi_result}, {napi_key}, {napi_val}));",
             )
 
 
@@ -1317,10 +1317,10 @@ class MapTypeNapiInfo(TypeNapiInfo):
         target.writelns(
             f"{self.cpp_info.as_owner} {cpp_result};",
             f"napi_value {cpp_result}_entries_fn = nullptr, {cpp_result}_entries_iter = nullptr;",
-            f'napi_get_named_property(env, {napi_value}, "entries", &{cpp_result}_entries_fn);',
-            f"napi_call_function(env, {napi_value}, {cpp_result}_entries_fn, 0, nullptr, &{cpp_result}_entries_iter);",
+            f'NAPI_CALL(env, napi_get_named_property(env, {napi_value}, "entries", &{cpp_result}_entries_fn));',
+            f"NAPI_CALL(env, napi_call_function(env, {napi_value}, {cpp_result}_entries_fn, 0, nullptr, &{cpp_result}_entries_iter));",
             f"napi_value {cpp_result}_next_meth = nullptr;",
-            f'napi_get_named_property(env, {cpp_result}_entries_iter, "next", &{cpp_result}_next_meth);',
+            f'NAPI_CALL(env, napi_get_named_property(env, {cpp_result}_entries_iter, "next", &{cpp_result}_next_meth));',
         )
         with target.indented(
             f"while (true) {{",
@@ -1328,16 +1328,16 @@ class MapTypeNapiInfo(TypeNapiInfo):
         ):
             target.writelns(
                 f"napi_value {cpp_result}_next_result;",
-                f"napi_call_function(env, {cpp_result}_entries_iter, {cpp_result}_next_meth, 0, nullptr, &{cpp_result}_next_result);",
+                f"NAPI_CALL(env, napi_call_function(env, {cpp_result}_entries_iter, {cpp_result}_next_meth, 0, nullptr, &{cpp_result}_next_result));",
                 f"bool {cpp_result}_done;",
                 f"napi_value {cpp_result}_done_prop;",
-                f'napi_get_named_property(env, {cpp_result}_next_result, "done", &{cpp_result}_done_prop);',
-                f"napi_get_value_bool(env, {cpp_result}_done_prop, &{cpp_result}_done);",
+                f'NAPI_CALL(env, napi_get_named_property(env, {cpp_result}_next_result, "done", &{cpp_result}_done_prop));',
+                f"NAPI_CALL(env, napi_get_value_bool(env, {cpp_result}_done_prop, &{cpp_result}_done));",
                 f"if ({cpp_result}_done) break;",
                 f"napi_value {cpp_result}_value_prop, {cpp_result}_key, {cpp_result}_value;",
-                f'napi_get_named_property(env, {cpp_result}_next_result, "value", &{cpp_result}_value_prop);',
-                f"napi_get_element(env, {cpp_result}_value_prop, 0, &{cpp_result}_key);",
-                f"napi_get_element(env, {cpp_result}_value_prop, 1, &{cpp_result}_value);",
+                f'NAPI_CALL(env, napi_get_named_property(env, {cpp_result}_next_result, "value", &{cpp_result}_value_prop));',
+                f"NAPI_CALL(env, napi_get_element(env, {cpp_result}_value_prop, 0, &{cpp_result}_key));",
+                f"NAPI_CALL(env, napi_get_element(env, {cpp_result}_value_prop, 1, &{cpp_result}_value));",
             )
             key_ty_napi_info.from_napi(target, f"{cpp_result}_key", cpp_key)
             val_ty_napi_info.from_napi(target, f"{cpp_result}_value", cpp_val)
@@ -1361,10 +1361,10 @@ class MapTypeNapiInfo(TypeNapiInfo):
         target.writelns(
             f"napi_value {napi_result}_global = nullptr, {napi_result}_map_ctor = nullptr, {napi_result} = nullptr;",
             f"napi_get_global(env, &{napi_result}_global);",
-            f'napi_get_named_property(env, {napi_result}_global, "Map", &{napi_result}_map_ctor);',
-            f"napi_new_instance(env, {napi_result}_map_ctor, 0, nullptr, &{napi_result});",
+            f'NAPI_CALL(env, napi_get_named_property(env, {napi_result}_global, "Map", &{napi_result}_map_ctor));',
+            f"NAPI_CALL(env, napi_new_instance(env, {napi_result}_map_ctor, 0, nullptr, &{napi_result}));",
             f"napi_value {napi_result}_set_fn = nullptr;",
-            f'napi_get_named_property(env, {napi_result}, "set", &{napi_result}_set_fn);',
+            f'NAPI_CALL(env, napi_get_named_property(env, {napi_result}, "set", &{napi_result}_set_fn));',
         )
         with target.indented(
             f"for (const auto& [{cpp_key}, {cpp_val}] : {cpp_value}) {{",
@@ -1374,7 +1374,7 @@ class MapTypeNapiInfo(TypeNapiInfo):
             val_ty_napi_info.into_napi(target, cpp_val, napi_val)
             target.writelns(
                 f"napi_value {napi_result}_args[2] = {{{napi_key}, {napi_val}}};",
-                f"napi_call_function(env, {napi_result}, {napi_result}_set_fn, 2, {napi_result}_args, nullptr);",
+                f"NAPI_CALL(env, napi_call_function(env, {napi_result}, {napi_result}_set_fn, 2, {napi_result}_args, nullptr));",
             )
 
 
@@ -1532,9 +1532,9 @@ class BigIntTypeNapiInfo(TypeNapiInfo):
         target.writelns(
             f"size_t {cpp_result}_len = 0;",
             f"int {cpp_result}_sign = 0;",
-            f"napi_get_value_bigint_words(env, {napi_value}, nullptr, &{cpp_result}_len, nullptr);",
+            f"NAPI_CALL(env, napi_get_value_bigint_words(env, {napi_value}, nullptr, &{cpp_result}_len, nullptr));",
             f"uint64_t* {cpp_result}_words = new uint64_t[{cpp_result}_len];",
-            f"napi_get_value_bigint_words(env, {napi_value}, &{cpp_result}_sign, &{cpp_result}_len, {cpp_result}_words);",
+            f"NAPI_CALL(env, napi_get_value_bigint_words(env, {napi_value}, &{cpp_result}_sign, &{cpp_result}_len, {cpp_result}_words));",
             f"{self.cpp_info.as_owner} {cpp_result}(_taihe_build_num({cpp_result}_sign, {self.cpp_info.as_owner}{{{cpp_result}_words, {cpp_result}_len}}));",
         )
 
@@ -1547,9 +1547,8 @@ class BigIntTypeNapiInfo(TypeNapiInfo):
         target.writelns(
             f"napi_value {napi_result} = nullptr;",
             f"auto [{napi_result}_sign, {napi_result}_abs] = _taihe_get_sign_and_abs({cpp_value});",
-            f"napi_create_bigint_words(env, {napi_result}_sign, {napi_result}_abs.size(), {napi_result}_abs.data(), &{napi_result});",
+            f"NAPI_CALL(env, napi_create_bigint_words(env, {napi_result}_sign, {napi_result}_abs.size(), {napi_result}_abs.data(), &{napi_result}));",
         )
-        # TODO: signBit
 
 
 class TypeNapiInfoDispatcher(TypeVisitor[TypeNapiInfo]):

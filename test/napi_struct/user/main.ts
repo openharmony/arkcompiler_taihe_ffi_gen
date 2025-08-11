@@ -1,5 +1,15 @@
 import * as lib from "struct_test";
 
+// Test error param type
+function testDynamicInput(value: any) {
+  try {
+    let rgb = lib.to_rgb(value);
+    console.log("result: ", rgb);
+  } catch (e) {
+    console.log("capture error message: ", e.message);
+  }
+}
+
 function main() {
   let rgb: lib.RGB = {r: 1, g: 2, b: 3};
   let my_rgb = lib.to_rgb(16);
@@ -25,6 +35,10 @@ function main() {
   console.log("process teacher: ", pro_teacher.name, pro_teacher.age)
   let cre_teacher = lib.create_teacher();
   console.log("create teacher: ", cre_teacher.name, cre_student.age)
+
+  testDynamicInput("It is a string.");
+  testDynamicInput({});
+  testDynamicInput(null);
 }
 
 main();
