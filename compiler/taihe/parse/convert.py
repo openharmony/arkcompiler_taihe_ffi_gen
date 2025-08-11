@@ -78,8 +78,8 @@ class ExprEvaluator(Visitor):
             "==": int.__eq__,
             "!=": int.__ne__,
         }[node.op.text](
-            int(self.visit(node.left)),
-            int(self.visit(node.right)),
+            int(node.left.accept(self)),
+            int(node.right.accept(self)),
         )
 
     @override
@@ -94,14 +94,14 @@ class ExprEvaluator(Visitor):
             "==": float.__eq__,
             "!=": float.__ne__,
         }[node.op.text](
-            float(self.visit(node.left)),
-            float(self.visit(node.right)),
+            float(node.left.accept(self)),
+            float(node.right.accept(self)),
         )
 
     @override
     def visit_unary_bool_expr(self, node: ast.UnaryBoolExpr) -> bool:
         assert node.op.text == "!"
-        return not self.visit(node.expr)
+        return not node.expr.accept(self)
 
     @override
     def visit_binary_bool_expr(self, node: ast.BinaryBoolExpr) -> bool:
@@ -109,20 +109,20 @@ class ExprEvaluator(Visitor):
             "&&": bool.__and__,
             "||": bool.__or__,
         }[node.op.text](
-            bool(self.visit(node.left)),
-            bool(self.visit(node.right)),
+            bool(node.left.accept(self)),
+            bool(node.right.accept(self)),
         )
 
     @override
     def visit_parenthesis_bool_expr(self, node: ast.ParenthesisBoolExpr) -> bool:
-        return self.visit(node.expr)
+        return node.expr.accept(self)
 
     @override
     def visit_conditional_bool_expr(self, node: ast.ConditionalBoolExpr) -> bool:
         return (
-            self.visit(node.then_expr)
-            if self.visit(node.cond)
-            else self.visit(node.else_expr)
+            node.then_expr.accept(self)
+            if node.cond.accept(self)
+            else node.else_expr.accept(self)
         )
 
     # Int Expr
@@ -140,14 +140,14 @@ class ExprEvaluator(Visitor):
 
     @override
     def visit_parenthesis_int_expr(self, node: ast.ParenthesisIntExpr) -> int:
-        return self.visit(node.expr)
+        return node.expr.accept(self)
 
     @override
     def visit_conditional_int_expr(self, node: ast.ConditionalIntExpr) -> int:
         return (
-            self.visit(node.then_expr)
-            if self.visit(node.cond)
-            else self.visit(node.else_expr)
+            node.then_expr.accept(self)
+            if node.cond.accept(self)
+            else node.else_expr.accept(self)
         )
 
     @override
@@ -157,7 +157,7 @@ class ExprEvaluator(Visitor):
             "+": int.__pos__,
             "~": int.__invert__,
         }[node.op.text](
-            int(self.visit(node.expr)),
+            int(node.expr.accept(self)),
         )
 
     @override
@@ -174,8 +174,8 @@ class ExprEvaluator(Visitor):
             "|": int.__or__,
             "^": int.__xor__,
         }[node.op.text](
-            int(self.visit(node.left)),
-            int(self.visit(node.right)),
+            int(node.left.accept(self)),
+            int(node.right.accept(self)),
         )
 
     @override
@@ -184,8 +184,8 @@ class ExprEvaluator(Visitor):
             "<": int.__lshift__,
             ">": int.__rshift__,
         }[node.ch.text](
-            int(self.visit(node.left)),
-            int(self.visit(node.right)),
+            int(node.left.accept(self)),
+            int(node.right.accept(self)),
         )
 
     # Float Expr
@@ -196,14 +196,14 @@ class ExprEvaluator(Visitor):
 
     @override
     def visit_parenthesis_float_expr(self, node: ast.ParenthesisFloatExpr) -> float:
-        return self.visit(node.expr)
+        return node.expr.accept(self)
 
     @override
     def visit_conditional_float_expr(self, node: ast.ConditionalFloatExpr) -> Any:
         return (
-            self.visit(node.then_expr)
-            if self.visit(node.cond)
-            else self.visit(node.else_expr)
+            node.then_expr.accept(self)
+            if node.cond.accept(self)
+            else node.else_expr.accept(self)
         )
 
     @override
@@ -212,7 +212,7 @@ class ExprEvaluator(Visitor):
             "-": float.__neg__,
             "+": float.__pos__,
         }[node.op.text](
-            float(self.visit(node.expr)),
+            float(node.expr.accept(self)),
         )
 
     @override
@@ -223,8 +223,8 @@ class ExprEvaluator(Visitor):
             "*": float.__mul__,
             "/": float.__truediv__,
         }[node.op.text](
-            float(self.visit(node.left)),
-            float(self.visit(node.right)),
+            float(node.left.accept(self)),
+            float(node.right.accept(self)),
         )
 
     # String Expr
@@ -239,25 +239,25 @@ class ExprEvaluator(Visitor):
 
     @override
     def visit_parenthesis_string_expr(self, node: ast.ParenthesisStringExpr) -> str:
-        return self.visit(node.expr)
+        return node.expr.accept(self)
 
     @override
     def visit_binary_string_expr(self, node: ast.BinaryStringExpr) -> str:
-        return self.visit(node.left) + self.visit(node.right)
+        return node.left.accept(self) + node.right.accept(self)
 
     @override
     def visit_conditional_string_expr(self, node: ast.ConditionalStringExpr) -> str:
         return (
-            self.visit(node.then_expr)
-            if self.visit(node.cond)
-            else self.visit(node.else_expr)
+            node.then_expr.accept(self)
+            if node.cond.accept(self)
+            else node.else_expr.accept(self)
         )
 
     # Any Expr
 
     @override
     def visit_any_expr(self, node: ast.AnyExpr) -> Any:
-        return self.visit(node.expr)
+        return node.expr.accept(self)
 
 
 class AstConverter(ExprEvaluator):
@@ -277,17 +277,19 @@ class AstConverter(ExprEvaluator):
 
     @override
     def visit_named_attr_arg(self, node: ast.NamedAttrArg) -> Argument:
-        return Argument(loc=node.loc, key=id2str(node.name), value=self.visit(node.val))
+        a = Argument(loc=node.loc, key=id2str(node.name), value=node.val.accept(self))
+        return a
 
     @override
     def visit_unnamed_attr_arg(self, node: ast.UnnamedAttrArg) -> Argument:
-        return Argument(loc=node.loc, key=None, value=self.visit(node.val))
+        a = Argument(loc=node.loc, key=None, value=node.val.accept(self))
+        return a
 
     def add_attr(self, decl: Decl, attr: ast.DeclAttr | ast.ScopeAttr):
         uncheck_attr = UncheckedAttribute(
             loc=attr.name.loc,
             name=id2str(attr.name),
-            args=[self.visit(arg) for arg in attr.args],
+            args=[arg.accept(self) for arg in attr.args],
         )
         decl.attributes.setdefault(UncheckedAttribute, []).append(uncheck_attr)
 
@@ -307,21 +309,21 @@ class AstConverter(ExprEvaluator):
 
     @override
     def visit_generic_arg(self, node: ast.GenericArg) -> GenericArgDecl:
-        d = GenericArgDecl(node.loc, self.visit(node.ty))
+        d = GenericArgDecl(node.loc, node.ty.accept(self))
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
         return d
 
     @override
     def visit_generic_type(self, node: ast.GenericType) -> GenericTypeRefDecl:
         d = GenericTypeRefDecl(node.loc, id2str(node.decl_name))
-        self.dm.for_each(node.args, lambda a: d.add_arg(self.visit(a)))
+        self.dm.for_each(node.args, lambda a: d.add_arg(a.accept(self)))
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
         return d
 
     @override
     def visit_callback_type(self, node: ast.CallbackType) -> CallbackTypeRefDecl:
-        d = CallbackTypeRefDecl(node.loc, self.visit(node.return_ty))
-        self.dm.for_each(node.parameters, lambda p: d.add_param(self.visit(p)))
+        d = CallbackTypeRefDecl(node.loc, node.return_ty.accept(self))
+        self.dm.for_each(node.parameters, lambda p: d.add_param(p.accept(self)))
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
         return d
 
@@ -363,14 +365,14 @@ class AstConverter(ExprEvaluator):
 
     @override
     def visit_struct_property(self, node: ast.StructProperty) -> StructFieldDecl:
-        d = StructFieldDecl(node.name.loc, id2str(node.name), self.visit(node.ty))
+        d = StructFieldDecl(node.name.loc, id2str(node.name), node.ty.accept(self))
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
         return d
 
     @override
     def visit_struct(self, node: ast.Struct) -> StructDecl:
         d = StructDecl(node.name.loc, id2str(node.name))
-        self.dm.for_each(node.fields, lambda f: d.add_field(self.visit(f)))
+        self.dm.for_each(node.fields, lambda f: d.add_field(f.accept(self)))
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
         self.dm.for_each(node.inner_attrs, lambda a: self.add_attr(d, a))
         return d
@@ -378,7 +380,7 @@ class AstConverter(ExprEvaluator):
     @override
     def visit_enum_property(self, node: ast.EnumProperty) -> EnumItemDecl:
         if node.val:
-            d = EnumItemDecl(node.name.loc, id2str(node.name), self.visit(node.val))
+            d = EnumItemDecl(node.name.loc, id2str(node.name), node.val.accept(self))
         else:
             d = EnumItemDecl(node.name.loc, id2str(node.name))
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
@@ -386,15 +388,15 @@ class AstConverter(ExprEvaluator):
 
     @override
     def visit_enum(self, node: ast.Enum) -> EnumDecl:
-        d = EnumDecl(node.name.loc, id2str(node.name), self.visit(node.enum_ty))
-        self.dm.for_each(node.fields, lambda a: d.add_item(self.visit(a)))
+        d = EnumDecl(node.name.loc, id2str(node.name), node.enum_ty.accept(self))
+        self.dm.for_each(node.fields, lambda a: d.add_item(a.accept(self)))
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
         return d
 
     @override
     def visit_union_property(self, node: ast.UnionProperty) -> UnionFieldDecl:
         if ty := node.ty:
-            d = UnionFieldDecl(node.name.loc, id2str(node.name), self.visit(ty))
+            d = UnionFieldDecl(node.name.loc, id2str(node.name), ty.accept(self))
         else:
             d = UnionFieldDecl(node.name.loc, id2str(node.name))
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
@@ -403,38 +405,38 @@ class AstConverter(ExprEvaluator):
     @override
     def visit_union(self, node: ast.Union) -> UnionDecl:
         d = UnionDecl(node.name.loc, id2str(node.name))
-        self.dm.for_each(node.fields, lambda f: d.add_field(self.visit(f)))
+        self.dm.for_each(node.fields, lambda f: d.add_field(f.accept(self)))
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
         self.dm.for_each(node.inner_attrs, lambda a: self.add_attr(d, a))
         return d
 
     @override
     def visit_parameter(self, node: ast.Parameter) -> ParamDecl:
-        d = ParamDecl(node.name.loc, id2str(node.name), self.visit(node.ty))
+        d = ParamDecl(node.name.loc, id2str(node.name), node.ty.accept(self))
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
         return d
 
     @override
     def visit_interface_function(self, node: ast.InterfaceFunction) -> IfaceMethodDecl:
         if ty := node.return_ty:
-            d = IfaceMethodDecl(node.name.loc, id2str(node.name), self.visit(ty))
+            d = IfaceMethodDecl(node.name.loc, id2str(node.name), ty.accept(self))
         else:
             d = IfaceMethodDecl(node.name.loc, id2str(node.name))
-        self.dm.for_each(node.parameters, lambda p: d.add_param(self.visit(p)))
+        self.dm.for_each(node.parameters, lambda p: d.add_param(p.accept(self)))
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
         return d
 
     @override
     def visit_interface_extend(self, node: ast.InterfaceExtend) -> IfaceExtendDecl:
-        d = IfaceExtendDecl(node.ty.loc, self.visit(node.ty))
+        d = IfaceExtendDecl(node.ty.loc, node.ty.accept(self))
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
         return d
 
     @override
     def visit_interface(self, node: ast.Interface) -> IfaceDecl:
         d = IfaceDecl(node.name.loc, id2str(node.name))
-        self.dm.for_each(node.fields, lambda f: d.add_method(self.visit(f)))
-        self.dm.for_each(node.extends, lambda i: d.add_extend(self.visit(i)))
+        self.dm.for_each(node.fields, lambda f: d.add_method(f.accept(self)))
+        self.dm.for_each(node.extends, lambda i: d.add_extend(i.accept(self)))
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
         self.dm.for_each(node.inner_attrs, lambda a: self.add_attr(d, a))
         return d
@@ -442,10 +444,10 @@ class AstConverter(ExprEvaluator):
     @override
     def visit_global_function(self, node: ast.GlobalFunction) -> GlobFuncDecl:
         if ty := node.return_ty:
-            d = GlobFuncDecl(node.name.loc, id2str(node.name), self.visit(ty))
+            d = GlobFuncDecl(node.name.loc, id2str(node.name), ty.accept(self))
         else:
             d = GlobFuncDecl(node.name.loc, id2str(node.name))
-        self.dm.for_each(node.parameters, lambda p: d.add_param(self.visit(p)))
+        self.dm.for_each(node.parameters, lambda p: d.add_param(p.accept(self)))
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
         return d
 
@@ -460,8 +462,8 @@ class AstConverter(ExprEvaluator):
             )
         pkg = PackageDecl(self.source.pkg_name, SourceLocation(self.source))
         for u in node.uses:
-            self.dm.for_each(self.visit(u), pkg.add_import)
-        self.dm.for_each(node.fields, lambda n: pkg.add_declaration(self.visit(n)))
+            self.dm.for_each(u.accept(self), pkg.add_import)
+        self.dm.for_each(node.fields, lambda n: pkg.add_declaration(n.accept(self)))
         self.dm.for_each(node.inner_attrs, lambda a: self.add_attr(pkg, a))
         return pkg
 
@@ -475,5 +477,5 @@ class AstConverter(ExprEvaluator):
         Raises:
             InvalidPackageNameError: If the package name is invalid.
         """
-        ast_nodes = generate_ast(self.source, self.dm)
-        return self.visit_spec(ast_nodes)
+        node = generate_ast(self.source, self.dm)
+        return self.visit_spec(node)
