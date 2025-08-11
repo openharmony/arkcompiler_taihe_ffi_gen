@@ -397,7 +397,7 @@ class GenAsyncAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     ) -> None:
         if self.func_name is None:
             if len(parent.name) > 4 and parent.name[-4:].lower() == "sync":
-                self.func_prefix = parent.name[-4:]
+                self.func_prefix = parent.name[:-4]
             else:
                 dm.emit(
                     AdhocError(
