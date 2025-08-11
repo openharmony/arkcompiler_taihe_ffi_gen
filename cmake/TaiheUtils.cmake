@@ -43,7 +43,7 @@ endfunction()
 # taihec 获取配置路径
 function(execute_and_set_variable OUTPUT_VAR_NAME)
   execute_process(
-    COMMAND "python3" "-m" "taihe.cli.compiler" ${ARGN}
+    COMMAND "taihec" ${ARGN}
     OUTPUT_VARIABLE _output
     OUTPUT_STRIP_TRAILING_WHITESPACE
     RESULT_VARIABLE _result
@@ -60,6 +60,17 @@ endfunction()
 
 # taihe 代码生成
 function(generate_code_from_idl demo_name idl_files gen_ets_names author_bridge user_bridge taihe_configs gen_include_dir gen_abi_c_files gen_bridge_cpp_files gen_ets_files)
+  set(options "")
+  set(oneValueArgs "TAIHEC_PATH")
+  set(multiValueArgs "")
+  cmake_parse_arguments(ARGS "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
+  if(NOT ARGS_TAIHEC_PATH)
+    set(TAIHEC_PATH "taihec")
+  else()
+    set(TAIHEC_PATH "${ARGS_TAIHEC_PATH}")
+  endif()
+
   set(GEN_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
 
   set(GEN_INCLUDE_DIR "${GEN_DIR}/include")
@@ -129,7 +140,7 @@ function(generate_code_from_idl demo_name idl_files gen_ets_names author_bridge 
   if(ENABLE_COVERAGE)
     list(APPEND COMMAND_TO_RUN "coverage" "run" "--parallel-mode" "-m" "taihe.cli.compiler")
   else()
-    list(APPEND COMMAND_TO_RUN "python3" "-m" "taihe.cli.compiler")
+    list(APPEND COMMAND_TO_RUN "${TAIHEC_PATH}")
   endif()
 
   add_custom_command(
@@ -139,7 +150,7 @@ function(generate_code_from_idl demo_name idl_files gen_ets_names author_bridge 
     -O${GEN_DIR}
     ${TAIHE_CONFIGS_LIST}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../..
-    DEPENDS ${idl_files} ${CMAKE_CURRENT_SOURCE_DIR}/../../compiler/taihe/parse/antlr/TaiheAST.py
+    DEPENDS ${idl_files}
     COMMENT "Generating Taihe C++ header and source files... ${GEN_DIR}"
     VERBATIM
   )
@@ -195,7 +206,7 @@ function(add_taihe_stdlib)
     if(ENABLE_COVERAGE)
       list(APPEND COMMAND_TO_RUN "coverage" "run" "--parallel-mode" "-m" "taihe.cli.compiler")
     else()
-      list(APPEND COMMAND_TO_RUN "python3" "-m" "taihe.cli.compiler")
+      list(APPEND COMMAND_TO_RUN "taihec")
     endif()
 
     add_custom_command(
@@ -381,7 +392,7 @@ endfunction()
 
 function(add_taihe_library target_name idl_files)
   set(options "")
-  set(oneValueArgs "AUTHOR_BRIDGE" "USER_BRIDGE" "TAIHE_CONFIGS")
+  set(oneValueArgs "AUTHOR_BRIDGE" "USER_BRIDGE" "TAIHE_CONFIGS" "TAIHEC_PATH")
   set(multiValueArgs "")
   cmake_parse_arguments(ARGS "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
   if(NOT ARGS_AUTHOR_BRIDGE)
@@ -392,6 +403,11 @@ function(add_taihe_library target_name idl_files)
   endif()
   if(NOT ARGS_TAIHE_CONFIGS)
     set(ARGS_TAIHE_CONFIGS "")
+  endif()
+  if(NOT ARGS_TAIHEC_PATH)
+    set(TAIHEC_PATH "taihec")
+  else()
+    set(TAIHEC_PATH "${ARGS_TAIHEC_PATH}")
   endif()
 
   execute_and_set_variable(TAIHE_RUNTIME_SOURCE_DIR "--print-runtime-source-path")
@@ -413,6 +429,7 @@ function(add_taihe_library target_name idl_files)
     GEN_ABI_C_FILES
     GEN_BRIDGE_CPP_FILES
     GEN_ETS_FILES
+    TAIHEC_PATH ${TAIHEC_PATH}
   )
 
   # compile static library
