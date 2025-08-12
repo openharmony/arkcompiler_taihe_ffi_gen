@@ -173,7 +173,7 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
         return
 
 
-T = TypeVar("T", bound=Type)
+_T = TypeVar("_T", bound=Type)
 
 
 class _ResolveTypePass(RecursiveDeclVisitor):
@@ -252,7 +252,7 @@ class _ResolveTypePass(RecursiveDeclVisitor):
         super().visit_enum_decl(d)
         d.resolve_ty(self.resolve_type(d.ty_ref, LiteralType))
 
-    def resolve_type(self, ty_ref: ExplicitTypeRefDecl, target: type[T]) -> T | None:
+    def resolve_type(self, ty_ref: ExplicitTypeRefDecl, target: type[_T]) -> _T | None:
         ty = ty_ref.accept(_TypeResolver(self.dm, self.curr_pkg))
         if ty is None:
             return None
@@ -545,11 +545,11 @@ class _CheckAttrPass(RecursiveDeclVisitor):
             attr.check_context(d, self.dm)
 
 
-V = TypeVar("V")
-E = TypeVar("E")
+_V = TypeVar("_V")
+_E = TypeVar("_E")
 
 
-def detect_cycles(graph: dict[V, list[tuple[E, V]]]) -> list[list[E]]:
+def detect_cycles(graph: dict[_V, list[tuple[_E, _V]]]) -> list[list[_E]]:
     """Detects and returns all cycles in a directed graph.
 
     Example:
@@ -562,7 +562,7 @@ def detect_cycles(graph: dict[V, list[tuple[E, V]]]) -> list[list[E]]:
     >>> detect_cycles(graph)
     [["A.b_0", "B.c_0", "C.a_0"], ["A.b_0", "B.c_0", "C.a_1"]]
     """
-    cycles: list[list[E]] = []
+    cycles: list[list[_E]] = []
 
     order = {point: i for i, point in enumerate(graph)}
     glist = [
@@ -570,7 +570,7 @@ def detect_cycles(graph: dict[V, list[tuple[E, V]]]) -> list[list[E]]:
         for children in graph.values()
     ]
     visited = [False for _ in glist]
-    edges: list[E] = []
+    edges: list[_E] = []
 
     def visit(i: int):
         if i < k:

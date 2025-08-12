@@ -45,7 +45,7 @@ if TYPE_CHECKING:
     )
 
 
-R = TypeVar("R")
+_R = TypeVar("_R")
 
 
 ############################
@@ -68,7 +68,7 @@ class Type(ABC):
         """Return the representation of the type."""
 
     @abstractmethod
-    def accept(self, v: "TypeVisitor[R]") -> R: ...
+    def accept(self, v: "TypeVisitor[_R]") -> _R: ...
 
 
 @dataclass(frozen=True, repr=False)
@@ -81,7 +81,7 @@ class VoidType(Type):
         return "void"
 
     @override
-    def accept(self, v: "VoidTypeVisitor[R]") -> R:
+    def accept(self, v: "VoidTypeVisitor[_R]") -> _R:
         return v.visit_void_type(self)
 
 
@@ -90,7 +90,7 @@ class NonVoidType(Type, ABC):
     """Represents a valid type that can be used in the type system."""
 
     @override
-    def accept(self, v: "NonVoidTypeVisitor[R]") -> R: ...
+    def accept(self, v: "NonVoidTypeVisitor[_R]") -> _R: ...
 
 
 #################
@@ -103,7 +103,7 @@ class LiteralType(NonVoidType, ABC):
     """Base class for literal types."""
 
     @abstractmethod
-    def accept(self, v: "LiteralTypeVisitor[R]") -> R: ...
+    def accept(self, v: "LiteralTypeVisitor[_R]") -> _R: ...
 
 
 class ScalarKind(Enum):
@@ -138,7 +138,7 @@ class ScalarType(LiteralType):
         return self.kind.symbol
 
     @override
-    def accept(self, v: "ScalarTypeVisitor[R]") -> R:
+    def accept(self, v: "ScalarTypeVisitor[_R]") -> _R:
         return v.visit_scalar_type(self)
 
 
@@ -150,7 +150,7 @@ class StringType(LiteralType):
         return "String"
 
     @override
-    def accept(self, v: "StringTypeVisitor[R]") -> R:
+    def accept(self, v: "StringTypeVisitor[_R]") -> _R:
         return v.visit_string_type(self)
 
 
@@ -162,7 +162,7 @@ class OpaqueType(NonVoidType):
         return "Opaque"
 
     @override
-    def accept(self, v: "OpaqueTypeVisitor[R]") -> R:
+    def accept(self, v: "OpaqueTypeVisitor[_R]") -> _R:
         return v.visit_opaque_type(self)
 
 
@@ -204,7 +204,7 @@ class CallbackType(NonVoidType):
         return f"({params_fmt}) => {return_fmt}"
 
     @override
-    def accept(self, v: "CallbackTypeVisitor[R]") -> R:
+    def accept(self, v: "CallbackTypeVisitor[_R]") -> _R:
         return v.visit_callback_type(self)
 
 
@@ -224,7 +224,7 @@ class GenericType(NonVoidType, ABC):
     ) -> "GenericType | None": ...
 
     @abstractmethod
-    def accept(self, v: "GenericTypeVisitor[R]") -> R: ...
+    def accept(self, v: "GenericTypeVisitor[_R]") -> _R: ...
 
 
 @dataclass(frozen=True, repr=False)
@@ -253,7 +253,7 @@ class ArrayType(GenericType):
         return cls(ty_ref, item_ty)
 
     @override
-    def accept(self, v: "ArrayTypeVisitor[R]") -> R:
+    def accept(self, v: "ArrayTypeVisitor[_R]") -> _R:
         return v.visit_array_type(self)
 
 
@@ -283,7 +283,7 @@ class OptionalType(GenericType):
         return cls(ty_ref, item_ty)
 
     @override
-    def accept(self, v: "OptionalTypeVisitor[R]") -> R:
+    def accept(self, v: "OptionalTypeVisitor[_R]") -> _R:
         return v.visit_optional_type(self)
 
 
@@ -313,7 +313,7 @@ class VectorType(GenericType):
         return cls(ty_ref, key_ty)
 
     @override
-    def accept(self, v: "VectorTypeVisitor[R]") -> R:
+    def accept(self, v: "VectorTypeVisitor[_R]") -> _R:
         return v.visit_vector_type(self)
 
 
@@ -348,7 +348,7 @@ class MapType(GenericType):
         return cls(ty_ref, key_ty, val_ty)
 
     @override
-    def accept(self, v: "MapTypeVisitor[R]") -> R:
+    def accept(self, v: "MapTypeVisitor[_R]") -> _R:
         return v.visit_map_type(self)
 
 
@@ -378,7 +378,7 @@ class SetType(GenericType):
         return cls(ty_ref, key_ty)
 
     @override
-    def accept(self, v: "SetTypeVisitor[R]") -> R:
+    def accept(self, v: "SetTypeVisitor[_R]") -> _R:
         return v.visit_set_type(self)
 
 
@@ -407,7 +407,7 @@ class UserType(NonVoidType, ABC):
         return self.decl.full_name
 
     @abstractmethod
-    def accept(self, v: "UserTypeVisitor[R]") -> R: ...
+    def accept(self, v: "UserTypeVisitor[_R]") -> _R: ...
 
 
 @dataclass(frozen=True, repr=False)
@@ -415,7 +415,7 @@ class EnumType(UserType):
     decl: "EnumDecl"
 
     @override
-    def accept(self, v: "EnumTypeVisitor[R]") -> R:
+    def accept(self, v: "EnumTypeVisitor[_R]") -> _R:
         return v.visit_enum_type(self)
 
 
@@ -424,7 +424,7 @@ class StructType(UserType):
     decl: "StructDecl"
 
     @override
-    def accept(self, v: "StructTypeVisitor[R]") -> R:
+    def accept(self, v: "StructTypeVisitor[_R]") -> _R:
         return v.visit_struct_type(self)
 
 
@@ -433,7 +433,7 @@ class UnionType(UserType):
     decl: "UnionDecl"
 
     @override
-    def accept(self, v: "UnionTypeVisitor[R]") -> R:
+    def accept(self, v: "UnionTypeVisitor[_R]") -> _R:
         return v.visit_union_type(self)
 
 
@@ -442,5 +442,5 @@ class IfaceType(UserType):
     decl: "IfaceDecl"
 
     @override
-    def accept(self, v: "IfaceTypeVisitor[R]") -> R:
+    def accept(self, v: "IfaceTypeVisitor[_R]") -> _R:
         return v.visit_iface_type(self)

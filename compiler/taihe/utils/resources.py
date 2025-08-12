@@ -49,7 +49,7 @@ def fetch_url(url: str, output: Path, curl_extra_args: Sequence[str] | None = No
     ]
     ok = False
     try:
-        logging.info(f"Downloading {url} to {output}")
+        logging.info("Downloading %s to %s", url, output)
         subprocess.check_call(curl_args)
         ok = output.exists()
         return output
@@ -60,7 +60,7 @@ def fetch_url(url: str, output: Path, curl_extra_args: Sequence[str] | None = No
         raise FileNotFoundError("curl command not found.") from e
     finally:
         if ok:
-            logging.info(f"Successfully downloaded to {output}")
+            logging.info("Downloaded %s successfully", output)
         else:
             output.unlink(missing_ok=True)
 
@@ -458,7 +458,7 @@ class PythonBuild(CachedResource):
     @override
     def fetch(self):
         shutil.rmtree(self.base_path, ignore_errors=True)
-        logging.info(f"Cloning repo from {self.REPO} to {self.base_path}")
+        logging.info("Cloning Python packages from %s to %s", self.REPO, self.base_path)
         subprocess.run(["git", "clone", self.REPO, self.base_path], check=True)
 
     def extract_to(self, target_dir: Path, *, system: str):
@@ -485,7 +485,6 @@ class Antlr(CachedResource):
     @override
     @classmethod
     def locate(cls, ctx: ResourceContext) -> Path:
-        del ctx
         return Path(f"{cls.MAVEN_LOCAL}/{cls.MAVEN_PATH}").expanduser()
 
     @override
