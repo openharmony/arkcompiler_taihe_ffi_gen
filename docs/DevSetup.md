@@ -10,7 +10,7 @@
     - CMake 3.14
   - **编译器**
     - Python 3.10
-    - uv，可参考 [官方文档](https://github.com/astral-sh/uv)
+    - uv，安装可参考[官方文档](https://github.com/astral-sh/uv)
 
 ## 编译器
 

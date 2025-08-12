@@ -31,13 +31,13 @@ struct TStringData {
 +---------------------+--------------------------+
 | TRefCount count     | buffer[]                 |
 +---------------------+--------------------------+
-                      | 字符串内容（可变长度）     |
-                      | 以 '\0' 作为结尾          |
+                      | 字符串内容（可变长度）   |
+                      | 以 '\0' 作为结尾         |
 ```
 
 注：下层创建的字符串 TString 的 ptr 指向 TStringData 的 buffer
 
-## 数组类型
+## 定长数组（Array）
 
 Taihe 数组类型的 ABI 内存布局
 
@@ -74,12 +74,86 @@ struct TOptional {
 
 同上，m_data里面存的是实际类型的指针
 
+## vector
+
+## set
+
+Taihe 的 set 类型使用 **Separate Chaining** 实现
+
+```cpp
+template<typename K>
+struct set_view {
+    using item_t = K const;
+
+    struct node_t {
+        item_t item;
+        node_t *next;
+    };
+
+private:
+    struct handle_t {
+        TRefCount count;
+        std::size_t cap;
+        node_t **bucket;
+        std::size_t size;
+    } *m_handle;
+};
+```
+
+```
+      set_view<K>
+┌─────────────────────┐
+│   m_handle ───────┐ │
+└───────────────────│─┘
+                    │
+                 handle_t
+          ┌──────────────────────┐
+          │   TRefCount count    │
+          │   std::size_t cap    │
+          │   node_t** bucket ──────┐
+          │   std::size_t size   │  │
+          └──────────────────────┘  │
+                                    │
+                           node_t* bucket[0..cap-1]
+                    ┌───────────────┬────────────────────────────────────┐
+                    │   bucket[0]   │ node_t --> node_t --> ... --> NULL │
+                    │   bucket[1]   │ NULL                               │
+                    │     ...       │ ...                                │
+                    │ bucket[cap-1] │ node_t --> NULL                    │
+                    └───────────────┴────────────────────────────────────┘
+```
+
+## map
+
+Taihe 的 map 类型与 set 类型同理
+
+```cpp
+template<typename K, typename V>
+struct map_view {
+public:
+    using item_t = std::pair<K const, V>;
+
+    struct node_t {
+        item_t item;
+        node_t *next;
+    };
+
+private:
+    struct handle_t {
+        TRefCount count;
+        std::size_t cap;
+        node_t **bucket;
+        std::size_t size;
+    } *m_handle;
+};
+```
+
 ## struct
 
 taihe 的 struct 是值类型的 struct
 
 ```rust
-struct Color{
+struct Color {
     R: i32;
     G: i32;
     B: i32;
@@ -96,76 +170,6 @@ struct binding_Color_t {
 
 注：此处 binding 为 package_name
 
-## set
-
-Taihe 的 set 类型使用 **Separate Chaining** 实现
-
-```cpp
-template<typename K>
-struct set_view {
-    using item_t = K const;
-    struct node_t {
-        item_t item;
-        node_t *next;
-    };
-private:
-    struct handle_t {
-        TRefCount count;
-        std::size_t cap;
-        node_t **bucket;
-        std::size_t size;
-    } *m_handle;
-};
-```
-
-```
-set_view<K>
-┌─────────────────────┐
-│ m_handle ─────────┐ │
-└─────────────────────┘
-                    |
-          handle_t（在堆上分配）
-          ┌────────────────────────────┐
-          │ TRefCount count            │
-          │ std::size_t cap            │
-          │ node_t** bucket ─────┐     │
-          │ std::size_t size     │     │
-          └──────────────────────┘     │
-                                       |
-                      node_t* bucket[0 .. cap-1]（在堆上）
-                      ┌──────────────┬──────────────┐
-                      │ bucket[0] ─────> node_t ... │
-                      │ bucket[1] = nullptr         │
-                      │ ...                         │
-                      │ bucket[cap-1] ─> node_t ... │
-                      └──────────────┴──────────────┘
-
-```
-
-## map
-
-Taihe 的 map 类型与 set 类型同理
-
-```cpp
-template<typename K, typename V>
-struct map_view {
-public:
-    using item_t = std::pair<K const, V>;
-
-    struct node_t {
-    item_t item;
-    node_t *next;
-    };
-private:
-    struct handle_t {
-        TRefCount count;
-        std::size_t cap;
-        node_t **bucket;
-        std::size_t size;
-    } *m_handle;
-};
-```
-
 ## enum
 
 ```rust
@@ -176,7 +180,7 @@ enum MessageType: i32 {
 
 enum EnumString: String {
     ONE = "hello",
-    TWO = "i am boy",
+    TWO = "world",
     THREE = "good morning"
 }
 ```
@@ -190,11 +194,14 @@ public:
         Text,
         Number,
     };
+
     static constexpr int32_t table[] = {
         1,
         2,
     };
+
     // ...
+
 private:
     key_t key;
 };
@@ -206,12 +213,15 @@ public:
         TWO,
         THREE,
     };
+
     static constexpr char const* table[] = {
         "hello",
-        "i am boy",
+        "world",
         "good morning",
     };
+
     // ...
+
 private:
     key_t key;
 };

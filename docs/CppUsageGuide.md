@@ -1248,7 +1248,7 @@ int main() {
 
 - 链接错误：```undefined reference to `package_name_InterfaceName_i'```
 
-  类似 `package_name_InterfaceName_i` 这样的是太和接口的 IID 符号，其定义通常在自动生成的 `package.name.abi.c` 中，请确保你在构建时将该文件包含在内。
+  类似 `package_name_InterfaceName_i` 这样的是太和接口的[接口 ID](./InterfaceAbi.md#接口-id) 符号，其定义通常在自动生成的 `package.name.abi.c` 中，请确保你在构建时将该文件包含在内。
 
 - 编译错误：
   ```
@@ -1257,6 +1257,21 @@ int main() {
       |                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  ^
   ```
   这意味着你没有在你的 C++ 类 `ClassName` 中实现 IDL 文件中定义的 `methodName` 方法。请检查你的类实现，确保所有所需的接口方法都已正确实现。并且注意方法名的大小写和参数类型是否与 IDL 文件中的定义一致。
+
+- 编译错误：
+  ```
+  error: no matching function for call to 'into_abi'
+   xx |         return ::taihe::into_abi<...>(::taihe::cast_data_ptr<Impl>(tobj.data_ptr)->methodName(...));
+      |                ^~~~~~~~~~~~~~~~~~~~~~
+  ```
+  `methodName` 方法的 C++ 实现中的返回类型和在 Taihe IDL 文件中声明的返回值类型所对应的 C++ 投影类型不匹配。
+
+  ```
+  error: no viable conversion from 'const ::my::package::MyStruct' to 'const std::string'
+   xx |         return ::taihe::cast_data_ptr<Impl>(tobj.data_ptr)->methodName(::taihe::from_abi<::my::package::MyStruct const&>(c));
+      |                                                                      ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ```
+  `methodName` 方法的 C++ 实现中的参数类型和在 Taihe IDL 文件中声明的参数类型所对应的 C++ 投影类型不匹配。
 
 - 编译错误：```error: no member named 'methodName' in 'package::name::weak::InterfaceName::virtual_type'```
 

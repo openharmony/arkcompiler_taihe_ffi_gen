@@ -150,7 +150,7 @@ enum Foo: i32 {
 
 ## 结构体
 
-结构体是数据成员的组合，其成员类型包括[内置类型](#内置类型)、[枚举类型](#枚举)、[接口类型](#接口)和其他[结构体类型](#结构体)：
+结构体是数据成员的组合，其成员可以是任意 Taihe 中的数据类型。包括[内置类型](#内置类型)、[枚举类型](#枚举)、[接口类型](#接口)、[标签联合](#标签联合)和其他[结构体类型](#结构体)等：
 ```rust
 interface Base {}
 struct Foo {
@@ -199,7 +199,7 @@ interface Derived: BaseA, BaseB {
 
 ## 注解
 
-注解用于为代码中的语法元素添加附加属性，本章节主要介绍 Taihe 的注解语法，关于 ArkTS 1.2 的相关注解使用教程可参考[ArkTS 1.2 注解能力](./TaiheAbility.md#arkts-12-注解能力)。
+注解用于为代码中的语法元素添加附加属性，本章节主要介绍 Taihe 的注解语法，关于 ArkTS 1.2 的相关注解使用教程可参考 [ArkTS 1.2 注解能力](./TaiheAbility.md#arkts-12-注解能力)。
 ```rust
 // 前缀注解（@name）
 @attribute_name(value1, value2, ..., key1 = value1, key2 = value2, ...)
