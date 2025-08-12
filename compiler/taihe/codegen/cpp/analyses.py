@@ -211,9 +211,7 @@ class ScalarTypeCppInfo(TypeCppInfo):
             ScalarKind.U16: "uint16_t",
             ScalarKind.U32: "uint32_t",
             ScalarKind.U64: "uint64_t",
-        }.get(t.kind)
-        if res is None:
-            raise ValueError
+        }[t.kind]
         self.decl_headers = []
         self.defn_headers = []
         self.impl_headers = []

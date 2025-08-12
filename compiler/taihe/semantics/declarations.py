@@ -192,7 +192,7 @@ class TypeRefDecl(DeclWithParent[Decl], ABC):
     @override
     def description(self) -> str:
         if (fmt := self.format(PrettyFormatter())) is not None:
-            return f"type reference ({fmt})"
+            return f"explicit type reference ({fmt})"
         return "implicit type reference"
 
     @abstractmethod

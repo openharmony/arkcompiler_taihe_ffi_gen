@@ -135,11 +135,11 @@ OverloadInfo = list[str]
 
 class OverloadRegister:
     def __init__(self):
-        self.overloads: dict[str, OverloadInfo] = {}
+        self.infos: dict[str, OverloadInfo] = {}
 
-    def register(self, orig: str, overload: str):
-        overload_info = self.overloads.setdefault(overload, [])
-        overload_info.append(orig)
+    def register(self, orig_name: str, name: str):
+        info = self.infos.setdefault(name, [])
+        info.append(orig_name)
 
 
 OnOffInfo = dict[tuple[str, ...], dict[str, tuple[str, list[str], str]]]
@@ -147,20 +147,20 @@ OnOffInfo = dict[tuple[str, ...], dict[str, tuple[str, list[str], str]]]
 
 class OnOffRegister:
     def __init__(self):
-        self.on_off: dict[str, OnOffInfo] = {}
+        self.infos: dict[str, OnOffInfo] = {}
 
     def register(
         self,
-        on_off: tuple[str, str],
-        sigs: list[str],
-        orig: str,
-        params_ty: list[str],
-        return_ty: str,
+        pair: tuple[str, str],
+        params_ty_sts_sig: list[str],
+        orig_name: str,
+        params_ty_sts_name: list[str],
+        return_ty_sts_name: str,
     ):
-        name, tag = on_off
-        on_off_info = self.on_off.setdefault(name, {})
-        funcs = on_off_info.setdefault(tuple(sigs), {})
-        funcs.setdefault(tag, (orig, params_ty, return_ty))
+        name, type = pair
+        info = self.infos.setdefault(name, {})
+        cases = info.setdefault(tuple(params_ty_sts_sig), {})
+        cases.setdefault(type, (orig_name, params_ty_sts_name, return_ty_sts_name))
 
 
 class StsCodeGenerator:
@@ -232,9 +232,9 @@ class StsCodeGenerator:
                 func_overload_register,
                 func_on_off_register,
             )
-        for name, info in func_overload_register.overloads.items():
+        for name, info in func_overload_register.infos.items():
             self.gen_overload_func(name, info, target, func_kind, "export ")
-        for name, info in func_on_off_register.on_off.items():
+        for name, info in func_on_off_register.infos.items():
             self.gen_full_on_off_func(name, info, target, func_kind, "export ")
 
         for enum in pkg.enums:
@@ -274,10 +274,10 @@ class StsCodeGenerator:
         target: StsWriter,
     ):
         if ConstAttr.get(enum) is not None:
-            type_ani_info = TypeAniInfo.get(self.am, enum.ty)
+            enum_ty_ani_info = TypeAniInfo.get(self.am, enum.ty)
             for item in enum.items:
                 target.writelns(
-                    f"export const {item.name}: {type_ani_info.sts_type_in(target)} = {dumps(item.value)};",
+                    f"export const {item.name}: {enum_ty_ani_info.sts_type_in(target)} = {dumps(item.value)};",
                 )
             return
 
@@ -314,8 +314,8 @@ class StsCodeGenerator:
         sts_types = []
         for field in union.fields:
             if isinstance(field_ty := field.ty, NonVoidType):
-                ty_ani_info = TypeAniInfo.get(self.am, field_ty)
-                sts_types.append(ty_ani_info.sts_type_in(target))
+                field_ty_ani_info = TypeAniInfo.get(self.am, field_ty)
+                sts_types.append(field_ty_ani_info.sts_type_in(target))
             elif NullAttr.get(field) is not None:
                 sts_types.append("null")
             elif UndefinedAttr.get(field) is not None:
@@ -360,9 +360,9 @@ class StsCodeGenerator:
             for field in struct_ani_info.sts_fields:
                 readonly = "readonly " if ReadOnlyAttr.get(field) is not None else ""
                 opt = "?" if OptionalAttr.get(field) else ""
-                ty_ani_info = TypeAniInfo.get(self.am, field.ty)
+                field_ty_ani_info = TypeAniInfo.get(self.am, field.ty)
                 target.writelns(
-                    f"{readonly}{field.name}{opt}: {ty_ani_info.sts_type_in(target)};",
+                    f"{readonly}{field.name}{opt}: {field_ty_ani_info.sts_type_in(target)};",
                 )
 
     def gen_struct_class(
@@ -401,9 +401,9 @@ class StsCodeGenerator:
                 final = parts[-1]
                 readonly = "readonly " if ReadOnlyAttr.get(final) is not None else ""
                 opt = "?" if OptionalAttr.get(final) else ""
-                ty_ani_info = TypeAniInfo.get(self.am, final.ty)
+                final_ty_ani_info = TypeAniInfo.get(self.am, final.ty)
                 target.writelns(
-                    f"{readonly}{final.name}{opt}: {ty_ani_info.sts_type_in(target)};",
+                    f"{readonly}{final.name}{opt}: {final_ty_ani_info.sts_type_in(target)};",
                 )
 
             with target.indented(
@@ -413,9 +413,9 @@ class StsCodeGenerator:
                 for parts in struct_ani_info.sts_all_fields:
                     final = parts[-1]
                     opt = "?" if OptionalAttr.get(final) else ""
-                    ty_ani_info = TypeAniInfo.get(self.am, final.ty)
+                    final_ty_ani_info = TypeAniInfo.get(self.am, final.ty)
                     target.writelns(
-                        f"{final.name}{opt}: {ty_ani_info.sts_type_in(target)},",
+                        f"{final.name}{opt}: {final_ty_ani_info.sts_type_in(target)},",
                     )
             with target.indented(
                 f"{{",
@@ -474,9 +474,9 @@ class StsCodeGenerator:
                     meth_overload_register,
                     meth_on_off_register,
                 )
-            for name, info in meth_overload_register.overloads.items():
+            for name, info in meth_overload_register.infos.items():
                 self.gen_overload_func(name, info, target, meth_kind, "")
-            for name, info in meth_on_off_register.on_off.items():
+            for name, info in meth_on_off_register.infos.items():
                 self.gen_half_on_off_func(name, info, target, meth_kind, "")
 
     def gen_iface_class(
@@ -577,9 +577,9 @@ class StsCodeGenerator:
                     ctor_overload_register,
                     ctor_on_off_register,
                 )
-            for name, info in ctor_overload_register.overloads.items():
+            for name, info in ctor_overload_register.infos.items():
                 self.gen_overload_ctor(name, info, target, ctor_kind, "")
-            for name, info in ctor_on_off_register.on_off.items():
+            for name, info in ctor_on_off_register.infos.items():
                 self.gen_full_on_off_ctor(name, info, target, ctor_kind, "")
 
             # funcs
@@ -597,9 +597,9 @@ class StsCodeGenerator:
                     func_overload_register,
                     func_on_off_register,
                 )
-            for name, info in func_overload_register.overloads.items():
+            for name, info in func_overload_register.infos.items():
                 self.gen_overload_func(name, info, target, func_kind, "")
-            for name, info in func_on_off_register.on_off.items():
+            for name, info in func_on_off_register.infos.items():
                 self.gen_full_on_off_func(name, info, target, func_kind, "")
 
             # methods
@@ -618,9 +618,9 @@ class StsCodeGenerator:
                         meth_overload_register,
                         meth_on_off_register,
                     )
-            for name, info in meth_overload_register.overloads.items():
+            for name, info in meth_overload_register.infos.items():
                 self.gen_overload_func(name, info, target, meth_kind, "")
-            for name, info in meth_on_off_register.on_off.items():
+            for name, info in meth_on_off_register.infos.items():
                 self.gen_half_on_off_func(name, info, target, meth_kind, "")
 
     def gen_native_func(
@@ -629,21 +629,19 @@ class StsCodeGenerator:
         func_ani_info: GlobFuncAniInfo | IfaceMethodAniInfo,
         target: StsWriter,
     ):
-        sts_native_params = []
+        params_sts = []
         for param in func.params:
-            type_ani_info = TypeAniInfo.get(self.am, param.ty)
-            sts_native_params.append(
-                f"{param.name}: {type_ani_info.sts_type_in(target)}"
-            )
-        sts_native_params_str = ", ".join(sts_native_params)
+            param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
+            params_sts.append(f"{param.name}: {param_ty_ani_info.sts_type_in(target)}")
+        params_sts_str = ", ".join(params_sts)
         if isinstance(return_ty := func.return_ty, NonVoidType):
-            type_ani_info = TypeAniInfo.get(self.am, return_ty)
-            sts_return_ty = type_ani_info.sts_type_in(target)
+            return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
+            return_ty_sts_name = return_ty_ani_info.sts_type_in(target)
         else:
-            sts_return_ty = "void"
+            return_ty_sts_name = "void"
 
         target.writelns(
-            f"{func_ani_info.native_prefix}{func_ani_info.native_name}({sts_native_params_str}): {sts_return_ty};",
+            f"{func_ani_info.native_prefix}{func_ani_info.native_name}({params_sts_str}): {return_ty_sts_name};",
         )
 
     def gen_any_func_decl(
@@ -656,77 +654,77 @@ class StsCodeGenerator:
         overload_register: OverloadRegister,
         on_off_register: OnOffRegister,
     ):
-        sts_params_sig = []
-        sts_params_ty = []
-        sts_params = []
-        sts_args = []
-        for sts_param in func_ani_info.sts_params:
-            opt = "?" if OptionalAttr.get(sts_param) else ""
-            type_ani_info = TypeAniInfo.get(self.am, sts_param.ty)
-            sts_params_sig.append(type_ani_info.type_sig)
-            sts_params_ty.append(type_ani_info.sts_type_in(target))
-            sts_params.append(
-                f"{sts_param.name}{opt}: {type_ani_info.sts_type_in(target)}"
+        params_ty_sts_sig = []
+        params_ty_sts_name = []
+        params_sts = []
+        args_sts = []
+        for param in func_ani_info.sts_params:
+            opt = "?" if OptionalAttr.get(param) else ""
+            param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
+            params_ty_sts_sig.append(param_ty_ani_info.type_sig)
+            params_ty_sts_name.append(param_ty_ani_info.sts_type_in(target))
+            params_sts.append(
+                f"{param.name}{opt}: {param_ty_ani_info.sts_type_in(target)}"
             )
-            sts_args.append(sts_param.name)
+            args_sts.append(param.name)
         if isinstance(return_ty := func.return_ty, NonVoidType):
-            type_ani_info = TypeAniInfo.get(self.am, return_ty)
-            sts_return_ty = type_ani_info.sts_type_in(target)
+            return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
+            return_ty_sts_name = return_ty_ani_info.sts_type_in(target)
         else:
-            sts_return_ty = "void"
+            return_ty_sts_name = "void"
 
         if (norm_name := func_ani_info.norm_name) is not None:
             self.gen_normal_func_decl(
                 norm_name,
                 func_ani_info.gen_async_name,
                 func_ani_info.gen_promise_name,
-                sts_params_sig,
-                sts_params,
-                sts_params_ty,
-                sts_return_ty,
+                params_ty_sts_sig,
+                params_sts,
+                params_ty_sts_name,
+                return_ty_sts_name,
                 target,
                 func_kind,
                 decl_prefix,
-                func_ani_info.overload,
-                func_ani_info.on_off,
+                func_ani_info.overload_name,
+                func_ani_info.on_off_pair,
                 overload_register,
                 on_off_register,
             )
         if (async_name := func_ani_info.async_name) is not None:
             self.gen_async_func_decl(
                 async_name,
-                sts_params_sig,
-                sts_params,
-                sts_params_ty,
-                sts_return_ty,
+                params_ty_sts_sig,
+                params_sts,
+                params_ty_sts_name,
+                return_ty_sts_name,
                 target,
                 func_kind,
                 decl_prefix,
-                func_ani_info.overload,
-                func_ani_info.on_off,
+                func_ani_info.overload_name,
+                func_ani_info.on_off_pair,
                 overload_register,
                 on_off_register,
             )
         if (promise_name := func_ani_info.promise_name) is not None:
             self.gen_promise_func_decl(
                 promise_name,
-                sts_params_sig,
-                sts_params,
-                sts_params_ty,
-                sts_return_ty,
+                params_ty_sts_sig,
+                params_sts,
+                params_ty_sts_name,
+                return_ty_sts_name,
                 target,
                 func_kind,
                 decl_prefix,
-                func_ani_info.overload,
-                func_ani_info.on_off,
+                func_ani_info.overload_name,
+                func_ani_info.on_off_pair,
                 overload_register,
                 on_off_register,
             )
         if (get_name := func_ani_info.get_name) is not None:
             self.gen_getter_decl(
                 get_name,
-                sts_params,
-                sts_return_ty,
+                params_sts,
+                return_ty_sts_name,
                 target,
                 func_kind,
                 decl_prefix,
@@ -734,8 +732,8 @@ class StsCodeGenerator:
         if (set_name := func_ani_info.set_name) is not None:
             self.gen_setter_decl(
                 set_name,
-                sts_params,
-                sts_return_ty,
+                params_sts,
+                return_ty_sts_name,
                 target,
                 func_kind,
                 decl_prefix,
@@ -751,89 +749,91 @@ class StsCodeGenerator:
         overload_register: OverloadRegister,
         on_off_register: OnOffRegister,
     ):
-        sts_params_sig = []
-        sts_params_ty = []
-        sts_params = []
-        sts_args = []
-        for sts_param in func_ani_info.sts_params:
-            opt = "?" if OptionalAttr.get(sts_param) else ""
-            type_ani_info = TypeAniInfo.get(self.am, sts_param.ty)
-            sts_params_sig.append(type_ani_info.type_sig)
-            sts_params_ty.append(type_ani_info.sts_type_in(target))
-            sts_params.append(
-                f"{sts_param.name}{opt}: {type_ani_info.sts_type_in(target)}"
+        params_ty_sts_sig = []
+        params_ty_sts_name = []
+        params_sts = []
+        args_sts = []
+        for param in func_ani_info.sts_params:
+            opt = "?" if OptionalAttr.get(param) else ""
+            param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
+            params_ty_sts_sig.append(param_ty_ani_info.type_sig)
+            params_ty_sts_name.append(param_ty_ani_info.sts_type_in(target))
+            params_sts.append(
+                f"{param.name}{opt}: {param_ty_ani_info.sts_type_in(target)}"
             )
-            sts_args.append(sts_param.name)
-        sts_native_args = func_ani_info.as_native_args(sts_args)
-        sts_native_args_str = ", ".join(sts_native_args)
-        sts_native_call = f"{func_ani_info.call_native(func_ani_info.native_name)}({sts_native_args_str})"
+            args_sts.append(param.name)
+        args_sts = func_ani_info.as_native_args(args_sts)
+        args_sts_str = ", ".join(args_sts)
+        result_sts = (
+            f"{func_ani_info.call_native(func_ani_info.native_name)}({args_sts_str})"
+        )
         if isinstance(return_ty := func.return_ty, NonVoidType):
-            type_ani_info = TypeAniInfo.get(self.am, return_ty)
-            sts_return_ty = type_ani_info.sts_type_in(target)
-            sts_resolved_ty = type_ani_info.sts_type_in(target)
+            return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
+            return_ty_sts_name = return_ty_ani_info.sts_type_in(target)
+            return_ty_sts_real = return_ty_ani_info.sts_type_in(target)
         else:
-            sts_return_ty = "void"
-            sts_resolved_ty = "undefined"
+            return_ty_sts_name = "void"
+            return_ty_sts_real = "undefined"
 
         if (norm_name := func_ani_info.norm_name) is not None:
             self.gen_normal_func(
                 norm_name,
                 func_ani_info.gen_async_name,
                 func_ani_info.gen_promise_name,
-                sts_params_sig,
-                sts_params,
-                sts_params_ty,
-                sts_return_ty,
-                sts_resolved_ty,
-                sts_native_call,
+                params_ty_sts_sig,
+                params_sts,
+                params_ty_sts_name,
+                return_ty_sts_name,
+                return_ty_sts_real,
+                result_sts,
                 target,
                 func_kind,
                 mode_prefix,
-                func_ani_info.overload,
-                func_ani_info.on_off,
+                func_ani_info.overload_name,
+                func_ani_info.on_off_pair,
                 overload_register,
                 on_off_register,
             )
         if (promise_name := func_ani_info.promise_name) is not None:
             self.gen_promise_func(
                 promise_name,
-                sts_params_sig,
-                sts_params,
-                sts_params_ty,
-                sts_return_ty,
-                sts_resolved_ty,
-                sts_native_call,
+                params_ty_sts_sig,
+                params_sts,
+                params_ty_sts_name,
+                return_ty_sts_name,
+                return_ty_sts_real,
+                result_sts,
                 target,
                 func_kind,
                 mode_prefix,
-                func_ani_info.overload,
-                func_ani_info.on_off,
+                func_ani_info.overload_name,
+                func_ani_info.on_off_pair,
                 overload_register,
                 on_off_register,
             )
         if (async_name := func_ani_info.async_name) is not None:
             self.gen_async_func(
                 async_name,
-                sts_params_sig,
-                sts_params,
-                sts_params_ty,
-                sts_return_ty,
-                sts_resolved_ty,
-                sts_native_call,
+                params_ty_sts_sig,
+                params_sts,
+                params_ty_sts_name,
+                return_ty_sts_name,
+                return_ty_sts_real,
+                result_sts,
                 target,
                 func_kind,
                 mode_prefix,
-                func_ani_info.overload,
-                func_ani_info.on_off,
+                func_ani_info.overload_name,
+                func_ani_info.on_off_pair,
                 overload_register,
                 on_off_register,
             )
         if (get_name := func_ani_info.get_name) is not None:
             self.gen_getter(
                 get_name,
-                sts_params,
-                sts_return_ty,
-                sts_native_call,
+                params_sts,
+                return_ty_sts_name,
+                result_sts,
                 target,
                 func_kind,
                 mode_prefix,
@@ -841,9 +841,9 @@ class StsCodeGenerator:
         if (set_name := func_ani_info.set_name) is not None:
             self.gen_setter(
                 set_name,
-                sts_params,
-                sts_return_ty,
-                sts_native_call,
+                params_sts,
+                return_ty_sts_name,
+                result_sts,
                 target,
                 func_kind,
                 mode_prefix,
@@ -859,35 +859,37 @@ class StsCodeGenerator:
         overload_register: OverloadRegister,
         on_off_register: OnOffRegister,
     ):
-        sts_params_sig = []
-        sts_params_ty = []
-        sts_params = []
-        sts_args = []
-        for sts_param in ctor_ani_info.sts_params:
-            opt = "?" if OptionalAttr.get(sts_param) else ""
-            type_ani_info = TypeAniInfo.get(self.am, sts_param.ty)
-            sts_params_sig.append(type_ani_info.type_sig)
-            sts_params_ty.append(type_ani_info.sts_type_in(target))
-            sts_params.append(
-                f"{sts_param.name}{opt}: {type_ani_info.sts_type_in(target)}"
+        params_ty_sts_sig = []
+        params_ty_sts_name = []
+        params_sts = []
+        args_sts = []
+        for param in ctor_ani_info.sts_params:
+            opt = "?" if OptionalAttr.get(param) else ""
+            param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
+            params_ty_sts_sig.append(param_ty_ani_info.type_sig)
+            params_ty_sts_name.append(param_ty_ani_info.sts_type_in(target))
+            params_sts.append(
+                f"{param.name}{opt}: {param_ty_ani_info.sts_type_in(target)}"
             )
-            sts_args.append(sts_param.name)
-        sts_native_args = ctor_ani_info.as_native_args(sts_args)
-        sts_native_args_str = ", ".join(sts_native_args)
-        sts_native_call = f"{ctor_ani_info.call_native(ctor_ani_info.native_name)}({sts_native_args_str})"
+            args_sts.append(param.name)
+        args_sts = ctor_ani_info.as_native_args(args_sts)
+        args_sts_str = ", ".join(args_sts)
+        result_sts = (
+            f"{ctor_ani_info.call_native(ctor_ani_info.native_name)}({args_sts_str})"
+        )
 
         if (ctor_name := ctor_ani_info.norm_name) is not None:
             self.gen_ctor(
                 ctor_name,
-                sts_params_sig,
-                sts_params,
-                sts_params_ty,
-                sts_native_call,
+                params_ty_sts_sig,
+                params_sts,
+                params_ty_sts_name,
+                result_sts,
                 target,
                 ctor_func,
                 mode_prefix,
-                ctor_ani_info.overload,
-                ctor_ani_info.on_off,
+                ctor_ani_info.overload_name,
+                ctor_ani_info.on_off_pair,
                 overload_register,
                 on_off_register,
             )
@@ -895,31 +897,31 @@ class StsCodeGenerator:
     def gen_getter_decl(
         self,
         get_name: str,
-        sts_params: list[str],
-        sts_return_ty: str,
+        params_sts: list[str],
+        return_ty_sts_name: str,
         target: StsWriter,
         func_kind: FuncKind,
         decl_prefix: str,
     ):
-        sts_params_str = ", ".join(sts_params)
+        params_sts_str = ", ".join(params_sts)
 
         target.writelns(
-            f"{decl_prefix}{func_kind.get_prefix}{get_name}({sts_params_str}): {sts_return_ty};",
+            f"{decl_prefix}{func_kind.get_prefix}{get_name}({params_sts_str}): {return_ty_sts_name};",
         )
 
     def gen_setter_decl(
         self,
         set_name: str,
-        sts_params: list[str],
-        sts_return_ty: str,
+        params_sts: list[str],
+        return_ty_sts_name: str,
         target: StsWriter,
         func_kind: FuncKind,
         decl_prefix: str,
     ):
-        sts_params_str = ", ".join(sts_params)
+        params_sts_str = ", ".join(params_sts)
 
         target.writelns(
-            f"{decl_prefix}{func_kind.set_prefix}{set_name}({sts_params_str});",
+            f"{decl_prefix}{func_kind.set_prefix}{set_name}({params_sts_str});",
         )
 
     def gen_normal_func_decl(
@@ -927,42 +929,42 @@ class StsCodeGenerator:
         norm_name: str,
         async_name: str | None,
         promise_name: str | None,
-        sts_params_sig: list[str],
-        sts_params: list[str],
-        sts_params_ty: list[str],
-        sts_return_ty: str,
+        params_ty_sts_sig: list[str],
+        params_sts: list[str],
+        params_ty_sts_name: list[str],
+        return_ty_sts_name: str,
         target: StsWriter,
         func_kind: FuncKind,
         decl_prefix: str,
-        overload: str | None,
-        on_off: tuple[str, str] | None,
+        overload_name: str | None,
+        on_off_pair: tuple[str, str] | None,
         overload_register: OverloadRegister,
         on_off_register: OnOffRegister,
     ):
-        sts_params_str = ", ".join(sts_params)
+        params_sts_str = ", ".join(params_sts)
 
         target.writelns(
-            f"{decl_prefix}{func_kind.func_prefix}{norm_name}({sts_params_str}): {sts_return_ty};",
+            f"{decl_prefix}{func_kind.func_prefix}{norm_name}({params_sts_str}): {return_ty_sts_name};",
         )
 
-        if overload is not None:
-            overload_register.register(norm_name, overload)
-        if on_off is not None:
+        if overload_name is not None:
+            overload_register.register(norm_name, overload_name)
+        if on_off_pair is not None:
             on_off_register.register(
-                on_off,
-                sts_params_sig,
+                on_off_pair,
+                params_ty_sts_sig,
                 norm_name,
-                sts_params_ty,
-                sts_return_ty,
+                params_ty_sts_name,
+                return_ty_sts_name,
             )
 
         if promise_name is not None:
             self.gen_promise_func_decl(
                 promise_name,
-                sts_params_sig,
-                sts_params,
-                sts_params_ty,
-                sts_return_ty,
+                params_ty_sts_sig,
+                params_sts,
+                params_ty_sts_name,
+                return_ty_sts_name,
                 target,
                 func_kind,
                 decl_prefix,
@@ -974,10 +976,10 @@ class StsCodeGenerator:
         if async_name is not None:
             self.gen_async_func_decl(
                 async_name,
-                sts_params_sig,
-                sts_params,
-                sts_params_ty,
-                sts_return_ty,
+                params_ty_sts_sig,
+                params_sts,
+                params_ty_sts_name,
+                return_ty_sts_name,
                 target,
                 func_kind,
                 decl_prefix,
@@ -990,110 +992,110 @@ class StsCodeGenerator:
     def gen_promise_func_decl(
         self,
         promise_name: str,
-        sts_params_sig: list[str],
-        sts_params: list[str],
-        sts_params_ty: list[str],
-        sts_return_ty: str,
+        params_ty_sts_sig: list[str],
+        params_sts: list[str],
+        params_ty_sts_name: list[str],
+        return_ty_sts_name: str,
         target: StsWriter,
         func_kind: FuncKind,
         decl_prefix: str,
-        overload: str | None,
-        on_off: tuple[str, str] | None,
+        overload_name: str | None,
+        on_off_pair: tuple[str, str] | None,
         overload_register: OverloadRegister,
         on_off_register: OnOffRegister,
     ):
-        sts_params_str = ", ".join(sts_params)
-        promise_ty = f"Promise<{sts_return_ty}>"
+        params_sts_str = ", ".join(params_sts)
+        promise_ty = f"Promise<{return_ty_sts_name}>"
 
         target.writelns(
-            f"{decl_prefix}{func_kind.func_prefix}{promise_name}({sts_params_str}): {promise_ty};",
+            f"{decl_prefix}{func_kind.func_prefix}{promise_name}({params_sts_str}): {promise_ty};",
         )
 
-        if overload is not None:
-            overload_register.register(promise_name, overload)
-        if on_off is not None:
+        if overload_name is not None:
+            overload_register.register(promise_name, overload_name)
+        if on_off_pair is not None:
             on_off_register.register(
-                on_off,
-                sts_params_sig,
+                on_off_pair,
+                params_ty_sts_sig,
                 promise_name,
-                sts_params_ty,
+                params_ty_sts_name,
                 promise_ty,
             )
 
     def gen_async_func_decl(
         self,
         async_name: str,
-        sts_params_sig: list[str],
-        sts_params: list[str],
-        sts_params_ty: list[str],
-        sts_return_ty: str,
+        params_ty_sts_sig: list[str],
+        params_sts: list[str],
+        params_ty_sts_name: list[str],
+        return_ty_sts_name: str,
         target: StsWriter,
         func_kind: FuncKind,
         decl_prefix: str,
-        overload: str | None,
-        on_off: tuple[str, str] | None,
+        overload_name: str | None,
+        on_off_pair: tuple[str, str] | None,
         overload_register: OverloadRegister,
         on_off_register: OnOffRegister,
     ):
-        callback_arg = "callback"
-        callback_param_sig = "C{std.core.Function2}"
-        callback_param_ty = f"_taihe_AsyncCallback<{sts_return_ty}>"
-        callback_param = f"{callback_arg}: {callback_param_ty}"
-        sts_params_with_cb_str = ", ".join([*sts_params, callback_param])
+        cbname = "callback"
+        callback_ty_sts_sig = "C{std.core.Function2}"
+        callback_ty_sts_name = f"_taihe_AsyncCallback<{return_ty_sts_name}>"
+        callback_sts = f"{cbname}: {callback_ty_sts_name}"
+        params_with_callback_sts_str = ", ".join([*params_sts, callback_sts])
 
         target.writelns(
-            f"{decl_prefix}{func_kind.func_prefix}{async_name}({sts_params_with_cb_str}): void;",
+            f"{decl_prefix}{func_kind.func_prefix}{async_name}({params_with_callback_sts_str}): void;",
         )
 
-        if overload is not None:
-            overload_register.register(async_name, overload)
-        if on_off is not None:
+        if overload_name is not None:
+            overload_register.register(async_name, overload_name)
+        if on_off_pair is not None:
             on_off_register.register(
-                on_off,
-                [*sts_params_sig, callback_param_sig],
+                on_off_pair,
+                [*params_ty_sts_sig, callback_ty_sts_sig],
                 async_name,
-                [*sts_params_ty, callback_param_ty],
+                [*params_ty_sts_name, callback_ty_sts_name],
                 "void",
             )
 
     def gen_getter(
         self,
         get_name: str,
-        sts_params: list[str],
-        sts_return_ty: str,
-        sts_native_call: str,
+        params_sts: list[str],
+        return_ty_sts_name: str,
+        result_sts: str,
         target: StsWriter,
         func_kind: FuncKind,
         mode_prefix: str,
     ):
-        sts_params_str = ", ".join(sts_params)
+        params_sts_str = ", ".join(params_sts)
 
         with target.indented(
-            f"{mode_prefix}{func_kind.get_prefix}{get_name}({sts_params_str}): {sts_return_ty} {{",
+            f"{mode_prefix}{func_kind.get_prefix}{get_name}({params_sts_str}): {return_ty_sts_name} {{",
             f"}}",
         ):
             target.writelns(
-                f"return {sts_native_call};",
+                f"return {result_sts};",
             )
 
     def gen_setter(
         self,
         set_name: str,
-        sts_params: list[str],
-        sts_return_ty: str,
-        sts_native_call: str,
+        params_sts: list[str],
+        return_ty_sts_name: str,
+        result_sts: str,
         target: StsWriter,
         func_kind: FuncKind,
         mode_prefix: str,
     ):
-        sts_params_str = ", ".join(sts_params)
+        params_sts_str = ", ".join(params_sts)
 
         with target.indented(
-            f"{mode_prefix}{func_kind.set_prefix}{set_name}({sts_params_str}) {{",
+            f"{mode_prefix}{func_kind.set_prefix}{set_name}({params_sts_str}) {{",
             f"}}",
         ):
             target.writelns(
-                f"return {sts_native_call};",
+                f"return {result_sts};",
             )
 
     def gen_normal_func(
@@ -1101,50 +1103,50 @@ class StsCodeGenerator:
         norm_name: str,
         async_name: str | None,
         promise_name: str | None,
-        sts_params_sig: list[str],
-        sts_params: list[str],
-        sts_params_ty: list[str],
-        sts_return_ty: str,
-        sts_resolved_ty: str,
-        sts_native_call: str,
+        params_ty_sts_sig: list[str],
+        params_sts: list[str],
+        params_ty_sts_name: list[str],
+        return_ty_sts_name: str,
+        return_ty_sts_real: str,
+        result_sts: str,
         target: StsWriter,
         func_kind: FuncKind,
         mode_prefix: str,
-        overload: str | None,
-        on_off: tuple[str, str] | None,
+        overload_name: str | None,
+        on_off_pair: tuple[str, str] | None,
         overload_register: OverloadRegister,
         on_off_register: OnOffRegister,
     ):
-        sts_params_str = ", ".join(sts_params)
+        params_sts_str = ", ".join(params_sts)
 
         with target.indented(
-            f"{mode_prefix}{func_kind.func_prefix}{norm_name}({sts_params_str}): {sts_return_ty} {{",
+            f"{mode_prefix}{func_kind.func_prefix}{norm_name}({params_sts_str}): {return_ty_sts_name} {{",
             f"}}",
         ):
             target.writelns(
-                f"return {sts_native_call};",
+                f"return {result_sts};",
             )
 
-        if overload is not None:
-            overload_register.register(norm_name, overload)
-        if on_off is not None:
+        if overload_name is not None:
+            overload_register.register(norm_name, overload_name)
+        if on_off_pair is not None:
             on_off_register.register(
-                on_off,
-                sts_params_sig,
+                on_off_pair,
+                params_ty_sts_sig,
                 norm_name,
-                sts_params_ty,
-                sts_return_ty,
+                params_ty_sts_name,
+                return_ty_sts_name,
             )
 
         if promise_name is not None:
             self.gen_promise_func(
                 promise_name,
-                sts_params_sig,
-                sts_params,
-                sts_params_ty,
-                sts_return_ty,
-                sts_resolved_ty,
-                sts_native_call,
+                params_ty_sts_sig,
+                params_sts,
+                params_ty_sts_name,
+                return_ty_sts_name,
+                return_ty_sts_real,
+                result_sts,
                 target,
                 func_kind,
                 mode_prefix,
@@ -1156,12 +1158,12 @@ class StsCodeGenerator:
         if async_name is not None:
             self.gen_async_func(
                 async_name,
-                sts_params_sig,
-                sts_params,
-                sts_params_ty,
-                sts_return_ty,
-                sts_resolved_ty,
-                sts_native_call,
+                params_ty_sts_sig,
+                params_sts,
+                params_ty_sts_name,
+                return_ty_sts_name,
+                return_ty_sts_real,
+                result_sts,
                 target,
                 func_kind,
                 mode_prefix,
@@ -1174,44 +1176,44 @@ class StsCodeGenerator:
     def gen_promise_func(
         self,
         promise_name: str,
-        sts_params_sig: list[str],
-        sts_params: list[str],
-        sts_params_ty: list[str],
-        sts_return_ty: str,
-        sts_resolved_ty: str,
-        sts_native_call: str,
+        params_ty_sts_sig: list[str],
+        params_sts: list[str],
+        params_ty_sts_name: list[str],
+        return_ty_sts_name: str,
+        return_ty_sts_real: str,
+        result_sts: str,
         target: StsWriter,
         func_kind: FuncKind,
         mode_prefix: str,
-        overload: str | None,
-        on_off: tuple[str, str] | None,
+        overload_name: str | None,
+        on_off_pair: tuple[str, str] | None,
         overload_register: OverloadRegister,
         on_off_register: OnOffRegister,
     ):
-        sts_params_str = ", ".join(sts_params)
-        promise_ty = f"Promise<{sts_return_ty}>"
+        params_sts_str = ", ".join(params_sts)
+        promise_ty_sts_name = f"Promise<{return_ty_sts_name}>"
 
         with target.indented(
-            f"{mode_prefix}{func_kind.func_prefix}{promise_name}({sts_params_str}): {promise_ty} {{",
+            f"{mode_prefix}{func_kind.func_prefix}{promise_name}({params_sts_str}): {promise_ty_sts_name} {{",
             f"}}",
         ):
             with target.indented(
-                f"return new {promise_ty}((resolve, reject): void => {{",
+                f"return new {promise_ty_sts_name}((resolve, reject): void => {{",
                 f"}});",
             ):
                 with target.indented(
-                    f"taskpool.execute((): {sts_return_ty} => {{",
+                    f"taskpool.execute((): {return_ty_sts_name} => {{",
                     f"}})",
                 ):
                     target.writelns(
-                        f"return {sts_native_call};",
+                        f"return {result_sts};",
                     )
                 with target.indented(
                     f".then((ret: Any): void => {{",
                     f"}})",
                 ):
                     target.writelns(
-                        f"resolve(ret as {sts_resolved_ty});",
+                        f"resolve(ret as {return_ty_sts_real});",
                     )
                 with target.indented(
                     f".catch((ret: Any): void => {{",
@@ -1221,110 +1223,110 @@ class StsCodeGenerator:
                         f"reject(ret as Error);",
                     )
 
-        if overload is not None:
-            overload_register.register(promise_name, overload)
-        if on_off is not None:
+        if overload_name is not None:
+            overload_register.register(promise_name, overload_name)
+        if on_off_pair is not None:
             on_off_register.register(
-                on_off,
-                sts_params_sig,
+                on_off_pair,
+                params_ty_sts_sig,
                 promise_name,
-                sts_params_ty,
-                promise_ty,
+                params_ty_sts_name,
+                promise_ty_sts_name,
             )
 
     def gen_async_func(
         self,
         async_name: str,
-        sts_params_sig: list[str],
-        sts_params: list[str],
-        sts_params_ty: list[str],
-        sts_return_ty: str,
-        sts_resolved_ty: str,
-        sts_native_call: str,
+        params_ty_sts_sig: list[str],
+        params_sts: list[str],
+        params_ty_sts_name: list[str],
+        return_ty_sts_name: str,
+        return_ty_sts_real: str,
+        result_sts: str,
         target: StsWriter,
         func_kind: FuncKind,
         mode_prefix: str,
-        overload: str | None,
-        on_off: tuple[str, str] | None,
+        overload_name: str | None,
+        on_off_pair: tuple[str, str] | None,
         overload_register: OverloadRegister,
         on_off_register: OnOffRegister,
     ):
-        callback_arg = "callback"
-        callback_param_sig = "C{std.core.Function2}"
-        callback_param_ty = f"_taihe_AsyncCallback<{sts_return_ty}>"
-        callback_param = f"{callback_arg}: {callback_param_ty}"
-        sts_params_with_cb_str = ", ".join([*sts_params, callback_param])
+        cbname = "callback"
+        callback_ty_sts_sig = "C{std.core.Function2}"
+        callback_ty_sts_name = f"_taihe_AsyncCallback<{return_ty_sts_name}>"
+        callback_sts = f"{cbname}: {callback_ty_sts_name}"
+        params_with_callback_sts_str = ", ".join([*params_sts, callback_sts])
 
         with target.indented(
-            f"{mode_prefix}{func_kind.func_prefix}{async_name}({sts_params_with_cb_str}): void {{",
+            f"{mode_prefix}{func_kind.func_prefix}{async_name}({params_with_callback_sts_str}): void {{",
             f"}}",
         ):
             with target.indented(
-                f"taskpool.execute((): {sts_return_ty} => {{",
+                f"taskpool.execute((): {return_ty_sts_name} => {{",
                 f"}})",
             ):
                 target.writelns(
-                    f"return {sts_native_call};",
+                    f"return {result_sts};",
                 )
             with target.indented(
                 f".then((ret: Any): void => {{",
                 f"}})",
             ):
                 target.writelns(
-                    f"callback(null, ret as {sts_resolved_ty});",
+                    f"{cbname}(null, ret as {return_ty_sts_real});",
                 )
             with target.indented(
                 f".catch((ret: Any): void => {{",
                 f"}});",
             ):
                 target.writelns(
-                    f"callback(ret as _taihe_BusinessError, undefined);",
+                    f"{cbname}(ret as _taihe_BusinessError, undefined);",
                 )
 
-        if overload is not None:
-            overload_register.register(async_name, overload)
-        if on_off is not None:
+        if overload_name is not None:
+            overload_register.register(async_name, overload_name)
+        if on_off_pair is not None:
             on_off_register.register(
-                on_off,
-                [*sts_params_sig, callback_param_sig],
+                on_off_pair,
+                [*params_ty_sts_sig, callback_ty_sts_sig],
                 async_name,
-                [*sts_params_ty, callback_param_ty],
+                [*params_ty_sts_name, callback_ty_sts_name],
                 "void",
             )
 
     def gen_ctor(
         self,
         ctor_name: str,
-        sts_params_sig: list[str],
-        sts_params: list[str],
-        sts_params_ty: list[str],
-        sts_native_call: str,
+        params_ty_sts_sig: list[str],
+        params_sts: list[str],
+        params_ty_sts_name: list[str],
+        result_sts: str,
         target: StsWriter,
         ctor_kind: CtorKind,
         mode_prefix: str,
-        overload: str | None,
-        on_off: tuple[str, str] | None,
+        overload_name: str | None,
+        on_off_pair: tuple[str, str] | None,
         overload_register: OverloadRegister,
         on_off_register: OnOffRegister,
     ):
-        sts_params_str = ", ".join(sts_params)
+        params_sts_str = ", ".join(params_sts)
 
         with target.indented(
-            f"{mode_prefix}{ctor_kind.func_prefix}{ctor_name}({sts_params_str}) {{",
+            f"{mode_prefix}{ctor_kind.func_prefix}{ctor_name}({params_sts_str}) {{",
             f"}}",
         ):
             target.writelns(
-                f"this._taihe_moveFrom({sts_native_call});",
+                f"this._taihe_moveFrom({result_sts});",
             )
 
-        if overload is not None:
-            overload_register.register(ctor_name, overload)
-        if on_off is not None:
+        if overload_name is not None:
+            overload_register.register(ctor_name, overload_name)
+        if on_off_pair is not None:
             on_off_register.register(
-                on_off,
-                sts_params_sig,
+                on_off_pair,
+                params_ty_sts_sig,
                 ctor_name,
-                sts_params_ty,
+                params_ty_sts_name,
                 "void",
             )
 
@@ -1361,13 +1363,13 @@ class StsCodeGenerator:
                 func_kind,
                 mode_prefix,
             )
-        params_len = max(len(sigs) for sigs in on_off_info)
-        sts_args = [f"p_{i}" for i in range(params_len)]
-        sts_params = ["type: Object", *(f"{arg}?: Object" for arg in sts_args)]
-        sts_params_str = ", ".join(sts_params)
+        params_len = max(len(params_ty_sts_sig) for params_ty_sts_sig in on_off_info)
+        args_sts = [f"p_{i}" for i in range(params_len)]
+        params_sts = ["type: Object", *(f"{arg_sts}?: Object" for arg_sts in args_sts)]
+        params_sts_str = ", ".join(params_sts)
 
         with target.indented(
-            f"{mode_prefix}{func_kind.func_prefix}{on_off_name}({sts_params_str}): Any {{",
+            f"{mode_prefix}{func_kind.func_prefix}{on_off_name}({params_sts_str}): Any {{",
             f"}}",
         ):
             with target.indented(
@@ -1375,14 +1377,20 @@ class StsCodeGenerator:
                 f"}}",
                 indent="",
             ):
-                for funcs in on_off_info.values():
-                    for tag, (orig, params_ty, _) in funcs.items():
-                        sts_args_str = ", ".join(
-                            f"{arg} as {param_ty}"
-                            for arg, param_ty in zip(sts_args, params_ty, strict=False)
+                for on_off_cases in on_off_info.values():
+                    for on_off_type, (
+                        orig_name,
+                        params_ty_sts_name,
+                        _,
+                    ) in on_off_cases.items():
+                        args_sts_str = ", ".join(
+                            f"{arg_sts} as {param_ty_sts_name}"
+                            for arg_sts, param_ty_sts_name in zip(
+                                args_sts, params_ty_sts_name, strict=False
+                            )
                         )
                         target.writelns(
-                            f'case "{tag}": return {func_kind.call_from_local(orig)}({sts_args_str});',
+                            f'case "{on_off_type}": return {func_kind.call_from_local(orig_name)}({args_sts_str});',
                         )
                 target.writelns(
                     f"default: throw new Error(`Unknown tag: ${{type}}`);",
@@ -1396,26 +1404,30 @@ class StsCodeGenerator:
         func_kind: FuncKind,
         mode_prefix: str,
     ):
-        for sigs, funcs in on_off_info.items():
-            params_types: list[set[str]] = [set() for _ in range(len(sigs))]
-            return_types: set[str] = set()
-            for _, params_ty, return_ty in funcs.values():
-                for param_types, param_ty in zip(params_types, params_ty, strict=True):
-                    param_types.add(param_ty)
-                return_types.add(return_ty)
-            sts_params = ["type: string"]
-            sts_args = []
-            for index, param_types in enumerate(params_types):
-                sts_param_name = f"p_{index}"
-                param_ty = " | ".join(param_types)
-                sts_params.append(f"{sts_param_name}?: {param_ty}")
-                sts_args.append(sts_param_name)
-            sts_params_str = ", ".join(sts_params)
-            sts_args_str = ", ".join(sts_args)
-            return_ty = " | ".join(return_types)
+        for params_ty_sts_sig, on_off_cases in on_off_info.items():
+            params_ty_sts_sum: list[set[str]] = [
+                set() for _ in range(len(params_ty_sts_sig))
+            ]
+            return_ty_sts_sum: set[str] = set()
+            for _, params_ty_sts_name, return_ty_sts_name in on_off_cases.values():
+                for param_ty_sts_sum, param_ty_sts_name in zip(
+                    params_ty_sts_sum, params_ty_sts_name, strict=True
+                ):
+                    param_ty_sts_sum.add(param_ty_sts_name)
+                return_ty_sts_sum.add(return_ty_sts_name)
+            params_sts = ["type: string"]
+            args_sts = []
+            for index, param_ty_sts_sum in enumerate(params_ty_sts_sum):
+                arg_sts = f"p_{index}"
+                param_ty = " | ".join(param_ty_sts_sum)
+                params_sts.append(f"{arg_sts}?: {param_ty}")
+                args_sts.append(arg_sts)
+            params_sts_str = ", ".join(params_sts)
+            args_sts_str = ", ".join(args_sts)
+            return_ty = " | ".join(return_ty_sts_sum)
 
             with target.indented(
-                f"{mode_prefix}{func_kind.func_prefix}{on_off_name}({sts_params_str}): {return_ty} {{",
+                f"{mode_prefix}{func_kind.func_prefix}{on_off_name}({params_sts_str}): {return_ty} {{",
                 f"}}",
             ):
                 with target.indented(
@@ -1423,13 +1435,19 @@ class StsCodeGenerator:
                     f"}}",
                     indent="",
                 ):
-                    for tag, (orig, params_ty, return_ty) in funcs.items():
-                        sts_args_str = ", ".join(
-                            f"{arg} as {param_ty}"
-                            for arg, param_ty in zip(sts_args, params_ty, strict=True)
+                    for on_off_type, (
+                        orig_name,
+                        params_ty_sts_name,
+                        _,
+                    ) in on_off_cases.items():
+                        args_sts_str = ", ".join(
+                            f"{arg_sts} as {param_ty_sts_name}"
+                            for arg_sts, param_ty_sts_name in zip(
+                                args_sts, params_ty_sts_name, strict=True
+                            )
                         )
                         target.writelns(
-                            f'case "{tag}": return {func_kind.call_from_local(orig)}({sts_args_str});',
+                            f'case "{on_off_type}": return {func_kind.call_from_local(orig_name)}({args_sts_str});',
                         )
                     target.writelns(
                         f"default: throw new Error(`Unknown tag: ${{type}}`);",
@@ -1468,13 +1486,13 @@ class StsCodeGenerator:
                 ctor_kind,
                 mode_prefix,
             )
-        params_len = max(len(sigs) for sigs in on_off_info)
-        sts_args = [f"p_{i}" for i in range(params_len)]
-        sts_params = ["type: Object", *(f"{arg}?: Object" for arg in sts_args)]
-        sts_params_str = ", ".join(sts_params)
+        params_len = max(len(params_ty_sts_sig) for params_ty_sts_sig in on_off_info)
+        args_sts = [f"p_{i}" for i in range(params_len)]
+        params_sts = ["type: Object", *(f"{arg_sts}?: Object" for arg_sts in args_sts)]
+        params_sts_str = ", ".join(params_sts)
 
         with target.indented(
-            f"{mode_prefix}{ctor_kind.func_prefix}{on_off_name}({sts_params_str}) {{",
+            f"{mode_prefix}{ctor_kind.func_prefix}{on_off_name}({params_sts_str}) {{",
             f"}}",
         ):
             with target.indented(
@@ -1482,14 +1500,20 @@ class StsCodeGenerator:
                 f"}}",
                 indent="",
             ):
-                for funcs in on_off_info.values():
-                    for tag, (orig, params_ty, _) in funcs.items():
-                        sts_args_str = ", ".join(
-                            f"{arg} as {param_ty}"
-                            for arg, param_ty in zip(sts_args, params_ty, strict=False)
+                for on_off_cases in on_off_info.values():
+                    for on_off_type, (
+                        orig_name,
+                        params_ty_sts_name,
+                        _,
+                    ) in on_off_cases.items():
+                        args_sts_str = ", ".join(
+                            f"{arg_sts} as {param_ty_sts_name}"
+                            for arg_sts, param_ty_sts_name in zip(
+                                args_sts, params_ty_sts_name, strict=False
+                            )
                         )
                         target.writelns(
-                            f'case "{tag}": {ctor_kind.call_from_local(orig)}({sts_args_str});',
+                            f'case "{on_off_type}": {ctor_kind.call_from_local(orig_name)}({args_sts_str});',
                         )
                 target.writelns(
                     f"default: throw new Error(`Unknown tag: ${{type}}`);",
@@ -1503,25 +1527,30 @@ class StsCodeGenerator:
         ctor_kind: CtorKind,
         mode_prefix: str,
     ):
-        for sigs, funcs in on_off_func.items():
-            params_types: list[set[str]] = [set() for _ in range(len(sigs))]
-            return_types: set[str] = set()
-            for _, params_ty, return_ty in funcs.values():
-                for param_types, param_ty in zip(params_types, params_ty, strict=True):
-                    param_types.add(param_ty)
-                return_types.add(return_ty)
-            sts_params = ["type: string"]
-            sts_args = []
-            for index, param_ty in enumerate(params_types):
-                sts_param_name = f"p_{index}"
-                sts_params.append(f"{sts_param_name}?: {param_ty}")
-                sts_args.append(sts_param_name)
-            sts_params_str = ", ".join(sts_params)
-            sts_args_str = ", ".join(sts_args)
-            return_ty = " | ".join(return_types)
+        for params_ty_sts_sig, on_off_cases in on_off_func.items():
+            params_ty_sts_sum: list[set[str]] = [
+                set() for _ in range(len(params_ty_sts_sig))
+            ]
+            return_ty_sts_sum: set[str] = set()
+            for _, params_ty_sts_name, return_ty_sts_name in on_off_cases.values():
+                for param_ty_sts_sum, param_ty_sts_name in zip(
+                    params_ty_sts_sum, params_ty_sts_name, strict=True
+                ):
+                    param_ty_sts_sum.add(param_ty_sts_name)
+                return_ty_sts_sum.add(return_ty_sts_name)
+            params_sts = ["type: string"]
+            args_sts = []
+            for index, param_ty_sts_sum in enumerate(params_ty_sts_sum):
+                arg_sts = f"p_{index}"
+                param_ty = " | ".join(param_ty_sts_sum)
+                params_sts.append(f"{arg_sts}?: {param_ty}")
+                args_sts.append(arg_sts)
+            params_sts_str = ", ".join(params_sts)
+            args_sts_str = ", ".join(args_sts)
+            return_ty = " | ".join(return_ty_sts_sum)  # noqa: F841
 
             with target.indented(
-                f"{mode_prefix}{ctor_kind.func_prefix}{on_off_name}({sts_params_str}) {{",
+                f"{mode_prefix}{ctor_kind.func_prefix}{on_off_name}({params_sts_str}) {{",
                 f"}}",
             ):
                 with target.indented(
@@ -1529,13 +1558,19 @@ class StsCodeGenerator:
                     f"}}",
                     indent="",
                 ):
-                    for tag, (orig, params_ty, return_ty) in funcs.items():
-                        sts_args_str = ", ".join(
-                            f"{arg} as {param_ty}"
-                            for arg, param_ty in zip(sts_args, params_ty, strict=True)
+                    for on_off_type, (
+                        orig_name,
+                        params_ty_sts_name,
+                        _,
+                    ) in on_off_cases.items():
+                        args_sts_str = ", ".join(
+                            f"{arg_sts} as {param_ty_sts_name}"
+                            for arg_sts, param_ty_sts_name in zip(
+                                args_sts, params_ty_sts_name, strict=True
+                            )
                         )
                         target.writelns(
-                            f'case "{tag}": {ctor_kind.call_from_local(orig)}({sts_args_str});',
+                            f'case "{on_off_type}": {ctor_kind.call_from_local(orig_name)}({args_sts_str});',
                         )
                     target.writelns(
                         f"default: throw new Error(`Unknown tag: ${{type}}`);",
@@ -1548,32 +1583,30 @@ class StsCodeGenerator:
         target: StsWriter,
         func_kind: FuncKind | CtorKind,
     ):
-        sts_reverse_args = []
-        sts_reverse_params = func_kind.reverse_base_params()
+        args_sts = []
+        params_sts = func_kind.reverse_base_params()
         for param in func.params:
-            type_ani_info = TypeAniInfo.get(self.am, param.ty)
-            sts_reverse_args.append(param.name)
-            sts_reverse_params.append(
-                f"{param.name}: {type_ani_info.sts_type_in(target)}"
-            )
-        sts_reverse_args = func_ani_info.as_normal_args(sts_reverse_args)
-        sts_reverse_params_str = ", ".join(sts_reverse_params)
+            param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
+            args_sts.append(param.name)
+            params_sts.append(f"{param.name}: {param_ty_ani_info.sts_type_in(target)}")
+        args_sts = func_ani_info.as_normal_args(args_sts)
+        params_sts_str = ", ".join(params_sts)
         if isinstance(return_ty := func.return_ty, NonVoidType):
-            type_ani_info = TypeAniInfo.get(self.am, return_ty)
-            sts_return_ty = type_ani_info.sts_type_in(target)
-            sts_resolved_ty = type_ani_info.sts_type_in(target)
+            return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
+            return_ty_sts_name = return_ty_ani_info.sts_type_in(target)
+            return_ty_sts_real = return_ty_ani_info.sts_type_in(target)
         else:
-            sts_return_ty = "void"
-            sts_resolved_ty = "undefined"
+            return_ty_sts_name = "void"
+            return_ty_sts_real = "undefined"
 
         with target.indented(
-            f"function {func_ani_info.reverse_name}({sts_reverse_params_str}): {sts_return_ty} {{",
+            f"function {func_ani_info.reverse_name}({params_sts_str}): {return_ty_sts_name} {{",
             f"}}",
         ):
             if (norm_name := func_ani_info.norm_name) is not None:
-                sts_args_str = ", ".join(sts_reverse_args)
+                args_sts_str = ", ".join(args_sts)
                 target.writelns(
-                    f"return {func_kind.call_from_reverse(norm_name)}({sts_args_str});",
+                    f"return {func_kind.call_from_reverse(norm_name)}({args_sts_str});",
                 )
             elif (get_name := func_ani_info.get_name) is not None:
                 target.writelns(
@@ -1581,20 +1614,20 @@ class StsCodeGenerator:
                 )
             elif (set_name := func_ani_info.set_name) is not None:
                 target.writelns(
-                    f"{func_kind.call_from_reverse(set_name)} = {sts_reverse_args[0]};",
+                    f"{func_kind.call_from_reverse(set_name)} = {args_sts[0]};",
                 )
             elif (promise_name := func_ani_info.promise_name) is not None:
-                sts_args_str = ", ".join(sts_reverse_args)
+                args_sts_str = ", ".join(args_sts)
                 target.writelns(
-                    f"return await {func_kind.call_from_reverse(promise_name)}({sts_args_str});",
+                    f"return await {func_kind.call_from_reverse(promise_name)}({args_sts_str});",
                 )
             elif (async_name := func_ani_info.async_name) is not None:
                 with target.indented(
-                    f"return await new Promise<{sts_return_ty}>((resolve, reject) => {{",
+                    f"return await new Promise<{return_ty_sts_name}>((resolve, reject) => {{",
                     f"}});",
                 ):
                     with target.indented(
-                        f"let callback: _taihe_AsyncCallback<{sts_return_ty}> = (err: _taihe_BusinessError | null, res?: {sts_resolved_ty}): void => {{",
+                        f"let callback: _taihe_AsyncCallback<{return_ty_sts_name}> = (err: _taihe_BusinessError | null, res?: {return_ty_sts_real}): void => {{",
                         f"}}",
                     ):
                         with target.indented(
@@ -1609,11 +1642,11 @@ class StsCodeGenerator:
                             f"}}",
                         ):
                             target.writelns(
-                                f"resolve(res as {sts_resolved_ty});",
+                                f"resolve(res as {return_ty_sts_real});",
                             )
-                    sts_args_with_cb_str = ", ".join([*sts_reverse_args, "callback"])
+                    args_with_cbname_sts_str = ", ".join([*args_sts, "callback"])
                     target.writelns(
-                        f"{func_kind.call_from_reverse(async_name)}({sts_args_with_cb_str});",
+                        f"{func_kind.call_from_reverse(async_name)}({args_with_cbname_sts_str});",
                     )
             else:
                 target.writelns(

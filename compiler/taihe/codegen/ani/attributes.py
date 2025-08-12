@@ -608,7 +608,7 @@ class OnOffAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     ATTRIBUTE_GROUP_TAGS = frozenset({OVERLOAD_KIND_ATTRIBUTE_GROUP})
 
     type: str | None = None
-    overload: str = field(kw_only=True, default="")
+    name: str = field(kw_only=True, default="")
     func_suffix: str = field(default="", init=False)
 
     @override
@@ -617,27 +617,26 @@ class OnOffAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
         parent: GlobFuncDecl | IfaceMethodDecl,
         dm: DiagnosticsManager,
     ) -> None:
-        if self.overload:
+        if self.name:
             if self.type is None:
                 if (
-                    len(parent.name) > len(self.overload)
-                    and parent.name[: len(self.overload)].lower()
-                    == self.overload.lower()
+                    len(parent.name) > len(self.name)
+                    and parent.name[: len(self.name)].lower() == self.name.lower()
                 ):
-                    self.func_suffix = parent.name[len(self.overload) :]
+                    self.func_suffix = parent.name[len(self.name) :]
                 else:
                     dm.emit(
                         AdhocError(
-                            f"Attribute '{self.NAME}' requires the type to be specified when the function name does not start with '{self.overload}'.",
+                            f"Attribute '{self.NAME}' requires the type to be specified when the function name does not start with '{self.name}'.",
                             loc=self.loc,
                         )
                     )
         elif len(parent.name) > 2 and parent.name[:2].lower() == "on":
-            self.overload = "on"
+            self.name = "on"
             if self.type is None:
                 self.func_suffix = parent.name[2:]
         elif len(parent.name) > 3 and parent.name[:3].lower() == "off":
-            self.overload = "off"
+            self.name = "off"
             if self.type is None:
                 self.func_suffix = parent.name[3:]
         else:

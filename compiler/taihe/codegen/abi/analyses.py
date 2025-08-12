@@ -230,9 +230,7 @@ class ScalarTypeAbiInfo(TypeAbiInfo):
             ScalarKind.U16: "uint16_t",
             ScalarKind.U32: "uint32_t",
             ScalarKind.U64: "uint64_t",
-        }.get(t.kind)
-        if res is None:
-            raise ValueError
+        }[t.kind]
         self.defn_headers = []
         self.impl_headers = []
         self.as_param = res

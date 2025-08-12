@@ -168,8 +168,8 @@ class CppHeadersGenerator:
             f"}}",
             indent="",
         ):
-            ty_cpp_info = TypeCppInfo.get(self.am, enum.ty)
-            enum_cpp_defn_target.add_include(*ty_cpp_info.impl_headers)
+            enum_ty_cpp_info = TypeCppInfo.get(self.am, enum.ty)
+            enum_cpp_defn_target.add_include(*enum_ty_cpp_info.impl_headers)
             with enum_cpp_defn_target.indented(
                 f"struct {enum_cpp_info.name} {{",
                 f"}};",
@@ -294,14 +294,14 @@ class CppHeadersGenerator:
         enum_cpp_info: EnumCppInfo,
         enum_cpp_defn_target: CHeaderWriter,
     ):
-        ty_cpp_info = TypeCppInfo.get(self.am, enum.ty)
+        enum_ty_cpp_info = TypeCppInfo.get(self.am, enum.ty)
         match enum.ty:
             case StringType():
                 as_owner = "char const*"
-                as_param = ty_cpp_info.as_param
+                as_param = enum_ty_cpp_info.as_param
             case ScalarType():
-                as_owner = ty_cpp_info.as_owner
-                as_param = ty_cpp_info.as_param
+                as_owner = enum_ty_cpp_info.as_owner
+                as_param = enum_ty_cpp_info.as_param
             case _:
                 raise ValueError("invalid enum type")
         # table
@@ -459,8 +459,8 @@ class CppHeadersGenerator:
             for field in union.fields:
                 if not isinstance(field_ty := field.ty, NonVoidType):
                     continue
-                type_cpp_info = TypeCppInfo.get(self.am, field_ty)
-                union_cpp_defn_target.add_include(*type_cpp_info.defn_headers)
+                field_ty_cpp_info = TypeCppInfo.get(self.am, field_ty)
+                union_cpp_defn_target.add_include(*field_ty_cpp_info.defn_headers)
             self.gen_union_defn(
                 union,
                 union_abi_info,
@@ -573,9 +573,9 @@ class CppHeadersGenerator:
             for field in union.fields:
                 if not isinstance(field_ty := field.ty, NonVoidType):
                     continue
-                type_cpp_info = TypeCppInfo.get(self.am, field_ty)
+                field_ty_cpp_info = TypeCppInfo.get(self.am, field_ty)
                 union_cpp_defn_target.writelns(
-                    f"{type_cpp_info.as_owner} {field.name};",
+                    f"{field_ty_cpp_info.as_owner} {field.name};",
                 )
 
     def gen_union_properties(
@@ -1052,8 +1052,8 @@ class CppHeadersGenerator:
             for field in union.fields:
                 if not isinstance(field_ty := field.ty, NonVoidType):
                     continue
-                type_cpp_info = TypeCppInfo.get(self.am, field_ty)
-                union_cpp_impl_target.add_include(*type_cpp_info.impl_headers)
+                field_ty_cpp_info = TypeCppInfo.get(self.am, field_ty)
+                union_cpp_impl_target.add_include(*field_ty_cpp_info.impl_headers)
 
     def gen_struct_decl_file(
         self,
@@ -1126,8 +1126,8 @@ class CppHeadersGenerator:
             struct_cpp_defn_target.add_include(struct_cpp_info.decl_header)
             struct_cpp_defn_target.add_include(struct_abi_info.defn_header)
             for field in struct.fields:
-                type_cpp_info = TypeCppInfo.get(self.am, field.ty)
-                struct_cpp_defn_target.add_include(*type_cpp_info.defn_headers)
+                field_ty_cpp_info = TypeCppInfo.get(self.am, field.ty)
+                struct_cpp_defn_target.add_include(*field_ty_cpp_info.defn_headers)
             self.gen_struct_defn(
                 struct,
                 struct_abi_info,
@@ -1164,9 +1164,9 @@ class CppHeadersGenerator:
                 f"}};",
             ):
                 for field in struct.fields:
-                    type_cpp_info = TypeCppInfo.get(self.am, field.ty)
+                    field_ty_cpp_info = TypeCppInfo.get(self.am, field.ty)
                     struct_cpp_defn_target.writelns(
-                        f"{type_cpp_info.as_owner} {field.name};",
+                        f"{field_ty_cpp_info.as_owner} {field.name};",
                     )
 
     def gen_struct_same(
@@ -1232,8 +1232,8 @@ class CppHeadersGenerator:
             struct_cpp_impl_target.add_include(struct_cpp_info.defn_header)
             struct_cpp_impl_target.add_include(struct_abi_info.impl_header)
             for field in struct.fields:
-                type_cpp_info = TypeCppInfo.get(self.am, field.ty)
-                struct_cpp_impl_target.add_include(*type_cpp_info.impl_headers)
+                field_ty_cpp_info = TypeCppInfo.get(self.am, field.ty)
+                struct_cpp_impl_target.add_include(*field_ty_cpp_info.impl_headers)
 
     def gen_iface_decl_file(
         self,
@@ -1820,11 +1820,11 @@ class CppHeadersGenerator:
             iface_cpp_impl_target.add_include(iface_abi_info.impl_header)
             for method in iface.methods:
                 for param in method.params:
-                    type_cpp_info = TypeCppInfo.get(self.am, param.ty)
-                    iface_cpp_impl_target.add_include(*type_cpp_info.defn_headers)
+                    param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
+                    iface_cpp_impl_target.add_include(*param_ty_cpp_info.defn_headers)
                 if isinstance(return_ty := method.return_ty, NonVoidType):
-                    type_cpp_info = TypeCppInfo.get(self.am, return_ty)
-                    iface_cpp_impl_target.add_include(*type_cpp_info.defn_headers)
+                    return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
+                    iface_cpp_impl_target.add_include(*return_ty_cpp_info.defn_headers)
             self.gen_iface_user_methods_impl(
                 iface,
                 iface_abi_info,
@@ -1850,11 +1850,11 @@ class CppHeadersGenerator:
                 iface_cpp_impl_target.add_include(ancestor_cpp_info.impl_header)
             for method in iface.methods:
                 for param in method.params:
-                    type_cpp_info = TypeCppInfo.get(self.am, param.ty)
-                    iface_cpp_impl_target.add_include(*type_cpp_info.impl_headers)
+                    return_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
+                    iface_cpp_impl_target.add_include(*return_ty_cpp_info.impl_headers)
                 if isinstance(return_ty := method.return_ty, NonVoidType):
-                    type_cpp_info = TypeCppInfo.get(self.am, return_ty)
-                    iface_cpp_impl_target.add_include(*type_cpp_info.impl_headers)
+                    return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
+                    iface_cpp_impl_target.add_include(*return_ty_cpp_info.impl_headers)
 
     def gen_iface_user_methods_impl(
         self,
@@ -1872,27 +1872,27 @@ class CppHeadersGenerator:
                 method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
                 params_cpp = []
                 thiz = f"*reinterpret_cast<{iface_abi_info.mangled_name} const*>(this)"
-                args_into_abi = [thiz]
+                args_abi = [thiz]
                 for param in method.params:
-                    type_cpp_info = TypeCppInfo.get(self.am, param.ty)
-                    params_cpp.append(f"{type_cpp_info.as_param} {param.name}")
-                    args_into_abi.append(type_cpp_info.pass_into_abi(param.name))
+                    param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
+                    params_cpp.append(f"{param_ty_cpp_info.as_param} {param.name}")
+                    args_abi.append(param_ty_cpp_info.pass_into_abi(param.name))
                 params_cpp_str = ", ".join(params_cpp)
-                args_into_abi_str = ", ".join(args_into_abi)
-                abi_result = f"{method_abi_info.mangled_name}({args_into_abi_str})"
+                args_abi_str = ", ".join(args_abi)
+                result_abi = f"{method_abi_info.mangled_name}({args_abi_str})"
                 if isinstance(return_ty := method.return_ty, NonVoidType):
-                    type_cpp_info = TypeCppInfo.get(self.am, return_ty)
-                    cpp_return_ty_name = type_cpp_info.as_owner
-                    cpp_result = type_cpp_info.return_from_abi(abi_result)
+                    return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
+                    return_ty_cpp_name = return_ty_cpp_info.as_owner
+                    result_cpp = return_ty_cpp_info.return_from_abi(result_abi)
                 else:
-                    cpp_return_ty_name = "void"
-                    cpp_result = abi_result
+                    return_ty_cpp_name = "void"
+                    result_cpp = result_abi
                 with iface_cpp_impl_target.indented(
-                    f"{cpp_return_ty_name} {method_cpp_info.call_name}({params_cpp_str}) const& {{",
+                    f"{return_ty_cpp_name} {method_cpp_info.call_name}({params_cpp_str}) const& {{",
                     f"}}",
                 ):
                     iface_cpp_impl_target.writelns(
-                        f"return {cpp_result};",
+                        f"return {result_cpp};",
                     )
 
     def gen_iface_impl_methods_impl(
@@ -1912,29 +1912,29 @@ class CppHeadersGenerator:
             for method in iface.methods:
                 method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
                 params_abi = [f"{iface_abi_info.as_param} tobj"]
-                args_from_abi = []
+                args_cpp = []
                 for param in method.params:
-                    type_abi_info = TypeAbiInfo.get(self.am, param.ty)
-                    type_cpp_info = TypeCppInfo.get(self.am, param.ty)
-                    params_abi.append(f"{type_abi_info.as_param} {param.name}")
-                    args_from_abi.append(type_cpp_info.pass_from_abi(param.name))
+                    param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
+                    param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
+                    params_abi.append(f"{param_ty_abi_info.as_param} {param.name}")
+                    args_cpp.append(param_ty_cpp_info.pass_from_abi(param.name))
                 params_abi_str = ", ".join(params_abi)
-                args_from_abi_str = ", ".join(args_from_abi)
-                cpp_result = f"::taihe::cast_data_ptr<Impl>(tobj.data_ptr)->{method_cpp_info.impl_name}({args_from_abi_str})"
+                args_cpp_str = ", ".join(args_cpp)
+                result_cpp = f"::taihe::cast_data_ptr<Impl>(tobj.data_ptr)->{method_cpp_info.impl_name}({args_cpp_str})"
                 if isinstance(return_ty := method.return_ty, NonVoidType):
-                    type_abi_info = TypeAbiInfo.get(self.am, return_ty)
-                    type_cpp_info = TypeCppInfo.get(self.am, return_ty)
-                    abi_return_ty_name = type_abi_info.as_owner
-                    abi_result = type_cpp_info.return_into_abi(cpp_result)
+                    return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
+                    return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
+                    return_ty_abi_name = return_ty_abi_info.as_owner
+                    result_abi = return_ty_cpp_info.return_into_abi(result_cpp)
                 else:
-                    abi_return_ty_name = "void"
-                    abi_result = cpp_result
+                    return_ty_abi_name = "void"
+                    result_abi = result_cpp
                 with iface_cpp_impl_target.indented(
-                    f"static {abi_return_ty_name} {method.name}({params_abi_str}) {{",
+                    f"static {return_ty_abi_name} {method.name}({params_abi_str}) {{",
                     f"}}",
                 ):
                     iface_cpp_impl_target.writelns(
-                        f"return {abi_result};",
+                        f"return {result_abi};",
                     )
 
     def gen_iface_ftbl_impl(
