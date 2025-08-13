@@ -17,6 +17,7 @@ from taihe.utils.exceptions import (
     DeclNotExistError,
     DeclRedefError,
     DuplicateExtendsWarn,
+    EnumValueError,
     GenericArgumentsError,
     IDLSyntaxError,
     InvalidPackageNameError,
@@ -87,19 +88,6 @@ def test_invalid_package_name():
     test_instance.add_source("package.1", "")
     test_instance.run()
     test_instance.assert_has_error(InvalidPackageNameError)
-
-
-def test_generic_arguments():
-    # fmt: off
-    test_instance = SemanticTestCompilerInstance(pre_invocation)
-    test_instance.add_source(
-        "package",
-        "struct A {\n"
-        "    a: Array<>;\n"
-        "}\n"
-    )
-    test_instance.run()
-    test_instance.assert_has_error(GenericArgumentsError)
 
 
 def test_package_not_exist():
@@ -342,6 +330,54 @@ def test_extends_type():
     test_instance.assert_has_error(TypeUsageError)
 
 
+def test_param_type():
+    # fmt: off
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
+    test_instance.add_source(
+        "package",
+        "function foo(p: void);\n"
+    )
+    test_instance.run()
+    test_instance.assert_has_error(TypeUsageError)
+
+
+def test_enum_type():
+    # fmt: off
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
+    test_instance.add_source(
+        "package",
+        "enum foo: void {}\n"
+    )
+    test_instance.run()
+    test_instance.assert_has_error(TypeUsageError)
+
+
+def test_generic_arg_type():
+    # fmt: off
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
+    test_instance.add_source(
+        "package",
+        "struct A {\n"
+        "    a: Vector<void>;\n"
+        "}\n"
+    )
+    test_instance.run()
+    test_instance.assert_has_error(TypeUsageError)
+
+
+def test_generic_arg_count():
+    # fmt: off
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
+    test_instance.add_source(
+        "package",
+        "struct A {\n"
+        "    a: Vector<i32, i32>;\n"
+        "}\n"
+    )
+    test_instance.run()
+    test_instance.assert_has_error(GenericArgumentsError)
+
+
 def test_duplicate_extends():
     # fmt: off
     test_instance = SemanticTestCompilerInstance(pre_invocation)
@@ -379,6 +415,19 @@ def test_not_a_type():
     )
     test_instance.run()
     test_instance.assert_has_error(NotATypeError)
+
+
+def test_enum_value():
+    # fmt: off
+    test_instance = SemanticTestCompilerInstance(pre_invocation)
+    test_instance.add_source(
+        "package",
+        "enum MyEnum: String {\n"
+        "    A = 0,\n"
+        "}\n"
+    )
+    test_instance.run()
+    test_instance.assert_has_error(EnumValueError)
 
 
 #################################
