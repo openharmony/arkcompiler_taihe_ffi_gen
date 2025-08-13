@@ -128,7 +128,7 @@ anyExpr
     ;
 
 floatExpr
-    : TOKEN_val = FLOAT_LITERAL # literalFloatExpr
+    : TOKEN_val = (FLOAT_LITERAL | NAN_LITERAL | INF_LITERAL) # literalFloatExpr
     | LEFT_PARENTHESIS FloatExpr_expr = floatExpr RIGHT_PARENTHESIS # parenthesisFloatExpr
     | TOKEN_op = (PLUS | MINUS) FloatExpr_expr = floatExpr # unaryFloatExpr
     | FloatExpr_left = floatExpr TOKEN_op = (STAR | SLASH) FloatExpr_right = floatExpr # binaryFloatExpr
@@ -416,8 +416,22 @@ BIN_LITERAL
     : '0b' BIN_DIGIT+
     ;
 
+EXPONENT
+    : ('e' | 'E') ('+' | '-')? DIGIT+
+    ;
+
 FLOAT_LITERAL
-    : DIGIT* '.' DIGIT*
+    : DIGIT* '.' DIGIT+ EXPONENT?
+    | DIGIT+ '.' DIGIT* EXPONENT?
+    | DIGIT+ EXPONENT
+    ;
+
+NAN_LITERAL
+    : 'NaN'
+    ;
+
+INF_LITERAL
+    : 'Infinity'
     ;
 
 IDENTIFIER
