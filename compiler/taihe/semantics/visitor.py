@@ -41,11 +41,11 @@ if TYPE_CHECKING:
     )
     from taihe.semantics.types import (
         ArrayType,
+        BuiltinType,
         CallbackType,
         EnumType,
         GenericType,
         IfaceType,
-        LiteralType,
         MapType,
         NonVoidType,
         OpaqueType,
@@ -75,26 +75,31 @@ class StringTypeVisitor(Generic[_R]):
         raise NotImplementedError
 
 
-class LiteralTypeVisitor(
+class OpaqueTypeVisitor(Generic[_R]):
+    def visit_opaque_type(self, t: "OpaqueType") -> _R:
+        raise NotImplementedError
+
+
+class BuiltinTypeVisitor(
     Generic[_R],
     ScalarTypeVisitor[_R],
     StringTypeVisitor[_R],
+    OpaqueTypeVisitor[_R],
 ):
-    def visit_literal_type(self, t: "LiteralType") -> _R:
+    def visit_builtin_type(self, t: "BuiltinType") -> _R:
         raise NotImplementedError
 
     @override
     def visit_scalar_type(self, t: "ScalarType") -> _R:
-        return self.visit_literal_type(t)
+        return self.visit_builtin_type(t)
 
     @override
     def visit_string_type(self, t: "StringType") -> _R:
-        return self.visit_literal_type(t)
+        return self.visit_builtin_type(t)
 
-
-class OpaqueTypeVisitor(Generic[_R]):
+    @override
     def visit_opaque_type(self, t: "OpaqueType") -> _R:
-        raise NotImplementedError
+        return self.visit_builtin_type(t)
 
 
 class OptionalTypeVisitor(Generic[_R]):
@@ -208,8 +213,7 @@ class UserTypeVisitor(
 
 class NonVoidTypeVisitor(
     Generic[_R],
-    OpaqueTypeVisitor[_R],
-    LiteralTypeVisitor[_R],
+    BuiltinTypeVisitor[_R],
     GenericTypeVisitor[_R],
     CallbackTypeVisitor[_R],
     UserTypeVisitor[_R],
@@ -222,7 +226,7 @@ class NonVoidTypeVisitor(
         return self.visit_non_void_type(t)
 
     @override
-    def visit_literal_type(self, t: "LiteralType") -> _R:
+    def visit_builtin_type(self, t: "BuiltinType") -> _R:
         return self.visit_non_void_type(t)
 
     @override

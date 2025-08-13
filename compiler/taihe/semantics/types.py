@@ -24,11 +24,11 @@ if TYPE_CHECKING:
     )
     from taihe.semantics.visitor import (
         ArrayTypeVisitor,
+        BuiltinTypeVisitor,
         CallbackTypeVisitor,
         EnumTypeVisitor,
         GenericTypeVisitor,
         IfaceTypeVisitor,
-        LiteralTypeVisitor,
         MapTypeVisitor,
         NonVoidTypeVisitor,
         OpaqueTypeVisitor,
@@ -99,11 +99,11 @@ class NonVoidType(Type, ABC):
 
 
 @dataclass(frozen=True, repr=False)
-class LiteralType(NonVoidType, ABC):
+class BuiltinType(NonVoidType, ABC):
     """Base class for literal types."""
 
     @abstractmethod
-    def accept(self, v: "LiteralTypeVisitor[_R]") -> _R: ...
+    def accept(self, v: "BuiltinTypeVisitor[_R]") -> _R: ...
 
 
 class ScalarKind(Enum):
@@ -129,7 +129,7 @@ class ScalarKind(Enum):
 
 
 @dataclass(frozen=True, repr=False)
-class ScalarType(LiteralType):
+class ScalarType(BuiltinType):
     kind: ScalarKind
 
     @property
@@ -143,7 +143,7 @@ class ScalarType(LiteralType):
 
 
 @dataclass(frozen=True, repr=False)
-class StringType(LiteralType):
+class StringType(BuiltinType):
     @property
     @override
     def signature(self):
@@ -155,7 +155,7 @@ class StringType(LiteralType):
 
 
 @dataclass(frozen=True, repr=False)
-class OpaqueType(NonVoidType):
+class OpaqueType(BuiltinType):
     @property
     @override
     def signature(self):

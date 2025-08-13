@@ -302,8 +302,6 @@ class CppHeadersGenerator:
             case ScalarType():
                 as_owner = enum_ty_cpp_info.as_owner
                 as_param = enum_ty_cpp_info.as_param
-            case _:
-                raise ValueError("invalid enum type")
         # table
         with enum_cpp_defn_target.indented(
             f"static constexpr {as_owner} table[] = {{",

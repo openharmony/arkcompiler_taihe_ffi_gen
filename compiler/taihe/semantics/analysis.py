@@ -36,7 +36,6 @@ from taihe.semantics.types import (
     BUILTIN_TYPES,
     CallbackType,
     IfaceType,
-    LiteralType,
     NonVoidType,
     ScalarKind,
     ScalarType,
@@ -47,7 +46,6 @@ from taihe.semantics.types import (
 )
 from taihe.semantics.visitor import (
     ExplicitTypeRefVisitor,
-    LiteralTypeVisitor,
     RecursiveDeclVisitor,
     TypeRefVisitor,
 )
@@ -366,13 +364,13 @@ class _ResolveTypePass(RecursiveDeclVisitor):
     @override
     def visit_enum_decl(self, d: EnumDecl) -> None:
         super().visit_enum_decl(d)
-        ty = self.resolve_explicit_type_ref(d.ty_ref, LiteralType)
+        ty = self.resolve_explicit_type_ref(d.ty_ref, ScalarType, StringType)
         d.resolve_ty(ty)
 
     def resolve_explicit_type_ref(
         self,
         ty_ref: ExplicitTypeRefDecl,
-        target: type[_T],
+        *target: type[_T],
     ) -> _T | None:
         ty = ty_ref.accept(_ExplicitTypeRefResolver(self.dm, self.curr_pkg))
         if ty is None:
@@ -385,7 +383,7 @@ class _ResolveTypePass(RecursiveDeclVisitor):
     def resolve_type_ref(
         self,
         ty_ref: TypeRefDecl,
-        target: type[_T],
+        *target: type[_T],
         default_type: Callable[[ImplicitTypeRefDecl], _T],
     ) -> _T | None:
         ty = ty_ref.accept(_TypeRefResolver(self.dm, self.curr_pkg, default_type))
@@ -397,87 +395,6 @@ class _ResolveTypePass(RecursiveDeclVisitor):
         return None
 
 
-class _EnumItemChecker(LiteralTypeVisitor[None]):
-    """Checks enum item types against the enum type."""
-
-    def __init__(self, dm: DiagnosticsManager, decl: EnumDecl):
-        self.dm = dm
-        self.decl = decl
-
-    @override
-    def visit_string_type(self, t: StringType) -> None:
-        for item in self.decl.items:
-            if item.value is None:
-                item.value = item.name
-            elif not isinstance(item.value, str):
-                self.dm.emit(EnumValueError(item, self.decl))
-                item.value = item.name
-
-    @override
-    def visit_scalar_type(self, t: ScalarType) -> None:
-        def is_int(val: Any) -> TypeGuard[int]:
-            return not isinstance(val, bool) and isinstance(val, int)
-
-        default: Any
-        deduce: Callable[[Any], Any]
-        is_valid: Callable[[Any], bool]
-
-        match t.kind:
-            case ScalarKind.I8:
-                default = 0
-                deduce = lambda prev: prev + 1 if prev + 1 < 2**7 else -(2**7)
-                is_valid = lambda val: is_int(val) and -(2**7) <= val < 2**7
-            case ScalarKind.I16:
-                default = 0
-                deduce = lambda prev: prev + 1 if prev + 1 < 2**15 else -(2**15)
-                is_valid = lambda val: is_int(val) and -(2**15) <= val < 2**15
-            case ScalarKind.I32:
-                default = 0
-                deduce = lambda prev: prev + 1 if prev + 1 < 2**31 else -(2**31)
-                is_valid = lambda val: is_int(val) and -(2**31) <= val < 2**31
-            case ScalarKind.I64:
-                default = 0
-                deduce = lambda prev: prev + 1 if prev + 1 < 2**63 else -(2**63)
-                is_valid = lambda val: is_int(val) and -(2**63) <= val < 2**63
-            case ScalarKind.U8:
-                default = 0
-                deduce = lambda prev: prev + 1 if prev + 1 < 2**8 else 0
-                is_valid = lambda val: is_int(val) and 0 <= val < 2**8
-            case ScalarKind.U16:
-                default = 0
-                deduce = lambda prev: prev + 1 if prev + 1 < 2**16 else 0
-                is_valid = lambda val: is_int(val) and 0 <= val < 2**16
-            case ScalarKind.U32:
-                default = 0
-                deduce = lambda prev: prev + 1 if prev + 1 < 2**32 else 0
-                is_valid = lambda val: is_int(val) and 0 <= val < 2**32
-            case ScalarKind.U64:
-                default = 0
-                deduce = lambda prev: prev + 1 if prev + 1 < 2**64 else 0
-                is_valid = lambda val: is_int(val) and 0 <= val < 2**64
-            case ScalarKind.BOOL:
-                default = False
-                deduce = lambda prev: False
-                is_valid = lambda val: isinstance(val, bool)
-            case ScalarKind.F32:
-                default = 0.0
-                deduce = lambda prev: 0.0
-                is_valid = lambda val: isinstance(val, float)
-            case ScalarKind.F64:
-                default = 0.0
-                deduce = lambda prev: 0.0
-                is_valid = lambda val: isinstance(val, float)
-
-        prev = None
-        for item in self.decl.items:
-            if item.value is None:
-                item.value = default if prev is None else deduce(prev)
-            elif not is_valid(item.value):
-                self.dm.emit(EnumValueError(item, self.decl))
-                item.value = default
-            prev = item.value
-
-
 class _CheckEnumTypePass(RecursiveDeclVisitor):
     """Validated enum item types."""
 
@@ -486,10 +403,77 @@ class _CheckEnumTypePass(RecursiveDeclVisitor):
 
     @override
     def visit_enum_decl(self, d: EnumDecl) -> None:
-        if d.ty_resolved is None:
-            return
+        match d.ty_resolved:
+            case None:
+                pass
 
-        d.ty_resolved.accept(_EnumItemChecker(self.dm, d))
+            case ScalarType():
+                succ: Callable[[Any | None], Any]
+                check: Callable[[Any], bool]
+
+                def check_int(val: Any, min: int, max: int) -> TypeGuard[int]:
+                    return (
+                        not isinstance(val, bool)
+                        and isinstance(val, int)
+                        and min <= val < max
+                    )
+
+                def succ_int(pred: int | None, min: int, max: int) -> int:
+                    if pred is None:
+                        return 0
+                    return succ if (succ := pred + 1) < max else min
+
+                match d.ty_resolved.kind:
+                    case ScalarKind.I8:
+                        succ = lambda pred: succ_int(pred, -(2**7), 2**7)
+                        check = lambda val: check_int(val, -(2**7), 2**7)
+                    case ScalarKind.I16:
+                        succ = lambda pred: succ_int(pred, -(2**15), 2**15)
+                        check = lambda val: check_int(val, -(2**15), 2**15)
+                    case ScalarKind.I32:
+                        succ = lambda pred: succ_int(pred, -(2**31), 2**31)
+                        check = lambda val: check_int(val, -(2**31), 2**31)
+                    case ScalarKind.I64:
+                        succ = lambda pred: succ_int(pred, -(2**63), 2**63)
+                        check = lambda val: check_int(val, -(2**63), 2**63)
+                    case ScalarKind.U8:
+                        succ = lambda pred: succ_int(pred, 0, 2**8)
+                        check = lambda val: check_int(val, 0, 2**8)
+                    case ScalarKind.U16:
+                        succ = lambda pred: succ_int(pred, 0, 2**16)
+                        check = lambda val: check_int(val, 0, 2**16)
+                    case ScalarKind.U32:
+                        succ = lambda pred: succ_int(pred, 0, 2**32)
+                        check = lambda val: check_int(val, 0, 2**32)
+                    case ScalarKind.U64:
+                        succ = lambda pred: succ_int(pred, 0, 2**64)
+                        check = lambda val: check_int(val, 0, 2**64)
+                    case ScalarKind.BOOL:
+                        succ = lambda pred: False
+                        check = lambda val: isinstance(val, bool)
+                    case ScalarKind.F32:
+                        succ = lambda pred: 0.0
+                        check = lambda val: isinstance(val, float)
+                    case ScalarKind.F64:
+                        succ = lambda pred: 0.0
+                        check = lambda val: isinstance(val, float)
+
+                pred = None
+                for item in d.items:
+                    if item.value is None:
+                        item.value = succ(pred)
+                    elif not check(item.value):
+                        self.dm.emit(EnumValueError(item, d))
+                        item.value = succ(None)
+                    pred = item.value
+
+            case StringType():
+                for item in d.items:
+                    if item.value is None:
+                        item.value = item.name
+                    elif not isinstance(item.value, str):
+                        self.dm.emit(EnumValueError(item, d))
+                        item.value = item.name
 
 
 _V = TypeVar("_V")
@@ -579,9 +563,9 @@ class _CheckRecursiveInclusionPass(RecursiveDeclVisitor):
                 continue
             extend_iface = extend_ty.decl
             extend_iface_list.append(((d, extend.ty_ref), extend_iface))
-            prev = extend_iface_dict.setdefault(extend_iface, extend)
-            if prev != extend:
-                self.dm.emit(DuplicateExtendsWarn(prev, extend, d, extend_iface))
+            pred = extend_iface_dict.setdefault(extend_iface, extend)
+            if pred != extend:
+                self.dm.emit(DuplicateExtendsWarn(pred, extend, d, extend_iface))
 
     @override
     def visit_struct_decl(self, d: StructDecl) -> None:

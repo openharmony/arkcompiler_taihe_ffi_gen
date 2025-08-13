@@ -10,8 +10,9 @@ from taihe.semantics.format import PrettyFormatter
 from taihe.semantics.types import (
     EnumType,
     IfaceType,
-    LiteralType,
     NonVoidType,
+    ScalarType,
+    StringType,
     StructType,
     Type,
     UnionType,
@@ -917,17 +918,17 @@ class EnumDecl(TypeDecl):
         return self._item_dict.values()
 
     @property
-    def ty_resolved(self) -> LiteralType | None:
+    def ty_resolved(self) -> ScalarType | StringType | None:
         assert self.ty_ref.is_resolved, "Type reference is not resolved yet"
-        return cast(LiteralType | None, self.ty_ref.resolved_ty)
+        return cast(ScalarType | StringType | None, self.ty_ref.resolved_ty)
 
     @property
-    def ty(self) -> LiteralType:
+    def ty(self) -> ScalarType | StringType:
         res = self.ty_resolved
         assert res, "Type resolve failed"
         return res
 
-    def resolve_ty(self, ty: LiteralType | None):
+    def resolve_ty(self, ty: ScalarType | StringType | None):
         assert not self.ty_ref.is_resolved, "Type reference is already resolved"
         self.ty_ref.is_resolved = True
         self.ty_ref.resolved_ty = ty
