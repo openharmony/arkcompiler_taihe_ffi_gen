@@ -58,6 +58,7 @@ Taihe 将 API 的发布方和消费方在二进制级别隔离，允许二者在
 
 - [Taihe 工具的环境配置及使用](docs/QuickStart.md)
 - [Taihe IDL 语言规范](docs/IdlReference.md)
+- [Taihe IDL 中支持的注解](docs/SupportedAttributes.md)
 - [Taihe C++ 使用文档](docs/CppUsageGuide.md)
 - [Interface 的二进制标准](docs/InterfaceAbi.md)
 - [深入理解 Taihe C++ 生成代码](docs/CppGeneratedCode.md)

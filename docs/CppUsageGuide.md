@@ -1248,7 +1248,7 @@ int main() {
 
 - 链接错误：```undefined reference to `package_name_InterfaceName_i'```
 
-  类似 `package_name_InterfaceName_i` 这样的是太和接口的[接口 ID](./InterfaceAbi.md#接口-id) 符号，其定义通常在自动生成的 `package.name.abi.c` 中，请确保你在构建时将该文件包含在内。
+  类似 `package_name_InterfaceName_i` 这样的是 Taihe 接口的[接口 ID](./InterfaceAbi.md#接口-id) 符号，其定义通常在自动生成的 `package.name.abi.c` 中，请确保你在构建时将该文件包含在内。
 
 - 编译错误：
   ```
