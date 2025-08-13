@@ -17,6 +17,7 @@ from taihe.semantics.declarations import (
     IfaceDecl,
     IfaceExtendDecl,
     IfaceMethodDecl,
+    ImplicitTypeRefDecl,
     LongTypeRefDecl,
     PackageDecl,
     PackageGroup,
@@ -48,6 +49,7 @@ from taihe.semantics.visitor import (
     ExplicitTypeRefVisitor,
     LiteralTypeVisitor,
     RecursiveDeclVisitor,
+    TypeRefVisitor,
 )
 from taihe.utils.diagnostics import DiagnosticsManager
 from taihe.utils.exceptions import (
@@ -110,11 +112,9 @@ def _check_decl_confilct_with_namespace(
 class _ResolveImportsPass(RecursiveDeclVisitor):
     """Resolves imports and type references within a package group."""
 
-    dm: DiagnosticsManager
-
     def __init__(self, dm: DiagnosticsManager):
-        self._curr_pg = None
         self.dm = dm
+        self._curr_pg = None
 
     @property
     def curr_pg(self) -> PackageGroup:
@@ -173,99 +173,8 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
         return
 
 
-_T = TypeVar("_T", bound=Type)
-
-
-class _ResolveTypePass(RecursiveDeclVisitor):
-    """Resolves type references within a package group."""
-
-    dm: DiagnosticsManager
-
-    def __init__(self, dm: DiagnosticsManager):
-        self._curr_pkg = None
-        self.dm = dm
-
-    @property
-    def curr_pkg(self) -> PackageDecl:
-        assert self._curr_pkg
-        return self._curr_pkg
-
-    @override
-    def visit_package(self, p: PackageDecl) -> None:
-        self._curr_pkg = p
-        try:
-            super().visit_package(p)
-        finally:
-            self._curr_pkg = None
-
-    @override
-    def visit_param(self, d: ParamDecl) -> None:
-        super().visit_param(d)
-        d.resolve_ty(self.resolve_type(d.ty_ref, NonVoidType))
-
-    @override
-    def visit_generic_arg(self, d: GenericArgDecl) -> None:
-        super().visit_generic_arg(d)
-        d.resolve_ty(self.resolve_type(d.ty_ref, Type))
-
-    @override
-    def visit_callback_type_ref(self, d: CallbackTypeRefDecl) -> None:
-        super().visit_callback_type_ref(d)
-        d.resolve_return_ty(self.resolve_type(d.return_ty_ref, Type))
-
-    @override
-    def visit_glob_func(self, d: GlobFuncDecl) -> None:
-        super().visit_glob_func(d)
-        if not isinstance(d.return_ty_ref, ExplicitTypeRefDecl):
-            d.resolve_return_ty(VoidType(d.return_ty_ref))
-        else:
-            d.resolve_return_ty(self.resolve_type(d.return_ty_ref, Type))
-
-    @override
-    def visit_iface_method(self, d: IfaceMethodDecl) -> None:
-        super().visit_iface_method(d)
-        if not isinstance(d.return_ty_ref, ExplicitTypeRefDecl):
-            d.resolve_return_ty(VoidType(d.return_ty_ref))
-        else:
-            d.resolve_return_ty(self.resolve_type(d.return_ty_ref, Type))
-
-    @override
-    def visit_union_field(self, d: UnionFieldDecl) -> None:
-        super().visit_union_field(d)
-        if not isinstance(d.ty_ref, ExplicitTypeRefDecl):
-            d.resolve_ty(VoidType(d.ty_ref))
-        else:
-            d.resolve_ty(self.resolve_type(d.ty_ref, Type))
-
-    @override
-    def visit_struct_field(self, d: StructFieldDecl) -> None:
-        super().visit_struct_field(d)
-        d.resolve_ty(self.resolve_type(d.ty_ref, NonVoidType))
-
-    @override
-    def visit_iface_extend(self, d: IfaceExtendDecl) -> None:
-        super().visit_iface_extend(d)
-        d.resolve_ty(self.resolve_type(d.ty_ref, IfaceType))
-
-    @override
-    def visit_enum_decl(self, d: EnumDecl) -> None:
-        super().visit_enum_decl(d)
-        d.resolve_ty(self.resolve_type(d.ty_ref, LiteralType))
-
-    def resolve_type(self, ty_ref: ExplicitTypeRefDecl, target: type[_T]) -> _T | None:
-        ty = ty_ref.accept(_TypeResolver(self.dm, self.curr_pkg))
-        if ty is None:
-            return None
-        if isinstance(ty, target):
-            return ty
-        self.dm.emit(TypeUsageError(ty_ref, ty))
-        return None
-
-
-class _TypeResolver(ExplicitTypeRefVisitor[Type | None]):
+class _ExplicitTypeRefResolver(ExplicitTypeRefVisitor[Type | None]):
     """A visitor that resolves types in declarations."""
-
-    dm: DiagnosticsManager
 
     def __init__(
         self,
@@ -351,7 +260,7 @@ class _TypeResolver(ExplicitTypeRefVisitor[Type | None]):
                     return None
                 args.append(arg)
 
-            return builtin_generic.try_construct(d, *args, dm=self.dm)
+            return builtin_generic.try_construct(d, dm=self.dm)
 
         self.dm.emit(DeclarationNotInScopeError(d.symbol, loc=d.loc))
         return None
@@ -366,26 +275,130 @@ class _TypeResolver(ExplicitTypeRefVisitor[Type | None]):
         return CallbackType(d)
 
 
-class _CheckEnumTypePass(RecursiveDeclVisitor):
-    """Validated enum item types."""
+class _TypeRefResolver(_ExplicitTypeRefResolver, TypeRefVisitor[Type | None]):
+    """A visitor that resolves type references in declarations."""
 
-    dm: DiagnosticsManager
+    def __init__(
+        self,
+        dm: DiagnosticsManager,
+        curr_pkg: PackageDecl,
+        default_ctor: Callable[[ImplicitTypeRefDecl], Type],
+    ):
+        super().__init__(dm, curr_pkg)
+        self.default_type = default_ctor
+
+    @override
+    def visit_implicit_type_ref(self, d: ImplicitTypeRefDecl) -> Type | None:
+        return self.default_type(d)
+
+
+_T = TypeVar("_T", bound=Type)
+
+
+class _ResolveTypePass(RecursiveDeclVisitor):
+    """Resolves type references within a package group."""
 
     def __init__(self, dm: DiagnosticsManager):
         self.dm = dm
+        self._curr_pkg = None
+
+    @property
+    def curr_pkg(self) -> PackageDecl:
+        assert self._curr_pkg
+        return self._curr_pkg
+
+    @override
+    def visit_package(self, p: PackageDecl) -> None:
+        self._curr_pkg = p
+        try:
+            super().visit_package(p)
+        finally:
+            self._curr_pkg = None
+
+    @override
+    def visit_param(self, d: ParamDecl) -> None:
+        super().visit_param(d)
+        ty = self.resolve_explicit_type_ref(d.ty_ref, NonVoidType)
+        d.resolve_ty(ty)
+
+    @override
+    def visit_generic_arg(self, d: GenericArgDecl) -> None:
+        super().visit_generic_arg(d)
+        ty = self.resolve_explicit_type_ref(d.ty_ref, Type)
+        d.resolve_ty(ty)
+
+    @override
+    def visit_callback_type_ref(self, d: CallbackTypeRefDecl) -> None:
+        super().visit_callback_type_ref(d)
+        ty = self.resolve_explicit_type_ref(d.return_ty_ref, Type)
+        d.resolve_return_ty(ty)
+
+    @override
+    def visit_glob_func(self, d: GlobFuncDecl) -> None:
+        super().visit_glob_func(d)
+        ty = self.resolve_type_ref(d.return_ty_ref, Type, default_type=VoidType)
+        d.resolve_return_ty(ty)
+
+    @override
+    def visit_iface_method(self, d: IfaceMethodDecl) -> None:
+        super().visit_iface_method(d)
+        ty = self.resolve_type_ref(d.return_ty_ref, Type, default_type=VoidType)
+        d.resolve_return_ty(ty)
+
+    @override
+    def visit_union_field(self, d: UnionFieldDecl) -> None:
+        super().visit_union_field(d)
+        ty = self.resolve_type_ref(d.ty_ref, Type, default_type=VoidType)
+        d.resolve_ty(ty)
+
+    @override
+    def visit_struct_field(self, d: StructFieldDecl) -> None:
+        super().visit_struct_field(d)
+        ty = self.resolve_explicit_type_ref(d.ty_ref, NonVoidType)
+        d.resolve_ty(ty)
+
+    @override
+    def visit_iface_extend(self, d: IfaceExtendDecl) -> None:
+        super().visit_iface_extend(d)
+        ty = self.resolve_explicit_type_ref(d.ty_ref, IfaceType)
+        d.resolve_ty(ty)
 
     @override
     def visit_enum_decl(self, d: EnumDecl) -> None:
-        if d.ty_resolved is None:
-            return
+        super().visit_enum_decl(d)
+        ty = self.resolve_explicit_type_ref(d.ty_ref, LiteralType)
+        d.resolve_ty(ty)
 
-        d.ty_resolved.accept(_EnumItemChecker(self.dm, d))
+    def resolve_explicit_type_ref(
+        self,
+        ty_ref: ExplicitTypeRefDecl,
+        target: type[_T],
+    ) -> _T | None:
+        ty = ty_ref.accept(_ExplicitTypeRefResolver(self.dm, self.curr_pkg))
+        if ty is None:
+            return None
+        if isinstance(ty, target):
+            return ty
+        self.dm.emit(TypeUsageError(ty_ref, ty))
+        return None
+
+    def resolve_type_ref(
+        self,
+        ty_ref: TypeRefDecl,
+        target: type[_T],
+        default_type: Callable[[ImplicitTypeRefDecl], _T],
+    ) -> _T | None:
+        ty = ty_ref.accept(_TypeRefResolver(self.dm, self.curr_pkg, default_type))
+        if ty is None:
+            return None
+        if isinstance(ty, target):
+            return ty
+        self.dm.emit(TypeUsageError(ty_ref, ty))
+        return None
 
 
 class _EnumItemChecker(LiteralTypeVisitor[None]):
     """Checks enum item types against the enum type."""
-
-    dm: DiagnosticsManager
 
     def __init__(self, dm: DiagnosticsManager, decl: EnumDecl):
         self.dm = dm
@@ -465,26 +478,93 @@ class _EnumItemChecker(LiteralTypeVisitor[None]):
             prev = item.value
 
 
-class _CheckRecursiveInclusionPass(RecursiveDeclVisitor):
-    """Validates struct fields for type correctness and cycles."""
-
-    dm: DiagnosticsManager
+class _CheckEnumTypePass(RecursiveDeclVisitor):
+    """Validated enum item types."""
 
     def __init__(self, dm: DiagnosticsManager):
         self.dm = dm
-        self.type_table: dict[
-            TypeDecl,
-            list[tuple[tuple[TypeDecl, TypeRefDecl], TypeDecl]],
-        ] = {}
+
+    @override
+    def visit_enum_decl(self, d: EnumDecl) -> None:
+        if d.ty_resolved is None:
+            return
+
+        d.ty_resolved.accept(_EnumItemChecker(self.dm, d))
+
+
+_V = TypeVar("_V")
+_E = TypeVar("_E")
+Graph = dict[_V, list[tuple[_E, _V]]]
+Cycle = list[_E]
+
+
+def _detect_cycles(graph: Graph[_V, _E]) -> list[Cycle[_E]]:
+    """Detects and returns all cycles in a directed graph.
+
+    Example:
+    -------
+    >>> graph = {
+            "A": [("A.b_0", "B")],
+            "B": [("B.c_0", "C")],
+            "C": [("C.a_0", "A"), ("C.a_1", "A")],
+        }
+    >>> detect_cycles(graph)
+    [["A.b_0", "B.c_0", "C.a_0"], ["A.b_0", "B.c_0", "C.a_1"]]
+    """
+    cycles: list[Cycle[_E]] = []
+
+    order = {point: i for i, point in enumerate(graph)}
+    glist = [
+        [(edge, order[child]) for edge, child in children]
+        for children in graph.values()
+    ]
+    visited = [False for _ in glist]
+    cycle: Cycle[_E] = []
+
+    def visit(i: int):
+        if i < k:
+            return
+        if visited[i]:
+            if i == k:
+                cycles.append(cycle.copy())
+            return
+        visited[i] = True
+        for edge, j in glist[i]:
+            cycle.append(edge)
+            visit(j)
+            cycle.pop()
+        visited[i] = False
+
+    for k in range(len(glist)):
+        visit(k)
+
+    return cycles
+
+
+class _CheckRecursiveInclusionPass(RecursiveDeclVisitor):
+    """Validates struct fields for type correctness and cycles."""
+
+    def __init__(self, dm: DiagnosticsManager):
+        self.dm = dm
+        self._type_table: Graph[TypeDecl, tuple[TypeDecl, TypeRefDecl]] | None = None
+
+    @property
+    def type_table(self) -> Graph[TypeDecl, tuple[TypeDecl, TypeRefDecl]]:
+        """Returns the type table for the current package group."""
+        assert self._type_table is not None
+        return self._type_table
 
     @override
     def visit_package_group(self, g: PackageGroup) -> None:
-        self.type_table = {}
-        super().visit_package_group(g)
-        cycles = detect_cycles(self.type_table)
-        for cycle in cycles:
-            last, *other = cycle[::-1]
-            self.dm.emit(RecursiveReferenceError(last, other))
+        self._type_table = {}
+        try:
+            super().visit_package_group(g)
+            cycles = _detect_cycles(self.type_table)
+            for cycle in cycles:
+                last, *other = cycle[::-1]
+                self.dm.emit(RecursiveReferenceError(last, other))
+        finally:
+            self._type_table = None
 
     @override
     def visit_enum_decl(self, d: EnumDecl) -> None:
@@ -543,50 +623,3 @@ class _CheckAttrPass(RecursiveDeclVisitor):
     def visit_decl(self, d: Decl) -> None:
         for attr in chain(*d.attributes.values()):
             attr.check_context(d, self.dm)
-
-
-_V = TypeVar("_V")
-_E = TypeVar("_E")
-
-
-def detect_cycles(graph: dict[_V, list[tuple[_E, _V]]]) -> list[list[_E]]:
-    """Detects and returns all cycles in a directed graph.
-
-    Example:
-    -------
-    >>> graph = {
-            "A": [("A.b_0", "B")],
-            "B": [("B.c_0", "C")],
-            "C": [("C.a_0", "A"), ("C.a_1", "A")],
-        }
-    >>> detect_cycles(graph)
-    [["A.b_0", "B.c_0", "C.a_0"], ["A.b_0", "B.c_0", "C.a_1"]]
-    """
-    cycles: list[list[_E]] = []
-
-    order = {point: i for i, point in enumerate(graph)}
-    glist = [
-        [(edge, order[child]) for edge, child in children]
-        for children in graph.values()
-    ]
-    visited = [False for _ in glist]
-    edges: list[_E] = []
-
-    def visit(i: int):
-        if i < k:
-            return
-        if visited[i]:
-            if i == k:
-                cycles.append(edges.copy())
-            return
-        visited[i] = True
-        for edge, j in glist[i]:
-            edges.append(edge)
-            visit(j)
-            edges.pop()
-        visited[i] = False
-
-    for k in range(len(glist)):
-        visit(k)
-
-    return cycles

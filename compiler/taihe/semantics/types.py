@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from taihe.semantics.declarations import (
         CallbackTypeRefDecl,
         EnumDecl,
-        GenericArgDecl,
+        GenericTypeRefDecl,
         IfaceDecl,
         StructDecl,
         TypeDecl,
@@ -218,9 +218,8 @@ class GenericType(NonVoidType, ABC):
     @abstractmethod
     def try_construct(
         cls,
-        ty_ref: "TypeRefDecl",
-        *args: "GenericArgDecl",
-        dm: "DiagnosticsManager",
+        ref: "GenericTypeRefDecl",
+        dm: DiagnosticsManager,
     ) -> "GenericType | None": ...
 
     @abstractmethod
@@ -239,18 +238,17 @@ class ArrayType(GenericType):
     @classmethod
     def try_construct(
         cls,
-        ty_ref: "TypeRefDecl",
-        *args: "GenericArgDecl",
-        dm: "DiagnosticsManager",
+        ref: "GenericTypeRefDecl",
+        dm: DiagnosticsManager,
     ) -> "ArrayType | None":
-        if len(args) != 1:
-            dm.emit(GenericArgumentsError(ty_ref, 1, len(args)))
+        if len(ref.args) != 1:
+            dm.emit(GenericArgumentsError(ref, 1, len(ref.args)))
             return None
-        item_ty = args[0].ty
+        item_ty = ref.args[0].ty
         if not isinstance(item_ty, NonVoidType):
-            dm.emit(TypeUsageError(args[0].ty_ref, item_ty))
+            dm.emit(TypeUsageError(ref.args[0].ty_ref, item_ty))
             return None
-        return cls(ty_ref, item_ty)
+        return cls(ref, item_ty)
 
     @override
     def accept(self, v: "ArrayTypeVisitor[_R]") -> _R:
@@ -269,18 +267,17 @@ class OptionalType(GenericType):
     @classmethod
     def try_construct(
         cls,
-        ty_ref: "TypeRefDecl",
-        *args: "GenericArgDecl",
-        dm: "DiagnosticsManager",
+        ref: "GenericTypeRefDecl",
+        dm: DiagnosticsManager,
     ) -> "OptionalType | None":
-        if len(args) != 1:
-            dm.emit(GenericArgumentsError(ty_ref, 1, len(args)))
+        if len(ref.args) != 1:
+            dm.emit(GenericArgumentsError(ref, 1, len(ref.args)))
             return None
-        item_ty = args[0].ty
+        item_ty = ref.args[0].ty
         if not isinstance(item_ty, NonVoidType):
-            dm.emit(TypeUsageError(args[0].ty_ref, item_ty))
+            dm.emit(TypeUsageError(ref.args[0].ty_ref, item_ty))
             return None
-        return cls(ty_ref, item_ty)
+        return cls(ref, item_ty)
 
     @override
     def accept(self, v: "OptionalTypeVisitor[_R]") -> _R:
@@ -299,18 +296,17 @@ class VectorType(GenericType):
     @classmethod
     def try_construct(
         cls,
-        ty_ref: "TypeRefDecl",
-        *args: "GenericArgDecl",
-        dm: "DiagnosticsManager",
+        ref: "GenericTypeRefDecl",
+        dm: DiagnosticsManager,
     ) -> "VectorType | None":
-        if len(args) != 1:
-            dm.emit(GenericArgumentsError(ty_ref, 1, len(args)))
+        if len(ref.args) != 1:
+            dm.emit(GenericArgumentsError(ref, 1, len(ref.args)))
             return None
-        key_ty = args[0].ty
+        key_ty = ref.args[0].ty
         if not isinstance(key_ty, NonVoidType):
-            dm.emit(TypeUsageError(args[0].ty_ref, key_ty))
+            dm.emit(TypeUsageError(ref.args[0].ty_ref, key_ty))
             return None
-        return cls(ty_ref, key_ty)
+        return cls(ref, key_ty)
 
     @override
     def accept(self, v: "VectorTypeVisitor[_R]") -> _R:
@@ -330,22 +326,21 @@ class MapType(GenericType):
     @classmethod
     def try_construct(
         cls,
-        ty_ref: "TypeRefDecl",
-        *args: "GenericArgDecl",
-        dm: "DiagnosticsManager",
+        ref: "GenericTypeRefDecl",
+        dm: DiagnosticsManager,
     ) -> "MapType | None":
-        if len(args) != 2:
-            dm.emit(GenericArgumentsError(ty_ref, 2, len(args)))
+        if len(ref.args) != 2:
+            dm.emit(GenericArgumentsError(ref, 2, len(ref.args)))
             return None
-        key_ty = args[0].ty
+        key_ty = ref.args[0].ty
         if not isinstance(key_ty, NonVoidType):
-            dm.emit(TypeUsageError(args[0].ty_ref, key_ty))
+            dm.emit(TypeUsageError(ref.args[0].ty_ref, key_ty))
             return None
-        val_ty = args[1].ty
+        val_ty = ref.args[1].ty
         if not isinstance(val_ty, NonVoidType):
-            dm.emit(TypeUsageError(args[1].ty_ref, val_ty))
+            dm.emit(TypeUsageError(ref.args[1].ty_ref, val_ty))
             return None
-        return cls(ty_ref, key_ty, val_ty)
+        return cls(ref, key_ty, val_ty)
 
     @override
     def accept(self, v: "MapTypeVisitor[_R]") -> _R:
@@ -364,18 +359,17 @@ class SetType(GenericType):
     @classmethod
     def try_construct(
         cls,
-        ty_ref: "TypeRefDecl",
-        *args: "GenericArgDecl",
-        dm: "DiagnosticsManager",
+        ref: "GenericTypeRefDecl",
+        dm: DiagnosticsManager,
     ) -> "SetType | None":
-        if len(args) != 1:
-            dm.emit(GenericArgumentsError(ty_ref, 1, len(args)))
+        if len(ref.args) != 1:
+            dm.emit(GenericArgumentsError(ref, 1, len(ref.args)))
             return None
-        key_ty = args[0].ty
+        key_ty = ref.args[0].ty
         if not isinstance(key_ty, NonVoidType):
-            dm.emit(TypeUsageError(args[0].ty_ref, key_ty))
+            dm.emit(TypeUsageError(ref.args[0].ty_ref, key_ty))
             return None
-        return cls(ty_ref, key_ty)
+        return cls(ref, key_ty)
 
     @override
     def accept(self, v: "SetTypeVisitor[_R]") -> _R:

@@ -511,7 +511,7 @@ class GetAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
                 )
             )
 
-        if not isinstance(parent.return_ty_resolved, NonVoidType):
+        if not isinstance(parent.return_ty, NonVoidType):
             dm.emit(
                 AdhocError(
                     f"Attribute '{self.NAME}' can only be attached to functions with a non-void return type.",
@@ -556,7 +556,7 @@ class SetAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
                 )
             )
 
-        if isinstance(parent.return_ty_resolved, NonVoidType):
+        if isinstance(parent.return_ty, NonVoidType):
             dm.emit(
                 AdhocError(
                     f"Attribute '{self.NAME}' can only be attached to functions returning void.",
