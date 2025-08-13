@@ -1,5 +1,6 @@
 #pragma once
 
+#include <taihe/vector.abi.h>
 #include <taihe/common.hpp>
 
 #include <algorithm>
@@ -127,7 +128,7 @@ struct vector : vector_view<T> {
   using vector_view<T>::m_handle;
 
   explicit vector(std::size_t cap = VEC_DEFAULT_CAPACITY) : vector(new data_t) {
-    tref_set(&m_handle->count, 1);
+    tref_init(&m_handle->count, 1);
     m_handle->cap = cap;
     m_handle->buffer = reinterpret_cast<T *>(malloc(sizeof(T) * cap));
     m_handle->len = 0;
@@ -168,12 +169,12 @@ private:
 
 template<typename T>
 struct as_abi<vector<T>> {
-  using type = void *;
+  using type = TVector;
 };
 
 template<typename T>
 struct as_abi<vector_view<T>> {
-  using type = void *;
+  using type = TVector;
 };
 
 template<typename T>

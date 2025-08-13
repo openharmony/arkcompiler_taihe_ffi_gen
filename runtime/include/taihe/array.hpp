@@ -176,16 +176,16 @@ struct array : public array_view<cpp_owner_t> {
   explicit array(pointer data, size_type size) noexcept
       : array_view<cpp_owner_t>(data, size) {}  // main constructor
 
-  template<typename Iterator>
-  array(copy_data_t, Iterator begin, size_type size) noexcept
+  template<typename InputIt>
+  array(copy_data_t, InputIt begin, size_type size) noexcept
       : array_view<cpp_owner_t>(
             reinterpret_cast<cpp_owner_t *>(malloc(size * sizeof(cpp_owner_t))),
             size) {
     std::uninitialized_copy_n(begin, size, this->m_data);
   }
 
-  template<typename Iterator>
-  array(move_data_t, Iterator begin, size_type size) noexcept
+  template<typename InputIt>
+  array(move_data_t, InputIt begin, size_type size) noexcept
       : array_view<cpp_owner_t>(
             reinterpret_cast<cpp_owner_t *>(malloc(size * sizeof(cpp_owner_t))),
             size) {
@@ -206,10 +206,12 @@ struct array : public array_view<cpp_owner_t> {
     std::uninitialized_fill_n(this->m_data, size, value);
   }
 
+  // TODO: Deprecate this
   static array make(size_type size) {
     return array(size);
   }
 
+  // TODO: Deprecate this
   static array make(size_type size, cpp_owner_t const &value) {
     return array(size, value);
   }

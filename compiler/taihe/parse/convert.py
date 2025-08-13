@@ -16,6 +16,7 @@ from taihe.semantics.declarations import (
     DeclarationRefDecl,
     EnumDecl,
     EnumItemDecl,
+    GenericArgDecl,
     GenericTypeRefDecl,
     GlobFuncDecl,
     IfaceDecl,
@@ -305,9 +306,15 @@ class AstConverter(ExprEvaluator):
         return d
 
     @override
+    def visit_generic_arg(self, node: ast.GenericArg) -> GenericArgDecl:
+        d = GenericArgDecl(node.loc, self.visit(node.ty))
+        self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
+        return d
+
+    @override
     def visit_generic_type(self, node: ast.GenericType) -> GenericTypeRefDecl:
         d = GenericTypeRefDecl(node.loc, id2str(node.decl_name))
-        self.dm.for_each(node.args, lambda a: d.add_arg_ty_ref(self.visit(a)))
+        self.dm.for_each(node.args, lambda a: d.add_arg(self.visit(a)))
         self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
         return d
 
@@ -422,8 +429,9 @@ class AstConverter(ExprEvaluator):
 
     @override
     def visit_interface_parent(self, node: ast.InterfaceParent) -> IfaceParentDecl:
-        p = IfaceParentDecl(node.ty.loc, self.visit(node.ty))
-        return p
+        d = IfaceParentDecl(node.ty.loc, self.visit(node.ty))
+        self.dm.for_each(node.forward_attrs, lambda a: self.add_attr(d, a))
+        return d
 
     @override
     def visit_interface(self, node: ast.Interface) -> IfaceDecl:

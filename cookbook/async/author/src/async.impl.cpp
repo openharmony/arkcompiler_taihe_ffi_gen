@@ -13,27 +13,27 @@ public:
 
   ~IStringHolder() {}
 
-  string get() {
+  string getStrSync() {
     return str;
   }
 
-  ::taihe::string getAsync() {
+  ::taihe::string getStrWithAsync() {
     return str;
   }
 
-  ::taihe::string getPromise() {
+  ::taihe::string getStrRetPromise() {
     return str;
   }
 
-  void setSync(string_view a) {
+  void setStrSync(string_view a) {
     this->str = a;
   }
 
-  void setAsync(::taihe::string_view a) {
+  void setStrWithAsync(::taihe::string_view a) {
     this->str = a;
   }
 
-  void setPromise(::taihe::string_view a) {
+  void setStrRetPromise(::taihe::string_view a) {
     this->str = a;
   }
 

@@ -77,9 +77,9 @@ void processMessage(Message const& msg) {
 
     以本例 enum 为例，用户可以使用 `MessageType::key_t::Text` 与 `MessageType::key_t::Number` 来构造 enum，即：使用 `{enum}::key_t::{key}` 来构造 enum
 
-2. `get_key()` 与 `get_val()`
+2. `get_key()` 与 `get_value()`
 
-    使用 `get_key()` 与 `get_val()` 可以获取 enum 的键与值
+    使用 `get_key()` 与 `get_value()` 可以获取 enum 的键与值
 
 3. make
 

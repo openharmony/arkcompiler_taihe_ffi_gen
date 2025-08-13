@@ -1,0 +1,21 @@
+interface IBase {
+    baseFunc(): void;
+}
+
+interface IColorable: IBase {
+    getColor(): String;
+}
+
+interface IShape: IBase {
+    getShape(): String;
+}
+
+interface IRect: IColorable, IShape {
+    getMessage(): String;
+}
+
+function createIColorable(color: String): IColorable;
+
+function createIShape(shape: String): IShape;
+
+function createIRect(color: String, shape: String): IRect;

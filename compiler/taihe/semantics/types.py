@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     )
     from taihe.semantics.visitor import TypeVisitor
 
-T = TypeVar("T")
+R = TypeVar("R")
 
 ############################
 # Infrastructure for Types #
@@ -30,7 +30,7 @@ T = TypeVar("T")
 
 
 class TypeProtocol(Protocol):
-    def _accept(self, v: "TypeVisitor[T]") -> T: ...
+    def _accept(self, v: "TypeVisitor[R]") -> R: ...
 
 
 @dataclass(frozen=True, repr=False)
@@ -48,7 +48,7 @@ class Type(ABC):
         """Return the representation of the type."""
 
     @abstractmethod
-    def _accept(self, v: "TypeVisitor[T]") -> T:
+    def _accept(self, v: "TypeVisitor[R]") -> R:
         """Accept a visitor."""
 
 
@@ -67,7 +67,7 @@ class InvalidType(Type):
         return "<ERROR>"
 
     @override
-    def _accept(self, v: "TypeVisitor[T]") -> T:
+    def _accept(self, v: "TypeVisitor[R]") -> R:
         return v.visit_invalid_type(self)
 
 
@@ -113,7 +113,7 @@ class ScalarType(BuiltinType):
         return self.kind.symbol
 
     @override
-    def _accept(self, v: "TypeVisitor[T]") -> T:
+    def _accept(self, v: "TypeVisitor[R]") -> R:
         return v.visit_scalar_type(self)
 
 
@@ -125,7 +125,7 @@ class OpaqueType(BuiltinType):
         return "Opaque"
 
     @override
-    def _accept(self, v: "TypeVisitor[T]") -> T:
+    def _accept(self, v: "TypeVisitor[R]") -> R:
         return v.visit_opaque_type(self)
 
 
@@ -137,7 +137,7 @@ class StringType(BuiltinType):
         return "String"
 
     @override
-    def _accept(self, v: "TypeVisitor[T]") -> T:
+    def _accept(self, v: "TypeVisitor[R]") -> R:
         return v.visit_string_type(self)
 
 
@@ -183,7 +183,7 @@ class CallbackType(ValidType):
         return f"({params_fmt}) => {return_fmt}"
 
     @override
-    def _accept(self, v: "TypeVisitor[T]") -> T:
+    def _accept(self, v: "TypeVisitor[R]") -> R:
         return v.visit_callback_type(self)
 
 
@@ -214,7 +214,7 @@ class ArrayType(GenericType):
         return cls(ty_ref, args_ty[0])
 
     @override
-    def _accept(self, v: "TypeVisitor[T]") -> T:
+    def _accept(self, v: "TypeVisitor[R]") -> R:
         return v.visit_array_type(self)
 
 
@@ -234,7 +234,7 @@ class OptionalType(GenericType):
         return cls(ty_ref, args_ty[0])
 
     @override
-    def _accept(self, v: "TypeVisitor[T]") -> T:
+    def _accept(self, v: "TypeVisitor[R]") -> R:
         return v.visit_optional_type(self)
 
 
@@ -254,7 +254,7 @@ class VectorType(GenericType):
         return cls(ty_ref, args_ty[0])
 
     @override
-    def _accept(self, v: "TypeVisitor[T]") -> T:
+    def _accept(self, v: "TypeVisitor[R]") -> R:
         return v.visit_vector_type(self)
 
 
@@ -275,7 +275,7 @@ class MapType(GenericType):
         return cls(ty_ref, args_ty[0], args_ty[1])
 
     @override
-    def _accept(self, v: "TypeVisitor[T]") -> T:
+    def _accept(self, v: "TypeVisitor[R]") -> R:
         return v.visit_map_type(self)
 
 
@@ -295,7 +295,7 @@ class SetType(GenericType):
         return cls(ty_ref, args_ty[0])
 
     @override
-    def _accept(self, v: "TypeVisitor[T]") -> T:
+    def _accept(self, v: "TypeVisitor[R]") -> R:
         return v.visit_set_type(self)
 
 
@@ -329,7 +329,7 @@ class EnumType(UserType):
     ty_decl: "EnumDecl"
 
     @override
-    def _accept(self, v: "TypeVisitor[T]") -> T:
+    def _accept(self, v: "TypeVisitor[R]") -> R:
         return v.visit_enum_type(self)
 
 
@@ -338,7 +338,7 @@ class StructType(UserType):
     ty_decl: "StructDecl"
 
     @override
-    def _accept(self, v: "TypeVisitor[T]") -> T:
+    def _accept(self, v: "TypeVisitor[R]") -> R:
         return v.visit_struct_type(self)
 
 
@@ -347,7 +347,7 @@ class UnionType(UserType):
     ty_decl: "UnionDecl"
 
     @override
-    def _accept(self, v: "TypeVisitor[T]") -> T:
+    def _accept(self, v: "TypeVisitor[R]") -> R:
         return v.visit_union_type(self)
 
 
@@ -356,5 +356,5 @@ class IfaceType(UserType):
     ty_decl: "IfaceDecl"
 
     @override
-    def _accept(self, v: "TypeVisitor[T]") -> T:
+    def _accept(self, v: "TypeVisitor[R]") -> R:
         return v.visit_iface_type(self)

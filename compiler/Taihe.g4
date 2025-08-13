@@ -69,13 +69,34 @@ interfaceField
     ;
 
 interfaceParent
-    : (DeclAttrLst_forward_attrs += declAttr)*
+    : (LEFT_BRACKET (DeclAttrLst_forward_attrs += declAttr)+ RIGHT_BRACKET)?
       Type_ty = type
     ;
 
 parameter
     : (DeclAttrLst_forward_attrs += declAttr)*
       IdName_name = idName COLON Type_ty = type
+    ;
+
+//////////
+// Type //
+//////////
+
+type
+    : (DeclAttrLst_forward_attrs += declAttr)*
+      PkgName_pkg_name = pkgName DOT IdName_decl_name = idName # longType
+    | (DeclAttrLst_forward_attrs += declAttr)*
+      IdName_decl_name = idName # shortType
+    | (DeclAttrLst_forward_attrs += declAttr)*
+      IdName_decl_name = idName LESS_THAN (GenericArgLst_args += genericArg (COMMA GenericArgLst_args += genericArg)* COMMA?)? GREATER_THAN # genericType
+    | <assoc = right>
+      (DeclAttrLst_forward_attrs += declAttr)*
+      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)* COMMA?)? RIGHT_PARENTHESIS ARROW (KW_VOID | TypeOpt_return_ty = type) # callbackType
+    ;
+
+genericArg
+    : (LEFT_BRACKET (DeclAttrLst_forward_attrs += declAttr)+ RIGHT_BRACKET)?
+      Type_ty = type
     ;
 
 ///////////////
@@ -95,22 +116,6 @@ attrArg
     | IdName_name = idName ASSIGN_TO AnyExpr_val = anyExpr # namedAttrArg
     ;
 
-//////////
-// Type //
-//////////
-
-type
-    : (DeclAttrLst_forward_attrs += declAttr)*
-      PkgName_pkg_name = pkgName DOT IdName_decl_name = idName # longType
-    | (DeclAttrLst_forward_attrs += declAttr)*
-      IdName_decl_name = idName # shortType
-    | (DeclAttrLst_forward_attrs += declAttr)*
-      IdName_decl_name = idName LESS_THAN (TypeLst_args += type (COMMA TypeLst_args += type)* COMMA?)? GREATER_THAN # genericType
-    | <assoc = right>
-      (DeclAttrLst_forward_attrs += declAttr)*
-      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)* COMMA?)? RIGHT_PARENTHESIS ARROW (KW_VOID | TypeOpt_return_ty = type) # callbackType
-    ;
-
 ////////////////
 // Expression //
 ////////////////
@@ -123,7 +128,7 @@ anyExpr
     ;
 
 floatExpr
-    : TOKEN_val = FLOAT_LITERAL # literalFloatExpr
+    : TOKEN_val = (FLOAT_LITERAL | NAN_LITERAL | INF_LITERAL) # literalFloatExpr
     | LEFT_PARENTHESIS FloatExpr_expr = floatExpr RIGHT_PARENTHESIS # parenthesisFloatExpr
     | TOKEN_op = (PLUS | MINUS) FloatExpr_expr = floatExpr # unaryFloatExpr
     | FloatExpr_left = floatExpr TOKEN_op = (STAR | SLASH) FloatExpr_right = floatExpr # binaryFloatExpr
@@ -411,8 +416,22 @@ BIN_LITERAL
     : '0b' BIN_DIGIT+
     ;
 
+EXPONENT
+    : ('e' | 'E') ('+' | '-')? DIGIT+
+    ;
+
 FLOAT_LITERAL
-    : DIGIT* '.' DIGIT*
+    : DIGIT* '.' DIGIT+ EXPONENT?
+    | DIGIT+ '.' DIGIT* EXPONENT?
+    | DIGIT+ EXPONENT
+    ;
+
+NAN_LITERAL
+    : 'NaN'
+    ;
+
+INF_LITERAL
+    : 'Infinity'
     ;
 
 IDENTIFIER

@@ -284,26 +284,26 @@ class CallbackTypeAbiInfo(TypeAbiInfo):
 
 class VectorTypeAbiInfo(TypeAbiInfo):
     def __init__(self, am: AnalysisManager, t: VectorType) -> None:
-        self.defn_headers = []
-        self.impl_headers = []
-        self.as_owner = "void*"
-        self.as_param = "void*"
+        self.defn_headers = ["taihe/vector.abi.h"]
+        self.impl_headers = ["taihe/vector.abi.h"]
+        self.as_owner = "struct TVector"
+        self.as_param = "struct TVector"
 
 
 class MapTypeAbiInfo(TypeAbiInfo):
     def __init__(self, am: AnalysisManager, t: MapType) -> None:
-        self.defn_headers = []
-        self.impl_headers = []
-        self.as_owner = "void*"
-        self.as_param = "void*"
+        self.defn_headers = ["taihe/map.abi.h"]
+        self.impl_headers = ["taihe/map.abi.h"]
+        self.as_owner = "struct TMap"
+        self.as_param = "struct TMap"
 
 
 class SetTypeAbiInfo(TypeAbiInfo):
     def __init__(self, am: AnalysisManager, t: SetType) -> None:
-        self.defn_headers = []
-        self.impl_headers = []
-        self.as_owner = "void*"
-        self.as_param = "void*"
+        self.defn_headers = ["taihe/set.abi.h"]
+        self.impl_headers = ["taihe/set.abi.h"]
+        self.as_owner = "struct TSet"
+        self.as_param = "struct TSet"
 
 
 class TypeAbiInfoDispatcher(TypeVisitor[TypeAbiInfo]):
