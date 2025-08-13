@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
+from json import dumps
 from types import UnionType
 from typing import TYPE_CHECKING
 
@@ -132,7 +133,7 @@ class AttrArgTypeError(DiagError):
             readable_type = " or ".join(t.__name__ for t in self.arg_type.__args__)
         else:
             readable_type = self.arg_type.__name__
-        return f"Argument {self.arg_name!r} in attribute {self.attr_name} must be of type {readable_type}, but got {self.attr_arg.value!r}"
+        return f"Argument {self.arg_name!r} in attribute {self.attr_name} must be of type {readable_type}, but got {dumps(self.attr_arg.value)}"
 
 
 @dataclass
@@ -369,7 +370,7 @@ class EnumValueError(DiagError):
 
     @override
     def describe(self) -> str:
-        return f"value of {self.item.description} ({self.item.value}) is conflict with {self.enum.description} ({self.enum.ty.signature})"
+        return f"value of {self.item.description} ({dumps(self.item.value)}) is conflict with {self.enum.description} ({self.enum.ty.signature})"
 
 
 @dataclass

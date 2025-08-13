@@ -2,7 +2,8 @@
 
 from collections.abc import Callable
 from itertools import chain
-from typing import TYPE_CHECKING, Any
+from json import dumps
+from typing import TYPE_CHECKING
 
 from typing_extensions import override
 
@@ -134,23 +135,12 @@ class PrettyFormatter(ExplicitTypeRefVisitor[str]):
         res = f"{d.name}: {d.ty_ref.format(self)}"
         return self.with_attr(d, res)
 
-    def get_value(self, obj: Any) -> str:
-        if isinstance(obj, str):
-            return '"' + obj.encode("unicode_escape").decode("utf-8") + '"'
-        if isinstance(obj, bool):
-            return "true" if obj else "false"
-        if isinstance(obj, int):
-            return f"{obj:d}"
-        if isinstance(obj, float):
-            return f"{obj:f}"
-        raise TypeError(f"Unsupported type: {type(obj)}")
-
     def get_format_attr(self, item: "AnyAttribute") -> str:
         name = item.get_name()
         args = item.get_args()
         args_str: list[str] = []
         for arg in args:
-            value = self.get_value(arg.value)
+            value = dumps(arg.value)
             if arg.key:
                 arg_str = f"{arg.key}={value}"
             else:
@@ -235,7 +225,7 @@ class PrettyPrinter(RecursiveDeclVisitor):
         if d.value is None:
             self.out.writeln(f"{d.name},")
         else:
-            self.out.writeln(f"{d.name} = {self.fmt.get_value(d.value)},")
+            self.out.writeln(f"{d.name} = {dumps(d.value)},")
 
     @override
     def visit_enum_decl(self, d: "EnumDecl") -> None:
