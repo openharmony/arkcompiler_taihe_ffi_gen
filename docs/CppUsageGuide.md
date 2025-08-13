@@ -1207,8 +1207,8 @@ function divmod_i32(a: i32, b: i32): DivModResult;
 
 你可以在 C++ 实现文件中这样导出该函数：
 ```cpp
-#include "integer.arithmetic.proj.hpp"
-#include "integer.arithmetic.impl.hpp"
+#include <integer.arithmetic.proj.hpp>
+#include <integer.arithmetic.impl.hpp>
 
 integer::arithmetic::DivModResult ohos_int_divmod(int32_t a, int32_t b) {
     return { a / b, a % b };
@@ -1221,9 +1221,9 @@ TH_EXPORT_CPP_API_divmod_i32(ohos_int_divmod)
 
 接口的使用方可以导入头文件 `package.name.user.hpp`，并根据 IDL 文件中定义的函数名称和其所在的命名空间来调用函数。如 `package::name::funcName()`。例如，假设你要调用上文中定义的 `divmod_i32` 函数，可以这样写：
 ```cpp
-#include <iostream>
+#include <integer.arithmetic.user.hpp>
 
-#include "integer.arithmetic.user.hpp"
+#include <iostream>
 
 int main() {
     int32_t a = 10;

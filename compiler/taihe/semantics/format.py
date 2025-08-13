@@ -97,9 +97,9 @@ class PrettyFormatter(ExplicitTypeRefVisitor[str]):
 
     @override
     def visit_callback_type_ref(self, d: "CallbackTypeRefDecl") -> str:
-        fmt_args = ", ".join(map(self.get_param_decl, d.params))
+        params_fmt = ", ".join(map(self.get_param_decl, d.params))
         ret = d.return_ty_ref.format(self)
-        return self.with_attr(d, f"({fmt_args}) => {ret}")
+        return self.with_attr(d, f"({params_fmt}) => {ret}")
 
     def get_package_ref(self, d: "PackageRefDecl") -> str:
         package_ref_repr = d.symbol
@@ -211,12 +211,12 @@ class PrettyPrinter(RecursiveDeclVisitor):
 
         func_kw = self.fmt.as_keyword("function")
 
-        fmt_args = ", ".join(map(self.fmt.get_param_decl, d.params))
+        params_fmt = ", ".join(map(self.fmt.get_param_decl, d.params))
 
         if (ret := d.return_ty_ref.format(self.fmt)) is None:
-            self.out.writeln(f"{func_kw} {d.name}({fmt_args});")
+            self.out.writeln(f"{func_kw} {d.name}({params_fmt});")
         else:
-            self.out.writeln(f"{func_kw} {d.name}({fmt_args}): {ret};")
+            self.out.writeln(f"{func_kw} {d.name}({params_fmt}): {ret};")
 
     @override
     def visit_enum_item(self, d: "EnumItemDecl") -> None:
@@ -293,12 +293,12 @@ class PrettyPrinter(RecursiveDeclVisitor):
     def visit_iface_method(self, d: "IfaceMethodDecl"):
         self.write_attr(d)
 
-        fmt_args = ", ".join(map(self.fmt.get_param_decl, d.params))
+        params_fmt = ", ".join(map(self.fmt.get_param_decl, d.params))
 
         if (ret := d.return_ty_ref.format(self.fmt)) is None:
-            self.out.writeln(f"{d.name}({fmt_args});")
+            self.out.writeln(f"{d.name}({params_fmt});")
         else:
-            self.out.writeln(f"{d.name}({fmt_args}): {ret};")
+            self.out.writeln(f"{d.name}({params_fmt}): {ret};")
 
     @override
     def visit_iface_decl(self, d: "IfaceDecl"):
