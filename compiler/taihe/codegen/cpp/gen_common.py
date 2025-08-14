@@ -455,9 +455,7 @@ class CppHeadersGenerator:
             union_cpp_defn_target.add_include(union_cpp_info.decl_header)
             union_cpp_defn_target.add_include(union_abi_info.defn_header)
             for field in union.fields:
-                if not isinstance(field_ty := field.ty, NonVoidType):
-                    continue
-                field_ty_cpp_info = TypeCppInfo.get(self.am, field_ty)
+                field_ty_cpp_info = TypeCppInfo.get(self.am, field.ty)
                 union_cpp_defn_target.add_include(*field_ty_cpp_info.defn_headers)
             self.gen_union_defn(
                 union,
@@ -569,9 +567,7 @@ class CppHeadersGenerator:
                 f"~storage_t() {{}}",
             )
             for field in union.fields:
-                if not isinstance(field_ty := field.ty, NonVoidType):
-                    continue
-                field_ty_cpp_info = TypeCppInfo.get(self.am, field_ty)
+                field_ty_cpp_info = TypeCppInfo.get(self.am, field.ty)
                 union_cpp_defn_target.writelns(
                     f"{field_ty_cpp_info.as_owner} {field.name};",
                 )
@@ -606,8 +602,6 @@ class CppHeadersGenerator:
                 indent="",
             ):
                 for field in union.fields:
-                    if not isinstance(field.ty, NonVoidType):
-                        continue
                     with union_cpp_defn_target.indented(
                         f"case tag_t::{field.name}: {{",
                         f"}}",
@@ -634,8 +628,6 @@ class CppHeadersGenerator:
                 indent="",
             ):
                 for field in union.fields:
-                    if not isinstance(field.ty, NonVoidType):
-                        continue
                     with union_cpp_defn_target.indented(
                         f"case tag_t::{field.name}: {{",
                         f"}}",
@@ -694,8 +686,6 @@ class CppHeadersGenerator:
                 indent="",
             ):
                 for field in union.fields:
-                    if not isinstance(field.ty, NonVoidType):
-                        continue
                     with union_cpp_defn_target.indented(
                         f"case tag_t::{field.name}: {{",
                         f"}}",
@@ -721,21 +711,16 @@ class CppHeadersGenerator:
     ):
         # in place constructor
         for field in union.fields:
-            if not isinstance(field.ty, NonVoidType):
+            union_cpp_defn_target.writelns(
+                f"template<typename... Args>",
+            )
+            with union_cpp_defn_target.indented(
+                f"{union_cpp_info.name}(::taihe::static_tag_t<tag_t::{field.name}>, Args&&... args) : m_tag(tag_t::{field.name}) {{",
+                f"}}",
+            ):
                 union_cpp_defn_target.writelns(
-                    f"{union_cpp_info.name}(::taihe::static_tag_t<tag_t::{field.name}>) : m_tag(tag_t::{field.name}) {{}}",
+                    f"new (&m_data.{field.name}) decltype(m_data.{field.name})(::std::forward<Args>(args)...);",
                 )
-            else:
-                union_cpp_defn_target.writelns(
-                    f"template<typename... Args>",
-                )
-                with union_cpp_defn_target.indented(
-                    f"{union_cpp_info.name}(::taihe::static_tag_t<tag_t::{field.name}>, Args&&... args) : m_tag(tag_t::{field.name}) {{",
-                    f"}}",
-                ):
-                    union_cpp_defn_target.writelns(
-                        f"new (&m_data.{field.name}) decltype(m_data.{field.name})(::std::forward<Args>(args)...);",
-                    )
         # creator
         union_cpp_defn_target.writelns(
             f"template<tag_t tag, typename... Args>",
@@ -789,8 +774,6 @@ class CppHeadersGenerator:
                 f"}}",
             ):
                 for field in union.fields:
-                    if not isinstance(field.ty, NonVoidType):
-                        continue
                     with union_cpp_defn_target.indented(
                         f"if constexpr (tag == tag_t::{field.name}) {{",
                         f"}}",
@@ -827,12 +810,8 @@ class CppHeadersGenerator:
                             f"case tag_t::{field.name}: {{",
                             f"}}",
                         ):
-                            result = [f"::taihe::static_tag<tag_t::{field.name}>"]
-                            if isinstance(field.ty, NonVoidType):
-                                result.append(f"m_data.{field.name}")
-                            result_str = ", ".join(result)
                             union_cpp_defn_target.writelns(
-                                f"return visitor({result_str});",
+                                f"return visitor(::taihe::static_tag<tag_t::{field.name}>, m_data.{field.name});",
                             )
             # explicit return type visitor
             union_cpp_defn_target.writelns(
@@ -852,12 +831,8 @@ class CppHeadersGenerator:
                             f"case tag_t::{field.name}: {{",
                             f"}}",
                         ):
-                            result = [f"::taihe::static_tag<tag_t::{field.name}>"]
-                            if isinstance(field.ty, NonVoidType):
-                                result.append(f"m_data.{field.name}")
-                            result_str = ", ".join(result)
                             union_cpp_defn_target.writelns(
-                                f"return visitor({result_str});",
+                                f"return visitor(::taihe::static_tag<tag_t::{field.name}>, m_data.{field.name});",
                             )
 
     def gen_union_named_utils(
@@ -903,8 +878,6 @@ class CppHeadersGenerator:
         for constness in ["", " const"]:
             # pointer getter
             for field in union.fields:
-                if not isinstance(field.ty, NonVoidType):
-                    continue
                 with union_cpp_defn_target.indented(
                     f"auto{constness}* get_{field.name}_ptr(){constness} {{",
                     f"}}",
@@ -914,8 +887,6 @@ class CppHeadersGenerator:
                     )
             # reference getter
             for field in union.fields:
-                if not isinstance(field.ty, NonVoidType):
-                    continue
                 with union_cpp_defn_target.indented(
                     f"auto{constness}& get_{field.name}_ref(){constness} {{",
                     f"}}",
@@ -941,12 +912,8 @@ class CppHeadersGenerator:
                             f"case tag_t::{field.name}: {{",
                             f"}}",
                         ):
-                            result = []
-                            if isinstance(field.ty, NonVoidType):
-                                result.append(f"m_data.{field.name}")
-                            result_str = ", ".join(result)
                             union_cpp_defn_target.writelns(
-                                f"return visitor.case_{field.name}({result_str});",
+                                f"return visitor.case_{field.name}(m_data.{field.name});",
                             )
             # explicit return type visitor
             union_cpp_defn_target.writelns(
@@ -966,12 +933,8 @@ class CppHeadersGenerator:
                             f"case tag_t::{field.name}: {{",
                             f"}}",
                         ):
-                            result = []
-                            if isinstance(field.ty, NonVoidType):
-                                result.append(f"m_data.{field.name}")
-                            result_str = ", ".join(result)
                             union_cpp_defn_target.writelns(
-                                f"return visitor.case_{field.name}({result_str});",
+                                f"return visitor.case_{field.name}(m_data.{field.name});",
                             )
 
     def gen_union_same(
@@ -992,10 +955,7 @@ class CppHeadersGenerator:
             ):
                 result = "false"
                 for field in union.fields:
-                    cond = f"lhs.holds_{field.name}() && rhs.holds_{field.name}()"
-                    if isinstance(field.ty, NonVoidType):
-                        cond = f"{cond} && lhs.get_{field.name}_ref() == rhs.get_{field.name}_ref()"
-                    result = f"{result} || ({cond})"
+                    result = f"{result} || (lhs.holds_{field.name}() && rhs.holds_{field.name}() && lhs.get_{field.name}_ref() == rhs.get_{field.name}_ref())"
                 union_cpp_defn_target.writelns(
                     f"return {result};",
                 )
@@ -1025,13 +985,9 @@ class CppHeadersGenerator:
                             f"case {union_cpp_info.full_name}::tag_t::{field.name}: {{",
                             f"}}",
                         ):
-                            val = "0x9e3779b9 + (seed << 6) + (seed >> 2)"
-                            if isinstance(field_ty := field.ty, NonVoidType):
-                                val = f"{val} + ::std::hash<{TypeCppInfo.get(self.am, field_ty).as_owner}>()(val.get_{field.name}_ref())"
-                            val = f"seed ^ ({val})"
                             union_cpp_defn_target.writelns(
                                 f"::std::size_t seed = ::std::hash<{union_abi_info.tag_type}>()(static_cast<{union_abi_info.tag_type}>({union_cpp_info.full_name}::tag_t::{field.name}));",
-                                f"return {val};",
+                                f"return seed ^ (0x9e3779b9 + (seed << 6) + (seed >> 2) + ::std::hash<{TypeCppInfo.get(self.am, field.ty).as_owner}>()(val.get_{field.name}_ref()));",
                             )
 
     def gen_union_impl_file(
@@ -1048,9 +1004,7 @@ class CppHeadersGenerator:
             union_cpp_impl_target.add_include(union_cpp_info.defn_header)
             union_cpp_impl_target.add_include(union_abi_info.impl_header)
             for field in union.fields:
-                if not isinstance(field_ty := field.ty, NonVoidType):
-                    continue
-                field_ty_cpp_info = TypeCppInfo.get(self.am, field_ty)
+                field_ty_cpp_info = TypeCppInfo.get(self.am, field.ty)
                 union_cpp_impl_target.add_include(*field_ty_cpp_info.impl_headers)
 
     def gen_struct_decl_file(

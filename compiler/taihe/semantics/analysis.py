@@ -43,6 +43,7 @@ from taihe.semantics.types import (
     ScalarType,
     StringType,
     Type,
+    UnitType,
     UserType,
     VoidType,
 )
@@ -347,7 +348,7 @@ class _ResolveTypePass(RecursiveDeclVisitor):
     @override
     def visit_union_field(self, d: UnionFieldDecl) -> None:
         super().visit_union_field(d)
-        ty = self.resolve_type_ref(d.ty_ref, Type, default_type=VoidType)
+        ty = self.resolve_type_ref(d.ty_ref, NonVoidType, default_type=UnitType)
         d.resolve_ty(ty)
 
     @override

@@ -20,10 +20,8 @@ from taihe.codegen.ani.analyses import (
 )
 from taihe.codegen.ani.attributes import (
     ConstAttr,
-    NullAttr,
     OptionalAttr,
     ReadOnlyAttr,
-    UndefinedAttr,
 )
 from taihe.codegen.ani.writer import StsWriter
 from taihe.semantics.declarations import (
@@ -313,13 +311,8 @@ class StsCodeGenerator:
 
         sts_types = []
         for field in union.fields:
-            if isinstance(field_ty := field.ty, NonVoidType):
-                field_ty_ani_info = TypeAniInfo.get(self.am, field_ty)
-                sts_types.append(field_ty_ani_info.sts_type_in(target))
-            elif NullAttr.get(field) is not None:
-                sts_types.append("null")
-            elif UndefinedAttr.get(field) is not None:
-                sts_types.append("undefined")
+            field_ty_ani_info = TypeAniInfo.get(self.am, field.ty)
+            sts_types.append(field_ty_ani_info.sts_type_in(target))
         sts_types_str = " | ".join(sts_types)
         target.writelns(
             f"{sts_decl} = {sts_types_str};",

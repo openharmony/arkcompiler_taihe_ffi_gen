@@ -22,7 +22,6 @@ from taihe.codegen.ani.attributes import (
     GenPromiseAttr,
     GetAttr,
     NamespaceAttr,
-    NullAttr,
     OnOffAttr,
     OptionalAttr,
     OverloadAttr,
@@ -80,6 +79,7 @@ from taihe.semantics.types import (
     StringType,
     StructType,
     UnionType,
+    UnitType,
     VectorType,
 )
 from taihe.semantics.visitor import NonVoidTypeVisitor
@@ -182,12 +182,12 @@ class AniRuntimeUndefinedType(AniRuntimeNonPrimitiveType):
 @dataclass
 class AniRuntimeNullType(AniRuntimeUnionMemberType):
     @property
-    def desc(self) -> str:
-        return self.sig
-
-    @property
     def sig(self) -> str:
         return "N"
+
+    @property
+    def desc(self) -> str:
+        return self.sig
 
 
 @dataclass
@@ -195,12 +195,12 @@ class AniRuntimeFixedArrayType(AniRuntimeUnionMemberType):
     element: AniRuntimeType
 
     @property
-    def desc(self) -> str:
-        return self.sig
-
-    @property
     def sig(self) -> str:
         return f"A{{{self.element.sig}}}"
+
+    @property
+    def desc(self) -> str:
+        return self.sig
 
 
 @dataclass
@@ -208,12 +208,12 @@ class AniRuntimeClassType(AniRuntimeUnionMemberType):
     name: str
 
     @property
-    def desc(self) -> str:
-        return self.name
-
-    @property
     def sig(self) -> str:
         return f"C{{{self.name}}}"
+
+    @property
+    def desc(self) -> str:
+        return self.name
 
 
 @dataclass
@@ -221,12 +221,12 @@ class AniRuntimeEnumType(AniRuntimeUnionMemberType):
     name: str
 
     @property
-    def desc(self) -> str:
-        return self.name
-
-    @property
     def sig(self) -> str:
         return f"E{{{self.name}}}"
+
+    @property
+    def desc(self) -> str:
+        return self.name
 
 
 # Ani Types
@@ -799,21 +799,15 @@ class UnionAniInfo(AbstractAnalysis[UnionDecl]):
         self.parent_ns = PackageAniInfo.get(am, d.parent_pkg).ns
         self.sts_type_name = d.name
 
-        self.sts_all_somes: list[list[UnionFieldDecl]] = []
-        self.sts_all_nones: list[list[UnionFieldDecl]] = []
+        self.sts_all_fields: list[list[UnionFieldDecl]] = []
         for field in d.fields:
             if isinstance(field_ty := field.ty, UnionType):
                 inner_ani_info = UnionAniInfo.get(am, field_ty.decl)
-                self.sts_all_somes.extend(
-                    [field, *parts] for parts in inner_ani_info.sts_all_somes
+                self.sts_all_fields.extend(
+                    [field, *parts] for parts in inner_ani_info.sts_all_fields
                 )
-                self.sts_all_nones.extend(
-                    [field, *parts] for parts in inner_ani_info.sts_all_nones
-                )
-            elif isinstance(field_ty := field.ty, NonVoidType):
-                self.sts_all_somes.append([field])
             else:
-                self.sts_all_nones.append([field])
+                self.sts_all_fields.append([field])
 
         self.is_default = ExportDefaultAttr.get(d) is not None
 
@@ -1225,13 +1219,8 @@ class UnionTypeAniInfo(TypeAniInfo):
         self.ani_type = ANI_REF
         sig_types: list[AniRuntimeType] = []
         for field in t.decl.fields:
-            if isinstance(field_ty := field.ty, NonVoidType):
-                field_ani_info = TypeAniInfo.get(self.am, field_ty)
-                sig_types.append(field_ani_info.sig_type)
-            elif NullAttr.get(field):
-                sig_types.append(AniRuntimeNullType())
-            elif UndefinedAttr.get(field):
-                sig_types.append(AniRuntimeUndefinedType())
+            field_ani_info = TypeAniInfo.get(self.am, field.ty)
+            sig_types.append(field_ani_info.sig_type)
         self.sig_type = AniRuntimeUnionType.union(*sig_types)
 
     @override
@@ -1312,6 +1301,78 @@ class IfaceTypeAniInfo(TypeAniInfo):
         target.add_include(iface_ani_info.impl_header)
         target.writelns(
             f"ani_object {ani_after} = ::taihe::into_ani<{iface_cpp_info.as_owner}>({env}, {cpp_value});",
+        )
+
+
+class NullTypeAniInfo(TypeAniInfo):
+    def __init__(self, am: AnalysisManager, t: UnitType):
+        super().__init__(am, t)
+        self.ani_type = ANI_REF
+        self.sig_type = AniRuntimeNullType()
+
+    @override
+    def sts_type_in(self, target: StsWriter) -> str:
+        return "null"
+
+    @override
+    def from_ani(
+        self,
+        target: CSourceWriter,
+        env: str,
+        ani_value: str,
+        cpp_after: str,
+    ):
+        target.writelns(
+            f"{self.cpp_info.as_owner} {cpp_after} = {{}};",
+        )
+
+    @override
+    def into_ani(
+        self,
+        target: CSourceWriter,
+        env: str,
+        cpp_value: str,
+        ani_after: str,
+    ):
+        target.writelns(
+            f"ani_ref {ani_after} = {{}};",
+            f"{env}->GetNull(&{ani_after});",
+        )
+
+
+class UndefinedTypeAniInfo(TypeAniInfo):
+    def __init__(self, am: AnalysisManager, t: UnitType):
+        super().__init__(am, t)
+        self.ani_type = ANI_REF
+        self.sig_type = AniRuntimeUndefinedType()
+
+    @override
+    def sts_type_in(self, target: StsWriter) -> str:
+        return "undefined"
+
+    @override
+    def from_ani(
+        self,
+        target: CSourceWriter,
+        env: str,
+        ani_value: str,
+        cpp_after: str,
+    ):
+        target.writelns(
+            f"{self.cpp_info.as_owner} {cpp_after} = {{}};",
+        )
+
+    @override
+    def into_ani(
+        self,
+        target: CSourceWriter,
+        env: str,
+        cpp_value: str,
+        ani_after: str,
+    ):
+        target.writelns(
+            f"ani_ref {ani_after} = {{}};",
+            f"{env}->GetUndefined(&{ani_after});",
         )
 
 
@@ -2199,6 +2260,15 @@ class TypeAniInfoDispatcher(NonVoidTypeVisitor[TypeAniInfo]):
     @override
     def visit_opaque_type(self, t: OpaqueType) -> TypeAniInfo:
         return OpaqueTypeAniInfo(self.am, t)
+
+    @override
+    def visit_unit_type(self, t: UnitType) -> TypeAniInfo:
+        if UndefinedAttr.get(t.ref) or (
+            isinstance(t.ref.parent_type_holder, StructFieldDecl | UnionFieldDecl)
+            and UndefinedAttr.get(t.ref.parent_type_holder)
+        ):
+            return UndefinedTypeAniInfo(self.am, t)
+        return NullTypeAniInfo(self.am, t)
 
     @override
     def visit_scalar_type(self, t: ScalarType) -> TypeAniInfo:

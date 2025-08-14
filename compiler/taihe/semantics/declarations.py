@@ -655,14 +655,14 @@ class UnionFieldDecl(NamedDeclWithParent["UnionDecl"]):
         return self._node_parent
 
     @property
-    def ty_or_none(self) -> Type | None:
-        return cast(Type | None, self.ty_ref.resolved_ty_or_none)  # type: ignore
+    def ty_or_none(self) -> NonVoidType | None:
+        return cast(NonVoidType | None, self.ty_ref.resolved_ty_or_none)
 
     @property
-    def ty(self) -> Type:
-        return cast(Type, self.ty_ref.resolved_ty)  # type: ignore
+    def ty(self) -> NonVoidType:
+        return cast(NonVoidType, self.ty_ref.resolved_ty)
 
-    def resolve_ty(self, ty: Type | None):
+    def resolve_ty(self, ty: NonVoidType | None):
         self.ty_ref.resolve(ty)
 
     @override

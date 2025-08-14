@@ -175,9 +175,7 @@ class AbiHeadersGenerator:
             union_abi_defn_target.add_include(union_abi_info.decl_header)
             self.gen_union_defn(union, union_abi_info, union_abi_defn_target)
             for field in union.fields:
-                if not isinstance(field_ty := field.ty, NonVoidType):
-                    continue
-                field_ty_abi_info = TypeAbiInfo.get(self.am, field_ty)
+                field_ty_abi_info = TypeAbiInfo.get(self.am, field.ty)
                 union_abi_defn_target.add_include(*field_ty_abi_info.defn_headers)
 
     def gen_union_defn(
@@ -191,12 +189,7 @@ class AbiHeadersGenerator:
             f"}};",
         ):
             for field in union.fields:
-                if not isinstance(field_ty := field.ty, NonVoidType):
-                    union_abi_defn_target.writelns(
-                        f"// {field.name}",
-                    )
-                    continue
-                field_ty_abi_info = TypeAbiInfo.get(self.am, field_ty)
+                field_ty_abi_info = TypeAbiInfo.get(self.am, field.ty)
                 union_abi_defn_target.writelns(
                     f"{field_ty_abi_info.as_owner} {field.name};",
                 )
@@ -221,9 +214,7 @@ class AbiHeadersGenerator:
         ) as union_abi_impl_target:
             union_abi_impl_target.add_include(union_abi_info.defn_header)
             for field in union.fields:
-                if not isinstance(field_ty := field.ty, NonVoidType):
-                    continue
-                field_ty_abi_info = TypeAbiInfo.get(self.am, field_ty)
+                field_ty_abi_info = TypeAbiInfo.get(self.am, field.ty)
                 union_abi_impl_target.add_include(*field_ty_abi_info.impl_headers)
 
     def gen_iface_decl_file(

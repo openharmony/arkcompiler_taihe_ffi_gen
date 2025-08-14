@@ -29,6 +29,7 @@ from taihe.semantics.types import (
     ScalarKind,
     ScalarType,
     StructType,
+    UnitType,
 )
 from taihe.utils.diagnostics import DiagnosticsManager
 from taihe.utils.exceptions import AdhocError
@@ -137,21 +138,25 @@ NULL_UNDEFINED_GROUP = AttributeGroupTag()
 
 
 @dataclass
-class NullAttr(TypedAttribute[UnionFieldDecl]):
+class NullAttr(TypedAttribute[UnionFieldDecl | StructFieldDecl | TypeRefDecl]):
     NAME = "null"
-    TARGETS = (UnionFieldDecl,)
+    TARGETS = (UnionFieldDecl, StructFieldDecl, TypeRefDecl)
     ATTRIBUTE_GROUP_TAGS = frozenset({NULL_UNDEFINED_GROUP})
 
     @override
     def check_typed_context(
         self,
-        parent: UnionFieldDecl,
+        parent: UnionFieldDecl | StructFieldDecl | TypeRefDecl,
         dm: DiagnosticsManager,
     ) -> None:
-        if isinstance(parent.ty, NonVoidType):
+        if isinstance(parent, TypeRefDecl):
+            ty = parent.resolved_ty
+        else:
+            ty = parent.ty
+        if not isinstance(ty, UnitType):
             dm.emit(
                 AdhocError(
-                    f"Attribute '{self.NAME}' can only be attached to union fields without a type.",
+                    f"Attribute '{self.NAME}' can only be attached to fields with unit type.",
                     loc=self.loc,
                 )
             )
@@ -160,21 +165,25 @@ class NullAttr(TypedAttribute[UnionFieldDecl]):
 
 
 @dataclass
-class UndefinedAttr(TypedAttribute[UnionFieldDecl]):
+class UndefinedAttr(TypedAttribute[UnionFieldDecl | StructFieldDecl | TypeRefDecl]):
     NAME = "undefined"
-    TARGETS = (UnionFieldDecl,)
+    TARGETS = (UnionFieldDecl, StructFieldDecl, TypeRefDecl)
     ATTRIBUTE_GROUP_TAGS = frozenset({NULL_UNDEFINED_GROUP})
 
     @override
     def check_typed_context(
         self,
-        parent: UnionFieldDecl,
+        parent: UnionFieldDecl | StructFieldDecl | TypeRefDecl,
         dm: DiagnosticsManager,
     ) -> None:
-        if isinstance(parent.ty, NonVoidType):
+        if isinstance(parent, TypeRefDecl):
+            ty = parent.resolved_ty
+        else:
+            ty = parent.ty
+        if not isinstance(ty, UnitType):
             dm.emit(
                 AdhocError(
-                    f"Attribute '{self.NAME}' can only be attached to union fields without a type.",
+                    f"Attribute '{self.NAME}' can only be attached to fields with unit type.",
                     loc=self.loc,
                 )
             )

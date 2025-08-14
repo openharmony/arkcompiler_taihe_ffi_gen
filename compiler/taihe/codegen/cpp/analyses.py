@@ -25,8 +25,8 @@ from taihe.semantics.types import (
     SetType,
     StringType,
     StructType,
-    UnitType,
     UnionType,
+    UnitType,
     VectorType,
 )
 from taihe.semantics.visitor import NonVoidTypeVisitor

@@ -13,10 +13,6 @@ from taihe.codegen.ani.analyses import (
     TypeAniInfo,
     UnionAniInfo,
 )
-from taihe.codegen.ani.attributes import (
-    NullAttr,
-    UndefinedAttr,
-)
 from taihe.codegen.cpp.analyses import (
     GlobFuncCppUserInfo,
     IfaceCppInfo,
@@ -953,7 +949,7 @@ class AniCodeGenerator:
             f"inline {union_cpp_info.as_owner} taihe::from_ani_t<{union_cpp_info.as_owner}>::operator()(ani_env* env, ani_ref ani_value) const {{",
             f"}}",
         ):
-            for parts in union_ani_info.sts_all_nones + union_ani_info.sts_all_somes:
+            for parts in union_ani_info.sts_all_fields:
                 final = parts[-1]
                 static_tags = []
                 for part in parts:
@@ -963,53 +959,38 @@ class AniCodeGenerator:
                     )
                 static_tags_str = ", ".join(static_tags)
                 full_name = "_".join(part.name for part in parts)
-                is_field = f"ani_is_{full_name}"
-                if isinstance(final_ty := final.ty, NonVoidType):
-                    final_ty_ani_info = TypeAniInfo.get(self.am, final_ty)
-                    if final_ty_ani_info.type_desc is None:
-                        continue
-                    union_ani_impl_target.writelns(
-                        f"ani_boolean {is_field} = {{}};",
-                        f'env->Object_InstanceOf(static_cast<ani_object>(ani_value), TH_ANI_FIND_CLASS(env, "{final_ty_ani_info.type_desc}"), &{is_field});',
-                    )
-                    with union_ani_impl_target.indented(
-                        f"if ({is_field}) {{",
-                        f"}}",
-                    ):
-                        field_cpp = f"cpp_field_{full_name}"
-                        final_ty_ani_info.from_ani_boxed(
-                            union_ani_impl_target,
-                            "env",
-                            "ani_value",
-                            field_cpp,
-                        )
+                is_field_ani = f"ani_is_{full_name}"
+                field_cpp = f"cpp_field_{full_name}"
+                final_ty_ani_info = TypeAniInfo.get(self.am, final.ty)
+                union_ani_impl_target.writelns(
+                    f"ani_boolean {is_field_ani} = {{}};",
+                )
+                match final_ty_ani_info.type_desc:
+                    case "U":
                         union_ani_impl_target.writelns(
-                            f"return {union_cpp_info.full_name}({static_tags_str}, std::move({field_cpp}));",
+                            f"env->Reference_IsUndefined(ani_value, &{is_field_ani});",
                         )
-                elif NullAttr.get(final):
-                    union_ani_impl_target.writelns(
-                        f"ani_boolean {is_field} = {{}};",
-                        f"env->Reference_IsNull(ani_value, &{is_field});",
-                    )
-                    with union_ani_impl_target.indented(
-                        f"if ({is_field}) {{",
-                        f"}}",
-                    ):
+                    case "N":
                         union_ani_impl_target.writelns(
-                            f"return {union_cpp_info.full_name}({static_tags_str});",
+                            f"env->Reference_IsNull(ani_value, &{is_field_ani});",
                         )
-                elif UndefinedAttr.get(final):
-                    union_ani_impl_target.writelns(
-                        f"ani_boolean {is_field} = {{}};",
-                        f"env->Reference_IsUndefined(ani_value, &{is_field});",
-                    )
-                    with union_ani_impl_target.indented(
-                        f"if ({is_field}) {{",
-                        f"}}",
-                    ):
+                    case _:
                         union_ani_impl_target.writelns(
-                            f"return {union_cpp_info.full_name}({static_tags_str});",
+                            f'env->Object_InstanceOf(static_cast<ani_object>(ani_value), TH_ANI_FIND_CLASS(env, "{final_ty_ani_info.type_desc}"), &{is_field_ani});',
                         )
+                with union_ani_impl_target.indented(
+                    f"if ({is_field_ani}) {{",
+                    f"}}",
+                ):
+                    final_ty_ani_info.from_ani_boxed(
+                        union_ani_impl_target,
+                        "env",
+                        "ani_value",
+                        field_cpp,
+                    )
+                    union_ani_impl_target.writelns(
+                        f"return {union_cpp_info.full_name}({static_tags_str}, std::move({field_cpp}));",
+                    )
             union_ani_impl_target.writelns(
                 f"__builtin_unreachable();",
             )
@@ -1025,9 +1006,6 @@ class AniCodeGenerator:
             f"inline ani_ref taihe::into_ani_t<{union_cpp_info.as_owner}>::operator()(ani_env* env, {union_cpp_info.as_owner} cpp_value) const {{",
             f"}}",
         ):
-            union_ani_impl_target.writelns(
-                f"ani_ref ani_value = {{}};",
-            )
             with union_ani_impl_target.indented(
                 f"switch (cpp_value.get_tag()) {{",
                 f"}}",
@@ -1038,29 +1016,14 @@ class AniCodeGenerator:
                         f"case {union_cpp_info.full_name}::tag_t::{field.name}: {{",
                         f"}}",
                     ):
-                        if isinstance(field_ty := field.ty, NonVoidType):
-                            field_ani = f"ani_field_{field.name}"
-                            field_ty_ani_info = TypeAniInfo.get(self.am, field_ty)
-                            field_ty_ani_info.into_ani_boxed(
-                                union_ani_impl_target,
-                                "env",
-                                f"cpp_value.get_{field.name}_ref()",
-                                field_ani,
-                            )
-                            union_ani_impl_target.writelns(
-                                f"ani_value = {field_ani};",
-                            )
-                        elif NullAttr.get(field):
-                            union_ani_impl_target.writelns(
-                                f"env->GetNull(&ani_value);",
-                            )
-                        elif UndefinedAttr.get(field):
-                            union_ani_impl_target.writelns(
-                                f"env->GetUndefined(&ani_value);",
-                            )
-                        union_ani_impl_target.writelns(
-                            f"break;",
+                        field_ani = f"ani_field_{field.name}"
+                        field_ty_ani_info = TypeAniInfo.get(self.am, field.ty)
+                        field_ty_ani_info.into_ani_boxed(
+                            union_ani_impl_target,
+                            "env",
+                            f"cpp_value.get_{field.name}_ref()",
+                            field_ani,
                         )
-            union_ani_impl_target.writelns(
-                f"return ani_value;",
-            )
+                        union_ani_impl_target.writelns(
+                            f"return {field_ani};",
+                        )
