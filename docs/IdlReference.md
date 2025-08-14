@@ -61,6 +61,8 @@
 
 提供以下基础类型：
 
+- **单位类型**
+  - `unit`：表示无值的类型。
 - **整型**
   - 无符号：`u8`, `u16`, `u32`, `u64`  注：ArkTS 1.2 不支持无符号类型
   - 有符号：`i8`, `i16`, `i32`, `i64`
@@ -208,6 +210,16 @@ union Foo {
 ```rust
 union Empty {};  // Error: empty union is not allowed
 union NonEmpty { a: i32; };  // OK
+```
+
+### 省略类型
+
+标签联合的成员可以省略类型，默认使用 `unit` 类型。
+```rust
+union MyUnion {
+  A: String;
+  B;  // 默认类型为 unit
+}
 ```
 
 ## 接口

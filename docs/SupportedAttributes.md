@@ -26,15 +26,13 @@
 
 - `@readonly`：设置 struct 中某个 field 为只读。
 
-- `@null`：用于将 union 里的某个无类型属性设置为 null 类型。
-
-- `@undefined`：用于将 union 里的某个无类型属性设置为 undefined 类型。
-
 - `@optional`：可加在函数参数或 struct field 上，表示该参数/属性为可选（`a?: T`）。需要注意的是，该参数/属性类型必须同时为 Optional 类型，例如 `@optional a: Optional<T>`。
 
 - `@sts_this`：加在函数参数上，表示该参数在 ets 侧的函数投影中被省略，native 侧相应参数被自动填充 ets 侧的 `this`。
 
 ## 类型注解
+
+- `@undefined`：添加在 Taihe unit 类型上，表示该 unit 类型在 ets 侧被投影为 undefined。
 
 - `@bigint`：将一个 Taihe Array 在 ets 中投影为 BigInt。（使用可变长小端序补码编码，仅支持 `Array<u64>`）
 

@@ -300,7 +300,7 @@ public:
         return std::format("Color: {}", color.get_value());
     }
 
-    std::string case_unknown() {
+    std::string case_unknown(taihe::unit) {
         return "Unknown";
     }
 };
@@ -334,7 +334,7 @@ public:
         return std::format("Color: {}", color.get_value());
     }
 
-    std::string operator()(taihe::static_tag_t<Tag::unknown>) {
+    std::string operator()(taihe::static_tag_t<Tag::unknown>, taihe::unit) {
         return "Unknown";
     }
 };
@@ -362,7 +362,7 @@ auto result = rgb::base::RGBOrColorOrName::make_rgb(RGB{0x39, 0xC5, 0xBB})
         [](taihe::static_tag_t<Tag::color>, rgb::base::Color const& color) {
             return std::format("Color: {}", color.get_value());
         },
-        [](taihe::static_tag_t<Tag::unknown>) {
+        [](taihe::static_tag_t<Tag::unknown>, taihe::unit) {
             return "Unknown";
         },
     });
