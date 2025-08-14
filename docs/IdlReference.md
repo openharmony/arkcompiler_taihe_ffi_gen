@@ -121,18 +121,18 @@ enum Bar: String {
 - 对于整数类型的枚举，若未指定值，则从上一个元素的值递增，第一个元素默认为 0。
   ```rust
   enum Foo: i32 {
-    A;          // 0
-    B;          // 1
-    C = -10;
-    D;          // -9
+    A,          // 0
+    B,          // 1
+    C = -10,
+    D,          // -9
   }
   ```
 - 对于字符串类型的枚举，若未指定值，默认使用元素名称作为值。
   ```rust
   enum Bar: String {
-    X;          // "X"
-    Y;          // "Y"
-    Z = "z_value";
+    X,          // "X"
+    Y,          // "Y"
+    Z = "z_value",
   }
   ```
 - 对于布尔类型和浮点类型的枚举，默认值为 `false` 或 `0.0`。
@@ -168,11 +168,11 @@ struct Foo {
 标签联合用于表示多种可能的数据类型，每个标签对应一种数据类型。多个标签可以对应同一个数据类型。标签联合的定义方式如下：
 ```rust
 union Foo {
-  A: i32,
-  B: String,
-  C: bool,
-  D: Bar,
-  E: Bar,
+  A: i32;
+  B: String;
+  C: bool;
+  D: Bar;
+  E: Bar;
 }
 
 struct Bar {
