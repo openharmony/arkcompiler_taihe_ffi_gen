@@ -56,6 +56,7 @@ if TYPE_CHECKING:
         StructType,
         Type,
         UnionType,
+        UnitType,
         UserType,
         VectorType,
         VoidType,
@@ -63,6 +64,11 @@ if TYPE_CHECKING:
 
 
 _R = TypeVar("_R")
+
+
+class UnitTypeVisitor(Generic[_R]):
+    def visit_unit_type(self, t: "UnitType") -> _R:
+        raise NotImplementedError
 
 
 class ScalarTypeVisitor(Generic[_R]):
@@ -85,6 +91,7 @@ class BuiltinTypeVisitor(
     ScalarTypeVisitor[_R],
     StringTypeVisitor[_R],
     OpaqueTypeVisitor[_R],
+    UnitTypeVisitor[_R],
 ):
     def visit_builtin_type(self, t: "BuiltinType") -> _R:
         raise NotImplementedError
@@ -99,6 +106,10 @@ class BuiltinTypeVisitor(
 
     @override
     def visit_opaque_type(self, t: "OpaqueType") -> _R:
+        return self.visit_builtin_type(t)
+
+    @override
+    def visit_unit_type(self, t: "UnitType") -> _R:
         return self.visit_builtin_type(t)
 
 

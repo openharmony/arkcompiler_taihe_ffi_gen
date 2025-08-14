@@ -25,6 +25,7 @@ from taihe.semantics.types import (
     SetType,
     StringType,
     StructType,
+    UnitType,
     UnionType,
     VectorType,
 )
@@ -197,6 +198,15 @@ class IfaceTypeCppInfo(TypeCppInfo):
         self.as_param = iface_cpp_info.as_param
 
 
+class UnitTypeCppInfo(TypeCppInfo):
+    def __init__(self, am: AnalysisManager, t: UnitType) -> None:
+        self.decl_headers = ["taihe/unit.hpp"]
+        self.defn_headers = ["taihe/unit.hpp"]
+        self.impl_headers = ["taihe/unit.hpp"]
+        self.as_owner = "::taihe::unit"
+        self.as_param = "::taihe::unit"
+
+
 class ScalarTypeCppInfo(TypeCppInfo):
     def __init__(self, am: AnalysisManager, t: ScalarType):
         res = {
@@ -362,6 +372,10 @@ class TypeCppInfoDispatcher(NonVoidTypeVisitor[TypeCppInfo]):
     @override
     def visit_iface_type(self, t: IfaceType) -> TypeCppInfo:
         return IfaceTypeCppInfo(self.am, t)
+
+    @override
+    def visit_unit_type(self, t: UnitType) -> TypeCppInfo:
+        return UnitTypeCppInfo(self.am, t)
 
     @override
     def visit_scalar_type(self, t: ScalarType) -> TypeCppInfo:

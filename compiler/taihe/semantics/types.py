@@ -39,6 +39,7 @@ if TYPE_CHECKING:
         StructTypeVisitor,
         TypeVisitor,
         UnionTypeVisitor,
+        UnitTypeVisitor,
         UserTypeVisitor,
         VectorTypeVisitor,
         VoidTypeVisitor,
@@ -106,6 +107,18 @@ class BuiltinType(NonVoidType, ABC):
     def accept(self, v: "BuiltinTypeVisitor[_R]") -> _R: ...
 
 
+@dataclass(frozen=True, repr=False)
+class UnitType(BuiltinType):
+    @property
+    @override
+    def signature(self):
+        return "unit"
+
+    @override
+    def accept(self, v: "UnitTypeVisitor[_R]") -> _R:
+        return v.visit_unit_type(self)
+
+
 class ScalarKind(Enum):
     """Enumeration of scalar types."""
 
@@ -169,6 +182,7 @@ class OpaqueType(BuiltinType):
 # Builtin Types Map
 BUILTIN_TYPES: dict[str, Callable[["TypeRefDecl"], Type]] = {
     "void": VoidType,
+    "unit": UnitType,
     "bool": lambda ty_ref: ScalarType(ty_ref, ScalarKind.BOOL),
     "f32": lambda ty_ref: ScalarType(ty_ref, ScalarKind.F32),
     "f64": lambda ty_ref: ScalarType(ty_ref, ScalarKind.F64),

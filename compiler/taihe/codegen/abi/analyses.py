@@ -28,6 +28,7 @@ from taihe.semantics.types import (
     StringType,
     StructType,
     UnionType,
+    UnitType,
     VectorType,
 )
 from taihe.semantics.visitor import NonVoidTypeVisitor
@@ -216,6 +217,14 @@ class IfaceTypeAbiInfo(TypeAbiInfo):
         self.as_param = iface_abi_info.as_param
 
 
+class UnitTypeAbiInfo(TypeAbiInfo):
+    def __init__(self, am: AnalysisManager, t: UnitType) -> None:
+        self.defn_headers = ["taihe/unit.abi.h"]
+        self.impl_headers = ["taihe/unit.abi.h"]
+        self.as_owner = "struct TUnit"
+        self.as_param = "struct TUnit"
+
+
 class ScalarTypeAbiInfo(TypeAbiInfo):
     def __init__(self, am: AnalysisManager, t: ScalarType):
         res = {
@@ -320,6 +329,10 @@ class TypeAbiInfoDispatcher(NonVoidTypeVisitor[TypeAbiInfo]):
     @override
     def visit_iface_type(self, t: IfaceType) -> TypeAbiInfo:
         return IfaceTypeAbiInfo(self.am, t)
+
+    @override
+    def visit_unit_type(self, t: UnitType) -> TypeAbiInfo:
+        return UnitTypeAbiInfo(self.am, t)
 
     @override
     def visit_scalar_type(self, t: ScalarType) -> TypeAbiInfo:
