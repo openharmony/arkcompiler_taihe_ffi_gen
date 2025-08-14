@@ -1,5 +1,6 @@
 from collections.abc import Callable
 from itertools import chain
+from math import isfinite
 from typing import Any, TypeGuard, TypeVar
 
 from typing_extensions import override
@@ -451,10 +452,10 @@ class _CheckEnumTypePass(RecursiveDeclVisitor):
                         check = lambda val: isinstance(val, bool)
                     case ScalarKind.F32:
                         succ = lambda pred: 0.0
-                        check = lambda val: isinstance(val, float)
+                        check = lambda val: isinstance(val, float) and isfinite(val)
                     case ScalarKind.F64:
                         succ = lambda pred: 0.0
-                        check = lambda val: isinstance(val, float)
+                        check = lambda val: isinstance(val, float) and isfinite(val)
 
                 pred = None
                 for item in d.items:
