@@ -158,7 +158,7 @@ class NamedDeclWithParent(NamedDecl, Generic[_P], ABC):
 ###################
 
 
-class TypeRefDecl(DeclWithParent[Decl], ABC):
+class TypeRefDecl(DeclWithParent["TypeHolderDecl"], ABC):
     """Repersents a reference to a `Type`.
 
     Each user of a `Type` must be encapsulated in a `TypeRefDecl`.
@@ -195,6 +195,11 @@ class TypeRefDecl(DeclWithParent[Decl], ABC):
         if (fmt := self.format(PrettyFormatter())) is not None:
             return f"explicit type reference ({fmt})"
         return "implicit type reference"
+
+    @property
+    def parent_type_holder(self) -> "TypeHolderDecl":
+        assert self._node_parent
+        return self._node_parent
 
     @property
     def resolved_ty(self) -> Type:
@@ -270,6 +275,11 @@ class GenericArgDecl(DeclWithParent["GenericTypeRefDecl"]):
     @override
     def description(self) -> str:
         return f"generic argument ({self.ty_ref.description})"
+
+    @property
+    def parent_generic_type_ref(self) -> "GenericTypeRefDecl":
+        assert self._node_parent
+        return self._node_parent
 
     @property
     def ty_or_none(self) -> Type | None:
@@ -427,7 +437,7 @@ class CallbackTypeRefDecl(ExplicitTypeRefDecl):
 #####################
 
 
-class PackageRefDecl(DeclWithParent[Decl]):
+class PackageRefDecl(DeclWithParent["PackageImportDecl | DeclarationRefDecl"]):
     symbol: str
 
     is_resolved: bool = False
@@ -457,7 +467,7 @@ class PackageRefDecl(DeclWithParent[Decl]):
         return v.visit_package_ref(self)
 
 
-class DeclarationRefDecl(DeclWithParent[Decl]):
+class DeclarationRefDecl(DeclWithParent["DeclarationImportDecl"]):
     symbol: str
 
     pkg_ref: PackageRefDecl
@@ -846,10 +856,6 @@ class GlobFuncDecl(PackageLevelDecl):
         return v.visit_glob_func(self)
 
 
-NamedFunctionLikeDecl = GlobFuncDecl | IfaceMethodDecl
-FunctionLikeDecl = NamedFunctionLikeDecl | CallbackTypeRefDecl
-
-
 #####################
 # Type Declarations #
 #####################
@@ -1011,6 +1017,19 @@ class IfaceDecl(TypeDecl):
     @override
     def accept(self, v: "IfaceDeclVisitor[_R]") -> _R:
         return v.visit_iface_decl(self)
+
+
+NamedFunctionLikeDecl = GlobFuncDecl | IfaceMethodDecl
+FunctionLikeDecl = NamedFunctionLikeDecl | CallbackTypeRefDecl
+TypeHolderDecl = (
+    FunctionLikeDecl
+    | ParamDecl
+    | StructFieldDecl
+    | UnionFieldDecl
+    | EnumDecl
+    | IfaceExtendDecl
+    | GenericArgDecl
+)
 
 
 ######################
