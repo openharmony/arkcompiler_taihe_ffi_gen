@@ -25,6 +25,7 @@ from taihe.semantics.types import (
     ArrayType,
     MapType,
     NonVoidType,
+    OptionalType,
     ScalarKind,
     ScalarType,
     StructType,
@@ -188,6 +189,22 @@ PARAM_ATTRIBUTE_GROUP = AttributeGroupTag()
 class OptionalAttr(TypedAttribute[ParamDecl | StructFieldDecl]):
     NAME = "optional"
     TARGETS = (ParamDecl, StructFieldDecl)
+
+    @override
+    def check_typed_context(
+        self,
+        parent: ParamDecl | StructFieldDecl,
+        dm: DiagnosticsManager,
+    ) -> None:
+        if not isinstance(parent.ty, OptionalType):
+            dm.emit(
+                AdhocError(
+                    f"Attribute '{self.NAME}' can only be attached to parameters or fields with optional types.",
+                    loc=self.loc,
+                )
+            )
+
+        super().check_typed_context(parent, dm)
 
 
 @dataclass
