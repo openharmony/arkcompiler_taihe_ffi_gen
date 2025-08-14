@@ -24,44 +24,44 @@
 
 - `@extends`：加在 struct field 上，用于以组合的方式实现纯数据类的继承。
 
-- `@readonly`：设置 struct 中某个属性为只读属性。
+- `@readonly`：设置 struct 中某个 field 为只读。
 
 - `@null`：用于将 union 里的某个无类型属性设置为 null 类型。
 
 - `@undefined`：用于将 union 里的某个无类型属性设置为 undefined 类型。
 
-- `@optional`：可加在函数参数或 struct field 上，表示该参数/属性为可选（`a?: T`）。
+- `@optional`：可加在函数参数或 struct field 上，表示该参数/属性为可选（`a?: T`）。需要注意的是，该参数/属性类型必须同时为 Optional 类型，例如 `@optional a: Optional<T>`。
 
-- `@sts_this`：在类中适用，获得与 Taihe 对象相绑定的 ArkTS 类的 `ani_object`。
+- `@sts_this`：加在函数参数上，表示该参数在 ets 侧的函数投影中被省略，native 侧相应参数被自动填充 ets 侧的 `this`。
 
 ## 类型注解
 
-- `@bigint`：将一个 array 绑定到 ets 的 bigint。
+- `@bigint`：将一个 Taihe Array 在 ets 中投影为 BigInt。（使用可变长小端序补码编码，仅支持 `Array<u64>`）
 
-- `@arraybuffer`：将一个 array 绑定到 ets 的 arraybuffer。
+- `@arraybuffer`：将一个 Taihe Array 在 ets 中投影为 ArrayBuffer。（仅支持 `Array<u8>`）
 
-- `@typedarray`：将一个 array 绑定到 ets 的 typedarray。
+- `@typedarray`：将一个 Taihe Array 在 ets 中投影为 TypedArray。（仅支持 `Array<u8>`, `Array<u16>`, `Array<u32>`, `Array<u64>`, `Array<i8>`, `Array<i16>`, `Array<i32>`, `Array<i64>`, `Array<f32>`, `Array<f64>`）
 
-- `@fixedarray`：将一个 array 绑定到 ets 的 fixedarray。
+- `@fixedarray`：将一个 Taihe Array 在 ets 中投影为 fixedarray。
 
-- `@record`：将一个 map 绑定到 ets 的 record。
+- `@record`：将一个 Taihe Map 在 ets 中投影为 Record。
 
 - `@sts_type("MyType")`：将一个 Opaque 的实际类型设置为一个具体的 ets 类型。
 
 ## 函数/方法注解
 
-- `@rename("newName")`：修改 ets 侧绑定的函数名。
+- `@rename("newName")`：修改 ets 侧对应投影函数/方法的名字。
 
 - `@static("ClassName")`：加在全局函数上，表示其在 ets 侧绑定的函数为静态函数。
 
-- `@constructor("ClassName")`：将一个函数的 ets 绑定设置为某个类的构造器。
+- `@constructor("ClassName")`：将一个全局函数在 ets 侧绑定设置为某个类的构造器。
 
-- `@get("propertyName")`：将一个函数设置为某个属性/变量的 get 方法。
+- `@get("propertyName")`：将一个方法设置为某个属性/变量的 get 方法。
 
-- `@set("propertyName")`：将一个函数设置为某个属性/变量的 set 方法。
+- `@set("propertyName")`：将一个方法设置为某个属性/变量的 set 方法。
 
-- `@async`：生成一个 ets 侧异步函数绑定。
+- `@async`：将一个返回 `T` 类型同步函数封装为接受 `AsyncCallback<T>` 的异步函数。（`type AsyncCallback<T> = (error: BusinessError | null, data: T | undefined) => void;`）
 
-- `@promise`：生成一个 ets 侧异步函数绑定。
+- `@promise`：将一个返回 `Promise<T>` 的函数封装为返回 `Promise<T>` 的异步函数。
 
-- `@static_overload("overloadedName")`：将一个函数设置为 ets 侧的 java like 重载函数。
+- `@static_overload("overloadedName")`：将一个函数设置为 ets 侧的 java like 重载函数。（`overload overloadedName { funcA, funcB, ... }`）
