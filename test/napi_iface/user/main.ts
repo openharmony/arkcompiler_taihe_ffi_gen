@@ -54,6 +54,10 @@ function main() {
   color.Id = "new my color";
   console.log("set attr: ", color.Id);
   console.log("color method: ", color.calculate(2, 3))
+
+  let d = new lib.IDerived();
+  d.call();
+  console.log(d.getId());
 }
 
 main();

@@ -1,6 +1,7 @@
 from collections.abc import Collection
 from json import dumps
 
+from taihe.codegen.abi.analyses import IfaceAbiInfo
 from taihe.codegen.ani.attributes import ReadOnlyAttr
 from taihe.codegen.napi.analyses import (
     EnumNapiInfo,
@@ -196,8 +197,21 @@ class DtsCodeGenerator:
         target: DtsWriter,
     ):
         iface_napi_info = IfaceNapiInfo.get(self.am, iface)
+        iface_abi_info = IfaceAbiInfo.get(self.am, iface)
+
+        iface_decl = f"declare class {iface_napi_info.dts_type_name}"
+        if iface_napi_info.dts_iface_parents:
+            parents = []
+            for parent in iface_napi_info.dts_iface_parents:
+                parent_ty = parent.ty_ref.resolved_ty
+                parent_napi_info = TypeNapiInfo.get(self.am, parent_ty)
+                parents.append(parent_napi_info.dts_type_in(target))
+            extends_str = ", ".join(parents) if parents else ""
+            iface_decl = f"{iface_decl} implements {extends_str}"
+        iface_decl = f"export {iface_decl}"
+
         with target.indented(
-            f"export declare class {iface_napi_info.dts_type_name} {{",
+            f"{iface_decl} {{",
             f"}}",
         ):
             if ctor := iface_napi_info.ctor:
@@ -228,7 +242,8 @@ class DtsCodeGenerator:
                 target.writelns(
                     f"static {static_func.name}({params_str}): {return_ty};",
                 )
-            self.gen_iface_methods_decl(iface.methods, target)
+            for ancestor in iface_abi_info.ancestor_dict:
+                self.gen_iface_methods_decl(ancestor.methods, target)
 
     def gen_iface_methods_decl(
         self,

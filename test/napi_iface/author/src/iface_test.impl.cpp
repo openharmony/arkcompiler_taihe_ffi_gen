@@ -100,6 +100,31 @@ public:
   }
 };
 
+class Derived {
+protected:
+  ::taihe::string id = "d";
+  float a = 1;
+  float b = 2;
+
+public:
+  void call() {
+    std::cout << "derived call!" << std::endl;
+  }
+
+  double calculateArea() {
+    return a * b;
+  }
+
+  ::taihe::string getId() {
+    return id;
+  }
+
+  void setId(::taihe::string_view s) {
+    this->id = s;
+    return;
+  }
+};
+
 ::iface_test::IBase makeIBase(::taihe::string_view id) {
   return ::taihe::make_holder<Base, ::iface_test::IBase>(id);
 }
@@ -136,6 +161,12 @@ void copyIColor(::iface_test::weak::IColor a, ::iface_test::weak::IColor b) {
   a->setId(b->getId());
   return;
 }
+
+::iface_test::IDerived createIDerived() {
+  // The parameters in the make_holder function should be of the same type
+  // as the parameters in the constructor of the actual implementation class.
+  return taihe::make_holder<Derived, ::iface_test::IDerived>();
+}
 }  // namespace
 
 // NOLINTBEGIN
@@ -147,4 +178,5 @@ TH_EXPORT_CPP_API_changeCTest(changeCTest);
 TH_EXPORT_CPP_API_multiply(multiply);
 TH_EXPORT_CPP_API_makeIColor(makeIColor);
 TH_EXPORT_CPP_API_copyIColor(copyIColor);
+TH_EXPORT_CPP_API_createIDerived(createIDerived);
 // NOLINTEND

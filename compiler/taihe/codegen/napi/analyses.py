@@ -33,6 +33,7 @@ from taihe.semantics.declarations import (
     GlobFuncDecl,
     IfaceDecl,
     IfaceMethodDecl,
+    IfaceParentDecl,
     PackageDecl,
     PackageGroup,
     StructDecl,
@@ -250,7 +251,6 @@ class IfaceNapiInfo(AbstractAnalysis[IfaceDecl]):
         else:
             self.dts_impl_name = f"{d.name}_inner"
 
-        iface_abi_info = IfaceAbiInfo.get(am, d)
         iface_register_infos: list[
             tuple[list[IfaceMethodDecl], IfaceDecl, list[str]]
         ] = []
@@ -306,6 +306,17 @@ class IfaceNapiInfo(AbstractAnalysis[IfaceDecl]):
         self.iface_register_infos = iface_register_infos
         self.ctor: GlobFuncDecl | None = None
         self.static_funcs: list[tuple[str, GlobFuncDecl]] = []
+
+        self.dts_class_parents: list[IfaceParentDecl] = []
+        self.dts_iface_parents: list[IfaceParentDecl] = []
+        for parent in d.parents:
+            ty = parent.ty_ref.resolved_ty
+            assert isinstance(ty, IfaceType)
+            parent_napi_info = IfaceNapiInfo.get(am, ty.ty_decl)
+            if parent_napi_info.is_class():
+                self.dts_class_parents.append(parent)
+            else:
+                self.dts_iface_parents.append(parent)
 
     @classmethod
     @override

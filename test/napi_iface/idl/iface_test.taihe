@@ -13,6 +13,14 @@ interface IShape: IBase {
 function makeIShape(id: String, a: f64, b: f64): IShape;
 
 @class
+interface IDerived: IShape {
+    call(): void;
+}
+
+@ctor("IDerived")
+function createIDerived(): IDerived;
+
+@class
 interface CTest{
     add(a: i32, b: i32): f32;
 }
