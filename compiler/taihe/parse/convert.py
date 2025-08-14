@@ -24,6 +24,7 @@ from taihe.semantics.declarations import (
     IfaceMethodDecl,
     LongTypeRefDecl,
     PackageDecl,
+    PackageGroup,
     PackageImportDecl,
     PackageRefDecl,
     ParamDecl,
@@ -35,7 +36,7 @@ from taihe.semantics.declarations import (
 )
 from taihe.utils.diagnostics import DiagnosticsManager
 from taihe.utils.exceptions import InvalidPackageNameError
-from taihe.utils.sources import SourceBase, SourceLocation
+from taihe.utils.sources import SourceBase, SourceLocation, SourceManager
 
 
 def id2str(id_name: ast.IdName) -> str:
@@ -478,4 +479,15 @@ class AstConverter(ExprEvaluator):
             InvalidPackageNameError: If the package name is invalid.
         """
         node = generate_ast(self.source, self.dm)
-        return self.visit_spec(node)
+        return node.accept(self)
+
+
+def convert_ast(sm: SourceManager, pg: PackageGroup, dm: DiagnosticsManager) -> None:
+    """Converts all sources in the source manager to a package group.
+
+    Args:
+        sm (SourceManager): The source manager containing all sources.
+        pg (PackageGroup): The package group to add the converted packages to.
+        dm (DiagnosticsManager): The diagnostics manager for error handling.
+    """
+    dm.for_each(sm.sources, lambda src: pg.add(AstConverter(src, dm).convert()))
