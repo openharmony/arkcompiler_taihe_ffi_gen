@@ -358,6 +358,12 @@ class Documentation(PathResource):
     PATH_BUNDLE = "share/doc/taihe"
 
 
+class CMakeModulesResource(PathResource):
+    CLI_NAME = "cmake"
+    PATH_PKG = PATH_DEV = "cmake"
+    PATH_BUNDLE = "lib/cmake/taihe"
+
+
 class _LegacyPandaVm(PathResource):
     PATH_DEV = ".panda_vm"
     PATH_PKG = "<no-panda-vm-in-pkg-mode>"
@@ -502,6 +508,7 @@ BUILTIN_RESOURCES: Sequence[ResourceT] = [
     RuntimeHeader,
     StandardLibrary,
     Documentation,
+    CMakeModulesResource,
 ]
 ALL_RESOURCES: Sequence[ResourceT] = [
     *BUILTIN_RESOURCES,

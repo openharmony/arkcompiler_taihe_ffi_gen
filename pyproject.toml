@@ -50,6 +50,7 @@ packages = ["compiler/taihe"]
 [tool.hatch.build.targets.wheel.force-include]
 "./runtime" = "taihe/data/runtime"
 "./stdlib" = "taihe/data/stdlib"
+"./cmake" = "taihe/data/cmake"
 "./cookbook" = "taihe/data/doc"
 
 ### Linting ###
