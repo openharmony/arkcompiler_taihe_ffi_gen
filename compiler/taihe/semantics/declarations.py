@@ -177,7 +177,7 @@ class TypeRefDecl(DeclWithParent[Decl], ABC):
     is_resolved: bool = False
     """Whether this type reference is resolved."""
 
-    resolved_ty: Type | None = None
+    resolved_ty_or_none: Type | None = None
     """The resolved type, if any.
 
     This field is `None` only if the type is not resolved yet.
@@ -195,6 +195,17 @@ class TypeRefDecl(DeclWithParent[Decl], ABC):
         if (fmt := self.format(PrettyFormatter())) is not None:
             return f"explicit type reference ({fmt})"
         return "implicit type reference"
+
+    @property
+    def resolved_ty(self) -> Type:
+        assert self.is_resolved, "Type reference is not resolved"
+        assert self.resolved_ty_or_none, "Type reference resolution failed"
+        return self.resolved_ty_or_none
+
+    def resolve(self, ty: Type | None):
+        assert not self.is_resolved, "Type reference is already resolved"
+        self.is_resolved = True
+        self.resolved_ty_or_none = ty
 
     @abstractmethod
     def format(self, fmt: PrettyFormatter) -> str | None:
@@ -261,20 +272,15 @@ class GenericArgDecl(DeclWithParent["GenericTypeRefDecl"]):
         return f"generic argument ({self.ty_ref.description})"
 
     @property
-    def ty_resolved(self) -> Type | None:
-        assert self.ty_ref.is_resolved, "Type reference is not resolved yet"
-        return cast(Type | None, self.ty_ref.resolved_ty)  # type: ignore
+    def ty_or_none(self) -> Type | None:
+        return cast(Type | None, self.ty_ref.resolved_ty_or_none)  # type: ignore
 
     @property
     def ty(self) -> Type:
-        res = self.ty_resolved
-        assert res, "Type resolve failed"
-        return res
+        return cast(Type, self.ty_ref.resolved_ty)  # type: ignore
 
     def resolve_ty(self, ty: Type | None):
-        assert not self.ty_ref.is_resolved, "Type reference is already resolved"
-        self.ty_ref.is_resolved = True
-        self.ty_ref.resolved_ty = ty
+        self.ty_ref.resolve(ty)
 
     @override
     def accept(self, v: "GenericArgVisitor[_R]") -> _R:
@@ -305,20 +311,15 @@ class ParamDecl(NamedDeclWithParent["FunctionLikeDecl"]):
         return self._node_parent
 
     @property
-    def ty_resolved(self) -> NonVoidType | None:
-        assert self.ty_ref.is_resolved, "Type reference is not resolved yet"
-        return cast(NonVoidType | None, self.ty_ref.resolved_ty)
+    def ty_or_none(self) -> NonVoidType | None:
+        return cast(NonVoidType | None, self.ty_ref.resolved_ty_or_none)
 
     @property
     def ty(self) -> NonVoidType:
-        res = self.ty_resolved
-        assert res, "Type resolve failed"
-        return res
+        return cast(NonVoidType, self.ty_ref.resolved_ty)
 
     def resolve_ty(self, ty: NonVoidType | None):
-        assert not self.ty_ref.is_resolved, "Type reference is already resolved"
-        self.ty_ref.is_resolved = True
-        self.ty_ref.resolved_ty = ty
+        self.ty_ref.resolve(ty)
 
     @override
     def accept(self, v: "ParamVisitor[_R]") -> _R:
@@ -401,20 +402,15 @@ class CallbackTypeRefDecl(ExplicitTypeRefDecl):
         return self._param_dict.values()
 
     @property
-    def return_ty_resolved(self) -> Type | None:
-        assert self.return_ty_ref.is_resolved, "Type is not resolved yet"
-        return cast(Type | None, self.return_ty_ref.resolved_ty)  # type: ignore
+    def return_ty_or_none(self) -> Type | None:
+        return cast(Type | None, self.return_ty_ref.resolved_ty_or_none)  # type: ignore
 
     @property
     def return_ty(self) -> Type:
-        res = self.return_ty_resolved
-        assert res, "Type resolve failed"
-        return res
+        return cast(Type, self.return_ty_ref.resolved_ty)  # type: ignore
 
     def resolve_return_ty(self, return_ty: Type | None):
-        assert not self.return_ty_ref.is_resolved, "Type reference is already resolved"
-        self.return_ty_ref.is_resolved = True
-        self.return_ty_ref.resolved_ty = return_ty
+        self.return_ty_ref.resolve(return_ty)
 
     def add_param(self, p: ParamDecl):
         if (prev := self._param_dict.setdefault(p.name, p)) != p:
@@ -437,7 +433,7 @@ class PackageRefDecl(DeclWithParent[Decl]):
     is_resolved: bool = False
     """Whether this package reference is resolved."""
 
-    resolved_pkg: "PackageDecl | None" = None
+    resolved_pkg_or_none: "PackageDecl | None" = None
     """The resolved package, if any.
 
     This field is `None` either if the package is not resolved yet or invalid.
@@ -469,7 +465,7 @@ class DeclarationRefDecl(DeclWithParent[Decl]):
     is_resolved: bool = False
     """Whether this declaration reference is resolved."""
 
-    resolved_decl: "PackageLevelDecl | None" = None
+    resolved_decl_or_none: "PackageLevelDecl | None" = None
     """The resolved declaration, if any.
 
     This field is `None` either if the declaration is not resolved yet or invalid.
@@ -649,20 +645,15 @@ class UnionFieldDecl(NamedDeclWithParent["UnionDecl"]):
         return self._node_parent
 
     @property
-    def ty_resolved(self) -> Type | None:
-        assert self.ty_ref.is_resolved, "Type reference is not resolved yet"
-        return cast(Type | None, self.ty_ref.resolved_ty)  # type: ignore
+    def ty_or_none(self) -> Type | None:
+        return cast(Type | None, self.ty_ref.resolved_ty_or_none)  # type: ignore
 
     @property
     def ty(self) -> Type:
-        res = self.ty_resolved
-        assert res, "Type resolve failed"
-        return res
+        return cast(Type, self.ty_ref.resolved_ty)  # type: ignore
 
     def resolve_ty(self, ty: Type | None):
-        assert not self.ty_ref.is_resolved, "Type reference is already resolved"
-        self.ty_ref.is_resolved = True
-        self.ty_ref.resolved_ty = ty
+        self.ty_ref.resolve(ty)
 
     @override
     def accept(self, v: "UnionFieldVisitor[_R]") -> _R:
@@ -693,20 +684,15 @@ class StructFieldDecl(NamedDeclWithParent["StructDecl"]):
         return self._node_parent
 
     @property
-    def ty_resolved(self) -> NonVoidType | None:
-        assert self.ty_ref.is_resolved, "Type reference is not resolved yet"
-        return cast(NonVoidType | None, self.ty_ref.resolved_ty)
+    def ty_or_none(self) -> NonVoidType | None:
+        return cast(NonVoidType | None, self.ty_ref.resolved_ty_or_none)
 
     @property
     def ty(self) -> NonVoidType:
-        res = self.ty_resolved
-        assert res, "Type resolve failed"
-        return res
+        return cast(NonVoidType, self.ty_ref.resolved_ty)
 
     def resolve_ty(self, ty: NonVoidType | None):
-        assert not self.ty_ref.is_resolved, "Type reference is already resolved"
-        self.ty_ref.is_resolved = True
-        self.ty_ref.resolved_ty = ty
+        self.ty_ref.resolve(ty)
 
     @override
     def accept(self, v: "StructFieldVisitor[_R]") -> _R:
@@ -736,20 +722,15 @@ class IfaceExtendDecl(DeclWithParent["IfaceDecl"]):
         return self._node_parent
 
     @property
-    def ty_resolved(self) -> IfaceType | None:
-        assert self.ty_ref.is_resolved, "Type reference is not resolved yet"
-        return cast(IfaceType | None, self.ty_ref.resolved_ty)
+    def ty_or_none(self) -> IfaceType | None:
+        return cast(IfaceType | None, self.ty_ref.resolved_ty_or_none)
 
     @property
     def ty(self) -> IfaceType:
-        res = self.ty_resolved
-        assert res, "Type resolve failed"
-        return res
+        return cast(IfaceType, self.ty_ref.resolved_ty)
 
     def resolve_ty(self, ty: IfaceType | None):
-        assert not self.ty_ref.is_resolved, "Type reference is already resolved"
-        self.ty_ref.is_resolved = True
-        self.ty_ref.resolved_ty = ty
+        self.ty_ref.resolve(ty)
 
     @override
     def accept(self, v: "IfaceExtendVisitor[_R]") -> _R:
@@ -786,20 +767,15 @@ class IfaceMethodDecl(NamedDeclWithParent["IfaceDecl"]):
         return self._param_dict.values()
 
     @property
-    def return_ty_resolved(self) -> Type | None:
-        assert self.return_ty_ref.is_resolved, "Type reference is not resolved yet"
-        return cast(Type | None, self.return_ty_ref.resolved_ty)  # type: ignore
+    def return_ty_or_none(self) -> Type | None:
+        return cast(Type | None, self.return_ty_ref.resolved_ty_or_none)  # type: ignore
 
     @property
     def return_ty(self) -> Type:
-        res = self.return_ty_resolved
-        assert res, "Type resolve failed"
-        return res
+        return cast(Type, self.return_ty_ref.resolved_ty)  # type: ignore
 
     def resolve_return_ty(self, return_ty: Type | None):
-        assert not self.return_ty_ref.is_resolved, "Type reference is already resolved"
-        self.return_ty_ref.is_resolved = True
-        self.return_ty_ref.resolved_ty = return_ty
+        self.return_ty_ref.resolve(return_ty)
 
     def add_param(self, p: ParamDecl):
         if (prev := self._param_dict.setdefault(p.name, p)) != p:
@@ -850,20 +826,15 @@ class GlobFuncDecl(PackageLevelDecl):
         return self._param_dict.values()
 
     @property
-    def return_ty_resolved(self) -> Type | None:
-        assert self.return_ty_ref.is_resolved, "Type is not resolved yet"
-        return cast(Type | None, self.return_ty_ref.resolved_ty)  # type: ignore
+    def return_ty_or_none(self) -> Type | None:
+        return cast(Type | None, self.return_ty_ref.resolved_ty_or_none)  # type: ignore
 
     @property
     def return_ty(self) -> Type:
-        res = self.return_ty_resolved
-        assert res, "Type resolve failed"
-        return res
+        return cast(Type, self.return_ty_ref.resolved_ty)  # type: ignore
 
     def resolve_return_ty(self, return_ty: Type | None):
-        assert not self.return_ty_ref.is_resolved, "Type reference is already resolved"
-        self.return_ty_ref.is_resolved = True
-        self.return_ty_ref.resolved_ty = return_ty
+        self.return_ty_ref.resolve(return_ty)
 
     def add_param(self, p: ParamDecl):
         if (prev := self._param_dict.setdefault(p.name, p)) != p:
@@ -918,20 +889,15 @@ class EnumDecl(TypeDecl):
         return self._item_dict.values()
 
     @property
-    def ty_resolved(self) -> ScalarType | StringType | None:
-        assert self.ty_ref.is_resolved, "Type reference is not resolved yet"
-        return cast(ScalarType | StringType | None, self.ty_ref.resolved_ty)
+    def ty_or_none(self) -> ScalarType | StringType | None:
+        return cast(ScalarType | StringType | None, self.ty_ref.resolved_ty_or_none)
 
     @property
     def ty(self) -> ScalarType | StringType:
-        res = self.ty_resolved
-        assert res, "Type resolve failed"
-        return res
+        return cast(ScalarType | StringType, self.ty_ref.resolved_ty)
 
     def resolve_ty(self, ty: ScalarType | StringType | None):
-        assert not self.ty_ref.is_resolved, "Type reference is already resolved"
-        self.ty_ref.is_resolved = True
-        self.ty_ref.resolved_ty = ty
+        self.ty_ref.resolve(ty)
 
     def add_item(self, i: EnumItemDecl):
         if (prev := self._item_dict.setdefault(i.name, i)) != i:

@@ -75,11 +75,11 @@ class PrettyFormatter(ExplicitTypeRefVisitor[str]):
         type_ref_repr = d.accept(self)
         if not d.is_resolved or not self.show_resolved:
             return type_ref_repr
-        if d.resolved_ty is None:
-            real_ty = "<ERROR>"
+        if (ty := d.resolved_ty_or_none) is None:
+            ty_sig = "<ERROR>"
         else:
-            real_ty = d.resolved_ty.signature
-        comment = self.as_comment(f"/* {real_ty} */")
+            ty_sig = ty.signature
+        comment = self.as_comment(f"/* {ty_sig} */")
         return f"{type_ref_repr} {comment}"
 
     @override
@@ -105,22 +105,22 @@ class PrettyFormatter(ExplicitTypeRefVisitor[str]):
         package_ref_repr = d.symbol
         if not d.is_resolved or not self.show_resolved:
             return package_ref_repr
-        if d.resolved_pkg is None:
-            real_pkg = "<ERROR>"
+        if (pkg := d.resolved_pkg_or_none) is None:
+            pkg_desc = "<ERROR>"
         else:
-            real_pkg = d.resolved_pkg.description
-        comment = self.as_comment(f"/* {real_pkg} */")
+            pkg_desc = pkg.description
+        comment = self.as_comment(f"/* {pkg_desc} */")
         return f"{package_ref_repr} {comment}"
 
     def get_declaration_ref(self, d: "DeclarationRefDecl") -> str:
         decl_ref_repr = d.symbol
         if not d.is_resolved or not self.show_resolved:
             return decl_ref_repr
-        if d.resolved_decl is None:
-            real_decl = "<ERROR>"
+        if (decl := d.resolved_decl_or_none) is None:
+            desc_desc = "<ERROR>"
         else:
-            real_decl = d.resolved_decl.description
-        comment = self.as_comment(f"/* {real_decl} */")
+            desc_desc = decl.description
+        comment = self.as_comment(f"/* {desc_desc} */")
         return f"{decl_ref_repr} {comment}"
 
     def get_generic_arg_decl(self, d: "GenericArgDecl") -> str:

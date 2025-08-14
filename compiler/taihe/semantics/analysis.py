@@ -21,6 +21,7 @@ from taihe.semantics.declarations import (
     LongTypeRefDecl,
     PackageDecl,
     PackageGroup,
+    PackageLevelDecl,
     PackageRefDecl,
     ParamDecl,
     ShortTypeRefDecl,
@@ -129,46 +130,43 @@ class _ResolveImportsPass(RecursiveDeclVisitor):
 
     @override
     def visit_package_ref(self, d: PackageRefDecl) -> None:
+        super().visit_package_ref(d)
         if d.is_resolved:
             return
         d.is_resolved = True
-
-        super().visit_package_ref(d)
-
-        pkg = self.curr_pg.lookup(d.symbol)
-
-        if pkg is not None:
-            d.resolved_pkg = pkg
-            return
-
-        self.dm.emit(PackageNotExistError(d.symbol, loc=d.loc))
-        d.resolved_pkg = None
-        return
+        d.resolved_pkg_or_none = self.resolve_package_ref(d)
 
     @override
     def visit_declaration_ref(self, d: DeclarationRefDecl) -> None:
+        super().visit_declaration_ref(d)
         if d.is_resolved:
             return
         d.is_resolved = True
+        d.resolved_decl_or_none = self.resolve_declaration_ref(d)
 
-        super().visit_declaration_ref(d)
+    def resolve_package_ref(self, d: PackageRefDecl) -> PackageDecl | None:
+        pkg = self.curr_pg.lookup(d.symbol)
 
-        pkg = d.pkg_ref.resolved_pkg
+        if pkg is not None:
+            return pkg
+
+        self.dm.emit(PackageNotExistError(d.symbol, loc=d.loc))
+        return None
+
+    def resolve_declaration_ref(self, d: DeclarationRefDecl) -> PackageLevelDecl | None:
+        pkg = d.pkg_ref.resolved_pkg_or_none
 
         if pkg is not None:
             decl = pkg.lookup(d.symbol)
 
             if decl is not None:
-                d.resolved_decl = decl
-                return
+                return decl
 
             self.dm.emit(DeclNotExistError(d.symbol, loc=d.loc))
-            d.resolved_decl = None
-            return
+            return None
 
         # No need to repeatedly throw exceptions
-        d.resolved_decl = None
-        return
+        return None
 
 
 class _ExplicitTypeRefResolver(ExplicitTypeRefVisitor[Type | None]):
@@ -188,7 +186,7 @@ class _ExplicitTypeRefResolver(ExplicitTypeRefVisitor[Type | None]):
         pkg_import = self.curr_pkg.lookup_pkg_import(d.pkname)
 
         if pkg_import is not None:
-            pkg = pkg_import.pkg_ref.resolved_pkg
+            pkg = pkg_import.pkg_ref.resolved_pkg_or_none
 
             if pkg is not None:
                 decl = pkg.lookup(d.symbol)
@@ -231,7 +229,7 @@ class _ExplicitTypeRefResolver(ExplicitTypeRefVisitor[Type | None]):
         decl_import = self.curr_pkg.lookup_decl_import(d.symbol)
 
         if decl_import is not None:
-            decl = decl_import.decl_ref.resolved_decl
+            decl = decl_import.decl_ref.resolved_decl_or_none
 
             if decl is not None:
                 if isinstance(decl, TypeDecl):
@@ -254,7 +252,7 @@ class _ExplicitTypeRefResolver(ExplicitTypeRefVisitor[Type | None]):
         if builtin_generic is not None:
             args: list[GenericArgDecl] = []
             for arg in d.args:
-                if arg.ty_resolved is None:
+                if arg.ty_or_none is None:
                     return None
                 args.append(arg)
 
@@ -266,9 +264,9 @@ class _ExplicitTypeRefResolver(ExplicitTypeRefVisitor[Type | None]):
     @override
     def visit_callback_type_ref(self, d: CallbackTypeRefDecl) -> Type | None:
         for param in d.params:
-            if param.ty_resolved is None:
+            if param.ty_or_none is None:
                 return None
-        if d.return_ty_resolved is None:
+        if d.return_ty_or_none is None:
             return None
         return CallbackType(d)
 
@@ -403,7 +401,7 @@ class _CheckEnumTypePass(RecursiveDeclVisitor):
 
     @override
     def visit_enum_decl(self, d: EnumDecl) -> None:
-        match d.ty_resolved:
+        match d.ty_or_none:
             case None:
                 pass
 
@@ -423,7 +421,7 @@ class _CheckEnumTypePass(RecursiveDeclVisitor):
                         return 0
                     return succ if (succ := pred + 1) < max else min
 
-                match d.ty_resolved.kind:
+                match d.ty_or_none.kind:
                     case ScalarKind.I8:
                         succ = lambda pred: succ_int(pred, -(2**7), 2**7)
                         check = lambda val: check_int(val, -(2**7), 2**7)
@@ -559,7 +557,7 @@ class _CheckRecursiveInclusionPass(RecursiveDeclVisitor):
         extend_iface_list = self.type_table.setdefault(d, [])
         extend_iface_dict: dict[IfaceDecl, IfaceExtendDecl] = {}
         for extend in d.extends:
-            if (extend_ty := extend.ty_resolved) is None:
+            if (extend_ty := extend.ty_or_none) is None:
                 continue
             extend_iface = extend_ty.decl
             extend_iface_list.append(((d, extend.ty_ref), extend_iface))
@@ -571,14 +569,14 @@ class _CheckRecursiveInclusionPass(RecursiveDeclVisitor):
     def visit_struct_decl(self, d: StructDecl) -> None:
         type_list = self.type_table.setdefault(d, [])
         for f in d.fields:
-            if isinstance(ty := f.ty_resolved, UserType):
+            if isinstance(ty := f.ty_or_none, UserType):
                 type_list.append(((d, f.ty_ref), ty.decl))
 
     @override
     def visit_union_decl(self, d: UnionDecl) -> None:
         type_list = self.type_table.setdefault(d, [])
         for i in d.fields:
-            if isinstance(ty := i.ty_resolved, UserType):
+            if isinstance(ty := i.ty_or_none, UserType):
                 type_list.append(((d, i.ty_ref), ty.decl))
 
 
