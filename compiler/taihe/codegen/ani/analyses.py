@@ -389,7 +389,7 @@ class ArkTsModuleOrNamespace(ABC):
         return ".".join(self.name_parts)
 
     @abstractmethod
-    def get_member(self, target: StsWriter, name: str, is_default: bool) -> str:
+    def get_member(self, name: str, is_default: bool, target: StsWriter) -> str:
         pass
 
     def add_path(
@@ -426,7 +426,7 @@ class ArkTsModule(ArkTsModuleOrNamespace):
     def mod(self) -> "ArkTsModule":
         return self
 
-    def get_member(self, target: StsWriter, name: str, is_default: bool) -> str:
+    def get_member(self, name: str, is_default: bool, target: StsWriter) -> str:
         filtered_name = "".join(c if c.isalnum() else "_" for c in self.mod_name)
         if is_default:
             decl_name = f"_taihe_{filtered_name}_default"
@@ -452,8 +452,8 @@ class ArkTsNamespace(ArkTsModuleOrNamespace):
     def mod(self) -> "ArkTsModule":
         return self.parent.mod
 
-    def get_member(self, target: StsWriter, name: str, is_default: bool) -> str:
-        return f"{self.parent.get_member(target, self.ns_name, self.is_default)}.{name}"
+    def get_member(self, name: str, is_default: bool, target: StsWriter) -> str:
+        return f"{self.parent.get_member(self.ns_name, self.is_default, target)}.{name}"
 
 
 # ANI Analyses
@@ -788,7 +788,7 @@ class EnumAniInfo(AbstractAnalysis[EnumDecl]):
         return EnumAniInfo(am, d)
 
     def sts_type_in(self, target: StsWriter):
-        return self.parent_ns.get_member(target, self.sts_type_name, self.is_default)
+        return self.parent_ns.get_member(self.sts_type_name, self.is_default, target)
 
 
 class UnionAniInfo(AbstractAnalysis[UnionDecl]):
@@ -823,7 +823,7 @@ class UnionAniInfo(AbstractAnalysis[UnionDecl]):
         return UnionAniInfo(am, d)
 
     def sts_type_in(self, target: StsWriter):
-        return self.parent_ns.get_member(target, self.sts_type_name, self.is_default)
+        return self.parent_ns.get_member(self.sts_type_name, self.is_default, target)
 
 
 class StructAniInfo(AbstractAnalysis[StructDecl]):
@@ -876,7 +876,7 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
         return self.sts_type_name == self.sts_impl_name
 
     def sts_type_in(self, target: StsWriter):
-        return self.parent_ns.get_member(target, self.sts_type_name, self.is_default)
+        return self.parent_ns.get_member(self.sts_type_name, self.is_default, target)
 
 
 class IfaceAniInfo(AbstractAnalysis[IfaceDecl]):
@@ -920,7 +920,7 @@ class IfaceAniInfo(AbstractAnalysis[IfaceDecl]):
         return self.sts_type_name == self.sts_impl_name
 
     def sts_type_in(self, target: StsWriter):
-        return self.parent_ns.get_member(target, self.sts_type_name, self.is_default)
+        return self.parent_ns.get_member(self.sts_type_name, self.is_default, target)
 
 
 class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
