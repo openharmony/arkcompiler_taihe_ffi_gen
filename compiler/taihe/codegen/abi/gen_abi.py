@@ -159,7 +159,6 @@ class AbiHeadersGenerator:
         ) as union_abi_decl_target:
             union_abi_decl_target.add_include("taihe/common.h")
             union_abi_decl_target.writelns(
-                f"union {union_abi_info.union_name};",
                 f"struct {union_abi_info.mangled_name};",
             )
 
