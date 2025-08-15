@@ -1,0 +1,1211 @@
+# Taihe Napi 用户文档
+
+本文档旨在帮助用户了解如何使用 Taihe 生成 napi 桥接代码。注意，使用工具需要用户对[Taihe IDL 语言规范](./IdlReference.md)，[Taihe C++ 数据结构用法](./CppUsageGuide.md)有基础的了解。
+
+## Taihe 工具使用流程
+
+1. **准备工具**
+
+   - 获取解压后的 Taihe 工具包
+   - 存放路径可自定义（无特殊限制）
+
+2. **编写 Taihe 文件**
+
+   - **命名规则**：
+     ```plaintext
+     [a-zA-Z_][a-zA-Z0-9_.]*.taihe
+     ```
+     - 正确示例：`member_test.taihe`
+     - 含特殊字符时需使用注解：
+       ```rust
+       @!namespace("@my.module")
+       ```
+   - 文件存放目录无限制
+   - 内容规范详见后续章节
+
+3. **生成桥接代码**
+   执行生成命令（参数说明）：
+
+   ```bash
+   taihec <输入.taihe文件> -O <输出目录> -G napi-bridge cpp-author -B cmake
+   ```
+
+   - **生成内容**：
+     - NAPI 桥接代码（C++）
+     - `.d.ts` 声明文件（默认同原名，含 `@!namespace` 时按注解命名）
+
+   **实际用例**：
+
+   ```bash
+   ./taihe/bin/taihec .memberTest/entry/src/main/idl/member_test.taihe \
+     -O .memberTest/entry/src/main/generated/ \
+     -G napi-bridge cpp-author -B cmake
+   ```
+
+   **生成目录结构**：
+
+   ```tree
+   base_dir/
+   └── memberTest/
+       └── entry/
+           └── src/
+               └── main/
+                   ├── generated/
+                   │   ├── include/  # 头文件
+                   │   ├── src/       # 实现代码
+                   │   └── temp/      # 临时文件
+                   └── idl/
+                       └── member_test.taihe  # 源文件
+   ```
+
+4. **书写 .cpp 文件**
+   运行 taihec 命令会在 `memberTest/entry/src/main/generated/temp` 目录下生成 cpp 实现文件模板 `membertest_test.impl.cpp`，需要用户将其拷贝到存放实现文件的目录中并手动填写实现逻辑
+
+5. **将生成文件加入编译流程**
+   以 IDE 中内置的 CMakeLists.txt 文件为基础，需要进行以下修改：
+
+   - Taihe 生成代码需使用 clang17 编译，需要在 CMakeLists.txt 文件中新增以下内容
+     ```CMakeLists.txt
+     set(CMAKE_CXX_STANDARD 17)
+     set(CMAKE_CXX_STANDARD_REQUIRED True)
+     ```
+   - .cpp 实现文件和 Taihe 的 runtime 文件都需要加入编译，所以编译部分应修改为
+
+     ```CMakeLists.txt
+     add_library(entry SHARED
+     membertest_test.impl.cpp
+     ../generated/temp/napi_register.cpp
+     ../generated/src/member_test.napi.cpp
+     //base_dir/taihe/src/taihe/runtime/object.cpp
+     //base_dir/taihe/src/taihe/runtime/string.cpp
+     )
+
+     target_include_directories(entry
+     PUBLIC
+     //base_dir/taihe/include
+     ../generated/include
+     )
+     ```
+
+可以使用命令获取 `object.cpp` 和 `string.cpp` 文件的所在目录的绝对路径
+
+```bash
+taihec --print-runtime-source-path
+```
+
+可以使用命令获取 `taihe/include` 文件夹的绝对路径
+
+```bash
+taihec --print-runtime-header-path
+```
+
+## 数据类型映射表
+
+Taihe 支持的基本数据类型包括数字、布尔值和[字符串](./CppUsageGuide.md#61-字符串string)等，以及更复杂的数据结构，如 [Map](./CppUsageGuide.md#65-映射map)、[Array](./CppUsageGuide.md#62-数组array)、[Optional](./CppUsageGuide.md#63-可选类型optional)、[callback](./CppUsageGuide.md#67-函数闭包callback) 等，各种数据类型在 ArkTs 1.1、C++、Taihe 之间的具体的映射关系详见下表。
+
+| ArkTs 1.1                | C++                                | Taihe                    |
+| ------------------------ | ---------------------------------- | ------------------------ |
+| number                   | int8_t                             | i8                       |
+| number                   | int16_t                            | i16                      |
+| number                   | int32_t                            | i32                      |
+| number                   | int64_t                            | i64                      |
+| number                   | uint8_t                            | u8                       |
+| number                   | uint16_t                           | u16                      |
+| number                   | uint32_t                           | u32                      |
+| number                   | uint64_t                           | u64                      |
+| number                   | float                              | f32                      |
+| number                   | double                             | f64                      |
+| boolean                  | bool                               | bool                     |
+| string                   | ::taihe::string                    | String                   |
+| ?T                       | ::taihe::optional\<T\>             | Optional\<T\>            |
+| Map<K, V>                | ::taihe::map\<K, V\>               | Map\<K, V\>              |
+| Record<K, V>             | ::taihe::map\<K, V\>               | @record Map\<K, V\>      |
+| Array\<T\>               | ::taihe::array\<T\>                | Array\<T\>               |
+| bigint                   | ::taihe::array\<u64\>              | @bigint Array\<u64\>     |
+| ArrayBuffer              | ::taihe::array\<u8\>               | @arraybuffer Array\<u8\> |
+| Uint8Array               | ::taihe::array\<u8\>               | @typedarray Array\<u8\>  |
+| Int8Array                | ::taihe::array\<i8\>               | @typedarray Array\<i8\>  |
+| Uint16Array              | ::taihe::array\<u16\>              | @typedarray Array\<u16\> |
+| Int16Array               | ::taihe::array\<i16\>              | @typedarray Array\<i16\> |
+| Uint32Array              | ::taihe::array\<u32\>              | @typedarray Array\<u32\> |
+| Int32Array               | ::taihe::array\<i32\>              | @typedarray Array\<i32\> |
+| Float32Array             | ::taihe::array\<f32\>              | @typedarray Array\<f32\> |
+| Float64Array             | ::taihe::array\<f64\>              | @typedarray Array\<f64\> |
+| BigUint64Array           | ::taihe::array\<u64\>              | @typedarray Array\<u64\> |
+| BigInt64Array            | ::taihe::array\<i64\>              | @typedarray Array\<i64\> |
+| Object                   | uintptr_t                          | Opaque                   |
+| (a: T1, b: T2, ...) => R | ::taihe::callback<R(a: T1, b: T2)> | (a: T1, b: T2) => R      |
+
+表格展示了不同编程语言（ArkTs 1.1、C++ 和 Taihe）中数据类型的对应关系。其中使用的 T、K 和 V 代表任意类型，可以在类型系统中进行灵活的定义和组合。
+
+注意，ArkTs 1.1 的 Map 和 Record 在 Taihe 中本质上都是 Map，所以在 C++ 实现时可以参考 Taihe [Map](./CppUsageGuide.md#65-映射map) 的用法， ArkTs 1.1 的 Array，bigint，arraybuffer 和 typedarray 在 Taihe 中本质上都是 Array，所以在 C++ 实现时可以参考 Taihe [Array](./CppUsageGuide.md#62-数组array) 的用法。
+
+# 包
+
+在 Taihe 原生的语言能力中，只有“[包](./IdlReference.md#包)”的概念，包名和 Taihe IDL 文件名一一对应。以 `foo.bar.baz.taihe` 为例，对应的 C++ 命名空间为 `::foo::bar::baz`，对应的声明文件为 `foo.bar.baz.d.ts`。
+
+在 Taihe 中，使用 `use` 语法来导入外部声明，可以导入的声明类型包括[枚举](#枚举)，[标签联合](#标签联合)，[结构体](#结构体)，[接口](#接口)。Taihe 有两种导入方式：
+
+1. `from ModuleA use DeclFoo;`
+
+2. `use ModuleA;`
+
+其中，ModuleA 为 Taihe 文件名，DeclFoo 为声明。
+
+为了避免重名导致无法分辨由哪个模块导入的情况，可以使用 `as` 语法：
+
+1. `use A as C;`
+
+2. `from A use B as C;`
+
+## 使用示例
+
+### Taihe 声明
+
+**`people.taihe`**
+
+```rust
+struct student {
+    name: String;
+    age: i32;
+}
+function make_student(): student;
+```
+
+**`building.taihe`**
+
+```rust
+from people use student;
+struct group {
+    member: student;
+    number: i32;
+}
+function make_group(): group;
+```
+
+### C++ 实现
+
+**File: `people.taihe 的 C++ 实现`**
+
+```cpp
+::people::student make_student() {
+  return ::people::student{"mike", 22};
+}
+```
+
+**File: `building.taihe 的 C++ 实现`**
+
+```cpp
+::building::group make_group() {
+  return ::building::group{::people::student{"mary", 20}, 23};
+}
+```
+
+### ArkTs 1.1 调用
+
+```typescript
+import * as lib_people from "people";
+import * as lib_building from "building";
+
+let g = lib_building.make_group();
+console.log(g.member.age, g.member.name, g.number);
+let p = lib_people.make_student();
+console.log(p.age, p.name);
+```
+
+输出结果如下：
+
+```sh
+20 mary 23
+22 mike
+```
+
+# 命名空间
+
+在 Taihe 中，使用注解 `@!namespace` 可以为生成的 .d.ts 代码添加一个命名空间。
+
+命名空间注解的语法为 `@!namespace(<mudule_name>, <namespace_name>)`, 表示该文件下面的内容为 `<module_name>` 模块下，`<namespace_name>` 命名空间中的内容。该注解作用于 Taihe 文件。
+
+推荐使用 Taihe 文件的命名为 <module_name>.<namespace_name>.taihe。
+
+特殊用法：
+
+可以使用 `@!namespace(<mudule_name>)`，使得生成的 .d.ts 文件的文件名更改为 `<module_name>.d.ts`。
+
+## 使用示例
+
+### Taihe 声明
+
+**`my_module_a.taihe`**
+
+```rust
+function baz(): void;
+```
+
+**`my_module_a.ns1.taihe`**
+
+```rust
+@!namespace("my_module_a", "ns1")
+function noo(): void;
+```
+
+**`my_module_a.ns1.ns2.ns3.ns4.ns5.taihe`**
+
+```rust
+@!namespace("my_module_a", "ns1.ns2.ns3.ns4.ns5")
+function foo(): void;
+```
+
+**生成`my_module_a.d.ts`**
+
+```typescript
+export function baz(): void;
+export namespace ns1 {
+  export function noo(): void;
+  export namespace ns2 {
+    export namespace ns3 {
+      export namespace ns4 {
+        export namespace ns5 {
+          export function foo(): void;
+        }
+      }
+    }
+  }
+}
+```
+
+可以看到 `my_module_a.taihe`，`my_module_a.ns1.taihe` 和 `my_module_a.ns1.ns2.ns3.ns4.ns5.taihe` 的相应内容都生成在 `my_module_a.d.ts` 里
+
+假如只需要一个 <module_name>.<namespace_name>.taihe 的文件，无需额外写一个空内容的 <module_name>.taihe
+
+**`my_module_b.functiontest.taihe`**
+
+```rust
+@!namespace("my_module_b", "functiontest")
+function bar(): void;
+```
+
+**生成`my_module_b.d.ts`**
+
+```typescript
+export namespace functiontest {
+  export function bar(): void;
+}
+```
+
+### C++ 实现
+
+**File: `my_module_a.taihe 的 C++ 实现`**
+
+```cpp
+void baz() {
+  std::cout << "namespace: my_module_a, func: baz" << std::endl;
+}
+```
+
+**File: `my_module_a.ns1.taihe 的 C++ 实现`**
+
+```cpp
+void noo() {
+  std::cout << "namespace: my_module_a.ns1, func: noo" << std::endl;
+}
+```
+
+**File: `my_module_a.ns1.ns2.ns3.ns4.ns5.taihe 的 C++ 实现`**
+
+```cpp
+void foo() {
+  std::cout << "namespace: my_module_a.ns1.ns2.ns3.ns4.ns5, func: noo" << std::endl;
+}
+```
+
+**File: `my_module_b.functiontest.taihe 的 C++ 实现`**
+
+```cpp
+void bar() {
+  std::cout << "namespace: my_module_b.functiontest, func: bar" << std::endl;
+}
+```
+
+### ArkTs 1.1 调用
+
+```typescript
+import * as lib_a from "my_module_a";
+import * as lib_b from "my_module_b";
+
+lib_a.baz();
+lib_a.ns1.noo();
+lib_a.ns1.ns2.ns3.ns4.ns5.foo();
+lib_b.functiontest.bar();
+```
+
+输出结果如下：
+
+```sh
+namespace: my_module_a, func: baz
+namespace: my_module_a.ns1, func: noo
+namespace: my_module_a.ns1.ns2.ns3.ns4.ns5, func: noo
+namespace: my_module_b.functiontest, func: bar
+```
+
+# 全局函数
+
+下面的代码将展示如何书写 Taihe 文件，生成一个全局函数的 napi 桥接代码及对应的 .d.ts 声明。Taihe 中的[全局函数](./IdlReference.md#函数)参数和返回值可以是任意类型，注意，在使用 Taihe 工具进行 napi 桥接代码生成时不支持以 `callback` 类型做为函数返回值。
+
+## 使用示例
+
+### Taihe 声明
+
+```rust
+function add(a: i32, b: i32): i32;
+```
+
+**生成`.d.ts`**
+
+```typescript
+export function add(a: number, b: number): number;
+```
+
+### C++ 实现
+
+除了书写 Taihe 文件外，还需要[在 C++ 侧实现函数](./CppUsageGuide.md#71-导出函数接口发布方)
+
+```cpp
+int32_t add(int32_t a, int32_t b) {
+  return a + b;
+}
+TH_EXPORT_CPP_API_add(add);
+```
+
+### ArkTs 1.1 调用
+
+```typescript
+let add_show = add(2, 3);
+console.log("function add: ", add_show);
+```
+
+输出结果如下：
+
+```sh
+function add:  5
+```
+
+# 枚举
+
+进行枚举类型相关开发时，可以使用 enum，使用常量表示有限的状态。进行常量相关开发时，可以在 enum 上使用 @const 注解。
+
+## 使用示例
+
+### Taihe 声明
+
+```rust
+enum Color: String {
+    RED = "Red",
+    GREEN = "Green",
+    BLUE = "Blue",
+}
+@const
+enum FlagsF32: i32 {
+    FLAG_F32_A = 1,
+    FLAG_F32_B = 1 + 2,
+}
+function nextEnum(color: Color): Color;
+```
+
+**生成`.d.ts`**
+
+```typescript
+export enum Color {
+  RED = "Red",
+  GREEN = "Green",
+  BLUE = "Blue",
+}
+export declare const FLAG_F32_A = 1;
+export declare const FLAG_F32_B = 3;
+export function nextEnum(color: Color): Color;
+```
+
+### C++ 实现
+
+Taihe 中 enum 类型的 C++ 使用方法可参考[枚举类](./CppUsageGuide.md#2-枚举类)
+
+```cpp
+::enum_test::Color nextEnum(::enum_test::Color color) {
+  return (::enum_test::Color::key_t)(((int)color.get_key() + 1) % COLOR_COUNT);
+}
+```
+
+### ArkTs 1.1 调用
+
+```typescript
+let color = lib.Color.GREEN;
+let nextColor = lib.nextEnum(color);
+console.log("nextColor:", nextColor);
+console.log("const value:", lib.FLAG_F32_A, lib.FLAG_F32_B);
+```
+
+输出结果如下：
+
+```sh
+nextColor: Blue
+const value: 1 3
+```
+
+# 标签联合
+
+需要在同一内存位置存放不同类型的数据时，可以使用 [union](./IdlReference.md#标签联合)。注意，在使用 Taihe 工具进行 napi 桥接代码生成时，只支持 union 联合基础类型、string、Array、Map、undefined、null 和 Object，当存在 Object 类型时，必须设为 union 的最后一个元素。在进行 undefined 和 null 相关开发时，需要在一个 union 内的变量名前增加注解 @null、@undefined 来声明 null 类型与 undefined 类型。
+
+## 使用示例
+
+### Taihe 声明
+
+```rust
+union union_primitive {
+  sValue: String;
+  numberValue: f64;
+  bValue: bool;
+  aValue: Array<i32>;
+  mValue: Map<i32, String>;
+  @undefined uValue;
+  @null nValue;
+}
+
+function printUnion(data: union_primitive): String;
+function makeUnion(kind: String): union_primitive;
+```
+
+**生成`.d.ts`**
+
+```typescript
+export function printUnion(data: union_primitive): string;
+export function makeUnion(kind: string): union_primitive;
+export type union_primitive =
+  | string
+  | number
+  | boolean
+  | Array<number>
+  | Map<number, string>
+  | undefined
+  | null;
+```
+
+### C++ 实现
+
+Taihe 中 union 类型的 C++ 使用方法可参考[联合体](./CppUsageGuide.md#4-联合体)
+
+```cpp
+::taihe::string printUnion(::union_test::union_primitive const &data) {
+  switch (data.get_tag()) {
+  case ::union_test::union_primitive::tag_t::sValue:
+    std::cout << "s: " << data.get_sValue_ref() << std::endl;
+    return "s";
+  case ::union_test::union_primitive::tag_t::numberValue:
+    std::cout << "number: " << (int)data.get_numberValue_ref() << std::endl;
+    return "number";
+  case ::union_test::union_primitive::tag_t::bValue:
+    std::cout << "bool: " << data.get_bValue_ref() << std::endl;
+    return "bool";
+  case ::union_test::union_primitive::tag_t::aValue:
+    std::cout << "array: " << data.get_aValue_ref()[0] << std::endl;
+    return "array";
+  case ::union_test::union_primitive::tag_t::mValue:
+    std::cout << "map: " << std::endl;
+    for (auto const &[key, val] : data.get_mValue_ref()) {
+      std::cout << "C++ Map: key: " << key << " value: " << val << std::endl;
+    }
+    return "map";
+  case ::union_test::union_primitive::tag_t::uValue:
+    return "undefined";
+  case ::union_test::union_primitive::tag_t::nValue:
+    return "null";
+  }
+}
+
+::union_test::union_primitive makeUnion(::taihe::string_view kind) {
+  ::taihe::string s_value = "string";
+  constexpr double f64_value = 1.12345;
+  constexpr bool bool_value = false;
+  ::taihe::array<int32_t> array_value = ::taihe::array<int32_t>{1, 2, 3};
+  ::taihe::map<int32_t, ::taihe::string> map_value;
+  map_value.emplace(1, "a");
+  map_value.emplace(2, "b");
+
+  if (kind == "s") {
+    return ::union_test::union_primitive::make_sValue(s_value);
+  }
+  if (kind == "number") {
+    return ::union_test::union_primitive::make_numberValue(f64_value);
+  }
+  if (kind == "bool") {
+    return ::union_test::union_primitive::make_bValue(bool_value);
+  }
+  if (kind == "array") {
+    return ::union_test::union_primitive::make_aValue(array_value);
+  }
+  if (kind == "map") {
+    return ::union_test::union_primitive::make_mValue(map_value);
+  }
+  if (kind == "undefined") {
+    return ::union_test::union_primitive::make_uValue();
+  }
+  if (kind == "null") {
+    return ::union_test::union_primitive::make_nValue();
+  }
+  return ::union_test::union_primitive::make_uValue();
+}
+```
+
+### ArkTs 1.1 调用
+
+```typescript
+console.log(printUnion(1));
+console.log(makeUnion("s"));
+```
+
+输出结果如下：
+
+```sh
+number: 1
+Test: number
+Test: string
+```
+
+# 结构体
+
+进行纯数据类型的接口相关开发时，可以使用 [struct](./IdlReference.md#结构体)。struct 是数据成员的组合，其成员可以是任意 Taihe 中的数据类型，包括[基础类型](#数据类型映射表)、[枚举类型](#枚举)、[接口类型](#接口)、[标签联合](#标签联合)和其他[结构体类型](#结构体)等。
+
+## 使用示例
+
+### Taihe 声明
+
+**`.taihe`**
+
+```rust
+struct RGB {
+    r: i32;
+    g: i32;
+    b: i32;
+}
+function from_rgb(rgb: RGB): i32;
+```
+
+**生成`.d.ts`**
+
+```typescript
+export interface RGB {
+  r: number;
+  g: number;
+  b: number;
+}
+export function from_rgb(rgb: RGB): number;
+```
+
+如果需要设置 struct 中某个属性为只读属性，可以使用 @readonly 注解。
+**`.taihe`**
+
+```rust
+struct Student {
+    @readonly name: String;
+    age: i32;
+}
+function process_student(a: Student): Student;
+```
+
+**生成`.d.ts`**
+
+```typescript
+export interface Student {
+  readonly name: string;
+  age: number;
+}
+export function process_student(a: Student): Student;
+```
+
+如果需要生成数据类型为 class 而不是 interface 可以使用 @class 注解。在生成代码的 class 中会自动生成一个默认的 constructor 函数。
+**`.taihe`**
+
+```rust
+@class
+struct Teacher {
+    @readonly name: String;
+    age: i32;
+}
+function process_teacher(a: Teacher): Teacher;
+```
+
+**生成`.d.ts`**
+
+```typescript
+export declare class Teacher {
+  readonly name: string;
+  age: number;
+  constructor(name: string, age: number);
+}
+export function process_teacher(a: Teacher): Teacher;
+```
+
+如果存在继承关系，可以使用 @extends 注解。@extends item_name: item_type，此处的 item_name 用于 C++ 侧，在 ArkTs 1.1 侧无作用；item_type 为用户实际希望继承的 struct 声明。注意，Taihe 只支持 struct 继承 struct，@class struct 继承 struct。
+**`.taihe`**
+
+```rust
+struct F {
+    f: i32;
+}
+
+struct G {
+    @extends f: F;
+    g: i32;
+}
+
+@class
+struct H {
+    @extends g: G;
+    h: i32;
+}
+
+function process_g(a: G): G;
+function process_h(a: H): H;
+```
+
+**生成`.d.ts`**
+
+```typescript
+export interface F {
+  f: number;
+}
+export interface G extends i32F {
+  g: number;
+}
+export declare class H implements i32G {
+  f: number;
+  g: number;
+  h: number;
+  constructor(f: number, g: number, h: number);
+}
+export function process_g(a: G): G;
+export function process_h(a: H): H;
+```
+
+### C++ 实现
+
+Taihe 中 struct 类型的 C++ 使用方法可参考[结构体](./CppUsageGuide.md#3-结构体)
+
+```cpp
+int32_t from_rgb(::struct_test::RGB const &rgb) {
+  return rgb.r + rgb.g + rgb.b;
+}
+::struct_test::Student process_student(::struct_test::Student const &a) {
+  return {a.name + " student", a.age + 10};
+}
+::struct_test::Teacher process_teacher(::struct_test::Teacher const &a) {
+  return {a.name + " teacher", a.age + 15};
+}
+::struct_test::G process_g(::struct_test::G const& a) {
+  return {{a.f.f + 1}, a.g + 2};
+}
+::struct_test::H process_h(::struct_test::H const& a) {
+  return {{{a.g.f.f + 1}, a.g.g + 2}, a.h +3};
+}
+```
+
+### ArkTs 1.1 调用
+
+```typescript
+let rgb: lib.RGB = { r: 1, g: 2, b: 3 };
+let my_rgb_i32 = lib.from_rgb(rgb);
+console.log("from ts RGB to i32:", my_rgb_i32);
+
+let student: lib.Student = { name: "Jack", age: 10 };
+let pro_student = lib.process_student(student);
+console.log("process student:", pro_student.name, pro_student.age);
+
+let teacher: lib.Teacher = { name: "Jony", age: 30 };
+let pro_teacher = lib.process_teacher(teacher);
+console.log("process teacher:", pro_teacher.name, pro_teacher.age);
+
+let g = { f: 0, g: 0 };
+let new_g = lib.process_g(g);
+console.log("process g:", new_g.f, new_g.g);
+
+let h = new lib.H(0, 0, 0);
+let new_h = lib.process_h(h);
+console.log("process h:", new_h.f, new_h.g, new_h.h);
+```
+
+输出结果如下：
+
+```sh
+from ts RGB to i32: 6
+process student: Jack student 20
+process teacher: Jony teacher 45
+process g: 1 2
+process h: 1 2 3
+```
+
+# 接口
+
+进行纯方法类型的接口相关开发时，可以使用 [interface](./CppUsageGuide.md#5-接口)。
+
+## 使用示例
+
+### Taihe 声明
+
+**`.taihe`**
+
+```rust
+interface IBase {
+    getId(): String;
+    setId(s: String): void;
+}
+function makeIBase(id: String): IBase;
+function copyIBase(a: IBase, b: IBase): void;
+```
+
+**生成`.d.ts`**
+
+```typescript
+export interface IBase {
+  getId(): string;
+  setId(s: string);
+}
+export function makeIBase(id: string): IBase;
+export function copyIBase(a: IBase, b: IBase): void;
+```
+
+当接口内既包含方法，又包含数据时，可以通过 @get 或 @set 注解来说明将特定方法声明为数据的 getter 或 setter。
+
+**`.taihe`**
+
+```rust
+interface IColor {
+    @get getId(): String;
+    @set setId(s: String): void;
+    calculate(a: i32, b: i32): i32;
+}
+
+function makeIColor(id: String): IColor;
+```
+
+**生成`.d.ts`**
+
+```typescript
+export interface IColor {
+  get Id(): string;
+  set Id(s: string);
+  calculate(a: number, b: number): number;
+}
+export function makeIColor(id: string): IColor;
+```
+
+如果需要生成数据类型为 class 而不是 interface 可以使用 @class 注解。可以使用 @static 注解标记全局函数为某个 class 的静态方法，可以使用 @ctor 注解标记全局函数为某个 class 的构造方法。
+
+**`.taihe`**
+
+```rust
+@class
+interface CTest{
+    add(a: i32, b: i32): f32;
+}
+
+@ctor("CTest")
+function createCTest(id: i32): CTest;
+
+@static("CTest")
+function multiply(a: i32, b: i32): i32;
+
+function changeCTest(a: CTest): CTest;
+```
+
+**生成`.d.ts`**
+
+```typescript
+export declare class CTest {
+  constructor(id: number);
+  static multiply(a: number, b: number): number;
+  add(a: number, b: number): number;
+}
+export function changeCTest(a: CTest): CTest;
+```
+
+Taihe IDL 语法支持 [interface](./IdlReference.md#接口) 单继承和多继承，interface A: B, C {} 表示 interface A 继承了 interface B 和 interface C。注意，Taihe 只支持 interface 继承 interface，@class interface 继承 interface。
+
+**`.taihe`**
+
+```rust
+interface IShape: IBase {
+    calculateArea(): f64;
+}
+
+function makeIShape(id: String, a: f64, b: f64): IShape;
+
+@class
+interface IDerived: IShape {
+    call(): void;
+}
+
+@ctor("IDerived")
+function createIDerived(): IDerived;
+```
+
+**生成`.d.ts`**
+
+```typescript
+export interface IShape extends IBase {
+  calculateArea(): number;
+}
+export declare class IDerived implements IShape {
+  constructor();
+  call();
+  calculateArea(): number;
+  getId(): string;
+  setId(s: string);
+}
+export function makeIShape(id: string, a: number, b: number): IShape;
+```
+
+### C++ 实现
+
+Taihe 中 interface 类型的 C++ 使用方法可参考[接口](./CppUsageGuide.md#5-接口)。
+
+```cpp
+class Base {
+protected:
+  ::taihe::string id;
+
+public:
+  Base(::taihe::string_view id) : id(id) {
+    std::cout << "new base " << this << std::endl;
+  }
+
+  ~Base() {
+    std::cout << "del base " << this << std::endl;
+  }
+
+  ::taihe::string getId() {
+    return id;
+  }
+
+  void setId(::taihe::string_view s) {
+    id = s;
+    return;
+  }
+};
+
+class Shape {
+protected:
+  ::taihe::string id;
+  float a;
+  float b;
+
+public:
+  Shape(::taihe::string_view id, float a, float b) : id(id), a(a), b(b) {
+    std::cout << "new shape " << this << std::endl;
+  }
+
+  ~Shape() {
+    std::cout << "del shape " << this << std::endl;
+  }
+
+  ::taihe::string getId() {
+    return id;
+  }
+
+  void setId(::taihe::string_view s) {
+    id = s;
+    return;
+  }
+
+  float calculateArea() {
+    return a * b;
+  }
+};
+
+class CTestImpl {
+  int32_t x;
+
+public:
+  CTestImpl(int32_t x) : x(x) {
+    std::cout << "new ctest " << this->x << std::endl;
+  }
+
+  ~CTestImpl() {
+    std::cout << "del ctest " << this << std::endl;
+  }
+
+  float add(int32_t a, int32_t b) {
+    return a + b + this->x;
+  }
+};
+
+class Color {
+protected:
+  ::taihe::string id;
+
+public:
+  Color(::taihe::string_view id) : id(id) {
+    std::cout << "new Color " << this << std::endl;
+  }
+
+  ~Color() {
+    std::cout << "del Color " << this << std::endl;
+  }
+
+  ::taihe::string getId() {
+    return id;
+  }
+
+  void setId(::taihe::string_view s) {
+    id = s;
+    return;
+  }
+
+  int32_t calculate(int32_t a, int32_t b) {
+    return a * b;
+  }
+};
+
+class Derived {
+protected:
+  ::taihe::string id = "d";
+  float a = 1;
+  float b = 2;
+
+public:
+  void call() {
+    std::cout << "derived call!" << std::endl;
+  }
+
+  double calculateArea() {
+    return a * b;
+  }
+
+  ::taihe::string getId() {
+    return id;
+  }
+
+  void setId(::taihe::string_view s) {
+    this->id = s;
+    return;
+  }
+};
+
+::iface_test::IBase makeIBase(::taihe::string_view id) {
+  return ::taihe::make_holder<Base, ::iface_test::IBase>(id);
+}
+
+void copyIBase(::iface_test::weak::IBase a, ::iface_test::weak::IBase b) {
+  a->setId(b->getId());
+  return;
+}
+
+::iface_test::IShape makeIShape(::taihe::string_view id, double a, double b) {
+  return ::taihe::make_holder<Shape, ::iface_test::IShape>(id, a, b);
+}
+
+::iface_test::CTest createCTest(int32_t id) {
+  return taihe::make_holder<CTestImpl, ::iface_test::CTest>(id);
+}
+
+::iface_test::CTest changeCTest(::iface_test::weak::CTest a) {
+  int32_t x = a->add(3, 4);
+  return taihe::make_holder<CTestImpl, ::iface_test::CTest>(x);
+}
+
+int32_t multiply(int32_t a, int32_t b) {
+  return a * b;
+}
+
+::iface_test::IColor makeIColor(::taihe::string_view id) {
+  return taihe::make_holder<Color, ::iface_test::IColor>(id);
+}
+
+::iface_test::IDerived createIDerived() {
+  return taihe::make_holder<Derived, ::iface_test::IDerived>();
+}
+```
+
+### ArkTs 1.1 调用
+
+```typescript
+class BaseImpl implements lib.IBase {
+  id: string;
+  constructor(id: string) {
+    this.id = id;
+  }
+  getId(): string {
+    return this.id;
+  }
+  setId(id: string): void {
+    this.id = id;
+    return;
+  }
+}
+
+let ibase_1 = lib.makeIBase("abc");
+console.log("ibase_1 getId: ", ibase_1.getId());
+
+ibase_1.setId("xyz");
+console.log("ibase_1 setId: ", ibase_1.getId());
+
+let ibase_2 = lib.makeIBase("test");
+lib.copyIBase(ibase_1, ibase_2);
+console.log("copyIBase: ", ibase_1.getId(), ibase_2.getId());
+
+let ishape_1 = lib.makeIShape("shape", 3.14, 2.5);
+console.log("makeIShape: ", ishape_1.calculateArea());
+console.log("interface extends: ", ishape_1.getId());
+
+ishape_1.setId("aaaaa");
+console.log("interface extends set: ", ishape_1.getId());
+
+let a: BaseImpl = new BaseImpl("A");
+let b: BaseImpl = new BaseImpl("B");
+lib.copyIBase(b, a);
+console.log("impl interface: ", a.getId(), b.getId());
+
+lib.copyIBase(ibase_1, ishape_1);
+console.log("interface extends: ", ibase_1.getId(), ishape_1.getId());
+
+let ctest = new lib.CTest(100);
+console.log("CTets: ", ctest.add(1, 2));
+
+let new_ctest = lib.changeCTest(ctest);
+console.log("change CTets: ", new_ctest.add(5, 6));
+
+let value3 = lib.CTest.multiply(7, 8);
+console.log("static function: ", value3);
+
+let color = lib.makeIColor("my color");
+console.log("get attr: ", color.Id);
+color.Id = "new my color";
+console.log("set attr: ", color.Id);
+console.log("color method: ", color.calculate(2, 3));
+
+let d = new lib.IDerived();
+d.call();
+console.log(d.getId());
+```
+
+输出结果如下：
+
+```sh
+new base 0x1d579b60
+ibase_1 getId:  abc
+ibase_1 setId:  xyz
+new base 0x1d53cc00
+copyIBase:  test test
+new shape 0x1d55fbb0
+makeIShape:  7.850000381469727
+interface extends:  shape
+interface extends set:  aaaaa
+impl interface:  A A
+interface extends:  aaaaa aaaaa
+new ctest 100
+CTets:  103
+new ctest 107
+change CTets:  118
+static function:  56
+new Color 0x1d53c680
+get attr:  my color
+set attr:  new my color
+color method:  6
+derived call!
+d
+del Color 0x1d53c680
+del ctest 0x1d53b290
+del ctest 0x1d53a880
+del shape 0x1d55fbb0
+del base 0x1d53cc00
+del base 0x1d579b60
+```
+
+# 逃逸通道
+
+Taihe 支持引入 napi 代码，从而在 C++ 侧访问 ArkTs 1.1 对象，可以使用 Opaque 类型，对应 napi 类型为 napi_value，C++ 类型为指针。可以引用 taihe/napi_runtime.hpp 头文件，其中提供 get_env() 函数返回 napi_env 指针，set_error() 函数抛出错误，set_type_error() 函数抛出类型错误，set_range_error() 函数抛出范围错误，has_error() 函数判断是否存在错误。
+
+## 使用示例
+
+### Taihe 声明
+
+```rust
+function is_string(s: Opaque): bool;
+function get_objects(): Array<Opaque>;
+union Union {
+  sValue: String;
+  oValue: Opaque;
+}
+struct Person{
+  name: String;
+}
+function is_opaque(s: Union): bool;
+```
+
+**生成`.d.ts`**
+
+```typescript
+export function is_string(s: Object): boolean;
+export function get_objects(): Array<Object>;
+export function is_opaque(s: Union): boolean;
+export type Union = string | Object;
+export interface Person {
+  name: string;
+}
+```
+
+### C++ 实现
+
+```cpp
+bool is_string(uintptr_t s) {
+  napi_env env = ::taihe::get_env();
+  napi_valuetype value_ty;
+  napi_typeof(env, (napi_value)s, &value_ty);
+  if (value_ty == napi_string) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+::taihe::array<uintptr_t> get_objects() {
+  napi_env env = ::taihe::get_env();
+  napi_value napi_arr_0 = nullptr;
+  ::taihe::string cpp_arr_0 = "FirstOne";
+  napi_create_string_utf8(env, cpp_arr_0.c_str(), cpp_arr_0.size(),
+                          &napi_arr_0);
+  napi_value napi_arr_1 = nullptr;
+  napi_get_undefined(env, &napi_arr_1);
+  return ::taihe::array<uintptr_t>(
+      {(uintptr_t)napi_arr_0, (uintptr_t)napi_arr_1});
+}
+
+bool is_opaque(::opaque_test::Union const &s) {
+  if (s.get_tag() == ::opaque_test::Union::tag_t::oValue) {
+    return true;
+  }
+  return false;
+}
+```
+
+### ArkTs 1.1 调用
+
+```typescript
+console.log("test opaque param", lib.is_string("test"));
+console.log("test opaque param", lib.is_string(2));
+
+let arr = lib.get_objects();
+console.log("test opaque return array value", arr[0], arr[1]);
+
+let p: lib.Person = { name: "Mary" };
+console.log("test opaque param union", lib.is_opaque(p));
+console.log("test opaque param union", lib.is_opaque("1"));
+```
+
+输出结果如下：
+
+```sh
+test opaque param true
+test opaque param false
+test opaque return array value FirstOne undefined
+test opaque param union true
+test opaque param union false
+```

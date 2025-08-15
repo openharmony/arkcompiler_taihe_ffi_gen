@@ -14,7 +14,7 @@ NAPI 代码生成及验证：
     - [x] const
     - [x] enum
     - [x] union                                          (number|string|bool|array|map)
-    - [x] undefined, null
+    - [x] undefined, null                               # TODO: 适配新的类型
     - [x] array
     - [x] record
     - [x] map                                           (规格为不保序)
@@ -41,9 +41,11 @@ NAPI 代码生成及验证：
     - [ ] 检查 class 必须有 ctor
 
 TODO:
-1. 生命周期；错误处理
-2. 逃逸通道
-3. union 自定义类型，tag
+1. 生命周期，之前已做: done
+2. 错误处理，发现错误抛出 error: done
+3. NAPI doc: 草稿已有 [NapiUsageGuide](./NapiUsageGuide.md)，各功能全覆盖，细节待完善
+4. 逃逸通道
+5. union 自定义类型，tag
 
 **注意：现在的验证方式是基于 ts 和 napi 非鸿蒙 napi，应配置鸿蒙环境下编译验证方法待设计。**
 xml 例子编译运行成功
