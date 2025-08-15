@@ -1,4 +1,4 @@
-struct Data {}
+struct Data { v: i32; }
 
 @class
 interface TestInterface {

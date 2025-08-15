@@ -22,11 +22,11 @@
 - **默认可直接引用当前包下的名称**
    ```rust
    // example.types.taihe
-   struct Foo {}
-   struct Bar {}
+   struct Foo { a: i32; }
+   struct Bar { b: String; }
 
-   function func1(bar: Foo): void;          // OK
-   function func2(foo: Foo): void;          // OK
+   function func1(foo: Foo): void;          // OK
+   function func2(bar: Bar): void;          // OK
    ```
 
 - **导入其他包并生成别名**
@@ -163,6 +163,12 @@ struct Foo {
 }
 ```
 
+空的结构体是禁止的，至少需要一个成员：
+```rust
+struct Empty {};  // Error: empty struct is not allowed
+struct NonEmpty { a: i32; };  // OK
+```
+
 ## 标签联合
 
 标签联合用于表示多种可能的数据类型，每个标签对应一种数据类型。多个标签可以对应同一个数据类型。标签联合的定义方式如下：
@@ -179,6 +185,12 @@ struct Bar {
   x: i32;
   y: String;
 }
+```
+
+和结构体一样，标签联合也禁止为空，至少需要一个标签：
+```rust
+union Empty {};  // Error: empty union is not allowed
+union NonEmpty { a: i32; };  // OK
 ```
 
 ## 接口

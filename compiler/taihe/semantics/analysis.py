@@ -56,6 +56,7 @@ from taihe.utils.exceptions import (
     DeclarationNotInScopeError,
     DeclNotExistError,
     DuplicateExtendsWarn,
+    EmptyStructOrUnionError,
     EnumValueError,
     NotATypeError,
     PackageNotExistError,
@@ -76,6 +77,7 @@ def analyze_semantics(
     pg.accept(_ResolveImportsPass(dm))
     pg.accept(_ResolveTypePass(dm))
     pg.accept(_CheckEnumTypePass(dm))
+    pg.accept(_CheckStructAndUnionNotEmptyPass(dm))
     pg.accept(_CheckRecursiveInclusionPass(dm))
 
     if dm.has_error:
@@ -473,6 +475,25 @@ class _CheckEnumTypePass(RecursiveDeclVisitor):
                     elif not isinstance(item.value, str):
                         self.dm.emit(EnumValueError(item, d))
                         item.value = item.name
+
+
+class _CheckStructAndUnionNotEmptyPass(RecursiveDeclVisitor):
+    """Checks that structs and unions are not empty."""
+
+    def __init__(self, dm: DiagnosticsManager):
+        self.dm = dm
+
+    @override
+    def visit_struct_decl(self, d: StructDecl) -> None:
+        super().visit_struct_decl(d)
+        if not d.fields:
+            self.dm.emit(EmptyStructOrUnionError(d))
+
+    @override
+    def visit_union_decl(self, d: UnionDecl) -> None:
+        super().visit_union_decl(d)
+        if not d.fields:
+            self.dm.emit(EmptyStructOrUnionError(d))
 
 
 _V = TypeVar("_V")

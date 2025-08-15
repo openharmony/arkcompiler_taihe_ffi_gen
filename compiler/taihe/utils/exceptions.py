@@ -22,9 +22,11 @@ if TYPE_CHECKING:
         NamedDecl,
         PackageDecl,
         PackageLevelDecl,
+        StructDecl,
         Type,
         TypeDecl,
         TypeRefDecl,
+        UnionDecl,
     )
 
 
@@ -371,6 +373,21 @@ class EnumValueError(DiagError):
     @override
     def describe(self) -> str:
         return f"value of {self.item.description} ({dumps(self.item.value)}) is conflict with {self.enum.description} ({self.enum.ty.signature})"
+
+
+@dataclass
+class EmptyStructOrUnionError(DiagError):
+    decl: "StructDecl | UnionDecl"
+
+    def __init__(self, decl: "StructDecl | UnionDecl"):
+        super().__init__(loc=decl.loc)
+        self.decl = decl
+
+    @override
+    def describe(self) -> str:
+        return (
+            f"{self.decl.description} cannot be empty, at least one field is required"
+        )
 
 
 @dataclass
