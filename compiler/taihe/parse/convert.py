@@ -39,24 +39,16 @@ from taihe.utils.exceptions import InvalidPackageNameError
 from taihe.utils.sources import SourceBase, SourceLocation, SourceManager
 
 
-def id2str(id_name: ast.IdName) -> str:
-    return id_name.val.text.lstrip("#")
+def int_div(a: int, b: int) -> int:
+    return a // b if b != 0 else 0
 
 
-def pkg2str(pkg_name: ast.PkgName) -> str:
-    return ".".join(map(id2str, pkg_name.parts))
+def int_mod(a: int, b: int) -> int:
+    return a % b if b != 0 else 0
 
 
-def is_valid_pkg_name(name: str) -> bool:
-    """Checks if the package name is valid."""
-    for part in name.split("."):
-        if not part:
-            return False
-        if not all(c.isalpha() or c == "_" for c in part[:1]):
-            return False
-        if not all(c.isalnum() or c == "_" for c in part[1:]):
-            return False
-    return True
+def float_div(a: float, b: float) -> float:
+    return a / b if b != 0.0 else float("nan")
 
 
 class ExprEvaluator(Visitor):
@@ -167,8 +159,8 @@ class ExprEvaluator(Visitor):
             "+": int.__add__,
             "-": int.__sub__,
             "*": int.__mul__,
-            "/": int.__floordiv__,
-            "%": int.__mod__,
+            "/": int_div,
+            "%": int_mod,
             "<<": int.__lshift__,
             ">>": int.__rshift__,
             "&": int.__and__,
@@ -222,7 +214,7 @@ class ExprEvaluator(Visitor):
             "+": float.__add__,
             "-": float.__sub__,
             "*": float.__mul__,
-            "/": float.__truediv__,
+            "/": float_div,
         }[node.op.text](
             float(node.left.accept(self)),
             float(node.right.accept(self)),
@@ -259,6 +251,26 @@ class ExprEvaluator(Visitor):
     @override
     def visit_any_expr(self, node: ast.AnyExpr) -> Any:
         return node.expr.accept(self)
+
+
+def id2str(id_name: ast.IdName) -> str:
+    return id_name.val.text.lstrip("#")
+
+
+def pkg2str(pkg_name: ast.PkgName) -> str:
+    return ".".join(map(id2str, pkg_name.parts))
+
+
+def is_valid_pkg_name(name: str) -> bool:
+    """Checks if the package name is valid."""
+    for part in name.split("."):
+        if not part:
+            return False
+        if not all(c.isalpha() or c == "_" for c in part[:1]):
+            return False
+        if not all(c.isalnum() or c == "_" for c in part[1:]):
+            return False
+    return True
 
 
 class AstConverter(ExprEvaluator):
