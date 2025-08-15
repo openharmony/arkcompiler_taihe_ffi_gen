@@ -1,4 +1,4 @@
-# Taihe ABI 及 C++ 层代码解析
+# 深入解析 Taihe 生成的代码（ABI 层与 C++ 层）
 
 ## 原始 IDL 文件内容
 
@@ -21,7 +21,7 @@ interface IBar: IFoo {
 function processWithBar(bar: IBar, data: Data): Result;
 ```
 
-## 生成的 ABI 层代码
+## 生成的代码结构
 
 当 Taihe 工具链处理 `my.package.taihe` 这个 IDL 文件后，会在指定的输出目录生成一系列文件。这些文件可以被清晰地划分为 ABI 层和 C++ 层。
 

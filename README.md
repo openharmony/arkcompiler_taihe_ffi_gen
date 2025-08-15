@@ -56,13 +56,19 @@ Taihe 将 API 的发布方和消费方在二进制级别隔离，允许二者在
 
 如果想要快速上手并有效使用 Taihe，可以阅读以下文档，涵盖了从环境配置到具体使用的详细内容。
 
-- [Taihe 工具的环境配置及使用](docs/QuickStart.md)
-- [Taihe IDL 语言规范](docs/IdlReference.md)
-- [Taihe IDL 中支持的注解](docs/SupportedAttributes.md)
-- [Taihe C++ 使用文档](docs/CppUsageGuide.md)
-- [Interface 的二进制标准](docs/InterfaceAbi.md)
-- [深入理解 Taihe C++ 生成代码](docs/CppGeneratedCode.md)
-- [深入理解 Taihe ANI 生成代码](docs/AniGeneratedCode.md)
+- 快速开始
+  - [Taihe 工具的环境配置及使用](docs/QuickStart.md)
+
+- Taihe IDL 语言
+  - [Taihe IDL 语言规范](docs/IdlReference.md)
+  - [Taihe IDL 中支持的注解](docs/SupportedAttributes.md)
+
+- 基本使用
+  - [Taihe C++ 使用文档](docs/CppUsageGuide.md)
+
+- 深入理解 Taihe 生成的代码
+  - [深入解析 Taihe 生成的代码（ABI 曾与 C++ 层）](docs/CppGeneratedCode.md)
+  - [深入解析 Taihe 生成的代码（ANI 桥接层）](docs/AniGeneratedCode.md)
 
 关于 ANI 开发的更多教程可以参考 [Taihe ANI CookBook](cookbook/README.md).
 
@@ -70,7 +76,14 @@ Taihe 将 API 的发布方和消费方在二进制级别隔离，允许二者在
 
 我们欢迎并鼓励社区开发者参与到 Taihe 的开发中来。如果你有兴趣参与 Taihe 的开发，以下文档可以帮助您深入了解项目的设计与实现，并顺利地开始您的贡献。
 
-- [整体设计](docs/Architecture.md)
 - [搭建开发环境](docs/DevSetup.md)
-- [Taihe 编译器设计文档](docs/Compiler.md)
-- [Taihe 注解系统设计文档](docs/AttributeSystem.md)
+
+- [Taihe 整体设计](docs/Architecture.md)
+
+- Taihe 编译器
+  - [Taihe 编译器设计文档](docs/Compiler.md)
+  - [Taihe 注解系统设计文档](docs/AttributeSystem.md)
+
+- Taihe ABI 及运行时
+  - [Taihe ABI 标准](docs/AbiStandard.md)
+  - [Taihe Interface ABI 设计文档](docs/InterfaceAbi.md)

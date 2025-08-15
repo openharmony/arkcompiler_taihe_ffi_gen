@@ -270,7 +270,7 @@ Taihe union 实际内存布局即`struct message_MessageData_t`。
 
 ## interface
 
-参考 [Interface ABI 文档](./InterfaceAbi.md)。
+参考 [Taihe Interface ABI 设计文档](./InterfaceAbi.md)。
 
 ## 函数闭包
 
