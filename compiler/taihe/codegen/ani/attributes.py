@@ -32,7 +32,7 @@ from taihe.semantics.types import (
     UnitType,
 )
 from taihe.utils.diagnostics import DiagnosticsManager
-from taihe.utils.exceptions import AdhocError
+from taihe.utils.exceptions import AdhocError, AdhocWarn
 
 
 @dataclass
@@ -152,6 +152,12 @@ class NullAttr(TypedAttribute[UnionFieldDecl | StructFieldDecl | TypeRefDecl]):
         if isinstance(parent, TypeRefDecl):
             ty = parent.resolved_ty
         else:
+            dm.emit(
+                AdhocWarn(
+                    f"Attachment of attribute '{self.NAME}' to a field will be deprecated. Should be attached to a type reference instead.",
+                    loc=self.loc,
+                )
+            )
             ty = parent.ty
         if not isinstance(ty, UnitType):
             dm.emit(
@@ -179,6 +185,12 @@ class UndefinedAttr(TypedAttribute[UnionFieldDecl | StructFieldDecl | TypeRefDec
         if isinstance(parent, TypeRefDecl):
             ty = parent.resolved_ty
         else:
+            dm.emit(
+                AdhocWarn(
+                    f"Attachment of attribute '{self.NAME}' to a field will be deprecated. Should be attached to a type reference instead.",
+                    loc=self.loc,
+                )
+            )
             ty = parent.ty
         if not isinstance(ty, UnitType):
             dm.emit(
