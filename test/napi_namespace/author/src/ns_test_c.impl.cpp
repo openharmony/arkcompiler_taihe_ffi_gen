@@ -1,5 +1,6 @@
-#include "ns_test_c.impl.hpp"
-#include "ns_test_c.proj.hpp"
+#include <iostream>
+#include "my_module_b.functiontest.impl.hpp"
+#include "my_module_b.functiontest.proj.hpp"
 
 namespace {
 class Base {
@@ -25,11 +26,16 @@ public:
   }
 };
 
-::ns_test_c::IBase makeIBase(::taihe::string_view id) {
-  return taihe::make_holder<Base, ::ns_test_c::IBase>(id);
+::my_module_b::functiontest::IBase makeIBase(::taihe::string_view id) {
+  return taihe::make_holder<Base, ::my_module_b::functiontest::IBase>(id);
+}
+
+void bar() {
+  std::cout << "namespace: my_module_b.functiontest, func: bar" << std::endl;
 }
 }  // namespace
 
 // NOLINTBEGIN
 TH_EXPORT_CPP_API_makeIBase(makeIBase);
+TH_EXPORT_CPP_API_bar(bar);
 // NOLINTEND

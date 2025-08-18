@@ -30,7 +30,7 @@ double from_color(::struct_test::Color const &color) {
 }
 
 ::struct_test::Student process_student(::struct_test::Student const &a) {
-  return a;
+  return {a.name + " student", a.age + 10};
 }
 
 ::struct_test::Teacher create_teacher() {
@@ -38,7 +38,15 @@ double from_color(::struct_test::Color const &color) {
 }
 
 ::struct_test::Teacher process_teacher(::struct_test::Teacher const &a) {
-  return a;
+  return {a.name + " teacher", a.age + 15};
+}
+
+::struct_test::G process_g(::struct_test::G const &a) {
+  return {{a.f.f + 1}, a.g + 2};
+}
+
+::struct_test::H process_h(::struct_test::H const &a) {
+  return {{{a.g.f.f + 1}, a.g.g + 2}, a.h + 3};
 }
 }  // namespace
 
@@ -51,4 +59,6 @@ TH_EXPORT_CPP_API_create_student(create_student);
 TH_EXPORT_CPP_API_process_student(process_student);
 TH_EXPORT_CPP_API_create_teacher(create_teacher);
 TH_EXPORT_CPP_API_process_teacher(process_teacher);
+TH_EXPORT_CPP_API_process_g(process_g);
+TH_EXPORT_CPP_API_process_h(process_h);
 // NOLINTEND

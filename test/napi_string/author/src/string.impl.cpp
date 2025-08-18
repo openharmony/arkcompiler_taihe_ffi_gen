@@ -16,7 +16,12 @@ taihe::string ohos_show() {
   return "success";
 }
 
+int32_t add(int32_t a, int32_t b) {
+  return a + b;
+}
+
 TH_EXPORT_CPP_API_concat(ohos_concat_str);
 TH_EXPORT_CPP_API_to_i32(ohos_str_to_int);
 TH_EXPORT_CPP_API_from_i32(ohos_int_to_str);
 TH_EXPORT_CPP_API_show(ohos_show);
+TH_EXPORT_CPP_API_add(add);

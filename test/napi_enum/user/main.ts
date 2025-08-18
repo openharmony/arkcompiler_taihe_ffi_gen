@@ -3,7 +3,8 @@ import * as lib from "enum_test";
 function main() {
   let color = lib.Color.GREEN;
   let nextColor = lib.nextEnum(color);
-  console.log("nextColor: ", nextColor);
+  console.log("nextColor:", nextColor);
+  console.log("const value:", lib.FLAG_F32_A, lib.FLAG_F32_B);
   let enum_v = lib.getValueOfEnum(color);
   console.log(enum_v);
   let value_e = lib.fromValueToEnum("Blue");

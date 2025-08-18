@@ -1,4 +1,4 @@
-@!namespace("my_ns_b", "functiontest")
+@!namespace("my_module_b", "functiontest")
 
 interface IBase {
     getId(): String;
@@ -6,3 +6,4 @@ interface IBase {
 }
 
 function makeIBase(id: String): IBase;
+function bar(): void;

@@ -39,6 +39,13 @@ function main() {
   testDynamicInput("It is a string.");
   testDynamicInput({});
   testDynamicInput(null);
+
+  let g = {f: 0, g: 0};
+  let new_g = lib.process_g(g);
+  let h = new lib.H(0, 0, 0);
+  let new_h = lib.process_h(h);
+  console.log("process g:", new_g.f, new_g.g);
+  console.log("process h:", new_h.f, new_h.g, new_h.h);
 }
 
 main();

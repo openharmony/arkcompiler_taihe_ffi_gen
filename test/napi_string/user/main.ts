@@ -1,4 +1,4 @@
-import { concat, to_i32, from_i32, show } from "string_test";
+import { concat, to_i32, from_i32, show, add } from "string_test";
 
 function main() {
   let concat_str = concat("test", "concat");
@@ -12,6 +12,9 @@ function main() {
   
   let str_show = show();
   console.log("function show: ", str_show);
+
+  let add_show = add(2, 3);
+  console.log("function add: ", add_show);
 }
 
 main();
