@@ -27,6 +27,7 @@ from taihe.codegen.cpp.analyses import (
     EnumCppInfo,
     TypeCppInfo,
 )
+from taihe.codegen.napi.attributes import DtsTypeAttr
 from taihe.codegen.napi.writer import DtsWriter
 from taihe.semantics.declarations import (
     EnumDecl,
@@ -1439,7 +1440,10 @@ class OpaqueTypeNapiInfo(TypeNapiInfo):
 
     @override
     def dts_type_in(self, target: DtsWriter) -> str:
-        return "Object"
+        if dts_type_attr := DtsTypeAttr.get(self.type.ty_ref):
+            return dts_type_attr.type_name
+        else:
+            return "Object"
 
     @override
     def dts_return_type_in(self, target: DtsWriter) -> str:

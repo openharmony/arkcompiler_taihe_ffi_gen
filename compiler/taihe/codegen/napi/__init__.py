@@ -12,10 +12,12 @@ class NapiBridgeBackendConfig(BackendConfig):
 
     def construct(self, instance: CompilerInstance) -> Backend:
         from taihe.codegen.ani.attributes import all_attr_types
+        from taihe.codegen.napi.attributes import all_napi_attr_types
         from taihe.codegen.napi.gen_dts import DtsCodeGenerator
         from taihe.codegen.napi.gen_napi import NapiCodeGenerator
 
         instance.attribute_registry.register(*all_attr_types)
+        instance.attribute_registry.register(*all_napi_attr_types)
 
         class NapiBridgeBackendImpl(Backend):
             def __init__(self, ci: CompilerInstance):
