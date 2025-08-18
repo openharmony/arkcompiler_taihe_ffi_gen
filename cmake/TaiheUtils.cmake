@@ -47,10 +47,12 @@ function(execute_and_set_variable OUTPUT_VAR_NAME)
   set(multiValueArgs "")
   cmake_parse_arguments(ARGS "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
-  if(NOT ARGS_TAIHEC_PATH)
-    set(TAIHEC_PATH "taihec")
-  else()
+  if(ARGS_TAIHEC_PATH)
     set(TAIHEC_PATH "${ARGS_TAIHEC_PATH}")
+  elseif(DEFINED IDE_TAIHEC_PATH)
+    set(TAIHEC_PATH "${IDE_TAIHEC_PATH}")
+  else()
+    set(TAIHEC_PATH "taihec")
   endif()
 
   execute_process(
@@ -62,6 +64,7 @@ function(execute_and_set_variable OUTPUT_VAR_NAME)
   )
 
   if(_result EQUAL 0)
+    string(REPLACE "\\" "/" _output "${_output}")
     set(${OUTPUT_VAR_NAME} "${_output}" CACHE STRING "Set ${OUTPUT_VAR_NAME} from taihec")
   else()
     message(FATAL_ERROR "Failed to execute 'taihec ${COMMAND_ARGS}'. Error code: ${_result}")
@@ -75,10 +78,12 @@ function(generate_code_from_idl demo_name idl_files gen_ets_names author_bridge 
   set(multiValueArgs "")
   cmake_parse_arguments(ARGS "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
-  if(NOT ARGS_TAIHEC_PATH)
-    set(TAIHEC_PATH "taihec")
-  else()
+  if(ARGS_TAIHEC_PATH)
     set(TAIHEC_PATH "${ARGS_TAIHEC_PATH}")
+  elseif(DEFINED IDE_TAIHEC_PATH)
+    set(TAIHEC_PATH "${IDE_TAIHEC_PATH}")
+  else()
+    set(TAIHEC_PATH "taihec")
   endif()
 
   set(GEN_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
@@ -422,12 +427,14 @@ function(add_taihe_library target_name idl_files)
   if(NOT ARGS_TAIHE_CONFIGS)
     set(ARGS_TAIHE_CONFIGS "")
   endif()
-  if(NOT ARGS_TAIHEC_PATH)
-    set(TAIHEC_PATH "taihec")
-  else()
+
+  if(ARGS_TAIHEC_PATH)
     set(TAIHEC_PATH "${ARGS_TAIHEC_PATH}")
+  elseif(DEFINED IDE_TAIHEC_PATH)
+    set(TAIHEC_PATH "${IDE_TAIHEC_PATH}")
+  else()
+    set(TAIHEC_PATH "taihec")
   endif()
-  message(STATUS "taihec path: ${TAIHEC_PATH}")
 
   execute_and_set_variable(TAIHE_RUNTIME_SOURCE_DIR "--print-runtime-source-path" TAIHEC_PATH ${TAIHEC_PATH})
   execute_and_set_variable(TAIHE_RUNTIME_HEADER_DIR "--print-runtime-header-path" TAIHEC_PATH ${TAIHEC_PATH})
@@ -435,6 +442,12 @@ function(add_taihe_library target_name idl_files)
     "${TAIHE_RUNTIME_SOURCE_DIR}/string.cpp"
     "${TAIHE_RUNTIME_SOURCE_DIR}/object.cpp"
     "${TAIHE_RUNTIME_SOURCE_DIR}/runtime.cpp"
+  )
+  set_source_files_properties(
+    ${TAIHE_RUNTIME_SOURCES}
+    PROPERTIES
+    LANGUAGE CXX
+    COMPILE_FLAGS "-std=c++17"
   )
 
   generate_code_from_idl(
