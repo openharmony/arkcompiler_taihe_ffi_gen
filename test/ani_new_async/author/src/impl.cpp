@@ -5,7 +5,7 @@
 #include "taihe/runtime.hpp"
 
 namespace {
-int32_t add_impl(int32_t a, int32_t b) {
+int32_t AddImpl(int32_t a, int32_t b) {
   if (a == 0) {
     taihe::set_business_error(1, "some error happen in add impl");
     return b;
@@ -15,7 +15,7 @@ int32_t add_impl(int32_t a, int32_t b) {
   }
 }
 
-::async_test::IBase getIBase_impl() {
+::async_test::IBase GetIBaseImpl() {
   struct AuthorIBase {
     taihe::string name;
 
@@ -23,42 +23,42 @@ int32_t add_impl(int32_t a, int32_t b) {
 
     ~AuthorIBase() {}
 
-    taihe::string get() {
+    taihe::string Get() {
       return name;
     }
 
-    taihe::string getWithCallback() {
+    taihe::string GetWithCallback() {
       return name;
     }
 
-    taihe::string getReturnsPromise() {
+    taihe::string GetReturnsPromise() {
       return name;
     }
 
-    void set(taihe::string_view a) {
+    void Set(taihe::string_view a) {
       this->name = a;
       return;
     }
 
-    void setWithCallback(taihe::string_view a) {
+    void SetWithCallback(taihe::string_view a) {
       this->name = a;
       return;
     }
 
-    void setReturnsPromise(taihe::string_view a) {
+    void SetReturnsPromise(taihe::string_view a) {
       this->name = a;
       return;
     }
 
-    void makeSync() {
+    void MakeSync() {
       TH_THROW(std::runtime_error, "makeSync not implemented");
     }
 
-    void makeWithCallback() {
+    void MakeWithCallback() {
       TH_THROW(std::runtime_error, "makeSync not implemented");
     }
 
-    void makeReturnsPromise() {
+    void MakeReturnsPromise() {
       TH_THROW(std::runtime_error, "makeSync not implemented");
     }
   };
@@ -66,51 +66,51 @@ int32_t add_impl(int32_t a, int32_t b) {
   return taihe::make_holder<AuthorIBase, ::async_test::IBase>();
 }
 
-void fromStructSync_impl(::async_test::Data const &data) {
+void FromStructSyncImpl(::async_test::Data const &data) {
   std::cout << data.a.c_str() << " " << data.b.c_str() << " " << data.c
             << std::endl;
   if (data.c == 0) {
-    taihe::set_business_error(1, "some error happen in fromStructSync_impl");
+    taihe::set_business_error(1, "some error happen in fromStructSyncImpl");
   }
   return;
 }
 
-::async_test::Data toStructSync_impl(taihe::string_view a, taihe::string_view b,
-                                     int32_t c) {
+::async_test::Data ToStructSyncImpl(taihe::string_view a, taihe::string_view b,
+                                    int32_t c) {
   if (c == 0) {
-    taihe::set_business_error(1, "some error happen in toStructSync_impl");
+    taihe::set_business_error(1, "some error happen in toStructSyncImpl");
     return {a, b, c};
   }
   return {a, b, c};
 }
 
-void printSync() {
+void PrintSync() {
   std::cout << "print Sync" << std::endl;
 }
 
-void makeGlobalSync() {
+void MakeGlobalSync() {
   std::cout << "makeGlobal" << std::endl;
 }
 }  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
 // NOLINTBEGIN
-TH_EXPORT_CPP_API_addSync(add_impl);
-TH_EXPORT_CPP_API_addWithAsync(add_impl);
-TH_EXPORT_CPP_API_addReturnsPromise(add_impl);
-TH_EXPORT_CPP_API_getIBase(getIBase_impl);
-TH_EXPORT_CPP_API_getIBaseWithCallback(getIBase_impl);
-TH_EXPORT_CPP_API_getIBaseReturnsPromise(getIBase_impl);
-TH_EXPORT_CPP_API_fromStructSync(fromStructSync_impl);
-TH_EXPORT_CPP_API_fromStructWithCallback(fromStructSync_impl);
-TH_EXPORT_CPP_API_fromStructReturnsPromise(fromStructSync_impl);
-TH_EXPORT_CPP_API_toStructSync(toStructSync_impl);
-TH_EXPORT_CPP_API_toStructWithCallback(toStructSync_impl);
-TH_EXPORT_CPP_API_toStructReturnsPromise(toStructSync_impl);
-TH_EXPORT_CPP_API_printSync(printSync);
-TH_EXPORT_CPP_API_printWithCallback(printSync);
-TH_EXPORT_CPP_API_printReturnsPromise(printSync);
-TH_EXPORT_CPP_API_makeGlobalSync(makeGlobalSync);
-TH_EXPORT_CPP_API_makeGlobalWithCallback(makeGlobalSync);
-TH_EXPORT_CPP_API_makeGlobalReturnsPromise(makeGlobalSync);
+TH_EXPORT_CPP_API_addSync(AddImpl);
+TH_EXPORT_CPP_API_addWithAsync(AddImpl);
+TH_EXPORT_CPP_API_addReturnsPromise(AddImpl);
+TH_EXPORT_CPP_API_getIBase(GetIBaseImpl);
+TH_EXPORT_CPP_API_getIBaseWithCallback(GetIBaseImpl);
+TH_EXPORT_CPP_API_getIBaseReturnsPromise(GetIBaseImpl);
+TH_EXPORT_CPP_API_fromStructSync(FromStructSyncImpl);
+TH_EXPORT_CPP_API_fromStructWithCallback(FromStructSyncImpl);
+TH_EXPORT_CPP_API_fromStructReturnsPromise(FromStructSyncImpl);
+TH_EXPORT_CPP_API_toStructSync(ToStructSyncImpl);
+TH_EXPORT_CPP_API_toStructWithCallback(ToStructSyncImpl);
+TH_EXPORT_CPP_API_toStructReturnsPromise(ToStructSyncImpl);
+TH_EXPORT_CPP_API_printSync(PrintSync);
+TH_EXPORT_CPP_API_printWithCallback(PrintSync);
+TH_EXPORT_CPP_API_printReturnsPromise(PrintSync);
+TH_EXPORT_CPP_API_makeGlobalSync(MakeGlobalSync);
+TH_EXPORT_CPP_API_makeGlobalWithCallback(MakeGlobalSync);
+TH_EXPORT_CPP_API_makeGlobalReturnsPromise(MakeGlobalSync);
 // NOLINTEND

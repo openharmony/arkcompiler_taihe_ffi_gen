@@ -36,7 +36,8 @@ void onBar(::taihe::string_view type, callback_view<void()> a) {
   std::cout << "onBar" << std::endl;
 }
 
-void onBaz(::taihe::string_view type, int32_t a, callback_view<void(int32_t)> cb) {
+void onBaz(::taihe::string_view type, int32_t a,
+           callback_view<void(int32_t)> cb) {
   cb(a);
   std::cout << "onNewBaz" << std::endl;
 }
@@ -51,7 +52,8 @@ void offBar(::taihe::string_view type, callback_view<void()> a) {
   std::cout << "offBar" << std::endl;
 }
 
-void offBaz(::taihe::string_view type, int32_t a, callback_view<void(int32_t)> cb) {
+void offBaz(::taihe::string_view type, int32_t a,
+            callback_view<void(int32_t)> cb) {
   cb(a);
   std::cout << "offNewBaz" << std::endl;
 }
