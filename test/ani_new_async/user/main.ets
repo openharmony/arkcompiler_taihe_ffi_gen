@@ -130,7 +130,7 @@ function testStructMethods() {
         }
         arktest.assertEQ(err?.code, 1, "fromStruct should throw an error");
         arktest.assertEQ(
-            err?.message, "some error happen in fromStructSync_impl",
+            err?.message, "some error happen in fromStructSyncImpl",
             "fromStruct should throw an error when c is 0");
     }
 
@@ -148,7 +148,7 @@ function testStructMethods() {
         }
         arktest.assertEQ(err?.code, 1, "toStruct should throw an error");
         arktest.assertEQ(
-            err?.message, "some error happen in toStructSync_impl",
+            err?.message, "some error happen in toStructSyncImpl",
             "toStruct should throw an error when c is 0");
     }
 }
