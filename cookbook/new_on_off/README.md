@@ -16,47 +16,39 @@ off(target: "bar", callback: (): void);
 **File: `idl/on_off.taihe`**
 ```rust
 interface ISetterObserver {
-    @on_off
-    onSet(a: () => void): void;
+    @rename("on")
+    onSet(type: String, a: () => void): void;
 
-    @on_off
-    offSet(a: () => void): void;
+    @rename("off")
+    offSet(type: String, a: () => void): void;
 }
 
 function getISetterObserver(): ISetterObserver;
 
-@on_off
-function onFoo(a: () => void): void;
+@static_overload("on")
+function onFoo(type: String, a: () => void): void;
 
-@on_off
-function onBar(a: () => void): void;
+@static_overload("on")
+function onBar(type: String, a: () => void): void;
 
-@on_off("newBaz")
-function onBaz(a: i32, cb: (b: i32) => void): void;
+@static_overload("on")
+function onBaz(type: String, a: i32, cb: (b: i32) => void): void;
 
-@on_off
-function offFoo(a: () => void): void;
+@static_overload("off")
+function offFoo(type: String, a: () => void): void;
 
-@on_off
-function offBar(a: () => void): void;
+@static_overload("off")
+function offBar(type: String, a: () => void): void;
 
-@on_off("newBaz")
-function offBaz(a: i32, cb: (b: i32) => void): void;
+@static_overload("off")
+function offBaz(type: String, a: i32, cb: (b: i32) => void): void;
 ```
 
-`@on_off` 注解有两种写法
+on/off 函数在支持了 java like 重载后，使用 `@rename` 和 `@static_overload` 注解来实现。
 
-on/off 函数在 Taihe 中需要命名形如为 `OnFoo`、`OnBar` 的函数
+@rename注解参考[文档](../rename_example/README.md)
 
-1. `@on_off`
-
-    使用第一种写法时，会将 taihe 函数名 on/off 后的字符串作为 sts 侧的 on/off 函数的 target (首字母会自动小写)，如 taihe 函数 OnFoo，在 sts 侧时 target 为 foo
-
-2. `@on_off("<target>")`
-
-    使用第二种写法时，会将 `@on_off("<target>")` 注解中的 `<target>` 作为 sts 侧的函数名，如 `@on_off("newBaz") function OnBaz()` 在 sts 侧会重载到函数 `newBaz` 上
-
-我们推荐使用第二种写法避免因某些函数写法的原因导致的问题
+@static_overload注解参考[文档](../javalike_overload/README.md)
 
 ## 第二步：完成 C++ 实现
 
@@ -66,12 +58,12 @@ class ISetterObserverImpl {
 public:
   ISetterObserverImpl() {}
 
-  void onSet(callback_view<void()> a) {
+  void onSet(::taihe::string_view type, callback_view<void()> a) {
     a();
     std::cout << "IBase::onSet" << std::endl;
   }
 
-  void offSet(callback_view<void()> a) {
+  void offSet(::taihe::string_view type, callback_view<void()> a) {
     a();
     std::cout << "IBase::offSet" << std::endl;
   }
@@ -81,32 +73,32 @@ ISetterObserver getISetterObserver() {
   return make_holder<ISetterObserverImpl, ISetterObserver>();
 }
 
-void onFoo(callback_view<void()> a) {
+void onFoo(::taihe::string_view type, callback_view<void()> a) {
   a();
   std::cout << "onFoo" << std::endl;
 }
 
-void onBar(callback_view<void()> a) {
+void onBar(::taihe::string_view type, callback_view<void()> a) {
     a();
     std::cout << "onBar" << std::endl;
 }
 
-void onBaz(int32_t a, callback_view<void(int32_t)> cb) {
+void onBaz(::taihe::string_view type, int32_t a, callback_view<void(int32_t)> cb) {
     cb(a);
     std::cout << "onNewBaz" << std::endl;
 }
 
-void offFoo(callback_view<void()> a) {
+void offFoo(::taihe::string_view type, callback_view<void()> a) {
     a();
     std::cout << "offFoo" << std::endl;
 }
 
-void offBar(callback_view<void()> a) {
+void offBar(::taihe::string_view type, callback_view<void()> a) {
     a();
     std::cout << "offBar" << std::endl;
 }
 
-void offBaz(int32_t a, callback_view<void(int32_t)> cb) {
+void offBaz(::taihe::string_view type, int32_t a, callback_view<void(int32_t)> cb) {
     cb(a);
     std::cout << "offNewBaz" << std::endl;
 }
@@ -137,13 +129,13 @@ IBase::offSet
 onFoo callback
 onFoo
 onBar callback
-onBar
+onFoo
 onNewBaz callback, num: 1
 onNewBaz
 offFoo callback
 offFoo
 offBar callback
-offBar
+offFoo
 offNewBaz callback, num: 0
 offNewBaz
 ```
