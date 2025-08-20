@@ -4,11 +4,63 @@
 
 ## ⚠️ 特别注意 ⚠️
 
-***自动生成的 ets 文件中，所有以 `_taihe_` 为前缀的函数和变量，均为 Taihe 的内部接口，我们不会保证这些接口的稳定性，因此，请不要勿在用户代码或注入代码中直接调用这些接口！！！***
+***自动生成的 ets 文件中，所有以 `_taihe_` 为前缀的函数和变量，均为 Taihe 的内部接口，我们不会保证这些接口的稳定性，因此，请不要在用户代码或注入代码中直接调用这些接口！！！***
+
+## 生成代码的目录结构解析
+
+以下面的 Taihe IDL 文件为例，来说明生成代码的目录结构和文件内容。
+```rust
+// File: example/idl/my.package.taihe
+struct Data {
+    a: i32;
+    b: String;
+}
+union Result {
+    ok: i32;
+    err: String;
+}
+interface IFoo {
+    init(): void;
+}
+interface IBar: IFoo {
+    process(data: Data): Result;
+}
+function processWithBar(bar: IBar, data: Data): Result;
+```
+
+生成的代码目录结构如下：
+```
+test/xxx/generated/
+├── include
+│   ├── my.package.*.abi.{0,1,2}.h
+│   ├── my.package.abi.h
+│   ├── my.package.*.proj.{0,1,2}.hpp
+│   ├── my.package.proj.hpp
+│   ├── my.package.impl.hpp
+│   ├── my.package.user.hpp
+│   ├── my.package.*.ani.{0,1}.hpp
+│   └── my.package.ani.hpp
+├── src
+│   ├── my.package.abi.c
+│   └── my.package.ani.cpp
+├── my.package.ets
+└── temp
+    ├── ani_constructor.cpp
+    └── my.package.impl.cpp
+```
+
+其中，`*.abi.h`, `*.proj.h`, `*.user.hpp`, `*.impl.hpp` 的说明可参考 [Taihe ABI 层及 C++ 层生成代码解析](./CppGeneratedCode.md)。
+
+ANI 生成的相关文件说明如下：
+- `include/my.package.*.ani.{0,1}.hpp`：包含了所有 `my.package.taihe` 中定义的结构体、枚举、接口等数据类型在 C++ 和 ANI 间相互转换的函数。其中，`*.ani.0.hpp` 是这些转换函数的前向声明，`*.ani.1.hpp` 是这些转换函数的具体实现。
+- `include/my.package.ani.hpp` 和 ：包含了 `my::package::ANI_Register` 函数的声明，该函数用于将 `my.package.taihe` 中定义的所有函数注册到 ANI 虚拟机中。
+- `src/my.package.ani.cpp`：包含了所有 `my.package.taihe` 中定义的函数的 native 侧桥接代码，以及 `my::package::ANI_Register` 函数的实现。
+- `my.package.ets`：包含了所有 `my.package.taihe` 中定义的数据类型和函数的 ArkTS 侧桥接代码。
+- `temp/ani_constructor.cpp`：`ANI_Constructor` 函数的实现模板代码，其中调用了 `ANI_Register` 函数，将所有函数的 native 侧实现注册到 ANI 虚拟机中。
 
 ## 基本函数的正向调用链
 
-假设我们有一个 IDL 文件 `my.package.taihe`，其中定义了两个简单的结构体 `MyParam` 和 `MyResult`，以及一个函数 `process`：
+假设我们有一个 Taihe IDL 文件 `my.package.taihe`，其中定义了两个简单的结构体 `MyParam` 和 `MyResult`，以及一个函数 `process`：
 ```rust
 struct MyParam {
     a: i32;

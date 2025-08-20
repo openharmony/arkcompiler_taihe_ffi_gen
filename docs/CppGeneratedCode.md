@@ -4,7 +4,7 @@
 
 以下我们将以一个简单的 API 为例，展示 Taihe 如何在发布方和消费方之间生成 ABI 层和 C++ 层的代码，以及数据如何跨越这两个层次进行传递。
 
-## 原始 IDL 文件内容
+## 原始 Taihe IDL 文件内容
 
 ```rust
 // File: example/idl/my.package.taihe
@@ -27,7 +27,7 @@ function processWithBar(bar: IBar, data: Data): Result;
 
 ## 生成的代码结构
 
-当 Taihe 工具链处理 `my.package.taihe` 这个 IDL 文件后，会在指定的输出目录生成一系列文件。这些文件可以被清晰地划分为 ABI 层和 C++ 层。
+当 Taihe 工具链处理 `my.package.taihe` 这个文件后，会在指定的输出目录生成一系列文件。这些文件可以被清晰地划分为 ABI 层和 C++ 层。
 
 以下是生成文件的结构树及其功能简介：
 ```
