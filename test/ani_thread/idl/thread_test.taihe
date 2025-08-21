@@ -1,0 +1,16 @@
+struct A {
+    param1: i32;
+}
+
+struct B {
+    @extends a: A;
+    @readonly param2: i32;
+}
+
+@class
+struct C {
+    @extends b: B;
+    @readonly param3: i32;
+}
+
+function invokeFromOtherThreadAfter(sec: f64, callback: () => void);

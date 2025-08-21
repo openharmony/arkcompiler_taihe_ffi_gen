@@ -1,0 +1,2 @@
+function createUint16Array(): @typedarray Array<u16>;
+function printUint16Array(arr: @typedarray Array<u16>): void;

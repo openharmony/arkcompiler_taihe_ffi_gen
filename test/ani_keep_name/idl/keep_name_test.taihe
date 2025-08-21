@@ -1,0 +1,19 @@
+interface Foo {
+    Bar(): void;
+    @set("name") SetName(name: String): void;
+    @get("name") GetName(): String;
+}
+
+interface IBase {
+    @on_off
+    OnSet(a: () => void): void;
+
+    @on_off
+    OffSet(a: () => void): void;
+}
+
+function GetIBase(a: String, b: String): IBase;
+
+function GetFooIface(): Foo;
+function PrintFooName(foo: Foo): String;
+@!sts_keep_name

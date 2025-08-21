@@ -1,0 +1,3 @@
+use impl;
+
+function UseIfaceA(obj: impl.IfaceA_taihe): String;

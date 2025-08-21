@@ -1,0 +1,6 @@
+@class interface Foo {
+    addCallback(callback: () => void): void;
+}
+
+@ctor("Foo")
+function makeFoo(): Foo;

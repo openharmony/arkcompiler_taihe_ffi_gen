@@ -1,0 +1,27 @@
+interface ISetterObserver {
+    @on_off
+    onSet(a: () => void): void;
+
+    @on_off
+    offSet(a: () => void): void;
+}
+
+function getISetterObserver(): ISetterObserver;
+
+@on_off
+function onFoo(a: () => void): void;
+
+@on_off
+function onBar(a: () => void): void;
+
+@on_off("newBaz")
+function onBaz(a: i32, cb: (b: i32) => void): void;
+
+@on_off
+function offFoo(a: () => void): void;
+
+@on_off
+function offBar(a: () => void): void;
+
+@on_off("newBaz")
+function offBaz(a: i32, cb: (b: i32) => void): void;

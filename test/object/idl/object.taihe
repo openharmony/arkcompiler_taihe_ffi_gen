@@ -1,0 +1,15 @@
+interface Top {
+    top(): void;
+}
+
+interface Left: Top {
+    left(): void;
+}
+
+interface Right: Top {
+    right(): void;
+}
+
+interface Bottom: Left, Right {
+    bottom(): void;
+}

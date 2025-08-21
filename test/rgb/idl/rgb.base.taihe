@@ -1,0 +1,37 @@
+struct RGB {
+    r: u8;
+    g: u8;
+    b: u8;
+}
+
+enum Color: u8 {
+    black = 0x0,
+    red = 0x1,
+    green = 0x2,
+    yellow = 0x3,
+    blue = 0x4,
+    magenta = 0x5,
+    cyan = 0x6,
+    white = 0x7,
+}
+
+enum Name: String {
+    RED = "Red",
+    GREEN = "Green",
+    BLUE = "Blue",
+}
+
+union ColorOrRGBOrName {
+    undefined;
+    color: Color;
+    rgb: RGB;
+    name: Name;
+}
+
+struct A {
+    arrB: Array<B>;
+}
+
+struct B {
+    optA: Optional<A>;
+}

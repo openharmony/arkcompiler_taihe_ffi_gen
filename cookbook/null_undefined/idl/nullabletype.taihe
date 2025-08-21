@@ -1,0 +1,8 @@
+union NullableValue {
+    sValue: String;
+    iValue: i32;
+    uValue: @undefined unit;
+    nValue;
+}
+
+function makeNullableValue(tag: i32): NullableValue;

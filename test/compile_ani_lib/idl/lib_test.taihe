@@ -1,0 +1,7 @@
+interface IfaceA {
+    Foo(): void;
+    Bar(): void;
+}
+
+function MakeIfaceA(): IfaceA;
+function UseIfaceA(obj: IfaceA): void;

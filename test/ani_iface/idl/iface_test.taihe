@@ -1,0 +1,52 @@
+interface Foo {
+    Bar(): void;
+    @set("name") SetName(name: String): void;
+    @get("name") GetName(): String;
+}
+
+function GetFooIface(): Foo;
+function PrintFooName(foo: Foo): String;
+
+interface BaseFun {
+    Base(): String;
+    Fun(): String;
+}
+function GetBaseFun(): BaseFun;
+
+interface SubBaseFun: BaseFun {
+    Sub(): String;
+}
+function GetSubBaseFun(): SubBaseFun;
+
+interface BaseElem {
+    @get GetBase(): String;
+    @set SetBase(s: String): void;
+}
+function GetBaseElem(): BaseElem;
+
+interface SubBaseElem: BaseElem {
+    Sub(): String;
+}
+function GetSubBaseElem(): SubBaseElem;
+
+interface IBase {
+    getId(): String;
+    setId(s: String): void;
+}
+
+function makeIBase(id: String): IBase;
+function copyIBase(a: IBase, b: IBase): void;
+
+interface IShape: IBase {
+    calculateArea(): f64;
+}
+
+function makeIShape(id: String, a: f64, b: f64): IShape;
+
+@class
+interface IDerived: IShape {
+    call(): void;
+}
+
+@ctor("IDerived")
+function createIDerived(): IDerived;
