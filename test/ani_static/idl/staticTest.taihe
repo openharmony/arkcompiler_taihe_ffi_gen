@@ -1,0 +1,47 @@
+@class
+interface IBase {
+    get(): String;
+    set(a: String): void;
+}
+
+@static("IBase")
+function sumSync(a: i32, b: i32): i32;
+
+@static("IBase")
+@static_overload("add")
+@async function addWithCallback(a: i32, b: i32): i32;
+
+@static("IBase")
+@static_overload("add")
+@promise function addReturnsPromise(a: i32, b: i32): i32;
+
+@static("IBase")
+function addSync(a: i32, b: i32): i32;
+
+@constructor("IBase")
+@rename()
+function getIBase(name: String): IBase;
+
+// @constructor("IBase")
+// @static_overload("createIBase")
+// function getIBase_test(name: String, test: String): IBase;
+
+interface ITest {
+    get(): String;
+    set(a: String): void;
+}
+
+@static("ITest")
+@rename("static_test")
+function static_func(a: i32, b: i32): i32;
+
+@static("ITest")
+function ctor_func(): ITest;
+
+@static("IBase")
+@get
+function getName(): String;
+
+@static("IBase")
+@set
+function setName(a: String);

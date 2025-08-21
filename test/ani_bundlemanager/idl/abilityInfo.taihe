@@ -1,0 +1,34 @@
+use ohos.bundle.bundleManager as bundleManager;
+from applicationInfo use ApplicationInfo as ApplicationInfo;
+from metadata use Metadata as Metadata;
+from skill use Skill as Skill;
+
+interface AbilityInfo {
+    @get GetBundleName(): String;
+    @get GetModuleName(): String;
+    @get GetName(): String;
+    @get GetLabel(): String;
+    @get GetLabelId(): i32;
+    @get GetDescription(): String;
+    @get GetDescriptionId(): i32;
+    @get GetIcon(): String;
+    @get GetIconId(): i32;
+    @get GetProcess(): String;
+    @get GetExported(): bool;
+    @get GetType(): bundleManager.AbilityType;
+    @get GetOrientation(): bundleManager.DisplayOrientation;
+    @get GetLaunchType(): bundleManager.LaunchType;
+    @get GetPermissions(): Array<String>;
+    @get GetReadPermission(): String;
+    @get GetWritePermission(): String;
+    @get GetUri(): String;
+    @get GetDeviceTypes(): Array<String>;
+    @get GetMetadata(): Array<Metadata>;    
+    @get GetEnabled(): bool;
+    @get GetSupportWindowModes(): Array<bundleManager.SupportWindowMode>;    
+    @get GetExcludeFromDock(): bool;
+    @get GetSkills(): Array<Skill>;
+    @get GetAppIndex(): i32;
+    @get GetOrientationId(): i32;
+}
+function GetAbilityInfo(): AbilityInfo;

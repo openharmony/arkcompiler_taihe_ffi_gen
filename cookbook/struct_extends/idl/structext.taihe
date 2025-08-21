@@ -1,0 +1,13 @@
+struct Position {
+    x: i32;
+    y: i32;
+    z: i32;
+}
+
+@class
+struct Player {
+    @extends pos: Position;
+    name: String;
+}
+
+function addNewPlayer(name: String): Player; 

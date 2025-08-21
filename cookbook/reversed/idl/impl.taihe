@@ -1,0 +1,4 @@
+interface IfaceA_taihe {
+    Foo(): String;
+    Bar(): i32;
+}

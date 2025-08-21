@@ -1,0 +1,1 @@
+function convert_arr(a: Array<i32>, str: String): Array<String>;

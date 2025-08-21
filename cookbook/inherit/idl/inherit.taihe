@@ -1,0 +1,13 @@
+interface Payable{
+    pay(amountDue: f64): void;
+}
+
+@class
+interface CreditCard : Payable {
+    topUp(topUpAmount: f64): void;
+    @get getBalance(): f64;
+    @get getIntlEnabled(): bool;
+    @set setIntlEnabled(tag: bool): void;
+}
+
+function makeCreditCard(initAmount: f64): CreditCard;

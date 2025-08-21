@@ -1,0 +1,7 @@
+struct Color{
+    R: i32;
+    G: i32;
+    B: i32;
+}
+
+function convert_color(a: Color): Color;

@@ -1,0 +1,46 @@
+interface BundleInfo {
+    @get GetName(): String;
+    @get GetVendor(): String;
+    @get GetVersionCode(): i32;
+    @get GetVersionName(): String;
+    @get GetMinCompatibleVersionCode(): String;
+    @get GetTargetVersion(): i32;
+    @get GetInstallTime(): i32;
+    @get GetUpdateTime(): i32;
+    @get GetAppIndex(): i32;
+}
+function GetBundleInfo(): BundleInfo; 
+
+interface ReqPermissionDetail {
+    @set("name") SetName(name: String): void;
+    @get("name") GetName(): String;
+    @set("moduleName") SetModuleName(moduleName: String): void;
+    @get("moduleName") GetModuleName(): String;
+    @set("reason") SetReason(reason: String): void;
+    @get("reason") GetReason(): String;
+    @set("reasonId") SetReasonId(reasonId: i32): void;
+    @get("reasonId") GetReasonId(): i32;
+}
+function GetReqPermissionDetail(): ReqPermissionDetail;
+
+interface UsedScene {
+    @set("abilities") SetAbilities(deviceId: Array<String>): void;
+    @get("abilities") GetAbilities(): Array<String>;
+    @set("when") SetWhen(when: String): void;
+    @get("when") GetWhen(): String;
+}
+function GetIUsedScene(): UsedScene;
+
+interface SignatureInfo {
+    @get GetAppId(): String;
+    @get GetFingerprint(): String;
+    @get GetAppIdentifier(): String;
+    @get GetCertificate(): String;
+}
+function GetISignatureInfo(): SignatureInfo;
+
+interface AppCloneIdentity {
+    @get GetBundleName(): String;
+    @get GetAppIndex(): i32;
+}
+function GetAppCloneIdentity(): AppCloneIdentity;

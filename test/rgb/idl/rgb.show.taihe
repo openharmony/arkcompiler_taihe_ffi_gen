@@ -1,0 +1,38 @@
+from rgb.base use RGB, Color, ColorOrRGBOrName;
+
+interface IBase {
+    getId(): String;
+}
+
+interface IShape: IBase {
+    calculateArea(): f32;
+}
+
+interface IColorable: IBase {
+    getColor(): ColorOrRGBOrName;
+    setColor(c: ColorOrRGBOrName): void;
+}
+
+function copyColor(dst: IColorable, src: IColorable): void;
+
+interface IShowable: IColorable, IShape {
+    show(): void;
+}
+
+function makeRectangle(id: String, h: f32, w: f32): IShape;
+function makeColoredRectangle(id: String, c: ColorOrRGBOrName, h: f32, w: f32): IShowable;
+
+function exchangeArr(dst: Array<IBase>, src: Array<IBase>): Array<IBase>;
+
+function getIdFromOptional(box: Optional<IBase>): Optional<String>;
+
+function makeVec(src: Array<IBase>): Vector<IBase>;
+function fillVec(src: Array<IBase>, dst: Vector<IBase>): void;
+
+function makeMap(keys: Array<String>, src: Array<IBase>): Map<String, IBase>;
+function fillMap(keys: Array<String>, src: Array<IBase>, dst: Map<String, IBase>): void;
+
+function makeSet(src: Array<String>): Set<String>;
+function fillSet(src: Array<String>, dst: Set<String>): void;
+
+function currying(f: (x: String, y: String) => String): (x: String) => (y: String) => String;
