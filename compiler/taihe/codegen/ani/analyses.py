@@ -180,17 +180,6 @@ class AniRuntimeUndefinedType(AniRuntimeNonPrimitiveType):
 
 
 @dataclass
-class AniRuntimeNullType(AniRuntimeUnionMemberType):
-    @property
-    def sig(self) -> str:
-        return "N"
-
-    @property
-    def desc(self) -> str:
-        return self.sig
-
-
-@dataclass
 class AniRuntimeFixedArrayType(AniRuntimeUnionMemberType):
     element: AniRuntimeType
 
@@ -1307,7 +1296,7 @@ class NullTypeAniInfo(TypeAniInfo):
     def __init__(self, am: AnalysisManager, t: UnitType):
         super().__init__(am, t)
         self.ani_type = ANI_REF
-        self.sig_type = AniRuntimeNullType()
+        self.sig_type = AniRuntimeClassType("std.core.Null")
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
