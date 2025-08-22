@@ -4,9 +4,9 @@ struct Pair {
 }
 
 union InnerUnion {
+  undefinedValue: @undefined unit;
   stringValue: String;
   pairValue: Pair;
-  undefinedValue: @undefined unit;
 }
 
 union MyUnion {
