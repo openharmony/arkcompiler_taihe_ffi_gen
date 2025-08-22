@@ -965,19 +965,14 @@ class AniCodeGenerator:
                 union_ani_impl_target.writelns(
                     f"ani_boolean {is_field_ani} = {{}};",
                 )
-                match final_ty_ani_info.type_desc:
-                    case "U":
-                        union_ani_impl_target.writelns(
-                            f"env->Reference_IsUndefined(ani_value, &{is_field_ani});",
-                        )
-                    case "N":
-                        union_ani_impl_target.writelns(
-                            f"env->Reference_IsNull(ani_value, &{is_field_ani});",
-                        )
-                    case _:
-                        union_ani_impl_target.writelns(
-                            f'env->Object_InstanceOf(static_cast<ani_object>(ani_value), TH_ANI_FIND_CLASS(env, "{final_ty_ani_info.type_desc}"), &{is_field_ani});',
-                        )
+                if final_ty_ani_info.type_desc == "U":
+                    union_ani_impl_target.writelns(
+                        f"env->Reference_IsUndefined(ani_value, &{is_field_ani});",
+                    )
+                else:
+                    union_ani_impl_target.writelns(
+                        f'env->Object_InstanceOf(static_cast<ani_object>(ani_value), TH_ANI_FIND_CLASS(env, "{final_ty_ani_info.type_desc}"), &{is_field_ani});',
+                    )
                 with union_ani_impl_target.indented(
                     f"if ({is_field_ani}) {{",
                     f"}}",
