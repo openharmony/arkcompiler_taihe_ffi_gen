@@ -108,12 +108,12 @@ function(generate_code_from_idl demo_name idl_files gen_ets_names author_bridge 
     # 替换扩展名
     get_filename_component(TAIHE_FILE_NAME ${TAIHE_FILE} NAME)
     # 将修改后的文件名添加到新的列表中
-    string(REGEX REPLACE "\\.taihe$" ".abi.c" GEN_ABI_C_FILE ${TAIHE_FILE_NAME})
+    string(REGEX REPLACE "\\.(taihe|ohidl)$" ".abi.c" GEN_ABI_C_FILE ${TAIHE_FILE_NAME})
     list(APPEND GEN_ABI_C_FILES "${GEN_DIR}/src/${GEN_ABI_C_FILE}")
 
     # author bridge
     if(author_bridge STREQUAL "kn-author")
-      string(REGEX REPLACE "\\.taihe$" ".knapi.cpp" GEN_AUTHOR_FILE ${TAIHE_FILE_NAME})
+      string(REGEX REPLACE "\\.(taihe|ohidl)$" ".knapi.cpp" GEN_AUTHOR_FILE ${TAIHE_FILE_NAME})
       list(APPEND GEN_AUTHOR_CPP_FILES "${GEN_DIR}/src/${GEN_AUTHOR_FILE}")
       # TODO: kn_author config
       # list(APPEND TAIHE_CONFIGS_LIST "-Gkn_author")
@@ -125,13 +125,13 @@ function(generate_code_from_idl demo_name idl_files gen_ets_names author_bridge 
     if(user_bridge STREQUAL "cpp-user")
       list(APPEND TAIHE_CONFIGS_LIST "-Gcpp-user")
     elseif(user_bridge STREQUAL "napi-bridge")
-      string(REGEX REPLACE "\\.taihe$" ".napi.cpp" GEN_USER_FILE ${TAIHE_FILE_NAME})
+      string(REGEX REPLACE "\\.(taihe|ohidl)$" ".napi.cpp" GEN_USER_FILE ${TAIHE_FILE_NAME})
       list(APPEND GEN_USER_CPP_FILES "${GEN_DIR}/src/${GEN_USER_FILE}")
       list(APPEND TAIHE_CONFIGS_LIST "-Gnapi-bridge")
       # TODO: napi_bridge config
       # list(APPEND TAIHE_CONFIGS_LIST "-Gnapi-bridge")
     elseif(user_bridge STREQUAL "ani-bridge")
-      string(REGEX REPLACE "\\.taihe$" ".ani.cpp" GEN_USER_FILE ${TAIHE_FILE_NAME})
+      string(REGEX REPLACE "\\.(taihe|ohidl)$" ".ani.cpp" GEN_USER_FILE ${TAIHE_FILE_NAME})
       list(APPEND GEN_USER_CPP_FILES "${GEN_DIR}/src/${GEN_USER_FILE}")
       list(APPEND TAIHE_CONFIGS_LIST "-Gani-bridge")
     endif()
