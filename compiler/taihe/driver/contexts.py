@@ -39,7 +39,7 @@ def validate_source_file(path: Path) -> IgnoredFileReason | None:
     if not path.is_file():
         return IgnoredFileReason.IS_DIRECTORY
     # unexpected file extension
-    if path.suffix != ".taihe":
+    if path.suffix != ".taihe" and path.suffix != ".ohidl":
         return IgnoredFileReason.EXTENSION_MISMATCH
     return None
 
