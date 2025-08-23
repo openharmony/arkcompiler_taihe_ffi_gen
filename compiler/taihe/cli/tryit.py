@@ -104,7 +104,8 @@ class BuildSystem(ABC):
             backend_names.append("pretty-print")
         taihec(
             dst_dir=self.generated_dir,
-            src_files=list(self.idl_dir.glob("*.taihe")),
+            src_files=list(self.idl_dir.glob("*.taihe"))
+            + list(self.idl_dir.glob("*.ohidl")),
             backend_names=backend_names,
             buildsys_name=buildsys_name,
             extra=extra,
