@@ -28,7 +28,7 @@ from taihe.utils.analyses import AnalysisManager
 from taihe.utils.diagnostics import ConsoleDiagnosticsManager, DiagnosticsManager
 from taihe.utils.exceptions import IgnoredFileReason, IgnoredFileWarn
 from taihe.utils.outputs import OutputConfig, OutputManager
-from taihe.utils.sources import SourceFile, SourceLocation, SourceManager
+from taihe.utils.sources import IDL_FILE_EXTS, SourceFile, SourceLocation, SourceManager
 
 
 def validate_source_file(path: Path) -> IgnoredFileReason | None:
@@ -39,7 +39,7 @@ def validate_source_file(path: Path) -> IgnoredFileReason | None:
     if not path.is_file():
         return IgnoredFileReason.IS_DIRECTORY
     # unexpected file extension
-    if path.suffix != ".taihe" and path.suffix != ".ohidl":
+    if path.suffix not in IDL_FILE_EXTS:
         return IgnoredFileReason.EXTENSION_MISMATCH
     return None
 
