@@ -70,6 +70,9 @@ class SourceBuffer(SourceBase):
         return self.buf.getvalue()
 
 
+IDL_FILE_EXTS = {".taihe", ".ohidl"}
+
+
 class SourceManager:
     """Manages all input files throughout the compilation."""
 
