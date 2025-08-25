@@ -1,5 +1,7 @@
 # Taihe 基本使用文档
 
+本文档介绍 Taihe 的安装、环境配置以及命令行工具的使用方法。
+
 ## 环境配置
 
 - 源码用户
@@ -70,8 +72,6 @@ taihec [taihe_files ...] [options ...]
 
 以下是一个 `taihec` 的基本使用示例：
 ```sh
-taihec stdlib/taihe.platform.ani.taihe -Otest/ani_test/generated -Gabi-source -Gcpp-common  # 生成 Taihe ANI 相关标准库接口
-
 taihec test/ani_test/idl/*.taihe -Otest/ani_test/generated -Gani-bridge -Gcpp-author -Carkts:module-prefix=<module_name> -Carkts:path-prefix=<pkg_name> -Bcmake  # 生成用户自己在 IDL 中定义的接口的 ANI 桥接代码，以及 C++ 实现模板等
 ```
 
@@ -138,7 +138,7 @@ taihe-tryit [mode] [test_dir] [options ...]
        └── main.ets                    # 测试入口
    ```
 
-2. 执行 `taihe-tryit generate --user sts path/to/demo` 后，会在 `path/to/demo` 中生成一个 `generated` 目录，包含生成的代码和头文件。也可以尝试修改 `hello.taihe`，按照[Taihe 语言规范](DSL.md)编写自己的接口描述文件并进行生成。
+2. 执行 `taihe-tryit generate --user sts path/to/demo` 后，会在 `path/to/demo` 中生成一个 `generated` 目录，包含生成的代码和头文件。也可以尝试修改 `hello.taihe`，按照 [Taihe 语言规范](DSL.md)编写自己的接口描述文件并进行生成。
 
    ```
    generated
