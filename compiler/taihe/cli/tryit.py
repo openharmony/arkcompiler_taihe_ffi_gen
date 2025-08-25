@@ -21,7 +21,6 @@ from taihe.utils.resources import (
     StandardLibrary,
     fetch_url,
 )
-from taihe.utils.sources import IDL_FILE_EXTS
 
 logger = logging.getLogger(__name__)
 
@@ -105,11 +104,7 @@ class BuildSystem(ABC):
             backend_names.append("pretty-print")
         taihec(
             dst_dir=self.generated_dir,
-            src_files=[
-                src_file
-                for src_file in self.idl_dir.glob("*")
-                if src_file.suffix in IDL_FILE_EXTS
-            ],
+            src_files=list(self.idl_dir.glob("*")),
             backend_names=backend_names,
             buildsys_name=buildsys_name,
             extra=extra,
