@@ -138,13 +138,10 @@ class CompilerInstance:
         direct = self.invocation.src_files
         scanned = chain.from_iterable(p.iterdir() for p in self.invocation.src_dirs)
 
-        for file in chain(direct, scanned):
-            source = SourceFile(file)
-            if warning := validate_source_file(file):
-                warn = IgnoredFileWarn(
-                    reason=warning,
-                    loc=SourceLocation(source),
-                )
+        for path in chain(direct, scanned):
+            source = SourceFile(path)
+            if reason := validate_source_file(path):
+                warn = IgnoredFileWarn(reason=reason, loc=SourceLocation(source))
                 self.diagnostics_manager.emit(warn)
             else:
                 self.source_manager.add_source(source)
