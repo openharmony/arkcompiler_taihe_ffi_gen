@@ -1,4 +1,4 @@
-# On 与 Off (根据目前overload策略暂废弃)
+# On 与 Off
 
 在 sts 中有些接口形如：
 ```typescript
