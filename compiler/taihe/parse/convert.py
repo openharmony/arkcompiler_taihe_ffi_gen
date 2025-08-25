@@ -473,7 +473,11 @@ class AstConverter(ExprEvaluator):
                 self.source.pkg_name,
                 loc=SourceLocation(self.source),
             )
-        pkg = PackageDecl(self.source.pkg_name, SourceLocation(self.source))
+        pkg = PackageDecl(
+            SourceLocation(self.source),
+            self.source.pkg_name,
+            self.source.is_stdlib,
+        )
         for u in node.uses:
             self.dm.for_each(u.accept(self), pkg.add_import)
         self.dm.for_each(node.fields, lambda n: pkg.add_declaration(n.accept(self)))
