@@ -1,6 +1,8 @@
 # Namespace
 
-taihe 使用注解的方式实现 sts 的 namespace, 注解为 `@!namespace()`, 下面是使用示例：
+taihe 使用注解的方式实现 sts 的 namespace, 注解为 `@!namespace()`, 一个 Taihe 文件只能使用一个 `@!namespace`，一个 module 里有多个 namespace 的情况下需要将每个 namespace 写到单独的 Taihe 文件中。
+
+下面是使用示例：
 
 ## 第一步：编写接口原型
 
