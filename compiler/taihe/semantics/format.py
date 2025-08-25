@@ -334,7 +334,7 @@ class PrettyPrinter(RecursiveDeclVisitor):
 
     @override
     def visit_package_group(self, g: "PackageGroup"):
-        for i, p in enumerate(g.packages):
+        for i, p in enumerate(g.all_packages):
             if i != 0:
                 self.out.newline()
             p.accept(self)
