@@ -480,7 +480,7 @@ class AstConverter(ExprEvaluator):
         )
         for u in node.uses:
             self.dm.for_each(u.accept(self), pkg.add_import)
-        self.dm.for_each(node.fields, lambda n: pkg.add_declaration(n.accept(self)))
+        self.dm.for_each(node.decls, lambda n: pkg.add_declaration(n.accept(self)))
         self.dm.for_each(node.inner_attrs, lambda a: self.add_attr(pkg, a))
         return pkg
 
