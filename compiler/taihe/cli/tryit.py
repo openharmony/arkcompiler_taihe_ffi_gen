@@ -18,7 +18,6 @@ from taihe.utils.resources import (
     ResourceContext,
     RuntimeHeader,
     RuntimeSource,
-    StandardLibrary,
     fetch_url,
 )
 
@@ -31,8 +30,6 @@ TRACE_VERBOSE = TRACE_CONCISE - 1
 
 class BuildSystem(ABC):
     """Main build system class."""
-
-    lib_files: list[Path]
 
     runtime_includes: list[Path]
     generated_includes: list[Path]
@@ -90,12 +87,6 @@ class BuildSystem(ABC):
 
         logger.info("Generating author and ani codes...")
 
-        # Generate taihe stdlib codes
-        taihec(
-            dst_dir=self.generated_dir,
-            src_files=self.lib_files,
-            backend_names=["abi-source", "cpp-common"],
-        )
         # Generate author codes
         backend_names: list[str] = []
         backend_names.extend(self.author_backend_names)
@@ -241,8 +232,6 @@ class CppBuildSystem(BuildSystem):
 
         self.exe_target = self.build_dir / "main"
 
-        self.lib_files = []
-
         self.user_backend_names = ["cpp-user"]
 
     def _create_user_files(self) -> None:
@@ -330,8 +319,6 @@ class StsBuildSystem(BuildSystem):
 
         self.abc_target = self.build_dir / "main.abc"
         self.arktsconfig_file = self.build_dir / "arktsconfig.json"
-
-        self.lib_files = [StandardLibrary.resolve_path() / "taihe.platform.ani.taihe"]
 
         self.user_backend_names = ["ani-bridge"]
 
