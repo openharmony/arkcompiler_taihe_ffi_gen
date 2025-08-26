@@ -29,6 +29,8 @@ from taihe.semantics.declarations import (
 )
 from taihe.semantics.types import (
     ArrayType,
+    AsyncCompleterType,
+    AsyncFutureType,
     CallbackType,
     EnumType,
     IfaceType,
@@ -318,6 +320,26 @@ class SetTypeCppInfo(TypeCppInfo):
         self.as_param = f"::taihe::set_view<{key_ty_cpp_info.as_owner}>"
 
 
+class AsyncCompleterTypeCppInfo(TypeCppInfo):
+    def __init__(self, am: AnalysisManager, t: AsyncCompleterType) -> None:
+        item_ty_cpp_info = TypeCppInfo.get(am, t.item_ty)
+        self.decl_headers = ["taihe/async.hpp", *item_ty_cpp_info.decl_headers]
+        self.defn_headers = ["taihe/async.hpp", *item_ty_cpp_info.decl_headers]
+        self.impl_headers = ["taihe/async.hpp", *item_ty_cpp_info.impl_headers]
+        self.as_owner = f"::taihe::async_completer<{item_ty_cpp_info.as_owner}>"
+        self.as_param = f"::taihe::async_completer<{item_ty_cpp_info.as_owner}>"
+
+
+class AsyncFutureTypeCppInfo(TypeCppInfo):
+    def __init__(self, am: AnalysisManager, t: AsyncFutureType) -> None:
+        item_ty_cpp_info = TypeCppInfo.get(am, t.item_ty)
+        self.decl_headers = ["taihe/async.hpp", *item_ty_cpp_info.decl_headers]
+        self.defn_headers = ["taihe/async.hpp", *item_ty_cpp_info.decl_headers]
+        self.impl_headers = ["taihe/async.hpp", *item_ty_cpp_info.impl_headers]
+        self.as_owner = f"::taihe::async_future<{item_ty_cpp_info.as_owner}>"
+        self.as_param = f"::taihe::async_future<{item_ty_cpp_info.as_owner}>"
+
+
 class CallbackTypeCppInfo(TypeCppInfo):
     def __init__(self, am: AnalysisManager, t: CallbackType) -> None:
         callback_abi_info = CallbackAbiInfo.get(am, t)
@@ -404,6 +426,14 @@ class TypeCppInfoDispatcher(NonVoidTypeVisitor[TypeCppInfo]):
     @override
     def visit_set_type(self, t: SetType) -> TypeCppInfo:
         return SetTypeCppInfo(self.am, t)
+
+    @override
+    def visit_async_completer_type(self, t: AsyncCompleterType) -> TypeCppInfo:
+        return AsyncCompleterTypeCppInfo(self.am, t)
+
+    @override
+    def visit_async_future_type(self, t: AsyncFutureType) -> TypeCppInfo:
+        return AsyncFutureTypeCppInfo(self.am, t)
 
     @override
     def visit_callback_type(self, t: CallbackType) -> TypeCppInfo:
