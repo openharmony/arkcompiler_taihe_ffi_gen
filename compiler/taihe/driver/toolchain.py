@@ -358,6 +358,7 @@ class TsToolchain:
         tsconfig_file: Path,
         paths: dict[str, Path],
         output_dir: Path,
+        root_dir: Path,
         main_file: Path,
     ):
         """Create TS configuration file."""
@@ -366,6 +367,7 @@ class TsToolchain:
                 "target": "ES2020",
                 "module": "commonjs",
                 "outDir": str(output_dir),
+                "rootDir": str(root_dir),
                 "paths": {key: [str(value)] for key, value in paths.items()},
             },
             "include": [

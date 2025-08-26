@@ -1,3 +1,4 @@
+@!lib("people")
 struct student {
     name: String;
     age: i32;

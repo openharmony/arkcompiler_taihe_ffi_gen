@@ -428,7 +428,7 @@ class TsBuildSystem(BuildSystem):
             runtime_src_dir / "napi_runtime.cpp",
         ]
 
-        self.js_target = self.build_dir / "main.js"
+        self.js_target = self.build_user_dir / "main.js"
         self.tsconfig_file = self.build_dir / "tsconfig.json"
 
         self.lib_files = []
@@ -503,7 +503,7 @@ class TsBuildSystem(BuildSystem):
 
         main_ts_file = self.user_dir / "main.ts"
         self.ts_toolchain.create_tsconfig(
-            self.tsconfig_file, paths, self.build_dir, main_ts_file
+            self.tsconfig_file, paths, self.build_dir, self.target_path, main_ts_file
         )
 
         self.ts_toolchain.compile(

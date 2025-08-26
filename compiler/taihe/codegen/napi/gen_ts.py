@@ -15,6 +15,7 @@ from taihe.codegen.napi.analyses import (
     UnionFieldNapiInfo,
     UnionNapiInfo,
 )
+from taihe.codegen.napi.attributes import LibAttr
 from taihe.codegen.napi.writer import DtsWriter
 from taihe.semantics.declarations import (
     EnumDecl,
@@ -31,7 +32,14 @@ from taihe.utils.analyses import AnalysisManager
 from taihe.utils.outputs import FileKind, OutputManager
 
 
-class DtsCodeGenerator:
+def check_lib(ns: Namespace) -> bool:
+    for pkg in ns.packages:
+        if LibAttr.get(pkg):
+            return True
+    return any(check_lib(child_ns) for child_ns_name, child_ns in ns.children.items())
+
+
+class TsCodeGenerator:
     def __init__(self, oc: OutputManager, am: AnalysisManager):
         self.oc = oc
         self.am = am
@@ -42,20 +50,28 @@ class DtsCodeGenerator:
             self.gen_module_file(module, ns)
 
     def gen_module_file(self, module: str, ns: Namespace):
-        with DtsWriter(
-            self.oc,
-            f"{module}.d.ts",
-            FileKind.DTS,
-        ) as target:
-            self.gen_namespace(ns, target)
+        if check_lib(ns):
+            with DtsWriter(
+                self.oc,
+                f"proxy/{module}.ts",
+                FileKind.TS,
+            ) as target:
+                native_lib_name = "_taihe_native_lib"
+                self.gen_namespace(ns, target, native_lib_name)
 
-    def gen_namespace(self, ns: Namespace, target: DtsWriter):
-        for head in ns.dts_injected_heads:
+    def gen_namespace(self, ns: Namespace, target: DtsWriter, native_lib_name: str):
+        for head in ns.ts_injected_heads:
             target.write_block(head)
-        for code in ns.dts_injected_codes:
+        for code in ns.ts_injected_codes:
             target.write_block(code)
         for pkg in ns.packages:
-            self.gen_package(pkg, target)
+            if attr := LibAttr.get(pkg):
+                lib_name = attr.lib_name
+                target.writelns(
+                    f"const _taihe_native_lib = require('{lib_name}');"  # TODO: so name
+                )
+                self.gen_package(pkg, target, native_lib_name)
+
         for child_ns_name, child_ns in ns.children.items():
             dts_decl = f"namespace {child_ns_name}"
             dts_decl = f"export {dts_decl}"
@@ -63,50 +79,37 @@ class DtsCodeGenerator:
                 f"{dts_decl} {{",
                 f"}}",
             ):
-                self.gen_namespace(child_ns, target)
+                native_lib_name = f"{native_lib_name}.{child_ns_name}"
+                self.gen_namespace(child_ns, target, native_lib_name)
 
-    def gen_package(self, pkg: PackageDecl, pkg_dts_target: DtsWriter):
+    def gen_package(self, pkg: PackageDecl, target: DtsWriter, native_lib_name: str):
         for func in pkg.functions:
             func_napi_info = GlobFuncNapiInfo.get(self.am, func)
             if (
                 func_napi_info.ctor_class_name is None
                 and func_napi_info.static_class_name is None
             ):
-                self.gen_func(func, pkg_dts_target)
+                self.gen_func(func, target, native_lib_name)
         for struct in pkg.structs:
-            self.gen_struct_interface(struct, pkg_dts_target)
-            self.gen_struct_class(struct, pkg_dts_target)
+            self.gen_struct_interface(struct, target, native_lib_name)
+            self.gen_struct_class(struct, target, native_lib_name)
         for iface in pkg.interfaces:
-            self.gen_iface_interface(iface, pkg_dts_target)
+            self.gen_iface_interface(iface, target, native_lib_name)
         for enum in pkg.enums:
-            self.gen_enum(enum, pkg_dts_target)
+            self.gen_enum(enum, target)
         for union in pkg.unions:
-            self.gen_union(union, pkg_dts_target)
+            self.gen_union(union, target)
 
-    def gen_func(self, func: GlobFuncDecl, pkg_dts_target: DtsWriter):
-        args = []
-        for param in func.params:
-            value_ty = param.ty_ref.resolved_ty
-            param_dts_info = TypeNapiInfo.get(self.am, value_ty)
-            args.append(
-                f"{param.name}{'?' if param_dts_info.is_optional else ''}: {param_dts_info.dts_type_in(pkg_dts_target)}"
-            )
-        args_str = ", ".join(args)
-        if func.return_ty_ref:
-            return_ty_dts_info = TypeNapiInfo.get(
-                self.am, func.return_ty_ref.resolved_ty
-            )
-            return_ty = return_ty_dts_info.dts_return_type_in(pkg_dts_target)
-        else:
-            return_ty = "void"
-        pkg_dts_target.writelns(
-            f"export function {func.name}({args_str}): {return_ty};",
+    def gen_func(self, func: GlobFuncDecl, target: DtsWriter, native_lib_name: str):
+        target.writelns(
+            f"export const {func.name} = {native_lib_name}.{func.name};",
         )
 
     def gen_struct_interface(
         self,
         struct: StructDecl,
         target: DtsWriter,
+        native_lib_name: str,
     ):
         struct_napi_info = StructNapiInfo.get(self.am, struct)
         if struct_napi_info.is_class():
@@ -128,7 +131,7 @@ class DtsCodeGenerator:
             f"{struct_decl} {{",
             f"}}",
         ):
-            for injected in struct_napi_info.interfacets_dts_injected_codes:
+            for injected in struct_napi_info.interfacets_ts_injected_codes:
                 target.write_block(injected)
 
             for field in struct_napi_info.dts_fields:
@@ -142,9 +145,16 @@ class DtsCodeGenerator:
         self,
         struct: StructDecl,
         target: DtsWriter,
+        native_lib_name: str,
     ):
         struct_napi_info = StructNapiInfo.get(self.am, struct)
         if not struct_napi_info.is_class():
+            return
+
+        if not struct_napi_info.interfacets_ts_injected_codes:
+            target.writelns(
+                f"export const {struct_napi_info.dts_type_name} = {native_lib_name}.{struct_napi_info.dts_type_name};",
+            )
             return
 
         struct_decl = f"class {struct_napi_info.dts_type_name}"
@@ -162,10 +172,10 @@ class DtsCodeGenerator:
             f"{struct_decl} {{",
             f"}}",
         ):
-            for injected in struct_napi_info.class_dts_injected_codes:
+            for injected in struct_napi_info.class_ts_injected_codes:
                 target.write_block(injected)
 
-            params = []
+            args = []
             for parts in struct_napi_info.dts_final_fields:
                 final = parts[-1]
                 readonly = "readonly " if ReadOnlyAttr.get(final) is not None else ""
@@ -173,22 +183,30 @@ class DtsCodeGenerator:
                 target.writelns(
                     f"{readonly}{final.name}{'?' if ty_napi_info.is_optional else ''}: {ty_napi_info.dts_type_in(target)};"
                 )
-                params.append(
+                args.append(
                     f"{final.name}{'?' if ty_napi_info.is_optional else ''}: {ty_napi_info.dts_type_in(target)}"
                 )
+            args_str = ", ".join(args)
 
-            params_str = ", ".join(params)
-            target.writelns(f"constructor({params_str});")
+            with target.indented(
+                f"constructor({args_str}) {{",
+                f"}}",
+            ):
+                for parts in struct_napi_info.dts_final_fields:
+                    final = parts[-1]
+                    target.writelns(f"this.{final.name} = {final.name};")
 
     def gen_iface_interface(
         self,
         iface: IfaceDecl,
         target: DtsWriter,
+        native_lib_name: str,
     ):
         iface_napi_info = IfaceNapiInfo.get(self.am, iface)
         if iface_napi_info.is_class():
-            self.gen_iface_class(iface, target)
+            self.gen_iface_class(iface, target, native_lib_name)
             return
+
         parents = []
         for parent in iface.parents:
             parent_ty = parent.ty_ref.resolved_ty
@@ -199,17 +217,24 @@ class DtsCodeGenerator:
             f"export interface {iface_napi_info.dts_type_name}{extends_str} {{",
             f"}}",
         ):
-            for injected in iface_napi_info.interface_dts_injected_codes:
+            for injected in iface_napi_info.interface_ts_injected_codes:
                 target.write_block(injected)
-            self.gen_iface_methods_decl(iface.methods, target)
+            self.gen_iface_interface_methods_decl(iface.methods, target)
 
     def gen_iface_class(
         self,
         iface: IfaceDecl,
         target: DtsWriter,
+        native_lib_name: str,
     ):
         iface_napi_info = IfaceNapiInfo.get(self.am, iface)
         iface_abi_info = IfaceAbiInfo.get(self.am, iface)
+
+        if not iface_napi_info.class_ts_injected_codes:
+            target.writelns(
+                f"export const {iface_napi_info.dts_type_name} = {native_lib_name}.{iface_napi_info.dts_type_name};",
+            )
+            return
 
         iface_decl = f"class {iface_napi_info.dts_type_name}"
         if iface_napi_info.dts_iface_parents:
@@ -222,31 +247,47 @@ class DtsCodeGenerator:
             iface_decl = f"{iface_decl} implements {extends_str}"
         iface_decl = f"export {iface_decl}"
 
+        nativa_class_name = f"native{iface_napi_info.dts_type_name}"
         with target.indented(
             f"{iface_decl} {{",
             f"}}",
         ):
-            for injected in iface_napi_info.class_dts_injected_codes:
+            for injected in iface_napi_info.class_ts_injected_codes:
                 target.write_block(injected)
 
+            target.writelns(
+                f"private {nativa_class_name};",
+            )
             if ctor := iface_napi_info.ctor:
                 params = []
+                args = []
                 for param in ctor.params:
                     type_napi_info = TypeNapiInfo.get(self.am, param.ty_ref.resolved_ty)
                     params.append(
                         f"{param.name}{'?' if type_napi_info.is_optional else ''}: {type_napi_info.dts_type_in(target)}"
                     )
+                    args.append(param.name)
                 params_str = ", ".join(params)
-                target.writelns(f"constructor({params_str});")
+                args_str = ", ".join(args)
+                with target.indented(
+                    f"constructor({params_str}) {{",
+                    f"}}",
+                ):
+                    target.writelns(
+                        f"this.{nativa_class_name} = new {native_lib_name}.{iface_napi_info.dts_type_name}({args_str});",
+                    )
             for mng_name, static_func in iface_napi_info.static_funcs:
                 params = []
+                args = []
                 for param in static_func.params:
                     value_ty = param.ty_ref.resolved_ty
                     param_dts_info = TypeNapiInfo.get(self.am, value_ty)
                     params.append(
                         f"{param.name}{'?' if param_dts_info.is_optional else ''}: {param_dts_info.dts_type_in(target)}"
                     )
+                    args.append(param.name)
                 params_str = ", ".join(params)
+                args_str = ", ".join(args)
                 if static_func.return_ty_ref:
                     return_ty_dts_info = TypeNapiInfo.get(
                         self.am, static_func.return_ty_ref.resolved_ty
@@ -254,13 +295,19 @@ class DtsCodeGenerator:
                     return_ty = return_ty_dts_info.dts_return_type_in(target)
                 else:
                     return_ty = "void"
-                target.writelns(
-                    f"static {static_func.name}({params_str}): {return_ty};",
-                )
+                with target.indented(
+                    f"static {static_func.name}({params_str}): {return_ty} {{",
+                    f"}}",
+                ):
+                    target.writelns(
+                        f"return {native_lib_name}.{iface_napi_info.dts_type_name}.{static_func.name}({args_str});",
+                    )
             for ancestor in iface_abi_info.ancestor_dict:
-                self.gen_iface_methods_decl(ancestor.methods, target)
+                self.gen_iface_class_methods_impl(
+                    ancestor.methods, target, nativa_class_name
+                )
 
-    def gen_iface_methods_decl(
+    def gen_iface_interface_methods_decl(
         self,
         methods: Collection[IfaceMethodDecl],
         target: DtsWriter,
@@ -291,6 +338,54 @@ class DtsCodeGenerator:
                 target.writelns(
                     f"{method.name}({dts_params_str}){dts_return_ty_name};",
                 )
+
+    def gen_iface_class_methods_impl(
+        self,
+        methods: Collection[IfaceMethodDecl],
+        target: DtsWriter,
+        nativa_class_name: str,
+    ):
+        for method in methods:
+            iface_method_napi_info = IfaceMethodNapiInfo.get(self.am, method)
+            params = []
+            args = []
+            for param in method.params:
+                type_napi_info = TypeNapiInfo.get(self.am, param.ty_ref.resolved_ty)
+                params.append(
+                    f"{param.name}{'?' if type_napi_info.is_optional else ''}: {type_napi_info.dts_type_in(target)}"
+                )
+                args.append(param.name)
+            params_str = ", ".join(params)
+            args_str = ", ".join(args)
+            if return_ty_ref := method.return_ty_ref:
+                type_napi_info = TypeNapiInfo.get(self.am, return_ty_ref.resolved_ty)
+                dts_return_ty_name = ": " + type_napi_info.dts_return_type_in(target)
+            else:
+                dts_return_ty_name = ""
+            if name := iface_method_napi_info.get_name:
+                with target.indented(
+                    f"get {name}({params_str}){dts_return_ty_name} {{",
+                    f"}}",
+                ):
+                    target.writelns(
+                        f"return this.{nativa_class_name}.{name};",
+                    )
+            elif name := iface_method_napi_info.set_name:
+                with target.indented(
+                    f"set {name}({params_str}){dts_return_ty_name} {{",
+                    f"}}",
+                ):
+                    target.writelns(
+                        f"this.{nativa_class_name}.{name} = {args_str};",
+                    )
+            else:
+                with target.indented(
+                    f"{method.name}({params_str}){dts_return_ty_name} {{",
+                    f"}}",
+                ):
+                    target.writelns(
+                        f"return this.{nativa_class_name}.{method.name}({args_str});",
+                    )
 
     def gen_enum(
         self,

@@ -1,0 +1,36 @@
+@!lib("my_module_a")
+
+@!namespace("my_module_a", "ns1")
+function Funtest(s: Color): String;
+enum Color: String {
+    RED = "Red",
+    GREEN = "Green",
+    BLUE = "Blue",
+}
+function noo(): void;
+
+interface IBase {
+@!ts_inject_into_interface("add(a: number, b: number): number;")
+    getId(): String;
+    setId(s: String): void;
+}
+
+function makeIBase(id: String): IBase;
+function bar(): void;
+
+@class
+interface CTest{
+@!ts_inject_into_class("""mul(a: number, b: number): number {
+    return a * b;
+}
+""")
+    add(a: i32, b: i32): f32;
+}
+
+@ctor("CTest")
+function createCTest(id: i32): CTest;
+
+function changeCTest(a: CTest): CTest;
+
+@static("CTest")
+function multiply(a: i32, b: i32): i32;

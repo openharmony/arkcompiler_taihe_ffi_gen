@@ -43,6 +43,7 @@ class FileKind(str, Enum):
     TEMPLATE = "template"
     ETS = "ets"
     DTS = "dts"
+    TS = "ts"
     OTHER = "other"
 
 

@@ -27,7 +27,17 @@ from taihe.codegen.cpp.analyses import (
     EnumCppInfo,
     TypeCppInfo,
 )
-from taihe.codegen.napi.attributes import DtsTypeAttr
+from taihe.codegen.napi.attributes import (
+    DtsInjectAttr,
+    DtsInjectIntoClazzAttr,
+    DtsInjectIntoIfaceAttr,
+    DtsInjectIntoModuleAttr,
+    DtsTypeAttr,
+    TsInjectAttr,
+    TsInjectIntoClazzAttr,
+    TsInjectIntoIfaceAttr,
+    TsInjectIntoModuleAttr,
+)
 from taihe.codegen.napi.writer import DtsWriter
 from taihe.semantics.declarations import (
     EnumDecl,
@@ -88,6 +98,11 @@ class Namespace:
 
         self.children: dict[str, Namespace] = {}
         self.packages: list[PackageDecl] = []
+        self.ts_injected_heads: list[str] = []
+        self.ts_injected_codes: list[str] = []
+
+        self.dts_injected_heads: list[str] = []
+        self.dts_injected_codes: list[str] = []
 
         if parent is None:
             self.module = self
@@ -95,8 +110,6 @@ class Namespace:
         else:
             self.module = parent.module
             self.path: list[str] = [*parent.path, name]
-
-        self.napi_path = "/".join(self.module.name.split(".") + self.path)
 
     def add_path(
         self,
@@ -141,7 +154,19 @@ class PackageGroupNapiInfo(AbstractAnalysis[PackageGroup]):
                 module_name = pkg.name
 
             mod = self.module_dict.setdefault(module_name, Namespace(module_name))
-            self.package_map[pkg] = mod.add_path(path, pkg)
+            ns = self.package_map[pkg] = mod.add_path(path, pkg)
+
+            for attr in TsInjectIntoModuleAttr.get(pkg):
+                mod.ts_injected_heads.append(attr.ts_code)
+
+            for attr in TsInjectAttr.get(pkg):
+                ns.ts_injected_codes.append(attr.ts_code)
+
+            for attr in DtsInjectIntoModuleAttr.get(pkg):
+                mod.dts_injected_heads.append(attr.dts_code)
+
+            for attr in DtsInjectAttr.get(pkg):
+                ns.dts_injected_codes.append(attr.dts_code)
 
     @classmethod
     @override
@@ -193,6 +218,20 @@ class StructNapiInfo(AbstractAnalysis[StructDecl]):
             self.dts_impl_name = f"{d.name}"
         else:
             self.dts_impl_name = f"{d.name}_inner"
+
+        self.interfacets_ts_injected_codes: list[str] = []
+        for iface_injected in TsInjectIntoIfaceAttr.get(d):
+            self.interfacets_ts_injected_codes.append(iface_injected.ts_code)
+        self.class_ts_injected_codes: list[str] = []
+        for class_injected in TsInjectIntoClazzAttr.get(d):
+            self.class_ts_injected_codes.append(class_injected.ts_code)
+
+        self.interfacets_dts_injected_codes: list[str] = []
+        for iface_injected in DtsInjectIntoIfaceAttr.get(d):
+            self.interfacets_dts_injected_codes.append(iface_injected.dts_code)
+        self.class_dts_injected_codes: list[str] = []
+        for class_injected in DtsInjectIntoClazzAttr.get(d):
+            self.class_dts_injected_codes.append(class_injected.dts_code)
 
         self.dts_fields: list[StructFieldDecl] = []
         self.dts_iface_parents: list[StructFieldDecl] = []
@@ -251,6 +290,20 @@ class IfaceNapiInfo(AbstractAnalysis[IfaceDecl]):
             self.dts_impl_name = f"{d.name}"
         else:
             self.dts_impl_name = f"{d.name}_inner"
+
+        self.interface_ts_injected_codes: list[str] = []
+        for iface_injected in TsInjectIntoIfaceAttr.get(d):
+            self.interface_ts_injected_codes.append(iface_injected.ts_code)
+        self.class_ts_injected_codes: list[str] = []
+        for class_injected in TsInjectIntoClazzAttr.get(d):
+            self.class_ts_injected_codes.append(class_injected.ts_code)
+
+        self.interface_dts_injected_codes: list[str] = []
+        for iface_injected in DtsInjectIntoIfaceAttr.get(d):
+            self.interface_dts_injected_codes.append(iface_injected.dts_code)
+        self.class_dts_injected_codes: list[str] = []
+        for class_injected in DtsInjectIntoClazzAttr.get(d):
+            self.class_dts_injected_codes.append(class_injected.dts_code)
 
         iface_register_infos: list[
             tuple[list[IfaceMethodDecl], IfaceDecl, list[str]]

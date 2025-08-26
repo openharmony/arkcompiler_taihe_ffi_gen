@@ -1,5 +1,7 @@
-import * as lib_people from "people";
-import * as lib_building from "building";
+// import * as lib_people from "people";                    // Use .d.ts
+// import * as lib_building from "building";                // Use .d.ts
+import * as lib_people from "../generated/proxy/people";           // Use .ts
+import * as lib_building from "../generated/proxy/building";       // Use .ts
 
 function main() {
     let g = lib_building.make_group(); 

@@ -29,7 +29,7 @@ NAPI 代码生成及验证：
     - [x] typedarray
     - [x] import
     - [x] Opaque
-    - [ ] inject
+    - [x] inject
     - [ ] on_off
 
 3. 需要报错但未实现或实现的较为简单，设计如何报错并区分如何：
@@ -44,8 +44,10 @@ TODO:
 1. 生命周期，之前已做: done
 2. 错误处理，发现错误抛出 error: done
 3. NAPI doc: 草稿已有 [NapiUsageGuide](./NapiUsageGuide.md)，各功能全覆盖，细节待完善
-4. 逃逸通道: Opaque + dts_type 已支持，inject 待支持
-5. union 自定义类型，tag
+4. 逃逸通道: Opaque + dts_type 已支持，inject 已支持
+5. ctor 和 static 支持 struct
+6. union 自定义类型，tag
+7. ctor 不支持重载
 
 **注意：现在的验证方式是基于 ts 和 napi 非鸿蒙 napi，应配置鸿蒙环境下编译验证方法待设计。**
 xml 例子编译运行成功
