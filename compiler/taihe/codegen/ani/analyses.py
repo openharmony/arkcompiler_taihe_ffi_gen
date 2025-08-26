@@ -2183,10 +2183,10 @@ class CallbackTypeAniInfo(TypeAniInfo):
             params_ani.append(f"[[maybe_unused]] ani_ref {arg_ani}")
             args_ani.append(arg_ani)
         params_ani_str = ", ".join(params_ani)
-        args_cpp = []
-        for i in self.t.ref.params:
-            arg_cpp = f"cpp_arg_{i.name}"
-            args_cpp.append(arg_cpp)
+        vals_cpp = []
+        for param in self.t.ref.params:
+            val_cpp = f"cpp_arg_{param.name}"
+            vals_cpp.append(val_cpp)
         return_ty_ani_name = "ani_ref"
         with target.indented(
             f"static {return_ty_ani_name} {cpp_cast_ptr}({params_ani_str}) {{",
@@ -2197,11 +2197,21 @@ class CallbackTypeAniInfo(TypeAniInfo):
                 f"DataBlockHead* cpp_data_ptr = reinterpret_cast<DataBlockHead*>(ani_data_ptr);",
                 f"{self.cpp_info.as_param} cpp_func = {self.cpp_info.as_param}({{cpp_vtbl_ptr, cpp_data_ptr}});",
             )
-            for param, arg_ani, arg_cpp in zip(
-                self.t.ref.params, args_ani, args_cpp, strict=False
+            args_cpp = []
+            for param, arg_ani, val_cpp in zip(
+                self.t.ref.params, args_ani, vals_cpp, strict=False
             ):
                 param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
-                param_ty_ani_info.from_ani_boxed(target, "env", arg_ani, arg_cpp)
+                param_ty_ani_info.from_ani_boxed(
+                    target,
+                    "env",
+                    arg_ani,
+                    val_cpp,
+                )
+                param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
+                args_cpp.append(
+                    f"std::forward<{param_ty_cpp_info.as_param}>({val_cpp})"
+                )
             args_cpp_str = ", ".join(args_cpp)
             if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
                 return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
@@ -2212,7 +2222,12 @@ class CallbackTypeAniInfo(TypeAniInfo):
                     f"{return_ty_cpp_info.as_owner} {result_cpp} = cpp_func({args_cpp_str});",
                     f"if (::taihe::has_error()) {{ return ani_ref{{}}; }}",
                 )
-                return_ty_ani_info.into_ani_boxed(target, "env", result_cpp, result_ani)
+                return_ty_ani_info.into_ani_boxed(
+                    target,
+                    "env",
+                    result_cpp,
+                    result_ani,
+                )
                 target.writelns(
                     f"return {result_ani};",
                 )
