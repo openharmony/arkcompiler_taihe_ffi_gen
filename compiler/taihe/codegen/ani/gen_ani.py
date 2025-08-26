@@ -352,14 +352,14 @@ class AniCodeGenerator:
         params_ani = []
         params_ani.append("[[maybe_unused]] ani_env *env")
         args_ani = []
-        args_cpp = []
+        vals_cpp = []
         for param in func.params:
             param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
             arg_ani = f"ani_arg_{param.name}"
-            arg_cpp = f"cpp_arg_{param.name}"
+            val_cpp = f"cpp_val_{param.name}"
             params_ani.append(f"{param_ty_ani_info.ani_type} {arg_ani}")
             args_ani.append(arg_ani)
-            args_cpp.append(arg_cpp)
+            vals_cpp.append(val_cpp)
         params_ani_str = ", ".join(params_ani)
         if isinstance(return_ty := func.return_ty, NonVoidType):
             return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
@@ -370,12 +370,20 @@ class AniCodeGenerator:
             f"static {return_ty_ani_name} {name}({params_ani_str}) {{",
             f"}}",
         ):
-            for param, arg_ani, arg_cpp in zip(
-                func.params, args_ani, args_cpp, strict=True
+            args_cpp = []
+            for param, arg_ani, val_cpp in zip(
+                func.params, args_ani, vals_cpp, strict=True
             ):
                 param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
                 param_ty_ani_info.from_ani(
-                    pkg_ani_source_target, "env", arg_ani, arg_cpp
+                    pkg_ani_source_target,
+                    "env",
+                    arg_ani,
+                    val_cpp,
+                )
+                param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
+                args_cpp.append(
+                    f"std::forward<{param_ty_cpp_info.as_param}>({val_cpp})"
                 )
             args_cpp_str = ", ".join(args_cpp)
             if isinstance(return_ty := func.return_ty, NonVoidType):
@@ -389,7 +397,10 @@ class AniCodeGenerator:
                     f"if (::taihe::has_error()) {{ return {return_ty_ani_info.ani_type}{{}}; }}",
                 )
                 return_ty_ani_info.into_ani(
-                    pkg_ani_source_target, "env", result_cpp, result_ani
+                    pkg_ani_source_target,
+                    "env",
+                    result_cpp,
+                    result_ani,
                 )
                 pkg_ani_source_target.writelns(
                     f"return {result_ani};",
@@ -416,14 +427,14 @@ class AniCodeGenerator:
         params_ani.append("[[maybe_unused]] ani_env *env")
         params_ani.append("[[maybe_unused]] ani_object object")
         args_ani = []
-        args_cpp = []
+        vals_cpp = []
         for param in method.params:
             param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
             arg_ani = f"ani_arg_{param.name}"
-            arg_cpp = f"cpp_arg_{param.name}"
+            val_cpp = f"cpp_val_{param.name}"
             params_ani.append(f"{param_ty_ani_info.ani_type} {arg_ani}")
             args_ani.append(arg_ani)
-            args_cpp.append(arg_cpp)
+            vals_cpp.append(val_cpp)
         params_ani_str = ", ".join(params_ani)
         if isinstance(return_ty := method.return_ty, NonVoidType):
             return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
@@ -443,12 +454,20 @@ class AniCodeGenerator:
                 f"{iface_abi_info.vtable}* cpp_vtbl_ptr = reinterpret_cast<{iface_abi_info.vtable}*>(ani_vtbl_ptr);",
                 f"{iface_cpp_info.full_weak_name} cpp_iface = {iface_cpp_info.full_weak_name}({{cpp_vtbl_ptr, cpp_data_ptr}});",
             )
-            for param, arg_ani, arg_cpp in zip(
-                method.params, args_ani, args_cpp, strict=True
+            args_cpp = []
+            for param, arg_ani, val_cpp in zip(
+                method.params, args_ani, vals_cpp, strict=True
             ):
                 return_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
                 return_ty_ani_info.from_ani(
-                    pkg_ani_source_target, "env", arg_ani, arg_cpp
+                    pkg_ani_source_target,
+                    "env",
+                    arg_ani,
+                    val_cpp,
+                )
+                param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
+                args_cpp.append(
+                    f"std::forward<{param_ty_cpp_info.as_param}>({val_cpp})"
                 )
             args_cpp_str = ", ".join(args_cpp)
             if isinstance(return_ty := method.return_ty, NonVoidType):
@@ -462,7 +481,10 @@ class AniCodeGenerator:
                     f"if (::taihe::has_error()) {{ return {return_ty_ani_info.ani_type}{{}}; }}",
                 )
                 return_ty_ani_info.into_ani(
-                    pkg_ani_source_target, "env", result_cpp, result_ani
+                    pkg_ani_source_target,
+                    "env",
+                    result_cpp,
+                    result_ani,
                 )
                 pkg_ani_source_target.writelns(
                     f"return {result_ani};",
