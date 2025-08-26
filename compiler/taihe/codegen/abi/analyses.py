@@ -31,6 +31,8 @@ from taihe.semantics.declarations import (
 )
 from taihe.semantics.types import (
     ArrayType,
+    AsyncCompleterType,
+    AsyncFutureType,
     CallbackType,
     EnumType,
     IfaceType,
@@ -313,14 +315,6 @@ class OptionalTypeAbiInfo(TypeAbiInfo):
         self.as_param = "struct TOptional"
 
 
-class CallbackTypeAbiInfo(TypeAbiInfo):
-    def __init__(self, am: AnalysisManager, t: CallbackType) -> None:
-        self.defn_headers = ["taihe/callback.abi.h"]
-        self.impl_headers = ["taihe/callback.abi.h"]
-        self.as_owner = "struct TCallback"
-        self.as_param = "struct TCallback"
-
-
 class VectorTypeAbiInfo(TypeAbiInfo):
     def __init__(self, am: AnalysisManager, t: VectorType) -> None:
         self.defn_headers = ["taihe/vector.abi.h"]
@@ -343,6 +337,30 @@ class SetTypeAbiInfo(TypeAbiInfo):
         self.impl_headers = ["taihe/set.abi.h"]
         self.as_owner = "struct TSet"
         self.as_param = "struct TSet"
+
+
+class AsyncCompleterTypeAbiInfo(TypeAbiInfo):
+    def __init__(self, am: AnalysisManager, t: AsyncCompleterType) -> None:
+        self.defn_headers = ["taihe/async.abi.h"]
+        self.impl_headers = ["taihe/async.abi.h"]
+        self.as_owner = "struct TAsyncCompleter"
+        self.as_param = "struct TAsyncCompleter"
+
+
+class AsyncFutureTypeAbiInfo(TypeAbiInfo):
+    def __init__(self, am: AnalysisManager, t: AsyncFutureType) -> None:
+        self.defn_headers = ["taihe/async.abi.h"]
+        self.impl_headers = ["taihe/async.abi.h"]
+        self.as_owner = "struct TAsyncFuture"
+        self.as_param = "struct TAsyncFuture"
+
+
+class CallbackTypeAbiInfo(TypeAbiInfo):
+    def __init__(self, am: AnalysisManager, t: CallbackType) -> None:
+        self.defn_headers = ["taihe/callback.abi.h"]
+        self.impl_headers = ["taihe/callback.abi.h"]
+        self.as_owner = "struct TCallback"
+        self.as_param = "struct TCallback"
 
 
 class TypeAbiInfoDispatcher(NonVoidTypeVisitor[TypeAbiInfo]):
@@ -400,6 +418,14 @@ class TypeAbiInfoDispatcher(NonVoidTypeVisitor[TypeAbiInfo]):
     @override
     def visit_set_type(self, t: SetType) -> TypeAbiInfo:
         return SetTypeAbiInfo(self.am, t)
+
+    @override
+    def visit_async_completer_type(self, t: AsyncCompleterType) -> TypeAbiInfo:
+        return AsyncCompleterTypeAbiInfo(self.am, t)
+
+    @override
+    def visit_async_future_type(self, t: AsyncFutureType) -> TypeAbiInfo:
+        return AsyncFutureTypeAbiInfo(self.am, t)
 
     @override
     def visit_callback_type(self, t: CallbackType) -> TypeAbiInfo:
