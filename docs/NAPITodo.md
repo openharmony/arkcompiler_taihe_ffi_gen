@@ -44,9 +44,7 @@ TODO:
 1. 生命周期，之前已做: done
 2. 错误处理，发现错误抛出 error: done
 3. NAPI doc: 草稿已有 [NapiUsageGuide](./NapiUsageGuide.md)，各功能全覆盖，细节待完善
-4. 逃逸通道: Opaque + dts_type 已支持，inject 已支持
-
-    （TODO：ts 使用 require 导入 so，ets 使用 import）
+4. 逃逸通道: Opaque + dts_type 已支持，inject 已支持，根据 lib 注解后缀判断 ts 该使用 require 导入 so，ets 使用 import 导入
 5. ctor 和 static 支持 struct
 6. union 自定义类型，tag
 7. ctor 不支持重载

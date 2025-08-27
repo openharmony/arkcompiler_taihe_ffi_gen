@@ -67,9 +67,15 @@ class TsCodeGenerator:
         for pkg in ns.packages:
             if attr := LibAttr.get(pkg):
                 lib_name = attr.lib_name
-                target.writelns(
-                    f"const _taihe_native_lib = require('{lib_name}');"  # TODO: so name
-                )
+                # TODO: hack to decide require/import
+                if lib_name[-3:] == ".so":
+                    target.writelns(
+                        f"import * as _taihe_native_lib from '{lib_name}';",
+                    )
+                else:
+                    target.writelns(
+                        f"const _taihe_native_lib = require('{lib_name}');",
+                    )
                 self.gen_package(pkg, target, native_lib_name)
 
         for child_ns_name, child_ns in ns.children.items():
