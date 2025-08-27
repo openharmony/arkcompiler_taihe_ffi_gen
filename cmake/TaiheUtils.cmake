@@ -94,7 +94,6 @@ function(generate_code_from_idl demo_name idl_files gen_ets_names author_bridge 
   set(GEN_AUTHOR_CPP_FILES)
   set(GEN_USER_CPP_FILES)
 
-  
   # config为字符串时需要拆分为字符串列表
   string(REGEX MATCH " " HAS_SPACE "${taihe_configs}")
 
@@ -104,16 +103,18 @@ function(generate_code_from_idl demo_name idl_files gen_ets_names author_bridge 
     set(TAIHE_CONFIGS_LIST ${taihe_configs})
   endif()
 
+  set(IDL_EXTENSION_REGEX "\\.(taihe|ohidl|hmidl)$")
+
   foreach(TAIHE_FILE ${idl_files})
     # 替换扩展名
     get_filename_component(TAIHE_FILE_NAME ${TAIHE_FILE} NAME)
     # 将修改后的文件名添加到新的列表中
-    string(REGEX REPLACE "\\.(taihe|ohidl)$" ".abi.c" GEN_ABI_C_FILE ${TAIHE_FILE_NAME})
+    string(REGEX REPLACE "${IDL_EXTENSION_REGEX}" ".abi.c" GEN_ABI_C_FILE ${TAIHE_FILE_NAME})
     list(APPEND GEN_ABI_C_FILES "${GEN_DIR}/src/${GEN_ABI_C_FILE}")
 
     # author bridge
     if(author_bridge STREQUAL "kn-author")
-      string(REGEX REPLACE "\\.(taihe|ohidl)$" ".knapi.cpp" GEN_AUTHOR_FILE ${TAIHE_FILE_NAME})
+      string(REGEX REPLACE "${IDL_EXTENSION_REGEX}" ".knapi.cpp" GEN_AUTHOR_FILE ${TAIHE_FILE_NAME})
       list(APPEND GEN_AUTHOR_CPP_FILES "${GEN_DIR}/src/${GEN_AUTHOR_FILE}")
       # TODO: kn_author config
       # list(APPEND TAIHE_CONFIGS_LIST "-Gkn_author")
@@ -125,13 +126,13 @@ function(generate_code_from_idl demo_name idl_files gen_ets_names author_bridge 
     if(user_bridge STREQUAL "cpp-user")
       list(APPEND TAIHE_CONFIGS_LIST "-Gcpp-user")
     elseif(user_bridge STREQUAL "napi-bridge")
-      string(REGEX REPLACE "\\.(taihe|ohidl)$" ".napi.cpp" GEN_USER_FILE ${TAIHE_FILE_NAME})
+      string(REGEX REPLACE "${IDL_EXTENSION_REGEX}" ".napi.cpp" GEN_USER_FILE ${TAIHE_FILE_NAME})
       list(APPEND GEN_USER_CPP_FILES "${GEN_DIR}/src/${GEN_USER_FILE}")
       list(APPEND TAIHE_CONFIGS_LIST "-Gnapi-bridge")
       # TODO: napi_bridge config
       # list(APPEND TAIHE_CONFIGS_LIST "-Gnapi-bridge")
     elseif(user_bridge STREQUAL "ani-bridge")
-      string(REGEX REPLACE "\\.(taihe|ohidl)$" ".ani.cpp" GEN_USER_FILE ${TAIHE_FILE_NAME})
+      string(REGEX REPLACE "${IDL_EXTENSION_REGEX}" ".ani.cpp" GEN_USER_FILE ${TAIHE_FILE_NAME})
       list(APPEND GEN_USER_CPP_FILES "${GEN_DIR}/src/${GEN_USER_FILE}")
       list(APPEND TAIHE_CONFIGS_LIST "-Gani-bridge")
     endif()
@@ -428,7 +429,7 @@ function(add_ani_demo demo_name idl_files taihe_configs gen_ets_names user_ets_f
   endif()
 
   set(MAIN_ABC "${CMAKE_CURRENT_BINARY_DIR}/main.abc")
-  
+
   # panda sdk 环境配置
   setup_panda_sdk()
   # ani 头文件
