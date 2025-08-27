@@ -33,6 +33,7 @@
    - **生成内容**：
      - NAPI 桥接代码（C++）
      - `.d.ts` 声明文件（默认同原名，含 `@!namespace` 时按注解命名）
+     - `.ts` 代理实现文件，只有用户需要（使用 `@!lib` 注解）时会生成，存储在 `//generated/proxy` 目录下，与 `.d.ts` 声明文件同名
 
    **实际用例**：
 
@@ -53,7 +54,9 @@
                    ├── generated/
                    │   ├── include/  # 头文件
                    │   ├── src/       # 实现代码
-                   │   └── temp/      # 临时文件
+                   │   ├── temp/      # 临时文件
+                   │   ├── proxy/     # 代理 ts 实现文件（用户需要时生成）
+                   |   └── member_test.d.ts   # 声明文件
                    └── idl/
                        └── member_test.taihe  # 源文件
    ```
@@ -1119,7 +1122,7 @@ del base 0x1d53cc00
 del base 0x1d579b60
 ```
 
-# 逃逸通道
+# 逃逸通道 - NAPI 协同开发
 
 Taihe 支持引入 napi 代码，从而在 C++ 侧访问 ArkTs 1.1 对象，可以使用 Opaque 类型，对应 napi 类型为 napi_value，C++ 类型为指针。可以使用 @dts_type 注解指定 Opaque 在 .d.ts 文件中的类型， @dts_type("<type_name>") Opaque, <type_name> 为 .d.ts 中的类型名。
 
@@ -1224,4 +1227,356 @@ test opaque return value OnlyObject
 test opaque return array value FirstOne undefined
 test opaque param union true
 test opaque param union false
+```
+
+# 逃逸通道 - ArkTs 1.1 协同开发
+
+Taihe 支持引入 ArkTs 1.1 代码，从而在 ArkTs 层添加代码。
+
+## 使用示例
+
+### Taihe 声明
+
+默认情况下，Taihe 会生成 Napi 桥接文件和 .d.ts 文件，此时，可以使用注解 @!dts_inject_into_module 将一段 ArkTs 1.1 代码注入到当前 Taihe 文件所对应的 .d.ts 文件的 namespace 中；可以使用注解 @!dts_inject 将一段 ArkTs 1.1 代码注入到当前 Taihe 文件所对应的 .d.ts 文件的 namespace 所在的 module 头部。
+
+**`my_module_b.functiontest.taihe`**
+
+```rust
+@!namespace("my_module_b", "functiontest")
+
+@!dts_inject_into_module("export const rate = 0.618;")
+@!dts_inject("""export function concat(a: string | number): string | number;""")
+function concat_str(a: String): String;
+function concat_i32(a: i32): i32;
+```
+
+**生成`my_module_b.d.ts`**
+
+```typescript
+export const rate = 0.618;
+export namespace functiontest {
+  export function concat(a: string | number): string | number;
+  export function concat_str(a: string): string;
+  export function concat_i32(a: number): number;
+}
+```
+
+特殊情况下（即使用 @!lib 注解时），Taihe 会额外生成与 .d.ts 文件同名的 .ts 文件存储在 //generated/proxy 目录下，做为 proxy 层代理 C++ 层已完成的实现，同时支持用户通过 inject 在 ts 层注入实现。
+
+注意，如果需要让当前 Taihe 文件对应的 module 生成 .ts 文件，或在当前 Taihe 文件中使用 ts inject 相关功能，必须提供 @!lib 注解。其语法为 @!lib("{so_file}")，使用注解时需指定 so 文件，作用是为生成的 .ts 文件提供寻找 C++ 层的实现。
+
+此时，可以使用注解 @!ts_inject_into_module 将一段 ArkTs 1.1 代码注入到当前 Taihe 文件所对应的 .ts 文件的 namespace 中；可以使用注解 @!ts_inject 将一段 ArkTs 1.1 代码注入到当前 Taihe 文件所对应的 .ts 文件的 namespace 所在的 module 头部；可以使用注解 @!ts_inject_into_interface 将一段 ArkTs 1.1 代码注入到当前 interface 中；可以使用注解 @!ts_inject_into_class 将一段 ArkTs 1.1 代码注入到当前 interface 对应的 class 中。
+
+注意，@!ts_inject_into_interface 注解应用于 struct 和 interface，@!ts_inject_into_class 注解可以应用于添加了 @class 注解的 struct 和 interface。
+
+**`my_module_a.taihe`**
+
+```rust
+@!lib("my_module_a")
+function concat_str(a: String): String;
+function concat_i32(a: i32): i32;
+
+@!ts_inject("""export function concat(a: string | number): string | number {
+    if (typeof a === "string") {
+        return concat_str(a);
+    } else {
+        return concat_i32(a);
+    }
+}""")
+```
+
+**`my_module_a.ns1.taihe`**
+
+```rust
+@!lib("my_module_a")
+@!namespace("my_module_a", "ns1")
+
+interface IBase {
+@!ts_inject_into_interface("add(a: number, b: number): number;")
+    getId(): String;
+    setId(s: String): void;
+}
+
+@class
+interface CTest{
+@!ts_inject_into_class("""mul(a: number, b: number): number {
+    return a * b;
+}
+""")
+    add(a: i32, b: i32): f32;
+}
+
+@ctor("CTest")
+function createCTest(id: i32): CTest;
+
+@static("CTest")
+function multiply(a: i32, b: i32): i32;
+```
+
+**`my_module_a.ns1.ns2.ns3.ns4.ns5.taihe`**
+
+```rust
+@!lib("my_module_a")
+
+@!namespace("my_module_a", "ns1.ns2.ns3.ns4.ns5")
+@!ts_inject_into_module("export const PI = 3.14159;")
+```
+
+**生成`my_module_a.d.ts`**
+
+```typescript
+export function concat_str(a: string): string;
+export function concat_i32(a: number): number;
+export namespace ns1 {
+  export interface IBase {
+    getId(): string;
+    setId(s: string);
+  }
+  export class CTest {
+    constructor(id: number);
+    static multiply(a: number, b: number): number;
+    add(a: number, b: number): number;
+  }
+  export namespace ns2 {
+    export namespace ns3 {
+      export namespace ns4 {
+        export namespace ns5 {}
+      }
+    }
+  }
+}
+```
+
+**生成`my_module_a.ts`**
+
+```typescript
+export const PI = 3.14159;
+export function concat(a: string | number): string | number {
+  if (typeof a === "string") {
+    return concat_str(a);
+  } else {
+    return concat_i32(a);
+  }
+}
+const _taihe_native_lib = require("my_module_a");
+export const concat_str = _taihe_native_lib.concat_str;
+export const concat_i32 = _taihe_native_lib.concat_i32;
+export namespace ns1 {
+  const _taihe_native_lib = require("my_module_a");
+  export interface IBase {
+    add(a: number, b: number): number;
+    getId(): string;
+    setId(s: string);
+  }
+  export class CTest {
+    mul(a: number, b: number): number {
+      return a * b;
+    }
+    private nativeCTest;
+    constructor(id: number) {
+      this.nativeCTest = new _taihe_native_lib.ns1.CTest(id);
+    }
+    static multiply(a: number, b: number): number {
+      return _taihe_native_lib.ns1.CTest.multiply(a, b);
+    }
+    add(a: number, b: number): number {
+      return this.nativeCTest.add(a, b);
+    }
+  }
+  export namespace ns2 {
+    export namespace ns3 {
+      export namespace ns4 {
+        export namespace ns5 {
+          const _taihe_native_lib = require("my_module_a");
+        }
+      }
+    }
+  }
+}
+```
+
+### C++ 实现
+
+**File: `my_module_a.taihe 的 C++ 实现`**
+
+```cpp
+::taihe::string concat_str(::taihe::string_view a) {
+  return a + "_concat";
+}
+
+int32_t concat_i32(int32_t a) {
+  return a + 10;
+}
+```
+
+**File: `my_module_a.ns1.taihe 的 C++ 实现`**
+
+```cpp
+class CTestImpl {
+  int32_t x;
+
+public:
+  CTestImpl(int32_t x) : x(x) {
+    std::cout << "new ctest " << this->x << std::endl;
+  }
+
+  ~CTestImpl() {
+    std::cout << "del ctest " << this << std::endl;
+  }
+
+  float add(int32_t a, int32_t b) {
+    return a + b + this->x;
+  }
+};
+
+::my_module_a::ns1::CTest createCTest(int32_t id) {
+  return taihe::make_holder<CTestImpl, ::my_module_a::ns1::CTest>(id);
+}
+
+int32_t multiply(int32_t a, int32_t b) {
+  return a * b;
+}
+```
+
+**File: `my_module_a.ns1.ns2.ns3.ns4.ns5.taihe 的 C++ 实现`**
+
+```cpp
+// 未定义函数，无需 C++ 实现
+```
+
+**File: `my_module_b.taihe 的 C++ 实现`**
+
+```cpp
+// Taihe 文件定义函数对应的 C++ 实现
+::taihe::string concat_str(::taihe::string_view a) {
+  return a + "_concat";
+}
+
+int32_t concat_i32(int32_t a) {
+  return a + 10;
+}
+```
+
+```cpp
+// 实现 Taihe 文件中注入在 .d.ts 文件中声明的函数，需要在 napi register 文件中添加以下内容
+
+// implement the inject declare in .d.ts file
+// implement for inject overload functions
+#include "my_module_b_functiontest.hpp"
+#include "taihe/napi_runtime.hpp"
+
+// 实现重载函数的分发
+static napi_value my_module_a_concat(napi_env env,
+                                     [[maybe_unused]] napi_callback_info info) {
+  size_t argc = 1;
+  napi_value args[1] = {nullptr};
+  napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+  napi_valuetype valueType;
+  napi_typeof(env, args[0], &valueType);
+
+  switch (valueType) {
+  case napi_number: {
+    int32_t value0_num;
+    napi_get_value_int32(env, args[0], &value0_num);
+    int32_t value_num = concat_i32(value0_num);
+    napi_value result_num = nullptr;
+    napi_create_int32(env, value_num, &result_num);
+    return result_num;
+  }
+  case napi_string: {
+    size_t value0_len = 0;
+    napi_get_value_string_utf8(env, args[0], nullptr, 0, &value0_len);
+    TString value0_abi;
+    char *value0_buf = tstr_initialize(&value0_abi, value0_len + 1);
+    napi_get_value_string_utf8(env, args[0], value0_buf, value0_len + 1,
+                               &value0_len);
+    value0_buf[value0_len] = '\0';
+    value0_abi.length = value0_len;
+    taihe::string value0_str(value0_abi);
+    ::taihe::string value_str = concat_str(value0_str);
+    napi_value result_str = nullptr;
+    napi_create_string_utf8(env, value_str.c_str(), value_str.size(),
+                            &result_str);
+    return result_str;
+  }
+  default:
+    napi_throw_error(env, nullptr, "param type is unknown");
+    return nullptr;
+  }
+}
+
+// 实现重载函数入口的注册
+napi_value Init_my_module_b_concat(napi_env env, napi_value exports) {
+  if (::taihe::get_env() == nullptr) {
+    ::taihe::set_env(env);
+  }
+  napi_property_descriptor desc[] = {
+      {"concat", nullptr, my_module_a_concat, nullptr, nullptr, nullptr, napi_default, nullptr},
+  };
+  napi_define_properties(env, exports, sizeof(desc) / sizeof(desc[0]), desc);
+  return exports;
+}
+
+napi_value Init(napi_env env, napi_value exports) {   // napi register 文件中的原有函数
+// 在函数中添加
+  // implement the inject declare in .d.ts file
+  // implement for inject module const variable
+  napi_value value_rate = nullptr;
+  napi_create_double(env, 0.618, &value_rate);
+  napi_set_named_property(env, exports, "rate", value_rate);
+
+  // 在初始化 namespace xxx 对象与向 exports 注册 namespace xxx 对象之间调用注册 ts_inject 函数 concat 的函数
+  // ... 初始化 namespace xxx 对象，例如：Init__my_module_b_functiontest(env, ns_functiontest);
+
+  // Add register for concat function
+  Init_my_module_b_concat(env, ns_functiontest);
+
+  // ... 向 exports 注册 namespace xxx 对象，例如：Init__my_module_b_functiontest(env, exports);
+
+}   // napi register 文件中的原有函数
+```
+
+### ArkTs 1.1 调用
+
+```typescript
+// Test ts inject (overload)
+let res_n = lib_a.concat(1);
+console.log("ts overload concat number:", res_n);
+let res_s = lib_a.concat("1");
+console.log("ts overload concat string:", res_s);
+
+// Test ts inject into module
+console.log("ts inject into module:", lib_a.PI);
+
+// Test ts interface inject
+let baseimpl_a: BaseImpl = new BaseImpl("A");
+console.log("ts inject into interface:", baseimpl_a.add(2, 3));
+
+// Test ts class inject
+let ctest = new lib_a.ns1.CTest(100);
+console.log("ts inject into class:", ctest.mul(2, 3));
+
+// Test dts inject (overload)
+let res_n_dts = lib_b.functiontest.concat(1);
+console.log("dts overload concat number:", res_n_dts);
+let res_s_dts = lib_b.functiontest.concat("1");
+console.log("dts overload concat string:", res_s_dts);
+
+// Test dts inject into module
+console.log("inject into module dts:", lib_b.rate);
+```
+
+输出结果如下：
+
+```sh
+ts overload concat number: 11
+ts overload concat string: 1_concat
+ts inject into module: 3.14159
+ts inject into interface: 5
+new ctest 100
+ts inject into class: 6
+dts overload concat number: 11
+dts overload concat string: 1_concat
+inject into module dts: 0.618
+del ctest 0x1afdbef0
 ```
