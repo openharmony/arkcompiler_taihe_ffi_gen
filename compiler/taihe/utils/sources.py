@@ -76,7 +76,7 @@ class SourceBuffer(SourceBase):
         return self.buf.getvalue()
 
 
-IDL_FILE_EXTS = {".taihe", ".ohidl"}
+IDL_FILE_EXTS = {".taihe", ".ohidl", ".hmidl"}
 
 
 class SourceManager:
