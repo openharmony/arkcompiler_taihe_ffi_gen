@@ -1,6 +1,6 @@
 # Taihe Napi 用户文档
 
-本文档旨在帮助用户了解如何使用 Taihe 生成 napi 桥接代码。注意，使用工具需要用户对[Taihe IDL 语言规范](./IdlReference.md)，[Taihe C++ 数据结构用法](./CppUsageGuide.md)有基础的了解。
+本文档旨在帮助用户了解如何使用 Taihe 生成 Napi 桥接代码。注意，使用工具需要用户对[Taihe IDL 语言规范](./IdlReference.md)，[Taihe C++ 数据结构用法](./CppUsageGuide.md)有基础的了解。
 
 ## Taihe 工具使用流程
 
@@ -27,11 +27,11 @@
    执行生成命令（参数说明）：
 
    ```bash
-   taihec <输入.taihe文件> -O <输出目录> -G napi-bridge cpp-author -B cmake
+   taihec <输入.taihe文件> -O <输出目录> -G napi-bridge cpp-author
    ```
 
    - **生成内容**：
-     - NAPI 桥接代码（C++）
+     - Napi 桥接代码（C++）
      - `.d.ts` 声明文件（默认同原名，含 `@!namespace` 时按注解命名）
      - `.ts` 代理实现文件，只有用户需要（使用 `@!lib` 注解）时会生成，存储在 `//generated/proxy` 目录下，与 `.d.ts` 声明文件同名
 
@@ -40,7 +40,7 @@
    ```bash
    ./taihe/bin/taihec .memberTest/entry/src/main/idl/member_test.taihe \
      -O .memberTest/entry/src/main/generated/ \
-     -G napi-bridge cpp-author -B cmake
+     -G napi-bridge cpp-author
    ```
 
    **生成目录结构**：
@@ -81,6 +81,7 @@
      ../generated/src/member_test.napi.cpp
      //base_dir/taihe/src/taihe/runtime/object.cpp
      //base_dir/taihe/src/taihe/runtime/string.cpp
+     //base_dir/taihe/src/taihe/runtime/napi_runtime.cpp
      )
 
      target_include_directories(entry
@@ -90,7 +91,7 @@
      )
      ```
 
-可以使用命令获取 `object.cpp` 和 `string.cpp` 文件的所在目录的绝对路径
+可以使用命令获取 `object.cpp`，`string.cpp` 和 `napi_runtime.cpp` 文件的所在目录的绝对路径
 
 ```bash
 taihec --print-runtime-source-path
@@ -157,9 +158,9 @@ Taihe 支持的基本数据类型包括数字、布尔值和[字符串](./CppUsa
 
 为了避免重名导致无法分辨由哪个模块导入的情况，可以使用 `as` 语法：
 
-1. `use A as C;`
+1. `use A as ModuleA;`
 
-2. `from A use B as C;`
+2. `from A use B as ModuleA_B;`
 
 ## 使用示例
 
@@ -191,16 +192,16 @@ function make_group(): group;
 **File: `people.taihe 的 C++ 实现`**
 
 ```cpp
-::people::student make_student() {
-  return ::people::student{"mike", 22};
+student make_student() {
+  return student{"mike", 22};
 }
 ```
 
 **File: `building.taihe 的 C++ 实现`**
 
 ```cpp
-::building::group make_group() {
-  return ::building::group{::people::student{"mary", 20}, 23};
+group make_group() {
+  return group{student{"mary", 20}, 23};
 }
 ```
 
@@ -353,7 +354,7 @@ namespace: my_module_b.functiontest, func: bar
 
 # 全局函数
 
-下面的代码将展示如何书写 Taihe 文件，生成一个全局函数的 napi 桥接代码及对应的 .d.ts 声明。Taihe 中的[全局函数](./IdlReference.md#函数)参数和返回值可以是任意类型，注意，在使用 Taihe 工具进行 napi 桥接代码生成时不支持以 `callback` 类型做为函数返回值。
+下面的代码将展示如何书写 Taihe 文件，生成一个全局函数的 Napi 桥接代码及对应的 .d.ts 声明。Taihe 中的[全局函数](./IdlReference.md#函数)参数和返回值可以是任意类型，注意，在使用 Taihe 工具进行 Napi 桥接代码生成时不支持以 `callback` 类型做为函数返回值类型。
 
 ## 使用示例
 
@@ -384,14 +385,75 @@ TH_EXPORT_CPP_API_add(add);
 
 ```typescript
 let add_show = add(2, 3);
-console.log("function add: ", add_show);
+console.log("function add:", add_show);
 ```
 
 输出结果如下：
 
 ```sh
-function add:  5
+function add: 5
 ```
+
+## 函数调用链
+
+以示例函数为例，当 ArkTs 1.1 侧调用函数 add 时，它会经历如下步骤：
+
+1. 进入生成代码中的注册函数，找到 `add` 对应的函数为 `package_name_add_NAPI0`。
+
+   **register**
+
+   ```cpp
+   napi_value Init(napi_env env, napi_value exports) {
+    ...
+    napi_property_descriptor desc[] = {
+        {"add", nullptr, package_name_add_NAPI0, nullptr, nullptr, nullptr, napi_default, nullptr},
+    };
+    ...
+   }
+   ```
+
+````
+
+2. 进入 `.napi.cpp` 文件中 `package_name_add_NAPI0` 函数，它会先解析参数，将 ArkTs 1.1 对象转换为 Taihe 对象，然后调用 C++ 实现函数，再将返回值由 Taihe 对象转换为 ArkTs 1.1 对象。
+
+ **.napi.cpp**
+
+ ```cpp
+static napi_value package_name_add_NAPI0(napi_env env, [[maybe_unused]] napi_callback_info info) {
+    // 参数解析
+    size_t argc = 2;
+    napi_value args[2] = {nullptr};
+    napi_get_cb_info(env, info, &argc, args , nullptr, nullptr);
+    // 参数类型转换
+    int32_t value0_tmp;
+    napi_get_value_int32(env, args[0], &value0_tmp);
+    int32_t value0 = value0_tmp;
+    int32_t value1_tmp;
+    napi_get_value_int32(env, args[1], &value1_tmp);
+    // 调用 C++ 实现
+    int32_t value1 = value1_tmp;
+    int32_t value = package_name::add(value0, value1);
+    // 返回值解析
+    napi_value result = nullptr;
+    napi_create_int32(env, value, &result);
+    // 向上层返回函数调用结果
+    return result;
+}
+````
+
+3. 接下来，`package_name_add_NAPI0` 函数会调用 `package_name::add` 函数，这个函数的调用会被自动转发到 C++ 实现文件中，通过 TH_EXPORT_CPP_API_add 这个宏所导出的具体实现。
+
+   **.impl.cpp**
+
+   ```cpp
+   // C++ 实现
+   int32_t add(int32_t a, int32_t b) {
+     return a + b;
+   }
+   TH_EXPORT_CPP_API_add(add);
+   ```
+
+4. `package_name::add` 函数执行完毕后，将返回第 3 步所示的函数，将获取到的返回值转换为 ArkTs 1.1 类型，返回给 ArkTs 1.1 侧函数。
 
 # 枚举
 
@@ -423,8 +485,8 @@ export enum Color {
   GREEN = "Green",
   BLUE = "Blue",
 }
-export declare const FLAG_F32_A = 1;
-export declare const FLAG_F32_B = 3;
+export const FLAG_F32_A = 1;
+export const FLAG_F32_B = 3;
 export function nextEnum(color: Color): Color;
 ```
 
@@ -433,18 +495,19 @@ export function nextEnum(color: Color): Color;
 Taihe 中 enum 类型的 C++ 使用方法可参考[枚举类](./CppUsageGuide.md#2-枚举类)
 
 ```cpp
-::enum_test::Color nextEnum(::enum_test::Color color) {
-  return (::enum_test::Color::key_t)(((int)color.get_key() + 1) % COLOR_COUNT);
+static constexpr std::size_t COLOR_COUNT = 3;
+Color nextEnum(Color color) {
+  return (Color::key_t)(((int)color.get_key() + 1) % COLOR_COUNT);
 }
 ```
 
 ### ArkTs 1.1 调用
 
 ```typescript
-let color = lib.Color.GREEN;
-let nextColor = lib.nextEnum(color);
+let color = Color.GREEN;
+let nextColor = nextEnum(color);
 console.log("nextColor:", nextColor);
-console.log("const value:", lib.FLAG_F32_A, lib.FLAG_F32_B);
+console.log("const value:", FLAG_F32_A, FLAG_F32_B);
 ```
 
 输出结果如下：
@@ -456,7 +519,7 @@ const value: 1 3
 
 # 标签联合
 
-需要在同一内存位置存放不同类型的数据时，可以使用 [union](./IdlReference.md#标签联合)。注意，在使用 Taihe 工具进行 napi 桥接代码生成时，只支持 union 联合基础类型、string、Array、Map、undefined、null 和 Object，当存在 Object 类型时，必须设为 union 的最后一个元素。在进行 undefined 和 null 相关开发时，需要在一个 union 内的变量名前增加注解 @null、@undefined 来声明 null 类型与 undefined 类型。
+需要在同一内存位置存放不同类型的数据时，可以使用 [union](./IdlReference.md#标签联合)。注意，在使用 Taihe 工具进行 Napi 桥接代码生成时，只支持 union 联合基础类型、String、Array、Map、undefined、null 和 Object，当存在 Object 类型时，必须设为 union 的最后一个元素。在进行 undefined 和 null 相关开发时，需要在一个 union 内的变量名前增加注解 @null、@undefined 来声明 null 类型与 undefined 类型。
 
 ## 使用示例
 
@@ -497,34 +560,34 @@ export type union_primitive =
 Taihe 中 union 类型的 C++ 使用方法可参考[联合体](./CppUsageGuide.md#4-联合体)
 
 ```cpp
-::taihe::string printUnion(::union_test::union_primitive const &data) {
+::taihe::string printUnion(union_primitive const &data) {
   switch (data.get_tag()) {
-  case ::union_test::union_primitive::tag_t::sValue:
+  case union_primitive::tag_t::sValue:
     std::cout << "s: " << data.get_sValue_ref() << std::endl;
     return "s";
-  case ::union_test::union_primitive::tag_t::numberValue:
+  case union_primitive::tag_t::numberValue:
     std::cout << "number: " << (int)data.get_numberValue_ref() << std::endl;
     return "number";
-  case ::union_test::union_primitive::tag_t::bValue:
+  case union_primitive::tag_t::bValue:
     std::cout << "bool: " << data.get_bValue_ref() << std::endl;
     return "bool";
-  case ::union_test::union_primitive::tag_t::aValue:
+  case union_primitive::tag_t::aValue:
     std::cout << "array: " << data.get_aValue_ref()[0] << std::endl;
     return "array";
-  case ::union_test::union_primitive::tag_t::mValue:
+  case union_primitive::tag_t::mValue:
     std::cout << "map: " << std::endl;
     for (auto const &[key, val] : data.get_mValue_ref()) {
       std::cout << "C++ Map: key: " << key << " value: " << val << std::endl;
     }
     return "map";
-  case ::union_test::union_primitive::tag_t::uValue:
+  case union_primitive::tag_t::uValue:
     return "undefined";
-  case ::union_test::union_primitive::tag_t::nValue:
+  case union_primitive::tag_t::nValue:
     return "null";
   }
 }
 
-::union_test::union_primitive makeUnion(::taihe::string_view kind) {
+union_primitive makeUnion(::taihe::string_view kind) {
   ::taihe::string s_value = "string";
   constexpr double f64_value = 1.12345;
   constexpr bool bool_value = false;
@@ -534,27 +597,27 @@ Taihe 中 union 类型的 C++ 使用方法可参考[联合体](./CppUsageGuide.m
   map_value.emplace(2, "b");
 
   if (kind == "s") {
-    return ::union_test::union_primitive::make_sValue(s_value);
+    return union_primitive::make_sValue(s_value);
   }
   if (kind == "number") {
-    return ::union_test::union_primitive::make_numberValue(f64_value);
+    return union_primitive::make_numberValue(f64_value);
   }
   if (kind == "bool") {
-    return ::union_test::union_primitive::make_bValue(bool_value);
+    return union_primitive::make_bValue(bool_value);
   }
   if (kind == "array") {
-    return ::union_test::union_primitive::make_aValue(array_value);
+    return union_primitive::make_aValue(array_value);
   }
   if (kind == "map") {
-    return ::union_test::union_primitive::make_mValue(map_value);
+    return union_primitive::make_mValue(map_value);
   }
   if (kind == "undefined") {
-    return ::union_test::union_primitive::make_uValue();
+    return union_primitive::make_uValue();
   }
   if (kind == "null") {
-    return ::union_test::union_primitive::make_nValue();
+    return union_primitive::make_nValue();
   }
-  return ::union_test::union_primitive::make_uValue();
+  return union_primitive::make_uValue();
 }
 ```
 
@@ -707,26 +770,26 @@ export function process_h(a: H): H;
 Taihe 中 struct 类型的 C++ 使用方法可参考[结构体](./CppUsageGuide.md#3-结构体)
 
 ```cpp
-int32_t from_rgb(::struct_test::RGB const &rgb) {
+int32_t from_rgb(RGB const &rgb) {
   return rgb.r + rgb.g + rgb.b;
 }
-::struct_test::Student process_student(::struct_test::Student const &a) {
+Student process_student(Student const &a) {
   return {a.name + " student", a.age + 10};
 }
-::struct_test::Teacher process_teacher(::struct_test::Teacher const &a) {
+Teacher process_teacher(Teacher const &a) {
   return {a.name + " teacher", a.age + 15};
 }
-::struct_test::G process_g(::struct_test::G const& a) {
+G process_g(G const& a) {
   return {{a.f.f + 1}, a.g + 2};
 }
-::struct_test::H process_h(::struct_test::H const& a) {
+H process_h(H const& a) {
   return {{{a.g.f.f + 1}, a.g.g + 2}, a.h +3};
 }
-::struct_test::H create_h(int32_t f, int32_t g, int32_t h) {
+H create_h(int32_t f, int32_t g, int32_t h) {
   return {{{f}, g}, h};
 }
-::struct_test::Teacher create_teacher() {
-  return ::struct_test::Teacher{"Rose", 25};
+Teacher create_teacher() {
+  return Teacher{"Rose", 25};
 }
 ::taihe::string give_lessons() {
   return "math";
@@ -736,30 +799,31 @@ int32_t from_rgb(::struct_test::RGB const &rgb) {
 ### ArkTs 1.1 调用
 
 ```typescript
-let rgb: lib.RGB = { r: 1, g: 2, b: 3 };
-let my_rgb_i32 = lib.from_rgb(rgb);
+// 初始化 interface 类型变量
+let rgb: RGB = { r: 1, g: 2, b: 3 };
+let my_rgb_i32 = from_rgb(rgb);
 console.log("from ts RGB to i32:", my_rgb_i32);
 
-let student: lib.Student = { name: "Jack", age: 10 };
-let pro_student = lib.process_student(student);
+let student: Student = { name: "Jack", age: 10 };
+let pro_student = process_student(student);
 console.log("process student:", pro_student.name, pro_student.age);
 
 // Test struct class constructor
-let cre_teacher = new lib.Teacher();
+let cre_teacher = new Teacher();
 console.log("create teacher: ", cre_teacher.name, cre_teacher.age);
-let pro_teacher = lib.process_teacher(cre_teacher);
+let pro_teacher = process_teacher(cre_teacher);
 console.log("process teacher: ", pro_teacher.name, pro_teacher.age);
 
 // Test struct class static function
-let lesson = lib.Teacher.give_lessons();
+let lesson = Teacher.give_lessons();
 console.log("teacher static function give lessons:", lesson);
 
 let g = { f: 0, g: 0 };
-let new_g = lib.process_g(g);
+let new_g = process_g(g);
 console.log("process g:", new_g.f, new_g.g);
 
-let h = new lib.H(0, 0, 0);
-let new_h = lib.process_h(h);
+let h = new H(0, 0, 0);
+let new_h = process_h(h);
 console.log("process h:", new_h.f, new_h.g, new_h.h);
 ```
 
@@ -852,7 +916,7 @@ function changeCTest(a: CTest): CTest;
 **生成`.d.ts`**
 
 ```typescript
-export declare class CTest {
+export class CTest {
   constructor(id: number);
   static multiply(a: number, b: number): number;
   add(a: number, b: number): number;
@@ -886,7 +950,7 @@ function createIDerived(): IDerived;
 export interface IShape extends IBase {
   calculateArea(): number;
 }
-export declare class IDerived implements IShape {
+export class IDerived implements IShape {
   constructor();
   call();
   calculateArea(): number;
@@ -1022,45 +1086,45 @@ public:
   }
 };
 
-::iface_test::IBase makeIBase(::taihe::string_view id) {
-  return ::taihe::make_holder<Base, ::iface_test::IBase>(id);
+IBase makeIBase(::taihe::string_view id) {
+  return ::taihe::make_holder<Base, IBase>(id);
 }
 
-void copyIBase(::iface_test::weak::IBase a, ::iface_test::weak::IBase b) {
+void copyIBase(weak::IBase a, weak::IBase b) {
   a->setId(b->getId());
   return;
 }
 
-::iface_test::IShape makeIShape(::taihe::string_view id, double a, double b) {
-  return ::taihe::make_holder<Shape, ::iface_test::IShape>(id, a, b);
+IShape makeIShape(::taihe::string_view id, double a, double b) {
+  return ::taihe::make_holder<Shape, IShape>(id, a, b);
 }
 
-::iface_test::CTest createCTest(int32_t id) {
-  return taihe::make_holder<CTestImpl, ::iface_test::CTest>(id);
+CTest createCTest(int32_t id) {
+  return taihe::make_holder<CTestImpl, CTest>(id);
 }
 
-::iface_test::CTest changeCTest(::iface_test::weak::CTest a) {
+CTest changeCTest(weak::CTest a) {
   int32_t x = a->add(3, 4);
-  return taihe::make_holder<CTestImpl, ::iface_test::CTest>(x);
+  return taihe::make_holder<CTestImpl, CTest>(x);
 }
 
 int32_t multiply(int32_t a, int32_t b) {
   return a * b;
 }
 
-::iface_test::IColor makeIColor(::taihe::string_view id) {
-  return taihe::make_holder<Color, ::iface_test::IColor>(id);
+IColor makeIColor(::taihe::string_view id) {
+  return taihe::make_holder<Color, IColor>(id);
 }
 
-::iface_test::IDerived createIDerived() {
-  return taihe::make_holder<Derived, ::iface_test::IDerived>();
+IDerived createIDerived() {
+  return taihe::make_holder<Derived, IDerived>();
 }
 ```
 
 ### ArkTs 1.1 调用
 
 ```typescript
-class BaseImpl implements lib.IBase {
+class BaseImpl implements IBase {
   id: string;
   constructor(id: string) {
     this.id = id;
@@ -1074,18 +1138,24 @@ class BaseImpl implements lib.IBase {
   }
 }
 
-let ibase_1 = lib.makeIBase("abc");
+// 创建父类接口
+let ibase_1 = makeIBase("abc");
 console.log("ibase_1 getId: ", ibase_1.getId());
 
+// 父类接口调用父类接口声明函数
 ibase_1.setId("xyz");
 console.log("ibase_1 setId: ", ibase_1.getId());
 
-let ibase_2 = lib.makeIBase("test");
-lib.copyIBase(ibase_1, ibase_2);
+let ibase_2 = makeIBase("test");
+copyIBase(ibase_1, ibase_2);
 console.log("copyIBase: ", ibase_1.getId(), ibase_2.getId());
 
-let ishape_1 = lib.makeIShape("shape", 3.14, 2.5);
+// 创建子类接口
+let ishape_1 = makeIShape("shape", 3.14, 2.5);
+
+// 子类接口调用子类接口声明函数
 console.log("makeIShape: ", ishape_1.calculateArea());
+// 子类接口调用父类接口声明函数
 console.log("interface extends: ", ishape_1.getId());
 
 ishape_1.setId("aaaaa");
@@ -1093,29 +1163,34 @@ console.log("interface extends set: ", ishape_1.getId());
 
 let a: BaseImpl = new BaseImpl("A");
 let b: BaseImpl = new BaseImpl("B");
-lib.copyIBase(b, a);
+copyIBase(b, a);
 console.log("impl interface: ", a.getId(), b.getId());
 
-lib.copyIBase(ibase_1, ishape_1);
+// 子类接口实例赋值给父类接口参数
+copyIBase(ibase_1, ishape_1);
 console.log("interface extends: ", ibase_1.getId(), ishape_1.getId());
 
-let ctest = new lib.CTest(100);
+// 创建 interface class
+let ctest = new CTest(100);
 console.log("CTets: ", ctest.add(1, 2));
 
-let new_ctest = lib.changeCTest(ctest);
+// 调用 interface class 声明方法
+let new_ctest = changeCTest(ctest);
 console.log("change CTets: ", new_ctest.add(5, 6));
 
-let value3 = lib.CTest.multiply(7, 8);
+// 调用 interface class 声明的静态方法
+let value3 = CTest.multiply(7, 8);
 console.log("static function: ", value3);
 
-let color = lib.makeIColor("my color");
+let color = makeIColor("my color");
 console.log("get attr: ", color.Id);
 color.Id = "new my color";
 console.log("set attr: ", color.Id);
 console.log("color method: ", color.calculate(2, 3));
 
-let d = new lib.IDerived();
+let d = new IDerived();
 d.call();
+// 子类接口调用父类声明方法
 console.log(d.getId());
 ```
 
@@ -1152,9 +1227,9 @@ del base 0x1d53cc00
 del base 0x1d579b60
 ```
 
-# 逃逸通道 - NAPI 协同开发
+# 逃逸通道 - Napi 协同开发
 
-Taihe 支持引入 napi 代码，从而在 C++ 侧访问 ArkTs 1.1 对象，可以使用 Opaque 类型，对应 napi 类型为 napi_value，C++ 类型为指针。可以使用 @dts_type 注解指定 Opaque 在 .d.ts 文件中的类型， @dts_type("<type_name>") Opaque, <type_name> 为 .d.ts 中的类型名。
+Taihe 支持引入 Napi 代码，从而在 C++ 侧访问 ArkTs 1.1 对象，可以使用 Opaque 类型，对应 Napi 类型为 napi_value，C++ 类型为指针。可以使用 @dts_type 注解指定 Opaque 在 .d.ts 文件中的类型， @dts_type("<type_name>") Opaque, <type_name> 为 .d.ts 中的类型名。
 
 可以引用 taihe/napi_runtime.hpp 头文件，其中提供 get_env() 函数返回 napi_env 指针，set_error() 函数抛出错误，set_type_error() 函数抛出类型错误，set_range_error() 函数抛出范围错误，has_error() 函数判断是否存在错误。
 
@@ -1224,8 +1299,8 @@ uintptr_t get_object() {
       {(uintptr_t)napi_arr_0, (uintptr_t)napi_arr_1});
 }
 
-bool is_opaque(::opaque_test::Union const &s) {
-  if (s.get_tag() == ::opaque_test::Union::tag_t::oValue) {
+bool is_opaque(Union const &s) {
+  if (s.get_tag() == Union::tag_t::oValue) {
     return true;
   }
   return false;
@@ -1235,17 +1310,17 @@ bool is_opaque(::opaque_test::Union const &s) {
 ### ArkTs 1.1 调用
 
 ```typescript
-console.log("test opaque param", lib.is_string("test"));
-console.log("test opaque param", lib.is_string(2));
+console.log("test opaque param", is_string("test"));
+console.log("test opaque param", is_string(2));
 
-console.log("test opaque return value", lib.get_object());
+console.log("test opaque return value", get_object());
 
-let arr = lib.get_objects();
+let arr = get_objects();
 console.log("test opaque return array value", arr[0], arr[1]);
 
-let p: lib.Person = { name: "Mary" };
-console.log("test opaque param union", lib.is_opaque(p));
-console.log("test opaque param union", lib.is_opaque("1"));
+let p: Person = { name: "Mary" };
+console.log("test opaque param union", is_opaque(p));
+console.log("test opaque param union", is_opaque("1"));
 ```
 
 输出结果如下：
@@ -1459,8 +1534,8 @@ public:
   }
 };
 
-::my_module_a::ns1::CTest createCTest(int32_t id) {
-  return taihe::make_holder<CTestImpl, ::my_module_a::ns1::CTest>(id);
+CTest createCTest(int32_t id) {
+  return taihe::make_holder<CTestImpl, CTest>(id);
 }
 
 int32_t multiply(int32_t a, int32_t b) {
@@ -1569,6 +1644,9 @@ napi_value Init(napi_env env, napi_value exports) {   // napi register 文件中
 ### ArkTs 1.1 调用
 
 ```typescript
+import * as lib_b from "my_module_b"; // Use .d.ts
+import * as lib_a from "../generated/proxy/my_module_a"; // Use .ts
+
 // Test ts inject (overload)
 let res_n = lib_a.concat(1);
 console.log("ts overload concat number:", res_n);
