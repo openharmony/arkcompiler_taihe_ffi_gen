@@ -50,8 +50,7 @@ class SourceFile(SourceBase):
 
     @override
     def read(self) -> str:
-        with open(self.path, encoding="utf-8") as f:
-            return f.read()
+        return self.path.read_text(encoding="utf-8", errors="replace")
 
 
 @dataclass(frozen=True)
