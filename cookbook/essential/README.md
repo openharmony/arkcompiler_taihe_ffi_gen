@@ -401,7 +401,7 @@ Taihe 以温和改良为设计目标。新增的 Taihe 绑定可以与现有 C++
     - 可以在存量 C++ 代码中使用 `TH_EXPORT_CPP_API_foobar` 导出兼容 Taihe 的现有函数
     - 可以在存量 C++ 代码中使用 `make_holder` 导出兼容 Taihe 的任意类。
     - 可以在存量 C++ 代码中混合 Taihe 对象，因为 C++ 中的 Taihe 的容器和 `interface` 实现，都是完全合法的 C++ 对象。
-  - 因此，尽管 `taihec` / `run-test` 等工具会帮助 API 作者创建代码骨架，但并不意味着 API 作者要完全依赖该骨架：
+  - 因此，尽管 `taihec` / `taihe-tryit` 等工具会帮助 API 作者创建代码骨架，但并不意味着 API 作者要完全依赖该骨架：
     - 可以对 C++ 源文件任意起名。
     - 可以对 C++ 类任意起名，或是选择性地 `make_holder`，动态切换接口背后的 C++ 实现。
     - 可以对 C++ 函数任意起名，甚至使用函数模板。
@@ -831,7 +831,7 @@ GetStringArray = AAA,undefined
 
 - Unhandled exception: std.core.LinkerUnresolvedMethodError
   - 检查 `user/main.ets`，是否遗漏了 `loadLibrary("<your-lib-name-here>")`
-  - 在使用 `run-test` 工具时，目录名就是 `loadLibrary` 需要填写的名字
+  - 在使用 `tryit` 工具时，目录名就是 `loadLibrary` 需要填写的名字
 
 - `union` 类型判断错误
   - `union` 的类型判断基于 ArkTS 的类型系统，根据分支的先后顺序判断

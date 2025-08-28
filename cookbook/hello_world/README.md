@@ -80,10 +80,8 @@ function main() {
 
 ## 第四步：执行测试
 
-本文使用了仓库中的 `compiler/run-test` 脚本，该脚本会自动编译并执行测试：
+本文使用了仓库中的 `taihe-tryit` 脚本，该脚本会自动编译并执行测试：
 ```sh
-../../compiler/run-test . -ani
-# ...
 1 + 2 = 3
 ```
 
