@@ -332,32 +332,34 @@ class TsCodeGenerator:
                     target.writelns(
                         f"this.{nativa_class_name} = new {native_lib_name}.{iface_napi_info.dts_type_name}({args_str});",
                     )
-            for mng_name, static_func in iface_napi_info.static_funcs:
-                params = []
-                args = []
-                for param in static_func.params:
-                    value_ty = param.ty_ref.resolved_ty
-                    param_dts_info = TypeNapiInfo.get(self.am, value_ty)
-                    params.append(
-                        f"{param.name}{'?' if param_dts_info.is_optional else ''}: {param_dts_info.dts_type_in(target)}"
-                    )
-                    args.append(param.name)
-                params_str = ", ".join(params)
-                args_str = ", ".join(args)
-                if static_func.return_ty_ref:
-                    return_ty_dts_info = TypeNapiInfo.get(
-                        self.am, static_func.return_ty_ref.resolved_ty
-                    )
-                    return_ty = return_ty_dts_info.dts_return_type_in(target)
-                else:
-                    return_ty = "void"
-                with target.indented(
-                    f"static {static_func.name}({params_str}): {return_ty} {{",
-                    f"}}",
-                ):
-                    target.writelns(
-                        f"return {native_lib_name}.{iface_napi_info.dts_type_name}.{static_func.name}({args_str});",
-                    )
+
+                # static methods
+                for mng_name, static_func in iface_napi_info.static_funcs:
+                    params = []
+                    args = []
+                    for param in static_func.params:
+                        value_ty = param.ty_ref.resolved_ty
+                        param_dts_info = TypeNapiInfo.get(self.am, value_ty)
+                        params.append(
+                            f"{param.name}{'?' if param_dts_info.is_optional else ''}: {param_dts_info.dts_type_in(target)}"
+                        )
+                        args.append(param.name)
+                    params_str = ", ".join(params)
+                    args_str = ", ".join(args)
+                    if static_func.return_ty_ref:
+                        return_ty_dts_info = TypeNapiInfo.get(
+                            self.am, static_func.return_ty_ref.resolved_ty
+                        )
+                        return_ty = return_ty_dts_info.dts_return_type_in(target)
+                    else:
+                        return_ty = "void"
+                    with target.indented(
+                        f"static {static_func.name}({params_str}): {return_ty} {{",
+                        f"}}",
+                    ):
+                        target.writelns(
+                            f"return {native_lib_name}.{iface_napi_info.dts_type_name}.{static_func.name}({args_str});",
+                        )
             for ancestor in iface_abi_info.ancestor_dict:
                 self.gen_iface_class_methods_impl(
                     ancestor.methods, target, nativa_class_name

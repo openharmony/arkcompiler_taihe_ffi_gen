@@ -262,25 +262,27 @@ class DtsCodeGenerator:
                     )
                 params_str = ", ".join(params)
                 target.writelns(f"constructor({params_str});")
-            for mng_name, static_func in iface_napi_info.static_funcs:
-                params = []
-                for param in static_func.params:
-                    value_ty = param.ty_ref.resolved_ty
-                    param_dts_info = TypeNapiInfo.get(self.am, value_ty)
-                    params.append(
-                        f"{param.name}{'?' if param_dts_info.is_optional else ''}: {param_dts_info.dts_type_in(target)}"
+
+                # static methods
+                for mng_name, static_func in iface_napi_info.static_funcs:
+                    params = []
+                    for param in static_func.params:
+                        value_ty = param.ty_ref.resolved_ty
+                        param_dts_info = TypeNapiInfo.get(self.am, value_ty)
+                        params.append(
+                            f"{param.name}{'?' if param_dts_info.is_optional else ''}: {param_dts_info.dts_type_in(target)}"
+                        )
+                    params_str = ", ".join(params)
+                    if static_func.return_ty_ref:
+                        return_ty_dts_info = TypeNapiInfo.get(
+                            self.am, static_func.return_ty_ref.resolved_ty
+                        )
+                        return_ty = return_ty_dts_info.dts_return_type_in(target)
+                    else:
+                        return_ty = "void"
+                    target.writelns(
+                        f"static {static_func.name}({params_str}): {return_ty};",
                     )
-                params_str = ", ".join(params)
-                if static_func.return_ty_ref:
-                    return_ty_dts_info = TypeNapiInfo.get(
-                        self.am, static_func.return_ty_ref.resolved_ty
-                    )
-                    return_ty = return_ty_dts_info.dts_return_type_in(target)
-                else:
-                    return_ty = "void"
-                target.writelns(
-                    f"static {static_func.name}({params_str}): {return_ty};",
-                )
             for ancestor in iface_abi_info.ancestor_dict:
                 self.gen_iface_methods_decl(ancestor.methods, target)
 

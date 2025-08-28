@@ -1083,7 +1083,7 @@ class NapiCodeGenerator:
             f"inline void {iface_napi_info.create_func_name}(napi_env env, [[maybe_unused]] napi_value exports) {{",
             f"}}",
         ):
-            target.writelns(f"napi_value result;")
+            target.writelns(f"napi_value result = nullptr;")
             target.add_include(iface_napi_info.meth_impl_header)
             with target.indented(
                 f"napi_property_descriptor desc[] = {{",
@@ -1095,7 +1095,7 @@ class NapiCodeGenerator:
                     props_strs,
                 ) in iface_napi_info.iface_register_infos:
                     target.writelns(f"{{{', '.join(props_strs)}}}, ")
-            if iface_napi_info.is_class():
+            if iface_napi_info.is_class() and iface_napi_info.ctor:
                 target.writelns(
                     f'NAPI_CALL(env, napi_define_class(env, "{iface.name}", NAPI_AUTO_LENGTH, {iface_napi_info.constructor_func_name}, nullptr, sizeof(desc) / sizeof(desc[0]), desc, &result));',
                 )
