@@ -1,0 +1,125 @@
+#!/bin/bash
+source "$(dirname "$0")/common_lib.sh"
+
+MIRROR_BASE=mirrors.tuna.tsinghua.edu.cn
+MIRROR_APT="http://$MIRROR_BASE/ubuntu"
+MIRROR_PYPI="http://$MIRROR_BASE/pypi/web/simple"
+MODE=""
+
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --mode)
+                MODE="$2"
+                shift 2
+                ;;
+            --mode=*)
+                MODE="${1#*=}"
+                shift
+                ;;
+            --help|-h)
+                echo "Usage: $0 --mode [ggw-ci|taihe-dev]"
+                exit 0
+                ;;
+            *)
+                log_error "Unknown argument: $1"
+                exit 1
+                ;;
+        esac
+    done
+
+    # default
+    if [[ -z "$MODE" ]]; then
+        MODE="taihe-dev"
+    fi
+
+    case "$MODE" in
+        ggw-ci|taihe-dev) ;; # valid
+        *)
+            log_error "Invalid mode: $MODE"
+            echo "Allowed values: ggw-ci, taihe-dev"
+            exit 1
+            ;;
+    esac
+}
+
+# This function is called magically when bash cannot find a command
+command_not_found_handle() {
+    log_action "Command \"$1\" not found, installing..."
+    case "$1" in
+        ninja|uv)       install_pip_pkgs "$1";;
+        java)           install_apt_pkgs default-jre-headless;;
+        python|python3) install_apt_pkgs python-is-python3;;
+        pip|cmake|curl) install_apt_pkgs "$1";;
+        clang-15)       install_apt_pkgs clang-15
+                        install_apt_pkgs lld-15
+                        install_apt_pkgs llvm-15
+                        link_home_tools_to_llvm15;;
+        *) log_error "Unknown command $1" && exit 2;;
+    esac
+}
+
+ensure_command() {
+    for cmd in "$@"; do
+        command -v "$cmd" &>/dev/null || command_not_found_handle "$cmd"
+    done;
+}
+
+install_apt_pkgs() {
+    log_verbose "Installing with apt: $*"
+    local apt_sources_list="/tmp/mirrorlist"
+    local apt_opts="Dir::Etc::sourcelist=$apt_sources_list"
+
+    if [[ ! -f "$apt_sources_list" ]]; then
+        log_verbose "Creating a temporary sources.list using mirror $MIRROR_APT"
+        sed -Ee "s|http://.*.ubuntu.com/ubuntu/|$MIRROR_APT|g" \
+            /etc/apt/sources.list > "$apt_sources_list"
+        apt-get -o "$apt_opts" update
+    fi
+
+    # Install the packages
+    DEBIAN_FRONTEND=noninteractive apt-get -o "$apt_opts" install --yes "$@"
+}
+
+install_pip_pkgs() {
+    log_verbose "Installing with pip: $*"
+    pip install --trusted-host "$MIRROR_BASE" -i "$MIRROR_PYPI" "$@"
+}
+
+link_home_tools_to_llvm15() {
+    log_verbose "Linking /home/tools/llvm/bin to llvm-15 binaries"
+    local src="/usr/lib/llvm-15/bin"
+    local dst="/home/tools/llvm/bin"
+    [[ -d "$src" ]] || { echo "[error] $src not found, install llvm-15 first"; return 1; }
+    install -d "$dst"
+
+    # Avoid bash globbing errors in empty directories
+    shopt -s nullglob
+    for f in "$src"/*; do
+        ln -sfn "$f" "$dst/$(basename "$f")"
+    done
+    shopt -u nullglob
+}
+
+main() {
+    log_action "Mode: $MODE"
+
+    if [[ "$MODE" == "ggw-ci" ]]; then
+        log_stage "Running in ggw-ci mode"
+    elif [[ "$MODE" == "taihe-dev" ]]; then
+        log_stage "Running in taihe-dev mode"
+    fi
+    # `uv bulid` runs ANTLR using java. Ensure java exists here.
+    # Since we cannot intercept a missing command in Python.
+    log_stage "Checking uv deps" && ensure_command java uv
+    log_stage "Syncing compiler deps" && _uv sync
+    log_stage "Generate grammar" && _uv build
+    log_stage "Checking build deps" && ensure_command python curl cmake ninja
+    log_stage "Checking clang-15" && ensure_command clang-15
+    log_stage "Done!"
+}
+
+init_shell_options
+chdir_root
+parse_args "$@"
+main
