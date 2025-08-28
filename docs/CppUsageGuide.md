@@ -779,7 +779,7 @@ process_string(std_sv);
 taihe::array<int> arr1(5);
 
 // 2. 创建并用特定值填充
-taihe::array<int> arr2(5, 42);  // 5个元素，都是42
+taihe::array<int> arr2(5, 42);  // 5 个元素，都是 42
 
 // 3. 从初始化列表创建
 taihe::array<int> arr3 = {1, 2, 3, 4, 5};
@@ -881,7 +881,7 @@ if (opt3.has_value()) {
 }
 
 // 使用 value_or 提供默认值
-int value = opt1.value_or(0);  // 如果为空返回0
+int value = opt1.value_or(0);  // 如果为空返回 0
 
 // 使用指针语法访问
 if (opt4) {

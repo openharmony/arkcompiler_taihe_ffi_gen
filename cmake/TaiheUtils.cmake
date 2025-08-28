@@ -94,7 +94,7 @@ function(generate_code_from_idl demo_name idl_files gen_ets_names author_bridge 
   set(GEN_AUTHOR_CPP_FILES)
   set(GEN_USER_CPP_FILES)
 
-  # config为字符串时需要拆分为字符串列表
+  # config 为字符串时需要拆分为字符串列表
   string(REGEX MATCH " " HAS_SPACE "${taihe_configs}")
 
   if(HAS_SPACE)

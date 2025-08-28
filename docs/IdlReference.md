@@ -270,8 +270,50 @@ interface MyInterface {
 }
 ```
 
-### 无参数时括号可以省略
+### 前缀注解
 
+语法为 `@name`，用于指定给其后面紧跟的语法元素添加属性。
+```rust
+@class // 用于修饰 interface MyInterface
+interface MyInterface {
+  @get("name") // 用于修饰方法 getName
+  getName(): String;
+  @set("name") // 用于修饰方法 setName
+  setName(name: String): void;
+}
+
+@class // 用于修饰结构体 A
+struct A {
+  param: i32;
+}
+
+@promise // 用于修饰函数 fetchData
+function fetchData(url: String): Response;
+
+@async // 用于修饰函数 processData
+function processData(data: String): void;
+
+function test(@optional param: Optional<String>); // 注解 @optional 用于修饰参数 param
+
+union MyUnion {
+  stringValue: @arraybuffer Array<i8>; // 注解 @arraybuffer 用于修饰类型 Array<i8>
+}
+```
+
+### 内联注解
+
+语法为 `@!name`，写在某个域内部（如接口、结构体等或包的顶层），用于为其所在的域对应的语法元素添加属性。
+```rust
+@!namespace("example", namespace = "a.b") // 用于修饰所在的整个包
+
+interface MyInterface {
+  @!class  // 用于修饰 interface MyInterface，等价于在 interface 前添加 @class
+}
+```
+
+### 简写规则
+
+无参数注解的括号可以被省略，例如，以下两种写法是等价的：
 ```rust
 @attribute_name()
 function myFunc(): void; // OK
@@ -279,45 +321,6 @@ function myFunc(): void; // OK
 @attribute_name
 function myFunc(): void; // OK, same as above
 ```
-
-### 前缀注解和内联注解
-
-- 前缀注解（语法为 `@name`）用于指定给其后面紧跟的语法元素添加属性。
-  ```rust
-  @class // 用于修饰 interface MyInterface
-  interface MyInterface {
-    @get("name") // 用于修饰方法 getName
-    getName(): String;
-    @set("name") // 用于修饰方法 setName
-    setName(name: String): void;
-  }
-
-  @class // 用于修饰结构体 A
-  struct A {
-    param: i32;
-  }
-
-  @promise // 用于修饰函数 fetchData
-  function fetchData(url: String): Response;
-
-  @async // 用于修饰函数 processData
-  function processData(data: String): void;
-
-  function test(@optional param: Optional<String>); // 注解 @optional 用于修饰参数 param
-
-  union MyUnion {
-    stringValue: @arraybuffer Array<i8>; // 注解 @arraybuffer 用于修饰类型 Array<i8>
-  }
-  ```
-
-- 内联注解（语法为 `@!name`）写在某个域内部（如接口、结构体等或包的顶层），用于为其所在的域对应的语法元素添加属性。
-  ```rust
-  @!namespace("example", namespace = "a.b") // 用于修饰所在的整个包
-
-  interface MyInterface {
-    @!class  // 用于修饰 interface MyInterface，等价于在 interface 前添加 @class
-  }
-  ```
 
 ## 其他规则
 
