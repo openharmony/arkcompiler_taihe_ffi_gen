@@ -86,7 +86,13 @@ void processPerson(uintptr_t person) {
 
 `compiler/`
 ```sh
-./run-test path/to/external_obj -ani
+# 注：Taihe IDL 文件里的函数与 C++ 规范一致，所以函数会在生成的 ets 侧自动转变为小写字母开头函数
+# Taihe IDL 文件中的写法：
+#   function FooBar(): void;
+# 生成的 ets 侧代码
+#   function fooBar(): void;
+# 如果希望生成的 ets 侧函数与 Taihe IDL 文件一致，可以使用 -Csts:keep-name
+taihe-tryit test -u sts path/to/external_obj -Csts:keep-name
 ```
 
 用户侧使用
