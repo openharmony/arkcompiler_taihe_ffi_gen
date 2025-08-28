@@ -233,6 +233,10 @@ class StructNapiInfo(AbstractAnalysis[StructDecl]):
         for class_injected in DtsInjectIntoClazzAttr.get(d):
             self.class_dts_injected_codes.append(class_injected.dts_code)
 
+        self.ctor: GlobFuncDecl | None = None
+        self.static_funcs: list[tuple[str, GlobFuncDecl]] = []
+        self.register_infos = []
+
         self.dts_fields: list[StructFieldDecl] = []
         self.dts_iface_parents: list[StructFieldDecl] = []
         self.dts_class_parents: list[StructFieldDecl] = []

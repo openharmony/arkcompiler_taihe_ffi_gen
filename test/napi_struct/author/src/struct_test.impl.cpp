@@ -48,6 +48,14 @@ double from_color(::struct_test::Color const &color) {
 ::struct_test::H process_h(::struct_test::H const &a) {
   return {{{a.g.f.f + 1}, a.g.g + 2}, a.h + 3};
 }
+
+::struct_test::H create_h(int32_t f, int32_t g, int32_t h) {
+  return {{{f}, g}, h};
+}
+
+::taihe::string give_lessons() {
+  return "math";
+}
 }  // namespace
 
 // NOLINTBEGIN
@@ -61,4 +69,6 @@ TH_EXPORT_CPP_API_create_teacher(create_teacher);
 TH_EXPORT_CPP_API_process_teacher(process_teacher);
 TH_EXPORT_CPP_API_process_g(process_g);
 TH_EXPORT_CPP_API_process_h(process_h);
+TH_EXPORT_CPP_API_create_h(create_h);
+TH_EXPORT_CPP_API_give_lessons(give_lessons);
 // NOLINTEND

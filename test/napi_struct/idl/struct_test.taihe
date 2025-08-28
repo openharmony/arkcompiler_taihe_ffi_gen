@@ -32,6 +32,10 @@ struct Teacher {
     age: i32;
 }
 
+@static("Teacher")
+function give_lessons(): String;
+
+@ctor("Teacher")
 function create_teacher(): Teacher;
 function process_teacher(a: Teacher): Teacher;
 
@@ -52,3 +56,6 @@ struct H {
 
 function process_g(a: G): G;
 function process_h(a: H): H;
+
+@ctor("H")
+function create_h(f: i32, g: i32, h: i32): H;

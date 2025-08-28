@@ -624,7 +624,10 @@ export interface Student {
 export function process_student(a: Student): Student;
 ```
 
-如果需要生成数据类型为 class 而不是 interface 可以使用 @class 注解。在生成代码的 class 中会自动生成一个默认的 constructor 函数。
+如果需要生成数据类型为 class 而不是 interface 可以使用 @class 注解。可以使用 @static 注解标记全局函数为某个 class 的静态方法，可以使用 @ctor 注解标记全局函数为某个 class 的构造函数。
+
+注意，使用 @class 时通常需要提供构造函数，除非确认无需在 ets 层使用 new 实例化。当使用 @static 注解标记某个全局函数为指定 class 的静态方法时，这个 class 必须提供构造函数，如不提供，则 @static 注解无效。
+
 **`.taihe`**
 
 ```rust
@@ -633,16 +636,23 @@ struct Teacher {
     @readonly name: String;
     age: i32;
 }
+
+@static("Teacher")
+function give_lessons(): String;
+
+@ctor("Teacher")
+function create_teacher(): Teacher;
 function process_teacher(a: Teacher): Teacher;
 ```
 
 **生成`.d.ts`**
 
 ```typescript
-export declare class Teacher {
+export class Teacher {
   readonly name: string;
   age: number;
-  constructor(name: string, age: number);
+  constructor();
+  static give_lessons(): string;
 }
 export function process_teacher(a: Teacher): Teacher;
 ```
@@ -666,6 +676,9 @@ struct H {
     h: i32;
 }
 
+@ctor("H")
+function create_h(f: i32, g: i32, h: i32): H;
+
 function process_g(a: G): G;
 function process_h(a: H): H;
 ```
@@ -676,10 +689,10 @@ function process_h(a: H): H;
 export interface F {
   f: number;
 }
-export interface G extends i32F {
+export interface G extends F {
   g: number;
 }
-export declare class H implements i32G {
+export class H implements G {
   f: number;
   g: number;
   h: number;
@@ -709,6 +722,15 @@ int32_t from_rgb(::struct_test::RGB const &rgb) {
 ::struct_test::H process_h(::struct_test::H const& a) {
   return {{{a.g.f.f + 1}, a.g.g + 2}, a.h +3};
 }
+::struct_test::H create_h(int32_t f, int32_t g, int32_t h) {
+  return {{{f}, g}, h};
+}
+::struct_test::Teacher create_teacher() {
+  return ::struct_test::Teacher{"Rose", 25};
+}
+::taihe::string give_lessons() {
+  return "math";
+}
 ```
 
 ### ArkTs 1.1 调用
@@ -722,9 +744,15 @@ let student: lib.Student = { name: "Jack", age: 10 };
 let pro_student = lib.process_student(student);
 console.log("process student:", pro_student.name, pro_student.age);
 
-let teacher: lib.Teacher = { name: "Jony", age: 30 };
-let pro_teacher = lib.process_teacher(teacher);
-console.log("process teacher:", pro_teacher.name, pro_teacher.age);
+// Test struct class constructor
+let cre_teacher = new lib.Teacher();
+console.log("create teacher: ", cre_teacher.name, cre_teacher.age);
+let pro_teacher = lib.process_teacher(cre_teacher);
+console.log("process teacher: ", pro_teacher.name, pro_teacher.age);
+
+// Test struct class static function
+let lesson = lib.Teacher.give_lessons();
+console.log("teacher static function give lessons:", lesson);
 
 let g = { f: 0, g: 0 };
 let new_g = lib.process_g(g);
@@ -740,7 +768,9 @@ console.log("process h:", new_h.f, new_h.g, new_h.h);
 ```sh
 from ts RGB to i32: 6
 process student: Jack student 20
-process teacher: Jony teacher 45
+create teacher:  Rose 25
+process teacher:  Rose teacher 40
+teacher static function give lessons: math
 process g: 1 2
 process h: 1 2 3
 ```

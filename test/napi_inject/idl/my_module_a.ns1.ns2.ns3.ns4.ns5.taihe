@@ -6,5 +6,22 @@ function Funtest(s: MyStruct): i32;
 struct MyStruct {
     a: i32;
     b: i32;
+@!ts_inject_into_interface("add(a: number, b: number): number;")
 }
 function foo(): void;
+
+@class
+struct MyClass {
+    a: bool;
+    b: f32;
+@!ts_inject_into_class("""mul(a: number, b: number): number {
+    return a * b;
+}
+""")
+}
+
+@ctor("MyClass")
+function create_myclass(a: bool, b: f32): MyClass;
+
+@static("MyClass")
+function add(a: i32, b: i32): i32;

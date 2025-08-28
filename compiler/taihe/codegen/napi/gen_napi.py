@@ -165,6 +165,13 @@ class NapiCodeGenerator:
                 if static_funcs := static_map.get(iface.name):
                     iface_napi_info.static_funcs = static_funcs
 
+            for struct in pkg.structs:
+                struct_napi_info = StructNapiInfo.get(self.am, struct)
+                if ctor := ctors_map.get(struct.name):
+                    struct_napi_info.ctor = ctor
+                if static_funcs := static_map.get(struct.name):
+                    struct_napi_info.static_funcs = static_funcs
+
             for func in pkg.functions:
                 func_napi_info = GlobFuncNapiInfo.get(self.am, func)
                 if func_napi_info.ctor_class_name is None:
@@ -173,7 +180,7 @@ class NapiCodeGenerator:
             for enum in pkg.enums:
                 self.gen_enum(enum, pkg_napi_target)
             for struct in pkg.structs:
-                self.gen_struct_files(struct)
+                self.gen_struct(struct, pkg_napi_target)
             for iface in pkg.interfaces:
                 self.gen_iface(iface, pkg_napi_target)
             for union in pkg.unions:
@@ -355,9 +362,10 @@ class NapiCodeGenerator:
                 f"NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args , nullptr, nullptr));",
             )
 
-    def gen_struct_files(
+    def gen_struct(
         self,
         struct: StructDecl,
+        target: CSourceWriter,
     ):
         struct_cpp_info = StructCppInfo.get(self.am, struct)
         struct_napi_info = StructNapiInfo.get(self.am, struct)
@@ -370,6 +378,11 @@ class NapiCodeGenerator:
             struct,
             struct_cpp_info,
             struct_napi_info,
+        )
+        self.gen_struct_create_func(
+            struct,
+            struct_napi_info,
+            target,
         )
 
     def gen_struct_conv_decl_file(
@@ -485,7 +498,7 @@ class NapiCodeGenerator:
             struct_napi_impl_target.writelns(
                 f"napi_value args[{len(struct_napi_info.dts_final_fields)}] = {{{args_str}}};",
                 f"napi_value napi_obj = nullptr, constructor = nullptr;",
-                f"NAPI_CALL(env, napi_get_reference_value(env, {struct_napi_info.ctor_ref_name}(), &constructor));",
+                f"NAPI_CALL(env, napi_get_reference_value(env, {struct_napi_info.ctor_ref_name}_inner(), &constructor));",
                 f"NAPI_CALL(env, napi_new_instance(env, constructor, {len(struct_napi_info.dts_final_fields)}, args, &napi_obj));",
                 f"return napi_obj;",
             )
@@ -497,7 +510,6 @@ class NapiCodeGenerator:
         struct_napi_info: StructNapiInfo,
         struct_napi_impl_target: CHeaderWriter,
     ):
-        register_infos = []
         for parts in struct_napi_info.dts_final_fields:
             final = parts[-1]
             filed_segments = [*final.parent_pkg.segments, struct.name, final.name]
@@ -524,7 +536,7 @@ class NapiCodeGenerator:
                     f"return napi_field_result;",
                 )
             if ReadOnlyAttr.get(final) is None:
-                register_infos.append(
+                struct_napi_info.register_infos.append(
                     (final.name, field_getter_name, field_setter_name)
                 )
                 with struct_napi_impl_target.indented(
@@ -547,10 +559,76 @@ class NapiCodeGenerator:
                         f"return nullptr;",
                     )
             else:
-                register_infos.append((final.name, field_getter_name, "nullptr"))
+                struct_napi_info.register_infos.append(
+                    (final.name, field_getter_name, "nullptr")
+                )
+
+        # process ctor
+        if ctor := struct_napi_info.ctor:
+            struct_napi_impl_target.writelns(
+                f"inline napi_ref& {struct_napi_info.ctor_ref_name}() {{",
+                f"    static napi_ref instance = nullptr;",
+                f"    return instance;",
+                f"}}",
+            )
+
+            with struct_napi_impl_target.indented(
+                f"inline napi_value {struct_napi_info.constructor_func_name}(napi_env env, napi_callback_info info) {{",
+                f"}}",
+            ):
+                ctor_cpp_user_info = GlobFuncCppUserInfo.get(self.am, ctor)
+                struct_napi_impl_target.writelns(
+                    f"napi_status _status;",
+                    f"napi_value thisobj;",
+                    f"size_t argc = {len(ctor.params)};",
+                    f"napi_value args[{len(ctor.params)}];",
+                    f"NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, &thisobj, nullptr));",
+                )
+                args = []
+                for i, param in enumerate(ctor.params):
+                    value_ty = param.ty_ref.resolved_ty
+                    type_info = TypeNapiInfo.get(self.am, value_ty)
+                    type_info.from_napi(
+                        struct_napi_impl_target, f"args[{i}]", f"value{i}"
+                    )
+                    args.append(f"value{i}")
+                args_str = ", ".join(args)
+
+                if return_ty_ref := ctor.return_ty_ref:
+                    # TODO: assert the return type is the struct type
+                    value_ty = return_ty_ref.resolved_ty
+                    struct_napi_impl_target.writelns(
+                        f"{struct_cpp_info.as_owner} value = {ctor_cpp_user_info.full_name}({args_str});",
+                        f"{struct_cpp_info.as_owner}* cpp_ptr = new {struct_cpp_info.as_owner}(std::move(value));",
+                    )
+                    with struct_napi_impl_target.indented(
+                        f"_status = napi_wrap(env, thisobj, cpp_ptr, []([[maybe_unused]] napi_env env, void* finalize_data, [[maybe_unused]] void* finalize_hint) {{",
+                        f"}}, nullptr, nullptr);",
+                    ):
+                        struct_napi_impl_target.writelns(
+                            f"delete static_cast<{struct_cpp_info.as_owner}*>(finalize_data);",
+                        )
+                    with struct_napi_impl_target.indented(
+                        f"if (_status != napi_ok) {{",
+                        f"}}",
+                    ):
+                        struct_napi_impl_target.writelns(
+                            f"delete thisobj;",
+                            f"napi_throw_error(env,",
+                            f'    "ERR_WRAP_FAILED",',
+                            f'    ("Native object wrapping failed (status " + std::to_string(_status) + ")").c_str()',
+                            f");",
+                            f"return nullptr;",
+                        )
+                    struct_napi_impl_target.writelns(
+                        f"return thisobj;",
+                    )
+                else:
+                    # TODO: special error
+                    raise ValueError("constructor must have return value")
 
         with struct_napi_impl_target.indented(
-            f"inline napi_value {struct_napi_info.constructor_func_name}(napi_env env, napi_callback_info info) {{",
+            f"inline napi_value {struct_napi_info.constructor_func_name}_inner(napi_env env, napi_callback_info info) {{",
             f"}}",
         ):
             struct_napi_impl_target.writelns(
@@ -598,29 +676,61 @@ class NapiCodeGenerator:
             struct_napi_impl_target.writelns(
                 f"return thisobj;",
             )
+
         struct_napi_impl_target.writelns(
-            f"inline napi_ref& {struct_napi_info.ctor_ref_name}() {{",
+            f"inline napi_ref& {struct_napi_info.ctor_ref_name}_inner() {{",
             f"    static napi_ref instance = nullptr;",
             f"    return instance;",
             f"}}",
         )
-        with struct_napi_impl_target.indented(
-            f"inline void {struct_napi_info.create_func_name}(napi_env env, napi_value exports) {{",
+
+    def gen_struct_create_func(
+        self,
+        struct: StructDecl,
+        struct_napi_info: StructNapiInfo,
+        target: CSourceWriter,
+    ):
+        # create function
+        with target.indented(
+            f"inline void {struct_napi_info.create_func_name}(napi_env env, [[maybe_unused]] napi_value exports) {{",
             f"}}",
         ):
-            struct_napi_impl_target.writelns(f"napi_value result;")
-            with struct_napi_impl_target.indented(
+            target.writelns(f"napi_value result = nullptr;")
+            with target.indented(
                 f"napi_property_descriptor desc[] = {{",
                 f"}};",
             ):
-                for field_name, field_getter, field_setter in register_infos:
-                    struct_napi_impl_target.writelns(
+                for (
+                    field_name,
+                    field_getter,
+                    field_setter,
+                ) in struct_napi_info.register_infos:
+                    target.writelns(
                         f'{{"{field_name}", nullptr, nullptr, {field_getter}, {field_setter}, nullptr, napi_default, nullptr}}, ',
                     )
-            struct_napi_impl_target.writelns(
-                f'NAPI_CALL(env, napi_define_class(env, "{struct.name}", NAPI_AUTO_LENGTH, {struct_napi_info.constructor_func_name}, nullptr, {len(struct_napi_info.dts_final_fields)}, desc, &result));',
-                f"NAPI_CALL(env, napi_create_reference(env, result, 1, &{struct_napi_info.ctor_ref_name}()));",
-                f'NAPI_CALL(env, napi_set_named_property(env, exports, "{struct.name}", result));',
+            if struct_napi_info.is_class() and struct_napi_info.ctor:
+                target.writelns(
+                    f'NAPI_CALL(env, napi_define_class(env, "{struct.name}", NAPI_AUTO_LENGTH, {struct_napi_info.constructor_func_name}, nullptr, sizeof(desc) / sizeof(desc[0]), desc, &result));',
+                )
+                if struct_napi_info.static_funcs:
+                    with target.indented(
+                        f"napi_property_descriptor static_properties[] = {{",
+                        f"}};",
+                    ):
+                        for mng_name, static_func in struct_napi_info.static_funcs:
+                            target.writelns(
+                                f'{{"{static_func.name}", nullptr, {mng_name}, nullptr, nullptr, nullptr, napi_static, nullptr}}, ',
+                            )
+                    target.writelns(
+                        f"NAPI_CALL(env, napi_define_properties(env, result, {len(struct_napi_info.static_funcs)}, static_properties));",
+                    )
+                target.writelns(
+                    f"NAPI_CALL(env, napi_create_reference(env, result, 1, &{struct_napi_info.ctor_ref_name}()));",
+                    f'NAPI_CALL(env, napi_set_named_property(env, exports, "{struct.name}", result));',
+                )
+            target.writelns(
+                f'NAPI_CALL(env, napi_define_class(env, "{struct.name}_inner", NAPI_AUTO_LENGTH, {struct_napi_info.constructor_func_name}_inner, nullptr, sizeof(desc) / sizeof(desc[0]), desc, &result));',
+                f"NAPI_CALL(env, napi_create_reference(env, result, 1, &{struct_napi_info.ctor_ref_name}_inner()));",
                 f"return;",
             )
 

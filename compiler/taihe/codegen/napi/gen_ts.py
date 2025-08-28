@@ -157,7 +157,7 @@ class TsCodeGenerator:
         if not struct_napi_info.is_class():
             return
 
-        if not struct_napi_info.interfacets_ts_injected_codes:
+        if not struct_napi_info.class_ts_injected_codes:
             target.writelns(
                 f"export const {struct_napi_info.dts_type_name} = {native_lib_name}.{struct_napi_info.dts_type_name};",
             )
@@ -178,29 +178,79 @@ class TsCodeGenerator:
             f"{struct_decl} {{",
             f"}}",
         ):
+            nativa_class_name = f"native{struct_napi_info.dts_type_name}"
+            target.writelns(
+                f"private {nativa_class_name};",
+            )
+
             for injected in struct_napi_info.class_ts_injected_codes:
                 target.write_block(injected)
 
-            args = []
             for parts in struct_napi_info.dts_final_fields:
                 final = parts[-1]
-                readonly = "readonly " if ReadOnlyAttr.get(final) is not None else ""
                 ty_napi_info = TypeNapiInfo.get(self.am, final.ty_ref.resolved_ty)
-                target.writelns(
-                    f"{readonly}{final.name}{'?' if ty_napi_info.is_optional else ''}: {ty_napi_info.dts_type_in(target)};"
-                )
-                args.append(
-                    f"{final.name}{'?' if ty_napi_info.is_optional else ''}: {ty_napi_info.dts_type_in(target)}"
-                )
-            args_str = ", ".join(args)
+                with target.indented(
+                    f"get {final.name}(): {ty_napi_info.dts_return_type_in(target)} {{",
+                    f"}}",
+                ):
+                    target.writelns(
+                        f"return this.{nativa_class_name}.{final.name};",
+                    )
+                if not ReadOnlyAttr.get(final):
+                    with target.indented(
+                        f"set {final.name}({final.name}{'?' if ty_napi_info.is_optional else ''}: {ty_napi_info.dts_type_in(target)}) {{",
+                        f"}}",
+                    ):
+                        target.writelns(
+                            f"this.{nativa_class_name}.{final.name} = {final.name};",
+                        )
 
-            with target.indented(
-                f"constructor({args_str}) {{",
-                f"}}",
-            ):
-                for parts in struct_napi_info.dts_final_fields:
-                    final = parts[-1]
-                    target.writelns(f"this.{final.name} = {final.name};")
+            if ctor := struct_napi_info.ctor:
+                params = []
+                args = []
+                for param in ctor.params:
+                    type_napi_info = TypeNapiInfo.get(self.am, param.ty_ref.resolved_ty)
+                    params.append(
+                        f"{param.name}{'?' if type_napi_info.is_optional else ''}: {type_napi_info.dts_type_in(target)}"
+                    )
+                    args.append(param.name)
+                params_str = ", ".join(params)
+                args_str = ", ".join(args)
+                with target.indented(
+                    f"constructor({params_str}) {{",
+                    f"}}",
+                ):
+                    target.writelns(
+                        f"this.{nativa_class_name} = new {native_lib_name}.{struct_napi_info.dts_type_name}({args_str});",
+                    )
+
+                # static methods
+                for mng_name, static_func in struct_napi_info.static_funcs:
+                    params = []
+                    args = []
+                    for param in static_func.params:
+                        value_ty = param.ty_ref.resolved_ty
+                        param_dts_info = TypeNapiInfo.get(self.am, value_ty)
+                        params.append(
+                            f"{param.name}{'?' if param_dts_info.is_optional else ''}: {param_dts_info.dts_type_in(target)}"
+                        )
+                        args.append(param.name)
+                    params_str = ", ".join(params)
+                    args_str = ", ".join(args)
+                    if static_func.return_ty_ref:
+                        return_ty_dts_info = TypeNapiInfo.get(
+                            self.am, static_func.return_ty_ref.resolved_ty
+                        )
+                        return_ty = return_ty_dts_info.dts_return_type_in(target)
+                    else:
+                        return_ty = "void"
+                    with target.indented(
+                        f"static {static_func.name}({params_str}): {return_ty} {{",
+                        f"}}",
+                    ):
+                        target.writelns(
+                            f"return {native_lib_name}.{struct_napi_info.dts_type_name}.{static_func.name}({args_str});",
+                        )
 
     def gen_iface_interface(
         self,
