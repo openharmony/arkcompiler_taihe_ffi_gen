@@ -1,4 +1,4 @@
-# On 与 Off (根据目前overload策略暂废弃)
+# On 与 Off（根据目前 overload 策略暂废弃）
 
 在 sts 中有些接口形如：
 ```typescript
@@ -50,7 +50,7 @@ on/off 函数在 Taihe 中需要命名形如为 `OnFoo`、`OnBar` 的函数
 
 1. `@on_off`
 
-    使用第一种写法时，会将 taihe 函数名 on/off 后的字符串作为 sts 侧的 on/off 函数的 target (首字母会自动小写)，如 taihe 函数 OnFoo，在 sts 侧时 target 为 foo
+    使用第一种写法时，会将 taihe 函数名 on/off 后的字符串作为 sts 侧的 on/off 函数的 target（首字母会自动小写），如 taihe 函数 OnFoo，在 sts 侧时 target 为 foo
 
 2. `@on_off("<target>")`
 

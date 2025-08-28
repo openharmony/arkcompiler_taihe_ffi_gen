@@ -2,23 +2,25 @@
 
 *注：当前本文档中的注解同时包括 Taihe 在所有后端共用的注解和仅针对 ArkTS 1.2 及 ANI 后端特有的注解且未作拆分。后续会进行拆分。*
 
+*本文档中以 `@!` 开头的表示该注解通常被写作[内联注解](./IdlReference.md#内联注解)，其余以 `@` 开头的表示该注解通常被写作[前缀注解](./IdlReference.md#前缀注解)。*
+
 ## 全局注解
 
-- `@namespace("@ohos.abc.xyz", "ns1.ns2.ns3")`：该注解作用于整个 Taihe 文件，作用一是让该文件生成 ets 代码都在 namespace 内；作用二是修改文件名，Taihe 文件不允许使用 @。
+- `@!namespace("@ohos.abc.xyz", "ns1.ns2.ns3")`：该注解作用于整个 Taihe 文件。其中第一个参数表示该 Taihe 文件所对应的 ets module 名称，第二个参数可选，表示该 Taihe 文件所对应于该 ets module 下的 namespace 名称（若不指定则表示该 Taihe 文件对应该 ets module 的根作用域）。如果不使用该注解，则默认该 Taihe 文件所对应的 ets module 名称为 Taihe 文件的包名，namespace 名称为根作用域。
 
-- `@sts_inject("""...""")`：注入功能，将一段 ets 代码注入到当前 Taihe 文件所对应的 ets namespace 中。
+- `@!sts_inject("""...""")`：表示将一段 ets 代码注入到当前 Taihe 文件所对应的 ets namespace 中。
 
-- `@sts_inject_into_module("""...""")`：注入功能，将一段 ets 代码注入到当前 Taihe 文件所对应的 ets namespace 所在的 module 头部。
+- `@!sts_inject_into_module("""...""")`：表示将一段 ets 代码注入到当前 Taihe 文件所对应的 ets namespace 所在的 module 头部。
 
 ## 声明注解
 
+- `@!sts_inject_into_class("""...""")`：将一段 ets 代码注入到生成的 ets 的 class 中。可加在 Taihe struct 和 interface 上。
+
+- `@!sts_inject_into_interface("""...""")`：将一段 ets 代码注入到生成的 ets 的 interface 中。可加在 Taihe struct 和 interface 上。
+
+- `@!sts_export_default`：ets 特有语法，将导出的某个目标指定为 default。可加在 Taihe 文件上（表示其所对应的 namespace 为默认导出），也可加在 Taihe enum/union/struct/interface 等声明上（表示其所对应的 ets 声明为默认导出）。
+
 - `@class`：使用此注解将在 Taihe 中声明的 interface 或 struct 在 TS 中投影为 class，如果不使用此注解则默认会被投影为 TS 中的 interface。
-
-- `@sts_inject_into_class("""...""")`：将一段 ets 代码注入到生成的 ets 的 class 中。可加在 Taihe struct 和 interface 上。
-
-- `@sts_inject_into_interface("""...""")`：将一段 ets 代码注入到生成的 ets 的 interface 中。可加在 Taihe struct 和 interface 上。
-
-- `@sts_export_default`：ets 特有语法，将导出的某个目标指定为 default。可加在 Taihe 文件上（表示其所对应的 namespace 为默认导出），也可加在 Taihe enum/union/struct/interface 等声明上（表示其所对应的 ets 目标为默认导出）。
 
 - `@const`：加在 Taihe enum 上，表示该 enum 在 ets 侧被投影为若干个常量，而不是一个 enum 类型。
 
