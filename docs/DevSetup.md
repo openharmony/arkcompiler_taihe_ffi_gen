@@ -3,7 +3,7 @@
 ## 项目配置
 
 - **操作系统**
-  推荐 Linux (或 WSL)，Windows 不保证完整支持
+  推荐 Linux（或 WSL），Windows 不保证完整支持
 - **软件最低版本**
   - **运行时**
     - Clang 15，GCC 不保证完整支持

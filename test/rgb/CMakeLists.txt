@@ -11,14 +11,6 @@ file(GLOB USER_CPP_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_LIST_DIR}/user/src/*
 
 set(USER_INCLUDE ${CMAKE_CURRENT_LIST_DIR}/user/include)
 
-
-if (NOT DEFINED TAIHE_STDLIB_DIR)  
-execute_and_set_variable(TAIHE_STDLIB_DIR "--print-stdlib-path")
-endif()
-
-# TODO: need to remove, stdlib should not take user as input
-set(IDL_FILES_WITAIHE_STDLIB ${IDL_FILES} "${TAIHE_STDLIB_DIR}/taihe.platform.ani.taihe")
-
 set(MAIN_ABC "${CMAKE_CURRENT_BINARY_DIR}/main.abc")
 
 # TODO: need to remove, now runtime is coupled with ani
@@ -27,7 +19,7 @@ setup_panda_sdk()
 # ani 头文件
 setup_ani_header()
 
-add_taihe_library(rgb_taihegen "${IDL_FILES_WITAIHE_STDLIB}"
+add_taihe_library(rgb_taihegen "${IDL_FILES}"
   USER_BRIDGE "cpp-user"
 )
 

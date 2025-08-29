@@ -57,7 +57,7 @@ enum AlphaType: i32 {
 
 union NullableString {
     str: String;
-    @null null;
+    null: unit;
 }
 
 struct Region {

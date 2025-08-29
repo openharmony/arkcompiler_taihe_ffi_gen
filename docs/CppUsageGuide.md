@@ -1,6 +1,6 @@
 # Taihe C++ 用户文档
 
-本文档旨在帮助用户了解如何调用由 IDL 文件生成的代码。
+本文档旨在帮助用户了解如何使用 Taihe 根据 IDL 文件自动生成的 C++ 代码，及 Taihe C++ 运行时提供的功能（如泛型容器等）。
 
 ## 1. 生成的文件结构
 
@@ -300,7 +300,7 @@ public:
         return std::format("Color: {}", color.get_value());
     }
 
-    std::string case_unknown() {
+    std::string case_unknown(taihe::unit) {
         return "Unknown";
     }
 };
@@ -334,7 +334,7 @@ public:
         return std::format("Color: {}", color.get_value());
     }
 
-    std::string operator()(taihe::static_tag_t<Tag::unknown>) {
+    std::string operator()(taihe::static_tag_t<Tag::unknown>, taihe::unit) {
         return "Unknown";
     }
 };
@@ -362,7 +362,7 @@ auto result = rgb::base::RGBOrColorOrName::make_rgb(RGB{0x39, 0xC5, 0xBB})
         [](taihe::static_tag_t<Tag::color>, rgb::base::Color const& color) {
             return std::format("Color: {}", color.get_value());
         },
-        [](taihe::static_tag_t<Tag::unknown>) {
+        [](taihe::static_tag_t<Tag::unknown>, taihe::unit) {
             return "Unknown";
         },
     });
@@ -779,7 +779,7 @@ process_string(std_sv);
 taihe::array<int> arr1(5);
 
 // 2. 创建并用特定值填充
-taihe::array<int> arr2(5, 42);  // 5个元素，都是42
+taihe::array<int> arr2(5, 42);  // 5 个元素，都是 42
 
 // 3. 从初始化列表创建
 taihe::array<int> arr3 = {1, 2, 3, 4, 5};
@@ -881,7 +881,7 @@ if (opt3.has_value()) {
 }
 
 // 使用 value_or 提供默认值
-int value = opt1.value_or(0);  // 如果为空返回0
+int value = opt1.value_or(0);  // 如果为空返回 0
 
 // 使用指针语法访问
 if (opt4) {
@@ -1207,8 +1207,8 @@ function divmod_i32(a: i32, b: i32): DivModResult;
 
 你可以在 C++ 实现文件中这样导出该函数：
 ```cpp
-#include "integer.arithmetic.proj.hpp"
-#include "integer.arithmetic.impl.hpp"
+#include <integer.arithmetic.proj.hpp>
+#include <integer.arithmetic.impl.hpp>
 
 integer::arithmetic::DivModResult ohos_int_divmod(int32_t a, int32_t b) {
     return { a / b, a % b };
@@ -1221,9 +1221,9 @@ TH_EXPORT_CPP_API_divmod_i32(ohos_int_divmod)
 
 接口的使用方可以导入头文件 `package.name.user.hpp`，并根据 IDL 文件中定义的函数名称和其所在的命名空间来调用函数。如 `package::name::funcName()`。例如，假设你要调用上文中定义的 `divmod_i32` 函数，可以这样写：
 ```cpp
-#include <iostream>
+#include <integer.arithmetic.user.hpp>
 
-#include "integer.arithmetic.user.hpp"
+#include <iostream>
 
 int main() {
     int32_t a = 10;
@@ -1248,7 +1248,7 @@ int main() {
 
 - 链接错误：```undefined reference to `package_name_InterfaceName_i'```
 
-  类似 `package_name_InterfaceName_i` 这样的是太和接口的[接口 ID](./InterfaceAbi.md#接口-id) 符号，其定义通常在自动生成的 `package.name.abi.c` 中，请确保你在构建时将该文件包含在内。
+  类似 `package_name_InterfaceName_i` 这样的是 Taihe 接口的[接口 ID](./InterfaceAbi.md#接口-id) 符号，其定义通常在自动生成的 `package.name.abi.c` 中，请确保你在构建时将该文件包含在内。
 
 - 编译错误：
   ```

@@ -1,5 +1,7 @@
 # Taihe 基本使用文档
 
+本文档介绍 Taihe 的安装、环境配置以及命令行工具的使用方法。
+
 ## 环境配置
 
 - 源码用户
@@ -43,16 +45,18 @@ taihec [taihe_files ...] [options ...]
 
 #### 代码生成后端
 
-| Backend | 说明 |
-| ------- | ---- |
-| `abi-header` | 生成 Taihe C ABI 头文件 |
-| `abi-source` | 生成 Taihe C ABI 源文件 |
-| `c-author` | 生成 C 语言提供者测的接口导出宏以及模板代码 |
-| `cpp-common` | 生成 C++ 接口提供者和消费者侧的公共代码 |
-| `cpp-author` | 生成 C++ 接口提供者侧的接口导出宏以及模板代码 |
-| `cpp-user` | 生成 C++ 接口消费者侧的所需代码 |
-| `ani-bridge` | 生成 ANI 相关的桥接代码 |
-| `pretty-print` | 将 Taihe IDL 文件格式化输出 |
+代码生成后端决定了 `taihec` 会生成哪些代码文件。后端之间存在依赖关系，工具会自动根据配置的后端来递归地启用所需的其他后端，生成完整的代码。
+
+| Backend | 说明 | 依赖 |
+| ------- | ---- | ---- |
+| `abi-header` | 生成 Taihe C ABI 头文件，包括类型声明，函数声明等 | 无 |
+| `abi-source` | 生成 Taihe C ABI 源文件，包含必要的符号定义 | `abi-header` |
+| `c-author` | 生成 C 语言提供者测的接口导出宏以及模板代码 | `abi-source` |
+| `cpp-common` | 生成 C++ 接口提供者和消费者侧的公共代码 | `abi-header` |
+| `cpp-author` | 生成 C++ 接口提供者侧的接口导出宏以及模板代码 | `cpp-common`, `abi-source` |
+| `cpp-user` | 生成 C++ 接口消费者侧的所需代码 | `cpp-common` |
+| `ani-bridge` | 生成 ANI 相关的桥接代码 | `cpp-user` |
+| `pretty-print` | 将 Taihe IDL 文件格式化输出 | 无 |
 
 #### 代码生成配置
 
@@ -68,9 +72,7 @@ taihec [taihe_files ...] [options ...]
 
 以下是一个 `taihec` 的基本使用示例：
 ```sh
-taihec stdlib/taihe.platform.ani.taihe -Otest/ani_test/generated -Gabi-source -Gcpp-common  # 生成 Taihe ANI 相关标准库接口
-
-taihec test/ani_test/idl/* -Otest/ani_test/generated -Gani-bridge -Gcpp-author -Carkts:module-prefix=<module_name> -Carkts:path-prefix=<pkg_name> -Bcmake  # 生成用户自己在 IDL 中定义的接口的 ANI 桥接代码，以及 C++ 实现模板等
+taihec test/ani_test/idl/*.taihe -Otest/ani_test/generated -Gani-bridge -Gcpp-author -Carkts:module-prefix=<module_name> -Carkts:path-prefix=<pkg_name> -Bcmake  # 生成用户自己在 IDL 中定义的接口的 ANI 桥接代码，以及 C++ 实现模板等
 ```
 
 ### `taihe-tryit`
@@ -136,7 +138,7 @@ taihe-tryit [mode] [test_dir] [options ...]
        └── main.ets                    # 测试入口
    ```
 
-2. 执行 `taihe-tryit generate --user sts path/to/demo` 后，会在 `path/to/demo` 中生成一个 `generated` 目录，包含生成的代码和头文件。也可以尝试修改 `hello.taihe`，按照[Taihe 语言规范](DSL.md)编写自己的接口描述文件并进行生成。
+2. 执行 `taihe-tryit generate --user sts path/to/demo` 后，会在 `path/to/demo` 中生成一个 `generated` 目录，包含生成的代码和头文件。也可以尝试修改 `hello.taihe`，按照 [Taihe 语言规范](DSL.md)编写自己的接口描述文件并进行生成。
 
    ```
    generated

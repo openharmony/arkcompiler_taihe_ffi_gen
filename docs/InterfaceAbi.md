@@ -1,4 +1,4 @@
-# OOP ABI 设计文档
+# Taihe Interface ABI 设计文档
 
 ## Taihe IDL 示例代码
 

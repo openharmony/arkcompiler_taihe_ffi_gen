@@ -21,7 +21,6 @@ from taihe.codegen.napi.analyses import (
     PackageNapiInfo,
     StructNapiInfo,
     TypeNapiInfo,
-    UnionFieldNapiInfo,
     UnionNapiInfo,
     get_mangled_func_name,
     get_mangled_method_name,
@@ -39,10 +38,11 @@ from taihe.semantics.declarations import (
 from taihe.semantics.types import (
     ArrayType,
     MapType,
+    NonVoidType,
     OpaqueType,
     ScalarType,
     StringType,
-    Type,
+    UnitType,
 )
 from taihe.utils.analyses import AnalysisManager
 from taihe.utils.outputs import FileKind, OutputManager
@@ -328,14 +328,14 @@ class NapiCodeGenerator:
         self.gen_get_cb_info(len(func.params), pkg_napi_target)
         args = []
         for i, param in enumerate(func.params):
-            value_ty = param.ty_ref.resolved_ty
+            value_ty = param.ty
             type_info = TypeNapiInfo.get(self.am, value_ty)
             type_info.from_napi(pkg_napi_target, f"args[{i}]", f"value{i}")
             args.append(f"value{i}")
         args_str = ", ".join(args)
 
-        if return_ty_ref := func.return_ty_ref:
-            value_ty = return_ty_ref.resolved_ty
+        if isinstance(return_ty := func.return_ty, NonVoidType):
+            value_ty = return_ty
             cpp_return_info = TypeCppInfo.get(self.am, value_ty)
             pkg_napi_target.writelns(
                 f"{cpp_return_info.as_owner} value = {func_cpp_name}({args_str});",
@@ -453,7 +453,7 @@ class NapiCodeGenerator:
             cpp_field_results = []
             for parts in struct_napi_info.dts_final_fields:
                 final = parts[-1]
-                type_napi_info = TypeNapiInfo.get(self.am, final.ty_ref.resolved_ty)
+                type_napi_info = TypeNapiInfo.get(self.am, final.ty)
                 napi_field_value = f"napi_field_{final.name}"
                 cpp_field_result = f"cpp_field_{final.name}"
                 struct_napi_impl_target.writelns(
@@ -487,7 +487,7 @@ class NapiCodeGenerator:
             for parts in struct_napi_info.dts_final_fields:
                 final = parts[-1]
                 napi_field_result = f"napi_field_{final.name}"
-                type_napi_info = TypeNapiInfo.get(self.am, final.ty_ref.resolved_ty)
+                type_napi_info = TypeNapiInfo.get(self.am, final.ty)
                 type_napi_info.into_napi(
                     struct_napi_impl_target,
                     ".".join(("cpp_obj", *(part.name for part in parts))),
@@ -516,7 +516,7 @@ class NapiCodeGenerator:
             field_getter_name = encode(filed_segments, DeclKind.GETTER)
             field_setter_name = encode(filed_segments, DeclKind.SETTER)
 
-            field_ty_napi_info = TypeNapiInfo.get(self.am, final.ty_ref.resolved_ty)
+            field_ty_napi_info = TypeNapiInfo.get(self.am, final.ty)
             with struct_napi_impl_target.indented(
                 f"static napi_value {field_getter_name}(napi_env env, napi_callback_info info) {{",
                 f"}}",
@@ -586,7 +586,7 @@ class NapiCodeGenerator:
                 )
                 args = []
                 for i, param in enumerate(ctor.params):
-                    value_ty = param.ty_ref.resolved_ty
+                    value_ty = param.ty
                     type_info = TypeNapiInfo.get(self.am, value_ty)
                     type_info.from_napi(
                         struct_napi_impl_target, f"args[{i}]", f"value{i}"
@@ -594,9 +594,9 @@ class NapiCodeGenerator:
                     args.append(f"value{i}")
                 args_str = ", ".join(args)
 
-                if return_ty_ref := ctor.return_ty_ref:
+                if isinstance(return_ty := ctor.return_ty, NonVoidType):
                     # TODO: assert the return type is the struct type
-                    value_ty = return_ty_ref.resolved_ty
+                    value_ty = return_ty
                     struct_napi_impl_target.writelns(
                         f"{struct_cpp_info.as_owner} value = {ctor_cpp_user_info.full_name}({args_str});",
                         f"{struct_cpp_info.as_owner}* cpp_ptr = new {struct_cpp_info.as_owner}(std::move(value));",
@@ -641,7 +641,7 @@ class NapiCodeGenerator:
             cpp_field_results = []
             for i, parts in enumerate(struct_napi_info.dts_final_fields):
                 final = parts[-1]
-                type_napi_info = TypeNapiInfo.get(self.am, final.ty_ref.resolved_ty)
+                type_napi_info = TypeNapiInfo.get(self.am, final.ty)
                 cpp_field_result = f"cpp_field_{final.name}"
                 type_napi_info.from_napi(
                     struct_napi_impl_target, f"args[{i}]", f"cpp_field_{final.name}"
@@ -866,12 +866,12 @@ class NapiCodeGenerator:
     ):
         params_cpp = []
         for param in method.params:
-            param_cpp_type_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
+            param_cpp_type_info = TypeCppInfo.get(self.am, param.ty)
             params_cpp.append(f"{param_cpp_type_info.as_param} {param.name}")
         params_cpp_str = ", ".join(params_cpp)
 
-        if method.return_ty_ref:
-            return_ty_info = TypeCppInfo.get(self.am, method.return_ty_ref.resolved_ty)
+        if isinstance(method.return_ty, NonVoidType):
+            return_ty_info = TypeCppInfo.get(self.am, method.return_ty)
             return_ty_str = return_ty_info.as_owner
         else:
             return_ty_str = "void"
@@ -889,9 +889,7 @@ class NapiCodeGenerator:
                 args_inner = "nullptr"
 
             for i, param in enumerate(method.params):
-                param_napi_type_info = TypeNapiInfo.get(
-                    self.am, param.ty_ref.resolved_ty
-                )
+                param_napi_type_info = TypeNapiInfo.get(self.am, param.ty)
                 param_napi_type_info.into_napi(
                     iface_napi_impl_target,
                     f"{param.name}",
@@ -909,10 +907,8 @@ class NapiCodeGenerator:
                 f"napi_value method_result_napi;",
                 f"NAPI_CALL(env, napi_call_function(env, org_napi_obj, {method.name}_ts_method, {len(method.params)}, {args_inner}, &method_result_napi));",
             )
-            if method.return_ty_ref:
-                return_napi_type_info = TypeNapiInfo.get(
-                    self.am, method.return_ty_ref.resolved_ty
-                )
+            if isinstance(method.return_ty, NonVoidType):
+                return_napi_type_info = TypeNapiInfo.get(self.am, method.return_ty)
                 return_napi_type_info.from_napi(
                     iface_napi_impl_target,
                     f"method_result_napi",
@@ -1026,7 +1022,7 @@ class NapiCodeGenerator:
                 )
                 args = []
                 for i, param in enumerate(ctor.params):
-                    value_ty = param.ty_ref.resolved_ty
+                    value_ty = param.ty
                     type_info = TypeNapiInfo.get(self.am, value_ty)
                     type_info.from_napi(
                         iface_napi_impl_target, f"args[{i}]", f"value{i}"
@@ -1034,9 +1030,9 @@ class NapiCodeGenerator:
                     args.append(f"value{i}")
                 args_str = ", ".join(args)
 
-                if return_ty_ref := ctor.return_ty_ref:
+                if isinstance(return_ty := ctor.return_ty, NonVoidType):
                     # TODO: assert the return type is the iface type
-                    value_ty = return_ty_ref.resolved_ty
+                    value_ty = return_ty
                     iface_napi_impl_target.writelns(
                         f"{iface_cpp_info.as_owner} value = {ctor_cpp_user_info.full_name}({args_str});",
                         f"{iface_cpp_info.as_owner}* cpp_ptr = new {iface_cpp_info.as_owner}(std::move(value));",
@@ -1210,10 +1206,8 @@ class NapiCodeGenerator:
         ):
             if enum_napi_info.is_literal:
                 for item in enum.items:
-                    item_ty_napi_info = TypeNapiInfo.get(
-                        self.am, enum.ty_ref.resolved_ty
-                    )
-                    item_ty_cpp_info = TypeCppInfo.get(self.am, enum.ty_ref.resolved_ty)
+                    item_ty_napi_info = TypeNapiInfo.get(self.am, enum.ty)
+                    item_ty_cpp_info = TypeCppInfo.get(self.am, enum.ty)
                     item_ty_napi_info.into_napi(
                         pkg_napi_target,
                         f"(({item_ty_cpp_info.as_owner}){dumps(item.value)})",
@@ -1230,10 +1224,8 @@ class NapiCodeGenerator:
                     f"napi_value key;",
                 )
                 for item in enum.items:
-                    item_ty_napi_info = TypeNapiInfo.get(
-                        self.am, enum.ty_ref.resolved_ty
-                    )
-                    item_ty_cpp_info = TypeCppInfo.get(self.am, enum.ty_ref.resolved_ty)
+                    item_ty_napi_info = TypeNapiInfo.get(self.am, enum.ty)
+                    item_ty_cpp_info = TypeCppInfo.get(self.am, enum.ty)
                     item_ty_napi_info.into_napi(
                         pkg_napi_target,
                         f"(({item_ty_cpp_info.as_owner}){dumps(item.value)})",
@@ -1369,75 +1361,59 @@ class NapiCodeGenerator:
                     )
                 static_tags_str = ", ".join(static_tags)
                 full_name = "_".join(part.name for part in parts)
-                final_napi_info = UnionFieldNapiInfo.get(self.am, final)
-                if isinstance(final_ty := final_napi_info.field_ty, Type):
-                    type_napi_info = TypeNapiInfo.get(self.am, final_ty)
-                    if isinstance(final_ty, ScalarType | StringType | OpaqueType):
-                        with union_napi_impl_target.indented(
-                            f"if (value_ty == {type_napi_info.napi_type_name}) {{",
-                            f"}}",
-                        ):
-                            cpp_result_spec = f"cpp_field_{full_name}"
-                            type_napi_info.from_napi(
-                                union_napi_impl_target,
-                                "napi_obj",
-                                cpp_result_spec,
-                            )
-                            union_napi_impl_target.writelns(
-                                f"return {union_cpp_info.full_name}({static_tags_str}, std::move({cpp_result_spec}));",
-                            )
-                    elif isinstance(final_ty, ArrayType):
-                        union_napi_impl_target.writelns(
-                            f"NAPI_CALL(env, napi_is_array(env, napi_obj, &flag));",
-                        )
-                        with union_napi_impl_target.indented(
-                            f"if (flag) {{",
-                            f"}}",
-                        ):
-                            cpp_result_spec = f"cpp_field_{full_name}"
-                            type_napi_info.from_napi(
-                                union_napi_impl_target,
-                                "napi_obj",
-                                cpp_result_spec,
-                            )
-                            union_napi_impl_target.writelns(
-                                f"return {union_cpp_info.full_name}({static_tags_str}, std::move({cpp_result_spec}));",
-                            )
-                    elif isinstance(final_ty, MapType):
-                        union_napi_impl_target.writelns(
-                            f"napi_value global = nullptr, map_ctor = nullptr;",
-                            f"napi_get_global(env, &global);",
-                            f'NAPI_CALL(env, napi_get_named_property(env, global, "Map", &map_ctor));',
-                            f"NAPI_CALL(env, napi_instanceof(env, napi_obj, map_ctor, &flag));",
-                        )
-                        with union_napi_impl_target.indented(
-                            f"if (flag) {{",
-                            f"}}",
-                        ):
-                            cpp_result_spec = f"cpp_field_{full_name}"
-                            type_napi_info.from_napi(
-                                union_napi_impl_target,
-                                "napi_obj",
-                                cpp_result_spec,
-                            )
-                            union_napi_impl_target.writelns(
-                                f"return {union_cpp_info.full_name}({static_tags_str}, std::move({cpp_result_spec}));",
-                            )
-                elif final_napi_info.field_ty == "null":
+                type_napi_info = TypeNapiInfo.get(self.am, final.ty)
+                if isinstance(
+                    final.ty, ScalarType | StringType | UnitType | OpaqueType
+                ):
                     with union_napi_impl_target.indented(
-                        f"if (value_ty == napi_null) {{",
+                        f"if (value_ty == {type_napi_info.napi_type_name}) {{",
                         f"}}",
                     ):
-                        union_napi_impl_target.writelns(
-                            f"return {union_cpp_info.full_name}({static_tags_str});",
+                        cpp_result_spec = f"cpp_field_{full_name}"
+                        type_napi_info.from_napi(
+                            union_napi_impl_target,
+                            "napi_obj",
+                            cpp_result_spec,
                         )
-                elif final_napi_info.field_ty == "undefined":
+                        union_napi_impl_target.writelns(
+                            f"return {union_cpp_info.full_name}({static_tags_str}, std::move({cpp_result_spec}));",
+                        )
+                elif isinstance(final.ty, ArrayType):
+                    union_napi_impl_target.writelns(
+                        f"NAPI_CALL(env, napi_is_array(env, napi_obj, &flag));",
+                    )
                     with union_napi_impl_target.indented(
-                        f"if (value_ty == napi_undefined) {{",
+                        f"if (flag) {{",
                         f"}}",
                     ):
+                        cpp_result_spec = f"cpp_field_{full_name}"
+                        type_napi_info.from_napi(
+                            union_napi_impl_target,
+                            "napi_obj",
+                            cpp_result_spec,
+                        )
                         union_napi_impl_target.writelns(
-                            f"return {union_cpp_info.full_name}({static_tags_str});",
+                            f"return {union_cpp_info.full_name}({static_tags_str}, std::move({cpp_result_spec}));",
+                        )
+                elif isinstance(final.ty, MapType):
+                    union_napi_impl_target.writelns(
+                        f"napi_value global = nullptr, map_ctor = nullptr;",
+                        f"napi_get_global(env, &global);",
+                        f'NAPI_CALL(env, napi_get_named_property(env, global, "Map", &map_ctor));',
+                        f"NAPI_CALL(env, napi_instanceof(env, napi_obj, map_ctor, &flag));",
+                    )
+                    with union_napi_impl_target.indented(
+                        f"if (flag) {{",
+                        f"}}",
+                    ):
+                        cpp_result_spec = f"cpp_field_{full_name}"
+                        type_napi_info.from_napi(
+                            union_napi_impl_target,
+                            "napi_obj",
+                            cpp_result_spec,
+                        )
+                        union_napi_impl_target.writelns(
+                            f"return {union_cpp_info.full_name}({static_tags_str}, std::move({cpp_result_spec}));",
                         )
 
     def gen_union_into_napi_func(
@@ -1460,29 +1436,16 @@ class NapiCodeGenerator:
                 indent="",
             ):
                 for field in union.fields:
-                    field_napi_info = UnionFieldNapiInfo.get(self.am, field)
                     with union_napi_impl_target.indented(
                         f"case {union_cpp_info.full_name}::tag_t::{field.name}: {{",
                         f"}}",
                     ):
-                        match field_napi_info.field_ty:
-                            case "null":
-                                union_napi_impl_target.writelns(
-                                    f"napi_value napi_obj_field = nullptr;",
-                                    f"napi_get_null(env, &napi_obj_field);",
-                                )
-                            case "undefined":
-                                union_napi_impl_target.writelns(
-                                    f"napi_value napi_obj_field = nullptr;",
-                                    f"napi_get_undefined(env, &napi_obj_field);",
-                                )
-                            case field_ty if isinstance(field_ty, Type):
-                                type_napi_info = TypeNapiInfo.get(self.am, field_ty)
-                                type_napi_info.into_napi(
-                                    union_napi_impl_target,
-                                    f"cpp_value.get_{field.name}_ref()",
-                                    "napi_obj_field",
-                                )
+                        type_napi_info = TypeNapiInfo.get(self.am, field.ty)
+                        type_napi_info.into_napi(
+                            union_napi_impl_target,
+                            f"cpp_value.get_{field.name}_ref()",
+                            "napi_obj_field",
+                        )
                         union_napi_impl_target.writelns(
                             f"napi_obj = napi_obj_field;",
                             f"break;",

@@ -7,13 +7,6 @@ file(GLOB IDL_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_LIST_DIR}/idl/*.taihe")
 
 file(GLOB AUTHOR_CPP_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_LIST_DIR}/author/src/*.cpp")
 
-if (NOT DEFINED TAIHE_STDLIB_DIR)  
-execute_and_set_variable(TAIHE_STDLIB_DIR "--print-stdlib-path")
-endif()
-
-# TODO: need to remove, stdlib should not take user as input
-set(IDL_FILES_WITAIHE_STDLIB ${IDL_FILES} "${TAIHE_STDLIB_DIR}/taihe.platform.ani.taihe")
-
 set(MAIN_ABC "${CMAKE_CURRENT_BINARY_DIR}/main.abc")
 
 # TODO: need to remove, now runtime is coupled with ani
@@ -25,7 +18,10 @@ setup_ani_header()
 #########################################################
 ############# TEST add_taihe_cpp_library ################
 #########################################################
-add_taihe_cpp_library(compile_cpp_lib_taihegen "${IDL_FILES_WITAIHE_STDLIB}")
+add_taihe_cpp_library(compile_cpp_lib_taihegen
+    "${IDL_FILES}"
+    TAIHEC_PATH "taihec"
+)
 
 add_library(compile_cpp_lib SHARED ${AUTHOR_CPP_FILES})
 target_compile_options(compile_cpp_lib PRIVATE "-Wno-attributes")

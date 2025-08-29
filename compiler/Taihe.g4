@@ -5,7 +5,7 @@ grammar Taihe;
 /////////////
 
 spec
-    : (UseLst_uses += use | SpecFieldLst_fields += specField | ScopeAttrLst_inner_attrs += scopeAttr)*
+    : (UseLst_uses += use | SpecFieldLst_decls += specField | ScopeAttrLst_inner_attrs += scopeAttr)*
       EOF
     ;
 
@@ -38,11 +38,11 @@ specField
       LEFT_BRACE (UnionFieldLst_fields += unionField | ScopeAttrLst_inner_attrs += scopeAttr)* RIGHT_BRACE # union
     | (DeclAttrLst_forward_attrs += declAttr)*
       KW_INTERFACE IdName_name = idName
-      (COLON InterfaceParentLst_extends += interfaceParent (COMMA InterfaceParentLst_extends += interfaceParent)* COMMA?)?
+      (COLON InterfaceExtendLst_extends += interfaceExtend (COMMA InterfaceExtendLst_extends += interfaceExtend)* COMMA?)?
       LEFT_BRACE (InterfaceFieldLst_fields += interfaceField | ScopeAttrLst_inner_attrs += scopeAttr)* RIGHT_BRACE # interface
     | (DeclAttrLst_forward_attrs += declAttr)*
       KW_FUNCTION IdName_name = idName
-      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)* COMMA?)? RIGHT_PARENTHESIS (COLON (KW_VOID | TypeOpt_return_ty = type))? SEMICOLON # globalFunction
+      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)* COMMA?)? RIGHT_PARENTHESIS (COLON TypeOpt_return_ty = type)? SEMICOLON # globalFunction
     ;
 
 enumItem
@@ -65,10 +65,10 @@ unionField
 interfaceField
     : (DeclAttrLst_forward_attrs += declAttr)*
       IdName_name = idName
-      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)* COMMA?)? RIGHT_PARENTHESIS (COLON (KW_VOID | TypeOpt_return_ty = type))? SEMICOLON # interfaceFunction
+      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)* COMMA?)? RIGHT_PARENTHESIS (COLON TypeOpt_return_ty = type)? SEMICOLON # interfaceFunction
     ;
 
-interfaceParent
+interfaceExtend
     : (LEFT_BRACKET (DeclAttrLst_forward_attrs += declAttr)+ RIGHT_BRACKET)?
       Type_ty = type
     ;
@@ -91,7 +91,7 @@ type
       IdName_decl_name = idName LESS_THAN (GenericArgLst_args += genericArg (COMMA GenericArgLst_args += genericArg)* COMMA?)? GREATER_THAN # genericType
     | <assoc = right>
       (DeclAttrLst_forward_attrs += declAttr)*
-      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)* COMMA?)? RIGHT_PARENTHESIS ARROW (KW_VOID | TypeOpt_return_ty = type) # callbackType
+      LEFT_PARENTHESIS (ParameterLst_parameters += parameter (COMMA ParameterLst_parameters += parameter)* COMMA?)? RIGHT_PARENTHESIS ARROW Type_return_ty = type # callbackType
     ;
 
 genericArg
@@ -357,10 +357,6 @@ KW_TRUE
 
 KW_FALSE
     : 'false'
-    ;
-
-KW_VOID
-    : 'void'
     ;
 
 STRING_LITERAL

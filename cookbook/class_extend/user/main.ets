@@ -26,5 +26,3 @@ function main() {
     let y3 = x3.getRecords();
     y3[0].getType();
 }
-
-main()

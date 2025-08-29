@@ -123,7 +123,7 @@ kind_decl = EnumDecl("Kind", attributes=[FooAttr()])
 #   }
 #
 # 对应的 IR：
-k_ty_ref = TypeRefDecl(resolved_ty=StructType(ty_decl=kind_decl), attributes=[BarAttr()])
+k_ty_ref = TypeRefDecl(resolved_ty=StructType(decl=kind_decl), attributes=[BarAttr()])
 k_field = StructFieldDecl(name="k", ty_ref=k_ty_ref)
 bar_decl = StructDecl(name="Bar", fields=[k_field])
 ```

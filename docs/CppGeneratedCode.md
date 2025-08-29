@@ -1,6 +1,10 @@
-# Taihe ABI 及 C++ 层代码解析
+# 深入解析 Taihe 生成的代码（ABI 层与 C++ 层）
 
-## 原始 IDL 文件内容
+本文档旨在帮助用户深入理解 Taihe 在 ABI 层和 C++ 层生成的代码结构和调用链。通过对生成代码的分析，用户可以更好地掌握 Taihe 的工作原理，并在实际开发中有效利用这些自动生成的接口。
+
+以下我们将以一个简单的 API 为例，展示 Taihe 如何在发布方和消费方之间生成 ABI 层和 C++ 层的代码，以及数据如何跨越这两个层次进行传递。
+
+## 原始 Taihe IDL 文件内容
 
 ```rust
 // File: example/idl/my.package.taihe
@@ -21,9 +25,9 @@ interface IBar: IFoo {
 function processWithBar(bar: IBar, data: Data): Result;
 ```
 
-## 生成的 ABI 层代码
+## 生成的代码结构
 
-当 Taihe 工具链处理 `my.package.taihe` 这个 IDL 文件后，会在指定的输出目录生成一系列文件。这些文件可以被清晰地划分为 ABI 层和 C++ 层。
+当 Taihe 工具链处理 `my.package.taihe` 这个文件后，会在指定的输出目录生成一系列文件。这些文件可以被清晰地划分为 ABI 层和 C++ 层。
 
 以下是生成文件的结构树及其功能简介：
 ```
@@ -161,7 +165,6 @@ struct my_package_Data_t {
 // File: example/generated/include/my.package.Result.abi.0.h
 #pragma once
 #include "taihe/common.h"
-union my_package_Result_union;
 struct my_package_Result_t;
 
 // File: example/generated/include/my.package.Result.abi.1.h

@@ -1,6 +1,5 @@
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
-from typing import Literal
 
 from typing_extensions import override
 
@@ -16,7 +15,6 @@ from taihe.codegen.ani.attributes import (
     ExtendsAttr,
     GetAttr,
     NamespaceAttr,
-    NullAttr,
     RecordAttr,
     SetAttr,
     StaticAttr,
@@ -43,8 +41,8 @@ from taihe.semantics.declarations import (
     EnumDecl,
     GlobFuncDecl,
     IfaceDecl,
+    IfaceExtendDecl,
     IfaceMethodDecl,
-    IfaceParentDecl,
     PackageDecl,
     PackageGroup,
     StructDecl,
@@ -58,16 +56,17 @@ from taihe.semantics.types import (
     EnumType,
     IfaceType,
     MapType,
+    NonVoidType,
     OpaqueType,
     OptionalType,
     ScalarKind,
     ScalarType,
     StringType,
     StructType,
-    Type,
     UnionType,
+    UnitType,
 )
-from taihe.semantics.visitor import TypeVisitor
+from taihe.semantics.visitor import NonVoidTypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
 
 
@@ -243,11 +242,11 @@ class StructNapiInfo(AbstractAnalysis[StructDecl]):
         self.dts_final_fields: list[list[StructFieldDecl]] = []
         for field in d.fields:
             if ExtendsAttr.get(field):
-                ty = field.ty_ref.resolved_ty
+                ty = field.ty
                 if not isinstance(ty, StructType):
                     raise ValueError("struct cannot extend non-struct type")
                     # TODO: check struct parent type
-                parent_napi_info = StructNapiInfo.get(am, ty.ty_decl)
+                parent_napi_info = StructNapiInfo.get(am, ty.decl)
                 if parent_napi_info.is_class():
                     self.dts_class_parents.append(field)
                 else:
@@ -365,16 +364,16 @@ class IfaceNapiInfo(AbstractAnalysis[IfaceDecl]):
         self.ctor: GlobFuncDecl | None = None
         self.static_funcs: list[tuple[str, GlobFuncDecl]] = []
 
-        self.dts_class_parents: list[IfaceParentDecl] = []
-        self.dts_iface_parents: list[IfaceParentDecl] = []
-        for parent in d.parents:
-            ty = parent.ty_ref.resolved_ty
+        self.dts_class_parents: list[IfaceExtendDecl] = []
+        self.dts_iface_parents: list[IfaceExtendDecl] = []
+        for extend in d.extends:
+            ty = extend.ty
             assert isinstance(ty, IfaceType)
-            parent_napi_info = IfaceNapiInfo.get(am, ty.ty_decl)
+            parent_napi_info = IfaceNapiInfo.get(am, ty.decl)
             if parent_napi_info.is_class():
-                self.dts_class_parents.append(parent)
+                self.dts_class_parents.append(extend)
             else:
-                self.dts_iface_parents.append(parent)
+                self.dts_iface_parents.append(extend)
 
     @classmethod
     @override
@@ -454,8 +453,8 @@ class UnionNapiInfo(AbstractAnalysis[UnionDecl]):
 
         self.dts_final_fields: list[list[UnionFieldDecl]] = []
         for field in d.fields:
-            if field.ty_ref and isinstance(ty := field.ty_ref.resolved_ty, UnionType):
-                inner_napi_info = UnionNapiInfo.get(am, ty.ty_decl)
+            if field.ty_ref and isinstance(ty := field.ty, UnionType):
+                inner_napi_info = UnionNapiInfo.get(am, ty.decl)
                 self.dts_final_fields.extend(
                     [field, *parts] for parts in inner_napi_info.dts_final_fields
                 )
@@ -474,40 +473,18 @@ class UnionNapiInfo(AbstractAnalysis[UnionDecl]):
         )
 
 
-class UnionFieldNapiInfo(AbstractAnalysis[UnionFieldDecl]):
-    field_ty: Type | None | Literal["null", "undefined"]
-
-    def __init__(self, am: AnalysisManager, d: UnionFieldDecl) -> None:
-        if d.ty_ref is None:
-            if NullAttr.get(d):
-                self.field_ty = "null"
-                return
-            if UndefinedAttr.get(d):
-                self.field_ty = "undefined"
-                return
-            self.field_ty = None
-        else:
-            self.field_ty = d.ty_ref.resolved_ty
-        # TODO: check union field must have a type or have @null/@undefined attribute
-
-    @classmethod
-    @override
-    def _create(cls, am: AnalysisManager, f: UnionFieldDecl) -> "UnionFieldNapiInfo":
-        return UnionFieldNapiInfo(am, f)
-
-
-class TypeNapiInfo(AbstractAnalysis[Type], metaclass=ABCMeta):
+class TypeNapiInfo(AbstractAnalysis[NonVoidType], metaclass=ABCMeta):
     is_optional: bool = False
     napi_type_name: str
 
-    def __init__(self, am: AnalysisManager, t: Type):
+    def __init__(self, am: AnalysisManager, t: NonVoidType):
         self.am = am
         self.cpp_info = TypeCppInfo.get(am, t)
 
     @classmethod
     @override
-    def _create(cls, am: AnalysisManager, t: Type) -> "TypeNapiInfo":
-        return TypeNapiInfoDispatcher(am).handle_type(t)
+    def _create(cls, am: AnalysisManager, t: NonVoidType) -> "TypeNapiInfo":
+        return t.accept(TypeNapiInfoDispatcher(am))
 
     @abstractmethod
     def dts_type_in(self, target: DtsWriter) -> str:
@@ -534,6 +511,84 @@ class TypeNapiInfo(AbstractAnalysis[Type], metaclass=ABCMeta):
         napi_result: str,
     ):
         pass
+
+
+class NullTypeNapiInfo(TypeNapiInfo):
+    def __init__(self, am: AnalysisManager, t: UnitType):
+        super().__init__(am, t)
+        self.am = am
+        self.type = t
+        self.cpp_info = TypeCppInfo.get(am, t)
+        self.napi_type_name = "napi_null"
+
+    @override
+    def dts_type_in(self, target: DtsWriter) -> str:
+        return "null"
+
+    @override
+    def dts_return_type_in(self, target: DtsWriter) -> str:
+        return self.dts_type_in(target)
+
+    def from_napi(
+        self,
+        target: CSourceWriter,
+        napi_value: str,
+        cpp_result: str,
+    ):
+        target.writelns(
+            f"{self.cpp_info.as_owner} {cpp_result} = {{}};",
+        )
+
+    @override
+    def into_napi(
+        self,
+        target: CSourceWriter,
+        cpp_value: str,
+        napi_result: str,
+    ):
+        target.writelns(
+            f"napi_value {napi_result} = nullptr;",
+            f"napi_get_null(env, &{napi_result});",
+        )
+
+
+class UndefinedTypeNapiInfo(TypeNapiInfo):
+    def __init__(self, am: AnalysisManager, t: UnitType):
+        super().__init__(am, t)
+        self.am = am
+        self.type = t
+        self.cpp_info = TypeCppInfo.get(am, t)
+        self.napi_type_name = "napi_undefined"
+
+    @override
+    def dts_type_in(self, target: DtsWriter) -> str:
+        return "undefined"
+
+    @override
+    def dts_return_type_in(self, target: DtsWriter) -> str:
+        return self.dts_type_in(target)
+
+    def from_napi(
+        self,
+        target: CSourceWriter,
+        napi_value: str,
+        cpp_result: str,
+    ):
+        target.writelns(
+            f"{self.cpp_info.as_owner} {cpp_result} = {{}};",
+        )
+
+    @override
+    def into_napi(
+        self,
+        target: CSourceWriter,
+        cpp_value: str,
+        napi_result: str,
+    ):
+        target.writelns(
+            f"napi_value {napi_result} = nullptr;",
+            f"napi_get_undefined(env, &{napi_result});",
+        )
 
 
 class ScalarTypeNapiInfo(TypeNapiInfo):
@@ -696,7 +751,7 @@ class StructTypeNapiInfo(TypeNapiInfo):
 
     @override
     def dts_type_in(self, target: DtsWriter) -> str:
-        struct_napi_info = StructNapiInfo.get(self.am, self.type.ty_decl)
+        struct_napi_info = StructNapiInfo.get(self.am, self.type.decl)
         return struct_napi_info.dts_type_in(target)
 
     @override
@@ -709,7 +764,7 @@ class StructTypeNapiInfo(TypeNapiInfo):
         napi_value: str,
         cpp_result: str,
     ):
-        struct_napi_info = StructNapiInfo.get(self.am, self.type.ty_decl)
+        struct_napi_info = StructNapiInfo.get(self.am, self.type.decl)
         target.add_include(struct_napi_info.impl_header)
         target.writelns(
             f"{self.cpp_info.as_owner} {cpp_result} = {struct_napi_info.from_napi_func_name}(env, {napi_value});",
@@ -721,7 +776,7 @@ class StructTypeNapiInfo(TypeNapiInfo):
         cpp_value: str,
         napi_result: str,
     ):
-        struct_napi_info = StructNapiInfo.get(self.am, self.type.ty_decl)
+        struct_napi_info = StructNapiInfo.get(self.am, self.type.decl)
         target.add_include(struct_napi_info.impl_header)
         target.writelns(
             f"napi_value {napi_result} = {struct_napi_info.into_napi_func_name}(env, {cpp_value});",
@@ -733,13 +788,13 @@ class IfaceTypeNapiInfo(TypeNapiInfo):
         super().__init__(am, t)
         self.am = am
         self.type = t
-        iface_napi_info = IfaceNapiInfo.get(self.am, t.ty_decl)
+        iface_napi_info = IfaceNapiInfo.get(self.am, t.decl)
         self.iface_register_infos = iface_napi_info.iface_register_infos
         self.napi_type_name = "napi_object"
 
     @override
     def dts_type_in(self, target: DtsWriter) -> str:
-        iface_napi_info = IfaceNapiInfo.get(self.am, self.type.ty_decl)
+        iface_napi_info = IfaceNapiInfo.get(self.am, self.type.decl)
         return iface_napi_info.dts_type_in(target)
 
     @override
@@ -752,7 +807,7 @@ class IfaceTypeNapiInfo(TypeNapiInfo):
         napi_value: str,
         cpp_result: str,
     ):
-        iface_napi_info = IfaceNapiInfo.get(self.am, self.type.ty_decl)
+        iface_napi_info = IfaceNapiInfo.get(self.am, self.type.decl)
         target.add_include(iface_napi_info.impl_header)
         target.writelns(
             f"{self.cpp_info.as_owner} {cpp_result} = {iface_napi_info.from_napi_func_name}(env, {napi_value});",
@@ -764,7 +819,7 @@ class IfaceTypeNapiInfo(TypeNapiInfo):
         cpp_value: str,
         napi_result: str,
     ):
-        iface_napi_info = IfaceNapiInfo.get(self.am, self.type.ty_decl)
+        iface_napi_info = IfaceNapiInfo.get(self.am, self.type.decl)
         target.add_include(iface_napi_info.impl_header)
         target.writelns(
             f"napi_value {napi_result} = {iface_napi_info.into_napi_func_name}(env, {cpp_value});",
@@ -855,14 +910,14 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
     @override
     def dts_type_in(self, target: DtsWriter) -> str:
         params_ty_dts = []
-        for index, param in enumerate(self.type.ty_ref.params):
-            param_ty_napi_info = TypeNapiInfo.get(self.am, param.ty_ref.resolved_ty)
+        for index, param in enumerate(self.type.ref.params):
+            param_ty_napi_info = TypeNapiInfo.get(self.am, param.ty)
             params_ty_dts.append(
                 f"arg_{index}{'?' if param_ty_napi_info.is_optional else ''}: {param_ty_napi_info.dts_type_in(target)}"
             )
         params_ty_dts_str = ", ".join(params_ty_dts)
-        if return_ty := self.type.ty_ref.return_ty_ref:
-            return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty.resolved_ty)
+        if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
+            return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty)
             return_ty_dts = return_ty_napi_info.dts_type_in(target)
         else:
             return_ty_dts = "void"
@@ -906,16 +961,16 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
             inner_cpp_params = []
             inner_napi_args = []
             inner_cpp_args = []
-            for index, param in enumerate(self.type.ty_ref.params):
+            for index, param in enumerate(self.type.ref.params):
                 inner_cpp_arg = f"cpp_arg_{index}"
                 inner_napi_arg = f"napi_arg_{index}"
-                param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty_ref.resolved_ty)
+                param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
                 inner_cpp_params.append(f"{param_ty_cpp_info.as_param} {inner_cpp_arg}")
                 inner_napi_args.append(inner_napi_arg)
                 inner_cpp_args.append(inner_cpp_arg)
             cpp_params_str = ", ".join(inner_cpp_params)
-            if return_ty := self.type.ty_ref.return_ty_ref:
-                return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty.resolved_ty)
+            if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
+                return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
                 return_ty_as_owner = return_ty_cpp_info.as_owner
             else:
                 return_ty_as_owner = "void"
@@ -927,15 +982,13 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                 for inner_napi_arg, inner_cpp_arg, param in zip(
                     inner_napi_args,
                     inner_cpp_args,
-                    self.type.ty_ref.params,
+                    self.type.ref.params,
                     strict=True,
                 ):
-                    param_ty_napi_info = TypeNapiInfo.get(
-                        self.am, param.ty_ref.resolved_ty
-                    )
+                    param_ty_napi_info = TypeNapiInfo.get(self.am, param.ty)
                     param_ty_napi_info.into_napi(target, inner_cpp_arg, inner_napi_arg)
                 inner_napi_args_str = ", ".join(inner_napi_args)
-                if return_ty := self.type.ty_ref.return_ty_ref:
+                if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
                     inner_napi_res = "napi_result"
                     inner_cpp_res = "cpp_result"
                     target.writelns(
@@ -944,11 +997,9 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                         f"napi_value cb_ref = nullptr, global = nullptr;",
                         f"NAPI_CALL(env, napi_get_reference_value(env, ref, &cb_ref));",
                         f"napi_get_global(env, &global);",
-                        f"NAPI_CALL(env, napi_call_function(env, global, cb_ref, {len(self.type.ty_ref.params)}, napi_argv, &{inner_napi_res}));",
+                        f"NAPI_CALL(env, napi_call_function(env, global, cb_ref, {len(self.type.ref.params)}, napi_argv, &{inner_napi_res}));",
                     )
-                    return_ty_napi_info = TypeNapiInfo.get(
-                        self.am, return_ty.resolved_ty
-                    )
+                    return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty)
                     return_ty_napi_info.from_napi(target, inner_napi_res, inner_cpp_res)
                     target.writelns(
                         f"return {inner_cpp_res};",
@@ -985,17 +1036,15 @@ class EnumTypeNapiInfo(TypeNapiInfo):
         super().__init__(am, t)
         self.am = am
         self.type = t
-        if isinstance(self.type.ty_decl.ty_ref.resolved_ty, ScalarType | StringType):
-            item_ty_napi_info = TypeNapiInfo.get(
-                self.am, self.type.ty_decl.ty_ref.resolved_ty
-            )
+        if isinstance(self.type.decl.ty, ScalarType | StringType):
+            item_ty_napi_info = TypeNapiInfo.get(self.am, self.type.decl.ty)
             self.napi_type_name = item_ty_napi_info.napi_type_name
         else:
             raise ValueError
 
     @override
     def dts_type_in(self, target: DtsWriter) -> str:
-        enum_napi_info = EnumNapiInfo.get(self.am, self.type.ty_decl)
+        enum_napi_info = EnumNapiInfo.get(self.am, self.type.decl)
         return enum_napi_info.dts_type_in(target)
 
     @override
@@ -1008,11 +1057,9 @@ class EnumTypeNapiInfo(TypeNapiInfo):
         napi_value: str,
         cpp_result: str,
     ):
-        enum_cpp_info = EnumCppInfo.get(self.am, self.type.ty_decl)
-        if isinstance(self.type.ty_decl.ty_ref.resolved_ty, ScalarType | StringType):
-            item_ty_napi_info = TypeNapiInfo.get(
-                self.am, self.type.ty_decl.ty_ref.resolved_ty
-            )
+        enum_cpp_info = EnumCppInfo.get(self.am, self.type.decl)
+        if isinstance(self.type.decl.ty, ScalarType | StringType):
+            item_ty_napi_info = TypeNapiInfo.get(self.am, self.type.decl.ty)
             item_ty_napi_info.from_napi(target, napi_value, f"{cpp_result}_item")
         else:
             raise ValueError
@@ -1027,13 +1074,9 @@ class EnumTypeNapiInfo(TypeNapiInfo):
         cpp_value: str,
         napi_result: str,
     ):
-        if isinstance(self.type.ty_decl.ty_ref.resolved_ty, ScalarType | StringType):
-            item_ty_napi_info = TypeNapiInfo.get(
-                self.am, self.type.ty_decl.ty_ref.resolved_ty
-            )
-            item_ty_cpp_info = TypeCppInfo.get(
-                self.am, self.type.ty_decl.ty_ref.resolved_ty
-            )
+        if isinstance(self.type.decl.ty, ScalarType | StringType):
+            item_ty_napi_info = TypeNapiInfo.get(self.am, self.type.decl.ty)
+            item_ty_cpp_info = TypeCppInfo.get(self.am, self.type.decl.ty)
             item_ty_napi_info.into_napi(
                 target,
                 f"(({item_ty_cpp_info.as_owner})({cpp_value}.get_value()))",
@@ -1456,7 +1499,7 @@ class UnionTypeNapiInfo(TypeNapiInfo):
 
     @override
     def dts_type_in(self, target: DtsWriter) -> str:
-        union_napi_info = UnionNapiInfo.get(self.am, self.type.ty_decl)
+        union_napi_info = UnionNapiInfo.get(self.am, self.type.decl)
         return union_napi_info.dts_type_in(target)
 
     @override
@@ -1469,7 +1512,7 @@ class UnionTypeNapiInfo(TypeNapiInfo):
         napi_value: str,
         cpp_result: str,
     ):
-        union_napi_info = UnionNapiInfo.get(self.am, self.type.ty_decl)
+        union_napi_info = UnionNapiInfo.get(self.am, self.type.decl)
         target.add_include(union_napi_info.impl_header)
         target.writelns(
             f"{self.cpp_info.as_owner} {cpp_result} = {union_napi_info.from_napi_func_name}(env, {napi_value});",
@@ -1481,7 +1524,7 @@ class UnionTypeNapiInfo(TypeNapiInfo):
         cpp_value: str,
         napi_result: str,
     ):
-        union_napi_info = UnionNapiInfo.get(self.am, self.type.ty_decl)
+        union_napi_info = UnionNapiInfo.get(self.am, self.type.decl)
         target.add_include(union_napi_info.impl_header)
         target.writelns(
             f"napi_value {napi_result} = {union_napi_info.into_napi_func_name}(env, {cpp_value});",
@@ -1497,7 +1540,7 @@ class OpaqueTypeNapiInfo(TypeNapiInfo):
 
     @override
     def dts_type_in(self, target: DtsWriter) -> str:
-        if dts_type_attr := DtsTypeAttr.get(self.type.ty_ref):
+        if dts_type_attr := DtsTypeAttr.get(self.type.ref):
             return dts_type_attr.type_name
         else:
             return "Object"
@@ -1533,14 +1576,12 @@ class ConstEnumTypeNapiInfo(TypeNapiInfo):
         self.am = am
         self.type = t
         self.const_attr = const_attr
-        item_ty_napi_info = TypeNapiInfo.get(
-            self.am, self.type.ty_decl.ty_ref.resolved_ty
-        )
+        item_ty_napi_info = TypeNapiInfo.get(self.am, self.type.decl.ty)
         self.napi_type_name = item_ty_napi_info.napi_type_name
 
     @override
     def dts_type_in(self, target: DtsWriter) -> str:
-        ty_napi_info = TypeNapiInfo.get(self.am, self.type.ty_decl.ty_ref.resolved_ty)
+        ty_napi_info = TypeNapiInfo.get(self.am, self.type.decl.ty)
         return ty_napi_info.dts_type_in(target)
 
     @override
@@ -1554,8 +1595,8 @@ class ConstEnumTypeNapiInfo(TypeNapiInfo):
         cpp_result: str,
     ):
         cpp_temp = f"{cpp_result}_cpp_temp"
-        ty_napi_info = TypeNapiInfo.get(self.am, self.type.ty_decl.ty_ref.resolved_ty)
-        enum_cpp_info = EnumCppInfo.get(self.am, self.type.ty_decl)
+        ty_napi_info = TypeNapiInfo.get(self.am, self.type.decl.ty)
+        enum_cpp_info = EnumCppInfo.get(self.am, self.type.decl)
         ty_napi_info.from_napi(target, napi_value, cpp_temp)
         target.writelns(
             f"{enum_cpp_info.full_name} {cpp_result} = {enum_cpp_info.full_name}::from_value({cpp_temp});",
@@ -1568,8 +1609,8 @@ class ConstEnumTypeNapiInfo(TypeNapiInfo):
         napi_result: str,
     ):
         cpp_temp = f"{napi_result}_cpp_temp"
-        ty_napi_info = TypeNapiInfo.get(self.am, self.type.ty_decl.ty_ref.resolved_ty)
-        value_cpp_info = TypeCppInfo.get(self.am, self.type.ty_decl.ty_ref.resolved_ty)
+        ty_napi_info = TypeNapiInfo.get(self.am, self.type.decl.ty)
+        value_cpp_info = TypeCppInfo.get(self.am, self.type.decl.ty)
         target.writelns(
             f"{value_cpp_info.as_owner} {cpp_temp} = {cpp_value}.get_value();",
         )
@@ -1623,7 +1664,7 @@ class BigIntTypeNapiInfo(TypeNapiInfo):
         )
 
 
-class TypeNapiInfoDispatcher(TypeVisitor[TypeNapiInfo]):
+class TypeNapiInfoDispatcher(NonVoidTypeVisitor[TypeNapiInfo]):
     def __init__(self, am: AnalysisManager):
         self.am = am
 
@@ -1653,23 +1694,23 @@ class TypeNapiInfoDispatcher(TypeVisitor[TypeNapiInfo]):
 
     @override
     def visit_enum_type(self, t: EnumType) -> TypeNapiInfo:
-        if const_attr := ConstAttr.get(t.ty_decl):
+        if const_attr := ConstAttr.get(t.decl):
             return ConstEnumTypeNapiInfo(self.am, t, const_attr)
         return EnumTypeNapiInfo(self.am, t)
 
     @override
     def visit_array_type(self, t: ArrayType) -> TypeNapiInfo:
-        if BigIntAttr.get(t.ty_ref):
+        if BigIntAttr.get(t.ref):
             return BigIntTypeNapiInfo(self.am, t)
-        if ArrayBufferAttr.get(t.ty_ref):
+        if ArrayBufferAttr.get(t.ref):
             return ArrayBufferTypeNapiInfo(self.am, t)
-        if typedarray_attr := TypedArrayAttr.get(t.ty_ref):
+        if typedarray_attr := TypedArrayAttr.get(t.ref):
             return TypedArrayTypeNapiInfo(self.am, t, typedarray_attr)
         return ArrayTypeNapiInfo(self.am, t)
 
     @override
     def visit_map_type(self, t: MapType) -> TypeNapiInfo:
-        if RecordAttr.get(t.ty_ref):
+        if RecordAttr.get(t.ref):
             return RecordTypeNapiInfo(self.am, t)
         return MapTypeNapiInfo(self.am, t)
 
@@ -1680,3 +1721,12 @@ class TypeNapiInfoDispatcher(TypeVisitor[TypeNapiInfo]):
     @override
     def visit_opaque_type(self, t: OpaqueType) -> TypeNapiInfo:
         return OpaqueTypeNapiInfo(self.am, t)
+
+    @override
+    def visit_unit_type(self, t: UnitType) -> TypeNapiInfo:
+        if UndefinedAttr.get(t.ref) or (
+            isinstance(t.ref.parent_type_holder, StructFieldDecl | UnionFieldDecl)
+            and UndefinedAttr.get(t.ref.parent_type_holder)
+        ):
+            return UndefinedTypeNapiInfo(self.am, t)
+        return NullTypeNapiInfo(self.am, t)

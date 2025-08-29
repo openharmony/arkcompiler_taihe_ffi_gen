@@ -5,6 +5,7 @@ loadLibrary("ani_static");
 
 function test_sumSync() {
     const result = lib.IBase.sumSync(10, 20);
+    console.log("sumSync result:", result);
     arktest.assertEQ(result, 200);
 }
 
@@ -15,6 +16,7 @@ function test_addSync() {
 
 function test_new_class() {
     let test = new lib.IBase("hello");
+    console.log("new IBase get:", test.get());
     arktest.assertEQ(test.get(), "hello");
 }
 

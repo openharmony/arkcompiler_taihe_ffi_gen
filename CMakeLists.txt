@@ -2,5 +2,6 @@ include(cmake/TaiheUtils.cmake)
 setup_taihe_cmake_test_env()
 cmake_minimum_required(VERSION 3.18)
 project(TaiheCompilerTest)
+
 add_subdirectory(test)
 add_subdirectory(cookbook)

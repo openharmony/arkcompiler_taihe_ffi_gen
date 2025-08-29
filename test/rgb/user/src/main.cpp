@@ -5,6 +5,7 @@
 #include <string>
 #include <taihe/callback.hpp>
 #include <taihe/object.hpp>
+#include <taihe/unit.hpp>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -43,7 +44,7 @@ string toString(ColorOrRGBOrName const &color) {
       [](static_tag_t<ColorOrRGBOrName::tag_t::color>, Color const &val) {
         return std::to_string(val.get_value());
       },
-      [](static_tag_t<ColorOrRGBOrName::tag_t::undefined>) {
+      [](static_tag_t<ColorOrRGBOrName::tag_t::undefined>, taihe::unit) {
         return "Undefined";
       },
   });

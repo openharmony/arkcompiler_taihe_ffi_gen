@@ -1,0 +1,3 @@
+@!sts_inject("""export function foo(a: int): int { return a; }""")
+@!sts_inject_into_module("""export function toplevelFunc(a: String): String { return a; }""")
+@!namespace("moduleA", "foo")
