@@ -205,7 +205,6 @@ def main():
         help="Specify the system type to build for. Can be used multiple times.",
     )
     args = parser.parse_args()
-    ResourceContext.initialize()
 
     ResourceContext.initialize()
     builder = Builder(g_repo_dir, g_repo_dir / "dist")
