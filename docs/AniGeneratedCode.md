@@ -52,8 +52,8 @@ test/xxx/generated/
 其中，`*.abi.h`, `*.proj.h`, `*.user.hpp`, `*.impl.hpp` 的说明可参考 [Taihe ABI 层及 C++ 层生成代码解析](./CppGeneratedCode.md)。
 
 ANI 生成的相关文件说明如下：
-- `include/my.package.*.ani.{0,1}.hpp`：包含了所有 `my.package.taihe` 中定义的结构体、枚举、接口等数据类型在 C++ 和 ANI 间相互转换的函数。其中，`*.ani.0.hpp` 是这些转换函数的前向声明，`*.ani.1.hpp` 是这些转换函数的具体实现。
-- `include/my.package.ani.hpp` 和 ：包含了 `my::package::ANI_Register` 函数的声明，该函数用于将 `my.package.taihe` 中定义的所有函数注册到 ANI 虚拟机中。
+- `include/my.package.*.ani.{0,1}.hpp`：包含了所有 `my.package.taihe` 中定义的结构体、枚举、接口等数据类型在 C++ 和 ANI 间相互转换的函数。`*.ani.0.hpp` 包含转换函数的前向声明，`*.ani.1.hpp` 包含这些函数的具体实现。
+- `include/my.package.ani.hpp`：包含了 `my::package::ANI_Register` 函数的声明，该函数用于将 `my.package.taihe` 中定义的所有函数注册到 ANI 虚拟机中。
 - `src/my.package.ani.cpp`：包含了所有 `my.package.taihe` 中定义的函数的 native 侧桥接代码，以及 `my::package::ANI_Register` 函数的实现。
 - `my.package.ets`：包含了所有 `my.package.taihe` 中定义的数据类型和函数的 ArkTS 侧桥接代码。
 - `temp/ani_constructor.cpp`：`ANI_Constructor` 函数的实现模板代码，其中调用了 `ANI_Register` 函数，将所有函数的 native 侧实现注册到 ANI 虚拟机中。
@@ -85,7 +85,7 @@ function process(param: MyParam): MyResult;
     }
     ```
 
-2. 该 `process` 函数中会进一步调用进同一文件中的 `_taihe_process_native` 函数，该函数与 `generated/src` 目录下的 `my.package.ani.cpp` 文件中的 `local::process` 函数相绑定。
+2. 该 `process` 函数中会进一步调用进同一文件中的 `_taihe_process_native` 函数，它与 `generated/src` 目录下的 `my.package.ani.cpp` 文件中的 `local::process` 函数相绑定。
 
     **generated/my.package.ets**
     ```typescript
@@ -120,7 +120,7 @@ function process(param: MyParam): MyResult;
     }
     ```
 
-4. 接下来，`local::process` 函数会调用 `my::package::process` 函数，这个函数的调用会被自动转发到接口作者在自己的 C++ 实现文件中，通过 TH_EXPORT_CPP_API_process 这个宏所导出的具体实现。
+4. 接下来，`local::process` 函数会调用 `my::package::process` 函数，该调用会自动转发到接口作者在 C++ 实现文件中通过 `TH_EXPORT_CPP_API_process` 宏导出的具体实现。
 
     **generated/src/my.package.ani.cpp**
     ```cpp
@@ -196,7 +196,7 @@ function processWithCallback(myCallback: MyCallback): void;
     }
     ```
 
-2. 当 `myCallback->onResult` 被调用时，会进入代理对象的 `onResult` 方法，该方法中会先将回调所需的参数 `MyParam` 结构体对象转换为 ani_object 对象，这一转换过程同正向调用链中的第 5 步。
+2. 当 `myCallback->onResult` 被调用时，会进入代理对象的 `onResult` 方法，该方法中会先将回调所需的参数 `MyParam` 结构体对象转换为 ani_object 对象，这一转换过程和正向调用链中的第 5 步类似。
 
     **generated/src/my.package.MyCallback.ani.1.hpp**
     ```cpp
@@ -268,7 +268,7 @@ function processWithCallback(myCallback: MyCallback): void;
     }
     ```
 
-5. 在 Taihe 代理对象的 `onResult` 方法中再将返回值从 ani_object 转换为对应的 C++ 对象（同正向调用链第 3 步），并返回到 `myCallback->onResult` 的调用处。
+5. 在 Taihe 代理对象的 `onResult` 方法中再将返回值从 ani_object 转换为对应的 C++ 对象（类似正向调用链第 3 步），并返回到 `myCallback->onResult` 的调用处。
 
     **generated/src/my.package.MyCallback.ani.1.hpp**
     ```cpp
