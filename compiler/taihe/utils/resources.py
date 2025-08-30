@@ -483,7 +483,7 @@ class PythonBuild(CachedResource):
 class Antlr(CachedResource):
     CLI_NAME = "antlr"
 
-    VERSION: Final = "4.13.2"
+    VERSION: Final = "4.11.1"
     MAVEN_REMOTE: Final = "https://mirrors.huaweicloud.com/repository/maven"
     MAVEN_LOCAL: Final = "~/.m2/repository"
     MAVEN_PATH: Final = f"org/antlr/antlr4/{VERSION}/antlr4-{VERSION}-complete.jar"
