@@ -14,7 +14,7 @@ NAPI 代码生成及验证：
     - [x] const
     - [x] enum
     - [x] union                                          (number|string|bool|array|map)
-    - [x] undefined, null                               # TODO: 适配新的类型
+    - [x] undefined, null
     - [x] array
     - [x] record
     - [x] map                                           (规格为不保序)
@@ -22,7 +22,7 @@ NAPI 代码生成及验证：
     - [x] namespace
     - [x] callback
     - [x] optional
-    - [ ] override
+    - [x] override
     - [ ] promise, async
     - [x] bigint
     - [x] arraybuffer

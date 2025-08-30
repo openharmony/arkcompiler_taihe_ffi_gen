@@ -139,6 +139,8 @@ Taihe 支持的基本数据类型包括数字、布尔值和[字符串](./CppUsa
 | BigInt64Array            | ::taihe::array\<i64\>              | @typedarray Array\<i64\> |
 | Object                   | uintptr_t                          | Opaque                   |
 | (a: T1, b: T2, ...) => R | ::taihe::callback<R(a: T1, b: T2)> | (a: T1, b: T2) => R      |
+| null                     | ::taihe::unit                      | @null unit               |
+| undefined                | ::taihe::unit                      | @undefined unit          |
 
 表格展示了不同编程语言（ArkTs 1.1、C++ 和 Taihe）中数据类型的对应关系。其中使用的 T、K 和 V 代表任意类型，可以在类型系统中进行灵活的定义和组合。
 
@@ -519,7 +521,7 @@ const value: 1 3
 
 # 标签联合
 
-需要在同一内存位置存放不同类型的数据时，可以使用 [union](./IdlReference.md#标签联合)。注意，在使用 Taihe 工具进行 Napi 桥接代码生成时，只支持 union 联合基础类型、String、Array、Map、undefined、null 和 Object，当存在 Object 类型时，必须设为 union 的最后一个元素。在进行 undefined 和 null 相关开发时，需要在一个 union 内的变量名前增加注解 @null、@undefined 来声明 null 类型与 undefined 类型。
+需要在同一内存位置存放不同类型的数据时，可以使用 [union](./IdlReference.md#标签联合)。注意，在使用 Taihe 工具进行 Napi 桥接代码生成时，只支持 union 联合基础类型、String、Array、Map、undefined、null 和 Object，当存在 Object 类型时，必须设为 union 的最后一个元素。
 
 ## 使用示例
 
@@ -532,8 +534,8 @@ union union_primitive {
   bValue: bool;
   aValue: Array<i32>;
   mValue: Map<i32, String>;
-  @undefined uValue;
-  @null nValue;
+  uValue: @undefined unit;
+  nValue: @null unit;
 }
 
 function printUnion(data: union_primitive): String;
