@@ -1,6 +1,6 @@
 # 类继承
 
-本章介绍 class 继承 class 的建议写法，通过 `@!sts_inject` 注解将 C++ 数据结构（以 `_th` 后缀标识）注入到 ETS 侧使用，确保 ETS 侧数据结构（如 `UnifiedRecord, Text, PlainText`）与 C++ 侧数据结构（如 `UnifiedRecord_th, Text_th, PlainText_th`）的正确绑定并保持继承关系的正确性。注意， C++ 数据结构（以 `_th` 后缀标识）不能在用户侧使用。
+本章介绍 class 继承 class 的建议写法，通过 `@!sts_inject` 注解将 C++ 数据结构（以 `_th` 后缀标识）注入到 ETS 侧使用，确保 ETS 侧数据结构（如 `UnifiedRecord, Text, PlainText`）与 C++ 侧数据结构（如 `UnifiedRecord_th, Text_th, PlainText_th`）的正确绑定并保持继承关系的正确性。注意，C++ 数据结构（以 `_th` 后缀标识）不能在用户侧使用。
 
 ## 第一步：编写接口原型
 
@@ -126,15 +126,15 @@ export class UnifiedData {
 ```
 
 - _th 结构与 ETS 类的关系
-  - **_th 结构**： C++ 侧的数据结构，仅在 `taihe` 文件和 C++ 代码中使用，不暴露给 ETS 侧。
+  - **_th 结构**：C++ 侧的数据结构，仅在 `taihe` 文件和 C++ 代码中使用，不暴露给 ETS 侧。
   - **ETS 类**：通过 `@!sts_inject` 注入的类，供 ETS 侧使用，包含对 `_th` 结构的封装。
 
 - 方法调用规则
-  - **覆盖父类方法**： 若子类接口包含父类方法，ETS 侧调用子类实现。
-  - **继承父类方法**： 若子类接口省略父类方法，ETS 侧调用父类实现。
+  - **覆盖父类方法**：若子类接口包含父类方法，ETS 侧调用子类实现。
+  - **继承父类方法**：若子类接口省略父类方法，ETS 侧调用父类实现。
 
 - 参数与返回值转换
-  - **ETS 类 -> th_ 结构**： 通过 `.inner` 属性访问。
+  - **ETS 类 -> th_ 结构**：通过 `.inner` 属性访问。
   - **th_ 结构 -> ETS 类**：通过构造函数注入（如 `new UnifiedRecord(UnifiedRecord_th)`）。
 
 ## 第二步：完成 C++ 实现

@@ -15,11 +15,11 @@
    - 每个部分必须是[合法的标识符](#合法的标识符)。
 
 - **包名由源文件名唯一确定**
-   - 示例：在 `ohos.hardware.sensors.taihe` 文件中，描述了 `ohos.hardware.sensors` 包下的各个成员。
+   - 示例：在 `ohos.hardware.sensors.taihe` 文件中，描述了 `ohos.hardware.sensors` 包中的各个成员。
 
 - **包的成员名称不得与包名相同**
    - 示例：如果 `ohos.hardware.sensors` 包下定义了 `enum SensorManager`，则不允许同时存在包 `ohos.hardware.sensors.SensorManager`。
-   - 原因：动态语言（如 JS、Python）不支持重名。
+   - 原因：动态语言（如 JS、Python）通常不支持在同一作用域内存在同名成员。
 
 ### 使用包管理命名空间
 
@@ -64,7 +64,7 @@
 - **单位类型**
   - `unit`：表示无值的类型。
 - **整型**
-  - 无符号：`u8`, `u16`, `u32`, `u64`  注：ArkTS 1.2 不支持无符号类型
+  - 无符号：`u8`, `u16`, `u32`, `u64`（注：ArkTS 1.2 中不支持直接使用无符号类型作为函数参数、返回值或数据结构成员等）
   - 有符号：`i8`, `i16`, `i32`, `i64`
 - **浮点型**
   - `f32`, `f64`
@@ -240,7 +240,7 @@ interface Derived: Base {
 }
 ```
 
-多继承是允许的，接口可以继承多个其他接口：
+接口可以同时继承多个其他接口：
 ```rust
 interface BaseA {
   baseAFunc(): i32;
@@ -257,7 +257,9 @@ interface Derived: BaseA, BaseB {
 
 ## 注解
 
-注解用于为代码中的语法元素添加附加属性，本章节主要介绍 Taihe 的注解语法，关于目前支持的全部注解详见 [Taihe IDL 注解全集](./SupportedAttributes.md)。
+注解用于为代码中的语法元素添加附加属性，从而使得可以在 Taihe 基本语法的基础上针对特定语言后端添加扩展能力支持，本章节主要介绍 Taihe 的注解语法，关于目前支持的全部注解详见 [Taihe IDL 注解全集](./SupportedAttributes.md)。
+
+注解的基本语法如下：
 ```rust
 // 前缀注解（@name）
 @attribute_name(value1, value2, ..., key1 = value1, key2 = value2, ...)
