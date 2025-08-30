@@ -99,7 +99,7 @@ PrintBook: Rust for Rustaceans, year 2021, kind = Rust
 ```
 
 - Taihe 的注解非常灵活
-  - `@!foobar` 添加注解到**当下的词法空间**下，而 `@foobar` （注意，没有感叹号）将注解添加到**下一个元素**中。
+  - `@!foobar` 添加注解到**当下的词法空间**下，而 `@foobar`（注意，没有感叹号）将注解添加到**下一个元素**中。
   - 例如，`@foobar struct Foo {}` 等价于 `struct Foo { @!foobar }`，都是在给 `struct Foo` 添加注解。
   - 注解可以有参数，例如 `@foobar("baz")` 或 `@foobar(1, "baz")`
   - 无参数时，括号可以省略，例如 `@foobar()` 等同于 `@foobar`

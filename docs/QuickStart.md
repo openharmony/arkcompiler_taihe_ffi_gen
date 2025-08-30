@@ -10,7 +10,7 @@
 
   通过 `scripts/install-ubuntu-deps` 配置好环境后，每次使用时都需要先在项目根目录下运行 `source .venv/bin/activate` 来激活虚拟环境，或者在使用命令行工具时运行 `uv run taihec` 或 `uv run taihe-tryit` 命令而不是直接运行 `taihec` 或 `taihe-tryit`。
 
-  对于非 Ubuntu 用户，目前可参考 Taihe 开发者文档 [Link](DevSetup.md).
+  对于非 Ubuntu 用户，目前可参考 [Taihe 开发者文档](DevSetup.md).
 
 - 二进制包用户
 
@@ -30,7 +30,7 @@ taihec [taihe_files ...] [options ...]
 - 输入：Taihe IDL 文件
 - 输出：生成文件
 
-*注：`taihe_files` 可以是一个或多个 Taihe IDL 文件，也可以使用通配符，例如 `path/to/idl/*.taihe` 来指定多个文件。*
+*注：`taihe_files` 可以是一个或多个 Taihe IDL 文件，也可以使用通配符（例如 `path/to/idl/*.taihe`）来指定多个文件。*
 
 #### 命令行选项
 
@@ -51,11 +51,11 @@ taihec [taihe_files ...] [options ...]
 | ------- | ---- | ---- |
 | `abi-header` | 生成 Taihe C ABI 头文件，包括类型声明，函数声明等 | 无 |
 | `abi-source` | 生成 Taihe C ABI 源文件，包含必要的符号定义 | `abi-header` |
-| `c-author` | 生成 C 语言提供者测的接口导出宏以及模板代码 | `abi-source` |
+| `c-author` | 生成 C 语言提供者侧的接口导出宏以及模板代码 | `abi-source` |
 | `cpp-common` | 生成 C++ 接口提供者和消费者侧的公共代码 | `abi-header` |
 | `cpp-author` | 生成 C++ 接口提供者侧的接口导出宏以及模板代码 | `cpp-common`, `abi-source` |
-| `cpp-user` | 生成 C++ 接口消费者侧的所需代码 | `cpp-common` |
-| `ani-bridge` | 生成 ANI 相关的桥接代码 | `cpp-user` |
+| `cpp-user` | 生成 C++ 接口消费者侧所需的所有代码 | `cpp-common` |
+| `ani-bridge` | 生成 ANI 及 ArkTS 1.2 用户侧的桥接代码 | `cpp-user` |
 | `pretty-print` | 将 Taihe IDL 文件格式化输出 | 无 |
 
 #### 代码生成配置
