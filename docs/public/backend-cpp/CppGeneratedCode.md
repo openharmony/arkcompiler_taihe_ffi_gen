@@ -30,6 +30,7 @@ function processWithBar(bar: IBar, data: Data): Result;
 当 Taihe 工具链处理 `my.package.taihe` 这个文件后，会在指定的输出目录生成一系列文件。这些文件可以被清晰地划分为 ABI 层和 C++ 层。
 
 以下是生成文件的结构树及其功能简介：
+
 ```
 generated/
 ├── include/
@@ -53,12 +54,13 @@ generated/
 
 - **ABI 层 (`.abi.h`, `.abi.c`)**：定义了所有类型的 C 语言内存布局、函数签名和接口 ID。这是所有上层代码（包括 C++ 和其他语言）的共同基础。
 - **C++ 层 (`.hpp`, `.cpp`)**：
-    - `proj.hpp` 文件：包含了所有公开类型（结构体、接口等）的 C++ 封装，是接口实现方和使用方都需要引用的基础文件。
-    - `user.hpp` 文件：除了 `proj.hpp` 的内容外，还包含了全局函数的 C++ 包装，专供函数的【调用者】使用。
-    - `impl.hpp` 文件：提供了导出全局函数的宏，专供函数的【实现者】使用。
-    - `impl.cpp` 文件：一个自动生成的实现骨架，帮助开发者快速开始编写接口的实现代码。
+  - `proj.hpp` 文件：包含了所有公开类型（结构体、接口等）的 C++ 封装，是接口实现方和使用方都需要引用的基础文件。
+  - `user.hpp` 文件：除了 `proj.hpp` 的内容外，还包含了全局函数的 C++ 包装，专供函数的【调用者】使用。
+  - `impl.hpp` 文件：提供了导出全局函数的宏，专供函数的【实现者】使用。
+  - `impl.cpp` 文件：一个自动生成的实现骨架，帮助开发者快速开始编写接口的实现代码。
 
 值得注意的是，头文件被拆分为 `*.{0,1,2}.h/hpp` 的形式，这是用于解决 C/C++ 中类型间循环依赖问题。
+
 - `*.0.h/hpp`: 包含类型的前向声明，`*.proj.0.hpp` 中还会包含 `taihe::as_abi` 模板的特化，用于表示 ABI 类型和 C++ 类型之间的映射关系。
 - `*.1.h/hpp`: 包含类型本身的完整定义，以及接口间的动态、静态转换方法等。但不包含接口成员方法的声明和定义。
 - `*.2.h/hpp`: 包含了接口的所有成员方法，并且会递归地包含该类型所依赖的其他类型（如结构体和联合体中成员的类型、接口成员方法的参数和返回值的类型等）的全部成员方法。
@@ -70,6 +72,7 @@ generated/
 ### 场景一：创建对象并调用方法
 
 **代码**:
+
 ```cpp
 using namespace my::package;
 
@@ -80,7 +83,9 @@ bar->process(data);
 ```
 
 **调用链**:
+
 1.  **对象创建 (`make_holder`)**：（需结合 `runtime/include/taihe/object.hpp`）
+
     1. `taihe::make_holder<BarImpl, IBar>()` 会调用 `taihe::impl_holder<BarImpl, IBar>` 的静态工厂方法 `make()`。这会使得在编译期生成一个 `rtti` 编译期常量，其中包含了 `BarImpl` 的类型信息，如版本信息、析构函数、Interface ID Map（从所有实现的接口 ID 到相应虚表指针的映射关系）等。
     2. 接下来，`make()` 方法会在堆上申请内存，创建一个 `taihe::data_block<BarImpl>` 对象，该对象内部同时包含 `DataBlockHead` 数据和 `BarImpl` 的实例。`BarImpl` 的构造函数会被调用。
     3. 接下来会调用 `tobj_init` 函数来初始化 `DataBlockHead`，这会将对象的引用计数设置为 1，并将 `rtti` 的地址存入 `DataBlockHead` 的 `rtti_ptr` 中。
@@ -88,6 +93,7 @@ bar->process(data);
     5. 最后，`taihe::impl_holder<BarImpl, IBar>` 被隐式转换为 `IBar`，这会根据前者的编译期信息，找到 `BarImpl` 对应于 `IBar` 接口的虚表指针（`vtbl_ptr`），并和 `data_ptr` 一起构成一个 `IBar` 对象。转换后的对象只能调用 `IBar` 接口上定义的方法，而丢失了 `BarImpl` 类本身的具体实现细节。
 
 2.  **方法调用 (`bar->process`)**：
+
     1. C++ 代码 `bar->process(data)` 会调用 `weak::IBar::virtual_type` 中定义的 `process` 方法。
     2. 这个 C++ 包装方法通过 `into_abi` 将 C++ 类型的 `data` 转换为 ABI 类型，然后调用 ABI 层的辅助函数 `my_package_IBar_process_f`。
     3. `my_package_IBar_process_f` 通过 `bar` 的 `vtbl_ptr` 取得 `ftbl_ptr_0`（`IBar` 的函数表），并调用其中的 `process` 函数指针。
@@ -95,19 +101,22 @@ bar->process(data);
     5. `methods_impl<BarImpl>::process` 是连接 ABI 和 C++ 实现的最后一环。它接收 ABI 类型的参数并通过 `taihe::from_abi` 转换回 C++ 类型，使用 `taihe::cast_data_ptr<BarImpl>` 将通用的 `data_ptr` 安全地转回 `BarImpl*` 类型，然后调用用户在 `BarImpl` 类中真正实现的 `process` 方法。
     6. 返回值沿着相反的路径，从 `BarImpl::process` 返回的 C++ `Result` 对象，通过 `into_abi` 转换回 ABI `my_package_Result_t`，最终通过 `from_abi` 转换回调用方的 C++ `Result` 对象。
 
-3. **析构对象**：
+3.  **析构对象**：
     1. 当 `bar` 的所有引用都被销毁时，其引用计数会减少到 0，然后通过 `DataBlockHead` 类型的 `data_ptr` 拿到其 `rtti_ptr`，从中获取到 `BarImpl` 的析构函数并调用。
 
 ### 场景二：静态转换（子接口到父接口）
 
 **代码**:
+
 ```cpp
 using namespace my::package;
 
 IBar bar = ...;
 weak::IFoo foo = bar; // 静态转换
 ```
+
 **调用链**:
+
 1.  该赋值操作触发了 `IBar` 中定义的到 `IFoo` 的转换运算符。
 2.  此运算符内部调用了 ABI 层的 `my_package_IBar_1_static` 辅助函数。
 3.  `_static` 函数的实现极其高效：它直接对 `IBar` 的虚表指针 `vtbl_ptr` 进行指针运算，加上一个编译时已知的偏移量，直接定位到 `IBar` 虚表中内嵌的 `IFoo` 虚表部分的起始地址。
@@ -116,6 +125,7 @@ weak::IFoo foo = bar; // 静态转换
 ### 场景三：动态转换（任意接口间）
 
 **代码**:
+
 ```cpp
 using namespace my::package;
 
@@ -125,7 +135,9 @@ if (!bar.is_error()) {
     // 转换成功
 }
 ```
+
 **调用链**:
+
 1.  该构造调用了 `weak::IBar` 的 `explicit IBar(::taihe::data_view other)` 构造函数。
 2.  此构造函数内部调用了 ABI 层的 `my_package_IBar_dynamic` 辅助函数。
 3.  `_dynamic` 函数执行以下运行时操作：
