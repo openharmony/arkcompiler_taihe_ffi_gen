@@ -7,55 +7,60 @@
 ### 定义包
 
 - **源文件与包的一一对应**
-   - 一个源文件只能描述一个包。
-   - 一个包不能分散到多个源文件中。
+
+  - 一个源文件只能描述一个包。
+  - 一个包不能分散到多个源文件中。
 
 - **包名中的每一部分必须是合法的标识符**
-   - 包名由多个部分组成，每个部分用点号（`.`）分隔。
-   - 每个部分必须是[合法的标识符](#合法的标识符)。
+
+  - 包名由多个部分组成，每个部分用点号（`.`）分隔。
+  - 每个部分必须是[合法的标识符](#合法的标识符)。
 
 - **包名由源文件名唯一确定**
-   - 示例：在 `ohos.hardware.sensors.taihe` 文件中，描述了 `ohos.hardware.sensors` 包中的各个成员。
+
+  - 示例：在 `ohos.hardware.sensors.taihe` 文件中，描述了 `ohos.hardware.sensors` 包中的各个成员。
 
 - **包的成员名称不得与包名相同**
-   - 示例：如果 `ohos.hardware.sensors` 包下定义了 `enum SensorManager`，则不允许同时存在包 `ohos.hardware.sensors.SensorManager`。
-   - 原因：动态语言（如 JS、Python）通常不支持在同一作用域内存在同名成员。
+  - 示例：如果 `ohos.hardware.sensors` 包下定义了 `enum SensorManager`，则不允许同时存在包 `ohos.hardware.sensors.SensorManager`。
+  - 原因：动态语言（如 JS、Python）通常不支持在同一作用域内存在同名成员。
 
 ### 使用包管理命名空间
 
 - **默认可直接引用当前包下的名称**
-   ```rust
-   // example.types.taihe
-   struct Foo { a: i32; }
-   struct Bar { b: String; }
 
-   function func1(foo: Foo): void;          // OK
-   function func2(bar: Bar): void;          // OK
-   ```
+  ```rust
+  // example.types.taihe
+  struct Foo { a: i32; }
+  struct Bar { b: String; }
+
+  function func1(foo: Foo): void;          // OK
+  function func2(bar: Bar): void;          // OK
+  ```
 
 - **导入其他包并生成别名**
-   使用 `use ... as` 或 `from ... use` 为其他包的名称生成别名。
-   ```rust
-   // example.test1.taihe
-   use example.types as myfoo;
-   function func3(foo: myfoo.Foo): void;    // OK
+  使用 `use ... as` 或 `from ... use` 为其他包的名称生成别名。
 
-   // example.test2.taihe
-   from example.types use Bar, Foo as Foobar;
-   function func4(foo: Foobar): void;       // OK
-   function func5(foo: Bar): void;          // OK
-   ```
+  ```rust
+  // example.test1.taihe
+  use example.types as myfoo;
+  function func3(foo: myfoo.Foo): void;    // OK
+
+  // example.test2.taihe
+  from example.types use Bar, Foo as Foobar;
+  function func4(foo: Foobar): void;       // OK
+  function func5(foo: Bar): void;          // OK
+  ```
 
 - **包间互相隔离，无从属关系**
-   ```rust
-   // example.taihe
-   from types use Foo;            // Error: package `types` does not exist
-   use types as mytypes;          // Error: package `types` does not exist
-   from example.types use Foo;    // OK
-   use example.types;             // OK
-   function func6(foo: Foo): void;           // OK
-   function func7(foo: example.types.Foo): void; // OK
-   ```
+  ```rust
+  // example.taihe
+  from types use Foo;            // Error: package `types` does not exist
+  use types as mytypes;          // Error: package `types` does not exist
+  from example.types use Foo;    // OK
+  use example.types;             // OK
+  function func6(foo: Foo): void;           // OK
+  function func7(foo: example.types.Foo): void; // OK
+  ```
 
 ## 内置类型
 
@@ -64,7 +69,7 @@
 - **单位类型**
   - `unit`：表示无值的类型。
 - **整型**
-  - 无符号：`u8`, `u16`, `u32`, `u64`（注：ArkTS 1.2 中不支持直接使用无符号类型作为函数参数、返回值或数据结构成员等）
+  - 无符号：`u8`, `u16`, `u32`, `u64`
   - 有符号：`i8`, `i16`, `i32`, `i64`
 - **浮点型**
   - `f32`, `f64`
@@ -80,7 +85,6 @@
   - `Vector<T>`：可动态变长的数组类型，支持任意成员类型 `T`。
 - **函数闭包类型**
   - `(arg1: Type1, arg2: Type2, ...) => ReturnType`：表示函数类型，支持任意数量的参数和一个返回值。
-
 
 ## 合法的标识符
 
@@ -103,6 +107,7 @@ Taihe 支持定义函数作为包的顶层成员。它们是 API 作者对外提
   函数最多只能有一个返回值。若需返回多个值，可以用结构体表示。当省略返回值时，返回值类型默认为 `void`。
 
 合法与非法声明示例：
+
 ```rust
 function func1(foo: i32): void;                    // OK
 function func2(foo: String);                       // OK
@@ -117,6 +122,7 @@ function func4(m: i32, n: i32): StringPair;        // OK
 ## 枚举类型
 
 枚举类型用于定义一组命名的常量，且在定义时必须指定一个特定的类型作为其成员的类型，支持整数、浮点数、布尔值和字符串类型。枚举类型的成员被称为枚举项，每个枚举项可以有一个指定的字面值，该值需要与枚举类型一致。
+
 ```rust
 enum Foo: i32 {
   A = 0,
@@ -136,6 +142,7 @@ enum Bar: String {
 枚举项可以省略值，若未指定值，则会根据枚举类型的规则自动分配默认值。
 
 - 对于整数类型的枚举，若未指定值，则从上一个元素的值递增，第一个元素默认为 0。
+
   ```rust
   enum Foo: i32 {
     A,          // 0
@@ -146,6 +153,7 @@ enum Bar: String {
   ```
 
 - 对于字符串类型的枚举，若未指定值，默认使用枚举项的名称作为值。
+
   ```rust
   enum Bar: String {
     X,          // "X"
@@ -159,6 +167,7 @@ enum Bar: String {
 ### 枚举值重复
 
 同一个枚举类型中，可以有多个不同的枚举项具有相同的值。
+
 ```rust
 enum Foo: i32 {
   A = 0,
@@ -172,6 +181,7 @@ enum Foo: i32 {
 ## 结构体
 
 结构体是数据成员的组合，其成员可以是任意 Taihe 支持的数据类型。如[内置类型](#内置类型)、[枚举类型](#枚举)、[接口类型](#接口)、[标签联合](#标签联合)和其他[结构体类型](#结构体)等：
+
 ```rust
 interface Base {}
 struct Foo {
@@ -183,6 +193,7 @@ struct Foo {
 ```
 
 空的结构体是禁止的，至少需要一个成员：
+
 ```rust
 struct Empty {};  // Error: empty struct is not allowed
 struct NonEmpty { a: i32; };  // OK
@@ -191,6 +202,7 @@ struct NonEmpty { a: i32; };  // OK
 ## 标签联合
 
 标签联合用于表示多种可能的数据类型，每个标签对应一种数据类型。多个标签可以对应同一个数据类型。标签联合的定义方式如下：
+
 ```rust
 struct Bar {
   x: i32;
@@ -207,6 +219,7 @@ union Foo {
 ```
 
 和结构体一样，标签联合也禁止为空，至少需要一种数据成员：
+
 ```rust
 union Empty {};  // Error: empty union is not allowed
 union NonEmpty { a: i32; };  // OK
@@ -215,6 +228,7 @@ union NonEmpty { a: i32; };  // OK
 ### 省略类型
 
 标签联合的成员可以省略类型，默认使用 `unit` 类型。
+
 ```rust
 union MyUnion {
   A: String;
@@ -225,6 +239,7 @@ union MyUnion {
 ## 接口
 
 接口用于定义一组方法的集合，接口中只能声明方法，不能包含数据成员。语法如下：
+
 ```rust
 interface Base {
   getId(): u64;
@@ -233,6 +248,7 @@ interface Base {
 ```
 
 接口可以继承其他接口，表示实现该接口的类型需要实现所有继承的接口中的方法。
+
 ```rust
 interface Derived: Base {
   getName(): String;
@@ -241,6 +257,7 @@ interface Derived: Base {
 ```
 
 接口可以同时继承多个其他接口：
+
 ```rust
 interface BaseA {
   baseAFunc(): i32;
@@ -257,9 +274,10 @@ interface Derived: BaseA, BaseB {
 
 ## 注解
 
-注解用于为代码中的语法元素添加附加属性，从而使得可以在 Taihe 基本语法的基础上针对特定语言后端添加扩展能力支持，本章节主要介绍 Taihe 的注解语法，关于目前支持的全部注解详见 [Taihe IDL 注解全集](./SupportedAttributes.md)。
+注解用于为代码中的语法元素添加附加属性，从而使得可以在 Taihe 基本语法的基础上针对特定语言后端添加扩展能力支持，本章节主要介绍 Taihe 的注解语法。
 
 注解的基本语法如下：
+
 ```rust
 // 前缀注解（@name）
 @attribute_name(value1, value2, ..., key1 = value1, key2 = value2, ...)
@@ -275,6 +293,7 @@ interface MyInterface {
 ### 前缀注解
 
 语法为 `@name`，用于指定给其后面紧跟的语法元素添加属性。
+
 ```rust
 @class // 用于修饰 interface MyInterface
 interface MyInterface {
@@ -305,6 +324,7 @@ union MyUnion {
 ### 内联注解
 
 语法为 `@!name`，写在某个域内部（如接口、结构体等或包的顶层），用于为其所在的域对应的语法元素添加属性。
+
 ```rust
 @!namespace("example", namespace = "a.b") // 用于修饰所在的整个包
 
@@ -316,6 +336,7 @@ interface MyInterface {
 ### 简写规则
 
 无参数注解的括号可以被省略，例如，以下两种写法是等价的：
+
 ```rust
 @attribute_name()
 function myFunc(): void; // OK
@@ -329,6 +350,7 @@ function myFunc(): void; // OK, same as above
 ### 递归包含与继承
 
 - 函数和类型的声明无先后顺序。
+
   ```rust
   struct Foo {
     bar: Bar;
@@ -340,6 +362,7 @@ function myFunc(): void; // OK, same as above
   ```
 
 - 禁止结构体与结构体、联合体与联合体、结构体与联合体之间的递归包含：
+
   ```rust
   struct RecursiveStruct {
     e: RecursiveUnion;
@@ -352,6 +375,7 @@ function myFunc(): void; // OK, same as above
   ```
 
   但是使用容器类型则允许递归：
+
   ```rust
   struct Foo {
     bar: Array<Foo>;
@@ -379,35 +403,35 @@ function myFunc(): void; // OK, same as above
 ### 模块与导入关键字
 
 | 关键字 | 含义                   |
-|--------|------------------------|
+| ------ | ---------------------- |
 | `use`  | 引入包或符号           |
 | `from` | 指定从某个包中引入符号 |
 | `as`   | 指定导入时的别名       |
 
 ### 顶层声明类型关键字
 
-| 关键字     | 含义           |
-|------------|----------------|
-| `enum`     | 定义枚举类型   |
-| `struct`   | 定义结构体类型 |
-| `union`    | 定义联合体类型 |
-| `interface`| 定义接口类型   |
-| `function` | 定义全局函数   |
+| 关键字      | 含义           |
+| ----------- | -------------- |
+| `enum`      | 定义枚举类型   |
+| `struct`    | 定义结构体类型 |
+| `union`     | 定义联合体类型 |
+| `interface` | 定义接口类型   |
+| `function`  | 定义全局函数   |
 
 ### 类型与值相关关键字
 
-| 关键字 | 含义         |
-|--------|--------------|
-| `true` | 布尔值：真   |
-| `false`| 布尔值：假   |
+| 关键字  | 含义       |
+| ------- | ---------- |
+| `true`  | 布尔值：真 |
+| `false` | 布尔值：假 |
 
 ### 条件表达式关键字
 
-| 关键字 | 含义                     |
-|--------|--------------------------|
-| `if`   | 条件判断起始             |
-| `then` | 条件成立时的执行分支     |
-| `else` | 条件不成立时的执行分支   |
+| 关键字 | 含义                   |
+| ------ | ---------------------- |
+| `if`   | 条件判断起始           |
+| `then` | 条件成立时的执行分支   |
+| `else` | 条件不成立时的执行分支 |
 
 ### 运算符符号（Token 保留字）
 
@@ -415,38 +439,38 @@ function myFunc(): void; // OK, same as above
 
 #### 算术与比较运算符
 
-| 符号 | 含义             |
-|------|------------------|
-| `+`  | 加法             |
-| `-`  | 减法 / 负号      |
-| `*`  | 乘法             |
-| `/`  | 除法             |
-| `%`  | 取余             |
-| `==` | 等于比较         |
-| `!=` | 不等比较         |
-| `<`  | 小于             |
-| `<=` | 小于等于         |
-| `>`  | 大于             |
-| `>=` | 大于等于         |
+| 符号 | 含义        |
+| ---- | ----------- |
+| `+`  | 加法        |
+| `-`  | 减法 / 负号 |
+| `*`  | 乘法        |
+| `/`  | 除法        |
+| `%`  | 取余        |
+| `==` | 等于比较    |
+| `!=` | 不等比较    |
+| `<`  | 小于        |
+| `<=` | 小于等于    |
+| `>`  | 大于        |
+| `>=` | 大于等于    |
 
 #### 位运算与逻辑运算符
 
-| 符号   | 含义           |
-|--------|----------------|
-| `&`    | 按位与         |
-| `\|`   | 按位或         |
-| `^`    | 按位异或       |
-| `~`    | 按位取反       |
-| `!`    | 逻辑非         |
-| `&&`   | 逻辑与         |
-| `\|\|` | 逻辑或         |
-| `<<`   | 左移           |
-| `>>`   | 右移           |
+| 符号   | 含义     |
+| ------ | -------- |
+| `&`    | 按位与   |
+| `\|`   | 按位或   |
+| `^`    | 按位异或 |
+| `~`    | 按位取反 |
+| `!`    | 逻辑非   |
+| `&&`   | 逻辑与   |
+| `\|\|` | 逻辑或   |
+| `<<`   | 左移     |
+| `>>`   | 右移     |
 
 #### 其他符号
 
 | 符号 | 含义                 |
-|------|----------------------|
+| ---- | -------------------- |
 | `=`  | 属性参数绑定         |
 | `=>` | 回调类型返回值标识符 |
 | `@`  | 前缀注解语法标识     |

@@ -3,6 +3,7 @@
 ## 字符串类型
 
 Taihe 字符串的 ABI 定义如下：
+
 ```cpp
 struct TString {
   uint32_t flags;
@@ -12,13 +13,15 @@ struct TString {
 ```
 
 在内存中的布局：
+
 ```
 +-------------+--------------+---------------------------+
 | flags (u32) | length (u32) | ptr (char*, always valid) |
 +-------------+--------------+---------------------------+
 ```
 
-作者侧，即下层创建 Taihe 字符串时，会创建带有引用计数的 char* 字符串 TStringData：
+作者侧，即下层创建 Taihe 字符串时，会创建带有引用计数的 char\* 字符串 TStringData：
+
 ```cpp
 struct TStringData {
   TRefCount count;
@@ -27,6 +30,7 @@ struct TStringData {
 ```
 
 在内存中的布局：
+
 ```
 +---------------------+--------------------------+
 | TRefCount count     | buffer[]                 |
@@ -40,6 +44,7 @@ struct TStringData {
 ## 定长数组（Array）
 
 Taihe 数组类型的 ABI 定义如下：
+
 ```cpp
 struct TArray {
   size_t m_size;
@@ -48,6 +53,7 @@ struct TArray {
 ```
 
 在内存中的布局：
+
 ```
 +-----------------+----------------+
 | m_size (size_t) | m_data (void*) |
@@ -67,6 +73,7 @@ struct TOptional {
 ```
 
 在内存中的布局：
+
 ```
 +----------------+
 | m_data (void*) |
@@ -78,6 +85,7 @@ struct TOptional {
 ## vector
 
 Taihe 的 vector 类型采用动态数组实现，类似于 C++ 的 `std::vector`。
+
 ```cpp
 template<typename T>
 struct vector_view {
@@ -96,6 +104,7 @@ private:
 ## set
 
 Taihe 的 set 类型采用哈希表实现，类似于 C++ 的 `std::unordered_set`。
+
 ```cpp
 template<typename K>
 struct set_view {
@@ -117,6 +126,7 @@ private:
 ```
 
 在内存中的布局如下：
+
 ```
       set_view<K>
 ┌─────────────────────┐
@@ -143,6 +153,7 @@ private:
 ## map
 
 Taihe 的 map 类型与 set 类型类似，采用哈希表实现，类似于 C++ 的 `std::unordered_map`。
+
 ```cpp
 template<typename K, typename V>
 struct map_view {
@@ -167,6 +178,7 @@ private:
 ## struct
 
 taihe 的 struct 类型直接对应 C 中的结构体，例如以下 Taihe struct 定义：
+
 ```rust
 struct Color {
     R: i32;
@@ -176,6 +188,7 @@ struct Color {
 ```
 
 在 C 中会生成如下结构体：
+
 ```c
 struct binding_Color_t {
     int32_t R;
@@ -187,6 +200,7 @@ struct binding_Color_t {
 ## enum
 
 以以下 Taihe enum 定义为例：
+
 ```rust
 enum MessageType: i32 {
     Text = 1,
@@ -201,6 +215,7 @@ enum EnumString: String {
 ```
 
 C++ 侧会生成：
+
 ```cpp
 struct MessageType {
 public:
@@ -246,6 +261,7 @@ private:
 ## union
 
 以以下 Taihe union 定义为例：
+
 ```rust
 union MessageData {
     textVal: String;
@@ -254,6 +270,7 @@ union MessageData {
 ```
 
 在 C++ 侧会生成如下结构体：
+
 ```cpp
 union message_MessageData_union {
     struct TString textVal;
@@ -275,6 +292,7 @@ Taihe union 实际内存布局即`struct message_MessageData_t`。
 ## 函数闭包
 
 Taihe 的 callback 的内存布局类似于 Taihe interface。
+
 ```cpp
 struct TCallback {
   void *vtbl_ptr;                 // 指向函数实现
