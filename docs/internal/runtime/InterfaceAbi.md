@@ -3,6 +3,7 @@
 ## Taihe IDL 示例代码
 
 以一个菱形继承的场景为例，假设我们有一个接口 `IFancyObj`，它继承了两个接口 `IColor` 和 `IShape`，而这两个接口又都继承自 `IBase`。我们可以定义如下的接口：
+
 ```rust
 interface IBase {
   getState(): bool;
@@ -27,6 +28,7 @@ interface IFancyObj: IColor, IShape {
 ## 对象构成
 
 一个 Taihe 接口对象由两个指针构成，它们分别指向**虚表**和**数据块**。
+
 ```c
 struct IFancyObj {
   struct IFancyObj_vtable const* vtbl_ptr;  // 指向虚表
@@ -37,6 +39,7 @@ struct IFancyObj {
 ### 虚表
 
 对于在 IDL 中定义的每个接口，其**虚表**结构体中的第一项应是指向该接口的**函数表**结构体的指针，接下来则应按顺序排入该接口*直接*继承的所有父接口的虚表中的*完整内存排布*。
+
 ```c
 struct IBase_vtable {
   struct IBase_ftable const* ftbl_ptr;  // 指向 IBase 的函数表
@@ -60,6 +63,7 @@ struct IFancyObj_vtable {
 ```
 
 实际生成的 ABI 层代码中，虚表的嵌套结构会被*扁平化展开*，例如上述的 `IFancyObj_vtable` 实际上会被展开为如下结构：
+
 ```c
 struct IFancyObj_vtable {
   struct IFancyObj_ftable const* ftbl_ptr_0;  // 指向 IFancyObj 的函数表
@@ -75,6 +79,7 @@ struct IFancyObj_vtable {
 ### 函数表
 
 每个 Taihe 接口的**函数表**内部则存有这个接口*自己的*所有方法的指针：
+
 ```c
 struct IBase_ftable {
     bool (*getState)(struct IBase self);
@@ -99,6 +104,7 @@ struct IFancyObj_ftable {
 ### 数据块
 
 Taihe 接口对象的**数据块**则由**数据头**和**实际对象内存**两部分构成，其中**数据头**存储了对象的**运行时类型信息**（RTTI）和**引用计数**等元数据。
+
 ```c
 struct DataBlockHead {
   struct TypeInfo const *rtti_ptr;  // 指向运行时类型信息
@@ -114,6 +120,7 @@ struct DataBlock {
 ### 运行时类型信息
 
 在**运行时类型信息**中，会包含对象的版本信息，销毁函数、哈希函数及比较函数等通用函数的指针，还有**动态转换表**及其长度。
+
 ```c
 typedef void free_func_t(struct DataBlockHead *);
 typedef size_t hash_func_t(struct DataBlockHead *);
@@ -130,6 +137,7 @@ struct TypeInfo {
 ```
 
 其中**动态转换表**由若干**动态转换表项**构成，每个项包含一个**接口 ID** 和指向该接口虚表的指针。
+
 ```c
 struct IdMapItem {
   void const *id;
@@ -140,6 +148,7 @@ struct IdMapItem {
 ### 接口 ID
 
 **接口 ID** 是一个全局唯一的标识符，在运行时对 Taihe 接口对象进行动态转换时会根据此标识判断该对象是否实现了特定接口。每个在 Taihe IDL 中声明的接口在编译时都会分配一个唯一的 ID。
+
 ```c
 void const *IBase_iid = ...;
 void const *IColor_iid = ...;
@@ -156,6 +165,7 @@ void const *IFancyObj_iid = ...;
 需要注意的时，有些情况下，一个接口可能通过不同路径重复继承了同一个接口。在这种情况下，无论增加该祖先在哪一条路径所对应的偏移量，结果都是正确的，不过通常我们会选择第一条路径。例如，在上面的例子中，`IFancyObj` 通过 `IColor` 和 `IShape` 两条路径都继承了 `IBase`，因此无论是在 `IFancyObj` 对应虚表指针的基础上增加 2 个还是 4 个指针的偏移量，都能正确得到 `IBase` 的虚表指针，但实际实现中我们会选择增加 2 个指针的偏移量。
 
 以下是 `IFancyObj` 接口和它的父接口的静态转换函数示例：
+
 ```cpp
 struct IBase_vtable const* static_cast_from_IFancyObj_to_IColor(struct IFancyObj_vtable const* vtbl_ptr) {
   if (vtbl_ptr == NULL) {
@@ -180,6 +190,7 @@ struct IShape_vtable const* static_cast_from_IFancyObj_to_IShape(struct IFancyOb
 ```
 
 要对对象进行静态转换时：
+
 ```cpp
 struct IFancyObj fancy = ...;
 struct IBase base = {
@@ -193,6 +204,7 @@ struct IBase base = {
 每个对象的数据块头部都有指向其具体类型运行时信息的指针。其中存有该类型的动态转换表。动态转换表是从接口 ID 到相应虚表的映射，用于在运行时查询对象实现的所有接口，从而实现运行时的向下转换。
 
 以下是代码样例，展示了如何从一个不知道实现了哪些接口的对象的运行时类型信息中动态判断其是否实现了 `IFancyObj` 接口并取得对应的虚表指针：
+
 ```cpp
 struct IFancyObj_vtable const* dynamic_cast_to_IFancyObj(struct TypeInfo const* rtti_ptr) {
   for (size_t i = 0; i < rtti_ptr->len; i++) {
@@ -205,6 +217,7 @@ struct IFancyObj_vtable const* dynamic_cast_to_IFancyObj(struct TypeInfo const* 
 ```
 
 如果要将一个对象转换为 `IFancyObj`，就可以这样做：
+
 ```cpp
 struct IBase base = ...;
 struct IFancyObj fancy = {
@@ -216,6 +229,7 @@ struct IFancyObj fancy = {
 ### 函数调用
 
 函数调用通过虚表中的函数指针实现。调用时，首先获取对象的虚表指针，然后根据接口的函数表指针调用相应的方法。
+
 ```cpp
 void call_IFancyObj_sparkle(struct IFancyObj self) {
   self->vtbl_ptr->ftbl_ptr_0->sparkle(self);
@@ -225,6 +239,7 @@ void call_IFancyObj_sparkle(struct IFancyObj self) {
 ### 对象的构造、拷贝和销毁
 
 以下代码截取自 `runtime/taihe/src/object.cpp`，展示了对象的构造、拷贝和销毁过程：
+
 ```cpp
 void tobj_init(struct DataBlockHead *data_ptr, struct TypeInfo const *rtti_ptr) {
   data_ptr->rtti_ptr = rtti_ptr;
@@ -252,6 +267,7 @@ void tobj_drop(struct DataBlockHead *data_ptr) {
 ### 对象的哈希和比较
 
 对象的哈希和比较通过 `TypeInfo` 中的 `hash_fptr` 和 `same_fptr` 函数指针实现。这些函数指针在对象的运行时类型信息中定义，允许在运行时对对象进行哈希和比较操作。
+
 ```cpp
 size_t tobj_hash(struct DataBlockHead *data_ptr) {
   return data_ptr->rtti_ptr->hash_fptr(data_ptr);
