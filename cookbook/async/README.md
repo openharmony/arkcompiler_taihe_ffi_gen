@@ -3,6 +3,7 @@
 在看本章内容前，最好对同步和异步有一定的了解。
 
 以 javascript 为例，简要解释同步与异步
+
 ```javascript
 // 同步
 console.log("1");
@@ -39,6 +40,8 @@ sts 提供了异步的支持，但是 native 并不支持异步
 
 ## 第一步：在 Taihe IDL 文件中声明
 
+**File: `idl/async.taihe`**
+
 ```rust
 @static_overload("add")
 @async function addAsync(a: i32, b: i32): i32;
@@ -71,6 +74,8 @@ taihe 不允许同名函数，如果用户有同名的函数，需要使用 `@st
 
 ## 第二步：实现声明的接口
 
+**File: `author/src/async.impl.cpp`**
+
 ```cpp
 int32_t addSync(int32_t a, int32_t b) {
     return a + b;
@@ -96,6 +101,9 @@ taihe-tryit test -u sts path/to/async -Csts:keep-name
 ```
 
 async 和 promise 版本的函数生成在 sts 侧
+
+**File (Generated): `generated/async.ets`**
+
 ```typescript
 // 导出的 Async 函数
 export function addAsync(a: int, b: int, callback: AsyncCallback<int>): void {
@@ -133,9 +141,10 @@ export overload add {
 }
 ```
 
-用户侧使用
+## 用户侧使用
 
-`main.ets`
+**File: `user/main.ets`**
+
 ```typescript
 // 使用同步版本的函数
 console.log("addSync: ", async_test.addSync(1, 2))
@@ -156,21 +165,25 @@ try {
 } catch (error) {
     console.error("main finsih test async promise ERROR ", error)
 }
-
-// Log output:
-// addSync:  3
-// async success  30
-// async promise success 
-// MyStr
-// interface async success 
-// interface async success p_istringholder  interface async set
 ```
 
-#### Know more, Code better
+**Stdout**
+
+```
+addSync:  3
+async success  30
+async promise success 
+MyStr
+interface async success 
+interface async success p_istringholder  interface async set
+```
+
+## Know more, Code better
 
 类内函数的异步版本也是类似
 
-Taihe IDL 文件
+**File: `idl/async.taihe`**
+
 ```rust
 interface IStringHolder {
     @async getAsync(): String;
@@ -188,7 +201,8 @@ interface IStringHolder {
 function makeIStringHolder(): IStringHolder;
 ```
 
-C++ 实现
+**File: `author/src/async.impl.cpp`**
+
 ```cpp
 class IStringHolder {
 public:
@@ -228,7 +242,8 @@ private:
 }
 ```
 
-sts 侧 export
+**File (Generated): `generated/async.ets`**
+
 ```typescript
 export interface IStringHolder {
     // get 函数 Async 版

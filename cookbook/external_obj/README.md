@@ -10,6 +10,8 @@ taihe 提供了 `ani runtime` 以及 `opaque` 类型用于在实现侧处理 ani
 
 ## 第一步：在 Taihe IDL 文件中声明
 
+**File: `idl/external_obj.taihe`**
+
 ```rust
 @!sts_inject("import {Person} from 'other.subsystem';")
 
@@ -20,6 +22,7 @@ function processPerson(person: @sts_type("Person") Opaque): void;
 ```
 
 这里使用到的 Person 类型如下：
+
 ```typescript
 export interface Person {
     name: string;
@@ -35,9 +38,11 @@ export interface Person {
 
 `@sts_inject` 注解用于将注解内的字符串写入生成的 sts 文件，`@!sts_inject` 添加注解到 当下的词法空间下，而 `@sts_inject`（注意，没有感叹号）将注解添加到下一个元素中。
 
-`@sts_type` 注解用于指定 `Opaque` 在 sts 侧的类型，使用方法是在类型 `Opaque` 前面增加 `@sts_type("\<type_name\>")`, \<type_name\> 为 sts 类型名
+`@sts_type` 注解用于指定 `Opaque` 在 sts 侧的类型，使用方法是在类型 `Opaque` 前面增加 `@sts_type("<type_name>")`，其中 `<type_name>` 为 sts 类型名
 
 ## 第二步：实现声明的接口
+
+**File: `author/src/external_obj.impl.cpp`**
 
 ```cpp
 // 判断输入的外部 ani 对象是否是 string 类型
@@ -84,7 +89,6 @@ void processPerson(uintptr_t person) {
 
 ## 第三步：生成并编译
 
-`compiler/`
 ```sh
 # 注：Taihe IDL 文件里的函数与 C++ 规范一致，所以函数会在生成的 ets 侧自动转变为小写字母开头函数
 # Taihe IDL 文件中的写法：
@@ -97,7 +101,8 @@ taihe-tryit test -u sts path/to/external_obj -Csts:keep-name
 
 用户侧使用
 
-`main.ets`
+**File: `user/main.ets`**
+
 ```typescript
 console.log(extobj.is_string("hello"));
 console.log(extobj.is_string(123));
@@ -107,7 +112,8 @@ extobj.processPerson(person);
 console.log(extobj.get_objects());
 ```
 
-Output:
+**Stdout**
+
 ```sh
 true
 false

@@ -17,43 +17,43 @@ taihec [taihe_files ...] [options ...]
 - 输入：Taihe IDL 文件
 - 输出：生成文件
 
-_注：`taihe_files` 可以是一个或多个 Taihe IDL 文件，也可以使用通配符（例如 `path/to/idl/*.taihe`）来指定多个文件。_
+*注：`taihe_files` 可以是一个或多个 Taihe IDL 文件，也可以使用通配符（例如 `path/to/idl/*.taihe`）来指定多个文件。*
 
 #### 命令行选项
 
-| 参数                                       | 简写                               | 说明                                                                        |
-| ------------------------------------------ | ---------------------------------- | --------------------------------------------------------------------------- |
-| `--output <path>`                          | `-O<path>`                         | 指定生成的目标文件存放目录（默认：`taihe-generated`）                       |
-| `--generate <backend>`                     | `-G<backend>`                      | 指定要启用的代码生成后端，如 `abi-header`、`abi-source`、`c-author` 等      |
-| `--build <build-system>`                   | `-B<build-system>`                 | 指定构建系统类型，目前支持 `cmake`（生成 `CMakeLists.txt`）                 |
+| 参数                                       | 简写                               | 说明 |
+|--------------------------------------------|------------------------------------|------|
+| `--output <path>`                          | `-O<path>`                         | 指定生成的目标文件存放目录（默认：`taihe-generated`） |
+| `--generate <backend>`                     | `-G<backend>`                      | 指定要启用的代码生成后端，如 `abi-header`、`abi-source`、`c-author` 等 |
+| `--build <build-system>`                   | `-B<build-system>`                 | 指定构建系统类型，目前支持 `cmake`（生成 `CMakeLists.txt`） |
 | `--codegen <namespace>:<config>[=<value>]` | `-C<namespace>:<config>[=<value>]` | 额外的代码生成配置项，例如 `sts:keep-name`、`arkts:module-prefix=prefix` 等 |
-| `--version`                                |                                    | 打印版本信息                                                                |
-| `--help`                                   | `-h`                               | 帮助信息                                                                    |
+| `--version`                                | 无                                 | 打印版本信息 |
+| `--help`                                   | `-h`                               | 帮助信息 |
 
 #### 代码生成后端
 
 代码生成后端决定了 `taihec` 会生成哪些代码文件。后端之间存在依赖关系，工具会自动根据配置的后端来递归地启用所需的其他后端，生成完整的代码。
 
-| Backend        | 说明                                              | 依赖                       |
-| -------------- | ------------------------------------------------- | -------------------------- |
-| `abi-header`   | 生成 Taihe C ABI 头文件，包括类型声明，函数声明等 | 无                         |
-| `abi-source`   | 生成 Taihe C ABI 源文件，包含必要的符号定义       | `abi-header`               |
-| `c-author`     | 生成 C 语言提供者侧的接口导出宏以及模板代码       | `abi-source`               |
-| `cpp-common`   | 生成 C++ 接口提供者和消费者侧的公共代码           | `abi-header`               |
-| `cpp-author`   | 生成 C++ 接口提供者侧的接口导出宏以及模板代码     | `cpp-common`, `abi-source` |
-| `cpp-user`     | 生成 C++ 接口消费者侧所需的所有代码               | `cpp-common`               |
-| `ani-bridge`   | 生成 ANI 及 ArkTS 1.2 用户侧的桥接代码            | `cpp-user`                 |
-| `pretty-print` | 将 Taihe IDL 文件格式化输出                       | 无                         |
+| Backend        | 依赖                       | 说明 |
+|----------------|----------------------------|------|
+| `abi-header`   | 无                         | 生成 Taihe C ABI 头文件，包括类型声明，函数声明等 |
+| `abi-source`   | `abi-header`               | 生成 Taihe C ABI 源文件，包含必要的符号定义 |
+| `c-author`     | `abi-source`               | 生成 C 语言提供者侧的接口导出宏以及模板代码 |
+| `cpp-common`   | `abi-header`               | 生成 C++ 接口提供者和消费者侧的公共代码 |
+| `cpp-author`   | `cpp-common`, `abi-source` | 生成 C++ 接口提供者侧的接口导出宏以及模板代码 |
+| `cpp-user`     | `cpp-common`               | 生成 C++ 接口消费者侧所需的所有代码 |
+| `ani-bridge`   | `cpp-user`                 | 生成 ANI 及 ArkTS 1.2 用户侧的桥接代码 |
+| `pretty-print` | 无                         | 将 Taihe IDL 文件格式化输出 |
 
 #### 代码生成配置
 
-| Codegen Config                 | 说明                                                                                                                     |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| Codegen Config                 | 说明 |
+|--------------------------------|------|
 | `sts:keep-name`                | 保持生成的代码中的函数和方法名称与 Taihe IDL 文件中的名称一致，若不使用此选择则会默认将 Taihe IDL 文件中的名称首字母小写 |
-| `arkts:module-prefix=<prefix>` | 指定生成的 ArkTS 对应的模块名，该配置会影响生成符号的 ANI 签名                                                           |
-| `arkts:path-prefix=<prefix>`   | 指定生成的 ArkTS 对应的路径前缀，该配置会影响生成符号的 ANI 签名                                                         |
+| `arkts:module-prefix=<prefix>` | 指定生成的 ArkTS 对应的模块名，该配置会影响生成符号的 ANI 签名 |
+| `arkts:path-prefix=<prefix>`   | 指定生成的 ArkTS 对应的路径前缀，该配置会影响生成符号的 ANI 签名 |
 
-_注：DevEco 用户必须指定 `arkts:module-prefix` 与 `arkts:path-prefix`_
+*注：DevEco 用户必须指定 `arkts:module-prefix` 与 `arkts:path-prefix`*
 
 #### 使用示例
 
@@ -98,18 +98,19 @@ taihe-tryit [mode] [test_dir] [options ...]
 
 - `test`
   生成代码，并编译运行，该命令等价于分别执行 `generated` 和 `build`，用于快速验证一个完整的样例，例如：
+
   ```
   taihe-tryit test --user sts path/to/demo/dir
   ```
 
 #### 支持的选项
 
-| 参数                                       | 简写                               | 说明                                                                | 可用模式           |
-| ------------------------------------------ | ---------------------------------- | ------------------------------------------------------------------- | ------------------ |
-| `--verbose`                                | `-v`                               | 输出详细的日志信息，便于调试                                        | 所有模式           |
-| `--user <user>`                            | `-u <user>`                        | 必要，选择消费者侧的语言类型，支持 `sts`（ArkTS 1.2）、`cpp`（C++） | 所有模式           |
-| `--optimization {0,1,2,3}`                 | `-O{0,1,2,3}`                      | 指定编译器的优化级别，默认为 `0`                                    | `build`、`test`    |
-| `--codegen <namespace>:<config>[=<value>]` | `-C<namespace>:<config>[=<value>]` | 同 `taihec`，额外的代码生成配置项，例如 `sts:keep-name` 等          | `generate`、`test` |
+| 参数                                       | 简写                               | 可用模式           | 说明 |
+|--------------------------------------------|------------------------------------|--------------------|------|
+| `--verbose`                                | `-v`                               | 所有模式           | 输出详细的日志信息，便于调试 |
+| `--user <user>`                            | `-u <user>`                        | 所有模式           | 必要，选择消费者侧的语言类型，支持 `sts`, `cpp` |
+| `--optimization {0,1,2,3}`                 | `-O{0,1,2,3}`                      | `build`, `test`    | 指定编译器的优化级别，默认为 `0` |
+| `--codegen <namespace>:<config>[=<value>]` | `-C<namespace>:<config>[=<value>]` | `generate`, `test` | 同 `taihec`，额外的代码生成配置项，例如 `sts:keep-name` 等 |
 
 #### 使用流程
 
@@ -122,10 +123,10 @@ taihe-tryit [mode] [test_dir] [options ...]
    ├── idl                             # Taihe IDL 文件目录
    │   └── hello.taihe
    ├── author                          # C++ 接口提供者侧代码目录
-   |   ├── include
+   │   ├── include
    │   └── src
-   |        └── hello.impl.cpp         # hello.taihe 的 C++ 实现
-   |        └── ani_constructor.cpp    # ani 注册文件
+   │        ├── hello.impl.cpp         # hello.taihe 的 C++ 实现
+   │        └── ani_constructor.cpp    # ani 注册文件
    └── user                            # 接口消费者侧代码目录
        └── main.ets                    # 测试入口
    ```
@@ -142,7 +143,7 @@ taihe-tryit [mode] [test_dir] [options ...]
    │   ├── hello.proj.hpp
    │   ├── hello.user.hpp               # 这几个是 C++ 提供方和消费方所需头文件，具体功能见 CppUserDoc.md
    │   ├── hello.ani.hpp                # 用于注册 ANI Native 接口的 ANIRegister 所在头文件
-   |   ├── taihe.platform.ani.abi.h
+   │   ├── taihe.platform.ani.abi.h
    │   ├── taihe.platform.ani.proj.hpp  # Taihe 标准库对应的头文件
    │   └── ...
    ├── src                              # 自动生成的源文件，会被编译进 C++ 提供方的动态链接库中

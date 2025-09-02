@@ -2,10 +2,10 @@
 
 用户可以使用 `@rename` 注解修改 ets 侧的函数名
 
-
 ## 第一步：在 Taihe IDL 文件中声明
 
-`rename_example/idl/rename_example.taihe`
+**File: `idl/rename_example.taihe`**
+
 ```rust
 @rename("newFoo")
 function oldFoo(a: i32, b: i32): i32;
@@ -34,7 +34,8 @@ function _taihe_oldFoo_reverse(a: int, b: int): int {
 
 ## 第二步：实现声明的接口
 
-`rename_example/author/src/rename_example.impl.cpp`
+**File: `author/src/rename_example.impl.cpp`**
+
 ```cpp
 int32_t oldFoo(int32_t a, int32_t b) {
     return a + b;
@@ -47,13 +48,15 @@ int32_t oldFoo(int32_t a, int32_t b) {
 taihe-tryit test -u sts cookbook/rename_example -Csts:keep-name
 ```
 
-`main.ets`
+**File: `user/main.ets`**
+
 ```typescript
 let res = rename_example.newFoo(1, 2);
 console.log("res = " + res);
 ```
 
-输出：
+**Stdout**
+
 ```sh
 res = 3
 ```

@@ -12,7 +12,7 @@ function main() {
     console.log("num1 - num2 = " + result2);
     let result3 = cal.getLastResult();
     console.log("Last calculation result: " + result3);
-    console.log("---restart_calculator---");
+    console.log("--- restartCalculator ---");
     restartCalculator(cal);
     let result4 = cal.getLastResult();
     console.log("Last calculation result: " + result4);
