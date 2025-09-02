@@ -5,6 +5,7 @@
 ## 第一步：编写接口原型
 
 **File: `idl/wrap_interface.taihe`**
+
 ```rust
 interface Foo{
     getInner(): i64;
@@ -25,6 +26,7 @@ function useFoo(obj: Foo): void;
 假设已经实现好的类 `InnerFoo` 如下所示：
 
 **File: `idl/wrap_interface.impl.cpp`**
+
 ```cpp
 // 已经实现的类
 class InnerFoo {
@@ -48,6 +50,7 @@ private:
 Taihe 实现侧为：
 
 **File: `idl/wrap_interface.impl.cpp`**
+
 ```cpp
 // Taihe interface 实现类
 class FooImpl {
@@ -92,6 +95,8 @@ void useFoo(weak::Foo obj) {
 
 ## 第三步：在 ets 侧使用
 
+**File: `user/main.ets`**
+
 ```typescript
 // 创建对象
 let obj = wrap_interface.makeFoo();
@@ -99,7 +104,8 @@ let obj = wrap_interface.makeFoo();
 wrap_interface.useFoo(obj);
 ```
 
-Output:
+**Stdout**
+
 ```sh
 Hello from func1
 Hello from func2

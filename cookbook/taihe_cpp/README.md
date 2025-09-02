@@ -3,10 +3,10 @@
 ## string
 
 1. string 使用引用计数进行自动的生命周期管理，用户只需要正常使用 string
-
 2. 为方便用户使用，提供了许多相关的操作函数便于用户开发
 
 C++ 侧使用：
+
 ```cpp
 // 使用字符串创建 taihe::string
 taihe::string s1("Hello");
@@ -65,6 +65,7 @@ std::cout << "to_string(false): " << boolFalseStr << "\n";
 ## array
 
 C++ 侧使用：
+
 ```cpp
 // 使用初始化列表方式创建 taihe::array
 taihe::array<int> arr = {10, 20, 30, 40, 50}
@@ -106,6 +107,7 @@ for (auto it = arr.rbegin(); it != arr.rend(); ++it) {
 ## set
 
 C++ 侧使用：
+
 ```cpp
 // 创建 taihe::set
 taihe::set<taihe::string> my_set;
@@ -146,6 +148,7 @@ my_set.clear();
 ## map
 
 C++ 侧使用：
+
 ```cpp
 // 创建一个空 taihe::map
 taihe::map<taihe::string, int32_t> my_map;
@@ -188,7 +191,8 @@ std::cout << "Map is empty: " << std::boolalpha << my_map.empty() << std::endl;
 
 ## optional
 
-Taihe IDL 文件：
+C++ 侧使用：
+
 ```cpp
 // 创建空 Optional
 optional<T> empty = std::nullopt;
@@ -209,6 +213,7 @@ int32_t var1 = opt_var.value();
 ## enum
 
 Taihe IDL 文件：
+
 ```rust
 enum MessageType: i32 {
     Text = 1,
@@ -217,6 +222,7 @@ enum MessageType: i32 {
 ```
 
 C++ 侧使用：
+
 ```cpp
 // 创建 enum
 MessageType enum_var1 = MessageType::key_t::Text;
@@ -234,6 +240,7 @@ std::cout << enum_var1.get_value() << std::cout;
 ## union
 
 Taihe IDL 文件：
+
 ```rust
 union MessageData {
     textVal: String;
@@ -242,6 +249,7 @@ union MessageData {
 ```
 
 C++ 侧使用：
+
 ```cpp
 // 创建 union 使用 {union_type}::make_{item}({value});
 MessageData msg_data = MessageData::make_textVal("hello");
@@ -263,6 +271,7 @@ std::cout << "text: " << msg_data.get_textVal_ref() << std::endl;
 ## struct
 
 Taihe IDL 文件：
+
 ```rust
 struct Color{
     R: i32;
@@ -272,6 +281,7 @@ struct Color{
 ```
 
 C++ 侧使用：
+
 ```cpp
 // C++ 侧创建 taihe 结构体使用大括号初始化
 Color white{255, 255, 255};
@@ -283,6 +293,7 @@ std::cout << "R = " << white.R << "G = " << white.G << "B = " << white.B << std:
 ## interface
 
 Taihe IDL 文件：
+
 ```rust
 interface Base {
     foo(): void;
@@ -297,6 +308,7 @@ function makeDerived(a: i32): Derived;
 ```
 
 C++ 侧实现：
+
 ```cpp
 // 类实现
 class BaseImpl {
@@ -337,6 +349,7 @@ Derived makeDerived(int32_t a) {
 ```
 
 C++ 侧使用类：
+
 ```cpp
 // 创建类
 Base baseObj = taihe::make_holder<BaseImpl, Base>();
@@ -362,13 +375,13 @@ derivedOBj->bar();
 
 ## callback
 
-C++ 侧实现：
+C++ 侧使用：
+
 ```cpp
 // callback 作为参数传入时，类型为 callback_view 类型
 // view 类型不具备所有权
 // 如果用户希望保存这个 callback，需要将其从 callback_view 转换为 callback 类型
 // 转换方法示例
-
 void Foo(taihe::callback_view<taihe::string(int32_t)> arg0) { // 入参为返回值为 string，入参为一个 int32_t 的函数
     taihe::callback<taihe::string(int32_t)> var(arg0); // 转换方法
 }

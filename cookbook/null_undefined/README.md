@@ -5,6 +5,7 @@
 ## 第一步：编写接口原型
 
 **File: `idl/nullabletype.taihe`**
+
 ```rust
 union NullableValue {
     sValue: String;
@@ -15,11 +16,13 @@ union NullableValue {
 
 function makeNullableValue(tag: i32): NullableValue;
 ```
+
 如上所示，Taihe IDL 文件中为一个 union 内的变量名前增加 注解 @null、@undefined 来声明 null 类型与 undefined 类型
 
 ## 第二步：完成 C++ 实现
 
 **File: `author/src/nullabletype.impl.cpp`**
+
 ```cpp
 constexpr int32_t TAG_NULL = 0;
 constexpr int32_t TAG_STRING = 1;
@@ -49,6 +52,8 @@ constexpr int32_t TAG_INT = 2;
 
 ## 第三步：在 ets 侧使用
 
+**File: `user/main.ets`**
+
 ```typescript
 let nvalue = makeNullableValue(0);
 console.log("null: " + nvalue);
@@ -60,7 +65,8 @@ let uvalue = makeNullableValue(10);
 console.log("undefined: " + uvalue);
 ```
 
-输出结果：
+**Stdout**
+
 ```sh
 null: null
 string: hello

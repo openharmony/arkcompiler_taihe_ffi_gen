@@ -1,10 +1,10 @@
 # Taihe IDL ArkTS 注解全集
 
-_本文档中以 `@!` 开头的表示该注解通常被写作[内联注解](../IdlReference.md#内联注解)，其余以 `@` 开头的表示该注解通常被写作[前缀注解](../IdlReference.md#前缀注解)。_
+*本文档中以 `@!` 开头的表示该注解通常被写作[内联注解](../IdlReference.md#内联注解)，其余以 `@` 开头的表示该注解通常被写作[前缀注解](../IdlReference.md#前缀注解)。*
 
 ## 全局注解
 
-- `@!namespace("@ohos.abc.xyz", "ns1.ns2.ns3")`：该注解作用于整个 Taihe 文件。其中第一个参数表示该 Taihe 文件所对应的 module 名称，第二个参数可选，表示该 Taihe 文件所对应于该 module 下的 namespace 名称（若不指定则表示该 Taihe 文件对应该 module 的根作用域）。如果不使用该注解，则默认该 Taihe 文件所对应 module 名称为 Taihe 文件的包名，namespace 名称为根作用域。
+- `@!namespace("@ohos.abc.xyz", "ns1.ns2.ns3")`：该注解作用于整个 Taihe 文件。其中第一个参数表示该 Taihe 文件所对应的 module 名称，第二个参数可选，表示该 Taihe 文件所对应于该 module 下的 namespace 名称，若不指定则默认表示该 Taihe 文件对应该 module 的根作用域。如果不使用该注解，则默认该 Taihe 文件所对应 module 名称为 Taihe 文件的包名，namespace 名称为根作用域。
 
 ## 声明注解
 

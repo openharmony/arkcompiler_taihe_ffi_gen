@@ -5,6 +5,7 @@
 ## 第一步：编写接口原型
 
 **File: `idl/hello.taihe`**
+
 ```rust
 interface UnifiedRecord_th {
     GetType(): void;
@@ -125,17 +126,17 @@ export class UnifiedData {
 """)
 ```
 
-- _th 结构与 ETS 类的关系
-  - **_th 结构**：C++ 侧的数据结构，仅在 `taihe` 文件和 C++ 代码中使用，不暴露给 ETS 侧。
-  - **ETS 类**：通过 `@!sts_inject` 注入的类，供 ETS 侧使用，包含对 `_th` 结构的封装。
+- `_th` 类型与 ETS 类的关系
+  - **`_th` 类型**：C++ 侧的数据结构，仅在 `taihe` 文件和 C++ 代码中使用，不暴露给 ETS 侧。
+  - **ETS 类**：通过 `@!sts_inject` 注入的类，供 ETS 侧使用，包含对 `_th` 类型的封装。
 
 - 方法调用规则
   - **覆盖父类方法**：若子类接口包含父类方法，ETS 侧调用子类实现。
   - **继承父类方法**：若子类接口省略父类方法，ETS 侧调用父类实现。
 
 - 参数与返回值转换
-  - **ETS 类 -> th_ 结构**：通过 `.inner` 属性访问。
-  - **th_ 结构 -> ETS 类**：通过构造函数注入（如 `new UnifiedRecord(UnifiedRecord_th)`）。
+  - **ETS 类 -> `th_` 类型**：通过 `.inner` 属性访问。
+  - **`th_` 类型 -> ETS 类**：通过构造函数注入（如 `new UnifiedRecord(UnifiedRecord_th)`）。
 
 ## 第二步：完成 C++ 实现
 
@@ -235,6 +236,8 @@ class UnifiedData_thImpl {
 ```
 
 ## 第三步：在 ets 侧使用
+
+**File: `user/main.ets`**
 
 ```typescript
 let a = new hello.UnifiedRecord();

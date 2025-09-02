@@ -1,6 +1,7 @@
 # On 与 Off
 
 在 sts 中有些接口形如：
+
 ```typescript
 on(target: "foo", callback: (): void);
 on(target: "bar", callback: (): void);
@@ -14,6 +15,7 @@ off(target: "bar", callback: (): void);
 ## 第一步：编写接口原型
 
 **File: `idl/on_off.taihe`**
+
 ```rust
 interface ISetterObserver {
     @rename("on")
@@ -46,13 +48,14 @@ function offBaz(type: String, a: i32, cb: (b: i32) => void): void;
 
 on/off 函数在支持了 java like 重载后，使用 `@rename` 和 `@static_overload` 注解来实现。
 
-@rename 注解参考[文档](../rename_example/README.md)。
+`@rename` 注解参考[文档](../rename_example/README.md)。
 
-@static_overload 注解参考[文档](../javalike_overload/README.md)。
+`@static_overload` 注解参考[文档](../javalike_overload/README.md)。
 
 ## 第二步：完成 C++ 实现
 
 **File: `author/src/on_off.impl.cpp`**
+
 ```cpp
 class ISetterObserverImpl {
 public:
@@ -106,6 +109,8 @@ void offBaz(::taihe::string_view type, int32_t a, callback_view<void(int32_t)> c
 
 ## 第三步：在 ets 侧使用
 
+**File: `user/main.ets`**
+
 ```typescript
 let num0: Int = 0;
 let num1: Int = 1;
@@ -120,7 +125,8 @@ OnOff.off("bar", (): void => { console.log("offBar callback"); });
 OnOff.off("newBaz", num0, (arg0: Int): void => { console.log("offNewBaz callback, num: " + arg0); });
 ```
 
-Output:
+**Stdout**
+
 ```sh
 ISetterObserver onSet callback
 IBase::onSet

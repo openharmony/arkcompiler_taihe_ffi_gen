@@ -1,10 +1,11 @@
-### 回调
+# 回调
 
 回调（Callback）可以理解为把一个函数作为参数传给另一个函数，在合适的时机再调用它
 
-Taihe 的 callback 样例如下
+## 第一步：编写接口原型
 
-`callback.taihe`
+**File: `idl/callback.taihe`**
+
 ```rust
 function cb_void_void(f: () => void): void;
 function cb_i_void(f: (a: i32) => void): void;
@@ -18,10 +19,14 @@ struct Person {
 function cb_struct(f: (data: Person) => Person): void;
 ```
 
-我们可以看到 `({param_type}) => {return_type}` 格式的语句就是一个函数，在上面把一个函数作为参数传递给了另外一个函数
-上述样例介绍无参数无返回值、有参数无返回值、有参数有返回值以及以 struct 作为参数和返回值 4 种情况
+我们可以看到 `(a: T, ...) => R` 就表示一个闭包参数，在上面把一个函数作为参数传递给了另外一个函数
 
-`callback.impl.cpp`
+上述样例涉及了无参数无返回值、有参数无返回值、有参数有返回值以及以 struct 作为参数和返回值 4 种情况
+
+## 第二步：完成 C++ 实现
+
+**File: `author/src/callback.impl.cpp`**
+
 ```cpp
 void cb_void_void(callback_view<void()> f) {
     f();
@@ -40,7 +45,10 @@ void cb_struct(callback_view<::callback::Person(::callback::Person const&)> f) {
 }
 ```
 
-`main.ets`
+## 第三步：在 ets 侧使用
+
+**File: `user/main.ets`**
+
 ```typescript
 callback_lib.cb_void_void(() => {
     console.log("void input void output callback!");

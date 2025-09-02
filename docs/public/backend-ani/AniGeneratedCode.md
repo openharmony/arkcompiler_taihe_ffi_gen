@@ -85,9 +85,7 @@ function process(param: MyParam): MyResult;
    **generated/my.package.ets**
 
    ```typescript
-   export function process(
-     param: _taihe_my_package.MyParam
-   ): _taihe_my_package.MyResult {
+   export function process(param: _taihe_my_package.MyParam): _taihe_my_package.MyResult {
      return _taihe_process_native(param);
    }
    ```

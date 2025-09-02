@@ -5,6 +5,7 @@
 ## 第一步：编写接口原型
 
 **File: `idl/inherit.taihe`**
+
 ```rust
 interface Payable{
     pay(amountDue: f64): void;
@@ -34,6 +35,8 @@ function makeCreditCard(initAmount: f64): CreditCard;
   `@get` 和 `@set` 注解中可以有参数，表示该 getter 或 setter 所对应的数据成员名；也可以省略该参数，这种情况下，该方法名必须以 `get` 或 `set` 起始，对应的数据成员名会取方法名中 `get` 或 `set` 后的部分，然后将剩余部分的首字母小写（即按照小驼峰命名法）。
 
 ## 第二步：完成 C++ 实现
+
+**File: `author/src/inherit.impl.cpp`**
 
 ```cpp
 class PayableImpl {
@@ -86,6 +89,8 @@ CreditCard makeCreditCard(double initAmount) {
 
 ## 第三步：在 ets 侧使用
 
+**File: `user/main.ets`**
+
 ```typescript
 // 初始化银行卡
 let card = inherit.makeCreditCard(1000.0);
@@ -104,7 +109,8 @@ card.pay(50.0); // 子 interface 可以直接调用父 inerface 的方法
 console.log(card.balance);
 ```
 
-输出结果：
+**Stdout**
+
 ```sh
 false
 true
@@ -117,6 +123,7 @@ Payment successful
 在 ets 侧，子 interface 可以直接调用父 interface 的方法，但是需要注意的是，在 C++ 侧，如果子类需要调用父类 interface 的方法，则需要手动转换一次
 
 举例如下：
+
 ```cpp
 CreditCard card = makeCreditCard(100.0);
 // 如果想要调用 pay 方法，因为 pay 是通过继承得到的，在 C++ 侧需要转换为父类 interface

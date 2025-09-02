@@ -1,6 +1,7 @@
 # On 与 Off（根据目前 overload 策略暂废弃）
 
 在 sts 中有些接口形如：
+
 ```typescript
 on(target: "foo", callback: (): void);
 on(target: "bar", callback: (): void);
@@ -14,6 +15,7 @@ off(target: "bar", callback: (): void);
 ## 第一步：编写接口原型
 
 **File: `idl/on_off.taihe`**
+
 ```rust
 interface ISetterObserver {
     @on_off
@@ -61,6 +63,7 @@ on/off 函数在 Taihe 中需要命名形如为 `OnFoo`、`OnBar` 的函数
 ## 第二步：完成 C++ 实现
 
 **File: `author/src/on_off.impl.cpp`**
+
 ```cpp
 class ISetterObserverImpl {
 public:
@@ -114,6 +117,8 @@ void offBaz(int32_t a, callback_view<void(int32_t)> cb) {
 
 ## 第三步：在 ets 侧使用
 
+**File: `user/main.ets`**
+
 ```typescript
 let num0: Int = 0;
 let num1: Int = 1;
@@ -128,7 +133,8 @@ OnOff.off("bar", (): void => { console.log("offBar callback"); });
 OnOff.off("newBaz", num0, (arg0: Int): void => { console.log("offNewBaz callback, num: " + arg0); });
 ```
 
-Output:
+**Stdout**
+
 ```sh
 ISetterObserver onSet callback
 IBase::onSet
