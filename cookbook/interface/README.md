@@ -8,7 +8,8 @@
 
 interface 需要写一个函数创建 interface 的实现，所以 `.taihe` 文件中需要有一个函数用于创建一个被实现的接口，如下方的 `makeIface` 函数
 
-`interface/idl/interface.taihe`
+**File: `idl/interface.taihe`**
+
 ```rust
 interface ICalculator {
     add(a: i32, b: i32): i32;
@@ -25,7 +26,8 @@ function restartCalculator(a: ICalculator): void;
 
 需要写一个 class 实现接口，再使用 make_holder<class, interface> 将实现和接口绑定
 
-`interface/author/src/interface.impl.cpp`
+**File: `author/src/interface.impl.cpp`**
+
 ```cpp
 class MyCalculator {
 public:
@@ -79,7 +81,8 @@ taihe-tryit test -u sts path/to/interface -Csts:keep-name
 
 用户侧使用
 
-`main.ets`
+**File: `user/main.ets`**
+
 ```typescript
 let cal = makeCalculator();
 let num1 = 1;
@@ -90,14 +93,18 @@ let result2 = cal.sub(num1, num2);
 console.log("num1 - num2 = " + result2);
 let result3 = cal.getLastResult();
 console.log("Last calculation result: " + result3);
-console.log("---restart_calculator---");
+console.log("--- restartCalculator ---");
 restartCalculator(cal);
 let result4 = cal.getLastResult();
 console.log("Last calculation result: " + result4);
-// Log output:
-// num1 + num2 = 3
-// num1 - num2 = -1
-// Last calculation result: -1
-// ---restart_calculator---
-// Last calculation result: 0
+```
+
+**Stdout**
+
+```
+num1 + num2 = 3
+num1 - num2 = -1
+Last calculation result: -1
+--- restartCalculator ---
+Last calculation result: 0
 ```

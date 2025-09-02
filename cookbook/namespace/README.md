@@ -7,11 +7,13 @@ taihe 使用注解的方式实现 sts 的 namespace, 注解为 `@!namespace()`, 
 ## 第一步：编写接口原型
 
 **File: `idl/module1.taihe`**
+
 ```rust
 function module1Run(): void;
 ```
 
 **File: `idl/module1.foo.taihe`**
+
 ```rust
 @!namespace("module1", "foo")
 
@@ -19,6 +21,7 @@ function fooFunc(): void;
 ```
 
 **File: `idl/module2.bar.taihe`**
+
 ```rust
 @!namespace("module2", "bar")
 
@@ -36,6 +39,7 @@ function barFunc(): void;
 ## 第二步：实现声明的接口
 
 **File: `author/src/module1.impl.cpp`**
+
 ```cpp
 void module1Run() {
     std::cout << "Module: module1" << std::endl;
@@ -43,6 +47,7 @@ void module1Run() {
 ```
 
 **File: `author/src/module1.foo.impl.cpp`**
+
 ```cpp
 void fooFunc() {
     std::cout << "namespace: module1.foo, func: foo" << std::endl;
@@ -50,6 +55,7 @@ void fooFunc() {
 ```
 
 **File: `author/src/module2.bar.impl.cpp`**
+
 ```cpp
 void barFunc() {
     std::cout << "namespace: module2.bar, func: bar" << std::endl;
@@ -58,13 +64,16 @@ void barFunc() {
 
 ## 第三步：在 ets 侧使用
 
+**File: `user/main.ets`**
+
 ```typescript
 Module1.module1Run();
 Module1.foo.fooFunc();
 Module2.bar.barFunc();
 ```
 
-Output:
+**Stdout**
+
 ```sh
 Module: module1
 namespace: module1.foo, func: foo
