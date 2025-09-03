@@ -1815,16 +1815,16 @@ class TypedArrayTypeAniInfo(TypeAniInfo):
         ani_data = f"{cpp_after}_ani_data"
         ani_length = f"{cpp_after}_ani_length"
         target.writelns(
-            f"ani_double {ani_byte_length} = {{}};",
-            f"ani_double {ani_byte_offset} = {{}};",
+            f"ani_int {ani_byte_length} = {{}};",
+            f"ani_int {ani_byte_offset} = {{}};",
             f"ani_arraybuffer {ani_arrbuf} = {{}};",
-            f'{env}->Object_GetPropertyByName_Double({ani_value}, "byteLength", &{ani_byte_length});',
-            f'{env}->Object_GetPropertyByName_Double({ani_value}, "byteOffset", &{ani_byte_offset});',
+            f'{env}->Object_GetPropertyByName_Int({ani_value}, "byteLength", &{ani_byte_length});',
+            f'{env}->Object_GetPropertyByName_Int({ani_value}, "byteOffset", &{ani_byte_offset});',
             f'{env}->Object_GetPropertyByName_Ref({ani_value}, "buffer", reinterpret_cast<ani_ref*>(&{ani_arrbuf}));',
             f"void* {ani_data} = {{}};",
             f"ani_size {ani_length} = {{}};",
             f"{env}->ArrayBuffer_GetInfo({ani_arrbuf}, &{ani_data}, &{ani_length});",
-            f"{self.cpp_info.as_param} {cpp_after}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>({ani_data}) + static_cast<size_t>({ani_byte_offset}), static_cast<size_t>({ani_byte_length}) / (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)));",
+            f"{self.cpp_info.as_param} {cpp_after}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>({ani_data}) + {ani_byte_offset}, {ani_byte_length} / (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)));",
         )
 
     @override
