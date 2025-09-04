@@ -803,12 +803,12 @@ class IfaceMethodDecl(NamedDeclWithParent["IfaceDecl"]):
 
 
 class PackageLevelDecl(NamedDeclWithParent["PackageDecl"], ABC):
-    @abstractmethod
-    def accept(self, v: "PackageLevelVisitor[_R]") -> _R: ...
-
     @property
     def full_name(self):
         return f"{self.parent_pkg.name}.{self.name}"
+
+    @abstractmethod
+    def accept(self, v: "PackageLevelVisitor[_R]") -> _R: ...
 
 
 class GlobFuncDecl(PackageLevelDecl):
