@@ -863,7 +863,7 @@ class GlobFuncDecl(PackageLevelDecl):
 
 class TypeDecl(PackageLevelDecl, ABC):
     @abstractmethod
-    def as_type(self, ty_ref: ExplicitTypeRefDecl) -> UserType:
+    def as_type(self, ty_ref: TypeRefDecl) -> UserType:
         """Return the type decalaration as type."""
 
     @abstractmethod
@@ -911,7 +911,7 @@ class EnumDecl(TypeDecl):
         i.set_parent(self)
 
     @override
-    def as_type(self, ty_ref: ExplicitTypeRefDecl) -> EnumType:
+    def as_type(self, ty_ref: TypeRefDecl) -> EnumType:
         return EnumType(ty_ref, self)
 
     @override
@@ -941,7 +941,7 @@ class UnionDecl(TypeDecl):
         f.set_parent(self)
 
     @override
-    def as_type(self, ty_ref: ExplicitTypeRefDecl) -> UnionType:
+    def as_type(self, ty_ref: TypeRefDecl) -> UnionType:
         return UnionType(ty_ref, self)
 
     @override
@@ -971,7 +971,7 @@ class StructDecl(TypeDecl):
         f.set_parent(self)
 
     @override
-    def as_type(self, ty_ref: ExplicitTypeRefDecl) -> StructType:
+    def as_type(self, ty_ref: TypeRefDecl) -> StructType:
         return StructType(ty_ref, self)
 
     @override
@@ -1011,7 +1011,7 @@ class IfaceDecl(TypeDecl):
         f.set_parent(self)
 
     @override
-    def as_type(self, ty_ref: ExplicitTypeRefDecl) -> IfaceType:
+    def as_type(self, ty_ref: TypeRefDecl) -> IfaceType:
         return IfaceType(ty_ref, self)
 
     @override
