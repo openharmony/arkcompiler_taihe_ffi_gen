@@ -66,9 +66,9 @@ struct data_block : DataBlockHead {
   Impl impl;
 
   template<typename... Args>
-  data_block(TypeInfo const *rtti, Args &&...args)
+  data_block(TypeInfo const *rtti_ptr, Args &&...args)
       : impl(std::forward<Args>(args)...) {
-    tobj_init(this, rtti);
+    tobj_init(this, rtti_ptr);
   }
 };
 
@@ -98,8 +98,8 @@ inline Impl *cast_data_ptr(struct DataBlockHead *data_ptr) {
 }
 
 template<typename Impl, typename... Args>
-inline DataBlockHead *make_data_ptr(TypeInfo const *rtti, Args &&...args) {
-  return new data_block<Impl>(rtti, std::forward<Args>(args)...);
+inline DataBlockHead *make_data_ptr(TypeInfo const *rtti_ptr, Args &&...args) {
+  return new data_block<Impl>(rtti_ptr, std::forward<Args>(args)...);
 }
 
 template<typename Impl>
