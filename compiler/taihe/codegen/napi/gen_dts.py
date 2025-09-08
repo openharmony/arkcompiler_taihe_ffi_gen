@@ -180,26 +180,26 @@ class DtsCodeGenerator:
                 params_str = ", ".join(params)
                 target.writelns(f"constructor({params_str});")
 
-                # static methods
-                for mng_name, static_func in struct_napi_info.static_funcs:
-                    params = []
-                    for param in static_func.params:
-                        value_ty = param.ty
-                        param_dts_info = TypeNapiInfo.get(self.am, value_ty)
-                        params.append(
-                            f"{param.name}{'?' if param_dts_info.is_optional else ''}: {param_dts_info.dts_type_in(target)}"
-                        )
-                    params_str = ", ".join(params)
-                    if isinstance(static_func.return_ty, NonVoidType):
-                        return_ty_dts_info = TypeNapiInfo.get(
-                            self.am, static_func.return_ty
-                        )
-                        return_ty = return_ty_dts_info.dts_return_type_in(target)
-                    else:
-                        return_ty = "void"
-                    target.writelns(
-                        f"static {static_func.name}({params_str}): {return_ty};",
+            # static methods
+            for mng_name, static_func in struct_napi_info.static_funcs:
+                params = []
+                for param in static_func.params:
+                    value_ty = param.ty
+                    param_dts_info = TypeNapiInfo.get(self.am, value_ty)
+                    params.append(
+                        f"{param.name}{'?' if param_dts_info.is_optional else ''}: {param_dts_info.dts_type_in(target)}"
                     )
+                params_str = ", ".join(params)
+                if isinstance(static_func.return_ty, NonVoidType):
+                    return_ty_dts_info = TypeNapiInfo.get(
+                        self.am, static_func.return_ty
+                    )
+                    return_ty = return_ty_dts_info.dts_return_type_in(target)
+                else:
+                    return_ty = "void"
+                target.writelns(
+                    f"static {static_func.name}({params_str}): {return_ty};",
+                )
 
     def gen_iface_interface(
         self,

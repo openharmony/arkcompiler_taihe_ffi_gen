@@ -223,33 +223,33 @@ class TsCodeGenerator:
                         f"this.{nativa_class_name} = new {native_lib_name}.{struct_napi_info.dts_type_name}({args_str});",
                     )
 
-                # static methods
-                for mng_name, static_func in struct_napi_info.static_funcs:
-                    params = []
-                    args = []
-                    for param in static_func.params:
-                        value_ty = param.ty
-                        param_dts_info = TypeNapiInfo.get(self.am, value_ty)
-                        params.append(
-                            f"{param.name}{'?' if param_dts_info.is_optional else ''}: {param_dts_info.dts_type_in(target)}"
-                        )
-                        args.append(param.name)
-                    params_str = ", ".join(params)
-                    args_str = ", ".join(args)
-                    if isinstance(static_func.return_ty, NonVoidType):
-                        return_ty_dts_info = TypeNapiInfo.get(
-                            self.am, static_func.return_ty
-                        )
-                        return_ty = return_ty_dts_info.dts_return_type_in(target)
-                    else:
-                        return_ty = "void"
-                    with target.indented(
-                        f"static {static_func.name}({params_str}): {return_ty} {{",
-                        f"}}",
-                    ):
-                        target.writelns(
-                            f"return {native_lib_name}.{struct_napi_info.dts_type_name}.{static_func.name}({args_str});",
-                        )
+            # static methods
+            for mng_name, static_func in struct_napi_info.static_funcs:
+                params = []
+                args = []
+                for param in static_func.params:
+                    value_ty = param.ty
+                    param_dts_info = TypeNapiInfo.get(self.am, value_ty)
+                    params.append(
+                        f"{param.name}{'?' if param_dts_info.is_optional else ''}: {param_dts_info.dts_type_in(target)}"
+                    )
+                    args.append(param.name)
+                params_str = ", ".join(params)
+                args_str = ", ".join(args)
+                if isinstance(static_func.return_ty, NonVoidType):
+                    return_ty_dts_info = TypeNapiInfo.get(
+                        self.am, static_func.return_ty
+                    )
+                    return_ty = return_ty_dts_info.dts_return_type_in(target)
+                else:
+                    return_ty = "void"
+                with target.indented(
+                    f"static {static_func.name}({params_str}): {return_ty} {{",
+                    f"}}",
+                ):
+                    target.writelns(
+                        f"return {native_lib_name}.{struct_napi_info.dts_type_name}.{static_func.name}({args_str});",
+                    )
 
     def gen_iface_interface(
         self,

@@ -25,3 +25,22 @@ function create_myclass(a: bool, b: f32): MyClass;
 
 @static("MyClass")
 function add(a: i32, b: i32): i32;
+
+@class
+struct MyTest {
+    a: Array<i32>;
+@!ts_inject_into_class("""constructor(a: Array<number> | number) {
+    if (typeof a === "number") {
+        this.nativeMyTest = createMyTestNum(a);
+    } else {
+        this.nativeMyTest = createMyTestArrayNum(a);
+    }
+}
+""")
+}
+
+@static("MyTest")
+function sum(a: i32, b: i32): i32;
+
+function createMyTestNum(a: i32): MyTest;
+function createMyTestArrayNum(a: Array<i32>): MyTest;

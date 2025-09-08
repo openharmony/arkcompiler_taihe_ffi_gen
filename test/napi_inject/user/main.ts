@@ -67,6 +67,13 @@ function main() {
 
     // Test dts inject into module
     console.log("inject into module dts:", lib_b.rate);
+
+    // Test ts inject constructor overload
+    console.log("struct class static method:", lib_a.ns1.ns2.ns3.ns4.ns5.MyTest.sum(1, 2));
+    let new_mytest_num = new lib_a.ns1.ns2.ns3.ns4.ns5.MyTest(1);
+    let new_mytest_arraynum = new lib_a.ns1.ns2.ns3.ns4.ns5.MyTest([1, 2]);
+    console.log("ts inject overload number:", new_mytest_num.a);
+    console.log("ts inject overload array number:", new_mytest_arraynum.a);
 }
 
 main();

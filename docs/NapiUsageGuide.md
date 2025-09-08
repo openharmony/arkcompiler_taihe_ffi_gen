@@ -590,7 +590,7 @@ export function process_student(a: Student): Student;
 
 如果需要生成数据类型为 class 而不是 interface 可以使用 @class 注解。可以使用 @static 注解标记全局函数为某个 class 的静态方法，可以使用 @ctor 注解标记全局函数为某个 class 的构造函数。
 
-注意，使用 @class 时通常需要提供构造函数，除非确认无需在 ets 层使用 new 实例化。当使用 @static 注解标记某个全局函数为指定 class 的静态方法时，这个 class 必须提供构造函数，如不提供，则 @static 注解无效。
+注意，使用 @class 时通常需要提供构造函数，除非确认无需在 ets 层使用 new 实例化。
 
 **`.taihe`**
 
@@ -1282,6 +1282,7 @@ export namespace functiontest {
 function concat_str(a: String): String;
 function concat_i32(a: i32): i32;
 
+// global function overload example
 @!ts_inject("""export function concat(a: string | number): string | number {
     if (typeof a === "string") {
         return concat_str(a);
@@ -1326,6 +1327,27 @@ function multiply(a: i32, b: i32): i32;
 
 @!namespace("my_module_a", "ns1.ns2.ns3.ns4.ns5")
 @!ts_inject_into_module("export const PI = 3.14159;")
+
+// class constructor overload example
+@class
+struct MyTest {
+    a: Array<i32>;
+// 构造函数需要为 native{class_name} 这个内部变量赋值
+@!ts_inject_into_class("""constructor(a: Array<number> | number) {
+    if (typeof a === "number") {
+        this.nativeMyTest = createMyTestNum(a);
+    } else {
+        this.nativeMyTest = createMyTestArrayNum(a);
+    }
+}
+""")
+}
+
+@static("MyTest")
+function sum(a: i32, b: i32): i32;
+
+function createMyTestNum(a: i32): MyTest;
+function createMyTestArrayNum(a: Array<i32>): MyTest;
 ```
 
 **生成`my_module_a.d.ts`**
@@ -1346,7 +1368,14 @@ export namespace ns1 {
   export namespace ns2 {
     export namespace ns3 {
       export namespace ns4 {
-        export namespace ns5 {}
+        export namespace ns5 {
+          export class MyTest {
+            a: Array<number>;
+            static sum(a: number, b: number): number;
+          }
+          export function createMyTestNum(a: number): MyTest;
+          export function createMyTestArrayNum(a: Array<number>): MyTest;
+        }
       }
     }
   }
@@ -1394,6 +1423,29 @@ export namespace ns1 {
       export namespace ns4 {
         export namespace ns5 {
           const _taihe_native_lib = require("my_module_a");
+          export const createMyTestNum =
+            _taihe_native_lib.ns1.ns2.ns3.ns4.ns5.createMyTestNum;
+          export const createMyTestArrayNum =
+            _taihe_native_lib.ns1.ns2.ns3.ns4.ns5.createMyTestArrayNum;
+          export class MyTest {
+            private nativeMyTest;
+            constructor(a: Array<number> | number) {
+              if (typeof a === "number") {
+                this.nativeMyTest = createMyTestNum(a);
+              } else {
+                this.nativeMyTest = createMyTestArrayNum(a);
+              }
+            }
+            get a(): Array<number> {
+              return this.nativeMyTest.a;
+            }
+            set a(a: Array<number>) {
+              this.nativeMyTest.a = a;
+            }
+            static sum(a: number, b: number): number {
+              return _taihe_native_lib.ns1.ns2.ns3.ns4.ns5.MyTest.sum(a, b);
+            }
+          }
         }
       }
     }
@@ -1447,7 +1499,18 @@ int32_t multiply(int32_t a, int32_t b) {
 **File: `my_module_a.ns1.ns2.ns3.ns4.ns5.taihe 的 C++ 实现`**
 
 ```cpp
-// 未定义函数，无需 C++ 实现
+int32_t sum(int32_t a, int32_t b) {
+    return a * b;
+}
+
+::my_module_a::ns1::ns2::ns3::ns4::ns5::MyTest createMyTestNum(int32_t a) {
+  ::taihe::array<int32_t> temp{a};
+  return {temp};
+}
+
+::my_module_a::ns1::ns2::ns3::ns4::ns5::MyTest createMyTestArrayNum(::taihe::array_view<int32_t> a) {
+  return {a};
+}
 ```
 
 **File: `my_module_b.taihe 的 C++ 实现`**
@@ -1548,6 +1611,23 @@ napi_value Init(napi_env env, napi_value exports) {   // napi register 文件中
 import * as lib_b from "my_module_b"; // Use .d.ts
 import * as lib_a from "../generated/proxy/my_module_a"; // Use .ts
 
+class BaseImpl implements lib_a.ns1.IBase {
+  id: string;
+  constructor(id: string) {
+    this.id = id;
+  }
+  getId(): string {
+    return this.id;
+  }
+  setId(id: string): void {
+    this.id = id;
+    return;
+  }
+  add(a: number, b: number): number {
+    return a + b;
+  }
+}
+
 // Test ts inject (overload)
 let res_n = lib_a.concat(1);
 console.log("ts overload concat number:", res_n);
@@ -1557,13 +1637,13 @@ console.log("ts overload concat string:", res_s);
 // Test ts inject into module
 console.log("ts inject into module:", lib_a.PI);
 
-// Test ts interface inject
+// Test ts interface interface inject
 let baseimpl_a: BaseImpl = new BaseImpl("A");
-console.log("ts inject into interface:", baseimpl_a.add(2, 3));
+console.log("ts inject into interface interface:", baseimpl_a.add(2, 3));
 
-// Test ts class inject
+// Test ts interface class inject
 let ctest = new lib_a.ns1.CTest(100);
-console.log("ts inject into class:", ctest.mul(2, 3));
+console.log("ts inject into interface class:", ctest.mul(2, 3));
 
 // Test dts inject (overload)
 let res_n_dts = lib_b.functiontest.concat(1);
@@ -1573,6 +1653,16 @@ console.log("dts overload concat string:", res_s_dts);
 
 // Test dts inject into module
 console.log("inject into module dts:", lib_b.rate);
+
+// Test ts inject constructor overload
+console.log(
+  "struct class static method:",
+  lib_a.ns1.ns2.ns3.ns4.ns5.MyTest.sum(1, 2)
+);
+let new_mytest_num = new lib_a.ns1.ns2.ns3.ns4.ns5.MyTest(1);
+let new_mytest_arraynum = new lib_a.ns1.ns2.ns3.ns4.ns5.MyTest([1, 2]);
+console.log("ts inject overload number:", new_mytest_num.a);
+console.log("ts inject overload array number:", new_mytest_arraynum.a);
 ```
 
 输出结果如下：
@@ -1581,11 +1671,14 @@ console.log("inject into module dts:", lib_b.rate);
 ts overload concat number: 11
 ts overload concat string: 1_concat
 ts inject into module: 3.14159
-ts inject into interface: 5
+ts inject into interface interface: 5
 new ctest 100
-ts inject into class: 6
+ts inject into interface class: 6
 dts overload concat number: 11
 dts overload concat string: 1_concat
 inject into module dts: 0.618
-del ctest 0x1afdbef0
+struct class static method: 2
+ts inject overload number: [ 1 ]
+ts inject overload array number: [ 1, 2 ]
+del ctest 0x1d695640
 ```

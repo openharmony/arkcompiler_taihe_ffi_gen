@@ -563,15 +563,19 @@ class NapiCodeGenerator:
                     (final.name, field_getter_name, "nullptr")
                 )
 
+        struct_napi_impl_target.writelns(
+            f"inline napi_ref& {struct_napi_info.ctor_ref_name}() {{",
+            f"    static napi_ref instance = nullptr;",
+            f"    return instance;",
+            f"}}",
+            f"inline napi_ref& {struct_napi_info.ctor_ref_name}_inner() {{",
+            f"    static napi_ref instance = nullptr;",
+            f"    return instance;",
+            f"}}",
+        )
+
         # process ctor
         if ctor := struct_napi_info.ctor:
-            struct_napi_impl_target.writelns(
-                f"inline napi_ref& {struct_napi_info.ctor_ref_name}() {{",
-                f"    static napi_ref instance = nullptr;",
-                f"    return instance;",
-                f"}}",
-            )
-
             with struct_napi_impl_target.indented(
                 f"inline napi_value {struct_napi_info.constructor_func_name}(napi_env env, napi_callback_info info) {{",
                 f"}}",
@@ -626,6 +630,14 @@ class NapiCodeGenerator:
                 else:
                     # TODO: special error
                     raise ValueError("constructor must have return value")
+        else:
+            with struct_napi_impl_target.indented(
+                f"inline napi_value {struct_napi_info.constructor_func_name}([[maybe_unused]] napi_env env, [[maybe_unused]] napi_callback_info info) {{",
+                f"}}",
+            ):
+                struct_napi_impl_target.writelns(
+                    f"return nullptr;",
+                )
 
         with struct_napi_impl_target.indented(
             f"inline napi_value {struct_napi_info.constructor_func_name}_inner(napi_env env, napi_callback_info info) {{",
@@ -677,13 +689,6 @@ class NapiCodeGenerator:
                 f"return thisobj;",
             )
 
-        struct_napi_impl_target.writelns(
-            f"inline napi_ref& {struct_napi_info.ctor_ref_name}_inner() {{",
-            f"    static napi_ref instance = nullptr;",
-            f"    return instance;",
-            f"}}",
-        )
-
     def gen_struct_create_func(
         self,
         struct: StructDecl,
@@ -708,7 +713,7 @@ class NapiCodeGenerator:
                     target.writelns(
                         f'{{"{field_name}", nullptr, nullptr, {field_getter}, {field_setter}, nullptr, napi_default, nullptr}}, ',
                     )
-            if struct_napi_info.is_class() and struct_napi_info.ctor:
+            if struct_napi_info.is_class():
                 target.writelns(
                     f'NAPI_CALL(env, napi_define_class(env, "{struct.name}", NAPI_AUTO_LENGTH, {struct_napi_info.constructor_func_name}, nullptr, sizeof(desc) / sizeof(desc[0]), desc, &result));',
                 )
@@ -1004,6 +1009,10 @@ class NapiCodeGenerator:
             f"    static napi_ref instance = nullptr;",
             f"    return instance;",
             f"}}",
+            f"inline napi_ref& {iface_napi_info.ctor_ref_name}() {{",
+            f"    static napi_ref instance = nullptr;",
+            f"    return instance;",
+            f"}}",
         )
 
         # process ctor
@@ -1062,12 +1071,14 @@ class NapiCodeGenerator:
                 else:
                     # TODO: special error
                     raise ValueError("constructor must have return value")
-            iface_napi_impl_target.writelns(
-                f"inline napi_ref& {iface_napi_info.ctor_ref_name}() {{",
-                f"    static napi_ref instance = nullptr;",
-                f"    return instance;",
+        else:
+            with iface_napi_impl_target.indented(
+                f"inline napi_value {iface_napi_info.constructor_func_name}([[maybe_unused]] napi_env env, [[maybe_unused]] napi_callback_info info) {{",
                 f"}}",
-            )
+            ):
+                iface_napi_impl_target.writelns(
+                    f"return nullptr;",
+                )
 
     def gen_iface_create_func(
         self,
@@ -1091,7 +1102,7 @@ class NapiCodeGenerator:
                     props_strs,
                 ) in iface_napi_info.iface_register_infos:
                     target.writelns(f"{{{', '.join(props_strs)}}}, ")
-            if iface_napi_info.is_class() and iface_napi_info.ctor:
+            if iface_napi_info.is_class():
                 target.writelns(
                     f'NAPI_CALL(env, napi_define_class(env, "{iface.name}", NAPI_AUTO_LENGTH, {iface_napi_info.constructor_func_name}, nullptr, sizeof(desc) / sizeof(desc[0]), desc, &result));',
                 )
