@@ -11,7 +11,7 @@ type checking through a plugin architecture.
 The system follows a hierarchical design:
 
 ```
-AnyAttribute = UncheckedAttribute | AbstractCheckedAttribute
+AnyAttribute
 ├── UncheckedAttribute: Raw attributes without validation
 └── AbstractCheckedAttribute: Base class for validated attributes
     └── AutoCheckedAttribute: Automatic checking via configuration
@@ -438,7 +438,7 @@ class RepeatableAttribute(AutoCheckedAttribute[_D]):
     """Type-checked attribute that can be attached multiple times per declaration."""
 
     @classmethod
-    def get(cls, decl: _D) -> list[Self]:
+    def get_all(cls, decl: _D) -> list[Self]:
         """Retrieves all instances of this attribute from a declaration.
 
         Args:

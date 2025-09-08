@@ -474,10 +474,10 @@ class PackageGroupAniInfo(AbstractAnalysis[PackageGroup]):
             mod = self.mods.setdefault(mod_name, ArkTsModule(mod_name, self.path))
             ns_name = self.pkg_map[pkg] = mod.add_path(ns_parts, pkg, is_default)
 
-            for attr in StsInjectIntoModuleAttr.get(pkg):
+            for attr in StsInjectIntoModuleAttr.get_all(pkg):
                 mod.injected_heads.append(attr.sts_code)
 
-            for attr in StsInjectAttr.get(pkg):
+            for attr in StsInjectAttr.get_all(pkg):
                 ns_name.injected_codes.append(attr.sts_code)
 
     @classmethod
@@ -823,10 +823,10 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
         self.impl_desc = ".".join([*self.parent_ns.name_parts, self.sts_impl_name])
 
         self.interface_injected_codes: list[str] = []
-        for iface_injected in StsInjectIntoIfaceAttr.get(d):
+        for iface_injected in StsInjectIntoIfaceAttr.get_all(d):
             self.interface_injected_codes.append(iface_injected.sts_code)
         self.class_injected_codes: list[str] = []
-        for class_injected in StsInjectIntoClazzAttr.get(d):
+        for class_injected in StsInjectIntoClazzAttr.get_all(d):
             self.class_injected_codes.append(class_injected.sts_code)
 
         self.sts_fields: list[StructFieldDecl] = []
@@ -876,10 +876,10 @@ class IfaceAniInfo(AbstractAnalysis[IfaceDecl]):
         self.impl_desc = ".".join([*self.parent_ns.name_parts, self.sts_impl_name])
 
         self.interface_injected_codes: list[str] = []
-        for iface_injected in StsInjectIntoIfaceAttr.get(d):
+        for iface_injected in StsInjectIntoIfaceAttr.get_all(d):
             self.interface_injected_codes.append(iface_injected.sts_code)
         self.class_injected_codes: list[str] = []
-        for class_injected in StsInjectIntoClazzAttr.get(d):
+        for class_injected in StsInjectIntoClazzAttr.get_all(d):
             self.class_injected_codes.append(class_injected.sts_code)
 
         self.sts_class_extends: list[IfaceExtendDecl] = []
