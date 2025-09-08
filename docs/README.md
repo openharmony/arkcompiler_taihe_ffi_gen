@@ -125,7 +125,7 @@ taihec test/napi_string/idl/*.taihe -Otest/napi_string/generated -Gnapi-bridge -
 5. **将生成文件加入编译流程**
    以 IDE 中内置的 CMakeLists.txt 文件为基础，需要进行以下修改：
 
-   - Taihe 生成代码需使用 clang17 编译，需要在 CMakeLists.txt 文件中新增以下内容
+   - Taihe 生成代码需使用 c++ 17 标准编译，需要在 CMakeLists.txt 文件中新增以下内容
      ```CMakeLists.txt
      set(CMAKE_CXX_STANDARD 17)
      set(CMAKE_CXX_STANDARD_REQUIRED True)

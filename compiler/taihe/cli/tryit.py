@@ -473,7 +473,7 @@ class TsBuildSystem(BuildSystem):
                     all_objects,
                     shared=True,
                 )
-                logger.info("Shared library compiled: %s", self.lib_target)
+                logger.info("Shared library compiled: %s", node_target)
             else:
                 logger.warning(
                     "No object files to link, skipping shared library compilation"
