@@ -132,7 +132,6 @@ class CppImplSourcesGenerator:
         ) as pkg_cpp_impl_target:
             pkg_cpp_impl_target.add_include(pkg_cpp_info.header)
             pkg_cpp_impl_target.add_include(pkg_cpp_impl_info.header)
-            pkg_cpp_impl_target.add_include("taihe/runtime.hpp")
             pkg_cpp_impl_target.add_include("stdexcept")
             pkg_cpp_impl_target.newline()
             self.using_namespaces = []
