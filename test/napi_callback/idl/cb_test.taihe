@@ -10,3 +10,5 @@ struct Data {
 }
 
 function test_cb_struct(f: (data: Data) => Data): void;
+
+function test_x(f: () => void): (a: String) => String;

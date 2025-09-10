@@ -35,7 +35,6 @@ NAPI 代码生成及验证：
 3. 需要报错但未实现或实现的较为简单，设计如何报错并区分如何：
     - [ ] Record 的 key 类型限制，TS 语法规定是 string/number，SDK 现有场景是 string
     - [ ] ctor 检查返回值为 指定的 interface/struct 且检查这个 interface/struct 为 class 
-    - [ ] 检查 struct 的基类是否是 struct
     - [ ] 检查 @static 是否加在 class 上
 
 

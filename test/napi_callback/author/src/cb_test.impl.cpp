@@ -32,6 +32,23 @@ void test_cb_struct(
             << result.c << std::endl;
   return;
 }
+
+class CallbackAImpl {
+public:
+  CallbackAImpl() {}
+
+  ::taihe::string operator()(::taihe::string_view a) {
+    std::cout << a << std::endl;
+    return "CallbackReverse";
+  }
+};
+
+::taihe::callback<::taihe::string(::taihe::string_view a)> test_x(
+    ::taihe::callback_view<void()> f) {
+  f();
+  return ::taihe::make_holder<CallbackAImpl, ::taihe::callback<::taihe::string(
+                                                 ::taihe::string_view a)>>();
+}
 }  // namespace
 
 // Since these macros are auto-generate, lint will cause false positive.
@@ -41,4 +58,5 @@ TH_EXPORT_CPP_API_test_cb_i(test_cb_i);
 TH_EXPORT_CPP_API_test_cb_s(test_cb_s);
 TH_EXPORT_CPP_API_test_cb_rs(test_cb_rs);
 TH_EXPORT_CPP_API_test_cb_struct(test_cb_struct);
+TH_EXPORT_CPP_API_test_x(test_x);
 // NOLINTEND

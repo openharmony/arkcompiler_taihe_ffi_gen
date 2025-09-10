@@ -978,7 +978,6 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                 f"{return_ty_as_owner} operator()({cpp_params_str}) {{",
                 f"}}",
             ):
-                target.writelns()
                 for inner_napi_arg, inner_cpp_arg, param in zip(
                     inner_napi_args,
                     inner_cpp_args,
@@ -988,31 +987,31 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                     param_ty_napi_info = TypeNapiInfo.get(self.am, param.ty)
                     param_ty_napi_info.into_napi(target, inner_cpp_arg, inner_napi_arg)
                 inner_napi_args_str = ", ".join(inner_napi_args)
-                if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
-                    inner_napi_res = "napi_result"
-                    inner_cpp_res = "cpp_result"
+                inner_napi_res = "napi_result"
+                inner_cpp_res = "cpp_result"
+                if len(self.type.ref.params) != 0:
                     target.writelns(
-                        f"napi_value napi_argv[] = {{{inner_napi_args_str}}};",
-                        f"napi_value {inner_napi_res} = nullptr;",
-                        f"napi_value cb_ref = nullptr, global = nullptr;",
-                        f"NAPI_CALL(env, napi_get_reference_value(env, ref, &cb_ref));",
-                        f"napi_get_global(env, &global);",
-                        f"NAPI_CALL(env, napi_call_function(env, global, cb_ref, {len(self.type.ref.params)}, napi_argv, &{inner_napi_res}));",
+                        f"napi_value napi_argv[{len(self.type.ref.params)}] = {{{inner_napi_args_str}}};",
                     )
+                else:
+                    target.writelns(
+                        f"napi_value napi_argv[] = {{}};",
+                    )
+                target.writelns(
+                    f"napi_value {inner_napi_res} = nullptr;",
+                    f"napi_value cb_ref = nullptr, global = nullptr;",
+                    f"NAPI_CALL(env, napi_get_reference_value(env, ref, &cb_ref));",
+                    f"napi_get_global(env, &global);",
+                    f"NAPI_CALL(env, napi_call_function(env, global, cb_ref, {len(self.type.ref.params)}, napi_argv, &{inner_napi_res}));",
+                )
+                if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
                     return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty)
                     return_ty_napi_info.from_napi(target, inner_napi_res, inner_cpp_res)
                     target.writelns(
                         f"return {inner_cpp_res};",
                     )
                 else:
-                    inner_napi_res = "napi_result"
                     target.writelns(
-                        f"napi_value napi_argv[] = {{{inner_napi_args_str}}};",
-                        f"napi_value {inner_napi_res} = nullptr;",
-                        f"napi_value cb_ref = nullptr, global = nullptr;",
-                        f"NAPI_CALL(env, napi_get_reference_value(env, ref, &cb_ref));",
-                        f"napi_get_global(env, &global);",
-                        f"NAPI_CALL(env, napi_call_function(env, global, cb_ref, 1, napi_argv, &{inner_napi_res}));",
                         f"return;",
                     )
         target.writelns(
@@ -1025,10 +1024,102 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
         cpp_value: str,
         napi_result: str,
     ):
-        # TODO: Callback into napi
+        cpp_copy = f"{napi_result}_cpp_copy"
+        cpp_scope = f"{napi_result}_cpp_scope"
+        invoke_name = "invoke"
+        napi_vtbl_ptr = f"{napi_result}_napi_vtbl_ptr"
+        napi_data_ptr = f"{napi_result}_napi_data_ptr"
+        with target.indented(
+            f"struct {cpp_scope} {{",
+            f"}};",
+        ):
+            self.gen_native_invoke(target, invoke_name)
         target.writelns(
-            f"napi_value {napi_result} = {{}};",
+            f"{self.cpp_info.as_owner} {cpp_copy} = {cpp_value};",
+            f"{self.cpp_info.as_param}::vtable_type* {napi_vtbl_ptr} = reinterpret_cast<{self.cpp_info.as_param}::vtable_type*>({cpp_copy}.m_handle.vtbl_ptr);",
+            f"DataBlockHead* {napi_data_ptr} = reinterpret_cast<DataBlockHead*>({cpp_copy}.m_handle.data_ptr);",
+            f"{cpp_copy}.m_handle.data_ptr = nullptr;",
+            f"{self.cpp_info.as_owner}* cpp_ptr = new {self.cpp_info.as_owner}({{{napi_vtbl_ptr}, {napi_data_ptr}}});",
+            f"napi_value {napi_result} = nullptr;",
+            f"NAPI_CALL(env, napi_create_function(env, nullptr, NAPI_AUTO_LENGTH, {cpp_scope}::{invoke_name}, cpp_ptr, &{napi_result}));",
         )
+        with target.indented(
+            f"NAPI_CALL(env, napi_add_finalizer(env, {napi_result}, cpp_ptr, []([[maybe_unused]] napi_env env, void* finalize_data, [[maybe_unused]] void* finalize_hint) {{",
+            f"}}, nullptr, nullptr));",
+        ):
+            target.writelns(
+                f"delete static_cast<{self.cpp_info.as_owner}*>(finalize_data);",
+            )
+
+    def gen_native_invoke(
+        self,
+        target: CSourceWriter,
+        cpp_cast_ptr: str,
+    ):
+        inner_napi_args = []
+        inner_cpp_args = []
+        for index, param in enumerate(self.type.ref.params):
+            inner_cpp_arg = f"cpp_arg_{index}"
+            inner_napi_arg = f"args[{index}]"
+            inner_napi_args.append(inner_napi_arg)
+            inner_cpp_args.append(inner_cpp_arg)
+
+        with target.indented(
+            f"static napi_value {cpp_cast_ptr}(napi_env env, napi_callback_info info) {{",
+            f"}};",
+        ):
+            target.writelns(
+                f"size_t argc = {len(self.type.ref.params)};",
+                f"napi_value args[{len(self.type.ref.params)}] = {{nullptr}};",
+                f"void* data_ptr = nullptr;",
+                f"NAPI_CALL(env, napi_get_cb_info(env, info, &argc, args, nullptr, &data_ptr));",
+                f"{self.cpp_info.as_owner}* cpp_cb = static_cast<{self.cpp_info.as_owner}*>(data_ptr);",
+            )
+            for inner_napi_arg, inner_cpp_arg, param in zip(
+                inner_napi_args,
+                inner_cpp_args,
+                self.type.ref.params,
+                strict=True,
+            ):
+                param_ty_napi_info = TypeNapiInfo.get(self.am, param.ty)
+                param_ty_napi_info.from_napi(target, inner_napi_arg, inner_cpp_arg)
+            inner_cpp_args_str = ", ".join(inner_cpp_args)
+            with target.indented(
+                f"if (cpp_cb) {{",
+                f"}}",
+            ):
+                result_cpp = "cpp_result"
+                result_napi = "napi_result"
+                if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
+                    return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
+                    return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty)
+                    target.writelns(
+                        f"{return_ty_cpp_info.as_owner} {result_cpp} = (*cpp_cb)({inner_cpp_args_str});",
+                    )
+                    return_ty_napi_info.into_napi(
+                        target,
+                        result_cpp,
+                        result_napi,
+                    )
+                else:
+                    target.writelns(
+                        f"napi_value {result_napi} = nullptr;",
+                        f"(*cpp_cb)({inner_cpp_args_str});",
+                        f"napi_get_undefined(env, &{result_napi});",
+                    )
+                target.writelns(
+                    f"return {result_napi};",
+                )
+            with target.indented(
+                f"else {{",
+                f"}}",
+            ):
+                target.writelns(
+                    f"napi_throw_error(env,",
+                    f'    "ERR_NOT_FOUND",',
+                    f'    "No cpp function pointer"',
+                    f");",
+                )
 
 
 class EnumTypeNapiInfo(TypeNapiInfo):
