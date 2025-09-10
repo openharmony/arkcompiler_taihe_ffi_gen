@@ -1,0 +1,17 @@
+interface HapModuleInfo {
+    @get GetName(): String;
+    @get GetDescription(): String;
+    @get GetDescriptionId(): i32;
+    @get GetIcon(): String;
+    @get GetLabel(): String;
+    @get GetLabelId(): i32;
+    @get GetIconId(): i32;
+    @get GetBackgroundImg(): String;
+    @get GetSupportedModes(): i32;
+    @get GetReqCapabilities(): Array<String>;
+    @get GetDeviceTypes(): Array<String>;
+    @get GetModuleName(): String;
+    @get GetMainAbilityName(): String;
+    @get GetInstallationFree(): bool;
+}
+function GetHapModuleInfo(): HapModuleInfo;

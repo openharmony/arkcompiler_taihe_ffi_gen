@@ -1,0 +1,15 @@
+struct Data {
+    a: Optional<String>;
+    b: Optional<f64>;
+    c: Optional<i32>;
+    d: Optional<bool>;
+    e: Optional<bool>;
+    f: Optional<bool>;
+    g: Optional<bool>;
+}
+
+function setData(data: Data): void;
+function getData(): Data;
+
+function setRecord(rec: @record Map<String, String>);
+function getRecord(): @record Map<String, String>;

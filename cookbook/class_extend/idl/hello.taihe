@@ -1,0 +1,109 @@
+interface UnifiedRecord_th {
+    getType(): void;
+}
+function createUnifiedRecord_noparam_th(): UnifiedRecord_th;
+interface Text_th {
+    getDetails(): i32;
+    setDetails(a: i32): void;
+    getType(): void;
+}
+function createText_noparam_th(): Text_th;
+interface PlainText_th {
+    getTextContent(): String;
+    setTextContent(a: String): void;
+    getDetails(): i32;
+    setDetails(a: i32): void;
+    getType(): void;
+}
+function createPlainText_noparam_th(): PlainText_th;
+
+interface UnifiedData_th {
+    hasType(type: String): bool;
+    addRecord(a: UnifiedRecord_th): void;
+    getRecords(): Array<UnifiedRecord_th>;
+}
+function createUnifiedData_noparam_th(): UnifiedData_th;
+function createUnifiedData_parama_th(a: UnifiedRecord_th): UnifiedData_th;
+
+@!sts_inject("""
+export class UnifiedRecord {
+    inner: UnifiedRecord_th;
+    getType(): void {
+        this.inner.getType();
+    }
+    constructor() {
+        this.inner = createUnifiedRecord_noparam_th();
+    }
+    constructor(a: UnifiedRecord_th) {
+        this.inner = a;
+    }
+}
+export class Text extends UnifiedRecord {
+    inner: Text_th;
+    getDetails(): int {
+        return this.inner.getDetails();
+    }
+    setDetails(a: int): void {
+        this.inner.setDetails(a);
+    }
+    constructor() {
+        this.inner = createText_noparam_th();
+    }
+    constructor(b: Text_th) {
+        this.inner = b;
+    }
+    getType(): void {
+        this.inner.getType();
+    }
+}
+export class PlainText extends Text {
+    inner: PlainText_th;
+    getTextContent(): String {
+        return this.inner.getTextContent();
+    }
+    setTextContent(a: String): void {
+        this.inner.setTextContent(a);
+    }
+    constructor() {
+        this.inner = createPlainText_noparam_th();
+    }
+    constructor(c: PlainText_th) {
+        this.inner = c;
+    }
+    getDetails(): int {
+        return this.inner.getDetails();
+    }
+    setDetails(a: int): void {
+        this.inner.setDetails(a);
+    }
+    getType(): void {
+        this.inner.getType();
+    }
+}
+export class UnifiedData {
+    inner: UnifiedData_th;
+    hasType(type: string): boolean {
+        return this.inner.hasType(type);
+    }
+    addRecord(a: UnifiedRecord) {
+        this.inner.addRecord(a.inner);
+    }
+    getRecords() {
+        let res_th: UnifiedRecord_th[] = this.inner.getRecords();
+        let res: UnifiedRecord[] = new Array<UnifiedRecord>(res_th.length);
+        for(let i = 0; i < res.length; i++) {
+            res[i] = new UnifiedRecord(res_th[i]);
+        }
+        return res;
+    }
+    constructor() {
+        this.inner = createUnifiedData_noparam_th();
+    }
+    constructor(x: UnifiedData_th) {
+        this.inner = x;
+    }
+    constructor(a: UnifiedRecord) {
+        this.inner = createUnifiedData_parama_th(a.inner);
+    }
+}
+""")

@@ -1,0 +1,14 @@
+interface ShortcutInfo {
+    @get GetId(): String;
+    @get GetBundleName(): String;
+    @get GetHostAbility(): String;
+    @get GetIcon(): String;
+    @get GetLabel(): String;
+    @get GetLabelId(): i32;
+    @get GetIconId(): i32;
+    @get GetDisableMessage(): String;
+    @get GetIsStatic(): Optional<bool>;
+    @get GetIsHomeShortcut(): Optional<bool>;
+    @get GetIsEnabled(): Optional<bool>;
+}
+function GetShortcutInfo(): ShortcutInfo;

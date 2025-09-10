@@ -1,0 +1,48 @@
+@!namespace("@ohos.multimedia.image", "image")
+
+struct Size {
+  width: i32;
+  height: i32;
+}
+
+struct Region {
+  size: Size;
+  x: i32;
+  y: i32;
+}
+
+enum PixelMapFormat: i32 {
+  UNKNOWN = 0,
+  ARGB_8888 = 1,
+  RGB_565 = 2,
+  RGBA_8888 = 3,
+  BGRA_8888 = 4,
+  RGB_888 = 5,
+  ALPHA_8 = 6,
+  RGBA_F16 = 7,
+  NV21 = 8,
+  NV12 = 9,
+  RGBA_1010102 = 10,
+  YCBCR_P010 = 11,
+  YCRCB_P010 = 12,
+  ASTC_4x4 = 102
+}
+
+struct DecodingOptions {
+  index: Optional<i32>;
+  sampleSize: Optional<i32>;
+  rotate: Optional<i32>;
+  editable: Optional<bool>;
+  desiredSize: Optional<Size>;
+  desiredRegion: Optional<Region>;
+  desiredPixelFormat: Optional<PixelMapFormat>;
+  fitDensity: Optional<i32>;
+}
+
+function CreateImageSource(): ImageSource;
+
+interface PixelMap {}
+
+interface ImageSource {
+  CreatePixelMapSync(options: DecodingOptions): PixelMap;
+}

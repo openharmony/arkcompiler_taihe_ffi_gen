@@ -1,0 +1,31 @@
+BasedOnStyle: Google
+---
+Language: Cpp
+
+SpaceAfterTemplateKeyword: false
+
+IncludeBlocks: Preserve
+
+IndentWidth: 2
+AccessModifierOffset: -2
+IndentCaseLabels: false
+
+SeparateDefinitionBlocks: Always
+EmptyLineBeforeAccessModifier: Always
+
+DerivePointerAlignment: false
+ReferenceAlignment: Right
+PointerAlignment: Right
+QualifierAlignment: Custom
+QualifierOrder: ["static", "constexpr", "inline", "type", "const"]
+
+AllowShortBlocksOnASingleLine: Empty
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortLambdasOnASingleLine: Empty
+
+FixNamespaceComments: true
+ShortNamespaceLines: 0
+---
+Language: JavaScript
+JavaScriptQuotes: Double
+IndentWidth: 4

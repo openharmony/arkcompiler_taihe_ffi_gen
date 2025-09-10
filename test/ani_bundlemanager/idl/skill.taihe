@@ -1,0 +1,20 @@
+interface Skill {
+    @get GetActions(): Array<String>;
+    @get GetEntities(): Array<String>;
+    @get GetdomainVerify(): bool;
+}
+function GetSkill(): Skill;
+
+interface SkillUri {
+    @get GetScheme(): String;
+    @get GetHost(): String;
+    @get GetPort(): i32;
+    @get GetPath(): String;
+    @get GetPathStartWith(): String;
+    @get GetPathRegex(): String;
+    @get GetType(): String;
+    @get GetUtd(): String;
+    @get GetMaxFileSupported(): i32;
+    @get GetLinkFeature(): String;
+}
+function GetSkillUri(): SkillUri;

@@ -1,0 +1,8 @@
+interface OverlayModuleInfo {
+    @get GetBundleName(): String;
+    @get GetModuleName(): String;
+    @get GetTargetModuleName(): String;
+    @get GetPriority(): i32;
+    @get GetState(): i32;
+}
+function GetOverlayModuleInfo(): OverlayModuleInfo;

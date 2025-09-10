@@ -1,0 +1,8 @@
+[run]
+omit =
+    compiler/tests/test_*
+    compiler/taihe/parse/antlr/*.py
+    compiler/taihe/utils/resources.py
+    compiler/taihe/utils/build_metadata.py
+    compiler/taihe/cli/compiler.py
+    compiler/taihe/cli/tryit.py

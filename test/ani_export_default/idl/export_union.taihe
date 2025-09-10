@@ -1,0 +1,4 @@
+@sts_export_default union ExportUnion {
+    Foo: String;
+    Bar: i64;
+}

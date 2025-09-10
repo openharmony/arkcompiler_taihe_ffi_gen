@@ -1,0 +1,6 @@
+@!sts_inject("import {Person} from 'other.subsystem';")
+
+function is_string(s: Opaque): bool;
+function get_objects(): Array<Opaque>;
+
+function processPerson(person: @sts_type("Person") Opaque): void;

@@ -1,0 +1,6 @@
+struct Foo {
+    a: String;
+    b: String;
+}
+
+function func(a: String): String;

@@ -1,0 +1,23 @@
+struct AntUserDialogBody {
+    title: Optional<String>;
+    detail: Optional<String>;
+    traceParams: Optional<@record Map<String, Opaque>>;
+}
+
+interface AntUserDialogAction {
+    @get GetName(): String;
+    @set SetName(name: String): void;
+    @get GetTraceParams(): Optional<@record Map<String, String>>;
+    @set SetTraceParams(traceParams: Optional<@record Map<String, String>>): void;
+    action(): void;
+}
+
+interface AntUserModalController {
+    Dismiss(): void;
+}
+
+interface AntUserUIProvider {
+    ShowLoading(): AntUserModalController;
+    ShowToast(text: String): AntUserModalController;
+    ShowDialog(body: AntUserDialogBody, actions: Array<AntUserDialogAction>): AntUserModalController;
+}
