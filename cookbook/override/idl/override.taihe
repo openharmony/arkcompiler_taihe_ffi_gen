@@ -1,0 +1,13 @@
+@class
+interface UIAbility {
+    onForeground(): void;
+    onBackground(): void;
+}
+
+@rename @constructor("UIAbility")
+function getUIAbility(): UIAbility;
+
+function useUIAbility(a: UIAbility): void;
+
+@static("UIAbility")
+function logLifecycle(str: String): void;

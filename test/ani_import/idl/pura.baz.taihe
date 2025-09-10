@@ -1,0 +1,8 @@
+@!namespace("pura", "baz")
+
+from mate.foo use FooType;
+
+struct BazType { v: i32; }
+
+function testFoo(foo: FooType): void;
+function testBaz(baz: BazType): void;

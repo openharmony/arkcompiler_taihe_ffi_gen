@@ -1,0 +1,7 @@
+interface SceneNodeParameters {
+    @get("name") GetName(): String;
+    @set("name") SetName(name:String);
+    @get("path") GetPath(): Optional<String>;
+    @set("path") SetPath(name: Optional<String>);
+}
+function GetSceneNodeParameters(): SceneNodeParameters;

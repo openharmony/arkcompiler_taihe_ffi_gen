@@ -1,0 +1,83 @@
+@static_overload("add")
+@async function addWithAsync(a: i32, b: i32): i32;
+
+@static_overload("add")
+@promise function addReturnsPromise(a: i32, b: i32): i32;
+
+function addSync(a: i32, b: i32): i32;
+
+@class
+interface IBase {
+    @rename("getAsync")
+    @async getWithCallback(): String;
+
+    @rename("getPromise")
+    @promise getReturnsPromise(): String;
+
+    get(): String;
+  
+    @rename("setAsync")
+    @async setWithCallback(a: String): void;
+
+    @rename("setPromise")
+    @promise setReturnsPromise(a: String): void;
+
+    set(a: String): void;
+
+    @static_overload("make")
+    makeWithCallback();
+
+    @static_overload("make")
+    makeReturnsPromise();
+
+    makeSync();
+}
+
+@rename("makeGlobal")
+@async function makeGlobalWithCallback();
+
+@rename("makeGlobal")
+@promise function makeGlobalReturnsPromise();
+
+function makeGlobalSync();
+
+@rename("getIBaseAsync")
+@async function getIBaseWithCallback(): IBase;
+
+@rename("getIBasePromise")
+@promise function getIBaseReturnsPromise(): IBase;
+
+function getIBase(): IBase;
+
+@static("IBase")
+@rename("printAsync")
+@async function printWithCallback(): void;
+
+@static("IBase")
+@rename("printPromise")
+@promise function printReturnsPromise(): void;
+
+@static("IBase")
+function printSync(): void;
+
+struct Data {
+  a: String;
+  b: String;
+  c: i32;
+}
+
+@rename("fromStruct")
+@async function fromStructWithCallback(data: Data): void;
+
+@rename("fromStruct")
+@promise function fromStructReturnsPromise(data: Data): void;
+
+function fromStructSync(data: Data): void;
+
+@rename("toStruct")
+@async function toStructWithCallback(a: String, b: String, c: i32): Data;
+
+@rename("toStruct")
+@promise function toStructReturnsPromise(a: String, b: String, c: i32): Data;
+
+function toStructSync(a: String, b: String, c: i32): Data;

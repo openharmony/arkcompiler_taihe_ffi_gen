@@ -1,0 +1,3 @@
+from export_example use Inner;
+
+function testImport(obj: Inner): void;

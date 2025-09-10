@@ -1,0 +1,9 @@
+@!namespace("export_ns", "foo")
+@!sts_export_default
+
+struct NsStructA {
+    foo: i64;
+    bar: i64;
+}
+
+function Bar(): void;

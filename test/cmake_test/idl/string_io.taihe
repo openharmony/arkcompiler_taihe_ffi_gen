@@ -1,0 +1,3 @@
+function input(): String;
+function print(a: String): void;
+function println(a: String): void;

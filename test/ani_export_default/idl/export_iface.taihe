@@ -1,0 +1,6 @@
+@sts_export_default interface IfaceA {
+    Foo(): void;
+    Bar(): void;
+}
+
+function CreateIfaceA(): IfaceA;

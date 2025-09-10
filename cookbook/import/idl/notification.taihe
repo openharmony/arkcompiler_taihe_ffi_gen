@@ -1,0 +1,7 @@
+from user use IUser;
+
+interface INotificationService{
+    sendMessage(a: IUser): void;
+}
+
+function makeNotificationService(): INotificationService;

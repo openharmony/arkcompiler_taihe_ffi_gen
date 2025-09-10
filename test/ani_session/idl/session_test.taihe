@@ -1,0 +1,53 @@
+interface IfaceA {
+    func_a(): String;
+}
+
+interface IfaceB: IfaceA {
+    func_b(): String;
+}
+
+interface IfaceC {
+    func_c(): String;
+}
+
+interface IfaceCA : IfaceA {
+    func_c(): String;
+}
+
+interface IfaceD: IfaceB, IfaceC {
+    func_d(): String;
+    @set("name") setName(name: String): void;
+    @get("name") getName(): String;
+    @on_off
+    onSet(a: () => void): void;
+    @on_off
+    offSet(a: () => void): void;
+}
+
+function getIfaceD(): IfaceD;
+
+@class
+interface IfaceE : IfaceB, IfaceCA  {
+    func_e(): String;
+}
+
+function getIfaceE(): IfaceE;
+
+interface Session {
+    beginConfig(): void;
+}
+
+interface PhotoSession: Session, IfaceA, IfaceC {
+    canPreconfig(): bool;
+}
+
+interface VideoSession: Session, IfaceA, IfaceC {
+    canPreconfig(): bool;
+}
+
+union session_type {
+    ps: PhotoSession;
+    vs: VideoSession;
+}
+
+function getSession(ty: i32): session_type;
