@@ -1,0 +1,1 @@
+@sts_export_default function ToplevelFunc(): void;

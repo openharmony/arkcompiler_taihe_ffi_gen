@@ -1,0 +1,27 @@
+@!sts_inject("import {Context} from 'other.subsystem';")
+
+@class
+interface MyContext_inner {
+    // start(): String;
+    stop(): String;
+}
+function createMyContext_inner(): MyContext_inner;
+
+@!sts_inject("
+export class MyContext extends Context {
+    inner: MyContext_inner;
+    // start(): string {
+    //     return this.inner.start();
+    // }
+    stop(): string {
+        return this.inner.stop();
+    }
+    constructor() {
+        this.inner = createMyContext_inner();
+    }
+    constructor(arg: MyContext_inner) {
+        this.inner = arg;
+    }
+}
+")
+

@@ -1,0 +1,4 @@
+@sts_export_default struct StructA {
+    Foo: i64;
+    Bar: String;
+}

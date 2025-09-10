@@ -1,0 +1,24 @@
+@!namespace("void_func", "mytest")
+
+enum BarTest: u8 {
+  A = 1,
+  B = 2,
+  C = 3,
+}
+
+function Myfunc1(): void;
+function Myfunc2(option1:i8,option2:i16): void;
+function Myfunc3(option1:i32,option2:bool):void;
+function Myfunc4(option1:i32,option2:i64):void;
+function Myfunc5(option1:i32,option2:String):void;
+function Myfunc6(option1:i64,option2:bool):void;
+function Myfunc7(option1:i64,option2:f32):void;
+function Myfunc8(option1:i64,option2:f64):void;
+function Myfunc9(option1:f32,option2:bool):void;
+function Myfunc10(option1:f32,option2:String):void;
+function Myfunc11(option1:f64,option2:String):void;
+function Myfunc12(option1:Optional<i32>,option2:Optional<i64>):void;
+function Myfunc13(option1:Optional<f32>,option2:Optional<f64>):void;
+function Myfunc14(option1:Optional<String>,option2:Optional<bool>):void;
+function Myfunc15(option1:Optional<i16>,option2:Optional<i64>):void;
+function Myfunc16(option1:Optional<i16>,option2:BarTest):void;

@@ -1,0 +1,27 @@
+name: test
+
+on:
+    [push, pull_request]
+
+jobs:
+  check_and_test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Sync Project
+        run: uv sync --locked --all-extras --dev
+      - name: Check Format
+        run: scripts/check
+      # TODO: perhaps we should use "dry-run" as a poor man's test?
+      - name: Setup Clang
+        uses: egor-tensin/setup-clang@v1
+        with:
+          version: 15
+          platform: x64
+      - name: Test and Report Coverage
+        run: scripts/test

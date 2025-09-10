@@ -1,0 +1,9 @@
+@class
+interface CallbackManager {
+    addCallback(cb: () => String): bool;
+    removeCallback(cb: () => String): bool;
+    invokeCallbacks(): Array<String>;
+}
+
+@ctor("CallbackManager")
+function getCallbackManager(): CallbackManager;

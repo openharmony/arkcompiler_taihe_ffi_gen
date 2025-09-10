@@ -1,0 +1,25 @@
+function TestCbV(f: () => void): void;
+function TestCbI(f: (a: i32) => void): void;
+function TestCbS(f: (a: String, b: bool) => void): void;
+function TestCbRs(f: (a: String) => String): String;
+
+function TestCbStruct(f: (data: Data) => Data): void;
+
+struct Data {
+  a: String;
+  b: String;
+  c: i32;
+}
+
+enum EnumData: i32 {
+  F32_A = 123,
+  F32_B = 456,
+} 
+
+interface MyInterface {
+  TestCbIntString(f: (a: i8, b: i32) => void): String;
+  TestCbIntBool(f: (a: i16, b: i64) =>void): bool;
+  TestCbEnum(f:(a: i32) => void): EnumData;
+}
+function GetInterface(): MyInterface;
+

@@ -1,0 +1,8 @@
+interface Foo{
+    getInner(): i64;
+    func1(): String;
+    func2(): String;
+}
+
+function makeFoo(): Foo;
+function useFoo(obj: Foo): void;

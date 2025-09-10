@@ -1,0 +1,9 @@
+interface CustomizeData {
+    @set("name") SetName(name: String): void;
+    @get("name") GetName(): String;
+    @set("value") SetValue(value: String): void;
+    @get("value") GetValue(): String;
+    @set("extra") SetExtra(extra: String): void;
+    @get("extra") GetExtra(): String;
+}
+function GetCustomizeData(): CustomizeData;

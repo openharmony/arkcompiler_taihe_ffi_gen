@@ -1,0 +1,16 @@
+interface ExtensionAbilityInfo {
+    @get GetBundleName(): String;
+    @get GetModuleName(): String;
+    @get GetName(): String;
+    @get GetLabelId(): i32;
+    @get GetDescriptionId(): i32;
+    @get GetIconId(): i32;
+    @get GetExported(): bool;
+    @get GetExtensionAbilityTypeName(): bool;
+    @get GetPermissions(): Array<String>;
+    @get GetEnabled(): bool;
+    @get GetReadPermission(): String;
+    @get GetWritePermission(): String;
+    @get GetAppIndex(): i32;
+}
+function GetExtensionAbilityInfo(): ExtensionAbilityInfo;

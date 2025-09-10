@@ -1,0 +1,9 @@
+from mate.bar use BarType;
+from pura use PuraType;
+
+@sts_export_default
+interface NovaType {}
+
+function testBar(bar: BarType): void;
+function testPura(pura: PuraType): void;
+function testNova(nova: NovaType): void;

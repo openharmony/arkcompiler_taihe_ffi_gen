@@ -1,0 +1,39 @@
+struct Data {
+    src: String;
+    dest: f64;
+    files: Array<String>;
+}
+
+function makeData(): Data;
+function showData(s: Data): void;
+
+union Union {
+    empty: unit;
+    iValue: i32;
+    fValue: f32;
+    sValue: String;
+}
+
+function makeUnion(v: i32): Union;
+function showUnion(u: Union): void;
+
+function showOptionalInt(x: Optional<i32>): void;
+function makeOptionalInt(b: bool): Optional<i32>;
+
+function showArrayInt(x: Array<i32>): void;
+function makeArrayInt(n: i32, v: i32): Array<i32>;
+
+interface Foo {
+    bar(): void;
+}
+
+interface A {
+    b(): B;
+}
+
+interface B {
+    a(): A;
+}
+
+function makeFoo(list: Array<String>): Array<Foo>;
+function callBar(arr: Array<Foo>): void;
