@@ -720,13 +720,13 @@ class CppHeadersGenerator:
             f"template<tag_t tag, typename... Args>",
         )
         with union_cpp_defn_target.indented(
-            f"{union_cpp_info.name} const& emplace(Args&&... args) {{",
+            f"auto& emplace(Args&&... args) & {{",
             f"}}",
         ):
             union_cpp_defn_target.writelns(
                 f"::std::destroy_at(this);",
                 f"new (this) {union_cpp_info.name}(::taihe::static_tag<tag>, ::std::forward<Args>(args)...);",
-                f"return *this;",
+                f"return get_ref<tag>();",
             )
         # tag getter
         with union_cpp_defn_target.indented(
@@ -796,12 +796,12 @@ class CppHeadersGenerator:
                         union_cpp_defn_target.writelns(
                             f"return std::move(m_data).{field.name};",
                         )
-            # implicit return type visitor
+            # lvalue reference visitor
             union_cpp_defn_target.writelns(
-                f"template<typename Visitor>",
+                f"template<typename ReturnType, typename Visitor>",
             )
             with union_cpp_defn_target.indented(
-                f"decltype(auto) match_function(Visitor&& visitor){constness} {{",
+                f"ReturnType visit(Visitor&& visitor){constness}& {{",
                 f"}}",
             ):
                 with union_cpp_defn_target.indented(
@@ -817,12 +817,12 @@ class CppHeadersGenerator:
                             union_cpp_defn_target.writelns(
                                 f"return visitor(::taihe::static_tag<tag_t::{field.name}>, m_data.{field.name});",
                             )
-            # explicit return type visitor
+            # rvalue reference visitor
             union_cpp_defn_target.writelns(
                 f"template<typename ReturnType, typename Visitor>",
             )
             with union_cpp_defn_target.indented(
-                f"ReturnType match_function(Visitor&& visitor){constness} {{",
+                f"ReturnType visit(Visitor&& visitor){constness}&& {{",
                 f"}}",
             ):
                 with union_cpp_defn_target.indented(
@@ -836,7 +836,7 @@ class CppHeadersGenerator:
                             f"}}",
                         ):
                             union_cpp_defn_target.writelns(
-                                f"return visitor(::taihe::static_tag<tag_t::{field.name}>, m_data.{field.name});",
+                                f"return visitor(::taihe::static_tag<tag_t::{field.name}>, std::move(m_data).{field.name});",
                             )
 
     def gen_union_named_utils(
@@ -864,7 +864,7 @@ class CppHeadersGenerator:
                 f"template<typename... Args>",
             )
             with union_cpp_defn_target.indented(
-                f"{union_cpp_info.name} const& emplace_{field.name}(Args&&... args) {{",
+                f"auto& emplace_{field.name}(Args&&... args) {{",
                 f"}}",
             ):
                 union_cpp_defn_target.writelns(
@@ -907,12 +907,12 @@ class CppHeadersGenerator:
                     union_cpp_defn_target.writelns(
                         f"return std::move(m_data).{field.name};",
                     )
-            # implicit return type visitor
+            # lvalue reference matcher
             union_cpp_defn_target.writelns(
-                f"template<typename Visitor>",
+                f"template<typename ReturnType, typename Matcher>",
             )
             with union_cpp_defn_target.indented(
-                f"decltype(auto) match(Visitor&& visitor){constness} {{",
+                f"ReturnType match(Matcher&& matcher){constness}& {{",
                 f"}}",
             ):
                 with union_cpp_defn_target.indented(
@@ -926,14 +926,14 @@ class CppHeadersGenerator:
                             f"}}",
                         ):
                             union_cpp_defn_target.writelns(
-                                f"return visitor.case_{field.name}(m_data.{field.name});",
+                                f"return matcher.case_{field.name}(m_data.{field.name});",
                             )
-            # explicit return type visitor
+            # rvalue reference matcher
             union_cpp_defn_target.writelns(
-                f"template<typename ReturnType, typename Visitor>",
+                f"template<typename ReturnType, typename Matcher>",
             )
             with union_cpp_defn_target.indented(
-                f"ReturnType match(Visitor&& visitor){constness} {{",
+                f"ReturnType match(Matcher&& matcher){constness}&& {{",
                 f"}}",
             ):
                 with union_cpp_defn_target.indented(
@@ -947,7 +947,7 @@ class CppHeadersGenerator:
                             f"}}",
                         ):
                             union_cpp_defn_target.writelns(
-                                f"return visitor.case_{field.name}(m_data.{field.name});",
+                                f"return matcher.case_{field.name}(std::move(m_data).{field.name});",
                             )
 
     def gen_union_same(
