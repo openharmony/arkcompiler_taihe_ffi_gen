@@ -29,7 +29,7 @@ template<typename... Ts>
 overloads(Ts...) -> overloads<Ts...>;
 
 string toString(ColorOrRGBOrName const &color) {
-  return color.match_function<string>(overloads{
+  return color.visit<string>(overloads{
       [](static_tag_t<ColorOrRGBOrName::tag_t::rgb>, const RGB &val) {
         std::ostringstream oss;
         oss << "#" << std::hex << std::setfill('0') << std::setw(2)

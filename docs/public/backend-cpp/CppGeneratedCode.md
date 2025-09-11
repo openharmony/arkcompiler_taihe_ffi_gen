@@ -491,7 +491,7 @@ struct Result {
         return m_tag == tag ? &get_ref<tag>() : nullptr;
     }
     template<typename Visitor>
-    decltype(auto) match_function(Visitor&& visitor) {
+    decltype(auto) visit(Visitor&& visitor) {
         switch (m_tag) {
         case tag_t::ok: {
             return visitor(::taihe::static_tag<tag_t::ok>, m_data.ok);
@@ -502,7 +502,7 @@ struct Result {
         }
     }
     template<typename ReturnType, typename Visitor>
-    ReturnType match_function(Visitor&& visitor) {
+    ReturnType visit(Visitor&& visitor) {
         switch (m_tag) {
         case tag_t::ok: {
             return visitor(::taihe::static_tag<tag_t::ok>, m_data.ok);
@@ -526,7 +526,7 @@ struct Result {
         return m_tag == tag ? &get_ref<tag>() : nullptr;
     }
     template<typename Visitor>
-    decltype(auto) match_function(Visitor&& visitor) const {
+    decltype(auto) visit(Visitor&& visitor) const {
         switch (m_tag) {
         case tag_t::ok: {
             return visitor(::taihe::static_tag<tag_t::ok>, m_data.ok);
@@ -537,7 +537,7 @@ struct Result {
         }
     }
     template<typename ReturnType, typename Visitor>
-    ReturnType match_function(Visitor&& visitor) const {
+    ReturnType visit(Visitor&& visitor) const {
         switch (m_tag) {
         case tag_t::ok: {
             return visitor(::taihe::static_tag<tag_t::ok>, m_data.ok);

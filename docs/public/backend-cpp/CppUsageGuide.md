@@ -331,21 +331,14 @@ public:
 };
 ```
 
-然后可以使用 `match` 方法来应用访问者：
+然后可以使用 `match` 方法来处理联合体对象：
 
 ```cpp
 auto result = rgb::base::RGBOrColorOrName::make_rgb(RGB{0x39, 0xC5, 0xBB})
-    .match(ColorVariantVisitor{});  // result 将包含 "#39C5BB"
+    .match<std::string>(ColorVariantVisitor{});  // result 将包含 "#39C5BB"
 ```
 
-`match` 方法的返回值类型可以被自动推断，也可以通过模板参数被显式指定。例如：
-
-```cpp
-auto result = rgb::base::RGBOrColorOrName::make_rgb(RGB{0x39, 0xC5, 0xBB})
-    .match<std::string>(ColorVariantVisitor{});
-```
-
-此外，`match` 方法还有模板版本 `match_function`，区别在于 `match` 通过方法名（`case_variantName`）进行匹配，而 `match_function` 通过重载 `operator()` 和标记类型 `static_tag_t<package::name::EnumName::tag_t::variantName>` 进行匹配：
+此外，`match` 方法还有模板版本 `visit`，区别在于 `match` 通过方法名（`case_variantName`）进行匹配，而 `visit` 通过重载 `operator()` 和标记类型 `static_tag_t<package::name::EnumName::tag_t::variantName>` 进行匹配：
 
 ```cpp
 class ColorVariantFunctionVisitor {
@@ -368,7 +361,7 @@ public:
 };
 
 auto result = rgb::base::RGBOrColorOrName::make_rgb(RGB{0x39, 0xC5, 0xBB})
-    .match_function(ColorVariantFunctionVisitor{});
+    .visit<std::string>(ColorVariantFunctionVisitor{});
 ```
 
 你还可以利用 C++17 的折叠表达式和模板参数包来简化访问者模式的实现：
@@ -381,7 +374,7 @@ template<typename... Ts>
 overloads(Ts...) -> overloads<Ts...>;
 
 auto result = rgb::base::RGBOrColorOrName::make_rgb(RGB{0x39, 0xC5, 0xBB})
-    .match_function<std::string>(overloads{
+    .visit<std::string>(overloads{
         [](taihe::static_tag_t<Tag::rgb>, rgb::base::RGB const& rgb) {
             return std::format("#{:02X}{:02X}{:02X}", rgb.red, rgb.green, rgb.blue);
         },
