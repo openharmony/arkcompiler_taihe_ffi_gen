@@ -1,0 +1,6 @@
+@!namespace("my_module_b", "functiontest")
+
+@!dts_inject_into_module("export const rate = 0.618;")
+@!dts_inject("""export function concat(a: string | number): string | number;""")
+function concat_str(a: String): String;
+function concat_i32(a: i32): i32;

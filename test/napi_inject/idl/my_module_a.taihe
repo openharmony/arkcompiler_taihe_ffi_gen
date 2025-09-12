@@ -1,0 +1,13 @@
+@!lib("my_module_a")
+function baz(): void;
+
+function concat_str(a: String): String;
+function concat_i32(a: i32): i32;
+
+@!ts_inject("""export function concat(a: string | number): string | number {
+    if (typeof a === "string") {
+        return concat_str(a);
+    } else {
+        return concat_i32(a);
+    }
+}""")

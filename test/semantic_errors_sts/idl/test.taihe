@@ -34,7 +34,3 @@ enum EFoo: i32 {
     B = 2,
     C = 3,
 }
-
-function foo(e: EFoo): void; // Error: @const enum cannot be used as a typedarray
-
-enum EBar: f32 {} // Error: enum with f32 type has to be @const

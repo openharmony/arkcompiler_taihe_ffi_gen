@@ -1,0 +1,14 @@
+function test_cb_v(f: () => void): void;
+function test_cb_i(f: (a: i32) => void): void;
+function test_cb_s(f: (a: String, b: bool) => void): void;
+function test_cb_rs(f: (a: String) => String): String;
+
+struct Data {
+  a: String;
+  b: String;
+  c: i32;
+}
+
+function test_cb_struct(f: (data: Data) => Data): void;
+
+function test_x(f: () => void): (a: String) => String;

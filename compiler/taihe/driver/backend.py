@@ -11,6 +11,13 @@ class Backend(ABC):
     def __init__(self, instance: "CompilerInstance"):
         """Initialize the backend."""
 
+    def inject(self):
+        """Add backend-specific sources after the collection phase.
+
+        For example, the standard library sources can be added in this stage.
+        """
+        return
+
     def post_process(self):
         """Post-processes the IR just after parsing.
 
@@ -25,7 +32,6 @@ class Backend(ABC):
         """
         return
 
-    @abstractmethod
     def generate(self):
         """Generate the output files.
 
@@ -33,6 +39,7 @@ class Backend(ABC):
         - The transformation should be completed in the `post_process` stage.
         - The error reporting should be completed in the `validate` stage.
         """
+        return
 
 
 class BackendConfig(ABC):
@@ -104,6 +111,7 @@ class BackendRegistry:
             CppCommonHeadersBackendConfig,
             CppUserHeadersBackendConfig,
         )
+        from taihe.codegen.napi import NapiBridgeBackendConfig
         from taihe.semantics import PrettyPrintBackendConfig
 
         backends = [
@@ -119,6 +127,8 @@ class BackendRegistry:
             AniBridgeBackendConfig,
             # pretty print
             PrettyPrintBackendConfig,
+            # napi
+            NapiBridgeBackendConfig,
         ]
 
         for b in backends:

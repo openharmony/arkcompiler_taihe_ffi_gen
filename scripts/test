@@ -122,6 +122,15 @@ def run_core_tests(project_root: Path, **config: Path | str):
         run_taihe_tryit(["test", "-u", "cpp", test_dir], project_root)
 
 
+def run_napi_tests(project_root: Path, **config: Path | str):
+    log_stage("Run napi tests...")
+    base_dir = project_root / "test"
+    for test_dir in base_dir.glob("napi_*"):
+        if test_dir.is_dir():
+            log_stage(f"Testing: {test_dir}")
+            run_taihe_tryit(["test", "-u", "ts", test_dir], project_root)
+
+
 def run_ani_tests(project_root: Path, **config: Path | str):
     log_stage("Run ANI tests...")
     build_dir = project_root / "build"
@@ -178,6 +187,7 @@ TESTS = {
     "core": run_core_tests,
     "ani": run_ani_tests,
     "cmake": run_cmake_test,
+    "napi": run_napi_tests,
 }
 
 MODE_TO_TESTS = {

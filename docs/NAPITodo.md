@@ -1,0 +1,55 @@
+NAPI 代码生成及验证：
+1. 修改 tryit 支持运行 Done （遗留问题一）
+2. 参照现有代码生成架构实现生成 .napi.cpp 和 .d.ts 支持以下语言特性
+    - [x] 基础类型
+    - [x] struct 
+    - [x] struct 继承                                    (和 ani 使用了同样方案)
+    - [x] interface
+    - [x] interface 继承
+    - [x] ts 侧绑定构造函数 class(struct)
+    - [x] ts 侧绑定构造函数 class(interface)              (只支持绑定一个构造函数且无法继承 interface)
+    - [x] static
+    - [x] readonly
+    - [x] get set
+    - [x] const
+    - [x] enum
+    - [x] union                                          (number|string|bool|array|map)
+    - [x] undefined, null
+    - [x] array
+    - [x] record
+    - [x] map                                           (规格为不保序)
+    - [ ] set vector
+    - [x] namespace
+    - [x] callback
+    - [x] optional
+    - [x] overload
+    - [ ] promise, async
+    - [x] bigint
+    - [x] arraybuffer
+    - [x] typedarray
+    - [x] import
+    - [x] Opaque
+    - [x] inject
+    - [ ] on_off
+
+3. 需要报错但未实现或实现的较为简单，设计如何报错并区分如何：
+    - [ ] Record 的 key 类型限制，TS 语法规定是 string/number，SDK 现有场景是 string
+    - [ ] ctor 检查返回值为 指定的 interface/struct 且检查这个 interface/struct 为 class 
+    - [ ] 检查 @static 是否加在 class 上
+
+
+TODO:
+1. 生命周期，之前已做: done
+2. 错误处理，发现错误抛出 error: done
+3. NAPI doc: 草稿已有 [NapiUsageGuide](./NapiUsageGuide.md)，各功能全覆盖，细节待完善
+4. 逃逸通道: Opaque + dts_type 已支持，inject 已支持，根据 lib 注解后缀判断 ts 该使用 require 导入 so，ets 使用 import 导入: done
+5. ctor 和 static 支持 struct: done
+6. ctor 不支持重载，可通过注入实现：例子 done
+
+**注意：现在的验证方式是基于 ts 和 napi 非鸿蒙 napi，应配置鸿蒙环境下编译验证方法待设计。**
+xml 例子编译运行成功
+
+
+暂时有办法待优化的点：
+1. tryit 里为了实现对每个 .d.ts 文件生成一个 .node 文件进行了遍历，这是否合适 
+2. napi_get_and_clear_last_exception 返回的 exception maybe is napi_undefined

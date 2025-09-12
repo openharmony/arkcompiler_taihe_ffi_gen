@@ -1,0 +1,8 @@
+@!namespace("my_module_a", "ns1")
+function Funtest(s: Color): String;
+enum Color: String {
+    RED = "Red",
+    GREEN = "Green",
+    BLUE = "Blue",
+}
+function noo(): void;

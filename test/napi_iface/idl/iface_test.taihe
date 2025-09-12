@@ -1,0 +1,43 @@
+interface IBase {
+    getId(): String;
+    setId(s: String): void;
+}
+
+function makeIBase(id: String): IBase;
+function copyIBase(a: IBase, b: IBase): void;
+
+interface IShape: IBase {
+    calculateArea(): f64;
+}
+
+function makeIShape(id: String, a: f64, b: f64): IShape;
+
+@class
+interface IDerived: IShape {
+    call(): void;
+}
+
+@ctor("IDerived")
+function createIDerived(): IDerived;
+
+@class
+interface CTest{
+    add(a: i32, b: i32): f32;
+}
+
+@ctor("CTest")
+function createCTest(id: i32): CTest;
+
+function changeCTest(a: CTest): CTest;
+
+@static("CTest")
+function multiply(a: i32, b: i32): i32;
+
+interface IColor {
+    @get getId(): String;
+    @set setId(s: String): void;
+    calculate(a: i32, b: i32): i32;
+}
+
+function makeIColor(id: String): IColor;
+function copyIColor(a: IColor, b: IColor): void;

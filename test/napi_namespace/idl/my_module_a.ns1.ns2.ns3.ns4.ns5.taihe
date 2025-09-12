@@ -1,0 +1,7 @@
+@!namespace("my_module_a", "ns1.ns2.ns3.ns4.ns5")
+function Funtest(s: MyStruct): i32;
+struct MyStruct {
+    a: i32;
+    b: i32;
+}
+function foo(): void;

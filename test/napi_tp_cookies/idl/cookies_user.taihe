@@ -1,0 +1,3 @@
+use cookies;
+
+function RunNativeBusiness(cookieprovider: cookies.AntUserCookiesProvider): void;

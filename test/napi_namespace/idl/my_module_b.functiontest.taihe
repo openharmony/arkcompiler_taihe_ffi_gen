@@ -1,0 +1,9 @@
+@!namespace("my_module_b", "functiontest")
+
+interface IBase {
+    getId(): String;
+    setId(s: String): void;
+}
+
+function makeIBase(id: String): IBase;
+function bar(): void;

@@ -19,3 +19,19 @@ executable("user") {
   ldpath = rebase_path("$root_out_dir")
   ldflags = ["-Wl,-rpath,$ldpath"]
 }
+
+
+shared_library("integer_napi") {
+  sources = [
+    "./src/integer.arithmetic.napi.cpp",
+  ]
+  deps = [
+    ":integer_test_user_compiler",
+    "//author:author"
+  ]
+  include_dirs = [
+    "/home/yueyue/.nvm/versions/node/v20.18.0/include",
+  ]
+  ldpath = rebase_path("$root_out_dir")
+  ldflags = ["-Wl,-rpath,$ldpath"]
+}

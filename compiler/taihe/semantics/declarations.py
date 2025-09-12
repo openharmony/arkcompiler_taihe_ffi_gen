@@ -1056,7 +1056,9 @@ class PackageDecl(NamedDecl):
     interfaces: list[IfaceDecl]
     enums: list[EnumDecl]
 
-    def __init__(self, name: str, loc: SourceLocation | None):
+    is_stdlib: bool
+
+    def __init__(self, loc: SourceLocation | None, name: str, is_stdlib: bool):
         super().__init__(loc, name)
 
         self._pkg_import_dict = {}
@@ -1069,6 +1071,8 @@ class PackageDecl(NamedDecl):
         self.unions = []
         self.interfaces = []
         self.enums = []
+
+        self.is_stdlib = is_stdlib
 
     @property
     @override
@@ -1183,15 +1187,21 @@ class PackageDecl(NamedDecl):
 class PackageGroup:
     """Stores all known packages for a compilation instance."""
 
+    _all_package_dict: dict[str, PackageDecl]
     _package_dict: dict[str, PackageDecl]
 
     def __init__(self):
         super().__init__()
+        self._all_package_dict = {}
         self._package_dict = {}
 
     def __repr__(self) -> str:
         packages_str = ", ".join(repr(x) for x in self._package_dict)
         return f"{self.__class__.__qualname__}({packages_str})"
+
+    @property
+    def all_packages(self) -> Collection[PackageDecl]:
+        return self._all_package_dict.values()
 
     @property
     def packages(self) -> Collection[PackageDecl]:
@@ -1201,8 +1211,10 @@ class PackageGroup:
         return self._package_dict.get(name)
 
     def add(self, d: PackageDecl):
-        if (prev := self._package_dict.setdefault(d.name, d)) != d:
+        if (prev := self._all_package_dict.setdefault(d.name, d)) != d:
             raise DeclRedefError(prev, d)
+        if not d.is_stdlib:
+            self._package_dict[d.name] = d
         d.set_group(self)
 
     def accept(self, v: "PackageGroupVisitor[_R]"):

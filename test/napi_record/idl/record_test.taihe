@@ -1,0 +1,25 @@
+function getStringIntSize(r : @record Map<String, i32>) : i32;
+function createStringString(a : i32) : @record Map<String, String>;
+
+enum Color: String {
+    RED = "Red",
+    GREEN = "Green",
+    BLUE = "Blue",
+}
+function setStringColor(m : @record Map<String, Color>): void;
+function getStringColor(): @record Map<String, Color>;
+
+struct Data {
+    a: String;
+    b: String;
+    c: i32;
+}
+function setStringData(m : @record Map<String, Data>): void;
+function getStringData(): @record Map<String, Data>;
+
+interface IBase {
+    getId(): String;
+    setId(s: String): void;
+}
+function setStringIBase(m : @record Map<String, IBase>): void;
+function getStringIBase(): @record Map<String, IBase>;

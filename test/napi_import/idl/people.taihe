@@ -1,0 +1,7 @@
+@!lib("people")
+struct student {
+    name: String;
+    age: i32;
+}
+
+function make_student(): student;
