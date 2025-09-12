@@ -13,6 +13,7 @@ from pathlib import Path
 from urllib.parse import urljoin
 from sys import exit
 from typing import ClassVar, Final, cast
+from urllib.parse import urljoin
 
 from typing_extensions import Self, override
 
@@ -463,23 +464,23 @@ class PythonBuild(CachedResource):
 
     # HarmonyOS repository url for Python bundles
     REPO: Final = "https://repo.huaweicloud.com/harmonyos/compiler/python/3.11.4/"
-    LINUX_REPO: Final   = urljoin(REPO, "linux/")
+    LINUX_REPO: Final = urljoin(REPO, "linux/")
     WINDOWS_REPO: Final = urljoin(REPO, "windows/")
-    DARWIN_REPO: Final  = urljoin(REPO, "darwin/")
+    DARWIN_REPO: Final = urljoin(REPO, "darwin/")
 
     BUNDLE_DIR_NAME: Final = "pyrt"
 
     # Supported platforms
-    LINUX_X86_64: Final   = "linux-x86_64"
+    LINUX_X86_64: Final = "linux-x86_64"
     WINDOWS_X86_64: Final = "windows-x86_64"
-    DARWIN_ARM64: Final   = "darwin-arm64"
-    DARWIN_X86_64: Final  = "darwin-x86_64"
+    DARWIN_ARM64: Final = "darwin-arm64"
+    DARWIN_X86_64: Final = "darwin-x86_64"
 
     # Bundle tarball file names for each platform
-    LINUX_X86_64_PY_BUNDLE: Final   = "python-linux-x86-GLIBC2.27-3.11.4_20250219.tar.gz"
+    LINUX_X86_64_PY_BUNDLE: Final = "python-linux-x86-GLIBC2.27-3.11.4_20250219.tar.gz"
     WINDOWS_X86_64_PY_BUNDLE: Final = "python-mingw-x86-3.11.4_20250509.tar.gz"
-    DARWIN_ARM64_PY_BUNDLE: Final   = "python-darwin-arm64-3.11.4_20250228.tar.gz"
-    DARWIN_X86_64_PY_BUNDLE: Final  = "python-darwin-x86-3.11.4_20250228.tar.gz"
+    DARWIN_ARM64_PY_BUNDLE: Final = "python-darwin-arm64-3.11.4_20250228.tar.gz"
+    DARWIN_X86_64_PY_BUNDLE: Final = "python-darwin-x86-3.11.4_20250228.tar.gz"
 
     @override
     def fetch(self):
@@ -489,10 +490,10 @@ class PythonBuild(CachedResource):
 
         # System -> (repository url, file name)
         downloads = {
-            self.LINUX_X86_64:   (self.LINUX_REPO,   self.LINUX_X86_64_PY_BUNDLE),
+            self.LINUX_X86_64: (self.LINUX_REPO, self.LINUX_X86_64_PY_BUNDLE),
             self.WINDOWS_X86_64: (self.WINDOWS_REPO, self.WINDOWS_X86_64_PY_BUNDLE),
-            self.DARWIN_ARM64:   (self.DARWIN_REPO,  self.DARWIN_ARM64_PY_BUNDLE),
-            self.DARWIN_X86_64:  (self.DARWIN_REPO,  self.DARWIN_X86_64_PY_BUNDLE),
+            self.DARWIN_ARM64: (self.DARWIN_REPO, self.DARWIN_ARM64_PY_BUNDLE),
+            self.DARWIN_X86_64: (self.DARWIN_REPO, self.DARWIN_X86_64_PY_BUNDLE),
         }
 
         # Download all platform bundles using curl, save as <system>-python.tar.gz
