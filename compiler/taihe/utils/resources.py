@@ -353,12 +353,6 @@ class StandardLibrary(PathResource):
     PATH_BUNDLE = "lib/taihe/stdlib"
 
 
-class Documentation(PathResource):
-    CLI_NAME = "doc"
-    PATH_PKG = PATH_DEV = "doc"
-    PATH_BUNDLE = "share/doc/taihe"
-
-
 class CMakeModulesResource(PathResource):
     CLI_NAME = "cmake"
     PATH_PKG = PATH_DEV = "cmake"
@@ -564,7 +558,6 @@ BUILTIN_RESOURCES: Sequence[ResourceT] = [
     RuntimeSource,
     RuntimeHeader,
     StandardLibrary,
-    Documentation,
     CMakeModulesResource,
 ]
 ALL_RESOURCES: Sequence[ResourceT] = [
