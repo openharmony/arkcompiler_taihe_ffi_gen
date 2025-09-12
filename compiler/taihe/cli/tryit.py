@@ -7,6 +7,7 @@ from pathlib import Path
 from taihe.driver.toolchain import (
     ArkToolchain,
     CppToolchain,
+    TsToolchain,
     clean_directory,
     create_directory,
     extract_file,
@@ -18,7 +19,6 @@ from taihe.utils.resources import (
     ResourceContext,
     RuntimeHeader,
     RuntimeSource,
-    StandardLibrary,
     fetch_url,
 )
 
@@ -31,8 +31,6 @@ TRACE_VERBOSE = TRACE_CONCISE - 1
 
 class BuildSystem(ABC):
     """Main build system class."""
-
-    lib_files: list[Path]
 
     runtime_includes: list[Path]
     generated_includes: list[Path]
@@ -90,12 +88,6 @@ class BuildSystem(ABC):
 
         logger.info("Generating author and ani codes...")
 
-        # Generate taihe stdlib codes
-        taihec(
-            dst_dir=self.generated_dir,
-            src_files=self.lib_files,
-            backend_names=["abi-source", "cpp-common"],
-        )
         # Generate author codes
         backend_names: list[str] = []
         backend_names.extend(self.author_backend_names)
@@ -104,7 +96,7 @@ class BuildSystem(ABC):
             backend_names.append("pretty-print")
         taihec(
             dst_dir=self.generated_dir,
-            src_files=list(self.idl_dir.glob("*.taihe")),
+            src_files=list(self.idl_dir.glob("*")),
             backend_names=backend_names,
             buildsys_name=buildsys_name,
             extra=extra,
@@ -241,8 +233,6 @@ class CppBuildSystem(BuildSystem):
 
         self.exe_target = self.build_dir / "main"
 
-        self.lib_files = []
-
         self.user_backend_names = ["cpp-user"]
 
     def _create_user_files(self) -> None:
@@ -331,8 +321,6 @@ class StsBuildSystem(BuildSystem):
         self.abc_target = self.build_dir / "main.abc"
         self.arktsconfig_file = self.build_dir / "arktsconfig.json"
 
-        self.lib_files = [StandardLibrary.resolve_path() / "taihe.platform.ani.taihe"]
-
         self.user_backend_names = ["ani-bridge"]
 
     def _create_user_files(self) -> None:
@@ -398,9 +386,132 @@ class StsBuildSystem(BuildSystem):
         logger.info("Done, time = %f s", elapsed_time)
 
 
+class TsBuildSystem(BuildSystem):
+    def __init__(
+        self,
+        target_dir: str,
+        verbosity: int = logging.INFO,
+    ):
+        super().__init__(target_dir, verbosity)
+
+        self.ts_toolchain = TsToolchain()
+
+        self.user_dir = self.target_path / "user"
+
+        self.build_generated_dir = self.build_dir / "generated"
+        self.build_user_dir = self.build_dir / "user"
+        self.build_node_modules_dir = self.build_dir / "node_modules"
+
+        self.runtime_includes = [
+            RuntimeHeader.resolve_path(),
+        ]
+        self.generated_includes = [*self.runtime_includes, self.generated_include_dir]
+        self.author_includes = [*self.generated_includes, self.author_include_dir]
+
+        runtime_src_dir = RuntimeSource.resolve_path()
+        self.runtime_sources = [
+            runtime_src_dir / "string.cpp",
+            runtime_src_dir / "object.cpp",
+            runtime_src_dir / "napi_runtime.cpp",
+        ]
+
+        self.js_target = self.build_user_dir / "main.js"
+        self.tsconfig_file = self.build_dir / "tsconfig.json"
+
+        self.lib_files = []
+        self.user_backend_names = ["napi-bridge"]
+
+    def _create_user_files(self) -> None:
+        """Create a simple example user TS file."""
+        create_directory(self.user_dir)
+        with open(self.user_dir / "main.ts", "w") as f:
+            f.write(
+                f'import * as hello from "hello";\n'
+                f"\n"
+                f"function main() {{\n"
+                f"    hello.sayHello();\n"
+                f"}}\n"
+                f"main()\n"
+            )
+
+    def _compile_shared_library(self, opt_level: str):
+        create_directory(self.build_runtime_src_dir)
+        create_directory(self.build_generated_src_dir)
+        create_directory(self.build_author_src_dir)
+        create_directory(self.build_node_modules_dir)
+
+        runtime_objects = self.cpp_toolchain.compile(
+            self.build_runtime_src_dir,
+            self.runtime_sources,
+            self.runtime_includes,
+            compile_flags=[f"-O{opt_level}"],
+        )
+
+        generated_objects = self.cpp_toolchain.compile(
+            self.build_generated_src_dir,
+            self.generated_src_dir.glob("*.[cC]*"),
+            self.generated_includes,
+            compile_flags=[f"-O{opt_level}"],
+        )
+
+        author_objects = self.cpp_toolchain.compile(
+            self.build_author_src_dir,
+            self.author_src_dir.glob("*.[cC]*"),
+            self.author_includes,
+            compile_flags=[f"-O{opt_level}"],
+        )
+
+        # TODO: One node file corresponds to multiple ts files
+        for path in self.generated_dir.glob("*.d.ts"):
+            file_name = path.with_suffix("").stem
+
+            node_target = self.build_node_modules_dir / f"{file_name}.node"
+            # Link all objects
+            if all_objects := runtime_objects + generated_objects + author_objects:
+                self.cpp_toolchain.link(
+                    node_target,
+                    all_objects,
+                    shared=True,
+                )
+                logger.info("Shared library compiled: %s", node_target)
+            else:
+                logger.warning(
+                    "No object files to link, skipping shared library compilation"
+                )
+
+    def _compile_user_executable(self, opt_level: str) -> None:
+        """Compile TS files."""
+        logger.info("Compile TS files...")
+
+        paths: dict[str, Path] = {}
+        for path in self.generated_dir.glob("*.d.ts"):
+            file_name = path.with_suffix("").stem
+            paths[file_name] = path
+
+        main_ts_file = self.user_dir / "main.ts"
+        self.ts_toolchain.create_tsconfig(
+            self.tsconfig_file, paths, self.build_dir, self.target_path, main_ts_file
+        )
+
+        self.ts_toolchain.compile(
+            self.tsconfig_file,
+        )
+
+    def _run_user_executable(self) -> None:
+        """Run the JS file with node."""
+        logger.info("Running ABC file with Ark runtime...")
+
+        elapsed_time = self.ts_toolchain.run(
+            self.js_target,
+        )
+
+        logger.info("Done, time = %f s", elapsed_time)
+
+
 BUILD_MODES = {
     "cpp": CppBuildSystem,
     "sts": StsBuildSystem,
+    "ts": TsBuildSystem,
 }
 
 

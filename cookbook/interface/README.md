@@ -23,7 +23,7 @@ function restartCalculator(a: ICalculator): void;
 
 ## 第二步：实现声明的接口
 
-需要写一个 class 实现接口，再使用 make_holder<class, interface>将实现和接口绑定
+需要写一个 class 实现接口，再使用 make_holder<class, interface> 将实现和接口绑定
 
 `interface/author/src/interface.impl.cpp`
 ```cpp

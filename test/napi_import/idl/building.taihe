@@ -1,0 +1,9 @@
+@!lib("building")
+
+from people use student ;
+struct group {
+    member: student;
+    number: i32;
+}
+
+function make_group(): group;

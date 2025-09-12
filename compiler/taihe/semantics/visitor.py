@@ -708,5 +708,5 @@ class RecursiveDeclVisitor(DeclVisitor[None]):
 
     @override
     def visit_package_group(self, g: "PackageGroup") -> None:
-        for i in g.packages:
+        for i in g.all_packages:
             i.accept(self)

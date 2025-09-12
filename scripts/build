@@ -4,6 +4,7 @@ from enum import Enum
 from functools import cache
 from io import StringIO
 import shutil
+import struct
 import subprocess
 import sys
 from typing import TYPE_CHECKING, Final

@@ -1,0 +1,61 @@
+struct RGB {
+    r: i32;
+    g: i32;
+    b: i32;
+}
+
+function from_rgb(rgb: RGB): i32;
+function to_rgb(a: i32): RGB;
+
+@class
+struct Color {
+    name: String;
+    flag: bool;
+    price: f64;
+    rgb: RGB;
+}
+
+function from_color(color: Color): f64;
+function to_color(a: String, b: bool, c: f64, d: RGB): Color;
+
+struct Student {
+    @readonly name: String;
+    age: i32;
+}
+
+function create_student(): Student;
+function process_student(a: Student): Student;
+
+@class
+struct Teacher {
+    @readonly name: String;
+    age: i32;
+}
+
+@static("Teacher")
+function give_lessons(): String;
+
+@ctor("Teacher")
+function create_teacher(): Teacher;
+function process_teacher(a: Teacher): Teacher;
+
+struct F {
+    f: i32;
+}
+
+struct G {
+    @extends f: F;
+    g: i32;
+}
+
+@class
+struct H {
+    @extends g: G;
+    h: i32;
+}
+
+function process_g(a: G): G;
+function process_h(a: H): H;
+
+@ctor("H")
+function create_h(f: i32, g: i32, h: i32): H;

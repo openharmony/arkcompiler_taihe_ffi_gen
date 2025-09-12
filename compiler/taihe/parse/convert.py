@@ -468,15 +468,14 @@ class AstConverter(ExprEvaluator):
 
     @override
     def visit_spec(self, node: ast.Spec) -> PackageDecl:
-        if not is_valid_pkg_name(self.source.pkg_name):
-            raise InvalidPackageNameError(
-                self.source.pkg_name,
-                loc=SourceLocation(self.source),
-            )
-        pkg = PackageDecl(self.source.pkg_name, SourceLocation(self.source))
+        pkg = PackageDecl(
+            SourceLocation(self.source),
+            self.source.pkg_name,
+            self.source.is_stdlib,
+        )
         for u in node.uses:
             self.dm.for_each(u.accept(self), pkg.add_import)
-        self.dm.for_each(node.fields, lambda n: pkg.add_declaration(n.accept(self)))
+        self.dm.for_each(node.decls, lambda n: pkg.add_declaration(n.accept(self)))
         self.dm.for_each(node.inner_attrs, lambda a: self.add_attr(pkg, a))
         return pkg
 
@@ -490,6 +489,11 @@ class AstConverter(ExprEvaluator):
         Raises:
             InvalidPackageNameError: If the package name is invalid.
         """
+        if not is_valid_pkg_name(self.source.pkg_name):
+            raise InvalidPackageNameError(
+                self.source.pkg_name,
+                loc=SourceLocation(self.source),
+            )
         node = generate_ast(self.source, self.dm)
         return node.accept(self)
 

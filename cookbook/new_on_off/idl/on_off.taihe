@@ -1,0 +1,27 @@
+interface ISetterObserver {
+    @rename("on")
+    onSet(type: String, a: () => void): void;
+
+    @rename("off")
+    offSet(type: String, a: () => void): void;
+}
+
+function getISetterObserver(): ISetterObserver;
+
+@static_overload("on")
+function onFoo(type: String, a: () => void): void;
+
+@static_overload("on")
+function onBar(type: String, a: () => void): void;
+
+@static_overload("on")
+function onBaz(type: String, a: i32, cb: (b: i32) => void): void;
+
+@static_overload("off")
+function offFoo(type: String, a: () => void): void;
+
+@static_overload("off")
+function offBar(type: String, a: () => void): void;
+
+@static_overload("off")
+function offBaz(type: String, a: i32, cb: (b: i32) => void): void;

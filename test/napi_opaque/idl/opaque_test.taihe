@@ -1,0 +1,11 @@
+function is_string(s: Opaque): bool;
+function get_object(): @dts_type("string") Opaque;
+function get_objects(): Array<@dts_type("any") Opaque>;
+union Union {
+  sValue: String;
+  oValue: Opaque;
+}
+struct Person{
+  name: String;
+}
+function is_opaque(s: Union): bool;

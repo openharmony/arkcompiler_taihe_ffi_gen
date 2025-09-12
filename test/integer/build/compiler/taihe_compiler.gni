@@ -1,0 +1,57 @@
+template("taihe_compiler") {
+  assert(defined(invoker.sources), "taihe compiler must specify a \"sources\" value")
+  assert(defined(invoker.mode), "taihe compiler must specify a \"mode\" value")
+  assert(invoker.mode == "author" || invoker.mode == "user", "\"mode\" value can only be \"author\" or \"user\"")
+
+  code_gen_target_name = target_name + "_code_gen"
+  config_target_name = target_name + "_config"
+
+  action_foreach(code_gen_target_name) {
+    sources = invoker.sources
+
+    script = "$taihe_out_compiler_path/taihec"
+
+    if (invoker.mode == "author") {
+      outputs = [
+        "$target_out_dir/include/{{source_name_part}}.abi.h",
+        "$target_out_dir/include/{{source_name_part}}.impl.h",
+        "$target_out_dir/include/{{source_name_part}}.impl.hpp",
+      ]
+    } else {
+      outputs = [
+        "$target_out_dir/include/{{source_name_part}}.abi.h",
+        "$target_out_dir/include/{{source_name_part}}.abi.hpp",
+      ]
+    }
+
+    args = [
+      "-I", "{{source_dir}}",
+      "-O", rebase_path("$target_out_dir"),
+    ]
+
+    if (invoker.mode == "author") {
+      args += ["--author"]
+    } else {
+      args += ["--user"]
+    }
+  }
+
+  config(config_target_name) {
+    include_dirs = [ 
+      "$target_out_dir/include"
+    ]
+  }
+
+  source_set(target_name) {
+    sources = get_target_outputs(":$code_gen_target_name")
+
+    deps = [
+      ":$code_gen_target_name",
+    ]
+
+    public_configs = [
+      ":$config_target_name",
+    ]
+
+  }
+}
