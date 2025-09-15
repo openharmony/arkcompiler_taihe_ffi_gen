@@ -370,10 +370,7 @@ class PandaVm(CachedResource):
     CLI_NAME = "panda-vm"
     PATH_CACHE = "panda-vm"
     VERSION: Final = "sdk-1.5.0-dev.43957"
-    CREDENTIAL = "koala-pub:y3t!n0therP"
-    URL: Final = (
-        "https://nexus.cn.bz-openlab.ru:10443/repository/koala-npm/@panda/sdk/-"
-    )
+    URL: Final = "https://raw.gitcode.com/m0_52007851/panda_vm/blobs/64114d3d133f12695b582ca5f30426790ae5870a"
 
     # Computed attributes
     ani_header_dir: Path = field(init=False)
@@ -440,7 +437,7 @@ class PandaVm(CachedResource):
         tgz = self.base_path.parent / f"{self.VERSION}.tgz"
         url = f"{self.URL}/{self.VERSION}.tgz"
         if not tgz.exists():
-            fetch_url(url, tgz, curl_extra_args=("--user", self.CREDENTIAL))
+            fetch_url(url, tgz)
 
         shutil.rmtree(self.base_path, ignore_errors=True)
         with tarfile.open(tgz, "r:gz") as tar:
