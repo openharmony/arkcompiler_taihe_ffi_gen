@@ -51,7 +51,7 @@ test/xxx/generated/
     └── my.package.impl.cpp
 ```
 
-其中，`*.abi.h`, `*.proj.h`, `*.user.hpp`, `*.impl.hpp` 的说明可参考 [Taihe ABI 层及 C++ 层生成代码解析](../backend-cpp/CppGeneratedCode.md)。
+其中，`*.abi.h`, `*.proj.hpp`, `*.user.hpp`, `*.impl.hpp` 的说明可参考 [Taihe ABI 层及 C++ 层生成代码解析](../backend-cpp/CppGeneratedCode.md)。
 
 ANI 生成的相关文件说明如下：
 
@@ -80,25 +80,19 @@ function process(param: MyParam): MyResult;
 
 当在上层代码 `user/main.ets` 中调用该 `process` 函数时，它会经历如下步骤：
 
-1. 进入自动生成的 `generated/my.package.ets` 文件中的 `process` 函数实现。
+1. `process` 函数内部会自动调用同一文件中的 `_taihe_process_native` 函数，该函数是一个 native 函数，它与 `generated/src` 目录下的 `my.package.ani.cpp` 文件中的 `local::process` 函数相绑定。
 
-   **generated/my.package.ets**
+    **generated/my.package.ets**
 
-   ```typescript
-   export function process(param: _taihe_my_package.MyParam): _taihe_my_package.MyResult {
-     return _taihe_process_native(param);
-   }
-   ```
+    ```typescript
+    export function process(param: _taihe_my_package.MyParam): _taihe_my_package.MyResult {
+        return _taihe_process_native(param);
+    }
 
-2. 该 `process` 函数中会进一步调用进同一文件中的 `_taihe_process_native` 函数，它与 `generated/src` 目录下的 `my.package.ani.cpp` 文件中的 `local::process` 函数相绑定。
+    native function _taihe_process_native(param: _taihe_my_package.MyParam): _taihe_my_package.MyResult;
+    ```
 
-   **generated/my.package.ets**
-
-   ```typescript
-   native function _taihe_process_native(param: _taihe_my_package.MyParam): _taihe_my_package.MyResult;
-   ```
-
-3. `local::process` 函数会先处理参数，将 `MyParam` 在上层对应的 JS 对象（在 ANI 中的类型为 ani_object）转换为 taihe 自动生成的 `my::package::MyParam` 结构体对象，这一转换的具体逻辑通常会实现在 `generated/include/my.package.MyParam.ani.1.hpp` 文件中，对应的转换函数为 `taihe::from_ani<my::package::MyParam>`。
+2. `local::process` 函数会先处理参数，将 `MyParam` 在上层对应的 JS 对象（在 ANI 中的类型为 ani_object）转换为 taihe 自动生成的 `my::package::MyParam` 结构体对象，这一转换的具体逻辑通常会实现在 `generated/include/my.package.MyParam.ani.1.hpp` 文件中，对应的转换函数为 `taihe::from_ani<my::package::MyParam>`。
 
    **generated/src/my.package.ani.cpp**
 
@@ -128,7 +122,7 @@ function process(param: MyParam): MyResult;
    }
    ```
 
-4. 接下来，`local::process` 函数会调用 `my::package::process` 函数，该调用会自动转发到接口作者在 C++ 实现文件中通过 `TH_EXPORT_CPP_API_process` 宏导出的具体实现。
+3. 接下来，`local::process` 函数会调用 `my::package::process` 函数，该调用会自动转发到接口作者在 C++ 实现文件中通过 `TH_EXPORT_CPP_API_process` 宏导出的具体实现。
 
    **generated/src/my.package.ani.cpp**
 
@@ -144,7 +138,7 @@ function process(param: MyParam): MyResult;
    }
    ```
 
-5. `my::package::process` 函数执行完毕后，拿到 `MyResult` 结构体对象，并将其转换为 ani_object 对象，与第 3 步类似，该转换的具体逻辑会实现在 `generated/include/my.package.MyResult.ani.1.hpp` 文件中的 `taihe::into_ani<my::package::MyResult>` 函数里。
+4. `my::package::process` 函数执行完毕后，拿到 `MyResult` 结构体对象，并将其转换为 ani_object 对象，与第 3 步类似，该转换的具体逻辑会实现在 `generated/include/my.package.MyResult.ani.1.hpp` 文件中的 `taihe::into_ani<my::package::MyResult>` 函数里。
 
    **generated/src/my.package.ani.cpp**
 
@@ -169,7 +163,7 @@ function process(param: MyParam): MyResult;
    }
    ```
 
-6. 最后，`local::process` 函数的返回值会被传递回上层的 `_taihe_process_native` 函数，进而返回到 `process` 函数，最终返回到用户代码中。
+5. 最后，`local::process` 函数的返回值会被传递回上层的 `_taihe_process_native` 函数，进而返回到 `process` 函数，最终返回到用户代码中。
 
 ## 反向调用链
 
