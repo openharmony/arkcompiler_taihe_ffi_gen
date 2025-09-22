@@ -533,14 +533,6 @@ class StsCodeGenerator:
                 target.writelns(
                     f"this._taihe_initialize(other._taihe_vtblPtr, _taihe_objDup(other._taihe_dataPtr));",
                 )
-            with target.indented(
-                f"public _taihe_moveFrom(other: {iface_ani_info.sts_impl_name}): void {{",
-                f"}}",
-            ):
-                target.writelns(
-                    f"this._taihe_initialize(other._taihe_vtblPtr, other._taihe_dataPtr);",
-                    f"other._taihe_dataPtr = 0;",
-                )
 
             iface_abi_info = IfaceAbiInfo.get(self.am, iface)
             for ancestor in iface_abi_info.ancestor_dict:
@@ -1302,7 +1294,7 @@ class StsCodeGenerator:
             f"}}",
         ):
             target.writelns(
-                f"this._taihe_moveFrom({result_sts});",
+                f"this._taihe_copyFrom({result_sts});",
             )
 
         if overload_name is not None:
