@@ -66,7 +66,7 @@ class CppUserHeadersGenerator:
             args_abi.append(param_ty_cpp_info.pass_into_abi(param.name))
         params_cpp_str = ", ".join(params_cpp)
         args_abi_str = ", ".join(args_abi)
-        result_abi = f"{func_abi_info.mangled_name}({args_abi_str})"
+        result_abi = f"{func_abi_info.impl_name}({args_abi_str})"
         if isinstance(return_ty := func.return_ty, NonVoidType):
             return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
             return_ty_cpp_name = return_ty_cpp_info.as_owner
