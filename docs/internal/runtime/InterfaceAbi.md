@@ -90,22 +90,22 @@ struct IFancyObj_vtable {
 
 ```c
 struct IBase_ftable {
-    bool (*getState)(struct IBase self);
-    void (*setState)(struct IBase self, bool s);
+  bool (*getState)(struct IBase self);
+  void (*setState)(struct IBase self, bool s);
 };
 
 struct IColor_ftable {
-    TString (*getColor)(struct IColor self);
-    void (*setColor)(struct IColor self, TString c);
+  TString (*getColor)(struct IColor self);
+  void (*setColor)(struct IColor self, TString c);
 };
 
 struct IShape_ftable {
-    TString (*getShape)(struct IShape self);
-    void (*setShape)(struct IShape self, TString s);
+  TString (*getShape)(struct IShape self);
+  void (*setShape)(struct IShape self, TString s);
 };
 
 struct IFancyObj_ftable {
-    void (*sparkle)(struct IFancyObj self);
+  void (*sparkle)(struct IFancyObj self);
 };
 ```
 
@@ -127,7 +127,7 @@ struct DataBlockHead {
 
 #### 2.2.5 运行时类型信息
 
-在**运行时类型信息**中，会包含对象的版本信息，销毁函数、哈希函数及比较函数等通用函数的指针，还有**动态转换表**及其长度。
+在**运行时类型信息**中，会包含对象的销毁函数、哈希函数及比较函数等通用函数的指针，还有**动态转换表**及其长度。
 
 ```c
 typedef void free_func_t(struct DataBlockHead *);
@@ -135,7 +135,6 @@ typedef size_t hash_func_t(struct DataBlockHead *);
 typedef bool same_func_t(struct DataBlockHead *, struct DataBlockHead *);
 
 struct TypeInfo {
-  uint64_t version;
   free_func_t *free_fptr;
   hash_func_t *hash_fptr;
   same_func_t *same_fptr;
@@ -241,6 +240,22 @@ struct IFancyObj fancy = {
 ```cpp
 void call_IFancyObj_sparkle(struct IFancyObj self) {
   self->vtbl_ptr->ftbl_ptr_0->sparkle(self);
+}
+```
+
+如果接口中的某个方法是在特定版本后新增的，那么，接口作者必须为该方法提供一个默认实现，该默认实现会和新增的接口定义一起发布，从而保证任何可能调用到这个新方法的代码，都能在被调用对象不支持该方法时回退到这个默认实现。
+
+实际调用时，调用者先检查对象所实现的接口版本号，如果不低于方法定义的版本号，则调用对象的实现，否则回退到默认实现。
+
+```cpp
+void default_IFancyObj_newMethod(struct IFancyObj self);
+
+void call_IFancyObj_newMethod(struct IFancyObj self) {
+  if (self->vtbl_ptr->ftbl_ptr_0->version >= NEW_METHOD_VERSION) {
+    self->vtbl_ptr->ftbl_ptr_0->newMethod(self);
+  } else {
+    default_IFancyObj_newMethod(self);
+  }
 }
 ```
 

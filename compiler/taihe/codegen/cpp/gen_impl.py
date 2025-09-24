@@ -82,7 +82,7 @@ class CppImplHeadersGenerator:
             result_abi = result_cpp
         pkg_cpp_impl_target.writelns(
             f"#define {func_cpp_impl_info.macro}({func_impl}) \\",
-            f"    {return_ty_abi_name} {func_abi_info.mangled_name}({params_abi_str}) {{ \\",
+            f"    {return_ty_abi_name} {func_abi_info.impl_name}({params_abi_str}) {{ \\",
             f"        return {result_abi}; \\",
             f"    }}",
         )
