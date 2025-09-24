@@ -49,7 +49,7 @@ class PackageAbiInfo(AbstractAnalysis[PackageDecl]):
 class GlobFuncAbiInfo(AbstractAnalysis[GlobFuncDecl]):
     def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
         segments = [*f.parent_pkg.segments, f.name]
-        self.mangled_name = encode(segments, DeclKind.FUNC)
+        self.impl_name = encode(segments, DeclKind.FUNC)
 
     @classmethod
     @override
@@ -60,7 +60,8 @@ class GlobFuncAbiInfo(AbstractAnalysis[GlobFuncDecl]):
 class IfaceMethodAbiInfo(AbstractAnalysis[IfaceMethodDecl]):
     def __init__(self, am: AnalysisManager, f: IfaceMethodDecl) -> None:
         segments = [*f.parent_pkg.segments, f.parent_iface.name, f.name]
-        self.mangled_name = encode(segments, DeclKind.FUNC)
+        self.impl_name = encode(segments, DeclKind.FUNC)
+        self.wrap_name = encode(segments, DeclKind.METHOD)
 
     @classmethod
     @override

@@ -11,6 +11,7 @@ from taihe.codegen.abi.writer import CHeaderWriter, CSourceWriter
 from taihe.semantics.declarations import (
     GlobFuncDecl,
     IfaceDecl,
+    IfaceMethodDecl,
     PackageDecl,
     PackageGroup,
     StructDecl,
@@ -63,27 +64,8 @@ class AbiHeadersGenerator:
                 if isinstance(return_ty := func.return_ty, NonVoidType):
                     return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
                     pkg_abi_target.add_include(*return_ty_abi_info.impl_headers)
-                self.gen_func(func, pkg_abi_target)
-
-    def gen_func(
-        self,
-        func: GlobFuncDecl,
-        pkg_abi_target: CHeaderWriter,
-    ):
-        func_abi_info = GlobFuncAbiInfo.get(self.am, func)
-        params = []
-        for param in func.params:
-            param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
-            params.append(f"{param_ty_abi_info.as_param} {param.name}")
-        params_str = ", ".join(params)
-        if isinstance(return_ty := func.return_ty, NonVoidType):
-            return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
-            return_ty_abi_name = return_ty_abi_info.as_owner
-        else:
-            return_ty_abi_name = "void"
-        pkg_abi_target.writelns(
-            f"TH_EXPORT {return_ty_abi_name} {func_abi_info.mangled_name}({params_str});",
-        )
+                func_abi_info = GlobFuncAbiInfo.get(self.am, func)
+                self.gen_func(func, func_abi_info, pkg_abi_target)
 
     def gen_struct_decl_file(
         self,
@@ -352,7 +334,15 @@ class AbiHeadersGenerator:
                     param_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
                     iface_abi_impl_target.add_include(*param_ty_abi_info.defn_headers)
             self.gen_iface_ftable(iface, iface_abi_info, iface_abi_impl_target)
-            self.gen_iface_methods(iface, iface_abi_info, iface_abi_impl_target)
+            for method in iface.methods:
+                method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
+                self.gen_method_call(
+                    iface,
+                    iface_abi_info,
+                    method,
+                    method_abi_info,
+                    iface_abi_impl_target,
+                )
             for ancestor, info in iface_abi_info.ancestor_dict.items():
                 if ancestor is iface:
                     continue
@@ -391,34 +381,76 @@ class AbiHeadersGenerator:
                     f"{return_ty_abi_name} (*{method.name})({params_str});",
                 )
 
-    def gen_iface_methods(
+    def gen_method_call(
         self,
         iface: IfaceDecl,
         iface_abi_info: IfaceAbiInfo,
+        method: IfaceMethodDecl,
+        method_abi_info: IfaceMethodAbiInfo,
         iface_abi_impl_target: CHeaderWriter,
     ):
-        for method in iface.methods:
-            method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
-            params = [f"{iface_abi_info.as_param} tobj"]
-            args = ["tobj"]
-            for param in method.params:
-                param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
-                params.append(f"{param_ty_abi_info.as_param} {param.name}")
-                args.append(param.name)
-            params_str = ", ".join(params)
-            args_str = ", ".join(args)
-            if isinstance(return_ty := method.return_ty, NonVoidType):
-                return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
-                return_ty_abi_name = return_ty_abi_info.as_owner
-            else:
-                return_ty_abi_name = "void"
-            with iface_abi_impl_target.indented(
-                f"TH_INLINE {return_ty_abi_name} {method_abi_info.mangled_name}({params_str}) {{",
-                f"}}",
-            ):
-                iface_abi_impl_target.writelns(
-                    f"return tobj.vtbl_ptr->{iface_abi_info.ancestor_dict[iface].ftbl_ptr}->{method.name}({args_str});",
-                )
+        params = [f"{iface_abi_info.as_param} tobj"]
+        args = ["tobj"]
+        for param in method.params:
+            param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
+            params.append(f"{param_ty_abi_info.as_param} {param.name}")
+            args.append(param.name)
+        params_str = ", ".join(params)
+        args_str = ", ".join(args)
+        if isinstance(return_ty := method.return_ty, NonVoidType):
+            return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
+            return_ty_abi_name = return_ty_abi_info.as_owner
+        else:
+            return_ty_abi_name = "void"
+        with iface_abi_impl_target.indented(
+            f"TH_INLINE {return_ty_abi_name} {method_abi_info.wrap_name}({params_str}) {{",
+            f"}}",
+        ):
+            iface_abi_impl_target.writelns(
+                f"return tobj.vtbl_ptr->{iface_abi_info.ancestor_dict[iface].ftbl_ptr}->{method.name}({args_str});",
+            )
+
+    def gen_method(
+        self,
+        iface: IfaceDecl,
+        iface_abi_info: IfaceAbiInfo,
+        method: IfaceMethodDecl,
+        method_abi_info: IfaceMethodAbiInfo,
+        iface_abi_impl_target: CHeaderWriter,
+    ):
+        params = [f"{iface_abi_info.as_param} tobj"]
+        for param in method.params:
+            param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
+            params.append(f"{param_ty_abi_info.as_param} {param.name}")
+        params_str = ", ".join(params)
+        if isinstance(return_ty := method.return_ty, NonVoidType):
+            return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
+            return_ty_abi_name = return_ty_abi_info.as_owner
+        else:
+            return_ty_abi_name = "void"
+        iface_abi_impl_target.writelns(
+            f"TH_EXPORT {return_ty_abi_name} {method_abi_info.impl_name}({params_str});",
+        )
+
+    def gen_func(
+        self,
+        func: GlobFuncDecl,
+        func_abi_info: GlobFuncAbiInfo,
+        pkg_abi_target: CHeaderWriter,
+    ):
+        params = []
+        for param in func.params:
+            param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
+            params.append(f"{param_ty_abi_info.as_param} {param.name}")
+        params_str = ", ".join(params)
+        if isinstance(return_ty := func.return_ty, NonVoidType):
+            return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
+            return_ty_abi_name = return_ty_abi_info.as_owner
+        else:
+            return_ty_abi_name = "void"
+        pkg_abi_target.writelns(
+            f"TH_EXPORT {return_ty_abi_name} {func_abi_info.impl_name}({params_str});",
+        )
 
 
 class AbiSourcesGenerator:
