@@ -86,26 +86,38 @@ struct IFancyObj_vtable {
 
 #### 2.2.3 函数表
 
-每个 Taihe 接口的**函数表**内部则存有这个接口*自己的*所有方法的指针：
+每个 Taihe 接口**函数表**结构体中的第一项是一个 64 位的**版本号**，表示对象所实现的该接口的版本。接下来是该接口中在当前版本定义的所有方法的函数指针。
 
 ```c
 struct IBase_ftable {
-  bool (*getState)(struct IBase self);
-  void (*setState)(struct IBase self, bool s);
+  uint64_t version;  // 接口版本号
+  struct {
+    bool (*getState)(struct IBase self);
+    void (*setState)(struct IBase self, bool s);
+  } methods;
 };
 
 struct IColor_ftable {
-  TString (*getColor)(struct IColor self);
-  void (*setColor)(struct IColor self, TString c);
+  uint64_t version;
+  struct {
+    TString (*getColor)(struct IColor self);
+    void (*setColor)(struct IColor self, TString c);
+  } methods;
 };
 
 struct IShape_ftable {
-  TString (*getShape)(struct IShape self);
-  void (*setShape)(struct IShape self, TString s);
+  uint64_t version;
+  struct {
+    TString (*getShape)(struct IShape self);
+    void (*setShape)(struct IShape self, TString s);
+  } methods;
 };
 
 struct IFancyObj_ftable {
-  void (*sparkle)(struct IFancyObj self);
+  uint64_t version;
+  struct {
+    void (*sparkle)(struct IFancyObj self);
+  } methods;
 };
 ```
 
@@ -239,7 +251,7 @@ struct IFancyObj fancy = {
 
 ```cpp
 void call_IFancyObj_sparkle(struct IFancyObj self) {
-  self->vtbl_ptr->ftbl_ptr_0->sparkle(self);
+  self->vtbl_ptr->ftbl_ptr_0->methods.sparkle(self);
 }
 ```
 
@@ -252,7 +264,7 @@ void default_IFancyObj_newMethod(struct IFancyObj self);
 
 void call_IFancyObj_newMethod(struct IFancyObj self) {
   if (self->vtbl_ptr->ftbl_ptr_0->version >= NEW_METHOD_VERSION) {
-    self->vtbl_ptr->ftbl_ptr_0->newMethod(self);
+    self->vtbl_ptr->ftbl_ptr_0->methods.newMethod(self);
   } else {
     default_IFancyObj_newMethod(self);
   }
@@ -387,7 +399,6 @@ auto obj = taihe::make_holder<MyObject, IColor, IShape>(constructor_args...);
 
     ```c++
     struct typeinfo_t {
-      uint64_t version;
       free_func_t *free_fptr;
       hash_func_t *hash_fptr;
       same_func_t *same_fptr;
@@ -396,7 +407,6 @@ auto obj = taihe::make_holder<MyObject, IColor, IShape>(constructor_args...);
     };
     static constexpr typeinfo_t rtti = [] {
       struct typeinfo_t info = {
-        .version = 0,
         .free_fptr = &free_data_ptr<Impl>,
         .hash_fptr = &hash_data_ptr<Impl>,
         .same_fptr = &same_data_ptr<Impl>,
@@ -460,8 +470,11 @@ auto obj = taihe::make_holder<MyObject, IColor, IShape>(constructor_args...);
 
     template<typename Impl>
     constexpr object_IColor_ftable object::weak::IColor::ftbl_impl = {
-      .getColor = &methods_impl<Impl>::getColor,
-      .setColor = &methods_impl<Impl>::setColor,
+      .version = 0,
+      .methods = {
+        .getColor = &methods_impl<Impl>::getColor,
+        .setColor = &methods_impl<Impl>::setColor,
+      },
     };
     ```
 
