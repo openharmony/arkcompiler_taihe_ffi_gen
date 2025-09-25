@@ -762,6 +762,18 @@ class IfaceMethodAniInfo(AbstractAnalysis[IfaceMethodDecl]):
         return upper_args_sts
 
 
+class NamedFunctionLikeAniInfo:
+    @staticmethod
+    def get(
+        am: AnalysisManager,
+        f: GlobFuncDecl | IfaceMethodDecl,
+    ) -> GlobFuncAniInfo | IfaceMethodAniInfo:
+        if isinstance(f, GlobFuncDecl):
+            return GlobFuncAniInfo.get(am, f)
+        if isinstance(f, IfaceMethodDecl):
+            return IfaceMethodAniInfo.get(am, f)
+
+
 class EnumAniInfo(AbstractAnalysis[EnumDecl]):
     def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
         self.parent_ns = PackageAniInfo.get(am, d.parent_pkg).ns
