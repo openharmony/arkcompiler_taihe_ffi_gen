@@ -366,20 +366,27 @@ class AbiHeadersGenerator:
             f"struct {iface_abi_info.ftable} {{",
             f"}};",
         ):
-            for method in iface.methods:
-                params = [f"{iface_abi_info.as_param} tobj"]
-                for param in method.params:
-                    param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
-                    params.append(f"{param_ty_abi_info.as_param} {param.name}")
-                params_str = ", ".join(params)
-                if isinstance(return_ty := method.return_ty, NonVoidType):
-                    return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
-                    return_ty_abi_name = return_ty_abi_info.as_owner
-                else:
-                    return_ty_abi_name = "void"
-                iface_abi_impl_target.writelns(
-                    f"{return_ty_abi_name} (*{method.name})({params_str});",
-                )
+            iface_abi_impl_target.writelns(
+                f"uint64_t version;",
+            )
+            with iface_abi_impl_target.indented(
+                f"struct {{",
+                f"}} methods;",
+            ):
+                for method in iface.methods:
+                    params = [f"{iface_abi_info.as_param} tobj"]
+                    for param in method.params:
+                        param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
+                        params.append(f"{param_ty_abi_info.as_param} {param.name}")
+                    params_str = ", ".join(params)
+                    if isinstance(return_ty := method.return_ty, NonVoidType):
+                        return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
+                        return_ty_abi_name = return_ty_abi_info.as_owner
+                    else:
+                        return_ty_abi_name = "void"
+                    iface_abi_impl_target.writelns(
+                        f"{return_ty_abi_name} (*{method.name})({params_str});",
+                    )
 
     def gen_method_call(
         self,
@@ -407,7 +414,7 @@ class AbiHeadersGenerator:
             f"}}",
         ):
             iface_abi_impl_target.writelns(
-                f"return tobj.vtbl_ptr->{iface_abi_info.ancestor_dict[iface].ftbl_ptr}->{method.name}({args_str});",
+                f"return tobj.vtbl_ptr->{iface_abi_info.ancestor_dict[iface].ftbl_ptr}->methods.{method.name}({args_str});",
             )
 
     def gen_method(
