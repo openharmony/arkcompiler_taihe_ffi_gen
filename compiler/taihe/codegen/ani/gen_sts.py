@@ -12,7 +12,7 @@ from taihe.codegen.ani.analyses import (
     EnumAniInfo,
     GlobFuncAniInfo,
     IfaceAniInfo,
-    IfaceMethodAniInfo,
+    NamedFunctionLikeAniInfo,
     PackageGroupAniInfo,
     StructAniInfo,
     TypeAniInfo,
@@ -201,8 +201,7 @@ class StsCodeGenerator:
 
     def gen_package(self, pkg: PackageDecl, target: StsWriter):
         for func in pkg.functions:
-            func_ani_info = GlobFuncAniInfo.get(self.am, func)
-            self.gen_native_func(func, func_ani_info, target)
+            self.gen_native_func(func, target)
 
         ctors_map: dict[str, list[GlobFuncDecl]] = {}
         statics_map: dict[str, list[GlobFuncDecl]] = {}
@@ -220,13 +219,13 @@ class StsCodeGenerator:
         func_on_off_register = OnOffRegister()
         func_kind = GlobalKind()
         for func in glob_funcs:
-            func_ani_info = GlobFuncAniInfo.get(self.am, func)
             self.gen_any_func(
                 func,
-                func_ani_info,
                 target,
                 func_kind,
-                "export default " if func_ani_info.is_default else "export ",
+                "export default "
+                if GlobFuncAniInfo.get(self.am, func).is_default
+                else "export ",
                 func_overload_register,
                 func_on_off_register,
             )
@@ -249,22 +248,18 @@ class StsCodeGenerator:
             self.gen_iface_class(iface, target, statics_map, ctors_map)
 
         for func in glob_funcs:
-            func_ani_info = GlobFuncAniInfo.get(self.am, func)
-            self.gen_reverse_func(func, func_ani_info, target, func_kind)
+            self.gen_reverse_func(func, target, func_kind)
         for iface in pkg.interfaces:
             iface_ani_info = IfaceAniInfo.get(self.am, iface)
             ctor_kind = CtorKind(iface_ani_info.sts_impl_name)
             for ctor in ctors_map.get(iface.name, []):
-                ctor_ani_info = GlobFuncAniInfo.get(self.am, ctor)
-                self.gen_reverse_func(ctor, ctor_ani_info, target, ctor_kind)
+                self.gen_reverse_func(ctor, target, ctor_kind)
             func_kind = StaticKind(iface_ani_info.sts_impl_name)
             for func in statics_map.get(iface.name, []):
-                func_ani_info = GlobFuncAniInfo.get(self.am, func)
-                self.gen_reverse_func(func, func_ani_info, target, func_kind)
+                self.gen_reverse_func(func, target, func_kind)
             meth_kind = InterfaceKind(iface_ani_info.sts_type_name)
             for method in iface.methods:
-                method_ani_info = IfaceMethodAniInfo.get(self.am, method)
-                self.gen_reverse_func(method, method_ani_info, target, meth_kind)
+                self.gen_reverse_func(method, target, meth_kind)
 
     def gen_enum(
         self,
@@ -457,10 +452,8 @@ class StsCodeGenerator:
             meth_on_off_register = OnOffRegister()
             meth_kind = InterfaceKind(iface_ani_info.sts_type_name)
             for method in iface.methods:
-                method_ani_info = IfaceMethodAniInfo.get(self.am, method)
                 self.gen_any_func_decl(
                     method,
-                    method_ani_info,
                     target,
                     meth_kind,
                     "",
@@ -537,18 +530,15 @@ class StsCodeGenerator:
             iface_abi_info = IfaceAbiInfo.get(self.am, iface)
             for ancestor in iface_abi_info.ancestor_dict:
                 for method in ancestor.methods:
-                    method_ani_info = IfaceMethodAniInfo.get(self.am, method)
-                    self.gen_native_func(method, method_ani_info, target)
+                    self.gen_native_func(method, target)
 
             # ctors
             ctor_overload_register = OverloadRegister()
             ctor_on_off_register = OnOffRegister()
             ctor_kind = CtorKind(iface_ani_info.sts_impl_name)
             for ctor in ctors_map.get(iface.name, []):
-                ctor_ani_info = GlobFuncAniInfo.get(self.am, ctor)
                 self.gen_any_ctor(
                     ctor,
-                    ctor_ani_info,
                     target,
                     ctor_kind,
                     "",
@@ -565,10 +555,8 @@ class StsCodeGenerator:
             func_on_off_register = OnOffRegister()
             func_kind = StaticKind(iface_ani_info.sts_impl_name)
             for func in statics_map.get(iface.name, []):
-                func_ani_info = GlobFuncAniInfo.get(self.am, func)
                 self.gen_any_func(
                     func,
-                    func_ani_info,
                     target,
                     func_kind,
                     "",
@@ -586,10 +574,8 @@ class StsCodeGenerator:
             meth_kind = InterfaceKind(iface_ani_info.sts_type_name)
             for ancestor in iface_abi_info.ancestor_dict:
                 for method in ancestor.methods:
-                    method_ani_info = IfaceMethodAniInfo.get(self.am, method)
                     self.gen_any_func(
                         method,
-                        method_ani_info,
                         target,
                         meth_kind,
                         "",
@@ -604,9 +590,9 @@ class StsCodeGenerator:
     def gen_native_func(
         self,
         func: GlobFuncDecl | IfaceMethodDecl,
-        func_ani_info: GlobFuncAniInfo | IfaceMethodAniInfo,
         target: StsWriter,
     ):
+        func_ani_info = NamedFunctionLikeAniInfo.get(self.am, func)
         params_sts = []
         for param in func.params:
             param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
@@ -625,13 +611,13 @@ class StsCodeGenerator:
     def gen_any_func_decl(
         self,
         func: GlobFuncDecl | IfaceMethodDecl,
-        func_ani_info: GlobFuncAniInfo | IfaceMethodAniInfo,
         target: StsWriter,
         func_kind: FuncKind,
         decl_prefix: str,
         overload_register: OverloadRegister,
         on_off_register: OnOffRegister,
     ):
+        func_ani_info = NamedFunctionLikeAniInfo.get(self.am, func)
         params_ty_sts_sig = []
         params_ty_sts_name = []
         params_sts = []
@@ -720,13 +706,13 @@ class StsCodeGenerator:
     def gen_any_func(
         self,
         func: GlobFuncDecl | IfaceMethodDecl,
-        func_ani_info: GlobFuncAniInfo | IfaceMethodAniInfo,
         target: StsWriter,
         func_kind: FuncKind,
         mode_prefix: str,
         overload_register: OverloadRegister,
         on_off_register: OnOffRegister,
     ):
+        func_ani_info = NamedFunctionLikeAniInfo.get(self.am, func)
         params_ty_sts_sig = []
         params_ty_sts_name = []
         params_sts = []
@@ -830,13 +816,13 @@ class StsCodeGenerator:
     def gen_any_ctor(
         self,
         ctor: GlobFuncDecl,
-        ctor_ani_info: GlobFuncAniInfo,
         target: StsWriter,
         ctor_func: CtorKind,
         mode_prefix: str,
         overload_register: OverloadRegister,
         on_off_register: OnOffRegister,
     ):
+        ctor_ani_info = GlobFuncAniInfo.get(self.am, ctor)
         params_ty_sts_sig = []
         params_ty_sts_name = []
         params_sts = []
@@ -1525,7 +1511,7 @@ class StsCodeGenerator:
                 args_sts.append(arg_sts)
             params_sts_str = ", ".join(params_sts)
             args_sts_str = ", ".join(args_sts)
-            return_ty = " | ".join(return_ty_sts_sum)  # noqa: F841
+            return_ty = " | ".join(return_ty_sts_sum)
 
             with target.indented(
                 f"{mode_prefix}{ctor_kind.func_prefix}{on_off_name}({params_sts_str}) {{",
@@ -1557,10 +1543,10 @@ class StsCodeGenerator:
     def gen_reverse_func(
         self,
         func: GlobFuncDecl | IfaceMethodDecl,
-        func_ani_info: GlobFuncAniInfo | IfaceMethodAniInfo,
         target: StsWriter,
         func_kind: FuncKind | CtorKind,
     ):
+        func_ani_info = NamedFunctionLikeAniInfo.get(self.am, func)
         args_sts = []
         params_sts = func_kind.reverse_base_params()
         for param in func.params:
