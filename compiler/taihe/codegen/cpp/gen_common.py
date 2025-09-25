@@ -1916,7 +1916,14 @@ class CppHeadersGenerator:
             f"constexpr {iface_abi_info.ftable} {iface_cpp_info.weakspace}::{iface_cpp_info.weak_name}::ftbl_impl = {{",
             f"}};",
         ):
-            for method in iface.methods:
-                iface_cpp_impl_target.writelns(
-                    f".{method.name} = &methods_impl<Impl>::{method.name},",
-                )
+            iface_cpp_impl_target.writelns(
+                f".version = 0,",
+            )
+            with iface_cpp_impl_target.indented(
+                f".methods = {{",
+                f"}},",
+            ):
+                for method in iface.methods:
+                    iface_cpp_impl_target.writelns(
+                        f".{method.name} = &methods_impl<Impl>::{method.name},",
+                    )
