@@ -62,6 +62,7 @@ class IfaceMethodAbiInfo(AbstractAnalysis[IfaceMethodDecl]):
         segments = [*f.parent_pkg.segments, f.parent_iface.name, f.name]
         self.impl_name = encode(segments, DeclKind.FUNC)
         self.wrap_name = encode(segments, DeclKind.METHOD)
+        self.min_version = 0
 
     @classmethod
     @override
@@ -133,6 +134,7 @@ class IfaceAbiInfo(AbstractAnalysis[IfaceDecl]):
         self.defn_header = f"{d.parent_pkg.name}.{d.name}.abi.1.h"
         self.impl_header = f"{d.parent_pkg.name}.{d.name}.abi.2.h"
         self.mangled_name = encode(segments, DeclKind.TYPE)
+        self.version = 0
         self.as_owner = f"struct {self.mangled_name}"
         self.as_param = f"struct {self.mangled_name}"
         self.ftable = encode(segments, DeclKind.FTABLE)

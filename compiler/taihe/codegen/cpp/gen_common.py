@@ -1917,7 +1917,7 @@ class CppHeadersGenerator:
             f"}};",
         ):
             iface_cpp_impl_target.writelns(
-                f".version = 0,",
+                f".version = {iface_abi_info.version},",
             )
             with iface_cpp_impl_target.indented(
                 f".methods = {{",
