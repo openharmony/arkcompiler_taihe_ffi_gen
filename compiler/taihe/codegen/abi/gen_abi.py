@@ -65,7 +65,11 @@ class AbiHeadersGenerator:
                     return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
                     pkg_abi_target.add_include(*return_ty_abi_info.impl_headers)
                 func_abi_info = GlobFuncAbiInfo.get(self.am, func)
-                self.gen_func(func, func_abi_info, pkg_abi_target)
+                self.gen_func(
+                    func,
+                    func_abi_info,
+                    pkg_abi_target,
+                )
 
     def gen_struct_decl_file(
         self,
@@ -336,6 +340,13 @@ class AbiHeadersGenerator:
             self.gen_iface_ftable(iface, iface_abi_info, iface_abi_impl_target)
             for method in iface.methods:
                 method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
+                self.gen_method(
+                    iface,
+                    iface_abi_info,
+                    method,
+                    method_abi_info,
+                    iface_abi_impl_target,
+                )
                 self.gen_method_call(
                     iface,
                     iface_abi_info,
@@ -413,9 +424,21 @@ class AbiHeadersGenerator:
             f"TH_INLINE {return_ty_abi_name} {method_abi_info.wrap_name}({params_str}) {{",
             f"}}",
         ):
-            iface_abi_impl_target.writelns(
-                f"return tobj.vtbl_ptr->{iface_abi_info.ancestor_dict[iface].ftbl_ptr}->methods.{method.name}({args_str});",
-            )
+            info = iface_abi_info.ancestor_dict[iface]
+            with iface_abi_impl_target.indented(
+                f"if (0 >= {method_abi_info.min_version} || tobj.vtbl_ptr->{info.ftbl_ptr}->version >= {method_abi_info.min_version}) {{",
+                f"}}",
+            ):
+                iface_abi_impl_target.writelns(
+                    f"return tobj.vtbl_ptr->{info.ftbl_ptr}->methods.{method.name}({args_str});",
+                )
+            with iface_abi_impl_target.indented(
+                f"else {{",
+                f"}}",
+            ):
+                iface_abi_impl_target.writelns(
+                    f"return {method_abi_info.impl_name}({args_str});",
+                )
 
     def gen_method(
         self,
