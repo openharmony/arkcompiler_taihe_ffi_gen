@@ -17,6 +17,8 @@ from taihe.codegen.cpp.analyses import (
     StructCppInfo,
     TypeCppInfo,
     UnionCppInfo,
+    from_abi,
+    into_abi,
 )
 from taihe.semantics.declarations import (
     EnumDecl,
@@ -1654,14 +1656,14 @@ class CppHeadersGenerator:
                 for param in method.params:
                     param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
                     params_cpp.append(f"{param_ty_cpp_info.as_param} {param.name}")
-                    args_abi.append(param_ty_cpp_info.pass_into_abi(param.name))
+                    args_abi.append(into_abi(param_ty_cpp_info.as_param, param.name))
                 params_cpp_str = ", ".join(params_cpp)
                 args_abi_str = ", ".join(args_abi)
                 result_abi = f"{method_abi_info.wrap_name}({args_abi_str})"
                 if isinstance(return_ty := method.return_ty, NonVoidType):
                     return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
                     return_ty_cpp_name = return_ty_cpp_info.as_owner
-                    result_cpp = return_ty_cpp_info.return_from_abi(result_abi)
+                    result_cpp = from_abi(return_ty_cpp_info.as_owner, result_abi)
                 else:
                     return_ty_cpp_name = "void"
                     result_cpp = result_abi
@@ -1695,7 +1697,7 @@ class CppHeadersGenerator:
                     param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
                     param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
                     params_abi.append(f"{param_ty_abi_info.as_param} {param.name}")
-                    args_cpp.append(param_ty_cpp_info.pass_from_abi(param.name))
+                    args_cpp.append(from_abi(param_ty_cpp_info.as_param, param.name))
                 params_abi_str = ", ".join(params_abi)
                 args_cpp_str = ", ".join(args_cpp)
                 result_cpp = f"::taihe::cast_data_ptr<Impl>(tobj.data_ptr)->{method_cpp_info.impl_name}({args_cpp_str})"
@@ -1703,7 +1705,7 @@ class CppHeadersGenerator:
                     return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
                     return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
                     return_ty_abi_name = return_ty_abi_info.as_owner
-                    result_abi = return_ty_cpp_info.return_into_abi(result_cpp)
+                    result_abi = into_abi(return_ty_cpp_info.as_owner, result_cpp)
                 else:
                     return_ty_abi_name = "void"
                     result_abi = result_cpp
