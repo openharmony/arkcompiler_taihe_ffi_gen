@@ -145,17 +145,13 @@ class TypeCppInfo(AbstractAnalysis[NonVoidType], ABC):
     def _create(cls, am: AnalysisManager, t: NonVoidType) -> "TypeCppInfo":
         return t.accept(TypeCppInfoDispatcher(am))
 
-    def return_from_abi(self, val):
-        return f"::taihe::from_abi<{self.as_owner}>({val})"
 
-    def return_into_abi(self, val):
-        return f"::taihe::into_abi<{self.as_owner}>({val})"
+def into_abi(ty: str, val: str) -> str:
+    return f"::taihe::into_abi<{ty}>({val})"
 
-    def pass_from_abi(self, val):
-        return f"::taihe::from_abi<{self.as_param}>({val})"
 
-    def pass_into_abi(self, val):
-        return f"::taihe::into_abi<{self.as_param}>({val})"
+def from_abi(ty: str, val: str) -> str:
+    return f"::taihe::from_abi<{ty}>({val})"
 
 
 class EnumTypeCppInfo(TypeCppInfo):

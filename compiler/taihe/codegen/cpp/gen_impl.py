@@ -13,6 +13,8 @@ from taihe.codegen.cpp.analyses import (
     PackageCppImplInfo,
     PackageCppInfo,
     TypeCppInfo,
+    from_abi,
+    into_abi,
 )
 from taihe.semantics.declarations import (
     GlobFuncDecl,
@@ -62,21 +64,21 @@ class CppImplHeadersGenerator:
         func_abi_info = GlobFuncAbiInfo.get(self.am, func)
         func_cpp_impl_info = GlobFuncCppImplInfo.get(self.am, func)
         func_impl = "CPP_FUNC_IMPL"
-        args_cpp = []
         params_abi = []
+        args_cpp = []
         for param in func.params:
             param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
             param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
-            args_cpp.append(param_ty_cpp_info.pass_from_abi(param.name))
             params_abi.append(f"{param_ty_abi_info.as_param} {param.name}")
-        args_cpp_str = ", ".join(args_cpp)
+            args_cpp.append(from_abi(param_ty_cpp_info.as_param, param.name))
         params_abi_str = ", ".join(params_abi)
+        args_cpp_str = ", ".join(args_cpp)
         result_cpp = f"{func_impl}({args_cpp_str})"
         if isinstance(return_ty := func.return_ty, NonVoidType):
             return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
             return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
             return_ty_abi_name = return_ty_abi_info.as_owner
-            result_abi = return_ty_cpp_info.return_into_abi(result_cpp)
+            result_abi = into_abi(return_ty_cpp_info.as_owner, result_cpp)
         else:
             return_ty_abi_name = "void"
             result_abi = result_cpp
