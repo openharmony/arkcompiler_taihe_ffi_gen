@@ -23,6 +23,7 @@ from taihe.codegen.cpp.analyses import (
 from taihe.semantics.declarations import (
     EnumDecl,
     IfaceDecl,
+    IfaceMethodDecl,
     PackageDecl,
     PackageGroup,
     StructDecl,
@@ -1213,8 +1214,8 @@ class CppHeadersGenerator:
                 )
                 self.gen_iface_view_dynamic_cast(iface, iface_cpp_defn_target)
                 self.gen_iface_view_static_cast(iface, iface_cpp_defn_target)
-                self.gen_iface_user_methods_decl(iface, iface_cpp_defn_target)
-                self.gen_iface_impl_methods_decl(iface, iface_cpp_defn_target)
+                self.gen_iface_virtual_type_decl(iface, iface_cpp_defn_target)
+                self.gen_iface_methods_impl_decl(iface, iface_cpp_defn_target)
                 self.gen_iface_ftbl_decl(iface, iface_cpp_defn_target)
                 self.gen_iface_vtbl_impl(iface, iface_cpp_defn_target)
                 self.gen_iface_idmap_impl(iface, iface_cpp_defn_target)
@@ -1290,7 +1291,7 @@ class CppHeadersGenerator:
                 f"other.data_ptr,",
             )
 
-    def gen_iface_user_methods_decl(
+    def gen_iface_virtual_type_decl(
         self,
         iface: IfaceDecl,
         iface_cpp_defn_target: CHeaderWriter,
@@ -1301,7 +1302,7 @@ class CppHeadersGenerator:
             f"struct virtual_type;",
         )
 
-    def gen_iface_impl_methods_decl(
+    def gen_iface_methods_impl_decl(
         self,
         iface: IfaceDecl,
         iface_cpp_defn_target: CHeaderWriter,
@@ -1620,8 +1621,8 @@ class CppHeadersGenerator:
                 if isinstance(return_ty := method.return_ty, NonVoidType):
                     return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
                     iface_cpp_impl_target.add_include(*return_ty_cpp_info.defn_headers)
-            self.gen_iface_user_methods_impl(iface, iface_cpp_impl_target)
-            self.gen_iface_impl_methods_impl(iface, iface_cpp_impl_target)
+            self.gen_iface_virtual_type_impl(iface, iface_cpp_impl_target)
+            self.gen_iface_methods_impl_impl(iface, iface_cpp_impl_target)
             self.gen_iface_ftbl_impl(iface, iface_cpp_impl_target)
             for ancestor, info in iface_abi_info.ancestor_dict.items():
                 if ancestor is iface:
@@ -1636,7 +1637,7 @@ class CppHeadersGenerator:
                     return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
                     iface_cpp_impl_target.add_include(*return_ty_cpp_info.impl_headers)
 
-    def gen_iface_user_methods_impl(
+    def gen_iface_virtual_type_impl(
         self,
         iface: IfaceDecl,
         iface_cpp_impl_target: CHeaderWriter,
@@ -1648,34 +1649,43 @@ class CppHeadersGenerator:
             f"}};",
         ):
             for method in iface.methods:
-                method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
-                method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
-                params_cpp = []
-                thiz = f"*reinterpret_cast<{iface_abi_info.mangled_name} const*>(this)"
-                args_abi = [thiz]
-                for param in method.params:
-                    param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
-                    params_cpp.append(f"{param_ty_cpp_info.as_param} {param.name}")
-                    args_abi.append(into_abi(param_ty_cpp_info.as_param, param.name))
-                params_cpp_str = ", ".join(params_cpp)
-                args_abi_str = ", ".join(args_abi)
-                result_abi = f"{method_abi_info.wrap_name}({args_abi_str})"
-                if isinstance(return_ty := method.return_ty, NonVoidType):
-                    return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-                    return_ty_cpp_name = return_ty_cpp_info.as_owner
-                    result_cpp = from_abi(return_ty_cpp_info.as_owner, result_abi)
-                else:
-                    return_ty_cpp_name = "void"
-                    result_cpp = result_abi
-                with iface_cpp_impl_target.indented(
-                    f"{return_ty_cpp_name} {method_cpp_info.call_name}({params_cpp_str}) const& {{",
-                    f"}}",
-                ):
-                    iface_cpp_impl_target.writelns(
-                        f"return {result_cpp};",
-                    )
+                self.gen_iface_virtual_type_method(iface, method, iface_cpp_impl_target)
 
-    def gen_iface_impl_methods_impl(
+    def gen_iface_virtual_type_method(
+        self,
+        iface: IfaceDecl,
+        method: IfaceMethodDecl,
+        iface_cpp_impl_target: CHeaderWriter,
+    ):
+        iface_abi_info = IfaceAbiInfo.get(self.am, iface)
+        iface_cpp_info = IfaceCppInfo.get(self.am, iface)
+        method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
+        method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
+        params_cpp = []
+        args_abi = [f"*reinterpret_cast<{iface_abi_info.mangled_name} const*>(this)"]
+        for param in method.params:
+            param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
+            params_cpp.append(f"{param_ty_cpp_info.as_param} {param.name}")
+            args_abi.append(into_abi(param_ty_cpp_info.as_param, param.name))
+        params_cpp_str = ", ".join(params_cpp)
+        args_abi_str = ", ".join(args_abi)
+        result_abi = f"{method_abi_info.wrap_name}({args_abi_str})"
+        if isinstance(return_ty := method.return_ty, NonVoidType):
+            return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
+            return_ty_cpp_name = return_ty_cpp_info.as_owner
+            result_cpp = from_abi(return_ty_cpp_info.as_owner, result_abi)
+        else:
+            return_ty_cpp_name = "void"
+            result_cpp = result_abi
+        with iface_cpp_impl_target.indented(
+            f"{return_ty_cpp_name} {method_cpp_info.call_name}({params_cpp_str}) const& {{",
+            f"}}",
+        ):
+            iface_cpp_impl_target.writelns(
+                f"return {result_cpp};",
+            )
+
+    def gen_iface_methods_impl_impl(
         self,
         iface: IfaceDecl,
         iface_cpp_impl_target: CHeaderWriter,
@@ -1690,32 +1700,42 @@ class CppHeadersGenerator:
             f"}};",
         ):
             for method in iface.methods:
-                method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
-                params_abi = [f"{iface_abi_info.as_param} tobj"]
-                args_cpp = []
-                for param in method.params:
-                    param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
-                    param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
-                    params_abi.append(f"{param_ty_abi_info.as_param} {param.name}")
-                    args_cpp.append(from_abi(param_ty_cpp_info.as_param, param.name))
-                params_abi_str = ", ".join(params_abi)
-                args_cpp_str = ", ".join(args_cpp)
-                result_cpp = f"::taihe::cast_data_ptr<Impl>(tobj.data_ptr)->{method_cpp_info.impl_name}({args_cpp_str})"
-                if isinstance(return_ty := method.return_ty, NonVoidType):
-                    return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
-                    return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-                    return_ty_abi_name = return_ty_abi_info.as_owner
-                    result_abi = into_abi(return_ty_cpp_info.as_owner, result_cpp)
-                else:
-                    return_ty_abi_name = "void"
-                    result_abi = result_cpp
-                with iface_cpp_impl_target.indented(
-                    f"static {return_ty_abi_name} {method.name}({params_abi_str}) {{",
-                    f"}}",
-                ):
-                    iface_cpp_impl_target.writelns(
-                        f"return {result_abi};",
-                    )
+                self.gen_iface_methods_impl_method(iface, method, iface_cpp_impl_target)
+
+    def gen_iface_methods_impl_method(
+        self,
+        iface: IfaceDecl,
+        method: IfaceMethodDecl,
+        iface_cpp_impl_target: CHeaderWriter,
+    ):
+        iface_abi_info = IfaceAbiInfo.get(self.am, iface)
+        iface_cpp_info = IfaceCppInfo.get(self.am, iface)
+        method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
+        params_abi = [f"{iface_abi_info.as_param} tobj"]
+        args_cpp = []
+        for param in method.params:
+            param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
+            param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
+            params_abi.append(f"{param_ty_abi_info.as_param} {param.name}")
+            args_cpp.append(from_abi(param_ty_cpp_info.as_param, param.name))
+        params_abi_str = ", ".join(params_abi)
+        args_cpp_str = ", ".join(args_cpp)
+        result_cpp = f"::taihe::cast_data_ptr<Impl>(tobj.data_ptr)->{method_cpp_info.impl_name}({args_cpp_str})"
+        if isinstance(return_ty := method.return_ty, NonVoidType):
+            return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
+            return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
+            return_ty_abi_name = return_ty_abi_info.as_owner
+            result_abi = into_abi(return_ty_cpp_info.as_owner, result_cpp)
+        else:
+            return_ty_abi_name = "void"
+            result_abi = result_cpp
+        with iface_cpp_impl_target.indented(
+            f"static {return_ty_abi_name} {method.name}({params_abi_str}) {{",
+            f"}}",
+        ):
+            iface_cpp_impl_target.writelns(
+                f"return {result_abi};",
+            )
 
     def gen_iface_ftbl_impl(
         self,
