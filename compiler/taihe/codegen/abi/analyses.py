@@ -385,11 +385,34 @@ class PackageCImplInfo(AbstractAnalysis[PackageDecl]):
         return PackageCImplInfo(am, p)
 
 
+class IfaceCImplInfo(AbstractAnalysis[IfaceDecl]):
+    def __init__(self, am: AnalysisManager, d: IfaceDecl) -> None:
+        self.header = f"{d.parent_pkg.name}.{d.name}.default.h"
+        self.source = f"{d.parent_pkg.name}.{d.name}.default.c"
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, d: IfaceDecl) -> "IfaceCImplInfo":
+        return IfaceCImplInfo(am, d)
+
+
 class GlobFuncCImplInfo(AbstractAnalysis[GlobFuncDecl]):
     def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
         self.macro = f"TH_EXPORT_C_API_{f.name}"
+        self.function = f"{f.name}_impl"
 
     @classmethod
     @override
     def _create(cls, am: AnalysisManager, f: GlobFuncDecl) -> "GlobFuncCImplInfo":
         return GlobFuncCImplInfo(am, f)
+
+
+class IfaceMethodCImplInfo(AbstractAnalysis[IfaceMethodDecl]):
+    def __init__(self, am: AnalysisManager, f: IfaceMethodDecl) -> None:
+        self.macro = f"TH_EXPORT_DEFAULT_C_API_{f.name}"
+        self.function = f"{f.name}_default_impl"
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, f: IfaceMethodDecl) -> "IfaceMethodCImplInfo":
+        return IfaceMethodCImplInfo(am, f)

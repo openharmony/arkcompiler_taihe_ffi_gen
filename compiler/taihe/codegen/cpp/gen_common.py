@@ -1657,10 +1657,9 @@ class CppHeadersGenerator:
         method: IfaceMethodDecl,
         iface_cpp_impl_target: CHeaderWriter,
     ):
-        iface_abi_info = IfaceAbiInfo.get(self.am, iface)
-        iface_cpp_info = IfaceCppInfo.get(self.am, iface)
         method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
         method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
+        iface_abi_info = IfaceAbiInfo.get(self.am, iface)
         params_cpp = []
         args_abi = [f"*reinterpret_cast<{iface_abi_info.mangled_name} const*>(this)"]
         for param in method.params:
@@ -1708,9 +1707,8 @@ class CppHeadersGenerator:
         method: IfaceMethodDecl,
         iface_cpp_impl_target: CHeaderWriter,
     ):
-        iface_abi_info = IfaceAbiInfo.get(self.am, iface)
-        iface_cpp_info = IfaceCppInfo.get(self.am, iface)
         method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
+        iface_abi_info = IfaceAbiInfo.get(self.am, iface)
         params_abi = [f"{iface_abi_info.as_param} tobj"]
         args_cpp = []
         for param in method.params:
