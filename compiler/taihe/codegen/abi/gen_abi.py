@@ -367,19 +367,28 @@ class AbiHeadersGenerator:
                 f"}} methods;",
             ):
                 for method in iface.methods:
-                    params = [f"{iface_abi_info.as_param} tobj"]
-                    for param in method.params:
-                        param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
-                        params.append(f"{param_ty_abi_info.as_param} {param.name}")
-                    params_str = ", ".join(params)
-                    if isinstance(return_ty := method.return_ty, NonVoidType):
-                        return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
-                        return_ty_abi_name = return_ty_abi_info.as_owner
-                    else:
-                        return_ty_abi_name = "void"
-                    iface_abi_impl_target.writelns(
-                        f"{return_ty_abi_name} (*{method.name})({params_str});",
-                    )
+                    self.gen_iface_ftable_method(iface, method, iface_abi_impl_target)
+
+    def gen_iface_ftable_method(
+        self,
+        iface: IfaceDecl,
+        method: IfaceMethodDecl,
+        iface_abi_impl_target: CHeaderWriter,
+    ):
+        iface_abi_info = IfaceAbiInfo.get(self.am, iface)
+        params = [f"{iface_abi_info.as_param} tobj"]
+        for param in method.params:
+            param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
+            params.append(f"{param_ty_abi_info.as_param} {param.name}")
+        params_str = ", ".join(params)
+        if isinstance(return_ty := method.return_ty, NonVoidType):
+            return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
+            return_ty_abi_name = return_ty_abi_info.as_owner
+        else:
+            return_ty_abi_name = "void"
+        iface_abi_impl_target.writelns(
+            f"{return_ty_abi_name} (*{method.name})({params_str});",
+        )
 
     def gen_method_call(
         self,
@@ -387,8 +396,8 @@ class AbiHeadersGenerator:
         method: IfaceMethodDecl,
         iface_abi_impl_target: CHeaderWriter,
     ):
-        iface_abi_info = IfaceAbiInfo.get(self.am, iface)
         method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
+        iface_abi_info = IfaceAbiInfo.get(self.am, iface)
         params = [f"{iface_abi_info.as_param} tobj"]
         args = ["tobj"]
         for param in method.params:
@@ -428,8 +437,8 @@ class AbiHeadersGenerator:
         method: IfaceMethodDecl,
         iface_abi_impl_target: CHeaderWriter,
     ):
-        iface_abi_info = IfaceAbiInfo.get(self.am, iface)
         method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
+        iface_abi_info = IfaceAbiInfo.get(self.am, iface)
         params = [f"{iface_abi_info.as_param} tobj"]
         for param in method.params:
             param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
