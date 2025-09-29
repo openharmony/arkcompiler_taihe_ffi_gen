@@ -1659,9 +1659,10 @@ class CppHeadersGenerator:
     ):
         method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
         method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
-        iface_abi_info = IfaceAbiInfo.get(self.am, iface)
         params_cpp = []
-        args_abi = [f"*reinterpret_cast<{iface_abi_info.mangled_name} const*>(this)"]
+        args_abi = []
+        iface_abi_info = IfaceAbiInfo.get(self.am, iface)
+        args_abi.append(f"*reinterpret_cast<{iface_abi_info.mangled_name} const*>(this)")  # fmt: skip
         for param in method.params:
             param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
             params_cpp.append(f"{param_ty_cpp_info.as_param} {param.name}")
@@ -1708,9 +1709,10 @@ class CppHeadersGenerator:
         iface_cpp_impl_target: CHeaderWriter,
     ):
         method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
-        iface_abi_info = IfaceAbiInfo.get(self.am, iface)
-        params_abi = [f"{iface_abi_info.as_param} tobj"]
+        params_abi = []
         args_cpp = []
+        iface_abi_info = IfaceAbiInfo.get(self.am, iface)
+        params_abi.append(f"{iface_abi_info.as_param} tobj")
         for param in method.params:
             param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
             param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
