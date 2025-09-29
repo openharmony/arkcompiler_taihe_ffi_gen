@@ -108,9 +108,11 @@ class CImplHeadersGenerator:
         method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
         method_c_impl_info = IfaceMethodCImplInfo.get(self.am, method)
         method_impl = "C_METHOD_IMPL"
+        params = []
+        args = []
         iface_abi_info = IfaceAbiInfo.get(self.am, iface)
-        params = [f"{iface_abi_info.as_param} tobj"]
-        args = ["tobj"]
+        params.append(f"{iface_abi_info.as_param} tobj")
+        args.append("tobj")
         for param in method.params:
             param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
             params.append(f"{param_ty_abi_info.as_param} {param.name}")
@@ -197,8 +199,9 @@ class CImplSourcesGenerator:
         iface_c_impl_target: CSourceWriter,
     ):
         method_c_impl_info = IfaceMethodCImplInfo.get(self.am, method)
+        params = []
         iface_abi_info = IfaceAbiInfo.get(self.am, iface)
-        params = [f"{iface_abi_info.as_param} tobj"]
+        params.append(f"{iface_abi_info.as_param} tobj")
         for param in method.params:
             param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
             params.append(f"{param_ty_abi_info.as_param} {param.name}")
