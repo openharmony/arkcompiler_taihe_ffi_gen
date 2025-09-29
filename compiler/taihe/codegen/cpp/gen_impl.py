@@ -122,10 +122,12 @@ class CppImplHeadersGenerator:
         method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
         method_cpp_impl_info = IfaceMethodCppImplInfo.get(self.am, method)
         method_impl = "CPP_METHOD_IMPL"
+        params_abi = []
+        args_cpp = []
         iface_cpp_info = IfaceCppInfo.get(self.am, iface)
         iface_abi_info = IfaceAbiInfo.get(self.am, iface)
-        params_abi = [f"{iface_abi_info.as_param} tobj"]
-        args_cpp = [from_abi(iface_cpp_info.as_param, "tobj")]
+        params_abi.append(f"{iface_abi_info.as_param} tobj")
+        args_cpp.append(from_abi(iface_cpp_info.as_param, "tobj"))
         for param in method.params:
             param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
             param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
@@ -318,8 +320,9 @@ class CppImplSourcesGenerator:
         iface_cpp_impl_target: CSourceWriter,
     ):
         method_cpp_impl_info = IfaceMethodCppImplInfo.get(self.am, method)
+        params_cpp = []
         iface_cpp_info = IfaceCppInfo.get(self.am, iface)
-        params_cpp = [f"{iface_cpp_info.as_param} tobj"]
+        params_cpp.append(f"{self.mask(iface_cpp_info.as_param)} tobj")
         for param in method.params:
             param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
             params_cpp.append(f"{self.mask(param_ty_cpp_info.as_param)} {param.name}")

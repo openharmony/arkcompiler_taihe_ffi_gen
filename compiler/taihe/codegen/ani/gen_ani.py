@@ -343,8 +343,7 @@ class AniCodeGenerator:
         name: str,
     ):
         func_cpp_user_info = GlobFuncCppUserInfo.get(self.am, func)
-        params_ani = []
-        params_ani.append("[[maybe_unused]] ani_env *env")
+        params_ani = ["[[maybe_unused]] ani_env *env"]
         args_ani = []
         vals_cpp = []
         for param in func.params:
@@ -417,8 +416,7 @@ class AniCodeGenerator:
         iface_abi_info = IfaceAbiInfo.get(self.am, iface)
         iface_ani_info = IfaceAniInfo.get(self.am, iface)
         ancestor_cpp_info = IfaceCppInfo.get(self.am, ancestor)
-        params_ani = []
-        params_ani.append("[[maybe_unused]] ani_env *env")
+        params_ani = ["[[maybe_unused]] ani_env *env"]
         params_ani.append("[[maybe_unused]] ani_object object")
         args_ani = []
         vals_cpp = []
