@@ -467,10 +467,10 @@ class PythonBuild(CachedResource):
     DARWIN_X86_64: Final = "darwin-x86_64"
 
     # Bundle tarball file names for each platform
-    LINUX_X86_64_PY_BUNDLE: Final = "python-linux-x86-GLIBC2.27-3.11.4_20250219.tar.gz"
-    WINDOWS_X86_64_PY_BUNDLE: Final = "python-mingw-x86-3.11.4_20250509.tar.gz"
-    DARWIN_ARM64_PY_BUNDLE: Final = "python-darwin-arm64-3.11.4_20250228.tar.gz"
-    DARWIN_X86_64_PY_BUNDLE: Final = "python-darwin-x86-3.11.4_20250228.tar.gz"
+    LINUX_X86_64_PY_BUNDLE: Final = "python-linux-x86-GLIBC2.27-3.11.4_20250807.tar.gz"
+    WINDOWS_X86_64_PY_BUNDLE: Final = "python-mingw-x86-3.11.4_20250617.tar.gz"
+    DARWIN_ARM64_PY_BUNDLE: Final = "python-darwin-arm64-3.11.4_20250804.tar.gz"
+    DARWIN_X86_64_PY_BUNDLE: Final = "python-darwin-x86-3.11.4_20250804.tar.gz"
 
     @override
     def fetch(self):
