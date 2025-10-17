@@ -137,9 +137,9 @@ def run_ani_test_build(
         if enable_coverage:
             ninja_cmd.append("-DENABLE_COVERAGE=ON")
         if taihec_path:
-            ninja_cmd.append(f"-DTAIHEC_PATH={str(taihec_path)}")
+            ninja_cmd.append(f"-DBIN_TAIHEC_PATH={taihec_path}")
         if panda_home:
-            ninja_cmd.append(f"-DPANDA_HOME={str(panda_home)}")
+            ninja_cmd.append(f"-DPANDA_HOME={panda_home}")
         run_command(ninja_cmd, cwd=project_root)
     else:
         log_verbose("Build directory exists. Skipping configuration.")
@@ -163,8 +163,6 @@ def run_bin_ani_tests(project_root: Path, **config: Path | str):
     taihe_bin_tar_url = f"https://gitcode.com/tongdiaoZS/taihe-bin/releases/download/0.51/{taihe_bin_tar_name}"
     taihe_bin_tar_path = project_root / taihe_bin_tar_name
     taihe_bin_extract_dir = project_root / "taihe_bin"
-
-    build_dir = project_root / "build_bin"
 
     if not taihe_bin_tar_path.exists():
         log_verbose("Downloading Taihe binary package...")
@@ -192,7 +190,7 @@ def run_bin_ani_tests(project_root: Path, **config: Path | str):
     run_ani_test_build(
         project_root,
         build_dir_name="build_bin",
-        enable_coverage=True,
+        enable_coverage=False,
         taihec_path=taihe_bin_path,
         panda_home=config.get("panda_home")
     )
