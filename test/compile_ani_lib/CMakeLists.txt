@@ -20,7 +20,6 @@ setup_ani_header()
 #########################################################
 add_taihe_ani_library(compile_ani_lib_taihegen
     "${IDL_FILES}"
-    TAIHEC_PATH "taihec"
 )
 
 add_library(compile_ani_lib SHARED ${AUTHOR_CPP_FILES})
