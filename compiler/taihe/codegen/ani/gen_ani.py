@@ -679,7 +679,7 @@ class AniIfaceImplGenerator:
                 f"ani_long ani_data_ptr = reinterpret_cast<ani_long>(cpp_obj.m_handle.data_ptr);",
                 f"cpp_obj.m_handle.data_ptr = nullptr;",
                 f"ani_object ani_obj;",
-                f'env->Object_New(TH_ANI_FIND_CLASS(env, "{iface_ani_info.impl_desc}"), TH_ANI_FIND_CLASS_METHOD(env, "{iface_ani_info.impl_desc}", "_taihe_initialize", "ll:"), &ani_obj, ani_vtbl_ptr, ani_data_ptr);',
+                f'env->Object_New(TH_ANI_FIND_CLASS(env, "{iface_ani_info.impl_desc}"), TH_ANI_FIND_CLASS_METHOD(env, "{iface_ani_info.impl_desc}", "<ctor>", "ll:"), &ani_obj, ani_vtbl_ptr, ani_data_ptr);',
                 f"return ani_obj;",
             )
 
