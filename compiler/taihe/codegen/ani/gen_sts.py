@@ -557,7 +557,7 @@ class StsStructGenerator:
             for injected in struct_ani_info.interface_injected_codes:
                 self.target.write_block(injected)
 
-            for field in struct_ani_info.sts_fields:
+            for field in struct_ani_info.sts_local_fields:
                 readonly = "readonly " if ReadOnlyAttr.get(field) is not None else ""
                 opt = "?" if OptionalAttr.get(field) else ""
                 field_ty_ani_info = TypeAniInfo.get(self.am, field.ty)
@@ -570,13 +570,21 @@ class StsStructGenerator:
 
         sts_decl = f"class {struct_ani_info.sts_impl_name}"
         if struct_ani_info.is_class():
+            if struct_ani_info.sts_class_extends:
+                inherits = []
+                for inherit in struct_ani_info.sts_class_extends:
+                    inherit_ty = inherit.ty
+                    inherit_ani_info = TypeAniInfo.get(self.am, inherit_ty)
+                    inherits.append(inherit_ani_info.sts_type_in(self.target))
+                inherits_str = ", ".join(inherits) if inherits else ""
+                sts_decl = f"{sts_decl} extends {inherits_str}"
             if struct_ani_info.sts_iface_extends:
-                extends = []
-                for extend in struct_ani_info.sts_iface_extends:
-                    extend_ty = extend.ty
-                    extend_ani_info = TypeAniInfo.get(self.am, extend_ty)
-                    extends.append(extend_ani_info.sts_type_in(self.target))
-                implements_str = ", ".join(extends) if extends else ""
+                implements = []
+                for implement in struct_ani_info.sts_iface_extends:
+                    implement_ty = implement.ty
+                    implement_ani_info = TypeAniInfo.get(self.am, implement_ty)
+                    implements.append(implement_ani_info.sts_type_in(self.target))
+                implements_str = ", ".join(implements) if implements else ""
                 sts_decl = f"{sts_decl} implements {implements_str}"
             if struct_ani_info.is_default:
                 sts_decl = f"export default {sts_decl}"
@@ -593,8 +601,10 @@ class StsStructGenerator:
             for injected in struct_ani_info.class_injected_codes:
                 self.target.write_block(injected)
 
-            for parts in struct_ani_info.sts_all_fields:
-                final = parts[-1]
+            for final in [
+                *struct_ani_info.sts_local_fields,
+                *struct_ani_info.sts_iface_extend_fields,
+            ]:
                 readonly = "readonly " if ReadOnlyAttr.get(final) is not None else ""
                 opt = "?" if OptionalAttr.get(final) else ""
                 final_ty_ani_info = TypeAniInfo.get(self.am, final.ty)
@@ -617,8 +627,18 @@ class StsStructGenerator:
                 f"{{",
                 f"}}",
             ):
-                for parts in struct_ani_info.sts_all_fields:
-                    final = parts[-1]
+                if struct_ani_info.sts_class_extends:
+                    finals = []
+                    for final in struct_ani_info.sts_class_extend_fields:
+                        finals.append(final.name)
+                    finals_str = ", ".join(finals)
+                    self.target.writelns(
+                        f"super({finals_str});",
+                    )
+                for final in [
+                    *struct_ani_info.sts_local_fields,
+                    *struct_ani_info.sts_iface_extend_fields,
+                ]:
                     self.target.writelns(
                         f"this.{final.name} = {final.name};",
                     )
@@ -780,13 +800,21 @@ class StsIfaceGenerator:
 
         sts_decl = f"class {iface_ani_info.sts_impl_name}"
         if iface_ani_info.is_class():
+            if iface_ani_info.sts_class_extends:
+                inherits = []
+                for inherit in iface_ani_info.sts_class_extends:
+                    inherit_ty = inherit.ty
+                    inherit_ani_info = TypeAniInfo.get(self.am, inherit_ty)
+                    inherits.append(inherit_ani_info.sts_type_in(self.target))
+                inherits_str = ", ".join(inherits) if inherits else ""
+                sts_decl = f"{sts_decl} extends {inherits_str}"
             if iface_ani_info.sts_iface_extends:
-                extends = []
-                for extend in iface_ani_info.sts_iface_extends:
-                    extend_ty = extend.ty
-                    extend_ani_info = TypeAniInfo.get(self.am, extend_ty)
-                    extends.append(extend_ani_info.sts_type_in(self.target))
-                implements_str = ", ".join(extends) if extends else ""
+                implements = []
+                for implement in iface_ani_info.sts_iface_extends:
+                    implement_ty = implement.ty
+                    implement_ani_info = TypeAniInfo.get(self.am, implement_ty)
+                    implements.append(implement_ani_info.sts_type_in(self.target))
+                implements_str = ", ".join(implements) if implements else ""
                 sts_decl = f"{sts_decl} implements {implements_str}"
             if iface_ani_info.is_default:
                 sts_decl = f"export default {sts_decl}"
@@ -803,32 +831,42 @@ class StsIfaceGenerator:
             for injected in iface_ani_info.class_injected_codes:
                 self.target.write_block(injected)
 
-            self.target.writelns(
-                f"private _taihe_vtblPtr: long;",
-                f"private _taihe_dataPtr: long;",
-            )
-            with self.target.indented(
-                f"private _taihe_register(): void {{",
-                f"}}",
-            ):
+            if not iface_ani_info.sts_class_extends:
                 self.target.writelns(
-                    f"_taihe_registry.register(this, this._taihe_dataPtr);",
+                    f"_taihe_vtblPtr: long;",
+                    f"_taihe_dataPtr: long;",
                 )
+                with self.target.indented(
+                    f"_taihe_register(): void {{",
+                    f"}}",
+                ):
+                    self.target.writelns(
+                        f"_taihe_registry.register(this, this._taihe_dataPtr);",
+                    )
+                with self.target.indented(
+                    f"constructor(vtblPtr: long, dataPtr: long) {{",
+                    f"}}",
+                ):
+                    self.target.writelns(
+                        f"this._taihe_vtblPtr = vtblPtr;",
+                        f"this._taihe_dataPtr = dataPtr;",
+                        f"this._taihe_register();",
+                    )
+            else:
+                with self.target.indented(
+                    f"constructor(vtblPtr: long, dataPtr: long) {{",
+                    f"}}",
+                ):
+                    self.target.writelns(
+                        f"super(vtblPtr, dataPtr);",
+                    )
+
             with self.target.indented(
-                f"private _taihe_initialize(vtblPtr: long, dataPtr: long): void {{",
+                f"constructor(other: {iface_ani_info.sts_impl_name}) {{",
                 f"}}",
             ):
                 self.target.writelns(
-                    f"this._taihe_vtblPtr = vtblPtr;",
-                    f"this._taihe_dataPtr = dataPtr;",
-                    f"this._taihe_register();",
-                )
-            with self.target.indented(
-                f"public _taihe_copyFrom(other: {iface_ani_info.sts_impl_name}): void {{",
-                f"}}",
-            ):
-                self.target.writelns(
-                    f"this._taihe_initialize(other._taihe_vtblPtr, _taihe_objDup(other._taihe_dataPtr));",
+                    f"this(other._taihe_vtblPtr, _taihe_objDup(other._taihe_dataPtr));",
                 )
 
             iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
@@ -1584,7 +1622,7 @@ class StsAnyCtorGenerator:
             f"}}",
         ):
             self.target.writelns(
-                f"this._taihe_copyFrom({result_sts});",
+                f"this({result_sts});",
             )
 
         if overload_name is not None:
