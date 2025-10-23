@@ -844,9 +844,8 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
         for class_injected in StsInjectIntoClazzAttr.get_all(d):
             self.class_injected_codes.append(class_injected.sts_code)
 
-        self.sts_fields: list[StructFieldDecl] = []
-        self.sts_iface_extends: list[StructFieldDecl] = []
         self.sts_class_extends: list[StructFieldDecl] = []
+        self.sts_iface_extends: list[StructFieldDecl] = []
         self.sts_all_fields: list[list[StructFieldDecl]] = []
         for field in d.fields:
             if extend := ExtendsAttr.get(field):
@@ -859,8 +858,22 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
                     [field, *parts] for parts in extend_ani_info.sts_all_fields
                 )
             else:
-                self.sts_fields.append(field)
                 self.sts_all_fields.append([field])
+
+        self.sts_local_fields: list[StructFieldDecl] = []
+        self.sts_class_extend_fields: list[StructFieldDecl] = []
+        self.sts_iface_extend_fields: list[StructFieldDecl] = []
+        for parts in self.sts_all_fields:
+            origin = parts[0]
+            final = parts[-1]
+            if extend := ExtendsAttr.get(origin):
+                extend_ani_info = StructAniInfo.get(am, extend.ty.decl)
+                if extend_ani_info.is_class():
+                    self.sts_class_extend_fields.append(final)
+                else:
+                    self.sts_iface_extend_fields.append(final)
+            else:
+                self.sts_local_fields.append(final)
 
         self.is_default = ExportDefaultAttr.get(d) is not None
 
