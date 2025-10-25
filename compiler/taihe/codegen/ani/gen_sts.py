@@ -616,7 +616,7 @@ class StsStructGenerator:
                 f"constructor(",
                 f")",
             ):
-                for parts in struct_ani_info.sts_all_fields:
+                for parts in struct_ani_info.sorted_sts_all_fields:
                     final = parts[-1]
                     opt = "?" if OptionalAttr.get(final) else ""
                     final_ty_ani_info = TypeAniInfo.get(self.am, final.ty)
@@ -642,6 +642,26 @@ class StsStructGenerator:
                     self.target.writelns(
                         f"this.{final.name} = {final.name};",
                     )
+
+            # with self.target.indented(
+            #     f"constructor(other: {struct_ani_info.sts_impl_name}) {{",
+            #     f"}}",
+            # ):
+            #     if struct_ani_info.sts_class_extends:
+            #         finals = []
+            #         for final in struct_ani_info.sts_class_extend_fields:
+            #             finals.append(f"other.{final.name}")
+            #         finals_str = ", ".join(finals)
+            #         self.target.writelns(
+            #             f"super({finals_str});",
+            #         )
+            #     for final in [
+            #         *struct_ani_info.sts_local_fields,
+            #         *struct_ani_info.sts_iface_extend_fields,
+            #     ]:
+            #         self.target.writelns(
+            #             f"this.{final.name} = other.{final.name};",
+            #         )
 
             # ctors
             ctor_overload_register = OverloadRegister()
