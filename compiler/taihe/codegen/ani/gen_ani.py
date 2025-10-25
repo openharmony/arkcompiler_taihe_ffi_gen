@@ -785,7 +785,7 @@ class AniStructImplGenerator:
             f"}}",
         ):
             fields_ani = []
-            for parts in struct_ani_info.sts_all_fields:
+            for parts in struct_ani_info.sorted_sts_all_fields:
                 final = parts[-1]
                 field_ani = f"ani_field_{final.name}"
                 final_ty_ani_info = TypeAniInfo.get(self.am, final.ty)

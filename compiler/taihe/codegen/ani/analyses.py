@@ -860,10 +860,15 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
             else:
                 self.sts_all_fields.append([field])
 
+        self.sorted_sts_all_fields = sorted(
+            self.sts_all_fields,
+            key=lambda parts: OptionalAttr.get(parts[-1]) is not None,
+        )
+
         self.sts_local_fields: list[StructFieldDecl] = []
         self.sts_class_extend_fields: list[StructFieldDecl] = []
         self.sts_iface_extend_fields: list[StructFieldDecl] = []
-        for parts in self.sts_all_fields:
+        for parts in self.sorted_sts_all_fields:
             origin = parts[0]
             final = parts[-1]
             if extend := ExtendsAttr.get(origin):
