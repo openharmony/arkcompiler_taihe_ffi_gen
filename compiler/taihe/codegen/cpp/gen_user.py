@@ -28,36 +28,40 @@ class CppUserHeadersGenerator:
 
     def generate(self, pg: PackageGroup):
         for pkg in pg.all_packages:
-            self.gen_package_file(pkg)
+            CppUserPackageGenerator(self.om, self.am, pkg).gen_package_file()
 
-    def gen_package_file(self, pkg: PackageDecl):
-        pkg_abi_info = PackageAbiInfo.get(self.am, pkg)
-        pkg_cpp_info = PackageCppInfo.get(self.am, pkg)
-        pkg_cpp_user_info = PackageCppUserInfo.get(self.am, pkg)
-        with CHeaderWriter(
+
+class CppUserPackageGenerator:
+    def __init__(self, om: OutputManager, am: AnalysisManager, pkg: PackageDecl):
+        self.om = om
+        self.am = am
+        self.pkg = pkg
+        pkg_cpp_user_info = PackageCppUserInfo.get(self.am, self.pkg)
+        self.target = CHeaderWriter(
             self.om,
             f"include/{pkg_cpp_user_info.header}",
             FileKind.CPP_HEADER,
-        ) as pkg_cpp_target:
+        )
+
+    def gen_package_file(self):
+        pkg_abi_info = PackageAbiInfo.get(self.am, self.pkg)
+        pkg_cpp_info = PackageCppInfo.get(self.am, self.pkg)
+        with self.target:
             # types
-            pkg_cpp_target.add_include(pkg_cpp_info.header)
+            self.target.add_include(pkg_cpp_info.header)
             # functions
-            pkg_cpp_target.add_include("taihe/common.hpp")
-            pkg_cpp_target.add_include(pkg_abi_info.header)
-            for func in pkg.functions:
+            self.target.add_include("taihe/common.hpp")
+            self.target.add_include(pkg_abi_info.header)
+            for func in self.pkg.functions:
                 for param in func.params:
                     param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
-                    pkg_cpp_target.add_include(*param_ty_cpp_info.impl_headers)
+                    self.target.add_include(*param_ty_cpp_info.impl_headers)
                 if isinstance(return_ty := func.return_ty, NonVoidType):
                     return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-                    pkg_cpp_target.add_include(*return_ty_cpp_info.impl_headers)
-                self.gen_func(func, pkg_cpp_target)
+                    self.target.add_include(*return_ty_cpp_info.impl_headers)
+                self.gen_func(func)
 
-    def gen_func(
-        self,
-        func: GlobFuncDecl,
-        pkg_cpp_target: CHeaderWriter,
-    ):
+    def gen_func(self, func: GlobFuncDecl):
         func_abi_info = GlobFuncAbiInfo.get(self.am, func)
         func_cpp_user_info = GlobFuncCppUserInfo.get(self.am, func)
         params_cpp = []
@@ -76,15 +80,15 @@ class CppUserHeadersGenerator:
         else:
             return_ty_cpp_name = "void"
             result_cpp = result_abi
-        with pkg_cpp_target.indented(
+        with self.target.indented(
             f"namespace {func_cpp_user_info.namespace} {{",
             f"}}",
             indent="",
         ):
-            with pkg_cpp_target.indented(
+            with self.target.indented(
                 f"inline {return_ty_cpp_name} {func_cpp_user_info.call_name}({params_cpp_str}) {{",
                 f"}}",
             ):
-                pkg_cpp_target.writelns(
+                self.target.writelns(
                     f"return {result_cpp};",
                 )
