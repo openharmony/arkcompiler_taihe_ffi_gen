@@ -165,6 +165,15 @@ def run_core_tests(project_root: Path, **config: Path | str):
         log_stage(f"Testing: {test_dir}")
         run_taihe_tryit(["test", "-u", "cpp", test_dir], project_root)
 
+
+def run_napi_tests(project_root: Path, **config: Path | str):
+    log_stage("Run napi tests...")
+    base_dir = project_root / "test"
+    for test_dir in base_dir.glob("napi_*"):
+        if test_dir.is_dir():
+            log_stage(f"Testing: {test_dir}")
+            run_taihe_tryit(["test", "-u", "ts", test_dir], project_root)
+
 def run_ani_test_build(
     project_root: Path,
     build_dir_name: str,
@@ -279,11 +288,12 @@ TESTS = {
     "ani": run_ani_tests,
     "bin_ani": run_bin_ani_tests,
     "cmake": run_cmake_test,
+    "napi": run_napi_tests,
 }
 
 MODE_TO_TESTS = {
-    "github-push-ci": ["pytest", "core", "ani", "cmake"],
-    "github-pr-ci": ["pytest", "core", "ani", "cmake"],
+    "github-push-ci": ["pytest", "core", "ani", "cmake", "napi"],
+    "github-pr-ci": ["pytest", "core", "ani", "cmake", "napi"],
     "ggw-ci": ["pytest", "ani", "bin_ani"],
 }
 
@@ -317,7 +327,7 @@ def main():
     elif args.run:
         selected_tests = args.run
     else:
-        selected_tests = ["pytest", "core", "ani", "cmake"]
+        selected_tests = ["pytest", "core", "ani", "cmake", "napi"]
 
     only_bin_ani = all(name == "bin_ani" for name in selected_tests)
 

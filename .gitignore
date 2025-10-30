@@ -41,3 +41,6 @@ compile_flags.txt
 
 # cache folders
 .cache
+
+# ts test
+node_modules/*

@@ -23,5 +23,7 @@ jobs:
         with:
           version: 15
           platform: x64
+      - name: Setup Node
+        run: npm i --save-dev @types/node
       - name: Test and Report Coverage
         run: scripts/test
