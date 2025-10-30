@@ -53,6 +53,8 @@ class FileKind(str, Enum):
     TEMPLATE = "template"
     ETS = "ets"
     TAIHE = "taihe"
+    DTS = "dts"
+    TS = "ts"
     OTHER = "other"
 
 

@@ -47,4 +47,7 @@ compile_flags.txt
 # Clangd
 .cache
 
+# ts test
+node_modules/*
+
 anigen
