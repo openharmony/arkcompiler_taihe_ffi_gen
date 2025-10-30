@@ -363,3 +363,54 @@ class ArkToolchain:
             command,
             env={"LD_LIBRARY_PATH": ld_lib_path},
         )
+
+
+class TsToolchain:
+    """Utility class for TS toolchain operations."""
+
+    def create_tsconfig(
+        self,
+        tsconfig_file: Path,
+        paths: dict[str, Path],
+        output_dir: Path,
+        root_dir: Path,
+        main_file: Path,
+    ):
+        """Create TS configuration file."""
+        config_content = {
+            "compilerOptions": {
+                "target": "ES2020",
+                "module": "commonjs",
+                "outDir": str(output_dir),
+                "rootDir": str(root_dir),
+                "paths": {key: [str(value)] for key, value in paths.items()},
+            },
+            "include": [
+                str(main_file),
+            ],
+        }
+
+        with open(tsconfig_file, "w") as json_file:
+            json.dump(config_content, json_file, indent=2)
+
+        logger.debug("Created configuration file at: %s", tsconfig_file)
+
+    def compile(
+        self,
+        tsconfig_file: Path,
+    ) -> None:
+        """Compile TS files to JS format."""
+        command_compiler = [
+            "tsc",
+            "--project",
+            f"{tsconfig_file}",
+        ]
+        run_command(command_compiler)
+
+    def run(
+        self,
+        js_target: Path,
+    ) -> float:
+        """Run the JS file with node."""
+        command_run = ["node", str(js_target)]
+        return run_command(command_run, capture_output=False)
