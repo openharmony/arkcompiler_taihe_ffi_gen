@@ -176,7 +176,7 @@ class AniRuntimeUndefinedType(AniRuntimeNonPrimitiveType):
 
     @property
     def desc(self) -> str:
-        return self.sig
+        return "std.core.Object"
 
     def as_union_members(self) -> Iterable["AniRuntimeUnionMemberType"]:
         yield from ()
@@ -974,14 +974,9 @@ class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
         env: str,
         is_field_ani: str,
     ):
-        if self.type_desc == "U":
-            target.writelns(
-                f"env->Reference_IsUndefined(ani_value, &{is_field_ani});",
-            )
-        else:
-            target.writelns(
-                f'env->Object_InstanceOf(static_cast<ani_object>(ani_value), TH_ANI_FIND_CLASS(env, "{self.type_desc}"), &{is_field_ani});',
-            )
+        target.writelns(
+            f'{env}->Object_InstanceOf(static_cast<ani_object>(ani_value), TH_ANI_FIND_CLASS(env, "{self.type_desc}"), &{is_field_ani});',
+        )
 
     def into_ani_boxed(
         self,
@@ -1010,12 +1005,8 @@ class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
         cpp_after: str,
     ):
         if self.ani_type.base == ANI_REF:
-            self.from_ani(
-                target,
-                env,
-                f"static_cast<{self.ani_type}>({ani_boxed})",
-                cpp_after,
-            )
+            ani_value = f"static_cast<{self.ani_type}>({ani_boxed})"
+            self.from_ani(target, env, ani_value, cpp_after)
         else:
             ani_value = f"{cpp_after}_ani_value"
             target.writelns(
@@ -1357,6 +1348,17 @@ class NullTypeAniInfo(TypeAniInfo):
             f"{env}->GetNull(&{ani_after});",
         )
 
+    @override
+    def check_type(
+        self,
+        target: CSourceWriter,
+        env: str,
+        is_field_ani: str,
+    ):
+        target.writelns(
+            f"{env}->Reference_IsNull(ani_value, &{is_field_ani});",
+        )
+
 
 class UndefinedTypeAniInfo(TypeAniInfo):
     def __init__(self, am: AnalysisManager, t: UnitType):
@@ -1391,6 +1393,17 @@ class UndefinedTypeAniInfo(TypeAniInfo):
         target.writelns(
             f"ani_ref {ani_after} = {{}};",
             f"{env}->GetUndefined(&{ani_after});",
+        )
+
+    @override
+    def check_type(
+        self,
+        target: CSourceWriter,
+        env: str,
+        is_field_ani: str,
+    ):
+        target.writelns(
+            f"{env}->Reference_IsUndefined(ani_value, &{is_field_ani});",
         )
 
 
