@@ -18,35 +18,43 @@ from collections import defaultdict
 
 from typing_extensions import override
 
-from taihe.codegen.abi.analyses import IfaceAbiInfo
+from taihe.codegen.abi.analyses import IfaceAbiInfo, StructAbiInfo
 from taihe.codegen.abi.mangle import DeclKind, encode
 from taihe.codegen.abi.writer import CSourceWriter
 from taihe.codegen.ani.attributes import (
     ClassAttr,
+    ConstAttr,
     CtorAttr,
+    ExtendsAttr,
     GetAttr,
     NamespaceAttr,
     SetAttr,
     StaticAttr,
 )
 from taihe.codegen.cpp.analyses import (
+    EnumCppInfo,
     TypeCppInfo,
 )
 from taihe.codegen.napi.writer import DtsWriter
 from taihe.semantics.declarations import (
+    EnumDecl,
     GlobFuncDecl,
     IfaceDecl,
     IfaceExtendDecl,
     IfaceMethodDecl,
     PackageDecl,
     PackageGroup,
+    StructDecl,
+    StructFieldDecl,
 )
 from taihe.semantics.types import (
+    EnumType,
     IfaceType,
     NonVoidType,
     ScalarKind,
     ScalarType,
     StringType,
+    StructType,
 )
 from taihe.semantics.visitor import NonVoidTypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
@@ -168,6 +176,65 @@ class PackageNapiInfo(AbstractAnalysis[PackageDecl]):
     def get_dts_type_name(self, target: DtsWriter, dts_type_name: str):
         target.add_import_module(f"./{self.name}", self.scope_name)
         return f"{self.scope_name}.{dts_type_name}"
+
+
+class StructNapiInfo(AbstractAnalysis[StructDecl]):
+    def __init__(self, am: AnalysisManager, d: StructDecl) -> None:
+        segments = [*d.parent_pkg.segments, d.name]
+        self.pkg_napi_info = PackageNapiInfo.get(am, d.parent_pkg)
+        self.from_napi_func_name = encode(segments, DeclKind.FROM_NAPI)
+        self.into_napi_func_name = encode(segments, DeclKind.INTO_NAPI)
+        self.constructor_func_name = encode(segments, DeclKind.CONSTRUCTOR)
+        self.create_func_name = encode(segments, DeclKind.CREATE)
+        self.decl_header = f"{d.parent_pkg.name}.{d.name}.napi.decl.h"
+        self.impl_header = f"{d.parent_pkg.name}.{d.name}.napi.impl.h"
+        self.dts_type_name = d.name
+        struct_abi_info = StructAbiInfo.get(am, d)
+        self.ctor_ref_name = f"ctor_ref_{struct_abi_info.mangled_name}"
+        if ClassAttr.get(d):
+            self.dts_impl_name = f"{d.name}"
+        else:
+            self.dts_impl_name = f"{d.name}_inner"
+
+        self.ctor: GlobFuncDecl | None = None
+        self.static_funcs: list[tuple[str, GlobFuncDecl]] = []
+        self.register_infos = []
+
+        self.dts_fields: list[StructFieldDecl] = []
+        self.dts_iface_parents: list[StructFieldDecl] = []
+        self.dts_class_parents: list[StructFieldDecl] = []
+        self.dts_final_fields: list[list[StructFieldDecl]] = []
+        for field in d.fields:
+            if ExtendsAttr.get(field):
+                ty = field.ty
+                if not isinstance(ty, StructType):
+                    raise ValueError("struct cannot extend non-struct type")
+                    # TODO: check struct parent type
+                parent_napi_info = StructNapiInfo.get(am, ty.decl)
+                if parent_napi_info.is_class():
+                    self.dts_class_parents.append(field)
+                else:
+                    self.dts_iface_parents.append(field)
+                self.dts_final_fields.extend(
+                    [field, *parts] for parts in parent_napi_info.dts_final_fields
+                )
+            else:
+                self.dts_fields.append(field)
+                self.dts_final_fields.append([field])
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, p: StructDecl) -> "StructNapiInfo":
+        return StructNapiInfo(am, p)
+
+    def is_class(self):
+        return self.dts_type_name == self.dts_impl_name
+
+    def dts_type_in(self, target: DtsWriter):
+        return self.pkg_napi_info.ns.get_member(
+            target,
+            self.dts_type_name,
+        )
 
 
 class IfaceNapiInfo(AbstractAnalysis[IfaceDecl]):
@@ -292,6 +359,26 @@ class IfaceMethodNapiInfo(AbstractAnalysis[IfaceMethodDecl]):
     @override
     def _create(cls, am: AnalysisManager, f: IfaceMethodDecl) -> "IfaceMethodNapiInfo":
         return IfaceMethodNapiInfo(am, f)
+
+
+class EnumNapiInfo(AbstractAnalysis[EnumDecl]):
+    def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
+        segments = [*d.parent_pkg.segments, d.name]
+        self.dts_type_name = d.name
+        self.pkg_napi_info = PackageNapiInfo.get(am, d.parent_pkg)
+        self.is_literal = ConstAttr.get(d) is not None
+        self.create_func_name = encode(segments, DeclKind.CREATE)
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, f: EnumDecl) -> "EnumNapiInfo":
+        return EnumNapiInfo(am, f)
+
+    def dts_type_in(self, target: DtsWriter):
+        return self.pkg_napi_info.ns.get_member(
+            target,
+            self.dts_type_name,
+        )
 
 
 class GlobFuncNapiInfo(AbstractAnalysis[GlobFuncDecl]):
@@ -502,6 +589,47 @@ class StringTypeNapiInfo(TypeNapiInfo):
         )
 
 
+class StructTypeNapiInfo(TypeNapiInfo):
+    def __init__(self, am: AnalysisManager, t: StructType):
+        super().__init__(am, t)
+        self.am = am
+        self.type = t
+        self.napi_type_name = "napi_object"
+
+    @override
+    def dts_type_in(self, target: DtsWriter) -> str:
+        struct_napi_info = StructNapiInfo.get(self.am, self.type.decl)
+        return struct_napi_info.dts_type_in(target)
+
+    @override
+    def dts_return_type_in(self, target: DtsWriter) -> str:
+        return self.dts_type_in(target)
+
+    def from_napi(
+        self,
+        target: CSourceWriter,
+        napi_value: str,
+        cpp_result: str,
+    ):
+        struct_napi_info = StructNapiInfo.get(self.am, self.type.decl)
+        target.add_include(struct_napi_info.impl_header)
+        target.writelns(
+            f"{self.cpp_info.as_owner} {cpp_result} = {struct_napi_info.from_napi_func_name}(env, {napi_value});",
+        )
+
+    def into_napi(
+        self,
+        target: CSourceWriter,
+        cpp_value: str,
+        napi_result: str,
+    ):
+        struct_napi_info = StructNapiInfo.get(self.am, self.type.decl)
+        target.add_include(struct_napi_info.impl_header)
+        target.writelns(
+            f"napi_value {napi_result} = {struct_napi_info.into_napi_func_name}(env, {cpp_value});",
+        )
+
+
 class IfaceTypeNapiInfo(TypeNapiInfo):
     def __init__(self, am: AnalysisManager, t: IfaceType):
         super().__init__(am, t)
@@ -545,6 +673,108 @@ class IfaceTypeNapiInfo(TypeNapiInfo):
         )
 
 
+class EnumTypeNapiInfo(TypeNapiInfo):
+    def __init__(self, am: AnalysisManager, t: EnumType):
+        super().__init__(am, t)
+        self.am = am
+        self.type = t
+        if isinstance(self.type.decl.ty, ScalarType | StringType):
+            item_ty_napi_info = TypeNapiInfo.get(self.am, self.type.decl.ty)
+            self.napi_type_name = item_ty_napi_info.napi_type_name
+        else:
+            raise ValueError
+
+    @override
+    def dts_type_in(self, target: DtsWriter) -> str:
+        enum_napi_info = EnumNapiInfo.get(self.am, self.type.decl)
+        return enum_napi_info.dts_type_in(target)
+
+    @override
+    def dts_return_type_in(self, target: DtsWriter) -> str:
+        return self.dts_type_in(target)
+
+    def from_napi(
+        self,
+        target: CSourceWriter,
+        napi_value: str,
+        cpp_result: str,
+    ):
+        enum_cpp_info = EnumCppInfo.get(self.am, self.type.decl)
+        if isinstance(self.type.decl.ty, ScalarType | StringType):
+            item_ty_napi_info = TypeNapiInfo.get(self.am, self.type.decl.ty)
+            item_ty_napi_info.from_napi(target, napi_value, f"{cpp_result}_item")
+        else:
+            raise ValueError
+
+        target.writelns(
+            f"{enum_cpp_info.as_owner} {cpp_result} = {enum_cpp_info.as_owner}::from_value({cpp_result}_item);",
+        )
+
+    def into_napi(
+        self,
+        target: CSourceWriter,
+        cpp_value: str,
+        napi_result: str,
+    ):
+        if isinstance(self.type.decl.ty, ScalarType | StringType):
+            item_ty_napi_info = TypeNapiInfo.get(self.am, self.type.decl.ty)
+            item_ty_cpp_info = TypeCppInfo.get(self.am, self.type.decl.ty)
+            item_ty_napi_info.into_napi(
+                target,
+                f"(({item_ty_cpp_info.as_owner})({cpp_value}.get_value()))",
+                napi_result,
+            )
+        else:
+            raise ValueError
+
+
+class ConstEnumTypeNapiInfo(TypeNapiInfo):
+    def __init__(self, am: AnalysisManager, t: EnumType, const_attr: ConstAttr):
+        super().__init__(am, t)
+        self.am = am
+        self.type = t
+        self.const_attr = const_attr
+        item_ty_napi_info = TypeNapiInfo.get(self.am, self.type.decl.ty)
+        self.napi_type_name = item_ty_napi_info.napi_type_name
+
+    @override
+    def dts_type_in(self, target: DtsWriter) -> str:
+        ty_napi_info = TypeNapiInfo.get(self.am, self.type.decl.ty)
+        return ty_napi_info.dts_type_in(target)
+
+    @override
+    def dts_return_type_in(self, target: DtsWriter) -> str:
+        return self.dts_type_in(target)
+
+    def from_napi(
+        self,
+        target: CSourceWriter,
+        napi_value: str,
+        cpp_result: str,
+    ):
+        cpp_temp = f"{cpp_result}_cpp_temp"
+        ty_napi_info = TypeNapiInfo.get(self.am, self.type.decl.ty)
+        enum_cpp_info = EnumCppInfo.get(self.am, self.type.decl)
+        ty_napi_info.from_napi(target, napi_value, cpp_temp)
+        target.writelns(
+            f"{enum_cpp_info.full_name} {cpp_result} = {enum_cpp_info.full_name}::from_value({cpp_temp});",
+        )
+
+    def into_napi(
+        self,
+        target: CSourceWriter,
+        cpp_value: str,
+        napi_result: str,
+    ):
+        cpp_temp = f"{napi_result}_cpp_temp"
+        ty_napi_info = TypeNapiInfo.get(self.am, self.type.decl.ty)
+        value_cpp_info = TypeCppInfo.get(self.am, self.type.decl.ty)
+        target.writelns(
+            f"{value_cpp_info.as_owner} {cpp_temp} = {cpp_value}.get_value();",
+        )
+        ty_napi_info.into_napi(target, cpp_temp, napi_result)
+
+
 class TypeNapiInfoDispatcher(NonVoidTypeVisitor[TypeNapiInfo]):
     def __init__(self, am: AnalysisManager):
         self.am = am
@@ -558,5 +788,15 @@ class TypeNapiInfoDispatcher(NonVoidTypeVisitor[TypeNapiInfo]):
         return StringTypeNapiInfo(self.am, t)
 
     @override
+    def visit_struct_type(self, t: StructType) -> TypeNapiInfo:
+        return StructTypeNapiInfo(self.am, t)
+
+    @override
     def visit_iface_type(self, t: IfaceType) -> TypeNapiInfo:
         return IfaceTypeNapiInfo(self.am, t)
+
+    @override
+    def visit_enum_type(self, t: EnumType) -> TypeNapiInfo:
+        if const_attr := ConstAttr.get(t.decl):
+            return ConstEnumTypeNapiInfo(self.am, t, const_attr)
+        return EnumTypeNapiInfo(self.am, t)
