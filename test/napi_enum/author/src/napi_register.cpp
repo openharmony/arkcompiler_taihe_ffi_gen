@@ -15,12 +15,13 @@
 // This file is a test file.
 // NOLINTBEGIN
 
-#include "iface_test.napi.h"
+#include <iostream>
+#include "enum_test.napi.h"
 
 EXTERN_C_START
 napi_value Init(napi_env env, napi_value exports)
 {
-    Init__iface_test(env, exports);
+    Init__enum_test(env, exports);
     return exports;
 }
 
