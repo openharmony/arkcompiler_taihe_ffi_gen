@@ -73,6 +73,7 @@ class NapiCodeGenerator:
         for pkg in pg.packages:
             self.gen_package(pkg)
         self.gen_register(pg)
+        self.gen_utils_file()
 
     def gen_ns_register(
         self, ns: Namespace, reg_obj: str, ns_name: str, target: CSourceWriter
@@ -202,6 +203,107 @@ class NapiCodeGenerator:
             self.gen_module_init(pkg, register_infos, pkg_napi_target)
         self.gen_napi_header_file(pkg_napi_info)
 
+    def gen_utils_file(self):
+        """Generate util functions for main thread."""
+        with CSourceWriter(
+            self.oc,
+            f"include/napi_utils.hpp",
+            FileKind.C_HEADER,
+        ) as target:
+            target.add_include("taihe/array.hpp")
+            target.add_include("mutex")
+            target.add_include("condition_variable")
+            target.add_include("pthread.h")
+            target.writelns(
+                f"#ifndef TAIHE_THREAD_UTILS_HPP",
+                f"#define TAIHE_THREAD_UTILS_HPP",
+                f"#include <pthread.h>",
+                f"#include <mutex>",
+                f"namespace taihe {{",
+                f"class ThreadContext {{",
+                f"public:",
+                f"    static ThreadContext& get_instance() {{",
+                f"        static ThreadContext instance;",
+                f"        return instance;",
+                f"    }}",
+                f"    void init_main_thread_id() {{",
+                f"        static std::once_flag flag;",
+                f"        std::call_once(flag, [this]() {{",
+                f"            main_thread_id_ = pthread_self();",
+                f"            initialized_ = true;",
+                f"        }});",
+                f"    }}",
+                f"    bool _is_main_thread() const {{",
+                f"        if (!initialized_) {{",
+                f"            return false;",
+                f"        }}",
+                f"        return pthread_equal(pthread_self(), main_thread_id_) != 0;",
+                f"    }}",
+                f"    ThreadContext(const ThreadContext&) = delete;",
+                f"    ThreadContext& operator=(const ThreadContext&) = delete;",
+                f"private:",
+                f"    ThreadContext() = default;",
+                f"    pthread_t main_thread_id_;",
+                f"    bool initialized_ = false;",
+                f"}};",
+                f"inline bool _is_main_thread() {{",
+                f"    return ThreadContext::get_instance()._is_main_thread();",
+                f"}}",
+                f"inline void _init_main_thread() {{",
+                f"    ThreadContext::get_instance().init_main_thread_id();",
+                f"}}",
+                f"inline bool _get_bigint_msb(uint64_t dig) {{",
+                f"    return dig >> (sizeof(uint64_t) * 8 - 1) != 0;",
+                f"}}",
+                f"inline bool _get_bigint_sign(taihe::array_view<uint64_t> num) {{",
+                f"    return _get_bigint_msb(num[num.size() - 1]);",
+                f"}}",
+                f"inline std::pair<bool, taihe::array<uint64_t>> _get_bigint_sign_and_abs(taihe::array_view<uint64_t> num) {{",
+                f"    uint64_t *buf = reinterpret_cast<uint64_t *>(malloc(num.size() * sizeof(uint64_t)));",
+                f"    bool sign = _get_bigint_msb(num[num.size() - 1]);",
+                f"    if (sign) {{",
+                f"        bool carry = true;",
+                f"        for (std::size_t i = 0; i < num.size(); i++) {{",
+                f"            buf[i] = ~num[i] + carry;",
+                f"            carry = carry && (buf[i] == 0);",
+                f"        }}",
+                f"    }} else {{",
+                f"        for (std::size_t i = 0; i < num.size(); i++) {{",
+                f"            buf[i] = num[i];",
+                f"        }}",
+                f"    }}",
+                f"    std::size_t size = num.size();",
+                f"    while (size > 0 && buf[size - 1] == 0) {{",
+                f"        size--;",
+                f"    }}",
+                f"    return {{sign, taihe::array<uint64_t>(buf, size)}};",
+                f"}}",
+                f"inline taihe::array<uint64_t> _taihe_build_num(bool sign, taihe::array_view<uint64_t> abs) {{",
+                f"    uint64_t *buf = reinterpret_cast<uint64_t *>(malloc((abs.size() + 1) * sizeof(uint64_t)));",
+                f"    if (sign) {{",
+                f"        bool carry = true;",
+                f"        for (std::size_t i = 0; i < abs.size(); i++) {{",
+                f"            buf[i] = ~abs[i] + carry;",
+                f"            carry = carry && (buf[i] == 0);",
+                f"        }}",
+                f"        buf[abs.size()] = carry - 1;",
+                f"    }} else {{",
+                f"        for (std::size_t i = 0; i < abs.size(); i++) {{",
+                f"            buf[i] = abs[i];",
+                f"        }}",
+                f"        buf[abs.size()] = 0;",
+                f"    }}",
+                f"    std::size_t size = abs.size() + 1;",
+                f"    while (size >= 2 && ((buf[size - 1] == 0 && _get_bigint_msb(buf[size - 2]) == 0) ||",
+                f"                        (buf[size - 1] == static_cast<uint64_t>(-1) && _get_bigint_msb(buf[size - 2]) == 1))) {{",
+                f"        size--;",
+                f"    }}",
+                f"    return taihe::array<uint64_t>(buf, size);",
+                f"}}",
+                f"}}",
+                f"#endif // TAIHE_THREAD_UTILS_HPP",
+            )
+
     def gen_napi_header_file(self, pkg_napi_info: PackageNapiInfo):
         with CHeaderWriter(
             self.oc,
@@ -209,6 +311,7 @@ class NapiCodeGenerator:
             FileKind.C_HEADER,
         ) as target:
             target.add_include("taihe/napi_runtime.hpp")
+            target.add_include("napi_utils.hpp")
             target.writelns(
                 f"#if __has_include(<napi/native_api.h>)",
                 f"#include <napi/native_api.h>",
@@ -243,6 +346,7 @@ class NapiCodeGenerator:
                 f"if (::taihe::get_env() == nullptr) {{",
                 f"    ::taihe::set_env(env);",
                 f"}}",
+                f"taihe::_init_main_thread();",
             )
             for iface in pkg.interfaces:
                 self.gen_iface_register(iface, pkg_napi_target)
@@ -344,6 +448,7 @@ class NapiCodeGenerator:
             f"include/{struct_napi_info.decl_header}",
             FileKind.C_HEADER,
         ) as struct_napi_decl_target:
+            struct_napi_decl_target.add_include("napi_utils.hpp")
             struct_napi_decl_target.add_include("taihe/napi_runtime.hpp")
             struct_napi_decl_target.add_include(struct_cpp_info.defn_header)
             struct_napi_decl_target.writelns(
@@ -702,6 +807,7 @@ class NapiCodeGenerator:
             f"include/{iface_napi_info.decl_header}",
             FileKind.C_HEADER,
         ) as iface_napi_decl_target:
+            iface_napi_decl_target.add_include("napi_utils.hpp")
             iface_napi_decl_target.add_include("taihe/napi_runtime.hpp")
             iface_napi_decl_target.add_include(iface_cpp_info.defn_header)
             iface_napi_decl_target.writelns(
@@ -1058,6 +1164,7 @@ class NapiCodeGenerator:
             f"include/{iface_napi_info.meth_decl_header}",
             FileKind.C_HEADER,
         ) as iface_meth_napi_decl_target:
+            iface_meth_napi_decl_target.add_include("napi_utils.hpp")
             iface_meth_napi_decl_target.add_include("taihe/napi_runtime.hpp")
             iface_meth_napi_decl_target.add_include(iface_cpp_info.defn_header)
             for methods, ancestor, props_strs in iface_napi_info.iface_register_infos:
@@ -1206,6 +1313,7 @@ class NapiCodeGenerator:
             f"include/{union_napi_info.decl_header}",
             FileKind.C_HEADER,
         ) as union_napi_decl_target:
+            union_napi_decl_target.add_include("napi_utils.hpp")
             union_napi_decl_target.add_include(union_cpp_info.defn_header)
             union_napi_decl_target.writelns(
                 f"{union_cpp_info.as_owner} {union_napi_info.from_napi_func_name}(napi_env env, napi_value napi_obj);",
