@@ -23,6 +23,7 @@ from taihe.codegen.abi.mangle import DeclKind, encode
 from taihe.codegen.abi.writer import CSourceWriter
 from taihe.codegen.ani.attributes import (
     ArrayBufferAttr,
+    AsyncAttribute,
     BigIntAttr,
     ClassAttr,
     ConstAttr,
@@ -30,6 +31,7 @@ from taihe.codegen.ani.attributes import (
     ExtendsAttr,
     GetAttr,
     NamespaceAttr,
+    PromiseAttribute,
     RecordAttr,
     SetAttr,
     StaticAttr,
@@ -39,6 +41,17 @@ from taihe.codegen.ani.attributes import (
 from taihe.codegen.cpp.analyses import (
     EnumCppInfo,
     TypeCppInfo,
+)
+from taihe.codegen.napi.attributes import (
+    DtsInjectAttr,
+    DtsInjectIntoClazzAttr,
+    DtsInjectIntoIfaceAttr,
+    DtsInjectIntoModuleAttr,
+    DtsTypeAttr,
+    TsInjectAttr,
+    TsInjectIntoClazzAttr,
+    TsInjectIntoIfaceAttr,
+    TsInjectIntoModuleAttr,
 )
 from taihe.codegen.napi.writer import DtsWriter
 from taihe.semantics.declarations import (
@@ -61,6 +74,7 @@ from taihe.semantics.types import (
     IfaceType,
     MapType,
     NonVoidType,
+    OpaqueType,
     OptionalType,
     ScalarKind,
     ScalarType,
@@ -158,6 +172,18 @@ class PackageGroupNapiInfo(AbstractAnalysis[PackageGroup]):
             mod = self.module_dict.setdefault(module_name, Namespace(module_name))
             ns = self.package_map[pkg] = mod.add_path(path, pkg)
 
+            for attr in TsInjectIntoModuleAttr.get_all(pkg):
+                mod.ts_injected_heads.append(attr.ts_code)
+
+            for attr in TsInjectAttr.get_all(pkg):
+                ns.ts_injected_codes.append(attr.ts_code)
+
+            for attr in DtsInjectIntoModuleAttr.get_all(pkg):
+                mod.dts_injected_heads.append(attr.dts_code)
+
+            for attr in DtsInjectAttr.get_all(pkg):
+                ns.dts_injected_codes.append(attr.dts_code)
+
     @classmethod
     @override
     def _create(cls, am: AnalysisManager, pg: PackageGroup) -> "PackageGroupNapiInfo":
@@ -208,6 +234,20 @@ class StructNapiInfo(AbstractAnalysis[StructDecl]):
             self.dts_impl_name = f"{d.name}"
         else:
             self.dts_impl_name = f"{d.name}_inner"
+
+        self.interfacets_ts_injected_codes: list[str] = []
+        for iface_injected in TsInjectIntoIfaceAttr.get_all(d):
+            self.interfacets_ts_injected_codes.append(iface_injected.ts_code)
+        self.class_ts_injected_codes: list[str] = []
+        for class_injected in TsInjectIntoClazzAttr.get_all(d):
+            self.class_ts_injected_codes.append(class_injected.ts_code)
+
+        self.interfacets_dts_injected_codes: list[str] = []
+        for iface_injected in DtsInjectIntoIfaceAttr.get_all(d):
+            self.interfacets_dts_injected_codes.append(iface_injected.dts_code)
+        self.class_dts_injected_codes: list[str] = []
+        for class_injected in DtsInjectIntoClazzAttr.get_all(d):
+            self.class_dts_injected_codes.append(class_injected.dts_code)
 
         self.ctor: GlobFuncDecl | None = None
         self.static_funcs: list[tuple[str, GlobFuncDecl]] = []
@@ -270,6 +310,20 @@ class IfaceNapiInfo(AbstractAnalysis[IfaceDecl]):
             self.dts_impl_name = f"{d.name}"
         else:
             self.dts_impl_name = f"{d.name}_inner"
+
+        self.interface_ts_injected_codes: list[str] = []
+        for iface_injected in TsInjectIntoIfaceAttr.get_all(d):
+            self.interface_ts_injected_codes.append(iface_injected.ts_code)
+        self.class_ts_injected_codes: list[str] = []
+        for class_injected in TsInjectIntoClazzAttr.get_all(d):
+            self.class_ts_injected_codes.append(class_injected.ts_code)
+
+        self.interface_dts_injected_codes: list[str] = []
+        for iface_injected in DtsInjectIntoIfaceAttr.get_all(d):
+            self.interface_dts_injected_codes.append(iface_injected.dts_code)
+        self.class_dts_injected_codes: list[str] = []
+        for class_injected in DtsInjectIntoClazzAttr.get_all(d):
+            self.class_dts_injected_codes.append(class_injected.dts_code)
 
         iface_register_infos: list[
             tuple[list[IfaceMethodDecl], IfaceDecl, list[str]]
@@ -368,6 +422,11 @@ class IfaceMethodNapiInfo(AbstractAnalysis[IfaceMethodDecl]):
 
         self.norm_name = f.name
 
+        if PromiseAttribute.get(f):
+            self.promise_name = self.norm_name
+        elif AsyncAttribute.get(f):
+            self.async_name = self.norm_name
+
     @classmethod
     @override
     def _create(cls, am: AnalysisManager, f: IfaceMethodDecl) -> "IfaceMethodNapiInfo":
@@ -398,12 +457,20 @@ class GlobFuncNapiInfo(AbstractAnalysis[GlobFuncDecl]):
     def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
         self.ctor_class_name = None
         self.static_class_name = None
+        self.promise_name = None
+        self.async_name = None
         self.norm_name = None
         if ctor_attr := CtorAttr.get(f):
             self.ctor_class_name = ctor_attr.cls_name
         elif static_attr := StaticAttr.get(f):
             self.static_class_name = static_attr.cls_name
+
         self.norm_name = f.name
+
+        if PromiseAttribute.get(f):
+            self.promise_name = self.norm_name
+        elif AsyncAttribute.get(f):
+            self.async_name = self.norm_name
 
     @classmethod
     @override
@@ -1752,6 +1819,45 @@ class UnionTypeNapiInfo(TypeNapiInfo):
         )
 
 
+class OpaqueTypeNapiInfo(TypeNapiInfo):
+    def __init__(self, am: AnalysisManager, t: OpaqueType) -> None:
+        super().__init__(am, t)
+        self.am = am
+        self.type = t
+        self.napi_type_name = "napi_object"
+
+    @override
+    def dts_type_in(self, target: DtsWriter) -> str:
+        if dts_type_attr := DtsTypeAttr.get(self.type.ref):
+            return dts_type_attr.type_name
+        else:
+            return "Object"
+
+    @override
+    def dts_return_type_in(self, target: DtsWriter) -> str:
+        return self.dts_type_in(target)
+
+    def from_napi(
+        self,
+        target: CSourceWriter,
+        napi_value: str,
+        cpp_result: str,
+    ):
+        target.writelns(
+            f"{self.cpp_info.as_owner} {cpp_result} = ({self.cpp_info.as_owner}){napi_value};",
+        )
+
+    def into_napi(
+        self,
+        target: CSourceWriter,
+        cpp_value: str,
+        napi_result: str,
+    ):
+        target.writelns(
+            f"napi_value {napi_result} = (napi_value){cpp_value};",
+        )
+
+
 class ConstEnumTypeNapiInfo(TypeNapiInfo):
     def __init__(self, am: AnalysisManager, t: EnumType, const_attr: ConstAttr):
         super().__init__(am, t)
@@ -1899,6 +2005,10 @@ class TypeNapiInfoDispatcher(NonVoidTypeVisitor[TypeNapiInfo]):
     @override
     def visit_union_type(self, t: UnionType) -> TypeNapiInfo:
         return UnionTypeNapiInfo(self.am, t)
+
+    @override
+    def visit_opaque_type(self, t: OpaqueType) -> TypeNapiInfo:
+        return OpaqueTypeNapiInfo(self.am, t)
 
     @override
     def visit_unit_type(self, t: UnitType) -> TypeNapiInfo:
