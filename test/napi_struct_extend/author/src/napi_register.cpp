@@ -15,12 +15,12 @@
 // This file is a test file.
 // NOLINTBEGIN
 
-#include "iface_test.napi.h"
+#include "struct_extend.napi.h"
 
 EXTERN_C_START
 napi_value Init(napi_env env, napi_value exports)
 {
-    Init__iface_test(env, exports);
+    Init__struct_extend(env, exports);
     return exports;
 }
 
