@@ -80,6 +80,7 @@ class DtsCodeGenerator:
                 self.gen_namespace(child_ns, target)
 
     def gen_package(self, pkg: PackageDecl, pkg_dts_target: DtsWriter):
+        self.gen_utils(pkg_dts_target)
         for func in pkg.functions:
             func_napi_info = GlobFuncNapiInfo.get(self.am, func)
             if (
@@ -97,6 +98,11 @@ class DtsCodeGenerator:
         for union in pkg.unions:
             self.gen_union(union, pkg_dts_target)
 
+    def gen_utils(self, target: DtsWriter):
+        target.writelns(
+            f"type AsyncCallback<T> = (error: Error | null, result: T | undefined) => void;",
+        )
+
     def gen_func(self, func: GlobFuncDecl, pkg_dts_target: DtsWriter):
         func_napi_info = GlobFuncNapiInfo.get(self.am, func)
         args = []
@@ -112,9 +118,23 @@ class DtsCodeGenerator:
             return_ty = return_ty_dts_info.dts_return_type_in(pkg_dts_target)
         else:
             return_ty = "void"
-        pkg_dts_target.writelns(
-            f"export function {func_napi_info.norm_name}({args_str}): {return_ty};",
-        )
+        if func_napi_info.async_name is not None:
+            cbname = "callback"
+            callback_ty_ts_name = f"AsyncCallback<{return_ty}>"
+            callback_ts = f"{cbname}: {callback_ty_ts_name}"
+            params_with_callback_ts_str = ", ".join([*args, callback_ts])
+            pkg_dts_target.writelns(
+                f"export function {func_napi_info.async_name}({params_with_callback_ts_str}): void;",
+            )
+        elif func_napi_info.promise_name is not None:
+            promise_ty = f"Promise<{return_ty}>"
+            pkg_dts_target.writelns(
+                f"export function {func_napi_info.promise_name}({args_str}): {promise_ty};",
+            )
+        else:
+            pkg_dts_target.writelns(
+                f"export function {func_napi_info.norm_name}({args_str}): {return_ty};",
+            )
 
     def gen_struct_interface(
         self,
@@ -141,6 +161,9 @@ class DtsCodeGenerator:
             f"{struct_decl} {{",
             f"}}",
         ):
+            for injected in struct_napi_info.interfacets_dts_injected_codes:
+                target.write_block(injected)
+
             for field in struct_napi_info.dts_fields:
                 readonly = "readonly " if ReadOnlyAttr.get(field) is not None else ""
                 ty_napi_info = TypeNapiInfo.get(self.am, field.ty)
@@ -172,6 +195,9 @@ class DtsCodeGenerator:
             f"{struct_decl} {{",
             f"}}",
         ):
+            for injected in struct_napi_info.class_dts_injected_codes:
+                target.write_block(injected)
+
             for parts in struct_napi_info.dts_final_fields:
                 final = parts[-1]
                 readonly = "readonly " if ReadOnlyAttr.get(final) is not None else ""
@@ -208,9 +234,23 @@ class DtsCodeGenerator:
                     return_ty = return_ty_dts_info.dts_return_type_in(target)
                 else:
                     return_ty = "void"
-                target.writelns(
-                    f"static {static_func_napi_info.norm_name}({params_str}): {return_ty};",
-                )
+                if static_func_napi_info.async_name is not None:
+                    cbname = "callback"
+                    callback_ty_ts_name = f"AsyncCallback<{return_ty}>"
+                    callback_ts = f"{cbname}: {callback_ty_ts_name}"
+                    params_with_callback_ts_str = ", ".join([*params, callback_ts])
+                    target.writelns(
+                        f"static {static_func_napi_info.async_name}({params_with_callback_ts_str}): void;",
+                    )
+                elif static_func_napi_info.promise_name is not None:
+                    promise_ty = f"Promise<{return_ty}>"
+                    target.writelns(
+                        f"static {static_func_napi_info.promise_name}({params_str}): {promise_ty};",
+                    )
+                else:
+                    target.writelns(
+                        f"static {static_func_napi_info.norm_name}({params_str}): {return_ty};",
+                    )
 
     def gen_iface_interface(
         self,
@@ -231,6 +271,8 @@ class DtsCodeGenerator:
             f"export interface {iface_napi_info.dts_type_name}{extends_str} {{",
             f"}}",
         ):
+            for injected in iface_napi_info.interface_dts_injected_codes:
+                target.write_block(injected)
             self.gen_iface_methods_decl(iface.methods, target)
 
     def gen_iface_class(
@@ -256,6 +298,9 @@ class DtsCodeGenerator:
             f"{iface_decl} {{",
             f"}}",
         ):
+            for injected in iface_napi_info.class_dts_injected_codes:
+                target.write_block(injected)
+
             if ctor := iface_napi_info.ctor:
                 params = []
                 for param in ctor.params:
@@ -284,9 +329,23 @@ class DtsCodeGenerator:
                     else:
                         return_ty = "void"
                     static_func_napi_info = GlobFuncNapiInfo.get(self.am, static_func)
-                    target.writelns(
-                        f"static {static_func_napi_info.norm_name}({params_str}): {return_ty};",
-                    )
+                    if static_func_napi_info.async_name is not None:
+                        cbname = "callback"
+                        callback_ty_ts_name = f"AsyncCallback<{return_ty}>"
+                        callback_ts = f"{cbname}: {callback_ty_ts_name}"
+                        params_with_callback_ts_str = ", ".join([*params, callback_ts])
+                        target.writelns(
+                            f"static {static_func_napi_info.async_name}({params_with_callback_ts_str}): void;",
+                        )
+                    elif static_func_napi_info.promise_name is not None:
+                        promise_ty = f"Promise<{return_ty}>"
+                        target.writelns(
+                            f"static {static_func_napi_info.promise_name}({params_str}): {promise_ty};",
+                        )
+                    else:
+                        target.writelns(
+                            f"static {static_func_napi_info.norm_name}({params_str}): {return_ty};",
+                        )
             for ancestor in iface_abi_info.ancestor_dict:
                 self.gen_iface_methods_decl(ancestor.methods, target)
 
