@@ -14,23 +14,29 @@
 # limitations under the License.
 
 from collections.abc import Collection
+from json import dumps
 
 from taihe.codegen.abi.analyses import IfaceAbiInfo
+from taihe.codegen.ani.attributes import ReadOnlyAttr
 from taihe.codegen.napi.analyses import (
+    EnumNapiInfo,
     GlobFuncNapiInfo,
     IfaceMethodNapiInfo,
     IfaceNapiInfo,
     Namespace,
     PackageGroupNapiInfo,
+    StructNapiInfo,
     TypeNapiInfo,
 )
 from taihe.codegen.napi.writer import DtsWriter
 from taihe.semantics.declarations import (
+    EnumDecl,
     GlobFuncDecl,
     IfaceDecl,
     IfaceMethodDecl,
     PackageDecl,
     PackageGroup,
+    StructDecl,
 )
 from taihe.semantics.types import NonVoidType
 from taihe.utils.analyses import AnalysisManager
@@ -79,8 +85,13 @@ class DtsCodeGenerator:
                 and func_napi_info.static_class_name is None
             ):
                 self.gen_func(func, pkg_dts_target)
+        for struct in pkg.structs:
+            self.gen_struct_interface(struct, pkg_dts_target)
+            self.gen_struct_class(struct, pkg_dts_target)
         for iface in pkg.interfaces:
             self.gen_iface_interface(iface, pkg_dts_target)
+        for enum in pkg.enums:
+            self.gen_enum(enum, pkg_dts_target)
 
     def gen_func(self, func: GlobFuncDecl, pkg_dts_target: DtsWriter):
         func_napi_info = GlobFuncNapiInfo.get(self.am, func)
@@ -100,6 +111,102 @@ class DtsCodeGenerator:
         pkg_dts_target.writelns(
             f"export function {func_napi_info.norm_name}({args_str}): {return_ty};",
         )
+
+    def gen_struct_interface(
+        self,
+        struct: StructDecl,
+        target: DtsWriter,
+    ):
+        struct_napi_info = StructNapiInfo.get(self.am, struct)
+        if struct_napi_info.is_class():
+            # no interface
+            return
+
+        struct_decl = f"interface {struct_napi_info.dts_type_name}"
+        if struct_napi_info.dts_iface_parents:
+            parents = []
+            for parent in struct_napi_info.dts_iface_parents:
+                parent_ty = parent.ty
+                parent_napi_info = TypeNapiInfo.get(self.am, parent_ty)
+                parents.append(parent_napi_info.dts_type_in(target))
+            extends_str = ", ".join(parents) if parents else ""
+            struct_decl = f"{struct_decl} extends {extends_str}"
+        struct_decl = f"export {struct_decl}"
+
+        with target.indented(
+            f"{struct_decl} {{",
+            f"}}",
+        ):
+            for field in struct_napi_info.dts_fields:
+                readonly = "readonly " if ReadOnlyAttr.get(field) is not None else ""
+                ty_napi_info = TypeNapiInfo.get(self.am, field.ty)
+                target.writelns(
+                    f"{readonly}{field.name}{'?' if ty_napi_info.is_optional else ''}: {ty_napi_info.dts_type_in(target)};"
+                )
+
+    def gen_struct_class(
+        self,
+        struct: StructDecl,
+        target: DtsWriter,
+    ):
+        struct_napi_info = StructNapiInfo.get(self.am, struct)
+        if not struct_napi_info.is_class():
+            return
+
+        struct_decl = f"class {struct_napi_info.dts_type_name}"
+        if struct_napi_info.dts_iface_parents:
+            parents = []
+            for parent in struct_napi_info.dts_iface_parents:
+                parent_ty = parent.ty
+                parent_napi_info = TypeNapiInfo.get(self.am, parent_ty)
+                parents.append(parent_napi_info.dts_type_in(target))
+            extends_str = ", ".join(parents) if parents else ""
+            struct_decl = f"{struct_decl} implements {extends_str}"
+        struct_decl = f"export {struct_decl}"
+
+        with target.indented(
+            f"{struct_decl} {{",
+            f"}}",
+        ):
+            for parts in struct_napi_info.dts_final_fields:
+                final = parts[-1]
+                readonly = "readonly " if ReadOnlyAttr.get(final) is not None else ""
+                ty_napi_info = TypeNapiInfo.get(self.am, final.ty)
+                target.writelns(
+                    f"{readonly}{final.name}{'?' if ty_napi_info.is_optional else ''}: {ty_napi_info.dts_type_in(target)};"
+                )
+
+            if ctor := struct_napi_info.ctor:
+                params = []
+                for param in ctor.params:
+                    type_napi_info = TypeNapiInfo.get(self.am, param.ty)
+                    params.append(
+                        f"{param.name}{'?' if type_napi_info.is_optional else ''}: {type_napi_info.dts_type_in(target)}"
+                    )
+                params_str = ", ".join(params)
+                target.writelns(f"constructor({params_str});")
+
+            # static methods
+            for mng_name, static_func in struct_napi_info.static_funcs:
+                static_func_napi_info = GlobFuncNapiInfo.get(self.am, static_func)
+                params = []
+                for param in static_func.params:
+                    value_ty = param.ty
+                    param_dts_info = TypeNapiInfo.get(self.am, value_ty)
+                    params.append(
+                        f"{param.name}{'?' if param_dts_info.is_optional else ''}: {param_dts_info.dts_type_in(target)}"
+                    )
+                params_str = ", ".join(params)
+                if isinstance(static_func.return_ty, NonVoidType):
+                    return_ty_dts_info = TypeNapiInfo.get(
+                        self.am, static_func.return_ty
+                    )
+                    return_ty = return_ty_dts_info.dts_return_type_in(target)
+                else:
+                    return_ty = "void"
+                target.writelns(
+                    f"static {static_func_napi_info.norm_name}({params_str}): {return_ty};",
+                )
 
     def gen_iface_interface(
         self,
@@ -225,3 +332,29 @@ class DtsCodeGenerator:
                 target.writelns(
                     f"{iface_method_napi_info.norm_name}({dts_params_str}): {return_ty};",
                 )
+
+    def gen_enum(
+        self,
+        enum: EnumDecl,
+        target: DtsWriter,
+    ):
+        enum_napi_info = EnumNapiInfo.get(self.am, enum)
+        if enum_napi_info.is_literal:
+            for item in enum.items:
+                target.writelns(
+                    f"export const {item.name} = {dumps(item.value)};",
+                )
+        else:
+            with target.indented(
+                f"export enum {enum_napi_info.dts_type_name} {{",
+                f"}}",
+            ):
+                for item in enum.items:
+                    if item.value is None:
+                        target.writelns(
+                            f"{item.name},",
+                        )
+                    else:
+                        target.writelns(
+                            f"{item.name} = {dumps(item.value)},",
+                        )
