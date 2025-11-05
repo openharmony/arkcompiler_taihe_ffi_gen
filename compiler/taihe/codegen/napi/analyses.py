@@ -14,13 +14,20 @@
 # limitations under the License.
 
 from abc import ABCMeta, abstractmethod
+from collections import defaultdict
 
 from typing_extensions import override
 
+from taihe.codegen.abi.analyses import IfaceAbiInfo
 from taihe.codegen.abi.mangle import DeclKind, encode
 from taihe.codegen.abi.writer import CSourceWriter
 from taihe.codegen.ani.attributes import (
+    ClassAttr,
+    CtorAttr,
+    GetAttr,
     NamespaceAttr,
+    SetAttr,
+    StaticAttr,
 )
 from taihe.codegen.cpp.analyses import (
     TypeCppInfo,
@@ -29,11 +36,13 @@ from taihe.codegen.napi.writer import DtsWriter
 from taihe.semantics.declarations import (
     GlobFuncDecl,
     IfaceDecl,
+    IfaceExtendDecl,
     IfaceMethodDecl,
     PackageDecl,
     PackageGroup,
 )
 from taihe.semantics.types import (
+    IfaceType,
     NonVoidType,
     ScalarKind,
     ScalarType,
@@ -70,6 +79,11 @@ class Namespace:
 
         self.children: dict[str, Namespace] = {}
         self.packages: list[PackageDecl] = []
+        self.ts_injected_heads: list[str] = []
+        self.ts_injected_codes: list[str] = []
+
+        self.dts_injected_heads: list[str] = []
+        self.dts_injected_codes: list[str] = []
 
         if parent is None:
             self.module = self
@@ -156,9 +170,139 @@ class PackageNapiInfo(AbstractAnalysis[PackageDecl]):
         return f"{self.scope_name}.{dts_type_name}"
 
 
+class IfaceNapiInfo(AbstractAnalysis[IfaceDecl]):
+    def __init__(self, am: AnalysisManager, d: IfaceDecl) -> None:
+        self.am = am
+        segments = [*d.parent_pkg.segments, d.name]
+        self.pkg_napi_info = PackageNapiInfo.get(am, d.parent_pkg)
+        self.from_napi_func_name = encode(segments, DeclKind.FROM_NAPI)
+        self.into_napi_func_name = encode(segments, DeclKind.INTO_NAPI)
+        self.constructor_func_name = encode(segments, DeclKind.CONSTRUCTOR)
+        self.create_func_name = encode(segments, DeclKind.CREATE)
+        self.decl_header = f"{d.parent_pkg.name}.{d.name}.napi.decl.h"
+        self.impl_header = f"{d.parent_pkg.name}.{d.name}.napi.impl.h"
+        self.meth_decl_header = f"{d.parent_pkg.name}.{d.name}.meth.napi.decl.h"
+        self.meth_impl_header = f"{d.parent_pkg.name}.{d.name}.meth.napi.impl.h"
+        self.dts_type_name = d.name
+        iface_abi_info = IfaceAbiInfo.get(am, d)
+        self.ctor_ref_name = f"ctor_ref_{iface_abi_info.mangled_name}"
+        if ClassAttr.get(d):
+            self.dts_impl_name = f"{d.name}"
+        else:
+            self.dts_impl_name = f"{d.name}_inner"
+
+        iface_register_infos: list[
+            tuple[list[IfaceMethodDecl], IfaceDecl, list[str]]
+        ] = []
+        for ancestor in iface_abi_info.ancestor_dict:
+            property_map: dict[
+                str, tuple[str | None, str | None, list[IfaceMethodDecl]]
+            ] = defaultdict(lambda: (None, None, []))
+            for method in ancestor.methods:
+                iface_meth_napi_info = IfaceMethodNapiInfo.get(self.am, method)
+                mangled_name = get_mangled_method_name(d, method)
+                if get_name := iface_meth_napi_info.get_name:
+                    existing_get, existing_set, methods = property_map[get_name]
+                    methods.append(method)
+                    property_map[get_name] = (mangled_name, existing_set, methods)
+
+                if set_name := iface_meth_napi_info.set_name:
+                    existing_get, existing_set, methods = property_map[set_name]
+                    methods.append(method)
+                    property_map[set_name] = (existing_get, mangled_name, methods)
+            for prop_name, (get_name, set_name, methods) in property_map.items():
+                if methods:
+                    get_mangled = get_name or "nullptr"
+                    set_mangled = set_name or "nullptr"
+                    props_strs = [
+                        f'"{prop_name}"',
+                        "nullptr",
+                        "nullptr",
+                        get_mangled,
+                        set_mangled,
+                        "nullptr",
+                        "napi_default",
+                        "nullptr",
+                    ]
+                    iface_register_infos.append((methods, ancestor, props_strs))
+            for method in ancestor.methods:
+                mangled_name = get_mangled_method_name(d, method)
+                iface_meth_napi_info = IfaceMethodNapiInfo.get(self.am, method)
+                if (
+                    iface_meth_napi_info.get_name is None
+                    and iface_meth_napi_info.set_name is None
+                ):
+                    props_strs = [
+                        f'"{iface_meth_napi_info.norm_name}"',
+                        "nullptr",
+                        f"{mangled_name}",
+                        "nullptr",
+                        "nullptr",
+                        "nullptr",
+                        "napi_default",
+                        "nullptr",
+                    ]
+                    iface_register_infos.append(([method], ancestor, props_strs))
+        self.iface_register_infos = iface_register_infos
+        self.ctor: GlobFuncDecl | None = None
+        self.static_funcs: list[tuple[str, GlobFuncDecl]] = []
+
+        self.dts_class_parents: list[IfaceExtendDecl] = []
+        self.dts_iface_parents: list[IfaceExtendDecl] = []
+        for extend in d.extends:
+            ty = extend.ty
+            assert isinstance(ty, IfaceType)
+            parent_napi_info = IfaceNapiInfo.get(am, ty.decl)
+            if parent_napi_info.is_class():
+                self.dts_class_parents.append(extend)
+            else:
+                self.dts_iface_parents.append(extend)
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, f: IfaceDecl) -> "IfaceNapiInfo":
+        return IfaceNapiInfo(am, f)
+
+    def is_class(self):
+        return self.dts_type_name == self.dts_impl_name
+
+    def dts_type_in(self, target: DtsWriter):
+        return self.pkg_napi_info.ns.get_member(
+            target,
+            self.dts_type_name,
+        )
+
+
+class IfaceMethodNapiInfo(AbstractAnalysis[IfaceMethodDecl]):
+    def __init__(self, am: AnalysisManager, f: IfaceMethodDecl) -> None:
+        self.get_name = None
+        self.set_name = None
+        self.promise_name = None
+        self.async_name = None
+        self.norm_name = None
+
+        if get_attr := GetAttr.get(f):
+            self.get_name = get_attr.member_name or get_attr.func_suffix
+        if set_attr := SetAttr.get(f):
+            self.set_name = set_attr.member_name or set_attr.func_suffix
+
+        self.norm_name = f.name
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, f: IfaceMethodDecl) -> "IfaceMethodNapiInfo":
+        return IfaceMethodNapiInfo(am, f)
+
+
 class GlobFuncNapiInfo(AbstractAnalysis[GlobFuncDecl]):
     def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
         self.ctor_class_name = None
+        self.static_class_name = None
+        self.norm_name = None
+        if ctor_attr := CtorAttr.get(f):
+            self.ctor_class_name = ctor_attr.cls_name
+        elif static_attr := StaticAttr.get(f):
+            self.static_class_name = static_attr.cls_name
         self.norm_name = f.name
 
     @classmethod
@@ -358,6 +502,49 @@ class StringTypeNapiInfo(TypeNapiInfo):
         )
 
 
+class IfaceTypeNapiInfo(TypeNapiInfo):
+    def __init__(self, am: AnalysisManager, t: IfaceType):
+        super().__init__(am, t)
+        self.am = am
+        self.type = t
+        iface_napi_info = IfaceNapiInfo.get(self.am, t.decl)
+        self.iface_register_infos = iface_napi_info.iface_register_infos
+        self.napi_type_name = "napi_object"
+
+    @override
+    def dts_type_in(self, target: DtsWriter) -> str:
+        iface_napi_info = IfaceNapiInfo.get(self.am, self.type.decl)
+        return iface_napi_info.dts_type_in(target)
+
+    @override
+    def dts_return_type_in(self, target: DtsWriter) -> str:
+        return self.dts_type_in(target)
+
+    def from_napi(
+        self,
+        target: CSourceWriter,
+        napi_value: str,
+        cpp_result: str,
+    ):
+        iface_napi_info = IfaceNapiInfo.get(self.am, self.type.decl)
+        target.add_include(iface_napi_info.impl_header)
+        target.writelns(
+            f"{self.cpp_info.as_owner} {cpp_result} = {iface_napi_info.from_napi_func_name}(env, {napi_value});",
+        )
+
+    def into_napi(
+        self,
+        target: CSourceWriter,
+        cpp_value: str,
+        napi_result: str,
+    ):
+        iface_napi_info = IfaceNapiInfo.get(self.am, self.type.decl)
+        target.add_include(iface_napi_info.impl_header)
+        target.writelns(
+            f"napi_value {napi_result} = {iface_napi_info.into_napi_func_name}(env, {cpp_value});",
+        )
+
+
 class TypeNapiInfoDispatcher(NonVoidTypeVisitor[TypeNapiInfo]):
     def __init__(self, am: AnalysisManager):
         self.am = am
@@ -369,3 +556,7 @@ class TypeNapiInfoDispatcher(NonVoidTypeVisitor[TypeNapiInfo]):
     @override
     def visit_string_type(self, t: StringType) -> TypeNapiInfo:
         return StringTypeNapiInfo(self.am, t)
+
+    @override
+    def visit_iface_type(self, t: IfaceType) -> TypeNapiInfo:
+        return IfaceTypeNapiInfo(self.am, t)
