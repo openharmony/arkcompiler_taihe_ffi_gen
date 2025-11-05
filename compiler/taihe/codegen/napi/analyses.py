@@ -30,6 +30,7 @@ from taihe.codegen.ani.attributes import (
     NamespaceAttr,
     SetAttr,
     StaticAttr,
+    UndefinedAttr,
 )
 from taihe.codegen.cpp.analyses import (
     EnumCppInfo,
@@ -46,15 +47,21 @@ from taihe.semantics.declarations import (
     PackageGroup,
     StructDecl,
     StructFieldDecl,
+    UnionDecl,
+    UnionFieldDecl,
 )
 from taihe.semantics.types import (
+    ArrayType,
     EnumType,
     IfaceType,
+    MapType,
     NonVoidType,
     ScalarKind,
     ScalarType,
     StringType,
     StructType,
+    UnionType,
+    UnitType,
 )
 from taihe.semantics.visitor import NonVoidTypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
@@ -398,6 +405,38 @@ class GlobFuncNapiInfo(AbstractAnalysis[GlobFuncDecl]):
         return GlobFuncNapiInfo(am, f)
 
 
+class UnionNapiInfo(AbstractAnalysis[UnionDecl]):
+    def __init__(self, am: AnalysisManager, d: UnionDecl) -> None:
+        segments = [*d.parent_pkg.segments, d.name]
+        self.pkg_napi_info = PackageNapiInfo.get(am, d.parent_pkg)
+        self.from_napi_func_name = encode(segments, DeclKind.FROM_NAPI)
+        self.into_napi_func_name = encode(segments, DeclKind.INTO_NAPI)
+        self.decl_header = f"{d.parent_pkg.name}.{d.name}.napi.decl.h"
+        self.impl_header = f"{d.parent_pkg.name}.{d.name}.napi.impl.h"
+        self.dts_type_name = d.name
+
+        self.dts_final_fields: list[list[UnionFieldDecl]] = []
+        for field in d.fields:
+            if field.ty_ref and isinstance(ty := field.ty, UnionType):
+                inner_napi_info = UnionNapiInfo.get(am, ty.decl)
+                self.dts_final_fields.extend(
+                    [field, *parts] for parts in inner_napi_info.dts_final_fields
+                )
+            else:
+                self.dts_final_fields.append([field])
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, f: UnionDecl) -> "UnionNapiInfo":
+        return UnionNapiInfo(am, f)
+
+    def dts_type_in(self, target: DtsWriter):
+        return self.pkg_napi_info.ns.get_member(
+            target,
+            self.dts_type_name,
+        )
+
+
 class TypeNapiInfo(AbstractAnalysis[NonVoidType], metaclass=ABCMeta):
     is_optional: bool = False
     napi_type_name: str
@@ -436,6 +475,84 @@ class TypeNapiInfo(AbstractAnalysis[NonVoidType], metaclass=ABCMeta):
         napi_result: str,
     ):
         pass
+
+
+class NullTypeNapiInfo(TypeNapiInfo):
+    def __init__(self, am: AnalysisManager, t: UnitType):
+        super().__init__(am, t)
+        self.am = am
+        self.type = t
+        self.cpp_info = TypeCppInfo.get(am, t)
+        self.napi_type_name = "napi_null"
+
+    @override
+    def dts_type_in(self, target: DtsWriter) -> str:
+        return "null"
+
+    @override
+    def dts_return_type_in(self, target: DtsWriter) -> str:
+        return self.dts_type_in(target)
+
+    def from_napi(
+        self,
+        target: CSourceWriter,
+        napi_value: str,
+        cpp_result: str,
+    ):
+        target.writelns(
+            f"{self.cpp_info.as_owner} {cpp_result} = {{}};",
+        )
+
+    @override
+    def into_napi(
+        self,
+        target: CSourceWriter,
+        cpp_value: str,
+        napi_result: str,
+    ):
+        target.writelns(
+            f"napi_value {napi_result} = nullptr;",
+            f"napi_get_null(env, &{napi_result});",
+        )
+
+
+class UndefinedTypeNapiInfo(TypeNapiInfo):
+    def __init__(self, am: AnalysisManager, t: UnitType):
+        super().__init__(am, t)
+        self.am = am
+        self.type = t
+        self.cpp_info = TypeCppInfo.get(am, t)
+        self.napi_type_name = "napi_undefined"
+
+    @override
+    def dts_type_in(self, target: DtsWriter) -> str:
+        return "undefined"
+
+    @override
+    def dts_return_type_in(self, target: DtsWriter) -> str:
+        return self.dts_type_in(target)
+
+    def from_napi(
+        self,
+        target: CSourceWriter,
+        napi_value: str,
+        cpp_result: str,
+    ):
+        target.writelns(
+            f"{self.cpp_info.as_owner} {cpp_result} = {{}};",
+        )
+
+    @override
+    def into_napi(
+        self,
+        target: CSourceWriter,
+        cpp_value: str,
+        napi_result: str,
+    ):
+        target.writelns(
+            f"napi_value {napi_result} = nullptr;",
+            f"napi_get_undefined(env, &{napi_result});",
+        )
 
 
 class ScalarTypeNapiInfo(TypeNapiInfo):
@@ -728,6 +845,215 @@ class EnumTypeNapiInfo(TypeNapiInfo):
             raise ValueError
 
 
+class ArrayTypeNapiInfo(TypeNapiInfo):
+    def __init__(self, am: AnalysisManager, t: ArrayType) -> None:
+        super().__init__(am, t)
+        self.am = am
+        self.type = t
+        self.napi_type_name = "napi_object"
+
+    @override
+    def dts_type_in(self, target: DtsWriter) -> str:
+        item_ty_napi_info = TypeNapiInfo.get(self.am, self.type.item_ty)
+        return f"Array<{item_ty_napi_info.dts_type_in(target)}>"
+
+    @override
+    def dts_return_type_in(self, target: DtsWriter) -> str:
+        return self.dts_type_in(target)
+
+    def from_napi(
+        self,
+        target: CSourceWriter,
+        napi_value: str,
+        cpp_result: str,
+    ):
+        item_ty_cpp_info = TypeCppInfo.get(self.am, self.type.item_ty)
+        item_ty_napi_info = TypeNapiInfo.get(self.am, self.type.item_ty)
+        array_size = f"{cpp_result}_size"
+        cpp_buffer = f"{cpp_result}_buffer"
+        napi_item = f"{cpp_buffer}_napi_item"
+        cpp_item = f"{cpp_buffer}_cpp_item"
+        cpp_ctr = f"{cpp_buffer}_i"
+        target.writelns(
+            f"uint32_t {array_size};",
+            f"NAPI_CALL(env, napi_get_array_length(env, {napi_value}, &{array_size}));",
+            f"{item_ty_cpp_info.as_owner}* {cpp_buffer} = reinterpret_cast<{item_ty_cpp_info.as_owner}*>(malloc({array_size} * sizeof({item_ty_cpp_info.as_owner})));",
+        )
+        with target.indented(
+            f"for (uint32_t {cpp_ctr} = 0; {cpp_ctr} < {array_size}; {cpp_ctr}++) {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"napi_value {napi_item};",
+                f"NAPI_CALL(env, napi_get_element(env, {napi_value}, {cpp_ctr}, &{napi_item}));",
+            )
+            item_ty_napi_info.from_napi(target, napi_item, cpp_item)
+            target.writelns(
+                f"new (&{cpp_buffer}[{cpp_ctr}]) {item_ty_napi_info.cpp_info.as_owner}(std::move({cpp_item}));",
+            )
+        target.writelns(
+            f"{self.cpp_info.as_owner} {cpp_result}({cpp_buffer}, {array_size});",
+        )
+
+    def into_napi(
+        self,
+        target: CSourceWriter,
+        cpp_value: str,
+        napi_result: str,
+    ):
+        item_ty_napi_info = TypeNapiInfo.get(self.am, self.type.item_ty)
+        cpp_size = f"{napi_result}_size"
+        napi_item = f"{napi_result}_item"
+        cpp_ctr = f"{napi_result}_i"
+        target.writelns(
+            f"uint32_t {cpp_size} = {cpp_value}.size();",
+            f"napi_value {napi_result} = nullptr;",
+            f"NAPI_CALL(env, napi_create_array_with_length(env, {cpp_size}, &{napi_result}));",
+        )
+        with target.indented(
+            f"for (uint32_t {cpp_ctr} = 0; {cpp_ctr} < {cpp_size}; {cpp_ctr}++) {{",
+            f"}}",
+        ):
+            item_ty_napi_info.into_napi(target, f"{cpp_value}[{cpp_ctr}]", napi_item)
+            target.writelns(
+                f"NAPI_CALL(env, napi_set_element(env, {napi_result}, {cpp_ctr}, {napi_item}));",
+            )
+
+
+class MapTypeNapiInfo(TypeNapiInfo):
+    def __init__(self, am: AnalysisManager, t: MapType) -> None:
+        super().__init__(am, t)
+        self.am = am
+        self.type = t
+        self.napi_type_name = "napi_object"
+
+    @override
+    def dts_type_in(self, target: DtsWriter) -> str:
+        key_ty_napi_info = TypeNapiInfo.get(self.am, self.type.key_ty)
+        val_ty_napi_info = TypeNapiInfo.get(self.am, self.type.val_ty)
+        key_dts_type = key_ty_napi_info.dts_type_in(target)
+        val_dts_type = val_ty_napi_info.dts_type_in(target)
+        return f"Map<{key_dts_type}, {val_dts_type}>"
+
+    @override
+    def dts_return_type_in(self, target: DtsWriter) -> str:
+        return self.dts_type_in(target)
+
+    def from_napi(
+        self,
+        target: CSourceWriter,
+        napi_value: str,
+        cpp_result: str,
+    ):
+        key_ty_napi_info = TypeNapiInfo.get(self.am, self.type.key_ty)
+        val_ty_napi_info = TypeNapiInfo.get(self.am, self.type.val_ty)
+        cpp_key = f"{cpp_result}_cpp_key"
+        cpp_val = f"{cpp_result}_cpp_val"
+        target.writelns(
+            f"{self.cpp_info.as_owner} {cpp_result};",
+            f"napi_value {cpp_result}_entries_fn = nullptr, {cpp_result}_entries_iter = nullptr;",
+            f'NAPI_CALL(env, napi_get_named_property(env, {napi_value}, "entries", &{cpp_result}_entries_fn));',
+            f"NAPI_CALL(env, napi_call_function(env, {napi_value}, {cpp_result}_entries_fn, 0, nullptr, &{cpp_result}_entries_iter));",
+            f"napi_value {cpp_result}_next_meth = nullptr;",
+            f'NAPI_CALL(env, napi_get_named_property(env, {cpp_result}_entries_iter, "next", &{cpp_result}_next_meth));',
+        )
+        with target.indented(
+            f"while (true) {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"napi_value {cpp_result}_next_result;",
+                f"NAPI_CALL(env, napi_call_function(env, {cpp_result}_entries_iter, {cpp_result}_next_meth, 0, nullptr, &{cpp_result}_next_result));",
+                f"bool {cpp_result}_done;",
+                f"napi_value {cpp_result}_done_prop;",
+                f'NAPI_CALL(env, napi_get_named_property(env, {cpp_result}_next_result, "done", &{cpp_result}_done_prop));',
+                f"NAPI_CALL(env, napi_get_value_bool(env, {cpp_result}_done_prop, &{cpp_result}_done));",
+                f"if ({cpp_result}_done) break;",
+                f"napi_value {cpp_result}_value_prop, {cpp_result}_key, {cpp_result}_value;",
+                f'NAPI_CALL(env, napi_get_named_property(env, {cpp_result}_next_result, "value", &{cpp_result}_value_prop));',
+                f"NAPI_CALL(env, napi_get_element(env, {cpp_result}_value_prop, 0, &{cpp_result}_key));",
+                f"NAPI_CALL(env, napi_get_element(env, {cpp_result}_value_prop, 1, &{cpp_result}_value));",
+            )
+            key_ty_napi_info.from_napi(target, f"{cpp_result}_key", cpp_key)
+            val_ty_napi_info.from_napi(target, f"{cpp_result}_value", cpp_val)
+            target.writelns(
+                f"{cpp_result}.emplace({cpp_key}, {cpp_val});",
+            )
+
+    def into_napi(
+        self,
+        target: CSourceWriter,
+        cpp_value: str,
+        napi_result: str,
+    ):
+        napi_key = f"{napi_result}_napi_key"
+        napi_val = f"{napi_result}_napi_val"
+        cpp_key = f"{napi_result}_cpp_key"
+        cpp_val = f"{napi_result}_cpp_val"
+        key_ty_napi_info = TypeNapiInfo.get(self.am, self.type.key_ty)
+        val_ty_napi_info = TypeNapiInfo.get(self.am, self.type.val_ty)
+
+        target.writelns(
+            f"napi_value {napi_result}_global = nullptr, {napi_result}_map_ctor = nullptr, {napi_result} = nullptr;",
+            f"napi_get_global(env, &{napi_result}_global);",
+            f'NAPI_CALL(env, napi_get_named_property(env, {napi_result}_global, "Map", &{napi_result}_map_ctor));',
+            f"NAPI_CALL(env, napi_new_instance(env, {napi_result}_map_ctor, 0, nullptr, &{napi_result}));",
+            f"napi_value {napi_result}_set_fn = nullptr;",
+            f'NAPI_CALL(env, napi_get_named_property(env, {napi_result}, "set", &{napi_result}_set_fn));',
+        )
+        with target.indented(
+            f"for (const auto& [{cpp_key}, {cpp_val}] : {cpp_value}) {{",
+            f"}}",
+        ):
+            key_ty_napi_info.into_napi(target, cpp_key, napi_key)
+            val_ty_napi_info.into_napi(target, cpp_val, napi_val)
+            target.writelns(
+                f"napi_value {napi_result}_args[2] = {{{napi_key}, {napi_val}}};",
+                f"NAPI_CALL(env, napi_call_function(env, {napi_result}, {napi_result}_set_fn, 2, {napi_result}_args, nullptr));",
+            )
+
+
+class UnionTypeNapiInfo(TypeNapiInfo):
+    def __init__(self, am: AnalysisManager, t: UnionType):
+        super().__init__(am, t)
+        self.am = am
+        self.type = t
+        self.napi_type_name = "napi_value"  # TODO not sure
+
+    @override
+    def dts_type_in(self, target: DtsWriter) -> str:
+        union_napi_info = UnionNapiInfo.get(self.am, self.type.decl)
+        return union_napi_info.dts_type_in(target)
+
+    @override
+    def dts_return_type_in(self, target: DtsWriter) -> str:
+        return self.dts_type_in(target)
+
+    def from_napi(
+        self,
+        target: CSourceWriter,
+        napi_value: str,
+        cpp_result: str,
+    ):
+        union_napi_info = UnionNapiInfo.get(self.am, self.type.decl)
+        target.add_include(union_napi_info.impl_header)
+        target.writelns(
+            f"{self.cpp_info.as_owner} {cpp_result} = {union_napi_info.from_napi_func_name}(env, {napi_value});",
+        )
+
+    def into_napi(
+        self,
+        target: CSourceWriter,
+        cpp_value: str,
+        napi_result: str,
+    ):
+        union_napi_info = UnionNapiInfo.get(self.am, self.type.decl)
+        target.add_include(union_napi_info.impl_header)
+        target.writelns(
+            f"napi_value {napi_result} = {union_napi_info.into_napi_func_name}(env, {cpp_value});",
+        )
+
+
 class ConstEnumTypeNapiInfo(TypeNapiInfo):
     def __init__(self, am: AnalysisManager, t: EnumType, const_attr: ConstAttr):
         super().__init__(am, t)
@@ -795,8 +1121,33 @@ class TypeNapiInfoDispatcher(NonVoidTypeVisitor[TypeNapiInfo]):
     def visit_iface_type(self, t: IfaceType) -> TypeNapiInfo:
         return IfaceTypeNapiInfo(self.am, t)
 
+    # @override
+    # def visit_optional_type(self, t: OptionalType) -> TypeNapiInfo:
+    #     return OptionalTypeNapiInfo(self.am, t)
+
     @override
     def visit_enum_type(self, t: EnumType) -> TypeNapiInfo:
         if const_attr := ConstAttr.get(t.decl):
             return ConstEnumTypeNapiInfo(self.am, t, const_attr)
         return EnumTypeNapiInfo(self.am, t)
+
+    @override
+    def visit_array_type(self, t: ArrayType) -> TypeNapiInfo:
+        return ArrayTypeNapiInfo(self.am, t)
+
+    @override
+    def visit_map_type(self, t: MapType) -> TypeNapiInfo:
+        return MapTypeNapiInfo(self.am, t)
+
+    @override
+    def visit_union_type(self, t: UnionType) -> TypeNapiInfo:
+        return UnionTypeNapiInfo(self.am, t)
+
+    @override
+    def visit_unit_type(self, t: UnitType) -> TypeNapiInfo:
+        if UndefinedAttr.get(t.ref) or (
+            isinstance(t.ref.parent_type_holder, StructFieldDecl | UnionFieldDecl)
+            and UndefinedAttr.get(t.ref.parent_type_holder)
+        ):
+            return UndefinedTypeNapiInfo(self.am, t)
+        return NullTypeNapiInfo(self.am, t)

@@ -27,6 +27,7 @@ from taihe.codegen.napi.analyses import (
     PackageGroupNapiInfo,
     StructNapiInfo,
     TypeNapiInfo,
+    UnionNapiInfo,
 )
 from taihe.codegen.napi.writer import DtsWriter
 from taihe.semantics.declarations import (
@@ -37,6 +38,7 @@ from taihe.semantics.declarations import (
     PackageDecl,
     PackageGroup,
     StructDecl,
+    UnionDecl,
 )
 from taihe.semantics.types import NonVoidType
 from taihe.utils.analyses import AnalysisManager
@@ -92,6 +94,8 @@ class DtsCodeGenerator:
             self.gen_iface_interface(iface, pkg_dts_target)
         for enum in pkg.enums:
             self.gen_enum(enum, pkg_dts_target)
+        for union in pkg.unions:
+            self.gen_union(union, pkg_dts_target)
 
     def gen_func(self, func: GlobFuncDecl, pkg_dts_target: DtsWriter):
         func_napi_info = GlobFuncNapiInfo.get(self.am, func)
@@ -358,3 +362,18 @@ class DtsCodeGenerator:
                         target.writelns(
                             f"{item.name} = {dumps(item.value)},",
                         )
+
+    def gen_union(
+        self,
+        union: UnionDecl,
+        target: DtsWriter,
+    ):
+        union_napi_info = UnionNapiInfo.get(self.am, union)
+        dts_types = []
+        for field in union.fields:
+            ty_napi_info = TypeNapiInfo.get(self.am, field.ty)
+            dts_types.append(ty_napi_info.dts_type_in(target))
+        dts_types_str = " | ".join(dts_types)
+        target.writelns(
+            f"export type {union_napi_info.dts_type_name} = {dts_types_str};",
+        )
