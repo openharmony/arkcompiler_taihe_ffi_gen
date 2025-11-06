@@ -527,6 +527,13 @@ class PythonBuild(CachedResource):
             if dir_path != target_dir and dir_path.exists():
                 shutil.rmtree(dir_path, ignore_errors=True)
 
+    @override
+    @classmethod
+    def construct(cls, ctx: ResourceContext) -> Self:
+        self = cls(cls.locate(ctx))
+        self.fetch()
+        return self
+
 
 class Antlr(CachedResource):
     CLI_NAME = "antlr"
