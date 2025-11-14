@@ -392,24 +392,69 @@ class AniPackageSourceGenerator:
                 return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
                 return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
                 return_ty_cpp_name = return_ty_cpp_info.as_owner
-                result_cpp = "cpp_result"
-                result_ani = "ani_result"
-                self.target.writelns(
-                    f"{return_ty_cpp_name} {result_cpp} = {function_call};",
-                    f"if (::taihe::has_error()) {{ return {return_ty_ani_info.ani_type}{{}}; }}",
-                )
-                return_ty_ani_info.into_ani(
-                    self.target,
-                    "env",
-                    result_cpp,
-                    result_ani,
-                )
-                self.target.writelns(
-                    f"return {result_ani};",
-                )
+                return_val = f"{return_ty_ani_info.ani_type}{{}}"
             else:
+                return_ty_cpp_name = "void"
+                return_val = ""
+            return_ty_cpp_name_expected = (
+                f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
+            )
+            result_cpp = "cpp_result"
+            result_ani = "ani_result"
+            result_expected = "expected_result"
+            result_error = "error_result"
+            self.target.writelns(
+                f"{return_ty_cpp_name_expected} {result_expected} = {function_call};",
+                f"if (::taihe::has_error()) {{ return {return_val}; }}",
+            )
+            with self.target.indented(
+                f"if ({result_expected}) {{",
+                f"}}",
+            ):
+                if isinstance(return_ty := func.return_ty, NonVoidType):
+                    self.target.writelns(
+                        f"{return_ty_cpp_name} {result_cpp} = {result_expected}.value();",
+                    )
+                    return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
+                    return_ty_ani_info.into_ani(
+                        self.target,
+                        "env",
+                        result_cpp,
+                        result_ani,
+                    )
+                    self.target.writelns(
+                        f"return {result_ani};",
+                    )
+                else:
+                    self.target.writelns(
+                        f"return;",
+                    )
+            with self.target.indented(
+                f"else {{",
+                f"}}",
+            ):
                 self.target.writelns(
-                    f"{function_call};",
+                    f"::taihe::error {result_error} = {result_expected}.error();",
+                    f"ani_string result_string{{}};",
+                    f"env->String_NewUTF8({result_error}.message().c_str(), {result_error}.message().size(), &result_string);",
+                    f"ani_ref undefined;",
+                    f"env->GetUndefined(&undefined);",
+                    f"ani_error errObj;",
+                    f'ani_class errCls = TH_ANI_FIND_CLASS(env, "escompat.Error");',
+                    f'ani_method errCtor = TH_ANI_FIND_CLASS_METHOD(env, "escompat.Error", "<ctor>", "C{{std.core.String}}C{{escompat.ErrorOptions}}:");',
+                    f"env->Object_New(errCls, errCtor, reinterpret_cast<ani_object *>(&errObj), result_string, undefined);",
+                    f"if ({result_error}.has_code()) {{",
+                    f'    ani_class buserrCls = TH_ANI_FIND_CLASS(env, "@ohos.base.BusinessError");',
+                    f'    ani_method buserrCtor = TH_ANI_FIND_CLASS_METHOD(env, "@ohos.base.BusinessError", "<ctor>", "iC{{escompat.Error}}:");',
+                    f"    env->Object_New(errCls, errCtor, reinterpret_cast<ani_object *>(&errObj), result_string, undefined);",
+                    f"    ani_int errCode = static_cast<ani_int>({result_error}.code());",
+                    f"    ani_error businessErrObj;",
+                    f"    env->Object_New(buserrCls, buserrCtor, reinterpret_cast<ani_object *>(&businessErrObj), errCode, errObj);",
+                    f"    env->ThrowError(businessErrObj);",
+                    f"}} else {{",
+                    f"    env->ThrowError(errObj);",
+                    f"}}",
+                    f"return {return_val};",
                 )
 
     def gen_native_method(
@@ -475,24 +520,69 @@ class AniPackageSourceGenerator:
                 return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
                 return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
                 return_ty_cpp_name = return_ty_cpp_info.as_owner
-                result_cpp = "cpp_result"
-                result_ani = "ani_result"
-                self.target.writelns(
-                    f"{return_ty_cpp_name} {result_cpp} = {method_call};",
-                    f"if (::taihe::has_error()) {{ return {return_ty_ani_info.ani_type}{{}}; }}",
-                )
-                return_ty_ani_info.into_ani(
-                    self.target,
-                    "env",
-                    result_cpp,
-                    result_ani,
-                )
-                self.target.writelns(
-                    f"return {result_ani};",
-                )
+                return_val = f"{return_ty_ani_info.ani_type}{{}}"
             else:
+                return_ty_cpp_name = "void"
+                return_val = ""
+            return_ty_cpp_name_expected = (
+                f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
+            )
+            result_cpp = "cpp_result"
+            result_ani = "ani_result"
+            result_expected = "expected_result"
+            result_error = "error_result"
+            self.target.writelns(
+                f"{return_ty_cpp_name_expected} {result_expected} = {method_call};",
+                f"if (::taihe::has_error()) {{ return {return_val}; }}",
+            )
+            with self.target.indented(
+                f"if ({result_expected}) {{",
+                f"}}",
+            ):
+                if isinstance(return_ty := method.return_ty, NonVoidType):
+                    self.target.writelns(
+                        f"{return_ty_cpp_name} {result_cpp} = {result_expected}.value();",
+                    )
+                    return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
+                    return_ty_ani_info.into_ani(
+                        self.target,
+                        "env",
+                        result_cpp,
+                        result_ani,
+                    )
+                    self.target.writelns(
+                        f"return {result_ani};",
+                    )
+                else:
+                    self.target.writelns(
+                        f"return;",
+                    )
+            with self.target.indented(
+                f"else {{",
+                f"}}",
+            ):
                 self.target.writelns(
-                    f"{method_call};",
+                    f"::taihe::error {result_error} = {result_expected}.error();",
+                    f"ani_string result_string{{}};",
+                    f"env->String_NewUTF8({result_error}.message().c_str(), {result_error}.message().size(), &result_string);",
+                    f"ani_ref undefined;",
+                    f"env->GetUndefined(&undefined);",
+                    f"ani_error errObj;",
+                    f'ani_class errCls = TH_ANI_FIND_CLASS(env, "escompat.Error");',
+                    f'ani_method errCtor = TH_ANI_FIND_CLASS_METHOD(env, "escompat.Error", "<ctor>", "C{{std.core.String}}C{{escompat.ErrorOptions}}:");',
+                    f"env->Object_New(errCls, errCtor, reinterpret_cast<ani_object *>(&errObj), result_string, undefined);",
+                    f"if ({result_error}.has_code()) {{",
+                    f'    ani_class buserrCls = TH_ANI_FIND_CLASS(env, "@ohos.base.BusinessError");',
+                    f'    ani_method buserrCtor = TH_ANI_FIND_CLASS_METHOD(env, "@ohos.base.BusinessError", "<ctor>", "iC{{escompat.Error}}:");',
+                    f"    env->Object_New(errCls, errCtor, reinterpret_cast<ani_object *>(&errObj), result_string, undefined);",
+                    f"    ani_int errCode = static_cast<ani_int>({result_error}.code());",
+                    f"    ani_error businessErrObj;",
+                    f"    env->Object_New(buserrCls, buserrCtor, reinterpret_cast<ani_object *>(&businessErrObj), errCode, errObj);",
+                    f"    env->ThrowError(businessErrObj);",
+                    f"}} else {{",
+                    f"    env->ThrowError(errObj);",
+                    f"}}",
+                    f"return {return_val};",
                 )
 
     def gen_obj_drop(self, name: str):
@@ -608,7 +698,7 @@ class AniIfaceImplGenerator:
                     for method in ancestor.methods:
                         self.gen_iface_method(method)
                 with self.target.indented(
-                    f"uintptr_t getGlobalReference() const {{",
+                    f"::taihe::expected<uintptr_t, ::taihe::error> getGlobalReference() const {{",
                     f"}}",
                 ):
                     self.target.writelns(
@@ -638,8 +728,11 @@ class AniIfaceImplGenerator:
             return_ty_cpp_name = return_ty_cpp_info.as_owner
         else:
             return_ty_cpp_name = "void"
+        return_ty_expected_name = (
+            f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
+        )
         with self.target.indented(
-            f"{return_ty_cpp_name} {method_cpp_info.impl_name}({params_cpp_str}) {{",
+            f"{return_ty_expected_name} {method_cpp_info.impl_name}({params_cpp_str}) {{",
             f"}}",
         ):
             self.target.writelns(
@@ -659,27 +752,76 @@ class AniIfaceImplGenerator:
             args_ani_str = ", ".join(["static_cast<ani_object>(this->ref)", *args_ani])
             pkg_ani_info = PackageAniInfo.get(self.am, method.parent_pkg)
             function = f'TH_ANI_FIND_{pkg_ani_info.ns.scope.upper}_FUNCTION(env, "{pkg_ani_info.ns.impl_desc}", "{method_ani_info.reverse_name}", nullptr)'
+            result_ani = "ani_result"
+            result_cpp = "cpp_result"
             if isinstance(return_ty := method.return_ty, NonVoidType):
-                result_ani = "ani_result"
-                result_cpp = "cpp_result"
                 return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
                 self.target.writelns(
                     f"{return_ty_ani_info.ani_type} {result_ani} = {{}};",
                     f"env->Function_Call_{return_ty_ani_info.ani_type.suffix}({function}, reinterpret_cast<{return_ty_ani_info.ani_type.base}*>(&{result_ani}), {args_ani_str});",
                 )
-                return_ty_ani_info.from_ani(
-                    self.target,
-                    "env",
-                    result_ani,
-                    result_cpp,
-                )
-                self.target.writelns(
-                    f"return {result_cpp};",
-                )
             else:
                 self.target.writelns(
                     f"env->Function_Call_Void({function}, {args_ani_str});",
                 )
+
+            self.target.writelns(
+                f"ani_boolean _ets_has_error = false;",
+                f"env->ExistUnhandledError(&_ets_has_error);",
+            )
+            with self.target.indented(
+                f"if (_ets_has_error) {{",
+                f"}}",
+            ):
+                self.target.writelns(
+                    f"ani_error _ets_error = nullptr;",
+                    f"env->GetUnhandledError(&_ets_error);",
+                    f"env->ResetError();",
+                    f"ani_string _ets_error_message;",
+                    f'env->Object_GetPropertyByName_Ref(ani_object(_ets_error), "message", reinterpret_cast<ani_ref*>(&_ets_error_message));',
+                    f"ani_size _ets_error_message_len;",
+                    f"env->String_GetUTF8Size(_ets_error_message, &_ets_error_message_len);",
+                    f"TString _ets_error_message_tstr;",
+                    f"char* _ets_error_message_buf = tstr_initialize(&_ets_error_message_tstr, _ets_error_message_len + 1);",
+                    f"env->String_GetUTF8(_ets_error_message, _ets_error_message_buf, _ets_error_message_len + 1, &_ets_error_message_len);",
+                    f"_ets_error_message_buf[_ets_error_message_len] = '\\0';",
+                    f"_ets_error_message_tstr.length = _ets_error_message_len;",
+                    f"::taihe::string _ets_error_message_taihe = ::taihe::string(_ets_error_message_tstr);",
+                    f"ani_int _ets_error_code = 0;",
+                )
+                with self.target.indented(
+                    f'if (ANI_OK == env->Object_GetPropertyByName_Int(_ets_error, "code", &_ets_error_code)) {{',
+                    f"}}",
+                ):
+                    self.target.writelns(
+                        f"return ::taihe::unexpected<::taihe::error>(::taihe::error(_ets_error_message_taihe, _ets_error_code));"
+                    )
+                with self.target.indented(
+                    f"else {{",
+                    f"}}",
+                ):
+                    self.target.writelns(
+                        f"return ::taihe::unexpected<::taihe::error>(::taihe::error(_ets_error_message_taihe));"
+                    )
+            with self.target.indented(
+                f"else {{",
+                f"}}",
+            ):
+                if isinstance(return_ty := method.return_ty, NonVoidType):
+                    return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
+                    return_ty_ani_info.from_ani(
+                        self.target,
+                        "env",
+                        result_ani,
+                        result_cpp,
+                    )
+                    self.target.writelns(
+                        f"return {result_cpp};",
+                    )
+                else:
+                    self.target.writelns(
+                        f"return {{}};",
+                    )
 
     def gen_iface_into_ani_func(self):
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)

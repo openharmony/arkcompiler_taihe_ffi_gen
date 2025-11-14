@@ -13,22 +13,13 @@
  * limitations under the License.
  */
 
-#ifndef TAIHE_CALLBACK_ABI_H
-#define TAIHE_CALLBACK_ABI_H
-
-#include <taihe/expected.abi.h>
-#include <taihe/object.abi.h>
-
-// TCallback
-// Represents a callback structure containing a pointer to the data block
-// and a function pointer.
-//
-// # Members
-// - `vtbl_ptr`: A pointer to the function associated with the callback.
-// - `data_ptr`: A pointer to the data block.
-struct TCallback {
-    void *vtbl_ptr;
-    struct DataBlockHead *data_ptr;
-};
-
-#endif  // TAIHE_CALLBACK_ABI_H
+function sayHello(): void;
+function sayHello_ii(a: i32): i32;
+interface Foo{
+    bar(): void;
+    bar_ii(a: i32): i32;
+}
+function createFoo(): Foo;
+function callFoo(a: Foo): String;
+function callcb(f: () => void): void;
+function callcb_ii(f: (a: i32) => i32): void;

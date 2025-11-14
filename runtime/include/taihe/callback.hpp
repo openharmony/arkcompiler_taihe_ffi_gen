@@ -18,6 +18,7 @@
 
 #include <taihe/callback.abi.h>
 #include <taihe/common.hpp>
+#include <taihe/invoke.hpp>
 #include <taihe/object.hpp>
 
 #include <utility>
@@ -31,11 +32,26 @@ struct callback;
 
 template<typename Return, typename... Params>
 struct callback_view<Return(Params...)> {
+private:
+    template<typename T = Return>
+    union cb_out_impl {
+        as_abi_t<T> data;
+        struct TError error;
+    };
+
+    template<>
+    union cb_out_impl<void> {
+        struct TError error;
+    };
+
+    using cb_out = cb_out_impl<Return>;
+
+public:
     static constexpr bool is_holder = false;
 
-  using vtable_type = as_abi_t<Return>(TCallback, as_abi_t<Params>...);
-  using view_type = callback_view<Return(Params...)>;
-  using holder_type = callback<Return(Params...)>;
+    using vtable_type = int32_t(cb_out *_taihe_out, TCallback, as_abi_t<Params>...);
+    using view_type = callback_view<Return(Params...)>;
+    using holder_type = callback<Return(Params...)>;
 
     struct abi_type {
         vtable_type *vtbl_ptr;
@@ -62,18 +78,19 @@ public:
         return m_handle.vtbl_ptr == nullptr;
     }
 
-  Return operator()(Params... params) const & {
-    return call_abi_func<Return, callback_view, Params...>(
-        m_handle.vtbl_ptr, *this, ::std::forward<Params>(params)...);
-  }
+    ::taihe::expected<Return, ::taihe::error> operator()(Params... params) const &
+    {
+        return call_abi_func<cb_out, Return, callback_view, Params...>(m_handle.vtbl_ptr, *this,
+                                                                       ::std::forward<Params>(params)...);
+    }
 
 public:
-  template<typename Impl>
-  static as_abi_t<Return> vtbl_impl(TCallback tobj,
-                                    as_abi_t<Params>... params) {
-    return call_cpp_method<Return, Params...>(
-        &Impl::operator(), *cast_data_ptr<Impl>(tobj.data_ptr), params...);
-  };
+    template<typename Impl>
+    static int32_t vtbl_impl(cb_out *_taihe_out, TCallback tobj, as_abi_t<Params>... params)
+    {
+        return call_cpp_method<cb_out, Return, Params...>(_taihe_out, &Impl::operator(),
+                                                          *cast_data_ptr<Impl>(tobj.data_ptr), params...);
+    };
 
     template<typename Impl>
     static constexpr struct IdMapItem idmap_impl[0] = {};

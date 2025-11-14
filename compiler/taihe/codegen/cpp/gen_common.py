@@ -1110,6 +1110,7 @@ class CppIfaceDeclGenerator:
         iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
         with self.target:
             self.target.add_include("taihe/object.hpp")
+            self.target.add_include("taihe/expected.hpp")
             self.target.add_include(iface_abi_info.decl_header)
             with self.target.indented(
                 f"namespace {iface_cpp_info.weakspace} {{",
@@ -1565,6 +1566,7 @@ class CppIfaceImplGenerator:
         with self.target:
             self.target.add_include(iface_cpp_info.defn_header)
             self.target.add_include(iface_abi_info.impl_header)
+            self.target.add_include("taihe/invoke.hpp")
             for method in self.iface.methods:
                 for param in method.params:
                     param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
@@ -1610,6 +1612,7 @@ class CppIfaceImplGenerator:
             return_ty_cpp_name = return_ty_cpp_info.as_owner
         else:
             return_ty_cpp_name = "void"
+        args_tmpl.append(method_abi_info.ret_type_name)
         args_tmpl.append(return_ty_cpp_name)
         iface_cpp_info = IfaceCppInfo.get(self.am, self.iface)
         iface_ty_cpp_name = iface_cpp_info.as_param
@@ -1625,8 +1628,11 @@ class CppIfaceImplGenerator:
         params_cpp_str = ", ".join(params_cpp)
         args_tmpl_str = ", ".join(args_tmpl)
         args_call_str = ", ".join(args_call)
+        return_ty_expected_name = (
+            f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
+        )
         with self.target.indented(
-            f"{return_ty_cpp_name} {method_cpp_info.call_name}({params_cpp_str}) const& {{",
+            f"{return_ty_expected_name} {method_cpp_info.call_name}({params_cpp_str}) const& {{",
             f"}}",
         ):
             self.target.writelns(
@@ -1648,18 +1654,20 @@ class CppIfaceImplGenerator:
 
     def gen_iface_methods_impl_method(self, method: IfaceMethodDecl):
         method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
+        method_abi_info = IfaceMethodAbiInfo.get(self.am, method)
+        out_param_name = "_taihe_out"
         params_abi = []
         args_tmpl = []
         args_call = []
+        args_call.append(out_param_name)
         args_call.append(f"&Impl::{method_cpp_info.impl_name}")
+        params_abi.append(f"{method_abi_info.ret_type_name}* {out_param_name}")
         if isinstance(return_ty := method.return_ty, NonVoidType):
-            return_ty_abi_info = TypeAbiInfo.get(self.am, return_ty)
             return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-            return_ty_abi_name = return_ty_abi_info.as_owner
             return_ty_cpp_name = return_ty_cpp_info.as_owner
         else:
-            return_ty_abi_name = "void"
             return_ty_cpp_name = "void"
+        args_tmpl.append(method_abi_info.ret_type_name)
         args_tmpl.append(return_ty_cpp_name)
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         iface_abi_name = iface_abi_info.as_param
@@ -1679,7 +1687,7 @@ class CppIfaceImplGenerator:
         args_call_str = ", ".join(args_call)
         args_tmpl_str = ", ".join(args_tmpl)
         with self.target.indented(
-            f"static {return_ty_abi_name} {method.name}({params_abi_str}) {{",
+            f"static int32_t {method.name}({params_abi_str}) {{",
             f"}}",
         ):
             self.target.writelns(

@@ -1,0 +1,508 @@
+/*
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef TAIHE_EXPECTED_HPP
+#define TAIHE_EXPECTED_HPP
+
+#pragma once
+#include <taihe/expected.abi.h>
+#include <taihe/common.hpp>
+#include <taihe/string.hpp>
+#include <type_traits>
+#include <utility>
+
+namespace taihe {
+class error {
+private:
+    int32_t code_;
+    ::taihe::string message_;
+
+public:
+    explicit error(::taihe::string_view message) : code_(0), message_(message)
+    {
+    }
+
+    explicit error(::taihe::string_view message, int32_t code) : code_(code), message_(message)
+    {
+    }
+
+    error(error const &) = default;
+    error(error &&) = default;
+    error &operator=(error const &) = default;
+    error &operator=(error &&) = default;
+
+    ::taihe::string const &message() const noexcept
+    {
+        return message_;
+    }
+
+    bool has_code() const noexcept
+    {
+        return code_ != 0;
+    }
+
+    int32_t code() const noexcept
+    {
+        return code_;
+    }
+
+    int32_t code_or(int32_t default_code = 0) const noexcept
+    {
+        return has_code() ? code_ : default_code;
+    }
+
+    friend bool operator==(error const &lhs, error const &rhs) noexcept
+    {
+        return lhs.code_ == rhs.code_ && lhs.message_ == rhs.message_;
+    }
+};
+
+template<>
+struct as_abi<error> {
+    using type = TError;
+};
+
+struct unexpect_t {
+    explicit unexpect_t() = default;
+};
+
+constexpr inline unexpect_t unexpect {};
+
+class bad_expected_access : public std::exception {
+private:
+    ::taihe::string message_;
+
+public:
+    bad_expected_access(::taihe::string const &msg) : message_(msg)
+    {
+    }
+
+    bad_expected_access(char const *msg) : message_(msg)
+    {
+    }
+
+    ~bad_expected_access() noexcept override = default;
+
+    char const *what() const noexcept override
+    {
+        return message_.c_str();
+    }
+};
+
+template<typename E>
+class unexpected {
+public:
+    constexpr unexpected(unexpected const &) = default;
+    constexpr unexpected(unexpected &&) = default;
+
+    template<class... Args>
+    constexpr explicit unexpected(std::in_place_t, Args &&...args) : unex(std::forward<Args>(args)...)
+    {
+    }
+
+    template<class Err = E>
+    constexpr explicit unexpected(Err &&err) : unex(std::forward<Err>(err))
+    {
+    }
+
+    constexpr unexpected &operator=(unexpected const &) = default;
+    constexpr unexpected &operator=(unexpected &&) = default;
+
+    constexpr E const &error() const & noexcept
+    {
+        return unex;
+    }
+
+    constexpr E &error() & noexcept
+    {
+        return unex;
+    }
+
+    constexpr E const &&error() const && noexcept
+    {
+        return std::move(unex);
+    }
+
+    constexpr E &&error() && noexcept
+    {
+        return std::move(unex);
+    }
+
+    template<class E2>
+    friend constexpr bool operator==(unexpected const &x, unexpected<E2> const &y)
+    {
+        return x.error() == y.error();
+    }
+
+private:
+    E unex;
+};
+
+template<typename T, typename E>
+class expected;
+
+template<typename E>
+class expected<void, E> {
+public:
+    using value_type = void;
+    using error_type = E;
+
+    constexpr expected() noexcept : has_val(true)
+    {
+    }
+
+    constexpr expected(expected const &other) noexcept(std::is_nothrow_copy_constructible<E>::value)
+        : has_val(other.has_val)
+    {
+        if (!has_val) {
+            new (&unex) E(other.unex);
+        }
+    }
+
+    constexpr expected(expected &&other) noexcept(std::is_nothrow_move_constructible<E>::value) : has_val(other.has_val)
+    {
+        if (!has_val) {
+            new (&unex) E(std::move(other.unex));
+        }
+    }
+
+    template<class G>
+    constexpr expected(unexpected<G> const &other) : has_val(false), unex(other.error())
+    {
+    }
+
+    template<class G>
+    constexpr expected(unexpected<G> &&other) : has_val(false), unex(std::move(other.error()))
+    {
+    }
+
+    template<typename... Args>
+    constexpr explicit expected(unexpect_t, Args &&...args) noexcept(std::is_nothrow_constructible_v<E, Args &&...>)
+        : has_val(false), unex(std::forward<Args>(args)...)
+    {
+    }
+
+    ~expected() noexcept(std::is_nothrow_destructible_v<E>)
+    {
+        if (!has_val) unex.~E();
+    }
+
+    expected &operator=(expected const &other) noexcept(std::is_nothrow_copy_constructible_v<E> &&
+                                                        std::is_nothrow_destructible_v<E>)
+    {
+        if (this != &other) {
+            if (has_val != other.has_val) {
+                if (!has_val) unex.~E();
+                has_val = other.has_val;
+                if (!has_val) new (&unex) E(other.unex);
+            } else if (!has_val) {
+                unex = other.unex;
+            }
+        }
+        return *this;
+    }
+
+    expected &operator=(expected &&other) noexcept(std::is_nothrow_move_constructible_v<E> &&
+                                                   std::is_nothrow_destructible_v<E>)
+    {
+        if (this != &other) {
+            if (has_val != other.has_val) {
+                if (!has_val) unex.~E();
+                has_val = other.has_val;
+                if (!has_val) new (&unex) E(std::move(other.unex));
+            } else if (!has_val) {
+                unex = std::move(other.unex);
+            }
+        }
+        return *this;
+    }
+
+    constexpr explicit operator bool() const noexcept
+    {
+        return has_val;
+    }
+
+    constexpr bool has_value() const noexcept
+    {
+        return has_val;
+    }
+
+    constexpr void value() const
+    {
+        if (!has_val) TH_THROW(bad_expected_access, "no value");
+    }
+
+    constexpr E const &error() const &
+    {
+        if (has_val) TH_THROW(bad_expected_access, "has value");
+        return unex;
+    }
+
+    constexpr E &error() &
+    {
+        if (has_val) TH_THROW(bad_expected_access, "has value");
+        return unex;
+    }
+
+    constexpr E const &&error() const &&
+    {
+        if (has_val) TH_THROW(bad_expected_access, "has value");
+        return std::move(unex);
+    }
+
+    constexpr E &&error() &&
+    {
+        if (has_val) TH_THROW(bad_expected_access, "has value");
+        return std::move(unex);
+    }
+
+private:
+    bool has_val;
+
+    union {
+        E unex;
+    };
+};
+
+template<typename T, typename E>
+class expected {
+public:
+    using value_type = T;
+    using error_type = E;
+
+    constexpr expected(expected const &other) noexcept(std::is_nothrow_copy_constructible_v<T> &&
+                                                       std::is_nothrow_copy_constructible_v<E>)
+        : has_val(other.has_val)
+    {
+        if (has_val) {
+            new (&val) T(other.val);
+        } else {
+            new (&unex) E(other.unex);
+        }
+    }
+
+    constexpr expected(expected &&other) noexcept(std::is_nothrow_move_constructible_v<T> &&
+                                                  std::is_nothrow_move_constructible_v<E>)
+        : has_val(other.has_val)
+    {
+        if (has_val) {
+            new (&val) T(std::move(other.val));
+        } else {
+            new (&unex) E(std::move(other.unex));
+        }
+    }
+
+    template<class U = T,
+             typename std::enable_if<std::is_constructible<T, U &&>::value && std::is_convertible<U &&, T>::value &&
+                                         !std::is_same<remove_cvref_t<U>, std::in_place_t>::value &&
+                                         !std::is_same<remove_cvref_t<U>, expected>::value &&
+                                         !std::is_same<remove_cvref_t<U>, unexpected<E>>::value &&
+                                         !std::is_same<remove_cvref_t<U>, unexpect_t>::value,
+                                     int>::type = 0>
+    constexpr expected(U &&value) noexcept(std::is_nothrow_constructible<T, U &&>::value)
+        : has_val(true), val(std::forward<U>(value))
+    {
+    }
+
+    template<class G>
+    constexpr expected(unexpected<G> const &other) : has_val(false), unex(other.error())
+    {
+    }
+
+    template<class G>
+    constexpr expected(unexpected<G> &&other) : has_val(false), unex(std::move(other).error())
+    {
+    }
+
+    template<typename... Args>
+    constexpr explicit expected(std::in_place_t,
+                                Args &&...args) noexcept(std::is_nothrow_constructible_v<T, Args &&...>)
+        : has_val(true), val(std::forward<Args>(args)...)
+    {
+    }
+
+    template<typename... Args>
+    constexpr explicit expected(unexpect_t, Args &&...args) noexcept(std::is_nothrow_constructible_v<E, Args &&...>)
+        : has_val(false), unex(std::forward<Args>(args)...)
+    {
+    }
+
+    ~expected() noexcept(std::is_nothrow_destructible_v<T> && std::is_nothrow_destructible_v<E>)
+    {
+        if (has_val) {
+            val.~T();
+        } else {
+            unex.~E();
+        }
+    }
+
+    constexpr expected &operator=(expected const &other) noexcept(std::is_nothrow_copy_constructible_v<T> &&
+                                                                  std::is_nothrow_copy_constructible_v<E> &&
+                                                                  std::is_nothrow_copy_assignable_v<T> &&
+                                                                  std::is_nothrow_copy_assignable_v<E> &&
+                                                                  std::is_nothrow_destructible_v<T> &&
+                                                                  std::is_nothrow_destructible_v<E>)
+    {
+        if (this != &other) {
+            if (has_val == other.has_val) {
+                if (has_val) {
+                    val = other.val;
+                } else {
+                    unex = other.unex;
+                }
+            } else {
+                if (has_val) {
+                    val.~T();
+                } else {
+                    unex.~E();
+                }
+                has_val = other.has_val;
+                if (has_val) {
+                    new (&val) T(other.val);
+                } else {
+                    new (&unex) E(other.unex);
+                }
+            }
+        }
+        return *this;
+    }
+
+    constexpr expected &operator=(expected &&other) noexcept(std::is_nothrow_move_constructible_v<T> &&
+                                                             std::is_nothrow_move_constructible_v<E> &&
+                                                             std::is_nothrow_move_assignable_v<T> &&
+                                                             std::is_nothrow_move_assignable_v<E> &&
+                                                             std::is_nothrow_destructible_v<T> &&
+                                                             std::is_nothrow_destructible_v<E>)
+    {
+        if (this != &other) {
+            if (has_val == other.has_val) {
+                if (has_val) {
+                    val = std::move(other.val);
+                } else {
+                    unex = std::move(other.unex);
+                }
+            } else {
+                if (has_val) {
+                    val.~T();
+                } else {
+                    unex.~E();
+                }
+
+                has_val = other.has_val;
+
+                if (has_val) {
+                    new (&val) T(std::move(other.val));
+                } else {
+                    new (&unex) E(std::move(other.unex));
+                }
+            }
+        }
+        return *this;
+    }
+
+    constexpr explicit operator bool() const noexcept
+    {
+        return has_val;
+    }
+
+    constexpr bool has_value() const noexcept
+    {
+        return has_val;
+    }
+
+    constexpr T const &value() const &
+    {
+        if (!has_val) {
+            TH_THROW(bad_expected_access, "No value");
+        }
+        return val;
+    }
+
+    constexpr T &value() &
+    {
+        if (!has_val) {
+            TH_THROW(bad_expected_access, "No value");
+        }
+        return val;
+    }
+
+    constexpr T const &&value() const &&
+    {
+        if (!has_val) {
+            TH_THROW(bad_expected_access, "No value");
+        }
+        return std::move(val);
+    }
+
+    constexpr T &&value() &&
+    {
+        if (!has_val) {
+            TH_THROW(bad_expected_access, "No value");
+        }
+        return std::move(val);
+    }
+
+    constexpr E const &error() const &
+    {
+        if (has_val) {
+            TH_THROW(bad_expected_access, "Has value, no error");
+        }
+        return unex;
+    }
+
+    constexpr E &error() &
+    {
+        if (has_val) {
+            TH_THROW(bad_expected_access, "Has value, no error");
+        }
+        return unex;
+    }
+
+    constexpr E const &&error() const &&
+    {
+        if (has_val) {
+            TH_THROW(bad_expected_access, "Has value, no error");
+        }
+        return std::move(unex);
+    }
+
+    constexpr E &&error() &&
+    {
+        if (has_val) {
+            TH_THROW(bad_expected_access, "Has value, no error");
+        }
+        return std::move(unex);
+    }
+
+private:
+    bool has_val;
+
+    union {
+        T val;
+        E unex;
+    };
+};
+
+template<typename T>
+struct is_expected : std::false_type {};
+
+template<typename T, typename E>
+struct is_expected<::taihe::expected<T, E>> : std::true_type {};
+
+template<typename T>
+constexpr inline bool is_expected_v = is_expected<T>::value;
+}  // namespace taihe
+
+#endif  // TAIHE_EXPECTED_HPP
