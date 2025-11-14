@@ -23,8 +23,6 @@ from taihe.codegen.cpp.analyses import (
     PackageCppInfo,
     PackageCppUserInfo,
     TypeCppInfo,
-    from_abi,
-    into_abi,
 )
 from taihe.semantics.declarations import (
     GlobFuncDecl,
@@ -80,21 +78,25 @@ class CppUserPackageGenerator:
         func_abi_info = GlobFuncAbiInfo.get(self.am, func)
         func_cpp_user_info = GlobFuncCppUserInfo.get(self.am, func)
         params_cpp = []
-        args_abi = []
-        for param in func.params:
-            param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
-            params_cpp.append(f"{param_ty_cpp_info.as_param} {param.name}")
-            args_abi.append(into_abi(param_ty_cpp_info.as_param, param.name))
-        params_cpp_str = ", ".join(params_cpp)
-        args_abi_str = ", ".join(args_abi)
-        result_abi = f"{func_abi_info.impl_name}({args_abi_str})"
+        args_tmpl = []
+        args_call = []
+        args_call.append(f"&{func_abi_info.impl_name}")
         if isinstance(return_ty := func.return_ty, NonVoidType):
             return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
             return_ty_cpp_name = return_ty_cpp_info.as_owner
-            result_cpp = from_abi(return_ty_cpp_info.as_owner, result_abi)
         else:
             return_ty_cpp_name = "void"
-            result_cpp = result_abi
+        args_tmpl.append(return_ty_cpp_name)
+        for param in func.params:
+            param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
+            param_ty_cpp_name = param_ty_cpp_info.as_param
+            param_name = param.name
+            params_cpp.append(f"{param_ty_cpp_name} {param_name}")
+            args_tmpl.append(param_ty_cpp_name)
+            args_call.append(f"::std::forward<{param_ty_cpp_name}>({param_name})")
+        params_cpp_str = ", ".join(params_cpp)
+        args_tmpl_str = ", ".join(args_tmpl)
+        args_call_str = ", ".join(args_call)
         with self.target.indented(
             f"namespace {func_cpp_user_info.namespace} {{",
             f"}}",
@@ -105,5 +107,5 @@ class CppUserPackageGenerator:
                 f"}}",
             ):
                 self.target.writelns(
-                    f"return {result_cpp};",
+                    f"return ::taihe::call_abi_func<{args_tmpl_str}>({args_call_str});",
                 )
