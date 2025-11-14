@@ -20,7 +20,7 @@
 #include <taihe/common.hpp>
 #include <taihe/object.hpp>
 
-#include <type_traits>
+#include <utility>
 
 namespace taihe {
 template<typename Signature>
@@ -33,11 +33,9 @@ template<typename Return, typename... Params>
 struct callback_view<Return(Params...)> {
     static constexpr bool is_holder = false;
 
-    struct abi_type;
-
-    using vtable_type = as_abi_t<Return>(abi_type, as_abi_t<Params>...);
-    using view_type = callback_view<Return(Params...)>;
-    using holder_type = callback<Return(Params...)>;
+  using vtable_type = as_abi_t<Return>(TCallback, as_abi_t<Params>...);
+  using view_type = callback_view<Return(Params...)>;
+  using holder_type = callback<Return(Params...)>;
 
     struct abi_type {
         vtable_type *vtbl_ptr;
@@ -64,25 +62,18 @@ public:
         return m_handle.vtbl_ptr == nullptr;
     }
 
-    Return operator()(Params... params) const &
-    {
-        if constexpr (std::is_void_v<Return>) {
-            return m_handle.vtbl_ptr(m_handle, into_abi<Params>(params)...);
-        } else {
-            return from_abi<Return>(m_handle.vtbl_ptr(m_handle, into_abi<Params>(params)...));
-        }
-    }
+  Return operator()(Params... params) const & {
+    return call_abi_func<Return, callback_view, Params...>(
+        m_handle.vtbl_ptr, *this, ::std::forward<Params>(params)...);
+  }
 
 public:
-    template<typename Impl>
-    static as_abi_t<Return> vtbl_impl(abi_type handle, as_abi_t<Params>... params)
-    {
-        if constexpr (std::is_void_v<Return>) {
-            return cast_data_ptr<Impl>(handle.data_ptr)->operator()(from_abi<Params>(params)...);
-        } else {
-            return into_abi<Return>(cast_data_ptr<Impl>(handle.data_ptr)->operator()(from_abi<Params>(params)...));
-        }
-    };
+  template<typename Impl>
+  static as_abi_t<Return> vtbl_impl(TCallback tobj,
+                                    as_abi_t<Params>... params) {
+    return call_cpp_method<Return, Params...>(
+        &Impl::operator(), *cast_data_ptr<Impl>(tobj.data_ptr), params...);
+  };
 
     template<typename Impl>
     static constexpr struct IdMapItem idmap_impl[0] = {};

@@ -161,14 +161,6 @@ class TypeCppInfo(AbstractAnalysis[NonVoidType], ABC):
         return t.accept(TypeCppInfoDispatcher(am))
 
 
-def into_abi(ty: str, val: str) -> str:
-    return f"::taihe::into_abi<{ty}>({val})"
-
-
-def from_abi(ty: str, val: str) -> str:
-    return f"::taihe::from_abi<{ty}>({val})"
-
-
 class EnumTypeCppInfo(TypeCppInfo):
     def __init__(self, am: AnalysisManager, t: EnumType):
         enum_cpp_info = EnumCppInfo.get(am, t.decl)
@@ -343,7 +335,9 @@ class CallbackTypeCppInfo(TypeCppInfo):
             param_ty_cpp_info = TypeCppInfo.get(am, param.ty)
             params_ty_decl_headers.extend(param_ty_cpp_info.decl_headers)
             params_ty_impl_headers.extend(param_ty_cpp_info.impl_headers)
-            params_ty_as_param.append(f"{param_ty_cpp_info.as_param} {param.name}")
+            param_ty_cpp_name = param_ty_cpp_info.as_param
+            param_name = param.name
+            params_ty_as_param.append(f"{param_ty_cpp_name} {param_name}")
         params_fmt = ", ".join(params_ty_as_param)
         self.decl_headers = [
             "taihe/callback.hpp",
