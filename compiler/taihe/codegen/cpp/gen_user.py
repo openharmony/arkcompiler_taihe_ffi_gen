@@ -65,6 +65,7 @@ class CppUserPackageGenerator:
             # functions
             self.target.add_include("taihe/common.hpp")
             self.target.add_include(pkg_abi_info.header)
+            self.target.add_include("taihe/invoke.hpp")
             for func in self.pkg.functions:
                 for param in func.params:
                     param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
@@ -86,6 +87,10 @@ class CppUserPackageGenerator:
             return_ty_cpp_name = return_ty_cpp_info.as_owner
         else:
             return_ty_cpp_name = "void"
+        return_ty_expected_name = (
+            f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
+        )
+        args_tmpl.append(func_abi_info.ret_type_name)
         args_tmpl.append(return_ty_cpp_name)
         for param in func.params:
             param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
@@ -103,7 +108,7 @@ class CppUserPackageGenerator:
             indent="",
         ):
             with self.target.indented(
-                f"inline {return_ty_cpp_name} {func_cpp_user_info.call_name}({params_cpp_str}) {{",
+                f"inline {return_ty_expected_name} {func_cpp_user_info.call_name}({params_cpp_str}) {{",
                 f"}}",
             ):
                 self.target.writelns(

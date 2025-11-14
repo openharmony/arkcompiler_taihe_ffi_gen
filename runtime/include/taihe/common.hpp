@@ -38,6 +38,14 @@
 #endif
 #endif
 
+#ifdef __cpp_lib_remove_cvref
+#include <type_traits>
+using std::remove_cvref_t;
+#else
+template<typename T>
+using remove_cvref_t = typename std::remove_cv<typename std::remove_reference<T>::type>::type;
+#endif
+
 namespace taihe {
 template<typename cpp_t, typename = void>
 struct as_abi;
@@ -104,54 +112,6 @@ template<typename cpp_t, std::enable_if_t<std::is_reference_v<cpp_t>, int> = 0>
 inline cpp_t from_abi(as_abi_t<cpp_t> abi_val)
 {
     return reinterpret_cast<cpp_t>(*abi_val);
-}
-
-template<typename cpp_return_t, typename... cpp_param_t, typename abi_func_t,
-         std::enable_if_t<std::is_same_v<void, cpp_return_t>, int> = 0>
-inline cpp_return_t call_abi_func(abi_func_t &&abi_func,
-                                  cpp_param_t... params) {
-  return abi_func(into_abi<cpp_param_t>(params)...);
-}
-
-template<typename cpp_return_t, typename... cpp_param_t, typename abi_func_t,
-         std::enable_if_t<!std::is_same_v<void, cpp_return_t>, int> = 0>
-inline cpp_return_t call_abi_func(abi_func_t &&abi_func,
-                                  cpp_param_t... params) {
-  return from_abi<cpp_return_t>(abi_func(into_abi<cpp_param_t>(params)...));
-}
-
-template<typename cpp_return_t, typename... cpp_param_t, typename cpp_func_t,
-         std::enable_if_t<std::is_same_v<void, cpp_return_t>, int> = 0>
-inline as_abi_t<cpp_return_t> call_cpp_func(cpp_func_t &&cpp_func,
-                                            as_abi_t<cpp_param_t>... params) {
-  return cpp_func(from_abi<cpp_param_t>(params)...);
-}
-
-template<typename cpp_return_t, typename... cpp_param_t, typename cpp_func_t,
-         std::enable_if_t<!std::is_same_v<void, cpp_return_t>, int> = 0>
-inline as_abi_t<cpp_return_t> call_cpp_func(cpp_func_t &&cpp_func,
-                                            as_abi_t<cpp_param_t>... params) {
-  return into_abi<cpp_return_t>(cpp_func(from_abi<cpp_param_t>(params)...));
-}
-
-template<typename cpp_return_t, typename... cpp_param_t, typename cpp_obj_t,
-         typename cpp_method_t,
-         std::enable_if_t<std::is_same_v<void, cpp_return_t>, int> = 0>
-inline as_abi_t<cpp_return_t> call_cpp_method(cpp_method_t &&cpp_method,
-                                              cpp_obj_t &&cpp_obj,
-                                              as_abi_t<cpp_param_t>... params) {
-  return (std::forward<cpp_obj_t>(cpp_obj).*
-          cpp_method)(from_abi<cpp_param_t>(params)...);
-}
-
-template<typename cpp_return_t, typename... cpp_param_t, typename cpp_obj_t,
-         typename cpp_method_t,
-         std::enable_if_t<!std::is_same_v<void, cpp_return_t>, int> = 0>
-inline as_abi_t<cpp_return_t> call_cpp_method(cpp_method_t &&cpp_method,
-                                              cpp_obj_t &&cpp_obj,
-                                              as_abi_t<cpp_param_t>... params) {
-  return into_abi<cpp_return_t>((std::forward<cpp_obj_t>(cpp_obj).*
-                                 cpp_method)(from_abi<cpp_param_t>(params)...));
 }
 
 ///////////////
