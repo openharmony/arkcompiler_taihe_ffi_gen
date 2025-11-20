@@ -1,0 +1,41 @@
+@class struct BaseDataClass {
+    a: String;
+}
+
+struct FooDataInterface {
+    p: String;
+}
+
+struct BarDataInterface {
+    q: String;
+}
+
+@class struct DerivedDataClass {
+    @extends base: BaseDataClass;
+    @extends foo: FooDataInterface;
+    @extends bar: BarDataInterface;
+    x: i32;
+    y: i32;
+}
+
+@class interface BaseMethodClass {
+    base(): void;
+}
+
+interface FooInterface {
+    foo(): void;
+}
+
+interface BarInterface {
+    bar(): void;
+}
+
+@class interface DerivedMethodClass: BaseMethodClass, FooInterface, BarInterface {
+    derived(): void;
+}
+
+@ctor("DerivedMethodClass")
+function makeDerivedMethodClass(): DerivedMethodClass;
+
+// constructor of struct class is not supported yet
+function makeDerivedDataClass(): DerivedDataClass;
