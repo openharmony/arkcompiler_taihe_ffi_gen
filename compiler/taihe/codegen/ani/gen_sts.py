@@ -189,44 +189,7 @@ class StsModuleGenerator:
         with self.target:
             namespace_generator = StsNamespaceGenerator(self.target, self.am, self.mod)
             namespace_generator.gen_namespace()
-            namespace_generator.gen_utils()
-
-
-class StsNamespaceGenerator:
-    def __init__(
-        self,
-        target: StsWriter,
-        am: AnalysisManager,
-        ns: ArkTsModuleOrNamespace,
-    ):
-        self.am = am
-        self.target = target
-        self.ns = ns
-
-    def gen_namespace(self):
-        for head in self.ns.injected_heads:
-            self.target.write_block(head)
-        for code in self.ns.injected_codes:
-            self.target.write_block(code)
-        for pkg in self.ns.packages:
-            package_generator = StsPackageGenerator(self.am, self.target, pkg)
-            package_generator.gen_package()
-        for child_ns_name, child_ns in self.ns.children.items():
-            sts_decl = f"namespace {child_ns_name}"
-            if child_ns.is_default:
-                sts_decl = f"export default {sts_decl}"
-            else:
-                sts_decl = f"export {sts_decl}"
-            with self.target.indented(
-                f"{sts_decl} {{",
-                f"}}",
-            ):
-                child_ns_generator = StsNamespaceGenerator(
-                    self.target,
-                    self.am,
-                    child_ns,
-                )
-                child_ns_generator.gen_namespace()
+            self.gen_utils()
 
     def gen_utils(self):
         self.target.add_import_decl(
@@ -308,6 +271,43 @@ class StsNamespaceGenerator:
             "native function _taihe_objDup(dataPtr: long): long;",
             "const _taihe_registry = new FinalizationRegistry<long>(_taihe_objDrop);",
         )
+
+
+class StsNamespaceGenerator:
+    def __init__(
+        self,
+        target: StsWriter,
+        am: AnalysisManager,
+        ns: ArkTsModuleOrNamespace,
+    ):
+        self.am = am
+        self.target = target
+        self.ns = ns
+
+    def gen_namespace(self):
+        for head in self.ns.injected_heads:
+            self.target.write_block(head)
+        for code in self.ns.injected_codes:
+            self.target.write_block(code)
+        for pkg in self.ns.packages:
+            package_generator = StsPackageGenerator(self.am, self.target, pkg)
+            package_generator.gen_package()
+        for child_ns_name, child_ns in self.ns.children.items():
+            sts_decl = f"namespace {child_ns_name}"
+            if child_ns.is_default:
+                sts_decl = f"export default {sts_decl}"
+            else:
+                sts_decl = f"export {sts_decl}"
+            with self.target.indented(
+                f"{sts_decl} {{",
+                f"}}",
+            ):
+                child_ns_generator = StsNamespaceGenerator(
+                    self.target,
+                    self.am,
+                    child_ns,
+                )
+                child_ns_generator.gen_namespace()
 
 
 class StsPackageGenerator:
