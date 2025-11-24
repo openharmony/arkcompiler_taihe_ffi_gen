@@ -13,6 +13,7 @@ from taihe.codegen.ani.analyses import (
     GlobFuncAniInfo,
     IfaceAniInfo,
     NamedFunctionLikeAniInfo,
+    PackageAniInfo,
     PackageGroupAniInfo,
     StructAniInfo,
     TypeAniInfo,
@@ -192,84 +193,82 @@ class StsModuleGenerator:
             self.gen_utils()
 
     def gen_utils(self):
-        self.target.add_import_decl(
-            "@ohos.base", "BusinessError", "_taihe_BusinessError"
-        )
+        self.target.add_import_decl("@ohos.base", "BusinessError", self.mod.BEType)
         self.target.writelns(
-            "type _taihe_AsyncCallback<T, E = void> = (error: _taihe_BusinessError<E> | null, data: T | undefined) => void;",
+            f"type {self.mod.ACType}<T, E = void> = (error: {self.mod.BEType}<E> | null, data: T | undefined) => void;",
         )
 
         self.target.writelns(
-            "function _taihe_fromArrayBufferToBigInt(arr: ArrayBuffer): BigInt {",
-            "    let res: BigInt = 0n;",
-            "    for (let i: int = 0; i < arr.getByteLength(); i++) {",
-            "        res |= BigInt(arr.at(i).toLong() & 0xff) << BigInt(i * 8);",
-            "    }",
-            "    let m: int = arr.getByteLength();",
-            "    if (arr.at(m - 1) < 0) {",
-            "        res |= -1n << BigInt(m * 8 - 1);",
-            "    }",
-            "    return res;",
-            "}",
+            f"function {self.mod.arrbuf_to_bigint}(arr: ArrayBuffer): BigInt {{",
+            f"    let res: BigInt = 0n;",
+            f"    for (let i: int = 0; i < arr.getByteLength(); i++) {{",
+            f"        res |= BigInt(arr.at(i).toLong() & 0xff) << BigInt(i * 8);",
+            f"    }}",
+            f"    let m: int = arr.getByteLength();",
+            f"    if (arr.at(m - 1) < 0) {{",
+            f"        res |= -1n << BigInt(m * 8 - 1);",
+            f"    }}",
+            f"    return res;",
+            f"}}",
         )
         self.target.writelns(
-            "function _taihe_fromBigIntToArrayBuffer(val: BigInt, blk: int): ArrayBuffer {",
-            "    let n_7 = BigInt(blk * 8 - 1);",
-            "    let n_8 = BigInt(blk * 8);",
-            "    let ocp: BigInt = val;",
-            "    let n: int = 0;",
-            "    while (true) {",
-            "        n += blk;",
-            "        let t_7 = ocp >> n_7;",
-            "        let t_8 = ocp >> n_8;",
-            "        if (t_7 == t_8) {",
-            "            break;",
-            "        }",
-            "        ocp = t_8;",
-            "    }",
-            "    let buf = new ArrayBuffer(n);",
-            "    for (let i: int = 0; i < n; i++) {",
-            "        buf.set(i, (val & 255n).getLong().toByte())",
-            "        val >>= 8n;",
-            "    }",
-            "    return buf;",
-            "}",
-        )
-
-        self.target.writelns(
-            "native function _taihe_nativeInvoke(",
-            "    castPtr: long, funcPtr: long, dataPtr: long,",
-            "    arg_0?: Object, arg_1?: Object, arg_2?: Object, arg_3?: Object,",
-            "    arg_4?: Object, arg_5?: Object, arg_6?: Object, arg_7?: Object,",
-            "    arg_8?: Object, arg_9?: Object, arg_a?: Object, arg_b?: Object,",
-            "    arg_c?: Object, arg_d?: Object, arg_e?: Object, arg_f?: Object,",
-            "): Object | null | undefined;",
-        )
-        self.target.writelns(
-            "function _taihe_makeCallback(castPtr: long, funcPtr: long, dataPtr: long) {",
-            "    let callback = (",
-            "        arg_0?: Object, arg_1?: Object, arg_2?: Object, arg_3?: Object,",
-            "        arg_4?: Object, arg_5?: Object, arg_6?: Object, arg_7?: Object,",
-            "        arg_8?: Object, arg_9?: Object, arg_a?: Object, arg_b?: Object,",
-            "        arg_c?: Object, arg_d?: Object, arg_e?: Object, arg_f?: Object,",
-            "    ): Object | null | undefined => {",
-            "        return _taihe_nativeInvoke(",
-            "            castPtr, funcPtr, dataPtr,",
-            "            arg_0, arg_1, arg_2, arg_3,",
-            "            arg_4, arg_5, arg_6, arg_7,",
-            "            arg_8, arg_9, arg_a, arg_b,",
-            "            arg_c, arg_d, arg_e, arg_f,",
-            "        );",
-            "    };",
-            "    _taihe_registry.register(callback, dataPtr);",
-            "    return callback;",
-            "}",
+            f"function {self.mod.bigint_to_arrbuf}(val: BigInt, blk: int): ArrayBuffer {{",
+            f"    let n_7 = BigInt(blk * 8 - 1);",
+            f"    let n_8 = BigInt(blk * 8);",
+            f"    let ocp: BigInt = val;",
+            f"    let n: int = 0;",
+            f"    while (true) {{",
+            f"        n += blk;",
+            f"        let t_7 = ocp >> n_7;",
+            f"        let t_8 = ocp >> n_8;",
+            f"        if (t_7 == t_8) {{",
+            f"            break;",
+            f"        }}",
+            f"        ocp = t_8;",
+            f"    }}",
+            f"    let buf = new ArrayBuffer(n);",
+            f"    for (let i: int = 0; i < n; i++) {{",
+            f"        buf.set(i, (val & 255n).getLong().toByte())",
+            f"        val >>= 8n;",
+            f"    }}",
+            f"    return buf;",
+            f"}}",
         )
 
         self.target.writelns(
-            "native function _taihe_objDrop(dataPtr: long): void;",
-            "native function _taihe_objDup(dataPtr: long): long;",
-            "const _taihe_registry = new FinalizationRegistry<long>(_taihe_objDrop);",
+            f"native function {self.mod.native_invoke}(",
+            f"    castPtr: long, funcPtr: long, dataPtr: long,",
+            f"    arg_0?: Object, arg_1?: Object, arg_2?: Object, arg_3?: Object,",
+            f"    arg_4?: Object, arg_5?: Object, arg_6?: Object, arg_7?: Object,",
+            f"    arg_8?: Object, arg_9?: Object, arg_a?: Object, arg_b?: Object,",
+            f"    arg_c?: Object, arg_d?: Object, arg_e?: Object, arg_f?: Object,",
+            f"): Object | null | undefined;",
+        )
+        self.target.writelns(
+            f"function {self.mod.make_callback}(castPtr: long, funcPtr: long, dataPtr: long) {{",
+            f"    let callback = (",
+            f"        arg_0?: Object, arg_1?: Object, arg_2?: Object, arg_3?: Object,",
+            f"        arg_4?: Object, arg_5?: Object, arg_6?: Object, arg_7?: Object,",
+            f"        arg_8?: Object, arg_9?: Object, arg_a?: Object, arg_b?: Object,",
+            f"        arg_c?: Object, arg_d?: Object, arg_e?: Object, arg_f?: Object,",
+            f"    ): Object | null | undefined => {{",
+            f"        return {self.mod.native_invoke}(",
+            f"            castPtr, funcPtr, dataPtr,",
+            f"            arg_0, arg_1, arg_2, arg_3,",
+            f"            arg_4, arg_5, arg_6, arg_7,",
+            f"            arg_8, arg_9, arg_a, arg_b,",
+            f"            arg_c, arg_d, arg_e, arg_f,",
+            f"        );",
+            f"    }};",
+            f"    {self.mod.registry}.register(callback, dataPtr);",
+            f"    return callback;",
+            f"}}",
+        )
+
+        self.target.writelns(
+            f"native function {self.mod.obj_drop}(dataPtr: long): void;",
+            f"native function {self.mod.obj_dup}(dataPtr: long): long;",
+            f"const {self.mod.registry} = new FinalizationRegistry<long>({self.mod.obj_drop});",
         )
 
 
@@ -846,6 +845,7 @@ class StsIfaceGenerator:
 
     def gen_iface_class(self):
         iface_ani_info = IfaceAniInfo.get(self.am, self.iface)
+        package_ani_info = PackageAniInfo.get(self.am, self.iface.parent_pkg)
 
         sts_decl = f"class {iface_ani_info.sts_impl_name}"
         if iface_ani_info.is_class():
@@ -882,24 +882,24 @@ class StsIfaceGenerator:
 
             if not iface_ani_info.sts_class_extends:
                 self.target.writelns(
-                    f"_taihe_vtblPtr: long;",
-                    f"_taihe_dataPtr: long;",
+                    f"{iface_ani_info.vtbl_ptr}: long;",
+                    f"{iface_ani_info.data_ptr}: long;",
                 )
                 with self.target.indented(
-                    f"_taihe_register(): void {{",
+                    f"{iface_ani_info.register}(): void {{",
                     f"}}",
                 ):
                     self.target.writelns(
-                        f"_taihe_registry.register(this, this._taihe_dataPtr);",
+                        f"{package_ani_info.ns.mod.registry}.register(this, this.{iface_ani_info.data_ptr});",
                     )
                 with self.target.indented(
                     f"constructor(vtblPtr: long, dataPtr: long) {{",
                     f"}}",
                 ):
                     self.target.writelns(
-                        f"this._taihe_vtblPtr = vtblPtr;",
-                        f"this._taihe_dataPtr = dataPtr;",
-                        f"this._taihe_register();",
+                        f"this.{iface_ani_info.vtbl_ptr} = vtblPtr;",
+                        f"this.{iface_ani_info.data_ptr} = dataPtr;",
+                        f"this.{iface_ani_info.register}();",
                     )
             else:
                 with self.target.indented(
@@ -915,7 +915,7 @@ class StsIfaceGenerator:
                 f"}}",
             ):
                 self.target.writelns(
-                    f"this(other._taihe_vtblPtr, _taihe_objDup(other._taihe_dataPtr));",
+                    f"this(other.{iface_ani_info.vtbl_ptr}, {package_ani_info.ns.mod.obj_dup}(other.{iface_ani_info.data_ptr}));",
                 )
 
             iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
@@ -1277,9 +1277,11 @@ class StsAnyFuncDeclGenerator:
         overload_name: str | None,
         on_off_pair: tuple[str, str] | None,
     ):
+        pkg_ani_info = PackageAniInfo.get(self.am, self.func.parent_pkg)
+
         cbname = "callback"
         callback_ty_sts_sig = "C{std.core.Function2}"
-        callback_ty_sts_name = f"_taihe_AsyncCallback<{return_ty_sts_name}>"
+        callback_ty_sts_name = f"{pkg_ani_info.ns.mod.ACType}<{return_ty_sts_name}>"
         callback_sts = f"{cbname}: {callback_ty_sts_name}"
         params_with_callback_sts_str = ", ".join([*params_sts, callback_sts])
 
@@ -1557,9 +1559,11 @@ class StsAnyFuncGenerator:
         overload_name: str | None,
         on_off_pair: tuple[str, str] | None,
     ):
+        pkg_ani_info = PackageAniInfo.get(self.am, self.func.parent_pkg)
+
         cbname = "callback"
         callback_ty_sts_sig = "C{std.core.Function2}"
-        callback_ty_sts_name = f"_taihe_AsyncCallback<{return_ty_sts_name}>"
+        callback_ty_sts_name = f"{pkg_ani_info.ns.mod.ACType}<{return_ty_sts_name}>"
         callback_sts = f"{cbname}: {callback_ty_sts_name}"
         params_with_callback_sts_str = ", ".join([*params_sts, callback_sts])
 
@@ -1592,7 +1596,7 @@ class StsAnyFuncGenerator:
                     f"}}",
                 ):
                     self.target.writelns(
-                        f"{cbname}(err as _taihe_BusinessError, undefined);",
+                        f"{cbname}(err as {pkg_ani_info.ns.mod.BEType}, undefined);",
                     )
 
         if overload_name is not None:
@@ -2021,12 +2025,14 @@ class StsReverseFuncGenerator:
                     f"return await {self.func_kind.call_from_reverse(promise_name)}({args_sts_str});",
                 )
             elif (async_name := func_ani_info.async_name) is not None:
+                pkg_ani_info = PackageAniInfo.get(self.am, self.func.parent_pkg)
+
                 with self.target.indented(
                     f"return await new Promise<{return_ty_sts_name}>((resolve, reject) => {{",
                     f"}});",
                 ):
                     with self.target.indented(
-                        f"let callback: _taihe_AsyncCallback<{return_ty_sts_name}> = (err: _taihe_BusinessError | null, res?: {return_ty_sts_real}): void => {{",
+                        f"let callback: {pkg_ani_info.ns.mod.ACType}<{return_ty_sts_name}> = (err: {pkg_ani_info.ns.mod.BEType} | null, res?: {return_ty_sts_real}): void => {{",
                         f"}}",
                     ):
                         with self.target.indented(
