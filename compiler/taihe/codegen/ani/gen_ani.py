@@ -3,7 +3,6 @@ from taihe.codegen.abi.analyses import (
 )
 from taihe.codegen.abi.writer import CHeaderWriter, CSourceWriter
 from taihe.codegen.ani.analyses import (
-    ANI_CLASS,
     AniScope,
     GlobFuncAniInfo,
     IfaceAniInfo,
@@ -221,24 +220,21 @@ class AniPackageSourceGenerator:
         ):
             mod_member_infos: dict[str, str] = {}
             obj_drop_cpp_name = "_obj_drop"
-            obj_drop_sts_name = "_taihe_objDrop"
             self.gen_obj_drop(obj_drop_cpp_name)
             mod_member_infos.setdefault(
-                obj_drop_sts_name,
+                pkg_ani_info.ns.mod.obj_drop,
                 f"{utils_namespace}::{obj_drop_cpp_name}",
             )
             obj_dup_cpp_name = "_obj_dup"
-            obj_dup_sts_name = "_taihe_objDup"
             self.gen_obj_dup(obj_dup_cpp_name)
             mod_member_infos.setdefault(
-                obj_dup_sts_name,
+                pkg_ani_info.ns.mod.obj_dup,
                 f"{utils_namespace}::{obj_dup_cpp_name}",
             )
             native_invoke_cpp_name = "_native_invoke"
-            native_invoke_sts_name = "_taihe_nativeInvoke"
             self.gen_native_invoke(native_invoke_cpp_name)
             mod_member_infos.setdefault(
-                native_invoke_sts_name,
+                pkg_ani_info.ns.mod.native_invoke,
                 f"{utils_namespace}::{native_invoke_cpp_name}",
             )
             self.gen_subregister(
@@ -293,7 +289,7 @@ class AniPackageSourceGenerator:
                         )
                 self.gen_subregister(
                     methods_register_name,
-                    parent_scope=ANI_CLASS,
+                    parent_scope=iface_ani_info.scope,
                     impl_desc=iface_ani_info.impl_desc,
                     member_infos=iface_member_infos,
                 )
@@ -376,6 +372,7 @@ class AniPackageSourceGenerator:
                     f"std::forward<{param_ty_cpp_info.as_param}>({val_cpp})"
                 )
             args_cpp_str = ", ".join(args_cpp)
+            function_call = f"{func_cpp_user_info.full_name}({args_cpp_str})"
             if isinstance(return_ty := func.return_ty, NonVoidType):
                 return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
                 return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
@@ -383,7 +380,7 @@ class AniPackageSourceGenerator:
                 result_cpp = "cpp_result"
                 result_ani = "ani_result"
                 self.target.writelns(
-                    f"{return_ty_cpp_name} {result_cpp} = {func_cpp_user_info.full_name}({args_cpp_str});",
+                    f"{return_ty_cpp_name} {result_cpp} = {function_call};",
                     f"if (::taihe::has_error()) {{ return {return_ty_ani_info.ani_type}{{}}; }}",
                 )
                 return_ty_ani_info.into_ani(
@@ -397,7 +394,7 @@ class AniPackageSourceGenerator:
                 )
             else:
                 self.target.writelns(
-                    f"{func_cpp_user_info.full_name}({args_cpp_str});",
+                    f"{function_call};",
                 )
 
     def gen_native_method(
@@ -435,9 +432,9 @@ class AniPackageSourceGenerator:
         ):
             self.target.writelns(
                 f"ani_long ani_data_ptr = {{}};",
-                f'env->Object_GetField_Long(object, TH_ANI_FIND_CLASS_FIELD(env, "{iface_ani_info.impl_desc}", "_taihe_dataPtr"), &ani_data_ptr);',
+                f'env->Object_GetField_Long(object, TH_ANI_FIND_CLASS_FIELD(env, "{iface_ani_info.impl_desc}", "{iface_ani_info.data_ptr}"), &ani_data_ptr);',
                 f"ani_long ani_vtbl_ptr = {{}};",
-                f'env->Object_GetField_Long(object, TH_ANI_FIND_CLASS_FIELD(env, "{iface_ani_info.impl_desc}", "_taihe_vtblPtr"), &ani_vtbl_ptr);',
+                f'env->Object_GetField_Long(object, TH_ANI_FIND_CLASS_FIELD(env, "{iface_ani_info.impl_desc}", "{iface_ani_info.vtbl_ptr}"), &ani_vtbl_ptr);',
                 f"DataBlockHead* cpp_data_ptr = reinterpret_cast<DataBlockHead*>(ani_data_ptr);",
                 f"{iface_abi_info.vtable}* cpp_vtbl_ptr = reinterpret_cast<{iface_abi_info.vtable}*>(ani_vtbl_ptr);",
                 f"{iface_cpp_info.full_weak_name} cpp_iface = {iface_cpp_info.full_weak_name}({{cpp_vtbl_ptr, cpp_data_ptr}});",
@@ -458,6 +455,7 @@ class AniPackageSourceGenerator:
                     f"std::forward<{param_ty_cpp_info.as_param}>({val_cpp})"
                 )
             args_cpp_str = ", ".join(args_cpp)
+            method_call = f"{ancestor_cpp_info.as_param}(cpp_iface)->{method_cpp_info.call_name}({args_cpp_str})"
             if isinstance(return_ty := method.return_ty, NonVoidType):
                 return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
                 return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
@@ -465,7 +463,7 @@ class AniPackageSourceGenerator:
                 result_cpp = "cpp_result"
                 result_ani = "ani_result"
                 self.target.writelns(
-                    f"{return_ty_cpp_name} {result_cpp} = {ancestor_cpp_info.as_param}(cpp_iface)->{method_cpp_info.call_name}({args_cpp_str});",
+                    f"{return_ty_cpp_name} {result_cpp} = {method_call};",
                     f"if (::taihe::has_error()) {{ return {return_ty_ani_info.ani_type}{{}}; }}",
                 )
                 return_ty_ani_info.into_ani(
@@ -479,7 +477,7 @@ class AniPackageSourceGenerator:
                 )
             else:
                 self.target.writelns(
-                    f"{ancestor_cpp_info.as_param}(cpp_iface)->{method_cpp_info.call_name}({args_cpp_str});",
+                    f"{method_call};",
                 )
 
     def gen_obj_drop(self, name: str):
@@ -606,6 +604,7 @@ class AniIfaceImplGenerator:
             )
 
     def gen_iface_method(self, method: IfaceMethodDecl):
+        iface_ani_info = IfaceAniInfo.get(self.am, method.parent_iface)
         method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
         method_ani_info = IfaceMethodAniInfo.get(self.am, method)
         params_cpp = []
@@ -642,15 +641,16 @@ class AniIfaceImplGenerator:
                     arg_cpp,
                     arg_ani,
                 )
-            args_ani_sss = "".join(", " + arg_ani for arg_ani in args_ani)
-            ns = IfaceAniInfo.get(self.am, method.parent_iface).parent_ns
+            args_ani_str = ", ".join(["static_cast<ani_object>(this->ref)", *args_ani])
+            pkg_ani_info = PackageAniInfo.get(self.am, method.parent_pkg)
+            function = f'TH_ANI_FIND_{pkg_ani_info.ns.scope.upper}_FUNCTION(env, "{pkg_ani_info.ns.impl_desc}", "{method_ani_info.reverse_name}", nullptr)'
             if isinstance(return_ty := method.return_ty, NonVoidType):
                 result_ani = "ani_result"
                 result_cpp = "cpp_result"
                 return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
                 self.target.writelns(
                     f"{return_ty_ani_info.ani_type} {result_ani} = {{}};",
-                    f'env->Function_Call_{return_ty_ani_info.ani_type.suffix}(TH_ANI_FIND_{ns.scope.upper}_FUNCTION(env, "{ns.impl_desc}", "{method_ani_info.reverse_name}", nullptr), reinterpret_cast<{return_ty_ani_info.ani_type.base}*>(&{result_ani}), static_cast<ani_object>(this->ref){args_ani_sss});',
+                    f"env->Function_Call_{return_ty_ani_info.ani_type.suffix}({function}, reinterpret_cast<{return_ty_ani_info.ani_type.base}*>(&{result_ani}), {args_ani_str});",
                 )
                 return_ty_ani_info.from_ani(
                     self.target,
@@ -663,7 +663,7 @@ class AniIfaceImplGenerator:
                 )
             else:
                 self.target.writelns(
-                    f'env->Function_Call_Void(TH_ANI_FIND_{ns.scope.upper}_FUNCTION(env, "{ns.impl_desc}", "{method_ani_info.reverse_name}", nullptr), static_cast<ani_object>(this->ref){args_ani_sss});',
+                    f"env->Function_Call_Void({function}, {args_ani_str});",
                 )
 
     def gen_iface_into_ani_func(self):
@@ -796,10 +796,10 @@ class AniStructImplGenerator:
                     field_ani,
                 )
                 fields_ani.append(field_ani)
-            fields_ani_sss = "".join(", " + field_ani for field_ani in fields_ani)
+            fields_ani_sum = "".join(", " + field_ani for field_ani in fields_ani)
             self.target.writelns(
                 f"ani_object ani_obj = {{}};",
-                f'env->Function_Call_Ref(TH_ANI_FIND_{struct_ani_info.parent_ns.scope.upper}_FUNCTION(env, "{struct_ani_info.parent_ns.impl_desc}", "{struct_ani_info.sts_ctor_name}", nullptr), reinterpret_cast<ani_ref*>(&ani_obj){fields_ani_sss});',
+                f'env->Function_Call_Ref(TH_ANI_FIND_{struct_ani_info.parent_ns.scope.upper}_FUNCTION(env, "{struct_ani_info.parent_ns.impl_desc}", "{struct_ani_info.sts_ctor_name}", nullptr), reinterpret_cast<ani_ref*>(&ani_obj){fields_ani_sum});',
                 f"return ani_obj;",
             )
 
