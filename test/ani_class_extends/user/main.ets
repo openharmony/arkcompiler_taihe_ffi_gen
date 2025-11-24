@@ -4,7 +4,7 @@ import * as foo from "foo";
 loadLibrary("ani_class_extends");
 
 function main() {
-    let data = foo.makeDerivedDataClass();
+    let data = new foo.DerivedDataClass();
     console.log(data);
     let obj = new foo.DerivedMethodClass();
     obj.base();
