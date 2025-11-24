@@ -401,6 +401,16 @@ class ArkTsModuleOrNamespace(ABC):
 
 @dataclass
 class ArkTsModule(ArkTsModuleOrNamespace):
+    obj_drop = "_taihe_objDrop"
+    obj_dup = "_taihe_objDup"
+    registry = "_taihe_registry"
+    native_invoke = "_taihe_nativeInvoke"
+    make_callback = "_taihe_makeCallback"
+    bigint_to_arrbuf = "_taihe_fromBigIntToArrayBuffer"
+    arrbuf_to_bigint = "_taihe_fromArrayBufferToBigInt"
+    BEType = "_taihe_BusinessError"
+    ACType = "_taihe_AsyncCallback"
+
     scope: ClassVar[AniScope] = ANI_MODULE
 
     mod_name: str
@@ -896,6 +906,12 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
 
 
 class IfaceAniInfo(AbstractAnalysis[IfaceDecl]):
+    data_ptr = "_taihe_dataPtr"
+    vtbl_ptr = "_taihe_vtblPtr"
+    register = "_taihe_register"
+
+    scope: ClassVar[AniScope] = ANI_CLASS
+
     def __init__(self, am: AnalysisManager, d: IfaceDecl) -> None:
         self.decl_header = f"{d.parent_pkg.name}.{d.name}.ani.0.hpp"
         self.impl_header = f"{d.parent_pkg.name}.{d.name}.ani.1.hpp"
@@ -2010,7 +2026,7 @@ class BigIntTypeAniInfo(TypeAniInfo):
         ani_length = f"{cpp_after}_ani_length"
         target.writelns(
             f"ani_arraybuffer {ani_arrbuf} = {{}};",
-            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.mod.impl_desc}", "_taihe_fromBigIntToArrayBuffer", "C{{std.core.BigInt}}i:C{{std.core.ArrayBuffer}}"), reinterpret_cast<ani_ref*>(&{ani_arrbuf}), {ani_value}, static_cast<ani_int>(sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)));'
+            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.mod.impl_desc}", "{pkg_ani_info.ns.mod.bigint_to_arrbuf}", "C{{std.core.BigInt}}i:C{{std.core.ArrayBuffer}}"), reinterpret_cast<ani_ref*>(&{ani_arrbuf}), {ani_value}, static_cast<ani_int>(sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)));'
             f"void* {ani_data} = {{}};",
             f"ani_size {ani_length} = {{}};",
             f"{env}->ArrayBuffer_GetInfo({ani_arrbuf}, &{ani_data}, &{ani_length});",
@@ -2035,7 +2051,7 @@ class BigIntTypeAniInfo(TypeAniInfo):
             f"{env}->CreateArrayBuffer({cpp_value}.size() * (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)), &{ani_data}, &{ani_arrbuf});",
             f"std::copy({cpp_value}.begin(), {cpp_value}.end(), reinterpret_cast<{item_ty_cpp_info.as_owner}*>({ani_data}));",
             f"ani_object {ani_after} = {{}};",
-            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.mod.impl_desc}", "_taihe_fromArrayBufferToBigInt", "C{{std.core.ArrayBuffer}}:C{{std.core.BigInt}}"), reinterpret_cast<ani_ref*>(&{ani_after}), {ani_arrbuf});',
+            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.mod.impl_desc}", "{pkg_ani_info.ns.mod.arrbuf_to_bigint}", "C{{std.core.ArrayBuffer}}:C{{std.core.BigInt}}"), reinterpret_cast<ani_ref*>(&{ani_after}), {ani_arrbuf});',
         )
 
 
@@ -2234,15 +2250,15 @@ class CallbackTypeAniInfo(TypeAniInfo):
                     arg_ani,
                 )
             args_ani_str = ", ".join(args_ani)
+            result_ani = "ani_result"
+            target.writelns(
+                f"ani_ref ani_argv[] = {{{args_ani_str}}};",
+                f"ani_ref {result_ani} = {{}};",
+                f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.ref.params)}, ani_argv, &{result_ani});",
+            )
             if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
-                result_ani = "ani_result"
                 result_cpp = "cpp_result"
                 return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
-                target.writelns(
-                    f"ani_ref ani_argv[] = {{{args_ani_str}}};",
-                    f"ani_ref {result_ani} = {{}};",
-                    f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.ref.params)}, ani_argv, &{result_ani});",
-                )
                 return_ty_ani_info.from_ani_boxed(
                     target,
                     "env",
@@ -2253,11 +2269,7 @@ class CallbackTypeAniInfo(TypeAniInfo):
                     f"return {result_cpp};",
                 )
             else:
-                result_ani = "ani_result"
                 target.writelns(
-                    f"ani_ref ani_argv[] = {{{args_ani_str}}};",
-                    f"ani_ref {result_ani} = {{}};",
-                    f"env->FunctionalObject_Call(static_cast<ani_fn_object>(this->ref), {len(self.t.ref.params)}, ani_argv, &{result_ani});",
                     f"return;",
                 )
 
@@ -2288,7 +2300,7 @@ class CallbackTypeAniInfo(TypeAniInfo):
             f"ani_long {ani_data_ptr} = reinterpret_cast<ani_long>({cpp_copy}.m_handle.data_ptr);",
             f"{cpp_copy}.m_handle.data_ptr = nullptr;",
             f"ani_fn_object {ani_after} = {{}};",
-            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.mod.impl_desc}", "_taihe_makeCallback", "lll:C{{std.core.Function0}}"), reinterpret_cast<ani_ref*>(&{ani_after}), {ani_cast_ptr}, {ani_func_ptr}, {ani_data_ptr});',
+            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.mod.impl_desc}", "{pkg_ani_info.ns.mod.make_callback}", "lll:C{{std.core.Function0}}"), reinterpret_cast<ani_ref*>(&{ani_after}), {ani_cast_ptr}, {ani_func_ptr}, {ani_data_ptr});',
         )
 
     def gen_native_invoke(
@@ -2336,13 +2348,14 @@ class CallbackTypeAniInfo(TypeAniInfo):
                     f"std::forward<{param_ty_cpp_info.as_param}>({val_cpp})"
                 )
             args_cpp_str = ", ".join(args_cpp)
+            lambda_invoke = f"cpp_func({args_cpp_str})"
             if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
                 return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
                 return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
                 result_cpp = "cpp_result"
                 result_ani = "ani_result"
                 target.writelns(
-                    f"{return_ty_cpp_info.as_owner} {result_cpp} = cpp_func({args_cpp_str});",
+                    f"{return_ty_cpp_info.as_owner} {result_cpp} = {lambda_invoke};",
                     f"if (::taihe::has_error()) {{ return ani_ref{{}}; }}",
                 )
                 return_ty_ani_info.into_ani_boxed(
@@ -2356,7 +2369,7 @@ class CallbackTypeAniInfo(TypeAniInfo):
                 )
             else:
                 target.writelns(
-                    f"cpp_func({args_cpp_str});",
+                    f"{lambda_invoke};",
                     f"return ani_ref{{}};",
                 )
 
