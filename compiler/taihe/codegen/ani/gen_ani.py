@@ -679,7 +679,7 @@ class AniIfaceImplGenerator:
                 f"ani_long ani_data_ptr = reinterpret_cast<ani_long>(cpp_obj.m_handle.data_ptr);",
                 f"cpp_obj.m_handle.data_ptr = nullptr;",
                 f"ani_object ani_obj;",
-                f'env->Object_New(TH_ANI_FIND_CLASS(env, "{iface_ani_info.impl_desc}"), TH_ANI_FIND_CLASS_METHOD(env, "{iface_ani_info.impl_desc}", "<ctor>", "ll:"), &ani_obj, ani_vtbl_ptr, ani_data_ptr);',
+                f'env->Function_Call_Ref(TH_ANI_FIND_{iface_ani_info.parent_ns.scope.upper}_FUNCTION(env, "{iface_ani_info.parent_ns.impl_desc}", "{iface_ani_info.sts_ctor_name}", nullptr), reinterpret_cast<ani_ref*>(&ani_obj), ani_vtbl_ptr, ani_data_ptr);',
                 f"return ani_obj;",
             )
 
@@ -799,7 +799,7 @@ class AniStructImplGenerator:
             fields_ani_sss = "".join(", " + field_ani for field_ani in fields_ani)
             self.target.writelns(
                 f"ani_object ani_obj = {{}};",
-                f'env->Object_New(TH_ANI_FIND_CLASS(env, "{struct_ani_info.impl_desc}"), TH_ANI_FIND_CLASS_METHOD(env, "{struct_ani_info.impl_desc}", "<ctor>", nullptr), &ani_obj{fields_ani_sss});',
+                f'env->Function_Call_Ref(TH_ANI_FIND_{struct_ani_info.parent_ns.scope.upper}_FUNCTION(env, "{struct_ani_info.parent_ns.impl_desc}", "{struct_ani_info.sts_ctor_name}", nullptr), reinterpret_cast<ani_ref*>(&ani_obj){fields_ani_sss});',
                 f"return ani_obj;",
             )
 
