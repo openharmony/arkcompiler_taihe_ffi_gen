@@ -37,5 +37,5 @@ interface BarInterface {
 @ctor("DerivedMethodClass")
 function makeDerivedMethodClass(): DerivedMethodClass;
 
-// constructor of struct class is not supported yet
+@ctor("DerivedDataClass")
 function makeDerivedDataClass(): DerivedDataClass;
