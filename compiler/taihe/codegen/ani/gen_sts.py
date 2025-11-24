@@ -386,6 +386,7 @@ class StsPackageGenerator:
             )
             struct_generator.gen_struct_interface()
             struct_generator.gen_struct_class()
+            struct_generator.gen_struct_ctor()
         for iface in self.pkg.interfaces:
             iface_generator = StsIfaceGenerator(
                 self.am,
@@ -396,6 +397,7 @@ class StsPackageGenerator:
             )
             iface_generator.gen_iface_interface()
             iface_generator.gen_iface_class()
+            iface_generator.gen_iface_ctor()
 
         for func in glob_funcs:
             reverse_func_generator = StsReverseFuncGenerator(
@@ -643,25 +645,25 @@ class StsStructGenerator:
                         f"this.{final.name} = {final.name};",
                     )
 
-            # with self.target.indented(
-            #     f"constructor(other: {struct_ani_info.sts_impl_name}) {{",
-            #     f"}}",
-            # ):
-            #     if struct_ani_info.sts_class_extends:
-            #         finals = []
-            #         for final in struct_ani_info.sts_class_extend_fields:
-            #             finals.append(f"other.{final.name}")
-            #         finals_str = ", ".join(finals)
-            #         self.target.writelns(
-            #             f"super({finals_str});",
-            #         )
-            #     for final in [
-            #         *struct_ani_info.sts_local_fields,
-            #         *struct_ani_info.sts_iface_extend_fields,
-            #     ]:
-            #         self.target.writelns(
-            #             f"this.{final.name} = other.{final.name};",
-            #         )
+            with self.target.indented(
+                f"constructor(other: {struct_ani_info.sts_impl_name}) {{",
+                f"}}",
+            ):
+                if struct_ani_info.sts_class_extends:
+                    finals = []
+                    for final in struct_ani_info.sts_class_extend_fields:
+                        finals.append(f"other.{final.name}")
+                    finals_str = ", ".join(finals)
+                    self.target.writelns(
+                        f"super({finals_str});",
+                    )
+                for final in [
+                    *struct_ani_info.sts_local_fields,
+                    *struct_ani_info.sts_iface_extend_fields,
+                ]:
+                    self.target.writelns(
+                        f"this.{final.name} = other.{final.name};",
+                    )
 
             # ctors
             ctor_overload_register = OverloadRegister()
@@ -734,6 +736,33 @@ class StsStructGenerator:
                     "",
                 )
                 on_off_func_generator.gen_full_on_off_func()
+
+    def gen_struct_ctor(self):
+        struct_ani_info = StructAniInfo.get(self.am, self.struct)
+
+        with self.target.indented(
+            f"function {struct_ani_info.sts_ctor_name}(",
+            f"): {struct_ani_info.sts_impl_name}",
+        ):
+            for parts in struct_ani_info.sorted_sts_all_fields:
+                final = parts[-1]
+                opt = "?" if OptionalAttr.get(final) else ""
+                final_ty_ani_info = TypeAniInfo.get(self.am, final.ty)
+                self.target.writelns(
+                    f"{final.name}{opt}: {final_ty_ani_info.sts_type_in(self.target)},",
+                )
+        with self.target.indented(
+            f"{{",
+            f"}}",
+        ):
+            finals = []
+            for parts in struct_ani_info.sorted_sts_all_fields:
+                final = parts[-1]
+                finals.append(final.name)
+            finals_str = ", ".join(finals)
+            self.target.writelns(
+                f"return new {struct_ani_info.sts_impl_name}({finals_str});",
+            )
 
 
 class StsIfaceGenerator:
@@ -1007,6 +1036,17 @@ class StsIfaceGenerator:
                     "",
                 )
                 on_off_func_generator.gen_full_on_off_func()
+
+    def gen_iface_ctor(self):
+        iface_ani_info = IfaceAniInfo.get(self.am, self.iface)
+
+        with self.target.indented(
+            f"function {iface_ani_info.sts_ctor_name}(vtblPtr: long, dataPtr: long): {iface_ani_info.sts_impl_name} {{",
+            f"}}",
+        ):
+            self.target.writelns(
+                f"return new {iface_ani_info.sts_impl_name}(vtblPtr, dataPtr);",
+            )
 
 
 class StsNativeFuncGenerator:

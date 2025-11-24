@@ -834,6 +834,7 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
             self.sts_impl_name = self.sts_type_name
         else:
             self.sts_impl_name = f"_taihe_{d.name}_inner"
+        self.sts_ctor_name = f"_taihe_{d.name}_ctor"
         self.type_desc = ".".join([*self.parent_ns.name_parts, self.sts_type_name])
         self.impl_desc = ".".join([*self.parent_ns.name_parts, self.sts_impl_name])
 
@@ -905,6 +906,7 @@ class IfaceAniInfo(AbstractAnalysis[IfaceDecl]):
             self.sts_impl_name = self.sts_type_name
         else:
             self.sts_impl_name = f"_taihe_{d.name}_inner"
+        self.sts_ctor_name = f"_taihe_{d.name}_ctor"
         self.type_desc = ".".join([*self.parent_ns.name_parts, self.sts_type_name])
         self.impl_desc = ".".join([*self.parent_ns.name_parts, self.sts_impl_name])
 
