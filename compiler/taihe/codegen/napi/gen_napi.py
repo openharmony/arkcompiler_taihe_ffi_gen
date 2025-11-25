@@ -403,18 +403,46 @@ class NapiCodeGenerator:
         if isinstance(return_ty := func.return_ty, NonVoidType):
             value_ty = return_ty
             cpp_return_info = TypeCppInfo.get(self.am, value_ty)
-            pkg_napi_target.writelns(
-                f"{cpp_return_info.as_owner} value = {func_cpp_name}({cpp_args_str});",
-            )
-            param_ty_napi_info = TypeNapiInfo.get(self.am, value_ty)
-            param_ty_napi_info.into_napi(pkg_napi_target, "value", "result")
+            return_ty_cpp_name = cpp_return_info.as_owner
         else:
+            return_ty_cpp_name = "void"
+        return_ty_cpp_name_expected = (
+            f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
+        )
+        result_cpp = "cpp_result"
+        result_napi = "napi_result"
+        result_expected = "expected_result"
+        result_error = "error_result"
+        pkg_napi_target.writelns(
+            f"{return_ty_cpp_name_expected} {result_expected} = {func_cpp_name}({cpp_args_str});",
+        )
+        with pkg_napi_target.indented(
+            f"if ({result_expected}) {{",
+            f"}}",
+        ):
+            if isinstance(return_ty := func.return_ty, NonVoidType):
+                pkg_napi_target.writelns(
+                    f"{return_ty_cpp_name} {result_cpp} = {result_expected}.value();",
+                )
+                return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty)
+                return_ty_napi_info.into_napi(pkg_napi_target, result_cpp, result_napi)
+                pkg_napi_target.writelns(
+                    f"return {result_napi};",
+                )
+            else:
+                pkg_napi_target.writelns(
+                    f"return nullptr;",
+                )
+        with pkg_napi_target.indented(
+            f"else {{",
+            f"}}",
+        ):
             pkg_napi_target.writelns(
-                f"{func_cpp_name}({cpp_args_str});",
-                f"napi_value result = nullptr;",
-                f"napi_get_undefined(env, &result);",
+                f"::taihe::error {result_error} = {result_expected}.error();",
+                f"char const *code = std::to_string({result_error}.code()).c_str();",
+                f"napi_throw_error(env, code, {result_error}.message().c_str());",
+                f"return nullptr;",
             )
-        pkg_napi_target.writelns(f"return result;")
 
     def gen_get_cb_info(
         self,
@@ -636,12 +664,28 @@ class NapiCodeGenerator:
                     args.append(f"value{i}")
                 args_str = ", ".join(args)
 
+            if isinstance(return_ty := ctor.return_ty, NonVoidType):
+                cpp_return_info = TypeCppInfo.get(self.am, return_ty)
+                return_ty_cpp_name = cpp_return_info.as_owner
+            else:
+                return_ty_cpp_name = "void"
+            return_ty_cpp_name_expected = (
+                f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
+            )
+            result_cpp = "cpp_result"
+            result_expected = "expected_result"
+            result_error = "error_result"
+            struct_napi_impl_target.writelns(
+                f"{return_ty_cpp_name_expected} {result_expected} = {ctor_cpp_user_info.full_name}({args_str});",
+            )
+            with struct_napi_impl_target.indented(
+                f"if ({result_expected}) {{",
+                f"}}",
+            ):
                 if isinstance(return_ty := ctor.return_ty, NonVoidType):
-                    # TODO: assert the return type is the struct type
-                    value_ty = return_ty
                     struct_napi_impl_target.writelns(
-                        f"{struct_cpp_info.as_owner} value = {ctor_cpp_user_info.full_name}({args_str});",
-                        f"{struct_cpp_info.as_owner}* cpp_ptr = new {struct_cpp_info.as_owner}(std::move(value));",
+                        f"{return_ty_cpp_name} {result_cpp} = {result_expected}.value();",
+                        f"{return_ty_cpp_name}* cpp_ptr = new {struct_cpp_info.as_owner}(std::move(value));",
                     )
                     with struct_napi_impl_target.indented(
                         f"_status = napi_wrap(env, thisobj, cpp_ptr, []([[maybe_unused]] napi_env env, void* finalize_data, [[maybe_unused]] void* finalize_hint) {{",
@@ -657,7 +701,7 @@ class NapiCodeGenerator:
                         struct_napi_impl_target.writelns(
                             f"delete thisobj;",
                             f"napi_throw_error(env,",
-                            f'    "ERR_WRAP_FAILED",',
+                            f"    nullptr,",
                             f'    ("Native object wrapping failed (status " + std::to_string(_status) + ")").c_str()',
                             f");",
                             f"return nullptr;",
@@ -666,8 +710,33 @@ class NapiCodeGenerator:
                         f"return thisobj;",
                     )
                 else:
-                    # TODO: special error
-                    raise ValueError("constructor must have return value")
+                    struct_napi_impl_target.writelns(
+                        f"return nullptr;",
+                    )
+            with struct_napi_impl_target.indented(
+                f"else {{",
+                f"}}",
+            ):
+                struct_napi_impl_target.writelns(
+                    f"::taihe::error {result_error} = {result_expected}.error();",
+                )
+                with struct_napi_impl_target.indented(
+                    f"if ({result_error}.code() == 0) {{",
+                    f"}}",
+                ):
+                    struct_napi_impl_target.writelns(
+                        f"napi_throw_error(env, nullptr, {result_error}.message().c_str());",
+                        f"return nullptr;",
+                    )
+                with struct_napi_impl_target.indented(
+                    f"else {{",
+                    f"}}",
+                ):
+                    struct_napi_impl_target.writelns(
+                        f"char const *code = std::to_string({result_error}.code()).c_str();",
+                        f"napi_throw_error(env, code, {result_error}.message().c_str());",
+                        f"return nullptr;",
+                    )
         else:
             with struct_napi_impl_target.indented(
                 f"inline napi_value {struct_napi_info.constructor_func_name}([[maybe_unused]] napi_env env, [[maybe_unused]] napi_callback_info info) {{",
@@ -718,7 +787,7 @@ class NapiCodeGenerator:
                 struct_napi_impl_target.writelns(
                     f"delete thisobj;",
                     f"napi_throw_error(env,",
-                    f'    "ERR_WRAP_FAILED",',
+                    f"    nullptr,",
                     f'    ("Native object wrapping failed (status " + std::to_string(_status) + ")").c_str()',
                     f");",
                     f"return nullptr;",
@@ -892,12 +961,14 @@ class NapiCodeGenerator:
 
         if isinstance(method.return_ty, NonVoidType):
             return_ty_info = TypeCppInfo.get(self.am, method.return_ty)
-            return_ty_str = return_ty_info.as_owner
+            return_ty_cpp_name = return_ty_info.as_owner
         else:
-            return_ty_str = "void"
-
+            return_ty_cpp_name = "void"
+        return_ty_expected_name = (
+            f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
+        )
         with iface_napi_impl_target.indented(
-            f"{return_ty_str} {method_napi_info.norm_name}({params_cpp_str}) {{",
+            f"{return_ty_expected_name} {method_napi_info.norm_name}({params_cpp_str}) {{",
             f"}}",
         ):
             if method.params:
@@ -927,20 +998,105 @@ class NapiCodeGenerator:
                 f"napi_value method_result_napi;",
                 f"NAPI_CALL(env, napi_call_function(env, org_napi_obj, {method_napi_info.norm_name}_ts_method, {len(method.params)}, {args_inner}, &method_result_napi));",
             )
-            if isinstance(method.return_ty, NonVoidType):
-                return_napi_type_info = TypeNapiInfo.get(self.am, method.return_ty)
-                return_napi_type_info.from_napi(
-                    iface_napi_impl_target,
-                    f"method_result_napi",
-                    f"method_result_cpp",
-                )
+            error_message_napi = "error_message_napi"
+            error_message_cpp = "error_message_cpp"
+            iface_napi_impl_target.writelns(
+                f"napi_value exception = nullptr;",
+                f"NAPI_CALL(env, napi_get_and_clear_last_exception(env, &exception));",
+            )
+            with iface_napi_impl_target.indented(
+                f"if (exception != nullptr) {{",
+                f"}}",
+            ):
                 iface_napi_impl_target.writelns(
-                    f"return method_result_cpp;",
+                    f"napi_value {error_message_napi};",
+                    f'NAPI_CALL(env, napi_get_named_property(env, exception, "message", &{error_message_napi}));',
+                    f"size_t {error_message_cpp}_len = 0;",
+                    f"NAPI_CALL(env, napi_get_value_string_utf8(env, {error_message_napi}, nullptr, 0, &{error_message_cpp}_len));",
+                    f"TString {error_message_cpp}_abi;",
+                    f"char* {error_message_cpp}_buf = tstr_initialize(&{error_message_cpp}_abi, {error_message_cpp}_len + 1);",
+                    f"NAPI_CALL(env, napi_get_value_string_utf8(env, {error_message_napi}, {error_message_cpp}_buf, {error_message_cpp}_len + 1, &{error_message_cpp}_len));",
+                    f"{error_message_cpp}_buf[{error_message_cpp}_len] = '\\0';",
+                    f"{error_message_cpp}_abi.length = {error_message_cpp}_len;",
+                    f"taihe::string {error_message_cpp}({error_message_cpp}_abi);",
+                    f"bool error_has_code;",
+                    f'NAPI_CALL(env, napi_has_named_property(env, exception, "code", &error_has_code));',
                 )
-            else:
-                iface_napi_impl_target.writelns(
-                    f"return;",
-                )
+                with iface_napi_impl_target.indented(
+                    f"if (error_has_code) {{",
+                    f"}}",
+                ):
+                    error_code_napi = "error_code_napi"
+                    error_code_cpp = "error_code_cpp"
+                    iface_napi_impl_target.writelns(
+                        f"napi_value {error_code_napi};",
+                        f'NAPI_CALL(env, napi_get_named_property(env, exception, "code", &{error_code_napi}));',
+                        f"napi_valuetype {error_code_napi}_type;",
+                        f"NAPI_CALL(env, napi_typeof(env, {error_code_napi}, &{error_code_napi}_type));",
+                        f"int32_t {error_code_cpp} = 0;",
+                    )
+                    with iface_napi_impl_target.indented(
+                        f"switch ({error_code_napi}_type) {{",
+                        f"}}",
+                    ):
+                        with iface_napi_impl_target.indented(
+                            f"case napi_string: {{",
+                            f"}}",
+                        ):
+                            iface_napi_impl_target.writelns(
+                                f"size_t {error_code_napi}_len = 0;",
+                                f"NAPI_CALL(env, napi_get_value_string_utf8(env, {error_code_napi}, nullptr, 0, &{error_code_napi}_len));",
+                                f"char {error_code_napi}_buffer[{error_code_napi}_len + 1];",
+                                f"size_t {error_code_napi}_copied;",
+                                f"NAPI_CALL(env, napi_get_value_string_utf8(env, {error_code_napi}, {error_code_napi}_buffer, {error_code_napi}_len + 1, &{error_code_napi}_copied));",
+                                f"{error_code_napi}_buffer[{error_code_napi}_len] = '\\0';",
+                                f"{error_code_cpp} = std::stoi({error_code_napi}_buffer);",
+                                f"break;",
+                            )
+                        with iface_napi_impl_target.indented(
+                            f"case napi_number: {{",
+                            f"}}",
+                        ):
+                            iface_napi_impl_target.writelns(
+                                f"NAPI_CALL(env, napi_get_value_int32(env, {error_code_napi}, &{error_code_cpp}));",
+                                f"break;",
+                            )
+                        with iface_napi_impl_target.indented(
+                            f"default: {{",
+                            f"}}",
+                        ):
+                            iface_napi_impl_target.writelns(
+                                f"return ::taihe::unexpected<::taihe::error>(taihe::error({error_message_cpp}));",
+                                f"break;",
+                            )
+                    iface_napi_impl_target.writelns(
+                        f"return ::taihe::unexpected<::taihe::error>(taihe::error({error_message_cpp}, {error_code_cpp}));",
+                    )
+                with iface_napi_impl_target.indented(
+                    f"else {{",
+                    f"}}",
+                ):
+                    iface_napi_impl_target.writelns(
+                        f"return ::taihe::unexpected<::taihe::error>(taihe::error({error_message_cpp}));",
+                    )
+            with iface_napi_impl_target.indented(
+                f"else {{",
+                f"}}",
+            ):
+                if isinstance(method.return_ty, NonVoidType):
+                    return_napi_type_info = TypeNapiInfo.get(self.am, method.return_ty)
+                    return_napi_type_info.from_napi(
+                        iface_napi_impl_target,
+                        f"method_result_napi",
+                        f"method_result_cpp",
+                    )
+                    iface_napi_impl_target.writelns(
+                        f"return method_result_cpp;",
+                    )
+                else:
+                    iface_napi_impl_target.writelns(
+                        f"return {{}};",
+                    )
 
     def gen_iface_into_napi_func(
         self,
@@ -1010,7 +1166,7 @@ class NapiCodeGenerator:
                 iface_napi_impl_target.writelns(
                     f"delete thisobj;",
                     f"napi_throw_error(env,",
-                    f'    "ERR_WRAP_FAILED",',
+                    f"    nullptr,",
                     f'    ("Native object wrapping failed (status " + std::to_string(_status) + ")").c_str()',
                     f");",
                     f"return nullptr;",
@@ -1055,37 +1211,78 @@ class NapiCodeGenerator:
                 args_str = ", ".join(args)
 
                 if isinstance(return_ty := ctor.return_ty, NonVoidType):
-                    # TODO: assert the return type is the iface type
-                    value_ty = return_ty
+                    cpp_return_info = TypeCppInfo.get(self.am, return_ty)
+                    return_ty_cpp_name = cpp_return_info.as_owner
+                else:
+                    return_ty_cpp_name = "void"
+                return_ty_cpp_name_expected = (
+                    f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
+                )
+                result_cpp = "cpp_result"
+                result_expected = "expected_result"
+                result_error = "error_result"
+                iface_napi_impl_target.writelns(
+                    f"{return_ty_cpp_name_expected} {result_expected} = {ctor_cpp_user_info.full_name}({args_str});",
+                )
+                with iface_napi_impl_target.indented(
+                    f"if ({result_expected}) {{",
+                    f"}}",
+                ):
+                    if isinstance(return_ty := ctor.return_ty, NonVoidType):
+                        iface_napi_impl_target.writelns(
+                            f"{return_ty_cpp_name} {result_cpp} = {result_expected}.value();",
+                            f"{return_ty_cpp_name}* cpp_ptr = new {return_ty_cpp_name}(std::move({result_cpp}));",
+                        )
+                        with iface_napi_impl_target.indented(
+                            f"_status = napi_wrap(env, thisobj, cpp_ptr, []([[maybe_unused]] napi_env env, void* finalize_data, [[maybe_unused]] void* finalize_hint) {{",
+                            f"}}, nullptr, nullptr);",
+                        ):
+                            iface_napi_impl_target.writelns(
+                                f"delete static_cast<{return_ty_cpp_name}*>(finalize_data);",
+                            )
+                        with iface_napi_impl_target.indented(
+                            f"if (_status != napi_ok) {{",
+                            f"}}",
+                        ):
+                            iface_napi_impl_target.writelns(
+                                f"delete thisobj;",
+                                f"napi_throw_error(env,",
+                                f"    nullptr,",
+                                f'    ("Native object wrapping failed (status " + std::to_string(_status) + ")").c_str()',
+                                f");",
+                                f"return nullptr;",
+                            )
+                        iface_napi_impl_target.writelns(
+                            f"return thisobj;",
+                        )
+                    else:
+                        iface_napi_impl_target.writelns(
+                            f"return nullptr;",
+                        )
+                with iface_napi_impl_target.indented(
+                    f"else {{",
+                    f"}}",
+                ):
                     iface_napi_impl_target.writelns(
-                        f"{iface_cpp_info.as_owner} value = {ctor_cpp_user_info.full_name}({args_str});",
-                        f"{iface_cpp_info.as_owner}* cpp_ptr = new {iface_cpp_info.as_owner}(std::move(value));",
+                        f"::taihe::error {result_error} = {result_expected}.error();",
                     )
                     with iface_napi_impl_target.indented(
-                        f"_status = napi_wrap(env, thisobj, cpp_ptr, []([[maybe_unused]] napi_env env, void* finalize_data, [[maybe_unused]] void* finalize_hint) {{",
-                        f"}}, nullptr, nullptr);",
-                    ):
-                        iface_napi_impl_target.writelns(
-                            f"delete static_cast<{iface_cpp_info.as_owner}*>(finalize_data);",
-                        )
-                    with iface_napi_impl_target.indented(
-                        f"if (_status != napi_ok) {{",
+                        f"if ({result_error}.code() == 0) {{",
                         f"}}",
                     ):
                         iface_napi_impl_target.writelns(
-                            f"delete thisobj;",
-                            f"napi_throw_error(env,",
-                            f'    "ERR_WRAP_FAILED",',
-                            f'    ("Native object wrapping failed (status " + std::to_string(_status) + ")").c_str()',
-                            f");",
+                            f"napi_throw_error(env, nullptr, {result_error}.message().c_str());",
                             f"return nullptr;",
                         )
-                    iface_napi_impl_target.writelns(
-                        f"return thisobj;",
-                    )
-                else:
-                    # TODO: special error
-                    raise ValueError("constructor must have return value")
+                    with iface_napi_impl_target.indented(
+                        f"else {{",
+                        f"}}",
+                    ):
+                        iface_napi_impl_target.writelns(
+                            f"char const *code = std::to_string({result_error}.code()).c_str();",
+                            f"napi_throw_error(env, code, {result_error}.message().c_str());",
+                            f"return nullptr;",
+                        )
         else:
             with iface_napi_impl_target.indented(
                 f"inline napi_value {iface_napi_info.constructor_func_name}([[maybe_unused]] napi_env env, [[maybe_unused]] napi_callback_info info) {{",

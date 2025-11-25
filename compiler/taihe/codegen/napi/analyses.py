@@ -993,9 +993,15 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                 cpp_inputs.append(cpp_input)
             if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
                 return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-                target.writelns(
-                    f"std::optional<{return_ty_cpp_info.as_owner}> cpp_result;",
-                )
+                return_ty_cpp_name = return_ty_cpp_info.as_owner
+            else:
+                return_ty_cpp_name = "void"
+            return_ty_expected_name = (
+                f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
+            )
+            target.writelns(
+                f"std::optional<{return_ty_expected_name}> cpp_result;",
+            )
 
         napi_resname = f"napi_resname"
         with target.indented(
@@ -1065,16 +1071,106 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                             f"napi_value {inner_napi_res} = nullptr;",
                             f"NAPI_CALL(env, napi_call_function(env, global, js_cb, {len(self.type.ref.params)}, napi_argv, &{inner_napi_res}));",
                         )
-                        if isinstance(
-                            return_ty := self.type.ref.return_ty, NonVoidType
+                        error_message_napi = "error_message_napi"
+                        error_message_cpp = "error_message_cpp"
+                        target.writelns(
+                            f"napi_value exception = nullptr;",
+                            f"NAPI_CALL(env, napi_get_and_clear_last_exception(env, &exception));",
+                        )
+                        with target.indented(
+                            f"if (exception != nullptr) {{",
+                            f"}}",
                         ):
-                            return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty)
-                            return_ty_napi_info.from_napi(
-                                target, inner_napi_res, inner_cpp_res
-                            )
                             target.writelns(
-                                f"cpp_cb->cpp_result = {inner_cpp_res};",
+                                f"napi_value {error_message_napi};",
+                                f'NAPI_CALL(env, napi_get_named_property(env, exception, "message", &{error_message_napi}));',
+                                f"size_t {error_message_cpp}_len = 0;",
+                                f"NAPI_CALL(env, napi_get_value_string_utf8(env, {error_message_napi}, nullptr, 0, &{error_message_cpp}_len));",
+                                f"TString {error_message_cpp}_abi;",
+                                f"char* {error_message_cpp}_buf = tstr_initialize(&{error_message_cpp}_abi, {error_message_cpp}_len + 1);",
+                                f"NAPI_CALL(env, napi_get_value_string_utf8(env, {error_message_napi}, {error_message_cpp}_buf, {error_message_cpp}_len + 1, &{error_message_cpp}_len));",
+                                f"{error_message_cpp}_buf[{error_message_cpp}_len] = '\\0';",
+                                f"{error_message_cpp}_abi.length = {error_message_cpp}_len;",
+                                f"taihe::string {error_message_cpp}({error_message_cpp}_abi);",
+                                f"bool error_has_code;",
+                                f'NAPI_CALL(env, napi_has_named_property(env, exception, "code", &error_has_code));',
                             )
+                            with target.indented(
+                                f"if (error_has_code) {{",
+                                f"}}",
+                            ):
+                                error_code_napi = "error_code_napi"
+                                error_code_cpp = "error_code_cpp"
+                                target.writelns(
+                                    f"napi_value {error_code_napi};",
+                                    f'NAPI_CALL(env, napi_get_named_property(env, exception, "code", &{error_code_napi}));',
+                                    f"napi_valuetype {error_code_napi}_type;",
+                                    f"NAPI_CALL(env, napi_typeof(env, {error_code_napi}, &{error_code_napi}_type));",
+                                    f"int32_t {error_code_cpp} = 0;",
+                                )
+                                with target.indented(
+                                    f"switch ({error_code_napi}_type) {{",
+                                    f"}}",
+                                ):
+                                    with target.indented(
+                                        f"case napi_string: {{",
+                                        f"}}",
+                                    ):
+                                        target.writelns(
+                                            f"size_t {error_code_napi}_len = 0;",
+                                            f"NAPI_CALL(env, napi_get_value_string_utf8(env, {error_code_napi}, nullptr, 0, &{error_code_napi}_len));",
+                                            f"char {error_code_napi}_buffer[{error_code_napi}_len + 1];",
+                                            f"size_t {error_code_napi}_copied;",
+                                            f"NAPI_CALL(env, napi_get_value_string_utf8(env, {error_code_napi}, {error_code_napi}_buffer, {error_code_napi}_len + 1, &{error_code_napi}_copied));",
+                                            f"{error_code_napi}_buffer[{error_code_napi}_len] = '\\0';",
+                                            f"{error_code_cpp} = std::stoi({error_code_napi}_buffer);",
+                                            f"cpp_cb->cpp_result = ::taihe::unexpected<::taihe::error>(taihe::error({error_message_cpp}));",
+                                            f"break;",
+                                        )
+                                    with target.indented(
+                                        f"case napi_number: {{",
+                                        f"}}",
+                                    ):
+                                        target.writelns(
+                                            f"NAPI_CALL(env, napi_get_value_int32(env, {error_code_napi}, &{error_code_cpp}));",
+                                            f"cpp_cb->cpp_result = ::taihe::unexpected<::taihe::error>(taihe::error({error_message_cpp}));",
+                                            f"break;",
+                                        )
+                                    with target.indented(
+                                        f"default: {{",
+                                        f"}}",
+                                    ):
+                                        target.writelns(
+                                            f"cpp_cb->cpp_result = ::taihe::unexpected<::taihe::error>(taihe::error({error_message_cpp}));",
+                                            f"break;",
+                                        )
+                            with target.indented(
+                                f"else {{",
+                                f"}}",
+                            ):
+                                target.writelns(
+                                    f"cpp_cb->cpp_result = ::taihe::unexpected<::taihe::error>(taihe::error({error_message_cpp}));",
+                                )
+                        with target.indented(
+                            f"else {{",
+                            f"}}",
+                        ):
+                            if isinstance(
+                                return_ty := self.type.ref.return_ty, NonVoidType
+                            ):
+                                return_napi_type_info = TypeNapiInfo.get(
+                                    self.am, return_ty
+                                )
+                                return_napi_type_info.from_napi(
+                                    target, inner_napi_res, inner_cpp_res
+                                )
+                                target.writelns(
+                                    f"cpp_cb->cpp_result = {inner_cpp_res};",
+                                )
+                            else:
+                                target.writelns(
+                                    f"cpp_cb->cpp_result = {{}};",
+                                )
                         target.writelns(
                             f"cpp_cb->completed = true;",
                             f"cpp_cb->cv.notify_one();",
@@ -1112,13 +1208,8 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                 inner_napi_args.append(inner_napi_arg)
                 inner_cpp_args.append(inner_cpp_arg)
             cpp_params_str = ", ".join(inner_cpp_params)
-            if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
-                return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-                return_ty_as_owner = return_ty_cpp_info.as_owner
-            else:
-                return_ty_as_owner = "void"
             with target.indented(
-                f"{return_ty_as_owner} operator()({cpp_params_str}) {{",
+                f"{return_ty_expected_name} operator()({cpp_params_str}) {{",
                 f"}}",
             ):
                 with target.indented(
@@ -1153,18 +1244,105 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                         f"napi_get_global(env, &global);",
                         f"NAPI_CALL(env, napi_call_function(env, global, cb_ref, {len(self.type.ref.params)}, napi_argv, &{inner_napi_res}));",
                     )
-                    if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
-                        return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty)
-                        return_ty_napi_info.from_napi(
-                            target, inner_napi_res, inner_cpp_res
-                        )
+                    error_message_napi = "error_message_napi"
+                    error_message_cpp = "error_message_cpp"
+                    target.writelns(
+                        f"napi_value exception = nullptr;",
+                        f"NAPI_CALL(env, napi_get_and_clear_last_exception(env, &exception));",
+                    )
+                    with target.indented(
+                        f"if (exception != nullptr) {{",
+                        f"}}",
+                    ):
                         target.writelns(
-                            f"return {inner_cpp_res};",
+                            f"napi_value {error_message_napi};",
+                            f'NAPI_CALL(env, napi_get_named_property(env, exception, "message", &{error_message_napi}));',
+                            f"size_t {error_message_cpp}_len = 0;",
+                            f"NAPI_CALL(env, napi_get_value_string_utf8(env, {error_message_napi}, nullptr, 0, &{error_message_cpp}_len));",
+                            f"TString {error_message_cpp}_abi;",
+                            f"char* {error_message_cpp}_buf = tstr_initialize(&{error_message_cpp}_abi, {error_message_cpp}_len + 1);",
+                            f"NAPI_CALL(env, napi_get_value_string_utf8(env, {error_message_napi}, {error_message_cpp}_buf, {error_message_cpp}_len + 1, &{error_message_cpp}_len));",
+                            f"{error_message_cpp}_buf[{error_message_cpp}_len] = '\\0';",
+                            f"{error_message_cpp}_abi.length = {error_message_cpp}_len;",
+                            f"taihe::string {error_message_cpp}({error_message_cpp}_abi);",
+                            f"bool error_has_code;",
+                            f'NAPI_CALL(env, napi_has_named_property(env, exception, "code", &error_has_code));',
                         )
-                    else:
-                        target.writelns(
-                            f"return;",
-                        )
+                        with target.indented(
+                            f"if (error_has_code) {{",
+                            f"}}",
+                        ):
+                            error_code_napi = "error_code_napi"
+                            error_code_cpp = "error_code_cpp"
+                            target.writelns(
+                                f"napi_value {error_code_napi};",
+                                f'NAPI_CALL(env, napi_get_named_property(env, exception, "code", &{error_code_napi}));',
+                                f"napi_valuetype {error_code_napi}_type;",
+                                f"NAPI_CALL(env, napi_typeof(env, {error_code_napi}, &{error_code_napi}_type));",
+                                f"int32_t {error_code_cpp} = 0;",
+                            )
+                            with target.indented(
+                                f"switch ({error_code_napi}_type) {{",
+                                f"}}",
+                            ):
+                                with target.indented(
+                                    f"case napi_string: {{",
+                                    f"}}",
+                                ):
+                                    target.writelns(
+                                        f"size_t {error_code_napi}_len = 0;",
+                                        f"NAPI_CALL(env, napi_get_value_string_utf8(env, {error_code_napi}, nullptr, 0, &{error_code_napi}_len));",
+                                        f"char {error_code_napi}_buffer[{error_code_napi}_len + 1];",
+                                        f"size_t {error_code_napi}_copied;",
+                                        f"NAPI_CALL(env, napi_get_value_string_utf8(env, {error_code_napi}, {error_code_napi}_buffer, {error_code_napi}_len + 1, &{error_code_napi}_copied));",
+                                        f"{error_code_napi}_buffer[{error_code_napi}_len] = '\\0';",
+                                        f"{error_code_cpp} = std::stoi({error_code_napi}_buffer);",
+                                        f"break;",
+                                    )
+                                with target.indented(
+                                    f"case napi_number: {{",
+                                    f"}}",
+                                ):
+                                    target.writelns(
+                                        f"NAPI_CALL(env, napi_get_value_int32(env, {error_code_napi}, &{error_code_cpp}));",
+                                        f"break;",
+                                    )
+                                with target.indented(
+                                    f"default: {{",
+                                    f"}}",
+                                ):
+                                    target.writelns(
+                                        f"return ::taihe::unexpected<::taihe::error>(taihe::error({error_message_cpp}));",
+                                        f"break;",
+                                    )
+                            target.writelns(
+                                f"return ::taihe::unexpected<::taihe::error>(taihe::error({error_message_cpp}, {error_code_cpp}));",
+                            )
+                        with target.indented(
+                            f"else {{",
+                            f"}}",
+                        ):
+                            target.writelns(
+                                f"return ::taihe::unexpected<::taihe::error>(taihe::error({error_message_cpp}));",
+                            )
+                    with target.indented(
+                        f"else {{",
+                        f"}}",
+                    ):
+                        if isinstance(
+                            return_ty := self.type.ref.return_ty, NonVoidType
+                        ):
+                            return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty)
+                            return_ty_napi_info.from_napi(
+                                target, inner_napi_res, inner_cpp_res
+                            )
+                            target.writelns(
+                                f"return {inner_cpp_res};",
+                            )
+                        else:
+                            target.writelns(
+                                f"return {{}};",
+                            )
                 cpp_cb_data = "cb_data"
                 with target.indented(
                     f"else {{",
@@ -1196,7 +1374,7 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                         )
                     else:
                         target.writelns(
-                            f"return;",
+                            f"return {{}};",
                         )
 
         target.writelns(
@@ -1285,28 +1463,48 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                 f"if (cpp_cb) {{",
                 f"}}",
             ):
+                if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
+                    cpp_return_info = TypeCppInfo.get(self.am, return_ty)
+                    return_ty_cpp_name = cpp_return_info.as_owner
+                else:
+                    return_ty_cpp_name = "void"
+                return_ty_cpp_name_expected = (
+                    f"::taihe::expected<{return_ty_cpp_name}, ::taihe::error>"
+                )
                 result_cpp = "cpp_result"
                 result_napi = "napi_result"
-                if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
-                    return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
-                    return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty)
-                    target.writelns(
-                        f"{return_ty_cpp_info.as_owner} {result_cpp} = (*cpp_cb)({args_cpp_str});",
-                    )
-                    return_ty_napi_info.into_napi(
-                        target,
-                        result_cpp,
-                        result_napi,
-                    )
-                else:
-                    target.writelns(
-                        f"napi_value {result_napi} = nullptr;",
-                        f"(*cpp_cb)({args_cpp_str});",
-                        f"napi_get_undefined(env, &{result_napi});",
-                    )
+                result_expected = "expected_result"
+                result_error = "error_result"
                 target.writelns(
-                    f"return {result_napi};",
+                    f"{return_ty_cpp_name_expected} {result_expected} = (*cpp_cb)({args_cpp_str});",
                 )
+                with target.indented(
+                    f"if ({result_expected}) {{",
+                    f"}}",
+                ):
+                    if isinstance(return_ty := self.type.ref.return_ty, NonVoidType):
+                        target.writelns(
+                            f"{return_ty_cpp_name} {result_cpp} = {result_expected}.value();",
+                        )
+                        return_ty_napi_info = TypeNapiInfo.get(self.am, return_ty)
+                        return_ty_napi_info.into_napi(target, result_cpp, result_napi)
+                        target.writelns(
+                            f"return {result_napi};",
+                        )
+                    else:
+                        target.writelns(
+                            f"return nullptr;",
+                        )
+                with target.indented(
+                    f"else {{",
+                    f"}}",
+                ):
+                    target.writelns(
+                        f"::taihe::error {result_error} = {result_expected}.error();",
+                        f"char const *code = std::to_string({result_error}.code()).c_str();",
+                        f"napi_throw_error(env, code, {result_error}.message().c_str());",
+                        f"return nullptr;",
+                    )
             with target.indented(
                 f"else {{",
                 f"}}",
@@ -1316,6 +1514,7 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                     f'    "ERR_NOT_FOUND",',
                     f'    "No cpp function pointer"',
                     f");",
+                    f"return nullptr;",
                 )
 
 
