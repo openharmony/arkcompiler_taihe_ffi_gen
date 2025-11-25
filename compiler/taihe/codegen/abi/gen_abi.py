@@ -496,6 +496,7 @@ class AbiPackageHeaderGenerator:
                 iface_abi_info = IfaceAbiInfo.get(self.am, iface)
                 self.target.add_include(iface_abi_info.impl_header)
             self.target.add_include("taihe/common.h")
+            self.target.add_include("taihe/expected.abi.h")
             for func in self.pkg.functions:
                 for param in func.params:
                     param_ty_abi_info = TypeAbiInfo.get(self.am, param.ty)
