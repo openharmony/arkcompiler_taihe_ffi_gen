@@ -12,7 +12,11 @@ namespace {
 
 ::foo::DerivedDataClass makeDerivedDataClass() {
   return {
-    .base = {"base"}, .foo = {"foo"}, .bar = {"bar"}, .x = 42, .y = 56,
+      .base = {"base"},
+      .foo = {"foo"},
+      .bar = {"bar"},
+      .x = 42,
+      .y = 56,
   };
 }
 }  // namespace
