@@ -14,7 +14,7 @@ Message createTextMessage(string_view str) {
 }
 
 Message createNumberMessage(int64_t num) {
-  return {MessageType::key_t::Number, MessageData::make_numVal(num)};
+  return {MessageType::key_t::Num, MessageData::make_numVal(num)};
 }
 
 void processMessage(Message const &msg) {
@@ -22,7 +22,7 @@ void processMessage(Message const &msg) {
   case MessageType::key_t::Text:
     std::cout << "text: " << msg.data.get_textVal_ref() << std::endl;
     break;
-  case MessageType::key_t::Number:
+  case MessageType::key_t::Num:
     std::cout << "num: " << msg.data.get_numVal_ref() << std::endl;
     break;
   }
