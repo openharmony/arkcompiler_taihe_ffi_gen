@@ -169,8 +169,8 @@ class StsCodeGenerator:
 
     def generate(self, pg: PackageGroup):
         pg_ani_info = PackageGroupAniInfo.get(self.am, pg)
-        for mod_name, mod in pg_ani_info.mods.items():
-            module_generator = StsModuleGenerator(self.om, self.am, mod_name, mod)
+        for _, mod in pg_ani_info.mods.items():
+            module_generator = StsModuleGenerator(self.om, self.am, mod)
             module_generator.gen_module_file()
 
 
@@ -179,11 +179,10 @@ class StsModuleGenerator:
         self,
         om: OutputManager,
         am: AnalysisManager,
-        mod_name: str,
         mod: ArkTsModule,
     ):
         self.am = am
-        self.target = StsWriter(om, f"{mod_name}.ets", FileKind.ETS)
+        self.target = StsWriter(om, f"{mod.module_name}.ets", FileKind.ETS)
         self.mod = mod
 
     def gen_module_file(self):

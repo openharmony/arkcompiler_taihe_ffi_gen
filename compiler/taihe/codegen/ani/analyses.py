@@ -343,17 +343,17 @@ ANI_NAMESPACE = AniScope("namespace", ANI_FUNCTION)
 
 
 @dataclass
-class ArkTsPath:
-    module_prefix: str | None = None
-    path_prefix: str | None = None
+class ArkTsOutDir:
+    bundle_str: str | None = None
+    prefix_str: str | None = None
 
     @property
-    def module_prefix_parts(self) -> list[str]:
-        return [] if self.module_prefix is None else self.module_prefix.split("/")
+    def bundle_parts(self) -> list[str]:
+        return [self.bundle_str] if self.bundle_str else []
 
     @property
-    def path_prefix_parts(self) -> list[str]:
-        return [] if self.path_prefix is None else self.path_prefix.split("/")
+    def prefix_parts(self) -> list[str]:
+        return [] if self.prefix_str is None else self.prefix_str.split("/")
 
 
 @dataclass
@@ -368,17 +368,13 @@ class ArkTsModuleOrNamespace(ABC):
 
     @property
     @abstractmethod
-    def name_parts(self) -> list[str]:
-        pass
-
-    @property
-    @abstractmethod
     def mod(self) -> "ArkTsModule":
         pass
 
     @property
+    @abstractmethod
     def impl_desc(self) -> str:
-        return ".".join(self.name_parts)
+        pass
 
     @abstractmethod
     def get_member(self, name: str, is_default: bool, target: StsWriter) -> str:
@@ -395,12 +391,17 @@ class ArkTsModuleOrNamespace(ABC):
             self.is_default |= is_default
             return self
         head, *tail = ns_parts
-        child = self.children.setdefault(head, ArkTsNamespace(head, self))
+        child = self.children.setdefault(head, ArkTsNamespace(self, head))
         return child.add_path(tail, pkg, is_default)
 
 
 @dataclass
 class ArkTsModule(ArkTsModuleOrNamespace):
+    parent: ArkTsOutDir
+    module_name: str
+
+    scope: ClassVar[AniScope] = ANI_MODULE
+
     obj_drop = "_taihe_objDrop"
     obj_dup = "_taihe_objDup"
     registry = "_taihe_registry"
@@ -411,47 +412,43 @@ class ArkTsModule(ArkTsModuleOrNamespace):
     BEType = "_taihe_BusinessError"
     ACType = "_taihe_AsyncCallback"
 
-    scope: ClassVar[AniScope] = ANI_MODULE
-
-    mod_name: str
-    parent: ArkTsPath
-
-    @property
-    def name_parts(self) -> list[str]:
-        return [
-            *self.parent.module_prefix_parts,
-            *self.parent.path_prefix_parts,
-            *self.mod_name.split("."),
-        ]
-
     @property
     def mod(self) -> "ArkTsModule":
         return self
 
+    @property
+    def impl_desc(self) -> str:
+        impl_desc_parts = [
+            *self.parent.bundle_parts,
+            *self.parent.prefix_parts,
+            self.module_name,
+        ]
+        return ".".join(impl_desc_parts)
+
     def get_member(self, name: str, is_default: bool, target: StsWriter) -> str:
-        filtered_name = "".join(c if c.isalnum() else "_" for c in self.mod_name)
+        filtered_name = "".join(c if c.isalnum() else "_" for c in self.module_name)
         import_name = f"_taihe_{filtered_name}_{name}"
         if is_default:
-            target.add_import_default(f"./{self.mod_name}", import_name)
+            target.add_import_default(f"./{self.module_name}.ets", import_name)
         else:
-            target.add_import_decl(f"./{self.mod_name}", name, import_name)
+            target.add_import_decl(f"./{self.module_name}.ets", name, import_name)
         return import_name
 
 
 @dataclass
 class ArkTsNamespace(ArkTsModuleOrNamespace):
-    scope: ClassVar[AniScope] = ANI_NAMESPACE
-
-    ns_name: str
     parent: ArkTsModuleOrNamespace
+    ns_name: str
 
-    @property
-    def name_parts(self) -> list[str]:
-        return [*self.parent.name_parts, self.ns_name]
+    scope: ClassVar[AniScope] = ANI_NAMESPACE
 
     @property
     def mod(self) -> "ArkTsModule":
         return self.parent.mod
+
+    @property
+    def impl_desc(self) -> str:
+        return f"{self.parent.impl_desc}.{self.ns_name}"
 
     def get_member(self, name: str, is_default: bool, target: StsWriter) -> str:
         return f"{self.parent.get_member(self.ns_name, self.is_default, target)}.{name}"
@@ -468,23 +465,23 @@ class PackageGroupAniInfo(AbstractAnalysis[PackageGroup]):
         self.mods: dict[str, ArkTsModule] = {}
         self.pkg_map: dict[PackageDecl, ArkTsModuleOrNamespace] = {}
 
-        self.path = ArkTsPath(
-            self.am.config.arkts_module_prefix,
-            self.am.config.arkts_path_prefix,
+        self.path = ArkTsOutDir(
+            bundle_str=self.am.config.arkts_module_prefix,
+            prefix_str=self.am.config.arkts_path_prefix,
         )
 
         for pkg in pg.packages:
             ns_parts = []
             if attr := NamespaceAttr.get(pkg):
-                mod_name = attr.module
+                module_str = attr.module
                 if ns_name := attr.namespace:
                     ns_parts = ns_name.split(".")
             else:
-                mod_name = pkg.name
+                module_str = pkg.name
 
             is_default = ExportDefaultAttr.get(pkg) is not None
 
-            mod = self.mods.setdefault(mod_name, ArkTsModule(mod_name, self.path))
+            mod = self.mods.setdefault(module_str, ArkTsModule(self.path, module_str))
             ns_name = self.pkg_map[pkg] = mod.add_path(ns_parts, pkg, is_default)
 
             for attr in StsInjectIntoModuleAttr.get_all(pkg):
@@ -791,7 +788,7 @@ class EnumAniInfo(AbstractAnalysis[EnumDecl]):
     def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
         self.parent_ns = PackageAniInfo.get(am, d.parent_pkg).ns
         self.sts_type_name = d.name
-        self.type_desc = ".".join([*self.parent_ns.name_parts, self.sts_type_name])
+        self.type_desc = f"{self.parent_ns.impl_desc}.{self.sts_type_name}"
 
         self.is_default = ExportDefaultAttr.get(d) is not None
 
@@ -845,8 +842,8 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
         else:
             self.sts_impl_name = f"_taihe_{d.name}_inner"
         self.sts_ctor_name = f"_taihe_{d.name}_ctor"
-        self.type_desc = ".".join([*self.parent_ns.name_parts, self.sts_type_name])
-        self.impl_desc = ".".join([*self.parent_ns.name_parts, self.sts_impl_name])
+        self.type_desc = f"{self.parent_ns.impl_desc}.{self.sts_type_name}"
+        self.impl_desc = f"{self.parent_ns.impl_desc}.{self.sts_impl_name}"
 
         self.interface_injected_codes: list[str] = []
         for iface_injected in StsInjectIntoIfaceAttr.get_all(d):
@@ -906,11 +903,11 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
 
 
 class IfaceAniInfo(AbstractAnalysis[IfaceDecl]):
+    scope: ClassVar[AniScope] = ANI_CLASS
+
     data_ptr = "_taihe_dataPtr"
     vtbl_ptr = "_taihe_vtblPtr"
     register = "_taihe_register"
-
-    scope: ClassVar[AniScope] = ANI_CLASS
 
     def __init__(self, am: AnalysisManager, d: IfaceDecl) -> None:
         self.decl_header = f"{d.parent_pkg.name}.{d.name}.ani.0.hpp"
@@ -923,8 +920,8 @@ class IfaceAniInfo(AbstractAnalysis[IfaceDecl]):
         else:
             self.sts_impl_name = f"_taihe_{d.name}_inner"
         self.sts_ctor_name = f"_taihe_{d.name}_ctor"
-        self.type_desc = ".".join([*self.parent_ns.name_parts, self.sts_type_name])
-        self.impl_desc = ".".join([*self.parent_ns.name_parts, self.sts_impl_name])
+        self.type_desc = f"{self.parent_ns.impl_desc}.{self.sts_type_name}"
+        self.impl_desc = f"{self.parent_ns.impl_desc}.{self.sts_impl_name}"
 
         self.interface_injected_codes: list[str] = []
         for iface_injected in StsInjectIntoIfaceAttr.get_all(d):
