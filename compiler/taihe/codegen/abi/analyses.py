@@ -243,16 +243,16 @@ class ScalarTypeAbiInfo(TypeAbiInfo):
             ScalarKind.U32: "uint32_t",
             ScalarKind.U64: "uint64_t",
         }[t.kind]
-        self.defn_headers = []
-        self.impl_headers = []
+        self.defn_headers = ["stdint.h"]
+        self.impl_headers = ["stdint.h"]
         self.as_param = res
         self.as_owner = res
 
 
 class OpaqueTypeAbiInfo(TypeAbiInfo):
     def __init__(self, am: AnalysisManager, t: OpaqueType) -> None:
-        self.defn_headers = []
-        self.impl_headers = []
+        self.defn_headers = ["stdint.h"]
+        self.impl_headers = ["stdint.h"]
         self.as_param = "uintptr_t"
         self.as_owner = "uintptr_t"
 
