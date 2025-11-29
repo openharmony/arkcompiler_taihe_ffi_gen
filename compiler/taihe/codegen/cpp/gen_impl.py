@@ -383,6 +383,7 @@ class CppClassHeaderGenerator:
     def gen_class_header(self):
         iface_abi_info = IfaceAbiInfo.get(self.am, self.iface)
         with self.target:
+            self.target.add_include("taihe/common.hpp")
             for ancestor in iface_abi_info.ancestor_dict:
                 for method in ancestor.methods:
                     for param in method.params:
