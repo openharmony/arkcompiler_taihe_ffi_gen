@@ -442,6 +442,7 @@ class CppClassSourceGenerator(CppTemplateBaseWriterGenerator):
         iface_cpp_impl_info = IfaceCppImplInfo.get(self.am, self.iface)
         with self.target:
             self.target.add_include(iface_cpp_impl_info.template_header)
+            self.target.add_include("stdexcept")
             self.target.newline()
             self.gen_using_namespaces()
             for ancestor in iface_abi_info.ancestor_dict:
