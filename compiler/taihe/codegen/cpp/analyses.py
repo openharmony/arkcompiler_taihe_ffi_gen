@@ -218,18 +218,18 @@ class ScalarTypeCppInfo(TypeCppInfo):
             ScalarKind.U32: "uint32_t",
             ScalarKind.U64: "uint64_t",
         }[t.kind]
-        self.decl_headers = ["cstdint"]
-        self.defn_headers = ["cstdint"]
-        self.impl_headers = ["cstdint"]
+        self.decl_headers = []
+        self.defn_headers = []
+        self.impl_headers = []
         self.as_param = res
         self.as_owner = res
 
 
 class OpaqueTypeCppInfo(TypeCppInfo):
     def __init__(self, am: AnalysisManager, t: OpaqueType) -> None:
-        self.decl_headers = ["cstdint"]
-        self.defn_headers = ["cstdint"]
-        self.impl_headers = ["cstdint"]
+        self.decl_headers = []
+        self.defn_headers = []
+        self.impl_headers = []
         self.as_param = "uintptr_t"
         self.as_owner = "uintptr_t"
 
