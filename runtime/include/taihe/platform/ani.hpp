@@ -1,7 +1,5 @@
 #pragma once
 
-#include <future>
-
 #include <taihe/object.hpp>
 #include <taihe/runtime.hpp>
 
