@@ -13,35 +13,35 @@
  * limitations under the License.
  */
 
-import * as lib from "../generated/proxy/async_test";
+import * as lib from "async_test";
 
 function main() {
     console.log("before call function addRetPromise success");
     let p1 = lib.addRetPromise(1, 2);
     p1.then((res) => {
-        console.log("success", res);
+        console.log("success in addRetPromise", res);
     })
     .catch((ret) => {
-        console.log("failed", ret);
+        console.log("failed in addRetPromise", ret);
     });
     console.log("after call function addRetPromise success");
 
     console.log("before call function addRetPromise failed");
     let p2 = lib.addRetPromise(0, 2);
     p2.then((res) => {
-        console.log("success", res);
+        console.log("success in addRetPromise", res);
     })
     .catch((ret) => {
-        console.log("failed", ret.message);
+        console.log("failed in addRetPromise", ret.message);
     });
     console.log("after call function addRetPromise failed");
 
     console.log("before call function addWithAsync success");
-    lib.addWithAsync(1, 2, (error: Error | null, result?: number) => {
+    lib.addWithAsync(1, 2, (error, result) => {
         if (error !== null) {
-            console.log("failed in f", error.message);
+            console.log("failed in addWithAsync", error.message);
         } else {
-            console.log("success in f", result!);
+            console.log("success in addWithAsync", result!);
         }
     })
     console.log("after call function addWithAsync success");
@@ -49,9 +49,9 @@ function main() {
     console.log("before call function addWithAsync failed");
     lib.addWithAsync(0, 2, (error: Error | null, result?: number) => {
         if (error !== null) {
-            console.log("failed in f", error.message);
+            console.log("failed in addWithAsync", error.message);
         } else {
-            console.log("success in f", result!);
+            console.log("success in addWithAsync", result!);
         }
     })
     console.log("after call function addWithAsync failed");
@@ -96,6 +96,30 @@ function main() {
             console.log("success in fromStruct");
         }
     });
+
+    let myshape: lib.IShape = lib.createIShape();
+    myshape.makeSync();
+
+    console.log("before promise");
+    let p_myshape = myshape.makeRetPromise();
+    p_myshape.then((res) => {
+        console.log("success in p_myshape", res);
+    })
+    .catch((ret) => {
+        console.log("failed in p_myshape", ret.code, ret.message);
+    });
+    console.log("after promise");
+
+    console.log("before asynccallback");
+    myshape.makeWithAsync((error: any) => {
+        console.log("in make shape callback");
+        if (error !== null) {
+            console.log("failed in make shape", error.code, error.message);
+        } else {
+            console.log("success in make shape");
+        }
+    });
+    console.log("after asynccallback");
     console.log("finish main");
 }
 
