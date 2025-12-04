@@ -13,8 +13,6 @@
  * limitations under the License.
  */
 
-@!lib("async_test")
-
 function addSync(a: i32, b: i32): i32;
 @promise function addRetPromise(a: i32, b: i32): i32;
 @async function addWithAsync(a: i32, b: i32): i32;
@@ -48,3 +46,11 @@ function fromStructSync(data: Data): void;
 @promise function toStructRetPromise(a: String, b: String, c: i32): Data;
 @async function toStructWithAsync(a: String, b: String, c: i32): Data;
 function toStructSync(a: String, b: String, c: i32): Data;
+
+interface IShape {
+    @promise makeRetPromise();
+    @async makeWithAsync();
+    makeSync();
+}
+
+function createIShape(): IShape;
