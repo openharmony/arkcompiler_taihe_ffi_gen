@@ -1954,9 +1954,20 @@ class TypedArrayTypeAniInfo(TypeAniInfo):
             f"ani_int {ani_byte_length} = {{}};",
             f"ani_int {ani_byte_offset} = {{}};",
             f"ani_arraybuffer {ani_arrbuf} = {{}};",
-            f'{env}->Object_GetPropertyByName_Int({ani_value}, "byteLength", &{ani_byte_length});',
-            f'{env}->Object_GetPropertyByName_Int({ani_value}, "byteOffset", &{ani_byte_offset});',
-            f'{env}->Object_GetPropertyByName_Ref({ani_value}, "buffer", reinterpret_cast<ani_ref*>(&{ani_arrbuf}));',
+        )
+        assert isinstance(self.t.item_ty, ScalarType), self.t.item_ty
+        if self.t.item_ty.kind.is_signed:
+            target.writelns(
+                f'{env}->Object_GetField_Int({ani_value}, TH_ANI_FIND_CLASS_FIELD({env}, "{self.type_desc}", "byteLength"), &{ani_byte_length});',
+                f'{env}->Object_GetField_Int({ani_value}, TH_ANI_FIND_CLASS_FIELD({env}, "{self.type_desc}", "byteOffset"), &{ani_byte_offset});',
+            )
+        else:
+            target.writelns(
+                f'{env}->Object_CallMethod_Int({ani_value}, TH_ANI_FIND_CLASS_METHOD({env}, "{self.type_desc}", "%%get-byteLength", ":i"), &{ani_byte_length});',
+                f'{env}->Object_CallMethod_Int({ani_value}, TH_ANI_FIND_CLASS_METHOD({env}, "{self.type_desc}", "%%get-byteOffset", ":i"), &{ani_byte_offset});',
+            )
+        target.writelns(
+            f'{env}->Object_GetField_Ref({ani_value}, TH_ANI_FIND_CLASS_FIELD({env}, "{self.type_desc}", "buffer"), reinterpret_cast<ani_ref*>(&{ani_arrbuf}));',
             f"void* {ani_data} = {{}};",
             f"ani_size {ani_length} = {{}};",
             f"{env}->ArrayBuffer_GetInfo({ani_arrbuf}, &{ani_data}, &{ani_length});",
@@ -2118,9 +2129,9 @@ class RecordTypeAniInfo(TypeAniInfo):
                 f"ani_tuple_value {ani_item} = {{}};",
                 f'{env}->Object_GetField_Ref({ani_next},  TH_ANI_FIND_CLASS_FIELD({env}, "std.core.IteratorResult", "value"), reinterpret_cast<ani_ref*>(&{ani_item}));',
                 f"ani_ref {ani_key} = {{}};",
-                f"{env}->TupleValue_GetItem_Ref({ani_item}, 0, &{ani_key});",
+                f'{env}->Object_GetField_Ref({ani_item}, TH_ANI_FIND_CLASS_FIELD({env}, "std.core.Tuple2", "$0"), &{ani_key});',
                 f"ani_ref {ani_val} = {{}};",
-                f"{env}->TupleValue_GetItem_Ref({ani_item}, 1, &{ani_val});",
+                f'{env}->Object_GetField_Ref({ani_item}, TH_ANI_FIND_CLASS_FIELD({env}, "std.core.Tuple2", "$1"), &{ani_val});',
             )
             key_ty_ani_info.from_ani_boxed(target, env, ani_key, cpp_key)
             val_ty_ani_info.from_ani_boxed(target, env, ani_val, cpp_val)
