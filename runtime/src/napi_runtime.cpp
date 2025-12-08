@@ -76,12 +76,8 @@ bool has_error()
 {
     EnvGuard guard;
     napi_env env = guard.env();
-    napi_value exception;
-    napi_get_and_clear_last_exception(env, &exception);
-    if (exception == nullptr) return false;
-
-    bool is_error = false;
-    napi_is_error(env, exception, &is_error);
-    return is_error;
+    bool has_error = false;
+    napi_is_exception_pending(env, &has_error);
+    return has_error;
 }
 }  // namespace taihe
