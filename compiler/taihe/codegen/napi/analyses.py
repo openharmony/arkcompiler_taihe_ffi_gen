@@ -1074,14 +1074,16 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                         error_message_napi = "error_message_napi"
                         error_message_cpp = "error_message_cpp"
                         target.writelns(
-                            f"napi_value exception = nullptr;",
-                            f"NAPI_CALL(env, napi_get_and_clear_last_exception(env, &exception));",
+                            f"bool has_error = false;",
+                            f"napi_is_exception_pending(env, &has_error);",
                         )
                         with target.indented(
-                            f"if (exception != nullptr) {{",
+                            f"if (has_error) {{",
                             f"}}",
                         ):
                             target.writelns(
+                                f"napi_value exception = nullptr;",
+                                f"NAPI_CALL(env, napi_get_and_clear_last_exception(env, &exception));",
                                 f"napi_value {error_message_napi};",
                                 f'NAPI_CALL(env, napi_get_named_property(env, exception, "message", &{error_message_napi}));',
                                 f"size_t {error_message_cpp}_len = 0;",
@@ -1247,14 +1249,16 @@ class CallbackTypeNapiInfo(TypeNapiInfo):
                     error_message_napi = "error_message_napi"
                     error_message_cpp = "error_message_cpp"
                     target.writelns(
-                        f"napi_value exception = nullptr;",
-                        f"NAPI_CALL(env, napi_get_and_clear_last_exception(env, &exception));",
+                        f"bool has_error = false;",
+                        f"napi_is_exception_pending(env, &has_error);",
                     )
                     with target.indented(
-                        f"if (exception != nullptr) {{",
+                        f"if (has_error) {{",
                         f"}}",
                     ):
                         target.writelns(
+                            f"napi_value exception = nullptr;",
+                            f"NAPI_CALL(env, napi_get_and_clear_last_exception(env, &exception));",
                             f"napi_value {error_message_napi};",
                             f'NAPI_CALL(env, napi_get_named_property(env, exception, "message", &{error_message_napi}));',
                             f"size_t {error_message_cpp}_len = 0;",
