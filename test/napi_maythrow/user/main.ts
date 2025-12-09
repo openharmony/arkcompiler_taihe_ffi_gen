@@ -47,13 +47,13 @@ function main() {
     try {
         lib.noReturnTypeError();
     } catch (error) {
-        console.error('noReturnTypeError Error caught:', error.message, error.code);
+        console.error('noReturnTypeError Error caught:', error.message);
     }
     
     try {
         lib.noReturnRangeError();
     } catch (error) {
-        console.error('noReturnRangeError Error caught:', error.message, error.code);
+        console.error('noReturnRangeError Error caught:', error.message);
     }
 }
 

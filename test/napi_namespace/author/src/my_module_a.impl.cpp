@@ -20,9 +20,10 @@
 #include "my_module_a.proj.hpp"
 
 namespace {
-void baz()
+::taihe::expected<void, ::taihe::error> baz()
 {
     std::cout << "namespace: my_module_a, func: baz" << std::endl;
+    return {};
 }
 }  // namespace
 

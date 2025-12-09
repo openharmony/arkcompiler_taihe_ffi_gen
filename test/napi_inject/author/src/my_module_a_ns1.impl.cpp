@@ -20,7 +20,7 @@
 #include "my_module_a.ns1.proj.hpp"
 
 namespace {
-::taihe::string Funtest(::my_module_a::ns1::Color s)
+::taihe::expected<::taihe::string, ::taihe::error> Funtest(::my_module_a::ns1::Color s)
 {
     switch (s.get_key()) {
         case ::my_module_a::ns1::Color::key_t::BLUE:
@@ -33,9 +33,10 @@ namespace {
     return "error";
 }
 
-void noo()
+::taihe::expected<void, ::taihe::error> noo()
 {
     std::cout << "namespace: my_module_a.ns1, func: noo" << std::endl;
+    return {};
 }
 
 class Base {
@@ -53,26 +54,27 @@ public:
         std::cout << "del base " << this << std::endl;
     }
 
-    ::taihe::string getId()
+    ::taihe::expected<::taihe::string, ::taihe::error> getId()
     {
         return id;
     }
 
-    void setId(::taihe::string_view s)
+    ::taihe::expected<void, ::taihe::error> setId(::taihe::string_view s)
     {
         id = s;
-        return;
+        return {};
     }
 };
 
-::my_module_a::ns1::IBase makeIBase(::taihe::string_view id)
+::taihe::expected<::my_module_a::ns1::IBase, ::taihe::error> makeIBase(::taihe::string_view id)
 {
     return taihe::make_holder<Base, ::my_module_a::ns1::IBase>(id);
 }
 
-void bar()
+::taihe::expected<void, ::taihe::error> bar()
 {
     std::cout << "namespace: my_module_b.functiontest, func: bar" << std::endl;
+    return {};
 }
 
 class CTestImpl {
@@ -89,24 +91,28 @@ public:
         std::cout << "del ctest " << this << std::endl;
     }
 
-    float add(int32_t a, int32_t b)
+    ::taihe::expected<float, ::taihe::error> add(int32_t a, int32_t b)
     {
         return a + b + this->x;
     }
 };
 
-::my_module_a::ns1::CTest createCTest(int32_t id)
+::taihe::expected<::my_module_a::ns1::CTest, ::taihe::error> createCTest(int32_t id)
 {
     return taihe::make_holder<CTestImpl, ::my_module_a::ns1::CTest>(id);
 }
 
-::my_module_a::ns1::CTest changeCTest(::my_module_a::ns1::weak::CTest a)
+::taihe::expected<::my_module_a::ns1::CTest, ::taihe::error> changeCTest(::my_module_a::ns1::weak::CTest a)
 {
-    int32_t x = a->add(3, 4);
-    return taihe::make_holder<CTestImpl, ::my_module_a::ns1::CTest>(x);
+    ::taihe::expected<float, ::taihe::error> x = a->add(3, 4);
+    if (x.has_value()) {
+        return taihe::make_holder<CTestImpl, ::my_module_a::ns1::CTest>(x.value());
+    } else {
+        return ::taihe::expected<::my_module_a::ns1::CTest, ::taihe::error>(::taihe::unexpect, x.error());
+    }
 }
 
-int32_t multiply(int32_t a, int32_t b)
+::taihe::expected<int32_t, ::taihe::error> multiply(int32_t a, int32_t b)
 {
     return a * b;
 }

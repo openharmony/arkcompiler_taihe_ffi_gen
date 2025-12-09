@@ -21,7 +21,7 @@
 
 namespace {
 
-::taihe::array<uint64_t> processBigInt(::taihe::array_view<uint64_t> a)
+::taihe::expected<::taihe::array<uint64_t>, ::taihe::error> processBigInt(::taihe::array_view<uint64_t> a)
 {
     ::taihe::array<uint64_t> res(a.size() + 1);
     res[0] = 0;

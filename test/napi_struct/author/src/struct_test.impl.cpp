@@ -19,18 +19,18 @@
 #include "struct_test.proj.hpp"
 
 namespace {
-int32_t from_rgb(::struct_test::RGB const &rgb)
+::taihe::expected<int32_t, ::taihe::error> from_rgb(::struct_test::RGB const &rgb)
 {
     return rgb.r + rgb.g + rgb.b;
 }
 
-::struct_test::RGB to_rgb(int32_t a)
+::taihe::expected<::struct_test::RGB, ::taihe::error> to_rgb(int32_t a)
 {
     ::struct_test::RGB rgb {a, a / 2, a / 4};
     return rgb;
 }
 
-double from_color(::struct_test::Color const &color)
+::taihe::expected<double, ::taihe::error> from_color(::struct_test::Color const &color)
 {
     if (color.flag) {
         return color.rgb.r + 100;
@@ -39,48 +39,49 @@ double from_color(::struct_test::Color const &color)
     }
 }
 
-::struct_test::Color to_color(::taihe::string_view a, bool b, double c, ::struct_test::RGB const &d)
+::taihe::expected<::struct_test::Color, ::taihe::error> to_color(::taihe::string_view a, bool b, double c,
+                                                                 ::struct_test::RGB const &d)
 {
     ::struct_test::Color color {a, b, c, d};
     return color;
 }
 
-::struct_test::Student create_student()
+::taihe::expected<::struct_test::Student, ::taihe::error> create_student()
 {
     return ::struct_test::Student {"Mary", 15};
 }
 
-::struct_test::Student process_student(::struct_test::Student const &a)
+::taihe::expected<::struct_test::Student, ::taihe::error> process_student(::struct_test::Student const &a)
 {
-    return {a.name + " student", a.age + 10};
+    return ::struct_test::Student {a.name + " student", a.age + 10};
 }
 
-::struct_test::Teacher create_teacher()
+::taihe::expected<::struct_test::Teacher, ::taihe::error> create_teacher()
 {
     return ::struct_test::Teacher {"Rose", 25};
 }
 
-::struct_test::Teacher process_teacher(::struct_test::Teacher const &a)
+::taihe::expected<::struct_test::Teacher, ::taihe::error> process_teacher(::struct_test::Teacher const &a)
 {
-    return {a.name + " teacher", a.age + 15};
+    return ::struct_test::Teacher {a.name + " teacher", a.age + 15};
 }
 
-::struct_test::G process_g(::struct_test::G const &a)
+::taihe::expected<::struct_test::G, ::taihe::error> process_g(::struct_test::G const &a)
 {
-    return {{a.f.f + 1}, a.g + 2};
+    return ::struct_test::G {{a.f.f + 1}, a.g + 2};
 }
 
-::struct_test::H process_h(::struct_test::H const &a)
+::taihe::expected<::struct_test::H, ::taihe::error> process_h(::struct_test::H const &a)
 {
-    return {{{a.g.f.f + 1}, a.g.g + 2}, a.h + 3};
+    return ::struct_test::H {{{a.g.f.f + 1}, a.g.g + 2}, a.h + 3};
 }
 
-::struct_test::H create_h(int32_t f, int32_t g, int32_t h)
+::taihe::expected<::struct_test::H, ::taihe::error> create_h(int32_t f, int32_t g, int32_t h)
 {
-    return {{{f}, g}, h};
+    return ::struct_test::H {{{f}, g}, h};
 }
 
-::taihe::string give_lessons()
+::taihe::expected<::taihe::string, ::taihe::error> give_lessons()
 {
     return "math";
 }

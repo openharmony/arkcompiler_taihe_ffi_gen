@@ -19,12 +19,12 @@
 #include "map_test.proj.hpp"
 
 namespace {
-int32_t getStringIntSize(::taihe::map_view<::taihe::string, int32_t> r)
+::taihe::expected<int32_t, ::taihe::error> getStringIntSize(::taihe::map_view<::taihe::string, int32_t> r)
 {
     return r.size();
 }
 
-::taihe::map<::taihe::string, ::taihe::string> createStringString(int32_t a)
+::taihe::expected<::taihe::map<::taihe::string, ::taihe::string>, ::taihe::error> createStringString(int32_t a)
 {
     ::taihe::map<::taihe::string, ::taihe::string> m;
     while (a--) {
@@ -33,7 +33,8 @@ int32_t getStringIntSize(::taihe::map_view<::taihe::string, int32_t> r)
     return m;
 }
 
-::taihe::map<int32_t, ::taihe::string> changeIntString(::taihe::map_view<int32_t, ::taihe::string> a)
+::taihe::expected<::taihe::map<int32_t, ::taihe::string>, ::taihe::error> changeIntString(
+    ::taihe::map_view<int32_t, ::taihe::string> a)
 {
     ::taihe::map<int32_t, ::taihe::string> result;
     for (auto const &[key, val] : a) {
@@ -42,15 +43,15 @@ int32_t getStringIntSize(::taihe::map_view<::taihe::string, int32_t> r)
     return result;
 }
 
-void setStringColor(::taihe::map_view<::taihe::string, ::map_test::Color> m)
+::taihe::expected<void, ::taihe::error> setStringColor(::taihe::map_view<::taihe::string, ::map_test::Color> m)
 {
     for (auto const &[key, val] : m) {
         std::cout << "C++ MapStringColor: key: " << key << " value: " << val << std::endl;
     }
-    return;
+    return {};
 }
 
-::taihe::map<::taihe::string, ::map_test::Color> getStringColor()
+::taihe::expected<::taihe::map<::taihe::string, ::map_test::Color>, ::taihe::error> getStringColor()
 {
     ::taihe::map<::taihe::string, ::map_test::Color> result;
     result.emplace("key1", map_test::Color::key_t::RED);
@@ -58,7 +59,7 @@ void setStringColor(::taihe::map_view<::taihe::string, ::map_test::Color> m)
     return result;
 }
 
-::taihe::map<::map_test::Color, ::taihe::string> changeColorString(
+::taihe::expected<::taihe::map<::map_test::Color, ::taihe::string>, ::taihe::error> changeColorString(
     ::taihe::map_view<::map_test::Color, ::taihe::string> a)
 {
     ::taihe::map<::map_test::Color, ::taihe::string> result;
@@ -68,15 +69,16 @@ void setStringColor(::taihe::map_view<::taihe::string, ::map_test::Color> m)
     return result;
 }
 
-void setStringData(::taihe::map_view<::taihe::string, ::map_test::Data> m)
+::taihe::expected<void, ::taihe::error> setStringData(::taihe::map_view<::taihe::string, ::map_test::Data> m)
 {
     for (auto const &[key, val] : m) {
         std::cout << "C++ MapStringData: key: " << key << " value: ";
         std::cout << val.a << " " << val.b << " " << val.c << std::endl;
     }
+    return {};
 }
 
-::taihe::map<::taihe::string, ::map_test::Data> getStringData()
+::taihe::expected<::taihe::map<::taihe::string, ::map_test::Data>, ::taihe::error> getStringData()
 {
     ::taihe::map<::taihe::string, ::map_test::Data> result;
     result.emplace("key1", ::map_test::Data {"a1", "b1", 1});
@@ -99,27 +101,30 @@ public:
         std::cout << "del shape " << this << std::endl;
     }
 
-    ::taihe::string getId()
+    ::taihe::expected<::taihe::string, ::taihe::error> getId()
     {
         return id;
     }
 
-    void setId(::taihe::string_view s)
+    ::taihe::expected<void, ::taihe::error> setId(::taihe::string_view s)
     {
         id = s;
-        return;
+        return {};
     }
 };
 
-void setStringIBase(::taihe::map_view<::taihe::string, ::map_test::IBase> m)
+::taihe::expected<void, ::taihe::error> setStringIBase(::taihe::map_view<::taihe::string, ::map_test::IBase> m)
 {
     for (auto const &[key, val] : m) {
-        std::cout << "C++ MapStringIBase: key: " << key << " value: " << val->getId() << std::endl;
+        ::taihe::expected<::taihe::string, ::taihe::error> res = val->getId();
+        if (res.has_value()) {
+            std::cout << "C++ MapStringIBase: key: " << key << " value: " << res.value() << std::endl;
+        }
     }
-    return;
+    return {};
 }
 
-::taihe::map<::taihe::string, ::map_test::IBase> getStringIBase()
+::taihe::expected<::taihe::map<::taihe::string, ::map_test::IBase>, ::taihe::error> getStringIBase()
 {
     auto basea = ::taihe::make_holder<Base, ::map_test::IBase>("basea");
     auto baseb = ::taihe::make_holder<Base, ::map_test::IBase>("baseb");

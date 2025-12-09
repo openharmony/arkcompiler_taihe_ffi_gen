@@ -21,14 +21,15 @@
 
 namespace {
 
-int32_t Funtest(::my_module_a::ns1::ns2::ns3::ns4::ns5::MyStruct const &s)
+::taihe::expected<int32_t, ::taihe::error> Funtest(::my_module_a::ns1::ns2::ns3::ns4::ns5::MyStruct const &s)
 {
     return s.a + s.b;
 }
 
-void foo()
+::taihe::expected<void, ::taihe::error> foo()
 {
     std::cout << "namespace: my_module_a.ns1.ns2.ns3.ns4.ns5, func: noo" << std::endl;
+    return {};
 }
 }  // namespace
 

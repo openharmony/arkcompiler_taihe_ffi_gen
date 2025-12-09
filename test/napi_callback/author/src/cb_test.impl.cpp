@@ -20,36 +20,51 @@
 #include "cb_test.proj.hpp"
 
 namespace {
-void test_cb_v(::taihe::callback_view<void()> f)
+::taihe::expected<void, ::taihe::error> test_cb_v(::taihe::callback_view<void()> f)
 {
     std::cout << "CPP impl test_cb_v " << std::endl;
     f();
+    return {};
 }
 
-void test_cb_i(::taihe::callback_view<void(int32_t)> f)
+::taihe::expected<void, ::taihe::error> test_cb_i(::taihe::callback_view<void(int32_t)> f)
 {
     std::cout << "CPP impl test_cb_i " << std::endl;
     f(1);
+    return {};
 }
 
-void test_cb_s(::taihe::callback_view<void(::taihe::string_view, bool)> f)
+::taihe::expected<void, ::taihe::error> test_cb_s(::taihe::callback_view<void(::taihe::string_view, bool)> f)
 {
     std::cout << "CPP impl test_cb_s " << std::endl;
     f("hello", true);
+    return {};
 }
 
-::taihe::string test_cb_rs(::taihe::callback_view<::taihe::string(::taihe::string_view)> f)
+::taihe::expected<::taihe::string, ::taihe::error> test_cb_rs(
+    ::taihe::callback_view<::taihe::string(::taihe::string_view)> f)
 {
-    ::taihe::string out = f("hello");
-    std::cout << "CPP impl test_cb_rs: " << out << std::endl;
-    return out;
+    ::taihe::expected<::taihe::string, ::taihe::error> res_expected = f("hello");
+    if (res_expected.has_value()) {
+        ::taihe::string out = res_expected.value();
+        std::cout << "CPP impl test_cb_rs: " << out << std::endl;
+        return out;
+    } else {
+        return ::taihe::unexpected<::taihe::error>(res_expected.error());
+    }
 }
 
-void test_cb_struct(::taihe::callback_view<::cb_test::Data(::cb_test::Data const &)> f)
+::taihe::expected<void, ::taihe::error> test_cb_struct(
+    ::taihe::callback_view<::cb_test::Data(::cb_test::Data const &)> f)
 {
-    ::cb_test::Data result = f(::cb_test::Data {"a", "b", 1});
-    std::cout << "CPP impl test_cb_struct " << result.a << " " << result.b << " " << result.c << std::endl;
-    return;
+    ::taihe::expected<::cb_test::Data, ::taihe::error> res_expected = f(::cb_test::Data {"a", "b", 1});
+    if (res_expected.has_value()) {
+        ::cb_test::Data result = res_expected.value();
+        std::cout << "CPP impl test_cb_struct " << result.a << " " << result.b << " " << result.c << std::endl;
+        return {};
+    } else {
+        return ::taihe::unexpected<::taihe::error>(res_expected.error());
+    }
 }
 
 class CallbackAImpl {
@@ -58,14 +73,15 @@ public:
     {
     }
 
-    ::taihe::string operator()(::taihe::string_view a)
+    ::taihe::expected<::taihe::string, ::taihe::error> operator()(::taihe::string_view a)
     {
         std::cout << a << std::endl;
         return "CallbackReverse";
     }
 };
 
-::taihe::callback<::taihe::string(::taihe::string_view a)> test_x(::taihe::callback_view<void()> f)
+::taihe::expected<::taihe::callback<::taihe::string(::taihe::string_view a)>, ::taihe::error> test_x(
+    ::taihe::callback_view<void()> f)
 {
     f();
     return ::taihe::make_holder<CallbackAImpl, ::taihe::callback<::taihe::string(::taihe::string_view a)>>();
