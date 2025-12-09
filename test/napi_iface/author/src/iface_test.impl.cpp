@@ -36,15 +36,15 @@ public:
         std::cout << "del base " << this << std::endl;
     }
 
-    ::taihe::string getId()
+    ::taihe::expected<::taihe::string, ::taihe::error> getId()
     {
         return id;
     }
 
-    void setId(::taihe::string_view s)
+    ::taihe::expected<void, ::taihe::error> setId(::taihe::string_view s)
     {
         id = s;
-        return;
+        return {};
     }
 };
 
@@ -65,18 +65,18 @@ public:
         std::cout << "del shape " << this << std::endl;
     }
 
-    ::taihe::string getId()
+    ::taihe::expected<::taihe::string, ::taihe::error> getId()
     {
         return id;
     }
 
-    void setId(::taihe::string_view s)
+    ::taihe::expected<void, ::taihe::error> setId(::taihe::string_view s)
     {
         id = s;
-        return;
+        return {};
     }
 
-    float calculateArea()
+    ::taihe::expected<float, ::taihe::error> calculateArea()
     {
         return a * b;
     }
@@ -96,7 +96,7 @@ public:
         std::cout << "del ctest " << this << std::endl;
     }
 
-    float add(int32_t a, int32_t b)
+    ::taihe::expected<float, ::taihe::error> add(int32_t a, int32_t b)
     {
         return a + b + this->x;
     }
@@ -117,18 +117,18 @@ public:
         std::cout << "del Color " << this << std::endl;
     }
 
-    ::taihe::string getId()
+    ::taihe::expected<::taihe::string, ::taihe::error> getId()
     {
         return id;
     }
 
-    void setId(::taihe::string_view s)
+    ::taihe::expected<void, ::taihe::error> setId(::taihe::string_view s)
     {
         id = s;
-        return;
+        return {};
     }
 
-    int32_t calculate(int32_t a, int32_t b)
+    ::taihe::expected<int32_t, ::taihe::error> calculate(int32_t a, int32_t b)
     {
         return a * b;
     }
@@ -141,74 +141,93 @@ protected:
     float b = 2;
 
 public:
-    void call()
+    ::taihe::expected<void, ::taihe::error> call()
     {
         std::cout << "derived call!" << std::endl;
+        return {};
     }
 
-    double calculateArea()
+    ::taihe::expected<double, ::taihe::error> calculateArea()
     {
         return a * b;
     }
 
-    ::taihe::string getId()
+    ::taihe::expected<::taihe::string, ::taihe::error> getId()
     {
         return id;
     }
 
-    void setId(::taihe::string_view s)
+    ::taihe::expected<void, ::taihe::error> setId(::taihe::string_view s)
     {
         this->id = s;
-        return;
+        return {};
     }
 };
 
-::iface_test::IBase makeIBase(::taihe::string_view id)
+::taihe::expected<::iface_test::IBase, ::taihe::error> makeIBase(::taihe::string_view id)
 {
     return ::taihe::make_holder<Base, ::iface_test::IBase>(id);
 }
 
-void copyIBase(::iface_test::weak::IBase a, ::iface_test::weak::IBase b)
+::taihe::expected<void, ::taihe::error> copyIBase(::iface_test::weak::IBase a, ::iface_test::weak::IBase b)
 {
-    a->setId(b->getId());
-    return;
+    ::taihe::expected<::taihe::string, ::taihe::error> id = b->getId();
+    if (id.has_value()) {
+        auto x = a->setId(id.value());
+        std::cout << x.has_value() << std::endl;
+        return {};
+    } else {
+        std::cout << "!!!!!!!!!! Error in getting ID " << id.error().message().c_str() << id.error().code()
+                  << std::endl;
+        return ::taihe::expected<void, ::taihe::error>(::taihe::unexpect, "Error in getting ID");
+    }
 }
 
-::iface_test::IShape makeIShape(::taihe::string_view id, double a, double b)
+::taihe::expected<::iface_test::IShape, ::taihe::error> makeIShape(::taihe::string_view id, double a, double b)
 {
     return ::taihe::make_holder<Shape, ::iface_test::IShape>(id, a, b);
 }
 
-::iface_test::CTest createCTest(int32_t id)
+::taihe::expected<::iface_test::CTest, ::taihe::error> createCTest(int32_t id)
 {
     return taihe::make_holder<CTestImpl, ::iface_test::CTest>(id);
 }
 
-::iface_test::CTest changeCTest(::iface_test::weak::CTest a)
+::taihe::expected<::iface_test::CTest, ::taihe::error> changeCTest(::iface_test::weak::CTest a)
 {
-    int32_t x = a->add(3, 4);
-    return taihe::make_holder<CTestImpl, ::iface_test::CTest>(x);
+    ::taihe::expected<float, ::taihe::error> x = a->add(3, 4);
+    if (x.has_value()) {
+        return ::taihe::make_holder<CTestImpl, ::iface_test::CTest>(x.value());
+    } else {
+        return ::taihe::expected<::iface_test::CTest, ::taihe::error>(::taihe::unexpect, "Error in add");
+    }
 }
 
-int32_t multiply(int32_t a, int32_t b)
+::taihe::expected<int32_t, ::taihe::error> multiply(int32_t a, int32_t b)
 {
     return a * b;
 }
 
-::iface_test::IColor makeIColor(::taihe::string_view id)
+::taihe::expected<::iface_test::IColor, ::taihe::error> makeIColor(::taihe::string_view id)
 {
     // The parameters in the make_holder function should be of the same type
     // as the parameters in the constructor of the actual implementation class.
     return taihe::make_holder<Color, ::iface_test::IColor>(id);
 }
 
-void copyIColor(::iface_test::weak::IColor a, ::iface_test::weak::IColor b)
+::taihe::expected<void, ::taihe::error> copyIColor(::iface_test::weak::IColor a, ::iface_test::weak::IColor b)
 {
-    a->setId(b->getId());
-    return;
+    ::taihe::expected<::taihe::string, ::taihe::error> id = b->getId();
+    if (id.has_value()) {
+        a->setId(id.value());
+        return {};
+    } else {
+        std::cout << "Error in getting ID " << id.error().message().c_str() << std::endl;
+        return ::taihe::expected<void, ::taihe::error>(::taihe::unexpect, "Error in getting ID");
+    }
 }
 
-::iface_test::IDerived createIDerived()
+::taihe::expected<::iface_test::IDerived, ::taihe::error> createIDerived()
 {
     // The parameters in the make_holder function should be of the same type
     // as the parameters in the constructor of the actual implementation class.

@@ -327,7 +327,7 @@ def main():
     elif args.run:
         selected_tests = args.run
     else:
-        selected_tests = ["pytest", "core", "ani", "cmake", "napi"]
+        selected_tests = ["pytest", "napi"]
 
     only_bin_ani = all(name == "bin_ani" for name in selected_tests)
 

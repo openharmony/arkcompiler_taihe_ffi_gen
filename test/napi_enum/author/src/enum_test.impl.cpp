@@ -27,33 +27,33 @@ static constexpr std::size_t NUMTYPEI32_COUNT = 3;
 static constexpr std::size_t NUMTYPEI64_COUNT = 3;
 static constexpr std::size_t BOOL_COUNT = 3;
 
-::enum_test::Color nextEnum(::enum_test::Color color)
+::taihe::expected<::enum_test::Color, ::taihe::error> nextEnum(::enum_test::Color color)
 {
     return (::enum_test::Color::key_t)(((int)color.get_key() + 1) % COLOR_COUNT);
 }
 
-taihe::string getValueOfEnum(::enum_test::Color color)
+::taihe::expected<taihe::string, ::taihe::error> getValueOfEnum(::enum_test::Color color)
 {
     return color.get_value();
 }
 
-::enum_test::Color fromValueToEnum(::taihe::string_view name)
+::taihe::expected<::enum_test::Color, ::taihe::error> fromValueToEnum(::taihe::string_view name)
 {
     auto color = ::enum_test::Color::from_value(name);
     return color;
 }
 
-::enum_test::Weekday nextEnumWeekday(::enum_test::Weekday day)
+::taihe::expected<::enum_test::Weekday, ::taihe::error> nextEnumWeekday(::enum_test::Weekday day)
 {
     return (::enum_test::Weekday::key_t)(((int)day.get_key() + 1) % WEEKDAY_COUNT);
 }
 
-int32_t getValueOfEnumWeekday(::enum_test::Weekday day)
+::taihe::expected<int32_t, ::taihe::error> getValueOfEnumWeekday(::enum_test::Weekday day)
 {
     return day.get_value();
 }
 
-::enum_test::Weekday fromValueToEnumWeekday(int day)
+::taihe::expected<::enum_test::Weekday, ::taihe::error> fromValueToEnumWeekday(int day)
 {
     auto weekday = ::enum_test::Weekday::from_value(day);
     return weekday;
