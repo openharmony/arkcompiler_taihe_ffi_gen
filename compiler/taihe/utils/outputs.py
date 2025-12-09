@@ -4,10 +4,9 @@ import sys
 from collections import defaultdict
 from collections.abc import Generator
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum, auto
 from io import StringIO
-from os import path, sep
 from pathlib import Path
 from types import FrameType, TracebackType
 from typing import TYPE_CHECKING, TextIO
@@ -104,11 +103,9 @@ class BaseWriter:
         Args:
             *lines: One or more lines to write
         """
-        self._write_debug(skip=2)
+        self._write_debug(skip=1)
         for line in lines:
-            self.writeln(
-                line,
-            )
+            self.writeln(line)
 
     def write_block(self, text_block: str):
         """Writes a potentially multi-line text block.
@@ -152,11 +149,9 @@ class BaseWriter:
         Returns:
             A context manager that yields this BaseWriter
         """
-        self._write_debug(skip=3)
+        self._write_debug(skip=2)
         if prologue is not None:
-            self.writeln(
-                prologue,
-            )
+            self.writeln(prologue)
         previous_indent = self._current_indent
         self._current_indent += self._default_indent if indent is None else indent
         try:
@@ -164,14 +159,12 @@ class BaseWriter:
         finally:
             self._current_indent = previous_indent
             if epilogue is not None:
-                self.writeln(
-                    epilogue,
-                )
+                self.writeln(epilogue)
 
     def _write_debug(self, *, skip: int):
         if self._debug_level == DebugLevel.NONE:
             return
-        self.write_comment(_format_frame(sys._getframe(skip)))  # type: ignore
+        self.write_comment(_format_frame(sys._getframe(skip + 1)))  # type: ignore
 
 
 class FileWriter(BaseWriter):
@@ -221,13 +214,8 @@ class FileWriter(BaseWriter):
 
 
 def _format_frame(f: FrameType) -> str:
-    # For /a/b/c/d/e.py, only keep FILENAME_KEEP directories, resulting "c/d/e.py"
-    FILENAME_KEEP = 3
-
-    file_name = f.f_code.co_filename
-    parts = file_name.split(sep)
-    if len(parts) > FILENAME_KEEP:
-        file_name = path.join(*parts[-FILENAME_KEEP:])
+    taihe_dir = Path(__file__).parent.parent
+    file_name = Path(f.f_code.co_filename).relative_to(taihe_dir).as_posix()
 
     base_format = f"CODEGEN-DEBUG: {f.f_code.co_name} in {file_name}:{f.f_lineno}"
 
@@ -242,8 +230,8 @@ class OutputConfig:
     def construct(self, ci: "CompilerInstance") -> "OutputManager":
         """Construct an OutputManager based on this configuration."""
         return OutputManager(
-            dst_dir=self.dst_dir,
-            debug_level=self.debug_level,
+            self.dst_dir,
+            self.debug_level,
         )
 
 
@@ -259,8 +247,8 @@ class OutputManager:
 
     def __init__(
         self,
-        dst_dir: Path | None = None,
-        debug_level: DebugLevel = DebugLevel.NONE,
+        dst_dir: Path | None,
+        debug_level: DebugLevel,
     ):
         self.files: dict[str, FileDescriptor] = {}
         self.files_by_kind: dict[FileKind, list[FileDescriptor]] = defaultdict(list)
@@ -324,25 +312,15 @@ class CMakeWriter(FileWriter):
         self.headers: dict[str, None] = {}
 
 
+@dataclass
 class CMakeOutputConfig(OutputConfig):
-    runtime_include_dir: Path
-    runtime_src_dir: Path
-
-    def __init__(
-        self,
-        runtime_include_dir: Path,
-        runtime_src_dir: Path,
-        dst_dir: Path | None = None,
-        debug_level: DebugLevel = DebugLevel.NONE,
-    ):
-        super().__init__(dst_dir=dst_dir, debug_level=debug_level)
-        self.runtime_include_dir = runtime_include_dir
-        self.runtime_src_dir = runtime_src_dir
+    runtime_include_dir: Path = field(kw_only=True)
+    runtime_src_dir: Path = field(kw_only=True)
 
     def construct(self, ci: "CompilerInstance") -> "CMakeOutputManager":
         return CMakeOutputManager(
-            dst_dir=self.dst_dir,
-            debug_level=self.debug_level,
+            self.dst_dir,
+            self.debug_level,
             runtime_include_dir=self.runtime_include_dir,
             runtime_src_dir=self.runtime_src_dir,
         )
@@ -356,13 +334,13 @@ class CMakeOutputManager(OutputManager):
 
     def __init__(
         self,
-        dst_dir: Path | None = None,
-        debug_level: DebugLevel = DebugLevel.NONE,
+        dst_dir: Path | None,
+        debug_level: DebugLevel,
         *,
         runtime_include_dir: Path,
         runtime_src_dir: Path,
     ):
-        super().__init__(dst_dir=dst_dir, debug_level=debug_level)
+        super().__init__(dst_dir, debug_level)
         self.runtime_include_dir = runtime_include_dir
         self.runtime_c_src_files = [
             p for p in runtime_src_dir.rglob("*.c") if p.is_file()
