@@ -1087,13 +1087,13 @@ class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
     ):
         if self.ani_type.base == ANI_REF:
             ani_item = f"{ani_fixedarray_after}_ani_item"
-            ani_none = f"{ani_fixedarray_after}_ani_none"
+            ani_init = f"{ani_fixedarray_after}_ani_init"
             iterator = f"{ani_fixedarray_after}_itorator"
             target.writelns(
                 f"ani_fixedarray_ref {ani_fixedarray_after} = {{}};",
-                f"ani_ref {ani_none} = {{}};",
-                f"{env}->GetUndefined(&{ani_none});",
-                f'{env}->FixedArray_New_Ref(TH_ANI_FIND_CLASS({env}, "{self.type_desc}"), {cpp_size}, {ani_none}, &{ani_fixedarray_after});',
+                f"ani_ref {ani_init} = {{}};",
+                f"{env}->GetUndefined(&{ani_init});",
+                f'{env}->FixedArray_New_Ref(TH_ANI_FIND_CLASS({env}, "{self.type_desc}"), {cpp_size}, {ani_init}, &{ani_fixedarray_after});',
             )
             with target.indented(
                 f"for (size_t {iterator} = 0; {iterator} < {cpp_size}; {iterator}++) {{",
@@ -1840,14 +1840,14 @@ class ArrayTypeAniInfo(TypeAniInfo):
         item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
         cpp_size = f"{ani_after}_ani_size"
         ani_item = f"{ani_after}_ani_item"
-        ani_none = f"{ani_after}_ani_none"
+        ani_init = f"{ani_after}_ani_init"
         iterator = f"{ani_after}_iterator"
         target.writelns(
             f"size_t {cpp_size} = {cpp_value}.size();",
             f"ani_array {ani_after} = {{}};",
-            f"ani_ref {ani_none} = {{}};",
-            f"{env}->GetUndefined(&{ani_none});",
-            f"{env}->Array_New({cpp_size}, {ani_none}, &{ani_after});",
+            f"ani_ref {ani_init} = {{}};",
+            f"{env}->GetUndefined(&{ani_init});",
+            f"{env}->Array_New({cpp_size}, {ani_init}, &{ani_after});",
         )
         with target.indented(
             f"for (size_t {iterator} = 0; {iterator} < {cpp_size}; {iterator}++) {{",
@@ -2136,7 +2136,7 @@ class RecordTypeAniInfo(TypeAniInfo):
             key_ty_ani_info.from_ani_boxed(target, env, ani_key, cpp_key)
             val_ty_ani_info.from_ani_boxed(target, env, ani_val, cpp_val)
             target.writelns(
-                f"{cpp_after}.emplace({cpp_key}, {cpp_val});",
+                f"{cpp_after}.emplace(std::move({cpp_key}), std::move({cpp_val}));",
             )
 
     @override
@@ -2165,6 +2165,271 @@ class RecordTypeAniInfo(TypeAniInfo):
             val_ty_ani_info.into_ani_boxed(target, env, cpp_val, ani_val)
             target.writelns(
                 f'{env}->Object_CallMethod_Void({ani_after}, TH_ANI_FIND_CLASS_METHOD({env}, "std.core.Record", "$_set", "X{{C{{std.core.BaseEnum}}C{{std.core.Numeric}}C{{std.core.String}}}}Y:"), {ani_key}, {ani_val});',
+            )
+
+
+class MapTypeAniInfo(TypeAniInfo):
+    def __init__(self, am: AnalysisManager, t: MapType) -> None:
+        super().__init__(am, t)
+        self.am = am
+        self.t = t
+        self.ani_type = ANI_OBJECT
+        self.sig_type = AniRuntimeClassType("std.core.Map")
+
+    @override
+    def sts_type_in(self, target: StsWriter) -> str:
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        val_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
+        key_sts_type = key_ty_ani_info.sts_type_in(target)
+        val_sts_type = val_ty_ani_info.sts_type_in(target)
+        return f"Map<{key_sts_type}, {val_sts_type}>"
+
+    @override
+    def from_ani(
+        self,
+        target: CSourceWriter,
+        env: str,
+        ani_value: str,
+        cpp_after: str,
+    ):
+        ani_iter = f"{cpp_after}_ani_iter"
+        ani_item = f"{cpp_after}_ani_item"
+        ani_next = f"{cpp_after}_ani_next"
+        ani_done = f"{cpp_after}_ani_done"
+        ani_key = f"{cpp_after}_ani_key"
+        ani_val = f"{cpp_after}_ani_val"
+        cpp_key = f"{cpp_after}_cpp_key"
+        cpp_val = f"{cpp_after}_cpp_val"
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        val_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
+        target.writelns(
+            f"ani_object {ani_iter} = {{}};",
+            f'{env}->Object_CallMethod_Ref({ani_value}, TH_ANI_FIND_CLASS_METHOD({env}, "std.core.Map", "entries", ":C{{std.core.IterableIterator}}"), reinterpret_cast<ani_ref*>(&{ani_iter}));',
+            f"{self.cpp_info.as_owner} {cpp_after};",
+        )
+        with target.indented(
+            f"while (true) {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"ani_object {ani_next} = {{}};",
+                f"ani_boolean {ani_done} = {{}};",
+                f'{env}->Object_CallMethod_Ref({ani_iter}, TH_ANI_FIND_CLASS_METHOD({env}, "std.core.Iterator", "next", ":C{{std.core.IteratorResult}}"), reinterpret_cast<ani_ref*>(&{ani_next}));',
+                f'{env}->Object_GetField_Boolean({ani_next}, TH_ANI_FIND_CLASS_FIELD({env}, "std.core.IteratorResult", "done"), &{ani_done});',
+            )
+            with target.indented(
+                f"if ({ani_done}) {{;",
+                f"}};",
+            ):
+                target.writelns(
+                    f"break;",
+                )
+            target.writelns(
+                f"ani_tuple_value {ani_item} = {{}};",
+                f'{env}->Object_GetField_Ref({ani_next},  TH_ANI_FIND_CLASS_FIELD({env}, "std.core.IteratorResult", "value"), reinterpret_cast<ani_ref*>(&{ani_item}));',
+                f"ani_ref {ani_key} = {{}};",
+                f'{env}->Object_GetField_Ref({ani_item}, TH_ANI_FIND_CLASS_FIELD({env}, "std.core.Tuple2", "$0"), &{ani_key});',
+                f"ani_ref {ani_val} = {{}};",
+                f'{env}->Object_GetField_Ref({ani_item}, TH_ANI_FIND_CLASS_FIELD({env}, "std.core.Tuple2", "$1"), &{ani_val});',
+            )
+            key_ty_ani_info.from_ani_boxed(target, env, ani_key, cpp_key)
+            val_ty_ani_info.from_ani_boxed(target, env, ani_val, cpp_val)
+            target.writelns(
+                f"{cpp_after}.emplace(std::move({cpp_key}), std::move({cpp_val}));",
+            )
+
+    @override
+    def into_ani(
+        self,
+        target: CSourceWriter,
+        env: str,
+        cpp_value: str,
+        ani_after: str,
+    ):
+        key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        val_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
+        cpp_key = f"{ani_after}_cpp_key"
+        cpp_val = f"{ani_after}_cpp_val"
+        ani_key = f"{ani_after}_ani_key"
+        ani_val = f"{ani_after}_ani_val"
+        target.writelns(
+            f"ani_object {ani_after} = {{}};",
+            f'{env}->Object_New(TH_ANI_FIND_CLASS({env}, "std.core.Map"), TH_ANI_FIND_CLASS_METHOD({env}, "std.core.Map", "<ctor>", ":"), &{ani_after});',
+        )
+        with target.indented(
+            f"for (const auto& [{cpp_key}, {cpp_val}] : {cpp_value}) {{",
+            f"}}",
+        ):
+            key_ty_ani_info.into_ani_boxed(target, env, cpp_key, ani_key)
+            val_ty_ani_info.into_ani_boxed(target, env, cpp_val, ani_val)
+            target.writelns(
+                f'{env}->Object_CallMethod_Ref({ani_after}, TH_ANI_FIND_CLASS_METHOD({env}, "std.core.Map", "set", "YY:C{{std.core.Map}}"), reinterpret_cast<ani_ref*>(&{ani_after}), {ani_key}, {ani_val});',
+            )
+
+
+class SetTypeAniInfo(TypeAniInfo):
+    def __init__(self, am: AnalysisManager, t: SetType) -> None:
+        super().__init__(am, t)
+        self.am = am
+        self.t = t
+        self.ani_type = ANI_OBJECT
+        self.sig_type = AniRuntimeClassType("std.core.Set")
+
+    @override
+    def sts_type_in(self, target: StsWriter) -> str:
+        item_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        item_sts_type = item_ty_ani_info.sts_type_in(target)
+        return f"Set<{item_sts_type}>"
+
+    @override
+    def from_ani(
+        self,
+        target: CSourceWriter,
+        env: str,
+        ani_value: str,
+        cpp_after: str,
+    ):
+        ani_iter = f"{cpp_after}_ani_iter"
+        ani_item = f"{cpp_after}_ani_item"
+        ani_next = f"{cpp_after}_ani_next"
+        ani_done = f"{cpp_after}_ani_done"
+        ani_val = f"{cpp_after}_ani_val"
+        cpp_val = f"{cpp_after}_cpp_val"
+        item_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        target.writelns(
+            f"ani_object {ani_iter} = {{}};",
+            f'{env}->Object_CallMethod_Ref({ani_value}, TH_ANI_FIND_CLASS_METHOD({env}, "std.core.Set", "values", ":C{{std.core.IterableIterator}}"), reinterpret_cast<ani_ref*>(&{ani_iter}));',
+            f"{self.cpp_info.as_owner} {cpp_after};",
+        )
+        with target.indented(
+            f"while (true) {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"ani_object {ani_next} = {{}};",
+                f"ani_boolean {ani_done} = {{}};",
+                f'{env}->Object_CallMethod_Ref({ani_iter}, TH_ANI_FIND_CLASS_METHOD({env}, "std.core.Iterator", "next", ":C{{std.core.IteratorResult}}"), reinterpret_cast<ani_ref*>(&{ani_next}));',
+                f'{env}->Object_GetField_Boolean({ani_next}, TH_ANI_FIND_CLASS_FIELD({env}, "std.core.IteratorResult", "done"), &{ani_done});',
+            )
+            with target.indented(
+                f"if ({ani_done}) {{;",
+                f"}};",
+            ):
+                target.writelns(
+                    f"break;",
+                )
+            target.writelns(
+                f"ani_ref {ani_val} = {{}};",
+                f'{env}->Object_GetField_Ref({ani_next},  TH_ANI_FIND_CLASS_FIELD({env}, "std.core.IteratorResult", "value"), &{ani_val});',
+            )
+            item_ty_ani_info.from_ani_boxed(target, env, ani_val, cpp_val)
+            target.writelns(
+                f"{cpp_after}.emplace(std::move({cpp_val}));",
+            )
+
+    @override
+    def into_ani(
+        self,
+        target: CSourceWriter,
+        env: str,
+        cpp_value: str,
+        ani_after: str,
+    ):
+        item_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
+        cpp_val = f"{ani_after}_cpp_val"
+        ani_val = f"{ani_after}_ani_val"
+        target.writelns(
+            f"ani_object {ani_after} = {{}};",
+            f'{env}->Object_New(TH_ANI_FIND_CLASS({env}, "std.core.Set"), TH_ANI_FIND_CLASS_METHOD({env}, "std.core.Set", "<ctor>", ":"), &{ani_after});',
+        )
+        with target.indented(
+            f"for (const auto& {cpp_val} : {cpp_value}) {{",
+            f"}}",
+        ):
+            item_ty_ani_info.into_ani_boxed(target, env, cpp_val, ani_val)
+            target.writelns(
+                f'{env}->Object_CallMethod_Ref({ani_after}, TH_ANI_FIND_CLASS_METHOD({env}, "std.core.Set", "add", "Y:C{{std.core.Set}}"), reinterpret_cast<ani_ref*>(&{ani_after}), {ani_val});',
+            )
+
+
+class VectorTypeAniInfo(TypeAniInfo):
+    def __init__(self, am: AnalysisManager, t: VectorType) -> None:
+        super().__init__(am, t)
+        self.am = am
+        self.t = t
+        self.ani_type = ANI_ARRAY
+        self.sig_type = AniRuntimeClassType("std.core.Array")
+
+    @override
+    def sts_type_in(self, target: StsWriter) -> str:
+        item_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
+        item_sts_type = item_ty_ani_info.sts_type_in(target)
+        return f"Array<{item_sts_type}>"
+
+    @override
+    def from_ani(
+        self,
+        target: CSourceWriter,
+        env: str,
+        ani_value: str,
+        cpp_after: str,
+    ):
+        ani_size = f"{cpp_after}_ani_size"
+        ani_item = f"{cpp_after}_ani_item"
+        cpp_item = f"{cpp_after}_cpp_item"
+        iterator = f"{cpp_after}_iterator"
+        item_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
+        target.writelns(
+            f"ani_size {ani_size} = {{}};",
+            f"{env}->Array_GetLength({ani_value}, &{ani_size});",
+            f"{self.cpp_info.as_owner} {cpp_after};",
+            f"{cpp_after}.reserve({ani_size});",
+        )
+        with target.indented(
+            f"for (size_t {iterator} = 0; {iterator} < {ani_size}; {iterator}++) {{",
+            f"}}",
+        ):
+            target.writelns(
+                f"ani_ref {ani_item} = {{}};",
+                f"{env}->Array_Get({ani_value}, {iterator}, &{ani_item});",
+            )
+            item_ty_ani_info.from_ani_boxed(target, env, ani_item, cpp_item)
+            target.writelns(
+                f"{cpp_after}.push_back(std::move({cpp_item}));",
+            )
+
+    @override
+    def into_ani(
+        self,
+        target: CSourceWriter,
+        env: str,
+        cpp_value: str,
+        ani_after: str,
+    ):
+        item_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
+        cpp_size = f"{ani_after}_ani_size"
+        ani_item = f"{ani_after}_ani_item"
+        ani_init = f"{ani_after}_ani_init"
+        iterator = f"{ani_after}_iterator"
+        target.writelns(
+            f"size_t {cpp_size} = {cpp_value}.size();",
+            f"ani_array {ani_after} = {{}};",
+            f"ani_ref {ani_init} = {{}};",
+            f"{env}->GetUndefined(&{ani_init});",
+            f"{env}->Array_New({cpp_size}, {ani_init}, &{ani_after});",
+        )
+        with target.indented(
+            f"for (size_t {iterator} = 0; {iterator} < {cpp_size}; {iterator}++) {{",
+            f"}}",
+        ):
+            item_ty_ani_info.into_ani_boxed(
+                target,
+                env,
+                f"{cpp_value}[{iterator}]",
+                ani_item,
+            )
+            target.writelns(
+                f"{env}->Array_Set({ani_after}, {iterator}, {ani_item});",
             )
 
 
@@ -2452,15 +2717,15 @@ class TypeAniInfoDispatcher(NonVoidTypeVisitor[TypeAniInfo]):
     def visit_map_type(self, t: MapType) -> TypeAniInfo:
         if record_attr := RecordAttr.get(t.ref):
             return RecordTypeAniInfo(self.am, t, record_attr)
-        raise NotImplementedError("MapType is not supported in ANI yet.")
+        return MapTypeAniInfo(self.am, t)
 
     @override
     def visit_set_type(self, t: SetType) -> TypeAniInfo:
-        raise NotImplementedError("SetType is not supported in ANI yet.")
+        return SetTypeAniInfo(self.am, t)
 
     @override
     def visit_vector_type(self, t: VectorType) -> TypeAniInfo:
-        raise NotImplementedError("VectorType is not supported in ANI yet.")
+        return VectorTypeAniInfo(self.am, t)
 
     @override
     def visit_callback_type(self, t: CallbackType) -> TypeAniInfo:
