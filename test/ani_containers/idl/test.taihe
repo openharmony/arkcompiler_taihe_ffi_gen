@@ -1,0 +1,13 @@
+struct Pair {
+  key: String;
+  value: String;
+}
+
+function serializeMap(m: Map<String, String>): Array<Pair>;
+function deserializeMap(serialized: Array<Pair>): Map<String, String>;
+
+function serializeSet(s: Set<String>): Array<String>;
+function deserializeSet(serialized: Array<String>): Set<String>;
+
+function serializeVector(v: Vector<String>): Array<String>;
+function deserializeVector(serialized: Array<String>): Vector<String>;
