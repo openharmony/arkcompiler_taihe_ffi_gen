@@ -4,9 +4,9 @@
 
 ## 数据类型映射表
 
-Taihe 支持的基本数据类型包括数字、布尔值和[字符串](../backend-cpp/CppUsageGuide.md#61-字符串string)等，以及更复杂的数据结构，如 [Map](../backend-cpp/CppUsageGuide.md#65-映射map)、[Array](../backend-cpp/CppUsageGuide.md#62-数组array)、[Optional](../backend-cpp/CppUsageGuide.md#63-可选类型optional)、[callback](../backend-cpp/CppUsageGuide.md#67-函数闭包callback) 等，各种数据类型在 ArkTs 1.1、C++、Taihe 之间的具体的映射关系详见下表。
+Taihe 支持的基本数据类型包括数字、布尔值和[字符串](../backend-cpp/CppUsageGuide.md#61-字符串string)等，以及更复杂的数据结构，如 [Map](../backend-cpp/CppUsageGuide.md#65-映射map)、[Array](../backend-cpp/CppUsageGuide.md#62-数组array)、[Optional](../backend-cpp/CppUsageGuide.md#63-可选类型optional)、[callback](../backend-cpp/CppUsageGuide.md#67-函数闭包callback) 等，各种数据类型在 ArkTS-Dyn、C++、Taihe 之间的具体的映射关系详见下表。
 
-| ArkTs 1.1                | C++                                | Taihe                    |
+| ArkTS-Dyn                | C++                                | Taihe                    |
 | ------------------------ | ---------------------------------- | ------------------------ |
 | number                   | int8_t                             | i8                       |
 | number                   | int16_t                            | i16                      |
@@ -41,13 +41,13 @@ Taihe 支持的基本数据类型包括数字、布尔值和[字符串](../backe
 | null                     | ::taihe::unit                      | @null unit               |
 | undefined                | ::taihe::unit                      | @undefined unit          |
 
-表格展示了不同编程语言（ArkTs 1.1、C++ 和 Taihe）中数据类型的对应关系。其中使用的 T、K 和 V 代表任意类型，可以在类型系统中进行灵活的定义和组合。
+表格展示了不同编程语言（ArkTS-Dyn、C++ 和 Taihe）中数据类型的对应关系。其中使用的 T、K 和 V 代表任意类型，可以在类型系统中进行灵活的定义和组合。
 
-注意，ArkTs 1.1 的 Map 和 Record 在 Taihe 中本质上都是 Map，所以在 C++ 实现时可以参考 Taihe [Map](../backend-cpp/CppUsageGuide.md#65-映射map) 的用法， ArkTs 1.1 的 Array，bigint，arraybuffer 和 typedarray 在 Taihe 中本质上都是 Array，所以在 C++ 实现时可以参考 Taihe [Array](../backend-cpp/CppUsageGuide.md#62-数组array) 的用法。
+注意，ArkTS-Dyn 的 Map 和 Record 在 Taihe 中本质上都是 Map，所以在 C++ 实现时可以参考 Taihe [Map](../backend-cpp/CppUsageGuide.md#65-映射map) 的用法， ArkTS-Dyn 的 Array，bigint，arraybuffer 和 typedarray 在 Taihe 中本质上都是 Array，所以在 C++ 实现时可以参考 Taihe [Array](../backend-cpp/CppUsageGuide.md#62-数组array) 的用法。
 
 # 包
 
-在 Taihe 原生的语言能力中，只有“[包](../spec/IdlReference.md#包)”的概念，包名和 Taihe IDL 文件名一一对应。以 `foo.bar.baz.taihe` 为例，对应的 C++ 命名空间为 `::foo::bar::baz`，对应的声明文件为 `foo.bar.baz.d.ts`。
+在 Taihe 原生的语言能力中，只有“[包](../spec/IdlReference.md#包)”的概念，包名和 Taihe IDL 文件名一一对应。以 `foo.bar.baz.ohidl` 为例，对应的 C++ 命名空间为 `::foo::bar::baz`，对应的声明文件为 `foo.bar.baz.d.ts`。
 
 在 Taihe 中，使用 `use` 语法来导入外部声明，可以导入的声明类型包括[枚举](#枚举)，[标签联合](#标签联合)，[结构体](#结构体)，[接口](#接口)。Taihe 有两种导入方式：
 
@@ -67,7 +67,7 @@ Taihe 支持的基本数据类型包括数字、布尔值和[字符串](../backe
 
 ### Taihe 声明
 
-**`people.taihe`**
+**`people.ohidl`**
 
 ```rust
 struct student {
@@ -77,7 +77,7 @@ struct student {
 function make_student(): student;
 ```
 
-**`building.taihe`**
+**`building.ohidl`**
 
 ```rust
 from people use student;
@@ -90,23 +90,23 @@ function make_group(): group;
 
 ### C++ 实现
 
-**File: `people.taihe 的 C++ 实现`**
+**File: `people.ohidl 的 C++ 实现`**
 
 ```cpp
-student make_student() {
+::taihe::expected<student, ::taihe::error> make_student() {
   return student{"mike", 22};
 }
 ```
 
-**File: `building.taihe 的 C++ 实现`**
+**File: `building.ohidl 的 C++ 实现`**
 
 ```cpp
-group make_group() {
+::taihe::expected<group, ::taihe::error> make_group() {
   return group{student{"mary", 20}, 23};
 }
 ```
 
-### ArkTs 1.1 调用
+### ArkTS-Dyn 调用
 
 ```typescript
 import * as lib_people from "people";
@@ -131,7 +131,7 @@ console.log(p.age, p.name);
 
 命名空间注解的语法为 `@!namespace(<mudule_name>, <namespace_name>)`, 表示该文件下面的内容为 `<module_name>` 模块下，`<namespace_name>` 命名空间中的内容。该注解作用于 Taihe 文件。
 
-推荐使用 Taihe 文件的命名为 <module_name>.<namespace_name>.taihe。
+推荐使用 Taihe 文件的命名为 <module_name>.<namespace_name>.ohidl。
 
 特殊用法：
 
@@ -141,20 +141,20 @@ console.log(p.age, p.name);
 
 ### Taihe 声明
 
-**`my_module_a.taihe`**
+**`my_module_a.ohidl`**
 
 ```rust
 function baz(): void;
 ```
 
-**`my_module_a.ns1.taihe`**
+**`my_module_a.ns1.ohidl`**
 
 ```rust
 @!namespace("my_module_a", "ns1")
 function noo(): void;
 ```
 
-**`my_module_a.ns1.ns2.ns3.ns4.ns5.taihe`**
+**`my_module_a.ns1.ns2.ns3.ns4.ns5.ohidl`**
 
 ```rust
 @!namespace("my_module_a", "ns1.ns2.ns3.ns4.ns5")
@@ -179,11 +179,11 @@ export namespace ns1 {
 }
 ```
 
-可以看到 `my_module_a.taihe`，`my_module_a.ns1.taihe` 和 `my_module_a.ns1.ns2.ns3.ns4.ns5.taihe` 的相应内容都生成在 `my_module_a.d.ts` 里
+可以看到 `my_module_a.ohidl`，`my_module_a.ns1.ohidl` 和 `my_module_a.ns1.ns2.ns3.ns4.ns5.ohidl` 的相应内容都生成在 `my_module_a.d.ts` 里
 
-假如只需要一个 <module_name>.<namespace_name>.taihe 的文件，无需额外写一个空内容的 <module_name>.taihe
+假如只需要一个 <module_name>.<namespace_name>.ohidl 的文件，无需额外写一个空内容的 <module_name>.ohidl
 
-**`my_module_b.functiontest.taihe`**
+**`my_module_b.functiontest.ohidl`**
 
 ```rust
 @!namespace("my_module_b", "functiontest")
@@ -200,39 +200,43 @@ export namespace functiontest {
 
 ### C++ 实现
 
-**File: `my_module_a.taihe 的 C++ 实现`**
+**File: `my_module_a.ohidl 的 C++ 实现`**
 
 ```cpp
-void baz() {
+::taihe::expected<void, ::taihe::error> baz() {
   std::cout << "namespace: my_module_a, func: baz" << std::endl;
+  return {};
 }
 ```
 
-**File: `my_module_a.ns1.taihe 的 C++ 实现`**
+**File: `my_module_a.ns1.ohidl 的 C++ 实现`**
 
 ```cpp
-void noo() {
+::taihe::expected<void, ::taihe::error> noo() {
   std::cout << "namespace: my_module_a.ns1, func: noo" << std::endl;
+  return {};
 }
 ```
 
-**File: `my_module_a.ns1.ns2.ns3.ns4.ns5.taihe 的 C++ 实现`**
+**File: `my_module_a.ns1.ns2.ns3.ns4.ns5.ohidl 的 C++ 实现`**
 
 ```cpp
-void foo() {
+::taihe::expected<void, ::taihe::error> foo() {
   std::cout << "namespace: my_module_a.ns1.ns2.ns3.ns4.ns5, func: noo" << std::endl;
+  return {};
 }
 ```
 
-**File: `my_module_b.functiontest.taihe 的 C++ 实现`**
+**File: `my_module_b.functiontest.ohidl 的 C++ 实现`**
 
 ```cpp
-void bar() {
+::taihe::expected<void, ::taihe::error> bar() {
   std::cout << "namespace: my_module_b.functiontest, func: bar" << std::endl;
+  return {};
 }
 ```
 
-### ArkTs 1.1 调用
+### ArkTS-Dyn 调用
 
 ```typescript
 import * as lib_a from "my_module_a";
@@ -261,6 +265,8 @@ namespace: my_module_b.functiontest, func: bar
 
 ### Taihe 声明
 
+**`.ohidl`**
+
 ```rust
 function add(a: i32, b: i32): i32;
 ```
@@ -276,13 +282,13 @@ export function add(a: number, b: number): number;
 除了书写 Taihe 文件外，还需要[在 C++ 侧实现函数](../backend-cpp/CppUsageGuide.md#71-导出函数接口发布方)
 
 ```cpp
-int32_t add(int32_t a, int32_t b) {
+::taihe::expected<int32_t, ::taihe::error> add(int32_t a, int32_t b) {
   return a + b;
 }
 TH_EXPORT_CPP_API_add(add);
 ```
 
-### ArkTs 1.1 调用
+### ArkTS-Dyn 调用
 
 ```typescript
 let add_show = add(2, 3);
@@ -297,7 +303,7 @@ function add: 5
 
 ## 函数调用链
 
-以示例函数为例，当 ArkTs 1.1 侧调用函数 add 时，它会经历如下步骤：
+以示例函数为例，当 ArkTS-Dyn 侧调用函数 add 时，它会经历如下步骤：
 
 1. 进入生成代码中的注册函数，找到 `add` 对应的函数为 `package_name_add_NAPI0`。
 
@@ -313,14 +319,12 @@ function add: 5
    }
    ```
 
-````
+2. 进入 `.napi.cpp` 文件中 `package_name_add_NAPI0` 函数，它会先解析参数，将 ArkTS-Dyn 对象转换为 Taihe 对象，然后调用 C++ 实现函数，再将返回值由 Taihe 对象转换为 ArkTS-Dyn 对象。
 
-2. 进入 `.napi.cpp` 文件中 `package_name_add_NAPI0` 函数，它会先解析参数，将 ArkTs 1.1 对象转换为 Taihe 对象，然后调用 C++ 实现函数，再将返回值由 Taihe 对象转换为 ArkTs 1.1 对象。
+  **.napi.cpp**
 
- **.napi.cpp**
-
- ```cpp
-static napi_value package_name_add_NAPI0(napi_env env, [[maybe_unused]] napi_callback_info info) {
+  ```cpp
+  static napi_value package_name_add_NAPI0(napi_env env, [[maybe_unused]] napi_callback_info info) {
     // 参数解析
     size_t argc = 2;
     napi_value args[2] = {nullptr};
@@ -339,8 +343,8 @@ static napi_value package_name_add_NAPI0(napi_env env, [[maybe_unused]] napi_cal
     napi_create_int32(env, value, &result);
     // 向上层返回函数调用结果
     return result;
-}
-````
+  }
+  ```
 
 3. 接下来，`package_name_add_NAPI0` 函数会调用 `package_name::add` 函数，这个函数的调用会被自动转发到 C++ 实现文件中，通过 TH_EXPORT_CPP_API_add 这个宏所导出的具体实现。
 
@@ -348,13 +352,13 @@ static napi_value package_name_add_NAPI0(napi_env env, [[maybe_unused]] napi_cal
 
    ```cpp
    // C++ 实现
-   int32_t add(int32_t a, int32_t b) {
+   ::taihe::expected<int32_t, ::taihe::error> add(int32_t a, int32_t b) {
      return a + b;
    }
    TH_EXPORT_CPP_API_add(add);
    ```
 
-4. `package_name::add` 函数执行完毕后，将返回第 3 步所示的函数，将获取到的返回值转换为 ArkTs 1.1 类型，返回给 ArkTs 1.1 侧函数。
+4. `package_name::add` 函数执行完毕后，将返回第 3 步所示的函数，将获取到的返回值转换为 ArkTS-Dyn 类型，返回给 ArkTS-Dyn 侧函数。
 
 # 枚举
 
@@ -363,6 +367,8 @@ static napi_value package_name_add_NAPI0(napi_env env, [[maybe_unused]] napi_cal
 ## 使用示例
 
 ### Taihe 声明
+
+**`.ohidl`**
 
 ```rust
 enum Color: String {
@@ -397,12 +403,12 @@ Taihe 中 enum 类型的 C++ 使用方法可参考[枚举类](../backend-cpp/Cpp
 
 ```cpp
 static constexpr std::size_t COLOR_COUNT = 3;
-Color nextEnum(Color color) {
+::taihe::expected<Color, ::taihe::error> nextEnum(Color color) {
   return (Color::key_t)(((int)color.get_key() + 1) % COLOR_COUNT);
 }
 ```
 
-### ArkTs 1.1 调用
+### ArkTS-Dyn 调用
 
 ```typescript
 let color = Color.GREEN;
@@ -425,6 +431,8 @@ const value: 1 3
 ## 使用示例
 
 ### Taihe 声明
+
+**`.ohidl`**
 
 ```rust
 union union_primitive {
@@ -461,7 +469,7 @@ export type union_primitive =
 Taihe 中 union 类型的 C++ 使用方法可参考[联合体](../backend-cpp/CppUsageGuide.md#4-联合体)
 
 ```cpp
-::taihe::string printUnion(union_primitive const &data) {
+::taihe::expected<::taihe::string, ::taihe::error> printUnion(union_primitive const &data) {
   switch (data.get_tag()) {
   case union_primitive::tag_t::sValue:
     std::cout << "s: " << data.get_sValue_ref() << std::endl;
@@ -488,7 +496,7 @@ Taihe 中 union 类型的 C++ 使用方法可参考[联合体](../backend-cpp/Cp
   }
 }
 
-union_primitive makeUnion(::taihe::string_view kind) {
+::taihe::expected<union_primitive, ::taihe::error> makeUnion(::taihe::string_view kind) {
   ::taihe::string s_value = "string";
   constexpr double f64_value = 1.12345;
   constexpr bool bool_value = false;
@@ -522,7 +530,7 @@ union_primitive makeUnion(::taihe::string_view kind) {
 }
 ```
 
-### ArkTs 1.1 调用
+### ArkTS-Dyn 调用
 
 ```typescript
 console.log(printUnion(1));
@@ -545,7 +553,7 @@ Test: string
 
 ### Taihe 声明
 
-**`.taihe`**
+**`.ohidl`**
 
 ```rust
 struct RGB {
@@ -568,7 +576,7 @@ export function from_rgb(rgb: RGB): number;
 ```
 
 如果需要设置 struct 中某个属性为只读属性，可以使用 @readonly 注解。
-**`.taihe`**
+**`.ohidl`**
 
 ```rust
 struct Student {
@@ -592,7 +600,7 @@ export function process_student(a: Student): Student;
 
 注意，使用 @class 时通常需要提供构造函数，除非确认无需在 ets 层使用 new 实例化。
 
-**`.taihe`**
+**`.ohidl`**
 
 ```rust
 @class
@@ -621,8 +629,8 @@ export class Teacher {
 export function process_teacher(a: Teacher): Teacher;
 ```
 
-如果存在继承关系，可以使用 @extends 注解。@extends item_name: item_type，此处的 item_name 用于 C++ 侧，在 ArkTs 1.1 侧无作用；item_type 为用户实际希望继承的 struct 声明。注意，Taihe 只支持 struct 继承 struct，@class struct 继承 struct。
-**`.taihe`**
+如果存在继承关系，可以使用 @extends 注解。@extends item_name: item_type，此处的 item_name 用于 C++ 侧，在 ArkTS-Dyn 侧无作用；item_type 为用户实际希望继承的 struct 声明。注意，Taihe 只支持 struct 继承 struct，@class struct 继承 struct。
+**`.ohidl`**
 
 ```rust
 struct F {
@@ -671,33 +679,33 @@ export function process_h(a: H): H;
 Taihe 中 struct 类型的 C++ 使用方法可参考[结构体](../backend-cpp/CppUsageGuide.md#3-结构体)
 
 ```cpp
-int32_t from_rgb(RGB const &rgb) {
+::taihe::expected<int32_t, ::taihe::error> from_rgb(RGB const &rgb) {
   return rgb.r + rgb.g + rgb.b;
 }
-Student process_student(Student const &a) {
-  return {a.name + " student", a.age + 10};
+::taihe::expected<Student, ::taihe::error> process_student(Student const &a) {
+  return Student{a.name + " student", a.age + 10};
 }
-Teacher process_teacher(Teacher const &a) {
-  return {a.name + " teacher", a.age + 15};
+::taihe::expected<Teacher, ::taihe::error> process_teacher(Teacher const &a) {
+  return Teacher{a.name + " teacher", a.age + 15};
 }
-G process_g(G const& a) {
+::taihe::expected<G, ::taihe::error> process_g(G const& a) {
   return {{a.f.f + 1}, a.g + 2};
 }
-H process_h(H const& a) {
-  return {{{a.g.f.f + 1}, a.g.g + 2}, a.h +3};
+::taihe::expected<H, ::taihe::error> process_h(H const& a) {
+  return H{{{a.g.f.f + 1}, a.g.g + 2}, a.h +3};
 }
-H create_h(int32_t f, int32_t g, int32_t h) {
-  return {{{f}, g}, h};
+::taihe::expected<H, ::taihe::error> create_h(int32_t f, int32_t g, int32_t h) {
+  return H{{{f}, g}, h};
 }
-Teacher create_teacher() {
+::taihe::expected<Teacher, ::taihe::error> create_teacher() {
   return Teacher{"Rose", 25};
 }
-::taihe::string give_lessons() {
+::taihe::expected<::taihe::string, ::taihe::error> give_lessons() {
   return "math";
 }
 ```
 
-### ArkTs 1.1 调用
+### ArkTS-Dyn 调用
 
 ```typescript
 // 初始化 interface 类型变量
@@ -748,7 +756,7 @@ process h: 1 2 3
 
 ### Taihe 声明
 
-**`.taihe`**
+**`.ohidl`**
 
 ```rust
 interface IBase {
@@ -772,7 +780,7 @@ export function copyIBase(a: IBase, b: IBase): void;
 
 当接口内既包含方法，又包含数据时，可以通过 @get 或 @set 注解来说明将特定方法声明为数据的 getter 或 setter。
 
-**`.taihe`**
+**`.ohidl`**
 
 ```rust
 interface IColor {
@@ -797,7 +805,7 @@ export function makeIColor(id: string): IColor;
 
 如果需要生成数据类型为 class 而不是 interface 可以使用 @class 注解。可以使用 @static 注解标记全局函数为某个 class 的静态方法，可以使用 @ctor 注解标记全局函数为某个 class 的构造方法。
 
-**`.taihe`**
+**`.ohidl`**
 
 ```rust
 @class
@@ -827,7 +835,7 @@ export function changeCTest(a: CTest): CTest;
 
 Taihe IDL 语法支持 [interface](../spec/IdlReference.md#接口) 单继承和多继承，interface A: B, C {} 表示 interface A 继承了 interface B 和 interface C。注意，Taihe 只支持 interface 继承 interface，@class interface 继承 interface。
 
-**`.taihe`**
+**`.ohidl`**
 
 ```rust
 interface IShape: IBase {
@@ -879,13 +887,13 @@ public:
     std::cout << "del base " << this << std::endl;
   }
 
-  ::taihe::string getId() {
+  ::taihe::expected<::taihe::string, ::taihe::error> getId() {
     return id;
   }
 
-  void setId(::taihe::string_view s) {
+  ::taihe::expected<void, ::taihe::error> setId(::taihe::string_view s) {
     id = s;
-    return;
+    return {};
   }
 };
 
@@ -904,16 +912,16 @@ public:
     std::cout << "del shape " << this << std::endl;
   }
 
-  ::taihe::string getId() {
+  ::taihe::expected<::taihe::string, ::taihe::error> getId() {
     return id;
   }
 
-  void setId(::taihe::string_view s) {
+  ::taihe::expected<void, ::taihe::error> setId(::taihe::string_view s) {
     id = s;
-    return;
+    return {};
   }
 
-  float calculateArea() {
+  ::taihe::expected<float, ::taihe::error> calculateArea() {
     return a * b;
   }
 };
@@ -930,7 +938,7 @@ public:
     std::cout << "del ctest " << this << std::endl;
   }
 
-  float add(int32_t a, int32_t b) {
+  ::taihe::expected<float, ::taihe::error> add(int32_t a, int32_t b) {
     return a + b + this->x;
   }
 };
@@ -948,16 +956,16 @@ public:
     std::cout << "del Color " << this << std::endl;
   }
 
-  ::taihe::string getId() {
+  ::taihe::expected<::taihe::string, ::taihe::error> getId() {
     return id;
   }
 
-  void setId(::taihe::string_view s) {
+  ::taihe::expected<void, ::taihe::error> setId(::taihe::string_view s) {
     id = s;
-    return;
+    return {};
   }
 
-  int32_t calculate(int32_t a, int32_t b) {
+  ::taihe::expected<int32_t, ::taihe::error> calculate(int32_t a, int32_t b) {
     return a * b;
   }
 };
@@ -969,60 +977,61 @@ protected:
   float b = 2;
 
 public:
-  void call() {
+  ::taihe::expected<void, ::taihe::error> call() {
     std::cout << "derived call!" << std::endl;
+    return {};
   }
 
-  double calculateArea() {
+  ::taihe::expected<double, ::taihe::error> calculateArea() {
     return a * b;
   }
 
-  ::taihe::string getId() {
+  ::taihe::expected<::taihe::string, ::taihe::error> getId() {
     return id;
   }
 
-  void setId(::taihe::string_view s) {
+  ::taihe::expected<void, ::taihe::error> setId(::taihe::string_view s) {
     this->id = s;
-    return;
+    return {};
   }
 };
 
-IBase makeIBase(::taihe::string_view id) {
+::taihe::expected<IBase, ::taihe::error> makeIBase(::taihe::string_view id) {
   return ::taihe::make_holder<Base, IBase>(id);
 }
 
-void copyIBase(weak::IBase a, weak::IBase b) {
+::taihe::expected<void, ::taihe::error> copyIBase(weak::IBase a, weak::IBase b) {
   a->setId(b->getId());
-  return;
+  return {};
 }
 
-IShape makeIShape(::taihe::string_view id, double a, double b) {
+::taihe::expected<IShape, ::taihe::error> makeIShape(::taihe::string_view id, double a, double b) {
   return ::taihe::make_holder<Shape, IShape>(id, a, b);
 }
 
-CTest createCTest(int32_t id) {
+::taihe::expected<CTest, ::taihe::error> createCTest(int32_t id) {
   return taihe::make_holder<CTestImpl, CTest>(id);
 }
 
-CTest changeCTest(weak::CTest a) {
+::taihe::expected<CTest, ::taihe::error> changeCTest(weak::CTest a) {
   int32_t x = a->add(3, 4);
   return taihe::make_holder<CTestImpl, CTest>(x);
 }
 
-int32_t multiply(int32_t a, int32_t b) {
+::taihe::expected<int32_t, ::taihe::error> multiply(int32_t a, int32_t b) {
   return a * b;
 }
 
-IColor makeIColor(::taihe::string_view id) {
+::taihe::expected<IColor, ::taihe::error> makeIColor(::taihe::string_view id) {
   return taihe::make_holder<Color, IColor>(id);
 }
 
-IDerived createIDerived() {
+::taihe::expected<IDerived, ::taihe::error> createIDerived() {
   return taihe::make_holder<Derived, IDerived>();
 }
 ```
 
-### ArkTs 1.1 调用
+### ArkTS-Dyn 调用
 
 ```typescript
 class BaseImpl implements IBase {
@@ -1128,9 +1137,203 @@ del base 0x1d53cc00
 del base 0x1d579b60
 ```
 
+# 异步
+
+使用注解 `@async` 将声明的函数或方法转换为Async版，使用注解 `@promise` 将声明的函数或方法转换为Promise版。
+
+## 使用示例
+
+### Taihe 声明
+
+**`.ohidl`**
+
+```rust
+function addSync(a: i32, b: i32): i32;
+@promise function addRetPromise(a: i32, b: i32): i32;
+@async function addWithAsync(a: i32, b: i32): i32;
+
+@class
+interface IBase {
+    @promise makeRetPromise();
+    @async makeWithAsync();
+    makeSync();
+}
+@ctor("IBase")
+function createIBase(): IBase;
+```
+
+**生成`.d.ts`**
+
+```typescript
+type AsyncCallback<T> = (error: Error | null, result: T | undefined) => void;
+export function addSync(a: number, b: number): number;
+export function addRetPromise(a: number, b: number): Promise<number>;
+export function addWithAsync(a: number, b: number, callback: AsyncCallback<number>): void;
+
+export class IBase {
+    constructor();
+    makeRetPromise(): Promise<void>;
+    makeWithAsync(callback: AsyncCallback<void>): void;
+    makeSync(): void;
+}
+```
+
+### C++ 实现
+
+在 C++ 侧函数正常书写同步实现即可，异步操作将在自动代码生成的 NAPI 层代码中完成，当函数中希望抛出异常时，可以构造出一个 `taihe::expected` 对象作为返回值，其中包含可能希望返回的错误信息与错误码等，具体使用方式请参考[异常和错误](../backend-cpp/CppUsageGuide.md)。
+
+```cpp
+::taihe::expected<int32_t, ::taihe::error> addSync(int32_t a, int32_t b) {
+  if (a == 0) {
+    std::cout << "throw error in addSync impl " << std::endl;
+    return ::taihe::expected<int32_t, ::taihe::error>(::taihe::unexpect,
+                                                      "some error happen");
+  } else {
+    std::cout << "add impl " << a + b << std::endl;
+    return a + b;
+  }
+}
+
+::taihe::expected<int32_t, ::taihe::error> addRetPromise(int32_t a, int32_t b) {
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+  if (a == 0) {
+    std::cout << "ERROR in addRetPromise" << std::endl;
+    return ::taihe::expected<int32_t, ::taihe::error>(::taihe::unexpect,
+                                                      "some error happen");
+  } else {
+    std::cout << "SUCCESS in addRetPromise: " << a + b << std::endl;
+    return a + b;
+  }
+}
+
+::taihe::expected<int32_t, ::taihe::error> addWithAsync(int32_t a, int32_t b) {
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+  if (a == 0) {
+    std::cout << "ERROR in addWithAsync" << std::endl;
+    return ::taihe::expected<int32_t, ::taihe::error>(::taihe::unexpect,
+                                                      "some error happen");
+  } else {
+    std::cout << "SUCCESS in addWithAsync: " << a + b << std::endl;
+    return a + b;
+  }
+}
+
+class IBaseImpl {
+public:
+  ::taihe::expected<void, ::taihe::error> makeSync() {
+    std::cout << "makeSync" << std::endl;
+    return {};
+  }
+
+  ::taihe::expected<void, ::taihe::error> makeRetPromise() {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::cout << "makeRetPromise" << std::endl;
+    return {};
+  }
+
+  ::taihe::expected<void, ::taihe::error> makeWithAsync() {
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    std::cout << "makeWithAsync" << std::endl;
+    return {};
+  }
+};
+::taihe::expected<::async_test::IBase, ::taihe::error> createIBase() {
+  return taihe::make_holder<IBaseImpl, ::async_test::IBase>();
+}
+
+TH_EXPORT_CPP_API_addSync(addSync);
+TH_EXPORT_CPP_API_addRetPromise(addRetPromise);
+TH_EXPORT_CPP_API_addWithAsync(addWithAsync);
+TH_EXPORT_CPP_API_createIBase(createIBase);
+```
+
+### ArkTS-Dyn 调用
+
+```typescript
+console.log("before call function addRetPromise success");
+let p1 = lib.addRetPromise(1, 2);
+p1.then((res) => {
+    console.log("success in addRetPromise", res);
+})
+.catch((ret) => {
+    console.log("failed in addRetPromise", ret);
+});
+console.log("after call function addRetPromise success");
+
+console.log("before call function addRetPromise failed");
+let p2 = lib.addRetPromise(0, 2);
+p2.then((res) => {
+    console.log("success in addRetPromise", res);
+})
+.catch((ret) => {
+    console.log("failed in addRetPromise", ret.message);
+});
+console.log("after call function addRetPromise failed");
+
+console.log("before call function addWithAsync success");
+lib.addWithAsync(1, 2, (error, result) => {
+    if (error !== null) {
+        console.log("failed in addWithAsync", error.message);
+    } else {
+        console.log("success in addWithAsync", result!);
+    }
+})
+console.log("after call function addWithAsync success");
+
+console.log("before call function addWithAsync failed");
+lib.addWithAsync(0, 2, (error: Error | null, result?: number) => {
+    if (error !== null) {
+        console.log("failed in addWithAsync", error.message);
+    } else {
+        console.log("success in addWithAsync", result!);
+    }
+})
+console.log("after call function addWithAsync failed");
+
+let mybase = new lib.IBase();
+mybase.makeSync();
+mybase.makeRetPromise();
+mybase.makeWithAsync((error: Error | null) => {
+    if (error !== null) {
+        console.log("failed in make", error.message);
+    } else {
+        console.log("success in make");
+    }
+});
+```
+
+输出结果如下：
+
+```sh
+before call function addRetPromise success
+after call function addRetPromise success
+before call function addRetPromise failed
+after call function addRetPromise failed
+before call function addWithAsync success
+after call function addWithAsync success
+before call function addWithAsync failed
+after call function addWithAsync failed
+makeSync
+finish main
+SUCCESS in addWithAsync: 3
+ERROR in addWithAsync
+success in addWithAsync 3
+failed in addWithAsync some error happen
+SUCCESS in addRetPromise: 3
+ERROR in addRetPromise
+success in addRetPromise 3
+failed in addRetPromise some error happen
+makeWithAsync
+success in make
+makeRetPromise
+```
+
+
 # 逃逸通道 - Napi 协同开发
 
-Taihe 支持引入 Napi 代码，从而在 C++ 侧访问 ArkTs 1.1 对象，可以使用 Opaque 类型，对应 Napi 类型为 napi_value，C++ 类型为指针。可以使用 @dts_type 注解指定 Opaque 在 .d.ts 文件中的类型， @dts_type("<type_name>") Opaque, <type_name> 为 .d.ts 中的类型名。
+Taihe 支持引入 Napi 代码，从而在 C++ 侧访问 ArkTS-Dyn 对象，可以使用 Opaque 类型，对应 Napi 类型为 napi_value，C++ 类型为指针。可以使用 @dts_type 注解指定 Opaque 在 .d.ts 文件中的类型， @dts_type("<type_name>") Opaque, <type_name> 为 .d.ts 中的类型名。
 
 可以引用 taihe/napi_runtime.hpp 头文件，其中提供 get_env() 函数返回 napi_env 指针，set_error() 函数抛出错误，set_type_error() 函数抛出类型错误，set_range_error() 函数抛出范围错误，has_error() 函数判断是否存在错误。
 
@@ -1168,7 +1371,7 @@ export interface Person {
 ### C++ 实现
 
 ```cpp
-bool is_string(uintptr_t s) {
+::taihe::expected<bool, ::taihe::error> is_string(uintptr_t s) {
   napi_env env = ::taihe::get_env();
   napi_valuetype value_ty;
   napi_typeof(env, (napi_value)s, &value_ty);
@@ -1179,7 +1382,7 @@ bool is_string(uintptr_t s) {
   }
 }
 
-uintptr_t get_object() {
+::taihe::expected<uintptr_t, ::taihe::error> get_object() {
   napi_env env = ::taihe::get_env();
   napi_value napi_arr_0 = nullptr;
   ::taihe::string cpp_arr_0 = "OnlyObject";
@@ -1188,7 +1391,7 @@ uintptr_t get_object() {
   return (uintptr_t)napi_arr_0;
 }
 
-::taihe::array<uintptr_t> get_objects() {
+::taihe::expected<::taihe::array<uintptr_t>, ::taihe::error> get_objects() {
   napi_env env = ::taihe::get_env();
   napi_value napi_arr_0 = nullptr;
   ::taihe::string cpp_arr_0 = "FirstOne";
@@ -1200,7 +1403,7 @@ uintptr_t get_object() {
       {(uintptr_t)napi_arr_0, (uintptr_t)napi_arr_1});
 }
 
-bool is_opaque(Union const &s) {
+::taihe::expected<bool, ::taihe::error> is_opaque(Union const &s) {
   if (s.get_tag() == Union::tag_t::oValue) {
     return true;
   }
@@ -1208,7 +1411,7 @@ bool is_opaque(Union const &s) {
 }
 ```
 
-### ArkTs 1.1 调用
+### ArkTS-Dyn 调用
 
 ```typescript
 console.log("test opaque param", is_string("test"));
@@ -1235,17 +1438,17 @@ test opaque param union true
 test opaque param union false
 ```
 
-# 逃逸通道 - ArkTs 1.1 协同开发
+# 逃逸通道 - ArkTS-Dyn 协同开发
 
-Taihe 支持引入 ArkTs 1.1 代码，从而在 ArkTs 层添加代码。
+Taihe 支持引入 ArkTS-Dyn 代码，从而在 ArkTs 层添加代码。
 
 ## 使用示例
 
 ### Taihe 声明
 
-默认情况下，Taihe 会生成 Napi 桥接文件和 .d.ts 文件，此时，可以使用注解 @!dts_inject_into_module 将一段 ArkTs 1.1 代码注入到当前 Taihe 文件所对应的 .d.ts 文件的 namespace 中；可以使用注解 @!dts_inject 将一段 ArkTs 1.1 代码注入到当前 Taihe 文件所对应的 .d.ts 文件的 namespace 所在的 module 头部。
+默认情况下，Taihe 会生成 Napi 桥接文件和 .d.ts 文件，此时，可以使用注解 @!dts_inject_into_module 将一段 ArkTS-Dyn 代码注入到当前 Taihe 文件所对应的 .d.ts 文件的 namespace 中；可以使用注解 @!dts_inject 将一段 ArkTS-Dyn 代码注入到当前 Taihe 文件所对应的 .d.ts 文件的 namespace 所在的 module 头部。
 
-**`my_module_b.functiontest.taihe`**
+**`my_module_b.functiontest.ohidl`**
 
 ```rust
 @!namespace("my_module_b", "functiontest")
@@ -1271,11 +1474,11 @@ export namespace functiontest {
 
 注意，如果需要让当前 Taihe 文件对应的 module 生成 .ts 文件，或在当前 Taihe 文件中使用 ts inject 相关功能，必须提供 @!lib 注解。其语法为 @!lib("{so_file}")，使用注解时需指定 so 文件，作用是为生成的 .ts 文件提供寻找 C++ 层的实现。
 
-此时，可以使用注解 @!ts_inject_into_module 将一段 ArkTs 1.1 代码注入到当前 Taihe 文件所对应的 .ts 文件的 namespace 中；可以使用注解 @!ts_inject 将一段 ArkTs 1.1 代码注入到当前 Taihe 文件所对应的 .ts 文件的 namespace 所在的 module 头部；可以使用注解 @!ts_inject_into_interface 将一段 ArkTs 1.1 代码注入到当前 interface 中；可以使用注解 @!ts_inject_into_class 将一段 ArkTs 1.1 代码注入到当前 interface 对应的 class 中。
+此时，可以使用注解 @!ts_inject_into_module 将一段 ArkTS-Dyn 代码注入到当前 Taihe 文件所对应的 .ts 文件的 namespace 中；可以使用注解 @!ts_inject 将一段 ArkTS-Dyn 代码注入到当前 Taihe 文件所对应的 .ts 文件的 namespace 所在的 module 头部；可以使用注解 @!ts_inject_into_interface 将一段 ArkTS-Dyn 代码注入到当前 interface 中；可以使用注解 @!ts_inject_into_class 将一段 ArkTS-Dyn 代码注入到当前 interface 对应的 class 中。
 
 注意，@!ts_inject_into_interface 注解应用于 struct 和 interface，@!ts_inject_into_class 注解可以应用于添加了 @class 注解的 struct 和 interface。
 
-**`my_module_a.taihe`**
+**`my_module_a.ohidl`**
 
 ```rust
 @!lib("my_module_a")
@@ -1292,7 +1495,7 @@ function concat_i32(a: i32): i32;
 }""")
 ```
 
-**`my_module_a.ns1.taihe`**
+**`my_module_a.ns1.ohidl`**
 
 ```rust
 @!lib("my_module_a")
@@ -1320,7 +1523,7 @@ function createCTest(id: i32): CTest;
 function multiply(a: i32, b: i32): i32;
 ```
 
-**`my_module_a.ns1.ns2.ns3.ns4.ns5.taihe`**
+**`my_module_a.ns1.ns2.ns3.ns4.ns5.ohidl`**
 
 ```rust
 @!lib("my_module_a")
@@ -1455,19 +1658,19 @@ export namespace ns1 {
 
 ### C++ 实现
 
-**File: `my_module_a.taihe 的 C++ 实现`**
+**File: `my_module_a.ohidl 的 C++ 实现`**
 
 ```cpp
-::taihe::string concat_str(::taihe::string_view a) {
+::taihe::expected<::taihe::string, ::taihe::error> concat_str(::taihe::string_view a) {
   return a + "_concat";
 }
 
-int32_t concat_i32(int32_t a) {
+::taihe::expected<int32_t, ::taihe::error> concat_i32(int32_t a) {
   return a + 10;
 }
 ```
 
-**File: `my_module_a.ns1.taihe 的 C++ 实现`**
+**File: `my_module_a.ns1.ohidl 的 C++ 实现`**
 
 ```cpp
 class CTestImpl {
@@ -1482,46 +1685,46 @@ public:
     std::cout << "del ctest " << this << std::endl;
   }
 
-  float add(int32_t a, int32_t b) {
+  ::taihe::expected<float, ::taihe::error> add(int32_t a, int32_t b) {
     return a + b + this->x;
   }
 };
 
-CTest createCTest(int32_t id) {
+::taihe::expected<CTest, ::taihe::error> createCTest(int32_t id) {
   return taihe::make_holder<CTestImpl, CTest>(id);
 }
 
-int32_t multiply(int32_t a, int32_t b) {
+::taihe::expected<int32_t, ::taihe::error> multiply(int32_t a, int32_t b) {
   return a * b;
 }
 ```
 
-**File: `my_module_a.ns1.ns2.ns3.ns4.ns5.taihe 的 C++ 实现`**
+**File: `my_module_a.ns1.ns2.ns3.ns4.ns5.ohidl 的 C++ 实现`**
 
 ```cpp
-int32_t sum(int32_t a, int32_t b) {
+::taihe::expected<int32_t sum(int32_t a, int32_t b) {
     return a * b;
 }
 
-::my_module_a::ns1::ns2::ns3::ns4::ns5::MyTest createMyTestNum(int32_t a) {
+::taihe::expected<MyTest, ::taihe::error> createMyTestNum(int32_t a) {
   ::taihe::array<int32_t> temp{a};
-  return {temp};
+  return MyTest{temp};
 }
 
-::my_module_a::ns1::ns2::ns3::ns4::ns5::MyTest createMyTestArrayNum(::taihe::array_view<int32_t> a) {
-  return {a};
+::taihe::expected<MyTest, ::taihe::error> createMyTestArrayNum(::taihe::array_view<int32_t> a) {
+  return MyTest{a};
 }
 ```
 
-**File: `my_module_b.taihe 的 C++ 实现`**
+**File: `my_module_b.ohidl 的 C++ 实现`**
 
 ```cpp
 // Taihe 文件定义函数对应的 C++ 实现
-::taihe::string concat_str(::taihe::string_view a) {
+::taihe::expected<::taihe::string, ::taihe::error> concat_str(::taihe::string_view a) {
   return a + "_concat";
 }
 
-int32_t concat_i32(int32_t a) {
+::taihe::expected<int32_t, ::taihe::error> concat_i32(int32_t a) {
   return a + 10;
 }
 ```
@@ -1605,7 +1808,7 @@ napi_value Init(napi_env env, napi_value exports) {   // napi register 文件中
 }   // napi register 文件中的原有函数
 ```
 
-### ArkTs 1.1 调用
+### ArkTS-Dyn 调用
 
 ```typescript
 import * as lib_b from "my_module_b"; // Use .d.ts
