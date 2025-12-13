@@ -112,10 +112,11 @@ class TsCodeGenerator:
             ):
                 self.gen_func(func, target, native_lib_name)
         for struct in pkg.structs:
-            self.gen_struct_interface(struct, target, native_lib_name)
+            self.gen_struct_interface(struct, target)
             self.gen_struct_class(struct, target, native_lib_name)
         for iface in pkg.interfaces:
-            self.gen_iface_interface(iface, target, native_lib_name)
+            self.gen_iface_interface(iface, target)
+            self.gen_iface_class(iface, target, native_lib_name)
         for enum in pkg.enums:
             self.gen_enum(enum, target)
         for union in pkg.unions:
@@ -128,68 +129,14 @@ class TsCodeGenerator:
 
     def gen_func(self, func: GlobFuncDecl, target: DtsWriter, native_lib_name: str):
         func_napi_info = GlobFuncNapiInfo.get(self.am, func)
-        params = []
-        args = []
-        for param in func.params:
-            value_ty = param.ty
-            param_dts_info = TypeNapiInfo.get(self.am, value_ty)
-            params.append(
-                f"{param.name}{'?' if param_dts_info.is_optional else ''}: {param_dts_info.dts_type_in(target)}"
-            )
-            args.append(param.name)
-        params_str = ", ".join(params)
-        args_str = ", ".join(args)
-        if isinstance(func.return_ty, NonVoidType):
-            return_ty_dts_info = TypeNapiInfo.get(self.am, func.return_ty)
-            return_ty = return_ty_dts_info.dts_return_type_in(target)
-        else:
-            return_ty = "void"
-        if func_napi_info.async_name is not None:
-            cbname = "callback"
-            callback_ty_ts_name = f"AsyncCallback<{return_ty}>"
-            callback_ts = f"{cbname}: {callback_ty_ts_name}"
-            params_with_callback_ts_str = ", ".join([*params, callback_ts])
-            with target.indented(
-                f"export function {func_napi_info.async_name}({params_with_callback_ts_str}): void {{",
-                f"}}",
-            ):
-                target.writelns(
-                    f"setTimeout(() => {{",
-                    f"    try {{",
-                    f"        const result = {native_lib_name}.{func_napi_info.async_name}({args_str});",
-                    f"        callback(null, result);",
-                    f"    }} catch (error) {{",
-                    f"        callback(error as Error, undefined);",
-                    f"    }}",
-                    f"}}, 0);",
-                )
-        elif func_napi_info.promise_name is not None:
-            promise_ty = f"Promise<{return_ty}>"
-            with target.indented(
-                f"export function {func_napi_info.promise_name}({params_str}): {promise_ty} {{",
-                f"}}",
-            ):
-                target.writelns(
-                    f"return new Promise((resolve, reject) => {{",
-                    f"    setTimeout(() => {{",
-                    f"        try {{",
-                    f"            const result = {native_lib_name}.{func_napi_info.promise_name}({args_str});",
-                    f"            resolve(result);",
-                    f"        }} catch (error) {{",
-                    f"            reject(error);",
-                    f"        }}",
-                    f"    }}, 0);}});",
-                )
-        else:
-            target.writelns(
-                f"export const {func_napi_info.norm_name} = {native_lib_name}.{func_napi_info.norm_name};",
-            )
+        target.writelns(
+            f"export const {func_napi_info.norm_name} = {native_lib_name}.{func_napi_info.norm_name};",
+        )
 
     def gen_struct_interface(
         self,
         struct: StructDecl,
         target: DtsWriter,
-        native_lib_name: str,
     ):
         struct_napi_info = StructNapiInfo.get(self.am, struct)
         if struct_napi_info.is_class():
@@ -313,60 +260,21 @@ class TsCodeGenerator:
                     return_ty = return_ty_dts_info.dts_return_type_in(target)
                 else:
                     return_ty = "void"
-                if static_func_napi_info.async_name is not None:
-                    cbname = "callback"
-                    callback_ty_ts_name = f"AsyncCallback<{return_ty}>"
-                    callback_ts = f"{cbname}: {callback_ty_ts_name}"
-                    params_with_callback_ts_str = ", ".join([*params, callback_ts])
-                    with target.indented(
-                        f"static {static_func_napi_info.async_name}({params_with_callback_ts_str}): void {{",
-                        f"}}",
-                    ):
-                        target.writelns(
-                            f"setTimeout(() => {{",
-                            f"    try {{",
-                            f"        const result = {native_lib_name}.{struct_napi_info.dts_type_name}.{static_func_napi_info.async_name}({args_str});",
-                            f"        callback(null, result);",
-                            f"    }} catch (error) {{",
-                            f"        callback(error as Error, undefined);",
-                            f"    }}",
-                            f"}}, 0);",
-                        )
-                elif static_func_napi_info.promise_name is not None:
-                    promise_ty = f"Promise<{return_ty}>"
-                    with target.indented(
-                        f"export function {static_func_napi_info.promise_name}({params_str}): {promise_ty} {{",
-                        f"}}",
-                    ):
-                        target.writelns(
-                            f"return new Promise((resolve, reject) => {{",
-                            f"    setTimeout(() => {{",
-                            f"        try {{",
-                            f"            const result = {native_lib_name}.{struct_napi_info.dts_type_name}.{static_func_napi_info.promise_name}({args_str});",
-                            f"            resolve(result);",
-                            f"        }} catch (error) {{",
-                            f"            reject(error);",
-                            f"        }}",
-                            f"    }}, 0);}});",
-                        )
-                else:
-                    with target.indented(
-                        f"static {static_func_napi_info.norm_name}({params_str}): {return_ty} {{",
-                        f"}}",
-                    ):
-                        target.writelns(
-                            f"return {native_lib_name}.{struct_napi_info.dts_type_name}.{static_func_napi_info.norm_name}({args_str});",
-                        )
+                with target.indented(
+                    f"static {static_func_napi_info.norm_name}({params_str}): {return_ty} {{",
+                    f"}}",
+                ):
+                    target.writelns(
+                        f"return {native_lib_name}.{struct_napi_info.dts_type_name}.{static_func_napi_info.norm_name}({args_str});",
+                    )
 
     def gen_iface_interface(
         self,
         iface: IfaceDecl,
         target: DtsWriter,
-        native_lib_name: str,
     ):
         iface_napi_info = IfaceNapiInfo.get(self.am, iface)
         if iface_napi_info.is_class():
-            self.gen_iface_class(iface, target, native_lib_name)
             return
 
         parents = []
@@ -390,6 +298,9 @@ class TsCodeGenerator:
         native_lib_name: str,
     ):
         iface_napi_info = IfaceNapiInfo.get(self.am, iface)
+        if not iface_napi_info.is_class():
+            return
+
         iface_abi_info = IfaceAbiInfo.get(self.am, iface)
 
         iface_decl = f"class {iface_napi_info.dts_type_name}"
@@ -455,50 +366,13 @@ class TsCodeGenerator:
                     else:
                         return_ty = "void"
 
-                    if static_func_napi_info.async_name is not None:
-                        cbname = "callback"
-                        callback_ty_ts_name = f"AsyncCallback<{return_ty}>"
-                        callback_ts = f"{cbname}: {callback_ty_ts_name}"
-                        params_with_callback_ts_str = ", ".join([*params, callback_ts])
-                        with target.indented(
-                            f"static {static_func_napi_info.async_name}({params_with_callback_ts_str}): void {{",
-                            f"}}",
-                        ):
-                            target.writelns(
-                                f"setTimeout(() => {{",
-                                f"    try {{",
-                                f"        const result = {native_lib_name}.{iface_napi_info.dts_type_name}.{static_func_napi_info.async_name}({args_str});",
-                                f"        callback(null, result);",
-                                f"    }} catch (error) {{",
-                                f"        callback(error as Error, undefined);",
-                                f"    }}",
-                                f"}}, 0);",
-                            )
-                    elif static_func_napi_info.promise_name is not None:
-                        promise_ty = f"Promise<{return_ty}>"
-                        with target.indented(
-                            f"static {static_func_napi_info.promise_name}({params_str}): {promise_ty} {{",
-                            f"}}",
-                        ):
-                            target.writelns(
-                                f"return new Promise((resolve, reject) => {{",
-                                f"    setTimeout(() => {{",
-                                f"        try {{",
-                                f"            const result = {native_lib_name}.{iface_napi_info.dts_type_name}.{static_func_napi_info.promise_name}({args_str});",
-                                f"            resolve(result);",
-                                f"        }} catch (error) {{",
-                                f"            reject(error);",
-                                f"        }}",
-                                f"    }}, 0);}});",
-                            )
-                    else:
-                        with target.indented(
-                            f"static {static_func_napi_info.norm_name}({params_str}): {return_ty} {{",
-                            f"}}",
-                        ):
-                            target.writelns(
-                                f"return {native_lib_name}.{iface_napi_info.dts_type_name}.{static_func_napi_info.norm_name}({args_str});",
-                            )
+                    with target.indented(
+                        f"static {static_func_napi_info.norm_name}({params_str}): {return_ty} {{",
+                        f"}}",
+                    ):
+                        target.writelns(
+                            f"return {native_lib_name}.{iface_napi_info.dts_type_name}.{static_func_napi_info.norm_name}({args_str});",
+                        )
             for ancestor in iface_abi_info.ancestor_dict:
                 self.gen_iface_class_methods_impl(
                     ancestor.methods, target, nativa_class_name
@@ -592,42 +466,6 @@ class TsCodeGenerator:
                 ):
                     target.writelns(
                         f"this.{nativa_class_name}.{iface_method_napi_info.set_name}({args_str});",
-                    )
-            elif iface_method_napi_info.async_name is not None:
-                cbname = "callback"
-                callback_ty_ts_name = f"AsyncCallback<{return_ty}>"
-                callback_ts = f"{cbname}: {callback_ty_ts_name}"
-                params_with_callback_ts_str = ", ".join([*params, callback_ts])
-                with target.indented(
-                    f"{iface_method_napi_info.async_name}({params_with_callback_ts_str}): void {{",
-                    f"}}",
-                ):
-                    target.writelns(
-                        f"setTimeout(() => {{",
-                        f"    try {{",
-                        f"        const result = this.{nativa_class_name}.{iface_method_napi_info.async_name}({args_str});",
-                        f"        callback(null, result);",
-                        f"    }} catch (error) {{",
-                        f"        callback(error as Error, undefined);",
-                        f"    }}",
-                        f"}}, 0);",
-                    )
-            elif iface_method_napi_info.promise_name is not None:
-                promise_ty = f"Promise<{return_ty}>"
-                with target.indented(
-                    f"{iface_method_napi_info.promise_name}({params_str}): {promise_ty} {{",
-                    f"}}",
-                ):
-                    target.writelns(
-                        f"return new Promise((resolve, reject) => {{",
-                        f"    setTimeout(() => {{",
-                        f"        try {{",
-                        f"            const result = this.{nativa_class_name}.{iface_method_napi_info.promise_name}({args_str});",
-                        f"            resolve(result);",
-                        f"        }} catch (error) {{",
-                        f"            reject(error);",
-                        f"        }}",
-                        f"    }}, 0);}});",
                     )
             else:
                 with target.indented(
