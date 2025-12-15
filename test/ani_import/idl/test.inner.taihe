@@ -1,3 +1,9 @@
 @!namespace("@ohos.test", "inner")
 
 struct MyStruct { v: i32; }
+
+@class
+struct MyClass {
+    @extends v: MyStruct;
+    u: i64;
+}
