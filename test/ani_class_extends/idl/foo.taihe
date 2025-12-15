@@ -19,23 +19,22 @@ struct BarDataInterface {
 }
 
 @class interface BaseMethodClass {
-    base(): void;
+    base(): String;
 }
 
 interface FooInterface {
-    foo(): void;
+    foo(): String;
 }
 
 interface BarInterface {
-    bar(): void;
+    bar(): String;
 }
 
 @class interface DerivedMethodClass: BaseMethodClass, FooInterface, BarInterface {
-    derived(): void;
+    derived(): String;
 }
 
 @ctor("DerivedMethodClass")
 function makeDerivedMethodClass(): DerivedMethodClass;
 
-@ctor("DerivedDataClass")
 function makeDerivedDataClass(): DerivedDataClass;
