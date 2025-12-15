@@ -1,5 +1,5 @@
 #include "foo.impl.hpp"
-#include "foo.DerivedMethodClass.template.hpp"
+#include "foo.DerivedMethodClass.impl.hpp"
 #include "stdexcept"
 
 namespace {
