@@ -20,6 +20,10 @@ void testNova(::nova::weak::NovaType nove) {
 void testMyStruct(::test::inner::MyStruct const &s) {
   TH_THROW(std::runtime_error, "testMyStruct not implemented");
 }
+
+void testPuraClass(::pura::PuraClass const &c) {
+  TH_THROW(std::runtime_error, "testPuraClass not implemented");
+}
 }  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
@@ -27,4 +31,5 @@ void testMyStruct(::test::inner::MyStruct const &s) {
 TH_EXPORT_CPP_API_testBar(testBar);
 TH_EXPORT_CPP_API_testNova(testNova);
 TH_EXPORT_CPP_API_testMyStruct(testMyStruct);
+TH_EXPORT_CPP_API_testPuraClass(testPuraClass);
 // NOLINTEND
