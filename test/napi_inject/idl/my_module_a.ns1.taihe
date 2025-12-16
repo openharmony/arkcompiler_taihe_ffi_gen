@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-@!lib("my_module_a")
+@!lib("my_module_a.so")
 
 @!namespace("my_module_a", "ns1")
 function Funtest(s: Color): String;

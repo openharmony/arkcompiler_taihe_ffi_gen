@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import * as lib from "record_test";
+const lib = requireNapi('./record_test.so', RequireBaseDir.SCRIPT_DIR);
 
 class BaseImpl implements lib.IBase {
   id: string;
@@ -56,7 +56,7 @@ function main() {
 
   let structRecord = lib.getStringData();
   for (const key in structRecord) {
-    console.log(`${key}: ${structRecord[key].a, structRecord[key].b, structRecord[key].c}`);
+      console.log(`${key}: ${structRecord[key].a}, ${structRecord[key].b}, ${structRecord[key].c}`);
   }
   let struct_record: Record<string, lib.Data> = {
     "key0": {a: "a0", b: "b0", c: 0},

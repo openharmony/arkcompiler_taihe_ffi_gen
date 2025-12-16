@@ -14,13 +14,13 @@
  */
 
 union union_primitive {
+  uValue: @undefined unit;
+  nValue: @null unit;
   sValue: String;
   numberValue: f64;
   bValue: bool;
   aValue: Array<i32>;
   mValue: Map<i32, String>;
-  uValue: @undefined unit;
-  nValue: @null unit;
 }
 
 function printUnion(data: union_primitive): String;

@@ -13,15 +13,15 @@
  * limitations under the License.
  */
 
-import { showOptionalInt, makeOptionalInt } from "opt_test";
+const lib = requireNapi('./opt_test.so', RequireBaseDir.SCRIPT_DIR);
 
 function main() {
-  showOptionalInt(1);
-  showOptionalInt(undefined);
-  let res1 = makeOptionalInt(true);
+  lib.showOptionalInt(1);
+  lib.showOptionalInt(undefined);
+  let res1 = lib.makeOptionalInt(true);
   if ( res1 !== 10) throw new Error(`Unexpected result`);
   console.log(res1);
-  let res2 = makeOptionalInt(false);
+  let res2 = lib.makeOptionalInt(false);
   if ( res2 !== undefined) throw new Error(`Unexpected result`);
   console.log(res2);
 }

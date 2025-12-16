@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import * as lib from "iface_test";
+const lib = requireNapi('./iface_test.so', RequireBaseDir.SCRIPT_DIR);
 
 class BaseImpl implements lib.IBase {
   id: string;

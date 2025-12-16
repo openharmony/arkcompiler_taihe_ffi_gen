@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import * as lib from "union_test";
+const lib = requireNapi('./union_test.so', RequireBaseDir.SCRIPT_DIR);
 
 function main() {
   let u1_res = lib.printUnion(1);
@@ -43,7 +43,10 @@ function main() {
   let m3 = lib.makeUnion("bool");
   if ( m3 !== false) throw new Error(`Unexpected result`);
   console.log(lib.makeUnion("array"));
-  console.log(lib.makeUnion("map"));
+  let m5 = lib.makeUnion("map");
+  for (const [key, value] of m5) {
+    console.log(key, value);
+  }
   let m6 = lib.makeUnion("undefined");
   if ( m6 !== undefined) throw new Error(`Unexpected result`);
   let m7 = lib.makeUnion("null");

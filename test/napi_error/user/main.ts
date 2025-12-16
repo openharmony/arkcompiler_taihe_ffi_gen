@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import * as lib from "hello";
+const lib = requireNapi('./hello.so', RequireBaseDir.SCRIPT_DIR);
 
 function testSayHello() {
     try {

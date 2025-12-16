@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import * as lib from "thread_test";
+const lib = requireNapi('./thread_test.so', RequireBaseDir.SCRIPT_DIR);
 
 function main() {
     console.log("start");
