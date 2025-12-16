@@ -426,7 +426,7 @@ const value: 1 3
 
 # 标签联合
 
-需要在同一内存位置存放不同类型的数据时，可以使用 [union](../spec/IdlReference.md#标签联合)。注意，在使用 Taihe 工具进行 Napi 桥接代码生成时，只支持 union 联合基础类型、String、Array、Map、undefined、null 和 Object，当存在 Object 类型时，必须设为 union 的最后一个元素。
+需要在同一内存位置存放不同类型的数据时，可以使用 [union](../spec/IdlReference.md#标签联合)。注意，在使用 Taihe 工具进行 Napi 桥接代码生成时，只支持 union 联合基础类型、String、Array、Map、undefined、null 和 Object，当存在 Object 类型时，必须设为 union 的最后一个元素，当存在 undefined 类型或 null 类型时需要定义在其他类型之前。
 
 ## 使用示例
 
@@ -436,13 +436,13 @@ const value: 1 3
 
 ```rust
 union union_primitive {
+  uValue: @undefined unit;
+  nValue: @null unit;
   sValue: String;
   numberValue: f64;
   bValue: bool;
   aValue: Array<i32>;
   mValue: Map<i32, String>;
-  uValue: @undefined unit;
-  nValue: @null unit;
 }
 
 function printUnion(data: union_primitive): String;
@@ -455,13 +455,13 @@ function makeUnion(kind: String): union_primitive;
 export function printUnion(data: union_primitive): string;
 export function makeUnion(kind: string): union_primitive;
 export type union_primitive =
+  | undefined
+  | null
   | string
   | number
   | boolean
   | Array<number>
-  | Map<number, string>
-  | undefined
-  | null;
+  | Map<number, string>;
 ```
 
 ### C++ 实现
