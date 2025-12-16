@@ -12,7 +12,7 @@
 
 ## Taihe 命令行使用方法
 
-Taihe 提供了 `taihec` 命令行工具，用于代码生成。
+Taihe 提供了 `taihec` 和 `taihe-tryit` 两个命令行工具，分别用于代码生成和自测试。
 
 ### `taihec`
 
@@ -58,7 +58,56 @@ taihec [taihe_files ...] [options ...]
 taihec test/napi_string/idl/*.taihe -Otest/napi_string/generated -Gnapi-bridge -Gcpp-author  # 生成用户自己在 IDL 中定义的接口的 NAPI 桥接代码，以及 C++ 实现模板等
 ```
 
-## 使用流程
+### `taihe-tryit`
+
+`taihe-tryit` 是一个 Taihe 内置的高度集成的自测试和验证工具，能够一键创建项目、生成代码、编译并运行测试。适合快速原型开发、学习和验证一个完整的样例。以下是 `taihe-tryit` 的基本用法：
+
+```sh
+taihe-tryit [mode] [test_dir] [options ...]
+```
+
+#### 模式
+
+`taihe-tryit` 支持多种模式，主要介绍 `create`、`generate`、`build`、`test` 几种：
+
+- `create`
+  用于创建一个新的测试样例目录，包含必要的目录结构和文件，例如：
+
+  ```sh
+  taihe-tryit create --user sts path/to/demo/dir
+  ```
+
+- `generate`
+  用于生成桥接代码，例如：
+
+  ```sh
+  taihe-tryit generate --user sts path/to/demo/dir
+  ```
+
+- `build`
+  不生成代码，将已有的代码进行编译并运行，用于生成了代码后，对生成的代码进行修改的场景，例如：
+
+  ```
+  taihe-tryit build --user sts path/to/demo/dir
+  ```
+
+- `test`
+  生成代码，并编译运行，该命令等价于分别执行 `generated` 和 `build`，用于快速验证一个完整的样例，例如：
+
+  ```
+  taihe-tryit test --user sts path/to/demo/dir
+  ```
+
+#### 支持的选项
+
+| 参数                                       | 简写                               | 可用模式           | 说明 |
+|--------------------------------------------|------------------------------------|--------------------|------|
+| `--verbose`                                | `-v`                               | 所有模式           | 输出详细的日志信息，便于调试 |
+| `--user <user>`                            | `-u <user>`                        | 所有模式           | 必要，选择消费者侧的语言类型，支持 `sts`, `cpp`, `ts` |
+| `--optimization {0,1,2,3}`                 | `-O{0,1,2,3}`                      | `build`, `test`    | 指定编译器的优化级别，默认为 `0` |
+| `--codegen <namespace>:<config>[=<value>]` | `-C<namespace>:<config>[=<value>]` | `generate`, `test` | 同 `taihec`，额外的代码生成配置项，例如 `sts:keep-name` 等 |
+
+## IDE 使用流程
 
 下面我们以一个 memberTest 项目为例，展示其标准流程。
 
