@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import * as lib from "cb_test";
+const lib = requireNapi('./cb_test.so', RequireBaseDir.SCRIPT_DIR);
 
 function main() {
   lib.test_cb_v((): void => {

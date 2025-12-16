@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import * as lib from "struct_extend";
+const lib = requireNapi('./struct_extend.so', RequireBaseDir.SCRIPT_DIR);
 
 class C implements lib.C {
     param1: number = 100;

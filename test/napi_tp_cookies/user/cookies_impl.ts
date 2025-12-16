@@ -13,9 +13,7 @@
  * limitations under the License.
  */
 
-"use static";
-
-import * as cookies_taihe from "cookies";
+const cookies_taihe = requireNapi('./cookies.so', RequireBaseDir.SCRIPT_DIR);
 
 export class AntUserCookiesProviderClz implements
     cookies_taihe.AntUserCookiesProvider {

@@ -13,8 +13,9 @@
  * limitations under the License.
  */
 
-import * as lib_a from "my_module_a";
-import * as lib_b from "my_module_b";
+const lib_a = requireNapi('./my_module_a.so', RequireBaseDir.SCRIPT_DIR);
+const lib_b = requireNapi('./my_module_b.so', RequireBaseDir.SCRIPT_DIR);
+
 
 function main() {
     let a = lib_a.ns1.Color.BLUE;

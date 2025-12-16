@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import * as lib from "bigint_test";
+const lib = requireNapi('./bigint_test.so', RequireBaseDir.SCRIPT_DIR);
 
 function main() {
     let num1: bigint = lib.processBigInt(18446744073709556846815135465465564525825546451551616n);
