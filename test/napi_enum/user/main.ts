@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import * as lib from "enum_test";
+const lib = requireNapi('./enum_test.so', RequireBaseDir.SCRIPT_DIR);
 
 function main() {
   let color = lib.Color.GREEN;

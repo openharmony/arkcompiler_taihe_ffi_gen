@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import * as lib from "maythrow";
+const lib = requireNapi('./maythrow.so', RequireBaseDir.SCRIPT_DIR);
 
 function main() {
     try {

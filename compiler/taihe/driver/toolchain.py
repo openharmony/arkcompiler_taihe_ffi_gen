@@ -34,6 +34,7 @@ from taihe.utils.diagnostics import ConsoleDiagnosticsManager
 from taihe.utils.exceptions import AdhocError
 from taihe.utils.outputs import BasicOutputConfig, CMakeOutputConfig
 from taihe.utils.resources import (
+    NapiSdk,
     PandaVm,
     RuntimeHeader,
     RuntimeSource,
@@ -198,6 +199,7 @@ class CppToolchain:
         input_files: Iterable[Path],
         include_dirs: Sequence[Path] = (),
         compile_flags: Sequence[str] = (),
+        system_include_dirs: Sequence[Path] = (),
     ) -> list[Path]:
         """Compile source files."""
         output_files: list[Path] = []
@@ -231,6 +233,10 @@ class CppToolchain:
             for include_dir in include_dirs:
                 if include_dir.exists():  # Only include directories that exist
                     command.append(f"-I{include_dir}")
+
+            for system_include_dir in system_include_dirs:
+                if system_include_dir.exists():
+                    command.append(f"-isystem{system_include_dir}")
 
             run_command(command)
 
@@ -402,49 +408,31 @@ class ArkToolchain:
 class TsToolchain:
     """Utility class for TS toolchain operations."""
 
-    def create_tsconfig(
-        self,
-        tsconfig_file: Path,
-        paths: dict[str, Path],
-        output_dir: Path,
-        root_dir: Path,
-        main_file: Path,
-    ):
-        """Create TS configuration file."""
-        config_content = {
-            "compilerOptions": {
-                "target": "ES2020",
-                "module": "commonjs",
-                "outDir": str(output_dir),
-                "rootDir": str(root_dir),
-                "paths": {key: [str(value)] for key, value in paths.items()},
-            },
-            "include": [
-                str(main_file),
-            ],
-        }
-
-        with open(tsconfig_file, "w") as json_file:
-            json.dump(config_content, json_file, indent=2)
-
-        logger.debug("Created configuration file at: %s", tsconfig_file)
+    def __init__(self):
+        self.sdk = NapiSdk.resolve()
 
     def compile(
         self,
-        tsconfig_file: Path,
+        main_ts_file: Path,
+        main_abc_file: Path,
     ) -> None:
-        """Compile TS files to JS format."""
+        """Compile TS files to ABC."""
         command_compiler = [
-            "tsc",
-            "--project",
-            f"{tsconfig_file}",
+            self.sdk.es2abc,
+            "--module",
+            main_ts_file,
+            "--output",
+            main_abc_file,
         ]
         run_command(command_compiler)
 
     def run(
         self,
-        js_target: Path,
+        abc_target: Path,
     ) -> float:
-        """Run the JS file with node."""
-        command_run = ["node", str(js_target)]
+        """Run the ABC file."""
+        command_run = [
+            self.sdk.napi_runner,
+            str(abc_target),
+        ]
         return run_command(command_run, capture_output=False)

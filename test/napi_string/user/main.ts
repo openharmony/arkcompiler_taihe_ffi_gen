@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import * as lib from "string_test";
+const lib = requireNapi('./string_test.so', RequireBaseDir.SCRIPT_DIR);
 
 function main() {
   let concat_str = lib.concat("test", "concat");

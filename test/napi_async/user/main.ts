@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import * as lib from "../generated/proxy/async_test";
+const lib = requireNapi('./async_test.so', RequireBaseDir.SCRIPT_DIR);
 
 function main() {
     console.log("before call function addRetPromise success");

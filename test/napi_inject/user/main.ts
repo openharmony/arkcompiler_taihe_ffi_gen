@@ -13,10 +13,10 @@
  * limitations under the License.
  */
 
-// import * as lib_a from "my_module_a";       // Use .d.ts
-import * as lib_b from "my_module_b";       // Use .d.ts
-import * as lib_a from "../generated/proxy/my_module_a";       // Use .ts
-// import * as lib_b from "../generated/proxy/my_module_b";       // Use .ts
+// const lib_a = requireNapi('./my_module_a.so', RequireBaseDir.SCRIPT_DIR);        // Use .d.ts
+const lib_b = requireNapi('./my_module_b.so', RequireBaseDir.SCRIPT_DIR);        // Use .d.ts
+import * as lib_a from "./my_module_a";       // Use .ts
+// import * as lib_b from "./my_module_b";       // Use .ts
 
 class BaseImpl implements lib_a.ns1.IBase {
   id: string;

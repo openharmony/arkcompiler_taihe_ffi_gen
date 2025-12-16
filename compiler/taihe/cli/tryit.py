@@ -15,6 +15,7 @@
 
 import argparse
 import logging
+import shutil
 import sys
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -412,16 +413,27 @@ class TsBuildSystem(BuildSystem):
         self.ts_toolchain = TsToolchain()
 
         self.user_dir = self.target_path / "user"
+        self.generate_proxy_dir = self.generated_dir / "proxy"
 
         self.build_generated_dir = self.build_dir / "generated"
-        self.build_user_dir = self.build_dir / "user"
-        self.build_node_modules_dir = self.build_dir / "node_modules"
 
         self.runtime_includes = [
             RuntimeHeader.resolve_path(),
         ]
         self.generated_includes = [*self.runtime_includes, self.generated_include_dir]
         self.author_includes = [*self.generated_includes, self.author_include_dir]
+
+        self.runtime_sys_includes = [
+            self.ts_toolchain.sdk.bounds_checking_function_header_dir,
+            self.ts_toolchain.sdk.interfaces_inner_api,
+            self.ts_toolchain.sdk.interfaces_kits,
+            self.ts_toolchain.sdk.libuv_header_dir,
+            self.ts_toolchain.sdk.native_engine,
+            self.ts_toolchain.sdk.native_engine_impl_ark,
+            self.ts_toolchain.sdk.node_src,
+        ]
+        self.generated_sys_includes = self.runtime_sys_includes
+        self.author_sys_includes = self.runtime_sys_includes
 
         runtime_src_dir = RuntimeSource.resolve_path()
         self.runtime_sources = [
@@ -430,8 +442,7 @@ class TsBuildSystem(BuildSystem):
             runtime_src_dir / "napi_runtime.cpp",
         ]
 
-        self.js_target = self.build_user_dir / "main.js"
-        self.tsconfig_file = self.build_dir / "tsconfig.json"
+        self.abc_target = self.build_dir / "main.abc"
 
         self.lib_files = []
         self.user_backend_names = ["napi-bridge"]
@@ -441,7 +452,7 @@ class TsBuildSystem(BuildSystem):
         create_directory(self.user_dir)
         with open(self.user_dir / "main.ts", "w") as f:
             f.write(
-                f'import * as hello from "hello";\n'
+                f"const hello = requireNapi('./hello.so', RequireBaseDir.SCRIPT_DIR);\n"
                 f"\n"
                 f"function main() {{\n"
                 f"    hello.sayHello();\n"
@@ -453,13 +464,13 @@ class TsBuildSystem(BuildSystem):
         create_directory(self.build_runtime_src_dir)
         create_directory(self.build_generated_src_dir)
         create_directory(self.build_author_src_dir)
-        create_directory(self.build_node_modules_dir)
 
         runtime_objects = self.cpp_toolchain.compile(
             self.build_runtime_src_dir,
             self.runtime_sources,
             self.runtime_includes,
             compile_flags=[f"-O{opt_level}"],
+            system_include_dirs=self.runtime_sys_includes,
         )
 
         generated_objects = self.cpp_toolchain.compile(
@@ -467,6 +478,7 @@ class TsBuildSystem(BuildSystem):
             self.generated_src_dir.glob("*.[cC]*"),
             self.generated_includes,
             compile_flags=[f"-O{opt_level}"],
+            system_include_dirs=self.generated_sys_includes,
         )
 
         author_objects = self.cpp_toolchain.compile(
@@ -474,21 +486,22 @@ class TsBuildSystem(BuildSystem):
             self.author_src_dir.glob("*.[cC]*"),
             self.author_includes,
             compile_flags=[f"-O{opt_level}"],
+            system_include_dirs=self.author_sys_includes,
         )
 
         # TODO: One node file corresponds to multiple ts files
         for path in self.generated_dir.glob("*.d.ts"):
             file_name = path.with_suffix("").stem
 
-            node_target = self.build_node_modules_dir / f"{file_name}.node"
+            so_target = self.build_dir / f"{file_name}.so"
             # Link all objects
             if all_objects := runtime_objects + generated_objects + author_objects:
                 self.cpp_toolchain.link(
-                    node_target,
+                    so_target,
                     all_objects,
                     shared=True,
                 )
-                logger.info("Shared library compiled: %s", node_target)
+                logger.info("Shared library compiled: %s", so_target)
             else:
                 logger.warning(
                     "No object files to link, skipping shared library compilation"
@@ -503,24 +516,37 @@ class TsBuildSystem(BuildSystem):
             file_name = path.with_suffix("").stem
             paths[file_name] = path
 
-        main_ts_file = self.user_dir / "main.ts"
-        self.ts_toolchain.create_tsconfig(
-            self.tsconfig_file, paths, self.build_dir, self.target_path, main_ts_file
-        )
+        for proxy_file in self.generate_proxy_dir.glob("*.ts"):
+            new_proxy_file = self.build_dir / proxy_file.name
+            shutil.copy2(proxy_file, new_proxy_file)
 
-        self.ts_toolchain.compile(
-            self.tsconfig_file,
-        )
+            proxy_abc_target = self.build_dir / f"{proxy_file.stem}.abc"
+            self.ts_toolchain.compile(
+                new_proxy_file,
+                proxy_abc_target,
+            )
+
+        for user_file in self.user_dir.glob("*.ts"):
+            new_user_file = self.build_dir / user_file.name
+            shutil.copy2(user_file, new_user_file)
+
+            user_abc_target = self.build_dir / f"{user_file.stem}.abc"
+            self.ts_toolchain.compile(
+                new_user_file,
+                user_abc_target,
+            )
 
     def _run_user_executable(self) -> None:
         """Run the JS file with node."""
         logger.info("Running ABC file with Ark runtime...")
 
-        elapsed_time = self.ts_toolchain.run(
-            self.js_target,
-        )
-
-        logger.info("Done, time = %f s", elapsed_time)
+        if self.abc_target.exists():
+            elapsed_time = self.ts_toolchain.run(
+                self.abc_target,
+            )
+            logger.info("Done, time = %f s", elapsed_time)
+        else:
+            logger.warning("No main ABC file to run, skipping execution")
 
 
 BUILD_MODES = {
