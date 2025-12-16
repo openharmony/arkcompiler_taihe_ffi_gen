@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import * as lib from "typedarray_test";
+const lib = requireNapi('./typedarray_test.so', RequireBaseDir.SCRIPT_DIR);
 
 function main() {
   let arr = lib.NewUint8Array(5, 10);

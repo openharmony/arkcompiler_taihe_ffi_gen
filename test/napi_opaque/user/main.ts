@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import * as lib from "opaque_test";
+const lib = requireNapi('./opaque_test.so', RequireBaseDir.SCRIPT_DIR);
 
 function main() {
     console.log("test opaque param", lib.is_string("test"));

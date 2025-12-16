@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import * as lib from "struct_test";
+const lib = requireNapi('./struct_test.so', RequireBaseDir.SCRIPT_DIR);
 
 // Test error param type
 function testDynamicInput(value: any) {

@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-@!lib("my_module_a")
+@!lib("my_module_a.so")
 function baz(): void;
 
 function concat_str(a: String): String;

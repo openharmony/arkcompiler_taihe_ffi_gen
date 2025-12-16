@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import * as lib from "arraybuffer_test";
+const lib = requireNapi('./arraybuffer_test.so', RequireBaseDir.SCRIPT_DIR);
 
 function main() {
   const arrbuf1 = new ArrayBuffer(16);

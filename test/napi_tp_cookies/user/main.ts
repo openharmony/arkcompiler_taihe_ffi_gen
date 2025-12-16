@@ -14,7 +14,7 @@
  */
 
 import * as cookies_impl from "./cookies_impl";
-import * as cookies_user from "cookies_user";
+const cookies_user = requireNapi('./cookies_user.so', RequireBaseDir.SCRIPT_DIR);
 
 function main() {
     let cookieProvider = new cookies_impl.AntUserCookiesProviderClz();

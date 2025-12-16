@@ -13,10 +13,10 @@
  * limitations under the License.
  */
 
-// import * as lib_people from "people";                    // Use .d.ts
-// import * as lib_building from "building";                // Use .d.ts
-import * as lib_people from "../generated/proxy/people";           // Use .ts
-import * as lib_building from "../generated/proxy/building";       // Use .ts
+// const lib_people = requireNapi('./people.so', RequireBaseDir.SCRIPT_DIR);        // Use .d.tsl
+// const lib_building = requireNapi('./building.so', RequireBaseDir.SCRIPT_DIR);    // Use .d.ts
+import * as lib_people from "./people";           // Use .ts
+import * as lib_building from "./building";       // Use .ts
 
 function main() {
     let g = lib_building.make_group();

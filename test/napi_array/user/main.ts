@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import * as lib from "array_test";
+const lib = requireNapi('./array_test.so', RequireBaseDir.SCRIPT_DIR);
 
 function main() {
 let numbers: number[] = [1, 2, 3, 4, 5];
