@@ -109,8 +109,8 @@ function make_group(): group;
 ### ArkTS-Dyn 调用
 
 ```typescript
-import * as lib_people from "people";
-import * as lib_building from "building";
+const lib_people = requireNapi('./people.so', RequireBaseDir.SCRIPT_DIR);
+const lib_building = requireNapi('./building.so', RequireBaseDir.SCRIPT_DIR);
 
 let g = lib_building.make_group();
 console.log(g.member.age, g.member.name, g.number);
@@ -239,8 +239,8 @@ export namespace functiontest {
 ### ArkTS-Dyn 调用
 
 ```typescript
-import * as lib_a from "my_module_a";
-import * as lib_b from "my_module_b";
+const lib_a = requireNapi('./my_module_a.so', RequireBaseDir.SCRIPT_DIR);
+const lib_b = requireNapi('./my_module_b.so', RequireBaseDir.SCRIPT_DIR);
 
 lib_a.baz();
 lib_a.ns1.noo();
@@ -362,7 +362,7 @@ function add: 5
 
 # 枚举
 
-进行枚举类型相关开发时，可以使用 enum，使用常量表示有限的状态。进行常量相关开发时，可以在 enum 上使用 @const 注解。
+进行枚举类型相关开发时，可以使用 enum，表示有限的状态。进行常量相关开发时，可以在 enum 上使用 @const 注解。
 
 ## 使用示例
 
@@ -541,8 +541,8 @@ console.log(makeUnion("s"));
 
 ```sh
 number: 1
-Test: number
-Test: string
+number
+string
 ```
 
 # 结构体
@@ -689,7 +689,7 @@ Taihe 中 struct 类型的 C++ 使用方法可参考[结构体](../backend-cpp/C
   return Teacher{a.name + " teacher", a.age + 15};
 }
 ::taihe::expected<G, ::taihe::error> process_g(G const& a) {
-  return {{a.f.f + 1}, a.g + 2};
+  return G{{a.f.f + 1}, a.g + 2};
 }
 ::taihe::expected<H, ::taihe::error> process_h(H const& a) {
   return H{{{a.g.f.f + 1}, a.g.g + 2}, a.h +3};
@@ -1001,8 +1001,16 @@ public:
 }
 
 ::taihe::expected<void, ::taihe::error> copyIBase(weak::IBase a, weak::IBase b) {
-  a->setId(b->getId());
-  return {};
+  ::taihe::expected<::taihe::string, ::taihe::error> id = b->getId();
+  if (id.has_value()) {
+    auto x = a->setId(id.value());
+    return {};
+  } else {
+    std::cout << "!!!!!!!!!! Error in getting ID "
+              << id.error().message().c_str() << id.error().code() << std::endl;
+    return ::taihe::expected<void, ::taihe::error>(::taihe::unexpect,
+                                                   "Error in getting ID");
+  }
 }
 
 ::taihe::expected<IShape, ::taihe::error> makeIShape(::taihe::string_view id, double a, double b) {
@@ -1014,8 +1022,13 @@ public:
 }
 
 ::taihe::expected<CTest, ::taihe::error> changeCTest(weak::CTest a) {
-  int32_t x = a->add(3, 4);
-  return taihe::make_holder<CTestImpl, CTest>(x);
+  ::taihe::expected<float, ::taihe::error> x = a->add(3, 4);
+  if (x.has_value()) {
+    return ::taihe::make_holder<CTestImpl, CTest>(x.value());
+  } else {
+    return ::taihe::expected<CTest, ::taihe::error>(
+        ::taihe::unexpect, "Error in add");
+  }
 }
 
 ::taihe::expected<int32_t, ::taihe::error> multiply(int32_t a, int32_t b) {
@@ -1107,12 +1120,12 @@ console.log(d.getId());
 输出结果如下：
 
 ```sh
-new base 0x1d579b60
+new base 0x60e03ead2420
 ibase_1 getId:  abc
 ibase_1 setId:  xyz
-new base 0x1d53cc00
+new base 0x60e03ead0970
 copyIBase:  test test
-new shape 0x1d55fbb0
+new shape 0x60e03ead0c10
 makeIShape:  7.850000381469727
 interface extends:  shape
 interface extends set:  aaaaa
@@ -1123,18 +1136,18 @@ CTets:  103
 new ctest 107
 change CTets:  118
 static function:  56
-new Color 0x1d53c680
+new Color 0x60e03ead0e40
 get attr:  my color
 set attr:  new my color
 color method:  6
 derived call!
 d
-del Color 0x1d53c680
-del ctest 0x1d53b290
-del ctest 0x1d53a880
-del shape 0x1d55fbb0
-del base 0x1d53cc00
-del base 0x1d579b60
+del base 0x60e03ead2420
+del base 0x60e03ead0970
+del shape 0x60e03ead0c10
+del ctest 0x60e03ead1010
+del ctest 0x60e03ead10f0
+del Color 0x60e03ead0e40
 ```
 
 # 异步
@@ -1239,8 +1252,8 @@ public:
     return {};
   }
 };
-::taihe::expected<::async_test::IBase, ::taihe::error> createIBase() {
-  return taihe::make_holder<IBaseImpl, ::async_test::IBase>();
+::taihe::expected<IBase, ::taihe::error> createIBase() {
+  return taihe::make_holder<IBaseImpl, IBase>();
 }
 
 TH_EXPORT_CPP_API_addSync(addSync);
@@ -1253,7 +1266,7 @@ TH_EXPORT_CPP_API_createIBase(createIBase);
 
 ```typescript
 console.log("before call function addRetPromise success");
-let p1 = lib.addRetPromise(1, 2);
+let p1 = addRetPromise(1, 2);
 p1.then((res) => {
     console.log("success in addRetPromise", res);
 })
@@ -1263,7 +1276,7 @@ p1.then((res) => {
 console.log("after call function addRetPromise success");
 
 console.log("before call function addRetPromise failed");
-let p2 = lib.addRetPromise(0, 2);
+let p2 = addRetPromise(0, 2);
 p2.then((res) => {
     console.log("success in addRetPromise", res);
 })
@@ -1273,7 +1286,7 @@ p2.then((res) => {
 console.log("after call function addRetPromise failed");
 
 console.log("before call function addWithAsync success");
-lib.addWithAsync(1, 2, (error, result) => {
+addWithAsync(1, 2, (error, result) => {
     if (error !== null) {
         console.log("failed in addWithAsync", error.message);
     } else {
@@ -1283,7 +1296,7 @@ lib.addWithAsync(1, 2, (error, result) => {
 console.log("after call function addWithAsync success");
 
 console.log("before call function addWithAsync failed");
-lib.addWithAsync(0, 2, (error: Error | null, result?: number) => {
+addWithAsync(0, 2, (error: Error | null, result?: number) => {
     if (error !== null) {
         console.log("failed in addWithAsync", error.message);
     } else {
@@ -1292,7 +1305,7 @@ lib.addWithAsync(0, 2, (error: Error | null, result?: number) => {
 })
 console.log("after call function addWithAsync failed");
 
-let mybase = new lib.IBase();
+let mybase = new IBase();
 mybase.makeSync();
 mybase.makeRetPromise();
 mybase.makeWithAsync((error: Error | null) => {
@@ -1316,7 +1329,6 @@ after call function addWithAsync success
 before call function addWithAsync failed
 after call function addWithAsync failed
 makeSync
-finish main
 SUCCESS in addWithAsync: 3
 ERROR in addWithAsync
 success in addWithAsync 3
@@ -1335,7 +1347,7 @@ makeRetPromise
 
 Taihe 支持引入 Napi 代码，从而在 C++ 侧访问 ArkTS-Dyn 对象，可以使用 Opaque 类型，对应 Napi 类型为 napi_value，C++ 类型为指针。可以使用 @dts_type 注解指定 Opaque 在 .d.ts 文件中的类型， @dts_type("<type_name>") Opaque, <type_name> 为 .d.ts 中的类型名。
 
-可以引用 taihe/napi_runtime.hpp 头文件，其中提供 get_env() 函数返回 napi_env 指针，set_error() 函数抛出错误，set_type_error() 函数抛出类型错误，set_range_error() 函数抛出范围错误，has_error() 函数判断是否存在错误。
+可以引用 taihe/runtime.hpp 头文件，其中提供 get_env() 函数返回 napi_env 指针。
 
 ## 使用示例
 
@@ -1440,13 +1452,13 @@ test opaque param union false
 
 # 逃逸通道 - ArkTS-Dyn 协同开发
 
-Taihe 支持引入 ArkTS-Dyn 代码，从而在 ArkTs 层添加代码。
+Taihe 支持注入 ArkTS-Dyn 代码。
 
 ## 使用示例
 
 ### Taihe 声明
 
-默认情况下，Taihe 会生成 Napi 桥接文件和 .d.ts 文件，此时，可以使用注解 @!dts_inject_into_module 将一段 ArkTS-Dyn 代码注入到当前 Taihe 文件所对应的 .d.ts 文件的 namespace 中；可以使用注解 @!dts_inject 将一段 ArkTS-Dyn 代码注入到当前 Taihe 文件所对应的 .d.ts 文件的 namespace 所在的 module 头部。
+默认情况下，Taihe 会生成 Napi 桥接文件和 .d.ts 文件，此时，可以使用注解 @!dts_inject_into_module 将一段 ArkTS-Dyn 代码注入到当前 Taihe 文件所对应的 .d.ts 文件的 namespace 所在的 module 头部；可以使用注解 @!dts_inject 将一段 ArkTS-Dyn 代码注入到当前 Taihe 文件所对应的 .d.ts 文件的 namespace 中。
 
 **`my_module_b.functiontest.ohidl`**
 
@@ -1470,11 +1482,11 @@ export namespace functiontest {
 }
 ```
 
-特殊情况下（即使用 @!lib 注解时），Taihe 会额外生成与 .d.ts 文件同名的 .ts 文件存储在 //generated/proxy 目录下，做为 proxy 层代理 C++ 层已完成的实现，同时支持用户通过 inject 在 ts 层注入实现。
+特殊情况下（即使用 @!lib 注解时），Taihe 会额外生成与 .d.ts 文件同名的 .ts 文件存储在 //generated/proxy 目录下，做为 proxy 层代理 C++ 层已完成的实现，同时支持用户通过注解在 .ts 文件注入实现。
 
-注意，如果需要让当前 Taihe 文件对应的 module 生成 .ts 文件，或在当前 Taihe 文件中使用 ts inject 相关功能，必须提供 @!lib 注解。其语法为 @!lib("{so_file}")，使用注解时需指定 so 文件，作用是为生成的 .ts 文件提供寻找 C++ 层的实现。
+注意，如果需要让当前 Taihe 文件对应的 module 生成 .ts 文件，或在当前 Taihe 文件中使用 ts inject 相关功能，必须提供 @!lib 注解。其语法为 @!lib("{so_file_name}")，使用注解时需指定 so 文件，作用是为生成的 .ts 文件提供寻找 C++ 层实现的途径。
 
-此时，可以使用注解 @!ts_inject_into_module 将一段 ArkTS-Dyn 代码注入到当前 Taihe 文件所对应的 .ts 文件的 namespace 中；可以使用注解 @!ts_inject 将一段 ArkTS-Dyn 代码注入到当前 Taihe 文件所对应的 .ts 文件的 namespace 所在的 module 头部；可以使用注解 @!ts_inject_into_interface 将一段 ArkTS-Dyn 代码注入到当前 interface 中；可以使用注解 @!ts_inject_into_class 将一段 ArkTS-Dyn 代码注入到当前 interface 对应的 class 中。
+此时，可以使用注解 @!ts_inject_into_module 将一段 ArkTS-Dyn 代码注入到当前 Taihe 文件所对应的 .ts 文件的 namespace 所在的 module 头部；可以使用注解 @!ts_inject 将一段 ArkTS-Dyn 代码注入到当前 Taihe 文件所对应的 .ts 文件的 namespace 中；可以使用注解 @!ts_inject_into_interface 将一段 ArkTS-Dyn 代码注入到当前 interface 中；可以使用注解 @!ts_inject_into_class 将一段 ArkTS-Dyn 代码注入到当前 interface 对应的 class 中。
 
 注意，@!ts_inject_into_interface 注解应用于 struct 和 interface，@!ts_inject_into_class 注解可以应用于添加了 @class 注解的 struct 和 interface。
 
@@ -1486,7 +1498,7 @@ function concat_str(a: String): String;
 function concat_i32(a: i32): i32;
 
 // global function overload example
-@!ts_inject("""export function concat(a: string | number): string | number {
+@!ts_inject_into_module("""export function concat(a: string | number): string | number {
     if (typeof a === "string") {
         return concat_str(a);
     } else {
@@ -1596,11 +1608,11 @@ export function concat(a: string | number): string | number {
     return concat_i32(a);
   }
 }
-const _taihe_native_lib = require("my_module_a");
+const _taihe_native_lib = requireNapi('./my_module_a.so', RequireBaseDir.SCRIPT_DIR);
 export const concat_str = _taihe_native_lib.concat_str;
 export const concat_i32 = _taihe_native_lib.concat_i32;
 export namespace ns1 {
-  const _taihe_native_lib = require("my_module_a");
+  const _taihe_native_lib = requireNapi('./my_module_a.so', RequireBaseDir.SCRIPT_DIR);
   export interface IBase {
     add(a: number, b: number): number;
     getId(): string;
@@ -1729,13 +1741,32 @@ public:
 }
 ```
 
+**File: `my_module_b_functiontest.hpp`**
+
+```cpp
+// 用于展示 concat 重载的具体业务代码，用于 napi_register.cpp 文件
+#include "taihe/string.hpp"
+
+namespace {
+::taihe::string concat_str(::taihe::string_view a) {
+  return a + "_concat";
+}
+
+int32_t concat_i32(int32_t a) {
+  return a + 10;
+}
+}  // namespace
+```
+
+**File: `napi_register.cpp`**
+
 ```cpp
 // 实现 Taihe 文件中注入在 .d.ts 文件中声明的函数，需要在 napi register 文件中添加以下内容
 
 // implement the inject declare in .d.ts file
 // implement for inject overload functions
 #include "my_module_b_functiontest.hpp"
-#include "taihe/napi_runtime.hpp"
+#include "taihe/runtime.hpp"
 
 // 实现重载函数的分发
 static napi_value my_module_a_concat(napi_env env,
