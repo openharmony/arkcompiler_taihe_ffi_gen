@@ -16,7 +16,7 @@
 // NOLINTBEGIN
 
 #include "opaque_test.impl.hpp"
-#include <taihe/napi_runtime.hpp>
+#include <taihe/runtime.hpp>
 
 namespace {
 bool is_string(uintptr_t s)
