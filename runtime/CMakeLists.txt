@@ -18,7 +18,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(TAIHE_SOURCE src/string.cpp
               src/object.cpp
-              src/runtime.cpp)
+              src/runtime_ani.cpp)
 
 add_library(taihe_runtime STATIC ${TAIHE_SOURCE})
 
