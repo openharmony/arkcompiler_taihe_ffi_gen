@@ -310,7 +310,7 @@ class NapiCodeGenerator:
             f"include/{pkg_napi_info.header}",
             FileKind.C_HEADER,
         ) as target:
-            target.add_include("taihe/napi_runtime.hpp")
+            target.add_include("taihe/runtime.hpp")
             target.add_include("napi_utils.hpp")
             target.writelns(
                 f"#if __has_include(<napi/native_api.h>)",
@@ -897,7 +897,7 @@ class NapiCodeGenerator:
             FileKind.C_HEADER,
         ) as struct_napi_decl_target:
             struct_napi_decl_target.add_include("napi_utils.hpp")
-            struct_napi_decl_target.add_include("taihe/napi_runtime.hpp")
+            struct_napi_decl_target.add_include("taihe/runtime.hpp")
             struct_napi_decl_target.add_include(struct_cpp_info.defn_header)
             struct_napi_decl_target.writelns(
                 f"{struct_cpp_info.as_owner} {struct_napi_info.from_napi_func_name}(napi_env env, napi_value napi_obj);",
@@ -1297,7 +1297,7 @@ class NapiCodeGenerator:
             FileKind.C_HEADER,
         ) as iface_napi_decl_target:
             iface_napi_decl_target.add_include("napi_utils.hpp")
-            iface_napi_decl_target.add_include("taihe/napi_runtime.hpp")
+            iface_napi_decl_target.add_include("taihe/runtime.hpp")
             iface_napi_decl_target.add_include(iface_cpp_info.defn_header)
             iface_napi_decl_target.writelns(
                 f"napi_value {iface_napi_info.constructor_func_name}(napi_env env, napi_callback_info info);",
@@ -1784,7 +1784,7 @@ class NapiCodeGenerator:
             FileKind.C_HEADER,
         ) as iface_meth_napi_decl_target:
             iface_meth_napi_decl_target.add_include("napi_utils.hpp")
-            iface_meth_napi_decl_target.add_include("taihe/napi_runtime.hpp")
+            iface_meth_napi_decl_target.add_include("taihe/runtime.hpp")
             iface_meth_napi_decl_target.add_include(iface_cpp_info.defn_header)
             for methods, ancestor, props_strs in iface_napi_info.iface_register_infos:
                 if props_strs[2] != "nullptr":

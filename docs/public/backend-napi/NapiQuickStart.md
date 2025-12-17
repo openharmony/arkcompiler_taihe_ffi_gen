@@ -188,7 +188,7 @@ taihe-tryit [mode] [test_dir] [options ...]
      ../generated/src/member_test.napi.cpp
      //base_dir/taihe/src/taihe/runtime/object.cpp
      //base_dir/taihe/src/taihe/runtime/string.cpp
-     //base_dir/taihe/src/taihe/runtime/napi_runtime.cpp
+     //base_dir/taihe/src/taihe/runtime/runtime_napi.cpp
      )
 
      target_include_directories(entry
@@ -198,7 +198,7 @@ taihe-tryit [mode] [test_dir] [options ...]
      )
      ```
 
-可以使用命令获取 `object.cpp`，`string.cpp` 和 `napi_runtime.cpp` 文件的所在目录的绝对路径
+可以使用命令获取 `object.cpp`，`string.cpp` 和 `runtime_napi.cpp` 文件的所在目录的绝对路径
 
 ```bash
 taihec --print-runtime-source-path

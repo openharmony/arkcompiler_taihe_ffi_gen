@@ -27,7 +27,7 @@
 // implement the inject declare in .d.ts file
 // implement for inject overload functions
 #include "my_module_b_functiontest.hpp"
-#include "taihe/napi_runtime.hpp"
+#include "taihe/runtime.hpp"
 
 static napi_value my_module_a_concat(napi_env env, [[maybe_unused]] napi_callback_info info)
 {
