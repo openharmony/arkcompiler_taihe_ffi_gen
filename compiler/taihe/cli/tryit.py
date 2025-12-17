@@ -314,7 +314,7 @@ class StsBuildSystem(BuildSystem):
         self.runtime_sources = [
             runtime_src_dir / "string.cpp",
             runtime_src_dir / "object.cpp",
-            runtime_src_dir / "runtime.cpp",
+            runtime_src_dir / "runtime_ani.cpp",
         ]
 
         self.abc_target = self.build_dir / "main.abc"
