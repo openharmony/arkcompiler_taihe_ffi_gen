@@ -439,7 +439,7 @@ class TsBuildSystem(BuildSystem):
         self.runtime_sources = [
             runtime_src_dir / "string.cpp",
             runtime_src_dir / "object.cpp",
-            runtime_src_dir / "napi_runtime.cpp",
+            runtime_src_dir / "runtime_napi.cpp",
         ]
 
         self.abc_target = self.build_dir / "main.abc"
@@ -469,7 +469,7 @@ class TsBuildSystem(BuildSystem):
             self.build_runtime_src_dir,
             self.runtime_sources,
             self.runtime_includes,
-            compile_flags=[f"-O{opt_level}"],
+            compile_flags=["-DUSE_NAPI_RUNTIME", f"-O{opt_level}"],
             system_include_dirs=self.runtime_sys_includes,
         )
 
@@ -477,7 +477,7 @@ class TsBuildSystem(BuildSystem):
             self.build_generated_src_dir,
             self.generated_src_dir.glob("*.[cC]*"),
             self.generated_includes,
-            compile_flags=[f"-O{opt_level}"],
+            compile_flags=["-DUSE_NAPI_RUNTIME", f"-O{opt_level}"],
             system_include_dirs=self.generated_sys_includes,
         )
 
@@ -485,7 +485,7 @@ class TsBuildSystem(BuildSystem):
             self.build_author_src_dir,
             self.author_src_dir.glob("*.[cC]*"),
             self.author_includes,
-            compile_flags=[f"-O{opt_level}"],
+            compile_flags=["-DUSE_NAPI_RUNTIME", f"-O{opt_level}"],
             system_include_dirs=self.author_sys_includes,
         )
 
