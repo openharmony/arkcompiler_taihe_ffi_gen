@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-#include <taihe/napi_runtime.hpp>
+#include <taihe/runtime.hpp>
 
 namespace taihe {
 
