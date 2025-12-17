@@ -190,7 +190,7 @@ function(add_taihe_runtime)
     set(TAIHE_RUNTIME_SOURCES
       "${TAIHE_RUNTIME_SOURCE_DIR}/string.cpp"
       "${TAIHE_RUNTIME_SOURCE_DIR}/object.cpp"
-      "${TAIHE_RUNTIME_SOURCE_DIR}/runtime.cpp"
+      "${TAIHE_RUNTIME_SOURCE_DIR}/runtime_ani.cpp"
     )
 
     add_library(taihe_runtime STATIC
@@ -392,7 +392,7 @@ function(add_taihe_library target_name idl_files)
   set(TAIHE_RUNTIME_SOURCES
     "${TAIHE_RUNTIME_SOURCE_DIR}/string.cpp"
     "${TAIHE_RUNTIME_SOURCE_DIR}/object.cpp"
-    "${TAIHE_RUNTIME_SOURCE_DIR}/runtime.cpp"
+    "${TAIHE_RUNTIME_SOURCE_DIR}/runtime_ani.cpp"
   )
   set_source_files_properties(
     ${TAIHE_RUNTIME_SOURCES}
