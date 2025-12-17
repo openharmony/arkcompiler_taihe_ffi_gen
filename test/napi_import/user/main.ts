@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-// const lib_people = requireNapi('./people.so', RequireBaseDir.SCRIPT_DIR);        // Use .d.tsl
+// const lib_people = requireNapi('./people.so', RequireBaseDir.SCRIPT_DIR);        // Use .d.ts
 // const lib_building = requireNapi('./building.so', RequireBaseDir.SCRIPT_DIR);    // Use .d.ts
 import * as lib_people from "./people";           // Use .ts
 import * as lib_building from "./building";       // Use .ts
