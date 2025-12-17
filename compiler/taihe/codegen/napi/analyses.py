@@ -690,7 +690,7 @@ class ScalarTypeNapiInfo(TypeNapiInfo):
             ScalarKind.U8: "uint32_t",
             ScalarKind.U16: "uint32_t",
             ScalarKind.U32: "uint32_t",
-            ScalarKind.U64: "uint64_t",
+            ScalarKind.U64: "double",
         }.get(self.type.kind)
         from_js_to_c_func = {
             ScalarKind.BOOL: "napi_get_value_bool",
@@ -703,7 +703,7 @@ class ScalarTypeNapiInfo(TypeNapiInfo):
             ScalarKind.U8: "napi_get_value_uint32",
             ScalarKind.U16: "napi_get_value_uint32",
             ScalarKind.U32: "napi_get_value_uint32",
-            ScalarKind.U64: "napi_get_value_bigint_uint64",
+            ScalarKind.U64: "napi_get_value_double",
         }.get(self.type.kind)
         target.writelns(
             f"{as_napi_c} {cpp_result}_tmp;",
@@ -727,6 +727,7 @@ class ScalarTypeNapiInfo(TypeNapiInfo):
             ScalarKind.I64: "napi_create_int64",
             ScalarKind.U8: "napi_create_uint32",
             ScalarKind.U32: "napi_create_uint32",
+            ScalarKind.U64: "napi_create_double",
         }.get(self.type.kind)
         target.writelns(
             f"napi_value {napi_result} = nullptr;",

@@ -34,6 +34,10 @@ function main() {
   let add_show = lib.add(2, 3);
   if (add_show !== 5) throw new Error(`Unexpected result`);
   console.log("function add: ", add_show);
+
+  let sum_show = lib.sum(2, 3);
+  if (sum_show !== 6) throw new Error(`Unexpected result`);
+  console.log("function sum: ", sum_show);
 }
 
 main();
