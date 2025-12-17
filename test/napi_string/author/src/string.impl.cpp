@@ -17,6 +17,8 @@
 
 #include "string_test.impl.hpp"
 
+namespace {
+
 taihe::string ohos_concat_str(taihe::string_view a, taihe::string_view b)
 {
     return a + b;
@@ -42,9 +44,18 @@ int32_t add(int32_t a, int32_t b)
     return a + b;
 }
 
+uint64_t sum(uint64_t a, uint64_t b)
+{
+    return (a * b);
+}
+}  // namespace
+
+// Since these macros are auto-generate, lint will cause false positive.
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_concat(ohos_concat_str);
 TH_EXPORT_CPP_API_to_i32(ohos_str_to_int);
 TH_EXPORT_CPP_API_from_i32(ohos_int_to_str);
 TH_EXPORT_CPP_API_show(ohos_show);
 TH_EXPORT_CPP_API_add(add);
+TH_EXPORT_CPP_API_sum(sum);
 // NOLINTEND
