@@ -401,4 +401,9 @@ class TsToolchain:
             self.sdk.napi_runner,
             str(abc_target),
         ]
-        return run_command(command_run, capture_output=False)
+
+        env_dict = {
+            "LD_LIBRARY_PATH": str(self.sdk.lib_dir),
+        }
+
+        return run_command(command_run, capture_output=False, env=env_dict)
