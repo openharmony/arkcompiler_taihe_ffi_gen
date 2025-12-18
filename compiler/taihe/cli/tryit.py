@@ -500,6 +500,16 @@ class TsBuildSystem(BuildSystem):
                     so_target,
                     all_objects,
                     shared=True,
+                    link_options=[
+                        f"-L{self.ts_toolchain.sdk.lib_dir}",
+                        f"-lace_napi",
+                        f"-luv",
+                        f"-lhmicuuc",
+                        f"-lark_jsruntime",
+                        f"-lsec_shared",
+                        f"-lhmicui18n",
+                        f"-lark_jsoptimizer",
+                    ],
                 )
                 logger.info("Shared library compiled: %s", so_target)
             else:
