@@ -1,5 +1,6 @@
 """Manage output files."""
 
+import os
 import sys
 from collections import defaultdict
 from collections.abc import Generator
@@ -272,12 +273,13 @@ class OutputManager:
         self.register(desc)
 
         if self.dst_dir is None:
-            return
+            file_path = Path(os.devnull)
+        else:
+            file_path = self.dst_dir / desc.relative_path
+            file_path.parent.mkdir(exist_ok=True, parents=True)
 
-        file_path = self.dst_dir / desc.relative_path
-        file_path.parent.mkdir(exist_ok=True, parents=True)
-        with open(file_path, "w", encoding="utf-8") as dst:
-            yield dst
+        with file_path.open("w", encoding="utf-8") as f:
+            yield f
 
     def get_all_files(self) -> list[FileDescriptor]:
         return list(self.files.values())
