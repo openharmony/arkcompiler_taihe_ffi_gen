@@ -199,7 +199,10 @@ class FileWriter(BaseWriter):
         exc_tb: TracebackType | None,
     ) -> bool:
         del exc_val, exc_tb, exc_type
-        self._om.save(self)
+        with self._om.open(self.desc) as f:
+            self.write_prologue(f)
+            self.write_body(f)
+            self.write_epilogue(f)
         return False
 
     def write_body(self, f: TextIO):
@@ -263,19 +266,18 @@ class OutputManager:
             )
         self.files_by_kind[desc.kind].append(desc)
 
-    def save(self, writer: FileWriter):
+    @contextmanager
+    def open(self, desc: FileDescriptor):
         """Saves the content of a FileWriter to the output directory."""
-        self.register(writer.desc)
+        self.register(desc)
 
         if self.dst_dir is None:
             return
 
-        file_path = self.dst_dir / writer.desc.relative_path
+        file_path = self.dst_dir / desc.relative_path
         file_path.parent.mkdir(exist_ok=True, parents=True)
         with open(file_path, "w", encoding="utf-8") as dst:
-            writer.write_prologue(dst)
-            writer.write_body(dst)
-            writer.write_epilogue(dst)
+            yield dst
 
     def get_all_files(self) -> list[FileDescriptor]:
         return list(self.files.values())
