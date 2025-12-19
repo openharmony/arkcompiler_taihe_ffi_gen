@@ -17,8 +17,6 @@ from typing_extensions import Self, override
 if TYPE_CHECKING:
     from taihe.driver.contexts import CompilerInstance
 
-DEFAULT_INDENT = "    "  # Four spaces
-
 
 class DebugLevel(Enum):
     """Controls the code-generator debug info.
@@ -201,7 +199,7 @@ class FileWriter(BaseWriter):
         relative_path: str,
         file_kind: FileKind,
         *,
-        default_indent: str = DEFAULT_INDENT,
+        default_indent: str,
         comment_prefix: str,
     ):
         super().__init__(
@@ -321,13 +319,12 @@ class CMakeWriter(FileWriter):
         om: OutputManager,
         relative_path: str,
         file_kind: FileKind,
-        indent_unit: str = DEFAULT_INDENT,
     ):
         super().__init__(
             om,
             relative_path=relative_path,
             file_kind=file_kind,
-            default_indent=indent_unit,
+            default_indent="    ",
             comment_prefix="# ",
         )
         self.headers: dict[str, None] = {}
