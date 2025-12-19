@@ -3,7 +3,7 @@ from typing import TextIO
 
 from typing_extensions import override
 
-from taihe.utils.outputs import DEFAULT_INDENT, FileKind, FileWriter, OutputManager
+from taihe.utils.outputs import FileKind, FileWriter, OutputManager
 
 
 class Naming(ABC):
@@ -51,13 +51,12 @@ class StsWriter(FileWriter):
         om: OutputManager,
         relative_path: str,
         file_kind: FileKind,
-        indent_unit: str = DEFAULT_INDENT,
     ):
         super().__init__(
             om,
             relative_path=relative_path,
             file_kind=file_kind,
-            default_indent=indent_unit,
+            default_indent="    ",
             comment_prefix="// ",
         )
         self.import_dict: dict[str, tuple[str, str | None]] = {}
