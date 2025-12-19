@@ -58,65 +58,76 @@ class BaseWriter:
         *,
         comment_prefix: str,
         default_indent: str,
+        newline: str = "\n",
         debug_level: DebugLevel = DebugLevel.NONE,
     ):
         """Initialize a code writer with a writable output stream.
 
         Args:
             out: A writable stream object
-            comment_prefix: The prefix for line-comment, for instance, "// " for C++
+            comment_prefix: The prefix for line-comment
             default_indent: The default indentation string for each level of indentation
+            newline: The newline character(s) to use
             debug_level: see `DebugLevel` for details
         """
         self._out = out
         self._default_indent = default_indent
         self._current_indent = ""
+        self._newline = newline
         self._debug_level = debug_level
         self._comment_prefix = comment_prefix
 
-    def newline(self):
+    def newline(self, _show_debug: bool = True):
         """Writes a newline character."""
-        self._out.write("\n")
+        if _show_debug:
+            self._write_debug(sys._getframe(1))  # type: ignore
 
-    def writeln(
-        self,
-        line: str = "",
-    ):
+        self._out.write(self._newline)
+
+    def writeln(self, line: str = "", _show_debug: bool = True):
         """Writes a single-line string.
 
         Args:
             line: The line to write (must not contain newlines)
         """
+        if _show_debug:
+            self._write_debug(sys._getframe(1))  # type: ignore
+
         assert "\n" not in line, "use write_block to write multi-line text block"
 
         if not line:
             # Don't use indent for empty lines
-            self._out.write("\n")
+            self._out.write(self._newline)
             return
 
         self._out.write(self._current_indent)
         self._out.write(line)
-        self._out.write("\n")
+        self._out.write(self._newline)
 
-    def writelns(self, *lines: str):
+    def writelns(self, *lines: str, _show_debug: bool = True):
         """Writes multiple one-line strings.
 
         Args:
             *lines: One or more lines to write
         """
-        self._write_debug(skip=1)
-        for line in lines:
-            self.writeln(line)
+        if _show_debug:
+            self._write_debug(sys._getframe(1))  # type: ignore
 
-    def write_block(self, text_block: str):
+        for line in lines:
+            self.writeln(line, _show_debug=False)
+
+    def write_block(self, text_block: str, *, _show_debug: bool = True):
         """Writes a potentially multi-line text block.
 
         Args:
             text_block: The block of text to write
         """
-        self.writelns(*text_block.splitlines())
+        if _show_debug:
+            self._write_debug(sys._getframe(1))  # type: ignore
 
-    def write_comment(self, comment: str):
+        self.writelns(*text_block.splitlines(), _show_debug=False)
+
+    def write_comment(self, comment: str, *, _show_debug: bool = True):
         """Writes a comment block, prefixing each line with the comment prefix.
 
         Indents the comment block according to the current indentation level.
@@ -125,20 +136,23 @@ class BaseWriter:
         Args:
             comment: The comment text to write. Can be multi-line.
         """
+        if _show_debug:
+            self._write_debug(sys._getframe(1))  # type: ignore
+
         for line in comment.splitlines():
             self._out.write(self._current_indent)
             self._out.write(self._comment_prefix)
             self._out.write(line)
-            self._out.write("\n")
+            self._out.write(self._newline)
 
     @contextmanager
     def indented(
         self,
         prologue: str | None,
         epilogue: str | None,
-        /,
         *,
         indent: str | None = None,
+        _show_debug: bool = True,
     ) -> Generator[Self, None, None]:
         """Context manager that indents code within its scope.
 
@@ -150,22 +164,34 @@ class BaseWriter:
         Returns:
             A context manager that yields this BaseWriter
         """
-        self._write_debug(skip=2)
+        if _show_debug:
+            self._write_debug(sys._getframe(2))  # type: ignore
+
         if prologue is not None:
-            self.writeln(prologue)
+            self.writeln(prologue, _show_debug=False)
+
         previous_indent = self._current_indent
-        self._current_indent += self._default_indent if indent is None else indent
+        if indent is None:
+            indent = self._default_indent
+        self._current_indent += indent
         try:
             yield self
         finally:
             self._current_indent = previous_indent
-            if epilogue is not None:
-                self.writeln(epilogue)
 
-    def _write_debug(self, *, skip: int):
+        if epilogue is not None:
+            self.writeln(epilogue, _show_debug=False)
+
+    def _write_debug(self, f: FrameType):
         if self._debug_level == DebugLevel.NONE:
             return
-        self.write_comment(_format_frame(sys._getframe(skip + 1)))  # type: ignore
+
+        taihe_dir = Path(__file__).parent.parent
+        file_name = Path(f.f_code.co_filename).relative_to(taihe_dir).as_posix()
+        self.write_comment(
+            f"CODEGEN-DEBUG: {f.f_code.co_name} in {file_name}:{f.f_lineno}",
+            _show_debug=False,
+        )
 
 
 class FileWriter(BaseWriter):
@@ -215,15 +241,6 @@ class FileWriter(BaseWriter):
 
     def write_epilogue(self, f: TextIO):
         del f
-
-
-def _format_frame(f: FrameType) -> str:
-    taihe_dir = Path(__file__).parent.parent
-    file_name = Path(f.f_code.co_filename).relative_to(taihe_dir).as_posix()
-
-    base_format = f"CODEGEN-DEBUG: {f.f_code.co_name} in {file_name}:{f.f_lineno}"
-
-    return base_format
 
 
 @dataclass
