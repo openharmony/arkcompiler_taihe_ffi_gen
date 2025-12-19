@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from itertools import chain
 from json import dumps
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TextIO
 
 from typing_extensions import override
 
@@ -155,11 +155,15 @@ class PrettyFormatter(ExplicitTypeRefVisitor[str]):
 class PrettyPrinter(RecursiveDeclVisitor):
     def __init__(
         self,
-        out: BaseWriter,
+        buffer: TextIO,
         show_resolved: bool = False,
         colorize: bool = False,
     ):
-        self.out = out
+        self.out = BaseWriter(
+            buffer,
+            default_indent="    ",
+            comment_prefix="// ",
+        )
         self.fmt = PrettyFormatter(show_resolved, colorize)
 
     def write_pkg_attr(self, d: "PackageDecl"):
