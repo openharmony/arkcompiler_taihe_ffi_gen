@@ -470,10 +470,10 @@ class TaiheNapiBuild(CachedResource):
         "taihe-windows-x86_64-1.0.0+napi-20251222.tar.gz"
     )
     DARWIN_ARM64_TAIHE_NAPI_BUNDLE: Final = (
-        "taihe-darwin-x86_64-1.0.0+napi-20251222.tar.gz"
+        "taihe-darwin-arm64-1.0.0+napi-20251222.tar.gz"
     )
     DARWIN_X86_64_TAIHE_NAPI_BUNDLE: Final = (
-        "taihe-darwin-arm64-1.0.0+napi-20251222.tar.gz"
+        "taihe-darwin-x86_64-1.0.0+napi-20251222.tar.gz"
     )
 
     files: ClassVar[dict[str, str]] = {
