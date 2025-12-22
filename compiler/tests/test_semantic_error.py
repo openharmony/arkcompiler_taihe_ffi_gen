@@ -39,7 +39,7 @@ class SemanticTestDiagnosticsManager(DiagnosticsManager):
         self.errors = []
 
     @override
-    def emit(self, diag: DiagBase) -> None:
+    def _emit_impl(self, diag: DiagBase) -> None:
         self.errors.append(diag)
 
 
@@ -78,7 +78,7 @@ backend_registry.register_all()
 
 pre_backend_names = ["pretty-print"]
 pre_backend_factories = backend_registry.collect_required_backends(pre_backend_names)
-pre_backend_configs = [b() for b in pre_backend_factories]
+pre_backend_configs = [b.create() for b in pre_backend_factories]
 pre_invocation = CompilerInvocation(backend_configs=pre_backend_configs)
 
 
@@ -437,7 +437,7 @@ def test_enum_value():
 
 ani_backend_names = ["cpp-author", "ani-bridge", "pretty-print"]
 ani_backend_factories = backend_registry.collect_required_backends(ani_backend_names)
-ani_backend_configs = [b() for b in ani_backend_factories]
+ani_backend_configs = [b.create() for b in ani_backend_factories]
 ani_invocation = CompilerInvocation(backend_configs=ani_backend_configs)
 
 

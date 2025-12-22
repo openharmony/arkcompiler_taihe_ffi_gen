@@ -75,6 +75,7 @@ class SourceBuffer(SourceBase):
         return self.buf.getvalue()
 
 
+IDL_FILE_DEFAULT_EXT = ".taihe"
 IDL_FILE_EXTS = {".taihe", ".ohidl", ".hmidl"}
 
 

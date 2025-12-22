@@ -27,7 +27,7 @@ from taihe.semantics.declarations import PackageGroup
 from taihe.utils.analyses import AnalysisManager
 from taihe.utils.diagnostics import ConsoleDiagnosticsManager, DiagnosticsManager
 from taihe.utils.exceptions import IgnoredFileReason, IgnoredFileWarn
-from taihe.utils.outputs import OutputConfig, OutputManager
+from taihe.utils.outputs import NullOutputConfig, OutputConfig, OutputManager
 from taihe.utils.sources import IDL_FILE_EXTS, SourceFile, SourceLocation, SourceManager
 
 
@@ -59,7 +59,7 @@ class CompilerInvocation:
 
     src_files: list[Path] = field(default_factory=lambda: [])
     src_dirs: list[Path] = field(default_factory=lambda: [])
-    output_config: OutputConfig = field(default_factory=OutputConfig)
+    output_config: OutputConfig = field(default_factory=NullOutputConfig)
     backend_configs: list[BackendConfig] = field(default_factory=lambda: [])
 
     extra: dict[str, str | None] = field(default_factory=lambda: {})
@@ -123,11 +123,14 @@ class CompilerInstance:
         self.attribute_registry = AttributeRegistry()
         self.analysis_manager = AnalysisManager(self.config)
 
-        self.output_manager = invocation.output_config.construct(self)
+        self.output_manager = invocation.output_config.construct()
         self.backends = [
             backend_config.construct(self)
             for backend_config in invocation.backend_configs
         ]
+
+        for b in self.backends:
+            b.register()
 
     ##########################
     # The compilation phases #

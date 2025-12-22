@@ -11,12 +11,15 @@ if TYPE_CHECKING:
 class AbiHeaderBackendConfig(BackendConfig):
     NAME = "abi-header"
 
-    def construct(self, instance: "CompilerInstance") -> Backend:
+    @classmethod
+    def create(cls):
+        return AbiHeaderBackendConfig()
+
+    def construct(self, instance: "CompilerInstance"):
         from taihe.codegen.abi.gen_abi import AbiHeadersGenerator
 
         class AbiHeaderBackendImpl(Backend):
             def __init__(self, ci: "CompilerInstance"):
-                super().__init__(ci)
                 self._ci = ci
 
             def generate(self):
@@ -33,12 +36,15 @@ class AbiSourcesBackendConfig(BackendConfig):
     NAME = "abi-source"
     DEPS: ClassVar = ["abi-header"]
 
-    def construct(self, instance: "CompilerInstance") -> Backend:
+    @classmethod
+    def create(cls):
+        return AbiSourcesBackendConfig()
+
+    def construct(self, instance: "CompilerInstance"):
         from taihe.codegen.abi.gen_abi import AbiSourcesGenerator
 
         class AbiSourcesBackendImpl(Backend):
             def __init__(self, ci: "CompilerInstance"):
-                super().__init__(ci)
                 self._ci = ci
 
             def generate(self):
@@ -55,7 +61,11 @@ class CAuthorBackendConfig(BackendConfig):
     NAME = "c-author"
     DEPS: ClassVar = ["abi-source"]
 
-    def construct(self, instance: "CompilerInstance") -> Backend:
+    @classmethod
+    def create(cls):
+        return CAuthorBackendConfig()
+
+    def construct(self, instance: "CompilerInstance"):
         from taihe.codegen.abi.gen_impl import (
             CImplHeadersGenerator,
             CImplSourcesGenerator,
@@ -64,7 +74,6 @@ class CAuthorBackendConfig(BackendConfig):
         # TODO: unify CImpl{Headers,Sources}Generator
         class CImplBackendImpl(Backend):
             def __init__(self, ci: "CompilerInstance"):
-                super().__init__(ci)
                 self._ci = ci
 
             def generate(self):

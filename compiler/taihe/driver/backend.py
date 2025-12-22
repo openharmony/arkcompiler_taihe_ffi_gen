@@ -6,10 +6,30 @@ if TYPE_CHECKING:
     from taihe.driver.contexts import CompilerInstance
 
 
-class Backend(ABC):
+class BackendConfig(ABC):
+    NAME: ClassVar[str]
+    "The name of the backend."
+
+    DEPS: ClassVar[list[str]] = []
+    "List of backends that the current backend depends on."
+
+    @classmethod
     @abstractmethod
-    def __init__(self, instance: "CompilerInstance"):
-        """Initialize the backend."""
+    def create(cls) -> "BackendConfig":
+        """Creates a default configuration for the backend."""
+
+    @abstractmethod
+    def construct(self, instance: "CompilerInstance") -> "Backend":
+        """Construct an instance of the backend based on this configuration."""
+
+
+class Backend(ABC):  # noqa: B024
+    def register(self):
+        """Register backend-specific analyses, attributes, etc.
+
+        This method is called just after the backend is constructed.
+        """
+        return
 
     def inject(self):
         """Add backend-specific sources after the collection phase.
@@ -40,20 +60,6 @@ class Backend(ABC):
         - The error reporting should be completed in the `validate` stage.
         """
         return
-
-
-class BackendConfig(ABC):
-    NAME: ClassVar[str]
-    "The name of the backend."
-
-    DEPS: ClassVar[list[str]] = []
-    "List of backends that the current backend depends on."
-
-    @abstractmethod
-    def __init__(self): ...
-
-    @abstractmethod
-    def construct(self, instance: "CompilerInstance") -> Backend: ...
 
 
 BackendConfigT = type[BackendConfig]
