@@ -7,6 +7,8 @@ from pathlib import Path
 
 from taihe.utils.sources import IDL_FILE_EXTS
 
+COPYRIGHT_TEST = "Copyright (c) 2025 Huawei Device Co., Ltd."
+
 C_COPYRIGHT = """/*
  * Copyright (c) 2025 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -244,24 +246,44 @@ def add_c_style_copyright(text: str) -> str:
     if not text:
         return C_COPYRIGHT
 
-    return C_COPYRIGHT + "\n" + text
+    lines = text.splitlines(keepends=True)
+
+    res = C_COPYRIGHT
+
+    if len(lines) >= 2 and COPYRIGHT_TEST in lines[1]:
+        return text
+
+    if lines:
+        res += "\n"
+        for line in lines:
+            res += line
+
+    return res
 
 
 def add_sh_style_copyright(text: str) -> str:
     if not text:
         return SH_COPYRIGHT
 
-    lines = text.splitlines()
+    lines = text.splitlines(keepends=True)
 
-    if len(lines) and lines[0].startswith("#!"):
-        head, *tail = lines
-        while tail and not tail[0].strip():
-            tail.pop(0)
-        lines = [head, "", SH_COPYRIGHT, *tail]
+    if len(lines) >= 1 and lines[0].startswith("#!"):
+        head = lines.pop(0)
+        while lines and not lines[0].rstrip():
+            lines.pop(0)
+        res = head + "\n" + SH_COPYRIGHT
     else:
-        lines = [SH_COPYRIGHT, *lines]
+        res = SH_COPYRIGHT
 
-    return "".join(line + "\n" for line in lines)
+    if COPYRIGHT_TEST in lines[0]:
+        return text
+
+    if lines:
+        res += "\n"
+        for line in lines:
+            res += line
+
+    return res
 
 
 def add_python_encoding_header(text: str) -> str:
