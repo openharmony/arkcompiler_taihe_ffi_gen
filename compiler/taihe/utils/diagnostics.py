@@ -140,15 +140,6 @@ class DiagnosticsManager(ABC):
     def has_fatal(self):
         return self.has_reached_severity(Severity.FATAL)
 
-    def reset_severity(self):
-        """Resets the current maximum diagnostic severity."""
-        self._max_severity_seen = Severity.NOTE
-
-    @abstractmethod
-    def emit(self, diag: DiagBase) -> None:
-        """Emits a new diagnostic message, don't forget to call it in subclasses."""
-        self._max_severity_seen = max(self._max_severity_seen, diag.SEVERITY)
-
     @contextmanager
     def capture_error(self):
         """Captures "error" and "fatal" diagnostics using context manager.
@@ -190,6 +181,19 @@ class DiagnosticsManager(ABC):
                 no_error = False
         return no_error
 
+    def reset_severity(self):
+        """Resets the current maximum diagnostic severity."""
+        self._max_severity_seen = Severity.NOTE
+
+    def emit(self, diag: DiagBase) -> None:
+        """Emits a new diagnostic message, don't forget to call it in subclasses."""
+        self._max_severity_seen = max(self._max_severity_seen, diag.SEVERITY)
+        self._emit_impl(diag)
+
+    @abstractmethod
+    def _emit_impl(self, diag: DiagBase) -> None:
+        """Emits a new diagnostic message. To be implemented by subclasses."""
+
 
 class ConsoleDiagnosticsManager(DiagnosticsManager):
     """Manages diagnostic messages."""
@@ -202,13 +206,11 @@ class ConsoleDiagnosticsManager(DiagnosticsManager):
             self._color_filter_fn = _discard
 
     @override
-    def emit(self, diag: DiagBase) -> None:
-        """Emits a new diagnostic message."""
-        super().emit(diag)
+    def _emit_impl(self, diag: DiagBase) -> None:
         self._render(diag)
         for n in diag.notes():
             self._render(n)
-        stderr.flush()
+        self._flush()
 
     def _write(self, s: str):
         self._out.write(s)

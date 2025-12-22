@@ -39,7 +39,7 @@ from typing import Any, ClassVar, Generic, TypeVar, cast
 from typing_extensions import Self, override
 
 from taihe.semantics.declarations import Decl
-from taihe.semantics.format import PrettyFormatter
+from taihe.semantics.format import TaiheFormatter
 from taihe.utils.diagnostics import DiagnosticsManager
 from taihe.utils.exceptions import (
     AttrArgMissingError,
@@ -105,7 +105,7 @@ class AnyAttribute(ABC):
 
         This can be overridden by subclasses to provide more context.
         """
-        return f"attribute {PrettyFormatter().get_format_attr(self)}"
+        return f"attribute {TaiheFormatter().get_format_attr(self)}"
 
     @abstractmethod
     def get_name(self) -> str:

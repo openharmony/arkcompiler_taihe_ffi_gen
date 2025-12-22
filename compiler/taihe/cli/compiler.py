@@ -6,7 +6,7 @@ from pathlib import Path
 from taihe.driver.backend import BackendRegistry
 from taihe.driver.contexts import CompilerInstance, CompilerInvocation
 from taihe.utils.build_metadata import BuildMetadata
-from taihe.utils.outputs import CMakeOutputConfig, OutputConfig
+from taihe.utils.outputs import BasicOutputConfig, CMakeOutputConfig
 from taihe.utils.resources import (
     ResourceContext,
     RuntimeHeader,
@@ -96,7 +96,7 @@ def main():
         return -1
 
     backend_factories = registry.collect_required_backends(args.backends)
-    backend_configs = [b() for b in backend_factories]
+    backend_configs = [b.create() for b in backend_factories]
 
     if args.buildsys == "cmake":
         output_config = CMakeOutputConfig(
@@ -105,7 +105,7 @@ def main():
             runtime_src_dir=RuntimeSource.resolve_path(),
         )
     else:
-        output_config = OutputConfig(
+        output_config = BasicOutputConfig(
             dst_dir=dst_dir,
         )
 
