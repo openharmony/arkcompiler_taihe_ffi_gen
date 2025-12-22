@@ -56,7 +56,6 @@ class BaseWriter:
         *,
         comment_prefix: str,
         default_indent: str,
-        newline: str = "\n",
         debug_level: DebugLevel = DebugLevel.NONE,
     ):
         """Initialize a code writer with a writable output stream.
@@ -69,18 +68,17 @@ class BaseWriter:
             debug_level: see `DebugLevel` for details
         """
         self._out = out
+        self._comment_prefix = comment_prefix
         self._default_indent = default_indent
         self._current_indent = ""
-        self._newline = newline
         self._debug_level = debug_level
-        self._comment_prefix = comment_prefix
 
     def newline(self, _show_debug: bool = True):
         """Writes a newline character."""
         if _show_debug:
             self._write_debug(sys._getframe(1))  # type: ignore
 
-        self._out.write(self._newline)
+        self._out.write("\n")
 
     def writeln(self, line: str = "", _show_debug: bool = True):
         """Writes a single-line string.
@@ -95,12 +93,12 @@ class BaseWriter:
 
         if not line:
             # Don't use indent for empty lines
-            self._out.write(self._newline)
+            self._out.write("\n")
             return
 
         self._out.write(self._current_indent)
         self._out.write(line)
-        self._out.write(self._newline)
+        self._out.write("\n")
 
     def writelns(self, *lines: str, _show_debug: bool = True):
         """Writes multiple one-line strings.
@@ -141,7 +139,7 @@ class BaseWriter:
             self._out.write(self._current_indent)
             self._out.write(self._comment_prefix)
             self._out.write(line)
-            self._out.write(self._newline)
+            self._out.write("\n")
 
     @contextmanager
     def indented(
