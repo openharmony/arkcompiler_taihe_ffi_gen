@@ -15,7 +15,11 @@ class AniBridgeBackendConfig(BackendConfig):
     keep_name: bool = False
     """Use the original function name (instead of "camelCase") in exported ArkTS sources."""
 
-    def construct(self, instance: CompilerInstance) -> Backend:
+    @classmethod
+    def create(cls):
+        return AniBridgeBackendConfig()
+
+    def construct(self, instance: CompilerInstance):
         from taihe.codegen.ani.attributes import all_attr_types
         from taihe.codegen.ani.gen_ani import AniCodeGenerator
         from taihe.codegen.ani.gen_sts import StsCodeGenerator
@@ -23,8 +27,9 @@ class AniBridgeBackendConfig(BackendConfig):
         # TODO: unify {Ani,Sts}CodeGenerator
         class AniBridgeBackendImpl(Backend):
             def __init__(self, ci: "CompilerInstance"):
-                super().__init__(ci)
                 self._ci = ci
+
+            def register(self):
                 self._ci.attribute_registry.register(*all_attr_types)
 
             def inject(self):

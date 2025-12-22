@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Generic, TypeVar, cast
 
 from typing_extensions import override
 
-from taihe.semantics.format import PrettyFormatter
+from taihe.semantics.format import TaiheFormatter
 from taihe.semantics.types import (
     EnumType,
     IfaceType,
@@ -192,7 +192,7 @@ class TypeRefDecl(DeclWithParent["TypeHolderDecl"], ABC):
     @property
     @override
     def description(self) -> str:
-        if (fmt := self.format(PrettyFormatter())) is not None:
+        if (fmt := self.format(TaiheFormatter())) is not None:
             return f"explicit type reference ({fmt})"
         return "implicit type reference"
 
@@ -213,7 +213,7 @@ class TypeRefDecl(DeclWithParent["TypeHolderDecl"], ABC):
         self.resolved_ty_or_none = ty
 
     @abstractmethod
-    def format(self, fmt: PrettyFormatter) -> str | None:
+    def format(self, fmt: TaiheFormatter) -> str | None:
         """Format this type reference into a string with a formatter."""
 
     @abstractmethod
@@ -232,7 +232,7 @@ class ImplicitTypeRefDecl(TypeRefDecl):
     ):
         super().__init__(loc)
 
-    def format(self, fmt: PrettyFormatter) -> None:
+    def format(self, fmt: TaiheFormatter) -> None:
         return None
 
     @override
@@ -252,7 +252,7 @@ class ExplicitTypeRefDecl(TypeRefDecl):
     ):
         super().__init__(loc)
 
-    def format(self, fmt: PrettyFormatter) -> str:
+    def format(self, fmt: TaiheFormatter) -> str:
         return fmt.get_type_ref(self)
 
     @abstractmethod

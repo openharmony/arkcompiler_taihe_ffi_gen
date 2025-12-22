@@ -48,7 +48,6 @@ class AbstractAnalysis(Generic[_P], ABC):
         **kwargs: _P.kwargs,
     ) -> _A:
         """Create an instance of an analysis with the given arguments."""
-        raise NotImplementedError("Subclasses must implement this method.")
 
 
 @dataclass(frozen=True)
