@@ -1,21 +1,18 @@
 """Manage output files."""
 
 import os
-import sys
-from collections import defaultdict
+from abc import ABC, abstractmethod
 from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from io import StringIO
 from pathlib import Path
+from sys import _getframe, stdout  # type: ignore
 from types import FrameType, TracebackType
-from typing import TYPE_CHECKING, TextIO
+from typing import TextIO
 
 from typing_extensions import Self, override
-
-if TYPE_CHECKING:
-    from taihe.driver.contexts import CompilerInstance
 
 
 class DebugLevel(Enum):
@@ -40,6 +37,7 @@ class FileKind(str, Enum):
     CPP_SOURCE = "cpp_source"
     TEMPLATE = "template"
     ETS = "ets"
+    TAIHE = "taihe"
     OTHER = "other"
 
 
@@ -76,7 +74,7 @@ class BaseWriter:
     def newline(self, _show_debug: bool = True):
         """Writes a newline character."""
         if _show_debug:
-            self._write_debug(sys._getframe(1))  # type: ignore
+            self._write_debug(_getframe(1))  # type: ignore
 
         self._out.write("\n")
 
@@ -87,7 +85,7 @@ class BaseWriter:
             line: The line to write (must not contain newlines)
         """
         if _show_debug:
-            self._write_debug(sys._getframe(1))  # type: ignore
+            self._write_debug(_getframe(1))  # type: ignore
 
         assert "\n" not in line, "use write_block to write multi-line text block"
 
@@ -107,7 +105,7 @@ class BaseWriter:
             *lines: One or more lines to write
         """
         if _show_debug:
-            self._write_debug(sys._getframe(1))  # type: ignore
+            self._write_debug(_getframe(1))  # type: ignore
 
         for line in lines:
             self.writeln(line, _show_debug=False)
@@ -119,7 +117,7 @@ class BaseWriter:
             text_block: The block of text to write
         """
         if _show_debug:
-            self._write_debug(sys._getframe(1))  # type: ignore
+            self._write_debug(_getframe(1))  # type: ignore
 
         self.writelns(*text_block.splitlines(), _show_debug=False)
 
@@ -133,7 +131,7 @@ class BaseWriter:
             comment: The comment text to write. Can be multi-line.
         """
         if _show_debug:
-            self._write_debug(sys._getframe(1))  # type: ignore
+            self._write_debug(_getframe(1))  # type: ignore
 
         for line in comment.splitlines():
             self._out.write(self._current_indent)
@@ -161,7 +159,7 @@ class BaseWriter:
             A context manager that yields this BaseWriter
         """
         if _show_debug:
-            self._write_debug(sys._getframe(2))  # type: ignore
+            self._write_debug(_getframe(2))  # type: ignore
 
         if prologue is not None:
             self.writeln(prologue, _show_debug=False)
@@ -240,59 +238,26 @@ class FileWriter(BaseWriter):
 
 
 @dataclass
-class OutputConfig:
-    dst_dir: Path | None = None
-    debug_level: DebugLevel = DebugLevel.NONE
+class OutputConfig(ABC):
+    debug_level: DebugLevel = field(default=DebugLevel.NONE, kw_only=True)
 
-    def construct(self, ci: "CompilerInstance") -> "OutputManager":
-        """Construct an OutputManager based on this configuration."""
-        return OutputManager(
-            self.dst_dir,
-            self.debug_level,
-        )
+    @abstractmethod
+    def construct(self) -> "OutputManager":
+        """Constructs an OutputManager based on this configuration."""
 
 
-class OutputManager:
-    """Manages the creation and saving of output files."""
+class OutputManager(ABC):
+    """Abstract base class for output managers."""
 
     files: dict[str, FileDescriptor]
     files_by_kind: dict[FileKind, list[FileDescriptor]]
 
-    dst_dir: Path | None
-
     debug_level: DebugLevel
 
-    def __init__(
-        self,
-        dst_dir: Path | None,
-        debug_level: DebugLevel,
-    ):
-        self.files: dict[str, FileDescriptor] = {}
-        self.files_by_kind: dict[FileKind, list[FileDescriptor]] = defaultdict(list)
-        self.dst_dir = dst_dir
+    def __init__(self, *, debug_level: DebugLevel):
+        self.files = {}
+        self.files_by_kind = {}
         self.debug_level = debug_level
-
-    def register(self, desc: FileDescriptor):
-        if (prev := self.files.setdefault(desc.relative_path, desc)) != desc:
-            raise ValueError(
-                f"File {desc.relative_path} is already registered as {prev.kind}, "
-                f"cannot re-register with {desc.kind}."
-            )
-        self.files_by_kind[desc.kind].append(desc)
-
-    @contextmanager
-    def open(self, desc: FileDescriptor):
-        """Saves the content of a FileWriter to the output directory."""
-        self.register(desc)
-
-        if self.dst_dir is None:
-            file_path = Path(os.devnull)
-        else:
-            file_path = self.dst_dir / desc.relative_path
-            file_path.parent.mkdir(exist_ok=True, parents=True)
-
-        with file_path.open("w", encoding="utf-8") as f:
-            yield f
 
     def get_all_files(self) -> list[FileDescriptor]:
         return list(self.files.values())
@@ -300,8 +265,91 @@ class OutputManager:
     def get_files_by_kind(self, kind: FileKind) -> list[FileDescriptor]:
         return self.files_by_kind.get(kind, [])
 
+    def register(self, desc: FileDescriptor):
+        if (prev := self.files.setdefault(desc.relative_path, desc)) != desc:
+            raise ValueError(
+                f"File {desc.relative_path} is already registered as {prev.kind}, "
+                f"cannot re-register with {desc.kind}."
+            )
+        self.files_by_kind.setdefault(desc.kind, []).append(desc)
+
     def post_generate(self) -> None:
-        pass
+        """Hook called after all files have been generated."""
+        return
+
+    @contextmanager
+    def open(self, desc: FileDescriptor):
+        """Opens a file for writing."""
+        self.register(desc)
+
+        with self._open_impl(desc) as f:
+            yield f
+
+    @contextmanager
+    @abstractmethod
+    def _open_impl(self, desc: FileDescriptor) -> Generator[TextIO, None, None]:
+        """Opens a file for writing."""
+
+
+@dataclass
+class NullOutputConfig(OutputConfig):
+    def construct(self) -> OutputManager:
+        class NullOutputManager(OutputManager):
+            def __init__(self, *, debug_level: DebugLevel):
+                super().__init__(debug_level=debug_level)
+
+            @contextmanager
+            def _open_impl(self, desc: FileDescriptor) -> Generator[TextIO, None, None]:
+                with Path(os.devnull).open("w", encoding="utf-8") as f:
+                    yield f
+
+        return NullOutputManager(debug_level=self.debug_level)
+
+
+@dataclass
+class DebugOutputConfig(OutputConfig):
+    def construct(self) -> OutputManager:
+        class DebugOutputManager(OutputManager):
+            def __init__(self, *, debug_level: DebugLevel):
+                super().__init__(debug_level=debug_level)
+
+            @contextmanager
+            def _open_impl(self, desc: FileDescriptor) -> Generator[TextIO, None, None]:
+                stdout.write(f"// File: {desc.relative_path}\n")
+                yield stdout
+
+        return DebugOutputManager(debug_level=self.debug_level)
+
+
+@dataclass
+class BasicOutputConfig(OutputConfig):
+    dst_dir: Path
+
+    def construct(self) -> OutputManager:
+        return BasicOutputManager(
+            self.dst_dir,
+            debug_level=self.debug_level,
+        )
+
+
+class BasicOutputManager(OutputManager):
+    """Manages the creation and saving of output files."""
+
+    def __init__(
+        self,
+        dst_dir: Path,
+        *,
+        debug_level: DebugLevel,
+    ):
+        super().__init__(debug_level=debug_level)
+        self.dst_dir = dst_dir
+
+    @contextmanager
+    def _open_impl(self, desc: FileDescriptor):
+        file_path = self.dst_dir / desc.relative_path
+        file_path.parent.mkdir(exist_ok=True, parents=True)
+        with file_path.open("w", encoding="utf-8") as f:
+            yield f
 
 
 #################################
@@ -329,20 +377,20 @@ class CMakeWriter(FileWriter):
 
 
 @dataclass
-class CMakeOutputConfig(OutputConfig):
+class CMakeOutputConfig(BasicOutputConfig):
     runtime_include_dir: Path = field(kw_only=True)
     runtime_src_dir: Path = field(kw_only=True)
 
-    def construct(self, ci: "CompilerInstance") -> "CMakeOutputManager":
+    def construct(self) -> OutputManager:
         return CMakeOutputManager(
             self.dst_dir,
-            self.debug_level,
+            debug_level=self.debug_level,
             runtime_include_dir=self.runtime_include_dir,
             runtime_src_dir=self.runtime_src_dir,
         )
 
 
-class CMakeOutputManager(OutputManager):
+class CMakeOutputManager(BasicOutputManager):
     """Manages the generation of CMake files for Taihe runtime."""
 
     runtime_include_dir: Path
@@ -350,13 +398,13 @@ class CMakeOutputManager(OutputManager):
 
     def __init__(
         self,
-        dst_dir: Path | None,
-        debug_level: DebugLevel,
+        dst_dir: Path,
         *,
+        debug_level: DebugLevel,
         runtime_include_dir: Path,
         runtime_src_dir: Path,
     ):
-        super().__init__(dst_dir, debug_level)
+        super().__init__(dst_dir, debug_level=debug_level)
         self.runtime_include_dir = runtime_include_dir
         self.runtime_c_src_files = [
             p for p in runtime_src_dir.rglob("*.c") if p.is_file()

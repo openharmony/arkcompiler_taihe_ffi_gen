@@ -12,12 +12,15 @@ class CppCommonHeadersBackendConfig(BackendConfig):
     NAME = "cpp-common"
     DEPS: ClassVar = ["abi-header"]
 
-    def construct(self, instance: "CompilerInstance") -> Backend:
+    @classmethod
+    def create(cls):
+        return CppCommonHeadersBackendConfig()
+
+    def construct(self, instance: "CompilerInstance"):
         from taihe.codegen.cpp.gen_common import CppHeadersGenerator
 
         class CppCommonHeadersBackendImpl(Backend):
             def __init__(self, ci: "CompilerInstance"):
-                super().__init__(ci)
                 self._ci = ci
 
             def generate(self):
@@ -34,7 +37,11 @@ class CppAuthorBackendConfig(BackendConfig):
     NAME = "cpp-author"
     DEPS: ClassVar = ["cpp-common", "abi-source"]
 
-    def construct(self, instance: "CompilerInstance") -> Backend:
+    @classmethod
+    def create(cls):
+        return CppAuthorBackendConfig()
+
+    def construct(self, instance: "CompilerInstance"):
         from taihe.codegen.cpp.gen_impl import (
             CppImplHeadersGenerator,
             CppImplSourcesGenerator,
@@ -43,7 +50,6 @@ class CppAuthorBackendConfig(BackendConfig):
         # TODO: unify CppImpl{Headers,Sources}Generator
         class CppImplBackendImpl(Backend):
             def __init__(self, ci: "CompilerInstance"):
-                super().__init__(ci)
                 self._ci = ci
 
             def generate(self):
@@ -61,12 +67,15 @@ class CppUserHeadersBackendConfig(BackendConfig):
     NAME = "cpp-user"
     DEPS: ClassVar = ["cpp-common"]
 
-    def construct(self, instance: "CompilerInstance") -> Backend:
+    @classmethod
+    def create(cls):
+        return CppUserHeadersBackendConfig()
+
+    def construct(self, instance: "CompilerInstance"):
         from taihe.codegen.cpp.gen_user import CppUserHeadersGenerator
 
         class CppUserHeadersBackendImpl(Backend):
             def __init__(self, ci: "CompilerInstance"):
-                super().__init__(ci)
                 self._ci = ci
 
             def generate(self):

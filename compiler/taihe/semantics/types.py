@@ -234,7 +234,16 @@ class GenericType(NonVoidType, ABC):
         cls,
         ref: "GenericTypeRefDecl",
         dm: DiagnosticsManager,
-    ) -> "GenericType | None": ...
+    ) -> "GenericType | None":
+        """Try to construct the generic type from the type reference.
+
+        Args:
+            ref: The generic type reference declaration.
+            dm: The diagnostics manager.
+
+        Returns:
+            The constructed generic type, or None if construction failed.
+        """
 
     @abstractmethod
     def accept(self, v: "GenericTypeVisitor[_R]") -> _R: ...
