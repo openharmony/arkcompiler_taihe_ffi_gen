@@ -65,4 +65,6 @@ ElementName GetElementName() {
 }
 }  // namespace
 
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetElementName(GetElementName);
+// NOLINTEND

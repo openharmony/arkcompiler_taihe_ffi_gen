@@ -12,8 +12,8 @@ function recoverMap(s: Array<test.Pair>): Map<string, string> {
 
 function testDeserializeMap() {
     let serialized: Array<test.Pair> = [
-        { key: "key1", value: "value1" },
-        { key: "key2", value: "value2" },
+        {key: "key1", value: "value1"},
+        {key: "key2", value: "value2"},
     ];
     let deserialized: Map<string, string> = test.deserializeMap(serialized);
     arktest.assertEQ(deserialized.size, 2);
@@ -87,7 +87,7 @@ function testSerializeVector() {
 
 function main() {
     let suite = new arktest.ArkTestsuite("Containers Test Suite");
-    
+
     suite.addTest("Deserialize Map Test", testDeserializeMap);
     suite.addTest("Serialize Map Test", testSerializeMap);
     suite.addTest("Deserialize Set Test", testDeserializeSet);

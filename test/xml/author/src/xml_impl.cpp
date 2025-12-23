@@ -9,11 +9,12 @@ XmlPullParser makeXmlPullParserImpl(BufferType const &buffer,
   return make_holder<ExpatParser, XmlPullParser>(buffer, encoding);
 }
 
-TH_EXPORT_CPP_API_makeXmlPullParser(makeXmlPullParserImpl);
-
 XmlSerializer makeXmlSerializerImpl(BufferType const &buffer,
                                     optional_view<string> encoding) {
   throw;
 }
 
+// NOLINTBEGIN
+TH_EXPORT_CPP_API_makeXmlPullParser(makeXmlPullParserImpl);
 TH_EXPORT_CPP_API_makeXmlSerializer(makeXmlSerializerImpl);
+// NOLINTEND

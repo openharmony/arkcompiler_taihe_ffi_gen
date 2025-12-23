@@ -12,4 +12,6 @@ Player addNewPlayer(string_view name) {
 }
 }  // namespace
 
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_addNewPlayer(addNewPlayer);
+// NOLINTEND

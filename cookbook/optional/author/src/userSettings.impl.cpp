@@ -16,4 +16,6 @@ optional<string> getUserSetting(map_view<string, string> settings,
 }
 }  // namespace
 
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_getUserSetting(getUserSetting);
+// NOLINTEND

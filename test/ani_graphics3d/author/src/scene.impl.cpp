@@ -201,6 +201,7 @@ public:
 }
 }  // namespace
 
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetSceneResourceFactory(GetSceneResourceFactory);
 TH_EXPORT_CPP_API_GetCamera(GetCamera);
 TH_EXPORT_CPP_API_GetLight(GetLight);
@@ -210,3 +211,4 @@ TH_EXPORT_CPP_API_GetMaterial(GetMaterial);
 TH_EXPORT_CPP_API_GetShader(GetShader);
 TH_EXPORT_CPP_API_GetImage(GetImage);
 TH_EXPORT_CPP_API_GetEnvironment(GetEnvironment);
+// NOLINTEND

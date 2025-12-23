@@ -102,4 +102,6 @@ taihe::array<uint8_t> processBigInt(taihe::array_view<uint8_t> a) {
 }
 }  // namespace
 
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_processBigInt(processBigInt);
+// NOLINTEND

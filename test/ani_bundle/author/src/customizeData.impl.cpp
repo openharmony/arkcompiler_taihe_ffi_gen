@@ -47,4 +47,6 @@ CustomizeData GetCustomizeData() {
 }
 }  // namespace
 
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetCustomizeData(GetCustomizeData);
+// NOLINTEND

@@ -41,4 +41,6 @@ OverlayModuleInfo GetOverlayModuleInfo() {
 }
 }  // namespace
 
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetOverlayModuleInfo(GetOverlayModuleInfo);
+// NOLINTEND

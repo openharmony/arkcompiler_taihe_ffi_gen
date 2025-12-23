@@ -77,6 +77,7 @@ int32_t GetValueOfEnumWeekday(::enum_test::Weekday day) {
 
 }  // namespace
 
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_nextEnum(NextEnum);
 TH_EXPORT_CPP_API_getValueOfEnum(GetValueOfEnum);
 TH_EXPORT_CPP_API_fromValueToEnum(fromValueToEnum);
@@ -88,3 +89,4 @@ TH_EXPORT_CPP_API_nextEnumI16(NextEnumI16);
 TH_EXPORT_CPP_API_nextEnumI32(NextEnumI32);
 TH_EXPORT_CPP_API_nextEnumI64(NextEnumI64);
 TH_EXPORT_CPP_API_nextEnumString(NextEnumString);
+// NOLINTEND
