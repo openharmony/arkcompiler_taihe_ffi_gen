@@ -26,22 +26,27 @@ namespace {
 
 class ModuleInfoImpl {
 public:
-  string moduleName_ = "this is moduleinfo with name";
-  string moduleSourceDir_ = "this is moduleinfo with moduleSourceDir";
+    string moduleName_ = "this is moduleinfo with name";
+    string moduleSourceDir_ = "this is moduleinfo with moduleSourceDir";
 
-  ModuleInfoImpl() {}
+    ModuleInfoImpl()
+    {
+    }
 
-  string GetModuleName() {
-    return moduleName_;
-  }
+    string GetModuleName()
+    {
+        return moduleName_;
+    }
 
-  string GetModuleSourceDir() {
-    return moduleSourceDir_;
-  }
+    string GetModuleSourceDir()
+    {
+        return moduleSourceDir_;
+    }
 };
 
-ModuleInfo GetModuleInfo() {
-  return make_holder<ModuleInfoImpl, ModuleInfo>();
+ModuleInfo GetModuleInfo()
+{
+    return make_holder<ModuleInfoImpl, ModuleInfo>();
 }
 }  // namespace
 

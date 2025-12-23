@@ -26,119 +26,129 @@ namespace {
 
 class TestImpl {
 public:
-  string str = "this is str";
-  optional<string> a_;
+    string str = "this is str";
+    optional<string> a_;
 
-  TestImpl() {}
-
-  void SetMemberStr(::taihe::optional_view<::taihe::string> a) {
-    this->a_ = a;
-  }
-
-  ::taihe::optional<::taihe::string> GetMemberStr() {
-    return a_;
-  }
-
-  void SetIntData(::taihe::string_view a) {
-    this->str = a;
-  }
-
-  ::taihe::optional<::taihe::string> ShowOptionalString(
-      ::taihe::optional_view<::taihe::string> a) {
-    if (a) {
-      return a;
-    } else {
-      return optional<string>(nullptr);
+    TestImpl()
+    {
     }
-  }
 
-  ::taihe::optional<int32_t> ShowOptionalInt32(
-      ::taihe::optional_view<int32_t> a) {
-    if (a) {
-      return a;
-    } else {
-      return optional<int32_t>(nullptr);
+    void SetMemberStr(::taihe::optional_view<::taihe::string> a)
+    {
+        this->a_ = a;
     }
-  }
 
-  ::taihe::optional<bool> ShowOptionalBool(::taihe::optional_view<bool> a) {
-    if (a) {
-      return a;
-    } else {
-      return optional<bool>(nullptr);
+    ::taihe::optional<::taihe::string> GetMemberStr()
+    {
+        return a_;
     }
-  }
 
-  ::taihe::optional<::taihe::map<::taihe::string, bool>> ShowOptionalRecord(
-      ::taihe::optional_view<::taihe::map<::taihe::string, bool>> a) {
-    if (a) {
-      return a;
-    } else {
-      return optional<map<string, bool>>(nullptr);
+    void SetIntData(::taihe::string_view a)
+    {
+        this->str = a;
     }
-  }
 
-  ::taihe::optional<::opt::MyStruct> ShowOptionalStruct(
-      ::taihe::optional_view<::opt::MyStruct> a) {
-    if (a) {
-      return a;
-    } else {
-      return optional<::opt::MyStruct>(nullptr);
+    ::taihe::optional<::taihe::string> ShowOptionalString(::taihe::optional_view<::taihe::string> a)
+    {
+        if (a) {
+            return a;
+        } else {
+            return optional<string>(nullptr);
+        }
     }
-  }
+
+    ::taihe::optional<int32_t> ShowOptionalInt32(::taihe::optional_view<int32_t> a)
+    {
+        if (a) {
+            return a;
+        } else {
+            return optional<int32_t>(nullptr);
+        }
+    }
+
+    ::taihe::optional<bool> ShowOptionalBool(::taihe::optional_view<bool> a)
+    {
+        if (a) {
+            return a;
+        } else {
+            return optional<bool>(nullptr);
+        }
+    }
+
+    ::taihe::optional<::taihe::map<::taihe::string, bool>> ShowOptionalRecord(
+        ::taihe::optional_view<::taihe::map<::taihe::string, bool>> a)
+    {
+        if (a) {
+            return a;
+        } else {
+            return optional<map<string, bool>>(nullptr);
+        }
+    }
+
+    ::taihe::optional<::opt::MyStruct> ShowOptionalStruct(::taihe::optional_view<::opt::MyStruct> a)
+    {
+        if (a) {
+            return a;
+        } else {
+            return optional<::opt::MyStruct>(nullptr);
+        }
+    }
 };
 
-void ShowOptionalInt(optional_view<int32_t> x) {
-  if (x) {
-    std::cout << *x << std::endl;
-  } else {
-    std::cout << "Null" << std::endl;
-  }
-}
-
-optional<int32_t> MakeOptionalInt(bool b) {
-  if (b) {
-    int const optionalMakeValue = 10;
-    return optional<int32_t>::make(optionalMakeValue);
-  } else {
-    return optional<int32_t>(nullptr);
-  }
-}
-
-optional<array<int32_t>> MakeOptionalArray(bool b, int32_t val, int32_t num) {
-  if (b) {
-    return optional<array<int32_t>>::make(array<int32_t>::make(num, val));
-  } else {
-    return optional<array<int32_t>>(nullptr);
-  }
-}
-
-optional<string> SendReturnResult(::opt::ReturnResult const &result) {
-  if (result.results) {
-    string ret = "";
-    for (auto str : *result.results) {
-      ret = ret + str;
+void ShowOptionalInt(optional_view<int32_t> x)
+{
+    if (x) {
+        std::cout << *x << std::endl;
+    } else {
+        std::cout << "Null" << std::endl;
     }
-    return optional<string>::make(ret);
-  } else {
-    return optional<string>(nullptr);
-  }
 }
 
-::opt::Test GetTest() {
-  return taihe::make_holder<TestImpl, ::opt::Test>();
+optional<int32_t> MakeOptionalInt(bool b)
+{
+    if (b) {
+        int const optionalMakeValue = 10;
+        return optional<int32_t>::make(optionalMakeValue);
+    } else {
+        return optional<int32_t>(nullptr);
+    }
 }
 
-void CallCallback(
-    bool second,
-    ::taihe::callback_view<void(::taihe::string_view a,
-                                ::taihe::optional_view<::taihe::string> b)>
-        cb) {
-  if (second) {
-    cb("Hello", optional<string>{std::in_place, "World"});
-  } else {
-    cb("Hello", optional<string>{std::nullopt});
-  }
+optional<array<int32_t>> MakeOptionalArray(bool b, int32_t val, int32_t num)
+{
+    if (b) {
+        return optional<array<int32_t>>::make(array<int32_t>::make(num, val));
+    } else {
+        return optional<array<int32_t>>(nullptr);
+    }
+}
+
+optional<string> SendReturnResult(::opt::ReturnResult const &result)
+{
+    if (result.results) {
+        string ret = "";
+        for (auto str : *result.results) {
+            ret = ret + str;
+        }
+        return optional<string>::make(ret);
+    } else {
+        return optional<string>(nullptr);
+    }
+}
+
+::opt::Test GetTest()
+{
+    return taihe::make_holder<TestImpl, ::opt::Test>();
+}
+
+void CallCallback(bool second,
+                  ::taihe::callback_view<void(::taihe::string_view a, ::taihe::optional_view<::taihe::string> b)> cb)
+{
+    if (second) {
+        cb("Hello", optional<string> {std::in_place, "World"});
+    } else {
+        cb("Hello", optional<string> {std::nullopt});
+    }
 }
 }  // namespace
 

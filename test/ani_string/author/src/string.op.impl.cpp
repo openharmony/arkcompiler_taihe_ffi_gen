@@ -25,104 +25,116 @@ using namespace taihe;
 
 namespace {
 class PlayString {
-  string name_{"PlayString"};
+    string name_ {"PlayString"};
 
 public:
-  string pickString(array_view<string> nums, int32_t n1, int32_t n2) {
-    int32_t size = static_cast<int32_t>(nums.size());
-    if (n1 > n2 || n1 < 0 || n2 >= size) {
-      throw std::runtime_error("index error");
+    string pickString(array_view<string> nums, int32_t n1, int32_t n2)
+    {
+        int32_t size = static_cast<int32_t>(nums.size());
+        if (n1 > n2 || n1 < 0 || n2 >= size) {
+            throw std::runtime_error("index error");
+        }
+        string res {};
+        for (int32_t i = n1; i <= n2; i++) {
+            res = res + nums[i];
+        }
+        return res;
     }
-    string res{};
-    for (int32_t i = n1; i <= n2; i++) {
-      res = res + nums[i];
+
+    string getName()
+    {
+        return name_;
     }
-    return res;
-  }
 
-  string getName() {
-    return name_;
-  }
-
-  void setName(string_view name) {
-    name_ = name;
-  }
+    void setName(string_view name)
+    {
+        name_ = name;
+    }
 };
 
-string concatString(string_view a, string_view b) {
-  return a + b;
+string concatString(string_view a, string_view b)
+{
+    return a + b;
 }
 
-string makeString(string_view a, int32_t b) {
-  string result = "";
-  while (b-- > 0) {
-    result = result + a;
-  }
-  return result;
-}
-
-::string_op::StringPair split(string_view a, int32_t n) {
-  int32_t l = a.size();
-  if (n > l) {
-    n = l;
-  } else if (n + l < 0) {
-    n = 0;
-  } else if (n < 0) {
-    n = n + l;
-  }
-  return {
-      a.substr(0, n),
-      a.substr(n, l - n),
-  };
-}
-
-array<string> split2(string_view a, int32_t n) {
-  int32_t l = a.size();
-  if (n > l) {
-    n = l;
-  } else if (n + l < 0) {
-    n = 0;
-  } else if (n < 0) {
-    n = n + l;
-  }
-  return {a.substr(0, n), a.substr(n, l - n)};
-}
-
-int32_t to_i32(string_view a) {
-  return std::atoi(a.c_str());
-}
-
-string from_i32(int32_t a) {
-  return to_string(a);
-}
-
-::string_op::PlayString makePlayStringIface() {
-  return make_holder<PlayString, ::string_op::PlayString>();
-}
-
-float to_f32(string_view a) {
-  return std::atof(a.c_str());
-}
-
-string from_f32(float a) {
-  return to_string(a);
-}
-
-string concatString2(string_view s, int32_t n, array_view<string> sArr, bool b,
-                     array_view<uint8_t> buffer) {
-  string result = "";
-  for (auto i = 0; i < n; i++) {
-    result = result + s;
-  }
-  if (b) {
-    for (auto c : sArr) {
-      result = result + c;
+string makeString(string_view a, int32_t b)
+{
+    string result = "";
+    while (b-- > 0) {
+        result = result + a;
     }
-    for (auto j : buffer) {
-      result = result + to_string(j);
+    return result;
+}
+
+::string_op::StringPair split(string_view a, int32_t n)
+{
+    int32_t l = a.size();
+    if (n > l) {
+        n = l;
+    } else if (n + l < 0) {
+        n = 0;
+    } else if (n < 0) {
+        n = n + l;
     }
-  }
-  return result;
+    return {
+        a.substr(0, n),
+        a.substr(n, l - n),
+    };
+}
+
+array<string> split2(string_view a, int32_t n)
+{
+    int32_t l = a.size();
+    if (n > l) {
+        n = l;
+    } else if (n + l < 0) {
+        n = 0;
+    } else if (n < 0) {
+        n = n + l;
+    }
+    return {a.substr(0, n), a.substr(n, l - n)};
+}
+
+int32_t to_i32(string_view a)
+{
+    return std::atoi(a.c_str());
+}
+
+string from_i32(int32_t a)
+{
+    return to_string(a);
+}
+
+::string_op::PlayString makePlayStringIface()
+{
+    return make_holder<PlayString, ::string_op::PlayString>();
+}
+
+float to_f32(string_view a)
+{
+    return std::atof(a.c_str());
+}
+
+string from_f32(float a)
+{
+    return to_string(a);
+}
+
+string concatString2(string_view s, int32_t n, array_view<string> sArr, bool b, array_view<uint8_t> buffer)
+{
+    string result = "";
+    for (auto i = 0; i < n; i++) {
+        result = result + s;
+    }
+    if (b) {
+        for (auto c : sArr) {
+            result = result + c;
+        }
+        for (auto j : buffer) {
+            result = result + to_string(j);
+        }
+    }
+    return result;
 }
 }  // namespace
 

@@ -20,7 +20,9 @@
 using namespace taihe;
 
 namespace {
-void Funtest(::test5namespace5::MyStruct const &s) {}
+void Funtest(::test5namespace5::MyStruct const &s)
+{
+}
 }  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.

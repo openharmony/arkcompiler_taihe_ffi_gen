@@ -27,14 +27,14 @@
 #ifdef __EXCEPTIONS
 #define TH_THROW(error_type, message) throw error_type(message)
 #else
-#define TH_THROW(error_type, message)                                \
-  do {                                                               \
-    fprintf(stderr,                                                  \
-            "%s: %s, \nfunction: %s, "                               \
-            "file: %s, line %d.\n",                                  \
-            #error_type, message, __FUNCTION__, __FILE__, __LINE__); \
-    abort();                                                         \
-  } while (0)
+#define TH_THROW(error_type, message)                                    \
+    do {                                                                 \
+        fprintf(stderr,                                                  \
+                "%s: %s, \nfunction: %s, "                               \
+                "file: %s, line %d.\n",                                  \
+                #error_type, message, __FUNCTION__, __FILE__, __LINE__); \
+        abort();                                                         \
+    } while (0)
 #endif
 #endif
 
@@ -53,52 +53,57 @@ using as_param_t = typename as_param<cpp_owner_t>::type;
 
 template<typename cpp_t>
 struct as_abi<cpp_t, std::enable_if_t<std::is_arithmetic_v<cpp_t>>> {
-  using type = cpp_t;
+    using type = cpp_t;
 };
 
 template<typename cpp_owner_t>
-struct as_param<cpp_owner_t,
-                std::enable_if_t<std::is_arithmetic_v<cpp_owner_t>>> {
-  using type = cpp_owner_t;
+struct as_param<cpp_owner_t, std::enable_if_t<std::is_arithmetic_v<cpp_owner_t>>> {
+    using type = cpp_owner_t;
 };
 
 template<>
 struct as_abi<void> {
-  using type = void;
+    using type = void;
 };
 
 template<typename cpp_t, std::enable_if_t<!std::is_reference_v<cpp_t>, int> = 0>
-inline as_abi_t<cpp_t> into_abi(cpp_t &&cpp_val) {
-  as_abi_t<cpp_t> abi_val;
-  new (&abi_val) cpp_t(std::move(cpp_val));
-  return abi_val;
+inline as_abi_t<cpp_t> into_abi(cpp_t &&cpp_val)
+{
+    as_abi_t<cpp_t> abi_val;
+    new (&abi_val) cpp_t(std::move(cpp_val));
+    return abi_val;
 }
 
 template<typename cpp_t, std::enable_if_t<!std::is_reference_v<cpp_t>, int> = 0>
-inline as_abi_t<cpp_t> into_abi(cpp_t &cpp_val) {
-  as_abi_t<cpp_t> abi_val;
-  new (&abi_val) cpp_t(std::move(cpp_val));
-  return abi_val;
+inline as_abi_t<cpp_t> into_abi(cpp_t &cpp_val)
+{
+    as_abi_t<cpp_t> abi_val;
+    new (&abi_val) cpp_t(std::move(cpp_val));
+    return abi_val;
 }
 
 template<typename cpp_t, std::enable_if_t<!std::is_reference_v<cpp_t>, int> = 0>
-inline cpp_t &&from_abi(as_abi_t<cpp_t> &abi_val) {
-  return reinterpret_cast<cpp_t &&>(abi_val);
+inline cpp_t &&from_abi(as_abi_t<cpp_t> &abi_val)
+{
+    return reinterpret_cast<cpp_t &&>(abi_val);
 }
 
 template<typename cpp_t, std::enable_if_t<!std::is_reference_v<cpp_t>, int> = 0>
-inline cpp_t &&from_abi(as_abi_t<cpp_t> &&abi_val) {
-  return reinterpret_cast<cpp_t &&>(abi_val);
+inline cpp_t &&from_abi(as_abi_t<cpp_t> &&abi_val)
+{
+    return reinterpret_cast<cpp_t &&>(abi_val);
 }
 
 template<typename cpp_t, std::enable_if_t<std::is_reference_v<cpp_t>, int> = 0>
-inline as_abi_t<cpp_t> into_abi(cpp_t cpp_val) {
-  return reinterpret_cast<as_abi_t<cpp_t>>(&cpp_val);
+inline as_abi_t<cpp_t> into_abi(cpp_t cpp_val)
+{
+    return reinterpret_cast<as_abi_t<cpp_t>>(&cpp_val);
 }
 
 template<typename cpp_t, std::enable_if_t<std::is_reference_v<cpp_t>, int> = 0>
-inline cpp_t from_abi(as_abi_t<cpp_t> abi_val) {
-  return reinterpret_cast<cpp_t>(*abi_val);
+inline cpp_t from_abi(as_abi_t<cpp_t> abi_val)
+{
+    return reinterpret_cast<cpp_t>(*abi_val);
 }
 
 ///////////////

@@ -22,8 +22,9 @@ using namespace taihe;
 using namespace structext;
 
 namespace {
-Player addNewPlayer(string_view name) {
-  return {{0, 0, 0}, name};
+Player addNewPlayer(string_view name)
+{
+    return {{0, 0, 0}, name};
 }
 }  // namespace
 

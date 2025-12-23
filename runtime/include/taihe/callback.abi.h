@@ -26,8 +26,8 @@
 // - `vtbl_ptr`: A pointer to the function associated with the callback.
 // - `data_ptr`: A pointer to the data block.
 struct TCallback {
-  void *vtbl_ptr;
-  struct DataBlockHead *data_ptr;
+    void *vtbl_ptr;
+    struct DataBlockHead *data_ptr;
 };
 
 #endif  // TAIHE_CALLBACK_ABI_H

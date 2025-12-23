@@ -23,23 +23,27 @@ namespace {
 
 class PixelMapImpl {
 public:
-  PixelMapImpl() {}
+    PixelMapImpl()
+    {
+    }
 };
 
 class ImageSourceImpl {
 public:
-  ImageSourceImpl() {}
+    ImageSourceImpl()
+    {
+    }
 
-  ::ohos::multimedia::image::image::PixelMap CreatePixelMapSync(
-      ::ohos::multimedia::image::image::DecodingOptions const &options) {
-    return taihe::make_holder<PixelMapImpl,
-                              ::ohos::multimedia::image::image::PixelMap>();
-  }
+    ::ohos::multimedia::image::image::PixelMap CreatePixelMapSync(
+        ::ohos::multimedia::image::image::DecodingOptions const &options)
+    {
+        return taihe::make_holder<PixelMapImpl, ::ohos::multimedia::image::image::PixelMap>();
+    }
 };
 
-::ohos::multimedia::image::image::ImageSource CreateImageSource() {
-  return taihe::make_holder<ImageSourceImpl,
-                            ::ohos::multimedia::image::image::ImageSource>();
+::ohos::multimedia::image::image::ImageSource CreateImageSource()
+{
+    return taihe::make_holder<ImageSourceImpl, ::ohos::multimedia::image::image::ImageSource>();
 }
 }  // namespace
 

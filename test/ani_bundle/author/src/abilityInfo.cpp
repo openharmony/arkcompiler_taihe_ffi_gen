@@ -26,100 +26,124 @@ namespace {
 
 class AbilityInfoImpl {
 public:
-  int32_t abilityInfoImpl = 100;
+    int32_t abilityInfoImpl = 100;
 
-  AbilityInfoImpl() {}
+    AbilityInfoImpl()
+    {
+    }
 
-  std::string GetBundleName() {
-    return "AbilityInfo::getBundleName";
-  }
+    std::string GetBundleName()
+    {
+        return "AbilityInfo::getBundleName";
+    }
 
-  std::string GetName() {
-    return "AbilityInfo::getName";
-  }
+    std::string GetName()
+    {
+        return "AbilityInfo::getName";
+    }
 
-  std::string GetLabel() {
-    return "AbilityInfo::getLabel";
-  }
+    std::string GetLabel()
+    {
+        return "AbilityInfo::getLabel";
+    }
 
-  std::string GetDescription() {
-    return "AbilityInfo::getDescription";
-  }
+    std::string GetDescription()
+    {
+        return "AbilityInfo::getDescription";
+    }
 
-  std::string GetIcon() {
-    return "AbilityInfo::getIcon";
-  }
+    std::string GetIcon()
+    {
+        return "AbilityInfo::getIcon";
+    }
 
-  int32_t GetLabelId() {
-    return abilityInfoImpl;
-  }
+    int32_t GetLabelId()
+    {
+        return abilityInfoImpl;
+    }
 
-  int32_t GetDescriptionId() {
-    return abilityInfoImpl;
-  }
+    int32_t GetDescriptionId()
+    {
+        return abilityInfoImpl;
+    }
 
-  int32_t GetIconId() {
-    return abilityInfoImpl;
-  }
+    int32_t GetIconId()
+    {
+        return abilityInfoImpl;
+    }
 
-  std::string GetModuleName() {
-    return "AbilityInfo::getModuleName";
-  }
+    std::string GetModuleName()
+    {
+        return "AbilityInfo::getModuleName";
+    }
 
-  std::string GetProcess() {
-    return "AbilityInfo::getProcess";
-  }
+    std::string GetProcess()
+    {
+        return "AbilityInfo::getProcess";
+    }
 
-  std::string GetTargetAbility() {
-    return "AbilityInfo::getTargetAbility";
-  }
+    std::string GetTargetAbility()
+    {
+        return "AbilityInfo::getTargetAbility";
+    }
 
-  int32_t GetBackgroundModes() {
-    return abilityInfoImpl;
-  }
+    int32_t GetBackgroundModes()
+    {
+        return abilityInfoImpl;
+    }
 
-  bool GetIsVisible() {
-    return true;
-  }
+    bool GetIsVisible()
+    {
+        return true;
+    }
 
-  bool GetFormEnabled() {
-    return true;
-  }
+    bool GetFormEnabled()
+    {
+        return true;
+    }
 
-  array<string> GetPermissions() {
-    array<string> str = {"AbilityInfo::getTargetAbility"};
-    return str;
-  }
+    array<string> GetPermissions()
+    {
+        array<string> str = {"AbilityInfo::getTargetAbility"};
+        return str;
+    }
 
-  array<string> GetDeviceTypes() {
-    array<string> str = {"AbilityInfo::getDeviceTypes"};
-    return str;
-  }
+    array<string> GetDeviceTypes()
+    {
+        array<string> str = {"AbilityInfo::getDeviceTypes"};
+        return str;
+    }
 
-  array<string> GetDeviceCapabilities() {
-    array<string> str = {"AbilityInfo::getDeviceCapabilities"};
-    return str;
-  }
+    array<string> GetDeviceCapabilities()
+    {
+        array<string> str = {"AbilityInfo::getDeviceCapabilities"};
+        return str;
+    }
 
-  std::string GetReadPermission() {
-    return "AbilityInfo::getReadPermission";
-  }
+    std::string GetReadPermission()
+    {
+        return "AbilityInfo::getReadPermission";
+    }
 
-  std::string GetWritePermission() {
-    return "AbilityInfo::getWritePermission";
-  }
+    std::string GetWritePermission()
+    {
+        return "AbilityInfo::getWritePermission";
+    }
 
-  std::string GetUri() {
-    return "AbilityInfo::getUri";
-  }
+    std::string GetUri()
+    {
+        return "AbilityInfo::getUri";
+    }
 
-  bool GetEnabled() {
-    return true;
-  }
+    bool GetEnabled()
+    {
+        return true;
+    }
 };
 
-AbilityInfo GetAbilityInfo() {
-  return make_holder<AbilityInfoImpl, AbilityInfo>();
+AbilityInfo GetAbilityInfo()
+{
+    return make_holder<AbilityInfoImpl, AbilityInfo>();
 }
 }  // namespace
 

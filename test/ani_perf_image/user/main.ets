@@ -32,7 +32,8 @@ function runTestFunction(prompt: string, n: int, fn: () => void): void {
     }
     const t = Chrono.nanoNow();
     const u = Chrono.nanoNow();
-    for (let i: int = 0; i < n; i++) {}
+    for (let i: int = 0; i < n; i++) {
+    }
     const v = Chrono.nanoNow();
     let durationNs = ((t - s) - (v - u)) * 1.0 / n;
     console.log(`>> Done ${prompt}: ${durationNs} ns.`);

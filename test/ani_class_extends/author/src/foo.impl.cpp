@@ -18,21 +18,22 @@
 #include "stdexcept"
 
 namespace {
-::foo::DerivedMethodClass makeDerivedMethodClass() {
-  // The parameters in the make_holder function should be of the same type
-  // as the parameters in the constructor of the actual implementation class.
-  return taihe::make_holder<DerivedMethodClassImpl,
-                            ::foo::DerivedMethodClass>();
+::foo::DerivedMethodClass makeDerivedMethodClass()
+{
+    // The parameters in the make_holder function should be of the same type
+    // as the parameters in the constructor of the actual implementation class.
+    return taihe::make_holder<DerivedMethodClassImpl, ::foo::DerivedMethodClass>();
 }
 
-::foo::DerivedDataClass makeDerivedDataClass() {
-  return {
-      .base = {"base"},
-      .foo = {"foo"},
-      .bar = {"bar"},
-      .x = 42,
-      .y = 56,
-  };
+::foo::DerivedDataClass makeDerivedDataClass()
+{
+    return {
+        .base = {"base"},
+        .foo = {"foo"},
+        .bar = {"bar"},
+        .x = 42,
+        .y = 56,
+    };
 }
 }  // namespace
 

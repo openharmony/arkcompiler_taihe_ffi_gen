@@ -22,9 +22,9 @@
 namespace {
 // To be implemented.
 
-::sceneNodeParameters::SceneNodeParameters GetSceneNodeParameters() {
-  return taihe::make_holder<SceneNodeParametersImpl,
-                            ::sceneNodeParameters::SceneNodeParameters>();
+::sceneNodeParameters::SceneNodeParameters GetSceneNodeParameters()
+{
+    return taihe::make_holder<SceneNodeParametersImpl, ::sceneNodeParameters::SceneNodeParameters>();
 }
 }  // namespace
 

@@ -21,8 +21,9 @@
 namespace {
 // To be implemented.
 
-void testImport(::export_example::Inner const &obj) {
-  std::cout << "obj.str= " << obj.s << ", obj.int= " << obj.i << std::endl;
+void testImport(::export_example::Inner const &obj)
+{
+    std::cout << "obj.str= " << obj.s << ", obj.int= " << obj.i << std::endl;
 }
 }  // namespace
 

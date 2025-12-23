@@ -26,138 +26,173 @@ namespace {
 
 class ApplicationInfoImpl {
 public:
-  int32_t applicationInfoImpl = 21474;
+    int32_t applicationInfoImpl = 21474;
 
-  ApplicationInfoImpl() {}
+    ApplicationInfoImpl()
+    {
+    }
 
-  string GetName() {
-    return "ApplicationInfoImpl::getName";
-  }
+    string GetName()
+    {
+        return "ApplicationInfoImpl::getName";
+    }
 
-  string GetDescription() {
-    return "ApplicationInfoImpl::getDescription";
-  }
+    string GetDescription()
+    {
+        return "ApplicationInfoImpl::getDescription";
+    }
 
-  int32_t GetDescriptionId() {
-    return applicationInfoImpl;
-  }
+    int32_t GetDescriptionId()
+    {
+        return applicationInfoImpl;
+    }
 
-  bool GetEnabled() {
-    return true;
-  }
+    bool GetEnabled()
+    {
+        return true;
+    }
 
-  string GetLabel() {
-    return "ApplicationInfoImpl::getLabel";
-  }
+    string GetLabel()
+    {
+        return "ApplicationInfoImpl::getLabel";
+    }
 
-  int32_t GetLabelId() {
-    return applicationInfoImpl;
-  }
+    int32_t GetLabelId()
+    {
+        return applicationInfoImpl;
+    }
 
-  string GetIcon() {
-    return "ApplicationInfoImpl::getIcon";
-  }
+    string GetIcon()
+    {
+        return "ApplicationInfoImpl::getIcon";
+    }
 
-  int32_t GetIconId() {
-    return applicationInfoImpl;
-  }
+    int32_t GetIconId()
+    {
+        return applicationInfoImpl;
+    }
 
-  string GetProcess() {
-    return "ApplicationInfoImpl::getProcess";
-  }
+    string GetProcess()
+    {
+        return "ApplicationInfoImpl::getProcess";
+    }
 
-  array<string> GetPermissions() {
-    array<string> res = {"ApplicationInfoImpl::getPermissions"};
-    return res;
-  }
+    array<string> GetPermissions()
+    {
+        array<string> res = {"ApplicationInfoImpl::getPermissions"};
+        return res;
+    }
 
-  string GetCodePath() {
-    return "ApplicationInfoImpl::getCodePath";
-  }
+    string GetCodePath()
+    {
+        return "ApplicationInfoImpl::getCodePath";
+    }
 
-  bool GetRemovable() {
-    return true;
-  }
+    bool GetRemovable()
+    {
+        return true;
+    }
 
-  int32_t GetAccessTokenId() {
-    return applicationInfoImpl;
-  }
+    int32_t GetAccessTokenId()
+    {
+        return applicationInfoImpl;
+    }
 
-  int32_t GetUid() {
-    return applicationInfoImpl;
-  }
+    int32_t GetUid()
+    {
+        return applicationInfoImpl;
+    }
 
-  string GetAppDistributionType() {
-    return "ApplicationInfoImpl::getAppDistributionType";
-  }
+    string GetAppDistributionType()
+    {
+        return "ApplicationInfoImpl::getAppDistributionType";
+    }
 
-  string GetAppProvisionType() {
-    return "ApplicationInfoImpl::getAppProvisionType";
-  }
+    string GetAppProvisionType()
+    {
+        return "ApplicationInfoImpl::getAppProvisionType";
+    }
 
-  bool GetSystemApp() {
-    return true;
-  }
+    bool GetSystemApp()
+    {
+        return true;
+    }
 
-  bool GetDebug() {
-    return true;
-  }
+    bool GetDebug()
+    {
+        return true;
+    }
 
-  bool GetDataUnclearable() {
-    return true;
-  }
+    bool GetDataUnclearable()
+    {
+        return true;
+    }
 
-  string GetNativeLibraryPath() {
-    return "ApplicationInfoImpl::getNativeLibraryPath";
-  }
+    string GetNativeLibraryPath()
+    {
+        return "ApplicationInfoImpl::getNativeLibraryPath";
+    }
 
-  int32_t GetAppIndex() {
-    return applicationInfoImpl;
-  }
+    int32_t GetAppIndex()
+    {
+        return applicationInfoImpl;
+    }
 
-  string GetInstallSource() {
-    return "ApplicationInfoImpl::getInstallSource";
-  }
+    string GetInstallSource()
+    {
+        return "ApplicationInfoImpl::getInstallSource";
+    }
 
-  string GetReleaseType() {
-    return "ApplicationInfoImpl::getReleaseType";
-  }
+    string GetReleaseType()
+    {
+        return "ApplicationInfoImpl::getReleaseType";
+    }
 
-  bool GetCloudFileSyncEnabled() {
-    return true;
-  }
+    bool GetCloudFileSyncEnabled()
+    {
+        return true;
+    }
 };
 
 class ModuleMetadataImpl {
 public:
-  ModuleMetadataImpl() {}
+    ModuleMetadataImpl()
+    {
+    }
 
-  string GetModuleName() {
-    return "ModuleMetadataImpl::getModuleName";
-  }
+    string GetModuleName()
+    {
+        return "ModuleMetadataImpl::getModuleName";
+    }
 };
 
 class MultiAppModeImpl {
 public:
-  int32_t multiAppModeImpl = 21474;
+    int32_t multiAppModeImpl = 21474;
 
-  MultiAppModeImpl() {}
+    MultiAppModeImpl()
+    {
+    }
 
-  int32_t GetMaxCount() {
-    return multiAppModeImpl;
-  }
+    int32_t GetMaxCount()
+    {
+        return multiAppModeImpl;
+    }
 };
 
-ApplicationInfo GetApplicationInfo() {
-  return make_holder<ApplicationInfoImpl, ApplicationInfo>();
+ApplicationInfo GetApplicationInfo()
+{
+    return make_holder<ApplicationInfoImpl, ApplicationInfo>();
 }
 
-ModuleMetadata GetModuleMetadata() {
-  return make_holder<ModuleMetadataImpl, ModuleMetadata>();
+ModuleMetadata GetModuleMetadata()
+{
+    return make_holder<ModuleMetadataImpl, ModuleMetadata>();
 }
 
-MultiAppMode GetMultiAppMode() {
-  return make_holder<MultiAppModeImpl, MultiAppMode>();
+MultiAppMode GetMultiAppMode()
+{
+    return make_holder<MultiAppModeImpl, MultiAppMode>();
 }
 }  // namespace
 

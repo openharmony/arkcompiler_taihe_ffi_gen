@@ -23,26 +23,31 @@ using namespace taihe;
 namespace {
 class UIAbility {
 public:
-  void onForeground() {
-    std::cout << "in cpp onForeground" << std::endl;
-  }
+    void onForeground()
+    {
+        std::cout << "in cpp onForeground" << std::endl;
+    }
 
-  void onBackground() {
-    std::cout << "in cpp onBackground" << std::endl;
-  }
+    void onBackground()
+    {
+        std::cout << "in cpp onBackground" << std::endl;
+    }
 };
 
-::override::UIAbility getUIAbility() {
-  return make_holder<UIAbility, ::override::UIAbility>();
+::override::UIAbility getUIAbility()
+{
+    return make_holder<UIAbility, ::override::UIAbility>();
 }
 
-void useUIAbility(::override::weak::UIAbility a) {
-  a->onForeground();
-  a->onBackground();
+void useUIAbility(::override::weak::UIAbility a)
+{
+    a->onForeground();
+    a->onBackground();
 }
 
-void logLifecycle(string_view str) {
-  std::cout << "[UIAbility]: " << str << std::endl;
+void logLifecycle(string_view str)
+{
+    std::cout << "[UIAbility]: " << str << std::endl;
 }
 }  // namespace
 

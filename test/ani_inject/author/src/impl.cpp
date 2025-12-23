@@ -25,14 +25,16 @@ namespace {
 
 class Foo {
 public:
-  void CallWithThis(uintptr_t thiz) {
-    std::cout << thiz << std::endl;
-  }
+    void CallWithThis(uintptr_t thiz)
+    {
+        std::cout << thiz << std::endl;
+    }
 };
 
-::inject_test::Foo MakeFooWithThis(uintptr_t thiz) {
-  std::cout << thiz << std::endl;
-  return make_holder<Foo, ::inject_test::Foo>();
+::inject_test::Foo MakeFooWithThis(uintptr_t thiz)
+{
+    std::cout << thiz << std::endl;
+    return make_holder<Foo, ::inject_test::Foo>();
 }
 
 }  // namespace

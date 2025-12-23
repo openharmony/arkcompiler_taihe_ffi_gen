@@ -26,19 +26,24 @@ class IfaceAImpl {
 public:
 
 public:
-  IfaceAImpl() {}
+    IfaceAImpl()
+    {
+    }
 
-  void Foo() {
-    std::cout << "Export IfaceA Foo()" << std::endl;
-  }
+    void Foo()
+    {
+        std::cout << "Export IfaceA Foo()" << std::endl;
+    }
 
-  void Bar() {
-    std::cout << "Export IfaceA Bar()" << std::endl;
-  }
+    void Bar()
+    {
+        std::cout << "Export IfaceA Bar()" << std::endl;
+    }
 };
 
-::export_iface::IfaceA CreateIfaceA() {
-  return taihe::make_holder<IfaceAImpl, ::export_iface::IfaceA>();
+::export_iface::IfaceA CreateIfaceA()
+{
+    return taihe::make_holder<IfaceAImpl, ::export_iface::IfaceA>();
 }
 }  // namespace
 

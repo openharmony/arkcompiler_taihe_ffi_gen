@@ -21,9 +21,9 @@
 namespace {
 // To be implemented.
 
-bool cbCompare(::taihe::callback_view<::taihe::string()> cb1,
-               ::taihe::callback_view<::taihe::string()> cb2) {
-  return cb1 == cb2 ? true : false;
+bool cbCompare(::taihe::callback_view<::taihe::string()> cb1, ::taihe::callback_view<::taihe::string()> cb2)
+{
+    return cb1 == cb2 ? true : false;
 }
 
 }  // namespace
