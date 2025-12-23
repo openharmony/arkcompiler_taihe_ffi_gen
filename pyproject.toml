@@ -134,4 +134,5 @@ ignore = [
     "TC006",
     "B007",
     "E501", # TODO fix long lines
+    "UP009",
 ]
