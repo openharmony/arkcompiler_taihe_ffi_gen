@@ -13,4 +13,6 @@ namespace {
 
 }  // namespace
 
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_convert_color(convert_color);
+// NOLINTEND

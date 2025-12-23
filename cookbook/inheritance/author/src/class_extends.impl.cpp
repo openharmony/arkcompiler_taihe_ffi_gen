@@ -135,7 +135,9 @@ public:
 }
 }  // namespace
 
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_makeBaseContext(makeBaseContext);
 TH_EXPORT_CPP_API_makeContext(makeContext);
 TH_EXPORT_CPP_API_makeTestContext(makeTestContext);
 TH_EXPORT_CPP_API_makeApplicationContext(makeApplicationContext);
+// NOLINTEND

@@ -146,6 +146,8 @@ MultiAppMode GetMultiAppMode() {
 }
 }  // namespace
 
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetApplicationInfo(GetApplicationInfo);
 TH_EXPORT_CPP_API_GetModuleMetadata(GetModuleMetadata);
 TH_EXPORT_CPP_API_GetMultiAppMode(GetMultiAppMode);
+// NOLINTEND

@@ -139,4 +139,6 @@ AbilityInfo GetAbilityInfo() {
 }
 }  // namespace
 
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetAbilityInfo(GetAbilityInfo);
+// NOLINTEND

@@ -31,6 +31,8 @@ void logLifecycle(string_view str) {
 }
 }  // namespace
 
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_getUIAbility(getUIAbility);
 TH_EXPORT_CPP_API_useUIAbility(useUIAbility);
 TH_EXPORT_CPP_API_logLifecycle(logLifecycle);
+// NOLINTEND

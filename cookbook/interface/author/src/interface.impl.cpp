@@ -43,5 +43,7 @@ void restartCalculator(::interface::weak::ICalculator a) {
 
 }  // namespace
 
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_makeCalculator(makeCalculator);
 TH_EXPORT_CPP_API_restartCalculator(restartCalculator);
+// NOLINTEND

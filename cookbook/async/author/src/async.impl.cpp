@@ -50,7 +50,9 @@ int32_t addSync(int32_t a, int32_t b) {
 }
 }  // namespace
 
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_addAsync(addSync);
 TH_EXPORT_CPP_API_addPromise(addSync);
 TH_EXPORT_CPP_API_addSync(addSync);
 TH_EXPORT_CPP_API_makeIStringHolder(makeIStringHolder);
+// NOLINTEND

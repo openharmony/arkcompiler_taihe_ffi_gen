@@ -100,4 +100,6 @@ ApplicationInfo GetApplicationInfo() {
 }
 }  // namespace
 
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetApplicationInfo(GetApplicationInfo);
+// NOLINTEND

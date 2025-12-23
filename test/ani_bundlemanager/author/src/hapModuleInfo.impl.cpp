@@ -157,8 +157,10 @@ DataItem GetDataItem() {
 }
 }  // namespace
 
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetHapModuleInfo(GetHapModuleInfo);
 TH_EXPORT_CPP_API_GetDependency(GetDependency);
 TH_EXPORT_CPP_API_GetPreloadItem(GetPreloadItem);
 TH_EXPORT_CPP_API_GetRouterItem(GetRouterItem);
 TH_EXPORT_CPP_API_GetDataItem(GetDataItem);
+// NOLINTEND
