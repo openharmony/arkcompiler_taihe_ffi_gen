@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TAIHE_OPTIONAL_HPP
+#define TAIHE_OPTIONAL_HPP
 
 #include <taihe/optional.abi.h>
 #include <taihe/common.hpp>
@@ -144,3 +145,5 @@ struct std::hash<taihe::optional<cpp_owner_t>> {
     return val ? std::hash<cpp_owner_t>()(*val) + 0x9e3779b9 : 0;
   }
 };
+
+#endif  // TAIHE_OPTIONAL_HPP

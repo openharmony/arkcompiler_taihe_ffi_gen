@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TAIHE_ARRAY_ABI_H
+#define TAIHE_ARRAY_ABI_H
 
 #include <taihe/common.h>
 
@@ -12,3 +13,5 @@ struct TArray {
   size_t m_size;
   void *m_data;
 };
+
+#endif  // TAIHE_ARRAY_ABI_H

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TAIHE_MAP_HPP
+#define TAIHE_MAP_HPP
 
 #include <taihe/map.abi.h>
 #include <taihe/common.hpp>
@@ -322,3 +323,5 @@ struct std::hash<taihe::map<K, V>> {
 
 #undef MAP_GROWTH_FACTOR
 #undef MAP_DEFAULT_CAPACITY
+
+#endif  // TAIHE_MAP_HPP
