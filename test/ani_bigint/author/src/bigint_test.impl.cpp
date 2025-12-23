@@ -34,6 +34,7 @@ double BigInt06(double a, array_view<int64_t> b) {
 }
 }  // namespace
 
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_BigInt01(BigInt01);
 TH_EXPORT_CPP_API_BigInt02(BigInt02);
 TH_EXPORT_CPP_API_BigInt03(BigInt03);

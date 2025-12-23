@@ -59,6 +59,7 @@ void offBaz(::taihe::string_view type, int32_t a,
 }
 }  // namespace
 
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_getISetterObserver(getISetterObserver);
 TH_EXPORT_CPP_API_onFoo(onFoo);
 TH_EXPORT_CPP_API_onBar(onBar);
@@ -66,3 +67,4 @@ TH_EXPORT_CPP_API_onBaz(onBaz);
 TH_EXPORT_CPP_API_offFoo(offFoo);
 TH_EXPORT_CPP_API_offBar(offBar);
 TH_EXPORT_CPP_API_offBaz(offBaz);
+// NOLINTEND

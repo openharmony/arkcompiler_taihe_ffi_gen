@@ -124,6 +124,7 @@ void ShowMyUnion(::bigint_new::MyUnion const &u) {
 
 }  // namespace
 
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_ProcessBigInt(ProcessBigInt);
 TH_EXPORT_CPP_API_PrintBigInt(PrintBigInt);
 TH_EXPORT_CPP_API_CreateBigInt(CreateBigInt);

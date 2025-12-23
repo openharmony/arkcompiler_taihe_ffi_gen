@@ -161,6 +161,7 @@ public:
 }
 }  // namespace
 
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetStructD(GetStructD);
 TH_EXPORT_CPP_API_GetStructE(GetStructE);
 TH_EXPORT_CPP_API_GetStructF(GetStructF);
@@ -175,3 +176,4 @@ TH_EXPORT_CPP_API_create_teacher(create_teacher);
 TH_EXPORT_CPP_API_process_teacher(process_teacher);
 TH_EXPORT_CPP_API_process_g(process_g);
 TH_EXPORT_CPP_API_process_h(process_h);
+// NOLINTEND

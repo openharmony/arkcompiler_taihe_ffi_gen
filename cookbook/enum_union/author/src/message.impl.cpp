@@ -29,6 +29,8 @@ void processMessage(Message const &msg) {
 }
 }  // namespace
 
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_createTextMessage(createTextMessage);
 TH_EXPORT_CPP_API_createNumberMessage(createNumberMessage);
 TH_EXPORT_CPP_API_processMessage(processMessage);
+// NOLINTEND

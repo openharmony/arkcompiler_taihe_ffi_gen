@@ -214,6 +214,7 @@ void CopyIBase(::iface_test::weak::IBase a, ::iface_test::weak::IBase b) {
 
 }  // namespace
 
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetFooIface(GetFooIface);
 TH_EXPORT_CPP_API_PrintFooName(PrintFooName);
 TH_EXPORT_CPP_API_GetBaseFun(GetBaseFun);

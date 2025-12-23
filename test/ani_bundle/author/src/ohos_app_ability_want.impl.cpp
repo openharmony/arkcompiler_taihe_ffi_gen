@@ -110,4 +110,6 @@ Want CreateWant() {
 }
 }  // namespace
 
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_CreateWant(CreateWant);
+// NOLINTEND

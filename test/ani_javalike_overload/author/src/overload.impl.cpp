@@ -157,7 +157,9 @@ public:
   }
 
   // These functions are testcases for overload, which use many input parameters
+
   // NOLINTBEGIN(readability-function-size)
+
   void OverloadFunc10param(int8_t p0, int16_t p1, int32_t p2, float p3,
                            double p4, bool p5, string_view p6,
                            array_view<int8_t> p7, array_view<int16_t> p8,
@@ -211,8 +213,8 @@ public:
     }
 
     std::cout << "], p8 = {testNum = " << p8.testNum
-              << ", testStr = " << p8.testStr << "}"
-              << ", p9 = " << p9 << std::endl;
+              << ", testStr = " << p8.testStr << "}" << ", p9 = " << p9
+              << std::endl;
   }
 
   void OverloadFunc10param2(int8_t p0, ::overload::Mystruct const &p1,
@@ -222,8 +224,8 @@ public:
                             array_view<int16_t> p8, array_view<int32_t> p9) {
     std::cout << "OverloadFunc10param2: p0 = " << static_cast<int>(p0)
               << ", p1 = {testNum = " << p1.testNum
-              << ", testStr = " << p1.testStr << "}"
-              << ", p2 = " << p2 << ", p3 = [";
+              << ", testStr = " << p1.testStr << "}" << ", p2 = " << p2
+              << ", p3 = [";
 
     for (size_t i = 0; i < p3.size(); ++i) {
       std::cout << p3.data()[i];
@@ -301,8 +303,8 @@ public:
     }
 
     std::cout << "], p8 = {testNum = " << p8.testNum
-              << ", testStr = " << p8.testStr << "}"
-              << ", p9 = " << p9 << std::endl;
+              << ", testStr = " << p8.testStr << "}" << ", p9 = " << p9
+              << std::endl;
   }
 
   void OverloadFunc10param4(int8_t p0, int16_t p1, int32_t p2, float p3,
