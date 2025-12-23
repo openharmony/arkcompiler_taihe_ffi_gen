@@ -27,8 +27,10 @@ void onNewBook() {
 }
 }  // namespace
 
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_SaveBookToInternet(SaveBookToInternet);
 TH_EXPORT_CPP_API_SaveBookToFile(SaveBookToFile);
 TH_EXPORT_CPP_API_uploadBook(uploadBook);
 TH_EXPORT_CPP_API_onBookSold(onBookSold);
 TH_EXPORT_CPP_API_onNewBook(onNewBook);
+// NOLINTEND

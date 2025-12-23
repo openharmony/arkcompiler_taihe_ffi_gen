@@ -19,5 +19,7 @@ void printUint16Array(array_view<uint16_t> arr) {
 }
 }  // namespace
 
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_createUint16Array(createUint16Array);
 TH_EXPORT_CPP_API_printUint16Array(printUint16Array);
+// NOLINTEND

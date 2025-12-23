@@ -86,5 +86,7 @@ public:
 }
 }  // namespace
 
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_createResource(createResource);
 TH_EXPORT_CPP_API_make_map_inner(make_map_inner);
+// NOLINTEND

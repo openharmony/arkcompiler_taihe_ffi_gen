@@ -43,6 +43,8 @@ void processPerson(uintptr_t person) {
 }
 }  // namespace
 
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_is_string(is_string);
 TH_EXPORT_CPP_API_get_objects(get_objects);
 TH_EXPORT_CPP_API_processPerson(processPerson);
+// NOLINTEND

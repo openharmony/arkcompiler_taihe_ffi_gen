@@ -111,6 +111,7 @@ void IsApplicationEnabled(string_view bundleName) {
 
 }  // namespace
 
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetBundleOptions(GetBundleOptions);
 TH_EXPORT_CPP_API_GetBundleInfo(GetBundleInfo);
 TH_EXPORT_CPP_API_GetAbilityInfo(GetAbilityInfo);
@@ -125,3 +126,4 @@ TH_EXPORT_CPP_API_GetAbilityLabel(GetAbilityLabel);
 TH_EXPORT_CPP_API_GetAbilityIcon(GetAbilityIcon);
 TH_EXPORT_CPP_API_IsAbilityEnabled(IsAbilityEnabled);
 TH_EXPORT_CPP_API_IsApplicationEnabled(IsApplicationEnabled);
+// NOLINTEND

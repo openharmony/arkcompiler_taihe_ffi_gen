@@ -78,4 +78,6 @@ HapModuleInfo GetHapModuleInfo() {
 }
 }  // namespace
 
+// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetHapModuleInfo(GetHapModuleInfo);
+// NOLINTEND
