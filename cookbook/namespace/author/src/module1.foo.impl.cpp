@@ -22,8 +22,9 @@
 using namespace taihe;
 
 namespace {
-void fooFunc() {
-  std::cout << "namespace: module1.foo, func: foo" << std::endl;
+void fooFunc()
+{
+    std::cout << "namespace: module1.foo, func: foo" << std::endl;
 }
 }  // namespace
 

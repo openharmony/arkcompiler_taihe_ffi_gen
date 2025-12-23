@@ -22,9 +22,10 @@ using namespace taihe;
 
 namespace {
 
-string add(int32_t a, int32_t b) {
-  std::string sum = std::to_string(a + b);
-  return sum;
+string add(int32_t a, int32_t b)
+{
+    std::string sum = std::to_string(a + b);
+    return sum;
 }
 
 }  // namespace

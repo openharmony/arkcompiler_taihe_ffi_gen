@@ -26,102 +26,125 @@ namespace {
 
 class WantImpl {
 public:
-  optional<string> bundleName_;
-  optional<string> abilityName_;
-  optional<string> deviceId_;
-  optional<string> uri_;
-  optional<string> type_;
-  optional<float> flags_;
-  optional<string> action_;
-  optional<array<string>> entities_;
-  optional<string> moduleName_;
-  optional<map<string, uintptr_t>> parameters_;
+    optional<string> bundleName_;
+    optional<string> abilityName_;
+    optional<string> deviceId_;
+    optional<string> uri_;
+    optional<string> type_;
+    optional<float> flags_;
+    optional<string> action_;
+    optional<array<string>> entities_;
+    optional<string> moduleName_;
+    optional<map<string, uintptr_t>> parameters_;
 
-  WantImpl() {}
+    WantImpl()
+    {
+    }
 
-  void SetBundleName(optional_view<string> bundleName) {
-    bundleName_ = bundleName;
-  }
+    void SetBundleName(optional_view<string> bundleName)
+    {
+        bundleName_ = bundleName;
+    }
 
-  optional<string> GetBundleName() {
-    return bundleName_;
-  }
+    optional<string> GetBundleName()
+    {
+        return bundleName_;
+    }
 
-  void SetAbilityName(optional_view<string> abilityName) {
-    abilityName_ = abilityName;
-  }
+    void SetAbilityName(optional_view<string> abilityName)
+    {
+        abilityName_ = abilityName;
+    }
 
-  optional<string> GetAbilityName() {
-    return abilityName_;
-  }
+    optional<string> GetAbilityName()
+    {
+        return abilityName_;
+    }
 
-  void SetDeviceId(optional_view<string> deviceId) {
-    deviceId_ = deviceId;
-  }
+    void SetDeviceId(optional_view<string> deviceId)
+    {
+        deviceId_ = deviceId;
+    }
 
-  optional<string> GetDeviceId() {
-    return deviceId_;
-  }
+    optional<string> GetDeviceId()
+    {
+        return deviceId_;
+    }
 
-  void SetUri(optional_view<string> uri) {
-    uri_ = uri;
-  }
+    void SetUri(optional_view<string> uri)
+    {
+        uri_ = uri;
+    }
 
-  optional<string> GetUri() {
-    return uri_;
-  }
+    optional<string> GetUri()
+    {
+        return uri_;
+    }
 
-  void SetType(optional_view<string> type) {
-    type_ = type;
-  }
+    void SetType(optional_view<string> type)
+    {
+        type_ = type;
+    }
 
-  optional<string> GetType() {
-    return type_;
-  }
+    optional<string> GetType()
+    {
+        return type_;
+    }
 
-  void SetFlags(optional<float> flags) {
-    flags_ = flags;
-  }
+    void SetFlags(optional<float> flags)
+    {
+        flags_ = flags;
+    }
 
-  optional<float> GetFlags() {
-    return flags_;
-  }
+    optional<float> GetFlags()
+    {
+        return flags_;
+    }
 
-  void SetAction(optional_view<string> action) {
-    action_ = action;
-  }
+    void SetAction(optional_view<string> action)
+    {
+        action_ = action;
+    }
 
-  optional<string> GetAction() {
-    return action_;
-  }
+    optional<string> GetAction()
+    {
+        return action_;
+    }
 
-  void SetParameters(optional_view<map<string, uintptr_t>> parameters) {
-    this->parameters_ = parameters;
-  }
+    void SetParameters(optional_view<map<string, uintptr_t>> parameters)
+    {
+        this->parameters_ = parameters;
+    }
 
-  optional<map<string, uintptr_t>> GetParameters() {
-    return parameters_;
-  }
+    optional<map<string, uintptr_t>> GetParameters()
+    {
+        return parameters_;
+    }
 
-  void SetEntities(optional_view<array<string>> entities) {
-    entities_ = entities;
-  }
+    void SetEntities(optional_view<array<string>> entities)
+    {
+        entities_ = entities;
+    }
 
-  optional<array<string>> GetEntities() {
-    return entities_;
-  }
+    optional<array<string>> GetEntities()
+    {
+        return entities_;
+    }
 
-  void SetModuleName(optional_view<string> moduleName) {
-    moduleName_ = moduleName;
-  }
+    void SetModuleName(optional_view<string> moduleName)
+    {
+        moduleName_ = moduleName;
+    }
 
-  optional<string> GetModuleName() {
-    return moduleName_;
-  }
+    optional<string> GetModuleName()
+    {
+        return moduleName_;
+    }
 };
 
-Want CreateWant() {
-  return make_holder<WantImpl, Want>();
+Want CreateWant()
+{
+    return make_holder<WantImpl, Want>();
 }
 }  // namespace
 

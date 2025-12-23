@@ -27,157 +27,195 @@ namespace {
 
 class UsedSceneImpl {
 public:
-  string when_ = "test";
-  array<string> abilities_ = {"getAbilities", "not", "implemented"};
+    string when_ = "test";
+    array<string> abilities_ = {"getAbilities", "not", "implemented"};
 
-  UsedSceneImpl() {}
+    UsedSceneImpl()
+    {
+    }
 
-  array<string> GetAbilities() {
-    return abilities_;
-  }
+    array<string> GetAbilities()
+    {
+        return abilities_;
+    }
 
-  void SetAbilities(array_view<string> abilities) {
-    abilities_ = abilities;
-  }
+    void SetAbilities(array_view<string> abilities)
+    {
+        abilities_ = abilities;
+    }
 
-  void SetWhen(string_view when) {
-    when_ = when;
-  }
+    void SetWhen(string_view when)
+    {
+        when_ = when;
+    }
 
-  string GetWhen() {
-    return when_;
-  }
+    string GetWhen()
+    {
+        return when_;
+    }
 };
 
 class ReqPermissionDetailImpl {
 public:
-  string name_ = "name";
-  string reason_ = "reason_";
-  UsedSceneImpl usedSceneImpl_;
+    string name_ = "name";
+    string reason_ = "reason_";
+    UsedSceneImpl usedSceneImpl_;
 
-  ReqPermissionDetailImpl() {}
+    ReqPermissionDetailImpl()
+    {
+    }
 
-  string GetName() {
-    return name_;
-  }
+    string GetName()
+    {
+        return name_;
+    }
 
-  void SetName(string_view name) {
-    name_ = name;
-  }
+    void SetName(string_view name)
+    {
+        name_ = name;
+    }
 
-  string GetReason() {
-    return reason_;
-  }
+    string GetReason()
+    {
+        return reason_;
+    }
 
-  void SetReason(string_view reason) {
-    reason_ = reason;
-  }
+    void SetReason(string_view reason)
+    {
+        reason_ = reason;
+    }
 
-  UsedSceneImpl GetUsedScene() {
-    return GetUsedScene();
-  }
+    UsedSceneImpl GetUsedScene()
+    {
+        return GetUsedScene();
+    }
 
-  void SetUsedScene(UsedSceneImpl usedScene) {
-    usedSceneImpl_.when_ = usedScene.when_;
-    usedSceneImpl_.abilities_ = usedScene.abilities_;
-  }
+    void SetUsedScene(UsedSceneImpl usedScene)
+    {
+        usedSceneImpl_.when_ = usedScene.when_;
+        usedSceneImpl_.abilities_ = usedScene.abilities_;
+    }
 };
 
 class BundleInfoImpl {
 public:
-  int32_t bundleInfoImpl = 127;
+    int32_t bundleInfoImpl = 127;
 
-  BundleInfoImpl() {}
+    BundleInfoImpl()
+    {
+    }
 
-  string GetName() {
-    return "bundleInfo::getName";
-  }
+    string GetName()
+    {
+        return "bundleInfo::getName";
+    }
 
-  string GetType() {
-    return "bundleInfo::getType";
-  }
+    string GetType()
+    {
+        return "bundleInfo::getType";
+    }
 
-  string GetAppId() {
-    return "bundleInfo::getAppId";
-  }
+    string GetAppId()
+    {
+        return "bundleInfo::getAppId";
+    }
 
-  int32_t GetUid() {
-    return bundleInfoImpl;
-  }
+    int32_t GetUid()
+    {
+        return bundleInfoImpl;
+    }
 
-  int32_t GetInstallTime() {
-    return bundleInfoImpl;
-  }
+    int32_t GetInstallTime()
+    {
+        return bundleInfoImpl;
+    }
 
-  int32_t GetUpdateTime() {
-    return bundleInfoImpl;
-  }
+    int32_t GetUpdateTime()
+    {
+        return bundleInfoImpl;
+    }
 
-  array<string> GetReqPermissions() {
-    array<string> str = {"bundleInfo::getReqPermissions"};
-    return str;
-  }
+    array<string> GetReqPermissions()
+    {
+        array<string> str = {"bundleInfo::getReqPermissions"};
+        return str;
+    }
 
-  string GetVendor() {
-    return "bundleInfo::getVendor";
-  }
+    string GetVendor()
+    {
+        return "bundleInfo::getVendor";
+    }
 
-  int32_t GetVersionCode() {
-    return bundleInfoImpl;
-  }
+    int32_t GetVersionCode()
+    {
+        return bundleInfoImpl;
+    }
 
-  string GetVersionName() {
-    return "bundleInfo::getVersionName";
-  }
+    string GetVersionName()
+    {
+        return "bundleInfo::getVersionName";
+    }
 
-  int32_t GetCompatibleVersion() {
-    return bundleInfoImpl;
-  }
+    int32_t GetCompatibleVersion()
+    {
+        return bundleInfoImpl;
+    }
 
-  int32_t GetTargetVersion() {
-    return bundleInfoImpl;
-  }
+    int32_t GetTargetVersion()
+    {
+        return bundleInfoImpl;
+    }
 
-  bool GetIsCompressNativeLibs() {
-    return true;
-  }
+    bool GetIsCompressNativeLibs()
+    {
+        return true;
+    }
 
-  string GetEntryModuleName() {
-    return "bundleInfo::getEntryModuleName";
-  }
+    string GetEntryModuleName()
+    {
+        return "bundleInfo::getEntryModuleName";
+    }
 
-  string GetCpuAbi() {
-    return "bundleInfo::getCpuAbi";
-  }
+    string GetCpuAbi()
+    {
+        return "bundleInfo::getCpuAbi";
+    }
 
-  string GetIsSilentInstallation() {
-    return "bundleInfo::getIsSilentInstallation";
-  }
+    string GetIsSilentInstallation()
+    {
+        return "bundleInfo::getIsSilentInstallation";
+    }
 
-  int32_t GetMinCompatibleVersionCode() {
-    return bundleInfoImpl;
-  }
+    int32_t GetMinCompatibleVersionCode()
+    {
+        return bundleInfoImpl;
+    }
 
-  bool GetEntryInstallationFree() {
-    return true;
-  }
+    bool GetEntryInstallationFree()
+    {
+        return true;
+    }
 
-  array<int32_t> GetReqPermissionStates() {
-    array<int32_t> arr = {bundleInfoImpl};
-    return arr;
-  }
+    array<int32_t> GetReqPermissionStates()
+    {
+        array<int32_t> arr = {bundleInfoImpl};
+        return arr;
+    }
 };
 
-UsedScene GetUsedScene() {
-  return make_holder<UsedSceneImpl, UsedScene>();
+UsedScene GetUsedScene()
+{
+    return make_holder<UsedSceneImpl, UsedScene>();
 }
 
-ReqPermissionDetail GetReqPermissionDetail() {
-  return make_holder<ReqPermissionDetailImpl, ReqPermissionDetail>();
+ReqPermissionDetail GetReqPermissionDetail()
+{
+    return make_holder<ReqPermissionDetailImpl, ReqPermissionDetail>();
 }
 
-BundleInfo GetBundleInfo() {
-  return make_holder<BundleInfoImpl, BundleInfo>();
+BundleInfo GetBundleInfo()
+{
+    return make_holder<BundleInfoImpl, BundleInfo>();
 }
 }  // namespace
 

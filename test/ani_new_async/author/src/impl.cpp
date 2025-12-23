@@ -20,91 +20,108 @@
 #include "taihe/runtime.hpp"
 
 namespace {
-int32_t AddImpl(int32_t a, int32_t b) {
-  if (a == 0) {
-    taihe::set_business_error(1, "some error happen in add impl");
-    return b;
-  } else {
-    std::cout << "add impl " << a + b << std::endl;
-    return a + b;
-  }
+int32_t AddImpl(int32_t a, int32_t b)
+{
+    if (a == 0) {
+        taihe::set_business_error(1, "some error happen in add impl");
+        return b;
+    } else {
+        std::cout << "add impl " << a + b << std::endl;
+        return a + b;
+    }
 }
 
-::async_test::IBase GetIBaseImpl() {
-  struct AuthorIBase {
-    taihe::string name;
+::async_test::IBase GetIBaseImpl()
+{
+    struct AuthorIBase {
+        taihe::string name;
 
-    AuthorIBase() : name("My IBase") {}
+        AuthorIBase() : name("My IBase")
+        {
+        }
 
-    ~AuthorIBase() {}
+        ~AuthorIBase()
+        {
+        }
 
-    taihe::string Get() {
-      return name;
-    }
+        taihe::string Get()
+        {
+            return name;
+        }
 
-    taihe::string GetWithCallback() {
-      return name;
-    }
+        taihe::string GetWithCallback()
+        {
+            return name;
+        }
 
-    taihe::string GetReturnsPromise() {
-      return name;
-    }
+        taihe::string GetReturnsPromise()
+        {
+            return name;
+        }
 
-    void Set(taihe::string_view a) {
-      this->name = a;
-      return;
-    }
+        void Set(taihe::string_view a)
+        {
+            this->name = a;
+            return;
+        }
 
-    void SetWithCallback(taihe::string_view a) {
-      this->name = a;
-      return;
-    }
+        void SetWithCallback(taihe::string_view a)
+        {
+            this->name = a;
+            return;
+        }
 
-    void SetReturnsPromise(taihe::string_view a) {
-      this->name = a;
-      return;
-    }
+        void SetReturnsPromise(taihe::string_view a)
+        {
+            this->name = a;
+            return;
+        }
 
-    void MakeSync() {
-      TH_THROW(std::runtime_error, "makeSync not implemented");
-    }
+        void MakeSync()
+        {
+            TH_THROW(std::runtime_error, "makeSync not implemented");
+        }
 
-    void MakeWithCallback() {
-      TH_THROW(std::runtime_error, "makeSync not implemented");
-    }
+        void MakeWithCallback()
+        {
+            TH_THROW(std::runtime_error, "makeSync not implemented");
+        }
 
-    void MakeReturnsPromise() {
-      TH_THROW(std::runtime_error, "makeSync not implemented");
-    }
-  };
+        void MakeReturnsPromise()
+        {
+            TH_THROW(std::runtime_error, "makeSync not implemented");
+        }
+    };
 
-  return taihe::make_holder<AuthorIBase, ::async_test::IBase>();
+    return taihe::make_holder<AuthorIBase, ::async_test::IBase>();
 }
 
-void FromStructSyncImpl(::async_test::Data const &data) {
-  std::cout << data.a.c_str() << " " << data.b.c_str() << " " << data.c
-            << std::endl;
-  if (data.c == 0) {
-    taihe::set_business_error(1, "some error happen in fromStructSyncImpl");
-  }
-  return;
+void FromStructSyncImpl(::async_test::Data const &data)
+{
+    std::cout << data.a.c_str() << " " << data.b.c_str() << " " << data.c << std::endl;
+    if (data.c == 0) {
+        taihe::set_business_error(1, "some error happen in fromStructSyncImpl");
+    }
+    return;
 }
 
-::async_test::Data ToStructSyncImpl(taihe::string_view a, taihe::string_view b,
-                                    int32_t c) {
-  if (c == 0) {
-    taihe::set_business_error(1, "some error happen in toStructSyncImpl");
+::async_test::Data ToStructSyncImpl(taihe::string_view a, taihe::string_view b, int32_t c)
+{
+    if (c == 0) {
+        taihe::set_business_error(1, "some error happen in toStructSyncImpl");
+        return {a, b, c};
+    }
     return {a, b, c};
-  }
-  return {a, b, c};
 }
 
-void PrintSync() {
-  std::cout << "print Sync" << std::endl;
+void PrintSync()
+{
+    std::cout << "print Sync" << std::endl;
 }
 
-void MakeGlobalSync() {
-  std::cout << "makeGlobal" << std::endl;
+void MakeGlobalSync()
+{
+    std::cout << "makeGlobal" << std::endl;
 }
 }  // namespace
 

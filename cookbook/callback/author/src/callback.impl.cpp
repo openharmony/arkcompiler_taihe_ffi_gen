@@ -23,24 +23,27 @@
 using namespace taihe;
 
 namespace {
-void cb_void_void(callback_view<void()> f) {
-  f();
+void cb_void_void(callback_view<void()> f)
+{
+    f();
 }
 
-void cb_i_void(callback_view<void(int32_t)> f) {
-  f(1);
+void cb_i_void(callback_view<void(int32_t)> f)
+{
+    f(1);
 }
 
-string cb_str_str(callback_view<string(string_view)> f) {
-  taihe::string out = f("hello");
-  return "hello";
+string cb_str_str(callback_view<string(string_view)> f)
+{
+    taihe::string out = f("hello");
+    return "hello";
 }
 
-void cb_struct(
-    callback_view<::callback::Person(::callback::Person const &)> f) {
-  ::callback::Person result = f(::callback::Person{"Tom", 18});
-  std::cout << result.name << " " << result.age << std::endl;
-  return;
+void cb_struct(callback_view<::callback::Person(::callback::Person const &)> f)
+{
+    ::callback::Person result = f(::callback::Person {"Tom", 18});
+    std::cout << result.name << " " << result.age << std::endl;
+    return;
 }
 }  // namespace
 

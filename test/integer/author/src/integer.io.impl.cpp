@@ -17,14 +17,16 @@
 
 #include <iostream>
 
-int32_t ohos_int_input() {
-  int n;
-  std::cin >> n;
-  return n;
+int32_t ohos_int_input()
+{
+    int n;
+    std::cin >> n;
+    return n;
 }
 
-void ohos_int_output(int32_t n) {
-  std::cout << n << std::endl;
+void ohos_int_output(int32_t n)
+{
+    std::cout << n << std::endl;
 }
 
 // NOLINTBEGIN

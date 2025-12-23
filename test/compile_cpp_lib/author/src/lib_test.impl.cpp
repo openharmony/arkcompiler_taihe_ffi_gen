@@ -24,27 +24,33 @@ namespace {
 
 class IfaceAImpl {
 public:
-  IfaceAImpl() {}
+    IfaceAImpl()
+    {
+    }
 
-  void Foo() {
-    std::cout << "IfaceA::Foo" << std::endl;
-  }
+    void Foo()
+    {
+        std::cout << "IfaceA::Foo" << std::endl;
+    }
 
-  void Bar() {
-    std::cout << "IfaceA::Bar" << std::endl;
-  }
+    void Bar()
+    {
+        std::cout << "IfaceA::Bar" << std::endl;
+    }
 };
 
-::lib_test::IfaceA MakeIfaceA() {
-  // The parameters in the make_holder function should be of the same type
-  // as the parameters in the constructor of the actual implementation class.
-  return taihe::make_holder<IfaceAImpl, ::lib_test::IfaceA>();
+::lib_test::IfaceA MakeIfaceA()
+{
+    // The parameters in the make_holder function should be of the same type
+    // as the parameters in the constructor of the actual implementation class.
+    return taihe::make_holder<IfaceAImpl, ::lib_test::IfaceA>();
 }
 
-void UseIfaceA(::lib_test::weak::IfaceA obj) {
-  std::cout << "UseIfaceA" << std::endl;
-  obj->Foo();
-  obj->Bar();
+void UseIfaceA(::lib_test::weak::IfaceA obj)
+{
+    std::cout << "UseIfaceA" << std::endl;
+    obj->Foo();
+    obj->Bar();
 }
 }  // namespace
 

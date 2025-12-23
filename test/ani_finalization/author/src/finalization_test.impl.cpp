@@ -28,30 +28,34 @@ namespace {
 // To be implemented.
 
 class FooImpl {
-  vector<callback<void()>> callbacks;
+    vector<callback<void()>> callbacks;
 
 public:
-  FooImpl() {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-  }
-
-  void addCallback(callback_view<void()> callback) {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-    callbacks.emplace_back(callback);
-  }
-
-  ~FooImpl() {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-    for (callback_view<void()> callback : callbacks) {
-      callback();
+    FooImpl()
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
     }
-  }
+
+    void addCallback(callback_view<void()> callback)
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+        callbacks.emplace_back(callback);
+    }
+
+    ~FooImpl()
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+        for (callback_view<void()> callback : callbacks) {
+            callback();
+        }
+    }
 };
 
-Foo makeFoo() {
-  // The parameters in the make_holder function should be of the same type
-  // as the parameters in the constructor of the actual implementation class.
-  return make_holder<FooImpl, Foo>();
+Foo makeFoo()
+{
+    // The parameters in the make_holder function should be of the same type
+    // as the parameters in the constructor of the actual implementation class.
+    return make_holder<FooImpl, Foo>();
 }
 }  // namespace
 

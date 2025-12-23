@@ -24,8 +24,9 @@ using namespace metadata;
 
 namespace {
 
-Metadata GetMetadata() {
-  return make_holder<MetadataImpl, Metadata>();
+Metadata GetMetadata()
+{
+    return make_holder<MetadataImpl, Metadata>();
 }
 }  // namespace
 

@@ -22,8 +22,9 @@
 namespace {
 // To be implemented.
 
-void ToplevelFunc() {
-  std::cout << "Export default toplevel func" << std::endl;
+void ToplevelFunc()
+{
+    std::cout << "Export default toplevel func" << std::endl;
 }
 }  // namespace
 

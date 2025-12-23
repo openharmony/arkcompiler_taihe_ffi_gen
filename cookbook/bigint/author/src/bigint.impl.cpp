@@ -27,8 +27,9 @@
 
 // Get most significant or sign bit from an integral type.
 template<typename T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
-bool get_msb(T dig) {
-  return dig >> (sizeof(T) * 8 - 1) != 0;
+bool get_msb(T dig)
+{
+    return dig >> (sizeof(T) * 8 - 1) != 0;
 }
 
 // Get sign from a 2's complement big integer represented as an array.
@@ -40,8 +41,9 @@ bool get_msb(T dig) {
 //   get_sign([0x00, 0xff]) => true   (-256)
 //   get_sign([0x00]) => false        (   0)
 template<typename T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
-bool get_sign(taihe::array_view<T> num) {
-  return get_msb(num[num.size() - 1]);
+bool get_sign(taihe::array_view<T> num)
+{
+    return get_msb(num[num.size() - 1]);
 }
 
 // Get sign and absolute value (without additional sign bit) from a 2's
@@ -54,25 +56,26 @@ bool get_sign(taihe::array_view<T> num) {
 //   get_sign_and_abs([0x00, 0xff]) => {true, [0x00, 0x01]}  (-256)
 //   get_sign_and_abs([0x00]) => {false, []}                 (   0)
 template<typename T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
-std::pair<bool, taihe::array<T>> get_sign_and_abs(taihe::array_view<T> num) {
-  T *buf = reinterpret_cast<T *>(malloc(num.size() * sizeof(T)));
-  bool sign = get_msb(num[num.size() - 1]);
-  if (sign) {
-    bool carry = true;
-    for (std::size_t i = 0; i < num.size(); i++) {
-      buf[i] = ~num[i] + carry;
-      carry = carry && (buf[i] == 0);
+std::pair<bool, taihe::array<T>> get_sign_and_abs(taihe::array_view<T> num)
+{
+    T *buf = reinterpret_cast<T *>(malloc(num.size() * sizeof(T)));
+    bool sign = get_msb(num[num.size() - 1]);
+    if (sign) {
+        bool carry = true;
+        for (std::size_t i = 0; i < num.size(); i++) {
+            buf[i] = ~num[i] + carry;
+            carry = carry && (buf[i] == 0);
+        }
+    } else {
+        for (std::size_t i = 0; i < num.size(); i++) {
+            buf[i] = num[i];
+        }
     }
-  } else {
-    for (std::size_t i = 0; i < num.size(); i++) {
-      buf[i] = num[i];
+    std::size_t size = num.size();
+    while (size > 0 && buf[size - 1] == 0) {
+        size--;
     }
-  }
-  std::size_t size = num.size();
-  while (size > 0 && buf[size - 1] == 0) {
-    size--;
-  }
-  return {sign, taihe::array<T>(buf, size)};
+    return {sign, taihe::array<T>(buf, size)};
 }
 
 // Create a 2's complement big integer represented as an array from its sign and
@@ -85,35 +88,37 @@ std::pair<bool, taihe::array<T>> get_sign_and_abs(taihe::array_view<T> num) {
 //   get_num(true, [0x00, 0x01]) => [0x00, 0xff]  (-256)
 //   get_num(false, []) => [0x00]                 (   0)
 template<typename T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
-taihe::array<T> build_num(bool sign, taihe::array_view<T> abs) {
-  T *buf = reinterpret_cast<T *>(malloc((abs.size() + 1) * sizeof(T)));
-  if (sign) {
-    bool carry = true;
-    for (std::size_t i = 0; i < abs.size(); i++) {
-      buf[i] = ~abs[i] + carry;
-      carry = carry && (buf[i] == 0);
+taihe::array<T> build_num(bool sign, taihe::array_view<T> abs)
+{
+    T *buf = reinterpret_cast<T *>(malloc((abs.size() + 1) * sizeof(T)));
+    if (sign) {
+        bool carry = true;
+        for (std::size_t i = 0; i < abs.size(); i++) {
+            buf[i] = ~abs[i] + carry;
+            carry = carry && (buf[i] == 0);
+        }
+        buf[abs.size()] = carry - 1;
+    } else {
+        for (std::size_t i = 0; i < abs.size(); i++) {
+            buf[i] = abs[i];
+        }
+        buf[abs.size()] = 0;
     }
-    buf[abs.size()] = carry - 1;
-  } else {
-    for (std::size_t i = 0; i < abs.size(); i++) {
-      buf[i] = abs[i];
+    std::size_t size = abs.size() + 1;
+    while (size >= 2 && ((buf[size - 1] == 0 && get_msb(buf[size - 2]) == 0) ||
+                         (buf[size - 1] == -1 && get_msb(buf[size - 2]) == 1))) {
+        size--;
     }
-    buf[abs.size()] = 0;
-  }
-  std::size_t size = abs.size() + 1;
-  while (size >= 2 && ((buf[size - 1] == 0 && get_msb(buf[size - 2]) == 0) ||
-                       (buf[size - 1] == -1 && get_msb(buf[size - 2]) == 1))) {
-    size--;
-  }
-  return taihe::array<T>(buf, size);
+    return taihe::array<T>(buf, size);
 }
 
 namespace {
-taihe::array<uint8_t> processBigInt(taihe::array_view<uint8_t> a) {
-  // Convert a 2's complement big integer to its sign and absolute value.
-  auto [sign, abs] = get_sign_and_abs(a);
-  // Invert the sign and return the new 2's complement big integer.
-  return build_num(!sign, abs);
+taihe::array<uint8_t> processBigInt(taihe::array_view<uint8_t> a)
+{
+    // Convert a 2's complement big integer to its sign and absolute value.
+    auto [sign, abs] = get_sign_and_abs(a);
+    // Invert the sign and return the new 2's complement big integer.
+    return build_num(!sign, abs);
 }
 }  // namespace
 

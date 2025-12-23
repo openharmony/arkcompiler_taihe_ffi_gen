@@ -42,38 +42,42 @@ namespace taihe {
 void set_vm(ani_vm *vm);
 ani_vm *get_vm();
 
-inline ani_env *get_env() {
-  ani_env *env = nullptr;
-  get_vm()->GetEnv(ANI_VERSION_1, &env);
-  return env;
+inline ani_env *get_env()
+{
+    ani_env *env = nullptr;
+    get_vm()->GetEnv(ANI_VERSION_1, &env);
+    return env;
 }
 
 class env_guard {
-  ani_env *env = nullptr;
-  bool is_temporary;
+    ani_env *env = nullptr;
+    bool is_temporary;
 
 public:
-  env_guard() {
-    is_temporary = get_vm()->GetEnv(ANI_VERSION_1, &env) != ANI_OK;
-    if (is_temporary) {
-      get_vm()->AttachCurrentThread(nullptr, ANI_VERSION_1, &env);
+    env_guard()
+    {
+        is_temporary = get_vm()->GetEnv(ANI_VERSION_1, &env) != ANI_OK;
+        if (is_temporary) {
+            get_vm()->AttachCurrentThread(nullptr, ANI_VERSION_1, &env);
+        }
     }
-  }
 
-  ~env_guard() {
-    if (is_temporary) {
-      get_vm()->DetachCurrentThread();
+    ~env_guard()
+    {
+        if (is_temporary) {
+            get_vm()->DetachCurrentThread();
+        }
     }
-  }
 
-  env_guard(env_guard const &) = delete;
-  env_guard &operator=(env_guard const &) = delete;
-  env_guard(env_guard &&) = delete;
-  env_guard &operator=(env_guard &&) = delete;
+    env_guard(env_guard const &) = delete;
+    env_guard &operator=(env_guard const &) = delete;
+    env_guard(env_guard &&) = delete;
+    env_guard &operator=(env_guard &&) = delete;
 
-  ani_env *get_env() {
-    return env;
-  }
+    ani_env *get_env()
+    {
+        return env;
+    }
 };
 }  // namespace taihe
 

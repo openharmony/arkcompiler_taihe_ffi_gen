@@ -21,8 +21,9 @@
 using namespace taihe;
 
 namespace {
-void barFunc() {
-  std::cout << "namespace: module2.bar, func: bar" << std::endl;
+void barFunc()
+{
+    std::cout << "namespace: module2.bar, func: bar" << std::endl;
 }
 }  // namespace
 

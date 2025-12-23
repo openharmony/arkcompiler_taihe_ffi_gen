@@ -21,24 +21,29 @@ using namespace ::ohos::book::store;
 
 // Won't Implement
 namespace {
-void SaveBookToInternet(string_view url) {
-  TH_THROW(std::runtime_error, "SaveBookToInternet not implemented");
+void SaveBookToInternet(string_view url)
+{
+    TH_THROW(std::runtime_error, "SaveBookToInternet not implemented");
 }
 
-void SaveBookToFile(weak::Path p) {
-  TH_THROW(std::runtime_error, "SaveBookToFile not implemented");
+void SaveBookToFile(weak::Path p)
+{
+    TH_THROW(std::runtime_error, "SaveBookToFile not implemented");
 }
 
-string uploadBook(Book const &b) {
-  TH_THROW(std::runtime_error, "uploadBook not implemented");
+string uploadBook(Book const &b)
+{
+    TH_THROW(std::runtime_error, "uploadBook not implemented");
 }
 
-void onBookSold() {
-  TH_THROW(std::runtime_error, "onBookSold not implemented");
+void onBookSold()
+{
+    TH_THROW(std::runtime_error, "onBookSold not implemented");
 }
 
-void onNewBook() {
-  TH_THROW(std::runtime_error, "onNewBook not implemented");
+void onNewBook()
+{
+    TH_THROW(std::runtime_error, "onNewBook not implemented");
 }
 }  // namespace
 

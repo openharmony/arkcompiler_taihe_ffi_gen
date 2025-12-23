@@ -23,25 +23,31 @@ using namespace taihe;
 
 class SceneNodeParametersImpl {
 public:
-  string name = "name";
-  optional<string> path;
+    string name = "name";
+    optional<string> path;
 
-  SceneNodeParametersImpl() {}
+    SceneNodeParametersImpl()
+    {
+    }
 
-  string GetName() {
-    return name;
-  }
+    string GetName()
+    {
+        return name;
+    }
 
-  void SetName(string_view name) {
-    this->name = name;
-  }
+    void SetName(string_view name)
+    {
+        this->name = name;
+    }
 
-  optional<string> GetPath() {
-    return path;
-  }
+    optional<string> GetPath()
+    {
+        return path;
+    }
 
-  void SetPath(optional_view<string> path) {
-    this->path = path;
-  }
+    void SetPath(optional_view<string> path)
+    {
+        this->path = path;
+    }
 };
 #endif

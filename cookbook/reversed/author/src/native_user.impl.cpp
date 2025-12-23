@@ -22,10 +22,11 @@
 namespace {
 // To be implemented.
 
-::taihe::string UseIfaceA(::impl::weak::IfaceA_taihe obj) {
-  std::cout << "native call Foo(): " << obj->Foo() << std::endl;
-  std::cout << "native call Bar(): " << obj->Bar() << std::endl;
-  return obj->Foo();
+::taihe::string UseIfaceA(::impl::weak::IfaceA_taihe obj)
+{
+    std::cout << "native call Foo(): " << obj->Foo() << std::endl;
+    std::cout << "native call Bar(): " << obj->Bar() << std::endl;
+    return obj->Foo();
 }
 }  // namespace
 

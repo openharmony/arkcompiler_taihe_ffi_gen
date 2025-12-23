@@ -30,8 +30,8 @@ struct DataBlockHead;
 // - `id`: A constant pointer representing the interface ID.
 // - `vtbl_ptr`: A pointer to the virtual table associated with the ID.
 struct IdMapItem {
-  void const *id;
-  void const *vtbl_ptr;
+    void const *id;
+    void const *vtbl_ptr;
 };
 
 typedef void free_func_t(struct DataBlockHead *);
@@ -52,12 +52,12 @@ typedef void const *qiid_func_t(void const *id);
 // - `idmap`: An array of IdMapItem structures representing the ID to vtable
 //   mapping.
 struct TypeInfo {
-  free_func_t *free_fptr;
-  hash_func_t *hash_fptr;
-  same_func_t *same_fptr;
-  qiid_func_t *qiid_fptr;
-  uint64_t len;
-  struct IdMapItem idmap[];
+    free_func_t *free_fptr;
+    hash_func_t *hash_fptr;
+    same_func_t *same_fptr;
+    qiid_func_t *qiid_fptr;
+    uint64_t len;
+    struct IdMapItem idmap[];
 };
 
 // DataBlockHead
@@ -68,8 +68,8 @@ struct TypeInfo {
 // - `rtti_ptr`: A pointer to the runtime type information structure.
 // - `m_count`: A reference count for the data block.
 struct DataBlockHead {
-  struct TypeInfo const *rtti_ptr;
-  TRefCount m_count;
+    struct TypeInfo const *rtti_ptr;
+    TRefCount m_count;
 };
 
 // Initializes the TObject with the given runtime typeinfo.
@@ -77,8 +77,7 @@ struct DataBlockHead {
 // # Arguments
 // - `data_ptr`: The data pointer.
 // - `rtti_ptr`: The runtime typeinfo pointer.
-TH_EXPORT void tobj_init(struct DataBlockHead *data_ptr,
-                         struct TypeInfo const *rtti_ptr);
+TH_EXPORT void tobj_init(struct DataBlockHead *data_ptr, struct TypeInfo const *rtti_ptr);
 
 // Increments the reference count of the given TObject.
 //

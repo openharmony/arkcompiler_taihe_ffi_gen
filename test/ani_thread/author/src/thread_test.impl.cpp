@@ -27,17 +27,16 @@ using namespace taihe;
 namespace {
 static constexpr int32_t THOUSAND = 1000;
 
-void invokeFromOtherThreadAfter(double sec, callback_view<void()> cb) {
-  std::cerr << "-- begin invokeFromOtherThreadAfter --" << std::endl;
-  std::thread thread([sec, cb = callback<void()>(cb)]() {
-    std::this_thread::sleep_for(
-        std::chrono::milliseconds(static_cast<int>(sec * THOUSAND)));
-    std::cerr << "invokeFromOtherThreadAfter: " << sec << " seconds"
-              << std::endl;
-    cb();
-  });
-  thread.detach();
-  std::cerr << "-- end invokeFromOtherThreadAfter --" << std::endl;
+void invokeFromOtherThreadAfter(double sec, callback_view<void()> cb)
+{
+    std::cerr << "-- begin invokeFromOtherThreadAfter --" << std::endl;
+    std::thread thread([sec, cb = callback<void()>(cb)]() {
+        std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(sec * THOUSAND)));
+        std::cerr << "invokeFromOtherThreadAfter: " << sec << " seconds" << std::endl;
+        cb();
+    });
+    thread.detach();
+    std::cerr << "-- end invokeFromOtherThreadAfter --" << std::endl;
 }
 }  // namespace
 
