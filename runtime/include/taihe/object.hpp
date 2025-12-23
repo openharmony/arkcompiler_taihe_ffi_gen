@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TAIHE_OBJECT_HPP
+#define TAIHE_OBJECT_HPP
 
 #include <taihe/object.abi.h>
 #include <taihe/common.hpp>
@@ -334,3 +335,5 @@ struct std::hash<taihe::impl_holder<Impl, InterfaceTypes...>> {
     return std::hash<taihe::data_holder>()(val);
   }
 };
+
+#endif  // TAIHE_OBJECT_HPP

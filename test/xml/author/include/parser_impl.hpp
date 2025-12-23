@@ -1,4 +1,5 @@
-#pragma once
+#ifndef PARSER_IMPL_HPP
+#define PARSER_IMPL_HPP
 
 #include <taihe/string.hpp>
 
@@ -89,3 +90,5 @@ private:
     ((ExpatParserState *)userData)->onCharacterData(s, len);
   }
 };
+
+#endif  // PARSER_IMPL_HPP

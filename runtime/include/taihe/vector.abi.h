@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TAIHE_VECTOR_ABI_H
+#define TAIHE_VECTOR_ABI_H
 
 #include <taihe/common.h>
 
@@ -12,3 +13,5 @@ struct TVectorHandle {
 struct TVector {
   TVectorHandle *m_handle;
 };
+
+#endif  // TAIHE_VECTOR_ABI_H
