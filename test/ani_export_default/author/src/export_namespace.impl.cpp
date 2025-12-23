@@ -22,8 +22,9 @@
 namespace {
 // To be implemented.
 
-void Bar() {
-  std::cout << "Export Namespace Bar()" << std::endl;
+void Bar()
+{
+    std::cout << "Export Namespace Bar()" << std::endl;
 }
 }  // namespace
 

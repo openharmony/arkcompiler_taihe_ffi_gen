@@ -26,167 +26,209 @@ namespace {
 
 class ReqPermissionDetailImpl {
 public:
-  string name_ = "";
-  string moduleName_ = "";
-  string reason_ = "";
-  int reasonId_ = 0;
+    string name_ = "";
+    string moduleName_ = "";
+    string reason_ = "";
+    int reasonId_ = 0;
 
-  ReqPermissionDetailImpl() {}
+    ReqPermissionDetailImpl()
+    {
+    }
 
-  void SetName(string_view name) {
-    this->name_ = name;
-  }
+    void SetName(string_view name)
+    {
+        this->name_ = name;
+    }
 
-  string GetName() {
-    return name_;
-  }
+    string GetName()
+    {
+        return name_;
+    }
 
-  void SetModuleName(string_view moduleName) {
-    this->moduleName_ = moduleName;
-  }
+    void SetModuleName(string_view moduleName)
+    {
+        this->moduleName_ = moduleName;
+    }
 
-  string GetModuleName() {
-    return moduleName_;
-  }
+    string GetModuleName()
+    {
+        return moduleName_;
+    }
 
-  void SetReason(string_view reason) {
-    this->reason_ = reason;
-  }
+    void SetReason(string_view reason)
+    {
+        this->reason_ = reason;
+    }
 
-  string GetReason() {
-    return reason_;
-  }
+    string GetReason()
+    {
+        return reason_;
+    }
 
-  void SetReasonId(int32_t reasonId) {
-    this->reasonId_ = reasonId;
-  }
+    void SetReasonId(int32_t reasonId)
+    {
+        this->reasonId_ = reasonId;
+    }
 
-  int32_t GetReasonId() {
-    return reasonId_;
-  }
+    int32_t GetReasonId()
+    {
+        return reasonId_;
+    }
 };
 
 class UsedSceneImpl {
 public:
-  array<string> abilities_ = {""};
-  string when_ = "";
+    array<string> abilities_ = {""};
+    string when_ = "";
 
-  UsedSceneImpl() {}
+    UsedSceneImpl()
+    {
+    }
 
-  void SetAbilities(array_view<string> abilities) {
-    abilities_ = abilities;
-  }
+    void SetAbilities(array_view<string> abilities)
+    {
+        abilities_ = abilities;
+    }
 
-  array<string> GetAbilities() {
-    return abilities_;
-  }
+    array<string> GetAbilities()
+    {
+        return abilities_;
+    }
 
-  void SetWhen(string_view when) {
-    this->when_ = when;
-  }
+    void SetWhen(string_view when)
+    {
+        this->when_ = when;
+    }
 
-  string GetWhen() {
-    return when_;
-  }
+    string GetWhen()
+    {
+        return when_;
+    }
 };
 
 class SignatureInfoImpl {
 public:
-  SignatureInfoImpl() {}
+    SignatureInfoImpl()
+    {
+    }
 
-  string GetAppId() {
-    return "SignatureInfoImpl::getAppId";
-  }
+    string GetAppId()
+    {
+        return "SignatureInfoImpl::getAppId";
+    }
 
-  string GetFingerprint() {
-    return "SignatureInfoImpl::getFingerprint";
-  }
+    string GetFingerprint()
+    {
+        return "SignatureInfoImpl::getFingerprint";
+    }
 
-  string GetAppIdentifier() {
-    return "SignatureInfoImpl::getAppIdentifier";
-  }
+    string GetAppIdentifier()
+    {
+        return "SignatureInfoImpl::getAppIdentifier";
+    }
 
-  string GetCertificate() {
-    return "SignatureInfoImpl::getCertificate";
-  }
+    string GetCertificate()
+    {
+        return "SignatureInfoImpl::getCertificate";
+    }
 };
 
 class AppCloneIdentityImpl {
 public:
-  int32_t appCloneIdentityImpl = 21474;
+    int32_t appCloneIdentityImpl = 21474;
 
-  AppCloneIdentityImpl() {}
+    AppCloneIdentityImpl()
+    {
+    }
 
-  string GetBundleName() {
-    return "AppCloneIdentityImpl::getBundleName";
-  }
+    string GetBundleName()
+    {
+        return "AppCloneIdentityImpl::getBundleName";
+    }
 
-  int32_t GetAppIndex() {
-    return appCloneIdentityImpl;
-  }
+    int32_t GetAppIndex()
+    {
+        return appCloneIdentityImpl;
+    }
 };
 
 class BundleInfoImpl {
 public:
-  int32_t version = 21474;
+    int32_t version = 21474;
 
-  BundleInfoImpl() {}
+    BundleInfoImpl()
+    {
+    }
 
-  string GetName() {
-    return "BundleInfoImpl::getName";
-  }
+    string GetName()
+    {
+        return "BundleInfoImpl::getName";
+    }
 
-  string GetVendor() {
-    return "BundleInfoImpl::getVendor";
-  }
+    string GetVendor()
+    {
+        return "BundleInfoImpl::getVendor";
+    }
 
-  int32_t GetVersionCode() {
-    return version;
-  }
+    int32_t GetVersionCode()
+    {
+        return version;
+    }
 
-  string GetVersionName() {
-    return "BundleInfoImpl::getVersionName";
-  }
+    string GetVersionName()
+    {
+        return "BundleInfoImpl::getVersionName";
+    }
 
-  string GetMinCompatibleVersionCode() {
-    return "BundleInfoImpl::getMinCompatibleVersionCode";
-  }
+    string GetMinCompatibleVersionCode()
+    {
+        return "BundleInfoImpl::getMinCompatibleVersionCode";
+    }
 
-  int32_t GetTargetVersion() {
-    return version;
-  }
+    int32_t GetTargetVersion()
+    {
+        return version;
+    }
 
-  int32_t GetInstallTime() {
-    return version;
-  }
+    int32_t GetInstallTime()
+    {
+        return version;
+    }
 
-  int32_t GetUpdateTime() {
-    return version;
-  }
+    int32_t GetUpdateTime()
+    {
+        return version;
+    }
 
-  int32_t GetAppIndex() {
-    return version;
-  }
+    int32_t GetAppIndex()
+    {
+        return version;
+    }
 };
 
-BundleInfo GetBundleInfo() {
-  return make_holder<BundleInfoImpl, BundleInfo>();
+BundleInfo GetBundleInfo()
+{
+    return make_holder<BundleInfoImpl, BundleInfo>();
 }
 
-ReqPermissionDetail GetReqPermissionDetail() {
-  return make_holder<ReqPermissionDetailImpl, ReqPermissionDetail>();
+ReqPermissionDetail GetReqPermissionDetail()
+{
+    return make_holder<ReqPermissionDetailImpl, ReqPermissionDetail>();
 }
 
-UsedScene GetIUsedScene() {
-  return make_holder<UsedSceneImpl, UsedScene>();
+UsedScene GetIUsedScene()
+{
+    return make_holder<UsedSceneImpl, UsedScene>();
 }
 
-SignatureInfo GetISignatureInfo() {
-  return make_holder<SignatureInfoImpl, SignatureInfo>();
+SignatureInfo GetISignatureInfo()
+{
+    return make_holder<SignatureInfoImpl, SignatureInfo>();
 }
 
-AppCloneIdentity GetAppCloneIdentity() {
-  return make_holder<AppCloneIdentityImpl, AppCloneIdentity>();
+AppCloneIdentity GetAppCloneIdentity()
+{
+    return make_holder<AppCloneIdentityImpl, AppCloneIdentity>();
 }
 }  // namespace
 

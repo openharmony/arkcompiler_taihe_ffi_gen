@@ -24,55 +24,64 @@ namespace {
 
 class MyInterfaceImpl {
 public:
-  static int const ten = 10;
-  static int const hundred = 100;
-  static long long const tenBillion = 1000000000LL;
+    static int const ten = 10;
+    static int const hundred = 100;
+    static long long const tenBillion = 1000000000LL;
 
-  MyInterfaceImpl() {}
+    MyInterfaceImpl()
+    {
+    }
 
-  ::taihe::string TestCbIntString(
-      ::taihe::callback_view<void(int8_t, int32_t)> f) {
-    f(ten, hundred);
-    return "testCbIntString";
-  }
+    ::taihe::string TestCbIntString(::taihe::callback_view<void(int8_t, int32_t)> f)
+    {
+        f(ten, hundred);
+        return "testCbIntString";
+    }
 
-  bool TestCbIntBool(::taihe::callback_view<void(int16_t, int64_t)> f) {
-    f(hundred, tenBillion);
-    return true;
-  }
+    bool TestCbIntBool(::taihe::callback_view<void(int16_t, int64_t)> f)
+    {
+        f(hundred, tenBillion);
+        return true;
+    }
 
-  ::callbackTest::EnumData TestCbEnum(::taihe::callback_view<void(int32_t)> f) {
-    f(ten);
-    return ::callbackTest::EnumData(::callbackTest::EnumData::key_t::F32_A);
-  }
+    ::callbackTest::EnumData TestCbEnum(::taihe::callback_view<void(int32_t)> f)
+    {
+        f(ten);
+        return ::callbackTest::EnumData(::callbackTest::EnumData::key_t::F32_A);
+    }
 };
 
-void TestCbV(callback_view<void()> f) {
-  f();
+void TestCbV(callback_view<void()> f)
+{
+    f();
 }
 
-void TestCbI(callback_view<void(int32_t)> f) {
-  static int const one = 1;
-  f(one);
+void TestCbI(callback_view<void(int32_t)> f)
+{
+    static int const one = 1;
+    f(one);
 }
 
-void TestCbS(callback_view<void(string_view, bool)> f) {
-  f("hello", true);
+void TestCbS(callback_view<void(string_view, bool)> f)
+{
+    f("hello", true);
 }
 
-string TestCbRs(callback_view<string(string_view)> f) {
-  taihe::string out = f("hello");
-  return out;
+string TestCbRs(callback_view<string(string_view)> f)
+{
+    taihe::string out = f("hello");
+    return out;
 }
 
-void TestCbStruct(
-    callback_view<::callbackTest::Data(::callbackTest::Data const &)> f) {
-  ::callbackTest::Data result = f(::callbackTest::Data{"a", "b", 1});
-  return;
+void TestCbStruct(callback_view<::callbackTest::Data(::callbackTest::Data const &)> f)
+{
+    ::callbackTest::Data result = f(::callbackTest::Data {"a", "b", 1});
+    return;
 }
 
-::callbackTest::MyInterface GetInterface() {
-  return taihe::make_holder<MyInterfaceImpl, ::callbackTest::MyInterface>();
+::callbackTest::MyInterface GetInterface()
+{
+    return taihe::make_holder<MyInterfaceImpl, ::callbackTest::MyInterface>();
 }
 }  // namespace
 

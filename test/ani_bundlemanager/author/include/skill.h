@@ -23,21 +23,26 @@ using namespace taihe;
 
 class SkillImpl {
 public:
-  SkillImpl() {}
+    SkillImpl()
+    {
+    }
 
-  array<string> GetActions() {
-    array<string> str = {"SkillImpl::getActions"};
-    return str;
-  }
+    array<string> GetActions()
+    {
+        array<string> str = {"SkillImpl::getActions"};
+        return str;
+    }
 
-  array<string> GetEntities() {
-    array<string> str = {"SkillImpl::getEntities"};
-    return str;
-  }
+    array<string> GetEntities()
+    {
+        array<string> str = {"SkillImpl::getEntities"};
+        return str;
+    }
 
-  bool GetdomainVerify() {
-    return true;
-  }
+    bool GetdomainVerify()
+    {
+        return true;
+    }
 };
 
 #endif

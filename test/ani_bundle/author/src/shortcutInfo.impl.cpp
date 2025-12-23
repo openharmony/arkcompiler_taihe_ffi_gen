@@ -26,57 +26,71 @@ namespace {
 
 class ShortcutInfoImpl {
 public:
-  int32_t shortcutInfoImpl = 4096;
+    int32_t shortcutInfoImpl = 4096;
 
-  ShortcutInfoImpl() {}
+    ShortcutInfoImpl()
+    {
+    }
 
-  string GetId() {
-    return "ShortcutInfo::GetId";
-  }
+    string GetId()
+    {
+        return "ShortcutInfo::GetId";
+    }
 
-  string GetBundleName() {
-    return "ShortcutInfo::GetBundleName";
-  }
+    string GetBundleName()
+    {
+        return "ShortcutInfo::GetBundleName";
+    }
 
-  string GetHostAbility() {
-    return "ShortcutInfo::GetHostAbility";
-  }
+    string GetHostAbility()
+    {
+        return "ShortcutInfo::GetHostAbility";
+    }
 
-  string GetIcon() {
-    return "ShortcutInfo::GetIcon";
-  }
+    string GetIcon()
+    {
+        return "ShortcutInfo::GetIcon";
+    }
 
-  string GetLabel() {
-    return "ShortcutInfo::GetLabel";
-  }
+    string GetLabel()
+    {
+        return "ShortcutInfo::GetLabel";
+    }
 
-  int32_t GetLabelId() {
-    return shortcutInfoImpl;
-  }
+    int32_t GetLabelId()
+    {
+        return shortcutInfoImpl;
+    }
 
-  int32_t GetIconId() {
-    return shortcutInfoImpl;
-  }
+    int32_t GetIconId()
+    {
+        return shortcutInfoImpl;
+    }
 
-  string GetDisableMessage() {
-    return "ShortcutInfo::GetDisableMessage";
-  }
+    string GetDisableMessage()
+    {
+        return "ShortcutInfo::GetDisableMessage";
+    }
 
-  optional<bool> GetIsStatic() {
-    return optional<bool>::make(true);
-  }
+    optional<bool> GetIsStatic()
+    {
+        return optional<bool>::make(true);
+    }
 
-  optional<bool> GetIsHomeShortcut() {
-    return optional<bool>::make(true);
-  }
+    optional<bool> GetIsHomeShortcut()
+    {
+        return optional<bool>::make(true);
+    }
 
-  optional<bool> GetIsEnabled() {
-    return optional<bool>::make(true);
-  }
+    optional<bool> GetIsEnabled()
+    {
+        return optional<bool>::make(true);
+    }
 };
 
-ShortcutInfo GetShortcutInfo() {
-  return make_holder<ShortcutInfoImpl, ShortcutInfo>();
+ShortcutInfo GetShortcutInfo()
+{
+    return make_holder<ShortcutInfoImpl, ShortcutInfo>();
 }
 }  // namespace
 

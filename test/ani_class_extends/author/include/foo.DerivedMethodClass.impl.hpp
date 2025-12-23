@@ -20,10 +20,10 @@
 
 class DerivedMethodClassImpl {
 public:
-  taihe::string derived();
-  taihe::string base();
-  taihe::string foo();
-  taihe::string bar();
+    taihe::string derived();
+    taihe::string base();
+    taihe::string foo();
+    taihe::string bar();
 };
 
 #endif  // FOO_DERIVEDMETHODCLASS_IMPL_HPP

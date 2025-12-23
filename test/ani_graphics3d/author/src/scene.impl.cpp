@@ -24,195 +24,234 @@ namespace {
 
 class CameraImpl {
 public:
-  float fov_ = 5.24;
+    float fov_ = 5.24;
 
-  CameraImpl() {}
+    CameraImpl()
+    {
+    }
 
-  void SetFov(float fov) {
-    this->fov_ = fov;
-  }
+    void SetFov(float fov)
+    {
+        this->fov_ = fov;
+    }
 
-  float GetFov() {
-    return fov_;
-  }
+    float GetFov()
+    {
+        return fov_;
+    }
 };
 
 class LightImpl {
 public:
-  float intens_ = 5.24;
+    float intens_ = 5.24;
 
-  LightImpl() {}
+    LightImpl()
+    {
+    }
 
-  void SetIntensity(float intens) {
-    this->intens_ = intens;
-  }
+    void SetIntensity(float intens)
+    {
+        this->intens_ = intens;
+    }
 
-  float GetIntensity() {
-    return intens_;
-  }
+    float GetIntensity()
+    {
+        return intens_;
+    }
 };
 
 class NodeImpl {
 public:
-  bool visible_ = true;
-  ::taihe::string path = "test\ani_graphics3d";
+    bool visible_ = true;
+    ::taihe::string path = "test\ani_graphics3d";
 
-  NodeImpl() {}
+    NodeImpl()
+    {
+    }
 
-  void SetVisible(bool visible) {
-    this->visible_ = visible;
-  }
+    void SetVisible(bool visible)
+    {
+        this->visible_ = visible;
+    }
 
-  bool GetVisible() {
-    return visible_;
-  }
+    bool GetVisible()
+    {
+        return visible_;
+    }
 
-  ::taihe::string GetPath() {
-    return path;
-  }
+    ::taihe::string GetPath()
+    {
+        return path;
+    }
 };
 
 class SceneResourceParametersImpl {
 public:
-  std::string name_ = "Scene";
+    std::string name_ = "Scene";
 
-  SceneResourceParametersImpl() {}
+    SceneResourceParametersImpl()
+    {
+    }
 
-  void SetName(::taihe::string_view name) {
-    this->name_ = name;
-  }
+    void SetName(::taihe::string_view name)
+    {
+        this->name_ = name;
+    }
 
-  ::taihe::string GetName() {
-    return name_;
-  }
+    ::taihe::string GetName()
+    {
+        return name_;
+    }
 };
 
 class MaterialImpl {
 public:
-  int8_t materialType = 122;
+    int8_t materialType = 122;
 
-  MaterialImpl() {}
+    MaterialImpl()
+    {
+    }
 
-  int8_t GetMaterialType() {
-    return materialType;
-  }
+    int8_t GetMaterialType()
+    {
+        return materialType;
+    }
 };
 
 class ShaderImpl {
 public:
-  ShaderImpl() {}
+    ShaderImpl()
+    {
+    }
 
-  ::taihe::map<::taihe::string, int32_t> GetInputs() {
-    ::taihe::map<::taihe::string, int32_t> res;
-    static int32_t const input = 2025;
-    res.emplace("banana", input);
-    return res;
-  }
+    ::taihe::map<::taihe::string, int32_t> GetInputs()
+    {
+        ::taihe::map<::taihe::string, int32_t> res;
+        static int32_t const input = 2025;
+        res.emplace("banana", input);
+        return res;
+    }
 };
 
 class ImageImpl {
 public:
-  float width = 800;
-  float height = 600;
+    float width = 800;
+    float height = 600;
 
-  ImageImpl() {}
+    ImageImpl()
+    {
+    }
 
-  float GetWidth() {
-    return width;
-  }
+    float GetWidth()
+    {
+        return width;
+    }
 
-  float GetHeight() {
-    return height;
-  }
+    float GetHeight()
+    {
+        return height;
+    }
 };
 
 class EnvironmentImpl {
 public:
-  EnvironmentImpl() {}
+    EnvironmentImpl()
+    {
+    }
 
-  int32_t GetBackgroundType() {
-    int32_t bkType = 0;
-    return bkType;
-  }
+    int32_t GetBackgroundType()
+    {
+        int32_t bkType = 0;
+        return bkType;
+    }
 };
 
 class SceneResourceFactoryImpl {
 public:
-  SceneResourceFactoryImpl() {}
+    SceneResourceFactoryImpl()
+    {
+    }
 
-  ::scene::Camera createCameraPro(
-      ::sceneNodeParameters::weak::SceneNodeParameters params) {
-    return taihe::make_holder<CameraImpl, ::scene::Camera>();
-  }
+    ::scene::Camera createCameraPro(::sceneNodeParameters::weak::SceneNodeParameters params)
+    {
+        return taihe::make_holder<CameraImpl, ::scene::Camera>();
+    }
 
-  ::scene::Light createLightPro(
-      ::sceneNodeParameters::weak::SceneNodeParameters params,
-      ::scene::LightType lightType) {
-    return taihe::make_holder<LightImpl, ::scene::Light>();
-  }
+    ::scene::Light createLightPro(::sceneNodeParameters::weak::SceneNodeParameters params, ::scene::LightType lightType)
+    {
+        return taihe::make_holder<LightImpl, ::scene::Light>();
+    }
 
-  ::scene::Node createNodePro(
-      ::sceneNodeParameters::weak::SceneNodeParameters params) {
-    return taihe::make_holder<NodeImpl, ::scene::Node>();
-  }
+    ::scene::Node createNodePro(::sceneNodeParameters::weak::SceneNodeParameters params)
+    {
+        return taihe::make_holder<NodeImpl, ::scene::Node>();
+    }
 
-  ::scene::Material createMaterialPro(
-      ::scene::weak::SceneResourceParameters params,
-      ::scene::MaterialType materialType) {
-    return taihe::make_holder<MaterialImpl, ::scene::Material>();
-  }
+    ::scene::Material createMaterialPro(::scene::weak::SceneResourceParameters params,
+                                        ::scene::MaterialType materialType)
+    {
+        return taihe::make_holder<MaterialImpl, ::scene::Material>();
+    }
 
-  ::scene::Shader createShaderPro(
-      ::scene::weak::SceneResourceParameters params) {
-    return taihe::make_holder<ShaderImpl, ::scene::Shader>();
-  }
+    ::scene::Shader createShaderPro(::scene::weak::SceneResourceParameters params)
+    {
+        return taihe::make_holder<ShaderImpl, ::scene::Shader>();
+    }
 
-  ::scene::Image createImagePro(::scene::weak::SceneResourceParameters params) {
-    return taihe::make_holder<ImageImpl, ::scene::Image>();
-  }
+    ::scene::Image createImagePro(::scene::weak::SceneResourceParameters params)
+    {
+        return taihe::make_holder<ImageImpl, ::scene::Image>();
+    }
 
-  ::scene::Environment createEnvironmentPro(
-      ::scene::weak::SceneResourceParameters params) {
-    return taihe::make_holder<EnvironmentImpl, ::scene::Environment>();
-  }
+    ::scene::Environment createEnvironmentPro(::scene::weak::SceneResourceParameters params)
+    {
+        return taihe::make_holder<EnvironmentImpl, ::scene::Environment>();
+    }
 };
 
-::scene::SceneResourceFactory GetSceneResourceFactory() {
-  return taihe::make_holder<SceneResourceFactoryImpl,
-                            ::scene::SceneResourceFactory>();
+::scene::SceneResourceFactory GetSceneResourceFactory()
+{
+    return taihe::make_holder<SceneResourceFactoryImpl, ::scene::SceneResourceFactory>();
 }
 
-::scene::Camera GetCamera() {
-  return taihe::make_holder<CameraImpl, ::scene::Camera>();
+::scene::Camera GetCamera()
+{
+    return taihe::make_holder<CameraImpl, ::scene::Camera>();
 }
 
-::scene::Light GetLight() {
-  return taihe::make_holder<LightImpl, ::scene::Light>();
+::scene::Light GetLight()
+{
+    return taihe::make_holder<LightImpl, ::scene::Light>();
 }
 
-::scene::Node GetNode() {
-  return taihe::make_holder<NodeImpl, ::scene::Node>();
+::scene::Node GetNode()
+{
+    return taihe::make_holder<NodeImpl, ::scene::Node>();
 }
 
-::scene::SceneResourceParameters GetSceneResourceParameters() {
-  return taihe::make_holder<SceneResourceParametersImpl,
-                            ::scene::SceneResourceParameters>();
+::scene::SceneResourceParameters GetSceneResourceParameters()
+{
+    return taihe::make_holder<SceneResourceParametersImpl, ::scene::SceneResourceParameters>();
 }
 
-::scene::Material GetMaterial() {
-  return taihe::make_holder<MaterialImpl, ::scene::Material>();
+::scene::Material GetMaterial()
+{
+    return taihe::make_holder<MaterialImpl, ::scene::Material>();
 }
 
-::scene::Shader GetShader() {
-  return taihe::make_holder<ShaderImpl, ::scene::Shader>();
+::scene::Shader GetShader()
+{
+    return taihe::make_holder<ShaderImpl, ::scene::Shader>();
 }
 
-::scene::Image GetImage() {
-  return taihe::make_holder<ImageImpl, ::scene::Image>();
+::scene::Image GetImage()
+{
+    return taihe::make_holder<ImageImpl, ::scene::Image>();
 }
 
-::scene::Environment GetEnvironment() {
-  return taihe::make_holder<EnvironmentImpl, ::scene::Environment>();
+::scene::Environment GetEnvironment()
+{
+    return taihe::make_holder<EnvironmentImpl, ::scene::Environment>();
 }
 }  // namespace
 

@@ -19,32 +19,36 @@
 #include "taihe/runtime.hpp"
 
 namespace {
-int32_t maythrow_impl(int32_t a) {
-  if (a == 0) {
-    taihe::set_error("some error happen");
-    return -1;
-  } else {
-    int const tempnum = 10;
-    return a + tempnum;
-  }
+int32_t maythrow_impl(int32_t a)
+{
+    if (a == 0) {
+        taihe::set_error("some error happen");
+        return -1;
+    } else {
+        int const tempnum = 10;
+        return a + tempnum;
+    }
 }
 
-maythrow::Data getDataMaythrow() {
-  taihe::set_error("error in getDataMaythrow");
-  return {
-      taihe::string("C++ Object"),
-      (float)1.0,
-      {"data.obj", "file.txt"},
-  };
+maythrow::Data getDataMaythrow()
+{
+    taihe::set_error("error in getDataMaythrow");
+    return {
+        taihe::string("C++ Object"),
+        (float)1.0,
+        {"data.obj", "file.txt"},
+    };
 }
 
-void noReturnMaythrow() {
-  taihe::set_error("error in noReturnMaythrow");
+void noReturnMaythrow()
+{
+    taihe::set_error("error in noReturnMaythrow");
 }
 
-void noReturnBusinessError() {
-  int errorcode = 5;
-  taihe::set_business_error(errorcode, "error in noReturnBusinessError");
+void noReturnBusinessError()
+{
+    int errorcode = 5;
+    taihe::set_business_error(errorcode, "error in noReturnBusinessError");
 }
 }  // namespace
 

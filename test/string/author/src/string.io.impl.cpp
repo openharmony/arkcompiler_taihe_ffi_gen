@@ -17,19 +17,21 @@
 
 #include <iostream>
 
-taihe::string ohos_input_str() {
-  std::string str;
-  std::cin >> str;
-  return taihe::string(str);
+taihe::string ohos_input_str()
+{
+    std::string str;
+    std::cin >> str;
+    return taihe::string(str);
 }
 
 template<bool endl>
-void ohos_print_str(taihe::string_view pstr) {
-  if (endl) {
-    std::cout << pstr.c_str() << std::endl;
-  } else {
-    std::cout << pstr.c_str() << std::flush;
-  }
+void ohos_print_str(taihe::string_view pstr)
+{
+    if (endl) {
+        std::cout << pstr.c_str() << std::endl;
+    } else {
+        std::cout << pstr.c_str() << std::flush;
+    }
 }
 
 // NOLINTBEGIN

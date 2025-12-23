@@ -24,23 +24,26 @@ using namespace message;
 
 namespace {
 
-Message createTextMessage(string_view str) {
-  return {MessageType::key_t::Text, MessageData::make_textVal(str)};
+Message createTextMessage(string_view str)
+{
+    return {MessageType::key_t::Text, MessageData::make_textVal(str)};
 }
 
-Message createNumberMessage(int64_t num) {
-  return {MessageType::key_t::Num, MessageData::make_numVal(num)};
+Message createNumberMessage(int64_t num)
+{
+    return {MessageType::key_t::Num, MessageData::make_numVal(num)};
 }
 
-void processMessage(Message const &msg) {
-  switch (msg.type.get_key()) {
-  case MessageType::key_t::Text:
-    std::cout << "text: " << msg.data.get_textVal_ref() << std::endl;
-    break;
-  case MessageType::key_t::Num:
-    std::cout << "num: " << msg.data.get_numVal_ref() << std::endl;
-    break;
-  }
+void processMessage(Message const &msg)
+{
+    switch (msg.type.get_key()) {
+        case MessageType::key_t::Text:
+            std::cout << "text: " << msg.data.get_textVal_ref() << std::endl;
+            break;
+        case MessageType::key_t::Num:
+            std::cout << "num: " << msg.data.get_numVal_ref() << std::endl;
+            break;
+    }
 }
 }  // namespace
 

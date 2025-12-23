@@ -23,128 +23,143 @@
 using namespace taihe;
 
 namespace {
-void Myfunc1() {
-  std::cout << "Myfunc1 is true " << std::endl;
+void Myfunc1()
+{
+    std::cout << "Myfunc1 is true " << std::endl;
 }
 
-void Myfunc2(int8_t option1, int16_t option2) {
-  std::cout << "Myfunc2 is option1  " << (int)option1 << std::endl;
-  std::cout << "Myfunc2 is option2  " << option2 << std::endl;
+void Myfunc2(int8_t option1, int16_t option2)
+{
+    std::cout << "Myfunc2 is option1  " << (int)option1 << std::endl;
+    std::cout << "Myfunc2 is option2  " << option2 << std::endl;
 }
 
-void Myfunc3(int32_t option1, bool option2) {
-  if (option2) {
-    std::cout << "Myfunc3 is option1  " << option1 << std::endl;
-    std::cout << "Myfunc3 is option2  " << option2 << std::endl;
-  } else {
-    std::cout << "Myfunc3 is option1  " << option1 << std::endl;
-    std::cout << "Myfunc3 is option2  " << option2 << std::endl;
-  }
+void Myfunc3(int32_t option1, bool option2)
+{
+    if (option2) {
+        std::cout << "Myfunc3 is option1  " << option1 << std::endl;
+        std::cout << "Myfunc3 is option2  " << option2 << std::endl;
+    } else {
+        std::cout << "Myfunc3 is option1  " << option1 << std::endl;
+        std::cout << "Myfunc3 is option2  " << option2 << std::endl;
+    }
 }
 
-void Myfunc4(int32_t option1, int64_t option2) {
-  std::cout << "Myfunc4 is option1  " << option1 << std::endl;
-  std::cout << "Myfunc4 is option2  " << option2 << std::endl;
+void Myfunc4(int32_t option1, int64_t option2)
+{
+    std::cout << "Myfunc4 is option1  " << option1 << std::endl;
+    std::cout << "Myfunc4 is option2  " << option2 << std::endl;
 }
 
-void Myfunc5(int32_t option1, string_view option2) {
-  std::cout << "Myfunc5 is option1  " << option1 << std::endl;
-  std::cout << "Myfunc5 is option2  " << option2 << std::endl;
+void Myfunc5(int32_t option1, string_view option2)
+{
+    std::cout << "Myfunc5 is option1  " << option1 << std::endl;
+    std::cout << "Myfunc5 is option2  " << option2 << std::endl;
 }
 
-void Myfunc6(int64_t option1, bool option2) {
-  if (option2) {
-    std::cout << "Myfunc6 is option1  " << option1 << std::endl;
-    std::cout << "Myfunc6 is option2  " << option2 << std::endl;
-  } else {
-    std::cout << "Myfunc6 is option1  " << option1 << std::endl;
-    std::cout << "Myfunc6 is option2  " << option2 << std::endl;
-  }
+void Myfunc6(int64_t option1, bool option2)
+{
+    if (option2) {
+        std::cout << "Myfunc6 is option1  " << option1 << std::endl;
+        std::cout << "Myfunc6 is option2  " << option2 << std::endl;
+    } else {
+        std::cout << "Myfunc6 is option1  " << option1 << std::endl;
+        std::cout << "Myfunc6 is option2  " << option2 << std::endl;
+    }
 }
 
-void Myfunc7(int64_t option1, float option2) {
-  std::cout << "Myfunc7 is option1  " << option1 << std::endl;
-  std::cout << "Myfunc7 is option2  " << option2 << std::endl;
+void Myfunc7(int64_t option1, float option2)
+{
+    std::cout << "Myfunc7 is option1  " << option1 << std::endl;
+    std::cout << "Myfunc7 is option2  " << option2 << std::endl;
 }
 
-void Myfunc8(int64_t option1, double option2) {
-  std::cout << "Myfunc8 is option1  " << option1 << std::endl;
-  std::cout << "Myfunc8 is option2  " << option2 << std::endl;
+void Myfunc8(int64_t option1, double option2)
+{
+    std::cout << "Myfunc8 is option1  " << option1 << std::endl;
+    std::cout << "Myfunc8 is option2  " << option2 << std::endl;
 }
 
-void Myfunc9(float option1, bool option2) {
-  if (option2) {
-    std::cout << "Myfunc9 is option1  " << option1 << std::endl;
-    std::cout << "Myfunc9 is option2  " << option2 << std::endl;
-  } else {
-    std::cout << "Myfunc9 is option1  " << option1 << std::endl;
-    std::cout << "Myfunc9 is option2  " << option2 << std::endl;
-  }
+void Myfunc9(float option1, bool option2)
+{
+    if (option2) {
+        std::cout << "Myfunc9 is option1  " << option1 << std::endl;
+        std::cout << "Myfunc9 is option2  " << option2 << std::endl;
+    } else {
+        std::cout << "Myfunc9 is option1  " << option1 << std::endl;
+        std::cout << "Myfunc9 is option2  " << option2 << std::endl;
+    }
 }
 
-void Myfunc10(float option1, string_view option2) {
-  std::cout << "Myfunc10 is option1  " << option1 << std::endl;
-  std::cout << "Myfunc10 is option2  " << option2 << std::endl;
+void Myfunc10(float option1, string_view option2)
+{
+    std::cout << "Myfunc10 is option1  " << option1 << std::endl;
+    std::cout << "Myfunc10 is option2  " << option2 << std::endl;
 }
 
-void Myfunc11(double option1, string_view option2) {
-  std::cout << "Myfunc11 is option1  " << option1 << std::endl;
-  std::cout << "Myfunc11 is option2  " << option2 << std::endl;
+void Myfunc11(double option1, string_view option2)
+{
+    std::cout << "Myfunc11 is option1  " << option1 << std::endl;
+    std::cout << "Myfunc11 is option2  " << option2 << std::endl;
 }
 
-void Myfunc12(optional_view<int32_t> option1, optional_view<int64_t> option2) {
-  if (option1) {
-    std::cout << *option1 << std::endl;
-  } else if (option2) {
-    std::cout << *option2 << std::endl;
-  } else {
-    std::cout << "Null" << std::endl;
-  }
+void Myfunc12(optional_view<int32_t> option1, optional_view<int64_t> option2)
+{
+    if (option1) {
+        std::cout << *option1 << std::endl;
+    } else if (option2) {
+        std::cout << *option2 << std::endl;
+    } else {
+        std::cout << "Null" << std::endl;
+    }
 }
 
-void Myfunc13(optional_view<float> option1, optional_view<double> option2) {
-  if (option1) {
-    std::cout << *option1 << std::endl;
-  } else if (option2) {
-    std::cout << *option2 << std::endl;
-  } else {
-    std::cout << "Null" << std::endl;
-  }
+void Myfunc13(optional_view<float> option1, optional_view<double> option2)
+{
+    if (option1) {
+        std::cout << *option1 << std::endl;
+    } else if (option2) {
+        std::cout << *option2 << std::endl;
+    } else {
+        std::cout << "Null" << std::endl;
+    }
 }
 
-void Myfunc14(optional_view<string> option1, optional_view<bool> option2) {
-  if (option1) {
-    std::cout << *option1 << std::endl;
-  } else if (option2) {
-    std::cout << *option2 << std::endl;
-  } else {
-    std::cout << "Null" << std::endl;
-  }
+void Myfunc14(optional_view<string> option1, optional_view<bool> option2)
+{
+    if (option1) {
+        std::cout << *option1 << std::endl;
+    } else if (option2) {
+        std::cout << *option2 << std::endl;
+    } else {
+        std::cout << "Null" << std::endl;
+    }
 }
 
-void Myfunc15(optional_view<int16_t> option1, optional_view<int64_t> option2) {
-  if (option1) {
-    std::cout << *option1 << std::endl;
-  } else if (option2) {
-    std::cout << *option2 << std::endl;
-  } else {
-    std::cout << "Null" << std::endl;
-  }
+void Myfunc15(optional_view<int16_t> option1, optional_view<int64_t> option2)
+{
+    if (option1) {
+        std::cout << *option1 << std::endl;
+    } else if (option2) {
+        std::cout << *option2 << std::endl;
+    } else {
+        std::cout << "Null" << std::endl;
+    }
 }
 
-void Myfunc16(optional_view<int16_t> option1,
-              ::void_func::mytest::BarTest const &option2) {
-  switch (option2.get_key()) {
-  case ::void_func::mytest::BarTest::key_t::A:
-    std::cout << static_cast<int32_t>(option2.get_key()) << " A: " << std::endl;
-    break;
-  case ::void_func::mytest::BarTest::key_t::B:
-    std::cout << static_cast<int32_t>(option2.get_key()) << " B: " << std::endl;
-    break;
-  case ::void_func::mytest::BarTest::key_t::C:
-    std::cout << static_cast<int32_t>(option2.get_key()) << " C: " << std::endl;
-    break;
-  }
+void Myfunc16(optional_view<int16_t> option1, ::void_func::mytest::BarTest const &option2)
+{
+    switch (option2.get_key()) {
+        case ::void_func::mytest::BarTest::key_t::A:
+            std::cout << static_cast<int32_t>(option2.get_key()) << " A: " << std::endl;
+            break;
+        case ::void_func::mytest::BarTest::key_t::B:
+            std::cout << static_cast<int32_t>(option2.get_key()) << " B: " << std::endl;
+            break;
+        case ::void_func::mytest::BarTest::key_t::C:
+            std::cout << static_cast<int32_t>(option2.get_key()) << " C: " << std::endl;
+            break;
+    }
 }
 }  // namespace
 

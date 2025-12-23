@@ -28,125 +28,161 @@ class ApplicationContext;
 
 class BaseContext {
 public:
-  string name;
+    string name;
 
-  BaseContext() : name("ApplicationContext") {}
+    BaseContext() : name("ApplicationContext")
+    {
+    }
 
-  ~BaseContext() {}
+    ~BaseContext()
+    {
+    }
 
-  void setName(string_view name) {
-    this->name = name;
-  }
+    void setName(string_view name)
+    {
+        this->name = name;
+    }
 
-  string getName() {
-    return this->name;
-  }
+    string getName()
+    {
+        return this->name;
+    }
 
-  string getType(string_view ctxType) {
-    return "BaseContextTypeBCTX";
-  }
+    string getType(string_view ctxType)
+    {
+        return "BaseContextTypeBCTX";
+    }
 };
 
 class Context {
 public:
-  string name;
-  bool stageMode;
+    string name;
+    bool stageMode;
 
-  Context() : name(""), stageMode(true) {}
+    Context() : name(""), stageMode(true)
+    {
+    }
 
-  ~Context() {}
+    ~Context()
+    {
+    }
 
-  void setStageMode(bool stageMode) {
-    this->stageMode = stageMode;
-  }
+    void setStageMode(bool stageMode)
+    {
+        this->stageMode = stageMode;
+    }
 
-  bool getStageMode() {
-    return this->stageMode;
-  }
+    bool getStageMode()
+    {
+        return this->stageMode;
+    }
 
-  void setName(string_view name) {
-    this->name = name;
-  }
+    void setName(string_view name)
+    {
+        this->name = name;
+    }
 
-  string getName() {
-    return this->name;
-  }
+    string getName()
+    {
+        return this->name;
+    }
 
-  string getType(string_view ctxType) {
-    return "ContextTypeCTX";
-  }
+    string getType(string_view ctxType)
+    {
+        return "ContextTypeCTX";
+    }
 };
 
 class TestContext {
 public:
-  string name;
+    string name;
 
-  TestContext() : name("ApplicationContext") {}
+    TestContext() : name("ApplicationContext")
+    {
+    }
 
-  ~TestContext() {}
+    ~TestContext()
+    {
+    }
 
-  void setName(string_view name) {
-    this->name = name;
-  }
+    void setName(string_view name)
+    {
+        this->name = name;
+    }
 
-  string getName() {
-    return this->name;
-  }
+    string getName()
+    {
+        return this->name;
+    }
 
-  string getType(string_view ctxType) {
-    return "TestContextTCTX";
-  }
+    string getType(string_view ctxType)
+    {
+        return "TestContextTCTX";
+    }
 };
 
 class ApplicationContext {
 public:
-  string name;
-  bool stageMode;
+    string name;
+    bool stageMode;
 
-  ApplicationContext() : name("ApplicationContext"), stageMode(false) {}
+    ApplicationContext() : name("ApplicationContext"), stageMode(false)
+    {
+    }
 
-  ~ApplicationContext() {}
+    ~ApplicationContext()
+    {
+    }
 
-  void setSupportedProcessCacheSync(bool isSupported) {
-    std::cout << "setSupportedProcessCacheSync "
-              << (isSupported ? "True" : "False") << std::endl;
-  }
+    void setSupportedProcessCacheSync(bool isSupported)
+    {
+        std::cout << "setSupportedProcessCacheSync " << (isSupported ? "True" : "False") << std::endl;
+    }
 
-  void setStageMode(bool stageMode) {
-    this->stageMode = stageMode;
-  }
+    void setStageMode(bool stageMode)
+    {
+        this->stageMode = stageMode;
+    }
 
-  bool getStageMode() {
-    return this->stageMode;
-  }
+    bool getStageMode()
+    {
+        return this->stageMode;
+    }
 
-  void setName(string_view name) {
-    this->name = name;
-  }
+    void setName(string_view name)
+    {
+        this->name = name;
+    }
 
-  string getName() {
-    return this->name;
-  }
+    string getName()
+    {
+        return this->name;
+    }
 
-  string getType(string_view ctxType) {
-    return "AppContextACTX";
-  }
+    string getType(string_view ctxType)
+    {
+        return "AppContextACTX";
+    }
 };
 
-::class_extends::BaseContext makeBaseContext() {
-  return make_holder<BaseContext, ::class_extends::BaseContext>();
+::class_extends::BaseContext makeBaseContext()
+{
+    return make_holder<BaseContext, ::class_extends::BaseContext>();
 }
 
-::class_extends::Context makeContext() {
-  return make_holder<Context, ::class_extends::Context>();
+::class_extends::Context makeContext()
+{
+    return make_holder<Context, ::class_extends::Context>();
 }
 
-::class_extends::TestContext makeTestContext() {
-  return make_holder<TestContext, ::class_extends::TestContext>();
+::class_extends::TestContext makeTestContext()
+{
+    return make_holder<TestContext, ::class_extends::TestContext>();
 }
 
-::class_extends::ApplicationContext makeApplicationContext() {
-  return make_holder<ApplicationContext, ::class_extends::ApplicationContext>();
+::class_extends::ApplicationContext makeApplicationContext()
+{
+    return make_holder<ApplicationContext, ::class_extends::ApplicationContext>();
 }
 }  // namespace
 

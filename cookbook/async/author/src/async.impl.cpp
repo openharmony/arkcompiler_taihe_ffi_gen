@@ -24,44 +24,56 @@ using namespace taihe;
 namespace {
 class IStringHolder {
 public:
-  IStringHolder() : str("MyStr") {}
+    IStringHolder() : str("MyStr")
+    {
+    }
 
-  ~IStringHolder() {}
+    ~IStringHolder()
+    {
+    }
 
-  string getStrSync() {
-    return str;
-  }
+    string getStrSync()
+    {
+        return str;
+    }
 
-  ::taihe::string getStrWithAsync() {
-    return str;
-  }
+    ::taihe::string getStrWithAsync()
+    {
+        return str;
+    }
 
-  ::taihe::string getStrRetPromise() {
-    return str;
-  }
+    ::taihe::string getStrRetPromise()
+    {
+        return str;
+    }
 
-  void setStrSync(string_view a) {
-    this->str = a;
-  }
+    void setStrSync(string_view a)
+    {
+        this->str = a;
+    }
 
-  void setStrWithAsync(::taihe::string_view a) {
-    this->str = a;
-  }
+    void setStrWithAsync(::taihe::string_view a)
+    {
+        this->str = a;
+    }
 
-  void setStrRetPromise(::taihe::string_view a) {
-    this->str = a;
-  }
+    void setStrRetPromise(::taihe::string_view a)
+    {
+        this->str = a;
+    }
 
 private:
-  string str;
+    string str;
 };
 
-int32_t addSync(int32_t a, int32_t b) {
-  return a + b;
+int32_t addSync(int32_t a, int32_t b)
+{
+    return a + b;
 }
 
-::async::IStringHolder makeIStringHolder() {
-  return make_holder<IStringHolder, ::async::IStringHolder>();
+::async::IStringHolder makeIStringHolder()
+{
+    return make_holder<IStringHolder, ::async::IStringHolder>();
 }
 }  // namespace
 

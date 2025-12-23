@@ -24,51 +24,62 @@ using namespace on_off;
 namespace {
 class ISetterObserverImpl {
 public:
-  ISetterObserverImpl() {}
+    ISetterObserverImpl()
+    {
+    }
 
-  void onSet(callback_view<void()> a) {
-    a();
-    std::cout << "IBase::onSet" << std::endl;
-  }
+    void onSet(callback_view<void()> a)
+    {
+        a();
+        std::cout << "IBase::onSet" << std::endl;
+    }
 
-  void offSet(callback_view<void()> a) {
-    a();
-    std::cout << "IBase::offSet" << std::endl;
-  }
+    void offSet(callback_view<void()> a)
+    {
+        a();
+        std::cout << "IBase::offSet" << std::endl;
+    }
 };
 
-ISetterObserver getISetterObserver() {
-  return make_holder<ISetterObserverImpl, ISetterObserver>();
+ISetterObserver getISetterObserver()
+{
+    return make_holder<ISetterObserverImpl, ISetterObserver>();
 }
 
-void onFoo(callback_view<void()> a) {
-  a();
-  std::cout << "onFoo" << std::endl;
+void onFoo(callback_view<void()> a)
+{
+    a();
+    std::cout << "onFoo" << std::endl;
 }
 
-void onBar(callback_view<void()> a) {
-  a();
-  std::cout << "onBar" << std::endl;
+void onBar(callback_view<void()> a)
+{
+    a();
+    std::cout << "onBar" << std::endl;
 }
 
-void onBaz(int32_t a, callback_view<void(int32_t)> cb) {
-  cb(a);
-  std::cout << "onNewBaz" << std::endl;
+void onBaz(int32_t a, callback_view<void(int32_t)> cb)
+{
+    cb(a);
+    std::cout << "onNewBaz" << std::endl;
 }
 
-void offFoo(callback_view<void()> a) {
-  a();
-  std::cout << "offFoo" << std::endl;
+void offFoo(callback_view<void()> a)
+{
+    a();
+    std::cout << "offFoo" << std::endl;
 }
 
-void offBar(callback_view<void()> a) {
-  a();
-  std::cout << "offBar" << std::endl;
+void offBar(callback_view<void()> a)
+{
+    a();
+    std::cout << "offBar" << std::endl;
 }
 
-void offBaz(int32_t a, callback_view<void(int32_t)> cb) {
-  cb(a);
-  std::cout << "offNewBaz" << std::endl;
+void offBaz(int32_t a, callback_view<void(int32_t)> cb)
+{
+    cb(a);
+    std::cout << "offNewBaz" << std::endl;
 }
 }  // namespace
 

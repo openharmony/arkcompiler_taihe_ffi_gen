@@ -19,14 +19,14 @@
 using namespace taihe;
 using namespace ohos::xml;
 
-XmlPullParser makeXmlPullParserImpl(BufferType const &buffer,
-                                    optional_view<string> encoding) {
-  return make_holder<ExpatParser, XmlPullParser>(buffer, encoding);
+XmlPullParser makeXmlPullParserImpl(BufferType const &buffer, optional_view<string> encoding)
+{
+    return make_holder<ExpatParser, XmlPullParser>(buffer, encoding);
 }
 
-XmlSerializer makeXmlSerializerImpl(BufferType const &buffer,
-                                    optional_view<string> encoding) {
-  throw;
+XmlSerializer makeXmlSerializerImpl(BufferType const &buffer, optional_view<string> encoding)
+{
+    throw;
 }
 
 // NOLINTBEGIN
