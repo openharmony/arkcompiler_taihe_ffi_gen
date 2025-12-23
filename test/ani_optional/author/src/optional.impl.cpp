@@ -24,166 +24,195 @@ using namespace taihe;
 namespace {
 class ExampleInterface {
 public:
-  void FuncPrimitiveI8(optional_view<int8_t> param1) {
-    std::cout << "opt1 has value: " << *param1 << std::endl;
-  }
-
-  void FuncPrimitiveI16(optional_view<int16_t> param1) {
-    std::cout << "opt1 has value: " << *param1 << std::endl;
-  }
-
-  void FuncPrimitiveI32(optional_view<int32_t> param1) {
-    std::cout << "opt1 has value: " << *param1 << std::endl;
-  }
-
-  void FuncPrimitiveI64(optional_view<int64_t> param1) {
-    std::cout << "opt1 has value: " << *param1 << std::endl;
-  }
-
-  void FuncPrimitiveF32(optional_view<float> param1) {
-    std::cout << "opt1 has value: " << *param1 << std::endl;
-  }
-
-  void FuncPrimitiveF64(optional_view<double> param1) {
-    std::cout << "opt1 has value: " << *param1 << std::endl;
-  }
-
-  void FuncPrimitiveBool(optional_view<bool> param1) {
-    std::cout << "opt1 has value: " << *param1 << std::endl;
-  }
-
-  void FuncPrimitiveString(optional_view<string> param1) {
-    std::cout << "opt1 has value: " << *param1 << std::endl;
-  }
-
-  void FuncArray(optional_view<array<int32_t>> param1) {
-    std::cout << "func_Array: [";
-    for (auto const &elem : *param1) {
-      std::cout << elem << " ";
+    void FuncPrimitiveI8(optional_view<int8_t> param1)
+    {
+        std::cout << "opt1 has value: " << *param1 << std::endl;
     }
-    std::cout << "]" << std::endl;
-  }
 
-  void FuncBuffer(optional_view<array<uint8_t>> param1) {
-    std::cout << "func_Array: [";
-    for (auto const &elem : *param1) {
-      std::cout << (int)elem << " ";
+    void FuncPrimitiveI16(optional_view<int16_t> param1)
+    {
+        std::cout << "opt1 has value: " << *param1 << std::endl;
     }
-    std::cout << "]" << std::endl;
-  }
 
-  void FuncUnion(optional_view<::optional::Union> param1) {
-    std::cout << (*param1).get_sValue_ref() << std::endl;
-    std::cout << (*param1).get_iValue_ref() << std::endl;
-  }
-
-  void FuncMap(optional_view<map<string, int32_t>> param1) {
-    for (auto it = (*param1).begin(); it != (*param1).end(); ++it) {
-      auto const &[key, value] = *it;
-      std::cout << "Key: " << key << ", Value: " << value << std::endl;
+    void FuncPrimitiveI32(optional_view<int32_t> param1)
+    {
+        std::cout << "opt1 has value: " << *param1 << std::endl;
     }
-  }
 
-  taihe::optional<string> GetName() {
-    return taihe::optional<string>::make("hello");
-  }
+    void FuncPrimitiveI64(optional_view<int64_t> param1)
+    {
+        std::cout << "opt1 has value: " << *param1 << std::endl;
+    }
 
-  taihe::optional<int8_t> Geti8() {
-    int8_t const geti8Value = 1;
-    return taihe::optional<int8_t>::make(geti8Value);
-  }
+    void FuncPrimitiveF32(optional_view<float> param1)
+    {
+        std::cout << "opt1 has value: " << *param1 << std::endl;
+    }
 
-  taihe::optional<int16_t> Geti16() {
-    int16_t const geti16Value = 100;
-    return taihe::optional<int16_t>::make(geti16Value);
-  }
+    void FuncPrimitiveF64(optional_view<double> param1)
+    {
+        std::cout << "opt1 has value: " << *param1 << std::endl;
+    }
 
-  taihe::optional<int32_t> Geti32() {
-    int32_t const geti32Value = 1024;
-    return taihe::optional<int32_t>::make(geti32Value);  // 默认返回 0
-  }
+    void FuncPrimitiveBool(optional_view<bool> param1)
+    {
+        std::cout << "opt1 has value: " << *param1 << std::endl;
+    }
 
-  taihe::optional<int64_t> Geti64() {
-    int64_t const geti64Value = 999999;
-    return taihe::optional<int64_t>::make(geti64Value);  // 默认返回 0
-  }
+    void FuncPrimitiveString(optional_view<string> param1)
+    {
+        std::cout << "opt1 has value: " << *param1 << std::endl;
+    }
 
-  taihe::optional<float> Getf32() {
-    float const getf32Value = 0.0f;
-    return taihe::optional<float>::make(getf32Value);
-  }
+    void FuncArray(optional_view<array<int32_t>> param1)
+    {
+        std::cout << "func_Array: [";
+        for (auto const &elem : *param1) {
+            std::cout << elem << " ";
+        }
+        std::cout << "]" << std::endl;
+    }
 
-  taihe::optional<double> Getf64() {
-    double const getf64Value = 0.0;
-    return taihe::optional<double>::make(getf64Value);
-  }
+    void FuncBuffer(optional_view<array<uint8_t>> param1)
+    {
+        std::cout << "func_Array: [";
+        for (auto const &elem : *param1) {
+            std::cout << (int)elem << " ";
+        }
+        std::cout << "]" << std::endl;
+    }
 
-  taihe::optional<bool> Getbool() {
-    return taihe::optional<bool>::make(false);
-  }
+    void FuncUnion(optional_view<::optional::Union> param1)
+    {
+        std::cout << (*param1).get_sValue_ref() << std::endl;
+        std::cout << (*param1).get_iValue_ref() << std::endl;
+    }
 
-  taihe::optional<array<uint8_t>> GetArraybuffer() {
-    int const arrSize = 10;
-    int const arrNum = 6;
-    return taihe::optional<array<uint8_t>>::make(
-        array<uint8_t>::make(arrSize, arrNum));
-  }
+    void FuncMap(optional_view<map<string, int32_t>> param1)
+    {
+        for (auto it = (*param1).begin(); it != (*param1).end(); ++it) {
+            auto const &[key, value] = *it;
+            std::cout << "Key: " << key << ", Value: " << value << std::endl;
+        }
+    }
+
+    taihe::optional<string> GetName()
+    {
+        return taihe::optional<string>::make("hello");
+    }
+
+    taihe::optional<int8_t> Geti8()
+    {
+        int8_t const geti8Value = 1;
+        return taihe::optional<int8_t>::make(geti8Value);
+    }
+
+    taihe::optional<int16_t> Geti16()
+    {
+        int16_t const geti16Value = 100;
+        return taihe::optional<int16_t>::make(geti16Value);
+    }
+
+    taihe::optional<int32_t> Geti32()
+    {
+        int32_t const geti32Value = 1024;
+        return taihe::optional<int32_t>::make(geti32Value);  // 默认返回 0
+    }
+
+    taihe::optional<int64_t> Geti64()
+    {
+        int64_t const geti64Value = 999999;
+        return taihe::optional<int64_t>::make(geti64Value);  // 默认返回 0
+    }
+
+    taihe::optional<float> Getf32()
+    {
+        float const getf32Value = 0.0f;
+        return taihe::optional<float>::make(getf32Value);
+    }
+
+    taihe::optional<double> Getf64()
+    {
+        double const getf64Value = 0.0;
+        return taihe::optional<double>::make(getf64Value);
+    }
+
+    taihe::optional<bool> Getbool()
+    {
+        return taihe::optional<bool>::make(false);
+    }
+
+    taihe::optional<array<uint8_t>> GetArraybuffer()
+    {
+        int const arrSize = 10;
+        int const arrNum = 6;
+        return taihe::optional<array<uint8_t>>::make(array<uint8_t>::make(arrSize, arrNum));
+    }
 };
 
-::optional::ExampleInterface GetInterface() {
-  return make_holder<ExampleInterface, ::optional::ExampleInterface>();
+::optional::ExampleInterface GetInterface()
+{
+    return make_holder<ExampleInterface, ::optional::ExampleInterface>();
 }
 
-void PrintTestInterfaceName(::optional::weak::ExampleInterface testiface) {
-  auto res = testiface->GetName();
-  std::cout << __func__ << ": " << *res << std::endl;
+void PrintTestInterfaceName(::optional::weak::ExampleInterface testiface)
+{
+    auto res = testiface->GetName();
+    std::cout << __func__ << ": " << *res << std::endl;
 }
 
-void PrintTestInterfaceNumberi8(::optional::weak::ExampleInterface testiface) {
-  auto res = testiface->Geti8();
-  std::cout << __func__ << ": " << *res << std::endl;
+void PrintTestInterfaceNumberi8(::optional::weak::ExampleInterface testiface)
+{
+    auto res = testiface->Geti8();
+    std::cout << __func__ << ": " << *res << std::endl;
 }
 
-void PrintTestInterfaceNumberi16(::optional::weak::ExampleInterface testiface) {
-  auto res = testiface->Geti16();
-  std::cout << __func__ << ": " << *res << std::endl;
+void PrintTestInterfaceNumberi16(::optional::weak::ExampleInterface testiface)
+{
+    auto res = testiface->Geti16();
+    std::cout << __func__ << ": " << *res << std::endl;
 }
 
-void PrintTestInterfaceNumberi32(::optional::weak::ExampleInterface testiface) {
-  auto res = testiface->Geti16();
-  std::cout << __func__ << ": " << *res << std::endl;
+void PrintTestInterfaceNumberi32(::optional::weak::ExampleInterface testiface)
+{
+    auto res = testiface->Geti16();
+    std::cout << __func__ << ": " << *res << std::endl;
 }
 
-void PrintTestInterfaceNumberi64(::optional::weak::ExampleInterface testiface) {
-  auto res = testiface->Geti64();
-  std::cout << __func__ << ": " << *res << std::endl;
+void PrintTestInterfaceNumberi64(::optional::weak::ExampleInterface testiface)
+{
+    auto res = testiface->Geti64();
+    std::cout << __func__ << ": " << *res << std::endl;
 }
 
-void PrintTestInterfaceNumberf32(::optional::weak::ExampleInterface testiface) {
-  auto res = testiface->Getf32();
-  std::cout << __func__ << ": " << *res << std::endl;
+void PrintTestInterfaceNumberf32(::optional::weak::ExampleInterface testiface)
+{
+    auto res = testiface->Getf32();
+    std::cout << __func__ << ": " << *res << std::endl;
 }
 
-void PrintTestInterfaceNumberf64(::optional::weak::ExampleInterface testiface) {
-  auto res = testiface->Getf64();
-  std::cout << __func__ << ": " << *res << std::endl;
+void PrintTestInterfaceNumberf64(::optional::weak::ExampleInterface testiface)
+{
+    auto res = testiface->Getf64();
+    std::cout << __func__ << ": " << *res << std::endl;
 }
 
-void PrintTestInterfacebool(::optional::weak::ExampleInterface testiface) {
-  auto res = testiface->Getbool();
-  std::cout << __func__ << ": " << *res << std::endl;
+void PrintTestInterfacebool(::optional::weak::ExampleInterface testiface)
+{
+    auto res = testiface->Getbool();
+    std::cout << __func__ << ": " << *res << std::endl;
 }
 
-void PrintTestInterfaceArraybuffer(
-    ::optional::weak::ExampleInterface testiface) {
-  auto arr = testiface->GetArraybuffer();
+void PrintTestInterfaceArraybuffer(::optional::weak::ExampleInterface testiface)
+{
+    auto arr = testiface->GetArraybuffer();
 
-  for (size_t i = 0; i < (*arr).size(); ++i) {
-    std::cout << static_cast<int>((*arr).data()[i]);
-    if (i < (*arr).size() - 1) {
-      std::cout << ", ";
+    for (size_t i = 0; i < (*arr).size(); ++i) {
+        std::cout << static_cast<int>((*arr).data()[i]);
+        if (i < (*arr).size() - 1) {
+            std::cout << ", ";
+        }
     }
-  }
 }
 }  // namespace
 

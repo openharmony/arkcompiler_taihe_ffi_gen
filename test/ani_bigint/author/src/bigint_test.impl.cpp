@@ -22,30 +22,36 @@ using namespace taihe;
 
 namespace {
 
-bool BigInt01(double a, array_view<int64_t> b) {
-  return true;
+bool BigInt01(double a, array_view<int64_t> b)
+{
+    return true;
 }
 
-double BigInt02(double a) {
-  return a;
+double BigInt02(double a)
+{
+    return a;
 }
 
-array<int64_t> BigInt03(array_view<int64_t> a) {
-  return a;
+array<int64_t> BigInt03(array_view<int64_t> a)
+{
+    return a;
 }
 
-void BigInt04(array_view<int64_t> a) {
-  for (int i = 0; i < a.size(); i++) {
-    std::cout << a[i] << std::endl;
-  }
+void BigInt04(array_view<int64_t> a)
+{
+    for (int i = 0; i < a.size(); i++) {
+        std::cout << a[i] << std::endl;
+    }
 }
 
-array<int64_t> BigInt05(double a, array_view<int64_t> b) {
-  return b;
+array<int64_t> BigInt05(double a, array_view<int64_t> b)
+{
+    return b;
 }
 
-double BigInt06(double a, array_view<int64_t> b) {
-  return a;
+double BigInt06(double a, array_view<int64_t> b)
+{
+    return a;
 }
 }  // namespace
 

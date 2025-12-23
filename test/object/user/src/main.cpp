@@ -24,119 +24,142 @@
 
 class Named {
 public:
-  static inline std::unordered_set<Named *> registry;
+    static inline std::unordered_set<Named *> registry;
 
-  std::string const name;
+    std::string const name;
 
-  Named(std::string_view sv) : name(sv) {
-    std::cout << name << " made" << std::endl;
-    registry.insert(this);
-  }
+    Named(std::string_view sv) : name(sv)
+    {
+        std::cout << name << " made" << std::endl;
+        registry.insert(this);
+    }
 
-  ~Named() {
-    std::cout << name << " deleted" << std::endl;
-    registry.erase(this);
-  }
+    ~Named()
+    {
+        std::cout << name << " deleted" << std::endl;
+        registry.erase(this);
+    }
 };
 
 class TopImpl : Named {
 public:
-  TopImpl(std::string_view sv) : Named(sv) {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-  }
+    TopImpl(std::string_view sv) : Named(sv)
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+    }
 
-  ~TopImpl() {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-  }
+    ~TopImpl()
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+    }
 
-  void top() {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-  }
+    void top()
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+    }
 };
 
 class LeftImpl : Named {
 public:
-  LeftImpl(std::string_view sv) : Named(sv) {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-  }
+    LeftImpl(std::string_view sv) : Named(sv)
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+    }
 
-  ~LeftImpl() {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-  }
+    ~LeftImpl()
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+    }
 
-  void left() {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-  }
+    void left()
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+    }
 
-  void top() {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-  }
+    void top()
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+    }
 };
 
 class RightImpl : Named {
 public:
-  RightImpl(std::string_view sv) : Named(sv) {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-  }
+    RightImpl(std::string_view sv) : Named(sv)
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+    }
 
-  ~RightImpl() {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-  }
+    ~RightImpl()
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+    }
 
-  void right() {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-  }
+    void right()
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+    }
 
-  void top() {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-  }
+    void top()
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+    }
 };
 
 class BottomImpl : Named {
 public:
-  BottomImpl(std::string_view sv) : Named(sv) {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-  }
+    BottomImpl(std::string_view sv) : Named(sv)
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+    }
 
-  ~BottomImpl() {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-  }
+    ~BottomImpl()
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+    }
 
-  void bottom() {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-  }
+    void bottom()
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+    }
 
-  void left() {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-  }
+    void left()
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+    }
 
-  void right() {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-  }
+    void right()
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+    }
 
-  void top() {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-  }
+    void top()
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+    }
 };
 
 class TopAndCallbackImpl : Named {
 public:
-  TopAndCallbackImpl(std::string_view sv) : Named(sv) {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-  }
+    TopAndCallbackImpl(std::string_view sv) : Named(sv)
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+    }
 
-  ~TopAndCallbackImpl() {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-  }
+    ~TopAndCallbackImpl()
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+    }
 
-  void top() {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-  }
+    void top()
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+    }
 
-  int operator()(int a) {
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-    return a;
-  }
+    int operator()(int a)
+    {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
+        return a;
+    }
 };
 
 using namespace object;
@@ -147,83 +170,85 @@ using callback_type_b = callback<int(int)>;
 using weak_callback_type_a = callback_view<void()>;
 using weak_callback_type_b = callback_view<int(int)>;
 
-void testTop() {
-  auto top = make_holder<TopImpl, Top>("top");
-  Top top_as_top = top;
-  weak::Top top_as_weak_top = top;
+void testTop()
+{
+    auto top = make_holder<TopImpl, Top>("top");
+    Top top_as_top = top;
+    weak::Top top_as_weak_top = top;
 
-  // Bottom top_as_bottom = top;  // Error
-  // weak::Bottom top_as_weak_bottom = top;  // Error
-  // Bottom top_as_top_as_bottom = top_as_top;  // Error
-  // weak::Bottom top_as_top_as_weak_bottom = top_as_top;  // Error
-  // Bottom top_as_weak_top_as_bottom = top_as_weak_top;  // Error
-  // Bottom top_as_weak_top_as_weak_bottom = top_as_weak_top;  // Error
+    // Bottom top_as_bottom = top;  // Error
+    // weak::Bottom top_as_weak_bottom = top;  // Error
+    // Bottom top_as_top_as_bottom = top_as_top;  // Error
+    // weak::Bottom top_as_top_as_weak_bottom = top_as_top;  // Error
+    // Bottom top_as_weak_top_as_bottom = top_as_weak_top;  // Error
+    // Bottom top_as_weak_top_as_weak_bottom = top_as_weak_top;  // Error
 
-  Bottom top_as_weak_top_as_bottom = Bottom(top_as_weak_top);
-  weak::Bottom top_as_top_as_weak_bottom = weak::Bottom(top_as_top);
+    Bottom top_as_weak_top_as_bottom = Bottom(top_as_weak_top);
+    weak::Bottom top_as_top_as_weak_bottom = weak::Bottom(top_as_top);
 
-  std::cout << top_as_weak_top_as_bottom.is_error() << std::endl;  // true
-  std::cout << top_as_top_as_weak_bottom.is_error() << std::endl;  // true
+    std::cout << top_as_weak_top_as_bottom.is_error() << std::endl;  // true
+    std::cout << top_as_top_as_weak_bottom.is_error() << std::endl;  // true
 
-  impl_view<TopImpl, Top> top_as_impl_view = top;
-  impl_holder<TopImpl, Top> top_as_impl_holder = top_as_impl_view;
+    impl_view<TopImpl, Top> top_as_impl_view = top;
+    impl_holder<TopImpl, Top> top_as_impl_holder = top_as_impl_view;
 }
 
-void testLR() {
-  auto lr = make_holder<BottomImpl, Left, Right>("lr");
-  Left lr_as_left = lr;
-  Right lr_as_right = lr;
-  Top lr_as_top = lr;
-  weak::Top lr_as_weak_top = lr;
-  // Bottom lr_as_bottom = lr;  // Error
+void testLR()
+{
+    auto lr = make_holder<BottomImpl, Left, Right>("lr");
+    Left lr_as_left = lr;
+    Right lr_as_right = lr;
+    Top lr_as_top = lr;
+    weak::Top lr_as_weak_top = lr;
+    // Bottom lr_as_bottom = lr;  // Error
 
-  Left lr_as_weak_top_as_left = Left(lr_as_weak_top);
-  weak::Right lr_as_top_as_weak_right = weak::Right(lr_as_top);
+    Left lr_as_weak_top_as_left = Left(lr_as_weak_top);
+    weak::Right lr_as_top_as_weak_right = weak::Right(lr_as_top);
 
-  std::cout << lr_as_weak_top_as_left.is_error() << std::endl;   // false
-  std::cout << lr_as_top_as_weak_right.is_error() << std::endl;  // false
+    std::cout << lr_as_weak_top_as_left.is_error() << std::endl;   // false
+    std::cout << lr_as_top_as_weak_right.is_error() << std::endl;  // false
 }
 
-void testCallbackB() {
-  auto callback_b =
-      make_holder<TopAndCallbackImpl, Top, callback_type_b>("callback_b");
+void testCallbackB()
+{
+    auto callback_b = make_holder<TopAndCallbackImpl, Top, callback_type_b>("callback_b");
 
-  callback_type_b callback_b_as_callback_b = callback_b;
-  weak_callback_type_b callback_b_as_weak_callback_b = callback_b;
+    callback_type_b callback_b_as_callback_b = callback_b;
+    weak_callback_type_b callback_b_as_weak_callback_b = callback_b;
 
-  // callback_type_b callback_b_as_callback_a = callback_b;  // Error
-  // weak_callback_type_a callback_b_as_weak_callback_a = callback_b;  // Error
+    // callback_type_b callback_b_as_callback_a = callback_b;  // Error
+    // weak_callback_type_a callback_b_as_weak_callback_a = callback_b;  // Error
 
-  weak::Top callback_b_as_weak_top = weak::Top(callback_b);
-  data_holder callback_b_as_data_holder = callback_b;
-  data_view callback_b_as_data_view = callback_b;
-  data_holder callback_b_as_weak_callback_b_as_data_holder =
-      callback_b_as_weak_callback_b;
-  data_view callback_b_as_callback_b_as_data_view = callback_b_as_callback_b;
+    weak::Top callback_b_as_weak_top = weak::Top(callback_b);
+    data_holder callback_b_as_data_holder = callback_b;
+    data_view callback_b_as_data_view = callback_b;
+    data_holder callback_b_as_weak_callback_b_as_data_holder = callback_b_as_weak_callback_b;
+    data_view callback_b_as_callback_b_as_data_view = callback_b_as_callback_b;
 
-  map<callback_type_b, int> callback_b_map;
+    map<callback_type_b, int> callback_b_map;
 
-  callback_b_map.emplace<1>(callback_b, 1);
-  callback_b_map.emplace<1>(callback_b_as_callback_b, 2);
-  callback_b_map.emplace<0>(callback_b_as_weak_callback_b, 3);
+    callback_b_map.emplace<1>(callback_b, 1);
+    callback_b_map.emplace<1>(callback_b_as_callback_b, 2);
+    callback_b_map.emplace<0>(callback_b_as_weak_callback_b, 3);
 
-  std::cout << "callback_b_map size: " << callback_b_map.size() << std::endl;
+    std::cout << "callback_b_map size: " << callback_b_map.size() << std::endl;
 }
 
-int main() {
-  testTop();
-  testLR();
-  testCallbackB();
+int main()
+{
+    testTop();
+    testLR();
+    testCallbackB();
 
-  bool all_deleted = true;
-  for (auto *named : Named::registry) {
-    std::cout << named->name << " is still alive" << std::endl;
-    all_deleted = false;
-  }
-  if (all_deleted) {
-    std::cout << "All named objects are deleted" << std::endl;
-    return 0;
-  } else {
-    return 1;
-  }
+    bool all_deleted = true;
+    for (auto *named : Named::registry) {
+        std::cout << named->name << " is still alive" << std::endl;
+        all_deleted = false;
+    }
+    if (all_deleted) {
+        std::cout << "All named objects are deleted" << std::endl;
+        return 0;
+    } else {
+        return 1;
+    }
 }

@@ -24,207 +24,251 @@ using namespace taihe;
 namespace {
 
 class Foo {
-  string name_{"foo"};
+    string name_ {"foo"};
 
 public:
-  void Bar() {
-    std::cout << "Fooimpl: " << __func__ << std::endl;
-  }
+    void Bar()
+    {
+        std::cout << "Fooimpl: " << __func__ << std::endl;
+    }
 
-  string GetName() {
-    std::cout << "Fooimpl: " << __func__ << " " << name_ << std::endl;
-    return name_;
-  }
+    string GetName()
+    {
+        std::cout << "Fooimpl: " << __func__ << " " << name_ << std::endl;
+        return name_;
+    }
 
-  void SetName(string_view name) {
-    std::cout << "Fooimpl: " << __func__ << " " << name << std::endl;
-    name_ = name;
-  }
+    void SetName(string_view name)
+    {
+        std::cout << "Fooimpl: " << __func__ << " " << name << std::endl;
+        name_ = name;
+    }
 };
 
 class BaseFunImpl {
 public:
-  BaseFunImpl() {}
+    BaseFunImpl()
+    {
+    }
 
-  ::taihe::string Base() {
-    return "BaseFun.base";
-  }
+    ::taihe::string Base()
+    {
+        return "BaseFun.base";
+    }
 
-  ::taihe::string Fun() {
-    return "BaseFun.fun";
-  }
+    ::taihe::string Fun()
+    {
+        return "BaseFun.fun";
+    }
 };
 
 class SubBaseFunImpl {
 public:
-  SubBaseFunImpl() {}
+    SubBaseFunImpl()
+    {
+    }
 
-  ::taihe::string Sub() {
-    return "SubBaseFun.sub";
-  }
+    ::taihe::string Sub()
+    {
+        return "SubBaseFun.sub";
+    }
 
-  ::taihe::string Base() {
-    return "SubBaseFun.base";
-  }
+    ::taihe::string Base()
+    {
+        return "SubBaseFun.base";
+    }
 
-  ::taihe::string Fun() {
-    return "SubBaseFun.fun";
-  }
+    ::taihe::string Fun()
+    {
+        return "SubBaseFun.fun";
+    }
 };
 
 class BaseElemImpl {
 public:
-  string base = "base";
+    string base = "base";
 
-  BaseElemImpl() {}
+    BaseElemImpl()
+    {
+    }
 
-  ::taihe::string GetBase() {
-    return base;
-  }
+    ::taihe::string GetBase()
+    {
+        return base;
+    }
 
-  void SetBase(::taihe::string_view s) {
-    this->base = s;
-  }
+    void SetBase(::taihe::string_view s)
+    {
+        this->base = s;
+    }
 };
 
 class SubBaseElemImpl {
 public:
-  string base = "SubBaseElem";
+    string base = "SubBaseElem";
 
-  SubBaseElemImpl() {}
+    SubBaseElemImpl()
+    {
+    }
 
-  ::taihe::string Sub() {
-    return "SubBaseElem.sub";
-  }
+    ::taihe::string Sub()
+    {
+        return "SubBaseElem.sub";
+    }
 
-  ::taihe::string GetBase() {
-    return base;
-  }
+    ::taihe::string GetBase()
+    {
+        return base;
+    }
 
-  void SetBase(::taihe::string_view s) {
-    this->base = s;
-  }
+    void SetBase(::taihe::string_view s)
+    {
+        this->base = s;
+    }
 };
 
-::iface_test::Foo GetFooIface() {
-  std::cout << __func__ << std::endl;
-  return make_holder<Foo, ::iface_test::Foo>();
+::iface_test::Foo GetFooIface()
+{
+    std::cout << __func__ << std::endl;
+    return make_holder<Foo, ::iface_test::Foo>();
 }
 
-string PrintFooName(::iface_test::weak::Foo foo) {
-  auto name = foo->GetName();
-  std::cout << __func__ << ": " << name << std::endl;
-  return name;
+string PrintFooName(::iface_test::weak::Foo foo)
+{
+    auto name = foo->GetName();
+    std::cout << __func__ << ": " << name << std::endl;
+    return name;
 }
 
-::iface_test::BaseFun GetBaseFun() {
-  return taihe::make_holder<BaseFunImpl, ::iface_test::BaseFun>();
+::iface_test::BaseFun GetBaseFun()
+{
+    return taihe::make_holder<BaseFunImpl, ::iface_test::BaseFun>();
 }
 
-::iface_test::SubBaseFun GetSubBaseFun() {
-  return taihe::make_holder<SubBaseFunImpl, ::iface_test::SubBaseFun>();
+::iface_test::SubBaseFun GetSubBaseFun()
+{
+    return taihe::make_holder<SubBaseFunImpl, ::iface_test::SubBaseFun>();
 }
 
-::iface_test::BaseElem GetBaseElem() {
-  return taihe::make_holder<BaseElemImpl, ::iface_test::BaseElem>();
+::iface_test::BaseElem GetBaseElem()
+{
+    return taihe::make_holder<BaseElemImpl, ::iface_test::BaseElem>();
 }
 
-::iface_test::SubBaseElem GetSubBaseElem() {
-  return taihe::make_holder<SubBaseElemImpl, ::iface_test::SubBaseElem>();
+::iface_test::SubBaseElem GetSubBaseElem()
+{
+    return taihe::make_holder<SubBaseElemImpl, ::iface_test::SubBaseElem>();
 }
 
 class Base {
 protected:
-  ::taihe::string id;
+    ::taihe::string id;
 
 public:
-  Base(::taihe::string_view id) : id(id) {
-    std::cout << "new base " << this << std::endl;
-  }
+    Base(::taihe::string_view id) : id(id)
+    {
+        std::cout << "new base " << this << std::endl;
+    }
 
-  ~Base() {
-    std::cout << "del base " << this << std::endl;
-  }
+    ~Base()
+    {
+        std::cout << "del base " << this << std::endl;
+    }
 
-  ::taihe::string GetId() {
-    return id;
-  }
+    ::taihe::string GetId()
+    {
+        return id;
+    }
 
-  void SetId(::taihe::string_view s) {
-    id = s;
-    return;
-  }
+    void SetId(::taihe::string_view s)
+    {
+        id = s;
+        return;
+    }
 };
 
 class Shape {
 protected:
-  ::taihe::string id;
-  float a;
-  float b;
+    ::taihe::string id;
+    float a;
+    float b;
 
 public:
-  Shape(::taihe::string_view id, float a, float b) : id(id), a(a), b(b) {
-    std::cout << "new shape " << this << std::endl;
-  }
+    Shape(::taihe::string_view id, float a, float b) : id(id), a(a), b(b)
+    {
+        std::cout << "new shape " << this << std::endl;
+    }
 
-  ~Shape() {
-    std::cout << "del shape " << this << std::endl;
-  }
+    ~Shape()
+    {
+        std::cout << "del shape " << this << std::endl;
+    }
 
-  ::taihe::string GetId() {
-    return id;
-  }
+    ::taihe::string GetId()
+    {
+        return id;
+    }
 
-  void SetId(::taihe::string_view s) {
-    id = s;
-    return;
-  }
+    void SetId(::taihe::string_view s)
+    {
+        id = s;
+        return;
+    }
 
-  float CalculateArea() {
-    return a * b;
-  }
+    float CalculateArea()
+    {
+        return a * b;
+    }
 };
 
 class Derived {
 protected:
-  ::taihe::string id = "d";
-  float a = 1;
-  float b = 2;
+    ::taihe::string id = "d";
+    float a = 1;
+    float b = 2;
 
 public:
-  void Call() {
-    std::cout << "derived call!" << std::endl;
-  }
+    void Call()
+    {
+        std::cout << "derived call!" << std::endl;
+    }
 
-  double CalculateArea() {
-    return a * b;
-  }
+    double CalculateArea()
+    {
+        return a * b;
+    }
 
-  ::taihe::string GetId() {
-    return id;
-  }
+    ::taihe::string GetId()
+    {
+        return id;
+    }
 
-  void SetId(::taihe::string_view s) {
-    this->id = s;
-    return;
-  }
+    void SetId(::taihe::string_view s)
+    {
+        this->id = s;
+        return;
+    }
 };
 
-::iface_test::IBase MakeIBase(::taihe::string_view id) {
-  return ::taihe::make_holder<Base, ::iface_test::IBase>(id);
+::iface_test::IBase MakeIBase(::taihe::string_view id)
+{
+    return ::taihe::make_holder<Base, ::iface_test::IBase>(id);
 }
 
-void CopyIBase(::iface_test::weak::IBase a, ::iface_test::weak::IBase b) {
-  a->SetId(b->GetId());
-  return;
+void CopyIBase(::iface_test::weak::IBase a, ::iface_test::weak::IBase b)
+{
+    a->SetId(b->GetId());
+    return;
 }
 
-::iface_test::IShape MakeIShape(::taihe::string_view id, double a, double b) {
-  return ::taihe::make_holder<Shape, ::iface_test::IShape>(id, a, b);
+::iface_test::IShape MakeIShape(::taihe::string_view id, double a, double b)
+{
+    return ::taihe::make_holder<Shape, ::iface_test::IShape>(id, a, b);
 }
 
-::iface_test::IDerived CreateIDerived() {
-  return taihe::make_holder<Derived, ::iface_test::IDerived>();
+::iface_test::IDerived CreateIDerived()
+{
+    return taihe::make_holder<Derived, ::iface_test::IDerived>();
 }
 
 }  // namespace

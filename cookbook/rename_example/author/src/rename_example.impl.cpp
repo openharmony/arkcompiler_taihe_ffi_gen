@@ -21,8 +21,9 @@
 namespace {
 // To be implemented.
 
-int32_t oldFoo(int32_t a, int32_t b) {
-  return a + b;
+int32_t oldFoo(int32_t a, int32_t b)
+{
+    return a + b;
 }
 }  // namespace
 

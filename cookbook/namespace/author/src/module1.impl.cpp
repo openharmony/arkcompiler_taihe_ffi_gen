@@ -22,8 +22,9 @@
 using namespace taihe;
 
 namespace {
-void module1Run() {
-  std::cout << "Module: module1" << std::endl;
+void module1Run()
+{
+    std::cout << "Module: module1" << std::endl;
 }
 }  // namespace
 

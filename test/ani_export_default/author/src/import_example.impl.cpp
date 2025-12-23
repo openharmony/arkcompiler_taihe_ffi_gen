@@ -32,35 +32,44 @@ class IfaceAImpl {
 public:
 
 public:
-  IfaceAImpl() {}
+    IfaceAImpl()
+    {
+    }
 
-  void Foo() {
-    std::cout << "Export IfaceA Foo()" << std::endl;
-  }
+    void Foo()
+    {
+        std::cout << "Export IfaceA Foo()" << std::endl;
+    }
 
-  void Bar() {
-    std::cout << "Export IfaceA Bar()" << std::endl;
-  }
+    void Bar()
+    {
+        std::cout << "Export IfaceA Bar()" << std::endl;
+    }
 };
 
-::export_enum::ExportEnum ImportEnumFunc() {
-  return ::export_enum::ExportEnum::key_t::Foo;
+::export_enum::ExportEnum ImportEnumFunc()
+{
+    return ::export_enum::ExportEnum::key_t::Foo;
 }
 
-::export_iface::IfaceA ImportIfaceFunc() {
-  return taihe::make_holder<IfaceAImpl, ::export_iface::IfaceA>();
+::export_iface::IfaceA ImportIfaceFunc()
+{
+    return taihe::make_holder<IfaceAImpl, ::export_iface::IfaceA>();
 }
 
-::export_namespace::NsStructA ImportNsFunc() {
-  return {K_DEFAULT_X, K_DEFAULT_Y};
+::export_namespace::NsStructA ImportNsFunc()
+{
+    return {K_DEFAULT_X, K_DEFAULT_Y};
 }
 
-::export_struct::StructA ImportStructFunc() {
-  return {K_ID, K_NAME};
+::export_struct::StructA ImportStructFunc()
+{
+    return {K_ID, K_NAME};
 }
 
-::export_union::ExportUnion ImportUnionFunc() {
-  return ::export_union::ExportUnion::make_Foo(K_NAME);
+::export_union::ExportUnion ImportUnionFunc()
+{
+    return ::export_union::ExportUnion::make_Foo(K_NAME);
 }
 }  // namespace
 

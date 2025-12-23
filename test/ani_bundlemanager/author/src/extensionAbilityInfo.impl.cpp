@@ -27,66 +27,82 @@ namespace {
 
 class ExtensionAbilityInfoImpl {
 public:
-  int32_t extensionAbilityInfoImpl = 21474;
+    int32_t extensionAbilityInfoImpl = 21474;
 
-  ExtensionAbilityInfoImpl() {}
+    ExtensionAbilityInfoImpl()
+    {
+    }
 
-  string GetBundleName() {
-    return "ExtensionAbilityInfoImpl::getBundleName";
-  }
+    string GetBundleName()
+    {
+        return "ExtensionAbilityInfoImpl::getBundleName";
+    }
 
-  string GetModuleName() {
-    return "ExtensionAbilityInfoImpl::getModuleName";
-  }
+    string GetModuleName()
+    {
+        return "ExtensionAbilityInfoImpl::getModuleName";
+    }
 
-  string GetName() {
-    return "ExtensionAbilityInfoImpl::getName";
-  }
+    string GetName()
+    {
+        return "ExtensionAbilityInfoImpl::getName";
+    }
 
-  int32_t GetLabelId() {
-    return extensionAbilityInfoImpl;
-  }
+    int32_t GetLabelId()
+    {
+        return extensionAbilityInfoImpl;
+    }
 
-  int32_t GetDescriptionId() {
-    return extensionAbilityInfoImpl;
-  }
+    int32_t GetDescriptionId()
+    {
+        return extensionAbilityInfoImpl;
+    }
 
-  int32_t GetIconId() {
-    return extensionAbilityInfoImpl;
-  }
+    int32_t GetIconId()
+    {
+        return extensionAbilityInfoImpl;
+    }
 
-  bool GetExported() {
-    return true;
-  }
+    bool GetExported()
+    {
+        return true;
+    }
 
-  bool GetExtensionAbilityTypeName() {
-    return true;
-  }
+    bool GetExtensionAbilityTypeName()
+    {
+        return true;
+    }
 
-  array<string> GetPermissions() {
-    array<string> str = {"ExtensionAbilityInfoImpl::getPermissions"};
-    return str;
-  }
+    array<string> GetPermissions()
+    {
+        array<string> str = {"ExtensionAbilityInfoImpl::getPermissions"};
+        return str;
+    }
 
-  bool GetEnabled() {
-    return true;
-  }
+    bool GetEnabled()
+    {
+        return true;
+    }
 
-  string GetReadPermission() {
-    return "ExtensionAbilityInfoImpl::getReadPermission";
-  }
+    string GetReadPermission()
+    {
+        return "ExtensionAbilityInfoImpl::getReadPermission";
+    }
 
-  string GetWritePermission() {
-    return "ExtensionAbilityInfoImpl::getWritePermission";
-  }
+    string GetWritePermission()
+    {
+        return "ExtensionAbilityInfoImpl::getWritePermission";
+    }
 
-  int32_t GetAppIndex() {
-    return extensionAbilityInfoImpl;
-  }
+    int32_t GetAppIndex()
+    {
+        return extensionAbilityInfoImpl;
+    }
 };
 
-ExtensionAbilityInfo GetExtensionAbilityInfo() {
-  return make_holder<ExtensionAbilityInfoImpl, ExtensionAbilityInfo>();
+ExtensionAbilityInfo GetExtensionAbilityInfo()
+{
+    return make_holder<ExtensionAbilityInfoImpl, ExtensionAbilityInfo>();
 }
 }  // namespace
 

@@ -25,8 +25,8 @@
 // - `m_size`: The size of the array.
 // - `m_data`: A pointer to the data in the array.
 struct TArray {
-  size_t m_size;
-  void *m_data;
+    size_t m_size;
+    void *m_data;
 };
 
 #endif  // TAIHE_ARRAY_ABI_H

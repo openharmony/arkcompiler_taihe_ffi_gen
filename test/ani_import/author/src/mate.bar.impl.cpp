@@ -24,8 +24,9 @@ using namespace mate::bar;
 namespace {
 // To be implemented.
 
-void testFoo(::mate::foo::FooType const &foo) {
-  TH_THROW(std::runtime_error, "testFoo not implemented");
+void testFoo(::mate::foo::FooType const &foo)
+{
+    TH_THROW(std::runtime_error, "testFoo not implemented");
 }
 }  // namespace
 

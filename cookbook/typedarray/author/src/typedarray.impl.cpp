@@ -22,15 +22,17 @@
 using namespace taihe;
 
 namespace {
-array<uint16_t> createUint16Array() {
-  return {1, 3, 5, 6, 9};
+array<uint16_t> createUint16Array()
+{
+    return {1, 3, 5, 6, 9};
 }
 
-void printUint16Array(array_view<uint16_t> arr) {
-  size_t i = 0;
-  for (uint16_t val : arr) {
-    std::cout << "Index: " << i++ << " Value: " << val << std::endl;
-  }
+void printUint16Array(array_view<uint16_t> arr)
+{
+    size_t i = 0;
+    for (uint16_t val : arr) {
+        std::cout << "Index: " << i++ << " Value: " << val << std::endl;
+    }
 }
 }  // namespace
 

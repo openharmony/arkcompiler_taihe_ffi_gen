@@ -28,57 +28,71 @@ namespace {
 
 class SkillUriImpl {
 public:
-  int32_t skillUriImpl = 21474;
+    int32_t skillUriImpl = 21474;
 
-  SkillUriImpl() {}
+    SkillUriImpl()
+    {
+    }
 
-  string GetScheme() {
-    return "SkillUriImpl::getScheme";
-  }
+    string GetScheme()
+    {
+        return "SkillUriImpl::getScheme";
+    }
 
-  string GetHost() {
-    return "SkillUriImpl::getHost";
-  }
+    string GetHost()
+    {
+        return "SkillUriImpl::getHost";
+    }
 
-  int32_t GetPort() {
-    return skillUriImpl;
-  }
+    int32_t GetPort()
+    {
+        return skillUriImpl;
+    }
 
-  string GetPath() {
-    return "SkillUriImpl::getPath";
-  }
+    string GetPath()
+    {
+        return "SkillUriImpl::getPath";
+    }
 
-  string GetPathStartWith() {
-    return "SkillUriImpl::getPathStartWith";
-  }
+    string GetPathStartWith()
+    {
+        return "SkillUriImpl::getPathStartWith";
+    }
 
-  string GetPathRegex() {
-    return "SkillUriImpl::getPathRegex";
-  }
+    string GetPathRegex()
+    {
+        return "SkillUriImpl::getPathRegex";
+    }
 
-  string GetType() {
-    return "SkillUriImpl::getType";
-  }
+    string GetType()
+    {
+        return "SkillUriImpl::getType";
+    }
 
-  string GetUtd() {
-    return "SkillUriImpl::getUtd";
-  }
+    string GetUtd()
+    {
+        return "SkillUriImpl::getUtd";
+    }
 
-  int32_t GetMaxFileSupported() {
-    return skillUriImpl;
-  }
+    int32_t GetMaxFileSupported()
+    {
+        return skillUriImpl;
+    }
 
-  string GetLinkFeature() {
-    return "SkillUriImpl::getLinkFeature";
-  }
+    string GetLinkFeature()
+    {
+        return "SkillUriImpl::getLinkFeature";
+    }
 };
 
-Skill GetSkill() {
-  return make_holder<SkillImpl, Skill>();
+Skill GetSkill()
+{
+    return make_holder<SkillImpl, Skill>();
 }
 
-SkillUri GetSkillUri() {
-  return make_holder<SkillUriImpl, SkillUri>();
+SkillUri GetSkillUri()
+{
+    return make_holder<SkillUriImpl, SkillUri>();
 }
 }  // namespace
 

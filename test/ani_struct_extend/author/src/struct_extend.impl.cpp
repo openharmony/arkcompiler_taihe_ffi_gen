@@ -32,137 +32,163 @@ using namespace taihe;
 namespace {
 class Bar {
 public:
-  explicit Bar(::struct_extend::E const &e) {
-    this->e_.d.param4 = e.d.param4;
-    this->e_.param5 = e.param5;
-  }
+    explicit Bar(::struct_extend::E const &e)
+    {
+        this->e_.d.param4 = e.d.param4;
+        this->e_.param5 = e.param5;
+    }
 
-  ::struct_extend::E getE() {
-    return e_;
-  }
+    ::struct_extend::E getE()
+    {
+        return e_;
+    }
 
-  void setE(::struct_extend::E const &e) {
-    this->e_.d.param4 = e.d.param4;
-    this->e_.param5 = e.param5;
-  }
+    void setE(::struct_extend::E const &e)
+    {
+        this->e_.d.param4 = e.d.param4;
+        this->e_.param5 = e.param5;
+    }
 
 private:
-  ::struct_extend::E e_;
+    ::struct_extend::E e_;
 };
 
-void check_A(::struct_extend::A const &i) {
-  std::cout << i.param1 << std::endl;
+void check_A(::struct_extend::A const &i)
+{
+    std::cout << i.param1 << std::endl;
 }
 
-::struct_extend::A create_A() {
-  return {1};
+::struct_extend::A create_A()
+{
+    return {1};
 }
 
-void check_B(::struct_extend::B const &i) {
-  std::cout << i.a.param1 << std::endl;
-  std::cout << i.param2 << std::endl;
+void check_B(::struct_extend::B const &i)
+{
+    std::cout << i.a.param1 << std::endl;
+    std::cout << i.param2 << std::endl;
 }
 
-::struct_extend::B create_B() {
-  return {{1}, 2};
+::struct_extend::B create_B()
+{
+    return {{1}, 2};
 }
 
-void check_C(::struct_extend::C const &i) {
-  std::cout << i.b.a.param1 << std::endl;
-  std::cout << i.b.param2 << std::endl;
-  std::cout << i.param3 << std::endl;
+void check_C(::struct_extend::C const &i)
+{
+    std::cout << i.b.a.param1 << std::endl;
+    std::cout << i.b.param2 << std::endl;
+    std::cout << i.param3 << std::endl;
 }
 
-::struct_extend::C create_C() {
-  return {{{1}, 2}, 3};
+::struct_extend::C create_C()
+{
+    return {{{1}, 2}, 3};
 }
 
-void check_D(::struct_extend::D const &i) {
-  std::cout << i.param4 << std::endl;
+void check_D(::struct_extend::D const &i)
+{
+    std::cout << i.param4 << std::endl;
 }
 
-::struct_extend::D create_D() {
-  return {4};
+::struct_extend::D create_D()
+{
+    return {4};
 }
 
-void check_E(::struct_extend::E const &i) {
-  std::cout << i.d.param4 << std::endl;
-  std::cout << i.param5 << std::endl;
+void check_E(::struct_extend::E const &i)
+{
+    std::cout << i.d.param4 << std::endl;
+    std::cout << i.param5 << std::endl;
 }
 
-::struct_extend::E create_E() {
-  return {{4}, 5};
+::struct_extend::E create_E()
+{
+    return {{4}, 5};
 }
 
-::struct_extend::Bar getBar(::struct_extend::E const &e) {
-  return make_holder<Bar, ::struct_extend::Bar>(e);
+::struct_extend::Bar getBar(::struct_extend::E const &e)
+{
+    return make_holder<Bar, ::struct_extend::Bar>(e);
 }
 
-bool check_Bar(::struct_extend::weak::Bar bar) {
-  return true;
+bool check_Bar(::struct_extend::weak::Bar bar)
+{
+    return true;
 }
 
-bool check_F(::struct_extend::F const &f) {
-  return true;
+bool check_F(::struct_extend::F const &f)
+{
+    return true;
 }
 
-bool check_G(::struct_extend::G const &g) {
-  return true;
+bool check_G(::struct_extend::G const &g)
+{
+    return true;
 }
 
-bool check_H(::struct_extend::H const &h) {
-  return true;
+bool check_H(::struct_extend::H const &h)
+{
+    return true;
 }
 
-bool check_I(::struct_extend::I const &i) {
-  return true;
+bool check_I(::struct_extend::I const &i)
+{
+    return true;
 }
 
-bool check_J(::struct_extend::J const &j) {
-  return true;
+bool check_J(::struct_extend::J const &j)
+{
+    return true;
 }
 
-::struct_extend::Bar create_Bar(::struct_extend::E const &e) {
-  return make_holder<Bar, ::struct_extend::Bar>(e);
+::struct_extend::Bar create_Bar(::struct_extend::E const &e)
+{
+    return make_holder<Bar, ::struct_extend::Bar>(e);
 }
 
-::struct_extend::F create_F(::struct_extend::E const &e) {
-  ::struct_extend::F f{
-      .barF = make_holder<Bar, ::struct_extend::Bar>(e),
-  };
-  return f;
+::struct_extend::F create_F(::struct_extend::E const &e)
+{
+    ::struct_extend::F f {
+        .barF = make_holder<Bar, ::struct_extend::Bar>(e),
+    };
+    return f;
 }
 
-::struct_extend::G create_G(::struct_extend::E const &e) {
-  ::struct_extend::G g{
-      .f = create_F(e),
-      .barG = make_holder<Bar, ::struct_extend::Bar>(e),
-  };
-  return g;
+::struct_extend::G create_G(::struct_extend::E const &e)
+{
+    ::struct_extend::G g {
+        .f = create_F(e),
+        .barG = make_holder<Bar, ::struct_extend::Bar>(e),
+    };
+    return g;
 }
 
-::struct_extend::H create_H(::struct_extend::E const &e) {
-  ::struct_extend::H h{
-      .g = create_G(e),
-      .barH = make_holder<Bar, ::struct_extend::Bar>(e),
-  };
-  return h;
+::struct_extend::H create_H(::struct_extend::E const &e)
+{
+    ::struct_extend::H h {
+        .g = create_G(e),
+        .barH = make_holder<Bar, ::struct_extend::Bar>(e),
+    };
+    return h;
 }
 
-::struct_extend::I create_I(::struct_extend::E const &e) {
-  ::struct_extend::I i{
-      .h = create_H(e),
-      .barI = make_holder<Bar, ::struct_extend::Bar>(e),
-  };
-  return i;
+::struct_extend::I create_I(::struct_extend::E const &e)
+{
+    ::struct_extend::I i {
+        .h = create_H(e),
+        .barI = make_holder<Bar, ::struct_extend::Bar>(e),
+    };
+    return i;
 }
 
-::struct_extend::J create_J(::struct_extend::E const &e) {
-  ::struct_extend::J j{
-      .i = create_I(e),
-      .barJ = make_holder<Bar, ::struct_extend::Bar>(e),
-  };
-  return j;
+::struct_extend::J create_J(::struct_extend::E const &e)
+{
+    ::struct_extend::J j {
+        .i = create_I(e),
+        .barJ = make_holder<Bar, ::struct_extend::Bar>(e),
+    };
+    return j;
 }
 }  // namespace
 

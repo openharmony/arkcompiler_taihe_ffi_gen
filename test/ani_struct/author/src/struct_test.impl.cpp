@@ -25,154 +25,190 @@ namespace {
 
 class StructDImpl {
 public:
-  ::struct_test::DBase5 structD = {1, 2, 3, 4, "5"};
+    ::struct_test::DBase5 structD = {1, 2, 3, 4, "5"};
 
-  StructDImpl() {}
+    StructDImpl()
+    {
+    }
 
-  void SetStructD(::struct_test::DBase5 const &d) {
-    this->structD = d;
-  }
+    void SetStructD(::struct_test::DBase5 const &d)
+    {
+        this->structD = d;
+    }
 
-  ::struct_test::DBase5 GetStructD() {
-    return structD;
-  }
+    ::struct_test::DBase5 GetStructD()
+    {
+        return structD;
+    }
 };
 
 class StructEImpl {
 public:
-  ::struct_test::EBigint structE = {true, 5.17, 18.00, 2025};
+    ::struct_test::EBigint structE = {true, 5.17, 18.00, 2025};
 
-  StructEImpl() {}
+    StructEImpl()
+    {
+    }
 
-  void SetStructE(::struct_test::EBigint const &e) {
-    this->structE = e;
-  }
+    void SetStructE(::struct_test::EBigint const &e)
+    {
+        this->structE = e;
+    }
 
-  ::struct_test::EBigint GetStructE() {
-    return structE;
-  }
+    ::struct_test::EBigint GetStructE()
+    {
+        return structE;
+    }
 };
 
 class StructFImpl {
 public:
-  ::struct_test::FUnion structF;
+    ::struct_test::FUnion structF;
 
-  StructFImpl()
-      : structF({taihe::optional<taihe::string>(std::in_place_t{}, "optval"),
-                 ::struct_test::UnionF::make_sValue("unionval"),
-                 taihe::map<taihe::string, taihe::string>()}) {
-    this->structF.param3.emplace("rsK", "rsV");
-  }
+    StructFImpl()
+        : structF({taihe::optional<taihe::string>(std::in_place_t {}, "optval"),
+                   ::struct_test::UnionF::make_sValue("unionval"), taihe::map<taihe::string, taihe::string>()})
+    {
+        this->structF.param3.emplace("rsK", "rsV");
+    }
 
-  void SetStructF(::struct_test::FUnion const &f) {
-    this->structF = f;
-  }
+    void SetStructF(::struct_test::FUnion const &f)
+    {
+        this->structF = f;
+    }
 
-  ::struct_test::FUnion GetStructF() {
-    return structF;
-  }
+    ::struct_test::FUnion GetStructF()
+    {
+        return structF;
+    }
 };
 
 class StructGImpl {
 public:
-  ::struct_test::GArray gArray = {{1, 2, 3, 4, 5}, {1, 2, 3, 4, 5}};
+    ::struct_test::GArray gArray = {{1, 2, 3, 4, 5}, {1, 2, 3, 4, 5}};
 
-  StructGImpl() {}
+    StructGImpl()
+    {
+    }
 
-  void SetGArray(::struct_test::GArray const &sa) {
-    this->gArray = sa;
-  }
+    void SetGArray(::struct_test::GArray const &sa)
+    {
+        this->gArray = sa;
+    }
 
-  ::struct_test::GArray GetGArray() {
-    return gArray;
-  }
+    ::struct_test::GArray GetGArray()
+    {
+        return gArray;
+    }
 };
 
 class SDB5ReadonlyImpl {
 public:
-  ::struct_test::DB5Readonly db5 = {1, 2, 3, 4, "5"};
+    ::struct_test::DB5Readonly db5 = {1, 2, 3, 4, "5"};
 
-  SDB5ReadonlyImpl() {}
+    SDB5ReadonlyImpl()
+    {
+    }
 
-  void SetDB5Readonly(::struct_test::DB5Readonly const &d) {
-    this->db5 = d;
-  }
+    void SetDB5Readonly(::struct_test::DB5Readonly const &d)
+    {
+        this->db5 = d;
+    }
 
-  ::struct_test::DB5Readonly GetDB5Readonly() {
-    return db5;
-  }
+    ::struct_test::DB5Readonly GetDB5Readonly()
+    {
+        return db5;
+    }
 };
 
 class SEBReadonlyImpl {
 public:
-  ::struct_test::EBigintReadonly ebr = {true, 5.17, 18.00, 2025};
+    ::struct_test::EBigintReadonly ebr = {true, 5.17, 18.00, 2025};
 
-  SEBReadonlyImpl() {}
+    SEBReadonlyImpl()
+    {
+    }
 
-  void SetSEBReadonly(::struct_test::EBigintReadonly const &e) {
-    this->ebr = e;
-  }
+    void SetSEBReadonly(::struct_test::EBigintReadonly const &e)
+    {
+        this->ebr = e;
+    }
 
-  ::struct_test::EBigintReadonly GetSEBReadonly() {
-    return ebr;
-  }
+    ::struct_test::EBigintReadonly GetSEBReadonly()
+    {
+        return ebr;
+    }
 };
 
-::struct_test::StructD GetStructD() {
-  return taihe::make_holder<StructDImpl, ::struct_test::StructD>();
+::struct_test::StructD GetStructD()
+{
+    return taihe::make_holder<StructDImpl, ::struct_test::StructD>();
 }
 
-::struct_test::StructE GetStructE() {
-  return taihe::make_holder<StructEImpl, ::struct_test::StructE>();
+::struct_test::StructE GetStructE()
+{
+    return taihe::make_holder<StructEImpl, ::struct_test::StructE>();
 }
 
-::struct_test::StructF GetStructF() {
-  return taihe::make_holder<StructFImpl, ::struct_test::StructF>();
+::struct_test::StructF GetStructF()
+{
+    return taihe::make_holder<StructFImpl, ::struct_test::StructF>();
 }
 
-::struct_test::StructG GetStructG() {
-  return taihe::make_holder<StructGImpl, ::struct_test::StructG>();
+::struct_test::StructG GetStructG()
+{
+    return taihe::make_holder<StructGImpl, ::struct_test::StructG>();
 }
 
-::struct_test::Canvas addNewCanvas(::taihe::string_view name) {
-  return {{255, 0, 255}, name};
+::struct_test::Canvas addNewCanvas(::taihe::string_view name)
+{
+    return {{255, 0, 255}, name};
 }
 
-::struct_test::SDB5Readonly GetSDB5Readonly() {
-  return taihe::make_holder<SDB5ReadonlyImpl, ::struct_test::SDB5Readonly>();
+::struct_test::SDB5Readonly GetSDB5Readonly()
+{
+    return taihe::make_holder<SDB5ReadonlyImpl, ::struct_test::SDB5Readonly>();
 }
 
-::struct_test::SEBReadonly GetSEBReadonly() {
-  return taihe::make_holder<SEBReadonlyImpl, ::struct_test::SEBReadonly>();
+::struct_test::SEBReadonly GetSEBReadonly()
+{
+    return taihe::make_holder<SEBReadonlyImpl, ::struct_test::SEBReadonly>();
 }
 
-::struct_test::Draw AddNewDraw(::taihe::string_view drawName) {
-  return {{255, 0, 255}, drawName};
-  ;
+::struct_test::Draw AddNewDraw(::taihe::string_view drawName)
+{
+    return {{255, 0, 255}, drawName};
+    ;
 }
 
-::struct_test::Student create_student() {
-  return ::struct_test::Student{"Mary", 15};
+::struct_test::Student create_student()
+{
+    return ::struct_test::Student {"Mary", 15};
 }
 
-::struct_test::Student process_student(::struct_test::Student const &a) {
-  return {a.name + " student", a.age + 10};
+::struct_test::Student process_student(::struct_test::Student const &a)
+{
+    return {a.name + " student", a.age + 10};
 }
 
-::struct_test::Teacher create_teacher() {
-  return ::struct_test::Teacher{"Rose", 25};
+::struct_test::Teacher create_teacher()
+{
+    return ::struct_test::Teacher {"Rose", 25};
 }
 
-::struct_test::Teacher process_teacher(::struct_test::Teacher const &a) {
-  return {a.name + " teacher", a.age + 15};
+::struct_test::Teacher process_teacher(::struct_test::Teacher const &a)
+{
+    return {a.name + " teacher", a.age + 15};
 }
 
-::struct_test::G process_g(::struct_test::G const &a) {
-  return {{a.f.f + 1}, a.g + 2};
+::struct_test::G process_g(::struct_test::G const &a)
+{
+    return {{a.f.f + 1}, a.g + 2};
 }
 
-::struct_test::H process_h(::struct_test::H const &a) {
-  return {{{a.g.f.f + 1}, a.g.g + 2}, a.h + 3};
+::struct_test::H process_h(::struct_test::H const &a)
+{
+    return {{{a.g.f.f + 1}, a.g.g + 2}, a.h + 3};
 }
 }  // namespace
 

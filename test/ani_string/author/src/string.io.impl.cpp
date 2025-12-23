@@ -21,16 +21,19 @@
 using namespace taihe;
 
 namespace {
-string input() {
-  return "input";
+string input()
+{
+    return "input";
 }
 
-void print(string_view a) {
-  std::cout << a << std::flush;
+void print(string_view a)
+{
+    std::cout << a << std::flush;
 }
 
-void println(string_view a) {
-  std::cout << a << std::endl;
+void println(string_view a)
+{
+    std::cout << a << std::endl;
 }
 }  // namespace
 

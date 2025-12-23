@@ -24,7 +24,7 @@
 // # Members
 // - `m_data`: A pointer to the data in the optional value.
 struct TOptional {
-  void const *m_data;
+    void const *m_data;
 };
 
 #endif  // TAIHE_OPTIONAL_ABI_H
