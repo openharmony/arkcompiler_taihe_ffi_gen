@@ -305,6 +305,20 @@ void generateKeyItemSync(taihe::string_view keyAlias, huks::HuksOptions const &o
     return GetVoid(ret);
 }
 
+::taihe::expected<void, ::taihe::error> generateKeyItemAsync(::taihe::string_view keyAlias,
+                                                             ::ohos::security::huks::huks::HuksOptions const &options)
+{
+    generateKeyItemSync(keyAlias, options);
+    return {};
+}
+
+::taihe::expected<void, ::taihe::error> generateKeyItemRetpromise(
+    ::taihe::string_view keyAlias, ::ohos::security::huks::huks::HuksOptions const &options)
+{
+    generateKeyItemSync(keyAlias, options);
+    return {};
+}
+
 void deleteKeyItemSync(taihe::string_view keyAlias, huks::HuksOptions const &options)
 {
     BlobGuard<0> ctxKeyAlias;
@@ -318,6 +332,20 @@ void deleteKeyItemSync(taihe::string_view keyAlias, huks::HuksOptions const &opt
         ret = HksDeleteKey(&ctxKeyAlias.data, ctxParamSetIn.data);
     } while (0);
     return GetVoid(ret);
+}
+
+::taihe::expected<void, ::taihe::error> deleteKeyItemAsync(::taihe::string_view keyAlias,
+                                                           ::ohos::security::huks::huks::HuksOptions const &options)
+{
+    deleteKeyItemSync(keyAlias, options);
+    return {};
+}
+
+::taihe::expected<void, ::taihe::error> deleteKeyItemRetpromise(
+    ::taihe::string_view keyAlias, ::ohos::security::huks::huks::HuksOptions const &options)
+{
+    deleteKeyItemSync(keyAlias, options);
+    return {};
 }
 
 void importKeyItemSync(taihe::string_view keyAlias, huks::HuksOptions const &options)
@@ -336,6 +364,20 @@ void importKeyItemSync(taihe::string_view keyAlias, huks::HuksOptions const &opt
         ret = HksImportKey(&ctxKeyAlias.data, ctxParamSetIn.data, &ctxKey.data);
     } while (0);
     return GetVoid(ret);
+}
+
+::taihe::expected<void, ::taihe::error> importKeyItemAsync(::taihe::string_view keyAlias,
+                                                           ::ohos::security::huks::huks::HuksOptions const &options)
+{
+    importKeyItemSync(keyAlias, options);
+    return {};
+}
+
+::taihe::expected<void, ::taihe::error> importKeyItemRetpromise(
+    ::taihe::string_view keyAlias, ::ohos::security::huks::huks::HuksOptions const &options)
+{
+    importKeyItemSync(keyAlias, options);
+    return {};
 }
 
 void importWrappedKeyItemSync(taihe::string_view keyAlias, taihe::string_view wrappingKeyAlias,
@@ -360,6 +402,22 @@ void importWrappedKeyItemSync(taihe::string_view keyAlias, taihe::string_view wr
     return GetVoid(ret);
 }
 
+::taihe::expected<void, ::taihe::error> importWrappedKeyItemAsync(
+    ::taihe::string_view keyAlias, ::taihe::string_view wrappingKeyAlias,
+    ::ohos::security::huks::huks::HuksOptions const &options)
+{
+    importWrappedKeyItemSync(keyAlias, wrappingKeyAlias, options);
+    return {};
+}
+
+::taihe::expected<void, ::taihe::error> importWrappedKeyItemRetpromise(
+    ::taihe::string_view keyAlias, ::taihe::string_view wrappingKeyAlias,
+    ::ohos::security::huks::huks::HuksOptions const &options)
+{
+    importWrappedKeyItemSync(keyAlias, wrappingKeyAlias, options);
+    return {};
+}
+
 huks::HuksReturnResult exportKeyItemSync(taihe::string_view keyAlias, huks::HuksOptions const &options)
 {
     BlobGuard<0> ctxKeyAlias;
@@ -378,6 +436,18 @@ huks::HuksReturnResult exportKeyItemSync(taihe::string_view keyAlias, huks::Huks
     return GetReturnResult(ret, ctxKey.data);
 }
 
+::taihe::expected<::ohos::security::huks::huks::HuksReturnResult, ::taihe::error> exportKeyItemAsync(
+    ::taihe::string_view keyAlias, ::ohos::security::huks::huks::HuksOptions const &options)
+{
+    return exportKeyItemSync(keyAlias, options);
+}
+
+::taihe::expected<::ohos::security::huks::huks::HuksReturnResult, ::taihe::error> exportKeyItemRetpromise(
+    ::taihe::string_view keyAlias, ::ohos::security::huks::huks::HuksOptions const &options)
+{
+    return exportKeyItemSync(keyAlias, options);
+}
+
 bool isKeyItemExistSync(taihe::string_view keyAlias, huks::HuksOptions const &options)
 {
     BlobGuard<0> ctxKeyAlias;
@@ -391,6 +461,18 @@ bool isKeyItemExistSync(taihe::string_view keyAlias, huks::HuksOptions const &op
         ret = HksKeyExist(&ctxKeyAlias.data, ctxParamSetIn.data);
     } while (0);
     return GetKeyExistBool(ret);
+}
+
+::taihe::expected<bool, ::taihe::error> isKeyItemExistAsync(::taihe::string_view keyAlias,
+                                                            ::ohos::security::huks::huks::HuksOptions const &options)
+{
+    return isKeyItemExistSync(keyAlias, options);
+}
+
+::taihe::expected<bool, ::taihe::error> isKeyItemExistRetpromise(
+    ::taihe::string_view keyAlias, ::ohos::security::huks::huks::HuksOptions const &options)
+{
+    return isKeyItemExistSync(keyAlias, options);
 }
 
 huks::HuksSessionHandle initSessionSync(taihe::string_view keyAlias, huks::HuksOptions const &options)
@@ -412,6 +494,18 @@ huks::HuksSessionHandle initSessionSync(taihe::string_view keyAlias, huks::HuksO
         ret = HksInit(&ctxKeyAlias.data, ctxParamSetIn.data, &ctxHandle.data, &ctxToken.data);
     } while (0);
     return GetSessionHandle(ret, ctxHandle.data, ctxToken.data);
+}
+
+::taihe::expected<::ohos::security::huks::huks::HuksSessionHandle, ::taihe::error> initSessionAsync(
+    ::taihe::string_view keyAlias, ::ohos::security::huks::huks::HuksOptions const &options)
+{
+    return initSessionSync(keyAlias, options);
+}
+
+::taihe::expected<::ohos::security::huks::huks::HuksSessionHandle, ::taihe::error> initSessionRetpromise(
+    ::taihe::string_view keyAlias, ::ohos::security::huks::huks::HuksOptions const &options)
+{
+    return initSessionSync(keyAlias, options);
 }
 
 huks::HuksReturnResult updateSessionSync(int64_t handle, huks::HuksOptions const &options,
@@ -442,11 +536,30 @@ huks::HuksReturnResult updateSessionSyncWithoutToken(int64_t handle, huks::HuksO
     return updateSessionSync(handle, options, opt_token);
 }
 
+::taihe::expected<::ohos::security::huks::huks::HuksReturnResult, ::taihe::error> updateSessionAsyncWithoutToken(
+    int64_t handle, ::ohos::security::huks::huks::HuksOptions const &options)
+{
+    return updateSessionSyncWithoutToken(handle, options);
+}
+
 huks::HuksReturnResult updateSessionSyncWithToken(int64_t handle, huks::HuksOptions const &options,
                                                   taihe::array_view<uint8_t> token)
 {
     taihe::optional<taihe::array<uint8_t>> opt_token(std::in_place, token);
     return updateSessionSync(handle, options, opt_token);
+}
+
+::taihe::expected<::ohos::security::huks::huks::HuksReturnResult, ::taihe::error> updateSessionAsyncWithToken(
+    int64_t handle, ::ohos::security::huks::huks::HuksOptions const &options, ::taihe::array_view<uint8_t> token)
+{
+    return updateSessionSyncWithToken(handle, options, token);
+}
+
+::taihe::expected<::ohos::security::huks::huks::HuksReturnResult, ::taihe::error> updateSessionRetpromise(
+    int64_t handle, ::ohos::security::huks::huks::HuksOptions const &options,
+    ::taihe::optional_view<::taihe::array<uint8_t>> token)
+{
+    return updateSessionSync(handle, options, token);
 }
 
 huks::HuksReturnResult finishSessionSync(int64_t handle, huks::HuksOptions const &options,
@@ -477,11 +590,30 @@ huks::HuksReturnResult finishSessionSyncWithoutToken(int64_t handle, huks::HuksO
     return finishSessionSync(handle, options, opt_token);
 }
 
+::taihe::expected<::ohos::security::huks::huks::HuksReturnResult, ::taihe::error> finishSessionAsyncWithoutToken(
+    int64_t handle, ::ohos::security::huks::huks::HuksOptions const &options)
+{
+    return finishSessionSyncWithoutToken(handle, options);
+}
+
 huks::HuksReturnResult finishSessionSyncWithToken(int64_t handle, huks::HuksOptions const &options,
                                                   taihe::array_view<uint8_t> token)
 {
     taihe::optional<taihe::array<uint8_t>> opt_token(std::in_place, token);
     return finishSessionSync(handle, options, opt_token);
+}
+
+::taihe::expected<::ohos::security::huks::huks::HuksReturnResult, ::taihe::error> finishSessionAsyncWithToken(
+    int64_t handle, ::ohos::security::huks::huks::HuksOptions const &options, ::taihe::array_view<uint8_t> token)
+{
+    return finishSessionSyncWithToken(handle, options, token);
+}
+
+::taihe::expected<::ohos::security::huks::huks::HuksReturnResult, ::taihe::error> finishSessionRetpromise(
+    int64_t handle, ::ohos::security::huks::huks::HuksOptions const &options,
+    ::taihe::optional_view<::taihe::array<uint8_t>> token)
+{
+    return finishSessionSync(handle, options, token);
 }
 
 void abortSessionSync(int64_t handle, huks::HuksOptions const &options)
@@ -497,6 +629,20 @@ void abortSessionSync(int64_t handle, huks::HuksOptions const &options)
         ret = HksAbort(&ctxHandle.data, ctxParamSetIn.data);
     } while (0);
     return GetVoid(ret);
+}
+
+::taihe::expected<void, ::taihe::error> abortSessionAsync(int64_t handle,
+                                                          ::ohos::security::huks::huks::HuksOptions const &options)
+{
+    abortSessionSync(handle, options);
+    return {};
+}
+
+::taihe::expected<void, ::taihe::error> abortSessionRetpromise(int64_t handle,
+                                                               ::ohos::security::huks::huks::HuksOptions const &options)
+{
+    abortSessionSync(handle, options);
+    return {};
 }
 
 huks::HuksReturnResult attestKeyItemSync(taihe::string_view keyAlias, huks::HuksOptions const &options)
@@ -515,6 +661,18 @@ huks::HuksReturnResult attestKeyItemSync(taihe::string_view keyAlias, huks::Huks
     return GetReturnResult(ret, ctxCC.data);
 }
 
+::taihe::expected<::ohos::security::huks::huks::HuksReturnResult, ::taihe::error> attestKeyItemAsync(
+    ::taihe::string_view keyAlias, ::ohos::security::huks::huks::HuksOptions const &options)
+{
+    return attestKeyItemSync(keyAlias, options);
+}
+
+::taihe::expected<::ohos::security::huks::huks::HuksReturnResult, ::taihe::error> attestKeyItemRetpromise(
+    ::taihe::string_view keyAlias, ::ohos::security::huks::huks::HuksOptions const &options)
+{
+    return attestKeyItemSync(keyAlias, options);
+}
+
 huks::HuksReturnResult anonAttestKeyItemSync(taihe::string_view keyAlias, huks::HuksOptions const &options)
 {
     BlobGuard<0> ctxKeyAlias;
@@ -530,23 +688,46 @@ huks::HuksReturnResult anonAttestKeyItemSync(taihe::string_view keyAlias, huks::
     } while (0);
     return GetReturnResult(ret, ctxCC.data);
 }
+
+::taihe::expected<::ohos::security::huks::huks::HuksReturnResult, ::taihe::error> anonAttestKeyItemAsync(
+    ::taihe::string_view keyAlias, ::ohos::security::huks::huks::HuksOptions const &options)
+{
+    return anonAttestKeyItemSync(keyAlias, options);
+}
+
+::taihe::expected<::ohos::security::huks::huks::HuksReturnResult, ::taihe::error> anonAttestKeyItemRetpromise(
+    ::taihe::string_view keyAlias, ::ohos::security::huks::huks::HuksOptions const &options)
+{
+    return anonAttestKeyItemSync(keyAlias, options);
+}
 }  // namespace
 
 // Since these macros are auto-generate, lint will cause false positive.
-TH_EXPORT_CPP_API_generateKeyItemSync(generateKeyItemSync);
-TH_EXPORT_CPP_API_deleteKeyItemSync(deleteKeyItemSync);
-TH_EXPORT_CPP_API_importKeyItemSync(importKeyItemSync);
-TH_EXPORT_CPP_API_importWrappedKeyItemSync(importWrappedKeyItemSync);
-TH_EXPORT_CPP_API_exportKeyItemSync(exportKeyItemSync);
-TH_EXPORT_CPP_API_isKeyItemExistSync(isKeyItemExistSync);
-TH_EXPORT_CPP_API_initSessionSync(initSessionSync);
-TH_EXPORT_CPP_API_updateSessionSyncWithoutToken(updateSessionSyncWithoutToken);
-TH_EXPORT_CPP_API_updateSessionSyncWithToken(updateSessionSyncWithToken);
-TH_EXPORT_CPP_API_updateSessionSync(updateSessionSync);
-TH_EXPORT_CPP_API_finishSessionSyncWithoutToken(finishSessionSyncWithoutToken);
-TH_EXPORT_CPP_API_finishSessionSyncWithToken(finishSessionSyncWithToken);
-TH_EXPORT_CPP_API_finishSessionSync(finishSessionSync);
-TH_EXPORT_CPP_API_abortSessionSync(abortSessionSync);
-TH_EXPORT_CPP_API_attestKeyItemSync(attestKeyItemSync);
-TH_EXPORT_CPP_API_anonAttestKeyItemSync(anonAttestKeyItemSync);
+// NOLINTBEGIN
+TH_EXPORT_CPP_API_generateKeyItemAsync(generateKeyItemAsync);
+TH_EXPORT_CPP_API_generateKeyItemRetpromise(generateKeyItemRetpromise);
+TH_EXPORT_CPP_API_deleteKeyItemAsync(deleteKeyItemAsync);
+TH_EXPORT_CPP_API_deleteKeyItemRetpromise(deleteKeyItemRetpromise);
+TH_EXPORT_CPP_API_importKeyItemAsync(importKeyItemAsync);
+TH_EXPORT_CPP_API_importKeyItemRetpromise(importKeyItemRetpromise);
+TH_EXPORT_CPP_API_importWrappedKeyItemAsync(importWrappedKeyItemAsync);
+TH_EXPORT_CPP_API_importWrappedKeyItemRetpromise(importWrappedKeyItemRetpromise);
+TH_EXPORT_CPP_API_exportKeyItemAsync(exportKeyItemAsync);
+TH_EXPORT_CPP_API_exportKeyItemRetpromise(exportKeyItemRetpromise);
+TH_EXPORT_CPP_API_isKeyItemExistAsync(isKeyItemExistAsync);
+TH_EXPORT_CPP_API_isKeyItemExistRetpromise(isKeyItemExistRetpromise);
+TH_EXPORT_CPP_API_initSessionAsync(initSessionAsync);
+TH_EXPORT_CPP_API_initSessionRetpromise(initSessionRetpromise);
+TH_EXPORT_CPP_API_updateSessionAsyncWithoutToken(updateSessionAsyncWithoutToken);
+TH_EXPORT_CPP_API_updateSessionAsyncWithToken(updateSessionAsyncWithToken);
+TH_EXPORT_CPP_API_updateSessionRetpromise(updateSessionRetpromise);
+TH_EXPORT_CPP_API_finishSessionAsyncWithoutToken(finishSessionAsyncWithoutToken);
+TH_EXPORT_CPP_API_finishSessionAsyncWithToken(finishSessionAsyncWithToken);
+TH_EXPORT_CPP_API_finishSessionRetpromise(finishSessionRetpromise);
+TH_EXPORT_CPP_API_abortSessionAsync(abortSessionAsync);
+TH_EXPORT_CPP_API_abortSessionRetpromise(abortSessionRetpromise);
+TH_EXPORT_CPP_API_attestKeyItemAsync(attestKeyItemAsync);
+TH_EXPORT_CPP_API_attestKeyItemRetpromise(attestKeyItemRetpromise);
+TH_EXPORT_CPP_API_anonAttestKeyItemAsync(anonAttestKeyItemAsync);
+TH_EXPORT_CPP_API_anonAttestKeyItemRetpromise(anonAttestKeyItemRetpromise);
 // NOLINTEND
