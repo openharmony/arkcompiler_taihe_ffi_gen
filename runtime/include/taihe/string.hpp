@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TAIHE_STRING_HPP
+#define TAIHE_STRING_HPP
 
 #include <taihe/string.abi.h>
 #include <taihe/common.hpp>
@@ -275,3 +276,5 @@ struct std::hash<taihe::string> {
     return std::hash<std::string_view>()(std::string_view(sv));
   }
 };
+
+#endif  // TAIHE_STRING_HPP
