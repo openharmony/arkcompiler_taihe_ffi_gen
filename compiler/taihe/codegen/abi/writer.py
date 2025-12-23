@@ -30,12 +30,16 @@ class CSourceWriter(FileWriter):
             f.write('#pragma clang diagnostic ignored "-Weverything"\n')
             f.write('#pragma clang diagnostic warning "-Wextra"\n')
             f.write('#pragma clang diagnostic warning "-Wall"\n')
+            f.write("\n")
         for header in self.headers:
             f.write(f'#include "{header}"\n')
+        if self.headers:
+            f.write("\n")
 
     @override
     def write_epilogue(self, f: TextIO):
         if self.desc.kind != FileKind.TEMPLATE:
+            f.write("\n")
             f.write("#pragma clang diagnostic pop\n")
 
     def add_include(self, *headers: str):
@@ -46,7 +50,32 @@ class CSourceWriter(FileWriter):
 class CHeaderWriter(CSourceWriter):
     """Represents a C or C++ header file."""
 
+    def __init__(
+        self,
+        om: OutputManager,
+        relative_path: str,
+        file_kind: FileKind,
+    ):
+        super().__init__(om, relative_path, file_kind)
+
+    @property
+    def guard_macro(self) -> str:
+        path = self.desc.relative_path.split("/")
+        try:
+            index = path.index("include") + 1
+        except ValueError:
+            index = 0
+        return "_".join(path[index:]).replace(".", "_").replace("/", "_").upper()
+
     @override
     def write_prologue(self, f: TextIO):
-        f.write("#pragma once\n")
+        f.write(f"#ifndef {self.guard_macro}\n")
+        f.write(f"#define {self.guard_macro}\n")
+        f.write("\n")
         super().write_prologue(f)
+
+    @override
+    def write_epilogue(self, f: TextIO):
+        super().write_epilogue(f)
+        f.write("\n")
+        f.write(f"#endif  // {self.guard_macro}\n")

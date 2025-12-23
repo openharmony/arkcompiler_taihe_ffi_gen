@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TAIHE_MAP_ABI_H
+#define TAIHE_MAP_ABI_H
 
 #include <taihe/common.h>
 
@@ -17,3 +18,5 @@ struct TMapHandle {
 struct TMap {
   TMapHandle *m_handle;
 };
+
+#endif  // TAIHE_MAP_ABI_H

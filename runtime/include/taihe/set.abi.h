@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TAIHE_SET_ABI_H
+#define TAIHE_SET_ABI_H
 
 #include <taihe/common.h>
 
@@ -17,3 +18,5 @@ struct TSetHandle {
 struct TSet {
   TSetHandle *m_handle;
 };
+
+#endif  // TAIHE_SET_ABI_H

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TAIHE_VECTOR_HPP
+#define TAIHE_VECTOR_HPP
 
 #include <taihe/vector.abi.h>
 #include <taihe/common.hpp>
@@ -192,3 +193,5 @@ struct std::hash<taihe::vector<T>> {
 
 #undef VEC_GROWTH_FACTOR
 #undef VEC_DEFAULT_CAPACITY
+
+#endif  // TAIHE_VECTOR_HPP

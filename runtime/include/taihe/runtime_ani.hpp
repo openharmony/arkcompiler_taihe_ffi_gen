@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TAIHE_RUNTIME_ANI_HPP
+#define TAIHE_RUNTIME_ANI_HPP
 
 #if __has_include(<ani.h>)
 #include <ani.h>
@@ -60,3 +61,5 @@ public:
   }
 };
 }  // namespace taihe
+
+#endif  // TAIHE_RUNTIME_ANI_HPP
