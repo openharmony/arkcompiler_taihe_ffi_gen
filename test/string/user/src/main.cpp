@@ -51,4 +51,5 @@ int main()
     string::io::print("b[n:] = ");
     string::io::println(b_1);
 }
+
 // NOLINTEND

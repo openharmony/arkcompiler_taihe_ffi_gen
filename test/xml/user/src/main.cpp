@@ -86,4 +86,5 @@ int main(int argc, char **argv)
                                            make_holder<CallbackAttribute, callback<bool(string_view, string_view)>>()},
     });
 }
+
 // NOLINTEND
