@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "record_test.impl.hpp"
 
 #include "record_test.Color.proj.1.hpp"
@@ -686,7 +688,6 @@ map<string, map<string, string>> Mapfunc51(optional_view<map<string, string>> op
 }  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_MakeCpu(MakeCpu);
 TH_EXPORT_CPP_API_GetCpuSize(GetCpuSize);
 TH_EXPORT_CPP_API_GetASize(GetASize);

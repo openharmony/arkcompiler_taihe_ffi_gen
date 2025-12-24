@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "struct_test.impl.hpp"
 #include "stdexcept"
 #include "struct_test.proj.hpp"
@@ -212,7 +214,6 @@ public:
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetStructD(GetStructD);
 TH_EXPORT_CPP_API_GetStructE(GetStructE);
 TH_EXPORT_CPP_API_GetStructF(GetStructF);

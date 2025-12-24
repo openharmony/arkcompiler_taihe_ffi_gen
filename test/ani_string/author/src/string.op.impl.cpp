@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "taihe/string.hpp"
 
 #include "stdexcept"
@@ -139,7 +141,6 @@ string concatString2(string_view s, int32_t n, array_view<string> sArr, bool b, 
 }  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_concatString(concatString);
 TH_EXPORT_CPP_API_makeString(makeString);
 TH_EXPORT_CPP_API_split(split);

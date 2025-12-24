@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "hello.impl.hpp"
 #include "hello.proj.hpp"
 #include "stdexcept"
@@ -109,6 +111,5 @@ public:
 }  // namespace
 
 // Since these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_newTestInterface(newTestInterface);
 // NOLINTEND

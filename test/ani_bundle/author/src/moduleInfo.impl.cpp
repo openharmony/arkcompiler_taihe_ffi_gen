@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "moduleInfo.impl.hpp"
 #include "moduleInfo.proj.hpp"
 #include "stdexcept"
@@ -50,6 +52,5 @@ ModuleInfo GetModuleInfo()
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetModuleInfo(GetModuleInfo);
 // NOLINTEND

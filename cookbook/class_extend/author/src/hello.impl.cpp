@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "hello.impl.hpp"
 #include "hello.proj.hpp"
 #include "stdexcept"
@@ -138,7 +140,6 @@ public:
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_createUnifiedRecord_noparam_th(createUnifiedRecord_noparam_th);
 TH_EXPORT_CPP_API_createText_noparam_th(createText_noparam_th);
 TH_EXPORT_CPP_API_createPlainText_noparam_th(createPlainText_noparam_th);

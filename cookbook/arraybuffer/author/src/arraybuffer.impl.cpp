@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "arraybuffer.impl.hpp"
 
 #include "stdexcept"
@@ -34,6 +36,5 @@ int32_t convert2Int(array_view<uint8_t> a)
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_convert2Int(convert2Int);
 // NOLINTEND

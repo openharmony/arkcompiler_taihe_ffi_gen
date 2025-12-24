@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "multiple_inherit.impl.hpp"
 #include <iostream>
 #include "multiple_inherit.proj.hpp"
@@ -132,7 +134,6 @@ private:
 }  // namespace
 
 // Since these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_createIColorable(createIColorable);
 TH_EXPORT_CPP_API_createIShape(createIShape);
 TH_EXPORT_CPP_API_createIRect(createIRect);

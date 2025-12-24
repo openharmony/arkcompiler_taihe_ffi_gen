@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "taihe/array.hpp"
 
 #include <algorithm>
@@ -654,7 +656,6 @@ array<array<::array_test::Data>> MakeStructArrayArray(string_view a, string_view
 }  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_SumArray(SumArray);
 TH_EXPORT_CPP_API_GetArrayValue(GetArrayValue);
 TH_EXPORT_CPP_API_ToStingArray(ToStingArray);

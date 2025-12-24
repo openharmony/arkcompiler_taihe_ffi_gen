@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "arraybuffer.impl.hpp"
 
 #include <cstdint>
@@ -264,7 +266,6 @@ array<uint8_t> DoubleBufferToUint32Array(array_view<uint8_t> nums)
 }  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_SumArrayU8(SumArrayU8);
 TH_EXPORT_CPP_API_GetArrayBuffer(GetArrayBuffer);
 TH_EXPORT_CPP_API_DoubleArrayBuffer(DoubleArrayBuffer);

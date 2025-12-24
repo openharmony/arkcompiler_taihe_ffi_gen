@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "void_func.mytest.impl.hpp"
 
 #include "stdexcept"
@@ -164,7 +166,6 @@ void Myfunc16(optional_view<int16_t> option1, ::void_func::mytest::BarTest const
 }  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_Myfunc1(Myfunc1);
 TH_EXPORT_CPP_API_Myfunc2(Myfunc2);
 TH_EXPORT_CPP_API_Myfunc3(Myfunc3);

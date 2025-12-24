@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "foo.DerivedMethodClass.impl.hpp"
 
 taihe::string DerivedMethodClassImpl::derived()
@@ -34,3 +36,5 @@ taihe::string DerivedMethodClassImpl::bar()
 {
     return "bar";
 }
+
+// NOLINTEND

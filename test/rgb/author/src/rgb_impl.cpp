@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include <cstddef>
 #include <iomanip>
 #include <iostream>
@@ -212,7 +214,6 @@ callback<callback<string(string_view)>(string_view)> currying(callback_view<stri
 }
 
 // Since these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_copyColor(copyColor);
 TH_EXPORT_CPP_API_makeRectangle(makeRectangle);
 TH_EXPORT_CPP_API_makeColoredRectangle(makeColoredRectangle);

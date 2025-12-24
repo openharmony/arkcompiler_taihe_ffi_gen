@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #ifndef PARSER_IMPL_HPP
 #define PARSER_IMPL_HPP
 
@@ -112,3 +114,4 @@ private:
 };
 
 #endif  // PARSER_IMPL_HPP
+// NOLINTEND

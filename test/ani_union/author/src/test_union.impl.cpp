@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "test_union.impl.hpp"
 
 #include <numeric>
@@ -414,7 +416,6 @@ string PrintUnion(::test_union::union_primitive const &data)
 }  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_PrintUnion(PrintUnion);
 TH_EXPORT_CPP_API_MakeUnion(MakeUnion);
 TH_EXPORT_CPP_API_GetInterface(GetInterface);

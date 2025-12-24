@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "inherit.impl.hpp"
 #include <iostream>
 #include "inherit.proj.hpp"
@@ -85,6 +87,5 @@ CreditCard makeCreditCard(double initAmount)
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_makeCreditCard(makeCreditCard);
 // NOLINTEND

@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #ifndef METADATA_H
 #define METADATA_H
 
@@ -69,3 +71,4 @@ public:
 };
 
 #endif
+// NOLINTEND

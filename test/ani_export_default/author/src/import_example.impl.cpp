@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "import_example.impl.hpp"
 #include <iostream>
 #include "import_example.proj.hpp"
@@ -74,7 +76,6 @@ public:
 }  // namespace
 
 // Since these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_ImportEnumFunc(ImportEnumFunc);
 TH_EXPORT_CPP_API_ImportIfaceFunc(ImportIfaceFunc);
 TH_EXPORT_CPP_API_ImportNsFunc(ImportNsFunc);

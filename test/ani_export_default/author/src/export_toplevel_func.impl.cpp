@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "export_toplevel_func.impl.hpp"
 #include <iostream>
 #include "export_toplevel_func.proj.hpp"
@@ -29,6 +31,5 @@ void ToplevelFunc()
 }  // namespace
 
 // Since these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_ToplevelFunc(ToplevelFunc);
 // NOLINTEND

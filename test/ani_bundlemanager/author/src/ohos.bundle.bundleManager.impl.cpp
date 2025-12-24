@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "ohos.bundle.bundleManager.impl.hpp"
 #include "ohos.bundle.bundleManager.proj.hpp"
 #include "stdexcept"
@@ -24,3 +26,5 @@ using namespace ohos::bundle::bundleManager;
 namespace {
 // To be implemented.
 }  // namespace
+
+// NOLINTEND

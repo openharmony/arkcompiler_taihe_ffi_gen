@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "lib_test.impl.hpp"
 #include <iostream>
 #include "lib_test.proj.hpp"
@@ -55,7 +57,6 @@ void UseIfaceA(::lib_test::weak::IfaceA obj)
 }  // namespace
 
 // Since these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_MakeIfaceA(MakeIfaceA);
 TH_EXPORT_CPP_API_UseIfaceA(UseIfaceA);
 // NOLINTEND

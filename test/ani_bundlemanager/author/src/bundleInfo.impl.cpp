@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "bundleInfo.impl.hpp"
 #include "bundleInfo.proj.hpp"
 #include "stdexcept"
@@ -232,7 +234,6 @@ AppCloneIdentity GetAppCloneIdentity()
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetBundleInfo(GetBundleInfo);
 TH_EXPORT_CPP_API_GetReqPermissionDetail(GetReqPermissionDetail);
 TH_EXPORT_CPP_API_GetIUsedScene(GetIUsedScene);

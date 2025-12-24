@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "bigint_new.impl.hpp"
 #include <cstdint>
 #include "bigint_new.MyUnion.proj.0.hpp"
@@ -151,7 +153,6 @@ void ShowMyUnion(::bigint_new::MyUnion const &u)
 
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_ProcessBigInt(ProcessBigInt);
 TH_EXPORT_CPP_API_PrintBigInt(PrintBigInt);
 TH_EXPORT_CPP_API_CreateBigInt(CreateBigInt);

@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "override.impl.hpp"
 
 #include <iostream>
@@ -51,7 +53,6 @@ void logLifecycle(string_view str)
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_getUIAbility(getUIAbility);
 TH_EXPORT_CPP_API_useUIAbility(useUIAbility);
 TH_EXPORT_CPP_API_logLifecycle(logLifecycle);

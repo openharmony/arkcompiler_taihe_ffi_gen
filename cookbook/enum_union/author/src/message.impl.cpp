@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "message.impl.hpp"
 #include <iostream>
 #include "message.proj.hpp"
@@ -47,7 +49,6 @@ void processMessage(Message const &msg)
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_createTextMessage(createTextMessage);
 TH_EXPORT_CPP_API_createNumberMessage(createNumberMessage);
 TH_EXPORT_CPP_API_processMessage(processMessage);

@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "string.io.user.hpp"
 #include "string.op.user.hpp"
 
@@ -49,3 +51,4 @@ int main()
     string::io::print("b[n:] = ");
     string::io::println(b_1);
 }
+// NOLINTEND

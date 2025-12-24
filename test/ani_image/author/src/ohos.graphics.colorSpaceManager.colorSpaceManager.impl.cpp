@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "ohos.graphics.colorSpaceManager.colorSpaceManager.impl.hpp"
 #include "ohos.graphics.colorSpaceManager.colorSpaceManager.proj.hpp"
 #include "stdexcept"
@@ -58,5 +60,4 @@ private:
 }  // namespace
 
 // Since these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 // NOLINTEND

@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "optional.impl.hpp"
 #include "optional.ExampleInterface.proj.2.hpp"
 #include "optional.Union.proj.1.hpp"
@@ -217,7 +219,6 @@ void PrintTestInterfaceArraybuffer(::optional::weak::ExampleInterface testiface)
 }  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetInterface(GetInterface);
 TH_EXPORT_CPP_API_PrintTestInterfaceName(PrintTestInterfaceName);
 TH_EXPORT_CPP_API_PrintTestInterfaceNumberi8(PrintTestInterfaceNumberi8);

@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "poly.impl.hpp"
 #include <iostream>
 #include "poly.proj.hpp"
@@ -168,7 +170,6 @@ public:
 }  // namespace
 
 // Since these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_MakeAnimal(MakeAnimal);
 TH_EXPORT_CPP_API_MakeDog(MakeDog);
 TH_EXPORT_CPP_API_MakeCat(MakeCat);
