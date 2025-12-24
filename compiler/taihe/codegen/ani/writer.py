@@ -58,27 +58,20 @@ class KeepNaming(Naming):
         return name[0].lower() + name[1:]
 
 
-class StsWriter(FileWriter):
-    """Represents a static type script (sts) file."""
+ETS_DEFAULT_INDENT = "    "
+ETS_COMMENT_PREFIX = "// "
 
-    def __init__(
-        self,
-        om: OutputManager,
-        relative_path: str,
-        file_kind: FileKind,
-    ):
-        super().__init__(
-            om,
-            relative_path=relative_path,
-            file_kind=file_kind,
-            default_indent="    ",
-            comment_prefix="// ",
-        )
+
+class ArkTsImportManager:
+    """A mixin class that manages ArkTS import statements."""
+
+    def __init__(self, *, is_static: bool = True):
         self.import_dict: dict[str, tuple[str, str | None]] = {}
+        self.is_static = is_static
 
-    @override
-    def write_prologue(self, f: TextIO):
-        f.write('"use static";\n')
+    def gen_prologue(self):
+        if self.is_static:
+            yield '"use static";'
         for import_name, decl_pair in self.import_dict.items():
             module_path, decl_name = decl_pair
             if decl_name is None:
@@ -89,7 +82,7 @@ class StsWriter(FileWriter):
                 import_str = f"{{{decl_name}}}"
             else:
                 import_str = f"{{{decl_name} as {import_name}}}"
-            f.write(f"import {import_str} from '{module_path}';\n")
+            yield f"import {import_str} from '{module_path}';"
 
     def add_import_module(
         self,
@@ -126,3 +119,29 @@ class StsWriter(FileWriter):
             raise ValueError(
                 f"Duplicate import for {import_name!r}: {old_pair} vs {new_pair}"
             )
+
+
+class StsWriter(FileWriter, ArkTsImportManager):
+    """Represents a static type script (sts) file."""
+
+    def __init__(
+        self,
+        om: OutputManager,
+        relative_path: str,
+        file_kind: FileKind,
+        *,
+        is_static: bool = True,
+    ):
+        super().__init__(
+            om,
+            relative_path=relative_path,
+            file_kind=file_kind,
+            default_indent=ETS_DEFAULT_INDENT,
+            comment_prefix=ETS_COMMENT_PREFIX,
+        )
+        ArkTsImportManager.__init__(self, is_static=is_static)
+
+    @override
+    def write_prologue(self, f: TextIO):
+        for line in self.gen_prologue():
+            f.write(f"{line}\n")
