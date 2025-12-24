@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "session_test.impl.hpp"
 
 #include <cstdint>
@@ -212,7 +214,6 @@ public:
 }  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_getIfaceD(getIfaceD);
 TH_EXPORT_CPP_API_getIfaceE(getIfaceE);
 TH_EXPORT_CPP_API_getSession(getSession);

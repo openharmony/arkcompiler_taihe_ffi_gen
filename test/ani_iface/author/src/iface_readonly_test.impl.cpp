@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "iface_readonly_test.impl.hpp"
 
 #include "iface_readonly_test.Noo.proj.2.hpp"
@@ -62,7 +64,6 @@ string PrintNooName(::iface_readonly_test::weak::Noo noo)
 }  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetNooIface(GetNooIface);
 TH_EXPORT_CPP_API_PrintNooName(PrintNooName);
 // NOLINTEND

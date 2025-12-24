@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "module2.bar.impl.hpp"
 #include "module2.bar.proj.hpp"
 #include "stdexcept"
@@ -27,6 +29,5 @@ void barFunc()
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_barFunc(barFunc);
 // NOLINTEND

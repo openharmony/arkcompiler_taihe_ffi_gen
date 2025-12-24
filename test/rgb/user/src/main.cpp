@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include <cmath>
 #include <cstddef>
 #include <iomanip>
@@ -497,3 +499,4 @@ int main()
 
     return tester.report();
 }
+// NOLINTEND

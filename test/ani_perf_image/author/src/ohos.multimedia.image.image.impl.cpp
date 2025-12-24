@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "ohos.multimedia.image.image.impl.hpp"
 #include "ohos.multimedia.image.image.proj.hpp"
 #include "stdexcept"
@@ -48,6 +50,5 @@ public:
 }  // namespace
 
 // Since these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_CreateImageSource(CreateImageSource);
 // NOLINTEND

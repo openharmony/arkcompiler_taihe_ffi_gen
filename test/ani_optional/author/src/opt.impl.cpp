@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "opt.impl.hpp"
 #include <iostream>
 #include "opt.ReturnResult.proj.1.hpp"
@@ -153,7 +155,6 @@ void CallCallback(bool second,
 }  // namespace
 
 // Since these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_ShowOptionalInt(ShowOptionalInt);
 TH_EXPORT_CPP_API_MakeOptionalInt(MakeOptionalInt);
 TH_EXPORT_CPP_API_MakeOptionalArray(MakeOptionalArray);

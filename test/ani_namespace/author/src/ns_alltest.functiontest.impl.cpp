@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "ns_alltest.functiontest.impl.hpp"
 
 #include <iostream>
@@ -1237,7 +1239,6 @@ bool BaseFunctionTest60(map_view<int64_t, bool> param1)
 }  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_BaseFunctionTest1(BaseFunctionTest1);
 TH_EXPORT_CPP_API_BaseFunctionTest2(BaseFunctionTest2);
 TH_EXPORT_CPP_API_BaseFunctionTest3(BaseFunctionTest3);

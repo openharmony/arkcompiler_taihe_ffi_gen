@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "nova.impl.hpp"
 #include "nova.proj.hpp"
 #include "stdexcept"
@@ -49,7 +51,6 @@ void testNova(weak::NovaType nova)
 }  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_testBar(testBar);
 TH_EXPORT_CPP_API_testPura(testPura);
 TH_EXPORT_CPP_API_testNova(testNova);

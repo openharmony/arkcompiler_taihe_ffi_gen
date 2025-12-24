@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "class_extends.impl.hpp"
 
 #include "class_extends.ApplicationContext.proj.2.hpp"
@@ -186,7 +188,6 @@ public:
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_makeBaseContext(makeBaseContext);
 TH_EXPORT_CPP_API_makeContext(makeContext);
 TH_EXPORT_CPP_API_makeTestContext(makeTestContext);

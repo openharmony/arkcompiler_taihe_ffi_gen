@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "hapModuleInfo.impl.hpp"
 #include "hapModuleInfo.proj.hpp"
 #include "stdexcept"
@@ -110,6 +112,5 @@ HapModuleInfo GetHapModuleInfo()
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetHapModuleInfo(GetHapModuleInfo);
 // NOLINTEND

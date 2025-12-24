@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "notification.impl.hpp"
 #include <iostream>
 #include "notification.proj.hpp"
@@ -42,6 +44,5 @@ INotificationService makeNotificationService()
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_makeNotificationService(makeNotificationService);
 // NOLINTEND

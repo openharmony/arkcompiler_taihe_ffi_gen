@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "export_namespace.impl.hpp"
 #include <iostream>
 #include "export_namespace.proj.hpp"
@@ -29,6 +31,5 @@ void Bar()
 }  // namespace
 
 // Since these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_Bar(Bar);
 // NOLINTEND

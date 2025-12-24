@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "async.impl.hpp"
 
 #include "async.IStringHolder.proj.2.hpp"
@@ -77,7 +79,6 @@ int32_t addSync(int32_t a, int32_t b)
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_addAsync(addSync);
 TH_EXPORT_CPP_API_addPromise(addSync);
 TH_EXPORT_CPP_API_addSync(addSync);

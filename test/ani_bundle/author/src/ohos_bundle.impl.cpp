@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "ohos_bundle.impl.hpp"
 #include <iomanip>
 #include <iostream>
@@ -146,7 +148,6 @@ void IsApplicationEnabled(string_view bundleName)
 
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetBundleOptions(GetBundleOptions);
 TH_EXPORT_CPP_API_GetBundleInfo(GetBundleInfo);
 TH_EXPORT_CPP_API_GetAbilityInfo(GetAbilityInfo);

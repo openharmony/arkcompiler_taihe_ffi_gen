@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "function_test.impl.hpp"
 
 #include "function_test.Foo.proj.2.hpp"
@@ -133,7 +135,6 @@ void setStaticProperty(int32_t a)
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_static_func_add(static_func_add);
 TH_EXPORT_CPP_API_static_func_sub(static_func_sub);
 TH_EXPORT_CPP_API_getFooCls1(getFooCls1);

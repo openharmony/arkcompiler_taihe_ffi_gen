@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "string.io.impl.hpp"
 
 #include <iostream>
@@ -34,7 +36,6 @@ void ohos_print_str(taihe::string_view pstr)
     }
 }
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_input(ohos_input_str);
 TH_EXPORT_CPP_API_print(ohos_print_str<false>);
 TH_EXPORT_CPP_API_println(ohos_print_str<true>);

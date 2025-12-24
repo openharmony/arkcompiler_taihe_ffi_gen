@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "structext.impl.hpp"
 #include "stdexcept"
 #include "structext.proj.hpp"
@@ -28,6 +30,5 @@ Player addNewPlayer(string_view name)
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_addNewPlayer(addNewPlayer);
 // NOLINTEND

@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "hapModuleInfo.impl.hpp"
 #include <iostream>
 #include "hapModuleInfo.proj.hpp"
@@ -211,7 +213,6 @@ DataItem GetDataItem()
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetHapModuleInfo(GetHapModuleInfo);
 TH_EXPORT_CPP_API_GetDependency(GetDependency);
 TH_EXPORT_CPP_API_GetPreloadItem(GetPreloadItem);

@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "metadata.impl.hpp"
 #include "metadata.h"
 #include "metadata.proj.hpp"
@@ -30,6 +32,5 @@ Metadata GetMetadata()
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetMetadata(GetMetadata);
 // NOLINTEND

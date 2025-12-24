@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "integer.io.impl.hpp"
 
 #include <iostream>
@@ -29,7 +31,6 @@ void ohos_int_output(int32_t n)
     std::cout << n << std::endl;
 }
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_input_i32(ohos_int_input);
 TH_EXPORT_CPP_API_output_i32(ohos_int_output);
 // NOLINTEND

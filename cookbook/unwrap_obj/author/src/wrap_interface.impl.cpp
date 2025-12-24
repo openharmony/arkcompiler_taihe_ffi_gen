@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "wrap_interface.impl.hpp"
 #include "stdexcept"
 #include "taihe/runtime.hpp"
@@ -89,7 +91,6 @@ void useFoo(weak::Foo obj)
 }  // namespace
 
 // Since these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_makeFoo(makeFoo);
 TH_EXPORT_CPP_API_useFoo(useFoo);
 // NOLINTEND

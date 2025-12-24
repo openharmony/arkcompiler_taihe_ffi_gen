@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -532,7 +534,6 @@ huks::HuksReturnResult anonAttestKeyItemSync(taihe::string_view keyAlias, huks::
 }  // namespace
 
 // Since these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_generateKeyItemSync(generateKeyItemSync);
 TH_EXPORT_CPP_API_deleteKeyItemSync(deleteKeyItemSync);
 TH_EXPORT_CPP_API_importKeyItemSync(importKeyItemSync);

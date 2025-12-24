@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "taihe/callback.hpp"
 #include <iostream>
 #include "callbackTest.impl.hpp"
@@ -85,7 +87,6 @@ void TestCbStruct(callback_view<::callbackTest::Data(::callbackTest::Data const 
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_TestCbV(TestCbV);
 TH_EXPORT_CPP_API_TestCbI(TestCbI);
 TH_EXPORT_CPP_API_TestCbS(TestCbS);

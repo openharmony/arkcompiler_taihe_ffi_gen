@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "scene.impl.hpp"
 #include "scene.proj.hpp"
 #include "sceneNodeParameters.h"
@@ -255,7 +257,6 @@ public:
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetSceneResourceFactory(GetSceneResourceFactory);
 TH_EXPORT_CPP_API_GetCamera(GetCamera);
 TH_EXPORT_CPP_API_GetLight(GetLight);

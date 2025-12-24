@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "bigint.impl.hpp"
 #include "bigint.proj.hpp"
 #include "stdexcept"
@@ -122,6 +124,5 @@ taihe::array<uint8_t> processBigInt(taihe::array_view<uint8_t> a)
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_processBigInt(processBigInt);
 // NOLINTEND

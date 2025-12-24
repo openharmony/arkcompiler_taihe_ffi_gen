@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "extends_inject.impl.hpp"
 
 #include "extends_inject.InnerPerson.proj.2.hpp"
@@ -50,6 +52,5 @@ public:
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_makePerson(makePerson);
 // NOLINTEND

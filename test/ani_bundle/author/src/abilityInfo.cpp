@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include <iostream>
 #include "abilityInfo.impl.hpp"
 #include "abilityInfo.proj.hpp"
@@ -147,6 +149,5 @@ AbilityInfo GetAbilityInfo()
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetAbilityInfo(GetAbilityInfo);
 // NOLINTEND

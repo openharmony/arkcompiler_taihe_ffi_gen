@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "ohos.xml.impl.hpp"
 #include "parser_impl.hpp"
 
@@ -29,7 +31,6 @@ XmlSerializer makeXmlSerializerImpl(BufferType const &buffer, optional_view<stri
     throw;
 }
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_makeXmlPullParser(makeXmlPullParserImpl);
 TH_EXPORT_CPP_API_makeXmlSerializer(makeXmlSerializerImpl);
 // NOLINTEND

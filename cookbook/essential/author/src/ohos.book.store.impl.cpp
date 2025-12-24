@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "ohos.book.store.impl.hpp"
 #include <cstdint>
 #include "ohos.book.store.Book.proj.1.hpp"
@@ -199,7 +201,6 @@ array<uintptr_t> GetStringArray()
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_ConstructBook(ConstructBook);
 TH_EXPORT_CPP_API_PrintBook(PrintBook);
 TH_EXPORT_CPP_API_MapBookToYear(MapBookToYear);

@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "test.impl.hpp"
 
 namespace {
@@ -122,7 +124,6 @@ auto converte_iterator(Iterator it, Converter converter)
 }  // namespace
 
 // Since these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_deserializeMap(deserializeMap);
 TH_EXPORT_CPP_API_serializeMap(serializeMap);
 TH_EXPORT_CPP_API_deserializeSet(deserializeSet);

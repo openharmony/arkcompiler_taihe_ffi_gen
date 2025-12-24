@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "callback.impl.hpp"
 
 #include "callback.Person.proj.1.hpp"
@@ -47,7 +49,6 @@ void cb_struct(callback_view<::callback::Person(::callback::Person const &)> f)
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_cb_void_void(cb_void_void);
 TH_EXPORT_CPP_API_cb_i_void(cb_i_void);
 TH_EXPORT_CPP_API_cb_str_str(cb_str_str);

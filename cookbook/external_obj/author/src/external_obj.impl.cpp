@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "external_obj.impl.hpp"
 
 #include "taihe/array.hpp"
@@ -60,7 +62,6 @@ void processPerson(uintptr_t person)
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_is_string(is_string);
 TH_EXPORT_CPP_API_get_objects(get_objects);
 TH_EXPORT_CPP_API_processPerson(processPerson);

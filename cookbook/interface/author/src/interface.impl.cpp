@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "interface.impl.hpp"
 
 #include "interface.ICalculator.proj.2.hpp"
@@ -66,7 +68,6 @@ void restartCalculator(::interface::weak::ICalculator a)
 
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_makeCalculator(makeCalculator);
 TH_EXPORT_CPP_API_restartCalculator(restartCalculator);
 // NOLINTEND

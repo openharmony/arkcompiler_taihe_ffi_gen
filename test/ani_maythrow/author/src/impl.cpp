@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include <iostream>
 #include <maythrow.impl.hpp>
 
@@ -53,7 +55,6 @@ void noReturnBusinessError()
 }  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_maythrow(maythrow_impl);
 TH_EXPORT_CPP_API_getDataMaythrow(getDataMaythrow);
 TH_EXPORT_CPP_API_noReturnMaythrow(noReturnMaythrow);

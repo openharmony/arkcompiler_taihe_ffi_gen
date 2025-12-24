@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "hello.impl.hpp"
 #include <iostream>
 #include "hello.proj.hpp"
@@ -64,7 +66,6 @@ static ::taihe::map<::taihe::string, ::taihe::string> global_rec = [] {
 }  // namespace
 
 // Since these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_setData(setData);
 TH_EXPORT_CPP_API_getData(getData);
 TH_EXPORT_CPP_API_setRecord(setRecord);
