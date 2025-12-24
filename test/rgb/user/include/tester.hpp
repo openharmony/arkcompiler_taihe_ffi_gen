@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include <stdarg.h>
 #include <cstddef>
 #include <iostream>
@@ -80,3 +82,4 @@ public:
         }
     }
 };
+// NOLINTEND

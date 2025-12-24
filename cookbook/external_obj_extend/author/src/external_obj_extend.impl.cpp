@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "external_obj_extend.impl.hpp"
 #include "external_obj_extend.proj.hpp"
 #include "taihe/runtime.hpp"
@@ -41,6 +43,5 @@ public:
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_createMyContext_inner(createMyContext_inner);
 // NOLINTEND

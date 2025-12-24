@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "module1.foo.impl.hpp"
 #include <iostream>
 #include "module1.foo.proj.hpp"
@@ -28,6 +30,5 @@ void fooFunc()
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_fooFunc(fooFunc);
 // NOLINTEND

@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "user.impl.hpp"
 #include "stdexcept"
 #include "taihe/runtime.hpp"
@@ -50,6 +52,5 @@ IUser makeUser(string_view path)
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_makeUser(makeUser);
 // NOLINTEND

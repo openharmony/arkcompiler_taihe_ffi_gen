@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "mate.foo.impl.hpp"
 #include "mate.foo.proj.hpp"
 #include "stdexcept"
@@ -41,7 +43,6 @@ void testPura(::pura::PuraType pura)
 }  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_testMate(testMate);
 TH_EXPORT_CPP_API_testNova(testNova);
 TH_EXPORT_CPP_API_testPura(testPura);

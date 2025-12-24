@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "customizeData.impl.hpp"
 #include <iostream>
 #include "customizeData.proj.hpp"
@@ -71,6 +73,5 @@ CustomizeData GetCustomizeData()
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetCustomizeData(GetCustomizeData);
 // NOLINTEND

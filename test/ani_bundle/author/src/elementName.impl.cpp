@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "elementName.impl.hpp"
 #include "elementName.proj.hpp"
 #include "stdexcept"
@@ -93,6 +95,5 @@ ElementName GetElementName()
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetElementName(GetElementName);
 // NOLINTEND

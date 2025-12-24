@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "inner.impl.hpp"
 
 #include "inner.Color.proj.1.hpp"
@@ -659,7 +661,6 @@ map<string, int8_t> PrintTestInterfaceRecord(::inner::weak::TestInterface testif
 }  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_Primitives_noreturn(Primitives_noreturn);
 TH_EXPORT_CPP_API_Primitives_return(Primitives_return);
 TH_EXPORT_CPP_API_Containers_noreturn(Containers_noreturn);

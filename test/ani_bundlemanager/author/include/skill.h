@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #ifndef SKILL_H
 #define SKILL_H
 
@@ -46,3 +48,4 @@ public:
 };
 
 #endif
+// NOLINTEND

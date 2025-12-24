@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "foo.impl.hpp"
 #include "foo.DerivedMethodClass.impl.hpp"
 #include "stdexcept"
@@ -38,7 +40,6 @@ namespace {
 }  // namespace
 
 // Since these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_makeDerivedMethodClass(makeDerivedMethodClass);
 TH_EXPORT_CPP_API_makeDerivedDataClass(makeDerivedDataClass);
 // NOLINTEND

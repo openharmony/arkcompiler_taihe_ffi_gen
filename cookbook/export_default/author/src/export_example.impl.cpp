@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "export_example.impl.hpp"
 #include "export_example.proj.hpp"
 #include "stdexcept"
@@ -23,5 +25,4 @@ namespace {
 }  // namespace
 
 // Since these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 // NOLINTEND

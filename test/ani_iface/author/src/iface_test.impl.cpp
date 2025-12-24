@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "iface_test.impl.hpp"
 
 #include "iface_test.Foo.proj.2.hpp"
@@ -273,7 +275,6 @@ void CopyIBase(::iface_test::weak::IBase a, ::iface_test::weak::IBase b)
 
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetFooIface(GetFooIface);
 TH_EXPORT_CPP_API_PrintFooName(PrintFooName);
 TH_EXPORT_CPP_API_GetBaseFun(GetBaseFun);

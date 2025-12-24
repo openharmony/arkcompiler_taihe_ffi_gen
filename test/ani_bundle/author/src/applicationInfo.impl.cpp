@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "applicationInfo.impl.hpp"
 #include <iostream>
 #include "applicationInfo.proj.hpp"
@@ -137,6 +139,5 @@ ApplicationInfo GetApplicationInfo()
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetApplicationInfo(GetApplicationInfo);
 // NOLINTEND

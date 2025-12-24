@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "keep_name_test.impl.hpp"
 #include "keep_name_test.proj.hpp"
 
@@ -92,7 +94,6 @@ string PrintFooName(::keep_name_test::weak::Foo foo)
 }  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetFooIface(GetFooIface);
 TH_EXPORT_CPP_API_PrintFooName(PrintFooName);
 TH_EXPORT_CPP_API_GetIBase(GetIBase);

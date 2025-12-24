@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "bar.impl.hpp"
 #include "bar.TypedArray1.proj.0.hpp"
 #include "bar.TypedArray1.proj.1.hpp"
@@ -950,7 +952,6 @@ void ShowMyUnion(::bar::MyUnion const &u)
 }  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_SumUint8Array(SumUint8Array);
 TH_EXPORT_CPP_API_NewUint8Array(NewUint8Array);
 TH_EXPORT_CPP_API_SumUint16Array(SumUint16Array);

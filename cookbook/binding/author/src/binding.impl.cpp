@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "binding.impl.hpp"
 
 #include "binding.Color.proj.1.hpp"
@@ -29,6 +31,5 @@ namespace {
 
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_convert_color(convert_color);
 // NOLINTEND

@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "ui_user.impl.hpp"
 #include <iostream>
 #include "stdexcept"
@@ -143,6 +145,5 @@ void RunNativeBusiness(::ui::weak::AntUserUIProvider ui, ::ui::AntUserDialogBody
 }  // namespace
 
 // Since these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_RunNativeBusiness(RunNativeBusiness);
 // NOLINTEND

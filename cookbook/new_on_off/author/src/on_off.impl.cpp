@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "on_off.impl.hpp"
 #include "on_off.proj.hpp"
 #include "stdexcept"
@@ -83,7 +85,6 @@ void offBaz(::taihe::string_view type, int32_t a, callback_view<void(int32_t)> c
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_getISetterObserver(getISetterObserver);
 TH_EXPORT_CPP_API_onFoo(onFoo);
 TH_EXPORT_CPP_API_onBar(onBar);

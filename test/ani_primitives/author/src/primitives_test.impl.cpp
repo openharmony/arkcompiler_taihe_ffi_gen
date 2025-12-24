@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "primitives_test.impl.hpp"
 
 #include <iomanip>
@@ -933,7 +935,6 @@ bool TestBaseBoolFunc6()
 }  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_Multiply(Multiply);
 TH_EXPORT_CPP_API_BaseCFunc(BaseCFunc);
 TH_EXPORT_CPP_API_BaseAFunc(BaseAFunc);

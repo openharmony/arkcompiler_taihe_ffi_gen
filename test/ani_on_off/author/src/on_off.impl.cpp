@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "on_off.impl.hpp"
 
 #include <iostream>
@@ -174,7 +176,6 @@ void offFuncB(callback_view<void(bool)> a)
 }  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_getIBase(getIBase);
 TH_EXPORT_CPP_API_onFoo(onFoo);
 TH_EXPORT_CPP_API_onBar(onBar);

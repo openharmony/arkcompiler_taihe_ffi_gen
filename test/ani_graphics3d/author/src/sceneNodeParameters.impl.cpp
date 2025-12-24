@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "sceneNodeParameters.impl.hpp"
 #include "sceneNodeParameters.h"
 #include "sceneNodeParameters.proj.hpp"
@@ -28,6 +30,5 @@ namespace {
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetSceneNodeParameters(GetSceneNodeParameters);
 // NOLINTEND

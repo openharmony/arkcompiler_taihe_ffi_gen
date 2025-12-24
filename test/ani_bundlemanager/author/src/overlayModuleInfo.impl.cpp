@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "overlayModuleInfo.impl.hpp"
 #include "overlayModuleInfo.proj.hpp"
 #include "stdexcept"
@@ -64,6 +66,5 @@ OverlayModuleInfo GetOverlayModuleInfo()
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetOverlayModuleInfo(GetOverlayModuleInfo);
 // NOLINTEND
