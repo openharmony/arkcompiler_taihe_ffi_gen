@@ -26,4 +26,5 @@ using namespace test::inner;
 namespace {
 // To be implemented.
 }  // namespace
+
 // NOLINTEND
