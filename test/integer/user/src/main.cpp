@@ -45,4 +45,5 @@ int main()
     std::cout << "a % b = ";
     io::output_i32(rem);
 }
+
 // NOLINTEND

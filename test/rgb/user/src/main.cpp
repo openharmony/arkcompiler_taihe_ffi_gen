@@ -499,4 +499,5 @@ int main()
 
     return tester.report();
 }
+
 // NOLINTEND
