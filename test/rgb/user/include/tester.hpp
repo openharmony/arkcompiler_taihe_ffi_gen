@@ -82,4 +82,5 @@ public:
         }
     }
 };
+
 // NOLINTEND

@@ -254,4 +254,5 @@ int main()
         return 1;
     }
 }
+
 // NOLINTEND
