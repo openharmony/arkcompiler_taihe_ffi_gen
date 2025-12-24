@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "ohos_app_ability_want.impl.hpp"
 #include "ohos_app_ability_want.proj.hpp"
 #include "stdexcept"
@@ -148,6 +150,5 @@ Want CreateWant()
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_CreateWant(CreateWant);
 // NOLINTEND

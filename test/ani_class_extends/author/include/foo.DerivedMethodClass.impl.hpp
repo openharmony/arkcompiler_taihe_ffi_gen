@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #ifndef FOO_DERIVEDMETHODCLASS_IMPL_HPP
 #define FOO_DERIVEDMETHODCLASS_IMPL_HPP
 
@@ -27,3 +29,4 @@ public:
 };
 
 #endif  // FOO_DERIVEDMETHODCLASS_IMPL_HPP
+// NOLINTEND

@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "applicationInfo.impl.hpp"
 #include "applicationInfo.proj.hpp"
 #include "stdexcept"
@@ -196,7 +198,6 @@ MultiAppMode GetMultiAppMode()
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetApplicationInfo(GetApplicationInfo);
 TH_EXPORT_CPP_API_GetModuleMetadata(GetModuleMetadata);
 TH_EXPORT_CPP_API_GetMultiAppMode(GetMultiAppMode);

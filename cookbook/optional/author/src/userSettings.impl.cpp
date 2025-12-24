@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "userSettings.impl.hpp"
 #include "stdexcept"
 #include "taihe/runtime.hpp"
@@ -31,6 +33,5 @@ optional<string> getUserSetting(map_view<string, string> settings, string_view k
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_getUserSetting(getUserSetting);
 // NOLINTEND

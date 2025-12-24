@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include <cstdint>
 #include <iostream>
 
@@ -119,7 +121,6 @@ void setName(::taihe::string_view a)
 }  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_addSync(add_impl);
 TH_EXPORT_CPP_API_addWithCallback(add_impl);
 TH_EXPORT_CPP_API_addReturnsPromise(add_impl);

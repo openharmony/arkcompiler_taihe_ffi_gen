@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include <iostream>
 
 #include "integer.arithmetic.user.hpp"
@@ -43,3 +45,4 @@ int main()
     std::cout << "a % b = ";
     io::output_i32(rem);
 }
+// NOLINTEND

@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "shortcutInfo.impl.hpp"
 #include "shortcutInfo.proj.hpp"
 #include "stdexcept"
@@ -94,6 +96,5 @@ ShortcutInfo GetShortcutInfo()
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetShortcutInfo(GetShortcutInfo);
 // NOLINTEND

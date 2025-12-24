@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "ohos.multimedia.image.image.impl.hpp"
 #include <iostream>
 #include "../include/image_source.h"
@@ -230,5 +232,4 @@ private:
 }  // namespace
 
 // Since these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 // NOLINTEND

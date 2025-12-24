@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include <fstream>
 #include <iostream>
 #include <optional>
@@ -84,3 +86,4 @@ int main(int argc, char **argv)
                                            make_holder<CallbackAttribute, callback<bool(string_view, string_view)>>()},
     });
 }
+// NOLINTEND

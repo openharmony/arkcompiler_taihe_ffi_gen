@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "test.inner.impl.hpp"
 #include "stdexcept"
 #include "taihe/runtime.hpp"
@@ -24,3 +26,4 @@ using namespace test::inner;
 namespace {
 // To be implemented.
 }  // namespace
+// NOLINTEND

@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "base_test.impl.hpp"
 
 #include "stdexcept"
@@ -107,7 +109,6 @@ string FromI32(int32_t a)
 }  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_AddI8(AddI8);
 TH_EXPORT_CPP_API_SubI16(SubI16);
 TH_EXPORT_CPP_API_MulI32(MulI32);

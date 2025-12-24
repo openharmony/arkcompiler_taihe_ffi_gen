@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #ifndef SCENENODEPARAMETERS_H
 #define SCENENODEPARAMETERS_H
 
@@ -51,3 +53,4 @@ public:
     }
 };
 #endif
+// NOLINTEND

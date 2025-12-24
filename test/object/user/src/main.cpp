@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include <iostream>
 #include <unordered_set>
 #include "object.Bottom.proj.1.hpp"
@@ -252,3 +254,4 @@ int main()
         return 1;
     }
 }
+// NOLINTEND

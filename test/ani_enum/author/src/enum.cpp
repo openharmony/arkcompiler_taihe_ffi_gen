@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include <cstdint>
 #include <iostream>
 
@@ -97,7 +99,6 @@ int32_t GetValueOfEnumWeekday(::enum_test::Weekday day)
 
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_nextEnum(NextEnum);
 TH_EXPORT_CPP_API_getValueOfEnum(GetValueOfEnum);
 TH_EXPORT_CPP_API_fromValueToEnum(fromValueToEnum);

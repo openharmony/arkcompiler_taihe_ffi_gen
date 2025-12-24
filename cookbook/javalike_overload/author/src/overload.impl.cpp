@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "javalike_overload.impl.hpp"
 
 #include "stdexcept"
@@ -37,7 +39,6 @@ int32_t sum_arr(array_view<int32_t> a)
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_sum_two(sum_two);
 TH_EXPORT_CPP_API_sum_arr(sum_arr);
 // NOLINTEND

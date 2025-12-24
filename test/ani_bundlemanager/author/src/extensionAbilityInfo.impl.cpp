@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "extensionAbilityInfo.impl.hpp"
 #include <iostream>
 #include "extensionAbilityInfo.proj.hpp"
@@ -106,6 +108,5 @@ ExtensionAbilityInfo GetExtensionAbilityInfo()
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetExtensionAbilityInfo(GetExtensionAbilityInfo);
 // NOLINTEND

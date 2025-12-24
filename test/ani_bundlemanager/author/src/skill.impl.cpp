@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "skill.impl.hpp"
 #include <iostream>
 #include "skill.h"
@@ -96,7 +98,6 @@ SkillUri GetSkillUri()
 }
 }  // namespace
 
-// NOLINTBEGIN
 TH_EXPORT_CPP_API_GetSkill(GetSkill);
 TH_EXPORT_CPP_API_GetSkillUri(GetSkillUri);
 // NOLINTEND
