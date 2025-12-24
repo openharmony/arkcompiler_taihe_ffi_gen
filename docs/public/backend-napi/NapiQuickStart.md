@@ -24,7 +24,7 @@ taihec [taihe_files ...] [options ...]
 - 输入：Taihe IDL 文件
 - 输出：生成文件
 
-*注：`taihe_files` 可以是一个或多个 Taihe IDL 文件，也可以使用通配符，例如 `path/to/idl/*.taihe` 来指定多个文件。*
+*注：`taihe_files` 可以是一个或多个 Taihe IDL 文件，也可以使用通配符，例如 `path/to/idl/*.ohidl` 来指定多个文件。*
 
 #### 命令行选项
 
@@ -55,7 +55,7 @@ taihec [taihe_files ...] [options ...]
 
 以下是一个 `taihec` 的基本使用示例：
 ```sh
-taihec test/napi_string/idl/*.taihe -Otest/napi_string/generated -Gnapi-bridge -Gcpp-author  # 生成用户自己在 IDL 中定义的接口的 NAPI 桥接代码，以及 C++ 实现模板等
+taihec test/napi_string/idl/*.ohidl -Otest/napi_string/generated -Gnapi-bridge -Gcpp-author  # 生成用户自己在 IDL 中定义的接口的 NAPI 桥接代码，以及 C++ 实现模板等
 ```
 
 ### `taihe-tryit`
@@ -107,6 +107,20 @@ taihe-tryit [mode] [test_dir] [options ...]
 | `--optimization {0,1,2,3}`                 | `-O{0,1,2,3}`                      | `build`, `test`    | 指定编译器的优化级别，默认为 `0` |
 | `--codegen <namespace>:<config>[=<value>]` | `-C<namespace>:<config>[=<value>]` | `generate`, `test` | 同 `taihec`，额外的代码生成配置项，例如 `sts:keep-name` 等 |
 
+<small>*Taihe 生成 NAPI 桥接代码时暂不支持 `sts:keep-name` 选项，所有生成代码默认与 IDL 文件名保持一致。*</small>
+
+## prebuilts 使用流程
+
+注意，需基于已下载的最新 prebuilts。可直接使用 `taihec` 和 `taihe-tryit` 命令，例如：
+
+```bash
+//prebuilts/taihe/napi_taihe/taihe/bin/taihec xxx.ohidl \
+  -O generated_dir/ \
+  -G napi-bridge cpp-author
+
+//prebuilts/taihe/napi_taihe/taihe/bin/taihe-tryit test --user ts path/to/demo/dir
+```
+
 ## IDE 使用流程
 
 下面以一个 memberTest 项目为例，展示其标准流程。
@@ -120,9 +134,9 @@ taihe-tryit [mode] [test_dir] [options ...]
 
    - **命名规则**：
      ```plaintext
-     [a-zA-Z_][a-zA-Z0-9_.]*.taihe
+     [a-zA-Z_][a-zA-Z0-9_.]*.ohidl
      ```
-     - 正确示例：`member_test.taihe`
+     - 正确示例：`member_test.ohidl`
      - 含特殊字符时需使用注解：
        ```rust
        @!namespace("@my.module")
@@ -134,7 +148,7 @@ taihe-tryit [mode] [test_dir] [options ...]
    执行生成命令（参数说明）：
 
    ```bash
-   taihec <输入.taihe文件> -O <输出目录> -G napi-bridge cpp-author
+   taihec <输入.ohidl文件> -O <输出目录> -G napi-bridge cpp-author
    ```
 
    - **生成内容**：
@@ -145,7 +159,7 @@ taihe-tryit [mode] [test_dir] [options ...]
    **实际用例**：
 
    ```bash
-   ./taihe/bin/taihec .memberTest/entry/src/main/idl/member_test.taihe \
+   ./taihe/napi_taihe/taihe/bin/taihec .memberTest/entry/src/main/idl/member_test.ohidl \
      -O .memberTest/entry/src/main/generated/ \
      -G napi-bridge cpp-author
    ```
@@ -165,7 +179,7 @@ taihe-tryit [mode] [test_dir] [options ...]
                    │   ├── proxy/     # 代理 ts 实现文件（用户需要时生成）
                    |   └── member_test.d.ts   # 声明文件
                    └── idl/
-                       └── member_test.taihe  # 源文件
+                       └── member_test.ohidl  # 源文件
    ```
 
 4. **书写 .cpp 文件**
@@ -174,7 +188,7 @@ taihe-tryit [mode] [test_dir] [options ...]
 5. **将生成文件加入编译流程**
    以 IDE 中内置的 CMakeLists.txt 文件为基础，需要进行以下修改：
 
-   - Taihe 生成代码需使用 c++ 17 标准编译，需要在 CMakeLists.txt 文件中新增以下内容
+   - Taihe 生成代码需使用 C++ 17 标准编译，需要在 CMakeLists.txt 文件中新增以下内容
      ```CMakeLists.txt
      set(CMAKE_CXX_STANDARD 17)
      set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -193,7 +207,7 @@ taihe-tryit [mode] [test_dir] [options ...]
 
      target_include_directories(entry
      PUBLIC
-     //base_dir/taihe/include
+     //base_dir/taihe/napi_taihe/taihe/include
      ../generated/include
      )
      ```
