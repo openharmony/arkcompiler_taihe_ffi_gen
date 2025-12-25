@@ -79,7 +79,7 @@ class AniConstructorGenerator:
         self.target = CSourceWriter(
             self.om,
             f"temp/ani_constructor.cpp",
-            FileKind.TEMPLATE,
+            FileKind.C_TEMPLATE,
         )
 
     def gen_constructor(self):
