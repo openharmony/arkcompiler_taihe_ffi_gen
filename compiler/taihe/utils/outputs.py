@@ -46,13 +46,21 @@ class DebugLevel(Enum):
 
 
 class FileKind(str, Enum):
+    """Kinds of output files.
+
+    Indicates the intended use case of the output file, e.g., C header, C source, etc.
+    Note that this does not necessarily imply the programming language of the file.
+    """
+
+    TAIHE = "taihe"
     C_HEADER = "c_header"
     C_SOURCE = "c_source"
     CPP_HEADER = "cpp_header"
     CPP_SOURCE = "cpp_source"
-    TEMPLATE = "template"
+    C_TEMPLATE = "c_template"  # C/C++ template file
     ETS = "ets"
-    TAIHE = "taihe"
+    DTS = "dts"
+    CMAKE = "cmake"
     OTHER = "other"
 
 
@@ -427,7 +435,7 @@ class CMakeOutputManager(BasicOutputManager):
         self.runtime_cxx_src_files = [
             p for p in runtime_src_dir.rglob("*.cpp") if p.is_file()
         ]
-        self.target = CMakeWriter(self, "TaiheGenerated.cmake", FileKind.OTHER)
+        self.target = CMakeWriter(self, "TaiheGenerated.cmake", FileKind.CMAKE)
         self.generated_path = "${CMAKE_CURRENT_LIST_DIR}"
 
     @override

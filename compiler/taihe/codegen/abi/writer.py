@@ -40,7 +40,7 @@ class CSourceWriter(FileWriter):
 
     @override
     def write_prologue(self, f: TextIO):
-        if self.desc.kind != FileKind.TEMPLATE:
+        if self.desc.kind != FileKind.C_TEMPLATE:
             f.write("#pragma clang diagnostic push\n")
             f.write('#pragma clang diagnostic ignored "-Weverything"\n')
             f.write('#pragma clang diagnostic warning "-Wextra"\n')
@@ -54,7 +54,7 @@ class CSourceWriter(FileWriter):
 
     @override
     def write_epilogue(self, f: TextIO):
-        if self.desc.kind != FileKind.TEMPLATE:
+        if self.desc.kind != FileKind.C_TEMPLATE:
             f.write("\n")
             f.write("#pragma clang diagnostic pop\n")
 
