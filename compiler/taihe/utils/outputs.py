@@ -17,8 +17,8 @@
 
 import os
 from abc import ABC, abstractmethod
-from collections.abc import Generator
-from contextlib import contextmanager
+from collections.abc import Iterator, Sequence
+from contextlib import AbstractContextManager, contextmanager
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from io import StringIO
@@ -70,6 +70,9 @@ class FileDescriptor:
     kind: FileKind
 
 
+IndentationLevel = tuple[str, ...]
+
+
 class BaseWriter:
     def __init__(
         self,
@@ -91,8 +94,25 @@ class BaseWriter:
         self._out = out
         self._comment_prefix = comment_prefix
         self._default_indent = default_indent
-        self._current_indent = ""
+        self._current_indent: IndentationLevel = ()
+        self._indent_stack: list[IndentationLevel] = []
         self._debug_level = debug_level
+
+    @property
+    def comment_prefix(self) -> str:
+        return self._comment_prefix
+
+    @property
+    def default_indent(self) -> str:
+        return self._default_indent
+
+    @property
+    def current_indent(self) -> IndentationLevel:
+        return self._current_indent
+
+    @property
+    def indent_stack(self) -> Sequence[IndentationLevel]:
+        return self._indent_stack
 
     def newline(self, _show_debug: bool = True):
         """Writes a newline character."""
@@ -112,13 +132,11 @@ class BaseWriter:
 
         assert "\n" not in line, "use write_block to write multi-line text block"
 
-        if not line:
-            # Don't use indent for empty lines
-            self._out.write("\n")
-            return
+        # don't write indentation for empty lines
+        if line:
+            self._out.write("".join(self._current_indent))
+            self._out.write(line)
 
-        self._out.write(self._current_indent)
-        self._out.write(line)
         self._out.write("\n")
 
     def writelns(self, *lines: str, _show_debug: bool = True):
@@ -142,7 +160,8 @@ class BaseWriter:
         if _show_debug:
             self._write_debug(_getframe(1))  # type: ignore
 
-        self.writelns(*text_block.splitlines(), _show_debug=False)
+        for line in text_block.splitlines():
+            self.writeln(line, _show_debug=False)
 
     def write_comment(self, comment: str, *, _show_debug: bool = True):
         """Writes a comment block, prefixing each line with the comment prefix.
@@ -157,10 +176,43 @@ class BaseWriter:
             self._write_debug(_getframe(1))  # type: ignore
 
         for line in comment.splitlines():
-            self._out.write(self._current_indent)
-            self._out.write(self._comment_prefix)
-            self._out.write(line)
-            self._out.write("\n")
+            self.writeln(self._comment_prefix + line, _show_debug=False)
+
+    @contextmanager
+    def set_indent(
+        self,
+        indent: IndentationLevel,
+        *,
+        _show_debug: bool = True,
+    ) -> Iterator[Self]:
+        if _show_debug:
+            self._write_debug(_getframe(2))  # type: ignore
+
+        self._indent_stack.append(self._current_indent)
+        self._current_indent = indent
+        try:
+            yield self
+        finally:
+            self._current_indent = self._indent_stack.pop()
+
+    @contextmanager
+    def inc_indent(
+        self,
+        indent: str | None = None,
+        *,
+        _show_debug: bool = True,
+    ) -> Iterator[Self]:
+        if _show_debug:
+            self._write_debug(_getframe(2))  # type: ignore
+
+        if indent is None:
+            indent = self._default_indent
+        self._indent_stack.append(self._current_indent)
+        self._current_indent = (*self._current_indent, indent)
+        try:
+            yield self
+        finally:
+            self._current_indent = self._indent_stack.pop()
 
     @contextmanager
     def indented(
@@ -170,7 +222,7 @@ class BaseWriter:
         *,
         indent: str | None = None,
         _show_debug: bool = True,
-    ) -> Generator[Self, None, None]:
+    ) -> Iterator[Self]:
         """Context manager that indents code within its scope.
 
         Args:
@@ -187,14 +239,8 @@ class BaseWriter:
         if prologue is not None:
             self.writeln(prologue, _show_debug=False)
 
-        previous_indent = self._current_indent
-        if indent is None:
-            indent = self._default_indent
-        self._current_indent += indent
-        try:
+        with self.inc_indent(indent, _show_debug=False):
             yield self
-        finally:
-            self._current_indent = previous_indent
 
         if epilogue is not None:
             self.writeln(epilogue, _show_debug=False)
@@ -301,16 +347,15 @@ class OutputManager(ABC):
         return
 
     @contextmanager
-    def open(self, desc: FileDescriptor):
+    def open(self, desc: FileDescriptor) -> Iterator[TextIO]:
         """Opens a file for writing."""
         self.register(desc)
 
         with self._open_impl(desc) as f:
             yield f
 
-    @contextmanager
     @abstractmethod
-    def _open_impl(self, desc: FileDescriptor) -> Generator[TextIO, None, None]:
+    def _open_impl(self, desc: FileDescriptor) -> AbstractContextManager[TextIO]:
         """Opens a file for writing."""
 
 
@@ -321,10 +366,8 @@ class NullOutputConfig(OutputConfig):
             def __init__(self, *, debug_level: DebugLevel):
                 super().__init__(debug_level=debug_level)
 
-            @contextmanager
-            def _open_impl(self, desc: FileDescriptor) -> Generator[TextIO, None, None]:
-                with Path(os.devnull).open("w", encoding="utf-8") as f:
-                    yield f
+            def _open_impl(self, desc: FileDescriptor):
+                return Path(os.devnull).open("w", encoding="utf-8")
 
         return NullOutputManager(debug_level=self.debug_level)
 
@@ -337,9 +380,11 @@ class DebugOutputConfig(OutputConfig):
                 super().__init__(debug_level=debug_level)
 
             @contextmanager
-            def _open_impl(self, desc: FileDescriptor) -> Generator[TextIO, None, None]:
+            def _open_impl(self, desc: FileDescriptor):
                 stdout.write(f"// File: {desc.relative_path}\n")
+                stdout.write(f"// Kind: {desc.kind.value}\n")
                 yield stdout
+                stdout.write(f"// End of file: {desc.relative_path}\n\n")
 
         return DebugOutputManager(debug_level=self.debug_level)
 
@@ -367,12 +412,10 @@ class BasicOutputManager(OutputManager):
         super().__init__(debug_level=debug_level)
         self.dst_dir = dst_dir
 
-    @contextmanager
     def _open_impl(self, desc: FileDescriptor):
         file_path = self.dst_dir / desc.relative_path
         file_path.parent.mkdir(exist_ok=True, parents=True)
-        with file_path.open("w", encoding="utf-8") as f:
-            yield f
+        return file_path.open("w", encoding="utf-8")
 
 
 #################################
