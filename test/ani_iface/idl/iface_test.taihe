@@ -30,23 +30,23 @@ interface SubBaseElem: BaseElem {
 function GetSubBaseElem(): SubBaseElem;
 
 interface IBase {
-    getId(): String;
-    setId(s: String): void;
+    GetId(): String;
+    SetId(s: String): void;
 }
 
-function makeIBase(id: String): IBase;
-function copyIBase(a: IBase, b: IBase): void;
+function MakeIBase(id: String): IBase;
+function CopyIBase(a: IBase, b: IBase): void;
 
 interface IShape: IBase {
-    calculateArea(): f64;
+    CalculateArea(): f64;
 }
 
-function makeIShape(id: String, a: f64, b: f64): IShape;
+function MakeIShape(id: String, a: f64, b: f64): IShape;
 
 @class
 interface IDerived: IShape {
-    call(): void;
+    Call(): void;
 }
 
 @ctor("IDerived")
-function createIDerived(): IDerived;
+function CreateIDerived(): IDerived;

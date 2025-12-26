@@ -354,7 +354,7 @@ def process_file(
 
     if file.endswith((".md", ".json")):
         pass
-    elif file.endswith((".taihe", ".cpp", ".c", ".hpp", ".h", ".ets", ".ts", ".g4")):
+    elif file.endswith((".taihe", ".ohidl", ".cpp", ".c", ".hpp", ".h", ".ets", ".ts", ".g4")):
         text = add_c_style_copyright(text)
     else:
         text = add_sh_style_copyright(text)

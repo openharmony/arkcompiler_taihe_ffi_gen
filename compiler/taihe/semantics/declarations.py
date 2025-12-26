@@ -803,12 +803,12 @@ class IfaceMethodDecl(NamedDeclWithParent["IfaceDecl"]):
 
 
 class PackageLevelDecl(NamedDeclWithParent["PackageDecl"], ABC):
-    @abstractmethod
-    def accept(self, v: "PackageLevelVisitor[_R]") -> _R: ...
-
     @property
     def full_name(self):
         return f"{self.parent_pkg.name}.{self.name}"
+
+    @abstractmethod
+    def accept(self, v: "PackageLevelVisitor[_R]") -> _R: ...
 
 
 class GlobFuncDecl(PackageLevelDecl):
@@ -863,7 +863,7 @@ class GlobFuncDecl(PackageLevelDecl):
 
 class TypeDecl(PackageLevelDecl, ABC):
     @abstractmethod
-    def as_type(self, ty_ref: ExplicitTypeRefDecl) -> UserType:
+    def as_type(self, ty_ref: TypeRefDecl) -> UserType:
         """Return the type decalaration as type."""
 
     @abstractmethod
@@ -911,7 +911,7 @@ class EnumDecl(TypeDecl):
         i.set_parent(self)
 
     @override
-    def as_type(self, ty_ref: ExplicitTypeRefDecl) -> EnumType:
+    def as_type(self, ty_ref: TypeRefDecl) -> EnumType:
         return EnumType(ty_ref, self)
 
     @override
@@ -941,7 +941,7 @@ class UnionDecl(TypeDecl):
         f.set_parent(self)
 
     @override
-    def as_type(self, ty_ref: ExplicitTypeRefDecl) -> UnionType:
+    def as_type(self, ty_ref: TypeRefDecl) -> UnionType:
         return UnionType(ty_ref, self)
 
     @override
@@ -971,7 +971,7 @@ class StructDecl(TypeDecl):
         f.set_parent(self)
 
     @override
-    def as_type(self, ty_ref: ExplicitTypeRefDecl) -> StructType:
+    def as_type(self, ty_ref: TypeRefDecl) -> StructType:
         return StructType(ty_ref, self)
 
     @override
@@ -1011,7 +1011,7 @@ class IfaceDecl(TypeDecl):
         f.set_parent(self)
 
     @override
-    def as_type(self, ty_ref: ExplicitTypeRefDecl) -> IfaceType:
+    def as_type(self, ty_ref: TypeRefDecl) -> IfaceType:
         return IfaceType(ty_ref, self)
 
     @override
@@ -1056,7 +1056,9 @@ class PackageDecl(NamedDecl):
     interfaces: list[IfaceDecl]
     enums: list[EnumDecl]
 
-    def __init__(self, name: str, loc: SourceLocation | None):
+    is_stdlib: bool
+
+    def __init__(self, loc: SourceLocation | None, name: str, is_stdlib: bool):
         super().__init__(loc, name)
 
         self._pkg_import_dict = {}
@@ -1069,6 +1071,8 @@ class PackageDecl(NamedDecl):
         self.unions = []
         self.interfaces = []
         self.enums = []
+
+        self.is_stdlib = is_stdlib
 
     @property
     @override
@@ -1183,15 +1187,21 @@ class PackageDecl(NamedDecl):
 class PackageGroup:
     """Stores all known packages for a compilation instance."""
 
+    _all_package_dict: dict[str, PackageDecl]
     _package_dict: dict[str, PackageDecl]
 
     def __init__(self):
         super().__init__()
+        self._all_package_dict = {}
         self._package_dict = {}
 
     def __repr__(self) -> str:
         packages_str = ", ".join(repr(x) for x in self._package_dict)
         return f"{self.__class__.__qualname__}({packages_str})"
+
+    @property
+    def all_packages(self) -> Collection[PackageDecl]:
+        return self._all_package_dict.values()
 
     @property
     def packages(self) -> Collection[PackageDecl]:
@@ -1201,8 +1211,10 @@ class PackageGroup:
         return self._package_dict.get(name)
 
     def add(self, d: PackageDecl):
-        if (prev := self._package_dict.setdefault(d.name, d)) != d:
+        if (prev := self._all_package_dict.setdefault(d.name, d)) != d:
             raise DeclRedefError(prev, d)
+        if not d.is_stdlib:
+            self._package_dict[d.name] = d
         d.set_group(self)
 
     def accept(self, v: "PackageGroupVisitor[_R]"):

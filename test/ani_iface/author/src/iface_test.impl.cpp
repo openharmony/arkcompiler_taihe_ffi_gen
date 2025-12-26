@@ -131,11 +131,11 @@ public:
     std::cout << "del base " << this << std::endl;
   }
 
-  ::taihe::string getId() {
+  ::taihe::string GetId() {
     return id;
   }
 
-  void setId(::taihe::string_view s) {
+  void SetId(::taihe::string_view s) {
     id = s;
     return;
   }
@@ -156,16 +156,16 @@ public:
     std::cout << "del shape " << this << std::endl;
   }
 
-  ::taihe::string getId() {
+  ::taihe::string GetId() {
     return id;
   }
 
-  void setId(::taihe::string_view s) {
+  void SetId(::taihe::string_view s) {
     id = s;
     return;
   }
 
-  float calculateArea() {
+  float CalculateArea() {
     return a * b;
   }
 };
@@ -177,38 +177,38 @@ protected:
   float b = 2;
 
 public:
-  void call() {
+  void Call() {
     std::cout << "derived call!" << std::endl;
   }
 
-  double calculateArea() {
+  double CalculateArea() {
     return a * b;
   }
 
-  ::taihe::string getId() {
+  ::taihe::string GetId() {
     return id;
   }
 
-  void setId(::taihe::string_view s) {
+  void SetId(::taihe::string_view s) {
     this->id = s;
     return;
   }
 };
 
-::iface_test::IBase makeIBase(::taihe::string_view id) {
+::iface_test::IBase MakeIBase(::taihe::string_view id) {
   return ::taihe::make_holder<Base, ::iface_test::IBase>(id);
 }
 
-void copyIBase(::iface_test::weak::IBase a, ::iface_test::weak::IBase b) {
-  a->setId(b->getId());
+void CopyIBase(::iface_test::weak::IBase a, ::iface_test::weak::IBase b) {
+  a->SetId(b->GetId());
   return;
 }
 
-::iface_test::IShape makeIShape(::taihe::string_view id, double a, double b) {
+::iface_test::IShape MakeIShape(::taihe::string_view id, double a, double b) {
   return ::taihe::make_holder<Shape, ::iface_test::IShape>(id, a, b);
 }
 
-::iface_test::IDerived createIDerived() {
+::iface_test::IDerived CreateIDerived() {
   return taihe::make_holder<Derived, ::iface_test::IDerived>();
 }
 
@@ -220,8 +220,8 @@ TH_EXPORT_CPP_API_GetBaseFun(GetBaseFun);
 TH_EXPORT_CPP_API_GetSubBaseFun(GetSubBaseFun);
 TH_EXPORT_CPP_API_GetBaseElem(GetBaseElem);
 TH_EXPORT_CPP_API_GetSubBaseElem(GetSubBaseElem);
-TH_EXPORT_CPP_API_makeIBase(makeIBase);
-TH_EXPORT_CPP_API_copyIBase(copyIBase);
-TH_EXPORT_CPP_API_makeIShape(makeIShape);
-TH_EXPORT_CPP_API_createIDerived(createIDerived);
+TH_EXPORT_CPP_API_MakeIBase(MakeIBase);
+TH_EXPORT_CPP_API_CopyIBase(CopyIBase);
+TH_EXPORT_CPP_API_MakeIShape(MakeIShape);
+TH_EXPORT_CPP_API_CreateIDerived(CreateIDerived);
 // NOLINTEND

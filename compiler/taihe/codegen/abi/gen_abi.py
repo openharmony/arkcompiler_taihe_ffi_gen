@@ -27,7 +27,7 @@ class AbiHeadersGenerator:
         self.am = am
 
     def generate(self, pg: PackageGroup):
-        for pkg in pg.packages:
+        for pkg in pg.all_packages:
             self.gen_package_files(pkg)
 
     def gen_package_files(self, pkg: PackageDecl):
@@ -427,7 +427,7 @@ class AbiSourcesGenerator:
         self.am = am
 
     def generate(self, pg: PackageGroup):
-        for pkg in pg.packages:
+        for pkg in pg.all_packages:
             self.gen_package_file(pkg)
 
     def gen_package_file(self, pkg: PackageDecl):

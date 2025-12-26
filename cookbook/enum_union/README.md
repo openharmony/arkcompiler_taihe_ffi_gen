@@ -7,6 +7,7 @@
 ## 第一步：编写接口原型
 
 **File: `idl/message.taihe`**
+
 ```rust
 enum MessageType: i32 {
     Text = 1;
@@ -33,14 +34,17 @@ function processMessage(msg: Message): void;
 enum 有 2 种语法
 
 1. key -> int
-    ```
+
+    ```rust
     enum MessageType: i32 {
         Text = 0,
         Number = 1
     }
     ```
+
 2. key -> string
-    ```
+
+    ```rust
     enum MessageType: String {
         Text = "Text",
         Number = "Num"
@@ -50,6 +54,7 @@ enum 有 2 种语法
 ## 第二步：完成 C++ 实现
 
 **File: `author/src/message.impl.cpp`**
+
 ```cpp
 Message createTextMessage(string_view str) {
     return {MessageType::key_t::Text, MessageData::make_textVal(str)};
@@ -71,25 +76,27 @@ void processMessage(Message const& msg) {
 }
 ```
 
-此实现有 4 个要点：1 如何创建 enum；2 如何获取 enum 信息；3 如何创建 union；4 如何读取 union 的值
+此实现有 4 个要点：创建 enum；获取 enum 信息；创建 union；读取 union 的值
 
-1. `key_t`
+1. 创建 enum（`{enum}::key_t::{key}`）
 
     以本例 enum 为例，用户可以使用 `MessageType::key_t::Text` 与 `MessageType::key_t::Number` 来构造 enum，即：使用 `{enum}::key_t::{key}` 来构造 enum
 
-2. `get_key()` 与 `get_value()`
+2. 获取 enum 信息（`get_key()` 与 `get_value()`）
 
     使用 `get_key()` 与 `get_value()` 可以获取 enum 的键与值
 
-3. make
+3. 创建 union（`{union}::make_{union_item}({val})`）
 
     以本例 union 为例，用户可以使用 `MessageData::make_textVal(str)` 与 `MessageData::make_numVal(num)` 来构造 union，即：使用 `{union}::make_{union_item}({val})` 来构造 union
 
-4. `get_xxx_ref()`
+4. 读取 union 的值（`get_key()` 与 `get_{union_item}_ref()`）
 
     以本例 union 为例，用户可以使用 `get_textVal_ref()` 与 `get_numVal_ref()` 来获取 union 的值，即：使用 `get_{union_item}_ref` 来获取 union 的值
 
 ## 第三步：在 ets 侧使用
+
+**File: `user/main.ets`**
 
 ```typescript
 // 创建文本信息
@@ -101,7 +108,8 @@ message.processMessage(textMsg);
 message.processMessage(numMsg);
 ```
 
-Output:
+**Stdout**
+
 ```sh
 text: hello
 num: 12345
@@ -112,6 +120,7 @@ num: 12345
 如果用户希望在 Taihe 里定义 `const` 常量
 
 可以在 enum 上使用 `@const`
+
 ```rust
 @const
 enum Flags: i32 {
@@ -121,6 +130,7 @@ enum Flags: i32 {
 ```
 
 在 ets 文件中，可以直接使用 `{pkg_name}.FLAG_I32_A` 或 `{pkg_name}.FLAG_I32_B`
+
 ```typescript
 import * as ConstPkg from "xxx";
 
