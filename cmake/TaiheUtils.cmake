@@ -94,8 +94,7 @@ function(generate_code_from_idl demo_name idl_files gen_ets_names author_bridge 
   set(GEN_AUTHOR_CPP_FILES)
   set(GEN_USER_CPP_FILES)
 
-  
-  # config为字符串时需要拆分为字符串列表
+  # config 为字符串时需要拆分为字符串列表
   string(REGEX MATCH " " HAS_SPACE "${taihe_configs}")
 
   if(HAS_SPACE)
@@ -104,16 +103,18 @@ function(generate_code_from_idl demo_name idl_files gen_ets_names author_bridge 
     set(TAIHE_CONFIGS_LIST ${taihe_configs})
   endif()
 
+  set(IDL_EXTENSION_REGEX "\\.(taihe|ohidl|hmidl)$")
+
   foreach(TAIHE_FILE ${idl_files})
     # 替换扩展名
     get_filename_component(TAIHE_FILE_NAME ${TAIHE_FILE} NAME)
     # 将修改后的文件名添加到新的列表中
-    string(REGEX REPLACE "\\.taihe$" ".abi.c" GEN_ABI_C_FILE ${TAIHE_FILE_NAME})
+    string(REGEX REPLACE "${IDL_EXTENSION_REGEX}" ".abi.c" GEN_ABI_C_FILE ${TAIHE_FILE_NAME})
     list(APPEND GEN_ABI_C_FILES "${GEN_DIR}/src/${GEN_ABI_C_FILE}")
 
     # author bridge
     if(author_bridge STREQUAL "kn-author")
-      string(REGEX REPLACE "\\.taihe$" ".knapi.cpp" GEN_AUTHOR_FILE ${TAIHE_FILE_NAME})
+      string(REGEX REPLACE "${IDL_EXTENSION_REGEX}" ".knapi.cpp" GEN_AUTHOR_FILE ${TAIHE_FILE_NAME})
       list(APPEND GEN_AUTHOR_CPP_FILES "${GEN_DIR}/src/${GEN_AUTHOR_FILE}")
       # TODO: kn_author config
       # list(APPEND TAIHE_CONFIGS_LIST "-Gkn_author")
@@ -125,19 +126,23 @@ function(generate_code_from_idl demo_name idl_files gen_ets_names author_bridge 
     if(user_bridge STREQUAL "cpp-user")
       list(APPEND TAIHE_CONFIGS_LIST "-Gcpp-user")
     elseif(user_bridge STREQUAL "napi-bridge")
-      string(REGEX REPLACE "\\.taihe$" ".napi.cpp" GEN_USER_FILE ${TAIHE_FILE_NAME})
+      string(REGEX REPLACE "${IDL_EXTENSION_REGEX}" ".napi.cpp" GEN_USER_FILE ${TAIHE_FILE_NAME})
       list(APPEND GEN_USER_CPP_FILES "${GEN_DIR}/src/${GEN_USER_FILE}")
       list(APPEND TAIHE_CONFIGS_LIST "-Gnapi-bridge")
       # TODO: napi_bridge config
       # list(APPEND TAIHE_CONFIGS_LIST "-Gnapi-bridge")
     elseif(user_bridge STREQUAL "ani-bridge")
-      string(REGEX REPLACE "\\.taihe$" ".ani.cpp" GEN_USER_FILE ${TAIHE_FILE_NAME})
+      string(REGEX REPLACE "${IDL_EXTENSION_REGEX}" ".ani.cpp" GEN_USER_FILE ${TAIHE_FILE_NAME})
       list(APPEND GEN_USER_CPP_FILES "${GEN_DIR}/src/${GEN_USER_FILE}")
       list(APPEND TAIHE_CONFIGS_LIST "-Gani-bridge")
     endif()
   endforeach()
 
   set(GEN_BRIDGE_CPP_FILES ${GEN_AUTHOR_CPP_FILES} ${GEN_USER_CPP_FILES})
+
+  if(user_bridge STREQUAL "ani-bridge")
+    list(APPEND GEN_ABI_C_FILES "${GEN_DIR}/src/taihe.platform.ani.abi.c")
+  endif()
 
   set_source_files_properties(
     ${GEN_BRIDGE_CPP_FILES}
@@ -197,60 +202,6 @@ function(add_taihe_runtime)
     )
 
     target_include_directories(taihe_runtime PUBLIC ${TAIHE_RUNTIME_HEADER_DIR})
-  endif()
-endfunction()
-
-function(add_taihe_stdlib)
-  execute_and_set_variable(TAIHE_STDLIB_DIR "--print-stdlib-path")
-  set(TAIHE_STDLIB_GEN_DIR "${CMAKE_BINARY_DIR}/stdlib/generated")
-  set(TAIHE_STDLIB_GEN_INCLUDE_DIR "${TAIHE_STDLIB_GEN_DIR}/include")
-  set(TAIHE_STDLIB_GEN_SRC_DIR "${TAIHE_STDLIB_GEN_DIR}/src")
-  set(TAIHE_STDLIB_BUILD_DIR "${CMAKE_BINARY_DIR}/stdlib/build")
-
-  set(TAIHE_STDLIB_IDL_FILES
-    "${TAIHE_STDLIB_DIR}/taihe.platform.ani.taihe"
-  )
-
-  set(TAIHE_STDLIB_GEN_SOURCES
-    "${TAIHE_STDLIB_GEN_SRC_DIR}/taihe.platform.ani.abi.c"
-  )
-  set_source_files_properties(${TAIHE_STDLIB_GEN_SOURCES} PROPERTIES GENERATED TRUE)
-
-  execute_and_set_variable(TAIHE_RUNTIME_HEADER_DIR "--print-runtime-header-path")
-
-  if (NOT TARGET taihe_stdlib_gen)
-    if(ENABLE_COVERAGE)
-      list(APPEND COMMAND_TO_RUN "coverage" "run" "--parallel-mode" "-m" "taihe.cli.compiler")
-    else()
-      list(APPEND COMMAND_TO_RUN "taihec")
-    endif()
-
-    add_custom_command(
-      OUTPUT ${TAIHE_STDLIB_GEN_SOURCES} ${TAIHE_STDLIB_GEN_INCLUDE_DIR}
-      COMMAND ${COMMAND_TO_RUN}
-      ${TAIHE_STDLIB_IDL_FILES}
-      -O${TAIHE_STDLIB_GEN_DIR}
-      -Gcpp-common -Gabi-source
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../..
-      DEPENDS ${TAIHE_STDLIB_IDL_FILES}
-      COMMENT "Generating Taihe standard library C++ header and source files..."
-      VERBATIM
-    )
-
-    add_custom_target(taihe_stdlib_gen
-      DEPENDS ${TAIHE_STDLIB_GEN_SOURCES} ${TAIHE_STDLIB_GEN_INCLUDE_DIR}
-    )
-  endif()
-
-  if(NOT TARGET taihe_stdlib)
-    add_library(taihe_stdlib STATIC ${TAIHE_STDLIB_GEN_SOURCES})
-
-    set_target_properties(taihe_stdlib PROPERTIES
-      ARCHIVE_OUTPUT_DIRECTORY ${TAIHE_STDLIB_BUILD_DIR}
-    )
-
-    target_include_directories(taihe_stdlib PUBLIC ${TAIHE_STDLIB_GEN_INCLUDE_DIR} ${TAIHE_RUNTIME_HEADER_DIR})
-    add_dependencies(taihe_stdlib taihe_stdlib_gen)
   endif()
 endfunction()
 
@@ -392,9 +343,9 @@ function(compile_gen_lib gen_demo_name gen_include_dir gen_abi_c_files gen_ani_c
 
   target_compile_options(${gen_demo_name} PRIVATE "-Wno-attributes")
   set_target_properties(${gen_demo_name} PROPERTIES LINKER_LANGUAGE CXX)
-  target_link_libraries(${gen_demo_name} PRIVATE taihe_runtime taihe_stdlib)
+  target_link_libraries(${gen_demo_name} PRIVATE taihe_runtime)
   target_link_options(${gen_demo_name} PRIVATE "-Wl,--no-undefined")
-  target_include_directories(${gen_demo_name} PUBLIC ${gen_include_dir} ${TAIHE_RUNTIME_HEADER_DIR} ${TAIHE_STDLIB_GEN_INCLUDE_DIR})
+  target_include_directories(${gen_demo_name} PUBLIC ${gen_include_dir} ${TAIHE_RUNTIME_HEADER_DIR})
 endfunction()
 
 # 将用户文件编译为动态库
@@ -408,9 +359,9 @@ function(compile_dylib demo_name user_include_dir user_cpp_files gen_include_dir
   endif()
   target_compile_options(${demo_name} PRIVATE "-Wno-attributes")
   set_target_properties(${demo_name} PROPERTIES LINKER_LANGUAGE CXX)
-  target_link_libraries(${demo_name} PRIVATE taihe_runtime taihe_stdlib ${link_gen_lib})
+  target_link_libraries(${demo_name} PRIVATE taihe_runtime ${link_gen_lib})
   target_link_options(${demo_name} PRIVATE "-Wl,--no-undefined")
-  target_include_directories(${demo_name} PUBLIC ${user_include_dir} ${gen_include_dir} ${TAIHE_RUNTIME_HEADER_DIR} ${TAIHE_STDLIB_GEN_INCLUDE_DIR})
+  target_include_directories(${demo_name} PUBLIC ${user_include_dir} ${gen_include_dir} ${TAIHE_RUNTIME_HEADER_DIR})
 endfunction()
 
 function(add_taihe_library target_name idl_files)
@@ -464,46 +415,12 @@ function(add_taihe_library target_name idl_files)
     TAIHEC_PATH ${TAIHEC_PATH}
   )
 
-  # Temporarily add taihe.platform.ani.taihe
-  execute_and_set_variable(TAIHE_STDLIB_DIR "--print-stdlib-path" TAIHEC_PATH ${TAIHEC_PATH})
-  set(TAIHE_STDLIB_GEN_DIR "${CMAKE_BINARY_DIR}/stdlib/generated")
-  set(TAIHE_STDLIB_GEN_INCLUDE_DIR "${TAIHE_STDLIB_GEN_DIR}/include")
-  set(TAIHE_STDLIB_GEN_SRC_DIR "${TAIHE_STDLIB_GEN_DIR}/src")
-  set(TAIHE_STDLIB_BUILD_DIR "${CMAKE_BINARY_DIR}/stdlib/build")
-  
-  set(TAIHE_STDLIB_IDL_FILES
-  "${TAIHE_STDLIB_DIR}/taihe.platform.ani.taihe"
-  )
-  
-  set(TAIHE_STDLIB_GEN_SOURCES
-  "${TAIHE_STDLIB_GEN_SRC_DIR}/taihe.platform.ani.abi.c"
-  )
-  set_source_files_properties(${TAIHE_STDLIB_GEN_SOURCES} PROPERTIES GENERATED TRUE)
-
-  if(NOT TARGET taihe_stdlib_gen)
-    add_custom_command(
-      OUTPUT ${TAIHE_STDLIB_GEN_SOURCES} ${TAIHE_STDLIB_GEN_INCLUDE_DIR}
-      COMMAND ${TAIHEC_PATH}
-      ${TAIHE_STDLIB_IDL_FILES}
-      -O${TAIHE_STDLIB_GEN_DIR}
-      -Gcpp-common -Gabi-source
-      DEPENDS ${TAIHE_STDLIB_IDL_FILES}
-      COMMENT "Generating Taihe standard library C++ header and source files..."
-      VERBATIM
-      )
-
-      add_custom_target(taihe_stdlib_gen
-      DEPENDS ${TAIHE_STDLIB_GEN_SOURCES} ${TAIHE_STDLIB_GEN_INCLUDE_DIR}
-    )
-  endif()
-
   # compile static library
-  add_library(${target_name} STATIC ${TAIHE_RUNTIME_SOURCES} ${GEN_ABI_C_FILES} ${GEN_BRIDGE_CPP_FILES} ${TAIHE_STDLIB_GEN_SOURCES})
+  add_library(${target_name} STATIC ${TAIHE_RUNTIME_SOURCES} ${GEN_ABI_C_FILES} ${GEN_BRIDGE_CPP_FILES} ${GEN_STDLIB_ABI_C_FILES})
   target_compile_options(${target_name} PRIVATE "-Wno-attributes")
   set_target_properties(${target_name} PROPERTIES LINKER_LANGUAGE CXX)
   target_link_options(${target_name} PRIVATE "-Wl,--no-undefined")
-  target_include_directories(${target_name} PUBLIC ${GEN_INCLUDE_DIR} ${TAIHE_RUNTIME_HEADER_DIR} ${TAIHE_STDLIB_GEN_INCLUDE_DIR})
-  add_dependencies(${target_name} taihe_stdlib_gen)
+  target_include_directories(${target_name} PUBLIC ${GEN_INCLUDE_DIR} ${TAIHE_RUNTIME_HEADER_DIR})
 endfunction()
 
 function(add_ani_demo demo_name idl_files taihe_configs gen_ets_names user_ets_files user_include_dir user_cpp_files)
@@ -512,21 +429,20 @@ function(add_ani_demo demo_name idl_files taihe_configs gen_ets_names user_ets_f
   endif()
 
   set(MAIN_ABC "${CMAKE_CURRENT_BINARY_DIR}/main.abc")
-  
+
   # panda sdk 环境配置
   setup_panda_sdk()
   # ani 头文件
   setup_ani_header()
   # 编译 taihe 运行时
   add_taihe_runtime()
-  # 编译 taihe 标准库
-  add_taihe_stdlib()
   # ani 代码生成相关配置
   set(taihe_configs "-Gpretty-print ${taihe_configs}")
   # 生成代码
   generate_code_from_idl(${demo_name} "${idl_files}" "${gen_ets_names}" "cpp-author" "ani-bridge" "${taihe_configs}" GEN_INCLUDE_DIR GEN_ABI_C_FILES GEN_ANI_CPP_FILES GEN_ETS_FILES)
   # 生成代码静态库编译
-  compile_gen_lib("taihe_gen_${demo_name}" "${GEN_INCLUDE_DIR}" "${GEN_ABI_C_FILES}" "${GEN_ANI_CPP_FILES}")
+  set(ALL_GEN_ABI_C_FILES ${GEN_STDLIB_ABI_C_FILES} ${GEN_ABI_C_FILES})
+  compile_gen_lib("taihe_gen_${demo_name}" "${GEN_INCLUDE_DIR}" "${ALL_GEN_ABI_C_FILES}" "${GEN_ANI_CPP_FILES}")
   # 动态库编译
   compile_dylib(${demo_name} "${user_include_dir}" "${user_cpp_files}" "${GEN_INCLUDE_DIR}" "taihe_gen_${demo_name}")
   # 链接为 main.abc

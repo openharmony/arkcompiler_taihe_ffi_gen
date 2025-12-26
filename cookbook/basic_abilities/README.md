@@ -2,32 +2,32 @@
 
 类型对应参照表
 
-| taihe 类型 | C++ 侧投影类型         | C++ 侧投影（作为参数时）     |
-|------------|-----------------------|----------------------------|
-| `i8`       | `int8_t`              | `int8_t`                   |
-| `i16`      | `int16_t`             | `int16_t`                  |
-| `i32`      | `int32_t`             | `int32_t`                  |
-| `i64`      | `int64_t`             | `int64_t`                  |
-| `u8`       | `uint8_t`             | `uint8_t`                  |
-| `u16`      | `uint16_t`            | `uint16_t`                 |
-| `u32`      | `uint32_t`            | `uint32_t`                 |
-| `u64`      | `uint64_t`            | `uint64_t`                 |
-| `f32`      | `float`               | `float`                    |
-| `f64`      | `double`              | `double`                   |
-| `bool`     | `bool`                | `bool`                     |
-| `String`   | `taihe::string` | `taihe::string_view` |
+| taihe 类型 | C++ 侧投影类型  | C++ 侧投影（作为参数时）   |
+|------------|-----------------|----------------------------|
+| `i8`       | `int8_t`        | `int8_t`                   |
+| `i16`      | `int16_t`       | `int16_t`                  |
+| `i32`      | `int32_t`       | `int32_t`                  |
+| `i64`      | `int64_t`       | `int64_t`                  |
+| `u8`       | `uint8_t`       | `uint8_t`                  |
+| `u16`      | `uint16_t`      | `uint16_t`                 |
+| `u32`      | `uint32_t`      | `uint32_t`                 |
+| `u64`      | `uint64_t`      | `uint64_t`                 |
+| `f32`      | `float`         | `float`                    |
+| `f64`      | `double`        | `double`                   |
+| `bool`     | `bool`          | `bool`                     |
+| `String`   | `taihe::string` | `taihe::string_view`       |
 
 注：目前 Taihe 在 C++ 侧支持 unsigned 类型，但是 ani 侧并不支持，如果用户进行开发，请避免使用 `u8`、`u16`、`u32`、`u64`. `array<u8>` 是一个特例，后续在 bytearray 章节会介绍
-    
+
 容器类型对应参照表
 
-| Taihe 类型          |     C++ 侧投影             |     C++ 侧投影（作为参数时）     |
-|---------------------|---------------------------|--------------------------------|
-| `Array<T>`          | `taihe::array<T>`   | `taihe::array_view<T>`   |
-| `Optional<T>`       | `taihe::optional<T>`| `taihe::optional_view<T>`|
-| `Vector<T>`         | `taihe::vector<T>`  | `taihe::vector_view<T>`  |
-| `Map<K, V>`         | `taihe::map<K, V>`  | `taihe::map_view<K, V>`  |
-| `Set<T>`            | `taihe::set<T>`     | `taihe::set_view<T>`     |
+| Taihe 类型          | C++ 侧投影           | C++ 侧投影（作为参数时）  |
+|---------------------|----------------------|---------------------------|
+| `Array<T>`          | `taihe::array<T>`    | `taihe::array_view<T>`    |
+| `Optional<T>`       | `taihe::optional<T>` | `taihe::optional_view<T>` |
+| `Vector<T>`         | `taihe::vector<T>`   | `taihe::vector_view<T>`   |
+| `Map<K, V>`         | `taihe::map<K, V>`   | `taihe::map_view<K, V>`   |
+| `Set<T>`            | `taihe::set<T>`      | `taihe::set_view<T>`      |
 
 我们可以发现，作为参数时，string 类型和容器类型的 Taihe 类型有 view 类型和非 view 类型，其中，view 类型的语义是不拥有所有权，只是对现有类型的引用，而非 view 类型则是拥有当前类型的所有权，用户可以根据使用场景来进行使用。
 
@@ -37,14 +37,16 @@
 
 ## 第一步：在 Taihe IDL 文件中声明
 
-`basic_abilities/idl/basic_abilities.taihe`
+**File: `idl/basic_abilities.taihe`**
+
 ```rust
 function convert_arr(a: Array<i32>, str: String): Array<String>;
 ```
 
 ## 第二步：实现声明的函数
 
-`basic_abilities/author/src/basic_abilities.impl.cpp`
+**File: `author/src/basic_abilities.impl.cpp`**
+
 ```cpp
 array<string> convert_arr(array_view<int32_t> a, string_view str) {
     // 可通过 size() 获取 array 长度
@@ -72,9 +74,10 @@ array<string> convert_arr(array_view<int32_t> a, string_view str) {
 taihe-tryit test -u sts path/to/basic_abilities -Csts:keep-name
 ```
 
-用户侧使用
+## 用户侧使用
 
-`main.ets`
+**File: `user/main.ets`**
+
 ```typescript
 let input_arr: int[] = [1, 2, 3, 4, 5]
 let input_str: String = "hello"
@@ -82,11 +85,15 @@ let output_arr: String[] = basic_abilities.convert_arr(input_arr, input_str)
 for (let i = 0; i < output_arr.length; i++) {
     console.log("arr [" + i + "] val " + output_arr[i])
 }
-// Log output :
-// arr [0] val 5
-// arr [1] val 1
-// arr [2] val 5
-// arr [3] val hello
+```
+
+**Stdout**
+
+```sh
+arr [0] val 5
+arr [1] val 1
+arr [2] val 5
+arr [3] val hello
 ```
 
 ## Know more, Code better
@@ -202,6 +209,7 @@ for (let i = 0; i < output_arr.length; i++) {
     ```
 
 2. 与 `string` 和 `string_view` 类似，`array` 拥有所有权，`array_view` 不拥有所有权
+
     ```cpp
     // example
 

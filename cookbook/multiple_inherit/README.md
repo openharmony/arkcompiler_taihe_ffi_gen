@@ -5,6 +5,7 @@ Taihe 的 interface 支持多继承, 以一个简单的菱形继承为例介绍 
 ## 第一步：编写接口原型
 
 **File: `idl/multiple_inherit.taihe`**
+
 ```rust
 interface IBase {
     baseFunc(): void;
@@ -33,14 +34,16 @@ function createIRect(color: String, shape: String): IRect;
 
 ```
        IBase
-      /    \
+      /     \
 IColorable IShape
-      \    /
+      \     /
        IRect
 ```
 
 ## 第二步：完成 C++ 实现
+
 **File: `author/src/multiple_inherit.impl.cpp`**
+
 ```cpp
 class IBaseImpl {
     public:
@@ -128,7 +131,7 @@ private:
 
 Taihe 的 C++ 实现侧与 Taihe 的 interface 是接口与实现的关系，Taihe 会将实现的对应名字的函数绑定到 Taihe 的 interface 对象上
 
-额外信息: C++ 实现侧的impl类直接是**允许没有继承关系**的，只要实现对应的方法就能够成功绑定, 用户在 C++ 实现时如果希望通过继承来完成现有方法的复用在 Taihe 也是允许的，代码如下：
+额外信息: C++ 实现侧的 impl 类直接是**允许没有继承关系**的，只要实现对应的方法就能够成功绑定, 用户在 C++ 实现时如果希望通过继承来完成现有方法的复用在 Taihe 也是允许的，代码如下：
 
 ```cpp
 class IColorableImpl {
@@ -184,8 +187,9 @@ class IRectImpl: public IColorableImpl, public IShapeImpl {
 };
 ```
 
-
 ## 第三步：在 ets 侧使用
+
+**File: `user/main.ets`**
 
 ```typescript
 let Obj = multiple_inherit.createIRect("Red", "Square");
@@ -194,7 +198,8 @@ console.log("Obj's Shape is: " + Obj.getShape());
 console.log("Obj's Message is: " + Obj.getMessage());
 ```
 
-输出结果：
+**Stdout**
+
 ```sh
 Obj's Color is: Red
 Obj's Shape is: Square

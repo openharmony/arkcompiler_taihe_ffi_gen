@@ -3,7 +3,7 @@
 ## 项目配置
 
 - **操作系统**
-  推荐 Linux (或 WSL)，Windows 不保证完整支持
+  推荐 Linux（或 WSL），Windows 不保证完整支持
 - **软件最低版本**
   - **运行时**
     - Clang 15，GCC 不保证完整支持
@@ -15,6 +15,10 @@
 ## 编译器
 
 首先配置 Python 及依赖环境。
+
+Ubuntu 用户可运行 `scripts/install-ubuntu-deps` 一键配置环境。
+
+通过 `scripts/install-ubuntu-deps` 配置好环境后，每次使用时都需要先在项目根目录下运行 `source .venv/bin/activate` 来激活虚拟环境，或者在使用命令行工具时运行 `uv run taihec` 或 `uv run taihe-tryit` 命令而不是直接运行 `taihec` 或 `taihe-tryit`。
 
 ### 初次克隆项目时
 

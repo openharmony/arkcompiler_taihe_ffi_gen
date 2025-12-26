@@ -5,6 +5,7 @@
 ## 第一步：编写接口原型
 
 **File: `idl/user.taihe`**
+
 ```rust
 interface IUser {
     @get getEmail(): String;
@@ -15,6 +16,7 @@ function makeUser(path: String): IUser;
 ```
 
 **File: `idl/notification.taihe`**
+
 ```rust
 from user use IUser;
 
@@ -28,7 +30,6 @@ function makeNotificationService(): INotificationService;
 taihe 有两种导入方式：
 
 1. `from A use B;`
-
 2. `use A;`
 
 其中，A 为 taihe 的 pkg，B 为声明
@@ -36,6 +37,7 @@ taihe 有两种导入方式：
 本章样例使用 `from user use IUser`，即从 `user` 包里导入 `IUser`
 
 当然也可以使用 `use user` 来导入整个 `user.taihe` 文件，但是这样做的话，在被导入的 Taihe IDL 文件 `notification.taihe` 里，使用导入的模块则需要前面跟上 pkg 名
+
 ```rust
 use user;
 
@@ -55,6 +57,7 @@ function makeNotificationService(): INotificationService;
 ## 第二步：完成 C++ 实现
 
 **File: `author/src/user.impl.cpp`**
+
 ```cpp
 class IUserImpl {
 public:
@@ -78,6 +81,7 @@ IUser makeUser(string_view path) {
 ```
 
 **File: `author/src/ntification.impl.cpp`**
+
 ```cpp
 class INotificationServiceImpl {
 public:
@@ -95,12 +99,15 @@ INotificationService makeNotificationService() {
 ```
 
 此处有一个需要注意的地方在于在 C++ 侧调用 taihe interface 的方法，当需要调用 taihe interface 的方法时，在 c++ 侧调用方法时，需要使用 `->` 的方式调用函数，而非 `.` 的方式
+
 ```cpp
-a.getEmail(); // false!
+a.getEmail();  // error!
 a->getEmail(); // success!
 ```
 
 ## 第三步：在 ets 侧使用
+
+**File: `user/main.ets`**
 
 ```typescript
 let userA = user.makeUser("12345@huawei.com");
@@ -110,7 +117,8 @@ noter.sendMessage(userA);
 noter.sendMessage(userB);
 ```
 
-Output:
+**Stdout**
+
 ```sh
 Welcome 12345@huawei.com
 Welcome 67890@outlook.com

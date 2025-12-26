@@ -180,17 +180,6 @@ class AniRuntimeUndefinedType(AniRuntimeNonPrimitiveType):
 
 
 @dataclass
-class AniRuntimeNullType(AniRuntimeUnionMemberType):
-    @property
-    def sig(self) -> str:
-        return "N"
-
-    @property
-    def desc(self) -> str:
-        return self.sig
-
-
-@dataclass
 class AniRuntimeFixedArrayType(AniRuntimeUnionMemberType):
     element: AniRuntimeType
 
@@ -428,13 +417,12 @@ class ArkTsModule(ArkTsModuleOrNamespace):
 
     def get_member(self, name: str, is_default: bool, target: StsWriter) -> str:
         filtered_name = "".join(c if c.isalnum() else "_" for c in self.mod_name)
+        import_name = f"_taihe_{filtered_name}_{name}"
         if is_default:
-            decl_name = f"_taihe_{filtered_name}_default"
-            target.add_import_default(f"./{self.mod_name}", decl_name)
-            return decl_name
-        scope_name = f"_taihe_{filtered_name}"
-        target.add_import_module(f"./{self.mod_name}", scope_name)
-        return f"{scope_name}.{name}"
+            target.add_import_default(f"./{self.mod_name}", import_name)
+        else:
+            target.add_import_decl(f"./{self.mod_name}", name, import_name)
+        return import_name
 
 
 @dataclass
@@ -486,10 +474,10 @@ class PackageGroupAniInfo(AbstractAnalysis[PackageGroup]):
             mod = self.mods.setdefault(mod_name, ArkTsModule(mod_name, self.path))
             ns_name = self.pkg_map[pkg] = mod.add_path(ns_parts, pkg, is_default)
 
-            for attr in StsInjectIntoModuleAttr.get(pkg):
+            for attr in StsInjectIntoModuleAttr.get_all(pkg):
                 mod.injected_heads.append(attr.sts_code)
 
-            for attr in StsInjectAttr.get(pkg):
+            for attr in StsInjectAttr.get_all(pkg):
                 ns_name.injected_codes.append(attr.sts_code)
 
     @classmethod
@@ -835,10 +823,10 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
         self.impl_desc = ".".join([*self.parent_ns.name_parts, self.sts_impl_name])
 
         self.interface_injected_codes: list[str] = []
-        for iface_injected in StsInjectIntoIfaceAttr.get(d):
+        for iface_injected in StsInjectIntoIfaceAttr.get_all(d):
             self.interface_injected_codes.append(iface_injected.sts_code)
         self.class_injected_codes: list[str] = []
-        for class_injected in StsInjectIntoClazzAttr.get(d):
+        for class_injected in StsInjectIntoClazzAttr.get_all(d):
             self.class_injected_codes.append(class_injected.sts_code)
 
         self.sts_fields: list[StructFieldDecl] = []
@@ -888,10 +876,10 @@ class IfaceAniInfo(AbstractAnalysis[IfaceDecl]):
         self.impl_desc = ".".join([*self.parent_ns.name_parts, self.sts_impl_name])
 
         self.interface_injected_codes: list[str] = []
-        for iface_injected in StsInjectIntoIfaceAttr.get(d):
+        for iface_injected in StsInjectIntoIfaceAttr.get_all(d):
             self.interface_injected_codes.append(iface_injected.sts_code)
         self.class_injected_codes: list[str] = []
-        for class_injected in StsInjectIntoClazzAttr.get(d):
+        for class_injected in StsInjectIntoClazzAttr.get_all(d):
             self.class_injected_codes.append(class_injected.sts_code)
 
         self.sts_class_extends: list[IfaceExtendDecl] = []
@@ -1308,7 +1296,7 @@ class NullTypeAniInfo(TypeAniInfo):
     def __init__(self, am: AnalysisManager, t: UnitType):
         super().__init__(am, t)
         self.ani_type = ANI_REF
-        self.sig_type = AniRuntimeNullType()
+        self.sig_type = AniRuntimeClassType("std.core.Null")
 
     @override
     def sts_type_in(self, target: StsWriter) -> str:
@@ -1827,16 +1815,16 @@ class TypedArrayTypeAniInfo(TypeAniInfo):
         ani_data = f"{cpp_after}_ani_data"
         ani_length = f"{cpp_after}_ani_length"
         target.writelns(
-            f"ani_double {ani_byte_length} = {{}};",
-            f"ani_double {ani_byte_offset} = {{}};",
+            f"ani_int {ani_byte_length} = {{}};",
+            f"ani_int {ani_byte_offset} = {{}};",
             f"ani_arraybuffer {ani_arrbuf} = {{}};",
-            f'{env}->Object_GetPropertyByName_Double({ani_value}, "byteLength", &{ani_byte_length});',
-            f'{env}->Object_GetPropertyByName_Double({ani_value}, "byteOffset", &{ani_byte_offset});',
+            f'{env}->Object_GetPropertyByName_Int({ani_value}, "byteLength", &{ani_byte_length});',
+            f'{env}->Object_GetPropertyByName_Int({ani_value}, "byteOffset", &{ani_byte_offset});',
             f'{env}->Object_GetPropertyByName_Ref({ani_value}, "buffer", reinterpret_cast<ani_ref*>(&{ani_arrbuf}));',
             f"void* {ani_data} = {{}};",
             f"ani_size {ani_length} = {{}};",
             f"{env}->ArrayBuffer_GetInfo({ani_arrbuf}, &{ani_data}, &{ani_length});",
-            f"{self.cpp_info.as_param} {cpp_after}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>({ani_data}) + static_cast<size_t>({ani_byte_offset}), static_cast<size_t>({ani_byte_length}) / (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)));",
+            f"{self.cpp_info.as_param} {cpp_after}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>({ani_data}) + {ani_byte_offset}, {ani_byte_length} / (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)));",
         )
 
     @override
@@ -1899,7 +1887,7 @@ class BigIntTypeAniInfo(TypeAniInfo):
         ani_length = f"{cpp_after}_ani_length"
         target.writelns(
             f"ani_arraybuffer {ani_arrbuf} = {{}};",
-            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.mod.impl_desc}", "_taihe_fromBigIntToArrayBuffer", nullptr), reinterpret_cast<ani_ref*>(&{ani_arrbuf}), {ani_value}, sizeof({item_ty_cpp_info.as_owner}) / sizeof(char));'
+            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.mod.impl_desc}", "_taihe_fromBigIntToArrayBuffer", "C{{escompat.BigInt}}i:C{{escompat.ArrayBuffer}}"), reinterpret_cast<ani_ref*>(&{ani_arrbuf}), {ani_value}, static_cast<ani_int>(sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)));'
             f"void* {ani_data} = {{}};",
             f"ani_size {ani_length} = {{}};",
             f"{env}->ArrayBuffer_GetInfo({ani_arrbuf}, &{ani_data}, &{ani_length});",
@@ -1924,7 +1912,7 @@ class BigIntTypeAniInfo(TypeAniInfo):
             f"{env}->CreateArrayBuffer({cpp_value}.size() * (sizeof({item_ty_cpp_info.as_owner}) / sizeof(char)), &{ani_data}, &{ani_arrbuf});",
             f"std::copy({cpp_value}.begin(), {cpp_value}.end(), reinterpret_cast<{item_ty_cpp_info.as_owner}*>({ani_data}));",
             f"ani_object {ani_after} = {{}};",
-            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.mod.impl_desc}", "_taihe_fromArrayBufferToBigInt", nullptr), reinterpret_cast<ani_ref*>(&{ani_after}), {ani_arrbuf});',
+            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.mod.impl_desc}", "_taihe_fromArrayBufferToBigInt", "C{{escompat.ArrayBuffer}}:C{{escompat.BigInt}}"), reinterpret_cast<ani_ref*>(&{ani_after}), {ani_arrbuf});',
         )
 
 
@@ -1970,7 +1958,7 @@ class RecordTypeAniInfo(TypeAniInfo):
         val_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
         target.writelns(
             f"ani_object {ani_iter} = {{}};",
-            f'{env}->Object_CallMethod_Ref({ani_value}, TH_ANI_FIND_CLASS_METHOD({env}, "escompat.Record", "$_iterator", nullptr), reinterpret_cast<ani_ref*>(&{ani_iter}));',
+            f'{env}->Object_CallMethod_Ref({ani_value}, TH_ANI_FIND_CLASS_METHOD({env}, "escompat.Record", "entries", ":C{{escompat.IterableIterator}}"), reinterpret_cast<ani_ref*>(&{ani_iter}));',
             f"{self.cpp_info.as_owner} {cpp_after};",
         )
         with target.indented(
@@ -1980,7 +1968,7 @@ class RecordTypeAniInfo(TypeAniInfo):
             target.writelns(
                 f"ani_object {ani_next} = {{}};",
                 f"ani_boolean {ani_done} = {{}};",
-                f'{env}->Object_CallMethod_Ref({ani_iter}, TH_ANI_FIND_CLASS_METHOD({env}, "escompat.Iterator", "next", nullptr), reinterpret_cast<ani_ref*>(&{ani_next}));',
+                f'{env}->Object_CallMethod_Ref({ani_iter}, TH_ANI_FIND_CLASS_METHOD({env}, "escompat.Iterator", "next", ":C{{escompat.IteratorResult}}"), reinterpret_cast<ani_ref*>(&{ani_next}));',
                 f'{env}->Object_GetField_Boolean({ani_next}, TH_ANI_FIND_CLASS_FIELD({env}, "escompat.IteratorResult", "done"), &{ani_done});',
             )
             with target.indented(
@@ -2020,7 +2008,7 @@ class RecordTypeAniInfo(TypeAniInfo):
         ani_val = f"{ani_after}_ani_val"
         target.writelns(
             f"ani_object {ani_after} = {{}};",
-            f'{env}->Object_New(TH_ANI_FIND_CLASS({env}, "escompat.Record"), TH_ANI_FIND_CLASS_METHOD({env}, "escompat.Record", "<ctor>", nullptr), &{ani_after});',
+            f'{env}->Object_New(TH_ANI_FIND_CLASS({env}, "escompat.Record"), TH_ANI_FIND_CLASS_METHOD({env}, "escompat.Record", "<ctor>", ":"), &{ani_after});',
         )
         with target.indented(
             f"for (const auto& [{cpp_key}, {cpp_val}] : {cpp_value}) {{",
@@ -2029,7 +2017,7 @@ class RecordTypeAniInfo(TypeAniInfo):
             key_ty_ani_info.into_ani_boxed(target, env, cpp_key, ani_key)
             val_ty_ani_info.into_ani_boxed(target, env, cpp_val, ani_val)
             target.writelns(
-                f'{env}->Object_CallMethod_Void({ani_after}, TH_ANI_FIND_CLASS_METHOD({env}, "escompat.Record", "$_set", nullptr), {ani_key}, {ani_val});',
+                f'{env}->Object_CallMethod_Void({ani_after}, TH_ANI_FIND_CLASS_METHOD({env}, "escompat.Record", "$_set", "X{{C{{std.core.BaseEnum}}C{{std.core.Numeric}}C{{std.core.String}}}}C{{std.core.Object}}:"), {ani_key}, {ani_val});',
             )
 
 
@@ -2177,7 +2165,7 @@ class CallbackTypeAniInfo(TypeAniInfo):
             f"ani_long {ani_data_ptr} = reinterpret_cast<ani_long>({cpp_copy}.m_handle.data_ptr);",
             f"{cpp_copy}.m_handle.data_ptr = nullptr;",
             f"ani_fn_object {ani_after} = {{}};",
-            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.mod.impl_desc}", "_taihe_makeCallback", nullptr), reinterpret_cast<ani_ref*>(&{ani_after}), {ani_cast_ptr}, {ani_func_ptr}, {ani_data_ptr});',
+            f'{env}->Function_Call_Ref(TH_ANI_FIND_MODULE_FUNCTION({env}, "{pkg_ani_info.ns.mod.impl_desc}", "_taihe_makeCallback", "lll:C{{std.core.Function0}}"), reinterpret_cast<ani_ref*>(&{ani_after}), {ani_cast_ptr}, {ani_func_ptr}, {ani_data_ptr});',
         )
 
     def gen_native_invoke(
@@ -2195,10 +2183,10 @@ class CallbackTypeAniInfo(TypeAniInfo):
             params_ani.append(f"[[maybe_unused]] ani_ref {arg_ani}")
             args_ani.append(arg_ani)
         params_ani_str = ", ".join(params_ani)
-        args_cpp = []
-        for i in self.t.ref.params:
-            arg_cpp = f"cpp_arg_{i.name}"
-            args_cpp.append(arg_cpp)
+        vals_cpp = []
+        for param in self.t.ref.params:
+            val_cpp = f"cpp_arg_{param.name}"
+            vals_cpp.append(val_cpp)
         return_ty_ani_name = "ani_ref"
         with target.indented(
             f"static {return_ty_ani_name} {cpp_cast_ptr}({params_ani_str}) {{",
@@ -2209,11 +2197,21 @@ class CallbackTypeAniInfo(TypeAniInfo):
                 f"DataBlockHead* cpp_data_ptr = reinterpret_cast<DataBlockHead*>(ani_data_ptr);",
                 f"{self.cpp_info.as_param} cpp_func = {self.cpp_info.as_param}({{cpp_vtbl_ptr, cpp_data_ptr}});",
             )
-            for param, arg_ani, arg_cpp in zip(
-                self.t.ref.params, args_ani, args_cpp, strict=False
+            args_cpp = []
+            for param, arg_ani, val_cpp in zip(
+                self.t.ref.params, args_ani, vals_cpp, strict=False
             ):
                 param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
-                param_ty_ani_info.from_ani_boxed(target, "env", arg_ani, arg_cpp)
+                param_ty_ani_info.from_ani_boxed(
+                    target,
+                    "env",
+                    arg_ani,
+                    val_cpp,
+                )
+                param_ty_cpp_info = TypeCppInfo.get(self.am, param.ty)
+                args_cpp.append(
+                    f"std::forward<{param_ty_cpp_info.as_param}>({val_cpp})"
+                )
             args_cpp_str = ", ".join(args_cpp)
             if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
                 return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
@@ -2224,7 +2222,12 @@ class CallbackTypeAniInfo(TypeAniInfo):
                     f"{return_ty_cpp_info.as_owner} {result_cpp} = cpp_func({args_cpp_str});",
                     f"if (::taihe::has_error()) {{ return ani_ref{{}}; }}",
                 )
-                return_ty_ani_info.into_ani_boxed(target, "env", result_cpp, result_ani)
+                return_ty_ani_info.into_ani_boxed(
+                    target,
+                    "env",
+                    result_cpp,
+                    result_ani,
+                )
                 target.writelns(
                     f"return {result_ani};",
                 )

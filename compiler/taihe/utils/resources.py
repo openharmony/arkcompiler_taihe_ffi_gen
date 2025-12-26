@@ -13,6 +13,7 @@ from pathlib import Path
 from urllib.parse import urljoin
 from sys import exit
 from typing import ClassVar, Final, cast
+from urllib.parse import urljoin
 
 from typing_extensions import Self, override
 
@@ -353,12 +354,6 @@ class StandardLibrary(PathResource):
     PATH_BUNDLE = "lib/taihe/stdlib"
 
 
-class Documentation(PathResource):
-    CLI_NAME = "doc"
-    PATH_PKG = PATH_DEV = "doc"
-    PATH_BUNDLE = "share/doc/taihe"
-
-
 class CMakeModulesResource(PathResource):
     CLI_NAME = "cmake"
     PATH_PKG = PATH_DEV = "cmake"
@@ -375,11 +370,8 @@ class _LegacyPandaVm(PathResource):
 class PandaVm(CachedResource):
     CLI_NAME = "panda-vm"
     PATH_CACHE = "panda-vm"
-    VERSION: Final = "sdk-1.5.0-dev.38664"
-    CREDENTIAL = "koala-pub:y3t!n0therP"
-    URL: Final = (
-        "https://nexus.cn.bz-openlab.ru:10443/repository/koala-npm/@panda/sdk/-"
-    )
+    VERSION: Final = "sdk-1.5.0-dev.43957"
+    URL: Final = "https://raw.gitcode.com/m0_52007851/panda_vm/blobs/64114d3d133f12695b582ca5f30426790ae5870a"
 
     # Computed attributes
     ani_header_dir: Path = field(init=False)
@@ -446,7 +438,7 @@ class PandaVm(CachedResource):
         tgz = self.base_path.parent / f"{self.VERSION}.tgz"
         url = f"{self.URL}/{self.VERSION}.tgz"
         if not tgz.exists():
-            fetch_url(url, tgz, curl_extra_args=("--user", self.CREDENTIAL))
+            fetch_url(url, tgz)
 
         shutil.rmtree(self.base_path, ignore_errors=True)
         with tarfile.open(tgz, "r:gz") as tar:
@@ -463,23 +455,23 @@ class PythonBuild(CachedResource):
 
     # HarmonyOS repository url for Python bundles
     REPO: Final = "https://repo.huaweicloud.com/harmonyos/compiler/python/3.11.4/"
-    LINUX_REPO: Final   = urljoin(REPO, "linux/")
+    LINUX_REPO: Final = urljoin(REPO, "linux/")
     WINDOWS_REPO: Final = urljoin(REPO, "windows/")
-    DARWIN_REPO: Final  = urljoin(REPO, "darwin/")
+    DARWIN_REPO: Final = urljoin(REPO, "darwin/")
 
     BUNDLE_DIR_NAME: Final = "pyrt"
 
     # Supported platforms
-    LINUX_X86_64: Final   = "linux-x86_64"
+    LINUX_X86_64: Final = "linux-x86_64"
     WINDOWS_X86_64: Final = "windows-x86_64"
-    DARWIN_ARM64: Final   = "darwin-arm64"
-    DARWIN_X86_64: Final  = "darwin-x86_64"
+    DARWIN_ARM64: Final = "darwin-arm64"
+    DARWIN_X86_64: Final = "darwin-x86_64"
 
     # Bundle tarball file names for each platform
-    LINUX_X86_64_PY_BUNDLE: Final   = "python-linux-x86-GLIBC2.27-3.11.4_20250219.tar.gz"
+    LINUX_X86_64_PY_BUNDLE: Final = "python-linux-x86-GLIBC2.27-3.11.4_20250219.tar.gz"
     WINDOWS_X86_64_PY_BUNDLE: Final = "python-mingw-x86-3.11.4_20250509.tar.gz"
-    DARWIN_ARM64_PY_BUNDLE: Final   = "python-darwin-arm64-3.11.4_20250228.tar.gz"
-    DARWIN_X86_64_PY_BUNDLE: Final  = "python-darwin-x86-3.11.4_20250228.tar.gz"
+    DARWIN_ARM64_PY_BUNDLE: Final = "python-darwin-arm64-3.11.4_20250228.tar.gz"
+    DARWIN_X86_64_PY_BUNDLE: Final = "python-darwin-x86-3.11.4_20250228.tar.gz"
 
     @override
     def fetch(self):
@@ -489,10 +481,10 @@ class PythonBuild(CachedResource):
 
         # System -> (repository url, file name)
         downloads = {
-            self.LINUX_X86_64:   (self.LINUX_REPO,   self.LINUX_X86_64_PY_BUNDLE),
+            self.LINUX_X86_64: (self.LINUX_REPO, self.LINUX_X86_64_PY_BUNDLE),
             self.WINDOWS_X86_64: (self.WINDOWS_REPO, self.WINDOWS_X86_64_PY_BUNDLE),
-            self.DARWIN_ARM64:   (self.DARWIN_REPO,  self.DARWIN_ARM64_PY_BUNDLE),
-            self.DARWIN_X86_64:  (self.DARWIN_REPO,  self.DARWIN_X86_64_PY_BUNDLE),
+            self.DARWIN_ARM64: (self.DARWIN_REPO, self.DARWIN_ARM64_PY_BUNDLE),
+            self.DARWIN_X86_64: (self.DARWIN_REPO, self.DARWIN_X86_64_PY_BUNDLE),
         }
 
         # Download all platform bundles using curl, save as <system>-python.tar.gz
@@ -535,7 +527,7 @@ class PythonBuild(CachedResource):
 class Antlr(CachedResource):
     CLI_NAME = "antlr"
 
-    VERSION: Final = "4.13.2"
+    VERSION: Final = "4.11.1"
     MAVEN_REMOTE: Final = "https://mirrors.huaweicloud.com/repository/maven"
     MAVEN_LOCAL: Final = "~/.m2/repository"
     MAVEN_PATH: Final = f"org/antlr/antlr4/{VERSION}/antlr4-{VERSION}-complete.jar"
@@ -559,7 +551,6 @@ BUILTIN_RESOURCES: Sequence[ResourceT] = [
     RuntimeSource,
     RuntimeHeader,
     StandardLibrary,
-    Documentation,
     CMakeModulesResource,
 ]
 ALL_RESOURCES: Sequence[ResourceT] = [

@@ -4,7 +4,8 @@
 
 ## 第一步：在 Taihe IDL 文件中声明
 
-`polymorphism/idl/poly.taihe`
+**File: `idl/poly.taihe`**
+
 ```rust
 // interface 继承
 interface Animal {
@@ -74,6 +75,7 @@ function introduceYourself(p: PersonType): void;
 ```
 
 继承关系如下：
+
 ```
     Animal
     /  \
@@ -86,7 +88,8 @@ Worker Student
 
 ## 第二步：实现声明的接口
 
-`polymorphism/author/src/poly.impl.cpp`
+**File: `author/src/poly.impl.cpp`**
+
 ```cpp
 class AnimalImpl {
 public:
@@ -231,7 +234,8 @@ void introduceYourself(::poly::PersonType const &p) {
 taihe-tryit test -u sts cookbook/polymorphism -Csts:keep-name
 ```
 
-`main.ets`
+**File: `user/main.ets`**
+
 ```typescript
     let unknownObj = poly.getAnimal(poly.AnimalTag.ANIMAL);
     let dogObj = poly.getAnimal(poly.AnimalTag.DOG);
@@ -248,7 +252,8 @@ taihe-tryit test -u sts cookbook/polymorphism -Csts:keep-name
     poly.introduceYourself(studentPer);
 ```
 
-输出：
+**Stdout**
+
 ```sh
 Unknown Animal
 Animal Speak
