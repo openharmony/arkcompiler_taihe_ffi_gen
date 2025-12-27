@@ -6,11 +6,15 @@
 
 ## 第一步：在 Taihe IDL 文件中声明
 
+**File: `idl/arraybuffer.taihe`**
+
 ```rust
 function convert2Int(a: @arraybuffer Array<u8>): i32;
 ```
 
 ## 第二步：实现声明的接口
+
+**File: `author/src/arraybuffer.impl.cpp`**
 
 ```cpp
 // 将一段连续的 byte 转换成 int 类型
@@ -41,7 +45,8 @@ taihe-tryit test -u sts path/to/arraybuffer -Csts:keep-name
 
 ## 用户侧使用
 
-`main.ets`
+**File: `user/main.ets`**
+
 ```typescript
 let numbersU8: byte[] = [1, 1, 0, 0, 0];
 let arrbuf1: ArrayBuffer = new ArrayBuffer(numbersU8.length);
@@ -50,15 +55,10 @@ for (let i = 0; i < numbersU8.length; i++) {
 }
 let num1 = other_type.convert2Int(arrbuf1);
 console.log("num1: " + num1);
-// Log output：
-// num1: 257
+```
 
-// 如果你使用下方代码
-let arrbuf2: ArrayBuffer = new ArrayBuffer(3);
-for (let i = 0; i < 3; i++) {
-    arrbuf2.set(i, numbersU8[i]);
-}
-let num2 = arraybuffer.convert2Int(arrbuf2);
-console.log("num2: " + num2);
-// [TID 09b61d] E/runtime: Error: ArrayBuffer len < 4
+**Stdout**
+
+```sh
+num1: 257
 ```

@@ -1,3 +1,18 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Defines the types for declarations."""
 
 from abc import ABC, abstractmethod
@@ -6,7 +21,7 @@ from typing import TYPE_CHECKING, Generic, TypeVar, cast
 
 from typing_extensions import override
 
-from taihe.semantics.format import PrettyFormatter
+from taihe.semantics.format import TaiheFormatter
 from taihe.semantics.types import (
     EnumType,
     IfaceType,
@@ -192,7 +207,7 @@ class TypeRefDecl(DeclWithParent["TypeHolderDecl"], ABC):
     @property
     @override
     def description(self) -> str:
-        if (fmt := self.format(PrettyFormatter())) is not None:
+        if (fmt := self.format(TaiheFormatter())) is not None:
             return f"explicit type reference ({fmt})"
         return "implicit type reference"
 
@@ -213,7 +228,7 @@ class TypeRefDecl(DeclWithParent["TypeHolderDecl"], ABC):
         self.resolved_ty_or_none = ty
 
     @abstractmethod
-    def format(self, fmt: PrettyFormatter) -> str | None:
+    def format(self, fmt: TaiheFormatter) -> str | None:
         """Format this type reference into a string with a formatter."""
 
     @abstractmethod
@@ -232,7 +247,7 @@ class ImplicitTypeRefDecl(TypeRefDecl):
     ):
         super().__init__(loc)
 
-    def format(self, fmt: PrettyFormatter) -> None:
+    def format(self, fmt: TaiheFormatter) -> None:
         return None
 
     @override
@@ -252,7 +267,7 @@ class ExplicitTypeRefDecl(TypeRefDecl):
     ):
         super().__init__(loc)
 
-    def format(self, fmt: PrettyFormatter) -> str:
+    def format(self, fmt: TaiheFormatter) -> str:
         return fmt.get_type_ref(self)
 
     @abstractmethod
@@ -803,12 +818,12 @@ class IfaceMethodDecl(NamedDeclWithParent["IfaceDecl"]):
 
 
 class PackageLevelDecl(NamedDeclWithParent["PackageDecl"], ABC):
-    @abstractmethod
-    def accept(self, v: "PackageLevelVisitor[_R]") -> _R: ...
-
     @property
     def full_name(self):
         return f"{self.parent_pkg.name}.{self.name}"
+
+    @abstractmethod
+    def accept(self, v: "PackageLevelVisitor[_R]") -> _R: ...
 
 
 class GlobFuncDecl(PackageLevelDecl):
@@ -863,7 +878,7 @@ class GlobFuncDecl(PackageLevelDecl):
 
 class TypeDecl(PackageLevelDecl, ABC):
     @abstractmethod
-    def as_type(self, ty_ref: ExplicitTypeRefDecl) -> UserType:
+    def as_type(self, ty_ref: TypeRefDecl) -> UserType:
         """Return the type decalaration as type."""
 
     @abstractmethod
@@ -871,8 +886,8 @@ class TypeDecl(PackageLevelDecl, ABC):
 
 
 class EnumDecl(TypeDecl):
-    _item_dict: dict[str, EnumItemDecl]
     ty_ref: ExplicitTypeRefDecl
+    _item_dict: dict[str, EnumItemDecl]
 
     def __init__(
         self,
@@ -881,9 +896,9 @@ class EnumDecl(TypeDecl):
         ty_ref: ExplicitTypeRefDecl,
     ):
         super().__init__(loc, name)
-        self._item_dict = {}
         self.ty_ref = ty_ref
         self.ty_ref.set_parent(self)
+        self._item_dict = {}
 
     @property
     @override
@@ -911,7 +926,7 @@ class EnumDecl(TypeDecl):
         i.set_parent(self)
 
     @override
-    def as_type(self, ty_ref: ExplicitTypeRefDecl) -> EnumType:
+    def as_type(self, ty_ref: TypeRefDecl) -> EnumType:
         return EnumType(ty_ref, self)
 
     @override
@@ -941,7 +956,7 @@ class UnionDecl(TypeDecl):
         f.set_parent(self)
 
     @override
-    def as_type(self, ty_ref: ExplicitTypeRefDecl) -> UnionType:
+    def as_type(self, ty_ref: TypeRefDecl) -> UnionType:
         return UnionType(ty_ref, self)
 
     @override
@@ -971,7 +986,7 @@ class StructDecl(TypeDecl):
         f.set_parent(self)
 
     @override
-    def as_type(self, ty_ref: ExplicitTypeRefDecl) -> StructType:
+    def as_type(self, ty_ref: TypeRefDecl) -> StructType:
         return StructType(ty_ref, self)
 
     @override
@@ -1011,7 +1026,7 @@ class IfaceDecl(TypeDecl):
         f.set_parent(self)
 
     @override
-    def as_type(self, ty_ref: ExplicitTypeRefDecl) -> IfaceType:
+    def as_type(self, ty_ref: TypeRefDecl) -> IfaceType:
         return IfaceType(ty_ref, self)
 
     @override
@@ -1056,7 +1071,9 @@ class PackageDecl(NamedDecl):
     interfaces: list[IfaceDecl]
     enums: list[EnumDecl]
 
-    def __init__(self, name: str, loc: SourceLocation | None):
+    is_stdlib: bool
+
+    def __init__(self, loc: SourceLocation | None, name: str, is_stdlib: bool):
         super().__init__(loc, name)
 
         self._pkg_import_dict = {}
@@ -1069,6 +1086,8 @@ class PackageDecl(NamedDecl):
         self.unions = []
         self.interfaces = []
         self.enums = []
+
+        self.is_stdlib = is_stdlib
 
     @property
     @override
@@ -1183,15 +1202,21 @@ class PackageDecl(NamedDecl):
 class PackageGroup:
     """Stores all known packages for a compilation instance."""
 
+    _all_package_dict: dict[str, PackageDecl]
     _package_dict: dict[str, PackageDecl]
 
     def __init__(self):
         super().__init__()
+        self._all_package_dict = {}
         self._package_dict = {}
 
     def __repr__(self) -> str:
         packages_str = ", ".join(repr(x) for x in self._package_dict)
         return f"{self.__class__.__qualname__}({packages_str})"
+
+    @property
+    def all_packages(self) -> Collection[PackageDecl]:
+        return self._all_package_dict.values()
 
     @property
     def packages(self) -> Collection[PackageDecl]:
@@ -1201,8 +1226,10 @@ class PackageGroup:
         return self._package_dict.get(name)
 
     def add(self, d: PackageDecl):
-        if (prev := self._package_dict.setdefault(d.name, d)) != d:
+        if (prev := self._all_package_dict.setdefault(d.name, d)) != d:
             raise DeclRedefError(prev, d)
+        if not d.is_stdlib:
+            self._package_dict[d.name] = d
         d.set_group(self)
 
     def accept(self, v: "PackageGroupVisitor[_R]"):

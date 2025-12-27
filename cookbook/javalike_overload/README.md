@@ -6,6 +6,8 @@ taihe 为了保证与 C 语言兼容性，并不允许函数重载，但是 sts 
 
 ### 第一步：在 Taihe IDL 文件中声明
 
+**File: `idl/javalike_overload.taihe`**
+
 ```rust
 @static_overload("add")
 function sum_two(a: i32, b: i32): i32;
@@ -13,11 +15,13 @@ function sum_two(a: i32, b: i32): i32;
 function sum_arr(a: Array<i32>): i32;
 ```
 
-sts 重载的注解如上述样例所示，使用 `@static_overload("{sts_name}")` 
+sts 重载的注解如上述样例所示，使用 `@static_overload("{sts_name}")`
 
 使用该注解后，实现侧的函数名仍为 Taihe IDL 文件声明的函数名，但在 ets 侧会使用 `overload add {sum_two, sum_arr}` 实现 java-like 重载
 
 ### 第二步：实现声明的接口
+
+**File: `author/src/javalike_overload.impl.cpp`**
 
 ```cpp
 int32_t sum_two(int32_t a, int32_t b) {
@@ -46,6 +50,9 @@ taihe-tryit test -u sts path/to/javalike_overload -Csts:keep-name
 ```
 
 生成的 sts 代码如下：
+
+**File (Generated): `generated/javalike_overload.ets`**
+
 ```typescript
 export native function _taihe_sum_two_native(a: int, b: int): int;
 export native function _taihe_sum_arr_native(a: Array<int>): int;
@@ -63,14 +70,21 @@ export overload add {
 
 可以发现实现侧的 `sum_two` 函数和 `sum_arr` 函数绑定到 sts 的 `add` 函数的不同重载
 
-用户侧使用如下
+### 第四步：在 ets 侧使用
+
+**File: `user/main.ets`**
+
 ```typescript
 let a: int = 1
 let b: int = 2
 let numbers: int[] = [1, 2, 3, 4, 5];
 console.log("add_two: " + overload.add(a, b))
 console.log("add_arr: " + overload.add(numbers))
-// Log output:
-// add_two: 3
-// add_arr: 15
+```
+
+**Stdout**
+
+```
+add_two: 3
+add_arr: 15
 ```

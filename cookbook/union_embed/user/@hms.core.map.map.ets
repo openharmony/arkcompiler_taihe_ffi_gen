@@ -1,3 +1,18 @@
+/*
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import {make_map_inner, Resource} from "@hms.core.map.map_inner";
 import {BusinessError} from "@ohos.base";
 import {Image} from "@ohos.multimedia.image";
@@ -13,7 +28,7 @@ export interface BasePriorityOverlay extends BaseOverlay {
 }
 
 export interface Bubble extends BasePriorityOverlay {
-    // 当前需要把 Aarray<T>替换成 T[]
+    // 当前需要把 Array<T> 替换成 T[]
     setIcons(icons: ((string | Resource | Image)[])): Promise<int>;
     setPositions(positions: ((Resource[])[])): void;
 }

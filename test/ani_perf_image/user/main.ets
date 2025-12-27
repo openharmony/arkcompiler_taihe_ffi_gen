@@ -1,3 +1,18 @@
+/*
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import {image} from "@ohos.multimedia.image"
 
 loadLibrary("ani_perf_image");
@@ -16,8 +31,12 @@ function runTestFunction(prompt: string, n: int, fn: () => void): void {
         fn();
     }
     const t = Chrono.nanoNow();
-    let durationNs: double = (t - s) / n;
-    console.log(`>> Done ${prompt}: ${durationNs / 1000} μs.`);
+    const u = Chrono.nanoNow();
+    for (let i: int = 0; i < n; i++) {
+    }
+    const v = Chrono.nanoNow();
+    let durationNs = ((t - s) - (v - u)) * 1.0 / n;
+    console.log(`>> Done ${prompt}: ${durationNs} ns.`);
 }
 
 function testImage() {

@@ -1,3 +1,18 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, ClassVar
@@ -6,10 +21,37 @@ if TYPE_CHECKING:
     from taihe.driver.contexts import CompilerInstance
 
 
-class Backend(ABC):
+class BackendConfig(ABC):
+    NAME: ClassVar[str]
+    "The name of the backend."
+
+    DEPS: ClassVar[list[str]] = []
+    "List of backends that the current backend depends on."
+
+    @classmethod
     @abstractmethod
-    def __init__(self, instance: "CompilerInstance"):
-        """Initialize the backend."""
+    def create(cls) -> "BackendConfig":
+        """Creates a default configuration for the backend."""
+
+    @abstractmethod
+    def construct(self, instance: "CompilerInstance") -> "Backend":
+        """Construct an instance of the backend based on this configuration."""
+
+
+class Backend(ABC):  # noqa: B024
+    def register(self):
+        """Register backend-specific analyses, attributes, etc.
+
+        This method is called just after the backend is constructed.
+        """
+        return
+
+    def inject(self):
+        """Add backend-specific sources after the collection phase.
+
+        For example, the standard library sources can be added in this stage.
+        """
+        return
 
     def post_process(self):
         """Post-processes the IR just after parsing.
@@ -25,7 +67,6 @@ class Backend(ABC):
         """
         return
 
-    @abstractmethod
     def generate(self):
         """Generate the output files.
 
@@ -33,20 +74,7 @@ class Backend(ABC):
         - The transformation should be completed in the `post_process` stage.
         - The error reporting should be completed in the `validate` stage.
         """
-
-
-class BackendConfig(ABC):
-    NAME: ClassVar[str]
-    "The name of the backend."
-
-    DEPS: ClassVar[list[str]] = []
-    "List of backends that the current backend depends on."
-
-    @abstractmethod
-    def __init__(self): ...
-
-    @abstractmethod
-    def construct(self, instance: "CompilerInstance") -> Backend: ...
+        return
 
 
 BackendConfigT = type[BackendConfig]

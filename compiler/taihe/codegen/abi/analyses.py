@@ -1,3 +1,18 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from abc import ABC
 from dataclasses import dataclass
 
@@ -49,7 +64,7 @@ class PackageAbiInfo(AbstractAnalysis[PackageDecl]):
 class GlobFuncAbiInfo(AbstractAnalysis[GlobFuncDecl]):
     def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
         segments = [*f.parent_pkg.segments, f.name]
-        self.mangled_name = encode(segments, DeclKind.FUNC)
+        self.impl_name = encode(segments, DeclKind.FUNC)
 
     @classmethod
     @override
@@ -60,7 +75,9 @@ class GlobFuncAbiInfo(AbstractAnalysis[GlobFuncDecl]):
 class IfaceMethodAbiInfo(AbstractAnalysis[IfaceMethodDecl]):
     def __init__(self, am: AnalysisManager, f: IfaceMethodDecl) -> None:
         segments = [*f.parent_pkg.segments, f.parent_iface.name, f.name]
-        self.mangled_name = encode(segments, DeclKind.FUNC)
+        self.impl_name = encode(segments, DeclKind.FUNC)
+        self.wrap_name = encode(segments, DeclKind.METHOD)
+        self.min_version = 0
 
     @classmethod
     @override
@@ -132,6 +149,7 @@ class IfaceAbiInfo(AbstractAnalysis[IfaceDecl]):
         self.defn_header = f"{d.parent_pkg.name}.{d.name}.abi.1.h"
         self.impl_header = f"{d.parent_pkg.name}.{d.name}.abi.2.h"
         self.mangled_name = encode(segments, DeclKind.TYPE)
+        self.version = 0
         self.as_owner = f"struct {self.mangled_name}"
         self.as_param = f"struct {self.mangled_name}"
         self.ftable = encode(segments, DeclKind.FTABLE)
@@ -382,11 +400,34 @@ class PackageCImplInfo(AbstractAnalysis[PackageDecl]):
         return PackageCImplInfo(am, p)
 
 
+class IfaceCImplInfo(AbstractAnalysis[IfaceDecl]):
+    def __init__(self, am: AnalysisManager, d: IfaceDecl) -> None:
+        self.header = f"{d.parent_pkg.name}.{d.name}.default.h"
+        self.source = f"{d.parent_pkg.name}.{d.name}.default.c"
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, d: IfaceDecl) -> "IfaceCImplInfo":
+        return IfaceCImplInfo(am, d)
+
+
 class GlobFuncCImplInfo(AbstractAnalysis[GlobFuncDecl]):
     def __init__(self, am: AnalysisManager, f: GlobFuncDecl) -> None:
         self.macro = f"TH_EXPORT_C_API_{f.name}"
+        self.function = f"{f.name}_impl"
 
     @classmethod
     @override
     def _create(cls, am: AnalysisManager, f: GlobFuncDecl) -> "GlobFuncCImplInfo":
         return GlobFuncCImplInfo(am, f)
+
+
+class IfaceMethodCImplInfo(AbstractAnalysis[IfaceMethodDecl]):
+    def __init__(self, am: AnalysisManager, f: IfaceMethodDecl) -> None:
+        self.macro = f"TH_EXPORT_DEFAULT_C_API_{f.name}"
+        self.function = f"{f.name}_default_impl"
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, f: IfaceMethodDecl) -> "IfaceMethodCImplInfo":
+        return IfaceMethodCImplInfo(am, f)

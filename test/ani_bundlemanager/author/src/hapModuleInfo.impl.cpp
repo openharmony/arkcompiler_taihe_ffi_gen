@@ -1,3 +1,20 @@
+/*
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// This file is a test file.
+// NOLINTBEGIN
 #include "hapModuleInfo.impl.hpp"
 #include <iostream>
 #include "hapModuleInfo.proj.hpp"
@@ -12,148 +29,187 @@ namespace {
 
 class HapModuleInfoImpl {
 public:
-  int32_t hapModuleInfoImpl = 21474;
+    int32_t hapModuleInfoImpl = 21474;
 
-  HapModuleInfoImpl() {}
+    HapModuleInfoImpl()
+    {
+    }
 
-  string GetName() {
-    return "HapModuleInfoImpl::getName";
-  }
+    string GetName()
+    {
+        return "HapModuleInfoImpl::getName";
+    }
 
-  string GetIcon() {
-    return "HapModuleInfoImpl::getIcon";
-  }
+    string GetIcon()
+    {
+        return "HapModuleInfoImpl::getIcon";
+    }
 
-  int32_t GetIconId() {
-    return hapModuleInfoImpl;
-  }
+    int32_t GetIconId()
+    {
+        return hapModuleInfoImpl;
+    }
 
-  string GetLabel() {
-    return "HapModuleInfoImpl::getLabel";
-  }
+    string GetLabel()
+    {
+        return "HapModuleInfoImpl::getLabel";
+    }
 
-  int32_t GetLabelId() {
-    return hapModuleInfoImpl;
-  }
+    int32_t GetLabelId()
+    {
+        return hapModuleInfoImpl;
+    }
 
-  string GetDescription() {
-    return "HapModuleInfoImpl::getDescription";
-  }
+    string GetDescription()
+    {
+        return "HapModuleInfoImpl::getDescription";
+    }
 
-  int32_t GetDescriptionId() {
-    return hapModuleInfoImpl;
-  }
+    int32_t GetDescriptionId()
+    {
+        return hapModuleInfoImpl;
+    }
 
-  string GetMainElementName() {
-    return "HapModuleInfoImpl::getMainElementName";
-  }
+    string GetMainElementName()
+    {
+        return "HapModuleInfoImpl::getMainElementName";
+    }
 
-  array<string> GetDeviceTypes() {
-    array<string> str = {"HapModuleInfoImpl::getDeviceTypes"};
-    return str;
-  }
+    array<string> GetDeviceTypes()
+    {
+        array<string> str = {"HapModuleInfoImpl::getDeviceTypes"};
+        return str;
+    }
 
-  bool GetInstallationFree() {
-    return true;
-  }
+    bool GetInstallationFree()
+    {
+        return true;
+    }
 
-  string GetHashValue() {
-    return "HapModuleInfoImpl::getHashValue";
-  }
+    string GetHashValue()
+    {
+        return "HapModuleInfoImpl::getHashValue";
+    }
 
-  string GetFileContextMenuConfig() {
-    return "HapModuleInfoImpl::getFileContextMenuConfig";
-  }
+    string GetFileContextMenuConfig()
+    {
+        return "HapModuleInfoImpl::getFileContextMenuConfig";
+    }
 
-  string GetNativeLibraryPath() {
-    return "HapModuleInfoImpl::getNativeLibraryPath";
-  }
+    string GetNativeLibraryPath()
+    {
+        return "HapModuleInfoImpl::getNativeLibraryPath";
+    }
 
-  string GetCodePath() {
-    return "HapModuleInfoImpl::getCodePath";
-  }
+    string GetCodePath()
+    {
+        return "HapModuleInfoImpl::getCodePath";
+    }
 };
 
 class DependencyImpl {
 public:
-  int32_t dependencyImpl = 21474;
+    int32_t dependencyImpl = 21474;
 
-  DependencyImpl() {}
+    DependencyImpl()
+    {
+    }
 
-  string GetModuleName() {
-    return "HapModuleInfoImpl::getModuleName";
-  }
+    string GetModuleName()
+    {
+        return "HapModuleInfoImpl::getModuleName";
+    }
 
-  string GetBundleName() {
-    return "HapModuleInfoImpl::getBundleName";
-  }
+    string GetBundleName()
+    {
+        return "HapModuleInfoImpl::getBundleName";
+    }
 
-  int32_t GetVersionCode() {
-    return dependencyImpl;
-  }
+    int32_t GetVersionCode()
+    {
+        return dependencyImpl;
+    }
 };
 
 class PreloadItemImpl {
 public:
-  PreloadItemImpl() {}
+    PreloadItemImpl()
+    {
+    }
 
-  string GetModuleName() {
-    return "PreloadItemImpl::getModuleName";
-  }
+    string GetModuleName()
+    {
+        return "PreloadItemImpl::getModuleName";
+    }
 };
 
 class RouterItemImpl {
 public:
-  RouterItemImpl() {}
+    RouterItemImpl()
+    {
+    }
 
-  string GetName() {
-    return "RouterItemImpl::getName";
-  }
+    string GetName()
+    {
+        return "RouterItemImpl::getName";
+    }
 
-  string GetPageSourceFile() {
-    return "RouterItemImpl::getPageSourceFile";
-  }
+    string GetPageSourceFile()
+    {
+        return "RouterItemImpl::getPageSourceFile";
+    }
 
-  string GetBuildFunction() {
-    return "RouterItemImpl::getBuildFunction";
-  }
+    string GetBuildFunction()
+    {
+        return "RouterItemImpl::getBuildFunction";
+    }
 
-  string GetCustomData() {
-    return "RouterItemImpl::getCustomData";
-  }
+    string GetCustomData()
+    {
+        return "RouterItemImpl::getCustomData";
+    }
 };
 
 class DataItemImpl {
 public:
-  DataItemImpl() {}
+    DataItemImpl()
+    {
+    }
 
-  string GetKey() {
-    return "DataItemImpl::getKey";
-  }
+    string GetKey()
+    {
+        return "DataItemImpl::getKey";
+    }
 
-  string GetValue() {
-    return "DataItemImpl::getValue";
-  }
+    string GetValue()
+    {
+        return "DataItemImpl::getValue";
+    }
 };
 
-HapModuleInfo GetHapModuleInfo() {
-  return make_holder<HapModuleInfoImpl, HapModuleInfo>();
+HapModuleInfo GetHapModuleInfo()
+{
+    return make_holder<HapModuleInfoImpl, HapModuleInfo>();
 }
 
-Dependency GetDependency() {
-  return make_holder<DependencyImpl, Dependency>();
+Dependency GetDependency()
+{
+    return make_holder<DependencyImpl, Dependency>();
 }
 
-PreloadItem GetPreloadItem() {
-  return make_holder<PreloadItemImpl, PreloadItem>();
+PreloadItem GetPreloadItem()
+{
+    return make_holder<PreloadItemImpl, PreloadItem>();
 }
 
-RouterItem GetRouterItem() {
-  return make_holder<RouterItemImpl, RouterItem>();
+RouterItem GetRouterItem()
+{
+    return make_holder<RouterItemImpl, RouterItem>();
 }
 
-DataItem GetDataItem() {
-  return make_holder<DataItemImpl, DataItem>();
+DataItem GetDataItem()
+{
+    return make_holder<DataItemImpl, DataItem>();
 }
 }  // namespace
 
@@ -162,3 +218,4 @@ TH_EXPORT_CPP_API_GetDependency(GetDependency);
 TH_EXPORT_CPP_API_GetPreloadItem(GetPreloadItem);
 TH_EXPORT_CPP_API_GetRouterItem(GetRouterItem);
 TH_EXPORT_CPP_API_GetDataItem(GetDataItem);
+// NOLINTEND

@@ -1,3 +1,18 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Tools for tracking resources."""
 
 import logging
@@ -12,6 +27,7 @@ from enum import Enum, auto
 from pathlib import Path
 from sys import exit
 from typing import ClassVar, Final, cast
+from urllib.parse import urljoin
 
 from typing_extensions import Self, override
 
@@ -352,12 +368,6 @@ class StandardLibrary(PathResource):
     PATH_BUNDLE = "lib/taihe/stdlib"
 
 
-class Documentation(PathResource):
-    CLI_NAME = "doc"
-    PATH_PKG = PATH_DEV = "doc"
-    PATH_BUNDLE = "share/doc/taihe"
-
-
 class CMakeModulesResource(PathResource):
     CLI_NAME = "cmake"
     PATH_PKG = PATH_DEV = "cmake"
@@ -374,11 +384,8 @@ class _LegacyPandaVm(PathResource):
 class PandaVm(CachedResource):
     CLI_NAME = "panda-vm"
     PATH_CACHE = "panda-vm"
-    VERSION: Final = "sdk-1.5.0-dev.38664"
-    CREDENTIAL = "koala-pub:y3t!n0therP"
-    URL: Final = (
-        "https://nexus.cn.bz-openlab.ru:10443/repository/koala-npm/@panda/sdk/-"
-    )
+    VERSION: Final = "sdk-1.5.0-dev.54451"
+    URL: Final = "https://gitcode.com/m0_52007851/panda_vm/releases/download/54451"
 
     # Computed attributes
     ani_header_dir: Path = field(init=False)
@@ -445,7 +452,7 @@ class PandaVm(CachedResource):
         tgz = self.base_path.parent / f"{self.VERSION}.tgz"
         url = f"{self.URL}/{self.VERSION}.tgz"
         if not tgz.exists():
-            fetch_url(url, tgz, curl_extra_args=("--user", self.CREDENTIAL))
+            fetch_url(url, tgz)
 
         shutil.rmtree(self.base_path, ignore_errors=True)
         with tarfile.open(tgz, "r:gz") as tar:
@@ -454,36 +461,174 @@ class PandaVm(CachedResource):
         self._write_version(self.VERSION)
 
 
+# TODO: HACK TO PROCESS TAIHE NAPI
+class TaiheNapiBuild(CachedResource):
+    CLI_NAME = "napi-packages"
+    PATH_CACHE = "napi-packages"
+
+    # url for taihe napi packages
+    REPO: Final = (
+        "https://gitcode.com/m0_52007851/taihe-napi-bin/releases/download/v1.0.0/"
+    )
+
+    # Supported platforms
+    LINUX_X86_64: Final = "linux-x86_64"
+    WINDOWS_X86_64: Final = "windows-x86_64"
+    DARWIN_ARM64: Final = "darwin-arm64"
+    DARWIN_X86_64: Final = "darwin-x86_64"
+
+    # Bundle tarball file names for each platform
+    LINUX_X86_64_TAIHE_NAPI_BUNDLE: Final = (
+        "taihe-linux-x86_64-1.0.0+napi-20251222.tar.gz"
+    )
+    WINDOWS_X86_64_TAIHE_NAPI_BUNDLE: Final = (
+        "taihe-windows-x86_64-1.0.0+napi-20251222.tar.gz"
+    )
+    DARWIN_ARM64_TAIHE_NAPI_BUNDLE: Final = (
+        "taihe-darwin-arm64-1.0.0+napi-20251222.tar.gz"
+    )
+    DARWIN_X86_64_TAIHE_NAPI_BUNDLE: Final = (
+        "taihe-darwin-x86_64-1.0.0+napi-20251222.tar.gz"
+    )
+
+    files: ClassVar[dict[str, str]] = {
+        LINUX_X86_64: LINUX_X86_64_TAIHE_NAPI_BUNDLE,
+        WINDOWS_X86_64: WINDOWS_X86_64_TAIHE_NAPI_BUNDLE,
+        DARWIN_ARM64: DARWIN_ARM64_TAIHE_NAPI_BUNDLE,
+        DARWIN_X86_64: DARWIN_X86_64_TAIHE_NAPI_BUNDLE,
+    }
+
+    @override
+    def fetch(self):
+        # Clear and rebuild the cache directory
+        shutil.rmtree(self.base_path, ignore_errors=True)
+        self.base_path.mkdir(parents=True, exist_ok=True)
+
+        # System -> (repository url, file name)
+        downloads = {
+            self.LINUX_X86_64: (self.REPO, self.LINUX_X86_64_TAIHE_NAPI_BUNDLE),
+            self.WINDOWS_X86_64: (self.REPO, self.WINDOWS_X86_64_TAIHE_NAPI_BUNDLE),
+            self.DARWIN_ARM64: (self.REPO, self.DARWIN_ARM64_TAIHE_NAPI_BUNDLE),
+            self.DARWIN_X86_64: (self.REPO, self.DARWIN_X86_64_TAIHE_NAPI_BUNDLE),
+        }
+
+        # Download all platform bundles using curl
+        for _, (repo, filename) in downloads.items():
+            url = urljoin(repo, filename).replace("+", "%2B")
+            out_path = self.base_path / filename
+            logging.info("Downloading napi packages from %s to %s", url, out_path)
+            subprocess.run(["curl", "-fLsS", "-o", str(out_path), url], check=True)
+
+        logging.info("All napi packages downloaded to %s", self.base_path)
+
+    def extract_to(self, target_dir: Path, *, system: str):
+        tgz = self.base_path / self.files[system]
+
+        # Extract the tgz and get the directory list
+        with tarfile.open(tgz, "r:gz") as tar:
+            tar.extractall(target_dir, filter="tar")
+
+    @override
+    @classmethod
+    def construct(cls, ctx: ResourceContext) -> Self:
+        self = cls(cls.locate(ctx))
+        self.fetch()
+        return self
+
+
 class PythonBuild(CachedResource):
     CLI_NAME = "python-packages"
     PATH_CACHE = "python-packages"
 
-    REPO: Final = "https://gitee.com/ASeaSalt/python-multi-platform.git"
+    # Constants for downloading prebuilt Python runtime bundles
+
+    # HarmonyOS repository url for Python bundles
+    REPO: Final = "https://repo.huaweicloud.com/harmonyos/compiler/python/3.11.4/"
+    LINUX_REPO: Final = urljoin(REPO, "linux/")
+    WINDOWS_REPO: Final = urljoin(REPO, "windows/")
+    DARWIN_REPO: Final = urljoin(REPO, "darwin/")
+
     BUNDLE_DIR_NAME: Final = "pyrt"
+
+    # Supported platforms
+    LINUX_X86_64: Final = "linux-x86_64"
+    WINDOWS_X86_64: Final = "windows-x86_64"
+    DARWIN_ARM64: Final = "darwin-arm64"
+    DARWIN_X86_64: Final = "darwin-x86_64"
+
+    # Bundle tarball file names for each platform
+    LINUX_X86_64_PY_BUNDLE: Final = "python-linux-x86-GLIBC2.27-3.11.4_20251107.tar.gz"
+    WINDOWS_X86_64_PY_BUNDLE: Final = "python-mingw-x86-3.11.4_20251107.tar.gz"
+    DARWIN_ARM64_PY_BUNDLE: Final = "python-darwin-arm64-3.11.4_20251107.tar.gz"
+    DARWIN_X86_64_PY_BUNDLE: Final = "python-darwin-x86-3.11.4_20251107.tar.gz"
 
     @override
     def fetch(self):
+        # Clear and rebuild the cache directory
         shutil.rmtree(self.base_path, ignore_errors=True)
-        logging.info("Cloning Python packages from %s to %s", self.REPO, self.base_path)
-        subprocess.run(["git", "clone", self.REPO, self.base_path], check=True)
+        self.base_path.mkdir(parents=True, exist_ok=True)
+
+        # System -> (repository url, file name)
+        downloads = {
+            self.LINUX_X86_64: (self.LINUX_REPO, self.LINUX_X86_64_PY_BUNDLE),
+            self.WINDOWS_X86_64: (self.WINDOWS_REPO, self.WINDOWS_X86_64_PY_BUNDLE),
+            self.DARWIN_ARM64: (self.DARWIN_REPO, self.DARWIN_ARM64_PY_BUNDLE),
+            self.DARWIN_X86_64: (self.DARWIN_REPO, self.DARWIN_X86_64_PY_BUNDLE),
+        }
+
+        # Download all platform bundles using curl, save as <system>-python.tar.gz
+        for system, (repo, filename) in downloads.items():
+            url = urljoin(repo, filename)
+            out_path = self.base_path / f"{system}-python.tar.gz"
+            logging.info("Downloading Python packages from %s to %s", url, out_path)
+            subprocess.run(["curl", "-fLsS", "-o", str(out_path), url], check=True)
+
+        logging.info("All Python runtime bundles downloaded to %s", self.base_path)
 
     def extract_to(self, target_dir: Path, *, system: str):
         tgz = self.base_path / f"{system}-python.tar.gz"
 
+        # Extract the tgz and get the directory list
         parent_dir = target_dir.parent
         with tarfile.open(tgz, "r:gz") as tar:
+            tgz_dir_lists = tar.getnames()
             tar.extractall(parent_dir, filter="tar")
-        # Next, rename "dist/lib/python" to "dist/lib/pyrt"
-        old_dir = parent_dir / "python"
+
+        # Find all top-level directories in the tgz
+        tgz_top_dirs = {Path(n).parts[0] for n in tgz_dir_lists if Path(n).parts}
+
+        # Find real root directory (including bin/lib/include)
+        root = parent_dir
+        while (
+            root.is_dir()
+            and not (root / "bin").exists()
+            and len(list(root.iterdir())) == 1
+        ):
+            root = next(root.iterdir())
+
+        # Next, rename root directory to "parent_dir/pyrt" (i.e. target_dir)
         if target_dir.exists():
-            target_dir.rmdir()
-        old_dir.rename(target_dir)
+            shutil.rmtree(target_dir, ignore_errors=True)
+        root.rename(target_dir)
+
+        # Remove unneeded directories extracted from the tgz
+        for dir in tgz_top_dirs:
+            dir_path = parent_dir / dir
+            if dir_path != target_dir and dir_path.exists():
+                shutil.rmtree(dir_path, ignore_errors=True)
+
+    @override
+    @classmethod
+    def construct(cls, ctx: ResourceContext) -> Self:
+        self = cls(cls.locate(ctx))
+        self.fetch()
+        return self
 
 
 class Antlr(CachedResource):
     CLI_NAME = "antlr"
 
-    VERSION: Final = "4.13.2"
+    VERSION: Final = "4.11.1"
     MAVEN_REMOTE: Final = "https://mirrors.huaweicloud.com/repository/maven"
     MAVEN_LOCAL: Final = "~/.m2/repository"
     MAVEN_PATH: Final = f"org/antlr/antlr4/{VERSION}/antlr4-{VERSION}-complete.jar"
@@ -507,12 +652,12 @@ BUILTIN_RESOURCES: Sequence[ResourceT] = [
     RuntimeSource,
     RuntimeHeader,
     StandardLibrary,
-    Documentation,
     CMakeModulesResource,
 ]
 ALL_RESOURCES: Sequence[ResourceT] = [
     *BUILTIN_RESOURCES,
     PandaVm,
+    TaiheNapiBuild,
     PythonBuild,
     Antlr,
 ]

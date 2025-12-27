@@ -1,3 +1,18 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from dataclasses import dataclass, field
 
 from typing_extensions import override
@@ -134,14 +149,14 @@ class ReadOnlyAttr(TypedAttribute[StructFieldDecl]):
     TARGETS = (StructFieldDecl,)
 
 
-NULL_UNDEFINED_GROUP = AttributeGroupTag()
+UNIT_ATTRIBUTE_GROUP = AttributeGroupTag()
 
 
 @dataclass
 class NullAttr(TypedAttribute[UnionFieldDecl | StructFieldDecl | TypeRefDecl]):
     NAME = "null"
     TARGETS = (UnionFieldDecl, StructFieldDecl, TypeRefDecl)
-    ATTRIBUTE_GROUP_TAGS = frozenset({NULL_UNDEFINED_GROUP})
+    ATTRIBUTE_GROUP_TAGS = frozenset({UNIT_ATTRIBUTE_GROUP})
 
     @override
     def check_typed_context(
@@ -174,7 +189,7 @@ class NullAttr(TypedAttribute[UnionFieldDecl | StructFieldDecl | TypeRefDecl]):
 class UndefinedAttr(TypedAttribute[UnionFieldDecl | StructFieldDecl | TypeRefDecl]):
     NAME = "undefined"
     TARGETS = (UnionFieldDecl, StructFieldDecl, TypeRefDecl)
-    ATTRIBUTE_GROUP_TAGS = frozenset({NULL_UNDEFINED_GROUP})
+    ATTRIBUTE_GROUP_TAGS = frozenset({UNIT_ATTRIBUTE_GROUP})
 
     @override
     def check_typed_context(
@@ -196,6 +211,27 @@ class UndefinedAttr(TypedAttribute[UnionFieldDecl | StructFieldDecl | TypeRefDec
             dm.emit(
                 AdhocError(
                     f"Attribute '{self.NAME}' can only be attached to fields with unit type.",
+                    loc=self.loc,
+                )
+            )
+
+        super().check_typed_context(parent, dm)
+
+
+@dataclass
+class LiteralAttr(TypedAttribute[TypeRefDecl]):
+    NAME = "literal"
+    TARGETS = (TypeRefDecl,)
+    ATTRIBUTE_GROUP_TAGS = frozenset({UNIT_ATTRIBUTE_GROUP})
+
+    value: str
+
+    @override
+    def check_typed_context(self, parent: TypeRefDecl, dm: DiagnosticsManager) -> None:
+        if not isinstance(parent.resolved_ty, UnitType):
+            dm.emit(
+                AdhocError(
+                    f"Attribute '{self.NAME}' can only be attached to unit types.",
                     loc=self.loc,
                 )
             )
@@ -701,6 +737,7 @@ all_attr_types: list[CheckedAttrT] = [
     ReadOnlyAttr,
     NullAttr,
     UndefinedAttr,
+    LiteralAttr,
     OptionalAttr,
     StsThisAttr,
     StsLastAttr,
