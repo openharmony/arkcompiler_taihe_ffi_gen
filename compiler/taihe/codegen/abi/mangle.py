@@ -52,6 +52,7 @@ from enum import Enum
 
 class DeclKind(Enum):
     FUNC = "f"
+    METHOD = "m"
     TYPE = "t"
     IID = "i"
     UNION = "union"

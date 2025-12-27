@@ -515,14 +515,7 @@ class StsCodeGenerator:
                 f"}}",
             ):
                 target.writelns(
-                    f"_taihe_registry.register(this, this._taihe_dataPtr, this);",
-                )
-            with target.indented(
-                f"private _taihe_unregister(): void {{",
-                f"}}",
-            ):
-                target.writelns(
-                    f"_taihe_registry.unregister(this);",
+                    f"_taihe_registry.register(this, this._taihe_dataPtr);",
                 )
             with target.indented(
                 f"private _taihe_initialize(vtblPtr: long, dataPtr: long): void {{",
@@ -539,14 +532,6 @@ class StsCodeGenerator:
             ):
                 target.writelns(
                     f"this._taihe_initialize(other._taihe_vtblPtr, _taihe_objDup(other._taihe_dataPtr));",
-                )
-            with target.indented(
-                f"public _taihe_moveFrom(other: {iface_ani_info.sts_impl_name}): void {{",
-                f"}}",
-            ):
-                target.writelns(
-                    f"this._taihe_initialize(other._taihe_vtblPtr, other._taihe_dataPtr);",
-                    f"other._taihe_unregister();",
                 )
 
             iface_abi_info = IfaceAbiInfo.get(self.am, iface)
@@ -1717,7 +1702,7 @@ class StsCodeGenerator:
             "            arg_c, arg_d, arg_e, arg_f,",
             "        );",
             "    };",
-            "    _taihe_registry.register(callback, dataPtr, callback);",
+            "    _taihe_registry.register(callback, dataPtr);",
             "    return callback;",
             "}",
         )

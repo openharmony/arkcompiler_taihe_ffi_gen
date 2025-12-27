@@ -263,7 +263,7 @@ if (rgb_ptr != nullptr) {
 }
 ```
 
-### 4.4.2 不安全获取数据指针
+#### 4.4.2 不安全获取数据指针
 
 使用 `get_variantName_ref()` 方法可以直接获取成员数据的引用，但不会检查变体类型是否正确。如果当前对象不是指定变体类型，可能会导致程序崩溃。因此，使用时应确保对象确实是该变体类型。例如：
 
@@ -464,6 +464,7 @@ rgb::show::IShowable circle =
   ```
 
 - **动态转换**：除子接口向父接口的转换外，其他接口间的类型转换是动态的，需要显式写出，并需要在运行时检查转换后得到的对象是否有效。
+
   ```cpp
   // 父接口
   my::package::IBase b1;
@@ -526,10 +527,12 @@ void copyColorImpl(rgb::base::weak::IColorable dst, rgb::base::weak::IColorable 
 强引用类型和弱引用类型之间可以相互转换：
 
 - 强引用转换为弱引用
+
   ```cpp
   rgb::base::IColorable colorable = taihe::make_holder<ColoredCircle, rgb::base::IColorable>("myCircle", 10, color_114514);
   rgb::base::weak::IColorable weakColorable = colorable;
   ```
+
 - 弱引用转换为强引用
 
   ```cpp
@@ -1046,7 +1049,7 @@ if (it != map1.end()) {
 bool erased = map1.erase("apple");
 ```
 
-**_⚠️ 特别注意：当前请不要使用 `map` 对象的 `find` 方法，当前该方法的返回值类型为 `V_`而不是迭代器。这将在未来的版本中被修正，届时将导致之前使用`find`处产生不兼容，请使用`find_item` 方法代替。_**
+**_⚠️ 特别注意：当前请不要使用 `map` 对象的 `find` 方法，当前该方法的返回值类型为 `V*` 而不是迭代器。这将在未来的版本中被修正，届时将导致之前使用 `find` 处产生不兼容，请使用 `find_item` 方法代替。_**
 
 #### 6.5.3 获取大小、遍历和清空
 
