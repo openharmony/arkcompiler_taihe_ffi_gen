@@ -235,7 +235,7 @@ class CppImplSourcesGenerator:
                 )
             else:
                 pkg_cpp_impl_target.writelns(
-                    f'TH_THROW({self.runtime_error}, "{func_cpp_impl_name} not implemented");',
+                    f'TH_THROW({self.runtime_error}, "not implemented");',
                 )
 
     def gen_func_impl(
@@ -267,7 +267,7 @@ class CppImplSourcesGenerator:
                 )
             else:
                 pkg_cpp_impl_target.writelns(
-                    f'TH_THROW({self.runtime_error}, "{func_cpp_impl_name} not implemented");',
+                    f'TH_THROW({self.runtime_error}, "not implemented");',
                 )
 
     def gen_func_macro(
