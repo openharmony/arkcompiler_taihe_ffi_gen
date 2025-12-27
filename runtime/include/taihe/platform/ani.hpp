@@ -16,6 +16,7 @@
 #ifndef TAIHE_PLATFORM_ANI_HPP
 #define TAIHE_PLATFORM_ANI_HPP
 
+#include <taihe/expected.hpp>
 #include <taihe/object.hpp>
 #include <taihe/runtime.hpp>
 
@@ -90,8 +91,13 @@ struct same_impl_t<AniRefGuard, std::enable_if_t<std::is_base_of_v<sref_guard, A
         }
         env_guard guard;
         ani_env *env = guard.get_env();
-        ani_ref lhs_ref = reinterpret_cast<ani_ref>(lhs_as_ani->getGlobalReference());
-        ani_ref rhs_ref = reinterpret_cast<ani_ref>(rhs_as_ani->getGlobalReference());
+        ::taihe::expected<uintptr_t, ::taihe::error> lhs_ptr = lhs_as_ani->getGlobalReference();
+        ::taihe::expected<uintptr_t, ::taihe::error> rhs_ptr = rhs_as_ani->getGlobalReference();
+        if (!lhs_ptr || !rhs_ptr) {
+            return false;
+        }
+        ani_ref lhs_ref = reinterpret_cast<ani_ref>(lhs_ptr.value());
+        ani_ref rhs_ref = reinterpret_cast<ani_ref>(rhs_ptr.value());
         ani_boolean result;
         return env->Reference_Equals(lhs_ref, rhs_ref, &result) == ANI_OK && result;
     }
