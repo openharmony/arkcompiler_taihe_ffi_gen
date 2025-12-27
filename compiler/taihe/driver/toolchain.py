@@ -27,6 +27,7 @@ from taihe.driver.backend import BackendRegistry
 from taihe.driver.contexts import CompilerInstance, CompilerInvocation
 from taihe.utils.outputs import BasicOutputConfig, CMakeOutputConfig
 from taihe.utils.resources import (
+    NapiSdk,
     PandaVm,
     RuntimeHeader,
     RuntimeSource,
@@ -165,6 +166,7 @@ class CppToolchain:
         input_files: Iterable[Path],
         include_dirs: Sequence[Path] = (),
         compile_flags: Sequence[str] = (),
+        system_include_dirs: Sequence[Path] = (),
     ) -> list[Path]:
         """Compile source files."""
         output_files: list[Path] = []
@@ -197,6 +199,10 @@ class CppToolchain:
             for include_dir in include_dirs:
                 if include_dir.exists():  # Only include directories that exist
                     command.append(f"-I{include_dir}")
+
+            for system_include_dir in system_include_dirs:
+                if system_include_dir.exists():
+                    command.append(f"-isystem{system_include_dir}")
 
             run_command(command)
 
@@ -363,3 +369,41 @@ class ArkToolchain:
             command,
             env={"LD_LIBRARY_PATH": ld_lib_path},
         )
+
+
+class TsToolchain:
+    """Utility class for TS toolchain operations."""
+
+    def __init__(self):
+        self.sdk = NapiSdk.resolve()
+
+    def compile(
+        self,
+        main_ts_file: Path,
+        main_abc_file: Path,
+    ) -> None:
+        """Compile TS files to ABC."""
+        command_compiler = [
+            self.sdk.es2abc,
+            "--module",
+            main_ts_file,
+            "--output",
+            main_abc_file,
+        ]
+        run_command(command_compiler)
+
+    def run(
+        self,
+        abc_target: Path,
+    ) -> float:
+        """Run the ABC file."""
+        command_run = [
+            self.sdk.napi_runner,
+            str(abc_target),
+        ]
+
+        env_dict = {
+            "LD_LIBRARY_PATH": str(self.sdk.lib_dir),
+        }
+
+        return run_command(command_run, capture_output=False, env=env_dict)

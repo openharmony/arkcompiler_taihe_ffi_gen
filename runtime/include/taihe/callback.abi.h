@@ -16,6 +16,7 @@
 #ifndef TAIHE_CALLBACK_ABI_H
 #define TAIHE_CALLBACK_ABI_H
 
+#include <taihe/expected.abi.h>
 #include <taihe/object.abi.h>
 
 // TCallback

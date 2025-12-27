@@ -38,6 +38,14 @@
 #endif
 #endif
 
+#ifdef __cpp_lib_remove_cvref
+#include <type_traits>
+using std::remove_cvref_t;
+#else
+template<typename T>
+using remove_cvref_t = typename std::remove_cv<typename std::remove_reference<T>::type>::type;
+#endif
+
 namespace taihe {
 template<typename cpp_t, typename = void>
 struct as_abi;
