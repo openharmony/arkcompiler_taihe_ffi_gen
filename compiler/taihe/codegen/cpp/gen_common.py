@@ -1844,7 +1844,7 @@ class CppHeadersGenerator:
                     args_abi.append(param_ty_cpp_info.pass_into_abi(param.name))
                 params_cpp_str = ", ".join(params_cpp)
                 args_abi_str = ", ".join(args_abi)
-                result_abi = f"{method_abi_info.mangled_name}({args_abi_str})"
+                result_abi = f"{method_abi_info.wrap_name}({args_abi_str})"
                 if isinstance(return_ty := method.return_ty, NonVoidType):
                     return_ty_cpp_info = TypeCppInfo.get(self.am, return_ty)
                     return_ty_cpp_name = return_ty_cpp_info.as_owner
@@ -1916,7 +1916,14 @@ class CppHeadersGenerator:
             f"constexpr {iface_abi_info.ftable} {iface_cpp_info.weakspace}::{iface_cpp_info.weak_name}::ftbl_impl = {{",
             f"}};",
         ):
-            for method in iface.methods:
-                iface_cpp_impl_target.writelns(
-                    f".{method.name} = &methods_impl<Impl>::{method.name},",
-                )
+            iface_cpp_impl_target.writelns(
+                f".version = {iface_abi_info.version},",
+            )
+            with iface_cpp_impl_target.indented(
+                f".methods = {{",
+                f"}},",
+            ):
+                for method in iface.methods:
+                    iface_cpp_impl_target.writelns(
+                        f".{method.name} = &methods_impl<Impl>::{method.name},",
+                    )

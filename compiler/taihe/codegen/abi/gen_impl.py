@@ -66,7 +66,7 @@ class CImplHeadersGenerator:
             return_ty_abi_name = "void"
         pkg_c_impl_target.writelns(
             f"#define {func_c_impl_info.macro}({func_impl}) \\",
-            f"    {return_ty_abi_name} {func_abi_info.mangled_name}({params_str}) {{ \\",
+            f"    {return_ty_abi_name} {func_abi_info.impl_name}({params_str}) {{ \\",
             f"        return {func_impl}({args_str}); \\",
             f"    }}",
         )
