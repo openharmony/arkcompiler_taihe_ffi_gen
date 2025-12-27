@@ -1,3 +1,18 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Customizable metadata for declarations.
 
 # Overview
@@ -11,7 +26,7 @@ type checking through a plugin architecture.
 The system follows a hierarchical design:
 
 ```
-AnyAttribute = UncheckedAttribute | AbstractCheckedAttribute
+AnyAttribute
 ├── UncheckedAttribute: Raw attributes without validation
 └── AbstractCheckedAttribute: Base class for validated attributes
     └── AutoCheckedAttribute: Automatic checking via configuration
@@ -39,7 +54,7 @@ from typing import Any, ClassVar, Generic, TypeVar, cast
 from typing_extensions import Self, override
 
 from taihe.semantics.declarations import Decl
-from taihe.semantics.format import PrettyFormatter
+from taihe.semantics.format import TaiheFormatter
 from taihe.utils.diagnostics import DiagnosticsManager
 from taihe.utils.exceptions import (
     AttrArgMissingError,
@@ -105,7 +120,7 @@ class AnyAttribute(ABC):
 
         This can be overridden by subclasses to provide more context.
         """
-        return f"attribute {PrettyFormatter().get_format_attr(self)}"
+        return f"attribute {TaiheFormatter().get_format_attr(self)}"
 
     @abstractmethod
     def get_name(self) -> str:
@@ -438,7 +453,7 @@ class RepeatableAttribute(AutoCheckedAttribute[_D]):
     """Type-checked attribute that can be attached multiple times per declaration."""
 
     @classmethod
-    def get(cls, decl: _D) -> list[Self]:
+    def get_all(cls, decl: _D) -> list[Self]:
         """Retrieves all instances of this attribute from a declaration.
 
         Args:

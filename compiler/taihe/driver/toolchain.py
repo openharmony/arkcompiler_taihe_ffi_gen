@@ -1,3 +1,18 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import json
 import logging
 import os
@@ -10,7 +25,7 @@ from pathlib import Path
 
 from taihe.driver.backend import BackendRegistry
 from taihe.driver.contexts import CompilerInstance, CompilerInvocation
-from taihe.utils.outputs import CMakeOutputConfig, OutputConfig
+from taihe.utils.outputs import BasicOutputConfig, CMakeOutputConfig
 from taihe.utils.resources import (
     PandaVm,
     RuntimeHeader,
@@ -113,7 +128,7 @@ def taihec(
     registry = BackendRegistry()
     registry.register_all()
     backend_factories = registry.collect_required_backends(backend_names)
-    backend_configs = [b() for b in backend_factories]
+    backend_configs = [b.create() for b in backend_factories]
 
     if buildsys_name == "cmake":
         output_config = CMakeOutputConfig(
@@ -122,7 +137,7 @@ def taihec(
             runtime_src_dir=RuntimeSource.resolve_path(),
         )
     else:
-        output_config = OutputConfig(
+        output_config = BasicOutputConfig(
             dst_dir=dst_dir,
         )
 
