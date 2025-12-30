@@ -19,6 +19,7 @@ function main() {
     console.log("before call function addRetPromise success");
     let p1 = lib.addRetPromise(1, 2);
     p1.then((res) => {
+        if (res !== 3) throw new Error(`Unexpected result`);
         console.log("success in addRetPromise", res);
     })
     .catch((ret) => {
@@ -32,6 +33,7 @@ function main() {
         console.log("success in addRetPromise", res);
     })
     .catch((ret) => {
+        if (ret.message !== "some error happen") throw new Error(`Unexpected result`);
         console.log("failed in addRetPromise", ret.message);
     });
     console.log("after call function addRetPromise failed");
@@ -41,6 +43,7 @@ function main() {
         if (error !== null) {
             console.log("failed in addWithAsync", error.message);
         } else {
+            if (result! !== 3) throw new Error(`Unexpected result`);
             console.log("success in addWithAsync", result!);
         }
     })
@@ -49,6 +52,7 @@ function main() {
     console.log("before call function addWithAsync failed");
     lib.addWithAsync(0, 2, (error: Error | null, result?: number) => {
         if (error !== null) {
+            if (error.message !== "some error happen") throw new Error(`Unexpected result`);
             console.log("failed in addWithAsync", error.message);
         } else {
             console.log("success in addWithAsync", result!);
@@ -62,6 +66,7 @@ function main() {
     mybase.makeWithAsync((error: Error | null) => {
         if (error !== null) {
             console.log("failed in make", error.message);
+            throw new Error(`Unexpected result`);
         } else {
             console.log("success in make");
         }
@@ -72,6 +77,7 @@ function main() {
     lib.IBase.printWithAsync((error: Error | null) => {
         if (error !== null) {
             console.log("failed in print", error.message);
+            throw new Error(`Unexpected result`);
         } else {
             console.log("success in print");
         }
@@ -83,6 +89,7 @@ function main() {
         if (error !== null) {
             console.log("failed in toStruct", error.message);
         } else {
+            if (result!.a !== "a" || result!.b !== "b" || result!.c !== 1) throw new Error(`Unexpected result`);
             console.log("success in toStruct", result!.a, result!.b, result!.c);
         }
     });
@@ -92,6 +99,7 @@ function main() {
     lib.fromStructWithAsync(mydata, (error: Error | null) => {
         if (error !== null) {
             console.log("failed in fromStruct", error.message);
+            throw new Error(`Unexpected result`);
         } else {
             console.log("success in fromStruct");
         }
@@ -106,6 +114,7 @@ function main() {
         console.log("success in p_myshape", res);
     })
     .catch((ret) => {
+        if (ret.code !== "1" || ret.message !== "Error in makeRetPromise") throw new Error(`Unexpected result`);
         console.log("failed in p_myshape", ret.code, ret.message);
     });
     console.log("after promise");
@@ -114,12 +123,36 @@ function main() {
     myshape.makeWithAsync((error: any) => {
         console.log("in make shape callback");
         if (error !== null) {
+            if (error.code !== "2" || error.message !== "Error in makeWithAsync") throw new Error(`Unexpected result`);
             console.log("failed in make shape", error.code, error.message);
         } else {
             console.log("success in make shape");
         }
     });
     console.log("after asynccallback");
+
+    let mysruct: lib.MyStruct = new lib.MyStruct();
+    if (mysruct.a !== 1 || mysruct.b !== 2) throw new Error(`Unexpected result`);
+
+    let res = lib.MyStruct.sumSync();
+    if (res !== 10) throw new Error(`Unexpected result`);
+    let p3 = lib.MyStruct.sumRetPromise();
+    p3.then((res) => {
+        if (res !== 10) throw new Error(`Unexpected result`);
+        console.log("success in sumRetPromise", res);
+    })
+    .catch((ret) => {
+        console.log("failed in sumRetPromise", ret.message);
+    });
+    lib.MyStruct.sumWithAsync((error, result) => {
+        if (error !== null) {
+            console.log("failed in sumWithAsync", error.message);
+        } else {
+            if (result! !== 10) throw new Error(`Unexpected result`);
+            console.log("success in sumWithAsync", result!);
+        }
+    })
+
     console.log("finish main");
 }
 
