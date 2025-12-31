@@ -31,7 +31,7 @@ void foo()
     std::cout << "namespace: my_module_a.ns1.ns2.ns3.ns4.ns5, func: noo" << std::endl;
 }
 
-::my_module_a::ns1::ns2::ns3::ns4::ns5::MyClass create_myclass(bool a, float b)
+::my_module_a::ns1::ns2::ns3::ns4::ns5::MyClass create_myclass(bool a, int32_t b)
 {
     return ::my_module_a::ns1::ns2::ns3::ns4::ns5::MyClass {a, b};
 }
