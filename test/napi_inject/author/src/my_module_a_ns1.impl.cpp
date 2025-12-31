@@ -42,6 +42,7 @@ namespace {
 class Base {
 protected:
     ::taihe::string id;
+    ::taihe::string name = "default_name";
 
 public:
     Base(::taihe::string_view id) : id(id)
@@ -52,6 +53,17 @@ public:
     ~Base()
     {
         std::cout << "del base " << this << std::endl;
+    }
+
+    ::taihe::expected<::taihe::string, ::taihe::error> getName()
+    {
+        return name;
+    }
+
+    ::taihe::expected<void, ::taihe::error> setName(::taihe::string_view s)
+    {
+        name = s;
+        return {};
     }
 
     ::taihe::expected<::taihe::string, ::taihe::error> getId()
@@ -91,7 +103,7 @@ public:
         std::cout << "del ctest " << this << std::endl;
     }
 
-    ::taihe::expected<float, ::taihe::error> add(int32_t a, int32_t b)
+    ::taihe::expected<int32_t, ::taihe::error> add(int32_t a, int32_t b)
     {
         return a + b + this->x;
     }
@@ -104,7 +116,7 @@ public:
 
 ::taihe::expected<::my_module_a::ns1::CTest, ::taihe::error> changeCTest(::my_module_a::ns1::weak::CTest a)
 {
-    ::taihe::expected<float, ::taihe::error> x = a->add(3, 4);
+    ::taihe::expected<int32_t, ::taihe::error> x = a->add(3, 4);
     if (x.has_value()) {
         return taihe::make_holder<CTestImpl, ::my_module_a::ns1::CTest>(x.value());
     } else {
@@ -116,6 +128,34 @@ public:
 {
     return a * b;
 }
+
+class IfaceCImpl {
+public:
+    ::taihe::expected<void, ::taihe::error> func3()
+    {
+        return {};
+    }
+
+    ::taihe::expected<void, ::taihe::error> func2()
+    {
+        return {};
+    }
+
+    ::taihe::expected<void, ::taihe::error> func1()
+    {
+        return {};
+    }
+};
+
+::taihe::expected<::my_module_a::ns1::C, ::taihe::error> createC()
+{
+    return ::my_module_a::ns1::C {{{1}, 2}, 3};
+}
+
+::taihe::expected<::my_module_a::ns1::IfaceC, ::taihe::error> createIfaceC()
+{
+    return taihe::make_holder<IfaceCImpl, ::my_module_a::ns1::IfaceC>();
+}
 }  // namespace
 
 TH_EXPORT_CPP_API_Funtest(Funtest);
@@ -125,4 +165,6 @@ TH_EXPORT_CPP_API_bar(bar);
 TH_EXPORT_CPP_API_createCTest(createCTest);
 TH_EXPORT_CPP_API_changeCTest(changeCTest);
 TH_EXPORT_CPP_API_multiply(multiply);
+TH_EXPORT_CPP_API_createC(createC);
+TH_EXPORT_CPP_API_createIfaceC(createIfaceC);
 // NOLINTEND

@@ -54,3 +54,19 @@ interface IShape {
 }
 
 function createIShape(): IShape;
+
+@class
+struct MyStruct {
+  a: i32;
+  b: i32;
+}
+
+@ctor("MyStruct")
+function createMyStruct(): MyStruct;
+
+@static("MyStruct")
+@promise function sumRetPromise(): i32;
+@static("MyStruct")
+@async function sumWithAsync(): i32;
+@static("MyStruct")
+function sumSync(): i32;

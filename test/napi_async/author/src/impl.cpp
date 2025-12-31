@@ -198,6 +198,26 @@ public:
     // as the parameters in the constructor of the actual implementation class.
     return taihe::make_holder<IShapeImpl, ::async_test::IShape>();
 }
+
+::taihe::expected<::async_test::MyStruct, ::taihe::error> createMyStruct()
+{
+    return ::async_test::MyStruct {1, 2};
+}
+
+::taihe::expected<int32_t, ::taihe::error> sumSync()
+{
+    return 10;
+}
+
+::taihe::expected<int32_t, ::taihe::error> sumRetPromise()
+{
+    return sumSync();
+}
+
+::taihe::expected<int32_t, ::taihe::error> sumWithAsync()
+{
+    return sumSync();
+}
 }  // namespace
 
 // because these macros are auto-generate, lint will cause false positive.
@@ -215,4 +235,8 @@ TH_EXPORT_CPP_API_toStructRetPromise(toStructRetPromise);
 TH_EXPORT_CPP_API_toStructWithAsync(toStructWithAsync);
 TH_EXPORT_CPP_API_toStructSync(toStructSync);
 TH_EXPORT_CPP_API_createIShape(createIShape);
+TH_EXPORT_CPP_API_createMyStruct(createMyStruct);
+TH_EXPORT_CPP_API_sumRetPromise(sumRetPromise);
+TH_EXPORT_CPP_API_sumWithAsync(sumWithAsync);
+TH_EXPORT_CPP_API_sumSync(sumSync);
 // NOLINTEND
