@@ -1,0 +1,61 @@
+/*
+ * Copyright (c) 2026 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+interface BundleInfo {
+    @get("name") GetName(): String;
+    @get("vendor") GetVendor(): String;
+    @get("versionCode") GetVersionCode(): i32;
+    @get("versionName") GetVersionName(): String;
+    @get("minCompatibleVersionCode") GetMinCompatibleVersionCode(): String;
+    @get("targetVersion") GetTargetVersion(): i32;
+    @get("installTime") GetInstallTime(): i32;
+    @get("updateTime") GetUpdateTime(): i32;
+    @get("appIndex") GetAppIndex(): i32;
+}
+function GetBundleInfo(): BundleInfo; 
+
+interface ReqPermissionDetail {
+    @set("name") SetName(name: String): void;
+    @get("name") GetName(): String;
+    @set("moduleName") SetModuleName(moduleName: String): void;
+    @get("moduleName") GetModuleName(): String;
+    @set("reason") SetReason(reason: String): void;
+    @get("reason") GetReason(): String;
+    @set("reasonId") SetReasonId(reasonId: i32): void;
+    @get("reasonId") GetReasonId(): i32;
+}
+function GetReqPermissionDetail(): ReqPermissionDetail;
+
+interface UsedScene {
+    @set("abilities") SetAbilities(deviceId: Array<String>): void;
+    @get("abilities") GetAbilities(): Array<String>;
+    @set("when") SetWhen(when: String): void;
+    @get("when") GetWhen(): String;
+}
+function GetIUsedScene(): UsedScene;
+
+interface SignatureInfo {
+    @get("appId") GetAppId(): String;
+    @get("fingerprint") GetFingerprint(): String;
+    @get("appIdentifier") GetAppIdentifier(): String;
+    @get("certificate") GetCertificate(): String;
+}
+function GetISignatureInfo(): SignatureInfo;
+
+interface AppCloneIdentity {
+    @get("bundleName") GetBundleName(): String;
+    @get("appIndex") GetAppIndex(): i32;
+}
+function GetAppCloneIdentity(): AppCloneIdentity;
