@@ -1,0 +1,40 @@
+/*
+ * Copyright (c) 2026 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@class
+interface Want {
+    @set("bundleName") SetBundleName(bundleName: Optional<String>): void;
+    @get("bundleName") GetBundleName(): Optional<String>;
+    @set("abilityName") SetAbilityName(abilityName: Optional<String>): void;
+    @get("abilityName") GetAbilityName(): Optional<String>;
+    @set("deviceId") SetDeviceId(deviceId: Optional<String>): void;
+    @get("deviceId") GetDeviceId(): Optional<String>;
+    @set("uri") SetUri(uri: Optional<String>): void;
+    @get("uri") GetUri(): Optional<String>;
+    @set("type") SetType(type: Optional<String>): void;
+    @get("type") GetType(): Optional<String>;
+    @set("flags") SetFlags(flags: Optional<f64>): void;
+    @get("flags") GetFlags(): Optional<f64>;
+    @set("action") SetAction(action: Optional<String>): void;
+    @get("action") GetAction(): Optional<String>;
+    @set("parameters") SetParameters(parameters: Optional<@record Map<String, Opaque>>): void;
+    @get("parameters") GetParameters(): Optional<@record Map<String, Opaque>>;
+    @set("entities") SetEntities(entities: Optional<Array<String>>): void;
+    @get("entities") GetEntities(): Optional<Array<String>>;
+    @set("moduleName") SetModuleName(moduleName: Optional<String>): void;
+    @get("moduleName") GetModuleName(): Optional<String>;
+}
+@ctor("Want")
+function CreateWant(): Want;
