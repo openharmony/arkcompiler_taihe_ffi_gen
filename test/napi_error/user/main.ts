@@ -21,7 +21,7 @@ function testSayHello() {
         console.log('testSayHello Success');
     } catch (error) {
         if (error.toString() !== "Error: System initialization failed") {
-            throw new Error(`testSayHello Unexpected result: ${error.toString()}`);
+            throw new Error(`Unexpected result`);
         }
         console.error('testSayHello Error caught:', error.toString());
     }
@@ -31,7 +31,7 @@ function testSayHelloWithNumber() {
     try {
         let result: number = lib.sayHello_ii(5);
         if (result !== 5) {
-            throw new Error(`testSayHelloWithNumber Unexpected result: ${result}`);
+            throw new Error(`Unexpected result`);
         }
         console.log('testSayHelloWithNumber Success:', result);
     } catch (error) {
@@ -44,7 +44,7 @@ function testSayHelloWithError() {
         lib.sayHello_ii(10);
     } catch (error) {
         if (error.message !== "Index out of range" || error.code !== "10") {
-            throw new Error(`testSayHello Unexpected result: ${error.toString()}`);
+            throw new Error(`Unexpected result`);
         }
         console.error('testSayHelloWithError Error caught:', error.message, error.code);
     }
@@ -56,7 +56,7 @@ function testFooBar() {
         x.bar();
     } catch (error) {
         if (error.code !== "12" || error.message !== "A Error in bar") {
-            throw new Error(`testFooBar Unexpected result: ${error.toString()}`);
+            throw new Error(`Unexpected result`);
         }
         console.error('testFooBar Error caught:', error.message, error.code);
     }
@@ -67,7 +67,7 @@ function testFooBarWithNumber() {
         let x = lib.createFoo();
         let result: number = x.bar_ii(20);
         if (result !== 21) {
-            throw new Error(`testFooBarWithNumber Unexpected result: ${result}`);
+            throw new Error(`Unexpected result`);
         }
         console.log('testFooBarWithNumber Success:', result);
     } catch (error) {
@@ -79,7 +79,7 @@ function testCallFoo() {
     let x = lib.createFoo();
     const str = lib.callFoo(x);
     if (str !== "A Error in bar") {
-        throw new Error(`testCallFoo Unexpected result: ${str}`);
+        throw new Error(`Unexpected result`);
     }
     console.log('testCallFoo Success:', str);
 }
@@ -94,7 +94,7 @@ function testCallback() {
         });
     } catch (error) {
         if (error.code !== "1001" || error.message !== "Callback error") {
-            throw new Error(`testCallback Unexpected result: ${error.toString()}`);
+            throw new Error(`Unexpected result`);
         }
         console.error('testCallback Error caught:', error.message, error.code);
     }
@@ -109,7 +109,7 @@ function testCallbackWithReturn() {
             return a + 1;
         });
         if (result !== 1) {
-            throw new Error(`testCallbackWithReturn Unexpected result: ${result}`);
+            throw new Error(`Unexpected result`);
         }
         console.log('testCallbackWithReturn Success:', result);
     } catch (error) {
