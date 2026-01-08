@@ -22,24 +22,24 @@
 
 namespace {
 
-::taihe::expected<int8_t, ::taihe::error> SumUint8Array(::taihe::array_view<uint8_t> v)
+::taihe::expected<int32_t, ::taihe::error> SumUint8Array(::taihe::array_view<uint8_t> v)
 {
     return std::accumulate(v.begin(), v.end(), 0);
 }
 
-::taihe::expected<::taihe::array<uint8_t>, ::taihe::error> NewUint8Array(int64_t n, int8_t v)
+::taihe::expected<::taihe::array<uint8_t>, ::taihe::error> NewUint8Array(int64_t n, int32_t v)
 {
     ::taihe::array<uint8_t> result(n);
     std::fill(result.begin(), result.end(), v);
     return result;
 }
 
-::taihe::expected<float, ::taihe::error> SumFloat32Array(::taihe::array_view<float> v)
+::taihe::expected<double, ::taihe::error> SumFloat32Array(::taihe::array_view<float> v)
 {
     return std::accumulate(v.begin(), v.end(), 0.0f);
 }
 
-::taihe::expected<::taihe::array<float>, ::taihe::error> NewFloat32Array(int64_t n, float v)
+::taihe::expected<::taihe::array<float>, ::taihe::error> NewFloat32Array(int64_t n, double v)
 {
     ::taihe::array<float> result(n);
     std::fill(result.begin(), result.end(), v);

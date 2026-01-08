@@ -39,19 +39,28 @@ function main() {
   console.log(map_size);
 
   let strMap: Map<string, string> = lib.createStringString(5);
-  if ( strMap.get("0") !== "abc") throw new Error(`Unexpected result`);
+  if ( strMap.get("0") !== "abc" || strMap.get("1") !== "abc" || strMap.get("2") !== "abc" || strMap.get("3") !== "abc" || strMap.get("4") !== "abc") throw new Error(`Unexpected result`);
   console.log(strMap)
   console.log(`Key: 0, Value: ` + strMap.get("0"));
+
+  let mapmap = new Map<string, Map<string, number>>();
+  mapmap.set("a", map);
+  mapmap.set("b", map);
+  mapmap.set("c", map);
+  let resmapmap = lib.changeMapMap(mapmap);
+  if ( resmapmap.get("a")?.get("key0") !== 0 || resmapmap.get("a")?.get("key1") !== 2 || resmapmap.get("a")?.get("key2") !== 4) throw new Error(`Unexpected result`);
+  if ( resmapmap.get("b")?.get("key0") !== 0 || resmapmap.get("b")?.get("key1") !== 2 || resmapmap.get("b")?.get("key2") !== 4) throw new Error(`Unexpected result`);
+  if ( resmapmap.get("c")?.get("key0") !== 0 || resmapmap.get("c")?.get("key1") !== 2 || resmapmap.get("c")?.get("key2") !== 4) throw new Error(`Unexpected result`);
 
   let new_intMap = new Map<number, string>();
   new_intMap.set(0, "a");
   new_intMap.set(1, "b");
   new_intMap.set(2, "c");
   let intMap: Map<number, string> = lib.changeIntString(new_intMap);
-  console.log(intMap)
+  if ( intMap.get(1) !== "ac++" || intMap.get(2) !== "bc++" || intMap.get(3) !== "cc++" ) throw new Error(`Unexpected result`);
 
   let enumMap = lib.getStringColor();
-  console.log(enumMap);
+  if ( enumMap.get("key1") !== lib.Color.RED || enumMap.get("key2") !== lib.Color.GREEN ) throw new Error(`Unexpected result`);
   let enum_Map = new Map<string, lib.Color>();
   enum_Map.set("key0", lib.Color.BLUE);
   enum_Map.set("key1", lib.Color.GREEN);
@@ -62,9 +71,12 @@ function main() {
   new_enumMap.set(lib.Color.BLUE, "a");
   new_enumMap.set(lib.Color.GREEN, "b");
   new_enumMap.set(lib.Color.RED, "c");
-  console.log(lib.changeColorString(new_enumMap));
+  let res_enumMap: Map<lib.Color, string> = lib.changeColorString(new_enumMap);
+  if ( res_enumMap.get(lib.Color.BLUE) !== "ac++" || res_enumMap.get(lib.Color.GREEN) !== "bc++" || res_enumMap.get(lib.Color.RED) !== "cc++" ) throw new Error(`Unexpected result`);
 
   let structMap: Map<string, lib.Data> = lib.getStringData();
+  if ( structMap.get("key1")?.a !== "a1" || structMap.get("key1")?.b !== "b1" || structMap.get("key1")?.c !== 1 ) throw new Error(`Unexpected result`);  
+  if ( structMap.get("key2")?.a !== "a2" || structMap.get("key2")?.b !== "b2" || structMap.get("key2")?.c !== 2 ) throw new Error(`Unexpected result`);  
   structMap.forEach((value, key) => {
     console.log("TS MapStringData", key, value.a, value.b, value.c);
   });
@@ -78,6 +90,8 @@ function main() {
   lib.setStringData(struct_Map)
 
   let ifaceMap: Map<string, lib.IBase> = lib.getStringIBase();
+  if ( ifaceMap.get("key1")?.getId() !== "basea" ) throw new Error(`Unexpected result`);
+  if ( ifaceMap.get("key2")?.getId() !== "baseb" ) throw new Error(`Unexpected result`);
   ifaceMap.forEach((value, key) => {
     console.log("TS MapStringIBase", key, value.getId());
   });

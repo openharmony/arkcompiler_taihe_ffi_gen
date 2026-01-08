@@ -20,12 +20,15 @@ function main() {
   let nextColor = lib.nextEnum(color);
   if (nextColor !== lib.Color.BLUE) throw new Error(`Unexpected result`);
   console.log("nextColor:", nextColor);
+
   if (lib.FLAG_F32_A !== 1) throw new Error(`Unexpected result`);
   if (lib.FLAG_F32_B !== 3) throw new Error(`Unexpected result`);
   console.log("const value:", lib.FLAG_F32_A, lib.FLAG_F32_B);
+
   let enum_v = lib.getValueOfEnum(color);
   if (enum_v !== lib.Color.GREEN) throw new Error(`Unexpected result`);
   console.log(enum_v);
+
   let value_e = lib.fromValueToEnum("Blue");
   if (value_e !== lib.Color.BLUE) throw new Error(`Unexpected result`);
   console.log(value_e, value_e === lib.Color.BLUE)
@@ -34,14 +37,18 @@ function main() {
   let nextday = lib.nextEnumWeekday(weekday);
   if (nextday !== 5) throw new Error(`Unexpected result`);
   console.log("nextDay: ", nextday)
+
   let weekday_v = lib.getValueOfEnumWeekday(weekday);
   if (weekday_v !== 4) throw new Error(`Unexpected result`);
   console.log(weekday_v);
+
   let value_w = lib.fromValueToEnumWeekday(1);
   if (value_w !== 1) throw new Error(`Unexpected result`);
   console.log(value_w, value_w === lib.Weekday.MONDAY);
 
   if (lib.FLAG_STRING_ONE !== "hello") throw new Error(`Unexpected result`);
+  if (lib.FLAG_STRING_TWO !== "i am boy") throw new Error(`Unexpected result`);
+  if (lib.FLAG_STRING_THREE !== "good morning") throw new Error(`Unexpected result`);
   console.log("const value: ", lib.FLAG_F32_A, lib.FLAG_STRING_ONE);
   console.log(lib.FLAG_F32_A === 1, lib.FLAG_STRING_ONE === "hello");
 }

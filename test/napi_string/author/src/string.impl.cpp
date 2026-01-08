@@ -44,7 +44,7 @@ namespace {
     return a + b;
 }
 
-::taihe::expected<uint64_t, ::taihe::error> sum(uint64_t a, uint64_t b)
+::taihe::expected<uint32_t, ::taihe::error> sum(uint32_t a, uint32_t b)
 {
     return (a * b);
 }

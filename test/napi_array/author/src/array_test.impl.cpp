@@ -130,6 +130,36 @@ public:
     }
     return res;
 }
+
+::taihe::expected<::taihe::array<::taihe::map<::taihe::string, int64_t>>, ::taihe::error> MakeRecordArray(
+    ::taihe::string_view key, int64_t val, int32_t num)
+{
+    ::taihe::map<::taihe::string, int64_t> record;
+    record.emplace(key, val);
+    return ::taihe::array<::taihe::map<::taihe::string, int64_t>>::make(num, record);
+}
+
+::taihe::expected<::taihe::array<::taihe::map<::taihe::string, int64_t>>, ::taihe::error> ChangeRecordArray(
+    ::taihe::array_view<::taihe::map<::taihe::string, int64_t>> value, ::taihe::string_view k, int64_t v)
+{
+    auto result = ::taihe::array<::taihe::map<::taihe::string, int64_t>>::make(value.size());
+    std::transform(value.begin(), value.end(), result.begin(),
+                   [k = ::taihe::string(k), v](::taihe::map<::taihe::string, int64_t> const &m) {
+                       ::taihe::map<::taihe::string, int64_t> new_record;
+                       new_record.emplace(k, v);
+                       return new_record;
+                   });
+
+    return result;
+
+    // auto result = array<map<string, int64_t>>::make(value.size(), value[0]);
+    // map<string, int64_t> record;
+    // record.emplace(k, v);
+    // std::transform(value.begin(), value.end(), result.begin(), [record](map<string, int64_t> m) {
+    //     return record;
+    // });
+    // return result;
+}
 }  // namespace
 
 TH_EXPORT_CPP_API_sumArray(sumArray);
@@ -143,4 +173,6 @@ TH_EXPORT_CPP_API_changeStructArray(changeStructArray);
 TH_EXPORT_CPP_API_makeStructArrayArray(makeStructArrayArray);
 TH_EXPORT_CPP_API_makeIfaceArray(makeIfaceArray);
 TH_EXPORT_CPP_API_changeIfaceArray(changeIfaceArray);
+TH_EXPORT_CPP_API_MakeRecordArray(MakeRecordArray);
+TH_EXPORT_CPP_API_ChangeRecordArray(ChangeRecordArray);
 // NOLINTEND
