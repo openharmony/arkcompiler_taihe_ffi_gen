@@ -635,16 +635,10 @@ class ScalarTypeNapiInfo(TypeNapiInfo):
         self.type = t
         napi_type = {
             ScalarKind.BOOL: "napi_boolean",
-            ScalarKind.F32: "napi_number",
             ScalarKind.F64: "napi_number",
-            ScalarKind.I8: "napi_number",
-            ScalarKind.I16: "napi_number",
             ScalarKind.I32: "napi_number",
             ScalarKind.I64: "napi_number",
-            ScalarKind.U8: "napi_number",
-            ScalarKind.U16: "napi_number",
             ScalarKind.U32: "napi_number",
-            ScalarKind.U64: "napi_number",
         }.get(self.type.kind)
         if napi_type is None:
             raise ValueError(f"Unsupported ScalarKind: {self.type.kind}")
@@ -654,16 +648,10 @@ class ScalarTypeNapiInfo(TypeNapiInfo):
     def dts_type_in(self, target: DtsWriter) -> str:
         dts_type = {
             ScalarKind.BOOL: "boolean",
-            ScalarKind.F32: "number",
             ScalarKind.F64: "number",
-            ScalarKind.I8: "number",
-            ScalarKind.I16: "number",
             ScalarKind.I32: "number",
             ScalarKind.I64: "number",
-            ScalarKind.U8: "number",
-            ScalarKind.U16: "number",
             ScalarKind.U32: "number",
-            ScalarKind.U64: "number",
         }.get(self.type.kind)
         if dts_type is None:
             raise ValueError(f"Unsupported ScalarKind: {self.type.kind}")
@@ -679,36 +667,18 @@ class ScalarTypeNapiInfo(TypeNapiInfo):
         napi_value: str,
         cpp_result: str,
     ):
-        as_napi_c = {
-            ScalarKind.BOOL: "bool",
-            ScalarKind.F32: "double",
-            ScalarKind.F64: "double",
-            ScalarKind.I8: "int32_t",
-            ScalarKind.I16: "int32_t",
-            ScalarKind.I32: "int32_t",
-            ScalarKind.I64: "int64_t",
-            ScalarKind.U8: "uint32_t",
-            ScalarKind.U16: "uint32_t",
-            ScalarKind.U32: "uint32_t",
-            ScalarKind.U64: "double",
-        }.get(self.type.kind)
         from_js_to_c_func = {
             ScalarKind.BOOL: "napi_get_value_bool",
-            ScalarKind.F32: "napi_get_value_double",
             ScalarKind.F64: "napi_get_value_double",
-            ScalarKind.I8: "napi_get_value_int32",
-            ScalarKind.I16: "napi_get_value_int32",
             ScalarKind.I32: "napi_get_value_int32",
             ScalarKind.I64: "napi_get_value_int64",
-            ScalarKind.U8: "napi_get_value_uint32",
-            ScalarKind.U16: "napi_get_value_uint32",
             ScalarKind.U32: "napi_get_value_uint32",
-            ScalarKind.U64: "napi_get_value_double",
         }.get(self.type.kind)
+        if from_js_to_c_func is None:
+            raise ValueError(f"Unsupported ScalarKind: {self.type.kind}")
         target.writelns(
-            f"{as_napi_c} {cpp_result}_tmp;",
-            f"NAPI_CALL(env, {from_js_to_c_func}(env, {napi_value}, &{cpp_result}_tmp));",
-            f"{self.cpp_info.as_owner} {cpp_result} = {cpp_result}_tmp;",
+            f"{self.cpp_info.as_owner} {cpp_result};",
+            f"NAPI_CALL(env, {from_js_to_c_func}(env, {napi_value}, &{cpp_result}));",
         )
 
     def into_napi(
@@ -719,16 +689,13 @@ class ScalarTypeNapiInfo(TypeNapiInfo):
     ):
         from_c_to_js_func = {
             ScalarKind.BOOL: "napi_get_boolean",
-            ScalarKind.F32: "napi_create_double",
             ScalarKind.F64: "napi_create_double",
-            ScalarKind.I8: "napi_create_int32",
-            ScalarKind.I16: "napi_create_int32",
             ScalarKind.I32: "napi_create_int32",
             ScalarKind.I64: "napi_create_int64",
-            ScalarKind.U8: "napi_create_uint32",
             ScalarKind.U32: "napi_create_uint32",
-            ScalarKind.U64: "napi_create_double",
         }.get(self.type.kind)
+        if from_c_to_js_func is None:
+            raise ValueError(f"Unsupported ScalarKind: {self.type.kind}")
         target.writelns(
             f"napi_value {napi_result} = nullptr;",
             f"NAPI_CALL(env, {from_c_to_js_func}(env, {cpp_value}, &{napi_result}));",
@@ -1774,6 +1741,24 @@ class TypedArrayTypeNapiInfo(TypeNapiInfo):
         napi_data = f"{cpp_result}_data"
         napi_arrbuf = f"{cpp_result}_arrbuf"
         napi_byte_offset = f"{cpp_result}_byoff"
+        element_length = f"{cpp_result}_element_length"
+        element_size = None
+        if isinstance(self.type.item_ty, ScalarType):
+            element_size = {
+                ScalarKind.F32: "float",
+                ScalarKind.F64: "double",
+                ScalarKind.I8: "int8_t",
+                ScalarKind.I16: "int16_t",
+                ScalarKind.I32: "int32_t",
+                ScalarKind.I64: "int64_t",
+                ScalarKind.U8: "uint8_t",
+                ScalarKind.U16: "uint16_t",
+                ScalarKind.U32: "uint32_t",
+                ScalarKind.U64: "uint64_t",
+            }.get(self.type.item_ty.kind)
+        if element_size is None:
+            raise ValueError(f"Unsupported TypedArrayKind: {self.type}")
+
         target.writelns(
             f"napi_typedarray_type {napi_ta_type};",
             f"size_t {napi_length};",
@@ -1781,7 +1766,8 @@ class TypedArrayTypeNapiInfo(TypeNapiInfo):
             f"napi_value {napi_arrbuf};",
             f"size_t {napi_byte_offset};",
             f"NAPI_CALL(env, napi_get_typedarray_info(env, {napi_value}, &{napi_ta_type}, &{napi_length}, &{napi_data}, &{napi_arrbuf}, &{napi_byte_offset}));",
-            f"{self.cpp_info.as_param} {cpp_result}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>({napi_data}), {napi_length});",
+            f"size_t {element_length} = {napi_length} / sizeof({element_size});",
+            f"{self.cpp_info.as_param} {cpp_result}(reinterpret_cast<{item_ty_cpp_info.as_owner}*>({napi_data}), {element_length});",
         )
 
     def into_napi(
@@ -2118,6 +2104,13 @@ class BigIntTypeNapiInfo(TypeNapiInfo):
         super().__init__(am, t)
         self.am = am
         self.type = t
+        if not (
+            isinstance(self.type.item_ty, ScalarType)
+            and self.type.item_ty.kind == ScalarKind.U64
+        ):
+            raise ValueError(
+                "Attribute bigint can only be attached to array types with u64 items"
+            )
         # TODO: check the attribute should be used in Array<u64>
 
     @override
