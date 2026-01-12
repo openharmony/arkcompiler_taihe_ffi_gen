@@ -206,8 +206,9 @@ class Builder:
             bundle.create_script("taihe-tryit", "taihe.cli.tryit")
 
         ### Create the taihe-napi ###
-        taihe_napi_bundle = NapiTaiheBundle(bundle_root, platform)
-        taihe_napi_bundle.extract()
+        # In napi branch don't need to copy napi package
+        # taihe_napi_bundle = NapiTaiheBundle(bundle_root, platform)
+        # taihe_napi_bundle.extract()
 
         ### Move resources ###
         src_ctx = ResourceContext(DeploymentMode.PKG, bundle.sitepkg_dir / "taihe/data")
