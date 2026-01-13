@@ -469,7 +469,7 @@ class TaiheNapiBuild(CachedResource):
 
     # url for taihe napi packages
     REPO: Final = (
-        "https://gitcode.com/m0_52007851/taihe-napi-bin/releases/download/v1.0.0/"
+        "https://gitcode.com/m0_52007851/taihe-napi-bin/releases/download/v1.2.0/"
     )
 
     # Supported platforms
@@ -480,16 +480,16 @@ class TaiheNapiBuild(CachedResource):
 
     # Bundle tarball file names for each platform
     LINUX_X86_64_TAIHE_NAPI_BUNDLE: Final = (
-        "taihe-linux-x86_64-1.0.0+napi-20251222.tar.gz"
+        "taihe-linux-x86_64-1.2.0+napi-20260112.tar.gz"
     )
     WINDOWS_X86_64_TAIHE_NAPI_BUNDLE: Final = (
-        "taihe-windows-x86_64-1.0.0+napi-20251222.tar.gz"
+        "taihe-windows-x86_64-1.2.0+napi-20260112.tar.gz"
     )
     DARWIN_ARM64_TAIHE_NAPI_BUNDLE: Final = (
-        "taihe-darwin-arm64-1.0.0+napi-20251222.tar.gz"
+        "taihe-darwin-arm64-1.2.0+napi-20260112.tar.gz"
     )
     DARWIN_X86_64_TAIHE_NAPI_BUNDLE: Final = (
-        "taihe-darwin-x86_64-1.0.0+napi-20251222.tar.gz"
+        "taihe-darwin-x86_64-1.2.0+napi-20260112.tar.gz"
     )
 
     files: ClassVar[dict[str, str]] = {
