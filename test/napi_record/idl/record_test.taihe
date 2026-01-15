@@ -15,6 +15,7 @@
 
 function getStringIntSize(r : @record Map<String, i32>) : i32;
 function createStringString(a : i32) : @record Map<String, String>;
+function changeRecRec(a: @record Map<String, @record Map<String, i32>>): @record Map<String, @record Map<String, i32>>;
 
 enum Color: String {
     RED = "Red",

@@ -24,6 +24,7 @@ namespace {
 class Base {
 protected:
     ::taihe::string id;
+    ::taihe::string name = "default_base_name";
 
 public:
     Base(::taihe::string_view id) : id(id)
@@ -46,6 +47,17 @@ public:
         id = s;
         return {};
     }
+
+    ::taihe::expected<::taihe::string, ::taihe::error> getName()
+    {
+        return name;
+    }
+
+    ::taihe::expected<void, ::taihe::error> setName(::taihe::string_view s)
+    {
+        name = s;
+        return {};
+    }
 };
 
 class Shape {
@@ -53,6 +65,7 @@ protected:
     ::taihe::string id;
     float a;
     float b;
+    ::taihe::string name = "default_shape_name";
 
 public:
     Shape(::taihe::string_view id, float a, float b) : id(id), a(a), b(b)
@@ -80,10 +93,22 @@ public:
     {
         return a * b;
     }
+
+    ::taihe::expected<::taihe::string, ::taihe::error> getName()
+    {
+        return name;
+    }
+
+    ::taihe::expected<void, ::taihe::error> setName(::taihe::string_view s)
+    {
+        name = s;
+        return {};
+    }
 };
 
 class CTestImpl {
     int32_t x;
+    ::taihe::string id = "default_ctest_id";
 
 public:
     CTestImpl(int32_t x) : x(x)
@@ -96,9 +121,20 @@ public:
         std::cout << "del ctest " << this << std::endl;
     }
 
-    ::taihe::expected<float, ::taihe::error> add(int32_t a, int32_t b)
+    ::taihe::expected<int32_t, ::taihe::error> add(int32_t a, int32_t b)
     {
         return a + b + this->x;
+    }
+
+    ::taihe::expected<::taihe::string, ::taihe::error> getId()
+    {
+        return id;
+    }
+
+    ::taihe::expected<void, ::taihe::error> setId(::taihe::string_view s)
+    {
+        id = s;
+        return {};
     }
 };
 
@@ -139,6 +175,7 @@ protected:
     ::taihe::string id = "d";
     float a = 1;
     float b = 2;
+    ::taihe::string name = "default_derived_name";
 
 public:
     ::taihe::expected<void, ::taihe::error> call()
@@ -160,6 +197,17 @@ public:
     ::taihe::expected<void, ::taihe::error> setId(::taihe::string_view s)
     {
         this->id = s;
+        return {};
+    }
+
+    ::taihe::expected<::taihe::string, ::taihe::error> getName()
+    {
+        return name;
+    }
+
+    ::taihe::expected<void, ::taihe::error> setName(::taihe::string_view s)
+    {
+        name = s;
         return {};
     }
 };
@@ -195,7 +243,7 @@ public:
 
 ::taihe::expected<::iface_test::CTest, ::taihe::error> changeCTest(::iface_test::weak::CTest a)
 {
-    ::taihe::expected<float, ::taihe::error> x = a->add(3, 4);
+    ::taihe::expected<int32_t, ::taihe::error> x = a->add(3, 4);
     if (x.has_value()) {
         return ::taihe::make_holder<CTestImpl, ::iface_test::CTest>(x.value());
     } else {
