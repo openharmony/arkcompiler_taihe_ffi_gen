@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-function SumUint8Array(v: @typedarray Array<u8>): i8;
-function NewUint8Array(n: i64, v: i8): @typedarray Array<u8>;
+function SumUint8Array(v: @typedarray Array<u8>): i32;
+function NewUint8Array(n: i64, v: i32): @typedarray Array<u8>;
 
-function SumFloat32Array(v: @typedarray Array<f32>): f32;
-function NewFloat32Array(n: i64, v: f32): @typedarray Array<f32>;
+function SumFloat32Array(v: @typedarray Array<f32>): f64;
+function NewFloat32Array(n: i64, v: f64): @typedarray Array<f32>;

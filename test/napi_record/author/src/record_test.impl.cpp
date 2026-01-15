@@ -33,6 +33,20 @@ namespace {
     return m;
 }
 
+::taihe::expected<::taihe::map<::taihe::string, ::taihe::map<::taihe::string, int32_t>>, ::taihe::error> changeRecRec(
+    ::taihe::map_view<::taihe::string, ::taihe::map<::taihe::string, int32_t>> a)
+{
+    ::taihe::map<::taihe::string, ::taihe::map<::taihe::string, int32_t>> result;
+    for (auto const &[outer_key, inner_map] : a) {
+        ::taihe::map<::taihe::string, int32_t> new_inner_map;
+        for (auto const &[inner_key, value] : inner_map) {
+            new_inner_map.emplace(inner_key, value * 2);
+        }
+        result.emplace(outer_key, std::move(new_inner_map));
+    }
+    return result;
+}
+
 ::taihe::expected<void, ::taihe::error> setStringColor(::taihe::map_view<::taihe::string, ::record_test::Color> m)
 {
     for (auto const &[key, val] : m) {
@@ -118,6 +132,7 @@ public:
 
 TH_EXPORT_CPP_API_getStringIntSize(getStringIntSize);
 TH_EXPORT_CPP_API_createStringString(createStringString);
+TH_EXPORT_CPP_API_changeRecRec(changeRecRec);
 TH_EXPORT_CPP_API_setStringColor(setStringColor);
 TH_EXPORT_CPP_API_getStringColor(getStringColor);
 TH_EXPORT_CPP_API_setStringData(setStringData);

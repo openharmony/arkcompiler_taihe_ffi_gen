@@ -40,12 +40,23 @@ function main() {
   if ( ret2 !== 4) throw new Error(`Unexpected result`);
   console.log(ret2);
 
-  let strRecord: Record<string, string> = lib.createStringString(5);
-  if ( strRecord["0"] !== "abc") throw new Error(`Unexpected result`);
+  let strRecord: Record<string, string> = lib.createStringString(3);
+  if ( strRecord["0"] !== "abc" || strRecord["1"] !== "abc" || strRecord["2"] !== "abc") throw new Error(`Unexpected result`);
   console.log(strRecord)
   console.log(`Key: 0, Value: ` + strRecord["0"]);
 
+  let recrec: Record<string, Record<string, number>> = {
+    "a": record,
+    "b": record,
+    "c": record,
+  };
+  let resrecrec = lib.changeRecRec(recrec);
+  if ( resrecrec["a"]?.["key0"] !== 0 || resrecrec["a"]?.["key1"] !== 2 || resrecrec["a"]?.["key2"] !== 4 || resrecrec["a"]?.["key3"] !== 6 ) throw new Error(`Unexpected result`);
+  if ( resrecrec["b"]?.["key0"] !== 0 || resrecrec["b"]?.["key1"] !== 2 || resrecrec["b"]?.["key2"] !== 4 || resrecrec["b"]?.["key3"] !== 6 ) throw new Error(`Unexpected result`);
+  if ( resrecrec["c"]?.["key0"] !== 0 || resrecrec["c"]?.["key1"] !== 2 || resrecrec["c"]?.["key2"] !== 4 || resrecrec["c"]?.["key3"] !== 6 ) throw new Error(`Unexpected result`);
+
   let enumRecord = lib.getStringColor();
+  if ( enumRecord["key1"] !== lib.Color.RED || enumRecord["key2"] !== lib.Color.GREEN ) throw new Error(`Unexpected result`);
   console.log(enumRecord);
   let enum_record: Record<string, lib.Color> = {
     "key0": lib.Color.BLUE,
@@ -55,6 +66,8 @@ function main() {
   lib.setStringColor(enum_record);
 
   let structRecord = lib.getStringData();
+  if ( structRecord["key1"].a !== "a1" || structRecord["key1"].b !== "b1" || structRecord["key1"].c !== 1 ) throw new Error(`Unexpected result`);
+  if ( structRecord["key2"].a !== "a2" || structRecord["key2"].b !== "b2" || structRecord["key2"].c !== 2 ) throw new Error(`Unexpected result`);
   for (const key in structRecord) {
       console.log(`${key}: ${structRecord[key].a}, ${structRecord[key].b}, ${structRecord[key].c}`);
   }
@@ -69,6 +82,7 @@ function main() {
   lib.setStringData(struct_record)
 
   let ifaceRecord = lib.getStringIBase();
+  if ( ifaceRecord["key1"].getId() !== "basea" || ifaceRecord["key2"].getId() !== "baseb" ) throw new Error(`Unexpected result`);
   for (const key in ifaceRecord) {
     console.log(`${key}: ${ifaceRecord[key].getId()}`);
   }
