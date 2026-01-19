@@ -364,7 +364,7 @@ class ArkTsOutDir:
 
     @property
     def bundle_parts(self) -> list[str]:
-        return [self.bundle_str] if self.bundle_str else []
+        return [] if self.bundle_str is None else self.bundle_str.split("/")
 
     @property
     def prefix_parts(self) -> list[str]:
