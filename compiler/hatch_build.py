@@ -97,7 +97,7 @@ def generate_ast(file: TextIO, parser: Any):
     type_list = []
     for rule_name in parser.ruleNames:
         node_kind = rule_name[0].upper() + rule_name[1:]
-        ctx_kind = node_kind + "Context"
+        ctx_kind = f"{node_kind}Context"
         ctx_type = getattr(parser, ctx_kind)
         type_list.append((node_kind, ctx_type))
     for node_kind, ctx_type in type_list:
@@ -141,7 +141,7 @@ def generate_visitor(file: TextIO, parser: Any):
     type_list = []
     for rule_name in parser.ruleNames:
         node_kind = rule_name[0].upper() + rule_name[1:]
-        ctx_kind = node_kind + "Context"
+        ctx_kind = f"{node_kind}Context"
         ctx_type = getattr(parser, ctx_kind)
         type_list.append((node_kind, ctx_type))
     for node_kind, ctx_type in type_list:
