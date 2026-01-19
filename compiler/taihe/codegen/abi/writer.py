@@ -45,6 +45,7 @@ class CSourceWriter(FileWriter):
             f.write('#pragma clang diagnostic ignored "-Weverything"\n')
             f.write('#pragma clang diagnostic warning "-Wextra"\n')
             f.write('#pragma clang diagnostic warning "-Wall"\n')
+            f.write('#pragma clang diagnostic ignored "-Wmissing-braces"\n')
             f.write("\n")
         for header in self.headers:
             f.write(f'#include "{header}"\n')
