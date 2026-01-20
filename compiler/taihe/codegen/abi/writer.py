@@ -66,32 +66,7 @@ class CSourceWriter(FileWriter):
 class CHeaderWriter(CSourceWriter):
     """Represents a C or C++ header file."""
 
-    def __init__(
-        self,
-        om: OutputManager,
-        relative_path: str,
-        file_kind: FileKind,
-    ):
-        super().__init__(om, relative_path, file_kind)
-
-    @property
-    def guard_macro(self) -> str:
-        path = self.desc.relative_path.split("/")
-        try:
-            index = path.index("include") + 1
-        except ValueError:
-            index = 0
-        return "_".join(path[index:]).replace(".", "_").replace("/", "_").upper()
-
     @override
     def write_prologue(self, f: TextIO):
-        f.write(f"#ifndef {self.guard_macro}\n")
-        f.write(f"#define {self.guard_macro}\n")
-        f.write("\n")
+        f.write("#pragma once\n")
         super().write_prologue(f)
-
-    @override
-    def write_epilogue(self, f: TextIO):
-        super().write_epilogue(f)
-        f.write("\n")
-        f.write(f"#endif  // {self.guard_macro}\n")
