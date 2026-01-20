@@ -108,8 +108,10 @@ function test_fromValueToEnum() {
     let errCode: number = 0;
     try {
         EnumTest.fromValueToEnum("Yellow");
-    } catch (e: BusinessError) {
-        errCode = e.code;
+    } catch (e) {
+        if (e instanceof BusinessError) {
+            errCode = e.code;
+        }
     }
     arktest.assertEQ(errCode, 1);
 }
@@ -120,8 +122,10 @@ function test_fromValueToEnumWeekday() {
     let errCode: number = 0;
     try {
         EnumTest.fromValueToEnumWeekday(8);
-    } catch (e: BusinessError) {
-        errCode = e.code;
+    } catch (e) {
+        if (e instanceof BusinessError) {
+            errCode = e.code;
+        }
     }
     arktest.assertEQ(errCode, 1);
 }
