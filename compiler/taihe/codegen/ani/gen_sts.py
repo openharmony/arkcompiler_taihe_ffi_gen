@@ -1243,10 +1243,8 @@ class StsAnyFuncGenerator:
         if isinstance(return_ty := self.func.return_ty, NonVoidType):
             return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
             return_ty_sts_name = return_ty_ani_info.sts_type_in(self.target)
-            return_ty_sts_real = return_ty_ani_info.sts_type_in(self.target)
         else:
             return_ty_sts_name = "void"
-            return_ty_sts_real = "undefined"
 
         if (norm_name := func_ani_info.norm_name) is not None:
             self.gen_normal_func(
@@ -1257,7 +1255,6 @@ class StsAnyFuncGenerator:
                 params_sts,
                 params_ty_sts_name,
                 return_ty_sts_name,
-                return_ty_sts_real,
                 result_sts,
                 func_ani_info.overload_name,
                 func_ani_info.on_off_pair,
@@ -1269,7 +1266,6 @@ class StsAnyFuncGenerator:
                 params_sts,
                 params_ty_sts_name,
                 return_ty_sts_name,
-                return_ty_sts_real,
                 result_sts,
                 func_ani_info.overload_name,
                 func_ani_info.on_off_pair,
@@ -1281,7 +1277,6 @@ class StsAnyFuncGenerator:
                 params_sts,
                 params_ty_sts_name,
                 return_ty_sts_name,
-                return_ty_sts_real,
                 result_sts,
                 func_ani_info.overload_name,
                 func_ani_info.on_off_pair,
@@ -1344,7 +1339,6 @@ class StsAnyFuncGenerator:
         params_sts: list[str],
         params_ty_sts_name: list[str],
         return_ty_sts_name: str,
-        return_ty_sts_real: str,
         result_sts: str,
         overload_name: str | None,
         on_off_pair: tuple[str, str] | None,
@@ -1377,7 +1371,6 @@ class StsAnyFuncGenerator:
                 params_sts,
                 params_ty_sts_name,
                 return_ty_sts_name,
-                return_ty_sts_real,
                 result_sts,
                 None,
                 None,
@@ -1389,7 +1382,6 @@ class StsAnyFuncGenerator:
                 params_sts,
                 params_ty_sts_name,
                 return_ty_sts_name,
-                return_ty_sts_real,
                 result_sts,
                 None,
                 None,
@@ -1402,7 +1394,6 @@ class StsAnyFuncGenerator:
         params_sts: list[str],
         params_ty_sts_name: list[str],
         return_ty_sts_name: str,
-        return_ty_sts_real: str,
         result_sts: str,
         overload_name: str | None,
         on_off_pair: tuple[str, str] | None,
@@ -1419,26 +1410,32 @@ class StsAnyFuncGenerator:
                 f"}});",
             ):
                 with self.target.indented(
-                    f"taskpool.execute((): {return_ty_sts_name} => {{",
+                    f"launch<void, () => void>(() => {{",
                     f"}})",
                 ):
-                    self.target.writelns(
-                        f"return {result_sts};",
-                    )
-                with self.target.indented(
-                    f".then((ret: Any): void => {{",
-                    f"}})",
-                ):
-                    self.target.writelns(
-                        f"resolve(ret as {return_ty_sts_real});",
-                    )
-                with self.target.indented(
-                    f".catch((ret: Any): void => {{",
-                    f"}});",
-                ):
-                    self.target.writelns(
-                        f"reject(ret as Error);",
-                    )
+                    with self.target.indented(
+                        f"try {{",
+                        f"}}",
+                    ):
+                        if return_ty_sts_name == "void":
+                            self.target.writelns(
+                                f"{result_sts};",
+                                f"let res = undefined;",
+                            )
+                        else:
+                            self.target.writelns(
+                                f"let res = {result_sts};",
+                            )
+                        self.target.writelns(
+                            f"resolve(res);",
+                        )
+                    with self.target.indented(
+                        f"catch(err) {{",
+                        f"}};",
+                    ):
+                        self.target.writelns(
+                            f"reject(err as Error);",
+                        )
 
         if overload_name is not None:
             self.overload_register.register(promise_name, overload_name)
@@ -1458,7 +1455,6 @@ class StsAnyFuncGenerator:
         params_sts: list[str],
         params_ty_sts_name: list[str],
         return_ty_sts_name: str,
-        return_ty_sts_real: str,
         result_sts: str,
         overload_name: str | None,
         on_off_pair: tuple[str, str] | None,
@@ -1474,26 +1470,32 @@ class StsAnyFuncGenerator:
             f"}}",
         ):
             with self.target.indented(
-                f"taskpool.execute((): {return_ty_sts_name} => {{",
+                f"launch<void, () => void>(() => {{",
                 f"}})",
             ):
-                self.target.writelns(
-                    f"return {result_sts};",
-                )
-            with self.target.indented(
-                f".then((ret: Any): void => {{",
-                f"}})",
-            ):
-                self.target.writelns(
-                    f"{cbname}(null, ret as {return_ty_sts_real});",
-                )
-            with self.target.indented(
-                f".catch((ret: Any): void => {{",
-                f"}});",
-            ):
-                self.target.writelns(
-                    f"{cbname}(ret as _taihe_BusinessError, undefined);",
-                )
+                with self.target.indented(
+                    f"try {{",
+                    f"}}",
+                ):
+                    if return_ty_sts_name == "void":
+                        self.target.writelns(
+                            f"{result_sts};",
+                            f"let res = undefined;",
+                        )
+                    else:
+                        self.target.writelns(
+                            f"let res = {result_sts};",
+                        )
+                    self.target.writelns(
+                        f"{cbname}(null, res);",
+                    )
+                with self.target.indented(
+                    f"catch(err) {{",
+                    f"}}",
+                ):
+                    self.target.writelns(
+                        f"{cbname}(err as _taihe_BusinessError, undefined);",
+                    )
 
         if overload_name is not None:
             self.overload_register.register(async_name, overload_name)
@@ -1546,6 +1548,11 @@ class StsAnyCtorGenerator:
         result_sts = (
             f"{ctor_ani_info.call_native(ctor_ani_info.native_name)}({args_sts_str})"
         )
+        if isinstance(return_ty := self.ctor.return_ty, NonVoidType):
+            return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
+            return_ty_sts_name = return_ty_ani_info.sts_type_in(self.target)
+        else:
+            return_ty_sts_name = "void"
 
         if (ctor_name := ctor_ani_info.norm_name) is not None:
             self.gen_ctor(
@@ -1553,6 +1560,7 @@ class StsAnyCtorGenerator:
                 params_ty_sts_sig,
                 params_sts,
                 params_ty_sts_name,
+                return_ty_sts_name,
                 result_sts,
                 ctor_ani_info.overload_name,
                 ctor_ani_info.on_off_pair,
@@ -1564,6 +1572,7 @@ class StsAnyCtorGenerator:
         params_ty_sts_sig: list[str],
         params_sts: list[str],
         params_ty_sts_name: list[str],
+        return_ty_sts_name: str,
         result_sts: str,
         overload_name: str | None,
         on_off_pair: tuple[str, str] | None,
