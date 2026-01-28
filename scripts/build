@@ -180,7 +180,7 @@ class Builder:
         if self._has_built_compiler:
             return  # Only build once.
         self._has_built_compiler = True
-        subprocess.run(["uv", "build"], cwd=self.pyproject_dir, check=True)
+        subprocess.run(["uv", "build", "--out-dir", str(self.dist_dir)], cwd=self.pyproject_dir, check=True)
 
     def build(self, platform: Platform):
         ### Preparation ###
@@ -236,10 +236,18 @@ def main():
         default=None,
         help="Specify the system type to build for. Can be used multiple times.",
     )
+    parser.add_argument(
+        "--output",
+        "-O",
+        dest="dst_dir",
+        type=Path,
+        default=g_repo_dir / "dist",
+        help="directory for build files",
+    )
     args = parser.parse_args()
 
     ResourceContext.initialize()
-    builder = Builder(g_repo_dir, g_repo_dir / "dist")
+    builder = Builder(g_repo_dir, args.dst_dir)
     for p in args.system or Platform:
         builder.build(Platform(p))
 
