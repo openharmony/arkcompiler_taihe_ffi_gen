@@ -1,0 +1,81 @@
+# Copyright (c) 2026 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import("//build/ohos.gni")
+import("//build/ohos/sdk/sdk.gni")
+
+action("build_taihe") {
+  script = "//arkcompiler/taihe_ffi_gen/scripts/build"
+  args = [
+    "--output",
+    rebase_path("$target_out_dir/dist"),
+  ]
+  outputs = [
+    "$target_out_dir/dist/taihe-linux-x86_64/version.txt",
+    "$target_out_dir/dist/taihe-darwin-arm64/version.txt",
+    "$target_out_dir/dist/taihe-darwin-x86_64/version.txt",
+    "$target_out_dir/dist/taihe-windows-x86_64/version.txt",
+  ]
+}
+
+static_library("build_taihe_wrapper") {
+  sources = []
+  deps = [ ":build_taihe" ]
+}
+
+if (sdk_build_arkts) {
+  action("copy_taihe_out") {
+    build_taihe_out_dir = get_label_info("build_taihe", "target_out_dir")
+    parent_build_taihe_out_dir = get_path_info(build_taihe_out_dir, "dir")
+
+    sources = [
+      "$parent_build_taihe_out_dir/dist/taihe-darwin-arm64/version.txt",
+      "$parent_build_taihe_out_dir/dist/taihe-darwin-x86_64/version.txt",
+      "$parent_build_taihe_out_dir/dist/taihe-linux-x86_64/version.txt",
+      "$parent_build_taihe_out_dir/dist/taihe-windows-x86_64/version.txt",
+    ]
+
+    script = "//arkcompiler/taihe_ffi_gen/scripts/process_sdk_files"
+    args = [
+      "--input_dir",
+      rebase_path("${parent_build_taihe_out_dir}/dist"),
+      "--output_dir",
+      rebase_path("$target_out_dir/tmp_taihe"),
+    ]
+    outputs = [
+      "$target_out_dir/tmp_taihe/taihe-linux-x86_64",
+      "$target_out_dir/tmp_taihe/taihe-windows-x86_64",
+      "$target_out_dir/tmp_taihe/taihe-darwin-arm64",
+      "$target_out_dir/tmp_taihe/taihe-darwin-x86_64",
+    ]
+    deps = [ ":build_taihe" ]
+  }
+
+  ohos_copy("copy_taihe_tools") {
+    deps = [ ":copy_taihe_out" ]
+    if (current_toolchain == "//build/toolchain/linux:clang_x64") {
+      sources = [ "$target_out_dir/tmp_taihe/taihe-linux-x86_64" ]
+    } else if (current_toolchain == "//build/toolchain/mingw:mingw_x86_64") {
+      sources = [ "$target_out_dir/tmp_taihe/taihe-windows-x86_64" ]
+    } else if (current_toolchain == "//build/taihe-toolchain/mac:clang_arm64") {
+      sources = [ "$target_out_dir/tmp_taihe/darwin-arm64" ]
+    } else if (current_toolchain == "//build/taihe-toolchain/mac:clang_x64") {
+      sources = [ "$target_out_dir/tmp_taihe/darwin-x86_64" ]
+    }
+    outputs = [ target_out_dir + "/$target_name" + "/taihe" ]
+    module_source_dir = target_out_dir + "/$target_name"
+    module_install_name = ""
+    part_name = "taihe_ffi_gen"
+    subsystem_name = "arkcompiler"
+  }
+}
