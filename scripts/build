@@ -1,4 +1,19 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import argparse
 from enum import Enum
 from functools import cache
@@ -19,6 +34,7 @@ sys.path.insert(0, str(g_compiler_dir))
 from taihe.utils.resources import (
     BUILTIN_RESOURCES,
     DeploymentMode,
+    TaiheNapiBuild,
     PythonBuild,
     ResourceContext,
 )
@@ -60,6 +76,19 @@ def create_tar(in_dir: Path, out_tgz: Path, rename_root: str, timestamp: float):
         raise
 
 
+class NapiTaiheBundle:
+    """A prebuilt taihe-napi with bundled packages."""
+
+    def __init__(self, root_dir: Path, platform: Platform):
+        self.platform = platform
+        self.root_dir = root_dir.absolute()
+        self.napi_taihe_dir = self.root_dir / "napi_taihe"
+
+    def extract(self):
+        self.napi_taihe_dir.mkdir(parents=True, exist_ok=True)
+        TaiheNapiBuild.resolve().extract_to(self.napi_taihe_dir, system=self.platform.value)
+
+
 class PythonBundle:
     """A prebuilt Python with bundled packages."""
 
@@ -67,9 +96,6 @@ class PythonBundle:
         self.platform = platform
         self.root_dir = root_dir.absolute()
         self.pyrt_dir = self.root_dir / "lib" / PythonBuild.BUNDLE_DIR_NAME
-
-        shutil.rmtree(self.root_dir, ignore_errors=True)
-        self.root_dir.mkdir()
 
     @property
     @cache
@@ -167,6 +193,10 @@ class Builder:
             / f"{dist_prefix}-{self.metadata.version}-{self.metadata.build_date}.tar.gz"
         )
 
+        # Clean up previous build ###
+        shutil.rmtree(bundle_root, ignore_errors=True)
+        bundle_root.mkdir()
+
         ### Create the bundle ###
         bundle = PythonBundle(bundle_root, platform)
         bundle.extract()
@@ -174,6 +204,10 @@ class Builder:
         bundle.create_script("taihec", "taihe.cli.compiler")
         if platform == Platform.LINUX_X86_64:
             bundle.create_script("taihe-tryit", "taihe.cli.tryit")
+
+        ### Create the taihe-napi ###
+        taihe_napi_bundle = NapiTaiheBundle(bundle_root, platform)
+        taihe_napi_bundle.extract()
 
         ### Move resources ###
         src_ctx = ResourceContext(DeploymentMode.PKG, bundle.sitepkg_dir / "taihe/data")
@@ -183,7 +217,6 @@ class Builder:
             dst = r.resolve_path(dst_ctx)
             dst.parent.mkdir(parents=True, exist_ok=True)
             src.rename(dst)
-
         ### Finalize ###
         (bundle.root_dir / "version.txt").write_text(self.release_note)
         create_tar(

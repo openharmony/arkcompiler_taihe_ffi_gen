@@ -13,6 +13,8 @@
  * limitations under the License.
  */
 
+// This file is a test file.
+// NOLINTBEGIN
 #include "on_off.impl.hpp"
 #include "on_off.proj.hpp"
 #include "stdexcept"
@@ -24,53 +26,62 @@ using namespace on_off;
 namespace {
 class ISetterObserverImpl {
 public:
-  ISetterObserverImpl() {}
+    ISetterObserverImpl()
+    {
+    }
 
-  void onSet(::taihe::string_view type, callback_view<void()> a) {
-    a();
-    std::cout << "IBase::onSet" << std::endl;
-  }
+    void onSet(::taihe::string_view type, callback_view<void()> a)
+    {
+        a();
+        std::cout << "IBase::onSet" << std::endl;
+    }
 
-  void offSet(::taihe::string_view type, callback_view<void()> a) {
-    a();
-    std::cout << "IBase::offSet" << std::endl;
-  }
+    void offSet(::taihe::string_view type, callback_view<void()> a)
+    {
+        a();
+        std::cout << "IBase::offSet" << std::endl;
+    }
 };
 
-ISetterObserver getISetterObserver() {
-  return make_holder<ISetterObserverImpl, ISetterObserver>();
+ISetterObserver getISetterObserver()
+{
+    return make_holder<ISetterObserverImpl, ISetterObserver>();
 }
 
-void onFoo(::taihe::string_view type, callback_view<void()> a) {
-  a();
-  std::cout << "onFoo" << std::endl;
+void onFoo(::taihe::string_view type, callback_view<void()> a)
+{
+    a();
+    std::cout << "onFoo" << std::endl;
 }
 
-void onBar(::taihe::string_view type, callback_view<void()> a) {
-  a();
-  std::cout << "onBar" << std::endl;
+void onBar(::taihe::string_view type, callback_view<void()> a)
+{
+    a();
+    std::cout << "onBar" << std::endl;
 }
 
-void onBaz(::taihe::string_view type, int32_t a,
-           callback_view<void(int32_t)> cb) {
-  cb(a);
-  std::cout << "onNewBaz" << std::endl;
+void onBaz(::taihe::string_view type, int32_t a, callback_view<void(int32_t)> cb)
+{
+    cb(a);
+    std::cout << "onNewBaz" << std::endl;
 }
 
-void offFoo(::taihe::string_view type, callback_view<void()> a) {
-  a();
-  std::cout << "offFoo" << std::endl;
+void offFoo(::taihe::string_view type, callback_view<void()> a)
+{
+    a();
+    std::cout << "offFoo" << std::endl;
 }
 
-void offBar(::taihe::string_view type, callback_view<void()> a) {
-  a();
-  std::cout << "offBar" << std::endl;
+void offBar(::taihe::string_view type, callback_view<void()> a)
+{
+    a();
+    std::cout << "offBar" << std::endl;
 }
 
-void offBaz(::taihe::string_view type, int32_t a,
-            callback_view<void(int32_t)> cb) {
-  cb(a);
-  std::cout << "offNewBaz" << std::endl;
+void offBaz(::taihe::string_view type, int32_t a, callback_view<void(int32_t)> cb)
+{
+    cb(a);
+    std::cout << "offNewBaz" << std::endl;
 }
 }  // namespace
 
@@ -81,3 +92,4 @@ TH_EXPORT_CPP_API_onBaz(onBaz);
 TH_EXPORT_CPP_API_offFoo(offFoo);
 TH_EXPORT_CPP_API_offBar(offBar);
 TH_EXPORT_CPP_API_offBaz(offBaz);
+// NOLINTEND

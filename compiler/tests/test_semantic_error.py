@@ -1,3 +1,18 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from io import StringIO
 
 import pytest
@@ -39,7 +54,7 @@ class SemanticTestDiagnosticsManager(DiagnosticsManager):
         self.errors = []
 
     @override
-    def emit(self, diag: DiagBase) -> None:
+    def _emit_impl(self, diag: DiagBase) -> None:
         self.errors.append(diag)
 
 
@@ -78,7 +93,7 @@ backend_registry.register_all()
 
 pre_backend_names = ["pretty-print"]
 pre_backend_factories = backend_registry.collect_required_backends(pre_backend_names)
-pre_backend_configs = [b() for b in pre_backend_factories]
+pre_backend_configs = [b.create() for b in pre_backend_factories]
 pre_invocation = CompilerInvocation(backend_configs=pre_backend_configs)
 
 
@@ -437,7 +452,7 @@ def test_enum_value():
 
 ani_backend_names = ["cpp-author", "ani-bridge", "pretty-print"]
 ani_backend_factories = backend_registry.collect_required_backends(ani_backend_names)
-ani_backend_configs = [b() for b in ani_backend_factories]
+ani_backend_configs = [b.create() for b in ani_backend_factories]
 ani_invocation = CompilerInvocation(backend_configs=ani_backend_configs)
 
 

@@ -1,4 +1,20 @@
-#pragma once
+/*
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef TAIHE_STRING_ABI_H
+#define TAIHE_STRING_ABI_H
 
 #include <taihe/common.h>
 
@@ -10,18 +26,18 @@
 /////////////////////////////////////////
 
 enum TStringFlags {
-  TSTRING_REF = 1,
+    TSTRING_REF = 1,
 };
 
 struct TString {
-  uint32_t flags;
-  uint32_t length;
-  char const *ptr;  // always valid and non-null
+    uint32_t flags;
+    uint32_t length;
+    char const *ptr;  // always valid and non-null
 };
 
 struct TStringData {
-  TRefCount count;
-  char buffer[];
+    TRefCount count;
+    char buffer[];
 };
 
 //////////////////
@@ -29,13 +45,15 @@ struct TStringData {
 //////////////////
 
 // Returns the buffer of the TString.
-TH_INLINE const char *tstr_buf(struct TString tstr) {
-  return tstr.ptr;
+TH_INLINE const char *tstr_buf(struct TString tstr)
+{
+    return tstr.ptr;
 }
 
 // Returns the length of the TString.
-TH_INLINE size_t tstr_len(struct TString tstr) {
-  return tstr.length;
+TH_INLINE size_t tstr_len(struct TString tstr)
+{
+    return tstr.length;
 }
 
 // Allocates memory and initializes a TString with a given capacity.
@@ -116,8 +134,7 @@ TH_EXPORT struct TString tstr_dup(struct TString tstr);
 //
 // # Notes
 // - The returned TString must be freed using `tstr_drop`.
-TH_EXPORT struct TString tstr_concat(size_t count,
-                                     struct TString const *tstr_list);
+TH_EXPORT struct TString tstr_concat(size_t count, struct TString const *tstr_list);
 
 // Extracts a substring from a TString object.
 //
@@ -133,5 +150,6 @@ TH_EXPORT struct TString tstr_concat(size_t count,
 // # Notes
 // - The returned TString is just a view of the original string and does not own
 //   the memory, so it should not be freed.
-TH_EXPORT struct TString tstr_substr(struct TString tstr, size_t pos,
-                                     size_t len);
+TH_EXPORT struct TString tstr_substr(struct TString tstr, size_t pos, size_t len);
+
+#endif  // TAIHE_STRING_ABI_H

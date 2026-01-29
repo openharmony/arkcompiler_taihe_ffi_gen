@@ -1,3 +1,18 @@
+/*
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 struct A {
     param1: i32;
 }
@@ -57,12 +72,30 @@ struct G {
 @class
 struct H {
     @extends g: G;
-    barh: Bar;
+    barH: Bar;
+}
+
+@class
+struct I {
+    @extends h: H;
+    barI: Bar;
+}
+
+@class
+struct J {
+    @extends i: I;
+    barJ: Bar;
 }
 
 function check_Bar(bar: Bar): bool;
 function check_F(f: F): bool;
 function check_G(g: G): bool;
+function check_H(h: H): bool;
+function check_I(i: I): bool;
+function check_J(j: J): bool;
 function create_Bar(e: E): Bar;
 function create_F(e: E): F;
 function create_G(e: E): G;
+function create_H(e: E): H;
+function create_I(e: E): I;
+function create_J(e: E): J;
