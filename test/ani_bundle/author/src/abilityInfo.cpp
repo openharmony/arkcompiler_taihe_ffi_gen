@@ -1,3 +1,20 @@
+/*
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// This file is a test file.
+// NOLINTBEGIN
 #include <iostream>
 #include "abilityInfo.impl.hpp"
 #include "abilityInfo.proj.hpp"
@@ -11,101 +28,126 @@ namespace {
 
 class AbilityInfoImpl {
 public:
-  int32_t abilityInfoImpl = 100;
+    int32_t abilityInfoImpl = 100;
 
-  AbilityInfoImpl() {}
+    AbilityInfoImpl()
+    {
+    }
 
-  std::string GetBundleName() {
-    return "AbilityInfo::getBundleName";
-  }
+    std::string GetBundleName()
+    {
+        return "AbilityInfo::getBundleName";
+    }
 
-  std::string GetName() {
-    return "AbilityInfo::getName";
-  }
+    std::string GetName()
+    {
+        return "AbilityInfo::getName";
+    }
 
-  std::string GetLabel() {
-    return "AbilityInfo::getLabel";
-  }
+    std::string GetLabel()
+    {
+        return "AbilityInfo::getLabel";
+    }
 
-  std::string GetDescription() {
-    return "AbilityInfo::getDescription";
-  }
+    std::string GetDescription()
+    {
+        return "AbilityInfo::getDescription";
+    }
 
-  std::string GetIcon() {
-    return "AbilityInfo::getIcon";
-  }
+    std::string GetIcon()
+    {
+        return "AbilityInfo::getIcon";
+    }
 
-  int32_t GetLabelId() {
-    return abilityInfoImpl;
-  }
+    int32_t GetLabelId()
+    {
+        return abilityInfoImpl;
+    }
 
-  int32_t GetDescriptionId() {
-    return abilityInfoImpl;
-  }
+    int32_t GetDescriptionId()
+    {
+        return abilityInfoImpl;
+    }
 
-  int32_t GetIconId() {
-    return abilityInfoImpl;
-  }
+    int32_t GetIconId()
+    {
+        return abilityInfoImpl;
+    }
 
-  std::string GetModuleName() {
-    return "AbilityInfo::getModuleName";
-  }
+    std::string GetModuleName()
+    {
+        return "AbilityInfo::getModuleName";
+    }
 
-  std::string GetProcess() {
-    return "AbilityInfo::getProcess";
-  }
+    std::string GetProcess()
+    {
+        return "AbilityInfo::getProcess";
+    }
 
-  std::string GetTargetAbility() {
-    return "AbilityInfo::getTargetAbility";
-  }
+    std::string GetTargetAbility()
+    {
+        return "AbilityInfo::getTargetAbility";
+    }
 
-  int32_t GetBackgroundModes() {
-    return abilityInfoImpl;
-  }
+    int32_t GetBackgroundModes()
+    {
+        return abilityInfoImpl;
+    }
 
-  bool GetIsVisible() {
-    return true;
-  }
+    bool GetIsVisible()
+    {
+        return true;
+    }
 
-  bool GetFormEnabled() {
-    return true;
-  }
+    bool GetFormEnabled()
+    {
+        return true;
+    }
 
-  array<string> GetPermissions() {
-    array<string> str = {"AbilityInfo::getTargetAbility"};
-    return str;
-  }
+    array<string> GetPermissions()
+    {
+        array<string> str = {"AbilityInfo::getTargetAbility"};
+        return str;
+    }
 
-  array<string> GetDeviceTypes() {
-    array<string> str = {"AbilityInfo::getDeviceTypes"};
-    return str;
-  }
+    array<string> GetDeviceTypes()
+    {
+        array<string> str = {"AbilityInfo::getDeviceTypes"};
+        return str;
+    }
 
-  array<string> GetDeviceCapabilities() {
-    array<string> str = {"AbilityInfo::getDeviceCapabilities"};
-    return str;
-  }
+    array<string> GetDeviceCapabilities()
+    {
+        array<string> str = {"AbilityInfo::getDeviceCapabilities"};
+        return str;
+    }
 
-  std::string GetReadPermission() {
-    return "AbilityInfo::getReadPermission";
-  }
+    std::string GetReadPermission()
+    {
+        return "AbilityInfo::getReadPermission";
+    }
 
-  std::string GetWritePermission() {
-    return "AbilityInfo::getWritePermission";
-  }
+    std::string GetWritePermission()
+    {
+        return "AbilityInfo::getWritePermission";
+    }
 
-  std::string GetUri() {
-    return "AbilityInfo::getUri";
-  }
+    std::string GetUri()
+    {
+        return "AbilityInfo::getUri";
+    }
 
-  bool GetEnabled() {
-    return true;
-  }
+    bool GetEnabled()
+    {
+        return true;
+    }
 };
 
-AbilityInfo GetAbilityInfo() {
-  return make_holder<AbilityInfoImpl, AbilityInfo>();
+AbilityInfo GetAbilityInfo()
+{
+    return make_holder<AbilityInfoImpl, AbilityInfo>();
 }
 }  // namespace
 
 TH_EXPORT_CPP_API_GetAbilityInfo(GetAbilityInfo);
+// NOLINTEND

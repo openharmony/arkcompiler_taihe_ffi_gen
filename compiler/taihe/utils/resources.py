@@ -1,3 +1,18 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Tools for tracking resources."""
 
 import logging
@@ -370,8 +385,8 @@ class _LegacyPandaVm(PathResource):
 class PandaVm(CachedResource):
     CLI_NAME = "panda-vm"
     PATH_CACHE = "panda-vm"
-    VERSION: Final = "sdk-1.5.0-dev.52592"
-    URL: Final = "https://gitcode.com/m0_52007851/panda_vm/releases/download/52592"
+    VERSION: Final = "sdk-1.5.0-dev.54451"
+    URL: Final = "https://gitcode.com/m0_52007851/panda_vm/releases/download/54451"
 
     # Computed attributes
     ani_header_dir: Path = field(init=False)
@@ -445,6 +460,81 @@ class PandaVm(CachedResource):
             tar.extractall(self.base_path.parent, filter="tar")
 
         self._write_version(self.VERSION)
+
+
+# TODO: HACK TO PROCESS TAIHE NAPI
+class TaiheNapiBuild(CachedResource):
+    CLI_NAME = "napi-packages"
+    PATH_CACHE = "napi-packages"
+
+    # url for taihe napi packages
+    REPO: Final = (
+        "https://gitcode.com/m0_52007851/taihe-napi-bin/releases/download/v1.2.0/"
+    )
+
+    # Supported platforms
+    LINUX_X86_64: Final = "linux-x86_64"
+    WINDOWS_X86_64: Final = "windows-x86_64"
+    DARWIN_ARM64: Final = "darwin-arm64"
+    DARWIN_X86_64: Final = "darwin-x86_64"
+
+    # Bundle tarball file names for each platform
+    LINUX_X86_64_TAIHE_NAPI_BUNDLE: Final = (
+        "taihe-linux-x86_64-1.2.0+napi-20260112.tar.gz"
+    )
+    WINDOWS_X86_64_TAIHE_NAPI_BUNDLE: Final = (
+        "taihe-windows-x86_64-1.2.0+napi-20260112.tar.gz"
+    )
+    DARWIN_ARM64_TAIHE_NAPI_BUNDLE: Final = (
+        "taihe-darwin-arm64-1.2.0+napi-20260112.tar.gz"
+    )
+    DARWIN_X86_64_TAIHE_NAPI_BUNDLE: Final = (
+        "taihe-darwin-x86_64-1.2.0+napi-20260112.tar.gz"
+    )
+
+    files: ClassVar[dict[str, str]] = {
+        LINUX_X86_64: LINUX_X86_64_TAIHE_NAPI_BUNDLE,
+        WINDOWS_X86_64: WINDOWS_X86_64_TAIHE_NAPI_BUNDLE,
+        DARWIN_ARM64: DARWIN_ARM64_TAIHE_NAPI_BUNDLE,
+        DARWIN_X86_64: DARWIN_X86_64_TAIHE_NAPI_BUNDLE,
+    }
+
+    @override
+    def fetch(self):
+        # Clear and rebuild the cache directory
+        shutil.rmtree(self.base_path, ignore_errors=True)
+        self.base_path.mkdir(parents=True, exist_ok=True)
+
+        # System -> (repository url, file name)
+        downloads = {
+            self.LINUX_X86_64: (self.REPO, self.LINUX_X86_64_TAIHE_NAPI_BUNDLE),
+            self.WINDOWS_X86_64: (self.REPO, self.WINDOWS_X86_64_TAIHE_NAPI_BUNDLE),
+            self.DARWIN_ARM64: (self.REPO, self.DARWIN_ARM64_TAIHE_NAPI_BUNDLE),
+            self.DARWIN_X86_64: (self.REPO, self.DARWIN_X86_64_TAIHE_NAPI_BUNDLE),
+        }
+
+        # Download all platform bundles using curl
+        for _, (repo, filename) in downloads.items():
+            url = urljoin(repo, filename).replace("+", "%2B")
+            out_path = self.base_path / filename
+            logging.info("Downloading napi packages from %s to %s", url, out_path)
+            subprocess.run(["curl", "-fLsS", "-o", str(out_path), url], check=True)
+
+        logging.info("All napi packages downloaded to %s", self.base_path)
+
+    def extract_to(self, target_dir: Path, *, system: str):
+        tgz = self.base_path / self.files[system]
+
+        # Extract the tgz and get the directory list
+        with tarfile.open(tgz, "r:gz") as tar:
+            tar.extractall(target_dir, filter="tar")
+
+    @override
+    @classmethod
+    def construct(cls, ctx: ResourceContext) -> Self:
+        self = cls(cls.locate(ctx))
+        self.fetch()
+        return self
 
 
 class PythonBuild(CachedResource):
@@ -564,6 +654,7 @@ BUILTIN_RESOURCES: Sequence[ResourceT] = [
 ALL_RESOURCES: Sequence[ResourceT] = [
     *BUILTIN_RESOURCES,
     PandaVm,
+    TaiheNapiBuild,
     PythonBuild,
     Antlr,
 ]

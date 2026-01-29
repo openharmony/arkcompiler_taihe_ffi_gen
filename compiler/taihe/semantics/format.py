@@ -1,15 +1,31 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Format the IDL files."""
 
 from collections.abc import Callable
 from itertools import chain
 from json import dumps
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TextIO
 
 from typing_extensions import override
 
 from taihe.semantics.visitor import ExplicitTypeRefVisitor, RecursiveDeclVisitor
 from taihe.utils.diagnostics import AnsiStyle
-from taihe.utils.outputs import BaseWriter
+from taihe.utils.outputs import BaseWriter, FileDescriptor, FileKind, OutputManager
+from taihe.utils.sources import IDL_FILE_DEFAULT_EXT
 
 if TYPE_CHECKING:
     from taihe.semantics.attributes import AnyAttribute
@@ -43,13 +59,14 @@ if TYPE_CHECKING:
 WrapF = Callable[[str], str]
 
 
-class PrettyFormatter(ExplicitTypeRefVisitor[str]):
+class TaiheFormatter(ExplicitTypeRefVisitor[str]):
     as_keyword: WrapF
     as_attr: WrapF
     as_comment: WrapF
 
-    def __init__(self, show_resolved: bool = False, colorize: bool = False):
+    def __init__(self, *, show_resolved: bool = False, colorize: bool = False):
         self.show_resolved = show_resolved
+
         if colorize:
             self.as_keyword = lambda s: f"{AnsiStyle.CYAN}{s}{AnsiStyle.RESET}"
             self.as_attr = lambda s: f"{AnsiStyle.MAGENTA}{s}{AnsiStyle.RESET}"
@@ -152,15 +169,23 @@ class PrettyFormatter(ExplicitTypeRefVisitor[str]):
         return f"{name}({args_fmt})"
 
 
-class PrettyPrinter(RecursiveDeclVisitor):
+class TaihePrinter(RecursiveDeclVisitor):
     def __init__(
         self,
-        out: BaseWriter,
+        buffer: TextIO,
+        *,
         show_resolved: bool = False,
         colorize: bool = False,
     ):
-        self.out = out
-        self.fmt = PrettyFormatter(show_resolved, colorize)
+        self.out = BaseWriter(
+            buffer,
+            default_indent="    ",
+            comment_prefix="// ",
+        )
+        self.fmt = TaiheFormatter(
+            show_resolved=show_resolved,
+            colorize=colorize,
+        )
 
     def write_pkg_attr(self, d: "PackageDecl"):
         for item in chain(*d.attributes.values()):
@@ -323,7 +348,6 @@ class PrettyPrinter(RecursiveDeclVisitor):
 
     @override
     def visit_package(self, p: "PackageDecl"):
-        self.out.writeln(f"// {p.name}")
         self.write_pkg_attr(p)
         for d in p.pkg_imports:
             d.accept(self)
@@ -332,9 +356,29 @@ class PrettyPrinter(RecursiveDeclVisitor):
         for d in p.declarations:
             d.accept(self)
 
-    @override
-    def visit_package_group(self, g: "PackageGroup"):
-        for i, p in enumerate(g.all_packages):
-            if i != 0:
-                self.out.newline()
-            p.accept(self)
+
+class TaiheGenerator:
+    def __init__(
+        self,
+        om: OutputManager,
+        *,
+        show_resolved: bool = False,
+        colorize: bool = False,
+    ):
+        self.om = om
+        self.show_resolved = show_resolved
+        self.colorize = colorize
+
+    def generate(self, g: "PackageGroup"):
+        for p in g.all_packages:
+            fd = FileDescriptor(
+                relative_path=f"{p.name}{IDL_FILE_DEFAULT_EXT}",
+                kind=FileKind.TEMPLATE,
+            )
+            with self.om.open(fd) as buffer:
+                self.printer = TaihePrinter(
+                    buffer,
+                    show_resolved=self.show_resolved,
+                    colorize=self.colorize,
+                )
+                p.accept(self.printer)

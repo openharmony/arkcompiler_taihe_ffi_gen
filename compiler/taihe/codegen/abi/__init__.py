@@ -1,3 +1,18 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar
 
@@ -11,12 +26,15 @@ if TYPE_CHECKING:
 class AbiHeaderBackendConfig(BackendConfig):
     NAME = "abi-header"
 
-    def construct(self, instance: "CompilerInstance") -> Backend:
+    @classmethod
+    def create(cls):
+        return AbiHeaderBackendConfig()
+
+    def construct(self, instance: "CompilerInstance"):
         from taihe.codegen.abi.gen_abi import AbiHeadersGenerator
 
         class AbiHeaderBackendImpl(Backend):
             def __init__(self, ci: "CompilerInstance"):
-                super().__init__(ci)
                 self._ci = ci
 
             def generate(self):
@@ -33,12 +51,15 @@ class AbiSourcesBackendConfig(BackendConfig):
     NAME = "abi-source"
     DEPS: ClassVar = ["abi-header"]
 
-    def construct(self, instance: "CompilerInstance") -> Backend:
+    @classmethod
+    def create(cls):
+        return AbiSourcesBackendConfig()
+
+    def construct(self, instance: "CompilerInstance"):
         from taihe.codegen.abi.gen_abi import AbiSourcesGenerator
 
         class AbiSourcesBackendImpl(Backend):
             def __init__(self, ci: "CompilerInstance"):
-                super().__init__(ci)
                 self._ci = ci
 
             def generate(self):
@@ -55,7 +76,11 @@ class CAuthorBackendConfig(BackendConfig):
     NAME = "c-author"
     DEPS: ClassVar = ["abi-source"]
 
-    def construct(self, instance: "CompilerInstance") -> Backend:
+    @classmethod
+    def create(cls):
+        return CAuthorBackendConfig()
+
+    def construct(self, instance: "CompilerInstance"):
         from taihe.codegen.abi.gen_impl import (
             CImplHeadersGenerator,
             CImplSourcesGenerator,
@@ -64,7 +89,6 @@ class CAuthorBackendConfig(BackendConfig):
         # TODO: unify CImpl{Headers,Sources}Generator
         class CImplBackendImpl(Backend):
             def __init__(self, ci: "CompilerInstance"):
-                super().__init__(ci)
                 self._ci = ci
 
             def generate(self):

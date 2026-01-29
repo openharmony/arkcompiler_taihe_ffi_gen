@@ -1,3 +1,18 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import re
 import subprocess
 import sys
@@ -82,7 +97,7 @@ def generate_ast(file: TextIO, parser: Any):
     type_list = []
     for rule_name in parser.ruleNames:
         node_kind = rule_name[0].upper() + rule_name[1:]
-        ctx_kind = node_kind + "Context"
+        ctx_kind = f"{node_kind}Context"
         ctx_type = getattr(parser, ctx_kind)
         type_list.append((node_kind, ctx_type))
     for node_kind, ctx_type in type_list:
@@ -126,7 +141,7 @@ def generate_visitor(file: TextIO, parser: Any):
     type_list = []
     for rule_name in parser.ruleNames:
         node_kind = rule_name[0].upper() + rule_name[1:]
-        ctx_kind = node_kind + "Context"
+        ctx_kind = f"{node_kind}Context"
         ctx_type = getattr(parser, ctx_kind)
         type_list.append((node_kind, ctx_type))
     for node_kind, ctx_type in type_list:

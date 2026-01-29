@@ -1,3 +1,18 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright (c) 2025 Huawei Device Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Orchestrates the compilation process.
 
 - BackendRegistry: initializes all known backends
@@ -27,7 +42,7 @@ from taihe.semantics.declarations import PackageGroup
 from taihe.utils.analyses import AnalysisManager
 from taihe.utils.diagnostics import ConsoleDiagnosticsManager, DiagnosticsManager
 from taihe.utils.exceptions import IgnoredFileReason, IgnoredFileWarn
-from taihe.utils.outputs import OutputConfig, OutputManager
+from taihe.utils.outputs import NullOutputConfig, OutputConfig, OutputManager
 from taihe.utils.sources import IDL_FILE_EXTS, SourceFile, SourceLocation, SourceManager
 
 
@@ -59,7 +74,7 @@ class CompilerInvocation:
 
     src_files: list[Path] = field(default_factory=lambda: [])
     src_dirs: list[Path] = field(default_factory=lambda: [])
-    output_config: OutputConfig = field(default_factory=OutputConfig)
+    output_config: OutputConfig = field(default_factory=NullOutputConfig)
     backend_configs: list[BackendConfig] = field(default_factory=lambda: [])
 
     extra: dict[str, str | None] = field(default_factory=lambda: {})
@@ -123,11 +138,14 @@ class CompilerInstance:
         self.attribute_registry = AttributeRegistry()
         self.analysis_manager = AnalysisManager(self.config)
 
-        self.output_manager = invocation.output_config.construct(self)
+        self.output_manager = invocation.output_config.construct()
         self.backends = [
             backend_config.construct(self)
             for backend_config in invocation.backend_configs
         ]
+
+        for b in self.backends:
+            b.register()
 
     ##########################
     # The compilation phases #

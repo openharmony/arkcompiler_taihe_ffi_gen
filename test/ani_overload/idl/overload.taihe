@@ -1,3 +1,18 @@
+/*
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 enum Color: i32 {
     red = 1,
     yellow = 2,
@@ -12,6 +27,15 @@ struct Mystruct {
 interface OverloadInterface { 
     @overload("overloadFunc")
     OverloadFuncI8(a: i8, b: i8): i8;
+
+    @overload("overloadFunc")
+    OverloadFuncI8I16(a: i8, b: i16): i8;
+
+    @overload("overloadFunc")
+    OverloadFuncI8F32(a: i8, b: f32): i8;
+
+    @overload("overloadFunc")
+    OverloadFuncI8String(a: i8, b: String): i8;
 
     @overload("overloadFunc")
     OverloadFuncI16(a: i16, b: i16): i16;
@@ -30,15 +54,6 @@ interface OverloadInterface {
 
     @overload("overloadFunc")
     OverloadFuncString(a: String, b: String): String;
-
-    @overload("overloadFunc")
-    OverloadFuncI8I16(a: i8, b: i16): i8;
-
-    @overload("overloadFunc")
-    OverloadFuncI8F32(a: i8, b: f32): i8;
-
-    @overload("overloadFunc")
-    OverloadFuncI8String(a: i8, b: String): i8;
 
     @overload("overloadFunc")
     OverloadFuncEnum(p0: Color): i32;
