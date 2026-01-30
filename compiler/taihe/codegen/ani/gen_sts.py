@@ -197,7 +197,7 @@ class StsModuleGenerator:
         mod: ArkTsModule,
     ):
         self.am = am
-        self.target = StsWriter(om, f"{mod.module_name}.ets", FileKind.ETS)
+        self.target = StsWriter(om, mod, FileKind.ETS)
         self.mod = mod
 
     def gen_module_file(self):
@@ -207,7 +207,7 @@ class StsModuleGenerator:
             self.gen_utils()
 
     def gen_utils(self):
-        self.target.add_import_decl("@ohos.base", "BusinessError", self.mod.BEType)
+        self.target.add_import_decl(self.mod.BEType, "@ohos.base", "BusinessError")
         self.target.writelns(
             f"type {self.mod.ACType}<T, E = void> = (error: {self.mod.BEType}<E> | null, data: T | undefined) => void;",
         )

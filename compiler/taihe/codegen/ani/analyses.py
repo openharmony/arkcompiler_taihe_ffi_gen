@@ -392,10 +392,10 @@ class ArkTsModuleOrNamespace(ABC):
         pass
 
     @abstractmethod
-    def get_member(
+    def get_type(
         self,
-        name: str,
         is_default: bool,
+        *type_path: str,
         target: ArkTsImportManager,
     ) -> str:
         pass
@@ -410,9 +410,9 @@ class ArkTsModuleOrNamespace(ABC):
             self.packages.append(pkg)
             self.is_default |= is_default
             return self
-        head, *tail = ns_parts
-        child = self.children.setdefault(head, ArkTsNamespace(self, head))
-        return child.add_path(tail, pkg, is_default)
+        ns_head, *ns_tail = ns_parts
+        child = self.children.setdefault(ns_head, ArkTsNamespace(self, ns_head))
+        return child.add_path(ns_tail, pkg, is_default)
 
 
 @dataclass
@@ -445,19 +445,13 @@ class ArkTsModule(ArkTsModuleOrNamespace):
         ]
         return ".".join(impl_desc_parts)
 
-    def get_member(
+    def get_type(
         self,
-        name: str,
         is_default: bool,
+        *type_path: str,
         target: ArkTsImportManager,
     ) -> str:
-        filtered_name = "".join(c if c.isalnum() else "_" for c in self.module_name)
-        import_name = f"_taihe_{filtered_name}_{name}"
-        if is_default:
-            target.add_import_default(f"./{self.module_name}.ets", import_name)
-        else:
-            target.add_import_decl(f"./{self.module_name}.ets", name, import_name)
-        return import_name
+        return target.get_type(self, is_default, *type_path)
 
 
 @dataclass
@@ -475,13 +469,18 @@ class ArkTsNamespace(ArkTsModuleOrNamespace):
     def impl_desc(self) -> str:
         return f"{self.parent.impl_desc}.{self.ns_name}"
 
-    def get_member(
+    def get_type(
         self,
-        name: str,
         is_default: bool,
+        *type_path: str,
         target: ArkTsImportManager,
     ) -> str:
-        return f"{self.parent.get_member(self.ns_name, self.is_default, target)}.{name}"
+        return self.parent.get_type(
+            self.is_default,
+            self.ns_name,
+            *type_path,
+            target=target,
+        )
 
 
 # ANI Analyses
@@ -828,7 +827,11 @@ class EnumAniInfo(AbstractAnalysis[EnumDecl]):
         return EnumAniInfo(am, d)
 
     def sts_type_in(self, target: ArkTsImportManager):
-        return self.parent_ns.get_member(self.sts_type_name, self.is_default, target)
+        return self.parent_ns.get_type(
+            self.is_default,
+            self.sts_type_name,
+            target=target,
+        )
 
 
 class UnionAniInfo(AbstractAnalysis[UnionDecl]):
@@ -857,7 +860,11 @@ class UnionAniInfo(AbstractAnalysis[UnionDecl]):
         return UnionAniInfo(am, d)
 
     def sts_type_in(self, target: ArkTsImportManager):
-        return self.parent_ns.get_member(self.sts_type_name, self.is_default, target)
+        return self.parent_ns.get_type(
+            self.is_default,
+            self.sts_type_name,
+            target=target,
+        )
 
 
 class StructAniInfo(AbstractAnalysis[StructDecl]):
@@ -929,7 +936,11 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
         return self.sts_type_name == self.sts_impl_name
 
     def sts_type_in(self, target: ArkTsImportManager):
-        return self.parent_ns.get_member(self.sts_type_name, self.is_default, target)
+        return self.parent_ns.get_type(
+            self.is_default,
+            self.sts_type_name,
+            target=target,
+        )
 
 
 class IfaceAniInfo(AbstractAnalysis[IfaceDecl]):
@@ -980,7 +991,11 @@ class IfaceAniInfo(AbstractAnalysis[IfaceDecl]):
         return self.sts_type_name == self.sts_impl_name
 
     def sts_type_in(self, target: ArkTsImportManager):
-        return self.parent_ns.get_member(self.sts_type_name, self.is_default, target)
+        return self.parent_ns.get_type(
+            self.is_default,
+            self.sts_type_name,
+            target=target,
+        )
 
 
 class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
