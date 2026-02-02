@@ -42,7 +42,8 @@ function main() {
     let image_cls = new Image_inner()
     let array_union_input: (string|Image|Resource)[] =
         ["aaa", Resource_cls, image_cls];
-    let promise_res = await Bubble_cls.setIcons(array_union_input);
+    let promise_res =
+        waitForCompletion(() => Bubble_cls.setIcons(array_union_input));
 
     let array_array_input: ((Resource[])[]) =
         [[Resource_cls, Resource_cls], [Resource_cls]]

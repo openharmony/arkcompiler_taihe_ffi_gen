@@ -119,19 +119,19 @@ function changeStructArray() {
 }
 
 function fetchBinaryData() {
-    let promise = new Promise<Array<float>>(
-        (resolve, reject) => {ArrayTest.fetchBinaryData(
-            5, (error: BusinessError|null, data?: Array<float>) => {
-                if (error !== null && error.code !== 0) {
-                    reject(error);
-                } else {
-                    resolve(data as Array<float>);
-                }
-            })});
     let data: Array<float>|undefined;
     let error: BusinessError|undefined;
     try {
-        data = await promise;
+        data = waitForCompletion(
+            () => new Promise<Array<float>>(
+                (resolve, reject) => {ArrayTest.fetchBinaryData(
+                    5, (error: BusinessError|null, data?: Array<float>) => {
+                        if (error !== null && error.code !== 0) {
+                            reject(error);
+                        } else {
+                            resolve(data as Array<float>);
+                        }
+                    })}));
     } catch (e) {
         error = e as BusinessError;
     }
@@ -296,19 +296,19 @@ function test_ani_array_with_PromiseI8() {
 }
 
 function test_ani_array_with_PromiseI8_sync() {
-    let promise = new Promise<byte[]>((resolve, reject) => {
-        arrI8.fetchData((err: BusinessError|null, data?: byte[]) => {
-            if (err !== null && err.code !== 0) {
-                reject(err);
-            } else {
-                resolve(data as byte[]);
-            }
-        });
-    });
     let info: byte[] = new Array<byte>(0);
     let err: BusinessError|undefined;
     try {
-        info = await promise;
+        info = waitForCompletion(
+            () => new Promise<byte[]>((resolve, reject) => {
+                arrI8.fetchData((err: BusinessError|null, data?: byte[]) => {
+                    if (err !== null && err.code !== 0) {
+                        reject(err);
+                    } else {
+                        resolve(data as byte[]);
+                    }
+                });
+            }));
         console.log("info is: " + info);
     } catch (e) {
         err = e as BusinessError;
@@ -320,7 +320,7 @@ function test_ani_array_with_PromiseI8_promise() {
     let info: byte[] = new Array<byte>(0);
     let err: BusinessError = new BusinessError();
     try {
-        info = await arrI8.fetchData();
+        info = waitForCompletion(() => arrI8.fetchData());
     } catch (e) {
         err = e as BusinessError;
     }
@@ -341,19 +341,19 @@ function test_ani_array_with_PromiseI16() {
 }
 
 function test_ani_array_with_PromiseI16_sync() {
-    let promise = new Promise<short[]>((resolve, reject) => {
-        arrI16.fetchData((err: BusinessError|null, data?: short[]) => {
-            if (err !== null && err.code !== 0) {
-                reject(err);
-            } else {
-                resolve(data as short[]);
-            }
-        });
-    });
     let info: short[] = new Array<short>(0);
     let err: BusinessError = new BusinessError();
     try {
-        info = await promise;
+        info = waitForCompletion(
+            () => new Promise<short[]>((resolve, reject) => {
+                arrI16.fetchData((err: BusinessError|null, data?: short[]) => {
+                    if (err !== null && err.code !== 0) {
+                        reject(err);
+                    } else {
+                        resolve(data as short[]);
+                    }
+                });
+            }));
         console.log("info is: " + info);
     } catch (e) {
         err = e as BusinessError;
@@ -365,7 +365,7 @@ function test_ani_array_with_PromiseI16_promise() {
     let info: short[] = new Array<short>(0);
     let err: BusinessError = new BusinessError();
     try {
-        info = await arrI16.fetchData();
+        info = waitForCompletion(() => arrI16.fetchData());
     } catch (e) {
         err = e as BusinessError;
     }
@@ -386,19 +386,19 @@ function test_ani_array_with_PromiseI32() {
 }
 
 function test_ani_array_with_PromiseI32_sync() {
-    let promise = new Promise<int[]>((resolve, reject) => {
-        arrI32.fetchData((err: BusinessError|null, data?: int[]) => {
-            if (err !== null && err.code !== 0) {
-                reject(err);
-            } else {
-                resolve(data as int[]);
-            }
-        });
-    });
     let info: int[] = new Array<int>(0);
     let err: BusinessError = new BusinessError();
     try {
-        info = await promise;
+        info = waitForCompletion(
+            () => new Promise<int[]>((resolve, reject) => {
+                arrI32.fetchData((err: BusinessError|null, data?: int[]) => {
+                    if (err !== null && err.code !== 0) {
+                        reject(err);
+                    } else {
+                        resolve(data as int[]);
+                    }
+                });
+            }));
         console.log("info is: " + info);
     } catch (e) {
         err = e as BusinessError;
@@ -410,7 +410,7 @@ function test_ani_array_with_PromiseI32_promise() {
     let info: int[] = new Array<int>(0);
     let err: BusinessError = new BusinessError();
     try {
-        info = await arrI32.fetchData();
+        info = waitForCompletion(() => arrI32.fetchData());
     } catch (e) {
         err = e as BusinessError;
     }
@@ -431,19 +431,19 @@ function test_ani_array_with_PromiseI64() {
 }
 
 function test_ani_array_with_PromiseI64_sync() {
-    let promise = new Promise<long[]>((resolve, reject) => {
-        arrI64.fetchData((err: BusinessError|null, data?: long[]) => {
-            if (err !== null && err.code !== 0) {
-                reject(err);
-            } else {
-                resolve(data as long[]);
-            }
-        });
-    });
     let info: long[] = new Array<long>(0);
     let err: BusinessError = new BusinessError();
     try {
-        info = await promise;
+        info = waitForCompletion(
+            () => new Promise<long[]>((resolve, reject) => {
+                arrI64.fetchData((err: BusinessError|null, data?: long[]) => {
+                    if (err !== null && err.code !== 0) {
+                        reject(err);
+                    } else {
+                        resolve(data as long[]);
+                    }
+                });
+            }));
         console.log("info is: " + info);
     } catch (e) {
         err = e as BusinessError;
@@ -455,7 +455,7 @@ function test_ani_array_with_PromiseI64_promise() {
     let info: long[] = new Array<long>(0);
     let err: BusinessError = new BusinessError();
     try {
-        info = await arrI64.fetchData();
+        info = waitForCompletion(() => arrI64.fetchData());
     } catch (e) {
         err = e as BusinessError;
     }
@@ -476,19 +476,19 @@ function test_ani_array_with_PromiseF32() {
 }
 
 function test_ani_array_with_PromiseF32_sync() {
-    let promise = new Promise<float[]>((resolve, reject) => {
-        arrF32.fetchData((err: BusinessError|null, data?: float[]) => {
-            if (err !== null && err.code !== 0) {
-                reject(err);
-            } else {
-                resolve(data as float[]);
-            }
-        });
-    });
     let info: float[] = new Array<float>(0);
     let err: BusinessError = new BusinessError();
     try {
-        info = await promise;
+        info = waitForCompletion(
+            () => new Promise<float[]>((resolve, reject) => {
+                arrF32.fetchData((err: BusinessError|null, data?: float[]) => {
+                    if (err !== null && err.code !== 0) {
+                        reject(err);
+                    } else {
+                        resolve(data as float[]);
+                    }
+                });
+            }));
         console.log("info is: " + info);
     } catch (e) {
         err = e as BusinessError;
@@ -500,7 +500,7 @@ function test_ani_array_with_PromiseF32_promise() {
     let info: float[] = new Array<float>(0);
     let err: BusinessError = new BusinessError();
     try {
-        info = await arrF32.fetchData();
+        info = waitForCompletion(() => arrF32.fetchData());
     } catch (e) {
         err = e as BusinessError;
     }
@@ -521,19 +521,19 @@ function test_ani_array_with_PromiseF64() {
 }
 
 function test_ani_array_with_PromiseF64_sync() {
-    let promise = new Promise<double[]>((resolve, reject) => {
-        arrF64.fetchData((err: BusinessError|null, data?: double[]) => {
-            if (err !== null && err.code !== 0) {
-                reject(err);
-            } else {
-                resolve(data as double[]);
-            }
-        });
-    });
     let info: double[] = new Array<double>(0);
     let err: BusinessError = new BusinessError();
     try {
-        info = await promise;
+        info = waitForCompletion(
+            () => new Promise<double[]>((resolve, reject) => {
+                arrF64.fetchData((err: BusinessError|null, data?: double[]) => {
+                    if (err !== null && err.code !== 0) {
+                        reject(err);
+                    } else {
+                        resolve(data as double[]);
+                    }
+                });
+            }));
         console.log("info is: " + info);
     } catch (e) {
         err = e as BusinessError;
@@ -545,7 +545,7 @@ function test_ani_array_with_PromiseF64_promise() {
     let info: double[] = new Array<double>(0);
     let err: BusinessError = new BusinessError();
     try {
-        info = await arrF64.fetchData();
+        info = waitForCompletion(() => arrF64.fetchData());
     } catch (e) {
         err = e as BusinessError;
     }
@@ -566,19 +566,19 @@ function test_ani_array_with_PromiseString() {
 }
 
 function test_ani_array_with_PromiseString_sync() {
-    let promise = new Promise<string[]>((resolve, reject) => {
-        arrStr.fetchData((err: BusinessError|null, data?: string[]) => {
-            if (err !== null && err.code !== 0) {
-                reject(err);
-            } else {
-                resolve(data as string[]);
-            }
-        });
-    });
     let info: string[] = new Array<string>(0);
     let err: BusinessError = new BusinessError();
     try {
-        info = await promise;
+        info = waitForCompletion(
+            () => new Promise<string[]>((resolve, reject) => {
+                arrStr.fetchData((err: BusinessError|null, data?: string[]) => {
+                    if (err !== null && err.code !== 0) {
+                        reject(err);
+                    } else {
+                        resolve(data as string[]);
+                    }
+                });
+            }));
         console.log("info is: " + info);
     } catch (e) {
         err = e as BusinessError;
@@ -590,7 +590,7 @@ function test_ani_array_with_PromiseString_promise() {
     let info: string[] = new Array<string>(0);
     let err: BusinessError = new BusinessError();
     try {
-        info = await arrStr.fetchData();
+        info = waitForCompletion(() => arrStr.fetchData());
     } catch (e) {
         err = e as BusinessError;
     }
@@ -611,19 +611,20 @@ function test_ani_array_with_PromiseBool() {
 }
 
 function test_ani_array_with_PromiseBool_sync() {
-    let promise = new Promise<boolean[]>((resolve, reject) => {
-        arrBool.fetchData((err: BusinessError|null, data?: boolean[]) => {
-            if (err !== null && err.code !== 0) {
-                reject(err);
-            } else {
-                resolve(data as boolean[]);
-            }
-        });
-    });
     let info: boolean[] = new Array<boolean>(0);
     let err: BusinessError = new BusinessError();
     try {
-        info = await promise;
+        info = waitForCompletion(
+            () => new Promise<boolean[]>((resolve, reject) => {
+                arrBool.fetchData(
+                    (err: BusinessError|null, data?: boolean[]) => {
+                        if (err !== null && err.code !== 0) {
+                            reject(err);
+                        } else {
+                            resolve(data as boolean[]);
+                        }
+                    });
+            }));
         console.log("info is: " + info);
     } catch (e) {
         err = e as BusinessError;
@@ -635,7 +636,7 @@ function test_ani_array_with_PromiseBool_promise() {
     let info: boolean[] = new Array<boolean>(0);
     let err: BusinessError = new BusinessError();
     try {
-        info = await arrBool.fetchData();
+        info = waitForCompletion(() => arrBool.fetchData());
     } catch (e) {
         err = e as BusinessError;
     }
@@ -657,19 +658,20 @@ function test_ani_array_with_PromiseU8() {
 }
 
 function test_ani_array_with_PromiseU8_sync() {
-    let promise = new Promise<Uint8Array>((resolve, reject) => {
-        arrU8.fetchData((err: BusinessError|null, data?: Uint8Array) => {
-            if (err !== null && err.code !== 0) {
-                reject(err);
-            } else {
-                resolve(data as Uint8Array);
-            }
-        });
-    });
     let info: Uint8Array = new Uint8Array(0);
     let err: BusinessError = new BusinessError();
     try {
-        info = await promise;
+        info = waitForCompletion(
+            () => new Promise<Uint8Array>((resolve, reject) => {
+                arrU8.fetchData(
+                    (err: BusinessError|null, data?: Uint8Array) => {
+                        if (err !== null && err.code !== 0) {
+                            reject(err);
+                        } else {
+                            resolve(data as Uint8Array);
+                        }
+                    });
+            }));
         console.log("info is: " + info);
     } catch (e) {
         err = e as BusinessError;
@@ -681,7 +683,7 @@ function test_ani_array_with_PromiseU8_promise() {
     let info: Uint8Array = new Uint8Array(0);
     let err: BusinessError = new BusinessError();
     try {
-        info = await arrU8.fetchData();
+        info = waitForCompletion(() => arrU8.fetchData());
     } catch (e) {
         err = e as BusinessError;
     }
@@ -702,19 +704,20 @@ function test_ani_array_with_PromiseU16() {
 }
 
 function test_ani_array_with_PromiseU16_sync() {
-    let promise = new Promise<Uint16Array>((resolve, reject) => {
-        arrU16.fetchData((err: BusinessError|null, data?: Uint16Array) => {
-            if (err !== null && err.code !== 0) {
-                reject(err);
-            } else {
-                resolve(data as Uint16Array);
-            }
-        });
-    });
     let info: Uint16Array = new Uint16Array(0);
     let err: BusinessError = new BusinessError();
     try {
-        info = await promise;
+        info = waitForCompletion(
+            () => new Promise<Uint16Array>((resolve, reject) => {
+                arrU16.fetchData(
+                    (err: BusinessError|null, data?: Uint16Array) => {
+                        if (err !== null && err.code !== 0) {
+                            reject(err);
+                        } else {
+                            resolve(data as Uint16Array);
+                        }
+                    });
+            }));
         console.log("info is: " + info);
     } catch (e) {
         err = e as BusinessError;
@@ -726,7 +729,7 @@ function test_ani_array_with_PromiseU16_promise() {
     let info: Uint16Array = new Uint16Array(0);
     let err: BusinessError = new BusinessError();
     try {
-        info = await arrU16.fetchData();
+        info = waitForCompletion(() => arrU16.fetchData());
     } catch (e) {
         err = e as BusinessError;
     }
