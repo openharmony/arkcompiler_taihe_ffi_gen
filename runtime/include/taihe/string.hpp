@@ -203,7 +203,7 @@ struct string : public string_view {
 
     string(string &&other) noexcept : string(other.m_handle)
     {
-        other.m_handle.ptr = NULL;
+        other.m_handle.ptr = nullptr;
     }
 
     // assignment
@@ -216,7 +216,7 @@ struct string : public string_view {
     // destructor
     ~string()
     {
-        if (m_handle.ptr != NULL) {
+        if (m_handle.ptr != nullptr) {
             tstr_drop(m_handle);
         }
     }

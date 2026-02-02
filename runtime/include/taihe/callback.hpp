@@ -82,7 +82,7 @@ public:
         } else {
             return into_abi<Return>(cast_data_ptr<Impl>(handle.data_ptr)->operator()(from_abi<Params>(params)...));
         }
-    };
+    }
 
     template<typename Impl>
     static constexpr struct IdMapItem idmap_impl[0] = {};
