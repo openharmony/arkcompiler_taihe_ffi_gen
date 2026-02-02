@@ -47,38 +47,40 @@ function testSyncAdd() {
 
 function testAsyncAdd() {
     {
-        let promise = new Promise<int>((resolve, reject) => {
-            async_test.add(10, 20, (err: BusinessError|null, data?: int) => {
-                if (err !== null && err.code !== 0) {
-                    reject(err);
-                } else {
-                    resolve(data!);
-                }
-            });
-        });
         let res: int|undefined;
         let err: BusinessError|undefined;
         try {
-            res = await promise;
+            res = waitForCompletion(
+                () => new Promise<int>((resolve, reject) => {
+                    async_test.add(
+                        10, 20, (err: BusinessError|null, data?: int) => {
+                            if (err !== null && err.code !== 0) {
+                                reject(err);
+                            } else {
+                                resolve(data!);
+                            }
+                        });
+                }));
         } catch (e) {
             err = e as BusinessError;
         }
         arktest.assertEQ(res, 30, "add callback should receive 10 + 20 = 30");
     }
     {
-        let promise = new Promise<int>((resolve, reject) => {
-            async_test.add(0, 2, (err: BusinessError|null, data?: int) => {
-                if (err !== null && err.code !== 0) {
-                    reject(err);
-                } else {
-                    resolve(data!);
-                }
-            });
-        });
         let res: int|undefined;
         let err: BusinessError|undefined;
         try {
-            res = await promise;
+            res = waitForCompletion(
+                () => new Promise<int>((resolve, reject) => {
+                    async_test.add(
+                        0, 2, (err: BusinessError|null, data?: int) => {
+                            if (err !== null && err.code !== 0) {
+                                reject(err);
+                            } else {
+                                resolve(data!);
+                            }
+                        });
+                }));
         } catch (e) {
             err = e as BusinessError;
         }
@@ -95,7 +97,7 @@ function testPromiseAdd() {
         let res: int|undefined;
         let err: BusinessError|undefined;
         try {
-            res = await async_test.add(1, 2);
+            res = waitForCompletion(() => async_test.add(1, 2));
         } catch (e) {
             err = e as BusinessError;
         }
@@ -105,7 +107,7 @@ function testPromiseAdd() {
         let res: int|undefined;
         let err: BusinessError|undefined;
         try {
-            res = await async_test.add(0, 2);
+            res = waitForCompletion(() => async_test.add(0, 2));
         } catch (e) {
             err = e as BusinessError;
         }
@@ -122,24 +124,26 @@ function testIBase() {
     arktest.assertEQ(
         ibase.get(), "My IBase", "IBase.get() should return 'My IBase'");
 
-    await ibase.setPromise("interface async set");
+    waitForCompletion(() => ibase.setPromise("interface async set"));
     arktest.assertEQ(
-        await ibase.getPromise(), "interface async set",
+        waitForCompletion(() => ibase.getPromise()), "interface async set",
         "getPromise should resolve with the value set in setAsync");
 }
 
 function testStaticAsyncMethods() {
-    await async_test.IBase.printPromise();
+    waitForCompletion(() => async_test.IBase.printPromise());
 }
 
 function testStructMethods() {
-    await async_test.fromStruct(
-        {a: "abc", b: "efg", c: 3});  // should not throw an error
+    waitForCompletion(
+        () => async_test.fromStruct(
+            {a: "abc", b: "efg", c: 3}));  // should not throw an error
 
     {
         let err: BusinessError|undefined;
         try {
-            await async_test.fromStruct({a: "abc", b: "efg", c: 0});
+            waitForCompletion(
+                () => async_test.fromStruct({a: "abc", b: "efg", c: 0}));
         } catch (e) {
             err = e as BusinessError;
         }
@@ -149,7 +153,8 @@ function testStructMethods() {
             "fromStruct should throw an error when c is 0");
     }
 
-    let data: async_test.Data = await async_test.toStruct("aaa", "bbb", 1);
+    let data: async_test.Data =
+        waitForCompletion(() => async_test.toStruct("aaa", "bbb", 1));
     arktest.assertEQ(data.a, "aaa", "Data.a should be 'aaa'");
     arktest.assertEQ(data.b, "bbb", "Data.b should be 'bbb'");
     arktest.assertEQ(data.c, 1, "Data.c should be 1");
@@ -157,7 +162,8 @@ function testStructMethods() {
     {
         let err: BusinessError|undefined;
         try {
-            data = await async_test.toStruct("aaa", "bbb", 0);
+            data =
+                waitForCompletion(() => async_test.toStruct("aaa", "bbb", 0));
         } catch (e) {
             err = e as BusinessError;
         }

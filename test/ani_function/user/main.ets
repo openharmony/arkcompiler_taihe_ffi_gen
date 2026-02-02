@@ -83,19 +83,21 @@ function test_string_return_value() {
 
 function test_from_callback() {
     let foo = FuncTest.makeFoo();
-    let p = new Promise<int>((resolve, reject) => {
-        foo.add(10, NUMBER_TWENTY, (error: BusinessError|null, data?: int) => {
-            if (error != null && error.message) {
-                reject(error);
-            } else {
-                resolve(data!);
-            }
-        });
-    });
     let res: int;
     let err: BusinessError = new BusinessError();
     try {
-        res = await p;
+        res = waitForCompletion(
+            () => new Promise<int>((resolve, reject) => {
+                foo.add(
+                    10, NUMBER_TWENTY,
+                    (error: BusinessError|null, data?: int) => {
+                        if (error != null && error.message) {
+                            reject(error);
+                        } else {
+                            resolve(data!);
+                        }
+                    });
+            }));
     } catch (e) {
         err = e as BusinessError;
     }
