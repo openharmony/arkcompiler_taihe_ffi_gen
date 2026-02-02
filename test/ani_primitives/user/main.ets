@@ -1043,20 +1043,20 @@ function testCasetestBaseBoolFunc4_2() {
 }
 
 function testCasetestBaseBoolFunc5() {
-    let p = new Promise<boolean>((resolve, reject) => {
-        primitivesBoolTest.TestBaseBoolFunc5Async(
-            true, (err: BusinessError|null, data?: boolean) => {
-                if (err !== null && err.code !== 0) {
-                    reject(err);
-                } else {
-                    resolve(data!);
-                }
-            });
-    });
     let res: boolean;
     let err: BusinessError = new BusinessError();
     try {
-        res = await p;
+        res = waitForCompletion(
+            () => new Promise<boolean>((resolve, reject) => {
+                primitivesBoolTest.TestBaseBoolFunc5Async(
+                    true, (err: BusinessError|null, data?: boolean) => {
+                        if (err !== null && err.code !== 0) {
+                            reject(err);
+                        } else {
+                            resolve(data!);
+                        }
+                    });
+            }));
     } catch (e) {
         err = e as BusinessError;
     }
@@ -1064,20 +1064,20 @@ function testCasetestBaseBoolFunc5() {
 }
 
 function testCasetestBaseBoolFunc5_1() {
-    let p = new Promise<boolean>((resolve, reject) => {
-        primitivesBoolTest.TestBaseBoolFunc5Async(
-            false, (err: BusinessError|null, data?: boolean) => {
-                if (err !== null && err.code !== 0) {
-                    reject(err);
-                } else {
-                    resolve(data!);
-                }
-            });
-    });
     let res: boolean;
     let err: BusinessError = new BusinessError();
     try {
-        res = await p;
+        res = waitForCompletion(
+            () => new Promise<boolean>((resolve, reject) => {
+                primitivesBoolTest.TestBaseBoolFunc5Async(
+                    false, (err: BusinessError|null, data?: boolean) => {
+                        if (err !== null && err.code !== 0) {
+                            reject(err);
+                        } else {
+                            resolve(data!);
+                        }
+                    });
+            }));
     } catch (e) {
         err = e as BusinessError;
     }
@@ -1086,8 +1086,8 @@ function testCasetestBaseBoolFunc5_1() {
 
 function testCasetestBaseBoolFunc5_2() {
     try {
-        let result: boolean =
-            await primitivesBoolTest.TestBaseBoolFunc5Promise(true);
+        let result: boolean = waitForCompletion(
+            () => primitivesBoolTest.TestBaseBoolFunc5Promise(true));
         arktest.assertEQ(result, true);
         console.log("testCasetestBaseBoolFunc5_2 result: " + result);
     } catch (error) {
