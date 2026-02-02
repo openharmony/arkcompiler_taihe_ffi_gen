@@ -26,7 +26,7 @@ struct TVectorHandle {
 };
 
 struct TVector {
-    TVectorHandle *m_handle;
+    struct TVectorHandle *m_handle;
 };
 
 #endif  // TAIHE_VECTOR_ABI_H

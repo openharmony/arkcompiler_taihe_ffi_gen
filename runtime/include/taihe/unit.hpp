@@ -31,7 +31,7 @@ struct unit {
 private:
     // This dummy field is required to ensure that the struct is not empty, which
     // is necessary for C compatibility and ABI layout.
-    char dummy = 0;
+    [[maybe_unused]] char dummy = 0;
 };
 
 inline bool operator==(unit, unit)
