@@ -163,7 +163,6 @@ class BuildSystem(ABC):
     @abstractmethod
     def _create_user_files(self) -> None:
         """Create user files based on the user type."""
-        pass
 
     def _compile_shared_library(self, opt_level: str):
         """Compile the shared library."""
@@ -210,12 +209,10 @@ class BuildSystem(ABC):
     @abstractmethod
     def _compile_user_executable(self, opt_level: str) -> None:
         """Compile and link the user executable."""
-        pass
 
     @abstractmethod
     def _run_user_executable(self) -> None:
         """Run the user executable."""
-        pass
 
 
 class CppBuildSystem(BuildSystem):

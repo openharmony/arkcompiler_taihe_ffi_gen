@@ -202,7 +202,14 @@ class StsModuleGenerator:
 
     def gen_module_file(self):
         with self.target:
-            namespace_generator = StsNamespaceGenerator(self.target, self.am, self.mod)
+            for descendant_ns in self.mod.descendants:
+                for head in descendant_ns.injected_globs:
+                    self.target.write_block(head)
+            namespace_generator = StsNamespaceGenerator(
+                self.target,
+                self.am,
+                self.mod,
+            )
             namespace_generator.gen_namespace()
             self.gen_utils()
 
@@ -298,8 +305,6 @@ class StsNamespaceGenerator:
         self.ns = ns
 
     def gen_namespace(self):
-        for head in self.ns.injected_heads:
-            self.target.write_block(head)
         for code in self.ns.injected_codes:
             self.target.write_block(code)
         for pkg in self.ns.packages:
