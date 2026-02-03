@@ -377,19 +377,17 @@ class ArkTsModuleOrNamespace(ABC):
 
     is_default: bool = datafield(default=False, init=False)
     injected_codes: list[str] = datafield(default_factory=list, init=False)
-    injected_heads: list[str] = datafield(default_factory=list, init=False)
+    injected_globs: list[str] = datafield(default_factory=list, init=False)
     packages: list[PackageDecl] = datafield(default_factory=list, init=False)
     children: dict[str, "ArkTsNamespace"] = datafield(default_factory=dict, init=False)
 
     @property
     @abstractmethod
-    def mod(self) -> "ArkTsModule":
-        pass
+    def mod(self) -> "ArkTsModule": ...
 
     @property
     @abstractmethod
-    def impl_desc(self) -> str:
-        pass
+    def impl_desc(self) -> str: ...
 
     @abstractmethod
     def get_type(
@@ -397,8 +395,13 @@ class ArkTsModuleOrNamespace(ABC):
         is_default: bool,
         *type_path: str,
         target: ArkTsImportManager,
-    ) -> str:
-        pass
+    ) -> str: ...
+
+    @property
+    def descendants(self) -> Iterable["ArkTsModuleOrNamespace"]:
+        yield self
+        for child in self.children.values():
+            yield from child.descendants
 
     def add_path(
         self,
@@ -511,13 +514,13 @@ class PackageGroupAniInfo(AbstractAnalysis[PackageGroup]):
             is_default = ExportDefaultAttr.get(pkg) is not None
 
             mod = self.mods.setdefault(module_str, ArkTsModule(self.path, module_str))
-            ns_name = self.pkg_map[pkg] = mod.add_path(ns_parts, pkg, is_default)
+            ns = self.pkg_map[pkg] = mod.add_path(ns_parts, pkg, is_default)
 
             for attr in StsInjectIntoModuleAttr.get_all(pkg):
-                mod.injected_heads.append(attr.sts_code)
+                ns.injected_globs.append(attr.sts_code)
 
             for attr in StsInjectAttr.get_all(pkg):
-                ns_name.injected_codes.append(attr.sts_code)
+                ns.injected_codes.append(attr.sts_code)
 
     @classmethod
     @override
@@ -1023,8 +1026,7 @@ class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
         return t.accept(TypeAniInfoDispatcher(am))
 
     @abstractmethod
-    def sts_type_in(self, target: ArkTsImportManager) -> str:
-        pass
+    def sts_type_in(self, target: ArkTsImportManager) -> str: ...
 
     @abstractmethod
     def from_ani(
@@ -1033,8 +1035,7 @@ class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
         env: str,
         ani_value: str,
         cpp_after: str,
-    ):
-        pass
+    ): ...
 
     @abstractmethod
     def into_ani(
@@ -1043,8 +1044,7 @@ class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
         env: str,
         cpp_value: str,
         ani_after: str,
-    ):
-        pass
+    ): ...
 
     def check_type(
         self,
