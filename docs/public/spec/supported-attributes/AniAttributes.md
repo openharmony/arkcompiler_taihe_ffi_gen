@@ -1,6 +1,6 @@
 # Taihe IDL ani 注解全集
 
-本文档中仅包含 ANI 后端特有的注解，通用注解请参考 [Taihe IDL 公用注解全集](./CommonAttributes.md)。
+本文档中仅包含 ANI 后端特有的注解，此外，[ArkTS 后端通用的注解](ArkTSAttributes.md) 也都适用于 ANI 后端。
 
 ## 全局注解
 
@@ -32,4 +32,6 @@
 
 - `@async`：将一个返回 `T` 类型同步函数封装为接受 `AsyncCallback<T>` 的异步函数。（`type AsyncCallback<T> = (error: BusinessError | null, data: T | undefined) => void;`）
 
-- `@promise`：将一个返回 `Promise<T>` 的函数封装为返回 `Promise<T>` 的异步函数。
+- `@promise`：将一个返回 `T` 的函数封装为返回 `Promise<T>` 的异步函数。
+
+- `@static_overload("overloadedName")`：将一个函数设置为 ets 侧的 java like 重载函数。（`overload overloadedName { funcA, funcB, ... }`）

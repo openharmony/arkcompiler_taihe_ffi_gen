@@ -39,3 +39,62 @@ uv build
 ```bash
 taihec --help
 ```
+
+## 代码检查与测试
+
+### 代码格式检查
+
+在提交代码前，需要运行代码检查脚本以确保代码符合项目规范：
+
+```bash
+scripts/check
+```
+
+该脚本会执行以下检查：
+- `ruff format --check` - Python 代码格式检查
+- `ruff check` - Python 代码 lint 检查
+- `pyright compiler` - Python 类型检查
+
+### 自动修复代码格式
+
+另外，开发者应该在提交代码前运行自动修复脚本以确保代码格式符合项目规范：
+
+```bash
+# 修复所有代码格式（Python、C++、ArkTS）
+scripts/autofix
+
+# 仅修复 Python 代码
+scripts/autofix --python
+
+# 仅修复 C++ 代码
+scripts/autofix --cpp
+
+# 仅修复 ArkTS 代码
+scripts/autofix --arkts
+```
+
+### 运行测试
+
+> **注意**：运行测试前需要手动删除根目录下的 `build` 目录以确保依赖 CMake 构建的测试项目能够正确重新生成。
+
+运行项目测试套件：
+
+```bash
+scripts/test
+```
+
+默认会运行以下测试：
+- `pytest` - Python 单元测试
+- `core` - 核心功能测试
+- `ani` - ANI 相关测试
+- `cmake` - CMake 构建测试
+
+也可以指定运行特定测试：
+
+```bash
+# 仅运行 pytest
+scripts/test --run pytest
+
+# 运行多个指定测试
+scripts/test --run pytest core
+```
