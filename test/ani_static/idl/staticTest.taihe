@@ -23,11 +23,11 @@ interface IBase {
 function sumSync(a: i32, b: i32): i32;
 
 @static("IBase")
-@static_overload("add")
+@rename("add")
 @async function addWithCallback(a: i32, b: i32): i32;
 
 @static("IBase")
-@static_overload("add")
+@rename("add")
 @promise function addReturnsPromise(a: i32, b: i32): i32;
 
 @static("IBase")
@@ -38,7 +38,7 @@ function addSync(a: i32, b: i32): i32;
 function getIBase(name: String): IBase;
 
 // @constructor("IBase")
-// @static_overload("createIBase")
+// @rename("createIBase")
 // function getIBase_test(name: String, test: String): IBase;
 
 interface ITest {

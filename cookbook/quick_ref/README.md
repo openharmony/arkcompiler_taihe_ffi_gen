@@ -48,13 +48,11 @@
 
 - [如何在 Taihe 更好地声明与实现纯数据类的继承 `@extends`](../struct_extends/README.md)
 
-- [如何在 Taihe 声明与实现函数重载 `@static_overload`](../overload/README.md)
+- [如何在 Taihe 声明重命名函数名称与实现函数重载 `@rename`](../async/README.md)
 
 - [如何在 Taihe 声明 Async 函数 `@async`](../async/README.md)
 
 - [如何在 Taihe 声明 Promise 函数 `@promise`](../async/README.md)
-
-- [如何在 Taihe 声明 重命名函数名称 `@rename`](../async/README.md)
 
 - [如何在 Taihe 通过注入方式将 sts 代码加入生成文件中 `@sts_inject`](../external_obj/README.md)
 
