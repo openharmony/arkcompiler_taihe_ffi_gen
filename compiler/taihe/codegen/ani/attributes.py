@@ -668,6 +668,8 @@ class PromiseAttribute(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
 
 @dataclass
 class StaticOverloadAttribute(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
+    # TODO: Deprecated
+
     NAME = "static_overload"
     TARGETS = (GlobFuncDecl, IfaceMethodDecl)
     ATTRIBUTE_GROUP_TAGS = frozenset({OVERLOAD_KIND_ATTRIBUTE_GROUP})
@@ -759,6 +761,6 @@ all_attr_types: list[CheckedAttrT] = [
     SetAttr,
     AsyncAttribute,
     PromiseAttribute,
-    StaticOverloadAttribute,
+    # StaticOverloadAttribute,
     OnOffAttr,
 ]

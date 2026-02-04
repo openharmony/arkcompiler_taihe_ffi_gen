@@ -49,16 +49,16 @@ interface IfaceA {}
 function createIfaceA(): IfaceA;
 ```
 
-注：根据 ets 新重载规则，当一个 class 有多个构造函数时，需要使用 `@static_overload`
+注：根据 ets 新重载规则，当一个 class 有多个构造函数时，需要使用 `@rename`
 
 ```rust
 @class
 interface IfaceB {}
 
-@static_overload @constructor("IfaceB")
+@rename @constructor("IfaceB")
 function createIfaceBWithInt(arg: i32): IfaceB;
 
-@static_overload @constructor("IfaceB")
+@rename @constructor("IfaceB")
 function createIfaceBWithString(arg: String): IfaceB;
 ```
 
