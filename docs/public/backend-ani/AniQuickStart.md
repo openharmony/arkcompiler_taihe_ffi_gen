@@ -1,158 +1,154 @@
-# Taihe 基本使用文档
+# ANI/ArkTS 快速入门
 
-本文档介绍 Taihe 命令行工具的使用方法。
+本文档介绍如何使用 Taihe 将 C++ 实现暴露给 ArkTS 调用。
 
-## Taihe 命令行使用方法
+> **前置知识**：建议先阅读 [命令行工具参考](../CliReference.md) 了解 `taihec` 和 `taihe-tryit` 的基本用法。
 
-Taihe 提供了 `taihec` 和 `taihe-tryit` 两个命令行工具，分别用于代码生成和自测试。
+## 概述
 
-### `taihec`
+ANI（ArkTS Native Interface）是 ArkTS 调用原生代码的桥接机制。Taihe 的 `ani-bridge` 后端可以自动生成 ANI 桥接代码，让 ArkTS 代码能够调用 C++ 实现。
 
-`taihec` 是 Taihe 的核心编译器工具，用于解析 Taihe IDL 文件并编译为目标语言的代码。并支持选择任意多种代码生成后端，生成适用于不同场景的代码。以下是 `taihec` 的基本用法：
+## 代码生成配置
 
-```sh
-taihec [taihe_files ...] [options ...]
-```
+使用 `ani-bridge` 后端时，支持以下代码生成配置项：
 
-- `taihe_files` 可以是一个或多个 Taihe IDL 文件，也可以使用通配符（例如 `path/to/idl/*.taihe`）来指定多个文件。
-- `options` 用于指定代码生成的各种选项，详见下表。
-
-#### 命令行选项
-
-| 参数                                       | 简写                               | 说明 |
-|--------------------------------------------|------------------------------------|------|
-| `--output <path>`                          | `-O<path>`                         | 指定生成的目标文件存放目录（如缺省则默认生成在 `taihe-generated` 目录下） |
-| `--generate <backend>`                     | `-G<backend>`                      | 指定要启用的代码生成后端，如 `abi-header`、`abi-source`、`c-author` 等 |
-| `--build <build-system>`                   | `-B<build-system>`                 | 指定构建系统类型，目前支持 `cmake`（生成 `CMakeLists.txt`） |
-| `--codegen <namespace>:<config>[=<value>]` | `-C<namespace>:<config>[=<value>]` | 额外的代码生成配置项，例如 `sts:keep-name`、`arkts:module-prefix=prefix` 等 |
-| `--version`                                | 无                                 | 打印版本信息 |
-| `--help`                                   | `-h`                               | 帮助信息 |
-
-#### 代码生成后端
-
-代码生成后端决定了 `taihec` 会生成哪些代码文件。后端之间存在依赖关系，工具会自动根据配置的后端来递归地启用所需的其他后端，生成完整的代码。
-
-| Backend        | 依赖                       | 说明 |
-|----------------|----------------------------|------|
-| `abi-header`   | 无                         | 生成 Taihe C ABI 头文件，包括类型声明，函数声明等 |
-| `abi-source`   | `abi-header`               | 生成 Taihe C ABI 源文件，包含必要的符号定义 |
-| `c-author`     | `abi-source`               | 生成 C 语言提供者侧的接口导出宏以及模板代码 |
-| `cpp-common`   | `abi-header`               | 生成 C++ 接口提供者和消费者侧的公共代码 |
-| `cpp-author`   | `cpp-common`, `abi-source` | 生成 C++ 接口提供者侧的接口导出宏以及模板代码 |
-| `cpp-user`     | `cpp-common`               | 生成 C++ 接口消费者侧所需的所有代码 |
-| `ani-bridge`   | `cpp-user`                 | 生成 ANI 及 ArkTS 1.2 用户侧的桥接代码 |
-| `pretty-print` | 无                         | 将 Taihe IDL 文件格式化输出 |
-
-#### 代码生成配置
-
-| Codegen Config                 | 说明 |
+| 配置项                         | 说明 |
 |--------------------------------|------|
-| `sts:keep-name`                | 保持生成的代码中的函数和方法名称与 Taihe IDL 文件中的名称一致，若不使用此选择则会默认将 Taihe IDL 文件中的名称首字母小写 |
+| `sts:keep-name`                | 保持生成的代码中的函数和方法名称与 Taihe IDL 文件中的名称一致。若不使用此选项，则默认将 IDL 中的名称首字母小写 |
 | `arkts:module-prefix=<prefix>` | 指定生成的 ArkTS 对应的模块名，该配置会影响生成符号的 ANI 签名 |
 | `arkts:path-prefix=<prefix>`   | 指定生成的 ArkTS 对应的路径前缀，该配置会影响生成符号的 ANI 签名 |
 
-*注：DevEco 用户必须指定 `arkts:module-prefix` 与 `arkts:path-prefix`*
+> ⚠️ **注意**：DevEco 用户必须指定 `arkts:module-prefix` 与 `arkts:path-prefix`。
 
-#### 使用示例
-
-以下是一个 `taihec` 的基本使用示例：
+### 使用示例
 
 ```sh
-taihec test/ani_test/idl/*.taihe -Otest/ani_test/generated -Gani-bridge -Gcpp-author -Carkts:module-prefix=<module_name> -Carkts:path-prefix=<pkg_name> -Bcmake  # 生成用户自己在 IDL 中定义的接口的 ANI 桥接代码，以及 C++ 实现模板等
+taihec idl/*.taihe -Ogenerated -Gani-bridge -Gcpp-author \
+    -Carkts:module-prefix=mymodule \
+    -Carkts:path-prefix=com.example \
+    -Bcmake
 ```
 
-### `taihe-tryit`
+---
 
-`taihe-tryit` 是一个 Taihe 内置的高度集成的自测试和验证工具，能够一键创建项目、生成代码、编译并运行测试。适合快速原型开发、学习和验证一个完整的样例。以下是 `taihe-tryit` 的基本用法：
+## 使用 `taihe-tryit` 快速上手
+
+下面我们以一个完整的示例展示如何使用 `taihe-tryit` 快速创建、生成和运行一个 ArkTS 调用 C++ 的项目。
+
+### 1. 创建项目
+
+运行以下命令创建一个新的样例目录：
 
 ```sh
-taihe-tryit [mode] [test_dir] [options ...]
+taihe-tryit create --user sts path/to/demo
 ```
 
-#### 模式
+生成的标准目录结构如下：
 
-`taihe-tryit` 支持多种模式，主要介绍 `create`、`generate`、`build`、`test` 几种：
+```
+demo/
+├── idl/                            # Taihe IDL 文件目录
+│   └── hello.taihe
+├── author/                         # C++ 接口提供者侧代码目录
+│   ├── include/
+│   └── src/
+│       ├── hello.impl.cpp          # hello.taihe 的 C++ 实现
+│       └── ani_constructor.cpp     # ANI 注册文件
+└── user/                           # 接口消费者侧代码目录
+    └── main.ets                    # 测试入口
+```
 
-- `create`
-  用于创建一个新的测试样例目录，包含必要的目录结构和文件，例如：
+### 2. 生成代码
 
-  ```sh
-  taihe-tryit create --user sts path/to/demo/dir
-  ```
+运行以下命令生成桥接代码：
 
-- `generate`
-  用于生成桥接代码，例如：
+```sh
+taihe-tryit generate --user sts path/to/demo
+```
 
-  ```sh
-  taihe-tryit generate --user sts path/to/demo/dir
-  ```
+生成的 `generated` 目录结构如下：
 
-- `build`
-  不生成代码，将已有的代码进行编译并运行，用于生成了代码后，对生成的代码进行修改的场景，例如：
+```
+generated/
+├── hello.ets                       # ArkTS 桥接代码
+├── include/                        # 生成的 C/C++ 头文件目录
+│   ├── hello.abi.h                 # C ABI 头文件
+│   ├── hello.proj.hpp              # C++ 类型投影
+│   ├── hello.impl.hpp              # C++ 提供方所需头文件
+│   ├── hello.user.hpp              # C++ 消费方所需头文件
+│   ├── hello.ani.hpp               # ANI 注册函数所在头文件
+│   ├── taihe.platform.ani.*.hpp    # Taihe 标准库头文件
+│   └── ...
+├── src/                            # 自动生成的源文件
+│   ├── hello.abi.c
+│   ├── hello.ani.cpp
+│   └── taihe.platform.ani.abi.c
+└── temp/                           # 模板文件（可复制到 author/src 修改）
+    ├── ani_constructor.cpp
+    └── hello.impl.cpp
+```
 
-  ```
-  taihe-tryit build --user sts path/to/demo/dir
-  ```
+也可以尝试修改 `hello.taihe`，按照 [Taihe IDL 语言规范](../spec/IdlReference.md) 编写自己的接口描述文件并进行生成。
 
-- `test`
-  生成代码，并编译运行，该命令等价于分别执行 `generated` 和 `build`，用于快速验证一个完整的样例，例如：
+### 3. 实现接口
 
-  ```
-  taihe-tryit test --user sts path/to/demo/dir
-  ```
+参考 `generated/temp` 目录下的模板文件，在 `author/src` 目录下编写 C++ 实现代码。
 
-#### 支持的选项
+**示例 IDL（`idl/hello.taihe`）：**
 
-| 参数                                       | 简写                               | 可用模式           | 说明 |
-|--------------------------------------------|------------------------------------|--------------------|------|
-| `--verbose`                                | `-v`                               | 所有模式           | 输出详细的日志信息，便于调试 |
-| `--user <user>`                            | `-u <user>`                        | 所有模式           | 必要，选择消费者侧的语言类型，支持 `sts`, `cpp` |
-| `--optimization {0,1,2,3}`                 | `-O{0,1,2,3}`                      | `build`, `test`    | 指定编译器的优化级别，默认为 `0` |
-| `--codegen <namespace>:<config>[=<value>]` | `-C<namespace>:<config>[=<value>]` | `generate`, `test` | 同 `taihec`，额外的代码生成配置项，例如 `sts:keep-name` 等 |
+```
+function add(a: i32, b: i32): i32;
+```
 
-#### 使用流程
+**示例实现（`author/src/hello.impl.cpp`）：**
 
-下面我们以一个 ArkTS 1.2 代码调用 C++ 实现的项目为例，展示其标准流程。
+```cpp
+#include "hello.impl.hpp"
 
-1. 用于 `taihe-tryit` 的标准目录结构如下，你可以运行 `taihe-tryit create --user sts path/to/demo` 来自动生成一个最简单的样例目录：
+int32_t add(int32_t a, int32_t b) {
+    return a + b;
+}
 
-   ```
-   demo
-   ├── idl                             # Taihe IDL 文件目录
-   │   └── hello.taihe
-   ├── author                          # C++ 接口提供者侧代码目录
-   │   ├── include
-   │   └── src
-   │        ├── hello.impl.cpp         # hello.taihe 的 C++ 实现
-   │        └── ani_constructor.cpp    # ani 注册文件
-   └── user                            # 接口消费者侧代码目录
-       └── main.ets                    # 测试入口
-   ```
+TH_EXPORT_CPP_API_add(add);
+```
 
-2. 执行 `taihe-tryit generate --user sts path/to/demo` 后，会在 `path/to/demo` 中生成一个 `generated` 目录，包含生成的代码和头文件。也可以尝试修改 `hello.taihe`，按照 [Taihe 语言规范](../spec/IdlReference.md)编写自己的接口描述文件并进行生成。
+**示例测试（`user/main.ets`）：**
 
-   ```
-   generated
-   ├── @ohos.base.ets                   # 用于导入 BusinessError，用户上库不需要
-   ├── hello.ets
-   ├── include                          # 生成的 C/C++ 头文件目录
-   │   ├── hello.abi.h
-   │   ├── hello.impl.hpp
-   │   ├── hello.proj.hpp
-   │   ├── hello.user.hpp               # 这几个是 C++ 提供方和消费方所需头文件，具体功能见 CppUserDoc.md
-   │   ├── hello.ani.hpp                # 用于注册 ANI Native 接口的 ANIRegister 所在头文件
-   │   ├── taihe.platform.ani.abi.h
-   │   ├── taihe.platform.ani.proj.hpp  # Taihe 标准库对应的头文件
-   │   └── ...
-   ├── src                              # 自动生成的源文件，会被编译进 C++ 提供方的动态链接库中
-   │   ├── hello.abi.c
-   │   ├── hello.ani.cpp
-   │   └── taihe.platform.ani.abi.c
-   └── temp                             # 用于方便用户使用的模板文件，用户可以复制这些文件到 author/src 目录下进行修改
-       ├── ani_constructor.cpp
-       └── hello.impl.cpp
-   ```
+```typescript
+import * as hello from "hello";
 
-3. 用户可以在 `author` 目录下编写 C++ 提供者侧的代码，可以参考 `generated/temp` 目录下的模板源码文件。然后在 `user` 目录下编写 ArkTS 消费者侧的代码，应用入口应该是 `main.ets` 文件。
+loadLibrary("hello");
 
-4. 完成后，运行 `taihe-tryit build --user sts path/to/demo` 来编译生成动态库及用户侧程序并运行。
+function main() {
+    let result = hello.add(1, 2);
+    console.log("1 + 2 = " + result);
+}
+```
+
+### 4. 编译运行
+
+运行以下命令编译并执行测试：
+
+```sh
+taihe-tryit test --user sts path/to/demo
+```
+
+或者分步执行：
+
+```sh
+# 仅生成代码
+taihe-tryit generate --user sts path/to/demo
+
+# 仅编译运行（不重新生成）
+taihe-tryit build --user sts path/to/demo
+```
+
+---
+
+## 相关文档
+
+- [命令行工具参考](../CliReference.md) - `taihec` 和 `taihe-tryit` 完整参数说明
+- [Taihe IDL 语言规范](../spec/IdlReference.md) - IDL 语法和语义规则
+- [ANI 注解参考](../spec/supported-attributes/AniAttributes.md) - ANI 后端特有的注解
+- [ANI 生成代码解析](AniGeneratedCode.md) - 深入理解生成代码的结构和调用链
+- [C++ 使用指南](../backend-cpp/CppUsageGuide.md) - C++ 类型和 API 的详细说明
