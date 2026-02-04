@@ -1,75 +1,116 @@
-# null 与 undefined
+# Null 与 Undefined
 
-在 taihe 中，使用 union 与注解 @null、@undefined 声明 null 类型与 undefined 类型
+> **学习目标**：掌握如何在 Taihe 中表示 null 和 undefined 类型。
 
-## 第一步：编写接口原型
+## 核心概念
+
+Taihe 使用 `union` 配合注解来表示 null 和 undefined 类型。
+
+| Taihe 表示 | ArkTS 类型 |
+|------------|------------|
+| `nValue: unit` | `null` |
+| `@undefined uValue: unit` | `undefined` |
+
+> **注意**：默认情况下，`unit` 类型映射为 `null`；使用 `@undefined` 注解后映射为 `undefined`。
+
+---
+
+## 第一步：定义接口
 
 **File: `idl/nullabletype.taihe`**
 
 ```rust
 union NullableValue {
-    sValue: String;
-    iValue: i32;
-    uValue: @undefined unit;
-    nValue: unit;
+    sValue: String;              // 字符串值
+    iValue: i32;                 // 整数值
+    @undefined uValue: unit;     // undefined
+    nValue: unit;                // null
 }
 
 function makeNullableValue(tag: i32): NullableValue;
 ```
 
-如上所示，Taihe IDL 文件中为一个 union 内的变量名前增加 注解 @null、@undefined 来声明 null 类型与 undefined 类型
-
-## 第二步：完成 C++ 实现
+## 第二步：实现 C++ 代码
 
 **File: `author/src/nullabletype.impl.cpp`**
 
 ```cpp
+#include "nullabletype.impl.hpp"
+
+using namespace taihe;
+using namespace nullabletype;
+
 constexpr int32_t TAG_NULL = 0;
 constexpr int32_t TAG_STRING = 1;
 constexpr int32_t TAG_INT = 2;
 
-::nullabletype::NullableValue makeNullableValue(int32_t tag) {
+NullableValue makeNullableValue(int32_t tag) {
     switch (tag) {
         case TAG_NULL:
-            return ::nullabletype::NullableValue::make_nValue();
+            return NullableValue::make_nValue();     // null
         case TAG_STRING:
-            return ::nullabletype::NullableValue::make_sValue("hello");
+            return NullableValue::make_sValue("hello");
         case TAG_INT:
-            return ::nullabletype::NullableValue::make_iValue(123);
+            return NullableValue::make_iValue(123);
         default:
-            return ::nullabletype::NullableValue::make_uValue();
+            return NullableValue::make_uValue();     // undefined
     }
 }
+
+TH_EXPORT_CPP_API_makeNullableValue(makeNullableValue);
 ```
 
-使用 union 的 make 方法创建 null 或 undefined
+### C++ 创建方法
 
-对于 taihe union 的 C++ 侧方法参考
+| 创建 | 方法 |
+|------|------|
+| null | `Union::make_nValue()` |
+| undefined | `Union::make_uValue()` |
+| 有值 | `Union::make_sValue("hello")` |
 
-[Taihe C++ 教程](../taihe_cpp/README.md)
+## 第三步：编译运行
 
-[Taihe Union 相关教程样例](../enum_union/README.md)
+```sh
+taihe-tryit test -u sts cookbook/nullabletype
+```
 
-## 第三步：在 ets 侧使用
+## 使用示例
 
 **File: `user/main.ets`**
 
 ```typescript
-let nvalue = makeNullableValue(0);
-console.log("null: " + nvalue);
-let svalue = makeNullableValue(1);
-console.log("string: " + svalue);
-let ivalue = makeNullableValue(2);
-console.log("int: " + ivalue);
-let uvalue = makeNullableValue(10);
-console.log("undefined: " + uvalue);
+import { makeNullableValue } from "nullabletype";
+
+loadLibrary("nullabletype");
+
+function main() {
+    let nvalue = makeNullableValue(0);   // null
+    console.log("null: " + nvalue);
+    
+    let svalue = makeNullableValue(1);   // "hello"
+    console.log("string: " + svalue);
+    
+    let ivalue = makeNullableValue(2);   // 123
+    console.log("int: " + ivalue);
+    
+    let uvalue = makeNullableValue(10);  // undefined
+    console.log("undefined: " + uvalue);
+}
 ```
 
-**Stdout**
+**输出：**
 
-```sh
+```
 null: null
 string: hello
 int: 123
 undefined: undefined
 ```
+
+---
+
+## 相关文档
+
+- [Enum 与 Union](../enum_union/README.md) - Union 详细用法
+- [Optional](../optional/README.md) - 可选类型
+- [Taihe C++](../taihe_cpp/README.md) - C++ API 参考

@@ -1,10 +1,39 @@
 # Enum 与 Union
 
-以消息系统为例介绍 taihe 的 `enum` 与 `union`
+> **学习目标**：掌握 Taihe 中枚举（Enum）和联合类型（Union）的定义与使用。
 
-`enum` 用于使用常量表示有限的状态，`union` 用于在同一内存位置存放不同数据类型
+本教程以"消息系统"为例，介绍 `enum` 与 `union` 的用法。
 
-## 第一步：编写接口原型
+## 核心概念
+
+| 类型 | 用途 | 类比 |
+|------|------|------|
+| `enum` | 表示有限的常量集合 | C++ enum class |
+| `union` | 同一位置存放不同数据类型 | C++ std::variant |
+
+---
+
+## Enum 语法
+
+Taihe 支持两种 enum 映射：
+
+```rust
+// 方式一：key -> int
+enum MessageType: i32 {
+    Text = 1;
+    Number = 2;
+}
+
+// 方式二：key -> string
+enum Status: String {
+    Success = "success";
+    Failed = "failed";
+}
+```
+
+---
+
+## 第一步：定义接口
 
 **File: `idl/message.taihe`**
 
@@ -25,37 +54,19 @@ struct Message {
 }
 
 function createTextMessage(str: String): Message;
-
 function createNumberMessage(num: i64): Message;
-
 function processMessage(msg: Message): void;
 ```
 
-enum 有 2 种语法
-
-1. key -> int
-
-    ```rust
-    enum MessageType: i32 {
-        Text = 0,
-        Number = 1
-    }
-    ```
-
-2. key -> string
-
-    ```rust
-    enum MessageType: String {
-        Text = "Text",
-        Number = "Num"
-    }
-    ```
-
-## 第二步：完成 C++ 实现
+## 第二步：实现 C++ 代码
 
 **File: `author/src/message.impl.cpp`**
 
 ```cpp
+#include "message.impl.hpp"
+
+using namespace taihe;
+
 Message createTextMessage(string_view str) {
     return {MessageType::key_t::Text, MessageData::make_textVal(str)};
 }
@@ -65,7 +76,7 @@ Message createNumberMessage(int64_t num) {
 }
 
 void processMessage(Message const& msg) {
-    switch(msg.type.get_key()) {
+    switch (msg.type.get_key()) {
         case MessageType::key_t::Text:
             std::cout << "text: " << msg.data.get_textVal_ref() << std::endl;
             break;
@@ -74,65 +85,89 @@ void processMessage(Message const& msg) {
             break;
     }
 }
+
+TH_EXPORT_CPP_API_createTextMessage(createTextMessage);
+TH_EXPORT_CPP_API_createNumberMessage(createNumberMessage);
+TH_EXPORT_CPP_API_processMessage(processMessage);
 ```
 
-此实现有 4 个要点：创建 enum；获取 enum 信息；创建 union；读取 union 的值
+### C++ API 参考
 
-1. 创建 enum（`{enum}::key_t::{key}`）
+#### Enum 操作
 
-    以本例 enum 为例，用户可以使用 `MessageType::key_t::Text` 与 `MessageType::key_t::Number` 来构造 enum，即：使用 `{enum}::key_t::{key}` 来构造 enum
+| 操作 | 语法 | 示例 |
+|------|------|------|
+| 创建 enum | `{Enum}::key_t::{Key}` | `MessageType::key_t::Text` |
+| 获取 key | `.get_key()` | `msg.type.get_key()` |
+| 获取 value | `.get_value()` | `msg.type.get_value()` |
 
-2. 获取 enum 信息（`get_key()` 与 `get_value()`）
+#### Union 操作
 
-    使用 `get_key()` 与 `get_value()` 可以获取 enum 的键与值
+| 操作 | 语法 | 示例 |
+|------|------|------|
+| 创建 union | `{Union}::make_{item}(value)` | `MessageData::make_textVal(str)` |
+| 获取值（引用） | `.get_{item}_ref()` | `msg.data.get_textVal_ref()` |
+| 获取当前类型 | `.get_key()` | `msg.data.get_key()` |
 
-3. 创建 union（`{union}::make_{union_item}({val})`）
+## 第三步：编译运行
 
-    以本例 union 为例，用户可以使用 `MessageData::make_textVal(str)` 与 `MessageData::make_numVal(num)` 来构造 union，即：使用 `{union}::make_{union_item}({val})` 来构造 union
+```sh
+taihe-tryit test -u sts cookbook/message
+```
 
-4. 读取 union 的值（`get_key()` 与 `get_{union_item}_ref()`）
-
-    以本例 union 为例，用户可以使用 `get_textVal_ref()` 与 `get_numVal_ref()` 来获取 union 的值，即：使用 `get_{union_item}_ref` 来获取 union 的值
-
-## 第三步：在 ets 侧使用
+## 使用示例
 
 **File: `user/main.ets`**
 
 ```typescript
-// 创建文本信息
-let textMsg = message.createTextMessage("hello");
-// 创建数字信息
-let numMsg = message.createNumberMessage(12345);
-// 输出信息
-message.processMessage(textMsg);
-message.processMessage(numMsg);
+import * as message from "message";
+
+loadLibrary("message");
+
+function main() {
+    // 创建文本消息
+    let textMsg = message.createTextMessage("hello");
+    // 创建数字消息
+    let numMsg = message.createNumberMessage(12345);
+    
+    // 处理消息
+    message.processMessage(textMsg);
+    message.processMessage(numMsg);
+}
 ```
 
-**Stdout**
+**输出：**
 
-```sh
+```
 text: hello
 num: 12345
 ```
 
-## `const` 常量
+---
 
-如果用户希望在 Taihe 里定义 `const` 常量
+## 进阶：`@const` 常量
 
-可以在 enum 上使用 `@const`
+使用 `@const` 注解可以将 enum 导出为全局常量：
 
 ```rust
 @const
 enum Flags: i32 {
-    FLAG_I32_A = 1,
-    FLAG_I32_B = 2,
+    FLAG_A = 1;
+    FLAG_B = 2;
 }
 ```
 
-在 ets 文件中，可以直接使用 `{pkg_name}.FLAG_I32_A` 或 `{pkg_name}.FLAG_I32_B`
+在 ArkTS 中直接使用：
 
 ```typescript
-import * as ConstPkg from "xxx";
+import * as pkg from "flags";
 
-const val = ConstPkg.FLAG_I32_A;
+const val = pkg.FLAG_A;  // 直接访问常量
 ```
+
+---
+
+## 相关文档
+
+- [Struct 结构体](../struct_extends/README.md) - 结构体定义
+- [Optional 可选类型](../optional/README.md) - 可选值处理
