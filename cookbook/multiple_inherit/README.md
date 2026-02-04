@@ -1,8 +1,22 @@
-# 继承
+# 多继承（Multiple Inheritance）
 
-Taihe 的 interface 支持多继承, 以一个简单的菱形继承为例介绍 Taihe interface 的多继承
+> **学习目标**：掌握 Taihe 接口的多继承机制。
 
-## 第一步：编写接口原型
+Taihe 的 interface 支持多继承。本教程以菱形继承为例进行介绍。
+
+## 继承关系图
+
+```
+       IBase
+      /     \
+IColorable IShape
+      \     /
+       IRect
+```
+
+---
+
+## 第一步：定义接口
 
 **File: `idl/multiple_inherit.taihe`**
 
@@ -24,184 +38,128 @@ interface IRect: IColorable, IShape {
 }
 
 function createIColorable(color: String): IColorable;
-
 function createIShape(shape: String): IShape;
-
 function createIRect(color: String, shape: String): IRect;
 ```
 
-我们可以得到一个明显的菱形继承关系
-
-```
-       IBase
-      /     \
-IColorable IShape
-      \     /
-       IRect
-```
-
-## 第二步：完成 C++ 实现
+## 第二步：实现 C++ 代码
 
 **File: `author/src/multiple_inherit.impl.cpp`**
 
 ```cpp
-class IBaseImpl {
-    public:
-    IBaseImpl() {}
+#include "multiple_inherit.impl.hpp"
 
-    void baseFunc() {
-        std::cout << "IBase" << std::endl;
-    }
-};
+using namespace taihe;
+using namespace multiple_inherit;
 
 class IColorableImpl {
 public:
-    IColorableImpl(): m_color("None") {}
+    IColorableImpl(string color = "None") : m_color(color) {}
 
-    IColorableImpl(::taihe::string color): m_color(color) {}
+    string getColor() { return m_color; }
+    void baseFunc() { std::cout << "IColor" << std::endl; }
 
-    ::taihe::string getColor() {
-        return this->m_color;
-    }
-
-    void baseFunc() {
-        std::cout << "IColor" << std::endl;
-    }
 private:
-    ::taihe::string m_color;
+    string m_color;
 };
 
 class IShapeImpl {
 public:
-    IShapeImpl(): m_shape("None") {}
+    IShapeImpl(string shape = "None") : m_shape(shape) {}
 
-    IShapeImpl(::taihe::string shape): m_shape(shape) {}
+    string getShape() { return m_shape; }
+    void baseFunc() { std::cout << "IShape" << std::endl; }
 
-    ::taihe::string getShape() {
-        return this->m_shape;
-    }
-
-    void baseFunc() {
-        std::cout << "IShape" << std::endl;
-    }
 private:
-    ::taihe::string m_shape;
+    string m_shape;
 };
 
 class IRectImpl {
-    public:
-    IRectImpl()
-        : m_color("None"), m_shape("None") {}
-
-    IRectImpl(::taihe::string color, ::taihe::string shape)
+public:
+    IRectImpl(string color = "None", string shape = "None")
         : m_color(color), m_shape(shape) {}
 
-    ::taihe::string getMessage() {
-        return "It's Rect";
-    }
+    string getMessage() { return "It's Rect"; }
+    string getColor() { return m_color; }
+    string getShape() { return m_shape; }
+    void baseFunc() { std::cout << "IRect" << std::endl; }
 
-    ::taihe::string getColor() {
-        return this->m_color;
-    }
-
-    void baseFunc() {
-        std::cout << "IRect" << std::endl;
-    }
-
-    ::taihe::string getShape() {
-        return this->m_shape;
-    }
 private:
-    ::taihe::string m_color;
-    ::taihe::string m_shape;
+    string m_color;
+    string m_shape;
 };
 
-::multiple_inherit::IColorable createIColorable(::taihe::string_view color) {
-    return taihe::make_holder<IColorableImpl, ::multiple_inherit::IColorable>(color);
+IColorable createIColorable(string_view color) {
+    return make_holder<IColorableImpl, IColorable>(color);
 }
 
-::multiple_inherit::IShape createIShape(::taihe::string_view shape) {
-    return taihe::make_holder<IShapeImpl, ::multiple_inherit::IShape>(shape);
+IShape createIShape(string_view shape) {
+    return make_holder<IShapeImpl, IShape>(shape);
 }
 
-::multiple_inherit::IRect createIRect(::taihe::string_view color, ::taihe::string_view shape) {
-    return taihe::make_holder<IRectImpl, ::multiple_inherit::IRect>(color, shape);
+IRect createIRect(string_view color, string_view shape) {
+    return make_holder<IRectImpl, IRect>(color, shape);
 }
+
+TH_EXPORT_CPP_API_createIColorable(createIColorable);
+TH_EXPORT_CPP_API_createIShape(createIShape);
+TH_EXPORT_CPP_API_createIRect(createIRect);
 ```
 
-Taihe 的 C++ 实现侧与 Taihe 的 interface 是接口与实现的关系，Taihe 会将实现的对应名字的函数绑定到 Taihe 的 interface 对象上
+> **说明**：C++ 实现类**无需继承关系**，只要实现对应的方法即可。如果希望通过继承复用代码也是允许的。
 
-额外信息: C++ 实现侧的 impl 类直接是**允许没有继承关系**的，只要实现对应的方法就能够成功绑定, 用户在 C++ 实现时如果希望通过继承来完成现有方法的复用在 Taihe 也是允许的，代码如下：
+### 使用 C++ 继承的写法（可选）
 
 ```cpp
-class IColorableImpl {
+class IRectImpl : public IColorableImpl, public IShapeImpl {
 public:
-    IColorableImpl(): m_color("None") {}
-
-    IColorableImpl(::taihe::string color): m_color(color) {}
-
-    virtual ::taihe::string getColor() {
-        return this->m_color;
-    }
-
-    virtual void baseFunc() {
-        std::cout << "IColor" << std::endl;
-    }
-private:
-    ::taihe::string m_color;
-};
-
-class IShapeImpl {
-public:
-    IShapeImpl(): m_shape("None") {}
-
-    IShapeImpl(::taihe::string shape): m_shape(shape) {}
-
-    virtual ::taihe::string getShape() {
-        return this->m_shape;
-    }
-
-    virtual void baseFunc() {
-        std::cout << "IShape" << std::endl;
-    }
-private:
-    ::taihe::string m_shape;
-};
-
-class IRectImpl: public IColorableImpl, public IShapeImpl {
-    public:
-    IRectImpl()
-        : IColorableImpl("None"), IShapeImpl("None") {}
-
-    IRectImpl(::taihe::string color, ::taihe::string shape)
+    IRectImpl(string color, string shape)
         : IColorableImpl(color), IShapeImpl(shape) {}
 
-    virtual ::taihe::string getMessage() {
-        return "It's Rect";
-    }
+    string getMessage() { return "It's Rect"; }
 
-    // 注：覆盖原有函数实现需要记得写 override
-    virtual void baseFunc() override {
+    // 覆盖原有方法需要 override
+    void baseFunc() override {
         std::cout << "IRect" << std::endl;
     }
 };
 ```
 
-## 第三步：在 ets 侧使用
+## 第三步：编译运行
+
+```sh
+taihe-tryit test -u sts cookbook/multiple_inherit
+```
+
+## 使用示例
 
 **File: `user/main.ets`**
 
 ```typescript
-let Obj = multiple_inherit.createIRect("Red", "Square");
-console.log("Obj's Color is: " + Obj.getColor());
-console.log("Obj's Shape is: " + Obj.getShape());
-console.log("Obj's Message is: " + Obj.getMessage());
+import * as multiple_inherit from "multiple_inherit";
+
+loadLibrary("multiple_inherit");
+
+function main() {
+    let rect = multiple_inherit.createIRect("Red", "Square");
+    
+    console.log("Color: " + rect.getColor());    // Red
+    console.log("Shape: " + rect.getShape());    // Square
+    console.log("Message: " + rect.getMessage()); // It's Rect
+}
 ```
 
-**Stdout**
+**输出：**
 
-```sh
-Obj's Color is: Red
-Obj's Shape is: Square
-Obj's Message is: It's Rect
 ```
+Color: Red
+Shape: Square
+Message: It's Rect
+```
+
+---
+
+## 相关文档
+
+- [继承](../inherit/README.md) - 单继承基础
+- [多态](../polymorphism/README.md) - 多态特性

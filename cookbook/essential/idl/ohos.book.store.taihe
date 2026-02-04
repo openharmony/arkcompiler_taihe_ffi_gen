@@ -79,8 +79,8 @@ function SaveBookToInternet(url: String);
 @overload("SaveBook")
 function SaveBookToFile(p: Path);
 
-@gen_async("uploadBook")
-@gen_promise("uploadBookPromise")
+@gen_async("uploadBookWithCallback")
+@gen_promise("uploadBookReturnsPromise")
 function uploadBook(b: Book): String;
 
 @on_off function onBookSold();

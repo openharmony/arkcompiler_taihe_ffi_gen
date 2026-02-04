@@ -34,34 +34,34 @@ public:
     {
     }
 
-    string getStrSync()
+    string getStringSync()
     {
         return str;
     }
 
-    ::taihe::string getStrWithAsync()
+    ::taihe::string getStringWithCallback()
     {
-        return str;
+        return getStringSync();
     }
 
-    ::taihe::string getStrRetPromise()
+    ::taihe::string getStringReturnsPromise()
     {
-        return str;
+        return getStringSync();
     }
 
-    void setStrSync(string_view a)
+    void setStringSync(string_view a)
     {
         this->str = a;
     }
 
-    void setStrWithAsync(::taihe::string_view a)
+    void setStringWithCallback(::taihe::string_view a)
     {
-        this->str = a;
+        setStringSync(a);
     }
 
-    void setStrRetPromise(::taihe::string_view a)
+    void setStringReturnsPromise(::taihe::string_view a)
     {
-        this->str = a;
+        setStringSync(a);
     }
 
 private:
@@ -79,8 +79,8 @@ int32_t addSync(int32_t a, int32_t b)
 }
 }  // namespace
 
-TH_EXPORT_CPP_API_addAsync(addSync);
-TH_EXPORT_CPP_API_addPromise(addSync);
+TH_EXPORT_CPP_API_addWithCallback(addSync);
+TH_EXPORT_CPP_API_addReturnsPromise(addSync);
 TH_EXPORT_CPP_API_addSync(addSync);
 TH_EXPORT_CPP_API_makeIStringHolder(makeIStringHolder);
 // NOLINTEND

@@ -22,18 +22,18 @@ function addSync(a: i32, b: i32): i32;
 
 @class
 interface IBase {
-    @rename("getAsync")
+    @rename("getString")
     @async GetWithCallback(): String;
 
-    @rename("getPromise")
+    @rename("getString")
     @promise GetReturnsPromise(): String;
 
     Get(): String;
   
-    @rename("setAsync")
+    @rename("setString")
     @async SetWithCallback(a: String): void;
 
-    @rename("setPromise")
+    @rename("setString")
     @promise SetReturnsPromise(a: String): void;
 
     Set(a: String): void;
@@ -55,20 +55,14 @@ interface IBase {
 
 function makeGlobalSync();
 
-@rename("getIBaseAsync")
-@async function getIBaseWithCallback(): IBase;
-
-@rename("getIBasePromise")
-@promise function getIBaseReturnsPromise(): IBase;
-
 function getIBase(): IBase;
 
 @static("IBase")
-@rename("printAsync")
+@rename("print")
 @async function printWithCallback(): void;
 
 @static("IBase")
-@rename("printPromise")
+@rename("print")
 @promise function printReturnsPromise(): void;
 
 @static("IBase")

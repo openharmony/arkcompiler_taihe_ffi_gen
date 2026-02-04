@@ -1,49 +1,84 @@
 # Taihe 绑定机制
 
-## Taihe 如何实现方法的绑定
+> **学习目标**：理解 Taihe 如何在 ArkTS 和 C++ 之间建立函数与类型的绑定关系。
 
-| 语言      | 文件             | 函数                             |
-|-----------|------------------|----------------------------------|
-| ani       | binding.ani.cpp  | `binding_convert_color_ANIFunc1` |
-| Taihe C++ | binding.proj.hpp | `binding::convert`               |
-| Taihe C   | binding.abi.h    | `binding_convert_color_f1`       |
-| C++ impl  | binding.impl.cpp | `convert_color`                  |
+本文档深入介绍 Taihe 的绑定原理，帮助你理解生成代码的结构和调用链。
 
-用户实际调用链条为：
+## 函数的绑定
 
-1. ets 侧使用函数 `convert_color()`
-2. ani 侧函数 `binding_convert_color_ANIFunc1()`
-3. taihe C++ 侧函数 `binding::convert()`
-4. taihe C 侧函数 `binding_convert_color_f1()`
-5. 实现侧函数 `convert_color()`
+当你在 Taihe IDL 中定义一个函数时，Taihe 会生成多层代码来实现跨语言调用。
 
-对应文件生成在 `generated/` 中
+### 生成文件对照表
 
-此外，为了方便实现侧开发，在 `temp/` 中有生成 `.impl.cpp` 的预实现，用户只需要将此文件里的函数实现改为自己的实现即可
+| 层级 | 文件 | 符号 |
+|------|------|------|
+| ANI 桥接层 | `binding.ani.cpp` | `binding_convert_color_ANIFunc1` |
+| C++ 投影层 | `binding.proj.hpp` | `binding::convert` |
+| C ABI 层 | `binding.abi.h` | `binding_convert_color_f1` |
+| 用户实现 | `binding.impl.cpp` | `convert_color` |
+
+### 调用链路
+
+当 ArkTS 代码调用 `convert_color()` 函数时，实际执行路径为：
+
+```
+ArkTS: convert_color()
+    ↓
+ANI: binding_convert_color_ANIFunc1()
+    ↓
+C++: binding::convert()
+    ↓
+ABI: binding_convert_color_f1()
+    ↓
+实现: convert_color()
+```
+
+> **💡 提示**
+>
+> 生成的代码位于 `generated/` 目录，实现模板位于 `generated/temp/`。
+
+### 实现示例
+
+Taihe 会在 `temp/` 中生成实现模板，你只需填写业务逻辑：
 
 ```cpp
 // temp/binding.impl.cpp
 
 ::binding::Color convert_color(::binding::Color const& a) {
     throw std::runtime_error("Function convert_color Not implemented");
-    // author need to modify this implement, e.g.
+    // 将此行替换为你的实现，例如：
     // return ::binding::Color{ a.G, a.B, a.R };
 }
 ```
 
-## Taihe 如何实现 struct 的绑定
+## Struct 的绑定
 
-struct 在 Taihe 中是纯数据的，所以不需要用户在实现侧填写实现，使用者直接使用即可
+`struct` 在 Taihe 中是纯数据类型，无需用户编写实现代码，可以直接在两端使用。
 
-| 语言      | 文件                     | 函数                            |
-|-----------|--------------------------|---------------------------------|
-| ani       | binding.Color.ani.1.h    | `binding_Color_intoANI/fromANI` |
-| Taihe C++ | binding.Color.proj.1.hpp | `binding::Color`                |
-| Taihe C   | binding.Color.abi.1.h    | `struct binding_Color_t`        |
+### 生成文件对照表
 
-用户实际调用链条如下：
+| 层级 | 文件 | 符号 |
+|------|------|------|
+| ANI 转换 | `binding.Color.ani.1.hpp` | `from_ani<Color>` / `into_ani<Color>` |
+| C++ 投影 | `binding.Color.proj.1.hpp` | `binding::Color` |
+| C ABI | `binding.Color.abi.1.h` | `struct binding_Color_t` |
 
-1. ets 侧使用 `new binding.Color`
-2. ani 侧 `binding_Color_intoANI/fromANI()`
-3. Taihe C++ 侧 `binding::Color`
-4. Taihe C 侧函数 `struct binding_Color_t`
+### 调用链路
+
+```
+ArkTS: new binding.Color(...)
+    ↓
+ANI: from_ani / into_ani
+    ↓
+C++: binding::Color
+    ↓
+ABI: struct binding_Color_t
+```
+
+---
+
+## 相关文档
+
+- [Hello World](../hello_world/README.md) - 快速入门示例
+- [基础能力](../basic_abilities/README.md) - 类型映射详解
+- [Interface 接口](../interface/README.md) - 接口绑定机制

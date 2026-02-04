@@ -13,18 +13,18 @@
  * limitations under the License.
  */
 
-@gen_async("add")
-@gen_promise("add")
+@gen_async
+@gen_promise
 function addSync(a: i32, b: i32): i32;
 
 @class
 interface IBase {
-    @gen_async("getAsync")
-    @gen_promise("getPromise")
+    @gen_async("getWithCallback")
+    @gen_promise("getReturnsPromise")
     get(): String;
   
-    @gen_async("setAsync")
-    @gen_promise("setPromise")
+    @gen_async("setWithCallback")
+    @gen_promise("setReturnsPromise")
     set(a: String): void;
 
     @gen_async
@@ -36,13 +36,11 @@ interface IBase {
 @gen_promise
 function makeGlobalSync();
 
-@gen_async("getIBaseAsync")
-@gen_promise("getIBasePromise")
 function getIBase(): IBase;
 
 @static("IBase")
-@gen_async("printAsync")
-@gen_promise("printPromise")
+@gen_async
+@gen_promise
 function PrintSync(): void;
 
 struct Data {
@@ -51,10 +49,10 @@ struct Data {
   c: i32;
 }
 
-@gen_async("fromStruct")
-@gen_promise("fromStruct")
+@gen_async
+@gen_promise
 function fromStructSync(data: Data): void;
 
-@gen_async("toStruct")
-@gen_promise("toStruct")
+@gen_async
+@gen_promise
 function toStructSync(a: String, b: String, c: i32): Data;

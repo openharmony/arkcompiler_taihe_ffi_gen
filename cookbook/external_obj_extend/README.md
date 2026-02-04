@@ -1,38 +1,57 @@
-# External object extend
+# External Object Extend（继承外部类）
 
-前面的章节中，我们讲述了 class 继承 class 的建议写法
+> **学习目标**：掌握如何继承外部 ArkTS 类并在 C++ 中实现方法覆盖。
 
-本章继续介绍继承外部 class 的建议写法，通过 `@!sts_inject` 注解将 ETS 侧数据结构注入，保证继承关系，定义 C++ 侧数据结构（以 `_inner` 后缀标识）调用具体函数实现。注意，C++ 数据结构（以 `_th` 后缀标识）不能在用户侧使用。
+## 核心概念
 
-## 第一步：在 Taihe IDL 文件中声明
+通过 `@!sts_inject` 注解将 ArkTS 类定义注入，使 Taihe 生成的类能够继承外部类。
 
-假设当前文件中定义了一个类 MyContext，需要继承其他文件中定义好的类 Context，类里有两个方法，start() 和 stop()
+| 组件 | 作用 |
+|------|------|
+| 外部类 | 已存在的 ArkTS 类（如 `Context`） |
+| `*_inner` 接口 | C++ 侧的内部实现 |
+| 注入的 ArkTS 类 | 继承外部类，委托到 `*_inner` |
 
-假设希望覆盖父类的 stop() 方法，使用父类的 start() 方法，则在 Taihe IDL 文件中的定义如下：
+---
+
+## 第一步：定义接口
+
+假设需要继承外部类 `Context`，并覆盖其 `stop()` 方法。
+
+**外部类定义：**
+
+```typescript
+// other.subsystem
+export class Context {
+    start(): string { return "Context start"; }
+    stop(): string { return "Context stop"; }
+}
+```
 
 **File: `idl/external_obj_extend.taihe`**
 
 ```rust
+// 导入外部类
 @!sts_inject("import {Context} from 'other.subsystem';")
 
-// C++ 数据结构，在内部使用
+// C++ 内部接口（只声明需要覆盖的方法）
 @class
 interface MyContext_inner {
-    // 此处只需要声明 override 的方法
     stop(): String;
 }
 
-// 构造内部对象
 function createMyContext_inner(): MyContext_inner;
 
-// ETS 数据结构，保证继承关系
+// 注入继承外部类的 ArkTS 类
 @!sts_inject("
 export class MyContext extends Context {
     inner: MyContext_inner;
-    // 此处只需要实现 override 的方法
+    
+    // 覆盖 stop 方法
     stop(): string {
         return this.inner.stop();
     }
+    
     constructor() {
         this.inner = createMyContext_inner();
     }
@@ -43,59 +62,74 @@ export class MyContext extends Context {
 ")
 ```
 
-这里使用到的 Context 类型如下：
+### 设计思路
 
-```typescript
-export class Context {
-    start(): string {
-        return "Context start";
-    }
-    stop(): string {
-        return "Context stop";
-    }
-}
-```
+1. `MyContext_inner` 只声明需要覆盖的方法
+2. `MyContext` 继承 `Context`，未覆盖的方法自动使用父类实现
+3. 覆盖的方法委托给 `inner` 对象
 
-## 第二步：实现声明的接口
+## 第二步：实现 C++ 代码
 
 **File: `author/src/external_obj_extend.impl.cpp`**
 
 ```cpp
+#include "external_obj_extend.impl.hpp"
+
+using namespace taihe;
+using namespace external_obj_extend;
+
 class MyContext_innerImpl {
 public:
-    MyContext_innerImpl() {}
-
-    ::taihe::string start() {
-        return "MyContext start";
-    }
-    ::taihe::string stop() {
-        return "MyContext stop";
+    // 实现覆盖的方法
+    string stop() {
+        return "MyContext stop";  // 自定义实现
     }
 };
 
-::external_obj_extend::MyContext_inner createMyContext_inner() {
-    return taihe::make_holder<MyContext_innerImpl, ::external_obj_extend::MyContext_inner>();
+MyContext_inner createMyContext_inner() {
+    return make_holder<MyContext_innerImpl, MyContext_inner>();
 }
+
+TH_EXPORT_CPP_API_createMyContext_inner(createMyContext_inner);
 ```
 
-在 C++ 侧实现类中的方法并提供构造函数
+## 第三步：编译运行
 
-## 第三步：生成并编译
+```sh
+taihe-tryit test -u sts cookbook/external_obj_extend
+```
 
-用户侧使用
+## 使用示例
 
 **File: `user/main.ets`**
 
 ```typescript
-let context = new Context();
-console.log("base class: ", context.start(), " ", context.stop());
-let mycontext = new lib.MyContext();
-console.log("sub class: ", mycontext.start(), " ", mycontext.stop());
+import { Context } from "other.subsystem";
+import * as lib from "external_obj_extend";
+
+loadLibrary("external_obj_extend");
+
+function main() {
+    let context = new Context();
+    console.log("base: ", context.start(), context.stop());
+    // base: Context start Context stop
+    
+    let mycontext = new lib.MyContext();
+    console.log("sub: ", mycontext.start(), mycontext.stop());
+    // sub: Context start MyContext stop  （start 使用父类，stop 使用覆盖）
+}
 ```
 
-**Stdout**
+**输出：**
 
-```sh
-base class:  Context start   Context stop
-sub class:  Context start   MyContext stop
 ```
+base: Context start Context stop
+sub: Context start MyContext stop
+```
+
+---
+
+## 相关文档
+
+- [类继承](../class_extend/README.md) - Taihe 内部类继承
+- [External Object](../external_obj/README.md) - 外部对象处理

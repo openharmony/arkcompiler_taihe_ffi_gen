@@ -1,20 +1,41 @@
 # 继承
 
-本章节会介绍继承，以银行卡付款为例子
+> **学习目标**：掌握 Taihe 中接口继承机制以及 `@class`、`@get`、`@set` 注解的使用。
 
-## 第一步：编写接口原型
+本教程以"银行卡付款系统"为例，介绍接口继承的用法。
+
+## 核心概念
+
+### 继承注解
+
+| 注解 | 作用 | 说明 |
+|------|------|------|
+| `@class` | 生成类而非接口 | ArkTS 侧投影为 `class` 而非 `interface` |
+| `@get` | 定义 getter | 声明只读属性的访问器 |
+| `@set` | 定义 setter | 声明可写属性的访问器 |
+
+### `@get` / `@set` 命名规则
+
+- **带参数**：`@get("balance")` 直接指定属性名
+- **无参数**：方法名必须以 `get`/`set` 开头，属性名取剩余部分并首字母小写
+  - `getBalance()` → 属性名 `balance`
+  - `setIntlEnabled()` → 属性名 `intlEnabled`
+
+---
+
+## 第一步：定义接口
 
 **File: `idl/inherit.taihe`**
 
 ```rust
-interface Payable{
+interface Payable {
     pay(amountDue: f64): void;
 }
 
 @class
 interface CreditCard : Payable {
     topUp(topUpAmount: f64): void;
-    @get("banlance") getBalance(): f64;
+    @get("balance") getBalance(): f64;
     @get getIntlEnabled(): bool;
     @set setIntlEnabled(tag: bool): void;
 }
@@ -22,111 +43,210 @@ interface CreditCard : Payable {
 function makeCreditCard(initAmount: f64): CreditCard;
 ```
 
-我们已经知道 `@` 是 taihe 中注解的写法，这里我们解释 `@class` `@get` `@set` 三种注解
+**说明：**
+- `CreditCard : Payable` 表示继承自 `Payable` 接口
+- `@class` 使 ArkTS 侧生成 `class CreditCard` 而非 `interface CreditCard`
+- `balance` 为只读属性（只有 getter）
+- `intlEnabled` 为可读写属性（有 getter 和 setter）
 
-- `@class`
-
-  对于上面的接口声明，如果不添加 `@class` 注解，那么在 ets 侧会默认投影成 `interface CreditCard`. 如果需要将其投影为 `class` 则需使用 `@class` 注解，使其在 ets 侧直接生成为 `class CreditCard`.
-
-- `@get` 与 `@set`
-
-  taihe 的 interface 中并不支持直接定义成员变量，但可以通过 `@get` 与 `@set` 注解来说明将某特定成员方法声明为某数据成员的 getter 或 setter，如样例中的 CreditCard 在 ets 侧会有一个只读变量 balance，以及一个可读写变量 intlEnabled.
-
-  `@get` 和 `@set` 注解中可以有参数，表示该 getter 或 setter 所对应的数据成员名；也可以省略该参数，这种情况下，该方法名必须以 `get` 或 `set` 起始，对应的数据成员名会取方法名中 `get` 或 `set` 后的部分，然后将剩余部分的首字母小写（即按照小驼峰命名法）。
-
-## 第二步：完成 C++ 实现
+## 第二步：实现 C++ 代码
 
 **File: `author/src/inherit.impl.cpp`**
 
 ```cpp
-class PayableImpl {
-public:
-    PayableImpl(double num) {}
+#include "inherit.impl.hpp"
 
-    void pay(double amountDue) {}
-private:
-};
+using namespace taihe;
 
 class CreditCardImpl {
 public:
-    CreditCardImpl(double num): amount(num), IntlEnabled(false) {}
+    CreditCardImpl(double initAmount) : amount(initAmount), intlEnabled(false) {}
 
     void topUp(double topUpAmount) {
-        this->amount += topUpAmount;
+        amount += topUpAmount;
     }
 
     double getBalance() {
-        return this->amount;
+        return amount;
     }
 
     bool getIntlEnabled() {
-        return this->IntlEnabled;
+        return intlEnabled;
     }
 
     void setIntlEnabled(bool tag) {
-        this->IntlEnabled = tag;
+        intlEnabled = tag;
     }
 
-    // 允许重写父类方法
+    // 实现继承自 Payable 的方法
     void pay(double amountDue) {
-        if (amountDue > this->amount) {
+        if (amountDue > amount) {
             std::cout << "Insufficient balance" << std::endl;
             return;
         }
-        this->amount -= amountDue;
+        amount -= amountDue;
         std::cout << "Payment successful" << std::endl;
-        return;
     }
+
 private:
     double amount;
-    bool IntlEnabled;
+    bool intlEnabled;
 };
 
 CreditCard makeCreditCard(double initAmount) {
     return make_holder<CreditCardImpl, CreditCard>(initAmount);
 }
+
+TH_EXPORT_CPP_API_makeCreditCard(makeCreditCard);
 ```
 
-## 第三步：在 ets 侧使用
+## 第三步：编译运行
+
+```sh
+taihe-tryit test -u sts cookbook/inherit
+```
+
+## 使用示例
 
 **File: `user/main.ets`**
 
 ```typescript
-// 初始化银行卡
-let card = inherit.makeCreditCard(1000.0);
-// 查看当前是否可以进行国际交易
-console.log(card.intlEnabled);
-// 设置为可进行国际交易
-card.intlEnabled = true;
-// 查看当前是否可以进行国际交易
-console.log(card.intlEnabled);
-// 查看余额
-console.log(card.balance);
-// 购买一件国际商品
-console.log("Buy an international product")
-card.pay(50.0); // 子 interface 可以直接调用父 inerface 的方法
-// 查看余额
-console.log(card.balance);
+import * as inherit from "inherit";
+
+loadLibrary("inherit");
+
+function main() {
+    // 创建银行卡，初始余额 1000
+    let card = inherit.makeCreditCard(1000.0);
+    
+    // 查看国际交易状态
+    console.log(card.intlEnabled);  // false
+    
+    // 开启国际交易
+    card.intlEnabled = true;
+    console.log(card.intlEnabled);  // true
+    
+    // 查看余额
+    console.log(card.balance);      // 1000
+    
+    // 付款（调用继承的方法）
+    card.pay(50.0);                 // Payment successful
+    
+    // 查看余额
+    console.log(card.balance);      // 950
+}
 ```
 
-**Stdout**
+**输出：**
 
-```sh
+```
 false
 true
 1000
-Buy an international product
 Payment successful
 950
 ```
 
-在 ets 侧，子 interface 可以直接调用父 interface 的方法，但是需要注意的是，在 C++ 侧，如果子类需要调用父类 interface 的方法，则需要手动转换一次
+---
 
-举例如下：
+## C++ 侧调用继承方法
+
+在 C++ 侧，调用继承来的方法需要先转换为父接口类型：
 
 ```cpp
 CreditCard card = makeCreditCard(100.0);
-// 如果想要调用 pay 方法，因为 pay 是通过继承得到的，在 C++ 侧需要转换为父类 interface
-card->pay(50.0); // false!
-weak::Payable(card)->pay(50.0); // success!（这里建议转换为父接口的 weak 类型以避免增加引用计数带来的开销）
+
+// ❌ 错误：直接调用继承方法
+card->pay(50.0);
+
+// ✅ 正确：转换为父接口的 weak 类型（避免引用计数开销）
+weak::Payable(card)->pay(50.0);
 ```
+
+---
+
+## 继承与实现规则
+
+### interface 与 struct 的继承方式
+
+| 类型 | 继承语法 | 示例 |
+|------|----------|------|
+| `interface` | 使用 `:` | `interface Derived: Base { }` |
+| `struct` | 使用 `@extends` | `struct Derived { @extends base: Base; }` |
+
+> **重要**：只允许 interface 与 interface 之间、struct 与 struct 之间继承，**不允许** interface 和 struct 之间继承/实现。如果 TypeScript 代码中存在这种情况，建议将涉及的类型都改写为 Taihe interface。
+
+### TypeScript 到 Taihe 的转换示例
+
+**带方法的接口继承：**
+
+```typescript
+// TypeScript
+interface BaseInterface {
+    getId(): string;
+}
+
+interface DerivedInterface extends BaseInterface {
+    getValue(): number;
+}
+```
+
+转换为：
+
+```rust
+// Taihe
+interface BaseInterface {
+    getId(): String;
+}
+
+interface DerivedInterface: BaseInterface {
+    getValue(): i32;
+}
+```
+
+**纯数据接口的继承**（参见 [Struct 继承](../struct_extends/README.md)）：
+
+```typescript
+// TypeScript
+interface BaseDataInterface {
+    id: string;
+}
+
+interface DerivedDataInterface extends BaseDataInterface {
+    value: number;
+}
+```
+
+转换为：
+
+```rust
+// Taihe
+struct BaseDataInterface {
+    id: String;
+}
+
+struct DerivedDataInterface {
+    @extends base: BaseDataInterface;
+    value: i32;
+}
+```
+
+### `@class` 注解与继承/实现的关系
+
+当使用 `interface Foo: Bar` 或 `struct Foo { @extends bar: Bar; }` 表示继承关系时，生成的代码取决于 `@class` 注解：
+
+| Foo | Bar | 生成的关系 |
+|-----|-----|------------|
+| `@class` | `@class` | 类继承类 (`class Foo extends Bar`) |
+| `@class` | 无 `@class` | 类实现接口 (`class Foo implements Bar`) |
+| 无 `@class` | 无 `@class` | 接口继承接口 (`interface Foo extends Bar`) |
+| 无 `@class` | `@class` | ❌ **不支持** |
+
+---
+
+## 相关文档
+
+- [Interface 接口](../interface/README.md) - 接口基础定义
+- [Struct 继承](../struct_extends/README.md) - 纯数据类型继承
+- [多继承](../multiple_inherit/README.md) - 多接口继承
+- [多态](../polymorphism/README.md) - 多态特性
