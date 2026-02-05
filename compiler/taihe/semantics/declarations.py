@@ -37,6 +37,7 @@ from taihe.utils.exceptions import DeclRedefError
 from taihe.utils.sources import SourceLocation
 
 if TYPE_CHECKING:
+    from taihe.driver.options import OptionStore
     from taihe.semantics.attributes import AnyAttribute
     from taihe.semantics.visitor import (
         CallbackTypeRefVisitor,
@@ -1205,10 +1206,12 @@ class PackageGroup:
     _all_package_dict: dict[str, PackageDecl]
     _package_dict: dict[str, PackageDecl]
 
-    def __init__(self):
-        super().__init__()
+    _options: "OptionStore"
+
+    def __init__(self, options: "OptionStore"):
         self._all_package_dict = {}
         self._package_dict = {}
+        self._options = options
 
     def __repr__(self) -> str:
         packages_str = ", ".join(repr(x) for x in self._package_dict)
@@ -1221,6 +1224,10 @@ class PackageGroup:
     @property
     def packages(self) -> Collection[PackageDecl]:
         return self._package_dict.values()
+
+    @property
+    def options(self) -> "OptionStore":
+        return self._options
 
     def lookup(self, name: str) -> PackageDecl | None:
         return self._package_dict.get(name)

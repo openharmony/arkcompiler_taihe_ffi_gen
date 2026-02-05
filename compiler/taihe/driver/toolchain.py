@@ -24,7 +24,11 @@ from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
 
 from taihe.driver.backend import BackendRegistry
-from taihe.driver.contexts import CompilerInstance, CompilerInvocation
+from taihe.driver.contexts import (
+    CompilerInstance,
+    CompilerInvocation,
+)
+from taihe.driver.options import OptionRegistry
 from taihe.utils.outputs import BasicOutputConfig, CMakeOutputConfig
 from taihe.utils.resources import (
     PandaVm,
@@ -123,12 +127,15 @@ def taihec(
     src_files: list[Path],
     backend_names: list[str],
     buildsys_name: str | None = None,
-    extra: dict[str, str | None] | None = None,
+    extra: list[str] | None = None,
 ) -> None:
     registry = BackendRegistry()
     registry.register_all()
+
     backend_factories = registry.collect_required_backends(backend_names)
-    backend_configs = [b.create() for b in backend_factories]
+    option_registry = OptionRegistry()
+    for factory in backend_factories:
+        factory.register(option_registry)
 
     if buildsys_name == "cmake":
         output_config = CMakeOutputConfig(
@@ -141,11 +148,14 @@ def taihec(
             dst_dir=dst_dir,
         )
 
+    options = option_registry.parse_args(extra or [])
+    backend_configs = [b.create() for b in backend_factories]
+
     invocation = CompilerInvocation(
         src_files=src_files,
         output_config=output_config,
         backend_configs=backend_configs,
-        extra=extra or {},
+        extra_options=options,
     )
     instance = CompilerInstance(invocation)
     if not instance.run():
