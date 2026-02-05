@@ -60,6 +60,11 @@ from taihe.codegen.ani.attributes import (
     TypedArrayAttr,
     UndefinedAttr,
 )
+from taihe.codegen.ani.options import (
+    ArktsKeepNameOption,
+    ArktsModulePrefixOption,
+    ArktsPathPrefixOption,
+)
 from taihe.codegen.ani.writer import ArkTsImportManager, DefaultNaming, KeepNaming
 from taihe.codegen.cpp.analyses import (
     EnumCppInfo,
@@ -497,9 +502,11 @@ class PackageGroupAniInfo(AbstractAnalysis[PackageGroup]):
         self.mods: dict[str, ArkTsModule] = {}
         self.pkg_map: dict[PackageDecl, ArkTsModuleOrNamespace] = {}
 
+        module_prefix_opt = pg.options.get(ArktsModulePrefixOption)
+        path_prefix_opt = pg.options.get(ArktsPathPrefixOption)
         self.path = ArkTsOutDir(
-            bundle_str=self.am.config.arkts_module_prefix,
-            prefix_str=self.am.config.arkts_path_prefix,
+            bundle_str=module_prefix_opt.prefix if module_prefix_opt else None,
+            prefix_str=path_prefix_opt.prefix if path_prefix_opt else None,
         )
 
         for pkg in pg.packages:
@@ -544,7 +551,8 @@ class PackageAniInfo(AbstractAnalysis[PackageDecl]):
         pg_ani_info = PackageGroupAniInfo.get(am, p.parent_group)
         self.ns = pg_ani_info.get_namespace(p)
 
-        if self.am.config.sts_keep_name:
+        keep_name_opt = p.parent_group.options.get(ArktsKeepNameOption)
+        if keep_name_opt:
             self.naming = KeepNaming()
         else:
             self.naming = DefaultNaming()

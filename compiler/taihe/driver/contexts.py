@@ -32,9 +32,8 @@ from dataclasses import dataclass, field
 from itertools import chain
 from pathlib import Path
 
-from typing_extensions import Self
-
 from taihe.driver.backend import Backend, BackendConfig
+from taihe.driver.options import OptionStore
 from taihe.parse.convert import convert_ast
 from taihe.semantics.analysis import analyze_semantics
 from taihe.semantics.attributes import AttributeRegistry
@@ -76,30 +75,7 @@ class CompilerInvocation:
     src_dirs: list[Path] = field(default_factory=lambda: [])
     output_config: OutputConfig = field(default_factory=NullOutputConfig)
     backend_configs: list[BackendConfig] = field(default_factory=lambda: [])
-
-    extra: dict[str, str | None] = field(default_factory=lambda: {})
-
-
-# TODO: refactor this
-@dataclass
-class CompilerConfig:
-    sts_keep_name: bool = False
-    arkts_module_prefix: str | None = None
-    arkts_path_prefix: str | None = None
-
-    @classmethod
-    def construct(cls, configure: dict[str, str | None]) -> Self:
-        res = cls()
-        for k, v in configure.items():
-            if k == "sts:keep-name":
-                res.sts_keep_name = True
-            elif k == "arkts:module-prefix":
-                res.arkts_module_prefix = v
-            elif k == "arkts:path-prefix":
-                res.arkts_path_prefix = v
-            else:
-                raise ValueError(f"unknown codegen config {k!r}")
-        return res
+    extra_options: OptionStore = field(default_factory=OptionStore)
 
 
 class CompilerInstance:
@@ -111,8 +87,8 @@ class CompilerInstance:
     It also provides utility methods for driving the compilation process.
     """
 
-    invocation: CompilerInvocation
-    config: CompilerConfig
+    src_files: list[Path]
+    src_dirs: list[Path]
 
     diagnostics_manager: DiagnosticsManager
     source_manager: SourceManager
@@ -127,16 +103,16 @@ class CompilerInstance:
         self,
         invocation: CompilerInvocation,
         *,
-        dm: type[DiagnosticsManager] = ConsoleDiagnosticsManager,
+        dm: DiagnosticsManager | None = None,
     ):
-        self.invocation = invocation
-        self.config = CompilerConfig.construct(invocation.extra)
-
-        self.diagnostics_manager = dm()
-        self.source_manager = SourceManager()
-        self.package_group = PackageGroup()
+        self.diagnostics_manager = dm or ConsoleDiagnosticsManager()
         self.attribute_registry = AttributeRegistry()
-        self.analysis_manager = AnalysisManager(self.config)
+        self.analysis_manager = AnalysisManager()
+
+        self.src_files = invocation.src_files
+        self.src_dirs = invocation.src_dirs
+        self.source_manager = SourceManager()
+        self.package_group = PackageGroup(invocation.extra_options)
 
         self.output_manager = invocation.output_config.construct()
         self.backends = [
@@ -153,8 +129,8 @@ class CompilerInstance:
 
     def collect(self):
         """Adds all `.taihe` files inside a directory. Subdirectories are ignored."""
-        direct = self.invocation.src_files
-        scanned = chain.from_iterable(p.iterdir() for p in self.invocation.src_dirs)
+        direct = self.src_files
+        scanned = chain.from_iterable(p.iterdir() for p in self.src_dirs)
 
         for path in chain(direct, scanned):
             source = SourceFile(path)

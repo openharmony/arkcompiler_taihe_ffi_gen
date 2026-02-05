@@ -20,6 +20,7 @@ from pathlib import Path
 
 from taihe.driver.backend import BackendRegistry
 from taihe.driver.contexts import CompilerInstance, CompilerInvocation
+from taihe.driver.options import OptionRegistry
 from taihe.utils.build_metadata import BuildMetadata
 from taihe.utils.outputs import BasicOutputConfig, CMakeOutputConfig
 from taihe.utils.resources import (
@@ -30,8 +31,8 @@ from taihe.utils.resources import (
 
 
 def main():
-    registry = BackendRegistry()
-    registry.register_all()
+    backend_registry = BackendRegistry()
+    backend_registry.register_all()
 
     parser = argparse.ArgumentParser(
         prog="taihec",
@@ -64,7 +65,7 @@ def main():
         nargs="*",
         action="extend",
         default=[],
-        choices=registry.get_backend_names(),
+        choices=backend_registry.get_backend_names(),
         help="backends to generate sources, default: abi-header, abi-source, c-author",
     )
     parser.add_argument(
@@ -110,8 +111,10 @@ def main():
         print("taihec: error: no input files", file=sys.stderr)
         return -1
 
-    backend_factories = registry.collect_required_backends(args.backends)
-    backend_configs = [b.create() for b in backend_factories]
+    backend_factories = backend_registry.collect_required_backends(args.backends)
+    option_registry = OptionRegistry()
+    for factory in backend_factories:
+        factory.register(option_registry)
 
     if args.buildsys == "cmake":
         output_config = CMakeOutputConfig(
@@ -124,20 +127,15 @@ def main():
             dst_dir=dst_dir,
         )
 
-    extra: dict[str, str | None] = {}
-    for config in args.config:
-        k, *v = config.split("=", 1)
-        if v:
-            extra[k] = v[0]
-        else:
-            extra[k] = None
+    options = option_registry.parse_args(args.config)
+    backend_configs = [b.create() for b in backend_factories]
 
     invocation = CompilerInvocation(
         src_files=src_files,
         src_dirs=src_dirs,
         backend_configs=backend_configs,
         output_config=output_config,
-        extra=extra,
+        extra_options=options,
     )
 
     instance = CompilerInstance(invocation)

@@ -14,12 +14,15 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from taihe.driver.backend import Backend, BackendConfig
-from taihe.driver.contexts import CompilerInstance
 from taihe.utils.resources import StandardLibrary
 from taihe.utils.sources import SourceFile
+
+if TYPE_CHECKING:
+    from taihe.driver.contexts import CompilerInstance
+    from taihe.driver.options import OptionRegistry
 
 
 @dataclass
@@ -27,14 +30,17 @@ class AniBridgeBackendConfig(BackendConfig):
     NAME = "ani-bridge"
     DEPS: ClassVar = ["cpp-user"]
 
-    keep_name: bool = False
-    """Use the original function name (instead of "camelCase") in exported ArkTS sources."""
+    @classmethod
+    def register(cls, option_registry: "OptionRegistry"):
+        from taihe.codegen.ani.options import all_ani_config_options
+
+        option_registry.register(*all_ani_config_options)
 
     @classmethod
     def create(cls):
         return AniBridgeBackendConfig()
 
-    def construct(self, instance: CompilerInstance):
+    def construct(self, instance: "CompilerInstance"):
         from taihe.codegen.ani.attributes import all_attr_types
         from taihe.codegen.ani.gen_ani import AniCodeGenerator
         from taihe.codegen.ani.gen_sts import StsCodeGenerator

@@ -93,7 +93,11 @@ class BuildSystem(ABC):
         self._create_author_files()
         self._create_user_files()
 
-    def generate(self, buildsys_name: str | None, extra: dict[str, str | None]) -> None:
+    def generate(
+        self,
+        buildsys_name: str | None,
+        extra: list[str],
+    ) -> None:
         """Generate code from IDL files."""
         if not self.idl_dir.is_dir():
             raise FileNotFoundError(f"IDL directory not found: '{self.idl_dir}'")
@@ -567,16 +571,9 @@ def main():
             if args.command == "create":
                 build_system.create()
             if args.command in ("generate", "test"):
-                extra: dict[str, str | None] = {}
-                for config in args.config:
-                    k, *v = config.split("=", 1)
-                    if v:
-                        extra[k] = v[0]
-                    else:
-                        extra[k] = None
                 build_system.generate(
                     buildsys_name=args.buildsys,
-                    extra=extra,
+                    extra=args.config,
                 )
             if args.command in ("build", "test"):
                 build_system.build(
