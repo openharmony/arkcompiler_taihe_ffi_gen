@@ -372,13 +372,13 @@ class TaiheGenerator:
     def generate(self, g: "PackageGroup"):
         for p in g.all_packages:
             fd = FileDescriptor(
-                relative_path=f"{p.name}{IDL_FILE_DEFAULT_EXT}",
-                kind=FileKind.TEMPLATE,
+                relative_path=f"idl/{p.name}{IDL_FILE_DEFAULT_EXT}",
+                kind=FileKind.TAIHE,
             )
             with self.om.open(fd) as buffer:
-                self.printer = TaihePrinter(
+                printer = TaihePrinter(
                     buffer,
                     show_resolved=self.show_resolved,
                     colorize=self.colorize,
                 )
-                p.accept(self.printer)
+                p.accept(printer)

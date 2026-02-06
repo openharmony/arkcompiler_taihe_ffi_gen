@@ -173,7 +173,7 @@ class CTemplatePackageGenerator:
         self.target = CSourceWriter(
             self.om,
             f"temp/{pkg_c_impl_info.source}",
-            FileKind.TEMPLATE,
+            FileKind.C_TEMPLATE,
         )
 
     def gen_package_file(self):
@@ -216,7 +216,7 @@ class CTemplateIfaceGenerator:
         self.target = CSourceWriter(
             self.om,
             f"temp/{iface_c_impl_info.source}",
-            FileKind.TEMPLATE,
+            FileKind.C_TEMPLATE,
         )
 
     def gen_iface_file(self):

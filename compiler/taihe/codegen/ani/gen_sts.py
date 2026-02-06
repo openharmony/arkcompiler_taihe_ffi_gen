@@ -197,17 +197,24 @@ class StsModuleGenerator:
         mod: ArkTsModule,
     ):
         self.am = am
-        self.target = StsWriter(om, f"{mod.module_name}.ets", FileKind.ETS)
+        self.target = StsWriter(om, mod, FileKind.ETS)
         self.mod = mod
 
     def gen_module_file(self):
         with self.target:
-            namespace_generator = StsNamespaceGenerator(self.target, self.am, self.mod)
+            for descendant_ns in self.mod.descendants:
+                for head in descendant_ns.injected_globs:
+                    self.target.write_block(head)
+            namespace_generator = StsNamespaceGenerator(
+                self.target,
+                self.am,
+                self.mod,
+            )
             namespace_generator.gen_namespace()
             self.gen_utils()
 
     def gen_utils(self):
-        self.target.add_import_decl("@ohos.base", "BusinessError", self.mod.BEType)
+        self.target.add_import_decl(self.mod.BEType, "@ohos.base", "BusinessError")
         self.target.writelns(
             f"type {self.mod.ACType}<T, E = void> = (error: {self.mod.BEType}<E> | null, data: T | undefined) => void;",
         )
@@ -298,8 +305,6 @@ class StsNamespaceGenerator:
         self.ns = ns
 
     def gen_namespace(self):
-        for head in self.ns.injected_heads:
-            self.target.write_block(head)
         for code in self.ns.injected_codes:
             self.target.write_block(code)
         for pkg in self.ns.packages:
