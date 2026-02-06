@@ -215,6 +215,42 @@ class AttrTargetError(DiagError):
 
 
 @dataclass
+class AttrDeprecatedWarn(DiagWarn):
+    attr: "AnyAttribute"
+    advice: str | None = None
+
+    def __init__(self, attr: "AnyAttribute", advice: str | None = None):
+        super().__init__(loc=attr.loc)
+        self.attr = attr
+        self.advice = advice
+
+    @override
+    def describe(self) -> str:
+        res = f"Attribute '{self.attr.get_name()}' is deprecated in this context and may be removed in future versions."
+        if self.advice:
+            res += f" {self.advice}"
+        return res
+
+
+@dataclass
+class AttrDeprecatedError(DiagError):
+    attr: "AnyAttribute"
+    advice: str | None = None
+
+    def __init__(self, attr: "AnyAttribute", advice: str | None = None):
+        super().__init__(loc=attr.loc)
+        self.attr = attr
+        self.advice = advice
+
+    @override
+    def describe(self) -> str:
+        res = f"Attribute '{self.attr.get_name()}' is deprecated in this context and cannot be used anymore."
+        if self.advice:
+            res += f" {self.advice}"
+        return res
+
+
+@dataclass
 class DeclRedefNote(DiagNote):
     prev: "NamedDecl"
 

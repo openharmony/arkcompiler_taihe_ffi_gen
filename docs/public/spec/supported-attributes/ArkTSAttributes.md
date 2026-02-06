@@ -18,19 +18,23 @@
 
 ## 类型注解
 
-- `@undefined`：添加在 Taihe unit 类型上，表示该 unit 类型在用户侧被投影为 undefined。
+- `@undefined`：添加在 Taihe `unit` 类型上，表示该 `unit` 类型在用户侧被投影为 `undefined`，而非默认的 `null`。
 
-- `@bigint`：将一个 Taihe Array 在用户侧中投影为 BigInt。（使用可变长小端序补码编码，仅支持 `Array<u64>`）
+- `@null`：添加在 Taihe `unit` 类型上，表示该 `unit` 类型在用户侧被投影为 `null`，该注解实际上与不添加任何注解的效果相同，仅用于明确标识该 `unit` 类型的语义。
 
-- `@arraybuffer`：将一个 Taihe Array 在用户侧中投影为 ArrayBuffer。（仅支持 `Array<u8>`）
+- `@bigint`：将一个 Taihe `Array<u64>` 在用户侧中投影为 `BigInt`。（使用可变长小端序补码编码）
 
-- `@typedarray`：将一个 Taihe Array 在用户侧中投影为 TypedArray。（仅支持 `Array<u8>`, `Array<u16>`, `Array<u32>`, `Array<u64>`, `Array<i8>`, `Array<i16>`, `Array<i32>`, `Array<i64>`, `Array<f32>`, `Array<f64>`）
+- `@arraybuffer`：将一个 Taihe `Array<u8>` 在用户侧中投影为 `ArrayBuffer`。
 
-- `@record`：将一个 Taihe Map 在用户侧中投影为 Record。
+- `@typedarray`：将一个 Taihe `Array` 在用户侧中投影为 `TypedArray`。（仅支持 `Array<u8>`, `Array<u16>`, `Array<u32>`, `Array<u64>`, `Array<i8>`, `Array<i16>`, `Array<i32>`, `Array<i64>`, `Array<f32>`, `Array<f64>`）
+
+- `@record`：将一个 Taihe `Map` 在用户侧中投影为 `Record`。
 
 ## 函数/方法注解
 
-- `@static("ClassName")`：加在全局函数上，表示其在用户侧绑定的函数为静态函数。
+- `@static("ClassName")`：加在全局函数上，表示其在用户侧绑定的函数为静态函数。该注解**可以**与 `@rename` 一起使用。
+
+- `@ctor("ClassName")`：加在全局函数上，表示其在用户侧绑定的函数为某个类的构造器。该注解**不能**与 `@rename` 一起使用。
 
 - `@get("propertyName")`：将一个方法设置为某个属性/变量的 get 方法。
 
