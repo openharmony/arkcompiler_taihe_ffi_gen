@@ -60,7 +60,7 @@ from taihe.codegen.ani.attributes import (
     TypedArrayAttr,
     UndefinedAttr,
 )
-from taihe.codegen.ani.writer import DefaultNaming, KeepNaming, StsWriter
+from taihe.codegen.ani.writer import ArkTsImportManager, DefaultNaming, KeepNaming
 from taihe.codegen.cpp.analyses import (
     EnumCppInfo,
     IfaceCppInfo,
@@ -377,23 +377,31 @@ class ArkTsModuleOrNamespace(ABC):
 
     is_default: bool = datafield(default=False, init=False)
     injected_codes: list[str] = datafield(default_factory=list, init=False)
-    injected_heads: list[str] = datafield(default_factory=list, init=False)
+    injected_globs: list[str] = datafield(default_factory=list, init=False)
     packages: list[PackageDecl] = datafield(default_factory=list, init=False)
     children: dict[str, "ArkTsNamespace"] = datafield(default_factory=dict, init=False)
 
     @property
     @abstractmethod
-    def mod(self) -> "ArkTsModule":
-        pass
+    def mod(self) -> "ArkTsModule": ...
 
     @property
     @abstractmethod
-    def impl_desc(self) -> str:
-        pass
+    def impl_desc(self) -> str: ...
 
     @abstractmethod
-    def get_member(self, name: str, is_default: bool, target: StsWriter) -> str:
-        pass
+    def get_type(
+        self,
+        is_default: bool,
+        *type_path: str,
+        target: ArkTsImportManager,
+    ) -> str: ...
+
+    @property
+    def descendants(self) -> Iterable["ArkTsModuleOrNamespace"]:
+        yield self
+        for child in self.children.values():
+            yield from child.descendants
 
     def add_path(
         self,
@@ -405,9 +413,9 @@ class ArkTsModuleOrNamespace(ABC):
             self.packages.append(pkg)
             self.is_default |= is_default
             return self
-        head, *tail = ns_parts
-        child = self.children.setdefault(head, ArkTsNamespace(self, head))
-        return child.add_path(tail, pkg, is_default)
+        ns_head, *ns_tail = ns_parts
+        child = self.children.setdefault(ns_head, ArkTsNamespace(self, ns_head))
+        return child.add_path(ns_tail, pkg, is_default)
 
 
 @dataclass
@@ -440,14 +448,13 @@ class ArkTsModule(ArkTsModuleOrNamespace):
         ]
         return ".".join(impl_desc_parts)
 
-    def get_member(self, name: str, is_default: bool, target: StsWriter) -> str:
-        filtered_name = "".join(c if c.isalnum() else "_" for c in self.module_name)
-        import_name = f"_taihe_{filtered_name}_{name}"
-        if is_default:
-            target.add_import_default(f"./{self.module_name}.ets", import_name)
-        else:
-            target.add_import_decl(f"./{self.module_name}.ets", name, import_name)
-        return import_name
+    def get_type(
+        self,
+        is_default: bool,
+        *type_path: str,
+        target: ArkTsImportManager,
+    ) -> str:
+        return target.get_type(self, is_default, *type_path)
 
 
 @dataclass
@@ -465,8 +472,18 @@ class ArkTsNamespace(ArkTsModuleOrNamespace):
     def impl_desc(self) -> str:
         return f"{self.parent.impl_desc}.{self.ns_name}"
 
-    def get_member(self, name: str, is_default: bool, target: StsWriter) -> str:
-        return f"{self.parent.get_member(self.ns_name, self.is_default, target)}.{name}"
+    def get_type(
+        self,
+        is_default: bool,
+        *type_path: str,
+        target: ArkTsImportManager,
+    ) -> str:
+        return self.parent.get_type(
+            self.is_default,
+            self.ns_name,
+            *type_path,
+            target=target,
+        )
 
 
 # ANI Analyses
@@ -497,13 +514,13 @@ class PackageGroupAniInfo(AbstractAnalysis[PackageGroup]):
             is_default = ExportDefaultAttr.get(pkg) is not None
 
             mod = self.mods.setdefault(module_str, ArkTsModule(self.path, module_str))
-            ns_name = self.pkg_map[pkg] = mod.add_path(ns_parts, pkg, is_default)
+            ns = self.pkg_map[pkg] = mod.add_path(ns_parts, pkg, is_default)
 
             for attr in StsInjectIntoModuleAttr.get_all(pkg):
-                mod.injected_heads.append(attr.sts_code)
+                ns.injected_globs.append(attr.sts_code)
 
             for attr in StsInjectAttr.get_all(pkg):
-                ns_name.injected_codes.append(attr.sts_code)
+                ns.injected_codes.append(attr.sts_code)
 
     @classmethod
     @override
@@ -812,8 +829,12 @@ class EnumAniInfo(AbstractAnalysis[EnumDecl]):
     def _create(cls, am: AnalysisManager, d: EnumDecl) -> "EnumAniInfo":
         return EnumAniInfo(am, d)
 
-    def sts_type_in(self, target: StsWriter):
-        return self.parent_ns.get_member(self.sts_type_name, self.is_default, target)
+    def sts_type_in(self, target: ArkTsImportManager):
+        return self.parent_ns.get_type(
+            self.is_default,
+            self.sts_type_name,
+            target=target,
+        )
 
 
 class UnionAniInfo(AbstractAnalysis[UnionDecl]):
@@ -841,8 +862,12 @@ class UnionAniInfo(AbstractAnalysis[UnionDecl]):
     def _create(cls, am: AnalysisManager, d: UnionDecl) -> "UnionAniInfo":
         return UnionAniInfo(am, d)
 
-    def sts_type_in(self, target: StsWriter):
-        return self.parent_ns.get_member(self.sts_type_name, self.is_default, target)
+    def sts_type_in(self, target: ArkTsImportManager):
+        return self.parent_ns.get_type(
+            self.is_default,
+            self.sts_type_name,
+            target=target,
+        )
 
 
 class StructAniInfo(AbstractAnalysis[StructDecl]):
@@ -913,8 +938,12 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
     def is_class(self):
         return self.sts_type_name == self.sts_impl_name
 
-    def sts_type_in(self, target: StsWriter):
-        return self.parent_ns.get_member(self.sts_type_name, self.is_default, target)
+    def sts_type_in(self, target: ArkTsImportManager):
+        return self.parent_ns.get_type(
+            self.is_default,
+            self.sts_type_name,
+            target=target,
+        )
 
 
 class IfaceAniInfo(AbstractAnalysis[IfaceDecl]):
@@ -964,8 +993,12 @@ class IfaceAniInfo(AbstractAnalysis[IfaceDecl]):
     def is_class(self):
         return self.sts_type_name == self.sts_impl_name
 
-    def sts_type_in(self, target: StsWriter):
-        return self.parent_ns.get_member(self.sts_type_name, self.is_default, target)
+    def sts_type_in(self, target: ArkTsImportManager):
+        return self.parent_ns.get_type(
+            self.is_default,
+            self.sts_type_name,
+            target=target,
+        )
 
 
 class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
@@ -993,8 +1026,7 @@ class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
         return t.accept(TypeAniInfoDispatcher(am))
 
     @abstractmethod
-    def sts_type_in(self, target: StsWriter) -> str:
-        pass
+    def sts_type_in(self, target: ArkTsImportManager) -> str: ...
 
     @abstractmethod
     def from_ani(
@@ -1003,8 +1035,7 @@ class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
         env: str,
         ani_value: str,
         cpp_after: str,
-    ):
-        pass
+    ): ...
 
     @abstractmethod
     def into_ani(
@@ -1013,8 +1044,7 @@ class TypeAniInfo(AbstractAnalysis[NonVoidType], ABC):
         env: str,
         cpp_value: str,
         ani_after: str,
-    ):
-        pass
+    ): ...
 
     def check_type(
         self,
@@ -1141,7 +1171,7 @@ class EnumTypeAniInfo(TypeAniInfo):
         self.sig_type = AniRuntimeEnumType(enum_ani_info.type_desc)
 
     @override
-    def sts_type_in(self, target: StsWriter) -> str:
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
         enum_ani_info = EnumAniInfo.get(self.am, self.t.decl)
         return enum_ani_info.sts_type_in(target)
 
@@ -1186,7 +1216,7 @@ class ConstEnumTypeAniInfo(TypeAniInfo):
         self.sig_type = enum_ty_ani_info.sig_type
 
     @override
-    def sts_type_in(self, target: StsWriter) -> str:
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
         enum_ty_ani_info = TypeAniInfo.get(self.am, self.t.decl.ty)
         return enum_ty_ani_info.sts_type_in(target)
 
@@ -1233,7 +1263,7 @@ class StructTypeAniInfo(TypeAniInfo):
         self.sig_type = AniRuntimeClassType(struct_ani_info.type_desc)
 
     @override
-    def sts_type_in(self, target: StsWriter) -> str:
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
         struct_ani_info = StructAniInfo.get(self.am, self.t.decl)
         return struct_ani_info.sts_type_in(target)
 
@@ -1281,7 +1311,7 @@ class UnionTypeAniInfo(TypeAniInfo):
         self.sig_type = AniRuntimeUnionType.union(*sig_types)
 
     @override
-    def sts_type_in(self, target: StsWriter) -> str:
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
         union_ani_info = UnionAniInfo.get(self.am, self.t.decl)
         return union_ani_info.sts_type_in(target)
 
@@ -1326,7 +1356,7 @@ class IfaceTypeAniInfo(TypeAniInfo):
         self.sig_type = AniRuntimeClassType(iface_ani_info.type_desc)
 
     @override
-    def sts_type_in(self, target: StsWriter) -> str:
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
         iface_ani_info = IfaceAniInfo.get(self.am, self.t.decl)
         return iface_ani_info.sts_type_in(target)
 
@@ -1368,7 +1398,7 @@ class NullTypeAniInfo(TypeAniInfo):
         self.sig_type = AniRuntimeClassType("std.core.Null")
 
     @override
-    def sts_type_in(self, target: StsWriter) -> str:
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
         return "null"
 
     @override
@@ -1415,7 +1445,7 @@ class UndefinedTypeAniInfo(TypeAniInfo):
         self.sig_type = AniRuntimeUndefinedType()
 
     @override
-    def sts_type_in(self, target: StsWriter) -> str:
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
         return "undefined"
 
     @override
@@ -1463,7 +1493,7 @@ class StringLiteralTypeAniInfo(TypeAniInfo):
         self.value = literal_attr.value
 
     @override
-    def sts_type_in(self, target: StsWriter) -> str:
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
         return dumps(self.value)
 
     @override
@@ -1539,7 +1569,7 @@ class ScalarTypeAniInfo(TypeAniInfo):
         self.sts_type = sts_type
 
     @override
-    def sts_type_in(self, target: StsWriter) -> str:
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
         return self.sts_type
 
     @override
@@ -1574,7 +1604,7 @@ class StringTypeAniInfo(TypeAniInfo):
         self.sig_type = AniRuntimeClassType("std.core.String")
 
     @override
-    def sts_type_in(self, target: StsWriter) -> str:
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
         return "string"
 
     @override
@@ -1626,7 +1656,7 @@ class OpaqueTypeAniInfo(TypeAniInfo):
         self.sig_type = AniRuntimeClassType("std.core.Object")
 
     @override
-    def sts_type_in(self, target: StsWriter) -> str:
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
         return self.sts_type
 
     @override
@@ -1664,7 +1694,7 @@ class OptionalTypeAniInfo(TypeAniInfo):
         self.sig_type = item_ty_ani_info.sig_type.boxed
 
     @override
-    def sts_type_in(self, target: StsWriter) -> str:
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
         item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
         sts_type = item_ty_ani_info.sts_type_in(target)
         return f"({sts_type} | undefined)"
@@ -1739,7 +1769,7 @@ class FixedArrayTypeAniInfo(TypeAniInfo):
         self.sig_type = AniRuntimeFixedArrayType(item_ty_ani_info.sig_type)
 
     @override
-    def sts_type_in(self, target: StsWriter) -> str:
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
         item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
         sts_type = item_ty_ani_info.sts_type_in(target)
         return f"FixedArray<{sts_type}>"
@@ -1803,7 +1833,7 @@ class ArrayTypeAniInfo(TypeAniInfo):
         self.sig_type = AniRuntimeClassType("std.core.Array")
 
     @override
-    def sts_type_in(self, target: StsWriter) -> str:
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
         item_ty_ani_info = TypeAniInfo.get(self.am, self.t.item_ty)
         sts_type = item_ty_ani_info.sts_type_in(target)
         return f"Array<{sts_type}>"
@@ -1894,7 +1924,7 @@ class ArrayBufferTypeAniInfo(TypeAniInfo):
         self.sig_type = AniRuntimeClassType("std.core.ArrayBuffer")
 
     @override
-    def sts_type_in(self, target: StsWriter) -> str:
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
         return "ArrayBuffer"
 
     @override
@@ -1948,7 +1978,7 @@ class TypedArrayTypeAniInfo(TypeAniInfo):
         self.sig_type = AniRuntimeClassType(f"escompat.{self.typedarray_attr.sts_type}")
 
     @override
-    def sts_type_in(self, target: StsWriter) -> str:
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
         return self.typedarray_attr.sts_type
 
     @override
@@ -2031,7 +2061,7 @@ class BigIntTypeAniInfo(TypeAniInfo):
         self.sig_type = AniRuntimeClassType("std.core.BigInt")
 
     @override
-    def sts_type_in(self, target: StsWriter) -> str:
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
         return "BigInt"
 
     @override
@@ -2093,7 +2123,7 @@ class RecordTypeAniInfo(TypeAniInfo):
         self.sig_type = AniRuntimeClassType("std.core.Record")
 
     @override
-    def sts_type_in(self, target: StsWriter) -> str:
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
         key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
         val_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
         key_sts_type = key_ty_ani_info.sts_type_in(target)
@@ -2192,7 +2222,7 @@ class MapTypeAniInfo(TypeAniInfo):
         self.sig_type = AniRuntimeClassType("std.core.Map")
 
     @override
-    def sts_type_in(self, target: StsWriter) -> str:
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
         key_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
         val_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
         key_sts_type = key_ty_ani_info.sts_type_in(target)
@@ -2291,7 +2321,7 @@ class SetTypeAniInfo(TypeAniInfo):
         self.sig_type = AniRuntimeClassType("std.core.Set")
 
     @override
-    def sts_type_in(self, target: StsWriter) -> str:
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
         item_ty_ani_info = TypeAniInfo.get(self.am, self.t.key_ty)
         item_sts_type = item_ty_ani_info.sts_type_in(target)
         return f"Set<{item_sts_type}>"
@@ -2376,7 +2406,7 @@ class VectorTypeAniInfo(TypeAniInfo):
         self.sig_type = AniRuntimeClassType("std.core.Array")
 
     @override
-    def sts_type_in(self, target: StsWriter) -> str:
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
         item_ty_ani_info = TypeAniInfo.get(self.am, self.t.val_ty)
         item_sts_type = item_ty_ani_info.sts_type_in(target)
         return f"Array<{item_sts_type}>"
@@ -2457,7 +2487,7 @@ class CallbackTypeAniInfo(TypeAniInfo):
         self.sig_type = AniRuntimeClassType(f"std.core.Function{len(t.ref.params)}")
 
     @override
-    def sts_type_in(self, target: StsWriter) -> str:
+    def sts_type_in(self, target: ArkTsImportManager) -> str:
         params = []
         for param in self.t.ref.params:
             opt = "?" if OptionalAttr.get(param) else ""
