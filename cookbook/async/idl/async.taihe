@@ -13,10 +13,10 @@
  * limitations under the License.
  */
 
-@static_overload("add")
+@rename("add")
 @async function addAsync(a: i32, b: i32): i32;
 
-@static_overload("add")
+@rename("add")
 @promise function addPromise(a: i32, b: i32): i32;
 
 function addSync(a: i32, b: i32): i32;
@@ -27,9 +27,9 @@ interface IStringHolder {
     @rename("newGet")
     getStrSync(): String;
 
-    @static_overload("setStr")
+    @rename("setStr")
     @async setStrWithAsync(a: String): void;
-    @static_overload("setStr")
+    @rename("setStr")
     @promise setStrRetPromise(a: String): void;
     setStrSync(a: String): void;
 }
