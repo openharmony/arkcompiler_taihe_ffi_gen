@@ -33,5 +33,3 @@
 - `@async`：将一个返回 `T` 类型同步函数封装为接受 `AsyncCallback<T>` 的异步函数。（`type AsyncCallback<T> = (error: BusinessError | null, data: T | undefined) => void;`）
 
 - `@promise`：将一个返回 `Promise<T>` 的函数封装为返回 `Promise<T>` 的异步函数。
-
-- `@static_overload("overloadedName")`：将一个函数设置为 ets 侧的 java like 重载函数。（`overload overloadedName { funcA, funcB, ... }`）

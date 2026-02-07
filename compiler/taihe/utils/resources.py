@@ -25,7 +25,6 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import Path
-from urllib.parse import urljoin
 from sys import exit
 from typing import ClassVar, Final, cast
 from urllib.parse import urljoin
@@ -600,7 +599,11 @@ class PythonBuild(CachedResource):
 
         # Find real root directory (including bin/lib/include)
         root = parent_dir
-        while root.is_dir() and not (root / "bin").exists() and len(list(root.iterdir())) == 1:
+        while (
+            root.is_dir()
+            and not (root / "bin").exists()
+            and len(list(root.iterdir())) == 1
+        ):
             root = next(root.iterdir())
 
         # Next, rename root directory to "parent_dir/pyrt" (i.e. target_dir)
