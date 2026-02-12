@@ -32,8 +32,12 @@ class NamingStrategy(ABC):
         """Convert a name to a function name."""
 
     @abstractmethod
-    def as_field(self, name: str) -> str:
-        """Convert a name to a field name."""
+    def as_property(self, name: str) -> str:
+        """Convert a name to a getter/setter property name."""
+
+    @abstractmethod
+    def as_on_off(self, name: str) -> str:
+        """Convert a name to a on/off event type name."""
 
 
 class DefaultNamingStrategy(NamingStrategy):
@@ -44,7 +48,11 @@ class DefaultNamingStrategy(NamingStrategy):
         return name[0].lower() + name[1:]
 
     @override
-    def as_field(self, name: str) -> str:
+    def as_property(self, name: str) -> str:
+        return name[0].lower() + name[1:]
+
+    @override
+    def as_on_off(self, name: str) -> str:
         return name[0].lower() + name[1:]
 
 
@@ -56,8 +64,11 @@ class UnchangeNamingStrategy(NamingStrategy):
         return name
 
     @override
-    def as_field(self, name: str) -> str:
-        # TODO: remove all `keep-name` options in tests and fix this
+    def as_property(self, name: str) -> str:
+        return name[0].lower() + name[1:]
+
+    @override
+    def as_on_off(self, name: str) -> str:
         return name[0].lower() + name[1:]
 
 

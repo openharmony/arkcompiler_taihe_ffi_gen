@@ -24,6 +24,7 @@ from taihe.codegen.ani.analyses import (
     IfaceMethodAniInfo,
     PackageAniInfo,
     StructAniInfo,
+    StructFieldAniInfo,
     TypeAniInfo,
     UnionAniInfo,
 )
@@ -764,6 +765,7 @@ class AniStructImplGenerator:
             fields_cpp = []
             for parts in struct_ani_info.sts_all_fields:
                 final = parts[-1]
+                final_ani_info = StructFieldAniInfo.get(self.am, final)
                 final_ty_ani_info = TypeAniInfo.get(self.am, final.ty)
                 field_ani = f"ani_field_{final.name}"
                 field_cpp = f"cpp_field_{final.name}"
@@ -772,11 +774,11 @@ class AniStructImplGenerator:
                 )
                 if struct_ani_info.is_class():
                     self.target.writelns(
-                        f'env->Object_GetField_{final_ty_ani_info.ani_type.suffix}(ani_obj, TH_ANI_FIND_CLASS_FIELD(env, "{struct_ani_info.type_desc}", "{final.name}"), reinterpret_cast<{final_ty_ani_info.ani_type.base}*>(&{field_ani}));',
+                        f'env->Object_GetField_{final_ty_ani_info.ani_type.suffix}(ani_obj, TH_ANI_FIND_CLASS_FIELD(env, "{struct_ani_info.type_desc}", "{final_ani_info.sts_name}"), reinterpret_cast<{final_ty_ani_info.ani_type.base}*>(&{field_ani}));',
                     )
                 else:
                     self.target.writelns(
-                        f'env->Object_CallMethod_{final_ty_ani_info.ani_type.suffix}(ani_obj, TH_ANI_FIND_CLASS_METHOD(env, "{struct_ani_info.type_desc}", "%%get-{final.name}", nullptr), reinterpret_cast<{final_ty_ani_info.ani_type.base}*>(&{field_ani}));',
+                        f'env->Object_CallMethod_{final_ty_ani_info.ani_type.suffix}(ani_obj, TH_ANI_FIND_CLASS_METHOD(env, "{struct_ani_info.type_desc}", "%%get-{final_ani_info.sts_name}", nullptr), reinterpret_cast<{final_ty_ani_info.ani_type.base}*>(&{field_ani}));',
                     )
                 final_ty_ani_info.from_ani(
                     self.target,

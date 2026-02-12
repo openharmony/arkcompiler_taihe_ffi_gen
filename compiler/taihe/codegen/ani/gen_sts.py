@@ -25,12 +25,15 @@ from taihe.codegen.ani.analyses import (
     ArkTsModule,
     ArkTsModuleOrNamespace,
     EnumAniInfo,
+    EnumFieldAniInfo,
     GlobFuncAniInfo,
     IfaceAniInfo,
     NamedFunctionLikeAniInfo,
     PackageAniInfo,
     PackageGroupAniInfo,
+    ParamAniInfo,
     StructAniInfo,
+    StructFieldAniInfo,
     TypeAniInfo,
     UnionAniInfo,
 )
@@ -486,8 +489,9 @@ class StsEnumGenerator:
         if ConstAttr.get(self.enum) is not None:
             enum_ty_ani_info = TypeAniInfo.get(self.am, self.enum.ty)
             for item in self.enum.items:
+                item_ani_info = EnumFieldAniInfo.get(self.am, item)
                 self.target.writelns(
-                    f"export const {item.name}: {enum_ty_ani_info.sts_type_in(self.target)} = {dumps(item.value)};",
+                    f"export const {item_ani_info.sts_name}: {enum_ty_ani_info.sts_type_in(self.target)} = {dumps(item.value)};",
                 )
             return
 
@@ -504,8 +508,9 @@ class StsEnumGenerator:
             f"}}",
         ):
             for item in self.enum.items:
+                item_ani_info = EnumFieldAniInfo.get(self.am, item)
                 self.target.writelns(
-                    f"{item.name} = {dumps(item.value)},",
+                    f"{item_ani_info.sts_name} = {dumps(item.value)},",
                 )
 
 
@@ -580,9 +585,10 @@ class StsStructGenerator:
             for field in struct_ani_info.sts_local_fields:
                 readonly = "readonly " if ReadOnlyAttr.get(field) is not None else ""
                 opt = "?" if OptionalAttr.get(field) else ""
+                field_ani_info = StructFieldAniInfo.get(self.am, field)
                 field_ty_ani_info = TypeAniInfo.get(self.am, field.ty)
                 self.target.writelns(
-                    f"{readonly}{field.name}{opt}: {field_ty_ani_info.sts_type_in(self.target)};",
+                    f"{readonly}{field_ani_info.sts_name}{opt}: {field_ty_ani_info.sts_type_in(self.target)};",
                 )
 
     def gen_struct_class(self):
@@ -627,9 +633,10 @@ class StsStructGenerator:
             ]:
                 readonly = "readonly " if ReadOnlyAttr.get(final) is not None else ""
                 opt = "?" if OptionalAttr.get(final) else ""
+                final_ani_info = StructFieldAniInfo.get(self.am, final)
                 final_ty_ani_info = TypeAniInfo.get(self.am, final.ty)
                 self.target.writelns(
-                    f"{readonly}{final.name}{opt}: {final_ty_ani_info.sts_type_in(self.target)};",
+                    f"{readonly}{final_ani_info.sts_name}{opt}: {final_ty_ani_info.sts_type_in(self.target)};",
                 )
 
             with self.target.indented(
@@ -639,9 +646,10 @@ class StsStructGenerator:
                 for parts in struct_ani_info.sorted_sts_all_fields:
                     final = parts[-1]
                     opt = "?" if OptionalAttr.get(final) else ""
+                    final_ani_info = StructFieldAniInfo.get(self.am, final)
                     final_ty_ani_info = TypeAniInfo.get(self.am, final.ty)
                     self.target.writelns(
-                        f"{final.name}{opt}: {final_ty_ani_info.sts_type_in(self.target)},",
+                        f"{final_ani_info.sts_name}{opt}: {final_ty_ani_info.sts_type_in(self.target)},",
                     )
             with self.target.indented(
                 f"{{",
@@ -650,7 +658,8 @@ class StsStructGenerator:
                 if struct_ani_info.sts_class_extends:
                     finals = []
                     for final in struct_ani_info.sts_class_extend_fields:
-                        finals.append(final.name)
+                        final_ani_info = StructFieldAniInfo.get(self.am, final)
+                        finals.append(final_ani_info.sts_name)
                     finals_str = ", ".join(finals)
                     self.target.writelns(
                         f"super({finals_str});",
@@ -659,8 +668,9 @@ class StsStructGenerator:
                     *struct_ani_info.sts_local_fields,
                     *struct_ani_info.sts_iface_extend_fields,
                 ]:
+                    final_ani_info = StructFieldAniInfo.get(self.am, final)
                     self.target.writelns(
-                        f"this.{final.name} = {final.name};",
+                        f"this.{final_ani_info.sts_name} = {final_ani_info.sts_name};",
                     )
 
             with self.target.indented(
@@ -670,7 +680,8 @@ class StsStructGenerator:
                 if struct_ani_info.sts_class_extends:
                     finals = []
                     for final in struct_ani_info.sts_class_extend_fields:
-                        finals.append(f"other.{final.name}")
+                        final_ani_info = StructFieldAniInfo.get(self.am, final)
+                        finals.append(f"other.{final_ani_info.sts_name}")
                     finals_str = ", ".join(finals)
                     self.target.writelns(
                         f"super({finals_str});",
@@ -679,8 +690,9 @@ class StsStructGenerator:
                     *struct_ani_info.sts_local_fields,
                     *struct_ani_info.sts_iface_extend_fields,
                 ]:
+                    final_ani_info = StructFieldAniInfo.get(self.am, final)
                     self.target.writelns(
-                        f"this.{final.name} = other.{final.name};",
+                        f"this.{final_ani_info.sts_name} = other.{final_ani_info.sts_name};",
                     )
 
             # ctors
@@ -765,9 +777,10 @@ class StsStructGenerator:
             for parts in struct_ani_info.sorted_sts_all_fields:
                 final = parts[-1]
                 opt = "?" if OptionalAttr.get(final) else ""
+                final_ani_info = StructFieldAniInfo.get(self.am, final)
                 final_ty_ani_info = TypeAniInfo.get(self.am, final.ty)
                 self.target.writelns(
-                    f"{final.name}{opt}: {final_ty_ani_info.sts_type_in(self.target)},",
+                    f"{final_ani_info.sts_name}{opt}: {final_ty_ani_info.sts_type_in(self.target)},",
                 )
         with self.target.indented(
             f"{{",
@@ -776,7 +789,8 @@ class StsStructGenerator:
             finals = []
             for parts in struct_ani_info.sorted_sts_all_fields:
                 final = parts[-1]
-                finals.append(final.name)
+                final_ani_info = StructFieldAniInfo.get(self.am, final)
+                finals.append(final_ani_info.sts_name)
             finals_str = ", ".join(finals)
             self.target.writelns(
                 f"return new {struct_ani_info.sts_impl_name}({finals_str});",
@@ -1083,9 +1097,10 @@ class StsNativeFuncGenerator:
         func_ani_info = NamedFunctionLikeAniInfo.get(self.am, self.func)
         params_sts = []
         for param in self.func.params:
+            param_ani_info = ParamAniInfo.get(self.am, param)
             param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
             params_sts.append(
-                f"{param.name}: {param_ty_ani_info.sts_type_in(self.target)}"
+                f"{param_ani_info.sts_name}: {param_ty_ani_info.sts_type_in(self.target)}"
             )
         params_sts_str = ", ".join(params_sts)
         if isinstance(return_ty := self.func.return_ty, NonVoidType):
@@ -1126,13 +1141,14 @@ class StsAnyFuncDeclGenerator:
         args_sts = []
         for param in func_ani_info.sts_params:
             opt = "?" if OptionalAttr.get(param) else ""
+            param_ani_info = ParamAniInfo.get(self.am, param)
             param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
             params_ty_sts_sig.append(param_ty_ani_info.type_sig)
             params_ty_sts_name.append(param_ty_ani_info.sts_type_in(self.target))
             params_sts.append(
-                f"{param.name}{opt}: {param_ty_ani_info.sts_type_in(self.target)}"
+                f"{param_ani_info.sts_name}{opt}: {param_ty_ani_info.sts_type_in(self.target)}"
             )
-            args_sts.append(param.name)
+            args_sts.append(param_ani_info.sts_name)
         if isinstance(return_ty := self.func.return_ty, NonVoidType):
             return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
             return_ty_sts_name = return_ty_ani_info.sts_type_in(self.target)
@@ -1347,13 +1363,14 @@ class StsAnyFuncGenerator:
         args_sts = []
         for param in func_ani_info.sts_params:
             opt = "?" if OptionalAttr.get(param) else ""
+            param_ani_info = ParamAniInfo.get(self.am, param)
             param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
             params_ty_sts_sig.append(param_ty_ani_info.type_sig)
             params_ty_sts_name.append(param_ty_ani_info.sts_type_in(self.target))
             params_sts.append(
-                f"{param.name}{opt}: {param_ty_ani_info.sts_type_in(self.target)}"
+                f"{param_ani_info.sts_name}{opt}: {param_ty_ani_info.sts_type_in(self.target)}"
             )
-            args_sts.append(param.name)
+            args_sts.append(param_ani_info.sts_name)
         args_sts = func_ani_info.as_native_args(args_sts)
         args_sts_str = ", ".join(args_sts)
         result_sts = (
@@ -1657,13 +1674,14 @@ class StsAnyCtorGenerator:
         args_sts = []
         for param in ctor_ani_info.sts_params:
             opt = "?" if OptionalAttr.get(param) else ""
+            param_ani_info = ParamAniInfo.get(self.am, param)
             param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
             params_ty_sts_sig.append(param_ty_ani_info.type_sig)
             params_ty_sts_name.append(param_ty_ani_info.sts_type_in(self.target))
             params_sts.append(
-                f"{param.name}{opt}: {param_ty_ani_info.sts_type_in(self.target)}"
+                f"{param_ani_info.sts_name}{opt}: {param_ty_ani_info.sts_type_in(self.target)}"
             )
-            args_sts.append(param.name)
+            args_sts.append(param_ani_info.sts_name)
         args_sts = ctor_ani_info.as_native_args(args_sts)
         args_sts_str = ", ".join(args_sts)
         result_sts = (
@@ -2006,10 +2024,11 @@ class StsReverseFuncGenerator:
         args_sts = []
         params_sts = self.func_kind.reverse_base_params()
         for param in self.func.params:
+            param_ani_info = ParamAniInfo.get(self.am, param)
             param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
-            args_sts.append(param.name)
+            args_sts.append(param_ani_info.sts_name)
             params_sts.append(
-                f"{param.name}: {param_ty_ani_info.sts_type_in(self.target)}"
+                f"{param_ani_info.sts_name}: {param_ty_ani_info.sts_type_in(self.target)}"
             )
         args_sts = func_ani_info.as_normal_args(args_sts)
         params_sts_str = ", ".join(params_sts)
