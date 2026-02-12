@@ -74,6 +74,7 @@ from taihe.codegen.cpp.analyses import (
 )
 from taihe.semantics.declarations import (
     EnumDecl,
+    EnumItemDecl,
     GlobFuncDecl,
     IfaceDecl,
     IfaceExtendDecl,
@@ -637,13 +638,13 @@ class GlobFuncAniInfo(AbstractAnalysis[GlobFuncDecl]):
             if get_attr.member_name is not None:
                 get_name = get_attr.member_name
             else:
-                get_name = naming.as_field(get_attr.func_suffix)
+                get_name = naming.as_property(get_attr.func_suffix)
             self.get_name = get_name
         elif set_attr := SetAttr.get(f):
             if set_attr.member_name is not None:
                 set_name = set_attr.member_name
             else:
-                set_name = naming.as_field(set_attr.func_suffix)
+                set_name = naming.as_property(set_attr.func_suffix)
             self.set_name = set_name
         elif PromiseAttribute.get(f):
             self.promise_name = func_name
@@ -669,7 +670,7 @@ class GlobFuncAniInfo(AbstractAnalysis[GlobFuncDecl]):
             if on_off_attr.type is not None:
                 on_off_type = on_off_attr.type
             else:
-                on_off_type = naming.as_field(on_off_attr.func_suffix)
+                on_off_type = naming.as_on_off(on_off_attr.func_suffix)
             self.on_off_pair = (on_off_attr.name, on_off_type)
 
         self.sts_params: list[ParamDecl] = []
@@ -757,13 +758,13 @@ class IfaceMethodAniInfo(AbstractAnalysis[IfaceMethodDecl]):
             if get_attr.member_name is not None:
                 get_name = get_attr.member_name
             else:
-                get_name = naming.as_field(get_attr.func_suffix)
+                get_name = naming.as_property(get_attr.func_suffix)
             self.get_name = get_name
         elif set_attr := SetAttr.get(f):
             if set_attr.member_name is not None:
                 set_name = set_attr.member_name
             else:
-                set_name = naming.as_field(set_attr.func_suffix)
+                set_name = naming.as_property(set_attr.func_suffix)
             self.set_name = set_name
         elif PromiseAttribute.get(f):
             self.promise_name = func_name
@@ -789,7 +790,7 @@ class IfaceMethodAniInfo(AbstractAnalysis[IfaceMethodDecl]):
             if on_off_attr.type is not None:
                 on_off_type = on_off_attr.type
             else:
-                on_off_type = naming.as_field(on_off_attr.func_suffix)
+                on_off_type = naming.as_on_off(on_off_attr.func_suffix)
             self.on_off_pair = (on_off_attr.name, on_off_type)
 
         self.sts_params: list[ParamDecl] = []
@@ -852,10 +853,53 @@ class NamedFunctionLikeAniInfo:
             return IfaceMethodAniInfo.get(am, f)
 
 
+class EnumFieldAniInfo(AbstractAnalysis[EnumItemDecl]):
+    def __init__(self, am: AnalysisManager, d: EnumItemDecl) -> None:
+        if rename_attr := RenameAttr.get(d):
+            self.sts_name = rename_attr.name
+        else:
+            self.sts_name = d.name
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, d: EnumItemDecl) -> "EnumFieldAniInfo":
+        return EnumFieldAniInfo(am, d)
+
+
+class StructFieldAniInfo(AbstractAnalysis[StructFieldDecl]):
+    def __init__(self, am: AnalysisManager, d: StructFieldDecl) -> None:
+        if rename_attr := RenameAttr.get(d):
+            self.sts_name = rename_attr.name
+        else:
+            self.sts_name = d.name
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, d: StructFieldDecl) -> "StructFieldAniInfo":
+        return StructFieldAniInfo(am, d)
+
+
+class ParamAniInfo(AbstractAnalysis[ParamDecl]):
+    def __init__(self, am: AnalysisManager, d: ParamDecl) -> None:
+        if rename_attr := RenameAttr.get(d):
+            self.sts_name = rename_attr.name
+        else:
+            self.sts_name = d.name
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, d: ParamDecl) -> "ParamAniInfo":
+        return ParamAniInfo(am, d)
+
+
 class EnumAniInfo(AbstractAnalysis[EnumDecl]):
     def __init__(self, am: AnalysisManager, d: EnumDecl) -> None:
         self.parent_ns = PackageAniInfo.get(am, d.parent_pkg).ns
-        self.sts_type_name = d.name
+        if rename_attr := RenameAttr.get(d):
+            self.sts_type_name = rename_attr.name
+        else:
+            self.sts_type_name = d.name
+
         self.type_desc = f"{self.parent_ns.impl_desc}.{self.sts_type_name}"
 
         self.is_default = ExportDefaultAttr.get(d) is not None
@@ -879,7 +923,10 @@ class UnionAniInfo(AbstractAnalysis[UnionDecl]):
         self.impl_header = f"{d.parent_pkg.name}.{d.name}.ani.1.hpp"
 
         self.parent_ns = PackageAniInfo.get(am, d.parent_pkg).ns
-        self.sts_type_name = d.name
+        if rename_attr := RenameAttr.get(d):
+            self.sts_type_name = rename_attr.name
+        else:
+            self.sts_type_name = d.name
 
         self.sts_all_fields: list[list[UnionFieldDecl]] = []
         for field in d.fields:
@@ -912,7 +959,10 @@ class StructAniInfo(AbstractAnalysis[StructDecl]):
         self.impl_header = f"{d.parent_pkg.name}.{d.name}.ani.1.hpp"
 
         self.parent_ns = PackageAniInfo.get(am, d.parent_pkg).ns
-        self.sts_type_name = d.name
+        if rename_attr := RenameAttr.get(d):
+            self.sts_type_name = rename_attr.name
+        else:
+            self.sts_type_name = d.name
         if ClassAttr.get(d):
             self.sts_impl_name = self.sts_type_name
         else:
@@ -994,7 +1044,10 @@ class IfaceAniInfo(AbstractAnalysis[IfaceDecl]):
         self.impl_header = f"{d.parent_pkg.name}.{d.name}.ani.1.hpp"
 
         self.parent_ns = PackageAniInfo.get(am, d.parent_pkg).ns
-        self.sts_type_name = d.name
+        if rename_attr := RenameAttr.get(d):
+            self.sts_type_name = rename_attr.name
+        else:
+            self.sts_type_name = d.name
         if ClassAttr.get(d):
             self.sts_impl_name = self.sts_type_name
         else:
@@ -2527,8 +2580,11 @@ class CallbackTypeAniInfo(TypeAniInfo):
         params = []
         for param in self.t.ref.params:
             opt = "?" if OptionalAttr.get(param) else ""
+            param_ani_info = ParamAniInfo.get(self.am, param)
             param_ty_ani_info = TypeAniInfo.get(self.am, param.ty)
-            params.append(f"{param.name}{opt}: {param_ty_ani_info.sts_type_in(target)}")
+            params.append(
+                f"{param_ani_info.sts_name}{opt}: {param_ty_ani_info.sts_type_in(target)}"
+            )
         params_str = ", ".join(params)
         if isinstance(return_ty := self.t.ref.return_ty, NonVoidType):
             return_ty_ani_info = TypeAniInfo.get(self.am, return_ty)
