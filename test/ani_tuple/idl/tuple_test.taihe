@@ -1,0 +1,149 @@
+/*
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// Basic tuple with primitive types
+@tuple
+struct IntPair {
+    first: i32;
+    second: i32;
+}
+
+// Tuple with mixed primitive types
+@tuple
+struct MixedTuple {
+    a: i8;
+    b: i16;
+    c: i32;
+    d: i64;
+    e: f32;
+    f: f64;
+    g: bool;
+}
+
+// Tuple with string
+@tuple
+struct StringPair {
+    key: String;
+    value: String;
+}
+
+// Tuple with mixed ref and primitive types
+@tuple
+struct MixedRefTuple {
+    name: String;
+    age: i32;
+    score: f64;
+    active: bool;
+}
+
+// Tuple as function return value (pass out)
+function MakeIntPair(a: i32, b: i32): IntPair;
+
+// Tuple as function parameter (pass in)
+function SumIntPair(p: IntPair): i32;
+
+// Tuple roundtrip
+function SwapIntPair(p: IntPair): IntPair;
+
+// Mixed tuple roundtrip
+function ProcessMixed(m: MixedTuple): MixedTuple;
+
+// String pair
+function MakeStringPair(k: String, v: String): StringPair;
+function ConcatStringPair(p: StringPair): String;
+
+// Mixed ref tuple
+function MakeMixedRef(name: String, age: i32, score: f64, active: bool): MixedRefTuple;
+function DescribeMixedRef(m: MixedRefTuple): String;
+
+// Array of tuples
+function MakeIntPairArray(n: i32): Array<IntPair>;
+function SumIntPairArray(pairs: Array<IntPair>): i32;
+
+// Tuple containing an Array
+@tuple
+struct ArrayTuple {
+    label: String;
+    values: Array<i32>;
+}
+
+function MakeArrayTuple(label: String, n: i32): ArrayTuple;
+function SumArrayTuple(t: ArrayTuple): String;
+
+@tuple struct MyTuple4 {
+    a: i32;
+    b: i32;
+    c: i32;
+    d: i32;
+}
+
+@tuple struct MyTuple4x4 {
+    a: MyTuple4;
+    b: MyTuple4;
+    c: MyTuple4;
+    d: MyTuple4;
+}
+
+function TransposeMyTuple4x4(t: MyTuple4x4): MyTuple4x4;
+
+@tuple struct MyTuple4Array {
+    a: Array<i32>;
+    b: Array<i32>;
+    c: Array<i32>;
+    d: Array<i32>;
+}
+
+function TransposeMyTuple4Array(t: MyTuple4Array): Array<MyTuple4>;
+function TransposeArrayMyTuple4(t: Array<MyTuple4>): MyTuple4Array;
+
+@tuple struct MyTuple16 {
+    f0: i32;
+    f1: i32;
+    f2: i32;
+    f3: i32;
+    f4: i32;
+    f5: i32;
+    f6: i32;
+    f7: i32;
+    f8: i32;
+    f9: i32;
+    fa: i32;
+    fb: i32;
+    fc: i32;
+    fd: i32;
+    fe: i32;
+    ff: i32;
+}
+
+function MakeMyTuple16(
+    p0: i32,
+    p1: i32,
+    p2: i32,
+    p3: i32,
+    p4: i32,
+    p5: i32,
+    p6: i32,
+    p7: i32,
+    p8: i32,
+    p9: i32,
+    pa: i32,
+    pb: i32,
+    pc: i32,
+    pd: i32,
+    pe: i32,
+    pf: i32,
+): MyTuple16;
+
+function SumMyTuple16(t: MyTuple16): i32;
