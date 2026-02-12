@@ -1,43 +1,43 @@
-# 类继承
+# 类继承（Class Extend）
 
-本章介绍 class 继承 class 的建议写法，通过 `@!sts_inject` 注解将 C++ 数据结构（以 `_th` 后缀标识）注入到 ETS 侧使用，确保 ETS 侧数据结构（如 `UnifiedRecord, Text, PlainText`）与 C++ 侧数据结构（如 `UnifiedRecord_th, Text_th, PlainText_th`）的正确绑定并保持继承关系的正确性。注意，C++ 数据结构（以 `_th` 后缀标识）不能在用户侧使用。
+> **学习目标**：掌握通过 `@!sts_inject` 实现 ArkTS 侧类继承的高级模式。
 
-## 第一步：编写接口原型
+本教程介绍如何在 ArkTS 侧实现类继承，同时保持与 C++ 数据结构的正确绑定。
+
+## 核心概念
+
+| 概念 | 说明 |
+|------|------|
+| `*_th` 类型 | C++ 侧的数据结构，仅在实现层使用 |
+| `@!sts_inject` | 注入自定义 ArkTS 类，包装 `*_th` 类型 |
+| `.inner` 属性 | ArkTS 类访问底层 `*_th` 对象 |
+
+---
+
+## 第一步：定义接口
 
 **File: `idl/hello.taihe`**
 
 ```rust
+// C++ 侧接口（_th 后缀）
 interface UnifiedRecord_th {
     GetType(): void;
 }
 function CreateUnifiedRecord_noparam_th(): UnifiedRecord_th;
+
 interface Text_th {
     GetDetails(): i32;
     SetDetails(a: i32): void;
-
-    // 如果需要覆盖父类方法，则需要额外声明被覆盖的方法：
-    // GetType(): void;
 }
 function CreateText_noparam_th(): Text_th;
+
 interface PlainText_th {
     GetTextContent(): String;
     SetTextContent(a: String): void;
-
-    // 如果需要覆盖父类方法，则需要额外声明被覆盖的方法：
-    // GetDetails(): i32;
-    // SetDetails(a: i32): void;
-    // GetType(): void;
 }
 function CreatePlainText_noparam_th(): PlainText_th;
 
-interface UnifiedData_th {
-    HasType(type: String): bool;
-    AddRecord(a: UnifiedRecord_th): void;
-    GetRecords(): Array<UnifiedRecord_th>;
-}
-function CreateUnifiedData_noparam_th(): UnifiedData_th;
-function CreateUnifiedData_parama_th(a: UnifiedRecord_th): UnifiedData_th;
-
+// 注入 ArkTS 类定义
 @!sts_inject("""
 export class UnifiedRecord {
     inner: UnifiedRecord_th;
@@ -51,6 +51,7 @@ export class UnifiedRecord {
         this.inner = a;
     }
 }
+
 export class Text extends UnifiedRecord {
     inner: Text_th;
     getDetails(): int {
@@ -65,12 +66,8 @@ export class Text extends UnifiedRecord {
     constructor(b: Text_th) {
         this.inner = b;
     }
-
-    // 如果需要覆盖父类方法，则需要额外绑定被覆盖的方法：
-    // getType(): void {
-    //     this.inner.getType();
-    // }
 }
+
 export class PlainText extends Text {
     inner: PlainText_th;
     getTextContent(): String {
@@ -85,176 +82,116 @@ export class PlainText extends Text {
     constructor(c: PlainText_th) {
         this.inner = c;
     }
-
-    // 如果需要覆盖父类方法，则需要额外绑定被覆盖的方法：
-    // getDetails(): int {
-    //     return this.inner.getDetails();
-    // }
-    // setDetails(a: int): void {
-    //     this.inner.setDetails(a);
-    // }
-    // getType(): void {
-    //     this.inner.getType();
-    // }
-}
-export class UnifiedData {
-    inner: UnifiedData_th;
-    hasType(type: string): boolean {
-        return this.inner.hasType(type);
-    }
-    addRecord(a: UnifiedRecord) {
-        this.inner.addRecord(a.inner);
-    }
-    getRecords() {
-        let res_th: UnifiedRecord_th[] = this.inner.getRecords();
-        let res: UnifiedRecord[] = new Array<UnifiedRecord>(res_th.length);
-        for(let i = 0; i < res.length; i++) {
-            res[i] = new UnifiedRecord(res_th[i]);
-        }
-        return res;
-    }
-    constructor() {
-        this.inner = createUnifiedData_noparam_th();
-    }
-    constructor(x: UnifiedData_th) {
-        this.inner = x;
-    }
-    constructor(a: UnifiedRecord) {
-        this.inner = createUnifiedData_parama_th(a.inner);
-    }
 }
 """)
 ```
 
-- `_th` 类型与 ETS 类的关系
-  - **`_th` 类型**：C++ 侧的数据结构，仅在 `taihe` 文件和 C++ 代码中使用，不暴露给 ETS 侧。
-  - **ETS 类**：通过 `@!sts_inject` 注入的类，供 ETS 侧使用，包含对 `_th` 类型的封装。
+### 继承关系
 
-- 方法调用规则
-  - **覆盖父类方法**：若子类接口包含父类方法，ETS 侧调用子类实现。
-  - **继承父类方法**：若子类接口省略父类方法，ETS 侧调用父类实现。
+```
+UnifiedRecord
+    ↑
+   Text
+    ↑
+PlainText
+```
 
-- 参数与返回值转换
-  - **ETS 类 -> `th_` 类型**：通过 `.inner` 属性访问。
-  - **`th_` 类型 -> ETS 类**：通过构造函数注入（如 `new UnifiedRecord(UnifiedRecord_th)`）。
+### 设计规则
 
-## 第二步：完成 C++ 实现
+| 规则 | 说明 |
+|------|------|
+| 覆盖父类方法 | 在 `*_th` 接口中声明该方法，ArkTS 调用子类实现 |
+| 继承父类方法 | 省略该方法，ArkTS 调用父类实现 |
+| 类型转换 | ETS → `_th`：使用 `.inner`；`_th` → ETS：使用构造函数 |
+
+## 第二步：实现 C++ 代码
+
+**File: `author/src/hello.impl.cpp`**
 
 ```cpp
-class UnifiedRecord_thImpl {
-    public:
-    UnifiedRecord_thImpl() {}
+#include "hello.impl.hpp"
 
+using namespace taihe;
+
+class UnifiedRecord_thImpl {
+public:
     void GetType() {
-        std::cout << "function GetType in UnifiedRecord_thImpl" << std::endl;
+        std::cout << "GetType in UnifiedRecord" << std::endl;
     }
 };
 
 class Text_thImpl {
-    public:
-    Text_thImpl() {}
-
+public:
     int32_t GetDetails() {
-        std::cout << "function GetDetails in Text_thImpl" << std::endl;
+        std::cout << "GetDetails in Text" << std::endl;
         return 1;
     }
-
     void SetDetails(int32_t a) {
-        std::cout << "function SetDetails in Text_thImpl" << std::endl;
+        std::cout << "SetDetails in Text" << std::endl;
     }
-
-    // 如果需要覆盖父类方法，则需要额外实现被覆盖的方法：
-    // void GetType() {
-    //     std::cout << "function GetType in Text_thImpl"  << std::endl;
-    // }
 };
 
 class PlainText_thImpl {
-    public:
-    PlainText_thImpl() {}
-
-    ::taihe::string GetTextContent() {
-        std::cout << "function GetTextContent in PlainText_thImpl" << std::endl;
-        return "GetTextContent";
+public:
+    string GetTextContent() {
+        std::cout << "GetTextContent in PlainText" << std::endl;
+        return "content";
     }
-
-    void SetTextContent(::taihe::string_view a) {
-        std::cout << "function SetTextContent in PlainText_thImpl" << std::endl;
-    }
-
-    // 如果需要覆盖父类方法，则需要额外实现被覆盖的方法：
-    // int32_t GetDetails() {
-    //     std::cout << "function GetDetails in  PlainText_thImpl" << std::endl;
-    //     return 1;
-    // }
-    //
-    // void SetDetails(int32_t a) {
-    //     std::cout << "function SetDetails in  PlainText_thImpl" << std::endl;
-    // }
-    //
-    // void GetType() {
-    //     std::cout << "function GetType in  PlainText_thImpl" << std::endl;
-    // }
-};
-
-class UnifiedData_thImpl {
-    public:
-    UnifiedData_thImpl() {}
-
-    bool HasType(::taihe::string_view type) {
-        std::cout << "function HasType in UnifiedData_thImpl" << std::endl;
-    }
-
-    void AddRecord(::hello::weak::UnifiedRecord_th a) {
-        std::cout << "function AddRecord in UnifiedData_thImpl" << std::endl;
-    }
-
-    ::taihe::array<::hello::UnifiedRecord_th> GetRecords() {
-        return ::taihe::array<::hello::UnifiedRecord_th>{taihe::make_holder<UnifiedRecord_thImpl, ::hello::UnifiedRecord_th>()};
+    void SetTextContent(string_view a) {
+        std::cout << "SetTextContent in PlainText" << std::endl;
     }
 };
 
-::hello::UnifiedRecord_th CreateUnifiedRecord_noparam_th() {
-    return taihe::make_holder<UnifiedRecord_thImpl, ::hello::UnifiedRecord_th>();
+UnifiedRecord_th CreateUnifiedRecord_noparam_th() {
+    return make_holder<UnifiedRecord_thImpl, UnifiedRecord_th>();
 }
 
-::hello::Text_th CreateText_noparam_th() {
-    return taihe::make_holder<Text_thImpl, ::hello::Text_th>();
+Text_th CreateText_noparam_th() {
+    return make_holder<Text_thImpl, Text_th>();
 }
 
-::hello::PlainText_th CreatePlainText_noparam_th() {
-    return taihe::make_holder<PlainText_thImpl, ::hello::PlainText_th>();
+PlainText_th CreatePlainText_noparam_th() {
+    return make_holder<PlainText_thImpl, PlainText_th>();
 }
 
-::hello::UnifiedData_th CreateUnifiedData_noparam_th() {
-    return taihe::make_holder<UnifiedData_thImpl, ::hello::UnifiedData_th>();
-}
-
-::hello::UnifiedData_th CreateUnifiedData_parama_th(::hello::weak::UnifiedRecord_th a) {
-    return taihe::make_holder<UnifiedData_thImpl, ::hello::UnifiedData_th>();
-}
+TH_EXPORT_CPP_API_CreateUnifiedRecord_noparam_th(CreateUnifiedRecord_noparam_th);
+TH_EXPORT_CPP_API_CreateText_noparam_th(CreateText_noparam_th);
+TH_EXPORT_CPP_API_CreatePlainText_noparam_th(CreatePlainText_noparam_th);
 ```
 
-## 第三步：在 ets 侧使用
+## 第三步：编译运行
+
+```sh
+taihe-tryit test -u sts cookbook/hello
+```
+
+## 使用示例
 
 **File: `user/main.ets`**
 
 ```typescript
-let a = new hello.UnifiedRecord();
-let x1 = new hello.UnifiedData(a);
-x1.addRecord(a);
-let y1 = x1.getRecords();
-y1[0].getType();
+import { UnifiedRecord, Text, PlainText } from "hello";
 
-let b = new hello.Text();
-b.getType();
-b.getDetails();
-let x2 = new hello.UnifiedData(b);
-x2.addRecord(a);
-let y2 = x2.getRecords();
-y2[0].getType();
+loadLibrary("hello");
+
+function main() {
+    let record = new UnifiedRecord();
+    record.getType();  // GetType in UnifiedRecord
+    
+    let text = new Text();
+    text.getType();     // 继承自 UnifiedRecord
+    text.getDetails();  // GetDetails in Text
+    
+    let plain = new PlainText();
+    plain.getType();           // 继承自 UnifiedRecord
+    plain.getTextContent();    // GetTextContent in PlainText
+}
 ```
 
-在使用时，声明为父类类型的函数可以接收子类对象做为入参。
+---
 
-如果子类数据结构定义时包含父类方法，ETS 调用时会调到子类实现，反之则调用父类实现。
+## 相关文档
+
+- [继承](../inherit/README.md) - 基本继承
+- [重写](../override/README.md) - 方法重写
+- [External Object](../external_obj/README.md) - 外部对象处理

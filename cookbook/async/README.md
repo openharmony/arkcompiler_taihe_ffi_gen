@@ -1,112 +1,75 @@
-# 异步
+# 异步函数
 
-在看本章内容前，最好对同步和异步有一定的了解。
+> **学习目标**：掌握 Taihe 中异步函数（`@async` 和 `@promise`）的声明与使用。
 
-以 javascript 为例，简要解释同步与异步
+## 核心概念
 
-```javascript
-// 同步
-console.log("1");
-console.log("2");
-console.log("3");
+Taihe 支持将 C++ 同步代码自动包装为 ArkTS 异步函数。
 
-// output:
-// 1
-// 2
-// 3
+| 注解 | 生成的 ArkTS 函数类型 | 使用方式 |
+|------|----------------------|----------|
+| `@async` | 回调式异步函数 | `func(args, callback)` |
+| `@promise` | Promise 式异步函数 | `await func(args)` |
+| （无注解） | 同步函数 | `func(args)` |
 
-// 异步
-console.log("1");
+---
 
-setTimeout(() => {
-    console.log("2");
-}, 1000);
-
-console.log("3");
-
-// output:
-// 1
-// 3
-// 2
-```
-
-其中，`setTimeout` 是一个异步函数，`arg0` 是一个回调函数，`arg1` 是时间，表示在过了一段时间后，执行 `arg0`
-
-简而言之，异步就是不阻塞后面的代码，而是 先执行其他任务，等操作完成后再回来处理
-
-sts 提供了异步的支持，但是 native 并不支持异步
-
-下面我们介绍使用 taihe 在 C++ 侧按原有逻辑实现，在 sts 侧生成异步代码并使用
-
-## 第一步：在 Taihe IDL 文件中声明
+## 第一步：定义接口
 
 **File: `idl/async.taihe`**
 
 ```rust
+// 使用 @rename 重命名使异步函数名与 .d.ts 中的声明一致
 @rename("add")
-@async function addAsync(a: i32, b: i32): i32;
+@async function addWithCallback(a: i32, b: i32): i32;
 
 @rename("add")
-@promise function addPromise(a: i32, b: i32): i32;
+@promise function addReturnsPromise(a: i32, b: i32): i32;
 
 function addSync(a: i32, b: i32): i32;
 ```
 
-我们可以看到函数 `addSync` 上方有一个 `@xxx()`, 这是 taihe 的注解（annotation）语法
+### 注解说明
 
-- Taihe 的注解非常灵活
-  - `@!foobar` 添加注解到 当下的词法空间下，而 `@foobar`（注意，没有感叹号）将注解添加到下一个元素中。
-  - 例如，`@foobar struct Foo {}` 等价于 `struct Foo { @!foobar }`，都是在给 `struct Foo` 添加注解。
-  - 注解可以有参数，例如 `@foobar("baz")` 或 `@foobar(1, "baz")`
-  - 无参数时，括号可以省略，例如 `@foobar()` 等同于 `@foobar`
+| 注解 | 作用 | 状态 |
+|------|------|------|
+| `@async` | 生成回调式异步版本 | ✅ 推荐 |
+| `@promise` | 生成 Promise 式异步版本 | ✅ 推荐 |
+| `@rename("name")` | 重命名 ArkTS 侧的函数名 | ✅ 推荐 |
+| `@gen_async("name")` | 生成额外的异步函数 | ⚠️ 废弃 |
+| `@gen_promise("name")` | 生成额外的 Promise 函数 | ⚠️ 废弃 |
 
-taihe 的注解可以作用在变量、函数、interface、struct、以及当前文件上
-
-处理作用在当前文件上时，将注解写在文件末尾，其余情况下都是写在被作用者的上方
-
-回到当前 Taihe IDL 文件，在 sts 中生成 async 版本函数的注解格式为 `@async`；生成 sts promise 版本函数的注解格式为 `@promise`，这两个注解单独使用，也可以在 interface 内的函数使用
-
-taihe 不允许同名函数，如果用户有同名的函数，需要使用 `@rename("<new_name>")` 注解，该注解的作用是改变生成在 ets 侧的对应函数名，可以实现 ets 侧的重载
-
-注：希望用户对 promise 有所了解，可以参考 javascript 的 promise
-
-## 第二步：实现声明的接口
+## 第二步：实现 C++ 代码
 
 **File: `author/src/async.impl.cpp`**
 
 ```cpp
+#include "async.impl.hpp"
+
+using namespace taihe;
+
+// 按同步方式实现即可
 int32_t addSync(int32_t a, int32_t b) {
     return a + b;
 }
 
-TH_EXPORT_CPP_API_addAsync(addSync);
-TH_EXPORT_CPP_API_addPromise(addSync);
+// 导出时可以复用同一实现
+TH_EXPORT_CPP_API_addWithCallback(addSync);
+TH_EXPORT_CPP_API_addReturnsPromise(addSync);
 TH_EXPORT_CPP_API_addSync(addSync);
 ```
 
-我们可以在实现侧像写同步代码一样实现函数
+> **关键点**：C++ 侧按同步方式实现，Taihe 自动处理异步包装。
 
-## 第三步：生成并编译
-
-```sh
-# 注：Taihe IDL 文件里的函数与 C++ 规范一致，所以函数会在生成的 ets 侧自动转变为小写字母开头函数
-# Taihe IDL 文件中的写法：
-#   function FooBar(): void;
-# 生成的 ets 侧代码
-#   function fooBar(): void;
-# 如果希望生成的 ets 侧函数与 Taihe IDL 文件一致，可以使用 -Csts:keep-name
-taihe-tryit test -u sts path/to/async -Csts:keep-name
-```
-
-async 和 promise 版本的函数生成在 sts 侧
+## 第三步：生成的 ArkTS 代码
 
 **File (Generated): `generated/async.ets`**
 
 ```typescript
-// 导出的 Async 函数
-export function addAsync(a: int, b: int, callback: AsyncCallback<int>): void {
+// 回调式异步函数
+export function addWithCallback(a: int, b: int, callback: AsyncCallback<int>): void {
     taskpool.execute((): int => {
-        return _taihe_addAsync_native(a, b);
+        return _taihe_addWithCallback_native(a, b);
     })
     .then((ret: Any): void => {
         callback(null, ret as int);
@@ -115,11 +78,12 @@ export function addAsync(a: int, b: int, callback: AsyncCallback<int>): void {
         callback(ret as BusinessError, undefined);
     });
 }
-// 导出的 Promise 函数
-export function addPromise(a: int, b: int): Promise<int> {
+
+// Promise 式异步函数
+export function addReturnsPromise(a: int, b: int): Promise<int> {
     return new Promise<int>((resolve, reject): void => {
         taskpool.execute((): int => {
-            return _taihe_addPromise_native(a, b);
+            return _taihe_addReturnsPromise_native(a, b);
         })
         .then((ret: Any): void => {
             resolve(ret as int);
@@ -129,260 +93,119 @@ export function addPromise(a: int, b: int): Promise<int> {
         });
     });
 }
-// 导出的同步函数
+
+// 同步函数
 export function addSync(a: int, b: int): int {
     return _taihe_addSync_native(a, b);
 }
+
+// 重载导出
 export overload add {
-    addAsync,
-    addPromise,
+    addWithCallback,
+    addReturnsPromise,
 }
 ```
 
-## 用户侧使用
+## 第四步：编译运行
+
+```sh
+taihe-tryit test -u sts cookbook/async -Csts:keep-name
+```
+
+> **注意**：默认情况下，Taihe IDL 中的函数名会转换为小驼峰命名。使用 `-Csts:keep-name` 保持原名。
+
+## 使用示例
 
 **File: `user/main.ets`**
 
 ```typescript
-// 使用同步版本的函数
-console.log("addSync: ", async_test.addSync(1, 2))
+import * as async_test from "async";
 
-// 使用 async 版本
-async_test.add(10, 20, (error: BusinessError | null, data?: int) => {
-    if (error !== null && error.code !== 0) {
-        console.log("main finsih test async ERROR ", error);
-    } else {
-        console.log("main finsih test async success ", data);
+loadLibrary("async");
+
+async function main() {
+    // 同步调用
+    console.log("addSync: ", async_test.addSync(1, 2));  // 3
+    
+    // 回调式异步调用
+    async_test.add(10, 20, (error: BusinessError | null, data?: int) => {
+        if (error !== null && error.code !== 0) {
+            console.log("Error:", error);
+        } else {
+            console.log("Async result:", data);  // 30
+        }
+    });
+    
+    // Promise 式异步调用
+    try {
+        let result = await async_test.add(1, 2);
+        console.log("Promise result:", result);  // 3
+    } catch (error) {
+        console.error("Error:", error);
     }
-})
-
-// 使用 promise 版本
-try {
-    let retPromise = await async_test.add(0, 2);
-    console.log("main finsih test async promise success ")
-} catch (error) {
-    console.error("main finsih test async promise ERROR ", error)
 }
 ```
 
-**Stdout**
+**输出：**
 
 ```
 addSync:  3
-async success  30
-async promise success 
-MyStr
-interface async success 
-interface async success p_istringholder  interface async set
+Async result: 30
+Promise result: 3
 ```
 
-## Know more, Code better
+---
 
-类内函数的异步版本也是类似
+## 接口方法的异步版本
+
+`@async` 和 `@promise` 同样适用于接口方法：
 
 **File: `idl/async.taihe`**
 
 ```rust
 interface IStringHolder {
-    @async getAsync(): String;
-    @promise getPromise(): String;
-    @rename("newGet")
-    get(): String;
+    @rename("getString")
+    @async getStringWithCallback(): String;
 
-    @rename("set")
-    @async setAsync(a: String): void;
-    @rename("set")
-    @promise setPromise(a: String): void;
-    setSync(a: String): void;
-}
+    @rename("getString")
+    @promise getStringReturnsPromise(): String;
 
-function makeIStringHolder(): IStringHolder;
-```
+    getStringSync(): String;
 
-**File: `author/src/async.impl.cpp`**
-
-```cpp
-class IStringHolder {
-public:
-  IStringHolder() : str("MyStr") {}
-
-  ~IStringHolder() {}
-
-  string get() {
-    return str;
-  }
-
-  ::taihe::string getAsync() {
-      return str;
-  }
-
-  ::taihe::string getPromise() {
-      return str;
-  }
-
-  void setSync(string_view a) {
-    this->str = a;
-  }
-
-  void setAsync(::taihe::string_view a) {
-    this->str = a;
-  }
-
-  void setPromise(::taihe::string_view a) {
-    this->str = a;
-  }
-
-private:
-  string str;
-};
-::async::IStringHolder makeIStringHolder() {
-    return taihe::make_holder<IStringHolder, ::async::IStringHolder>();
+    @rename("setString")
+    @async setStringWithCallback(a: String): void;
+    
+    @rename("setString")
+    @promise setStringReturnsPromise(a: String): void;
+    
+    setStringSync(a: String): void;
 }
 ```
 
-**File (Generated): `generated/async.ets`**
+---
 
-```typescript
-export interface IStringHolder {
-    // get 函数 Async 版
-    getAsync(callback: AsyncCallback<string>): void;
-    // get 函数 Promise 版
-    getPromise(): Promise<string>;
-    // get 函数 Sync 版，rename 函数
-    newGet(): string;
-    // set 函数 Async 版
-    setAsync(a: string, callback: AsyncCallback<void>): void;
-    // set 函数 Promise 版
-    setPromise(a: string): Promise<void>;
-    // set 函数 Sync 版
-    setSync(a: string): void;
-    // java-like 重载
-    overload set {
-        setAsync,
-        setPromise,
-    }
-    _taihe_getAsync_revert(): string {
-        throw new Error(`No valid revert function found`);
-    }
-    _taihe_getPromise_revert(): string {
-        throw new Error(`No valid revert function found`);
-    }
-    _taihe_get_revert(): string {
-        return this.get();
-    }
-    _taihe_setAsync_revert(a: string): void {
-        throw new Error(`No valid revert function found`);
-    }
-    _taihe_setPromise_revert(a: string): void {
-        throw new Error(`No valid revert function found`);
-    }
-    _taihe_setSync_revert(a: string): void {
-        return this.setSync(a);
-    }
-}
-class _taihe_IStringHolder_inner implements IStringHolder {
-    private _taihe_vtblPtr: long;
-    private _taihe_dataPtr: long;
-    private _taihe_register(): void {
-        _taihe_registry.register(this, this._taihe_dataPtr, this);
-    }
-    private _taihe_unregister(): void {
-        _taihe_registry.unregister(this);
-    }
-    private _taihe_initialize(vtblPtr: long, dataPtr: long): void {
-        this._taihe_vtblPtr = vtblPtr;
-        this._taihe_dataPtr = dataPtr;
-        this._taihe_register();
-    }
-    public _taihe_copyFrom(other: _taihe_IStringHolder_inner): void {
-        this._taihe_initialize(other._taihe_vtblPtr, _taihe_objDup(other._taihe_dataPtr));
-    }
-    public _taihe_moveFrom(other: _taihe_IStringHolder_inner): void {
-        this._taihe_initialize(other._taihe_vtblPtr, other._taihe_dataPtr);
-        other._taihe_unregister();
-    }
-    native _taihe_getAsync_native(): string;
-    native _taihe_getPromise_native(): string;
-    native _taihe_get_native(): string;
-    native _taihe_setAsync_native(a: string): void;
-    native _taihe_setPromise_native(a: string): void;
-    native _taihe_setSync_native(a: string): void;
-    getAsync(callback: AsyncCallback<string>): void {
-        taskpool.execute((): string => {
-            return this._taihe_getAsync_native();
-        })
-        .then((ret: Any): void => {
-            callback(null, ret as string);
-        })
-        .catch((ret: Any): void => {
-            callback(ret as BusinessError, undefined);
-        });
-    }
-    getPromise(): Promise<string> {
-        return new Promise<string>((resolve, reject): void => {
-            taskpool.execute((): string => {
-                return this._taihe_getPromise_native();
-            })
-            .then((ret: Any): void => {
-                resolve(ret as string);
-            })
-            .catch((ret: Any): void => {
-                reject(ret as Error);
-            });
-        });
-    }
-    // rename 函数
-    newGet(): string {
-        return this._taihe_get_native();
-    }
-    setAsync(a: string, callback: AsyncCallback<void>): void {
-        taskpool.execute((): void => {
-            return this._taihe_setAsync_native(a);
-        })
-        .then((ret: Any): void => {
-            callback(null, ret as undefined);
-        })
-        .catch((ret: Any): void => {
-            callback(ret as BusinessError, undefined);
-        });
-    }
-    setPromise(a: string): Promise<void> {
-        return new Promise<void>((resolve, reject): void => {
-            taskpool.execute((): void => {
-                return this._taihe_setPromise_native(a);
-            })
-            .then((ret: Any): void => {
-                resolve(ret as undefined);
-            })
-            .catch((ret: Any): void => {
-                reject(ret as Error);
-            });
-        });
-    }
-    setSync(a: string): void {
-        return this._taihe_setSync_native(a);
-    }
-    overload set {
-        setAsync,
-        setPromise,
-    }
-    _taihe_getAsync_revert(): string {
-        throw new Error(`No valid revert function found`);
-    }
-    _taihe_getPromise_revert(): string {
-        throw new Error(`No valid revert function found`);
-    }
-    _taihe_get_revert(): string {
-        return this.get();
-    }
-    _taihe_setAsync_revert(a: string): void {
-        throw new Error(`No valid revert function found`);
-    }
-    _taihe_setPromise_revert(a: string): void {
-        throw new Error(`No valid revert function found`);
-    }
-    _taihe_setSync_revert(a: string): void {
-        return this.setSync(a);
-    }
-}
+## 注解语法补充
+
+Taihe 注解的通用规则：
+
+| 语法 | 作用域 |
+|------|--------|
+| `@annotation` | 作用于下一个元素 |
+| `@!annotation` | 作用于当前词法空间 |
+| `@annotation("param")` | 带参数的注解 |
+| `@annotation` | 无参数时可省略括号 |
+
+**示例：**
+
+```rust
+@foobar struct Foo {}
+// 等价于
+struct Foo { @!foobar }
 ```
+
+---
+
+## 相关文档
+
+- [Callback 回调](../callback/README.md) - 回调函数模式
+- [Interface 接口](../interface/README.md) - 接口定义

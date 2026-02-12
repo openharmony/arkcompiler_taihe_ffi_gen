@@ -15,59 +15,95 @@
 
 @!namespace("@ohos.security.huks", "huks")
 
-@gen_async("generateKeyItem")
-@gen_promise("generateKeyItem")
-function generateKeyItemSync(keyAlias: String, options: HuksOptions): void;
+@async
+@rename("generateKeyItem")
+function generateKeyItemWithCallback(keyAlias: String, options: HuksOptions): void;
+@promise
+@rename("generateKeyItem")
+function generateKeyItemReturnsPromise(keyAlias: String, options: HuksOptions): void;
 
-@gen_async("deleteKeyItem")
-@gen_promise("deleteKeyItem")
-function deleteKeyItemSync(keyAlias: String, options: HuksOptions): void;
+@async
+@rename("deleteKeyItem")
+function deleteKeyItemWithCallback(keyAlias: String, options: HuksOptions): void;
+@promise
+@rename("deleteKeyItem")
+function deleteKeyItemReturnsPromise(keyAlias: String, options: HuksOptions): void;
 
-@gen_async("importKeyItem")
-@gen_promise("importKeyItem")
-function importKeyItemSync(keyAlias: String, options: HuksOptions): void;
+@async
+@rename("importKeyItem")
+function importKeyItemWithCallback(keyAlias: String, options: HuksOptions): void;
+@promise
+@rename("importKeyItem")
+function importKeyItemReturnsPromise(keyAlias: String, options: HuksOptions): void;
 
-@gen_async("importWrappedKeyItem")
-@gen_promise("importWrappedKeyItem")
-function importWrappedKeyItemSync(keyAlias: String, wrappingKeyAlias: String, options: HuksOptions): void;
+@async
+@rename("importWrappedKeyItem")
+function importWrappedKeyItemWithCallback(keyAlias: String, wrappingKeyAlias: String, options: HuksOptions): void;
+@promise
+@rename("importWrappedKeyItem")
+function importWrappedKeyItemReturnsPromise(keyAlias: String, wrappingKeyAlias: String, options: HuksOptions): void;
 
-@gen_async("exportKeyItem")
-@gen_promise("exportKeyItem")
-function exportKeyItemSync(keyAlias: String, options: HuksOptions): HuksReturnResult;
+@async
+@rename("exportKeyItem")
+function exportKeyItemWithCallback(keyAlias: String, options: HuksOptions): HuksReturnResult;
+@promise
+@rename("exportKeyItem")
+function exportKeyItemReturnsPromise(keyAlias: String, options: HuksOptions): HuksReturnResult;
 
-@gen_async("isKeyItemExist")
-@gen_promise("isKeyItemExist")
-function isKeyItemExistSync(keyAlias: String, options: HuksOptions): bool;
+@async
+@rename("isKeyItemExist")
+function isKeyItemExistWithCallback(keyAlias: String, options: HuksOptions): bool;
+@promise
+@rename("isKeyItemExist")
+function isKeyItemExistReturnsPromise(keyAlias: String, options: HuksOptions): bool;
 
-@gen_async("initSession")
-@gen_promise("initSession")
-function initSessionSync(keyAlias: String, options: HuksOptions): HuksSessionHandle;
+@async
+@rename("initSession")
+function initSessionWithCallback(keyAlias: String, options: HuksOptions): HuksSessionHandle;
+@promise
+@rename("initSession")
+function initSessionReturnsPromise(keyAlias: String, options: HuksOptions): HuksSessionHandle;
 
-@gen_async("updateSession")
-function updateSessionSyncWithoutToken(handle: i64, options: HuksOptions): HuksReturnResult;
-@gen_async("updateSession")
-function updateSessionSyncWithToken(handle: i64, options: HuksOptions, token: @typedarray Array<u8>): HuksReturnResult;
-@gen_promise("updateSession")
-function updateSessionSync(handle: i64, options: HuksOptions, token: Optional<@typedarray Array<u8>>): HuksReturnResult;
+@async
+@rename("updateSession")
+function updateSessionWithCallbackWithoutToken(handle: i64, options: HuksOptions): HuksReturnResult;
+@async
+@rename("updateSession")
+function updateSessionWithCallbackWithToken(handle: i64, options: HuksOptions, token: @typedarray Array<u8>): HuksReturnResult;
+@promise
+@rename("updateSession")
+function updateSessionReturnsPromise(handle: i64, options: HuksOptions, @optional token: Optional<@typedarray Array<u8>>): HuksReturnResult;
 
-@gen_async("finishSession")
-function finishSessionSyncWithoutToken(handle: i64, options: HuksOptions): HuksReturnResult;
-@gen_async("finishSession")
-function finishSessionSyncWithToken(handle: i64, options: HuksOptions, token: @typedarray Array<u8>): HuksReturnResult;
-@gen_promise("finishSession")
-function finishSessionSync(handle: i64, options: HuksOptions, token: Optional<@typedarray Array<u8>>): HuksReturnResult;
+@async
+@rename("finishSession")
+function finishSessionWithCallbackWithoutToken(handle: i64, options: HuksOptions): HuksReturnResult;
+@async
+@rename("finishSession")
+function finishSessionWithCallbackWithToken(handle: i64, options: HuksOptions, token: @typedarray Array<u8>): HuksReturnResult;
+@promise
+@rename("finishSession")
+function finishSessionReturnsPromise(handle: i64, options: HuksOptions, @optional token: Optional<@typedarray Array<u8>>): HuksReturnResult;
 
-@gen_async("abortSession")
-@gen_promise("abortSession")
-function abortSessionSync(handle: i64, options: HuksOptions): void;
+@async
+@rename("abortSession")
+function abortSessionWithCallback(handle: i64, options: HuksOptions): void;
+@promise
+@rename("abortSession")
+function abortSessionReturnsPromise(handle: i64, options: HuksOptions): void;
 
-@gen_async("attestKeyItem")
-@gen_promise("attestKeyItem")
-function attestKeyItemSync(keyAlias: String, options: HuksOptions): HuksReturnResult;
+@async
+@rename("attestKeyItem")
+function attestKeyItemWithCallback(keyAlias: String, options: HuksOptions): HuksReturnResult;
+@promise
+@rename("attestKeyItem")
+function attestKeyItemReturnsPromise(keyAlias: String, options: HuksOptions): HuksReturnResult;
 
-@gen_async("anonAttestKeyItem")
-@gen_promise("anonAttestKeyItem")
-function anonAttestKeyItemSync(keyAlias: String, options: HuksOptions): HuksReturnResult;
+@async
+@rename("anonAttestKeyItem")
+function anonAttestKeyItemWithCallback(keyAlias: String, options: HuksOptions): HuksReturnResult;
+@promise
+@rename("anonAttestKeyItem")
+function anonAttestKeyItemReturnsPromise(keyAlias: String, options: HuksOptions): HuksReturnResult;
 
 union HuksParamValue {
     booleanValue: bool;
@@ -82,32 +118,32 @@ struct HuksParam {
 }
 
 struct HuksOptions {
-    properties: Optional<Array<HuksParam>>;
-    inData: Optional<@typedarray Array<u8>>;
+    @optional properties: Optional<Array<HuksParam>>;
+    @optional inData: Optional<@typedarray Array<u8>>;
 }
 
 struct HuksResult {
     errorCode: i64;
-    outData: Optional<@typedarray Array<u8>>;
-    properties: Optional<Array<HuksParam>>;
-    certChains: Optional<Array<String>>;
+    @optional outData: Optional<@typedarray Array<u8>>;
+    @optional properties: Optional<Array<HuksParam>>;
+    @optional certChains: Optional<Array<String>>;
 }
 
 struct HuksReturnResult {
-    outData: Optional<@typedarray Array<u8>>;
-    properties: Optional<Array<HuksParam>>;
-    certChains: Optional<Array<String>>;
+    @optional outData: Optional<@typedarray Array<u8>>;
+    @optional properties: Optional<Array<HuksParam>>;
+    @optional certChains: Optional<Array<String>>;
 }
 
 struct HuksHandle {
     errorCode: i64;
     handle: i64;
-    token: Optional<@typedarray Array<u8>>;
+    @optional token: Optional<@typedarray Array<u8>>;
 }
 
 struct HuksSessionHandle {
     handle: i64;
-    challenge: Optional<@typedarray Array<u8>>;
+    @optional challenge: Optional<@typedarray Array<u8>>;
 }
 
 struct HuksListAliasesReturnResult {

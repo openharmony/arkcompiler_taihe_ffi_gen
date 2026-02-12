@@ -1,8 +1,18 @@
-# Rename
+# Rename 重命名
 
-用户可以使用 `@rename` 注解修改 ets 侧的函数名
+> **学习目标**：掌握如何使用 `@rename` 注解修改 ArkTS 侧的函数名。
 
-## 第一步：在 Taihe IDL 文件中声明
+## 核心概念
+
+`@rename` 注解用于修改函数在 ArkTS 侧的导出名称，C++ 侧仍使用原名。
+
+| 用法 | 说明 |
+|------|------|
+| `@rename("newName")` | 指定新名称 |
+
+---
+
+## 第一步：定义接口
 
 **File: `idl/rename_example.taihe`**
 
@@ -11,52 +21,57 @@
 function oldFoo(a: i32, b: i32): i32;
 ```
 
-当用户对函数使用了 `@rename` 注解，会使得生成 ets 代码的 export 的函数名修改为新名字
+### 生成的 ArkTS 代码
 
 ```typescript
 // 不使用 @rename
-native function _taihe_oldFoo_native(a: int, b: int): int;
-export function oldFoo(a: int, b: int): int {
-    return _taihe_oldFoo_native(a, b);
-}
-function _taihe_oldFoo_reverse(a: int, b: int): int {
-    return oldFoo(a, b);
-}
-// 使用 @rename
-native function _taihe_oldFoo_native(a: int, b: int): int;
-export function newFoo(a: int, b: int): int {
-    return _taihe_oldFoo_native(a, b);
-}
-function _taihe_oldFoo_reverse(a: int, b: int): int {
-    return newFoo(a, b);
-}
+export function oldFoo(a: int, b: int): int { ... }
+
+// 使用 @rename("newFoo")
+export function newFoo(a: int, b: int): int { ... }
 ```
 
-## 第二步：实现声明的接口
+## 第二步：实现 C++ 代码
 
 **File: `author/src/rename_example.impl.cpp`**
 
 ```cpp
+#include "rename_example.impl.hpp"
+
+using namespace taihe;
+
+// C++ 侧仍使用原名
 int32_t oldFoo(int32_t a, int32_t b) {
     return a + b;
 }
+
+TH_EXPORT_CPP_API_oldFoo(oldFoo);
 ```
 
-## 第三步：生成并编译
+## 第三步：编译运行
 
 ```sh
 taihe-tryit test -u sts cookbook/rename_example -Csts:keep-name
 ```
 
+## 使用示例
+
 **File: `user/main.ets`**
 
 ```typescript
-let res = rename_example.newFoo(1, 2);
-console.log("res = " + res);
+import * as rename_example from "rename_example";
+
+loadLibrary("rename_example");
+
+function main() {
+    // ArkTS 侧使用新名称
+    let res = rename_example.newFoo(1, 2);
+    console.log("res = " + res);  // res = 3
+}
 ```
 
-**Stdout**
+---
 
-```sh
-res = 3
-```
+## 相关文档
+
+- [重写](../override/README.md) - 构造函数相关注解

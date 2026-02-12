@@ -1,19 +1,24 @@
-# 外部 interface 实现在 C++ 侧调用
+# 反向调用（Reversed Call）
 
-## 背景：用户已有实现
+> **学习目标**：掌握如何在 C++ 中调用 ArkTS 侧已有的接口实现。
 
-用户本身有声明文件，里面声明了一个 interface
+## 使用场景
+
+用户在 ArkTS 侧已有接口定义和实现，希望在 C++ 代码中调用这些实现。
+
+---
+
+## 第一步：定义接口
+
+**用户已有的 ArkTS 接口和实现：**
 
 ```typescript
+// user_impl.ets
 export interface IfaceA {
     foo(): string;
     bar(): int;
 }
-```
 
-用户有对该接口实现的一个 class
-
-```typescript
 export class ClassA implements IfaceA {
     name: string = "";
     age: int;
@@ -23,34 +28,20 @@ export class ClassA implements IfaceA {
         this.age = age;
     }
 
-    foo(): string {
-        return this.name;
-    }
-
-    bar(): int {
-        return this.age;
-    }
+    foo(): string { return this.name; }
+    bar(): int { return this.age; }
 }
 ```
-
-现在我们希望在使用 taihe 后，在 C++ 代码调用 ets 侧的这些方法的实现
-
-## 第一步：编写接口原型
-
-被调用接口对应的 Taihe IDL 文件
 
 **File: `idl/impl.taihe`**
 
 ```rust
+// 定义对应的 Taihe 接口（使用不同名称）
 interface IfaceA_taihe {
     Foo(): String;
     Bar(): i32;
 }
 ```
-
-注：此处的 interface 使用与原 interface 不同的名字
-
-在 native 侧调用的对应 Taihe IDL 文件
 
 **File: `idl/native_user.taihe`**
 
@@ -60,53 +51,39 @@ use impl;
 function UseIfaceA(obj: impl.IfaceA_taihe): String;
 ```
 
-## 第二步：完成 C++ 实现
-
-impl.taihe 不需要手写 C++ 实现
+## 第二步：实现 C++ 代码
 
 **File: `author/src/native_user.impl.cpp`**
 
 ```cpp
-::taihe::string UseIfaceA(::impl::weak::IfaceA_taihe obj) {
-  std::cout << "native call Foo(): " << obj->Foo() << std::endl;
-  std::cout << "native call Bar(): " << obj->Bar() << std::endl;
-  return obj->Foo();
+#include "native_user.impl.hpp"
+#include "impl.proj.hpp"
+
+using namespace taihe;
+
+string UseIfaceA(impl::weak::IfaceA_taihe obj) {
+    // 在 C++ 侧调用 ArkTS 实现的方法
+    std::cout << "native call Foo(): " << obj->Foo() << std::endl;
+    std::cout << "native call Bar(): " << obj->Bar() << std::endl;
+    return obj->Foo();
 }
+
+TH_EXPORT_CPP_API_UseIfaceA(UseIfaceA);
 ```
 
-因为这个对象传递到 C++ 层时已经是一个 taihe C++ 对象了，所以可以使用 taihe C++ 的方式调用
+> **说明**：`impl.taihe` 不需要 C++ 实现，它只是类型声明。
 
-```cpp
-// 得到 weak 类型类对象
-weak::Base weakBaseObj = baseObj;
+## 第三步：修改 ArkTS 实现
 
-// weak 类型转换为非 weak 类型
-Base baseObj2 = Base(weakBaseObj);
-
-// 子类转换为父类，静态转换
-Base newDerivedOBj = Base(derivedOBj);
-
-// 父类转换为子类，动态转换
-Derived newDerivedOBj2 = Derived(newDerivedOBj);
-
-// 调用函数 ->
-baseObj->foo();
-derivedOBj->foo(); // X 不允许子类直接调用父类函数，需要先转换为父类
-derivedOBj->bar();
-```
-
-该示例就是使用了 `->` 调用相应的函数实现
-
-## 第三步：ets 侧
-
-修改原本的 class 实现
+让已有的类同时实现 Taihe 接口：
 
 **File: `user/user_impl.ets`**
 
 ```typescript
 import * as impl_taihe from "impl";
 
-export class ClassA implements IfaceA, impl_taihe.IfaceA_taihe { // 新增 taihe 定义的 interface
+// 添加 impl_taihe.IfaceA_taihe 到 implements 列表
+export class ClassA implements IfaceA, impl_taihe.IfaceA_taihe {
     name: string = "";
     age: int;
 
@@ -115,22 +92,59 @@ export class ClassA implements IfaceA, impl_taihe.IfaceA_taihe { // 新增 taihe
         this.age = age;
     }
 
-    foo(): string {
-        return this.name;
-    }
-
-    bar(): int {
-        return this.age;
-    }
+    foo(): string { return this.name; }
+    bar(): int { return this.age; }
 }
 ```
 
-原本是 `class ClassA implements IfaceA`，现在修改为 `class ClassA implements IfaceA, impl_taihe.IfaceA_taihe`
+## 第四步：编译运行
+
+```sh
+taihe-tryit test -u sts cookbook/native_user
+```
+
+## 使用示例
 
 **File: `user/main.ets`**
 
 ```typescript
-let obj: user_impl.IfaceA = new user_impl.ClassA("Tom", 18);
-let objName: string = native_user.useIfaceA(obj);
-console.log("ETS return: " + objName);
+import * as user_impl from "user_impl";
+import * as native_user from "native_user";
+
+loadLibrary("native_user");
+
+function main() {
+    let obj = new user_impl.ClassA("Tom", 18);
+    let result = native_user.useIfaceA(obj);
+    console.log("ETS return: " + result);
+}
 ```
+
+**输出：**
+
+```
+native call Foo(): Tom
+native call Bar(): 18
+ETS return: Tom
+```
+
+---
+
+## C++ 调用接口方法
+
+```cpp
+// 使用 -> 调用接口方法
+obj->Foo();
+obj->Bar();
+
+// weak 类型转换
+weak::Base weakObj = obj;
+Base strongObj = Base(weakObj);
+```
+
+---
+
+## 相关文档
+
+- [Interface 接口](../interface/README.md) - 接口定义
+- [Callback](../callback/README.md) - 回调函数
