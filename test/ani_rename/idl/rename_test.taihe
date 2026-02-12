@@ -13,11 +13,11 @@
  * limitations under the License.
  */
 
-// Function rename
-@rename("newFoo")
-function OldFoo(a: i32, b: i32): i32;
+// Test @rename on function
+@rename("add")
+function OldAdd(a: i32, b: i32): i32;
 
-// Enum rename (type and items)
+// Test @rename on enum declaration and enum items
 @rename("Color")
 enum OldColor: i32 {
     @rename("red") RED = 0,
@@ -25,7 +25,16 @@ enum OldColor: i32 {
     @rename("blue") BLUE = 2,
 }
 
-// Struct rename (type and fields)
+function GetColorValue(c: OldColor): i32;
+
+// Test @rename on const enum items
+@const
+enum OldMaxValue: i32 {
+    @rename("INT_MAX") OLD_INT_MAX = 2147483647,
+    @rename("ZERO") OLD_ZERO = 0,
+}
+
+// Test @rename on struct declaration and struct fields
 @rename("Point")
 struct OldPoint {
     @rename("xPos") x: i32;
@@ -33,13 +42,23 @@ struct OldPoint {
 }
 
 function CreatePoint(x: i32, y: i32): OldPoint;
+function GetPointSum(p: OldPoint): i32;
 
-// Interface rename
-@rename("Greeter")
-interface OldGreeter {
-    Greet(): String;
+// Test @rename on interface declaration
+@rename("Calculator")
+interface OldCalculator {
+    @rename("compute")
+    OldCompute(a: i32, b: i32): i32;
 }
 
-function CreateGreeter(name: String): OldGreeter;
+function CreateCalculator(): OldCalculator;
 
-function TestParamRename(@rename("message") msg: String): String;
+// Test @rename on union declaration
+@rename("Data")
+union OldData {
+    intVal: i32;
+    strVal: String;
+}
+
+function CreateIntData(v: i32): OldData;
+function CreateStrData(v: String): OldData;

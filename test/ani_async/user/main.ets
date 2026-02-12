@@ -126,7 +126,8 @@ function testIBase() {
 
     waitForCompletion(() => ibase.setReturnsPromise("interface async set"));
     arktest.assertEQ(
-        waitForCompletion(() => ibase.getReturnsPromise()), "interface async set",
+        waitForCompletion(() => ibase.getReturnsPromise()),
+        "interface async set",
         "getString should resolve with the value set in setAsync");
 }
 
