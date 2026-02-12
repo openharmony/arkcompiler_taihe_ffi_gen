@@ -1,8 +1,19 @@
-# export default
+# Export Default
 
-本章节介绍如何使用 `@sts_export_default` 注解来实现 ets 中的 export default
+> **学习目标**：掌握如何使用 `@sts_export_default` 注解实现 ArkTS 的 export default。
 
-## 第一步：编写接口原型
+## 核心概念
+
+| 注解 | 作用 |
+|------|------|
+| `@!sts_export_default` | 为当前文件/命名空间添加 export default |
+| `@sts_export_default` | 为接口/枚举/联合类型添加 export default |
+
+> **注意**：ArkTS 只允许对一个实体使用 export default，请勿在同一个包内多次使用。
+
+---
+
+## 第一步：定义接口
 
 **File: `idl/export_example.taihe`**
 
@@ -16,8 +27,6 @@ struct Inner {
 }
 ```
 
-然后让另一个 Taihe IDL 文件 import：
-
 **File: `idl/import_example.taihe`**
 
 ```rust
@@ -26,70 +35,86 @@ from export_example use Inner;
 function testImport(obj: Inner): void;
 ```
 
-@sts_export_default 注解使用方法如下：
+### 使用方式
 
-- 给 namespace 添加 export_default
+**方式一：为 namespace 添加 export default**
 
-  ```rust
-  @!namespace("xxx", "yyy")
-  @!sts_export_default
+```rust
+@!namespace("xxx", "yyy")
+@!sts_export_default
+// ...
+```
 
-  // ...
-  ```
+**方式二：为类型添加 export default**
 
-- 给 interface/enum/union 添加 export_default
+```rust
+@sts_export_default
+interface IfaceA {}
+```
 
-  ```rust
-  // 只能加在头等声明
-  @sts_export_default
-  interface IfaceA {}
-  ```
+## 第二步：生成的代码
 
-注：arkts 只允许对一个实体使用 export default，请用户不要在一个 package 里面多次使用该注解
-
-## 第二步：生成文件
-
-**File: `generated/export_pkg.ets`**
+**File (Generated): `generated/export_pkg.ets`**
 
 ```typescript
-export default namespace export_ns { // export default
+export default namespace export_ns {
     export interface Inner {
         i: int;
         s: string;
     }
-    class Inner_inner implements Inner {
-        i: int;
-        s: string;
-        constructor(i: int, s: string) {
-            this.i = i;
-            this.s = s;
-        }
-    }
+    // ...
 }
 ```
 
-我们可以看到生成文件里面添加了 `export default`
+## 第三步：实现 C++ 代码
 
-## 第三步：在 ets 侧使用
+**File: `author/src/import_example.impl.cpp`**
+
+```cpp
+#include "import_example.impl.hpp"
+
+using namespace taihe;
+
+void testImport(export_example::Inner const& obj) {
+    std::cout << "obj.s = " << obj.s << ", obj.i = " << obj.i << std::endl;
+}
+
+TH_EXPORT_CPP_API_testImport(testImport);
+```
+
+## 第四步：编译运行
+
+```sh
+taihe-tryit test -u sts cookbook/export_default
+```
+
+## 使用示例
 
 **File: `user/main.ets`**
 
 ```typescript
-import {BusinessError} from "@ohos.base";
-// 注：ets 里导入一个 export default 只能使用 import x from y，不可以使用 import * as X from y
+// 导入 export default 使用 import X from "Y"
+// 不能使用 import * as X from "Y"
 import export_ns from "export_pkg";
-import {testImport} from "import_example";
+import { testImport } from "import_example";
 
 loadLibrary("export_default");
 
 function main() {
-    let obj: export_ns.Inner = {i: 1, s: "str"};
+    let obj: export_ns.Inner = { i: 1, s: "str" };
     testImport(obj);
 }
 ```
 
-**Stdout**
+**输出：**
 
-```sh
-obj.str= str, obj.int= 1
 ```
+obj.s = str, obj.i = 1
+```
+
+---
+
+## 相关文档
+
+- [Namespace 命名空间](../namespace/README.md) - 命名空间用法
+- [Import 导入](../import/README.md) - 模块导入

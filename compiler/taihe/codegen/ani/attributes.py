@@ -47,7 +47,7 @@ from taihe.semantics.types import (
     UnitType,
 )
 from taihe.utils.diagnostics import DiagnosticsManager
-from taihe.utils.exceptions import AdhocError, AdhocWarn
+from taihe.utils.exceptions import AdhocError, AttrDeprecatedError, AttrDeprecatedWarn
 
 
 @dataclass
@@ -167,12 +167,7 @@ class NullAttr(TypedAttribute[UnionFieldDecl | StructFieldDecl | TypeRefDecl]):
         if isinstance(parent, TypeRefDecl):
             ty = parent.resolved_ty
         else:
-            dm.emit(
-                AdhocWarn(
-                    f"Attachment of attribute '{self.NAME}' to a field will be deprecated. Should be attached to a type reference instead.",
-                    loc=self.loc,
-                )
-            )
+            dm.emit(AttrDeprecatedWarn(self, "Attached to a type reference instead."))
             ty = parent.ty
         if not isinstance(ty, UnitType):
             dm.emit(
@@ -200,12 +195,7 @@ class UndefinedAttr(TypedAttribute[UnionFieldDecl | StructFieldDecl | TypeRefDec
         if isinstance(parent, TypeRefDecl):
             ty = parent.resolved_ty
         else:
-            dm.emit(
-                AdhocWarn(
-                    f"Attachment of attribute '{self.NAME}' to a field will be deprecated. Should be attached to a type reference instead.",
-                    loc=self.loc,
-                )
-            )
+            dm.emit(AttrDeprecatedWarn(self, "Attached to a type reference instead."))
             ty = parent.ty
         if not isinstance(ty, UnitType):
             dm.emit(
@@ -450,18 +440,24 @@ class RenameAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
 
 @dataclass
 class OverloadAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
-    # TODO: Deprecated
-
     NAME = "overload"
     TARGETS = (GlobFuncDecl, IfaceMethodDecl)
 
     func_name: str
 
+    @override
+    def check_typed_context(
+        self,
+        parent: GlobFuncDecl | IfaceMethodDecl,
+        dm: DiagnosticsManager,
+    ) -> None:
+        dm.emit(AttrDeprecatedWarn(self, "Use 'rename' attribute instead."))
+
+        super().check_typed_context(parent, dm)
+
 
 @dataclass
 class GenAsyncAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
-    # TODO: Deprecated
-
     NAME = "gen_async"
     TARGETS = (GlobFuncDecl, IfaceMethodDecl)
 
@@ -474,9 +470,11 @@ class GenAsyncAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
         parent: GlobFuncDecl | IfaceMethodDecl,
         dm: DiagnosticsManager,
     ) -> None:
+        dm.emit(AttrDeprecatedWarn(self, "Use 'async' attribute instead."))
+
         if self.func_name is None:
-            if len(parent.name) > 4 and parent.name[-4:].lower() == "sync":
-                self.func_prefix = parent.name[:-4]
+            if parent.name.lower().endswith("sync"):
+                self.func_prefix = parent.name[: -len("sync")]
             else:
                 dm.emit(
                     AdhocError(
@@ -490,8 +488,6 @@ class GenAsyncAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
 
 @dataclass
 class GenPromiseAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
-    # TODO: Deprecated
-
     NAME = "gen_promise"
     TARGETS = (GlobFuncDecl, IfaceMethodDecl)
 
@@ -504,9 +500,11 @@ class GenPromiseAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
         parent: GlobFuncDecl | IfaceMethodDecl,
         dm: DiagnosticsManager,
     ) -> None:
+        dm.emit(AttrDeprecatedWarn(self, "Use 'promise' attribute instead."))
+
         if self.func_name is None:
-            if len(parent.name) > 4 and parent.name[-4:].lower() == "sync":
-                self.func_prefix = parent.name[:-4]
+            if parent.name.lower().endswith("sync"):
+                self.func_prefix = parent.name[: -len("sync")]
             else:
                 dm.emit(
                     AdhocError(
@@ -534,8 +532,6 @@ class StaticAttr(TypedAttribute[GlobFuncDecl]):
 
 @dataclass
 class CtorAttr(TypedAttribute[GlobFuncDecl]):
-    # TODO: Deprecated
-
     NAME = "ctor"
     TARGETS = (GlobFuncDecl,)
     ATTRIBUTE_GROUP_TAGS = frozenset(
@@ -594,8 +590,8 @@ class GetAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
             )
 
         if self.member_name is None:
-            if len(parent.name) > 3 and parent.name[:3].lower() == "get":
-                self.func_suffix = parent.name[3:]
+            if parent.name.lower().startswith("get"):
+                self.func_suffix = parent.name[len("get") :]
             else:
                 dm.emit(
                     AdhocError(
@@ -639,8 +635,8 @@ class SetAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
             )
 
         if self.member_name is None:
-            if len(parent.name) > 3 and parent.name[:3].lower() == "set":
-                self.func_suffix = parent.name[3:]
+            if parent.name.lower().startswith("set"):
+                self.func_suffix = parent.name[len("set") :]
             else:
                 dm.emit(
                     AdhocError(
@@ -668,13 +664,21 @@ class PromiseAttribute(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
 
 @dataclass
 class StaticOverloadAttribute(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
-    # TODO: Deprecated
-
     NAME = "static_overload"
     TARGETS = (GlobFuncDecl, IfaceMethodDecl)
     ATTRIBUTE_GROUP_TAGS = frozenset({OVERLOAD_KIND_ATTRIBUTE_GROUP})
 
     name: str = ""
+
+    @override
+    def check_typed_context(
+        self,
+        parent: GlobFuncDecl | IfaceMethodDecl,
+        dm: DiagnosticsManager,
+    ) -> None:
+        dm.emit(AttrDeprecatedError(self, "Maybe use 'rename' attribute instead."))
+
+        super().check_typed_context(parent, dm)
 
 
 @dataclass
@@ -695,11 +699,10 @@ class OnOffAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
     ) -> None:
         if self.name:
             if self.type is None:
-                if (
-                    len(parent.name) > len(self.name)
-                    and parent.name[: len(self.name)].lower() == self.name.lower()
-                ):
-                    self.func_suffix = parent.name[len(self.name) :]
+                parent_name_lower = parent.name.casefold()
+                prefix_name_lower = self.name.casefold()
+                if parent_name_lower.startswith(prefix_name_lower):
+                    self.func_suffix = parent_name_lower[len(prefix_name_lower) :]
                 else:
                     dm.emit(
                         AdhocError(
@@ -707,21 +710,22 @@ class OnOffAttr(TypedAttribute[GlobFuncDecl | IfaceMethodDecl]):
                             loc=self.loc,
                         )
                     )
-        elif len(parent.name) > 2 and parent.name[:2].lower() == "on":
-            self.name = "on"
-            if self.type is None:
-                self.func_suffix = parent.name[2:]
-        elif len(parent.name) > 3 and parent.name[:3].lower() == "off":
-            self.name = "off"
-            if self.type is None:
-                self.func_suffix = parent.name[3:]
         else:
-            dm.emit(
-                AdhocError(
-                    f"Attribute '{self.NAME}' requires the function name to be specified when the function name does not start with 'on' or 'off'.",
-                    loc=self.loc,
+            for prefix in ("on", "off"):
+                parent_name_lower = parent.name.casefold()
+                prefix_name_lower = prefix.casefold()
+                if parent_name_lower.startswith(prefix_name_lower):
+                    self.name = prefix
+                    if self.type is None:
+                        self.func_suffix = parent_name_lower[len(prefix_name_lower) :]
+                    break
+            else:
+                dm.emit(
+                    AdhocError(
+                        f"Attribute '{self.NAME}' requires the function name to be specified when the function name does not start with 'on' or 'off'.",
+                        loc=self.loc,
+                    )
                 )
-            )
 
         super().check_typed_context(parent, dm)
 
@@ -761,6 +765,6 @@ all_attr_types: list[CheckedAttrT] = [
     SetAttr,
     AsyncAttribute,
     PromiseAttribute,
-    # StaticOverloadAttribute,
+    StaticOverloadAttribute,
     OnOffAttr,
 ]

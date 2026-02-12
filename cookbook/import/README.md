@@ -1,125 +1,158 @@
-# 导入
+# Import 导入
 
-我们经常会需要将一个模块导入到另一个模块，本章节已**用户注册通知**为例，介绍 taihe 的 import
+> **学习目标**：掌握如何在 Taihe 中导入和使用其他模块。
 
-## 第一步：编写接口原型
+本教程以"用户通知系统"为例，介绍 Taihe 的模块导入机制。
+
+## 导入语法
+
+Taihe 支持两种导入方式：
+
+| 语法 | 说明 | 示例 |
+|------|------|------|
+| `from A use B;` | 从包 A 导入声明 B | `from user use IUser;` |
+| `use A;` | 导入整个包 A | `use user;` |
+
+### 别名语法
+
+为避免命名冲突，可以使用 `as` 关键字：
+
+```rust
+use user as u;                    // 包别名
+from user use IUser as UserType;  // 声明别名
+```
+
+---
+
+## 第一步：定义模块
 
 **File: `idl/user.taihe`**
 
 ```rust
 interface IUser {
     @get getEmail(): String;
-    @set setEmail(path: String): void;
+    @set setEmail(email: String): void;
 }
 
-function makeUser(path: String): IUser;
+function makeUser(email: String): IUser;
 ```
 
 **File: `idl/notification.taihe`**
 
 ```rust
+// 方式一：导入单个声明
 from user use IUser;
 
-interface INotificationService{
-    sendMessage(a: IUser): void;
+interface INotificationService {
+    sendMessage(user: IUser): void;
 }
 
 function makeNotificationService(): INotificationService;
 ```
 
-taihe 有两种导入方式：
-
-1. `from A use B;`
-2. `use A;`
-
-其中，A 为 taihe 的 pkg，B 为声明
-
-本章样例使用 `from user use IUser`，即从 `user` 包里导入 `IUser`
-
-当然也可以使用 `use user` 来导入整个 `user.taihe` 文件，但是这样做的话，在被导入的 Taihe IDL 文件 `notification.taihe` 里，使用导入的模块则需要前面跟上 pkg 名
+或者使用整包导入：
 
 ```rust
+// 方式二：导入整个包
 use user;
 
-interface INotificationService{
-    sendMessage(a: user.IUser): void; // 此处使用 pkg.module 的形式
+interface INotificationService {
+    sendMessage(u: user.IUser): void;  // 需要使用 包名.类型 的形式
 }
 
 function makeNotificationService(): INotificationService;
 ```
 
-为了避免重名的情况，支持 `as` 语法：
-
-1. `use A as C;`
-
-2. `from A use B as C;`
-
-## 第二步：完成 C++ 实现
+## 第二步：实现 C++ 代码
 
 **File: `author/src/user.impl.cpp`**
 
 ```cpp
+#include "user.impl.hpp"
+
+using namespace taihe;
+
 class IUserImpl {
 public:
-    IUserImpl(string_view path): m_email(path){}
+    IUserImpl(string_view email) : m_email(email) {}
 
     string getEmail() {
-        return this->m_email;
+        return m_email;
     }
 
-    void setEmail(string_view path) {
-        this->m_email = path;
+    void setEmail(string_view email) {
+        m_email = email;
     }
 
 private:
     string m_email;
 };
 
-IUser makeUser(string_view path) {
-    return make_holder<IUserImpl, IUser>(path);
+IUser makeUser(string_view email) {
+    return make_holder<IUserImpl, IUser>(email);
 }
+
+TH_EXPORT_CPP_API_makeUser(makeUser);
 ```
 
-**File: `author/src/ntification.impl.cpp`**
+**File: `author/src/notification.impl.cpp`**
 
 ```cpp
+#include "notification.impl.hpp"
+#include "user.proj.hpp"
+
+using namespace taihe;
+
 class INotificationServiceImpl {
 public:
-    INotificationServiceImpl() {}
-
-    void sendMessage(::user::weak::IUser a) {
-        string_view user_email = a->getEmail(); // 使用 -> 调用方法
-        std::cout << "Welcome " << a->getEmail() << std::endl;
+    void sendMessage(::user::weak::IUser user) {
+        std::cout << "Welcome " << user->getEmail() << std::endl;
     }
 };
 
 INotificationService makeNotificationService() {
     return make_holder<INotificationServiceImpl, INotificationService>();
 }
+
+TH_EXPORT_CPP_API_makeNotificationService(makeNotificationService);
 ```
 
-此处有一个需要注意的地方在于在 C++ 侧调用 taihe interface 的方法，当需要调用 taihe interface 的方法时，在 c++ 侧调用方法时，需要使用 `->` 的方式调用函数，而非 `.` 的方式
+## 第三步：编译运行
 
-```cpp
-a.getEmail();  // error!
-a->getEmail(); // success!
+```sh
+taihe-tryit test -u sts cookbook/notification
 ```
 
-## 第三步：在 ets 侧使用
+## 使用示例
 
 **File: `user/main.ets`**
 
 ```typescript
-let userA = user.makeUser("12345@huawei.com");
-let userB = user.makeUser("67890@outlook.com");
-let noter = notification.makeNotificationService();
-noter.sendMessage(userA);
-noter.sendMessage(userB);
+import * as user from "user";
+import * as notification from "notification";
+
+loadLibrary("notification");
+
+function main() {
+    let userA = user.makeUser("alice@example.com");
+    let userB = user.makeUser("bob@example.com");
+    
+    let service = notification.makeNotificationService();
+    service.sendMessage(userA);
+    service.sendMessage(userB);
+}
 ```
 
-**Stdout**
+**输出：**
 
-```sh
-Welcome 12345@huawei.com
-Welcome 67890@outlook.com
 ```
+Welcome alice@example.com
+Welcome bob@example.com
+```
+
+---
+
+## 相关文档
+
+- [Interface 接口](../interface/README.md) - 接口定义与实现
+- [继承](../inherit/README.md) - 接口继承

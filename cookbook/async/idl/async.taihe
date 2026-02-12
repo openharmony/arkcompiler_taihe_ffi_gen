@@ -14,24 +14,29 @@
  */
 
 @rename("add")
-@async function addAsync(a: i32, b: i32): i32;
+@async function addWithCallback(a: i32, b: i32): i32;
 
 @rename("add")
-@promise function addPromise(a: i32, b: i32): i32;
+@promise function addReturnsPromise(a: i32, b: i32): i32;
 
 function addSync(a: i32, b: i32): i32;
 
 interface IStringHolder {
-    @async getStrWithAsync(): String;
-    @promise getStrRetPromise(): String;
-    @rename("newGet")
-    getStrSync(): String;
+    @rename("getString")
+    @async getStringWithCallback(): String;
 
-    @rename("setStr")
-    @async setStrWithAsync(a: String): void;
-    @rename("setStr")
-    @promise setStrRetPromise(a: String): void;
-    setStrSync(a: String): void;
+    @rename("getString")
+    @promise getStringReturnsPromise(): String;
+
+    getStringSync(): String;
+
+    @rename("setString")
+    @async setStringWithCallback(a: String): void;
+    
+    @rename("setString")
+    @promise setStringReturnsPromise(a: String): void;
+    
+    setStringSync(a: String): void;
 }
 
 function makeIStringHolder(): IStringHolder;

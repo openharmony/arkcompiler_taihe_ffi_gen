@@ -124,14 +124,14 @@ function testIBase() {
     arktest.assertEQ(
         ibase.get(), "My IBase", "IBase.get() should return 'My IBase'");
 
-    waitForCompletion(() => ibase.setPromise("interface async set"));
+    waitForCompletion(() => ibase.setString("interface async set"));
     arktest.assertEQ(
-        waitForCompletion(() => ibase.getPromise()), "interface async set",
-        "getPromise should resolve with the value set in setAsync");
+        waitForCompletion(() => ibase.getString()), "interface async set",
+        "getString should resolve with the value set in setString");
 }
 
 function testStaticAsyncMethods() {
-    waitForCompletion(() => async_test.IBase.printPromise());
+    waitForCompletion(() => async_test.IBase.print());
 }
 
 function testStructMethods() {

@@ -132,8 +132,6 @@ TH_EXPORT_CPP_API_addSync(AddImpl);
 TH_EXPORT_CPP_API_addWithAsync(AddImpl);
 TH_EXPORT_CPP_API_addReturnsPromise(AddImpl);
 TH_EXPORT_CPP_API_getIBase(GetIBaseImpl);
-TH_EXPORT_CPP_API_getIBaseWithCallback(GetIBaseImpl);
-TH_EXPORT_CPP_API_getIBaseReturnsPromise(GetIBaseImpl);
 TH_EXPORT_CPP_API_fromStructSync(FromStructSyncImpl);
 TH_EXPORT_CPP_API_fromStructWithCallback(FromStructSyncImpl);
 TH_EXPORT_CPP_API_fromStructReturnsPromise(FromStructSyncImpl);

@@ -1,10 +1,23 @@
-# 重写
+# 重写（Override）
 
-重写（override）是指在子类中重新定义父类中已存在的方法，以改变其行为。在运行时，系统会根据对象的实际类型自动调用对应版本的方法。
+> **学习目标**：掌握如何在 ArkTS 侧继承 Taihe 接口并重写方法。
 
-taihe 支持用户在 sts 侧创建子类，继承在 Taihe IDL 文件中声明的父类，并重写其方法。
+## 核心概念
 
-## 第一步：在 Taihe IDL 文件中声明
+Taihe 支持在 ArkTS 侧创建子类，继承 Taihe 定义的父类，并重写其方法。
+
+### 相关注解
+
+| 注解 | 作用 | 示例 |
+|------|------|------|
+| `@class` | 生成 class 而非 interface | `@class interface UIAbility` |
+| `@ctor("Class")` | 添加构造器 | `@ctor("UIAbility") function create()` |
+| `@static("Class")` | 添加静态方法 | `@static("UIAbility") function log()` |
+| `@rename` | 重命名 | `@rename("logLifecycle") @static("OtherAbility") function logLifecycleInOtherAbility()` |
+
+---
+
+## 第一步：定义接口
 
 **File: `idl/override.taihe`**
 
@@ -15,61 +28,61 @@ interface UIAbility {
     onBackground(): void;
 }
 
-@rename @constructor("UIAbility")
+// 匿名构造函数（单构造函数时推荐）
+@ctor("UIAbility")
 function getUIAbility(): UIAbility;
 
 function useUIAbility(a: UIAbility): void;
 
+// 静态方法
 @static("UIAbility")
 function logLifecycle(str: String): void;
+
+@class
+interface OtherAbility {}
+
+// @static 可以和 @rename 结合使用，logLifecycleInOtherAbility 会被生成为 OtherAbility.logLifecycle
+@static("OtherAbility")
+@rename("logLifecycle")
+function logLifecycleInOtherAbility(str: String): void;
 ```
 
-这里涉及 3 种注解：`@class` `@constructor` `@static` `@rename`
+### 构造函数使用规则
 
-- `@class`
-
-  对于上面的接口声明，如果不添加 `@class` 注解，那么在 ets 侧会默认投影成 `interface UIAbility`. 如果需要将其投影为 `class` 则需使用 `@class` 注解，使其在 ets 侧直接生成为 `class CUIAbility`.
-
-- `@constructor`
-  该注解会给对应的 class 添加构造器，仅对 `@class` 注解的 interface 有效
-
-- `@static`
-  该注解会给对应的 class 添加静态方法，仅对 `@class` 注解的 interface 有效
-
-- `@rename`
-  该注解会改变 ets 侧方法名，使用 `@rename("<new_name>")` 会使得 ets 侧方法名修改为 `new_name`, 不带参数时适用于匿名函数
-
-注：根据 ets 规范，当一个 class 只有一个构造函数时，该函数应该为匿名构造函数，所以应该使用 `@rename`
+**单构造函数**（使用 `@ctor` 直接匿名化）：
 
 ```rust
 @class
 interface IfaceA {}
 
-@rename @constructor("IfaceA")
+@ctor("IfaceA")
 function createIfaceA(): IfaceA;
 ```
 
-注：根据 ets 新重载规则，当一个 class 有多个构造函数时，需要使用 `@rename`
+**多构造函数**（命名构造函数）：
 
 ```rust
 @class
 interface IfaceB {}
 
-@rename @constructor("IfaceB")
+@ctor("IfaceB")
 function createIfaceBWithInt(arg: i32): IfaceB;
 
-@rename @constructor("IfaceB")
+@ctor("IfaceB")
 function createIfaceBWithString(arg: String): IfaceB;
 ```
 
-## 第二步：实现声明的接口
-
-`useUIAbility` 函数接收 `UIAbility` 类型的参数，根据传入参数对象的实际类型调用 `onForeground` 方法和 `onBackground` 方法。
+## 第二步：实现 C++ 代码
 
 **File: `author/src/override.impl.cpp`**
 
 ```cpp
-class UIAbility {
+#include "override.impl.hpp"
+
+using namespace taihe;
+using namespace override;
+
+class UIAbilityImpl {
 public:
     void onForeground() {
         std::cout << "in cpp onForeground" << std::endl;
@@ -78,56 +91,77 @@ public:
         std::cout << "in cpp onBackground" << std::endl;
     }
 };
-::override::UIAbility getUIAbility() {
-    return make_holder<UIAbility, ::override::UIAbility>();
+
+UIAbility getUIAbility() {
+    return make_holder<UIAbilityImpl, UIAbility>();
 }
-void useUIAbility(::override::weak::UIAbility a) {
-    a->onForeground();
-    a->onBackground();
+
+void useUIAbility(weak::UIAbility a) {
+    a->onForeground();  // 可能调用重写的方法
+    a->onBackground();  // 可能调用重写的方法
 }
+
 void logLifecycle(string_view str) {
-  std::cout << "[UIAbility]: " << str << std::endl;
+    std::cout << "[UIAbility]: " << str << std::endl;
 }
+
+TH_EXPORT_CPP_API_getUIAbility(getUIAbility);
+TH_EXPORT_CPP_API_useUIAbility(useUIAbility);
+TH_EXPORT_CPP_API_logLifecycle(logLifecycle);
 ```
 
-## 第三步：生成并编译
+## 第三步：编译运行
 
 ```sh
-# 注：Taihe IDL 文件里的函数与 C++ 规范一致，所以函数会在生成的 ets 侧自动转变为小写字母开头函数
-# Taihe IDL 文件中的写法：
-#   function FooBar(): void;
-# 生成的 ets 侧代码
-#   function fooBar(): void;
-# 如果希望生成的 ets 侧函数与 Taihe IDL 文件一致，可以使用 -Csts:keep-name
-taihe-tryit test -u sts path/to/override -Csts:keep-name
+taihe-tryit test -u sts cookbook/override -Csts:keep-name
 ```
 
-用户侧创建类 `MyAbility` 继承了 Taihe IDL 文件中声明的类 `UIAbility`，并重写了方法 `onForeground`，创建了一个 `MyAbility` 类的实例，并将其赋值给类型为 `UIAbility` 的变量，以此做为参数传入 `useUIAbility` 函数。
-
-可以看出实际上在 C++ 侧调用了 sts 侧重写的 `onForeground` 方法和 C++ 侧原本的 `onBackground` 方法。
+## 使用示例
 
 **File: `user/main.ets`**
 
 ```typescript
+import { UIAbility, useUIAbility } from "override";
+
+loadLibrary("override");
+
+// 继承并重写方法
 class MyAbility extends UIAbility {
-    constructor () {
+    constructor() {
         super();
     }
+    
+    // 重写 onForeground
     onForeground(): void {
-        console.log("in ets onForeground")
+        console.log("in ets onForeground");
     }
+    // onBackground 继承自父类，不重写
 }
-let my_uiability: UIAbility = new MyAbility();
-useUIAbility(my_uiability);
-MyAbility.logLifecycle("using uiability")
+
+function main() {
+    let my_ability: UIAbility = new MyAbility();
+    
+    // C++ 会调用重写的 onForeground 和原始的 onBackground
+    useUIAbility(my_ability);
+    
+    // 调用静态方法
+    MyAbility.logLifecycle("using uiability");
+}
 ```
 
-上面的 ets 侧代码使用 MyAbility 继承 UIAbility
+**输出：**
 
-**Stdout**
-
-```sh
+```
 in ets onForeground
 in cpp onBackground
 [UIAbility]: using uiability
 ```
+
+> **说明**：`useUIAbility` 在 C++ 中调用时，`onForeground()` 实际执行的是 ArkTS 侧重写的版本，`onBackground()` 执行的是 C++ 原始版本。
+
+---
+
+## 相关文档
+
+- [继承](../inherit/README.md) - 接口继承基础
+- [多态](../polymorphism/README.md) - 多态特性

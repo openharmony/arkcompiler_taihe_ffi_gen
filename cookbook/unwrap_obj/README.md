@@ -1,14 +1,24 @@
-# 外部对象导出
+# 访问原生 C++ 对象（Unwrap Object）
 
-在实践的过程中，会有使用已经实现的 class 的情况
+> **学习目标**：掌握如何从 Taihe 接口中访问底层的原生 C++ 对象。
 
-## 第一步：编写接口原型
+## 使用场景
+
+当你有一个**已有的 C++ 类**（非 Taihe 设计），希望：
+1. 通过 Taihe 接口暴露部分功能
+2. 在实现内部访问 C++ 类的非暴露方法
+
+这需要一种机制从接口对象中"取出"底层 C++ 实例。
+
+---
+
+## 第一步：定义接口
 
 **File: `idl/wrap_interface.taihe`**
 
 ```rust
-interface Foo{
-    getInner(): i64;
+interface Foo {
+    getInner(): i64;    // 关键：返回实现类指针
     func1(): String;
     func2(): String;
 }
@@ -17,60 +27,49 @@ function makeFoo(): Foo;
 function useFoo(obj: Foo): void;
 ```
 
-该场景中，实际上在 `useFoo` 函数中需要使用到已经实现的类
+> **说明**：`getInner(): i64` 是辅助方法，返回 C++ 实现类指针，仅供 C++ 内部使用。
 
-我们在这种情况下，需要给 `interface Foo` 增加一个 `GetInner()` 的方法，返回类型为 `i64`, 用于返回实现类
+## 第二步：实现 C++ 代码
 
-## 第二步：完成 C++ 实现
-
-假设已经实现好的类 `InnerFoo` 如下所示：
-
-**File: `idl/wrap_interface.impl.cpp`**
+**File: `author/src/wrap_interface.impl.cpp`**
 
 ```cpp
-// 已经实现的类
+#include "wrap_interface.impl.hpp"
+
+using namespace taihe;
+using namespace wrap_interface;
+
+// 已有的原生 C++ 类
 class InnerFoo {
 public:
-    std::string func1() const {
-        return "Hello from func1";
+    std::string func1() const { return "Hello from func1"; }
+    std::string func2() const { return "Hello from func2"; }
+    
+    // 未暴露的方法
+    void setName(std::string str) {
+        name = str;
+        std::cout << "Inner name: " << str << std::endl;
     }
 
-    std::string func2() const {
-        return "Hello from func2";
-    }
-    void setName(std::string str) {
-        this->name = str;
-        std::cout << "Inner Class's name is " << str << std::endl;
-    }
 private:
     std::string name;
 };
-```
 
-Taihe 实现侧为：
-
-**File: `idl/wrap_interface.impl.cpp`**
-
-```cpp
-// Taihe interface 实现类
+// Taihe 接口实现类
 class FooImpl {
 public:
-    FooImpl() {
-        m_data = new InnerClass();
-    }
+    FooImpl() : m_data(new InnerFoo()) {}
+    ~FooImpl() { delete m_data; }
 
-    // 使用类型转换将类指针转换为 int64_t 类型
+    // 返回 this 指针
     int64_t getInner() {
         return reinterpret_cast<int64_t>(this);
     }
 
-    string func1() {
-        return this->m_data->func1();
-    }
+    // 委托给 InnerFoo
+    string func1() { return m_data->func1(); }
+    string func2() { return m_data->func2(); }
 
-    string func2() {
-        return this->m_data->func2();
-    }
 private:
     friend void useFoo(weak::Foo);
     InnerFoo* m_data;
@@ -81,33 +80,67 @@ Foo makeFoo() {
 }
 
 void useFoo(weak::Foo obj) {
+    // 通过接口调用公开方法
     std::cout << obj->func1() << std::endl;
     std::cout << obj->func2() << std::endl;
-    // 使用 getInner() 然后类型转换为 taihe 实现类指针
-    reinterpret_cast<FooImpl*>(obj->getInner())->m_data->setName("Tom");
-    return ;
+
+    // 关键：通过 getInner() 获取实现类，访问未暴露功能
+    FooImpl* impl = reinterpret_cast<FooImpl*>(obj->getInner());
+    impl->m_data->setName("Tom");
 }
+
+TH_EXPORT_CPP_API_makeFoo(makeFoo);
+TH_EXPORT_CPP_API_useFoo(useFoo);
 ```
 
-使用 `getInner()` 方法输出实现类的指针
+### 关键步骤
 
-我们也可以看到 `useFoo()` 函数里面能够成功获取 `InnerFoo` 以及调用其方法 `setName`
+1. **`getInner()`** 返回 `this` 指针（转为 `int64_t`）
+2. **使用时** 通过 `reinterpret_cast` 转回实现类指针
+3. **访问内部** 通过实现类指针访问原生 C++ 对象
 
-## 第三步：在 ets 侧使用
+## 第三步：编译运行
+
+```sh
+taihe-tryit test -u sts cookbook/wrap_interface
+```
+
+## 使用示例
 
 **File: `user/main.ets`**
 
 ```typescript
-// 创建对象
-let obj = wrap_interface.makeFoo();
-// 调用函数
-wrap_interface.useFoo(obj);
+import * as wrap_interface from "wrap_interface";
+
+loadLibrary("wrap_interface");
+
+function main() {
+    let obj = wrap_interface.makeFoo();
+    wrap_interface.useFoo(obj);
+}
 ```
 
-**Stdout**
+**输出：**
 
-```sh
+```
 Hello from func1
 Hello from func2
-Inner Class's name is Tom
+Inner name: Tom
 ```
+
+---
+
+## 安全注意事项
+
+| 注意点 | 说明 |
+|--------|------|
+| 类型安全 | `reinterpret_cast` 必须转换到正确的类型 |
+| 生命周期 | 确保接口对象生命周期覆盖指针使用范围 |
+| 最小暴露 | 尽量通过接口方法暴露功能，避免直接访问实现类 |
+
+---
+
+## 相关文档
+
+- [Interface 接口](../interface/README.md) - 接口定义
+- [External Object](../external_obj/README.md) - 外部对象处理

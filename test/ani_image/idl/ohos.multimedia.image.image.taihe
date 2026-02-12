@@ -51,16 +51,16 @@ enum AntiAliasingLevel: i32 {
 }
 
 struct DecodingOptions {
-    index: Optional<i32>;
-    sampleSize: Optional<i32>;
-    rotate: Optional<i32>;
-    editable: Optional<bool>;
-    desiredSize: Optional<Size>;
-    desiredRegion: Optional<Region>;
-    desiredPixelFormat: Optional<PixelMapFormat>;
-    fitDensity: Optional<i32>;
-    desiredColorSpace: Optional<colorSpaceManager.ColorSpaceManager>;
-    desiredDynamicRange: Optional<DecodingDynamicRange>;
+    @optional index: Optional<i32>;
+    @optional sampleSize: Optional<i32>;
+    @optional rotate: Optional<i32>;
+    @optional editable: Optional<bool>;
+    @optional desiredSize: Optional<Size>;
+    @optional desiredRegion: Optional<Region>;
+    @optional desiredPixelFormat: Optional<PixelMapFormat>;
+    @optional fitDensity: Optional<i32>;
+    @optional desiredColorSpace: Optional<colorSpaceManager.ColorSpaceManager>;
+    @optional desiredDynamicRange: Optional<DecodingDynamicRange>;
 }
 
 enum AlphaType: i32 {
@@ -72,7 +72,7 @@ enum AlphaType: i32 {
 
 union NullableString {
     str: String;
-    null: unit;
+    null: @null unit;
 }
 
 struct Region {
@@ -82,30 +82,54 @@ struct Region {
 }
 
 interface PixelMap {
-    @gen_promise("createAlphaPixelmap")
     createAlphaPixelmapSync(): PixelMap;
+    @rename("createAlphaPixelmap")
+    @promise
+    createAlphaPixelmapReturnsPromise(): PixelMap;
+    @rename("createAlphaPixelmap")
+    @async
+    createAlphaPixelmapWithCallback(): PixelMap;
 
-    @gen_promise("getImageInfo")
     getImageInfoSync(): ImageInfo;
+    @rename("getImageInfo")
+    @promise
+    getImageInfoReturnsPromise(): ImageInfo;
+    @rename("getImageInfo")
+    @async
+    getImageInfoWithCallback(): ImageInfo;
 
     getBytesNumberPerRow(): i32;
     getPixelBytesNumber(): i32;
 
-    @gen_promise("readPixelsToBuffer")
     readPixelsToBufferSync(buff: @arraybuffer Array<u8>);
+    @rename("readPixelsToBuffer")
+    @promise
+    readPixelsToBufferReturnsPromise(buff: @arraybuffer Array<u8>);
+    @rename("readPixelsToBuffer")
+    @async
+    readPixelsToBufferWithCallback(buff: @arraybuffer Array<u8>);
 
-    @overload("scaleSync")
+    @rename("scaleSync")
     scaleSyncWithoutLevel(x: f64, y: f64): void;
-    @overload("scaleSync")
+    @rename("scaleSync")
     scaleSyncWithLevel(x: f64, y: f64, level: AntiAliasingLevel): void;
 
-    @gen_promise("crop")
     cropSync(region: Region): void;
+    @rename("crop")
+    @promise
+    cropReturnsPromise(region: Region): void;
+    @rename("crop")
+    @async
+    cropWithCallback(region: Region): void;
 
     flipSync(horizontal: bool, vertical: bool): void;
 
-    @gen_promise("release")
-    releaseSync(): void;
+    @rename("release")
+    @promise
+    releaseReturnsPromise(): void;
+    @rename("release")
+    @async
+    releaseWithCallback(): void;
 
     getInner(): i64;
 }
@@ -121,18 +145,40 @@ struct ImageInfo {
 }
 
 interface ImageSource {
-    @gen_async("getImageInfo")
-    getImageInfoSync(index: i32): ImageInfo;
+    getImageInfoSync(@optional index: Optional<i32>): ImageInfo;
+    @rename("getImageInfo")
+    @promise
+    getImageInfoReturnsPromise(@optional index: Optional<i32>): ImageInfo;
+    @rename("getImageInfo")
+    @async
+    getImageInfoWithCallbackWithIndex(index: i32): ImageInfo;
+    @rename("getImageInfo")
+    @async
+    getImageInfoWithCallbackWithoutIndex(): ImageInfo;
 
-    @gen_promise("createPixelMap")
-    createPixelMapSync(options: Optional<DecodingOptions>): PixelMap;
+    createPixelMapSync(@optional options: Optional<DecodingOptions>): PixelMap;
+    @rename("createPixelMap")
+    @promise
+    createPixelMapReturnsPromise(@optional options: Optional<DecodingOptions>): PixelMap;
+    @rename("createPixelMap")
+    @async
+    createPixelMapWithCallbackWithOptions(options: DecodingOptions): PixelMap;
+    @rename("createPixelMap")
+    @async
+    createPixelMapWithCallbackWithoutOptions(): PixelMap;
 
     modifyImageProperty(key: String, value: String): void;
 
-    @gen_promise("modifyImageProperties")
-    modifyImagePropertiesSync(records: @record Map<String, NullableString>): void;
+    @promise
+    modifyImageProperties(records: @record Map<String, NullableString>): void;
 
-    @gen_promise("getImageProperties")
-    getImagePropertiesSync(key: Array<String>): @record Map<String, NullableString>;
-    release(): void;
+    @promise
+    getImageProperties(key: Array<String>): @record Map<String, NullableString>;
+
+    @rename("release")
+    @promise
+    releaseReturnsPromise(): void;
+    @rename("release")
+    @async
+    releaseWithCallback(): void;
 }
