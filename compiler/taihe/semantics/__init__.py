@@ -21,6 +21,7 @@ from taihe.utils.outputs import DebugOutputConfig, OutputConfig
 
 if TYPE_CHECKING:
     from taihe.driver.contexts import CompilerInstance
+    from taihe.driver.options import OptionStore
 
 
 @dataclass
@@ -33,7 +34,7 @@ class PrettyPrintBackendConfig(BackendConfig):
     output_config: OutputConfig = field(default_factory=DebugOutputConfig)
 
     @classmethod
-    def create(cls):
+    def create(cls, options: "OptionStore"):
         return PrettyPrintBackendConfig()
 
     def construct(self, instance: "CompilerInstance"):

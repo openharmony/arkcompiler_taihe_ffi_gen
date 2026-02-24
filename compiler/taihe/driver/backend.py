@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from taihe.driver.contexts import CompilerInstance
+    from taihe.driver.options import OptionRegistry, OptionStore
 
 
 class BackendConfig(ABC):
@@ -29,9 +30,22 @@ class BackendConfig(ABC):
     "List of backends that the current backend depends on."
 
     @classmethod
+    def register(cls, option_registry: "OptionRegistry"):
+        """Registers the backend configuration to the registry.
+
+        By default, this method does nothing. Subclass may override this method
+        to register backend-specific configuration options.
+        """
+        return
+
+    @classmethod
     @abstractmethod
-    def create(cls) -> "BackendConfig":
-        """Creates a default configuration for the backend."""
+    def create(cls, options: "OptionStore") -> "BackendConfig":
+        """Creates a configuration for the backend.
+
+        Subclasses that registered options in `register()` should consume
+        them from *options* here and store the resolved values as fields.
+        """
 
     @abstractmethod
     def construct(self, instance: "CompilerInstance") -> "Backend":
@@ -57,13 +71,37 @@ class Backend(ABC):  # noqa: B024
         """Post-processes the IR just after parsing.
 
         Language backend may transform the IR in-place in this stage.
+
+        IMPORTANT RESTRICTIONS:
+        - The transformation MUST be idempotent. Running the same backend's
+          post_process multiple times MUST produce the same result as running
+          it once.
+        - Any transformation MUST NOT affect other backends. Specifically:
+          - Do NOT add, remove, or modify attributes owned by other backends
+            or shared/common attributes.
+          - Do NOT modify the IR structure (declarations, types, etc.) itself.
+        - This stage is intended for adding backend-specific metadata only,
+          such as backend-specific attributes derived from existing information.
+        - The execution order of backends' post_process is unspecified, so
+          backends MUST NOT depend on each other's post_process results.
         """
         return
 
     def validate(self):
         """Validate the IR after the post-process stage.
 
-        Language backend MUST NOT transform the IR in this stage.
+        Language backend may report errors or warnings in this stage.
+
+        IMPORTANT RESTRICTIONS:
+        - Language backend MUST NOT transform the IR in this stage.
+        - Enabling a backend MUST NOT cause previously valid code to fail.
+          In other words, code that compiles without this backend MUST also
+          compile with this backend enabled.
+        - Only check backend-specific attributes. If the code does not use
+          any attributes specific to this backend, validation MUST pass.
+        - Prefer implementing validation in `Attribute.check_context()` for
+          attribute-level checks. Use `validate()` only for complex checks
+          that span multiple attributes or declarations.
         """
         return
 

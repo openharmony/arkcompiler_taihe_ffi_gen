@@ -1206,7 +1206,6 @@ class PackageGroup:
     _package_dict: dict[str, PackageDecl]
 
     def __init__(self):
-        super().__init__()
         self._all_package_dict = {}
         self._package_dict = {}
 

@@ -30,7 +30,7 @@ taihe-tryit generate -u sts cookbook/hello_world
 > - IDL: `function FooBar(): void;`
 > - ArkTS: `function fooBar(): void;`
 >
-> 如需保持原名，可添加 `-Csts:keep-name` 参数。
+> 如需保持原名，可添加 `-Carkts:keep-name` 参数。
 
 工具自动生成了 C++ 代码的骨架：
 

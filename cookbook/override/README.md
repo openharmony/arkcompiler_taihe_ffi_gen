@@ -113,7 +113,7 @@ TH_EXPORT_CPP_API_logLifecycle(logLifecycle);
 ## 第三步：编译运行
 
 ```sh
-taihe-tryit test -u sts cookbook/override -Csts:keep-name
+taihe-tryit test -u sts cookbook/override -Carkts:keep-name
 ```
 
 ## 使用示例

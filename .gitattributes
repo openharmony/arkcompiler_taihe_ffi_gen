@@ -15,4 +15,3 @@
 # TypeScript
 *.ts text eol=lf diff=javascript whitespace=indent,trail,space
 *.ets text eol=lf diff=javascript whitespace=indent,trail,space
-*.sts text eol=lf diff=javascript whitespace=indent,trail,space

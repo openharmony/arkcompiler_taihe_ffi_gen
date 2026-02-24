@@ -18,6 +18,7 @@ from io import StringIO
 import pytest
 from taihe.driver.backend import BackendRegistry
 from taihe.driver.contexts import CompilerInstance, CompilerInvocation
+from taihe.driver.options import OptionStore
 from taihe.utils.diagnostics import DiagBase, DiagnosticsManager
 from taihe.utils.exceptions import (
     AttrArgMissingError,
@@ -60,7 +61,7 @@ class SemanticTestDiagnosticsManager(DiagnosticsManager):
 
 class SemanticTestCompilerInstance(CompilerInstance):
     def __init__(self, invocation: CompilerInvocation):
-        super().__init__(invocation, dm=SemanticTestDiagnosticsManager)
+        super().__init__(invocation, dm=SemanticTestDiagnosticsManager())
 
     def add_source(self, pkg_name: str, source: str):
         self.source_manager.add_source(SourceBuffer(pkg_name, StringIO(source)))
@@ -93,8 +94,11 @@ backend_registry.register_all()
 
 pre_backend_names = ["pretty-print"]
 pre_backend_factories = backend_registry.collect_required_backends(pre_backend_names)
-pre_backend_configs = [b.create() for b in pre_backend_factories]
-pre_invocation = CompilerInvocation(backend_configs=pre_backend_configs)
+pre_options = OptionStore()
+pre_backend_configs = [b.create(pre_options) for b in pre_backend_factories]
+pre_invocation = CompilerInvocation(
+    backend_configs=pre_backend_configs,
+)
 
 
 def test_invalid_package_name():
@@ -452,8 +456,11 @@ def test_enum_value():
 
 ani_backend_names = ["cpp-author", "ani-bridge", "pretty-print"]
 ani_backend_factories = backend_registry.collect_required_backends(ani_backend_names)
-ani_backend_configs = [b.create() for b in ani_backend_factories]
-ani_invocation = CompilerInvocation(backend_configs=ani_backend_configs)
+ani_options = OptionStore()
+ani_backend_configs = [b.create(ani_options) for b in ani_backend_factories]
+ani_invocation = CompilerInvocation(
+    backend_configs=ani_backend_configs,
+)
 
 
 def test_attr_arg_order_error():
