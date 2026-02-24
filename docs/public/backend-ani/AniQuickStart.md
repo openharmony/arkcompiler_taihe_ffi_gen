@@ -14,7 +14,7 @@ ANI（ArkTS Native Interface）是 ArkTS 调用原生代码的桥接机制。Tai
 
 | 配置项                         | 说明 |
 |--------------------------------|------|
-| `sts:keep-name`                | 保持生成的代码中的函数和方法名称与 Taihe IDL 文件中的名称一致。若不使用此选项，则默认将 IDL 中的名称首字母小写 |
+| `arkts:keep-name`                | 保持生成的代码中的函数和方法名称与 Taihe IDL 文件中的名称一致。若不使用此选项，则默认将 IDL 中的名称首字母小写 |
 | `arkts:module-prefix=<prefix>` | 指定生成的 ArkTS 对应的模块名，该配置会影响生成符号的 ANI 签名 |
 | `arkts:path-prefix=<prefix>`   | 指定生成的 ArkTS 对应的路径前缀，该配置会影响生成符号的 ANI 签名 |
 

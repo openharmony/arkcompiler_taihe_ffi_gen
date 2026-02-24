@@ -51,7 +51,7 @@ TH_EXPORT_CPP_API_oldFoo(oldFoo);
 ## 第三步：编译运行
 
 ```sh
-taihe-tryit test -u sts cookbook/rename_example -Csts:keep-name
+taihe-tryit test -u sts cookbook/rename_example -Carkts:keep-name
 ```
 
 ## 使用示例

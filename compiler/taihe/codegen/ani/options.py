@@ -28,10 +28,10 @@ class ArktsKeepNameOption(AbstractConfigOption):
     the names in the Taihe IDL file exactly, instead of being converted
     to camelCase.
 
-    Usage: -Csts:keep-name
+    Usage: -Carkts:keep-name
     """
 
-    NAME = "sts:keep-name"
+    NAME = "arkts:keep-name"
 
     @classmethod
     def parse(cls, value: str | None) -> Self:
