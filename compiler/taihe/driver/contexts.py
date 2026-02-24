@@ -19,8 +19,7 @@
 - CompilerInvocation: constructs the invocation from cmdline
     - Parses the general command line arguments
     - Enables user specified backends
-    - Parses backend-specific arguments
-    - Sets backend options
+    - Backend-specific options are consumed by BackendConfig.create()
 - CompilerInstance: runs the compilation
     - CompilerInstance: scans and parses sources files
     - Backends: post-process the IR
@@ -33,7 +32,6 @@ from itertools import chain
 from pathlib import Path
 
 from taihe.driver.backend import Backend, BackendConfig
-from taihe.driver.options import OptionStore
 from taihe.parse.convert import convert_ast
 from taihe.semantics.analysis import analyze_semantics
 from taihe.semantics.attributes import AttributeRegistry
@@ -75,7 +73,6 @@ class CompilerInvocation:
     src_dirs: list[Path] = field(default_factory=lambda: [])
     output_config: OutputConfig = field(default_factory=NullOutputConfig)
     backend_configs: list[BackendConfig] = field(default_factory=lambda: [])
-    extra_options: OptionStore = field(default_factory=OptionStore)
 
 
 class CompilerInstance:
@@ -112,7 +109,7 @@ class CompilerInstance:
         self.src_files = invocation.src_files
         self.src_dirs = invocation.src_dirs
         self.source_manager = SourceManager()
-        self.package_group = PackageGroup(invocation.extra_options)
+        self.package_group = PackageGroup()
 
         self.output_manager = invocation.output_config.construct()
         self.backends = [

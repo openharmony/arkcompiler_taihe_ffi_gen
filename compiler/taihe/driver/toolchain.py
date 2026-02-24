@@ -149,13 +149,12 @@ def taihec(
         )
 
     options = option_registry.parse_args(extra or [])
-    backend_configs = [b.create() for b in backend_factories]
+    backend_configs = [b.create(options) for b in backend_factories]
 
     invocation = CompilerInvocation(
         src_files=src_files,
         output_config=output_config,
         backend_configs=backend_configs,
-        extra_options=options,
     )
     instance = CompilerInstance(invocation)
     if not instance.run():

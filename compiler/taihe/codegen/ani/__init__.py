@@ -22,13 +22,17 @@ from taihe.utils.sources import SourceFile
 
 if TYPE_CHECKING:
     from taihe.driver.contexts import CompilerInstance
-    from taihe.driver.options import OptionRegistry
+    from taihe.driver.options import OptionRegistry, OptionStore
 
 
 @dataclass
 class AniBridgeBackendConfig(BackendConfig):
     NAME = "ani-bridge"
     DEPS: ClassVar = ["cpp-user"]
+
+    keep_name: bool = False
+    module_prefix: str | None = None
+    path_prefix: str | None = None
 
     @classmethod
     def register(cls, option_registry: "OptionRegistry"):
@@ -37,21 +41,45 @@ class AniBridgeBackendConfig(BackendConfig):
         option_registry.register(*all_ani_config_options)
 
     @classmethod
-    def create(cls):
-        return AniBridgeBackendConfig()
+    def create(cls, options: "OptionStore"):
+        from taihe.codegen.ani.options import (
+            ArktsKeepNameOption,
+            ArktsModulePrefixOption,
+            ArktsPathPrefixOption,
+        )
+
+        keep_name_opt = options.get(ArktsKeepNameOption)
+        module_prefix_opt = options.get(ArktsModulePrefixOption)
+        path_prefix_opt = options.get(ArktsPathPrefixOption)
+        return AniBridgeBackendConfig(
+            keep_name=keep_name_opt is not None,
+            module_prefix=module_prefix_opt.prefix if module_prefix_opt else None,
+            path_prefix=path_prefix_opt.prefix if path_prefix_opt else None,
+        )
 
     def construct(self, instance: "CompilerInstance"):
+        from taihe.codegen.ani.analyses import AniConfig
         from taihe.codegen.ani.attributes import all_attr_types
         from taihe.codegen.ani.gen_ani import AniCodeGenerator
         from taihe.codegen.ani.gen_sts import StsCodeGenerator
 
         # TODO: unify {Ani,Sts}CodeGenerator
         class AniBridgeBackendImpl(Backend):
-            def __init__(self, ci: "CompilerInstance"):
+            def __init__(self, ci: "CompilerInstance", config: AniBridgeBackendConfig):
                 self._ci = ci
+                self._config = config
 
             def register(self):
                 self._ci.attribute_registry.register(*all_attr_types)
+                self._ci.analysis_manager.provide(
+                    AniConfig(
+                        keep_name=self._config.keep_name,
+                        module_prefix=self._config.module_prefix,
+                        path_prefix=self._config.path_prefix,
+                    ),
+                    AniConfig,
+                    self._ci.package_group,
+                )
 
             def inject(self):
                 self._ci.source_manager.add_source(
@@ -68,4 +96,4 @@ class AniBridgeBackendConfig(BackendConfig):
                 AniCodeGenerator(om, am).generate(pg)
                 StsCodeGenerator(om, am).generate(pg)
 
-        return AniBridgeBackendImpl(instance)
+        return AniBridgeBackendImpl(instance, self)

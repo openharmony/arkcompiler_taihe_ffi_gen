@@ -70,18 +70,43 @@ class AnalysisManager:
     def __init__(self) -> None:
         self._cache: dict[CacheKey, AbstractAnalysis[Any]] = {}
 
-    def get_or_create(self, analysis_type: type[_A], *args: Any, **kwargs: Any) -> _A:
-        """Get existing analysis or create new one if not cached."""
+    def get_or_create(
+        self,
+        analysis_type: type[_A],
+        *args: Any,
+        **kwargs: Any,
+    ) -> _A:
+        """Get existing analysis or create new one if not cached.
+
+        The analysis is uniquely identified by its type and the provided arguments.
+        """
         hashable_args = tuple(args)
         hashable_kwargs = tuple(sorted(kwargs.items()))
         key = CacheKey(analysis_type, hashable_args, hashable_kwargs)
 
-        if cached := self._cache.get(key):
-            return cast(_A, cached)
+        if cached_analysis := self._cache.get(key):
+            return cast(_A, cached_analysis)
 
-        new_instance = analysis_type._create(self, *args, **kwargs)  # type: ignore
-        self._cache[key] = new_instance
-        return new_instance
+        created_analysis = analysis_type._create(self, *args, **kwargs)  # type: ignore
+        self._cache[key] = created_analysis
+        return created_analysis
+
+    def provide(
+        self,
+        analysis: _A,
+        analysis_type: type[_A],
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
+        """Pre-populate the cache with an externally-constructed analysis instance.
+
+        This can be used to seed the cache with analyses that are constructed
+        outside of the standard factory mechanism, such as by backends.
+        """
+        hashable_args = tuple(args)
+        hashable_kwargs = tuple(sorted(kwargs.items()))
+        key = CacheKey(analysis_type, hashable_args, hashable_kwargs)
+        self._cache[key] = analysis
 
     def clear(self) -> None:
         """Clear the analysis cache."""

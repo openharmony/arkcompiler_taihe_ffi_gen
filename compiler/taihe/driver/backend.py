@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from taihe.driver.contexts import CompilerInstance
-    from taihe.driver.options import OptionRegistry
+    from taihe.driver.options import OptionRegistry, OptionStore
 
 
 class BackendConfig(ABC):
@@ -40,8 +40,12 @@ class BackendConfig(ABC):
 
     @classmethod
     @abstractmethod
-    def create(cls) -> "BackendConfig":
-        """Creates a default configuration for the backend."""
+    def create(cls, options: "OptionStore") -> "BackendConfig":
+        """Creates a configuration for the backend.
+
+        Subclasses that registered options in `register()` should consume
+        them from *options* here and store the resolved values as fields.
+        """
 
     @abstractmethod
     def construct(self, instance: "CompilerInstance") -> "Backend":
