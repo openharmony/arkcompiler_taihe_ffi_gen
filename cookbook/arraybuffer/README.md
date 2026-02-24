@@ -46,7 +46,7 @@ TH_EXPORT_CPP_API_convert2Int(convert2Int);
 ## 第三步：编译运行
 
 ```sh
-taihe-tryit test -u sts cookbook/arraybuffer -Csts:keep-name
+taihe-tryit test -u sts cookbook/arraybuffer -Carkts:keep-name
 ```
 
 ## 使用示例

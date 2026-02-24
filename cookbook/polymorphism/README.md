@@ -265,7 +265,7 @@ void introduceYourself(::poly::PersonType const &p) {
 编译并运行示例：
 
 ```sh
-taihe-tryit test -u sts cookbook/polymorphism -Csts:keep-name
+taihe-tryit test -u sts cookbook/polymorphism -Carkts:keep-name
 ```
 
 **File: `user/main.ets`**
