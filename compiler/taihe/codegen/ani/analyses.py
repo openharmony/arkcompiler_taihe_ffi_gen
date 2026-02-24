@@ -60,7 +60,11 @@ from taihe.codegen.ani.attributes import (
     TypedArrayAttr,
     UndefinedAttr,
 )
-from taihe.codegen.ani.writer import ArkTsImportManager, DefaultNaming, KeepNaming
+from taihe.codegen.ani.writer import (
+    ArkTsImportManager,
+    DefaultNamingStrategy,
+    UnchangeNamingStrategy,
+)
 from taihe.codegen.cpp.analyses import (
     EnumCppInfo,
     IfaceCppInfo,
@@ -105,22 +109,24 @@ from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
 
 
 @dataclass
-class AniConfig(AbstractAnalysis["PackageGroup"]):
-    """Resolved ANI backend configuration.
-
-    This is seeded into the AnalysisManager by the ANI backend during
-    backend construction, and can be retrieved by analyses and code generators
-    to determine how to generate code.
-    """
-
-    keep_name: bool = False
+class ArkTsOutDir(AbstractAnalysis["PackageGroup"]):
     module_prefix: str | None = None
     path_prefix: str | None = None
 
     @classmethod
     @override
-    def _create(cls, am: AnalysisManager, pg: PackageGroup) -> "AniConfig":
-        raise NotImplementedError("AniConfig should be provided by the ANI backend")
+    def _create(cls, am: AnalysisManager, pg: PackageGroup) -> "ArkTsOutDir":
+        raise NotImplementedError(f"{cls.__name__} should be provided by backend")
+
+
+@dataclass
+class ArkTsNamingConfig(AbstractAnalysis["PackageGroup"]):
+    keep_name: bool = False
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, pg: PackageGroup) -> "ArkTsNamingConfig":
+        raise NotImplementedError(f"{cls.__name__} should be provided by backend")
 
 
 # Ani Runtime Types
@@ -378,20 +384,6 @@ ANI_NAMESPACE = AniScope("namespace", ANI_FUNCTION)
 
 
 @dataclass
-class ArkTsOutDir:
-    bundle_str: str | None = None
-    prefix_str: str | None = None
-
-    @property
-    def bundle_parts(self) -> list[str]:
-        return [] if self.bundle_str is None else self.bundle_str.split("/")
-
-    @property
-    def prefix_parts(self) -> list[str]:
-        return [] if self.prefix_str is None else self.prefix_str.split("/")
-
-
-@dataclass
 class ArkTsModuleOrNamespace(ABC):
     scope: ClassVar[AniScope]
 
@@ -461,12 +453,38 @@ class ArkTsModule(ArkTsModuleOrNamespace):
 
     @property
     def impl_desc(self) -> str:
-        impl_desc_parts = [
-            *self.parent.bundle_parts,
-            *self.parent.prefix_parts,
-            self.module_name,
-        ]
-        return ".".join(impl_desc_parts)
+        module_prefix_desc = (
+            ""
+            if self.parent.module_prefix is None
+            else self.parent.module_prefix.replace("/", ".") + "."
+        )
+        path_prefix_desc = (
+            ""
+            if self.parent.path_prefix is None
+            else self.parent.path_prefix.replace("/", ".") + "."
+        )
+        module_desc = self.module_name.replace("/", ".")
+        return f"{module_prefix_desc}{path_prefix_desc}{module_desc}"
+
+    @property
+    def relative_path(self) -> list[str]:
+        return f"{self.module_name}.ets".split("/")
+
+    def relative_path_to(self, base: "ArkTsModule") -> list[str]:
+        if self.parent != base.parent:
+            raise ValueError(
+                f"Cannot compute relative path between modules in different output directories: "
+                f"{self.parent} vs {base.parent}"
+            )
+        self_path = self.relative_path
+        base_path = base.relative_path[:-1]
+        while self_path and base_path and self_path[0] == base_path[0]:
+            self_path.pop(0)
+            base_path.pop(0)
+        return [".."] * len(base_path) + self_path
+
+    def is_same(self, other: "ArkTsModule") -> bool:
+        return self.parent == other.parent and self.relative_path == other.relative_path
 
     def get_type(
         self,
@@ -517,11 +535,7 @@ class PackageGroupAniInfo(AbstractAnalysis[PackageGroup]):
         self.mods: dict[str, ArkTsModule] = {}
         self.pkg_map: dict[PackageDecl, ArkTsModuleOrNamespace] = {}
 
-        ani_config = AniConfig.get(am, pg)
-        self.path = ArkTsOutDir(
-            bundle_str=ani_config.module_prefix,
-            prefix_str=ani_config.path_prefix,
-        )
+        self.path = ArkTsOutDir.get(am, pg)
 
         for pkg in pg.packages:
             ns_parts = []
@@ -565,8 +579,11 @@ class PackageAniInfo(AbstractAnalysis[PackageDecl]):
         pg_ani_info = PackageGroupAniInfo.get(am, p.parent_group)
         self.ns = pg_ani_info.get_namespace(p)
 
-        ani_config = AniConfig.get(am, p.parent_group)
-        self.naming = KeepNaming() if ani_config.keep_name else DefaultNaming()
+        naming_config = ArkTsNamingConfig.get(am, p.parent_group)
+        if naming_config.keep_name:
+            self.naming = UnchangeNamingStrategy()
+        else:
+            self.naming = DefaultNamingStrategy()
 
     @classmethod
     @override

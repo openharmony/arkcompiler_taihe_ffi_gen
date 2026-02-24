@@ -58,7 +58,7 @@ class AniBridgeBackendConfig(BackendConfig):
         )
 
     def construct(self, instance: "CompilerInstance"):
-        from taihe.codegen.ani.analyses import AniConfig
+        from taihe.codegen.ani.analyses import ArkTsNamingConfig, ArkTsOutDir
         from taihe.codegen.ani.attributes import all_attr_types
         from taihe.codegen.ani.gen_ani import AniCodeGenerator
         from taihe.codegen.ani.gen_sts import StsCodeGenerator
@@ -72,12 +72,16 @@ class AniBridgeBackendConfig(BackendConfig):
             def register(self):
                 self._ci.attribute_registry.register(*all_attr_types)
                 self._ci.analysis_manager.provide(
-                    AniConfig(
-                        keep_name=self._config.keep_name,
+                    ArkTsOutDir(
                         module_prefix=self._config.module_prefix,
                         path_prefix=self._config.path_prefix,
                     ),
-                    AniConfig,
+                    ArkTsOutDir,
+                    self._ci.package_group,
+                )
+                self._ci.analysis_manager.provide(
+                    ArkTsNamingConfig(self._config.keep_name),
+                    ArkTsNamingConfig,
                     self._ci.package_group,
                 )
 
