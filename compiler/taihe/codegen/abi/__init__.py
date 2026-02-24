@@ -20,6 +20,7 @@ from taihe.driver.backend import Backend, BackendConfig
 
 if TYPE_CHECKING:
     from taihe.driver.contexts import CompilerInstance
+    from taihe.driver.options import OptionStore
 
 
 @dataclass
@@ -27,7 +28,7 @@ class AbiHeaderBackendConfig(BackendConfig):
     NAME = "abi-header"
 
     @classmethod
-    def create(cls):
+    def create(cls, options: "OptionStore"):
         return AbiHeaderBackendConfig()
 
     def construct(self, instance: "CompilerInstance"):
@@ -52,7 +53,7 @@ class AbiSourcesBackendConfig(BackendConfig):
     DEPS: ClassVar = ["abi-header"]
 
     @classmethod
-    def create(cls):
+    def create(cls, options: "OptionStore"):
         return AbiSourcesBackendConfig()
 
     def construct(self, instance: "CompilerInstance"):
@@ -77,7 +78,7 @@ class CAuthorBackendConfig(BackendConfig):
     DEPS: ClassVar = ["abi-source"]
 
     @classmethod
-    def create(cls):
+    def create(cls, options: "OptionStore"):
         return CAuthorBackendConfig()
 
     def construct(self, instance: "CompilerInstance"):

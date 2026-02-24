@@ -36,12 +36,17 @@ OptionStore
 
 ## Lifecycle
 
-1. **Backend Collection**: `BackendRegistry.collect_required_backends()` gathers
-   all required backends and their OPTIONS
-2. **Option Registration**: `ConfigRegistry.register()` registers all option types
-3. **Parsing**: `ConfigRegistry.parse()` validates and parses raw config dict
-4. **Storage**: Parsed options stored in `OptionStore` within `CompilerInstance`
-5. **Access**: Backends access options via `OptionStore.get()` or `OptionStore.get_all()`
+1. **Backend Collection**: `BackendRegistry.collect_required_backends()` gathers all
+   required backends
+2. **Option Registration**: Each backend's `BackendConfig.register()` registers its
+   option types into `OptionRegistry`
+3. **Parsing**: `OptionRegistry.parse_args()` validates and parses raw config strings
+   into an `OptionStore`
+4. **Consumption**: `BackendConfig.create(options)` reads the `OptionStore` and stores
+   resolved values as fields on the config
+5. **Seeding**: During `Backend.register()`, resolved config is seeded into the
+   `AnalysisManager` for access by analyses and code generators via the standard
+   `Analysis.get()` API
 """
 
 from abc import ABC, abstractmethod

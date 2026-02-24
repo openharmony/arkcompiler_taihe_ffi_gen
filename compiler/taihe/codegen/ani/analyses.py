@@ -60,11 +60,6 @@ from taihe.codegen.ani.attributes import (
     TypedArrayAttr,
     UndefinedAttr,
 )
-from taihe.codegen.ani.options import (
-    ArktsKeepNameOption,
-    ArktsModulePrefixOption,
-    ArktsPathPrefixOption,
-)
 from taihe.codegen.ani.writer import ArkTsImportManager, DefaultNaming, KeepNaming
 from taihe.codegen.cpp.analyses import (
     EnumCppInfo,
@@ -107,6 +102,26 @@ from taihe.semantics.types import (
 )
 from taihe.semantics.visitor import NonVoidTypeVisitor
 from taihe.utils.analyses import AbstractAnalysis, AnalysisManager
+
+
+@dataclass
+class AniConfig(AbstractAnalysis["PackageGroup"]):
+    """Resolved ANI backend configuration.
+
+    This is seeded into the AnalysisManager by the ANI backend during
+    backend construction, and can be retrieved by analyses and code generators
+    to determine how to generate code.
+    """
+
+    keep_name: bool = False
+    module_prefix: str | None = None
+    path_prefix: str | None = None
+
+    @classmethod
+    @override
+    def _create(cls, am: AnalysisManager, pg: PackageGroup) -> "AniConfig":
+        raise NotImplementedError("AniConfig should be provided by the ANI backend")
+
 
 # Ani Runtime Types
 
@@ -502,11 +517,10 @@ class PackageGroupAniInfo(AbstractAnalysis[PackageGroup]):
         self.mods: dict[str, ArkTsModule] = {}
         self.pkg_map: dict[PackageDecl, ArkTsModuleOrNamespace] = {}
 
-        module_prefix_opt = pg.options.get(ArktsModulePrefixOption)
-        path_prefix_opt = pg.options.get(ArktsPathPrefixOption)
+        ani_config = AniConfig.get(am, pg)
         self.path = ArkTsOutDir(
-            bundle_str=module_prefix_opt.prefix if module_prefix_opt else None,
-            prefix_str=path_prefix_opt.prefix if path_prefix_opt else None,
+            bundle_str=ani_config.module_prefix,
+            prefix_str=ani_config.path_prefix,
         )
 
         for pkg in pg.packages:
@@ -551,11 +565,8 @@ class PackageAniInfo(AbstractAnalysis[PackageDecl]):
         pg_ani_info = PackageGroupAniInfo.get(am, p.parent_group)
         self.ns = pg_ani_info.get_namespace(p)
 
-        keep_name_opt = p.parent_group.options.get(ArktsKeepNameOption)
-        if keep_name_opt:
-            self.naming = KeepNaming()
-        else:
-            self.naming = DefaultNaming()
+        ani_config = AniConfig.get(am, p.parent_group)
+        self.naming = KeepNaming() if ani_config.keep_name else DefaultNaming()
 
     @classmethod
     @override

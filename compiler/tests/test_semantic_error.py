@@ -95,10 +95,9 @@ backend_registry.register_all()
 pre_backend_names = ["pretty-print"]
 pre_backend_factories = backend_registry.collect_required_backends(pre_backend_names)
 pre_options = OptionStore()
-pre_backend_configs = [b.create() for b in pre_backend_factories]
+pre_backend_configs = [b.create(pre_options) for b in pre_backend_factories]
 pre_invocation = CompilerInvocation(
     backend_configs=pre_backend_configs,
-    extra_options=pre_options,
 )
 
 
@@ -458,10 +457,9 @@ def test_enum_value():
 ani_backend_names = ["cpp-author", "ani-bridge", "pretty-print"]
 ani_backend_factories = backend_registry.collect_required_backends(ani_backend_names)
 ani_options = OptionStore()
-ani_backend_configs = [b.create() for b in ani_backend_factories]
+ani_backend_configs = [b.create(ani_options) for b in ani_backend_factories]
 ani_invocation = CompilerInvocation(
     backend_configs=ani_backend_configs,
-    extra_options=ani_options,
 )
 
 

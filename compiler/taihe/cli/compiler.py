@@ -128,14 +128,13 @@ def main():
         )
 
     options = option_registry.parse_args(args.config)
-    backend_configs = [b.create() for b in backend_factories]
+    backend_configs = [b.create(options) for b in backend_factories]
 
     invocation = CompilerInvocation(
         src_files=src_files,
         src_dirs=src_dirs,
         backend_configs=backend_configs,
         output_config=output_config,
-        extra_options=options,
     )
 
     instance = CompilerInstance(invocation)
