@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from taihe.codegen.ani.analyses import ArkTsModule
 
 
-class Naming(ABC):
+class NamingStrategy(ABC):
     """Base class for naming conventions."""
 
     @abstractmethod
@@ -36,7 +36,7 @@ class Naming(ABC):
         """Convert a name to a field name."""
 
 
-class DefaultNaming(Naming):
+class DefaultNamingStrategy(NamingStrategy):
     """Default naming convention that converts names to camelCase."""
 
     @override
@@ -48,7 +48,7 @@ class DefaultNaming(Naming):
         return name[0].lower() + name[1:]
 
 
-class KeepNaming(Naming):
+class UnchangeNamingStrategy(NamingStrategy):
     """Naming convention that keeps the name unchanged."""
 
     @override
@@ -101,10 +101,9 @@ class ArkTsImportManager:
         is_default: bool,
         *type_path: str,
     ):
-        module_path = f"./{mod.module_name}.ets"
         mangled_mod = "".join(c if c.isalnum() else "_" for c in mod.module_name)
         # Handle types defined in the current module
-        if mod.module_name == self.module.module_name:
+        if mod.is_same(self.module):
             mangled_type = "_".join(type_path)
             alias = f"_taihe_{mangled_mod}_{mangled_type}"
             self.add_typealias(alias, *type_path)
@@ -112,6 +111,7 @@ class ArkTsImportManager:
         # Handle types defined in other modules
         type_head, *type_tail = type_path
         import_name = f"_taihe_{mangled_mod}_{type_head}"
+        module_path = "/".join([".", *mod.relative_path_to(self.module)])
         if is_default:
             self.add_import_default(import_name, module_path)
         else:
@@ -157,7 +157,7 @@ class StsWriter(FileWriter, ArkTsImportManager):
     ):
         super().__init__(
             om,
-            relative_path=f"{mod.module_name}.ets",
+            relative_path="/".join(mod.relative_path),
             file_kind=file_kind,
             default_indent=ETS_DEFAULT_INDENT,
             comment_prefix=ETS_COMMENT_PREFIX,
