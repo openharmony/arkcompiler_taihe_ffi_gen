@@ -133,7 +133,7 @@ TH_EXPORT_CPP_API_processPerson(processPerson);
 ## 第三步：编译运行
 
 ```sh
-taihe-tryit test -u sts cookbook/external_obj -Csts:keep-name
+taihe-tryit test -u sts cookbook/external_obj -Carkts:keep-name
 ```
 
 ## 使用示例

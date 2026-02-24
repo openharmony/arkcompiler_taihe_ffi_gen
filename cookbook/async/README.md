@@ -109,10 +109,10 @@ export overload add {
 ## 第四步：编译运行
 
 ```sh
-taihe-tryit test -u sts cookbook/async -Csts:keep-name
+taihe-tryit test -u sts cookbook/async -Carkts:keep-name
 ```
 
-> **注意**：默认情况下，Taihe IDL 中的函数名会转换为小驼峰命名。使用 `-Csts:keep-name` 保持原名。
+> **注意**：默认情况下，Taihe IDL 中的函数名会转换为小驼峰命名。使用 `-Carkts:keep-name` 保持原名。
 
 ## 使用示例
 
