@@ -19,9 +19,8 @@ from taihe.codegen.abi.analyses import (
 from taihe.codegen.abi.writer import CHeaderWriter, CSourceWriter
 from taihe.codegen.ani.analyses import (
     AniScope,
-    GlobFuncAniInfo,
     IfaceAniInfo,
-    IfaceMethodAniInfo,
+    NamedCallableAniInfo,
     PackageAniInfo,
     StructAniInfo,
     StructFieldAniInfo,
@@ -271,7 +270,7 @@ class AniPackageSourceGenerator:
             pkg_member_infos: dict[str, str] = {}
             for func in self.pkg.functions:
                 self.gen_native_func(func.name, func)
-                func_ani_info = GlobFuncAniInfo.get(self.am, func)
+                func_ani_info = NamedCallableAniInfo.get(self.am, func)
                 pkg_member_infos.setdefault(
                     func_ani_info.native_name,
                     f"{funcs_namespace}::{func.name}",
@@ -298,7 +297,7 @@ class AniPackageSourceGenerator:
                 for ancestor in iface_abi_info.ancestor_dict:
                     for method in ancestor.methods:
                         self.gen_native_method(method.name, method, iface, ancestor)
-                        method_ani_info = IfaceMethodAniInfo.get(self.am, method)
+                        method_ani_info = NamedCallableAniInfo.get(self.am, method)
                         iface_member_infos.setdefault(
                             method_ani_info.native_name,
                             f"{methods_namespace}::{method.name}",
@@ -622,7 +621,7 @@ class AniIfaceImplGenerator:
     def gen_iface_method(self, method: IfaceMethodDecl):
         iface_ani_info = IfaceAniInfo.get(self.am, method.parent_iface)
         method_cpp_info = IfaceMethodCppInfo.get(self.am, method)
-        method_ani_info = IfaceMethodAniInfo.get(self.am, method)
+        method_ani_info = NamedCallableAniInfo.get(self.am, method)
         params_cpp = []
         args_cpp = []
         args_ani = []
